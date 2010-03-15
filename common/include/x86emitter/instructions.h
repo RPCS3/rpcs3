@@ -168,6 +168,9 @@ namespace x86Emitter
 	// NOP 1-byte
 	extern void xNOP();
 
+	extern void xINT( u8 imm );
+	extern void xINTO();
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// JMP / Jcc Instructions!
 

@@ -901,46 +901,37 @@ void PREF( void )
 {
 }
 
-// Fixme: The game "Mademan" triggers a trap here, and crashes when we actually handle it.
+static void trap(u16 code=0)
+{
+	// unimplemented?
+	// throw R5900Exception::Trap(code);
+
+	cpuRegs.pc -= 4;
+	Console.Warning("Trap exception at 0x%08x", cpuRegs.pc);
+	cpuException(0x34, cpuRegs.branch);
+}
+
 /*********************************************************
 * Register trap                                          *
 * Format:  OP rs, rt                                     *
 *********************************************************/
-#ifdef PCSX2_DEVBUILD
-void TGE()  { Console.Warning("TGE Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] >= cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
-void TGEU() { Console.Warning("TGEU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] >= cpuRegs.GPR.r[_Rt_].UD[0]) throw R5900Exception::Trap(_TrapCode_); }
-void TLT()  { Console.Warning("TLT Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] <  cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
-void TLTU() { Console.Warning("TLTU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] <  cpuRegs.GPR.r[_Rt_].UD[0]) throw R5900Exception::Trap(_TrapCode_); }
-void TEQ()  { Console.Warning("TEQ Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
-void TNE()  { Console.Warning("TNE Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
-#else
-void TGE()  { }
-void TGEU() { }
-void TLT()  { }
-void TLTU() { }
-void TEQ()  { }
-void TNE()  { }
-#endif
+void TGE()  { if (cpuRegs.GPR.r[_Rs_].SD[0] >= cpuRegs.GPR.r[_Rt_].SD[0]) trap(_TrapCode_); }
+void TGEU() { if (cpuRegs.GPR.r[_Rs_].UD[0] >= cpuRegs.GPR.r[_Rt_].UD[0]) trap(_TrapCode_); }
+void TLT()  { if (cpuRegs.GPR.r[_Rs_].SD[0] <  cpuRegs.GPR.r[_Rt_].SD[0]) trap(_TrapCode_); }
+void TLTU() { if (cpuRegs.GPR.r[_Rs_].UD[0] <  cpuRegs.GPR.r[_Rt_].UD[0]) trap(_TrapCode_); }
+void TEQ()  { if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) trap(_TrapCode_); }
+void TNE()  { if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) trap(_TrapCode_); }
 
 /*********************************************************
 * Trap with immediate operand                            *
 * Format:  OP rs, rt                                     *
 *********************************************************/
-#ifdef PCSX2_DEVBUILD
-void TGEI()  { Console.Warning("TGEI Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] >= _Imm_) throw R5900Exception::Trap(); }
-void TLTI()  { Console.Warning("TLTI Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] <  _Imm_) throw R5900Exception::Trap(); }
-void TEQI()  { Console.Warning("TEQI Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] == _Imm_) throw R5900Exception::Trap(); }
-void TNEI()  { Console.Warning("TNEI Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] != _Imm_) throw R5900Exception::Trap(); }
-void TGEIU() { Console.Warning("TGEIU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] >= (u64)_Imm_) throw R5900Exception::Trap(); }
-void TLTIU() { Console.Warning("TLTIU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] <  (u64)_Imm_) throw R5900Exception::Trap(); }
-#else
-void TGEI()  { }
-void TLTI()  { }
-void TEQI()  { }
-void TNEI()  { }
-void TGEIU() { }
-void TLTIU() { }
-#endif
+void TGEI()  { if (cpuRegs.GPR.r[_Rs_].SD[0] >= _Imm_) trap(); }
+void TLTI()  { if (cpuRegs.GPR.r[_Rs_].SD[0] <  _Imm_) trap(); }
+void TEQI()  { if (cpuRegs.GPR.r[_Rs_].SD[0] == _Imm_) trap(); }
+void TNEI()  { if (cpuRegs.GPR.r[_Rs_].SD[0] != _Imm_) trap(); }
+void TGEIU() { if (cpuRegs.GPR.r[_Rs_].UD[0] >= (u64)_Imm_) trap(); }
+void TLTIU() { if (cpuRegs.GPR.r[_Rs_].UD[0] <  (u64)_Imm_) trap(); }
 
 /*********************************************************
 * Sa intructions                                         *

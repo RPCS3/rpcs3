@@ -861,6 +861,19 @@ __forceinline void xCLC()	{ xWrite8( 0xF8 ); }
 // NOP 1-byte
 __forceinline void xNOP()	{ xWrite8(0x90); }
 
+__forceinline void xINT( u8 imm )
+{
+	if (imm == 3)
+		xWrite8(0xcc);
+	else
+	{
+		xWrite8(0xcd);
+		xWrite8(imm);
+	}
+}
+
+__forceinline void xINTO()	{ xWrite8(0xce); }
+
 __emitinline void xBSWAP( const xRegister32& to )
 {
 	xWrite8( 0x0F );
