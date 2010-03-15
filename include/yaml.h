@@ -6,6 +6,7 @@
 
 #include "parser.h"
 #include "node.h"
+#include "stlnode.h"
 #include "iterator.h"
 #include "emitter.h"
 #include "stlemitter.h"

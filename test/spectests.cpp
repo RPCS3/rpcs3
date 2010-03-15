@@ -1121,9 +1121,9 @@ namespace Test {
 				"   0.278";
 
 			PARSE(doc, input);
-			StringMap key;
-			key._["first"] = "Sammy";
-			key._["last"] = "Sosa";
+			std::map<std::string, std::string> key;
+			key["first"] = "Sammy";
+			key["last"] = "Sosa";
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[key].size() == 2);
 			YAML_ASSERT(doc[key]["hr"] == 65);
