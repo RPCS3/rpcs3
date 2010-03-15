@@ -77,7 +77,7 @@ namespace YAML
 		bool IsReferenced() const { return m_referenced; }
 		
 		// for tags
-		const std::string GetTag() const { return m_tag; } // TODO: should an aliased node return its alias's tag?
+		const std::string GetTag() const { return IsAlias() ? m_pIdentity->GetTag() : m_tag; }
 
 		// emitting
 		friend Emitter& operator << (Emitter& out, const Node& node);
