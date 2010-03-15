@@ -372,9 +372,13 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 
 			if(blendMapD3D9[i].bogus == 1)
 			{
-				ASSERT(0);
-
 				(bsel.a == 0 ? bd.RenderTarget[0].SrcBlend : bd.RenderTarget[0].DestBlend) = D3D11_BLEND_ONE;
+
+				const string afixstr = format("%d >> 7", afix);
+				const char *col[3] = {"Cs", "Cd", "0"};
+				const char *alpha[3] = {"As", "Ad", afixstr.c_str()};
+				printf("Impossible blend for D3D: (%s - %s) * %s + %s\n",
+					col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
 			}
 		}
 
