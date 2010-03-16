@@ -538,7 +538,7 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 	if(Interpolation == 4)
 		val = CatmullRomInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
 	else if(Interpolation == 3)
-		val = HermiteInterpolate<48000>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
+		val = HermiteInterpolate<16384>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
 	else
 		val = CubicInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
 
