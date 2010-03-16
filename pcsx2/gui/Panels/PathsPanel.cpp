@@ -32,7 +32,7 @@ Panels::BasePathsPanel::BasePathsPanel( wxWindow* parent )
 Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 	BasePathsPanel( parent )
 {
-	wxSizer& s_main( *GetSizer() );
+	//wxSizer& s_main( *GetSizer() );
 
 	*this += BetweenFolderSpace;
 	*this += (new DirPickerPanel( this, FolderId_Savestates,

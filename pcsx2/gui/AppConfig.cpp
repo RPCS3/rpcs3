@@ -630,8 +630,8 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 AppConfig::FramerateOptions::FramerateOptions()
 {
 	NominalScalar			= 1.0;
-	TurboScalar				= 3.0;
-	SlomoScalar				= 0.33;
+	TurboScalar				= 2.0;
+	SlomoScalar				= 0.50;
 	
 	SkipOnLimit				= false;
 	SkipOnTurbo				= false;

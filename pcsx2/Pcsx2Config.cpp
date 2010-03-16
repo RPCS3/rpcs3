@@ -204,10 +204,12 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	Recompiler.LoadSave( ini );
 }
 
+// Default GSOptions
 Pcsx2Config::GSOptions::GSOptions()
 {
 	FrameLimitEnable		= true;
 	FrameSkipEnable			= false;
+	VsyncEnable				= false;
 
 	SynchronousMTGS			= false;
 	DisableOutput			= false;
