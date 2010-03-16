@@ -253,14 +253,16 @@ u8 mpeg2_scan_alt[64] = {
 };
 };
 
-/* idct_mmx.c */
-void mpeg2_idct_copy_mmxext (s16 * block, u8 * dest, int stride);
-void mpeg2_idct_add_mmxext (int last, s16 * block,
-			   s16 * dest, int stride);
-void mpeg2_idct_copy_mmx (s16 * block, u8 * dest, int stride);
-void mpeg2_idct_add_mmx (int last, s16 * block,
-			   s16 * dest, int stride);
-void mpeg2_idct_mmx_init (void);
+// The MMX verson wasn't being used and it was only available as a .obj,
+// so I removed it (gigaherz).
+///* idct_mmx.c */
+//void mpeg2_idct_copy_mmxext (s16 * block, u8 * dest, int stride);
+//void mpeg2_idct_add_mmxext (int last, s16 * block,
+//			   s16 * dest, int stride);
+//void mpeg2_idct_copy_mmx (s16 * block, u8 * dest, int stride);
+//void mpeg2_idct_add_mmx (int last, s16 * block,
+//			   s16 * dest, int stride);
+//void mpeg2_idct_mmx_init (void);
 
 void mpeg2_idct_init()
 {

@@ -1255,10 +1255,6 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\Ipu\idct_mmx.obj"
-						>
-					</File>
-					<File
 						RelativePath="..\..\Ipu\IPU.cpp"
 						>
 						<FileConfiguration
