@@ -483,6 +483,66 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 	return MulShr32( val, vc.ADSR.Value );
 }
 
+/*
+   Tension: 32767 is high, 0 normal, -32768 is low
+*/
+template<s32 i_tension>
+ __forceinline 
+static s32 HermiteInterpolate(
+   s32 y0, // 16.0
+   s32 y1, // 16.0
+   s32 y2, // 16.0
+   s32 y3, // 16.0
+   s32 mu  //  0.12
+   )
+{
+	s32 m00 = ((y1-y0)*i_tension) >> 16; // 16.0
+	s32 m01 = ((y2-y1)*i_tension) >> 16; // 16.0
+	s32 m0  = m00 + m01;
+
+	s32 m10 = ((y2-y1)*i_tension) >> 16; // 16.0
+	s32 m11 = ((y3-y2)*i_tension) >> 16; // 16.0
+	s32 m1  = m10 + m11;
+
+	s32 t0 = ((     2*y1 +   m0 + m1 - 2*y2) * mu) >> 12; // 16.0
+	s32 t1 = ((t0 - 3*y1 - 2*m0 - m1 + 3*y2) * mu) >> 12; // 16.0
+	s32 t2 = ((t1        +   m0            ) * mu) >> 12; // 16.0
+	s32 t3 = t2 + y1; // 16.0
+		
+	return(t3);
+}
+
+// Returns a 16 bit result in Value.
+static s32 __forceinline GetVoiceValues_Hermite( V_Core& thiscore, uint voiceidx )
+{
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
+	while( vc.SP > 0 )
+	{
+		vc.PV4 = vc.PV3;
+		vc.PV3 = vc.PV2;
+		vc.PV2 = vc.PV1;
+
+		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
+		//vc.PV1 <<= 2;
+		//vc.SPc = vc.SP&4095;	// just the fractional part, please!
+		vc.SP -= 4096;
+	}
+
+	CalculateADSR( thiscore, voiceidx );
+
+	const s32 mu = vc.SP + 4096;
+
+	// The template parameter should specify the "tension" for the hermite function,
+	// see the comments in the function for usage.
+	s32 val = HermiteInterpolate<16384>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
+
+	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
+	// it is used, various sound effects can end prematurely if we truncate more than
+	// one or two bits.  (or maybe it's better with no truncation at all?)
+	return MulShr32( val, vc.ADSR.Value );
+}
+
 // Noise values need to be mixed without going through interpolation, since it
 // can wreak havoc on the noise (causing muffling or popping).  Not that this noise
 // generator is accurate in its own right.. but eh, ah well :)
@@ -560,6 +620,9 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 			Value = GetNoiseValues( thiscore, voiceidx );
 		else
 		{
+			if( Interpolation == 3 )
+				Value = GetVoiceValues_Hermite( thiscore, voiceidx );
+			else
 			if( Interpolation == 2 )
 				Value = GetVoiceValues_Cubic( thiscore, voiceidx );
 			else
