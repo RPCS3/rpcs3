@@ -302,7 +302,7 @@ _vifT void vifUnpackSetup(u32 *data) {
 
 	if ((vifXRegs->cycle.wl == 0) && (vifXRegs->cycle.wl < vifXRegs->cycle.cl)) {
         Console.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs->cycle.cl, vifXRegs->cycle.wl);
-		vifX.cmd &= ~0x7f;
+		vifX.cmd = 0;
         return; // Skipping write and 0 write-cycles, so do nothing!
 	}
 
