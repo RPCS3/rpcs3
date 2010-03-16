@@ -439,6 +439,80 @@ static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, uint voiceidx 
 	}
 }
 
+/*
+   Tension: 65535 is high, 32768 is normal, 0 is low
+*/
+template<s32 i_tension>
+ __forceinline 
+static s32 HermiteInterpolate(
+	s32 y0, // 16.0
+	s32 y1, // 16.0
+	s32 y2, // 16.0
+	s32 y3, // 16.0
+	s32 mu  //  0.12
+	)
+{
+	s32 m00 = ((y1-y0)*i_tension) >> 16; // 16.0
+	s32 m01 = ((y2-y1)*i_tension) >> 16; // 16.0
+	s32 m0  = m00 + m01;
+
+	s32 m10 = ((y2-y1)*i_tension) >> 16; // 16.0
+	s32 m11 = ((y3-y2)*i_tension) >> 16; // 16.0
+	s32 m1  = m10 + m11;
+
+	s32 val = ((  2*y1 +   m0 + m1 - 2*y2) * mu) >> 12; // 16.0
+	val = ((val - 3*y1 - 2*m0 - m1 + 3*y2) * mu) >> 12; // 16.0
+	val = ((val        +   m0            ) * mu) >> 11; // 16.0
+
+	return(val + (y1<<1));
+}
+
+__forceinline 
+static s32 CatmullRomInterpolate(
+	s32 y0, // 16.0
+	s32 y1, // 16.0
+	s32 y2, // 16.0
+	s32 y3, // 16.0
+	s32 mu  //  0.12
+	)
+{
+	//q(t) = 0.5 *(    	(2 * P1) +
+	//	(-P0 + P2) * t +
+	//	(2*P0 - 5*P1 + 4*P2 - P3) * t2 +
+	//	(-P0 + 3*P1- 3*P2 + P3) * t3)
+
+	s32 a3 = (-  y0 + 3*y1 - 3*y2 + y3);
+	s32 a2 = ( 2*y0 - 5*y1 + 4*y2 - y3);
+	s32 a1 = (-  y0        +   y2     );
+	s32 a0 = (        2*y1            );
+
+	s32 val = ((a3  ) * mu) >> 12;
+	val = ((a2 + val) * mu) >> 12;
+	val = ((a1 + val) * mu) >> 12;
+
+	return (a0 + val);
+}
+
+__forceinline 
+static s32 CubicInterpolate(
+	s32 y0, // 16.0
+	s32 y1, // 16.0
+	s32 y2, // 16.0
+	s32 y3, // 16.0
+	s32 mu  //  0.12
+	)
+{
+	const s32 a0 = y3 - y2 - y0 + y1;
+	const s32 a1 = y0 - y1 - a0;
+	const s32 a2 = y2 - y0;
+
+	s32 val = ((  a0) * mu) >> 12;
+	val = ((val + a1) * mu) >> 12;
+	val = ((val + a2) * mu) >> 11;
+
+	return(val + (y1<<1));
+}
+
 // Returns a 16 bit result in Value.
 static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 {
@@ -458,84 +532,16 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 
 	CalculateADSR( thiscore, voiceidx );
 
-	/*mu2 = mu*mu;
-	a0 = y3 - y2 - y0 + y1; //p
-	a1 = y0 - y1 - a0;
-	a2 = y2 - y0;
-	a3 = y1;
-
-	return ( a0*mu*mu2 + a1*mu2 + a2*mu + a3 );*/
-
-	const s32 z0 = (vc.PV1 - vc.PV2) - (vc.PV4 - vc.PV3);
-	const s32 z1 = (vc.PV4 - vc.PV3) - z0;
-	const s32 z2 = (vc.PV2 - vc.PV4);
-
 	const s32 mu = vc.SP + 4096;
 
-	s32 val = (z0 * mu) >> 12;
-	val = ((val + z1) * mu) >> 12;
-	val = ((val + z2) * mu) >> 12;
-	val += vc.PV3;
+	s32 val;
+	if(Interpolation == 4)
+		val = CatmullRomInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
+	else if(Interpolation == 3)
+		val = HermiteInterpolate<48000>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
+	else
+		val = CubicInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
 
-	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
-	// it is used, various sound effects can end prematurely if we truncate more than
-	// one or two bits.  (or maybe it's better with no truncation at all?)
-	return MulShr32( val, vc.ADSR.Value );
-}
-
-/*
-   Tension: 32767 is high, 0 normal, -32768 is low
-*/
-template<s32 i_tension>
- __forceinline 
-static s32 HermiteInterpolate(
-   s32 y0, // 16.0
-   s32 y1, // 16.0
-   s32 y2, // 16.0
-   s32 y3, // 16.0
-   s32 mu  //  0.12
-   )
-{
-	s32 m00 = ((y1-y0)*i_tension) >> 16; // 16.0
-	s32 m01 = ((y2-y1)*i_tension) >> 16; // 16.0
-	s32 m0  = m00 + m01;
-
-	s32 m10 = ((y2-y1)*i_tension) >> 16; // 16.0
-	s32 m11 = ((y3-y2)*i_tension) >> 16; // 16.0
-	s32 m1  = m10 + m11;
-
-	s32 t0 = ((     2*y1 +   m0 + m1 - 2*y2) * mu) >> 12; // 16.0
-	s32 t1 = ((t0 - 3*y1 - 2*m0 - m1 + 3*y2) * mu) >> 12; // 16.0
-	s32 t2 = ((t1        +   m0            ) * mu) >> 12; // 16.0
-	s32 t3 = t2 + y1; // 16.0
-		
-	return(t3);
-}
-
-// Returns a 16 bit result in Value.
-static s32 __forceinline GetVoiceValues_Hermite( V_Core& thiscore, uint voiceidx )
-{
-	V_Voice& vc( thiscore.Voices[voiceidx] );
-
-	while( vc.SP > 0 )
-	{
-		vc.PV4 = vc.PV3;
-		vc.PV3 = vc.PV2;
-		vc.PV2 = vc.PV1;
-
-		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
-		//vc.PV1 <<= 2;
-		//vc.SPc = vc.SP&4095;	// just the fractional part, please!
-		vc.SP -= 4096;
-	}
-
-	CalculateADSR( thiscore, voiceidx );
-
-	const s32 mu = vc.SP + 4096;
-
-	// The template parameter should specify the "tension" for the hermite function,
-	// see the comments in the function for usage.
-	s32 val = HermiteInterpolate<16384>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
@@ -620,10 +626,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 			Value = GetNoiseValues( thiscore, voiceidx );
 		else
 		{
-			if( Interpolation == 3 )
-				Value = GetVoiceValues_Hermite( thiscore, voiceidx );
-			else
-			if( Interpolation == 2 )
+			if( Interpolation >= 2 )
 				Value = GetVoiceValues_Cubic( thiscore, voiceidx );
 			else
 				Value = GetVoiceValues_Linear( thiscore, voiceidx );

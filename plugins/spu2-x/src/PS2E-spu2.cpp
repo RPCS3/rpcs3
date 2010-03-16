@@ -26,6 +26,9 @@
 #	include "svnrev.h"
 #endif
 
+// Uncomment to enable debug keys
+//#define DEBUG_KEYS
+
 // PCSX2 expects ASNI, not unicode, so this MUST always be char...
 static char libraryName[256];
 
@@ -479,6 +482,11 @@ EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
 
 bool numpad_plus = false, numpad_plus_old = false;
 
+#ifdef DEBUG_KEYS
+u32 lastTicks;
+bool lState[5];
+#endif
+
 EXPORT_C_(void) SPU2async(u32 cycles) 
 {
 	DspUpdate();
@@ -492,6 +500,40 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 		pClocks += cycles;
 		TimeUpdate( pClocks );
 	}
+
+#ifdef DEBUG_KEYS
+	u32 curTicks = GetTickCount();
+	if((curTicks - lastTicks) >= 100)
+	{
+		int oldI = Interpolation;
+		bool cState[5];
+		for(int i=0;i<5;i++)
+		{
+			cState[i] = !!(GetAsyncKeyState(VK_NUMPAD0+i)&0x8000);
+
+			if(cState[i] && !lState[i])
+				Interpolation = i;
+
+			lState[i] = cState[i];
+		}
+
+		if(Interpolation != oldI)
+		{
+			printf("Interpolation set to %d", Interpolation);
+			switch(Interpolation)
+			{
+			case 0: printf(" - Nearest.\n"); break;
+			case 1: printf(" - Linear.\n"); break;
+			case 2: printf(" - Cubic.\n"); break;
+			case 3: printf(" - Hermite.\n"); break;
+			case 4: printf(" - Catmull-Rom.\n"); break;
+			default: printf(" (unknown).\n"); break;
+			}
+		}
+
+		lastTicks = curTicks;
+	}
+#endif
 }
 
 EXPORT_C_(u16) SPU2read(u32 rmem) 
