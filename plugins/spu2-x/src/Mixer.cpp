@@ -271,8 +271,7 @@ static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voi
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
-	// can also be 29 because it's left at 1 after the voice is stopped
-	if( vc.SCurrent >= 28 )
+	if (vc.SCurrent == 28 || !vc.SCurrent)
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
@@ -285,7 +284,7 @@ static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voi
 
 		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFFF) >> 8;	// grab loop flags from the upper byte.
 
-		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
+		if ((vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode)
 			vc.LoopStartA = vc.NextA;
 
 		IncrementNextA(thiscore, vc);
@@ -293,9 +292,9 @@ static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voi
 		vc.SCurrent = 0;
 	}
 
+	vc.SP -= 4096 * (4 - (vc.SCurrent & 3));
+	vc.SCurrent += 4 - (vc.SCurrent & 3);
 	IncrementNextA(thiscore, vc);
-
-	vc.SCurrent += 4;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -651,10 +650,8 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 		if ((vc.LoopFlags & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)) {
 			UpdatePitch(coreidx, voiceidx);
 
-			while (vc.SP > 0) {
+			while (vc.SP > 0)
 				GetNextDataDummy(thiscore, voiceidx); // Dummy is enough
-				vc.SP -= 16384;
-			}
 		}
 
 		// Write-back of raw voice data (some zeros since the voice is "dead")
