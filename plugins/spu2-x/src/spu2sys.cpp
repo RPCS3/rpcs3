@@ -145,6 +145,7 @@ void V_Core::Reset( int index )
 		VoiceGates[v].WetR = -1;
 
 		Voices[v].Volume		= V_VolumeSlideLR::Max;
+		Voices[v].SCurrent		= 28;
 
 		Voices[v].ADSR.Value	= 0;
 		Voices[v].ADSR.Phase	= 0;

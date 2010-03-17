@@ -31,22 +31,6 @@ static const s32 tbl_XA_Factor[5][2] =
 	{  122, -60 }
 };
 
-static double   K0[4] =
-{
-	0.0,
-	0.9375,
-	1.796875,
-	1.53125
-};
-
-static double   K1[4] =
-{
-	0.0,
-	0.0,
-	-0.8125,
-	-0.859375
-};
-
 
 // Performs a 64-bit multiplication between two values and returns the
 // high 32 bits as a result (discarding the fractional 32 bits).
@@ -121,7 +105,7 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 
 static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
-	const u8 header = *(u8*)block;
+	const s32 header = *block;
 	const s32 shift =  (header&0xF) + 16;
 	const s32 pred1 = tbl_XA_Factor[header>>4][0];
 	const s32 pred2 = tbl_XA_Factor[header>>4][1];
@@ -271,7 +255,7 @@ static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voi
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
-	if (vc.SCurrent == 28 || !vc.SCurrent)
+	if (vc.SCurrent == 28)
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
@@ -604,6 +588,10 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 {
 	V_Core& thiscore( Cores[coreidx] );
 	V_Voice& vc( thiscore.Voices[voiceidx] );
+
+	// If this assertion fails, it mans SCurrent is being corrupted somewhere, or is not initialized
+	// properly.  Invalid values in SCurrent will cause errant IRQs and corrupted audio.
+	pxAssumeMsg( (vc.SCurrent <= 28) && (vc.SCurrent != 0), "Current sample should always range from 1->28" );
 
 	// Most games don't use much volume slide effects.  So only call the UpdateVolume
 	// methods when needed by checking the flag outside the method here...
