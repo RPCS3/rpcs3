@@ -103,38 +103,6 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 	}
 }
 
-static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* block, s32& prev1, s32& prev2)
-{
-	const s32 header = *block;
-	const s32 shift =  (header&0xF) + 16;
-	const s32 pred1 = tbl_XA_Factor[header>>4][0];
-	const s32 pred2 = tbl_XA_Factor[header>>4][1];
-
-	const s8* blockbytes = (s8*)&block[1];
-
-	for(uint i=0; i<14; i++, blockbytes++)
-	{
-		s32 pcm, pcm2;
-		{
-			s32 data = ((*blockbytes)<<28) & 0xF0000000;
-			pcm = data>>shift;
-			pcm+=((pred1*prev1)+(pred2*prev2))>>6;
-			*(buffer++) = pcm;
-		}
-
-		{
-			s32 data = ((*blockbytes)<<24) & 0xF0000000;
-			pcm2 = data>>shift;
-			pcm2+=((pred1*pcm)+(pred2*prev1))>>6;
-			*(buffer++) = pcm2;
-		}
-
-		prev2 = pcm;
-		prev1 = pcm2;
-	}
-}
-
-
 static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 {
 	// Important!  Both cores signal IRQ when an address is read, regardless of
@@ -230,8 +198,6 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 					g_counter_cache_misses++;
 			}
 
-			// The unsaturated version causes clipping artefacts. TODO: Fix it :)
-			//XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 			XA_decode_block( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 		}
 
