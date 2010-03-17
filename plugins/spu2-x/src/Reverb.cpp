@@ -121,6 +121,46 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const u32 mix_dest_b1 = RevbGetIndexer( RevBuffers.MIX_DEST_B1 );
 
 		// -----------------------------------------
+		//          Optimized IRQ Testing !
+		// -----------------------------------------
+		
+		// This test is enhanced by using the reverb effects area begin/end test as a
+		// shortcut, since all buffer addresses are within that area.  If the IRQA isn't
+		// within that zone then the "bulk" of the test is skipped, so this should only
+		// be a slowdown on a few evil games.
+
+		for( uint i=0; i<2; i++ )
+		{
+			if( Cores[i].IRQEnable && ((Cores[i].IRQA >= EffectsStartA) && (Cores[i].IRQA <= EffectsEndA)) )
+			{
+				if(	(Cores[i].IRQA == src_a0)		||	(Cores[i].IRQA == src_a1)		||
+					(Cores[i].IRQA == src_b0)		||	(Cores[i].IRQA == src_b1)		||
+				
+					(Cores[i].IRQA == dest_a0)		||	(Cores[i].IRQA == dest_a1)		||
+					(Cores[i].IRQA == dest_b0)		||	(Cores[i].IRQA == dest_b1)		||
+
+					(Cores[i].IRQA == dest2_a0)		||	(Cores[i].IRQA == dest2_a1)		||
+					(Cores[i].IRQA == dest2_b0)		||	(Cores[i].IRQA == dest2_b1)		||
+
+					(Cores[i].IRQA == acc_src_a0)	||	(Cores[i].IRQA == acc_src_a1)	||
+					(Cores[i].IRQA == acc_src_b0)	||	(Cores[i].IRQA == acc_src_b1)	||
+					(Cores[i].IRQA == acc_src_c0)	||	(Cores[i].IRQA == acc_src_c1)	||
+					(Cores[i].IRQA == acc_src_d0)	||	(Cores[i].IRQA == acc_src_d1)	||
+
+					(Cores[i].IRQA == fb_src_a0)	||	(Cores[i].IRQA == fb_src_a1)	||
+					(Cores[i].IRQA == fb_src_b0)	||	(Cores[i].IRQA == fb_src_b1)	||
+
+					(Cores[i].IRQA == mix_dest_a0)	||	(Cores[i].IRQA == mix_dest_a1)	||
+					(Cores[i].IRQA == mix_dest_b0)	||	(Cores[i].IRQA == mix_dest_b1) )
+				{
+					//printf("Core %d IRQ Called (Reverb). IRQA = %x\n",i,addr);
+					Spdif.Info |= 4 << i;
+					SetIrqCall();
+				}
+			}
+		}
+		
+		// -----------------------------------------
 		//         Begin Reverb Processing !
 		// -----------------------------------------
 

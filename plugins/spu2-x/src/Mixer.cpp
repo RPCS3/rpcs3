@@ -108,7 +108,7 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 	// Important!  Both cores signal IRQ when an address is read, regardless of
 	// which core actually reads the address.
 
-	for( int i=0; i<2; i++ )
+	for( uint i=0; i<2; i++ )
 	{
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
 		{
@@ -533,7 +533,7 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voice
 static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
 {
 	// Fixes some of the oldest hangs in pcsx2's history! :p
-	for( int i=0; i<2; i++ )
+	for( uint i=0; i<2; i++ )
 	{
 		if( Cores[i].IRQEnable && Cores[i].IRQA == addr )
 		{
