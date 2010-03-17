@@ -359,35 +359,6 @@ static __forceinline void CalculateADSR( V_Core& thiscore, uint voiceidx )
 	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
 }
 
-// Returns a 16 bit result in Value.
-static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, uint voiceidx )
-{
-	V_Voice& vc( thiscore.Voices[voiceidx] );
-
-	while( vc.SP > 0 )
-	{
-		vc.PV2 = vc.PV1;
-		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
-		vc.SP -= 4096;
-	}
-
-	CalculateADSR( thiscore, voiceidx );
-
-	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
-	// it is used, various sound effects can end prematurely if we truncate more than
-	// one or two bits.
-
-	if(Interpolation==0)
-	{
-		return ApplyVolume( vc.PV1, vc.ADSR.Value );
-	}
-	else //if(Interpolation==1) //must be linear
-	{
-		s32 t0 = vc.PV2 - vc.PV1;
-		return MulShr32( (vc.PV1<<1) - ((t0*vc.SP)>>11), vc.ADSR.Value );
-	}
-}
-
 /*
    Tension: 65535 is high, 32768 is normal, 0 is low
 */
@@ -463,39 +434,40 @@ static s32 CubicInterpolate(
 }
 
 // Returns a 16 bit result in Value.
-static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
+// Uses standard template-style optimization techniques to statically generate five different
+// versions of this function (one for each type of interpolation).
+template< int InterpType >
+static __forceinline s32 GetVoiceValues( V_Core& thiscore, uint voiceidx )
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
 	while( vc.SP > 0 )
 	{
-		vc.PV4 = vc.PV3;
-		vc.PV3 = vc.PV2;
+		if( InterpType >= 2 )
+		{
+			vc.PV4 = vc.PV3;
+			vc.PV3 = vc.PV2;
+		}
 		vc.PV2 = vc.PV1;
-
 		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
-		//vc.PV1 <<= 2;
-		//vc.SPc = vc.SP&4095;	// just the fractional part, please!
 		vc.SP -= 4096;
 	}
 
-	CalculateADSR( thiscore, voiceidx );
-
 	const s32 mu = vc.SP + 4096;
 
-	s32 val;
-	if(Interpolation == 4)
-		val = CatmullRomInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
-	else if(Interpolation == 3)
-		val = HermiteInterpolate<16384>(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
-	else
-		val = CubicInterpolate(vc.PV4,vc.PV3,vc.PV2,vc.PV1,mu);
+	switch( InterpType )
+	{
+		case 0: return vc.PV1;
+		case 1: return (vc.PV1<<1) - (( (vc.PV2 - vc.PV1) * vc.SP)>>11);
 
+		case 2: return CubicInterpolate				(vc.PV4, vc.PV3, vc.PV2, vc.PV1, mu);
+		case 3: return HermiteInterpolate<16384>	(vc.PV4, vc.PV3, vc.PV2, vc.PV1, mu);
+		case 4: return CatmullRomInterpolate		(vc.PV4, vc.PV3, vc.PV2, vc.PV1, mu);
 
-	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
-	// it is used, various sound effects can end prematurely if we truncate more than
-	// one or two bits.  (or maybe it's better with no truncation at all?)
-	return MulShr32( val, vc.ADSR.Value );
+		jNO_DEFAULT;
+	}
+	
+	return 0;		// technically unreachable!
 }
 
 // Noise values need to be mixed without going through interpolation, since it
@@ -517,10 +489,7 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voice
 	// like GetVoiceValues can.  Better assert just in case though..
 	jASSUME( vc.ADSR.Phase != 0 );
 
-	CalculateADSR( thiscore, voiceidx );
-
-	// Yup, ADSR applies even to noise sources...
-	return ApplyVolume( retval, vc.ADSR.Value );
+	return retval;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -579,14 +548,31 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 			Value = GetNoiseValues( thiscore, voiceidx );
 		else
 		{
-			if( Interpolation >= 2 )
-				Value = GetVoiceValues_Cubic( thiscore, voiceidx );
-			else
-				Value = GetVoiceValues_Linear( thiscore, voiceidx );
+			// Optimization : Forceinline'd Templated Dispatch Table.  Any halfwit compiler will
+			// turn this into a clever jump dispatch table (no call/rets, no compares, uber-efficient!)
+
+			switch( Interpolation )
+			{
+				case 0: Value = GetVoiceValues<0>( thiscore, voiceidx );
+				case 1: Value = GetVoiceValues<1>( thiscore, voiceidx );
+				case 2: Value = GetVoiceValues<2>( thiscore, voiceidx );
+				case 3: Value = GetVoiceValues<3>( thiscore, voiceidx );
+				case 4: Value = GetVoiceValues<4>( thiscore, voiceidx );
+				
+				jNO_DEFAULT;
+			}
 		}
 
-		// Note: All values recorded into OutX (may be used for modulation later)
-		vc.OutX = Value;
+		// Update and Apply ADSR  (applies to normal and noise sources)
+		//
+		// Note!  It's very important that ADSR stay as accurate as possible.  By the way
+		// it is used, various sound effects can end prematurely if we truncate more than
+		// one or two bits.  Best result comes from no truncation at all, which is why we
+		// use a full 64-bit multiply/result here.
+
+		CalculateADSR( thiscore, voiceidx );
+		Value	= MulShr32( Value, vc.ADSR.Value );
+		vc.OutX	= Value;		// Note: All values recorded into OutX (may be used for modulation later)
 
 		if( IsDevBuild )
 			DebugCores[coreidx].Voices[voiceidx].displayPeak = std::max(DebugCores[coreidx].Voices[voiceidx].displayPeak,abs(vc.OutX));
