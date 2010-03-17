@@ -553,11 +553,11 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 			switch( Interpolation )
 			{
-				case 0: Value = GetVoiceValues<0>( thiscore, voiceidx );
-				case 1: Value = GetVoiceValues<1>( thiscore, voiceidx );
-				case 2: Value = GetVoiceValues<2>( thiscore, voiceidx );
-				case 3: Value = GetVoiceValues<3>( thiscore, voiceidx );
-				case 4: Value = GetVoiceValues<4>( thiscore, voiceidx );
+				case 0: Value = GetVoiceValues<0>( thiscore, voiceidx ); break;
+				case 1: Value = GetVoiceValues<1>( thiscore, voiceidx ); break;
+				case 2: Value = GetVoiceValues<2>( thiscore, voiceidx ); break;
+				case 3: Value = GetVoiceValues<3>( thiscore, voiceidx ); break;
+				case 4: Value = GetVoiceValues<4>( thiscore, voiceidx ); break;
 				
 				jNO_DEFAULT;
 			}
