@@ -121,8 +121,14 @@ else {
 	xPSHUF.D   (destReg, workReg, _v0);
 }
 
+// The V2 + V3 unpacks have freaky behaviour, the manual claims "indeterminate".
+// After testing on the PS2, it's very much determinate in 99% of cases
+// and games like Lemmings, And1 Streetball rely on this data to be like this!
+// I have commented after each shuffle to show what data is going where - Ref
+
 void VifUnpackSSE_Base::xUPK_V2_32() const {
 	xMOV64     (destReg, ptr32[srcIndirect]);
+	xMOVH.PS   (destReg, ptr32[srcIndirect]); //v1v0v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V2_16() const {
@@ -134,6 +140,7 @@ else {
 	xPUNPCK.LWD(destReg, destReg);
 	xShiftR    (destReg, 16);
 }
+	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V2_8() const {
@@ -146,10 +153,12 @@ else {
 	xPUNPCK.LWD(destReg, destReg);
 	xShiftR    (destReg, 24);
 }
+	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V3_32() const {
 	xMOV128    (destReg, ptr32[srcIndirect]);
+	xPSHUF.D   (destReg, destReg, 0xA4); //v2v2v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V3_16() const {
@@ -161,6 +170,7 @@ else {
 	xPUNPCK.LWD(destReg, destReg);
 	xShiftR    (destReg, 16);
 }
+	xPSHUF.D   (destReg, destReg, 0xA4); //v2v2v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V3_8() const {
@@ -173,6 +183,7 @@ else {
 	xPUNPCK.LWD(destReg, destReg);
 	xShiftR    (destReg, 24);
 }
+	xPSHUF.D   (destReg, destReg, 0xA4); //v2v2v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V4_32() const {
