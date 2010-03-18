@@ -1,10 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// gcc version of the x86 CPU detect routine.
+/// Generic version of the x86 CPU extension detection routine.
 ///
-/// This file is to be compiled on any platform with the GNU C compiler.
-/// Compiler. Please see 'cpu_detect_x86_win.cpp' for the x86 Windows version 
-/// of this file.
+/// This file is for GNU & other non-Windows compilers, see 'cpu_detect_x86_win.cpp' 
+/// for the Microsoft compiler version.
 ///
 /// Author        : Copyright (c) Olli Parviainen
 /// Author e-mail : oparviai 'at' iki.fi
@@ -12,10 +11,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.6 $
+// Last changed  : $Date: 2009-02-25 19:13:51 +0200 (Wed, 25 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: cpu_detect_x86_gcc.cpp,v 1.6 2006/02/05 16:44:06 Olli Exp $
+// $Id: cpu_detect_x86_gcc.cpp 67 2009-02-25 17:13:51Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -43,20 +42,17 @@
 #include <stdexcept>
 #include <string>
 #include "cpu_detect.h"
-
-#ifndef __GNUC__
-#error wrong platform - this source code file is for the GNU C compiler.
-#endif
+#include "STTypes.h"
 
 using namespace std;
 
 #include <stdio.h>
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // processor instructions extension detection routines
 //
 //////////////////////////////////////////////////////////////////////////////
-
 
 // Flag variable indicating whick ISA extensions are disabled (for debugging)
 static uint _dwDisabledISA = 0x00;      // 0xffffffff; //<- use this to disable all extensions
@@ -72,8 +68,10 @@ void disableExtensions(uint dwDisableMask)
 /// Checks which instruction set extensions are supported by the CPU.
 uint detectCPUextensions(void)
 {
-#ifndef __i386__
+#if (!(ALLOW_X86_OPTIMIZATIONS) || !(__GNUC__))
+
     return 0; // always disable extensions on non-x86 platforms.
+
 #else
     uint res = 0;
 
@@ -84,22 +82,21 @@ uint detectCPUextensions(void)
         // check if 'cpuid' instructions is available by toggling eflags bit 21
 
         "\n\tpushf"                      // save eflags to stack
-        "\n\tpop     %%eax"              // load eax from stack (with eflags)
+        "\n\tmovl    (%%esp), %%eax"     // load eax from stack (with eflags)
         "\n\tmovl    %%eax, %%ecx"       // save the original eflags values to ecx
         "\n\txor     $0x00200000, %%eax" // toggle bit 21
-        "\n\tpush    %%eax"              // store toggled eflags to stack
+        "\n\tmovl    %%eax, (%%esp)"     // store toggled eflags to stack
         "\n\tpopf"                       // load eflags from stack
         "\n\tpushf"                      // save updated eflags to stack
-        "\n\tpop     %%eax"              // load from stack
+        "\n\tmovl    (%%esp), %%eax"     // load eax from stack
+        "\n\tpopf"                       // pop stack to restore esp
         "\n\txor     %%edx, %%edx"       // clear edx for defaulting no mmx
         "\n\tcmp     %%ecx, %%eax"       // compare to original eflags values
         "\n\tjz      end"                // jumps to 'end' if cpuid not present
-
         // cpuid instruction available, test for presence of mmx instructions
 
         "\n\tmovl    $1, %%eax"
         "\n\tcpuid"
-//        movl       $0x00800000, %edx   // force enable MMX
         "\n\ttest    $0x00800000, %%edx"
         "\n\tjz      end"                // branch if MMX not available
 

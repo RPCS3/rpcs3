@@ -17,10 +17,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.8 $
+// Last changed  : $Date: 2009-04-13 16:18:48 +0300 (Mon, 13 Apr 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIFOSamplePipe.h,v 1.8 2006/02/05 16:44:06 Olli Exp $
+// $Id: FIFOSamplePipe.h 69 2009-04-13 13:18:48Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -59,6 +59,10 @@ namespace soundtouch
 class FIFOSamplePipe
 {
 public:
+    // virtual default destructor
+    virtual ~FIFOSamplePipe() {}
+
+
     /// Returns a pointer to the beginning of the output samples. 
     /// This function is provided for accessing the output samples directly. 
     /// Please be careful for not to corrupt the book-keeping!
@@ -66,12 +70,12 @@ public:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const = 0;
+    virtual SAMPLETYPE *ptrBegin() = 0;
 
     /// Adds 'numSamples' pcs of samples from the 'samples' memory position to
     /// the sample buffer.
     virtual void putSamples(const SAMPLETYPE *samples,  ///< Pointer to samples.
-                            uint numSamples                         ///< Number of samples to insert.
+                            uint numSamples             ///< Number of samples to insert.
                             ) = 0;
 
 
@@ -166,7 +170,7 @@ protected:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const
+    virtual SAMPLETYPE *ptrBegin()
     {
         return output->ptrBegin();
     }

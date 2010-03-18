@@ -13,10 +13,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.24 $
+// Last changed  : $Date: 2009-12-28 21:27:04 +0200 (Mon, 28 Dec 2009) $
+// File revision : $Revision: 1.12 $
 //
-// $Id: TDStretch.cpp,v 1.24 2006/02/05 16:44:06 Olli Exp $
+// $Id: TDStretch.cpp 77 2009-12-28 19:27:04Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -42,23 +42,21 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <string.h>
-#include <stdlib.h>
-#include <memory.h>
 #include <limits.h>
-#include <math.h>
 #include <assert.h>
+#include <math.h>
+#include <float.h>
+#include <stdexcept>
 
 #include "STTypes.h"
 #include "cpu_detect.h"
 #include "TDStretch.h"
 
+#include <stdio.h>
+
 using namespace soundtouch;
 
-#ifndef min
-#define min(a,b) ((a > b) ? b : a)
-#define max(a,b) ((a < b) ? b : a)
-#endif
-
+#define max(x, y) (((x) > (y)) ? (x) : (y))
 
 
 /*****************************************************************************
@@ -67,17 +65,18 @@ using namespace soundtouch;
  *
  *****************************************************************************/
 
-
 // Table for the hierarchical mixing position seeking algorithm
-int scanOffsets[4][24]={
-    { 124,  186,  248,  310,  372,  434,  496,  558,  620,  682,  744, 806, 
-      868,  930,  992, 1054, 1116, 1178, 1240, 1302, 1364, 1426, 1488,   0}, 
+static const short _scanOffsets[5][24]={
+    { 124,  186,  248,  310,  372,  434,  496,  558,  620,  682,  744, 806,
+      868,  930,  992, 1054, 1116, 1178, 1240, 1302, 1364, 1426, 1488,   0},
     {-100,  -75,  -50,  -25,   25,   50,   75,  100,    0,    0,    0,   0,
         0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0},
     { -20,  -15,  -10,   -5,    5,   10,   15,   20,    0,    0,    0,   0,
         0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0},
     {  -4,   -3,   -2,   -1,    1,    2,    3,    4,    0,    0,    0,   0,
-        0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0}};
+        0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,   0},
+    { 121,  114,   97,  114,   98,  105,  108,   32,  104,   99,  117,  111,
+      116,  100,  110,  117,  111,  115,    0,    0,    0,    0,    0,   0}};
 
 /*****************************************************************************
  *
@@ -88,19 +87,25 @@ int scanOffsets[4][24]={
 
 TDStretch::TDStretch() : FIFOProcessor(&outputBuffer)
 {
-    bQuickseek = FALSE;
+    bQuickSeek = FALSE;
     channels = 2;
-    bMidBufferDirty = FALSE;
 
     pMidBuffer = NULL;
     pRefMidBufferUnaligned = NULL;
     overlapLength = 0;
 
+    bAutoSeqSetting = TRUE;
+    bAutoSeekSetting = TRUE;
+
+//    outDebt = 0;
+    skipFract = 0;
+
+    tempo = 1.0f;
     setParameters(48000, DEFAULT_SEQUENCE_MS, DEFAULT_SEEKWINDOW_MS, DEFAULT_OVERLAP_MS);
-
     setTempo(1.0f);
-}
 
+    clear();
+}
 
 
 
@@ -108,14 +113,6 @@ TDStretch::~TDStretch()
 {
     delete[] pMidBuffer;
     delete[] pRefMidBufferUnaligned;
-}
-
-
-    
-// Calculates the x having the closest 2^x value for the given value
-static int _getClosest2Power(double value)
-{
-    return (int)(log(value) / log(2.0) + 0.5);
 }
 
 
@@ -129,18 +126,36 @@ static int _getClosest2Power(double value)
 //      position (default = 28 ms)
 // 'overlapMS' = overlapping length (default = 12 ms)
 
-void TDStretch::setParameters(uint aSampleRate, uint aSequenceMS, 
-                              uint aSeekWindowMS, uint aOverlapMS)
+void TDStretch::setParameters(int aSampleRate, int aSequenceMS, 
+                              int aSeekWindowMS, int aOverlapMS)
 {
-    this->sampleRate = aSampleRate;
-    this->sequenceMs = aSequenceMS;
-    this->seekWindowMs = aSeekWindowMS;
-    this->overlapMs = aOverlapMS;
+    // accept only positive parameter values - if zero or negative, use old values instead
+    if (aSampleRate > 0)   this->sampleRate = aSampleRate;
+    if (aOverlapMS > 0)    this->overlapMs = aOverlapMS;
 
-    seekLength = (sampleRate * seekWindowMs) / 1000;
-    seekWindowLength = (sampleRate * sequenceMs) / 1000;
+    if (aSequenceMS > 0)
+    {
+        this->sequenceMs = aSequenceMS;
+        bAutoSeqSetting = FALSE;
+    } 
+    else if (aSequenceMS == 0)
+    {
+        // if zero, use automatic setting
+        bAutoSeqSetting = TRUE;
+    }
 
-    maxOffset = seekLength;
+    if (aSeekWindowMS > 0) 
+    {
+        this->seekWindowMs = aSeekWindowMS;
+        bAutoSeekSetting = FALSE;
+    } 
+    else if (aSeekWindowMS == 0) 
+    {
+        // if zero, use automatic setting
+        bAutoSeekSetting = TRUE;
+    }
+
+    calcSeqParameters();
 
     calculateOverlapLength(overlapMs);
 
@@ -154,7 +169,7 @@ void TDStretch::setParameters(uint aSampleRate, uint aSequenceMS,
 /// Get routine control parameters, see setParameters() function.
 /// Any of the parameters to this function can be NULL, in such case corresponding parameter
 /// value isn't returned.
-void TDStretch::getParameters(uint *pSampleRate, uint *pSequenceMs, uint *pSeekWindowMs, uint *pOverlapMs)
+void TDStretch::getParameters(int *pSampleRate, int *pSequenceMs, int *pSeekWindowMs, int *pOverlapMs) const
 {
     if (pSampleRate)
     {
@@ -163,12 +178,12 @@ void TDStretch::getParameters(uint *pSampleRate, uint *pSequenceMs, uint *pSeekW
 
     if (pSequenceMs)
     {
-        *pSequenceMs = sequenceMs;
+        *pSequenceMs = (bAutoSeqSetting) ? (USE_AUTO_SEQUENCE_LEN) : sequenceMs;
     }
 
     if (pSeekWindowMs)
     {
-        *pSeekWindowMs = seekWindowMs;
+        *pSeekWindowMs = (bAutoSeekSetting) ? (USE_AUTO_SEEKWINDOW_LEN) : seekWindowMs;
     }
 
     if (pOverlapMs)
@@ -178,15 +193,15 @@ void TDStretch::getParameters(uint *pSampleRate, uint *pSequenceMs, uint *pSeekW
 }
 
 
-// Overlaps samples in 'midBuffer' with the samples in 'input'
-void TDStretch::overlapMono(SAMPLETYPE *output, const SAMPLETYPE *input) const
+// Overlaps samples in 'midBuffer' with the samples in 'pInput'
+void TDStretch::overlapMono(SAMPLETYPE *pOutput, const SAMPLETYPE *pInput) const
 {
     int i, itemp;
 
-    for (i = 0; i < (int)overlapLength ; i ++) 
+    for (i = 0; i < overlapLength ; i ++) 
     {
         itemp = overlapLength - i;
-        output[i] = (input[i] * i + pMidBuffer[i] * itemp ) / overlapLength;    // >> overlapDividerBits;
+        pOutput[i] = (pInput[i] * i + pMidBuffer[i] * itemp ) / overlapLength;    // >> overlapDividerBits;
     }
 }
 
@@ -194,11 +209,7 @@ void TDStretch::overlapMono(SAMPLETYPE *output, const SAMPLETYPE *input) const
 
 void TDStretch::clearMidBuffer()
 {
-    if (bMidBufferDirty) 
-    {
-        memset(pMidBuffer, 0, 2 * sizeof(SAMPLETYPE) * overlapLength);
-        bMidBufferDirty = FALSE;
-    }
+    memset(pMidBuffer, 0, 2 * sizeof(SAMPLETYPE) * overlapLength);
 }
 
 
@@ -213,8 +224,7 @@ void TDStretch::clearInput()
 void TDStretch::clear()
 {
     outputBuffer.clear();
-    inputBuffer.clear();
-    clearMidBuffer();
+    clearInput();
 }
 
 
@@ -223,24 +233,24 @@ void TDStretch::clear()
 // to enable
 void TDStretch::enableQuickSeek(BOOL enable)
 {
-    bQuickseek = enable;
+    bQuickSeek = enable;
 }
 
 
 // Returns nonzero if the quick seeking algorithm is enabled.
 BOOL TDStretch::isQuickSeekEnabled() const
 {
-    return bQuickseek;
+    return bQuickSeek;
 }
 
 
 // Seeks for the optimal overlap-mixing position.
-uint TDStretch::seekBestOverlapPosition(const SAMPLETYPE *refPos)
+int TDStretch::seekBestOverlapPosition(const SAMPLETYPE *refPos)
 {
     if (channels == 2) 
     {
         // stereo sound
-        if (bQuickseek) 
+        if (bQuickSeek) 
         {
             return seekBestOverlapPositionStereoQuick(refPos);
         } 
@@ -252,7 +262,7 @@ uint TDStretch::seekBestOverlapPosition(const SAMPLETYPE *refPos)
     else 
     {
         // mono sound
-        if (bQuickseek) 
+        if (bQuickSeek) 
         {
             return seekBestOverlapPositionMonoQuick(refPos);
         } 
@@ -266,17 +276,17 @@ uint TDStretch::seekBestOverlapPosition(const SAMPLETYPE *refPos)
 
 
 
-// Overlaps samples in 'midBuffer' with the samples in 'inputBuffer' at position
+// Overlaps samples in 'midBuffer' with the samples in 'pInputBuffer' at position
 // of 'ovlPos'.
-inline void TDStretch::overlap(SAMPLETYPE *output, const SAMPLETYPE *input, uint ovlPos) const
+inline void TDStretch::overlap(SAMPLETYPE *pOutput, const SAMPLETYPE *pInput, uint ovlPos) const
 {
     if (channels == 2) 
     {
         // stereo sound
-        overlapStereo(output, input + 2 * ovlPos);
+        overlapStereo(pOutput, pInput + 2 * ovlPos);
     } else {
         // mono sound.
-        overlapMono(output, input + ovlPos);
+        overlapMono(pOutput, pInput + ovlPos);
     }
 }
 
@@ -289,16 +299,16 @@ inline void TDStretch::overlap(SAMPLETYPE *output, const SAMPLETYPE *input, uint
 // The best position is determined as the position where the two overlapped
 // sample sequences are 'most alike', in terms of the highest cross-correlation
 // value over the overlapping period
-uint TDStretch::seekBestOverlapPositionStereo(const SAMPLETYPE *refPos) 
+int TDStretch::seekBestOverlapPositionStereo(const SAMPLETYPE *refPos) 
 {
-    uint bestOffs;
-    LONG_SAMPLETYPE bestCorr, corr;
-    uint i;
+    int bestOffs;
+    double bestCorr, corr;
+    int i;
 
     // Slopes the amplitudes of the 'midBuffer' samples
     precalcCorrReferenceStereo();
 
-    bestCorr = INT_MIN;
+    bestCorr = FLT_MIN;
     bestOffs = 0;
 
     // Scans for the best correlation value by testing each possible position
@@ -307,7 +317,10 @@ uint TDStretch::seekBestOverlapPositionStereo(const SAMPLETYPE *refPos)
     {
         // Calculates correlation value for the mixing position corresponding
         // to 'i'
-        corr = calcCrossCorrStereo(refPos + 2 * i, pRefMidBuffer);
+        corr = (double)calcCrossCorrStereo(refPos + 2 * i, pRefMidBuffer);
+        // heuristic rule to slightly favour values close to mid of the range
+        double tmp = (double)(2 * i - seekLength) / (double)seekLength;
+        corr = ((corr + 0.1) * (1.0 - 0.25 * tmp * tmp));
 
         // Checks for the highest correlation value
         if (corr > bestCorr) 
@@ -329,18 +342,18 @@ uint TDStretch::seekBestOverlapPositionStereo(const SAMPLETYPE *refPos)
 // The best position is determined as the position where the two overlapped
 // sample sequences are 'most alike', in terms of the highest cross-correlation
 // value over the overlapping period
-uint TDStretch::seekBestOverlapPositionStereoQuick(const SAMPLETYPE *refPos) 
+int TDStretch::seekBestOverlapPositionStereoQuick(const SAMPLETYPE *refPos) 
 {
-    uint j;
-    uint bestOffs;
-    LONG_SAMPLETYPE bestCorr, corr;
-    uint scanCount, corrOffset, tempOffset;
+    int j;
+    int bestOffs;
+    double bestCorr, corr;
+    int scanCount, corrOffset, tempOffset;
 
     // Slopes the amplitude of the 'midBuffer' samples
     precalcCorrReferenceStereo();
 
-    bestCorr = INT_MIN;
-    bestOffs = 0;
+    bestCorr = FLT_MIN;
+    bestOffs = _scanOffsets[0][0];
     corrOffset = 0;
     tempOffset = 0;
 
@@ -353,14 +366,17 @@ uint TDStretch::seekBestOverlapPositionStereoQuick(const SAMPLETYPE *refPos)
     for (scanCount = 0;scanCount < 4; scanCount ++) 
     {
         j = 0;
-        while (scanOffsets[scanCount][j]) 
+        while (_scanOffsets[scanCount][j]) 
         {
-            tempOffset = corrOffset + scanOffsets[scanCount][j];
+            tempOffset = corrOffset + _scanOffsets[scanCount][j];
             if (tempOffset >= seekLength) break;
 
             // Calculates correlation value for the mixing position corresponding
             // to 'tempOffset'
-            corr = calcCrossCorrStereo(refPos + 2 * tempOffset, pRefMidBuffer);
+            corr = (double)calcCrossCorrStereo(refPos + 2 * tempOffset, pRefMidBuffer);
+            // heuristic rule to slightly favour values close to mid of the range
+            double tmp = (double)(2 * tempOffset - seekLength) / seekLength;
+            corr = ((corr + 0.1) * (1.0 - 0.25 * tmp * tmp));
 
             // Checks for the highest correlation value
             if (corr > bestCorr) 
@@ -386,17 +402,17 @@ uint TDStretch::seekBestOverlapPositionStereoQuick(const SAMPLETYPE *refPos)
 // The best position is determined as the position where the two overlapped
 // sample sequences are 'most alike', in terms of the highest cross-correlation
 // value over the overlapping period
-uint TDStretch::seekBestOverlapPositionMono(const SAMPLETYPE *refPos) 
+int TDStretch::seekBestOverlapPositionMono(const SAMPLETYPE *refPos) 
 {
-    uint bestOffs;
-    LONG_SAMPLETYPE bestCorr, corr;
-    uint tempOffset;
+    int bestOffs;
+    double bestCorr, corr;
+    int tempOffset;
     const SAMPLETYPE *compare;
 
     // Slopes the amplitude of the 'midBuffer' samples
     precalcCorrReferenceMono();
 
-    bestCorr = INT_MIN;
+    bestCorr = FLT_MIN;
     bestOffs = 0;
 
     // Scans for the best correlation value by testing each possible position
@@ -407,7 +423,10 @@ uint TDStretch::seekBestOverlapPositionMono(const SAMPLETYPE *refPos)
 
         // Calculates correlation value for the mixing position corresponding
         // to 'tempOffset'
-        corr = calcCrossCorrMono(pRefMidBuffer, compare);
+        corr = (double)calcCrossCorrMono(pRefMidBuffer, compare);
+        // heuristic rule to slightly favour values close to mid of the range
+        double tmp = (double)(2 * tempOffset - seekLength) / seekLength;
+        corr = ((corr + 0.1) * (1.0 - 0.25 * tmp * tmp));
 
         // Checks for the highest correlation value
         if (corr > bestCorr) 
@@ -429,18 +448,18 @@ uint TDStretch::seekBestOverlapPositionMono(const SAMPLETYPE *refPos)
 // The best position is determined as the position where the two overlapped
 // sample sequences are 'most alike', in terms of the highest cross-correlation
 // value over the overlapping period
-uint TDStretch::seekBestOverlapPositionMonoQuick(const SAMPLETYPE *refPos) 
+int TDStretch::seekBestOverlapPositionMonoQuick(const SAMPLETYPE *refPos) 
 {
-    uint j;
-    uint bestOffs;
-    LONG_SAMPLETYPE bestCorr, corr;
-    uint scanCount, corrOffset, tempOffset;
+    int j;
+    int bestOffs;
+    double bestCorr, corr;
+    int scanCount, corrOffset, tempOffset;
 
     // Slopes the amplitude of the 'midBuffer' samples
     precalcCorrReferenceMono();
 
-    bestCorr = INT_MIN;
-    bestOffs = 0;
+    bestCorr = FLT_MIN;
+    bestOffs = _scanOffsets[0][0];
     corrOffset = 0;
     tempOffset = 0;
 
@@ -453,14 +472,17 @@ uint TDStretch::seekBestOverlapPositionMonoQuick(const SAMPLETYPE *refPos)
     for (scanCount = 0;scanCount < 4; scanCount ++) 
     {
         j = 0;
-        while (scanOffsets[scanCount][j]) 
+        while (_scanOffsets[scanCount][j]) 
         {
-            tempOffset = corrOffset + scanOffsets[scanCount][j];
+            tempOffset = corrOffset + _scanOffsets[scanCount][j];
             if (tempOffset >= seekLength) break;
 
             // Calculates correlation value for the mixing position corresponding
             // to 'tempOffset'
-            corr = calcCrossCorrMono(refPos + tempOffset, pRefMidBuffer);
+            corr = (double)calcCrossCorrMono(refPos + tempOffset, pRefMidBuffer);
+            // heuristic rule to slightly favour values close to mid of the range
+            double tmp = (double)(2 * tempOffset - seekLength) / seekLength;
+            corr = ((corr + 0.1) * (1.0 - 0.25 * tmp * tmp));
 
             // Checks for the highest correlation value
             if (corr > bestCorr) 
@@ -486,29 +508,82 @@ void TDStretch::clearCrossCorrState()
 }
 
 
+/// Calculates processing sequence length according to tempo setting
+void TDStretch::calcSeqParameters()
+{
+    // Adjust tempo param according to tempo, so that variating processing sequence length is used
+    // at varius tempo settings, between the given low...top limits
+    #define AUTOSEQ_TEMPO_LOW   0.5     // auto setting low tempo range (-50%)
+    #define AUTOSEQ_TEMPO_TOP   2.0     // auto setting top tempo range (+100%)
+
+    // sequence-ms setting values at above low & top tempo
+    #define AUTOSEQ_AT_MIN      125.0
+    #define AUTOSEQ_AT_MAX      50.0
+    #define AUTOSEQ_K           ((AUTOSEQ_AT_MAX - AUTOSEQ_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW))
+    #define AUTOSEQ_C           (AUTOSEQ_AT_MIN - (AUTOSEQ_K) * (AUTOSEQ_TEMPO_LOW))
+
+    // seek-window-ms setting values at above low & top tempo
+    #define AUTOSEEK_AT_MIN     25.0
+    #define AUTOSEEK_AT_MAX     15.0
+    #define AUTOSEEK_K          ((AUTOSEEK_AT_MAX - AUTOSEEK_AT_MIN) / (AUTOSEQ_TEMPO_TOP - AUTOSEQ_TEMPO_LOW))
+    #define AUTOSEEK_C          (AUTOSEEK_AT_MIN - (AUTOSEEK_K) * (AUTOSEQ_TEMPO_LOW))
+
+    #define CHECK_LIMITS(x, mi, ma) (((x) < (mi)) ? (mi) : (((x) > (ma)) ? (ma) : (x)))
+
+    double seq, seek;
+    
+    if (bAutoSeqSetting)
+    {
+        seq = AUTOSEQ_C + AUTOSEQ_K * tempo;
+        seq = CHECK_LIMITS(seq, AUTOSEQ_AT_MAX, AUTOSEQ_AT_MIN);
+        sequenceMs = (int)(seq + 0.5);
+    }
+
+    if (bAutoSeekSetting)
+    {
+        seek = AUTOSEEK_C + AUTOSEEK_K * tempo;
+        seek = CHECK_LIMITS(seek, AUTOSEEK_AT_MAX, AUTOSEEK_AT_MIN);
+        seekWindowMs = (int)(seek + 0.5);
+    }
+
+    // Update seek window lengths
+    seekWindowLength = (sampleRate * sequenceMs) / 1000;
+    if (seekWindowLength < 2 * overlapLength) 
+    {
+        seekWindowLength = 2 * overlapLength;
+    }
+    seekLength = (sampleRate * seekWindowMs) / 1000;
+}
+
+
+
 // Sets new target tempo. Normal tempo = 'SCALE', smaller values represent slower 
 // tempo, larger faster tempo.
 void TDStretch::setTempo(float newTempo)
 {
-    uint intskip;
+    int intskip;
 
     tempo = newTempo;
 
+    // Calculate new sequence duration
+    calcSeqParameters();
+
     // Calculate ideal skip length (according to tempo value) 
     nominalSkip = tempo * (seekWindowLength - overlapLength);
-    skipFract = 0;
     intskip = (int)(nominalSkip + 0.5f);
 
     // Calculate how many samples are needed in the 'inputBuffer' to 
     // process another batch of samples
-    sampleReq = max(intskip + overlapLength, seekWindowLength) + maxOffset;
+    //sampleReq = max(intskip + overlapLength, seekWindowLength) + seekLength / 2;
+    sampleReq = max(intskip + overlapLength, seekWindowLength) + seekLength;
 }
 
 
 
 // Sets the number of channels, 1 = mono, 2 = stereo
-void TDStretch::setChannels(uint numChannels)
+void TDStretch::setChannels(int numChannels)
 {
+    assert(numChannels > 0);
     if (channels == numChannels) return;
     assert(numChannels == 1 || numChannels == 2);
 
@@ -520,6 +595,7 @@ void TDStretch::setChannels(uint numChannels)
 
 // nominal tempo, no need for processing, just pass the samples through
 // to outputBuffer
+/*
 void TDStretch::processNominalTempo()
 {
     assert(tempo == 1.0f);
@@ -547,13 +623,15 @@ void TDStretch::processNominalTempo()
     // Simply bypass samples from input to output
     outputBuffer.moveSamples(inputBuffer);
 }
+*/
 
+#include <stdio.h>
 
 // Processes as many processing frames of the samples 'inputBuffer', store
 // the result into 'outputBuffer'
 void TDStretch::processSamples()
 {
-    uint ovlSkip, offset;
+    int ovlSkip, offset;
     int temp;
 
     /* Removed this small optimization - can introduce a click to sound when tempo setting
@@ -566,23 +644,10 @@ void TDStretch::processSamples()
     }
     */
 
-    if (bMidBufferDirty == FALSE) 
-    {
-        // if midBuffer is empty, move the first samples of the input stream 
-        // into it
-        if (inputBuffer.numSamples() < overlapLength) 
-        {
-            // wait until we've got overlapLength samples
-            return;
-        }
-        memcpy(pMidBuffer, inputBuffer.ptrBegin(), channels * overlapLength * sizeof(SAMPLETYPE));
-        inputBuffer.receiveSamples(overlapLength);
-        bMidBufferDirty = TRUE;
-    }
-
     // Process samples as long as there are enough samples in 'inputBuffer'
     // to form a processing frame.
-    while (inputBuffer.numSamples() >= sampleReq) 
+//    while ((int)inputBuffer.numSamples() >= sampleReq - (outDebt / 4)) 
+    while ((int)inputBuffer.numSamples() >= sampleReq) 
     {
         // If tempo differs from the normal ('SCALE'), scan for the best overlapping
         // position
@@ -592,23 +657,36 @@ void TDStretch::processSamples()
         // samples in 'midBuffer' using sliding overlapping
         // ... first partially overlap with the end of the previous sequence
         // (that's in 'midBuffer')
-        overlap(outputBuffer.ptrEnd(overlapLength), inputBuffer.ptrBegin(), offset);
-        outputBuffer.putSamples(overlapLength);
+        overlap(outputBuffer.ptrEnd((uint)overlapLength), inputBuffer.ptrBegin(), (uint)offset);
+        outputBuffer.putSamples((uint)overlapLength);
 
-        // ... then copy sequence samples from 'inputBuffer' to output
-        temp = (seekWindowLength - 2 * overlapLength);// & 0xfffffffe;
-        if (temp > 0)
+        // ... then copy sequence samples from 'inputBuffer' to output:
+        temp = (seekLength / 2 - offset);
+
+        // compensate cumulated output length diff vs. ideal output
+//        temp -= outDebt / 4;
+
+        // update ideal vs. true output difference 
+//        outDebt += temp;
+
+        // length of sequence
+//        temp += (seekWindowLength - 2 * overlapLength);
+        temp = (seekWindowLength - 2 * overlapLength);
+
+        // crosscheck that we don't have buffer overflow...
+        if ((int)inputBuffer.numSamples() < (offset + temp + overlapLength * 2))
         {
-            outputBuffer.putSamples(inputBuffer.ptrBegin() + channels * (offset + overlapLength), temp);
+            continue;    // just in case, shouldn't really happen
         }
+
+        outputBuffer.putSamples(inputBuffer.ptrBegin() + channels * (offset + overlapLength), (uint)temp);
 
         // Copies the end of the current sequence from 'inputBuffer' to 
         // 'midBuffer' for being mixed with the beginning of the next 
         // processing sequence and so on
-        assert(offset + seekWindowLength <= inputBuffer.numSamples());
-        memcpy(pMidBuffer, inputBuffer.ptrBegin() + channels * (offset + seekWindowLength - overlapLength), 
+        assert((offset + temp + overlapLength * 2) <= (int)inputBuffer.numSamples());
+        memcpy(pMidBuffer, inputBuffer.ptrBegin() + channels * (offset + temp + overlapLength), 
             channels * sizeof(SAMPLETYPE) * overlapLength);
-        bMidBufferDirty = TRUE;
 
         // Remove the processed samples from the input buffer. Update
         // the difference between integer & nominal skip step to 'skipFract'
@@ -616,17 +694,17 @@ void TDStretch::processSamples()
         skipFract += nominalSkip;   // real skip size
         ovlSkip = (int)skipFract;   // rounded to integer skip
         skipFract -= ovlSkip;       // maintain the fraction part, i.e. real vs. integer skip
-        inputBuffer.receiveSamples(ovlSkip);
+        inputBuffer.receiveSamples((uint)ovlSkip);
     }
 }
 
 
 // Adds 'numsamples' pcs of samples from the 'samples' memory position into
 // the input of the object.
-void TDStretch::putSamples(const SAMPLETYPE *samples, uint numSamples)
+void TDStretch::putSamples(const SAMPLETYPE *samples, uint nSamples)
 {
     // Add the samples into the input buffer
-    inputBuffer.putSamples(samples, numSamples);
+    inputBuffer.putSamples(samples, nSamples);
     // Process the samples in input buffer
     processSamples();
 }
@@ -634,10 +712,11 @@ void TDStretch::putSamples(const SAMPLETYPE *samples, uint numSamples)
 
 
 /// Set new overlap length parameter & reallocate RefMidBuffer if necessary.
-void TDStretch::acceptNewOverlapLength(uint newOverlapLength)
+void TDStretch::acceptNewOverlapLength(int newOverlapLength)
 {
-    uint prevOvl;
+    int prevOvl;
 
+    assert(newOverlapLength >= 0);
     prevOvl = overlapLength;
     overlapLength = newOverlapLength;
 
@@ -647,12 +726,11 @@ void TDStretch::acceptNewOverlapLength(uint newOverlapLength)
         delete[] pRefMidBufferUnaligned;
 
         pMidBuffer = new SAMPLETYPE[overlapLength * 2];
-        bMidBufferDirty = TRUE;
         clearMidBuffer();
 
         pRefMidBufferUnaligned = new SAMPLETYPE[2 * overlapLength + 16 / sizeof(SAMPLETYPE)];
         // ensure that 'pRefMidBuffer' is aligned to 16 byte boundary for efficiency
-        pRefMidBuffer = (SAMPLETYPE *)((((ulongptr)pRefMidBufferUnaligned) + 15) & -16);
+        pRefMidBuffer = (SAMPLETYPE *)((((ulong)pRefMidBufferUnaligned) + 15) & (ulong)-16);
     }
 }
 
@@ -662,18 +740,16 @@ void TDStretch::acceptNewOverlapLength(uint newOverlapLength)
 void * TDStretch::operator new(size_t s)
 {
     // Notice! don't use "new TDStretch" directly, use "newInstance" to create a new instance instead!
-    assert(FALSE);  
+    throw std::runtime_error("Error in TDStretch::new: Don't use 'new TDStretch' directly, use 'newInstance' member instead!");
     return NULL;
 }
 
 
 TDStretch * TDStretch::newInstance()
 {
-    uint uExtensions = 0;
+    uint uExtensions;
 
-#if !defined(_MSC_VER) || !defined(__x86_64__)
     uExtensions = detectCPUextensions();
-#endif
 
     // Check if MMX/SSE/3DNow! instruction set extensions supported by CPU
 
@@ -760,33 +836,44 @@ void TDStretch::precalcCorrReferenceMono()
 
 // Overlaps samples in 'midBuffer' with the samples in 'input'. The 'Stereo' 
 // version of the routine.
-void TDStretch::overlapStereo(short *output, const short *input) const
+void TDStretch::overlapStereo(short *poutput, const short *input) const
 {
     int i;
     short temp;
-    uint cnt2;
+    int cnt2;
 
-    for (i = 0; i < (int)overlapLength ; i ++) 
+    for (i = 0; i < overlapLength ; i ++) 
     {
         temp = (short)(overlapLength - i);
         cnt2 = 2 * i;
-        output[cnt2] = (input[cnt2] * i + pMidBuffer[cnt2] * temp )  / overlapLength;
-        output[cnt2 + 1] = (input[cnt2 + 1] * i + pMidBuffer[cnt2 + 1] * temp ) / overlapLength;
+        poutput[cnt2] = (input[cnt2] * i + pMidBuffer[cnt2] * temp )  / overlapLength;
+        poutput[cnt2 + 1] = (input[cnt2 + 1] * i + pMidBuffer[cnt2 + 1] * temp ) / overlapLength;
     }
+}
+
+// Calculates the x having the closest 2^x value for the given value
+static int _getClosest2Power(double value)
+{
+    return (int)(log(value) / log(2.0) + 0.5);
 }
 
 
 /// Calculates overlap period length in samples.
 /// Integer version rounds overlap length to closest power of 2
 /// for a divide scaling operation.
-void TDStretch::calculateOverlapLength(uint overlapMs)
+void TDStretch::calculateOverlapLength(int aoverlapMs)
 {
-    uint newOvl;
+    int newOvl;
 
-    overlapDividerBits = _getClosest2Power((sampleRate * overlapMs) / 1000.0);
+    assert(aoverlapMs >= 0);
+
+    // calculate overlap length so that it's power of 2 - thus it's easy to do
+    // integer division by right-shifting. Term "-1" at end is to account for 
+    // the extra most significatnt bit left unused in result by signed multiplication 
+    overlapDividerBits = _getClosest2Power((sampleRate * aoverlapMs) / 1000.0) - 1;
     if (overlapDividerBits > 9) overlapDividerBits = 9;
-    if (overlapDividerBits < 4) overlapDividerBits = 4;
-    newOvl = 1<<overlapDividerBits;
+    if (overlapDividerBits < 3) overlapDividerBits = 3;
+    newOvl = (int)pow(2.0, (int)overlapDividerBits + 1);    // +1 => account for -1 above
 
     acceptNewOverlapLength(newOvl);
 
@@ -800,31 +887,41 @@ void TDStretch::calculateOverlapLength(uint overlapMs)
 long TDStretch::calcCrossCorrMono(const short *mixingPos, const short *compare) const
 {
     long corr;
-    uint i;
+    long norm;
+    int i;
 
-    corr = 0;
+    corr = norm = 0;
     for (i = 1; i < overlapLength; i ++) 
     {
         corr += (mixingPos[i] * compare[i]) >> overlapDividerBits;
+        norm += (mixingPos[i] * mixingPos[i]) >> overlapDividerBits;
     }
 
-    return corr;
+    // Normalize result by dividing by sqrt(norm) - this step is easiest 
+    // done using floating point operation
+    if (norm == 0) norm = 1;    // to avoid div by zero
+    return (long)((double)corr * SHRT_MAX / sqrt((double)norm));
 }
 
 
 long TDStretch::calcCrossCorrStereo(const short *mixingPos, const short *compare) const
 {
     long corr;
-    uint i;
+    long norm;
+    int i;
 
-    corr = 0;
+    corr = norm = 0;
     for (i = 2; i < 2 * overlapLength; i += 2) 
     {
         corr += (mixingPos[i] * compare[i] +
                  mixingPos[i + 1] * compare[i + 1]) >> overlapDividerBits;
+        norm += (mixingPos[i] * mixingPos[i] + mixingPos[i + 1] * mixingPos[i + 1]) >> overlapDividerBits;
     }
 
-    return corr;
+    // Normalize result by dividing by sqrt(norm) - this step is easiest 
+    // done using floating point operation
+    if (norm == 0) norm = 1;    // to avoid div by zero
+    return (long)((double)corr * SHRT_MAX / sqrt((double)norm));
 }
 
 #endif // INTEGER_SAMPLES
@@ -869,11 +966,11 @@ void TDStretch::precalcCorrReferenceMono()
 }
 
 
-// SSE-optimized version of the function overlapStereo
-void TDStretch::overlapStereo(float *output, const float *input) const
+// Overlaps samples in 'midBuffer' with the samples in 'pInput'
+void TDStretch::overlapStereo(float *pOutput, const float *pInput) const
 {
     int i;
-    uint cnt2;
+    int cnt2;
     float fTemp;
     float fScale;
     float fi;
@@ -885,18 +982,19 @@ void TDStretch::overlapStereo(float *output, const float *input) const
         fTemp = (float)(overlapLength - i) * fScale;
         fi = (float)i * fScale;
         cnt2 = 2 * i;
-        output[cnt2 + 0] = input[cnt2 + 0] * fi + pMidBuffer[cnt2 + 0] * fTemp;
-        output[cnt2 + 1] = input[cnt2 + 1] * fi + pMidBuffer[cnt2 + 1] * fTemp;
+        pOutput[cnt2 + 0] = pInput[cnt2 + 0] * fi + pMidBuffer[cnt2 + 0] * fTemp;
+        pOutput[cnt2 + 1] = pInput[cnt2 + 1] * fi + pMidBuffer[cnt2 + 1] * fTemp;
     }
 }
 
 
-/// Calculates overlap period length in samples.
-void TDStretch::calculateOverlapLength(uint overlapMs)
+/// Calculates overlapInMsec period length in samples.
+void TDStretch::calculateOverlapLength(int overlapInMsec)
 {
-    uint newOvl;
+    int newOvl;
 
-    newOvl = (sampleRate * overlapMs) / 1000;
+    assert(overlapInMsec >= 0);
+    newOvl = (sampleRate * overlapInMsec) / 1000;
     if (newOvl < 16) newOvl = 16;
 
     // must be divisible by 8
@@ -910,31 +1008,38 @@ void TDStretch::calculateOverlapLength(uint overlapMs)
 double TDStretch::calcCrossCorrMono(const float *mixingPos, const float *compare) const
 {
     double corr;
-    uint i;
+    double norm;
+    int i;
 
-    corr = 0;
+    corr = norm = 0;
     for (i = 1; i < overlapLength; i ++) 
     {
         corr += mixingPos[i] * compare[i];
+        norm += mixingPos[i] * mixingPos[i];
     }
 
-    return corr;
+    if (norm < 1e-9) norm = 1.0;    // to avoid div by zero
+    return corr / sqrt(norm);
 }
 
 
 double TDStretch::calcCrossCorrStereo(const float *mixingPos, const float *compare) const
 {
     double corr;
-    uint i;
+    double norm;
+    int i;
 
-    corr = 0;
+    corr = norm = 0;
     for (i = 2; i < 2 * overlapLength; i += 2) 
     {
         corr += mixingPos[i] * compare[i] +
                 mixingPos[i + 1] * compare[i + 1];
+        norm += mixingPos[i] * mixingPos[i] + 
+                mixingPos[i + 1] * mixingPos[i + 1];
     }
 
-    return corr;
+    if (norm < 1e-9) norm = 1.0;    // to avoid div by zero
+    return corr / sqrt(norm);
 }
 
 #endif // FLOAT_SAMPLES

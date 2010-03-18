@@ -8,10 +8,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.16 $
+// Last changed  : $Date: 2009-05-17 14:30:57 +0300 (Sun, 17 May 2009) $
+// File revision : $Revision: 3 $
 //
-// $Id: STTypes.h,v 1.16 2006/02/05 16:44:06 Olli Exp $
+// $Id: STTypes.h 70 2009-05-17 11:30:57Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -39,63 +39,12 @@
 #ifndef STTypes_H
 #define STTypes_H
 
-//#define INTEGER_SAMPLES 1
-
 typedef unsigned int    uint;
 typedef unsigned long   ulong;
 
-#ifdef __x86_64__
-typedef unsigned long long   ulongptr;
-#else
-typedef unsigned long   ulongptr;
-#endif
-
-
 #ifdef __GNUC__
     // In GCC, include soundtouch_config.h made by config scritps
-/* Define to 1 if you have the <inttypes.h> header file. */
-#define HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the `m' library (-lm). */
-#define HAVE_LIBM 1
-
-/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
-   to 0 otherwise. */
-#define HAVE_MALLOC 1
-
-/* Define to 1 if you have the <memory.h> header file. */
-#define HAVE_MEMORY_H 1
-
-/* Define to 1 if you have the <stdint.h> header file. */
-#define HAVE_STDINT_H 1
-
-/* Define to 1 if you have the <stdlib.h> header file. */
-#define HAVE_STDLIB_H 1
-
-/* Define to 1 if you have the <strings.h> header file. */
-#define HAVE_STRINGS_H 1
-
-/* Define to 1 if you have the <string.h> header file. */
-#define HAVE_STRING_H 1
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#define HAVE_SYS_STAT_H 1
-
-/* Define to 1 if you have the <sys/types.h> header file. */
-#define HAVE_SYS_TYPES_H 1
-
-/* Define to 1 if you have the <unistd.h> header file. */
-#define HAVE_UNISTD_H 1
-
-/* Use Integer as Sample type */
-//#define INTEGER_SAMPLES 1
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
-
-/* Define to 1 if you have the ANSI C header files. */
-#define STDC_HEADERS 1
-
+    #include "soundtouch_config.h"
 #endif
 
 #ifndef _WINDEF_
@@ -103,19 +52,15 @@ typedef unsigned long   ulongptr;
 
     typedef int BOOL;
 
-#ifndef FALSE
     #define FALSE   0
-#endif
-
-#ifndef TRUE
     #define TRUE    1
-#endif
 
 #endif  // _WINDEF_
 
 
 namespace soundtouch
 {
+
 /// Activate these undef's to overrule the possible sampletype 
 /// setting inherited from some other header file:
 //#undef INTEGER_SAMPLES
@@ -142,22 +87,21 @@ namespace soundtouch
  
  #endif
 
-    /// Define this to allow CPU-specific assembler optimizations. Notice that 
-    /// having this enabled on non-x86 platforms doesn't matter; the compiler can 
-    /// drop unsupported extensions on different platforms automatically. 
-    /// However, if you're having difficulties getting the optimized routines 
-    /// compiled with your compler (e.g. some gcc compiler versions may be picky), 
-    /// you may wish to disable the optimizations to make the library compile.
-	#if !defined(_MSC_VER) || !defined(__x86_64__)
-	#define ALLOW_OPTIMIZATIONS 1
-	#define ALLOW_NONEXACT_SIMD_OPTIMIZATION    1
-	#endif
+    #if (WIN32 || __i386__ || __x86_64__)
+        /// Define this to allow X86-specific assembler/intrinsic optimizations. 
+        /// Notice that library contains also usual C++ versions of each of these
+        /// these routines, so if you're having difficulties getting the optimized 
+        /// routines compiled for whatever reason, you may disable these optimizations 
+        /// to make the library compile.
 
+        #define ALLOW_X86_OPTIMIZATIONS     1
+
+    #endif
 
     // If defined, allows the SIMD-optimized routines to take minor shortcuts 
     // for improved performance. Undefine to require faithfully similar SIMD 
     // calculations as in normal C implementation.
-    
+    #define ALLOW_NONEXACT_SIMD_OPTIMIZATION    1
 
 
     #ifdef INTEGER_SAMPLES
@@ -171,11 +115,9 @@ namespace soundtouch
             #error "conflicting sample types defined"
         #endif // FLOAT_SAMPLES
 
-        #ifdef ALLOW_OPTIMIZATIONS
-            #if (_WIN32 || __i386__ || __x86_64__)
-                // Allow MMX optimizations
-                #define ALLOW_MMX   1
-            #endif
+        #ifdef ALLOW_X86_OPTIMIZATIONS
+            // Allow MMX optimizations
+            #define ALLOW_MMX   1
         #endif
 
     #else
@@ -185,18 +127,23 @@ namespace soundtouch
         // data type for sample accumulation: Use double to utilize full precision.
         typedef double LONG_SAMPLETYPE;
 
-        #ifdef ALLOW_OPTIMIZATIONS
+        #ifdef ALLOW_X86_OPTIMIZATIONS
                 // Allow 3DNow! and SSE optimizations
-            #if _WIN32
-               // #define ALLOW_3DNOW     1
+            #if WIN32
+                #define ALLOW_3DNOW     1
             #endif
 
-            #if (_WIN32 || __i386__ || __x86_64__)
-                #define ALLOW_SSE       1
-            #endif
+            #define ALLOW_SSE       1
         #endif
 
     #endif  // INTEGER_SAMPLES
 };
+
+
+// When this #define is active, eliminates a clicking sound when the "rate" or "pitch" 
+// parameter setting crosses from value <1 to >=1 or vice versa during processing. 
+// Default is off as such crossover is untypical case and involves a slight sound 
+// quality compromise.
+//#define PREVENT_CLICK_AT_RATE_CROSSOVER   1
 
 #endif

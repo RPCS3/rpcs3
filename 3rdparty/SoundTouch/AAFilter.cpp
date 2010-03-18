@@ -12,10 +12,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.9 $
+// Last changed  : $Date: 2009-01-11 13:34:24 +0200 (Sun, 11 Jan 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: AAFilter.cpp,v 1.9 2006/02/05 16:44:06 Olli Exp $
+// $Id: AAFilter.cpp 45 2009-01-11 11:34:24Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -58,11 +58,11 @@ using namespace soundtouch;
  *
  *****************************************************************************/
 
-AAFilter::AAFilter(const uint length)
+AAFilter::AAFilter(uint len)
 {
     pFIR = FIRFilter::newInstance();
     cutoffFreq = 0.5;
-    setLength(length);
+    setLength(len);
 }
 
 
@@ -77,7 +77,7 @@ AAFilter::~AAFilter()
 // Sets new anti-alias filter cut-off edge frequency, scaled to
 // sampling frequency (nyquist frequency = 0.5).
 // The filter will cut frequencies higher than the given frequency.
-void AAFilter::setCutoffFreq(const double newCutoffFreq)
+void AAFilter::setCutoffFreq(double newCutoffFreq)
 {
     cutoffFreq = newCutoffFreq;
     calculateCoeffs();
@@ -86,7 +86,7 @@ void AAFilter::setCutoffFreq(const double newCutoffFreq)
 
 
 // Sets number of FIR filter taps
-void AAFilter::setLength(const uint newLength)
+void AAFilter::setLength(uint newLength)
 {
     length = newLength;
     calculateCoeffs();
@@ -104,7 +104,7 @@ void AAFilter::calculateCoeffs()
     double *work;
     SAMPLETYPE *coeffs;
 
-    assert(length > 0);
+    assert(length >= 2);
     assert(length % 4 == 0);
     assert(cutoffFreq >= 0);
     assert(cutoffFreq <= 0.5);

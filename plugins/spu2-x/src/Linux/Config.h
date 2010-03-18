@@ -93,9 +93,9 @@ namespace SoundtouchCfg
 	static const int Overlap_Min = 3;
 	static const int Overlap_Max = 15;
 
-	static int SequenceLenMS = 63;
-	static int SeekWindowMS = 16;
-	static int OverlapMS = 7;
+	static int SequenceLenMS = 50;
+	static int SeekWindowMS = 15;
+	static int OverlapMS = 25;
 
 	void ReadSettings();
 	void WriteSettings();

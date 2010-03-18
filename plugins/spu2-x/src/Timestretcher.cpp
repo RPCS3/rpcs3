@@ -284,11 +284,12 @@ void SndBuffer::timeStretchWrite()
 	{
 		if( progress )
 		{
-			if( ++ts_stats_logcounter > 300 )
+			if( ++ts_stats_logcounter > 150 )
 			{
 				ts_stats_logcounter = 0;
-				ConLog( " * SPU2 > Timestretch Stats > %d%% of packets stretched.\n",
-					( ts_stats_stretchblocks * 100 ) / ( ts_stats_normalblocks + ts_stats_stretchblocks ) );
+				ConLog( " * SPU2 > Timestretch Stats > %d percent stretched. Total stretchblocks = %d.\n",
+					( ts_stats_stretchblocks * 100 ) / ( ts_stats_normalblocks + ts_stats_stretchblocks ),
+					ts_stats_stretchblocks);
 				ts_stats_normalblocks = 0;
 				ts_stats_stretchblocks = 0;
 			}

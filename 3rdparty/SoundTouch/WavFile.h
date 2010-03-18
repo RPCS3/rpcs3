@@ -16,10 +16,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.7 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: WavFile.h,v 1.7 2006/02/05 16:44:06 Olli Exp $
+// $Id: WavFile.h 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -105,13 +105,16 @@ private:
     /// WAV header information
     WavHeader header;
 
+    /// Init the WAV file stream
+    void init();
+
     /// Read WAV file headers.
     /// \return zero if all ok, nonzero if file format is invalid.
     int readWavHeaders();
 
     /// Checks WAV file header tags.
     /// \return zero if all ok, nonzero if file format is invalid.
-    int checkCharTags();
+    int checkCharTags() const;
 
     /// Reads a single WAV file header block.
     /// \return zero if all ok, nonzero if file format is invalid.
@@ -125,12 +128,10 @@ public:
     /// throws 'runtime_error' exception.
     WavInFile(const char *filename);
 
+    WavInFile(FILE *file);
+
     /// Destructor: Closes the file.
     ~WavInFile();
-
-    /// Close the file. Notice that file is automatically closed also when the 
-    /// class instance is deleted.
-    void close();
 
     /// Rewind to beginning of the file
     void rewind();
@@ -203,9 +204,6 @@ private:
     /// Counter of how many bytes have been written to the file so far.
     int bytesWritten;
 
-	/// number of bytes to be written before next flush.
-	int flushTime;
-
     /// Fills in WAV file header information.
     void fillInHeader(const uint sampleRate, const uint bits, const uint channels);
 
@@ -216,14 +214,6 @@ private:
     /// Writes the WAV file header.
     void writeHeader();
 
-	/// Flushes the WAV file every so often -- writes header info for the current
-	/// data length and then returns the seek position to the end of the WAV for
-	/// continued writing.  This method is called from each write() method.
-	void flush( int numElems );
-
-	/// Flush the WAVheader every 32kb written
-	static const int flushRate = 0x8000;
-
 public:
     /// Constructor: Creates a new WAV file. Throws a 'runtime_error' exception 
     /// if file creation fails.
@@ -232,6 +222,8 @@ public:
                int bits,                ///< Bits per sample (8 or 16 bits)
                int channels             ///< Number of channels (1=mono, 2=stereo)
                );
+
+    WavOutFile(FILE *file, int sampleRate, int bits, int channels);
 
     /// Destructor: Finalizes & closes the WAV file.
     ~WavOutFile();
@@ -253,12 +245,6 @@ public:
     void write(const float *buffer,     ///< Pointer to sample data buffer.
                int numElems             ///< How many array items are to be written to file.
                );
-
-    /// Finalize & close the WAV file. Automatically supplements the WAV file header
-    /// information according to written data etc.
-    ///
-    /// Notice that file is automatically closed also when the class instance is deleted.
-    void close();
 };
 
 #endif

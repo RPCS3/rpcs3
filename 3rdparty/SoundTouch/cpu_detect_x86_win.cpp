@@ -12,10 +12,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.10 $
+// Last changed  : $Date: 2009-02-13 18:22:48 +0200 (Fri, 13 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: cpu_detect_x86_win.cpp,v 1.10 2006/02/05 16:44:06 Olli Exp $
+// $Id: cpu_detect_x86_win.cpp 62 2009-02-13 16:22:48Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -42,7 +42,7 @@
 
 #include "cpu_detect.h"
 
-#ifndef _WIN32
+#ifndef WIN32
 #error wrong platform - this source code file is exclusively for Win32 platform
 #endif
 
@@ -78,13 +78,16 @@ uint detectCPUextensions(void)
         xor     esi, esi            ; clear esi = result register
 
         pushfd                      ; save eflags to stack
-        pop     eax                 ; load eax from stack (with eflags)
+        mov     eax,dword ptr [esp] ; load eax from stack (with eflags)
         mov     ecx, eax            ; save the original eflags values to ecx
         xor     eax, 0x00200000     ; toggle bit 21
-        push    eax                 ; store toggled eflags to stack
+        mov     dword ptr [esp],eax ; store toggled eflags to stack
         popfd                       ; load eflags from stack
+
         pushfd                      ; save updated eflags to stack
-        pop     eax                 ; load from stack
+        mov     eax,dword ptr [esp] ; load eax from stack
+        popfd                       ; pop stack to restore stack pointer
+
         xor     edx, edx            ; clear edx for defaulting no mmx
         cmp     eax, ecx            ; compare to original eflags values
         jz      end                 ; jumps to 'end' if cpuid not present

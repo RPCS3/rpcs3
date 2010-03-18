@@ -17,10 +17,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.15 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: WavFile.cpp,v 1.15 2006/02/05 16:44:06 Olli Exp $
+// $Id: WavFile.cpp 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -48,20 +48,18 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <string>
+#include <cstring>
 #include <assert.h>
 #include <limits.h>
-
-#include <cstdlib>
-#include <cstring>
 
 #include "WavFile.h"
 
 using namespace std;
 
-const static char riffStr[] = "RIFF";
-const static char waveStr[] = "WAVE";
-const static char fmtStr[]  = "fmt ";
-const static char dataStr[] = "data";
+static const char riffStr[] = "RIFF";
+static const char waveStr[] = "WAVE";
+static const char fmtStr[]  = "fmt ";
+static const char dataStr[] = "data";
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -142,8 +140,6 @@ const static char dataStr[] = "data";
 
 WavInFile::WavInFile(const char *fileName)
 {
-    int hdrsOk;
-
     // Try to open the file for reading
     fptr = fopen(fileName, "rb");
     if (fptr == NULL) 
@@ -155,22 +151,45 @@ WavInFile::WavInFile(const char *fileName)
         throw runtime_error(msg);
     }
 
+    init();
+}
+
+
+WavInFile::WavInFile(FILE *file)
+{
+    // Try to open the file for reading
+    fptr = file;
+    if (!file) 
+    {
+        // didn't succeed
+        string msg = "Error : Unable to access input stream for reading";
+        throw runtime_error(msg);
+    }
+
+    init();
+}
+
+
+/// Init the WAV file stream
+void WavInFile::init()
+{
+    int hdrsOk;
+
+    // assume file stream is already open
+    assert(fptr);
+
     // Read the file headers
     hdrsOk = readWavHeaders();
     if (hdrsOk != 0) 
     {
         // Something didn't match in the wav file headers 
-        string msg = "File \"";
-        msg += fileName;
-        msg += "\" is corrupt or not a WAV file";
+        string msg = "Input file is corrupt or not a WAV file";
         throw runtime_error(msg);
     }
 
     if (header.format.fixed != 1)
     {
-        string msg = "File \"";
-        msg += fileName;
-        msg += "\" uses unsupported encoding.";
+        string msg = "Input file uses unsupported encoding.";
         throw runtime_error(msg);
     }
 
@@ -181,7 +200,8 @@ WavInFile::WavInFile(const char *fileName)
 
 WavInFile::~WavInFile()
 {
-    close();
+    if (fptr) fclose(fptr);
+    fptr = NULL;
 }
 
 
@@ -197,7 +217,7 @@ void WavInFile::rewind()
 }
 
 
-int WavInFile::checkCharTags()
+int WavInFile::checkCharTags() const
 {
     // header.format.fmt should equal to 'fmt '
     if (memcmp(fmtStr, header.format.fmt, 4) != 0) return -1;
@@ -225,10 +245,11 @@ int WavInFile::read(char *buffer, int maxElems)
     if (afterDataRead > header.data.data_len) 
     {
         // Don't read more samples than are marked available in header
-        numBytes = header.data.data_len - dataRead;
+        numBytes = (int)header.data.data_len - (int)dataRead;
         assert(numBytes >= 0);
     }
 
+    assert(buffer);
     numBytes = fread(buffer, 1, numBytes, fptr);
     dataRead += numBytes;
 
@@ -242,6 +263,7 @@ int WavInFile::read(short *buffer, int maxElems)
     int numBytes;
     int numElems;
 
+    assert(buffer);
     if (header.format.bits_per_sample == 8)
     {
         // 8 bit format
@@ -267,7 +289,7 @@ int WavInFile::read(short *buffer, int maxElems)
         if (afterDataRead > header.data.data_len) 
         {
             // Don't read more samples than are marked available in header
-            numBytes = header.data.data_len - dataRead;
+            numBytes = (int)header.data.data_len - (int)dataRead;
             assert(numBytes >= 0);
         }
 
@@ -313,13 +335,6 @@ int WavInFile::eof() const
 }
 
 
-void WavInFile::close()
-{
-    fclose(fptr);
-    fptr = NULL;
-}
-
-
 
 // test if character code is between a white space ' ' and little 'z'
 static int isAlpha(char c)
@@ -329,9 +344,9 @@ static int isAlpha(char c)
 
 
 // test if all characters are between a white space ' ' and little 'z'
-static int isAlphaStr(char *str)
+static int isAlphaStr(const char *str)
 {
-    int c;
+    char c;
 
     c = str[0];
     while (c) 
@@ -347,7 +362,7 @@ static int isAlphaStr(char *str)
 
 int WavInFile::readRIFFBlock()
 {
-    fread(&(header.riff), sizeof(WavRiff), 1, fptr);
+    if (fread(&(header.riff), sizeof(WavRiff), 1, fptr) != 1) return -1;
 
     // swap 32bit data byte order if necessary
     _swap32((unsigned int &)header.riff.package_len);
@@ -369,7 +384,7 @@ int WavInFile::readHeaderBlock()
     string sLabel;
 
     // lead label string
-    fread(label, 1, 4, fptr);
+    if (fread(label, 1, 4, fptr) !=4) return -1;
     label[4] = 0;
 
     if (isAlphaStr(label) == 0) return -1;    // not a valid label
@@ -383,13 +398,13 @@ int WavInFile::readHeaderBlock()
         memcpy(header.format.fmt, fmtStr, 4);
 
         // read length of the format field
-        fread(&nLen, sizeof(int), 1, fptr);
+        if (fread(&nLen, sizeof(int), 1, fptr) != 1) return -1;
         // swap byte order if necessary
         _swap32((unsigned int &)nLen); // int format_len;
         header.format.format_len = nLen;
 
         // calculate how much length differs from expected
-        nDump = nLen - (sizeof(header.format) - 8);
+        nDump = nLen - ((int)sizeof(header.format) - 8);
 
         // if format_len is larger than expected, read only as much data as we've space for
         if (nDump > 0)
@@ -398,7 +413,7 @@ int WavInFile::readHeaderBlock()
         }
 
         // read data
-        fread(&(header.format.fixed), nLen, 1, fptr);
+        if (fread(&(header.format.fixed), nLen, 1, fptr) != 1) return -1;
 
         // swap byte order if necessary
         _swap16((unsigned short &)header.format.fixed);            // short int fixed;
@@ -420,7 +435,7 @@ int WavInFile::readHeaderBlock()
     {
         // 'data' block
         memcpy(header.data.data_field, dataStr, 4);
-        fread(&(header.data.data_len), sizeof(uint), 1, fptr);
+        if (fread(&(header.data.data_len), sizeof(uint), 1, fptr) != 1) return -1;
 
         // swap byte order if necessary
         _swap32((unsigned int &)header.data.data_len);
@@ -434,11 +449,11 @@ int WavInFile::readHeaderBlock()
         // unknown block
 
         // read length
-        fread(&len, sizeof(len), 1, fptr);
+        if (fread(&len, sizeof(len), 1, fptr) != 1) return -1;
         // scan through the block
         for (i = 0; i < len; i ++)
         {
-            fread(&temp, 1, 1, fptr);
+            if (fread(&temp, 1, 1, fptr) != 1) return -1;
             if (feof(fptr)) return -1;   // unexpected eof
         }
     }
@@ -499,7 +514,8 @@ uint WavInFile::getDataSizeInBytes() const
 
 uint WavInFile::getNumSamples() const
 {
-    return header.data.data_len / header.format.byte_per_sample;
+    if (header.format.byte_per_sample == 0) return 0;
+    return header.data.data_len / (unsigned short)header.format.byte_per_sample;
 }
 
 
@@ -536,15 +552,30 @@ WavOutFile::WavOutFile(const char *fileName, int sampleRate, int bits, int chann
 
     fillInHeader(sampleRate, bits, channels);
     writeHeader();
-    
-    flushTime = flushRate;
+}
+
+
+WavOutFile::WavOutFile(FILE *file, int sampleRate, int bits, int channels)
+{
+    bytesWritten = 0;
+    fptr = file;
+    if (fptr == NULL) 
+    {
+        string msg = "Error : Unable to access output file stream.";
+        throw runtime_error(msg);
+    }
+
+    fillInHeader(sampleRate, bits, channels);
+    writeHeader();
 }
 
 
 
 WavOutFile::~WavOutFile()
 {
-    close();
+    finishHeader();
+    if (fptr) fclose(fptr);
+    fptr = NULL;
 }
 
 
@@ -569,11 +600,11 @@ void WavOutFile::fillInHeader(uint sampleRate, uint bits, uint channels)
     header.format.format_len = 0x10;
     header.format.fixed = 1;
     header.format.channel_number = (short)channels;
-    header.format.sample_rate = sampleRate;
+    header.format.sample_rate = (int)sampleRate;
     header.format.bits_per_sample = (short)bits;
     header.format.byte_per_sample = (short)(bits * channels / 8);
-    header.format.byte_rate = header.format.byte_per_sample * sampleRate;
-    header.format.sample_rate = sampleRate;
+    header.format.byte_rate = header.format.byte_per_sample * (int)sampleRate;
+    header.format.sample_rate = (int)sampleRate;
 
     // fill in the 'data' part..
 
@@ -598,6 +629,7 @@ void WavOutFile::finishHeader()
 void WavOutFile::writeHeader()
 {
     WavHeader hdrTemp;
+    int res;
 
     // swap byte order if necessary
     hdrTemp = header;
@@ -613,29 +645,17 @@ void WavOutFile::writeHeader()
 
     // write the supplemented header in the beginning of the file
     fseek(fptr, 0, SEEK_SET);
-    fwrite(&hdrTemp, sizeof(hdrTemp), 1, fptr);
+    res = fwrite(&hdrTemp, sizeof(hdrTemp), 1, fptr);
+    if (res != 1)
+    {
+        throw runtime_error("Error while writing to a wav file.");
+    }
+
     // jump back to the end of the file
     fseek(fptr, 0, SEEK_END);
 }
 
 
-
-void WavOutFile::close()
-{
-    finishHeader();
-    fclose(fptr);
-    fptr = NULL;
-}
-
-void WavOutFile::flush( int numElems )
-{
-	flushTime -= numElems;
-	if( flushTime < 0 )
-	{
-		flushTime += flushRate;
-		finishHeader();
-	}
-}
 
 void WavOutFile::write(const char *buffer, int numElems)
 {
@@ -654,7 +674,6 @@ void WavOutFile::write(const char *buffer, int numElems)
     }
 
     bytesWritten += numElems;
-	flush( numElems );
 }
 
 
@@ -698,7 +717,6 @@ void WavOutFile::write(const short *buffer, int numElems)
             throw runtime_error("Error while writing to a wav file.");
         }
         bytesWritten += 2 * numElems;
-		flush( numElems*2 );
     }
 }
 
@@ -722,7 +740,6 @@ void WavOutFile::write(const float *buffer, int numElems)
     }
 
     write(temp, numElems);
-	flush( numElems );
 
     delete[] temp;
 }

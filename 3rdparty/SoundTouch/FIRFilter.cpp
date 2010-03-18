@@ -11,10 +11,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.16 $
+// Last changed  : $Date: 2009-02-25 19:13:51 +0200 (Wed, 25 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIRFilter.cpp,v 1.16 2006/02/05 16:44:06 Olli Exp $
+// $Id: FIRFilter.cpp 67 2009-02-25 17:13:51Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -58,6 +58,7 @@ using namespace soundtouch;
 FIRFilter::FIRFilter()
 {
     resultDivFactor = 0;
+    resultDivider = 0;
     length = 0;
     lengthDiv8 = 0;
     filterCoeffs = NULL;
@@ -81,6 +82,9 @@ uint FIRFilter::evaluateFilterStereo(SAMPLETYPE *dest, const SAMPLETYPE *src, ui
 #endif
 
     assert(length != 0);
+    assert(src != NULL);
+    assert(dest != NULL);
+    assert(filterCoeffs != NULL);
 
     end = 2 * (numSamples - length);
 
@@ -177,11 +181,7 @@ void FIRFilter::setCoefficients(const SAMPLETYPE *coeffs, uint newLength, uint u
     assert(length == newLength);
 
     resultDivFactor = uResultDivFactor;
-#ifdef INTEGER_SAMPLES
-    resultDivider = (SAMPLETYPE)(1<<resultDivFactor);
-#else
-    resultDivider = (SAMPLETYPE)powf(2, (SAMPLETYPE)resultDivFactor);
-#endif
+    resultDivider = (SAMPLETYPE)::pow(2.0, (int)resultDivFactor);
 
     delete[] filterCoeffs;
     filterCoeffs = new SAMPLETYPE[length];
@@ -207,7 +207,6 @@ uint FIRFilter::evaluate(SAMPLETYPE *dest, const SAMPLETYPE *src, uint numSample
     assert(length > 0);
     assert(lengthDiv8 * 8 == length);
     if (numSamples < length) return 0;
-    assert(resultDivFactor >= 0);
     if (numChannels == 2) 
     {
         return evaluateFilterStereo(dest, src, numSamples);
@@ -223,18 +222,16 @@ uint FIRFilter::evaluate(SAMPLETYPE *dest, const SAMPLETYPE *src, uint numSample
 void * FIRFilter::operator new(size_t s)
 {
     // Notice! don't use "new FIRFilter" directly, use "newInstance" to create a new instance instead!
-    throw std::runtime_error("Don't use 'new FIRFilter', use 'newInstance' member instead!");
+    throw std::runtime_error("Error in FIRFilter::new: Don't use 'new FIRFilter', use 'newInstance' member instead!");
     return NULL;
 }
 
 
 FIRFilter * FIRFilter::newInstance()
 {
-    uint uExtensions = 0;
+    uint uExtensions;
 
-#if !defined(_MSC_VER) || !defined(__x86_64__)
     uExtensions = detectCPUextensions();
-#endif
 
     // Check if MMX/SSE/3DNow! instruction set extensions supported by CPU
 

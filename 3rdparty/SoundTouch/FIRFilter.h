@@ -11,10 +11,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.17 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIRFilter.h,v 1.17 2006/02/05 16:44:06 Olli Exp $
+// $Id: FIRFilter.h 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -42,6 +42,7 @@
 #ifndef FIRFilter_H
 #define FIRFilter_H
 
+#include <stddef.h>
 #include "STTypes.h"
 
 namespace soundtouch
@@ -77,7 +78,7 @@ public:
 
     /// Operator 'new' is overloaded so that it automatically creates a suitable instance 
     /// depending on if we've a MMX-capable CPU available or not.
-    void * operator new(size_t s);
+    static void * operator new(size_t s);
 
     static FIRFilter *newInstance();
 
@@ -103,7 +104,7 @@ public:
 
 #ifdef ALLOW_MMX
 
-    /// Class that implements MMX optimized functions exclusive for 16bit integer samples type.
+/// Class that implements MMX optimized functions exclusive for 16bit integer samples type.
     class FIRFilterMMX : public FIRFilter
     {
     protected:

@@ -15,10 +15,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.9 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIFOSampleBuffer.h,v 1.9 2006/02/05 16:44:06 Olli Exp $
+// $Id: FIFOSampleBuffer.h 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -85,7 +85,7 @@ private:
     void rewind();
 
     /// Ensures that the buffer has capacity for at least this many samples.
-    void ensureCapacity(const uint capacityRequirement);
+    void ensureCapacity(uint capacityRequirement);
 
     /// Returns current capacity.
     uint getCapacity() const;
@@ -93,7 +93,7 @@ private:
 public:
 
     /// Constructor
-    FIFOSampleBuffer(uint numChannels = 2     ///< Number of channels, 1=mono, 2=stereo.
+    FIFOSampleBuffer(int numChannels = 2     ///< Number of channels, 1=mono, 2=stereo.
                                               ///< Default is stereo.
                      );
 
@@ -107,7 +107,7 @@ public:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const;
+    virtual SAMPLETYPE *ptrBegin();
 
     /// Returns a pointer to the end of the used part of the sample buffer (i.e. 
     /// where the new samples are to be inserted). This function may be used for 
@@ -160,7 +160,7 @@ public:
     virtual uint numSamples() const;
 
     /// Sets number of channels, 1 = mono, 2 = stereo.
-    void setChannels(uint numChannels);
+    void setChannels(int numChannels);
 
     /// Returns nonzero if there aren't any samples available for outputting.
     virtual int isEmpty() const;

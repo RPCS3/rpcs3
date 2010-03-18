@@ -26,10 +26,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.5 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: BPMDetect.h,v 1.5 2006/02/05 16:44:06 Olli Exp $
+// $Id: BPMDetect.h 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,8 +60,11 @@
 #include "STTypes.h"
 #include "FIFOSampleBuffer.h"
 
+namespace soundtouch
+{
+
 /// Minimum allowed BPM rate. Used to restrict accepted result above a reasonable limit.
-#define MIN_BPM 45
+#define MIN_BPM 29
 
 /// Maximum allowed BPM rate. Used to restrict accepted result below a reasonable limit.
 #define MAX_BPM 230
@@ -105,9 +108,6 @@ protected:
     /// FIFO-buffer for decimated processing samples.
     soundtouch::FIFOSampleBuffer *buffer;
 
-    /// Initialize the class for processing.
-    void init(int numChannels, int sampleRate);
-
     /// Updates auto-correlation function for given number of decimated samples that 
     /// are read from the internal 'buffer' pipe (samples aren't removed from the pipe 
     /// though).
@@ -143,8 +143,8 @@ public:
     /// function. 
     /// 
     /// Notice that data in 'samples' array can be disrupted in processing.
-    void inputSamples(soundtouch::SAMPLETYPE *samples,  ///< Pointer to input/working data buffer
-                      int numSamples                    ///< Number of samples in buffer
+    void inputSamples(const soundtouch::SAMPLETYPE *samples,    ///< Pointer to input/working data buffer
+                      int numSamples                            ///< Number of samples in buffer
                       );
 
 
@@ -155,5 +155,7 @@ public:
     /// \return Beats-per-minute rate, or zero if detection failed.
     float getBpm();
 };
+
+}
 
 #endif // _BPMDetect_H_

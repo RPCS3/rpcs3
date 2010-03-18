@@ -14,10 +14,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.10 $
+// Last changed  : $Date: 2009-02-21 18:00:14 +0200 (Sat, 21 Feb 2009) $
+// File revision : $Revision: 4 $
 //
-// $Id: RateTransposer.h,v 1.10 2006/02/05 16:44:06 Olli Exp $
+// $Id: RateTransposer.h 63 2009-02-21 16:00:14Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -45,6 +45,7 @@
 #ifndef RateTransposer_H
 #define RateTransposer_H
 
+#include <stddef.h>
 #include "AAFilter.h"
 #include "FIFOSamplePipe.h"
 #include "FIFOSampleBuffer.h"
@@ -68,7 +69,7 @@ protected:
 
     float fRate;
 
-    uint uChannels;
+    int numChannels;
 
     /// Buffer for collecting samples to feed the anti-alias filter between
     /// two batches
@@ -82,8 +83,6 @@ protected:
 
     BOOL bUseAAFilter;
 
-    void init();
-
     virtual void resetRegisters() = 0;
 
     virtual uint transposeStereo(SAMPLETYPE *dest, 
@@ -92,11 +91,9 @@ protected:
     virtual uint transposeMono(SAMPLETYPE *dest, 
                        const SAMPLETYPE *src, 
                        uint numSamples) = 0;
-    uint transpose(SAMPLETYPE *dest, 
+    inline uint transpose(SAMPLETYPE *dest, 
                    const SAMPLETYPE *src, 
                    uint numSamples);
-
-    void flushStoreBuffer();
 
     void downsample(const SAMPLETYPE *src, 
                     uint numSamples);
@@ -117,7 +114,7 @@ public:
 
     /// Operator 'new' is overloaded so that it automatically creates a suitable instance 
     /// depending on if we're to use integer or floating point arithmetics.
-    void *operator new(size_t s);
+    static void *operator new(size_t s);
 
     /// Use this function instead of "new" operator to create a new instance of this class. 
     /// This function automatically chooses a correct implementation, depending on if 
@@ -131,7 +128,7 @@ public:
     FIFOSamplePipe *getStore() { return &storeBuffer; };
 
     /// Return anti-alias filter object
-    AAFilter *getAAFilter() const;
+    AAFilter *getAAFilter();
 
     /// Enables/disables the anti-alias filter. Zero to disable, nonzero to enable
     void enableAAFilter(BOOL newMode);
@@ -144,7 +141,7 @@ public:
     virtual void setRate(float newRate);
 
     /// Sets the number of channels, 1 = mono, 2 = stereo
-    void setChannels(uint channels);
+    void setChannels(int channels);
 
     /// Adds 'numSamples' pcs of samples from the 'samples' memory position into
     /// the input of the object.
@@ -154,7 +151,7 @@ public:
     void clear();
 
     /// Returns nonzero if there aren't any samples available for outputting.
-    uint isEmpty();
+    int isEmpty() const;
 };
 
 }

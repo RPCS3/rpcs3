@@ -20,9 +20,9 @@
 
 #include "SoundTouch/SoundTouch.h"
 
-static int SequenceLenMS = 63;
-static int SeekWindowMS = 16;
-static int OverlapMS = 7;
+static int SequenceLenMS = 50;
+static int SeekWindowMS = 15;
+static int OverlapMS = 25;
 
 // Timestretch Slider Bounds, Min/Max
 static const int SequenceLen_Min = 50;
