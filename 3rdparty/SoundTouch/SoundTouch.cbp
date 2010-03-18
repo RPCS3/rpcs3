@@ -72,6 +72,7 @@
 		<Unit filename="cpu_detect.h" />
 		<Unit filename="cpu_detect_x86_gcc.cpp" />
 		<Unit filename="mmx_optimized.cpp" />
+		<Unit filename="soundtouch_config.h" />
 		<Unit filename="sse_optimized.cpp" />
 		<Extensions>
 			<envvars />

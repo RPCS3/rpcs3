@@ -38,7 +38,7 @@ int Interpolation = 1;
 		1. linear interpolation
 		2. cubic interpolation
 		3. hermite interpolation
-		3. catmull-rom interpolation
+		4. catmull-rom interpolation
 */
 
 bool EffectsDisabled = false;
