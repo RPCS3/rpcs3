@@ -37,7 +37,10 @@ int Interpolation = 1;
 		0: no interpolation (use nearest)
 		1. linear interpolation
 		2. cubic interpolation
+		3. hermite interpolation
+		3. catmull-rom interpolation
 */
+
 bool EffectsDisabled = false;
 int ReverbBoost = 0;
 
@@ -130,12 +133,14 @@ void DisplayDialog()
 		GTK_STOCK_CANCEL,
 			GTK_RESPONSE_REJECT,
 		NULL);
-    
+	
     int_label = gtk_label_new ("Interpolation:");
     int_box = gtk_combo_box_new_text ();
-    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "0 - Nearest(none/fast)");
-    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "1 - Linear (reccommended)");
-    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "2 - Cubic (slower/maybe better)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "0 - Nearest (fastest/bad quality)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "1 - Linear (simple/nice)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "2 - Cubic (slower/good highs)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "3 - Hermite (slower/better highs)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "4 - Catmull-Rom (slow/hq)");
     gtk_combo_box_set_active(GTK_COMBO_BOX(int_box), Interpolation);
     
     effects_check = gtk_check_button_new_with_label("Disable Effects Processing");

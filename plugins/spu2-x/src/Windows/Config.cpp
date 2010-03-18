@@ -32,6 +32,8 @@ int Interpolation = 1;
 		0: no interpolation (use nearest)
 		1. linear interpolation
 		2. cubic interpolation
+		3. hermite interpolation
+		3. catmull-rom interpolation
 */
 int ReverbBoost = 0;
 bool EffectsDisabled = false;
