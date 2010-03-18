@@ -22,13 +22,13 @@
 // VifCode Transfer Interpreter (Vif0/Vif1)
 //------------------------------------------------------------------
 
-// Runs the next vifCode if its the Mark command
-_vifT void runMark(u32* &data) {
+// Doesn't stall if the next vifCode is the Mark command
+_vifT bool runMark(u32* &data) {
 	if (vifX.vifpacketsize && (((data[0]>>24)&0x7f)==7)) {
-		vifX.vifpacketsize--;
-		vifXCode[7](0, data++);
-		DevCon.WriteLn("Vif%d: Running Mark on I-bit", idx);
+		Console.WriteLn("Vif%d: Running Mark after I-bit", idx);
+		return 0; // No Stall?
 	}
+	return 1; // Stall
 }
 
 // Returns 1 if i-bit && finished vifcode && i-bit not masked
@@ -37,9 +37,14 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
 		// On i-bit, the command is run, vif stalls etc, 
-		// however if the vifcode is MASK, you do NOT stall, just send IRQ. - Max Payne shows this up.
+		// however if the vifcode is MARK, you do NOT stall, just send IRQ. - Max Payne shows this up.
 		if((vifX.cmd & 0x7f) == 0x7) return 0;
-		else return 1;
+
+		// If we have a vifcode with i-bit, the following instruction
+		// should stall unless its MARK?.. we test that case here...
+		// Not 100% sure if this is the correct behavior, so printing
+		// a console message to see games that use this. (cottonvibes)
+		return runMark<idx>(data);
 	}
 	return 0;
 }

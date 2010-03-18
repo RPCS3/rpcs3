@@ -57,8 +57,8 @@ _f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 	u32 m3 = (m1>>1) & ~m0;
 	u32* row = (v.idx) ? g_vifmask.Row1 : g_vifmask.Row0;
 	u32* col = (v.idx) ? g_vifmask.Col1 : g_vifmask.Col0;
-	if (isFill||(m2&&doMask)||doMode) { xMOVAPS(xmmRow, ptr32[row]); }
-	if (isFill||(m3&&doMask)) {
+	if((m2&&(doMask||isFill))||doMode) { xMOVAPS(xmmRow, ptr32[row]); }
+	if (m3&&(doMask||isFill)) {
 		xMOVAPS(xmmCol0, ptr32[col]); 
 		if ((cS>=2) && (m3&0x0000ff00)) xPSHUF.D(xmmCol1, xmmCol0, _v1);
 		if ((cS>=3) && (m3&0x00ff0000)) xPSHUF.D(xmmCol2, xmmCol0, _v2);
