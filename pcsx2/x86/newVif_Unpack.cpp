@@ -127,10 +127,10 @@ int nVifUnpack(int idx, u8* data) {
 			data = v.buffer;
 			size = v.bSize;
 		}
-		if (size > 0) {
+		if (size > 0 || isFill) {
 			if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
 			else			   _nVifUnpack(idx, data, size, isFill);
-		}	else if (isFill)   _nVifUnpack(idx, data, size, isFill);
+		}
 		vif->tag.size = 0;
 		vif->cmd = 0;
 		v.bSize  = 0;
