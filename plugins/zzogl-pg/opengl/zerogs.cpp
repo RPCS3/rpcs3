@@ -506,11 +506,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 
 	ProcessMessages();
 
-#ifdef _WIN32
-		SwapBuffers(hDC);
-#else
-		GLWin.SwapBuffers();
-#endif
+		GLWin.SwapGLBuffers();
 
 	glEnable(GL_SCISSOR_TEST);
 	glEnable(GL_STENCIL_TEST);
@@ -596,10 +592,14 @@ __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 	}
 }
 
-#define OUTPUT_VERT(fn, vert, id) { \
-	fn("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n", id==0?'*':' ', id, prim->prim, vert.x/8, vert.y/8, vert.z, vert.f/128, \
-		vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10)); \
-} \
+static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
+{	
+#ifdef PRIM_LOG
+		PRIM_LOG("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n", 
+			id==0?'*':' ', id, prim->prim, vert.x/8, vert.y/8, vert.z, vert.f/128,
+		vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10)); 
+#endif
+}
 
 void ZeroGS::KickPoint()
 {
@@ -623,9 +623,7 @@ void ZeroGS::KickPoint()
 	SET_VERTEX(&p[0], last, curvb);
 	curvb.nCount++;
 
-#ifdef PRIM_LOG
-	OUTPUT_VERT(PRIM_LOG, p[0], 0);
-#endif
+	OUTPUT_VERT(p[0], 0);
 }
 
 void ZeroGS::KickLine()
@@ -653,10 +651,8 @@ void ZeroGS::KickLine()
 
 	curvb.nCount += 2;
 
-#ifdef PRIM_LOG
-	OUTPUT_VERT(PRIM_LOG, p[0], 0);
-	OUTPUT_VERT(PRIM_LOG, p[1], 1);
-#endif
+	OUTPUT_VERT(p[0], 0);
+	OUTPUT_VERT(p[1], 1);
 }
 
 void ZeroGS::KickTriangle()
@@ -681,11 +677,9 @@ void ZeroGS::KickTriangle()
 
 	curvb.nCount += 3;
 
-#ifdef PRIM_LOG
-	OUTPUT_VERT(PRIM_LOG, p[0], 0);
-	OUTPUT_VERT(PRIM_LOG, p[1], 1);
-	OUTPUT_VERT(PRIM_LOG, p[2], 2);
-#endif
+	OUTPUT_VERT(p[0], 0);
+	OUTPUT_VERT(p[1], 1);
+	OUTPUT_VERT(p[2], 2);
 }
 
 void ZeroGS::KickTriangleFan()
@@ -714,11 +708,9 @@ void ZeroGS::KickTriangleFan()
 	if (gs.primIndex == gs.nTriFanVert)
 		gs.primIndex = (gs.primIndex+1)%ARRAY_SIZE(gs.gsvertex);
 
-#ifdef PRIM_LOG
-	OUTPUT_VERT(PRIM_LOG, p[0], 0);
-	OUTPUT_VERT(PRIM_LOG, p[1], 1);
-	OUTPUT_VERT(PRIM_LOG, p[2], 2);
-#endif
+	OUTPUT_VERT(p[0], 0);
+	OUTPUT_VERT(p[1], 1);
+	OUTPUT_VERT(p[2], 2);
 }
 
 __forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
@@ -775,10 +767,8 @@ void ZeroGS::KickSprite()
 
 	curvb.nCount += 6;
 
-#ifdef PRIM_LOG
-	OUTPUT_VERT(PRIM_LOG, p[0], 0);
-	OUTPUT_VERT(PRIM_LOG, p[1], 1);
-#endif
+	OUTPUT_VERT(p[0], 0);
+	OUTPUT_VERT(p[1], 1);
 }
 
 void ZeroGS::KickDummy()

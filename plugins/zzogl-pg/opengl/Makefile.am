@@ -1,7 +1,7 @@
 # Create a shared library libzzoglpg
 AUTOMAKE_OPTIONS = foreign
 noinst_LIBRARIES = libzzoglpg.a
-INCLUDES = -I@srcdir@/../../../common/include -I@srcdir@/common
+INCLUDES = -I@srcdir@/../../../common/include -I@srcdir@/common  -I@srcdir@/../../../3rdparty/
 
 libzzoglpg_a_CPPFLAGS = $(shell pkg-config --cflags gtk+-2.0)
 libzzoglpg_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
