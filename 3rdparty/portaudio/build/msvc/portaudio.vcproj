@@ -20,7 +20,7 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -64,16 +64,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ksuser.lib"
-				OutputFile="$(SolutionDir)\bin\$(ProjectName)_x86.dll"
-				ModuleDefinitionFile=".\portaudio.def"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -85,9 +79,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -189,7 +180,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -232,16 +223,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ksuser.lib"
-				OutputFile="$(SolutionDir)\bin\$(ProjectName)_x86_dbg.dll"
-				ModuleDefinitionFile=".\portaudio.def"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -253,9 +238,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -358,7 +340,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release (NO ASIO)|Win32"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -402,16 +384,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ksuser.lib"
-				OutputFile="$(SolutionDir)\bin\$(ProjectName)_x86_noasio.dll"
-				ModuleDefinitionFile=".\portaudio_noasio.def"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -423,9 +399,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -527,7 +500,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug (NO ASIO)|Win32"
-			ConfigurationType="2"
+			ConfigurationType="4"
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -570,16 +543,10 @@
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ksuser.lib"
-				OutputFile="$(SolutionDir)\bin\$(ProjectName)_x86_dbg_noasio.dll"
-				ModuleDefinitionFile=".\portaudio_noasio.def"
+				Name="VCLibrarianTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -591,9 +558,6 @@
 			/>
 			<Tool
 				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
