@@ -37,3 +37,7 @@ Pa_GetSampleSize                    @33
 Pa_Sleep                            @34
 PaUtil_InitializeX86PlainConverters @52
 PaUtil_SetDebugPrintFunction        @55
+PaWasapi_GetDeviceDefaultFormat     @56
+PaWasapi_GetDeviceRole              @57
+PaWasapi_ThreadPriorityBoost        @58
+PaWasapi_ThreadPriorityRevert       @59

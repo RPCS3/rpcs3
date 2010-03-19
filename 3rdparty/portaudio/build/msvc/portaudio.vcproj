@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="portaudio"
 	ProjectGUID="{0A18A071-125E-442F-AFF7-A3F68ABECF99}"
 	RootNamespace="portaudio"
@@ -1409,7 +1409,7 @@
 					Name="wasapi"
 					>
 					<File
-						RelativePath="..\..\src\hostapi\wasapi\pa_win_wasapi.cpp"
+						RelativePath="..\..\src\hostapi\wasapi\pa_win_wasapi.c"
 						>
 					</File>
 				</Filter>
@@ -1478,6 +1478,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\pa_win_ds.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_win_wasapi.h"
 				>
 			</File>
 			<File

@@ -4062,3 +4062,4 @@ PaError PaAsio_SetStreamSampleRate( PaStream* s, double sampleRate )
 
     return ValidateAndSetSampleRate( sampleRate );
 }
+

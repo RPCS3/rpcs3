@@ -530,12 +530,27 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
 {
     PaError result = paNoError;
     int i;
-    PaMacAUHAL *auhalHostApi;
+    PaMacAUHAL *auhalHostApi = NULL;
     PaDeviceInfo *deviceInfoArray;
     int unixErr;
 
     VVDBUG(("PaMacCore_Initialize(): hostApiIndex=%d\n", hostApiIndex));
-
+	
+	SInt32 major;
+	SInt32 minor;
+	Gestalt(gestaltSystemVersionMajor, &major);
+	Gestalt(gestaltSystemVersionMinor, &minor);
+	
+	// Starting with 10.6 systems, the HAL notification thread is created internally
+	if (major == 10 && minor >= 6) {
+		CFRunLoopRef theRunLoop = NULL;
+		AudioObjectPropertyAddress theAddress = { kAudioHardwarePropertyRunLoop, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
+		OSStatus osErr = AudioObjectSetPropertyData (kAudioObjectSystemObject, &theAddress, 0, NULL, sizeof(CFRunLoopRef), &theRunLoop);
+		if (osErr != noErr) {
+			goto error;
+		}
+	}
+	
     unixErr = initializeXRunListenerList();
     if( 0 != unixErr ) {
        return UNIX_ERR(unixErr);

@@ -45,6 +45,7 @@
 */
 
 #include "pa_win_ds_dynlink.h"
+#include "pa_debugprint.h"
 
 PaWinDsDSoundEntryPoints paWinDsDSoundEntryPoints = { 0, 0, 0, 0, 0, 0, 0 };
 
@@ -101,10 +102,37 @@ static HRESULT WINAPI DummyDirectSoundCaptureEnumerateA(LPDSENUMCALLBACKA lpDSCE
     return E_NOTIMPL;
 }
 
+#ifdef PAWIN_USE_DIRECTSOUNDFULLDUPLEXCREATE
+static HRESULT WINAPI DummyDirectSoundFullDuplexCreate8(
+         LPCGUID pcGuidCaptureDevice,
+         LPCGUID pcGuidRenderDevice,
+         LPCDSCBUFFERDESC pcDSCBufferDesc,
+         LPCDSBUFFERDESC pcDSBufferDesc,
+         HWND hWnd,
+         DWORD dwLevel,
+         LPDIRECTSOUNDFULLDUPLEX * ppDSFD,
+         LPDIRECTSOUNDCAPTUREBUFFER8 * ppDSCBuffer8,
+         LPDIRECTSOUNDBUFFER8 * ppDSBuffer8,
+         LPUNKNOWN pUnkOuter)
+{
+    (void)pcGuidCaptureDevice; /* unused parameter */
+    (void)pcGuidRenderDevice; /* unused parameter */
+    (void)pcDSCBufferDesc; /* unused parameter */
+    (void)pcDSBufferDesc; /* unused parameter */
+    (void)hWnd; /* unused parameter */
+    (void)dwLevel; /* unused parameter */
+    (void)ppDSFD; /* unused parameter */
+    (void)ppDSCBuffer8; /* unused parameter */
+    (void)ppDSBuffer8; /* unused parameter */
+    (void)pUnkOuter; /* unused parameter */
+
+    return E_NOTIMPL;
+}
+#endif /* PAWIN_USE_DIRECTSOUNDFULLDUPLEXCREATE */
 
 void PaWinDs_InitializeDSoundEntryPoints(void)
 {
-    paWinDsDSoundEntryPoints.hInstance_ = LoadLibrary("dsound.dll");
+    paWinDsDSoundEntryPoints.hInstance_ = LoadLibraryA("dsound.dll");
     if( paWinDsDSoundEntryPoints.hInstance_ != NULL )
     {
         paWinDsDSoundEntryPoints.DllGetClassObject =
@@ -148,9 +176,22 @@ void PaWinDs_InitializeDSoundEntryPoints(void)
                 GetProcAddress( paWinDsDSoundEntryPoints.hInstance_, "DirectSoundCaptureEnumerateA" );
         if( paWinDsDSoundEntryPoints.DirectSoundCaptureEnumerateA == NULL )
             paWinDsDSoundEntryPoints.DirectSoundCaptureEnumerateA = DummyDirectSoundCaptureEnumerateA;
+
+#ifdef PAWIN_USE_DIRECTSOUNDFULLDUPLEXCREATE
+        paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 =
+                (HRESULT (WINAPI *)(LPCGUID, LPCGUID, LPCDSCBUFFERDESC, LPCDSBUFFERDESC,
+                                    HWND, DWORD, LPDIRECTSOUNDFULLDUPLEX *, LPDIRECTSOUNDCAPTUREBUFFER8 *, 
+                                    LPDIRECTSOUNDBUFFER8 *, LPUNKNOWN))
+                GetProcAddress( paWinDsDSoundEntryPoints.hInstance_, "DirectSoundFullDuplexCreate" );
+        if( paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 == NULL )
+            paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 = DummyDirectSoundFullDuplexCreate8;
+#endif
     }
     else
     {
+        DWORD errorCode = GetLastError(); // 126 (0x7E) == ERROR_MOD_NOT_FOUND
+        PA_DEBUG(("Couldn't load dsound.dll error code: %d \n",errorCode));
+
         /* initialize with dummy entry points to make live easy when ds isn't present */
         paWinDsDSoundEntryPoints.DirectSoundCreate = DummyDirectSoundCreate;
         paWinDsDSoundEntryPoints.DirectSoundEnumerateW = DummyDirectSoundEnumerateW;
@@ -158,6 +199,9 @@ void PaWinDs_InitializeDSoundEntryPoints(void)
         paWinDsDSoundEntryPoints.DirectSoundCaptureCreate = DummyDirectSoundCaptureCreate;
         paWinDsDSoundEntryPoints.DirectSoundCaptureEnumerateW = DummyDirectSoundCaptureEnumerateW;
         paWinDsDSoundEntryPoints.DirectSoundCaptureEnumerateA = DummyDirectSoundCaptureEnumerateA;
+#ifdef PAWIN_USE_DIRECTSOUNDFULLDUPLEXCREATE
+        paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 = DummyDirectSoundFullDuplexCreate8;
+#endif
     }
 }
 

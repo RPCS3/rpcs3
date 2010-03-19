@@ -38,16 +38,17 @@ AC_ARG_WITH(asihpi,
 
 AC_ARG_WITH(winapi,
             AS_HELP_STRING([--with-winapi],
-                           [Select Windows API support (@<:@wmme|directx|asio|wdmks@:>@@<:@,...@:>@) @<:@wmme@:>@]),
+                           [Select Windows API support (@<:@wmme|directx|asio|wasapi|wdmks@:>@@<:@,...@:>@) @<:@wmme@:>@]),
             [with_winapi=$withval], [with_winapi="wmme"])
 case "$target_os" in *mingw* | *cygwin*)
      with_wmme=no
      with_directx=no
      with_asio=no
+     with_wasapi=no
      with_wdmks=no
      for api in $(echo $with_winapi | sed 's/,/ /g'); do
          case "$api" in
-             wmme|directx|asio|wdmks)
+             wmme|directx|asio|wasapi|wdmks)
                  eval with_$api=yes
                  ;;
              *)
@@ -222,7 +223,7 @@ case "${host_os}" in
         PADLL="portaudio.dll"
         THREAD_CFLAGS="-mthreads"
         SHARED_FLAGS="-shared"
-        CFLAGS="$CFLAGS -I\$(top_srcdir)/include -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS -DPA_NO_DS"
+        CFLAGS="$CFLAGS -I\$(top_srcdir)/include -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS -DPA_NO_DS -DPA_NO_WASAPI"
 
         if [[ "x$with_directx" = "xyes" ]]; then
             DXDIR="$with_dxdir"
@@ -258,6 +259,13 @@ case "${host_os}" in
             LIBS="-lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm"
             CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -UPA_NO_WMME"
+        fi
+
+        if [[ "x$with_wasapi" = "xyes" ]]; then
+            add_objects src/hostapi/wasapi/pa_win_wasapi.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
+            LIBS="-lwinmm -lm -lole32 -luuid"
+            DLL_LIBS="${DLL_LIBS} -lwinmm"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/wasapi/mingw-include -UPA_NO_WASAPI"
         fi
         ;;
 
@@ -396,11 +404,13 @@ case "$target_os" in
         test "x$with_directx" = "xyes" && with_directx="$with_directx (${with_dxdir})"
         test "x$with_wdmks" = "xyes" && with_wdmks="$with_wdmks (${with_dxdir})"
         test "x$with_asio" = "xyes" && with_asio="$with_asio (${with_asiodir})"
+        test "x$with_wasapi" = "xyes"
         AC_MSG_RESULT([
   WMME ........................ $with_wmme
   DSound ...................... $with_directx
-  WDMKS ....................... $with_wdmks
   ASIO ........................ $with_asio
+  WASAPI ...................... $with_wasapi
+  WDMKS ....................... $with_wdmks
 ])
         ;;
     *darwin*)
