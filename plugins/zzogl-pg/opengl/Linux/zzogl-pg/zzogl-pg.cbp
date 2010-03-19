@@ -59,6 +59,8 @@
 		</Linker>
 		<Unit filename="../../GS.h" />
 		<Unit filename="../../GSmain.cpp" />
+		<Unit filename="../../GifTransfer.cpp" />
+		<Unit filename="../../GifTransfer.h" />
 		<Unit filename="../Conf.cpp" />
 		<Unit filename="../Linux.cpp" />
 		<Unit filename="../Linux.h" />

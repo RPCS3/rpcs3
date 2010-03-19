@@ -24,7 +24,7 @@ libzzoglpg_LDFLAGS+=-Wl,-soname,@ZEROGS_SONAME@
 libzzoglpg_LDADD=$(libzzoglpg_a_OBJECTS)
 
 libzzoglpg_a_SOURCES = \
-GSmain.cpp  memcpy_amd.cpp  Regs.cpp     x86.cpp     zpipe.cpp 		Mem.cpp     \
+GSmain.cpp  GifTransfer.cpp memcpy_amd.cpp  Regs.cpp     x86.cpp     zpipe.cpp 		Mem.cpp     \
 rasterfont.cpp  targets.cpp  zerogs.cpp  ZZoglVB.cpp  ZZoglShoots.cpp	ZZoglCreate.cpp	\
 ZZoglShaders.cpp	ZZoglCRTC.cpp	ZZoglSave.cpp	ZZoglFlush.cpp
 
