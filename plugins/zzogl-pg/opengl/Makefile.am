@@ -1,0 +1,50 @@
+# Create a shared library libzzoglpg
+AUTOMAKE_OPTIONS = foreign
+noinst_LIBRARIES = libzzoglpg.a
+INCLUDES = -I@srcdir@/../../../common/include -I@srcdir@/common
+
+libzzoglpg_a_CPPFLAGS = $(shell pkg-config --cflags gtk+-2.0)
+libzzoglpg_a_CXXFLAGS = $(shell pkg-config --cflags gtk+-2.0)
+
+if X86_64
+libzzoglpg_a_CPPFLAGS += -fPIC
+libzzoglpg_a_CXXFLAGS += -fPIC
+CCASFLAGS += -fPIC
+endif
+
+# Create a shared object by faking an exe (thanks to ODE makefiles)
+traplibdir=$(prefix)
+
+
+if RELEASE_TO_PUBLIC
+preext=r
+endif
+
+EXEEXT=$(preext)@so_ext@
+
+traplib_PROGRAMS=libzzoglpg
+libzzoglpg_SOURCES=
+libzzoglpg_DEPENDENCIES = libzzoglpg.a
+libzzoglpg_LDFLAGS= @SHARED_LDFLAGS@
+libzzoglpg_LDFLAGS+=-Wl,-soname,@ZEROGS_SONAME@
+libzzoglpg_LDADD=$(libzzoglpg_a_OBJECTS)
+
+libzzoglpg_a_SOURCES = \
+GSmain.cpp  memcpy_amd.cpp  Regs.cpp     x86.cpp     zpipe.cpp 		Mem.cpp     \
+rasterfont.cpp  targets.cpp  zerogs.cpp  ZZoglVB.cpp  ZZoglShoots.cpp	ZZoglCreate.cpp	\
+ZZoglShaders.cpp	ZZoglCRTC.cpp	ZZoglSave.cpp	ZZoglFlush.cpp
+
+if X86_64
+libzzoglpg_a_SOURCES += x86-64.S
+else
+libzzoglpg_a_SOURCES += x86-32.S
+endif
+
+if SSE2
+CCASFLAGS+= -DZEROGS_SSE2
+endif
+
+libzzoglpg_a_DEPENDENCIES = Linux/libZeroGSLinux.a
+libzzoglpg_LDADD += Linux/libZeroGSLinux.a
+
+SUBDIRS = Linux ZeroGSShaders .

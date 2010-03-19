@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="plugins"
+	OutputDirectory="$(ProjectDir)\bin"
+	IntermediateDirectory="$(ConfigurationName)"
+	>
+
+	<Tool
+		Name="VCPreBuildEventTool"
+		CommandLine=".\vsprops\preBuild.cmd &quot;$(ProjectDir)\..&quot; &quot;$(ProjectDir)vsprops&quot;"
+	/>
+	<Tool
+		Name="VCPostBuildEventTool"
+		CommandLine=".\vsprops\postBuild.cmd &quot;$(TargetPath)&quot; &quot;$(SolutionDir)&quot; &quot;$(TargetName)&quot; $(TargetExt)"
+	/>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories="..\;&quot;$(ProjectDir)&quot;;..\common;..\3rdparty"
+		PreprocessorDefinitions="__WIN32__;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
+		StructMemberAlignment="5"
+		RuntimeTypeInfo="false"
+		WarningLevel="3"
+		DebugInformationFormat="3"
+		CompileAs="0"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		LinkIncremental="1"
+		GenerateDebugInformation="true"
+		SubSystem="2"
+	/>
+</VisualStudioPropertySheet>

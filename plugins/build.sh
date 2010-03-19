@@ -23,6 +23,7 @@ buildplugin SPU2null $@
 
 buildplugin zerogs $@
 buildplugin zzogl $@
+buildplugin zzogl-pg $@
 buildplugin zeropad $@
 buildplugin zerospu2 $@
 
