@@ -194,114 +194,8 @@ ZeroGS::Create_Window(int _width, int _height) {
 	nBackbufferHeight = _height;
 	fiRendWidth = 1.0f / nBackbufferWidth;
 	fiRendHeight = 1.0f / nBackbufferHeight;
-#ifdef _WIN32
 
-	GLuint	  PixelFormat;			// Holds The Results After Searching For A Match
-	DWORD	   dwExStyle;			  // Window Extended Style
-	DWORD	   dwStyle;				// Window Style
-
-	RECT rcdesktop;
-	GetWindowRect(GetDesktopWindow(), &rcdesktop);
-
-	if( conf.options & GSOPTION_FULLSCREEN) {
-		nBackbufferWidth = rcdesktop.right - rcdesktop.left;
-		nBackbufferHeight = rcdesktop.bottom - rcdesktop.top;
-
-		dwExStyle=WS_EX_APPWINDOW;
-		dwStyle=WS_POPUP;
-		ShowCursor(FALSE);
-	}
-	else {
-		dwExStyle=WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-		dwStyle=WS_OVERLAPPEDWINDOW;
-	}
-
-	RECT rc;
-	rc.left = 0; rc.top = 0;
-	rc.right = nBackbufferWidth; rc.bottom = nBackbufferHeight;
-	AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
-	int X = (rcdesktop.right-rcdesktop.left)/2 - (rc.right-rc.left)/2;
-	int Y = (rcdesktop.bottom-rcdesktop.top)/2 - (rc.bottom-rc.top)/2;
-
-	SetWindowLong( GShwnd, GWL_STYLE, dwStyle );
-	SetWindowLong( GShwnd, GWL_EXSTYLE, dwExStyle );
-
-	SetWindowPos(GShwnd, HWND_TOP, X, Y, rc.right-rc.left, rc.bottom-rc.top, SWP_SHOWWINDOW);
-		
-	if (conf.options & GSOPTION_FULLSCREEN) {
-		DEVMODE dmScreenSettings;
-		memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
-		dmScreenSettings.dmSize=sizeof(dmScreenSettings);
-		dmScreenSettings.dmPelsWidth	= nBackbufferWidth;
-		dmScreenSettings.dmPelsHeight   = nBackbufferHeight;
-		dmScreenSettings.dmBitsPerPel   = 32;
-		dmScreenSettings.dmFields=DM_BITSPERPEL|DM_PELSWIDTH|DM_PELSHEIGHT;
-
-		// Try To Set Selected Mode And Get Results.  NOTE: CDS_FULLSCREEN Gets Rid Of Start Bar.
-		if (ChangeDisplaySettings(&dmScreenSettings,CDS_FULLSCREEN)!=DISP_CHANGE_SUCCESSFUL)
-		{
-			if (MessageBox(NULL,"The Requested Fullscreen Mode Is Not Supported By\nYour Video Card. Use Windowed Mode Instead?","NeHe GL",MB_YESNO|MB_ICONEXCLAMATION)==IDYES)
-				conf.options &= ~GSOPTION_FULLSCREEN;
-			else
-				return false;
-		}
-	}
-	else {
-		// change to default resolution
-		ChangeDisplaySettings(NULL, 0);
-	}
-
-	PIXELFORMATDESCRIPTOR pfd=			  // pfd Tells Windows How We Want Things To Be
-	{
-		sizeof(PIXELFORMATDESCRIPTOR),			  // Size Of This Pixel Format Descriptor
-		1,										  // Version Number
-		PFD_DRAW_TO_WINDOW |						// Format Must Support Window
-		PFD_SUPPORT_OPENGL |						// Format Must Support OpenGL
-		PFD_DOUBLEBUFFER,						   // Must Support Double Buffering
-		PFD_TYPE_RGBA,							  // Request An RGBA Format
-		32,										 // Select Our Color Depth
-		0, 0, 0, 0, 0, 0,						   // Color Bits Ignored
-		0,										  // 8bit Alpha Buffer
-		0,										  // Shift Bit Ignored
-		0,										  // No Accumulation Buffer
-		0, 0, 0, 0,								 // Accumulation Bits Ignored
-		24,										 // 24Bit Z-Buffer (Depth Buffer)  
-		8,										  // 8bit Stencil Buffer
-		0,										  // No Auxiliary Buffer
-		PFD_MAIN_PLANE,							 // Main Drawing Layer
-		0,										  // Reserved
-		0, 0, 0									 // Layer Masks Ignored
-	};
-	
-	if (!(hDC=GetDC(GShwnd))) {
-		MessageBox(NULL,"(1) Can't Create A GL Device Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
-		return false;
-	}
-	
-	if (!(PixelFormat=ChoosePixelFormat(hDC,&pfd))) {
-		MessageBox(NULL,"(2) Can't Find A Suitable PixelFormat.","ERROR",MB_OK|MB_ICONEXCLAMATION);
-		return false;
-	}
-
-	if(!SetPixelFormat(hDC,PixelFormat,&pfd)) {
-		MessageBox(NULL,"(3) Can't Set The PixelFormat.","ERROR",MB_OK|MB_ICONEXCLAMATION);
-		return false;
-	}
-
-	if (!(hRC=wglCreateContext(hDC))) {
-		MessageBox(NULL,"(4) Can't Create A GL Rendering Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
-		return false;
-	}
-
-	if(!wglMakeCurrent(hDC,hRC)) {
-		MessageBox(NULL,"(5) Can't Activate The GL Rendering Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
-		return false;
-	}
-	
-	UpdateWindow(GShwnd);
-#else //NOT _WIN32
-	GLWin.DisplayWindow(_width, _height);
-#endif // WIN32
+	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
 	s_nFullscreen = (conf.options & GSOPTION_FULLSCREEN) ? 1 : 0;
 	conf.mrtdepth = 0; // for now
@@ -914,29 +808,7 @@ void ZeroGS::Destroy(BOOL bD3D)
 
 	SAFE_DELETE(font_p);
 
-#ifdef _WIN32
-	if (hRC)											// Do We Have A Rendering Context?
-	{
-		if (!wglMakeCurrent(NULL,NULL))				 // Are We Able To Release The DC And RC Contexts?
-		{
-			MessageBox(NULL,"Release Of DC And RC Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		}
-
-		if (!wglDeleteContext(hRC))					 // Are We Able To Delete The RC?
-		{
-			MessageBox(NULL,"Release Rendering Context Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		}
-		hRC=NULL;									   // Set RC To NULL
-	}
-
-	if (hDC && !ReleaseDC(GShwnd,hDC))				  // Are We Able To Release The DC
-	{
-		MessageBox(NULL,"Release Device Context Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		hDC=NULL;									   // Set DC To NULL
-	}
-#else // linux
-	GLWin.DestroyWindow();
-#endif
+	GLWin.ReleaseWindow();
 
 	mapGLExtensions.clear();
 }

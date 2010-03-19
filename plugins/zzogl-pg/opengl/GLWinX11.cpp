@@ -33,7 +33,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
         return true;
 }
 
-bool GLWindow::DestroyWindow()
+bool GLWindow::ReleaseWindow()
 {       
     if (context)
         {
@@ -66,7 +66,7 @@ void GLWindow::CloseWindow()
         }
 }
 
-void GLWindow::DisplayWindow(int _width, int _height)
+bool GLWindow::DisplayWindow(int _width, int _height)
 {
 	int i;
 	XVisualInfo *vi;
@@ -208,21 +208,23 @@ void GLWindow::DisplayWindow(int _width, int _height)
 	XSelectInput(GLWin.glDisplay, GLWin.glWindow, ExposureMask | KeyPressMask | KeyReleaseMask | 
 				 ButtonPressMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask |
 				 FocusChangeMask );
+
+	return true;
 }
 
-void GLWindow::SwapBuffers()
+void GLWindow::SwapGLBuffers()
 {
     glXSwapBuffers(glDisplay, glWindow);
 }
                 
 void GLWindow::SetTitle(char *strtitle)
 {
-                XTextProperty prop;
-                memset(&prop, 0, sizeof(prop));
-                char* ptitle = strtitle;
-                if( XStringListToTextProperty(&ptitle, 1, &prop) )
-                        XSetWMName(glDisplay, glWindow, &prop);
-                XFree(prop.value);
+	XTextProperty prop;
+	memset(&prop, 0, sizeof(prop));
+	char* ptitle = strtitle;
+	if( XStringListToTextProperty(&ptitle, 1, &prop) )
+		XSetWMName(glDisplay, glWindow, &prop);
+	XFree(prop.value);
 }
 
 void GLWindow::ResizeCheck()

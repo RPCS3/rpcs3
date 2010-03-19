@@ -154,12 +154,35 @@ class GLWindow
 		u32 width, height, depth;
 
 	public:
-		void SwapBuffers();
+		void SwapGLBuffers();
 		void SetTitle(char *strtitle);
 		bool CreateWindow(void *pDisplay);
-		bool DestroyWindow();
+		bool ReleaseWindow();
 		void CloseWindow();
-		void DisplayWindow(int _width, int _height);
+		bool DisplayWindow(int _width, int _height);
+		void ResizeCheck();
+};
+
+extern GLWindow GLWin;
+
+#else
+
+#define GL_WIN32_WINDOW
+
+class GLWindow
+{
+	private:
+		bool fullScreen, doubleBuffered;
+		s32 x, y;
+		u32 width, height, depth;
+
+	public:
+		void SwapGLBuffers();
+		void SetTitle(char *strtitle);
+		bool CreateGLWindow(void *pDisplay);
+		bool ReleaseWindow();
+		void CloseWindow();
+		bool DisplayWindow(int _width, int _height);
 		void ResizeCheck();
 };
 

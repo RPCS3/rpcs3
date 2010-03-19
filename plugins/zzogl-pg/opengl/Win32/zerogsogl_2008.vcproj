@@ -296,6 +296,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GLWin32.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\GLWinX11.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\GSmain.cpp"
 				>
 			</File>

@@ -112,6 +112,8 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 
 static u64 luPerfFreq;
 
+GLWindow GLWin;
+
 #ifdef _WIN32
 
 HWND GShwnd = NULL;
@@ -127,7 +129,6 @@ void SysMessage(const char *fmt, ...) {
 }
 #else
 
-GLWindow GLWin;
 u32 THR_KeyEvent = 0; // Value for key event processing between threads 
 bool THR_bShift = false;
 
@@ -466,7 +467,7 @@ GameHack HackinshTable[HACK_NUMBER] = {
 	{"***16 Full 16 bit", GAME_FULL16BITRES},
      	{"***17 Resolve promoted", GAME_RESOLVEPROMOTED},
 	{"***18 Fast Update", GAME_FASTUPDATE},
-	{"***19 No Apha Test", GAME_NOALPHATEST},
+	{"***19 No Alpha Test", GAME_NOALPHATEST},
 	{"***20 Disable MRT deprh", GAME_DISABLEMRTDEPTH},
 	{"***21 32 bit targes", GAME_32BITTARGS},
 	{"***22 path 3 hack", GAME_PATH3HACK},
@@ -516,54 +517,7 @@ void OnKeyboardF1(int shift) {
 HANDLE g_hCurrentThread = NULL;
 #endif
 
-LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
-{
-	static int nWindowWidth = 0, nWindowHeight = 0;
-
-	switch( msg ) {
-		case WM_DESTROY:
-			PostQuitMessage( 0 );
-			return 0;
-
-		case WM_KEYDOWN:
-//			switch(wParam) {
-//				case VK_ESCAPE:
-//					SendMessage(hWnd, WM_DESTROY, 0L, 0L);
-//					break;
-//			}
-			break;
-
-		case WM_ACTIVATE:
-
-			if( wParam != WA_INACTIVE ) {
-				//DEBUG_LOG("restoring device\n");
-				ZeroGS::Restore();
-			}
-
-			break;
-
-		case WM_SIZE:
-			nWindowWidth = lParam&0xffff;
-			nWindowHeight = lParam>>16;
-			ZeroGS::ChangeWindowSize(nWindowWidth, nWindowHeight);
-
-			break;
-
-		case WM_SIZING:
-			// if button is 0, then just released so can resize
-			if( GetSystemMetrics(SM_SWAPBUTTON) ? !GetAsyncKeyState(VK_RBUTTON) : !GetAsyncKeyState(VK_LBUTTON) ) {
-				ZeroGS::SetChangeDeviceSize(nWindowWidth, nWindowHeight);
-			}
-			break;
-
-		case WM_SETCURSOR:
-			SetCursor(NULL);
-			break;
-	}
-
-	return DefWindowProc( hWnd, msg, wParam, lParam );
-}
-
+extern LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 extern HINSTANCE hInst;
 void CALLBACK GSconfigure() {
 	DialogBox(hInst,
@@ -576,7 +530,9 @@ void CALLBACK GSconfigure() {
 }
 
 
-s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
+s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) 
+{
+	bool err;
 
 	g_GSMultiThreaded = multithread;
 
@@ -590,65 +546,13 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
 	LoadConfig();
 
 	strcpy(GStitle, Title);
-	
-	RECT rc, rcdesktop;
-	rc.left = 0; rc.top = 0;
-	rc.right = conf.width; rc.bottom = conf.height;
+	err = GLWin.CreateGLWindow(pDsp);
 
-	WNDCLASSEX wc;
-	HINSTANCE hInstance = GetModuleHandle(NULL);
-	DWORD dwExStyle, dwStyle;
-
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_CLASSDC;
-	wc.lpfnWndProc = (WNDPROC) MsgProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = hInstance;
-	wc.hIcon = NULL;
-	wc.hIconSm = NULL;
-	wc.hCursor = NULL;
-	wc.hbrBackground = NULL;
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = "PS2EMU_ZEROGS";
-
-	RegisterClassEx( &wc );
-
-	if( conf.options & GSOPTION_FULLSCREEN)
+	if (!err) 
 	{
-		dwExStyle = WS_EX_APPWINDOW;
-		dwStyle = WS_POPUP;
-	}
-	else
-	{
-		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-		dwStyle = WS_OVERLAPPEDWINDOW;
-	}
-
-	AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
-	GetWindowRect(GetDesktopWindow(), &rcdesktop);
-
-	GShwnd = CreateWindowEx(
-		dwExStyle,
-		"PS2EMU_ZEROGS",
-		"ZeroGS",
-		dwStyle,
-		(rcdesktop.right - (rc.right - rc.left)) / 2,
-		(rcdesktop.bottom - (rc.bottom - rc.top)) / 2,
-		rc.right - rc.left,
-		rc.bottom - rc.top,
-		NULL,
-		NULL,
-		hInstance,
-		NULL);
-
-	if(GShwnd == NULL) {
 		GS_LOG("Failed to create window. Exiting...");
 		return -1;
 	}
-
-	if( pDsp != NULL )
-		*(HWND*)pDsp = GShwnd;
 
 	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
 	ERROR_LOG("creating zerogs\n");
@@ -834,14 +738,7 @@ void CALLBACK GSclose() {
 
 	ZeroGS::Destroy(1);
 
-#ifdef _WIN32
-	if( GShwnd != NULL ) {
-		DestroyWindow(GShwnd);
-		GShwnd = NULL;
-	}
-#else
 	GLWin.CloseWindow();
-#endif
 
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
@@ -972,14 +869,7 @@ void CALLBACK GSvsync(int interlace)
 //			DEBUG_LOG("set profile\n");
 //			g_bWriteProfile = 1;
 //		}
-
-#ifdef _WIN32
-		if( !(conf.options&GSOPTION_FULLSCREEN) )
-			SetWindowText(GShwnd, strtitle);
-#else // linux
-		if (!(conf.options & GSOPTION_FULLSCREEN))
-			GLWin.SetTitle(strtitle);
-#endif
+		if (!(conf.options & GSOPTION_FULLSCREEN)) GLWin.SetTitle(strtitle);
 
 		if( fFPS < 16 ) UPDATE_FRAMES = 4;
 		else if( fFPS < 32 ) UPDATE_FRAMES = 8;

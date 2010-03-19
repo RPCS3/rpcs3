@@ -623,13 +623,7 @@ inline void AfterRenderSwapBuffers() {
 	if (glGetError() != GL_NO_ERROR) 
 		DEBUG_LOG("glerror before swap!\n");
 
-#ifdef _WIN32
-	static u32 lastswaptime = 0;
-	SwapBuffers(hDC);
-	lastswaptime = timeGetTime();
-#else
-	GLWin.SwapBuffers();
-#endif
+	GLWin.SwapGLBuffers();
 }
 
 // SnapeShoot helper

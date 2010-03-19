@@ -182,9 +182,9 @@ public:
 		g_pbyGSClut = (u8*)_aligned_malloc(256*8, 1024); // need 512 alignment!
 		memset(g_pbyGSClut, 0, 256*8);
 
-#ifndef _WIN32
+//#ifndef _WIN32
 		memset(&GLWin, 0, sizeof(GLWin));
-#endif
+//#endif
 	}
 	~ZeroGSInit() {
 		_aligned_free(g_pbyGSMemory); g_pbyGSMemory = NULL;
