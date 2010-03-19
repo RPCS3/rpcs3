@@ -24,6 +24,12 @@
 #include "GSDeviceDX.h"
 #include "GSTexture10.h"
 
+struct GSVertexShader10
+{
+	CComPtr<ID3D10VertexShader> vs;
+	CComPtr<ID3D10InputLayout> il;
+};
+
 class GSDevice10 : public GSDeviceDX
 {
 	GSTexture* Create(int type, int w, int h, bool msaa, int format);
@@ -96,8 +102,7 @@ public: // TODO
 
 	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm);
 
-	CComPtr<ID3D10InputLayout> m_il;
-	hash_map<uint32, CComPtr<ID3D10VertexShader> > m_vs;
+	hash_map<uint32, GSVertexShader10 > m_vs;
 	CComPtr<ID3D10Buffer> m_vs_cb;
 	hash_map<uint32, CComPtr<ID3D10GeometryShader> > m_gs;
 	hash_map<uint32, CComPtr<ID3D10PixelShader> > m_ps;

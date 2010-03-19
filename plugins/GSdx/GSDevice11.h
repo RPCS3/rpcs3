@@ -24,6 +24,12 @@
 #include "GSDeviceDX.h"
 #include "GSTexture11.h"
 
+struct GSVertexShader11
+{
+	CComPtr<ID3D11VertexShader> vs;
+	CComPtr<ID3D11InputLayout> il;
+};
+
 class GSDevice11 : public GSDeviceDX
 {
 	GSTexture* Create(int type, int w, int h, bool msaa, int format);
@@ -99,8 +105,7 @@ public: // TODO
 
 	// Shaders...
 
-	CComPtr<ID3D11InputLayout> m_il;
-	hash_map<uint32, CComPtr<ID3D11VertexShader> > m_vs;
+	hash_map<uint32, GSVertexShader11 > m_vs;
 	CComPtr<ID3D11Buffer> m_vs_cb;
 	hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
 	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;

@@ -59,6 +59,12 @@ struct Direct3DBlendState9
     UINT8 RenderTargetWriteMask;
 };
 
+struct GSVertexShader9
+{
+	CComPtr<IDirect3DVertexShader9> vs;
+	CComPtr<IDirect3DVertexDeclaration9> il;
+};
+
 class GSDevice9 : public GSDeviceDX
 {
 	GSTexture* Create(int type, int w, int h, bool msaa, int format);
@@ -134,8 +140,7 @@ public: // TODO
 
 	// Shaders...
 
-	CComPtr<IDirect3DVertexDeclaration9> m_il;
-	hash_map<uint32, CComPtr<IDirect3DVertexShader9> > m_vs;
+	hash_map<uint32, GSVertexShader9 > m_vs;
 	D3DXHANDLE m_vs_params;
 	hash_map<uint32, CComPtr<IDirect3DPixelShader9> > m_ps;
 	hash_map<uint32, Direct3DSamplerState9* > m_ps_ss;

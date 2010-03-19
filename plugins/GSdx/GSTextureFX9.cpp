@@ -64,13 +64,12 @@ GSTexture* GSDevice9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 void GSDevice9::SetupIA(const void* vertices, int count, int prim)
 {
 	IASetVertexBuffer(vertices, sizeof(GSVertexHW9), count);
-	IASetInputLayout(m_il);
 	IASetPrimitiveTopology((D3DPRIMITIVETYPE)prim);
 }
 
 void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	hash_map< uint32, CComPtr<IDirect3DVertexShader9> >::const_iterator i = m_vs.find(sel);
+	hash_map< uint32, GSVertexShader9 >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
 	{
@@ -99,22 +98,17 @@ void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			D3DDECL_END()
 		};
 
-		CComPtr<IDirect3DVertexDeclaration9> il;
-		CComPtr<IDirect3DVertexShader9> vs;
+		GSVertexShader9 vs;
 
-		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
-
-		if(m_il == NULL)
-		{
-			m_il = il;
-		}
+		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs.vs, layout, countof(layout), &vs.il);
 
 		m_vs[sel] = vs;
 
 		i = m_vs.find(sel);
 	}
 
-	VSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	VSSetShader(i->second.vs, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	IASetInputLayout(i->second.il);
 }
 
 void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)

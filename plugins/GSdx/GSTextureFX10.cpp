@@ -79,13 +79,12 @@ bool GSDevice10::CreateTextureFX()
 void GSDevice10::SetupIA(const void* vertices, int count, int prim)
 {
 	IASetVertexBuffer(vertices, sizeof(GSVertexHW10), count);
-	IASetInputLayout(m_il);
 	IASetPrimitiveTopology((D3D10_PRIMITIVE_TOPOLOGY)prim);
 }
 
 void GSDevice10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	hash_map<uint32, CComPtr<ID3D10VertexShader> >::const_iterator i = m_vs.find(sel);
+	hash_map<uint32, GSVertexShader10 >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
 	{
@@ -113,15 +112,9 @@ void GSDevice10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D10_INPUT_PER_VERTEX_DATA, 0},
 		};
 
-		CComPtr<ID3D10InputLayout> il;
-		CComPtr<ID3D10VertexShader> vs;
+		GSVertexShader10 vs;
 
-		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
-
-		if(m_il == NULL)
-		{
-			m_il = il;
-		}
+		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs.vs, layout, countof(layout), &vs.il);
 
 		m_vs[sel] = vs;
 
@@ -133,7 +126,8 @@ void GSDevice10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		m_dev->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	VSSetShader(i->second, m_vs_cb);
+	VSSetShader(i->second.vs, m_vs_cb);
+	IASetInputLayout(i->second.il);
 }
 
 void GSDevice10::SetupGS(GSSelector sel)
