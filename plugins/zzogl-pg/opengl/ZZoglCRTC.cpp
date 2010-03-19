@@ -628,7 +628,7 @@ inline void AfterRenderSwapBuffers() {
 	SwapBuffers(hDC);
 	lastswaptime = timeGetTime();
 #else
-	glXSwapBuffers(GLWin.dpy, GLWin.win);
+	GLWin.SwapBuffers();
 #endif
 }
 

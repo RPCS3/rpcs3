@@ -57,6 +57,7 @@
 			<Add library="stdc++" />
 			<Add library="Cg" />
 		</Linker>
+		<Unit filename="../../GLWinX11.cpp" />
 		<Unit filename="../../GS.h" />
 		<Unit filename="../../GSmain.cpp" />
 		<Unit filename="../../GifTransfer.cpp" />

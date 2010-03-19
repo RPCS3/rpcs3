@@ -509,7 +509,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 #ifdef _WIN32
 		SwapBuffers(hDC);
 #else
-		glXSwapBuffers(GLWin.dpy, GLWin.win);
+		GLWin.SwapBuffers();
 #endif
 
 	glEnable(GL_SCISSOR_TEST);

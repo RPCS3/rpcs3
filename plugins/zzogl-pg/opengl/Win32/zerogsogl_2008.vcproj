@@ -287,6 +287,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GifTransfer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSsoftdx.def"
 				>
 			</File>
@@ -400,6 +404,10 @@
 			</File>
 			<File
 				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\GifTransfer.h"
 				>
 			</File>
 			<File
