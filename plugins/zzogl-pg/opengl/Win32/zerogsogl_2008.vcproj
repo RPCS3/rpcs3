@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Devel|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -102,11 +102,14 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -175,11 +178,14 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\pcsx2_plugin_common.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -213,7 +219,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="..\x86\;..\..\ZeroGSShaders\"
+				AdditionalIncludeDirectories="..\x86\;..\..\ZeroGSShaders\; ..\..\..\3rdparty\zlib\"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;__i386__;ZEROGS_SSE2;RELEASE_TO_PUBLIC"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -265,6 +271,9 @@
 			<Tool
 				Name="VCAppVerifierTool"
 			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
 	<References>
@@ -279,15 +288,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GifTransfer.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\glprocs.c"
 				>
 			</File>
 			<File
 				RelativePath="..\GSmain.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\GifTransfer.cpp"
 				>
 			</File>
 			<File
@@ -366,6 +375,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglCRTC.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglFlush.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglSave.cpp"
 				>
 			</File>
@@ -374,20 +391,12 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZoglVB.cpp"
-				>			
-			</File>
-			<File
-				RelativePath="..\ZZoglCRTC.cpp"
-				>			
-			</File>
-			<File
 				RelativePath="..\ZZoglShoots.cpp"
-				>			
+				>
 			</File>
 			<File
-				RelativePath="..\ZZoglFlush.cpp"
-				>			
+				RelativePath="..\ZZoglVB.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
@@ -403,11 +412,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\GS.h"
+				RelativePath="..\GifTransfer.h"
 				>
 			</File>
 			<File
-				RelativePath="..\GifTransfer.h"
+				RelativePath="..\GS.h"
 				>
 			</File>
 			<File
@@ -488,91 +497,91 @@
 			Name="zlib"
 			>
 			<File
-				RelativePath="..\3rdparty\zlib\adler32.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\adler32.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\compress.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\compress.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\crc32.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\crc32.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\crc32.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\crc32.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\deflate.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\deflate.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\deflate.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\deflate.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\gzio.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\gzio.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\infback.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\infback.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inffast.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\inffast.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inffast.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\inffast.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inffixed.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\inffixed.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inflate.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\inflate.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inflate.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\inflate.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inftrees.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\inftrees.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\inftrees.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\inftrees.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\trees.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\trees.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\trees.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\trees.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\uncompr.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\uncompr.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\zconf.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\zconf.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\zlib.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\zlib.h"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\zutil.c"
+				RelativePath="..\..\..\..\3rdparty\zlib\zutil.c"
 				>
 			</File>
 			<File
-				RelativePath="..\3rdparty\zlib\zutil.h"
+				RelativePath="..\..\..\..\3rdparty\zlib\zutil.h"
 				>
 			</File>
 		</Filter>

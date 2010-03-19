@@ -176,7 +176,7 @@ int g_LastCRC = 0;
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
 	VALIDATE_THRESH = 8;
-	conf.mrtdepth = (conf.gamesettings&GAME_DISABLEMRTDEPTH !=0);
+	conf.mrtdepth = ((conf.gamesettings & GAME_DISABLEMRTDEPTH) != 0);
 
 	if (!conf.mrtdepth) 
 		ERROR_LOG("Disabling MRT depth writing\n");

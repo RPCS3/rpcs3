@@ -57,7 +57,7 @@ void LoadConfig() {
 
 	if( conf.aa < 0 || conf.aa > 4 ) conf.aa = 0;
 
-	conf.isWideScreen = conf.options & GSOPTION_WIDESCREEN;
+	conf.isWideScreen = ((conf.options & GSOPTION_WIDESCREEN) != 0);
 	switch(conf.options & GSOPTION_WINDIMS) 
 	{
 		case GSOPTION_WIN640:

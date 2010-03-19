@@ -607,7 +607,7 @@ inline bool PSMT_IS16BIT(int psm) { return ((psm & 0x7) == 2);}
 inline bool PSMT_ISZTEX(int psm) {return ((psm & 0x30) == 0x30);}
 
 // PSMCT16, PSMCT16S, PSMT8, PSMT8H, PSMT16Z and PSMT16SZ use only half 16 bit per pixel.
-inline bool PSMT_ISHALF(int psm) {return (psm & 2);}
+inline bool PSMT_ISHALF(int psm) {return ((psm & 2) == 2);}
 
 // PSMT8 and PSMT8H use IDTEX8 CLUT, PSMT4H, PSMT4HL, PSMT4HH -- IDTEX4.
 // Don't use it on non clut entries, please!

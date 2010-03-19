@@ -216,11 +216,19 @@ DisableAllgl () {
 	glColorMask(1,1,1,1);
 }
 
-// Calculate maximun height for target
+// Calculate maximum height for target
 inline int
-get_maxheight(int fbp, int fbw, int psm) {
+get_maxheight(int fbp, int fbw, int psm) 
+{
+	int ret;
+
 	if (fbw == 0) return 0;
-	return ( ( ( 0x00100000 - 64 * fbp ) / fbw ) & ~0x1f ) << (PSMT_ISHALF(psm)) ;
+	if (PSMT_ISHALF(psm))
+		ret = (((0x00100000 - 64 * fbp)/fbw ) & ~0x1f) * 2;
+	else
+		ret = (((0x00100000 - 64 * fbp)/fbw ) & ~0x1f);
+
+	return ret;
 }
 
 // Does psm need Alpha test with alpha expansion
