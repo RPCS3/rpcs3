@@ -200,9 +200,9 @@ __forceinline void vif1Interrupt()
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if (gif->chcr.STR)
+		if (gif->chcr.STR && (Path3progress != STOPPED_MODE))
 		{
-			CPU_INT(DMAC_VIF1, gif->qwc * BIAS);
+			CPU_INT(DMAC_VIF1, 4);
 			return;
 		}
 		else

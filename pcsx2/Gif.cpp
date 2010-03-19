@@ -55,10 +55,20 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
-	if ((vif1.cmd & 0x7f) == 0x51) // DIRECTHL
+	
+
+	if ((vif1.cmd & 0x7e) == 0x50) // DIRECT/HL
 	{
-	    // Not waiting for the end of the Gif transfer.
-		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = false;
+
+		//original behaviour here - if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = false;
+
+	    // Transfer in progress on VIF and GIF has finished so let VIF do its bit
+		if (Path3progress == STOPPED_MODE)
+		{
+			vif1Regs->stat.VGW = false;
+			CPU_INT( DMAC_GIF, 4 );
+			return;
+		}
 	}
 
 	if (Path3progress == STOPPED_MODE)
@@ -209,7 +219,7 @@ void GIFdma()
 	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 
 	//Path2 gets priority in intermittent mode
-	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && (Path3progress == IMAGE_MODE))
+	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7e) == 0x50) && gifRegs->mode.IMT && (Path3progress == STOPPED_MODE))
 	{
 	    // We are in image mode doing DIRECTHL, Path 1 is in queue, and in intermittant mode.
 		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, Path3progress);

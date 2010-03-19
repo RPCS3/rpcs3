@@ -109,14 +109,18 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		vif1Only();
 		//return vifTrans_DirectHL<idx>((u32*)data);
 
-		if (isDirectHL) {
-			if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) {
-				DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");
-				vif1Regs->stat.VGW = true; // PATH3 is in image mode, so wait for end of transfer
-				vif1.vifstalled    = true;
-				return 0;
-			}
+		//Should probably do this for both types of transfer seen as the GS hates taking 2 seperate chunks
+		//if (isDirectHL) {
+		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress != STOPPED_MODE))) 
+		{
+			/*if(!isDirectHL) DevCon.WriteLn("Direct: Waiting for Path3 to finish!");
+			else DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");*/
+
+			vif1Regs->stat.VGW = true; // PATH3 is in image mode, so wait for end of transfer
+			vif1.vifstalled    = true;
+			return 0;
 		}
+		//}
 
 		Registers::Freeze();
 		nVifStruct&	v	 = nVif[1];
