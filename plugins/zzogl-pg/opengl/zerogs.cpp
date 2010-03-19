@@ -829,9 +829,6 @@ void ZeroGS::ExtWrite()
 ////////////
 // Caches //
 ////////////
-#ifdef __x86_64__
-extern "C" void TestClutChangeMMX(void* src, void* dst, int entries, void* pret);
-#endif
 
 bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 {
@@ -869,10 +866,6 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 
 	// do a fast test with MMX
 #ifdef _MSC_VER
-
-#ifdef __x86_64__
-	TestClutChangeMMX(dst, src, entries, &bRet);
-#else
 	int storeebx;
 	__asm {
 		mov storeebx, ebx
@@ -937,63 +930,8 @@ Return:
 		emms
 		mov ebx, storeebx
 	}
-#endif // __x86_64__
 
 #else // linux
-
-#ifdef __x86_64__
-	__asm__(
-		".intel_syntax\n"
-"Start:\n"
-		"movq %%mm0, [%%rcx]\n"
-		"movq %%mm1, [%%rcx+8]\n"
-		"pcmpeqd %%mm0, [%%rdx]\n"
-		"pcmpeqd %%mm1, [%%rdx+16]\n"
-		"movq %%mm2, [%%rcx+16]\n"
-		"movq %%mm3, [%%rcx+24]\n"
-		"pcmpeqd %%mm2, [%%rdx+32]\n"
-		"pcmpeqd %%mm3, [%%rdx+48]\n"
-		"pand %%mm0, %%mm1\n"
-		"pand %%mm2, %%mm3\n"
-		"movq %%mm4, [%%rcx+32]\n"
-		"movq %%mm5, [%%rcx+40]\n"
-		"pcmpeqd %%mm4, [%%rdx+8]\n"
-		"pcmpeqd %%mm5, [%%rdx+24]\n"
-		"pand %%mm0, %%mm2\n"
-		"pand %%mm4, %%mm5\n"
-		"movq %%mm6, [%%rcx+48]\n"
-		"movq %%mm7, [%%rcx+56]\n"
-		"pcmpeqd %%mm6, [%%rdx+40]\n"
-		"pcmpeqd %%mm7, [%%rdx+56]\n"
-		"pand %%mm0, %%mm4\n"
-		"pand %%mm6, %%mm7\n"
-		"pand %%mm0, %%mm6\n"
-		"pmovmskb %%eax, %%mm0\n"
-		"cmp %%eax, 0xff\n"
-		"je Continue\n"
-		".att_syntax\n"
-		"movb $1, %0\n"
-		".intel_syntax\n"
-		"jmp Return\n"
-"Continue:\n"
-		"cmp %%rbx, 16\n"
-		"jle Return\n"
-		"test %%rbx, 0x10\n"
-		"jz AddRcx\n"
-		"sub %%rdx, 448\n" // go back and down one column
-"AddRcx:\n"
-		"add %%rdx, 256\n" // go to the right block
-		"cmp %%rbx, 0x90\n"
-		"jne Continue1\n"
-		"add %%rdx, 256\n" // skip whole block
-"Continue1:\n"
-		"add %%rcx, 64\n"
-		"sub %%rbx, 16\n"
-		"jmp Start\n"
-"Return:\n"
-		"emms\n"
-		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "rax", "memory");
-#else
 	// do a fast test with MMX
 	__asm__(
 		".intel_syntax\n"
@@ -1046,7 +984,6 @@ Return:
 "Return:\n"
 		"emms\n"
 		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory");
-#endif // __x86_64__
 
 #endif // _WIN32
 
