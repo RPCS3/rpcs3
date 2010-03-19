@@ -55,7 +55,7 @@ float SndBuffer::GetStatusPct()
 
 	int drvempty = mods[OutputModule]->GetEmptySampleCount(); // / 2;
 
-	//ConLog( "Data %d >>> driver: %d   predict: %d\n", data, drvempty, predictData );
+	//ConLog( "Data %d >>> driver: %d   predict: %d\n", m_data, drvempty, m_predictData );
 
 	float result = (float)(m_data + m_predictData - drvempty) - (m_size/2);
 	result /= (m_size/2);

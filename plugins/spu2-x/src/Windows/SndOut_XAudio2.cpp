@@ -68,7 +68,7 @@ static const double SndOutNormalizer = (double)(1UL<<(SndOutVolumeShift+16));
 class XAudio2Mod: public SndOutModule
 {
 private:
-	static const int PacketsPerBuffer = 1;
+	static const int PacketsPerBuffer = 8;
 	static const int MAX_BUFFER_COUNT = 3;
 
 	class BaseStreamingVoice : public IXAudio2VoiceCallback

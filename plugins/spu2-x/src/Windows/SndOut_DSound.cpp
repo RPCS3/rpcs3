@@ -27,7 +27,7 @@ class DSound : public SndOutModule
 {
 private:
 	static const uint MAX_BUFFER_COUNT = 8;
-	static const int PacketsPerBuffer = 1;
+	static const int PacketsPerBuffer = 8;
 	static const int BufferSize = SndOutPacketSize * PacketsPerBuffer;
 
 	//////////////////////////////////////////////////////////////////////////////////////////

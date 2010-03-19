@@ -21,6 +21,7 @@
 #include "Dialogs.h"
 
 #include "portaudio/include/portaudio.h"
+#include "portaudio/include/pa_win_wasapi.h"
 
 #ifdef __LINUX__
 int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
@@ -33,10 +34,6 @@ int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
 class Portaudio : public SndOutModule
 {
 private:
-	static const uint MAX_BUFFER_COUNT = 8;
-	static const int PacketsPerBuffer = 1;
-	static const int BufferSize = SndOutPacketSize * PacketsPerBuffer;
-
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Configuration Vars (unused still)
 
@@ -153,6 +150,13 @@ public:
 		
 		if(deviceIndex>=0)
 		{
+			PaWasapiStreamInfo info = { 
+				sizeof(PaWasapiStreamInfo), 
+				paWASAPI, 
+				1, 
+				paWinWasapiExclusive 
+			};
+
 			PaStreamParameters outParams = {
 
 			//	PaDeviceIndex device;
@@ -165,6 +169,7 @@ public:
 				paInt32,
 				0, //?
 				NULL
+				//&info  // Use this instead of the NULL above, to pass it the Exclusive mode enable flag
 			};
 			
 			err = Pa_OpenStream(&stream,
@@ -258,6 +263,7 @@ public:
 		writtenLastTime = writtenSoFar;
 		availableLastTime = availableNow;
 
+		// Lowest resolution here is the SndOutPacketSize we use.
 		return playedSinceLastTime;
 	}
 

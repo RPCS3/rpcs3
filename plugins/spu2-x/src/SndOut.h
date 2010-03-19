@@ -20,7 +20,7 @@
 // Number of stereo samples per SndOut block.
 // All drivers must work in units of this size when communicating with
 // SndOut.
-static const int SndOutPacketSize = 512;
+static const int SndOutPacketSize = 64;
 
 // Overall master volume shift.
 // Converts the mixer's 32 bit value into a 16 bit value.

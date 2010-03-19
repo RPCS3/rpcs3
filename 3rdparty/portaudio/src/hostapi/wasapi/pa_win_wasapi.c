@@ -1806,6 +1806,10 @@ static HRESULT CreateAudioClient(PaWasapiSubStream *pSubStream, PaWasapiDeviceIn
 		if (pSubStream->period < info->DefaultDevicePeriod)
 			pSubStream->period = info->DefaultDevicePeriod;
 	}
+	// Issues with setting exclusive mode due to pSubStream->period beeing wrong somehow
+	// Most likely reason is that framesPerLatency is hardcoded to 0.
+	else if (pSubStream->shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE) 
+		pSubStream->period = info->MinimumDevicePeriod; // Gives 3ms of latency
 
 	// Open the stream and associate it with an audio session
     hr = IAudioClient_Initialize(pAudioClient,
