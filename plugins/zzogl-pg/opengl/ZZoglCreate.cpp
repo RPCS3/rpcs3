@@ -398,6 +398,9 @@ inline bool CreateFillExtensionsMap(){
 	return true;
 }
 
+
+const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
+
 bool ZeroGS::Create(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;

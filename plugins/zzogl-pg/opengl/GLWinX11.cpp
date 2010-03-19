@@ -35,26 +35,27 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 bool GLWindow::ReleaseWindow()
 {       
-    if (context)
-        {
-                if (!glXMakeCurrent(glDisplay, None, NULL))
-                {
-                        ERROR_LOG("Could not release drawing context.\n");
-                }
-                
-                glXDestroyContext(glDisplay, context);
-                context = NULL;
-        }
-        
-        /* switch back to original desktop resolution if we were in fullScreen */
-        if ( glDisplay != NULL ) 
-        {
-                if (fullScreen) 
-                {
-                                XF86VidModeSwitchToMode(glDisplay, glScreen, &deskMode);
-                                XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
-                }
-        }
+	if (context)
+	{
+		if (!glXMakeCurrent(glDisplay, None, NULL))
+		{
+			ERROR_LOG("Could not release drawing context.\n");
+		}
+
+		glXDestroyContext(glDisplay, context);
+		context = NULL;
+	}
+
+	/* switch back to original desktop resolution if we were in fullscreen */
+	if ( glDisplay != NULL ) 
+	{
+		if (fullScreen) 
+		{
+			XF86VidModeSwitchToMode(glDisplay, glScreen, &deskMode);
+			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
+		}
+	}
+	return true;
 }
 
 void GLWindow::CloseWindow()
@@ -98,32 +99,36 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	GLWin.fullScreen = !!(conf.options & GSOPTION_FULLSCREEN);
 	
 	/* get an appropriate visual */
-	vi = glXChooseVisual(GLWin.glDisplay, GLWin.glScreen, attrListDbl);
-	if (vi == NULL) {
-		vi = glXChooseVisual(GLWin.glDisplay, GLWin.glScreen, attrListSgl);
-		GLWin.doubleBuffered = False;
+	vi = glXChooseVisual(glDisplay, glScreen, attrListDbl);
+	if (vi == NULL) 
+	{
+		vi = glXChooseVisual(glDisplay, glScreen, attrListSgl);
+		doubleBuffered = false;
 		ERROR_LOG("Only Singlebuffered Visual!\n");
 	}
-	else {
-		GLWin.doubleBuffered = True;
+	else 
+	{
+		doubleBuffered = true;
 		ERROR_LOG("Got Doublebuffered Visual!\n");
 	}
 
-	glXQueryVersion(GLWin.glDisplay, &glxMajorVersion, &glxMinorVersion);
+	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
 	ERROR_LOG("glX-Version %d.%d\n", glxMajorVersion, glxMinorVersion);
+	
 	/* create a GLX context */
-	GLWin.context = glXCreateContext(GLWin.glDisplay, vi, 0, GL_TRUE);
+	context = glXCreateContext(glDisplay, vi, 0, GL_TRUE);
+	
 	/* create a color map */
-	cmap = XCreateColormap(GLWin.glDisplay, RootWindow(GLWin.glDisplay, vi->screen),
+	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
 						   vi->visual, AllocNone);
-	GLWin.attr.colormap = cmap;
-	GLWin.attr.border_pixel = 0;
+	attr.colormap = cmap;
+	attr.border_pixel = 0;
 
 	// get a connection
-	XF86VidModeQueryVersion(GLWin.glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
+	XF86VidModeQueryVersion(glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
 
-	if (GLWin.fullScreen) {
-		
+	if (fullScreen) 
+	{
 		XF86VidModeModeInfo **modes = NULL;
 		int modeNum = 0;
 		int bestMode = 0;
@@ -131,81 +136,78 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		// set best mode to current
 		bestMode = 0;
 		ERROR_LOG("XF86VidModeExtension-Version %d.%d\n", vidModeMajorVersion, vidModeMinorVersion);
-		XF86VidModeGetAllModeLines(GLWin.glDisplay, GLWin.glScreen, &modeNum, &modes);
+		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
 		
-		if( modeNum > 0 && modes != NULL ) {
+		if( modeNum > 0 && modes != NULL ) 
+		{
 			/* save desktop-resolution before switching modes */
-			GLWin.deskMode = *modes[0];
+			deskMode = *modes[0];
+			
 			/* look for mode with requested resolution */
-			for (i = 0; i < modeNum; i++) {
-				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height)) {
+			for (i = 0; i < modeNum; i++) 
+			{
+				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height))
+				{
 					bestMode = i;
 				}
 			}	
 
-			XF86VidModeSwitchToMode(GLWin.glDisplay, GLWin.glScreen, modes[bestMode]);
-			XF86VidModeSetViewPort(GLWin.glDisplay, GLWin.glScreen, 0, 0);
+			XF86VidModeSwitchToMode(glDisplay, glScreen, modes[bestMode]);
+			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
 			dpyWidth = modes[bestMode]->hdisplay;
 			dpyHeight = modes[bestMode]->vdisplay;
 			ERROR_LOG("Resolution %dx%d\n", dpyWidth, dpyHeight);
 			XFree(modes);
 			
 			/* create a fullscreen window */
-			GLWin.attr.override_redirect = True;
-			GLWin.attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
-				StructureNotifyMask;
-			GLWin.glWindow = XCreateWindow(GLWin.glDisplay, RootWindow(GLWin.glDisplay, vi->screen),
+			attr.override_redirect = True;
+			attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
+			glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
 									  0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
 									  CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,
-									  &GLWin.attr);
-			XWarpPointer(GLWin.glDisplay, None, GLWin.glWindow, 0, 0, 0, 0, 0, 0);
-			XMapRaised(GLWin.glDisplay, GLWin.glWindow);
-			XGrabKeyboard(GLWin.glDisplay, GLWin.glWindow, True, GrabModeAsync,
-						  GrabModeAsync, CurrentTime);
-			XGrabPointer(GLWin.glDisplay, GLWin.glWindow, True, ButtonPressMask,
-						 GrabModeAsync, GrabModeAsync, GLWin.glWindow, None, CurrentTime);
+									  &attr);
+			XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 0, 0);
+			XMapRaised(glDisplay, glWindow);
+			XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+			XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
 		}
-		else {
+		else 
+		{
 			ERROR_LOG("Failed to start fullscreen. If you received the \n"
 					  "\"XFree86-VidModeExtension\" extension is missing, add\n"
 					  "Load \"extmod\"\n"
 					  "to your X configuration file (under the Module Section)\n");
-			GLWin.fullScreen = false;
+			fullScreen = false;
 		}
 	}
 	
-	if( !GLWin.fullScreen ) {
-
-		//XRootWindow(dpy,screen)
-		//int X = (rcdesktop.right-rcdesktop.left)/2 - (rc.right-rc.left)/2;
-		//int Y = (rcdesktop.bottom-rcdesktop.top)/2 - (rc.bottom-rc.top)/2;
-
+	if (!fullScreen) 
+	{
 		// create a window in window mode
-		GLWin.attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask |
-			StructureNotifyMask;
-		GLWin.glWindow = XCreateWindow(GLWin.glDisplay, RootWindow(GLWin.glDisplay, vi->screen),
+		attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
+		glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
 								  0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
-								  CWBorderPixel | CWColormap | CWEventMask, &GLWin.attr);
+								  CWBorderPixel | CWColormap | CWEventMask, &attr);
+								  
 		// only set window title and handle wm_delete_events if in windowed mode
-		wmDelete = XInternAtom(GLWin.glDisplay, "WM_DELETE_WINDOW", True);
-		XSetWMProtocols(GLWin.glDisplay, GLWin.glWindow, &wmDelete, 1);
-		XSetStandardProperties(GLWin.glDisplay, GLWin.glWindow, "ZZOgl-PG",
-								   "ZZOgl-PG", None, NULL, 0, NULL);
-		XMapRaised(GLWin.glDisplay, GLWin.glWindow);
+		wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
+		
+		XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
+		XSetStandardProperties(glDisplay, glWindow, "ZZOgl-PG", "ZZOgl-PG", None, NULL, 0, NULL);
+		XMapRaised(glDisplay, glWindow);
 	}	   
 
 	// connect the glx-context to the window
-	glXMakeCurrent(GLWin.glDisplay, GLWin.glWindow, GLWin.context);
-	XGetGeometry(GLWin.glDisplay, GLWin.glWindow, &winDummy, &GLWin.x, &GLWin.y,
-				 &GLWin.width, &GLWin.height, &borderDummy, &GLWin.depth);
-	ERROR_LOG("Depth %d\n", GLWin.depth);
-	if (glXIsDirect(GLWin.glDisplay, GLWin.context)) 
+	glXMakeCurrent(glDisplay, glWindow, context);
+	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
+	ERROR_LOG("Depth %d\n", depth);
+	if (glXIsDirect(glDisplay, context)) 
 		ERROR_LOG("you have Direct Rendering!\n");
 	else
 		ERROR_LOG("no Direct Rendering possible!\n");
 
 	// better for pad plugin key input (thc)
-	XSelectInput(GLWin.glDisplay, GLWin.glWindow, ExposureMask | KeyPressMask | KeyReleaseMask | 
+	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask | 
 				 ButtonPressMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask |
 				 FocusChangeMask );
 

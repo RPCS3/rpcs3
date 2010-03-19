@@ -13,7 +13,6 @@
 
 #define NUM_SHADERS (NUM_FILTERS*NUM_TYPES*NUM_TEXWRAPS*32) // # shaders for a given ps
 
-const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
 const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
 
@@ -22,14 +21,14 @@ const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex1
 #define TEXWRAP_REGION_REPEAT 2
 #define TEXWRAP_REPEAT_CLAMP 3
 
-inline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int context, int ps)
+static __forceinline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int context, int ps)
 {
 	return type + texfilter*NUM_TYPES + NUM_FILTERS*NUM_TYPES*texwrap + NUM_TEXWRAPS*NUM_FILTERS*NUM_TYPES*(fog+2*writedepth+4*testaem+8*exactcolor+16*context+32*ps);
 }
 
 extern CGcontext g_cgcontext;
 
-static CGprogram LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context)
+static __forceinline CGprogram LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context)
 {
 	assert( texwrap < NUM_TEXWRAPS);
 	assert( type < NUM_TYPES );

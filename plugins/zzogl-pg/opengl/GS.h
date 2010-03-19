@@ -210,10 +210,18 @@ struct Vector_16F
 #endif
 
 #define ERROR_LOG __LogToConsole
-//Logging for oftenly calling error should have time counter.
-static unsigned long int lasttime = 0; 
-static unsigned long int BigTime = 5000;
+//Logging for errors that are called often should have a time counter.
+
+#ifdef __LINUX__
+static u32 __attribute__((unused)) lasttime = 0; 
+static u32 __attribute__((unused)) BigTime = 5000;
+static bool __attribute__((unused)) SPAM_PASS;
+#else
+static u32 lasttime = 0; 
+static u32 BigTime = 5000;
 static bool SPAM_PASS;
+#endif
+
 #define ERROR_LOG_SPAM(text) { \
 	if( timeGetTime() - lasttime > BigTime ) { \
 		ERROR_LOG(text); \
@@ -489,13 +497,8 @@ extern u8* g_pBasePS2Mem;
 //
 // sps2tags.h
 //
-#ifdef _M_AMD64
-#define GET_GIF_REG(tag, reg) \
-	(((tag).ai64[1] >> ((reg) << 2)) & 0xf)
-#else
 #define GET_GIF_REG(tag, reg) \
 	(((tag).ai32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
-#endif
 
 //
 // GIFTag
@@ -543,26 +546,17 @@ typedef struct {
 #define GSOPTION_LOADED		0x8000
 
 //Configuration values.
-typedef struct {
-	// write color in render target
-	u8 mrtdepth;
-	// intelacing mode 0, 1, 3-off
-	u8 interlace;
-	// antialiasing 0 - off, 1 - 2x, 2 - 4x, 3 - 8x, 4 - 16x
-	u8 aa; 	
-	// negative aliasing
-	u8 negaa;
-	// set to enable bilinear support. 0 - off, 1 -- on, 2 -- force (use it to textures, 
-	// that usually does neet billinear
-	u8 bilinear; 
-	// game options -- diffetent hacks.
-	u32 options;
-	// default game settings
-	u32 gamesettings;
-	// View target size, have no impact to speed
-	int width, height;
-	// Widescreen support
-	bool isWideScreen;
+typedef struct 
+{
+	u8 mrtdepth; // write color in render target
+	u8 interlace; // intelacing mode 0, 1, 3-off
+	u8 aa;	// antialiasing 0 - off, 1 - 2x, 2 - 4x, 3 - 8x, 4 - 16x
+	u8 negaa; // negative aliasing
+	u8 bilinear; // set to enable bilinear support. 0 - off, 1 -- on, 2 -- force (use for textures that usually need it)
+	u32 options; // game options -- different hacks.
+	u32 gamesettings;// default game settings
+	int width, height; // View target size, has no impact towards speed
+	bool isWideScreen; // Widescreen support
 #ifdef GS_LOG
 	u32 log;
 #endif

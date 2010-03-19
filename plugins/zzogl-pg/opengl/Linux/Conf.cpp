@@ -46,8 +46,6 @@ void SaveConfig()
 
 void LoadConfig() 
 {
-	char cfg[255];
-
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;

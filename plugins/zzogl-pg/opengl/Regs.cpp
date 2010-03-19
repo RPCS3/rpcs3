@@ -993,7 +993,6 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 	}
 }
 
-static u32 oldhw[4];
 void __fastcall GIFRegHandlerHWREG(u32* data)
 {   
 	FUNCLOG

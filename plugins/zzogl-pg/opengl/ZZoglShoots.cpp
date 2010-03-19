@@ -320,12 +320,11 @@ void ZeroGS::CaptureFrame()
 
 	vector<u32> data(nBackbufferWidth*nBackbufferHeight);
 	glReadPixels(0, 0, nBackbufferWidth, nBackbufferHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
-	if (glGetError() != GL_NO_ERROR)
-		return;
-
-	int fps = SMODE1->CMOD == 3 ? 50 : 60;
+	if (glGetError() != GL_NO_ERROR) return;
 
 #ifdef _WIN32
+	int fps = SMODE1->CMOD == 3 ? 50 : 60;
+	
 	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, nBackbufferWidth, nBackbufferHeight, 32, &data[0]);
 
 	if( !bSuccess ) {

@@ -213,8 +213,8 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 	if( maxpos > 256 ) 
 		maxpos &= ~0x1f;
 
-	int noscissorpos = maxpos;
-	int ConstrainR1 = ConstraintReson;
+	//int noscissorpos = maxpos;
+	//int ConstrainR1 = ConstraintReson;
 	maxpos = FindMinimalHeightConstrain(maxpos);
 
 	frame = gsfb;

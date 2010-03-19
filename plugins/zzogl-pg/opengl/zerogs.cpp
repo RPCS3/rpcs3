@@ -351,7 +351,7 @@ void ZeroGS::Reset()
 void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
-	int oldscreen = s_nFullscreen;
+	//int oldscreen = s_nFullscreen;
 
 	int oldwidth = nBackbufferWidth, oldheight = nBackbufferHeight;
 	if( !Create(nNewWidth&~7, nNewHeight&~7) ) {

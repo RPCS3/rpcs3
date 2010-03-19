@@ -248,7 +248,7 @@ static PCSX2_ALIGNED16(u32 tempblock[64]);
 	assert( gs.imageTransfer == 0 ); \
 	u8* pstart = g_pbyGSMemory + gs.dstbuf.bp*256; \
 	\
-	const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4; \
+	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ \
 	int i = gs.imageY, j = gs.imageX; \
 
 #define END_HOSTLOCAL() \

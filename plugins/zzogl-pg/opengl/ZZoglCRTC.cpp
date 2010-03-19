@@ -263,8 +263,9 @@ inline void RenderStartHelper(u32 bInterlace){
 	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
 
 	// if interlace, only clear every other vsync
-	if(!bInterlace ) {
-		u32 color = COLOR_ARGB(0, BGCOLOR->R, BGCOLOR->G, BGCOLOR->B);
+	if(!bInterlace ) 
+	{
+		//u32 color = COLOR_ARGB(0, BGCOLOR->R, BGCOLOR->G, BGCOLOR->B);
 		glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 	}
 

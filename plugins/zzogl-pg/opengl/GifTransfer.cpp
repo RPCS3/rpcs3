@@ -283,12 +283,15 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	_GSgifTransfer(&gs.path3, pMem, size);
 }
 
+#ifdef _DEBUG
 static int count = 0;
+#endif
+
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	FUNCLOG
 
-	pathInfo *path = &gs.path1;
+	//pathInfo *path = &gs.path1;
 	
 	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
 	

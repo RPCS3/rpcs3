@@ -95,7 +95,8 @@ bool ZeroGS::Load(s8* pbydata)
 		GSStateReset();
 		pbydata += 32;
 
-		int context = *(int*)pbydata; pbydata += 4;
+		//int context = *(int*)pbydata; 
+		pbydata += 4;
 		u32 savelimit = VBSAVELIMIT;
 		
 		savelimit = *(u32*)pbydata; pbydata += 4;

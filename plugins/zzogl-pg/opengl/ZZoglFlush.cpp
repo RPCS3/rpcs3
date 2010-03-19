@@ -780,7 +780,7 @@ inline Vector FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& cu
 		vTexDims.w = 0;//0.2f/(float)ptextarg->fbh;
 	}
 	else {
-		u32 tbp0 = curvb.tex0.tbp0 >> 5; // align to a page
+		//u32 tbp0 = curvb.tex0.tbp0 >> 5; // align to a page
 		int blockheight =  PSMT_ISHALF(ptextarg->psm) ? 64 : 32;
 		int ycoord = ((curvb.tex0.tbp0 - ptextarg->fbp) / (32 * (ptextarg->fbw >> 6))) * blockheight;
 		int xcoord = (((curvb.tex0.tbp0 - ptextarg->fbp) % (32 * (ptextarg -> fbw >> 6)))) * 2;
@@ -822,7 +822,7 @@ inline FRAGMENTSHADER* FlushUseExistRenderTaget(VB& curvb, CRenderTarget* ptexta
 		SetWriteDepth();
 
 	GLuint ptexclut = 0;
-	int psm = GetTexCPSM(curvb.tex0);
+	//int psm = GetTexCPSM(curvb.tex0);
 	int shadertype = FlushGetShaderType(curvb, ptextarg, ptexclut);
 
 	FRAGMENTSHADER* pfragment = LoadShadeEffect(shadertype, 0, curvb.curprim.fge,
@@ -852,7 +852,7 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 	if( g_bSaveTex ) {
 		if( g_bSaveTex == 1 ) {
 			SaveTex(&curvb.tex0, 1);
-			CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(curvb.tex0, 0);
+			/*CMemoryTarget* pmemtarg = */g_MemTargs.GetMemoryTarget(curvb.tex0, 0);
 		}
 		else SaveTex(&curvb.tex0, 0);
 	}
@@ -1817,8 +1817,8 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment ) {
 	Vector v, v2;
 	tex0Info& tex0 = vb[context].tex0;
 	
-	float fw = (float)tex0.tw;
-	float fh = (float)tex0.th;
+	//float fw = (float)tex0.tw;
+	//float fh = (float)tex0.th;
 
 	if( !vb[context].bTexConstsSync ) {
 		SetShaderCaller("SetTexVariables");
@@ -2024,11 +2024,11 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	}
 
 	float g_fitexwidth = g_fiGPU_TEXWIDTH/(float)pmemtarg->widthmult;
-	float g_texwidth = GPU_TEXWIDTH*(float)pmemtarg->widthmult;
+	//float g_texwidth = GPU_TEXWIDTH*(float)pmemtarg->widthmult;
 
 	float fpage = tex0.tbp0*(64.0f*g_fitexwidth);// + 0.05f * g_fitexwidth;
 	float fpageint = floorf(fpage);
-	int starttbp = (int)fpage;
+	//int starttbp = (int)fpage;
 	
 	// 2048 is number of words to span one page
 	//float fblockstride = (2048.0f /(float)(g_texwidth*BLOCK_TEXWIDTH)) * b.vTexDims.x * fbw;
@@ -2053,7 +2053,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	ZZcgSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
 
 	// get hardware texture dims
-	int texheight = (pmemtarg->realheight+pmemtarg->widthmult-1)/pmemtarg->widthmult;
+	//int texheight = (pmemtarg->realheight+pmemtarg->widthmult-1)/pmemtarg->widthmult;
 	int texwidth = GPU_TEXWIDTH*pmemtarg->widthmult*pmemtarg->channels;
 
 	v.y = 1.0f;
@@ -2136,7 +2136,7 @@ inline void ZeroGS::NeedFactor( int w ) {
 	}
 }
 
-static int CheckArray[48][2] = {{0,}};
+//static int CheckArray[48][2] = {{0,}};
 
 void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 {
@@ -2147,7 +2147,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	g_vars._bAlphaState = 0; // set all to zero
 	bNeedBlendFactorInAlpha = 0;
 	b2XAlphaTest = 1;
-	u32 dwTemp = 0xffffffff;
+	//u32 dwTemp = 0xffffffff;
 	bDestAlphaColor = 0;
 
 	// default

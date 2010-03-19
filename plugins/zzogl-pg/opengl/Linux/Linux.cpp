@@ -93,14 +93,10 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 
 void OnConf_Ok(GtkButton *button, gpointer user_data)
 {
-	GtkWidget *Btn;
 	GtkWidget *treeview;
 	GtkTreeModel *treemodel;
 	GtkTreeIter treeiter;
 	gboolean treeoptval;
-	gchar *gbuf;
-	char *str;
-	int i;
 
 	conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkBilinear")));
 	// restore
@@ -177,9 +173,7 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 
 void CALLBACK GSconfigure()
 {
-	char name[32];
 	char descbuf[255];
-	int nmodes, i;
 	bool itval;
 	GtkWidget *treeview;
 	GtkCellRenderer *treerend;

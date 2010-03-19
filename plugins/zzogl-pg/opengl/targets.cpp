@@ -1242,11 +1242,9 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			for(MAPTARGETS::iterator it = mapTargets.begin(); it != mapTargets.end(); ++it) {
 				if( it->second->start < end && start < it->second->end ) {
 						if((g_GameSettings&GAME_FASTUPDATE) ||
-							(frame.fbw == it->second->fbw)
-						       	&& 
+							(frame.fbw == it->second->fbw) && 
 							// check depth targets only if partialdepth option
-							((it->second->fbp != frame.fbp) || ((g_GameSettings&GAME_PARTIALDEPTH)&&(opts&CRenderTargetMngr::TO_DepthBuffer))))
-						
+							((it->second->fbp != frame.fbp) || ((g_GameSettings & GAME_PARTIALDEPTH) && (opts & CRenderTargetMngr::TO_DepthBuffer))))
 						{
 							if( besttarg != 0 ) {
 								besttarg = 0;
@@ -1544,11 +1542,11 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	}
 
 	// delete clearminy, clearmaxy range (not the checkstarty, checkendy range)
-	int newstarty = 0;
+	//int newstarty = 0;
 	if( clearminy <= starty ) {
 		if( clearmaxy < starty + height) {
 			// preserve end
-			height = starty+height-clearmaxy;
+			height = starty + height - clearmaxy;
 			starty = clearmaxy;
 			assert(height > 0);
 		}
@@ -2412,7 +2410,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 {
 	FUNCLOG
 	assert( s_RangeMngr.ranges.size() > 0 );
-	bool bHasFlushed = false;
+	//bool bHasFlushed = false;
 	list<CRenderTarget*> listTransmissionUpdateTargs;
 
 	int texstart = -1, texend = -1;
@@ -2554,7 +2552,7 @@ void InitTransferHostLocal()
 		WARN_LOG("Transfer error, width exceeds\n");
 #endif
 
-	bool bHasFlushed = false;
+	//bool bHasFlushed = false;
 
 	gs.imageX = gs.trxpos.dx;
 	gs.imageY = gs.trxpos.dy;
@@ -3199,8 +3197,8 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
 
 	int i, j;
-	short smask1 = gs.smask&1;
-	short smask2 = gs.smask&2;
+	//short smask1 = gs.smask&1;
+	//short smask2 = gs.smask&2;
 	u32 mask, imask;
 
 	if (PSMT_ISHALF(psm)) { // 16 bit
