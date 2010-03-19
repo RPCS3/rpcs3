@@ -674,12 +674,12 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 	}
 
 	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
-	IASetInputLayout(m_convert.il);
 	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
 	// vs
 
 	VSSetShader(m_convert.vs, NULL, 0);
+	IASetInputLayout(m_convert.il);
 
 	// ps
 
@@ -751,12 +751,12 @@ void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVe
 		// ia
 
 		IASetVertexBuffer(iaVertices, sizeof(iaVertices[0]), countof(iaVertices));
-		IASetInputLayout(m_convert.il);
 		IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
 		// vs
 
 		VSSetShader(m_convert.vs, NULL, 0);
+		IASetInputLayout(m_convert.il);
 
 		// ps
 

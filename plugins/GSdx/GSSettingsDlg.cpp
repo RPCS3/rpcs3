@@ -30,17 +30,9 @@ GSSetting GSSettingsDlg::g_renderers[] =
 	{0, "Direct3D9 (Hardware)", NULL},
 	{1, "Direct3D9 (Software)", NULL},
 	{2, "Direct3D9 (Null)", NULL},
-	{3, "Direct3D10 (Hardware)", NULL},
-	{4, "Direct3D10 (Software)", NULL},
-	{5, "Direct3D10 (Null)", NULL},
-	#if 0
-	{6, "Direct3D11 (Hardware)", NULL},
-	{7, "Direct3D11 (Software)", NULL},
-	{8, "Direct3D11 (Null)", NULL},
-	{9, "OpenGL (Hardware)", NULL},
-	{10, "OpenGL (Software)", NULL},
-	{11, "OpenGL (Null)", NULL},
-	#endif
+	{3, "Direct3D11 (Hardware)", NULL},
+	{4, "Direct3D11 (Software)", NULL},
+	{5, "Direct3D11 (Null)", NULL},
 	{12, "Null (Software)", NULL},
 	{13, "Null (Null)", NULL},
 };
@@ -115,15 +107,13 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
-	bool isdx10avail = GSUtil::IsDirect3D10Available();
-	bool isdx11avail = false; //GSUtil::IsDirect3D11Available();
+	bool isdx11avail = GSUtil::IsDirect3D11Available();
 
 	vector<GSSetting> renderers;
 
 	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
-		if(i >= 3 && i <= 5 && !isdx10avail) continue;
-		if(i >= 6 && i <= 8 && !isdx11avail) continue;
+		if(i >= 3 && i <= 5 && !isdx11avail) continue;
 
 		renderers.push_back(g_renderers[i]);
 	}

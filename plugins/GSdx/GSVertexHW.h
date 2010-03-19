@@ -56,7 +56,7 @@ __aligned16 union GSVertexHW9
 	float GetQ() {return p.w;}
 };
 
-__aligned16 union GSVertexHW10
+__aligned16 union GSVertexHW11
 {
 	struct
 	{
@@ -88,13 +88,9 @@ __aligned16 union GSVertexHW10
 	struct {GSVector4i vi[2];};
 	struct {GSVector4 vf[2];};
 
-	GSVertexHW10& operator = (GSVertexHW10& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
+	GSVertexHW11& operator = (GSVertexHW11& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
 
 	float GetQ() {return q;}
 };
-
-typedef GSVertexHW10 GSVertexHW11; // TODO
-
-typedef GSVertexHW9 GSVertexOGL; // TODO
 
 #pragma pack(pop)

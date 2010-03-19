@@ -36,7 +36,6 @@ public:
 	static bool CheckDirectX();
 	static bool CheckSSE();
 
-	static bool IsDirect3D10Available();
 	static bool IsDirect3D11Available();
 
 	static char* GetLibName();

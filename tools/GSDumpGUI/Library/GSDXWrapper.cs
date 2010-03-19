@@ -28,7 +28,7 @@ namespace GSDumpGUI
             if (hmod.ToInt64() > 0)
             {
                 IntPtr funcaddrReplay = NativeMethods.GetProcAddress(hmod, "GSReplay");
-                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PSEgetLibName");
+                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
                 NativeMethods.FreeLibrary(hmod);
@@ -64,7 +64,7 @@ namespace GSDumpGUI
             if (hmod.ToInt64() > 0)
             {
                 IntPtr funcaddrReplay = NativeMethods.GetProcAddress(hmod, "GSReplay");
-                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PSEgetLibName");
+                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
                 gsReplay = (GSReplay)Marshal.GetDelegateForFunctionPointer(funcaddrReplay, typeof(GSReplay));

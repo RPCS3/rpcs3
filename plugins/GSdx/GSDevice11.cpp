@@ -67,7 +67,16 @@ bool GSDevice11::Create(GSWnd* wnd)
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
 
+	// Always start in Windowed mode.  According to MS, DXGI just "prefers" this, and it's more or less
+	// required if we want to add support for dual displays later on.  The fullscreen/exclusive flip
+	// will be issued after all other initializations are complete.
+
 	scd.Windowed = TRUE;
+
+	// NOTE : D3D11_CREATE_DEVICE_SINGLETHREADED
+	//   This flag is safe as long as the DXGI's internal message pump is disabled or is on the
+	//   same thread as the GS window (which the emulator makes sure of, if it utilizes a
+	//   multithreaded GS).  Setting the flag is a nice and easy 5% speedup on GS-intensive scenes.
 
 	uint32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 
@@ -255,7 +264,8 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	m_dev->CreateBlendState(&blend, &m_date.bs);
 
-	//
+	// Exclusive/Fullscreen flip, issued for legacy (managed) windows only.  GSopen2 style
+	// emulators will issue the flip themselves later on.
 
 	if(m_wnd->IsManaged())
 	{
@@ -410,7 +420,7 @@ GSTexture* GSDevice11::CreateRenderTarget(int w, int h, bool msaa, int format)
 
 GSTexture* GSDevice11::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return __super::CreateDepthStencil(w, h, msaa, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	return __super::CreateDepthStencil(w, h, msaa, format ? format : DXGI_FORMAT_D32_FLOAT_S8X24_UINT); // DXGI_FORMAT_R32G8X24_TYPELESS
 }
 
 GSTexture* GSDevice11::CreateTexture(int w, int h, int format)
@@ -651,7 +661,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 		m_vertices.start = 0;
 		m_vertices.count = 0;
-		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
+		m_vertices.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
 	if(m_vb == NULL)
@@ -952,7 +962,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 
 	PrepareShaderMacro(m, macro);
 
-	CComPtr<ID3D10Blob> shader, error;
+	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
 	

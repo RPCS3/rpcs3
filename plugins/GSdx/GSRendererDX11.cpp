@@ -46,10 +46,68 @@ void GSRendererDX11::VertexKick(bool skip)
 	dst.vi[0] = m_v.vi[0];
 	dst.vi[1] = m_v.vi[1];
 
+#ifdef USE_UPSCALE_HACKS
+	if(tme && fst)
+	{
+		//GSVector4::storel(&dst.ST, m_v.GetUV());
+		int Udiff = 0;
+		int Vdiff = 0;
+		int Uadjust = 0;
+		int Vadjust = 0;
+		int multiplier = upscale_Multiplier(); 
+		
+		if (multiplier > 1) {
+			
+			Udiff = m_v.UV.U & 4095;
+			Vdiff = m_v.UV.V & 4095;
+			if (Udiff != 0){
+				if		(Udiff >= 4080)	{/*printf("U+ %d %d\n", Udiff, m_v.UV.U);*/  Uadjust = -1; }
+				else if (Udiff <= 16)	{/*printf("U- %d %d\n", Udiff, m_v.UV.U);*/  Uadjust = 1; }
+			}
+			if (Vdiff != 0){
+				if		(Vdiff >= 4080)	{/*printf("V+ %d %d\n", Vdiff, m_v.UV.V);*/  Vadjust = -1; }
+				else if	(Vdiff <= 16)	{/*printf("V- %d %d\n", Vdiff, m_v.UV.V);*/  Vadjust = 1; }
+			}
+			
+			Udiff = m_v.UV.U & 255;
+			Vdiff = m_v.UV.V & 255;
+			if (Udiff != 0){
+				if		(Udiff >= 248)	{ Uadjust = -1;	} 
+				else if (Udiff <= 8)	{ Uadjust = 1; }
+			}
+			
+			if (Vdiff != 0){
+				if		(Vdiff >= 248)	{ Vadjust = -1;	}
+				else if	(Vdiff <= 8)	{ Vadjust = 1; }
+			}
+
+			Udiff = m_v.UV.U & 15;
+			Vdiff = m_v.UV.V & 15;
+			if (Udiff != 0){
+				if		(Udiff >= 15)	{ Uadjust = -1; } 
+				else if (Udiff <= 1)	{ Uadjust = 1; }
+			}
+			
+			if (Vdiff != 0){
+				if		(Vdiff >= 15)	{ Vadjust = -1; }
+				else if	(Vdiff <= 1)	{ Vadjust = 1; }
+			}
+		}
+		dst.ST.S = (float)m_v.UV.U - Uadjust;
+		dst.ST.T = (float)m_v.UV.V - Vadjust;	
+	}
+	else if (tme)
+	{
+		// Wip :p
+		//dst.XYZ.X += 5;
+		//dst.XYZ.Y += 5;
+	}
+#else
 	if(tme && fst)
 	{
 		GSVector4::storel(&dst.ST, m_v.GetUV());
 	}
+#endif
 
 	int count = 0;
 	

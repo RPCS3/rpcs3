@@ -86,9 +86,9 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 	m_alpha.valid = false;
 }
 
-void GSVertexTrace::Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass)
+void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primclass)
 {
-	m_map_hw10[Hash(primclass)](v, count, m_min, m_max);
+	m_map_hw11[Hash(primclass)](v, count, m_min, m_max);
 
 	const GSDrawingContext* context = m_state->m_context;
 
@@ -480,7 +480,7 @@ L("loop");
 	ret();
 }
 
-GSVertexTrace::CGHW10::CGHW10(uint32 key, void* ptr, size_t maxsize)
+GSVertexTrace::CGHW11::CGHW11(uint32 key, void* ptr, size_t maxsize)
 	: CodeGenerator(maxsize, ptr)
 {
 	#if _M_AMD64
@@ -564,7 +564,7 @@ L("loop");
 	{
 		if(color && (iip || j == n - 1) || tme)
 		{
-			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexHW10)]);
+			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexHW11)]);
 		}
 
 		if(color && (iip || j == n - 1))
@@ -593,7 +593,7 @@ L("loop");
 			maxps(xmm7, xmm0);
 		}
 
-		movdqa(xmm0, xmmword[edx + j * sizeof(GSVertexHW10) + 16]);
+		movdqa(xmm0, xmmword[edx + j * sizeof(GSVertexHW11) + 16]);
 		
 		if(m_cpu.has(util::Cpu::tSSE41))
 		{
@@ -614,7 +614,7 @@ L("loop");
 		maxps(xmm5, xmm1);
 	}
 
-	add(edx, n * sizeof(GSVertexHW10));
+	add(edx, n * sizeof(GSVertexHW11));
 	sub(ecx, n);
 
 	jg("loop");

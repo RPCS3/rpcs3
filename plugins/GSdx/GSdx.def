@@ -41,30 +41,3 @@ EXPORTS
 	GSgetLastTag
 	GSReplay
 	GSBenchmark
-	PSEgetLibType
-	PSEgetLibName
-	PSEgetLibVersion
-	GPUinit
-	GPUshutdown
-	GPUopen
-	GPUclose
-	GPUconfigure
-	GPUabout
-	GPUtest
-	GPUwriteData
-	GPUwriteStatus
-	GPUreadData
-	GPUreadStatus
-	GPUdmaChain
-	GPUgetMode
-	GPUsetMode
-	GPUupdateLace
-	GPUmakeSnapshot
-    GPUwriteDataMem
-    GPUreadDataMem
-    GPUdisplayText
-    GPUdisplayFlags
-	GPUfreeze
-    GPUshowScreenPic
-    GPUgetScreenPic
-    GPUcursor

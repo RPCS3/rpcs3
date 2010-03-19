@@ -66,24 +66,24 @@ __aligned16 class GSVertexTrace
 		CGHW9* Create(uint32 key, void* ptr, size_t maxsize) {return new CGHW9(key, ptr, maxsize);}
 	};
 
-	class CGHW10 : public Xbyak::CodeGenerator
+	class CGHW11 : public Xbyak::CodeGenerator
 	{
 		Xbyak::util::Cpu m_cpu;
 
 	public:
-		CGHW10(uint32 key, void* ptr, size_t maxsize);
+		CGHW11(uint32 key, void* ptr, size_t maxsize);
 	};
 
-	class GSVertexTraceMapHW10 : public GSCodeGeneratorFunctionMap<CGHW10, uint32, VertexTracePtr>
+	class GSVertexTraceMapHW11 : public GSCodeGeneratorFunctionMap<CGHW11, uint32, VertexTracePtr>
 	{
 	public:
-		GSVertexTraceMapHW10() : GSCodeGeneratorFunctionMap("VertexTraceHW10") {}
-		CGHW10* Create(uint32 key, void* ptr, size_t maxsize) {return new CGHW10(key, ptr, maxsize);}
+		GSVertexTraceMapHW11() : GSCodeGeneratorFunctionMap("VertexTraceHW11") {}
+		CGHW11* Create(uint32 key, void* ptr, size_t maxsize) {return new CGHW11(key, ptr, maxsize);}
 	};
 
 	GSVertexTraceMapSW m_map_sw;
 	GSVertexTraceMapHW9 m_map_hw9;
-	GSVertexTraceMapHW10 m_map_hw10;
+	GSVertexTraceMapHW11 m_map_hw11;
 
 	uint32 Hash(GS_PRIM_CLASS primclass);
 
@@ -105,6 +105,6 @@ public:
 
 	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass);
 	void Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass);
-	void Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass);
+	void Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primclass);
 	void Update(const GSVertexNull* v, int count, GS_PRIM_CLASS primclass) {}
 };
