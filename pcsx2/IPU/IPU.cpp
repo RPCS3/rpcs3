@@ -25,6 +25,7 @@
 #include "IPU.h"
 #include "yuv2rgb.h"
 #include "Vif.h"
+#include "Gif.h"
 
 // Zero cycle IRQ schedules aren't really good, but the IPU uses them.
 // Better to throw the IRQ inline:
@@ -1308,7 +1309,7 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, tDMA_TAG *ptag)
 
 static __forceinline void flushGIF()
 {
-	while(gif->chcr.STR && (vif1Regs->mskpath3 == 0))
+	while(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && Path3progress != STOPPED_MODE)
 	{
 		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
 		gsInterrupt();
