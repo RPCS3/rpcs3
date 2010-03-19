@@ -21,7 +21,10 @@
 #include "Dialogs.h"
 
 #include "portaudio/include/portaudio.h"
+
+#ifdef __WIN32__
 #include "portaudio/include/pa_win_wasapi.h"
+#endif
 
 #ifdef __LINUX__
 int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
@@ -41,6 +44,8 @@ private:
 	wstring m_Device;
 
 	bool m_UseHardware;
+
+	bool m_WasapiExclusiveMode;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Instance vars
@@ -150,12 +155,22 @@ public:
 		
 		if(deviceIndex>=0)
 		{
+			void* infoPtr = NULL;
+
+#ifdef __WIN32__
 			PaWasapiStreamInfo info = { 
 				sizeof(PaWasapiStreamInfo), 
 				paWASAPI, 
 				1, 
 				paWinWasapiExclusive 
 			};
+
+			if((m_ApiId == paWASAPI) && m_WasapiExclusiveMode)
+			{
+				// Pass it the Exclusive mode enable flag
+				infoPtr = &info;
+			}
+#endif
 
 			PaStreamParameters outParams = {
 
@@ -168,8 +183,7 @@ public:
 				2,
 				paInt32,
 				0, //?
-				NULL
-				//&info  // Use this instead of the NULL above, to pass it the Exclusive mode enable flag
+				infoPtr
 			};
 			
 			err = Pa_OpenStream(&stream,
@@ -300,6 +314,7 @@ public:
 		if(api == L"WASAPI")		m_ApiId = paWASAPI;
 		if(api == L"AudioScienceHPI") m_ApiId = paAudioScienceHPI;
 
+		m_WasapiExclusiveMode = CfgReadBool( L"PORTAUDIO", L"Wasapi_Exclusive_Mode", false);
 	}
 
 	void WriteSettings() const
@@ -326,6 +341,8 @@ public:
 
 		CfgWriteStr( L"PORTAUDIO", L"HostApi", api);
 		CfgWriteStr( L"PORTAUDIO", L"Device", m_Device);
+
+		CfgWriteBool( L"PORTAUDIO", L"Wasapi_Exclusive_Mode", m_WasapiExclusiveMode);
 	}
 
 } static PA;
