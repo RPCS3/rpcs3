@@ -26,7 +26,7 @@
 
 void SaveConfig() 
 {
-	const std::string iniFile( s_strIniPath + "zerogs.ini" );
+	const std::string iniFile( s_strIniPath + "zzogl-pg.ini" );
 	FILE* f = fopen(iniFile.c_str(),"w");
 
 	if (f == NULL) 
@@ -57,7 +57,7 @@ void LoadConfig()
 	conf.height = 480;
 	conf.aa = 0;
 
-	const std::string iniFile( s_strIniPath + "zerogs.ini" );
+	const std::string iniFile( s_strIniPath + "zzogl-pg.ini" );
 	FILE* f = fopen(iniFile.c_str(), "r");
 	if (f == NULL) 
 	{

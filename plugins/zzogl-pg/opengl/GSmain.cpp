@@ -66,22 +66,22 @@ const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
 // statistics
 u32 g_nGenVars = 0, g_nTexVars = 0, g_nAlphaVars = 0, g_nResolve = 0;
 
-#define VER 21
+#define VER 1
 const unsigned char zgsversion	= PS2E_GS_VERSION;
 unsigned char zgsrevision = 0; // revision and build gives plugin version
 unsigned char zgsbuild	= VER;
-unsigned char zgsminor = 209;
+unsigned char zgsminor = 0;
 
 #ifdef _DEBUG
-char *libraryName	 = "ZZ Ogl (Debug) ";
+char *libraryName	 = "ZZ Ogl PG (Debug) ";
 #elif defined(RELEASE_TO_PUBLIC)
-char *libraryName	 = "ZZ Ogl ";
+char *libraryName	 = "ZZ Ogl PG ";
 #else
-char *libraryName	 = "ZZ Ogl (Dev) ";
+char *libraryName	 = "ZZ Ogl PG (Dev) ";
 #endif
 	
 static const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
-static const char* s_naa[3] = { "nattive res |", "res /2 |", "res /4 |" };
+static const char* s_naa[3] = { "native res |", "res /2 |", "res /4 |" };
 static const char* pbilinear[] = { "off", "normal", "forced" };
 
 extern GIFRegHandler g_GIFPackedRegHandlers[];

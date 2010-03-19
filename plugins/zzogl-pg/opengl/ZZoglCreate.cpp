@@ -594,7 +594,7 @@ inline bool ZeroGS::CreateOpenShadersFile() {
 	FILE* f = fopen(EFFECT_NAME, "r");
 	if( f == NULL ) {
 
-		strcpy(tempstr, "../../plugins/ZZOgl/opengl/");
+		strcpy(tempstr, "../../plugins/zzogl-pg/opengl/");
 		sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
 		f = fopen(EFFECT_NAME, "r");
 

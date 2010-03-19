@@ -30,5 +30,6 @@
 		<Project filename="plugins/zerospu2/Linux/ZeroSPU2.cbp">
 			<Depends filename="3rdparty/SoundTouch/SoundTouch.cbp" />
 		</Project>
+		<Project filename="plugins/zzogl-pg/opengl/Linux/zzogl-pg/zzogl-pg.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>
