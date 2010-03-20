@@ -169,16 +169,9 @@
 	TRANSMIT_HOSTLOCAL_Y##th(psm,T,widthlimit,endY)
 // calculate pitch in source buffer
 
-
-template <class T>
-static __forceinline int TransmitPitch_(int pitch) { return (pitch * sizeof(T)); }
-template <class T>
-static __forceinline int TransmitPitch_24(int pitch) { return (pitch * 3); }
-template <class T>
-static __forceinline int TransmitPitch_4(int pitch) { return (pitch/2); }
-
-#define TRANSMIT_PITCH_(pitch, T) TransmitPitch_<T>(pitch)
-#define TRANSMIT_PITCH_24(pitch, T) TransmitPitch_24<T>(pitch)
-#define TRANSMIT_PITCH_4(pitch, T) TransmitPitch_4<T>(pitch)
+static __forceinline u32 TransPitch(u32 pitch, u32 size)
+{
+	return pitch * size / 8;
+}
 
 #endif // MEM_TRANSMIT_H_INCLUDED

@@ -38,7 +38,7 @@ PCSX2_ALIGNED16(u32 tempblock[64]);
 // ------------------------
 // |              Y       |
 // ------------------------
-#define DEFINE_TRANSFERLOCAL(psm, T, widthlimit, blockbits, blockwidth, blockheight, TransSfx, SwizzleBlock) \
+#define DEFINE_TRANSFERLOCAL(psm, transfersize, T, widthlimit, blockbits, blockwidth, blockheight, TransSfx, SwizzleBlock) \
 int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 { \
 	assert( gs.imageTransfer == 0 ); \
@@ -46,10 +46,12 @@ int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 	\
 	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ \
 	int i = gs.imageY, j = gs.imageX; \
+	const u32 TSize = sizeof(T); \
 	\
 	const T* pbuf = (const T*)pbyMem; \
-	int nLeftOver = (nQWordSize*4*2)%(TransmitPitch##TransSfx<T>(2)); \
-	int nSize = nQWordSize*4*2/TransmitPitch##TransSfx<T>(2); \
+	const int tp = TransPitch(2, transfersize); \
+	int nLeftOver = (nQWordSize*4*2)%tp; \
+	int nSize = nQWordSize*4*2/tp; \
 	nSize = min(nSize, gs.imageWnew * gs.imageHnew); \
 	\
 	int pitch, area, fracX; \
@@ -97,37 +99,37 @@ int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 	fracX = gs.imageEndX-alignedX; \
 	\
 	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */ \
-	bAligned = !((uptr)pbuf & 0xf) && (TransmitPitch##TransSfx<T>(pitch) & 0xf) == 0; \
+	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, transfersize) & 0xf) == 0; \
 	\
 	/* transfer aligning to blocks */ \
 	for(; i < alignedY && nSize >= area; i += blockheight, nSize -= area) { \
 		\
 		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) { \
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransmitPitch##TransSfx<T>(blockwidth)/sizeof(T)) { \
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) { \
 				SwizzleBlock(pstart + getPixelAddress_0(psm,tempj, i, gs.dstbuf.bw)*blockbits/8, \
-					(u8*)pbuf, TransmitPitch##TransSfx<T>(pitch)); \
+					(u8*)pbuf, TransPitch(pitch, transfersize)); \
 			} \
 		} \
 		else { \
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransmitPitch##TransSfx<T>(blockwidth)/sizeof(T)) { \
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) { \
 				SwizzleBlock##u(pstart + getPixelAddress_0(psm,tempj, i, gs.dstbuf.bw)*blockbits/8, \
-					(u8*)pbuf, TransmitPitch##TransSfx<T>(pitch)); \
+					(u8*)pbuf, TransPitch(pitch, transfersize)); \
 			} \
 		} \
 		\
 		/* transfer the rest */ \
 		if( alignedX < gs.imageEndX ) { \
 			TRANSMIT_HOSTLOCAL_X(TransSfx,psm, T, widthlimit, blockheight, alignedX); \
-			pbuf -= TransmitPitch##TransSfx<T>(alignedX-gs.trxpos.dx)/sizeof(T); \
+			pbuf -= TransPitch(alignedX-gs.trxpos.dx, transfersize)/TSize; \
 		} \
-		else pbuf += (blockheight-1)*TransmitPitch##TransSfx<T>(pitch)/sizeof(T); \
+		else pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/TSize; \
 		j = gs.trxpos.dx; \
 	} \
 	\
-	if( TransmitPitch##TransSfx<T>(nSize)/4 > 0 ) { \
+	if( TransPitch(nSize, transfersize)/4 > 0 ) { \
 		TRANSMIT_HOSTLOCAL_Y(TransSfx,psm, T, widthlimit, gs.imageEndY); \
 		/* sometimes wrong sizes are sent (tekken tag) */ \
-		assert( gs.imageTransfer == -1 || TransmitPitch##TransSfx<T>(nSize)/4 <= 2 ); \
+		assert( gs.imageTransfer == -1 || TransPitch(nSize, transfersize)/4 <= 2 ); \
 	} \
 	\
 End: \
@@ -143,16 +145,11 @@ End: \
 		gs.imageY = i; \
 		gs.imageX = j; \
 	} \
-	return (nSize * TransmitPitch##TransSfx<T>(2) + nLeftOver)/2; \
+	return (nSize * TransPitch(2, transfersize) + nLeftOver)/2; \
 } \
 
 #define NEW_TRANSFER
 #ifdef NEW_TRANSFER
-
-u32 TransPitch(u32 pitch, u32 size)
-{
-	return pitch * size / 8;
-}
 
 //DEFINE_TRANSFERLOCAL(32, u32, 2, 32, 8, 8, _, SwizzleBlock32);
 int TransferHostLocal32(const void* pbyMem, u32 nQWordSize) 
@@ -362,14 +359,14 @@ int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize)
 	{ 
 		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u32)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock32(pstart + getPixelAddress_0(32Z,tempj, i, gs.dstbuf.bw)*blockbits/8,  (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
 		} 
 		else 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u32)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock32u(pstart + getPixelAddress_0(32Z,tempj, i, gs.dstbuf.bw)*blockbits/8, (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
@@ -379,11 +376,11 @@ int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize)
 		if ( alignedX < gs.imageEndX ) 
 		{ 
 			TRANSMIT_HOSTLOCAL_X_( 32Z, u32, widthlimit, blockheight, alignedX); 
-			pbuf -= TransPitch((alignedX - gs.trxpos.dx), transfersize)/sizeof(u32); 
+			pbuf -= TransPitch((alignedX - gs.trxpos.dx), transfersize)/TSize; 
 		} 
 		else 
 		{
-			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/sizeof(u32);
+			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/TSize;
 		}
 		j = gs.trxpos.dx; 
 	} 
@@ -488,14 +485,14 @@ int TransferHostLocal24(const void* pbyMem, u32 nQWordSize)
 	{ 
 		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u8)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock24(pstart + getPixelAddress_0(24,tempj, i, gs.dstbuf.bw)*blockbits/8,  (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
 		} 
 		else 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u8)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock24u(pstart + getPixelAddress_0(24,tempj, i, gs.dstbuf.bw)*blockbits/8, (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
@@ -505,11 +502,11 @@ int TransferHostLocal24(const void* pbyMem, u32 nQWordSize)
 		if ( alignedX < gs.imageEndX ) 
 		{ 
 			TRANSMIT_HOSTLOCAL_X_24(24, T, widthlimit, blockheight, alignedX); 
-			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/sizeof(u8); 
+			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/TSize; 
 		} 
 		else 
 		{
-			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/sizeof(u8);
+			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/TSize;
 		}
 		j = gs.trxpos.dx; 
 	} 
@@ -614,14 +611,14 @@ int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize)
 	{ 
 		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u8)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock24(pstart + getPixelAddress_0(16,tempj, i, gs.dstbuf.bw)*blockbits/8,  (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
 		} 
 		else 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u8)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock24u(pstart + getPixelAddress_0(16,tempj, i, gs.dstbuf.bw)*blockbits/8, (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
@@ -631,11 +628,11 @@ int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize)
 		if ( alignedX < gs.imageEndX ) 
 		{ 
 			TRANSMIT_HOSTLOCAL_X_24(16, u8, widthlimit, blockheight, alignedX); 
-			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/sizeof(u8); 
+			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/TSize; 
 		} 
 		else 
 		{
-			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/sizeof(u8);
+			pbuf += (blockheight-1)*TransPitch(pitch, transfersize)/TSize;
 		}
 		j = gs.trxpos.dx; 
 	} 
@@ -740,14 +737,14 @@ int TransferHostLocal16(const void* pbyMem, u32 nQWordSize)
 	{ 
 		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u16)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock16(pstart + getPixelAddress_0(16,tempj, i, gs.dstbuf.bw)*blockbits/8,  (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
 		} 
 		else 
 		{ 
-			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/sizeof(u16)) 
+			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) 
 			{ 
 				SwizzleBlock16u(pstart + getPixelAddress_0(16,tempj, i, gs.dstbuf.bw)*blockbits/8, (u8*)pbuf, TransPitch(pitch, transfersize)); 
 			} 
@@ -757,11 +754,11 @@ int TransferHostLocal16(const void* pbyMem, u32 nQWordSize)
 		if ( alignedX < gs.imageEndX ) 
 		{ 
 			TRANSMIT_HOSTLOCAL_X_(16, T, widthlimit, blockheight, alignedX); 
-			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/sizeof(u16); 
+			pbuf -= TransPitch((alignedX-gs.trxpos.dx), transfersize)/TSize; 
 		} 
 		else 
 		{
-			pbuf += (blockheight-1)* TransPitch(pitch, transfersize)/sizeof(u16);
+			pbuf += (blockheight-1)* TransPitch(pitch, transfersize)/TSize;
 		}
 		j = gs.trxpos.dx; 
 	} 
@@ -1522,7 +1519,7 @@ int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize)
 		j = gs.trxpos.dx; 
 	} 
 	
-	if (TRANSMIT_PITCH_(nSize, u8)/4 > 0 ) 
+	if (TransPitch(nSize, transfersize)/4 > 0 ) 
 	{ 
 		TRANSMIT_HOSTLOCAL_Y_(8H, u8, widthlimit, gs.imageEndY); 
 		/* sometimes wrong sizes are sent (tekken tag) */ 
@@ -1798,19 +1795,19 @@ int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize)
 } 
 #else
 
-DEFINE_TRANSFERLOCAL(32,  u32,  2, 32,  8,  8,   _, SwizzleBlock32);
-DEFINE_TRANSFERLOCAL(32Z, u32,  2, 32,  8,  8,   _, SwizzleBlock32);
-DEFINE_TRANSFERLOCAL(24,  u8,   8, 32,  8,  8, _24, SwizzleBlock24);
-DEFINE_TRANSFERLOCAL(24Z, u8,   8, 32,  8,  8, _24, SwizzleBlock24);
-DEFINE_TRANSFERLOCAL(16,  u16,  4, 16, 16,  8,   _, SwizzleBlock16);
-DEFINE_TRANSFERLOCAL(16S, u16,  4, 16, 16,  8,   _, SwizzleBlock16);
-DEFINE_TRANSFERLOCAL(16Z, u16,  4, 16, 16,  8,   _, SwizzleBlock16);
-DEFINE_TRANSFERLOCAL(16SZ, u16, 4, 16, 16,  8,   _, SwizzleBlock16);
-DEFINE_TRANSFERLOCAL(8,    u8,  4,  8, 16, 16,   _, SwizzleBlock8);
-DEFINE_TRANSFERLOCAL(4,    u8,  8,  4, 32, 16,  _4, SwizzleBlock4);
-DEFINE_TRANSFERLOCAL(8H,   u8,  4, 32,  8,  8,   _, SwizzleBlock8H);
-DEFINE_TRANSFERLOCAL(4HL,  u8,  8, 32,  8,  8,  _4, SwizzleBlock4HL);
-DEFINE_TRANSFERLOCAL(4HH,  u8,  8, 32,  8,  8,  _4, SwizzleBlock4HH);
+DEFINE_TRANSFERLOCAL(32,	32,	u32,	2,	32,	8,	8,	_,		SwizzleBlock32);
+DEFINE_TRANSFERLOCAL(32Z,	32,	u32,	2,	32,	8,	8,	_,		SwizzleBlock32);
+DEFINE_TRANSFERLOCAL(24,	24,	u8,		8,	32,	8,	8,	_24,	SwizzleBlock24);
+DEFINE_TRANSFERLOCAL(24Z,	24,	u8,		8,	32,	8,	8,	_24,	SwizzleBlock24);
+DEFINE_TRANSFERLOCAL(16,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);
+DEFINE_TRANSFERLOCAL(16S,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);
+DEFINE_TRANSFERLOCAL(16Z,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);
+DEFINE_TRANSFERLOCAL(16SZ,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);
+DEFINE_TRANSFERLOCAL(8,		8,	u8,		4,	8,	16,	16,	_,		SwizzleBlock8);
+DEFINE_TRANSFERLOCAL(4,		4,	u8,		8,	4,	32,	16,	_4,		SwizzleBlock4);
+DEFINE_TRANSFERLOCAL(8H,	8,	u8,		4,	32,	8,	8,	_,		SwizzleBlock8H);
+DEFINE_TRANSFERLOCAL(4HL,	4,	u8,		8,	32,	8,	8,	_4,		SwizzleBlock4HL);
+DEFINE_TRANSFERLOCAL(4HH,	4,	u8,		8,	32,	8,	8,	_4,		SwizzleBlock4HH);
 
 #endif
 
