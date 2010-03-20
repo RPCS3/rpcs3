@@ -324,6 +324,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Mem_Tables.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\memcpy_amd.cpp"
 				>
 			</File>
@@ -438,6 +442,15 @@
 			<File
 				RelativePath="..\Mem.h"
 				>
+			</File>
+			<File
+				RelativePath="..\Mem_Swizzle.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Mem_Transmit.h"
+				>
+			</File>
 			</File>
 			<File
 				RelativePath="..\PS2Edefs.h"

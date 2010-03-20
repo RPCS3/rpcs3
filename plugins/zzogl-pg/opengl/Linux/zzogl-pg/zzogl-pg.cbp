@@ -78,6 +78,9 @@
 		<Unit filename="../zerogs.glade" />
 		<Unit filename="../../Mem.cpp" />
 		<Unit filename="../../Mem.h" />
+		<Unit filename="../../Mem_Swizzle.h" />
+		<Unit filename="../../Mem_Tables.cpp" />
+		<Unit filename="../../Mem_Transmit.h" />
 		<Unit filename="../../Regs.cpp" />
 		<Unit filename="../../Regs.h" />
 		<Unit filename="../../Win32/Conf.cpp">

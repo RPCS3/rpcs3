@@ -26,7 +26,9 @@ libzzoglpg_LDADD=$(libzzoglpg_a_OBJECTS)
 libzzoglpg_a_SOURCES = \
 GSmain.cpp  GifTransfer.cpp memcpy_amd.cpp  Regs.cpp     x86.cpp     zpipe.cpp 		Mem.cpp     \
 rasterfont.cpp  targets.cpp  zerogs.cpp  ZZoglVB.cpp  ZZoglShoots.cpp	ZZoglCreate.cpp	\
-ZZoglShaders.cpp	ZZoglCRTC.cpp	ZZoglSave.cpp	ZZoglFlush.cpp
+ZZoglShaders.cpp	ZZoglCRTC.cpp	ZZoglSave.cpp	ZZoglFlush.cpp \
+Mem_Swizzle.h Mem_Tables.cpp Mem_Transmit.h
+
 
 libzzoglpg_a_SOURCES += x86-32.S
 
