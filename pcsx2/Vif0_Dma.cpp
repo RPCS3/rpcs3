@@ -125,7 +125,7 @@ void vif0Interrupt()
 
 	if (!vif0ch->chcr.STR) Console.WriteLn("Vif0 running when CHCR = %x", vif0ch->chcr._u32);
 
-	if ((vif0ch->chcr.MOD == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
+	if ((vif0ch->chcr.MOD == CHAIN_MODE) && (!vif0.done))
 	{
 
 		if (!(dmacRegs->ctrl.DMAE))

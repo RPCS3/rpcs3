@@ -106,13 +106,14 @@ _f void vif0FBRST(u32 value) {
 		vif0Regs->stat.clear_flags(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 	}
 
+	/* Fixme: Forcebreaks are pretty unknown for operation, presumption is it just stops it what its doing
+	          usually accompanied by a reset, but if we find a broken game which falls here, we need to see it! (Refraction) */
 	if (value & 0x2) // Forcebreak Vif,
 	{
 		/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
 		cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		vif0Regs->stat.VFS = true;
 		vif0Regs->stat.VPS = VPS_IDLE;
-		vif0.vifstalled = true;
 		Console.WriteLn("vif0 force break");
 	}
 
@@ -179,13 +180,15 @@ _f void vif1FBRST(u32 value) {
 		vif1Regs->stat.clear_flags(VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS);
 	}
 
+	/* Fixme: Forcebreaks are pretty unknown for operation, presumption is it just stops it what its doing
+	          usually accompanied by a reset, but if we find a broken game which falls here, we need to see it! (Refraction) */
+
 	if (FBRST(value).FBK) // Forcebreak Vif.
 	{
 		/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
 		vif1Regs->stat.VFS = true;
 		vif1Regs->stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled = true;
 		Console.WriteLn("vif1 force break");
 	}
 
