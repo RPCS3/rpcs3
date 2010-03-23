@@ -135,17 +135,6 @@ typedef signed long long int64;
 
 #endif 
 
-// opengl
-
-#include <GL/glew.h>
-#include <GL/glut.h>
-#include <Cg/cg.h>
-#include <Cg/cgGL.h>
-
-#ifdef _WINDOWS
-#include <GL/wglew.h>
-#endif
-
 // sse
 
 #if !defined(_M_SSE) && (!defined(_WINDOWS) || defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
