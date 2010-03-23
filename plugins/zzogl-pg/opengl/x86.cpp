@@ -67,7 +67,7 @@ void __fastcall SwizzleBlock24_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
 	}
 }
 
-void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch)
+void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
 {
 	u32* d = &g_columnTable16[0][0];
 
@@ -76,7 +76,7 @@ void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch)
 			((u16*)dst)[d[i]] = ((u16*)src)[i];
 }
 
-void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch)
+void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
 {
 	u32* d = &g_columnTable8[0][0];
 
@@ -85,7 +85,7 @@ void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch)
 			dst[d[i]] = src[i];
 }
 
-void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch)
+void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
 {
 	u32* d = &g_columnTable4[0][0];
 

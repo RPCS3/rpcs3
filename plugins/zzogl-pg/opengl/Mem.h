@@ -43,6 +43,40 @@ typedef u32 (*_readPixel_0)(const void* pmem, int x, int y, u32 bw);
 typedef int (*_TransferHostLocal)(const void* pbyMem, u32 nQWordSize);
 typedef void (*_TransferLocalHost)(void* pbyMem, u32 nQWordSize);
 typedef void (__fastcall *_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteMask);
+
+// Both of the following structs should probably be local class variables or in a namespace,
+// but this works for the moment.
+struct TransferData
+{
+	u32 widthlimit;
+	u32 blockbits;
+	u32 blockwidth;
+	u32 blockheight;
+	u32 transfersize;
+	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size)
+	{
+		widthlimit = limit;
+		blockbits = bits;
+		blockwidth = width;
+		blockheight = height;
+		transfersize = size;
+	}
+};
+
+struct TransferFuncts
+{
+	_writePixel_0 wp;
+	_getPixelAddress_0 gp;
+	_SwizzleBlock Swizzle, Swizzle_u;
+	__forceinline TransferFuncts(_writePixel_0 writePix, _getPixelAddress_0 readPix, _SwizzleBlock s,  _SwizzleBlock su)
+	{
+		wp = writePix;
+		gp = readPix;
+		Swizzle = s;
+		Swizzle_u = su;
+	}
+};
+
 // rest not visible externally
 struct BLOCK
 {
