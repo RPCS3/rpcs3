@@ -71,7 +71,7 @@ static __forceinline bool TransmitHostLocalY_(_writePixel_0 wp, u32 widthlimit, 
 template <class T>
 static __forceinline bool TransmitHostLocalX_(_writePixel_0 wp, u32 widthlimit, u32 blockheight, u32 startX, const T *pbuf) 
 {
-	for(int tempi = 0; tempi < blockheight; ++tempi) 
+	for(u32 tempi = 0; tempi < blockheight; ++tempi) 
 	{ 
 		for(tempX = startX; tempX < gs.imageEndX; tempX++, pbuf++) 
 		{ 
@@ -155,7 +155,7 @@ static __forceinline bool TransmitHostLocalY_24(_writePixel_0 wp, u32 widthlimit
 template <class T>
 static __forceinline bool TransmitHostLocalX_24(_writePixel_0 wp, u32 widthlimit, u32 blockheight, u32 startX, const T *pbuf) 
 {
-	for(int tempi = 0; tempi < blockheight; ++tempi) 
+	for(u32 tempi = 0; tempi < blockheight; ++tempi) 
 	{ 
 		for(tempX = startX; tempX < gs.imageEndX; tempX++, pbuf += 3) 
 		{ 
@@ -217,7 +217,7 @@ static __forceinline bool TransmitHostLocalY_4(_writePixel_0 wp, u32 widthlimit,
 template <class T>
 static __forceinline bool TransmitHostLocalX_4(_writePixel_0 wp, u32 widthlimit, u32 blockheight, u32 startX, const T *pbuf) 
 { 
-	for(int tempi = 0; tempi < blockheight; ++tempi)
+	for(u32 tempi = 0; tempi < blockheight; ++tempi)
 	{
 		for(tempX = startX; tempX < gs.imageEndX; tempX+=2, pbuf++) 
 		{

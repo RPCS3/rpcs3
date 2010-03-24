@@ -225,7 +225,7 @@
 				RuntimeLibrary="0"
 				BufferSecurityCheck="false"
 				PrecompiledHeaderFile=""
-				WarningLevel="3"
+				WarningLevel="1"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="3"
 			/>
@@ -450,7 +450,6 @@
 			<File
 				RelativePath="..\Mem_Transmit.h"
 				>
-			</File>
 			</File>
 			<File
 				RelativePath="..\PS2Edefs.h"

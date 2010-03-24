@@ -24,7 +24,7 @@
 
 // special swizzle macros - which I converted to functions.
 
-static __forceinline __fastcall void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void __fastcall SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 { 
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -52,7 +52,7 @@ static __forceinline __fastcall void SwizzleBlock24(u8 *dst, u8 *src, int pitch,
 
 #define SwizzleBlock24u SwizzleBlock24
 
-static __forceinline __fastcall void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff)
+static __forceinline void __fastcall SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff)
 {
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -75,7 +75,7 @@ static __forceinline __fastcall void SwizzleBlock8H(u8 *dst, u8 *src, int pitch,
 
 #define SwizzleBlock8Hu SwizzleBlock8H
 
-static __forceinline __fastcall void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void __fastcall SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 { 
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -97,7 +97,7 @@ static __forceinline __fastcall void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch
 
 #define SwizzleBlock4HHu SwizzleBlock4HH
 
-static __forceinline __fastcall void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void __fastcall SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 {
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 

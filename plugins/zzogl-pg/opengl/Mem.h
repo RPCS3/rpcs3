@@ -48,7 +48,8 @@ typedef void (__fastcall *_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteM
 // but this works for the moment.
 struct TransferData
 {
-	u32 widthlimit;
+	// Signed because Visual C++ is weird.
+	s32 widthlimit;
 	u32 blockbits;
 	u32 blockwidth;
 	u32 blockheight;
