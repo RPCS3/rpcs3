@@ -3,6 +3,7 @@
 
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
+#include "PS2Edefs.h"
 
 #define NUM_FILTERS 2 // texture filtering
 #define NUM_TYPES 5 // types of texture read modes

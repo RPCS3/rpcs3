@@ -37,6 +37,8 @@
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-m32" />
 			<Add option="-I/opt/cg/include -L/opt/cg/lib" />
+			<Add option="-msse2" />
+			<Add option="-fno-regmove" />
 			<Add directory="../../Linux" />
 			<Add directory="../../../opengl" />
 			<Add directory="../../../../../common/include" />
