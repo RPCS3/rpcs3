@@ -45,7 +45,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;__i386__;ZEROGS_DEVBUILD"
 			/>
 			<Tool
@@ -111,7 +111,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
 				PreprocessorDefinitions="_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__"
 			/>
 			<Tool
@@ -184,7 +184,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;__i386__;ZEROGS_SSE2;RELEASE_TO_PUBLIC"
 				PrecompiledHeaderFile=""
 			/>
