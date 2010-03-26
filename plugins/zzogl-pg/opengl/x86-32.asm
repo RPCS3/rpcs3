@@ -193,7 +193,7 @@ SwizzleBlock32_sse2@WM:
 ; SwizzleBlock16
 ;
 
-@SwizzleBlock16_sse2@16 proc public
+@SwizzleBlock16_sse2@12 proc public
 
 	push		ebx
 
@@ -225,13 +225,13 @@ SwizzleBlock32_sse2@WM:
 
 	ret			4
 
-@SwizzleBlock16_sse2@16 endp
+@SwizzleBlock16_sse2@12 endp
 
 ;
 ; SwizzleBlock8
 ;
 
-@SwizzleBlock8_sse2@16 proc public
+@SwizzleBlock8_sse2@12 proc public
 
 	push		ebx
 
@@ -287,13 +287,13 @@ SwizzleBlock32_sse2@WM:
 
 	ret			4
 	
-@SwizzleBlock8_sse2@16 endp
+@SwizzleBlock8_sse2@12 endp
 
 ;
 ; SwizzleBlock4
 ;
 
-@SwizzleBlock4_sse2@16 proc public
+@SwizzleBlock4_sse2@12 proc public
 
 	push		ebx
 	
@@ -365,7 +365,7 @@ SwizzleBlock32_sse2@WM:
 
 	ret			4
 
-@SwizzleBlock4_sse2@16 endp
+@SwizzleBlock4_sse2@12 endp
 
 ;
 ; swizzling with unaligned reads
@@ -471,7 +471,7 @@ SwizzleBlock32u_sse2@WM:
 ; SwizzleBlock16u
 ;
 
-@SwizzleBlock16u_sse2@16 proc public
+@SwizzleBlock16u_sse2@12 proc public
 
 	push		ebx
 
@@ -503,13 +503,13 @@ SwizzleBlock32u_sse2@WM:
 
 	ret			4
 
-@SwizzleBlock16u_sse2@16 endp
+@SwizzleBlock16u_sse2@12 endp
 
 ;
 ; SwizzleBlock8u
 ;
 
-@SwizzleBlock8u_sse2@16 proc public
+@SwizzleBlock8u_sse2@12 proc public
 
 	push		ebx
 
@@ -569,13 +569,13 @@ SwizzleBlock32u_sse2@WM:
 
 	ret			4
 	
-@SwizzleBlock8u_sse2@16 endp
+@SwizzleBlock8u_sse2@12 endp
 
 ;
 ; SwizzleBlock4u
 ;
 
-@SwizzleBlock4u_sse2@16 proc public
+@SwizzleBlock4u_sse2@12 proc public
 
 	push		ebx
 	
@@ -647,6 +647,6 @@ SwizzleBlock32u_sse2@WM:
 
 	ret			4
 
-@SwizzleBlock4u_sse2@16 endp
+@SwizzleBlock4u_sse2@12 endp
 
 	end

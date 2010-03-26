@@ -23,8 +23,79 @@
 #include "Mem.h"
 
 // special swizzle macros - which I converted to functions.
+#ifdef ZEROGS_SSE2
 
-static __forceinline void __fastcall SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock32_sse2(dst, src, pitch, WriteMask);
+}
+
+static __forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock16_sse2(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock8_sse2(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock4_sse2(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock32u_sse2(dst, src, pitch, WriteMask);
+}
+static __forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock16u_sse2(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock8u_sse2(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock4u_sse2(dst, src, pitch/*, WriteMask*/);
+}
+#else
+
+static __forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock32_c(dst, src, pitch, WriteMask);
+}
+
+static __forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock16_c(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock8_c(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock4_c(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock32_c(dst, src, pitch, WriteMask);
+}
+static __forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock16_c(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock8_c(dst, src, pitch/*, WriteMask*/);
+}
+static __forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+{
+	SwizzleBlock4_c(dst, src, pitch/*, WriteMask*/);
+}
+
+#endif
+static __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 { 
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -52,7 +123,7 @@ static __forceinline void __fastcall SwizzleBlock24(u8 *dst, u8 *src, int pitch,
 
 #define SwizzleBlock24u SwizzleBlock24
 
-static __forceinline void __fastcall SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff)
+static __forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff)
 {
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -75,7 +146,7 @@ static __forceinline void __fastcall SwizzleBlock8H(u8 *dst, u8 *src, int pitch,
 
 #define SwizzleBlock8Hu SwizzleBlock8H
 
-static __forceinline void __fastcall SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 { 
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
@@ -97,7 +168,7 @@ static __forceinline void __fastcall SwizzleBlock4HH(u8 *dst, u8 *src, int pitch
 
 #define SwizzleBlock4HHu SwizzleBlock4HH
 
-static __forceinline void __fastcall SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
+static __forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff) 
 {
 	u8* pnewsrc = src; 
 	u32* pblock = tempblock; 
