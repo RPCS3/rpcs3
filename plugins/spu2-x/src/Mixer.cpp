@@ -103,8 +103,10 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 	}
 }
 
-static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
+static void __forceinline IncrementNextA(V_Core& thiscore, uint voiceidx)
 {
+	V_Voice &vc(thiscore.Voices[voiceidx]);
+
 	// Important!  Both cores signal IRQ when an address is read, regardless of
 	// which core actually reads the address.
 
@@ -113,7 +115,7 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
 		{
 			if( IsDevBuild )
-				ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i);
+				ConLog(" * SPU2 Core %d: IRQ Called (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
 
 			Spdif.Info |= 4 << i;
 			SetIrqCall();
@@ -211,7 +213,7 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 	if( (vc.SCurrent&3) == 3 )
 	{
 _Increment:
-		IncrementNextA( thiscore, vc );
+		IncrementNextA( thiscore, voiceidx );
 	}
 
 	return vc.SBuffer[vc.SCurrent++];
@@ -237,14 +239,14 @@ static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voi
 		if ((vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode)
 			vc.LoopStartA = vc.NextA;
 
-		IncrementNextA(thiscore, vc);
+		IncrementNextA(thiscore, voiceidx);
 
 		vc.SCurrent = 0;
 	}
 
 	vc.SP -= 4096 * (4 - (vc.SCurrent & 3));
 	vc.SCurrent += 4 - (vc.SCurrent & 3);
-	IncrementNextA(thiscore, vc);
+	IncrementNextA(thiscore, voiceidx);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

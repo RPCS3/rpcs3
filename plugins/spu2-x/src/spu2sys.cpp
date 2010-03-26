@@ -135,7 +135,7 @@ void V_Core::Reset( int index )
 
 	FxEnable		= 0;
 	IRQA			= 0xFFFF0;
-	IRQEnable		= 1;
+	IRQEnable		= 0;
 
 	for( uint v=0; v<NumVoices; ++v )
 	{
@@ -304,13 +304,12 @@ __forceinline void TimeUpdate(u32 cClocks)
 	{
 		if(has_to_call_irq)
 		{
-			ConLog(" * SPU2: Irq Called (%04x).\n",Spdif.Info);
+			ConLog(" * SPU2: Irq Called (%04x) at cycle %d.\n", Spdif.Info, Cycles);
 			has_to_call_irq=false;
 			if(_irqcallback) _irqcallback();
 		}
 
-		// Part of the no core resets hack. See fixme in RegWrite_Core.
-		/*if(Cores[0].InitDelay>0)
+		if(Cores[0].InitDelay>0)
 		{
 			Cores[0].InitDelay--;
 			if(Cores[0].InitDelay==0)
@@ -326,7 +325,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 			{
 				Cores[1].Reset(1);
 			}
-		}*/
+		}
 
 #ifndef ENABLE_NEW_IOPDMA_SPU2
 		//Update DMA4 interrupt delay counter
@@ -855,12 +854,9 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
-				ConLog( " * SPU2: Runtime core%d reset requested, (but ignored. Hack.). \n", core );
-				// Fixme:
-				// Not initializing a core reset here fixes SH Shattered Memories and Silver Surfer audio.
-				// This is a hack, but better than clearing the wrong bits.
-				// Also check the commented out code in TimeUpdate() above.
-				/*if(cyclePtr != NULL)
+				ConLog( " * SPU2: Runtime core%d reset\n", core );
+
+				if(cyclePtr != NULL)
 				{
 					thiscore.InitDelay  = 1;
 					thiscore.Regs.STATX = 0;
@@ -868,7 +864,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				else
 				{
 					thiscore.Reset(thiscore.Index);
-				}*/
+				}
 			}
 
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
