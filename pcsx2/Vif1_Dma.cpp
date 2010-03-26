@@ -262,6 +262,7 @@ __forceinline void vif1Interrupt()
 
 	if (vif1.vifstalled && vif1.irq)
 	{
+		DevCon.WriteLn("VIF1 looping on stall\n");
 		CPU_INT(DMAC_VIF1, 0);
 		return; //Dont want to end if vif is stalled.
 	}

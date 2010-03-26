@@ -143,13 +143,8 @@ _f void vif0FBRST(u32 value) {
 				g_vifCycles = 0;
 
 				// loop necessary for spiderman
-				if (vif0.stallontag)
-					_chainVIF0();
-				else
-					_VIF0chain();
-
 				vif0ch->chcr.STR = true;
-				CPU_INT(DMAC_VIF0, g_vifCycles); // Gets the timing right - Flatout
+				CPU_INT(DMAC_VIF0, 0); // Gets the timing right - Flatout
 			}
 		}
 	}
@@ -225,14 +220,14 @@ _f void vif1FBRST(u32 value) {
 				{
 				    case MFD_VIF1:
                         //Console.WriteLn("MFIFO Stall");
-                        CPU_INT(10, vif1ch->qwc * BIAS);
+                        CPU_INT(10, 0);
                         break;
 
                     case NO_MFD:
                     case MFD_RESERVED:
                     case MFD_GIF: // Wonder if this should be with VIF?
                         // Gets the timing right - Flatout
-                        CPU_INT(DMAC_VIF1, vif1ch->qwc * BIAS);
+                        CPU_INT(DMAC_VIF1, 0);
                         break;
 				}
 				

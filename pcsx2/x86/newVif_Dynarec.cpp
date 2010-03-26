@@ -186,12 +186,16 @@ static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 	if (!isFill) { // Account for skip-cycles
 		int skipSize  = cl - wl;
 		int blocks    = _vBlock.num / wl;
-		int skips	  = (blocks * skipSize + _vBlock.num) * 16;
+		int skips	  = (blocks * skipSize + _vBlock.num) * 16;  
+
+		//We must do skips - 1 here else skip calculation adds an extra skip which can overflow
+		//causing the emu to drop back to the interpreter (do not need to skip on last block write) - Refraction
+		if(skipSize > 0) skips -= skipSize * 16;
 		endPtr = ptr + skips;
 	}
 	else endPtr = ptr + (_vBlock.num * 16);
 	if ( endPtr > v.vuMemEnd ) {
-		DevCon.WriteLn("nVif - VU Mem Ptr Overflow; falling back to interpreter.");
+		DevCon.WriteLn("nVif%x - VU Mem Ptr Overflow; falling back to interpreter. Start = %x End = %x num = %x, wl = %x, cl = %x", v.idx, v.vif->tag.addr, v.vif->tag.addr + (_vBlock.num * 16), _vBlock.num, wl, cl);
 		ptr = NULL; // Fall Back to Interpreters which have wrap-around logic
 	}
 	return ptr;
