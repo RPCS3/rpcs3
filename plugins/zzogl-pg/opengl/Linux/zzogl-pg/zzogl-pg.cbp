@@ -39,6 +39,7 @@
 			<Add option="-I/opt/cg/include -L/opt/cg/lib" />
 			<Add option="-msse2" />
 			<Add option="-fno-regmove" />
+			<Add option="-DZEROGS_SSE2" />
 			<Add directory="../../Linux" />
 			<Add directory="../../../opengl" />
 			<Add directory="../../../../../common/include" />
@@ -80,6 +81,7 @@
 		<Unit filename="../zerogs.glade" />
 		<Unit filename="../../Mem.cpp" />
 		<Unit filename="../../Mem.h" />
+		<Unit filename="../../Mem_Swizzle.cpp" />
 		<Unit filename="../../Mem_Swizzle.h" />
 		<Unit filename="../../Mem_Tables.cpp" />
 		<Unit filename="../../Mem_Transmit.h" />

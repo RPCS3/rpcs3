@@ -328,6 +328,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Mem_Swizzle.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\memcpy_amd.cpp"
 				>
 			</File>

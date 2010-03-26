@@ -50,126 +50,58 @@ void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
 		DEBUG_LOG("	last listing: %s\n", listing);
 }
 
-// This is helper of cgGLSetParameter4fv, made for debug purpose.
-// Name could be any string. We must use it on compilation time, because erroneus handler does not
-// return name
-void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name) {
+// This is a helper of cgGLSetParameter4fv, made for debugging purposes.
+// The name could be any string. We must use it on compilation time, because the erronious handler does not
+// return it.
+void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name) 
+{
 	ShaderHandleName = name;
 	cgGLSetParameter4fv(param, v);
 }
 
-#define SET_UNIFORMPARAM(var, name) { \
-	p = cgGetNamedParameter(pf->prog, name); \
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) \
-		pf->var = p; \
-} \
-
 void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 {
 	// uniform parameters
-	CGparameter p;
+	pf->connect(g_fparamFogColor, "g_fFogColor");
 
-	p = cgGetNamedParameter(pf->prog, "g_fFogColor");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		cgConnectParameter(g_fparamFogColor, p);
-	}
-
-	SET_UNIFORMPARAM(sOneColor, "g_fOneColor");
-	SET_UNIFORMPARAM(sBitBltZ, "g_fBitBltZ");
-	SET_UNIFORMPARAM(sInvTexDims, "g_fInvTexDims");
-	SET_UNIFORMPARAM(fTexAlpha2, "fTexAlpha2");
-	SET_UNIFORMPARAM(fTexOffset, "g_fTexOffset");
-	SET_UNIFORMPARAM(fTexDims, "g_fTexDims");
-	SET_UNIFORMPARAM(fTexBlock, "g_fTexBlock");
-	SET_UNIFORMPARAM(fClampExts, "g_fClampExts");
-	SET_UNIFORMPARAM(fTexWrapMode, "TexWrapMode");
-	SET_UNIFORMPARAM(fRealTexDims, "g_fRealTexDims");
-	SET_UNIFORMPARAM(fTestBlack, "g_fTestBlack");
-	SET_UNIFORMPARAM(fPageOffset, "g_fPageOffset");
-	SET_UNIFORMPARAM(fTexAlpha, "fTexAlpha");
+	pf->set_uniform_param(pf->sOneColor, "g_fOneColor");
+	pf->set_uniform_param(pf->sBitBltZ, "g_fBitBltZ");
+	pf->set_uniform_param(pf->sInvTexDims, "g_fInvTexDims");
+	pf->set_uniform_param(pf->fTexAlpha2, "fTexAlpha2");
+	pf->set_uniform_param(pf->fTexOffset, "g_fTexOffset");
+	pf->set_uniform_param(pf->fTexDims, "g_fTexDims");
+	pf->set_uniform_param(pf->fTexBlock, "g_fTexBlock");
+	pf->set_uniform_param(pf->fClampExts, "g_fClampExts");
+	pf->set_uniform_param(pf->fTexWrapMode, "TexWrapMode");
+	pf->set_uniform_param(pf->fRealTexDims, "g_fRealTexDims");
+	pf->set_uniform_param(pf->fTestBlack, "g_fTestBlack");
+	pf->set_uniform_param(pf->fPageOffset, "g_fPageOffset");
+	pf->set_uniform_param(pf->fTexAlpha, "fTexAlpha");
 
 	// textures
-	p = cgGetNamedParameter(pf->prog, "g_sBlocks");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		cgGLSetTextureParameter(p, ptexBlocks);
-		cgGLEnableTextureParameter(p);
-	}
+	pf->set_texture(ptexBlocks, "g_sBlocks");
 
 	// cg parameter usage is wrong, so do it manually
-	if( type == 3 ) {
-		p = cgGetNamedParameter(pf->prog, "g_sConv16to32");
-		if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-			cgGLSetTextureParameter(p, ptexConv16to32);
-			cgGLEnableTextureParameter(p);
-		}
-	}
-	else if( type == 4 ) {
-		p = cgGetNamedParameter(pf->prog, "g_sConv32to16");
-		if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-			cgGLSetTextureParameter(p, ptexConv32to16);
-			cgGLEnableTextureParameter(p);
-		}
-	}
-	else {
-		p = cgGetNamedParameter(pf->prog, "g_sBilinearBlocks");
-		if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-			cgGLSetTextureParameter(p, ptexBilinearBlocks);
-			cgGLEnableTextureParameter(p);
-		}
+	switch(type)
+	{
+		case 3: pf->set_texture(ptexConv16to32, "g_sConv16to32"); break;
+		case 4: pf->set_texture(ptexConv32to16, "g_sConv32to16"); break;
+		default: pf->set_texture(ptexBilinearBlocks, "g_sBilinearBlocks"); break;
 	}
 
-	p = cgGetNamedParameter(pf->prog, "g_sMemory");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sMemory = p;
-	}
-	p = cgGetNamedParameter(pf->prog, "g_sSrcFinal");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sFinal = p;
-	}
-	p = cgGetNamedParameter(pf->prog, "g_sBitwiseANDX");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sBitwiseANDX = p;
-	}
-	p = cgGetNamedParameter(pf->prog, "g_sBitwiseANDY");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sBitwiseANDY = p;
-	}
-	p = cgGetNamedParameter(pf->prog, "g_sCLUT");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sCLUT = p;
-	}
-	p = cgGetNamedParameter(pf->prog, "g_sInterlace");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		//cgGLEnableTextureParameter(p);
-		pf->sInterlace = p;
-	}
+	pf->set_texture(pf->sMemory, "g_sMemory");
+	pf->set_texture(pf->sFinal, "g_sSrcFinal");
+	pf->set_texture(pf->sBitwiseANDX, "g_sBitwiseANDX");
+	pf->set_texture(pf->sBitwiseANDY, "g_sBitwiseANDY");
+	pf->set_texture(pf->sCLUT, "g_sCLUT");
+	pf->set_texture(pf->sInterlace, "g_sInterlace");
 
 	// set global shader constants
-	p = cgGetNamedParameter(pf->prog, "g_fExactColor");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE ) {
-		cgGLSetParameter4fv(p, Vector(0.5f, (g_GameSettings&GAME_EXACTCOLOR)?0.9f/256.0f:0.5f/256.0f, 0,1/255.0f));
-	}
-
-	p = cgGetNamedParameter(pf->prog, "g_fBilinear");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f ));
-
-	p = cgGetNamedParameter(pf->prog, "g_fZBias");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(1.0f/256.0f, 1.0004f, 1, 0.5f));
-
-	p = cgGetNamedParameter(pf->prog, "g_fc0");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(0,1, 0.001f, 0.5f));
-
-	p = cgGetNamedParameter(pf->prog, "g_fMult");
-	if( p != NULL && cgIsParameterUsed(p, pf->prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(1/1024.0f, 0.2f/1024.0f, 1/128.0f, 1/512.0f));
+	pf->set_shader_const(Vector(0.5f, (g_GameSettings&GAME_EXACTCOLOR)?0.9f/256.0f:0.5f/256.0f, 0,1/255.0f), "g_fExactColor");
+	pf->set_shader_const(Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f ), "g_fBilinear");
+	pf->set_shader_const(Vector(1.0f/256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
+	pf->set_shader_const(Vector(0,1, 0.001f, 0.5f), "g_fc0");
+	pf->set_shader_const(Vector(1/1024.0f, 0.2f/1024.0f, 1/128.0f, 1/512.0f), "g_fMult");
 }
 
 void SetupVertexProgramParameters(CGprogram prog, int context)
@@ -181,11 +113,13 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		cgConnectParameter(g_vparamPosXY[context], p);
 
 	// Set Z-test, log or no log;
-	if (g_GameSettings&GAME_NOLOGZ) {
-       		g_vdepth = Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
+	if (g_GameSettings&GAME_NOLOGZ) 
+	{
+		g_vdepth = Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
 		vlogz = Vector( 1.0f, 0.0f, 0.0f, 0.0f);
 	}
-	else {
+	else 
+	{
 		g_vdepth = Vector( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);	
 		vlogz = Vector( 0.0f, 1.0f, 0.0f, 0.0f);
 	}

@@ -59,10 +59,10 @@ extern "C" void __fastcall Frame16SwizzleBlock32ZA4_sse2(u32* dst, Vector_16F* s
 extern "C" void __fastcall Frame16SwizzleBlock16A4_sse2(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask);
 extern "C" void __fastcall Frame16SwizzleBlock16ZA4_sse2(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask);
 
-extern void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
+/*extern void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
 extern void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch);
 extern void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch);
-extern void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch);
+extern void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch);*/
 
 // no AA
 extern void __fastcall FrameSwizzleBlock32_c(u32* dst, u32* src, int srcpitch, u32 WriteMask);

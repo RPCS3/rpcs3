@@ -271,6 +271,67 @@ struct FRAGMENTSHADER
 #ifdef _DEBUG
 	string filename;
 #endif
+	void set_uniform_param(CGparameter &var, const char *name)
+	{
+		CGparameter p;
+		p = cgGetNamedParameter(prog, name);
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE) var = p;
+	}
+	
+	bool set_texture(GLuint texobj, const char *name)
+	{
+		CGparameter p;
+		
+		p = cgGetNamedParameter(prog, name);
+		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE ) 
+		{
+			cgGLSetTextureParameter(p, texobj);
+			cgGLEnableTextureParameter(p);
+			return true;
+		}
+		return false;
+	}
+	
+	bool connect(CGparameter &tex, const char *name)
+	{
+		CGparameter p;
+		
+		p = cgGetNamedParameter(prog, name);
+		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE ) 
+		{
+			cgConnectParameter(tex, p);
+			return true;
+		}
+		return false;
+	}
+	
+	bool set_texture(CGparameter &tex, const char *name)
+	{
+		CGparameter p;
+		
+		p = cgGetNamedParameter(prog, name);
+		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE ) 
+		{
+			//cgGLEnableTextureParameter(p);
+			tex = p;
+			return true;
+		}
+		return false;
+	}
+	
+	bool set_shader_const(Vector v, const char *name)
+	{
+		CGparameter p;
+		
+		p = cgGetNamedParameter(prog, name);
+	
+		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE ) 
+		{
+			cgGLSetParameter4fv(p, v);
+			return true;
+		}
+		return false;
+	}
 };
 
 struct VERTEXSHADER
