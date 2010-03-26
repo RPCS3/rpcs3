@@ -50,6 +50,7 @@ int branch;		         // set for branch
 
 __aligned16 GPR_reg64 g_cpuConstRegs[32] = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
+bool g_cpuFlushedPC;
 
 ////////////////////////////////////////////////////////////////
 // Static Private Variables - R5900 Dynarec
@@ -308,26 +309,17 @@ void recBranchCall( void (*func)() )
 	// In order to make sure a branch test is performed, the nextBranchCycle is set
 	// to the current cpu cycle.
 
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
 	MOV32MtoR( EAX, (uptr)&cpuRegs.cycle );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
 	MOV32RtoM( (uptr)&g_nextBranchCycle, EAX );
 
-	// Might as well flush everything -- it'll all get flushed when the
-	// recompiler inserts the branchtest anyway.
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)func );
+	recCall(func);
 	branch = 2;
 }
 
-void recCall( void (*func)(), int delreg )
+void recCall( void (*func)() )
 {
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-
-	iFlushCall(FLUSH_EVERYTHING);
-	if( delreg > 0 ) _deleteEEreg(delreg, 0);
-	CALLFunc( (uptr)func );
+	iFlushCall(FLUSH_INTERPRETER);
+	xCALL(func);
 }
 
 // =====================================================================================================
@@ -786,10 +778,7 @@ static void recExecuteBiosStub()
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
 {
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_NODESTROY);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::SYSCALL );
+	recCall(R5900::Interpreter::OpcodeImpl::SYSCALL);
 
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
@@ -802,10 +791,7 @@ void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recBREAK( void )
 {
-	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BREAK );
+	recCall(R5900::Interpreter::OpcodeImpl::BREAK);
 
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
@@ -1026,6 +1012,15 @@ void iFlushCall(int flushtype)
 	_freeX86reg(ECX);
 	_freeX86reg(EDX);
 
+	if (flushtype & FLUSH_PC && !g_cpuFlushedPC) {
+		xMOV(ptr32[&cpuRegs.pc], pc);
+		g_cpuFlushedPC = true;
+	}
+	if (flushtype & FLUSH_CODE)
+		xMOV(ptr32[&cpuRegs.code], cpuRegs.code);
+	if (flushtype & FLUSH_CAUSE)
+		; // TODO
+
 	if( flushtype & FLUSH_FREE_XMM )
 		_freeXMMregs();
 	else if( flushtype & FLUSH_FLUSH_XMM)
@@ -1208,6 +1203,7 @@ void recompileNextInstruction(int delayslot)
 
 	cpuRegs.code = *(int *)s_pCode;
 	pc += 4;
+	g_cpuFlushedPC = false;
 
 	g_pCurInstInfo++;
 

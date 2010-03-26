@@ -88,9 +88,7 @@ namespace DOUBLE {
 #define REC_FPUBRANCH(f) \
 	void f(); \
 	void rec##f() { \
-	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code); \
-	MOV32ItoM((uptr)&cpuRegs.pc, pc); \
-	iFlushCall(FLUSH_EVERYTHING); \
+	iFlushCall(FLUSH_INTERPRETER); \
 	CALLFunc((uptr)R5900::Interpreter::OpcodeImpl::COP1::f); \
 	branch = 2; \
 }
@@ -98,9 +96,7 @@ namespace DOUBLE {
 #define REC_FPUFUNC(f) \
 	void f(); \
 	void rec##f() { \
-	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code); \
-	MOV32ItoM((uptr)&cpuRegs.pc, pc); \
-	iFlushCall(FLUSH_EVERYTHING); \
+	iFlushCall(FLUSH_INTERPRETER); \
 	CALLFunc((uptr)R5900::Interpreter::OpcodeImpl::COP1::f); \
 }
 //------------------------------------------------------------------

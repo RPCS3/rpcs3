@@ -187,13 +187,8 @@ void recPMFHL()
 
 		case 0x02: // SLW
 			// fall to interp
-			MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
-			MOV32ItoM( (uptr)&cpuRegs.pc, pc );
-			_flushCachedRegs();
 			_deleteEEreg(_Rd_, 0);
-			_deleteEEreg(XMMGPR_LO, 1);
-			_deleteEEreg(XMMGPR_HI, 1);
-			iFlushCall(FLUSH_CACHED_REGS); // since calling CALLFunc
+			iFlushCall(FLUSH_INTERPRETER); // since calling CALLFunc
 			CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::MMI::PMFHL );
 			break;
 
@@ -1710,7 +1705,8 @@ REC_FUNC_DEL( PROT3W, _Rd_ );
 void recPMADDW()
 {
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
-		recCall( Interp::PMADDW, _Rd_ );
+		_deleteEEreg(_Rd_, 0);
+		recCall(Interp::PMADDW);
 		return;
 	}
 
@@ -1888,7 +1884,8 @@ void recPSRLVW()
 void recPMSUBW()
 {
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
-		recCall( Interp::PMSUBW, _Rd_ );
+		_deleteEEreg(_Rd_, 0);
+		recCall(Interp::PMSUBW);
 		return;
 	}
 	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI );
@@ -1939,7 +1936,8 @@ void recPMSUBW()
 void recPMULTW()
 {
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
-		recCall( Interp::PMULTW, _Rd_ );
+		_deleteEEreg(_Rd_, 0);
+		recCall(Interp::PMULTW);
 		return;
 	}
 	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI );
@@ -1979,13 +1977,15 @@ void recPMULTW()
 ////////////////////////////////////////////////////
 void recPDIVW()
 {
-	recCall( Interp::PDIVW, _Rd_ );
+	_deleteEEreg(_Rd_, 0);
+	recCall(Interp::PDIVW);
 }
 
 ////////////////////////////////////////////////////
 void recPDIVBW()
 {
-	recCall( Interp::PDIVBW, _Rd_ ); //--
+	_deleteEEreg(_Rd_, 0);
+	recCall(Interp::PDIVBW); //--
 }
 
 ////////////////////////////////////////////////////
@@ -2608,7 +2608,8 @@ void recPMADDUW()
 ////////////////////////////////////////////////////
 void recPDIVUW()
 {
-	recCall( Interp::PDIVUW, _Rd_ );
+	_deleteEEreg(_Rd_, 0);
+	recCall(Interp::PDIVUW);
 }
 
 ////////////////////////////////////////////////////

@@ -37,41 +37,27 @@ extern u32 s_nBlockCycles;		// cycles of current block recompiling
 #define REC_FUNC( f ) \
    void rec##f( void ) \
    { \
-	   MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code ); \
-	   MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc ); \
-	   iFlushCall(FLUSH_EVERYTHING); \
-	   CALLFunc( (uptr)Interp::f ); \
+	   recCall(Interp::f); \
    }
 
 #define REC_FUNC_DEL( f, delreg ) \
 	void rec##f( void ) \
 { \
-	MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code ); \
-	MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc ); \
-	iFlushCall(FLUSH_EVERYTHING); \
 	if( (delreg) > 0 ) _deleteEEreg(delreg, 0); \
-	CALLFunc( (uptr)Interp::f ); \
+	recCall(Interp::f); \
 }
 
 #define REC_SYS( f ) \
    void rec##f( void ) \
    { \
-	   MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code ); \
-	   MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc ); \
-	   iFlushCall(FLUSH_EVERYTHING); \
-	   CALLFunc( (uptr)Interp::f ); \
-	   branch = 2; \
+	   recBranchCall(Interp::f); \
    }
 
 #define REC_SYS_DEL( f, delreg ) \
    void rec##f( void ) \
    { \
-	   MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code ); \
-	   MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc ); \
-	   iFlushCall(FLUSH_EVERYTHING); \
 	   if( (delreg) > 0 ) _deleteEEreg(delreg, 0); \
-	   CALLFunc( (uptr)Interp::f ); \
-	   branch = 2; \
+	   recBranchCall(Interp::f); \
    }
 
 
@@ -89,7 +75,7 @@ void SetBranchImm( u32 imm );
 
 void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );
-void recCall( void (*func)(), int delreg );
+void recCall( void (*func)() );
 
 namespace R5900{
 namespace Dynarec {

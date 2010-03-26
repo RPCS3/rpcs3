@@ -86,10 +86,10 @@ void recBC0TL()
 	recDoBranchImm_Likely(JNE32(0));
 }
 
-void recTLBR() { recCall( Interp::TLBR, -1 ); }
-void recTLBP() { recCall( Interp::TLBP, -1 ); }
-void recTLBWI() { recCall( Interp::TLBWI, -1 ); }
-void recTLBWR() { recCall( Interp::TLBWR, -1 ); }
+void recTLBR() { recCall(Interp::TLBR); }
+void recTLBP() { recCall(Interp::TLBP); }
+void recTLBWI() { recCall(Interp::TLBWI); }
+void recTLBWR() { recCall(Interp::TLBWR); }
 
 void recERET()
 {

@@ -79,10 +79,7 @@ void endMacroOp(int mode) {
 
 #define INTERPRETATE_COP2_FUNC(f)							\
 	void recV##f() {										\
-		MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code);		\
-		MOV32ItoM((uptr)&cpuRegs.pc, pc);					\
-		iFlushCall(FLUSH_EVERYTHING);						\
-		CALLFunc((uptr)V##f);								\
+		recCall(V##f);										\
 		_freeX86regs();										\
 	}
 

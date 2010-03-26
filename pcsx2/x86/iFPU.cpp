@@ -84,9 +84,7 @@ static const __aligned16 u32 s_pos[4] = { 0x7fffffff, 0xffffffff, 0xffffffff, 0x
 #define REC_FPUBRANCH(f) \
 	void f(); \
 	void rec##f() { \
-	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code); \
-	MOV32ItoM((uptr)&cpuRegs.pc, pc); \
-	iFlushCall(FLUSH_EVERYTHING); \
+	iFlushCall(FLUSH_INTERPRETER); \
 	CALLFunc((uptr)R5900::Interpreter::OpcodeImpl::COP1::f); \
 	branch = 2; \
 }
@@ -94,9 +92,7 @@ static const __aligned16 u32 s_pos[4] = { 0x7fffffff, 0xffffffff, 0xffffffff, 0x
 #define REC_FPUFUNC(f) \
 	void f(); \
 	void rec##f() { \
-	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code); \
-	MOV32ItoM((uptr)&cpuRegs.pc, pc); \
-	iFlushCall(FLUSH_EVERYTHING); \
+	iFlushCall(FLUSH_INTERPRETER); \
 	CALLFunc((uptr)R5900::Interpreter::OpcodeImpl::COP1::f); \
 }
 //------------------------------------------------------------------

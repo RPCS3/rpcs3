@@ -123,6 +123,7 @@ void recLoad64( u32 bits, bool sign )
 	}
 	else
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		// Load ECX with the source memory address that we're reading from.
 		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
@@ -158,6 +159,7 @@ void recLoad32( u32 bits, bool sign )
 	}
 	else
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		// Load ECX with the source memory address that we're reading from.
 		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
@@ -219,6 +221,7 @@ void recStore(u32 sz, bool edxAlreadyAssigned=false)
 	}
 	else
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		_eeMoveGPRtoR(ECX, _Rs_);
 
 		if ( _Imm_ != 0 )
@@ -254,25 +257,23 @@ void recSD( void )  { recStore(64); }
 ////////////////////////////////////////////////////
 void recLWL( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LWL );
+	recCall(LWL);
 }
 
 ////////////////////////////////////////////////////
 void recLWR( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LWR );   
+	recCall(LWR);
 }
 
 static const u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
@@ -312,64 +313,58 @@ void recSWL( void )
 	}
 	else
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		_deleteEEreg(_Rs_, 1);
 		_deleteEEreg(_Rt_, 1);
-		MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-		//MOV32ItoM( (int)&cpuRegs.pc, pc );	// pc's not needed by SWL
-		CALLFunc( (int)SWL );
+		recCall(SWL);
 	}
 }
 
 ////////////////////////////////////////////////////
 void recSWR( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)SWR );
+	recCall(SWR);
 }
 
 ////////////////////////////////////////////////////
 void recLDL( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LDL );
+	recCall(LDL);
 }
 
 ////////////////////////////////////////////////////
 void recLDR( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)LDR );
+	recCall(LDR);
 }
 
 ////////////////////////////////////////////////////
 void recSDL( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)SDL );
+	recCall(SDL);
 }
 
 ////////////////////////////////////////////////////
 void recSDR( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	//MOV32ItoM( (int)&cpuRegs.pc, pc );
-	CALLFunc( (int)SDR );
+	recCall(SDR);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -381,6 +376,7 @@ void recSDR( void )
 ////////////////////////////////////////////////////
 void recLWC1( void )
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 2);
 
@@ -395,6 +391,7 @@ void recLWC1( void )
 ////////////////////////////////////////////////////
 void recSWC1( void )
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 0);
 
@@ -419,6 +416,7 @@ void recSWC1( void )
 
 void recLQC2( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 2);
 
@@ -437,6 +435,7 @@ void recLQC2( void )
 ////////////////////////////////////////////////////
 void recSQC2( void ) 
 {
+	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 0);
 
