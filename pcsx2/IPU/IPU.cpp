@@ -1309,10 +1309,13 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, tDMA_TAG *ptag)
 
 static __forceinline void flushGIF()
 {
-	while(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && Path3progress != STOPPED_MODE)
+	if (dmacRegs->ctrl.STD != STD_GIF || (gif->madr + (gif->qwc * 16)) < dmacRegs->stadr.ADDR) 
 	{
-		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
-		gsInterrupt();
+		while(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && Path3progress != STOPPED_MODE)
+		{
+			GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
+			gsInterrupt();
+		}
 	}
 }
 
@@ -1566,7 +1569,7 @@ void ipu0Interrupt()
 	{
 		// gif
 		g_nDMATransfer.GIFSTALL = false;
-		if (gif->chcr.STR) GIFdma();
+		//if (gif->chcr.STR) GIFdma();
 	}
 
 	if (g_nDMATransfer.VIFSTALL)

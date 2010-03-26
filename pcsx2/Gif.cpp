@@ -206,7 +206,7 @@ void GIFdma()
 
 		if ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR)
 		{
-			CPU_INT(DMAC_GIF, gscycles);
+			CPU_INT(DMAC_GIF, 4);
 			gscycles = 0;
 			return;
 		}
@@ -272,7 +272,10 @@ void GIFdma()
 			GIFchain();	//Transfers the data set by the switch
 			CPU_INT(DMAC_GIF, gscycles * BIAS);
 			return;
+		} else { //Else it really is a normal transfer and we want to quit, else it gets confused with chains
+			gspath3done = 1;
 		}
+
 		//else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
 	}
 
@@ -289,9 +292,9 @@ void GIFdma()
 			{
 				// stalled. 
 				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
-				Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
+				Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
-				gif->tadr -= 16;
+				//gif->tadr -= 16;
 				hwDmacIrq(DMAC_STALL_SIS);
 				CPU_INT(DMAC_GIF, gscycles);
 				gscycles = 0;
