@@ -51,7 +51,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="..\x86\;..\..\ZeroGSShaders\"
+				AdditionalIncludeDirectories="..\ZeroGSShaders\; ..\..\3rdparty\"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;__i386__;ZEROGS_DEVBUILD"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -130,7 +130,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\x86\;..\..\ZeroGSShaders\"
+				AdditionalIncludeDirectories="..\ZeroGSShaders\; ..\..\3rdparty\"
 				PreprocessorDefinitions="_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__"
 				IgnoreStandardIncludePath="false"
 				BasicRuntimeChecks="3"
