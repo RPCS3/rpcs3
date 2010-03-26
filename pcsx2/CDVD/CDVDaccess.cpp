@@ -241,10 +241,10 @@ static void DetectDiskType()
 
 	// Paranoid mode: do not trust the plugin's detection system to work correctly.
 	// (.. and there's no reason plugins should be doing their own detection anyway).
-#if 0
 
 	switch(baseMediaType)
 	{
+#if 0
 		case CDVD_TYPE_CDDA:
 		case CDVD_TYPE_PSCD:
 		case CDVD_TYPE_PS2CD:
@@ -263,12 +263,12 @@ static void DetectDiskType()
 		case CDVD_TYPE_DETCTCD:
 			mType = baseMediaType;
 			break;
+#endif
 
 		case CDVD_TYPE_NODISC:
 			diskTypeCached = CDVD_TYPE_NODISC;
 			return;
 	}
-#endif
 
 	diskTypeCached = FindDiskType(mType);
 }
