@@ -41,7 +41,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
 	if ((psHu32(qwcRegister) >> 16) != 0)
 	{
-		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", qwcRegister, psHu32(qwcRegister) >> 16);
+		DevCon.Warning("DmaExec8 DMA QWC (%x) upper 16bits set to %x\n", qwcRegister, psHu32(qwcRegister) >> 16);
 		psHu32(qwcRegister) = 0;
 	}
 
@@ -71,11 +71,12 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
 	// Note: pad is the padding right above qwc, so we're testing whether qwc
 	// has overflowed into pad.
+	// Note2: May be only needed for IPU which has this handling in IPU.cpp now. (Fixes GS transfers)
 	if (reg->pad != 0)
 	{
-	    DevCon.Warning(L"DMA QWC (%s) upper 16 bits set to %x\n",
+	    DevCon.Warning(L"DmaExec16 DMA QWC (%s) upper 16 bits set to %x\n",
 			ChcrName(mem), reg->pad);
-		reg->qwc = reg->pad = 0;
+		//reg->qwc = reg->pad = 0;
 	}
 
 	psHu16(mem) = chcr.lower();
@@ -106,11 +107,12 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 
 	// Note: pad is the padding right above qwc, so we're testing whether qwc
 	// has overflowed into pad.
+	// Note2: May be only needed for IPU which has this handling in IPU.cpp now. (Fixes GS transfers)
 	if (reg->pad != 0)
 	{
-	    DevCon.Warning(L"DMA QWC (%s) upper 16 bits set to %x\n",
+	    DevCon.Warning(L"DmaExec32 DMA QWC (%s) upper 16 bits set to %x\n",
 			ChcrName(mem), reg->pad);
-		reg->qwc = reg->pad = 0;
+		//reg->qwc = reg->pad = 0;
 		//return;
 	}
     

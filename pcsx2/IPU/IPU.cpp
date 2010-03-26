@@ -1327,12 +1327,12 @@ int IPU1dma()
 
 	// Note: pad is the padding right above qwc, so we're testing whether qwc
 	// has overflowed into pad.
-//	if (ipu1dma->pad != 0) 
-//	{
-//	    DevCon.Warning(L"IPU1dma's upper 16 bits set to %x\n", ipu1dma->pad);
-//		//ipu1dma->qwc = ipu1dma->pad = 0;
-//		return 0;
-//	}
+	if (ipu1dma->pad != 0) 
+	{
+	    DevCon.Warning(L"IPU1dma's upper 16 bits set to %x\n", ipu1dma->pad);
+		ipu1dma->qwc = ipu1dma->pad = 0;
+		//return 0;
+	}
 	
 	pxAssert(!ipu1dma->chcr.TTE);
 
@@ -1485,12 +1485,12 @@ int IPU0dma()
 
 	// Note: pad is the padding right above qwc, so we're testing whether qwc
 	// has overflowed into pad.
-//	if (ipu0dma->pad != 0) 
-//	{
-//	    DevCon.Warning(L"IPU0dma's upper 16 bits set to %x\n", ipu0dma->pad);
-//		//ipu0dma->qwc = ipu0dma->pad = 0;
-//		return 0;
-//	}
+	if (ipu0dma->pad != 0) 
+	{
+	    DevCon.Warning(L"IPU0dma's upper 16 bits set to %x\n", ipu0dma->pad);
+		ipu0dma->qwc = ipu0dma->pad = 0;
+		//return 0;
+	}
 	
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
