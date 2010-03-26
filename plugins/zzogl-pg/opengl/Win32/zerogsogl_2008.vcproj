@@ -219,7 +219,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories="..\x86\;..\..\ZeroGSShaders\; ..\..\..\3rdparty\zlib\"
+				AdditionalIncludeDirectories="..\ZeroGSShaders\; ..\..\3rdparty\"
 				PreprocessorDefinitions="NDEBUG;_USRDLL;__i386__;ZEROGS_SSE2;RELEASE_TO_PUBLIC"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -324,11 +324,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Mem_Tables.cpp"
+				RelativePath="..\Mem_Swizzle.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\Mem_Swizzle.cpp"
+				RelativePath="..\Mem_Tables.cpp"
 				>
 			</File>
 			<File
@@ -428,10 +428,6 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\avcodec.h"
-				>
-			</File>
-			<File
 				RelativePath=".\aviUtil.h"
 				>
 			</File>
@@ -522,98 +518,6 @@
 			>
 			<File
 				RelativePath="..\..\ReadMe.txt"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="zlib"
-			>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\adler32.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\compress.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\crc32.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\crc32.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\deflate.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\deflate.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\gzio.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\infback.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inffast.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inffast.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inffixed.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inflate.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inflate.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inftrees.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\inftrees.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\trees.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\trees.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\uncompr.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\zconf.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\zlib.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\zutil.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\..\3rdparty\zlib\zutil.h"
 				>
 			</File>
 		</Filter>

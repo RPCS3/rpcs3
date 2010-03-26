@@ -72,6 +72,7 @@
 			Name="Release|Win32"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
+			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -92,6 +93,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				RuntimeLibrary="0"
 				WarningLevel="3"
 			/>
 			<Tool
