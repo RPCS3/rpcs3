@@ -50,7 +50,7 @@ int branch;		         // set for branch
 
 __aligned16 GPR_reg64 g_cpuConstRegs[32] = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
-bool g_cpuFlushedPC;
+bool g_cpuFlushedPC, g_recompilingDelaySlot, g_maySignalException;
 
 ////////////////////////////////////////////////////////////////
 // Static Private Variables - R5900 Dynarec
@@ -1018,8 +1018,11 @@ void iFlushCall(int flushtype)
 	}
 	if (flushtype & FLUSH_CODE)
 		xMOV(ptr32[&cpuRegs.code], cpuRegs.code);
-	if (flushtype & FLUSH_CAUSE)
-		; // TODO
+	if (flushtype & FLUSH_CAUSE) {
+		if (g_recompilingDelaySlot)
+			xOR(ptr32[&cpuRegs.CP0.n.Cause], 1 << 31); // BD
+		g_maySignalException = true;
+	}
 
 	if( flushtype & FLUSH_FREE_XMM )
 		_freeXMMregs();
@@ -1202,8 +1205,13 @@ void recompileNextInstruction(int delayslot)
 		MOV32ItoR(EAX, pc);		// acts as a tag for delimiting recompiled instructions when viewing x86 disasm.
 
 	cpuRegs.code = *(int *)s_pCode;
-	pc += 4;
-	g_cpuFlushedPC = false;
+	if (!delayslot) {
+		pc += 4;
+		g_cpuFlushedPC = false;
+	} else {
+		// increment after recompiling so that pc points to the branch during recompilation
+		g_recompilingDelaySlot = true;
+	}
 
 	g_pCurInstInfo++;
 
@@ -1284,6 +1292,16 @@ void recompileNextInstruction(int delayslot)
 //	_freeMMXregs();
 //	_flushCachedRegs();
 //	g_cpuHasConstReg = 1;
+
+	if (delayslot) {
+		pc += 4;
+		g_cpuFlushedPC = false;
+		if (g_maySignalException)
+			xAND(ptr32[&cpuRegs.CP0.n.Cause], ~(1 << 31)); // BD
+		g_recompilingDelaySlot = false;
+	}
+
+	g_maySignalException = false;
 
 	if (!delayslot && (xGetPtr() - recPtr > 0x1000) )
 		s_nEndBlock = pc;
