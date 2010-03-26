@@ -47,15 +47,13 @@ extern HWND GShwnd;
 
 extern float fFPS;
 
-// need C definitions
-extern "C" {
 #define GSdefs
 #include "PS2Edefs.h"
 
+// need C definitions -- no mangling please!
 extern "C" u32   CALLBACK PS2EgetLibType(void);
 extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
-}
 
 #include "zerogsmath.h"
 

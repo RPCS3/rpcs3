@@ -92,6 +92,9 @@ void CALLBACK GSgetLastTag(u64* ptag)
 	nPath3Hack = 0;
 }
 
+// for debug assertion checks (thread affinity checks)
+extern HANDLE g_hCurrentThread;
+
 void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 {
 	FUNCLOG

@@ -76,9 +76,10 @@ MEMCPY_AMD.CPP
 #endif
 
 #if defined(_MSC_VER) && !defined(__x86_64__)
-extern "C" {
+
 #include "PS2Etypes.h"
 
+extern "C" {
 void * memcpy_amd(void *dest, const void *src, size_t n)
 {
     __asm {

@@ -196,9 +196,12 @@ inline const char *error_name(int err) {
 		case GL_TABLE_TOO_LARGE:
 			return "GL_TABLE_TOO_LARGE";
 		default: {
-			char *str;
-			sprintf(str, "Unknown error(0x%x)", err);
-			return str;
+			return "Unknown GL error";
+
+			// ... ok, who wrote this code?  You should be slapped, fool! str is an uninitialized pointer! -- air.
+			//char *str;
+			//sprintf(str, "Unknown error(0x%x)", err);
+			//return str;
 		}
 	}
 }
