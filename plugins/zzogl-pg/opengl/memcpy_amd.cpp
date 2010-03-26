@@ -75,10 +75,9 @@ MEMCPY_AMD.CPP
 #include <windows.h>
 #endif
 
+#if defined(_MSC_VER) && !defined(__x86_64__)
 extern "C" {
 #include "PS2Etypes.h"
-
-#if defined(_MSC_VER) && !defined(__x86_64__)
 
 void * memcpy_amd(void *dest, const void *src, size_t n)
 {
@@ -460,19 +459,21 @@ End:
 	}
 }
 
+}
 #else // _MSC_VER
 // assume gcc or mingw or win x64
 
 #include <memory.h>
 #include <string.h>
-
-void * memcpy_amd(void *dest, const void *src, size_t n)
-{
-memcpy(dest, src, n);
-return dest;
-}
-
+#include "PS2Etypes.h"
+#include "Utilities/MemcpyFast.h"
+//void * memcpy_amd(void *dest, const void *src, size_t n)
+//{
+//	//memcpy(dest, src, n);
+//	memcpy_fast(dest, src, n);
+//	return dest;
+//}
+#define memcpy_amd memcpy_fast
 
 #endif
 
-}

@@ -872,8 +872,13 @@ char *SysLibError();					// Gets previous error loading sysbols
 void SysCloseLibrary(void *lib);		// Closes Library
 void SysMessage(const char *fmt, ...);
 
+#ifdef __LINUX__
+#include "Utilities/MemcpyFast.h"
+#define memcpy_amd memcpy_fast
+#else
 extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
+#endif
 
 template <typename T>
 class CInterfacePtr

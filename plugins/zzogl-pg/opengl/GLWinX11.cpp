@@ -62,9 +62,9 @@ void GLWindow::CloseWindow()
 {       
     if ( glDisplay != NULL ) 
     {
-                XCloseDisplay(glDisplay);
-                glDisplay = NULL;
-        }
+		XCloseDisplay(glDisplay);
+		glDisplay = NULL;
+	}
 }
 
 bool GLWindow::DisplayWindow(int _width, int _height)
