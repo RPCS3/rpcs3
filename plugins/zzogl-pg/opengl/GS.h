@@ -36,7 +36,6 @@ extern HWND GShwnd;
 #include <X11/keysym.h>
 #include <X11/extensions/xf86vmode.h>
 #include <gtk/gtk.h>
-//#include <sys/stat.h>
 #include <sys/types.h>
 
 #endif
@@ -120,21 +119,13 @@ struct RECT
 	int right, bottom;
 };
 
-/*typedef struct {
-	Display *dpy;
-	int screen;
-	Window win;
-	GLXContext ctx;
-	XSetWindowAttributes attr;
-	Bool fs;
-	Bool doubleBuffered;
-	XF86VidModeModeInfo deskMode;
-	int x, y;
-	unsigned int width, height;
-	unsigned int depth;	
-} GLWindow;*/
-
 #define GL_X11_WINDOW
+
+#else
+
+#define GL_WIN32_WINDOW
+
+#endif // linux basic definitions
 
 class GLWindow
 {
@@ -162,31 +153,6 @@ class GLWindow
 };
 
 extern GLWindow GLWin;
-
-#else
-
-#define GL_WIN32_WINDOW
-
-class GLWindow
-{
-	private:
-		bool fullScreen, doubleBuffered;
-		s32 x, y;
-		u32 width, height, depth;
-
-	public:
-		void SwapGLBuffers();
-		void SetTitle(char *strtitle);
-		bool CreateGLWindow(void *pDisplay);
-		bool ReleaseWindow();
-		void CloseWindow();
-		bool DisplayWindow(int _width, int _height);
-		void ResizeCheck();
-};
-
-extern GLWindow GLWin;
-
-#endif // linux basic definitions
 
 struct Vector_16F
 {
@@ -856,19 +822,19 @@ extern GSinternal gs;
 
 extern FILE *gsLog;
 
-void __Log(const char *fmt, ...);
-void __LogToConsole(const char *fmt, ...);
+extern void __Log(const char *fmt, ...);
+extern void __LogToConsole(const char *fmt, ...);
 
-void LoadConfig();
-void SaveConfig();
+extern void LoadConfig();
+extern void SaveConfig();
 
 extern void (*GSirq)();
 
-void *SysLoadLibrary(char *lib);		// Loads Library
-void *SysLoadSym(void *lib, char *sym);	// Loads Symbol from Library
-char *SysLibError();					// Gets previous error loading sysbols
-void SysCloseLibrary(void *lib);		// Closes Library
-void SysMessage(const char *fmt, ...);
+extern void *SysLoadLibrary(char *lib);		// Loads Library
+extern void *SysLoadSym(void *lib, char *sym);	// Loads Symbol from Library
+extern char *SysLibError();					// Gets previous error loading sysbols
+extern void SysCloseLibrary(void *lib);		// Closes Library
+extern void SysMessage(const char *fmt, ...);
 
 #ifdef __LINUX__
 #include "Utilities/MemcpyFast.h"
@@ -911,17 +877,21 @@ private:
 	T* ptr;
 };
 
-#define RGBA32to16(c) \
-	(u16)((((c) & 0x000000f8) >>  3) | \
-	(((c) & 0x0000f800) >>  6) | \
-	(((c) & 0x00f80000) >>  9) | \
-	(((c) & 0x80000000) >> 16)) \
+static __forceinline u16 RGBA32to16(u32 c)
+{
+	return (u16)((((c) & 0x000000f8) >>  3) |
+				(((c) & 0x0000f800) >>  6) |
+				(((c) & 0x00f80000) >>  9) |
+				(((c) & 0x80000000) >> 16));
+}
 
-#define RGBA16to32(c) \
-	(((c) & 0x001f) <<  3) | \
-	(((c) & 0x03e0) <<  6) | \
-	(((c) & 0x7c00) <<  9) | \
-	(((c) & 0x8000) ? 0xff000000 : 0) \
+static __forceinline u32 RGBA16to32(u16 c)
+{
+	return 	(((c) & 0x001f) <<  3) | 
+			(((c) & 0x03e0) <<  6) | 
+			(((c) & 0x7c00) <<  9) | 
+			(((c) & 0x8000) ? 0xff000000 : 0);
+}
 
 // converts float16 [0,1] to BYTE [0,255] (assumes value is in range, otherwise will take lower 8bits)
 // f is a u16

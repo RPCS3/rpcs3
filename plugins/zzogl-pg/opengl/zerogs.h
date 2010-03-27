@@ -195,14 +195,8 @@ inline const char *error_name(int err) {
 			return "GL_OUT_OF_MEMORY";
 		case GL_TABLE_TOO_LARGE:
 			return "GL_TABLE_TOO_LARGE";
-		default: {
+		default:
 			return "Unknown GL error";
-
-			// ... ok, who wrote this code?  You should be slapped, fool! str is an uninitialized pointer! -- air.
-			//char *str;
-			//sprintf(str, "Unknown error(0x%x)", err);
-			//return str;
-		}
 	}
 }
 
@@ -434,37 +428,40 @@ extern int s_aviinit;
 extern int s_avicapturing;
 
 // don't change these values!
-#define GAME_TEXTURETARGS	0x01
-#define GAME_AUTORESET		0x02
-#define GAME_INTERLACE2X	0x04
-#define GAME_TEXAHACK		0x08 // apply texa to non textured polys
-#define GAME_NOTARGETRESOLVE 0x10
-#define GAME_EXACTCOLOR		0x20
-#define GAME_NOCOLORCLAMP	0x40
-#define GAME_FFXHACK		0x80
-#define GAME_NOALPHAFAIL	0x0100
-#define GAME_NODEPTHUPDATE  0x0200
-#define GAME_QUICKRESOLVE1  0x0400
-#define GAME_NOQUICKRESOLVE 0x0800
-#define GAME_NOTARGETCLUT   0x1000 // full 16 bit resolution
-#define GAME_NOSTENCIL	  0x2000
-#define GAME_VSSHACKOFF		0x4000 // vertical stripe syndrome
-#define GAME_NODEPTHRESOLVE 0x8000
-#define GAME_FULL16BITRES   0x00010000
-#define GAME_RESOLVEPROMOTED 0x00020000
-#define GAME_FASTUPDATE 0x00040000
-#define GAME_NOALPHATEST 0x00080000
-#define GAME_DISABLEMRTDEPTH 0x00100000
-#define GAME_32BITTARGS 0x00200000
-#define GAME_PATH3HACK 0x00400000
-#define GAME_DOPARALLELCTX 0x00800000 // tries to parallelize both contexts so that render calls are reduced (xenosaga)
-									  // makes the game faster, but can be buggy
-#define GAME_XENOSPECHACK 0x01000000 // xenosaga specularity hack (ignore any zmask=1 draws)
-#define GAME_PARTIALPOINTERS 0x02000000 // whenver the texture or render target are small, tries to look for bigger ones to read from
-#define GAME_PARTIALDEPTH 0x04000000 // tries to save depth targets as much as possible across height changes
-#define GAME_REGETHACK    0x08000000 // some sort of weirdness in ReGet() code
-#define GAME_GUSTHACK	  0x10000000 // Needed for Gustgames fast update.
-#define GAME_NOLOGZ	  0x20000000 // Intended for linux -- not logaripmic Z.
+enum GAME_HACK_OPTIONS
+{
+	GAME_TEXTURETARGS		=	0x00000001,
+	GAME_AUTORESET			=	0x00000002,
+	GAME_INTERLACE2X		=	0x00000004,
+	GAME_TEXAHACK			=	0x00000008, // apply texa to non textured polys
+	GAME_NOTARGETRESOLVE	=	0x00000010,
+	GAME_EXACTCOLOR			=	0x00000020,
+	GAME_NOCOLORCLAMP		=	0x00000040,
+	GAME_FFXHACK			=	0x00000080,
+	GAME_NOALPHAFAIL		=	0x00000100,
+	GAME_NODEPTHUPDATE		=	0x00000200,
+	GAME_QUICKRESOLVE1		=	0x00000400,
+	GAME_NOQUICKRESOLVE		=	0x00000800,
+	GAME_NOTARGETCLUT		=	0x00001000, // full 16 bit resolution
+	GAME_NOSTENCIL			=	0x00002000,
+	GAME_VSSHACKOFF			=	0x00004000, // vertical stripe syndrome
+	GAME_NODEPTHRESOLVE		=	0x00008000,
+	GAME_FULL16BITRES		=	0x00010000,
+	GAME_RESOLVEPROMOTED	=	0x00020000,
+	GAME_FASTUPDATE			=	0x00040000,
+	GAME_NOALPHATEST		=	0x00080000,
+	GAME_DISABLEMRTDEPTH	=	0x00100000,
+	GAME_32BITTARGS			=	0x00200000,
+	GAME_PATH3HACK			=	0x00400000,
+	GAME_DOPARALLELCTX		=	0x00800000, // tries to parallelize both contexts so that render calls are reduced (xenosaga)
+											// makes the game faster, but can be buggy
+	GAME_XENOSPECHACK		=	0x01000000, // xenosaga specularity hack (ignore any zmask=1 draws)
+	GAME_PARTIALPOINTERS	=	0x02000000, // whenver the texture or render target are small, tries to look for bigger ones to read from
+	GAME_PARTIALDEPTH		=	0x04000000, // tries to save depth targets as much as possible across height changes
+	GAME_REGETHACK			=	0x08000000, // some sort of weirdness in ReGet() code
+	GAME_GUSTHACK			=	0x10000000, // Needed for Gustgames fast update.
+	GAME_NOLOGZ				=	0x20000000 // Intended for linux -- not logarithmic Z.
+};
 
 #define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
 

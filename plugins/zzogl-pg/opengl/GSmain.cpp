@@ -476,6 +476,7 @@ GameHack HackinshTable[HACK_NUMBER] = {
 	{"***25 partial pointers", GAME_PARTIALPOINTERS},
 	{"***26 partial depth", GAME_PARTIALDEPTH},
 	{"***27 reget hack", GAME_REGETHACK},
+
 	{"***28 gust hack", GAME_GUSTHACK},
 	{"***29 log-Z", GAME_NOLOGZ}
 };

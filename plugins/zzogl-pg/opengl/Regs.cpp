@@ -81,6 +81,7 @@ u32 results[65535] = {0,};
 inline bool NoHighlights(int i) {
 //	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
 
+	// I'd have thought we could just test prim->_val and ZeroGS::vb[i].zbuf.psm directly...
 	int resultA = prim->iip + ((prim->tme) << 1) + ((prim->fge) << 2) + ((prim->abe) << 3) + ((prim->aa1) << 4) + ((prim->fst) << 5) + ((prim->ctxt) << 6) + ((prim->fix)<< 7) + 
 			((ZeroGS::vb[i].zbuf.psm ) << 8);
 //	if ( results[resultA] == 0 ) {
@@ -90,6 +91,7 @@ inline bool NoHighlights(int i) {
 //	if (resultA == 0xb && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
 	const pixTest curtest = ZeroGS::vb[i].test;
+	// Again, couldn't we just test curtest._val?
 	int result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
 //	if (resultA == 0xb)
 //		if ( results[result] == 0) {
@@ -99,9 +101,15 @@ inline bool NoHighlights(int i) {
 //	0, -50b, -500, !-300, -30a, -50a, -5cb, +100 (zte==1), -50d
 //	if (result == 0x50b && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
+	// if psm is 16S or 24, tme, abe, & fst are true, the rest are false, result is 0x302 or 0x700, and there is a mask.
 	if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
+	
+	// if psm is 24, abe is true, tme doesn't matter, the rest are false, result is 0x54c or 0x50c and there is a mask.
 	if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Okage
+	
+	// if psm is 24, abe & tme are true, the rest are false, and no result.
 	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
+	// if psm is 16S, tme, abe, fst, and ctxt are true, the rest are false, result is 0x330 or 0x500, and there is a mask.
 	if (resultA == 0x3a6a && (result == 0x300 || result == 0x500)&& ZeroGS::vb[i].zbuf.zmsk) return false; // Okami, result != 0x30d
 //	if ((resultA == 0x300b) && (result == 0x300) && ZeroGS::vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
 
@@ -228,7 +236,8 @@ void tex0Write(int i, u32 *data)
 	FUNCLOG
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
-	if( m_Blocks[psm].bpp == 0 ) {
+	if ( m_Blocks[psm].bpp == 0 ) 
+	{
 		// kh and others
 		return;
 	}
@@ -238,13 +247,16 @@ void tex0Write(int i, u32 *data)
 	ZeroGS::vb[i].bNeedTexCheck = 1;
 
 	// don't update unless necessary
-	if( PSMT_ISCLUT(psm) ) {
-		if( ZeroGS::CheckChangeInClut(data[1], psm) ) {
+	if (PSMT_ISCLUT(psm)) 
+	{
+		if (ZeroGS::CheckChangeInClut(data[1], psm)) 
+		{
 			// loading clut, so flush whole texture
 			ZeroGS::vb[i].FlushTexData();
 		}
 		// check if csa is the same!! (ffx bisaid island, grass)
-		else if( (data[1]&0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1]&0x1f780000) ) {
+		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000)) 
+		{
 			ZeroGS::Flush(i); // flush any previous entries
 		}
 	}
@@ -296,8 +308,11 @@ __forceinline void frameWrite(int i, u32 *data) {
 	FUNCLOG
 	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
 
-	if((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) && (gsfb.fbw == ZZOglGet_fbw_FrameBitsMult(data[0])) &&
-	(gsfb.psm ==  ZZOglGet_psm_FrameBits(data[0])) && (gsfb.fbm == ZZOglGet_fbm_FrameBits(data[0])) ) {
+	if ((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) && 
+		(gsfb.fbw == ZZOglGet_fbw_FrameBitsMult(data[0])) &&
+		(gsfb.psm == ZZOglGet_psm_FrameBits(data[0])) && 
+		(gsfb.fbm == ZZOglGet_fbm_FrameBits(data[0])) ) 
+	{
 		return;
 	}
 
