@@ -27,17 +27,6 @@
 
 #include <map>
 
-GtkWidget *Conf, *Logging, *About;
-GList *fresl, *wresl, *cachesizel, *codecl, *filtersl;
-
-static int prevbilinearfilter;
-
-struct confOptsStruct
-{
-	int value;
-	const char *desc;
-} confOpts;
-
 static map<string, confOptsStruct> mapConfOpts;
 
 void CALLBACK GSkeyEvent(keyEvent *ev)
@@ -250,7 +239,7 @@ void DisplayDialog()
     gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "2X - Anti-Aliasing x 2");
     gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "4X - Anti-Aliasing x 4");
     gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "8X - Anti-Aliasing x 8");
-    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "8X - Anti-Aliasing x 8");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "16X - Anti-Aliasing x 16");
     gtk_combo_box_set_active(GTK_COMBO_BOX(aa_box), conf.aa);
     
     wireframe_check = gtk_check_button_new_with_label("Wireframe Rendering(Shift + F6)");
