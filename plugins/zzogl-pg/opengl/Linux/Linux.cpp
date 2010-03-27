@@ -23,13 +23,6 @@
 #include <dlfcn.h>
 
 #include "GS.h"
-
-extern "C" {
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
-
 #include "Linux.h"
 
 #include <map>
@@ -91,86 +84,6 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 	}
 }
 
-void OnConf_Ok(GtkButton *button, gpointer user_data)
-{
-	GtkWidget *treeview;
-	GtkTreeModel *treemodel;
-	GtkTreeIter treeiter;
-	gboolean treeoptval;
-
-	conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(Conf, "checkBilinear")));
-	// restore
-	if (conf.bilinear && prevbilinearfilter)
-		conf.bilinear = prevbilinearfilter;
-
-	//conf.mrtdepth = 1;//IsDlgButtonChecked(hW, IDC_CONFIG_DEPTHWRITE);
-
-	if is_checked(Conf, "radioAANone")
-		conf.aa = 0;
-	else if is_checked(Conf, "radioAA2X")
-		conf.aa = 1;
-	else if is_checked(Conf, "radioAA4X")
-		conf.aa = 2;
-	else if is_checked(Conf, "radioAA8X")
-		conf.aa = 3;
-	else
-		conf.aa = 4;
-	conf.negaa = 0;
-
-	conf.options = 0;
-	conf.options |= is_checked(Conf, "checkAVI") ? GSOPTION_CAPTUREAVI : 0;
-	conf.options |= is_checked(Conf, "checkWireframe") ? GSOPTION_WIREFRAME : 0;
-	conf.options |= is_checked(Conf, "checkfullscreen") ? GSOPTION_FULLSCREEN : 0;
-	conf.options |= is_checked(Conf, "checkwidescreen") ? GSOPTION_WIDESCREEN : 0;
-	conf.options |= is_checked(Conf, "checkTGA") ? GSOPTION_TGASNAP : 0;
-
-	if is_checked(Conf, "radiointerlace0")
-		conf.interlace = 0;
-	else if is_checked(Conf, "radiointerlace1") 
-		conf.interlace = 1;
-	else
-		conf.interlace = 2;
-
-	//------- get advanced options from the treeview model -------//
-	treeview = lookup_widget(Conf,"treeview1");
-	treemodel = gtk_tree_view_get_model(GTK_TREE_VIEW(treeview));
-	gtk_tree_model_get_iter_first(treemodel, &treeiter);
-
-	conf.gamesettings = 0;
-	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
-	{
-		treeoptval = FALSE;
-		gtk_tree_model_get(treemodel, &treeiter, 0, &treeoptval, -1);
-		
-		if(treeoptval) conf.gamesettings |= it->second.value;
-		
-		gtk_tree_model_iter_next(treemodel,&treeiter);		
-	}
-	
-	GSsetGameCRC(0, conf.gamesettings);
-	//---------- done getting advanced options ---------//
-
-	if is_checked(Conf, "radioSize640")
-		conf.options |= GSOPTION_WIN640;
-	else if is_checked(Conf, "radioSize800")
-		conf.options |= GSOPTION_WIN800;
-	else if is_checked(Conf, "radioSize1024")
-		conf.options |= GSOPTION_WIN1024;
-	else if is_checked(Conf, "radioSize1280")
-		conf.options |= GSOPTION_WIN1280;
-
-	SaveConfig();
-
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
-}
-
-void OnConf_Cancel(GtkButton *button, gpointer user_data) 
-{
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
-}
-
 void add_map_entry(u32 option, const char *key, const char *desc)
 {
 	confOpts.value = option;
@@ -178,52 +91,16 @@ void add_map_entry(u32 option, const char *key, const char *desc)
 	mapConfOpts[key] = confOpts;
 }
 
-void CALLBACK GSconfigure()
+void CreateGameHackTable(GtkWidget *treeview)
 {
 	char descbuf[255];
 	bool itval;
-	GtkWidget *treeview;
 	GtkCellRenderer *treerend;
 	GtkListStore *treestore;//Gets typecast as GtkTreeModel as needed.
 	GtkTreeIter treeiter;
 	GtkTreeViewColumn *treecol;
-
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
 	
-	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
-	Conf = create_Config();
-	
-	// fixme; Need to check "checkInterlace" as well.
-	if (conf.interlace == 0)
-		set_checked(Conf, "radiointerlace0", true);
-	else if (conf.interlace == 1)
-		set_checked(Conf, "radiointerlace1", true);
-	else
-		set_checked(Conf, "radionointerlace", true);
-	
-	set_checked(Conf, "checkBilinear", !!conf.bilinear);
-	//set_checked(Conf, "checkbutton6", conf.mrtdepth);
-	set_checked(Conf, "radioAANone", (conf.aa==0));
-	set_checked(Conf, "radioAA2X",     (conf.aa==1));
-	set_checked(Conf, "radioAA4X",     (conf.aa==2));
-	set_checked(Conf, "radioAA8X",     (conf.aa==3));
-	set_checked(Conf, "radioAA16X",   (conf.aa==4));
-	set_checked(Conf, "checkWireframe", (conf.options&GSOPTION_WIREFRAME)?1:0);
-	set_checked(Conf, "checkAVI", (conf.options&GSOPTION_CAPTUREAVI)?1:0);
-	set_checked(Conf, "checkfullscreen", (conf.options&GSOPTION_FULLSCREEN)?1:0);
-	set_checked(Conf, "checkwidescreen", (conf.options&GSOPTION_WIDESCREEN)?1:0);
-	set_checked(Conf, "checkTGA", (conf.options&GSOPTION_TGASNAP)?1:0);
-
-	set_checked(Conf, "radioSize640", ((conf.options&GSOPTION_WINDIMS)>>4)==0);
-	set_checked(Conf, "radioSize800", ((conf.options&GSOPTION_WINDIMS)>>4)==1);
-	set_checked(Conf, "radioSize1024", ((conf.options&GSOPTION_WINDIMS)>>4)==2);
-	set_checked(Conf, "radioSize1280", ((conf.options&GSOPTION_WINDIMS)>>4)==3);
-
-	prevbilinearfilter = conf.bilinear;
-
 	//--------- Let's build a treeview for our advanced options! --------//
-	treeview = lookup_widget(Conf,"treeview1");
 	treestore = gtk_list_store_new(2,G_TYPE_BOOLEAN, G_TYPE_STRING);
 
 	//setup columns in treeview
@@ -285,10 +162,31 @@ void CALLBACK GSconfigure()
 	//don't select/highlight rows
 	gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview)), GTK_SELECTION_NONE);
 	//------treeview done -------//
+}
 
-	//Let's do it!
-	gtk_widget_show_all(Conf);
-	gtk_main();
+void SaveGameHackTable(GtkWidget *treeview)
+{
+	GtkTreeModel *treemodel;
+	GtkTreeIter treeiter;
+	gboolean treeoptval;
+	
+	//------- get advanced options from the treeview model -------//
+	treemodel = gtk_tree_view_get_model(GTK_TREE_VIEW(treeview));
+	gtk_tree_model_get_iter_first(treemodel, &treeiter);
+
+	conf.gamesettings = 0;
+	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
+	{
+		treeoptval = FALSE;
+		gtk_tree_model_get(treemodel, &treeiter, 0, &treeoptval, -1);
+		
+		if(treeoptval) conf.gamesettings |= it->second.value;
+		
+		gtk_tree_model_iter_next(treemodel,&treeiter);		
+	}
+	
+	GSsetGameCRC(0, conf.gamesettings);
+	//---------- done getting advanced options ---------//
 }
 
 void OnToggle_advopts(GtkCellRendererToggle *cell, gchar *path, gpointer user_data)
@@ -302,73 +200,211 @@ void OnToggle_advopts(GtkCellRendererToggle *cell, gchar *path, gpointer user_da
 	gtk_list_store_set(GTK_LIST_STORE(user_data), &treeiter, 0, val, -1);
 }
 
-void OnAbout_Ok(GtkButton *button, gpointer user_data) 
+void DisplayDialog()
 {
-	gtk_widget_destroy(About);
-	gtk_main_quit();
+    int return_value;
+    
+    GtkWidget *dialog;
+    GtkWidget *main_frame, *main_box;
+    
+    GtkWidget *option_frame, *option_box;
+    GtkWidget *int_label, *int_box;
+    GtkWidget *bilinear_check, *bilinear_label;
+    GtkWidget *aa_label, *aa_box;
+    GtkWidget *wireframe_check, *avi_check;
+    GtkWidget *snap_label, *snap_box;
+    GtkWidget *size_label, *size_box;
+    GtkWidget *fullscreen_check, *widescreen_check;
+    
+    GtkWidget *advanced_frame, *advanced_box;
+    GtkWidget *advanced_scroll;
+    GtkWidget *tree;
+	
+	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
+	
+    /* Create the widgets */
+    dialog = gtk_dialog_new_with_buttons (
+		"ZZOgl PG Config",
+		NULL, /* parent window*/
+		(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+		GTK_STOCK_CANCEL,
+			GTK_RESPONSE_REJECT,
+		GTK_STOCK_OK,
+			GTK_RESPONSE_ACCEPT,
+		NULL);
+	
+    int_label = gtk_label_new ("Interlacing: (F5 to toggle)");
+    int_box = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "No Interlacing");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "Interlace 0");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "Interlace 1");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(int_box), conf.interlace);
+    
+    
+    bilinear_check = gtk_check_button_new_with_label("Bilinear Filtering (Shift + F5)");
+    bilinear_label = gtk_label_new ("Best quality is off. Turn on for speed.");
+    
+    aa_label = gtk_label_new ("Anti-Aliasing for Higher Quality(F6)");
+    aa_box = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "1X - No Anti-Aliasing");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "2X - Anti-Aliasing x 2");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "4X - Anti-Aliasing x 4");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "8X - Anti-Aliasing x 8");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(aa_box), "8X - Anti-Aliasing x 8");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(aa_box), conf.aa);
+    
+    wireframe_check = gtk_check_button_new_with_label("Wireframe Rendering(Shift + F6)");
+    avi_check = gtk_check_button_new_with_label("Capture Avi (as zerogs.avi)(F7)");
+    
+    snap_label = gtk_label_new ("Snapshot format:");
+    snap_box = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(snap_box), "JPEG");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(snap_box), "TIFF");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(snap_box), conf.options&GSOPTION_TGASNAP);
+    
+    fullscreen_check = gtk_check_button_new_with_label("Fullscreen (Alt + Enter)");
+	widescreen_check = gtk_check_button_new_with_label("Widescreen");
+	
+    size_label = gtk_label_new ("Default Window Size: (no speed impact)");
+    size_box = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "640x480");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "800x600");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1024x768");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1280x960");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), (conf.options&GSOPTION_WINDIMS)>>4);
+    
+    main_box = gtk_hbox_new(false, 5);
+    main_frame = gtk_frame_new ("ZZOgl PG Config");
+    gtk_container_add (GTK_CONTAINER(main_frame), main_box);
+    
+    option_box = gtk_vbox_new(false, 5);
+    option_frame = gtk_frame_new ("");
+    gtk_container_add (GTK_CONTAINER(option_frame), option_box);
+    
+    advanced_box = gtk_vbox_new(false, 5);
+    advanced_frame = gtk_frame_new ("Advanced Settings:");
+    gtk_container_add (GTK_CONTAINER(advanced_frame), advanced_box);
+    
+	tree = gtk_tree_view_new();
+	CreateGameHackTable(tree);
+	advanced_scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(advanced_scroll), tree);
+	
+	gtk_box_pack_start(GTK_BOX(option_box), int_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), int_box, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), bilinear_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), bilinear_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), aa_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), aa_box, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), wireframe_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), avi_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), snap_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), snap_box, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), fullscreen_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), size_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), size_box, false, false, 2);
+	
+	gtk_box_pack_start(GTK_BOX(advanced_box), advanced_scroll, true, true, 2);
+	
+	gtk_box_pack_start(GTK_BOX(main_box), option_frame, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(main_box), advanced_frame, true, true, 2);
+	
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bilinear_check), conf.bilinear);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.options & GSOPTION_WIREFRAME));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.options & GSOPTION_CAPTUREAVI));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fullscreen_check), (conf.options & GSOPTION_FULLSCREEN));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.options & GSOPTION_WIDESCREEN));
+    
+    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
+    gtk_widget_show_all (dialog);
+    
+    return_value = gtk_dialog_run (GTK_DIALOG (dialog));
+    
+    if (return_value == GTK_RESPONSE_ACCEPT)
+    {
+    	int fake_options = 0;
+    	SaveGameHackTable(tree);
+    	
+    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1) 
+			conf.interlace = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
+
+    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box)) != -1) 
+			conf.aa = gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box));
+			
+		conf.negaa = 0;	
+			
+		switch(gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)))
+		{
+			case 0: fake_options |= GSOPTION_WIN640; break;
+			case 1: fake_options |= GSOPTION_WIN800; break;
+			case 2: fake_options |= GSOPTION_WIN1024; break;
+			case 3: fake_options |= GSOPTION_WIN1280; break;
+		}
+		
+		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
+		
+    	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check))) 
+			fake_options |= GSOPTION_WIREFRAME;
+			
+    	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(avi_check))) 
+			fake_options |= GSOPTION_CAPTUREAVI;
+			
+    	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check))) 
+			fake_options |= GSOPTION_FULLSCREEN;
+			
+    	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check))) 
+			fake_options |= GSOPTION_WIDESCREEN;
+			
+    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box)) == 1) 
+			fake_options |= GSOPTION_TGASNAP;
+
+		conf.options = fake_options;
+		SaveConfig();
+    }
+    
+    gtk_widget_destroy (dialog);
+}
+
+void CALLBACK GSconfigure()
+{
+	char strcurdir[256];
+	getcwd(strcurdir, 256);
+	
+	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
+	
+	DisplayDialog();
+}
+
+void __forceinline SysMessage(const char *fmt, ...)
+{
+    va_list list;
+    char msg[512];
+
+    va_start(list, fmt);
+    vsprintf(msg, fmt, list);
+    va_end(list);
+
+    if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
+
+    GtkWidget *dialog;
+    dialog = gtk_message_dialog_new (NULL,
+                                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                                     GTK_MESSAGE_INFO,
+                                     GTK_BUTTONS_OK,
+                                     "%s", msg);
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    gtk_widget_destroy (dialog);
 }
 
 void CALLBACK GSabout() 
 {
-	About = create_About();
-
-	gtk_widget_show_all(About);
-	gtk_main();
+	SysMessage("ZZOgl PG: by Zeydlitz (PG version worked on by arcum42). Based off of ZeroGS, by zerofrog.");
 }
 
 s32 CALLBACK GStest() 
 {
 	return 0;
-}
-
-GtkWidget *MsgDlg;
-
-void OnMsg_Ok() 
-{
-	gtk_widget_destroy(MsgDlg);
-	gtk_main_quit();
-}
-
-void SysMessage(const char *fmt, ...) 
-{
-	GtkWidget *Ok,*Txt;
-	GtkWidget *Box,*Box1;
-	va_list list;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
-
-	MsgDlg = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "GSsoft Msg");
-	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
-
-	Box = gtk_vbox_new(5, 0);
-	gtk_container_add(GTK_CONTAINER(MsgDlg), Box);
-	gtk_widget_show(Box);
-
-	Txt = gtk_label_new(msg);
-	
-	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
-	gtk_widget_show(Txt);
-
-	Box1 = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), Box1, FALSE, FALSE, 0);
-	gtk_widget_show(Box1);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect (GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
-	gtk_container_add(GTK_CONTAINER(Box1), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(MsgDlg);	
-
-	gtk_main();
 }
 
 void *SysLoadLibrary(char *lib) 
