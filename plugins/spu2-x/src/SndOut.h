@@ -364,7 +364,6 @@ private:
 	static float lastEmergencyAdj;
 	static float cTempo;
 	static float eTempo;
-	static int freezeTempo;
 	static int ssFreeze;
 
 	static void _InitFail();

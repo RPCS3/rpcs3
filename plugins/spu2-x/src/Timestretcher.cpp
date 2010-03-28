@@ -36,7 +36,6 @@ float SndBuffer::lastEmergencyAdj;
 
 float SndBuffer::cTempo = 1;
 float SndBuffer::eTempo = 1;
-int SndBuffer::freezeTempo = 0;
 
 void SndBuffer::PredictDataWrite( int samples )
 {
@@ -64,11 +63,6 @@ float SndBuffer::GetStatusPct()
 
 void SndBuffer::UpdateTempoChange()
 {
-	if( --freezeTempo > 0 )
-	{
-		return;
-	}
-
 	float statusPct = GetStatusPct();
 	float pctChange = statusPct - lastPct;
 
@@ -317,9 +311,6 @@ void SndBuffer::soundtouchInit()
 	lastPct = 0;
 	lastEmergencyAdj = 0;
 
-	// just freeze tempo changes for a while at startup.
-	// the driver buffers are bogus anyway.
-	freezeTempo = 16;
 	m_predictData = 0;
 }
 
@@ -336,7 +327,6 @@ void SndBuffer::soundtouchClearContents()
 	lastPct = 0;
 	lastEmergencyAdj = 0;
 
-	freezeTempo = 16;
 	m_predictData = 0;
 }
 

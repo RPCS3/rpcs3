@@ -274,6 +274,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
+				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
@@ -303,6 +304,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
+				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
@@ -420,8 +422,9 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	}
 	else
 	{
-		if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
-			GetDmaIndexChar(),size<<1,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
+		if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x). IRQE = %d IRQA = %x \n",
+			GetDmaIndexChar(),size<<1,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff,
+			Cores[0].IRQEnable, Cores[0].IRQA);
 
 		PlainDMAWrite(pMem,size);
 	}

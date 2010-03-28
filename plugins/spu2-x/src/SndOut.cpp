@@ -127,7 +127,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 	quietSampleCount = 0;
 	if( m_underrun_freeze )
 	{			
-		int toFill = (int)(m_size * ( timeStretchDisabled ? 0.50f : 0.1f ) );
+		int toFill = (int)(m_size * ( timeStretchDisabled ? 0.50f : 0.02f ) );
 		toFill = GetAlignedBufferSize( toFill );
 
 		// toFill is now aligned to a SndOutPacket
@@ -229,6 +229,14 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 		m_wpos += nSamples;
 
 	memcpy( wposbuffer, bData, nSamples * sizeof( *bData ) );
+	
+	// Use to monitor buffer levels in real time 
+	/*int drvempty = mods[OutputModule]->GetEmptySampleCount();
+	float result = (float)(m_data + m_predictData - drvempty) - (m_size/2);
+	result /= (m_size/2);
+	if (result > 0.6 || result < -0.5)
+		printf("buffer: %f\n",result);
+	}*/
 }
 
 void SndBuffer::Init()
@@ -302,7 +310,7 @@ int SndBuffer::ssFreeze = 0;
 void SndBuffer::ClearContents()
 {
 	SndBuffer::soundtouchClearContents();
-	SndBuffer::ssFreeze = 30; //Delays sound output for about half a second.
+	SndBuffer::ssFreeze = 256; //Delays sound output for about 1 second.
 }
 
 void SndBuffer::Write( const StereoOut32& Sample )
@@ -325,10 +333,10 @@ void SndBuffer::Write( const StereoOut32& Sample )
 	if ( ssFreeze > 0 )
 	{	
 		ssFreeze--;
-		return;
+		memset( sndTempBuffer, 0, sizeof(StereoOut32) * SndOutPacketSize ); // Play silence
 	}
 #ifndef __LINUX__
-	else if( dspPluginEnabled )
+	if( dspPluginEnabled )
 	{
 		// Convert in, send to winamp DSP, and convert out.
 
@@ -344,7 +352,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 			if( !timeStretchDisabled )
 				timeStretchWrite();
 			else
-				_WriteSamples(sndTempBuffer, sndTempProgress);
+				_WriteSamples(sndTempBuffer, SndOutPacketSize);
 
 			m_dsp_progress -= SndOutPacketSize;
 		}
