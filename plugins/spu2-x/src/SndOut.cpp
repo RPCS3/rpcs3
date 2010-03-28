@@ -264,7 +264,7 @@ void SndBuffer::Init()
 		m_underrun_freeze = false;
 
 		sndTempBuffer = new StereoOut32[SndOutPacketSize];
-		sndTempBuffer16 = new StereoOut16[SndOutPacketSize];
+		sndTempBuffer16 = new StereoOut16[SndOutPacketSize * 2]; // in case of leftovers.
 	}
 	catch( std::bad_alloc& )
 	{
@@ -340,11 +340,12 @@ void SndBuffer::Write( const StereoOut32& Sample )
 	{
 		// Convert in, send to winamp DSP, and convert out.
 
-		for( int i=0; i<SndOutPacketSize; ++i ) { sndTempBuffer16[i] = sndTempBuffer[i].DownSample(); }
-		m_dsp_progress += DspProcess( (s16*)sndTempBuffer16, SndOutPacketSize );
+		int ei= m_dsp_progress;
+		for( int i=0; i<SndOutPacketSize; ++i, ++ei ) { sndTempBuffer16[ei] = sndTempBuffer[i].DownSample(); }
+		m_dsp_progress += DspProcess( (s16*)sndTempBuffer16 + m_dsp_progress, SndOutPacketSize );
 
 		// Some ugly code to ensure full packet handling:
-		int ei = 0;
+		ei = 0;
 		while( m_dsp_progress >= SndOutPacketSize )
 		{
 			for( int i=0; i<SndOutPacketSize; ++i, ++ei ) { sndTempBuffer[i] = sndTempBuffer16[ei].UpSample(); }
@@ -360,7 +361,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 		// copy any leftovers to the front of the dsp buffer.
 		if( m_dsp_progress > 0 )
 		{
-			memcpy( &sndTempBuffer16[ei], sndTempBuffer16,
+			memcpy( sndTempBuffer16, &sndTempBuffer16[ei],
 				sizeof(sndTempBuffer16[0]) * m_dsp_progress
 			);
 		}
