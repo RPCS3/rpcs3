@@ -127,6 +127,8 @@ struct RECT
 
 #endif // linux basic definitions
 
+#undef CreateWindow	// Undo Windows.h global namespace pollution
+
 class GLWindow
 {
 	private:
