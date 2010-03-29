@@ -547,7 +547,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	LoadConfig();
 
 	strcpy(GStitle, Title);
-	err = GLWin.CreateGLWindow(pDsp);
+	err = GLWin.CreateWindow(pDsp);
 
 	if (!err) 
 	{

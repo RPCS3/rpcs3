@@ -69,7 +69,7 @@ LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 	return DefWindowProc( hWnd, msg, wParam, lParam );
 }
 
-bool GLWindow::CreateGLWindow(void *pDisplay)
+bool GLWindow::CreateWindow(void *pDisplay)
 {       
 	RECT rc, rcdesktop;
 	rc.left = 0; rc.top = 0;
