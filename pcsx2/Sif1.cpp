@@ -191,7 +191,7 @@ static __forceinline void EndIOP()
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
 	if (sif1.iop.cycles == 0) 
 	{
-		SIF_LOG("SIF1 IOP: cycles = 0");
+		DevCon.Warning("SIF1 IOP: cycles = 0");
 		sif1.iop.cycles = 1;
 	}
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
@@ -201,12 +201,18 @@ static __forceinline void EndIOP()
 // Handle the EE transfer.
 static __forceinline void HandleEETransfer()
 {
-#ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_SIF1)
 	{
-		SIF_LOG("SIF1 stall control"); // STD == fromSIF1
+		DevCon.Warning("SIF1 stall control"); // STD == fromSIF1
 	}
-#endif
+
+	if (sif1dma->qwc == 0) 
+		if (sif1dma->chcr.MOD == NORMAL_MODE) 
+			if (!sif1.ee.end){ 
+				DevCon.Warning("sif1 irq prevented"); 
+				done = true; 
+				return;
+			}
 
 	// If there's no more to transfer.
 	if (sif1dma->qwc <= 0)

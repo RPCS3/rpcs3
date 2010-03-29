@@ -164,7 +164,7 @@ static __forceinline void EndIOP()
 					
 	if (sif0.iop.cycles == 0) 
 	{
-		SIF_LOG("SIF0 IOP: cycles = 0");
+		DevCon.Warning("SIF0 IOP: cycles = 0");
 		sif0.iop.cycles = 1;
 	}
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
@@ -176,13 +176,19 @@ static __forceinline void EndIOP()
 // Handle the EE transfer.
 static __forceinline void HandleEETransfer()
 {
-#ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STS == STS_SIF0)
 	{
-		SIF_LOG("SIF0 stall control");
+		DevCon.Warning("SIF0 stall control");
 	}
-#endif
-	
+
+	if (sif0dma->qwc == 0) 
+		if (sif0dma->chcr.MOD == NORMAL_MODE) 
+			if (!sif0.ee.end){ 
+				DevCon.Warning("sif0 irq prevented"); 
+				done = true; 
+				return;
+			}
+
 	if (sif0dma->qwc <= 0)
 	{
 		if ((sif0dma->chcr.MOD == NORMAL_MODE) || sif0.ee.end)
