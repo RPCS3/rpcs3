@@ -1,15 +1,23 @@
 /* crc32.c -- compute the CRC-32 of a data stream
- * Copyright (C) 1995-2003 Mark Adler
+ * Copyright (C) 1995-2006 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  *
  * Thanks to Rodney Brown <rbrown64@csc.com.au> for his contribution of faster
  * CRC methods: exclusive-oring 32 bits of data at a time, and pre-computing
  * tables for updating the shift register in one step with three exclusive-ors
- * instead of four steps with four exclusive-ors.  This results about a factor
- * of two increase in speed on a Power PC G4 (PPC7455) using gcc -O3.
+ * instead of four steps with four exclusive-ors.  This results in about a
+ * factor of two increase in speed on a Power PC G4 (PPC7455) using gcc -O3.
  */
 
-/* @(#) $Id: crc32.c,v 1.1 2006/01/12 17:26:07 shadowpcsx2 Exp $ */
+/* @(#) $Id$ */
+
+/*
+  Note on the use of DYNAMIC_CRC_TABLE: there is no mutex or semaphore
+  protection on the static variables used to control the first-use generation
+  of the crc tables.  Therefore, if you #define DYNAMIC_CRC_TABLE, you should
+  first call get_crc_table() to initialize the tables before allowing more than
+  one thread to use crc32().
+ */
 
 #ifdef MAKECRCH
 #  include <stdio.h>
@@ -45,7 +53,7 @@
 
 /* Definitions for doing the crc four data bytes at a time. */
 #ifdef BYFOUR
-#  define REV(w) (((w)>>24)+(((w)>>8)&0xff00)+ \
+#  define REV(w) ((((w)>>24)&0xff)+(((w)>>8)&0xff00)+ \
                 (((w)&0xff00)<<8)+(((w)&0xff)<<24))
    local unsigned long crc32_little OF((unsigned long,
                         const unsigned char FAR *, unsigned));
@@ -56,15 +64,21 @@
 #  define TBLS 1
 #endif /* BYFOUR */
 
+/* Local functions for crc concatenation */
+local unsigned long gf2_matrix_times OF((unsigned long *mat,
+                                         unsigned long vec));
+local void gf2_matrix_square OF((unsigned long *square, unsigned long *mat));
+local uLong crc32_combine_(uLong crc1, uLong crc2, z_off64_t len2);
+
+
 #ifdef DYNAMIC_CRC_TABLE
 
-local int crc_table_empty = 1;
+local volatile int crc_table_empty = 1;
 local unsigned long FAR crc_table[TBLS][256];
 local void make_crc_table OF((void));
 #ifdef MAKECRCH
    local void write_table OF((FILE *, const unsigned long FAR *));
 #endif /* MAKECRCH */
-
 /*
   Generate tables for a byte-wise 32-bit CRC calculation on the polynomial:
   x^32+x^26+x^23+x^22+x^16+x^12+x^11+x^10+x^8+x^7+x^5+x^4+x^2+x+1.
@@ -95,38 +109,51 @@ local void make_crc_table()
 {
     unsigned long c;
     int n, k;
-    unsigned long poly;            /* polynomial exclusive-or pattern */
+    unsigned long poly;                 /* polynomial exclusive-or pattern */
     /* terms of polynomial defining this crc (except x^32): */
+    static volatile int first = 1;      /* flag to limit concurrent making */
     static const unsigned char p[] = {0,1,2,4,5,7,8,10,11,12,16,22,23,26};
 
-    /* make exclusive-or pattern from polynomial (0xedb88320UL) */
-    poly = 0UL;
-    for (n = 0; n < sizeof(p)/sizeof(unsigned char); n++)
-        poly |= 1UL << (31 - p[n]);
+    /* See if another task is already doing this (not thread-safe, but better
+       than nothing -- significantly reduces duration of vulnerability in
+       case the advice about DYNAMIC_CRC_TABLE is ignored) */
+    if (first) {
+        first = 0;
 
-    /* generate a crc for every 8-bit value */
-    for (n = 0; n < 256; n++) {
-        c = (unsigned long)n;
-        for (k = 0; k < 8; k++)
-            c = c & 1 ? poly ^ (c >> 1) : c >> 1;
-        crc_table[0][n] = c;
-    }
+        /* make exclusive-or pattern from polynomial (0xedb88320UL) */
+        poly = 0UL;
+        for (n = 0; n < sizeof(p)/sizeof(unsigned char); n++)
+            poly |= 1UL << (31 - p[n]);
+
+        /* generate a crc for every 8-bit value */
+        for (n = 0; n < 256; n++) {
+            c = (unsigned long)n;
+            for (k = 0; k < 8; k++)
+                c = c & 1 ? poly ^ (c >> 1) : c >> 1;
+            crc_table[0][n] = c;
+        }
 
 #ifdef BYFOUR
-    /* generate crc for each value followed by one, two, and three zeros, and
-       then the byte reversal of those as well as the first table */
-    for (n = 0; n < 256; n++) {
-        c = crc_table[0][n];
-        crc_table[4][n] = REV(c);
-        for (k = 1; k < 4; k++) {
-            c = crc_table[0][c & 0xff] ^ (c >> 8);
-            crc_table[k][n] = c;
-            crc_table[k + 4][n] = REV(c);
+        /* generate crc for each value followed by one, two, and three zeros,
+           and then the byte reversal of those as well as the first table */
+        for (n = 0; n < 256; n++) {
+            c = crc_table[0][n];
+            crc_table[4][n] = REV(c);
+            for (k = 1; k < 4; k++) {
+                c = crc_table[0][c & 0xff] ^ (c >> 8);
+                crc_table[k][n] = c;
+                crc_table[k + 4][n] = REV(c);
+            }
         }
-    }
 #endif /* BYFOUR */
 
-  crc_table_empty = 0;
+        crc_table_empty = 0;
+    }
+    else {      /* not first */
+        /* wait for the other guy to finish (not efficient, but rare) */
+        while (crc_table_empty)
+            ;
+    }
 
 #ifdef MAKECRCH
     /* write out CRC tables to crc32.h */
@@ -180,9 +207,10 @@ local void write_table(out, table)
 const unsigned long FAR * ZEXPORT get_crc_table()
 {
 #ifdef DYNAMIC_CRC_TABLE
-  if (crc_table_empty) make_crc_table();
+    if (crc_table_empty)
+        make_crc_table();
 #endif /* DYNAMIC_CRC_TABLE */
-  return (const unsigned long FAR *)crc_table;
+    return (const unsigned long FAR *)crc_table;
 }
 
 /* ========================================================================= */
@@ -248,7 +276,7 @@ local unsigned long crc32_little(crc, buf, len)
         len--;
     }
 
-    buf4 = (const u4 FAR *)buf;
+    buf4 = (const u4 FAR *)(const void FAR *)buf;
     while (len >= 32) {
         DOLIT32;
         len -= 32;
@@ -288,7 +316,7 @@ local unsigned long crc32_big(crc, buf, len)
         len--;
     }
 
-    buf4 = (const u4 FAR *)buf;
+    buf4 = (const u4 FAR *)(const void FAR *)buf;
     buf4--;
     while (len >= 32) {
         DOBIG32;
@@ -309,3 +337,106 @@ local unsigned long crc32_big(crc, buf, len)
 }
 
 #endif /* BYFOUR */
+
+#define GF2_DIM 32      /* dimension of GF(2) vectors (length of CRC) */
+
+/* ========================================================================= */
+local unsigned long gf2_matrix_times(mat, vec)
+    unsigned long *mat;
+    unsigned long vec;
+{
+    unsigned long sum;
+
+    sum = 0;
+    while (vec) {
+        if (vec & 1)
+            sum ^= *mat;
+        vec >>= 1;
+        mat++;
+    }
+    return sum;
+}
+
+/* ========================================================================= */
+local void gf2_matrix_square(square, mat)
+    unsigned long *square;
+    unsigned long *mat;
+{
+    int n;
+
+    for (n = 0; n < GF2_DIM; n++)
+        square[n] = gf2_matrix_times(mat, mat[n]);
+}
+
+/* ========================================================================= */
+local uLong crc32_combine_(crc1, crc2, len2)
+    uLong crc1;
+    uLong crc2;
+    z_off64_t len2;
+{
+    int n;
+    unsigned long row;
+    unsigned long even[GF2_DIM];    /* even-power-of-two zeros operator */
+    unsigned long odd[GF2_DIM];     /* odd-power-of-two zeros operator */
+
+    /* degenerate case (also disallow negative lengths) */
+    if (len2 <= 0)
+        return crc1;
+
+    /* put operator for one zero bit in odd */
+    odd[0] = 0xedb88320UL;          /* CRC-32 polynomial */
+    row = 1;
+    for (n = 1; n < GF2_DIM; n++) {
+        odd[n] = row;
+        row <<= 1;
+    }
+
+    /* put operator for two zero bits in even */
+    gf2_matrix_square(even, odd);
+
+    /* put operator for four zero bits in odd */
+    gf2_matrix_square(odd, even);
+
+    /* apply len2 zeros to crc1 (first square will put the operator for one
+       zero byte, eight zero bits, in even) */
+    do {
+        /* apply zeros operator for this bit of len2 */
+        gf2_matrix_square(even, odd);
+        if (len2 & 1)
+            crc1 = gf2_matrix_times(even, crc1);
+        len2 >>= 1;
+
+        /* if no more bits set, then done */
+        if (len2 == 0)
+            break;
+
+        /* another iteration of the loop with odd and even swapped */
+        gf2_matrix_square(odd, even);
+        if (len2 & 1)
+            crc1 = gf2_matrix_times(odd, crc1);
+        len2 >>= 1;
+
+        /* if no more bits set, then done */
+    } while (len2 != 0);
+
+    /* return combined crc */
+    crc1 ^= crc2;
+    return crc1;
+}
+
+/* ========================================================================= */
+uLong ZEXPORT crc32_combine(crc1, crc2, len2)
+    uLong crc1;
+    uLong crc2;
+    z_off_t len2;
+{
+    return crc32_combine_(crc1, crc2, len2);
+}
+
+uLong ZEXPORT crc32_combine64(crc1, crc2, len2)
+    uLong crc1;
+    uLong crc2;
+    z_off64_t len2;
+{
+    return crc32_combine_(crc1, crc2, len2);
+}
