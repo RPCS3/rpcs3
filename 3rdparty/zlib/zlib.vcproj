@@ -95,7 +95,6 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="_CRT_NONSTDC_NO_WARNINGS"
-				RuntimeLibrary="0"
 				WarningLevel="3"
 			/>
 			<Tool

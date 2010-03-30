@@ -1,8 +1,16 @@
 #define __USE_LARGEFILE64
 #define __USE_FILE_OFFSET64
 #define _FILE_OFFSET_BITS 64
-#define _LARGEFILE_SOURCE 
-#define _LARGEFILE64_SOURCE
+
+#ifdef __GNUC__
+#	ifndef _LARGEFILE_SOURCE
+#	define _LARGEFILE_SOURCE
+#	endif
+
+#	ifndef _LARGEFILE64_SOURCE
+#	define _LARGEFILE64_SOURCE
+#	endif
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
