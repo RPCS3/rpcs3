@@ -213,7 +213,10 @@ protected:
 
 		static const int BlockSize = 0x20000;
 		int curidx = 0;
-		
+
+		gzsetparams(m_gzfp, Z_BEST_SPEED, Z_FILTERED); // Best speed at good compression
+		gzbuffer(m_gzfp, 0x100000); // 1mb buffer size for less file fragments
+
 		gzwrite(m_gzfp, SavestateIdentString, sizeof( SavestateIdentString ));
 		gzwrite(m_gzfp, &g_SaveVersion, sizeof( g_SaveVersion ));
 
@@ -323,7 +326,7 @@ protected:
 
 		static const int BlockSize = 0x100000;
 		state_buffer.MakeRoomFor( 0x800000 );		// start with an 8 meg buffer to avoid frequent reallocation.
-
+		gzbuffer(m_gzfp, 0x100000); // 1mb buffer for zlib internal operations
 		int curidx = 0;
 		do
 		{
