@@ -59,7 +59,17 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="deflate.h" />
-		<Unit filename="gzio.c">
+		<Unit filename="gzclose.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="gzguts.h" />
+		<Unit filename="gzlib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="gzread.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="gzwrite.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="infback.c">
