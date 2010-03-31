@@ -1673,10 +1673,6 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	return it;
 }
 
-#if defined(_MSC_VER) && defined(__x86_64__)
-extern "C" void UnswizzleZ16Target(void* dst, void* src, int iters);
-#endif
-
 int MemoryTarget_CompareTarget (list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset) {
 	if( PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm) ) {
 		return 1;

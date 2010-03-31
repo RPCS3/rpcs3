@@ -23,7 +23,7 @@
 #include "Mem.h"
 #include "x86.h"
 
-#if defined(ZEROGS_SSE2) && (defined(_WIN32)||defined(__x86_64__))
+#if defined(ZEROGS_SSE2) && defined(_WIN32)
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
@@ -261,7 +261,7 @@ _FrameSwizzleBlock(A4_, (src[2*j]+src[2*j+1]+src[2*j+srcpitch]+src[2*j+srcpitch+
 //  }
 //}
 
-#if (defined(_WIN32)||defined(__x86_64__))
+#if defined(_WIN32)
 
 extern "C" void __fastcall WriteCLUT_T32_I8_CSM1_sse2(u32* vm, u32* clut)
 {
@@ -319,8 +319,6 @@ PCSX2_ALIGNED16(int s_clut16mask2[4]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x
 PCSX2_ALIGNED16(int s_clut16mask[8]) = { 0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000,
 										0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff};
 }
-
-#if !defined(__x86_64__)
 
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {
@@ -436,7 +434,6 @@ WriteUnaligned:
 End:
 	}
 }
-#endif // __x86_64__
 #endif // _MSC_VER
 
 #endif // ZEROGS_SSE2
@@ -542,9 +539,6 @@ void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut)
 void SSE2_UnswizzleZ16Target( u16* dst, u16* src, int iters ) {
 
 #if defined(_MSC_VER) 
-#	if defined(__x86_64__)
-	UnswizzleZ16Target(dst, src, iters);
-#	else
 	__asm {
 		mov edx, iters
 		pxor xmm7, xmm7
@@ -593,7 +587,6 @@ Z16Loop:
 		sub edx, 1
 		jne Z16Loop
 	}
-#	endif // __x86_64__
 #else // _MSC_VER
 
 	__asm__(".intel_syntax\n"

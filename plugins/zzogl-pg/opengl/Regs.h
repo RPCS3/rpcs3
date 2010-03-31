@@ -19,17 +19,7 @@
 #ifndef __GSREGS_H__
 #define __GSREGS_H__
 
-#ifdef _MSC_VER
 typedef void (__fastcall *GIFRegHandler)(u32* data);
-#else
-
-#ifdef __x86_64__
-typedef void (*GIFRegHandler)(u32* data);
-#else
-typedef void (__fastcall *GIFRegHandler)(u32* data);
-#endif
-
-#endif
 
 void __fastcall GIFPackedRegHandlerNull(u32* data);
 void __fastcall GIFPackedRegHandlerRGBA(u32* data);
