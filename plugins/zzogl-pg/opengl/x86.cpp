@@ -23,7 +23,7 @@
 #include "Mem.h"
 #include "x86.h"
 
-#if defined(ZEROGS_SSE2) && defined(_WIN32)
+#if defined(ZEROGS_SSE2)
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
@@ -261,8 +261,6 @@ _FrameSwizzleBlock(A4_, (src[2*j]+src[2*j+1]+src[2*j+srcpitch]+src[2*j+srcpitch+
 //  }
 //}
 
-#if defined(_WIN32)
-
 extern "C" void __fastcall WriteCLUT_T32_I8_CSM1_sse2(u32* vm, u32* clut)
 {
 	__m128i* src = (__m128i*)vm;
@@ -310,7 +308,6 @@ extern "C" void __fastcall WriteCLUT_T32_I4_CSM1_sse2(u32* vm, u32* clut)
 	_mm_store_si128(&dst[2], _mm_unpackhi_epi64(r0, r1));
 	_mm_store_si128(&dst[3], _mm_unpackhi_epi64(r2, r3));
 }
-#endif
 
 #if defined(_MSC_VER)
 

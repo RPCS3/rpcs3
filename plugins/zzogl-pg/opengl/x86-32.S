@@ -932,71 +932,71 @@ WriteCLUT_T16_I4_CSM1_End:
         ret
 
 
-.globl WriteCLUT_T32_I8_CSM1_sse2
-	.type	WriteCLUT_T32_I8_CSM1_sse2, @function
-WriteCLUT_T32_I8_CSM1_sse2:
-	push	%ebx
-	xor	%ebx, %ebx
-.L231:
-	xor	%eax, %eax
-	.align 16
-.L232:
-	movdqa	%xmm3, XMMWORD PTR [%eax+16+%ecx]
-	movdqa	%xmm4, XMMWORD PTR [%eax+48+%ecx]
-	movdqa	%xmm1, XMMWORD PTR [%eax+%ecx]
-	movdqa	%xmm2, XMMWORD PTR [%eax+32+%ecx]
-	movdqa	%xmm0, %xmm1
-	punpckhqdq	%xmm1, %xmm3
-	punpcklqdq	%xmm0, %xmm3
-	movdqa	XMMWORD PTR [%edx+32+%eax*2], %xmm1
-	movdqa	XMMWORD PTR [%edx+%eax*2], %xmm0
-	movdqa	%xmm0, %xmm2
-	punpckhqdq	%xmm2, %xmm4
-	punpcklqdq	%xmm0, %xmm4
-	movdqa	XMMWORD PTR [%edx+48+%eax*2], %xmm2
-	movdqa	XMMWORD PTR [%edx+16+%eax*2], %xmm0
-	movdqa	%xmm1, XMMWORD PTR [%eax+256+%ecx]
-	movdqa	%xmm3, XMMWORD PTR [%eax+272+%ecx]
-	movdqa	%xmm2, XMMWORD PTR [%eax+288+%ecx]
-	movdqa	%xmm4, XMMWORD PTR [%eax+304+%ecx]
-	movdqa	%xmm0, %xmm1
-	punpckhqdq	%xmm1, %xmm3
-	punpcklqdq	%xmm0, %xmm3
-	movdqa	XMMWORD PTR [%edx+96+%eax*2], %xmm1
-	movdqa	XMMWORD PTR [%edx+64+%eax*2], %xmm0
-	movdqa	%xmm0, %xmm2
-	punpckhqdq	%xmm2, %xmm4
-	punpcklqdq	%xmm0, %xmm4
-	movdqa	XMMWORD PTR [%edx+112+%eax*2], %xmm2
-	movdqa	XMMWORD PTR [%edx+80+%eax*2], %xmm0
-	add	%eax, 64
-	cmp	%eax, 256
-	jne	.L232
-    add %edx, 512
-    add %ecx, 512
-	add	%ebx, 512
-	cmp	%ebx, 1024
-	jne	.L231
-	pop	%ebx
-	ret
+#.globl WriteCLUT_T32_I8_CSM1_sse2
+#	.type	WriteCLUT_T32_I8_CSM1_sse2, @function
+#WriteCLUT_T32_I8_CSM1_sse2:
+#	push	%ebx
+#	xor	%ebx, %ebx
+#.L231:
+#	xor	%eax, %eax
+#	.align 16
+#.L232:
+#	movdqa	%xmm3, XMMWORD PTR [%eax+16+%ecx]
+#	movdqa	%xmm4, XMMWORD PTR [%eax+48+%ecx]
+#	movdqa	%xmm1, XMMWORD PTR [%eax+%ecx]
+#	movdqa	%xmm2, XMMWORD PTR [%eax+32+%ecx]
+#	movdqa	%xmm0, %xmm1
+#	punpckhqdq	%xmm1, %xmm3
+#	punpcklqdq	%xmm0, %xmm3
+#	movdqa	XMMWORD PTR [%edx+32+%eax*2], %xmm1
+#	movdqa	XMMWORD PTR [%edx+%eax*2], %xmm0
+#	movdqa	%xmm0, %xmm2
+#	punpckhqdq	%xmm2, %xmm4
+#	punpcklqdq	%xmm0, %xmm4
+#	movdqa	XMMWORD PTR [%edx+48+%eax*2], %xmm2
+#	movdqa	XMMWORD PTR [%edx+16+%eax*2], %xmm0
+#	movdqa	%xmm1, XMMWORD PTR [%eax+256+%ecx]
+#	movdqa	%xmm3, XMMWORD PTR [%eax+272+%ecx]
+#	movdqa	%xmm2, XMMWORD PTR [%eax+288+%ecx]
+#	movdqa	%xmm4, XMMWORD PTR [%eax+304+%ecx]
+#	movdqa	%xmm0, %xmm1
+#	punpckhqdq	%xmm1, %xmm3
+#	punpcklqdq	%xmm0, %xmm3
+#	movdqa	XMMWORD PTR [%edx+96+%eax*2], %xmm1
+#	movdqa	XMMWORD PTR [%edx+64+%eax*2], %xmm0
+#	movdqa	%xmm0, %xmm2
+#	punpckhqdq	%xmm2, %xmm4
+#	punpcklqdq	%xmm0, %xmm4
+#	movdqa	XMMWORD PTR [%edx+112+%eax*2], %xmm2
+#	movdqa	XMMWORD PTR [%edx+80+%eax*2], %xmm0
+#	add	%eax, 64
+#	cmp	%eax, 256
+#	jne	.L232
+#	add %edx, 512
+#   add %ecx, 512
+#	add	%ebx, 512
+#	cmp	%ebx, 1024
+#	jne	.L231
+#	pop	%ebx
+#	ret
 
-.globl WriteCLUT_T32_I4_CSM1_sse2
-	.type	WriteCLUT_T32_I4_CSM1_sse2, @function
-WriteCLUT_T32_I4_CSM1_sse2:
-	movdqa	%xmm1, XMMWORD PTR [%ecx]
-	movdqa	%xmm3, XMMWORD PTR [%ecx+16]
-	movdqa	%xmm2, XMMWORD PTR [%ecx+32]
-	movdqa	%xmm4, XMMWORD PTR [%ecx+48]
-	movdqa	%xmm0, %xmm1
-	punpckhqdq	%xmm1, %xmm3
-	punpcklqdq	%xmm0, %xmm3
-	movdqa	XMMWORD PTR [%edx+32], %xmm1
-	movdqa	XMMWORD PTR [%edx], %xmm0
-	movdqa	%xmm0, %xmm2
-	punpckhqdq	%xmm2, %xmm4
-	punpcklqdq	%xmm0, %xmm4
-	movdqa	XMMWORD PTR [%edx+48], %xmm2
-	movdqa	XMMWORD PTR [%edx+16], %xmm0
-	ret
+#.globl WriteCLUT_T32_I4_CSM1_sse2
+#	.type	WriteCLUT_T32_I4_CSM1_sse2, @function
+#WriteCLUT_T32_I4_CSM1_sse2:
+#	movdqa	%xmm1, XMMWORD PTR [%ecx]
+#	movdqa	%xmm3, XMMWORD PTR [%ecx+16]
+#	movdqa	%xmm2, XMMWORD PTR [%ecx+32]
+#	movdqa	%xmm4, XMMWORD PTR [%ecx+48]
+#	movdqa	%xmm0, %xmm1
+#	punpckhqdq	%xmm1, %xmm3
+#	punpcklqdq	%xmm0, %xmm3
+#	movdqa	XMMWORD PTR [%edx+32], %xmm1
+#	movdqa	XMMWORD PTR [%edx], %xmm0
+#	movdqa	%xmm0, %xmm2
+#	punpckhqdq	%xmm2, %xmm4
+#	punpcklqdq	%xmm0, %xmm4
+#	movdqa	XMMWORD PTR [%edx+48], %xmm2
+#	movdqa	XMMWORD PTR [%edx+16], %xmm0
+#	ret
                         
 #endif
