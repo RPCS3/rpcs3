@@ -231,11 +231,13 @@ static const char* _getModeStr( u32 mode )
 }
 
 // Generates a tlbMiss Exception
+// Note: Don't throw exceptions yet, they cause a crash when otherwise 
+// there would be a (slight) chance the game continues (rama).
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
 	Console.Error( "vtlb miss : addr 0x%X, mode %d [%s]", addr, mode, _getModeStr(mode) );
 	//verify(false);
-	throw R5900Exception::TLBMiss( addr, !!mode );
+	//throw R5900Exception::TLBMiss( addr, !!mode );
 }
 
 // Just dies a horrible death for now.
