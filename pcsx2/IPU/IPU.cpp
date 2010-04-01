@@ -1243,7 +1243,10 @@ static __forceinline bool IPU1chain(int &totalqwc)
 
 		if (ipu1dma->qwc > 0)
 		{
-			g_nDMATransfer.ACTV1 = true;
+			// Needed for a select few games, but breaks many others.
+			// Games known to need it include all 3 Tri-Ace games and Grandia Xtreme.
+			// Breaks Atelier Iris 2, Gundam, GT4, Resident Evil Code Veronica X, Music 3000, etc.
+			if(CHECK_IPUSLICEHACK) g_nDMATransfer.ACTV1 = true;
 			return true;
 		}
 	}
@@ -1343,7 +1346,9 @@ int IPU1dma()
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	flushGIF();
 
-	// in kh, qwc == 0 when dma_actv1 is set
+	// in kh, qwc == 0 when dma_actv1 is set   << legacy comment that means ..something.. I guess
+	// Note: g_nDMATransfer.ACTV1 seems to handle some kind of HLE data slicing. 
+	// Most games hate it and vtlb miss or hang / skip the FMV.
 	if ((g_nDMATransfer.ACTV1) && ipu1dma->qwc > 0)
 	{
 		if (IPU1chain(totalqwc)) return totalqwc;

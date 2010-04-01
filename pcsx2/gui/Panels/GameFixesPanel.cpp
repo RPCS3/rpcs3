@@ -35,8 +35,12 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	const CheckTextMess check_text[NUM_OF_GAME_FIXES] = 
 	{
 		{
-			_("VU Add Hack - for Tri-Ace games!"),
+			_("VU Add Hack - fixes Tri-Ace games boot crash (Enable IPU hack as well.)"),
 			_("Games that need this hack to boot:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
+		},
+		{
+			_("IPU slices Hack - for Tri-Ace game's videos (Breaks most other games!)"),
+			_("Fixes videos not playing in:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
 		},
 		{
 			_("VU Clip Flag Hack - for Persona games (SuperVU recompiler only!)"),
@@ -52,10 +56,6 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		},
 		{
 			_("FPU Negative Div Hack - for Gundam games."),
-			wxEmptyString
-		},
-		{
-			_("DMA Execution Hack - for Fatal Frame."),
 			wxEmptyString
 		},
 		{

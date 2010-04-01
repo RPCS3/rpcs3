@@ -252,11 +252,11 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniScopedGroup path( ini, L"Gamefixes" );
 
 	IniBitBool( VuAddSubHack );
+	IniBitBool( IpuSliceHack );
 	IniBitBool( VuClipFlagHack );
 	IniBitBool( FpuCompareHack );
 	IniBitBool( FpuMulHack );
 	IniBitBool( FpuNegDivHack );
-	IniBitBool( DMAExeHack );
 	IniBitBool( XgKickHack );
 }
 

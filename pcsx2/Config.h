@@ -426,11 +426,11 @@ struct Pcsx2Config
 		BITFIELD32()
 			bool
 				VuAddSubHack	:1,		// Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
+				IpuSliceHack	:1,		// Legacy IPU1 DMA code, breaks several games but needed for Tri-Ace ones.
 				VuClipFlagHack	:1,		// Persona games, maybe others. It's to do with the VU clip flag (again).
 				FpuCompareHack	:1,		// Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 				FpuMulHack		:1,		// Tales of Destiny hangs.
 				FpuNegDivHack	:1,		// Gundam games messed up camera-view.
-				DMAExeHack		:1,		// Fatal Frame; breaks Gust and Tri-Ace games.
 				XgKickHack		:1;		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
 		BITFIELD_END
 
@@ -559,11 +559,11 @@ TraceLogFilters&			SetTraceConfig();
 #define NUM_OF_GAME_FIXES 7
 
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+#define CHECK_IPUSLICEHACK			(EmuConfig.Gamefixes.IpuSliceHack)  // Enables legacy code for IPU1 DMA involving "g_nDMATransfer.ACTV1".
 #define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_VUCLIPFLAGHACK		(EmuConfig.Gamefixes.VuClipFlagHack) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
 #define CHECK_FPUMULHACK			(EmuConfig.Gamefixes.FpuMulHack) // Special Fix for Tales of Destiny hangs.
 #define CHECK_FPUNEGDIVHACK			(EmuConfig.Gamefixes.FpuNegDivHack) // Special Fix for Gundam games messed up camera-view.
-#define CHECK_DMAEXECHACK			(EmuConfig.Gamefixes.DMAExeHack)  // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
 #define CHECK_XGKICKHACK			(EmuConfig.Gamefixes.XgKickHack) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
 
 //------------ Advanced Options!!! ---------------
