@@ -309,7 +309,6 @@ extern "C" void __fastcall WriteCLUT_T32_I4_CSM1_sse2(u32* vm, u32* clut)
 	_mm_store_si128(&dst[3], _mm_unpackhi_epi64(r2, r3));
 }
 
-#if defined(_MSC_VER)
 
 extern "C" {
 PCSX2_ALIGNED16(int s_clut16mask2[4]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
@@ -319,6 +318,7 @@ PCSX2_ALIGNED16(int s_clut16mask[8]) = { 0xffff0000, 0xffff0000, 0xffff0000, 0xf
 
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {
+#if defined(_MSC_VER)
 	__asm {
 		mov eax, vm
 		mov ecx, clut
@@ -430,9 +430,120 @@ WriteUnaligned:
 		movdqa [ecx+48], xmm3
 End:
 	}
-}
-#endif // _MSC_VER
+#else
+	__asm__(".intel_syntax noprefix\n"
+		"movdqa xmm0, xmmword ptr [ecx]\n"
+		"movdqa xmm1, xmmword ptr [ecx+16]\n"
+		"movdqa xmm2, xmmword ptr [ecx+32]\n"
+		"movdqa xmm3, xmmword ptr [ecx+48]\n"
 
+		// rearrange
+		"pshuflw xmm0, xmm0, 0x88\n"
+		"pshufhw xmm0, xmm0, 0x88\n"
+		"pshuflw xmm1, xmm1, 0x88\n"
+		"pshufhw xmm1, xmm1, 0x88\n"
+		"pshuflw xmm2, xmm2, 0x88\n"
+		"pshufhw xmm2, xmm2, 0x88\n"
+		"pshuflw xmm3, xmm3, 0x88\n"
+		"pshufhw xmm3, xmm3, 0x88\n"
+
+		"shufps xmm0, xmm1, 0x88\n"
+		"shufps xmm2, xmm3, 0x88\n"
+
+		"pshufd xmm0, xmm0, 0xd8\n"
+		"pshufd xmm2, xmm2, 0xd8\n"
+
+		"pxor xmm6, xmm6\n"
+
+		"test edx, 15\n"
+		"jnz WriteUnaligned\n"
+
+		"movdqa xmm7, [%[s_clut16mask]]\n" // saves upper 16 bits
+
+		// have to save interlaced with the old data
+		"movdqa xmm4, [edx]\n"
+		"movdqa xmm5, [edx+32]\n"
+		"movhlps xmm1, xmm0\n"
+		"movlhps xmm0, xmm2\n"// lower 8 colors
+
+		"pand xmm4, xmm7\n"
+		"pand xmm5, xmm7\n"
+
+		"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
+		"movdqa xmm2, xmm0\n"
+		"movdqa xmm3, xmm1\n"
+
+		"punpcklwd xmm0, xmm6\n"
+		"punpcklwd xmm1, xmm6\n"
+		"por xmm0, xmm4\n"
+		"por xmm1, xmm5\n"
+
+		"punpckhwd xmm2, xmm6\n"
+		"punpckhwd xmm3, xmm6\n"
+
+		"movdqa [edx], xmm0\n"
+		"movdqa [edx+32], xmm1\n"
+
+		"movdqa xmm5, xmm7\n"
+		"pand xmm7, [edx+16]\n"
+		"pand xmm5, [edx+48]\n"
+
+		"por xmm2, xmm7\n"
+		"por xmm3, xmm5\n"
+
+		"movdqa [edx+16], xmm2\n"
+		"movdqa [edx+48], xmm3\n"
+		"jmp WriteCLUT_T16_I4_CSM1_End\n"
+
+"WriteUnaligned:\n"
+		// %edx is offset by 2
+		"sub edx, 2\n"
+
+		"movdqa xmm7, [%[s_clut16mask2]]\n" // saves lower 16 bits
+
+		// have to save interlaced with the old data
+		"movdqa xmm4, [edx]\n"
+		"movdqa xmm5, [edx+32]\n"
+		"movhlps xmm1, xmm0\n"
+		"movlhps xmm0, xmm2\n" // lower 8 colors
+
+		"pand xmm4, xmm7\n"
+		"pand xmm5, xmm7\n"
+
+		"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
+		"movdqa xmm2, xmm0\n"
+		"movdqa xmm3, xmm1\n"
+
+		"punpcklwd xmm0, xmm6\n"
+		"punpcklwd xmm1, xmm6\n"
+		"pslld xmm0, 16\n"
+		"pslld xmm1, 16\n"
+		"por xmm0, xmm4\n"
+		"por xmm1, xmm5\n"
+
+		"punpckhwd xmm2, xmm6\n"
+		"punpckhwd xmm3, xmm6\n"
+		"pslld xmm2, 16\n"
+		"pslld xmm3, 16\n"
+
+		"movdqa [edx], xmm0\n"
+		"movdqa [edx+32], xmm1\n"
+
+		"movdqa xmm5, xmm7\n"
+		"pand xmm7, [edx+16]\n"
+		"pand xmm5, [edx+48]\n"
+
+		"por xmm2, xmm7\n"
+		"por xmm3, xmm5\n"
+
+		"movdqa [edx+16], xmm2\n"
+		"movdqa [edx+48], xmm3\n"
+"WriteCLUT_T16_I4_CSM1_End:\n"
+		".att_syntax\n"
+        : [s_clut16mask]"=m"(s_clut16mask), [s_clut16mask2]"=m"(s_clut16mask2)
+	);
+#endif // _MSC_VER
+}
 #endif // ZEROGS_SSE2
 
 void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
