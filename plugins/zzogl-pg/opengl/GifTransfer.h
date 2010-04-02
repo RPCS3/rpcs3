@@ -23,6 +23,29 @@
 #include "Mem.h"
 #include "Regs.h"
 #include "zerogs.h"
+#include "Util.h"
+
+enum GIF_FLG
+{
+	GIF_FLG_PACKED	= 0,
+	GIF_FLG_REGLIST	= 1,
+	GIF_FLG_IMAGE	= 2,
+	GIF_FLG_IMAGE2	= 3
+};
+
+//
+// GIFTag
+REG128(GIFTag)
+	u32 NLOOP:15;
+	u32 EOP:1;
+	u32 _PAD1:16;
+	u32 _PAD2:14;
+	u32 PRE:1;
+	u32 PRIM:11;
+	u32 FLG:2; // enum GIF_FLG
+	u32 NREG:4;
+	u64 REGS:64;
+REG_END
 
 void GIFtag(pathInfo *path, u32 *data);
 void _GSgifPacket(pathInfo *path, u32 *pMem);

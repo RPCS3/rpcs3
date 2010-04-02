@@ -134,7 +134,8 @@ bool THR_bShift = false;
 
 #endif
 
-void __Log(const char *fmt, ...) {
+void __Log(const char *fmt, ...) 
+{
 	va_list list;
 
 	// gsLog can be null if the config dialog is used prior to Pcsx2 an emulation session.

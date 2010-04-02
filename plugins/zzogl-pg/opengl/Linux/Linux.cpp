@@ -365,7 +365,7 @@ void CALLBACK GSconfigure()
 	DisplayDialog();
 }
 
-void __forceinline SysMessage(const char *fmt, ...)
+void SysMessage(const char *fmt, ...)
 {
     va_list list;
     char msg[512];

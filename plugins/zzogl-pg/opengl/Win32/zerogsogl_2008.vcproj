@@ -394,6 +394,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Util.h"
+				>
+			</File>
+			<File
 				RelativePath="..\Mem.h"
 				>
 			</File>

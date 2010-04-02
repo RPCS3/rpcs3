@@ -30,15 +30,14 @@ void GIFtag(pathInfo *path, u32 *data) {
 	
 	if (path->tag.nreg == 0) path->tag.nreg = 64;
 
-	gs.q = 1;
-
 //	GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
 //			data[3], data[2], data[1], data[0],
 //			path->tag.eop, path->tag.nloop, tagflg, path->tag.nreg, tagpre);
 
-	path->mode = tagflg+1;
+	path->mode = tagflg;
 
-	switch (tagflg) {
+	switch (tagflg) 
+	{
 		case 0x0:
 			path->regs = *(u64 *)(data+2);
 			path->regn = 0;
@@ -135,15 +134,15 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		if (path->tag.nloop == 0) 
 		{
 			GIFtag(path, pMem);
-			pMem+= 4;
+			gs.q = 1;
+			pMem += 4;
 			size--;
 
-			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && gs.path[2].tag.eop)
-				nPath3Hack = 1;
+			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->tag.eop) nPath3Hack = 1;
 
 			if (index == 0) 
 			{
-				if (path->mode == 1) 
+				if (path->mode == GIF_FLG_PACKED) 
 				{
 					// check if 0xb is in any reg, if yes, exit (kh2)
 					for(int i = 0; i < path->tag.nreg; i += 4)
@@ -167,11 +166,11 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 					continue;					
 				}
 
-				if( !path->tag.eop ) 
+				/*if( !path->tag.eop ) 
 				{
 					//DEBUG_LOG("continuing from eop\n");
 					continue;
-				}
+				}*/
 
 				// Issue 174 fix!
 				continue;
@@ -180,7 +179,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 
 		switch(path->mode) 
 		{
-		case 1: // PACKED
+		case GIF_FLG_PACKED:
 		{
 			assert( path->tag.nloop > 0 );
 			for(; size > 0; size--, pMem += 4)
@@ -190,6 +189,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 				g_GIFPackedRegHandlers[reg](pMem);
 
 				path->regn += 4;
+				
 				if (path->tag.nreg == path->regn) 
 				{
 					path->regn = 0;
@@ -203,16 +203,20 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 			}
 			break;
 		}
-		case 2: // REGLIST
+		case GIF_FLG_REGLIST:
 		{
 			//GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
 			assert( path->tag.nloop > 0 );
 			size *= 2;
+			
 			for(; size > 0; pMem+= 2, size--)
 			{
 				int reg = (int)((path->regs >> path->regn) & 0xf);
+				
 				g_GIFRegHandlers[reg](pMem);
+				
 				path->regn += 4;
+				
 				if (path->tag.nreg == path->regn) 
 				{
 					path->regn = 0;
@@ -229,8 +233,8 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 			size /= 2;
 			break;
 		}
-		case 3: // GIF_IMAGE (FROM_VFRAM)
-		case 4: // Used in the DirectX version, so we'll use it here too.
+		case GIF_FLG_IMAGE: // FROM_VFRAM
+		case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
 		{
 			if(gs.imageTransfer >= 0 && gs.imageTransfer <= 1)
 			{
@@ -254,8 +258,10 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 			{
 				// simulate
 				int process = min((int)size, path->tag.nloop);
+				
 				path->tag.nloop -= process;
-				pMem += process*4; size -= process;
+				pMem += process*4; 
+				size -= process;
 			}
 
 			break;
@@ -284,7 +290,7 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	FUNCLOG
 
-	//pathInfo *path = &gs.path[0];
+	pathInfo *path = &gs.path[0];
 	
 	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
 	
@@ -295,14 +301,14 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	count++;
 #endif
 
-	gs.path[0].tag.nloop = 0;
-	gs.path[0].tag.eop = 0;
+	path->tag.nloop = 0;
+	path->tag.eop = 0;
 	_GSgifTransfer<0>((u32*)((u8*)pMem+addr), (0x4000 - addr)/16);
 
-	if (!gs.path[0].tag.eop && (gs.path[0].tag.nloop > 0)) 
+	if (!path->tag.eop && (path->tag.nloop > 0)) 
 	{
 		assert( (addr&0xf) == 0 ); //BUG
-		gs.path[0].tag.nloop = 0;
+		path->tag.nloop = 0;
 		ERROR_LOG("Transfer1 - 2\n");
 		return;
 	}
