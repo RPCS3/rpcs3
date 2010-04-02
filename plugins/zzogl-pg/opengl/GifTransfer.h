@@ -19,10 +19,7 @@
 #ifndef GIFTRANSFER_H_INCLUDED
 #define GIFTRANSFER_H_INCLUDED
 
-#include "GS.h"
-#include "Mem.h"
 #include "Regs.h"
-#include "zerogs.h"
 #include "Util.h"
 
 enum GIF_FLG
@@ -35,19 +32,86 @@ enum GIF_FLG
 
 //
 // GIFTag
-REG128(GIFTag)
-	u32 NLOOP:15;
-	u32 EOP:1;
-	u32 _PAD1:16;
-	u32 _PAD2:14;
-	u32 PRE:1;
-	u32 PRIM:11;
-	u32 FLG:2; // enum GIF_FLG
-	u32 NREG:4;
-	u64 REGS:64;
-REG_END
+union GIFTag
+{
+	u64 ai64[2];
+	u32 ai32[4];
+	struct
+	{
+		u32 NLOOP:15;
+		u32 EOP:1;
+		u32 _PAD1:16;
+		u32 _PAD2:14;
+		u32 PRE:1;
+		u32 PRIM:11;
+		u32 FLG:2; // enum GIF_FLG
+		u32 NREG:4;
+		u64 REGS:64;
+	};
+	void set(u32 *data)
+	{
+		for(int i = 0; i <= 3; i++)
+		{
+			ai32[i] = data[i];
+			ERROR_LOG("Set tag %i\n", i);
+		}
+	}
+	GIFTag(u32 *data)
+	{
+		set(data);
+	}
+	GIFTag(){ ai64[0] = 0; ai64[1] = 0; }
+};
 
-void GIFtag(pathInfo *path, u32 *data);
+// EE part. Data transfer packet description
+
+typedef struct 
+{
+	int mode;
+	int regn;
+	u64 regs;
+	int nloop;
+	int eop;
+	int nreg;
+	GIFTag tag;
+	
+	void setTag(u32 *data) 
+	{
+		tag.set(data);
+
+		nloop	= tag.NLOOP;
+		eop	= tag.EOP;
+		u32 tagpre		= tag.PRE;
+		u32 tagprim		= tag.PRIM;
+		u32 tagflg		= tag.FLG;
+		
+		// Hmm....
+		nreg	= tag.NREG << 2;
+		if (nreg == 0) nreg = 64;
+
+	//	GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+	//			data[3], data[2], data[1], data[0],
+	//			path->eop, path->nloop, tagflg, path->nreg, tagpre);
+
+		mode = tagflg;
+
+		switch (mode) 
+		{
+			case GIF_FLG_PACKED:
+				regs = *(u64 *)(data+2);
+				regn = 0;
+				if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
+
+				break;
+
+			case GIF_FLG_REGLIST:
+				regs = *(u64 *)(data+2);
+				regn = 0;
+				break;
+		}
+	}
+} pathInfo;
+
 void _GSgifPacket(pathInfo *path, u32 *pMem);
 void _GSgifRegList(pathInfo *path, u32 *pMem);
 void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size);

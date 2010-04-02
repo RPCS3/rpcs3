@@ -16,70 +16,41 @@
  *	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
  */
  
+#include "GS.h"
+#include "Mem.h"
+#include "zerogs.h"
 #include "GifTransfer.h"
- 
-void GIFtag(pathInfo *path, u32 *data) {
-	FUNCLOG
-	
-	path->tag.nloop	= data[0] & 0x7fff;
-	path->tag.eop	= (data[0] >> 15) & 0x1;
-	u32 tagpre		= (data[1] >> 14) & 0x1;
-	u32 tagprim		= (data[1] >> 15) & 0x7ff;
-	u32 tagflg		= (data[1] >> 26) & 0x3;
-	path->tag.nreg	= (data[1] >> 28)<<2;
-	
-	if (path->tag.nreg == 0) path->tag.nreg = 64;
 
-//	GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
-//			data[3], data[2], data[1], data[0],
-//			path->tag.eop, path->tag.nloop, tagflg, path->tag.nreg, tagpre);
-
-	path->mode = tagflg;
-
-	switch (tagflg) 
-	{
-		case 0x0:
-			path->regs = *(u64 *)(data+2);
-			path->regn = 0;
-			if (tagpre)
-				GIFRegHandlerPRIM((u32*)&tagprim);
-
-			break;
-
-		case 0x1:
-			path->regs = *(u64 *)(data+2);
-			path->regn = 0;
-			break;
-	}
-}
-
-void _GSgifPacket(pathInfo *path, u32 *pMem) { // 128bit
+/*void _GSgifPacket(pathInfo *path, u32 *pMem)  // 128bit
+{
 	FUNCLOG
 
 	int reg = (int)((path->regs >> path->regn) & 0xf);
 	g_GIFPackedRegHandlers[reg](pMem);
 
 	path->regn += 4;
-	if (path->tag.nreg == path->regn) {
+	if (path->nreg == path->regn) 
+	{
 		path->regn = 0;
-		path->tag.nloop--;
+		path->nloop--;
 	}
 }
 
-void _GSgifRegList(pathInfo *path, u32 *pMem) { // 64bit
+void _GSgifRegList(pathInfo *path, u32 *pMem)  // 64bit
+{
 	FUNCLOG
 
-	int reg;
-
-	reg = (int)((path->regs >> path->regn) & 0xf);
+	int reg = (int)((path->regs >> path->regn) & 0xf);
 
 	g_GIFRegHandlers[reg](pMem);
+	
 	path->regn += 4;
-	if (path->tag.nreg == path->regn) {
+	if (path->nreg == path->regn) 
+	{
 		path->regn = 0;
-		path->tag.nloop--;
+		path->nloop--;
 	}
-}
+}*/
 
 static int nPath3Hack = 0;
 
@@ -131,42 +102,42 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 	while(size > 0)
 	{
 		//LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
-		if (path->tag.nloop == 0) 
+		if (path->nloop == 0) 
 		{
-			GIFtag(path, pMem);
+			path->setTag(pMem);
 			gs.q = 1;
 			pMem += 4;
 			size--;
 
-			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->tag.eop) nPath3Hack = 1;
+			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
 
 			if (index == 0) 
 			{
 				if (path->mode == GIF_FLG_PACKED) 
 				{
 					// check if 0xb is in any reg, if yes, exit (kh2)
-					for(int i = 0; i < path->tag.nreg; i += 4)
+					for(int i = 0; i < path->nreg; i += 4)
 					{
-						if (((path->regs >> i)&0xf) == 11) 
+						if (((path->regs >> i) & 0xf) == 11) 
 						{
 							ERROR_LOG_SPAM("Invalid unpack type\n");
-							path->tag.nloop = 0;
+							path->nloop = 0;
 							return;
 						}
 					}
 				}
 			}
 
-			if(path->tag.nloop == 0 ) 
+			if(path->nloop == 0 ) 
 			{
 				if (index == 0) 
 				{
 					// ffx hack
-					if( path->tag.eop ) return;
+					if( path->eop ) return;
 					continue;					
 				}
 
-				/*if( !path->tag.eop ) 
+				/*if( !path->eop ) 
 				{
 					//DEBUG_LOG("continuing from eop\n");
 					continue;
@@ -181,7 +152,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		{
 		case GIF_FLG_PACKED:
 		{
-			assert( path->tag.nloop > 0 );
+			assert( path->nloop > 0 );
 			for(; size > 0; size--, pMem += 4)
 			{
 				int reg = (int)((path->regs >> path->regn) & 0xf);
@@ -190,10 +161,11 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 
 				path->regn += 4;
 				
-				if (path->tag.nreg == path->regn) 
+				if (path->nreg == path->regn) 
 				{
 					path->regn = 0;
-					if( path->tag.nloop-- <= 1 ) 
+					
+					if( path->nloop-- <= 1 ) 
 					{
 						size--;
 						pMem += 4;
@@ -206,7 +178,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		case GIF_FLG_REGLIST:
 		{
 			//GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
-			assert( path->tag.nloop > 0 );
+			assert( path->nloop > 0 );
 			size *= 2;
 			
 			for(; size > 0; pMem+= 2, size--)
@@ -217,10 +189,10 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 				
 				path->regn += 4;
 				
-				if (path->tag.nreg == path->regn) 
+				if (path->nreg == path->regn) 
 				{
 					path->regn = 0;
-					if( path->tag.nloop-- <= 1 ) 
+					if( path->nloop-- <= 1 ) 
 					{
 						size--;
 						pMem += 2;
@@ -238,7 +210,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		{
 			if(gs.imageTransfer >= 0 && gs.imageTransfer <= 1)
 			{
-				int process = min((int)size, path->tag.nloop);
+				int process = min((int)size, path->nloop);
 
 				if( process > 0 ) 
 				{
@@ -247,19 +219,20 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 					else 
 						ZeroGS::TransferHostLocal(pMem, process*4);
 
-					path->tag.nloop -= process;
-					pMem += process*4; size -= process;
+					path->nloop -= process;
+					pMem += process*4; 
+					size -= process;
 
-					assert( size == 0 || path->tag.nloop == 0 );
+					assert( size == 0 || path->nloop == 0 );
 				}
 				break;
 			}
 			else 
 			{
 				// simulate
-				int process = min((int)size, path->tag.nloop);
+				int process = min((int)size, path->nloop);
 				
-				path->tag.nloop -= process;
+				path->nloop -= process;
 				pMem += process*4; 
 				size -= process;
 			}
@@ -269,18 +242,18 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		default: // GIF_IMAGE
 			GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
 			assert(0);
-			path->tag.nloop = 0;
+			path->nloop = 0;
 			break;
 		}
 
-		if ((index == 0) && path->tag.eop) return;
+		if ((index == 0) && path->eop) return;
 	}
 
 	// This is the case when not all data was readed from one try: VU1 has too much data.
 	// So we should redo reading from the start.
-	if ((index == 0) && size == 0 && path->tag.nloop > 0) 
+	if ((index == 0) && size == 0 && path->nloop > 0) 
 	{
-		ERROR_LOG_SPAMA("VU1 too much data, ignore if gfx are fine %d\n", path->tag.nloop)
+		ERROR_LOG_SPAMA("VU1 too much data, ignore if gfx are fine %d\n", path->nloop)
 		//	TODO: this code is not working correctly. Anyway, ringing work only in single-threaded mode.		
 		//		_GSgifTransfer(&gs.path[0], (u32*)((u8*)pMem-0x4000), (0x4000)/16);
 	}
@@ -301,14 +274,14 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	count++;
 #endif
 
-	path->tag.nloop = 0;
-	path->tag.eop = 0;
-	_GSgifTransfer<0>((u32*)((u8*)pMem+addr), (0x4000 - addr)/16);
+	path->nloop = 0;
+	path->eop = 0;
+	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr)/16);
 
-	if (!path->tag.eop && (path->tag.nloop > 0)) 
+	if (!path->eop && (path->nloop > 0)) 
 	{
 		assert( (addr&0xf) == 0 ); //BUG
-		path->tag.nloop = 0;
+		path->nloop = 0;
 		ERROR_LOG("Transfer1 - 2\n");
 		return;
 	}

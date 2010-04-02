@@ -20,6 +20,7 @@
 #define __GS_H__
 
 #include "Util.h"
+#include "GifTransfer.h"
 
 extern float fFPS;
 
@@ -322,19 +323,6 @@ inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
 
 //----------------------- Data from registers -----------------------
-// EE part. Data transfer packet description
-typedef struct {
-	int nloop;
-	int eop;
-	int nreg;
-} tagInfo;
-
-typedef struct {
-	int mode;
-	int regn;
-	u64 regs;
-	tagInfo tag;
-} pathInfo;
 
 typedef union {
 	s64 SD;
