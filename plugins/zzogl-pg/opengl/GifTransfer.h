@@ -22,6 +22,8 @@
 #include "Regs.h"
 #include "Util.h"
 
+// This is fairly broken right now, and shouldn't be enabled unless you feel like fixing it.
+//#define NEW_GIF_TRANSFER
 enum GIF_FLG
 {
 	GIF_FLG_PACKED	= 0,
@@ -53,7 +55,6 @@ union GIFTag
 		for(int i = 0; i <= 3; i++)
 		{
 			ai32[i] = data[i];
-			ERROR_LOG("Set tag %i\n", i);
 		}
 	}
 	GIFTag(u32 *data)
@@ -73,35 +74,31 @@ typedef struct
 	int nloop;
 	int eop;
 	int nreg;
+	u32 adonly;
 	GIFTag tag;
-	
+
+#ifdef NEW_GIF_TRANSFER	
 	void setTag(u32 *data) 
 	{
 		tag.set(data);
 
 		nloop	= tag.NLOOP;
-		eop	= tag.EOP;
-		u32 tagpre		= tag.PRE;
-		u32 tagprim		= tag.PRIM;
-		u32 tagflg		= tag.FLG;
+		eop		= tag.EOP;
+		mode	= tag.FLG;
+		nreg	= tag.NREG;
+		//regs = tag.REGS;
+		//regn = 0;
 		
-		// Hmm....
-		nreg	= tag.NREG << 2;
-		if (nreg == 0) nreg = 64;
-
-	//	GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
-	//			data[3], data[2], data[1], data[0],
-	//			path->eop, path->nloop, tagflg, path->nreg, tagpre);
-
-		mode = tagflg;
+		ERROR_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+				data[3], data[2], data[1], data[0],
+				eop, nloop, mode, nreg, tag.PRE);
+		
 
 		switch (mode) 
 		{
 			case GIF_FLG_PACKED:
 				regs = *(u64 *)(data+2);
 				regn = 0;
-				if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
-
 				break;
 
 			case GIF_FLG_REGLIST:
@@ -109,7 +106,68 @@ typedef struct
 				regn = 0;
 				break;
 		}
+
+		adonly = (nreg == 1) && ((u8)regs == 0xe);
 	}
+	
+	u32 GetReg() 
+	{
+		return (regs >> regn) & 0xf;
+	}
+
+	bool StepReg()
+	{
+		regn += 1;
+							
+		if ((regn & 0xf) == nreg) 
+		{
+			regn = 0;
+								
+			if (--nloop <= 0) 
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+#else
+       
+        void setTag(u32 *data) 
+        {
+                tag.set(data);
+
+                nloop   = tag.NLOOP;
+                eop     = tag.EOP;
+                u32 tagpre              = tag.PRE;
+                u32 tagprim             = tag.PRIM;
+                u32 tagflg              = tag.FLG;
+                
+                // Hmm....
+                nreg    = tag.NREG << 2;
+                if (nreg == 0) nreg = 64;
+
+        //      GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+        //                      data[3], data[2], data[1], data[0],
+        //                      path->eop, path->nloop, tagflg, path->nreg, tagpre);
+
+                mode = tagflg;
+
+                switch (mode) 
+                {
+					case GIF_FLG_PACKED:
+						regs = *(u64 *)(data+2);
+						regn = 0;
+						if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
+
+						break;
+
+					case GIF_FLG_REGLIST:
+						regs = *(u64 *)(data+2);
+						regn = 0;
+						break;
+                }
+        }
+#endif
 } pathInfo;
 
 void _GSgifPacket(pathInfo *path, u32 *pMem);

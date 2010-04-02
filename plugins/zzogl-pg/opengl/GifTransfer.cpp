@@ -85,6 +85,10 @@ __forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 #endif
 }
 
+#ifdef NEW_GIF_TRANSFER
+
+extern int g_GSMultiThreaded;
+
 template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 {
 	FUNCLOG
@@ -105,157 +109,131 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 		if (path->nloop == 0) 
 		{
 			path->setTag(pMem);
-			gs.q = 1;
 			pMem += 4;
 			size--;
 
 			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
-
-			if (index == 0) 
+				
+			// eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and 
+			// values other than the EOP field are disregarded."
+			if (path->nloop > 0) 
 			{
-				if (path->mode == GIF_FLG_PACKED) 
+				gs.q = 1.0f;
+
+				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
+
+				if(path->tag.PRE && (path->tag.FLG == GIF_FLG_PACKED))
 				{
-					// check if 0xb is in any reg, if yes, exit (kh2)
-					for(int i = 0; i < path->nreg; i += 4)
-					{
-						if (((path->regs >> i) & 0xf) == 11) 
-						{
-							ERROR_LOG_SPAM("Invalid unpack type\n");
-							path->nloop = 0;
-							return;
-						}
-					}
+					u32 tagprim = path->tag.PRIM;
+					GIFRegHandlerPRIM((u32*)&tagprim);
 				}
-			}
-
-			if(path->nloop == 0 ) 
-			{
-				if (index == 0) 
-				{
-					// ffx hack
-					if( path->eop ) return;
-					continue;					
-				}
-
-				/*if( !path->eop ) 
-				{
-					//DEBUG_LOG("continuing from eop\n");
-					continue;
-				}*/
-
-				// Issue 174 fix!
-				continue;
 			}
 		}
-
-		switch(path->mode) 
+		else
 		{
-		case GIF_FLG_PACKED:
-		{
-			assert( path->nloop > 0 );
-			for(; size > 0; size--, pMem += 4)
+			switch(path->tag.FLG)
 			{
-				int reg = (int)((path->regs >> path->regn) & 0xf);
-				
-				g_GIFPackedRegHandlers[reg](pMem);
-
-				path->regn += 4;
-				
-				if (path->nreg == path->regn) 
+				case GIF_FLG_PACKED:
 				{
-					path->regn = 0;
-					
-					if( path->nloop-- <= 1 ) 
+					do
 					{
-						size--;
+						u32 reg = path->GetReg();
+							
+						g_GIFPackedRegHandlers[reg](pMem);
+						
 						pMem += 4;
-						break;
-					}
-				}
-			}
-			break;
-		}
-		case GIF_FLG_REGLIST:
-		{
-			//GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
-			assert( path->nloop > 0 );
-			size *= 2;
-			
-			for(; size > 0; pMem+= 2, size--)
-			{
-				int reg = (int)((path->regs >> path->regn) & 0xf);
-				
-				g_GIFRegHandlers[reg](pMem);
-				
-				path->regn += 4;
-				
-				if (path->nreg == path->regn) 
-				{
-					path->regn = 0;
-					if( path->nloop-- <= 1 ) 
-					{
 						size--;
-						pMem += 2;
-						break;
 					}
+					while(path->StepReg() && size > 0);
+					break;
 				}
-			}
-
-			if( size & 1 ) pMem += 2;
-			size /= 2;
-			break;
-		}
-		case GIF_FLG_IMAGE: // FROM_VFRAM
-		case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
-		{
-			if(gs.imageTransfer >= 0 && gs.imageTransfer <= 1)
-			{
-				int process = min((int)size, path->nloop);
-
-				if( process > 0 ) 
+				case GIF_FLG_REGLIST:
 				{
-					if ( gs.imageTransfer ) 
-						ZeroGS::TransferLocalHost(pMem, process);
-					else 
-						ZeroGS::TransferHostLocal(pMem, process*4);
+					size *= 2;
 
-					path->nloop -= process;
-					pMem += process*4; 
-					size -= process;
+					do
+					{
+						int reg = path->GetReg();
+						g_GIFRegHandlers[reg](pMem);
+						
+						pMem += 2;
+						size--;
+					}
+					while(path->StepReg() && size > 0);
+					
+					if (size & 1) pMem += 2;
 
-					assert( size == 0 || path->nloop == 0 );
+					size /= 2;
+					break;
 				}
+				case GIF_FLG_IMAGE2: // hmmm
+				{
+					assert(0);
+					path->nloop = 0;
+					break;
+				}
+						
+				case GIF_FLG_IMAGE: // FROM_VFRAM
+				{
+					int len = (int)min(size, path->nloop);
+
+					switch(gs.imageTransfer)
+					{
+						case 0:
+							ZeroGS::TransferHostLocal(pMem, len * 4);
+							break;
+						case 1: 
+							ZeroGS::TransferLocalHost(pMem, len);
+							break;
+						case 2: 
+							//Move();
+							break;
+						case 3: 
+							assert(0);
+							break;
+						default: 
+							assert(0);
+							break;
+					}
+					
+					pMem += len * 16;
+					path->nloop -= len;
+					size -= len;
+						
+					break;
+				}
+				default: // GIF_IMAGE
+					GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
+					assert(0);
+					break;
+				}
+		}
+		
+		
+		if (index == 0)
+		{
+			if(path->tag.EOP && path->nloop == 0)
+			{
 				break;
 			}
-			else 
-			{
-				// simulate
-				int process = min((int)size, path->nloop);
-				
-				path->nloop -= process;
-				pMem += process*4; 
-				size -= process;
-			}
-
-			break;
 		}
-		default: // GIF_IMAGE
-			GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
-			assert(0);
-			path->nloop = 0;
-			break;
-		}
-
-		if ((index == 0) && path->eop) return;
 	}
-
-	// This is the case when not all data was readed from one try: VU1 has too much data.
-	// So we should redo reading from the start.
-	if ((index == 0) && size == 0 && path->nloop > 0) 
+	
+	if(index == 0)
 	{
-		ERROR_LOG_SPAMA("VU1 too much data, ignore if gfx are fine %d\n", path->nloop)
-		//	TODO: this code is not working correctly. Anyway, ringing work only in single-threaded mode.		
-		//		_GSgifTransfer(&gs.path[0], (u32*)((u8*)pMem-0x4000), (0x4000)/16);
+		if(size == 0 && path->nloop > 0)
+		{
+			if (g_GSMultiThreaded)
+			{
+				// TODO
+
+				path->nloop = 0;
+			}
+			else
+			{
+				_GSgifTransfer<0>(pMem - 0x4000, 0x4000 / 16);
+			}
+		}
 	}
 }
 
@@ -305,7 +283,229 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	nPath3Hack = 0;
 	_GSgifTransfer<2>(pMem, size);
 }
+#else
 
+template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
+{
+        FUNCLOG
+
+        pathInfo *path = &gs.path[index];
+        
+#ifdef _WIN32
+        assert( g_hCurrentThread == GetCurrentThread() );
+#endif
+
+#ifdef _DEBUG
+        gifTransferLog(index, pMem, size);
+#endif
+
+        while(size > 0)
+        {
+                //LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
+                if (path->nloop == 0) 
+                {
+                        path->setTag(pMem);
+                        gs.q = 1;
+                        pMem += 4;
+                        size--;
+
+                        if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
+
+                        if (index == 0) 
+                        {
+                                if (path->mode == GIF_FLG_PACKED) 
+                                {
+                                        // check if 0xb is in any reg, if yes, exit (kh2)
+                                        for(int i = 0; i < path->nreg; i += 4)
+                                        {
+                                                if (((path->regs >> i) & 0xf) == 11) 
+                                                {
+                                                        ERROR_LOG_SPAM("Invalid unpack type\n");
+                                                        path->nloop = 0;
+                                                        return;
+                                                }
+                                        }
+                                }
+                        }
+
+                        if(path->nloop == 0 ) 
+                        {
+                                if (index == 0) 
+                                {
+                                        // ffx hack
+                                        if( path->eop ) return;
+                                        continue;                                       
+                                }
+
+                                /*if( !path->eop ) 
+                                {
+                                        //DEBUG_LOG("continuing from eop\n");
+                                        continue;
+                                }*/
+
+                                // Issue 174 fix!
+                                continue;
+                        }
+                }
+
+                switch(path->mode) 
+                {
+                case GIF_FLG_PACKED:
+                {
+                        assert( path->nloop > 0 );
+                        for(; size > 0; size--, pMem += 4)
+                        {
+                                int reg = (int)((path->regs >> path->regn) & 0xf);
+                                
+                                g_GIFPackedRegHandlers[reg](pMem);
+
+                                path->regn += 4;
+                                
+                                if (path->nreg == path->regn) 
+                                {
+                                        path->regn = 0;
+                                        
+                                        if( path->nloop-- <= 1 ) 
+                                        {
+                                                size--;
+                                                pMem += 4;
+                                                break;
+                                        }
+                                }
+                        }
+                        break;
+                }
+                case GIF_FLG_REGLIST:
+                {
+                        //GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
+                        assert( path->nloop > 0 );
+                        size *= 2;
+                        
+                        for(; size > 0; pMem+= 2, size--)
+                        {
+                                int reg = (int)((path->regs >> path->regn) & 0xf);
+                                
+                                g_GIFRegHandlers[reg](pMem);
+                                
+                                path->regn += 4;
+                                
+                                if (path->nreg == path->regn) 
+                                {
+                                        path->regn = 0;
+                                        if( path->nloop-- <= 1 ) 
+                                        {
+                                                size--;
+                                                pMem += 2;
+                                                break;
+                                        }
+                                }
+                        }
+
+                        if( size & 1 ) pMem += 2;
+                        size /= 2;
+                        break;
+                }
+                case GIF_FLG_IMAGE: // FROM_VFRAM
+                case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
+                {
+                        if(gs.imageTransfer >= 0 && gs.imageTransfer <= 1)
+                        {
+                                int process = min((int)size, path->nloop);
+
+                                if( process > 0 ) 
+                                {
+                                        if ( gs.imageTransfer ) 
+                                                ZeroGS::TransferLocalHost(pMem, process);
+                                        else 
+                                                ZeroGS::TransferHostLocal(pMem, process*4);
+
+                                        path->nloop -= process;
+                                        pMem += process*4; 
+                                        size -= process;
+
+                                        assert( size == 0 || path->nloop == 0 );
+                                }
+                                break;
+                        }
+                        else 
+                        {
+                                // simulate
+                                int process = min((int)size, path->nloop);
+                                
+                                path->nloop -= process;
+                                pMem += process*4; 
+                                size -= process;
+                        }
+
+                        break;
+                }
+                default: // GIF_IMAGE
+                        GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
+                        assert(0);
+                        path->nloop = 0;
+                        break;
+                }
+
+                if ((index == 0) && path->eop) return;
+        }
+
+        // This is the case when not all data was readed from one try: VU1 has too much data.
+        // So we should redo reading from the start.
+        if ((index == 0) && size == 0 && path->nloop > 0) 
+        {
+                ERROR_LOG_SPAMA("VU1 too much data, ignore if gfx are fine %d\n", path->nloop)
+                //      TODO: this code is not working correctly. Anyway, ringing work only in single-threaded mode.            
+                //              _GSgifTransfer(&gs.path[0], (u32*)((u8*)pMem-0x4000), (0x4000)/16);
+        }
+}
+
+void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
+{
+	FUNCLOG
+
+	pathInfo *path = &gs.path[0];
+	
+	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
+	
+//	addr &= 0x3fff;
+
+#ifdef _DEBUG
+	PRIM_LOG("count: %d\n", count);
+	count++;
+#endif
+
+	path->nloop = 0;
+	path->eop = 0;
+	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr)/16);
+
+	if (!path->eop && (path->nloop > 0)) 
+	{
+		assert( (addr&0xf) == 0 ); //BUG
+		path->nloop = 0;
+		ERROR_LOG("Transfer1 - 2\n");
+		return;
+	}
+}
+
+void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path[1].mode, gs.path[1].tag.nloop);
+	
+	_GSgifTransfer<1>(pMem, size);
+}
+
+void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	//GS_LOG("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d)\n", size, gs.path[2].mode, gs.path[2].tag.nloop);
+
+	nPath3Hack = 0;
+	_GSgifTransfer<2>(pMem, size);
+}
+#endif
 #ifdef _DEBUG
 static int count = 0;
 #endif
