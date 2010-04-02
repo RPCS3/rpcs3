@@ -83,6 +83,7 @@
 		<Unit filename="../../Mem_Transmit.h" />
 		<Unit filename="../../Regs.cpp" />
 		<Unit filename="../../Regs.h" />
+		<Unit filename="../../Util.h" />
 		<Unit filename="../../Win32/Conf.cpp">
 			<Option compile="0" />
 			<Option link="0" />
