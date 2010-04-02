@@ -251,6 +251,15 @@ static bool SPAM_PASS;
 #define WARN_LOG 0&&
 #endif
 
+
+enum GIF_FLG
+{
+	GIF_FLG_PACKED	= 0,
+	GIF_FLG_REGLIST	= 1,
+	GIF_FLG_IMAGE	= 2,
+	GIF_FLG_IMAGE2	= 3
+};
+
 #define REG64(name) \
 union name			\
 {					\
@@ -814,9 +823,7 @@ typedef struct {
 	int imageTransfer;		
 	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
 
-	pathInfo path1;
-	pathInfo path2;
-	pathInfo path3;
+	pathInfo path[3];
 
 } GSinternal;
 

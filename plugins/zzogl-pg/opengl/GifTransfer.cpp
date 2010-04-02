@@ -97,25 +97,36 @@ void CALLBACK GSgetLastTag(u64* ptag)
 extern HANDLE g_hCurrentThread;
 #endif
 
-void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
+__forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 {
-	FUNCLOG
-
-#ifdef _WIN32
-	assert( g_hCurrentThread == GetCurrentThread() );
-#endif
-
 #ifdef _DEBUG
-	if( conf.log & 0x20 ) {
-		static int nSaveIndex=0;
-		GS_LOG("%d: p:%d %x\n", nSaveIndex++, (path==&gs.path3)?3:(path==&gs.path2?2:1), size);
+	if( conf.log & 0x20 ) 
+	{
+		static int nSaveIndex = 0;
+		GS_LOG("%d: p:%d %x\n", nSaveIndex++, index + 1, size);
 		int vals[4] = {0};
-		for(int i = 0; i < size; i++) {
+		for(int i = 0; i < size; i++) 
+		{
 			for(int j = 0; j < 4; ++j )
 				vals[j] ^= pMem[4*i+j];
 		}
 		GS_LOG("%x %x %x %x\n", vals[0], vals[1], vals[2], vals[3]);
 	}
+#endif
+}
+
+template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	pathInfo *path = &gs.path[index];
+	
+#ifdef _WIN32
+	assert( g_hCurrentThread == GetCurrentThread() );
+#endif
+
+#ifdef _DEBUG
+	gifTransferLog(index, pMem, size);
 #endif
 
 	while(size > 0)
@@ -127,10 +138,10 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			pMem+= 4;
 			size--;
 
-			if ((g_GameSettings & GAME_PATH3HACK) && path == &gs.path3 && gs.path3.tag.eop)
+			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && gs.path[2].tag.eop)
 				nPath3Hack = 1;
 
-			if (path == &gs.path1) 
+			if (index == 0) 
 			{
 				if (path->mode == 1) 
 				{
@@ -149,11 +160,10 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 
 			if(path->tag.nloop == 0 ) 
 			{
-				if( path == &gs.path1 ) 
+				if (index == 0) 
 				{
 					// ffx hack
-					if( path->tag.eop )
-						return;
+					if( path->tag.eop ) return;
 					continue;					
 				}
 
@@ -168,7 +178,8 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			}
 		}
 
-		switch(path->mode) {
+		switch(path->mode) 
+		{
 		case 1: // PACKED
 		{
 			assert( path->tag.nloop > 0 );
@@ -256,47 +267,24 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			break;
 		}
 
-		if( path == &gs.path1 && path->tag.eop )
-			return;
+		if ((index == 0) && path->tag.eop) return;
 	}
 
-	// This is case when not all data was readed from one try: VU1 to much data.
-	// So we should redone reading from start
-	if (path == &gs.path1 && size == 0 && path->tag.nloop > 0) {
+	// This is the case when not all data was readed from one try: VU1 has too much data.
+	// So we should redo reading from the start.
+	if ((index == 0) && size == 0 && path->tag.nloop > 0) 
+	{
 		ERROR_LOG_SPAMA("VU1 too much data, ignore if gfx are fine %d\n", path->tag.nloop)
-//	TODO: this code is not working correctly. Anyway, ringing work only in single-threadred mode.		
-//		_GSgifTransfer(&gs.path1, (u32*)((u8*)pMem-0x4000), (0x4000)/16);
+		//	TODO: this code is not working correctly. Anyway, ringing work only in single-threaded mode.		
+		//		_GSgifTransfer(&gs.path[0], (u32*)((u8*)pMem-0x4000), (0x4000)/16);
 	}
 }
-
-void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
-{
-	FUNCLOG
-
-	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path2.mode, gs.path2.tag.nloop);
-	
-	_GSgifTransfer(&gs.path2, pMem, size);
-}
-
-void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
-{
-	FUNCLOG
-
-	//GS_LOG("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d)\n", size, gs.path3.mode, gs.path3.tag.nloop);
-
-	nPath3Hack = 0;
-	_GSgifTransfer(&gs.path3, pMem, size);
-}
-
-#ifdef _DEBUG
-static int count = 0;
-#endif
 
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	FUNCLOG
 
-	//pathInfo *path = &gs.path1;
+	//pathInfo *path = &gs.path[0];
 	
 	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
 	
@@ -307,15 +295,38 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	count++;
 #endif
 
-	gs.path1.tag.nloop = 0;
-	gs.path1.tag.eop = 0;
-	_GSgifTransfer(&gs.path1, (u32*)((u8*)pMem+addr), (0x4000 - addr)/16);
+	gs.path[0].tag.nloop = 0;
+	gs.path[0].tag.eop = 0;
+	_GSgifTransfer<0>((u32*)((u8*)pMem+addr), (0x4000 - addr)/16);
 
-	if( !gs.path1.tag.eop && gs.path1.tag.nloop > 0 ) {
+	if (!gs.path[0].tag.eop && (gs.path[0].tag.nloop > 0)) 
+	{
 		assert( (addr&0xf) == 0 ); //BUG
-		gs.path1.tag.nloop = 0;
+		gs.path[0].tag.nloop = 0;
 		ERROR_LOG("Transfer1 - 2\n");
 		return;
 	}
 }
 
+void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path[1].mode, gs.path[1].tag.nloop);
+	
+	_GSgifTransfer<1>(pMem, size);
+}
+
+void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	//GS_LOG("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d)\n", size, gs.path[2].mode, gs.path[2].tag.nloop);
+
+	nPath3Hack = 0;
+	_GSgifTransfer<2>(pMem, size);
+}
+
+#ifdef _DEBUG
+static int count = 0;
+#endif

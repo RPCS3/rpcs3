@@ -109,7 +109,8 @@ bool GIFPath::StepReg()
 }
 
 __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
-{	GIFPath& path = m_path[pathidx];
+{
+	GIFPath& path = m_path[pathidx];
 
 	while(size > 0)
 	{

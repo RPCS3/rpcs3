@@ -311,12 +311,13 @@ void CALLBACK GSreset() {
 	gs.q = 1;
 }
 
-void CALLBACK GSgifSoftReset(u32 mask){
+void CALLBACK GSgifSoftReset(u32 mask)
+{
 	FUNCLOG
 
-	if( mask & 1 ) memset(&gs.path1, 0, sizeof(gs.path1));
-	if( mask & 2 ) memset(&gs.path2, 0, sizeof(gs.path2));
-	if( mask & 4 ) memset(&gs.path3, 0, sizeof(gs.path3));
+	if( mask & 1 ) memset(&gs.path[0], 0, sizeof(gs.path[0]));
+	if( mask & 2 ) memset(&gs.path[1], 0, sizeof(gs.path[1]));
+	if( mask & 4 ) memset(&gs.path[2], 0, sizeof(gs.path[2]));
 	gs.imageTransfer = -1;
 	gs.q = 1;
 	gs.nTriFanVert = -1;
@@ -558,18 +559,21 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
 	ERROR_LOG("creating zerogs\n");
 	//if (conf.record) recOpen();
-	if( !ZeroGS::Create(conf.width, conf.height) )
-		return -1;
+	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
 	ERROR_LOG("initialization successful\n");
 
-	if( conf.bilinear == 2 ) {
+	if( conf.bilinear == 2 ) 
+	{
 		ZeroGS::AddMessage("forced bilinear filtering - on", 1000);
 	}
-	else if( conf.bilinear == 1 ) {
+	else if( conf.bilinear == 1 ) 
+	{
 		ZeroGS::AddMessage("normal bilinear filtering - on", 1000);
 	}
-	if( conf.aa ) {
+	
+	if( conf.aa ) 
+	{
 		char strtitle[64];
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa], 1000);
 		ZeroGS::AddMessage(strtitle);
@@ -588,9 +592,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	QueryPerformanceFrequency(&temp);
 	luPerfFreq = temp.QuadPart;
 
-	gs.path1.mode = 0;
-	gs.path2.mode = 0;
-	gs.path3.mode = 0;
+	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
 
 	return 0;
 }
@@ -599,24 +601,31 @@ void ProcessMessages()
 {
 	MSG msg; 
 	ZeroMemory( &msg, sizeof(msg) );
-	while( 1 ) {
+	while( 1 ) 
+	{
 		if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
 		{
-			switch( msg.message ) {
+			switch( msg.message ) 
+			{
 				case WM_KEYDOWN :
-					if( msg.wParam == VK_F5 ) {
+					if( msg.wParam == VK_F5 ) 
+					{
 						OnKeyboardF5(GetKeyState(VK_SHIFT)&0x8000);
 					}
-					else if( msg.wParam == VK_F6 ) {
+					else if( msg.wParam == VK_F6 ) 
+					{
 						OnKeyboardF6(GetKeyState(VK_SHIFT)&0x8000);
 					}
-					else if( msg.wParam == VK_F7 ) {
+					else if( msg.wParam == VK_F7 ) 
+					{
 						OnKeyboardF7(GetKeyState(VK_SHIFT)&0x8000);
 					}
-					else if( msg.wParam == VK_F9 ) {
+					else if( msg.wParam == VK_F9 ) 
+					{
 						OnKeyboardF9(GetKeyState(VK_SHIFT)&0x8000);
 					}
-					else if( msg.wParam == VK_ESCAPE ) {
+					else if( msg.wParam == VK_ESCAPE ) 
+					{
 
 						if( conf.options & GSOPTION_FULLSCREEN ) {
 							// destroy that msg				 
@@ -639,10 +648,13 @@ void ProcessMessages()
 			DispatchMessage( &msg );
 		}
 		else
+		{
 			break;
+		}
 	}
 
-	if( (GetKeyState(VK_MENU)&0x8000) && (GetKeyState(VK_RETURN)&0x8000) ) {
+	if ((GetKeyState(VK_MENU)&0x8000) && (GetKeyState(VK_RETURN)&0x8000)) 
+	{
 		conf.options ^= GSOPTION_FULLSCREEN;
 
 		ZeroGS::SetChangeDeviceSize(
@@ -677,18 +689,20 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
 	ERROR_LOG("creating zerogs\n");
 	//if (conf.record) recOpen();
-	if( !ZeroGS::Create(conf.width, conf.height) )
-		return -1;
+	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
 	ERROR_LOG("initialization successful\n");
 
-	if( conf.bilinear == 2 ) {
+	if( conf.bilinear == 2 ) 
+	{
 		ZeroGS::AddMessage("bilinear filtering - forced", 1000);
 	}
-	else if( conf.bilinear == 1 ) {
+	else if( conf.bilinear == 1 ) 
+	{
 		ZeroGS::AddMessage("bilinear filtering - normal", 1000);
 	}
-	if( conf.aa ) {
+	if( conf.aa ) 
+	{
 		char strtitle[64];
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
 		ZeroGS::AddMessage(strtitle,1000);
@@ -696,9 +710,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	GS_LOG("GSopen ok\n");
 
-	gs.path1.mode = 0;
-	gs.path2.mode = 0;
-	gs.path3.mode = 0;
+	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
 	luPerfFreq = 1;
 
 	return 0;
