@@ -22,8 +22,9 @@
 #include "Regs.h"
 #include "Util.h"
 
-// This is fairly broken right now, and shouldn't be enabled unless you feel like fixing it.
-//#define NEW_GIF_TRANSFER
+// If you notice bugs in the newest revisions, you might try disabling this, 
+// to see if they are related.
+#define NEW_GIF_TRANSFER
 enum GIF_FLG
 {
 	GIF_FLG_PACKED	= 0,
@@ -68,6 +69,16 @@ union GIFTag
 
 typedef struct 
 {
+#ifdef NEW_GIF_TRANSFER	
+	int mode;
+	int reg;
+	u64 regs;
+	int nloop;
+	int eop;
+	int nreg;
+	u32 adonly;
+	GIFTag tag;
+#else
 	int mode;
 	int regn;
 	u64 regs;
@@ -76,8 +87,9 @@ typedef struct
 	int nreg;
 	u32 adonly;
 	GIFTag tag;
+#endif
 
-#ifdef NEW_GIF_TRANSFER	
+#ifdef NEW_GIF_TRANSFER
 	void setTag(u32 *data) 
 	{
 		tag.set(data);
@@ -85,45 +97,33 @@ typedef struct
 		nloop	= tag.NLOOP;
 		eop		= tag.EOP;
 		mode	= tag.FLG;
-		nreg	= tag.NREG;
-		//regs = tag.REGS;
-		//regn = 0;
+                
+		// Hmm....
+		nreg	= tag.NREG << 2;
+		if (nreg == 0) nreg = 64;
 		
-		ERROR_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
-				data[3], data[2], data[1], data[0],
-				eop, nloop, mode, nreg, tag.PRE);
-		
+		regs = tag.REGS;
+		reg = 0;
 
-		switch (mode) 
-		{
-			case GIF_FLG_PACKED:
-				regs = *(u64 *)(data+2);
-				regn = 0;
-				break;
-
-			case GIF_FLG_REGLIST:
-				regs = *(u64 *)(data+2);
-				regn = 0;
-				break;
-		}
-
-		adonly = (nreg == 1) && ((u8)regs == 0xe);
+        //      GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+        //                      data[3], data[2], data[1], data[0],
+        //                      path->eop, path->nloop, mode, path->nreg, tag.PRE);
 	}
 	
 	u32 GetReg() 
 	{
-		return (regs >> regn) & 0xf;
+		return (regs >> reg) & 0xf;
 	}
 
 	bool StepReg()
 	{
-		regn += 1;
+		reg += 4;
 							
-		if ((regn & 0xf) == nreg) 
+		if (reg == nreg) 
 		{
-			regn = 0;
+			reg = 0;
 								
-			if (--nloop <= 0) 
+			if (--nloop == 0) 
 			{
 				return false;
 			}
@@ -131,7 +131,6 @@ typedef struct
 		return true;
 	}
 #else
-       
         void setTag(u32 *data) 
         {
                 tag.set(data);
