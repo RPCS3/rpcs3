@@ -108,8 +108,6 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 #define _aligned_malloc pcsx2_aligned_malloc
 #define _aligned_free pcsx2_aligned_free
 
-#endif
-
 #include <sys/timeb.h>	// ftime(), struct timeb
 
 inline unsigned long timeGetTime()
@@ -125,14 +123,17 @@ inline unsigned long timeGetTime()
 	return (unsigned long)(t.time*1000+t.millitm);
 }
 
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
-
 struct RECT
 {
 	int left, top;
 	int right, bottom;
 };
+
+#endif
+
+#define max(a,b)			(((a) > (b)) ? (a) : (b))
+#define min(a,b)			(((a) < (b)) ? (a) : (b))
+
 
 typedef struct {
 	int x, y, w, h;

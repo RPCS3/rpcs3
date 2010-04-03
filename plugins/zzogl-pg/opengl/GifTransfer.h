@@ -70,10 +70,10 @@ union GIFTag
 typedef struct 
 {
 #ifdef NEW_GIF_TRANSFER	
-	int mode;
+	u32 mode;
 	int reg;
 	u64 regs;
-	int nloop;
+	u32 nloop;
 	int eop;
 	int nreg;
 	u32 adonly;

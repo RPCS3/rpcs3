@@ -21,6 +21,10 @@
 #include "zerogs.h"
 #include "GifTransfer.h"
 
+#ifdef _DEBUG
+static int count = 0;
+#endif
+
 /*void _GSgifPacket(pathInfo *path, u32 *pMem)  // 128bit
 {
 	FUNCLOG
@@ -75,9 +79,9 @@ __forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 		static int nSaveIndex = 0;
 		GS_LOG("%d: p:%d %x\n", nSaveIndex++, index + 1, size);
 		int vals[4] = {0};
-		for(int i = 0; i < size; i++) 
+		for(u32 i = 0; i < size; i++) 
 		{
-			for(int j = 0; j < 4; ++j )
+			for(u32 j = 0; j < 4; ++j )
 				vals[j] ^= pMem[4*i+j];
 		}
 		GS_LOG("%x %x %x %x\n", vals[0], vals[1], vals[2], vals[3]);
@@ -185,7 +189,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 					case GIF_FLG_IMAGE: // FROM_VFRAM
 					case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
 					{
-						int len = (int)min(size, path->nloop);
+						int len = min(size, path->nloop);
 						//ERROR_LOG("GIF_FLG_IMAGE(%d)=%d\n", gs.imageTransfer, len);
 
 						switch(gs.imageTransfer)
@@ -502,7 +506,4 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	nPath3Hack = 0;
 	_GSgifTransfer<2>(pMem, size);
 }
-#endif
-#ifdef _DEBUG
-static int count = 0;
 #endif
