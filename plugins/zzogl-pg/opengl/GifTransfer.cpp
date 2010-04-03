@@ -152,23 +152,10 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 						{
 							g_GIFPackedRegHandlers[path->GetReg()](pMem);
 							
-							path->reg += 4;
-							if (path->nreg == path->reg) 
-							{
-								path->reg = 0;
-                                        
-								if( path->nloop-- <= 1 ) 
-								{
-									size--;
-									pMem += 4;
-									break;
-								}
-							}
-							
 							pMem += 4;
 							size--;
 						} 
-						while (size > 0);
+						while (path->StepReg() && (size > 0));
 						
                         break;
 					}
@@ -184,23 +171,10 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 						{
 							g_GIFRegHandlers[path->GetReg()](pMem);
 							
-							path->reg += 4;
-							
-							if (path->nreg == path->reg) 
-							{
-								path->reg = 0;
-								if( path->nloop-- <= 1 ) 
-								{
-									size--;
-									pMem += 2;
-									break;
-								}
-							}
-							
 							pMem += 2;
 							size--;
 						}
-						while(size > 0);
+						while(path->StepReg() && (size > 0));
 					
 						if(size & 1) pMem += 2;
 

@@ -122,8 +122,9 @@ typedef struct
 		if (reg == nreg) 
 		{
 			reg = 0;
+			nloop--;
 								
-			if (--nloop == 0) 
+			if (nloop == 0) 
 			{
 				return false;
 			}
