@@ -14,6 +14,7 @@
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
+					<Add option="-Wall" />
 					<Add option="-g" />
 				</Compiler>
 				<Linker>
@@ -29,6 +30,7 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-W" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -37,11 +39,15 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-Wall" />
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-parameter" />
+			<Add option="-Wno-unused-value" />
+			<Add option="-Wunused-variable" />
 			<Add option="-m32" />
 			<Add option="-I/opt/cg/include -L/opt/cg/lib" />
-			<Add option="-msse2" />
+			<Add option="-fno-strict-aliasing" />
+			<Add option="-pipe -msse -msse2" />
 			<Add option="-fno-regmove" />
 			<Add option="-DZEROGS_SSE2" />
 			<Add directory="../../Linux" />

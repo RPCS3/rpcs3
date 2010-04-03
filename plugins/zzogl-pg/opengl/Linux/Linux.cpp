@@ -24,6 +24,7 @@
 
 #include "GS.h"
 #include "Linux.h"
+#include "zerogs.h"
 
 #include <map>
 
@@ -113,29 +114,30 @@ void CreateGameHackTable(GtkWidget *treeview)
 
 	//setup the model with all our rows of option data
 	mapConfOpts.clear();
-	add_map_entry(0x00000001, "00000001", "Tex Target checking - 00000001\nLego Racers");
-	add_map_entry(0x00000002, "00000002", "Auto reset targs - 00000002\nShadow Hearts, Samurai Warriors.  Use when game is slow and toggling AA fixes it.");
-	add_map_entry(0x00000010, "00000010", "No target resolves - 00000010\nStops all resolving of targets.  Try this first for really slow games. Dark Cloud 1");
-	add_map_entry(0x00000020, "00000020", "Exact color testing - 00000020\nFixes overbright or shadow/black artifacts (Crash 'n Burn).");
-	add_map_entry(0x00000040, "00000040", "No color clamping - 00000040\nSpeeds up games, but might be too bright or too dim.");
-	add_map_entry(0x00000100, "00000100", "Alpha Fail hack - 00000100\nFor Sonic Unleashed, Shadow the Hedgehog, Ghost in the Shell. Remove vertical stripes or other coloring artefacts. Break Persona 4 and MGS3");
-	add_map_entry(0x00000200, "00000200", "Disable depth updates - 00000200");
-	add_map_entry(0x00000400, "00000400", "Resolve Hack #1 - 00000400\nKingdom Hearts.  Speeds some games.");
-	add_map_entry(0x00000800, "00000800", "Resolve Hack #2 - 00000800\nShadow Hearts, Urbz. Destroy FFX");
-	add_map_entry(0x00001000, "00001000", "No target CLUT - 00001000\nResident Evil 4, or foggy scenes.");
-	add_map_entry(0x00002000, "00002000", "Disable stencil buffer - 00002000\nUsually safe to do for simple scenes. Harvest Moon");
-	add_map_entry(0x00008000, "00008000", "No depth resolve - 00008000\nMight give z buffer artifacts.");
-	add_map_entry(0x00010000, "00010000", "Full 16 bit resolution - 00010000\nUse when half the screen is missing.");
-	add_map_entry(0x00020000, "00020000", "Resolve Hack #3 - 00020000\nNeopets");
-	add_map_entry(0x00040000, "00040000", "Fast Update - 00040000\nOkami. Speeds some games. Needs for Sonic Unleashed");
-	add_map_entry(0x00080000, "00080000", "Disable alpha testing - 00080000");
-	add_map_entry(0x00100000, "00100000", "Enable Multiple RTs - 00100000");
-	add_map_entry(0x01000000, "01000000", "Specular Highlights - 01000000\nMakes Xenosaga and Okage graphics faster by removing highlights");
-	add_map_entry(0x02000000, "02000000", "Partial targets - 02000000");
-	add_map_entry(0x04000000, "04000000", "Partial depth - 04000000");
-	add_map_entry(0x10000000, "10000000", "Gust fix, made gustgame more clean and fast - 10000000");
-	add_map_entry(0x20000000, "20000000", "No logarithmic Z, could decrease number of Z-artefacts - 20000000");
-	add_map_entry(0x00000004, "00000004", "Interlace 2X - 00000004\nFixes 2x bigger screen (Gradius 3).");
+	
+	add_map_entry(GAME_TEXTURETARGS, "00000001", "Tex Target checking - 00000001\nLego Racers");
+	add_map_entry(GAME_AUTORESET, "00000002", "Auto reset targs - 00000002\nShadow Hearts, Samurai Warriors.  Use when game is slow and toggling AA fixes it.");
+	add_map_entry(GAME_NOTARGETRESOLVE, "00000010", "No target resolves - 00000010\nStops all resolving of targets.  Try this first for really slow games. Dark Cloud 1");
+	add_map_entry(GAME_EXACTCOLOR, "00000020", "Exact color testing - 00000020\nFixes overbright or shadow/black artifacts (Crash 'n Burn).");
+	add_map_entry(GAME_NOCOLORCLAMP, "00000040", "No color clamping - 00000040\nSpeeds up games, but might be too bright or too dim.");
+	add_map_entry(GAME_NOALPHAFAIL, "00000100", "Alpha Fail hack - 00000100\nFor Sonic Unleashed, Shadow the Hedgehog, Ghost in the Shell. Remove vertical stripes or other coloring artefacts. Break Persona 4 and MGS3");
+	add_map_entry(GAME_NODEPTHUPDATE, "00000200", "Disable depth updates - 00000200");
+	add_map_entry(GAME_QUICKRESOLVE1, "00000400", "Resolve Hack #1 - 00000400\nKingdom Hearts.  Speeds some games.");
+	add_map_entry(GAME_NOQUICKRESOLVE, "00000800", "Resolve Hack #2 - 00000800\nShadow Hearts, Urbz. Destroy FFX");
+	add_map_entry(GAME_NOTARGETCLUT, "00001000", "No target CLUT - 00001000\nResident Evil 4, or foggy scenes.");
+	add_map_entry(GAME_NOSTENCIL, "00002000", "Disable stencil buffer - 00002000\nUsually safe to do for simple scenes. Harvest Moon");
+	add_map_entry(GAME_NODEPTHRESOLVE, "00008000", "No depth resolve - 00008000\nMight give z buffer artifacts.");
+	add_map_entry(GAME_FULL16BITRES, "00010000", "Full 16 bit resolution - 00010000\nUse when half the screen is missing.");
+	add_map_entry(GAME_RESOLVEPROMOTED, "00020000", "Resolve Hack #3 - 00020000\nNeopets");
+	add_map_entry(GAME_FASTUPDATE, "00040000", "Fast Update - 00040000\nOkami. Speeds some games. Needs for Sonic Unleashed");
+	add_map_entry(GAME_NOALPHATEST, "00080000", "Disable alpha testing - 00080000");
+	add_map_entry(GAME_DISABLEMRTDEPTH, "00100000", "Enable Multiple RTs - 00100000");
+	add_map_entry(GAME_XENOSPECHACK, "01000000", "Specular Highlights - 01000000\nMakes Xenosaga and Okage graphics faster by removing highlights");
+	add_map_entry(GAME_PARTIALPOINTERS, "02000000", "Partial targets - 02000000");
+	add_map_entry(GAME_PARTIALDEPTH, "04000000", "Partial depth - 04000000");
+	add_map_entry(GAME_GUSTHACK, "10000000", "Gust fix, made gustgame more clean and fast - 10000000");
+	add_map_entry(GAME_NOLOGZ, "20000000", "No logarithmic Z, could decrease number of Z-artefacts - 20000000");
+	add_map_entry(GAME_INTERLACE2X, "00000004", "Interlace 2X - 00000004\nFixes 2x bigger screen (Gradius 3).");
 
 	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
 	{

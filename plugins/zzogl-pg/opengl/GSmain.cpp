@@ -57,7 +57,7 @@ u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 
-static BOOL g_bHidden = 0;
+//static BOOL g_bHidden = 0;
 int g_GameSettings = 0;
 int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
@@ -637,7 +637,7 @@ void ProcessMessages()
 						}
 						else {
 							SendMessage(GShwnd, WM_DESTROY, 0, 0);
-							g_bHidden = 1;
+							//g_bHidden = 1;
 							return;
 						}
 					}

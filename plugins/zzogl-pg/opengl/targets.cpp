@@ -48,7 +48,10 @@ extern u32 s_uFramebuffer;
 #	define INC_RESOLVE() ++g_nResolve
 #endif
 
+#ifdef DEVBUILD
 static int g_bSaveResolved = 0;
+#endif
+
 extern int s_nResolved;
 extern u32 g_nResolve;
 extern bool g_bSaveTrans;
@@ -1241,10 +1244,10 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			// its data instead of resolving then updating (ffx2). Do not change the original target.
 			for(MAPTARGETS::iterator it = mapTargets.begin(); it != mapTargets.end(); ++it) {
 				if( it->second->start < end && start < it->second->end ) {
-						if((g_GameSettings&GAME_FASTUPDATE) ||
-							(frame.fbw == it->second->fbw) && 
+						if ((g_GameSettings&GAME_FASTUPDATE) ||
+							((frame.fbw == it->second->fbw) && 
 							// check depth targets only if partialdepth option
-							((it->second->fbp != frame.fbp) || ((g_GameSettings & GAME_PARTIALDEPTH) && (opts & CRenderTargetMngr::TO_DepthBuffer))))
+							((it->second->fbp != frame.fbp) || ((g_GameSettings & GAME_PARTIALDEPTH) && (opts & CRenderTargetMngr::TO_DepthBuffer)))))
 						{
 							if( besttarg != 0 ) {
 								besttarg = 0;

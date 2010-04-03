@@ -46,6 +46,7 @@ void SaveConfig()
 
 void LoadConfig() 
 {
+	int err = 0;
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;
@@ -63,12 +64,12 @@ void LoadConfig()
 		SaveConfig();//save and return
 		return;
 	}
-	fscanf(f, "interlace = %hhx\n", &conf.interlace);
-	fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
-	fscanf(f, "options = %x\n", &conf.options);//u32
-	fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
-	fscanf(f, "aliasing = %hhx\n", &conf.aa);
-	fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
+	err = fscanf(f, "interlace = %hhx\n", &conf.interlace);
+	err = fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
+	err = fscanf(f, "options = %x\n", &conf.options);//u32
+	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
+	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
+	err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
 	fclose(f);
 
 	// filter bad files

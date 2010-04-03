@@ -19,7 +19,9 @@
 #ifndef __ZEROGS__H
 #define __ZEROGS__H
 
+#ifdef _MSC_VER
 #pragma warning(disable:4200) // nonstandard extension used : zero-sized array in struct/union
+#endif
 
 // ----------------------------- Includes
 #include "PS2Etypes.h"

@@ -266,6 +266,7 @@ struct TGA_HEADER
 bool 
 ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 {
+	int err = 0;
 	TGA_HEADER hdr;
 	FILE* f = fopen(filename, "wb");
 	if (f == NULL)
@@ -280,8 +281,8 @@ ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 	hdr.height = height;
 	hdr.descriptor |= 8|(1<<5); 	// 8bit alpha, flip vertical
 
-	fwrite(&hdr, sizeof(hdr), 1, f);
-	fwrite(pdata, width * height * 4, 1, f);
+	err = fwrite(&hdr, sizeof(hdr), 1, f);
+	err = fwrite(pdata, width * height * 4, 1, f);
 	fclose(f);
 	return true;
 }
