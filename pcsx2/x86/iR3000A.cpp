@@ -75,6 +75,7 @@ static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 
 static u32 s_nEndBlock = 0; // what psxpc the current block ends
+static bool s_nBlockFF;
 
 static u32 s_saveConstRegs[32];
 static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0;
@@ -1006,30 +1007,53 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 {
 	u32 blockCycles = psxScaleBlockCycles();
 
-	MOV32MtoR(ECX, (uptr)&psxRegs.cycle);
-	MOV32MtoR(EAX, (uptr)&psxCycleEE);
-	ADD32ItoR(ECX, blockCycles);
-	SUB32ItoR(EAX, blockCycles*8);
-	MOV32RtoM((uptr)&psxRegs.cycle, ECX); // update cycles
-	MOV32RtoM((uptr)&psxCycleEE, EAX);
-
-	// jump if psxCycleEE <= 0  (iop's timeslice timed out, so time to return control to the EE)
-	xJLE( iopExitRecompiledCode );
-
-	// check if an event is pending
-	SUB32MtoR(ECX, (uptr)&g_psxNextBranchCycle);
-	j8Ptr[0] = JS8( 0 );
-
-	CALLFunc((uptr)psxBranchTest);
-
-	if( newpc != 0xffffffff )
+	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF)
 	{
-		CMP32ItoM((uptr)&psxRegs.pc, newpc);
-		JNE32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 6 ));
-	}
+		xMOV(eax, ptr32[&psxRegs.cycle]);
+		xMOV(ecx, eax);
+		xMOV(edx, ptr32[&psxCycleEE]);
+		xADD(edx, 7);
+		xSHR(edx, 3);
+		xADD(eax, edx);
+		xCMP(eax, ptr32[&g_psxNextBranchCycle]);
+		xCMOVNS(eax, ptr32[&g_psxNextBranchCycle]);
+		xMOV(ptr32[&psxRegs.cycle], eax);
+		xSUB(eax, ecx);
+		xSHL(eax, 3);
+		xSUB(ptr32[&psxCycleEE], eax);
+		xJLE(iopExitRecompiledCode);
 
-	// Skip branch jump target here:
-	x86SetJ8( j8Ptr[0] );
+		xCALL(psxBranchTest);
+
+		if( newpc != 0xffffffff )
+		{
+			xCMP(ptr32[&psxRegs.pc], newpc);
+			xJNE(iopDispatcherReg);
+		}
+	}
+	else
+	{
+		xMOV(eax, ptr32[&psxRegs.cycle]);
+		xADD(eax, blockCycles);
+		xMOV(ptr32[&psxRegs.cycle], eax); // update cycles
+
+		// jump if psxCycleEE <= 0  (iop's timeslice timed out, so time to return control to the EE)
+		xSUB(ptr32[&psxCycleEE], blockCycles*8);
+		xJLE(iopExitRecompiledCode);
+
+		// check if an event is pending
+		xSUB(eax, ptr32[&g_psxNextBranchCycle]);
+		xForwardJS<u8> nointerruptpending;
+
+		xCALL(psxBranchTest);
+
+		if( newpc != 0xffffffff ) {
+			xCMP(ptr32[&psxRegs.pc], newpc);
+			xJNE(iopDispatcherReg);
+		}
+
+		nointerruptpending.SetTarget();
+	}
 }
 
 #if 0
@@ -1152,7 +1176,7 @@ static void printfn()
 static void __fastcall iopRecRecompile( const u32 startpc )
 {
 	u32 i;
-	u32 branchTo;
+	u32 branchTo = -1;
 	u32 willbranch3 = 0;
 
 	if( IsDebugBuild && (psxdump & 4) )
@@ -1238,6 +1262,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 
 			case 2: // J
 			case 3: // JAL
+				branchTo = _Target_ << 2 | (i + 4) & 0xf0000000;
 				s_nEndBlock = i + 8;
 				goto StartRecomp;
 
@@ -1255,6 +1280,21 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 	}
 
 StartRecomp:
+
+	s_nBlockFF = false;
+	if (branchTo == startpc) {
+		s_nBlockFF = true;
+		for (i = startpc; i < s_nEndBlock; i += 4) {
+			if (i != s_nEndBlock - 8) {
+				switch (iopMemRead32(i)) {
+					case 0: // nop
+						break;
+					default:
+						s_nBlockFF = false;
+				}
+			}
+		}
+	}
 
 	// rec info //
 	{
