@@ -2043,7 +2043,8 @@ bool GSC_BullyCC(const GSFrameInfo& fi, int& skip)
 }
 bool GSC_SoTC(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	// Not needed anymore? What did it fix anyway? (rama)
+	/*if(skip == 0)
 	{
 		if(fi.TME && fi.FBP == 0x02b80 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x01e80 && fi.TPSM == PSM_PSMCT24)
 		{
@@ -2057,7 +2058,7 @@ bool GSC_SoTC(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 8;
 		}
-	}
+	}*/
 
 	return true;
 }
