@@ -456,7 +456,7 @@ struct Pcsx2Config
 			bool
 				IopCycleRate_X2	:1,		// enables the x2 multiplier of the IOP cyclerate
 				IntcStat		:1,		// tells Pcsx2 to fast-forward through intc_stat waits.
-				BIFC0			:1,		// enables BIFC0 detection and fast-forwarding
+				WaitLoop		:1,		// enables constant loop detection and fast-forwarding
 				vuFlagHack		:1,		// microVU specific flag hack; Can cause Infinite loops, SPS, etc...
 				vuMinMax		:1;		// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
 		BITFIELD_END

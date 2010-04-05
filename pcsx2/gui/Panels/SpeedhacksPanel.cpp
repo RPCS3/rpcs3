@@ -192,8 +192,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_intc = new pxCheckBox( miscHacksPanel, _("Enable INTC Spin Detection"),
 		_("Huge speedup for some games, with almost no compatibility side effects. [Recommended]") );
 
-	m_check_b1fc0 = new pxCheckBox( miscHacksPanel, _("Enable BIFC0 Spin Detection"),
-		_("Moderate speedup for some games, with no known side effects. [Recommended]" ) );
+	m_check_waitloop = new pxCheckBox( miscHacksPanel, _("Enable Wait Loop Detection"),
+		_("Moderate speedup for some games, with no known side effects. [Recommended???]" ) );
 	
 	m_check_IOPx2 = new pxCheckBox( miscHacksPanel, _("IOP x2 cycle rate hack"),
 		_("Small Speedup and works well with most games; may cause some games to hang during startup.") );
@@ -204,10 +204,11 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		L"RPG titles. Games that do not use this method of vsync will see little or no speedup from this hack."
 	) );
 
-	m_check_b1fc0->SetToolTip( pxE( ".Tooltips:Speedhacks:BIFC0",
-		L"This hack works especially well for Final Fantasy X and Kingdom Hearts.  BIFC0 is the address of a specific block of "
-		L"code in the EE kernel that's run repeatedly when the EE is waiting for the IOP to complete a task.  This hack detects "
-		L"that and responds by fast-forwarding the EE until the IOP signals that the task is complete."
+	m_check_waitloop->SetToolTip( pxE( ".Tooltips:Speedhacks:BIFC0",
+		L"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this hack attempts to "
+		L"detect loops whose bodies are guaranteed to result in the same machine state for every iteration "
+		L"until a scheduled event triggers emulation of another unit.  After a single iteration of such loops, "
+		L"we advance to the time of the next event or the end of the processor's timeslice, whichever comes first."
 	) );
 
 	m_check_IOPx2->SetToolTip( pxE( ".Tooltips:Speedhacks:IOPx2",
@@ -233,7 +234,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	*vuHacksPanel	+= m_check_vuMinMax;
 
 	*miscHacksPanel	+= m_check_intc;
-	*miscHacksPanel	+= m_check_b1fc0;
+	*miscHacksPanel	+= m_check_waitloop;
 	*miscHacksPanel	+= m_check_IOPx2;
 
 	*left	+= eeSliderPanel	| StdExpand();
@@ -303,7 +304,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Confi
 	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
 	m_check_vuMinMax	->SetValue(opts.vuMinMax);
 	m_check_intc		->SetValue(opts.IntcStat);
-	m_check_b1fc0		->SetValue(opts.BIFC0);
+	m_check_waitloop	->SetValue(opts.WaitLoop);
 	m_check_IOPx2		->SetValue(opts.IopCycleRate_X2);
 	
 	EnableStuff();
@@ -321,7 +322,7 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.EECycleRate		= m_slider_eecycle->GetValue()-1;
 	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 
-	opts.BIFC0				= m_check_b1fc0->GetValue();
+	opts.WaitLoop			= m_check_waitloop->GetValue();
 	opts.IopCycleRate_X2	= m_check_IOPx2->GetValue();
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();

@@ -73,6 +73,7 @@ static u32 s_nInstCacheSize = 0;
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 u32 s_nEndBlock = 0; // what pc the current block ends
+u32 s_branchTo;
 static bool s_nBlockFF;
 
 // save states for branches
@@ -973,6 +974,7 @@ void SetBranchImm( u32 imm )
 
 	// end the current block
 	iFlushCall(FLUSH_EVERYTHING);
+	xMOV(ptr32[&cpuRegs.pc], imm);
 	iBranchTest(imm);
 }
 
@@ -1132,26 +1134,18 @@ static void iBranchTest(u32 newpc)
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
 
-	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF)
+	if (EmuConfig.Speedhacks.WaitLoop && s_nBlockFF && newpc == s_branchTo)
 	{
 		xMOV(eax, ptr32[&g_nextBranchCycle]);
 		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
-		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
+		xCMOVS(eax, ptr32[&cpuRegs.cycle]);
 		xMOV(ptr32[&cpuRegs.cycle], eax);
 
 		xJMP( DispatcherEvent );
 	}
 	else
 	{
-		// Optimization -- we need to load cpuRegs.pc on static block links, but doing it inside
-		// the if() block below (it would be paired with recBlocks.Link) breaks the sub/jcc
-		// pairing that modern CPUs optimize (applies to all P4+ and AMD X2+ CPUs).  So let's do
-		// it up here instead. :D
-
-		if( newpc != 0xffffffff )
-			xMOV( ptr32[&cpuRegs.pc], newpc );
-
 		xMOV(eax, &cpuRegs.cycle);
 		xADD(eax, eeScaleBlockCycles());
 		xMOV(&cpuRegs.cycle, eax); // update cycles
@@ -1367,7 +1361,6 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 static void __fastcall recRecompile( const u32 startpc )
 {
 	u32 i = 0;
-	u32 branchTo;
 	u32 willbranch3 = 0;
 	u32 usecop2;
 
@@ -1388,10 +1381,6 @@ static void __fastcall recRecompile( const u32 startpc )
 
 	xSetPtr( recPtr );
 	recPtr = xGetAlignedCallTarget();
-
-	s_nBlockFF = false;
-	if (HWADDR(startpc) == 0x81fc0)
-		s_nBlockFF = true;
 
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
@@ -1432,6 +1421,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
+	s_branchTo = -1;
 
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
@@ -1470,8 +1460,8 @@ static void __fastcall recRecompile( const u32 startpc )
 
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
 					// branches
-					branchTo = _Imm_ * 4 + i + 4;
-					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
+					s_branchTo = _Imm_ * 4 + i + 4;
+					if( s_branchTo > startpc && s_branchTo < i ) s_nEndBlock = s_branchTo;
 					else  s_nEndBlock = i+8;
 
 					goto StartRecomp;
@@ -1480,14 +1470,15 @@ static void __fastcall recRecompile( const u32 startpc )
 
 			case 2: // J
 			case 3: // JAL
+				s_branchTo = _Target_ << 2 | (i + 4) & 0xf0000000;
 				s_nEndBlock = i + 8;
 				goto StartRecomp;
 
 			// branches
 			case 4: case 5: case 6: case 7:
 			case 20: case 21: case 22: case 23:
-				branchTo = _Imm_ * 4 + i + 4;
-				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
+				s_branchTo = _Imm_ * 4 + i + 4;
+				if( s_branchTo > startpc && s_branchTo < i ) s_nEndBlock = s_branchTo;
 				else  s_nEndBlock = i+8;
 
 				goto StartRecomp;
@@ -1507,8 +1498,8 @@ static void __fastcall recRecompile( const u32 startpc )
 				if( _Rs_ == 8 ) {
 					// BC1F, BC1T, BC1FL, BC1TL
 					// BC2F, BC2T, BC2FL, BC2TL
-					branchTo = _Imm_ * 4 + i + 4;
-					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
+					s_branchTo = _Imm_ * 4 + i + 4;
+					if( s_branchTo > startpc && s_branchTo < i ) s_nEndBlock = s_branchTo;
 					else  s_nEndBlock = i+8;
 
 					goto StartRecomp;
@@ -1520,6 +1511,86 @@ static void __fastcall recRecompile( const u32 startpc )
 	}
 
 StartRecomp:
+
+	// The idea here is that as long as a loop doesn't write to a register it's already read
+	// (excepting registers initialised with constants or memory loads) or use any instructions
+	// which alter the machine state apart from registers, it will do the same thing on every
+	// iteration.
+	// TODO: special handling for counting loops.  God of war wastes time in a loop which just
+	// counts to some large number and does nothing else, many other games use a counter as a
+	// timeout on a register read.  AFAICS the only way to optimise this for non-const cases
+	// without a significant loss in cycle accuracy is with a division, but games would probably
+	// be happy with time wasting loops completing in 0 cycles and timeouts waiting forever.
+	s_nBlockFF = false;
+	if (s_branchTo == startpc) {
+		s_nBlockFF = true;
+
+		u32 reads = 0, loads = 1;
+
+		for (i = startpc; i < s_nEndBlock; i += 4) {
+			if (i == s_nEndBlock - 8)
+				continue;
+			cpuRegs.code = *(u32*)PSM(i);
+			// nop
+			if (cpuRegs.code == 0)
+				continue;
+			// cache, sync
+			else if (_Opcode_ == 057 || _Opcode_ == 0 && _Funct_ == 013)
+				continue;
+			// imm arithmetic
+			else if ((_Opcode_ & 070) == 010 || (_Opcode_ & 076) == 030)
+			{
+				if (loads & 1 << _Rs_) {
+					loads |= 1 << _Rt_;
+					continue;
+				}
+				else
+					reads |= 1 << _Rs_;
+				if (reads & 1 << _Rt_) {
+					s_nBlockFF = false;
+					break;
+				}
+			}
+			// common register arithmetic instructions
+			else if (_Opcode_ == 0 && (_Funct_ & 060) == 040 && (_Funct_ & 076) != 050)
+			{
+				if (loads & 1 << _Rs_ && loads & 1 << _Rt_) {
+					loads |= 1 << _Rd_;
+					continue;
+				}
+				else
+					reads |= 1 << _Rs_ | 1 << _Rt_;
+				if (reads & 1 << _Rd_) {
+					s_nBlockFF = false;
+					break;
+				}
+			}
+			// loads
+			else if ((_Opcode_ & 070) == 040 || (_Opcode_ & 076) == 032 || _Opcode_ == 067)
+			{
+				if (loads & 1 << _Rs_) {
+					loads |= 1 << _Rt_;
+					continue;
+				}
+				else
+					reads |= 1 << _Rs_;
+				if (reads & 1 << _Rt_) {
+					s_nBlockFF = false;
+					break;
+				}
+			}
+			// mfc*, cfc*
+			else if ((_Opcode_ & 074) == 020 && _Rs_ < 4)
+			{
+				loads |= 1 << _Rt_;
+			}
+			else
+			{
+				s_nBlockFF = false;
+				break;
+			}
+		}
+	}
 
 	// rec info //
 	{
@@ -1753,7 +1824,7 @@ StartRecomp:
 
 			int numinsts = (pc - startpc) / 4;
 			if( numinsts > 6 )
-				iBranchTest(pc);
+				SetBranchImm(pc);
 			else
 			{
 				xMOV( ptr32[&cpuRegs.pc], pc );

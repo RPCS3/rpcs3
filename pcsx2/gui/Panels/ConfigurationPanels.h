@@ -293,7 +293,7 @@ namespace Panels
 		pxStaticText*	m_msg_vustealer;
 
 		pxCheckBox*		m_check_intc;
-		pxCheckBox*		m_check_b1fc0;
+		pxCheckBox*		m_check_waitloop;
 		pxCheckBox*		m_check_IOPx2;
 		pxCheckBox*		m_check_vuFlagHack;
 		pxCheckBox*		m_check_vuMinMax;

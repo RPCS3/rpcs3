@@ -75,6 +75,7 @@ static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 
 static u32 s_nEndBlock = 0; // what psxpc the current block ends
+static u32 s_branchTo;
 static bool s_nBlockFF;
 
 static u32 s_saveConstRegs[32];
@@ -1007,7 +1008,7 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 {
 	u32 blockCycles = psxScaleBlockCycles();
 
-	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF)
+	if (EmuConfig.Speedhacks.WaitLoop && s_nBlockFF && newpc == s_branchTo)
 	{
 		xMOV(eax, ptr32[&psxRegs.cycle]);
 		xMOV(ecx, eax);
@@ -1176,7 +1177,6 @@ static void printfn()
 static void __fastcall iopRecRecompile( const u32 startpc )
 {
 	u32 i;
-	u32 branchTo = -1;
 	u32 willbranch3 = 0;
 
 	if( IsDebugBuild && (psxdump & 4) )
@@ -1224,6 +1224,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
+	s_branchTo = -1;
 
 	while(1) {
 		BASEBLOCK* pblock = PSX_GETBLOCK(i);
@@ -1251,8 +1252,8 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 
 				if( _Rt_ == 0 || _Rt_ == 1 || _Rt_ == 16 || _Rt_ == 17 ) {
 
-					branchTo = _Imm_ * 4 + i + 4;
-					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
+					s_branchTo = _Imm_ * 4 + i + 4;
+					if( s_branchTo > startpc && s_branchTo < i ) s_nEndBlock = s_branchTo;
 					else  s_nEndBlock = i+8;
 
 					goto StartRecomp;
@@ -1262,15 +1263,15 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 
 			case 2: // J
 			case 3: // JAL
-				branchTo = _Target_ << 2 | (i + 4) & 0xf0000000;
+				s_branchTo = _Target_ << 2 | (i + 4) & 0xf0000000;
 				s_nEndBlock = i + 8;
 				goto StartRecomp;
 
 			// branches
 			case 4: case 5: case 6: case 7:
 
-				branchTo = _Imm_ * 4 + i + 4;
-				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
+				s_branchTo = _Imm_ * 4 + i + 4;
+				if( s_branchTo > startpc && s_branchTo < i ) s_nEndBlock = s_branchTo;
 				else  s_nEndBlock = i+8;
 
 				goto StartRecomp;
@@ -1282,7 +1283,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 StartRecomp:
 
 	s_nBlockFF = false;
-	if (branchTo == startpc) {
+	if (s_branchTo == startpc) {
 		s_nBlockFF = true;
 		for (i = startpc; i < s_nEndBlock; i += 4) {
 			if (i != s_nEndBlock - 8) {
