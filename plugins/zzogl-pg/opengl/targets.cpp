@@ -289,7 +289,7 @@ void ZeroGS::CRenderTarget::Resolve()
 
 		GL_REPORT_ERRORD();
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if defined(DEVBUILD)
 		if( g_bSaveResolved ) {
 			SaveTexture("resolved.tga", GL_TEXTURE_RECTANGLE_NV, ptex, RW(fbw), RH(fbh));
 			g_bSaveResolved = 0;
@@ -311,7 +311,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 		// flush if necessary
 		FlushIfNecesary ( this ) ;
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if defined(DEVBUILD)
 		if( g_bSaveResolved ) {
 			SaveTexture("resolved.tga", GL_TEXTURE_RECTANGLE_NV, ptex, RW(fbw), RH(fbh));
 			g_bSaveResolved = 0;
