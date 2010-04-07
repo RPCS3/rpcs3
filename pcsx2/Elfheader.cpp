@@ -25,7 +25,7 @@ extern void InitPatch(const wxString& crc);
 u32 ElfCRC;
 
 // uncomment this to enable pcsx2hostfs loading when using "load elf"
-#define USE_HOSTFS
+//#define USE_HOSTFS
 
 #if 0
 // fixme: ELF command line option system.

@@ -45,7 +45,6 @@ static void mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool mod
 
 	//-------------------------Check for Signed flags------------------------------
 
-	// The following code makes sure the Signed Bit isn't set with Negative Zero
 	SSE_MOVMSKPS_XMM_to_R32(mReg,  regT2); // Move the Sign Bits of the t2reg
 	SSE_XORPS_XMM_to_XMM   (regT1, regT1); // Clear regT1
 	SSE_CMPEQPS_XMM_to_XMM (regT1, regT2); // Set all F's if each vector is zero

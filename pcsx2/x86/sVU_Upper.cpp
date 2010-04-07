@@ -250,13 +250,11 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 
 		//-------------------------Check for Signed flags------------------------------
 
-		// The following code makes sure the Signed Bit isn't set with Negative Zero
 		SSE_XORPS_XMM_to_XMM(t1reg, t1reg); // Clear t1reg
 		SSE_CMPEQPS_XMM_to_XMM(t1reg, reg); // Set all F's if each vector is zero
 		SSE_MOVMSKPS_XMM_to_R32(x86temp, t1reg); // Used for Zero Flag Calculation
-		SSE_ANDNPS_XMM_to_XMM(t1reg, reg);
 
-		SSE_MOVMSKPS_XMM_to_R32(EAX, t1reg); // Move the sign bits of the t1reg
+		SSE_MOVMSKPS_XMM_to_R32(EAX, reg); // Move the sign bits of the t1reg
 
 		AND16ItoR(EAX, _X_Y_Z_W );  // Grab "Is Signed" bits from the previous calculation
 		pjmp = JZ8(0); // Skip if none are
