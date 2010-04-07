@@ -46,11 +46,10 @@ static void mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool mod
 	//-------------------------Check for Signed flags------------------------------
 
 	// The following code makes sure the Signed Bit isn't set with Negative Zero
-	SSE_XORPS_XMM_to_XMM   (regT1, regT1); // Clear regT2
+	SSE_MOVMSKPS_XMM_to_R32(mReg,  regT2); // Move the Sign Bits of the t2reg
+	SSE_XORPS_XMM_to_XMM   (regT1, regT1); // Clear regT1
 	SSE_CMPEQPS_XMM_to_XMM (regT1, regT2); // Set all F's if each vector is zero
 	SSE_MOVMSKPS_XMM_to_R32(gprT2, regT1); // Used for Zero Flag Calculation
-	SSE_ANDNPS_XMM_to_XMM  (regT1, regT2); // Used for Sign Flag Calculation
-	SSE_MOVMSKPS_XMM_to_R32(mReg,  regT1); // Move the Sign Bits of the t1reg
 
 	AND32ItoR(mReg, AND_XYZW);	// Grab "Is Signed" bits from the previous calculation
 	SHL32ItoR(mReg, 4 + ADD_XYZW);
