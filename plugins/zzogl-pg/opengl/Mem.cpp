@@ -92,10 +92,12 @@ int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 		\
 		if( ((gs.imageEndX-gs.trxpos.dx)%widthlimit) || ((gs.imageEndX-tempX)%widthlimit) ) { \
 			/* transmit with a width of 1 */ \
-			if (!TransmitHostLocalY##TransSfx<T>(wp, (1 + (DSTPSM == 0x14)), endY, pbuf)) goto End; \
+			pbuf = TransmitHostLocalY##TransSfx<T>(wp, (1 + (DSTPSM == 0x14)), endY, pbuf);\
+			if (pbuf == NULL) goto End; \
 		} \
 		else { \
-			if (!TransmitHostLocalY##TransSfx<T>(wp, widthlimit, endY, pbuf)) goto End; \
+		pbuf = TransmitHostLocalY##TransSfx<T>(wp, widthlimit, endY, pbuf);\
+			if (pbuf == NULL) goto End; \
 		} \
 		\
 		if( nSize == 0 || tempY == gs.imageEndY ) \
@@ -132,7 +134,8 @@ int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 		\
 		/* transfer the rest */ \
 		if( alignedX < gs.imageEndX ) { \
-			if (!TransmitHostLocalX##TransSfx<T>(wp, widthlimit, blockheight, alignedX, pbuf)) goto End; \
+			pbuf = TransmitHostLocalX##TransSfx<T>(wp, widthlimit, blockheight, alignedX, pbuf);\
+			if (pbuf == NULL) goto End; \
 			pbuf -= TransPitch(alignedX-gs.trxpos.dx, transfersize)/TSize; \
 		} \
 		else pbuf += (blockheight-1)* TransPitch(pitch, transfersize)/TSize; \
@@ -140,7 +143,8 @@ int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
 	} \
 	\
 	if( TransPitch(nSize, transfersize)/4 > 0 ) { \
-		if (!TransmitHostLocalY##TransSfx<T>(wp, widthlimit, gs.imageEndY, pbuf)) goto End; \
+	pbuf = TransmitHostLocalY##TransSfx<T>(wp, widthlimit, gs.imageEndY, pbuf);\
+		if (pbuf == NULL) goto End; \
 		/* sometimes wrong sizes are sent (tekken tag) */ \
 		assert( gs.imageTransfer == -1 || TransPitch(nSize, transfersize)/4 <= 2 ); \
 	} \
@@ -166,7 +170,7 @@ End: \
 
 // Get ready for the same function 3 times. *sigh*
 template <class T>
-static __forceinline bool AlignOnBlockBoundry_(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
+static __forceinline const T* AlignOnBlockBoundry_(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
 {
 	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
@@ -207,16 +211,17 @@ static __forceinline bool AlignOnBlockBoundry_(TransferData data, TransferFuncts
 		} 
 		
 		// The only line that's different in these 3 functions.
-		if (!TransmitHostLocalY_<T>(fun.wp, transwidth, endY, pbuf)) return false;
+		pbuf = TransmitHostLocalY_<T>(fun.wp, transwidth, endY, pbuf);
+		if (pbuf == NULL) return NULL;
 		
-		if( nSize == 0 || tempY == gs.imageEndY ) return false; 
+		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
 	} 
-	return true;
+	return pbuf;
 }
 
 
 template <class T>
-static __forceinline bool AlignOnBlockBoundry_4(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
+static __forceinline const T* AlignOnBlockBoundry_4(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
 {
 	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
@@ -257,16 +262,17 @@ static __forceinline bool AlignOnBlockBoundry_4(TransferData data, TransferFunct
 		} 
 		
 		// The only line that's different in these 3 functions.
-		if (!TransmitHostLocalY_4<T>(fun.wp, transwidth, endY, pbuf)) return false;
+		pbuf = TransmitHostLocalY_4<T>(fun.wp, transwidth, endY, pbuf);
+		if (pbuf == NULL) return NULL;
 		
-		if( nSize == 0 || tempY == gs.imageEndY ) return false; 
+		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
 	} 
-	return true;
+	return pbuf;
 }
 
 
 template <class T>
-static __forceinline bool AlignOnBlockBoundry_24(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
+static __forceinline const T* AlignOnBlockBoundry_24(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
 {
 	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
@@ -307,16 +313,17 @@ static __forceinline bool AlignOnBlockBoundry_24(TransferData data, TransferFunc
 		} 
 		
 		// The only line that's different in these 3 functions.
-		if (!TransmitHostLocalY_24<T>(fun.wp, transwidth, endY, pbuf)) return false;
+		pbuf = TransmitHostLocalY_24<T>(fun.wp, transwidth, endY, pbuf);
+		if (pbuf == NULL) return NULL;
 		
-		if( nSize == 0 || tempY == gs.imageEndY ) return false; 
+		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
 	} 
-	return true;
+	return pbuf;
 }
 
 // Here we go again. 3 nearly identical functions.
 template <class T>
-static __forceinline bool TransferAligningToBlocks_(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
+static __forceinline const T* TransferAligningToBlocks_(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
 {
 	bool bAligned;
 	const u32 TSize = sizeof(T);
@@ -348,7 +355,8 @@ static __forceinline bool TransferAligningToBlocks_(TransferData data, TransferF
 		if( alignedPt.x < gs.imageEndX ) 
 		{ 
 			// The only line that's different in these 3 functions.
-			if (!TransmitHostLocalX_<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf)) return false;
+			pbuf = TransmitHostLocalX_<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
+			if (pbuf == NULL) return NULL;
 			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
 		} 
 		else 
@@ -358,11 +366,11 @@ static __forceinline bool TransferAligningToBlocks_(TransferData data, TransferF
 		
 		tempX = gs.trxpos.dx; 
 	} 
-	return true;
+	return pbuf;
 }
 
 template <class T>
-static __forceinline bool TransferAligningToBlocks_4(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
+static __forceinline const T* TransferAligningToBlocks_4(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
 {
 	bool bAligned;
 	const u32 TSize = sizeof(T);
@@ -394,7 +402,8 @@ static __forceinline bool TransferAligningToBlocks_4(TransferData data, Transfer
 		if( alignedPt.x < gs.imageEndX ) 
 		{ 
 			// The only line that's different in these 3 functions.
-			if (!TransmitHostLocalX_4<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf)) return false;
+			pbuf = TransmitHostLocalX_4<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
+			if (pbuf == NULL) return NULL;
 			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
 		} 
 		else 
@@ -404,11 +413,11 @@ static __forceinline bool TransferAligningToBlocks_4(TransferData data, Transfer
 		
 		tempX = gs.trxpos.dx; 
 	} 
-	return true;
+	return pbuf;
 }
 
 template <class T>
-static __forceinline bool TransferAligningToBlocks_24(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
+static __forceinline const T* TransferAligningToBlocks_24(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
 {
 	bool bAligned;
 	const u32 TSize = sizeof(T);
@@ -440,7 +449,8 @@ static __forceinline bool TransferAligningToBlocks_24(TransferData data, Transfe
 		if( alignedPt.x < gs.imageEndX ) 
 		{ 
 			// The only line that's different in these 3 functions.
-			if (!TransmitHostLocalX_24<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf)) return false;
+			pbuf = TransmitHostLocalX_24<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
+			if (pbuf == NULL) return NULL;
 			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
 		} 
 		else 
@@ -450,7 +460,7 @@ static __forceinline bool TransferAligningToBlocks_24(TransferData data, Transfe
 		
 		tempX = gs.trxpos.dx; 
 	} 
-	return true;
+	return pbuf;
 }
 
 // Only one of this function, since no TransmitHostLocalX_ or TransmitHostLocalY_'s were involved.
@@ -495,9 +505,11 @@ static __forceinline int RealTransfer_(TransferData data, TransferFuncts fun, co
 	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
 	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
 	
-	if (!AlignOnBlockBoundry_<T>(data, fun, alignedPt, endY, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = AlignOnBlockBoundry_<T>(data, fun, alignedPt, endY, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
-	if (!TransferAligningToBlocks_<T>(data, fun, alignedPt, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = TransferAligningToBlocks_<T>(data, fun, alignedPt, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 	
 	if (TransPitch(nSize, data.transfersize)/4 > 0) 
 	{ 
@@ -529,9 +541,11 @@ static __forceinline int RealTransfer_4(TransferData data, TransferFuncts fun, c
 	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
 	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
 	
-	if (!AlignOnBlockBoundry_4<T>(data, fun, alignedPt, endY, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = AlignOnBlockBoundry_4<T>(data, fun, alignedPt, endY, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
-	if (!TransferAligningToBlocks_4<T>(data, fun, alignedPt, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = TransferAligningToBlocks_4<T>(data, fun, alignedPt, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 	
 	if (TransPitch(nSize, data.transfersize)/4 > 0) 
 	{ 
@@ -563,9 +577,11 @@ static __forceinline int RealTransfer_24(TransferData data, TransferFuncts fun, 
 	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
 	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
 	
-	if (!AlignOnBlockBoundry_24<T>(data, fun, alignedPt, endY, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = AlignOnBlockBoundry_24<T>(data, fun, alignedPt, endY, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
-	if (!TransferAligningToBlocks_24<T>(data, fun, alignedPt, pbuf)) return FinishTransfer(data, nLeftOver);
+	pbuf = TransferAligningToBlocks_24<T>(data, fun, alignedPt, pbuf);
+	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 	
 	if (TransPitch(nSize, data.transfersize)/4 > 0) 
 	{ 

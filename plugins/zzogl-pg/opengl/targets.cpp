@@ -2835,6 +2835,64 @@ void InitTransferLocalHost()
 	ResolveInRange(start, end);
 }
 
+template <class T>
+void TransferLocalHost(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart, _readPixel_0 rp)
+{
+	int i = x, j = y;
+	T* pbuf = (T*)pbyMem;
+	u32 nSize = nQWordSize*16/sizeof(T);
+	
+	for(; i < gs.imageEndY; ++i) 
+	{
+		for(; j < gs.imageEndX && nSize > 0; ++j, --nSize) 
+		{
+			*pbuf++ = rp(pstart, j%2048, i%2048, gs.srcbuf.bw);
+		}
+		
+		if( j >= gs.imageEndX ) 
+		{ 
+			assert( j == gs.imageEndX); 
+			j = gs.trxpos.sx; 
+		}
+		else 
+		{ 
+			assert( nSize == 0 ); 
+			break; 
+		}
+	}
+	
+}
+
+void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart, _readPixel_0 rp)
+{
+	int i = x, j = y;
+	u8* pbuf = (u8*)pbyMem;
+	u32 nSize = nQWordSize*16/3;
+	
+	for(; i < gs.imageEndY; ++i) 
+	{ 
+		for(; j < gs.imageEndX && nSize > 0; ++j, --nSize) 
+		{ 
+			u32 p = rp(pstart, j%2048, i%2048, gs.srcbuf.bw); 
+			pbuf[0] = (u8)p; 
+			pbuf[1] = (u8)(p>>8); 
+			pbuf[2] = (u8)(p>>16); 
+			pbuf += 3; 
+		} 
+		
+		if( j >= gs.imageEndX ) 
+			{ 
+				assert( j == gs.imageEndX); 
+				j = gs.trxpos.sx; 
+			} 
+		else 
+			{ 
+				assert( nSize == 0 ); 
+				break; 
+			} 
+	}
+}
+
 // left/right, top/down
 void TransferLocalHost(void* pbyMem, u32 nQWordSize)
 {
@@ -2844,47 +2902,17 @@ void TransferLocalHost(void* pbyMem, u32 nQWordSize)
 	u8* pstart = g_pbyGSMemory + 256*gs.srcbuf.bp;
 	int i = gs.imageY, j = gs.imageX;
 
-#define TRANSFERLOCALHOST(psm, T) { \
-	T* pbuf = (T*)pbyMem; \
-	u32 nSize = nQWordSize*16/sizeof(T); \
-	for(; i < gs.imageEndY; ++i) { \
-		for(; j < gs.imageEndX && nSize > 0; ++j, --nSize) { \
-			*pbuf++ = readPixel##psm##_0(pstart, j%2048, i%2048, gs.srcbuf.bw); \
-		} \
-		\
-		if( j >= gs.imageEndX ) { assert( j == gs.imageEndX); j = gs.trxpos.sx; } \
-		else { assert( nSize == 0 ); break; } \
-	} \
-} \
-
-#define TRANSFERLOCALHOST_24(psm) { \
-	u8* pbuf = (u8*)pbyMem; \
-	u32 nSize = nQWordSize*16/3; \
-	for(; i < gs.imageEndY; ++i) { \
-		for(; j < gs.imageEndX && nSize > 0; ++j, --nSize) { \
-			u32 p = readPixel##psm##_0(pstart, j%2048, i%2048, gs.srcbuf.bw); \
-			pbuf[0] = (u8)p; \
-			pbuf[1] = (u8)(p>>8); \
-			pbuf[2] = (u8)(p>>16); \
-			pbuf += 3; \
-		} \
-		\
-		if( j >= gs.imageEndX ) { assert( j == gs.imageEndX); j = gs.trxpos.sx; } \
-		else { assert( nSize == 0 ); break; } \
-	} \
-} \
-
 	switch (gs.srcbuf.psm) {
-		case 0x0:  TRANSFERLOCALHOST(32, u32); break;
-		case 0x1:  TRANSFERLOCALHOST_24(24); break;
-		case 0x2:  TRANSFERLOCALHOST(16, u16); break;
-		case 0xA:  TRANSFERLOCALHOST(16S, u16); break;
-		case 0x13: TRANSFERLOCALHOST(8, u8); break;
-		case 0x1B: TRANSFERLOCALHOST(8H, u8); break;
-		case 0x30: TRANSFERLOCALHOST(32Z, u32); break;
-		case 0x31: TRANSFERLOCALHOST_24(24Z); break;
-		case 0x32: TRANSFERLOCALHOST(16Z, u16); break;
-		case 0x3A: TRANSFERLOCALHOST(16SZ, u16); break;
+		case PSMCT32:  TransferLocalHost<u32>(pbyMem, nQWordSize, i, j, pstart, readPixel32_0); break;
+		case PSMCT24:  TransferLocalHost_24(pbyMem, nQWordSize, i, j, pstart, readPixel24_0); break;
+		case PSMCT16:  TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16_0); break;
+		case PSMCT16S: TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16S_0); break;
+		case PSMT8: TransferLocalHost<u8>(pbyMem, nQWordSize, i, j, pstart, readPixel8_0); break;
+		case PSMT8H: TransferLocalHost<u8>(pbyMem, nQWordSize, i, j, pstart, readPixel8H_0); break;
+		case PSMT32Z: TransferLocalHost<u32>(pbyMem, nQWordSize, i, j, pstart, readPixel32Z_0); break;
+		case PSMT24Z: TransferLocalHost_24(pbyMem, nQWordSize, i, j, pstart, readPixel24Z_0); break;
+		case PSMT16Z: TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16Z_0); break;
+		case PSMT16SZ: TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16SZ_0); break;
 		default: assert(0);
 	}
 
