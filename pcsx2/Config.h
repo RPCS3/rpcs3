@@ -426,7 +426,6 @@ struct Pcsx2Config
 		BITFIELD32()
 			bool
 				VuAddSubHack	:1,		// Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
-				IpuSliceHack	:1,		// Legacy IPU1 DMA code, breaks several games but needed for Tri-Ace ones.
 				VuClipFlagHack	:1,		// Persona games, maybe others. It's to do with the VU clip flag (again).
 				FpuCompareHack	:1,		// Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 				FpuMulHack		:1,		// Tales of Destiny hangs.
@@ -556,10 +555,9 @@ TraceLogFilters&			SetTraceConfig();
 #define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().IsRecAvailable_IOP())
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define NUM_OF_GAME_FIXES 7
+#define NUM_OF_GAME_FIXES 6
 
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
-#define CHECK_IPUSLICEHACK			(EmuConfig.Gamefixes.IpuSliceHack)  // Enables legacy code for IPU1 DMA involving "g_nDMATransfer.ACTV1".
 #define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_VUCLIPFLAGHACK		(EmuConfig.Gamefixes.VuClipFlagHack) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
 #define CHECK_FPUMULHACK			(EmuConfig.Gamefixes.FpuMulHack) // Special Fix for Tales of Destiny hangs.

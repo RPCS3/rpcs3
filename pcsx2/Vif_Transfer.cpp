@@ -74,6 +74,7 @@ _vifT void vifTransferLoop(u32* &data) {
 			iBit		   = data[0] >> 31;
 
 			vifXCode[vifX.cmd & 0x7f](0, data);
+			VIF_LOG("New Vif%d CMD, CMD = %x, iBit = %x, data %x", idx, vifX.cmd, iBit, data[0]);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;

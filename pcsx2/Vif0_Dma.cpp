@@ -152,7 +152,7 @@ __forceinline void vif0Interrupt()
 		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
 		if (vif0.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF0, 1024);
-		else CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
+		else CPU_INT(DMAC_VIF0, g_vifCycles/*VifCycleVoodoo*/);
 		return;
 	}
 
@@ -167,7 +167,7 @@ __forceinline void vif0Interrupt()
 
 		if ((vif0.inprogress & 0x1) == 0) vif0SetupTransfer();
 
-		CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF0, g_vifCycles /*VifCycleVoodoo*/);
 		return;
 	}
 

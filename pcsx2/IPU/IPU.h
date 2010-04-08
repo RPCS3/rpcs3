@@ -43,6 +43,28 @@
 #define ipumsk( src ) ( (src) & 0xff )
 #define ipucase( src ) case ipumsk(src)
 
+struct IPUStatus {
+	bool InProgress;
+	u8 DMAMode;
+	bool DMAFinished;
+	bool IRQTriggered;
+	u8 TagFollow;
+	u32 TagAddr;
+	bool stalled;
+	u8 ChainMode;
+	u32 NextMem;
+};
+
+static IPUStatus IPU1Status;
+
+#define DMA_MODE_NORMAL 0
+#define DMA_MODE_CHAIN 1
+
+#define IPU1_TAG_FOLLOW 0
+#define IPU1_TAG_QWC 1
+#define IPU1_TAG_ADDR 2
+#define IPU1_TAG_NONE 3
+
 //
 // Bitfield Structures
 //

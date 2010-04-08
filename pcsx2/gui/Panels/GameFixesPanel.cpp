@@ -39,10 +39,6 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 			_("Games that need this hack to boot:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
 		},
 		{
-			_("IPU slices Hack - for Tri-Ace game's videos (Breaks most other games!)"),
-			_("Fixes videos not playing in:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
-		},
-		{
 			_("VU Clip Flag Hack - for Persona games (SuperVU recompiler only!)"),
 			wxEmptyString
 		},

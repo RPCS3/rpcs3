@@ -78,9 +78,9 @@ void Vif1MskPath3() {
 
 	if (!vif1Regs->mskpath3) {
 		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
-		Path3progress = TRANSFER_MODE;
+		GSTransferStatus.PTH3 = TRANSFER_MODE;
 		gifRegs->stat.IMT  = false;
-		CPU_INT(DMAC_GIF, 4);
+		if(gif->chcr.STR == true) CPU_INT(DMAC_GIF, 4);
 	}
 	else gifRegs->stat.M3P = true;
 
@@ -111,7 +111,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 
 		//Should probably do this for both types of transfer seen as the GS hates taking 2 seperate chunks
 		//if (isDirectHL) {
-		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress != STOPPED_MODE))) 
+		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (GSTransferStatus.PTH3 != STOPPED_MODE))) 
 		{
 			/*if(!isDirectHL) DevCon.WriteLn("Direct: Waiting for Path3 to finish!");
 			else DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");*/
@@ -125,7 +125,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		Registers::Freeze();
 		nVifStruct&	v	 = nVif[1];
 		const int	ret	 = aMin(vif1.vifpacketsize, vif1.tag.size);
-		s32			size = ret << 2;
+		u32			size = ret << 2;
 
 		if (ret == v.vif->tag.size) { // Full Transfer
 			if (v.bSize) { // Last transfer was partial
@@ -138,13 +138,14 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 			const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, size >> 4);
 			memcpy_fast(GetMTGS().GetDataPacketPtr(), data, count << 4);
 			GetMTGS().SendDataPacket();
+			if((count << 4) < size) Console.Warning("PATH2 end early, count %x, size %x", count << 4, size);
 			vif1.tag.size = 0;
 			vif1.cmd = 0;
 			v.bSize  = 0;
 			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		}
 		else { // Partial Transfer
-			//DevCon.WriteLn("DirectHL: Partial Transfer [%d]", size);
+			DevCon.WriteLn("DirectHL: Partial Transfer [%d]", size);
 			gifRegs->stat.set_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
 			memcpy_fast(&v.buffer[v.bSize], data, size);
 			v.bSize		  += size;
@@ -180,7 +181,7 @@ vifOp(vifCode_FlushA) {
 	vif1Only();
 	pass1 {
 		// Gif is already transferring so wait for it.
-		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR) { 
+		if (((GSTransferStatus.PTH3 != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR) { 
 			//DevCon.WriteLn("FlushA path3 Wait!");
 			vif1Regs->stat.VGW = true;
 			vifX.vifstalled    = true;

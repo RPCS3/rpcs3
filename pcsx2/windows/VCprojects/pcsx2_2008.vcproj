@@ -777,10 +777,6 @@
 					<Filter
 						Name="DMAC"
 						>
-						<File
-							RelativePath="..\..\Gif.cpp"
-							>
-						</File>
 						<Filter
 							Name="Sif"
 							>
@@ -902,6 +898,18 @@
 							</File>
 							<File
 								RelativePath="..\..\SPR.h"
+								>
+							</File>
+						</Filter>
+						<Filter
+							Name="Gif"
+							>
+							<File
+								RelativePath="..\..\Gif.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Gif.h"
 								>
 							</File>
 						</Filter>

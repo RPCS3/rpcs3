@@ -195,12 +195,12 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
-
+	
 	if (schedulepath3msk) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if (gif->chcr.STR && (Path3progress != STOPPED_MODE))
+		if ((gif->chcr.STR && (GSTransferStatus.PTH3 != STOPPED_MODE)) || (GSTransferStatus.PTH1 != STOPPED_MODE))
 		{
 			CPU_INT(DMAC_VIF1, 4);
 			return;
@@ -240,8 +240,10 @@ __forceinline void vif1Interrupt()
 		_VIF1chain();
 		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
-		if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
-		else CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
+
+		// Refraction - Removing voodoo timings for now, completely messes a lot of Path3 masked games.
+		/*if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
+		else */CPU_INT(DMAC_VIF1, g_vifCycles /*VifCycleVoodoo*/);
 		return;
 	}
 
@@ -256,7 +258,7 @@ __forceinline void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
-		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF1, g_vifCycles /*VifCycleVoodoo*/);
 		return;
 	}
 
@@ -280,7 +282,7 @@ __forceinline void vif1Interrupt()
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0;
+	if (!vif1Regs->mskpath3 || !vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0;
 }
 
 void dmaVIF1()
