@@ -111,12 +111,17 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		doubleBuffered = true;
 		ERROR_LOG("Got Doublebuffered Visual!\n");
 	}
+	if (vi == NULL) 
+	{
+		ERROR_LOG("Failed to get buffered Visual!\n");
+		return false;
+	}
 
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
 	ERROR_LOG("glX-Version %d.%d\n", glxMajorVersion, glxMinorVersion);
 	
 	/* create a GLX context */
-	context = glXCreateContext(glDisplay, vi, 0, GL_TRUE);
+	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
 	
 	/* create a color map */
 	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
