@@ -1314,17 +1314,29 @@ static __forceinline int IPU1chain() {
 }
 
 
-static __forceinline bool flushGIF()
+//static __forceinline bool flushGIF()
+//{
+//	//Wait for all GS paths to be clear
+//	if (GSTransferStatus._u32 != 0x2a) 
+//	{
+//		if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs->mskpath3) return true;
+//		DMA_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
+//		IPU_INT_TO(4);
+//		return false;
+//	}
+//	return true;
+//}
+
+static __forceinline void flushGIF()
 {
-	//Wait for all GS paths to be clear
-        if (GSTransferStatus._u32 != 0x2a) 
-        {
-                       if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs->mskpath3) return true;
-					DMA_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
-                       IPU_INT_TO(4);
-					   return false;
-        }
-	return true;
+	if (dmacRegs->ctrl.STD != STD_GIF || (gif->madr + (gif->qwc * 16)) < dmacRegs->stadr.ADDR)
+	{
+		while(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && GSTransferStatus.PTH3 != STOPPED_MODE)
+		{
+			GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
+			gsInterrupt();
+		}
+	}
 }
 
 
@@ -1335,7 +1347,8 @@ int IPU1dma()
 	int totalqwc = 0;
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-    if(!flushGIF()) return totalqwc;
+    //if(!flushGIF()) return totalqwc;
+	flushGIF();
 
 	DMA_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 
