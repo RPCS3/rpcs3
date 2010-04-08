@@ -282,7 +282,7 @@ __forceinline void vif1Interrupt()
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if (!vif1Regs->mskpath3 || !vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0;
+	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0;
 }
 
 void dmaVIF1()
