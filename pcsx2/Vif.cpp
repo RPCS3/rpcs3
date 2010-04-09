@@ -23,7 +23,7 @@
 
 vifStruct  vif0;
 vifStruct  vif1;
-tGSTransferStatus GSTransferStatus = (STOPPED_MODE<<4) | (STOPPED_MODE<<2) | STOPPED_MODE;
+Path3Modes Path3progress = STOPPED_MODE;
 
 void vif0Init() { initNewVif(0); }
 void vif1Init() { initNewVif(1); }
@@ -253,23 +253,15 @@ _f void vif1STAT(u32 value) {
 	if (vif1Regs->stat.FDR) // Vif transferring to memory.
 	{
 	    // Hack but it checks this is true before transfer? (fatal frame)
-		// Update Refraction: Use of this function has been investigated and understood.
-		// Before this ever happens, a DIRECT/HL command takes place sending the transfer info to the GS
-		// One of the registers told about this is TRXREG which tells us how much data is going to transfer (th x tw) in words
-		// As far as the GS is concerned, the transfer starts as soon as TRXREG is accessed, which is why fatal frame
-		// was expecting data, the GS should already be sending it over (buffering in the FIFO)
-
-		vif1Regs->stat.FQC = max((u32)16, vif1.GSLastTRXPOS);
-		//Console.Warning("Reversing VIF Transfer for %x QWC", vif1.GSLastTRXPOS);
-		
+		vif1Regs->stat.FQC = 0x1;
 	}
-	/*else // Memory transferring to Vif.
+	else // Memory transferring to Vif.
 	{
 		vif1ch->qwc = 0;
 		vif1.vifstalled = false;
 		vif1.done = true;
 		vif1Regs->stat.FQC = 0;
-	}*/
+	}
 }
 
 #define caseVif(x) (idx ? VIF1_##x : VIF0_##x)

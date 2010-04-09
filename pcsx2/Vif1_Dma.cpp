@@ -195,12 +195,12 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
-	
+
 	if (schedulepath3msk) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if ((gif->chcr.STR && (GSTransferStatus.PTH3 != STOPPED_MODE)) || (GSTransferStatus.PTH1 != STOPPED_MODE))
+		if (gif->chcr.STR && (Path3progress != STOPPED_MODE))
 		{
 			CPU_INT(DMAC_VIF1, 4);
 			return;
@@ -240,10 +240,8 @@ __forceinline void vif1Interrupt()
 		_VIF1chain();
 		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
-
-		// Refraction - Removing voodoo timings for now, completely messes a lot of Path3 masked games.
-		/*if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
-		else */CPU_INT(DMAC_VIF1, g_vifCycles /*VifCycleVoodoo*/);
+		if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
+		else CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
@@ -258,7 +256,7 @@ __forceinline void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
-		CPU_INT(DMAC_VIF1, g_vifCycles /*VifCycleVoodoo*/);
+		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 

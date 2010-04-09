@@ -60,15 +60,10 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 	if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
 		DevCon.Warning( "Reading from vif1 fifo when stalled" );
 
-	if(vif1Regs->stat.FQC == 0) Console.Warning("FQC = 0 on VIF FIFO READ!");
 	if (vif1Regs->stat.FDR)
 	{
-			if (vif1Regs->stat.FQC > 0)
-			{
-				GetMTGS().WaitGS();
-				GSreadFIFO(&psHu64(VIF1_FIFO));
-			}
-			if(vif1Regs->stat.FQC > 0)--vif1Regs->stat.FQC;			
+		if (--psHu32(D1_QWC) == 0)
+			vif1Regs->stat.FQC = 0;
 	}
 
 	out[0] = psHu64(VIF1_FIFO);

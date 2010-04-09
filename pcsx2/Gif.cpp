@@ -56,7 +56,22 @@ __forceinline void gsInterrupt()
 	}
 
 	
-	if (GSTransferStatus.PTH3 == STOPPED_MODE)
+
+	if ((vif1.cmd & 0x7e) == 0x50) // DIRECT/HL
+	{
+
+		//original behaviour here - if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = false;
+
+	    // Transfer in progress on VIF and GIF has finished so let VIF do its bit
+		if (Path3progress == STOPPED_MODE)
+		{
+			vif1Regs->stat.VGW = false;
+			CPU_INT( DMAC_GIF, 4 );
+			return;
+		}
+	}
+
+	if (Path3progress == STOPPED_MODE)
 	{
 	    gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH);
 	}
@@ -204,15 +219,12 @@ void GIFdma()
 	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 
 	//Path2 gets priority in intermittent mode
-	if (GSTransferStatus.PTH1 != STOPPED_MODE || GSTransferStatus.PTH2 != STOPPED_MODE)
+	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7e) == 0x50) && gifRegs->mode.IMT && (Path3progress == STOPPED_MODE))
 	{
 	    // We are in image mode doing DIRECTHL, Path 1 is in queue, and in intermittant mode.
-		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, GSTransferStatus.PTH3);
-		if(GSTransferStatus.PTH3 == STOPPED_MODE)
-		{
-			CPU_INT(DMAC_GIF, 16);
-			return;
-		}
+		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, Path3progress);
+		CPU_INT(DMAC_GIF, 16);
+		return;
 	}
 
 	if (vif1Regs->mskpath3 || gifRegs->mode.M3R)
@@ -230,9 +242,8 @@ void GIFdma()
 			}
 		}
 
-		if (GSTransferStatus.PTH3 == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
+		if (Path3progress == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
 		{
-			GIF_LOG("PTH3 MASK Continuing VIF");
 			vif1Regs->stat.VGW = false;
 			if (gif->qwc == 0) CPU_INT(DMAC_GIF, 16);
 			return;
@@ -240,7 +251,6 @@ void GIFdma()
 		
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
-			GIF_LOG("PTH3 MASK Transferring", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
 			GIFchain();
 			CPU_INT(DMAC_GIF, gscycles * BIAS);
 			return;
@@ -323,7 +333,7 @@ void dmaGIF()
 	//It takes the time of 24 QW for the BUS to become ready - The Punisher And Streetball
 	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr._u32, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
-	GSTransferStatus.PTH3 = STOPPED_MODE;
+	Path3progress = STOPPED_MODE;
 	gspath3done = false; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 
 	gifRegs->stat.P3Q = true;
@@ -536,7 +546,7 @@ void gifMFIFOInterrupt()
     //Console.WriteLn("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
-	if (GSTransferStatus.PTH3 == STOPPED_MODE)
+	if (Path3progress == STOPPED_MODE)
 	{
 	     gifRegs->stat.APATH = GIF_APATH_IDLE;
 	     gifRegs->stat.OPH = false;
@@ -555,9 +565,9 @@ void gifMFIFOInterrupt()
 		return;
 	}
 
-	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && GSTransferStatus.PTH3 == IMAGE_MODE) //Path2 gets priority in intermittent mode
+	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && Path3progress == IMAGE_MODE) //Path2 gets priority in intermittent mode
 	{
-		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), GSTransferStatus.PTH3);
+		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(11,mfifocycles);
 		return;
 	}
