@@ -185,6 +185,19 @@ static __forceinline const T *TransmitHostLocalY_4(_writePixel_0 wp, u32 widthli
 } 
 
 template <class T>
+ static __forceinline const T *TransmitHostLocalY(TransferData data, _writePixel_0 wp, u32 widthlimit, u32 endY, const T *buf) 
+ {
+ 	switch (data.psm)
+ 	{
+ 		case PSM_: return TransmitHostLocalY_<T>(wp, widthlimit, endY, buf);
+ 		case PSM_4_: return TransmitHostLocalY_4<T>(wp, widthlimit, endY, buf);
+ 		case PSM_24_: return TransmitHostLocalY_24<T>(wp, widthlimit, endY, buf);
+ 	}
+ 	assert(0);
+ 	return NULL;
+ }
+ 
+template <class T>
 static __forceinline const T *TransmitHostLocalX_(_writePixel_0 wp, u32 widthlimit, u32 blockheight, u32 startX, const T *buf) 
 {
 	for(u32 tempi = 0; tempi < blockheight; ++tempi) 
@@ -228,7 +241,20 @@ static __forceinline const T *TransmitHostLocalX_4(_writePixel_0 wp, u32 widthli
 	}
 	return buf;
 }
-
+	
+template <class T>
+ static __forceinline const T *TransmitHostLocalX(TransferData data, _writePixel_0 wp, u32 widthlimit, u32 blockheight, u32 startX, const T *buf) 
+ {
+ 	switch (data.psm)
+ 	{
+ 		case PSM_: return TransmitHostLocalX_<T>(wp, widthlimit, blockheight, startX, buf);
+ 		case PSM_4_: return TransmitHostLocalX_4<T>(wp, widthlimit, blockheight, startX, buf);
+ 		case PSM_24_: return TransmitHostLocalX_24<T>(wp, widthlimit, blockheight, startX, buf);
+ 	}
+ 	assert(0);
+ 	return NULL;
+ }
+ 	
 // calculate pitch in source buffer
 static __forceinline u32 TransPitch(u32 pitch, u32 size)
 {

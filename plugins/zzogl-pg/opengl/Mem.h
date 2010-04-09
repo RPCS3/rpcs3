@@ -44,6 +44,13 @@ typedef int (*_TransferHostLocal)(const void* pbyMem, u32 nQWordSize);
 typedef void (*_TransferLocalHost)(void* pbyMem, u32 nQWordSize);
 typedef void (*_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteMask);
 
+enum Psm_Size
+{
+	PSM_ = 0,
+	PSM_4_,
+	PSM_24_
+};
+
 // Both of the following structs should probably be local class variables or in a namespace,
 // but this works for the moment.
 struct TransferData
@@ -54,13 +61,15 @@ struct TransferData
 	u32 blockwidth;
 	u32 blockheight;
 	u32 transfersize;
-	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size)
+	Psm_Size psm;
+	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, Psm_Size ps)
 	{
 		widthlimit = limit;
 		blockbits = bits;
 		blockwidth = width;
 		blockheight = height;
 		transfersize = size;
+		psm = ps;
 	}
 };
 

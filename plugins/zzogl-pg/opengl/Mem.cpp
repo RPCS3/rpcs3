@@ -46,131 +46,9 @@ u8* pstart;
 // ------------------------
 // |              Y       |
 // ------------------------
-#define DEFINE_TRANSFERLOCAL(psm, transfersize, T, widthlimit, blockbits, blockwidth, blockheight, TransSfx, SwizzleBlockFn) \
-int TransferHostLocal##psm(const void* pbyMem, u32 nQWordSize) \
-{ \
-	assert( gs.imageTransfer == 0 ); \
-	pstart = g_pbyGSMemory + gs.dstbuf.bp*256; \
-	\
-	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ \
-	tempY = gs.imageY; tempX = gs.imageX; \
-	const u32 TSize = sizeof(T); \
-	_SwizzleBlock swizzle; \
-	_SwizzleBlock Swizzle = (SwizzleBlockFn);\
-	_SwizzleBlock Swizzle_u = (SwizzleBlockFn##u); \
-	_writePixel_0 wp = writePixel##psm##_0; \
-	\
-	const T* pbuf = (const T*)pbyMem; \
-	const int tp = TransPitch(2, transfersize); \
-	int nLeftOver = (nQWordSize*4*2)%tp; \
-	nSize = nQWordSize*4*2/tp; \
-	nSize = min(nSize, gs.imageWnew * gs.imageHnew); \
-	\
-	int endY = ROUND_UPPOW2(tempY, blockheight); \
-	int alignedY = ROUND_DOWNPOW2(gs.imageEndY, blockheight); \
-	int alignedX = ROUND_DOWNPOW2(gs.imageEndX, blockwidth); \
-	bool bAligned, bCanAlign = MOD_POW2(gs.trxpos.dx, blockwidth) == 0 && (tempX == gs.trxpos.dx) && (alignedY > endY) && alignedX > gs.trxpos.dx; \
-	\
-	if( (gs.imageEndX-gs.trxpos.dx)%widthlimit ) { \
-		/* hack */ \
-		int testwidth = (int)nSize - (gs.imageEndY-tempY)*(gs.imageEndX-gs.trxpos.dx)+(tempX-gs.trxpos.dx); \
-		if((testwidth <= widthlimit) && (testwidth >= -widthlimit)) { \
-			/* don't transfer */ \
-			/*DEBUG_LOG("bad texture %s: %d %d %d\n", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/ \
-			gs.imageTransfer = -1; \
-		} \
-		bCanAlign = false; \
-	} \
-	\
-	/* first align on block boundary */ \
-	if( MOD_POW2(tempY, blockheight) || !bCanAlign ) { \
-		\
-		if( !bCanAlign ) \
-			endY = gs.imageEndY; /* transfer the whole image */ \
-		else \
-			assert( endY < gs.imageEndY); /* part of alignment condition */ \
-		\
-		if( ((gs.imageEndX-gs.trxpos.dx)%widthlimit) || ((gs.imageEndX-tempX)%widthlimit) ) { \
-			/* transmit with a width of 1 */ \
-			pbuf = TransmitHostLocalY##TransSfx<T>(wp, (1 + (DSTPSM == 0x14)), endY, pbuf);\
-			if (pbuf == NULL) goto End; \
-		} \
-		else { \
-		pbuf = TransmitHostLocalY##TransSfx<T>(wp, widthlimit, endY, pbuf);\
-			if (pbuf == NULL) goto End; \
-		} \
-		\
-		if( nSize == 0 || tempY == gs.imageEndY ) \
-			goto End; \
-	} \
-	\
-	assert( MOD_POW2(tempY, blockheight) == 0 && tempX == gs.trxpos.dx); \
-	\
-	/* can align! */ \
-	pitch = gs.imageEndX-gs.trxpos.dx; \
-	area = pitch*blockheight; \
-	fracX = gs.imageEndX-alignedX; \
-	\
-	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */ \
-	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, transfersize) & 0xf) == 0; \
-	\
-	/* transfer aligning to blocks */ \
-	for(; tempY < alignedY && nSize >= area; tempY += blockheight, nSize -= area) { \
-		\
-		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) \
-		{ \
-			swizzle = Swizzle;\
-		} \
-		else \
-		{ \
-			swizzle = Swizzle_u;\
-		} \
-		\
-		for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TransPitch(blockwidth, transfersize)/TSize) \
-		{ \
-			swizzle(pstart + getPixelAddress_0(psm,tempj, tempY, gs.dstbuf.bw)*blockbits/8, \
-				(u8*)pbuf, TransPitch(pitch, transfersize), 0xffffffff); \
-		} \
-		\
-		/* transfer the rest */ \
-		if( alignedX < gs.imageEndX ) { \
-			pbuf = TransmitHostLocalX##TransSfx<T>(wp, widthlimit, blockheight, alignedX, pbuf);\
-			if (pbuf == NULL) goto End; \
-			pbuf -= TransPitch(alignedX-gs.trxpos.dx, transfersize)/TSize; \
-		} \
-		else pbuf += (blockheight-1)* TransPitch(pitch, transfersize)/TSize; \
-		tempX = gs.trxpos.dx; \
-	} \
-	\
-	if( TransPitch(nSize, transfersize)/4 > 0 ) { \
-	pbuf = TransmitHostLocalY##TransSfx<T>(wp, widthlimit, gs.imageEndY, pbuf);\
-		if (pbuf == NULL) goto End; \
-		/* sometimes wrong sizes are sent (tekken tag) */ \
-		assert( gs.imageTransfer == -1 || TransPitch(nSize, transfersize)/4 <= 2 ); \
-	} \
-	\
-End: \
-	if( tempY >= gs.imageEndY ) { \
-		assert( gs.imageTransfer == -1 || tempY == gs.imageEndY ); \
-		gs.imageTransfer = -1; \
-		/*int start, end; \
-		ZeroGS::GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw); \
-		ZeroGS::g_MemTargs.ClearRange(start, end);*/ \
-	} \
-	else { \
-		/* update new params */ \
-		gs.imageY = tempY; \
-		gs.imageX = tempX; \
-	} \
-	return (nSize * TransPitch(2, transfersize) + nLeftOver)/2; \
-} \
 
-#define NEW_TRANSFER
-#ifdef NEW_TRANSFER
-
-// Get ready for the same function 3 times. *sigh*
 template <class T>
-static __forceinline const T* AlignOnBlockBoundry_(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
+static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
 {
 	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
@@ -203,15 +81,14 @@ static __forceinline const T* AlignOnBlockBoundry_(TransferData data, TransferFu
 		if (((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) || ((gs.imageEndX - gs.imageX) % data.widthlimit)) 
 		{ 
 			/* transmit with a width of 1 */ 
-			transwidth = (1 + (DSTPSM == 0x14));
+			transwidth = (1 + (DSTPSM == PSMT4));
 		} 
 		else 
 		{ 
 			transwidth = data.widthlimit;
 		} 
 		
-		// The only line that's different in these 3 functions.
-		pbuf = TransmitHostLocalY_<T>(fun.wp, transwidth, endY, pbuf);
+		pbuf = TransmitHostLocalY<T>(data, fun.wp, transwidth, endY, pbuf);
 		if (pbuf == NULL) return NULL;
 		
 		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
@@ -219,111 +96,8 @@ static __forceinline const T* AlignOnBlockBoundry_(TransferData data, TransferFu
 	return pbuf;
 }
 
-
 template <class T>
-static __forceinline const T* AlignOnBlockBoundry_4(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
-{
-	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
-					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
-	
-	if ((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) 
-	{ 
-		/* hack */ 
-		int testwidth = (int)nSize - 
-			(gs.imageEndY - gs.imageY) * (gs.imageEndX - gs.trxpos.dx)
-			 + (gs.imageX - gs.trxpos.dx); 
-			 
-		if ((testwidth <= data.widthlimit) && (testwidth >= -data.widthlimit)) 
-		{ 
-			/* don't transfer */ 
-			/*DEBUG_LOG("bad texture %s: %d %d %d\n", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/ 
-			gs.imageTransfer = -1; 
-		} 
-		bCanAlign = false; 
-	} 
-	/* first align on block boundary */ 
-	if ( MOD_POW2(gs.imageY, data.blockheight) || !bCanAlign ) 
-	{ 
-		u32 transwidth;
-		
-		if( !bCanAlign ) 
-			endY = gs.imageEndY; /* transfer the whole image */ 
-		else 
-			assert( endY < gs.imageEndY); /* part of alignment condition */ 
-		
-		if (((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) || ((gs.imageEndX - gs.imageX) % data.widthlimit)) 
-		{ 
-			/* transmit with a width of 1 */ 
-			transwidth = (1 + (DSTPSM == 0x14));
-		} 
-		else 
-		{ 
-			transwidth = data.widthlimit;
-		} 
-		
-		// The only line that's different in these 3 functions.
-		pbuf = TransmitHostLocalY_4<T>(fun.wp, transwidth, endY, pbuf);
-		if (pbuf == NULL) return NULL;
-		
-		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
-	} 
-	return pbuf;
-}
-
-
-template <class T>
-static __forceinline const T* AlignOnBlockBoundry_24(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
-{
-	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
-					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
-	
-	if ((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) 
-	{ 
-		/* hack */ 
-		int testwidth = (int)nSize - 
-			(gs.imageEndY - gs.imageY) * (gs.imageEndX - gs.trxpos.dx)
-			 + (gs.imageX - gs.trxpos.dx); 
-			 
-		if ((testwidth <= data.widthlimit) && (testwidth >= -data.widthlimit)) 
-		{ 
-			/* don't transfer */ 
-			/*DEBUG_LOG("bad texture %s: %d %d %d\n", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/ 
-			gs.imageTransfer = -1; 
-		} 
-		bCanAlign = false; 
-	} 
-	/* first align on block boundary */ 
-	if ( MOD_POW2(gs.imageY, data.blockheight) || !bCanAlign ) 
-	{ 
-		u32 transwidth;
-		
-		if( !bCanAlign ) 
-			endY = gs.imageEndY; /* transfer the whole image */ 
-		else 
-			assert( endY < gs.imageEndY); /* part of alignment condition */ 
-		
-		if (((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) || ((gs.imageEndX - gs.imageX) % data.widthlimit)) 
-		{ 
-			/* transmit with a width of 1 */ 
-			transwidth = (1 + (DSTPSM == 0x14));
-		} 
-		else 
-		{ 
-			transwidth = data.widthlimit;
-		} 
-		
-		// The only line that's different in these 3 functions.
-		pbuf = TransmitHostLocalY_24<T>(fun.wp, transwidth, endY, pbuf);
-		if (pbuf == NULL) return NULL;
-		
-		if( nSize == 0 || tempY == gs.imageEndY ) return NULL; 
-	} 
-	return pbuf;
-}
-
-// Here we go again. 3 nearly identical functions.
-template <class T>
-static __forceinline const T* TransferAligningToBlocks_(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
+static __forceinline const T* TransferAligningToBlocks(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
 {
 	bool bAligned;
 	const u32 TSize = sizeof(T);
@@ -354,56 +128,9 @@ static __forceinline const T* TransferAligningToBlocks_(TransferData data, Trans
 		/* transfer the rest */ 
 		if( alignedPt.x < gs.imageEndX ) 
 		{ 
-			// The only line that's different in these 3 functions.
-			pbuf = TransmitHostLocalX_<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
+			pbuf = TransmitHostLocalX<T>(data, fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
 			if (pbuf == NULL) return NULL;
-			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
-		} 
-		else 
-		{
-			pbuf += (data.blockheight - 1)* TransPitch(pitch, data.transfersize)/TSize; 
-		}
-		
-		tempX = gs.trxpos.dx; 
-	} 
-	return pbuf;
-}
-
-template <class T>
-static __forceinline const T* TransferAligningToBlocks_4(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
-{
-	bool bAligned;
-	const u32 TSize = sizeof(T);
-	_SwizzleBlock swizzle;
-	
-	/* can align! */ 
-	pitch = gs.imageEndX - gs.trxpos.dx; 
-	area = pitch * data.blockheight; 
-	fracX = gs.imageEndX - alignedPt.x; 
-	
-	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */ 
-	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, data.transfersize) & 0xf) == 0; 
-	
-	/* transfer aligning to blocks */ 
-	for(; tempY < alignedPt.y && nSize >= area; tempY += data.blockheight, nSize -= area) 
-	{ 
-		if ( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL))) 
-			swizzle = (fun.Swizzle);
-		else 
-			swizzle = (fun.Swizzle_u);
 			
-		for(int tempj = gs.trxpos.dx; tempj < alignedPt.x; tempj += data.blockwidth, pbuf += TransPitch(data.blockwidth, data.transfersize)/TSize) 
-		{ 
-				u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits/8;
-				swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize), 0xffffffff); 
-		} 
-		
-		/* transfer the rest */ 
-		if( alignedPt.x < gs.imageEndX ) 
-		{ 
-			// The only line that's different in these 3 functions.
-			pbuf = TransmitHostLocalX_4<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
-			if (pbuf == NULL) return NULL;
 			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
 		} 
 		else 
@@ -416,54 +143,6 @@ static __forceinline const T* TransferAligningToBlocks_4(TransferData data, Tran
 	return pbuf;
 }
 
-template <class T>
-static __forceinline const T* TransferAligningToBlocks_24(TransferData data, TransferFuncts fun, Point alignedPt, const T* pbuf)
-{
-	bool bAligned;
-	const u32 TSize = sizeof(T);
-	_SwizzleBlock swizzle;
-	
-	/* can align! */ 
-	pitch = gs.imageEndX - gs.trxpos.dx; 
-	area = pitch * data.blockheight; 
-	fracX = gs.imageEndX - alignedPt.x; 
-	
-	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */ 
-	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, data.transfersize) & 0xf) == 0; 
-	
-	/* transfer aligning to blocks */ 
-	for(; tempY < alignedPt.y && nSize >= area; tempY += data.blockheight, nSize -= area) 
-	{ 
-		if ( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL))) 
-			swizzle = (fun.Swizzle);
-		else 
-			swizzle = (fun.Swizzle_u);
-			
-		for(int tempj = gs.trxpos.dx; tempj < alignedPt.x; tempj += data.blockwidth, pbuf += TransPitch(data.blockwidth, data.transfersize)/TSize) 
-		{ 
-				u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits/8;
-				swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize), 0xffffffff); 
-		} 
-		
-		/* transfer the rest */ 
-		if( alignedPt.x < gs.imageEndX ) 
-		{ 
-			// The only line that's different in these 3 functions.
-			pbuf = TransmitHostLocalX_24<T>(fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
-			if (pbuf == NULL) return NULL;
-			pbuf -= TransPitch((alignedPt.x - gs.trxpos.dx), data.transfersize)/TSize; 
-		} 
-		else 
-		{
-			pbuf += (data.blockheight - 1)* TransPitch(pitch, data.transfersize)/TSize; 
-		}
-		
-		tempX = gs.trxpos.dx; 
-	} 
-	return pbuf;
-}
-
-// Only one of this function, since no TransmitHostLocalX_ or TransmitHostLocalY_'s were involved.
 static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 {
 	if( tempY >= gs.imageEndY ) 
@@ -484,20 +163,18 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 	return (nSize * TransPitch(2, data.transfersize) + nLeftOver)/2; 
 }
 
-// Oh, here we go again. 3 mostly identical functions.
 template <class T>
-static __forceinline int RealTransfer_(TransferData data, TransferFuncts fun, const void* pbyMem, u32 nQWordSize)
+static __forceinline int RealTransfer(TransferData data, TransferFuncts fun, const void* pbyMem, u32 nQWordSize)
 {
 	assert( gs.imageTransfer == 0 ); 
+	
 	pstart = g_pbyGSMemory + gs.dstbuf.bp*256; 
-	
-	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ 
-	tempY = gs.imageY; tempX = gs.imageX; 
-	
 	const T* pbuf = (const T*)pbyMem; 
 	const int tp2 = TransPitch(2, data.transfersize);
 	int nLeftOver = (nQWordSize*4*2)%tp2; 
+	tempY = gs.imageY; tempX = gs.imageX; 
 	Point alignedPt;
+	
 	nSize = (nQWordSize*4*2)/tp2; 
 	nSize = min(nSize, gs.imageWnew * gs.imageHnew); 
 	
@@ -505,87 +182,16 @@ static __forceinline int RealTransfer_(TransferData data, TransferFuncts fun, co
 	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
 	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
 	
-	pbuf = AlignOnBlockBoundry_<T>(data, fun, alignedPt, endY, pbuf);
+	pbuf = AlignOnBlockBoundry<T>(data, fun, alignedPt, endY, pbuf);
 	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
-	pbuf = TransferAligningToBlocks_<T>(data, fun, alignedPt, pbuf);
+	pbuf = TransferAligningToBlocks<T>(data, fun, alignedPt, pbuf);
 	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 	
 	if (TransPitch(nSize, data.transfersize)/4 > 0) 
 	{ 
-		if (!TransmitHostLocalY_<T>(fun.wp, data.widthlimit, gs.imageEndY, pbuf)) return FinishTransfer(data, nLeftOver);
-		/* sometimes wrong sizes are sent (tekken tag) */ 
-		assert( gs.imageTransfer == -1 || TransPitch(nSize, data.transfersize)/4 <= 2 ); 
-	} 
-	
-	return FinishTransfer(data, nLeftOver);
-}
-
-template <class T>
-static __forceinline int RealTransfer_4(TransferData data, TransferFuncts fun, const void* pbyMem, u32 nQWordSize)
-{
-	assert( gs.imageTransfer == 0 ); 
-	pstart = g_pbyGSMemory + gs.dstbuf.bp*256; 
-	
-	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ 
-	tempY = gs.imageY; tempX = gs.imageX; 
-	
-	const T* pbuf = (const T*)pbyMem; 
-	const int tp2 = TransPitch(2, data.transfersize);
-	int nLeftOver = (nQWordSize*4*2)%tp2; 
-	Point alignedPt;
-	nSize = (nQWordSize*4*2)/tp2; 
-	nSize = min(nSize, gs.imageWnew * gs.imageHnew); 
-	
-	int endY = ROUND_UPPOW2(gs.imageY, data.blockheight); 
-	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
-	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
-	
-	pbuf = AlignOnBlockBoundry_4<T>(data, fun, alignedPt, endY, pbuf);
-	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
-
-	pbuf = TransferAligningToBlocks_4<T>(data, fun, alignedPt, pbuf);
-	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
-	
-	if (TransPitch(nSize, data.transfersize)/4 > 0) 
-	{ 
-		if (!TransmitHostLocalY_4<T>(fun.wp, data.widthlimit, gs.imageEndY, pbuf)) return FinishTransfer(data, nLeftOver);
-		/* sometimes wrong sizes are sent (tekken tag) */ 
-		assert( gs.imageTransfer == -1 || TransPitch(nSize, data.transfersize)/4 <= 2 ); 
-	} 
-	
-	return FinishTransfer(data, nLeftOver);
-}
-
-template <class T>
-static __forceinline int RealTransfer_24(TransferData data, TransferFuncts fun, const void* pbyMem, u32 nQWordSize)
-{
-	assert( gs.imageTransfer == 0 ); 
-	pstart = g_pbyGSMemory + gs.dstbuf.bp*256; 
-	
-	/*const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;*/ 
-	tempY = gs.imageY; tempX = gs.imageX; 
-	
-	const T* pbuf = (const T*)pbyMem; 
-	const int tp2 = TransPitch(2, data.transfersize);
-	int nLeftOver = (nQWordSize*4*2)%tp2; 
-	Point alignedPt;
-	nSize = (nQWordSize*4*2)/tp2; 
-	nSize = min(nSize, gs.imageWnew * gs.imageHnew); 
-	
-	int endY = ROUND_UPPOW2(gs.imageY, data.blockheight); 
-	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight); 
-	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth); 
-	
-	pbuf = AlignOnBlockBoundry_24<T>(data, fun, alignedPt, endY, pbuf);
-	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
-
-	pbuf = TransferAligningToBlocks_24<T>(data, fun, alignedPt, pbuf);
-	if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
-	
-	if (TransPitch(nSize, data.transfersize)/4 > 0) 
-	{ 
-		if (!TransmitHostLocalY_24<T>(fun.wp, data.widthlimit, gs.imageEndY, pbuf)) return FinishTransfer(data, nLeftOver);
+		pbuf = TransmitHostLocalY<T>(data, fun.wp, data.widthlimit, gs.imageEndY, pbuf);
+		if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 		/* sometimes wrong sizes are sent (tekken tag) */ 
 		assert( gs.imageTransfer == -1 || TransPitch(nSize, data.transfersize)/4 <= 2 ); 
 	} 
@@ -596,189 +202,133 @@ static __forceinline int RealTransfer_24(TransferData data, TransferFuncts fun, 
 //DEFINE_TRANSFERLOCAL(32, u32, 2, 32, 8, 8, _, SwizzleBlock32);
 int TransferHostLocal32(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(2,32,8,8,32);
+	TransferData data(2,32,8,8,32, PSM_);
 	TransferFuncts fun(writePixel32_0, getPixelAddress32_0, SwizzleBlock32, SwizzleBlock32u);
 
-	return RealTransfer_<u32>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u32>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(32Z, u32, 2, 32, 8, 8, _, SwizzleBlock32);
 int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(2,32,8,8,32);
+	TransferData data(2,32,8,8,32, PSM_);
 	TransferFuncts fun(writePixel32Z_0, getPixelAddress32Z_0, SwizzleBlock32, SwizzleBlock32u);
 
-	return RealTransfer_<u32>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u32>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(24, u8, 8, 32, 8, 8, _24, SwizzleBlock24);
 int TransferHostLocal24(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(8,32,8,8,24);
+	TransferData data(8,32,8,8,24, PSM_24_);
 	TransferFuncts fun(writePixel24_0, getPixelAddress24_0, SwizzleBlock24, SwizzleBlock24u);
 
-	return RealTransfer_24<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(24Z, u8, 8, 32, 8, 8, _24, SwizzleBlock24);
 int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(8,32,8,8,24);
+	TransferData data(8,32,8,8,24, PSM_24_);
 	TransferFuncts fun(writePixel24Z_0, getPixelAddress24Z_0, SwizzleBlock24, SwizzleBlock24u);
 
-	return RealTransfer_24<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(16, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,16,16,8,16);
+	TransferData data(4,16,16,8,16, PSM_);
 	TransferFuncts fun(writePixel16_0, getPixelAddress16_0, SwizzleBlock16, SwizzleBlock16u);
 
-	return RealTransfer_<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(16S, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16S(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,16,16,8,16);
+	TransferData data(4,16,16,8,16, PSM_);
 	TransferFuncts fun(writePixel16S_0, getPixelAddress16S_0, SwizzleBlock16, SwizzleBlock16u);
 
-	return RealTransfer_<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(16Z, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16Z(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,16,16,8,16);
+	TransferData data(4,16,16,8,16, PSM_);
 	TransferFuncts fun(writePixel16Z_0, getPixelAddress16Z_0, SwizzleBlock16, SwizzleBlock16u);
 
-	return RealTransfer_<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(16SZ, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16SZ(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,16,16,8,16);
+	TransferData data(4,16,16,8,16, PSM_);
 	TransferFuncts fun(writePixel16SZ_0, getPixelAddress16SZ_0, SwizzleBlock16, SwizzleBlock16u);
 
-	return RealTransfer_<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(8, u8, 4, 8, 16, 16, _, SwizzleBlock8);
 int TransferHostLocal8(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,8,16,16,8);
+	TransferData data(4,8,16,16,8, PSM_);
 	TransferFuncts fun(writePixel8_0, getPixelAddress8_0, SwizzleBlock8, SwizzleBlock8u);
 
-	return RealTransfer_<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(4, u8, 8, 4, 32, 16, _4, SwizzleBlock4);
 int TransferHostLocal4(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(8,4,32,16,4);
+	TransferData data(8,4,32,16,4, PSM_4_);
 	TransferFuncts fun(writePixel4_0, getPixelAddress4_0, SwizzleBlock4, SwizzleBlock4u);
 
-	return RealTransfer_4<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(8H, u8, 4, 32, 8, 8, _, SwizzleBlock8H);
 int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(4,32,8,8,8);
+	TransferData data(4,32,8,8,8, PSM_);
 	TransferFuncts fun(writePixel8H_0, getPixelAddress8H_0, SwizzleBlock8H, SwizzleBlock8Hu);
 
-	return RealTransfer_<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(4HL, u8, 8, 32, 8, 8, _4, SwizzleBlock4HL);
 int TransferHostLocal4HL(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(8,32,8,8,4);
+	TransferData data(8,32,8,8,4, PSM_4_);
 	TransferFuncts fun(writePixel4HL_0, getPixelAddress4HL_0, SwizzleBlock4HL, SwizzleBlock4HLu);
 
-	return RealTransfer_4<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
 //DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize) 
 { 
-	TransferData data(8,32,8,8,4);
+	TransferData data(8,32,8,8,4, PSM_4_);
 	TransferFuncts fun(writePixel4HH_0, getPixelAddress4HH_0, SwizzleBlock4HH, SwizzleBlock4HHu);
 
-	return RealTransfer_4<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
 } 
 
-#else
-
-DEFINE_TRANSFERLOCAL(32,	32,	u32,	2,	32,	8,	8,	_,		SwizzleBlock32);	// 32/8/4 = 1
-DEFINE_TRANSFERLOCAL(32Z,	32,	u32,	2,	32,	8,	8,	_,		SwizzleBlock32);	// 32/8/4 = 1
-DEFINE_TRANSFERLOCAL(24,	24,	u8,		8,	32,	8,	8,	_24,	SwizzleBlock24);	// 24/8/1 = 3
-DEFINE_TRANSFERLOCAL(24Z,	24,	u8,		8,	32,	8,	8,	_24,	SwizzleBlock24);	// 24/8/1 = 3
-DEFINE_TRANSFERLOCAL(16,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);	// 16/8/2 = 1
-DEFINE_TRANSFERLOCAL(16S,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);	// 16/8/2 = 1
-DEFINE_TRANSFERLOCAL(16Z,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);	// 16/8/2 = 1
-DEFINE_TRANSFERLOCAL(16SZ,	16,	u16,	4,	16,	16,	8,	_,		SwizzleBlock16);	// 16/8/2 = 1
-DEFINE_TRANSFERLOCAL(8,		8,	u8,		4,	8,	16,	16,	_,		SwizzleBlock8);		// 8/8/1  = 1
-DEFINE_TRANSFERLOCAL(4,		4,	u8,		8,	4,	32,	16,	_4,		SwizzleBlock4);		// 4/8/1  = 1/2
-DEFINE_TRANSFERLOCAL(8H,	8,	u8,		4,	32,	8,	8,	_,		SwizzleBlock8H);	// 8/8/1  = 1
-DEFINE_TRANSFERLOCAL(4HL,	4,	u8,		8,	32,	8,	8,	_4,		SwizzleBlock4HL);	// 4/8/1  = 1/2
-DEFINE_TRANSFERLOCAL(4HH,	4,	u8,		8,	32,	8,	8,	_4,		SwizzleBlock4HH);	// 4/8/1  = 1/2
-
-#endif
-
-void TransferLocalHost32(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost24(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost16(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost16S(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost8(void* pbyMem, u32 nQWordSize)
-{
-}
-
-void TransferLocalHost4(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost8H(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost4HL(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost4HH(void* pbyMem, u32 nQWordSize)
-{
-}
-
-void TransferLocalHost32Z(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
-
-void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)
-{FUNCLOG
-}
+void TransferLocalHost32(void* pbyMem, u32 nQWordSize) 		{ FUNCLOG }
+void TransferLocalHost24(void* pbyMem, u32 nQWordSize) 		{FUNCLOG}
+void TransferLocalHost16(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost16S(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost8(void* pbyMem, u32 nQWordSize)		{}
+void TransferLocalHost4(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost8H(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost4HL(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost4HH(void* pbyMem, u32 nQWordSize)		{}
+void TransferLocalHost32Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
+void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 
 #define FILL_BLOCK(bw, bh, ox, oy, mult, psm, psmcol) { \
 	b.vTexDims = Vector(BLOCK_TEXWIDTH/(float)(bw), BLOCK_TEXHEIGHT/(float)bh, 0, 0); \
