@@ -136,8 +136,9 @@ extern const __aligned(32) mVU_Globals mVUglob;
 #define opCase3 if (opCase == 3) // I  Opcodes
 #define opCase4 if (opCase == 4) // Q  Opcodes
 
+//------------------------------------------------------------------
 // Define mVUquickSearch
-
+//------------------------------------------------------------------
 // FIXME: I changed the below saerchXMM extern from __aligned16 to __pagealigned.
 // This *probably* fixes the crashing bugs in linux when using the optimized memcmp.
 // Needs testing... --air
@@ -153,6 +154,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUquickSearch(dest, src, size) (!memcmp_mmx(dest, src, size))
 #define mVUemitSearch()
 #endif
+//------------------------------------------------------------------
 
 // Misc Macros...
 #define __four(val)	{ val, val, val, val }
@@ -197,12 +199,12 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
 #define elif		 else if
 
-// Flag Info
+// Flag Info (Set if next-block's first 4 ops will read current-block's flags)
 #define __Status	 (mVUregs.needExactMatch & 1)
 #define __Mac		 (mVUregs.needExactMatch & 2)
 #define __Clip		 (mVUregs.needExactMatch & 4)
 
-// Pass 3 Helper Macros
+// Pass 3 Helper Macros (Used for program logging)
 #define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))
 #define _Ftf_String	 ((_Ftf_ == 3) ? "w" : ((_Ftf_ == 2) ? "z" : ((_Ftf_ == 1) ? "y" : "x")))
 #define xyzwStr(x,s) (_X_Y_Z_W == x) ? s :
@@ -226,24 +228,54 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUdumpProg(...) if (0) {}
 #endif
 
+//------------------------------------------------------------------
+// Optimization Options
+//------------------------------------------------------------------
+
 // Reg Alloc
-#define doRegAlloc 1 // Set to 0 to flush every 64bit Instruction (Turns off regAlloc)
+#define doRegAlloc 1 // Set to 0 to flush every 64bit Instruction
+// This turns off reg alloc for the most part, but reg alloc will still
+// be done between Upper/Lower and within instructions...
+
+// No Flag Optimizations
+#define noFlagOpts 0 // Set to 1 to disable all flag setting optimizations
+// Note: The flag optimizations this disables should all be harmless, so
+// this option is mainly just for debugging... it effectively forces mVU
+// to always update Mac and Status Flags (both sticky and non-sticky) whenever
+// an Upper Instruction updates them. It also always transfers the 4 possible
+// flag instances between blocks...
 
 // Constant Propagation
-#define CHECK_VU_CONSTPROP 0 
-// Enables Constant Propagation for Jumps based on vi15
+#define CHECK_VU_CONSTPROP 0 // Set to 1 to turn on vi15 const propagation 
+// Enables Constant Propagation for Jumps based on vi15 'link-register'
 // allowing us to know many indirect jump target addresses.
-// Makes GoW a lot slower due to extra recompilation time!
+// Makes GoW a lot slower due to extra recompilation time and extra code-gen!
 
-// Speed Hacks
-#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack) // (Can cause Infinite loops, SPS, etc...)
-#define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)	  // (Can cause SPS, Black Screens,  etc...)
+//------------------------------------------------------------------
+// Speed Hacks (can cause infinite loops, SPS, Black Screens, etc...)
+//------------------------------------------------------------------
 
+// Status Flag Speed Hack
+#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack) 
+// This hack only updates the Status Flag on blocks that will read it.
+// Most blocks do not read status flags, so this is a big speedup.
+
+// Min/Max Speed Hack
+#define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)
+// This hack uses SSE min/max instructions instead of emulated "logical min/max"
+// The PS2 does not consider denormals as zero on the mini/max opcodes.
+// This speedup is minor, but on AMD X2 CPUs it can be a 1~3% speedup
+
+//------------------------------------------------------------------
 // Unknown Data
+//------------------------------------------------------------------
+
+// XG Kick Transfer Delay Amount
 #define mVU_XGKICK_CYCLES ((CHECK_XGKICKHACK) ? 3 : 1)
 // Its unknown at recompile time how long the xgkick transfer will take
 // so give it a value that makes games happy :) (SO3 is fine at 1 cycle delay)
 
+//------------------------------------------------------------------
 
 // Cache Limit Check
 #define mVUcacheCheck(ptr, start, limit) {														  \

@@ -30,6 +30,7 @@ _f void mVUdivSet(mV) {
 }
 
 // Optimizes out unneeded status flag updates
+// This can safely be done when there is an FSSET opcode
 _f void mVUstatusFlagOp(mV) {
 	int curPC = iPC;
 	int i = mVUcount;
@@ -124,7 +125,7 @@ _f void mVUsetFlags(mV, microFlagCycles& mFC) {
 	u32 xCount	= mVUcount; // Backup count
 	iPC			= mVUstartPC;
 	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
-		if (mVUlow.isFSSET) {
+		if (mVUlow.isFSSET && !noFlagOpts) {
 			if (__Status) { // Don't Optimize out on the last ~4+ instructions
 				if ((xCount - mVUcount) > aCount) { mVUstatusFlagOp(mVU); }
 			}
@@ -145,6 +146,7 @@ _f void mVUsetFlags(mV, microFlagCycles& mFC) {
 		cFLAG.lastWrite = (xC-1) & 3;
 
 		if (sHackCond)	  { sFLAG.doFlag = 0; }
+		if (sFLAG.doFlag) { if(noFlagOpts){sFLAG.doNonSticky=1;mFLAG.doFlag=1;}}
 		if (sFlagCond)	  { mFC.xStatus[xS] = mFC.cycles + 4; xS = (xS+1) & 3; }
 		if (mFLAG.doFlag) { mFC.xMac   [xM] = mFC.cycles + 4; xM = (xM+1) & 3; }
 		if (cFLAG.doFlag) { mFC.xClip  [xC] = mFC.cycles + 4; xC = (xC+1) & 3; }
@@ -279,5 +281,6 @@ _f void mVUsetFlagInfo(mV) {
 		mVUregs.needExactMatch |= backupFlagInfo;
 	}
 	mVUregs.needExactMatch &= 0x7;
+	if (noFlagOpts) mVUregs.needExactMatch |= 0x7;
 }
 

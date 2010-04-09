@@ -122,7 +122,7 @@ _f void mVUreset(mV) {
 	mVU->prog.cleared	=  1;
 	mVU->prog.isSame	= -1;
 	mVU->prog.cur		= NULL;
-	mVU->prog.total		= -1;
+	mVU->prog.total		=  0;
 	mVU->prog.curFrame	=  0;
 
 	// Setup Dynarec Cache Limits for Each Program
@@ -205,7 +205,7 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	float cacheUsed =((float)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
 	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)", 
-					vuIndex, mVU->prog.total, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
+					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
 	return prog;
 }
 
