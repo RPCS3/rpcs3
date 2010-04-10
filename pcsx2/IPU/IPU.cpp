@@ -1255,22 +1255,27 @@ static __forceinline void ipuDmacSrcChain()
 		{
 			case 0x0: // refe
 				//if(IPU1Status.InProgress == false) ipu1dma->tadr += 16;
+				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = true;
 				break;
 			case 0x1: // cnt
 				// Set the taddr to the next tag
 				ipu1dma->tadr = ipu1dma->madr;
+				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
 				break;
 
 			case 0x2: // next
 				ipu1dma->tadr = IPU1Status.NextMem;
+				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
 				break;
 
-			/*case 0x3: // ref
-				if(IPU1Status.InProgress == false)ipu1dma->tadr += 16;
-				break;*/
+			case 0x3: // ref
+				//if(IPU1Status.InProgress == false)ipu1dma->tadr += 16;
+				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
+				break;
 
 			case 0x7: // end
 				ipu1dma->tadr = ipu1dma->madr;
+				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = true;
 				break;
 		}
 }
@@ -1401,7 +1406,7 @@ int IPU1dma()
 							ipu1dma->tadr += 16;
 							ipu1dma->madr = ptag[1];
 							DMA_LOG("Tag should end on %x", ipu1dma->tadr);
-							IPU1Status.DMAFinished = true;
+							
 							break;
 
 						case 0x1: // cnt
@@ -1409,21 +1414,21 @@ int IPU1dma()
 							DMA_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
 							//ipu1dma->tadr = ipu1dma->madr + (ipu1dma->qwc * 16);
 							// Set the taddr to the next tag
-							IPU1Status.DMAFinished = false;
+							//IPU1Status.DMAFinished = false;
 							break;
 
 						case 0x2: // next
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							IPU1Status.NextMem = ptag[1];
 							DMA_LOG("Tag should end on %x", IPU1Status.NextMem);
-							IPU1Status.DMAFinished = false;
+							//IPU1Status.DMAFinished = false;
 							break;
 
 						case 0x3: // ref
 							ipu1dma->madr = ptag[1];
 							ipu1dma->tadr += 16;
 							DMA_LOG("Tag should end on %x", ipu1dma->tadr);
-							IPU1Status.DMAFinished = false;
+							//IPU1Status.DMAFinished = false;
 							break;
 
 						case 0x7: // end
@@ -1431,7 +1436,7 @@ int IPU1dma()
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							ipu1dma->tadr += 16;
 							DMA_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
-							IPU1Status.DMAFinished = true;
+							
 							break;
 
 						default:
@@ -1549,9 +1554,8 @@ __forceinline void dmaIPU1() // toIPU
 		} 
 		else
 		{   //Attempting to continue a previous chain
-			//Console.Warning("IPU1 continuing previous chain");
-			if(IPU1Status.ChainMode == 0 || IPU1Status.ChainMode == 0x7)IPU1Status.DMAFinished = true;
-			else IPU1Status.DMAFinished = false;
+			//We MUST check the CHCR for the tag it last knew, it can be manipulated!
+			IPU1Status.ChainMode = (ipu1dma->chcr.TAG >> 12) & 0x7;
 			IPU1Status.InProgress = true;
 		}
 		
