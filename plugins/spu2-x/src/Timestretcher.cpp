@@ -61,7 +61,7 @@ float SndBuffer::GetStatusPct()
 	return result;
 }
 
-void SndBuffer::UpdateTempoChange()
+void SndBuffer::UpdateTempoChangeSoundTouch()
 {
 	float statusPct = GetStatusPct();
 	float pctChange = statusPct - lastPct;
@@ -200,6 +200,23 @@ void SndBuffer::UpdateTempoChange()
 	}
 }
 
+extern int TickInterval;
+void SndBuffer::UpdateTempoChangeAsyncMixing()
+{
+	float statusPct = GetStatusPct();
+
+	lastPct = statusPct;
+	if( statusPct < -0.1f )
+	{
+		TickInterval = 100;
+	}
+	else if( statusPct > 0.1f )
+	{
+		TickInterval = 9000;
+	}
+	else TickInterval = 768;
+}
+
 void SndBuffer::timeStretchUnderrun()
 {
 	// timeStretcher failed it's job.  We need to slow down the audio some.
@@ -272,7 +289,7 @@ void SndBuffer::timeStretchWrite()
 		progress = true;
 	}
 
-	UpdateTempoChange();
+	UpdateTempoChangeSoundTouch();
 
 	if( MsgOverruns() )
 	{

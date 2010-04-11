@@ -269,12 +269,10 @@ void V_Voice::Stop()
 	ADSR.Phase = 0;
 }
 
-static const int TickInterval = 768;
+int TickInterval = 768;
 static const int SanityInterval = 4800;
 
-u32 TicksCore = 0;
-u32 TicksThread = 0;
-
+//#define USE_ASYNC_MIXING
 
 __forceinline void TimeUpdate(u32 cClocks)
 {
@@ -298,7 +296,9 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 
 	//UpdateDebugDialog();
-
+#ifdef USE_ASYNC_MIXING
+	SndBuffer::UpdateTempoChangeAsyncMixing();
+#endif
 	//Update Mixing Progress
 	while(dClocks>=TickInterval)
 	{
@@ -855,7 +855,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
 				ConLog( " * SPU2: Runtime core%d reset\n", core );
-
+#ifndef USE_ASYNC_MIXING
 				if(cyclePtr != NULL)
 				{
 					thiscore.InitDelay  = 1;
@@ -866,6 +866,10 @@ static void __fastcall RegWrite_Core( u16 value )
 					thiscore.Reset(thiscore.Index);
 				}
 			}
+#else 
+					thiscore.Reset(thiscore.Index);
+			}
+#endif
 
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
 			thiscore.DMABits	=(value>> 1) & 0x07; //3 bits
@@ -895,7 +899,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			}
 			if(thiscore.IRQEnable!=irqe)
 			{
-				ConLog(" * SPU2: IRQ %s\n",((thiscore.IRQEnable==0)?"disabled":"enabled"));
+				ConLog(" * SPU2: IRQ %s at cycle %d\n",((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles);
 				if(!thiscore.IRQEnable)
 					Spdif.Info &= ~(4 << thiscore.Index);
 			}

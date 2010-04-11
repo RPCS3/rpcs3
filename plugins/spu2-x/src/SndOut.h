@@ -379,9 +379,10 @@ private:
 
 	static void PredictDataWrite( int samples );
 	static float GetStatusPct();
-	static void UpdateTempoChange();
+	static void UpdateTempoChangeSoundTouch();
 
 public:
+	static void UpdateTempoChangeAsyncMixing();
 	static void Init();
 	static void Cleanup();
 	static void Write( const StereoOut32& Sample );
