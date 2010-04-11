@@ -422,7 +422,6 @@ static __forceinline BOOL ipuIDEC(u32 val)
 }
 
 static int s_bdec = 0;
-static int g_ipu_dma_error = 0;
 
 static __forceinline BOOL ipuBDEC(u32 val)
 {
@@ -819,8 +818,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_FDEC:
-			g_ipu_dma_error = 0; // if g_ipu_dma_error is set, then continue processing. Fixes GoWs white screens of death.
-			if (!ipuFDEC(ipuRegs->cmd.DATA) && !g_ipu_dma_error)
+			if (!ipuFDEC(ipuRegs->cmd.DATA))
 			{
 				hwIntcIrq(INTC_IPU);
 				return;
@@ -1569,6 +1567,11 @@ __forceinline void dmaIPU1() // toIPU
 		if(ipu1dma->qwc == 0)
 		{
 			ipu1dma->chcr.STR = 0;
+				// Hack to force stop IPU
+				ipuRegs->cmd.BUSY = 0;
+				ipuRegs->ctrl.BUSY = 0;
+				ipuRegs->topbusy = 0;
+				// 
 			hwDmacIrq(DMAC_TO_IPU);
 			Console.Warning("IPU1 Normal error!");
 		}
