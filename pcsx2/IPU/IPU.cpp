@@ -102,7 +102,7 @@ __forceinline void IPUProcessInterrupt()
 	if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
 }
 
-__forceinline void init_g_decoder()
+void init_g_decoder()
 {
 	//other stuff
 	g_decoder.intra_quantizer_matrix = (u8*)iq;
@@ -115,7 +115,7 @@ __forceinline void init_g_decoder()
 	g_decoder.stride = 16;
 }
 
-__forceinline void mpeg2_init()
+void mpeg2_init()
 {
 	if (!mpeg2_inited)
 	{
@@ -181,8 +181,6 @@ void ReportIPU()
 
 void SaveStateBase::ipuFreeze()
 {
-	IPUProcessInterrupt();
-
 	// Get a report of the status of the ipu variables when saving and loading savestates.
 	//ReportIPU();
 	FreezeTag("IPU");
@@ -388,7 +386,7 @@ static void ipuBCLR(u32 val)
 	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X", g_BP.BP);
 }
 
-static __forceinline BOOL ipuIDEC(u32 val)
+static BOOL ipuIDEC(u32 val)
 {
 	tIPU_CMD_IDEC idec(val);
 	
@@ -522,7 +520,7 @@ static BOOL __fastcall ipuVDEC(u32 val)
 	return FALSE;
 }
 
-static BOOL ipuFDEC(u32 val)
+static __forceinline BOOL ipuFDEC(u32 val)
 {
 	if (!getBits32((u8*)&ipuRegs->cmd.DATA, 0)) return FALSE;
 
@@ -534,7 +532,7 @@ static BOOL ipuFDEC(u32 val)
 	return TRUE;
 }
 
-static __forceinline BOOL ipuSETIQ(u32 val)
+static BOOL ipuSETIQ(u32 val)
 {
 	int i;
 
@@ -566,7 +564,7 @@ static __forceinline BOOL ipuSETIQ(u32 val)
 	return ipu_cmd.pos[0] == 64;
 }
 
-static __forceinline BOOL ipuSETVQ(u32 val)
+static BOOL ipuSETVQ(u32 val)
 {
 	ipu_cmd.pos[0] += getBits((u8*)vqclut + ipu_cmd.pos[0], 256 - 8 * ipu_cmd.pos[0], 1); // 16*2*8
 
