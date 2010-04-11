@@ -297,13 +297,17 @@ enum PSM_value{
 	PSMT16SZ	= 58,		// 111010
 };
 
+// Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
+// 16, 16S, 16Z, 16SZ -- 2, PSMT8 and 8H - 3, PSMT4, 4HL, 4HH -- 4.
+inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
+
 // CLUT = Color look up table. Set proper color to table according CLUT table.
 // Used for PSMT8, PSMT8H, PSMT4, PSMT4HH, PSMT4HL textures
-inline bool PSMT_ISCLUT(int psm) { return ((psm & 0x7) > 2);}
+inline bool PSMT_ISCLUT(int psm) { return (PSMT_BITMODE(psm) > 2);}
 
 // PSMCT16, PSMCT16S, PSMT16Z, PSMT16SZ is 16-bit targets and usually there is
 // two of them in each 32-bit word.
-inline bool PSMT_IS16BIT(int psm) { return ((psm & 0x7) == 2);}
+inline bool PSMT_IS16BIT(int psm) { return (PSMT_BITMODE(psm) == 2);}
 
 // PSMT32Z, PSMT24Z, PSMT16Z, PSMT16SZ is Z-buffer textures
 inline bool PSMT_ISZTEX(int psm) {return ((psm & 0x30) == 0x30);}
@@ -318,9 +322,9 @@ inline bool PSMT_IS8CLUT(int psm) {return ((psm & 3) == 3);}
 // PSM16Z and PSMT16SZ use -1 offset to z-buff. Need to check this thesis.
 inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 
-// Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
-// 16, 16S, 16Z, 16SZ -- 2, PSMT8 and 8H - 3, PSMT4, 4HL, 4HH -- 4.
-inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
+// Check to see if it is 32 bits. According to code comments, anyways.
+// I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
+inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
 //----------------------- Data from registers -----------------------
 

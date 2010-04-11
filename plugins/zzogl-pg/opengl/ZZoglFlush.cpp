@@ -638,7 +638,7 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut) {
 		if (curvb.tex0.csm && curvb.tex0.csa )
 			printf ("ERROR, csm1\n");
 
-		if (curvb.tex0.cpsm <= 1) { // 32 bit
+		if (PSMT_IS32BIT(curvb.tex0.cpsm)) { // 32 bit
 			nClutOffset = 64 * curvb.tex0.csa;
 			clutsize = min(entries, 256 - curvb.tex0.csa * 16) * 4;
 		}
@@ -647,7 +647,7 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut) {
 			clutsize = min(entries, 512 - curvb.tex0.csa * 16) * 2;
 		}
 
-		if( curvb.tex0.cpsm <= 1 ) { // 32 bit
+		if (PSMT_IS32BIT(curvb.tex0.cpsm)) { // 32 bit
 			memcpy_amd(&data[0], g_pbyGSClut+nClutOffset, clutsize);
 		}
 		else {

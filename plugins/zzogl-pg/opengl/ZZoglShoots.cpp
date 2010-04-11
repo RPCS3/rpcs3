@@ -362,10 +362,11 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 		glGetTexImage(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGBA, pmemtarg->fmt, &srcdata[0]);
 
 		u32 offset = pmemtarg->realy * 4 * GPU_TEXWIDTH;
+		
 		if (ptex->psm == PSMT8) 
-			offset *= ptex->cpsm <= 1 ? 4 : 2;
+			offset *= PSMT_IS32BIT(ptex->cpsm) ? 4 : 2;
 		else if (ptex->psm == PSMT4) 
-			offset *= ptex->cpsm <= 1 ? 8 : 4;
+			offset *= PSMT_IS32BIT(ptex->cpsm) ? 8 : 4;
 
 		psrc = &srcdata[0] - offset;
 	}
@@ -410,8 +411,8 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 				case PSMT8:
 					addr = getPixelAddress8(j, i, ptex->tbp0, ptex->tbw);
 					if (addr < 0x00400000) {
-						if (usevid) {
-							if (ptex->cpsm <= 1) 
+						if (usevid) { 
+							if (PSMT_IS32BIT(ptex->cpsm)) 
 								u = *(u32*)(psrc+4*addr);
 							else 
 								u = RGBA16to32(*(u16*)(psrc+2*addr));
@@ -428,8 +429,10 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( addr < 2*0x00400000 ) {
 						if( usevid ) {
-							if( ptex->cpsm <= 1 ) u = *(u32*)(psrc+4*addr);
-							else u = RGBA16to32(*(u16*)(psrc+2*addr));
+							if (PSMT_IS32BIT(ptex->cpsm)) 
+								u = *(u32*)(psrc+4*addr);
+							else 
+							u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
 							u = readPixel4(psrc, j, i, ptex->tbp0, ptex->tbw);
@@ -442,8 +445,10 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if( ptex->cpsm <= 1 ) u = *(u32*)(psrc+4*addr);
-							else u = RGBA16to32(*(u16*)(psrc+2*addr));
+							if (PSMT_IS32BIT(ptex->cpsm)) 
+								u = *(u32*)(psrc+4*addr);
+							else 
+								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
 							u = readPixel8H(psrc, j, i, ptex->tbp0, ptex->tbw);
@@ -457,8 +462,10 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if( ptex->cpsm <= 1 ) u = *(u32*)(psrc+4*addr);
-							else u = RGBA16to32(*(u16*)(psrc+2*addr));
+							if (PSMT_IS32BIT(ptex->cpsm)) 
+								u = *(u32*)(psrc+4*addr);
+							else 
+								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
 							u = readPixel4HL(psrc, j, i, ptex->tbp0, ptex->tbw);
@@ -471,8 +478,10 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if( ptex->cpsm <= 1 ) u = *(u32*)(psrc+4*addr);
-							else u = RGBA16to32(*(u16*)(psrc+2*addr));
+							if (PSMT_IS32BIT(ptex->cpsm)) 
+								u = *(u32*)(psrc+4*addr);
+							else 
+								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
 							u = readPixel4HH(psrc, j, i, ptex->tbp0, ptex->tbw);
