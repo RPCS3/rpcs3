@@ -3277,6 +3277,120 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 	}
 }
 
+// I removed some code here that wasn't getting called. The old versions #if'ed out below this.
+#define RESOLVE_32_BIT(PSM, T, Tsrc, convfn) \
+	{ \
+		u32 mask, imask; \
+		\
+		if (PSMT_ISHALF(psm)) /* 16 bit */ \
+		{\
+			/* mask is shifted*/ \
+			imask = RGBA32to16(fbm);\
+			mask = (~imask)&0xffff;\
+		}\
+		else \
+		{\
+			mask = ~fbm;\
+			imask = fbm;\
+		}\
+		\
+		Tsrc* src = (Tsrc*)(psrc); \
+		T* pPageOffset = (T*)g_pbyGSMemory + fbp*(256/sizeof(T)), *dst; \
+		int maxfbh = (0x00400000-fbp*256) / (sizeof(T) * fbw); \
+		if( maxfbh > fbh ) maxfbh = fbh; \
+		\
+		for(int i = 0; i < maxfbh; ++i) { \
+			for(int j = 0; j < fbw; ++j) { \
+				T dsrc = convfn(src[RW(j)]); \
+				dst = pPageOffset + getPixelAddress##PSM##_0(j, i, fbw); \
+				*dst = (dsrc & mask) | (*dst & imask); \
+			} \
+			src += RH(Pitch(fbw))/sizeof(Tsrc); \
+		} \
+	} \
+	
+void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode = true)
+{
+	FUNCLOG
+	
+	int start, end;
+	
+	s_nResolved += 2;
+	
+	// align the rect to the nearest page
+	// note that fbp is always aligned on page boundaries
+	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
+
+	if (GetRenderFormat() == RFT_byte8) 
+	{
+		// start the conversion process A8R8G8B8 -> psm
+		switch(psm) 
+		{
+			case PSMCT32:
+			case PSMCT24:
+				RESOLVE_32_BIT(32, u32, u32, (u32));
+				break;
+				
+			case PSMCT16:
+				RESOLVE_32_BIT(16, u16, u32, RGBA32to16);
+				break;
+				
+			case PSMCT16S:
+				RESOLVE_32_BIT(16S, u16, u32, RGBA32to16);
+				break;
+				
+			case PSMT32Z:
+			case PSMT24Z:
+				RESOLVE_32_BIT(32Z, u32, u32, (u32));
+				break;
+				
+			case PSMT16Z:
+				RESOLVE_32_BIT(16Z, u16, u32, (u16));
+				break;
+				
+			case PSMT16SZ:
+				RESOLVE_32_BIT(16SZ, u16, u32, (u16));
+				break;
+		}
+	}
+	else  // float16
+	{
+		switch(psm) 
+		{
+			case PSMCT32:
+			case PSMCT24:
+				RESOLVE_32_BIT(32, u32, Vector_16F, Float16ToARGB);
+				break;
+				
+			case PSMCT16:
+				RESOLVE_32_BIT(16, u16, Vector_16F, Float16ToARGB16);
+				break;
+				
+			case PSMCT16S:
+				RESOLVE_32_BIT(16S, u16, Vector_16F, Float16ToARGB16);
+				break;
+				
+			case PSMT32Z:
+			case PSMT24Z:
+				RESOLVE_32_BIT(32Z, u32, Vector_16F,  Float16ToARGB_Z);
+				break;
+				
+			case PSMT16Z:
+				RESOLVE_32_BIT(16Z, u16, Vector_16F, Float16ToARGB16_Z);
+				break;
+				
+			case PSMT16SZ:
+				RESOLVE_32_BIT(16SZ, u16, Vector_16F, Float16ToARGB16_Z);
+				break;
+		}
+	}
+
+	g_MemTargs.ClearRange(start, end);
+	INC_RESOLVE();
+}
+
+// Leaving this code in for reference for the moment.
+#if 0
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode)
 {
 	FUNCLOG
@@ -3501,5 +3615,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	g_MemTargs.ClearRange(start, end);
 	INC_RESOLVE();
 }
+#endif
 
 } // End of namespece ZeroGS
