@@ -2212,7 +2212,9 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	if (glGetError() != GL_NO_ERROR ) 	
 		ERROR_LOG ("Error on puting bitmask texture\n");
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//	Removing clamping, as it seems lead to numerous troubles at some drivers
+//	Need to observe, may be clamping is not really needed.
+	/*glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	GLint Error = glGetError();
@@ -2228,7 +2230,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 			}
 		}
 		return 0;
-	}
+	}*/
 
 	mapTextures[bitvalue] = ptex;
 	return ptex;
