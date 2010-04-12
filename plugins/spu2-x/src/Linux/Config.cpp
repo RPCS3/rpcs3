@@ -48,6 +48,7 @@ int ReverbBoost = 0;
 u32 OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 int SndOutLatencyMS = 160;
 bool timeStretchDisabled = false;
+bool asyncMixingEnabled = false;
 
 /*****************************************************************************/
 
@@ -63,6 +64,7 @@ void ReadSettings()
 	
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
+	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
 
 	PortaudioOut->ReadSettings();
 	SoundtouchCfg::ReadSettings();
@@ -87,6 +89,7 @@ void WriteSettings()
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
 	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
 
 	PortaudioOut->WriteSettings();	
 	SoundtouchCfg::WriteSettings();

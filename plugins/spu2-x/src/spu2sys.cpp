@@ -296,9 +296,9 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 
 	//UpdateDebugDialog();
-#ifdef USE_ASYNC_MIXING
-	SndBuffer::UpdateTempoChangeAsyncMixing();
-#endif
+	if(asyncMixingEnabled)
+		SndBuffer::UpdateTempoChangeAsyncMixing();
+
 	//Update Mixing Progress
 	while(dClocks>=TickInterval)
 	{
@@ -855,8 +855,10 @@ static void __fastcall RegWrite_Core( u16 value )
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
 				ConLog( " * SPU2: Runtime core%d reset\n", core );
-#ifndef USE_ASYNC_MIXING
-				if(cyclePtr != NULL)
+
+				// Async mixing can cause a scheduled reset to happen untimely, ff12 hates it and dies.
+				// So do the next best thing and reset the core directly.
+				if(cyclePtr != NULL && !asyncMixingEnabled)
 				{
 					thiscore.InitDelay  = 1;
 					thiscore.Regs.STATX = 0;
@@ -866,10 +868,6 @@ static void __fastcall RegWrite_Core( u16 value )
 					thiscore.Reset(thiscore.Index);
 				}
 			}
-#else 
-					thiscore.Reset(thiscore.Index);
-			}
-#endif
 
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
 			thiscore.DMABits	=(value>> 1) & 0x07; //3 bits

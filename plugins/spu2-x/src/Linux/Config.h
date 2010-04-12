@@ -79,6 +79,7 @@ extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
 extern bool timeStretchDisabled;
+extern bool asyncMixingEnabled;
 extern bool StereoExpansionEnabled;
 
 namespace SoundtouchCfg

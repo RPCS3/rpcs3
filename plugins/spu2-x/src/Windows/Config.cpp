@@ -41,6 +41,7 @@ bool EffectsDisabled = false;
 // OUTPUT
 int SndOutLatencyMS = 150;
 bool timeStretchDisabled = false;
+bool asyncMixingEnabled = false;
 
 u32 OutputModule = 0;
 
@@ -62,6 +63,7 @@ void ReadSettings()
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
+	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
 	StereoExpansionEnabled = CfgReadBool( L"OUTPUT", L"Enable_StereoExpansion", false );
@@ -112,6 +114,7 @@ void WriteSettings()
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
 	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
 	CfgWriteBool(L"OUTPUT",L"Enable_StereoExpansion", StereoExpansionEnabled);
 
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
