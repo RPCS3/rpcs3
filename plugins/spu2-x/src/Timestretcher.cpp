@@ -123,7 +123,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch()
 
 	if( cTempo < 0.965f || cTempo > 1.060f ||
 		pctChange < -0.38f || pctChange > 0.54f ||
-		statusPct < -0.42f || statusPct > 0.49f ||
+		statusPct < -0.42f || statusPct > 0.70f ||
 		eTempo < 0.89f || eTempo > 1.19f )
 	{
 		//printf("Emergency stretch: cTempo = %f eTempo = %f pctChange = %f statusPct = %f\n",cTempo,eTempo,pctChange,statusPct);
@@ -208,13 +208,15 @@ void SndBuffer::UpdateTempoChangeAsyncMixing()
 	lastPct = statusPct;
 	if( statusPct < -0.4f )
 	{
-		TickInterval -= 2;
+		TickInterval -= 4;
 		if( TickInterval <= 200 ) TickInterval = 200;
+		//printf("-- %d, %f\n",TickInterval,statusPct);
 	}
-	else if( statusPct > 0.4f )
+	else if( statusPct > 0.5f )
 	{
-		TickInterval += 10;
+		TickInterval += 1;
 		if( TickInterval >= 7000 ) TickInterval = 7000;
+		//printf("++ %d, %f\n",TickInterval,statusPct);
 	}
 	else TickInterval = 768;
 }

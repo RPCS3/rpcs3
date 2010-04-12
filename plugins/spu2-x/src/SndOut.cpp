@@ -127,7 +127,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 	quietSampleCount = 0;
 	if( m_underrun_freeze )
 	{			
-		int toFill = m_size / (timeStretchDisabled || asyncMixingEnabled ? 32 : 400);
+		int toFill = m_size / (timeStretchDisabled && !asyncMixingEnabled ? 32 : 400);
 		toFill = GetAlignedBufferSize( toFill );
 
 		// toFill is now aligned to a SndOutPacket
