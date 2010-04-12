@@ -56,8 +56,8 @@ float SndBuffer::GetStatusPct()
 
 	//ConLog( "Data %d >>> driver: %d   predict: %d\n", m_data, drvempty, m_predictData );
 
-	float result = (float)(m_data + m_predictData - drvempty) - (m_size/2);
-	result /= (m_size/2);
+	float result = (float)(m_data + m_predictData - drvempty) - (m_size/16);
+	result /= (m_size/16);
 	return result;
 }
 

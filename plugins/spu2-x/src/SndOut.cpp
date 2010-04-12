@@ -127,7 +127,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 	quietSampleCount = 0;
 	if( m_underrun_freeze )
 	{			
-		int toFill = (int)(m_size * ( timeStretchDisabled ? 0.50f : 0.02f ) );
+		int toFill = m_size / (timeStretchDisabled || asyncMixingEnabled ? 32 : 400);
 		toFill = GetAlignedBufferSize( toFill );
 
 		// toFill is now aligned to a SndOutPacket
@@ -149,7 +149,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 		quietSampleCount = SndOutPacketSize - m_data;
 		m_underrun_freeze = true;
 
-		if( !timeStretchDisabled )
+		if( !timeStretchDisabled && !asyncMixingEnabled )
 			timeStretchUnderrun();
 
 		return nSamples != 0;
@@ -192,14 +192,14 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 
 		s32 comp;
 
-		if( !timeStretchDisabled )
+		if( !timeStretchDisabled && !asyncMixingEnabled )
 		{
 			comp = timeStretchOverrun();
 		}
 		else
 		{
 			// Toss half the buffer plus whatever's being written anew:
-			comp = GetAlignedBufferSize( (m_size + nSamples ) / 2 );
+			comp = GetAlignedBufferSize( (m_size + nSamples ) / 16 );
 			if( comp > (m_size-SndOutPacketSize) ) comp = m_size-SndOutPacketSize;
 		}
 
@@ -232,8 +232,8 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 	
 	// Use to monitor buffer levels in real time 
 	/*int drvempty = mods[OutputModule]->GetEmptySampleCount();
-	float result = (float)(m_data + m_predictData - drvempty) - (m_size/2);
-	result /= (m_size/2);
+	float result = (float)(m_data + m_predictData - drvempty) - (m_size/16);
+	result /= (m_size/16);
 	if (result > 0.6 || result < -0.5)
 		printf("buffer: %f\n",result);
 	}*/
@@ -258,7 +258,7 @@ void SndBuffer::Init()
 
 	try
 	{
-		const float latencyMS = SndOutLatencyMS * (timeStretchDisabled ? 1.5f : 2.0f );
+		const float latencyMS = SndOutLatencyMS * 16;
 		m_size = GetAlignedBufferSize( (int)(latencyMS * SampleRate / 1000.0f ) );
 		m_buffer = new StereoOut32[m_size];
 		m_underrun_freeze = false;
@@ -350,7 +350,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 		{
 			for( int i=0; i<SndOutPacketSize; ++i, ++ei ) { sndTempBuffer[i] = sndTempBuffer16[ei].UpSample(); }
 
-			if( !timeStretchDisabled )
+			if( !timeStretchDisabled && !asyncMixingEnabled )
 				timeStretchWrite();
 			else
 				_WriteSamples(sndTempBuffer, SndOutPacketSize);
@@ -369,7 +369,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 #endif
 	else
 	{
-		if( !timeStretchDisabled )
+		if( !timeStretchDisabled && !asyncMixingEnabled )
 			timeStretchWrite();
 		else
 			_WriteSamples(sndTempBuffer, SndOutPacketSize);
