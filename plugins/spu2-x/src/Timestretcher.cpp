@@ -206,13 +206,15 @@ void SndBuffer::UpdateTempoChangeAsyncMixing()
 	float statusPct = GetStatusPct();
 
 	lastPct = statusPct;
-	if( statusPct < -0.1f )
+	if( statusPct < -0.4f )
 	{
-		TickInterval = 100;
+		TickInterval -= 2;
+		if( TickInterval <= 200 ) TickInterval = 200;
 	}
-	else if( statusPct > 0.1f )
+	else if( statusPct > 0.4f )
 	{
-		TickInterval = 9000;
+		TickInterval += 10;
+		if( TickInterval >= 7000 ) TickInterval = 7000;
 	}
 	else TickInterval = 768;
 }
