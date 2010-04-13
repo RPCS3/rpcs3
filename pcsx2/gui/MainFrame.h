@@ -93,7 +93,7 @@ public:
 	virtual ~GSFrame() throw();
 
 	GSPanel* GetViewport();
-
+	void SetFocus();
 	bool Show( bool shown=true );
 	wxStaticText* GetLabel_OutputDisabled() const;
 
