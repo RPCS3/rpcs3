@@ -78,7 +78,7 @@ extern wchar_t dspPlugin[];
 extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
-extern bool timeStretchDisabled;
+extern bool timeStretchEnabled;
 extern bool asyncMixingEnabled;
 extern bool StereoExpansionEnabled;
 

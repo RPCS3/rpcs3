@@ -40,7 +40,7 @@ bool EffectsDisabled = false;
 
 // OUTPUT
 int SndOutLatencyMS = 150;
-bool timeStretchDisabled = false;
+bool timeStretchEnabled = true;
 bool asyncMixingEnabled = false;
 
 u32 OutputModule = 0;
@@ -62,7 +62,7 @@ void ReadSettings()
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
-	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
+	timeStretchEnabled = CfgReadBool( L"OUTPUT", L"Enable_Timestretch", true );
 	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
@@ -113,7 +113,7 @@ void WriteSettings()
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
-	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_Timestretch", timeStretchEnabled);
 	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
 	CfgWriteBool(L"OUTPUT",L"Enable_StereoExpansion", StereoExpansionEnabled);
 
@@ -177,12 +177,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			swprintf_s(temp,L"%d ms (avg)",SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			
-			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
+			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 			
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
 			SET_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
-			SET_CHECK(IDC_TS_DISABLE,		timeStretchDisabled);
+			SET_CHECK(IDC_TS_ENABLE,		timeStretchEnabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
 		}
@@ -239,8 +239,8 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
 				HANDLE_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
-				HANDLE_CHECKNB(IDC_TS_DISABLE,timeStretchDisabled);
-					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
+				HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchEnabled);
+					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 				break;
 				
 				HANDLE_CHECKNB(IDC_DEBUG_ENABLE,DebugEnabled);

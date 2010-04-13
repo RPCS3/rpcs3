@@ -67,7 +67,7 @@ extern bool EffectsDisabled;
 
 extern u32 OutputModule;
 extern int SndOutLatencyMS;
-extern bool timeStretchDisabled;
+extern bool timeStretchEnabled;
 extern bool asyncMixingEnabled;
 
 #ifndef __LINUX__

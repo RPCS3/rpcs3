@@ -47,7 +47,7 @@ int ReverbBoost = 0;
 // OUTPUT
 u32 OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 int SndOutLatencyMS = 160;
-bool timeStretchDisabled = false;
+bool timeStretchEnabled = true;
 bool asyncMixingEnabled = false;
 
 /*****************************************************************************/
@@ -63,7 +63,7 @@ void ReadSettings()
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 	
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
-	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
+	timeStretchEnabled = CfgReadBool( L"OUTPUT", L"Enable_Timestretch", true );
 	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
 
 	PortaudioOut->ReadSettings();
@@ -88,7 +88,7 @@ void WriteSettings()
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
-	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_Timestretch", timeStretchEnabled);
 	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
 
 	PortaudioOut->WriteSettings();	
@@ -171,7 +171,7 @@ void DisplayDialog()
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
     gtk_range_set_value(GTK_RANGE(latency_slide), SndOutLatencyMS);
     
-    time_check = gtk_check_button_new_with_label("Disable Time Stretch");
+    time_check = gtk_check_button_new_with_label("Enable Time Stretch");
     
 	advanced_button = gtk_button_new_with_label("Advanced...");
     
@@ -206,7 +206,7 @@ void DisplayDialog()
 	
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), timeStretchDisabled);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), timeStretchEnabled);
     
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
@@ -233,7 +233,7 @@ void DisplayDialog()
 			OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 			
     	SndOutLatencyMS = gtk_range_get_value(GTK_RANGE(latency_slide));
-    	timeStretchDisabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_check));
+    	timeStretchEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_check));
     }
     
     gtk_widget_destroy (dialog);

@@ -32,7 +32,7 @@
 #define IDC_MSGSHOW                     1024
 #define IDC_OUTCONF                     1028
 #define IDC_DSP_ENABLE                  1029
-#define IDC_TS_DISABLE                  1030
+#define IDC_TS_ENABLE                   1030
 #define IDC_DS_DEVICE                   1032
 #define IDC_DBG_OVERRUNS                1038
 #define IDC_DBG_CACHE                   1039

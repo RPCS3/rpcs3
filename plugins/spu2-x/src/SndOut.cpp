@@ -127,7 +127,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 	quietSampleCount = 0;
 	if( m_underrun_freeze )
 	{			
-		int toFill = m_size / (timeStretchDisabled && !asyncMixingEnabled ? 32 : 400);
+		int toFill = m_size / (!timeStretchEnabled && !asyncMixingEnabled ? 32 : 400);
 		toFill = GetAlignedBufferSize( toFill );
 
 		// toFill is now aligned to a SndOutPacket
@@ -149,7 +149,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 		quietSampleCount = SndOutPacketSize - m_data;
 		m_underrun_freeze = true;
 
-		if( !timeStretchDisabled && !asyncMixingEnabled )
+		if( timeStretchEnabled && !asyncMixingEnabled )
 			timeStretchUnderrun();
 
 		return nSamples != 0;
@@ -192,7 +192,7 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 
 		s32 comp;
 
-		if( !timeStretchDisabled && !asyncMixingEnabled )
+		if( timeStretchEnabled && !asyncMixingEnabled )
 		{
 			comp = timeStretchOverrun();
 		}
@@ -350,7 +350,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 		{
 			for( int i=0; i<SndOutPacketSize; ++i, ++ei ) { sndTempBuffer[i] = sndTempBuffer16[ei].UpSample(); }
 
-			if( !timeStretchDisabled && !asyncMixingEnabled )
+			if( timeStretchEnabled && !asyncMixingEnabled )
 				timeStretchWrite();
 			else
 				_WriteSamples(sndTempBuffer, SndOutPacketSize);
@@ -369,7 +369,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 #endif
 	else
 	{
-		if( !timeStretchDisabled && !asyncMixingEnabled )
+		if( timeStretchEnabled && !asyncMixingEnabled )
 			timeStretchWrite();
 		else
 			_WriteSamples(sndTempBuffer, SndOutPacketSize);
