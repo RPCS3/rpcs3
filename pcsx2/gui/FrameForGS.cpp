@@ -409,6 +409,13 @@ void GSFrame::OnMove( wxMoveEvent& evt )
 	//lastpos = evt.GetPosition();
 }
 
+void GSFrame::SetFocus()
+{
+	_parent::SetFocus();
+	if( GSPanel* gsPanel = GetViewport() )
+		gsPanel->SetFocusFromKbd();
+}
+
 void GSFrame::OnResize( wxSizeEvent& evt )
 {
 	if( IsBeingDeleted() ) return;
