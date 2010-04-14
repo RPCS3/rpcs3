@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{c3444fe6-e86c-41ad-b284-9aaa0085018c}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{3dc117c4-127f-4132-8d90-a21203ff7c9a}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{acd9ab42-6216-4bd0-a5b5-b849e2d1ba3f}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="InputAPIs">
+      <UniqueIdentifier>{15d8bba0-4d93-410e-9892-ff6062a6a6c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input">
+      <UniqueIdentifier>{0ef876e2-98b1-4cf0-8733-7cfe1a728411}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Diagnostics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LilyPad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Global.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectInput.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="DualShock3.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="HidDevice.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardHook.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardQueue.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="RawInput.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsKeyboard.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsMessaging.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsMouse.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="XInput.cpp">
+      <Filter>InputAPIs</Filter>
+    </ClCompile>
+    <ClCompile Include="DeviceEnumerator.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="InputManager.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="VKey.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="WndProcEater.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Config.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Diagnostics.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Global.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectInput.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="DualShock3.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="HidDevice.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardHook.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardQueue.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="RawInput.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="usb.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowsKeyboard.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowsMessaging.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowsMouse.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="XInput.h">
+      <Filter>InputAPIs</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceEnumerator.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="InputManager.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="VKey.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="WndProcEater.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="frog.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="LilyPad.def">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="LilyPad.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

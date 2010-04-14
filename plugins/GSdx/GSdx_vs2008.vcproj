@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1250"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="GSdx"
 	ProjectGUID="{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 	RootNamespace="GSdx"
@@ -85,6 +85,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug SSE2|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -213,6 +215,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release SSE2|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -340,6 +344,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release SSSE3|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -467,6 +473,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug SSSE3|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -593,6 +601,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug SSE4|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -720,6 +730,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release SSE4|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
@@ -843,6 +855,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
@@ -967,6 +981,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"

@@ -175,6 +175,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\FileStream.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\IOCtlSrc.cpp"
 				>
 			</File>
@@ -194,7 +198,7 @@
 				Name="Reader Modules"
 				>
 				<File
-					RelativePath=".\PlainIso.cpp"
+					RelativePath="..\PlainIso.cpp"
 					>
 				</File>
 			</Filter>
@@ -205,6 +209,10 @@
 			>
 			<File
 				RelativePath="..\CDVD.h"
+				>
+			</File>
+			<File
+				RelativePath="..\FileStream.h"
 				>
 			</File>
 			<File

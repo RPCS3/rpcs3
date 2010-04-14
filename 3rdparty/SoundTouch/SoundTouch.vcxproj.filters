@@ -11,81 +11,72 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="adler32.c">
+    <ClCompile Include="3dnow_win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="compress.c">
+    <ClCompile Include="AAFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crc32.c">
+    <ClCompile Include="cpu_detect_x86_win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="deflate.c">
+    <ClCompile Include="FIFOSampleBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzclose.c">
+    <ClCompile Include="FIRFilter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzlib.c">
+    <ClCompile Include="mmx_optimized.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzread.c">
+    <ClCompile Include="RateTransposer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzwrite.c">
+    <ClCompile Include="SoundTouch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="infback.c">
+    <ClCompile Include="sse_optimized.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="inffast.c">
+    <ClCompile Include="TDStretch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="inflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="inftrees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="trees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="uncompr.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zutil.c">
+    <ClCompile Include="WavFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="crc32.h">
+    <ClInclude Include="AAFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="deflate.h">
+    <ClInclude Include="BPMDetect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inffast.h">
+    <ClInclude Include="cpu_detect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inffixed.h">
+    <ClInclude Include="FIFOSampleBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inflate.h">
+    <ClInclude Include="FIFOSamplePipe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inftrees.h">
+    <ClInclude Include="FIRFilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="trees.h">
+    <ClInclude Include="RateTransposer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zconf.h">
+    <ClInclude Include="SoundTouch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib.h">
+    <ClInclude Include="STTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zutil.h">
+    <ClInclude Include="TDStretch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WavFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

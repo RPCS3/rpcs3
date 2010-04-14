@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|Win32">
+      <Configuration>Devel</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A51123F5-9505-4EAE-85E7-D320290A272C}</ProjectGuid>
+    <RootNamespace>x86emitter</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vsprops\CommonLibrary.props" />
+    <Import Project="..\..\vsprops\IncrementalLinking.props" />
+    <Import Project="..\..\vsprops\CodeGen_Devel.props" />
+    <Import Project="..\..\vsprops\pthreads.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vsprops\CommonLibrary.props" />
+    <Import Project="..\..\vsprops\CodeGen_Release.props" />
+    <Import Project="..\..\vsprops\pthreads.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vsprops\CommonLibrary.props" />
+    <Import Project="..\..\vsprops\CodeGen_Debug.props" />
+    <Import Project="..\..\vsprops\IncrementalLinking.props" />
+    <Import Project="..\..\vsprops\pthreads.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>PrecompiledHeader.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>PrecompiledHeader.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>PrecompiledHeader.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\x86emitter\3dnow.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\cpudetect.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\fpu.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\groups.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\jmp.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\legacy.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\legacy_sse.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\movs.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\PrecompiledHeader.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\x86emitter\simd.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\tools.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\x86emitter.cpp" />
+    <ClCompile Include="..\..\src\x86emitter\LnxCpuDetect.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\x86emitter\WinCpuDetect.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\x86emitter\cpudetect_internal.h" />
+    <ClInclude Include="..\..\include\x86emitter\instructions.h" />
+    <ClInclude Include="..\..\include\x86emitter\internal.h" />
+    <ClInclude Include="..\..\include\x86emitter\legacy_instructions.h" />
+    <ClInclude Include="..\..\include\x86emitter\legacy_internal.h" />
+    <ClInclude Include="..\..\include\x86emitter\legacy_types.h" />
+    <ClInclude Include="..\..\include\x86emitter\macros.h" />
+    <ClInclude Include="..\..\src\x86emitter\PrecompiledHeader.h" />
+    <ClInclude Include="..\..\include\x86emitter\sse_helpers.h" />
+    <ClInclude Include="..\..\include\x86emitter\tools.h" />
+    <ClInclude Include="..\..\include\x86emitter\x86emitter.h" />
+    <ClInclude Include="..\..\include\x86emitter\x86types.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\dwshift.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\group1.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\group2.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\group3.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\helpers.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\incdec.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\jmpcall.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\movs.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\test.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\xchg.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\simd_arithmetic.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\simd_comparisons.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\simd_helpers.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\simd_moremovs.h" />
+    <ClInclude Include="..\..\include\x86emitter\implement\simd_shufflepack.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\include\x86emitter\inlines.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

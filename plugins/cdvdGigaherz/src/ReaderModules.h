@@ -1,8 +1,13 @@
 #pragma once
 
+#include "FileStream.h"
+
 class Reader: public Source //abstract class as base for Reader modules
 {
+	Reader(Reader&);
 public:
+	Reader(){};
+
 	//virtual destructor
 	virtual ~Reader() {}
 
@@ -26,7 +31,7 @@ public:
 
 class PlainIso: public Reader
 {
-	HANDLE fileSource;
+	FileStream* fileSource;
 
 	bool OpenOK;
 
@@ -50,6 +55,7 @@ class PlainIso: public Reader
 	bool layerBreakCached;
 	s32  layerBreak;
 
+	PlainIso(PlainIso&);
 public:
 
 	PlainIso(const char* fileName);

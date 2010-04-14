@@ -1,0 +1,302 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{21596259-72f4-41c0-b499-40839e39f043}</UniqueIdentifier>
+      <Extensions>h;hpp;cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\debug">
+      <UniqueIdentifier>{30e5b8dd-2015-4c3d-a663-992fb42627b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound Output">
+      <UniqueIdentifier>{ed4df93e-4e4b-4675-a181-c5084146df7c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound Output\Windows">
+      <UniqueIdentifier>{1cb77247-dec9-4a0a-867f-7353b14decac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound Output\Linux">
+      <UniqueIdentifier>{f87cf8e1-d654-4214-b7f4-6fb697f3941a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound Output\Crossplatform">
+      <UniqueIdentifier>{10ccccc1-642a-42ec-900c-801f707bd776}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\decoder">
+      <UniqueIdentifier>{03be4765-f627-4c0a-9d40-f3c0f86f1e57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\decoder\ac3%28a/52%29">
+      <UniqueIdentifier>{ea7e8889-2015-40b9-ac77-b4a3a58c41af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SPU2">
+      <UniqueIdentifier>{63ac2d88-b5c3-41a3-bd2c-a04c80acd35f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SPU2\Mixer">
+      <UniqueIdentifier>{825046cd-874f-45f4-8622-14c146a97b46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Winamp DSP">
+      <UniqueIdentifier>{3924e038-9ec9-4f1c-89b9-6d03c46566ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GUI">
+      <UniqueIdentifier>{efaf786c-f09d-49f7-b5f3-8bb7078e9c44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GUI\Linux">
+      <UniqueIdentifier>{00c53f28-fde8-4f60-88d2-d223584f1db5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GUI\Linux\Include">
+      <UniqueIdentifier>{95111121-7e1f-4624-8765-a17e8f13827f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\GUI\Windows">
+      <UniqueIdentifier>{70e9653e-fba5-4c6e-ad9b-185006096d49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\PluginInterface">
+      <UniqueIdentifier>{6fcf6c91-7afe-4ade-bb30-79d63901d590}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documents">
+      <UniqueIdentifier>{381a6e5e-bdd5-48b0-81f8-e2775eff9585}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{d26e57df-a97e-4ba5-801a-c0c52b5d061f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Config.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ConvertUTF.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Global.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\utf8.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spu2replay.h">
+      <Filter>Source Files\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Lowpass.h">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SndOut.h">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Linux\Alsa.h">
+      <Filter>Source Files\Sound Output\Linux</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spdif.h">
+      <Filter>Source Files\decoder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\a52.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\a52_internal.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\attributes.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\bitstream.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\mm_accel.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\tables.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\liba52\tendra.h">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\defs.h">
+      <Filter>Source Files\SPU2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dma.h">
+      <Filter>Source Files\SPU2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\regs.h">
+      <Filter>Source Files\SPU2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Mixer.h">
+      <Filter>Source Files\SPU2\Mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="dsp.h">
+      <Filter>Source Files\Winamp DSP</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Linux\Config.h">
+      <Filter>Source Files\GUI\Linux\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Linux\Dialogs.h">
+      <Filter>Source Files\GUI\Linux\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Linux\Linux.h">
+      <Filter>Source Files\GUI\Linux\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Dialogs.h">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="Hyperlinks.h">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="WinConfig.h">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\PS2E-spu2.h">
+      <Filter>Source Files\PluginInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resources</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\ConvertUTF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\PrecompiledHeader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\utf8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\debug.cpp">
+      <Filter>Source Files\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RegLog.cpp">
+      <Filter>Source Files\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\spu2replay.cpp">
+      <Filter>Source Files\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\wavedump_wav.cpp">
+      <Filter>Source Files\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Lowpass.cpp">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SndOut.cpp">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Timestretcher.cpp">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClCompile>
+    <ClCompile Include="SndOut_DSound.cpp">
+      <Filter>Source Files\Sound Output\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="SndOut_waveOut.cpp">
+      <Filter>Source Files\Sound Output\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="SndOut_XAudio2.cpp">
+      <Filter>Source Files\Sound Output\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Linux\Alsa.cpp">
+      <Filter>Source Files\Sound Output\Linux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SndOut_Portaudio.cpp">
+      <Filter>Source Files\Sound Output\Crossplatform</Filter>
+    </ClCompile>
+    <ClCompile Include="..\decoder.cpp">
+      <Filter>Source Files\decoder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\3rdparty\liba52\bit_allocate.c">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\3rdparty\liba52\bitstream.c">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\3rdparty\liba52\downmix.c">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\3rdparty\liba52\imdct.c">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\3rdparty\liba52\parse.c">
+      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dma.cpp">
+      <Filter>Source Files\SPU2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\RegTable.cpp">
+      <Filter>Source Files\SPU2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\spu2freeze.cpp">
+      <Filter>Source Files\SPU2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\spu2sys.cpp">
+      <Filter>Source Files\SPU2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ADSR.cpp">
+      <Filter>Source Files\SPU2\Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Mixer.cpp">
+      <Filter>Source Files\SPU2\Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ReadInput.cpp">
+      <Filter>Source Files\SPU2\Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Reverb.cpp">
+      <Filter>Source Files\SPU2\Mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="dsp.cpp">
+      <Filter>Source Files\Winamp DSP</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Linux\Config.cpp">
+      <Filter>Source Files\GUI\Linux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Linux\Dialogs.cpp">
+      <Filter>Source Files\GUI\Linux</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Linux\Linux.cpp">
+      <Filter>Source Files\GUI\Linux</Filter>
+    </ClCompile>
+    <ClCompile Include="AboutBox.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="CfgHelpers.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigDebug.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="ConfigSoundtouch.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Hyperlinks.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="RealtimeDebugger.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="UIHelpers.cpp">
+      <Filter>Source Files\GUI\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\PS2E-spu2.cpp">
+      <Filter>Source Files\PluginInterface</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\LGPL.txt">
+      <Filter>Documents</Filter>
+    </None>
+    <None Include="..\..\License.txt">
+      <Filter>Documents</Filter>
+    </None>
+    <None Include="..\..\Website.txt">
+      <Filter>Documents</Filter>
+    </None>
+    <None Include="..\..\spu2-x-sm.bmp">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="..\..\spu2-x.bmp">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="Spu2-X.def">
+      <Filter>Resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Spu2-X.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

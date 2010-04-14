@@ -45,7 +45,10 @@ extern toc_data cdtoc;
 
 class Source //abstract class as base for source modules
 {
+	Source(Source&);
 public:
+	Source(){};
+
 	//virtual destructor
 	virtual ~Source()
 	{
@@ -68,7 +71,8 @@ public:
 
 class IOCtlSrc: public Source
 {
-private:
+	IOCtlSrc(IOCtlSrc&);
+
 	HANDLE device;
 
 	bool OpenOK;

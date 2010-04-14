@@ -9,84 +9,63 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="adler32.c">
+    <ClCompile Include="..\Targets\dsound51.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="compress.c">
+    <ClCompile Include="..\Targets\SoundTargets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crc32.c">
+    <ClCompile Include="..\voices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="deflate.c">
+    <ClCompile Include="Win32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzclose.c">
+    <ClCompile Include="..\zerodma.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzlib.c">
+    <ClCompile Include="..\zerospu2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gzread.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gzwrite.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="infback.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="inffast.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="inflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="inftrees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="trees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="uncompr.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zutil.c">
+    <ClCompile Include="..\zeroworker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="crc32.h">
+    <ClInclude Include="..\Targets\dsound51.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="deflate.h">
+    <ClInclude Include="..\misc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inffast.h">
+    <ClInclude Include="..\reg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inffixed.h">
+    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inflate.h">
+    <ClInclude Include="..\Targets\SoundTargets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="inftrees.h">
+    <ClInclude Include="..\zerodma.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="trees.h">
+    <ClInclude Include="..\zerospu2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zconf.h">
+    <ClInclude Include="..\zeroworker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ZeroSPU2.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
