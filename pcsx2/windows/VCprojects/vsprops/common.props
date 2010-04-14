@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <ProjectRootDir>$(ProjectDir)\..\..</ProjectRootDir>
+    <SvnRootDir>$(ProjectRootDir)\..</SvnRootDir>
+    <SvnCommonDir>$(SvnRootDir)\common</SvnCommonDir>
+    <PcsxSubsection />
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>./;../../;../../x86;../../x86/ix86-32;../../IPU;../../System;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>__i386__;TIXML_USE_STL;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <PrecompiledHeaderOutputFile>$(IntDir)pcsx2.pch</PrecompiledHeaderOutputFile>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\;..\libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="ProjectRootDir">
+      <Value>$(ProjectRootDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="SvnRootDir">
+      <Value>$(SvnRootDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="SvnCommonDir">
+      <Value>$(SvnCommonDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="PcsxSubsection">
+      <Value>$(PcsxSubsection)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
