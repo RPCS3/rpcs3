@@ -325,7 +325,11 @@
     <ClCompile Include="..\..\src\msw\volume.cpp" />
     <ClCompile Include="..\..\src\msw\window.cpp" />
     <ClCompile Include="..\..\src\generic\aboutdlgg.cpp" />
-    <ClCompile Include="..\..\src\generic\accel.cpp" />
+    <ClCompile Include="..\..\src\generic\accel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\src\generic\busyinfo.cpp" />
     <ClCompile Include="..\..\src\generic\buttonbar.cpp" />
     <ClCompile Include="..\..\src\generic\choicbkg.cpp" />
@@ -345,7 +349,11 @@
     <ClCompile Include="..\..\src\generic\fontpickerg.cpp" />
     <ClCompile Include="..\..\src\generic\hyperlink.cpp" />
     <ClCompile Include="..\..\src\generic\listbkg.cpp" />
-    <ClCompile Include="..\..\src\generic\listctrl.cpp" />
+    <ClCompile Include="..\..\src\generic\listctrl.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\src\generic\logg.cpp" />
     <ClCompile Include="..\..\src\generic\mdig.cpp" />
     <ClCompile Include="..\..\src\generic\msgdlgg.cpp">
