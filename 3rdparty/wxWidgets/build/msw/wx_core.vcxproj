@@ -1519,7 +1519,7 @@
       <Project>{bc236261-77e8-4567-8d09-45cd02965eb6}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="wx_config_2008.vcxproj">
+    <ProjectReference Include="wx_config.vcxproj">
       <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

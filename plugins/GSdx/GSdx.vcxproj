@@ -1441,15 +1441,15 @@
     <ResourceCompile Include="GSdx.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\3rdparty\glew\glew_static_vs2008.vcxproj">
+    <ProjectReference Include="..\..\3rdparty\glew\glew_static.vcxproj">
       <Project>{067d7863-393b-494f-b296-4a8853eb3d1d}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads_2008.vcxproj">
+    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads.vcxproj">
       <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads_lib_2008.vcxproj">
+    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads_lib.vcxproj">
       <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

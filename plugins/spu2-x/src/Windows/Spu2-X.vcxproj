@@ -528,27 +528,27 @@
       <Project>{e9b51944-7e6d-4bcd-83f2-7bbd5a46182d}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads.vcxproj">
       <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_lib_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_lib.vcxproj">
       <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_adv_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_adv.vcxproj">
       <Project>{0e231fb1-f3c9-4724-accb-de8bcb3c089e}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_base_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_base.vcxproj">
       <Project>{48ad7e0a-25b1-4974-a1e3-03f8c438d34f}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_config_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_config.vcxproj">
       <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_core_2008.vcxproj">
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_core.vcxproj">
       <Project>{0318ba30-ef48-441a-9e10-dc85efae39f0}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

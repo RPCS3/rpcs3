@@ -633,7 +633,7 @@
     <None Include="PCSX2.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="pthreads_2008.vcxproj">
+    <ProjectReference Include="pthreads.vcxproj">
       <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

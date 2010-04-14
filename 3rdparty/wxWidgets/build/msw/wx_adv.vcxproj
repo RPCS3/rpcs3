@@ -216,7 +216,7 @@
     <ClInclude Include="..\..\include\wx\wizard.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="wx_config_2008.vcxproj">
+    <ProjectReference Include="wx_config.vcxproj">
       <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

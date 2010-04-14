@@ -179,7 +179,7 @@
     <ClInclude Include="..\..\include\Utilities\Threading.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_base_2008.vcxproj">
+    <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_base.vcxproj">
       <Project>{48ad7e0a-25b1-4974-a1e3-03f8c438d34f}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
