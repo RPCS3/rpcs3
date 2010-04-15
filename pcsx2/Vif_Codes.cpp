@@ -75,12 +75,15 @@ void Vif1MskPath3() {
 
 	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
 	//Console.WriteLn("VIF MSKPATH3 %x", vif1Regs->mskpath3);
-
+	gifRegs->stat.M3P = vif1Regs->mskpath3;
 	if (!vif1Regs->mskpath3) {
 		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
-		GSTransferStatus.PTH3 = TRANSFER_MODE;
-		gifRegs->stat.IMT  = false;
-		if(gif->chcr.STR == true) CPU_INT(DMAC_GIF, 4);
+		if(gif->chcr.STR == true) 
+		{
+			GSTransferStatus.PTH3 = 3;
+			CPU_INT(DMAC_GIF, 4);
+		}
+		
 	}
 	else gifRegs->stat.M3P = true;
 
@@ -111,11 +114,11 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		gifRegs->stat.P2Q = true;
 		//Should probably do this for both types of transfer seen as the GS hates taking 2 seperate chunks
 		//if (isDirectHL) {
-		if ((gif->chcr.STR && (!vif1Regs->mskpath3 && (GSTransferStatus.PTH3 != STOPPED_MODE))) || GSTransferStatus.PTH1 != STOPPED_MODE) 
+		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE) 
 		{
 			/*if(!isDirectHL) DevCon.WriteLn("Direct: Waiting for Path3 to finish!");
 			else DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");*/
-			VIF_LOG("Mask %x, GIF STR %x, PTH1 %x, PTH2 %x, PTH3 %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH1, GSTransferStatus.PTH2, GSTransferStatus.PTH3);
+			//VIF_LOG("Mask %x, GIF STR %x, PTH1 %x, PTH2 %x, PTH3 %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH1, GSTransferStatus.PTH2, GSTransferStatus.PTH3);
 			vif1Regs->stat.VGW = true; // PATH3 is in image mode, so wait for end of transfer
 			vif1.vifstalled    = true;
 			return 0;
@@ -183,11 +186,10 @@ vifOp(vifCode_FlushA) {
 	vif1Only();
 	pass1 {
 		// Gif is already transferring so wait for it.
-		if (((GSTransferStatus.PTH3 != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR) { 
-			//DevCon.WriteLn("FlushA path3 Wait!");
+		if (GSTransferStatus.PTH3 < STOPPED_MODE) { 
+			//DevCon.WriteLn("FlushA path3 Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);
 			vif1Regs->stat.VGW = true;
 			vifX.vifstalled    = true;
-			CPU_INT(DMAC_GIF, 4);
 		}
 		vifFlush(idx);
 		vifX.cmd = 0;

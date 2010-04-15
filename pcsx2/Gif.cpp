@@ -82,7 +82,7 @@ __forceinline void gsInterrupt()
 	gscycles = 0;
 	gif->chcr.STR = false;
 	vif1Regs->stat.VGW = false;
-
+	if(GSTransferStatus.PTH3 == 3) GSTransferStatus.PTH3 = STOPPED_MODE;
 	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_FQC);
 
 	clearFIFOstuff(false);
@@ -238,7 +238,7 @@ void GIFdma()
 
 		if (GSTransferStatus.PTH3 == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
 		{
-			GIF_LOG("PTH3 MASK Continuing VIF");
+			GIF_LOG("PTH3 MASK Paused by VIF");
 			vif1Regs->stat.VGW = false;
 			if (gif->qwc == 0) CPU_INT(DMAC_GIF, 16);
 			return;
@@ -246,7 +246,7 @@ void GIFdma()
 		gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
-			GIF_LOG("PTH3 MASK Transferring", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
+			GIF_LOG("PTH3 MASK Transferring");
 			GIFchain();
 			CPU_INT(DMAC_GIF, gscycles * BIAS);
 			return;

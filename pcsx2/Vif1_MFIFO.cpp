@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Vif.h"
+#include "Gif.h"
 #include "Vif_Dma.h"
 
 VIFregisters *vifRegs;
@@ -224,9 +225,9 @@ void vifMFIFOInterrupt()
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if (gif->chcr.STR)
+		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE)
 		{
-			CPU_INT(10, 16);
+			CPU_INT(10, 4);
 			return;
 		}
 		else

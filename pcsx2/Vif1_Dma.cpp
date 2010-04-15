@@ -211,7 +211,7 @@ __forceinline void vif1Interrupt()
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if ((gif->chcr.STR && (GSTransferStatus.PTH3 != STOPPED_MODE)) || (GSTransferStatus.PTH1 != STOPPED_MODE))
+		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE)
 		{
 			CPU_INT(DMAC_VIF1, 4);
 			return;
