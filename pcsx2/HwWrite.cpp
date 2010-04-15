@@ -63,9 +63,9 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (chcr.STR && reg->chcr.STR && dmacRegs->ctrl.DMAE) {
-		if((reg->chcr._u32 & 0xff) == (chcr._u32 & 0xff)) //Tried to start another DMA in the same mode
+		if((reg->chcr._u32 & 0xff) == (chcr._u32 & 0xff) && psHu8(DMAC_ENABLER+2) == 0) //Tried to start another DMA in the same mode
 			DevCon.Warning(L"DMAExec32 Attempt to run DMA while one is already active in %s(%x)", ChcrName(mem), mem);
-		else if(psHu8(DMAC_ENABLER+2) != 0)//Just trying to change mode without stopping the DMA, so we dont care really :P
+		else //Just trying to change mode without stopping the DMA, so we dont care really :P
 		{
 			HW_LOG("Attempted to change modes while DMA active, ignoring");
 			// When DMA is active only STR field is writable, so we just
@@ -104,9 +104,9 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (chcr.STR && reg->chcr.STR && dmacRegs->ctrl.DMAE) {
-		if((reg->chcr._u32 & 0xff) == (chcr._u32 & 0xff)) //Tried to start another DMA in the same mode
+		if((reg->chcr._u32 & 0xff) == (chcr._u32 & 0xff) && psHu8(DMAC_ENABLER+2) == 0) //Tried to start another DMA in the same mode
 			DevCon.Warning(L"DMAExec32 Attempt to run DMA while one is already active in %s(%x)", ChcrName(mem), mem);
-		else if(psHu8(DMAC_ENABLER+2) != 0)//Just trying to change mode without stopping the DMA, so we dont care really :P
+		else //Just trying to change mode without stopping the DMA, so we dont care really :P
 		{
 			HW_LOG("Attempted to change modes while DMA active, ignoring");
 			// When DMA is active only STR field is writable, so we just

@@ -455,7 +455,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 	if (pathidx == GIF_PATH_3) {
 		gif->madr += size * 16;
 		gif->qwc  -= size;
-	} 
+	} else if (pathidx == GIF_PATH_2 && !nloop) { //Path2 is odd, but always provides the correct size
+		GSTransferStatus.PTH2 = STOPPED_MODE;
+	}
 	
 	return size;
 }

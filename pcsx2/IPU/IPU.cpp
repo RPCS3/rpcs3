@@ -42,7 +42,7 @@
 #	define IPU_INT_FROM( cycles )  ipu0Interrupt()
 #	define IPU_FORCEINLINE
 #else
-#	define IPU_INT_TO( cycles )  CPU_INT( DMAC_TO_IPU, cycles )
+#	define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
 #	define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
 #	define IPU_FORCEINLINE __forceinline
 #endif
@@ -1372,7 +1372,7 @@ int IPU1dma()
 			{
 				if(!WaitGSPaths())
 				{ // legacy WaitGSPaths() for now
-					if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+					IPU_INT_TO(4); //Give it a short wait.
 					return totalqwc;
 				}
 				DMA_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -1386,7 +1386,7 @@ int IPU1dma()
 				{
 					if(!WaitGSPaths())
 					{ // legacy WaitGSPaths() for now
-						if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(4); //Give it a short wait.
 						return totalqwc;
 					}
 					DMA_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -1475,7 +1475,7 @@ int IPU1dma()
 					
 					if(!WaitGSPaths() && ipu1dma->qwc > 0)
 					{ // legacy WaitGSPaths() for now
-						if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(4); //Give it a short wait.
 						return totalqwc;
 					}
 					DMA_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
