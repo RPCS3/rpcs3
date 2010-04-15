@@ -337,7 +337,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
 	if (pathidx==GIF_PATH_1) size = 0x400;		// VU1 mem size
-	const u32	startSize =  size;				// Start Size
+	u32	startSize =  size;						// Start Size
 
 	while (size > 0) {
 		if (!nloop) {
@@ -363,7 +363,8 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			}
 			//}
 		}
-		else {
+		else
+		{
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 					GIF_LOG("Packed Mode");
@@ -398,7 +399,32 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 			}
 		}
+		if(pathidx == GIF_PATH_1)
+		{
+			if(nloop > 0 && size == 0 && !tag.EOP) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
+			{
+				switch(tag.FLG)
+				{
+					case GIF_FLG_PACKED:
+						size = nloop * numregs;
+					break;
 
+					case GIF_FLG_REGLIST:
+						size = (nloop * numregs) / 2;
+					break;
+
+					default:
+						size = nloop;
+					break;
+				}
+				startSize += size;
+				if(startSize >= 0x3fff)
+				{
+					size = 0;
+					Console.Warning("GIFTAG error, size exceeded VU memory size");
+				}
+			}
+		}
 		if (tag.EOP && !nloop) {
 			if (pathidx != GIF_PATH_2) {
 				break;

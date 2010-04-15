@@ -72,7 +72,7 @@ _vifT void vifTransferLoop(u32* &data) {
 			vifXRegs->code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
-
+			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
 			vifXCode[vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;

@@ -115,7 +115,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		{
 			/*if(!isDirectHL) DevCon.WriteLn("Direct: Waiting for Path3 to finish!");
 			else DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");*/
-
+			VIF_LOG("Mask %x, GIF STR %x, PTH1 %x, PTH2 %x, PTH3 %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH1, GSTransferStatus.PTH2, GSTransferStatus.PTH3);
 			vif1Regs->stat.VGW = true; // PATH3 is in image mode, so wait for end of transfer
 			vif1.vifstalled    = true;
 			return 0;
