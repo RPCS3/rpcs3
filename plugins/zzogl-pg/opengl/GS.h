@@ -415,6 +415,66 @@ typedef struct {
 	u8 cld;
 } tex0Info;
 
+union tex_0_info
+{
+	struct
+	{
+		u64 tbp0 : 14;
+		u64 tbw : 6;
+		u64 psm : 6;
+		u64 tw : 4;
+		u64 th : 4;
+		u64 tcc : 1;
+		u64 tfx : 2;
+		u64 cbp : 14;
+		u64 cpsm : 4;
+		u64 csm : 1;
+		u64 csa : 5;
+		u64 cld : 3;
+	};
+	u64 _u64;
+	u32 _u32[2];
+	u16 _u16[4];
+	u8 _u8[8];
+	tex_0_info(u64 data) { _u64 = data; }
+	tex_0_info(u32 data) { _u32[0] = data; _u32[1] = 0; }
+	tex_0_info(u32 data0, u32 data1) { _u32[0] = data0; _u32[1] = data1; }
+	u32 tbw_mult()
+	{
+		if (tbw == 0)			
+			return 64;
+		else	
+			return (tbw << 6);
+	}
+	u32 psm_fix()
+	{
+	//	printf ("psm %d\n", psm);
+		if ( psm == 9 ) return 1;
+		return psm;
+	}
+	u32 tw_exp()
+	{
+		if (tw > 10) return (1<<10);
+		return (1<<tw);
+	}
+	u32 th_exp()
+	{
+		if (th > 10) return (1<<10);
+		return (1<<th);
+	}
+	u32 cpsm_fix()
+	{
+		return cpsm & 0xe;
+	}
+	u32 csa_fix()
+	{
+		if (cpsm < 2)
+			return (csa & 0xf);
+		else
+			return (csa & 0x1f);
+	}
+};
+
 #define TEX_MODULATE 0
 #define TEX_DECAL 1
 #define TEX_HIGHLIGHT 2
@@ -607,21 +667,24 @@ inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0) {
 // Tex0Info (TEXD_x registers) bits, lower word 
 // The register is really 64-bit, but we use 2 32bit ones to represent it
 // Obtain tbp0 -- Texture Buffer Base Pointer (Word Address/64) -- from data. Bits 0-13.
-inline int
-ZZOglGet_tbp0_TexBits(u32 data) { 
+static __forceinline int ZZOglGet_tbp0_TexBits(u32 data) 
+{ 
+	//return tex_0_info(data).tbp0;
 	return (data	  ) & 0x3fff;
 }
 
 // Obtain tbw -- Texture Buffer Width (Texels/64) -- from data, do not multiply to 64. Bits 14-19
 // ( data & 0xfc000 ) >> 14
-inline int
-ZZOglGet_tbw_TexBits(u32 data) { 
+static __forceinline int ZZOglGet_tbw_TexBits(u32 data) 
+{ 
+	//return tex_0_info(data).tbw;
 	return (data >> 14) & 0x3f;
 }
 
 // Obtain tbw -- Texture Buffer Width (Texels) -- from data, do multiply to 64, never return 0.
-inline int
-ZZOglGet_tbw_TexBitsMult(u32 data) { 
+static __forceinline int ZZOglGet_tbw_TexBitsMult(u32 data) 
+{ 
+	//return text_0_info(data).tbw_mult();
 	int result = ZZOglGet_tbw_TexBits(data);
 	if (result == 0)			
 		return 64;
@@ -631,94 +694,106 @@ ZZOglGet_tbw_TexBitsMult(u32 data) {
 
 // Obtain psm -- Pixel Storage Format -- from data. Bits 20-25. 
 // (data & 0x3f00000) >> 20
-inline int
-ZZOglGet_psm_TexBits(u32 data) { 
+static __forceinline int ZZOglGet_psm_TexBits(u32 data) 
+{ 
+	//return tex_0_info(data).psm;
 	return 	((data >> 20) & 0x3f);
 }
 
 // Obtain psm -- Pixel Storage Format -- from data. Bits 20-25. Fix incorrect psm == 9 
-inline int
-ZZOglGet_psm_TexBitsFix(u32 data) { 
+static __forceinline int ZZOglGet_psm_TexBitsFix(u32 data) 
+{ 
+	//return tex_0_info(data).psm_fix();
 	int result = ZZOglGet_psm_TexBits(data) ;
 //	printf ("result %d\n", result);
-	if ( result == 9 )
-		result = 1;
+	if ( result == 9 ) result = 1;
 	return result;
 }
 
 // Obtain tw -- Texture Width (Width = 2^TW) -- from data. Bits 26-29
 // (data & 0x3c000000)>>26
-inline u16
-ZZOglGet_tw_TexBits(u32 data) { 
+static __forceinline u16 ZZOglGet_tw_TexBits(u32 data) 
+{ 
+	//return tex_0_info(data).tw;
 	return 	((data >> 26) & 0xf);
 }
 
 // Obtain tw -- Texture Width (Width = TW) -- from data. Width could newer be more than 1024.
-inline u16
-ZZOglGet_tw_TexBitsExp(u32 data) { 
+static __forceinline u16 ZZOglGet_tw_TexBitsExp(u32 data) 
+{ 
+	//return tex_0_info(data).tw_exp();
 	u16 result = ZZOglGet_tw_TexBits(data);
-	if (result > 10) 
-		result = 10;
+	if (result > 10) result = 10;
 	return (1<<result);
 }
 
 // TH set at the border of upper and higher words.
 // Obtain th -- Texture Height (Height = 2^TH) -- from data. Bits 30-31 lower, 0-1 higher
 // (dataLO & 0xc0000000) >> 30 + (dataHI & 0x3) * 0x4
-inline u16
-ZZOglGet_th_TexBits(u32 dataLO, u32 dataHI) { 
+static __forceinline u16 ZZOglGet_th_TexBits(u32 dataLO, u32 dataHI) 
+{ 
+	//return tex_0_info(dataLO, dataHI).th;
 	return (((dataLO >> 30) & 0x3) | ((dataHI & 0x3) << 2));
 }
 
 // Obtain th --Texture Height (Height = 2^TH) -- from data. Height could newer be more than 1024.
-inline u16
-ZZOglGet_th_TexBitsExp(u32 dataLO, u32 dataHI) { 
+static __forceinline u16 ZZOglGet_th_TexBitsExp(u32 dataLO, u32 dataHI) 
+{ 
+	//return tex_0_info(dataLO, dataHI).th_exp();
 	u16 result = ZZOglGet_th_TexBits(dataLO, dataHI);
-	if (result > 10) 
-		result = 10;
+	if (result > 10) result = 10;
 	return 	(1<<result);
 }
 
 // Tex0Info bits, higher word.
-// Obtain tcc -- Tecture Color Component 0=RGB, 1=RGBA + use Alpha from TEXA reg when not in PSM -- from data. Bit 3
+// Obtain tcc -- Texture Color Component 0=RGB, 1=RGBA + use Alpha from TEXA reg when not in PSM -- from data. Bit 3
 // (data & 0x4)>>2
-inline u8
-ZZOglGet_tcc_TexBits(u32 data) { 
+static __forceinline u8 ZZOglGet_tcc_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).tcc;
 	return  ((data >>  2) & 0x1);
 }
 
 // Obtain tfx -- Texture Function (0=modulate, 1=decal, 2=hilight, 3=hilight2) -- from data. Bit 4-5
 // (data & 0x18)>>3
-inline u8
-ZZOglGet_tfx_TexBits(u32 data) { 
+static __forceinline u8 ZZOglGet_tfx_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).tfx;
 	return  ((data >>  3) & 0x3);
 }
 
 // Obtain cbp from data -- Clut Buffer Base Pointer (Address/256) -- Bits 5-18
 // (data & 0x7ffe0)>>5
-inline int
-ZZOglGet_cbp_TexBits(u32 data) { 
+static __forceinline int ZZOglGet_cbp_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).cbp;
 	return  ((data >>  5) & 0x3fff);
 }
 
 // Obtain cpsm from data -- Clut pixel Storage Format -- Bits 19-22. 22nd is at no use.
 // (data & 0x700000)>>19
-inline u8
-ZZOglGet_cpsm_TexBits(u32 data) { 
+// 0000 - psmct32; 0010 - psmct16; 1010 - psmct16s.
+static __forceinline u8 ZZOglGet_cpsm_TexBits(u32 data) 
+{ 
+	//return (tex_0_info(0, data).cpsm & 0xe);
 	return ((data >> 19) & 0xe);
 }
 
 // Obtain csm -- I don't know what is it -- from data. Bit 23
 // (data & 0x800000)>>23
-inline u8
-ZZOglGet_csm_TexBits(u32 data) { 
+// csm is the clut storage mode. 0 for CSM1, 1 for CSM2.
+static __forceinline u8 ZZOglGet_csm_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).csm;
 	return ((data >> 23) & 0x1);
 }
 
 // Obtain csa -- -- from data. Bits 24-28
 // (data & 0x1f000000)>>24
-inline u8
-ZZOglGet_csa_TexBits(u32 data) { 
+static __forceinline u8 ZZOglGet_csa_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).csa_fix();
+		
 	if ((data & 0x700000) == 0 ) // it is cpsm < 2 check
 		return ((data >> 24) & 0xf);
 	else	
@@ -727,8 +802,9 @@ ZZOglGet_csa_TexBits(u32 data) {
 
 // Obtain cld --   -- from data. Bits 29-31
 // (data & 0xe0000000)>>29
-inline u8
-ZZOglGet_cld_TexBits(u32 data) { 
+static __forceinline u8 ZZOglGet_cld_TexBits(u32 data) 
+{ 
+	//return tex_0_info(0, data).cld;
 	return  ((data >> 29) & 0x7);
 }
 

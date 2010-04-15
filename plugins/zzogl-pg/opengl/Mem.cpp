@@ -52,7 +52,7 @@ static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFun
 {
 	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) && 
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx)); 
-	
+		
 	if ((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) 
 	{ 
 		/* hack */ 
@@ -64,6 +64,7 @@ static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFun
 		{ 
 			/* don't transfer */ 
 			/*DEBUG_LOG("bad texture %s: %d %d %d\n", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/ 
+			//ERROR_LOG("bad texture: testwidth = %d; data.widthlimit = %d\n", testwidth, data.widthlimit);
 			gs.imageTransfer = -1; 
 		} 
 		bCanAlign = false; 
@@ -111,14 +112,14 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */ 
 	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, data.transfersize) & 0xf) == 0; 
 	
-	/* transfer aligning to blocks */ 
+	if ( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL))) 
+		swizzle = (fun.Swizzle);
+	else 
+		swizzle = (fun.Swizzle_u);
+	
+	//Transfer aligning to blocks.
 	for(; tempY < alignedPt.y && nSize >= area; tempY += data.blockheight, nSize -= area) 
 	{ 
-		if ( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL))) 
-			swizzle = (fun.Swizzle);
-		else 
-			swizzle = (fun.Swizzle_u);
-			
 		for(int tempj = gs.trxpos.dx; tempj < alignedPt.x; tempj += data.blockwidth, pbuf += TransPitch(data.blockwidth, data.transfersize)/TSize) 
 		{ 
 				u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits/8;
@@ -126,7 +127,7 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 		} 
 		
 		/* transfer the rest */ 
-		if( alignedPt.x < gs.imageEndX ) 
+		if (alignedPt.x < gs.imageEndX)
 		{ 
 			pbuf = TransmitHostLocalX<T>(data, fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
 			if (pbuf == NULL) return NULL;
@@ -139,7 +140,7 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 		}
 		
 		tempX = gs.trxpos.dx; 
-	} 
+	}
 	return pbuf;
 }
 
@@ -151,7 +152,7 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 		gs.imageTransfer = -1; 
 		/*int start, end; 
 		ZeroGS::GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw); 
-		ZeroGS::g_MemTargs.ClearRange(start, end);*/ 
+		ZeroGS::g_MemTargs.ClearRange(start, end);*/
 	} 
 	else 
 	{ 

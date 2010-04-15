@@ -820,37 +820,35 @@ void ZeroGS::ExtWrite()
 // Caches //
 ////////////
 
-bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
-{
-	FUNCLOG
-	int cld = ZZOglGet_cld_TexBits(highdword);
-	int cbp = ZZOglGet_cbp_TexBits(highdword);
+
+//	case 0: return false;
+//	case 1: break;
+//	case 2: m_CBP[0] = TEX0.CBP; break;
+//	case 3: m_CBP[1] = TEX0.CBP; break;
+//	case 4: if(m_CBP[0] == TEX0.CBP) return false; m_CBP[0] = TEX0.CBP; break;
+//	case 5: if(m_CBP[1] == TEX0.CBP) return false; m_CBP[1] = TEX0.CBP; break;
+//	case 6: ASSERT(0); return false; // ffx2 menu
+//	case 7: ASSERT(0); return false;
+//	default: __assume(0);
 	
-	// processing the CLUT after tex0/2 are written
-	switch(cld) {
-		case 0: return false;
-		case 1: break; // Seems to rarely not be 1.
-		// note sure about changing cbp[0,1]
-		case 4: return gs.cbp[0] != cbp;
-		case 5: return gs.cbp[1] != cbp;
-
-		// default: load
-		default: break;
-	}
-
+bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
+{
 	int cpsm = ZZOglGet_cpsm_TexBits(highdword);
 	int csm = ZZOglGet_csm_TexBits(highdword);
 	
-	if( cpsm > 1 || csm )
+	if (cpsm > 1 || csm)
+	{
+		ERROR_LOG("16 bit clut not supported.\n");
 		// don't support 16bit for now
 		return true;
+	}
 
 	int csa = ZZOglGet_csa_TexBits(highdword);
 
 	int entries = PSMT_IS8CLUT(psm) ? 256 : 16;
 
-	u64* src = (u64*)(g_pbyGSMemory + cbp*256);
-	u64* dst = (u64*)(g_pbyGSClut+64*csa);
+	u64* src = (u64*)(g_pbyGSMemory + cbp * 256);
+	u64* dst = (u64*)(g_pbyGSClut + 64 * csa);
 
 	bool bRet = false;
 
@@ -976,34 +974,66 @@ Return:
 		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory");
 
 #endif // _WIN32
+return bRet;
+}
 
-	return bRet;
+// cld state:
+// 000 - clut data is not loaded; data in the temp buffer is stored
+// 001 - clut data is always loaded.
+// 010 - clut data is always loaded; cbp0 = cbp.
+// 011 - clut data is always loadedl cbp1 = cbp.
+// 100 - cbp0 is compared with cbp. if different, clut data is loaded.
+// 101 - cbp1 is compared with cbp. if different, clut data is loaded.
+
+// GSdx sets cbp0 & cbp1 when checking for clut changes. ZeroGS sets them in texClutWrite.
+bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
+{
+	FUNCLOG
+	int cld = ZZOglGet_cld_TexBits(highdword);
+	int cbp = ZZOglGet_cbp_TexBits(highdword);
+	
+	// processing the CLUT after tex0/2 are written
+	ERROR_LOG("high == 0x%x; cld == %d\n", highdword, cld);
+	switch(cld) {
+		case 0: return false;
+		case 1: break;
+		case 2: break;
+		case 3: break;
+		case 4: if (gs.cbp[0] == cbp) return false; break;
+		case 5: if (gs.cbp[1] == cbp) return false; break;
+
+		//case 4: return gs.cbp[0] != cbp;
+		//case 5: return gs.cbp[1] != cbp;
+
+		// default: load
+		default: break;
+	}
+
+	return IsDirty(highdword, psm, cld, cbp);
 }
 
 void ZeroGS::texClutWrite(int ctx)
 {
 	FUNCLOG
 	s_bTexFlush = 0;
-	if( g_bIsLost )
-		return;
+	if (g_bIsLost) return;
 
 	tex0Info& tex0 = vb[ctx].tex0;
 	assert( PSMT_ISCLUT(tex0.psm) );
+	
 	// processing the CLUT after tex0/2 are written
-	switch(tex0.cld) {
+	switch(tex0.cld) 
+	{
 		case 0: return;
 		case 1: break; // tex0.cld is usually 1.
 		case 2: gs.cbp[0] = tex0.cbp; break;
 		case 3: gs.cbp[1] = tex0.cbp; break;
-		// not sure about changing cbp[0,1]
 		case 4:
-			if( gs.cbp[0] == tex0.cbp )
-				return;
+			if (gs.cbp[0] == tex0.cbp) return;
 			gs.cbp[0] = tex0.cbp;
 			break;
 		case 5:
-			if( gs.cbp[1] == tex0.cbp )
-				return;
+			if (gs.cbp[1] == tex0.cbp) return;
 			gs.cbp[1] = tex0.cbp;
 			break;
 		default:  //DEBUG_LOG("cld isn't 0-5!");

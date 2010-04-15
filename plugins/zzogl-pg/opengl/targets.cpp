@@ -1576,7 +1576,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 	switch(psm) 
 	{ 
 		case PSMT8: 
-			for(int i = 0; i < height; ++i) 
+			for(u32 i = 0; i < height; ++i) 
 			{
 				for(int j = 0; j < GPU_TEXWIDTH/2; ++j) 
 				{
@@ -1595,7 +1595,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 			break; 
 
 		case PSMT4: 
-			for(int i = 0; i < height; ++i) 
+			for(u32 i = 0; i < height; ++i) 
 			{ 
 				for(int j = 0; j < GPU_TEXWIDTH; ++j) 
 				{
@@ -1615,7 +1615,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 			break; 
 			
 		case PSMT8H: 
-			for(int i = 0; i < height; ++i) 
+			for(u32 i = 0; i < height; ++i) 
 			{ 
 				for(int j = 0; j < GPU_TEXWIDTH/8; ++j) 
 				{ 
@@ -1634,7 +1634,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 			break; 
 			
 		case PSMT4HH: 
-			for(int i = 0; i < height; ++i) 
+			for(u32 i = 0; i < height; ++i) 
 			{ 
 				for(int j = 0; j < GPU_TEXWIDTH/8; ++j) 
 				{ 
@@ -1653,7 +1653,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 			break; 
 			
 		case PSMT4HL: 
-			for(int i = 0; i < height; ++i) 
+			for(u32 i = 0; i < height; ++i) 
 			{ 
 				for(int j = 0; j < GPU_TEXWIDTH/8; ++j) 
 				{ 
@@ -1883,11 +1883,11 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	ZeroGS::CMemoryTarget* it = MemoryTarget_SearchExistTarget (start, end, nClutOffset, clutsize, tex0, forcevalidate);
 	if (it != NULL) return it;
 
-	// couldn't find so create
+	// couldn't find, so create.
 	CMemoryTarget* targ;
 
 	u32 fmt = GL_UNSIGNED_BYTE;
-//	if ((PSMT_ISCLUT(tex0.psm) && tex0.cpsm > 1) || tex0.psm == PSMCT16 || tex0.psm == PSMCT16S) {
+	
 	if (PSMT_ISHALF_STORAGE(tex0)) 
 	{
 		fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
@@ -2299,141 +2299,160 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	return ptex;
 }
 
+static __forceinline void RangeSanityCheck()
+{
+#ifdef _DEBUG
+	// sanity check
+	for(int i = 0; i < (int)ranges.size()-1; ++i) 
+	{
+		assert( ranges[i].end < ranges[i+1].start );
+	}
+#endif
+}
+
 void ZeroGS::CRangeManager::Insert(int start, int end)
 {
 	FUNCLOG
 	int imin = 0, imax = (int)ranges.size(), imid;
 	
-#ifdef _DEBUG
-	// sanity check
-	for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
-
-	switch( ranges.size() ) {
+	RangeSanityCheck();
+	
+	switch(ranges.size()) 
+	{
 		case 0:
 			ranges.push_back(RANGE(start, end));
 			return;
 
 		case 1:
-			if( end < ranges.front().start ) {
+			if (end < ranges.front().start) 
+			{
 				ranges.insert(ranges.begin(), RANGE(start, end));
 			}
-			else if( start > ranges.front().end ) {
+			else if (start > ranges.front().end) 
+			{
 				ranges.push_back(RANGE(start, end));
 			}
-			else {
-				if( start < ranges.front().start ) ranges.front().start = start;
-				if( end > ranges.front().end ) ranges.front().end = end;
+			else 
+			{
+				if (start < ranges.front().start) ranges.front().start = start;
+				if (end > ranges.front().end) ranges.front().end = end;
 			}
 
 			return;
 	}
 
 	// find where start is
-	while(imin < imax) {
+	while(imin < imax) 
+	{
 		imid = (imin+imax)>>1;
 
 		assert( imid < (int)ranges.size() );
 
-		if( ranges[imid].end >= start && (imid == 0 || ranges[imid-1].end < start) ) {
+		if ((ranges[imid].end >= start) && ((imid == 0) || (ranges[imid-1].end < start))) 
+		{
 			imin = imid;
 			break;
 		}
-		else if( ranges[imid].start > start ) imax = imid;
-		else imin = imid+1;
+		else if (ranges[imid].start > start) 
+		{
+			imax = imid;
+		}
+		else 
+		{
+			imin = imid + 1;
+		}
 	}
 
 	int startindex = imin;
 
-	if( startindex >= (int)ranges.size() ) {
+	if (startindex >= (int)ranges.size()) 
+	{
 		// non intersecting
 		assert( start > ranges.back().end );
 		ranges.push_back(RANGE(start, end));
 		return;
 	}
-	if( startindex == 0 && end < ranges.front().start ) {
+	if (startindex == 0 && end < ranges.front().start) 
+	{
 		ranges.insert(ranges.begin(), RANGE(start, end));
-
-#ifdef _DEBUG
-		// sanity check
-		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
+		RangeSanityCheck();
 		return;
 	}
 
-	imin = 0; imax = (int)ranges.size();
+	imin = 0; 
+	imax = (int)ranges.size();
 
 	// find where end is
-	while(imin < imax) {
-		imid = (imin+imax)>>1;
+	while(imin < imax) 
+	{
+		imid = (imin + imax) >> 1;
 
-		assert( imid < (int)ranges.size() );
+		assert(imid < (int)ranges.size());
 
-		if( ranges[imid].end <= end && (imid == ranges.size()-1 || ranges[imid+1].start > end ) ) {
+		if ((ranges[imid].end <= end) && ((imid == ranges.size() - 1) || (ranges[imid+1].start > end))) 
+		{
 			imin = imid;
 			break;
 		}
-		else if( ranges[imid].start >= end ) imax = imid;
-		else imin = imid+1;
+		else if (ranges[imid].start >= end)
+		{
+			imax = imid;
+		}
+		else 
+		{
+			imin = imid + 1;
+		}
 	}
 
 	int endindex = imin;
 
-	if( startindex > endindex ) {
+	if (startindex > endindex) 
+	{
 		// create a new range
-		ranges.insert(ranges.begin()+startindex, RANGE(start, end));
-
-#ifdef _DEBUG
-		// sanity check
-		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
+		ranges.insert(ranges.begin() + startindex, RANGE(start, end));
+		RangeSanityCheck();
 		return;
 	}
 
-	if( endindex >= (int)ranges.size()-1 ) {
+	if (endindex >= (int)ranges.size() - 1) 
+	{
 		// pop until startindex is reached
 		int lastend = ranges.back().end;
 		int numpop = (int)ranges.size() - startindex - 1;
-		while(numpop-- > 0 ) ranges.pop_back();
+		
+		while(numpop-- > 0 ) 
+		{
+			ranges.pop_back();
+		}
 
 		assert( start <= ranges.back().end );
-		if( start < ranges.back().start ) ranges.back().start = start;
-		if( lastend > ranges.back().end ) ranges.back().end = lastend;
-		if( end > ranges.back().end ) ranges.back().end = end;
-
-#ifdef _DEBUG
-		// sanity check
-		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
-
+		if (start < ranges.back().start) ranges.back().start = start;
+		if (lastend > ranges.back().end) ranges.back().end = lastend;
+		if (end > ranges.back().end) ranges.back().end = end;
+		RangeSanityCheck();
 		return;
 	}
 
-	if( endindex == 0 ) {
+	if( endindex == 0 ) 
+	{
 		assert( end >= ranges.front().start );
-		if( start < ranges.front().start ) ranges.front().start = start;
-		if( end > ranges.front().end ) ranges.front().end = end;
-		
-#ifdef _DEBUG
-		// sanity check
-		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
+		if (start < ranges.front().start) ranges.front().start = start;
+		if (end > ranges.front().end) ranges.front().end = end;
+		RangeSanityCheck();
 	}
 
 	// somewhere in the middle
-	if( ranges[startindex].start < start ) start = ranges[startindex].start;
+	if (ranges[startindex].start < start) start = ranges[startindex].start;
 
-	if( startindex < endindex ) {
+	if (startindex < endindex) 
+	{
 		ranges.erase(ranges.begin() + startindex, ranges.begin() + endindex );
 	}
 
-	if( start < ranges[startindex].start ) ranges[startindex].start = start;
-	if( end > ranges[startindex].end ) ranges[startindex].end = end;
-
-#ifdef _DEBUG
-	// sanity check
-	for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
-#endif
+	if (start < ranges[startindex].start) ranges[startindex].start = start;
+	if (end > ranges[startindex].end) ranges[startindex].end = end;
+	
+	RangeSanityCheck();
 }
 
 namespace ZeroGS {
