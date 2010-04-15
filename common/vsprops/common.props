@@ -8,7 +8,6 @@
     <_PropertySheetDisplayName>common</_PropertySheetDisplayName>
     <OutDir>$(SolutionDir)bin\$(PcsxSubsection)</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

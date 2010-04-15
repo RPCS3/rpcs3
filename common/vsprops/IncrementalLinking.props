@@ -3,6 +3,7 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>$(ProjectName)-dbg</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

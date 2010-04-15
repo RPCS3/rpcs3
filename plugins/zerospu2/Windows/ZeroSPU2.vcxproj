@@ -40,7 +40,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\common\vsprops\nullplugin_svnroot.props" />
+    <Import Project="..\..\..\common\vsprops\plugin_svnroot.props" />
     <Import Project="ProjectRootDir.props" />
     <Import Project="..\..\..\common\vsprops\BaseProperties.props" />
     <Import Project="..\..\..\common\vsprops\3rdpartyDeps.props" />
@@ -49,7 +49,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\common\vsprops\nullplugin_svnroot.props" />
+    <Import Project="..\..\..\common\vsprops\plugin_svnroot.props" />
     <Import Project="ProjectRootDir.props" />
     <Import Project="..\..\..\common\vsprops\BaseProperties.props" />
     <Import Project="..\..\..\common\vsprops\3rdpartyDeps.props" />
@@ -57,7 +57,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\common\vsprops\nullplugin_svnroot.props" />
+    <Import Project="..\..\..\common\vsprops\plugin_svnroot.props" />
     <Import Project="ProjectRootDir.props" />
     <Import Project="..\..\..\common\vsprops\BaseProperties.props" />
     <Import Project="..\..\..\common\vsprops\3rdpartyDeps.props" />
