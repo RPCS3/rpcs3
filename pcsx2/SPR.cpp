@@ -251,6 +251,10 @@ void SPRFROMinterrupt()
 		}
 	}
 	if (!spr0finished) return;
+
+	if((spr0->chcr.MOD == CHAIN_MODE) && ((spr0->chcr.TAG >> 12) & 0x7) != 0x0 && ((spr0->chcr.TAG >> 12) & 0x7) != 0x7 && !((spr0->chcr.TAG >> 12) & 0x8))
+		DevCon.Warning("SPR0 Ending when refe or end not set! CHCR = %x", spr0->chcr._u32);
+
 	spr0->chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_SPR);
 }
@@ -424,6 +428,10 @@ void SPRTOinterrupt()
 {
 	_dmaSPR1();
 	if (!spr1finished) return;
+
+	if((spr1->chcr.MOD == CHAIN_MODE) && ((spr1->chcr.TAG >> 12) & 0x7) != 0x0 && ((spr1->chcr.TAG >> 12) & 0x7) != 0x7 && !((spr1->chcr.TAG >> 12) & 0x8))
+		DevCon.Warning("SPR1 Ending when refe or end not set! CHCR = %x", spr1->chcr._u32);
+
 	spr1->chcr.STR = false;
 	hwDmacIrq(DMAC_TO_SPR);
 }

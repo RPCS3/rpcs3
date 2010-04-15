@@ -50,7 +50,7 @@ void vif1TransferFromMemory()
 	// MTGS concerns:  The MTGS is inherently disagreeable with the idea of downloading
 	// stuff from the GS.  The *only* way to handle this case safely is to flush the GS
 	// completely and execute the transfer there-after.
-
+	//Console.Warning("Real QWC %x", vif1ch->qwc);
     XMMRegisters::Freeze();
 
 	if (GSreadFIFO2 == NULL)
@@ -81,6 +81,11 @@ void vif1TransferFromMemory()
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
+	if(vif1.GSLastTRXPOS > vif1ch->qwc) 
+		vif1Regs->stat.FQC = vif1.GSLastTRXPOS - vif1ch->qwc;
+	else
+		vif1Regs->stat.FQC = 0;
+
 	vif1ch->qwc = 0;
 }
 
@@ -195,12 +200,18 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
+	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+	//Simulated GS transfer time done, clear the flags
+	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50) 
+	{
+		gifRegs->stat.clear_flags(GIF_STAT_APATH2|GIF_STAT_OPH);
+	}
 
 	if (schedulepath3msk) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{
-		if (gif->chcr.STR && (Path3progress != STOPPED_MODE))
+		if ((gif->chcr.STR && (GSTransferStatus.PTH3 != STOPPED_MODE)) || (GSTransferStatus.PTH1 != STOPPED_MODE))
 		{
 			CPU_INT(DMAC_VIF1, 4);
 			return;
@@ -220,7 +231,7 @@ __forceinline void vif1Interrupt()
 		--vif1.irq;
 		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat.FQC = 0;
+			//vif1Regs->stat.FQC = 0;
 
 			// One game doesn't like vif stalling at end, can't remember what. Spiderman isn't keen on it tho
 			vif1ch->chcr.STR = false;
@@ -240,8 +251,10 @@ __forceinline void vif1Interrupt()
 		_VIF1chain();
 		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
-		if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
-		else CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
+		if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+		// Refraction - Removing voodoo timings for now, completely messes a lot of Path3 masked games.
+		/*if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
+		else */CPU_INT(DMAC_VIF1, g_vifCycles /*VifCycleVoodoo*/);
 		return;
 	}
 
@@ -255,8 +268,8 @@ __forceinline void vif1Interrupt()
 		}
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
-
-		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
+		if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+		CPU_INT(DMAC_VIF1, g_vifCycles);
 		return;
 	}
 
@@ -275,12 +288,14 @@ __forceinline void vif1Interrupt()
 	vif1ch->chcr.STR = false;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
-
+	
+	/*if(vif1.dmamode == VIF_CHAIN_MODE && ((vif1ch->chcr.TAG >> 12) & 0x7) != 0x0 && ((vif1ch->chcr.TAG >> 12) & 0x7) != 0x7 && !((vif1ch->chcr.TAG >> 12) & 0x8))
+		DevCon.Warning("VIF1 Ending when refe or end not set! CHCR = %x", vif1ch->chcr._u32);*/
 	//Im not totally sure why Path3 Masking makes it want to see stuff in the fifo
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0;
+	//if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 }
 
 void dmaVIF1()
@@ -298,6 +313,7 @@ void dmaVIF1()
 		//Console.WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
 		if (vif1ch->chcr.MOD == NORMAL_MODE) Console.WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch->chcr._u32);
+		vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 		vifMFIFOInterrupt();
 		return;
 	}
@@ -325,10 +341,7 @@ void dmaVIF1()
 		vif1.dmamode = VIF_CHAIN_MODE;
 	}
 
-	if (vif1.dmamode != VIF_NORMAL_FROM_MEM_MODE)
-		vif1Regs->stat.FQC = 0x10;
-	else
-		vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
+	vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 
 	// Chain Mode
 	vif1.done = false;

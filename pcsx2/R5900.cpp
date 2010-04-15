@@ -270,6 +270,11 @@ static __forceinline void TESTINT( u8 n, void (*callback)() )
 
 static __forceinline void _cpuTestInterrupts()
 {
+	if (!dmacRegs->ctrl.DMAE || psHu16(DMAC_ENABLER + 2))
+	{
+		//Console.Write("DMAC Disabled or suspended");
+		return;
+	}
 	/* These are 'pcsx2 interrupts', they handle asynchronous stuff
 	   that depends on the cycle timings */
 

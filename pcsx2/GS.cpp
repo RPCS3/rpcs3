@@ -59,7 +59,7 @@ void gsReset()
 	GetMTGS().ResetGS();
 
 	UpdateVSyncRate();
-
+	GSTransferStatus = (STOPPED_MODE<<4) | (STOPPED_MODE<<2) | STOPPED_MODE;
 	memzero(g_RealGSMem);
 
 	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now

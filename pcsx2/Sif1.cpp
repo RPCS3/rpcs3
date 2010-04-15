@@ -174,6 +174,10 @@ static __forceinline void EndEE()
 		SIF_LOG("SIF1 EE: cycles = 0");
 		sif1.ee.cycles = 1;
 	}
+
+	if((sif1dma->chcr.MOD == CHAIN_MODE) && ((sif1dma->chcr.TAG >> 12) & 0x7) != 0x0 && ((sif1dma->chcr.TAG >> 12) & 0x7) != 0x7 && !((sif1dma->chcr.TAG >> 12) & 0x8))
+		DevCon.Warning("SIF0 Ending when refe or end not set! CHCR = %x", sif1dma->chcr._u32);
+
 	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384)); 
 }
 

@@ -26,13 +26,29 @@ enum gifstate_t
 	GIF_STATE_EMPTY = 0x10
 };
 
-enum Path3Modes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
+enum GSTransferModes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
 {
 	IMAGE_MODE = 0,
 	TRANSFER_MODE = 1,
 	STOPPED_MODE = 2
 };
 
+union tGSTransferStatus {
+	struct {
+		u32 PTH1 : 2; // Resets Vif(0/1) when written.
+		u32 PTH2 : 2; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
+		u32 PTH3 : 2; // Stops after the end of the Vifcode in progress when true. (Stall)
+		u32 reserved : 26;
+	};
+	u32 _u32;
+	
+	tGSTransferStatus(u32 val)			{ _u32 = val; }
+	bool test		(u32 flags) const	{ return !!(_u32 & flags); }
+	void set_flags	(u32 flags)			{ _u32 |=  flags; }
+	void clear_flags(u32 flags)			{ _u32 &= ~flags; }
+	void reset()						{ _u32 = 0; }
+	wxString desc() const				{ return wxsFormat(L"GSTransferStatus.PTH3: 0x%x", _u32); }
+};
 //GIF_STAT
 enum gif_stat_flags
 {
@@ -262,7 +278,7 @@ struct GIFregisters
 
 #define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))
 
-extern Path3Modes Path3progress;
+extern tGSTransferStatus GSTransferStatus;
 
 extern void gsInterrupt();
 extern int _GIFchain();

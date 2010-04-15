@@ -18,6 +18,7 @@
 #include "GS.h"
 #include "Gif.h"
 #include "Vif_Dma.h"
+#include "vif.h"
 
 // --------------------------------------------------------------------------------------
 //  GIFpath -- the GIFtag Parser
@@ -277,6 +278,40 @@ void SaveStateBase::gifPathFreeze()
 static __forceinline void gsHandler(const u8* pMem)
 {
 	const int handler = pMem[8];
+	
+	if(handler == 0x50)
+	{
+		const u16* pMem16 = (const u16*)pMem;
+		
+		vif1.TRXPOS._u32 = pMem16[1];
+		//Console.Warning("BLITBUF = %x %x_%x_%x_%x", vif1.TRXPOS.BLTDIVIDE, pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
+		switch(vif1.TRXPOS.BLTDIVIDE & 0x3)
+		{
+			case 0x3:
+				VIF_LOG("8bit");
+				vif1.TRXPOS.BLTDIVIDE = 16; //8bit
+				break;
+			case 0x2:
+				VIF_LOG("16bit");
+				vif1.TRXPOS.BLTDIVIDE = 8; //16bit
+				break;
+			case 0x1:
+				VIF_LOG("24bit");
+				vif1.TRXPOS.BLTDIVIDE = 5; //24bit
+				break;
+			default:
+				VIF_LOG("32bit");
+				vif1.TRXPOS.BLTDIVIDE = 4; //32bit
+				break;
+		}
+	}
+	if(handler == 0x52)
+	{
+		const u16* pMem16 = (const u16*)pMem;
+		VIF_LOG("TRX REG = %x_%x_%x_%x", pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
+		vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / (u8)vif1.TRXPOS.BLTDIVIDE;
+		
+	}
 	if (handler >= 0x60)
 	{
 		// Question: What happens if an app writes to uncharted register space on real PS2
@@ -310,14 +345,28 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			SetTag(pMem);
 			incTag(16, 1);
 
-			if (pathidx == GIF_PATH_3) {
-				if (tag.FLG&2)	Path3progress = IMAGE_MODE;
-				else			Path3progress = TRANSFER_MODE;
+			//if (pathidx == GIF_PATH_3) {
+			switch(pathidx)
+			{
+				case GIF_PATH_1:
+					if (tag.FLG&2)	GSTransferStatus.PTH1 = IMAGE_MODE;
+					else			GSTransferStatus.PTH1 = TRANSFER_MODE;
+					break;
+				case GIF_PATH_2:
+					if (tag.FLG&2)	GSTransferStatus.PTH2 = IMAGE_MODE;
+					else			GSTransferStatus.PTH2 = TRANSFER_MODE;
+					break;
+				case GIF_PATH_3:
+					if (tag.FLG&2)	GSTransferStatus.PTH3 = IMAGE_MODE;
+					else			GSTransferStatus.PTH3 = TRANSFER_MODE;
+					break;
 			}
+			//}
 		}
 		else {
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
+					GIF_LOG("Packed Mode");
 					PrepPackedRegs();
 					do {
 						if (GetReg() == 0xe) {
@@ -328,6 +377,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
+					GIF_LOG("Reglist Mode");
 					size *= 2;
 
 					do { incTag(8, 1); }
@@ -340,6 +390,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
+					GIF_LOG("IMAGE Mode");
 					int len = aMin(size, nloop);
 					incTag(( len * 16 ), len);
 					nloop -= len;
@@ -354,17 +405,32 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			}
 		}
 	}
+	/*if(((GSTransferStatus.PTH1 & 0x2) + (GSTransferStatus.PTH2 & 0x2) + ((GSTransferStatus.PTH3 & 0x2) && !vif1Regs->mskpath3)) < 0x4 )
+		Console.Warning("CHK PTH1 %x, PTH2 %x, PTH3 %x", GSTransferStatus.PTH1, GSTransferStatus.PTH2, GSTransferStatus.PTH3);*/
 
 	size = (startSize - size);
 
-	if (pathidx == GIF_PATH_3) {
+	
 		if (tag.EOP && !nloop) {
-			Path3progress = STOPPED_MODE;
+			//Console.Warning("Finishing path %x", pathidx);
+			switch(pathidx)
+			{
+				case GIF_PATH_1:
+					GSTransferStatus.PTH1 = STOPPED_MODE;
+					break;
+				case GIF_PATH_2:
+					GSTransferStatus.PTH2 = STOPPED_MODE;
+					break;
+				case GIF_PATH_3:
+					GSTransferStatus.PTH3 = STOPPED_MODE;
+					break;
+			}
 		}
+	if (pathidx == GIF_PATH_3) {
 		gif->madr += size * 16;
 		gif->qwc  -= size;
-	}
-
+	} 
+	
 	return size;
 }
 

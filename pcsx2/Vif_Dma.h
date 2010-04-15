@@ -24,6 +24,18 @@ struct vifCode {
    u16 cl;
 };
 
+union tBITBLT {
+	struct {
+		u32 reserved : 8;
+		u32 BLTDIVIDE : 8; // This is the value we want to work out the divider for the reverse transfer
+		u32 reserved2 : 6;
+		u32 TRXPOS : 16;
+	};
+	u32 _u32;
+
+	
+};
+
 // NOTE, if debugging vif stalls, use sega classics, spyro, gt4, and taito
 struct vifStruct {
 	vifCode tag;
@@ -36,7 +48,10 @@ struct vifStruct {
 	bool done;
 	bool vifstalled;
 	bool stallontag;
+	tBITBLT TRXPOS;		//used for reversed fifo operations, sometimes only the GS knows how big (like on HW register fifo read)!
+	u32 GSLastTRXPOS;
 	
+
 	u8 irqoffset; // 32bit offset where next vif code is
 	u32 savedtag; // need this for backwards compat with save states
 	u32 vifpacketsize;
@@ -47,7 +62,6 @@ struct vifStruct {
 extern vifStruct* vif;
 extern vifStruct  vif0, vif1;
 extern u8		  schedulepath3msk;
-static const int  VifCycleVoodoo = 4;
 
 extern void vif0Init();
 extern void vif0Interrupt();

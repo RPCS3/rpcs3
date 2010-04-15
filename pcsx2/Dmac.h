@@ -401,7 +401,7 @@ static __forceinline const wxChar* ChcrName(u32 addr)
         case D6_CHCR: return L"Sif 1";
         case D7_CHCR: return L"Sif 2";
         case D8_CHCR: return L"SPR 0";
-        case SPR1_CHCR: return L"SPR 1";
+        case D9_CHCR: return L"SPR 1";
         default: return L"???";
     }
 }

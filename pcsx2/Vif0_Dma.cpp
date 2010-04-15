@@ -152,7 +152,7 @@ __forceinline void vif0Interrupt()
 		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
 		if (vif0.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF0, 1024);
-		else CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
+		else CPU_INT(DMAC_VIF0, g_vifCycles);
 		return;
 	}
 
@@ -167,7 +167,7 @@ __forceinline void vif0Interrupt()
 
 		if ((vif0.inprogress & 0x1) == 0) vif0SetupTransfer();
 
-		CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF0, g_vifCycles);
 		return;
 	}
 
@@ -181,6 +181,9 @@ __forceinline void vif0Interrupt()
 	if (vif0ch->qwc > 0) Console.WriteLn("vif0 Ending with %x QWC left");
 	if (vif0.cmd != 0) Console.WriteLn("vif0.cmd still set %x tag size %x", vif0.cmd, vif0.tag.size);
 #endif
+
+	/*if(vif0.dmamode == VIF_CHAIN_MODE && ((vif0ch->chcr.TAG >> 12) & 0x7) != 0x0 && ((vif0ch->chcr.TAG >> 12) & 0x7) != 0x7 && !((vif0ch->chcr.TAG >> 12) & 0x8))
+		DevCon.Warning("VIF0 Ending when refe or end not set! CHCR = %x", vif0ch->chcr._u32);*/
 
 	vif0Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
 	vif0ch->chcr.STR = false;

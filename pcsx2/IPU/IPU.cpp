@@ -796,7 +796,7 @@ void IPUCMD_WRITE(u32 val)
 	// have to resort to the thread
 	ipu_cmd.current = val >> 28;
 	ipuRegs->ctrl.BUSY = 1;
-	hwIntcIrq(INTC_IPU);
+	if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 }
 
 void IPUWorker()
@@ -808,7 +808,7 @@ void IPUWorker()
 		case SCE_IPU_VDEC:
 			if (!ipuVDEC(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -818,7 +818,7 @@ void IPUWorker()
 		case SCE_IPU_FDEC:
 			if (!ipuFDEC(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -828,7 +828,7 @@ void IPUWorker()
 		case SCE_IPU_SETIQ:
 			if (!ipuSETIQ(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -836,7 +836,7 @@ void IPUWorker()
 		case SCE_IPU_SETVQ:
 			if (!ipuSETVQ(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -844,7 +844,7 @@ void IPUWorker()
 		case SCE_IPU_CSC:
 			if (!ipuCSC(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR)  IPU_INT0_FROM();
@@ -853,7 +853,7 @@ void IPUWorker()
 		case SCE_IPU_PACK:
 			if (!ipuPACK(ipuRegs->cmd.DATA))
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -862,7 +862,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -881,7 +881,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -1276,6 +1276,30 @@ static __forceinline void ipuDmacSrcChain()
 		}
 }
 
+static __forceinline bool WaitGSPaths()
+{
+	if (dmacRegs->ctrl.STD != STD_GIF || (gif->madr + (gif->qwc * 16)) < dmacRegs->stadr.ADDR) 
+	{
+		if(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && GSTransferStatus.PTH3 != STOPPED_MODE)
+		{
+			GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
+			//DevCon.WriteLn("Waiting for GIF");
+			return false;
+		}
+	}
+	if(GSTransferStatus.PTH2 != STOPPED_MODE)
+	{
+		//DevCon.WriteLn("Waiting for VIF");
+		return false;
+	}
+	if(GSTransferStatus.PTH1 != STOPPED_MODE)
+	{
+		//DevCon.WriteLn("Waiting for VU");
+		return false;
+	}
+	return true;
+}
+
 static __forceinline int IPU1chain() { 
 
 	int totalqwc = 0;
@@ -1304,7 +1328,7 @@ static __forceinline int IPU1chain() {
 			//If the transfer has finished or we have room in the FIFO, schedule to the interrupt code.
 			if(IPU1Status.DMAFinished == true || g_BP.IFC < 8) 
 			{ 
-				IPU_INT_TO(totalqwc*BIAS);
+				IPU_INT_TO(4);
 			} 
 			//No data left
 			IPU1Status.InProgress = false; 
@@ -1314,7 +1338,7 @@ static __forceinline int IPU1chain() {
 	return totalqwc;
 }
 
-//static __forceinline bool flushGIF()
+//static __forceinline bool WaitGSPaths()
 //{
 //	//Wait for all GS paths to be clear
 //	if (GSTransferStatus._u32 != 0x2a) 
@@ -1327,17 +1351,7 @@ static __forceinline int IPU1chain() {
 //	return true;
 //}
 
-static __forceinline void flushGIF()
-{
-	if (dmacRegs->ctrl.STD != STD_GIF || (gif->madr + (gif->qwc * 16)) < dmacRegs->stadr.ADDR) 
-	{
-		while(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && Path3progress != STOPPED_MODE)
-		{
-			GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
-			gsInterrupt();
-		}
-	}
-}
+
 
 int IPU1dma()
 {
@@ -1346,9 +1360,9 @@ int IPU1dma()
 	int totalqwc = 0;
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-    //if(!flushGIF()) return totalqwc;
+    //if(!WaitGSPaths()) return totalqwc;
 	
-	flushGIF(); // legacy flushGIF() for now
+	
 
 	DMA_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 
@@ -1356,6 +1370,11 @@ int IPU1dma()
 	{
 		case DMA_MODE_NORMAL:
 			{
+				if(!WaitGSPaths())
+				{ // legacy WaitGSPaths() for now
+					if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+					return totalqwc;
+				}
 				DMA_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 				if(IPU1Status.InProgress == true) totalqwc += IPU1chain();		
 			}
@@ -1365,6 +1384,11 @@ int IPU1dma()
 			{
 				if(IPU1Status.InProgress == true) //No transfer is ready to go so we need to set one up
 				{
+					if(!WaitGSPaths())
+					{ // legacy WaitGSPaths() for now
+						if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+						return totalqwc;
+					}
 					DMA_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();	
 					//Set the TADR forward
@@ -1449,7 +1473,11 @@ int IPU1dma()
 						IPU1Status.DMAFinished = true;
 
 					
-
+					if(!WaitGSPaths() && ipu1dma->qwc > 0)
+					{ // legacy WaitGSPaths() for now
+						if(totalqwc == 0)IPU_INT_TO(4); //Give it a short wait.
+						return totalqwc;
+					}
 					DMA_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();
 					//Set the TADR forward
@@ -1469,15 +1497,6 @@ int IPU0dma()
 	static int totalsize = 0;
 	tDMA_TAG* pMem;
 
-	// Note: pad is the padding right above qwc, so we're testing whether qwc
-	// has overflowed into pad.
-	if (ipu0dma->pad != 0) 
-	{
-	    DevCon.Warning(L"IPU0dma's upper 16 bits set to %x\n", ipu0dma->pad);
-		ipu0dma->qwc = ipu0dma->pad = 0;
-		//return 0;
-	}
-	
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
 
@@ -1533,6 +1552,16 @@ int IPU0dma()
 
 __forceinline void dmaIPU0() // fromIPU
 {
+	if (ipu0dma->pad != 0) 
+	{
+		// Note: pad is the padding right above qwc, so we're testing whether qwc
+		// has overflowed into pad.
+	    DevCon.Warning(L"IPU0dma's upper 16 bits set to %x\n", ipu0dma->pad);
+		ipu0dma->qwc = ipu0dma->pad = 0;
+		//If we are going to clear down IPU0, we should end it too. Going to test this scenario on the PS2 mind - Refraction
+		ipu0dma->chcr.STR = false;
+		hwDmacIrq(DMAC_FROM_IPU);
+	}
 	if (ipuRegs->ctrl.BUSY) IPUWorker();
 }
 
@@ -1556,7 +1585,6 @@ __forceinline void dmaIPU1() // toIPU
 		}
 		
 		IPU1Status.DMAMode = DMA_MODE_CHAIN;
-
 		IPU1dma();
 		if (ipuRegs->ctrl.BUSY) IPUWorker();
 	}
@@ -1582,9 +1610,7 @@ __forceinline void dmaIPU1() // toIPU
 			IPU1dma();
 			if (ipuRegs->ctrl.BUSY) IPUWorker();
 		}
-	}
-
-	
+	}	
 }
 
 extern void GIFdma();

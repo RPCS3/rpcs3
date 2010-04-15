@@ -210,7 +210,7 @@ void mfifoVIF1transfer(int qwc)
 			vif1.done = true;
 		}
 	}
-
+	vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	vif1.inprogress |= 1;
 
 	SPR_LOG("mfifoVIF1transfer end %x madr %x, tadr %x vifqwc %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr, vifqwc);
@@ -294,6 +294,9 @@ void vifMFIFOInterrupt()
 		vif1Regs->stat.FQC = 0; // FQC=0
 		hwDmacIrq(DMAC_MFIFO_EMPTY);
 	}*/
+
+	if(((vif1ch->chcr.TAG >> 12) & 0x7) != 0x0 && ((vif1ch->chcr.TAG >> 12) & 0x7) != 0x7)
+		DevCon.Warning("VIF1 MFIFO Ending when refe or end not set! CHCR = %x", vif1ch->chcr._u32);
 
 	vif1.done = 1;
 	g_vifCycles = 0;
