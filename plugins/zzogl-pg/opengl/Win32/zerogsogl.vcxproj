@@ -83,7 +83,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;zlib.lib;libjpeg7.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName)-dev.dll</OutputFile>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
@@ -95,7 +95,7 @@
       <PreprocessorDefinitions>_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;zlib.lib;libjpeg7.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -122,7 +122,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;zlib.lib;libjpeg7.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName).dll</OutputFile>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
