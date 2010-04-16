@@ -1875,7 +1875,6 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 {
 	FUNCLOG
 	int start, end, nClutOffset, clutsize;
-	const int TexWidth = GPU_TEXWIDTH * 4;
 
 	MemoryTarget_GetClutVariables (nClutOffset, clutsize, tex0);
 	MemoryTarget_GetMemAddress(start, end, tex0);
@@ -1883,70 +1882,68 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	ZeroGS::CMemoryTarget* it = MemoryTarget_SearchExistTarget (start, end, nClutOffset, clutsize, tex0, forcevalidate);
 	if (it != NULL) return it;
 
-	// couldn't find, so create.
+	// couldn't find so create
 	CMemoryTarget* targ;
 
 	u32 fmt = GL_UNSIGNED_BYTE;
-	
-	if (PSMT_ISHALF_STORAGE(tex0)) 
-	{
-		fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-	}
+
+	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 	
 	int widthmult = 1;
-	int channels = NumberOfChannels(tex0.psm);
-	
 	if ((g_MaxTexHeight < 4096) && (end-start > g_MaxTexHeight)) widthmult = 2;	
 
-	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start) ;
+	int channels = 1;
+	channels = NumberOfChannels(tex0.psm);
+
+	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 
 	// fill local clut
 	if (PSMT_ISCLUT(tex0.psm)) 
 	{
 		assert( clutsize > 0 );
+
 		targ->cpsm = tex0.cpsm;
-		targ->clut.reserve(256 * 4); // no matter what
+		targ->clut.reserve(256*4); // no matter what
 		targ->clut.resize(clutsize);
 		
-		if (PSMT_IS32BIT(tex0.cpsm)) // 32 bit 
+		if (PSMT_IS32BIT(tex0.cpsm)) 
 		{
-			memcpy_amd(&targ->clut[0], g_pbyGSClut + nClutOffset, clutsize);
+			memcpy_amd(&targ->clut[0], g_pbyGSClut+nClutOffset, clutsize);
 		}
 		else 
 		{
 			u16* pClutBuffer = (u16*)(g_pbyGSClut + nClutOffset);
 			u16* pclut = (u16*)&targ->clut[0];
-			
-			int left = ((u32)nClutOffset & 2) ? 0 : ((nClutOffset & 0x3ff) / 2) + clutsize - 512;
-			if (left > 0) clutsize -= left;
+			int left = ((u32)nClutOffset & 2) ? 0 : ((nClutOffset&0x3ff)/2)+clutsize-512;
+			if( left > 0 ) clutsize -= left;
 
 			while(clutsize > 0) 
 			{
 				pclut[0] = pClutBuffer[0];
 				pclut++;
-				pClutBuffer += 2;
+				pClutBuffer+=2;
 				clutsize -= 2;
 			}
 
-			if (left > 0) 
+			if( left > 0) 
 			{
 				pClutBuffer = (u16*)(g_pbyGSClut + 2);
-				
+
 				while(left > 0) 
 				{
 					pclut[0] = pClutBuffer[0];
-					pclut++;
-					pClutBuffer += 2;
 					left -= 2;
+					pClutBuffer += 2;
+					pclut++;
 				}
 			}
 		}
 	}
 
-	if (targ->ptex != NULL) 
+	if( targ->ptex != NULL ) 
 	{
 		assert( end-start <= targ->realheight && targ->fmt == fmt && targ->widthmult == widthmult );
-		
+
 		// good enough, so init
 		targ->realy = targ->starty = start;
 		targ->usedstamp = curstamp;
@@ -1973,37 +1970,28 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	}
 
 #ifndef RELEASE_TO_PUBLIC
-	g_TransferredToGPU += TexWidth * channels * targ->height;
+	g_TransferredToGPU += GPU_TEXWIDTH * channels * 4 * targ->height;
 #endif
 	
 	// fill with data
-	if (targ->ptex->memptr == NULL) 
+	if( targ->ptex->memptr == NULL ) 
 	{
-		targ->ptex->memptr = (u8*)_aligned_malloc(TexWidth * targ->realheight, 16);
+		targ->ptex->memptr = (u8*)_aligned_malloc(4 * GPU_TEXWIDTH * targ->realheight, 16);
 		assert(targ->ptex->ref > 0 );
 	}
 
-	memcpy_amd(targ->ptex->memptr, g_pbyGSMemory + TexWidth * targ->realy, TexWidth * targ->height);
+	memcpy_amd(targ->ptex->memptr, g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy, 4 * GPU_TEXWIDTH * targ->height);
 	vector<u8> texdata;
 	u8* ptexdata = NULL;
 	
-	const int cur_width = GPU_TEXWIDTH * channels * widthmult;
-	
 	if (PSMT_ISCLUT(tex0.psm)) 
 	{
-		int new_size = cur_width * (targ->realheight + widthmult - 1)/widthmult;
-		
-		if (PSMT_IS32BIT(tex0.cpsm))
-			new_size *= 4;
-		else
-			new_size *= 2;
-		
-		texdata.resize(new_size);
+		texdata.resize( (tex0.cpsm <= 1?4:2) *GPU_TEXWIDTH*channels*widthmult*(targ->realheight+widthmult-1)/widthmult);
 		ptexdata = &texdata[0];
 
 		u8* psrc = (u8*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
 
-		if (PSMT_IS32BIT(tex0.cpsm)) // 32bit
+		if (PSMT_IS32BIT(tex0.cpsm)) 
 		{
 			u32* pclut = (u32*)&targ->clut[0];
 			u32* pdst = (u32*)ptexdata;
@@ -2020,40 +2008,39 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	}
 	else 
 	{
-		if ((tex0.psm == PSMT16Z) || (tex0.psm == PSMT16SZ)) 
+		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ) 
 		{
-			int new_size = cur_width * (targ->realheight + widthmult - 1)/widthmult;
+			texdata.resize(4*GPU_TEXWIDTH*channels*widthmult*(targ->realheight+widthmult-1)/widthmult
 #if defined(ZEROGS_SSE2)
-			// reserve additional elements for alignment if SSE2 used. 
-			// better do it now, so less resizing would be needed
-			new_size += 15;
-#endif
-
-			texdata.resize(new_size);
+					+ 15 						// reserve additional elements for alignment if SSE2 used. 
+											// better do it now, so less resizing would be needed
+#endif					
+					);
 					
 			ptexdata = &texdata[0];
+
 			// needs to be 8 bit, use xmm for unpacking
 			u16* dst = (u16*)ptexdata;
-			u16* src = (u16*)(g_pbyGSMemory + TexWidth * targ->realy);
+			u16* src = (u16*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
 
 #if defined(ZEROGS_SSE2)
 			if (((u32)(uptr)dst)%16 != 0) 
 			{
-			// This is not an unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2 
+			// This is not unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2 
 			// instruction movdqa [%eax], xmm0
 			// The idea would be resise vector to 15 elements, that set ptxedata to aligned position.
 			// Later we would move eax by 16, so only we should verify is first element align
 			// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
 			// Probably, usage of _aligned_maloc() would be preferable.
-				int disalignment = 16 - ((u32)(uptr)dst) % 16 ;		// This is value of shift. It could be 0 < disalignment <= 15	
+				int disalignment = 16 - ((u32)(uptr)dst)%16 ;		// This is value of shift. It could be 0 < disalignment <= 15	
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
 				dst = (u16*)ptexdata;					
 				GS_LOG("Made alignment for texdata, 0x%x\n", dst );	
-				assert( ((u32)(uptr)dst) % 16 == 0 );			// Assert, because at future could be vectors with uncontigious spaces
+				assert( ((u32)(uptr)dst)%16 == 0 );			// Assert, because at future could be vectors with uncontigious spaces
 			}
 
-			int iters = targ->height * GPU_TEXWIDTH / 16;
-			SSE2_UnswizzleZ16Target( dst, src, iters );
+			int iters = targ->height*GPU_TEXWIDTH/16;
+			SSE2_UnswizzleZ16Target( dst, src, iters ) ;
 #else // ZEROGS_SSE2
 			for(int i = 0; i < targ->height; ++i) 
 			{
@@ -2076,12 +2063,12 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	// create the texture
 	GL_REPORT_ERRORD();
 	assert(ptexdata != NULL);
-	
+
 	if (targ->ptex->tex == 0) glGenTextures(1, &targ->ptex->tex);
-	
+
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, (fmt == GL_UNSIGNED_BYTE) ? 4 : GL_RGB5_A1, GPU_TEXWIDTH * channels * widthmult, 
-		(targ->realheight + widthmult - 1)/widthmult, 0, GL_RGBA, fmt, ptexdata);
+	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, fmt==GL_UNSIGNED_BYTE?4:GL_RGB5_A1, GPU_TEXWIDTH*channels*widthmult, 
+		(targ->realheight+widthmult-1)/widthmult, 0, GL_RGBA, fmt, ptexdata);
 
 	int realheight = targ->realheight;
 	while(glGetError() != GL_NO_ERROR) 
@@ -2095,14 +2082,14 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		{
 			if (listTargets.size() == 0) 
 			{
-				ERROR_LOG("Failed to create %dx%x texture\n", GPU_TEXWIDTH * channels * widthmult, (realheight + widthmult - 1)/widthmult);
-				//channels = 1;
+				ERROR_LOG("Failed to create %dx%x texture\n", GPU_TEXWIDTH*channels*widthmult, (realheight+widthmult-1)/widthmult);
+				channels = 1;
 				return NULL;
 			}
 			DestroyOldest();
 		}
 
-		glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, GPU_TEXWIDTH * channels * widthmult, (targ->realheight + widthmult - 1) / widthmult, 0, GL_RGBA, fmt, ptexdata);
+		glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, GPU_TEXWIDTH*channels*widthmult, (targ->realheight+widthmult-1)/widthmult, 0, GL_RGBA, fmt, ptexdata);
 	}
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP);
