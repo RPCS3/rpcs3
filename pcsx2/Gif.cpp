@@ -75,6 +75,7 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
+	// Champions: Return to Arms prints this a lot.
 	if((gif->chcr.MOD == CHAIN_MODE) && ((gif->chcr.TAG >> 12) & 0x7) != 0x0 && ((gif->chcr.TAG >> 12) & 0x7) != 0x7 && !((gif->chcr.TAG >> 12) & 0x8))
 		DevCon.Warning("GIF Ending when refe or end not set! CHCR = %x", gif->chcr._u32);
 

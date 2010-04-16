@@ -1249,27 +1249,27 @@ static __forceinline void ipuDmacSrcChain()
 	
 		switch (IPU1Status.ChainMode)
 		{
-			case 0x0: // refe
+			case TAG_REFE: // refe
 				//if(IPU1Status.InProgress == false) ipu1dma->tadr += 16;
 				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = true;
 				break;
-			case 0x1: // cnt
+			case TAG_CNT: // cnt
 				// Set the taddr to the next tag
 				ipu1dma->tadr = ipu1dma->madr;
 				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
-			case 0x2: // next
+			case TAG_NEXT: // next
 				ipu1dma->tadr = IPU1Status.NextMem;
 				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
-			case 0x3: // ref
+			case TAG_REF: // ref
 				//if(IPU1Status.InProgress == false)ipu1dma->tadr += 16;
 				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
-			case 0x7: // end
+			case TAG_END: // end
 				ipu1dma->tadr = ipu1dma->madr;
 				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = true;
 				break;
@@ -1418,7 +1418,7 @@ int IPU1dma()
 
 					switch (IPU1Status.ChainMode)
 					{
-						case 0x0: // refe
+						case TAG_REFE: // refe
 							// do not change tadr
 							//ipu1dma->tadr += 16;
 							ipu1dma->tadr += 16;
@@ -1427,7 +1427,7 @@ int IPU1dma()
 							
 							break;
 
-						case 0x1: // cnt
+						case TAG_CNT: // cnt
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							IPU_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
 							//ipu1dma->tadr = ipu1dma->madr + (ipu1dma->qwc * 16);
@@ -1435,21 +1435,21 @@ int IPU1dma()
 							//IPU1Status.DMAFinished = false;
 							break;
 
-						case 0x2: // next
+						case TAG_NEXT: // next
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							IPU1Status.NextMem = ptag[1];
 							IPU_LOG("Tag should end on %x", IPU1Status.NextMem);
 							//IPU1Status.DMAFinished = false;
 							break;
 
-						case 0x3: // ref
+						case TAG_REF: // ref
 							ipu1dma->madr = ptag[1];
 							ipu1dma->tadr += 16;
 							IPU_LOG("Tag should end on %x", ipu1dma->tadr);
 							//IPU1Status.DMAFinished = false;
 							break;
 
-						case 0x7: // end
+						case TAG_END: // end
 							// do not change tadr
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							ipu1dma->tadr += 16;
@@ -1566,7 +1566,7 @@ __forceinline void dmaIPU0() // fromIPU
 __forceinline void dmaIPU1() // toIPU
 {
 	IPU_LOG("IPU1DMAStart QWC %x, MADR %x, CHCR %x, TADR %x", ipu1dma->qwc, ipu1dma->madr, ipu1dma->chcr._u32, ipu1dma->tadr);
-	if(ipu1dma->chcr.MOD == 1)  //Chain Mode
+	if (ipu1dma->chcr.MOD == CHAIN_MODE)  //Chain Mode
 	{
 		IPU_LOG("Setting up IPU1 Chain mode");
 		if(ipu1dma->qwc == 0)
@@ -1590,7 +1590,7 @@ __forceinline void dmaIPU1() // toIPU
 	{
 		if(ipu1dma->qwc == 0)
 		{
-			ipu1dma->chcr.STR = 0;
+			ipu1dma->chcr.STR = false;
 				// Hack to force stop IPU
 				ipuRegs->cmd.BUSY = 0;
 				ipuRegs->ctrl.BUSY = 0;

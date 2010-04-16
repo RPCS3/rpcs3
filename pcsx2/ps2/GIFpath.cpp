@@ -452,7 +452,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					break;
 			}
 		}
-	if (pathidx == GIF_PATH_3 & gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
+	if (pathidx == GIF_PATH_3 && gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
 		//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
 		gif->madr += size * 16;
 		gif->qwc  -= size;

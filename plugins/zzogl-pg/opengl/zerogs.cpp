@@ -838,8 +838,8 @@ bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
 	
 	if (cpsm > 1 || csm)
 	{
-		ERROR_LOG("16 bit clut not supported.\n");
-		// don't support 16bit for now
+		// Mana Khemia triggers this.
+		//ERROR_LOG("16 bit clut not supported.\n");
 		return true;
 	}
 
