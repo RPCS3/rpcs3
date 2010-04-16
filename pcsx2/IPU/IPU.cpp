@@ -1251,42 +1251,40 @@ static __forceinline void ipuDmacSrcChain()
 		{
 			case 0x0: // refe
 				//if(IPU1Status.InProgress == false) ipu1dma->tadr += 16;
-				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = true;
+				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = true;
 				break;
 			case 0x1: // cnt
 				// Set the taddr to the next tag
 				ipu1dma->tadr = ipu1dma->madr;
-				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
+				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case 0x2: // next
 				ipu1dma->tadr = IPU1Status.NextMem;
-				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
+				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case 0x3: // ref
 				//if(IPU1Status.InProgress == false)ipu1dma->tadr += 16;
-				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = false;
+				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case 0x7: // end
 				ipu1dma->tadr = ipu1dma->madr;
-				if(ipu1dma->qwc == 0) IPU1Status.DMAFinished = true;
+				if(ipu1dma->qwc == 0 && IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = true;
 				break;
 		}
 }
 
 static __forceinline bool WaitGSPaths()
 {
-	if (dmacRegs->ctrl.STD != STD_GIF || (gif->madr + (gif->qwc * 16)) < dmacRegs->stadr.ADDR) 
+	if(GSTransferStatus.PTH3 < STOPPED_MODE)
 	{
-		if(gif->chcr.STR && (vif1Regs->mskpath3 == 0) && GSTransferStatus.PTH3 != STOPPED_MODE)
-		{
-			GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
-			//DevCon.WriteLn("Waiting for GIF");
-			return false;
-		}
+		//GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
+		//DevCon.WriteLn("Waiting for GIF");
+		return false;
 	}
+
 	if(GSTransferStatus.PTH2 != STOPPED_MODE)
 	{
 		//DevCon.WriteLn("Waiting for VIF");
@@ -1344,7 +1342,7 @@ static __forceinline int IPU1chain() {
 //	if (GSTransferStatus._u32 != 0x2a) 
 //	{
 //		if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs->mskpath3) return true;
-//		DMA_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
+//		IPU_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
 //		IPU_INT_TO(4);
 //		return false;
 //	}
@@ -1364,7 +1362,7 @@ int IPU1dma()
 	
 	
 
-	DMA_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
+	IPU_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 
 	switch(IPU1Status.DMAMode)
 	{
@@ -1375,7 +1373,7 @@ int IPU1dma()
 					IPU_INT_TO(4); //Give it a short wait.
 					return totalqwc;
 				}
-				DMA_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
+				IPU_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 				if(IPU1Status.InProgress == true) totalqwc += IPU1chain();		
 			}
 			break;
@@ -1389,7 +1387,7 @@ int IPU1dma()
 						IPU_INT_TO(4); //Give it a short wait.
 						return totalqwc;
 					}
-					DMA_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
+					IPU_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();	
 					//Set the TADR forward
 					ipuDmacSrcChain();
@@ -1425,13 +1423,13 @@ int IPU1dma()
 							//ipu1dma->tadr += 16;
 							ipu1dma->tadr += 16;
 							ipu1dma->madr = ptag[1];
-							DMA_LOG("Tag should end on %x", ipu1dma->tadr);
+							IPU_LOG("Tag should end on %x", ipu1dma->tadr);
 							
 							break;
 
 						case 0x1: // cnt
 							ipu1dma->madr = ipu1dma->tadr + 16;
-							DMA_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
+							IPU_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
 							//ipu1dma->tadr = ipu1dma->madr + (ipu1dma->qwc * 16);
 							// Set the taddr to the next tag
 							//IPU1Status.DMAFinished = false;
@@ -1440,14 +1438,14 @@ int IPU1dma()
 						case 0x2: // next
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							IPU1Status.NextMem = ptag[1];
-							DMA_LOG("Tag should end on %x", IPU1Status.NextMem);
+							IPU_LOG("Tag should end on %x", IPU1Status.NextMem);
 							//IPU1Status.DMAFinished = false;
 							break;
 
 						case 0x3: // ref
 							ipu1dma->madr = ptag[1];
 							ipu1dma->tadr += 16;
-							DMA_LOG("Tag should end on %x", ipu1dma->tadr);
+							IPU_LOG("Tag should end on %x", ipu1dma->tadr);
 							//IPU1Status.DMAFinished = false;
 							break;
 
@@ -1455,7 +1453,7 @@ int IPU1dma()
 							// do not change tadr
 							ipu1dma->madr = ipu1dma->tadr + 16;
 							ipu1dma->tadr += 16;
-							DMA_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
+							IPU_LOG("Tag should end on %x", ipu1dma->madr + ipu1dma->qwc * 16);
 							
 							break;
 
@@ -1466,10 +1464,10 @@ int IPU1dma()
 
 					//if(ipu1dma->qwc == 0) Console.Warning("Blank QWC!");
 					if(ipu1dma->qwc > 0) IPU1Status.InProgress = true;
-					DMA_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
+					IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 							ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
-					if ((ipu1dma->chcr._u32 & 0x80) && ptag[0] & 0x80000000) //Tag Interrupt is set, so schedule the end/interrupt
+					if (ipu1dma->chcr.TIE && (ptag[0] & 0x80000000)) //Tag Interrupt is set, so schedule the end/interrupt
 						IPU1Status.DMAFinished = true;
 
 					
@@ -1478,7 +1476,7 @@ int IPU1dma()
 						IPU_INT_TO(4); //Give it a short wait.
 						return totalqwc;
 					}
-					DMA_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
+					IPU_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();
 					//Set the TADR forward
 					ipuDmacSrcChain();
@@ -1567,10 +1565,10 @@ __forceinline void dmaIPU0() // fromIPU
 
 __forceinline void dmaIPU1() // toIPU
 {
-	
+	IPU_LOG("IPU1DMAStart QWC %x, MADR %x, CHCR %x, TADR %x", ipu1dma->qwc, ipu1dma->madr, ipu1dma->chcr._u32, ipu1dma->tadr);
 	if(ipu1dma->chcr.MOD == 1)  //Chain Mode
 	{
-		DMA_LOG("Setting up IPU1 Chain mode");
+		IPU_LOG("Setting up IPU1 Chain mode");
 		if(ipu1dma->qwc == 0)
 		{
 			IPU1Status.InProgress = false;		
@@ -1603,7 +1601,7 @@ __forceinline void dmaIPU1() // toIPU
 		}
 		else
 		{
-			DMA_LOG("Setting up IPU1 Normal mode");
+			IPU_LOG("Setting up IPU1 Normal mode");
 			IPU1Status.InProgress = true;
 			IPU1Status.DMAFinished = true;
 			IPU1Status.DMAMode = DMA_MODE_NORMAL;
@@ -1628,6 +1626,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.GIFSTALL)
 	{
 		// gif
+		Console.Warning("IPU GIF Stall");
 		g_nDMATransfer.GIFSTALL = false;
 		//if (gif->chcr.STR) GIFdma();
 	}
@@ -1635,6 +1634,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.VIFSTALL)
 	{
 		// vif
+		Console.Warning("IPU VIF Stall");
 		g_nDMATransfer.VIFSTALL = false;
 		if (vif1ch->chcr.STR) dmaVIF1();
 	}
@@ -1642,6 +1642,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.SIFSTALL)
 	{
 		// sif
+		Console.Warning("IPU SIF Stall");
 		g_nDMATransfer.SIFSTALL = false;
 
 		// Not totally sure whether this needs to be done or not, so I'm
@@ -1660,7 +1661,7 @@ void ipu0Interrupt()
 
 IPU_FORCEINLINE void ipu1Interrupt()
 {
-	DMA_LOG("ipu1Interrupt %x:", cpuRegs.cycle);
+	IPU_LOG("ipu1Interrupt %x:", cpuRegs.cycle);
 
 	if(IPU1Status.DMAFinished == false || IPU1Status.InProgress == true)  //Sanity Check
 	{
@@ -1669,9 +1670,6 @@ IPU_FORCEINLINE void ipu1Interrupt()
 		if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
 		return;
 	}
-
-	//Console.Warning("Whoops");
-
 
 	ipu1dma->chcr.STR = false;
 	hwDmacIrq(DMAC_TO_IPU);
