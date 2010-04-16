@@ -993,7 +993,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 	int cbp = ZZOglGet_cbp_TexBits(highdword);
 	
 	// processing the CLUT after tex0/2 are written
-	ERROR_LOG("high == 0x%x; cld == %d\n", highdword, cld);
+	//ERROR_LOG("high == 0x%x; cld == %d\n", highdword, cld);
 	switch(cld) {
 		case 0: return false;
 		case 1: break;

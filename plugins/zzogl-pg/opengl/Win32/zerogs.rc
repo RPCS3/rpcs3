@@ -124,7 +124,7 @@ BEGIN
     CONTROL         "Specular Highlights - 01000000\nMakes xenosaga and Okage graphics faster by removing highlights",IDC_CONFOPT_01000000,
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,285,313,125,25
     CONTROL         "Gust fix, made gustgame more clean and fast - 10000000",IDC_CONFOPT_10000000,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,284,366,125,25
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,284,343,125,25
 
 END
 
