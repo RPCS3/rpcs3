@@ -1566,6 +1566,19 @@ __forceinline void dmaIPU0() // fromIPU
 __forceinline void dmaIPU1() // toIPU
 {
 	IPU_LOG("IPU1DMAStart QWC %x, MADR %x, CHCR %x, TADR %x", ipu1dma->qwc, ipu1dma->madr, ipu1dma->chcr._u32, ipu1dma->tadr);
+	
+	if (ipu1dma->pad != 0) 
+	{
+		// Note: pad is the padding right above qwc, so we're testing whether qwc
+		// has overflowed into pad.
+	    DevCon.Warning(L"IPU1dma's upper 16 bits set to %x\n", ipu1dma->pad);
+		ipu1dma->qwc = ipu1dma->pad = 0;
+		// If we are going to clear down IPU1, we should end it too. 
+		// Going to test this scenario on the PS2 mind - Refraction
+		ipu1dma->chcr.STR = false;
+		hwDmacIrq(DMAC_TO_IPU);
+	}
+
 	if (ipu1dma->chcr.MOD == CHAIN_MODE)  //Chain Mode
 	{
 		IPU_LOG("Setting up IPU1 Chain mode");
