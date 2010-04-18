@@ -248,6 +248,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 
 			if(!m_blend || !(m_blend->GetSize() == ds))
 			{
+				delete m_blend;
 				m_blend = CreateRenderTarget(ds.x, ds.y, false);
 			}
 
