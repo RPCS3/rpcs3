@@ -516,7 +516,7 @@ void cdvdReset()
 	cdvd.RTC.second = (u8)curtime.GetSecond();
 	cdvd.RTC.minute = (u8)curtime.GetMinute();
 	cdvd.RTC.hour = (u8)(curtime.GetHour(wxDateTime::GMT0)+1) % 24;
-	cdvd.RTC.day = (u8)curtime.GetDay();
+	cdvd.RTC.day = (u8)curtime.GetDay(wxDateTime::GMT0);
  	cdvd.RTC.month = (u8)curtime.GetMonth(wxDateTime::GMT0) + 1; // WX returns Jan as "0"
  	cdvd.RTC.year = (u8)(curtime.GetYear(wxDateTime::GMT0) - 2000);
 }
