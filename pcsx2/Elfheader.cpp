@@ -20,9 +20,9 @@
 #include "Elfheader.h"
 
 using namespace std;
-extern void InitPatch(const wxString& crc);
 
 u32 ElfCRC;
+u32 ElfEntry;
 
 // uncomment this to enable pcsx2hostfs loading when using "load elf"
 //#define USE_HOSTFS
@@ -274,7 +274,7 @@ void ElfObject::checkElfSize(s64 elfsize)
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 }
 	
-void ElfObject::getCRC()
+u32 ElfObject::getCRC()
 {
 	u32 CRC = 0;
 
@@ -282,7 +282,7 @@ void ElfObject::getCRC()
 	for(u32 i=data.GetSizeInBytes()/4; i; --i, ++srcdata)
 		CRC ^= *srcdata;
 
-	ElfCRC = CRC;
+	return CRC;
 }
 
 void ElfObject::loadProgramHeaders()
@@ -418,17 +418,6 @@ void ElfObject::loadHeaders()
 	loadSectionHeaders();
 }
 
-void ElfObject::applyPatches()
-{
-	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
-
-	// if patches found the following status msg will be overwritten
-	Console.SetTitle(L"Game running [CRC=" + filename +L"]");
-
-	if (EmuConfig.EnablePatches) InitPatch(filename);
-    GetMTGS().SendGameCRC(ElfCRC);
-}
-
 // Loads the elf binary data from the specified file into PS2 memory, and injects the ELF's
 // starting execution point into cpuRegs.pc.  If the filename is a cdrom URI in the form
 // of "cdrom0:" or "cdrom1:" then the CDVD is used as the source; otherwise the ELF is loaded
@@ -448,7 +437,6 @@ void loadElfFile(const wxString& filename)
 #endif
 {
 	ScopedPtr<ElfObject> elfptr;
-	bool iscdvd;
 
 #ifdef USE_HOSTFS
 	wxString filename = _filename;
@@ -459,53 +447,36 @@ void loadElfFile(const wxString& filename)
 
 	Console.WriteLn( L"loadElfFile: " + filename );
 
-	if (filename.StartsWith(L"cdrom:") && !ENABLE_LOADING_PS1_GAMES)
-		throw Exception::RuntimeError( wxLt("This is not a Ps2 disc. (And we don't currently emulate PS1 games)") );
-	
-	iscdvd = (filename.StartsWith(L"cdrom:") || filename.StartsWith(L"cdrom0:") || filename.StartsWith(L"cdrom1:"));
-	if (iscdvd)
-	{
-		// It's a game disc.
-		DevCon.WriteLn(L"Loading from a CD rom or CD image.");
-		
-		IsoFSCDVD isofs;
-		IsoFile file(isofs, filename);
-		
-		elfptr = new ElfObject(filename, file);
-	}
-	else
-	{
-		// It's an elf file.
-		DevCon.WriteLn("Loading from a file (or non-cd image).");
 #ifdef USE_HOSTFS
-		parameters = filename;
-		filename = wxT("pcsx2hostfs_ldr.elf");
+	parameters = filename;
+	filename = wxT("pcsx2hostfs_ldr.elf");
 #endif
-		elfptr = new ElfObject(filename, Path::GetFileSize(filename));
+	elfptr = new ElfObject(filename, Path::GetFileSize(filename));
 #ifdef USE_HOSTFS
-		filename = wxT("host:pcsx2hostfs_ldr.elf");
+	filename = wxT("host:pcsx2hostfs_ldr.elf");
 #endif
-	}
 
 	if (!elfptr->hasProgramHeaders())
 	{
-		throw Exception::BadStream( filename, elfptr->isCdvd ?
-			wxLt("Invalid ELF file header.  The CD-Rom may be damaged, or the ISO image corrupted.") :
-			wxLt("Invalid ELF file.")
-		);
+		throw Exception::BadStream(filename, wxLt("Invalid ELF file."));
 	}
+
+	elfptr->loadHeaders();
+
+	ElfCRC = elfptr->getCRC();
+	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
+	ElfEntry = elfptr->header.e_entry;
+	elfptr.Delete();
 
 	//2002-09-19 (Florin)
 	//args_ptr = 0xFFFFFFFF;	//big value, searching for minimum [used by parseCommandLine]
 
-	elfptr->loadHeaders();
-
-	cpuRegs.pc = elfptr->header.e_entry; //set pc to proper place
+	cpuRegs.pc = ElfEntry; //set pc to proper place
 	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
-
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
 	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );		// see #ifdef'd out parseCommendLine for details.
+
 #ifdef USE_HOSTFS
 
 	//HACK!!!!!!!!!!!!!
@@ -524,30 +495,6 @@ void loadElfFile(const wxString& filename)
 
 #endif
 
-	for( uint i = 0; i < 0x100000; i++ )
-	{
-		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
-		{
-			// All right, this is not likely to be right. It's fine if it is a cd, but
-			// We really do not want to pass the elf file with full path and drive letter
-			// into pcsx2 memory, like this.
-			strcpy((char*)PSM(i), filename.ToUTF8());
-			
-			// We could test and only do it if (iscdvd) is true, or we could do something 
-			// like this if it isn't a cdvd:
-			// strcpy((char*)PSM(i), wxsFormat(L"rom0:"+Path::GetFilename(filename)).ToUTF8());
-			
-			// Though the question is what device name to pass if we do that...
-			// Not sure, so I'm leaving it the known incorrect way for now. --arcum42
-			
-			DevCon.WriteLn( wxsFormat(L"loadElfFile: addr %x \"rom0:OSDSYS\" -> \"" + filename + L"\"", i));
-		}
-	}
-	elfptr->getCRC();
-	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
-	elfptr->applyPatches();
-	elfptr.Delete();
-	
 	return;
 }
 
@@ -607,6 +554,10 @@ int GetPS2ElfName( wxString& name )
 			Console.Error("(GetElfName) Disc image is *not* a Playstation or PS2 game!");
 			return 0;
 		}
+	}
+	catch (Exception::BadStream&)
+	{
+		return 0;		// ISO error
 	}
 	catch( Exception::FileNotFound& )
 	{

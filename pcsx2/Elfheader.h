@@ -155,8 +155,7 @@ class ElfObject
 		bool hasSectionHeaders();
 		bool hasHeaders();
 		
-		void getCRC();
-		void applyPatches();
+		u32 getCRC();
 };
 
 //-------------------
@@ -165,5 +164,6 @@ extern int  GetPS2ElfName( wxString& dest );
 
 
 extern u32 ElfCRC;
+extern u32 ElfEntry;
 
 #endif

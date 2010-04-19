@@ -60,6 +60,7 @@ void inifile_read( const wxString& name );
 void inifile_command( const wxString& cmd );
 void inifile_trim( wxString& buffer );
 
+void InitPatch(const wxString& crc);
 int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
 void ApplyPatch( int place = 1);
 void ResetPatch( void );

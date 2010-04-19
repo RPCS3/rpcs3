@@ -273,57 +273,6 @@ void SysCoreThread::CpuInitializeMess()
 
 	ScopedBool_ClearOnError sbcoe( m_hasValidState );
 
-	wxString elf_file( m_elf_override );
-	if( elf_file.IsEmpty() && EmuConfig.SkipBiosSplash && (CDVDsys_GetSourceType() != CDVDsrc_NoDisc))
-	{
-		// Fetch the ELF filename and CD type from the CDVD provider.
-		wxString ename;
-		int result = GetPS2ElfName( ename );
-		switch( result )
-		{
-			case 0:
-				throw Exception::RuntimeError( wxLt("Fast Boot failed: CDVD image is not a PS1 or PS2 game.") );
-
-			case 1:
-				if (!ENABLE_LOADING_PS1_GAMES)
-                    throw Exception::RuntimeError( wxLt("Fast Boot failed: PCSX2 does not support emulation of PS1 games.") );
-
-			case 2:
-				// PS2 game.  Valid!
-				elf_file = ename;
-			break;
-
-			jNO_DEFAULT
-		}
-	}
-
-	if( !elf_file.IsEmpty() )
-	{
-		// Skip Bios Hack *or* Manual ELF override:
-		//   Runs the PS2 BIOS stub, and then manually loads the ELF executable data, and
-		//   injects the cpuRegs.pc with the address of the execution start point.
-		//
-		// This hack is necessary for non-CD ELF files, and is optional for game CDs as a
-		// fast boot up option. (though not recommended for games because of rare ill side
-		// effects).
-
-		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
-
-		Console.WriteLn( Color_StrongGreen, "(PCSX2 Core) Executing Bios Stub..." );
-
-		do {
-			// Even the BiosStub invokes vsyncs, so we need to be weary of state
-			// changes and premature loop exits, and re-enter the stub executer until
-			// the critera is met.
-
-			StateCheckInThread();
-			Cpu->ExecuteBiosStub();
-		} while( cpuRegs.pc != 0x00200008 && cpuRegs.pc != 0x00100008 );
-
-		Console.WriteLn( Color_StrongGreen, "(PCSX2 Core) Execute Bios Stub Complete");
-		loadElfFile( elf_file );
-	}
-	
 	sbcoe.Success();
 }
 

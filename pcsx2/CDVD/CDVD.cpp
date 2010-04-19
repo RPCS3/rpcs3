@@ -28,6 +28,8 @@
 #include "Elfheader.h"
 #include "ps2/BiosTools.h"
 
+wxString DiscID;
+
 static cdvdStruct cdvd;
 
 static __forceinline void SetResultSize(u8 size)
@@ -306,7 +308,7 @@ s32 cdvdWriteConfig(const u8* config)
 static MutexLockRecursive Mutex_NewDiskCB;
 
 // Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
-static __forceinline ElfObject *loadElfCRC( const wxString filename )
+static __forceinline ElfObject *loadElf( const wxString filename )
 {
 	// Note: calling loadElfFile here causes bad things to happen.
 	IsoFSCDVD isofs;
@@ -314,35 +316,51 @@ static __forceinline ElfObject *loadElfCRC( const wxString filename )
 	ElfObject *elfptr;
 	
 	elfptr = new ElfObject(filename, file);
-	elfptr->getCRC();
-	
-	Console.WriteLn(wxsFormat(L"loadElfCRC(" + filename + L") = %8.8X", ElfCRC));
 	return elfptr;
 }
 
-static __forceinline void _reloadElfInfo(wxString str)
+static __forceinline void _reloadElfInfo(wxString elfpath)
 {
 	ScopedPtr<ElfObject> elfptr;
 	
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
-        
-    elfptr = loadElfCRC(str);
-	elfptr->applyPatches();
+
+	wxString fname = elfpath.AfterLast('\\');
+	if (!fname)
+		fname = elfpath.AfterLast('/');
+	if (!fname)
+		fname = elfpath.AfterLast(':');
+	if (fname.Matches(L"????_???.??*"))
+		DiscID = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
+
+	Console.WriteLn("Disc ID = %s", DiscID.ToUTF8());
+
+	elfptr = loadElf(elfpath);
+
+	ElfCRC = elfptr->getCRC();
+	Console.WriteLn("ELF (%s) CRC = %8.8X", elfpath.ToUTF8(), ElfCRC);
+
+	ElfEntry = elfptr->header.e_entry;
+	Console.WriteLn("Entry point = 0x%08x", ElfEntry);
+
 	elfptr.Delete();
 }
 
-static __forceinline void reloadElfInfo(u32 discType, wxString str)
+void cdvdReloadElfInfo()
 {
+	wxString elfpath;
+	u32 discType = GetPS2ElfName(elfpath);
+
     if (ElfCRC == 0)
     {
         switch (discType)
         {
             case 2: // Is a PS2 disc.
-                _reloadElfInfo(str);
+                _reloadElfInfo(elfpath);
                 break;
             case 1: // Is a PS1 disc.
-                if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(str);
+                if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(elfpath);
                 break;
             default: // Isn't a disc we recognise.
                 break;
@@ -363,23 +381,17 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
 	u32 key_0_3;
 	u8 key_4, key_14;
 
-	wxString fname, exeName;
-	
-	// Get the main elf name.
-	u32 discType = GetPS2ElfName(fname);
-	
-	exeName = fname(8, 11);
-	DevCon.Warning(L"exeName = " + exeName);
+    cdvdReloadElfInfo();
 
 	// convert the number characters to a real 32 bit number
-	numbers = StrToS32(exeName(5,3) + exeName(9,2));
+	numbers = StrToS32(DiscID(5,5));
 	
 	// combine the lower 7 bits of each char
 	// to make the 4 letters fit into a single u32
-	letters =	(s32)((exeName[3]&0x7F)<< 0) |
-				(s32)((exeName[2]&0x7F)<< 7) |
-				(s32)((exeName[1]&0x7F)<<14) |
-				(s32)((exeName[0]&0x7F)<<21);
+	letters =	(s32)((DiscID[3]&0x7F)<< 0) |
+				(s32)((DiscID[2]&0x7F)<< 7) |
+				(s32)((DiscID[1]&0x7F)<<14) |
+				(s32)((DiscID[0]&0x7F)<<21);
 
 	// calculate magic numbers
 	key_0_3 = ((numbers & 0x1FC00) >> 10) | ((0x01FFFFFF & letters) <<  7);	// numbers = 7F  letters = FFFFFF80
@@ -424,8 +436,6 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
 
 	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", 
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
-
-    reloadElfInfo(discType, fname);
 }
 
 s32 cdvdGetToc(void* toc)
@@ -551,8 +561,7 @@ static void cdvdDetectDisk()
 {
 	wxString str;
 	cdvd.Type = DoCDVDdetectDiskType();
-	
-    reloadElfInfo(GetPS2ElfName(str), str);
+    cdvdReloadElfInfo();
 }
 
 void cdvdNewDiskCB()

@@ -20,6 +20,8 @@
 #include "R5900OpcodeTables.h"
 #include "System/SysThreads.h"
 
+#include "ElfHeader.h"
+
 #include <float.h>
 
 using namespace R5900;		// for OPCODE and OpcodeImpl
@@ -383,39 +385,22 @@ static void intExecute()
 	// done in a more optimized fashion.
 
 	try {
-		while( true )
-			execI();
-	} catch( Exception::ExitCpuExecute& ) { }
-}
-
-static void intExecuteBiosStub()
-{
-	g_EEFreezeRegs = false;
-
-	// We need to be wary of events that could occur during vsyncs, which means
-	// making sure to exit this function for ExitCpuExecute.  The calling function
-	// will update UI status, and then re-enter if the bios stub execution criteria
-	// wasn't met yet.
-
-	try {
-		while( (cpuRegs.pc != 0x00200008) && (cpuRegs.pc != 0x00100008) ) {
-			execI();
+		if (g_SkipBiosHack) {
+			do
+				execI();
+			while (cpuRegs.pc != EELOAD_START);
+			eeloadReplaceOSDSYS();
+		}
+		if (ElfEntry != -1) {
+			do
+				execI();
+			while (cpuRegs.pc != ElfEntry);
+			eeGameStarting();
+		} else {
+			while (true)
+				execI();
 		}
 	} catch( Exception::ExitCpuExecute& ) { }
-
-	// ... some maual bios injection hack from a century ago, me thinks.  Leaving the
-	// code intact for posterity. --air
-
-	//    {
-	//        FILE* f = fopen("eebios.bin", "wb");
-	//        fwrite(PSM(0x80000000), 0x100000, 1, f);
-	//        fclose(f);
-	//        exit(0);
-
-	//        f = fopen("iopbios.bin", "wb");
-	//        fwrite(PS2MEM_PSX, 0x80000, 1, f);
-	//        fclose(f);
-	//    }
 }
 
 static void intCheckExecutionState()
@@ -445,7 +430,6 @@ R5900cpu intCpu =
 	intReset,
 	intStep,
 	intExecute,
-	intExecuteBiosStub,
 
 	intCheckExecutionState,
 	intClear,

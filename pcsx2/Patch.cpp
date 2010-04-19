@@ -465,19 +465,25 @@ void _ApplyPatch(IniPatch *p)
 			switch (p->type)
 			{
 				case BYTE_T:
-					memWrite8(p->addr, (u8)p->data);
+					if (memRead8(p->addr) != (u8)p->data)
+						memWrite8(p->addr, (u8)p->data);
 					break;
 
 				case SHORT_T:
-					memWrite16(p->addr, (u16)p->data);
+					if (memRead16(p->addr) != (u16)p->data)
+						memWrite16(p->addr, (u16)p->data);
 					break;
 
 				case WORD_T:
-					memWrite32(p->addr, (u32)p->data);
+					if (memRead32(p->addr) != (u32)p->data)
+						memWrite32(p->addr, (u32)p->data);
 					break;
 
 				case DOUBLE_T:
-					memWrite64(p->addr, &p->data);
+					u64 mem;
+					memRead64(p->addr, &mem);
+					if (mem != p->data)
+						memWrite64(p->addr, &p->data);
 					break;
 
 				case EXTENDED_T:
@@ -493,13 +499,16 @@ void _ApplyPatch(IniPatch *p)
 			switch (p->type)
 			{
 				case BYTE_T:
-					iopMemWrite8(p->addr, (u8)p->data);
+					if (iopMemRead8(p->addr) != (u8)p->data)
+						iopMemWrite8(p->addr, (u8)p->data);
 					break;
 				case SHORT_T:
-					iopMemWrite16(p->addr, (u16)p->data);
+					if (iopMemRead16(p->addr) != (u16)p->data)
+						iopMemWrite16(p->addr, (u16)p->data);
 					break;
 				case WORD_T:
-					iopMemWrite32(p->addr, (u32)p->data);
+					if (iopMemRead32(p->addr) != (u32)p->data)
+						iopMemWrite32(p->addr, (u32)p->data);
 					break;
 				default:
 					break;
@@ -525,7 +534,6 @@ void InitPatch(const wxString& crc)
 {
     inifile_read(crc);
     Console.WriteLn("patchnumber: %d", patchnumber);
-    ApplyPatch(0);
 }
 
 void ResetPatch( void )

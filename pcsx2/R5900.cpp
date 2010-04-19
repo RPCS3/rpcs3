@@ -27,6 +27,10 @@
 
 #include "Hardware.h"
 
+#include "ElfHeader.h"
+#include "CDVD/CDVD.h"
+#include "Patch.h"
+
 using namespace R5900;	// for R5900 disasm tools
 
 s32 EEsCycle;		// used to sync the IOP to the EE
@@ -37,7 +41,8 @@ __aligned16 fpuRegisters fpuRegs;
 __aligned16 tlbs tlb[48];
 R5900cpu *Cpu = NULL;
 
-bool g_ExecBiosHack = false; // set if the BIOS has already been executed
+bool g_SkipBiosHack; // set at boot if the skip bios hack is on, reset before the game has started
+bool g_GameStarted; // set when we reach the game's entry point or earlier if the entry point cannot be determined
 
 static const uint eeWaitCycles = 3072;
 
@@ -75,6 +80,13 @@ void cpuReset()
 	vif1Reset();
 	rcntInit();
 	psxReset();
+
+	g_GameStarted = false;
+	g_SkipBiosHack = EmuConfig.SkipBiosSplash;
+
+	ElfCRC = 0;
+	DiscID = L"";
+	ElfEntry = -1;
 }
 
 __releaseinline void cpuException(u32 code, u32 bd)
@@ -555,4 +567,70 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 	}
 
 	cpuSetNextBranchDelta( cpuRegs.eCycle[n] );
+}
+
+void __fastcall eeGameStarting()
+{
+	if (!g_GameStarted && ElfCRC) {
+		wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
+
+		// if patches found the following status msg will be overwritten
+		Console.SetTitle(L"Game running [CRC=" + filename +L"]");
+
+		if (EmuConfig.EnablePatches) InitPatch(filename);
+		GetMTGS().SendGameCRC(ElfCRC);
+
+		g_GameStarted = true;
+	}
+
+	ApplyPatch(0);
+}
+
+void __fastcall eeloadReplaceOSDSYS()
+{
+	g_SkipBiosHack = false;
+
+	const wxString &elf_override = GetCoreThread().GetElfOverride();
+
+	if (!elf_override.IsEmpty()) {
+		loadElfFile(elf_override);
+		return;
+	}
+
+	cdvdReloadElfInfo();
+
+	// didn't recognise an ELF
+	if (ElfEntry == -1) {
+		eeGameStarting();
+		return;
+	}
+
+	static u32 osdsys = 0, osdsys_p = 0;
+	// Memory this high is safe before the game's running presumably
+	// Other options are kernel memory (first megabyte) or the scratchpad
+	// PS2LOGO is loaded at 16MB, let's use 17MB
+	const u32 safemem = 0x1100000;
+
+	// The strings are all 64-bit aligned.  Why? I don't know, but they are
+	for (u32 i = EELOAD_START; i < EELOAD_START + EELOAD_SIZE; i += 8) {
+		if (!strcmp((char*)PSM(i), "rom0:OSDSYS")) {
+			osdsys = i;
+			break;
+		}
+	}
+	pxAssert(osdsys);
+
+	for (u32 i = osdsys - 4; i >= EELOAD_START; i -= 4) {
+		if (memRead32(i) == osdsys) {
+			osdsys_p = i;
+			break;
+		}
+	}
+	pxAssert(osdsys_p);
+
+	wxString elfname;
+	if (GetPS2ElfName(elfname) == 2) {
+		strcpy((char*)PSM(safemem), elfname.ToUTF8());
+		memWrite32(osdsys_p, safemem);
+	}
 }

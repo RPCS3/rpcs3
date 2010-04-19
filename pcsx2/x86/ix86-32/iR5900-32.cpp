@@ -28,6 +28,9 @@
 #include "System/SysThreads.h"
 #include "GS.h"
 
+#include "CDVD/CDVD.h"
+#include "ElfHeader.h"
+
 #if !PCSX2_SEH
 #	include <csetjmp>
 #endif
@@ -763,19 +766,6 @@ static void recExecute()
 #endif
 }
 
-static void recExecuteBiosStub()
-{
-	g_ExecBiosHack = true;
-	recExecute();
-	g_ExecBiosHack = false;
-
-	// Reset the EErecs here, because the bios generates "slow" blocks that have
-	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them
-	// with new faster versions:
-	recResetEE();
-}
-
-
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
 {
@@ -884,36 +874,6 @@ static void recExitExecution()
 #else
 	longjmp( m_SetJmp_StateCheck, 1 );
 #endif
-}
-
-// check for end of bios
-void CheckForBIOSEnd()
-{
-	xMOV( eax, &cpuRegs.pc );
-
-	if( IsDevBuild )
-	{
-		// Using CALL retains stacktrace info, useful for debugging.
-
-		xCMP( eax, 0x00200008 );
-		xForwardJE8 CallExitRec;
-
-		xCMP( eax, 0x00100008 );
-		xForwardJNE8 SkipExitRec;
-
-		CallExitRec.SetTarget();
-		xCALL( recExitExecution );
-
-		SkipExitRec.SetTarget();
-	}
-	else
-	{
-		xCMP( eax, 0x00200008 );
-		xJE(recExitExecution);
-
-		xCMP( eax, 0x00100008 );
-		xJE(recExitExecution);
-	}
 }
 
 static int *s_pCode;
@@ -1126,8 +1086,6 @@ static u32 eeScaleBlockCycles()
 static void iBranchTest(u32 newpc)
 {
 	_DynGen_StackFrameCheck();
-
-	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
 	// Equiv code to:
@@ -1393,6 +1351,16 @@ static void __fastcall recRecompile( const u32 startpc )
 	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
 	pxAssume(s_pCurBlockEx);
+
+	if (g_SkipBiosHack && HWADDR(startpc) == EELOAD_START) {
+		xCALL(eeloadReplaceOSDSYS);
+		xCMP(ptr32[&cpuRegs.pc], startpc);
+		xJNE(DispatcherReg);
+	}
+
+	// this is the only way patches get applied, doesn't depend on a hack
+	if (HWADDR(startpc) == ElfEntry)
+		xCALL(eeGameStarting);
 
 	branch = 0;
 
@@ -1857,8 +1825,7 @@ R5900cpu recCpu =
 	recResetEE,
 	recStep,
 	recExecute,
-	recExecuteBiosStub,
-	
+
 	recCheckExecutionState,
 	recClear,
 };

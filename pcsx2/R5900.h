@@ -25,7 +25,8 @@
 // right now, so we're sticking them here for now until a better solution comes along.
 
 extern bool g_EEFreezeRegs;
-extern bool g_ExecBiosHack;
+extern bool g_SkipBiosHack;
+extern bool g_GameStarted;
 
 namespace Exception
 {
@@ -255,6 +256,15 @@ void intSetBranch();
 // parts of the Recs (namely COP0's branch codes and stuff).
 void __fastcall intDoBranch(u32 target);
 
+// modules loaded at hardcoded addresses by the kernel
+const u32 EEKERNEL_START = 0;
+const u32 EENULL_START = 0x81FC0;
+const u32 EELOAD_START = 0x82000;
+const u32 EELOAD_SIZE = 0x20000; // overestimate for searching
+
+void __fastcall eeGameStarting();
+void __fastcall eeloadReplaceOSDSYS();
+
 ////////////////////////////////////////////////////////////////////
 // R5900 Public Interface / API
 //
@@ -318,20 +328,6 @@ struct R5900cpu
 	// Exception Throws:  [TODO]  (possible execution-related throws to be added)
 	//
 	void (*Execute)();
-
-	// This function performs a "hackish" execution of the BIOS stub, which initializes
-	// EE memory and hardware.  It forcefully breaks execution when the stub is finished,
-	// prior to the PS2 logos being displayed.  This allows us to "shortcut" right into
-	// a game without having to wait through the logos or endure game/bios localization
-	// checks.
-	//
-	// Use of this function must be followed by the proper injection of the elf header's
-	// code execution entry point into cpuRegs.pc.  Failure to modify cpuRegs.pc will
-	// result in the bios continuing its normal unimpeded splash screen execution.
-	//
-	// Exception Throws:  [TODO]  (possible execution-related throws to be added)
-	//
-	void (*ExecuteBiosStub)();
 
 	// Checks for execution suspension or cancellation.  In pthreads terms this provides 
 	// a "cancellation point."  Execution state checks are typically performed at Vsyncs
