@@ -406,6 +406,28 @@ static __forceinline const wxChar* ChcrName(u32 addr)
     }
 }
 
+static __forceinline const int ChannelNumber(u32 addr)
+{
+    switch (addr)
+    {
+        case D0_CHCR: return 0;
+        case D1_CHCR: return 1;
+        case D2_CHCR: return 2;
+        case D3_CHCR: return 3;
+        case D4_CHCR: return 4;
+        case D5_CHCR: return 5;
+        case D6_CHCR: return 6;
+        case D7_CHCR: return 7;
+        case D8_CHCR: return 8;
+        case D9_CHCR: return 9;
+		default:
+		{
+			DevCon.Warning("Invalid DMA channel number");
+			return 51; // some value
+		}
+    }
+}
+
 union tDMAC_CTRL {
 	struct {
 		u32 DMAE : 1;       // 0/1 - disables/enables all DMAs
