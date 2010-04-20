@@ -34,6 +34,8 @@ void IPU_Fifo::init()
 void IPU_Fifo_Input::clear()
 {
 	memzero(data);
+	ipu1dma->chcr.STR = 0; //It forcebly ends, so we should clear the dma too (Kingdom Hearts)
+	ipu1dma->qwc = 0;
 	g_BP.IFC = 0;
 	ipuRegs->ctrl.IFC = 0;
 	readpos = 0;

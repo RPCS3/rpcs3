@@ -394,7 +394,7 @@ static __forceinline const wxChar* ChcrName(u32 addr)
     {
         case D0_CHCR: return L"Vif 0";
         case D1_CHCR: return L"Vif 1";
-        case D2_CHCR: return L"GS";
+        case D2_CHCR: return L"GIF";
         case D3_CHCR: return L"Ipu 0";
         case D4_CHCR: return L"Ipu 1";
         case D5_CHCR: return L"Sif 0";

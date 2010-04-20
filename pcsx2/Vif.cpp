@@ -40,7 +40,7 @@ void vif0Reset()
 	vif0Regs->stat.VPS = VPS_IDLE;
 	vif0Regs->stat.FQC = 0;
 
-	vif0.done = true;
+	vif0.done = false;
 
 	resetNewVif(0);
 }
@@ -57,7 +57,7 @@ void vif1Reset()
 	vif1Regs->stat.VPS = VPS_IDLE;
 	vif1Regs->stat.FQC = 0; // FQC=0
 
-	vif1.done = true;
+	vif1.done = false;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 
 	resetNewVif(1);
@@ -101,7 +101,7 @@ _f void vif0FBRST(u32 value) {
 		cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		psHu64(VIF0_FIFO) = 0;
 		psHu64(VIF0_FIFO + 8) = 0;
-		vif0.done = true;
+		vif0.done = false;
 		vif0Regs->err.reset();
 		vif0Regs->stat.clear_flags(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 	}
@@ -160,7 +160,7 @@ _f void vif1FBRST(u32 value) {
 		vif1ch->qwc = 0; //?
 		psHu64(VIF1_FIFO) = 0;
 		psHu64(VIF1_FIFO + 8) = 0;
-		vif1.done = true;
+		vif1.done = false;
 
 		if(vif1Regs->mskpath3)
 		{

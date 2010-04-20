@@ -220,6 +220,7 @@ void mfifoVIF1transfer(int qwc)
 void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
+	VIF_LOG("vif mfifo interrupt");
 
 	if (schedulepath3msk) Vif1MskPath3();
 

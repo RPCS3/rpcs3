@@ -57,6 +57,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		{
 			_("VU XGkick Hack - for Erementar Gerad."),
 			wxEmptyString
+		},
+		{
+			_("IPU Wait Hack - Fix Ripping/Corrupted videos (FFX, Digital Devil Saga), Causes others to cut short"),
+			wxEmptyString
 		}
 	};
 

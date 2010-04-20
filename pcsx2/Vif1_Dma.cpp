@@ -99,7 +99,8 @@ bool _VIF1chain()
 		return true;
 	}
 
-	if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE)
+	// Clarification - this is TO memory mode, for some reason i used the other way round >.<
+	if (vif1.dmamode == VIF_NORMAL_TO_MEM_MODE)
 	{
 		vif1TransferFromMemory();
 		vif1.inprogress = 0;
@@ -305,6 +306,7 @@ void dmaVIF1()
 	        vif1ch->chcr._u32, vif1ch->madr, vif1ch->qwc,
 	        vif1ch->tadr, vif1ch->asr0, vif1ch->asr1);
 
+	vif1.done = false;
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
 
@@ -332,9 +334,9 @@ void dmaVIF1()
 			Console.WriteLn("DMA Stall Control on VIF1 normal");
 
 		if (vif1ch->chcr.DIR)  // to Memory
-			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
-		else
 			vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
+		else
+			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 	}
 	else
 	{
@@ -344,6 +346,5 @@ void dmaVIF1()
 	vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 
 	// Chain Mode
-	vif1.done = false;
 	vif1Interrupt();
 }
