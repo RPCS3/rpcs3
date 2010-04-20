@@ -309,7 +309,10 @@ static __forceinline void gsHandler(const u8* pMem)
 	{
 		const u16* pMem16 = (const u16*)pMem;
 		VIF_LOG("TRX REG = %x_%x_%x_%x", pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
-		vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / (u8)vif1.TRXPOS.BLTDIVIDE;
+
+		//Onimusha does TRXREG without BLTDIVIDE first, so we "assume" 32bit for this equasion, probably isnt important.
+		if(vif1.TRXPOS.BLTDIVIDE) vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / (u8)vif1.TRXPOS.BLTDIVIDE;
+		else vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / 4;
 		
 	}
 	if (handler >= 0x60)
