@@ -201,6 +201,18 @@ __forceinline void vif1Interrupt()
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
+
+	//Some games (Fahrenheit being one) start vif first, let it loop through blankness while it sets MFIFO mode, so we need to check it here.
+	if (dmacRegs->ctrl.MFD == MFD_VIF1)   // VIF MFIFO
+	{
+		//Console.WriteLn("VIFMFIFO\n");
+		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
+		if (vif1ch->chcr.MOD == NORMAL_MODE) Console.WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch->chcr._u32);
+		vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
+		vifMFIFOInterrupt();
+		return;
+	}
+
 	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	//Simulated GS transfer time done, clear the flags
 	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50) 
@@ -309,16 +321,6 @@ void dmaVIF1()
 	vif1.done = false;
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
-
-	if (dmacRegs->ctrl.MFD == MFD_VIF1)   // VIF MFIFO
-	{
-		//Console.WriteLn("VIFMFIFO\n");
-		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
-		if (vif1ch->chcr.MOD == NORMAL_MODE) Console.WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch->chcr._u32);
-		vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
-		vifMFIFOInterrupt();
-		return;
-	}
 
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_VIF1)
