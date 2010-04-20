@@ -191,8 +191,9 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 			}
 			//Sanity Check for possible future bug fix0rs ;p
 			if(reg->chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
-			//Here we update the ENTIRE CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
-			reg->chcr.set(value);
+			//Here we update the LOWER CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
+			//But we need to preserve the existing tag for now
+			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
 			return;
 		}
 		else //Else the DMA is running (Not Suspended), so we cant touch it!
@@ -215,7 +216,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		
 	}
 
-	//if(reg->chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) //DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
+	//if(reg->chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
 
 	reg->chcr.set(value);
 		
@@ -227,7 +228,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	}
 	else if(reg->chcr.STR)
 	{
-		////DevCon.Warning(L"32bit %s DMA Start while DMAC Disabled\n", ChcrName(mem));
+		//DevCon.Warning(L"32bit %s DMA Start while DMAC Disabled\n", ChcrName(mem));
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
 	} //else QueuedDMA._u16 &~= (1 << ChannelNumber(mem)); //
 }

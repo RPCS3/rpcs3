@@ -1594,9 +1594,11 @@ __forceinline void dmaIPU1() // toIPU
 		} 
 		else
 		{   //Attempting to continue a previous chain
+			DevCon.Warning("Resuming DMA TAG %x", (ipu1dma->chcr.TAG >> 12));
 			//We MUST check the CHCR for the tag it last knew, it can be manipulated!
 			IPU1Status.ChainMode = (ipu1dma->chcr.TAG >> 12) & 0x7;
 			IPU1Status.InProgress = true;
+			IPU1Status.DMAFinished = ((ipu1dma->chcr.TAG >> 15) && ipu1dma->chcr.TIE) ? true : false;
 		}
 		
 		IPU1Status.DMAMode = DMA_MODE_CHAIN;
