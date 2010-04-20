@@ -67,7 +67,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	//The only thing we can do in an 8bit write is set the CHCR, so lets just do checks for that
 	
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)// && reg->chcr.STR && dmacRegs->ctrl.DMAE) 
+	if (reg->chcr.STR)
 	{
 		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
 		{
@@ -77,11 +77,11 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 				//DevCon.Warning(L"8bit %s DMA Stopped on Suspend", ChcrName(mem & ~0xf));
 				cpuClearInt( ChannelNumber(mem & ~0xf) );
 			}
-			//Here we update the lower part of the CHCR, we dont touch the tag as it is only a 16bit value
+			//Here we update the CHCR STR (Busy) bit, we don't touch anything else.
 			reg->chcr.STR = value;
 			return;
 		}
-		else //Else the DMA is suspended, so we cant touch it!
+		else //Else the DMA is running (Not Suspended), so we cant touch it!
 		{
 			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
 			//Also "The DMA may not stop properly just by writing 0 to STR"
@@ -91,7 +91,10 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 			{
 				//DevCon.Warning(L"8bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem & ~0xf), reg->chcr._u32, value);
 				reg->chcr.STR = value;
-			} 
+				//We need to clear any existing DMA loops that are in progress else they will continue!
+				cpuClearInt( ChannelNumber(mem&~0xf) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem&~0xf)); //Clear any queued DMA requests for this channel
+			}
 			//else DevCon.Warning(L"8bit Attempted to stop %s DMA without suspend, ignoring", ChcrName(mem & ~0xf));
 			return;
 		}
@@ -120,7 +123,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
     tDMA_CHCR chcr(value);
 	
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)// && reg->chcr.STR && dmacRegs->ctrl.DMAE) 
+	if (reg->chcr.STR)
 	{
 		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
 		{
@@ -134,7 +137,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
 			return;
 		}
-		else //Else the DMA is suspended, so we cant touch it!
+		else //Else the DMA is running (Not Suspended), so we cant touch it!
 		{
 			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
 			//Also "The DMA may not stop properly just by writing 0 to STR"
@@ -143,8 +146,11 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"16bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
-				reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
-			} 
+				reg->chcr.STR = 0;
+				//We need to clear any existing DMA loops that are in progress else they will continue!
+				cpuClearInt( ChannelNumber(mem) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
+			}
 			//else DevCon.Warning(L"16bit Attempted to change %s modes while DMA active, ignoring", ChcrName(mem));
 			return;
 		}
@@ -173,7 +179,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
     tDMA_CHCR chcr(value);
 	
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)// && reg->chcr.STR && dmacRegs->ctrl.DMAE) 
+	if (reg->chcr.STR)
 	{
 		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
 		{
@@ -189,7 +195,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 			reg->chcr.set(value);
 			return;
 		}
-		else //Else the DMA is suspended, so we cant touch it!
+		else //Else the DMA is running (Not Suspended), so we cant touch it!
 		{
 			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
 			//Also "The DMA may not stop properly just by writing 0 to STR"
@@ -198,8 +204,11 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
-				reg->chcr.set(value);
-			} 
+				reg->chcr.STR = 0;
+				//We need to clear any existing DMA loops that are in progress else they will continue!
+				cpuClearInt( ChannelNumber(mem) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel 
+			}
 			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg->chcr._u32, chcr._u32, reg->qwc);
 			return;
 		}
@@ -221,51 +230,6 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		////DevCon.Warning(L"32bit %s DMA Start while DMAC Disabled\n", ChcrName(mem));
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
 	} //else QueuedDMA._u16 &~= (1 << ChannelNumber(mem)); //
-
-
-	/*
-		if((reg->chcr._u32 & 0xff) == (chcr._u32 & 0xff) && psHu8(DMAC_ENABLER+2) == 0) //Tried to start another DMA in the same mode
-		{
-			//DevCon.Warning(L"DMAExec32 Attempt to run DMA while one is already active in %s(%x)", ChcrName(mem), mem);
-			cpuClearInt( ChannelNumber(mem) ); // clear any eventual interrupts (Fahrenheit boot, VIF1 active)
-		}
-		else //Just trying to change mode without stopping the DMA, so we dont care really :P
-		{
-			DevCon.Warning("Attempted to change modes while DMA active, ignoring");
-			// When DMA is active only STR field is writable, so we just
-			// call the dma transfer function w/o modifying CHCR contents...
-			//func();
-			Registers::Thaw();
-			return; // Test with Gust games and fatal frame
-		}*/
-	//This should be more correct, but the FFX video does some WIERD stuff and tries to stop and restart the IPU without suspending
-	/*if (reg->chcr.STR) {
-		if(psHu8(DMAC_ENABLER+2) == 0) // DMA Not in suspend mode
-		{
-			//DevCon.Warning(L"DMAExec32 Attempt to alter DMA While not Suspended %s(%x) Current Val %x New Val %x", ChcrName(mem), mem, reg->chcr._u32, value);
-			// When DMA is active only STR field is writable, so we just
-			// call the dma transfer function w/o modifying CHCR contents...
-			//func();
-			Registers::Thaw();
-			return; // Test with Gust games and fatal frame
-		}
-	}*/
-
-	// Note: pad is the padding right above qwc, so we're testing whether qwc
-	// has overflowed into pad.
-	// Note2: May be only needed for IPU which has this handling in IPU.cpp now. (Fixes GS transfers)
-	/*if (reg->pad != 0)
-	{
-	    //DevCon.Warning(L"DmaExec32 DMA QWC (%s) upper 16 bits set to %x\n",
-			ChcrName(mem), reg->pad);
-		//reg->qwc = reg->pad = 0;
-		//return;
-	}*/
-    
-    /* Keep the old tag if in chain mode and hw doesn't set it*/
-	/*if ((chcr.MOD == CHAIN_MODE) && (chcr.TAG == 0))
-	    reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
-	else*/ /* Else (including Normal mode etc) write whatever the hardware sends*/
 }
 
 /////////////////////////////////////////////////////////////////////////
