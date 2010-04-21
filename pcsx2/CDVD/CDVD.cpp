@@ -1426,7 +1426,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			cdvd.Result[3] = itob(cdvd.RTC.hour); //Hours
 			cdvd.Result[4] = 0; //Nothing
 			cdvd.Result[5] = itob(cdvd.RTC.day); //Day
-			cdvd.Result[6] = itob(cdvd.RTC.month)+0x80; //Month
+			cdvd.Result[6] = itob(cdvd.RTC.month); //Month
 			cdvd.Result[7] = itob(cdvd.RTC.year); //Year
 			/*Console.WriteLn("RTC Read Sec %x Min %x Hr %x Day %x Month %x Year %x", cdvd.Result[1], cdvd.Result[2],
 				cdvd.Result[3], cdvd.Result[5], cdvd.Result[6], cdvd.Result[7]);
@@ -1443,7 +1443,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			cdvd.RTC.minute = btoi(cdvd.Param[cdvd.ParamP-6]) % 60;
 			cdvd.RTC.hour = btoi(cdvd.Param[cdvd.ParamP-5]) % 24;
 			cdvd.RTC.day = btoi(cdvd.Param[cdvd.ParamP-3]);
-			cdvd.RTC.month = btoi(cdvd.Param[cdvd.ParamP-2]-0x80);
+			cdvd.RTC.month = btoi(cdvd.Param[cdvd.ParamP-2] & 0x7f);
 			cdvd.RTC.year = btoi(cdvd.Param[cdvd.ParamP-1]);
 			/*Console.WriteLn("RTC write incomming Sec %x Min %x Hr %x Day %x Month %x Year %x", cdvd.Param[cdvd.ParamP-7], cdvd.Param[cdvd.ParamP-6],
 				cdvd.Param[cdvd.ParamP-5], cdvd.Param[cdvd.ParamP-3], cdvd.Param[cdvd.ParamP-2], cdvd.Param[cdvd.ParamP-1]);
