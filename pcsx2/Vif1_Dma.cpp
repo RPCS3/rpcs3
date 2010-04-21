@@ -29,7 +29,7 @@ __forceinline void vif1FLUSH()
 	g_vifCycles += (VU1.cycle - _cycles) * BIAS;
 }
 
-void vif1TransferFromMemory()
+void vif1TransferToMemory()
 {
 	int size;
 	u64* pMem = (u64*)dmaGetAddr(vif1ch->madr);
@@ -102,7 +102,7 @@ bool _VIF1chain()
 	// Clarification - this is TO memory mode, for some reason i used the other way round >.<
 	if (vif1.dmamode == VIF_NORMAL_TO_MEM_MODE)
 	{
-		vif1TransferFromMemory();
+		vif1TransferToMemory();
 		vif1.inprogress = 0;
 		return true;
 	}

@@ -259,7 +259,7 @@ _f void vif1STAT(u32 value) {
 		// As far as the GS is concerned, the transfer starts as soon as TRXREG is accessed, which is why fatal frame
 		// was expecting data, the GS should already be sending it over (buffering in the FIFO)
 
-		vif1Regs->stat.FQC = max((u32)16, vif1.GSLastTRXPOS);
+		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastTRXPOS);
 		//Console.Warning("Reversing VIF Transfer for %x QWC", vif1.GSLastTRXPOS);
 		
 	}
