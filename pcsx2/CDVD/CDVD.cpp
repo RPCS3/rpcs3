@@ -897,7 +897,7 @@ void cdvdVsync() {
 	cdvd.RTC.hour = 0;
 
 	cdvd.RTC.day++;
-	if (cdvd.RTC.day <= monthmap[cdvd.RTC.month-1]) return;
+	if (cdvd.RTC.day <= (cdvd.RTC.month == 2 && cdvd.RTC.year % 4 == 0 ? 29 : monthmap[cdvd.RTC.month-1])) return;
 	cdvd.RTC.day = 1;
 
 	cdvd.RTC.month++;
