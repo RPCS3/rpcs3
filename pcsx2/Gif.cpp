@@ -217,7 +217,7 @@ void GIFdma()
 		CPU_INT(DMAC_GIF, 16);
 		return;
 	}
-	gifRegs->stat.clear_flags(GIF_STAT_P2Q);
+	gifRegs->stat.clear_flags(GIF_STAT_P3Q);
 	gifRegs->stat.APATH = GIF_APATH3;
 	gifRegs->stat.OPH = true;
 
