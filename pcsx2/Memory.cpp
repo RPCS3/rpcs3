@@ -85,6 +85,15 @@ u8  *psR2 = NULL; // 0x00080000
 u8  *psER = NULL; // 0x001C0000
 u8  *psS = NULL; //0.015 mb, scratch pad
 
+// Two 1 megabyte (max DMA) buffers for reading and writing to high memory (>32MB).
+// Such accesses are not documented as causing bus errors but as the memory does
+// not exist, reads should continue to return 0 and writes should be discarded.
+// Probably.
+static __aligned16 u8 highmem[0x200000];
+
+u8  *psMHR = &highmem[0];
+u8  *psMHW = &highmem[0x100000];
+
 #define CHECK_MEM(mem) //MyMemCheck(mem)
 
 void MyMemCheck(u32 mem)
@@ -96,6 +105,8 @@ void MyMemCheck(u32 mem)
 /////////////////////////////
 // REGULAR MEM START
 /////////////////////////////
+vtlbHandler null_handler;
+
 vtlbHandler tlb_fallback_0;
 vtlbHandler tlb_fallback_1;
 vtlbHandler tlb_fallback_2;
@@ -137,6 +148,8 @@ void memMapPhy()
 {
 	// Main memory
 	vtlb_MapBlock(psM,	0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
+	// High memory, uninstalled on the configuration we emulate
+	vtlb_MapHandler(null_handler, Ps2MemSize::Base, 0x10000000 - Ps2MemSize::Base);
 
 	// Various ROMs (all read-only)
 	vtlb_MapBlock(psR,	0x1fc00000,Ps2MemSize::Rom);
@@ -204,6 +217,47 @@ void memMapSupervisorMem()
 
 void memMapUserMem()
 {
+}
+
+static mem8_t __fastcall nullRead8(u32 mem) {
+	MEM_LOG("Read uninstalled memory at address %08x", mem);
+	return 0;
+}
+static mem16_t __fastcall nullRead16(u32 mem) {
+	MEM_LOG("Read uninstalled memory at address %08x", mem);
+	return 0;
+}
+static mem32_t __fastcall nullRead32(u32 mem) {
+	MEM_LOG("Read uninstalled memory at address %08x", mem);
+	return 0;
+}
+static void __fastcall nullRead64(u32 mem, mem64_t *out) {
+	MEM_LOG("Read uninstalled memory at address %08x", mem);
+	*out = 0;
+}
+static void __fastcall nullRead128(u32 mem, mem128_t *out) {
+	MEM_LOG("Read uninstalled memory at address %08x", mem);
+	*out = 0;
+}
+static void __fastcall nullWrite8(u32 mem, mem8_t value)
+{
+	MEM_LOG("Write uninstalled memory at address %08x", mem);
+}
+static void __fastcall nullWrite16(u32 mem, mem16_t value)
+{
+	MEM_LOG("Write uninstalled memory at address %08x", mem);
+}
+static void __fastcall nullWrite32(u32 mem, mem32_t value)
+{
+	MEM_LOG("Write uninstalled memory at address %08x", mem);
+}
+static void __fastcall nullWrite64(u32 mem, const mem64_t *value)
+{
+	MEM_LOG("Write uninstalled memory at address %08x", mem);
+}
+static void __fastcall nullWrite128(u32 mem, const mem128_t *value)
+{
+	MEM_LOG("Write uninstalled memory at address %08x", mem);
 }
 
 template<int p>
@@ -639,6 +693,9 @@ void memReset()
 #endif
 
 	vtlb_Init();
+
+	null_handler = vtlb_RegisterHandler(nullRead8, nullRead16, nullRead32, nullRead64, nullRead128,
+		nullWrite8, nullWrite16, nullWrite32, nullWrite64, nullWrite128);
 
 	tlb_fallback_0 = vtlb_RegisterHandlerTempl1(_ext_mem,0);
 	tlb_fallback_3 = vtlb_RegisterHandlerTempl1(_ext_mem,3);

@@ -32,7 +32,7 @@ __forceinline void vif1FLUSH()
 void vif1TransferToMemory()
 {
 	int size;
-	u64* pMem = (u64*)dmaGetAddr(vif1ch->madr);
+	u64* pMem = (u64*)dmaGetAddr(vif1ch->madr, false);
 
 	// VIF from gsMemory
 	if (pMem == NULL)  						//Is vif0ptag empty?
@@ -107,7 +107,7 @@ bool _VIF1chain()
 		return true;
 	}
 
-	pMem = (u32*)dmaGetAddr(vif1ch->madr);
+	pMem = (u32*)dmaGetAddr(vif1ch->madr, !vif1ch->chcr.DIR);
 	if (pMem == NULL)
 	{
 		vif1.cmd = 0;
@@ -139,7 +139,7 @@ __forceinline void vif1SetupTransfer()
 			break;
 
 		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
+			ptag = dmaGetAddr(vif1ch->tadr, false); //Set memory pointer to TADR
 
 			if (!(vif1ch->transfer("Vif1 Tag", ptag))) return;
 

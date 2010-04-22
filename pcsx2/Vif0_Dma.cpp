@@ -39,7 +39,7 @@ bool _VIF0chain()
 		return true;
 	}
 
-	pMem = (u32*)dmaGetAddr(vif0ch->madr);
+	pMem = (u32*)dmaGetAddr(vif0ch->madr, false);
 	if (pMem == NULL)
 	{
 		vif0.cmd = 0;
@@ -70,7 +70,7 @@ __forceinline void vif0SetupTransfer()
 			break;
 
 		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
+			ptag = dmaGetAddr(vif0ch->tadr, false); //Set memory pointer to TADR
 
 			if (!(vif0ch->transfer("vif0 Tag", ptag))) return;
 

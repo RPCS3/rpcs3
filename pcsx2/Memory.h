@@ -30,6 +30,10 @@ extern u8  *psR2; // 0x00080000
 extern u8  *psER; // 0x001C0000
 extern u8  *psS; //0.015 mb, scratch pad
 
+// separate buffers implementing write only high memory for DMA
+extern u8  *psMHR;
+extern u8  *psMHW;
+
 #define PS2MEM_BASE		psM
 #define PS2MEM_HW		psH
 #define PS2MEM_ROM		psR

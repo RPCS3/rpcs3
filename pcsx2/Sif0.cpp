@@ -42,7 +42,7 @@ static __forceinline bool WriteFifoToEE()
 	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 	SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
-	ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
+	ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0, true);
 	if (ptag == NULL)
 	{
 		DevCon.Warning("Write Fifo to EE: ptag == NULL");

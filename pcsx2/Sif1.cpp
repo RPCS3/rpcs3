@@ -42,7 +42,7 @@ static __forceinline bool WriteEEtoFifo()
 	
 	tDMA_TAG *ptag;
 		
-	ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
+	ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1, false);
 	if (ptag == NULL) 
 	{
 		DevCon.Warning("Write EE to Fifo: ptag == NULL");

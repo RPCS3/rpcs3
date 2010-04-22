@@ -1313,7 +1313,7 @@ static __forceinline int IPU1chain() {
 		int qwc = ipu1dma->qwc; 
 		u32 *pMem;
 
-		pMem = (u32*)dmaGetAddr(ipu1dma->madr); 
+		pMem = (u32*)dmaGetAddr(ipu1dma->madr, false); 
 
 		if (pMem == NULL) 
 		{ 
@@ -1404,7 +1404,7 @@ int IPU1dma()
 					u32 *ptag;
 
 							
-					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
+					ptag = (u32*)dmaGetAddr(ipu1dma->tadr, false);  //Set memory pointer to TADR
 					if (ptag == NULL)  					 //Is ptag empty?
 					{
 						Console.Error("IPU1 BUSERR");
@@ -1509,7 +1509,7 @@ int IPU0dma()
 
 	pxAssert(ipu0dma->chcr.MOD == NORMAL_MODE);
 	
-	pMem = dmaGetAddr(ipu0dma->madr);
+	pMem = dmaGetAddr(ipu0dma->madr, true);
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
 	totalsize+=readsize;

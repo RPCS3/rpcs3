@@ -785,7 +785,8 @@ int __Deci2Call(int call, u32 *addr)
 //			Console.WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
 			if (deci2addr == NULL) return 1;
 			if (deci2addr[1]>0xc){
-				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc);
+				// this looks horribly wrong, justification please?
+				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc, false);
 				if( pdeciaddr == NULL )
 					pdeciaddr = (u8*)PSM(deci2addr[4]+0xc);
 				else
