@@ -190,6 +190,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 				cpuClearInt( ChannelNumber(mem) );
 			}
 			//Sanity Check for possible future bug fix0rs ;p
+			//Spams on Persona 4 opening.
 			if(reg->chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
 			//Here we update the LOWER CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
 			//But we need to preserve the existing tag for now

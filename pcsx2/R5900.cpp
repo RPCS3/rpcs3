@@ -27,7 +27,7 @@
 
 #include "Hardware.h"
 
-#include "ElfHeader.h"
+#include "Elfheader.h"
 #include "CDVD/CDVD.h"
 #include "Patch.h"
 

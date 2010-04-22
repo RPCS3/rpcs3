@@ -20,7 +20,7 @@
 #include "R5900OpcodeTables.h"
 #include "System/SysThreads.h"
 
-#include "ElfHeader.h"
+#include "Elfheader.h"
 
 #include <float.h>
 

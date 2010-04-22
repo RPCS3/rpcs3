@@ -334,12 +334,12 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	if (fname.Matches(L"????_???.??*"))
 		DiscID = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
 
-	Console.WriteLn("Disc ID = %s", DiscID.ToUTF8());
+	Console.WriteLn("Disc ID = %s", DiscID.ToUTF8().data());
 
 	elfptr = loadElf(elfpath);
 
 	ElfCRC = elfptr->getCRC();
-	Console.WriteLn("ELF (%s) CRC = %8.8X", elfpath.ToUTF8(), ElfCRC);
+	Console.WriteLn("ELF (%s) CRC = %8.8X", elfpath.ToUTF8().data(), ElfCRC);
 
 	ElfEntry = elfptr->header.e_entry;
 	Console.WriteLn("Entry point = 0x%08x", ElfEntry);

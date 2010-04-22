@@ -29,7 +29,7 @@
 #include "GS.h"
 
 #include "CDVD/CDVD.h"
-#include "ElfHeader.h"
+#include "Elfheader.h"
 
 #if !PCSX2_SEH
 #	include <csetjmp>
