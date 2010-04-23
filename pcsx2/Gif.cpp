@@ -202,7 +202,7 @@ void GIFdma()
 	}
 
 	clearFIFOstuff(true);
-	gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+	gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 
 	//Path2 gets priority in intermittent mode
 	if (GSTransferStatus.PTH1 != STOPPED_MODE || GSTransferStatus.PTH2 != STOPPED_MODE)
@@ -228,7 +228,7 @@ void GIFdma()
 			if ((gif->chcr.MOD == CHAIN_MODE) && gif->chcr.STR)
 			{
 			    ptag = ReadTag();
-				gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+				gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 				if (ptag == NULL) return;
 				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx tadr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr, gif->tadr);
 
@@ -244,7 +244,7 @@ void GIFdma()
 			if (gif->qwc == 0) CPU_INT(DMAC_GIF, 16);
 			return;
 		}
-		gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
 			GIF_LOG("PTH3 MASK Transferring");
@@ -263,7 +263,7 @@ void GIFdma()
 		{
 			Console.WriteLn("DMA Stall Control on GIF normal");
 		}
-		gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
 			GIFchain();	//Transfers the data set by the switch
@@ -281,7 +281,7 @@ void GIFdma()
         ptag = ReadTag();
         if (ptag == NULL) return;
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx tadr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr, gif->tadr);
-		gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 		if (dmacRegs->ctrl.STD == STD_GIF)
 		{
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
@@ -322,7 +322,7 @@ void GIFdma()
 		CPU_INT(DMAC_GIF, gscycles * BIAS);
 		gscycles = 0;
 	}
-	gifRegs->stat.FQC = max((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+	gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
 }
 
 void dmaGIF()
