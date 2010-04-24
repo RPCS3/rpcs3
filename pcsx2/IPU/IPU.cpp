@@ -1644,7 +1644,7 @@ void ipu0Interrupt()
 		// vif
 		Console.Warning("IPU VIF Stall");
 		g_nDMATransfer.VIFSTALL = false;
-		if (vif1ch->chcr.STR) dmaVIF1();
+		//if (vif1ch->chcr.STR) dmaVIF1();
 	}
 
 	if (g_nDMATransfer.SIFSTALL)

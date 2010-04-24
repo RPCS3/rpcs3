@@ -203,18 +203,25 @@ static __forceinline void EndIOP()
 // Handle the EE transfer.
 static __forceinline void HandleEETransfer()
 {
+	if(sif1dma->chcr.STR == false)
+	{
+		DevCon.Warning("Replacement for irq prevention hack EE SIF1");
+		sif1.ee.end = false;
+		sif1.ee.busy = false;
+		return;
+	}
 	if (dmacRegs->ctrl.STD == STD_SIF1)
 	{
 		DevCon.Warning("SIF1 stall control"); // STD == fromSIF1
 	}
 
-	if (sif1dma->qwc == 0) 
+	/*if (sif1dma->qwc == 0) 
 		if (sif1dma->chcr.MOD == NORMAL_MODE) 
 			if (!sif1.ee.end){ 
-				DevCon.Warning("sif1 irq prevented"); 
+				DevCon.Warning("sif1 irq prevented CHCR %x QWC %x", sif1dma->chcr, sif1dma->qwc); 
 				done = true; 
 				return;
-			}
+			}*/
 
 	// If there's no more to transfer.
 	if (sif1dma->qwc <= 0)
@@ -275,13 +282,27 @@ static __forceinline void Sif1End()
 // Transfer EE to IOP, putting data in the fifo as an intermediate step.
 __forceinline void SIF1Dma()
 {
+	int BusyCheck = 0;
 	Sif1Init();
 	
 	do
 	{
-		if (sif1.ee.busy) HandleEETransfer();
-		if (sif1.iop.busy) HandleIOPTransfer();
-	} while (!done);
+		//I realise this is very hacky in a way but its an easy way of checking if both are doing something
+		BusyCheck = 0;
+
+		if (sif1.ee.busy) 
+		{
+			if(sif1.fifo.free() > 0) BusyCheck++;
+			HandleEETransfer();
+		}
+
+		if (sif1.iop.busy) 
+		{
+			if(sif1.fifo.size >= 4) BusyCheck++;
+			HandleIOPTransfer();
+		}
+		
+	} while (!done && BusyCheck > 0);
 	
 	Sif1End();
 }

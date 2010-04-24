@@ -16,8 +16,6 @@
 #ifndef __GIF_H__
 #define __GIF_H__
 
-const int gifsplit = 0x10000;
-
 enum gifstate_t
 {
 	GIF_STATE_READY = 0,

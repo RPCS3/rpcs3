@@ -300,6 +300,7 @@ __forceinline void vif1Interrupt()
 	vif1Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
 	vif1ch->chcr.STR = false;
 	g_vifCycles = 0;
+	VIF_LOG("VIF1 End");
 	hwDmacIrq(DMAC_VIF1);
 	
 }

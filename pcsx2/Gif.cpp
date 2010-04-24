@@ -105,7 +105,6 @@ static u32 WRITERING_DMA(tDMA_TAG *pMem, u32 qwc)
 
 int  _GIFchain()
 {
-	u32 qwc = min( gifsplit, (int)gif->qwc );
 	tDMA_TAG *pMem;
 
 	pMem = dmaGetAddr(gif->madr, false);
@@ -121,7 +120,7 @@ int  _GIFchain()
 		return -1;
 	}
 
-	return WRITERING_DMA(pMem, qwc);
+	return WRITERING_DMA(pMem, gif->qwc);
 }
 
 static __forceinline void GIFchain()
@@ -205,11 +204,7 @@ void GIFdma()
 	{
 	    // We are in image mode doing DIRECTHL, Path 1 is in queue, and in intermittant mode.
 		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, GSTransferStatus.PTH3);
-		/*if(GSTransferStatus.PTH3 == STOPPED_MODE)
-		{
-			
-		} else Console.Warning("PATH3 Transfer in action while another one path is running, Path3 mode %x", GSTransferStatus.PTH3);*/
-		gifRegs->stat.set_flags(GIF_STAT_P2Q);
+		gifRegs->stat.set_flags(GIF_STAT_P3Q);
 		CPU_INT(DMAC_GIF, 16);
 		return;
 	}
@@ -327,7 +322,7 @@ void dmaGIF()
 	//It takes the time of 24 QW for the BUS to become ready - The Punisher And Streetball
 	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr._u32, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
-	GSTransferStatus.PTH3 = STOPPED_MODE;
+	//GSTransferStatus.PTH3 = STOPPED_MODE;
 	gspath3done = false; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 
 	gifRegs->stat.P3Q = true;
