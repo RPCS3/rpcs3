@@ -75,10 +75,6 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
-	// Champions: Return to Arms prints this a lot.
-	if((gif->chcr.MOD == CHAIN_MODE) && ((gif->chcr.TAG >> 12) & 0x7) != 0x0 && ((gif->chcr.TAG >> 12) & 0x7) != 0x7 && !((gif->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("GIF Ending when refe or end not set! CHCR = %x", gif->chcr._u32);
-
 	gspath3done = false;
 	gscycles = 0;
 	gif->chcr.STR = false;
@@ -358,6 +354,7 @@ void dmaGIF()
 
 	//Halflife sets a QWC amount in chain mode, no tadr set.
 	if (gif->qwc > 0) gspath3done = true;
+	if(gif->chcr.MOD == CHAIN_MODE && gif->qwc > 0) DevCon.Warning("GIF QWC on Chain CHCR = %x", gif->chcr);
 
 	GIFdma();
 }

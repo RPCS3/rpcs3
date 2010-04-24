@@ -52,7 +52,7 @@ int  _SPR0chain()
 	tDMA_TAG *pMem;
 
 	if (spr0->qwc == 0) return 0;
-	pMem = dmaGetAddr(spr0->madr, true);
+	pMem = SPRdmaGetAddr(spr0->madr, true);
 	if (pMem == NULL) return -1;
 
 	switch (dmacRegs->ctrl.MFD)
@@ -106,7 +106,7 @@ void _SPR0interleave()
 	{
 		spr0->qwc = std::min(tqwc, qwc);
 		qwc -= spr0->qwc;
-		pMem = dmaGetAddr(spr0->madr, true);
+		pMem = SPRdmaGetAddr(spr0->madr, true);
 		
 		switch (dmacRegs->ctrl.MFD)
  		{
@@ -252,9 +252,7 @@ void SPRFROMinterrupt()
 	}
 	if (!spr0finished) return;
 
-	if((spr0->chcr.MOD == CHAIN_MODE) && ((spr0->chcr.TAG >> 12) & 0x7) != 0x0 && ((spr0->chcr.TAG >> 12) & 0x7) != 0x7 && !((spr0->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("SPR0 Ending when refe or end not set! CHCR = %x", spr0->chcr._u32);
-
+	
 	spr0->chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_SPR);
 }
@@ -271,6 +269,7 @@ void dmaSPR0()   // fromSPR
 		CPU_INT(DMAC_FROM_SPR, /*ptag[0].QWC / BIAS*/ 4 );
 		return;
 	}
+	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) DevCon.Warning("SPR0 QWC on Chain CHCR = %x", spr0->chcr);
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
@@ -290,7 +289,7 @@ int  _SPR1chain()
 
 	if (spr1->qwc == 0) return 0;
 
-	pMem = dmaGetAddr(spr1->madr, false);
+	pMem = SPRdmaGetAddr(spr1->madr, false);
 	if (pMem == NULL) return -1;
 
 	SPR1transfer((u32*)pMem, spr1->qwc << 2);
@@ -320,7 +319,7 @@ void _SPR1interleave()
 	{
 		spr1->qwc = std::min(tqwc, qwc);
 		qwc -= spr1->qwc;
-		pMem = dmaGetAddr(spr1->madr, false);
+		pMem = SPRdmaGetAddr(spr1->madr, false);
 		memcpy_fast(&psSu8(spr1->sadr), (u8*)pMem, spr1->qwc << 4);
 		spr1->sadr += spr1->qwc * 16;
 		spr1->madr += (sqwc + spr1->qwc) * 16; 
@@ -356,7 +355,7 @@ void _dmaSPR1()   // toSPR work function
 			}
 			// Chain Mode
 
-			ptag = dmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
+			ptag = SPRdmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
 			
 			if (!spr1->transfer("SPR1 Tag", ptag))
 			{
@@ -390,7 +389,7 @@ void _dmaSPR1()   // toSPR work function
 			spr1finished = done;
 			if (!done)
 			{
-				ptag = dmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
+				ptag = SPRdmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
 				CPU_INT(DMAC_TO_SPR, /*(ptag[0].QWC / BIAS)*/ 4 );// the lower 16 bits of the tag / BIAS);
 			}
 			break;
@@ -414,10 +413,11 @@ void dmaSPR1()   // toSPR
 	if ((spr1->chcr.MOD == CHAIN_MODE) && (spr1->qwc == 0))
 	{
 		tDMA_TAG *ptag;
-		ptag = dmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
+		ptag = SPRdmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
 		CPU_INT(DMAC_TO_SPR, /*ptag[0].QWC / BIAS*/ 4 );
 		return;
 	}
+	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) DevCon.Warning("SPR1 QWC on Chain CHCR = %x", spr1->chcr);
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
@@ -428,9 +428,6 @@ void SPRTOinterrupt()
 {
 	_dmaSPR1();
 	if (!spr1finished) return;
-
-	if((spr1->chcr.MOD == CHAIN_MODE) && ((spr1->chcr.TAG >> 12) & 0x7) != 0x0 && ((spr1->chcr.TAG >> 12) & 0x7) != 0x7 && !((spr1->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("SPR1 Ending when refe or end not set! CHCR = %x", spr1->chcr._u32);
 
 	spr1->chcr.STR = false;
 	hwDmacIrq(DMAC_TO_SPR);

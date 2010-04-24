@@ -628,6 +628,47 @@ static __forceinline bool inScratchpad(u32 addr)
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
+static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write) 
+{
+    // if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
+
+
+	//Probably dont need these.
+    if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&psS[addr & 0x3ff0];
+    
+    // Need to check the physical address as well as just the "SPR" flag, as VTLB doesn't seem to handle it.--refraction
+    if (inScratchpad(addr)) 
+    {
+        //Console.Warning("Writing to the scratchpad without the SPR flag set!");
+        return (tDMA_TAG*)&psS[addr & 0x3ff0];
+    }
+
+	// FIXME: Why??? DMA uses physical addresses
+	
+	
+	if ((addr & 0x7ffffff0) >= 0x20000000)
+	{
+        Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
+        return NULL;
+	}
+
+	addr &= 0x1ffffff0;
+
+	if (addr >= 0x11004000 && addr < 0x11010000)
+	{
+		//Access for VU Memory
+		return (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
+	}
+
+	if (addr > Ps2MemSize::Base)
+	{
+		return (tDMA_TAG*)(write ? psMHW : psMHR);
+	}
+
+	return (tDMA_TAG*)&psM[addr];
+} 
+
+// Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
 static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write) 
 {
     // if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
@@ -642,13 +683,15 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
     }
 
 	// FIXME: Why??? DMA uses physical addresses
-	addr &= 0x3ffffff0;
-
-	if (addr >= 0x20000000)
+	
+	
+	if ((addr & 0x7ffffff0) >= 0x20000000)
 	{
         Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
         return NULL;
 	}
+
+	addr &= 0x1ffffff0;
 
 	if (addr > Ps2MemSize::Base)
 	{

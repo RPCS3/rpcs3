@@ -175,9 +175,7 @@ static __forceinline void EndEE()
 		sif1.ee.cycles = 1;
 	}
 
-	if((sif1dma->chcr.MOD == CHAIN_MODE) && ((sif1dma->chcr.TAG >> 12) & 0x7) != 0x0 && ((sif1dma->chcr.TAG >> 12) & 0x7) != 0x7 && !((sif1dma->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("SIF0 Ending when refe or end not set! CHCR = %x", sif1dma->chcr._u32);
-
+	
 	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384)); 
 }
 
@@ -310,6 +308,8 @@ __forceinline void dmaSIF1()
 	{
 		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
+
+	if(sif1dma->chcr.MOD == CHAIN_MODE && sif1dma->qwc > 0) DevCon.Warning("SIF1 QWC on Chain CHCR = %x", sif1dma->chcr);
 
 	psHu32(SBUS_F240) |= 0x4000;
 	sif1.ee.busy = true;

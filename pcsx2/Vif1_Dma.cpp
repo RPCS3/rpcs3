@@ -302,13 +302,6 @@ __forceinline void vif1Interrupt()
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
 	
-	/*if(vif1.dmamode == VIF_CHAIN_MODE && ((vif1ch->chcr.TAG >> 12) & 0x7) != 0x0 && ((vif1ch->chcr.TAG >> 12) & 0x7) != 0x7 && !((vif1ch->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("VIF1 Ending when refe or end not set! CHCR = %x", vif1ch->chcr._u32);*/
-	//Im not totally sure why Path3 Masking makes it want to see stuff in the fifo
-	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
-	//Im guessing due to the full gs fifo before the reverse? (Refraction)
-	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	//if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 }
 
 void dmaVIF1()
@@ -339,6 +332,8 @@ void dmaVIF1()
 			vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
 		else
 			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
+
+		if(vif1ch->chcr.MOD == CHAIN_MODE && vif1ch->qwc > 0) DevCon.Warning("VIF1 QWC on Chain CHCR = %x", vif1ch->chcr);
 	}
 	else
 	{

@@ -182,9 +182,6 @@ __forceinline void vif0Interrupt()
 	if (vif0.cmd != 0) Console.WriteLn("vif0.cmd still set %x tag size %x", vif0.cmd, vif0.tag.size);
 #endif
 
-	/*if(vif0.dmamode == VIF_CHAIN_MODE && ((vif0ch->chcr.TAG >> 12) & 0x7) != 0x0 && ((vif0ch->chcr.TAG >> 12) & 0x7) != 0x7 && !((vif0ch->chcr.TAG >> 12) & 0x8))
-		DevCon.Warning("VIF0 Ending when refe or end not set! CHCR = %x", vif0ch->chcr._u32);*/
-
 	vif0Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
 	vif0ch->chcr.STR = false;
 	g_vifCycles = 0;
@@ -205,6 +202,7 @@ void dmaVIF0()
 	if ((vif0ch->chcr.MOD == NORMAL_MODE) || vif0ch->qwc > 0)   // Normal Mode
 	{
 			vif0.dmamode = VIF_NORMAL_TO_MEM_MODE;
+			if(vif0ch->chcr.MOD == CHAIN_MODE && vif0ch->qwc > 0) DevCon.Warning("VIF0 QWC on Chain CHCR = %x", vif0ch->chcr);
 	}
 	else
 	{
