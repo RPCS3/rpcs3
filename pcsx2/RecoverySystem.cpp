@@ -37,7 +37,7 @@ static NonblockingMutex state_buffer_lock;
 
 // This boolean tracks if a savestate is actively saving.  When a state is saving we
 // typically delay program termination to allow the state time to finish its work.
-static bool state_is_saving = false;
+//static bool state_is_saving = false;
 
 // This boolean is to keep the system from resuming emulation until the current state has completely
 // uploaded or downloaded itself.  It is only modified from the main thread, and should only be read

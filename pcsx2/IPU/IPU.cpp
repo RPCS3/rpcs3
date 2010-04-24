@@ -49,6 +49,7 @@
 
 static tIPU_DMA g_nDMATransfer(0);
 static tIPU_cmd ipu_cmd;
+static IPUStatus IPU1Status;
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
@@ -1258,17 +1259,17 @@ static __forceinline void ipuDmacSrcChain()
 			case TAG_CNT: // cnt
 				// Set the taddr to the next tag
 				ipu1dma->tadr = ipu1dma->madr;
-				if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
+				//if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case TAG_NEXT: // next
 				ipu1dma->tadr = IPU1Status.NextMem;
-				if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
+				//if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case TAG_REF: // ref
 				//if(IPU1Status.InProgress == false)ipu1dma->tadr += 16;
-				if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
+				//if(IPU1Status.DMAFinished == false) IPU1Status.DMAFinished = false;
 				break;
 
 			case TAG_END: // end
@@ -1359,15 +1360,12 @@ static __forceinline int IPU1chain() {
 
 int IPU1dma()
 {
-	bool done = FALSE;
 	int ipu1cycles = 0;
 	int totalqwc = 0;
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
     //if(!WaitGSPaths()) return totalqwc;
 	
-	
-
 	IPU_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 
 	switch(IPU1Status.DMAMode)
@@ -1401,24 +1399,15 @@ int IPU1dma()
 
 				if(IPU1Status.InProgress == false && IPU1Status.DMAFinished == false) //No transfer is ready to go so we need to set one up
 				{
-					u32 *ptag;
-
-							
-					ptag = (u32*)dmaGetAddr(ipu1dma->tadr, false);  //Set memory pointer to TADR
-					if (ptag == NULL)  					 //Is ptag empty?
+					tDMA_TAG* ptag = dmaGetAddr(ipu1dma->tadr, false);  //Set memory pointer to TADR
+					
+					if (!ipu1dma->transfer("IPU1", ptag))
 					{
-						Console.Error("IPU1 BUSERR");
-						ipu1dma->chcr._u32 = (ipu1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-						psHu32(DMAC_STAT) |= 1 << 15;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
 						return totalqwc;
 					}
-
+				
 					ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
-
-					ipu1dma->chcr._u32 = (ipu1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-					ipu1dma->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
-					
-					IPU1Status.ChainMode = (ptag[0] & 0x70000000) >> 28;
+					IPU1Status.ChainMode = ptag->ID;
 
 					switch (IPU1Status.ChainMode)
 					{
@@ -1426,7 +1415,7 @@ int IPU1dma()
 							// do not change tadr
 							//ipu1dma->tadr += 16;
 							ipu1dma->tadr += 16;
-							ipu1dma->madr = ptag[1];
+							ipu1dma->madr = ptag[1]._u32;
 							IPU_LOG("Tag should end on %x", ipu1dma->tadr);
 							
 							break;
@@ -1441,13 +1430,13 @@ int IPU1dma()
 
 						case TAG_NEXT: // next
 							ipu1dma->madr = ipu1dma->tadr + 16;
-							IPU1Status.NextMem = ptag[1];
+							IPU1Status.NextMem = ptag[1]._u32;
 							IPU_LOG("Tag should end on %x", IPU1Status.NextMem);
 							//IPU1Status.DMAFinished = false;
 							break;
 
 						case TAG_REF: // ref
-							ipu1dma->madr = ptag[1];
+							ipu1dma->madr = ptag[1]._u32;
 							ipu1dma->tadr += 16;
 							IPU_LOG("Tag should end on %x", ipu1dma->tadr);
 							//IPU1Status.DMAFinished = false;
@@ -1469,9 +1458,9 @@ int IPU1dma()
 					//if(ipu1dma->qwc == 0) Console.Warning("Blank QWC!");
 					if(ipu1dma->qwc > 0) IPU1Status.InProgress = true;
 					IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
-							ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
+							ptag[1]._u32, ptag[0]._u32, ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
-					if (ipu1dma->chcr.TIE && (ptag[0] & 0x80000000)) //Tag Interrupt is set, so schedule the end/interrupt
+					if (ipu1dma->chcr.TIE && ptag->IRQ) //Tag Interrupt is set, so schedule the end/interrupt
 						IPU1Status.DMAFinished = true;
 
 					
