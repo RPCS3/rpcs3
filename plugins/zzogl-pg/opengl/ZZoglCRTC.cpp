@@ -121,14 +121,13 @@ void ZeroGS::AdjustTransToAspect(Vector& v)
 {
 	double temp;
 	float f;
-	int dispwidth = 640;
-       	int dispheight = conf.isWideScreen ? 360 : 480;
 
-	if( dispwidth * nBackbufferHeight > dispheight * nBackbufferWidth) {
+	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth) 
+	{
 		// limited by width
 		
 		// change in ratio
-		f = ((float)nBackbufferWidth / (float)dispwidth) / ((float)nBackbufferHeight / (float)dispheight);
+		f = ((float)nBackbufferWidth / (float)conf.width) / ((float)nBackbufferHeight / (float)conf.height);
 		v.y *= f;
 		v.w *= f;
 
@@ -136,9 +135,11 @@ void ZeroGS::AdjustTransToAspect(Vector& v)
 		v.y += (1-(float)modf(v.y*(float)nBackbufferHeight*0.5f+0.05f, &temp))*2.0f/(float)nBackbufferHeight;
 		v.w += (1-(float)modf(v.w*(float)nBackbufferHeight*0.5f+0.05f, &temp))*2.0f/(float)nBackbufferHeight;
 	}
-	else {
+	else 
+	{
 		// limited by height
-		f = ((float)nBackbufferHeight / (float)dispheight) / ((float)nBackbufferWidth / (float)dispwidth);
+		
+		f = ((float)nBackbufferHeight / (float)conf.height) / ((float)nBackbufferWidth / (float)conf.width);
 		f -= (float)modf(f*nBackbufferWidth, &temp)/(float)nBackbufferWidth;
 		v.x *= f;
 		v.z *= f;
