@@ -269,7 +269,7 @@ void dmaSPR0()   // fromSPR
 		CPU_INT(DMAC_FROM_SPR, /*ptag[0].QWC / BIAS*/ 4 );
 		return;
 	}
-	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) DevCon.Warning("SPR0 QWC on Chain CHCR = %x", spr0->chcr);
+	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) DevCon.Warning(L"SPR0 QWC on Chain " + spr0->chcr.desc());
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
@@ -417,7 +417,7 @@ void dmaSPR1()   // toSPR
 		CPU_INT(DMAC_TO_SPR, /*ptag[0].QWC / BIAS*/ 4 );
 		return;
 	}
-	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) DevCon.Warning("SPR1 QWC on Chain CHCR = %x", spr1->chcr);
+	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) DevCon.Warning(L"SPR1 QWC on Chain " + spr1->chcr.desc());
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)

@@ -333,7 +333,7 @@ void dmaVIF1()
 		else
 			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 
-		if(vif1ch->chcr.MOD == CHAIN_MODE && vif1ch->qwc > 0) DevCon.Warning("VIF1 QWC on Chain CHCR = %x", vif1ch->chcr);
+		if(vif1ch->chcr.MOD == CHAIN_MODE && vif1ch->qwc > 0) DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch->chcr.desc());
 	}
 	else
 	{

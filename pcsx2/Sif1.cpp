@@ -309,7 +309,7 @@ __forceinline void dmaSIF1()
 		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
 
-	if(sif1dma->chcr.MOD == CHAIN_MODE && sif1dma->qwc > 0) DevCon.Warning("SIF1 QWC on Chain CHCR = %x", sif1dma->chcr);
+	if(sif1dma->chcr.MOD == CHAIN_MODE && sif1dma->qwc > 0) DevCon.Warning(L"SIF1 QWC on Chain CHCR " + sif1dma->chcr.desc());
 
 	psHu32(SBUS_F240) |= 0x4000;
 	sif1.ee.busy = true;

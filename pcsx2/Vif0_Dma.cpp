@@ -202,7 +202,7 @@ void dmaVIF0()
 	if ((vif0ch->chcr.MOD == NORMAL_MODE) || vif0ch->qwc > 0)   // Normal Mode
 	{
 			vif0.dmamode = VIF_NORMAL_TO_MEM_MODE;
-			if(vif0ch->chcr.MOD == CHAIN_MODE && vif0ch->qwc > 0) DevCon.Warning("VIF0 QWC on Chain CHCR = %x", vif0ch->chcr);
+			if(vif0ch->chcr.MOD == CHAIN_MODE && vif0ch->qwc > 0) DevCon.Warning(L"VIF0 QWC on Chain CHCR " + vif0ch->chcr.desc());
 	}
 	else
 	{

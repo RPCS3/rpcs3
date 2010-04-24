@@ -354,7 +354,7 @@ void dmaGIF()
 
 	//Halflife sets a QWC amount in chain mode, no tadr set.
 	if (gif->qwc > 0) gspath3done = true;
-	if(gif->chcr.MOD == CHAIN_MODE && gif->qwc > 0) DevCon.Warning("GIF QWC on Chain CHCR = %x", gif->chcr);
+	if(gif->chcr.MOD == CHAIN_MODE && gif->qwc > 0) DevCon.Warning(L"GIF QWC on Chain " + gif->chcr.desc());
 
 	GIFdma();
 }
