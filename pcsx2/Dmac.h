@@ -642,9 +642,9 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
     }
 
 	// FIXME: Why??? DMA uses physical addresses
-	addr &= 0x1ffffff0;
+	addr &= 0x3ffffff0;
 
-	if (addr > 0x10000000)
+	if (addr >= 0x20000000)
 	{
         Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
         return NULL;
