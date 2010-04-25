@@ -187,8 +187,8 @@ ZeroGS::VB::CheckFrame32bitRes(int maxpos)
 
 }
 
-// This is the main code of frame resising.
-// It's check several reasons for resize and resize if it needs.
+// This is the main code for frame resizing.
+// It checks for several reasons to resize and resizes if it needs to.
 // 4Mb memory in 64 bit (4 bytes) words.
 // |------------------------|---------------------|----------|----------|---------------------|
 // 0                     gsfb.fbp               zbuff.zpb   tbp    frame.fbp              2^20/64
@@ -213,8 +213,11 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 	if( maxpos > 256 )
 		maxpos &= ~0x1f;
 
-	//int noscissorpos = maxpos;
-	//int ConstrainR1 = ConstraintReson;
+#ifdef DEVBUILD
+	int noscissorpos = maxpos;
+	int ConstrainR1 = ConstraintReson;
+#endif
+
 	maxpos = FindMinimalHeightConstrain(maxpos);
 
 	frame = gsfb;

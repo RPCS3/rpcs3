@@ -49,7 +49,7 @@ extern u32 s_uFramebuffer;
 #endif
 
 #ifdef DEVBUILD
-static int g_bSaveResolved = 0;
+//static int g_bSaveResolved = 0;
 #endif
 
 extern int s_nResolved;

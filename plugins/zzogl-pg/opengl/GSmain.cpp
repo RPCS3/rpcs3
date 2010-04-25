@@ -330,9 +330,12 @@ void CALLBACK GSsetSettingsDir(const char* dir) {
 
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
+
 int g_LastCRC = 0;
+
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
+	// TEXDESTROY_THRESH starts out at 16.
 	VALIDATE_THRESH = 8;
 	conf.mrtdepth = ((conf.gamesettings & GAME_DISABLEMRTDEPTH) != 0);
 
@@ -343,63 +346,24 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 
 	g_GameSettings |= GAME_PATH3HACK;
 
-	bool RunningFirstTime = (g_LastCRC == crc);
+	bool CRCValueChanged = (g_LastCRC != crc);
 	g_LastCRC = crc;
-
-	if (RunningFirstTime) {
-		switch(crc) {
-			case 0x54A548B4: // crash n burn
-				// overbright
-				break;
-
-			case 0xA3D63039: // xenosaga(j)
-			case 0x0E7807B2: // xenosaga(u)
-				g_GameSettings |= GAME_DOPARALLELCTX;
-				VALIDATE_THRESH = 64;
-				TEXDESTROY_THRESH = 32;
-				break;
-
-			case 0x7D2FE035: // espgaluda (j)
-				VALIDATE_THRESH = 24;
-				//g_GameSettings |= GAME_BIGVALIDATE;
-				break;
-
-			case 0x21068223: //Okami, US,
-			case 0x891f223f: //Okami, FR
-			case 0xC5DEFEA0: //Okami, JP,
-			case 0xe0426fc6: //Okage Shadow King
-				conf.gamesettings |= 0x01000000; // Specular highlight;
-				break;
-
-			case 0xD6385328: // GodOfWar
-			case 0xFB0E6D72: // GodOfWar, EU,
-			case 0xEB001875: // GodOfWar, EU,
-			case 0xA61A4C6D: // GodOfWar,
-			case 0xE23D532B: // GodOfWar,
-				conf.gamesettings |= 0x00010000; // full 16 bit
-				break;
-
-			case 0xF0A6D880: // HarvestMoon, US
-				conf.gamesettings |= 0x00002000; // Disable stencil buffer
-				break;
-
-			case 0xFB236A46: // SonicUnleashed, US
-			case 0xa5d29941: // Shadow the Hedgehog
-				conf.gamesettings |= 0x00040100; // Fast update + no Alpha fail
-
-			case 0x7acf7e03: // Atelier Iris 1
-			case 0x9AC65D6A: // Atelier Iris 2, US
-			case 0x4ccc9212: // Atelier Iris 3
-			case 0xF95F37EE: // Ar Tonelico 2, US
-			case 0x77b0236f: // Mana Khemia
-			case 0x433951e7: // Mana Khemia 2
-				conf.gamesettings |= 0x10000000; // GustFix
-
-			case 0xbaa8dd8: // Dark Cloud 1
-				conf.gamesettings |= 0x00000010; // No Target Resolves
-
-			case 0x95cc86ef: // Ghost in the Shell
-				conf.gamesettings |= 0x00000100; // no Alpha fail
+	
+	ZZLog::Error_Log("CRC = %x", crc);
+	if (CRCValueChanged && (crc != 0)) 
+	{
+		for (int i = 0; i < GAME_INFO_INDEX; i++)
+		{
+			if (crc_game_list[i].crc == crc)
+			{
+				if (crc_game_list[i].v_thresh > 0) VALIDATE_THRESH = crc_game_list[i].v_thresh;
+				if (crc_game_list[i].t_thresh > 0) TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
+				
+				conf.gamesettings |= crc_game_list[i].flags;
+				g_GameSettings = conf.gamesettings | options;
+				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
+				return;
+			}
 		}
 	}
 

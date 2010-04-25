@@ -223,6 +223,10 @@ static bool SPAM_PASS;
 #define ZEROGS_DEVBUILD
 #endif
 
+#ifdef ZEROGS_DEVBUILD
+//#define DEVBUILD
+#endif
+
 extern void __LogToConsole(const char *fmt, ...);
 
 namespace ZZLog
@@ -358,5 +362,5 @@ public:
 };
 
 #endif
-
+        
 #endif // UTIL_H_INCLUDED

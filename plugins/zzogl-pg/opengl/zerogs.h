@@ -467,6 +467,164 @@ enum GAME_HACK_OPTIONS
 
 #define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
 
+
+// CRC Information
+        enum Title_Info
+        {
+                Unknown_Title,
+                MetalSlug6,
+                TomoyoAfter,
+                Clannad,
+                Lamune,
+                KyuuketsuKitanMoonties,
+                PiaCarroteYoukosoGPGakuenPrincess,
+                KazokuKeikakuKokoroNoKizuna,
+                DuelSaviorDestiny,
+                FFX,
+                FFX2,
+                FFXII,
+                ShadowHearts,
+                Okami,
+                MetalGearSolid3,
+                DBZBT2,
+                DBZBT3,
+                SFEX3,
+                Bully,
+                BullyCC,
+                SoTC,
+                OnePieceGrandAdventure,
+                OnePieceGrandBattle,
+                ICO,
+                GT4,
+                WildArms5,
+                Manhunt2,
+                CrashBandicootWoC,
+                ResidentEvil4,
+                Spartan,
+                AceCombat4,
+                Drakengard2,
+                Tekken5,
+                IkkiTousen,
+                GodOfWar,
+                GodOfWar2,
+                JackieChanAdv,
+                HarvestMoon,
+                NamcoXCapcom,
+                GiTS,
+                Onimusha3,
+                MajokkoALaMode2,
+                TalesOfAbyss,
+                SonicUnleashed,
+                SimpsonsGame,
+                Genji,
+                StarOcean3,
+                ValkyrieProfile2,
+                RadiataStories,
+                SMTNocturne,
+                SMTDDS1,
+                SMTDDS2,
+                RozenMaidenGebetGarden,
+                Xenosaga,
+                Espgaluda,
+                OkageShadowKing,
+                ShadowTheHedgehog,
+                AtelierIris1,
+                AtelierIris2,
+                AtelierIris3,
+                ArTonelico1,
+                ArTonelico2,
+				ManaKhemia1,
+                ManaKhemia2,
+                DarkCloud1,
+                DarkCloud2,
+                GhostInTheShell,
+                TitleCount,
+        };
+
+        enum Region_Info
+        {
+                Unknown_Region,
+                US,
+                EU,
+                JP,
+                JPUNDUB,
+                RU,
+                FR,
+                DE,
+                IT,
+                ES,
+                ASIA,
+                RegionCount,
+        };
+
+	struct Game_Info
+	{
+			u32 crc;
+			Title_Info title;
+			Region_Info region;
+			u32 flags;
+			s32 v_thresh, t_thresh;
+	};
+	
+	// Note; all the options surrounded by /**/ are ones that were getting chosen previously because of missing break statements, and might not be appropriate.
+	// I'll have to check and see if they work better with or without them.
+	static const Game_Info crc_game_list[] =
+	{
+		{0xA3D63039, Xenosaga, JP, GAME_DOPARALLELCTX, 64, 32},
+		{0x0E7807B2, Xenosaga, US, GAME_DOPARALLELCTX, 64, 32},
+		{0x7D2FE035, Espgaluda, JP, 0/*GAME_BIGVALIDATE*/, 24, -1},
+		{0x21068223, Okami, US, GAME_XENOSPECHACK, -1, -1},
+		{0x891f223f, Okami, FR, GAME_XENOSPECHACK, -1, -1},
+		{0xC5DEFEA0, Okami, JP, GAME_XENOSPECHACK, -1, -1},
+		{0xe0426fc6, OkageShadowKing, Unknown_Region, GAME_XENOSPECHACK, -1, -1},
+		
+		{0xD6385328, GodOfWar, US, GAME_FULL16BITRES, -1, -1},
+		{0xFB0E6D72, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
+		{0xEB001875, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
+		{0xA61A4C6D, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		{0xE23D532B, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		{0xDF1AF973, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		{0xD6385328, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		
+		//{0x2F123FD8, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		//{0x44A8A22A, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		//{0x4340C7C6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		//{0xF8CD3DF6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		//{0x0B82BFF7, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+		
+		{0xF0A6D880, HarvestMoon, US, GAME_NOSTENCIL, -1, -1},
+		{0xFB236A46, SonicUnleashed, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL /**/ | GAME_GUSTHACK |  GAME_NOTARGETRESOLVE /**/, -1, -1},
+		{0xa5d29941, ShadowTheHedgehog, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL /**/ | GAME_GUSTHACK |  GAME_NOTARGETRESOLVE /**/, -1, -1},
+		
+		{0x7acf7e03, AtelierIris1, Unknown_Region, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0xE3981DBB, AtelierIris1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0x9AC65D6A, AtelierIris2, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0x4CCC9212, AtelierIris3, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0x433951e7, ManaKhemia2, Unknown_Region, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		
+		{0xbaa8dd8, DarkCloud1, US, GAME_NOTARGETRESOLVE /**/| GAME_NOALPHAFAIL/**/, -1, -1},
+		{0xA5C05C78, DarkCloud1, Unknown_Region, GAME_NOTARGETRESOLVE /**/| GAME_NOALPHAFAIL/**/, -1, -1},
+		//{0x1DF41F33, DarkCloud2, US, 0, -1, -1},
+		{0x95cc86ef, GhostInTheShell, Unknown_Region, GAME_NOALPHAFAIL, -1, -1}
+		
+        //{0xC164550A, WildArms5, JPUNDUB, 0, -1, -1},
+        //{0xC1640D2C, WildArms5, US, 0, -1, -1},
+        //{0x0FCF8FE4, WildArms5, EU, 0, -1, -1},
+        //{0x2294D322, WildArms5, JP, 0, -1, -1},
+        //{0x565B6170, WildArms5, JP, 0, -1, -1},
+        //{0xD7273511, SMTDDS1, US, 0, -1, -1},          // SMT Digital Devil Saga
+        //{0x1683A6BE, SMTDDS1, EU, 0, -1, -1},          // SMT Digital Devil Saga
+        //{0x44865CE1, SMTDDS1, JP, 0, -1, -1},          // SMT Digital Devil Saga
+        //{0xD382C164, SMTDDS2, US, 0, -1, -1},          // SMT Digital Devil Saga 2
+        //{0xE47C1A9C, SMTDDS2, JP, 0, -1, -1},          // SMT Digital Devil Saga 2
+	};
+	
+	#define GAME_INFO_INDEX (sizeof(crc_game_list)/sizeof(Game_Info))
+	
 extern int nBackbufferWidth, nBackbufferHeight;
 extern u8* g_pbyGSMemory;
 extern u8* g_pbyGSClut; // the temporary clut buffer
