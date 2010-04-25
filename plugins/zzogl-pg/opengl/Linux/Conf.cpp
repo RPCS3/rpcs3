@@ -41,6 +41,9 @@ void SaveConfig()
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
 	fprintf(f, "gamesettings = %x\n", conf.gamesettings); //u32
+	fprintf(f, "width = %x\n", conf.width); //u32
+	fprintf(f, "height = %x\n", conf.height); //u32
+	fprintf(f, "log = %x\n", conf.log); //u32
 	fclose(f);
 }
 
@@ -55,6 +58,7 @@ void LoadConfig()
 	conf.width = 640;
 	conf.height = 480;
 	conf.aa = 0;
+	conf.log = 1;
 
 	const std::string iniFile( s_strIniPath + "zzogl-pg.ini" );
 	FILE* f = fopen(iniFile.c_str(), "r");
@@ -70,6 +74,9 @@ void LoadConfig()
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
 	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
 	err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
+	err = fscanf(f, "width = %x\n", &conf.width);//u32
+	err = fscanf(f, "height = %x\n", &conf.height);//u32
+	err = fscanf(f, "log = %x\n", &conf.log);//u32
 	fclose(f);
 
 	// filter bad files

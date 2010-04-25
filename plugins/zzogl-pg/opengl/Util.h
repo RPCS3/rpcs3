@@ -73,15 +73,6 @@ extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file 
 // fixme - We should use ZEROGS_DEVBUILD to determine devel/debug builds from "public release" builds.
 //  Means a lot of search-and-replace though. (air)
 
-#ifdef ZEROGS_DEVBUILD
-#define GS_LOG __Log
-#else
-#define GS_LOG 0&&
-#endif
-
-#define ERROR_LOG __LogToConsole
-//Logging for errors that are called often should have a time counter.
-
 #if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
 
 // declare linux equivalents
@@ -178,11 +169,10 @@ typedef struct
 	u32 gamesettings;// default game settings
 	int width, height; // View target size, has no impact towards speed
 	bool isWideScreen; // Widescreen support
-#ifdef GS_LOG
 	u32 log;
-#endif
 } GSconf;
 
+//Logging for errors that are called often should have a time counter.
 #ifdef __LINUX__
 static u32 __attribute__((unused)) lasttime = 0;
 static u32 __attribute__((unused)) BigTime = 5000;
@@ -236,25 +226,31 @@ static bool SPAM_PASS;
 #define FUNCLOG
 #endif
 
-#define DEBUG_LOG printf
+extern void __LogToConsole(const char *fmt, ...);
 
-#ifdef RELEASE_TO_PUBLIC
-#define WARN_LOG 0&&
-#define PRIM_LOG 0&&
-#else
-#define WARN_LOG printf
-#define PRIM_LOG if (conf.log & 0x00000010) GS_LOG
-#endif
+namespace ZZLog
+{
+	extern void Message(const char *fmt, ...);
+	extern void Log(const char *fmt, ...);
+	extern void WriteToConsole(const char *fmt, ...);
+	extern void Print(const char *fmt, ...);
+	
+	extern void Greg_Log(const char *fmt, ...);
+	extern void Prim_Log(const char *fmt, ...);
+	extern void GS_Log(const char *fmt, ...);
+	
+	extern void Debug_Log(const char *fmt, ...);
+	extern void Warn_Log(const char *fmt, ...);
+	extern void Error_Log(const char *fmt, ...);
+};
 
-#ifndef GREG_LOG
-#define GREG_LOG 0&&
-#endif
-#ifndef PRIM_LOG
-#define PRIM_LOG 0&&
-#endif
-#ifndef WARN_LOG
-#define WARN_LOG 0&&
-#endif
+#define GREG_LOG ZZLog::Greg_Log
+#define PRIM_LOG ZZLog::Prim_Log
+#define WARN_LOG ZZLog::Warn_Log
+#define GS_LOG ZZLog::GS_Log
+#define DEBUG_LOG ZZLog::Debug_Log
+#define ERROR_LOG ZZLog::Error_Log
+//ZZLog::Error_Log
 
 
 #define REG64(name) \
@@ -290,12 +286,6 @@ union name			\
 	u32 ai32[4];	\
 
 #define REG_SET_END };
-
-
-extern FILE *gsLog;
-
-extern void __Log(const char *fmt, ...);
-extern void __LogToConsole(const char *fmt, ...);
 
 extern void LoadConfig();
 extern void SaveConfig();

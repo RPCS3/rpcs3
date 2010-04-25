@@ -74,7 +74,7 @@ extern HANDLE g_hCurrentThread;
 __forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 {
 #ifdef _DEBUG
-	if( conf.log & 0x20 )
+	if( conf.log /*& 0x20*/ )
 	{
 		static int nSaveIndex = 0;
 		GS_LOG("%d: p:%d %x\n", nSaveIndex++, index + 1, size);

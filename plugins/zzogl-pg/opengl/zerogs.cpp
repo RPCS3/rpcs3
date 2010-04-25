@@ -780,13 +780,17 @@ void ZeroGS::KickDummy()
 void ZeroGS::SetFogColor(u32 fog)
 {
 	FUNCLOG
-	if( 1||gs.fogcol != fog ) {
+	
+//	Always set the fog color, even if it was already set.
+//	if (gs.fogcol != fog) 
+//	{
 		gs.fogcol = fog;
 
 		ZeroGS::Flush(0);
 		ZeroGS::Flush(1);
 
-		if( !g_bIsLost ) {
+		if (!g_bIsLost) 
+		{
 			SetShaderCaller("SetFogColor");
 			Vector v;
 
@@ -796,7 +800,7 @@ void ZeroGS::SetFogColor(u32 fog)
 			v.z = ((gs.fogcol>>16)&0xff)/255.0f;
 			ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 		}
-	}
+//	}
 }
 
 void ZeroGS::ExtWrite()

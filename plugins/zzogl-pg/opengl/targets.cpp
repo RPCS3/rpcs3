@@ -2286,7 +2286,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	return ptex;
 }
 
-static __forceinline void RangeSanityCheck()
+void ZeroGS::CRangeManager::RangeSanityCheck()
 {
 #ifdef _DEBUG
 	// sanity check

@@ -47,8 +47,9 @@ BOOL CALLBACK LoggingDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 					return TRUE;
 				case IDOK:
 					if (IsDlgButtonChecked(hW, IDC_LOG))
-						 conf.log = 1;
-					else conf.log = 0;
+						conf.log = 1;
+					else 
+						conf.log = 0;
 
 					SaveConfig();
 					EndDialog(hW, FALSE);

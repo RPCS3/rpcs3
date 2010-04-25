@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../../../bin/plugins/ZZOgl-PG-d.so" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-dbg.so" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -16,9 +16,26 @@
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-D_DEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../../deps/debug/libUtilities.a" />
+				</Linker>
+			</Target>
+			<Target title="Devel">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-dev" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-W" />
+					<Add option="-g" />
+					<Add option="-DZEROGS_DEVBUILD" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../../../deps/release/libUtilities.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -31,6 +48,7 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-W" />
+					<Add option="-DRELEASE_TO_PUBLIC" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

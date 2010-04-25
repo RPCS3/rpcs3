@@ -148,20 +148,29 @@ void ZeroGS::AdjustTransToAspect(Vector& v)
 }
 
 // Helper for skip frames.
-int TimeLastSkip=0;
-inline bool FrameSkippingHelper() {
+int TimeLastSkip = 0;
+
+inline bool FrameSkippingHelper() 
+{
 	bool ShouldSkip = false;
-	if( g_nFrameRender > 0 ) {
-		if( g_nFrameRender < 8 ) {
+	
+	if (g_nFrameRender > 0) 
+	{
+		if (g_nFrameRender < 8) 
+		{
 			g_nFrameRender++;
-			if( g_nFrameRender <= 3 ) {
+			
+			if (g_nFrameRender <= 3) 
+			{
 				g_nFramesSkipped++;
 				ShouldSkip = true;
 			}
 		}
 	}
-	else {
-		if( g_nFrameRender < -1 ) {
+	else 
+	{
+		if (g_nFrameRender < -1) 
+		{
 			g_nFramesSkipped++;
 			ShouldSkip = true;
 		}
@@ -446,10 +455,11 @@ inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 	Vector v;
 	v = Vector(th, tw, dh, dw);
 
-	// Incorrect Asect ration on interlaced frames
-	if (isInterlace) {
-		v.y -= 1.0f/480 ;
-		v.w += 1.0f/480 ;
+	// Incorrect Aspect ratio on interlaced frames
+	if (isInterlace) 
+	{
+		v.y -= 1.0f/conf.height;
+		v.w += 1.0f/conf.height;
 	}
 
 	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");

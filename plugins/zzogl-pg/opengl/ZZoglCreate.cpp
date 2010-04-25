@@ -142,7 +142,7 @@ float fiRendWidth, fiRendHeight;
 u8* s_lpShaderResources = NULL;
 CGprogram pvs[16] = {NULL};
 
-// String's for shader file in developer's mode
+// String's for shader file in developer mode
 #ifdef DEVBUILD
 char* EFFECT_NAME="";
 char* EFFECT_DIR="";
@@ -203,7 +203,7 @@ ZeroGS::Create_Window(int _width, int _height) {
 	return true;
 }
 
-// Function ask about differnt OGL extensions, that are required to setup accordingly. Return false if cheks failed
+// Function asks about different OGL extensions, that are required to setup accordingly. Return false if checks failed
 inline bool ZeroGS::CreateImportantCheck() {
 	bool bSuccess = true;
 #ifndef _WIN32
@@ -224,7 +224,7 @@ inline bool ZeroGS::CreateImportantCheck() {
 		bSuccess = false;
 	}
 
-	// load the effect, find the best profiles (if any)
+	// load the effect & find the best profiles (if any)
 	if( cgGLIsProfileSupported(CG_PROFILE_ARBVP1) != CG_TRUE ) {
 		ERROR_LOG("arbvp1 not supported\n");
 		bSuccess = false;
@@ -237,7 +237,7 @@ inline bool ZeroGS::CreateImportantCheck() {
 	return bSuccess;
 }
 
-// This is check for less important open gl extensions.
+// This is a check for less important open gl extensions.
 inline void ZeroGS::CreateOtherCheck() {
 	if( !IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL ) {
 		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_equation_separate\nZZogl: *********\n");
@@ -274,9 +274,9 @@ inline void ZeroGS::CreateOtherCheck() {
 
 	glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_NV, &Max_Texture_Size_NV);
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &Max_Texture_Size_2d);
-	ERROR_LOG("Maximun texture size is %d for Tex_2d and %d for Tex_NV\n", Max_Texture_Size_2d, Max_Texture_Size_NV);
+	ERROR_LOG("Maximum texture size is %d for Tex_2d and %d for Tex_NV\n", Max_Texture_Size_2d, Max_Texture_Size_NV);
 	if (Max_Texture_Size_NV < 1024)
-		ERROR_LOG("Could not properly made bitmasks, so some textures should be missed\n");
+		ERROR_LOG("Could not properly make bitmasks, so some textures will be missed\n");
 
 	/* Zeydlitz: we don't support 128-bit targets yet. they are slow and weirdo
 	if( g_GameSettings & GAME_32BITTARGS ) {
@@ -374,7 +374,18 @@ inline bool CreateFillExtensionsMap(){
 
 	int prevlog = conf.log;
 	conf.log = 1;
-	GS_LOG("Supported OpenGL Extensions:\n%s\n", ptoken);	 // write to the log file
+	
+	ZZLog::GS_Log("Supported OpenGL Extensions:\n%s\n", ptoken);	 // write to the log file
+	
+	// Probably a better way to do it, but seems to crash.
+	/*int n;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+	ZZLog::GS_Log("Supported OpenGL Extensions:\n");
+	for (int i = 0; i < n; i++) 
+	{
+		ZZLog::GS_Log("%s/n", (const char*)glGetStringi(GL_EXTENSIONS, i));
+	}*/
+
 	conf.log = prevlog;
 
 	// insert all exts into mapGLExtensions
@@ -413,14 +424,10 @@ bool ZeroGS::Create(int _width, int _height)
 	cgSetErrorHandler(HandleCgError, NULL);
 	g_RenderFormatType = RFT_float16;
 
-	if (!Create_Window(_width, _height))
-		return false;
-
-	if (!CreateFillExtensionsMap())
-		return false;
-
-	if (!CreateImportantCheck())
-		return false;
+	if (!Create_Window(_width, _height)) return false;
+	if (!CreateFillExtensionsMap()) return false;
+	if (!CreateImportantCheck()) return false;
+	
 	ZeroGS::CreateOtherCheck();
 
 	// check the max texture width and height
@@ -462,7 +469,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	glGenFramebuffersEXT( 1, &s_uFramebuffer);
 	if( s_uFramebuffer == 0 ) {
-		ERROR_LOG("failed to create the renderbuffer\n");
+		ERROR_LOG("Failed to create the renderbuffer\n");
 	}
 
 	assert( glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT );

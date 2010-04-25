@@ -122,7 +122,7 @@ namespace ZeroGS {
 		void ClearRange(int starty, int endy); // set all targets to cleared
 		void DestroyCleared(); // flush all cleared targes
 		void DestroyOldest();
-
+		
 		list<CMemoryTarget> listTargets, listClearedTargets;
 		u32 curstamp;
 
@@ -168,6 +168,7 @@ namespace ZeroGS {
 
 		// works in semi logN
 		void Insert(int start, int end);
+		void RangeSanityCheck();
 		inline void Clear() {
 			ranges.resize(0);
 		}

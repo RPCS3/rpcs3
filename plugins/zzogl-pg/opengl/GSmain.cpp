@@ -134,35 +134,165 @@ bool THR_bShift = false;
 
 #endif
 
-void __Log(const char *fmt, ...)
+namespace ZZLog
 {
-	va_list list;
+	bool IsLogging() 
+	{ 
+		// gsLog can be null if the config dialog is used prior to Pcsx2 starting an emulation session.
+		// (GSinit won't have been called then)
+		return (gsLog != NULL && conf.log); 
+	}
+	void _Message(const char *str) 
+	{
+		SysMessage(str);
+	}
 
-	// gsLog can be null if the config dialog is used prior to Pcsx2 an emulation session.
-	// (GSinit won't have been called then)
+	void _Log(const char *str)
+	{
+		if (IsLogging()) fprintf(gsLog, str);
+	}
 
-	if (gsLog == NULL || !conf.log) return;
+	void _WriteToConsole(const char *str) 
+	{
+		printf("ZZogl-PG: %s", str);
+	}	
 
-	va_start(list, fmt);
-	vfprintf(gsLog, fmt, list);
-	va_end(list);
-}
+	void _Print(const char *str) 
+	{
+		printf("ZZogl-PG: %s", str);
+		if (IsLogging()) fprintf(gsLog, str);
+	}
+	
+	void Message(const char *fmt, ...) 
+	{
+		va_list list;
+		char tmp[512];
 
-void __LogToConsole(const char *fmt, ...) {
-	va_list list;
+		va_start(list, fmt);
+		vsprintf(tmp, fmt, list);
+		va_end(list);
+		
+		SysMessage(tmp);
+	}
 
-	va_start(list, fmt);
+	void Log(const char *fmt, ...)
+	{
+		va_list list;
 
-	// gsLog can be null if the config dialog is used prior to Pcsx2 an emulation session.
-	// (GSinit won't have been called then)
+		va_start(list, fmt);
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		va_end(list);
+	}
 
-	if( gsLog != NULL )
-		vfprintf(gsLog, fmt, list);
+	void WriteToConsole(const char *fmt, ...) 
+	{
+			va_list list;
 
-	printf("ZZogl: ");
-	vprintf(fmt, list);
-	va_end(list);
-}
+			va_start(list, fmt);
+
+			printf("ZZogl-PG: ");
+			vprintf(fmt, list);
+			va_end(list);
+	}	
+
+	void Print(const char *fmt, ...) 
+	{
+		va_list list;
+
+		va_start(list, fmt);
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		printf("ZZogl-PG: ");
+		vprintf(fmt, list);
+		va_end(list);
+	}
+
+	void Greg_Log(const char *fmt, ...)
+	{
+		// Not currently used
+#if 0
+		va_list list;
+		char tmp[512];
+
+		va_start(list, fmt);
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		va_end(list);
+#endif
+	}
+	
+	void Prim_Log(const char *fmt, ...)
+	{
+#if ZEROGS_DEVBUILD
+		va_list list;
+		char tmp[512];
+
+		va_start(list, fmt);
+		
+		if (conf.log /*& 0x00000010*/)
+		{
+			if (IsLogging()) vfprintf(gsLog, fmt, list);
+			
+			printf("ZZogl-PG(PRIM): ");
+			vprintf(fmt, list);
+		}
+		va_end(list);
+		
+#endif
+	}
+	
+	void GS_Log(const char *fmt, ...)
+	{
+#if ZEROGS_DEVBUILD
+		va_list list;
+
+		va_start(list,fmt);
+		
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		printf("ZZogl-PG(GS): ");
+		vprintf(fmt,list);
+		va_end(list);
+#endif
+	}
+	
+	void Warn_Log(const char *fmt, ...)
+	{
+#if ZEROGS_DEVBUILD
+		va_list list;
+
+		va_start(list,fmt);
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		printf("ZZogl-PG(Warning): ");
+		vprintf(fmt, list);
+		va_end(list);
+#endif
+	}
+	
+	void Debug_Log(const char *fmt, ...)
+	{
+#if _DEBUG
+		va_list list;
+
+		va_start(list,fmt);
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		printf("ZZogl-PG(Debug): ");
+		vprintf(fmt, list);
+		va_end(list);
+		
+		
+#endif
+	}
+	
+	void Error_Log(const char *fmt, ...)
+	{
+		va_list list;
+
+		va_start(list,fmt);
+		
+		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		printf("ZZogl-PG(Error): ");
+		vprintf(fmt,list);
+		va_end(list);
+	}
+};
 
 void CALLBACK GSsetBaseMem(void* pmem) {
 	g_pBasePS2Mem = (u8*)pmem;
@@ -688,7 +818,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	GLWin.CreateWindow(pDsp);
 
 	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ERROR_LOG("creating zerogs\n");
+	ERROR_LOG("Creating zerogs\n");
 	//if (conf.record) recOpen();
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
@@ -834,7 +964,7 @@ void CALLBACK GSvsync(int interlace)
 {
 	FUNCLOG
 
-	GS_LOG("\nGSvsync\n\n");
+	//GS_LOG("GSvsync\n");
 
 	static u32 dwTime = timeGetTime();
 	static int nToNextUpdate = 1;

@@ -199,6 +199,7 @@ void DisplayDialog()
     GtkWidget *main_frame, *main_box;
 
     GtkWidget *option_frame, *option_box;
+    GtkWidget *log_check;
     GtkWidget *int_label, *int_box;
     GtkWidget *bilinear_check, *bilinear_label;
     GtkWidget *aa_label, *aa_box;
@@ -224,6 +225,7 @@ void DisplayDialog()
 			GTK_RESPONSE_ACCEPT,
 		NULL);
 
+    log_check = gtk_check_button_new_with_label("Logging (For Debugging):");
     int_label = gtk_label_new ("Interlacing: (F5 to toggle)");
     int_box = gtk_combo_box_new_text ();
     gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "No Interlacing");
@@ -281,6 +283,7 @@ void DisplayDialog()
 	advanced_scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(advanced_scroll), tree);
 
+	gtk_box_pack_start(GTK_BOX(option_box), log_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), int_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), int_box, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), bilinear_check, false, false, 2);
@@ -301,6 +304,7 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(main_box), option_frame, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(main_box), advanced_frame, true, true, 2);
 
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), conf.log);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bilinear_check), conf.bilinear);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.options & GSOPTION_WIREFRAME));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.options & GSOPTION_CAPTUREAVI));
@@ -316,7 +320,7 @@ void DisplayDialog()
     {
     	int fake_options = 0;
     	SaveGameHackTable(tree);
-
+			
     	if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1)
 			conf.interlace = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
 
@@ -333,6 +337,7 @@ void DisplayDialog()
 			case 3: fake_options |= GSOPTION_WIN1280; break;
 		}
 
+		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
 		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
 
     	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check)))
