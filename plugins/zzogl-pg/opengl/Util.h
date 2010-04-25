@@ -65,14 +65,6 @@ extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
 extern bool THR_bShift;
 extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
-/////////////////////
-// define when releasing
-// The only code that uses it is commented out!
-//#define ZEROGS_CACHEDCLEAR // much better performance
-//#define RELEASE_TO_PUBLIC
-// fixme - We should use ZEROGS_DEVBUILD to determine devel/debug builds from "public release" builds.
-//  Means a lot of search-and-replace though. (air)
-
 #if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
 
 // declare linux equivalents
@@ -227,6 +219,9 @@ static bool SPAM_PASS;
 #endif
 
 //#define WRITE_PRIM_LOGS
+#ifdef _DEBUG
+#define ZEROGS_DEVBUILD
+#endif
 
 extern void __LogToConsole(const char *fmt, ...);
 

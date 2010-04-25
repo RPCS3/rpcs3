@@ -74,10 +74,10 @@ unsigned char zgsminor = 0;
 
 #ifdef _DEBUG
 char *libraryName	 = "ZZ Ogl PG (Debug) ";
-#elif defined(RELEASE_TO_PUBLIC)
-char *libraryName	 = "ZZ Ogl PG ";
+#elif defined(ZEROGS_DEVBUILD)
+char *libraryName	 = "ZZ Ogl PG (Dev)";
 #else
-char *libraryName	 = "ZZ Ogl PG (Dev) ";
+char *libraryName	 = "ZZ Ogl PG ";
 #endif
 
 static const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
@@ -91,7 +91,7 @@ extern int g_nPixelShaderVer;
 extern int g_nFrameRender;
 extern int g_nFramesSkipped;
 
-#ifdef RELEASE_TO_PUBLIC
+#if !defined(ZEROGS_DEVBUILD)
 #define g_bWriteProfile 0
 #else
 BOOL g_bWriteProfile = 0;
@@ -142,6 +142,12 @@ namespace ZZLog
 		// (GSinit won't have been called then)
 		return (gsLog != NULL && conf.log); 
 	}
+	
+	void WriteToScreen(const char* pstr, u32 ms)
+	{
+		ZeroGS::AddMessage(pstr, ms);
+	}
+
 	void _Message(const char *str) 
 	{
 		SysMessage(str);
@@ -241,7 +247,7 @@ namespace ZZLog
 	
 	void GS_Log(const char *fmt, ...)
 	{
-#if ZEROGS_DEVBUILD
+#ifdef ZEROGS_DEVBUILD
 		va_list list;
 
 		va_start(list,fmt);
@@ -260,7 +266,7 @@ namespace ZZLog
 	
 	void Warn_Log(const char *fmt, ...)
 	{
-#if ZEROGS_DEVBUILD
+#ifdef ZEROGS_DEVBUILD
 		va_list list;
 
 		va_start(list,fmt);
@@ -1004,7 +1010,7 @@ void CALLBACK GSvsync(int interlace)
 		dwTime = d;
 		g_nFrame += UPDATE_FRAMES;
 
-#ifdef RELEASE_TO_PUBLIC
+#if !defined(ZEROGS_DEVBUILD)
 		const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 		const char* g_pInterlace[3] = { "interlace 0 |", "interlace 1 |", "" };
 		const char* g_pBilinear[3] = { "", "bilinear |", "forced bilinear |" };
@@ -1049,7 +1055,7 @@ void CALLBACK GSvsync(int interlace)
 		g_nFramesSkipped = 0;
 	}
 
-#ifndef RELEASE_TO_PUBLIC
+#if defined(ZEROGS_DEVBUILD)
 	if( g_bWriteProfile ) {
 		//g_bWriteProfile = 0;
 		DVProfWrite("prof.txt", UPDATE_FRAMES);

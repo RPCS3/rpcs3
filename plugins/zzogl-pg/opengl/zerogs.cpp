@@ -1108,9 +1108,7 @@ void ZeroGS::texClutWrite(int ctx)
 
 			default:
 			{
-#ifndef RELEASE_TO_PUBLIC
-			//ZZLog::Debug_Log("Unknown cpsm: %x (%x).", tex0.cpsm, tex0.psm);
-#endif
+				//ZZLog::Debug_Log("Unknown cpsm: %x (%x).", tex0.cpsm, tex0.psm);
 				break;
 			}
 		}

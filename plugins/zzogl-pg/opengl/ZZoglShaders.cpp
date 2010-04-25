@@ -358,7 +358,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	return NULL;
 }
 
-#else // not RELEASE_TO_PUBLIC
+#else // defined(ZEROGS_DEVBUILD)
 
 #define LOAD_VS(name, prog, shaderver) { \
 	prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, EFFECT_NAME, shaderver, name, args); \
@@ -556,5 +556,5 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	return NULL;
 }
 
-#endif // RELEASE_TO_PUBLIC
+#endif // !defined(ZEROGS_DEVBUILD)
 

@@ -33,10 +33,10 @@
 // Hack for save game compatible!
 #ifdef _DEBUG
 char *libraryNameX	 = "ZeroGS-Pg OpenGL (Debug) ";
-#elif defined(RELEASE_TO_PUBLIC)
-char *libraryNameX	 = "ZeroGS Playground OpenGL ";
-#else
+#elif defined(ZEROGS_DEVBUILD)
 char *libraryNameX	 = "ZeroGS-Pg OpenGL (Dev) ";
+#else
+char *libraryNameX	 = "ZeroGS Playground OpenGL ";
 #endif
 
 //------------------ Code

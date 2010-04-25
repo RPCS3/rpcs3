@@ -42,7 +42,7 @@ extern bool g_bIsLost;
 extern bool g_bUpdateStencil;
 extern u32 s_uFramebuffer;
 
-#ifdef RELEASE_TO_PUBLIC
+#if !defined(ZEROGS_DEVBUILD)
 #	define INC_RESOLVE()
 #else
 #	define INC_RESOLVE() ++g_nResolve
@@ -1169,7 +1169,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		else {
 			// certain variables have to be reset every time
 			if( (it->second->psm&~1) != (frame.psm&~1) ) {
-#ifndef RELEASE_TO_PUBLIC
+#if defined(ZEROGS_DEVBUILD)
 				ZZLog::Warn_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
 #endif
 				it->second->psm = frame.psm;
@@ -1967,7 +1967,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		targ->ptex->ref = 1;
 	}
 
-#ifndef RELEASE_TO_PUBLIC
+#if defined(ZEROGS_DEVBUILD)
 	g_TransferredToGPU += GPU_TEXWIDTH * channels * 4 * targ->height;
 #endif
 
@@ -2611,7 +2611,7 @@ void InitTransferHostLocal()
 	if( g_bIsLost )
 		return;
 
-#ifndef RELEASE_TO_PUBLIC
+#if defined(ZEROGS_DEVBUILD)
 	if( gs.trxpos.dx+gs.imageWnew > gs.dstbuf.bw )
 		ZZLog::Warn_Log("Transfer error, width exceeded.");
 #endif
@@ -2741,7 +2741,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 	}
 	else s_vTransferCache.resize(0);
 
-#if !defined(RELEASE_TO_PUBLIC) && defined(_DEBUG)
+#if defined(_DEBUG)
 	if( g_bSaveTrans ) {
 		tex0Info t;
 		t.tbp0 = gs.dstbuf.bp;
@@ -2884,7 +2884,7 @@ void InitTransferLocalHost()
 	FUNCLOG
 	assert( gs.trxpos.sx+gs.imageWnew <= 2048 && gs.trxpos.sy+gs.imageHnew <= 2048 );
 
-#ifndef RELEASE_TO_PUBLIC
+#if defined(ZEROGS_DEVBUILD)
 	if( gs.trxpos.sx+gs.imageWnew > gs.srcbuf.bw )
 		ZZLog::Warn_Log("Transfer error, width exceeded.");
 #endif

@@ -29,13 +29,13 @@
 using namespace ZeroGS;
 
 //------------------ Defines
-#ifdef RELEASE_TO_PUBLIC
+#if !defined(ZEROGS_DEVBUILD)
 #define g_bSaveFrame 0
 #define g_bSaveFinalFrame 0
-#else // NOT RELEASE_TO_PUBLIC
+#else 
 BOOL g_bSaveFrame = 0;  // saves the current psurfTarget
 BOOL g_bSaveFinalFrame = 0; // saves the input to the CRTC
-#endif // RELEASE_TO_PUBLIC
+#endif // !defined(ZEROGS_DEVBUILD)
 
 #define INTERLACE_COUNT (bInterlace && interlace == (conf.interlace))
 
@@ -238,7 +238,7 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo) {
 // Something should be done before Renderer the picture.
 inline void RenderStartHelper(u32 bInterlace){
 	// Crashes Final Fantasy X at startup if uncommented. --arcum42
-//#ifdef RELEASE_TO_PUBLIC
+//#ifdef !defined(ZEROGS_DEVBUILD)
 //	if(g_nRealFrame < 80 ) {
 //		RenderCustom( min(1.0f, 2.0f - (float)g_nRealFrame / 40.0f) );
 //

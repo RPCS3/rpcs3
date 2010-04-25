@@ -47,7 +47,7 @@ using namespace ZeroGS;
 bool g_bSaveTrans = 0;
 #define g_bSaveResolved 0
 
-#else // NOT RELEASE_TO_PUBLIC
+#else // defined(ZEROGS_DEVBUILD)
 
 #define INC_GENVARS() ++g_nGenVars
 #define INC_TEXVARS() ++g_nTexVars
@@ -58,7 +58,7 @@ bool g_bSaveTrans = 0;
 bool g_bUpdateEffect = 0;
 bool g_bSaveTex = 0;	// saves the curent texture
 bool g_bSaveResolved = 0;
-#endif // RELEASE_TO_PUBLIC
+#endif // !defined(ZEROGS_DEVBUILD)
 
 #define STENCIL_ALPHABIT	1	   // if set, dest alpha >= 0x80
 #define STENCIL_PIXELWRITE  2	   // if set, pixel just written (reset after every Flush)
@@ -276,7 +276,7 @@ int GetTexFilter(const tex1Info& tex1)
 
 void ZeroGS::ReloadEffects()
 {
-#ifndef RELEASE_TO_PUBLIC
+#ifdef ZEROGS_DEVBUILD
 	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
@@ -287,7 +287,7 @@ void ZeroGS::ReloadEffects()
 
 long BufferNumber = 0;
 
-// This is debug function. It's print all buffer info and save current texture into the file, than printf file name.
+// This is a debug function. It prints all buffer info and save current texture into the file, then prints the file name.
 inline void
 VisualBufferMessage(int context) {
 #if defined(WRITE_PRIM_LOGS) && defined(_DEBUG)
@@ -331,7 +331,7 @@ inline void SaveRendererTarget(VB& curvb) {
 
 // Stop effects in Developers mode
 inline void FlushUpdateEffect() {
-#ifdef DEVBUID
+#if defined(DEVBUILD)
 	if( g_bUpdateEffect ) {
 		ReloadEffects();
 		g_bUpdateEffect = 0;

@@ -336,7 +336,7 @@ inline bool ZeroGS::CreateOpenShadersFile() {
 	fread(s_lpShaderResources, s, 1, fres);
 	s_lpShaderResources[s] = 0;
 #	endif // _WIN32
-#else // NOT RELEASE_TO_PUBLIC
+#else // defined(ZEROGS_DEVBUILD)
 #	ifndef _WIN32 // NOT WINDOWS
 	// test if ps2hw.fx exists
 	char tempstr[255];
@@ -362,7 +362,7 @@ inline bool ZeroGS::CreateOpenShadersFile() {
 	sprintf(EFFECT_DIR, "%s/%s", curwd, tempstr);
 	sprintf(EFFECT_NAME, "%sps2hw.fx", EFFECT_DIR);
 	#endif
-#endif // RELEASE_TO_PUBLIC
+#endif // !defined(ZEROGS_DEVBUILD)
 	return true;
 }
 
