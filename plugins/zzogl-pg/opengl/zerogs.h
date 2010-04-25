@@ -531,6 +531,9 @@ enum GAME_HACK_OPTIONS
                 AtelierIris1,
                 AtelierIris2,
                 AtelierIris3,
+                AtelierJudie,
+                AtelierLilie,
+                AtelierViorate,
                 ArTonelico1,
                 ArTonelico2,
 				ManaKhemia1,
@@ -593,21 +596,27 @@ enum GAME_HACK_OPTIONS
 		//{0x0B82BFF7, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
 		
 		{0xF0A6D880, HarvestMoon, US, GAME_NOSTENCIL, -1, -1},
-		{0xFB236A46, SonicUnleashed, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL /**/ | GAME_GUSTHACK |  GAME_NOTARGETRESOLVE /**/, -1, -1},
-		{0xa5d29941, ShadowTheHedgehog, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL /**/ | GAME_GUSTHACK |  GAME_NOTARGETRESOLVE /**/, -1, -1},
+		//{0x304C115C, HarvestMoon, Unknown, GAME_NOSTENCIL, -1, -1},
+		{0xFB236A46, SonicUnleashed, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
+		{0xa5d29941, ShadowTheHedgehog, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
 		
-		{0x7acf7e03, AtelierIris1, Unknown_Region, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0xE3981DBB, AtelierIris1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0x9AC65D6A, AtelierIris2, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0x4CCC9212, AtelierIris3, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
-		{0x433951e7, ManaKhemia2, Unknown_Region, GAME_GUSTHACK /**/| GAME_NOTARGETRESOLVE | GAME_NOALPHAFAIL/**/, -1, -1},
+		{0x7acf7e03, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
+		{0xF0457CEF, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
+		{0xE3981DBB, AtelierIris1, US, GAME_GUSTHACK, -1, -1},
+		{0x9AC65D6A, AtelierIris2, US, GAME_GUSTHACK, -1, -1},
+		{0x4CCC9212, AtelierIris3, US, GAME_GUSTHACK, -1, -1},
+		{0xCA295E61, AtelierIris3, JP, GAME_GUSTHACK, -1, -1},
+		//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK, -1, -1},
+		{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK, -1, -1},
+		{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK, -1, -1},
+		{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK , -1, -1},
+		{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
+		//{0xda11c6d4, AtelierJudie, JP, GAME_GUSTHACK, -1, -1},
+		//{0x3e72c085, AtelierLilie, JP, GAME_GUSTHACK, -1, -1},
+		//{0x6eac076b, AtelierViorate, JP, GAME_GUSTHACK, -1, -1},
 		
-		{0xbaa8dd8, DarkCloud1, US, GAME_NOTARGETRESOLVE /**/| GAME_NOALPHAFAIL/**/, -1, -1},
-		{0xA5C05C78, DarkCloud1, Unknown_Region, GAME_NOTARGETRESOLVE /**/| GAME_NOALPHAFAIL/**/, -1, -1},
+		{0xbaa8dd8, DarkCloud1, US, GAME_NOTARGETRESOLVE, -1, -1},
+		{0xA5C05C78, DarkCloud1, Unknown_Region, GAME_NOTARGETRESOLVE, -1, -1},
 		//{0x1DF41F33, DarkCloud2, US, 0, -1, -1},
 		{0x95cc86ef, GhostInTheShell, Unknown_Region, GAME_NOALPHAFAIL, -1, -1}
 		
@@ -1039,7 +1048,7 @@ namespace ZeroGS {
 	void StopCapture();
 	void CaptureFrame();
 
-	// Perform clutting for flushed texture. Better check if it need prior call
+	// Perform clutting for flushed texture. Better check if it needs a prior call.
 	inline void
 	CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx) {
 		tex0->cbp  = ZZOglGet_cbp_TexBits(Data);

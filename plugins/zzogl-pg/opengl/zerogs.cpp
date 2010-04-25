@@ -541,7 +541,7 @@ void ZeroGS::Restore()
 
 __forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
 {
-	p->z = curvb.zprimmask==0xffff?min((u32)0xffff, gsz):gsz;
+	p->z = (curvb.zprimmask==0xffff) ? min((u32)0xffff, gsz) : gsz;
 }
 
 __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
@@ -554,20 +554,23 @@ int Values[100]={0,};
 __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 {
 	int index = Index;
+	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x >> 1) & 0xffff);
+	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y >> 1) & 0xffff);
+	
+#ifdef LSD_MODE
+	int diffX = (int)gs.gsvertex[index].x - curvb.offset.x;
+	int diffY = (int)gs.gsvertex[index].y - curvb.offset.y;
+	
+	if (diffX < 0) { p->x = - p->x; }
+	if (diffY < 0) { p->y = - p->y; }
+#endif
 
-	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x)>>1)&0xffff;
-	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y)>>1)&0xffff;
-
-	/*x = ((int)gs.gsvertex[index].x - curvb.offset.x);
-	y = ((int)gs.gsvertex[index].y - curvb.offset.y);
-	p.x = (x&0x7fff) | (x < 0 ? 0x8000 : 0);
-	p.y = (y&0x7fff) | (y < 0 ? 0x8000 : 0);*/
 
 	p->f = ((s16)gs.gsvertex[index].f<<7)|0x7f;
 	MOVZ(p, gs.gsvertex[index].z, curvb);
 	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
 
-// 	This code is somehow icorrect
+// 	This code is somehow incorrect
 //	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0))
 //		p->rgba = 0;
 
