@@ -60,7 +60,7 @@ int *          sRVBStart[2];
 INLINE void StartREVERB(int ch)
 {
  int core=ch/24;
- 
+
  if((s_chan[ch].bReverbL || s_chan[ch].bReverbR) && (spuCtrl2[core]&0x80))       // reverb possible?
   {
    if(iUseReverb==1) s_chan[ch].bRVBActive=1;
@@ -88,7 +88,7 @@ INLINE void InitREVERB(void)
 INLINE void StoreREVERB(int ch,int ns)
 {
  int core=ch/24;
- 
+
  if(iUseReverb==0) return;
  else
  if(iUseReverb==1) // -------------------------------- // Neil's reverb
@@ -144,14 +144,14 @@ INLINE int MixREVERBLeft(int ns,int core)
 {
  if(iUseReverb==1)
   {
-   if(!rvb[core].StartAddr || !rvb[core].EndAddr || 
+   if(!rvb[core].StartAddr || !rvb[core].EndAddr ||
       rvb[core].StartAddr>=rvb[core].EndAddr)          // reverb is off
     {
      rvb[core].iLastRVBLeft=rvb[core].iLastRVBRight=rvb[core].iRVBLeft=rvb[core].iRVBRight=0;
      return 0;
     }
 
-   rvb[core].iCnt++;                                    
+   rvb[core].iCnt++;
 
    if(rvb[core].iCnt&1)                                // we work on every second left value: downsample to 22 khz
     {
@@ -159,8 +159,8 @@ INLINE int MixREVERBLeft(int ns,int core)
       {
        int ACC0,ACC1,FB_A0,FB_A1,FB_B0,FB_B1;
 
-       const int INPUT_SAMPLE_L=*(sRVBStart[core]+(ns<<1));                         
-       const int INPUT_SAMPLE_R=*(sRVBStart[core]+(ns<<1)+1);                     
+       const int INPUT_SAMPLE_L=*(sRVBStart[core]+(ns<<1));
+       const int INPUT_SAMPLE_R=*(sRVBStart[core]+(ns<<1)+1);
 
        const int IIR_INPUT_A0 = (g_buffer(rvb[core].IIR_SRC_A0,core) * rvb[core].IIR_COEF)/33768L + (INPUT_SAMPLE_L * rvb[core].IN_COEF_L)/33768L;
        const int IIR_INPUT_A1 = (g_buffer(rvb[core].IIR_SRC_A1,core) * rvb[core].IIR_COEF)/33768L + (INPUT_SAMPLE_R * rvb[core].IN_COEF_R)/33768L;
@@ -176,7 +176,7 @@ INLINE int MixREVERBLeft(int ns,int core)
        s_buffer1(rvb[core].IIR_DEST_A1, IIR_A1,core);
        s_buffer1(rvb[core].IIR_DEST_B0, IIR_B0,core);
        s_buffer1(rvb[core].IIR_DEST_B1, IIR_B1,core);
- 
+
        ACC0 = (g_buffer(rvb[core].ACC_SRC_A0,core) * rvb[core].ACC_COEF_A)/33768L +
               (g_buffer(rvb[core].ACC_SRC_B0,core) * rvb[core].ACC_COEF_B)/33768L +
               (g_buffer(rvb[core].ACC_SRC_C0,core) * rvb[core].ACC_COEF_C)/33768L +
@@ -193,10 +193,10 @@ INLINE int MixREVERBLeft(int ns,int core)
 
        s_buffer(rvb[core].MIX_DEST_A0, ACC0 - (FB_A0 * rvb[core].FB_ALPHA)/33768L,core);
        s_buffer(rvb[core].MIX_DEST_A1, ACC1 - (FB_A1 * rvb[core].FB_ALPHA)/33768L,core);
-       
+
        s_buffer(rvb[core].MIX_DEST_B0, (rvb[core].FB_ALPHA * ACC0)/33768L - (FB_A0 * (int)(rvb[core].FB_ALPHA^0xFFFF8000))/33768L - (FB_B0 * rvb[core].FB_X)/33768L,core);
        s_buffer(rvb[core].MIX_DEST_B1, (rvb[core].FB_ALPHA * ACC1)/33768L - (FB_A1 * (int)(rvb[core].FB_ALPHA^0xFFFF8000))/33768L - (FB_B1 * rvb[core].FB_X)/33768L,core);
- 
+
        rvb[core].iLastRVBLeft  = rvb[core].iRVBLeft;
        rvb[core].iLastRVBRight = rvb[core].iRVBRight;
 

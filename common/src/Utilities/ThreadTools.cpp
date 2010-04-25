@@ -132,7 +132,7 @@ Threading::PersistentThread::PersistentThread()
 {
 	m_detached	= true;		// start out with m_thread in detached/invalid state
 	m_running	= false;
-	
+
 	m_native_id		= 0;
 	m_native_handle	= NULL;
 }
@@ -202,7 +202,7 @@ void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
 		// Our lock is bupkis, which means  the previous thread probably deadlocked.
 		// Let's create a new mutex lock to replace it.
 
-		Console.Error( 
+		Console.Error(
 			L"(Thread Log) Possible deadlock detected on restarted mutex belonging to '%s'.", m_name.c_str()
 		);
 	}
@@ -243,7 +243,7 @@ void Threading::PersistentThread::Start()
 	// be done very often anyway, hence the concept of Threadpooling for rapidly rotating tasks.
 	// (and indeed, this semaphore wait might, in fact, be very swift compared to other kernel
 	// overhead in starting threads).
-	
+
 	// (this could also be done using operating system specific calls, since any threaded OS has
 	// functions that allow us to see if a thread is running or not, and to block against it even if
 	// it's been detached -- removing the need for m_lock_InThread and the semaphore wait above.  But
@@ -296,7 +296,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 {
 	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
-	// Prevent simultaneous startup and cancel, necessary to avoid 
+	// Prevent simultaneous startup and cancel, necessary to avoid
 	ScopedLock startlock( m_lock_start );
 
 	if( !_basecancel() ) return;
@@ -559,7 +559,7 @@ void Threading::PersistentThread::OnStartInThread()
 {
 	m_detached	= false;
 	m_running	= true;
-	
+
 	_platform_specific_OnStartInThread();
 }
 
@@ -776,12 +776,12 @@ __forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
 // --------------------------------------------------------------------------------------
 
 wxString Exception::BaseThreadError::FormatDiagnosticMessage() const
-{	
+{
     return wxsFormat( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
 wxString Exception::BaseThreadError::FormatDisplayMessage() const
-{	
+{
     return wxsFormat( m_message_user, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 

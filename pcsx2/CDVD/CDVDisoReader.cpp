@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -13,13 +13,13 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /*
  *  Original code from libcdvd by Hiryu & Sjeep (C) 2002
  *  Modified by Florin for PCSX2 emu
  *  Fixed CdRead by linuzappz
  */
- 
+
 #include "PrecompiledHeader.h"
 
 #include <stdio.h>
@@ -148,7 +148,7 @@ static bool FindLayer1Start()
 	Console.WriteLn("CDVDiso: searching for layer1...");
 
 	int blockresult = -1;
-	
+
 	// Check the ini file cache first:
 	// Cache is stored in LayerBreakCache.ini, and is associated by hex-encoded hash key of the
 	// complete filename/path of the iso file. :)
@@ -158,7 +158,7 @@ static bool FindLayer1Start()
 
 	wxString cacheKey;
 	cacheKey.Printf( L"%X", HashTools::Hash( iso->filename, strlen( iso->filename ) ) );
-	
+
 	blockresult = layerCacheIni.Read( cacheKey, -1 );
 	if( blockresult != -1 )
 	{
@@ -195,8 +195,8 @@ static bool FindLayer1Start()
 		// be quite courteous to pop up a status dialog bar that lets the user know that it's
 		// thinking.  Since we're not on the GUI thread, we'll need to establish some messages
 		// to create the window and pass progress increments back to it.
-		
-	
+
+
 		uint midsector = (iso->blocks / 2) & ~0xf;
 		uint deviation = 0;
 
@@ -213,7 +213,7 @@ static bool FindLayer1Start()
 				if( testForPartitionInfo( tempbuffer ) )
 					layer1start = midsector+deviation;
 			}
-			
+
 			if( layer1start != -1 )
 			{
 				if( !pxAssertDev( tempbuffer[iso->blockofs] == 0x01, "Layer1-Detect: CD001 tag found, but the partition type is invalid." ) )
@@ -232,7 +232,7 @@ static bool FindLayer1Start()
 		else
 		{
 			Console.WriteLn("CDVDiso: second layer found at sector 0x%8.8x", layer1start);
-	
+
 			// Save layer information to configuration:
 
 			layerCacheIni.Write( cacheKey, layer1start );
@@ -386,7 +386,7 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 	isoReadBlock(iso, cdbuffer, lsn);
 
 	pbuffer = cdbuffer;
-	
+
 	switch (mode)
 	{
 	case CDVD_MODE_2352:

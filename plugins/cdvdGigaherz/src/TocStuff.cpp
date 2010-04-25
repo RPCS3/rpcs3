@@ -39,7 +39,7 @@ s32 cdvdParseTOC()
 			strack=1;
 			etrack=2;
 		}
-        else 
+        else
 		{
 			tracks[1].length=tracks[0].length;
 			tracks[1].type=0;
@@ -144,6 +144,6 @@ s32 cdvdParseTOC()
 
 		tracks[etrack].length = tracks[0].length - tracks[etrack].start_lba;
 	}
-	
+
 	return 0;
 }

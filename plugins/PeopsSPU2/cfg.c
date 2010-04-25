@@ -76,8 +76,8 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 ////////////////////////////////////////////////////////////////////////
 
 // timer mode 2 (spuupdate sync mode) can be enabled for windows
-// by setting MAXMODE to 2. 
-// Attention: that mode is not much tested, maybe the dsound buffers 
+// by setting MAXMODE to 2.
+// Attention: that mode is not much tested, maybe the dsound buffers
 // need to get adjusted to use that mode safely. Also please note:
 // sync sound updates will _always_ cause glitches, if the system is
 // busy by, for example, long lasting cdrom accesses. OK, you have
@@ -159,12 +159,12 @@ void WriteConfig(void)
 // INIT WIN CFG DIALOG
 ////////////////////////////////////////////////////////////////////////
 
-BOOL OnInitDSoundDialog(HWND hW) 
+BOOL OnInitDSoundDialog(HWND hW)
 {
  HWND hWC;
 
  ReadConfig();
-                
+
  hWC=GetDlgItem(hW,IDC_VOLUME);
  ComboBox_AddString(hWC, "0: Mute");
  ComboBox_AddString(hWC, "1: low");
@@ -187,15 +187,15 @@ BOOL OnInitDSoundDialog(HWND hW)
  ComboBox_AddString(hWC, "2: Gaussian interpolation (good quality)");
  ComboBox_AddString(hWC, "3: Cubic interpolation (better treble)");
  ComboBox_SetCurSel(hWC,iUseInterpolation);
- 
- return TRUE;	                
+
+ return TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////
 // WIN CFG DLG OK
 ////////////////////////////////////////////////////////////////////////
 
-void OnDSoundOK(HWND hW) 
+void OnDSoundOK(HWND hW)
 {
  HWND hWC;
 
@@ -226,7 +226,7 @@ void OnDSoundOK(HWND hW)
 // WIN CFG DLG CANCEL
 ////////////////////////////////////////////////////////////////////////
 
-void OnDSoundCancel(HWND hW) 
+void OnDSoundCancel(HWND hW)
 {
  EndDialog(hW,FALSE);
 }

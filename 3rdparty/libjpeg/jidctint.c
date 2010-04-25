@@ -225,7 +225,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
-    
+
     z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
 
@@ -256,7 +256,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     tmp1 = DEQUANTIZE(inptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
     tmp2 = DEQUANTIZE(inptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
     tmp3 = DEQUANTIZE(inptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
-    
+
     z2 = tmp0 + tmp2;
     z3 = tmp1 + tmp3;
 
@@ -288,7 +288,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     wsptr[DCTSIZE*5] = (int) RIGHT_SHIFT(tmp12 - tmp1, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*3] = (int) RIGHT_SHIFT(tmp13 + tmp0, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*4] = (int) RIGHT_SHIFT(tmp13 - tmp0, CONST_BITS-PASS1_BITS);
-    
+
     inptr++;			/* advance pointers to next column */
     quantptr++;
     wsptr++;
@@ -332,7 +332,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
-    
+
     z2 = (INT32) wsptr[2];
     z3 = (INT32) wsptr[6];
 
@@ -346,7 +346,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = (z2 + z3) << CONST_BITS;
     tmp1 = (z2 - z3) << CONST_BITS;
-    
+
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
     tmp11 = tmp1 + tmp3;
@@ -835,7 +835,7 @@ jpeg_idct_4x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     tmp2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
-    
+
     tmp10 = (tmp0 + tmp2) << PASS1_BITS;
     tmp12 = (tmp0 - tmp2) << PASS1_BITS;
 
@@ -2851,14 +2851,14 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
      * With typical images and quantization tables, half or more of the
      * column DCT calculations can be simplified this way.
      */
-    
+
     if (inptr[DCTSIZE*1] == 0 && inptr[DCTSIZE*2] == 0 &&
 	inptr[DCTSIZE*3] == 0 && inptr[DCTSIZE*4] == 0 &&
 	inptr[DCTSIZE*5] == 0 && inptr[DCTSIZE*6] == 0 &&
 	inptr[DCTSIZE*7] == 0) {
       /* AC terms all zero */
       int dcval = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]) << PASS1_BITS;
-      
+
       wsptr[DCTSIZE*0] = dcval;
       wsptr[DCTSIZE*1] = dcval;
       wsptr[DCTSIZE*2] = dcval;
@@ -2867,23 +2867,23 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
       wsptr[DCTSIZE*5] = dcval;
       wsptr[DCTSIZE*6] = dcval;
       wsptr[DCTSIZE*7] = dcval;
-      
+
       inptr++;			/* advance pointers to next column */
       quantptr++;
       wsptr++;
       continue;
     }
-    
+
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
-    
+
     z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
-    
+
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);
     tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);
-    
+
     z2 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
     z2 <<= CONST_BITS;
@@ -2893,21 +2893,21 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = z2 + z3;
     tmp1 = z2 - z3;
-    
+
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
     tmp11 = tmp1 + tmp3;
     tmp12 = tmp1 - tmp3;
-    
+
     /* Odd part per figure 8; the matrix is unitary and hence its
      * transpose is its inverse.  i0..i3 are y7,y5,y3,y1 respectively.
      */
-    
+
     tmp0 = DEQUANTIZE(inptr[DCTSIZE*7], quantptr[DCTSIZE*7]);
     tmp1 = DEQUANTIZE(inptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
     tmp2 = DEQUANTIZE(inptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
     tmp3 = DEQUANTIZE(inptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
-    
+
     z2 = tmp0 + tmp2;
     z3 = tmp1 + tmp3;
 
@@ -2928,9 +2928,9 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     tmp2 = MULTIPLY(tmp2, FIX_3_072711026); /* sqrt(2) * ( c1+c3+c5-c7) */
     tmp1 += z1 + z3;
     tmp2 += z1 + z2;
-    
+
     /* Final output stage: inputs are tmp10..tmp13, tmp0..tmp3 */
-    
+
     wsptr[DCTSIZE*0] = (int) RIGHT_SHIFT(tmp10 + tmp3, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*7] = (int) RIGHT_SHIFT(tmp10 - tmp3, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*1] = (int) RIGHT_SHIFT(tmp11 + tmp2, CONST_BITS-PASS1_BITS);
@@ -2939,7 +2939,7 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     wsptr[DCTSIZE*5] = (int) RIGHT_SHIFT(tmp12 - tmp1, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*3] = (int) RIGHT_SHIFT(tmp13 + tmp0, CONST_BITS-PASS1_BITS);
     wsptr[DCTSIZE*4] = (int) RIGHT_SHIFT(tmp13 - tmp0, CONST_BITS-PASS1_BITS);
-    
+
     inptr++;			/* advance pointers to next column */
     quantptr++;
     wsptr++;
@@ -3688,18 +3688,18 @@ jpeg_idct_8x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     z2 = (INT32) wsptr[2];
     z3 = (INT32) wsptr[6];
-    
+
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);
     tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);
-    
+
     /* Add fudge factor here for final descale. */
     z2 = (INT32) wsptr[0] + (ONE << (PASS1_BITS+2));
     z3 = (INT32) wsptr[4];
-    
+
     tmp0 = (z2 + z3) << CONST_BITS;
     tmp1 = (z2 - z3) << CONST_BITS;
-    
+
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
     tmp11 = tmp1 + tmp3;
@@ -3819,7 +3819,7 @@ jpeg_idct_6x3 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     wsptr[6*2] = (int) RIGHT_SHIFT(tmp10 - tmp0, CONST_BITS-PASS1_BITS);
     wsptr[6*1] = (int) RIGHT_SHIFT(tmp2, CONST_BITS-PASS1_BITS);
   }
-  
+
   /* Pass 2: process 3 rows from work array, store into output array.
    * 6-point IDCT kernel, cK represents sqrt(2) * cos(K*pi/12).
    */
@@ -4134,7 +4134,7 @@ jpeg_idct_8x16 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     wsptr[8*7]  = (int) RIGHT_SHIFT(tmp27 + tmp13, CONST_BITS-PASS1_BITS);
     wsptr[8*8]  = (int) RIGHT_SHIFT(tmp27 - tmp13, CONST_BITS-PASS1_BITS);
   }
-  
+
   /* Pass 2: process rows from work array, store into output array. */
   /* Note that we must descale the results by a factor of 8 == 2**3, */
   /* and also undo the PASS1_BITS scaling. */
@@ -4142,38 +4142,38 @@ jpeg_idct_8x16 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
   wsptr = workspace;
   for (ctr = 0; ctr < 16; ctr++) {
     outptr = output_buf[ctr] + output_col;
-    
+
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
-    
+
     z2 = (INT32) wsptr[2];
     z3 = (INT32) wsptr[6];
-    
+
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);
     tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);
-    
+
     /* Add fudge factor here for final descale. */
     z2 = (INT32) wsptr[0] + (ONE << (PASS1_BITS+2));
     z3 = (INT32) wsptr[4];
-    
+
     tmp0 = (z2 + z3) << CONST_BITS;
     tmp1 = (z2 - z3) << CONST_BITS;
-    
+
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
     tmp11 = tmp1 + tmp3;
     tmp12 = tmp1 - tmp3;
-    
+
     /* Odd part per figure 8; the matrix is unitary and hence its
      * transpose is its inverse.  i0..i3 are y7,y5,y3,y1 respectively.
      */
-    
+
     tmp0 = (INT32) wsptr[7];
     tmp1 = (INT32) wsptr[5];
     tmp2 = (INT32) wsptr[3];
     tmp3 = (INT32) wsptr[1];
-    
+
     z2 = tmp0 + tmp2;
     z3 = tmp1 + tmp3;
 
@@ -4194,9 +4194,9 @@ jpeg_idct_8x16 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     tmp2 = MULTIPLY(tmp2, FIX_3_072711026); /* sqrt(2) * ( c1+c3+c5-c7) */
     tmp1 += z1 + z3;
     tmp2 += z1 + z2;
-    
+
     /* Final output stage: inputs are tmp10..tmp13, tmp0..tmp3 */
-    
+
     outptr[0] = range_limit[(int) RIGHT_SHIFT(tmp10 + tmp3,
 					      CONST_BITS+PASS1_BITS+3)
 			    & RANGE_MASK];
@@ -4221,7 +4221,7 @@ jpeg_idct_8x16 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     outptr[4] = range_limit[(int) RIGHT_SHIFT(tmp13 - tmp0,
 					      CONST_BITS+PASS1_BITS+3)
 			    & RANGE_MASK];
-    
+
     wsptr += DCTSIZE;		/* advance pointer to next row */
   }
 }
@@ -4794,11 +4794,11 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
-    
+
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);
     tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);
-    
+
     z2 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
     z2 <<= CONST_BITS;
@@ -4808,7 +4808,7 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = z2 + z3;
     tmp1 = z2 - z3;
-    
+
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
     tmp11 = tmp1 + tmp3;
@@ -4900,7 +4900,7 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     outptr[2] = range_limit[(int) RIGHT_SHIFT(tmp12 - tmp2,
 					      CONST_BITS+PASS1_BITS+3)
 			    & RANGE_MASK];
-    
+
     wsptr += 4;		/* advance pointer to next row */
   }
 }
@@ -5116,7 +5116,7 @@ jpeg_idct_1x2 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
   quantptr = (ISLOW_MULT_TYPE *) compptr->dct_table;
 
   /* Even part */
-    
+
   tmp10 = DEQUANTIZE(coef_block[DCTSIZE*0], quantptr[DCTSIZE*0]);
   /* Add fudge factor here for final descale. */
   tmp10 += ONE << 2;

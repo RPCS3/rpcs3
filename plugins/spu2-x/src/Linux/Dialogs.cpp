@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,9 +14,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
  // To be continued...
- 
+
  #include "Dialogs.h"
 #include <gtk/gtk.h>
 #include <cstring>
@@ -49,7 +49,7 @@ void SysMessage(const wchar_t *fmt, ...)
 	wxString msg;
 	msg.PrintfV( fmt, list );
 	va_end(list);
-	
+
     GtkWidget *dialog;
     dialog = gtk_message_dialog_new (NULL,
                                      GTK_DIALOG_DESTROY_WITH_PARENT,

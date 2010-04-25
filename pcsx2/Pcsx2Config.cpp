@@ -170,7 +170,7 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuOverflow );
 	IniBitBool( fpuExtraOverflow );
 	IniBitBool( fpuFullMode );
-	
+
 	IniBitBool( StackFrameChecks );
 }
 
@@ -213,7 +213,7 @@ Pcsx2Config::GSOptions::GSOptions()
 
 	SynchronousMTGS			= false;
 	DisableOutput			= false;
-	
+
 	DefaultRegionMode		= Region_NTSC;
 	FramesToDraw			= 2;
 	FramesToSkip			= 2;

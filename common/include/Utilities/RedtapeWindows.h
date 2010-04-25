@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -32,7 +32,7 @@
 #ifdef _WIN32
 
 // Force availability of to WinNT APIs (change to 0x600 to enable XP-specific APIs)
-#ifndef WINVER 
+#ifndef WINVER
 #define WINVER 0x0501
 #define _WIN32_WINNT 0x0501
 #endif

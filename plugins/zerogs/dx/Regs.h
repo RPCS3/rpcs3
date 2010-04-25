@@ -112,7 +112,7 @@ void __fastcall GIFRegHandlerLABEL(u32* data);
 //	u32 tex0data[2];
 //	u32 tex1data[2];
 //	primInfo curprim;
-//	
+//
 //	std::vector<Vertex> vertices;
 //	bool bCanExecute;
 //};

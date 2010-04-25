@@ -36,9 +36,9 @@ struct IsoFileDescriptor
 
 	IsoFileDescriptor();
 	IsoFileDescriptor(const u8* data, int length);
-	
+
 	void Load( const u8* data, int length );
-	
+
 	bool IsFile() const { return !(flags & 2); }
 	bool IsDir() const { return !IsFile(); }
 };

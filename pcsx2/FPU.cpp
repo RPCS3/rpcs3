@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -176,7 +176,7 @@ float fpuDouble(u32 f)
 void ABS_S() {
 	_FdValUl_ = _FsValUl_ & 0x7fffffff;
 	clearFPUFlags( FPUflagO | FPUflagU );
-}  
+}
 
 void ADD_S() {
 	_FdValf_  = fpuDouble( _FsValUl_ ) + fpuDouble( _FtValUl_ );
@@ -188,7 +188,7 @@ void ADDA_S() {
 	_FAValf_  = fpuDouble( _FsValUl_ ) + fpuDouble( _FtValUl_ );
 	checkOverflow( _FAValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FAValUl_, FPUflagU | FPUflagSU, 1 );
-} 
+}
 
 void BC1F() {
 	BC1(==);
@@ -260,13 +260,13 @@ void MADD_S() {
 	_FdValf_  = fpuDouble( _FAValUl_ ) + fpuDouble( temp.UL );
 	checkOverflow( _FdValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FdValUl_, FPUflagU | FPUflagSU, 1 );
-} 
+}
 
 void MADDA_S() {
 	_FAValf_ += fpuDouble( _FsValUl_ ) * fpuDouble( _FtValUl_ );
 	checkOverflow( _FAValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FAValUl_, FPUflagU | FPUflagSU, 1 );
-} 
+}
 
 void MAX_S() {
 	_FdValf_  = max( _FsValf_, _FtValf_ );
@@ -285,7 +285,7 @@ void MIN_S() {
 
 void MOV_S() {
 	_FdValUl_ = _FsValUl_;
-} 
+}
 
 void MSUB_S() {
 	FPRreg temp;
@@ -293,7 +293,7 @@ void MSUB_S() {
 	_FdValf_  = fpuDouble( _FAValUl_ ) - fpuDouble( temp.UL );
 	checkOverflow( _FdValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FdValUl_, FPUflagU | FPUflagSU, 1 );
-} 
+}
 
 void MSUBA_S() {
 	_FAValf_ -= fpuDouble( _FsValUl_ ) * fpuDouble( _FtValUl_ );
@@ -320,7 +320,7 @@ void MULA_S() {
 void NEG_S() {
 	_FdValUl_  = (_FsValUl_ ^ 0x80000000);
 	clearFPUFlags( FPUflagO | FPUflagU );
-} 
+}
 
 void RSQRT_S() {
 	FPRreg temp;
@@ -354,13 +354,13 @@ void SUB_S() {
 	_FdValf_  = fpuDouble( _FsValUl_ ) - fpuDouble( _FtValUl_ );
 	checkOverflow( _FdValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FdValUl_, FPUflagU | FPUflagSU, 1 );
-}  
+}
 
 void SUBA_S() {
 	_FAValf_  = fpuDouble( _FsValUl_ ) - fpuDouble( _FtValUl_ );
 	checkOverflow( _FAValUl_, FPUflagO | FPUflagSO, 1 );
 	checkUnderflow( _FAValUl_, FPUflagU | FPUflagSU, 1 );
-} 
+}
 
 }	// End Namespace COP1
 

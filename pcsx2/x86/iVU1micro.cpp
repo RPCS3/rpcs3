@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -227,7 +227,7 @@ namespace VU1micro
 			cmpPrint((VU1.VI[REG_TPC].UL != VU3.VI[REG_TPC].UL));
 
 			SysPrintf("-----------------------------------------------\n\n");
-			
+
 			if (mVUdebugNow) {
 
 				resetVUrec(1);
@@ -246,23 +246,23 @@ namespace VU1micro
         XMMRegisters::Thaw();
 	}
 }
-#else 
+#else
 
 /*
 namespace VU1micro
 {
 	void recAlloc()		{ SuperVUAlloc(1);   initVUrec(&VU1, 1); }
 	void recShutdown()	{ SuperVUDestroy(1); closeVUrec(1);}
-	
-	void __fastcall recClear(u32 Addr, u32 Size) { 
-		if (useMVU1) clearVUrec(Addr, Size, 1); 
+
+	void __fastcall recClear(u32 Addr, u32 Size) {
+		if (useMVU1) clearVUrec(Addr, Size, 1);
 		else		 SuperVUClear(Addr, Size, 1);
 	}
 
-	static void recReset() { 
-		if (useMVU1) resetVUrec(1); 
+	static void recReset() {
+		if (useMVU1) resetVUrec(1);
 		else		 SuperVUReset(1);
-		x86FpuState = FPU_STATE; 
+		x86FpuState = FPU_STATE;
 	}
 
 	static void recStep() {}
@@ -278,8 +278,8 @@ namespace VU1micro
         XMMRegisters::Freeze();
 		if (useMVU1) runVUrec(VU1.VI[REG_TPC].UL, 3000000, 1);
 		else {
-			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { 
-				Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL); 
+			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
+				Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL);
 			}
 			do { // while loop needed since not always will return finished
 				SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);

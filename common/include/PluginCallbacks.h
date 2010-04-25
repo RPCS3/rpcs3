@@ -231,7 +231,7 @@ typedef void PS2E_CALLBACK PS2E_OnMenuItemClicked( PS2E_THISPTR* thisptr, void* 
 //  PS2E_ConsoleWriterAPI
 // --------------------------------------------------------------------------------------
 // APIs for writing text to the console.  Typically the emulator will write the text to
-// both a console window and to a disk file, however actual implementation is up to the 
+// both a console window and to a disk file, however actual implementation is up to the
 // emulator.  All text must be either 7-bit ASCII or UTF8 encoded.  Other codepages or
 // MBCS encodings will not be displayed properly.
 //
@@ -321,7 +321,7 @@ typedef struct _PS2E_MenuItemInfo
 
 	// Optional image displayed with the menu option.  The emulator may not support
 	// this option, or may choose to ignore or resize the image if the size parameters
-	// are outside a valid threshold.  
+	// are outside a valid threshold.
 	const PS2E_Image*	Image;
 
 	// Specifies the style of the menu, either Normal, Checked, Radio, or Separator.
@@ -333,7 +333,7 @@ typedef struct _PS2E_MenuItemInfo
 	// created normally.  If non-NULL, the menu item will use sub-menu mode and will
 	// ignore the Style field.
 	PS2E_MenuHandle		SubMenu;
-	
+
 	// Menu that this item is attached to.  When this struct is passed into AddMenuItem,
 	// the menu item will be automatically appended to the menu specified in this field
 	// if the field is non-NULL (if the field is NULL, then no action is taken).
@@ -381,7 +381,7 @@ typedef struct _PS2E_MenuItemAPI
 	void (PS2E_CALLBACK* MenuItem_SetImage)( PS2E_MenuItemHandle mitem, const PS2E_Image* image );
 
 	// Gives the menu item an accompanying image (orientation of the image may depend
-	// on the operating system platform).  
+	// on the operating system platform).
 	//
 	// Returns:
 	//   TRUE if the image was loaded successfully, or FALSE if the image was not found,
@@ -514,7 +514,7 @@ typedef struct _PS2E_EmulatorInfo
 	// defined type that can range from 8 bits to 32 bits (realistically, although there is
 	// no actual limit on size), and can vary between compilers for the same platform.
 	int		Sizeof_wchar_t;
-	
+
 
 	// Reserved area for future expansion of the structure (avoids having to upgrade the
 	// plugin api for amending new extensions).
@@ -966,7 +966,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	//
 	// Note that SIGNAL, FINISH, and LABEL tags are handled internally by the emulator in a
 	// thread-safe manner -- the GS plugin should ignore those tags when processing.
-	// 
+	//
 	// Returns FALSE if the plugin encountered a critical error while setting texture;
 	// indicating a device failure.
 	//
@@ -1111,7 +1111,7 @@ typedef struct _PS2E_KeyEvent
 	// Combination of PS2E_SHIFT, PS2E_CONTROL, and/or PS2E_ALT, indicating which
 	// modifier keys were also down when the key was pressed.
 	uint flags;
-	
+
 } PS2E_KeyEvent;
 
 

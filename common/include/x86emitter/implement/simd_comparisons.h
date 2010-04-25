@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -26,7 +26,7 @@ struct xImplSimd_MinMax
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// 
+//
 struct xImplSimd_Compare
 {
 	SSE2_ComparisonType		CType;
@@ -91,7 +91,7 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// 
+//
 struct xImplSimd_PMinMax
 {
 	// Compare packed unsigned byte integers in dest to src and store packed min/max
@@ -104,19 +104,19 @@ struct xImplSimd_PMinMax
 	// Operation can be performed on either MMX or SSE operands.
 	const xImplSimd_DestRegEither SW;
 
-	// [SSE-4.1] Compare packed signed byte integers in dest to src and store 
+	// [SSE-4.1] Compare packed signed byte integers in dest to src and store
 	// packed min/max values in dest. (SSE operands only)
 	const xImplSimd_DestRegSSE SB;
 
-	// [SSE-4.1] Compare packed signed doubleword integers in dest to src and store 
+	// [SSE-4.1] Compare packed signed doubleword integers in dest to src and store
 	// packed min/max values in dest. (SSE operands only)
 	const xImplSimd_DestRegSSE SD;
 
-	// [SSE-4.1] Compare packed unsigned word integers in dest to src and store 
+	// [SSE-4.1] Compare packed unsigned word integers in dest to src and store
 	// packed min/max values in dest. (SSE operands only)
 	const xImplSimd_DestRegSSE UW;
 
-	// [SSE-4.1] Compare packed unsigned doubleword integers in dest to src and store 
+	// [SSE-4.1] Compare packed unsigned doubleword integers in dest to src and store
 	// packed min/max values in dest. (SSE operands only)
 	const xImplSimd_DestRegSSE UD;
 };

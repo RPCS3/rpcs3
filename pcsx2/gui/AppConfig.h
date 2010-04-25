@@ -23,15 +23,15 @@ enum DocsModeType
 {
 	// uses /home/user or /cwd for the program data
 	DocsFolder_User,
-	
+
 	// uses the current working directory for program data
 	DocsFolder_CWD,
-	
+
 	// uses a custom location for program data
 	DocsFolder_Custom,
 };
 
-extern DocsModeType		DocsFolderMode;				// 
+extern DocsModeType		DocsFolderMode;				//
 extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
 extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
 extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
@@ -48,7 +48,7 @@ enum AspectRatioType
 };
 
 // =====================================================================================================
-//  Pcsx2 Application Configuration. 
+//  Pcsx2 Application Configuration.
 // =====================================================================================================
 
 class AppConfig
@@ -161,7 +161,7 @@ public:
 		Fixed100	SlomoScalar;
 
 		FramerateOptions();
-		
+
 		void LoadSave( IniInterface& conf );
 		void SanityCheck();
 	};
@@ -212,7 +212,7 @@ public:
 	FilenameOptions			BaseFilenames;
 	GSWindowOptions			GSWindow;
 	FramerateOptions		Framerate;
-	
+
 	// PCSX2-core emulation options, which are passed to the emu core prior to initiating
 	// an emulation session.  Note these are the options saved into the GUI ini file and
 	// which are shown as options in the gui preferences, but *not* necessarily the options
@@ -227,7 +227,7 @@ public:
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 
 	bool FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const;
-	
+
 	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
 	void LoadSave( IniInterface& ini );

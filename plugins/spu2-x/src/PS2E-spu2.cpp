@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "Global.h"
 #include "PS2E-spu2.h"
 #include "Dma.h"
@@ -48,7 +48,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 	if( dwReason == DLL_PROCESS_ATTACH )
 	{
 		hInstance = hinstDLL;
-	}	
+	}
 	else if( dwReason == DLL_PROCESS_DETACH )
 	{
 		// TODO : perform shutdown procedure, just in case PCSX2 itself failed
@@ -129,18 +129,18 @@ static bool CheckSSE()
 	return true;
 }
 
-EXPORT_C_(u32) PS2EgetLibType() 
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_SPU2;
 }
 
-EXPORT_C_(char*) PS2EgetLibName() 
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	InitLibraryName();
 	return libraryName;
 }
 
-EXPORT_C_(u32) PS2EgetLibVersion2(u32 type) 
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (PS2E_SPU2_VERSION<<16) | (VersionInfo::Release<<8) | VersionInfo::Revision;
 }
@@ -292,7 +292,7 @@ EXPORT_C_(void) CALLBACK SPU2writeDMA7Mem(u16* pMem, u32 size)
 	Cores[1].DoDMAwrite(pMem,size);
 }
 
-EXPORT_C_(s32) SPU2init() 
+EXPORT_C_(s32) SPU2init()
 {
 	assert( regtable[0x400] == NULL );
 
@@ -300,7 +300,7 @@ EXPORT_C_(s32) SPU2init()
 	ReadSettings();
 
 #ifdef SPU2_LOG
-	if(AccessLog()) 
+	if(AccessLog())
 	{
 		spu2Log = fopen( Unicode::Convert( AccessLogFileName ).c_str(), "w" );
 		setvbuf(spu2Log, NULL,  _IONBF, 0);
@@ -384,7 +384,7 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	if( IsOpened ) return 0;
 
 	FileLog("[%10d] SPU2 Open\n",Cycles);
-	
+
 	if( pDsp != NULL )
 		gsWindowHandle = *(uptr*)pDsp;
 	else
@@ -419,7 +419,7 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	return 0;
 }
 
-EXPORT_C_(void) SPU2close() 
+EXPORT_C_(void) SPU2close()
 {
 	if( !IsOpened ) return;
 	IsOpened = false;
@@ -433,7 +433,7 @@ EXPORT_C_(void) SPU2close()
 	SndBuffer::Cleanup();
 }
 
-EXPORT_C_(void) SPU2shutdown() 
+EXPORT_C_(void) SPU2shutdown()
 {
 	if(!IsInitialized) return;
 	IsInitialized = false;
@@ -487,7 +487,7 @@ u32 lastTicks;
 bool lState[5];
 #endif
 
-EXPORT_C_(void) SPU2async(u32 cycles) 
+EXPORT_C_(void) SPU2async(u32 cycles)
 {
 	DspUpdate();
 
@@ -536,7 +536,7 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 #endif
 }
 
-EXPORT_C_(u16) SPU2read(u32 rmem) 
+EXPORT_C_(u16) SPU2read(u32 rmem)
 {
 	//	if(!replay_mode)
 	//		s2r_readreg(Cycles,rmem);
@@ -562,18 +562,18 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 			ret = spu2Ru16(mem);
 			ConLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
 		}
-		else 
+		else
 		{
 			ret = *(regtable[(mem>>1)]);
 			//FileLog("[%10d] SPU2 read mem %x (core %d, register %x): %x\n",Cycles, mem, core, (omem & 0x7ff), ret);
 			SPU2writeLog( "read", rmem, ret );
 		}
 	}
-	
+
 	return ret;
 }
 
-EXPORT_C_(void) SPU2write(u32 rmem, u16 value) 
+EXPORT_C_(void) SPU2write(u32 rmem, u16 value)
 {
 #ifdef S2R_ENABLE
 	if(!replay_mode)
@@ -627,10 +627,10 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 	{
 		case FREEZE_LOAD: return Savestate::ThawIt( spud );
 		case FREEZE_SAVE: return Savestate::FreezeIt( spud );
-		
+
 		jNO_DEFAULT;
 	}
-	
+
 	// technically unreachable, but kills a warning:
 	return 0;
 }

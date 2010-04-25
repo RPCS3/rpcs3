@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -25,7 +25,7 @@ enum VURegFlags
     REG_R			= 20,
     REG_I			= 21,
     REG_Q			= 22,
-    REG_P           = 23, // only exists in micromode 
+    REG_P           = 23, // only exists in micromode
     REG_VF0_FLAG	= 24, // dummy flag that indicates VF0 is read (nothing to do with VI[24])
     REG_TPC			= 26,
     REG_CMSAR0		= 27,
@@ -53,7 +53,7 @@ union VECTOR {
 	} i;
 
 	float F[4];
-	
+
 	u64 UD[2];      //128 bits
 	s64 SD[2];
 	u32 UL[4];

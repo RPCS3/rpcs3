@@ -20,7 +20,7 @@
     defined(__MWERKS__)    || \
     defined(__WATCOMC__)   || \
     defined(__BORLANDC__)
-         
+
 
     // If user did not request NOCPH and we're not building using configure
     // then assume user wants precompiled headers.

@@ -29,7 +29,7 @@
 // - fix to prevent the new interpolations from crashing when loading a save state
 //
 // 2003/01/06 - Pete
-// - small changes for version 1.3 adsr save state loading      
+// - small changes for version 1.3 adsr save state loading
 //
 // 2002/05/15 - Pete
 // - generic cleanup for the Peops release
@@ -76,7 +76,7 @@ typedef struct
  unsigned long   dummy2;
  unsigned long   dummy3;
 
- SPUCHAN  s_chan[MAXCHAN];   
+ SPUCHAN  s_chan[MAXCHAN];
 
 } SPUOSSFreeze_t;
 
@@ -102,9 +102,9 @@ EXPORT_GCC long CALLBACK SPU2freeze(unsigned long ulFreezeMode,SPUFreeze_t * pFt
    if(ulFreezeMode==2) return 0;                       // emu just asking for size? bye
 
    if(!pFt->data) return 0;
-   
+
    pF=(SPUFreeze_Ex_t *)pFt->data;
-  
+
    memset(pF,0,pFt->size);
 
    strcpy(pF->szSPUName,"PBOSS2");
@@ -161,7 +161,7 @@ EXPORT_GCC long CALLBACK SPU2freeze(unsigned long ulFreezeMode,SPUFreeze_t * pFt
  memcpy(spuMem,pF->cSPURam,2*1024*1024);               // get ram
  memcpy(regArea,pF->cSPUPort,64*1024);
 
- if(!strcmp(pF->szSPUName,"PBOSS2") &&                  
+ if(!strcmp(pF->szSPUName,"PBOSS2") &&
     pF->ulFreezeVersion==1)
       LoadStateV1(pF);
  else LoadStateUnknown(pF);
@@ -238,7 +238,7 @@ void LoadStateUnknown(SPUFreeze_Ex_t * pF)
  dwNewChannel2[1]=0;
  dwEndChannel2[0]=0;
  dwEndChannel2[1]=0;
- 
+
  pSpuIrq[0]=0;
  pSpuIrq[1]=0;
 }

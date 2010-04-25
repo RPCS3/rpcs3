@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -59,7 +59,7 @@ public:
 	void Configure(uptr parent)  { }
 	bool Is51Out() const { return false; }
 	int GetEmptySampleCount()  { return 0; }
-	
+
 	const wchar_t* GetIdent() const
 	{
 		return L"nullout";
@@ -126,7 +126,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 {
 	quietSampleCount = 0;
 	if( m_underrun_freeze )
-	{			
+	{
 		int toFill = m_size / (!timeStretchEnabled && !asyncMixingEnabled ? 32 : 400);
 		toFill = GetAlignedBufferSize( toFill );
 
@@ -229,8 +229,8 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 		m_wpos += nSamples;
 
 	memcpy( wposbuffer, bData, nSamples * sizeof( *bData ) );
-	
-	// Use to monitor buffer levels in real time 
+
+	// Use to monitor buffer levels in real time
 	/*int drvempty = mods[OutputModule]->GetEmptySampleCount();
 	float result = (float)(m_data + m_predictData - drvempty) - (m_size/16);
 	result /= (m_size/16);
@@ -331,7 +331,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 
 	//Don't play anything directly after loading a savestate, avoids static killing your speakers.
 	if ( ssFreeze > 0 )
-	{	
+	{
 		ssFreeze--;
 		memset( sndTempBuffer, 0, sizeof(StereoOut32) * SndOutPacketSize ); // Play silence
 	}
@@ -357,7 +357,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 
 			m_dsp_progress -= SndOutPacketSize;
 		}
-		
+
 		// copy any leftovers to the front of the dsp buffer.
 		if( m_dsp_progress > 0 )
 		{

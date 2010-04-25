@@ -3,8 +3,8 @@
 //[type]	ELF-IRX
 //[name]	IOP_SIF_rpc_interface
 //[version]	0x101
-//[memory map]	
-//[handlers]	
+//[memory map]
+//[handlers]
 //[entry point]	sifcmd_start, sifcmd_stub
 //[made by]	[RO]man (roman_ps2dev@hotmail.com)
 
@@ -390,7 +390,7 @@ void cmd80000009_BIND(RPC_PACKET_BIND *packet, struct tag_rpc_common *common){
 	epacket->packet.paddr=packet->packet.paddr;
 	epacket->command=0x80000009;
 	epacket->client=packet->client;
-	
+
 	s = search_svdata(packet->fno, common);
 	if (s == NULL){
 		epacket->server=0;
@@ -419,7 +419,7 @@ int SifBindRpc(struct sifcmd_RPC_CLIENT_DATA *client, unsigned int number, unsig
 	packet->packet.paddr = packet;
 	packet->client = client;
 	packet->fno    = number;
-	
+
 	if (mode & 1==0){
 		client->hdr.tid=GetThreadId();
 		if (SifSendCmd(0x80000009, packet, 0x40, 0, 0, 0)==0)
@@ -490,8 +490,8 @@ int SifCallRpc(struct sifcmd_RPC_CLIENT_DATA *client, unsigned int fno, unsigned
 ///////////////////////////////////////////////////////////////////////[12]
 int SifCheckStatRpc(struct sifcmd_RPC_HEADER *rd){
 	RPC_PACKET *packet = (RPC_PACKET*)rd->pkt_addr;
-	return (rd->pkt_addr && 
-	       (rd->rpc_id==packet->pid) && 
+	return (rd->pkt_addr &&
+	       (rd->rpc_id==packet->pid) &&
 	       (packet->rec_id & 2));
 }
 
@@ -516,7 +516,7 @@ void SifSetRpcQueue(struct sifcmd_RPC_DATA_QUEUE *qd, int key){
 }
 
 ///////////////////////////////////////////////////////////////////////[11]
-void SifRegisterRpc(struct sifcmd_RPC_SERVER_DATA *sd, u32 command, 
+void SifRegisterRpc(struct sifcmd_RPC_SERVER_DATA *sd, u32 command,
 		       rpch_func func, void *buff,
 		       rpch_func cfunc, void *cbuff,
 		       struct sifcmd_RPC_DATA_QUEUE *qd) {
@@ -670,7 +670,7 @@ void SifInitRpc(int mode){
 	CpuSuspendIntr(&x);
 
 	if (sifInitRpc){
-		CpuResumeIntr(x);		
+		CpuResumeIntr(x);
 	}else{
 		sifInitRpc=1;
 		rpc_common.paddr=(RPC_PACKET*)bufx;
@@ -781,7 +781,7 @@ int _start(){
 	sysCmds[1].data=&cmd_common;
 
 	cmd_common.systemStatusFlag=GetSystemStatusFlag();
-	
+
 	sysCmds[2].func=(cmdh_func)cmd80000002_INIT_CMD;
 	sysCmds[2].data=&cmd_common;
 

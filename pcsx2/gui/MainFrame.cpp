@@ -511,7 +511,7 @@ void MainEmuFrame::OnActivate( wxActivateEvent& evt )
 {
 	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
 		MSW_SetWindowAfter( logframe->GetHandle(), GetHandle() );
-	
+
 	evt.Skip();
 }
 // ----------------------------------------------------------------------------

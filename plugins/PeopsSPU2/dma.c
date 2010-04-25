@@ -52,10 +52,10 @@ EXPORT_GCC void CALLBACK SPU2readDMA4Mem(unsigned short * pusPSXMem,int iSize)
 {
  int i;
 #ifdef _WINDOWS
- if(iDebugMode==1) 
+ if(iDebugMode==1)
   {
    logprintf("READDMA4 %X - %X\r\n",spuAddr2[0],iSize);
-   
+
    if(spuAddr2[0]<=0x1fff)
     logprintf("# OUTPUT AREA ACCESS #############\r\n");
   }
@@ -76,7 +76,7 @@ EXPORT_GCC void CALLBACK SPU2readDMA4Mem(unsigned short * pusPSXMem,int iSize)
   }
 
  spuAddr2[0]+=19; //Transfer Local To Host TSAH/L + Data Size + 20 (already +1'd)
- 
+
 
  iSpuAsyncWait=0;
 
@@ -96,10 +96,10 @@ EXPORT_GCC void CALLBACK SPU2readDMA7Mem(unsigned short * pusPSXMem,int iSize)
 {
  int i;
 #ifdef _WINDOWS
- if(iDebugMode==1) 
-  { 
+ if(iDebugMode==1)
+  {
    logprintf("READDMA7 %X - %X\r\n",spuAddr2[1],iSize);
-   
+
    if(spuAddr2[1]<=0x1fff)
     logprintf("# OUTPUT AREA ACCESS #############\r\n");
   }
@@ -140,10 +140,10 @@ spuAddr2[1]+=19; //Transfer Local To Host TSAH/L + Data Size + 20 (already +1'd)
 
 
 // AutoDMA's are used to transfer to the DIRECT INPUT area of the spu2 memory
-// Left and Right channels are always interleaved together in the transfer so 
+// Left and Right channels are always interleaved together in the transfer so
 // the AutoDMA's deinterleaves them and transfers them. An interrupt is
-// generated when half of the buffer (256 short-words for left and 256 
-// short-words for right ) has been transferred. Another interrupt occurs at 
+// generated when half of the buffer (256 short-words for left and 256
+// short-words for right ) has been transferred. Another interrupt occurs at
 // the end of the transfer.
 
 int ADMAS4Write()
@@ -160,11 +160,11 @@ int ADMAS4Write()
  if(Adma4.ADMAPos == 512) Adma4.ADMAPos = 0;
 
 #ifdef _WINDOWS
- if(iDebugMode==1) 
+ if(iDebugMode==1)
   {
    logprintf("ADMAWRITE4 %X - %X\r\n",spuAddr2[0],Adma4.AmountLeft);
    if(Adma4.AmountLeft<512) logprintf("FUCK YOU %X\r\n",Adma4.AmountLeft);
-  }   
+  }
 #endif
 
  // SPU2 Deinterleaves the Left and Right Channels
@@ -178,8 +178,8 @@ int ADMAS4Write()
  //MemAddr[0] += 1024;
  Adma4.AmountLeft-= Adma4.TransferAmount;
  spuStat2[0]&=~0x80;
- 
- if(Adma4.AmountLeft == 0) 
+
+ if(Adma4.AmountLeft == 0)
  {
 	 if(Adma4.IRQ == 0){
 		 Adma4.IRQ = 1;
@@ -204,11 +204,11 @@ int ADMAS7Write()
  if(Adma7.ADMAPos == 512) Adma7.ADMAPos = 0;
 
 #ifdef _WINDOWS
- if(iDebugMode==1) 
+ if(iDebugMode==1)
   {
    logprintf("ADMAWRITE7 %X - %X\r\n",spuAddr2[1],Adma7.AmountLeft);
    if(Adma7.AmountLeft<512) logprintf("FUCK YOU %X\r\n",Adma7.AmountLeft);
-  }   
+  }
 #endif
 
  // SPU2 Deinterleaves the Left and Right Channels
@@ -222,8 +222,8 @@ int ADMAS7Write()
  //MemAddr[1] += 1024;
  Adma7.AmountLeft-=Adma7.TransferAmount;
  spuStat2[1]&=~0x80;
- 
- if(Adma7.AmountLeft == 0) 
+
+ if(Adma7.AmountLeft == 0)
  {
 	 if(Adma7.IRQ == 0){
 		 Adma7.IRQ = 1;
@@ -257,10 +257,10 @@ EXPORT_GCC void CALLBACK SPU2writeDMA4Mem(short * pMem,unsigned int iSize)
  }
 
 #ifdef _WINDOWS
- if(iDebugMode==1) 
+ if(iDebugMode==1)
   {
    logprintf("WRITEDMA4 %X - %X\r\n",spuAddr2[0],iSize);
-  } 
+  }
 #endif
 
  memcpy((unsigned char*)(spuMem+spuAddr2[0]),(unsigned char*)pMem,iSize<<1);
@@ -270,9 +270,9 @@ EXPORT_GCC void CALLBACK SPU2writeDMA4Mem(short * pMem,unsigned int iSize)
 	   irqCallbackSPU2();
  }
  spuAddr2[0] += iSize;
- 
+
  if(spuAddr2[0]>0x23FF) spuAddr2[0] = 0x2000;
-  
+
  MemAddr[0] += iSize<<1;
  spuStat2[0]&=~0x80;
  SPUStartCycle[0] = SPUCycles;
@@ -335,10 +335,10 @@ EXPORT_GCC void CALLBACK SPU2writeDMA7Mem(unsigned short * pMem,int iSize)
 	 return;
  }
 #ifdef _WINDOWS
- if(iDebugMode==1) 
+ if(iDebugMode==1)
   {
    logprintf("WRITEDMA7 %X - %X\r\n",spuAddr2[1],iSize);
-  } 
+  }
 #endif
 
  memcpy((short*)(spuMem+spuAddr2[1]),(short*)pMem,iSize<<1);
@@ -348,14 +348,14 @@ EXPORT_GCC void CALLBACK SPU2writeDMA7Mem(unsigned short * pMem,int iSize)
    irqCallbackSPU2();
  }
  spuAddr2[1] += iSize;
- 
+
  if(spuAddr2[1]>0x27FF) spuAddr2[1] = 0x2400;
- 
+
  MemAddr[1] += iSize<<1;
  spuStat2[1]&=~0x80;
  SPUStartCycle[1] = SPUCycles;
  SPUTargetCycle[1] = 1;//iSize;
- interrupt |= (1<<2); 
+ interrupt |= (1<<2);
 }
 
 
@@ -363,7 +363,7 @@ EXPORT_GCC void CALLBACK SPU2writeDMA7Mem(unsigned short * pMem,int iSize)
 // INTERRUPTS
 ////////////////////////////////////////////////////////////////////////
 
-void InterruptDMA4(void) 
+void InterruptDMA4(void)
 {
 // taken from linuzappz NULL spu2
 //	spu2Rs16(CORE0_ATTR)&= ~0x30;
@@ -377,13 +377,13 @@ void InterruptDMA4(void)
 	spuCtrl2[0]&=~0x30;
 	spuStat2[0]|=0x80;
 }
-                       
-EXPORT_GCC void CALLBACK SPU2interruptDMA4(void) 
+
+EXPORT_GCC void CALLBACK SPU2interruptDMA4(void)
 {
  InterruptDMA4();
 }
 
-void InterruptDMA7(void) 
+void InterruptDMA7(void)
 {
 // taken from linuzappz NULL spu2
 //	spu2Rs16(CORE1_ATTR)&= ~0x30;
@@ -398,7 +398,7 @@ void InterruptDMA7(void)
 	spuCtrl2[1]&=~0x30;
 }
 
-EXPORT_GCC void CALLBACK SPU2interruptDMA7(void) 
+EXPORT_GCC void CALLBACK SPU2interruptDMA7(void)
 {
  InterruptDMA7();
 }

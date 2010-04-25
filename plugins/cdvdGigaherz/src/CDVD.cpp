@@ -132,12 +132,12 @@ void CALLBACK CDVDsetSettingsDir(const char* dir)
 	CfgSetSettingsDir(dir);
 }
 
-s32 CALLBACK CDVDinit() 
+s32 CALLBACK CDVDinit()
 {
 	return 0;
 }
 
-s32 CALLBACK CDVDopen(const char* pTitleFilename) 
+s32 CALLBACK CDVDopen(const char* pTitleFilename)
 {
 	ReadSettings();
 
@@ -193,7 +193,7 @@ s32 CALLBACK CDVDopen(const char* pTitleFilename)
 	return cdvdRefreshData();
 }
 
-void CALLBACK CDVDclose() 
+void CALLBACK CDVDclose()
 {
 	cdvdStopThread();
 
@@ -202,7 +202,7 @@ void CALLBACK CDVDclose()
 	src=NULL;
 }
 
-void CALLBACK CDVDshutdown() 
+void CALLBACK CDVDshutdown()
 {
 	//nothing to do here
 }
@@ -235,7 +235,7 @@ s32  CALLBACK CDVDreadSector(u8* buffer, s32 lsn, int mode)
 	return cdvdDirectReadSector(lsn,mode,(char*)buffer);
 }
 
-s32 CALLBACK CDVDreadTrack(u32 lsn, int mode) 
+s32 CALLBACK CDVDreadTrack(u32 lsn, int mode)
 {
 	csector=lsn;
 	cmode=mode;
@@ -256,7 +256,7 @@ s32 CALLBACK CDVDreadTrack(u32 lsn, int mode)
 }
 
 // return can be NULL (for async modes)
-u8*  CALLBACK CDVDgetBuffer() 
+u8*  CALLBACK CDVDgetBuffer()
 {
 	if(lastReadInNewDiskCB)
 	{
@@ -270,7 +270,7 @@ u8*  CALLBACK CDVDgetBuffer()
 }
 
 // return can be NULL (for async modes)
-int CALLBACK CDVDgetBuffer2(u8* dest) 
+int CALLBACK CDVDgetBuffer2(u8* dest)
 {
 	int csize = 2352;
 	switch(cmode)
@@ -293,7 +293,7 @@ int CALLBACK CDVDgetBuffer2(u8* dest)
 	return 0;
 }
 
-s32 CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq) 
+s32 CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
 	int i;
 	// the formatted subq command returns:  control/adr, track, index, trk min, trk sec, trk frm, 0x00, abs min, abs sec, abs frm
@@ -327,14 +327,14 @@ s32 CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 	return 0;
 }
 
-s32 CALLBACK CDVDgetTN(cdvdTN *Buffer) 
+s32 CALLBACK CDVDgetTN(cdvdTN *Buffer)
 {
 	Buffer->strack=strack;
 	Buffer->etrack=etrack;
 	return 0;
 }
 
-s32 CALLBACK CDVDgetTD(u8 Track, cdvdTD *Buffer) 
+s32 CALLBACK CDVDgetTD(u8 Track, cdvdTD *Buffer)
 {
 	if(Track==0)
 	{
@@ -353,14 +353,14 @@ s32 CALLBACK CDVDgetTD(u8 Track, cdvdTD *Buffer)
 
 u32 layer1start=-1;
 
-s32 CALLBACK CDVDgetTOC(u8* tocBuff) 
+s32 CALLBACK CDVDgetTOC(u8* tocBuff)
 {
 	//return src->ReadTOC((char*)toc,2048);
 	//that didn't work too well...
 
 	if(curDiskType==CDVD_TYPE_NODISC)
 		return -1;
-   
+
 	if((curDiskType == CDVD_TYPE_DVDV) ||
 	   (curDiskType == CDVD_TYPE_PS2DVD))
 	{
@@ -450,16 +450,16 @@ s32 CALLBACK CDVDgetTOC(u8* tocBuff)
 		memset(tocBuff, 0, 1024);
 		if (CDVDgetTN(&diskInfo) == -1)	{ diskInfo.etrack = 0;diskInfo.strack = 1; }
 		if (CDVDgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
-		
+
 		tocBuff[0] = 0x41;
 		tocBuff[1] = 0x00;
 
 #define itob(n) ((((n)/10)<<4)+((n)%10))
-		
+
 		//Number of FirstTrack
 		tocBuff[2] = 0xA0;
 		tocBuff[7] = itob(diskInfo.strack);
-		
+
 		//Number of LastTrack
 		tocBuff[12] = 0xA1;
 		tocBuff[17] = itob(diskInfo.etrack);
@@ -472,7 +472,7 @@ s32 CALLBACK CDVDgetTOC(u8* tocBuff)
 		tocBuff[29] = itob(frm);
 
 		fprintf(stderr,"Track 0: %d mins %d secs %d frames\n",min,sec,frm);
-		
+
 		for (i=diskInfo.strack; i<=diskInfo.etrack; i++)
 		{
 			err = CDVDgetTD(i, &trackInfo);
@@ -487,27 +487,27 @@ s32 CALLBACK CDVDgetTOC(u8* tocBuff)
 	}
 	else
 		return -1;
-	
+
 	return 0;
 }
 
-s32 CALLBACK CDVDgetDiskType() 
+s32 CALLBACK CDVDgetDiskType()
 {
 	return curDiskType;
 }
 
-s32 CALLBACK CDVDgetTrayStatus() 
+s32 CALLBACK CDVDgetTrayStatus()
 {
 	return curTrayStatus;
 }
 
-s32 CALLBACK CDVDctrlTrayOpen() 
+s32 CALLBACK CDVDctrlTrayOpen()
 {
 	curTrayStatus=CDVD_TRAY_OPEN;
 	return 0;
 }
 
-s32 CALLBACK CDVDctrlTrayClose() 
+s32 CALLBACK CDVDctrlTrayClose()
 {
 	curTrayStatus=CDVD_TRAY_CLOSE;
 	return 0;
@@ -519,7 +519,7 @@ void CALLBACK CDVDnewDiskCB(void (*callback)())
 }
 
 void configure();
-void CALLBACK CDVDconfigure() 
+void CALLBACK CDVDconfigure()
 {
 	configure();
 }

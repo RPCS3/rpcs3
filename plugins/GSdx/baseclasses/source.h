@@ -67,7 +67,7 @@ public:
     );
 
     int FindPinNumber(IPin *iPin);
-    
+
 protected:
 
     int             m_iPins;       // The number of pins on this filter. Updated by CSourceStream

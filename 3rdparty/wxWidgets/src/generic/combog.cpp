@@ -278,7 +278,7 @@ void wxGenericComboCtrl::OnPaintEvent( wxPaintEvent& WXUNUSED(event) )
 
     // clear main background
     dc.DrawRectangle(rect);
-    
+
     if ( !m_btn )
     {
         // Standard button rendering

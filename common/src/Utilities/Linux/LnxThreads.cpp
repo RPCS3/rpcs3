@@ -62,7 +62,7 @@ u64 Threading::GetThreadCpuTime()
 	// Get the cpu time for the current thread.  Should be a measure of total time the
 	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
 	// which typically would be an OS-provided scalar or some sort).
-	
+
 	return 0;
 }
 

@@ -859,7 +859,7 @@ PaError PaWasapi_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
         If COM is already initialized CoInitialize will either return
         FALSE, or RPC_E_CHANGED_MODE if it was initialised in a different
         threading mode. In either case we shouldn't consider it an error
-        but we need to be careful to not call CoUninitialize() if 
+        but we need to be careful to not call CoUninitialize() if
         RPC_E_CHANGED_MODE was returned.
     */
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -1360,8 +1360,8 @@ static PaSampleFormat waveformatToPaFormat(const WAVEFORMATEXTENSIBLE *in)
             }
         }
 		break; }
-    
-    case WAVE_FORMAT_IEEE_FLOAT: 
+
+    case WAVE_FORMAT_IEEE_FLOAT:
 		return paFloat32;
 
     case WAVE_FORMAT_PCM: {
@@ -1808,7 +1808,7 @@ static HRESULT CreateAudioClient(PaWasapiSubStream *pSubStream, PaWasapiDeviceIn
 	}
 	// Issues with setting exclusive mode due to pSubStream->period beeing wrong somehow
 	// Most likely reason is that framesPerLatency is hardcoded to 0.
-	else if (pSubStream->shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE) 
+	else if (pSubStream->shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE)
 		pSubStream->period = info->MinimumDevicePeriod; // Gives 3ms of latency
 
 	// Open the stream and associate it with an audio session

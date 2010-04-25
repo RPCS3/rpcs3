@@ -859,7 +859,7 @@ static bool wxLaunchDefaultBrowserBaseImpl(const wxString& url, int flags)
         wxLogDebug(wxT("ICStart error %d"), (int) err);
         return false;
     }
-#else 
+#else
     // (non-Mac, non-MSW)
 
 #ifdef __UNIX__

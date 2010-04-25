@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -44,7 +44,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 		L"This option only affects Standard Paths which are set to use the installation default value."
 	) );
 
-	const RadioPanelItem UsermodeOptions[] = 
+	const RadioPanelItem UsermodeOptions[] =
 	{
 		RadioPanelItem(
 			_("User Documents (recommended)"),
@@ -67,7 +67,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
 	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingVert() + 4 );
 	m_radio_UserMode->Realize();
-	
+
 	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
 
 	*this	+= Text( isFirstTime ? usermodeExplained : usermodeWarning );
@@ -76,7 +76,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	*this	+= 4;
 
 	AppStatusEvent_OnSettingsApplied();
-	
+
 	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(UsermodeSelectionPanel::OnRadioChanged) );
 }
 
@@ -100,7 +100,7 @@ void Panels::UsermodeSelectionPanel::OnRadioChanged( wxCommandEvent& evt )
 	if( !m_radio_UserMode ) return;
 
 	if( m_dirpicker_custom )
-		m_dirpicker_custom->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_Custom );	
+		m_dirpicker_custom->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_Custom );
 }
 
 // --------------------------------------------------------------------------------------

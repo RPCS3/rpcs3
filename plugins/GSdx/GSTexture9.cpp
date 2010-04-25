@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -28,7 +28,7 @@ GSTexture9::GSTexture9(IDirect3DSurface9* surface)
 
 	surface->GetDevice(&m_dev);
 	surface->GetDesc(&m_desc);
-	
+
 	if(m_desc.Type != D3DRTYPE_SURFACE)
 	{
 		surface->GetContainer(__uuidof(IDirect3DTexture9), (void**)&m_texture);
@@ -88,7 +88,7 @@ bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
 			uint8* dst = (uint8*)lr.pBits;
 
 			int bytes = r.width() * sizeof(uint32);
-			
+
 			switch(m_desc.Format)
 			{
 			case D3DFMT_A8: bytes >>= 2; break;
@@ -144,7 +144,7 @@ void GSTexture9::Unmap()
 bool GSTexture9::Save(const string& fn, bool dds)
 {
 	CComPtr<IDirect3DSurface9> surface;
-	
+
 	if(m_desc.Usage & D3DUSAGE_DEPTHSTENCIL)
 	{
 		HRESULT hr;

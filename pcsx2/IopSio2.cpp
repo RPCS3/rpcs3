@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -71,7 +71,7 @@ u32 sio2_getRecv2() {
 	return 0xf;
 }//0, 0x10, 0x20, 0x10 | 0x20; bits 4 & 5
 
-u32 sio2_getRecv3() { 
+u32 sio2_getRecv3() {
 	if(sio2.packet.recvVal3 == 0x8C || sio2.packet.recvVal3 == 0x8b ||
 	   sio2.packet.recvVal3 == 0x83)
 	{
@@ -94,7 +94,7 @@ u32 sio2_getSend1(u32 index){return sio2.packet.sendArray1[index];}				//0->3
 void sio2_setSend2(u32 index, u32 value){sio2.packet.sendArray2[index]=value;}	//0->3
 u32 sio2_getSend2(u32 index){return sio2.packet.sendArray2[index];}				//0->3
 
-void sio2_setSend3(u32 index, u32 value) 
+void sio2_setSend3(u32 index, u32 value)
 {
 //	int i;
 	sio2.packet.sendArray3[index]=value;
@@ -142,7 +142,7 @@ void sio2_serialIn(u8 value){
 	u16 ctrl=0x0002;
 	if (sio2.packet.sendArray3[sio2.cmdport] && (sio2.cmdlength==0))
 	{
-		
+
 		sio2.cmdlength=(sio2.packet.sendArray3[sio2.cmdport] >> 8) & 0x1FF;
 		ctrl &= ~0x2000;
 		ctrl |= (sio2.packet.sendArray3[sio2.cmdport] & 1) << 13;
@@ -155,7 +155,7 @@ void sio2_serialIn(u8 value){
 
 	if (sio2.cmdlength) sio2.cmdlength--;
 	sioWrite8(value);
-	
+
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
 		Console.Warning("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
@@ -169,7 +169,7 @@ void sio2_fifoIn(u8 value){
 	u16 ctrl=0x0002;
 	if (sio2.packet.sendArray3[sio2.cmdport] && (sio2.cmdlength==0))
 	{
-		
+
 		sio2.cmdlength=(sio2.packet.sendArray3[sio2.cmdport] >> 8) & 0x1FF;
 		ctrl &= ~0x2000;
 		ctrl |= (sio2.packet.sendArray3[sio2.cmdport] & 1) << 13;
@@ -182,7 +182,7 @@ void sio2_fifoIn(u8 value){
 
 	if (sio2.cmdlength) sio2.cmdlength--;
 	SIODMAWrite(value);
-	
+
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
 		Console.WriteLn("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
@@ -234,7 +234,7 @@ s32 CALLBACK sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProce
 	// limit the burst length to avoid problems
 	//if(bytesLeft>2048) bytesLeft = 2048;
 
-	while (bytesLeft > 0) 
+	while (bytesLeft > 0)
 	{
 		(*(data++)) = sio2_fifoOut();
 		bytesLeft--;
@@ -309,7 +309,7 @@ void psxDma11(u32 madr, u32 bcr, u32 chcr) {
 	unsigned int i, j;
 	int size = (bcr >> 16) * (bcr & 0xffff);
 	PSXDMA_LOG("*** DMA 11 - SIO2 in *** %lx addr = %lx size = %lx", chcr, madr, bcr);
-	
+
 	if (chcr != 0x01000201) return;
 
 	for(i = 0; i < (bcr >> 16); i++)

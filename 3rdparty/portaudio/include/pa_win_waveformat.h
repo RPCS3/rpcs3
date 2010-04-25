@@ -29,13 +29,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -125,11 +125,11 @@ typedef unsigned long PaWinWaveFormatChannelMask;
 
 /*
 	PaWinWaveFormat is defined here to provide compatibility with
-	compilation environments which don't have headers defining 
+	compilation environments which don't have headers defining
 	WAVEFORMATEXTENSIBLE (e.g. older versions of MSVC, Borland C++ etc.
 
 	The fields for WAVEFORMATEX and WAVEFORMATEXTENSIBLE are declared as an
-    unsigned char array here to avoid clients who include this file having 
+    unsigned char array here to avoid clients who include this file having
     a dependency on windows.h and mmsystem.h, and also to to avoid having
     to write separate packing pragmas for each compiler.
 */
@@ -138,18 +138,18 @@ typedef unsigned long PaWinWaveFormatChannelMask;
 
 typedef struct{
     unsigned char fields[ PAWIN_SIZEOF_WAVEFORMATEXTENSIBLE ];
-    unsigned long extraLongForAlignment; /* ensure that compiler aligns struct to DWORD */ 
+    unsigned long extraLongForAlignment; /* ensure that compiler aligns struct to DWORD */
 } PaWinWaveFormat;
 
 /*
     WAVEFORMATEXTENSIBLE fields:
-    
+
     union  {
-	    WORD  wValidBitsPerSample;    
-	    WORD  wSamplesPerBlock;    
-	    WORD  wReserved;  
+	    WORD  wValidBitsPerSample;
+	    WORD  wSamplesPerBlock;
+	    WORD  wReserved;
     } Samples;
-    DWORD  dwChannelMask;  
+    DWORD  dwChannelMask;
     GUID  SubFormat;
 */
 
@@ -179,11 +179,11 @@ int PaWin_SampleFormatToLinearWaveFormatTag( PaSampleFormat sampleFormat );
 	Use the following two functions to initialize the waveformat structure.
 */
 
-void PaWin_InitializeWaveFormatEx( PaWinWaveFormat *waveFormat, 
+void PaWin_InitializeWaveFormatEx( PaWinWaveFormat *waveFormat,
 		int numChannels, PaSampleFormat sampleFormat, int waveFormatTag, double sampleRate );
 
 
-void PaWin_InitializeWaveFormatExtensible( PaWinWaveFormat *waveFormat, 
+void PaWin_InitializeWaveFormatExtensible( PaWinWaveFormat *waveFormat,
 		int numChannels, PaSampleFormat sampleFormat, int waveFormatTag, double sampleRate,
 	    PaWinWaveFormatChannelMask channelMask );
 

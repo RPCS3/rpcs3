@@ -164,10 +164,10 @@ void wxSocketEventDispatcher::AddEvents(fd_set* readset, fd_set* writeset)
     wxHashTable::compatibility_iterator node = Next();
     while (node)
     {
-        // We have to store the next node here, because the event processing can 
+        // We have to store the next node here, because the event processing can
         // destroy the object before we call Next()
 
-        wxHashTable::compatibility_iterator next_node = Next();	
+        wxHashTable::compatibility_iterator next_node = Next();
 
         wxSocketEventDispatcherEntry* entry =
             (wxSocketEventDispatcherEntry*) node->GetData();

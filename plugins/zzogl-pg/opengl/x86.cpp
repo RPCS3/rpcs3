@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -548,11 +548,11 @@ End:
 
 void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
 {
-	const static u32 map[] = 
+	const static u32 map[] =
 	{
 		0, 2, 8, 10, 16, 18, 24, 26,
 		4, 6, 12, 14, 20, 22, 28, 30,
-		1, 3, 9, 11, 17, 19, 25, 27, 
+		1, 3, 9, 11, 17, 19, 25, 27,
 		5, 7, 13, 15, 21, 23, 29, 31
 	};
 
@@ -561,7 +561,7 @@ void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
 
 	int left = ((u32)(uptr)clut&2) ? 512 : 512-(((u32)(uptr)clut)&0x3ff)/2;
 
-	for(int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32) 
+	for(int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32)
 	{
 		if(left == 32) {
 			assert( left == 32 );
@@ -591,7 +591,7 @@ void __fastcall WriteCLUT_T32_I8_CSM1_c(u32* vm, u32* clut)
 	u64* dst = (u64*)clut;
 
 	for(int j = 0; j < 2; j++, src += 32) {
-		for(int i = 0; i < 4; i++, dst+=16, src+=8) 
+		for(int i = 0; i < 4; i++, dst+=16, src+=8)
 		{
 			dst[0] = src[0];
 			dst[1] = src[2];
@@ -646,7 +646,7 @@ void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut)
 
 void SSE2_UnswizzleZ16Target( u16* dst, u16* src, int iters ) {
 
-#if defined(_MSC_VER) 
+#if defined(_MSC_VER)
 	__asm {
 		mov edx, iters
 		pxor xmm7, xmm7
@@ -699,44 +699,44 @@ Z16Loop:
 
 	__asm__(".intel_syntax\n"
 		"pxor %%xmm7, %%xmm7\n"
-			
+
 		"Z16Loop:\n"
 		// unpack 64 bytes at a time
 		"movdqa %%xmm0, [%0]\n"
 		"movdqa %%xmm2, [%0+16]\n"
 		"movdqa %%xmm4, [%0+32]\n"
 		"movdqa %%xmm6, [%0+48]\n"
-					
+
 		"movdqa %%xmm1, %%xmm0\n"
 		"movdqa %%xmm3, %%xmm2\n"
 		"movdqa %%xmm5, %%xmm4\n"
-					
+
 		"punpcklwd %%xmm0, %%xmm7\n"
 		"punpckhwd %%xmm1, %%xmm7\n"
 		"punpcklwd %%xmm2, %%xmm7\n"
 		"punpckhwd %%xmm3, %%xmm7\n"
-					
+
 		// start saving
 		"movdqa [%1], %%xmm0\n"
 		"movdqa [%1+16], %%xmm1\n"
-					
+
 		"punpcklwd %%xmm4, %%xmm7\n"
 		"punpckhwd %%xmm5, %%xmm7\n"
-					
+
 		"movdqa [%1+32], %%xmm2\n"
 		"movdqa [%1+48], %%xmm3\n"
-					
+
 		"movdqa %%xmm0, %%xmm6\n"
 		"punpcklwd %%xmm6, %%xmm7\n"
-					
+
 		"movdqa [%1+64], %%xmm4\n"
 		"movdqa [%1+80], %%xmm5\n"
 
 		"punpckhwd %%xmm0, %%xmm7\n"
-			
+
 		"movdqa [%1+96], %%xmm6\n"
 		"movdqa [%1+112], %%xmm0\n"
-					
+
 		"add %0, 64\n"
 		"add %1, 128\n"
 		"sub %2, 1\n"

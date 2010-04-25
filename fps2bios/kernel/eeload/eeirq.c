@@ -91,7 +91,7 @@ __asm__(".set noreorder");
 void SyscException()
 {
     const register int code __asm__("$3"); // $v1
-    
+
 	if (code < 0) {
         __asm__(
             "addiu $sp, -0x10\n"
@@ -103,7 +103,7 @@ void SyscException()
             "sync\n");
 
 		table_SYSCALL[-code]();
-        
+
 		__asm__(
             "lw    $26, 4($sp)\n"
             "lw    $31, 0($sp)\n"
@@ -201,7 +201,7 @@ void INTCException() {
 
 	__asm__ (
 		"plzcw %0, %1"
-		: "=r"(temp) : "r"(code) 
+		: "=r"(temp) : "r"(code)
 	);
 	temp = 0x1e - (temp & 0xff);
 	INTC_STAT = 1 << temp;
@@ -273,7 +273,7 @@ void DMACException() {
 
 	__asm__ (
 		"plzcw %0, %1"
-		: "=r"(temp) : "r"(code) 
+		: "=r"(temp) : "r"(code)
 	);
 	temp = 0x1e - (temp & 0xff);
 	DMAC_STAT = 1 << temp;
@@ -316,7 +316,7 @@ void DMACException() {
 ////////////////////////////////////////////////////////////////////
 void TIMERException()
 {
-    
+
 }
 
 ////////////////////////////////////////////////////////////////////

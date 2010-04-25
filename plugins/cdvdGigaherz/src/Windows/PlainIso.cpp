@@ -172,7 +172,7 @@ s32 PlainIso::ReadSectors2048(u32 sector, u32 count, char *buffer)
 	LARGE_INTEGER Offset;
 
 	if(!OpenOK) return -1;
-	
+
 	Offset.QuadPart=sector*(u64)2048;
 
 	//fall back to standard reading

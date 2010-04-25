@@ -30,7 +30,7 @@ void LoadConfig() {
 
 	char szValue[256];
 	const std::string iniFile( s_strIniPath + "zerogs.ini" );
-  
+
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;
@@ -91,7 +91,7 @@ void LoadConfig() {
 			conf.height = 1080;
 			break;
 	}
-	
+
 	// turn off all hacks by defaultof
 	conf.options &= ~(GSOPTION_FULLSCREEN|GSOPTION_WIREFRAME|GSOPTION_CAPTUREAVI);
 	conf.options |= GSOPTION_LOADED;

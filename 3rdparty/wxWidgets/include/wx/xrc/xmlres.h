@@ -250,7 +250,7 @@ public:
     // Get/Set the domain to be passed to the translation functions, defaults to NULL.
     wxChar* GetDomain() const { return m_domain; }
     void SetDomain(const wxChar* domain);
-    
+
 protected:
     // Scans the resources list for unloaded files and loads them. Also reloads
     // files that have been modified since last loading.
@@ -292,7 +292,7 @@ private:
 
     // domain to pass to translation functions, if any.
     wxChar* m_domain;
-    
+
     friend class wxXmlResourceHandler;
     friend class wxXmlResourceModule;
 

@@ -150,7 +150,7 @@ public:
 	virtual void Apply()=0;
 
 	void Init();
-	
+
 	// Mandatory override: As a rule for proper interface design, all deriving classes need
 	// to implement this function.  There's no implementation of an options/settings panel
 	// that does not heed the changes of application status/settings changes. ;)

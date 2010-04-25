@@ -30,18 +30,18 @@ class WXDLLEXPORT wxWindowsPrintNativeData: public wxPrintNativeDataBase
 public:
     wxWindowsPrintNativeData();
     virtual ~wxWindowsPrintNativeData();
-    
+
     virtual bool TransferTo( wxPrintData &data );
     virtual bool TransferFrom( const wxPrintData &data );
-    
+
     virtual bool Ok() const { return IsOk(); }
     virtual bool IsOk() const;
-    
+
     void* GetDevMode() const { return m_devMode; }
     void SetDevMode(void* data) { m_devMode = data; }
     void* GetDevNames() const { return m_devNames; }
     void SetDevNames(void* data) { m_devNames = data; }
-   
+
 private:
     void* m_devMode;
     void* m_devNames;
@@ -51,7 +51,7 @@ private:
 private:
     DECLARE_DYNAMIC_CLASS(wxWindowsPrintNativeData)
 };
-    
+
 // ---------------------------------------------------------------------------
 // wxWindowsPrintDialog: the MSW dialog for printing
 // ---------------------------------------------------------------------------
@@ -76,11 +76,11 @@ private:
     wxPrinterDC*      m_printerDC;
     bool              m_destroyDC;
     wxWindow*         m_dialogParent;
-    
+
 private:
     bool ConvertToNative( wxPrintDialogData &data );
     bool ConvertFromNative( wxPrintDialogData &data );
-    
+
     // holds MSW handle
     void*             m_printDlg;
 
@@ -90,7 +90,7 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// wxWindowsPageSetupDialog: the MSW page setup dialog 
+// wxWindowsPageSetupDialog: the MSW page setup dialog
 // ---------------------------------------------------------------------------
 
 class WXDLLEXPORT wxWindowsPageSetupDialog: public wxPageSetupDialogBase
@@ -110,7 +110,7 @@ public:
 private:
     wxPageSetupDialogData   m_pageSetupData;
     wxWindow*               m_dialogParent;
-    
+
     // holds MSW handle
     void*                   m_pageDlg;
 

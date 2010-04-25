@@ -39,7 +39,7 @@ typedef struct romfs {
 
 // searches between beginning and end addresses for a romdir structure.
 // if found it returns info about it in romDirInfo.
-// 
+//
 // args:	address to start searching from
 //			address to stop searching at
 //			gets filled in with info if found
@@ -48,7 +48,7 @@ typedef struct romfs {
 extern ROMDIR_INFO* searchRomDir(const u32* searchStartAddr, const u32* searchEndAddr, ROMDIR_INFO* romDirInfo);
 
 // find a file in the romdir table and return info about it
-// 
+//
 // args:	info about romdir to search through
 //			filename to search for
 //			structure to get info about file into
@@ -57,7 +57,7 @@ extern ROMDIR_INFO* searchRomDir(const u32* searchStartAddr, const u32* searchEn
 extern ROMFILE_INFO* searchFileInRom(const ROMDIR_INFO* romdirInfo, const char* filename, ROMFILE_INFO* fileinfo);
 
 // gets a hex number from *addr and updates the pointer
-// 
+//
 // args:	pointer to string buffer containing a hex number
 // returns:	the value of the hex number
 extern u32 getHexNumber(char** addr);
@@ -72,7 +72,7 @@ Format:  @<HEXNUMBER>
 Example: @800
 Default: 0
 Description: starting with <HEXNUMBER> (or 0 if not specified) the loader will
- place modules in memory on 256 boundaries at +0x30 (the first 48 bytes are 
+ place modules in memory on 256 boundaries at +0x30 (the first 48 bytes are
  reserved for info about the following module)
 
 2. address of function to be called while loading of IOP kernel

@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -20,13 +20,13 @@
 #include <math.h>
 #include <float.h>
 
-template< typename FloatType > __forceinline 
+template< typename FloatType > __forceinline
 LowPassFilter<FloatType>::LowPassFilter( FloatType freq, FloatType srate )
 {
 	typedef FloatType FT;
 
 	FloatType omega = (FT)2.0 * freq / srate;
-	static const FloatType g = (FT)1.0; 
+	static const FloatType g = (FT)1.0;
 
 	// calculating coefficients:
 
@@ -41,14 +41,14 @@ LowPassFilter<FloatType>::LowPassFilter( FloatType freq, FloatType srate )
 	a = (FT)1.0/(tan((FT)0.5*omega)*((FT)1.0+p));
 	p = (FT)1.0+a;
 	q = (FT)1.0-a;
-	        
+
 	a0 = (FT)1.0/(k+p*p*p*p);
 	a1 = (FT)4.0*(k+p*p*p*q);
 	a2 = (FT)6.0*(k+p*p*q*q);
 	a3 = (FT)4.0*(k+p*q*q*q);
 	a4 =     (k+q*q*q*q);
 	p  = a0*(k+(FT)1.0);
-        
+
 	coef[0] = p;
 	coef[1] = (FT)4.0*p;
 	coef[2] = (FT)6.0*p;
@@ -61,14 +61,14 @@ LowPassFilter<FloatType>::LowPassFilter( FloatType freq, FloatType srate )
 }
 
 // Processes a single sample into the LPF.
-template< typename FloatType > __forceinline 
+template< typename FloatType > __forceinline
 FloatType LowPassFilter<FloatType>::sample( FloatType inval )
 {
 	const FloatType out = (coef[0]*inval) + d[0];
 	d[0] = (coef[1]*inval) + (coef[5]*out) + d[1];
 	d[1] = (coef[2]*inval) + (coef[6]*out) + d[2];
 	d[2] = (coef[3]*inval) + (coef[7]*out) + d[3];
-	d[3] = (coef[4]*inval) + (coef[8]*out);	
+	d[3] = (coef[4]*inval) + (coef[8]*out);
 
 	return out;
 }

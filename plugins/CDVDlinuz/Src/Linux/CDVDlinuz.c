@@ -265,7 +265,7 @@ s32 CALLBACK CDVDgetTD(u8 newtrack, cdvdTD *cdvdtd) {
 
 s32 CALLBACK CDVDgetTOC(void *toc) {
   // A structure to fill in, or at least some documentation on what
-  // the PS2 expects from this call would be more helpful than a 
+  // the PS2 expects from this call would be more helpful than a
   // "void *".
 
   union {

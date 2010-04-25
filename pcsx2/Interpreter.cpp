@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -112,7 +112,7 @@ void __fastcall intDoBranch(u32 target)
 	}
 }
 
-void intSetBranch() 
+void intSetBranch()
 {
 	branch2 = /*cpuRegs.branch =*/ 1;
 }
@@ -135,15 +135,15 @@ namespace OpcodeImpl {
 *********************************************************/
 // fixme: looking at the other branching code, shouldn't those _SetLinks in BGEZAL and such only be set
 // if the condition is true? --arcum42
-	
-void J()   
+
+void J()
 {
 	doBranch(_JumpTarget_);
 }
 
-void JAL() 
+void JAL()
 {
-	_SetLink(31); 
+	_SetLink(31);
 	doBranch(_JumpTarget_);
 }
 
@@ -153,20 +153,20 @@ void JAL()
 *********************************************************/
 
 void BEQ()  // Branch if Rs == Rt
-{	
-	if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) 
-		doBranch(_BranchTarget_); 
-	else 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0])
+		doBranch(_BranchTarget_);
+	else
 		intEventTest();
-} 
+}
 
 void BNE()  // Branch if Rs != Rt
-{	
-	if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) 
-		doBranch(_BranchTarget_); 
-	else 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0])
+		doBranch(_BranchTarget_);
+	else
 		intEventTest();
-} 
+}
 
 /*********************************************************
 * Register branch logic                                  *
@@ -174,55 +174,55 @@ void BNE()  // Branch if Rs != Rt
 *********************************************************/
 
 void BGEZ()    // Branch if Rs >= 0
-{ 
-	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
-	{ 
-		doBranch(_BranchTarget_); 
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0)
+	{
+		doBranch(_BranchTarget_);
 	}
-}     
+}
 
 void BGEZAL() // Branch if Rs >= 0 and link
-{ 
-	
+{
+
 	if (cpuRegs.GPR.r[_Rs_].SD[0] >= 0)
-	{ 
-		_SetLink(31); 
-		doBranch(_BranchTarget_); 
+	{
+		_SetLink(31);
+		doBranch(_BranchTarget_);
 	}
-}  
+}
 
 void BGTZ()    // Branch if Rs >  0
-{ 
-	if (cpuRegs.GPR.r[_Rs_].SD[0] > 0) 
-	{ 
-		doBranch(_BranchTarget_); 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] > 0)
+	{
+		doBranch(_BranchTarget_);
 	}
-}      
+}
 
 void BLEZ()   // Branch if Rs <= 0
-{ 
-	if (cpuRegs.GPR.r[_Rs_].SD[0] <= 0) 
-	{ 
-		doBranch(_BranchTarget_); 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] <= 0)
+	{
+		doBranch(_BranchTarget_);
 	}
-}   
+}
 
 void BLTZ()    // Branch if Rs <  0
-{ 
-	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
-	{ 
-		doBranch(_BranchTarget_); 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0)
+	{
+		doBranch(_BranchTarget_);
 	}
-}    
+}
 
 void BLTZAL()  // Branch if Rs <  0 and link
-{ 
-	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
-	{ 
-		_SetLink(31); 
-		doBranch(_BranchTarget_); 
+{
+	if (cpuRegs.GPR.r[_Rs_].SD[0] < 0)
+	{
+		_SetLink(31);
+		doBranch(_BranchTarget_);
 	}
-}  
+}
 
 /*********************************************************
 * Register branch logic  Likely                          *
@@ -231,110 +231,110 @@ void BLTZAL()  // Branch if Rs <  0 and link
 
 
 void BEQL()    // Branch if Rs == Rt
-{ 
-	if(cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
-		intEventTest(); 
-	}   
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0])
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
+		intEventTest();
+	}
 }
 
 void BNEL()     // Branch if Rs != Rt
-{  
-	if(cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
-		intEventTest(); 
-	}   
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0])
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
+		intEventTest();
+	}
 }
 
 void BLEZL()    // Branch if Rs <= 0
-{ 
-	if(cpuRegs.GPR.r[_Rs_].SD[0] <= 0) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] <= 0)
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
 		intEventTest();
 	}
 }
 
 void BGTZL()     // Branch if Rs >  0
-{ 
-	if(cpuRegs.GPR.r[_Rs_].SD[0] > 0) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] > 0)
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
 		intEventTest();
 	}
 }
 
 void BLTZL()     // Branch if Rs <  0
-{  
-	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0)
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
 		intEventTest();
 	}
 }
 
 void BGEZL()     // Branch if Rs >= 0
-{ 
-	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
-	{ 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
+{
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0)
+	{
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
 		intEventTest();
 	}
 }
 
 void BLTZALL()   // Branch if Rs <  0 and link
-{ 
-	
-	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0) 
-	{ 
-		_SetLink(31); 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
-		intEventTest(); 
+{
+
+	if(cpuRegs.GPR.r[_Rs_].SD[0] < 0)
+	{
+		_SetLink(31);
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
+		intEventTest();
 	}
 }
 
 void BGEZALL()   // Branch if Rs >= 0 and link
-{  
-	
-	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0) 
-	{ 
-		_SetLink(31); 
-		doBranch(_BranchTarget_); 
-	} 
-	else 
-	{ 
-		cpuRegs.pc +=4; 
-		intEventTest(); 
+{
+
+	if(cpuRegs.GPR.r[_Rs_].SD[0] >= 0)
+	{
+		_SetLink(31);
+		doBranch(_BranchTarget_);
+	}
+	else
+	{
+		cpuRegs.pc +=4;
+		intEventTest();
 	}
 }
 
@@ -342,17 +342,17 @@ void BGEZALL()   // Branch if Rs >= 0 and link
 * Register jump                                          *
 * Format:  OP rs, rd                                     *
 *********************************************************/
-void JR()  
-{ 
-	doBranch(cpuRegs.GPR.r[_Rs_].UL[0]); 
+void JR()
+{
+	doBranch(cpuRegs.GPR.r[_Rs_].UL[0]);
 }
 
 void JALR()
-{ 
+{
 	u32 temp = cpuRegs.GPR.r[_Rs_].UL[0];
-	
-	if (_Rd_)  _SetLink(_Rd_); 
-	
+
+	if (_Rd_)  _SetLink(_Rd_);
+
 	doBranch(temp);
 }
 

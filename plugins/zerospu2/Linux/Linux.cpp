@@ -15,12 +15,12 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  // Modified by arcum42@gmail.com
 
 #include <gtk/gtk.h>
 
-extern "C" 
+extern "C"
 {
 #include "interface.h"
 #include "support.h"
@@ -34,13 +34,13 @@ extern char *libraryName;
 
 GtkWidget *MsgDlg, *ConfDlg;
 
-void OnMsg_Ok() 
+void OnMsg_Ok()
 {
 	gtk_widget_destroy(MsgDlg);
 	gtk_main_quit();
 }
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...)
 {
 	GtkWidget *Ok,*Txt;
 	GtkWidget *Box,*Box1;
@@ -52,7 +52,7 @@ void SysMessage(char *fmt, ...)
 	va_end(list);
 
 	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
-    
+
 	MsgDlg = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
 	gtk_window_set_title(GTK_WINDOW(MsgDlg), "SPU2null Msg");
@@ -63,7 +63,7 @@ void SysMessage(char *fmt, ...)
 	gtk_widget_show(Box);
 
 	Txt = gtk_label_new(msg);
-	
+
 	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
 	gtk_widget_show(Txt);
 
@@ -77,12 +77,12 @@ void SysMessage(char *fmt, ...)
 	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
 	gtk_widget_show(Ok);
 
-	gtk_widget_show(MsgDlg);	
+	gtk_widget_show(MsgDlg);
 
 	gtk_main();
 }
 
-void CALLBACK SPU2configure() 
+void CALLBACK SPU2configure()
 {
 	LOG_CALLBACK("SPU2configure()\n");
 	ConfDlg = create_Config();
@@ -92,7 +92,7 @@ void CALLBACK SPU2configure()
 	set_checked(ConfDlg, "recordingbutton", (conf.options & OPTION_RECORDING));
 	set_checked(ConfDlg, "mutebutton", (conf.options & OPTION_MUTE));
 	set_checked(ConfDlg, "loggingbutton", (conf.Log));
-	
+
 	gtk_widget_show_all(ConfDlg);
 	gtk_main();
 }
@@ -101,18 +101,18 @@ void CALLBACK SPU2configure()
 void on_Conf_Ok (GtkButton *button, gpointer user_data)
 {
 	conf.options = 0;
-	
-	if (is_checked(ConfDlg, "realtimebutton")) 
+
+	if (is_checked(ConfDlg, "realtimebutton"))
 		conf.options |= OPTION_REALTIME;
-	if (is_checked(ConfDlg, "timescalingbutton")) 
+	if (is_checked(ConfDlg, "timescalingbutton"))
 		conf.options |= OPTION_TIMESTRETCH;
 	if (is_checked(ConfDlg, "recordingbutton"))
 		conf.options |= OPTION_RECORDING;
 	if (is_checked(ConfDlg, "mutebutton"))
 		conf.options |= OPTION_MUTE;
-	
+
 	conf.Log = is_checked(ConfDlg, "loggingbutton");
-	
+
 	SaveConfig();
 	gtk_widget_destroy(ConfDlg);
 	gtk_main_quit();
@@ -126,31 +126,31 @@ void on_Conf_Cancel (GtkButton *button, gpointer user_data)
 
 }
 
-void CALLBACK SPU2about() 
+void CALLBACK SPU2about()
 {
 	LOG_CALLBACK("SPU2about()\n");
 	SysMessage("%s %d.%d\ndeveloper: zerofrog", libraryName, SPU2_VERSION, SPU2_BUILD);
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
 	string iniFile( s_strIniPath + "zerospu2.ini" );
-	
+
 	FILE* f = fopen(iniFile.c_str(),"w");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		ERROR_LOG("Failed to open %s\n", iniFile.c_str());
 		return;
 	}
-	
+
 	fprintf(f, "log = %d\n", conf.Log);
 	//fprintf(f, "options = %d\n", conf.options);
-	
+
 	fprintf(f, "realtime = %d\n", is_checked(ConfDlg, "realtimebutton"));
 	fprintf(f, "timestretch = %d\n", is_checked(ConfDlg, "timescalingbutton"));
 	fprintf(f, "recording = %d\n", is_checked(ConfDlg, "recordingbutton"));
 	fprintf(f, "mute = %d\n", is_checked(ConfDlg, "mutebutton"));
-	
+
 	fclose(f);
 }
 
@@ -161,9 +161,9 @@ void LoadConfig()
 	memset(&conf, 0, sizeof(conf));
 
 	string iniFile( s_strIniPath + "zerospu2.ini" );
-	
+
 	FILE* f = fopen(iniFile.c_str(), "r");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		ERROR_LOG("Failed to open %s\n", iniFile.c_str());
 		conf.Log = 0;
@@ -171,22 +171,22 @@ void LoadConfig()
 		SaveConfig();//save and return
 		return;
 	}
-	
+
 	fscanf(f, "log = %d\n", &conf.Log);
-	
+
 	fscanf(f, "realtime = %d\n", &temp);
 	if (temp) conf.options |= OPTION_REALTIME;
-	
+
 	fscanf(f, "timestretch = %d\n", &temp);
 	if (temp) conf.options |= OPTION_TIMESTRETCH;
-	
+
 	fscanf(f, "recording = %d\n", &temp);
 	if (temp) conf.options |= OPTION_RECORDING;
-	
+
 	fscanf(f, "mute = %d\n", &temp);
 	if (temp) conf.options |= OPTION_MUTE;
-	
+
 	fscanf(f, "options = %d\n", &conf.options);
-	
+
 	fclose(f);
 }

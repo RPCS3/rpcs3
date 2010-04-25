@@ -187,7 +187,7 @@ public:
     virtual bool SetCursor( const wxCursor &cursor );
 
     virtual int GetScrollPos(int orient) const;
-    virtual void SetScrollPos(int orient, int pos, bool refresh = true); 
+    virtual void SetScrollPos(int orient, int pos, bool refresh = true);
 
 #if wxUSE_DRAG_AND_DROP
     virtual void SetDropTarget( wxDropTarget *dropTarget );
@@ -274,7 +274,7 @@ public:
     : wxGenericListCtrl(parent, winid, pos, size, style, validator, name)
     {
     }
-    
+
 };
 #endif // !__WXMSW__ || __WXUNIVERSAL__
 

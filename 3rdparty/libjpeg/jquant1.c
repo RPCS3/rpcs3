@@ -424,7 +424,7 @@ make_odither_array (j_decompress_ptr cinfo, int ncolors)
 
 /*
  * Create the ordered-dither tables.
- * Components having the same number of representative colors may 
+ * Components having the same number of representative colors may
  * share a dither table.
  */
 

@@ -217,7 +217,7 @@ wxAppWithHelpers::wxAppWithHelpers()
 	, m_IdleEventTimer( this )
 {
 #ifdef __WXMSW__
-	// This variable assignment ensures that MSVC links in the TLS setup stubs even in 
+	// This variable assignment ensures that MSVC links in the TLS setup stubs even in
 	// full optimization builds.  Without it, DLLs that use TLS won't work because the
 	// FS segment register won't have been initialized by the main exe, due to tls_insurance
 	// being optimized away >_<  --air

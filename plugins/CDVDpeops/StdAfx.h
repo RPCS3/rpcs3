@@ -54,7 +54,7 @@ typedef unsigned __int64 u64;
 
 #include "PS2Edefs.h"
 
-#define __WIN32__ 
+#define __WIN32__
 
 // ################################################### //
 

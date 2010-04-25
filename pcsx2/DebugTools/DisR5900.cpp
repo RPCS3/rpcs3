@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -85,10 +85,10 @@ typedef void (*TdisR5900F)DisFInterface;
 #undef _Sa_
 #undef _Im_
 
-#define _Funct_  ((code      ) & 0x3F) // The funct part of the instruction register 
-#define _Rd_     ((code >> 11) & 0x1F) // The rd part of the instruction register 
-#define _Rt_     ((code >> 16) & 0x1F) // The rt part of the instruction register 
-#define _Rs_     ((code >> 21) & 0x1F) // The rs part of the instruction register 
+#define _Funct_  ((code      ) & 0x3F) // The funct part of the instruction register
+#define _Rd_     ((code >> 11) & 0x1F) // The rd part of the instruction register
+#define _Rt_     ((code >> 16) & 0x1F) // The rt part of the instruction register
+#define _Rs_     ((code >> 21) & 0x1F) // The rs part of the instruction register
 #define _Sa_     ((code >>  6) & 0x1F) // The sa part of the instruction register
 #define _Im_     ( code & 0xFFFF)      // The immediate part of the instruction register
 
@@ -127,11 +127,11 @@ typedef void (*TdisR5900F)DisFInterface;
 
 // sap!  it stands for string append.  It's not a friendly name but for now it makes
 // the copy-paste marathon of code below more readable!
-#define _sap( str ) ssappendf( output, str, 
+#define _sap( str ) ssappendf( output, str,
 
 #define dName(i)	_sap("%-7s\t") i);
 #define dGPR128(i)	_sap("%8.8x_%8.8x_%8.8x_%8.8x (%s),") cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0], disRNameGPR[i])
-#define dGPR64(i)	_sap("%8.8x_%8.8x (%s),") cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0], disRNameGPR[i]) 
+#define dGPR64(i)	_sap("%8.8x_%8.8x (%s),") cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0], disRNameGPR[i])
 #define dGPR64U(i)	_sap("%8.8x_%8.8x (%s),") cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], disRNameGPR[i])
 #define dGPR32(i)	_sap("%8.8x (%s),") cpuRegs.GPR.r[i].UL[0], disRNameGPR[i])
 
@@ -260,7 +260,7 @@ MakeDisF(disAND,		dName("AND");   dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disOR,		    dName("OR");    dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disXOR,		dName("XOR");   dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disNOR,		dName("NOR");   dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
-MakeDisF(disSLT,		dName("SLT");   dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);) 
+MakeDisF(disSLT,		dName("SLT");   dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disSLTU,		dName("SLTU");  dGPR64(_Rd_); dGPR64(_Rs_); dGPR64(_Rt_);)
 
 /*********************************************************
@@ -378,10 +378,10 @@ MakeDisF(disMTC0,		dName("MTC0"); dCP032(_Rd_); dGPR32(_Rt_);)
 
 MakeDisF(disBGEZ, 		dName("BGEZ");   dGPR64(_Rs_); dOffset();)
 MakeDisF(disBGEZAL, 	dName("BGEZAL"); dGPR64(_Rs_); dOffset();)
-MakeDisF(disBGTZ, 		dName("BGTZ");   dGPR64(_Rs_); dOffset();)   
-MakeDisF(disBLEZ, 		dName("BLEZ");   dGPR64(_Rs_); dOffset();)  
-MakeDisF(disBLTZ, 		dName("BLTZ");   dGPR64(_Rs_); dOffset();)    
-MakeDisF(disBLTZAL,     dName("BLTZAL"); dGPR64(_Rs_); dOffset();) 
+MakeDisF(disBGTZ, 		dName("BGTZ");   dGPR64(_Rs_); dOffset();)
+MakeDisF(disBLEZ, 		dName("BLEZ");   dGPR64(_Rs_); dOffset();)
+MakeDisF(disBLTZ, 		dName("BLTZ");   dGPR64(_Rs_); dOffset();)
+MakeDisF(disBLTZAL,     dName("BLTZAL"); dGPR64(_Rs_); dOffset();)
 
 
 /*********************************************************
@@ -390,12 +390,12 @@ MakeDisF(disBLTZAL,     dName("BLTZAL"); dGPR64(_Rs_); dOffset();)
 *********************************************************/
 
 
-MakeDisF(disBEQL, 		dName("BEQL");      dGPR64(_Rs_); dGPR64(_Rt_); dOffset();)  
-MakeDisF(disBNEL, 		dName("BNEL");      dGPR64(_Rs_); dGPR64(_Rt_); dOffset();)   
-MakeDisF(disBLEZL, 		dName("BLEZL");     dGPR64(_Rs_); dOffset();)  
-MakeDisF(disBGTZL, 		dName("BGTZL");     dGPR64(_Rs_); dOffset();) 
-MakeDisF(disBLTZL, 		dName("BLTZL");     dGPR64(_Rs_); dOffset();) 
-MakeDisF(disBGEZL, 		dName("BGEZL");     dGPR64(_Rs_); dOffset();)  
+MakeDisF(disBEQL, 		dName("BEQL");      dGPR64(_Rs_); dGPR64(_Rt_); dOffset();)
+MakeDisF(disBNEL, 		dName("BNEL");      dGPR64(_Rs_); dGPR64(_Rt_); dOffset();)
+MakeDisF(disBLEZL, 		dName("BLEZL");     dGPR64(_Rs_); dOffset();)
+MakeDisF(disBGTZL, 		dName("BGTZL");     dGPR64(_Rs_); dOffset();)
+MakeDisF(disBLTZL, 		dName("BLTZL");     dGPR64(_Rs_); dOffset();)
+MakeDisF(disBGEZL, 		dName("BGEZL");     dGPR64(_Rs_); dOffset();)
 MakeDisF(disBLTZALL,    dName("BLTZALL");   dGPR64(_Rs_); dOffset();)
 MakeDisF(disBGEZALL, 	dName("BGEZALL");   dGPR64(_Rs_); dOffset();)
 
@@ -639,13 +639,13 @@ MakeDisF(disPCPYH,		dName("PCPYH"); dGPR128(_Rd_); dGPR128(_Rt_);)
 #define _Z code>>22
 #define _W code>>21
 
-MakeDisF(disLQC2,		dName("LQC2"); dCP2128f(_Rt_); dOfB();)  
-MakeDisF(disSQC2,		dName("SQC2"); dCP2128f(_Rt_); dOfB();)  
+MakeDisF(disLQC2,		dName("LQC2"); dCP2128f(_Rt_); dOfB();)
+MakeDisF(disSQC2,		dName("SQC2"); dCP2128f(_Rt_); dOfB();)
 
-MakeDisF(disQMFC2,		dName("QMFC2");)  
-MakeDisF(disQMTC2,		dName("QMTC2");)  
-MakeDisF(disCFC2,		dName("CFC2"); dGPR32(_Rt_); dCP232i(_Fs_);)  
-MakeDisF(disCTC2,		dName("CTC2"); dCP232i(_Fs_); dGPR32(_Rt_);)  
+MakeDisF(disQMFC2,		dName("QMFC2");)
+MakeDisF(disQMTC2,		dName("QMTC2");)
+MakeDisF(disCFC2,		dName("CFC2"); dGPR32(_Rt_); dCP232i(_Fs_);)
+MakeDisF(disCTC2,		dName("CTC2"); dCP232i(_Fs_); dGPR32(_Rt_);)
 
 MakeDisF(disBC2F,		dName("BC2F");)
 MakeDisF(disBC2T,		dName("BC2T");)
@@ -761,14 +761,14 @@ MakeDisF(disVWAITQ,		dName("VWAITQ");)
 * Format:  OP                                            *
 *********************************************************/
 
-MakeDisF(disSYNC,		dName("SYNC");)  
-MakeDisF(disBREAK,		dName("BREAK");) 
+MakeDisF(disSYNC,		dName("SYNC");)
+MakeDisF(disBREAK,		dName("BREAK");)
 MakeDisF(disSYSCALL,	dName("SYSCALL"); dCode();)
 MakeDisF(disCACHE,		ssappendf(output, "%-7s, %x,", "CACHE", _Rt_); dOfB();)
-MakeDisF(disPREF,		dName("PREF");) 
+MakeDisF(disPREF,		dName("PREF");)
 
-MakeDisF(disMFSA,		dName("MFSA"); dGPR64(_Rd_); dSaR();)   
-MakeDisF(disMTSA,		dName("MTSA"); dGPR64(_Rs_); dSaR();)   
+MakeDisF(disMFSA,		dName("MFSA"); dGPR64(_Rd_); dSaR();)
+MakeDisF(disMTSA,		dName("MTSA"); dGPR64(_Rs_); dSaR();)
 
 MakeDisF(disMTSAB,      dName("MTSAB");dGPR64(_Rs_); dImm();)
 MakeDisF(disMTSAH,      dName("MTSAH");dGPR64(_Rs_); dImm();)
@@ -776,15 +776,15 @@ MakeDisF(disMTSAH,      dName("MTSAH");dGPR64(_Rs_); dImm();)
 MakeDisF(disTGE,	    dName("TGE");  dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disTGEU,	    dName("TGEU"); dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disTLT,	    dName("TLT");  dGPR64(_Rs_); dGPR64(_Rt_);)
-MakeDisF(disTLTU,	    dName("TLTU"); dGPR64(_Rs_); dGPR64(_Rt_);) 
-MakeDisF(disTEQ,		dName("TEQ");  dGPR64(_Rs_); dGPR64(_Rt_);) 
+MakeDisF(disTLTU,	    dName("TLTU"); dGPR64(_Rs_); dGPR64(_Rt_);)
+MakeDisF(disTEQ,		dName("TEQ");  dGPR64(_Rs_); dGPR64(_Rt_);)
 MakeDisF(disTNE,	    dName("TNE");  dGPR64(_Rs_); dGPR64(_Rt_);)
 
 MakeDisF(disTGEI,	    dName("TGEI");  dGPR64(_Rs_); dImm();)
-MakeDisF(disTGEIU,	    dName("TGEIU"); dGPR64(_Rs_); dImm();) 
-MakeDisF(disTLTI,	    dName("TLTI");  dGPR64(_Rs_); dImm();) 
-MakeDisF(disTLTIU,	    dName("TLTIU"); dGPR64(_Rs_); dImm();)  
-MakeDisF(disTEQI,	    dName("TEQI");  dGPR64(_Rs_); dImm();)  
+MakeDisF(disTGEIU,	    dName("TGEIU"); dGPR64(_Rs_); dImm();)
+MakeDisF(disTLTI,	    dName("TLTI");  dGPR64(_Rs_); dImm();)
+MakeDisF(disTLTIU,	    dName("TLTIU"); dGPR64(_Rs_); dImm();)
+MakeDisF(disTEQI,	    dName("TEQI");  dGPR64(_Rs_); dImm();)
 MakeDisF(disTNEI,	    dName("TNEI");  dGPR64(_Rs_); dImm();)
 
 /*********************************************************
@@ -796,11 +796,11 @@ static MakeDisF(disNULL,		dName("*** Bad OP ***");)
 TdisR5900F disR5900_MMI0[] = { // Subset of disMMI0
     disPADDW,  disPSUBW,  disPCGTW,  disPMAXW,
 	disPADDH,  disPSUBH,  disPCGTH,  disPMAXH,
-    disPADDB,  disPSUBB,  disPCGTB,  disNULL, 
+    disPADDB,  disPSUBB,  disPCGTB,  disNULL,
 	disNULL,   disNULL,   disNULL,   disNULL,
-    disPADDSW, disPSUBSW, disPEXTLW, disPPACW, 
+    disPADDSW, disPSUBSW, disPEXTLW, disPPACW,
 	disPADDSH, disPSUBSH, disPEXTLH, disPPACH,
-    disPADDSB, disPSUBSB, disPEXTLB, disPPACB, 
+    disPADDSB, disPSUBSB, disPEXTLB, disPPACB,
 	disNULL,   disNULL,   disPEXTS,  disPPACS};
 
 static void disMMI0( string& output, u32 code )
@@ -809,13 +809,13 @@ static void disMMI0( string& output, u32 code )
 }
 
 TdisR5900F disR5900_MMI1[] = { // Subset of disMMI1
-    disNULL,   disPABSW,  disPCEQW,  disPMINW, 
+    disNULL,   disPABSW,  disPCEQW,  disPMINW,
 	disPADSBH, disPABSH,  disPCEQH,  disPMINH,
-    disNULL,   disNULL,   disPCEQB,  disNULL, 
+    disNULL,   disNULL,   disPCEQB,  disNULL,
 	disNULL,   disNULL,   disNULL,   disNULL,
-    disPADDUW, disPSUBUW, disPEXTUW, disNULL, 
+    disPADDUW, disPSUBUW, disPEXTUW, disNULL,
 	disPADDUH, disPSUBUH, disPEXTUH, disNULL,
-    disPADDUB, disPSUBUB, disPEXTUB, disQFSRV, 
+    disPADDUB, disPSUBUB, disPEXTUB, disQFSRV,
 	disNULL,   disNULL,   disNULL,   disNULL};
 
 static void disMMI1( string& output, u32 code )
@@ -824,13 +824,13 @@ static void disMMI1( string& output, u32 code )
 }
 
 TdisR5900F disR5900_MMI2[] = { // Subset of disMMI2
-    disPMADDW, disNULL,   disPSLLVW, disPSRLVW, 
+    disPMADDW, disNULL,   disPSLLVW, disPSRLVW,
 	disPMSUBW, disNULL,   disNULL,   disNULL,
-    disPMFHI,  disPMFLO,  disPINTH,  disNULL, 
+    disPMFHI,  disPMFLO,  disPINTH,  disNULL,
 	disPMULTW, disPDIVW,  disPCPYLD, disNULL,
-    disPMADDH, disPHMADH, disPAND,   disPXOR, 
+    disPMADDH, disPHMADH, disPAND,   disPXOR,
 	disPMSUBH, disPHMSBH, disNULL,   disNULL,
-    disNULL,   disNULL,   disPEXEH,  disPREVH, 
+    disNULL,   disNULL,   disPEXEH,  disPREVH,
 	disPMULTH, disPDIVBW, disPEXEW,  disPROT3W};
 
 static void disMMI2( string& output, u32 code )
@@ -839,13 +839,13 @@ static void disMMI2( string& output, u32 code )
 }
 
 TdisR5900F disR5900_MMI3[] = { // Subset of disMMI3
-    disPMADDUW, disNULL,   disNULL,   disPSRAVW, 
+    disPMADDUW, disNULL,   disNULL,   disPSRAVW,
 	disNULL,    disNULL,   disNULL,   disNULL,
-    disPMTHI,   disPMTLO,  disPINTEH, disNULL, 
+    disPMTHI,   disPMTLO,  disPINTEH, disNULL,
 	disPMULTUW, disPDIVUW, disPCPYUD, disNULL,
-    disNULL,    disNULL,   disPOR,    disPNOR, 
+    disNULL,    disNULL,   disPOR,    disPNOR,
 	disNULL,    disNULL,   disNULL,   disNULL,
-    disNULL,    disNULL,   disPEXCH,  disPCPYH, 
+    disNULL,    disNULL,   disPEXCH,  disPCPYH,
 	disNULL,    disNULL,   disPEXCW,  disNULL};
 
 static void disMMI3( string& output, u32 code )

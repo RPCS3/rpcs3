@@ -75,7 +75,7 @@ static __forceinline void set_hat_pins(int tilt_o_the_hat)
 	hat_position.right = false;
 	hat_position.up = false;
 	hat_position.down = false;
-	
+
 	switch (tilt_o_the_hat)
 	{
 		case SDL_HAT_UP:

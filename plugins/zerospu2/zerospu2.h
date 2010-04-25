@@ -36,7 +36,7 @@ using namespace std;
 extern FILE *spu2Log;
 extern string s_strIniPath;
 
-// Prints most of the function names of the callbacks as they are called by pcsx2. 
+// Prints most of the function names of the callbacks as they are called by pcsx2.
 // I'm keeping the code in because I have a feeling it will come in handy.
 //#define PRINT_CALLBACKS
 
@@ -140,7 +140,7 @@ static __forceinline void clamp16(s32 &dest)
 {
 	if (dest < -32768L)
 		dest = -32768L;
-	else if (dest > 32767L) 
+	else if (dest > 32767L)
 		dest = 32767L;
 }
 
@@ -148,9 +148,9 @@ static __forceinline void clampandwrite16(s16 &dest, s32 &value)
 {
 	if (value < -32768)
 		dest = -32768;
-	else if (value > 32767) 
+	else if (value > 32767)
 		dest = 32767;
-	else 
+	else
 		dest = (s16)value;
 }
 
@@ -158,7 +158,7 @@ struct tSPU_ATTR
 {
 	u16 extCd : 1;
 	u16 extAudio : 1;
-	u16 cdreverb : 1; 
+	u16 cdreverb : 1;
 	u16 extr : 1;	  // external reverb
 	u16 dma : 2;	   // 1 - no dma, 2 - write, 3 - read
 	u16 irq : 1;
@@ -239,7 +239,7 @@ static __forceinline void SPU2_SET32BIT(u32 value, u32 lo, u32 hi)
 
 static __forceinline u32 C_IRQA(s32 c)
 {
-	if (c == 0) 
+	if (c == 0)
 		return SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI);
 	else
 		return SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
@@ -290,16 +290,16 @@ struct _SPU_VOICE
 
 	u16 SustainLvl : 4;
 	u16 DecayRate : 4;
-	u16 AttackRate : 7; 
+	u16 AttackRate : 7;
 	u16 AttackExp : 1;	 // if 0, linear
-	
+
 	u16 ReleaseRate : 5;
 	u16 ReleaseExp : 1;	// if 0, linear
 	u16 SustainRate : 7;
 	u16 res1 : 1;
 	u16 SustainDec : 1;	// if 0, inc
 	u16 SustainExp : 1;	// if 0, linear
-	
+
 	u16 AdsrVol;
 	u16 Address;		   // add / 8
 	u16 RepeatAddr;		// gets reset when sample starts
@@ -359,7 +359,7 @@ struct VOICE_PROCESSED
 
 	s32 iIrqDone;						   // debug irq done flag
 	s32 s_1, s_2;								// last decoding infos
-	s32 iOldNoise;						  // old noise val for this channel   
+	s32 iOldNoise;						  // old noise val for this channel
 	s32 iActFreq, iUsedFreq;			// current psx pitch & pc pitch
 
 	s32 iStartAddr, iLoopAddr, iNextAddr;
@@ -371,7 +371,7 @@ struct VOICE_PROCESSED
 
 	bool bIgnoreLoop, bNew, bNoise, bReverb, bOn, bStop, bVolChanged;
 	bool bVolumeR, bVolumeL;
-	
+
 	// end save state
 
 	///////////////////
@@ -385,7 +385,7 @@ struct VOICE_PROCESSED
 	void init(s32 i)
 	{
 		chanid = i;
-		
+
 		if (chanid > 23)
 		{
 			memoffset = 0x400;
@@ -396,7 +396,7 @@ struct VOICE_PROCESSED
 			memoffset = 0x0;
 			memchannel = 0;
 		}
-		
+
 		pLoop = pStart = pCurr = (u8*)spu2mem;
 
 		pvoice = (_SPU_VOICE*)((u8*)spu2regs + memoffset) + (i % 24);
@@ -421,7 +421,7 @@ struct ADMA
 	u16*			  MemAddr;
 	s32			  Index;
 	s32			  AmountLeft;
-	s32			  Enabled; 
+	s32			  Enabled;
 	// used to make sure that ADMA doesn't get interrupted with a writeDMA call
 };
 

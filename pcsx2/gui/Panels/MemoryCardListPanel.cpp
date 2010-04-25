@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -51,7 +51,7 @@ static bool EnumerateMemoryCard( McdListItem& dest, const wxString& filename )
 	dest.SizeInMB		= (uint)(mcdFile.Length() / (1024 * 528 * 2));
 	dest.IsFormatted	= IsMcdFormatted( mcdFile );
 	wxFileName(filename).GetTimes( NULL, &dest.DateModified, &dest.DateCreated );
-	
+
 	return true;
 }
 
@@ -116,7 +116,7 @@ MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 	m_listview->SetMinSize( wxSize( wxDefaultCoord, 120 ) );
 
 	AppStatusEvent_OnSettingsApplied();
-	
+
 	Disable();
 }
 
@@ -126,7 +126,7 @@ void MemoryCardListPanel::Apply()
 
 void MemoryCardListPanel::AppStatusEvent_OnSettingsApplied()
 {
-	
+
 }
 
 bool Panels::MemoryCardListPanel::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)

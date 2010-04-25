@@ -45,13 +45,13 @@ extern "C"
 GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;
 
-void OnMsg_Ok() 
+void OnMsg_Ok()
 {
 	gtk_widget_destroy(MsgDlg);
 	gtk_main_quit();
 }
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...)
 {
 	GtkWidget *Ok,*Txt;
 	GtkWidget *Box,*Box1;
@@ -74,7 +74,7 @@ void SysMessage(char *fmt, ...)
 	gtk_widget_show(Box);
 
 	Txt = gtk_label_new(msg);
-	
+
 	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
 	gtk_widget_show(Txt);
 
@@ -88,25 +88,25 @@ void SysMessage(char *fmt, ...)
 	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
 	gtk_widget_show(Ok);
 
-	gtk_widget_show(MsgDlg);	
+	gtk_widget_show(MsgDlg);
 
 	gtk_main();
 }
- 
-void OnAbout_Ok(GtkButton *button, gpointer user_data) 
+
+void OnAbout_Ok(GtkButton *button, gpointer user_data)
 {
 	gtk_widget_destroy(About);
 	gtk_main_quit();
 }
 
-EXPORT_C_(void) PADabout() 
+EXPORT_C_(void) PADabout()
 {
 	About = create_About();
 	gtk_widget_show_all(About);
 	gtk_main();
 }
 
-void OnConf_Ok(GtkButton *button, gpointer user_data) 
+void OnConf_Ok(GtkButton *button, gpointer user_data)
 {
 	conf.Log = is_checked(Conf, "check_logging");
 	SaveConfig();
@@ -115,13 +115,13 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void OnConf_Cancel(GtkButton *button, gpointer user_data) 
+void OnConf_Cancel(GtkButton *button, gpointer user_data)
 {
 	gtk_widget_destroy(Conf);
 	gtk_main_quit();
 }
 
-EXPORT_C_(void) PADconfigure() 
+EXPORT_C_(void) PADconfigure()
 {
 	LoadConfig();
 	Conf = create_Config();
@@ -131,14 +131,14 @@ EXPORT_C_(void) PADconfigure()
 	gtk_main();
 }
 
-void LoadConfig() 
+void LoadConfig()
 {
 	FILE *f;
 	char cfg[255];
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg, "r");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		printf("failed to open %s\n", s_strIniPath.c_str());
 		SaveConfig();//save and return
@@ -149,14 +149,14 @@ void LoadConfig()
 	fclose(f);
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
 	FILE *f;
 	char cfg[255];
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg,"w");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		printf("failed to open '%s'\n", s_strIniPath.c_str());
 		return;

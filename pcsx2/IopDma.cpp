@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -57,7 +57,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
 		}
 	}
-    
+
 	switch (chcr)
 	{
 		case 0x01000201: //cpu to spu2 transfer
@@ -389,7 +389,7 @@ void RaiseDmaIrq(u32 channel)
 
 void IopDmaStart(int channel)
 {
-	if(!(IopDmaHandlers[channel].DirectionFlags&_E__)) 
+	if(!(IopDmaHandlers[channel].DirectionFlags&_E__))
 		return;
 
 	int chcr = IopDmaHandlers[channel].REG_CHCR();
@@ -457,7 +457,7 @@ template<int channel>
 static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 {
 	// Hopefully the compiler would be able to optimize the whole function away if this doesn't pass.
-	if(!(IopDmaHandlers[channel].DirectionFlags&_E__)) 
+	if(!(IopDmaHandlers[channel].DirectionFlags&_E__))
 		return;
 
 	DmaChannelInfo *ch = IopDmaChannels + channel;
@@ -517,7 +517,7 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 				{
 				 	ch->NextUpdate = 0;
 	 			}
-				else 
+				else
 					ch->NextUpdate += NextUpdateDelay;
 
 				//ch->NextUpdate += NextUpdateDelay;
@@ -538,7 +538,7 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 void IopDmaUpdate(u32 elapsed)
 {
 	s32 MinDelay=0;
-	
+
 	do {
 		MinDelay = 0x7FFFFFFF; // max possible value
 
@@ -599,7 +599,7 @@ void SaveStateBase::iopDmacFreeze()
 	FreezeTag("iopDmac");
 
 	Freeze(IopDmaChannels);
-	
+
 	if( IsLoading() )
 	{
 		SetDmaUpdateTarget(10000); // Might be needed to kickstart the main updater :p

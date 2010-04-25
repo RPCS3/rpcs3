@@ -29,15 +29,15 @@ static bool QuickDmaExec( void (*func)(), u32 mem)
 	bool ret = false;
     DMACh *reg = &psH_DMACh(mem);
 
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
+	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		Registers::Freeze();
 		func();
 		Registers::Thaw();
 		ret = true;
 	}
-	
-	
+
+
 	return ret;
 }
 
@@ -63,9 +63,9 @@ void __fastcall StartQueuedDMA()
 static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 {
 	DMACh *reg = &psH_DMACh(mem & ~0xf);
-    
+
 	//The only thing we can do in an 8bit write is set the CHCR, so lets just do checks for that
-	
+
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (reg->chcr.STR)
 	{
@@ -98,12 +98,12 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 			//else DevCon.Warning(L"8bit Attempted to stop %s DMA without suspend, ignoring", ChcrName(mem & ~0xf));
 			return;
 		}
-		
+
 	}
 
 	reg->chcr.STR = value;
-		
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
+
+	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		Registers::Freeze();
 		func();
@@ -121,7 +121,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
     DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
-	
+
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (reg->chcr.STR)
 	{
@@ -154,12 +154,12 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 			//else DevCon.Warning(L"16bit Attempted to change %s modes while DMA active, ignoring", ChcrName(mem));
 			return;
 		}
-		
+
 	}
 
 	reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
-		
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
+
+	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		Registers::Freeze();
 		func();
@@ -174,10 +174,10 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
 static void DmaExec( void (*func)(), u32 mem, u32 value )
 {
-	
+
 	DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
-	
+
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (reg->chcr.STR)
 	{
@@ -209,19 +209,19 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 				reg->chcr.STR = 0;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
 				cpuClearInt( ChannelNumber(mem) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel 
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
 			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg->chcr._u32, chcr._u32, reg->qwc);
 			return;
 		}
-		
+
 	}
 
 	//if(reg->chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
 
 	reg->chcr.set(value);
-		
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
+
+	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		Registers::Freeze();
 		func();
@@ -247,7 +247,7 @@ void hwWrite8(u32 mem, u8 value)
 		u32 bytemod = mem & 0x3;
 		u32 bitpos  = 8 * bytemod;
 		u32 oldval  = ~(0xff  << bitpos) & psHu32(mem);
-		u32 newval	=  (value << bitpos) | oldval;  
+		u32 newval	=  (value << bitpos) | oldval;
 		if (mem < VIF1_STAT) vif0Write32(mem & ~0x3, newval);
 		else				 vif1Write32(mem & ~0x3, newval);
 		return;
@@ -975,7 +975,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 
 //------------------------------------------------------------------
 		case D1_CHCR: // dma1 - vif1 - chcr
-			DMA_LOG("VIF1dma EXECUTE, value=0x%x", value);			
+			DMA_LOG("VIF1dma EXECUTE, value=0x%x", value);
 			DmaExec(dmaVIF1, mem, value);
 			return;
 

@@ -75,7 +75,7 @@ int SSBUSgetTable2(int code){			//get
 
 ///////////////////////////////////////////////////////////////////////
 int SSBUSsetCOM_DELAY_1st(int a){			//set lowest nibble
-	return	 *(int*)(0xBF801020) = 
+	return	 *(int*)(0xBF801020) =
 		(*(int*)(0xBF801020) & 0xFFFFFFF0) |
 		(             a      &        0xF);
 }
@@ -87,7 +87,7 @@ int SSBUSgetCOM_DELAY_1st(){				//get lowest nibble
 
 ///////////////////////////////////////////////////////////////////////
 int SSBUSsetCOM_DELAY_2nd(int a){			//set
-	return	 *(int*)(0xBF801020) = 
+	return	 *(int*)(0xBF801020) =
 		(*(int*)(0xBF801020) & 0xFFFFFF0F) |
 		(         (a << 4)   &       0xF0);
 }
@@ -99,7 +99,7 @@ int SSBUSgetCOM_DELAY_2nd(){				//get
 
 ///////////////////////////////////////////////////////////////////////
 int SSBUSsetCOM_DELAY_3rd(int a){			//set
-	return	 *(int*)(0xBF801020) = 
+	return	 *(int*)(0xBF801020) =
 		(*(int*)(0xBF801020) & 0xFFFFF0FF) |
 		(         (a << 8)   &      0xF00);
 }
@@ -111,7 +111,7 @@ int SSBUSgetCOM_DELAY_3rd(){				//get
 
 ///////////////////////////////////////////////////////////////////////
 int SSBUSsetCOM_DELAY_4th(int a){			//set
-	return	 *(int*)(0xBF801020) = 
+	return	 *(int*)(0xBF801020) =
 		(*(int*)(0xBF801020) & 0xFFFF0FFF) |
 		(        (a << 12)   &     0xF000);
 }

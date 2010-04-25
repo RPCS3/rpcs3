@@ -37,7 +37,7 @@ void SysMessage(char *fmt, ...) {
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    
+
 	switch(uMsg) {
 		case WM_INITDIALOG:
 			LoadConfig();
@@ -52,7 +52,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				case IDOK:
 					if (IsDlgButtonChecked(hW, IDC_LOGGING))
 						 conf.Log = 1;
-					else 
+					else
 						conf.Log = 0;
 					SaveConfig();
 					EndDialog(hW, FALSE);
@@ -80,19 +80,19 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 EXPORT_C_(void) PADconfigure() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_CONFIG),
-              GetActiveWindow(),  
-              (DLGPROC)ConfigureDlgProc); 
+              GetActiveWindow(),
+              (DLGPROC)ConfigureDlgProc);
 }
 
 EXPORT_C_(void) PADabout() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_ABOUT),
-              GetActiveWindow(),  
+              GetActiveWindow(),
               (DLGPROC)AboutDlgProc);
 }
 
 BOOL APIENTRY DllMain(HANDLE hModule,                  // DLL INIT
-                      DWORD  dwReason, 
+                      DWORD  dwReason,
                       LPVOID lpReserved) {
 	hInst = (HINSTANCE)hModule;
 	return TRUE;                                          // very quick :)

@@ -463,7 +463,7 @@ public:
     virtual bool SetDisplayMode(const wxVideoMode& WXUNUSED(info)) { return true; }
 
         // set use of best visual flag (see below)
-    void SetUseBestVisual( bool flag, bool forceTrueColour = false ) 
+    void SetUseBestVisual( bool flag, bool forceTrueColour = false )
         { m_useBestVisual = flag; m_forceTrueColour = forceTrueColour; }
     bool GetUseBestVisual() const { return m_useBestVisual; }
 

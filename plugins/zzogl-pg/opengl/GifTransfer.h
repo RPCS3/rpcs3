@@ -15,14 +15,14 @@
  *	along with this program; if not, write to the Free Software
  *	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
  */
- 
+
 #ifndef GIFTRANSFER_H_INCLUDED
 #define GIFTRANSFER_H_INCLUDED
 
 #include "Regs.h"
 #include "Util.h"
 
-// If you notice bugs in the newest revisions, you might try disabling this, 
+// If you notice bugs in the newest revisions, you might try disabling this,
 // to see if they are related.
 #define NEW_GIF_TRANSFER
 enum GIF_FLG
@@ -67,9 +67,9 @@ union GIFTag
 
 // EE part. Data transfer packet description
 
-typedef struct 
+typedef struct
 {
-#ifdef NEW_GIF_TRANSFER	
+#ifdef NEW_GIF_TRANSFER
 	u32 mode;
 	int reg;
 	u64 regs;
@@ -90,18 +90,18 @@ typedef struct
 #endif
 
 #ifdef NEW_GIF_TRANSFER
-	void setTag(u32 *data) 
+	void setTag(u32 *data)
 	{
 		tag.set(data);
 
 		nloop	= tag.NLOOP;
 		eop		= tag.EOP;
 		mode	= tag.FLG;
-                
+
 		// Hmm....
 		nreg	= tag.NREG << 2;
 		if (nreg == 0) nreg = 64;
-		
+
 		regs = tag.REGS;
 		reg = 0;
 
@@ -109,8 +109,8 @@ typedef struct
         //                      data[3], data[2], data[1], data[0],
         //                      path->eop, path->nloop, mode, path->nreg, tag.PRE);
 	}
-	
-	u32 GetReg() 
+
+	u32 GetReg()
 	{
 		return (regs >> reg) & 0xf;
 	}
@@ -118,13 +118,13 @@ typedef struct
 	bool StepReg()
 	{
 		reg += 4;
-							
-		if (reg == nreg) 
+
+		if (reg == nreg)
 		{
 			reg = 0;
 			nloop--;
-								
-			if (nloop == 0) 
+
+			if (nloop == 0)
 			{
 				return false;
 			}
@@ -132,7 +132,7 @@ typedef struct
 		return true;
 	}
 #else
-        void setTag(u32 *data) 
+        void setTag(u32 *data)
         {
                 tag.set(data);
 
@@ -141,7 +141,7 @@ typedef struct
                 u32 tagpre              = tag.PRE;
                 u32 tagprim             = tag.PRIM;
                 u32 tagflg              = tag.FLG;
-                
+
                 // Hmm....
                 nreg    = tag.NREG << 2;
                 if (nreg == 0) nreg = 64;
@@ -152,7 +152,7 @@ typedef struct
 
                 mode = tagflg;
 
-                switch (mode) 
+                switch (mode)
                 {
 					case GIF_FLG_PACKED:
 						regs = *(u64 *)(data+2);

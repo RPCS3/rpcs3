@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -102,11 +102,11 @@ struct xImplSimd_PMul
 	// Both operands can be MMX or XMM registers.  Source can be register or memory.
 	//
 	const xImplSimd_DestRegEither HRSW;
-	
+
 	// [SSE-4.1] Multiply the packed dword signed integers in dest with src, and store
 	// the low 32 bits of each product in xmm1.
 	const xImplSimd_DestRegSSE LD;
-	
+
 	// [SSE-4.1] Multiply the packed signed dword integers in dest with src.
 	const xImplSimd_DestRegSSE DQ;
 };
@@ -230,7 +230,7 @@ struct xImplSimd_HorizAdd
 	// * Adds single-precision floating-point values in the first and second dword of *src*
 	//   and stores the result in the third dword of dest.
 	const xImplSimd_DestRegSSE PS;
-	
+
 	// [SSE-3] Horizontal Add of Packed Data.  A two step process:
 	// * Adds the double-precision floating-point values in the high and low quadwords of
 	//   dest and stores the result in the low quadword of dest.
@@ -249,7 +249,7 @@ struct xImplSimd_DotProduct
 	// mask extracted from the high 4 bits of the immediate byte. If a condition mask
 	// bit in Imm8[7:4] is zero, the corresponding multiplication is replaced by a value
 	// of 0.0.	The four resulting single-precision values are summed into an inter-
-	// mediate result. 
+	// mediate result.
 	//
 	// The intermediate result is conditionally broadcasted to the destination using a
 	// broadcast mask specified by bits [3:0] of the immediate byte. If a broadcast

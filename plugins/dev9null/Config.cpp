@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include <string>
 using namespace std;
 
@@ -40,19 +40,19 @@ void setLoggingState()
 	}
 }
 
-EXPORT_C_(void) DEV9about() 
+EXPORT_C_(void) DEV9about()
 {
 	SysMessage("Dev9null: A simple null plugin.");
 }
 
-EXPORT_C_(void) DEV9configure() 
+EXPORT_C_(void) DEV9configure()
 {
 	LoadConfig();
 	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
 	SaveConfig();
-} 
+}
 
-void LoadConfig() 
+void LoadConfig()
 {
 	string IniPath = s_strIniPath + "/Dev9null.ini";
 	if (!Ini.Open(IniPath, READ_FILE))
@@ -61,12 +61,12 @@ void LoadConfig()
 		SaveConfig();
 		return;
 	}
-	
+
 	conf.Log = Ini.ReadInt("logging",0);
 	Ini.Close();
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
 	string IniPath = s_strIniPath + "/Dev9null.ini";
 	if (!Ini.Open(IniPath, WRITE_FILE))
@@ -74,7 +74,7 @@ void SaveConfig()
 		Dev9Log.WriteLn("Failed to open %s", IniPath.c_str());
 		return;
 	}
-	
+
 	Ini.WriteInt("logging", conf.Log);
 	Ini.Close();
 }

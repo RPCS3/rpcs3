@@ -27,25 +27,25 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	m_Option_FTZ		= new pxCheckBox( this, _("Flush to Zero") );
 	m_Option_DAZ		= new pxCheckBox( this, _("Denormals are Zero") );
 
-	const RadioPanelItem RoundModeChoices[] = 
+	const RadioPanelItem RoundModeChoices[] =
 	{
 		RadioPanelItem(_("Nearest")),
 		RadioPanelItem(_("Negative")),
 		RadioPanelItem(_("Positive")),
 		RadioPanelItem(_("Chop / Zero"))
 	};
-	
-	const RadioPanelItem ClampModeChoices[] = 
+
+	const RadioPanelItem ClampModeChoices[] =
 	{
 		RadioPanelItem(_("None")),
-		RadioPanelItem(_("Normal")),	
+		RadioPanelItem(_("Normal")),
 	};
 
 	m_RoundModePanel = new pxRadioPanel( this, RoundModeChoices );
 	m_ClampModePanel = new pxRadioPanel( this, ClampModeChoices );
 
 	// Highlight Default Options:
-	
+
 	m_RoundModePanel->SetDefaultItem( 3 );
 	m_ClampModePanel->SetDefaultItem( 1 );
 
@@ -129,11 +129,11 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	{
 		RadioPanelItem(_("Interpreter"))
 		.SetToolTip(_("Quite possibly the slowest thing in the universe.")),
-			
+
 		RadioPanelItem(_("Recompiler"))
 		.SetToolTip(_("Performs just-in-time binary translation of 64-bit MIPS-IV machine code to x86."))
 	};
-	
+
 	const RadioPanelItem tbl_CpuTypes_IOP[] =
 	{
 		RadioPanelItem(_("Interpreter"))
@@ -143,7 +143,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 		.SetToolTip(_("Performs just-in-time binary translation of 32-bit MIPS-I machine code to x86."))
 	};
 
-	
+
 	m_panel_RecEE	= &(new pxRadioPanel( this, tbl_CpuTypes_EE ))->SetDefaultItem( 1 );
 	m_panel_RecIOP	= &(new pxRadioPanel( this, tbl_CpuTypes_IOP ))->SetDefaultItem( 1 );
 
@@ -189,7 +189,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 
 		RadioPanelItem(_("microVU Recompiler"))
 		.SetToolTip(_("New Vector Unit recompiler with much improved compatibility. Recommended.")),
-		
+
 		RadioPanelItem(_("superVU Recompiler [legacy]"))
 		.SetToolTip(_("Useful for diagnosing bugs or clamping issues in the new mVU recompiler."))
 	};

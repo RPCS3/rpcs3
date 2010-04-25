@@ -68,7 +68,7 @@ public:
     int GetScrollPageSize(int orient) const;
     void SetScrollPageSize(int orient, int pageSize);
 
-    // get the number of lines the window can scroll, 
+    // get the number of lines the window can scroll,
     // returns 0 if no scrollbars are there.
     int GetScrollLines( int orient ) const;
 

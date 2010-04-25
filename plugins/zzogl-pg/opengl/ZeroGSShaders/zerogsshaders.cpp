@@ -66,7 +66,7 @@ void LoadShader(int index, const char* pshader, CGprofile prof, vector<const cha
 
 	if( !cgIsProgramCompiled(prog) )
 		cgCompileProgram(prog);
-	
+
 	const char* pstr = cgGetProgramString(prog, CG_COMPILED_PROGRAM);
 
 	const char* pprog = strstr(pstr, "#program");
@@ -88,7 +88,7 @@ void LoadShader(int index, const char* pshader, CGprofile prof, vector<const cha
 	SHADERINFO info;
 	info.type = 0;
 	info.buf.resize(strlen(pstr)+1);
-	
+
 	// change the program name to main
 	memset(&info.buf[0], 0, info.buf.size());
 	memcpy(&info.buf[0], pstr, pprog-pstr);
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	fclose(fsrc);
-	
+
 	g_cgcontext = cgCreateContext();
 	if( !cgIsContext(g_cgcontext) ) {
 		printf("failed to create cg context\n");
@@ -198,14 +198,14 @@ int main(int argc, char** argv)
 
 	printf("creating shaders, note that ctx0/ps2hw_ctx.fx, and ctx1/ps2hw_ctx.fx are required\n");
 	vmacros.resize(0);
-		
+
 	for(int texwrap = 0; texwrap < NUM_TEXWRAPS; ++texwrap ) {
 
 		if( g_pPsTexWrap[texwrap] != NULL )
 			vmacros.push_back(g_pPsTexWrap[texwrap]);
 
 		for(int context = 0; context < 2; ++context) {
-			
+
 			for(int texfilter = 0; texfilter < NUM_FILTERS; ++texfilter) {
 				for(int fog = 0; fog < 2; ++fog ) {
 					for(int writedepth = 0; writedepth < 2; ++writedepth ) {
@@ -219,7 +219,7 @@ int main(int argc, char** argv)
 								vmacros.push_back("-DTEST_AEM");
 
 							for(int exactcolor = 0; exactcolor < 2; ++exactcolor ) {
-								
+
 								if( exactcolor )
 									vmacros.push_back("-DEXACT_COLOR");
 
@@ -295,13 +295,13 @@ int main(int argc, char** argv)
 	// create the database
 
 	int num = (int)mapShaders.size();
-	
+
 	// first compress
 	vector<char> buffer;
 	buffer.reserve(10000000); // 10mb
 	buffer.resize(sizeof(SHADERHEADER)*num);
 
-	i = 0;	
+	i = 0;
 	for(map<int, SHADERINFO>::iterator it = mapShaders.begin(); it != mapShaders.end(); ++it, ++i) {
 		SHADERHEADER h;
 		h.index = it->first | it->second.type;

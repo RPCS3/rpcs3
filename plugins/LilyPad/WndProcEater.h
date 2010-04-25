@@ -35,7 +35,7 @@ public:
 	void Eat(ExtraWndProc proc, DWORD flags);
 	void ReleaseExtraProc(ExtraWndProc proc);
 	void Release();
-	
+
 	LRESULT _OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 

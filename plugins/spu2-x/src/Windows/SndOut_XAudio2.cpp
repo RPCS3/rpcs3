@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -85,7 +85,7 @@ private:
 		CRITICAL_SECTION cs;
 
 	public:
-		int GetEmptySampleCount() 
+		int GetEmptySampleCount()
 		{
 			XAUDIO2_VOICE_STATE state;
 			pSourceVoice->GetState( &state );
@@ -103,14 +103,14 @@ private:
 			m_BufferSizeBytes( m_BufferSize * sizeof(s16) )
 		{
 		}
-		
+
 		virtual void Init( IXAudio2* pXAudio2 ) = 0;
-		
+
 	protected:
 		// Several things must be initialized separate of the constructor, due to the fact that
 		// virtual calls can't be made from the constructor's context.
 		void _init( IXAudio2* pXAudio2, uint chanConfig )
-		{			
+		{
 			WAVEFORMATEXTENSIBLE wfx;
 
 			memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE));
@@ -163,10 +163,10 @@ private:
 		STDMETHOD_(void, OnVoiceProcessingPassEnd) () {}
 		STDMETHOD_(void, OnStreamEnd) () {}
 		STDMETHOD_(void, OnBufferStart) ( void* ) {}
-		STDMETHOD_(void, OnLoopEnd) ( void* ) {}   
+		STDMETHOD_(void, OnLoopEnd) ( void* ) {}
 		STDMETHOD_(void, OnVoiceError) (THIS_ void* pBufferContext, HRESULT Error) { };
 	};
-	
+
 	template< typename T >
 	class StreamingVoice : public BaseStreamingVoice
 	{
@@ -175,7 +175,7 @@ private:
 			BaseStreamingVoice( sizeof(T) / sizeof( s16 ) )
 		{
 		}
-		
+
 		virtual ~StreamingVoice()
 		{
 			IXAudio2SourceVoice* killMe = pSourceVoice;
@@ -297,7 +297,7 @@ public:
 					ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
 					voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
 				break;
-							
+
 				case 5:
 					ConLog( "* SPU2 > 4.1 speaker expansion enabled.\n" );
 					voiceContext = new StreamingVoice<Stereo41Out16>( pXAudio2 );
@@ -315,7 +315,7 @@ public:
 					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
 				break;
 			}
-			
+
 			voiceContext->Init( pXAudio2 );
 		}
 		catch( Exception::XAudio2Error& ex )
@@ -364,7 +364,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() 
+	int GetEmptySampleCount()
 	{
 		if( voiceContext == NULL ) return 0;
 		return voiceContext->GetEmptySampleCount();
@@ -383,7 +383,7 @@ public:
 	void ReadSettings()
 	{
 	}
-	
+
 	void WriteSettings() const
 	{
 	}

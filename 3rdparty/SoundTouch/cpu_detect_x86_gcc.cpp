@@ -2,7 +2,7 @@
 ///
 /// Generic version of the x86 CPU extension detection routine.
 ///
-/// This file is for GNU & other non-Windows compilers, see 'cpu_detect_x86_win.cpp' 
+/// This file is for GNU & other non-Windows compilers, see 'cpu_detect_x86_win.cpp'
 /// for the Microsoft compiler version.
 ///
 /// Author        : Copyright (c) Olli Parviainen
@@ -129,7 +129,7 @@ uint detectCPUextensions(void)
       : "=r" (res)
       : /* no inputs */
       : "%edx", "%eax", "%ecx", "%esi" );
-      
+
     return res & ~_dwDisabledISA;
 #endif
 }

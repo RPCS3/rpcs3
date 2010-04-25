@@ -36,7 +36,7 @@
 /////////////////////////////////////////////////////////
 
 int        iCD_AD=-1;                                  // drive address
-int        iCD_TA=-1;               
+int        iCD_TA=-1;
 int        iCD_LU=-1;
 int        iRType=0;                                   // read mode
 int        iUseSpeedLimit=0;                           // speed limit use
@@ -87,7 +87,7 @@ unsigned long time2addr(unsigned char *time)
  addr =  time[0]*100;
  addr += time[1];
  addr *= 60;
- 
+
  addr = (addr + time[2])*75;
  addr += time[3];
  addr -= 150;
@@ -118,7 +118,7 @@ unsigned long reOrder(unsigned long value)
 unsigned long reOrder(unsigned long value)
 {
 #pragma warning (disable: 4035)
-   __asm 
+   __asm
     {
      mov eax,value
      bswap eax
@@ -182,7 +182,7 @@ void WaitUntilDriveIsReady(void)
  if(iNoWait==0)
   {
    while(TestSCSIUnitReady()==0) Sleep(500);
-  } 
+  }
 }
 
 /////////////////////////////////////////////////////////
@@ -191,7 +191,7 @@ void SetGenCDSpeed(int iReset)
 {
  if(iUseSpeedLimit)
   {
-   if(bDoWaiting)                                      // still a command running? wait 
+   if(bDoWaiting)                                      // still a command running? wait
     {WaitGenEvent(0xFFFFFFFF);bDoWaiting=FALSE;}
 
    if(iReset) SetSCSISpeed(0xFFFF);
@@ -228,7 +228,7 @@ void GetBESubReadFunc(void)
       pReadFunc  = ReadSCSI_BE_Sub_1;                  // ---> wow, byte is ok
     }
   }
- free(pB);                                            
+ free(pB);
 }
 
 /////////////////////////////////////////////////////////
@@ -291,7 +291,7 @@ int OpenGenCD(int iA,int iT,int iL)
 
    if(iInterfaceMode==3)                               // special ioctl RAW mode?
     {                                                  // -> get special reading funcs (non-scsi!)
-     if(iUseSubReading==1)                         
+     if(iUseSubReading==1)
           pReadFunc  = ReadIOCTL_Raw_Sub;
      else pReadFunc  = ReadIOCTL_Raw;
 
@@ -307,7 +307,7 @@ int OpenGenCD(int iA,int iT,int iL)
 
  if(CheckSCSIReadMode()==SS_COMP)
   WaitUntilDriveIsReady();
- else 
+ else
   {
    CloseIOCTLHandle();
    return -3;
@@ -322,7 +322,7 @@ void CloseGenCD(void)
 {
  iCDROK=0;                                             // no more cd available
  if(pDeInitFunc) pDeInitFunc();                        // deinit, if needed
- pDeInitFunc = NULL;                
+ pDeInitFunc = NULL;
  pReadFunc   = ReadSCSI_Dummy;
  CloseIOCTLHandle();                                   // close ioctl drive file (if used)
 }

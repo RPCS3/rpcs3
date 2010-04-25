@@ -332,7 +332,7 @@ void switch(){
 		hp=getHighestUsed();
 		if (hp<128){
 			if (unk3 & 4)
-				Kprintf(" readyq = %x, newrun = %x:%d, prio = %d", 
+				Kprintf(" readyq = %x, newrun = %x:%d, prio = %d",
 					&prio_lists[hp], prio_lists[hp].next, prio_lists[hp].next->id, hp);
 			unqueue(prio_lists[hp].next, hp);
 			prio_lists[hp].next->status=THS_RUN;
@@ -561,7 +561,7 @@ int StartThreadArgs(int thid,int args,void *argp){
 		CpuResumeIntr(x);
 		return KE_NOT_DORMANT;
 	}
-	
+
 	_argp=th->stack + ((th->thp_stackSize >> 2) - ((args+3) >> 2)) << 2
 	if (args>0 && argp)
 		memcpy(_argp, argp, args);

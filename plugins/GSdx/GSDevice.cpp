@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -23,7 +23,7 @@
 #include "GSdx.h"
 #include "GSDevice.h"
 
-GSDevice::GSDevice() 
+GSDevice::GSDevice()
 	: m_wnd(NULL)
 	, m_vsync(false)
 	, m_rbswapped(false)
@@ -41,12 +41,12 @@ GSDevice::GSDevice()
 	m_msaa_desc.Quality = 0;
 }
 
-GSDevice::~GSDevice() 
+GSDevice::~GSDevice()
 {
 	for_each(m_pool.begin(), m_pool.end(), delete_object());
-	
+
 	delete m_backbuffer;
-	delete m_merge; 
+	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
 	delete m_1x1;
@@ -62,11 +62,11 @@ bool GSDevice::Create(GSWnd* wnd)
 bool GSDevice::Reset(int w, int h)
 {
 	for_each(m_pool.begin(), m_pool.end(), delete_object());
-	
+
 	m_pool.clear();
-	
+
 	delete m_backbuffer;
-	delete m_merge; 
+	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
 	delete m_1x1;
@@ -197,7 +197,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 	// KH:COM crashes at startup when booting *through the bios* due to m_merge being NULL.
 	// (texture appears to be non-null, and is being re-created at a size around like 1700x340,
 	// dunno if that's relevant) -- air
-	
+
 	if(m_merge)
 	{
 		GSTexture* tex[2] = {NULL, NULL};

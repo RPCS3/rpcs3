@@ -52,7 +52,7 @@ int GetSCSIDevice(int iA,int iT,int iL)
 
  dwStatus=pSendASPI32Command((LPSRB)&s);
 
- if(dwStatus==SS_PENDING) 
+ if(dwStatus==SS_PENDING)
   {WaitGenEvent(30000);dwStatus=s.SRB_Status;}
 
  if(dwStatus==SS_COMP) return s.SRB_DeviceType;
@@ -163,7 +163,7 @@ int GetSCSICDDrives(char * pDList)
           sd.SRB_DeviceType==DTYPE_CDROM)
         {
          memset(&s,0,sizeof(s));
- 
+
          s.SRB_Cmd        = SC_EXEC_SCSI_CMD;
          s.SRB_HaId       = iA;
          s.SRB_Target     = iT;
@@ -189,7 +189,7 @@ int GetSCSICDDrives(char * pDList)
            szBuf[31]=0;
            for(i=32;i<37;i++) if(szBuf[i]==' ') {szBuf[i]=0;break;}
            szBuf[36]=0;
-           wsprintf(p,"[%d:%d:%d] %s %s V%s", 
+           wsprintf(p,"[%d:%d:%d] %s %s V%s",
             iA,iT,iL,&szBuf[8],&szBuf[16],&szBuf[32]);
            iCnt++;
            p+=strlen(p)+1;
@@ -366,7 +366,7 @@ DWORD SetSCSISpeed(DWORD dwSpeed)
 
  ResetEvent(hEvent);
  dwStatus=pSendASPI32Command((LPSRB)&s);
- 
+
  if(dwStatus==SS_PENDING)
   WaitGenEvent(WAITFOREVER);
 
@@ -381,8 +381,8 @@ DWORD SetSCSISpeed(DWORD dwSpeed)
 // all the different SCSI read commands can be found here
 // 'bWait' is a flag, if the command should wait until
 // completed, or if the func can return as soon as possible
-// (async reading). Attention: 'bWait' is not really used 
-// in the Sub-channel commands yet (sub is done always 
+// (async reading). Attention: 'bWait' is not really used
+// in the Sub-channel commands yet (sub is done always
 // blocking, and just 'one sector' reads are done, caching=0)
 /////////////////////////////////////////////////////////
 
@@ -514,7 +514,7 @@ DWORD ReadSCSI_BE_Sub_1(BOOL bWait,FRAMEBUF * f)
 
  ResetEvent(hEvent);
  dwStatus=pSendASPI32Command((LPSRB)&sx);
- 
+
  if(dwStatus==SS_PENDING)
   WaitGenEvent(WAITSUB);
 
@@ -531,7 +531,7 @@ DWORD ReadSCSI_BE_Sub_1(BOOL bWait,FRAMEBUF * f)
 /////////////////////////////////////////////////////////
 // 28: used by most SCSI drives
 /////////////////////////////////////////////////////////
-              
+
 DWORD InitSCSI_28_2(void)
 {
  SRB_ExecSCSICmd s;DWORD dwStatus;
@@ -555,7 +555,7 @@ DWORD InitSCSI_28_2(void)
    s.CDBByte[0]     = 0x15;
    s.CDBByte[1]     = 0x10;
    s.CDBByte[4]     = 0x14;
-   
+
    ResetEvent(hEvent);
 
    dwStatus=pSendASPI32Command((LPSRB)&s);
@@ -565,7 +565,7 @@ DWORD InitSCSI_28_2(void)
    if(s.SRB_Status!=SS_COMP)
     return SS_ERR;
   }
-                 
+
  pDeInitFunc = DeInitSCSI_28;
 
  return s.SRB_Status;
@@ -608,7 +608,7 @@ DWORD InitSCSI_28_1(void)
 /////////////////////////////////////////////////////////
 
 DWORD InitSCSI_28_2048(void)
-{  
+{
  SRB_ExecSCSICmd s;DWORD dwStatus;
  BYTE init1[] = { 0, 0, 0, 0x08, 0, 0, 0, 0, 0, 0, 0x08, 0x0 };
 
@@ -907,11 +907,11 @@ DWORD ReadSCSI_28_Sub(BOOL bWait,FRAMEBUF * f)
  memcpy(&SubCData[12],&tbuf[2352],16);
 
  return SS_COMP;
-}                            
+}
 
 
 /////////////////////////////////////////////////////////
-// various simple scsi sub data read funcs... used for 
+// various simple scsi sub data read funcs... used for
 // ripping and subread checking... first 2352 bytes can
 // be trash after read, only the bytes after are important
 /////////////////////////////////////////////////////////
@@ -1059,13 +1059,13 @@ DWORD CheckSCSIReadMode(void)
  DWORD dwStatus;int i,j,k,iCnt;char * p;
  int iModes[MAXMODES]={MODE_BE_2,MODE_BE_1,MODE_28_1,MODE_28_2,MODE_28_2048,MODE_28_2048_Ex};
  int iBlock[MAXMODES]={2352,     2352,     2352,     2352,     2048,        2048};
- unsigned char cdb[3000];   
+ unsigned char cdb[3000];
  FRAMEBUF * f=(FRAMEBUF *)cdb;
 
  for(i=0;i<MAXMODES;i++)                               // loop avail read modes
   {
    f->dwFrame    = 16;                                 // we check on addr 16 (should be available on all ps2 cds/dvds)
-   f->dwFrameCnt = 1;  
+   f->dwFrameCnt = 1;
    f->dwBufLen   = iBlock[i];
 
    pDeInitFunc = NULL;
@@ -1077,21 +1077,21 @@ DWORD CheckSCSIReadMode(void)
      memset(f->BufData,0xAA,f->dwBufLen);              // fill buf with AA
      dwStatus=pReadFunc(TRUE,f);                       // do the read
 
-#ifdef DBGOUT  	 
+#ifdef DBGOUT
 auxprintf("status %d\n",dwStatus);
 #endif
 
      if(dwStatus!=SS_COMP) continue;                   // error? try again
 
-     p=&(f->BufData[0]);                               
+     p=&(f->BufData[0]);
 
-#ifdef DBGOUT  	 
+#ifdef DBGOUT
 auxprintf("check mode %d\n",i);
 #endif
 
      for(k=0,iCnt=0;k<(int)f->dwBufLen;k+=4,p+=4)      // now check the returned data
       {
-#ifdef DBGOUT  	 
+#ifdef DBGOUT
 // auxprintf("%08x ",*((DWORD *)p));
 #endif
 
@@ -1109,17 +1109,17 @@ auxprintf("check mode %d\n",i);
        if(iUsedBlockSize==2352)
             iUsedMode=CDVD_MODE_2352;
        else iUsedMode=CDVD_MODE_2048;
-       
-#ifdef DBGOUT  	 
+
+#ifdef DBGOUT
 auxprintf("mode found %d\n",i);
 #endif
-       
+
        return dwStatus;                                // -> bye
       }
     }
    if(pDeInitFunc) pDeInitFunc();                      // deinit, try next mode
   }
-  
+
  return dwStatus;
 }
 

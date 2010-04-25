@@ -1615,7 +1615,7 @@ wxString& wxString::MakeLower()
 
 // some compilers (VC++ 6.0 not to name them) return true for a call to
 // isspace('\xEA') in the C locale which seems to be broken to me, but we have
-// to live with this by checking that the character is a 7 bit one - even if 
+// to live with this by checking that the character is a 7 bit one - even if
 // this may fail to detect some spaces (I don't know if Unicode doesn't have
 // space-like symbols somewhere except in the first 128 chars), it is arguably
 // still better than trimming away accented letters
@@ -1860,7 +1860,7 @@ int wxString::Printf(const wxChar *pszFormat, ...)
     an undersized buffer and no other errno are defined we treat those two
     as meaning hard errors and everything else gets the old behavior which
     is to keep looping and increasing buffer size until the function succeeds.
- 
+
     In practice it's impossible to determine before compilation which behavior
     may be used.  The vswprintf function may have vsnprintf-like behavior or
     vice-versa.  Behavior detected on one release can theoretically change
@@ -1948,7 +1948,7 @@ int wxString::PrintfV(const wxChar* pszFormat, va_list argptr)
         else if ( len >= size )
         {
 #if wxUSE_WXVSNPRINTF
-            // we know that our own implementation of wxVsnprintf() returns 
+            // we know that our own implementation of wxVsnprintf() returns
             // size+1 when there's not enough space but that's not the size
             // of the required buffer!
             size *= 2;      // so we just double the current size of the buffer
@@ -1980,7 +1980,7 @@ int wxString::PrintfV(const wxChar* pszFormat, va_list argptr)
 
 	//if( capacity() - 128 >= length() )		// this line added by air, as proposed above.
     //	Shrink();
-    
+
     return length();
 }
 

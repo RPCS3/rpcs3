@@ -1,6 +1,6 @@
 /*  GSnull
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -36,7 +36,7 @@ LRESULT CALLBACK MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int GSOpenWindow(void *pDsp, char *Title)
 {
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L, 
+	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L,
 					GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
 					"PS2EMU_GSNULL", NULL };
 	RegisterClassEx( &wc );
@@ -44,7 +44,7 @@ int GSOpenWindow(void *pDsp, char *Title)
 	GShwnd = CreateWindowEx( WS_EX_CLIENTEDGE, "PS2EMU_GSNULL", Title,
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 240, 120, NULL, NULL, wc.hInstance, NULL);
 
-	if(GShwnd == NULL) 
+	if(GShwnd == NULL)
 	{
 		GS_LOG("Failed to create window. Exiting...");
 		return -1;

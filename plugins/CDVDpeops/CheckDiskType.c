@@ -22,11 +22,11 @@ int CheckDiskType(int baseType){
 		else
 			return CDVD_TYPE_DVDV;
 	}
-	
+
 	f=CDVDFS_open("SYSTEM.CNF;1", 1);
 	CDVDFS_read(f, buffer, 256);
 	CDVDFS_close(f);
-	
+
 	buffer[tocEntry.fileSize]='\0';
 
 	pos=strstr(buffer, "BOOT2");

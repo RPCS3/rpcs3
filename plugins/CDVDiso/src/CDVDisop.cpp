@@ -154,7 +154,7 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 		char temp[256];
 
 		CfgOpenFile();
-		
+
 		LoadConf();
 		strcpy(temp, IsoFile);
 		*IsoFile = 0;
@@ -186,7 +186,7 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 		_makepath(fname_only, NULL, NULL, fname, NULL);
 #else
 		char* p, *plast;
-		
+
 		plast = p = strchr(IsoFile, '/');
 		while (p != NULL)
 		{
@@ -196,13 +196,13 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 
 		// Lets not create dumps in the plugin directory.
 		strcpy(fname_only, "../");
-		if (plast != NULL) 
+		if (plast != NULL)
 			strcat(fname_only, plast + 1);
-		else 
+		else
 			strcat(fname_only, IsoFile);
-	
+
 		plast = p = strchr(fname_only, '.');
-		
+
 		while (p != NULL)
 		{
 			plast = p;
@@ -345,7 +345,7 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 						break;
 				}
 				free(tempbuffer);*/
-				
+
 				uint midsector = (iso->blocks / 2) & ~0xf;
 				uint deviation = 0;
 

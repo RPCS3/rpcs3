@@ -29,13 +29,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -164,7 +164,7 @@ void PaUtil_InitializeStreamRepresentation(
         PaUtilStreamInterface *streamInterface,
         PaStreamCallback *streamCallback,
         void *userData );
-        
+
 
 /** Clean up a PaUtilStreamRepresentation structure previously initialized
  by a call to PaUtil_InitializeStreamRepresentation.
@@ -198,7 +198,7 @@ PaError PaUtil_ValidateStreamPointer( PaStream *stream );
     PA_STREAM_REP( (stream) )->streamInterface
 
 
-    
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

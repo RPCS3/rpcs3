@@ -26,7 +26,7 @@
 #define GIF_CTRL		*(volatile int*)0xB0003000
 
 #define GIF_FIFO		*(volatile u128*)0xB0006000
-	
+
 //SIF0
 #define D5_CHCR			*(volatile int*)0xB000C000
 #define D5_MADR			*(volatile int*)0xB000C010
@@ -383,7 +383,7 @@ int  _iSignalSema(int sid);
 int  _PollSema(int sid);
 int  _ReferSemaStatus(int sid, struct SemaParam *sema);
 int  _DeleteEventFlag();
-void*_InitializeMainThread(u32 gp, void *stack, int stack_size, 
+void*_InitializeMainThread(u32 gp, void *stack, int stack_size,
 						char *args, int root);
 void *_InitializeHeapArea(void *heap_base, int heap_size);
 void *_EndOfHeap();

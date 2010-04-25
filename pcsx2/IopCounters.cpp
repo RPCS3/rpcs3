@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -26,7 +26,7 @@
 /* Config.PsxType == 1: PAL:
 	 VBlank interlaced		50.00 Hz
 	 VBlank non-interlaced	49.76 Hz
-	 HBlank					15.625 KHz 
+	 HBlank					15.625 KHz
    Config.PsxType == 0: NSTC
 	 VBlank interlaced		59.94 Hz
 	 VBlank non-interlaced	59.82 Hz
@@ -90,7 +90,7 @@ static void _rcntSet( int cntidx )
 	c = (u64)((overflowCap - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
 	c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
 
-	if(c < (u64)psxNextCounter) 
+	if(c < (u64)psxNextCounter)
 	{
 		psxNextCounter = (u32)c;
 		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
@@ -102,7 +102,7 @@ static void _rcntSet( int cntidx )
 		c = (s64)((counter.target - counter.count) * counter.rate) - (psxRegs.cycle - counter.sCycleT);
 		c += psxRegs.cycle - psxNextsCounter;		// adjust for time passed since last rcntUpdate();
 
-	if(c < (u64)psxNextCounter) 
+	if(c < (u64)psxNextCounter)
 	{
 		psxNextCounter = (u32)c;
 		psxSetNextBranch( psxNextsCounter, psxNextCounter );	//Need to update on counter resets/target changes
@@ -180,7 +180,7 @@ static void __fastcall _rcntTestTarget( int i )
 
 		psxHu32(0x1070) |= psxCounters[i].interrupt;
 	}
-	
+
 	if (psxCounters[i].mode & 0x08)
 	{
 		// Reset on target
@@ -210,12 +210,12 @@ static __forceinline void _rcntTestOverflow( int i )
 		if(psxCounters[i].mode & 0x80)
 			psxCounters[i].mode &= ~0x0400; // Interrupt flag
 	}
-	
+
 	// Update count and target.
 	// Count wraps around back to zero, while the target is restored (if needed).
 	// (high bit of the target gets set by rcntWtarget when the target is behind
 	// the counter value, and thus should not be flagged until after an overflow)
-	
+
 	psxCounters[i].count &= maxTarget;
 	psxCounters[i].target &= maxTarget;
 }
@@ -262,7 +262,7 @@ static void _psxCheckStartGate( int i )
 		case 0x0: //GATE_ON_count - stop count on gate start:
 
 			// get the current count at the time of stoppage:
-			psxCounters[i].count = ( i < 3 ) ? 
+			psxCounters[i].count = ( i < 3 ) ?
 				psxRcntRcount16( i ) : psxRcntRcount32( i );
 			psxCounters[i].mode |= IOPCNT_STOPPED;
 		return;
@@ -298,7 +298,7 @@ static void _psxCheckEndGate(int i)
 		break;
 
 		case 0x2: //GATE_ON_Clear_OFF_Start - start counting on gate start, stop on gate end
-			psxCounters[i].count = ( i < 3 ) ? 
+			psxCounters[i].count = ( i < 3 ) ?
 				psxRcntRcount16( i ) : psxRcntRcount32( i );
 			psxCounters[i].mode |= IOPCNT_STOPPED;
 		return;	// do not set the counter
@@ -421,7 +421,7 @@ void psxRcntUpdate()
 	// Do target/overflow testing
 	// Optimization Note: This approach is very sound.  Please do not try to unroll it
 	// as the size of the Test functions will cause code cache clutter and slowness.
-	
+
 	for( i=0; i<6; i++ )
 	{
 		// don't do target/oveflow checks for hblankers.  Those
@@ -431,16 +431,16 @@ void psxRcntUpdate()
 
 		_rcntTestTarget( i );
 		_rcntTestOverflow( i );
-		
+
 		// perform second target test because if we overflowed above it's possible we
 		// already shot past our target if it was very near zero.
 
 		//if( psxCounters[i].count >= psxCounters[i].target ) _rcntTestTarget( i );
 	}
-	
+
 
 	if(SPU2async)
-	{	
+	{
 		const s32 difference = psxRegs.cycle - psxCounters[6].sCycleT;
 		s32 c = psxCounters[6].CycleT;
 
@@ -521,7 +521,7 @@ void psxRcntWcount32(int index, u32 value)
 
 	pxAssert( index >= 3 && index < 6 );
 	PSXCNT_LOG("IOP Counter[%d] writeCount32 = %x", index, value);
-	
+
 	if(psxCounters[index].rate != PSXHBLANK)
 	{
 		// Re-adjust the sCycleT to match where the counter is currently
@@ -532,7 +532,7 @@ void psxRcntWcount32(int index, u32 value)
 	}
 
 	psxCounters[index].count = value & 0xffffffff;
-	psxCounters[index].target &= 0xffffffff;	
+	psxCounters[index].target &= 0xffffffff;
 	_rcntSet( index );
 }
 
@@ -659,7 +659,7 @@ void psxRcntWtarget16(int index, u32 value)
 	// protect the target from an early arrival.
 	// if the target is behind the current count, then set the target overflow
 	// flag, so that the target won't be active until after the next overflow.
-	
+
 	if(psxCounters[index].target <= psxRcntCycles(index))
 		psxCounters[index].target |= IOPCNT_FUTURE_TARGET;
 
@@ -708,7 +708,7 @@ u16 psxRcntRcount16(int index)
 u32 psxRcntRcount32(int index)
 {
 	u32 retval = (u32)psxCounters[index].count;
-	
+
 	pxAssert( index >= 3 && index < 6 );
 
 	PSXCNT_LOG("IOP Counter[%d] readCount32 = %lx", index, retval );
@@ -755,7 +755,7 @@ void SaveStateBase::psxRcntFreeze()
     Freeze(psxCounters);
 	Freeze(psxNextCounter);
 	Freeze(psxNextsCounter);
-	
+
 	if( IsLoading() )
 		psxRcntSetGates();
 }

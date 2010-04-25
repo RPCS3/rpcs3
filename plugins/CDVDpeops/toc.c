@@ -52,17 +52,17 @@ void ReadTOC(void)
 
  if(dwStatus!=SS_COMP) return;
 
-#ifdef DBGOUT  	 
+#ifdef DBGOUT
  auxprintf("TOC Last %d, max %08x,%08x\n",sTOC.cLastTrack,sTOC.tracks[sTOC.cLastTrack].lAddr,reOrder(sTOC.tracks[sTOC.cLastTrack].lAddr));
-#endif 
+#endif
                                                       // re-order it to psemu pro standards
  addr2time(reOrder(sTOC.tracks[sTOC.cLastTrack].lAddr),xbuffer);
 
-#ifdef DBGOUT  	
+#ifdef DBGOUT
  auxprintf("TOC %d, %d, %d, %d\n",
            xbuffer[0],xbuffer[1],xbuffer[2],xbuffer[3]  );
 #endif
-           
+
  xbuffer[0]=itob(xbuffer[0]);
  xbuffer[1]=itob(xbuffer[1]);
  xbuffer[2]=itob(xbuffer[2]);

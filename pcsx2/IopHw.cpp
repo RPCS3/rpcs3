@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -37,7 +37,7 @@ void psxHwReset() {
 	//sio2Reset();
 }
 
-__forceinline u8 psxHw4Read8(u32 add) 
+__forceinline u8 psxHw4Read8(u32 add)
 {
 	u16 mem = add & 0xFF;
 	u8 ret = cdvdRead(mem);
@@ -45,10 +45,10 @@ __forceinline u8 psxHw4Read8(u32 add)
 	return ret;
 }
 
-__forceinline void psxHw4Write8(u32 add, u8 value) 
+__forceinline void psxHw4Write8(u32 add, u8 value)
 {
 	u8 mem = (u8)add;	// only lower 8 bits are relevant (cdvd regs mirror across the page)
-	cdvdWrite(mem, value); 
+	cdvdWrite(mem, value);
 	PSXHW_LOG("HwWrite8 to Cdvd [segment 0x1f40], addr 0x%02x = 0x%02x", mem, value);
 }
 

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -118,7 +118,7 @@ protected:
 	int m_idx;		// current read/write index of the allocation
 	int m_sectid;
 	int m_pid;
-	
+
 	bool m_DidBios;
 
 public:
@@ -139,7 +139,7 @@ public:
 	// (loading) a state!
 	virtual void FreezeAll();
 
-	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.  
+	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.
 	// For dynamically allocated pointers use FreezeMem instead.
 	template<typename T>
 	void Freeze( T& data )
@@ -201,7 +201,7 @@ protected:
 	void vuMicroFreeze();
 	void vif0Freeze();
 	void vif1Freeze();
-#ifdef ENABLE_NEW_IOPDMA	
+#ifdef ENABLE_NEW_IOPDMA
 	void iopDmacFreeze();
 #endif
 	void sifFreeze();
@@ -250,7 +250,7 @@ public:
 	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
 	bool SeekToSection( PluginsEnum_t pid );
-	
+
 	bool IsSaving() const { return false; }
 	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
 };

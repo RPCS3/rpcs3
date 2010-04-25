@@ -63,7 +63,7 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 
 extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
 extern bool THR_bShift;
-extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path 
+extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
 /////////////////////
 // define when releasing
@@ -167,7 +167,7 @@ typedef struct {
 #define GSOPTION_LOADED		0x8000
 
 //Configuration values.
-typedef struct 
+typedef struct
 {
 	u8 mrtdepth; // write color in render target
 	u8 interlace; // intelacing mode 0, 1, 3-off
@@ -184,11 +184,11 @@ typedef struct
 } GSconf;
 
 #ifdef __LINUX__
-static u32 __attribute__((unused)) lasttime = 0; 
+static u32 __attribute__((unused)) lasttime = 0;
 static u32 __attribute__((unused)) BigTime = 5000;
 static bool __attribute__((unused)) SPAM_PASS;
 #else
-static u32 lasttime = 0; 
+static u32 lasttime = 0;
 static u32 BigTime = 5000;
 static bool SPAM_PASS;
 #endif
@@ -328,7 +328,7 @@ public:
 	inline T* operator->() { return ptr; }
 	inline T* get() { return ptr; }
 
-	inline void release() { 
+	inline void release() {
 		if( ptr != NULL ) { ptr->Release(); ptr = NULL; }
 	}
 

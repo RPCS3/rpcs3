@@ -18,25 +18,25 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  template <class T>
  static void __forceinline set_bit(T &value, int bit)
  {
 	 value |= (1 << bit);
  }
- 
+
   template <class T>
  static void __forceinline clear_bit(T &value, int bit)
  {
 	 value &= ~(1 << bit);
  }
- 
+
   template <class T>
  static void __forceinline toggle_bit(T &value, int bit)
  {
 	 value ^= (1 << bit);
  }
- 
+
    template <class T>
  static bool __forceinline test_bit(T &value, int bit)
  {

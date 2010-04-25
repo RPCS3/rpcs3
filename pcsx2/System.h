@@ -47,7 +47,7 @@ public:
 
 	bool IsRecAvailable_EE() const		{ return m_RecSuccessEE; }
 	bool IsRecAvailable_IOP() const		{ return m_RecSuccessIOP; }
-	
+
 	bool IsRecAvailable_MicroVU0() const;
 	bool IsRecAvailable_MicroVU1() const;
 

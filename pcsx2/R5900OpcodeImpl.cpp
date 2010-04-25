@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -76,39 +76,39 @@ namespace R5900
 	//0x00
 		"RFU000_FullReset", "ResetEE",				"SetGsCrt",				"RFU003",
 		"Exit",				"RFU005",				"LoadExecPS2",			"ExecPS2",
-		"RFU008",			"RFU009",				"AddSbusIntcHandler",	"RemoveSbusIntcHandler", 
-		"Interrupt2Iop",	"SetVTLBRefillHandler", "SetVCommonHandler",	"SetVInterruptHandler", 
+		"RFU008",			"RFU009",				"AddSbusIntcHandler",	"RemoveSbusIntcHandler",
+		"Interrupt2Iop",	"SetVTLBRefillHandler", "SetVCommonHandler",	"SetVInterruptHandler",
 	//0x10
 		"AddIntcHandler",	"RemoveIntcHandler",	"AddDmacHandler",		"RemoveDmacHandler",
 		"_EnableIntc",		"_DisableIntc",			"_EnableDmac",			"_DisableDmac",
 		"_SetAlarm",		"_ReleaseAlarm",		"_iEnableIntc",			"_iDisableIntc",
-		"_iEnableDmac",		"_iDisableDmac",		"_iSetAlarm",			"_iReleaseAlarm", 
+		"_iEnableDmac",		"_iDisableDmac",		"_iSetAlarm",			"_iReleaseAlarm",
 	//0x20
-		"CreateThread",			"DeleteThread",		"StartThread",			"ExitThread", 
+		"CreateThread",			"DeleteThread",		"StartThread",			"ExitThread",
 		"ExitDeleteThread",		"TerminateThread",	"iTerminateThread",		"DisableDispatchThread",
 		"EnableDispatchThread",		"ChangeThreadPriority", "iChangeThreadPriority",	"RotateThreadReadyQueue",
-		"iRotateThreadReadyQueue",	"ReleaseWaitThread",	"iReleaseWaitThread",		"GetThreadId", 
+		"iRotateThreadReadyQueue",	"ReleaseWaitThread",	"iReleaseWaitThread",		"GetThreadId",
 	//0x30
 		"ReferThreadStatus","iReferThreadStatus",	"SleepThread",		"WakeupThread",
 		"_iWakeupThread",   "CancelWakeupThread",	"iCancelWakeupThread",	"SuspendThread",
 		"iSuspendThread",   "ResumeThread",		"iResumeThread",	"JoinThread",
-		"RFU060",	    "RFU061",			"EndOfHeap",		 "RFU063", 
+		"RFU060",	    "RFU061",			"EndOfHeap",		 "RFU063",
 	//0x40
-		"CreateSema",	    "DeleteSema",	"SignalSema",		"iSignalSema", 
-		"WaitSema",	    "PollSema",		"iPollSema",		"ReferSemaStatus", 
+		"CreateSema",	    "DeleteSema",	"SignalSema",		"iSignalSema",
+		"WaitSema",	    "PollSema",		"iPollSema",		"ReferSemaStatus",
 		"iReferSemaStatus", "RFU073",		"SetOsdConfigParam", 	"GetOsdConfigParam",
 		"GetGsHParam",	    "GetGsVParam",	"SetGsHParam",		"SetGsVParam",
 	//0x50
-		"RFU080_CreateEventFlag",	"RFU081_DeleteEventFlag", 
-		"RFU082_SetEventFlag",		"RFU083_iSetEventFlag", 
-		"RFU084_ClearEventFlag",	"RFU085_iClearEventFlag", 
-		"RFU086_WaitEventFlag",		"RFU087_PollEventFlag", 
-		"RFU088_iPollEventFlag",	"RFU089_ReferEventFlagStatus", 
-		"RFU090_iReferEventFlagStatus", "RFU091_GetEntryAddress", 
-		"EnableIntcHandler_iEnableIntcHandler", 
-		"DisableIntcHandler_iDisableIntcHandler", 
-		"EnableDmacHandler_iEnableDmacHandler", 
-		"DisableDmacHandler_iDisableDmacHandler", 
+		"RFU080_CreateEventFlag",	"RFU081_DeleteEventFlag",
+		"RFU082_SetEventFlag",		"RFU083_iSetEventFlag",
+		"RFU084_ClearEventFlag",	"RFU085_iClearEventFlag",
+		"RFU086_WaitEventFlag",		"RFU087_PollEventFlag",
+		"RFU088_iPollEventFlag",	"RFU089_ReferEventFlagStatus",
+		"RFU090_iReferEventFlagStatus", "RFU091_GetEntryAddress",
+		"EnableIntcHandler_iEnableIntcHandler",
+		"DisableIntcHandler_iDisableIntcHandler",
+		"EnableDmacHandler_iEnableDmacHandler",
+		"DisableDmacHandler_iDisableDmacHandler",
 	//0x60
 		"KSeg0",				"EnableCache",	"DisableCache",			"GetCop0",
 		"FlushCache",			"RFU101",		"CpuConfig",			"iGetCop0",
@@ -116,9 +116,9 @@ namespace R5900
 		"SetCPUTimerHandler",	"SetCPUTimer",	"SetOsdConfigParam2",	"SetOsdConfigParam2",
 	//0x70
 		"GsGetIMR_iGsGetIMR",				"GsGetIMR_iGsPutIMR",	"SetPgifHandler", 				"SetVSyncFlag",
-		"RFU116",							"print", 				"sceSifDmaStat_isceSifDmaStat", "sceSifSetDma_isceSifSetDma", 
-		"sceSifSetDChain_isceSifSetDChain", "sceSifSetReg",			"sceSifGetReg",					"ExecOSD", 
-		"Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize", 
+		"RFU116",							"print", 				"sceSifDmaStat_isceSifDmaStat", "sceSifSetDma_isceSifSetDma",
+		"sceSifSetDChain_isceSifSetDChain", "sceSifSetReg",			"sceSifGetReg",					"ExecOSD",
+		"Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize",
 	};
 
 namespace Interpreter {
@@ -247,7 +247,7 @@ void SLTU()		{ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (cpuRegs.GPR.r[_Rs
 *********************************************************/
 
 // Signed division "overflows" on (0x80000000 / -1), here (LO = 0x80000000, HI = 0) is returned by MIPS
-// in division by zero on MIPS, it appears that: 
+// in division by zero on MIPS, it appears that:
 // LO gets 1 if rs is negative (and the division is signed) and -1 otherwise.
 // HI gets the value of rs.
 
@@ -274,7 +274,7 @@ void DIV()
 // Result is stored in HI/LO [no arithmetic exceptions]
 void DIVU()
 {
-	if (cpuRegs.GPR.r[_Rt_].UL[0] != 0) 
+	if (cpuRegs.GPR.r[_Rt_].UL[0] != 0)
 	{
 		// note: DIVU has no sign extension when assigning back to 64 bits
 		// note 2: reference material strongly disagrees. (air)
@@ -316,8 +316,8 @@ void MULTU()
 * Load higher 16 bits of the first word in GPR with imm  *
 * Format:  OP rt, immediate                              *
 *********************************************************/
-void LUI() { 
-	if (!_Rt_) return; 
+void LUI() {
+	if (!_Rt_) return;
 	cpuRegs.GPR.r[_Rt_].UD[0] = (s32)(cpuRegs.code << 16);
 }
 
@@ -357,7 +357,7 @@ void DSRL32(){ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = cpuRegs.GPR.r[_Rt_
 void SLLV() { if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].SD[0] = (s32)(cpuRegs.GPR.r[_Rt_].UL[0] << (cpuRegs.GPR.r[_Rs_].UL[0] &0x1f));} // Rd = Rt << rs
 void SRAV() { if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].SD[0] = (s32)(cpuRegs.GPR.r[_Rt_].SL[0] >> (cpuRegs.GPR.r[_Rs_].UL[0] &0x1f));} // Rd = Rt >> rs (arithmetic)
 void SRLV() { if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].SD[0] = (s32)(cpuRegs.GPR.r[_Rt_].UL[0] >> (cpuRegs.GPR.r[_Rs_].UL[0] &0x1f));} // Rd = Rt >> rs (logical)
-void DSLLV(){ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (u64)(cpuRegs.GPR.r[_Rt_].UD[0] << (cpuRegs.GPR.r[_Rs_].UL[0] &0x3f));}  
+void DSLLV(){ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (u64)(cpuRegs.GPR.r[_Rt_].UD[0] << (cpuRegs.GPR.r[_Rs_].UL[0] &0x3f));}
 void DSRAV(){ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].SD[0] = (s64)(cpuRegs.GPR.r[_Rt_].SD[0] >> (cpuRegs.GPR.r[_Rs_].UL[0] &0x3f));}
 void DSRLV(){ if (!_Rd_) return; cpuRegs.GPR.r[_Rd_].UD[0] = (u64)(cpuRegs.GPR.r[_Rt_].UD[0] >> (cpuRegs.GPR.r[_Rs_].UL[0] &0x3f));}
 
@@ -409,7 +409,7 @@ void LH()
 }
 
 void LHU()
-{ 
+{
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 
 	if( addr & 1 )
@@ -435,14 +435,14 @@ void LW()
 }
 
 void LWU()
-{ 
+{
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 
 	if( addr & 3 )
 		throw R5900Exception::AddressError( addr, false );
 
 	u32 temp = memRead32(addr);
-	
+
 	if (!_Rt_) return;
 	cpuRegs.GPR.r[_Rt_].UD[0] = temp;
 }
@@ -462,7 +462,7 @@ void LWL()
 
 	if (!_Rt_) return;
 
-	cpuRegs.GPR.r[_Rt_].SD[0] =	(cpuRegs.GPR.r[_Rt_].SL[0] & LWL_MASK[shift]) | 
+	cpuRegs.GPR.r[_Rt_].SD[0] =	(cpuRegs.GPR.r[_Rt_].SL[0] & LWL_MASK[shift]) |
 								(mem << LWL_SHIFT[shift]);
 
 	/*
@@ -525,7 +525,7 @@ static u64* gpr_GetWritePtr( uint gpr )
 void LD()
 {
     s32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-    
+
 	if( addr & 7 )
 		throw R5900Exception::AddressError( addr, false );
 
@@ -533,7 +533,7 @@ void LD()
 }
 
 static const u64 LDL_MASK[8] =
-{	0x00ffffffffffffffLL, 0x0000ffffffffffffLL, 0x000000ffffffffffLL, 0x00000000ffffffffLL, 
+{	0x00ffffffffffffffLL, 0x0000ffffffffffffLL, 0x000000ffffffffffLL, 0x00000000ffffffffLL,
 	0x0000000000ffffffLL, 0x000000000000ffffLL, 0x00000000000000ffLL, 0x0000000000000000LL
 };
 static const u64 LDR_MASK[8] =
@@ -554,7 +554,7 @@ void LDL()
 	memRead64(addr & ~7, &mem);
 
 	if( !_Rt_ ) return;
-	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UD[0] & LDL_MASK[shift]) | 
+	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UD[0] & LDL_MASK[shift]) |
 								(mem << LDL_SHIFT[shift]);
 }
 
@@ -567,7 +567,7 @@ void LDR()
 	memRead64(addr & ~7, &mem);
 
 	if (!_Rt_) return;
-	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UD[0] & LDR_MASK[shift]) | 
+	cpuRegs.GPR.r[_Rt_].UD[0] =	(cpuRegs.GPR.r[_Rt_].UD[0] & LDR_MASK[shift]) |
 								(mem >> LDR_SHIFT[shift]);
 }
 
@@ -575,25 +575,25 @@ void LQ()
 {
 	// MIPS Note: LQ and SQ are special and "silently" align memory addresses, thus
 	// an address error due to unaligned access isn't possible like it is on other loads/stores.
-	
+
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 	memRead128(addr & ~0xf, gpr_GetWritePtr(_Rt_));
 }
 
 void SB()
-{ 
+{
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	memWrite8(addr, cpuRegs.GPR.r[_Rt_].UC[0]); 
+	memWrite8(addr, cpuRegs.GPR.r[_Rt_].UC[0]);
 }
 
 void SH()
-{ 
+{
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
 
 	if( addr & 1 )
 		throw R5900Exception::AddressError( addr, true );
 
-	memWrite16(addr, cpuRegs.GPR.r[_Rt_].US[0]); 
+	memWrite16(addr, cpuRegs.GPR.r[_Rt_].US[0]);
 }
 
 void SW()
@@ -603,7 +603,7 @@ void SW()
 	if( addr & 3 )
 		throw R5900Exception::AddressError( addr, true );
 
-    memWrite32(addr, cpuRegs.GPR.r[_Rt_].UL[0]); 
+    memWrite32(addr, cpuRegs.GPR.r[_Rt_].UL[0]);
 }
 
 static const u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
@@ -660,11 +660,11 @@ void SD()
 	if( addr & 7 )
 		throw R5900Exception::AddressError( addr, true );
 
-    memWrite64(addr,&cpuRegs.GPR.r[_Rt_].UD[0]); 
+    memWrite64(addr,&cpuRegs.GPR.r[_Rt_].UD[0]);
 }
 
 static const u64 SDL_MASK[8] =
-{	0xffffffffffffff00LL, 0xffffffffffff0000LL, 0xffffffffff000000LL, 0xffffffff00000000LL, 
+{	0xffffffffffffff00LL, 0xffffffffffff0000LL, 0xffffffffff000000LL, 0xffffffff00000000LL,
 	0xffffff0000000000LL, 0xffff000000000000LL, 0xff00000000000000LL, 0x0000000000000000LL
 };
 static const u64 SDR_MASK[8] =
@@ -887,7 +887,7 @@ void MTSA( void ) {
 	cpuRegs.sa = (s32)cpuRegs.GPR.r[_Rs_].SD[0] & 0xf;
 }
 
-// SNY supports three basic modes, two which synchronize memory accesses (related 
+// SNY supports three basic modes, two which synchronize memory accesses (related
 // to the cache) and one which synchronizes the instruction pipeline (effectively
 // a stall in either case).  Our emulation model does not track EE-side pipeline
 // status or stalls, nor does it implement the CACHE.  Thus SYNC need do nothing.
@@ -898,7 +898,7 @@ void SYNC( void )
 // Used to prefetch data into the EE's cache, or schedule a dirty write-back.
 // CACHE is not emulated at this time (nor is there any need to emulate it), so
 // this function does nothing in the context of our emulator.
-void PREF( void ) 
+void PREF( void )
 {
 }
 

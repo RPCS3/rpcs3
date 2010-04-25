@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -41,7 +41,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 //
 
-static struct 
+static struct
 {
 	static const UINT32 revision = 0;
 	static const UINT32 build = 2;
@@ -86,7 +86,7 @@ EXPORT_C_(UINT32) PS2EgetLibVersion2(UINT32 type)
 
 struct XPadButton
 {
-	enum 
+	enum
 	{
 		Select = 0x0001,
 		L3 = 0x0002,
@@ -132,7 +132,7 @@ public:
 		if(now > m_lastpoll + delay)
 		{
 			memset(&m_state, 0, sizeof(m_state));
-			
+
 			m_connected = XInputGetState(m_pad, &m_state) == S_OK; // ERROR_DEVICE_NOT_CONNECTED is not an error, SUCCEEDED(...) won't work here
 
 			m_lastpoll = now;
@@ -181,7 +181,7 @@ public:
 		{
 			m_buttons &= ~flag;
 		}
-		else 
+		else
 		{
 			m_buttons |= flag;
 		}
@@ -195,7 +195,7 @@ public:
 	}
 
 public:
-	XPad(int pad) 
+	XPad(int pad)
 		: m_xinput(pad)
 		, m_ds2native(false)
 		, m_analog(!s_ps2) // defaults to analog off for ps2
@@ -269,7 +269,7 @@ public:
 					vibraton.wLeftMotorSpeed = m_large << 8;
 					vibraton.wRightMotorSpeed = m_small << 8;
 				}
-				
+
 				m_xinput.SetState(vibraton);
 			}
 		}
@@ -312,9 +312,9 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 2: 
+		case 2:
 			return 0x02;
-		case 5: 
+		case 5:
 			return 'Z';
 		}
 
@@ -327,17 +327,17 @@ static class XPadPlugin
 		{
 			switch(index)
 			{
-			case 0: 
+			case 0:
 				return 0xff;
-			case 1: 
+			case 1:
 				return 0xff;
-			case 2: 
+			case 2:
 				return 3;
-			case 3: 
+			case 3:
 				return 0;
-			case 4: 
+			case 4:
 				return 0;
-			case 5: 
+			case 5:
 				return 'Z';
 			}
 		}
@@ -349,10 +349,10 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			m_pad->m_small = value == 1 ? 128 : 0; // RE4 map menu, value = 2
 			break;
-		case 1: 
+		case 1:
 			m_pad->m_large = value;
 			break;
 		}
@@ -364,7 +364,7 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			switch(value)
 			{
 			case 0:
@@ -389,11 +389,11 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
-			// if(!m_pad->m_locked) ? 
+		case 0:
+			// if(!m_pad->m_locked) ?
 			m_pad->m_analog = value == 1;
 			break;
-		case 1: 
+		case 1:
 			m_pad->m_locked = value == 3;
 			break;
 		}
@@ -405,9 +405,9 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			return 3;
-		case 1: 
+		case 1:
 			return 2;
 		case 2:
 			return m_pad->m_analog ? 1 : 0;
@@ -424,7 +424,7 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			m_unknown1 = value;
 			return 0;
 		case 1:
@@ -459,7 +459,7 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			m_unknown3 = value;
 			return 0;
 		case 3:
@@ -473,9 +473,9 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 0: 
+		case 0:
 			return value;
-		case 1: 
+		case 1:
 			m_pad->m_vibration = value == 1;
 			return value;
 		}
@@ -487,7 +487,7 @@ static class XPadPlugin
 	{
 		switch(index)
 		{
-		case 5: 
+		case 5:
 			m_pad->m_ds2native = true;
 			return 'Z';
 		}
@@ -580,7 +580,7 @@ static int s_nRefs = 0;
 static HWND s_hWnd = NULL;
 static WNDPROC s_GSWndProc = NULL;
 
-static class CKeyEventList : protected list<KeyEvent>, protected CCritSec 
+static class CKeyEventList : protected list<KeyEvent>, protected CCritSec
 {
 public:
 	void Push(UINT32 event, UINT32 key)
@@ -604,7 +604,7 @@ public:
 		e = front();
 
 		pop_front();
-		
+
 		return true;
 	}
 

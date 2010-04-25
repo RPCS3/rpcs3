@@ -21,8 +21,8 @@
 // won't be too useful since growing the block buffer will
 // invalidate any pointers pointing to the old block buffer.
 // (so remember to invalidate those block pointers :D)
-// It also deallocates itself on 'delete', so you can 
-// just use 'new' and 'delete' for initialization and 
+// It also deallocates itself on 'delete', so you can
+// just use 'new' and 'delete' for initialization and
 // deletion/cleanup respectfully...
 class BlockBuffer {
 protected:

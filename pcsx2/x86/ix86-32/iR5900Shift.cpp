@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -21,8 +21,8 @@
 #include "iR5900.h"
 
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -87,7 +87,7 @@ void recSRL_const()
 	g_cpuConstRegs[_Rd_].SD[0] = (s32)(g_cpuConstRegs[_Rt_].UL[0] >> _Sa_);
 }
 
-void recSRLs_(int info, int sa) 
+void recSRLs_(int info, int sa)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
@@ -99,7 +99,7 @@ void recSRLs_(int info, int sa)
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
-void recSRL_(int info) 
+void recSRL_(int info)
 {
 	recSRLs_(info, _Sa_);
 }
@@ -112,7 +112,7 @@ void recSRA_const()
 	g_cpuConstRegs[_Rd_].SD[0] = (s32)(g_cpuConstRegs[_Rt_].SL[0] >> _Sa_);
 }
 
-void recSRAs_(int info, int sa) 
+void recSRAs_(int info, int sa)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
@@ -124,7 +124,7 @@ void recSRAs_(int info, int sa)
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
-void recSRA_(int info) 
+void recSRA_(int info)
 {
 	recSRAs_(info, _Sa_);
 }
@@ -147,7 +147,7 @@ void recDSLLs_(int info, int sa)
 	rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
 	rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 	SetMMXstate();
-	
+
 	if( rtreg != rdreg ) MOVQRtoR(rdreg, rtreg);
 	PSLLQItoR(rdreg, sa);
 }
@@ -175,12 +175,12 @@ void recDSRLs_(int info, int sa)
 	rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
 	rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 	SetMMXstate();
-	
+
 	if( rtreg != rdreg ) MOVQRtoR(rdreg, rtreg);
 	PSRLQItoR(rdreg, sa);
 }
 
-void recDSRL_(int info) 
+void recDSRL_(int info)
 {
 	recDSRLs_(info, _Sa_);
 }
@@ -203,11 +203,11 @@ void recDSRAs_(int info, int sa)
 	rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
 	rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 	SetMMXstate();
-	
+
 	if( rtreg != rdreg ) MOVQRtoR(rdreg, rtreg);
 
     if ( sa != 0 ) {
-		t0reg = _allocMMXreg(-1, MMX_TEMP, 0);	
+		t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 		MOVQRtoR(t0reg, rtreg);
 
 		// it is a signed shift
@@ -215,7 +215,7 @@ void recDSRAs_(int info, int sa)
 		PSRLQItoR(rdreg, sa);
 
 		PUNPCKHDQRtoR(t0reg, t0reg); // shift to lower
-		// take lower dword of rdreg and lower dword of t0reg		
+		// take lower dword of rdreg and lower dword of t0reg
 		PUNPCKLDQRtoR(rdreg, t0reg);
 
 		_freeMMXreg(t0reg);
@@ -245,8 +245,8 @@ void recDSLL32s_(int info, int sa)
 		SHL32ItoR( EAX, sa );
 	}
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], 0 );
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EAX );  
-		
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EAX );
+
 }
 
 void recDSLL32_(int info)
@@ -296,7 +296,7 @@ void recDSRA32s_(int info, int sa)
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		
+
 }
 
 void recDSRA32_(int info)
@@ -373,7 +373,7 @@ void recSLLV_constt(int info)
 void recSLLV_(int info)
 {
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	if ( _Rs_ != 0 )	
+	if ( _Rs_ != 0 )
 	{
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 		AND32ItoR( ECX, 0x1f );
@@ -393,7 +393,7 @@ void recSRLV_const()
 }
 
 void recSRLV_consts(int info)
-{ 
+{
 	recSRLs_(info, g_cpuConstRegs[_Rs_].UL[0]&0x1f);
 }
 
@@ -409,9 +409,9 @@ void recSRLV_constt(int info)
 }
 
 void recSRLV_(int info)
-{ 
+{
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	if ( _Rs_ != 0 )	
+	if ( _Rs_ != 0 )
 	{
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 		AND32ItoR( ECX, 0x1f );
@@ -442,7 +442,7 @@ void recSRAV_constt(int info)
 	MOV32ItoR( EAX, g_cpuConstRegs[_Rt_].UL[0] );
 	AND32ItoR( ECX, 0x1f );
 	SAR32CLtoR( EAX );
-	
+
 	eeSignExtendTo(_Rd_);
 }
 
@@ -564,12 +564,12 @@ void recDSRAV_constt(int info)
 	MOVD32RtoMMX(t1reg, EAX);
 	PSUBDRtoR(t1reg, rsreg);
 
-	// right logical shift 
+	// right logical shift
 	PSRLQRtoR(rdreg, rsreg);
 	PSLLQRtoR(t0reg, t1reg); // highest bits
 
 	PORRtoR(rdreg, t0reg);
-	
+
 	_freeMMXreg(t0reg);
 	_freeMMXreg(t1reg);
 	if( rstemp != -1 ) _freeMMXreg(rstemp);
@@ -594,12 +594,12 @@ void recDSRAV_(int info)
 	MOVD32RtoMMX(t1reg, EAX);
 	PSUBDRtoR(t1reg, rsreg);
 
-	// right logical shift 
+	// right logical shift
 	PSRLQRtoR(rdreg, rsreg);
 	PSLLQRtoR(t0reg, t1reg); // highest bits
 
 	PORRtoR(rdreg, t0reg);
-	
+
 	_freeMMXreg(t0reg);
 	_freeMMXreg(t1reg);
 	if( rstemp != -1 ) _freeMMXreg(rstemp);

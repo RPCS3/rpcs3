@@ -140,7 +140,7 @@ public:
             m_graphics->ReleaseHDC(m_hdc);
 #endif
     }
-    
+
     operator HDC() const { return m_hdc; }
 
 private:
@@ -195,7 +195,7 @@ public:
                                   wxHeaderSortIconType sortArrow = wxHDR_SORT_ICON_NONE,
                                   wxHeaderButtonParams* params = NULL);
     virtual int GetHeaderButtonHeight(wxWindow *win);
-    
+
     virtual void DrawTreeItemButton(wxWindow *win,
                                     wxDC& dc,
                                     const wxRect& rect,
@@ -397,7 +397,7 @@ wxRendererXP::DrawHeaderButton(wxWindow *win,
     // NOTE: Using the theme to draw HP_HEADERSORTARROW doesn't do anything.
     // Why?  If this can be fixed then draw the sort arrows using the theme
     // and then clear those flags before calling DrawHeaderButtonContents.
-    
+
     // Add any extras that are specified in flags and params
     return DrawHeaderButtonContents(win, dc, rect, flags, sortArrow, params);
 }
@@ -411,10 +411,10 @@ wxRendererXP::GetHeaderButtonHeight(wxWindow *win)
     {
         return m_rendererNative.GetHeaderButtonHeight(win);
     }
-    
+
     HRESULT hr;
     int value = -1;
-    
+
     hr = wxUxThemeEngine::Get()->GetThemeMetric( hTheme,
                                                  NULL,
                                                  HP_HEADERITEM,
@@ -606,7 +606,7 @@ void wxRenderer_DrawTextCtrl(wxWindow* win, wxDC& dc, const wxRect& rect, int fl
     wxColour fill;
     wxColour bdr;
     COLORREF cref;
-    
+
 #if wxUSE_UXTHEME
     wxUxThemeHandle hTheme(win, L"EDIT");
     if (hTheme)
@@ -620,10 +620,10 @@ void wxRenderer_DrawTextCtrl(wxWindow* win, wxDC& dc, const wxRect& rect, int fl
             etsState = ETS_DISABLED;
         else
             etsState = ETS_NORMAL;
-        
+
         wxUxThemeEngine::Get()->GetThemeColor(hTheme, EP_EDITTEXT,
                                               etsState, TMT_BORDERCOLOR, &cref);
-        bdr = wxRGBToColour(cref);        
+        bdr = wxRGBToColour(cref);
     }
     else
 #endif
@@ -631,7 +631,7 @@ void wxRenderer_DrawTextCtrl(wxWindow* win, wxDC& dc, const wxRect& rect, int fl
         fill = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
         bdr = *wxBLACK;
     }
-    
+
     dc.SetPen( bdr );
     dc.SetBrush( fill );
     dc.DrawRectangle(rect);
@@ -642,8 +642,8 @@ void wxRenderer_DrawTextCtrl(wxWindow* win, wxDC& dc, const wxRect& rect, int fl
 void wxRenderer_DrawComboBox(wxWindow* win, wxDC& dc, const wxRect& rect, int flags)
 {
     // Draw the main part of the control same as TextCtrl
-    wxRenderer_DrawTextCtrl(win, dc, rect, flags);    
-    
+    wxRenderer_DrawTextCtrl(win, dc, rect, flags);
+
     // Draw the button inside the border, on the right side
     wxRect br(rect);
     br.height -= 2;
@@ -661,7 +661,7 @@ void wxRenderer_DrawChoice(wxWindow* win, wxDC& dc,
     wxRenderer_DrawComboBox(win, dc, rect, flags);
 }
 
-    
+
 // Draw a themed radio button
 void wxRenderer_DrawRadioButton(wxWindow* win, wxDC& dc, const wxRect& rect, int flags)
 {

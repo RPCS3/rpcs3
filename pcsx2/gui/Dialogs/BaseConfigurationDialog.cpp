@@ -78,7 +78,7 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	Connect( wxID_SAVE,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnScreenshot_Click ) );
 
 	Connect(				wxEVT_CLOSE_WINDOW,				wxCloseEventHandler(BaseConfigurationDialog::OnCloseWindow) );
-	
+
 	// ----------------------------------------------------------------------------
 	// Bind a variety of standard "something probably changed" events.  If the user invokes
 	// any of these, we'll automatically de-gray the Apply button for this dialog box. :)

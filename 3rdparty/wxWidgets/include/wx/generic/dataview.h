@@ -214,7 +214,7 @@ protected:
 class WXDLLIMPEXP_ADV wxDataViewColumn: public wxDataViewColumnBase
 {
 public:
-    wxDataViewColumn( const wxString &title, wxDataViewRenderer *renderer, unsigned int model_column, 
+    wxDataViewColumn( const wxString &title, wxDataViewRenderer *renderer, unsigned int model_column,
         int width = 80, int flags = wxDATAVIEW_COL_RESIZABLE );
     wxDataViewColumn( const wxBitmap &bitmap, wxDataViewRenderer *renderer, unsigned int model_column,
         int width = 80, int flags = wxDATAVIEW_COL_RESIZABLE );
@@ -222,9 +222,9 @@ public:
 
     virtual void SetTitle( const wxString &title );
     virtual void SetBitmap( const wxBitmap &bitmap );
-    
+
     virtual void SetAlignment( wxAlignment align );
-    
+
     virtual void SetSortable( bool sortable );
     virtual bool GetSortable();
     virtual void SetSortOrder( bool ascending );
@@ -278,7 +278,7 @@ public:
     virtual void SetSelectionRange( unsigned int from, unsigned int to );
     virtual void SetSelections( const wxArrayInt& aSelections);
     virtual void Unselect( unsigned int row );
-    
+
     virtual bool IsSelected( unsigned int row ) const;
     virtual int GetSelection() const;
     virtual int GetSelections(wxArrayInt& aSelections) const;

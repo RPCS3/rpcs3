@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -256,7 +256,7 @@ L("loop");
 	WriteFrame(params);
 
 L("step");
-	
+
 	// if(steps <= 0) break;
 
 	if(!m_sel.edge)
@@ -402,7 +402,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 				pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 
 				paddd(xmm2, xmmword[edx + 16 * 7]);
-				
+
 				if(!m_sel.sprite)
 				{
 					paddd(xmm3, xmmword[edx + 16 * 8]);
@@ -424,7 +424,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			}
 			else
 			{
-				// s = vt.xxxx() + m_env.d[skip].s; 
+				// s = vt.xxxx() + m_env.d[skip].s;
 				// t = vt.yyyy() + m_env.d[skip].t;
 				// q = vt.zzzz() + m_env.d[skip].q;
 
@@ -625,7 +625,7 @@ void GSDrawScanlineCodeGenerator::Step()
 
 void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 {
-	if(!m_sel.zb) 
+	if(!m_sel.zb)
 	{
 		return;
 	}
@@ -706,7 +706,7 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 
 		switch(m_sel.ztst)
 		{
-		case ZTST_GEQUAL: 
+		case ZTST_GEQUAL:
 			// test |= zso < zdo; // ~(zso >= zdo)
 			pcmpgtd(xmm1, xmm0);
 			por(xmm7, xmm1);
@@ -818,7 +818,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 	pxor(xmm0, xmm0);
 	movd(xmm1, ptr[&m_env.tw]);
-	
+
 	movdqa(xmm4, xmm2);
 	punpckhwd(xmm2, xmm0);
 	punpcklwd(xmm4, xmm0);
@@ -1048,14 +1048,14 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv)
 		movdqa(xmm5, xmmword[&m_env.t.max]);
 
 		// GSVector4i clamp = t.sat_i16(m_env.t.min, m_env.t.max);
-		
+
 		pmaxsw(uv, xmm4);
 		pminsw(uv, xmm5);
 
 		// GSVector4i repeat = (t & m_env.t.min) | m_env.t.max;
 
 		pand(xmm1, xmm4);
-		
+
 		if(region)
 		{
 			por(xmm1, xmm5);
@@ -1125,7 +1125,7 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv0, const Xmm& uv1)
 		movdqa(xmm5, xmmword[&m_env.t.max]);
 
 		// GSVector4i clamp = t.sat_i16(m_env.t.min, m_env.t.max);
-		
+
 		pmaxsw(uv0, xmm4);
 		pmaxsw(uv1, xmm4);
 		pminsw(uv0, xmm5);
@@ -1185,11 +1185,11 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 		// gat = gat.modulate16<1>(ga).clamp8();
 
 		modulate16<1>(xmm6, xmm4);
-		
+
 		clamp16(xmm6, xmm3);
 
 		// if(!tcc) gat = gat.mix16(ga.srl16(7));
-		
+
 		if(!m_sel.tcc)
 		{
 			psrlw(xmm4, 7);
@@ -1216,7 +1216,7 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		break;
 
-	case TFX_HIGHLIGHT: 
+	case TFX_HIGHLIGHT:
 
 		// GSVector4i ga = iip ? gaf : m_env.c.ga;
 
@@ -1254,7 +1254,7 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 
 		break;
 
-	case TFX_NONE: 
+	case TFX_NONE:
 
 		// gat = iip ? ga.srl16(7) : ga;
 
@@ -1263,7 +1263,7 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 			psrlw(xmm6, 7);
 		}
 
-		break; 
+		break;
 	}
 
 	if(m_sel.aa1)
@@ -1359,7 +1359,7 @@ void GSDrawScanlineCodeGenerator::TestAlpha()
 		pxor(xmm1, xmm0);
 		break;
 
-	case ATST_GEQUAL: 
+	case ATST_GEQUAL:
 	case ATST_GREATER:
 		// t = (ga >> 16) < m_env.aref;
 		movdqa(xmm0, xmm6);
@@ -1449,7 +1449,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 		pshuflw(xmm2, xmm2, _MM_SHUFFLE(3, 3, 1, 1));
 		pshufhw(xmm2, xmm2, _MM_SHUFFLE(3, 3, 1, 1));
 		psrlw(xmm2, 7);
-		
+
 		paddw(xmm6, xmm2);
 
 		clamp16(xmm6, xmm0);
@@ -1468,7 +1468,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 
 		break;
 
-	case TFX_NONE: 
+	case TFX_NONE:
 
 		// rbt = iip ? rb.srl16(7) : rb;
 
@@ -1477,7 +1477,7 @@ void GSDrawScanlineCodeGenerator::ColorTFX()
 			psrlw(xmm5, 7);
 		}
 
-		break; 
+		break;
 	}
 }
 
@@ -1617,9 +1617,9 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 			psllw(xmm0, 8);
 			psrlw(xmm0, 8);
 			psrlw(xmm1, 8);
-			
+
 			break;
-		
+
 		case 2:
 
 			// c[2] = ((fd & 0x7c00) << 9) | ((fd & 0x001f) << 3);
@@ -1633,7 +1633,7 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 			psrld(xmm7, 27); // 0x0000001f
 			pand(xmm0, xmm7);
 			pslld(xmm0, 3);
-			
+
 			pslld(xmm7, 10); // 0x00007c00
 			pand(xmm4, xmm7);
 			pslld(xmm4, 9);
@@ -1692,15 +1692,15 @@ void GSDrawScanlineCodeGenerator::AlphaBlend()
 
 			switch(m_sel.abc)
 			{
-			case 0: 
-			case 1: 
+			case 0:
+			case 1:
 				movdqa(xmm7, m_sel.abc ? xmm1 : xmm6);
 				pshuflw(xmm7, xmm7, _MM_SHUFFLE(3, 3, 1, 1));
 				pshufhw(xmm7, xmm7, _MM_SHUFFLE(3, 3, 1, 1));
 				psllw(xmm7, 7);
 				break;
-			case 2: 
-				movdqa(xmm7, xmmword[&m_env.afix]); 
+			case 2:
+				movdqa(xmm7, xmmword[&m_env.afix]);
 				break;
 			}
 
@@ -1931,7 +1931,7 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, co
 {
 	if(fast)
 	{
-		// if(fzm & 0x0f) GSVector4i::storel(&vm16[addr + 0], fs); 
+		// if(fzm & 0x0f) GSVector4i::storel(&vm16[addr + 0], fs);
 		// if(fzm & 0xf0) GSVector4i::storeh(&vm16[addr + 8], fs);
 
 		test(mask, 0x0f);
@@ -1946,9 +1946,9 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, co
 	}
 	else
 	{
-		// if(fzm & 0x03) WritePixel(fpsm, &vm16[addr + 0], fs.extract32<0>()); 
+		// if(fzm & 0x03) WritePixel(fpsm, &vm16[addr + 0], fs.extract32<0>());
 		// if(fzm & 0x0c) WritePixel(fpsm, &vm16[addr + 2], fs.extract32<1>());
-		// if(fzm & 0x30) WritePixel(fpsm, &vm16[addr + 8], fs.extract32<2>()); 
+		// if(fzm & 0x30) WritePixel(fpsm, &vm16[addr + 8], fs.extract32<2>());
 		// if(fzm & 0xc0) WritePixel(fpsm, &vm16[addr + 10], fs.extract32<3>());
 
 		test(mask, 0x03);
@@ -2068,7 +2068,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr, uin
 	else pinsrd(dst, src, i);
 }
 
-template<int shift> 
+template<int shift>
 void GSDrawScanlineCodeGenerator::modulate16(const Xmm& a, const Operand& f)
 {
 	if(shift == 0 && m_cpu.has(util::Cpu::tSSSE3))
@@ -2082,7 +2082,7 @@ void GSDrawScanlineCodeGenerator::modulate16(const Xmm& a, const Operand& f)
 	}
 }
 
-template<int shift> 
+template<int shift>
 void GSDrawScanlineCodeGenerator::lerp16(const Xmm& a, const Xmm& b, const Xmm& f)
 {
 	psubw(a, b);
@@ -2168,7 +2168,7 @@ void GSDrawScanlineCodeGenerator::blendr(const Xmm& b, const Xmm& a, const Xmm& 
 	por(b, mask);
 }
 
-const GSVector4i GSDrawScanlineCodeGenerator::m_test[8] = 
+const GSVector4i GSDrawScanlineCodeGenerator::m_test[8] =
 {
 	GSVector4i::zero(),
 	GSVector4i(0xffffffff, 0x00000000, 0x00000000, 0x00000000),

@@ -76,7 +76,7 @@ void LoadConfig() {
 			conf.height = 960;
 			break;
 	}
-	
+
 	// turn off all hacks by defaultof
 	conf.options &= ~(GSOPTION_FULLSCREEN|GSOPTION_WIREFRAME|GSOPTION_CAPTUREAVI);
 	conf.options |= GSOPTION_LOADED;

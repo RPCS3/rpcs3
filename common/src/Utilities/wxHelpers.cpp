@@ -107,7 +107,7 @@ wxDialogWithHelpers::wxDialogWithHelpers()
 {
 	m_hasContextHelp	= false;
 	m_extraButtonSizer	= NULL;
-	
+
 	Init();
 }
 
@@ -293,7 +293,7 @@ void wxPanelWithHelpers::Init()
 	wxSizer* guess = GetSizer();
 	if( guess == NULL ) guess = GetParent()->GetSizer();
 	if( guess == NULL ) guess = GetParent()->GetContainingSizer();
-	
+
 	if( guess != NULL )
 	{
 		if( wxIsKindOf( guess, wxStaticBoxSizer ) )
@@ -320,7 +320,7 @@ wxPanelWithHelpers* wxPanelWithHelpers::AddFrame( const wxString& label, wxOrien
 
 	if( oldSizer )
 		*this += oldSizer | pxExpand;
-	
+
 	return this;
 }
 

@@ -14,5 +14,5 @@
 //
 // TortoiseSVN can be downloaded from http://tortoisesvn.tigris.org
 
-#define SVN_REV $WCREV$ 
+#define SVN_REV $WCREV$
 #define SVN_MODS $WCMODS?1:0$

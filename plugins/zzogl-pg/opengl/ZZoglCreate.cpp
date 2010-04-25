@@ -17,7 +17,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// Create and Destroy function. They would be called once per session. 
+// Create and Destroy function. They would be called once per session.
 
 //------------------ Includes
 #include "GS.h"
@@ -101,7 +101,7 @@ namespace ZeroGS{
 	vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 	int g_nCurVBOIndex = 0;
 
-	inline bool CreateImportantCheck(); 
+	inline bool CreateImportantCheck();
 	inline void CreateOtherCheck();
 	inline bool CreateOpenShadersFile();
 }
@@ -137,7 +137,7 @@ namespace ZeroGS{
 //------------------ variables
 ////////////////////////////
 // State parameters
-float fiRendWidth, fiRendHeight; 
+float fiRendWidth, fiRendHeight;
 
 u8* s_lpShaderResources = NULL;
 CGprogram pvs[16] = {NULL};
@@ -146,7 +146,7 @@ CGprogram pvs[16] = {NULL};
 #ifdef DEVBUILD
 char* EFFECT_NAME="";
 char* EFFECT_DIR="";
-#endif 
+#endif
 
 /////////////////////
 // graphics resources
@@ -164,7 +164,7 @@ u32 ptexLogo = 0;
 int nLogoWidth, nLogoHeight;
 u32 s_ptexInterlace = 0;		 // holds interlace fields
 
-//------------------ Global Variables 
+//------------------ Global Variables
 int g_MaxTexWidth = 4096, g_MaxTexHeight = 4096;
 u32 s_uFramebuffer = 0;
 CGprofile cgvProf, cgfProf;
@@ -199,7 +199,7 @@ ZeroGS::Create_Window(int _width, int _height) {
 
 	s_nFullscreen = (conf.options & GSOPTION_FULLSCREEN) ? 1 : 0;
 	conf.mrtdepth = 0; // for now
-	
+
 	return true;
 }
 
@@ -236,21 +236,21 @@ inline bool ZeroGS::CreateImportantCheck() {
 
 	return bSuccess;
 }
-	
+
 // This is check for less important open gl extensions.
 inline void ZeroGS::CreateOtherCheck() {
 	if( !IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL ) {
 		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_equation_separate\nZZogl: *********\n");
 		zgsBlendEquationSeparateEXT = glBlendEquationSeparateDummy;
 	}
-	else 
+	else
 		zgsBlendEquationSeparateEXT = glBlendEquationSeparateEXT;
-	
+
 	if( !IsGLExt("GL_EXT_blend_func_separate") || glBlendFuncSeparateEXT == NULL ) {
 		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_func_separate\nZZogl: *********\n");
 		zgsBlendFuncSeparateEXT = glBlendFuncSeparateDummy;
 	}
-	else 
+	else
 		zgsBlendFuncSeparateEXT = glBlendFuncSeparateEXT;
 
 	if( !IsGLExt("GL_ARB_draw_buffers") && !IsGLExt("GL_ATI_draw_buffers") ) {
@@ -408,7 +408,7 @@ bool ZeroGS::Create(int _width, int _height)
 	int i;
 
 	Destroy(1);
-	GSStateReset(); 
+	GSStateReset();
 
 	cgSetErrorHandler(HandleCgError, NULL);
 	g_RenderFormatType = RFT_float16;
@@ -456,7 +456,7 @@ bool ZeroGS::Create(int _width, int _height)
 	GL_LOADFN(glGenerateMipmapEXT);
 
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-	
+
 	GL_REPORT_ERROR();
 	if( err != GL_NO_ERROR ) bSuccess = false;
 
@@ -511,7 +511,7 @@ bool ZeroGS::Create(int _width, int _height)
 	glDisable(GL_LIGHTING);
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // Really Nice Perspective Calculations
-	
+
 	glGenTextures(1, &ptexLogo);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptexLogo);
 
@@ -592,7 +592,7 @@ bool ZeroGS::Create(int _width, int _height)
 			g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
 			g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
 			glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-			ERROR_LOG("ZZogl Fill bilinear blocks\n");		
+			ERROR_LOG("ZZogl Fill bilinear blocks\n");
 			B_G(glGetError() == GL_NO_ERROR, return false);
 		}
 		else
@@ -614,7 +614,7 @@ bool ZeroGS::Create(int _width, int _height)
 	// fill a simple rect
 	glGenBuffers(1, &vboRect);
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
-	
+
 	vector<VertexGPU> verts(4);
 	VertexGPU* pvert = &verts[0];
 	pvert->x = -0x7fff; pvert->y = 0x7fff; pvert->z = 0; pvert->s = 0; pvert->t = 0; pvert++;
@@ -678,7 +678,7 @@ bool ZeroGS::Create(int _width, int _height)
 	if( err != GL_NO_ERROR ) bSuccess = false;
 
 	g_cgcontext = cgCreateContext();
-	
+
 	cgvProf = CG_PROFILE_ARBVP1;
 	cgfProf = CG_PROFILE_ARBFP1;
 	cgGLEnableProfile(cgvProf);
@@ -737,7 +737,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	GL_BLEND_ALPHA(GL_ONE, GL_ZERO);
 	glBlendColorEXT(0, 0, 0, 0.5f);
-	
+
 	glDisable(GL_CULL_FACE);
 
 	// points

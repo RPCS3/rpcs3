@@ -47,7 +47,7 @@ _start( int argc, char **argv)
 	printf("host: mounted\n");
     naplinkRpcInit();
 	printf("Naplink thread started\n");
-	
+
 	installExceptionHandlers();
 
     return 0;

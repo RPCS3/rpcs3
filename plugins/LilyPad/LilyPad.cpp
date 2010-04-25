@@ -402,7 +402,7 @@ struct EnterScopedSection
 	EnterScopedSection( CRITICAL_SECTION& cs ) : m_cs( cs ) {
 		EnterCriticalSection( &m_cs );
 	}
-	
+
 	~EnterScopedSection() {
 		LeaveCriticalSection( &m_cs );
 	}
@@ -984,7 +984,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 			hWndGSProc.Eat(HideCursorProc, 0);
 		}
 		SaveStateChanged();
-		
+
 		windowThreadId = GetWindowThreadProcessId(hWndTop, 0);
 	}
 

@@ -36,22 +36,22 @@ Config conf;
 keyEvent event;
 static keyEvent s_event;
 
-EXPORT_C_(u32) PS2EgetLibType() 
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_PAD;
 }
 
-EXPORT_C_(char*) PS2EgetLibName() 
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	return libraryName;
 }
 
-EXPORT_C_(u32) PS2EgetLibVersion2(u32 type) 
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (version<<16) | (revision<<8) | build;
 }
 
-void __Log(const char *fmt, ...) 
+void __Log(const char *fmt, ...)
 {
 	va_list list;
 
@@ -61,7 +61,7 @@ void __Log(const char *fmt, ...)
 	va_end(list);
 }
 
-void __LogToConsole(const char *fmt, ...) 
+void __LogToConsole(const char *fmt, ...)
 {
 	va_list list;
 
@@ -74,10 +74,10 @@ void __LogToConsole(const char *fmt, ...)
 	va_end(list);
 }
 
-EXPORT_C_(s32) PADinit(u32 flags) 
+EXPORT_C_(s32) PADinit(u32 flags)
 {
 	LoadConfig();
-	
+
 #ifdef PAD_LOG
 	if (padLog == NULL)
 	{
@@ -90,7 +90,7 @@ EXPORT_C_(s32) PADinit(u32 flags)
 	return 0;
 }
 
-EXPORT_C_(void) PADshutdown() 
+EXPORT_C_(void) PADshutdown()
 {
 #ifdef PAD_LOG
 	if (padLog != NULL)
@@ -101,14 +101,14 @@ EXPORT_C_(void) PADshutdown()
 #endif
 }
 
-EXPORT_C_(s32) PADopen(void *pDsp) 
+EXPORT_C_(s32) PADopen(void *pDsp)
 {
 	memset(&event, 0, sizeof(event));
 
 	return _PADOpen(pDsp);
 }
 
-EXPORT_C_(void) PADclose() 
+EXPORT_C_(void) PADclose()
 {
 	_PADClose();
 }
@@ -116,10 +116,10 @@ EXPORT_C_(void) PADclose()
 // PADkeyEvent is called every vsync (return NULL if no event)
 EXPORT_C_(keyEvent*) PADkeyEvent()
 {
-	
+
 	s_event = event;
 	event.evt = 0;
-	
+
 	return &s_event;
 }
 
@@ -157,12 +157,12 @@ EXPORT_C_(void) PADgsDriverInfo(GSdriverInfo *info)
 {
 }
 
-EXPORT_C_(s32) PADfreeze(int mode, freezeData *data) 
+EXPORT_C_(s32) PADfreeze(int mode, freezeData *data)
 {
 	return 0;
 }
 
-EXPORT_C_(s32) PADtest() 
+EXPORT_C_(s32) PADtest()
 {
 	return 0;
 }

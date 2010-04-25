@@ -144,11 +144,11 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Book Type: DVD+RW");
         break;
       default:
-        PrintLog("CDVD driver:       Book Type: Unknown (%i)", 
+        PrintLog("CDVD driver:       Book Type: Unknown (%i)",
                  dvdphysical.physical.layer[i].book_type);
         break;
     } // ENDSWITCH- Displaying the Book Type
-    PrintLog("CDVD driver:       Book Version %i", 
+    PrintLog("CDVD driver:       Book Version %i",
              dvdphysical.physical.layer[i].book_version);
     switch(dvdphysical.physical.layer[i].min_rate) {
       case 0:
@@ -167,7 +167,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Use Minimum Rate for: DVD+RW");
         break;
       default:
-        PrintLog("CDVD driver:       Use Minimum Rate for: Unknown (%i)", 
+        PrintLog("CDVD driver:       Use Minimum Rate for: Unknown (%i)",
                  dvdphysical.physical.layer[i].min_rate);
         break;
     } // ENDSWITCH- Displaying the Minimum (Spin?) Rate
@@ -179,7 +179,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Physical Disk Size: 80mm");
         break;
       default:
-        PrintLog("CDVD driver:       Physical Disk Size: Unknown (%i)", 
+        PrintLog("CDVD driver:       Physical Disk Size: Unknown (%i)",
                  dvdphysical.physical.layer[i].disc_size);
         break;
     } // ENDSWITCH- What's the Disk Size?
@@ -194,7 +194,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Layer Type: Rewritable");
         break;
       default:
-        PrintLog("CDVD driver:       Layer Type: Unknown (%i)", 
+        PrintLog("CDVD driver:       Layer Type: Unknown (%i)",
                  dvdphysical.physical.layer[i].layer_type);
         break;
     } // ENDSWITCH- Displaying the Layer Type
@@ -206,7 +206,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Track Path: OTP");
         break;
       default:
-        PrintLog("CDVD driver:       Track Path: Unknown (%i)", 
+        PrintLog("CDVD driver:       Track Path: Unknown (%i)",
                  dvdphysical.physical.layer[i].track_path);
         break;
     } // ENDSWITCH- What's Track Path Layout?
@@ -223,7 +223,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Track Density: .615 m/track");
         break;
       default:
-        PrintLog("CDVD driver:       Track Density: Unknown (%i)", 
+        PrintLog("CDVD driver:       Track Density: Unknown (%i)",
                  dvdphysical.physical.layer[i].track_density);
         break;
     } // ENDSWITCH- Displaying the Track Density
@@ -244,7 +244,7 @@ s32 DVDreadPhysical() {
         PrintLog("CDVD driver:       Linear Density: .353 m/bit");
         break;
       default:
-        PrintLog("CDVD driver:       Linear Density: Unknown (%i)", 
+        PrintLog("CDVD driver:       Linear Density: Unknown (%i)",
                  dvdphysical.physical.layer[i].linear_density);
         break;
     } // ENDSWITCH- Displaying the Linear Density
@@ -255,12 +255,12 @@ s32 DVDreadPhysical() {
       PrintLog("CDVD driver:       Starting Sector: %lu (DVD-RAM, DVD+RW)",
                dvdphysical.physical.layer[i].start_sector);
     } else {
-      PrintLog("CDVD driver:       Starting Sector: %lu", 
+      PrintLog("CDVD driver:       Starting Sector: %lu",
                dvdphysical.physical.layer[i].start_sector);
     } // ENDLONGIF- What does the starting sector tell us?
-    PrintLog("CDVD driver:       End of Layer 0: %lu", 
+    PrintLog("CDVD driver:       End of Layer 0: %lu",
              dvdphysical.physical.layer[i].end_sector_l0);
-    PrintLog("CDVD driver:       Ending Sector: %lu", 
+    PrintLog("CDVD driver:       Ending Sector: %lu",
              dvdphysical.physical.layer[i].end_sector);
     if(dvdphysical.physical.layer[i].bca != 0)
       PrintLog("CDVD driver:       BCA data present");
@@ -501,7 +501,7 @@ s32 DVDgetDiskType(s32 ioctldisktype) {
   s32 s32result;
   int i;
   s32 tempdisctype;
-  
+
   errno = 0;
   s32result = 0;
   i = 0;

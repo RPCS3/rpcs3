@@ -755,7 +755,7 @@ jinit_arith_decoder (j_decompress_ptr cinfo)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				  cinfo->num_components*DCTSIZE2*SIZEOF(int));
     coef_bit_ptr = & cinfo->coef_bits[0][0];
-    for (ci = 0; ci < cinfo->num_components; ci++) 
+    for (ci = 0; ci < cinfo->num_components; ci++)
       for (i = 0; i < DCTSIZE2; i++)
 	*coef_bit_ptr++ = -1;
   }

@@ -525,7 +525,7 @@ struct wxPixelDataOut<wxBitmap>
             {
                 m_ptr = NULL;
             }
-            
+
             // return true if this iterator is valid
             bool IsOk() const { return m_ptr != NULL; }
 

@@ -111,7 +111,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	ContribSizer	+= m_bitmap_dualshock	| StdSpace();
 	ContribSizer	+= pxStretchSpacer( 1 );
 
-	// Main (top-level) layout 
+	// Main (top-level) layout
 
 	*this	+= Text(_("PCSX2  -  Playstation 2 Emulator"));
 	*this	+= AuthLogoSizer										| StdSpace();

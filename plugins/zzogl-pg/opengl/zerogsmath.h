@@ -76,7 +76,7 @@ public:
 	inline Vector& operator += (const Vector& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
 	inline Vector& operator -= (const Vector& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
 	inline Vector& operator *= (const Vector& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
-	
+
 	inline Vector& operator *= (const dReal k) { x *= k; y *= k; z *= k; w *= k; return *this; }
 	inline Vector& operator /= (const dReal _k) { dReal k=1/_k; x *= k; y *= k; z *= k; w *= k; return *this; }
 
@@ -115,7 +115,7 @@ struct TRIANGLE
 	const Vector& operator[](int i) const { return (&v1)[i]; }
 	Vector&	   operator[](int i)	   { return (&v1)[i]; }
 
-	/// assumes CCW ordering of vertices 
+	/// assumes CCW ordering of vertices
 	inline Vector ComputeNormal() {
 		Vector normal;
 		cross3(normal, v2-v1, v3-v1);
@@ -200,7 +200,7 @@ inline T* multtrans(T* pf1, R* pf2, int r1, int c1, int c2, S* pfres, bool badd 
 template <class T, class S, class R>
 inline T* multtrans_to2(T* pf1, R* pf2, int r1, int c1, int r2, S* pfres, bool badd = false);
 
-// multiplies rxc matrix pf1 and cxc matrix pf2 and stores the result in pf1, 
+// multiplies rxc matrix pf1 and cxc matrix pf2 and stores the result in pf1,
 // the function needs a temporary buffer the size of c doubles, if pftemp == NULL,
 // the function will allocate the necessary memory, otherwise pftemp should be big
 // enough to store all the entries
@@ -242,7 +242,7 @@ bool eig2(const dReal* pfmat, dReal* peigs, dReal& fv1x, dReal& fv1y, dReal& fv2
 		fv2x = -fv1y;		fv2y = fv1x;
 		return true;
 	}
-	
+
 	// two roots
 	d = sqrtf(d);
 	a = -0.5f * (b + d);
@@ -290,7 +290,7 @@ template <class T> inline T* _mult3(T* pfres, const T* pf1, const T* pf2)
 inline dReal* mult3(dReal* pfres, const dReal* pf1, const dReal* pf2) { return _mult3<dReal>(pfres, pf1, pf2); }
 inline double* mult3(double* pfres, const double* pf1, const double* pf2) { return _mult3<double>(pfres, pf1, pf2); }
 
-template <class T> 
+template <class T>
 inline T* _mult4(T* pfres, const T* p1, const T* p2)
 {
 	assert( pfres != NULL && p1 != NULL && p2 != NULL );
@@ -326,7 +326,7 @@ inline T* _mult4(T* pfres, const T* p1, const T* p2)
 inline dReal* mult4(dReal* pfres, const dReal* pf1, const dReal* pf2) { return _mult4<dReal>(pfres, pf1, pf2); }
 inline double* mult4(double* pfres, const double* pf1, const double* pf2) { return _mult4<double>(pfres, pf1, pf2); }
 
-template <class T> 
+template <class T>
 inline T* _multtrans3(T* pfres, const T* pf1, const T* pf2)
 {
 	T* pfres2;
@@ -350,7 +350,7 @@ inline T* _multtrans3(T* pfres, const T* pf1, const T* pf2)
 	return pfres;
 }
 
-template <class T> 
+template <class T>
 inline T* _multtrans4(T* pfres, const T* pf1, const T* pf2)
 {
 	T* pfres2;
@@ -737,7 +737,7 @@ template <class T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 
 	int j, k;
 	bool bdel = false;
-	
+
 	if( pftemp == NULL ) {
 		pftemp = new T[c];
 		bdel = true;
@@ -748,7 +748,7 @@ template <class T> inline T* multto1(T* pf1, T* pf2, int r, int c, T* pftemp)
 
 		j = 0;
 		while(j < c) {
-			
+
 			pftemp[j] = 0.0;
 
 			k = 0;
@@ -774,7 +774,7 @@ template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S*
 
 	int i, j, k;
 	bool bdel = false;
-	
+
 	if( pftemp == NULL ) {
 		pftemp = new S[r2];
 		bdel = true;
@@ -785,7 +785,7 @@ template <class T, class S> inline T* multto2(T* pf1, S* pf2, int r2, int c2, S*
 	while(j < c2) {
 		i = 0;
 		while(i < r2) {
-			
+
 			pftemp[i] = 0.0;
 
 			k = 0;

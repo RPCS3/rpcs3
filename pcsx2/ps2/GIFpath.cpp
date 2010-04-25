@@ -77,7 +77,7 @@ struct GIFTAG
 };
 
 // --------------------------------------------------------------------------------------
-//  GIFPath -- PS2 GIFtag info (one for each path). 
+//  GIFPath -- PS2 GIFtag info (one for each path).
 // --------------------------------------------------------------------------------------
 // fixme: The real PS2 has a single internal PATH and 3 logical sources, not 3 entirely
 // separate paths.  But for that to work properly we need also interlocked path sources.
@@ -99,7 +99,7 @@ struct GIFPath
 	void SetTag(const void* mem);
 	bool StepReg();
 	u8 GetReg();
-	
+
 	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
@@ -109,7 +109,7 @@ struct GifPathStruct
 {
 	const GIFRegHandler	Handlers[0x100-0x60];		// handlers for 0x60->0x100
 	GIFPath				path[3];
-	
+
 	__forceinline GIFPath& operator[]( int idx ) { return path[idx]; }
 };
 
@@ -179,7 +179,7 @@ static void __fastcall RegHandlerLABEL(const u32* data)
 static void __fastcall RegHandlerUNMAPPED(const u32* data)
 {
 	const int regidx = ((u8*)data)[8];
-	
+
 	// Known "unknowns":
 	//  It's possible that anything above 0x63 should just be silently ignored, but in the
 	//  offhand chance not, I'm documenting known cases of unknown register use here.
@@ -208,10 +208,10 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 #define INSERT_UNMAPPED_16	INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4
 #define INSERT_UNMAPPED_64	INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16
 
-static __aligned16 GifPathStruct s_gifPath = 
+static __aligned16 GifPathStruct s_gifPath =
 {
 	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL, RegHandlerUNMAPPED,
-	
+
 	// Rest are mapped to Unmapped
 	INSERT_UNMAPPED_4  INSERT_UNMAPPED_4  INSERT_UNMAPPED_4
 	INSERT_UNMAPPED_64 INSERT_UNMAPPED_64 INSERT_UNMAPPED_16
@@ -278,11 +278,11 @@ void SaveStateBase::gifPathFreeze()
 static __forceinline void gsHandler(const u8* pMem)
 {
 	const int handler = pMem[8];
-	
+
 	if(handler == 0x50)
 	{
 		const u16* pMem16 = (const u16*)pMem;
-		
+
 		vif1.TRXPOS._u32 = pMem16[1];
 		//Console.Warning("BLITBUF = %x %x_%x_%x_%x", vif1.TRXPOS.BLTDIVIDE, pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
 		switch(vif1.TRXPOS.BLTDIVIDE & 0x3)
@@ -313,7 +313,7 @@ static __forceinline void gsHandler(const u8* pMem)
 		//Onimusha does TRXREG without BLTDIVIDE first, so we "assume" 32bit for this equasion, probably isnt important.
 		if(vif1.TRXPOS.BLTDIVIDE) vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / (u8)vif1.TRXPOS.BLTDIVIDE;
 		else vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / 4;
-		
+
 	}
 	if (handler >= 0x60)
 	{
@@ -439,7 +439,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 	size = (startSize - size);
 
-	
+
 		if (tag.EOP && !nloop) {
 			//Console.Warning("Finishing path %x", pathidx);
 			switch(pathidx)
@@ -462,7 +462,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 	} else if (pathidx == GIF_PATH_2 && !nloop) { //Path2 is odd, but always provides the correct size
 		GSTransferStatus.PTH2 = STOPPED_MODE;
 	}
-	
+
 	return size;
 }
 

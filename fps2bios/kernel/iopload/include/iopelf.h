@@ -44,11 +44,11 @@ typedef struct {
 	u32	e_shoff;        //+20 Start of section headers (offset from file start)
 	u32	e_flags;        //+24 Processor specific flags = 0x20924001 noreorder, mips
 	u16	e_ehsize;       //+28 ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //+2A Program headers entry size 
+	u16	e_phentsize;    //+2A Program headers entry size
 	u16	e_phnum;        //+2C Number of program headers
 	u16	e_shentsize;    //+2E Section headers entry size
 	u16	e_shnum;        //+30 Number of section headers
-	u16	e_shstrndx;     //+32 Section header stringtable index	
+	u16	e_shstrndx;     //+32 Section header stringtable index
 } ELF_HEADER;			//+34=sizeof
 #define ET_SCE_IOPRELEXEC	0xFF80
 #define PT_SCE_IOPMOD		0x70000080
@@ -182,7 +182,7 @@ typedef struct {
 //5=HASH hash table
 //6=DYNAMIC dynamic linking information
 //7=NOTE
-//8=NOBITS 
+//8=NOBITS
 //9=REL relocation entries
 //10=SHLIB
 //0x70000000=LOPROC processor specifc

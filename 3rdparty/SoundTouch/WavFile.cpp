@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Classes for easy reading & writing of WAV sound files. 
+/// Classes for easy reading & writing of WAV sound files.
 ///
 /// For big-endian CPU, define _BIG_ENDIAN_ during compile-time to correctly
 /// parse the WAV files with such processors.
-/// 
+///
 /// Admittingly, more complete WAV reader routines may exist in public domain,
-/// but the reason for 'yet another' one is that those generic WAV reader 
+/// but the reason for 'yet another' one is that those generic WAV reader
 /// libraries are exhaustingly large and cumbersome! Wanted to have something
 /// simpler here, i.e. something that's not already larger than rest of the
 /// SoundTouch/SoundStretch program...
@@ -64,9 +64,9 @@ static const char dataStr[] = "data";
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// Helper functions for swapping byte order to correctly read/write WAV files 
+// Helper functions for swapping byte order to correctly read/write WAV files
 // with big-endian CPU's: Define compile-time definition _BIG_ENDIAN_ to
-// turn-on the conversion if it appears necessary. 
+// turn-on the conversion if it appears necessary.
 //
 // For example, Intel x86 is little-endian and doesn't require conversion,
 // while PowerPC of Mac's and many other RISC cpu's are big-endian.
@@ -78,23 +78,23 @@ static const char dataStr[] = "data";
         #define _BIG_ENDIAN_
     #endif
 #endif
-    
+
 #ifdef _BIG_ENDIAN_
     // big-endian CPU, swap bytes in 16 & 32 bit words
 
     // helper-function to swap byte-order of 32bit integer
     static inline void _swap32(unsigned int &dwData)
     {
-        dwData = ((dwData >> 24) & 0x000000FF) | 
-                 ((dwData >> 8)  & 0x0000FF00) | 
-                 ((dwData << 8)  & 0x00FF0000) | 
+        dwData = ((dwData >> 24) & 0x000000FF) |
+                 ((dwData >> 8)  & 0x0000FF00) |
+                 ((dwData << 8)  & 0x00FF0000) |
                  ((dwData << 24) & 0xFF000000);
-    }   
+    }
 
     // helper-function to swap byte-order of 16bit integer
     static inline void _swap16(unsigned short &wData)
     {
-        wData = ((wData >> 8) & 0x00FF) | 
+        wData = ((wData >> 8) & 0x00FF) |
                 ((wData << 8) & 0xFF00);
     }
 
@@ -116,7 +116,7 @@ static const char dataStr[] = "data";
     static inline void _swap32(unsigned int &dwData)
     {
         // do nothing
-    }   
+    }
 
     // dummy helper-function
     static inline void _swap16(unsigned short &wData)
@@ -142,7 +142,7 @@ WavInFile::WavInFile(const char *fileName)
 {
     // Try to open the file for reading
     fptr = fopen(fileName, "rb");
-    if (fptr == NULL) 
+    if (fptr == NULL)
     {
         // didn't succeed
         string msg = "Error : Unable to open file \"";
@@ -159,7 +159,7 @@ WavInFile::WavInFile(FILE *file)
 {
     // Try to open the file for reading
     fptr = file;
-    if (!file) 
+    if (!file)
     {
         // didn't succeed
         string msg = "Error : Unable to access input stream for reading";
@@ -180,9 +180,9 @@ void WavInFile::init()
 
     // Read the file headers
     hdrsOk = readWavHeaders();
-    if (hdrsOk != 0) 
+    if (hdrsOk != 0)
     {
-        // Something didn't match in the wav file headers 
+        // Something didn't match in the wav file headers
         string msg = "Input file is corrupt or not a WAV file";
         throw runtime_error(msg);
     }
@@ -242,7 +242,7 @@ int WavInFile::read(char *buffer, int maxElems)
 
     numBytes = maxElems;
     afterDataRead = dataRead + numBytes;
-    if (afterDataRead > header.data.data_len) 
+    if (afterDataRead > header.data.data_len)
     {
         // Don't read more samples than are marked available in header
         numBytes = (int)header.data.data_len - (int)dataRead;
@@ -286,7 +286,7 @@ int WavInFile::read(short *buffer, int maxElems)
 
         numBytes = maxElems * 2;
         afterDataRead = dataRead + numBytes;
-        if (afterDataRead > header.data.data_len) 
+        if (afterDataRead > header.data.data_len)
         {
             // Don't read more samples than are marked available in header
             numBytes = (int)header.data.data_len - (int)dataRead;
@@ -349,7 +349,7 @@ static int isAlphaStr(const char *str)
     char c;
 
     c = str[0];
-    while (c) 
+    while (c)
     {
         if (isAlpha(c) == 0) return 0;
         str ++;
@@ -394,7 +394,7 @@ int WavInFile::readHeaderBlock()
     {
         int nLen, nDump;
 
-        // 'fmt ' block 
+        // 'fmt ' block
         memcpy(header.format.fmt, fmtStr, 4);
 
         // read length of the format field
@@ -541,7 +541,7 @@ WavOutFile::WavOutFile(const char *fileName, int sampleRate, int bits, int chann
 {
     bytesWritten = 0;
     fptr = fopen(fileName, "wb");
-    if (fptr == NULL) 
+    if (fptr == NULL)
     {
         string msg = "Error : Unable to open file \"";
         msg += fileName;
@@ -559,7 +559,7 @@ WavOutFile::WavOutFile(FILE *file, int sampleRate, int bits, int channels)
 {
     bytesWritten = 0;
     fptr = file;
-    if (fptr == NULL) 
+    if (fptr == NULL)
     {
         string msg = "Error : Unable to access output file stream.";
         throw runtime_error(msg);
@@ -668,7 +668,7 @@ void WavOutFile::write(const char *buffer, int numElems)
     assert(sizeof(char) == 1);
 
     res = fwrite(buffer, 1, numElems, fptr);
-    if (res != numElems) 
+    if (res != numElems)
     {
         throw runtime_error("Error while writing to a wav file.");
     }
@@ -712,7 +712,7 @@ void WavOutFile::write(const short *buffer, int numElems)
 
         delete[] pTemp;
 
-        if (res != numElems) 
+        if (res != numElems)
         {
             throw runtime_error("Error while writing to a wav file.");
         }

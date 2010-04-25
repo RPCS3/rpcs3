@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -24,15 +24,15 @@ extern void _vuFlushAll(VURegs* VU);
 _vuTables(VU0, VU0);
 
 void _vu0ExecUpper(VURegs* VU, u32 *ptr) {
-	VU->code = ptr[1]; 
+	VU->code = ptr[1];
 	IdebugUPPER(VU0);
-	VU0_UPPER_OPCODE[VU->code & 0x3f](); 
+	VU0_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
 void _vu0ExecLower(VURegs* VU, u32 *ptr) {
-	VU->code = ptr[0]; 
+	VU->code = ptr[0];
 	IdebugLOWER(VU0);
-	VU0_LOWER_OPCODE[VU->code >> 25](); 
+	VU0_LOWER_OPCODE[VU->code >> 25]();
 }
 
 int vu0branch = 0;
@@ -58,13 +58,13 @@ static void _vu0Exec(VURegs* VU)
 		return;
 	}
 
-	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL]; 
+	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL];
 	VU->VI[REG_TPC].UL+=8;
 
 	if (ptr[1] & 0x40000000) {
 		VU->ebit = 2;
 	}
-	if (ptr[1] & 0x20000000) { /* M flag */ 
+	if (ptr[1] & 0x20000000) { /* M flag */
 		VU->flags|= VUFLAG_MFLAGSET;
 //		Console.WriteLn("fixme: M flag set");
 	}
@@ -81,17 +81,17 @@ static void _vu0Exec(VURegs* VU)
 		}
 	}
 
-	VU->code = ptr[1]; 
+	VU->code = ptr[1];
 	VU0regs_UPPER_OPCODE[VU->code & 0x3f](&uregs);
 #ifndef INT_VUSTALLHACK
 	_vuTestUpperStalls(VU, &uregs);
 #endif
 
-	/* check upper flags */ 
-	if (ptr[1] & 0x80000000) { /* I flag */ 
+	/* check upper flags */
+	if (ptr[1] & 0x80000000) { /* I flag */
 		_vu0ExecUpper(VU, ptr);
 
-		VU->VI[REG_I].UL = ptr[0]; 
+		VU->VI[REG_I].UL = ptr[0];
 		memset(&lregs, 0, sizeof(lregs));
 	} else {
 		VU->code = ptr[0];
@@ -165,7 +165,7 @@ static void _vu0Exec(VURegs* VU)
 	if( VU->ebit > 0 ) {
 		if( VU->ebit-- == 1 ) {
 			_vuFlushAll(VU);
-			VU0.VI[REG_VPU_STAT].UL&= ~0x1; /* E flag */ 
+			VU0.VI[REG_VPU_STAT].UL&= ~0x1; /* E flag */
 			vif0Regs->stat.VEW = false;
 		}
 	}
@@ -173,14 +173,14 @@ static void _vu0Exec(VURegs* VU)
 
 void vu0Exec(VURegs* VU)
 {
-	if (VU->VI[REG_TPC].UL >= VU->maxmicro) { 
+	if (VU->VI[REG_TPC].UL >= VU->maxmicro) {
 #ifdef CPU_LOG
 		Console.Warning("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
 #endif
-		VU0.VI[REG_VPU_STAT].UL&= ~0x1; 
-	} else { 
+		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
+	} else {
 		_vu0Exec(VU);
-	} 
+	}
 	VU->cycle++;
 
 	if (VU->VI[0].UL != 0) DbgCon.Error("VI[0] != 0!!!!\n");

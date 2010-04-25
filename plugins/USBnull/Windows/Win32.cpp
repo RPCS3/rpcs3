@@ -18,7 +18,7 @@ void SysMessage(char *fmt, ...) {
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    
+
 	switch(uMsg) {
 		case WM_INITDIALOG:
 			LoadConfig();
@@ -60,20 +60,20 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 void CALLBACK USBconfigure() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_CONFIG),
-              GetActiveWindow(),  
-              (DLGPROC)ConfigureDlgProc); 
+              GetActiveWindow(),
+              (DLGPROC)ConfigureDlgProc);
 
 }
 
 void CALLBACK USBabout() {
     DialogBox(hInst,
               MAKEINTRESOURCE(IDD_ABOUT),
-              GetActiveWindow(),  
+              GetActiveWindow(),
               (DLGPROC)AboutDlgProc);
 }
 
 BOOL APIENTRY DllMain(HANDLE hModule,                  // DLL INIT
-                      DWORD  dwReason, 
+                      DWORD  dwReason,
                       LPVOID lpReserved) {
 	hInst = (HINSTANCE)hModule;
 	return TRUE;                                          // very quick :)

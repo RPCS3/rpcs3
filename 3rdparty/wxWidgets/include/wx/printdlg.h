@@ -36,11 +36,11 @@ public:
                       const wxPoint &pos = wxDefaultPosition,
                       const wxSize &size = wxDefaultSize,
                       long style = wxDEFAULT_DIALOG_STYLE);
-            
+
     virtual wxPrintDialogData& GetPrintDialogData() = 0;
     virtual wxPrintData& GetPrintData() = 0;
     virtual wxDC *GetPrintDC() = 0;
-    
+
 private:
     DECLARE_ABSTRACT_CLASS(wxPrintDialogBase)
     DECLARE_NO_COPY_CLASS(wxPrintDialogBase)
@@ -62,10 +62,10 @@ public:
     virtual wxPrintDialogData& GetPrintDialogData();
     virtual wxPrintData& GetPrintData();
     virtual wxDC *GetPrintDC();
-    
+
 private:
     wxPrintDialogBase  *m_pimpl;
-    
+
 private:
     DECLARE_DYNAMIC_CLASS(wxPrintDialog)
     DECLARE_NO_COPY_CLASS(wxPrintDialog)
@@ -110,7 +110,7 @@ public:
 
 private:
     wxPageSetupDialogBase  *m_pimpl;
-    
+
 private:
     DECLARE_DYNAMIC_CLASS(wxPageSetupDialog)
     DECLARE_NO_COPY_CLASS(wxPageSetupDialog)

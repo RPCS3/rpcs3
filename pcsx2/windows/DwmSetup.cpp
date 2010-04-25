@@ -21,7 +21,7 @@ void pxDwm_Load()
 	wxDoNotLogInThisScope please;
 
 	// Version test is not needed since we're using LoadLibrary. --air
-	
+
 	/*OSVERSIONINFOEX info = {0};
 	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	info.dwMajorVersion = 6;
@@ -61,13 +61,13 @@ void pxDwm_SetPresentParams( WXWidget wnd )
 	if( pDwmSetPresentParameters == NULL ) return;
 
 	DWM_PRESENT_PARAMETERS params;
-	
+
 	params.cbSize = sizeof(DWM_PRESENT_PARAMETERS);
 	params.fQueue = FALSE;
 
 	if(FAILED(pDwmSetPresentParameters( (HWND)wnd, &params )))
 		Console.WriteLn("[Dwm] DwmSetPresentParameters returned a failure code.");
-		
+
 	//DwmSetDxFrameDuration(hMainWindow,1);
 }
 

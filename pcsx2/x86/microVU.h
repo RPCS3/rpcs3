@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #pragma once
 //#define mVUlogProg // Dumps MicroPrograms to \logs\*.html
 
@@ -40,7 +40,7 @@ private:
 	int listI;
 
 public:
-	microBlockManager() { 
+	microBlockManager() {
 		listI = -1;
 		blockList.block = NULL;
 		blockList.next  = NULL;
@@ -57,7 +57,7 @@ public:
 				safe_delete(linkD);
 				linkD = linkI;
 			}
-			safe_delete(linkI); 
+			safe_delete(linkI);
 		}
 		listI = -1;
 		blockEnd = &blockList;
@@ -109,7 +109,7 @@ public:
 	}
 };
 
-struct microRange { 
+struct microRange {
 	s32 start; // Start PC (The opcode the block starts at)
 	s32 end;   // End PC   (The opcode the block ends with)
 };
@@ -123,7 +123,7 @@ struct microProgram {
 	int idx;	 // Program index
 };
 
-struct microProgramList { 
+struct microProgramList {
 	deque<microProgram*>* list;  // List of microPrograms who start with the same startPC value
 };
 

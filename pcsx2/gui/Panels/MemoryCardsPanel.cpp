@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -155,7 +155,7 @@ MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot
 	SetMinSize( wxSize(128, 48) );
 
 	Connect( wxEVT_PAINT, wxPaintEventHandler(MemoryCardInfoPanel::paintEvent) );
-	
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -166,7 +166,7 @@ void MemoryCardInfoPanel::paintEvent(wxPaintEvent & evt)
 	wxFont woot( dc.GetFont() );
 	woot.SetWeight( wxBOLD );
 	dc.SetFont( woot );
-	
+
 	wxString msg;
 	msg = _("No Card (empty)");
 
@@ -252,7 +252,7 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 
 		*s_table += columns[port]	| StdExpand();
 	}
-	
+
 	wxBoxSizer& s_checks( *new wxBoxSizer( wxVERTICAL ) );
 	s_checks += m_check_Ejection;
 

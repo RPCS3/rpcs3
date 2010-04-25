@@ -21,7 +21,7 @@
 
 // Run VU0 until finish, don't add cycles to EE
 // because its vif stalling not the EE core...
-__forceinline void vif0FLUSH() 
+__forceinline void vif0FLUSH()
 {
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 	int _cycles = VU0.cycle;
@@ -60,7 +60,7 @@ bool _VIF0chain()
 __forceinline void vif0SetupTransfer()
 {
     tDMA_TAG *ptag;
-    
+
 	switch (vif0.dmamode)
 	{
 		case VIF_NORMAL_TO_MEM_MODE:
@@ -149,7 +149,7 @@ __forceinline void vif0Interrupt()
 	if (vif0.inprogress & 0x1)
 	{
 		_VIF0chain();
-		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
+		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation.
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
 		if (vif0.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF0, 1024);
 		else CPU_INT(DMAC_VIF0, g_vifCycles);

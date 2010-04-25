@@ -870,17 +870,17 @@ int wxWindowsPageSetupDialog::ShowModal()
         pd->hwndOwner = (HWND) wxTheApp->GetTopWindow()->GetHWND();
     else
         pd->hwndOwner = 0;
-        
+
     BOOL retVal = PageSetupDlg( pd ) ;
     pd->hwndOwner = 0;
-    
+
     if (retVal)
     {
         ConvertFromNative( m_pageSetupData );
-        
+
         return wxID_OK;
     }
-    
+
     return wxID_CANCEL;
 }
 
@@ -889,7 +889,7 @@ bool wxWindowsPageSetupDialog::ConvertToNative( wxPageSetupDialogData &data )
     wxWindowsPrintNativeData *native_data =
         (wxWindowsPrintNativeData *) data.GetPrintData().GetNativeData();
     data.GetPrintData().ConvertToNative();
-    
+
     PAGESETUPDLG *pd = (PAGESETUPDLG*) m_pageDlg;
 
     // Shouldn't have been defined anywhere

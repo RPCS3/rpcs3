@@ -60,7 +60,7 @@ struct Module
 		base=(u32)mbi.AllocationBase;
 		GetModuleFileName((HMODULE)mbi.AllocationBase,filename,512);
 		len=(u8*)mbi.BaseAddress-(u8*)mbi.AllocationBase+mbi.RegionSize;
-		
+
 		if (getname)
 		{
 			name=filename;
@@ -74,7 +74,7 @@ struct Module
 			VirtualQuery(((u8*)base)+len,&mbi,sizeof(mbi));
 			if (!(mbi.Type&MEM_IMAGE))
 				break;
-			
+
 			if (!GetModuleFileName((HMODULE)mbi.AllocationBase,filename2,512))
 				break;
 
@@ -82,7 +82,7 @@ struct Module
 				break;
 			len+=mbi.RegionSize;
 		}
-		
+
 
 		end=base+len-1;
 	}
@@ -248,7 +248,7 @@ int __stdcall ProfilerThread(void* nada)
 		{
 			MapUnknownSource( ctx.Eip );
 		}
-		
+
 		if( hMtgsThread != NULL )
 		{
 			GetThreadContext(hMtgsThread,&ctx);
@@ -267,10 +267,10 @@ void ProfilerInit()
 
 	//Console.Msg( "Profiler Thread Initializing..." );
 	ProfRunning=true;
-	DuplicateHandle(GetCurrentProcess(), 
-		GetCurrentThread(), 
+	DuplicateHandle(GetCurrentProcess(),
+		GetCurrentThread(),
 		GetCurrentProcess(),
-		&(HANDLE)hEmuThread, 
+		&(HANDLE)hEmuThread,
 		0,
 		FALSE,
 		DUPLICATE_SAME_ACCESS);

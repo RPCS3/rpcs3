@@ -160,7 +160,7 @@ bool wxTopLevelWindowBase::IsLastBeforeExit() const
 
 void wxTopLevelWindowBase::SetMinSize(const wxSize& minSize)
 {
-    SetSizeHints( minSize.x, minSize.y, GetMaxWidth(), GetMaxHeight() );    
+    SetSizeHints( minSize.x, minSize.y, GetMaxWidth(), GetMaxHeight() );
 }
 
 void wxTopLevelWindowBase::SetMaxSize(const wxSize& maxSize)

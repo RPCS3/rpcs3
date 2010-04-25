@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "analog.h"
 
 PADAnalog g_lanalog[NUM_OF_PADS], g_ranalog[NUM_OF_PADS];
@@ -29,25 +29,25 @@ namespace Analog
 			case PAD_LX:
 				return g_lanalog[i].x;
 				break;
-			
+
 			case PAD_RX:
 				return g_ranalog[i].x;
 				break;
-			
+
 			case PAD_LY:
 				return g_lanalog[i].y;
 				break;
-			
+
 			case PAD_RY:
 				return g_ranalog[i].y;
 				break;
-			
+
 			default:
 				return 0;
 				break;
 		}
 	}
-	
+
 	void SetPad(int padvalue, u8 i, u8 value)
 	{
 		switch (padvalue)
@@ -55,34 +55,34 @@ namespace Analog
 			case PAD_LX:
 				g_lanalog[i].x = value;
 				break;
-			
+
 			case PAD_RX:
 				g_ranalog[i].x = value;
 				break;
-			
+
 			case PAD_LY:
 				g_lanalog[i].y = value;
 				break;
-			
+
 			case PAD_RY:
 				g_ranalog[i].y = value;
 				break;
-			
+
 			default:
 				break;
 		}
 	}
-	
+
 	void InvertPad(int padvalue, u8 i)
 	{
 		SetPad(padvalue, i, -Pad(padvalue, i));
 	}
-	
+
 	void ResetPad(int padvalue, u8 i)
 	{
 		SetPad(padvalue, i, 0x80);
 	}
-	
+
 	void Init()
 	{
 		for (int i = 0; i < 2; ++i)
@@ -93,7 +93,7 @@ namespace Analog
 			ResetPad(PAD_RY, i);
 		}
 	}
-	
+
 	bool RevertPad(u8 padvalue)
 	{
 		switch (padvalue)
@@ -101,32 +101,32 @@ namespace Analog
 			case PAD_LX:
 				return ((conf.options & PADOPTION_REVERTLX) != 0);
 				break;
-			
+
 			case PAD_RX:
 				return ((conf.options & PADOPTION_REVERTRX) != 0);
 				break;
-			
+
 			case PAD_LY:
 				return ((conf.options & PADOPTION_REVERTLY) != 0);
 				break;
-			
+
 			case PAD_RY:
 				return ((conf.options & PADOPTION_REVERTRY) != 0);
 				break;
-			
+
 			default:
 				return false;
 				break;
 		}
 	}
-	
+
 	void ConfigurePad(int padvalue, u8 i, int value)
 	{
 		int temp = Pad(padvalue, i);
 		SetPad(padvalue, i, value / 256);
 		if (RevertPad(padvalue)) InvertPad(padvalue, i);
 		SetPad(padvalue, i, Pad(padvalue, i) + 0x80);
-		
+
 		//PAD_LOG("Setting pad[%d]@%d to %d from %d\n", padvalue, i, value, temp);
 	}
 	int AnalogToPad(int padvalue)

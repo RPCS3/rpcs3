@@ -32,7 +32,7 @@ using namespace ZeroGS;
 
 //------------------ Constants
 
-// ----------------- Global Variables 
+// ----------------- Global Variables
 int maxmin = 608;
 // ----------------- Code
 
@@ -53,7 +53,7 @@ ZeroGS::VB::~VB()
 void ZeroGS::VB::Destroy()
 {
 	_aligned_free(pBufferData); pBufferData = NULL; nNumVertices = 0;
-	
+
 	prndr = NULL;
 	pdepth = NULL;
 }
@@ -61,15 +61,15 @@ void ZeroGS::VB::Destroy()
 int ConstraintReson;
 
 // Return number of 64-pixels block, that guaranted could be hold in memory
-// from gsfb.fbp and tbp (textrure pase), zbuf.zbp (Z-buffer), frame.fbp 
-// (previous frame). 
+// from gsfb.fbp and tbp (textrure pase), zbuf.zbp (Z-buffer), frame.fbp
+// (previous frame).
 inline int
 ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos) {
 	int MinConstraint = maxpos;
-	
+
 	// make sure texture is far away from tbp
-	{ 
-		int Constraint = tbp - gsfb.fbp; 
+	{
+		int Constraint = tbp - gsfb.fbp;
 		if ((0 < Constraint) && (Constraint < MinConstraint)) {
 			MinConstraint = Constraint;
 			ConstraintReson = 1;
@@ -79,8 +79,8 @@ ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos) {
 	// offroad uses 0x80 fbp which messes up targets
 	// special case when double buffering (hamsterball)
 	// Suikoden 3 require e00 have this issue too. P3 - 0x1000.
-	if (prndr != NULL) { 
-		int Constraint = frame.fbp - gsfb.fbp; 
+	if (prndr != NULL) {
+		int Constraint = frame.fbp - gsfb.fbp;
 		if ((0x0 < Constraint) && (Constraint < MinConstraint)) {
 			MinConstraint = Constraint;
 			ConstraintReson = 2;
@@ -89,8 +89,8 @@ ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos) {
 
 	// old caching method
 	// zmsk necessary for KH movie
-	if (!zbuf.zmsk){ 
-		int Constraint = zbuf.zbp - gsfb.fbp; 
+	if (!zbuf.zmsk){
+		int Constraint = zbuf.zbp - gsfb.fbp;
 		if ((0 < Constraint) && (Constraint < MinConstraint)) {
 			MinConstraint = Constraint;
 			ConstraintReson = 3;
@@ -98,7 +98,7 @@ ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos) {
 	}
 
 	// In 16Bit mode in one Word freame stored 2 pixels
-	if (PSMT_ISHALF(gsfb.psm)) 
+	if (PSMT_ISHALF(gsfb.psm))
 		MinConstraint *= 2;
 
 	return MinConstraint ;
@@ -138,9 +138,9 @@ ZeroGS::VB::FindMinimalHeightConstrain(int maxpos) {
 
 	if (maxmin < MinConstraint) {
 		MinConstraint = maxmin;
-		ConstraintReson = 5;	
+		ConstraintReson = 5;
 	}
-	
+
 	if (gsfb.fbh < MinConstraint) {
 		MinConstraint = gsfb.fbh;
 		ConstraintReson = 6;
@@ -155,11 +155,11 @@ ZeroGS::VB::FindMinimalHeightConstrain(int maxpos) {
 	return MinConstraint;
 }
 
-// 32 bit frames have additional constraints to frame 
+// 32 bit frames have additional constraints to frame
 // maxpos was maximum length of frame at normal constraints
-inline void 
-ZeroGS::VB::CheckFrame32bitRes(int maxpos) 
-{ 
+inline void
+ZeroGS::VB::CheckFrame32bitRes(int maxpos)
+{
 	int fbh = frame.fbh;
 
 	if ( frame.fbh >= 512 ) {
@@ -168,7 +168,7 @@ ZeroGS::VB::CheckFrame32bitRes(int maxpos)
 		frame.fbh = maxmin;
 		ConstraintReson = 8;
 	}
-	
+
 	// ffxii hack to stop resolving
 	if( frame.fbp >= 0x3000 && fbh >= 0x1a0 ) {
 		int endfbp = frame.fbp + frame.fbw * fbh / (PSMT_ISHALF(gsfb.psm) ? 128 : 64);
@@ -184,16 +184,16 @@ ZeroGS::VB::CheckFrame32bitRes(int maxpos)
 		if (frame.fbh < fbh)
 			ConstraintReson = 9;
 	}
-	
+
 }
 
-// This is the main code of frame resising. 
+// This is the main code of frame resising.
 // It's check several reasons for resize and resize if it needs.
-// 4Mb memory in 64 bit (4 bytes) words. 
+// 4Mb memory in 64 bit (4 bytes) words.
 // |------------------------|---------------------|----------|----------|---------------------|
 // 0                     gsfb.fbp               zbuff.zpb   tbp    frame.fbp              2^20/64
-inline int 
-ZeroGS::VB::CheckFrameAddConstraints(int tbp) 
+inline int
+ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 {
 	if ( gsfb.fbw <= 0 )  {
 		ERROR_LOG_SPAM("render target null, no constraints. Ignoring\n");
@@ -204,13 +204,13 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 	int maxmemorypos = 0x4000 - gsfb.fbp;
 	ConstraintReson = 0;
 
-	maxmemorypos = FindMinimalMemoryConstrain(tbp, maxmemorypos); 
+	maxmemorypos = FindMinimalMemoryConstrain(tbp, maxmemorypos);
 	maxmemorypos = FindZbufferMemoryConstrain(tbp, maxmemorypos);
-	
+
 	int maxpos = 64 * maxmemorypos ;
 	maxpos /= gsfb.fbw;
 	//? atelier iris crashes without it
-	if( maxpos > 256 ) 
+	if( maxpos > 256 )
 		maxpos &= ~0x1f;
 
 	//int noscissorpos = maxpos;
@@ -220,15 +220,15 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 	frame = gsfb;
 	frame.fbh = maxpos;
 
-	if( !PSMT_ISHALF(frame.psm) || !(g_GameSettings&GAME_FULL16BITRES) ) 
+	if( !PSMT_ISHALF(frame.psm) || !(g_GameSettings&GAME_FULL16BITRES) )
 		CheckFrame32bitRes( maxpos ) ;
 
 #ifdef DEVBUILD
 	if (frame.fbh == 0xe2)
 		ERROR_LOG ("Const: %x %x %d| %x %d %x %x\n", frame.fbh, frame.fbw, ConstraintReson, noscissorpos, ConstrainR1, tbp, frame.fbp);
-#endif	
+#endif
 
-// 	Fixme: Reserved psm for framebuffers	
+// 	Fixme: Reserved psm for framebuffers
 //	gsfb.psm &= 0xf; // shadow tower
 
 	return 0 ;
@@ -237,8 +237,8 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 // Check if after resising new depth target is need to be used.
 // it return 2 if new deapth target used. bool Chose is used to proprely check
 // renderer target status
-inline int 
-ZeroGS::VB::CheckFrameResolveDepth(int tbp) 
+inline int
+ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 {
 	int result = 0 ;
 	CDepthTarget* pprevdepth = pdepth;
@@ -246,7 +246,7 @@ ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 
 	// just z changed
 	frameInfo f = CreateFrame(zbuf.zbp, prndr->fbw, prndr->fbh, zbuf.psm, (zbuf.psm == 0x31) ? 0xff000000 : 0);
-	
+
 	CDepthTarget* pnewdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
 		(zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), get_maxheight(zbuf.zbp, gsfb.fbw, 0));
 
@@ -263,7 +263,7 @@ ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 
 // Check if after resings new render target is need to be used. Also perform deptaget check
 // Return 1 if only render target is changed and 3 -- if both.
-inline int 
+inline int
 ZeroGS::VB::CheckFrameResolveRender(int tbp) {
 	int result = 0 ;
 
@@ -303,8 +303,8 @@ ZeroGS::VB::CheckFrameResolveRender(int tbp) {
 }
 
 // After frame resetting it is possible that 16 to 32 or 32 to 16 (color bits) conversion should be made.
-inline void 
-ZeroGS::VB::CheckFrame16vs32Convesion() 
+inline void
+ZeroGS::VB::CheckFrame16vs32Convesion()
 {
 	if( prndr->status & CRenderTarget::TS_NeedConvert32) {
 		if( pdepth->pdepth != 0 )
@@ -322,7 +322,7 @@ ZeroGS::VB::CheckFrame16vs32Convesion()
 	}
 }
 
-// a lot of times, target is too big and overwrites the texture using, 
+// a lot of times, target is too big and overwrites the texture using,
 // if tbp != 0, use it to bound
 void ZeroGS::VB::CheckFrame(int tbp)
 {
@@ -356,10 +356,10 @@ void ZeroGS::VB::CheckFrame(int tbp)
 	}
 	else if (bNeedZCheck) {
 		bNeedZCheck = 0;
-		if (prndr != NULL && gsfb.fbw > 0 )  
+		if (prndr != NULL && gsfb.fbw > 0 )
 			CheckFrameResolveDepth(tbp);
 	}
-	
+
 	if( prndr != NULL ) SetContextTarget(ictx);
 }
 
@@ -375,7 +375,7 @@ inline void ZeroGS::VB::FlushTexUnchangedClutDontUpdate() {
 // The second of easy branch. We does not change storage model, so we don't need to
 // update anything except texture itself
 inline void ZeroGS::VB::FlushTexClutDontUpdate() {
-	if (!ZZOglClutStorageUnchanged(uCurTex0Data, uNextTex0Data)) 
+	if (!ZZOglClutStorageUnchanged(uCurTex0Data, uNextTex0Data))
 		ZeroGS::Flush(ictx);
 
 	// clut memory isn't going to be loaded so can ignore, but at least update CSA and CPSM!
@@ -388,7 +388,7 @@ inline void ZeroGS::VB::FlushTexClutDontUpdate() {
 	bVarsTexSync = FALSE;
 }
 
- 
+
 // Set texture variables after big change
 inline void ZeroGS::VB::FlushTexSetNewVars(u32 psm) {
 	tex0.tbp0 = ZZOglGet_tbp0_TexBits(uNextTex0Data[0]);
@@ -396,7 +396,7 @@ inline void ZeroGS::VB::FlushTexSetNewVars(u32 psm) {
 	tex0.psm  = psm;
 	tex0.tw   = ZZOglGet_tw_TexBitsExp(uNextTex0Data[0]);
 	tex0.th   = ZZOglGet_th_TexBitsExp(uNextTex0Data[0], uNextTex0Data[1]);
-	
+
 	tex0.tcc  = ZZOglGet_tcc_TexBits(uNextTex0Data[1]);
 	tex0.tfx  = ZZOglGet_tfx_TexBits(uNextTex0Data[1]);
 
@@ -417,8 +417,8 @@ void ZeroGS::VB::FlushTexData()
 	// don't update unless necessary
 	if (ZZOglAllExceptClutIsSame(uCurTex0Data, uNextTex0Data)) {
 		// Don't need to do anything if there is no clutting and VB tex data was not changed
-		if( !PSMT_ISCLUT(psm) ) 
-			return ; 
+		if( !PSMT_ISCLUT(psm) )
+			return ;
 
 		// have to write the CLUT again if only CLD was changed
 		if( ZZOglClutMinusCLDunchanged(uCurTex0Data, uNextTex0Data) ) {
@@ -443,7 +443,7 @@ void ZeroGS::VB::FlushTexData()
 
 	FlushTexSetNewVars(psm);
 
-	if( PSMT_ISCLUT(psm) ) 
+	if( PSMT_ISCLUT(psm) )
 		ZeroGS::CluttingForFlushedTex(&tex0, uNextTex0Data[1], ictx ) ;
 }
 

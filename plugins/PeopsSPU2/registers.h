@@ -121,9 +121,9 @@
 
 // CORE 1 only
 
-#define PS2_SPDIF_OUT        0x7C0                                // SPDIF Out: OFF/'PCM'/Bitstream/Bypass 
-#define PS2_SPDIF_MODE       0x7C6 
-#define PS2_SPDIF_MEDIA      0x7C8                                // SPDIF Media: 'CD'/DVD	
+#define PS2_SPDIF_OUT        0x7C0                                // SPDIF Out: OFF/'PCM'/Bitstream/Bypass
+#define PS2_SPDIF_MODE       0x7C6
+#define PS2_SPDIF_MEDIA      0x7C8                                // SPDIF Media: 'CD'/DVD
 #define PS2_SPDIF_COPY       0x7CA                                // SPDIF Copy Protection
 
 //###########################################################################
@@ -150,7 +150,7 @@
 
  SD_S_PMON                - Pitch mod; assuming identical to PS1
  SD_S_NON                 - Noise; assuming identical to PS1
- SD_S_VMIXL, SD_S_VMIXR   - Voice mix L/R. Guessing this is just a separate L/R version 
+ SD_S_VMIXL, SD_S_VMIXR   - Voice mix L/R. Guessing this is just a separate L/R version
                             of the "voice enable" bits on the PS1.
  SD_S_VMIXEL, SD_S_VMIXER - Voice effect mix L/R. Guessing this is just a separate L/R
                             version of the "voice reverb enable" bits on the PS1.
@@ -220,7 +220,7 @@ Other PS2 IOP notes
  SPU CORE1's DMA channel is 7
 
 DMA channel 10 is SIF
- 
+
  Original INTR controller at 1F801000-1F80107F
 
  All interrupt handling seems to be done using the old INTR, but
@@ -343,7 +343,7 @@ Reading probably clears these bits.
  1D000030 (word) - read counter of some sort?
  1D000040 (word) - read bits 0x20, 0x40 mean something
  1D000060 (word) - used to detect whether the SIF interface exists
-                   read must be 0x1D000060, or the top 20 bits must be zero 
+                   read must be 0x1D000060, or the top 20 bits must be zero
 */
 
 /*
@@ -387,7 +387,7 @@ Included these just in case you need them J.F. - Kanodin
    #define IOP_INT_USB     (1<<22)
    #define IOP_INT_EXTR    (1<<23)
    #define IOP_INT_FWRE    (1<<24)
-   #define IOP_INT_FDMA    (1<<25)    
+   #define IOP_INT_FDMA    (1<<25)
 
 // CORE0 => +0x000, CORE1 => +0x400
 
@@ -416,7 +416,7 @@ Included these just in case you need them J.F. - Kanodin
 #define S_VMIXER(cr)     (0x400 * cr + 0x194)                // voice output mixing (wet right)
 #define P_MMIX(cr)       (0x400 * cr + 0x198)                // output type after voice mixing (See paragraph below)
 #define P_ATTR(cr)       (0x400 * cr + 0x19A)                // core attributes (See paragraph below)
-#define A_IRQA(cr)       (0x400 * cr + 0x19C)                // IRQ address 
+#define A_IRQA(cr)       (0x400 * cr + 0x19C)                // IRQ address
 #define S_KON(cr)        (0x400 * cr + 0x1A0)                // key on (start voice sound generation)
 #define S_KOFF(cr)       (0x400 * cr + 0x1A4)                // key off (end voice sound generation)
 #define A_TSA(cr)        (0x400 * cr + 0x1A8)                // DMA transfer start address
@@ -426,30 +426,30 @@ Included these just in case you need them J.F. - Kanodin
 
 #define A_ESA(cr)        (0x400 * cr + 0x2E0)                // effects work area start address
 
-#define FB_SRC_A(cr)     (0x400 * cr + 0x2E4)      
-#define FB_SRC_B(cr)     (0x400 * cr + 0x2E8)      
-#define IIR_DEST_A0(cr)  (0x400 * cr + 0x2EC)      
-#define IIR_DEST_A1(cr)  (0x400 * cr + 0x2F0)      
-#define ACC_SRC_A0(cr)   (0x400 * cr + 0x2F4)     
+#define FB_SRC_A(cr)     (0x400 * cr + 0x2E4)
+#define FB_SRC_B(cr)     (0x400 * cr + 0x2E8)
+#define IIR_DEST_A0(cr)  (0x400 * cr + 0x2EC)
+#define IIR_DEST_A1(cr)  (0x400 * cr + 0x2F0)
+#define ACC_SRC_A0(cr)   (0x400 * cr + 0x2F4)
 #define ACC_SRC_A1(cr)   (0x400 * cr + 0x2F8)
-#define ACC_SRC_B0(cr)   (0x400 * cr + 0x2FC)  
+#define ACC_SRC_B0(cr)   (0x400 * cr + 0x2FC)
 
-#define ACC_SRC_B1(cr)   (0x400 * cr + 0x300)      
-#define IIR_SRC_A0(cr)   (0x400 * cr + 0x304)      
-#define IIR_SRC_A1(cr)   (0x400 * cr + 0x308)      
-#define IIR_DEST_B0(cr)  (0x400 * cr + 0x30C)      
-#define IIR_DEST_B1(cr)  (0x400 * cr + 0x310)      
-#define ACC_SRC_C0(cr)   (0x400 * cr + 0x314)      
-#define ACC_SRC_C1(cr)   (0x400 * cr + 0x318)  
+#define ACC_SRC_B1(cr)   (0x400 * cr + 0x300)
+#define IIR_SRC_A0(cr)   (0x400 * cr + 0x304)
+#define IIR_SRC_A1(cr)   (0x400 * cr + 0x308)
+#define IIR_DEST_B0(cr)  (0x400 * cr + 0x30C)
+#define IIR_DEST_B1(cr)  (0x400 * cr + 0x310)
+#define ACC_SRC_C0(cr)   (0x400 * cr + 0x314)
+#define ACC_SRC_C1(cr)   (0x400 * cr + 0x318)
 
-#define ACC_SRC_D0(cr)   (0x400 * cr + 0x31C)      
-#define ACC_SRC_D1(cr)   (0x400 * cr + 0x320)      
-#define IIR_SRC_B1(cr)   (0x400 * cr + 0x324)      
-#define IIR_SRC_B0(cr)   (0x400 * cr + 0x328)      
-#define MIX_DEST_A0(cr)  (0x400 * cr + 0x32C)      
-#define MIX_DEST_A1(cr)  (0x400 * cr + 0x330)      
-#define MIX_DEST_B0(cr)  (0x400 * cr + 0x334)      
-#define MIX_DEST_B1(cr)  (0x400 * cr + 0x338)      
+#define ACC_SRC_D0(cr)   (0x400 * cr + 0x31C)
+#define ACC_SRC_D1(cr)   (0x400 * cr + 0x320)
+#define IIR_SRC_B1(cr)   (0x400 * cr + 0x324)
+#define IIR_SRC_B0(cr)   (0x400 * cr + 0x328)
+#define MIX_DEST_A0(cr)  (0x400 * cr + 0x32C)
+#define MIX_DEST_A1(cr)  (0x400 * cr + 0x330)
+#define MIX_DEST_B0(cr)  (0x400 * cr + 0x334)
+#define MIX_DEST_B1(cr)  (0x400 * cr + 0x338)
 
 #define A_EEA(cr)        (0x400 * cr + 0x33C)                // effects work area end address
 
@@ -470,22 +470,22 @@ Included these just in case you need them J.F. - Kanodin
 #define P_MVOLXL(cr)     (0x28 * cr + 0x770)                 // current master volume (left)
 #define P_MVOLXR(cr)     (0x28 * cr + 0x772)                 // current master volume (right)
 
-#define IIR_ALPHA(cr)    (0x28 * cr + 0x774)      
-#define ACC_COEF_A(cr)   (0x28 * cr + 0x776)      
-#define ACC_COEF_B(cr)   (0x28 * cr + 0x778)      
-#define ACC_COEF_C(cr)   (0x28 * cr + 0x77A)      
-#define ACC_COEF_D(cr)   (0x28 * cr + 0x77C)      
-#define IIR_COEF(cr)     (0x28 * cr + 0x77E)      
-#define FB_ALPHA(cr)     (0x28 * cr + 0x780)      
-#define FB_X(cr)         (0x28 * cr + 0x782)      
-#define IN_COEF_L(cr)    (0x28 * cr + 0x784)      
-#define IN_COEF_R(cr)    (0x28 * cr + 0x786)      
+#define IIR_ALPHA(cr)    (0x28 * cr + 0x774)
+#define ACC_COEF_A(cr)   (0x28 * cr + 0x776)
+#define ACC_COEF_B(cr)   (0x28 * cr + 0x778)
+#define ACC_COEF_C(cr)   (0x28 * cr + 0x77A)
+#define ACC_COEF_D(cr)   (0x28 * cr + 0x77C)
+#define IIR_COEF(cr)     (0x28 * cr + 0x77E)
+#define FB_ALPHA(cr)     (0x28 * cr + 0x780)
+#define FB_X(cr)         (0x28 * cr + 0x782)
+#define IN_COEF_L(cr)    (0x28 * cr + 0x784)
+#define IN_COEF_R(cr)    (0x28 * cr + 0x786)
 
 // CORE1 only => +0x400
 
-#define SPDIF_OUT        0x7C0                               // SPDIF Out: OFF/'PCM'/Bitstream/Bypass 
+#define SPDIF_OUT        0x7C0                               // SPDIF Out: OFF/'PCM'/Bitstream/Bypass
 #define SPDIF_MODE       0x7C6
-#define SPDIF_MEDIA      0x7C8                               // SPDIF Media: 'CD'/DVD	
+#define SPDIF_MEDIA      0x7C8                               // SPDIF Media: 'CD'/DVD
 #define SPDIF_COPY       0x7CA                               // SPDIF Copy Protection
 
 // PS1 SPU CORE
@@ -504,17 +504,17 @@ Included these just in case you need them J.F. - Kanodin
 #define SPU_P_RVOLL      0xD84                               // effect return volume (left)
 #define SPU_P_RVOLR      0xD86                               // effect return volume (right)
 #define SPU_S_KON1       0xD88                               // key on
-#define SPU_S_KON2       0xD8A                               // 
+#define SPU_S_KON2       0xD8A                               //
 #define SPU_S_KOFF1      0xD8C                               // key off
-#define SPU_S_KOFF2      0xD8E                               // 
+#define SPU_S_KOFF2      0xD8E                               //
 #define SPU_S_PMON1      0xD90                               // pitch modulation on
-#define SPU_S_PMON2      0xD92                               // 
+#define SPU_S_PMON2      0xD92                               //
 #define SPU_S_NON1       0xD94                               // noise generator on
-#define SPU_S_NON2       0xD96                               // 
+#define SPU_S_NON2       0xD96                               //
 #define SPU_S_RVBON1     0xD98                               // effects on
-#define SPU_S_RVBON2     0xD9A                               // 
+#define SPU_S_RVBON2     0xD9A                               //
 #define SPU_S_MUTE1      0xD9C                               // voice mute
-#define SPU_S_MUTE2      0xD9E                               // 
+#define SPU_S_MUTE2      0xD9E                               //
 
 #define SPU_A_ESA        0xDA2                               // effects work area start
 #define SPU_A_IRQA       0xDA4                               // IRQ address
@@ -560,7 +560,7 @@ Included these just in case you need them J.F. - Kanodin
 #define S_VMIXER(cr)     (0x400 * cr + 0x194)                // voice output mixing (wet right)
 #define P_MMIX(cr)       (0x400 * cr + 0x198)                // output type after voice mixing (See paragraph below)
 #define P_ATTR(cr)       (0x400 * cr + 0x19A)                // core attributes (See paragraph below)
-#define A_IRQA(cr)       (0x400 * cr + 0x19C)                // IRQ address 
+#define A_IRQA(cr)       (0x400 * cr + 0x19C)                // IRQ address
 #define S_KON(cr)        (0x400 * cr + 0x1A0)                // key on (start voice sound generation)
 #define S_KOFF(cr)       (0x400 * cr + 0x1A4)                // key off (end voice sound generation)
 #define A_TSA(cr)        (0x400 * cr + 0x1A8)                // DMA transfer start address
@@ -574,30 +574,30 @@ Included these just in case you need them J.F. - Kanodin
 // Core 0 Reverb Addresses
 
 
-#define FB_SRC_A(cr)     (0x400 * cr + 0x2E4)      
-#define FB_SRC_B(cr)     (0x400 * cr + 0x2E8)      
-#define IIR_DEST_A0(cr)  (0x400 * cr + 0x2EC)      
-#define IIR_DEST_A1(cr)  (0x400 * cr + 0x2F0)      
-#define ACC_SRC_A0(cr)   (0x400 * cr + 0x2F4)     
+#define FB_SRC_A(cr)     (0x400 * cr + 0x2E4)
+#define FB_SRC_B(cr)     (0x400 * cr + 0x2E8)
+#define IIR_DEST_A0(cr)  (0x400 * cr + 0x2EC)
+#define IIR_DEST_A1(cr)  (0x400 * cr + 0x2F0)
+#define ACC_SRC_A0(cr)   (0x400 * cr + 0x2F4)
 #define ACC_SRC_A1(cr)   (0x400 * cr + 0x2F8)
-#define ACC_SRC_B0(cr)   (0x400 * cr + 0x2FC)  
+#define ACC_SRC_B0(cr)   (0x400 * cr + 0x2FC)
 
-#define ACC_SRC_B1(cr)   (0x400 * cr + 0x300)      
-#define IIR_SRC_A0(cr)   (0x400 * cr + 0x304)      
-#define IIR_SRC_A1(cr)   (0x400 * cr + 0x308)      
-#define IIR_DEST_B0(cr)  (0x400 * cr + 0x30C)      
-#define IIR_DEST_B1(cr)  (0x400 * cr + 0x310)      
-#define ACC_SRC_C0(cr)   (0x400 * cr + 0x314)      
-#define ACC_SRC_C1(cr)   (0x400 * cr + 0x318)  
+#define ACC_SRC_B1(cr)   (0x400 * cr + 0x300)
+#define IIR_SRC_A0(cr)   (0x400 * cr + 0x304)
+#define IIR_SRC_A1(cr)   (0x400 * cr + 0x308)
+#define IIR_DEST_B0(cr)  (0x400 * cr + 0x30C)
+#define IIR_DEST_B1(cr)  (0x400 * cr + 0x310)
+#define ACC_SRC_C0(cr)   (0x400 * cr + 0x314)
+#define ACC_SRC_C1(cr)   (0x400 * cr + 0x318)
 
-#define ACC_SRC_D0(cr)   (0x400 * cr + 0x31C)      
-#define ACC_SRC_D1(cr)   (0x400 * cr + 0x320)      
-#define IIR_SRC_B1(cr)   (0x400 * cr + 0x324)      
-#define IIR_SRC_B0(cr)   (0x400 * cr + 0x328)      
-#define MIX_DEST_A0(cr)  (0x400 * cr + 0x32C)      
-#define MIX_DEST_A1(cr)  (0x400 * cr + 0x330)      
-#define MIX_DEST_B0(cr)  (0x400 * cr + 0x334)      
-#define MIX_DEST_B1(cr)  (0x400 * cr + 0x338)      
+#define ACC_SRC_D0(cr)   (0x400 * cr + 0x31C)
+#define ACC_SRC_D1(cr)   (0x400 * cr + 0x320)
+#define IIR_SRC_B1(cr)   (0x400 * cr + 0x324)
+#define IIR_SRC_B0(cr)   (0x400 * cr + 0x328)
+#define MIX_DEST_A0(cr)  (0x400 * cr + 0x32C)
+#define MIX_DEST_A1(cr)  (0x400 * cr + 0x330)
+#define MIX_DEST_B0(cr)  (0x400 * cr + 0x334)
+#define MIX_DEST_B1(cr)  (0x400 * cr + 0x338)
 
 #define A_EEA(cr)        (0x400 * cr + 0x33C)                // effects work area end address
 
@@ -624,23 +624,23 @@ Included these just in case you need them J.F. - Kanodin
 // More CORE 0 Reverb
 
 
-#define IIR_ALPHA(cr)    (0x28 * cr + 0x774)      
-#define ACC_COEF_A(cr)   (0x28 * cr + 0x776)      
-#define ACC_COEF_B(cr)   (0x28 * cr + 0x778)      
-#define ACC_COEF_C(cr)   (0x28 * cr + 0x77A)      
-#define ACC_COEF_D(cr)   (0x28 * cr + 0x77C)      
-#define IIR_COEF(cr)     (0x28 * cr + 0x77E)      
-#define FB_ALPHA(cr)     (0x28 * cr + 0x780)      
-#define FB_X(cr)         (0x28 * cr + 0x782)      
-#define IN_COEF_L(cr)    (0x28 * cr + 0x784)      
-#define IN_COEF_R(cr)    (0x28 * cr + 0x786) 
+#define IIR_ALPHA(cr)    (0x28 * cr + 0x774)
+#define ACC_COEF_A(cr)   (0x28 * cr + 0x776)
+#define ACC_COEF_B(cr)   (0x28 * cr + 0x778)
+#define ACC_COEF_C(cr)   (0x28 * cr + 0x77A)
+#define ACC_COEF_D(cr)   (0x28 * cr + 0x77C)
+#define IIR_COEF(cr)     (0x28 * cr + 0x77E)
+#define FB_ALPHA(cr)     (0x28 * cr + 0x780)
+#define FB_X(cr)         (0x28 * cr + 0x782)
+#define IN_COEF_L(cr)    (0x28 * cr + 0x784)
+#define IN_COEF_R(cr)    (0x28 * cr + 0x786)
 
 
 // CORE 1 only
 
-#define SPDIF_OUT        0x7C0                                // SPDIF Out: OFF/'PCM'/Bitstream/Bypass 
-#define SPDIF_MODE       0x7C6 
-#define SPDIF_MEDIA      0x7C8                                // SPDIF Media: 'CD'/DVD	
+#define SPDIF_OUT        0x7C0                                // SPDIF Out: OFF/'PCM'/Bitstream/Bypass
+#define SPDIF_MODE       0x7C6
+#define SPDIF_MEDIA      0x7C8                                // SPDIF Media: 'CD'/DVD
 #define SPDIF_COPY       0x7CA                                // SPDIF Copy Protection
 */
 
@@ -663,17 +663,17 @@ Included these just in case you need them J.F. - Kanodin
 #define SPU_P_RVOLL      0xD84                               // effect return volume (left)
 #define SPU_P_RVOLR      0xD86                               // effect return volume (right)
 #define SPU_S_KON1       0xD88                               // key on
-#define SPU_S_KON2       0xD8A                               // 
+#define SPU_S_KON2       0xD8A                               //
 #define SPU_S_KOFF1      0xD8C                               // key off
-#define SPU_S_KOFF2      0xD8E                               // 
+#define SPU_S_KOFF2      0xD8E                               //
 #define SPU_S_PMON1      0xD90                               // pitch modulation on
-#define SPU_S_PMON2      0xD92                               // 
+#define SPU_S_PMON2      0xD92                               //
 #define SPU_S_NON1       0xD94                               // noise generator on
-#define SPU_S_NON2       0xD96                               // 
+#define SPU_S_NON2       0xD96                               //
 #define SPU_S_RVBON1     0xD98                               // effects on
-#define SPU_S_RVBON2     0xD9A                               // 
+#define SPU_S_RVBON2     0xD9A                               //
 #define SPU_S_MUTE1      0xD9C                               // voice mute
-#define SPU_S_MUTE2      0xD9E                               // 
+#define SPU_S_MUTE2      0xD9E                               //
 
 #define SPU_A_ESA        0xDA2                               // effects work area start
 #define SPU_A_IRQA       0xDA4                               // IRQ address

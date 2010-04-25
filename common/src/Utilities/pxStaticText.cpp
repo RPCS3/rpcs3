@@ -79,7 +79,7 @@ int pxStaticText::GetIdealWidth() const
 
 	//pxAssertDev( GetContainingSizer() != NULL, "The Static Text must first belong to a Sizer!!" );
 	int idealWidth = wxDefaultCoord;
-	
+
 	// Find the first parent with a fixed width:
 	wxWindow* millrun = this->GetParent();
 	while( (idealWidth == wxDefaultCoord) && millrun != NULL )
@@ -96,7 +96,7 @@ int pxStaticText::GetIdealWidth() const
 	if( idealWidth != wxDefaultCoord )
 	{
 		idealWidth -= 6;
-		
+
 		if( GetWindowStyle() & wxALIGN_CENTRE )
 			idealWidth *= (1.0 - m_centerPadding);
 	}

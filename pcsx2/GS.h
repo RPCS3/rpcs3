@@ -39,7 +39,7 @@ union tGS_CSRw
         u32 EDWINT : 1; // Rect Area Write Termination Interrupt
     };
     u32 _u32;
-    
+
     void reset() { _u32 = 0; }
     void fill()
     {
@@ -50,12 +50,12 @@ union tGS_CSRw
 		EDWINT = true;
     }
 };
-    
-// I'm initializing this as 64 bit because GSCSRr is 64 bit. There only appeared to be 32 bits worth of fields, 
+
+// I'm initializing this as 64 bit because GSCSRr is 64 bit. There only appeared to be 32 bits worth of fields,
 // and CSRw is 32 bit, though, so I'm not sure if that's correct.
 union tGS_CSR
 {
-    struct 
+    struct
     {
         // Start Interrupts.
         // If reading, 1 means a signal has been generated.
@@ -65,13 +65,13 @@ union tGS_CSR
         u64 VSINT : 1; // VSYNC Interrupt
         u64 EDWINT : 1; // Rect Area Write Termination Interrupt
         // End of Interrupts. Those 5 fields together are 0x1f.
-        
+
         u64 undefined : 2; // Should both be 0.
         u64 reserved1 : 1;
         u64 FLUSH : 1; // Drawing Suspend And FIFO Clear
         u64 RESET : 1; // GS System Reset
         u64 reserved2 : 2;
-        u64 NFIELD : 1; 
+        u64 NFIELD : 1;
         u64 FIELD : 1; // If the field currently displayed in Interlace mode is even or odd
         u64 FIFO : 2;
         u64 REV : 8; // The GS's Revision number
@@ -79,27 +79,27 @@ union tGS_CSR
         u64 reserved3 : 32;
     };
     u64 _u64;
-    
-    void reset() 
+
+    void reset()
     {
         _u64 = 0;
         FIFO = CSR_FIFO_EMPTY;
         REV = 0x1D; // GS Revision
         ID = 0x55; // GS ID
     }
-    
+
     void set(u64 value)
     {
         _u64 = value;
     }
-    
+
     bool interrupts() { return (SIGNAL || FINISH || HSINT || VSINT || EDWINT); }
-    
+
     void setAllInterrupts(bool value)
     {
         SIGNAL = FINISH = HSINT = VSINT = EDWINT = value;
     }
-    
+
 	tGS_CSR(u64 val) { _u64 = val; }
 	tGS_CSR(u32 val) { _u64 = (u64)val; }
 	tGS_CSR() { reset(); }
@@ -107,7 +107,7 @@ union tGS_CSR
 
 union tGS_IMR
 {
-    struct 
+    struct
     {
         u32 reserved1 : 8;
         u32 SIGMSK : 1;
@@ -119,7 +119,7 @@ union tGS_IMR
         u32 reserved2 : 17;
     };
     u32 _u32;
-    void reset() 
+    void reset()
     {
         _u32 = 0;
         SIGMSK = FINISHMSK = HSMSK = VSMSK = EDWMSK = true;
@@ -130,7 +130,7 @@ union tGS_IMR
         _u32 = (value & 0x1f00); // Set only the interrupt mask fields.
         undefined = 0x3; // These should always be set.
     }
-    
+
     bool masked() { return (SIGMSK || FINISHMSK || HSMSK || VSMSK || EDWMSK); }
 };
 
@@ -288,8 +288,8 @@ protected:
 };
 
 // GetMTGS() is a required external implementation. This function is *NOT* provided
-// by the PCSX2 core library.  It provides an interface for the linking User Interface 
-// apps or DLLs to reference their own instance of SysMtgsThread (also allowing them 
+// by the PCSX2 core library.  It provides an interface for the linking User Interface
+// apps or DLLs to reference their own instance of SysMtgsThread (also allowing them
 // to extend the class and override virtual methods).
 //
 extern SysMtgsThread& GetMTGS();

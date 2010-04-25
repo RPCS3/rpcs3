@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -84,7 +84,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-	D3D_FEATURE_LEVEL levels[] = 
+	D3D_FEATURE_LEVEL levels[] =
 	{
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_1,
@@ -104,7 +104,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	}
 
 	D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS options;
-	
+
 	hr = m_dev->CheckFeatureSupport(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &options, sizeof(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS));
 
 	// msaa
@@ -222,7 +222,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.MaxLOD = FLT_MAX;
-	sd.MaxAnisotropy = 16; 
+	sd.MaxAnisotropy = 16;
 	sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
 	hr = m_dev->CreateSamplerState(&sd, &m_convert.ln);
@@ -238,7 +238,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	//
 
 	CreateTextureFX();
-	
+
 	//
 
 	memset(&dsd, 0, sizeof(dsd));
@@ -286,7 +286,7 @@ bool GSDevice11::Reset(int w, int h)
 		memset(&scd, 0, sizeof(scd));
 		m_swapchain->GetDesc(&scd);
 		m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
-		
+
 		CComPtr<ID3D11Texture2D> backbuffer;
 		if(FAILED(m_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer)))
 		{
@@ -302,7 +302,7 @@ bool GSDevice11::Reset(int w, int h)
 void GSDevice11::SetExclusive(bool isExcl)
 {
 	if(!m_swapchain) return;
-	
+
 	// TODO : Support for alternative display modes, by finishing this code below:
 	//  Video mode info should be pulled form config/ini.
 
@@ -312,11 +312,11 @@ void GSDevice11::SetExclusive(bool isExcl)
 
 	m_swapchain->ResizeTarget(&desc);
 	*/
-	
+
 	HRESULT hr = m_swapchain->SetFullscreenState( isExcl, NULL );
 	if(hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
 		fprintf(stderr, "(GSdx10) SetExclusive(%s) failed; request unavailable.", isExcl ? "true" : "false");
-} 
+}
 
 void GSDevice11::Flip()
 {
@@ -367,7 +367,7 @@ GSTexture* GSDevice11::Create(int type, int w, int h, bool msaa, int format)
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 
-	if(msaa) 
+	if(msaa)
 	{
 		desc.SampleDesc = m_msaa_desc;
 	}
@@ -636,7 +636,7 @@ void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaV
 		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
 		PSSetSamplerState(m_convert.pt, NULL);
 
-		// 
+		//
 
 		DrawPrimitive();
 
@@ -676,7 +676,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
 		HRESULT hr;
-		
+
 		hr = m_dev->CreateBuffer(&bd, NULL, &m_vb);
 
 		if(FAILED(hr)) return;
@@ -747,7 +747,7 @@ void GSDevice11::VSSetShader(ID3D11VertexShader* vs, ID3D11Buffer* vs_cb)
 
 		m_ctx->VSSetShader(vs, NULL, 0);
 	}
-	
+
 	if(m_state.vs_cb != vs_cb)
 	{
 		m_state.vs_cb = vs_cb;
@@ -770,7 +770,7 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	ID3D11ShaderResourceView* srv0 = NULL;
 	ID3D11ShaderResourceView* srv1 = NULL;
-	
+
 	if(sr0) srv0 = *(GSTexture11*)sr0;
 	if(sr1) srv1 = *(GSTexture11*)sr1;
 
@@ -780,7 +780,7 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 		m_state.ps_srv[1] = srv1;
 
 		ID3D11ShaderResourceView* srvs[] = {srv0, srv1};
-	
+
 		m_ctx->PSSetShaderResources(0, 2, srvs);
 	}
 }
@@ -793,7 +793,7 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 		m_ctx->PSSetShader(ps, NULL, 0);
 	}
-	
+
 	if(m_state.ps_cb != ps_cb)
 	{
 		m_state.ps_cb = ps_cb;
@@ -862,7 +862,7 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 		D3D11_VIEWPORT vp;
 
 		memset(&vp, 0, sizeof(vp));
-		
+
 		vp.TopLeftX = 0;
 		vp.TopLeftY = 0;
 		vp.Width = rt->GetWidth();
@@ -894,7 +894,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, 0, NULL, &shader, &error, NULL);
-	
+
 	if(error)
 	{
 		printf("%s\n", (const char*)error->GetBufferPointer());
@@ -933,7 +933,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
-	
+
 	if(error)
 	{
 		printf("%s\n", (const char*)error->GetBufferPointer());
@@ -965,7 +965,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
-	
+
 	if(error)
 	{
 		printf("%s\n", (const char*)error->GetBufferPointer());

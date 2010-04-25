@@ -59,7 +59,7 @@ _f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 	u32* col = (v.idx) ? g_vifmask.Col1 : g_vifmask.Col0;
 	if((m2&&(doMask||isFill))||doMode) { xMOVAPS(xmmRow, ptr32[row]); }
 	if (m3&&(doMask||isFill)) {
-		xMOVAPS(xmmCol0, ptr32[col]); 
+		xMOVAPS(xmmCol0, ptr32[col]);
 		if ((cS>=2) && (m3&0x0000ff00)) xPSHUF.D(xmmCol1, xmmCol0, _v1);
 		if ((cS>=3) && (m3&0x00ff0000)) xPSHUF.D(xmmCol2, xmmCol0, _v2);
 		if ((cS>=4) && (m3&0xff000000)) xPSHUF.D(xmmCol3, xmmCol0, _v3);
@@ -99,7 +99,7 @@ void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 			if (doMode==2) xMOVAPS(xmmRow, regX);
 		}
 	}
-	xMOVAPS(ptr32[dstIndirect], regX);	
+	xMOVAPS(ptr32[dstIndirect], regX);
 }
 
 void VifUnpackSSE_Dynarec::writeBackRow() const {
@@ -143,7 +143,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 		ShiftDisplacementWindow( srcIndirect, edx );
 		ShiftDisplacementWindow( dstIndirect, ecx );
 
-		if (vCL < cycleSize) { 
+		if (vCL < cycleSize) {
 			xUnpack(upkNum);
 			xMovDest();
 
@@ -154,7 +154,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 				++destReg;
 				++workReg;
 			}
-			
+
 			vNum--;
 			if (++vCL == blockSize) vCL = 0;
 		}
@@ -186,7 +186,7 @@ static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 	if (!isFill) { // Account for skip-cycles
 		int skipSize  = cl - wl;
 		int blocks    = _vBlock.num / wl;
-		int skips	  = (blocks * skipSize + _vBlock.num) * 16;  
+		int skips	  = (blocks * skipSize + _vBlock.num) * 16;
 
 		//We must do skips - 1 here else skip calculation adds an extra skip which can overflow
 		//causing the emu to drop back to the interpreter (do not need to skip on last block write) - Refraction
@@ -255,7 +255,7 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	nVif[idx].recPtr = xGetPtr();
 
 	dVifRecLimit(idx);
-	
+
 	// Run the block we just compiled.  Various conditions may force us to still use
 	// the interpreter unpacker though, so a recursive call is the safest way here...
 	dVifUnpack(idx, data, size, isFill);

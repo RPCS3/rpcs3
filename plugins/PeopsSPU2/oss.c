@@ -101,7 +101,7 @@ void SetupSound(void)
  if(ioctl(oss_audio_fd,SNDCTL_DSP_SETFRAGMENT,&myfrag)==-1)
   {
    printf("Sound set fragment failed!\n");
-   return;        
+   return;
   }
 
  format = AFMT_S16_LE;

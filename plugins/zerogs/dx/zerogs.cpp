@@ -109,7 +109,7 @@ BOOL g_bWriteProfile = 0;
 BOOL g_bSaveTex = 0;	// saves the curent texture
 BOOL g_bSaveFrame = 0;	// saves the current psurfTarget
 BOOL g_bSaveFinalFrame = 0; // saves the input to the CRTC
-BOOL g_bUpdateStencil = 1;		// only needed for dest alpha test (unfortunately, it has to be on all the time)	
+BOOL g_bUpdateStencil = 1;		// only needed for dest alpha test (unfortunately, it has to be on all the time)
 BOOL g_bSaveResolved = 0;
 
 #endif
@@ -117,7 +117,7 @@ BOOL g_bSaveResolved = 0;
 #define DRAW() pd3dDevice->DrawPrimitive(primtype[curvb.curprim.prim], 0, curvb.dwCount)
 
 extern int s_frameskipping;
-			
+
 //inline void SetRenderTarget_(int index, LPD3DSURF psurf, int counter, const char* pname)
 //{
 //	static LPD3DSURF ptargs[4] = {NULL};
@@ -165,11 +165,11 @@ static const DWORD blendinvalpha[3] = { D3DBLEND_INVSRCALPHA, D3DBLEND_INVDESTAL
 
 static const int PRIMMASK = 0x0e;	// for now ignore 0x10 (AA)
 
-static const DWORD g_dwAlphaCmp[] = { D3DCMP_NEVER, D3DCMP_ALWAYS, D3DCMP_LESS, D3DCMP_LESSEQUAL, 
+static const DWORD g_dwAlphaCmp[] = { D3DCMP_NEVER, D3DCMP_ALWAYS, D3DCMP_LESS, D3DCMP_LESSEQUAL,
 								D3DCMP_EQUAL, D3DCMP_GREATEREQUAL, D3DCMP_GREATER, D3DCMP_NOTEQUAL };
 
 // used for afail case
-static const DWORD g_dwReverseAlphaCmp[] = { D3DCMP_ALWAYS, D3DCMP_NEVER, D3DCMP_GREATEREQUAL, D3DCMP_GREATER, 
+static const DWORD g_dwReverseAlphaCmp[] = { D3DCMP_ALWAYS, D3DCMP_NEVER, D3DCMP_GREATEREQUAL, D3DCMP_GREATER,
 									D3DCMP_NOTEQUAL, D3DCMP_LESS, D3DCMP_LESSEQUAL, D3DCMP_EQUAL };
 
 static const DWORD g_dwZCmp[] = { D3DCMP_NEVER, D3DCMP_ALWAYS, D3DCMP_GREATEREQUAL, D3DCMP_GREATER };
@@ -210,7 +210,7 @@ static BOOL s_bDestAlphaTest = FALSE;
 static int s_nLastResolveReset = 0;
 static int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 static int s_nCurResolveIndex = 0;
-int s_nResolved = 0; // number of targets resolved this frame 
+int s_nResolved = 0; // number of targets resolved this frame
 int g_nDepthUsed = 0; // ffx2 pal movies
 static int s_nWriteDepthCount = 0;
 static int s_nWireframeCount = 0;
@@ -218,7 +218,7 @@ static int s_nWriteDestAlphaTest = 0;
 
 ////////////////////
 // State parameters
-static float fiRendWidth, fiRendHeight;	
+static float fiRendWidth, fiRendHeight;
 
 static DWORD dwStencilRef, dwStencilMask;
 
@@ -261,7 +261,7 @@ namespace ZeroGS
 	u8* g_pbyGSMemory = NULL;	// 4Mb GS system mem
 	u8* g_pbyGSClut = NULL;
 
-	D3DPRESENT_PARAMETERS d3dpp; 
+	D3DPRESENT_PARAMETERS d3dpp;
 
 	BYTE s_AAx = 0, s_AAy = 0; // if AAy is set, then AAx has to be set
 	BYTE bIndepWriteMasks = 1;
@@ -280,7 +280,7 @@ namespace ZeroGS
 	extern CRangeManager s_RangeMngr; // manages overwritten memory
 	void FlushTransferRanges(const tex0Info* ptex);
 
-	// returns the first and last addresses aligned to a page that cover 
+	// returns the first and last addresses aligned to a page that cover
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
 	HRESULT LoadEffects();
@@ -376,7 +376,7 @@ void ZeroGS::VB::Destroy()
 {
 	Unlock();
 	SAFE_RELEASE(pvb);
-	
+
 	prndr = NULL;
 	pdepth = NULL;
 }
@@ -496,7 +496,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 				ResetAlphaVariables();
 			}
 		}
-	
+
 		int fbh = (scissor.y1>>MINMAX_SHIFT)+1;
 		if( fbh > 2 && (fbh&1) ) fbh -= 1;
 
@@ -529,7 +529,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 				frame.fbh = considerheight;
 			else if( frame.fbh <= 32 )
 				frame.fbh = considerheight;
-			
+
 			if( frame.fbh == considerheight ) {
 				// stops bad resolves (mgs3)
 				if( !curprim.abe && (!test.ate || test.atst == 0) )
@@ -646,7 +646,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 			f.fbw = prndr->fbw;
 			f.fbh = prndr->fbh;
 			f.psm = zbuf.psm;
-			
+
 			if( zbuf.psm == 0x31 ) f.fbm = 0xff000000;
 			else f.fbm = 0;
 			CDepthTarget* pnewdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
@@ -661,13 +661,13 @@ void ZeroGS::VB::CheckFrame(int tbp)
 			pdepth = pnewdepth;
 		}
 	}
-	
+
 	s_nResolved &= 0xff; // restore
 
 	if( prndr != NULL )
 		SetContextTarget(ictx);
 
-	//if( prndr != NULL && ictx == icurctx) 
+	//if( prndr != NULL && ictx == icurctx)
 	//else bVarsSetTarg = 0;
 
 //	if( prndr != NULL && bChanged ) {
@@ -690,7 +690,7 @@ void ZeroGS::VB::FlushTexData()
 	if( uCurTex0Data[0] == uNextTex0Data[0] && (uCurTex0Data[1]&0x1f) == (uNextTex0Data[1]&0x1f) ) {
 
 		if( PSMT_ISCLUT(psm) ) {
-			
+
 			// have to write the CLUT again if changed
 			if( (uCurTex0Data[1]&0x1fffffe0) == (uNextTex0Data[1]&0x1fffffe0) ) {
 
@@ -791,7 +791,7 @@ static ZeroGSInit s_ZeroGSInit;
 HRESULT ZeroGS::Create(LONG _width, LONG _height)
 {
 	Destroy(1);
-	GSStateReset();	
+	GSStateReset();
 
 	width = _width;
 	height = _height;
@@ -877,7 +877,7 @@ HRESULT ZeroGS::Create(LONG _width, LONG _height)
 
 	if( FAILED( hr = pD3D->CreateDevice( adapter, devtype, GShwnd,
 		!DEBUG_PS2 ? hwoptions : D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &pd3dDevice ) ) )
-	{	
+	{
 		ERROR_LOG(_T("Failed to create hardware device, creating software.\n"));
 
 		if( FAILED( hr = pD3D->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GShwnd,
@@ -931,7 +931,7 @@ HRESULT ZeroGS::Create(LONG _width, LONG _height)
 	else if( FAILED(hr) ) {
 		ERROR_LOG("******\nGS ERROR: Device doesn't support alpha blending for 16bit floating point targets.\nQuality will reduce.\n*********\n");
 		g_RenderFormat = D3DFMT_A8R8G8B8;
-	}	
+	}
 
 //	hr = pD3D->CheckDeviceFormat( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, d3ddm.Format, 0, D3DRTYPE_TEXTURE, D3DFMT_G32R32F);
 //
@@ -1095,7 +1095,7 @@ void ZeroGS::GSStateReset()
 		if( pvb != NULL ) pvb->AddRef();
 		vb[i].Destroy();
 		memset(&vb[i], 0, sizeof(VB));
-		
+
 		vb[i].tex0.tw = 1;
 		vb[i].tex0.th = 1;
 		vb[i].pvb = pvb;
@@ -1148,7 +1148,7 @@ void ZeroGS::Reset()
 {
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	vb[0].Unlock();
 	vb[1].Unlock();
 
@@ -1218,7 +1218,7 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 void ZeroGS::SetAA(int mode)
 {
 	float f;
-	
+
 	// need to flush all targets
 	s_RTs.ResolveAll();
 	s_RTs.Destroy();
@@ -1226,7 +1226,7 @@ void ZeroGS::SetAA(int mode)
 	s_DepthRTs.Destroy();
 
 	s_AAx = s_AAy = 0;
-	if( mode > 0 ) 
+	if( mode > 0 )
 	{
 		s_AAx = (mode+1) / 2;
 		s_AAy = mode / 2;
@@ -1236,7 +1236,7 @@ void ZeroGS::SetAA(int mode)
 
 	vb[0].prndr = NULL; vb[0].pdepth = NULL; vb[0].bNeedFrameCheck = 1; vb[0].bNeedZCheck = 1;
 	vb[1].prndr = NULL; vb[1].pdepth = NULL; vb[1].bNeedFrameCheck = 1; vb[1].bNeedZCheck = 1;
-	
+
 	f = mode > 0 ? 2.0f : 1.0f;
 	SETRS(D3DRS_POINTSIZE, FtoDW(f));
 }
@@ -1303,7 +1303,7 @@ HRESULT ZeroGS::LoadExtraEffects()
 		LOAD_VS(vsshaders[i]|mask|SH_WRITEDEPTH, pvs[2*i+8]);
 		LOAD_VS(vsshaders[i]|mask|SH_WRITEDEPTH|SH_CONTEXT1, pvs[2*i+8+1]);
 	}
-	
+
 	LOAD_VS(SH_BITBLTVS, pvsBitBlt);
 	//LOAD_VS(SH_BITBLTVS|SH_30, pvsBitBlt30);
 
@@ -1354,7 +1354,7 @@ LPD3DPS ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, i
 	assert( index < ArraySize(ppsTexture) );
 	LPD3DPS* pps = ppsTexture+index;
 
-	if( *pps != NULL ) 
+	if( *pps != NULL )
 		return *pps;
 
 	index += NUM_SHADERS*g_nPixelShaderVer;
@@ -1372,12 +1372,12 @@ LPD3DPS ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, i
 
 	return NULL;
 }
-	
+
 #else // not RELEASE_TO_PUBLIC
 
 //#define EFFECT_NAME "f:\\ps2dev\\pcsx2\\zerogs\\dx\\"
 #define EFFECT_NAME ".\\"
-#define COMPILE_SHADER(name, type, flags) 
+#define COMPILE_SHADER(name, type, flags)
 
 class ZeroGSShaderInclude : public ID3DXInclude
 {
@@ -1396,7 +1396,7 @@ public:
 			_snprintf(strfile, 255, "%s%s", EFFECT_NAME, pFileName);
 			pfilename = strfile;
 		}
-		
+
 		FILE* f = fopen(pfilename, "rb");
 
 		if( f == NULL )
@@ -1490,7 +1490,7 @@ HRESULT ZeroGS::LoadExtraEffects()
 	D3DXMACRO* pmacros = NULL;
 
 	macros[0].Name = "WRITE_DEPTH";
-	macros[0].Definition = "1";	
+	macros[0].Definition = "1";
 
 	for(int i = 0; i < 4; ++i) {
 		pmacros = NULL;
@@ -1537,7 +1537,7 @@ HRESULT ZeroGS::LoadExtraEffects()
 LPD3DPS ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context)
 {
 	int texwrap;
-	
+
 	assert( texfilter < NUM_FILTERS );
 	//assert( g_nPixelShaderVer == SHADER_30 );
 	if( clamp.wms == clamp.wmt ) {
@@ -1558,9 +1558,9 @@ LPD3DPS ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, i
 
 	LPD3DPS* pps = ppsTexture+index;
 
-	if( *pps != NULL ) 
+	if( *pps != NULL )
 		return *pps;
-	
+
 	ZeroGSShaderInclude inc;
 	inc.context = context;
 
@@ -1630,7 +1630,7 @@ HRESULT ZeroGS::InitDeviceObjects()
 
 	if( ptexBilinearBlocks != NULL )
 		ptexBilinearBlocks->LockRect(0, &lockbilinear, NULL, 0);
-	
+
 	BLOCK::FillBlocks(&lock, ptexBilinearBlocks != NULL ? &lockbilinear : NULL, blockfmt);
 
 	ptexBlocks->UnlockRect(0);
@@ -1689,7 +1689,7 @@ HRESULT ZeroGS::InitDeviceObjects()
 	pd3dDevice->SetTexture(SAMP_BLOCKS, ptexBlocks);
 	pd3dDevice->SetTexture(SAMP_BILINEARBLOCKS, ptexBilinearBlocks);
 	pd3dDevice->SetVertexDeclaration(pdecl);
-	
+
 	SETRS(D3DRS_STENCILENABLE, FALSE);
 	SETRS(D3DRS_SCISSORTESTENABLE, 1);
 	SETRS(D3DRS_SEPARATEALPHABLENDENABLE, USEALPHABLENDING);
@@ -1871,7 +1871,7 @@ void ZeroGS::Flush(int context)
 //				curvb.dwCount = 0;
 //				return;
 //			}
-		
+
 			// if texture is part of a previous target, use that instead
 			int tbw = curvb.tex0.tbw;
 			int tbp0 = curvb.tex0.tbp0;
@@ -1916,13 +1916,13 @@ void ZeroGS::Flush(int context)
 	PRIM_LOG("test: ate:%d, atst: %s, aref: %d, afail: %s, date: %d, datm: %d, zte: %d, ztst: %s, fba: %d\n",
 		curvb.test.ate, patst[curvb.test.atst], curvb.test.aref, pafail[curvb.test.afail], curvb.test.date, curvb.test.datm, curvb.test.zte, pztst[curvb.test.ztst], curvb.fba.fba);
 	PRIM_LOG("alpha: A%d B%d C%d D%d FIX:%d pabe: %d; aem: %d, ta0: %d, ta1: %d\n", curvb.alpha.a, curvb.alpha.b, curvb.alpha.c, curvb.alpha.d, curvb.alpha.fix, gs.pabe, gs.texa.aem, gs.texa.ta[0], gs.texa.ta[1]);
-	PRIM_LOG("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d\n", 
-			 curvb.tex0.tbp0, curvb.tex0.tbw, curvb.tex0.psm, curvb.tex0.tw, 
+	PRIM_LOG("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d\n",
+			 curvb.tex0.tbp0, curvb.tex0.tbw, curvb.tex0.psm, curvb.tex0.tw,
 			 curvb.tex0.th, curvb.tex0.tcc, curvb.tex0.tfx, curvb.tex0.cbp,
 		 	 curvb.tex0.cpsm, curvb.tex0.csm, curvb.tex0.csa, curvb.tex0.cld);
 	PRIM_LOG("frame: %d\n\n", g_SaveFrameNum);
 #endif
-	
+
 	CMemoryTarget* pmemtarg = NULL;
 	CRenderTarget* ptextarg = NULL;
 
@@ -2011,7 +2011,7 @@ void ZeroGS::Flush(int context)
 				// have to add an offset to all texture reads
 				mytex0.tbp0 = tbp0; // change so that SetTexVariablesInt can set the right offsets
 
-				SetTexVariablesInt(context, GetTexFilter(curvb.tex1), mytex0, pmemtarg, s_bForceTexFlush);	
+				SetTexVariablesInt(context, GetTexFilter(curvb.tex1), mytex0, pmemtarg, s_bForceTexFlush);
 				curvb.bVarsTexSync = TRUE;
 
 				ptextarg = NULL; // won't be needing this anymore
@@ -2086,9 +2086,9 @@ void ZeroGS::Flush(int context)
 		SetContextTarget(context);
 	else {
 		assert( curvb.pdepth != NULL );
-		
+
 		if( curvb.pdepth->status & CRenderTarget::TS_Virtual) {
-		
+
 			if( !curvb.zbuf.zmsk ) {
 				CRenderTarget* ptemp = s_DepthRTs.Promote(curvb.pdepth->fbp|(curvb.pdepth->fbw<<16));
 				assert( ptemp == curvb.pdepth );
@@ -2112,7 +2112,7 @@ void ZeroGS::Flush(int context)
 			}
 		}
 		else {
-			SetTexVariablesInt(context, GetTexFilter(curvb.tex1), curvb.tex0, pmemtarg, s_bForceTexFlush);	
+			SetTexVariablesInt(context, GetTexFilter(curvb.tex1), curvb.tex0, pmemtarg, s_bForceTexFlush);
 			vb[context].bVarsTexSync = TRUE;
 
 			INC_TEXVARS();
@@ -2123,7 +2123,7 @@ void ZeroGS::Flush(int context)
 
 	assert( !(curvb.prndr->status&CRenderTarget::TS_NeedUpdate) );
 	curvb.prndr->status = 0;
-	
+
 	if( curvb.pdepth != NULL ) {
 		assert( !(curvb.pdepth->status&CRenderTarget::TS_NeedUpdate) );
 		if( !curvb.zbuf.zmsk ) {
@@ -2182,7 +2182,7 @@ void ZeroGS::Flush(int context)
 				pd3dDevice->SetSamplerState(SAMP_MEMORY0+context, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 				dwFilterOpts |= 1;
 			}
-			
+
 			if( curvb.tex1.mmin ) {
 				pd3dDevice->SetSamplerState(SAMP_MEMORY0+context, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
 				dwFilterOpts |= 2;
@@ -2345,7 +2345,7 @@ void ZeroGS::Flush(int context)
 				pd3dDevice->SetSamplerState(SAMP_MEMORY0+context, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 				dwFilterOpts |= 1;
 			}
-			
+
 			if( curvb.tex1.mmin ) {
 				pd3dDevice->SetSamplerState(SAMP_MEMORY0+context, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
 				dwFilterOpts |= 2;
@@ -2424,13 +2424,13 @@ void ZeroGS::Flush(int context)
 	else pps = ppsRegular[curvb.curprim.fge+2*s_bWriteDepth];
 
 	pd3dDevice->SetPixelShader(pps);
-		
+
 	BOOL bCanRenderStencil = g_bUpdateStencil && (curvb.prndr->psm&0xf) != 1 && !(curvb.frame.fbm&0x80000000);
 	if( g_GameSettings & GAME_NOSTENCIL )
 		bCanRenderStencil = 0;
 
 	if( s_bDestAlphaTest) {
-		SETRS(D3DRS_STENCILENABLE, bCanRenderStencil);		
+		SETRS(D3DRS_STENCILENABLE, bCanRenderStencil);
 		SETRS(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
 		SETRS(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
 	}
@@ -2591,7 +2591,7 @@ void ZeroGS::Flush(int context)
 		SETRS(D3DRS_ALPHAFUNC, g_dwReverseAlphaCmp[curtest.atst]);
 
 		if( curtest.afail & 1 ) {	// front buffer update only
-			
+
 			if( curtest.afail == 3 ) // disable alpha
 				SETRS(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_BLUE|D3DCOLORWRITEENABLE_GREEN|D3DCOLORWRITEENABLE_RED);
 
@@ -2604,7 +2604,7 @@ void ZeroGS::Flush(int context)
 		}
 		else {
 			// zbuffer update only
-			SETRS(D3DRS_COLORWRITEENABLE, 0);	
+			SETRS(D3DRS_COLORWRITEENABLE, 0);
 		}
 
 		if( gs.pabe && bCanRenderStencil ) {
@@ -2641,7 +2641,7 @@ void ZeroGS::Flush(int context)
 		// Empty the command buffer and wait until the GPU is idle.
 //		while(S_FALSE == pOcclusionQuery->GetData( &numberOfPixelsDrawn, sizeof(DWORD), D3DGETDATA_FLUSH ));
 //		SAFE_RELEASE(pOcclusionQuery);
-	
+
 		if( gs.pabe ) {
 			// only render the pixels with alpha values < 0x80
 			SETRS(D3DRS_ALPHABLENDENABLE, 0);
@@ -2661,7 +2661,7 @@ void ZeroGS::Flush(int context)
 		}
 
 		// restore
-		
+
 		if( (curtest.afail & 1) && !curvb.zbuf.zmsk ) {
 			SETRS(D3DRS_ZWRITEENABLE, TRUE);
 
@@ -2740,7 +2740,7 @@ void ZeroGS::Flush(int context)
 		SETRS(D3DRS_ZENABLE, FALSE);
 		SETRS(D3DRS_ZWRITEENABLE, FALSE);
 		SETRS(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED|D3DCOLORWRITEENABLE_BLUE|D3DCOLORWRITEENABLE_GREEN);
-		
+
 		if( s_bWriteDepth ) {
 			if( bIndepWriteMasks ) SETRS(D3DRS_COLORWRITEENABLE1, 0);
 			else pd3dDevice->SetRenderTarget(1,NULL);
@@ -2760,7 +2760,7 @@ void ZeroGS::Flush(int context)
 			SETRS(D3DRS_BLENDOP, D3DBLENDOP_MAX);
 			DRAW();
 		}
-		
+
 		// bios shows white screen
 		if( bAlphaClamping & 2 ) { // max
 			f = 1;
@@ -2804,7 +2804,7 @@ void ZeroGS::Flush(int context)
 //#endif
 	curvb.dwCurOff += POINT_BUFFERFLUSH;
 	SAFE_RELEASE(ptexRenderTargetCached);
-	
+
 	g_MaxRenderedHeight = 0;
 	curvb.dwCount = 0;
 	//curvb.Lock();
@@ -2828,7 +2828,7 @@ void ZeroGS::ProcessMessages()
 		RECT rctext;
 		rctext.left = 25; rctext.top = 15;
 		list<MESSAGE>::iterator it = listMsgs.begin();
-		
+
 		while( it != listMsgs.end() ) {
 			rctext.left += 1;
 			rctext.top += 1;
@@ -2915,7 +2915,7 @@ void ZeroGS::AdjustTransToAspect(DXVEC4& v, int dispwidth, int dispheight)
 	float temp, f;
 	if( dispwidth * height > dispheight * width ) {
 		// limited by width
-		
+
 		// change in ratio
 		f = ((float)width / (float)dispwidth) / ((float)height / (float)dispheight);
 		v.y *= f;
@@ -2988,7 +2988,7 @@ void ZeroGS::RenderCRTC(int interlace)
 
 	if( g_bSaveFrame ) {
 		if( vb[0].prndr != NULL ) D3DXSaveSurfaceToFile("frame1.tga", D3DXIFF_TGA, vb[0].prndr->psurf, NULL, NULL);
-		
+
 		if( vb[1].prndr != NULL && vb[0].prndr != vb[1].prndr ) D3DXSaveSurfaceToFile("frame2.tga", D3DXIFF_TGA, vb[1].prndr->psurf, NULL, NULL);
 		else DeleteFile("frame2.tga");
 	}
@@ -3066,7 +3066,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		GSRegDISPLAY* pd = i ? DISPLAY2 : DISPLAY1;
 		int magh = pd->MAGH+1;
 		int magv = pd->MAGV+1;
-		
+
 		dispinfo[i].tbp0 =	pfb->FBP << 5;
 		dispinfo[i].tbw = pfb->FBW << 6;
 		dispinfo[i].tw = (pd->DW + 1) / magh;
@@ -3107,7 +3107,7 @@ void ZeroGS::RenderCRTC(int interlace)
 
 			// interlace mode
 			pd3dDevice->SetTexture(SAMP_INTERLACE, CreateInterlaceTex(2*texframe.th));
-			
+
 			if( interlace == (conf.interlace&1) ) {
 				// pass if odd
 				valpha.z = 1.0f;
@@ -3173,7 +3173,7 @@ void ZeroGS::RenderCRTC(int interlace)
 			pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
 			continue;
 		}
-		
+
 		// first render the current render targets, then from ptexMem
 		if( texframe.psm == 1 ) {
 			valpha.x = 0;
@@ -3195,7 +3195,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		s_RTs.GetTargs(start, end, listTargs);
 
 		for(list<CRenderTarget*>::iterator it = listTargs.begin(); it != listTargs.end(); ) {
-	
+
 			CRenderTarget* ptarg = *it;
 
 			if( ptarg->fbw == texframe.tbw && !(ptarg->status&CRenderTarget::TS_NeedUpdate) && ((256/bpp)*(texframe.tbp0-ptarg->fbp))%texframe.tbw == 0 ) {
@@ -3213,7 +3213,7 @@ void ZeroGS::RenderCRTC(int interlace)
 						continue;
 					}
 				}
-				
+
 				static int sindex = 0;
 				char strtemp[25];
 				sprintf(strtemp, "frames/frame%d.jpg", sindex++);
@@ -3267,7 +3267,7 @@ void ZeroGS::RenderCRTC(int interlace)
 					v.y = dh/(float)texframe.th;
 					v.z = 0;
 					v.w = 1-v.y;
-					
+
 					if( movy > 0 )
 						v.w -= movy/(float)texframe.th;
 
@@ -3301,7 +3301,7 @@ void ZeroGS::RenderCRTC(int interlace)
 					}
 				}
 			}
-		
+
 			++it;
 		}
 
@@ -3335,7 +3335,7 @@ void ZeroGS::RenderCRTC(int interlace)
 			v.z = 0;//-0.5f * v.x;
 			v.w = -0.5f * v.y;
 			SETCONSTF(GPU_INVTEXDIMS, v);
-			
+
 			pd3dDevice->SetPixelShader(ppsCRTC[bInterlace]);
 			pd3dDevice->DrawPrimitive(D3DPT_TRIANGLESTRIP, 0, 2);
 		}
@@ -3393,7 +3393,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		}
 
 		if( g_bMakeSnapshot ) {
-			
+
 			if( SUCCEEDED(D3DXSaveSurfaceToFile(strSnapshot != ""?strSnapshot.c_str():"temp.jpg", (conf.options&GSOPTION_BMPSNAP)?D3DXIFF_BMP:D3DXIFF_JPG, psurfOrgTarg, NULL, NULL)) ) {
 				char str[255];
 				sprintf(str, "saved %s\n", strSnapshot.c_str());
@@ -3498,7 +3498,7 @@ void ZeroGS::RenderCRTC(int interlace)
 // Internal Definitions //
 //////////////////////////
 
-__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb) 
+__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
 {
 	p->z = curvb.zprimmask==0xffff?min((u32)0xffff, gsz):gsz;
 }
@@ -3508,33 +3508,33 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 	p->f = ((s16)(gsf).f<<7)|0x7f;
 }
 
-__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb) 
-{ 
-	int index = Index; 
-	
+__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+{
+	int index = Index;
+
 	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x)>>1)&0xffff;
 	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y)>>1)&0xffff;
-	
+
 	/*x = ((int)gs.gsvertex[index].x - curvb.offset.x);
 	y = ((int)gs.gsvertex[index].y - curvb.offset.y);
 	p.x = (x&0x7fff) | (x < 0 ? 0x8000 : 0);
 	p.y = (y&0x7fff) | (y < 0 ? 0x8000 : 0);*/
-	
+
 	p->f = ((s16)gs.gsvertex[index].f<<7)|0x7f;
 	MOVZ(p, gs.gsvertex[index].z, curvb);
 	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
-	
+
 	if ((g_GameSettings & GAME_TEXAHACK) && !(p->rgba&0xffffff))
 		p->rgba = 0;
-	if (prim->tme ) 
+	if (prim->tme )
 	{
-		if( prim->fst ) 
+		if( prim->fst )
 		{
 			p->s = (float)gs.gsvertex[index].u * fiTexWidth[prim->ctxt];
 			p->t = (float)gs.gsvertex[index].v * fiTexHeight[prim->ctxt];
 			p->q = 1;
 		}
-		else 
+		else
 		{
 			p->s = gs.gsvertex[index].s;
 			p->t = gs.gsvertex[index].t;
@@ -3673,10 +3673,10 @@ void ZeroGS::KickTriangleFan()
 #endif
 }
 
-__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
+__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 {
-	SET_VERTEX(p, next, curvb); 
-	MOVZ(p, v.z, curvb);	
+	SET_VERTEX(p, next, curvb);
+	MOVZ(p, v.z, curvb);
 	MOVFOG(p, v);
 }
 
@@ -3700,7 +3700,7 @@ void ZeroGS::KickSprite()
 	int last = (gs.primIndex+2)%ArraySize(gs.gsvertex);
 
 	// sprite is too small and AA shows lines (tek4)
-	if( s_AAx ) 
+	if( s_AAx )
 	{
 		gs.gsvertex[last].x += 4;
 		if (s_AAy) gs.gsvertex[last].y += 4;
@@ -3711,7 +3711,7 @@ void ZeroGS::KickSprite()
 	//	return;
 
 	VertexGPU* p = curvb.pbuf+curvb.dwCount*3;
-	
+
 	SetKickVertex(&p[0], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[3], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[1], gs.gsvertex[last], last, curvb);
@@ -3726,7 +3726,7 @@ void ZeroGS::KickSprite()
 
 	SetKickVertex(&p[5], gs.gsvertex[last], last, curvb);
 	p[5].s = p[0].s;
-	p[5].x = p[0].x;	
+	p[5].x = p[0].x;
 
 	curvb.dwCount += 2;
 
@@ -3783,7 +3783,7 @@ __forceinline void ZeroGS::RenderFBA(const VB& curvb)
 
 	if( !curvb.zbuf.zmsk ) {
 		SETRS(D3DRS_ZWRITEENABLE, TRUE);
-		
+
 		assert( curvb.pdepth != NULL );
 		if( s_bWriteDepth ) {
 			if( bIndepWriteMasks ) SETRS(D3DRS_COLORWRITEENABLE1, 0xf);
@@ -3818,7 +3818,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb)
 	SETRS(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
 
 	SETRS(D3DRS_STENCILENABLE, TRUE);
-	
+
 	if( !s_bDestAlphaTest ) {
 		// clear everything
 		SETRS(D3DRS_STENCILREF, 0);
@@ -3839,7 +3839,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb)
 	SETRS(D3DRS_STENCILREF, STENCIL_SPECIAL);
 	SETRS(D3DRS_STENCILWRITEMASK, STENCIL_SPECIAL);
 	SETRS(D3DRS_ZENABLE, FALSE);
-	
+
 	DRAW();
 
 	if( curvb.test.zte ) SETRS(D3DRS_ZENABLE, TRUE);
@@ -3859,7 +3859,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb)
 
 __forceinline void ZeroGS::RenderStencil(const VB& curvb, DWORD dwUsingSpecialTesting)
 {
-	//NOTE: This stencil hack for dest alpha testing ONLY works when 
+	//NOTE: This stencil hack for dest alpha testing ONLY works when
 	// the geometry in one DrawPrimitive call does not overlap
 
 	// mark the stencil buffer for the new data's bits (mark 4 if alpha is >= 0xff)
@@ -3948,7 +3948,7 @@ __forceinline void ZeroGS::ProcessFBA(const VB& curvb)
 	SETRS(D3DRS_ZENABLE, FALSE);
 	SETRS(D3DRS_ZWRITEENABLE, FALSE);
 	SETRS(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
-	
+
 	if( s_bWriteDepth ) {
 		if( bIndepWriteMasks ) SETRS(D3DRS_COLORWRITEENABLE1, 0);
 		else pd3dDevice->SetRenderTarget(1, NULL);
@@ -4025,10 +4025,10 @@ inline void ZeroGS::SetContextTarget(int context)
 		curvb.pdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
 			(curvb.zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), GET_MAXHEIGHT(curvb.zbuf.zbp, curvb.gsfb.fbw, 0));
 	}
-	
+
 	assert( curvb.prndr != NULL && curvb.pdepth != NULL );
 	assert( curvb.pdepth->fbh == curvb.prndr->targheight );
-	
+
 //	if( curvb.pdepth->fbh != curvb.prndr->fbh ) {
 //
 //		s_DepthRTs.DestroyTarg(curvb.pdepth);
@@ -4040,11 +4040,11 @@ inline void ZeroGS::SetContextTarget(int context)
 //		f.psm = curvb.zbuf.psm;
 //		f.fbm = 0;
 //		curvb.pdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
-//			(curvb.zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), GET_MAXHEIGHT(curvb.zbuf.zbp, curvb.gsfb.fbw, 0));		
+//			(curvb.zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), GET_MAXHEIGHT(curvb.zbuf.zbp, curvb.gsfb.fbw, 0));
 //	}
 
 	if( curvb.pdepth->status & CRenderTarget::TS_Virtual) {
-		
+
 		if( !curvb.zbuf.zmsk ) {
 			CRenderTarget* ptemp = s_DepthRTs.Promote(curvb.pdepth->fbp|(curvb.pdepth->fbw<<16));
 			assert( ptemp == curvb.pdepth );
@@ -4062,7 +4062,7 @@ inline void ZeroGS::SetContextTarget(int context)
 		curvb.pdepth->Update(context, curvb.prndr);
 		bSetTarg = 0;
 	}
-	
+
 	if( curvb.prndr->status & CRenderTarget::TS_NeedUpdate ) {
 
 		if( s_bWriteDepth ) {
@@ -4077,11 +4077,11 @@ inline void ZeroGS::SetContextTarget(int context)
 		curvb.prndr->Update(context, curvb.pdepth);
 		// note, targ already set
 	}
-	else { 
+	else {
 
 		//if( (vb[0].prndr != vb[1].prndr && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg )
 			pd3dDevice->SetRenderTarget(0, curvb.prndr->psurf);
-		//if( bSetTarg && ((vb[0].pdepth != vb[1].pdepth && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg) ) 
+		//if( bSetTarg && ((vb[0].pdepth != vb[1].pdepth && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg) )
 			curvb.pdepth->SetDepthTarget();
 
 		if( s_ptexCurSet[0] == curvb.prndr->ptex ) {
@@ -4120,7 +4120,7 @@ void ZeroGS::SetTexVariables(int context)
 
 	DXVEC4 v, v2;
 	tex0Info& tex0 = vb[context].tex0;
-	
+
 	float fw = (float)tex0.tw;
 	float fh = (float)tex0.th;
 
@@ -4131,7 +4131,7 @@ void ZeroGS::SetTexVariables(int context)
 		// if clut, use the frame format
 		int psm = tex0.psm;
 		if( PSMT_ISCLUT(tex0.psm) ) psm = tex0.cpsm;
-		
+
 		int nNeedAlpha = (psm == 1 || psm == 2 || psm == 10);
 
 		DXVEC4 vblack;
@@ -4142,26 +4142,26 @@ void ZeroGS::SetTexVariables(int context)
 				valpha.z = 0; valpha.w = 0;
 				valpha2.x = 0; valpha2.y = 0;
 				valpha2.z = 2; valpha2.w = 1;
-				
+
 				break;
 			case 1:
 				valpha.z = 0; valpha.w = 1;
 				valpha2.x = 1; valpha2.y = 0;
 				valpha2.z = 0; valpha2.w = 0;
-				
+
 				break;
 			case 2:
 				valpha.z = 1; valpha.w = 1.0f;
 				valpha2.x = 0; valpha2.y = tex0.tcc ? 1.0f : 0.0f;
-				valpha2.z = 2; valpha2.w = 0;				
-				
+				valpha2.z = 2; valpha2.w = 0;
+
 				break;
 
 			case 3:
 				valpha.z = 1; valpha.w = tex0.tcc ? 0.0f : 1.0f;
 				valpha2.x = 0; valpha2.y = tex0.tcc ? 1.0f : 0.0f;
 				valpha2.z = 2; valpha2.w = 0;
-		
+
 				break;
 			default: __assume(0);
 		}
@@ -4176,7 +4176,7 @@ void ZeroGS::SetTexVariables(int context)
 			}
 
 			if( nNeedAlpha ) {
-				
+
 				if( tex0.tfx == 0 ) {
 					// make sure alpha is mult by two when the output is Cv = Ct*Cf
 					valpha.x = 2*gs.texa.fta[0];
@@ -4344,7 +4344,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	float fpage = tex0.tbp0*(64.0f*g_fitexwidth) + 0.05f * g_fitexwidth;
 	float fpageint = floorf(fpage);
 	int starttbp = (int)fpage;
-	
+
 	// 2048 is number of words to span one page
 	float fblockstride = (2048.0f /(float)(g_texwidth*BLOCK_TEXWIDTH)) * b.vTexDims.x * fbw;
 	assert( fblockstride >= 1.0f );
@@ -4465,12 +4465,12 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 		if( a.a == 2 ) {
 			// zero all color
 			SETRS(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-			SETRS(D3DRS_DESTBLEND, D3DBLEND_ZERO);	
+			SETRS(D3DRS_DESTBLEND, D3DBLEND_ZERO);
 			goto EndSetAlpha;
 		}
-		else if( a.b == 2 ) {				
+		else if( a.b == 2 ) {
 			//b2XAlphaTest = 1;
-			
+
 			SET_ALPHA_COLOR_FACTOR(1);
 
 			if( bDestAlphaColor == 2 ) {
@@ -4481,7 +4481,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 			else {
 				if( bNeedAlphaColor ) bAlphaClamping = 2;
 
-				SETRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);					
+				SETRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 				SETRS(D3DRS_SRCBLEND, a.a == 0 ? blendalpha[usec] : D3DBLEND_ZERO);
 				SETRS(D3DRS_DESTBLEND, a.a == 0 ? D3DBLEND_ZERO : blendalpha[usec]);
 			}
@@ -4558,7 +4558,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 		if( a.a == a.d ) {
 			// can get away with 1+A, but need to set alpha to negative
 			SETRS(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-			
+
 			if( bDestAlphaColor == 2 ) {
 				assert(usec==1);
 
@@ -4690,7 +4690,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 
 	int cpsm = (highdword >> 19) & 0xe;
 	int csm = (highdword >> 23) & 0x1;
-	
+
 	if( cpsm > 1 || csm )
 		// don't support 16bit for now
 		return true;
@@ -4739,7 +4739,7 @@ Start:
 		movq mm7, [edx+56]
 		pcmpeqd mm6, [ecx+40]
 		pcmpeqd mm7, [ecx+56]
-		
+
 		pand mm0, mm4
 		pand mm6, mm7
 		pand mm0, mm6
@@ -4756,7 +4756,7 @@ Continue:
 
 		test ebx, 0x10
 		jz AddEcx
-		sub ecx, 448 // go back and down one column, 
+		sub ecx, 448 // go back and down one column,
 AddEcx:
 		add ecx, 256 // go to the right block
 
@@ -4812,7 +4812,7 @@ void ZeroGS::texClutWrite(int ctx)
 	Flush(!ctx);
 
 	int entries = (tex0.psm&3)==3 ? 256 : 16;
-if (tex0.csm) 
+if (tex0.csm)
 	{
 		switch (tex0.cpsm)
 		{
@@ -4823,51 +4823,51 @@ if (tex0.csm)
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 				break;
 			}
-			
+
 			case PSMCT16S:
 			{
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16S_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 			break;
 			}
-		
+
 			case PSMCT32:
 			case PSMCT24:
 			{
 				u32* src = (u32*)g_pbyGSMemory + tex0.cbp*64;
 				u32 *dst = (u32*)(g_pbyGSClut+64*tex0.csa);
-				
+
 				// check if address exceeds src
-				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 ) 
+				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 )
 					ERROR_LOG("texClutWrite out of bounds\n");
-				else 
-					for(int i = 0; i < entries; ++i) 
+				else
+					for(int i = 0; i < entries; ++i)
 					{
 						*dst = src[getPixelAddress32_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 						dst++;
 					}
 			}
 			break;
-			
+
 			default:
 			{
 #ifndef RELEASE_TO_PUBLIC
@@ -4877,7 +4877,7 @@ if (tex0.csm)
 			}
 		}
 	}
-	else 
+	else
 	{
 		switch (tex0.cpsm)
 		{
@@ -4885,17 +4885,17 @@ if (tex0.csm)
 			case PSMCT32:
 				if( entries == 16 )
 					WriteCLUT_T32_I4_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
-				else 
+				else
 					WriteCLUT_T32_I8_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
 				break;
-				
+
 			default:
 				if( entries == 16 )
 					WriteCLUT_T16_I4_CSM1((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				else // sse2 for 256 is more complicated, so use regular
 					WriteCLUT_T16_I8_CSM1_c((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				break;
-			
+
 		}
 	}
 }
@@ -4909,14 +4909,14 @@ void ZeroGS::SetTexFlush()
 //	if( PSMT_ISCLUT(vb[1].tex0.psm) )
 //		texClutWrite(1);
 
-	if( !s_bForceTexFlush ) 
+	if( !s_bForceTexFlush )
 	{
-		if( s_ptexCurSet[0] != s_ptexNextSet[0] ) 
+		if( s_ptexCurSet[0] != s_ptexNextSet[0] )
 		{
 			s_ptexCurSet[0] = s_ptexNextSet[0];
 			pd3dDevice->SetTexture(SAMP_MEMORY0, s_ptexNextSet[0]);
 		}
-		if( s_ptexCurSet[1] != s_ptexNextSet[1] ) 
+		if( s_ptexCurSet[1] != s_ptexNextSet[1] )
 		{
 			s_ptexCurSet[1] = s_ptexNextSet[1];
 			pd3dDevice->SetTexture(SAMP_MEMORY1, s_ptexNextSet[1]);
@@ -4931,10 +4931,10 @@ int ZeroGS::Save(char* pbydata)
 
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	vb[0].Unlock();
 	vb[1].Unlock();
-	
+
 	strcpy(pbydata, libraryName);
 	*(u32*)(pbydata+16) = ZEROGS_SAVEVER;
 	pbydata += 32;
@@ -4973,7 +4973,7 @@ bool ZeroGS::Load(char* pbydata)
 
 	// first 32 bytes are the id
 	u32 savever = *(u32*)(pbydata+16);
-	
+
 	if( strncmp(pbydata, libraryName, 6) == 0 && (savever == ZEROGS_SAVEVER || savever == 0xaa000004) ) {
 
 		g_MemTargs.Destroy();
@@ -4983,7 +4983,7 @@ bool ZeroGS::Load(char* pbydata)
 
 		int context = *(int*)pbydata; pbydata += 4;
 		u32 savelimit = VBSAVELIMIT;
-		
+
 		savelimit = *(u32*)pbydata; pbydata += 4;
 
 		memcpy(g_pbyGSMemory, pbydata, 0x00400000);
@@ -5018,13 +5018,13 @@ bool ZeroGS::Load(char* pbydata)
 
 		for(int i = 0; i < 2; ++i) {
 			vb[i].bNeedZCheck = vb[i].bNeedFrameCheck = 1;
-			
+
 			vb[i].bSyncVars = 0; vb[i].bNeedTexCheck = 1;
 			memset(vb[i].uCurTex0Data, 0, sizeof(vb[i].uCurTex0Data));
 		}
 
 		icurctx = -1;
-		
+
 		pd3dDevice->SetRenderTarget(0, psurfOrgTarg);
 		pd3dDevice->SetRenderTarget(1, NULL);
 		pd3dDevice->SetDepthStencilSurface(psurfOrgDepth);
@@ -5080,7 +5080,7 @@ void ZeroGS::CaptureFrame()
 	vector<BYTE> mem;
 
 	pd3dDevice->GetRenderTargetData(psurfOrgTarg, s_ptexAVICapture);
-	
+
 	D3DLOCKED_RECT lock;
 	mem.resize(width * height * 4);
 

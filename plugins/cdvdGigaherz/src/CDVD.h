@@ -32,7 +32,7 @@ typedef struct _toc_entry {
     UCHAR Msf[3];
 } toc_entry;
 
-typedef struct _toc_data 
+typedef struct _toc_data
 {
     UCHAR Length[2];
     UCHAR FirstCompleteSession;

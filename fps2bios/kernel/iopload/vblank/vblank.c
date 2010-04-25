@@ -55,7 +55,7 @@ int RegisterVblankHandler(int number, int priority, int (*handler)(struct VBHS *
 		_dprintf("%s - ERROR_INTR_CONTEXT\n", __FUNCTION__);
 		return ERROR_INTR_CONTEXT;
 	}
-	CpuSuspendIntr(&x);	
+	CpuSuspendIntr(&x);
 
 	if (DCLL_is_only_sentinel(&v.free)){
 		CpuResumeIntr(x);
@@ -77,7 +77,7 @@ int RegisterVblankHandler(int number, int priority, int (*handler)(struct VBHS *
 	}
 	while (p != list){			// while we have elements in list ...
 		if (priority < p->priority)
-			break;			//greater priority 
+			break;			//greater priority
 		p=p->next;
 	}
 
@@ -89,7 +89,7 @@ int RegisterVblankHandler(int number, int priority, int (*handler)(struct VBHS *
 	DCLL_add_after(p, node);
 
 	CpuResumeIntr(x);
-	return ERROR_OK;	
+	return ERROR_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -267,7 +267,7 @@ int _start(){
     u32 x;
 	int i;
 
-	CpuSuspendIntr(&x);	
+	CpuSuspendIntr(&x);
 
 	if (RegisterLibraryEntries(&export_stub)){
 		CpuResumeIntr(x);
@@ -281,7 +281,7 @@ int _start(){
 	for (i=0; i<16; i++){				//link 16 elements
 		DCLL_add_after(&v.free, &v.items[i]);//to 'available' list
 	}
-	
+
 	e.bits=0;
 	e.attr=2;
 	e.option=0;
@@ -290,10 +290,10 @@ int _start(){
 	v.statusFlag=0;
 	RegisterVblankHandler(0, 128, vblankh_0, &v);
 	RegisterVblankHandler(1, 128, vblankh_1, &v);
-	RegisterIntrHandler( 0, 1, (intrh_func)intrh_vblank, &v);	
+	RegisterIntrHandler( 0, 1, (intrh_func)intrh_vblank, &v);
 	RegisterIntrHandler(11, 1, (intrh_func)intrh_evblank,&v);
 	EnableIntr(0);
-	EnableIntr(11);	
+	EnableIntr(11);
 
 	CpuResumeIntr(x);
 	return 0;

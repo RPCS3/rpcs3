@@ -94,7 +94,7 @@ void SysLogMachineCaps()
 	Console.Newline();
 
 	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
-	
+
 	Console.Indent().WriteLn(
 		L"CPU vendor name  =  %s\n"
 		L"FamilyID         =  %x\n"
@@ -112,7 +112,7 @@ void SysLogMachineCaps()
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
 	);
-	
+
 	Console.Newline();
 
 	wxArrayString features[2];	// 2 lines, for readability!
@@ -206,7 +206,7 @@ public:
 
 	CpuInitializer<InterpVU0>		interpVU0;
 	CpuInitializer<InterpVU1>		interpVU1;
-	
+
 public:
 	CpuInitializerSet() {}
 	virtual ~CpuInitializerSet() throw() {}
@@ -371,7 +371,7 @@ void SysClearExecutionCache()
 
 	Cpu->Reset();
 	psxCpu->Reset();
-	
+
 	resetNewVif(0);
 	resetNewVif(1);
 

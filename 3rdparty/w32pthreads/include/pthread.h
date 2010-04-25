@@ -5,25 +5,25 @@
  *      Pthreads-win32 - POSIX Threads Library for Win32
  *      Copyright(C) 1998 John E. Bossom
  *      Copyright(C) 1999,2005 Pthreads-win32 contributors
- * 
+ *
  *      Contact Email: rpj@callisto.canberra.edu.au
- * 
+ *
  *      The current list of contributors is contained
  *      in the file CONTRIBUTORS included with the source
  *      code distribution. The list can also be seen at the
  *      following World Wide Web location:
  *      http://sources.redhat.com/pthreads-win32/contributors.html
- * 
+ *
  *      This library is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU Lesser General Public
  *      License as published by the Free Software Foundation; either
  *      version 2 of the License, or (at your option) any later version.
- * 
+ *
  *      This library is distributed in the hope that it will be useful,
  *      but WITHOUT ANY WARRANTY; without even the implied warranty of
  *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *      Lesser General Public License for more details.
- * 
+ *
  *      You should have received a copy of the GNU Lesser General Public
  *      License along with this library in the file COPYING.LIB;
  *      if not, write to the Free Software Foundation, Inc.,
@@ -316,7 +316,7 @@ struct timespec {
 #define SIG_BLOCK 0
 #endif /* SIG_BLOCK */
 
-#ifndef SIG_UNBLOCK 
+#ifndef SIG_UNBLOCK
 #define SIG_UNBLOCK 1
 #endif /* SIG_UNBLOCK */
 
@@ -1044,7 +1044,7 @@ extern int pthread_mutex_unlock (pthread_mutex_t * mutex);
 /*
  * Spinlock Functions
  *
- * These are disabled by default; they are not part of the "required" portion of pthreads 
+ * These are disabled by default; they are not part of the "required" portion of pthreads
  * implementations, and they are generally a bad idea for anything except the most controlled
  * of threaded environments (which hardly exist in modern computing).
  */
@@ -1116,7 +1116,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_getschedparam (pthread_t thread,
                                    struct sched_param *param);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_setconcurrency (int);
- 
+
 PTW32_DLLPORT int PTW32_CDECL pthread_getconcurrency (void);
 
 /*
@@ -1325,7 +1325,7 @@ PTW32_DLLPORT DWORD PTW32_CDECL ptw32_get_exception_services_code(void);
  * Redefine the SEH __except keyword to ensure that applications
  * propagate our internal exceptions up to the library's internal handlers.
  */
- 
+
 // PCSX2: Holy crap, what?!  No.  Let's not force code conformity on stupid coders.  If they can't write
 // a proper exception handler that does EXCEPTION_CONTINUE_SEARCH on unhandled exceptions, they deserve
 // whatever bad karma befalls them.  --air

@@ -61,45 +61,45 @@ typedef unsigned long   ulong;
 namespace soundtouch
 {
 
-/// Activate these undef's to overrule the possible sampletype 
+/// Activate these undef's to overrule the possible sampletype
 /// setting inherited from some other header file:
 //#undef INTEGER_SAMPLES
 //#undef FLOAT_SAMPLES
 
 #if !(INTEGER_SAMPLES || FLOAT_SAMPLES)
-   
+
     /// Choose either 32bit floating point or 16bit integer sampletype
-    /// by choosing one of the following defines, unless this selection 
+    /// by choosing one of the following defines, unless this selection
     /// has already been done in some other file.
     ////
     /// Notes:
     /// - In Windows environment, choose the sample format with the
     ///   following defines.
-    /// - In GNU environment, the floating point samples are used by 
-    ///   default, but integer samples can be chosen by giving the 
+    /// - In GNU environment, the floating point samples are used by
+    ///   default, but integer samples can be chosen by giving the
     ///   following switch to the configure script:
     ///       ./configure --enable-integer-samples
-    ///   However, if you still prefer to select the sample format here 
+    ///   However, if you still prefer to select the sample format here
     ///   also in GNU environment, then please #undef the INTEGER_SAMPLE
     ///   and FLOAT_SAMPLE defines first as in comments above.
     //#define INTEGER_SAMPLES     1    //< 16bit integer samples
     #define FLOAT_SAMPLES       1    //< 32bit float samples
- 
+
  #endif
 
     #if (WIN32 || __i386__ || __x86_64__)
-        /// Define this to allow X86-specific assembler/intrinsic optimizations. 
+        /// Define this to allow X86-specific assembler/intrinsic optimizations.
         /// Notice that library contains also usual C++ versions of each of these
-        /// these routines, so if you're having difficulties getting the optimized 
-        /// routines compiled for whatever reason, you may disable these optimizations 
+        /// these routines, so if you're having difficulties getting the optimized
+        /// routines compiled for whatever reason, you may disable these optimizations
         /// to make the library compile.
 
         #define ALLOW_X86_OPTIMIZATIONS     1
 
     #endif
 
-    // If defined, allows the SIMD-optimized routines to take minor shortcuts 
-    // for improved performance. Undefine to require faithfully similar SIMD 
+    // If defined, allows the SIMD-optimized routines to take minor shortcuts
+    // for improved performance. Undefine to require faithfully similar SIMD
     // calculations as in normal C implementation.
     #define ALLOW_NONEXACT_SIMD_OPTIMIZATION    1
 
@@ -140,9 +140,9 @@ namespace soundtouch
 };
 
 
-// When this #define is active, eliminates a clicking sound when the "rate" or "pitch" 
-// parameter setting crosses from value <1 to >=1 or vice versa during processing. 
-// Default is off as such crossover is untypical case and involves a slight sound 
+// When this #define is active, eliminates a clicking sound when the "rate" or "pitch"
+// parameter setting crosses from value <1 to >=1 or vice versa during processing.
+// Default is off as such crossover is untypical case and involves a slight sound
 // quality compromise.
 //#define PREVENT_CLICK_AT_RATE_CROSSOVER   1
 

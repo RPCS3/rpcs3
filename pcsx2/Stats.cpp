@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -49,7 +49,7 @@ void statsClose() {
 	fprintf(f, "Total EE  Instructions Executed: %lld\n", stats.eeCycles);
 	fprintf(f, "Total IOP Instructions Executed: %lld\n", stats.iopCycles);
 	if (!CHECK_EEREC) fprintf(f, "Interpreter Mode\n");
-	else fprintf(f, "Recompiler Mode: VUrec1 %s, VUrec0 %s\n", 
+	else fprintf(f, "Recompiler Mode: VUrec1 %s, VUrec0 %s\n",
 		CHECK_VU1REC ? "Enabled" : "Disabled", CHECK_VU0REC ? "Enabled" : "Disabled");
 	fclose(f);
 */

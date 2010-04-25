@@ -15,7 +15,7 @@
 
 // Macros for READ Data pattan
 #define CdSecS2048		0	// sector size 2048
-#define CdSecS2328		1	// sector size 2328	
+#define CdSecS2328		1	// sector size 2328
 #define CdSecS2340		2	// sector size 2340
 
 //#define CD_FRAMESIZE_RAW1 (CD_FRAMESIZE_RAW-CD_SYNC_SIZE) /*2340*/
@@ -25,8 +25,8 @@
 //#define CD_XA_HEAD        (CD_HEAD_SIZE+CD_SUBHEAD_SIZE) /* "before data" part of raw XA frame */
 
 /*
- * A CD-ROM physical sector size is 2048, 2052, 2056, 2324, 2332, 2336, 
- * 2340, or 2352 bytes long.  
+ * A CD-ROM physical sector size is 2048, 2052, 2056, 2324, 2332, 2336,
+ * 2340, or 2352 bytes long.
  *         Sector types of the standard CD-ROM data formats:
  *
  * format   sector type               user data size (bytes)

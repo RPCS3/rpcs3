@@ -120,7 +120,7 @@ bool wxFFile::ReadAll(wxString *str, const wxMBConv& conv)
     // realLen = fileLen - numOfLinesInTheFile)
     length = fread(buf.data(), sizeof(char), length, m_fp);
 
-    if ( Error() ) 
+    if ( Error() )
     {
         wxLogSysError(_("Read error on file '%s'"), m_name.c_str());
 

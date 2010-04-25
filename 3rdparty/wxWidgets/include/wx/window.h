@@ -372,7 +372,7 @@ public:
     void SetInitialSize(const wxSize& size=wxDefaultSize);
     wxDEPRECATED( void SetBestFittingSize(const wxSize& size=wxDefaultSize) );  // replaced by SetInitialSize
 
-    
+
         // the generic centre function - centers the window on parent by`
         // default or on screen if it doesn't have parent or
         // wxCENTER_ON_SCREEN flag is given
@@ -395,7 +395,7 @@ public:
         // and it is therefore overridden in wxTLW to do that.
         // In wxWindow(Base), it has (unfortunately) been abused
         // to mean the same as SetMinSize() and SetMaxSize().
-        
+
     virtual void SetSizeHints( int minW, int minH,
                                int maxW = wxDefaultCoord, int maxH = wxDefaultCoord,
                                int incW = wxDefaultCoord, int incH = wxDefaultCoord )
@@ -422,14 +422,14 @@ public:
     }
 
 
-        // Call these to override what GetBestSize() returns. This 
+        // Call these to override what GetBestSize() returns. This
         // method is only virtual because it is overriden in wxTLW
         // as a different API for SetSizeHints().
     virtual void SetMinSize(const wxSize& minSize) { m_minWidth = minSize.x; m_minHeight = minSize.y; }
     virtual void SetMaxSize(const wxSize& maxSize) { m_maxWidth = maxSize.x; m_maxHeight = maxSize.y; }
 
         // Override these methods to impose restrictions on min/max size.
-        // The easier way is to call SetMinSize() and SetMaxSize() which  
+        // The easier way is to call SetMinSize() and SetMaxSize() which
         // will have the same effect. Doing both is non-sense.
     virtual wxSize GetMinSize() const { return wxSize(m_minWidth, m_minHeight); }
     virtual wxSize GetMaxSize() const { return wxSize(m_maxWidth, m_maxHeight); }

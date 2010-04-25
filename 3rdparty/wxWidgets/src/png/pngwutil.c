@@ -2129,7 +2129,7 @@ png_write_find_filter(png_structp png_ptr, png_row_infop row_info)
    png_uint_32 row_bytes = row_info->rowbytes;
 #ifdef PNG_WRITE_WEIGHTED_FILTER_SUPPORTED
    int num_p_filters = (int)png_ptr->num_prev_filters;
-#endif 
+#endif
 
    png_debug(1, "in png_write_find_filter");
 

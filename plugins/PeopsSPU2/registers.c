@@ -95,32 +95,32 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
   {
    int rx=0;
    int ch=0;
-   if(r>=0x400) { 
+   if(r>=0x400) {
 	   rx= r - 0x400;
 	   ch=(rx>>4)+24;
    } else {
 	    rx= r;
 	   ch=(rx>>4);
    }
-   
+
    switch(rx&0x0f)
     {
      //------------------------------------------------// r volume
-     case 0:                                           
+     case 0:
        SetVolumeL((unsigned char)ch,val);
 #ifdef _WINDOWS
 		if(iDebugMode==1) logprintf("W_REG Volume Left - Channel %d Core %d Addr %X Val %X\r\n", (ch > 23? (ch - 24) : ch), ch/24, reg&0xFFFF, val);
 #endif
        break;
      //------------------------------------------------// l volume
-     case 2:                                           
+     case 2:
        SetVolumeR((unsigned char)ch,val);
 #ifdef _WINDOWS
 		if(iDebugMode==1) logprintf("W_REG Volume Right - Channel %d Core %d Addr %X Val %X\r\n", (ch > 23? (ch - 24) : ch), ch/24, reg&0xFFFF, val);
 #endif
        break;
      //------------------------------------------------// pitch
-     case 4:                                           
+     case 4:
        SetPitch(ch,val);
 #ifdef _WINDOWS
 		if(iDebugMode==1) logprintf("W_REG Pitch - Channel %d Core %d Addr %X Val %X\r\n", (ch > 23? (ch - 24) : ch), ch/24, reg&0xFFFF, val);
@@ -131,7 +131,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
        {
         const unsigned long lval=val;unsigned long lx;
         //---------------------------------------------//
-        s_chan[ch].ADSRX.AttackModeExp=(lval&0x8000)?1:0; 
+        s_chan[ch].ADSRX.AttackModeExp=(lval&0x8000)?1:0;
         s_chan[ch].ADSRX.AttackRate=(lval>>8) & 0x007f;
         s_chan[ch].ADSRX.DecayRate=(lval>>4) & 0x000f;
         s_chan[ch].ADSRX.SustainLevel=lval & 0x000f;
@@ -143,14 +143,14 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
 
         lx=(((lval>>8) & 0x007f)>>2);                  // attack time to run from 0 to 100% volume
         lx=min(31,lx);                                 // no overflow on shift!
-        if(lx) 
-         { 
+        if(lx)
+         {
           lx = (1<<lx);
           if(lx<2147483) lx=(lx*ATTACK_MS)/10000L;     // another overflow check
           else           lx=(lx/10000L)*ATTACK_MS;
           if(!lx) lx=1;
          }
-        s_chan[ch].ADSR.AttackTime=lx;                
+        s_chan[ch].ADSR.AttackTime=lx;
 
         s_chan[ch].ADSR.SustainLevel=                 // our adsr vol runs from 0 to 1024, so scale the sustain level
          (1024*((lval) & 0x000f))/15;
@@ -185,14 +185,14 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
 
        s_chan[ch].ADSR.SustainModeExp = (lval&0x8000)?1:0;
        s_chan[ch].ADSR.ReleaseModeExp = (lval&0x0020)?1:0;
-                   
+
        lx=((((lval>>6) & 0x007f)>>2));                 // sustain time... often very high
        lx=min(31,lx);                                  // values are used to hold the volume
        if(lx)                                          // until a sound stop occurs
-        {                                              // the highest value we reach (due to 
-         lx = (1<<lx);                                 // overflow checking) is: 
-         if(lx<2147483) lx=(lx*SUSTAIN_MS)/10000L;     // 94704 seconds = 1578 minutes = 26 hours... 
-         else           lx=(lx/10000L)*SUSTAIN_MS;     // should be enuff... if the stop doesn't 
+        {                                              // the highest value we reach (due to
+         lx = (1<<lx);                                 // overflow checking) is:
+         if(lx<2147483) lx=(lx*SUSTAIN_MS)/10000L;     // 94704 seconds = 1578 minutes = 26 hours...
+         else           lx=(lx/10000L)*SUSTAIN_MS;     // should be enuff... if the stop doesn't
          if(!lx) lx=1;                                 // come in this time span, I don't care :)
         }
        s_chan[ch].ADSR.SustainTime = lx;
@@ -202,7 +202,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
        if(lx)                                          // release time from 100% to 0%
         {                                              // note: the release time will be
          lx = (1<<lx);                                 // adjusted when a stop is coming,
-         if(lx<2147483) lx=(lx*RELEASE_MS)/10000L;     // so at this time the adsr vol will 
+         if(lx<2147483) lx=(lx*RELEASE_MS)/10000L;     // so at this time the adsr vol will
          else           lx=(lx/10000L)*RELEASE_MS;     // run from (current volume) to 0%
          if(!lx) lx=1;
         }
@@ -232,7 +232,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
    int ch=0;unsigned long rx=r;
 
     ch=((rx & 0x3ff)-0x1c0) / 0xC;
-   
+
    rx-=ch*0xC;
    if(rx>=0x400) {ch+=24;rx-=0x400;}
 
@@ -291,7 +291,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
     }
 
    return;
-  } 
+  }
 
  switch(r)
    {
@@ -342,7 +342,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
     //-------------------------------------------------//
     case PS2_C1_SPUdata:
       spuMem[spuAddr2[1]] = val;
-      
+
 	  if(spuCtrl2[1]&0x40 && spuIrq2[1] == spuAddr2[1]){
 			regArea[0x7C0] |= 0x8;
             regArea[PS2_IRQINFO] |= 8;
@@ -483,7 +483,7 @@ EXPORT_GCC void CALLBACK SPU2write(unsigned long reg, unsigned short val)
 #endif
       break;
     //-------------------------------------------------//
-    case PS2_IRQINFO: 
+    case PS2_IRQINFO:
       // regArea[PS2_IRQINFO] = 0; // clear
 #ifdef _WINDOWS
 			if(iDebugMode==1) logprintf("W_REG IRQINFO - Addr %X Val %X - Not Implemented!\r\n", reg&0xFFFF, val);
@@ -1226,19 +1226,19 @@ if(spuCtrl2[1]&0x40 && spuIrq2[1] == r){
 		if(iDebugMode==1) logprintf("R_REG Envelope - Channel %d Core %d Addr %X Val %X\r\n", (ch > 23? (ch - 24) : ch), ch/24, reg&0xFFFF, ret);
 #endif
 		 break;
-  
+
     }
 
   }else
 	 if((r>=0x01c0 && r<0x02E0)||(r>=0x05c0 && r<0x06E0))  // some channel info?
 	  {
 	   int ch=0;unsigned long rx=r;
-	    
+
 	   ch=((rx & 0x3ff)-0x1c0) / 0xC;
-	   
+
 	   rx-=ch*0xC;
 	   if(rx>=0x400) {ch+=24;rx-=0x400;}
-	  
+
 	   switch(rx)
 		{
 			case 0x1C0:
@@ -1349,7 +1349,7 @@ if(spuCtrl2[1]&0x40 && spuIrq2[1] == r){
 		   case PS2_C0_SPUdata:
 			 {
 			  unsigned short s=spuMem[spuAddr2[0]];
-		      
+
 			  if(spuCtrl2[0]&0x40 && spuIrq2[0] == spuAddr2[0]){
 					regArea[0x7C0] |= 0x4;
 					regArea[PS2_IRQINFO] |= 4;
@@ -1369,7 +1369,7 @@ if(spuCtrl2[1]&0x40 && spuIrq2[1] == r){
 		   case PS2_C1_SPUdata:
 			 {
 			  unsigned short s=spuMem[spuAddr2[1]];
-		      
+
 			  if(spuCtrl2[1]&0x40 && spuIrq2[1] == spuAddr2[1]){
 					regArea[0x7C0] |= 0x8;
 					regArea[PS2_IRQINFO] |= 8;
@@ -1833,10 +1833,10 @@ if(spuCtrl2[1]&0x40 && spuIrq2[1] == r){
 #endif*/
 	}
 
- 
+
  return ret;
 }
- 
+
 ////////////////////////////////////////////////////////////////////////
 // SOUND ON register write
 ////////////////////////////////////////////////////////////////////////
@@ -1898,7 +1898,7 @@ void SoundOff(int start,int end,unsigned short val)    // SOUND OFF PSX COMMAND
 			}
 		}
      s_chan[ch].bStop=1;
-    }                                                  
+    }
   }
 }
 
@@ -1914,7 +1914,7 @@ void FModOn(int start,int end,unsigned short val)      // FMOD ON PSX COMMAND
   {
    if(val&1)                                           // -> fmod on/off
     {
-     if(ch>0) 
+     if(ch>0)
       {
        s_chan[ch].bFMod=1;                             // --> sound channel
        s_chan[ch-1].bFMod=2;                           // --> freq channel
@@ -1941,7 +1941,7 @@ void NoiseOn(int start,int end,unsigned short val)     // NOISE ON PSX COMMAND
     {
      s_chan[ch].bNoise=1;
     }
-   else 
+   else
     {
      s_chan[ch].bNoise=0;
     }
@@ -1992,11 +1992,11 @@ void SetVolumeR(unsigned char ch,short vol)            // RIGHT VOLUME
    short sInc=1;
    if(vol&0x2000) sInc=-1;
    if(vol&0x1000) vol^=0xffff;
-   vol=((vol&0x7f)+1)/2;        
+   vol=((vol&0x7f)+1)/2;
    vol+=vol/(2*sInc);
    vol*=128;
   }
- else            
+ else
   {
    if(vol&0x4000) //vol=vol^=0xffff;
     vol=0x3fff-(vol&0x3fff);
@@ -2039,7 +2039,7 @@ void ReverbOn(int start,int end,unsigned short val,int iRight)  // REVERB ON PSX
      if(iRight) s_chan[ch].bReverbR=1;
      else       s_chan[ch].bReverbL=1;
     }
-   else 
+   else
     {
      if(iRight) s_chan[ch].bReverbR=0;
      else       s_chan[ch].bReverbL=0;
@@ -2054,7 +2054,7 @@ void ReverbOn(int start,int end,unsigned short val,int iRight)  // REVERB ON PSX
 void SetReverbAddr(int core)
 {
  long val=spuRvbAddr2[core];
- 
+
  if(rvb[core].StartAddr!=val)
   {
    if(val<=0x27ff)
@@ -2065,7 +2065,7 @@ void SetReverbAddr(int core)
     {
      rvb[core].StartAddr=val;
      rvb[core].CurrAddr=rvb[core].StartAddr;
-    } 
+    }
   }
 }
 
@@ -2084,7 +2084,7 @@ void VolumeOn(int start,int end,unsigned short val,int iRight)  // VOLUME ON PSX
      if(iRight) s_chan[ch].bVolumeR=1;
      else       s_chan[ch].bVolumeL=1;
     }
-   else 
+   else
     {
      if(iRight) s_chan[ch].bVolumeR=0;
      else       s_chan[ch].bVolumeL=0;

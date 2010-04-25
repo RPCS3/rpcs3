@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -81,7 +81,7 @@ u16* regtable[0x401] =
 	PCORE(0,TSA)+1,
 	PCORE(0,TSA),
 
-	PRAW(REG__1AC), PRAW(REG__1AE), 
+	PRAW(REG__1AC), PRAW(REG__1AE),
 
 	PCORE(0,AutoDMACtrl),
 
@@ -184,7 +184,7 @@ u16* regtable[0x401] =
 	PCORE(1,TSA)+1,
 	PCORE(1,TSA),
 
-	PRAW(0x5ac), PRAW(0x5ae), 
+	PRAW(0x5ac), PRAW(0x5ae),
 
 	PCORE(1,AutoDMACtrl),
 

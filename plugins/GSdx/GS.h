@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,18 +6,18 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
- *	Special Notes: 
+ *	Special Notes:
  *
  *	Register definitions and most of the enums originate from sps2dev-0.4.0
  *	Copyright (C) 2002 Terratron Technologies Inc.  All Rights Reserved.
@@ -151,12 +151,12 @@ enum GIF_FLG
 
 enum GS_PSM
 {
-	PSM_PSMCT32		= 0,  // 0000-0000 
-	PSM_PSMCT24		= 1,  // 0000-0001 
-	PSM_PSMCT16		= 2,  // 0000-0010 
-	PSM_PSMCT16S	= 10, // 0000-1010 
-	PSM_PSMT8		= 19, // 0001-0011 
-	PSM_PSMT4		= 20, // 0001-0100 
+	PSM_PSMCT32		= 0,  // 0000-0000
+	PSM_PSMCT24		= 1,  // 0000-0001
+	PSM_PSMCT16		= 2,  // 0000-0010
+	PSM_PSMCT16S	= 10, // 0000-1010
+	PSM_PSMT8		= 19, // 0001-0011
+	PSM_PSMT4		= 20, // 0001-0100
 	PSM_PSMT8H		= 27, // 0001-1011
 	PSM_PSMT4HL		= 36, // 0010-0100
 	PSM_PSMT4HH		= 44, // 0010-1100
@@ -490,8 +490,8 @@ REG64_SET(GSReg)
 	GSRegIMR		IMR;
 	GSRegPMODE		PMODE;
 	GSRegSIGLBLID	SIGLBLID;
-	GSRegSMODE1		SMODE1; 
-	GSRegSMODE2		SMODE2; 
+	GSRegSMODE1		SMODE1;
+	GSRegSMODE2		SMODE2;
 REG_SET_END
 
 //
@@ -786,7 +786,7 @@ REG64_(GIFReg, TEST)
 	uint32 _PAD2:32;
 REG_END2
 	__forceinline bool DoFirstPass() {return !ATE || ATST != ATST_NEVER;} // not all pixels fail automatically
-	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z  
+	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z
 	__forceinline bool NoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL == AFAIL_KEEP;} // pixels may fail, no output
 REG_END2
 
@@ -1085,7 +1085,7 @@ REG_SET_END
 
 __aligned16 struct GIFPath
 {
-	GIFTag tag; 
+	GIFTag tag;
 	uint32 reg;
 	uint32 nreg;
 	uint32 nloop;
@@ -1103,14 +1103,14 @@ __aligned16 struct GIFPath
 		adonly = nreg == 1 && regs.u8[0] == GIF_REG_A_D;
 	}
 
-	__forceinline uint8 GetReg() 
+	__forceinline uint8 GetReg()
 	{
 		return regs.u8[reg]; // GET_GIF_REG(tag, reg);
 	}
 
 	__forceinline bool StepReg()
 	{
-		if((++reg & 0xf) == nreg) 
+		if((++reg & 0xf) == nreg)
 		{
 			reg = 0;
 			if(--nloop == 0)
@@ -1188,4 +1188,4 @@ struct GSKeyEventData {uint32 key, type;};
 enum {FREEZE_LOAD=0, FREEZE_SAVE=1, FREEZE_SIZE=2};
 struct GSFreezeData {int size; uint8* data;};
 
-enum stateType {ST_WRITE, ST_TRANSFER, ST_VSYNC}; 
+enum stateType {ST_WRITE, ST_TRANSFER, ST_VSYNC};

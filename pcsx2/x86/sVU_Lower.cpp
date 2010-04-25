@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
@@ -31,8 +31,8 @@
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
-#define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
+#define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register
 #define _Fd_ (( VU->code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _It_ (_Ft_ & 15)
 #define _Is_ (_Fs_ & 15)
@@ -138,7 +138,7 @@ void recVUMI_DIV(VURegs *VU, int info)
 	_vuFlipRegSS_xyzw(EEREC_T, _Ftf_);
 
 	vuFloat_useEAX(info, EEREC_TEMP, 0x8);
-	
+
 	x86SetJ32(bjmp32);
 
 	SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(REG_Q, 0), EEREC_TEMP);
@@ -243,7 +243,7 @@ void recVUMI_RSQRT(VURegs *VU, int info)
 	SSE_MOVSS_XMM_to_M32(VU_VI_ADDR(REG_Q, 0), t1reg);
 
 	x86SetJ8(bjmp8);
-			
+
 	if (t1boolean) SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)&RSQRT_TEMP_XMM[0] ); // restore t1reg data
 	else _freeXMMreg(t1reg); // free t1reg
 }
@@ -270,7 +270,7 @@ void _addISIMMtoIT(VURegs *VU, s16 imm, int info)
 
 	if ( _It_ == _Is_ ) {
 		if (imm != 0 ) ADD16ItoR(itreg, imm);
-	} 
+	}
 	else {
 		if( imm ) {
 			LEA32RtoR(itreg, isreg, imm);
@@ -402,7 +402,7 @@ void recVUMI_IOR( VURegs *VU, int info )
 		idreg = ALLOCVI(_Id_, MODE_WRITE);
 		XOR32RtoR(idreg, idreg);
 		return;
-	} 
+	}
 
 	ADD_VI_NEEDED(_Is_);
 	ADD_VI_NEEDED(_It_);
@@ -450,8 +450,8 @@ void recVUMI_ISUB( VURegs *VU, int info )
 		idreg = ALLOCVI(_Id_, MODE_WRITE);
 		XOR32RtoR(idreg, idreg);
 		return;
-	} 
-	
+	}
+
 	ADD_VI_NEEDED(_Is_);
 	ADD_VI_NEEDED(_It_);
 	idreg = ALLOCVI(_Id_, MODE_WRITE);
@@ -509,7 +509,7 @@ void recVUMI_ISUBIU( VURegs *VU, int info )
 // MOVE*
 //------------------------------------------------------------------
 void recVUMI_MOVE( VURegs *VU, int info )
-{	
+{
 	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0) ) return;
 	//Console.WriteLn("recVUMI_MOVE");
 	if (_X_Y_Z_W == 0x8)  SSE_MOVSS_XMM_to_XMM(EEREC_T, EEREC_S);
@@ -543,7 +543,7 @@ void recVUMI_MFIR( VURegs *VU, int info )
 		SSE2_PSRAD_I8_to_XMM(EEREC_TEMP, 16);
 		SSE_SHUFPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP, 0);
 		VU_MERGE_REGS(EEREC_T, EEREC_TEMP);
-	} 
+	}
 	else {
 		SSE2_MOVD_M32_to_XMM(EEREC_T, VU_VI_ADDR(_Is_, 1)-2);
 		SSE2_PSRAD_I8_to_XMM(EEREC_T, 16);
@@ -571,7 +571,7 @@ void recVUMI_MTIR( VURegs *VU, int info )
 	}
 
 	AND32ItoM(VU_VI_ADDR(_It_, 0), 0xffff);
-} 
+}
 //------------------------------------------------------------------
 
 
@@ -579,7 +579,7 @@ void recVUMI_MTIR( VURegs *VU, int info )
 // MR32*
 //------------------------------------------------------------------
 void recVUMI_MR32( VURegs *VU, int info )
-{	
+{
 	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0) ) return;
 	//Console.WriteLn("recVUMI_MR32");
 	if (_X_Y_Z_W != 0xf) {
@@ -685,13 +685,13 @@ int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 		if( imm ) LEA32RtoR(EAX, x86reg, imm);
 		else MOV32RtoR(EAX, x86reg);
 	}
-	
+
 	if( VU == &VU1 ) {
 		AND32ItoR(EAX, 0x3ff); // wrap around
 		SHL32ItoR(EAX, 4);
 	}
 	else {
-	
+
 		// VU0 has a somewhat interesting memory mapping:
 		// if addr >= 0x4000, reads VU1's VF regs and VI regs
 		// if addr < 0x4000, wrap around at 0x1000
@@ -720,10 +720,10 @@ void recVUMI_LQ(VURegs *VU, int info)
 	s16 imm;
 	if ( _Ft_ == 0 ) return;
 	//Console.WriteLn("recVUMI_LQ");
-	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff); 
+	imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff);
 	if (_Is_ == 0) {
 		_loadEAX(VU, -1, (uptr)GET_VU_MEM(VU, (u32)imm*16), info);
-	} 
+	}
 	else {
 		int isreg = ALLOCVI(_Is_, MODE_READ);
 		_loadEAX(VU, recVUTransformAddr(isreg, VU, _Is_, imm), (uptr)VU->Mem, info);
@@ -773,7 +773,7 @@ void recVUMI_LQI(VURegs *VU, int info)
 
     if (_Is_ == 0) {
 		_loadEAX(VU, -1, (uptr)VU->Mem, info);
-    } 
+    }
 	else {
 		isreg = ALLOCVI(_Is_, MODE_READ|MODE_WRITE);
 		_loadEAX(VU, recVUTransformAddr(isreg, VU, _Is_, 0), (uptr)VU->Mem, info);
@@ -867,7 +867,7 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 		case 9: // XW
 			if ( x86reg >= 0 ) SSE_MOVSS_XMM_to_Rm(x86reg, EEREC_S, offset);
 			else SSE_MOVSS_XMM_to_M32(offset, EEREC_S);
-			
+
 			SSE2_PSHUFD_XMM_to_XMM(EEREC_TEMP, EEREC_S, 0xff); //WWWW
 
 			if ( x86reg >= 0 ) SSE_MOVSS_XMM_to_Rm(x86reg, EEREC_TEMP, offset+12);
@@ -946,7 +946,7 @@ void recVUMI_SQ(VURegs *VU, int info)
 {
 	s16 imm;
 	//Console.WriteLn("recVUMI_SQ");
-	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff); 
+	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff);
 	if ( _It_ == 0 ) _saveEAX(VU, -1, (uptr)GET_VU_MEM(VU, (int)imm * 16), info);
 	else {
 		int itreg = ALLOCVI(_It_, MODE_READ);
@@ -995,7 +995,7 @@ void recVUMI_ILW(VURegs *VU, int info)
 {
 	int itreg;
 	s16 imm, off;
- 
+
 	if ( ( _It_ == 0 ) || ( _X_Y_Z_W == 0 ) ) return;
 	//Console.WriteLn("recVUMI_ILW");
 	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff);
@@ -1025,7 +1025,7 @@ void recVUMI_ISW( VURegs *VU, int info )
 {
 	s16 imm;
 	//Console.WriteLn("recVUMI_ISW");
-	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff); 
+	imm = ( VU->code & 0x400) ? ( VU->code & 0x3ff) | 0xfc00 : ( VU->code & 0x3ff);
 
 	if (_Is_ == 0) {
 		uptr off = (uptr)GET_VU_MEM(VU, (int)imm * 16);
@@ -1138,7 +1138,7 @@ void recVUMI_RINIT(VURegs *VU, int info)
 		AND32ItoR( rreg, 0x7fffff );
 		OR32ItoR( rreg, 0x7f << 23 );
 
-		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1); 
+		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1);
 	}
 }
 //------------------------------------------------------------------
@@ -1200,7 +1200,7 @@ void recVUMI_RNEXT( VURegs *VU, int info )
 	_freeX86reg(x86temp1);
 
 	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0)  ) {
-		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1); 
+		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1);
 		return;
 	}
 
@@ -1216,7 +1216,7 @@ void recVUMI_RXOR( VURegs *VU, int info )
 {
 	//Console.WriteLn("recVUMI_RXOR()");
 	if( (xmmregs[EEREC_S].mode & MODE_WRITE) && (xmmregs[EEREC_S].mode & MODE_NOFLUSH) ) {
-		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1); 
+		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1);
 		_unpackVFSS_xyzw(EEREC_TEMP, EEREC_S, _Fsf_);
 
 		SSE_XORPS_M128_to_XMM(EEREC_TEMP, VU_REGR_ADDR);
@@ -1236,9 +1236,9 @@ void recVUMI_RXOR( VURegs *VU, int info )
 		AND32ItoR( rreg, 0x7fffff );
 		OR32ItoR ( rreg, 0x3f800000 );
 
-		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1); 
+		_deleteX86reg(X86TYPE_VI|(VU==&VU1?X86TYPE_VU1:0), REG_R, 1);
 	}
-} 
+}
 //------------------------------------------------------------------
 
 
@@ -1265,7 +1265,7 @@ void recVUMI_FSAND( VURegs *VU, int info )
 	u16 imm;
 	//Console.WriteLn("recVUMI_FSAND");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
-	if(_It_ == 0) return; 
+	if(_It_ == 0) return;
 
 	itreg = ALLOCVI(_It_, MODE_WRITE);
 	MOV32MtoR( itreg, VU_VI_ADDR(REG_STATUS_FLAG, 1) );
@@ -1302,7 +1302,7 @@ void recVUMI_FSOR( VURegs *VU, int info )
 {
 	int itreg;
 	u32 imm;
-	if(_It_ == 0) return; 
+	if(_It_ == 0) return;
 	//Console.WriteLn("recVUMI_FSOR");
 	imm = (((VU->code >> 21 ) & 0x1) << 11) | (VU->code & 0x7ff);
 
@@ -1380,9 +1380,9 @@ void recVUMI_FMEQ( VURegs *VU, int info )
 		ADD_VI_NEEDED(_Is_);
 		itreg = ALLOCVI(_It_, MODE_WRITE|MODE_8BITREG);
 		isreg = ALLOCVI(_Is_, MODE_READ);
-		
+
 		XOR32RtoR(itreg, itreg);
-		
+
 		CMP16MtoR(isreg, VU_VI_ADDR(REG_MAC_FLAG, 1));
 		SETE8R(itreg);
 	}
@@ -1466,7 +1466,7 @@ void recVUMI_FCOR( VURegs *VU, int info )
 	OR32ItoR ( itreg, VU->code );
 	AND32ItoR( itreg, 0xffffff );
 	ADD32ItoR( itreg, 1 );	// If 24 1's will make 25th bit 1, else 0
-	SHR32ItoR( itreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)	
+	SHR32ItoR( itreg, 24 );	// Get the 25th bit (also clears the rest of the garbage in the reg)
 }
 //------------------------------------------------------------------
 
@@ -1514,7 +1514,7 @@ void recVUMI_FCGET( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_MFP(VURegs *VU, int info)
 {
-	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0) ) return; 
+	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0) ) return;
 	//Console.WriteLn("recVUMI_MFP");
 	if( _XYZW_SS ) {
 		_vuFlipRegSS(VU, EEREC_T);
@@ -1562,7 +1562,7 @@ void vuSqSumXYZ(int regd, int regs, int regtemp) // regd.x =  x ^ 2 + y ^ 2 + z 
 		if (CHECK_VU_EXTRA_OVERFLOW) vuFloat2(regd, regtemp, 0xf);
 		SSE4_DPPS_XMM_to_XMM(regd, regd, 0x71);
 	}
-	else 
+	else
 	{
 		SSE_MOVAPS_XMM_to_XMM(regtemp, regs);
 		if (CHECK_VU_EXTRA_OVERFLOW) vuFloat2(regtemp, regd, 0xf);
@@ -1577,7 +1577,7 @@ void vuSqSumXYZ(int regd, int regs, int regtemp) // regd.x =  x ^ 2 + y ^ 2 + z 
 			SSE_MOVSS_XMM_to_XMM(regd, regtemp);
 			SSE2_PSHUFLW_XMM_to_XMM(regtemp, regtemp, 0x4e); // wzyx -> wzxy
 			SSE_ADDSS_XMM_to_XMM(regd, regtemp); // x ^ 2 + y ^ 2
-			SSE_SHUFPS_XMM_to_XMM(regtemp, regtemp, 0xD2); // wzxy -> wxyz 
+			SSE_SHUFPS_XMM_to_XMM(regtemp, regtemp, 0xD2); // wzxy -> wxyz
 			SSE_ADDSS_XMM_to_XMM(regd, regtemp); // x ^ 2 + y ^ 2 + z ^ 2
 		}
 	}
@@ -1728,7 +1728,7 @@ void recVUMI_ESUM( VURegs *VU, int info )
 		SSE_ADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_S); // z+x, w+y, z+z, w+w
 		SSE_UNPCKLPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP); // z+x, z+x, w+y, w+y
 		SSE_MOVHLPS_XMM_to_XMM(EEREC_D, EEREC_TEMP); // w+y, w+y, w+y, w+y
-		SSE_ADDSS_XMM_to_XMM(EEREC_TEMP, EEREC_D); // x+y+z+w, w+y, w+y, w+y 
+		SSE_ADDSS_XMM_to_XMM(EEREC_TEMP, EEREC_D); // x+y+z+w, w+y, w+y, w+y
 	}
 
 	vuFloat_useEAX(info, EEREC_TEMP, 8);
@@ -1805,7 +1805,7 @@ void recVUMI_ESQRT( VURegs *VU, int info )
 void recVUMI_ERSQRT( VURegs *VU, int info )
 {
 	int t1reg = _vuGetTempXMMreg(info);
- 
+
 	pxAssert( VU == &VU1 );
 	//Console.WriteLn("VU1: ERSQRT");
 
@@ -1814,7 +1814,7 @@ void recVUMI_ERSQRT( VURegs *VU, int info )
 	SSE_MINSS_M32_to_XMM(EEREC_TEMP, (uptr)g_maxvals); // Clamp Infinities to Fmax
 	SSE_SQRTSS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP); // SQRT(abs(x))
 
-	if( t1reg >= 0 ) 
+	if( t1reg >= 0 )
 	{
 		SSE_MOVSS_M32_to_XMM(t1reg, (uptr)VU_ONE);
 		SSE_DIVSS_XMM_to_XMM(t1reg, EEREC_TEMP);
@@ -1932,7 +1932,7 @@ void recVUMI_EEXP( VURegs *VU, int info )
 	FADD320toR(1);
 	FSCALE();
 	FSTP(1);
-	
+
 	FSTP32(VU_VI_ADDR(REG_P, 0));
 }
 //------------------------------------------------------------------
@@ -1973,13 +1973,13 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	u32 size;
     u8* data = ((u8*)pMem + (addr&0x3fff));
-	
+
 	size = GetMTGS().PrepDataPacket(GIF_PATH_1, data, (0x4000-(addr&0x3fff)) / 16);
     jASSUME( size > 0 );
-	
+
 	u8* pmem = GetMTGS().GetDataPacketPtr();
-	
-	if((size << 4) > (0x4000-(addr&0x3fff))) 
+
+	if((size << 4) > (0x4000-(addr&0x3fff)))
 	{
 		//DevCon.Warning("addr + Size = 0x%x, transferring %x then doing %x", (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
 		memcpy_aligned(pmem, (u8*)pMem+addr, 0x4000-(addr&0x3fff));

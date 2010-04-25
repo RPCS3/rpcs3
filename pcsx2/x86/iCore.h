@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -277,17 +277,17 @@ void SetFPUstate();
 #define MMX_COP0 96
 #define MMX_TEMP 0x7f
 
-static __forceinline bool MMX_IS32BITS(s32 x) 
+static __forceinline bool MMX_IS32BITS(s32 x)
 {
 	return (((x >= MMX_FPU) && (x < MMX_COP0 + 32)) || (x == MMX_FPUACC));
 }
 
-static __forceinline bool MMX_ISGPR(s32 x) 
+static __forceinline bool MMX_ISGPR(s32 x)
 {
-	return ((x >= MMX_GPR) && (x < MMX_GPR + 34)); 
+	return ((x >= MMX_GPR) && (x < MMX_GPR + 34));
 }
 
-static __forceinline bool MMX_ISGPR(u32 x) 
+static __forceinline bool MMX_ISGPR(u32 x)
 {
 	return (x < MMX_GPR + 34);
 }
@@ -342,7 +342,7 @@ extern u16 x86FpuState;
 // as needed.  (similar to a "FreezeXMMRegs")
 
 // "Flushing" means that in addition to the standard free (which is actually a flush)
-// the register allocations are additionally wiped.  This should only be necessary if 
+// the register allocations are additionally wiped.  This should only be necessary if
 // the code being called is going to modify register allocations -- ie, be doing
 // some kind of recompiling of its own.
 

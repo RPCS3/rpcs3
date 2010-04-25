@@ -17,9 +17,9 @@
  */
 
 #pragma once
- 
+
 #define NUM_OF_PADS 2
- 
+
 #include "zeropad.h"
 
 namespace Analog

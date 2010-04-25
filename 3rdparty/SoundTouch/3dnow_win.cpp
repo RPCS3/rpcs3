@@ -1,32 +1,32 @@
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// Win32 version of the AMD 3DNow! optimized routines for AMD K6-2/Athlon 
+/// Win32 version of the AMD 3DNow! optimized routines for AMD K6-2/Athlon
 /// processors. All 3DNow! optimized functions have been gathered into this
-/// single source code file, regardless to their class or original source code 
-/// file, in order to ease porting the library to other compiler and processor 
+/// single source code file, regardless to their class or original source code
+/// file, in order to ease porting the library to other compiler and processor
 /// platforms.
 ///
-/// By the way; the performance gain depends heavily on the CPU generation: On 
-/// K6-2 these routines provided speed-up of even 2.4 times, while on Athlon the 
-/// difference to the original routines stayed at unremarkable 8%! Such a small 
-/// improvement on Athlon is due to 3DNow can perform only two operations in 
+/// By the way; the performance gain depends heavily on the CPU generation: On
+/// K6-2 these routines provided speed-up of even 2.4 times, while on Athlon the
+/// difference to the original routines stayed at unremarkable 8%! Such a small
+/// improvement on Athlon is due to 3DNow can perform only two operations in
 /// parallel, and obviously also the Athlon FPU is doing a very good job with
-/// the standard C floating point routines! Here these routines are anyway, 
-/// although it might not be worth the effort to convert these to GCC platform, 
-/// for Athlon CPU at least. The situation is different regarding the SSE 
-/// optimizations though, thanks to the four parallel operations of SSE that 
+/// the standard C floating point routines! Here these routines are anyway,
+/// although it might not be worth the effort to convert these to GCC platform,
+/// for Athlon CPU at least. The situation is different regarding the SSE
+/// optimizations though, thanks to the four parallel operations of SSE that
 /// already make a difference.
-/// 
-/// This file is to be compiled in Windows platform with Microsoft Visual C++ 
+///
+/// This file is to be compiled in Windows platform with Microsoft Visual C++
 /// Compiler. Please see '3dnow_gcc.cpp' for the gcc compiler version for all
 /// GNU platforms (if file supplied).
 ///
-/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++ 
-/// 6.0 processor pack" update to support 3DNow! instruction set. The update is 
+/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++
+/// 6.0 processor pack" update to support 3DNow! instruction set. The update is
 /// available for download at Microsoft Developers Network, see here:
 /// http://msdn.microsoft.com/en-us/vstudio/aa718349.aspx
 ///
-/// If the above URL is expired or removed, go to "http://msdn.microsoft.com" and 
+/// If the above URL is expired or removed, go to "http://msdn.microsoft.com" and
 /// perform a search with keywords "processor pack".
 ///
 /// Author        : Copyright (c) Olli Parviainen
@@ -73,7 +73,7 @@
 using namespace soundtouch;
 
 #ifdef ALLOW_3DNOW
-// 3DNow! routines available only with float sample type    
+// 3DNow! routines available only with float sample type
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -111,10 +111,10 @@ double TDStretch3DNow::calcCrossCorrStereo(const float *pV1, const float *pV2) c
         }
     */
 
-    _asm 
+    _asm
     {
         // give prefetch hints to CPU of what data are to be needed soonish.
-        // give more aggressive hints on pV1 as that changes more between different calls 
+        // give more aggressive hints on pV1 as that changes more between different calls
         // while pV2 stays the same.
         prefetch [pV1]
         prefetch [pV2]
@@ -153,7 +153,7 @@ double TDStretch3DNow::calcCrossCorrStereo(const float *pV1, const float *pV2) c
         dec     ecx
         jnz     loop1
 
-        // add halfs of mm0 together and return the result. 
+        // add halfs of mm0 together and return the result.
         // note: mm1 is used as a dummy parameter only, we actually don't care about it's value
         pfacc   mm0, mm1
         movd    corr, mm0
@@ -206,7 +206,7 @@ void FIRFilter3DNow::setCoefficients(const float *coeffs, uint newLength, uint u
 
     fDivider = (float)resultDivider;
 
-    // rearrange the filter coefficients for mmx routines 
+    // rearrange the filter coefficients for mmx routines
     for (i = 0; i < newLength; i ++)
     {
         filterCoeffsAlign[2 * i + 0] =
@@ -239,26 +239,26 @@ uint FIRFilter3DNow::evaluateFilterStereo(float *dest, const float *src, uint nu
         suml2 = sumr2 = 0.0;
         ptr = src;
         filterCoeffsLocal = filterCoeffs;
-        for (i = 0; i < lengthLocal; i ++) 
+        for (i = 0; i < lengthLocal; i ++)
         {
             // unroll loop for efficiency.
 
-            suml1 += ptr[0] * filterCoeffsLocal[0] + 
+            suml1 += ptr[0] * filterCoeffsLocal[0] +
                      ptr[2] * filterCoeffsLocal[2] +
                      ptr[4] * filterCoeffsLocal[4] +
                      ptr[6] * filterCoeffsLocal[6];
 
-            sumr1 += ptr[1] * filterCoeffsLocal[1] + 
+            sumr1 += ptr[1] * filterCoeffsLocal[1] +
                      ptr[3] * filterCoeffsLocal[3] +
                      ptr[5] * filterCoeffsLocal[5] +
                      ptr[7] * filterCoeffsLocal[7];
 
-            suml2 += ptr[8] * filterCoeffsLocal[0] + 
+            suml2 += ptr[8] * filterCoeffsLocal[0] +
                      ptr[10] * filterCoeffsLocal[2] +
                      ptr[12] * filterCoeffsLocal[4] +
                      ptr[14] * filterCoeffsLocal[6];
 
-            sumr2 += ptr[9] * filterCoeffsLocal[1] + 
+            sumr2 += ptr[9] * filterCoeffsLocal[1] +
                      ptr[11] * filterCoeffsLocal[3] +
                      ptr[13] * filterCoeffsLocal[5] +
                      ptr[15] * filterCoeffsLocal[7];

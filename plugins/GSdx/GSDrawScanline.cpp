@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -105,53 +105,53 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 		switch(context->CLAMP.WMS)
 		{
-		case CLAMP_REPEAT: 
+		case CLAMP_REPEAT:
 			m_env.t.min.u16[0] = tw - 1;
 			m_env.t.max.u16[0] = 0;
-			m_env.t.mask.u32[0] = 0xffffffff; 
+			m_env.t.mask.u32[0] = 0xffffffff;
 			break;
-		case CLAMP_CLAMP: 
+		case CLAMP_CLAMP:
 			m_env.t.min.u16[0] = 0;
 			m_env.t.max.u16[0] = tw - 1;
-			m_env.t.mask.u32[0] = 0; 
+			m_env.t.mask.u32[0] = 0;
 			break;
-		case CLAMP_REGION_CLAMP: 
+		case CLAMP_REGION_CLAMP:
 			m_env.t.min.u16[0] = std::min<int>(context->CLAMP.MINU, tw - 1);
 			m_env.t.max.u16[0] = std::min<int>(context->CLAMP.MAXU, tw - 1);
-			m_env.t.mask.u32[0] = 0; 
+			m_env.t.mask.u32[0] = 0;
 			break;
-		case CLAMP_REGION_REPEAT: 
+		case CLAMP_REGION_REPEAT:
 			m_env.t.min.u16[0] = context->CLAMP.MINU;
 			m_env.t.max.u16[0] = context->CLAMP.MAXU;
-			m_env.t.mask.u32[0] = 0xffffffff; 
+			m_env.t.mask.u32[0] = 0xffffffff;
 			break;
-		default: 
+		default:
 			__assume(0);
 		}
 
 		switch(context->CLAMP.WMT)
 		{
-		case CLAMP_REPEAT: 
+		case CLAMP_REPEAT:
 			m_env.t.min.u16[4] = th - 1;
 			m_env.t.max.u16[4] = 0;
-			m_env.t.mask.u32[2] = 0xffffffff; 
+			m_env.t.mask.u32[2] = 0xffffffff;
 			break;
-		case CLAMP_CLAMP: 
+		case CLAMP_CLAMP:
 			m_env.t.min.u16[4] = 0;
 			m_env.t.max.u16[4] = th - 1;
-			m_env.t.mask.u32[2] = 0; 
+			m_env.t.mask.u32[2] = 0;
 			break;
-		case CLAMP_REGION_CLAMP: 
+		case CLAMP_REGION_CLAMP:
 			m_env.t.min.u16[4] = std::min<int>(context->CLAMP.MINV, th - 1);
 			m_env.t.max.u16[4] = std::min<int>(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
-			m_env.t.mask.u32[2] = 0; 
+			m_env.t.mask.u32[2] = 0;
 			break;
-		case CLAMP_REGION_REPEAT: 
+		case CLAMP_REGION_REPEAT:
 			m_env.t.min.u16[4] = context->CLAMP.MINV;
 			m_env.t.max.u16[4] = context->CLAMP.MAXV;
-			m_env.t.mask.u32[2] = 0xffffffff; 
+			m_env.t.mask.u32[2] = 0xffffffff;
 			break;
-		default: 
+		default:
 			__assume(0);
 		}
 
@@ -254,7 +254,7 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			c |= 0x80000000;
 		}
-		
+
 		if(m_sel.fpsm != 2)
 		{
 			if(m == 0)
@@ -282,7 +282,7 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 	}
 }
 
-template<class T, bool masked> 
+template<class T, bool masked>
 void GSDrawScanline::DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(m == 0xffffffff) return;
@@ -319,7 +319,7 @@ void GSDrawScanline::DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT
 	}
 }
 
-template<class T, bool masked> 
+template<class T, bool masked>
 void GSDrawScanline::FillRect(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(r.x >= r.z) return;
@@ -335,7 +335,7 @@ void GSDrawScanline::FillRect(const int* RESTRICT row, const int* RESTRICT col, 
 	}
 }
 
-template<class T, bool masked> 
+template<class T, bool masked>
 void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
 {
 	if(r.x >= r.z) return;

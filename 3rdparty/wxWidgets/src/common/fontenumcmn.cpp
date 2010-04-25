@@ -82,9 +82,9 @@ bool wxFontEnumerator::IsValidFacename(const wxString &facename)
 
 #ifdef __WXMSW__
     // Quoting the MSDN:
-    //     "MS Shell Dlg is a mapping mechanism that enables 
-    //     U.S. English Microsoft Windows NT, and Microsoft Windows 2000 to 
-    //     support locales that have characters that are not contained in code 
+    //     "MS Shell Dlg is a mapping mechanism that enables
+    //     U.S. English Microsoft Windows NT, and Microsoft Windows 2000 to
+    //     support locales that have characters that are not contained in code
     //     page 1252. It is not a font but a face name for a nonexistent font."
     // Thus we need to consider "Ms Shell Dlg" and "Ms Shell Dlg 2" as valid
     // font face names even if they are enumerated by wxFontEnumerator

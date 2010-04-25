@@ -50,7 +50,7 @@ namespace WaveDump
 	,	CoreSrc_External
 
 	,	CoreSrc_Count
-	};	
+	};
 
 	extern void Open();
 	extern void Close();

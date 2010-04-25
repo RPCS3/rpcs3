@@ -479,7 +479,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	xMOV( &s_store_ebp, ebp );
 
 	xJMP( ptr32[&DispatcherReg] );
-	
+
 	xAlignCallTarget();
 	imm = (uptr)xGetPtr();
 	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
@@ -756,7 +756,7 @@ static void recExecute()
 
 		pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
 		EnterRecompiledCode();
-		
+
 		// Generally unreachable code here ...
 	}
 	else
@@ -1211,7 +1211,7 @@ void recompileNextInstruction(int delayslot)
 		}
 	}
 	// Check for NOP
-	if (cpuRegs.code == 0x00000000) { 
+	if (cpuRegs.code == 0x00000000) {
 		// Note: Tests on a ps2 suggested more like 5 cycles for a NOP. But there's many factors in this..
 		s_nBlockCycles +=9 * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
 	}

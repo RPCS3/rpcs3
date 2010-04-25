@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -111,7 +111,7 @@ void SearchReset()
 	FirstSearch=true;
 
 	results.clear();
-	
+
 }
 
 int AddResult(u32 addr)
@@ -124,7 +124,7 @@ int AddResult(u32 addr)
 bool CompareAny(u64 val,u64 cto)
 {
 
-	if(Unsigned) 
+	if(Unsigned)
 	{
 		switch(Size)
 		{
@@ -255,7 +255,7 @@ void SearchMore()
 		{
 			cto=old;
 		}
-		
+
 		if(CompareAny(val,cto)) {
 			AddResult(addr);
 			UpdateStatus();
@@ -268,7 +268,7 @@ void SearchMore()
 #define HANDLE_CHECKNB(idc,hvar)case idc: hvar=hvar?0:1; SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(hvar==1)?BST_CHECKED:BST_UNCHECKED,0)
 #define ENABLE_CONTROL(idc,value) EnableWindow(GetDlgItem(hWnd,idc),value)
 
-#define HANDLE_GROUP_ITEM(idc)	case idc: 
+#define HANDLE_GROUP_ITEM(idc)	case idc:
 #define BEGIN_GROUP_HANDLER(first,hvar) TSelect=wmId;hvar=TSelect-first
 #define GROUP_SELECT(idc)	SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(TSelect==idc)?BST_CHECKED:BST_UNCHECKED,0)
 #define GROUP_INIT(first,hvar) TSelect=first+hvar
@@ -316,15 +316,15 @@ BOOL CALLBACK AddCheatProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-				
+
 				case IDOK:
 					GetWindowText(GetDlgItem(hWnd,IDC_VALUE),tv,100);
 					value=_atoi64(tv);
@@ -370,7 +370,7 @@ void AddResults(HWND hWnd)
 
 		sprintf(tn,"%08x",results[i].address);
 
-		if(Unsigned) 
+		if(Unsigned)
 		{
 			sprintf(to,"%I64u",(u64)o&sizemask);
 			sprintf(tv,"%I64u",(u64)v&sizemask);
@@ -483,15 +483,15 @@ BOOL CALLBACK FinderProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-				
+
 				case IDC_ADD:
 					AddCheat(pInstance,hWnd);
 					break;
@@ -529,7 +529,7 @@ BOOL CALLBACK FinderProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 						SearchFirst();
 					}
 					else			SearchMore();
-					
+
 					AddResults(hWnd);
 
 					memcpy(olds,mptr[Source],msize[Source]);

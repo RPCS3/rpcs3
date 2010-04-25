@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -43,7 +43,7 @@ struct xImplSimd_PShuffle
 	// Copies doublewords from src and inserts them into dest at dword locations selected
 	// with the order operand (8 bit immediate).
 	const xImplSimd_DestRegImmSSE	D;
-	
+
 	// Copies words from the low quadword of src and inserts them into the low quadword
 	// of dest at word locations selected with the order operand (8 bit immediate).
 	// The high quadword of src is copied to the high quadword of dest.
@@ -96,15 +96,15 @@ struct SimdImpl_PUnpack
 //
 struct SimdImpl_Pack
 {
-	// Converts packed signed word integers from src and dest into packed signed 
+	// Converts packed signed word integers from src and dest into packed signed
 	// byte integers in dest, using signed saturation.
 	const xImplSimd_DestRegEither	SSWB;
 
-	// Converts packed signed dword integers from src and dest into packed signed 
+	// Converts packed signed dword integers from src and dest into packed signed
 	// word integers in dest, using signed saturation.
 	const xImplSimd_DestRegEither	SSDW;
 
-	// Converts packed unsigned word integers from src and dest into packed unsigned 
+	// Converts packed unsigned word integers from src and dest into packed unsigned
 	// byte integers in dest, using unsigned saturation.
 	const xImplSimd_DestRegEither	USWB;
 

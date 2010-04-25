@@ -24,13 +24,13 @@
 s32 g_logsound = 0;
 WavOutFile* g_pWavRecord=NULL; // used for recording
 
-const s32 f[5][2] = {   
+const s32 f[5][2] = {
 				{    0,     0 },
 				{  60,     0 },
 				{ 115, -52 },
 				{   98, -55 },
 				{ 122, -60 } };
-				
+
 s32 predict_nr, shift_factor, flags;
 s32 s_1, s_2;
 
@@ -42,7 +42,7 @@ static __forceinline s32 SetPacket(s32 val)
 	ret += ((s_1 * f[predict_nr][0]) >> 6) + ((s_2 * f[predict_nr][1]) >> 6);
 	s_2 = s_1;
 	s_1 = ret;
-	
+
 	return ret;
 }
 
@@ -50,7 +50,7 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 {
 	u8* start;
 	u32 nSample;
-	
+
 	for (u32 ns = 0; ns < NSSIZE; ns++)
 	{
 		// fmod freq channel
@@ -61,7 +61,7 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 			if (pChannel->iSBPos == 28)			// 28 reached?
 			{
 				start=pChannel->pCurr;		  // set up the current pos
-				
+
 				// special "stop" sign
 				if (start == (u8*)-1)  //!pChannel->bOn
 				{
@@ -70,40 +70,40 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 					pChannel->ADSRX.EnvelopeVol = 0;
 					return;							  // -> and done for this channel
 				}
-					
+
 				predict_nr = (s32)start[0];
 				shift_factor = predict_nr&0xf;
 				predict_nr >>= 4;
 				flags=(s32)start[1];
 				start += 2;
-					
+
 				pChannel->iSBPos = 0;
 
 				// decode the 16byte packet
 				s_1 = pChannel->s_1;
 				s_2 = pChannel->s_2;
-					
+
 				for (nSample=0; nSample<28; ++start)
 				{
 					s32 d = (s32)*start;
 					s32 s;
-					
+
 					s = ((d & 0xf)<<12);
 					pChannel->SB[nSample++] = SetPacket(s);
-					
+
 					s = ((d & 0xf0) << 8);
 					pChannel->SB[nSample++] = SetPacket(s);
 				}
-			
+
 				// irq occurs no matter what core accesses the address
-				for (s32 core = 0; core < 2; ++core) 
+				for (s32 core = 0; core < 2; ++core)
 				{
 					if (spu2attr(core).irq)		 // some callback and irq active?
 					{
-						// if irq address reached or irq on looping addr, when stop/loop flag is set 
+						// if irq address reached or irq on looping addr, when stop/loop flag is set
 						u8* pirq = (u8*)pSpuIrq[core];
-						
-						if ((pirq > (start - 16)  && pirq <= start) || 
+
+						if ((pirq > (start - 16)  && pirq <= start) ||
 							((flags & 1) && (pirq > (pChannel->pLoop - 16) && pirq <= pChannel->pLoop)))
 						{
 							IRQINFO |= 4 << core;
@@ -121,7 +121,7 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 				{
 					// We play this block out first...
 					dwEndChannel2[ch / 24] |= (1 << (ch % 24));
-				
+
 					if (flags != 3 || pChannel->pLoop == NULL)
 					{									  // and checking if pLoop is set avoids crashes, yeah
 						start = (u8*)-1;
@@ -142,7 +142,7 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 			pChannel->StoreInterpolationVal(pChannel->SB[pChannel->iSBPos++]); // get sample data
 			pChannel->spos -= 0x10000;
 		}
-		
+
 		s32 sval = (MixADSR(pChannel) * pChannel->iGetVal()) / 1023;   // mix adsr with noise or sample val.
 
 		if (pChannel->bFMod == 2)						// fmod freq channel
@@ -150,11 +150,11 @@ void SPU2Loop(VOICE_PROCESSED* pChannel, u32 ch)
 			// -> store 1T sample data, use that to do fmod on next channel
 			if (!pChannel->bNoise) iFMod[ns] = sval;
 		}
-		else 
+		else
 		{
 			if (pChannel->bVolumeL)
 				s_buffers[ns][0] += (sval * pChannel->leftvol) >> 14;
-				
+
 			if (pChannel->bVolumeR)
 				s_buffers[ns][1] += (sval * pChannel->rightvol) >> 14;
 		}
@@ -167,11 +167,11 @@ void SPU2Worker()
 {
 	// assume s_buffers are zeroed out
 	if (dwNewChannel2[0] || dwNewChannel2[1]) s_pAudioBuffers[s_nCurBuffer].newchannels++;
-		
+
 	VOICE_PROCESSED* pChannel = voices;
 	for (u32 ch=0; ch < SPU_NUMBER_VOICES; ch++, pChannel++)			  // loop em all... we will collect 1 ms of sound of each playing channel
 	{
-		if (pChannel->bNew) 
+		if (pChannel->bNew)
 		{
 			pChannel->StartSound();						 // start new sound
 			dwEndChannel2[ch / 24] &= ~(1 << (ch % 24));				  // clear end channel bit
@@ -191,29 +191,29 @@ void SPU2Worker()
 	MixChannels(0);
 	MixChannels(1);
 
-	if ( g_bPlaySound ) 
+	if ( g_bPlaySound )
 	{
 		assert( s_pCurOutput != NULL);
 
-		for (u32 ns = 0; ns < NSSIZE; ns++) 
+		for (u32 ns = 0; ns < NSSIZE; ns++)
 		{
 			// clamp and write
 			clampandwrite16(s_pCurOutput[0],s_buffers[ns][0]);
 			clampandwrite16(s_pCurOutput[1],s_buffers[ns][1]);
-			
+
 			s_pCurOutput += 2;
 			s_buffers[ns][0] = 0;
 			s_buffers[ns][1] = 0;
 		}
 		// check if end reached
 
-		if ((uptr)s_pCurOutput - (uptr)s_pAudioBuffers[s_nCurBuffer].pbuf >= 4 * NS_TOTAL_SIZE) 
+		if ((uptr)s_pCurOutput - (uptr)s_pAudioBuffers[s_nCurBuffer].pbuf >= 4 * NS_TOTAL_SIZE)
 		{
 
-			if ( conf.options & OPTION_RECORDING ) 
+			if ( conf.options & OPTION_RECORDING )
 			{
 				static s32 lastrectime = 0;
-				if (timeGetTime() - lastrectime > 5000) 
+				if (timeGetTime() - lastrectime > 5000)
 				{
 					WARN_LOG("ZeroSPU2: recording\n");
 					lastrectime = timeGetTime();
@@ -221,7 +221,7 @@ void SPU2Worker()
 				LogRawSound(s_pAudioBuffers[s_nCurBuffer].pbuf, 4, s_pAudioBuffers[s_nCurBuffer].pbuf+2, 4, NS_TOTAL_SIZE);
 			}
 
-			if ( s_nQueuedBuffers >= ArraySize(s_pAudioBuffers)-1 ) 
+			if ( s_nQueuedBuffers >= ArraySize(s_pAudioBuffers)-1 )
 			{
 				//ZeroSPU2: dropping packets! game too fast
 				s_nDropPacket += NSFRAMES;
@@ -230,24 +230,24 @@ void SPU2Worker()
 			else {
 				// submit to final mixer
 #ifdef ZEROSPU2_DEVBUILD
-				if ( g_logsound ) 
+				if ( g_logsound )
 					LogRawSound(s_pAudioBuffers[s_nCurBuffer].pbuf, 4, s_pAudioBuffers[s_nCurBuffer].pbuf + 2, 4, NS_TOTAL_SIZE);
 #endif
-				if ( g_startcount == 0xffffffff ) 
+				if ( g_startcount == 0xffffffff )
 				{
 					g_startcount = timeGetTime();
 					g_packetcount = 0;
 				}
 
-				if ( conf.options & OPTION_TIMESTRETCH ) 
+				if ( conf.options & OPTION_TIMESTRETCH )
 				{
 					u32 newtotal = s_nTotalDuration - s_nDurations[s_nCurDuration];
 					u64 newtime = GetMicroTime();
 					u32 duration;
-					
+
 					if (s_GlobalTimeStamp == 0) s_GlobalTimeStamp = newtime - NSFRAMES * 1000;
 					duration = (u32)(newtime-s_GlobalTimeStamp);
-					
+
 					s_nDurations[s_nCurDuration] = duration;
 					s_nTotalDuration = newtotal + duration;
 					s_nCurDuration = (s_nCurDuration+1)%ArraySize(s_nDurations);
@@ -276,8 +276,8 @@ void LogPacketSound(void* packet, s32 memsize)
 
 	u8* pstart = (u8*)packet;
 	s_1 = s_2 = 0;
-	
-	for (s32 i = 0; i < memsize; i += 16) 
+
+	for (s32 i = 0; i < memsize; i += 16)
 	{
 		predict_nr = (s32)pstart[0];
 		shift_factor = predict_nr&0xf;
@@ -287,9 +287,9 @@ void LogPacketSound(void* packet, s32 memsize)
 		for (s32 nSample = 0;nSample < 28; ++pstart)
 		{
 			s32 d = (s32)*pstart;
-			
+
 			s32 temp;
-			
+
 			temp = ((d & 0xf) << 12);
 			buf[nSample++] = SetPacket(temp);
 			temp = ((d & 0xf0) << 8);
@@ -302,7 +302,7 @@ void LogPacketSound(void* packet, s32 memsize)
 
 void LogRawSound(void* pleft, s32 leftstride, void* pright, s32 rightstride, s32 numsamples)
 {
-	if (g_pWavRecord == NULL ) 
+	if (g_pWavRecord == NULL )
 		g_pWavRecord = new WavOutFile(RECORD_FILENAME, SAMPLE_RATE, 16, 2);
 
 	u8* left = (u8*)pleft;
@@ -311,7 +311,7 @@ void LogRawSound(void* pleft, s32 leftstride, void* pright, s32 rightstride, s32
 
 	tempbuf.resize(2 * numsamples);
 
-	for (s32 i = 0; i < numsamples; ++i) 
+	for (s32 i = 0; i < numsamples; ++i)
 	{
 		tempbuf[2*i+0] = *(s16*)left;
 		tempbuf[2*i+1] = *(s16*)right;

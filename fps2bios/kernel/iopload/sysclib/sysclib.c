@@ -114,7 +114,7 @@ void* memchr(void *s, int ch, int len){
 		    if (*(unsigned char*)s == ch)
 			return s;
 		} while(s++, --len>0);
-	
+
     }
     return NULL;
 }
@@ -274,7 +274,7 @@ size_t strspn(const char *s, const char *accept) {
 	}
 
 	return s - _s;
-} 
+}
 
 size_t strcspn(const char *s, const char *reject) {
 	const char *_s = s;
@@ -289,7 +289,7 @@ size_t strcspn(const char *s, const char *reject) {
 	}
 
 	return s - _s;
-} 
+}
 
 char *index(const char *s, int c) {
 	return strchr(s, c);

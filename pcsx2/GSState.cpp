@@ -95,10 +95,10 @@ void LoadGSState(const wxString& file)
 
 	//if( !wxFileName::FileExists( src ) )
 	//	src = Path::Combine( g_Conf->Folders.Savestates, src );
-		
+
 	if( !wxFileName::FileExists( src ) )
 		return;
-	
+
 	SafeArray<u8> buf;
 	memLoadingState f( buf );
 

@@ -649,7 +649,7 @@ bool wxSetFocusToChild(wxWindow *win, wxWindow **childLastFocused)
         if ( child->GetParent()->MacIsWindowScrollbar( child ) )
             continue;
 #endif
-        
+
         if ( child->AcceptsFocusFromKeyboard() && !child->IsTopLevel() )
         {
 #ifdef __WXMSW__

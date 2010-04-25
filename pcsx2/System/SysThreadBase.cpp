@@ -60,7 +60,7 @@ void SysThreadBase::OnStart()
 
 // (overridable) Timeout period before a thread is considered potentially
 // deadlocked.  SysThreadBase default is 4 seconds.
-// 
+//
 wxTimeSpan SysThreadBase::GetDeadlockTimeout() const
 {
 	return wxTimeSpan( 0, 0, 4, 0 );
@@ -68,7 +68,7 @@ wxTimeSpan SysThreadBase::GetDeadlockTimeout() const
 
 void SysThreadBase::DoThreadDeadlocked()
 {
-	
+
 }
 
 void SysThreadBase::ThrowDeadlockException()
@@ -123,7 +123,7 @@ bool SysThreadBase::Suspend( bool isBlocking )
 			case ExecMode_Paused:
 				if( !isBlocking ) return retval;
 				throw Exception::CancelEvent( "Another thread is pausing the VM state." );
-	
+
 			case ExecMode_Opened:
 				m_ExecMode = ExecMode_Closing;
 				retval = true;

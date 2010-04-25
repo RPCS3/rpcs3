@@ -37,7 +37,7 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
   if (version != JPEG_LIB_VERSION)
     ERREXIT2(cinfo, JERR_BAD_LIB_VERSION, JPEG_LIB_VERSION, version);
   if (structsize != SIZEOF(struct jpeg_decompress_struct))
-    ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE, 
+    ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE,
 	     (int) SIZEOF(struct jpeg_decompress_struct), (int) structsize);
 
   /* For debugging purposes, we zero the whole master structure.
@@ -122,7 +122,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
     cinfo->jpeg_color_space = JCS_GRAYSCALE;
     cinfo->out_color_space = JCS_GRAYSCALE;
     break;
-    
+
   case 3:
     if (cinfo->saw_JFIF_marker) {
       cinfo->jpeg_color_space = JCS_YCbCr; /* JFIF implies YCbCr */
@@ -157,7 +157,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
     /* Always guess RGB is proper output colorspace. */
     cinfo->out_color_space = JCS_RGB;
     break;
-    
+
   case 4:
     if (cinfo->saw_Adobe_marker) {
       switch (cinfo->Adobe_transform) {
@@ -178,7 +178,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
     }
     cinfo->out_color_space = JCS_CMYK;
     break;
-    
+
   default:
     cinfo->jpeg_color_space = JCS_UNKNOWN;
     cinfo->out_color_space = JCS_UNKNOWN;

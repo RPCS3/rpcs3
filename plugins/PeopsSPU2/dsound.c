@@ -39,9 +39,9 @@
 #ifdef _WINDOWS
 #define _LPCWAVEFORMATEX_DEFINED
 #include "dsound.h"
-                                
+
 #include "record.h"
-                   
+
 ////////////////////////////////////////////////////////////////////////
 // dsound globals
 ////////////////////////////////////////////////////////////////////////
@@ -68,7 +68,7 @@ void SetupSound(void)
  HRESULT dsval;WAVEFORMATEX pcmwf;
 
  dsval = DirectSoundCreate(NULL,&lpDS,NULL);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    MessageBox(hWMain,"DirectSoundCreate!","Error",MB_OK);
    return;
@@ -85,12 +85,12 @@ void SetupSound(void)
 
  memset(&dsbd,0,sizeof(DSBUFFERDESC));
  dsbd.dwSize = sizeof(DSBUFFERDESC);                                     // NT4 hack! sizeof(dsbd);
- dsbd.dwFlags = DSBCAPS_PRIMARYBUFFER;                 
- dsbd.dwBufferBytes = 0; 
+ dsbd.dwFlags = DSBCAPS_PRIMARYBUFFER;
+ dsbd.dwBufferBytes = 0;
  dsbd.lpwfxFormat = NULL;
 
  dsval=IDirectSound_CreateSoundBuffer(lpDS,&dsbd,&lpDSBPRIMARY,NULL);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    MessageBox(hWMain, "CreateSoundBuffer (Primary)", "Error",MB_OK);
    return;
@@ -99,16 +99,16 @@ void SetupSound(void)
  memset(&pcmwf, 0, sizeof(WAVEFORMATEX));
  pcmwf.wFormatTag = WAVE_FORMAT_PCM;
 
- pcmwf.nChannels = 2; 
+ pcmwf.nChannels = 2;
  pcmwf.nBlockAlign = 4;
 
  pcmwf.nSamplesPerSec = 48000;
- 
+
  pcmwf.nAvgBytesPerSec = pcmwf.nSamplesPerSec * pcmwf.nBlockAlign;
  pcmwf.wBitsPerSample = 16;
 
  dsval=IDirectSoundBuffer_SetFormat(lpDSBPRIMARY,&pcmwf);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    MessageBox(hWMain, "SetFormat!", "Error",MB_OK);
    return;
@@ -126,11 +126,11 @@ void SetupSound(void)
  dsbdesc.lpwfxFormat = (LPWAVEFORMATEX)&pcmwf;
 
  dsval=IDirectSound_CreateSoundBuffer(lpDS,&dsbdesc,&lpDSBSECONDARY1,NULL);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    dsbdesc.dwFlags = DSBCAPS_LOCSOFTWARE | DSBCAPS_STICKYFOCUS | DSBCAPS_GETCURRENTPOSITION2;
    dsval=IDirectSound_CreateSoundBuffer(lpDS,&dsbdesc,&lpDSBSECONDARY1,NULL);
-   if(dsval!=DS_OK) 
+   if(dsval!=DS_OK)
    {
 	MessageBox(hWMain,"CreateSoundBuffer (Secondary1)", "Error",MB_OK);
 	return;
@@ -140,14 +140,14 @@ void SetupSound(void)
 
 
  dsval=IDirectSoundBuffer_Play(lpDSBPRIMARY,0,0,DSBPLAY_LOOPING);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    MessageBox(hWMain,"Play (Primary)","Error",MB_OK);
    return;
   }
 
  dsval=IDirectSoundBuffer_Play(lpDSBSECONDARY1,0,0,DSBPLAY_LOOPING);
- if(dsval!=DS_OK) 
+ if(dsval!=DS_OK)
   {
    MessageBox(hWMain,"Play (Secondary1)","Error",MB_OK);
    return;
@@ -160,12 +160,12 @@ void SetupSound(void)
 ////////////////////////////////////////////////////////////////////////
 
 void RemoveSound(void)
-{ 
+{
  int iRes;
 
  if(iDoRecord) RecordStop();
 
- if(lpDSBSECONDARY1!=NULL) 
+ if(lpDSBSECONDARY1!=NULL)
   {
    IDirectSoundBuffer_Stop(lpDSBSECONDARY1);
    iRes=IDirectSoundBuffer_Release(lpDSBSECONDARY1);
@@ -174,7 +174,7 @@ void RemoveSound(void)
    lpDSBSECONDARY1=NULL;
   }
 
- if(lpDSBPRIMARY!=NULL) 
+ if(lpDSBPRIMARY!=NULL)
   {
    IDirectSoundBuffer_Stop(lpDSBPRIMARY);
    iRes=IDirectSoundBuffer_Release(lpDSBPRIMARY);
@@ -183,7 +183,7 @@ void RemoveSound(void)
    lpDSBPRIMARY=NULL;
   }
 
- if(lpDS!=NULL) 
+ if(lpDS!=NULL)
   {
    iRes=IDirectSound_Release(lpDS);
    // FF says such a loop is bad... Demo says it's good... Pete doesn't care
@@ -218,7 +218,7 @@ unsigned long SoundGetBytesBuffered(void)
 void SoundFeedVoiceData(unsigned char* pSound,long lBytes)
 {
  LPVOID lpvPtr1, lpvPtr2;
- unsigned long dwBytes1,dwBytes2; 
+ unsigned long dwBytes1,dwBytes2;
  unsigned long *lpSS, *lpSD;
  unsigned long dw,cplay,cwrite;
  HRESULT hr;
@@ -238,7 +238,7 @@ void SoundFeedVoiceData(unsigned char* pSound,long lBytes)
  if(LastWrite==0xffffffff) LastWrite=cwrite;
 
  hr=IDirectSoundBuffer_Lock(lpDSBSECONDARY1,LastWrite,lBytes,
-                &lpvPtr1, &dwBytes1, 
+                &lpvPtr1, &dwBytes1,
                 &lpvPtr2, &dwBytes2,
                 0);
 

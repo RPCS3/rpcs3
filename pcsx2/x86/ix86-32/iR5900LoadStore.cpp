@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -24,8 +24,8 @@
 // Implemented at the bottom of the module:
 void SetFastMemory(int bSetFast);
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl {
 
 /*********************************************************
@@ -255,7 +255,7 @@ void recSD( void )  { recStore(64); }
 // (LWL/SWL, LWR/SWR, etc)
 
 ////////////////////////////////////////////////////
-void recLWL( void ) 
+void recLWL( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -266,7 +266,7 @@ void recLWL( void )
 }
 
 ////////////////////////////////////////////////////
-void recLWR( void ) 
+void recLWR( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -283,11 +283,11 @@ static const u8 SWR_SHIFT[4] = { 0, 8, 16, 24 };
 static const u8 SWL_SHIFT[4] = { 24, 16, 8, 0 };
 
 ////////////////////////////////////////////////////
-void recSWL( void ) 
+void recSWL( void )
 {
 	// Perform a translated memory read, followed by a translated memory write
 	// of the "merged" result.
-	
+
 	// NOTE: Code incomplete. I'll fix/finish it soon. --air
 	if( 0 ) //GPR_IS_CONST1( _Rs_ ) )
 	{
@@ -321,7 +321,7 @@ void recSWL( void )
 }
 
 ////////////////////////////////////////////////////
-void recSWR( void ) 
+void recSWR( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -330,7 +330,7 @@ void recSWR( void )
 }
 
 ////////////////////////////////////////////////////
-void recLDL( void ) 
+void recLDL( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -340,7 +340,7 @@ void recLDL( void )
 }
 
 ////////////////////////////////////////////////////
-void recLDR( void ) 
+void recLDR( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -350,7 +350,7 @@ void recLDR( void )
 }
 
 ////////////////////////////////////////////////////
-void recSDL( void ) 
+void recSDL( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -359,7 +359,7 @@ void recSDL( void )
 }
 
 ////////////////////////////////////////////////////
-void recSDR( void ) 
+void recSDR( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -381,7 +381,7 @@ void recLWC1( void )
 	_deleteFPtoXMMreg(_Rt_, 2);
 
 	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )	
+	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_ );
 
 	vtlb_DynGenRead32(32, false);
@@ -396,7 +396,7 @@ void recSWC1( void )
 	_deleteFPtoXMMreg(_Rt_, 0);
 
 	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	if ( _Imm_ != 0 )	
+	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_ );
 
 	MOV32MtoR(EDX, (int)&fpuRegs.fpr[ _Rt_ ].UL );
@@ -414,7 +414,7 @@ void recSWC1( void )
 #define _Fs_ _Rd_
 #define _Fd_ _Sa_
 
-void recLQC2( void ) 
+void recLQC2( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -433,7 +433,7 @@ void recLQC2( void )
 }
 
 ////////////////////////////////////////////////////
-void recSQC2( void ) 
+void recSQC2( void )
 {
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);

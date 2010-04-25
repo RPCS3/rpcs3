@@ -112,7 +112,7 @@ bool Threading::Mutex::RecreateIfLocked()
 // This is a direct blocking action -- very fast, very efficient, and generally very dangerous
 // if used from the main GUI thread, since it typically results in an unresponsive program.
 // Call this method directly only if you know the code in question will be run from threads
-// other than the main thread.  
+// other than the main thread.
 void Threading::Mutex::AcquireWithoutYield()
 {
 	pxAssertMsg( !wxThread::IsMain(), "Unyielding mutex acquire issued from the main/gui thread.  Please use Acquire() instead." );

@@ -79,7 +79,7 @@ enum TransferMode
 //
 
 // Doing double duty as both the top 32 bits *and* the lower 32 bits of a chain tag.
-// Theoretically should probably both be in a u64 together, but with the way the 
+// Theoretically should probably both be in a u64 together, but with the way the
 // code is layed out, this is easier for the moment.
 
 union tDMA_TAG {
@@ -95,7 +95,7 @@ union tDMA_TAG {
 		u32 SPR : 1;
 	};
 	u32 _u32;
-	
+
 	tDMA_TAG(u32 val) { _u32 = val; }
 	u16 upper() const { return (_u32 >> 16); }
 	u16 lower() const { return (u16)_u32; }
@@ -131,9 +131,9 @@ union tDMA_CHCR {
 		u32 TAG : 16;
 	};
 	u32 _u32;
-	
+
 	tDMA_CHCR( u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set(u32 value) { _u32 = value; }
 	void set_flags(u32 flags) { _u32 |= flags; }
@@ -152,9 +152,9 @@ union tDMA_SADR {
 		u32 reserved2 : 18;
 	};
 	u32 _u32;
-	
+
 	tDMA_SADR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Sadr: 0x%x", _u32); }
 };
@@ -165,9 +165,9 @@ union tDMA_MADR {
 		u32 SPR : 1; // Memory/SPR Address
 	};
 	u32 _u32;
-	
+
 	tDMA_MADR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Madr: 0x%x", _u32); }
 };
@@ -178,9 +178,9 @@ union tDMA_TADR {
 		u32 SPR : 1; // Memory/SPR Address
 	};
 	u32 _u32;
-	
+
 	tDMA_TADR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Tadr: 0x%x", _u32); }
 };
@@ -191,9 +191,9 @@ union tDMA_ASR { // The Address Stack Register
 		u32 SPR : 1; // Memory/SPR Address
 	};
 	u32 _u32;
-	
+
 	tDMA_ASR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Asr: 0x%x", _u32); }
 };
@@ -204,9 +204,9 @@ union tDMA_QWC {
 		u32 reserved2 : 16;
 	};
 	u32 _u32;
-	
+
 	tDMA_QWC(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"QWC: 0x%x", _u32); }
 };
@@ -228,17 +228,17 @@ struct DMACh {
 	u32 asr1;
 	u32 null5[11];
 	u32 sadr;
-	
+
 	void chcrTransfer(tDMA_TAG* ptag)
 	{
 	    chcr.TAG = ptag[0].upper();
 	}
-	
+
 	void qwcTransfer(tDMA_TAG* ptag)
 	{
 	    qwc = ptag[0].QWC;
-	} 
-	
+	}
+
 	bool transfer(const char *s, tDMA_TAG* ptag)
 	{
 		if (ptag == NULL)  					 // Is ptag empty?
@@ -247,17 +247,17 @@ struct DMACh {
 			return false;
 		}
 	    chcrTransfer(ptag);
-		
+
         qwcTransfer(ptag);
         return true;
 	}
-	
+
 	void unsafeTransfer(tDMA_TAG* ptag)
 	{
         chcrTransfer(ptag);
         qwcTransfer(ptag);
 	}
-	
+
 	tDMA_TAG *getAddr(u32 addr, u32 num, bool write)
 	{
 		tDMA_TAG *ptr = dmaGetAddr(addr, write);
@@ -270,28 +270,28 @@ struct DMACh {
 
 		return ptr;
 	}
-	
+
 	tDMA_TAG *DMAtransfer(u32 addr, u32 num)
 	{
 		tDMA_TAG *tag = getAddr(addr, num, false);
-		
+
 		if (tag == NULL) return NULL;
-		
+
 	    chcrTransfer(tag);
         qwcTransfer(tag);
         return tag;
 	}
-	
+
 	tDMA_TAG dma_tag() const
 	{
 		return DMA_TAG(chcr._u32);
 	}
-	
+
 	wxString cmq_to_str() const
 	{
 		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx", chcr._u32, madr, qwc);
 	}
-	
+
 	wxString cmqt_to_str() const
 	{
 		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx, tadr = %1x", chcr._u32, madr, qwc, tadr);
@@ -365,7 +365,7 @@ enum DMAInter
 
 union tDMAC_QUEUE
 {
-	struct 
+	struct
 	{
 	    u16 VIF0 : 1;
 	    u16 VIF1 : 1;
@@ -382,7 +382,7 @@ union tDMAC_QUEUE
 	    u16 BEIS : 1;
 	};
 	u16 _u16;
-	
+
 	tDMAC_QUEUE(u16 val) { _u16 = val; }
 	void reset() { _u16 = 0; }
 	bool empty() const { return (_u16 == 0); }
@@ -439,9 +439,9 @@ union tDMAC_CTRL {
 		u32 reserved1 : 21;
 	};
 	u32 _u32;
-	
+
 	tDMAC_CTRL(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -463,9 +463,9 @@ union tDMAC_STAT {
 		u32 reserved3 : 1;
 	};
 	u32 _u32;
-	
+
 	tDMAC_STAT(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -482,9 +482,9 @@ union tDMAC_PCR {
 		u32 PCE : 1;
 	};
 	u32 _u32;
-	
+
 	tDMAC_PCR(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -500,9 +500,9 @@ union tDMAC_SQWC {
 		u32 reserved2 : 8;
 	};
 	u32 _u32;
-	
+
 	tDMAC_SQWC(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -516,9 +516,9 @@ union tDMAC_RBSR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
-	
+
 	tDMAC_RBSR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Rbsr: 0x%x", _u32); }
 };
@@ -529,9 +529,9 @@ union tDMAC_RBOR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
-	
+
 	tDMAC_RBOR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Rbor: 0x%x", _u32); }
 };
@@ -542,9 +542,9 @@ union tDMAC_STADR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
-	
+
 	tDMAC_STADR(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Stadr: 0x%x", _u32); }
 };
@@ -575,9 +575,9 @@ union tINTC_STAT {
 	    u32 placeholder : 22;
 	};
 	u32 _u32;
-	
+
 	tINTC_STAT(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -591,9 +591,9 @@ union tINTC_MASK {
 	    u32 placeholder:22;
 	};
 	u32 _u32;
-	
+
 	tINTC_MASK(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -623,7 +623,7 @@ static __forceinline void setDmacStat(u32 num)
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
-static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write) 
+static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
@@ -648,7 +648,7 @@ static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 
 	Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
 	return NULL;
-} 
+}
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
 static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
@@ -679,7 +679,7 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 
 	Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
 	return NULL;
-} 
+}
 
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);

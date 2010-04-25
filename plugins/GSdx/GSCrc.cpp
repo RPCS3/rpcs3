@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -22,7 +22,7 @@
 #include "StdAfx.h"
 #include "GSCrc.h"
 
-CRC::Game CRC::m_games[] = 
+CRC::Game CRC::m_games[] =
 {
 	{0x00000000, None, Unknown, 0},
 	{0x2113EA2E, MetalSlug6, Unknown, 0},
@@ -76,11 +76,11 @@ CRC::Game CRC::m_games[] =
 	{0xFE961D28, DBZBT2, US, 0},
 	{0x0393B6BE, DBZBT2, EU, 0},
 	{0xE2F289ED, DBZBT2, JP, 0}, // Sparking Neo!
-	{0x35AA84D1, DBZBT2, Unknown, 0},	
+	{0x35AA84D1, DBZBT2, Unknown, 0},
 	{0x428113C2, DBZBT3, US, 0},
 	{0xA422BB13, DBZBT3, EU, 0},
-	{0x983C53D2, DBZBT3, Unknown, 0},	
-	{0x983C53D3, DBZBT3, Unknown, 0},	
+	{0x983C53D2, DBZBT3, Unknown, 0},
+	{0x983C53D3, DBZBT3, Unknown, 0},
 	{0x72B3802A, SFEX3, US, 0},
 	{0x71521863, SFEX3, US, 0},
 	{0x28703748, Bully, US, 0},
@@ -102,7 +102,7 @@ CRC::Game CRC::m_games[] =
 	{0xC164550A, WildArms5, JPUNDUB, 0},
 	{0xC1640D2C, WildArms5, US, 0},
 	{0x0FCF8FE4, WildArms5, EU, 0},
-	{0x2294D322, WildArms5, JP, 0}, 
+	{0x2294D322, WildArms5, JP, 0},
 	{0x565B6170, WildArms5, JP, 0},
 	{0x8B029334, Manhunt2, Unknown, 0},
 	{0x09F49E37, CrashBandicootWoC, Unknown, 0},
@@ -115,7 +115,7 @@ CRC::Game CRC::m_games[] =
 	{0xEC432B24, Drakengard2, Unknown, 0},
 	{0xFC46EA61, Tekken5, JP, 0},
 	{0x1F88EE37, Tekken5, Unknown, 0},
-	{0x652050D2, Tekken5, Unknown, 0}, 
+	{0x652050D2, Tekken5, Unknown, 0},
 	{0x9E98B8AE, IkkiTousen, JP, 0},
 	{0xD6385328, GodOfWar, US, 0},
 	{0xFB0E6D72, GodOfWar, EU, 0},
@@ -123,7 +123,7 @@ CRC::Game CRC::m_games[] =
 	{0xA61A4C6D, GodOfWar, Unknown, 0},
 	{0xE23D532B, GodOfWar, Unknown, 0},
 	{0xDF1AF973, GodOfWar, Unknown, 0},
-	{0xD6385328, GodOfWar, Unknown, 0},	
+	{0xD6385328, GodOfWar, Unknown, 0},
 	{0x2F123FD8, GodOfWar2, RU, 0},
 	{0x2F123FD8, GodOfWar2, US, 0},
 	{0x44A8A22A, GodOfWar2, EU, 0},
@@ -135,11 +135,11 @@ CRC::Game CRC::m_games[] =
 	{0x75c01a04, NamcoXCapcom, US, 0},
 	{0xBF6F101F, GiTS, US, 0},
 	{0xA5768F53, GiTS, JP, 0},
-	{0x6BF11378, Onimusha3, US, 0},	
+	{0x6BF11378, Onimusha3, US, 0},
 	{0xF442260C, MajokkoALaMode2, JP, 0},
 	{0x14FE77F7, TalesOfAbyss, US, 0},
 	{0x045D77E9, TalesOfAbyss, JPUNDUB, 0},
-	{0xAA5EC3A3, TalesOfAbyss, JP, 0}, 
+	{0xAA5EC3A3, TalesOfAbyss, JP, 0},
 	{0xFB236A46, SonicUnleashed, US, 0},
 	{0x4C7BB3C8, SimpsonsGame, Unknown, 0},
 	{0x4C94B32C, SimpsonsGame, Unknown, 0},
@@ -156,7 +156,7 @@ CRC::Game CRC::m_games[] =
 	{0xF0A31EE3, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)
 	{0xD60DA6D4, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne
 	{0x0e762e8d, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne Maniacs
-	{0x47BA9034, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne Maniacs Chronicle 
+	{0x47BA9034, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne Maniacs Chronicle
 	{0xD7273511, SMTDDS1, US, ZWriteMustNotClear},		// SMT Digital Devil Saga
 	{0x1683A6BE, SMTDDS1, EU, ZWriteMustNotClear},		// SMT Digital Devil Saga
 	{0x44865CE1, SMTDDS1, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga

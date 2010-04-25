@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #ifndef __FW_H__
 #define __FW_H__
 
@@ -30,7 +30,7 @@ extern s8 *fwregs;
 #define fwRs32(mem)	(*(s32*)&fwregs[(mem) & 0xffff])
 #define fwRu32(mem)	(*(u32*)&fwregs[(mem) & 0xffff])
 
-typedef struct 
+typedef struct
 {
 	s32 Log;
 } Config;

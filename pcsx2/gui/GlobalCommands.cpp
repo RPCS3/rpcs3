@@ -61,7 +61,7 @@ namespace Implementations
 	{
 		g_Conf->EmuOptions.GS.FrameSkipEnable = !g_Conf->EmuOptions.GS.FrameSkipEnable;
 		SetGSConfig().FrameSkipEnable = g_Conf->EmuOptions.GS.FrameSkipEnable;
-		
+
 		if( EmuConfig.GS.FrameSkipEnable )
 			Console.WriteLn( "(FrameSkipping) Enabled : FrameDraws=%d, FrameSkips=%d", g_Conf->EmuOptions.GS.FramesToDraw, g_Conf->EmuOptions.GS.FramesToSkip );
 		else
@@ -98,10 +98,10 @@ namespace Implementations
 	{
 		// Slow motion auto-enables the framelimiter even if it's disabled.
 		// This seems like desirable and expected behavior.
-		
+
 		// FIXME: Inconsistent use of g_Conf->EmuOptions vs. EmuConfig.  Should figure
 		// out a better consistency approach... -air
-	
+
 		ScopedCoreThreadPause pauser;
 		GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
 		if( g_LimiterMode == Limit_Slomo )
@@ -210,7 +210,7 @@ namespace Implementations
 		Console.Warning("hardware registers dumped EE:%x, IOP:%x\n", cpuRegs.pc, psxRegs.pc);
 #endif
 	}
-	
+
 	void FullscreenToggle()
 	{
 		g_Conf->GSWindow.DefaultToFullscreen = !g_Conf->GSWindow.DefaultToFullscreen;
@@ -383,7 +383,7 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	// Hack! The following bindings are temporary hacks which are needed because of issues
 	// with PAD plugin interfacing (the local window-based accelerators in GSPanel are
 	// currently ignored).
-	
+
 	GlobalAccels.Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
 	GlobalAccels.Map( AAC( WXK_F8 ),			"Sys_TakeSnapshot");
 	GlobalAccels.Map( AAC( WXK_F8 ).Shift(),	"Sys_TakeSnapshot");

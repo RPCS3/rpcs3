@@ -75,7 +75,7 @@ string GetKeyLabel(const int pad, const int index)
 		{
 			if (key >= 0x60 && key <= 0x69)
 				sprintf(buff, "NumPad %c", '0' + key - 0x60);
-			else 
+			else
 				sprintf(buff, "%c", key);
 		}
 	}
@@ -87,7 +87,7 @@ string GetKeyLabel(const int pad, const int index)
 	{
 		static const char name[][4] = { "MIN", "MAX" };
 		const int axis = (key & 0xff);
-		
+
 		sprintf(buff, "J%d_AXIS%d_%s", (key & 0xfff) / 0x100, axis / 2, name[axis % 2]);
 		if (index >= 17 && index <= 20) buff[strlen(buff) -4] = '\0';
 	}
@@ -95,7 +95,7 @@ string GetKeyLabel(const int pad, const int index)
 	{
 		static const char name[][8] = { "FORWARD", "RIGHT", "BACK", "LEFT" };
 		const int pov = (key & 0xff);
-		
+
 		sprintf(buff, "J%d_POV%d_%s", (key & 0xfff) / 0x100, pov / 4, name[pov % 4]);
 	}
 
@@ -160,7 +160,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					// Get rid of the expired timer, try to configure the keys, fail horribly, 
+					// Get rid of the expired timer, try to configure the keys, fail horribly,
 					// and either crash or don't register a keypress.
 					KillTimer(hW, 0x80);
 					hWC = GetDlgItem(hW, disabled);
@@ -196,12 +196,12 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					KillTimer(hW, 0x80);
 					EndDialog(hW, TRUE);
 					return TRUE;
-				
+
 				case IDOK:
 					KillTimer(hW, 0x80);
 					if (IsDlgButtonChecked(hW, IDC_LOG))
 						conf.log = 1;
-					else 
+					else
 						conf.log = 0;
 					SaveConfig();
 					EndDialog(hW, FALSE);
@@ -251,7 +251,7 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 void CALLBACK PADconfigure()
 {
 	INT_PTR ret;
-	
+
 	ret = DialogBoxParam(hInst,MAKEINTRESOURCE(IDD_DIALOG1),GetActiveWindow(),(DLGPROC)ConfigureDlgProc,1);
 }
 

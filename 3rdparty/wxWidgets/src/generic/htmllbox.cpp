@@ -655,7 +655,7 @@ void wxSimpleHtmlListBox::SetString(unsigned int n, const wxString& s)
     wxCHECK_RET( IsValid(n),
                  wxT("invalid index in wxSimpleHtmlListBox::SetString") );
 
-    m_items[n]=s; 
+    m_items[n]=s;
     RefreshLine(n);
 }
 

@@ -116,14 +116,14 @@ void Pcsx2App::ReadUserModeSettings()
 			L"It will likely crash on all games, devour your young, and make you an object of shame and disgrace among your family and friends. "
 			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. ", wxALIGN_CENTER
 		);
-		
+
 		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
 		hackedVersion.ShowModal();
 	}
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
 	bool forceWiz = m_ForceWizard || !hasGroup;
-	
+
 	if( !forceWiz )
 	{
 		conf_usermode->SetPath( groupname );
@@ -141,16 +141,16 @@ void Pcsx2App::ReadUserModeSettings()
 
 			preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
 			preAlpha += new pxStaticText( &preAlpha,
-				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
+				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the "
 				L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
 				L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
 				L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
 			);
-			
+
 			preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
 			preAlpha.ShowModal();
 		}
-	
+
 		// first time startup, so give the user the choice of user mode:
 		OpenWizardConsole();
 		FirstTimeWizard wiz( NULL );
@@ -190,7 +190,7 @@ void Pcsx2App::ReadUserModeSettings()
 			AppSaveSettings();
 		}
 	}
-	
+
 	// force a reset here to unload plugins loaded by the wizard.  If we don't do this
 	// the recompilers might fail to allocate the memory they need to function.
 	SysReset();
@@ -259,7 +259,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
 			// the user already has all interps configured, for example, then no point in
 			// popping up this dialog.
-			
+
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
 
 			exconf += 12;
@@ -273,7 +273,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			);
 
 			exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
-			
+
 			if( !m_CoreAllocs->IsRecAvailable_EE() )
 			{
 				scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
@@ -551,13 +551,13 @@ void Pcsx2App::CleanupOnExit()
 #ifdef __WXMSW__
 	pxDwm_Unload();
 #endif
-	
+
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.
 	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for
 	// closing out all the windows.  So just leave it be and let the plugins get unloaded
 	// during the wxApp destructor. -- air
-	
+
 	// FIXME: performing a wxYield() here may fix that problem. -- air
 
 	pxDoAssert = pxAssertImpl_LogIt;
@@ -582,7 +582,7 @@ int Pcsx2App::OnExit()
 }
 
 
-Pcsx2App::Pcsx2App() 
+Pcsx2App::Pcsx2App()
 {
 	m_id_MainFrame		= wxID_ANY;
 	m_id_GsFrame		= wxID_ANY;

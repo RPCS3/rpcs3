@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -215,7 +215,7 @@ void GSRasterizer::DrawLine(const GSVertexSW* v, const GSVector4i& scissor)
 	}
 }
 
-static const int s_abc[8][4] = 
+static const int s_abc[8][4] =
 {
 	{0, 1, 2, 0}, // c >= b >= a
 	{1, 0, 2, 0}, // c >= a > b
@@ -354,7 +354,7 @@ void GSRasterizer::DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor)
 void GSRasterizer::DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor)
 {
 	GSVertexSW longest;
-	
+
 	longest.p = v[1].p - v[0].p;
 
 	int i = longest.p.upl(longest.p == GSVector4::zero()).mask();
@@ -486,7 +486,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 	{
 		do
 		{
-			if(IsOneOfMyScanlines(top)) 
+			if(IsOneOfMyScanlines(top))
 			{
 				GSVector4 lr = l.p.xyxy(r).ceil();
 
@@ -575,7 +575,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 	GSVector4i r(v[0].p.xyxy(v[1].p).ceil());
 
 	r = r.rintersect(scissor);
-	
+
 	if(r.rempty()) return;
 
 	GSVertexSW scan = v[0];
@@ -614,7 +614,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 
 	for(; r.top < r.bottom; r.top++, scan.t += dedge.t)
 	{
-		if(IsOneOfMyScanlines(r.top)) 
+		if(IsOneOfMyScanlines(r.top))
 		{
 			m_dsf.ssl(r.right, r.left, r.top, scan);
 
@@ -625,10 +625,10 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 
 void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, const GSVector4i& scissor, int orientation, int side)
 {
-	// orientation: 
+	// orientation:
 	// - true: |dv.p.y| > |dv.p.x|
-	// - false |dv.p.x| > |dv.p.y| 
-	// side: 
+	// - false |dv.p.x| > |dv.p.y|
+	// side:
 	// - true: top/left edge
 	// - false: bottom/right edge
 
@@ -696,7 +696,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 						edge.t.u32[3] = (0x10000 - xf) & 0xffff;
 
 						m_dsf.ssle(xi + 1, xi, top, edge);
-						
+
 						edge.t.u32[3] = 0;
 					}
 				}
@@ -794,7 +794,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 						edge.t.u32[3] = (0x10000 - yf) & 0xffff;
 
 						m_dsf.ssle(left + 1, left, yi, edge);
-						
+
 						edge.t.u32[3] = 0;
 					}
 				}
@@ -822,7 +822,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 						edge.t.u32[3] = yf;
 
 						m_dsf.ssle(left + 1, left, yi, edge);
-						
+
 						edge.t.u32[3] = 0;
 					}
 				}
@@ -856,7 +856,7 @@ GSRasterizerMT::~GSRasterizerMT()
 	m_exit = true;
 	sem_post(&m_semaphore);
 	sem_wait(&m_stopped);
-	
+
 	sem_destroy(&m_semaphore);
 	sem_destroy(&m_stopped);
 }
@@ -884,7 +884,7 @@ void GSRasterizerMT::ThreadProc()
 		else
 			sem_post(&m_finished);
 	}
-	
+
 	sem_post(&m_stopped);
 }
 

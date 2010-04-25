@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -73,12 +73,12 @@ public:
 	{
 		m_name = (m_color == Color_Red) ? L"Redirect_Stderr" : L"Redirect_Stdout";
 	}
-	
+
 	virtual ~WinPipeThread() throw()
 	{
 		_parent::Cancel();
 	}
-	
+
 protected:
 	void ExecuteTaskInThread()
 	{
@@ -113,7 +113,7 @@ protected:
 					// But we don't want to break the ability to print progressive status bars, like '....'
 					// so I use a clever Yield/Peek loop combo that keeps reading as long as there's new data
 					// immediately being fed to our pipe. :)  --air
-					
+
 					DWORD u32_avail = 0;
 
 					do
@@ -123,7 +123,7 @@ protected:
 							throw Exception::WinApiError( "Error peeking Pipe." );
 
 						if( u32_avail == 0 ) break;
-						
+
 						DWORD loopread;
 						if( !ReadFile(m_outpipe, &s8_Buf[u32_Read], sizeof(s8_Buf)-u32_Read-1, &loopread, NULL) ) break;
 						u32_Read += loopread;
@@ -134,7 +134,7 @@ protected:
 				// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
 				s8_Buf[u32_Read] = 0;
 				Console.WriteFromStdout( m_color, s8_Buf );
-				
+
 				TestCancel();
 			}
 		}
@@ -169,7 +169,7 @@ protected:
 public:
 	WinPipeRedirection( FILE* stdstream );
 	virtual ~WinPipeRedirection() throw();
-	
+
 	void Cleanup() throw();
 };
 
@@ -206,7 +206,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 		// didn't error.
 
 		m_crtFile = _open_osfhandle( (intptr_t)m_writepipe, _O_TEXT );
-		if( m_crtFile == -1 ) 
+		if( m_crtFile == -1 )
 			throw Exception::RuntimeError( "_open_osfhandle returned -1." );
 
 		m_fp = _fdopen( m_crtFile, "w" );
@@ -222,7 +222,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 	{
 		// thread object will become invalid because of scoping after we leave
 		// the constructor, so re-pack a new exception:
-		
+
 		Cleanup();
 		throw Exception::RuntimeError( ex.FormatDiagnosticMessage(), ex.FormatDisplayMessage() );
 	}
@@ -254,7 +254,7 @@ void WinPipeRedirection::Cleanup() throw()
 
 	if( m_stdfp != NULL )
 		*m_stdfp = m_stdfp_copy;
-	
+
 	// Cleanup Order Notes:
 	//  * The redirection thread is most likely blocking on ReadFile(), so we can't Cancel yet, lest we deadlock --
 	//    Closing the writepipe (either directly or through the fp/crt handles) issues an EOF to the thread,
@@ -271,7 +271,7 @@ void WinPipeRedirection::Cleanup() throw()
 		m_crtFile	= -1;						// crtFile is closed implicitly when closing m_fp
 		m_writepipe = INVALID_HANDLE_VALUE;		// same for the write end of the pipe
 	}
-	
+
 	if( m_crtFile != -1 )
 	{
 		_close( m_crtFile );
@@ -306,6 +306,6 @@ PipeRedirectionBase* NewPipeRedir( FILE* stdstream )
 		// Entirely non-critical errors.  Log 'em and move along.
 		Console.Error( ex.FormatDiagnosticMessage() );
 	}
-	
+
 	return NULL;
 }

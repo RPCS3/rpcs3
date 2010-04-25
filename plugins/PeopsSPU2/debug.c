@@ -79,7 +79,7 @@ int    iCoreOffset=0;
 ////////////////////////////////////////////////////////////////////////
 // display the sound data waves: no subclassing used, so the
 // area will not be redrawn... but faster that way, and good enuff
-// for debugging purposes 
+// for debugging purposes
 
 void DisplayStreamInfos(HWND hW)
 {
@@ -87,7 +87,7 @@ void DisplayStreamInfos(HWND hW)
  HDC hdc;RECT r;HBRUSH hBO;int ch,dy,i,j,id;
 
  //----------------------------------------------------//
-                                                      
+
  GetClientRect(hWS,&r);                                // get size of stream display
  hdc=GetDC(hWS);                                       // device context
  r.right--;                                            // leave the right border intact
@@ -161,9 +161,9 @@ void DisplayADSRInfos(HWND hW)
  PatBlt(hdc,0,0,r.right,r.bottom,PATCOPY);
  r.left++;r.right-=2;r.top++;r.bottom-=2;              // shrink the display rect for better optics
 
- //----------------------------------------------------// 
+ //----------------------------------------------------//
 
- ia=min(s_chan[ch].ADSR.AttackTime,10000);             // get adsr, but limit it for drawing 
+ ia=min(s_chan[ch].ADSR.AttackTime,10000);             // get adsr, but limit it for drawing
  id=min(s_chan[ch].ADSR.DecayTime,10000);
  is=min(s_chan[ch].ADSR.SustainTime,10000);
  ir=min(s_chan[ch].ADSR.ReleaseTime,10000);
@@ -197,15 +197,15 @@ void DisplayADSRInfos(HWND hW)
    LineTo(hdc,dn,dy);                                  // line to DxPos,SLevel
 
    SelectObject(hdc,hPAdsr[3]);                        // sel S pen
-   if(s_chan[ch].ADSR.SustainTime>10000) 
+   if(s_chan[ch].ADSR.SustainTime>10000)
     dm=1;                                              // we have to fake the S values... S will
    else                                                // inc/decrease until channel stop...
-   if(s_chan[ch].ADSR.SustainTime==0)    
+   if(s_chan[ch].ADSR.SustainTime==0)
     dm=0;                                              // we dunno here when this will happen,
-   else 
+   else
     dm=21-(((s_chan[ch].ADSR.SustainTime/500)));       // so we do some more or less angled line,
    dy=dy-(s_chan[ch].ADSR.SustainModeDec*dm);          // roughly depending on the S time
-   if(dy>r.bottom) dy=r.bottom; 
+   if(dy>r.bottom) dy=r.bottom;
    if(dy<r.top)    dy=r.top;
    dn+=(is*r.right)/dx;
    LineTo(hdc,dn,dy);                                  // line to SxPos, fake end volume level
@@ -241,12 +241,12 @@ void DisplayChannelInfos(HWND hW)
  SetDlgItemText(hW,IDC_CI8,szB);
  wsprintf(szB,"%08lX",rvb[iCoreOffset/24].CurrAddr);
  SetDlgItemText(hW,IDC_CI9,szB);
- 
+
  wsprintf(szB,"%08lX",((unsigned long)s_chan[ch].pStart-(unsigned long)spuMemC)>>1);
  SetDlgItemText(hW,IDC_CI10,szB);
  if(s_chan[ch].pCurr==(unsigned char *)-1)
   SetDlgItemText(hW,IDC_CI11,"FFFFFFFF");
- else 
+ else
   {
    wsprintf(szB,"%08lX",((unsigned long)s_chan[ch].pCurr-(unsigned long)spuMemC)>>1);
    SetDlgItemText(hW,IDC_CI11,szB);
@@ -270,23 +270,23 @@ void DisplayChannelInfos(HWND hW)
  SetDlgItemText(hW,IDC_CI19,szB);
 
  // generic infos
- /*if(pSpuIrq[ch]==0) 
+ /*if(pSpuIrq[ch]==0)
       SetDlgItemText(hW,IDC_STA1,"FFFFFFFF");
  else
   {*/
    wsprintf(szB,"%08lX",((unsigned long)pSpuIrq[ch/24]-(unsigned long)spuMemC)>>1);
    SetDlgItemText(hW,IDC_STA1,szB);
   /*}*/
-  
+
  wsprintf(szB,"%04X",spuCtrl2[ch/24]);
  SetDlgItemText(hW,IDC_STA2,szB);
  wsprintf(szB,"%04X",spuStat2[ch/24]);
  SetDlgItemText(hW,IDC_STA3,szB);
- 
+
  wsprintf(szB,"%08lX",spuAddr2[ch/24]);
  SetDlgItemText(hW,IDC_STA4,szB);
  }
- 
+
 ////////////////////////////////////////////////////////////////////////
 // display everything (called in dialog timer for value refreshing)
 
@@ -324,7 +324,7 @@ BOOL CALLBACK DebugDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
                                                        // create brushes/pens
      hBStream[0]=CreateSolidBrush(GetSysColor(COLOR_3DFACE));
      hPAdsr[0]=CreatePen(PS_SOLID,0,GetSysColor(COLOR_3DFACE));
-     for(i=1;i<6;i++) 
+     for(i=1;i<6;i++)
       {
        hBStream[i]=CreateSolidBrush(crStreamCol[i]);
        hPAdsr[i]=CreatePen(PS_SOLID,0,crAdsrCol[i]);
@@ -360,7 +360,7 @@ BOOL CALLBACK DebugDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
        if(IsDlgButtonChecked(hW,IDC_CORE1))            // -> sel correct half of channels
             iCoreOffset=0;
        else iCoreOffset=24;
-       
+
        for(i=IDC_MUTE1;i<=IDC_MUTE24;i++)
         {
          if(s_chan[i-IDC_MUTE1+iCoreOffset].iMute)
@@ -376,16 +376,16 @@ BOOL CALLBACK DebugDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
       {
        if(IsDlgButtonChecked(hW,wParam))               // -> mute/unmute it
         s_chan[wParam-IDC_MUTE1+iCoreOffset].iMute=1;
-       else 
+       else
         s_chan[wParam-IDC_MUTE1+iCoreOffset].iMute=0;
       }
                                                        // all mute/unmute
-     if(wParam==IDC_MUTEOFF) SendMessage(hW,WM_MUTE,0,0); 
+     if(wParam==IDC_MUTEOFF) SendMessage(hW,WM_MUTE,0,0);
      if(wParam==IDC_MUTEON)  SendMessage(hW,WM_MUTE,1,0);
 
      if(wParam>=IDC_CHAN1 && wParam<=IDC_CHAN24)       // sel channel
       {
-       if(IsDlgButtonChecked(hW,wParam)) 
+       if(IsDlgButtonChecked(hW,wParam))
         {
          iSelChannel=wParam-IDC_CHAN1;
          SetDlgItemInt(hW,IDC_CHANNUM,iSelChannel+1,FALSE);
@@ -399,7 +399,7 @@ BOOL CALLBACK DebugDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
      for(i=IDC_MUTE1;i<=IDC_MUTE24;i++)
       {
        CheckDlgButton(hW,i,wParam);
-       if(wParam) 
+       if(wParam)
         s_chan[i-IDC_MUTE1+iCoreOffset].iMute=1;
        else
         s_chan[i-IDC_MUTE1+iCoreOffset].iMute=0;
@@ -412,7 +412,7 @@ BOOL CALLBACK DebugDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
    //--------------------------------------------------// setcursor
    case WM_SETCURSOR:
     {
-     SetCursor(LoadCursor(NULL,IDC_ARROW));            // force the arrow 
+     SetCursor(LoadCursor(NULL,IDC_ARROW));            // force the arrow
      return TRUE;
     }
    //--------------------------------------------------//
@@ -430,7 +430,7 @@ void logprintf(LPCTSTR pFormat, ...)
  else
  {
 	va_list list;
-		
+
 	va_start(list,pFormat);
 	vfprintf(LogFile, pFormat, list);
 	va_end(list);

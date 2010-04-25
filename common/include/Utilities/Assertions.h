@@ -48,7 +48,7 @@ struct DiagnosticOrigin
 		, line( _line )
 	{
 	}
-	
+
 	wxString ToString( const wxChar* msg=NULL ) const;
 };
 

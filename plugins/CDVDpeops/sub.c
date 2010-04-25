@@ -33,7 +33,7 @@
 /* TODO (#1#): SUB CHANNEL STUFF */
 
 /////////////////////////////////////////////////////////
-              
+
 unsigned char * pCurrSubBuf=NULL;                      // ptr to emu sub data (or NULL)
 int             iUseSubReading=0;                      // subdata support (by file or directly)
 char            szSUBF[260];                           // sub file name
@@ -115,15 +115,15 @@ void BuildSUBCache(void)
       {
        fread(&px->subq[7],3, 1, subfile);
       }
-    
+
      if(plast==NULL)                                   // add new cache block to linked list
       {
        plast=subHead=px;
-      } 
+      }
      else
       {
        plast->pNext=px;plast=px;
-      } 
+      }
     }
   }
  else                                                  // M3S file?
@@ -131,10 +131,10 @@ void BuildSUBCache(void)
    unsigned char min,sec,frame,xmin,xsec,xframe;       // -> subs which are different from
    BOOL b1,b2,goon=TRUE;int iNum=0;                    // -> the expected calculated values
 
-   xmin=2;       
+   xmin=2;
    xsec=58;
    xframe=0;
-   min=3;        
+   min=3;
    sec=0;
    frame=0;
 
@@ -167,8 +167,8 @@ void BuildSUBCache(void)
        px->addr=time2addrB(&buffer[7]);
 
        if(plast==NULL)
-            {plast=subHead=px;} 
-       else {plast->pNext=px;plast=px;} 
+            {plast=subHead=px;}
+       else {plast->pNext=px;plast=px;}
       }
 
      xframe=xframe+1;
@@ -180,13 +180,13 @@ void BuildSUBCache(void)
         {
          xmin+=1;
          xsec-=60;
-         if(xmin>99) 
+         if(xmin>99)
           {
            goon=FALSE;
           }
         }
       }
-        
+
      frame=frame+1;
      if(frame>74)
       {
@@ -196,7 +196,7 @@ void BuildSUBCache(void)
         {
          min+=1;
          sec-=60;
-         if(min>99) 
+         if(min>99)
           {
            goon=FALSE;
           }
@@ -206,7 +206,7 @@ void BuildSUBCache(void)
      if(iNum>(60*75)) goon=FALSE;
     }
    while(goon && (fread(buffer, 16, 1, subfile)==1));
-   
+
    if(iNum!=(60*75))    goon=FALSE;
    else
    if(iSUBNum==(60*75)) goon=FALSE;
@@ -220,7 +220,7 @@ void BuildSUBCache(void)
     }
   }
 
- subCache=NULL;                                       
+ subCache=NULL;
  if(iSUBNum)                                           // something in cache?
   {                                                    // -> create an array with the used addresses, for fast searching access
    SUB_CACHE * psc;int i;
@@ -245,12 +245,12 @@ void FakeSubData(unsigned long adr)
  SubCData[12]=0x41;
  SubCData[13]=0x01;
  SubCData[14]=0x01;
- 
+
  /* TODO (#1#): addr2time fake sub data
  */
- 
- 
-//!!!!!!!!!!!!!!!!!!!!!!!???? 
+
+
+//!!!!!!!!!!!!!!!!!!!!!!!????
  addr2timeB(adr,    &SubCData[15]);
 // SubCData[18]=0x00;
  addr2timeB(adr+150,&SubCData[19]);

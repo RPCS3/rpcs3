@@ -100,10 +100,10 @@ namespace PathDefs
 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
 			case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
 			case DocsFolder_Custom: return CustomDocumentsFolder;
-			
+
 			jNO_DEFAULT
 		}
-		
+
 		return wxDirName();
 	}
 
@@ -158,7 +158,7 @@ namespace PathDefs
 			case FolderId_Savestates:	return GetSavestates();
 			case FolderId_MemoryCards:	return GetMemoryCards();
 			case FolderId_Logs:			return GetLogs();
-			
+
 			case FolderId_Documents:	return CustomDocumentsFolder;
 
 			jNO_DEFAULT
@@ -178,7 +178,7 @@ wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		case FolderId_Savestates:	return Savestates;
 		case FolderId_MemoryCards:	return MemoryCards;
 		case FolderId_Logs:			return Logs;
-		
+
 		case FolderId_Documents:	return CustomDocumentsFolder;
 
 		jNO_DEFAULT
@@ -248,7 +248,7 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 			Logs = src;
 			UseDefaultLogs = useDefault;
 		break;
-		
+
 		case FolderId_Documents:
 			CustomDocumentsFolder = src;
 		break;
@@ -448,7 +448,7 @@ void AppConfig::LoadSave( IniInterface& ini )
 	BaseFilenames	.LoadSave( ini );
 	GSWindow		.LoadSave( ini );
 	Framerate		.LoadSave( ini );
-	
+
 	// Load Emulation options and apply some defaults overtop saved items, which are regulated
 	// by the PCSX2 UI.
 
@@ -575,7 +575,7 @@ AppConfig::GSWindowOptions::GSWindowOptions()
 	DisableScreenSaver		= true;
 
 	AspectRatio				= AspectRatio_4_3;
-	
+
 	WindowSize				= wxSize( 640, 480 );
 	WindowPos				= wxDefaultPosition;
 	IsMaximized				= false;
@@ -610,10 +610,10 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 	IniEntry( AlwaysHideMouse );
 	IniEntry( DisableResizeBorders );
 	IniEntry( DisableScreenSaver );
-	
+
 	IniEntry( WindowSize );
 	IniEntry( WindowPos );
-	
+
 	static const wxChar* AspectRatioNames[] =
 	{
 		L"Stretch",
@@ -632,7 +632,7 @@ AppConfig::FramerateOptions::FramerateOptions()
 	NominalScalar			= 1.0;
 	TurboScalar				= 2.0;
 	SlomoScalar				= 0.50;
-	
+
 	SkipOnLimit				= false;
 	SkipOnTurbo				= false;
 }
@@ -655,7 +655,7 @@ void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
 	IniEntry( NominalScalar );
 	IniEntry( TurboScalar );
 	IniEntry( SlomoScalar );
-	
+
 	IniEntry( SkipOnLimit );
 	IniEntry( SkipOnTurbo );
 }

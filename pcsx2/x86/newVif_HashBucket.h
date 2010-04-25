@@ -51,7 +51,7 @@ protected:
 	SizeChain<T> mBucket[hSize];
 
 public:
-	HashBucket() { 
+	HashBucket() {
 		for (int i = 0; i < hSize; i++) {
 			mBucket[i].Chain	= NULL;
 			mBucket[i].Size		= 0;
@@ -80,7 +80,7 @@ public:
 	__forceinline void add(const T& dataPtr) {
 		u32 d = (u32&)dataPtr;
 		SizeChain<T>& bucket( mBucket[d % hSize] );
-		
+
 		if( bucket.Chain = (T*)_aligned_realloc( bucket.Chain, sizeof(T)*(bucket.Size+1), 16), bucket.Chain==NULL ) {
 			throw Exception::OutOfMemory(
 				wxsFormat(L"Out of memory re-allocating hash bucket (bucket size=%d)", bucket.Size+1),

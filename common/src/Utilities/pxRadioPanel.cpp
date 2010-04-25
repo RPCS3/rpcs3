@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -90,7 +90,7 @@ void pxRadioPanel::Realize()
 	for( int i=0; i<numbuttons; ++i )
 	{
 		*this += m_objects[i].LabelObj	| pxSizerFlags::StdExpand();
-	
+
 		if( wxStaticText* subobj = m_objects[i].SubTextObj )
 		{
 			*this += subobj	| pxBorder( wxLEFT, m_Indentation );
@@ -167,7 +167,7 @@ pxRadioPanel& pxRadioPanel::SetDefaultItem( int idx )
 pxRadioPanel& pxRadioPanel::EnableItem( int idx, bool enable )
 {
 	pxAssertDev( m_IsRealized, "RadioPanel must be realized first, prior to enabling or disabling individual items." );
-	
+
 	if( m_objects[idx].LabelObj )
 		m_objects[idx].LabelObj->Enable( enable );
 
@@ -193,7 +193,7 @@ int pxRadioPanel::GetSelection() const
 	// select one of the members of the group (which is, as far as I'm concerned, a
 	// programmer error!). so Assert here in such cases, and return 0 as the assumed
 	// default, so that calling code has a "valid" return code in release builds.
-	
+
 	pxFailDev( "No valid selection was found in this group!" );
 	return 0;
 }

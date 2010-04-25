@@ -189,7 +189,7 @@ void *_openfile(const char *filename, int flags)
 
 	if (flags & O_WRONLY)
 		return fopen64(filename, "wb");
-	else 
+	else
 		return fopen64(filename, "rb");
 }
 
@@ -214,9 +214,9 @@ u64 _tellfile(void *handle)
 int _seekfile(void *handle, u64 offset, int whence)
 {
 	int seekerr = fseeko64(handle, offset, whence);
-	
+
 	if (seekerr == -1) printf("failed to seek\n");
-	
+
 	return seekerr;
 }
 
@@ -243,9 +243,9 @@ int detect(isoFile *iso)
 	struct cdVolDesc *volDesc;
 
 	if (isoReadBlock(iso, buf, 16) == -1) return -1;
-	
+
 	volDesc = (struct cdVolDesc *)(buf + 24);
-	
+
 	if (strncmp((char*)volDesc->volID, "CD001", 5)) return 0;
 
 	if (volDesc->rootToc.tocSize == 2048)
@@ -273,7 +273,7 @@ int _isoReadZtable(isoFile *iso)
 	_seekfile(handle, 0, SEEK_END);
 	size = _tellfile(handle);
 	iso->Ztable = (char*)malloc(size);
-	
+
 	if (iso->Ztable == NULL)
 	{
 		return -1;
@@ -297,7 +297,7 @@ int _isoReadZ2table(isoFile *iso)
 
 	sprintf(table, "%s.table", iso->filename);
 	handle = _openfile(table, O_RDONLY);
-	
+
 	if (handle == NULL)
 	{
 		printf("Error loading %s\n", table);
@@ -307,7 +307,7 @@ int _isoReadZ2table(isoFile *iso)
 	_seekfile(handle, 0, SEEK_END);
 	size = _tellfile(handle);
 	Ztable = (u32*)malloc(size);
-	
+
 	if (Ztable == NULL)
 	{
 		return -1;
@@ -318,21 +318,21 @@ int _isoReadZ2table(isoFile *iso)
 	_closefile(handle);
 
 	iso->Ztable = (char*)malloc(iso->blocks * 8);
-	
+
 	if (iso->Ztable == NULL)
 	{
 		return -1;
 	}
 
 	ofs = 16;
-	
+
 	for (i = 0; i < iso->blocks; i++)
 	{
 		*(u32*)&iso->Ztable[i*8+0] = ofs;
 		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
 		ofs += Ztable[i];
 	}
-	
+
 	free(Ztable);
 
 	return 0;
@@ -368,21 +368,21 @@ int _isoReadBZ2table(isoFile *iso)
 	if (iso->Ztable == NULL) return -1;
 
 	ofs = 16;
-	
+
 	for (i = 0; i < iso->blocks / 16; i++)
 	{
 		*(u32*)&iso->Ztable[i*8+0] = ofs;
 		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
 		ofs += Ztable[i];
 	}
-	
+
 	if (iso->blocks & 0xf)
 	{
 		*(u32*)&iso->Ztable[i*8+0] = ofs;
 		*(u32*)&iso->Ztable[i*8+4] = Ztable[i];
 		ofs += Ztable[i];
 	}
-	
+
 	free(Ztable);
 
 	return 0;
@@ -428,7 +428,7 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 
 	_seekfile(iso->handle, 0, SEEK_SET);
 	_readfile(iso->handle, buf, 4);
-	
+
 	if (strncmp(buf, "BDV2", 4) == 0)
 	{
 		iso->flags = ISOFLAGS_BLOCKDUMP;
@@ -785,7 +785,7 @@ int _isoReadBlockBZ2(isoFile *iso, u8 *dst, int lsn)
 //	printf("%d, %d\n", pos, p);
 	_seekfile(iso->handle, pos, SEEK_SET);
 	ret = _readfile(iso->handle, Zbuf, p);
-	
+
 	if (ret < p)
 	{
 		printf("error reading block!!\n");
@@ -794,7 +794,7 @@ int _isoReadBlockBZ2(isoFile *iso, u8 *dst, int lsn)
 
 	size = iso->blocksize * 64;
 	ret = BZ2_bzBuffToBuffDecompress((s8*)iso->buffer, &size, (s8*)Zbuf, p, 0, 0);
-	
+
 	if (ret != BZ_OK)
 	{
 		printf("_isoReadBlockBZ2 %d, %d\n", lsn, iso->blocksize);
@@ -851,7 +851,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->multih[i].handle, ofs, SEEK_SET);
 	ret = _readfile(iso->multih[i].handle, dst + iso->blockofs, iso->blocksize);
-	
+
 	if (ret < iso->blocksize)
 	{
 		printf("read error %d\n", ret);
@@ -870,7 +870,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 		printf("isoReadBlock: %d > %d\n", lsn, iso->blocks);
 		return -1;
 	}
-	
+
 	if (iso->flags & ISOFLAGS_Z)
 		ret = _isoReadBlockZ(iso, dst, lsn);
 	else if (iso->flags & ISOFLAGS_Z2)
@@ -883,7 +883,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 		ret = _isoReadBlockBZ2(iso, dst, lsn);
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
-	
+
 	if (ret == -1) return ret;
 
 	if (iso->type == ISOTYPE_CD)
@@ -999,19 +999,19 @@ int _isoWriteBlockBZ2(isoFile *iso, u8 *src, int lsn)
 //	printf("_isoWriteBlockBZ2 %d\n", iso->blocksize);
 	size = 64 * 1024;
 	ret = BZ2_bzBuffToBuffCompress((s8*)Zbuf, (u32*) & size, (s8*)iso->buffer, iso->blocksize * blocks, 9, 0, 30);
-	
+
 	if (ret != BZ_OK)
 	{
 		printf("error on BZ2: %d\n", ret);
 	}
-	
+
 //	printf("_isoWriteBlockBZ2 %d\n", size);
 
 	ret = _writefile(iso->htable, (u8*) & size, 4);
 	if (ret < 4) return -1;
 	ret = _writefile(iso->handle, Zbuf, size);
 //	printf("_isoWriteBlockZ %d\n", ret);
-	
+
 	if (ret < size)
 	{
 		printf("error writing block!!\n");
@@ -1035,7 +1035,7 @@ int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 		ret = _isoWriteBlockBZ2(iso, src, lsn);
 	else
 		ret = _isoWriteBlock(iso, src, lsn);
-	
+
 	if (ret == -1) return ret;
 	return 0;
 }
@@ -1045,7 +1045,7 @@ void isoClose(isoFile *iso)
 	if (iso->handle) _closefile(iso->handle);
 	if (iso->htable) _closefile(iso->htable);
 	if (iso->buffer) free(iso->buffer);
-	
+
 	free(iso);
 }
 

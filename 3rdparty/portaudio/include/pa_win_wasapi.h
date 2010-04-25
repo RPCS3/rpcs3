@@ -28,13 +28,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -69,7 +69,7 @@ typedef enum PaWasapiFlags
              method can only provide 15-20ms latency. */
     paWinWasapiPolling                  = (1 << 3),
 
-    /* forces custom thread priority setting. must be used if PaWasapiStreamInfo::threadPriority 
+    /* forces custom thread priority setting. must be used if PaWasapiStreamInfo::threadPriority
        is set to custom value. */
     paWinWasapiThreadPriority           = (1 << 4)
 }
@@ -81,7 +81,7 @@ PaWasapiFlags;
 #define paWinWasapiThreadPriority        (paWinWasapiThreadPriority)
 
 
-/* Host processor. Allows to skip internal PA processing completely. 
+/* Host processor. Allows to skip internal PA processing completely.
    You must set paWinWasapiRedirectHostProcessor flag to PaWasapiStreamInfo::flags member
    in order to have host processor redirected to your callback.
    Use with caution! inputFrames and outputFrames depend solely on final device setup (buffer
@@ -125,7 +125,7 @@ PaWasapiThreadPriority;
 
 
 /* Stream descriptor. */
-typedef struct PaWasapiStreamInfo 
+typedef struct PaWasapiStreamInfo
 {
     unsigned long size;             /**< sizeof(PaWasapiStreamInfo) */
     PaHostApiTypeId hostApiType;    /**< paWASAPI */
@@ -134,16 +134,16 @@ typedef struct PaWasapiStreamInfo
     unsigned long flags;            /**< collection of PaWasapiFlags */
 
     /* Support for WAVEFORMATEXTENSIBLE channel masks. If flags contains
-       paWinWasapiUseChannelMask this allows you to specify which speakers 
+       paWinWasapiUseChannelMask this allows you to specify which speakers
        to address in a multichannel stream. Constants for channelMask
-       are specified in pa_win_waveformat.h. Will be used only if 
+       are specified in pa_win_waveformat.h. Will be used only if
        paWinWasapiUseChannelMask flag is specified.
     */
     PaWinWaveFormatChannelMask channelMask;
 
-    /* Delivers raw data to callback obtained from GetBuffer() methods skipping 
-       internal PortAudio processing inventory completely. userData parameter will 
-       be the same that was passed to Pa_OpenStream method. Will be used only if 
+    /* Delivers raw data to callback obtained from GetBuffer() methods skipping
+       internal PortAudio processing inventory completely. userData parameter will
+       be the same that was passed to Pa_OpenStream method. Will be used only if
        paWinWasapiRedirectHostProcessor flag is specified.
     */
     PaWasapiHostProcessorCallback hostProcessorOutput;
@@ -157,11 +157,11 @@ typedef struct PaWasapiStreamInfo
        to setup thread priority.
     */
     PaWasapiThreadPriority threadPriority;
-} 
+}
 PaWasapiStreamInfo;
 
 
-/** Returns default sound format for device. Format is represented by PaWinWaveFormat or 
+/** Returns default sound format for device. Format is represented by PaWinWaveFormat or
     WAVEFORMATEXTENSIBLE structure.
 
  @param pFormat pointer to PaWinWaveFormat or WAVEFORMATEXTENSIBLE structure.
@@ -191,7 +191,7 @@ int/*PaWasapiDeviceRole*/ PaWasapi_GetDeviceRole( PaDeviceIndex nDevice );
  @param hTask a handle to pointer to priority task. Must be used with PaWasapi_RevertThreadPriority
               method to revert thread priority to initial state.
 
- @param nPriorityClass an Id of thread priority of PaWasapiThreadPriority type. Specifying 
+ @param nPriorityClass an Id of thread priority of PaWasapiThreadPriority type. Specifying
                        eThreadPriorityNone does nothing.
 
  @return Error code indicating success or failure.
@@ -214,8 +214,8 @@ PaError PaWasapi_ThreadPriorityRevert( void *hTask );
     IMPORTANT:
 
     WASAPI is implemented for Callback and Blocking interfaces. It supports Shared and Exclusive
-    share modes. 
-    
+    share modes.
+
     Exclusive Mode:
 
         Exclusive mode allows to deliver audio data directly to hardware bypassing
@@ -224,20 +224,20 @@ PaError PaWasapi_ThreadPriorityRevert( void *hTask );
 
     Callback Interface:
 
-        Provides best audio quality with low latency. Callback interface is implemented in 
+        Provides best audio quality with low latency. Callback interface is implemented in
         two versions:
 
         1) Event-Driven:
         This is the most powerful WASAPI implementation which is capable to provides glitch-free
-        audio at 2ms latency in Exclusive mode. Lowest possible latency for this mode is 
-        usually - 2ms for HD Audio class audio chips (including on-board audio, 2ms was achieved 
+        audio at 2ms latency in Exclusive mode. Lowest possible latency for this mode is
+        usually - 2ms for HD Audio class audio chips (including on-board audio, 2ms was achieved
         on Realtek ALC888/S/T). For Shared mode latency can not go lower than 20ms.
 
         2) Poll-Driven:
         Polling is another 2-nd method to operate with WASAPI. It is less efficient than Event-Driven
         and provides latency at around 12-13ms. Polling must be used to overcome a system bug
         under Windows Vista x64 when application is WOW64(32-bit) and Event-Driven method simply times
-        out (event handle is never signalled on buffer completion). Please note, such Vista bug 
+        out (event handle is never signalled on buffer completion). Please note, such Vista bug
         does not exist in Windows 7 x64.
         Polling is setup by speciying 'paWinWasapiPolling' flag.
         Thread priority can be boosted by specifying 'paWinWasapiBlockingThreadPriorityPro' flag.
@@ -245,19 +245,19 @@ PaError PaWasapi_ThreadPriorityRevert( void *hTask );
     Blocking Interface:
 
         Blocking interface is implemented but due to above described Poll-Driven method can not
-        deliver low latency audio. Specifying too low latency in Shared mode will result in 
+        deliver low latency audio. Specifying too low latency in Shared mode will result in
         distorted audio although Exclusive mode adds stability.
 
     Pa_IsFormatSupported:
 
         To check format with correct Share Mode (Exclusive/Shared) you must supply
-        PaWasapiStreamInfo with flags paWinWasapiExclusive set through member of 
+        PaWasapiStreamInfo with flags paWinWasapiExclusive set through member of
         PaStreamParameters::hostApiSpecificStreamInfo structure.
 
     Pa_OpenStream:
 
         To set desired Share Mode (Exclusive/Shared) you must supply
-        PaWasapiStreamInfo with flags paWinWasapiExclusive set through member of 
+        PaWasapiStreamInfo with flags paWinWasapiExclusive set through member of
         PaStreamParameters::hostApiSpecificStreamInfo structure.
 */
 
@@ -265,4 +265,4 @@ PaError PaWasapi_ThreadPriorityRevert( void *hTask );
 }
 #endif /* __cplusplus */
 
-#endif /* PA_WIN_WASAPI_H */                                  
+#endif /* PA_WIN_WASAPI_H */

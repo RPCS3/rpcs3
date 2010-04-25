@@ -28,7 +28,7 @@
 using namespace Panels;
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), wxGetApp().GetImgList_Config(), 600 )	
+	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), wxGetApp().GetImgList_Config(), 600 )
 {
 	SetName( GetNameStatic() );
 
@@ -43,7 +43,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
 
 	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
-	
+
 	// For some reason adding pages un-does the Apply button, so we need to re-disable it here.
 	FindWindow( wxID_APPLY )->Disable();
 }

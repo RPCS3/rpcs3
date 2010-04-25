@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -83,7 +83,7 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 bool GSWnd::Create(const string& title, int w, int h)
 {
 	if(m_hWnd) return true;
-	
+
 	WNDCLASS wc;
 
 	memset(&wc, 0, sizeof(wc));
@@ -112,7 +112,7 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	bool remote = !!GetSystemMetrics(SM_REMOTESESSION);
 
-	if(w <= 0 || h <= 0 || remote) 
+	if(w <= 0 || h <= 0 || remote)
 	{
 		w = r.width() / 3;
 		h = r.width() / 4;
@@ -168,7 +168,7 @@ GSVector4i GSWnd::GetClientRect()
 	GSVector4i r;
 
 	::GetClientRect(m_hWnd, r);
-	
+
 	return r;
 }
 
@@ -188,11 +188,11 @@ void GSWnd::Show()
 	if( !m_IsManaged ) return;
 
 	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
-	
+
 	SetForegroundWindow(m_hWnd);
-	
+
 	ShowWindow(m_hWnd, SW_SHOWNORMAL);
-	
+
 	UpdateWindow(m_hWnd);
 }
 
@@ -208,10 +208,10 @@ void GSWnd::HideFrame()
 	if( !m_IsManaged ) return;
 
 	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
-	
+
 	SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-	
+
 	SetMenu(m_hWnd, NULL);
-	
+
 	m_HasFrame = false;
 }

@@ -35,7 +35,7 @@
 // Thread safety note: If used in a threaded environment, you shoud use a handle to a __threadlocal
 // storage variable (protects aaginst race conditions and, in *most* cases, is more desirable
 // behavior as well.
-// 
+//
 // Rationale: wxWidgets has its own wxRecursionGuard, but it has a sloppy implementation with
 // entirely unnecessary assertion checks.
 //
@@ -134,7 +134,7 @@ namespace HostSys
 	extern void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
 
 	extern void Munmap( void* base, u32 size );
-	
+
 	template< uint size >
 	void MemProtectStatic( u8 (&arr)[size], PageProtectionMode mode, bool allowExecution=false )
 	{

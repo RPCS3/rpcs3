@@ -11,11 +11,11 @@ typedef struct {
 	u32	e_shoff;        //Start of section headers (offset from file start)
 	u32	e_flags;        //Processor specific flags = 0x20924001 noreorder, mips
 	u16	e_ehsize;       //ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //Program headers entry size 
+	u16	e_phentsize;    //Program headers entry size
 	u16	e_phnum;        //Number of program headers
 	u16	e_shentsize;    //Section headers entry size
 	u16	e_shnum;        //Number of section headers
-	u16	e_shstrndx;     //Section header stringtable index	
+	u16	e_shstrndx;     //Section header stringtable index
 } ELF_HEADER;
 
 typedef struct {
@@ -65,7 +65,7 @@ Type:
 5=HASH hash table
 6=DYNAMIC dynamic linking information
 7=NOTE
-8=NOBITS 
+8=NOBITS
 9=REL relocation entries
 10=SHLIB
 0x70000000=LOPROC processor specifc
@@ -99,8 +99,8 @@ typedef struct {
 } Elf32_Rel;
 
 char *sections_names;
-	
-ELF_HEADER *elfHeader;	
+
+ELF_HEADER *elfHeader;
 ELF_PHR	*elfProgH;
 ELF_SHR	*elfSectH;
 u8 *elfdata;
@@ -123,55 +123,55 @@ int loadHeaders() {
 	if ((elfHeader->e_shentsize != sizeof(ELF_SHR)) && (elfHeader->e_shnum > 0)) {
 		return -1;
 	}
-	
-#ifdef ELF_LOG 
+
+#ifdef ELF_LOG
     ELF_LOG( "type:      " );
 #endif
-	switch( elfHeader->e_type ) 
+	switch( elfHeader->e_type )
    {
 		default:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 		   ELF_LOG( "unknown %x", elfHeader->e_type );
 #endif
 			break;
 
 		case 0x0:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 			ELF_LOG( "no file type" );
 #endif
 			break;
 
 		case 0x1:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 		   ELF_LOG( "relocatable" );
 #endif
 			break;
 
 		case 0x2:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 		   ELF_LOG( "executable" );
 #endif
 			break;
 	}
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 	ELF_LOG( "\n" );
 	ELF_LOG( "machine:   " );
 #endif
-	switch ( elfHeader->e_machine ) 
+	switch ( elfHeader->e_machine )
    {
 		default:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 			ELF_LOG( "unknown" );
 #endif
 			break;
 
 		case 0x8:
-#ifdef ELF_LOG        
+#ifdef ELF_LOG
 			ELF_LOG( "mips_rs3000" );
 #endif
 			break;
 	}
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	ELF_LOG("\n");
 	ELF_LOG("version:   %d\n",elfHeader->e_version);
 	ELF_LOG("entry:     %08x\n",elfHeader->e_entry);
@@ -184,9 +184,9 @@ int loadHeaders() {
 	ELF_LOG("sh entsiz: %08x\n",elfHeader->e_shentsize);
 	ELF_LOG("sh num:    %08x\n",elfHeader->e_shnum);
 	ELF_LOG("sh strndx: %08x\n",elfHeader->e_shstrndx);
-	
+
 	ELF_LOG("\n");
-#endif 	
+#endif
 
 	return 0;
 }
@@ -204,23 +204,23 @@ int loadProgramHeaders() {
 	}
 
 	elfProgH = (ELF_PHR*)&elfdata[elfHeader->e_phoff];
-		
-	for ( i = 0 ; i < elfHeader->e_phnum ; i++ ) 
+
+	for ( i = 0 ; i < elfHeader->e_phnum ; i++ )
    {
-#ifdef ELF_LOG  
-      ELF_LOG( "Elf32 Program Header\n" );	
+#ifdef ELF_LOG
+      ELF_LOG( "Elf32 Program Header\n" );
 		ELF_LOG( "type:      " );
 #endif
-		switch ( elfProgH[ i ].p_type ) 
+		switch ( elfProgH[ i ].p_type )
       {
 			default:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG( "unknown %x", (int)elfProgH[ i ].p_type );
 #endif
 				break;
 
 			case 0x1:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("load");
 #endif
 /*				if ( elfHeader->e_shnum == 0 ) {*/
@@ -233,17 +233,17 @@ int loadProgramHeaders() {
 							size = elfProgH[ i ].p_filesz;
 						}
 //						__printf("loading program to %x\n", elfProgH[ i ].p_paddr + elfbase);
-						__memcpy(elfProgH[ i ].p_paddr, 
+						__memcpy(elfProgH[ i ].p_paddr,
 								 &elfdata[elfProgH[ i ].p_offset],
 								 size);
 					}
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 					ELF_LOG("\t*LOADED*");
 #endif
 //				}
 				break;
 		}
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
       ELF_LOG("\n");
 		ELF_LOG("offset:    %08x\n",(int)elfProgH[i].p_offset);
 		ELF_LOG("vaddr:     %08x\n",(int)elfProgH[i].p_vaddr);
@@ -269,14 +269,14 @@ int loadSectionHeaders() {
 	}
 
 	elfSectH = (ELF_SHR*)&elfdata[elfHeader->e_shoff];
-	
+
 	if ( elfHeader->e_shstrndx < elfHeader->e_shnum ) {
 		sections_names = (char *)&elfdata[elfSectH[ elfHeader->e_shstrndx ].sh_offset];
 	}
-		
+
 	for ( i = 0 ; i < elfHeader->e_shnum ; i++ )
    {
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
       ELF_LOG( "Elf32 Section Header [%x] %s", i, &sections_names[ elfSectH[ i ].sh_name ] );
 #endif
 /*		if ( elfSectH[i].sh_flags & 0x2 ) {
@@ -292,65 +292,65 @@ int loadSectionHeaders() {
 					   &elfdata[elfSectH[i].sh_offset],
 					   size);
 			}
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
          ELF_LOG( "\t*LOADED*" );
 #endif
 		}*/
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
       ELF_LOG("\n");
 		ELF_LOG("type:      ");
 #endif
 		switch ( elfSectH[ i ].sh_type )
       {
 			default:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("unknown %08x",elfSectH[i].sh_type);
-#endif	          
+#endif
 				break;
 
 			case 0x0:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("null");
 #endif
 				break;
 
 			case 0x1:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("progbits");
 #endif
 				break;
 
 			case 0x2:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("symtab");
 #endif
 				break;
 
 			case 0x3:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("strtab");
 #endif
 				break;
 
          case 0x4:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("rela");
 #endif
 				break;
 
 			case 0x8:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("no bits");
 #endif
 				break;
 
          case 0x9:
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
 	         ELF_LOG("rel");
 #endif
 				break;
 		}
-#ifdef ELF_LOG  
+#ifdef ELF_LOG
       ELF_LOG("\n");
 		ELF_LOG("flags:     %08x\n", elfSectH[i].sh_flags);
 		ELF_LOG("addr:      %08x\n", elfSectH[i].sh_addr);
@@ -360,9 +360,9 @@ int loadSectionHeaders() {
 		ELF_LOG("info:      %08x\n", elfSectH[i].sh_info);
 		ELF_LOG("addralign: %08x\n", elfSectH[i].sh_addralign);
 		ELF_LOG("entsize:   %08x\n", elfSectH[i].sh_entsize);
-#endif			
+#endif
 		// dump symbol table
-	
+
 		if (elfSectH[i].sh_type == 0x02) {
 			i_st = i; i_dt = elfSectH[i].sh_link;
 		}

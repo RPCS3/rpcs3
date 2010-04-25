@@ -40,7 +40,7 @@ AllThreeThreads AllThreeThreads::operator-( const AllThreeThreads& right ) const
 	retval.gs		= gs - right.gs;
 	retval.ui		= ui - right.ui;
 	retval.update	= update - right.update;
-	
+
 	return retval;
 }
 
@@ -73,7 +73,7 @@ void DefaultCpuUsageProvider::UpdateStats()
 	newone.LoadWithCurrentTimes();
 	m_writepos = (m_writepos+1) % QueueDepth;
 	const AllThreeThreads deltas( newone - m_queue[m_writepos] );
-	
+
 	// get the real time passed, scaled to the Thread's tick frequency.
 	u64 timepass	= (deltas.update * GetThreadTicksPerSecond()) / GetTickFrequency();
 

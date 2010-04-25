@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -78,14 +78,14 @@ public:
 			{
 
 			#endif
-			
+
 			((GSVector4i*)dst)[i * 4 + 0] = ((GSVector4i*)dst)[i * 4 + 0].blend(v0, v4);
 			((GSVector4i*)dst)[i * 4 + 1] = ((GSVector4i*)dst)[i * 4 + 1].blend(v1, v4);
 			((GSVector4i*)dst)[i * 4 + 2] = ((GSVector4i*)dst)[i * 4 + 2].blend(v2, v4);
 			((GSVector4i*)dst)[i * 4 + 3] = ((GSVector4i*)dst)[i * 4 + 3].blend(v3, v4);
 
 			#if _M_SSE >= 0x401
-			
+
 			}
 
 			#endif
@@ -266,9 +266,9 @@ public:
 	{
 		const GSVector4i* s = (const GSVector4i*)src;
 
-		GSVector4i v0 = s[i * 4 + 0]; 
-		GSVector4i v1 = s[i * 4 + 1]; 
-		GSVector4i v2 = s[i * 4 + 2]; 
+		GSVector4i v0 = s[i * 4 + 0];
+		GSVector4i v1 = s[i * 4 + 1];
+		GSVector4i v2 = s[i * 4 + 2];
 		GSVector4i v3 = s[i * 4 + 3];
 
 		GSVector4i::sw64(v0, v1, v2, v3);
@@ -308,9 +308,9 @@ public:
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
-		GSVector4i v0 = s[i * 4 + 0]; 
-		GSVector4i v1 = s[i * 4 + 1]; 
-		GSVector4i v2 = s[i * 4 + 2]; 
+		GSVector4i v0 = s[i * 4 + 0];
+		GSVector4i v1 = s[i * 4 + 1];
+		GSVector4i v2 = s[i * 4 + 2];
 		GSVector4i v3 = s[i * 4 + 3];
 
 		GSVector4i::sw16(v0, v1, v2, v3);
@@ -338,16 +338,16 @@ public:
 
 		if((i & 1) == 0)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 		}
 		else
 		{
-			v2 = s[i * 4 + 0]; 
-			v3 = s[i * 4 + 1]; 
-			v0 = s[i * 4 + 2]; 
+			v2 = s[i * 4 + 0];
+			v3 = s[i * 4 + 1];
+			v0 = s[i * 4 + 2];
 			v1 = s[i * 4 + 3];
 		}
 
@@ -368,9 +368,9 @@ public:
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
-		GSVector4i v0 = s[i * 4 + 0]; 
-		GSVector4i v1 = s[i * 4 + 1]; 
-		GSVector4i v2 = s[i * 4 + 2]; 
+		GSVector4i v0 = s[i * 4 + 0];
+		GSVector4i v1 = s[i * 4 + 1];
+		GSVector4i v2 = s[i * 4 + 2];
 		GSVector4i v3 = s[i * 4 + 3];
 
 		GSVector4i::sw8(v0, v1, v2, v3);
@@ -387,7 +387,7 @@ public:
 		{
 			v0 = v0.yxwz();
 			v1 = v1.yxwz();
-		}		
+		}
 
 		GSVector4i::store<aligned>(&dst[dstpitch * 0], v0);
 		GSVector4i::store<aligned>(&dst[dstpitch * 1], v1);
@@ -396,16 +396,16 @@ public:
 
 		#endif
 	}
-	
+
 	template<int i, bool aligned> __forceinline static void ReadColumn4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
-		GSVector4i v0 = s[i * 4 + 0].xzyw(); 
-		GSVector4i v1 = s[i * 4 + 1].xzyw(); 
-		GSVector4i v2 = s[i * 4 + 2].xzyw(); 
+		GSVector4i v0 = s[i * 4 + 0].xzyw();
+		GSVector4i v1 = s[i * 4 + 1].xzyw();
+		GSVector4i v2 = s[i * 4 + 2].xzyw();
 		GSVector4i v3 = s[i * 4 + 3].xzyw();
 
 		GSVector4i::sw64(v0, v1, v2, v3);
@@ -435,9 +435,9 @@ public:
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
-		GSVector4i v0 = s[i * 4 + 0]; 
-		GSVector4i v1 = s[i * 4 + 1]; 
-		GSVector4i v2 = s[i * 4 + 2]; 
+		GSVector4i v0 = s[i * 4 + 0];
+		GSVector4i v1 = s[i * 4 + 1];
+		GSVector4i v2 = s[i * 4 + 2];
 		GSVector4i v3 = s[i * 4 + 3];
 
 		GSVector4i::sw32(v0, v1, v2, v3);
@@ -576,9 +576,9 @@ public:
 		{
 			// col 0, 2
 
-			v0 = s[i * 8 + 0]; 
-			v1 = s[i * 8 + 1]; 
-			v2 = s[i * 8 + 2]; 
+			v0 = s[i * 8 + 0];
+			v1 = s[i * 8 + 1];
+			v2 = s[i * 8 + 2];
 			v3 = s[i * 8 + 3];
 
 			GSVector4i::sw8(v0, v1, v2, v3);
@@ -601,9 +601,9 @@ public:
 
 			// col 1, 3
 
-			v0 = s[i * 8 + 4]; 
-			v1 = s[i * 8 + 5]; 
-			v2 = s[i * 8 + 6]; 
+			v0 = s[i * 8 + 4];
+			v1 = s[i * 8 + 5];
+			v2 = s[i * 8 + 6];
 			v3 = s[i * 8 + 7];
 
 			GSVector4i::sw8(v0, v1, v2, v3);
@@ -634,9 +634,9 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
@@ -644,11 +644,11 @@ public:
 			v0 = ((v0 >> 24).ps32(v1 >> 24)).pu16((v2 >> 24).ps32(v3 >> 24));
 
 			GSVector4i::storel(dst, v0);
-			
+
 			dst += dstpitch;
 
 			GSVector4i::storeh(dst, v0);
-			
+
 			dst += dstpitch;
 		}
 	}
@@ -663,9 +663,9 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
@@ -673,11 +673,11 @@ public:
 			v0 = ((v0 >> 24).ps32(v1 >> 24)).pu16((v2 >> 24).ps32(v3 >> 24)) & mask;
 
 			GSVector4i::storel(dst, v0);
-			
+
 			dst += dstpitch;
 
 			GSVector4i::storeh(dst, v0);
-			
+
 			dst += dstpitch;
 		}
 	}
@@ -690,9 +690,9 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
@@ -700,11 +700,11 @@ public:
 			v0 = ((v0 >> 28).ps32(v1 >> 28)).pu16((v2 >> 28).ps32(v3 >> 28));
 
 			GSVector4i::storel(dst, v0);
-			
+
 			dst += dstpitch;
 
 			GSVector4i::storeh(dst, v0);
-			
+
 			dst += dstpitch;
 		}
 	}
@@ -761,9 +761,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
@@ -796,9 +796,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
@@ -1077,7 +1077,7 @@ public:
 
 			#ifdef _M_AMD64
 
-			((GSVector4i*)dst)[i * 4 + 0] = ((GSVector4i*)dst)[i * 4 + 0].blend8(v0, mask); 
+			((GSVector4i*)dst)[i * 4 + 0] = ((GSVector4i*)dst)[i * 4 + 0].blend8(v0, mask);
 			((GSVector4i*)dst)[i * 4 + 1] = ((GSVector4i*)dst)[i * 4 + 1].blend8(v1, mask);
 			((GSVector4i*)dst)[i * 4 + 2] = ((GSVector4i*)dst)[i * 4 + 2].blend8(v2, mask);
 			((GSVector4i*)dst)[i * 4 + 3] = ((GSVector4i*)dst)[i * 4 + 3].blend8(v3, mask);
@@ -1086,7 +1086,7 @@ public:
 
 			// here blend is faster than blend8 because vc8 has a little problem optimizing register usage for pblendvb (3rd op must be xmm0)
 
-			((GSVector4i*)dst)[i * 4 + 0] = ((GSVector4i*)dst)[i * 4 + 0].blend(v0, mask); 
+			((GSVector4i*)dst)[i * 4 + 0] = ((GSVector4i*)dst)[i * 4 + 0].blend(v0, mask);
 			((GSVector4i*)dst)[i * 4 + 1] = ((GSVector4i*)dst)[i * 4 + 1].blend(v1, mask);
 			((GSVector4i*)dst)[i * 4 + 2] = ((GSVector4i*)dst)[i * 4 + 2].blend(v2, mask);
 			((GSVector4i*)dst)[i * 4 + 3] = ((GSVector4i*)dst)[i * 4 + 3].blend(v3, mask);
@@ -1162,9 +1162,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
@@ -1213,9 +1213,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = v & mask;
@@ -1277,9 +1277,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
@@ -1328,9 +1328,9 @@ public:
 		for(int i = 0; i < 2; i++, src += srcpitch * 4)
 		{
 			GSVector4i v(
-				*(uint32*)&src[srcpitch * 0], 
-				*(uint32*)&src[srcpitch * 1], 
-				*(uint32*)&src[srcpitch * 2], 
+				*(uint32*)&src[srcpitch * 0],
+				*(uint32*)&src[srcpitch * 1],
+				*(uint32*)&src[srcpitch * 2],
 				*(uint32*)&src[srcpitch * 3]);
 
 			GSVector4i lo = (v << 4) & mask;
@@ -1430,9 +1430,9 @@ public:
 
 		for(int i = 0; i < 2; i++)
 		{
-			v0 = s[i * 8 + 0].shuffle8(mask); 
-			v1 = s[i * 8 + 1].shuffle8(mask); 
-			v2 = s[i * 8 + 2].shuffle8(mask); 
+			v0 = s[i * 8 + 0].shuffle8(mask);
+			v1 = s[i * 8 + 1].shuffle8(mask);
+			v2 = s[i * 8 + 2].shuffle8(mask);
 			v3 = s[i * 8 + 3].shuffle8(mask);
 
 			GSVector4i::sw16(v0, v1, v2, v3);
@@ -1447,9 +1447,9 @@ public:
 			v2.gather32_8<>(pal, (GSVector4i*)dst);
 			dst += dstpitch;
 
-			v2 = s[i * 8 + 4].shuffle8(mask); 
-			v3 = s[i * 8 + 5].shuffle8(mask); 
-			v0 = s[i * 8 + 6].shuffle8(mask); 
+			v2 = s[i * 8 + 4].shuffle8(mask);
+			v3 = s[i * 8 + 5].shuffle8(mask);
+			v0 = s[i * 8 + 6].shuffle8(mask);
 			v1 = s[i * 8 + 7].shuffle8(mask);
 
 			GSVector4i::sw16(v0, v1, v2, v3);
@@ -1489,9 +1489,9 @@ public:
 
 		for(int i = 0; i < 2; i++)
 		{
-			v0 = s[i * 8 + 0].xzyw(); 
-			v1 = s[i * 8 + 1].xzyw(); 
-			v2 = s[i * 8 + 2].xzyw(); 
+			v0 = s[i * 8 + 0].xzyw();
+			v1 = s[i * 8 + 1].xzyw();
+			v2 = s[i * 8 + 2].xzyw();
 			v3 = s[i * 8 + 3].xzyw();
 
 			GSVector4i::sw64(v0, v1, v2, v3);
@@ -1514,9 +1514,9 @@ public:
 			v3.gather64_8<>(pal, (GSVector4i*)dst);
 			dst += dstpitch;
 
-			v0 = s[i * 8 + 4].xzyw(); 
-			v1 = s[i * 8 + 5].xzyw(); 
-			v2 = s[i * 8 + 6].xzyw(); 
+			v0 = s[i * 8 + 4].xzyw();
+			v1 = s[i * 8 + 5].xzyw();
+			v2 = s[i * 8 + 6].xzyw();
 			v3 = s[i * 8 + 7].xzyw();
 
 			GSVector4i::sw64(v0, v1, v2, v3);
@@ -1563,21 +1563,21 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
 
 			(v0 >> 24).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			(v1 >> 24).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 
 			(v2 >> 24).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			(v3 >> 24).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 		}
 
@@ -1604,21 +1604,21 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
 
 			((v0 >> 24) & 0xf).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			((v1 >> 24) & 0xf).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 
 			((v2 >> 24) & 0xf).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			((v3 >> 24) & 0xf).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 		}
 
@@ -1634,7 +1634,7 @@ public:
 	}
 
 	// TODO: ReadAndExpandBlock4HL_16
-	
+
 	__forceinline static void ReadAndExpandBlock4HH_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
 	{
 		#if _M_SSE >= 0x401
@@ -1645,21 +1645,21 @@ public:
 
 		for(int i = 0; i < 4; i++)
 		{
-			v0 = s[i * 4 + 0]; 
-			v1 = s[i * 4 + 1]; 
-			v2 = s[i * 4 + 2]; 
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
 			v3 = s[i * 4 + 3];
 
 			GSVector4i::sw64(v0, v1, v2, v3);
 
 			(v0 >> 28).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			(v1 >> 28).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 
 			(v2 >> 28).gather32_32<>(pal, (GSVector4i*)&dst[0]);
 			(v3 >> 28).gather32_32<>(pal, (GSVector4i*)&dst[16]);
-			
+
 			dst += dstpitch;
 		}
 

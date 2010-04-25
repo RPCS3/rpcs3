@@ -328,7 +328,7 @@ bool wxEncodingConverter::Convert(const wchar_t* input, wchar_t* output) const
                 wxT("You must call wxEncodingConverter::Init() before actually converting!"));
 
     bool replaced = false;
-    
+
     for (i = input, o = output; *i != 0;)
         *(o++) = (wchar_t)(GetTableValue(m_Table, (wxUint8)*(i++), replaced));
     *o = 0;

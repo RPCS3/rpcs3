@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #include <string.h>
 #include <gtk/gtk.h>
 #include <pthread.h>
@@ -40,7 +40,7 @@ GtkWidget *Conf, *About, *MsgDlg;
 GtkWidget *s_devicecombo;
 
 GtkTreeStore *treestore;
-GtkTreeModel *model;  
+GtkTreeModel *model;
 
 bool has_columns = false;
 
@@ -48,7 +48,7 @@ extern string KeyName(int pad, int key);
 extern const char* s_pGuiKeyMap[];
 extern void UpdateConf(int pad);
 
-enum 
+enum
 {
 	COL_PAD = 0,
 	COL_BUTTON,
@@ -61,9 +61,9 @@ enum
 void populate_tree_view()
 {
 	GtkTreeIter toplevel;
-	
+
 	gtk_tree_store_clear(treestore);
-	
+
 	for (int pad = 0; pad < 2 * MAX_SUB_KEYS; pad++)
 	{
 		for (int key = 0; key < MAX_KEYS; key++)
@@ -79,15 +79,15 @@ void populate_tree_view()
 				-1);
 			}
 		}
-	}	
+	}
 }
 
 void create_a_column(GtkWidget *view, const char *name, int num, bool visible)
 {
 	GtkCellRenderer     *renderer;
-	GtkTreeViewColumn   *col;  
-	
-	col = gtk_tree_view_column_new();  
+	GtkTreeViewColumn   *col;
+
+	col = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(col, name);
 
 	/* pack tree view column into tree view */
@@ -118,10 +118,10 @@ void create_columns(GtkWidget *view)
 
 void init_tree_view()
 {
-	GtkWidget *view; 
+	GtkWidget *view;
 
 	view = lookup_widget(Conf,"padtreeview");
-	
+
 	treestore = gtk_tree_store_new(NUM_COLS,
                                  G_TYPE_UINT,
                                  G_TYPE_STRING,
@@ -130,7 +130,7 @@ void init_tree_view()
 
 	populate_tree_view();
 	create_columns(view);
-	
+
 	model = GTK_TREE_MODEL(treestore);
 
 	gtk_tree_view_set_model(GTK_TREE_VIEW(view), model);
@@ -188,55 +188,55 @@ void on_joydevicescombo_changed(GtkComboBox *combobox, gpointer user_data)
 void on_checkbutton_reverselx_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
-	
+
 	if (gtk_toggle_button_get_active(togglebutton))
 		conf.options |= mask;
-	else 
+	else
 		conf.options &= ~mask;
 }
 
 void on_checkbutton_reversely_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTLY << (16 * s_selectedpad);
-	
+
 	if (gtk_toggle_button_get_active(togglebutton))
 		conf.options |= mask;
-	else 
+	else
 		conf.options &= ~mask;
 }
 
 void on_checkbutton_reverserx_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTRX << (16 * s_selectedpad);
-	if (gtk_toggle_button_get_active(togglebutton)) 
+	if (gtk_toggle_button_get_active(togglebutton))
 		conf.options |= mask;
-	else 
+	else
 		conf.options &= ~mask;
 }
 
 void on_checkbutton_reversery_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTRY << (16 * s_selectedpad);
-	
-	if (gtk_toggle_button_get_active(togglebutton)) 
+
+	if (gtk_toggle_button_get_active(togglebutton))
 		conf.options |= mask;
-	else 
+	else
 		conf.options &= ~mask;
 }
 
 void on_forcefeedback_toggled(GtkToggleButton *togglebutton, gpointer user_data)
 {
 	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
-	
+
 	if (gtk_toggle_button_get_active(togglebutton))
 	{
 		conf.options |= mask;
 
 		int joyid = gtk_combo_box_get_active(GTK_COMBO_BOX(s_devicecombo));
-		
+
 		if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->TestForce();
 	}
-	else 
+	else
 	{
 		conf.options &= ~mask;
 	}
@@ -294,7 +294,7 @@ void on_Remove(GtkButton *button, gpointer user_data)
 {
 	GtkTreeSelection *selection;
 	GtkTreeIter iter;
-	GtkWidget *view; 
+	GtkWidget *view;
 
 	view = lookup_widget(Conf,"padtreeview");
 

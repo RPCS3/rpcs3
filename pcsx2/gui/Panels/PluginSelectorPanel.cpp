@@ -345,7 +345,7 @@ void Panels::PluginSelectorPanel::Apply()
 		{
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
 			wxDialogWithHelpers dialog( this, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
-			
+
 			dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
 				L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
 				L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
@@ -482,7 +482,7 @@ void Panels::PluginSelectorPanel::OnPluginSelected( wxCommandEvent& evt )
 
 			bool isSame = (g_plugins==NULL) || g_Conf->FullpathMatchTest( pi->id, (*m_FileList)[(int)box.GetClientData(box.GetSelection())] );
 			m_ComponentBoxes->GetConfigButton( pi->id ).Enable( isSame );
-			
+
 			if( !isSame ) evt.Skip();		// enabled Apply button! :D
 			return;
 		}

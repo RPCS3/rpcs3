@@ -39,7 +39,7 @@ union tGSTransferStatus {
 		u32 reserved : 26;
 	};
 	u32 _u32;
-	
+
 	tGSTransferStatus(u32 val)			{ _u32 = val; }
 	bool test		(u32 flags) const	{ return !!(_u32 & flags); }
 	void set_flags	(u32 flags)			{ _u32 |=  flags; }
@@ -82,9 +82,9 @@ union tGIF_CTRL
 		u32 reserved2 : 28;
 	};
 	u32 _u32;
-	
+
 	tGIF_CTRL(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -102,9 +102,9 @@ union tGIF_MODE
 		u32 reserved2 : 29;
 	};
 	u32 _u32;
-	
+
 	tGIF_MODE(u32 val) { _u32 = val; }
-	
+
 	void write(u32 val) { _u32 = val; }
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
@@ -144,7 +144,7 @@ union tGIF_STAT
 	u32 _u32;
 
 	tGIF_STAT(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -161,9 +161,9 @@ union tGIF_TAG0
 		u32 TAG : 16;
 	};
 	u32 _u32;
-	
+
 	tGIF_TAG0(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -182,9 +182,9 @@ union tGIF_TAG1
 		u32 NREG : 4;
 	};
 	u32 _u32;
-	
+
 	tGIF_TAG1(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -204,9 +204,9 @@ union tGIF_CNT
 
 	};
 	u32 _u32;
-	
+
 	tGIF_CNT(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -222,9 +222,9 @@ union tGIF_P3CNT
 		u32 reserved1 : 17;
 	};
 	u32 _u32;
-	
+
 	tGIF_P3CNT(u32 val) { _u32 = val; }
-	
+
 	void reset() { _u32 = 0; }
 	wxString desc() { return wxsFormat(L"P3CNT: 0x%x", _u32); }
 };
@@ -238,9 +238,9 @@ union tGIF_P3TAG
 		u32 reserved1 : 16;
 	};
 	u32 _u32;
-	
+
 	tGIF_P3TAG(u32 val) { _u32 = val; }
-	
+
 	bool test(u32 flags) { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }

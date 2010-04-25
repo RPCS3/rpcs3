@@ -197,7 +197,7 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
 				  SIZEOF(c_derived_tbl));
   dtbl = *pdtbl;
-  
+
   /* Figure C.1: make table of Huffman code length for each symbol */
 
   p = 0;
@@ -210,7 +210,7 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
   }
   huffsize[p] = 0;
   lastp = p;
-  
+
   /* Figure C.2: generate the codes themselves */
   /* We also validate that the counts represent a legal Huffman code tree. */
 
@@ -230,7 +230,7 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
     code <<= 1;
     si++;
   }
-  
+
   /* Figure C.3: generate encoding tables */
   /* These are code and size indexed by symbol value */
 
@@ -327,16 +327,16 @@ emit_bits_s (working_state * state, unsigned int code, int size)
     ERREXIT(state->cinfo, JERR_HUFF_MISSING_CODE);
 
   put_buffer &= (((INT32) 1)<<size) - 1; /* mask off any extra bits in code */
-  
+
   put_bits += size;		/* new number of bits in buffer */
-  
+
   put_buffer <<= 24 - put_bits; /* align incoming bits */
 
   put_buffer |= state->cur.put_buffer; /* and merge with old buffer contents */
-  
+
   while (put_bits >= 8) {
     int c = (int) ((put_buffer >> 16) & 0xFF);
-    
+
     emit_byte_s(state, c, return FALSE);
     if (c == 0xFF) {		/* need to stuff a zero byte? */
       emit_byte_s(state, 0, return FALSE);
@@ -369,7 +369,7 @@ emit_bits_e (huff_entropy_ptr entropy, unsigned int code, int size)
     return;			/* do nothing if we're only getting stats */
 
   put_buffer &= (((INT32) 1)<<size) - 1; /* mask off any extra bits in code */
-  
+
   put_bits += size;		/* new number of bits in buffer */
 
   put_buffer <<= 24 - put_bits; /* align incoming bits */
@@ -578,7 +578,7 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
       /* This code assumes we are on a two's complement machine */
       temp2--;
     }
-    
+
     /* Find the number of bits needed for the magnitude of the coefficient */
     nbits = 0;
     while (temp) {
@@ -590,10 +590,10 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
      */
     if (nbits > MAX_COEF_BITS+1)
       ERREXIT(cinfo, JERR_BAD_DCT_COEF);
-    
+
     /* Count/emit the Huffman-coded symbol for the number of bits */
     emit_symbol(entropy, compptr->dc_tbl_no, nbits);
-    
+
     /* Emit that number of bits of the value, if positive, */
     /* or the complement of its magnitude, if negative. */
     if (nbits)			/* emit_bits rejects calls with size 0 */
@@ -645,9 +645,9 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
   block = MCU_data[0];
 
   /* Encode the AC coefficients per section G.1.2.2, fig. G.3 */
-  
+
   r = 0;			/* r = run length of zeros */
-   
+
   for (k = cinfo->Ss; k <= Se; k++) {
     if ((temp = (*block)[jpeg_natural_order[k]]) == 0) {
       r++;
@@ -820,7 +820,7 @@ encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
   }
 
   /* Encode the AC coefficients per section G.1.2.3, fig. G.7 */
-  
+
   r = 0;			/* r = run length of zeros */
   BR = 0;			/* BR = count of buffered bits added now */
   BR_buffer = entropy->bit_buffer + entropy->BE; /* Append bits to buffer */
@@ -1113,13 +1113,13 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
   register int temp;
   register int nbits;
   register int k, r;
-  
+
   /* Encode the DC coefficient difference per section F.1.2.1 */
-  
+
   temp = block[0] - last_dc_val;
   if (temp < 0)
     temp = -temp;
-  
+
   /* Find the number of bits needed for the magnitude of the coefficient */
   nbits = 0;
   while (temp) {
@@ -1134,11 +1134,11 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
 
   /* Count the Huffman symbol for the number of bits */
   dc_counts[nbits]++;
-  
+
   /* Encode the AC coefficients per section F.1.2.2 */
-  
+
   r = 0;			/* r = run length of zeros */
-  
+
   for (k = 1; k < DCTSIZE2; k++) {
     if ((temp = block[jpeg_natural_order[k]]) == 0) {
       r++;
@@ -1148,11 +1148,11 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
 	ac_counts[0xF0]++;
 	r -= 16;
       }
-      
+
       /* Find the number of bits needed for the magnitude of the coefficient */
       if (temp < 0)
 	temp = -temp;
-      
+
       /* Find the number of bits needed for the magnitude of the coefficient */
       nbits = 1;		/* there must be at least one 1 bit */
       while ((temp >>= 1))
@@ -1160,10 +1160,10 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
       /* Check for out-of-range coefficient values */
       if (nbits > MAX_COEF_BITS)
 	ERREXIT(cinfo, JERR_BAD_DCT_COEF);
-      
+
       /* Count Huffman symbol for run length / number of bits */
       ac_counts[(r << 4) + nbits]++;
-      
+
       r = 0;
     }
   }
@@ -1255,7 +1255,7 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
   MEMZERO(codesize, SIZEOF(codesize));
   for (i = 0; i < 257; i++)
     others[i] = -1;		/* init links to empty */
-  
+
   freq[256] = 1;		/* make sure 256 has a nonzero count */
   /* Including the pseudo-symbol 256 in the Huffman procedure guarantees
    * that no real symbol is given code-value of all ones, because 256
@@ -1290,7 +1290,7 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
     /* Done if we've merged everything into one frequency */
     if (c2 < 0)
       break;
-    
+
     /* Else merge the two counts/trees */
     freq[c1] += freq[c2];
     freq[c2] = 0;
@@ -1301,9 +1301,9 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
       c1 = others[c1];
       codesize[c1]++;
     }
-    
+
     others[c1] = c2;		/* chain c2 onto c1's tree branch */
-    
+
     /* Increment the codesize of everything in c2's tree branch */
     codesize[c2]++;
     while (others[c2] >= 0) {
@@ -1334,13 +1334,13 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
    * shortest nonzero BITS entry is converted into a prefix for two code words
    * one bit longer.
    */
-  
+
   for (i = MAX_CLEN; i > 16; i--) {
     while (bits[i] > 0) {
       j = i - 2;		/* find length of new prefix to be used */
       while (bits[j] == 0)
 	j--;
-      
+
       bits[i] -= 2;		/* remove two symbols */
       bits[i-1]++;		/* one goes in this length */
       bits[j+1] += 2;		/* two new symbols in this length */
@@ -1352,10 +1352,10 @@ jpeg_gen_optimal_table (j_compress_ptr cinfo, JHUFF_TBL * htbl, long freq[])
   while (bits[i] == 0)		/* find largest codelength still in use */
     i--;
   bits[i]--;
-  
+
   /* Return final symbol counts (only for lengths 0..16) */
   MEMCOPY(htbl->bits, bits, SIZEOF(htbl->bits));
-  
+
   /* Return a list of the symbols sorted by code length */
   /* It's not real clear to me why we don't need to consider the codelength
    * changes made above, but the JPEG spec seems to think this works.

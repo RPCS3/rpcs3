@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -35,8 +35,8 @@ typedef char* (*TdisR5900F)DisFInterface;
 	}
 
 //Lower/Upper instructions can use that..
-#define _Ft_ ((code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ ((code >> 11) & 0x1F)  // The rd part of the instruction register 
+#define _Ft_ ((code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Fs_ ((code >> 11) & 0x1F)  // The rd part of the instruction register
 #define _Fd_ ((code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _It_ (_Ft_ & 15)
 #define _Is_ (_Fs_ & 15)

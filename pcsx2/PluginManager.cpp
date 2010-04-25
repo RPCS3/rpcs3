@@ -714,7 +714,7 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
 	wxDoNotLogInThisScope please;
-	
+
 	Console.WriteLn( Color_StrongBlue, "Loading plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do
@@ -745,7 +745,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		//m_libs[i].GetSymbol( L"PS2E_InitAPI" );
 
 		// Fetch plugin name and version information
-		
+
 		_PS2EgetLibName		GetLibName		= (_PS2EgetLibName)		m_info[pid].Lib.GetSymbol( L"PS2EgetLibName" );
 		_PS2EgetLibVersion2	GetLibVersion2	= (_PS2EgetLibVersion2)	m_info[pid].Lib.GetSymbol( L"PS2EgetLibVersion2" );
 		_PS2EsetEmuVersion	SetEmuVersion	= (_PS2EsetEmuVersion)	m_info[pid].Lib.GetSymbol( L"PS2EsetEmuVersion" );
@@ -823,7 +823,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	}
 
 	g_plugins = this;
-	
+
 	SendSettingsFolder();
 }
 
@@ -1094,7 +1094,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 		case PluginId_USB:	ClosePlugin_USB();	break;
 		case PluginId_FW:	ClosePlugin_FW();	break;
 		case PluginId_DEV9:	ClosePlugin_DEV9();	break;
-		
+
 		jNO_DEFAULT;
 	}
 
@@ -1296,7 +1296,7 @@ void PluginManager::SetSettingsFolder( const wxString& folder )
 	{
 		fixedfolder += wxFileName::GetPathSeparator();
 	}
-	
+
 	if( m_SettingsFolder == fixedfolder ) return;
 	m_SettingsFolder = fixedfolder;
 	SendSettingsFolder();

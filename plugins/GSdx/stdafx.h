@@ -9,8 +9,8 @@
 #ifdef _WINDOWS
 
 // The following macros define the minimum required platform.  The minimum required platform
-// is the earliest version of Windows, Internet Explorer etc. that has the necessary features to run 
-// your application.  The macros work by enabling all features available on platform versions up to and 
+// is the earliest version of Windows, Internet Explorer etc. that has the necessary features to run
+// your application.  The macros work by enabling all features available on platform versions up to and
 // including the version specified.
 
 // Modify the following defines if you have to target a platform prior to the ones specified below.
@@ -133,7 +133,7 @@ typedef signed long long int64;
 #define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
 #define ID3D11Blob ID3D10Blob
 
-#endif 
+#endif
 
 // sse
 

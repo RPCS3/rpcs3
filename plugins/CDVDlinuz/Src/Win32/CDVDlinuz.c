@@ -178,7 +178,7 @@ s32 CALLBACK CDVDinit() {
 
   if(OpenLog() != 0)  return(-1); // Couldn't open Log File? Abort.
 
-  
+
 
 #ifdef VERBOSE_FUNCTION_INTERFACE
 
@@ -370,7 +370,7 @@ s32  CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq) {
 
   subq->trackIndex = HEXTOBCD(i);
 
-	
+
 
   LBAtoMSF(lsn - tracklsn, temptime);
 
@@ -380,11 +380,11 @@ s32  CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq) {
 
   subq->trackF = HEXTOBCD(temptime[2]);
 
-	
+
 
   subq->pad = 0;
 
-	
+
 
   // lba_to_msf(lsn + (2*75), &min, &sec, &frm);
 

@@ -34,7 +34,7 @@ public:
                       HRESULT *phr,
                       LPCWSTR pName);
 #endif
-    
+
     // Override methods to track end of stream state
     STDMETHODIMP EndOfStream();
     STDMETHODIMP EndFlush();

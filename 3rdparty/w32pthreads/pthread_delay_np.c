@@ -9,25 +9,25 @@
  *      Pthreads-win32 - POSIX Threads Library for Win32
  *      Copyright(C) 1998 John E. Bossom
  *      Copyright(C) 1999,2005 Pthreads-win32 contributors
- * 
+ *
  *      Contact Email: rpj@callisto.canberra.edu.au
- * 
+ *
  *      The current list of contributors is contained
  *      in the file CONTRIBUTORS included with the source
  *      code distribution. The list can also be seen at the
  *      following World Wide Web location:
  *      http://sources.redhat.com/pthreads-win32/contributors.html
- * 
+ *
  *      This library is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU Lesser General Public
  *      License as published by the Free Software Foundation; either
  *      version 2 of the License, or (at your option) any later version.
- * 
+ *
  *      This library is distributed in the hope that it will be useful,
  *      but WITHOUT ANY WARRANTY; without even the implied warranty of
  *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *      Lesser General Public License for more details.
- * 
+ *
  *      You should have received a copy of the GNU Lesser General Public
  *      License along with this library in the file COPYING.LIB;
  *      if not, write to the Free Software Foundation, Inc.,
@@ -45,26 +45,26 @@
  *       This period ends at the current time plus the specified interval. The routine
  *       will not return before the end of the period is reached, but may return an
  *       arbitrary amount of time after the period has gone by. This can be due to
- *       system load, thread priorities, and system timer granularity. 
+ *       system load, thread priorities, and system timer granularity.
  *
  *       Specifying an interval of zero (0) seconds and zero (0) nanoseconds is
  *       allowed and can be used to force the thread to give up the processor or to
- *       deliver a pending cancelation request. 
+ *       deliver a pending cancelation request.
  *
- *       The timespec structure contains the following two fields: 
+ *       The timespec structure contains the following two fields:
  *
- *            tv_sec is an integer number of seconds. 
- *            tv_nsec is an integer number of nanoseconds. 
+ *            tv_sec is an integer number of seconds.
+ *            tv_nsec is an integer number of nanoseconds.
  *
  *  Return Values
  *
  *  If an error condition occurs, this routine returns an integer value indicating
- *  the type of error. Possible return values are as follows: 
+ *  the type of error. Possible return values are as follows:
  *
- *  0 
+ *  0
  *           Successful completion.
- *  [EINVAL] 
- *           The value specified by interval is invalid. 
+ *  [EINVAL]
+ *           The value specified by interval is invalid.
  *
  * Example
  *

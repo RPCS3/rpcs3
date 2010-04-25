@@ -118,7 +118,7 @@ char EFFECT_NAME[255] = "~/pcsx2/plugins/gs/zerogs/opengl/ps2hw.fx";
 
 #endif
 
-BOOL g_bUpdateStencil = 1;	  // only needed for dest alpha test (unfortunately, it has to be on all the time)	
+BOOL g_bUpdateStencil = 1;	  // only needed for dest alpha test (unfortunately, it has to be on all the time)
 
 #define DRAW() glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount)
 
@@ -292,7 +292,7 @@ static BOOL s_bDestAlphaTest = FALSE;
 static int s_nLastResolveReset = 0;
 static int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 static int s_nCurResolveIndex = 0;
-int s_nResolved = 0; // number of targets resolved this frame 
+int s_nResolved = 0; // number of targets resolved this frame
 int g_nDepthUsed = 0; // ffx2 pal movies
 static int s_nWriteDepthCount = 0;
 static int s_nWireframeCount = 0;
@@ -300,7 +300,7 @@ static int s_nWriteDestAlphaTest = 0;
 
 ////////////////////
 // State parameters
-static float fiRendWidth, fiRendHeight; 
+static float fiRendWidth, fiRendHeight;
 
 static Vector vAlphaBlendColor;	 // used for GPU_COLOR
 
@@ -363,7 +363,7 @@ namespace ZeroGS
 	RenderFormatType GetRenderFormat() { return g_RenderFormatType; }
 	GLenum GetRenderTargetFormat() { return GetRenderFormat()==RFT_byte8?4:g_internalRGBAFloat16Fmt; }
 
-	// returns the first and last addresses aligned to a page that cover 
+	// returns the first and last addresses aligned to a page that cover
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
 	bool LoadEffects();
@@ -463,7 +463,7 @@ ZeroGS::VB::~VB()
 void ZeroGS::VB::Destroy()
 {
 	_aligned_free(pBufferData); pBufferData = NULL; nNumVertices = 0;
-	
+
 	prndr = NULL;
 	pdepth = NULL;
 }
@@ -555,7 +555,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 				ResetAlphaVariables();
 			}
 		}
-	
+
 		int fbh = (scissor.y1>>MINMAX_SHIFT)+1;
 		if( fbh > 2 && (fbh&1) ) fbh -= 1;
 
@@ -588,14 +588,14 @@ void ZeroGS::VB::CheckFrame(int tbp)
 				frame.fbh = considerheight;
 			else if( frame.fbh <= 32 )
 				frame.fbh = considerheight;
-			
+
 			if( frame.fbh == considerheight ) {
 				// stops bad resolves (mgs3)
 				if( !curprim.abe && (!test.ate || test.atst == 0) )
 					s_nResolved |= 0x100;
 			}
 		}*/
-		
+
 		// ffxii hack to stop resolving
 		if( !(frame.psm&2) || !(g_GameSettings&GAME_FULL16BITRES) ) {
 			if( frame.fbp >= 0x3000 && fbh >= 0x1a0 ) {
@@ -650,9 +650,9 @@ void ZeroGS::VB::CheckFrame(int tbp)
 		tempfb.fbp = zbuf.zbp;
 		tempfb.psm = zbuf.psm;
 		tempfb.fbh = prndr->fbh;
-		if( zbuf.psm == 0x31 ) 
+		if( zbuf.psm == 0x31 )
 			tempfb.fbm = 0xff000000;
-		else 
+		else
 			tempfb.fbm = 0;
 
 		// check if there is a target that exactly aligns with zbuf (zbuf can be cleared this way, gunbird 2)
@@ -706,7 +706,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 			f.fbw = prndr->fbw;
 			f.fbh = prndr->fbh;
 			f.psm = zbuf.psm;
-			
+
 			if( zbuf.psm == PSMT24Z ) f.fbm = 0xff000000;
 			else f.fbm = 0;
 			CDepthTarget* pnewdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
@@ -721,7 +721,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 			pdepth = pnewdepth;
 		}
 	}
-	
+
 	if( prndr != NULL ) SetContextTarget(ictx);
 }
 
@@ -738,7 +738,7 @@ void ZeroGS::VB::FlushTexData()
 	if( uCurTex0Data[0] == uNextTex0Data[0] && (uCurTex0Data[1]&0x1f) == (uNextTex0Data[1]&0x1f) ) {
 
 		if( PSMT_ISCLUT(psm) ) {
-			
+
 			// have to write the CLUT again if changed
 			if( (uCurTex0Data[1]&0x1fffffe0) == (uNextTex0Data[1]&0x1fffffe0) ) {
 
@@ -879,7 +879,7 @@ void ZeroGS::HandleGLError()
 	// check the error status of this framebuffer */
 	GLenum error = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 
-	// if error != GL_FRAMEBUFFER_COMPLETE_EXT, there's an error of some sort 
+	// if error != GL_FRAMEBUFFER_COMPLETE_EXT, there's an error of some sort
 	if( error != 0 ) {
 		int w, h;
 		GLint fmt;
@@ -945,7 +945,7 @@ bool ZeroGS::Create(int _width, int _height)
 	int i;
 
 	Destroy(1);
-	GSStateReset(); 
+	GSStateReset();
 
 	cgSetErrorHandler(HandleCgError, NULL);
 	g_RenderFormatType = RFT_float16;
@@ -962,7 +962,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	RECT rcdesktop;
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
-		
+
 	if (conf.options & GSOPTION_FULLSCREEN) {
 		nBackbufferWidth = rcdesktop.right - rcdesktop.left;
 		nBackbufferHeight = rcdesktop.bottom - rcdesktop.top;
@@ -1022,19 +1022,19 @@ bool ZeroGS::Create(int _width, int _height)
 		0,										  // Shift Bit Ignored
 		0,										  // No Accumulation Buffer
 		0, 0, 0, 0,								 // Accumulation Bits Ignored
-		24,										 // 24Bit Z-Buffer (Depth Buffer)  
+		24,										 // 24Bit Z-Buffer (Depth Buffer)
 		8,										  // 8bit Stencil Buffer
 		0,										  // No Auxiliary Buffer
 		PFD_MAIN_PLANE,							 // Main Drawing Layer
 		0,										  // Reserved
 		0, 0, 0									 // Layer Masks Ignored
 	};
-	
+
 	if (!(hDC=GetDC(GShwnd))) {
 		MessageBox(NULL,"(1) Can't Create A GL Device Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
 		return false;
 	}
-	
+
 	if (!(PixelFormat=ChoosePixelFormat(hDC,&pfd))) {
 		MessageBox(NULL,"(2) Can't Find A Suitable PixelFormat.","ERROR",MB_OK|MB_ICONEXCLAMATION);
 		return false;
@@ -1130,7 +1130,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	if( !bSuccess )
 		return false;
-	
+
 	if( g_GameSettings & GAME_32BITTARGS ) {
 		g_RenderFormatType = RFT_byte8;
 		ERROR_LOG("Setting 32 bit render target\n");
@@ -1198,7 +1198,7 @@ bool ZeroGS::Create(int _width, int _height)
 	char tempstr[255];
 	char curwd[255];
 	getcwd(curwd, ARRAY_SIZE(curwd));
-	
+
 	strcpy(tempstr, "../plugins/zerogs/opengl/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
 	FILE* f = fopen(EFFECT_NAME, "r");
@@ -1260,7 +1260,7 @@ bool ZeroGS::Create(int _width, int _height)
 		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffersATI");
 
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-	
+
 	GL_REPORT_ERROR();
 	if( err != GL_NO_ERROR ) bSuccess = false;
 
@@ -1315,7 +1315,7 @@ bool ZeroGS::Create(int _width, int _height)
 	glDisable(GL_LIGHTING);
 	glDepthFunc(GL_LEQUAL);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // Really Nice Perspective Calculations
-	
+
 	glGenTextures(1, &ptexLogo);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptexLogo);
 
@@ -1412,7 +1412,7 @@ bool ZeroGS::Create(int _width, int _height)
 	// fill a simple rect
 	glGenBuffers(1, &vboRect);
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
-	
+
 	vector<VertexGPU> verts(4);
 	VertexGPU* pvert = &verts[0];
 	pvert->x = -0x7fff; pvert->y = 0x7fff; pvert->z = 0; pvert->s = 0; pvert->t = 0; pvert++;
@@ -1476,7 +1476,7 @@ bool ZeroGS::Create(int _width, int _height)
 	if( err != GL_NO_ERROR ) bSuccess = false;
 
 	g_cgcontext = cgCreateContext();
-	
+
 	cgvProf = CG_PROFILE_ARBVP1;
 	cgfProf = CG_PROFILE_ARBFP1;
 	cgGLEnableProfile(cgvProf);
@@ -1535,7 +1535,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	GL_BLEND_ALPHA(GL_ONE, GL_ZERO);
 	glBlendColorEXT(0, 0, 0, 0.5f);
-	
+
 	glDisable(GL_CULL_FACE);
 
 	// points
@@ -1671,9 +1671,9 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 {
 	cgGLDisableProfile(cgvProf);
 	cgGLDisableProfile(cgfProf);
-	
+
 	glColor3f(((color>>16)&0xff)/255.0f, ((color>>8)&0xff)/255.0f, (color&0xff)/255.0f);
-	
+
 	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight,0);
 	cgGLEnableProfile(cgvProf);
 	cgGLEnableProfile(cgfProf);
@@ -1707,7 +1707,7 @@ void ZeroGS::Reset()
 {
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	vb[0].nCount = 0;
 	vb[1].nCount = 0;
 
@@ -1774,15 +1774,15 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 void ZeroGS::SetAA(int mode)
 {
 	float f;
-	
+
 	// need to flush all targets
 	s_RTs.ResolveAll();
 	s_RTs.Destroy();
 	s_DepthRTs.ResolveAll();
 	s_DepthRTs.Destroy();
-	
+
 	s_AAx = s_AAy = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-	if (mode > 0) 
+	if (mode > 0)
 	{
 		s_AAx = (mode+1) / 2;		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) -- it's used as binary shift, so x >> s_AAx, y >> s_AAy
 		s_AAy = mode / 2;
@@ -1793,7 +1793,7 @@ void ZeroGS::SetAA(int mode)
 
 	vb[0].prndr = NULL; vb[0].pdepth = NULL; vb[0].bNeedFrameCheck = 1; vb[0].bNeedZCheck = 1;
 	vb[1].prndr = NULL; vb[1].pdepth = NULL; vb[1].bNeedFrameCheck = 1; vb[1].bNeedZCheck = 1;
-	
+
 	f = mode > 0 ? 2.0f : 1.0f;
 	glPointSize(f);
 }
@@ -2029,7 +2029,7 @@ bool ZeroGS::LoadExtraEffects()
 //			pvs[2*i+8] = pvs[2*i+8+1] = NULL;
 //		}
 	}
-	
+
 	LOAD_VS(SH_BITBLTVS, pvsBitBlt.prog);
 	pvsBitBlt.sBitBltPos = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltPos");
 	pvsBitBlt.sBitBltTex = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltTex");
@@ -2056,7 +2056,7 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS(SH_BITBLTDEPTHPS, ppsBitBltDepth);
 	LOAD_PS(SH_CRTCTARGPS, ppsCRTCTarg[0]);
 	LOAD_PS(SH_CRTCTARGINTERPS, ppsCRTCTarg[1]);
-	
+
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS(SH_CRTCPS, ppsCRTC[0]);
 	if( !bLoadSuccess ) {
@@ -2071,7 +2071,7 @@ bool ZeroGS::LoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ERROR_LOG("Failed to create CRTC shaders\n");
-	
+
 	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
 	LOAD_PS(SH_CRTC24INTERPS, ppsCRTC24[1]);
 	LOAD_PS(SH_ZEROPS, ppsOne);
@@ -2105,13 +2105,13 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
-	
+
 	assert( index < ARRAY_SIZE(ppsTexture) );
 	FRAGMENTSHADER* pf = ppsTexture+index;
-	
+
 	if( pbFailed != NULL ) *pbFailed = false;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
 
 	if( (g_nPixelShaderVer & SHADER_ACCURATE) && mapShaderResources.find(index+NUM_SHADERS*SHADER_ACCURATE) != mapShaderResources.end() )
@@ -2144,7 +2144,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 
 	return NULL;
 }
-	
+
 #else // ZEROGS_DEVBUILD
 
 #define LOAD_VS(name, prog, shaderver) { \
@@ -2254,7 +2254,7 @@ bool ZeroGS::LoadExtraEffects()
 
 	LOAD_PS("BitBltDepthPS", ppsBitBltDepth, cgfProf);
 	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf); LOAD_PS("CRTCTargInterPS", ppsCRTCTarg[1], cgfProf);
-	
+
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS("CRTCPS", ppsCRTC[0], cgfProf);
 	if( !bLoadSuccess ) {
@@ -2269,7 +2269,7 @@ bool ZeroGS::LoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ERROR_LOG("Failed to create CRTC shaders\n");
-	
+
 	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
 	LOAD_PS("ZeroPS", ppsOne, cgfProf);
 	LOAD_PS("BaseTexturePS", ppsBaseTexture, cgfProf);
@@ -2287,7 +2287,7 @@ bool ZeroGS::LoadExtraEffects()
 FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
 {
 	int texwrap;
-	
+
 	assert( texfilter < NUM_FILTERS );
 	//assert( g_nPixelShaderVer == SHADER_30 );
 	if( clamp.wms == clamp.wmt ) {
@@ -2310,9 +2310,9 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 
 	FRAGMENTSHADER* pf = ppsTexture+index;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
-	
+
 	pf->prog = LoadShaderFromType(EFFECT_DIR, EFFECT_NAME, type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
 	if( pf->prog != NULL ) {
@@ -2456,13 +2456,13 @@ void ZeroGS::Flush(int context)
 	PRIM_LOG("test: ate:%d, atst: %s, aref: %d, afail: %s, date: %d, datm: %d, zte: %d, ztst: %s, fba: %d\n",
 		curvb.test.ate, patst[curvb.test.atst], curvb.test.aref, pafail[curvb.test.afail], curvb.test.date, curvb.test.datm, curvb.test.zte, pztst[curvb.test.ztst], curvb.fba.fba);
 	PRIM_LOG("alpha: A%d B%d C%d D%d FIX:%d pabe: %d; aem: %d, ta0: %d, ta1: %d\n", curvb.alpha.a, curvb.alpha.b, curvb.alpha.c, curvb.alpha.d, curvb.alpha.fix, gs.pabe, gs.texa.aem, gs.texa.ta[0], gs.texa.ta[1]);
-	PRIM_LOG("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d\n", 
-			 curvb.tex0.tbp0, curvb.tex0.tbw, curvb.tex0.psm, curvb.tex0.tw, 
+	PRIM_LOG("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d\n",
+			 curvb.tex0.tbp0, curvb.tex0.tbw, curvb.tex0.psm, curvb.tex0.tw,
 			 curvb.tex0.th, curvb.tex0.tcc, curvb.tex0.tfx, curvb.tex0.cbp,
 			 curvb.tex0.cpsm, curvb.tex0.csm, curvb.tex0.csa, curvb.tex0.cld);
 	PRIM_LOG("frame: %d\n\n", g_SaveFrameNum);
 #endif
-	
+
 	GL_REPORT_ERRORD();
 	CRenderTarget* ptextarg = NULL;
 
@@ -2496,12 +2496,12 @@ void ZeroGS::Flush(int context)
 				ptextarg = curvb.prndr;
 			}
 		}
-		
+
 		if( ptextarg != NULL && !(ptextarg->status&CRenderTarget::TS_NeedUpdate) ) {
 			if( PSMT_ISCLUT(tpsm) && tpsm != PSMT8H ) { // handle 8h cluts
 				// don't support clut targets, read from mem
 				// 4hl - kh2 check - from dx version -- arcum42
-				if( tpsm != PSMT4HL && tpsm != PSMT4HH && s_ClutResolve <= 1 ) 
+				if( tpsm != PSMT4HL && tpsm != PSMT4HH && s_ClutResolve <= 1 )
 				{ // xenosaga requires 2 resolves
 					u32 prevcount = curvb.nCount;
 					curvb.nCount = 0;
@@ -2545,9 +2545,9 @@ void ZeroGS::Flush(int context)
 		SetContextTarget(context);
 	else {
 		assert( curvb.pdepth != NULL );
-		
+
 		if( curvb.pdepth->status & CRenderTarget::TS_Virtual) {
-		
+
 			if( !curvb.zbuf.zmsk ) {
 				CRenderTarget* ptemp = s_DepthRTs.Promote(curvb.pdepth->fbp|(curvb.pdepth->fbw<<16));
 				assert( ptemp == curvb.pdepth );
@@ -2574,7 +2574,7 @@ void ZeroGS::Flush(int context)
 
 	assert( !(curvb.prndr->status&CRenderTarget::TS_NeedUpdate) );
 	curvb.prndr->status = 0;
-	
+
 	if( curvb.pdepth != NULL ) {
 		assert( !(curvb.pdepth->status&CRenderTarget::TS_NeedUpdate) );
 		if( !curvb.zbuf.zmsk ) {
@@ -2636,7 +2636,7 @@ void ZeroGS::Flush(int context)
 				glGenTextures(1, &ptexclut);
 				glBindTexture(GL_TEXTURE_2D, ptexclut);
 				vector<char> data((curvb.tex0.cpsm&2) ? 512 : 1024);
-				
+
 				if( ptexclut != 0 ) {
 
 					// fill the buffer by decoding the clut
@@ -2680,7 +2680,7 @@ void ZeroGS::Flush(int context)
 
 					glTexImage2D(GL_TEXTURE_2D, 0, 4, 256, 1, 0, GL_RGBA, (curvb.tex0.cpsm&2)?GL_UNSIGNED_SHORT_5_5_5_1:GL_UNSIGNED_BYTE, &data[0]);
 					s_vecTempTextures.push_back(ptexclut);
-					
+
 					if( g_bSaveTex )
 						SaveTexture("clut.tga", GL_TEXTURE_2D, ptexclut, 256, 1);
 
@@ -2752,14 +2752,14 @@ void ZeroGS::Flush(int context)
 				glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 				dwFilterOpts |= 1;
 			}
-			
+
 			if( !curvb.tex1.mmin ) {
 				if( curvb.tex1.mmag )
 					glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptexset);
 				glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 				dwFilterOpts |= 2;
 			}
-			
+
 			Vector vTexDims;
 			vTexDims.x = curvb.tex0.tw << s_AAx ;
 			vTexDims.y = curvb.tex0.th << s_AAy ;
@@ -2780,7 +2780,7 @@ void ZeroGS::Flush(int context)
 			}
 
 			if( shadertype == 4 ) vTexDims.z += 8.0f;
-			
+
 
 			cgGLSetParameter4fv(pfragment->fTexDims, vTexDims);
 
@@ -2846,7 +2846,7 @@ void ZeroGS::Flush(int context)
 	else {
 		pfragment = &ppsRegular[curvb.curprim.fge+2*s_bWriteDepth];
 	}
-	
+
 	assert(pfragment != 0 );
 	if( curvb.curprim.tme ) {
 		// have to enable the texture parameters
@@ -3035,7 +3035,7 @@ void ZeroGS::Flush(int context)
 		glAlphaFunc(g_dwReverseAlphaCmp[curtest.atst], b2XAlphaTest ? min(1.0f,(float)curtest.aref * (1/ 127.5f)) : curtest.aref*(1/255.0f));
 
 		if( curtest.afail & 1 ) {   // front buffer update only
-			
+
 			if( curtest.afail == 3 ) // disable alpha
 				glColorMask(1,1,1,0);
 
@@ -3046,7 +3046,7 @@ void ZeroGS::Flush(int context)
 		}
 		else {
 			// zbuffer update only
-			glColorMask(0,0,0,0);   
+			glColorMask(0,0,0,0);
 		}
 
 		if( gs.pabe && bCanRenderStencil ) {
@@ -3074,7 +3074,7 @@ void ZeroGS::Flush(int context)
 		// Empty the command buffer and wait until the GPU is idle.
 //	  while(S_FALSE == pOcclusionQuery->GetData( &numberOfPixelsDrawn, sizeof(u32), D3DGETDATA_FLUSH ));
 //	  SAFE_RELEASE(pOcclusionQuery);
-	
+
 		if( gs.pabe ) {
 			// only render the pixels with alpha values < 0x80
 			glDisable(GL_BLEND);
@@ -3095,7 +3095,7 @@ void ZeroGS::Flush(int context)
 		}
 
 		// restore
-		
+
 		if( (curtest.afail & 1) && !curvb.zbuf.zmsk ) {
 			glDepthMask(1);
 
@@ -3184,7 +3184,7 @@ void ZeroGS::Flush(int context)
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(0);
 		glColorMask(1,1,1,0);
-		
+
 		if( s_bWriteDepth ) {
 			ResetRenderTarget(1);
 		}
@@ -3202,7 +3202,7 @@ void ZeroGS::Flush(int context)
 			GL_BLENDEQ_RGB(GL_MAX_EXT);
 			DRAW();
 		}
-		
+
 		// bios shows white screen
 		if( bAlphaClamping & 2 ) { // max
 			f = 1;
@@ -3256,7 +3256,7 @@ void ZeroGS::ProcessMessages()
 	if( listMsgs.size() > 0 ) {
 		int left = 25, top = 15;
 		list<MESSAGE>::iterator it = listMsgs.begin();
-		
+
 		while( it != listMsgs.end() ) {
 			DrawText(it->str, left+1, top+1, 0xff000000);
 			DrawText(it->str, left, top, 0xffffff30);
@@ -3342,7 +3342,7 @@ void ZeroGS::AdjustTransToAspect(Vector& v, int dispwidth, int dispheight)
 	float f;
 	if( dispwidth * nBackbufferHeight > dispheight * nBackbufferWidth) {
 		// limited by width
-		
+
 		// change in ratio
 		f = ((float)nBackbufferWidth / (float)dispwidth) / ((float)nBackbufferHeight / (float)dispheight);
 		v.y *= f;
@@ -3427,7 +3427,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		if( vb[0].prndr != NULL ) {
 			SaveTexture("frame1.tga", GL_TEXTURE_RECTANGLE_NV, vb[0].prndr->ptex, vb[0].prndr->fbw<<s_AAx, vb[0].prndr->fbh<<s_AAy);
 		}
-		
+
 		if( vb[1].prndr != NULL && vb[0].prndr != vb[1].prndr ) {
 			SaveTexture("frame2.tga", GL_TEXTURE_RECTANGLE_NV, vb[1].prndr->ptex, vb[1].prndr->fbw<<s_AAx, vb[1].prndr->fbh<<s_AAy);
 		}
@@ -3494,7 +3494,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		GSRegDISPLAY* pd = i ? DISPLAY2 : DISPLAY1;
 		int magh = pd->MAGH+1;
 		int magv = pd->MAGV+1;
-		
+
 		dispinfo[i].tbp0 =  pfb->FBP << 5;
 		dispinfo[i].tbw = pfb->FBW << 6;
 		dispinfo[i].tw = (pd->DW + 1) / magh;
@@ -3536,7 +3536,7 @@ void ZeroGS::RenderCRTC(int interlace)
 
 			// interlace mode
 			interlacetex = CreateInterlaceTex(2*texframe.th);
-			
+
 			if( interlace == (conf.interlace&1) ) {
 				// pass if odd
 				valpha.z = 1.0f;
@@ -3603,7 +3603,7 @@ void ZeroGS::RenderCRTC(int interlace)
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 			continue;
 		}
-		
+
 		// first render the current render targets, then from ptexMem
 		if( texframe.psm == 1 ) {
 			valpha.x = 0;
@@ -3623,7 +3623,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		s_RTs.GetTargs(start, end, listTargs);
 
 		for(list<CRenderTarget*>::iterator it = listTargs.begin(); it != listTargs.end(); ) {
-	
+
 			CRenderTarget* ptarg = *it;
 
 			if( ptarg->fbw == texframe.tbw && !(ptarg->status&CRenderTarget::TS_NeedUpdate) && ((256/bpp)*(texframe.tbp0-ptarg->fbp))%texframe.tbw == 0 ) {
@@ -3689,7 +3689,7 @@ void ZeroGS::RenderCRTC(int interlace)
 					v.y = dh/(float)texframe.th;
 					v.z = 0;
 					v.w = 1-v.y;
-					
+
 					if( movy > 0 )
 						v.w -= movy/(float)texframe.th;
 
@@ -3738,7 +3738,7 @@ void ZeroGS::RenderCRTC(int interlace)
 					}
 				}
 			}
-		
+
 			++it;
 		}
 
@@ -3773,9 +3773,9 @@ void ZeroGS::RenderCRTC(int interlace)
 				cgGLSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(texframe.tw,texframe.th,-0.5f,-0.5f));
 			else
 				cgGLSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(1,1,-0.5f/(float)texframe.tw,-0.5f/(float)texframe.th));
-			
+
 			cgGLSetParameter4fv(pvsBitBlt.fBitBltTrans, Vector(fih * 0.5f, fih * -0.5f, fih * 0.5f, fih * 0.5f));
-			
+
 			// use g_fInvTexDims to store inverse texture dims
 			if( ppsCRTC[bInterlace].sInvTexDims ) {
 				v.x = 1.0f / (float)texframe.tw;
@@ -3784,7 +3784,7 @@ void ZeroGS::RenderCRTC(int interlace)
 				v.w = -0.5f * fih;
 				cgGLSetParameter4fv(ppsCRTC[bInterlace].sInvTexDims, v);
 			}
-			
+
 			if( interlacetex != 0 ) {
 				cgGLSetTextureParameter(ppsCRTC[bInterlace].sInterlace, interlacetex);
 				cgGLEnableTextureParameter(ppsCRTC[bInterlace].sInterlace);
@@ -3819,7 +3819,7 @@ void ZeroGS::RenderCRTC(int interlace)
 		}
 
 		if (glGetError() != GL_NO_ERROR) DEBUG_LOG("glerror before swap!\n");
-		
+
 
 #ifdef _WIN32
 		static u32 lastswaptime = 0;
@@ -3845,13 +3845,13 @@ void ZeroGS::RenderCRTC(int interlace)
 		}
 
 		if( g_bMakeSnapshot ) {
-			
+
 			if( SaveRenderTarget(strSnapshot != ""?strSnapshot.c_str():"temp.jpg", nBackbufferWidth, -nBackbufferHeight, 0)) {//(conf.options&GSOPTION_TGASNAP)?0:1) ) {
 				char str[255];
 				sprintf(str, "saved %s\n", strSnapshot.c_str());
 				AddMessage(str, 500);
 			}
-			
+
 			g_bMakeSnapshot = 0;
 		}
 
@@ -3953,7 +3953,7 @@ void ZeroGS::RenderCRTC(int interlace)
 //////////////////////////
 
 
-__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb) 
+__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
 {
 	p->z = curvb.zprimmask==0xffff?min((u32)0xffff, gsz):gsz;
 }
@@ -3963,33 +3963,33 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 	p->f = ((s16)(gsf).f<<7)|0x7f;
 }
 
-void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb) 
-{ 
-	int index = Index; 
-	
+void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+{
+	int index = Index;
+
 	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x)>>1)&0xffff;
 	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y)>>1)&0xffff;
-	
+
 	/*x = ((int)gs.gsvertex[index].x - curvb.offset.x);
 	y = ((int)gs.gsvertex[index].y - curvb.offset.y);
 	p.x = (x&0x7fff) | (x < 0 ? 0x8000 : 0);
 	p.y = (y&0x7fff) | (y < 0 ? 0x8000 : 0);*/
-	
+
 	p->f = ((s16)gs.gsvertex[index].f<<7)|0x7f;
 	MOVZ(p, gs.gsvertex[index].z, curvb);
 	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
-	
+
 	if ((g_GameSettings & GAME_TEXAHACK) && !(p->rgba&0xffffff))
 		p->rgba = 0;
-	if (prim->tme ) 
+	if (prim->tme )
 	{
-		if( prim->fst ) 
+		if( prim->fst )
 		{
 			p->s = (float)gs.gsvertex[index].u * fiTexWidth[prim->ctxt];
 			p->t = (float)gs.gsvertex[index].v * fiTexHeight[prim->ctxt];
 			p->q = 1;
 		}
-		else 
+		else
 		{
 			p->s = gs.gsvertex[index].s;
 			p->t = gs.gsvertex[index].t;
@@ -4119,10 +4119,10 @@ void ZeroGS::KickTriangleFan()
 #endif
 }
 
-void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
+void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 {
-	SET_VERTEX(p, next, curvb); 
-	MOVZ(p, v.z, curvb);	
+	SET_VERTEX(p, next, curvb);
+	MOVZ(p, v.z, curvb);
 	MOVFOG(p, v);
 }
 
@@ -4130,7 +4130,7 @@ void ZeroGS::KickSprite()
 {
 	assert( gs.primC >= 2 );
 	VB& curvb = vb[prim->ctxt];
-	
+
 	if (curvb.bNeedTexCheck) curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
@@ -4145,7 +4145,7 @@ void ZeroGS::KickSprite()
 	int last = (gs.primIndex+2)%ARRAY_SIZE(gs.gsvertex);
 
 	// sprite is too small and AA shows lines (tek4)
-	if ( s_AAx ) 
+	if ( s_AAx )
 	{
 		gs.gsvertex[last].x += 4;
 		if( s_AAy ) gs.gsvertex[last].y += 4;
@@ -4156,19 +4156,19 @@ void ZeroGS::KickSprite()
 	  //return;
 
 	VertexGPU* p = curvb.pBufferData+curvb.nCount;
-	
+
 	SetKickVertex(&p[0], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[3], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[1], gs.gsvertex[last], last, curvb);
 	SetKickVertex(&p[4], gs.gsvertex[last], last, curvb);
 	SetKickVertex(&p[2], gs.gsvertex[last], next, curvb);
-	
+
 	p[2].s = p[1].s;
 	p[2].x = p[1].x;
 
 	SetKickVertex(&p[5], gs.gsvertex[last], last, curvb);
 	p[5].s = p[0].s;
-	p[5].x = p[0].x;	
+	p[5].x = p[0].x;
 
 	curvb.nCount += 6;
 
@@ -4207,17 +4207,17 @@ __forceinline void ZeroGS::RenderFBA(const VB& curvb, CGparameter sOneColor)
 
 	if( !curvb.test.ate )
 		glDisable(GL_ALPHA_TEST);
-	else 
+	else
 		glAlphaFunc(g_dwAlphaCmp[curvb.test.atst], b2XAlphaTest ? min(1.0f,curvb.test.aref*(1/127.5f)) : curvb.test.aref*(1/255.0f));
 
 	// reset (not necessary)
 	GL_COLORMASK(s_dwColorWrite);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	if( !curvb.zbuf.zmsk ) 
+	if( !curvb.zbuf.zmsk )
 	{
 		glDepthMask(1);
-		
+
 		assert( curvb.pdepth != NULL );
 		if( s_bWriteDepth ) curvb.pdepth->SetRenderTarget(1);
 	}
@@ -4245,8 +4245,8 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 	s_stencilfunc = GL_ALWAYS;
 
 	glEnable(GL_STENCIL_TEST);
-	
-	if( !s_bDestAlphaTest ) 
+
+	if( !s_bDestAlphaTest )
 	{
 		// clear everything
 		s_stencilref = 0;
@@ -4259,7 +4259,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 			glEnable(GL_ALPHA_TEST);
 	}
 
-	if( curvb.test.ate && curvb.test.atst>1 && curvb.test.aref > 0x80) 
+	if( curvb.test.ate && curvb.test.atst>1 && curvb.test.aref > 0x80)
 	{
 		v.x = 1; v.y = 1; v.z = 0; v.w = 0;
 		cgGLSetParameter4fv(sOneColor, v);
@@ -4270,7 +4270,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 	glStencilMask(STENCIL_SPECIAL);
 	GL_STENCILFUNC_SET();
 	glDisable(GL_DEPTH_TEST);
-	
+
 	DRAW();
 
 	if( curvb.test.zte )
@@ -4278,7 +4278,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 	GL_ALPHATEST(0);
 	GL_COLORMASK(s_dwColorWrite);
 
-	if( !curvb.zbuf.zmsk ) 
+	if( !curvb.zbuf.zmsk )
 	{
 		glDepthMask(1);
 
@@ -4289,7 +4289,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 
 __forceinline void ZeroGS::RenderStencil(const VB& curvb, u32 dwUsingSpecialTesting)
 {
-	//NOTE: This stencil hack for dest alpha testing ONLY works when 
+	//NOTE: This stencil hack for dest alpha testing ONLY works when
 	// the geometry in one DrawPrimitive call does not overlap
 
 	// mark the stencil buffer for the new data's bits (mark 4 if alpha is >= 0xff)
@@ -4365,7 +4365,7 @@ __forceinline void ZeroGS::ProcessFBA(const VB& curvb, CGparameter sOneColor)
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(0);
 	glColorMask(0,0,0,1);
-	
+
 	if( s_bWriteDepth ) {
 		ResetRenderTarget(1);
 	}
@@ -4432,12 +4432,12 @@ inline void ZeroGS::SetContextTarget(int context)
 		curvb.pdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
 			(curvb.zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), GET_MAXHEIGHT(curvb.zbuf.zbp, curvb.gsfb.fbw, 0));
 	}
-	
+
 	assert( curvb.prndr != NULL && curvb.pdepth != NULL );
 	assert( curvb.pdepth->fbh == curvb.prndr->fbh );
 
 	if( curvb.pdepth->status & CRenderTarget::TS_Virtual) {
-		
+
 		if( !curvb.zbuf.zmsk ) {
 			CRenderTarget* ptemp = s_DepthRTs.Promote(curvb.pdepth->fbp|(curvb.pdepth->fbw<<16));
 			assert( ptemp == curvb.pdepth );
@@ -4455,7 +4455,7 @@ inline void ZeroGS::SetContextTarget(int context)
 		curvb.pdepth->Update(context, curvb.prndr);
 		bSetTarg = 0;
 	}
-	
+
 	GL_REPORT_ERRORD();
 	if( curvb.prndr->status & CRenderTarget::TS_NeedUpdate ) {
 
@@ -4469,15 +4469,15 @@ inline void ZeroGS::SetContextTarget(int context)
 
 		curvb.prndr->Update(context, curvb.pdepth);
 	}
-	else { 
+	else {
 
 		//if( (vb[0].prndr != vb[1].prndr && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg )
 		curvb.prndr->SetRenderTarget(0);
-		//if( bSetTarg && ((vb[0].pdepth != vb[1].pdepth && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg) ) 
+		//if( bSetTarg && ((vb[0].pdepth != vb[1].pdepth && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg) )
 		curvb.pdepth->SetDepthStencilSurface();
-		
+
 		if (conf.mrtdepth && ZeroGS::IsWriteDepth()) curvb.pdepth->SetRenderTarget(1);
-		
+
 		if (s_ptexCurSet[0] == curvb.prndr->ptex) s_ptexCurSet[0] = 0;
 		if (s_ptexCurSet[1] == curvb.prndr->ptex) s_ptexCurSet[1] = 0;
 
@@ -4507,7 +4507,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment, int settexi
 
 	Vector v, v2;
 	tex0Info& tex0 = vb[context].tex0;
-	
+
 	float fw = (float)tex0.tw;
 	float fh = (float)tex0.th;
 
@@ -4518,7 +4518,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment, int settexi
 		// if clut, use the frame format
 		int psm = tex0.psm;
 		if( PSMT_ISCLUT(tex0.psm) ) psm = tex0.cpsm;
-		
+
 		int nNeedAlpha = (psm == 1 || psm == 2 || psm == 10);
 
 		Vector vblack;
@@ -4529,26 +4529,26 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment, int settexi
 				valpha.z = 0; valpha.w = 0;
 				valpha2.x = 0; valpha2.y = 0;
 				valpha2.z = 2; valpha2.w = 1;
-				
+
 				break;
 			case 1:
 				valpha.z = 0; valpha.w = 1;
 				valpha2.x = 1; valpha2.y = 0;
 				valpha2.z = 0; valpha2.w = 0;
-				
+
 				break;
 			case 2:
 				valpha.z = 1; valpha.w = 1.0f;
 				valpha2.x = 0; valpha2.y = tex0.tcc ? 1.0f : 0.0f;
-				valpha2.z = 2; valpha2.w = 0;			   
-				
+				valpha2.z = 2; valpha2.w = 0;
+
 				break;
 
 			case 3:
 				valpha.z = 1; valpha.w = tex0.tcc ? 0.0f : 1.0f;
 				valpha2.x = 0; valpha2.y = tex0.tcc ? 1.0f : 0.0f;
 				valpha2.z = 2; valpha2.w = 0;
-		
+
 				break;
 		}
 
@@ -4562,7 +4562,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment, int settexi
 			}
 
 			if( nNeedAlpha ) {
-				
+
 				if( tex0.tfx == 0 ) {
 					// make sure alpha is mult by two when the output is Cv = Ct*Cf
 					valpha.x = 2*gs.texa.fta[0];
@@ -4691,7 +4691,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment, int settexi
 			}
 		}
 		else {
-			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);   
+			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);
 			vb[context].bVarsTexSync = TRUE;
 
 			INC_TEXVARS();
@@ -4721,7 +4721,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	if (pfragment->fRealTexDims)
 			cgGLSetParameter4fv(pfragment->fRealTexDims, v);
 	else
-		cgGLSetParameter4fv(cgGetNamedParameter(pfragment->prog,"g_fRealTexDims"),v);	
+		cgGLSetParameter4fv(cgGetNamedParameter(pfragment->prog,"g_fRealTexDims"),v);
 	}
 
 	if( m_Blocks[tex0.psm].bpp == 0 ) {
@@ -4752,7 +4752,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	float fpage = tex0.tbp0*(64.0f*g_fitexwidth) + 0.05f * g_fitexwidth;
 	float fpageint = floorf(fpage);
 	int starttbp = (int)fpage;
-	
+
 	// 2048 is number of words to span one page
 	float fblockstride = (2048.0f /(float)(g_texwidth*BLOCK_TEXWIDTH)) * b.vTexDims.x * fbw;
 	assert( fblockstride >= 1.0f );
@@ -4777,7 +4777,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 
 	v.y = 1;//(float)1.0f / (float)((pmemtarg->realheight+pmemtarg->widthmult-1)/pmemtarg->widthmult);
 	v.x = (fpageint-(float)pmemtarg->realy/(float)pmemtarg->widthmult+0.5f);//*v.y;
-	
+
 //	v.x *= (float)texheight;
 //	v.y *= (float)texheight;
 	v.z = (float)texwidth;
@@ -4791,8 +4791,8 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	if( force ) s_ptexCurSet[context] = pmemtarg->ptex->tex;
 	else s_ptexNextSet[context] = pmemtarg->ptex->tex;
 	vb[context].pmemtarg = pmemtarg;
-	
-	vb[context].bVarsTexSync = FALSE; 
+
+	vb[context].bVarsTexSync = FALSE;
 }
 #define SET_ALPHA_COLOR_FACTOR(sign) \
 { \
@@ -4862,13 +4862,13 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	vAlphaBlendColor = Vector(1,2*255.0f/256.0f,0,0);
 	u32 usec = a.c;
 
-	if( a.a == a.b ) 
+	if( a.a == a.b )
 	{ // just d remains
-		if( a.d == 0 ) 
+		if( a.d == 0 )
 		{
 			alphaenable = false;
 		}
-		else 
+		else
 		{
 			s_dstrgb = a.d == 1 ? GL_ONE : GL_ZERO;
 			s_srcrgb = GL_ZERO;
@@ -4877,28 +4877,28 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 
 		goto EndSetAlpha;
 	}
-	else if( a.d == 2 ) 
+	else if( a.d == 2 )
 	{ // zero
-		if( a.a == 2 ) 
+		if( a.a == 2 )
 		{
 			// zero all color
 			s_srcrgb = GL_ZERO;
 			s_dstrgb = GL_ZERO;
 			goto EndSetAlpha;
 		}
-		else if( a.b == 2 ) 
+		else if( a.b == 2 )
 		{
 			//b2XAlphaTest = 1;
 
 			SET_ALPHA_COLOR_FACTOR(1);
 
-			if( bDestAlphaColor == 2 ) 
+			if( bDestAlphaColor == 2 )
 			{
 				s_rgbeq = GL_FUNC_ADD;
 				s_srcrgb = a.a == 0 ? GL_ONE : GL_ZERO;
 				s_dstrgb = a.a == 0 ? GL_ZERO : GL_ONE;
 			}
-			else 
+			else
 			{
 				bAlphaClamping = 2;
 
@@ -4913,14 +4913,14 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 		// nothing is zero, so must do some real blending
 		//b2XAlphaTest = 1;
 		bAlphaClamping = 3;
-	
+
 		SET_ALPHA_COLOR_FACTOR(1);
-	
+
 		s_rgbeq = a.a == 0 ? GL_FUNC_SUBTRACT : GL_FUNC_REVERSE_SUBTRACT;
 		s_srcrgb = bDestAlphaColor == 2 ? GL_ONE : blendalpha[usec];
 		s_dstrgb = bDestAlphaColor == 2 ? GL_ONE : blendalpha[usec];
 	}
-	else if( a.a == 2 ) 
+	else if( a.a == 2 )
 	{ // zero
 
 		//b2XAlphaTest = 1;
@@ -4928,32 +4928,32 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 
 		SET_ALPHA_COLOR_FACTOR(1);
 
-		if( a.b == a.d ) 
+		if( a.b == a.d )
 		{
 			// can get away with 1-A
 			s_rgbeq = GL_FUNC_ADD;
 			s_srcrgb = (a.b == 0 && bDestAlphaColor != 2) ? blendinvalpha[usec] : GL_ZERO;
 			s_dstrgb = (a.b == 0 || bDestAlphaColor == 2) ? GL_ZERO : blendinvalpha[usec];
 		}
-		else 
+		else
 		{
 			s_rgbeq = a.b==0 ? GL_FUNC_REVERSE_SUBTRACT : GL_FUNC_SUBTRACT;
 			s_srcrgb = (a.b == 0 && bDestAlphaColor != 2) ? blendalpha[usec] : GL_ONE;
 			s_dstrgb = (a.b == 0 || bDestAlphaColor == 2 ) ? GL_ONE : blendalpha[usec];
 		}
 	}
-	else if( a.b == 2 ) 
+	else if( a.b == 2 )
 	{
 		bAlphaClamping = 2; // max testing
 
 		SET_ALPHA_COLOR_FACTOR(a.a!=a.d);
 
-		if( a.a == a.d ) 
+		if( a.a == a.d )
 		{
 			// can get away with 1+A, but need to set alpha to negative
 			s_rgbeq = GL_FUNC_ADD;
 
-			if( bDestAlphaColor == 2 ) 
+			if( bDestAlphaColor == 2 )
 			{
 				assert(usec==1);
 
@@ -4965,13 +4965,13 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 				s_srcrgb = (a.a == 0) ? GL_ONE_MINUS_SRC_ALPHA : GL_ZERO;
 				s_dstrgb = (a.a == 0) ? GL_ZERO : GL_ONE_MINUS_SRC_ALPHA;
 			}
-			else 
+			else
 			{
 				s_srcrgb = a.a == 0 ? blendinvalpha[usec] : GL_ZERO;
 				s_dstrgb = a.a == 0 ? GL_ZERO : blendinvalpha[usec];
 			}
 		}
-		else 
+		else
 		{
 			//b2XAlphaTest = 1;
 			s_rgbeq = GL_FUNC_ADD;
@@ -4979,18 +4979,18 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 			s_dstrgb = (a.a == 0 || bDestAlphaColor == 2) ? GL_ONE : blendalpha[usec];
 		}
 	}
-	else 
+	else
 	{
 		// all 3 components are valid!
 		bAlphaClamping = 3; // all testing
 		SET_ALPHA_COLOR_FACTOR(a.a!=a.d);
 
-		if( a.a == a.d ) 
+		if( a.a == a.d )
 		{
 			// can get away with 1+A, but need to set alpha to negative
 			s_rgbeq = GL_FUNC_ADD;
 
-			if( bDestAlphaColor == 2 ) 
+			if( bDestAlphaColor == 2 )
 			{
 				assert(usec==1);
 
@@ -5001,7 +5001,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 				s_srcrgb = a.a == 0 ? GL_ONE_MINUS_SRC_ALPHA : GL_SRC_ALPHA;
 				s_dstrgb = a.a == 0 ? GL_SRC_ALPHA : GL_ONE_MINUS_SRC_ALPHA;
 			}
-			else 
+			else
 			{
 				s_srcrgb = a.a == 0 ? blendinvalpha[usec] : blendalpha[usec];
 				s_dstrgb = a.a == 0 ? blendalpha[usec] : blendinvalpha[usec];
@@ -5012,7 +5012,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 			assert(a.b == a.d);
 			s_rgbeq = GL_FUNC_ADD;
 
-			if( bDestAlphaColor == 2 ) 
+			if( bDestAlphaColor == 2 )
 			{
 				assert(usec==1);
 
@@ -5023,7 +5023,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 				s_srcrgb = a.a != 0 ? GL_ONE_MINUS_SRC_ALPHA : GL_SRC_ALPHA;
 				s_dstrgb = a.a != 0 ? GL_SRC_ALPHA : GL_ONE_MINUS_SRC_ALPHA;
 			}
-			else 
+			else
 			{
 				//b2XAlphaTest = 1;
 				s_srcrgb = a.a != 0 ? blendinvalpha[usec] : blendalpha[usec];
@@ -5037,9 +5037,9 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	GL_BLEND_SET();
 	zgsBlendEquationSeparateEXT(s_rgbeq, s_alphaeq);
 
-	if( alphaenable ) 
+	if( alphaenable )
 		glEnable(GL_BLEND); // always set
-	else 
+	else
 		glDisable(GL_BLEND);
 
 	INC_ALPHAVARS();
@@ -5113,7 +5113,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 {
 	int cld = (highdword >> 29) & 0x7;
 	int cbp = ((highdword >>  5) & 0x3fff);
-	
+
 	// processing the CLUT after tex0/2 are written
 	switch(cld) {
 		case 0: return false;
@@ -5128,7 +5128,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 
 	int cpsm = (highdword >> 19) & 0xe;
 	int csm = (highdword >> 23) & 0x1;
-	
+
 	if( cpsm > 1 || csm )
 		// don't support 16bit for now
 		return true;
@@ -5176,7 +5176,7 @@ Start:
 		movq mm7, [edx+56]
 		pcmpeqd mm6, [ecx+40]
 		pcmpeqd mm7, [ecx+56]
-		
+
 		pand mm0, mm4
 		pand mm6, mm7
 		pand mm0, mm6
@@ -5193,11 +5193,11 @@ Continue:
 
 		test ebx, 0x10
 		jz AddEcx
-		sub ecx, 448 // go back and down one column, 
+		sub ecx, 448 // go back and down one column,
 AddEcx:
 		add ecx, 256 // go to the right block
 
-	
+
 		jne Continue1
 		add ecx, 256 // skip whole block
 Continue1:
@@ -5303,7 +5303,7 @@ void ZeroGS::texClutWrite(int ctx)
 
 	int entries = (tex0.psm & 3)==3 ? 256 : 16;
 
-	if (tex0.csm) 
+	if (tex0.csm)
 	{
 		switch (tex0.cpsm)
 		{
@@ -5314,33 +5314,33 @@ void ZeroGS::texClutWrite(int ctx)
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 				break;
 			}
-			
+
 			case PSMCT16S:
 			{
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16S_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 			break;
 			}
-		
+
 			case PSMCT32:
 			case PSMCT24:
 			{
@@ -5348,17 +5348,17 @@ void ZeroGS::texClutWrite(int ctx)
 				u32 *dst = (u32*)(g_pbyGSClut+64*tex0.csa);
 
 				// check if address exceeds src
-				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 ) 
+				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 )
 					ERROR_LOG("texClutWrite out of bounds\n");
-				else 
-					for(int i = 0; i < entries; ++i) 
+				else
+					for(int i = 0; i < entries; ++i)
 					{
 						*dst = src[getPixelAddress32_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 						dst++;
 					}
 			break;
 			}
-			
+
 			default:
 			{
 #ifdef ZEROGS_DEVBUILD
@@ -5368,7 +5368,7 @@ void ZeroGS::texClutWrite(int ctx)
 			}
 		}
 	}
-	else 
+	else
 	{
 		switch (tex0.cpsm)
 		{
@@ -5376,17 +5376,17 @@ void ZeroGS::texClutWrite(int ctx)
 			case PSMCT32:
 				if( entries == 16 )
 					WriteCLUT_T32_I4_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
-				else 
+				else
 					WriteCLUT_T32_I8_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
 				break;
-				
+
 			default:
 				if( entries == 16 )
 					WriteCLUT_T16_I4_CSM1((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				else // sse2 for 256 is more complicated, so use regular
 					WriteCLUT_T16_I8_CSM1_c((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				break;
-			
+
 		}
 	}
 }
@@ -5400,7 +5400,7 @@ void ZeroGS::SetTexFlush()
 //	if( PSMT_ISCLUT(vb[1].tex0.psm) )
 //		texClutWrite(1);
 
-	if( !s_bForceTexFlush ) 
+	if( !s_bForceTexFlush )
 	{
 		if (s_ptexCurSet[0] != s_ptexNextSet[0]) s_ptexCurSet[0] = s_ptexNextSet[0];
 		if (s_ptexCurSet[1] != s_ptexNextSet[1]) s_ptexCurSet[1] = s_ptexNextSet[1];
@@ -5414,7 +5414,7 @@ int ZeroGS::Save(char* pbydata)
 
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	strcpy(pbydata, libraryName);
 	*(u32*)(pbydata+16) = ZEROGS_SAVEVER;
 	pbydata += 32;
@@ -5462,7 +5462,7 @@ bool ZeroGS::Load(char* pbydata)
 
 		int context = *(int*)pbydata; pbydata += 4;
 		u32 savelimit = VBSAVELIMIT;
-		
+
 		savelimit = *(u32*)pbydata; pbydata += 4;
 
 		memcpy(g_pbyGSMemory, pbydata, 0x00400000);
@@ -5498,13 +5498,13 @@ bool ZeroGS::Load(char* pbydata)
 		for(int i = 0; i < 2; ++i) {
 			vb[i].Init(VB_BUFFERSIZE);
 			vb[i].bNeedZCheck = vb[i].bNeedFrameCheck = 1;
-			
+
 			vb[i].bSyncVars = 0; vb[i].bNeedTexCheck = 1;
 			memset(vb[i].uCurTex0Data, 0, sizeof(vb[i].uCurTex0Data));
 		}
 
 		icurctx = -1;
-		
+
 		glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, s_uFramebuffer ); // switch to the backbuffer
 		SetFogColor(gs.fogcol);
 
@@ -5541,7 +5541,7 @@ bool ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int j
 	}
 
 	if( jpeg ) return SaveJPEG(filename, width, height, &data[0], 70);
-	
+
 	return SaveTGA(filename, width, height, &data[0]);
 }
 
@@ -5571,7 +5571,7 @@ bool ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, c
 {
 	u8* image_buffer = new u8[image_width * image_height * 3];
 	u8* psrc = (u8*)pdata;
-	
+
 	// input data is rgba format, so convert to rgb
 	u8* p = image_buffer;
 	for(int i = 0; i < image_height; ++i) {
@@ -5711,9 +5711,9 @@ struct TGA_HEADER
 	s16 height;			 // image height in pixels
 	u8  bits;			   // image bits per pixel 8,16,24,32
 	u8  descriptor;		 // image descriptor bits (vh flip bits)
-	
+
 	// pixel data follows header
-	
+
 #if defined(_MSC_VER)
 };
 #pragma pack(pop)
@@ -5729,7 +5729,7 @@ bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 		return false;
 
 	assert( sizeof(TGA_HEADER) == 18 && sizeof(hdr) == 18 );
-	
+
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.imagetype = 2;
 	hdr.bits = 32;

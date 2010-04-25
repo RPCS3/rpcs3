@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -19,7 +19,7 @@
 #include "VUmicro.h"
 
 static u8* m_vuAllMem = NULL;
-static const uint m_vuMemSize = 
+static const uint m_vuMemSize =
 	0x1000 +					// VU0micro memory
 	0x4000+0x800 +				// VU0 memory and VU1 registers
 	0x4000 +					// VU1 memory
@@ -38,9 +38,9 @@ void vuMicroMemAlloc()
 	u8* curpos = m_vuAllMem;
 	VU0.Micro	= curpos; curpos += 0x1000;
 	VU0.Mem		= curpos; curpos += 0x4000;
-	g_pVU1		= (VURegs*)curpos; curpos += 0x800;	
+	g_pVU1		= (VURegs*)curpos; curpos += 0x800;
 	VU1.Micro	= curpos; curpos += 0x4000;
-	VU1.Mem		= curpos; 
+	VU1.Mem		= curpos;
 	 //curpos += 0x4000;
 }
 

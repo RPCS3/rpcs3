@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -41,12 +41,12 @@ protected:
 		void OnUsermodeChanged( wxCommandEvent& evt );
 		void OnCustomDirChanged( wxCommandEvent& evt );
 	};
-	
+
 protected:
 	UsermodePage&		m_page_usermode;
 	wxWizardPageSimple& m_page_plugins;
 	wxWizardPageSimple& m_page_bios;
-	
+
 	Panels::PluginSelectorPanel&	m_panel_PluginSel;
 	Panels::BiosSelectorPanel&		m_panel_BiosSel;
 
@@ -84,7 +84,7 @@ namespace Dialogs
 		static const wxChar* GetNameStatic() { return L"Dialog:AboutBox"; }
 	};
 
-	
+
 	class PickUserModeDialog : public BaseApplicableDialog
 	{
 	protected:
@@ -105,7 +105,7 @@ namespace Dialogs
 	public:
 		ImportSettingsDialog( wxWindow* parent );
 		virtual ~ImportSettingsDialog() throw() {}
-		
+
 	protected:
 		void OnImport_Click( wxCommandEvent& evt );
 		void OnOverwrite_Click( wxCommandEvent& evt );
@@ -125,7 +125,7 @@ namespace Dialogs
 	// The former means we can provide a "cancel" action for the user, which would itself
 	// open a new dialog in the latter category.  The latter means that there's really nothing
 	// we can do, since pthreads API provides no good way for killing threads.  The only
-	// valid options for the user in that case is to either wait (boring!) or kill the 
+	// valid options for the user in that case is to either wait (boring!) or kill the
 	// process (awesome!).
 
 	enum StuckThreadActionType
@@ -148,7 +148,7 @@ namespace Dialogs
 	public:
 		StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, Threading::PersistentThread& stuck_thread );
 		virtual ~StuckThreadDialog() throw() {}
-		
+
 	protected:
 		void OnThreadCleanup();
 	};

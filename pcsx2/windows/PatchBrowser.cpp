@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -43,7 +43,7 @@ BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             Button_SetText(GetDlgItem(hW,IDC_NEWPATCH), "New Patch");
 			Button_SetText(GetDlgItem(hW,IDC_SAVEPATCH), "Save Patch");
 			Button_SetText(GetDlgItem(hW,IDC_EXITPB), "Exit");
-            Static_SetText(GetDlgItem(hW,IDC_GAMENAMESEARCH), "Search game name patch:"); 
+            Static_SetText(GetDlgItem(hW,IDC_GAMENAMESEARCH), "Search game name patch:");
 			//List Patches
 			ListPatches ((HWND) hW);
 			return TRUE;
@@ -54,21 +54,21 @@ BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 				case IDC_NEWPATCH:
 
 					i = Save_Patch_Proc(fileName);
-					if ( i == FALSE || (fp = fopen(fileName,"a")) == NULL ) { 
+					if ( i == FALSE || (fp = fopen(fileName,"a")) == NULL ) {
 						MessageBox(hW,(LPCTSTR)"Couldn't create the file.",NULL,(UINT)MB_ICONERROR);
 						return FALSE;
 					}
 
 					fclose(fp);
 					i = MessageBox(hW,(LPCTSTR)"File created sucessfully.\nClear textbox?",NULL,(UINT)(MB_YESNO|MB_ICONQUESTION));
-					if (i==IDYES) SetDlgItemText(hW, IDC_PATCHTEXT, (LPCTSTR)""); 
+					if (i==IDYES) SetDlgItemText(hW, IDC_PATCHTEXT, (LPCTSTR)"");
 
 					return TRUE;
 
 				case IDC_SAVEPATCH:
 
 					i = Save_Patch_Proc(fileName);
-					if ( i == FALSE || (fp = fopen(fileName,"w")) == NULL ) { 
+					if ( i == FALSE || (fp = fopen(fileName,"w")) == NULL ) {
 						MessageBox(hW,(LPCTSTR)"Couldn't save the file.",NULL,(UINT)MB_ICONERROR);
 						return FALSE;
 					}
@@ -148,7 +148,7 @@ BOOL CALLBACK PatchBDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 					SendDlgItemMessage(hW, IDC_SEARCHPATCHTEXT, EM_GETLINE, 0, (LPARAM)fileName);
 					//search
 					tmpi = SendDlgItemMessage(hW, IDC_PATCHNAMELIST, LB_FINDSTRING, (WPARAM)-1, (LPARAM)fileName);
-					//select match item 
+					//select match item
 					SendDlgItemMessage(hW, IDC_PATCHNAMELIST, LB_SETCURSEL, (WPARAM)tmpi, (LPARAM)NULL);
 
 					return TRUE;
@@ -202,15 +202,15 @@ void ListPatches (HWND hW) {
 		sprintf(fileData,"");
 
 		//read file
-		while((tmpi=fgetc(fp)) != EOF) 
+		while((tmpi=fgetc(fp)) != EOF)
 			sprintf(fileData,"%s%c",fileData,tmpi);
 
 		//small hack :p
 		for(i=0;i<filesize;i++) {
-			if (fileData[i] == 'g' && fileData[i+1] == 'a' && 
-				fileData[i+2] == 'm' && fileData[i+3] == 'e' && 
+			if (fileData[i] == 'g' && fileData[i+1] == 'a' &&
+				fileData[i+2] == 'm' && fileData[i+3] == 'e' &&
 				fileData[i+4] == 't' && fileData[i+5] == 'i' &&
-				fileData[i+6] == 't' && fileData[i+7] == 'l' && 
+				fileData[i+6] == 't' && fileData[i+7] == 'l' &&
 				fileData[i+8] == 'e' && fileData[i+9] == '=')  {
 
 					for(i=i+10,tmpi=0;i<filesize;i++,tmpi++) {
@@ -235,7 +235,7 @@ void ListPatches (HWND hW) {
 
 		//add game name to patch name list
 		SendDlgItemMessage(hW, IDC_PATCHNAMELIST, (UINT) LB_ADDSTRING, (WPARAM)NULL, (LPARAM)tmpStr);
-		
+
 		totalPatch++;
 		sprintf(fileData,"");
 		fclose(fp);
@@ -269,7 +269,7 @@ int ReadPatch (HWND hW, char fileName[1024]) {
 	fileData = (char *) malloc(filesize+1024);
 	sprintf(fileData,"");
 
-	while((tmpi=fgetc(fp)) != EOF) 
+	while((tmpi=fgetc(fp)) != EOF)
 		sprintf(fileData,"%s%c",fileData,tmpi);
 
 	//for some reason windows editbox only show the newline
@@ -339,7 +339,7 @@ BOOL Save_Patch_Proc( char * filename )  {
 
 		strcpy( filename, szFileName );
 
-		return TRUE;             
+		return TRUE;
 	}
 	else {
 		return FALSE;

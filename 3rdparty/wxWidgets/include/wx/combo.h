@@ -605,7 +605,7 @@ protected:
 
     // should the focus be reset to the textctrl in idle time?
     bool                    m_resetFocus;
-    
+
 private:
     void Init();
 

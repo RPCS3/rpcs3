@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -42,10 +42,10 @@ extern void psxLWR();
 extern void psxSWL();
 extern void psxSWR();
 
-//// 
+////
 void rpsxADDIU_const()
 {
-	g_psxConstRegs[_Rt_] = g_psxConstRegs[_Rs_] + _Imm_; 
+	g_psxConstRegs[_Rt_] = g_psxConstRegs[_Rs_] + _Imm_;
 }
 
 // adds a constant to sreg and puts into dreg
@@ -394,7 +394,7 @@ void rpsxSLT_(int info)
     SETL8R   (EAX);
     AND32ItoR(EAX, 0xff);
 	MOV32RtoM((uptr)&psxRegs.GPR.r[_Rd_], EAX);
-}  
+}
 
 PSXRECOMPILE_CONSTCODE0(SLT);
 
@@ -413,7 +413,7 @@ void rpsxSLTU_consts(int info)
 }
 
 void rpsxSLTU_constt(int info) { rpsxSLTUconst(info, _Rd_, _Rs_, g_psxConstRegs[_Rt_]); }
-void rpsxSLTU_(int info) 
+void rpsxSLTU_(int info)
 {
 	// Rd = Rs < Rt (unsigned)
 	if (!_Rd_) return;
@@ -500,8 +500,8 @@ void rpsxDIVsuperconsts(int info, int sign)
 		CMP32ItoR(ECX, 0);
 		j8Ptr[0] = JE8(0);
 		MOV32ItoR(EAX, imm);
-		
-		
+
+
 		if( sign ) {
 		CDQ();
 		IDIV32R  (ECX);
@@ -531,7 +531,7 @@ void rpsxDIVsuperconstt(int info, int sign)
 		MOV32MtoR(EAX, (uptr)&psxRegs.GPR.r[_Rs_]);
 		MOV32ItoR(ECX, imm);
 		//CDQ();
-		
+
 		if( sign ) {
 			CDQ();
 			IDIV32R  (ECX);
@@ -554,7 +554,7 @@ void rpsxDIVsuper(int info, int sign)
 	CMP32ItoR(ECX, 0);
 	j8Ptr[0] = JE8(0);
 	MOV32MtoR(EAX, (uptr)&psxRegs.GPR.r[_Rs_]);
-	
+
 	if( sign ) {
 		CDQ();
 		IDIV32R  (ECX);
@@ -935,15 +935,15 @@ void rpsxJALR()
 	_allocX86reg(ESI, X86TYPE_PCWRITEBACK, 0, MODE_WRITE);
 	_psxMoveGPRtoR(ESI, _Rs_);
 
-	if ( _Rd_ ) 
+	if ( _Rd_ )
 	{
 		_psxDeleteReg(_Rd_, 0);
 		PSX_SET_CONST(_Rd_);
 		g_psxConstRegs[_Rd_] = psxpc + 4;
 	}
-	
+
 	psxRecompileNextInstruction(1);
-	
+
 	if( x86regs[ESI].inuse ) {
 		pxAssert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 		MOV32RtoM((uptr)&psxRegs.pc, ESI);
@@ -998,7 +998,7 @@ void rpsxSetBranchEQ(int info, int process)
 void rpsxBEQ_const()
 {
 	u32 branchTo;
-	
+
 	if( g_psxConstRegs[_Rs_] == g_psxConstRegs[_Rt_] )
 		branchTo = ((s32)_Imm_ * 4) + psxpc;
 	else
@@ -1025,12 +1025,12 @@ void rpsxBEQ_process(int info, int process)
 		psxSaveBranchState();
 
 		rpsxSetBranchEQ(info, process);
-		
+
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(branchTo);
 
 		if( JUMPVALID(s_pbranchjmp) ) {
-			x86SetJ8A( (u8*)s_pbranchjmp ); 
+			x86SetJ8A( (u8*)s_pbranchjmp );
 		}
 		else {
 			x86SetPtr( prevx86 );
@@ -1041,7 +1041,7 @@ void rpsxBEQ_process(int info, int process)
 			rpsxSetBranchEQ(info, process);
 			psxRecompileNextInstruction(1);
 			psxSetBranchImm(branchTo);
-			x86SetJ32A( (u32*)s_pbranchjmp ); 
+			x86SetJ32A( (u32*)s_pbranchjmp );
 		}
 
 		// recopy the next inst
@@ -1062,7 +1062,7 @@ PSXRECOMPILE_CONSTCODE3(BEQ, 0);
 void rpsxBNE_const()
 {
 	u32 branchTo;
-	
+
 	if( g_psxConstRegs[_Rs_] != g_psxConstRegs[_Rt_] )
 		branchTo = ((s32)_Imm_ * 4) + psxpc;
 	else
@@ -1093,7 +1093,7 @@ void rpsxBNE_process(int info, int process)
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(s_pbranchjmp) ) {
-		x86SetJ8A( (u8*)s_pbranchjmp ); 
+		x86SetJ8A( (u8*)s_pbranchjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1104,7 +1104,7 @@ void rpsxBNE_process(int info, int process)
 		rpsxSetBranchEQ(info, process);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( (u32*)s_pbranchjmp ); 
+		x86SetJ32A( (u32*)s_pbranchjmp );
 	}
 
 	// recopy the next inst
@@ -1125,7 +1125,7 @@ void rpsxBLTZ()
 {
 	// Branch if Rs < 0
 	u32 branchTo = (s32)_Imm_ * 4 + psxpc;
-	
+
 	_psxFlushAllUnused();
 
 	if( PSX_IS_CONST1(_Rs_) ) {
@@ -1147,7 +1147,7 @@ void rpsxBLTZ()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1157,7 +1157,7 @@ void rpsxBLTZ()
 		u32* pjmp32 = JL32(0);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	// recopy the next inst
@@ -1169,7 +1169,7 @@ void rpsxBLTZ()
 }
 
 //// BGEZ
-void rpsxBGEZ() 
+void rpsxBGEZ()
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + psxpc;
 
@@ -1194,7 +1194,7 @@ void rpsxBGEZ()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1204,7 +1204,7 @@ void rpsxBGEZ()
 		u32* pjmp32 = JGE32(0);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	// recopy the next inst
@@ -1250,7 +1250,7 @@ void rpsxBLTZAL()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1261,7 +1261,7 @@ void rpsxBLTZAL()
 		MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	// recopy the next inst
@@ -1284,7 +1284,7 @@ void rpsxBGEZAL()
 	if( PSX_IS_CONST1(_Rs_) ) {
 		if( (int)g_psxConstRegs[_Rs_] < 0 )
 			branchTo = psxpc+4;
-		else 
+		else
 			MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
 
 		psxRecompileNextInstruction(1);
@@ -1304,7 +1304,7 @@ void rpsxBGEZAL()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1315,7 +1315,7 @@ void rpsxBGEZAL()
 		MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	// recopy the next inst
@@ -1331,7 +1331,7 @@ void rpsxBLEZ()
 {
 	// Branch if Rs <= 0
 	u32 branchTo = (s32)_Imm_ * 4 + psxpc;
-	
+
 	_psxFlushAllUnused();
 
 	if( PSX_IS_CONST1(_Rs_) ) {
@@ -1355,7 +1355,7 @@ void rpsxBLEZ()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1365,7 +1365,7 @@ void rpsxBLEZ()
 		u32* pjmp32 = JLE32(0);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	psxpc -= 4;
@@ -1379,7 +1379,7 @@ void rpsxBGTZ()
 {
 	// Branch if Rs > 0
 	u32 branchTo = (s32)_Imm_ * 4 + psxpc;
-	
+
 	_psxFlushAllUnused();
 
 	if( PSX_IS_CONST1(_Rs_) ) {
@@ -1403,7 +1403,7 @@ void rpsxBGTZ()
 	psxSetBranchImm(psxpc);
 
 	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp ); 
+		x86SetJ8A( pjmp );
 	}
 	else {
 		x86SetPtr( prevx86 );
@@ -1413,7 +1413,7 @@ void rpsxBGTZ()
 		u32* pjmp32 = JG32(0);
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 ); 
+		x86SetJ32A( pjmp32 );
 	}
 
 	psxpc -= 4;
@@ -1716,7 +1716,7 @@ void rpsxpropCP0(EEINST* prev, EEINST* pinst)
 		case 2: // cfc0
 			rpsxpropSetWrite(_Rt_);
 			break;
-		
+
 		case 4: // mtc0
 		case 6: // ctc0
 			rpsxpropSetRead(_Rt_);

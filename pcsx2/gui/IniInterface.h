@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #pragma once
 
 #include <wx/config.h>
@@ -38,12 +38,12 @@ public:
 
 	void SetPath( const wxString& path );
 	void Flush();
-	
+
 	wxConfigBase& GetConfig() { return m_Config; }
 
 	virtual bool IsLoading() const=0;
 	bool IsSaving() const { return !IsLoading(); }
-	
+
 	virtual void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() )=0;
 	virtual void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() )=0;
 	virtual void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() )=0;

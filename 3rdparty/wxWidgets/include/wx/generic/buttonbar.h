@@ -6,7 +6,7 @@
 // Created:     2006-04-13
 // Id:          $Id: buttonbar.h 38714 2006-04-14 15:49:57Z JS $
 // Copyright:   (c) Julian Smart, Robert Roebling, Vadim Zeitlin,
-//              SciTech Software, Inc. 
+//              SciTech Software, Inc.
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -23,7 +23,7 @@ class WXDLLEXPORT wxButtonToolBarTool;
 // ----------------------------------------------------------------------------
 
 class WXDLLEXPORT wxButtonToolBar : public wxToolBarBase
-{    
+{
 public:
     // construction/destruction
     wxButtonToolBar() { Init(); }
@@ -45,7 +45,7 @@ public:
                  const wxSize& size = wxDefaultSize,
                  long style = 0,
                  const wxString& name = wxToolBarNameStr );
-                 
+
     virtual ~wxButtonToolBar();
 
     virtual bool Realize();

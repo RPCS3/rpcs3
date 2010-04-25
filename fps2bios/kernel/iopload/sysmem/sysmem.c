@@ -125,7 +125,7 @@ void *_start(u32 iopmemsize)
 
 	alloclist = (struct allocTABLE*)(((u32)&_alloclist + 255)  & 0xFFFFFF00); // round up
 	memsize = iopmemsize & 0xFFFFFF00;
-    
+
     //__printf("sysmem_start: %x, %x\n", memsize, ((u32)alloclist+sizeof(struct allocTABLE)));
     //Kprintnum((int)alloclist);  Kputs(" alloclist\n");
     //Kprintnum((int)&alloclist);  Kputs(" &alloclist\n");
@@ -156,7 +156,7 @@ void *sysmem_init_memory(){	//mark all mem as not allocated, available
 	alloclist->list[smFIRST].info &= 0x0001FFFF;
 	alloclist->list[smFIRST].info |= (((memsize<0 ?
 				 memsize+255:memsize) >> 8) << 17);
-    
+
     // _end ~= alloclist + sizeof(struct alocTABLE);
 
     //this is not NULL! but the starting address of the first 0x1500 bytes allocated
@@ -315,7 +315,7 @@ void *alloc(int flags, int size, void *mem){
 			return (void*)(mADDRESS(a->info) << 8);
 		}
 
-		a->info = (a->info & 0x0001FFFF) | 
+		a->info = (a->info & 0x0001FFFF) |
 		   ((mSIZE(a->info) - bsize) << 17);	//put rest of block
 
 		i =  	(((i & 0xFFFF0001)//this line has no use; this is stupid
@@ -344,7 +344,7 @@ void *alloc(int flags, int size, void *mem){
 				break;
 		}
 		if (a==0) return NULL;
-                
+
 		if (mADDRESS(a->info) < baddress){
 			tmp = mADDRESS(a->info) + mSIZE(a->info) - baddress;
 			a->info= (a->info & 0x1FFFF) |
@@ -423,8 +423,8 @@ int  free(void *mem){
 
 	if (!mALLOCATED(a->info))return -1;	//cannot free a freed block
 
-	n=NULL;	
-	skip=0;	
+	n=NULL;
+	skip=0;
 
 	a->info&=0xFFFFFFFE;	//free block
 
@@ -438,7 +438,7 @@ int  free(void *mem){
 	if (p && (!mALLOCATED(p->info))){	//bind with previous free block
 		n=a;
 		skip++;			// or skip=2;
-		p->info=(p->info & 0x1FFFF) | 
+		p->info=(p->info & 0x1FFFF) |
 		  ((mSIZE(p->info) + mSIZE(a->info)) << 17);
 	}
 
@@ -504,7 +504,7 @@ void maintain(){
 struct allocELEM *findblock(void *a){ // it finds the block for a given address
      struct allocELEM *p;
 	for (p = alloclist->list; p; p=p->next)
-		if (((unsigned int)a >= (mADDRESS(p->info) << 8)) && 
+		if (((unsigned int)a >= (mADDRESS(p->info) << 8)) &&
 		    ((unsigned int)a <  (mADDRESS(p->info) << 8) + mSIZE(p->info)))
 			break;
 	return p;

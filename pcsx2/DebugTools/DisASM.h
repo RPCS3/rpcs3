@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -25,9 +25,9 @@
 ///********
 
 #define DECODE_FUNCTION     ((cpuRegs.code) & 0x3F)
-#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register 
-#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register 
-#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register 
+#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register
+#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register
+#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register
 #define DECODE_SA     ((cpuRegs.code >>  6) & 0x1F) // The sa part of the instruction register
 #define DECODE_IMMED     ( cpuRegs.code & 0xFFFF)      // The immediate part of the instruction register
 #define DECODE_OFFSET  ((((short)DECODE_IMMED * 4) + opcode_addr + 4))
@@ -36,14 +36,14 @@
 #define DECODE_BREAK        (DECODE_SYSCALL)
 #define DECODE_C0BC         ((cpuRegs.code >> 16) & 0x03)
 #define DECODE_C1BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)   
+#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)
 
 //IOP
 
-#define DECODE_RD_IOP     ((psxRegs.code >> 11) & 0x1F) 
-#define DECODE_RT_IOP     ((psxRegs.code >> 16) & 0x1F) 
-#define DECODE_RS_IOP     ((psxRegs.code >> 21) & 0x1F) 
-#define DECODE_IMMED_IOP   ( psxRegs.code & 0xFFFF)  
+#define DECODE_RD_IOP     ((psxRegs.code >> 11) & 0x1F)
+#define DECODE_RT_IOP     ((psxRegs.code >> 16) & 0x1F)
+#define DECODE_RS_IOP     ((psxRegs.code >> 21) & 0x1F)
+#define DECODE_IMMED_IOP   ( psxRegs.code & 0xFFFF)
 #define DECODE_SA_IOP    ((psxRegs.code >>  6) & 0x1F)
 #define DECODE_FS_IOP           (DECODE_RD_IOP)
 

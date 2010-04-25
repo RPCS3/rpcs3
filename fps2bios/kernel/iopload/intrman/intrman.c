@@ -124,13 +124,13 @@ int RegisterIntrHandler(int interrupt, int mode, intrh_func handler, void *arg)
 	}
 	int real_interrupt = interrupt;
 	int real_mode = mode;
-	
+
 	if (interrupt >= 0x2E){
-		real_interrupt -= 0x10;	
+		real_interrupt -= 0x10;
 	} else if (interrupt >= 0x20){
-		real_mode = 0;	
+		real_mode = 0;
 	}
-	
+
 	if (intrtable[real_interrupt].handler){
 		CpuResumeIntr(ictrl);
 		_dprintf("%s ERROR_DOES_EXIST\n", __FUNCTION__);
@@ -158,13 +158,13 @@ int ReleaseIntrHandler(int interrupt)
 		return ERROR_ILLEGAL_INTRCODE;
 	}
 	if (interrupt >= 0x2E){
-		interrupt -= 0x10;	
+		interrupt -= 0x10;
 	}
-	
+
 	if (intrtable[interrupt].handler){
 		intrtable[interrupt].handler = 0;
 		CpuResumeIntr(ictrl);
-		return 0;		
+		return 0;
 	}
 	CpuResumeIntr(ictrl);
 	return ERROR_DOES_EXIST;
@@ -265,7 +265,7 @@ void intrman_syscall_0C()
 //
 // Interrupt:
 //       0 - 0x1F  normal interrupt
-//    0x20 - 0x26  
+//    0x20 - 0x26
 //    0x27 - 0x2D
 //
 // Return 0 for success, -101 for invalid interrupt number
@@ -283,7 +283,7 @@ int EnableIntr(int interrupt)
     int retval = 0;
     u32 low_irq  = interrupt & 0xFF;
     u32 high_irq = interrupt & 0xFFFFFF00;
-    
+
     u32 ictrl;
     CpuSuspendIntr(&ictrl);
 
@@ -297,10 +297,10 @@ int EnableIntr(int interrupt)
             | (1 << (INUM_DMA_BERR-INUM_DMA_0 + 16))
             | (1<<(low_irq-INUM_DMA_0+0x10))
             | ((high_irq & IMODE_DMA_IRM) ? (1<<(low_irq-INUM_DMA_0)) : 0);
-            
+
         DMA_ICR2 = (DMA_ICR2 & ((~(1<<(low_irq-INUM_DMA_0)))&0x00FFFFFF))
             | ((high_irq & IMODE_DMA_IQE) ? (1<<(low_irq-0x10)) : 0);
-        
+
         IMASK |= 1<<INUM_DMA;
     } else if ( (low_irq-INUM_DMA_7)<6){ // low_irq = 0x27 isn't handled?
 
@@ -310,12 +310,12 @@ int EnableIntr(int interrupt)
 
         DMA_ICR2=(DMA_ICR2&(~(1<<(low_irq-INUM_DMA_7 + (INUM_DMA_BERR-INUM_DMA_0))) & 0x00FFFFFF)) | (1<<(low_irq-INUM_DMA_7+0x10)) | extra;
         DMA_ICR |= (DMA_ICR&0x00FFFFFF)| (1 << (INUM_DMA_BERR-INUM_DMA_0 + 16));
-        
+
         IMASK |= 1<<INUM_DMA;
     } else {
         retval = ERROR_BAD_NUMBER;
     }
-    
+
     CpuResumeIntr(ictrl);
     return retval;
 }
@@ -402,9 +402,9 @@ void intrman_call16(int interrupt)
 {
     u32 ictrl;
     CpuSuspendIntr(&ictrl);
-    
+
     interrupt &= 0xFF;
-    
+
     if (interrupt < 0x20){
         soft_hw_intr_mask |= (1 << interrupt);
     } else if (interrupt < 0x28){
@@ -412,7 +412,7 @@ void intrman_call16(int interrupt)
     } else if (interrupt < 0x2E){
         unknown2[2] |= 1 << (interrupt-0x10);
     }
-    
+
     CpuResumeIntr(ictrl);
 }
 
@@ -422,9 +422,9 @@ void intrman_call15(int interrupt)
 {
     u32 ictrl;
     CpuSuspendIntr(&ictrl);
-    
+
     interrupt &= 0xFF;
-    
+
     if (interrupt < 0x20){
         soft_hw_intr_mask &= ~(1 << interrupt);
     } else if (interrupt < 0x28){
@@ -432,7 +432,7 @@ void intrman_call15(int interrupt)
     } else if (interrupt < 0x2E){
         unknown2[2] &= ~(1 << (interrupt-0x10));
     }
-    
+
     CpuResumeIntr(ictrl);
 }
 
@@ -452,7 +452,7 @@ int IntrHandler()
 
 
 	while (masked_icr & 0x7F008000){
-		int i;		
+		int i;
 		if (masked_icr & 0x00008000){
 			// Int 0x25
 			func int_func = (func)(intrtable[0x25].handler & 0xFFFFFFFC);
@@ -463,7 +463,7 @@ int IntrHandler()
 		}
 		// Check each DMA interrupt
 		// The bits 24 - 30 are set for DMA channels 0 - 6 (ints 0x20 - 0x26 respectively)
-        // The bits 16 - 23 are the corresponding mask bits - the interrupt is only generated if the mask bit is set. 
+        // The bits 16 - 23 are the corresponding mask bits - the interrupt is only generated if the mask bit is set.
 		for (i=0; i < 7; ++i){
 			u32 ibit = 0x01000000 << i;
 			if (masked_icr & ibit){
@@ -549,7 +549,7 @@ int QueryIntrContext()
 {
 	unsigned char* sp;
 	__asm__ ("move   %0, $29\n" : "=r"(sp) :);
- 
+
 	return QueryIntrStack(sp);
 }
 
@@ -678,7 +678,7 @@ int _start(){
 		intrtable[i].handler = 0;
 		intrtable[i].arg = 0;
 	}
- 
+
 	soft_hw_intr_mask  = 0xFFFFFFFF;
 	unknown2[1] = -1;
 	unknown2[2] = -1;

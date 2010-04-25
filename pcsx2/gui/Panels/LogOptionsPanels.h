@@ -28,7 +28,7 @@ namespace Panels
 		CheckedStaticBox*	m_disasmPanel;
 		CheckedStaticBox*	m_hwPanel;
 		CheckedStaticBox*	m_evtPanel;
-		
+
 		pxCheckBox*			m_Memory;
 		pxCheckBox*			m_Bios;
 		pxCheckBox*			m_Cache;
@@ -54,7 +54,7 @@ namespace Panels
 	public:
 		eeLogOptionsPanel( LogOptionsPanel* parent );
 		virtual ~eeLogOptionsPanel() throw() {}
-		
+
 		void OnSettingsChanged();
 		void Apply();
 	};

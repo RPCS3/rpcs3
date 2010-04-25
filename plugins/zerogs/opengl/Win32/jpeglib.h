@@ -131,9 +131,9 @@ typedef struct {
   /* The decompressor output side may not use these variables. */
   int dc_tbl_no;		/* DC entropy table selector (0..3) */
   int ac_tbl_no;		/* AC entropy table selector (0..3) */
-  
+
   /* Remaining fields should be treated as private by applications. */
-  
+
   /* These values are computed during compression or decompression startup: */
   /* Component's size in DCT blocks.
    * Any dummy blocks added to complete an MCU are not counted; therefore
@@ -301,14 +301,14 @@ struct jpeg_compress_struct {
 
   jpeg_component_info * comp_info;
   /* comp_info[i] describes component that appears i'th in SOF */
-  
+
   JQUANT_TBL * quant_tbl_ptrs[NUM_QUANT_TBLS];
   /* ptrs to coefficient quantization tables, or NULL if not defined */
-  
+
   JHUFF_TBL * dc_huff_tbl_ptrs[NUM_HUFF_TBLS];
   JHUFF_TBL * ac_huff_tbl_ptrs[NUM_HUFF_TBLS];
   /* ptrs to Huffman coding tables, or NULL if not defined */
-  
+
   UINT8 arith_dc_L[NUM_ARITH_TBLS]; /* L values for DC arith-coding tables */
   UINT8 arith_dc_U[NUM_ARITH_TBLS]; /* U values for DC arith-coding tables */
   UINT8 arith_ac_K[NUM_ARITH_TBLS]; /* Kx values for AC arith-coding tables */
@@ -348,7 +348,7 @@ struct jpeg_compress_struct {
   UINT16 X_density;		/* Horizontal pixel density */
   UINT16 Y_density;		/* Vertical pixel density */
   boolean write_Adobe_marker;	/* should an Adobe marker be written? */
-  
+
   /* State variable: index of next scanline to be written to
    * jpeg_write_scanlines().  Application may use this to control its
    * processing loop, e.g., "while (next_scanline < image_height)".
@@ -373,7 +373,7 @@ struct jpeg_compress_struct {
    * There are v_samp_factor * DCTSIZE sample rows of each component in an
    * "iMCU" (interleaved MCU) row.
    */
-  
+
   /*
    * These fields are valid during any one scan.
    * They describe the components and MCUs actually appearing in the scan.
@@ -381,10 +381,10 @@ struct jpeg_compress_struct {
   int comps_in_scan;		/* # of JPEG components in this scan */
   jpeg_component_info * cur_comp_info[MAX_COMPS_IN_SCAN];
   /* *cur_comp_info[i] describes component that appears i'th in SOS */
-  
+
   JDIMENSION MCUs_per_row;	/* # of MCUs across the image */
   JDIMENSION MCU_rows_in_scan;	/* # of MCU rows in the image */
-  
+
   int blocks_in_MCU;		/* # of DCT blocks per MCU */
   int MCU_membership[C_MAX_BLOCKS_IN_MCU];
   /* MCU_membership[i] is index in cur_comp_info of component owning */
@@ -655,7 +655,7 @@ struct jpeg_error_mgr {
 #define JMSG_LENGTH_MAX  200	/* recommended size of format_message buffer */
   /* Reset error state variables at start of a new image */
   JMETHOD(void, reset_error_mgr, (j_common_ptr cinfo));
-  
+
   /* The message ID code and any parameters are saved here.
    * A message can have one string parameter or up to 8 int parameters.
    */
@@ -665,11 +665,11 @@ struct jpeg_error_mgr {
     int i[8];
     char s[JMSG_STR_PARM_MAX];
   } msg_parm;
-  
+
   /* Standard state variables for error facility */
-  
+
   int trace_level;		/* max msg_level that will be displayed */
-  
+
   /* For recoverable corrupt-data errors, we emit a warning message,
    * but keep going unless emit_message chooses to abort.  emit_message
    * should count warnings in num_warnings.  The surrounding application
@@ -827,7 +827,7 @@ typedef JMETHOD(boolean, jpeg_marker_parser_method, (j_decompress_ptr cinfo));
 /* Short forms of external names for systems with brain-damaged linkers.
  * We shorten external names to be unique in the first six letters, which
  * is good enough for all known systems.
- * (If your compiler itself needs names to be unique in less than 15 
+ * (If your compiler itself needs names to be unique in less than 15
  * characters, you are out of luck.  Get a better compiler.)
  */
 

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -60,7 +60,7 @@ void RefreshListBox(HWND hWnd)
 	ListView_DeleteAllItems(GetDlgItem(hWnd,IDC_PATCHES));
 
 	char Address[100], CPU[100], Data[100], Enabled[100], Group[100], PlaceToPatch[100], Type[100];
-	
+
 	LVITEM   item[7]={
 		{LVIF_TEXT|LVIF_STATE,0,0,0,0,Address,0,0,0,0},
 		{LVIF_TEXT|LVIF_STATE,0,1,0,0,CPU,0,0,0,0},
@@ -73,7 +73,7 @@ void RefreshListBox(HWND hWnd)
 
 	char datatype[4][10]={"byte", "short", "word", "double"};
 	char cpucore[2][10]={"EE", "IOP"};
-	
+
 	// Adding items
 	for (int i = patchnumber-1; i >= 0; i--)
 	{
@@ -92,7 +92,7 @@ void RefreshListBox(HWND hWnd)
 		ListView_SetItem(GetDlgItem(hWnd,IDC_PATCHES),&item[4]);
 		ListView_SetItem(GetDlgItem(hWnd,IDC_PATCHES),&item[5]);
 		ListView_SetItem(GetDlgItem(hWnd,IDC_PATCHES),&item[6]);
-	}	
+	}
 }
 
 
@@ -102,10 +102,10 @@ unsigned char gsv3_bseeds1[256] = {
 0xD9, 0x6F, 0x79, 0x39, 0x7E, 0xCC, 0x9A, 0x4E, 0x1E, 0xF4, 0xA7, 0x3D, 0x05, 0x75, 0xD0, 0x36,
 0x9E, 0x8D, 0xF8, 0x8B, 0x96, 0x7A, 0xBF, 0x49, 0x62, 0x4F, 0x2A, 0xB8, 0xAF, 0x60, 0x80, 0x0D,
 0x99, 0x89, 0xA9, 0xED, 0xB6, 0xD5, 0x7B, 0x54, 0x56, 0x65, 0x5C, 0xB3, 0xD3, 0x11, 0xDF, 0x27,
-0x10, 0x71, 0x91, 0x3E, 0x25, 0x52, 0x46, 0x15, 0x3A, 0x31, 0x51, 0x81, 0xC5, 0xB1, 0xBE, 0x43, 
+0x10, 0x71, 0x91, 0x3E, 0x25, 0x52, 0x46, 0x15, 0x3A, 0x31, 0x51, 0x81, 0xC5, 0xB1, 0xBE, 0x43,
 0x95, 0x7C, 0x83, 0x53, 0x38, 0x88, 0x21, 0x4C, 0x9B, 0x7F, 0x90, 0xB9, 0xDB, 0x55, 0x33, 0xB7,
 0xAD, 0x61, 0xD8, 0xE1, 0xE4, 0x20, 0xDC, 0x5F, 0xA4, 0x67, 0x26, 0x97, 0x2E, 0xAC, 0x7D, 0x24,
-0xBD, 0x22, 0x04, 0x6C, 0xC0, 0x73, 0xE0, 0x32, 0x0C, 0xA3, 0xEE, 0x2B, 0xA0, 0x8A, 0x5B, 0xF3, 
+0xBD, 0x22, 0x04, 0x6C, 0xC0, 0x73, 0xE0, 0x32, 0x0C, 0xA3, 0xEE, 0x2B, 0xA0, 0x8A, 0x5B, 0xF3,
 0xA6, 0xD1, 0x68, 0x8E, 0xAE, 0xC7, 0x9C, 0x82, 0xB4, 0xF9, 0xF6, 0xC4, 0x1B, 0xAB, 0x57, 0xCE,
 0xEF, 0x69, 0xF7, 0x74, 0xFF, 0xA2, 0x6D, 0xF5, 0xB2, 0x0A, 0x37, 0x1F, 0xEC, 0x06, 0x5D, 0x0F,
 0xB0, 0x08, 0xD7, 0xE3,	0x85, 0x58, 0x1A, 0x9F, 0x1D, 0x84, 0xE9, 0xEB, 0x0E, 0x66, 0x64, 0x40,
@@ -197,7 +197,7 @@ u8 DecryptGS2v3(u32* address, u32* value, u8 ctrl)
 						}
 					}
 				}
-				
+
 				*address = tmp ^ (gsv3_hseeds[2] << 3);
 				*value = tmp2 ^ gsv3_hseeds[2];
 				break;
@@ -259,7 +259,7 @@ u8 DecryptGS2v3(u32* address, u32* value, u8 ctrl)
 			*address =  tmp & 0xF1FFFFFF;
 			break;
 		}
-	
+
 		case 2:
 		{
 			if(encFlag == 2)
@@ -388,8 +388,8 @@ BOOL CALLBACK AddGS(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			hParent=(HWND)lParam;
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
@@ -431,8 +431,8 @@ BOOL CALLBACK AddGS(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					break;
 
 				}
-					
-				
+
+
 				case IDOK: // Add the code
 				{
 					std::vector<Cheat> Cheats;
@@ -479,7 +479,7 @@ BOOL CALLBACK AddGS(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		default:
 			return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -500,15 +500,15 @@ BOOL CALLBACK AddRAW(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			hParent=(HWND)lParam;
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-					
+
 				case IDOK: // Add the code
 				{
 					std::vector<Cheat> Cheats;
@@ -553,7 +553,7 @@ BOOL CALLBACK AddRAW(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		default:
 			return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -645,10 +645,10 @@ BOOL CALLBACK AddPatchProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			// Address
 			SetWindowText(GetDlgItem(hWnd, IDC_ADDRESS), "0x00000000");
-			
+
 			// Data
 			SetWindowText(GetDlgItem(hWnd, IDC_DATA), "0x00000000");
-			
+
 			// Group
 			SetWindowText(GetDlgItem(hWnd, IDC_GROUP), "0");
 
@@ -661,38 +661,38 @@ BOOL CALLBACK AddPatchProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_ADDSTRING, 0, (LPARAM)"No");
 			SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_ADDSTRING, 0, (LPARAM)"Yes");
 			SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_SETCURSEL, (WPARAM)0, 0);
-			
+
 			// PlaceToPatch ComboBox
 			SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_ADDSTRING, 0, (LPARAM)"0");
 			SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_ADDSTRING, 0, (LPARAM)"1");
 			SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_SETCURSEL, (WPARAM)0, 0);
-			
+
 			// Type ComboBox
 			SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"byte");
 			SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"short");
 			SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"word");
 			SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"double");
 			SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_SETCURSEL, (WPARAM)0, 0);
-			
+
 			// Spin Control
 			SendMessage(GetDlgItem(hWnd, IDC_SPIN1), UDM_SETBUDDY, (WPARAM)GetDlgItem(hWnd, IDC_GROUP), 0);
 			SendMessage(GetDlgItem(hWnd, IDC_SPIN1), UDM_SETRANGE32, (WPARAM)(0-0x80000000), (LPARAM)0x7FFFFFFF);
-			
+
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-				
+
 				case IDC_SAVE: // Add the code
 				{
 					IniPatch temp;
-					
+
 					if(ReadPatch(hWnd, temp) == 0)
 						break;
 
@@ -712,7 +712,7 @@ BOOL CALLBACK AddPatchProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		default:
 			return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -731,9 +731,9 @@ BOOL CALLBACK EditPatch(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		case WM_PAINT:
 			return FALSE;
 		case WM_INITDIALOG:
-		{	
+		{
 			hParent=(HWND)lParam;
-			
+
 			// Find the selected patch
 			UINT mresults = ListView_GetItemCount(GetDlgItem(hParent, IDC_PATCHES));
 
@@ -749,11 +749,11 @@ BOOL CALLBACK EditPatch(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					// Address
 					sprintf(chepa, "0x%.8X", patch[i].addr);
 					SetWindowText(GetDlgItem(hWnd, IDC_ADDRESS), chepa);
-					
+
 					// Data
 					sprintf(chepa, "0x%.8X", patch[i].data);
 					SetWindowText(GetDlgItem(hWnd, IDC_DATA), chepa);
-					
+
 					// Group
 					sprintf(chepa, "%d", patch[i].group);
 					SetWindowText(GetDlgItem(hWnd, IDC_GROUP), chepa);
@@ -770,19 +770,19 @@ BOOL CALLBACK EditPatch(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_ADDSTRING, 0, (LPARAM)"No");
 					SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_ADDSTRING, 0, (LPARAM)"Yes");
 					SendMessage(GetDlgItem(hWnd, IDC_ENABLED), CB_SETCURSEL, (WPARAM)patch[i].enabled, 0);
-					
+
 					// PlaceToPatch ComboBox
 					SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_ADDSTRING, 0, (LPARAM)"0");
 					SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_ADDSTRING, 0, (LPARAM)"1");
 					SendMessage(GetDlgItem(hWnd, IDC_PLACETOPATCH), CB_SETCURSEL, (WPARAM)patch[i].placetopatch, 0);
-					
+
 					// Type ComboBox
 					SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"byte");
 					SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"short");
 					SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"word");
 					SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_ADDSTRING, 0, (LPARAM)"double");
 					SendMessage(GetDlgItem(hWnd, IDC_TYPE), CB_SETCURSEL, (WPARAM)patch[i].type-1, 0);
-					
+
 					// Spin Control
 					SendMessage(GetDlgItem(hWnd, IDC_SPIN1), UDM_SETBUDDY, (WPARAM)GetDlgItem(hWnd, IDC_GROUP), 0);
 					SendMessage(GetDlgItem(hWnd, IDC_SPIN1), UDM_SETRANGE32, (WPARAM)(0-0x80000000), (LPARAM)0x7FFFFFFF);
@@ -793,23 +793,23 @@ BOOL CALLBACK EditPatch(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			// If nothing is selected close the window
 			if(i == mresults)
 				EndDialog(hWnd,1);
-			
+
 			break;
 		}
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-				
+
 				case IDC_SAVE: // Add the code
 				{
 					IniPatch temp;
-					
+
 					if(ReadPatch(hWnd, temp) == 0)
 						break;
 
@@ -828,7 +828,7 @@ BOOL CALLBACK EditPatch(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		default:
 			return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -853,10 +853,10 @@ BOOL CALLBACK pnachWriterProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			// try to load value
 			if(ElfCRC != 0){}
-			
+
 			// Comment
 			SetWindowText(GetDlgItem(hWnd, IDC_COMMENT), "Insert comment.");
-			
+
 			// Gametitle
 			SetWindowText(GetDlgItem(hWnd, IDC_GAMETITLE), "Insert Game Title.");
 
@@ -881,15 +881,15 @@ BOOL CALLBACK pnachWriterProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDCANCEL:
 					EndDialog(hWnd,1);
 					break;
-				
+
 				case IDC_SAVE: // Add the code
 				{
 					char filename[1024];
@@ -950,7 +950,7 @@ BOOL CALLBACK pnachWriterProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					{
 						fprintf(fp, "vunanmode\n");
 					}
-					
+
 					// write patches
 					for(int i=0;i<patchnumber;i++)
 					{
@@ -980,7 +980,7 @@ BOOL CALLBACK pnachWriterProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 								strcpy(type, "double");
 								break;
 						}
-						//patch=placetopatch,cpucore,address,type,data 
+						//patch=placetopatch,cpucore,address,type,data
 						fprintf(fp, "patch=%d,%s,%.8x,%s,%.8x\n", patch[i].placetopatch, cpucore, patch[i].addr, type, patch[i].data);
 					}
 
@@ -998,7 +998,7 @@ BOOL CALLBACK pnachWriterProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		default:
 			return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -1022,8 +1022,8 @@ BOOL CALLBACK BrowserProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			break;
 
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{

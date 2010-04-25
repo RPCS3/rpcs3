@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #include "analog.h"
 PADAnalog g_lanalog[NUM_OF_PADS], g_ranalog[NUM_OF_PADS];
 
@@ -31,25 +31,25 @@ namespace Analog
 			case PAD_LX:
 				return g_lanalog[pad].x;
 				break;
-			
+
 			case PAD_RX:
 				return g_ranalog[pad].x;
 				break;
-			
+
 			case PAD_LY:
 				return g_lanalog[pad].y;
 				break;
-			
+
 			case PAD_RY:
 				return g_ranalog[pad].y;
 				break;
-			
+
 			default:
 				return 0;
 				break;
 		}
 	}
-	
+
 	void SetPad(u8 pad, int index, u8 value)
 	{
 		switch (index)
@@ -57,34 +57,34 @@ namespace Analog
 			case PAD_LX:
 				g_lanalog[pad].x = value;
 				break;
-			
+
 			case PAD_RX:
 				g_ranalog[ pad].x = value;
 				break;
-			
+
 			case PAD_LY:
 				g_lanalog[ pad].y = value;
 				break;
-			
+
 			case PAD_RY:
 				g_ranalog[pad].y = value;
 				break;
-			
+
 			default:
 				break;
 		}
 	}
-	
+
 	void InvertPad(u8 pad, int key)
 	{
 		SetPad(pad, key, -Pad(pad, key));
 	}
-	
+
 	void ResetPad( u8 pad, int key)
 	{
 		SetPad(pad, key, 0x80);
 	}
-	
+
 	void Init()
 	{
 		for (u8 pad = 0; pad < 2; ++pad)
@@ -95,7 +95,7 @@ namespace Analog
 			ResetPad(pad, PAD_RY);
 		}
 	}
-	
+
 	bool RevertPad(u8 index)
 	{
 		switch (index)
@@ -103,25 +103,25 @@ namespace Analog
 			case PAD_LX:
 				return ((conf.options & PADOPTION_REVERTLX) != 0);
 				break;
-			
+
 			case PAD_RX:
 				return ((conf.options & PADOPTION_REVERTRX) != 0);
 				break;
-			
+
 			case PAD_LY:
 				return ((conf.options & PADOPTION_REVERTLY) != 0);
 				break;
-			
+
 			case PAD_RY:
 				return ((conf.options & PADOPTION_REVERTRY) != 0);
 				break;
-			
+
 			default:
 				return false;
 				break;
 		}
 	}
-	
+
 	void ConfigurePad( u8 pad, int index, int value)
 	{
 		Pad(pad, index);
@@ -129,7 +129,7 @@ namespace Analog
 		if (RevertPad(index)) InvertPad(pad,index);
 		SetPad(pad, index, Pad(pad, index) + 0x80);
 	}
-	
+
 	int AnalogToPad(int index)
 	{
 		switch (index)

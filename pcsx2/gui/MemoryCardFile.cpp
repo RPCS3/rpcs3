@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -36,7 +36,7 @@ static const int MCD_SIZE = 1024 *  8  * 16;		// Legacy PSX card default size
 static const int MC2_SIZE = 1024 * 528 * 16;		// PS2 card default size.
 
 // --------------------------------------------------------------------------------------
-//  FileMemoryCard 
+//  FileMemoryCard
 // --------------------------------------------------------------------------------------
 // Provides thread-safe direct file IO mapping.
 //
@@ -93,7 +93,7 @@ FileMemoryCard::FileMemoryCard()
 				if( !Create( str ) )
 				{
 					Msgbox::Alert(
-						wxsFormat( _( "Could not create a MemoryCard file: \n\n%s\n\n" ), str.c_str() ) + 
+						wxsFormat( _( "Could not create a MemoryCard file: \n\n%s\n\n" ), str.c_str() ) +
 						GetDisabledMessage( port, slot )
 					);
 				}
@@ -109,9 +109,9 @@ FileMemoryCard::FileMemoryCard()
 				// Translation note: detailed description should mention that the memory card will be disabled
 				// for the duration of this session.
 				Msgbox::Alert(
-					wxsFormat( _( "Access denied to MemoryCard file: \n\n%s\n\n" ), str.c_str() ) + 
+					wxsFormat( _( "Access denied to MemoryCard file: \n\n%s\n\n" ), str.c_str() ) +
 					GetDisabledMessage( port, slot )
-				); 
+				);
 			}
 		}
 	}
@@ -123,11 +123,11 @@ bool FileMemoryCard::Seek( wxFFile& f, u32 adr )
 	const u32 size = f.Length();
 
 	// If anyone knows why this filesize logic is here (it appears to be related to legacy PSX
-	// cards, perhaps hacked support for some special emulator-specific memcard formats that 
+	// cards, perhaps hacked support for some special emulator-specific memcard formats that
 	// had header info?), then please replace this comment with something useful.  Thanks!  -- air
 
 	u32 offset = 0;
-	
+
 	if( size == MCD_SIZE + 64 )
 		offset = 64;
 	else if( size == MCD_SIZE + 3904 )

@@ -118,7 +118,7 @@ void CDVDSettingsDlg::UpdateDrives()
 			path = format("\\\\.\\%c:", i);
 
 			CDVD cdvd;
-			
+
 			if(cdvd.Open(path.c_str()))
 			{
 				string str = cdvd.GetLabel();

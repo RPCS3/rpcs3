@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -27,7 +27,7 @@
 #include "GSFunctionMap.h"
 
 
-template<class Vertex> 
+template<class Vertex>
 class GSRendererHW : public GSRendererT<Vertex>
 {
 	int m_width;
@@ -79,7 +79,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 					return false;
 				}
-				else 
+				else
 				{
 					lines = 0;
 				}
@@ -108,7 +108,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 					m_vt.Update(m_vertices, m_count, GS_TRIANGLE_CLASS);
 				}
-				else 
+				else
 				{
 					lines = 0;
 				}
@@ -137,7 +137,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 	bool OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		// missing red channel fix
-		
+
 		for(int i = 0, j = m_count; i < j; i++)
 		{
 			if(m_vertices[i].r == 0 && m_vertices[i].g != 0 && m_vertices[i].b != 0)
@@ -355,10 +355,10 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 	class Hacks
 	{
-		template<class T> struct HackEntry 
+		template<class T> struct HackEntry
 		{
-			CRC::Title title; 
-			CRC::Region region; 
+			CRC::Title title;
+			CRC::Region region;
 			T func;
 
 			struct HackEntry(CRC::Title t, CRC::Region r, T f)
@@ -369,7 +369,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 			}
 		};
 
-		template<class T> class FunctionMap : public GSFunctionMap<uint32, T> 
+		template<class T> class FunctionMap : public GSFunctionMap<uint32, T>
 		{
 			list<HackEntry<T> >& m_tbl;
 
@@ -405,13 +405,13 @@ class GSRendererHW : public GSRendererT<Vertex>
 		OI_Ptr m_oi;
 		OO_Ptr m_oo;
 		CU_Ptr m_cu;
-		
-		Hacks() 
+
+		Hacks()
 			: m_oi_map(m_oi_list)
 			, m_oo_map(m_oo_list)
 			, m_cu_map(m_cu_list)
-			, m_oi(NULL) 
-			, m_oo(NULL) 
+			, m_oi(NULL)
+			, m_oo(NULL)
 			, m_cu(NULL)
 		{
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::FFXII, CRC::EU, &GSRendererHW::OI_FFXII));
@@ -452,7 +452,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 protected:
 	GSTextureCache* m_tc;
 
-	void Reset() 
+	void Reset()
 	{
 		// TODO: GSreset can come from the main thread too => crash
 		// m_tc->RemoveAll();
@@ -466,7 +466,7 @@ protected:
 	{
 		__super::VSync(field);
 
-		m_tc->IncAge();  
+		m_tc->IncAge();
 
 		m_skip = 0;
 
@@ -478,7 +478,7 @@ protected:
 		}
 	}
 
-	void ResetDevice() 
+	void ResetDevice()
 	{
 		__super::ResetDevice();
 		m_tc->RemoveAll();
@@ -504,7 +504,7 @@ protected:
 
 			if(s_dump)
 			{
-				if(s_save && s_n >= s_saven) 
+				if(s_save && s_n >= s_saven)
 				{
 					t->Save(format("c:\\temp2\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
 				}
@@ -533,7 +533,7 @@ protected:
 	void Draw()
 	{
 		if(IsBadFrame(m_skip, m_UserHacks_SkipDraw)) return;
-		
+
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
 
@@ -571,13 +571,13 @@ protected:
 			uint64 frame = m_perfmon.GetFrame();
 
 			string s;
-			
-			if(s_save && s_n >= s_saven && tex) 
+
+			if(s_save && s_n >= s_saven && tex)
 			{
-				s = format("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds", 
+				s = format("c:\\temp2\\_%05d_f%I64d_tex_%05x_%d_%d%d_%02x_%02x_%02x_%02x.dds",
 					s_n, frame, (int)context->TEX0.TBP0, (int)context->TEX0.PSM,
-					(int)context->CLAMP.WMS, (int)context->CLAMP.WMT, 
-					(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU, 
+					(int)context->CLAMP.WMS, (int)context->CLAMP.WMT,
+					(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU,
 					(int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
 
 				tex->m_texture->Save(s, true);
@@ -722,7 +722,7 @@ public:
 			m_height = theApp.GetConfig("resy", m_height);
 			m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", m_upscale_multiplier);
 			if (m_upscale_multiplier > 6) m_upscale_multiplier = 1; //use the normal upscale math
-			if (m_upscale_multiplier > 1) 
+			if (m_upscale_multiplier > 1)
 			{
 				m_width  = 640 * m_upscale_multiplier; //512 is also common, but this is not always detected right.
 				m_height = 512 * m_upscale_multiplier; //448 is also common, but this is not always detected right.

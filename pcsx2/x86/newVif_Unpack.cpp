@@ -27,7 +27,7 @@ __aligned16 nVifStruct	nVif[2];
 __aligned16 nVifCall	nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]
 __aligned16 u32			nVifMask[3][4][4] = {0};	// [MaskNumber][CycleNumber][Vector]
 
-__aligned16 const u8 nVifT[16] = { 
+__aligned16 const u8 nVifT[16] = {
 	4, // S-32
 	2, // S-16
 	1, // S-8
@@ -207,17 +207,17 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	const int	usn		= !!(vif->usn);
 	const int	upkNum	= vif->cmd & 0x1f;
 	//const s8&	vift	= nVifT[upkNum]; // might be useful later when other SSE paths are finished.
-	
+
 	const nVifCall*	fnbase			= &nVifUpk[ ((usn*2*16) + upkNum) * (4*1) ];
 	const VIFUnpackFuncTable& ft	= VIFfuncTable[upkNum];
 	UNPACKFUNCTYPE func				= usn ? ft.funcU : ft.funcS;
-	
+
 	const u8* vuMemBase	= (idx ? VU1 : VU0).Mem;
 	u8* dest			= setVUptr(idx, vuMemBase, vif->tag.addr);
 	if (vif->cl >= blockSize)  vif->cl = 0;
-	
+
 	while (vifRegs->num) {
-		if (vif->cl < cycleSize) { 
+		if (vif->cl < cycleSize) {
 			if (size < ft.gsize) break;
 			if (doMode) {
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -93,13 +93,13 @@ void gsCSRwrite(u32 value)
 		{
 			GetMTGS().SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 		}
-	
+
 		CSRw |= 0x1f;
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
-	} 
+	}
 	else if( value & 0x100 ) // FLUSH
-	{ 
+	{
 		// Our emulated GS has no FIFO, but if it did, it would flush it here...
 		//Console.WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}
@@ -116,7 +116,7 @@ static void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
 
-	if((GSCSRr & 0x1f) & (~(GSIMR >> 8) & 0x1f)) 
+	if((GSCSRr & 0x1f) & (~(GSIMR >> 8) & 0x1f))
 	{
 		gsIrq();
 	}
@@ -338,13 +338,13 @@ void gsIrq() {
 
 __forceinline void gsFrameSkip()
 {
-	
+
 	if( !EmuConfig.GS.FrameSkipEnable ) return;
 
 	static int consec_skipped = 0;
 	static int consec_drawn = 0;
 	static bool isSkipping = false;
-	
+
 	GSsetFrameSkip( isSkipping );
 
 	if( isSkipping )

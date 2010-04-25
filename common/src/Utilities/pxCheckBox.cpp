@@ -31,7 +31,7 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 {
 	m_subtext	= NULL;
 	m_checkbox	= new wxCheckBox( this, wxID_ANY, label );
-	
+
 	*this += m_checkbox | pxSizerFlags::StdExpand();
 
 	static const int Indentation = 23;

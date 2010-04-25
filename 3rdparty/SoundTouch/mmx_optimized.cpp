@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// MMX optimized routines. All MMX optimized functions have been gathered into 
-/// this single source code file, regardless to their class or original source 
-/// code file, in order to ease porting the library to other compiler and 
+/// MMX optimized routines. All MMX optimized functions have been gathered into
+/// this single source code file, regardless to their class or original source
+/// code file, in order to ease porting the library to other compiler and
 /// processor platforms.
 ///
 /// The MMX-optimizations are programmed using MMX compiler intrinsics that
 /// are supported both by Microsoft Visual C++ and GCC compilers, so this file
 /// should compile with both toolsets.
 ///
-/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++ 
+/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++
 /// 6.0 processor pack" update to support compiler intrinsic syntax. The update
 /// is available for download at Microsoft Developers Network, see here:
 /// http://msdn.microsoft.com/en-us/vstudio/aa718349.aspx
@@ -79,14 +79,14 @@ long TDStretchMMX::calcCrossCorrStereo(const short *pV1, const short *pV2) const
     __m64 accu, normaccu;
     long corr, norm;
     int i;
-   
+
     pVec1 = (__m64*)pV1;
     pVec2 = (__m64*)pV2;
 
     shifter = _m_from_int(overlapDividerBits);
     normaccu = accu = _mm_setzero_si64();
 
-    // Process 4 parallel sets of 2 * stereo samples each during each 
+    // Process 4 parallel sets of 2 * stereo samples each during each
     // round to improve CPU-level parallellization.
     for (i = 0; i < overlapLength / 8; i ++)
     {
@@ -127,7 +127,7 @@ long TDStretchMMX::calcCrossCorrStereo(const short *pV1, const short *pV2) const
     // Clear MMS state
     _m_empty();
 
-    // Normalize result by dividing by sqrt(norm) - this step is easiest 
+    // Normalize result by dividing by sqrt(norm) - this step is easiest
     // done using floating point operation
     if (norm == 0) norm = 1;    // to avoid div by zero
     return (long)((double)corr * USHRT_MAX / sqrt((double)norm));
@@ -161,7 +161,7 @@ void TDStretchMMX::overlapStereo(short *output, const short *input) const
     // mix1  = mixer values for 1st stereo sample
     // mix1  = mixer values for 2nd stereo sample
     // adder = adder for updating mixer values after each round
-    
+
     mix1  = _mm_set_pi16(0, overlapLength,   0, overlapLength);
     adder = _mm_set_pi16(1, -1, 1, -1);
     mix2  = _mm_add_pi16(mix1, adder);
@@ -174,7 +174,7 @@ void TDStretchMMX::overlapStereo(short *output, const short *input) const
     for (i = 0; i < overlapLength / 4; i ++)
     {
         __m64 temp1, temp2;
-                
+
         // load & shuffle data so that input & mixbuffer data samples are paired
         temp1 = _mm_unpacklo_pi16(pVMidBuf[0], pVinput[0]);     // = i0l m0l i0r m0r
         temp2 = _mm_unpackhi_pi16(pVMidBuf[0], pVinput[0]);     // = i1l m1l i1r m1r
@@ -244,8 +244,8 @@ void FIRFilterMMX::setCoefficients(const short *coeffs, uint newLength, uint uRe
     filterCoeffsUnalign = new short[2 * newLength + 8];
     filterCoeffsAlign = (short *)(((ulong)filterCoeffsUnalign + 15) & -16);
 
-    // rearrange the filter coefficients for mmx routines 
-    for (i = 0;i < length; i += 4) 
+    // rearrange the filter coefficients for mmx routines
+    for (i = 0;i < length; i += 4)
     {
         filterCoeffsAlign[2 * i + 0] = coeffs[i + 0];
         filterCoeffsAlign[2 * i + 1] = coeffs[i + 2];

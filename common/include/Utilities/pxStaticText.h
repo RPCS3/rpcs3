@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -33,7 +33,7 @@
 //     wxWidgets inability to fit individual directions, ie fit widths and then fit heights,
 //     which would allow a textbox to wrap text to a sizer-determined width, and then grow
 //     the sizers vertically to fit the calcuated text-wrapped height).
-// 
+//
 //   * Textbox alignment requires aligning both the textbox contents, and aligning the text
 //     control within it's containing sizer.  If both alignment flags do not match the result
 //     is typically undesirable.

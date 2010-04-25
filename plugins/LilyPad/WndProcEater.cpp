@@ -84,7 +84,7 @@ LRESULT WndProcEater::_OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		}
 		if (res == CONTINUE_BLISSFULLY)
 			out = CallWindowProc(eatenWndProc, hWnd, uMsg, wParam, lParam);
-		else if (res == USE_DEFAULT_WND_PROC) 
+		else if (res == USE_DEFAULT_WND_PROC)
 			out = DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
 	return out;
@@ -103,7 +103,7 @@ bool WndProcEater::SetWndHandle(HWND hWnd)
 	if(hWnd == hWndEaten) return true;
 
 	//printf( "(Lilypad) (Re)-Setting window handle! -> this=0x%08x, hWnd=0x%08x\n", this, hWnd );
-	
+
 	Release();
 	SetProp(hWnd, L"LilyHaxxor", (HANDLE)this);
 

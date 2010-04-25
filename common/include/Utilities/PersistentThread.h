@@ -44,7 +44,7 @@ namespace Threading
 		virtual void Block() {}
 		virtual bool Detach() { return false; }
 	};
-	
+
 // --------------------------------------------------------------------------------------
 //  ThreadDeleteEvent
 // --------------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ namespace Threading
 		ScopedPtr<Exception::BaseException> m_except;
 
 		EventSource<EventListener_Thread> m_evtsrc_OnDelete;
-		
+
 
 	public:
 		virtual ~PersistentThread() throw();
@@ -149,7 +149,7 @@ namespace Threading
 		virtual bool Detach();
 		virtual void Block();
 		virtual void RethrowException() const;
-		
+
 		void AddListener( EventListener_Thread& evt );
 		void AddListener( EventListener_Thread* evt )
 		{
@@ -199,7 +199,7 @@ namespace Threading
 			Threading::Sleep( ms );
 			TestCancel();
 		}
-		
+
 		void FrankenMutex( Mutex& mutex );
 
 		bool AffinityAssert_AllowFromSelf( const DiagnosticOrigin& origin ) const;
@@ -224,7 +224,7 @@ namespace Threading
 
 
 // --------------------------------------------------------------------------------------
-//  BaseTaskThread 
+//  BaseTaskThread
 // --------------------------------------------------------------------------------------
 // an abstract base class which provides simple parallel execution of single tasks.
 //

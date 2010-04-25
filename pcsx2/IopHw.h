@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -24,7 +24,7 @@ static const u32
 	HW_FW_END		= 0x1f808550,	// end addr for FW is a guess...
 	HW_SPU2_START	= 0x1f801c00,
 	HW_SPU2_END		= 0x1f801e00;
-	
+
 static const u32
 	HW_SSBUS_SPD_ADDR	= 0x1f801000,
 	HW_SSBUS_PIO_ADDR	= 0x1f801004,
@@ -35,7 +35,7 @@ static const u32
 	HW_SSBUS_DEV5_DELAY	= 0x1f801018,
 	HW_SSBUS_PIO_DELAY	= 0x1f80101c,
 	HW_SSBUS_COM_DELAY	= 0x1f801020,
-	
+
 	HW_SIO_DATA			= 0x1f801040,	// SIO read/write register
 	HW_SIO_STAT			= 0x1f801044,
 	HW_SIO_MODE			= 0x1f801048,
@@ -158,14 +158,14 @@ enum IOPCountRegs
 	IOP_T3_COUNT = 0x1f801480,
 	IOP_T4_COUNT = 0x1f801490,
 	IOP_T5_COUNT = 0x1f8014a0,
-			
+
 	IOP_T0_MODE = 0x1f801104,
 	IOP_T1_MODE = 0x1f801114,
 	IOP_T2_MODE = 0x1f801124,
 	IOP_T3_MODE = 0x1f801484,
 	IOP_T4_MODE = 0x1f801494,
 	IOP_T5_MODE = 0x1f8014a4,
-			
+
 	IOP_T0_TARGET = 0x1f801108,
 	IOP_T1_TARGET = 0x1f801118,
 	IOP_T2_TARGET = 0x1f801128,
@@ -199,7 +199,7 @@ struct dma_mbc
 	u32 madr;
 	u32 bcr;
 	u32 chcr;
-	
+
 	u16 bcr_lower() const
 	{
 		return (u16)(bcr);
@@ -217,7 +217,7 @@ struct dma_mbct
 	u32 bcr;
 	u32 chcr;
 	u32 tadr;
-	
+
 	u16 bcr_lower() const
 	{
 		return (u16)(bcr);

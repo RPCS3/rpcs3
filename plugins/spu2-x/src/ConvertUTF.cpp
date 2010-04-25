@@ -1,8 +1,8 @@
 /*
  * Copyright 2001-2004 Unicode, Inc.
- * 
+ *
  * Disclaimer
- * 
+ *
  * This source code is provided as is by Unicode, Inc. No claims are
  * made as to fitness for any particular purpose. No warranties of any
  * kind are expressed or implied. The recipient agrees to determine
@@ -10,9 +10,9 @@
  * purchased on magnetic or optical media from Unicode, Inc., the
  * sole remedy for any claim will be exchange of defective media
  * within 90 days of receipt.
- * 
+ *
  * Limitations on Rights to Redistribute This Code
- * 
+ *
  * Unicode, Inc. hereby grants the right to freely use the information
  * supplied in this file in the creation of products supporting the
  * Unicode Standard, and to make copies of this file in any form
@@ -95,7 +95,7 @@ namespace Unicode
 	 * This table contains as many values as there might be trailing bytes
 	 * in a UTF-8 sequence.
 	 */
-	static const UTF32 offsetsFromUTF8[6] = { 0x00000000UL, 0x00003080UL, 0x000E2080UL, 
+	static const UTF32 offsetsFromUTF8[6] = { 0x00000000UL, 0x00003080UL, 0x000E2080UL,
 				 0x03C82080UL, 0xFA082080UL, 0x82082080UL };
 
 	/*
@@ -123,7 +123,7 @@ namespace Unicode
 	{
 		const UTF16* source = (UTF16*)src.c_str();
 		const UTF16* sourceEnd = &source[ src.length() ];
-		
+
 		// initialize a four-char packet:
 		std::wstring packet( L"    " );
 
@@ -132,7 +132,7 @@ namespace Unicode
 			UTF32 ch;
 			unsigned short bytesToWrite = 0;
 			const UTF32 byteMask = 0xBF;
-			const UTF32 byteMark = 0x80; 
+			const UTF32 byteMark = 0x80;
 			//const UTF16* oldSource = source; /* In case we have to back up because of target overflow. */
 
 			ch = *source++;
@@ -182,7 +182,7 @@ namespace Unicode
 				}
 			}
 			#endif
-			
+
 			/* Figure out how many bytes the result will require */
 			if (ch < (UTF32)0x80) bytesToWrite = 1;
 			else if (ch < (UTF32)0x800) bytesToWrite = 2;
@@ -224,7 +224,7 @@ namespace Unicode
 		UTF8 a;
 		const UTF8 *srcptr = source+length;
 
-		switch (length) 
+		switch (length)
 		{
 			default: return false;
 			/* Everything else falls through when "true"... */
@@ -268,12 +268,12 @@ namespace Unicode
 	{
 		const UTF8* source = (UTF8*)src.c_str();
 		const UTF8* sourceEnd = &source[ src.length() ];
-	    
+
 		while (source < sourceEnd)
 		{
 			UTF32 ch = 0;
 			u16 extraBytesToRead = trailingBytesForUTF8[*source];
-		
+
 			if( source + extraBytesToRead >= sourceEnd )
 			{
 				throw Exception::UTFConversion<wstring>( dest, "UTF8->UTF16 String Conversion failed: Unexpected end of string data." );
@@ -318,7 +318,7 @@ namespace Unicode
 						dest += UNI_REPLACEMENT_CHAR;
 					}
 				}
-				else 
+				else
 				{
 					dest += (UTF16)ch; /* normal case */
 				}
@@ -364,7 +364,7 @@ namespace Unicode
 		similarly unrolled loops.
 
 	   --------------------------------------------------------------------- */
-	   
+
 	wstring Convert( const string& src )
 	{
 		wstring dest;

@@ -130,14 +130,14 @@ s32 stoi(sample_t n) //input: [-1..1]
 
 void spdif_update()
 {
-	
+
 
 	for(int i=0;i<data_rate;i++)
 	{
 		// Source is Core 0
 		// .. and Right side data should be zero / ignored
 		StereoOut32 Data( Cores[0].ReadInput_HiFi() );
-		
+
 		if(fSpdifDump)
 		{
 			fwrite(&Data.Left,4,1,fSpdifDump);
@@ -194,7 +194,7 @@ void spdif_update()
 				int output_cursor=j;
 
 				int n=0;
-				if(flags&A52_LFE) 
+				if(flags&A52_LFE)
 				{
 					sample_flags|=CHANNEL_LFE;
 

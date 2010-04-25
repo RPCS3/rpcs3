@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -24,8 +24,8 @@
 
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -69,10 +69,10 @@ void recSetBranchEQ(int info, int bne, int process)
 				t0reg = _allocTempXMMreg(XMMT_INT, -1);
 				SSE2_MOVQ_XMM_to_XMM(t0reg, EEREC_T);
 			}
-		
+
 			_flushConstReg(_Rs_);
 			SSE2_PCMPEQD_M128_to_XMM(t0reg, (u32)&cpuRegs.GPR.r[_Rs_].UL[0]);
-			
+
 
 			if( t0reg != EEREC_T ) _freeXMMreg(t0reg);
 		}
@@ -86,14 +86,14 @@ void recSetBranchEQ(int info, int bne, int process)
 				t0reg = _allocTempXMMreg(XMMT_INT, -1);
 				SSE2_MOVQ_XMM_to_XMM(t0reg, EEREC_S);
 			}
-		
+
 			_flushConstReg(_Rt_);
 			SSE2_PCMPEQD_M128_to_XMM(t0reg, (u32)&cpuRegs.GPR.r[_Rt_].UL[0]);
 
 			if( t0reg != EEREC_S ) _freeXMMreg(t0reg);
 		}
 		else {
-			
+
 			if( (g_pCurInstInfo->regs[_Rs_] & EEINST_LASTUSE) || !EEINST_ISLIVEXMM(_Rs_) ) {
 				_deleteGPRtoXMMreg(_Rs_, 1);
 				xmmregs[EEREC_S].inuse = 0;
@@ -213,11 +213,11 @@ void recSetBranchL(int ltz)
 
 		return;
 	}*/
-	
+
 	regs = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ);
 
 	if( regs >= 0 ) {
-		
+
 		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
 		SSE_XORPS_XMM_to_XMM(t0reg, t0reg);
 		SSE2_PCMPGTD_XMM_to_XMM(t0reg, regs);
@@ -233,7 +233,7 @@ void recSetBranchL(int ltz)
 
 		return;
 	}
-	
+
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], 0 );
 	if( ltz ) j32Ptr[ 0 ] = JGE32( 0 );
 	else j32Ptr[ 0 ] = JL32( 0 );
@@ -246,7 +246,7 @@ void recSetBranchL(int ltz)
 void recBEQ_const()
 {
 	u32 branchTo;
-	
+
 	if( g_cpuConstRegs[_Rs_].SD[0] == g_cpuConstRegs[_Rt_].SD[0] )
 		branchTo = ((s32)_Imm_ * 4) + pc;
 	else
@@ -268,13 +268,13 @@ void recBEQ_process(int info, int process)
 	else
 	{
 		recSetBranchEQ(info, 0, process);
-		
+
 		SaveBranchState();
 		recompileNextInstruction(1);
 
 		SetBranchImm(branchTo);
 
-		x86SetJ32( j32Ptr[ 0 ] ); 
+		x86SetJ32( j32Ptr[ 0 ] );
 		x86SetJ32( j32Ptr[ 1 ] );
 
 		// recopy the next inst
@@ -296,7 +296,7 @@ EERECOMPILE_CODE0(BEQ, XMMINFO_READS|XMMINFO_READT);
 void recBNE_const()
 {
 	u32 branchTo;
-	
+
 	if( g_cpuConstRegs[_Rs_].SD[0] != g_cpuConstRegs[_Rt_].SD[0] )
 		branchTo = ((s32)_Imm_ * 4) + pc;
 	else
@@ -321,7 +321,7 @@ void recBNE_process(int info, int process)
 
 	SaveBranchState();
 	recompileNextInstruction(1);
-	
+
 	SetBranchImm(branchTo);
 
 	x86SetJ32( j32Ptr[ 1 ] );
@@ -362,9 +362,9 @@ void recBEQL_process(int info, int process)
 	recompileNextInstruction(1);
 	SetBranchImm(branchTo);
 
-	x86SetJ32( j32Ptr[ 0 ] ); 
+	x86SetJ32( j32Ptr[ 0 ] );
 	x86SetJ32( j32Ptr[ 1 ] );
-	
+
 	LoadBranchState();
 	SetBranchImm(pc);
 }
@@ -388,7 +388,7 @@ void recBNEL_const()
 	}
 }
 
-void recBNEL_process(int info, int process) 
+void recBNEL_process(int info, int process)
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -397,7 +397,7 @@ void recBNEL_process(int info, int process)
 	SaveBranchState();
 	SetBranchImm(pc+4);
 
-	x86SetJ32( j32Ptr[ 0 ] ); 
+	x86SetJ32( j32Ptr[ 0 ] );
 	x86SetJ32( j32Ptr[ 1 ] );
 
 	// recopy the next inst
@@ -418,7 +418,7 @@ EERECOMPILE_CODE0(BNEL, XMMINFO_READS|XMMINFO_READT);
 *********************************************************/
 
 ////////////////////////////////////////////////////
-//void recBLTZAL( void ) 
+//void recBLTZAL( void )
 //{
 //	Console.WriteLn("BLTZAL");
 //	_eeFlushAllUnused();
@@ -426,11 +426,11 @@ EERECOMPILE_CODE0(BNEL, XMMINFO_READS|XMMINFO_READT);
 //	MOV32ItoM( (int)&cpuRegs.pc, pc );
 //	iFlushCall(FLUSH_EVERYTHING);
 //	CALLFunc( (int)BLTZAL );
-//	branch = 2;    
+//	branch = 2;
 //}
 
 ////////////////////////////////////////////////////
-void recBLTZAL() 
+void recBLTZAL()
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -469,7 +469,7 @@ void recBLTZAL()
 }
 
 ////////////////////////////////////////////////////
-void recBGEZAL( void ) 
+void recBGEZAL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -508,7 +508,7 @@ void recBGEZAL( void )
 }
 
 ////////////////////////////////////////////////////
-void recBLTZALL( void ) 
+void recBLTZALL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -542,7 +542,7 @@ void recBLTZALL( void )
 }
 
 ////////////////////////////////////////////////////
-void recBGEZALL( void ) 
+void recBGEZALL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -577,7 +577,7 @@ void recBGEZALL( void )
 
 
 //// BLEZ
-void recBLEZ( void ) 
+void recBLEZ( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -623,7 +623,7 @@ void recBLEZ( void )
 }
 
 //// BGTZ
-void recBGTZ( void ) 
+void recBGTZ( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -669,10 +669,10 @@ void recBGTZ( void )
 }
 
 ////////////////////////////////////////////////////
-void recBLTZ() 
+void recBLTZ()
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
-	
+
 	_eeFlushAllUnused();
 
 	if( GPR_IS_CONST1(_Rs_) ) {
@@ -702,7 +702,7 @@ void recBLTZ()
 }
 
 ////////////////////////////////////////////////////
-void recBGEZ( void ) 
+void recBGEZ( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -735,7 +735,7 @@ void recBGEZ( void )
 }
 
 ////////////////////////////////////////////////////
-void recBLTZL( void ) 
+void recBLTZL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -763,9 +763,9 @@ void recBLTZL( void )
 	SetBranchImm(pc);
 }
 
-	
+
 ////////////////////////////////////////////////////
-void recBGEZL( void ) 
+void recBGEZL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -802,7 +802,7 @@ void recBGEZL( void )
 *********************************************************/
 
 ////////////////////////////////////////////////////
-void recBLEZL( void ) 
+void recBLEZL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 
@@ -846,7 +846,7 @@ void recBLEZL( void )
 }
 
 ////////////////////////////////////////////////////
-void recBGTZL( void ) 
+void recBGTZL( void )
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
 

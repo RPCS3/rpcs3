@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,24 +6,24 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
- *	Special Notes: 
+ *	Special Notes:
  *
  *	Based on Page.c from GSSoft
  *	Copyright (C) 2002-2004 GSsoft Team
  *
  */
- 
+
 #include "StdAfx.h"
 #include "GSLocalMemory.h"
 
@@ -95,7 +95,7 @@ GSLocalMemory::GSLocalMemory()
 			pageOffset32Z[bp][y][x] = PixelAddressOrg32Z(x, y, bp, 0);
 		}
 
-		for(int y = 0; y < 64; y++) for(int x = 0; x < 64; x++) 
+		for(int y = 0; y < 64; y++) for(int x = 0; x < 64; x++)
 		{
 			pageOffset16[bp][y][x] = PixelAddressOrg16(x, y, bp, 0);
 			pageOffset16S[bp][y][x] = PixelAddressOrg16S(x, y, bp, 0);
@@ -620,7 +620,7 @@ void GSLocalMemory::WriteImageLeftRight(int l, int r, int y, int h, uint8* src, 
 			case PSM_PSMZ16S: WritePixel16SZ(x, y, *(uint16*)&src[x * 2], bp, bw); break;
 			// TODO
 			default: __assume(0);
-			}			
+			}
 		}
 	}
 }
@@ -664,7 +664,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 			switch(psm)
 			{
 			case PSM_PSMCT32:
-			case PSM_PSMZ32: 
+			case PSM_PSMZ32:
 				ReadColumn32<true>(y, dst, buff, 32);
 				memcpy(&buff[32], &src[x * 4], 32);
 				WriteColumn32<true, 0xffffffff>(y, dst, buff, 32);
@@ -677,18 +677,18 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 				memcpy(&buff[32], &src[x * 2], 32);
 				WriteColumn16<true>(y, dst, buff, 32);
 				break;
-			case PSM_PSMT8: 
+			case PSM_PSMT8:
 				ReadColumn8<true>(y, dst, buff, 16);
 				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
-			case PSM_PSMT4: 
+			case PSM_PSMT4:
 				ReadColumn4<true>(y, dst, buff, 16);
 				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
 			// TODO
-			default: 
+			default:
 				__assume(0);
 			}
 		}
@@ -745,7 +745,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 			switch(psm)
 			{
 			case PSM_PSMCT32:
-			case PSM_PSMZ32: 
+			case PSM_PSMZ32:
 				ReadColumn32<true>(y, dst, buff, 32);
 				memcpy(&buff[0], &src[x * 4], 32);
 				WriteColumn32<true, 0xffffffff>(y, dst, buff, 32);
@@ -758,18 +758,18 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 				memcpy(&buff[0], &src[x * 2], 32);
 				WriteColumn16<true>(y, dst, buff, 32);
 				break;
-			case PSM_PSMT8: 
+			case PSM_PSMT8:
 				ReadColumn8<true>(y, dst, buff, 16);
 				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
-			case PSM_PSMT4: 
+			case PSM_PSMT4:
 				ReadColumn4<true>(y, dst, buff, 16);
 				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
 			// TODO
-			default: 
+			default:
 				__assume(0);
 			}
 		}
@@ -786,7 +786,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, uint8* src, int len, GIFRegBITB
 
 	// finish the incomplete row first
 
-	if(tx != l) 
+	if(tx != l)
 	{
 		int n = min(len, (r - tx) * trbpp >> 3);
 		WriteImageX(tx, ty, src, n, BITBLTBUF, TRXPOS, TRXREG);
@@ -1282,9 +1282,9 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 			for(; len > 0 && x < ex; len--, x++, pb += 3)
 			{
 				uint32 c = ReadPixel32(addr + offset[x]);
-				
-				pb[0] = ((uint8*)&c)[0]; 
-				pb[1] = ((uint8*)&c)[1]; 
+
+				pb[0] = ((uint8*)&c)[0];
+				pb[1] = ((uint8*)&c)[1];
 				pb[2] = ((uint8*)&c)[2];
 			}
 
@@ -1382,7 +1382,7 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		}
 
 		break;
-	
+
 	case PSM_PSMT4HH:
 
 		while(len > 0)
@@ -1696,8 +1696,8 @@ void GSLocalMemory::ReadTexture(const GSOffset* RESTRICT o, const GSVector4i& r,
 	readTexel rt = psm.rt;
 	readTexture rtx = psm.rtx;
 
-	if(r.width() < psm.bs.x || r.height() < psm.bs.y 
-	|| (r.left & (psm.bs.x - 1)) || (r.top & (psm.bs.y - 1)) 
+	if(r.width() < psm.bs.x || r.height() < psm.bs.y
+	|| (r.left & (psm.bs.x - 1)) || (r.top & (psm.bs.y - 1))
 	|| (r.right & (psm.bs.x - 1)) || (r.bottom & (psm.bs.y - 1)))
 	{
 		GIFRegTEX0 TEX0;

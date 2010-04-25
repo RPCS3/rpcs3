@@ -55,7 +55,7 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
-	
+
 	if (GSTransferStatus.PTH3 == STOPPED_MODE)
 	{
 	    gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH);
@@ -278,7 +278,7 @@ void GIFdma()
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (ptag->ID == TAG_REFS))
 			{
-				// stalled. 
+				// stalled.
 				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
 				Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
@@ -466,7 +466,7 @@ void mfifoGIFtransfer(int qwc)
 		ptag = dmaGetAddr(gif->tadr, false);
 		gif->unsafeTransfer(ptag);
 		gif->madr = ptag[1]._u32;
-		
+
 		mfifocycles += 2;
 
 		GIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",

@@ -3,7 +3,7 @@
 #include "../USB.h"
 
 extern HINSTANCE hInst;
-void SaveConfig() 
+void SaveConfig()
 {
 
     Config *Conf1 = &conf;
@@ -27,7 +27,7 @@ void LoadConfig() {
     Config *Conf1 = &conf;
 	char *szTemp;
 	char szIniFile[256], szValue[256];
-  
+
 	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
 	szTemp = strrchr(szIniFile, '\\');
 
@@ -36,7 +36,7 @@ void LoadConfig() {
     fp=fopen("inis\\usbnull.ini","rt");//check if usbnull.ini really exists
 	if (!fp)
 	{
-		CreateDirectory("inis",NULL); 
+		CreateDirectory("inis",NULL);
         memset(&conf, 0, sizeof(conf));
         conf.Log = 0;//default value
 		SaveConfig();//save and return

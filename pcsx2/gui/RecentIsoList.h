@@ -26,7 +26,7 @@ protected:
 	{
 		wxString	Filename;
 		wxMenuItem*	ItemPtr;
-		
+
 		RecentItem() { ItemPtr = NULL; }
 
 		RecentItem( const wxString& src )
@@ -41,7 +41,7 @@ protected:
 	wxMenu*		m_Menu;
 	uint		m_MaxLength;
 	int			m_cursel;
-	
+
 	wxMenuItem* m_Separator;
 
 public:
@@ -52,7 +52,7 @@ public:
 	void Repopulate();
 	void Clear();
 	void Add( const wxString& src );
-	
+
 protected:
 	void InsertIntoMenu( int id );
 	void OnChangedSelection( wxCommandEvent& evt );

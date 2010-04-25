@@ -450,7 +450,7 @@ public:
 	{
 		_freeHeap_wxObject( ptr );
 	}
-	
+
 	void operator delete( void* ptr, const wxChar*, int  )
 	{
 		_freeHeap_wxObject( ptr );
@@ -460,7 +460,7 @@ public:
 	{
 		_freeHeap_wxObject( ptr );
 	}
-	
+
 	void operator delete[]( void* ptr, const wxChar*, int  )
 	{
 		_freeHeap_wxObject( ptr );

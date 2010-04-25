@@ -428,11 +428,11 @@ public:
 
     // check if a native double-buffering applies for this window
     virtual bool IsDoubleBuffered() const;
-    
+
 #if wxABI_VERSION >= 20808
     void SetDoubleBuffered(bool on);
 #endif
-    
+
     // synthesize a wxEVT_LEAVE_WINDOW event and set m_mouseInWindow to false
     void GenerateMouseLeave();
 

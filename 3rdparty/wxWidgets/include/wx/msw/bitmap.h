@@ -106,7 +106,7 @@ public:
     wxBitmap GetSubBitmap( const wxRect& rect ) const;
 
     // NB: This should not be called from user code. It is for wx internal
-    // use only. 
+    // use only.
     wxBitmap GetSubBitmapOfHDC( const wxRect& rect, WXHDC hdc ) const;
 
     // copies the contents and mask of the given (colour) icon to the bitmap

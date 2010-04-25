@@ -2091,7 +2091,7 @@ public:
         return ControlDown();
 #endif
     }
-    
+
     virtual wxEvent *Clone() const { return new wxGridSizeEvent(*this); }
 
 protected:
@@ -2148,7 +2148,7 @@ public:
         return ControlDown();
 #endif
     }
-    
+
     virtual wxEvent *Clone() const { return new wxGridRangeSelectEvent(*this); }
 
 protected:
@@ -2183,7 +2183,7 @@ public:
     void SetRow(int row)                { m_row = row; }
     void SetCol(int col)                { m_col = col; }
     void SetControl(wxControl* ctrl)    { m_ctrl = ctrl; }
-    
+
     virtual wxEvent *Clone() const { return new wxGridEditorCreatedEvent(*this); }
 
 private:

@@ -83,7 +83,7 @@ void SetupSound(void)
  buffer_time=500000;
  period_time=buffer_time/4;
 
- if((err=snd_pcm_open(&handle, "default", 
+ if((err=snd_pcm_open(&handle, "default",
                       SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK))<0)
   {
    printf("Audio open error: %s\n", snd_strerror(err));

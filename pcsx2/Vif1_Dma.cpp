@@ -21,7 +21,7 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-__forceinline void vif1FLUSH() 
+__forceinline void vif1FLUSH()
 {
 	if (!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 	int _cycles = VU1.cycle;
@@ -81,7 +81,7 @@ void vif1TransferToMemory()
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
-	if(vif1.GSLastTRXPOS > vif1ch->qwc) 
+	if(vif1.GSLastTRXPOS > vif1ch->qwc)
 		vif1Regs->stat.FQC = vif1.GSLastTRXPOS - vif1ch->qwc;
 	else
 		vif1Regs->stat.FQC = 0;
@@ -128,7 +128,7 @@ bool _VIF1chain()
 __forceinline void vif1SetupTransfer()
 {
     tDMA_TAG *ptag;
-    
+
 	switch (vif1.dmamode)
 	{
 		case VIF_NORMAL_TO_MEM_MODE:
@@ -215,7 +215,7 @@ __forceinline void vif1Interrupt()
 
 	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	//Simulated GS transfer time done, clear the flags
-	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50) 
+	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
 	{
 		gifRegs->stat.clear_flags(GIF_STAT_APATH2|GIF_STAT_OPH);
 	}
@@ -262,7 +262,7 @@ __forceinline void vif1Interrupt()
 	if (vif1.inprogress & 0x1)
 	{
 		_VIF1chain();
-		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
+		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation.
 		// Timesplitters 2 depends on this beeing a bit higher than 128.
 		if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 		// Refraction - Removing voodoo timings for now, completely messes a lot of Path3 masked games.
@@ -302,7 +302,7 @@ __forceinline void vif1Interrupt()
 	g_vifCycles = 0;
 	VIF_LOG("VIF1 End");
 	hwDmacIrq(DMAC_VIF1);
-	
+
 }
 
 void dmaVIF1()

@@ -15,16 +15,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #ifndef __KEYBOARD_H__
  #define __KEYBOARD_H__
- 
+
 #include "zeropad.h"
- 
+
 #ifdef __LINUX__
 
 #include "Linux/linux.h"
- 
+
 extern Display *GSdsp;
 extern void PollForX11KeyboardInput(int pad);
 extern bool PollX11Keyboard(char* &temp, u32 &pkey);
@@ -35,7 +35,7 @@ extern WNDPROC GSwndProc;
 extern HWND GShwnd;
 
 #endif
- 
+
 extern char* KeysymToChar(int keysym);
 extern void PollForKeyboardInput(int pad);
 extern void SetAutoRepeat(bool autorep);

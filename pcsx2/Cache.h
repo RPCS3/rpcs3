@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -42,7 +42,7 @@ void writeCache64(u32 mem, u64 value);
 void writeCache128(u32 mem, u64 *value);
 u8  *readCache(u32 mem);
 
-// Fixme - these two functions do nothing, and the cache code relies on these two functions.	
+// Fixme - these two functions do nothing, and the cache code relies on these two functions.
 static __forceinline u32 getMemR(s32 mem)
 {
 	return 0;//memLUTR[mem >> 12];

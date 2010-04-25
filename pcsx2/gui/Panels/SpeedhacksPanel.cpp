@@ -109,7 +109,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_Enable = new pxCheckBox( this, _("Enable speedhacks"),
 		_("(Warning, can cause false FPS readings and many bugs!)"));
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all speedhacks are completely disabled."));
-	
+
 	m_button_Defaults = new wxButton( this, wxID_DEFAULT, _("Restore Defaults") );
 	pxSetToolTip( m_button_Defaults, _("Resets all speedhack options to their defaults, which consequently turns them all OFF.") );
 
@@ -142,12 +142,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	pxSetToolTip( m_slider_eecycle, ee_tooltip );
 	pxSetToolTip( m_msg_eecycle, ee_tooltip );
-	
+
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
 
 	wxPanelWithHelpers* vuSliderPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("VU Cycle Stealing") );
-	
+
 	m_slider_vustealer = new wxSlider( vuSliderPanel, wxID_ANY, 0, 0, 3, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
@@ -165,7 +165,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	// ------------------------------------------------------------------------
 	// microVU Hacks Section:
-	
+
 	wxPanelWithHelpers* vuHacksPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("microVU Hacks") );
 
 	m_check_vuFlagHack = new pxCheckBox( vuHacksPanel, _("mVU Flag Hack"),
@@ -194,10 +194,10 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	m_check_waitloop = new pxCheckBox( miscHacksPanel, _("Enable Wait Loop Detection"),
 		_("Moderate speedup for some games, with no known side effects. [Recommended???]" ) );
-	
+
 	m_check_IOPx2 = new pxCheckBox( miscHacksPanel, _("IOP x2 cycle rate hack"),
 		_("Small Speedup and works well with most games; may cause some games to hang during startup.") );
-		
+
 
 	m_check_intc->SetToolTip( pxE( ".Tooltips:Speedhacks:INTC",
 		L"This hack works best for games that use the INTC Status register to wait for vsyncs, which includes primarily non-3D "
@@ -292,7 +292,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()
 void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Config::SpeedhackOptions& opts )
 {
 	const bool enabled = g_Conf->EnableSpeedHacks;
-	
+
 	m_check_Enable		->SetValue( !!enabled );
 
 	m_slider_eecycle	->SetValue( opts.EECycleRate + 1 );
@@ -306,7 +306,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Confi
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
 	m_check_IOPx2		->SetValue(opts.IopCycleRate_X2);
-	
+
 	EnableStuff();
 
 	// Layout necessary to ensure changed slider text gets re-aligned properly
@@ -318,7 +318,7 @@ void Panels::SpeedHacksPanel::Apply()
 	g_Conf->EnableSpeedHacks = m_check_Enable->GetValue();
 
 	Pcsx2Config::SpeedhackOptions& opts( g_Conf->EmuOptions.Speedhacks );
-	
+
 	opts.EECycleRate		= m_slider_eecycle->GetValue()-1;
 	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 
@@ -361,7 +361,7 @@ void Panels::SpeedHacksPanel::Slider_Click(wxScrollEvent &event) {
 	else if (eventType == wxEVT_SCROLL_BOTTOM) {
 		slider->SetValue(slider->GetMax());
 	}
-	
+
 	event.Skip();
 }
 

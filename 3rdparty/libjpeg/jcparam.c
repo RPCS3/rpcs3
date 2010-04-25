@@ -204,12 +204,12 @@ std_huff_tables (j_compress_ptr cinfo)
     { /* 0-base */ 0, 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };
   static const UINT8 val_dc_luminance[] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-  
+
   static const UINT8 bits_dc_chrominance[17] =
     { /* 0-base */ 0, 0, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
   static const UINT8 val_dc_chrominance[] =
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
-  
+
   static const UINT8 bits_ac_luminance[17] =
     { /* 0-base */ 0, 0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 0x7d };
   static const UINT8 val_ac_luminance[] =
@@ -234,7 +234,7 @@ std_huff_tables (j_compress_ptr cinfo)
       0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea,
       0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
       0xf9, 0xfa };
-  
+
   static const UINT8 bits_ac_chrominance[17] =
     { /* 0-base */ 0, 0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 0x77 };
   static const UINT8 val_ac_chrominance[] =
@@ -259,7 +259,7 @@ std_huff_tables (j_compress_ptr cinfo)
       0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9,
       0xea, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
       0xf9, 0xfa };
-  
+
   add_huff_table(cinfo, &cinfo->dc_huff_tbl_ptrs[0],
 		 bits_dc_luminance, val_dc_luminance);
   add_huff_table(cinfo, &cinfo->ac_huff_tbl_ptrs[0],

@@ -151,8 +151,8 @@ void RefreshEnabledDevices(int updateDeviceList) {
 			(dev->type == KEYBOARD && dev->api == config.keyboardApi) ||
 			(dev->type == MOUSE && dev->api == config.mouseApi) ||
 			(dev->type == OTHER &&
-				((dev->api == DI && config.gameApis.directInput) || 
-				 (dev->api == DS3 && config.gameApis.dualShock3) || 
+				((dev->api == DI && config.gameApis.directInput) ||
+				 (dev->api == DS3 && config.gameApis.dualShock3) ||
 				 (dev->api == XINPUT && config.gameApis.xInput)))) {
 					if (config.gameApis.dualShock3 && dev->api == DI && dev->displayName &&
 						!wcsicmp(dev->displayName, L"DX PLAYSTATION(R)3 Controller")) {
@@ -728,7 +728,7 @@ int SaveSettings(wchar_t *file=0) {
 			*c = 0;
 			wcscpy(config.lastSaveConfigPath, file);
 			wcscpy(config.lastSaveConfigFileName, c+1);
-			*c = '\\'; 
+			*c = '\\';
 		}
 	}
 	DeleteFileW(file);
@@ -816,7 +816,7 @@ u8 GetPrivateProfileBool(wchar_t *s1, wchar_t *s2, int def, wchar_t *ini) {
 
 int LoadSettings(int force, wchar_t *file) {
 	if (dm && !force) return 0;
-	
+
 	if( createIniDir )
 	{
 		CreateDirectory(L"inis", 0);
@@ -1330,7 +1330,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			// *always* returned NULL anyway.  This resulted in hWndButton being null, which meant Device code
 			// used hWnd instead.  This may have caused odd behavior since the callbacks were still all eaten
 			// by the initial GetDlgItem(hWnd, cmd) selection made when the timer was initialized.
-			
+
 			InitInfo info = {selected==0x7F, 1, hWndProp, &hWndButtonProc};
 			Device *dev = dm->GetActiveDevice(&info, &uid, &index, &value);
 			if (dev) {

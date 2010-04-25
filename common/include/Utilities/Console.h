@@ -120,7 +120,7 @@ struct IConsoleWriter
 
 	// internal value for indentation of individual lines.  Use the Indent() member to invoke.
 	int _imm_indentation;
-	
+
 	// For internal use only.
 	wxString _addIndentation( const wxString& src, int glob_indent ) const;
 };

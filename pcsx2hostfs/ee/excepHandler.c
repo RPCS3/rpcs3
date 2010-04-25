@@ -17,7 +17,7 @@ int userThreadID;
 int excepscrdump;
 
 ////////////////////////////////////////////////////////////////////////
-typedef union 
+typedef union
 {
     unsigned int  uint128 __attribute__(( mode(TI) ));
     unsigned long uint64[2];
@@ -33,16 +33,16 @@ extern void pkoExceptionHandler(void);
 static const unsigned char regName[32][5] =
 {
     "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3",
-    "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", 
-    "t8", "t9", "s0", "s1", "s2", "s3", "s4", "s5", 
+    "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
+    "t8", "t9", "s0", "s1", "s2", "s3", "s4", "s5",
     "s6", "s7", "k0", "k1", "gp", "sp", "fp", "ra"
 };
 
-static char codeTxt[14][24] = 
+static char codeTxt[14][24] =
 {
     "Interrupt", "TLB modification", "TLB load/inst fetch", "TLB store",
-    "Address load/inst fetch", "Address store", "Bus error (instr)", 
-    "Bus error (data)", "Syscall", "Breakpoint", "Reserved instruction", 
+    "Address load/inst fetch", "Address store", "Bus error (instr)",
+    "Bus error (data)", "Syscall", "Breakpoint", "Reserved instruction",
     "Coprocessor unusable", "Arithmetic overflow", "Trap"
 };
 
@@ -78,14 +78,14 @@ pkoDebug(int cause, int badvaddr, int status, int epc, eeReg *regs)
     }
 	else excpPrintf = (void*)printf;
 
-    excpPrintf("\n\n           EE Exception handler: %s exception\n\n", 
+    excpPrintf("\n\n           EE Exception handler: %s exception\n\n",
                codeTxt[code>>2]);
 
     excpPrintf("      Cause %08X  BadVAddr %08X  Status %08X  EPC %08X\n\n",
                cause, badvaddr, status, epc);
 
     for(i = 0; i < 32/2; i++) {
-        excpPrintf("%4s: %016lX%016lX %4s: %016lX%016lX\n", 
+        excpPrintf("%4s: %016lX%016lX %4s: %016lX%016lX\n",
                    regName[i],    regs[i].uint64[1],    regs[i].uint64[0],
                    regName[i+16], regs[i+16].uint64[1], regs[i+16].uint64[0]);
     }
@@ -121,10 +121,10 @@ void iopException(int cause, int badvaddr, int status, int epc, u32 *regs, int r
         excpPrintf = scr_printf;
     }
 	else excpPrintf = (void*)printf;
-   
-	excpPrintf("\n\n         IOP Exception handler: %s exception\n\n", 
+
+	excpPrintf("\n\n         IOP Exception handler: %s exception\n\n",
                codeTxt[code>>2]);
-		
+
 	excpPrintf("               Module Name \"%s\" Relative EPC %08X\n\n",
                name, repc);
 
@@ -132,17 +132,17 @@ void iopException(int cause, int badvaddr, int status, int epc, u32 *regs, int r
 	excpPrintf("      Cause %08X  BadVAddr %08X  Status %08X  EPC %08X\n\n",
                cause, badvaddr, status, epc);
 
-	for(i = 0; i < 32/4; i++) 
+	for(i = 0; i < 32/4; i++)
 	{
-		excpPrintf("       %4s: %08X %4s: %08X %4s: %08X %4s: %08X\n", 
+		excpPrintf("       %4s: %08X %4s: %08X %4s: %08X %4s: %08X\n",
 					regName[i],  regs[i], regName[i+8], regs[i+8],
-					regName[i+16],  regs[i+16], regName[i+24], regs[i+24]); 
+					regName[i+16],  regs[i+16], regName[i+24], regs[i+24]);
 	}
-	
-	excpPrintf("\n");
-	
 
-	
+	excpPrintf("\n");
+
+
+
 	SleepThread();
 }
 

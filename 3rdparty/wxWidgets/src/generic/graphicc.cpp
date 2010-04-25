@@ -145,7 +145,7 @@ public :
 
     /*
 
-    // appends a rectangle as a new closed subpath 
+    // appends a rectangle as a new closed subpath
     virtual void AddRectangle( wxDouble x, wxDouble y, wxDouble w, wxDouble h ) ;
     // appends an ellipsis as a new closed subpath fitting the passed rectangle
     virtual void AddEllipsis( wxDouble x, wxDouble y, wxDouble w , wxDouble h ) ;
@@ -184,13 +184,13 @@ public :
     virtual void Concat( const wxGraphicsMatrixData *t );
 
     // sets the matrix to the respective values
-    virtual void Set(wxDouble a=1.0, wxDouble b=0.0, wxDouble c=0.0, wxDouble d=1.0, 
+    virtual void Set(wxDouble a=1.0, wxDouble b=0.0, wxDouble c=0.0, wxDouble d=1.0,
         wxDouble tx=0.0, wxDouble ty=0.0);
 
     // gets the component valuess of the matrix
     virtual void Get(wxDouble* a=NULL, wxDouble* b=NULL,  wxDouble* c=NULL,
                      wxDouble* d=NULL, wxDouble* tx=NULL, wxDouble* ty=NULL) const;
-       
+
     // makes this the inverse matrix
     virtual void Invert();
 
@@ -211,7 +211,7 @@ public :
     virtual void Scale( wxDouble xScale , wxDouble yScale );
 
     // add the rotation to this matrix (radians)
-    virtual void Rotate( wxDouble angle );	
+    virtual void Rotate( wxDouble angle );
 
     //
     // apply the transforms
@@ -242,12 +242,12 @@ public:
 
 private :
     double m_width;
-    
+
     double m_red;
     double m_green;
     double m_blue;
     double m_alpha;
-    
+
     cairo_line_cap_t m_cap;
     cairo_line_join_t m_join;
 
@@ -266,7 +266,7 @@ public:
     ~wxCairoBrushData ();
 
     virtual void Apply( wxGraphicsContext* context );
-    void CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2, 
+    void CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
         const wxColour&c1, const wxColour&c2 );
     void CreateRadialGradientBrush( wxDouble xo, wxDouble yo, wxDouble xc, wxDouble yc, wxDouble radius,
         const wxColour &oColor, const wxColour &cColor );
@@ -392,7 +392,7 @@ void wxCairoPenData::Init()
 
 wxCairoPenData::wxCairoPenData( wxGraphicsRenderer* renderer, const wxPen &pen )
 : wxGraphicsObjectRefData(renderer)
-{    
+{
     Init();
     m_pen = pen;
     m_width = m_pen.GetWidth();
@@ -400,7 +400,7 @@ wxCairoPenData::wxCairoPenData( wxGraphicsRenderer* renderer, const wxPen &pen )
         m_width = 0.1;
 
     m_red = m_pen.GetColour().Red()/255.0;
-    m_green = m_pen.GetColour().Green()/255.0; 
+    m_green = m_pen.GetColour().Green()/255.0;
     m_blue = m_pen.GetColour().Blue()/255.0;
     m_alpha = m_pen.GetColour().Alpha()/255.0;
 
@@ -583,9 +583,9 @@ wxCairoBrushData::wxCairoBrushData( wxGraphicsRenderer* renderer, const wxBrush 
   : wxGraphicsObjectRefData(renderer)
 {
     Init();
-    
+
     m_red = brush.GetColour().Red()/255.0;
-    m_green = brush.GetColour().Green()/255.0; 
+    m_green = brush.GetColour().Green()/255.0;
     m_blue = brush.GetColour().Blue()/255.0;
     m_alpha = brush.GetColour().Alpha()/255.0;
     /*
@@ -622,7 +622,7 @@ wxCairoBrushData::wxCairoBrushData( wxGraphicsRenderer* renderer, const wxBrush 
     m_brush = new HatchBrush(style,Color( brush.GetColour().Alpha() , brush.GetColour().Red() ,
     brush.GetColour().Green() , brush.GetColour().Blue() ), Color.Transparent );
     }
-    else 
+    else
     {
     wxBitmap* bmp = brush.GetStipple();
     if ( bmp && bmp->Ok() )
@@ -654,7 +654,7 @@ void wxCairoBrushData::Apply( wxGraphicsContext* context )
     }
 }
 
-void wxCairoBrushData::CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2, 
+void wxCairoBrushData::CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
         const wxColour&c1, const wxColour&c2 )
 {
     m_brushPattern = cairo_pattern_create_linear(x1,y1,x2,y2);
@@ -685,11 +685,11 @@ void wxCairoBrushData::Init()
 // wxCairoFontData implementation
 //-----------------------------------------------------------------------------
 
-wxCairoFontData::wxCairoFontData( wxGraphicsRenderer* renderer, const wxFont &font, 
+wxCairoFontData::wxCairoFontData( wxGraphicsRenderer* renderer, const wxFont &font,
                          const wxColour& col ) : wxGraphicsObjectRefData(renderer)
 {
     m_red = col.Red()/255.0;
-    m_green = col.Green()/255.0; 
+    m_green = col.Green()/255.0;
     m_blue = col.Blue()/255.0;
     m_alpha = col.Alpha()/255.0;
 
@@ -804,7 +804,7 @@ void wxCairoPathData::GetCurrentPoint( wxDouble* x, wxDouble* y) const
 
 void wxCairoPathData::AddArc( wxDouble x, wxDouble y, wxDouble r, double startAngle, double endAngle, bool clockwise )
 {
-    // as clockwise means positive in our system (y pointing downwards) 
+    // as clockwise means positive in our system (y pointing downwards)
     // TODO make this interpretation dependent of the
     // real device trans
     if ( clockwise||(endAngle-startAngle)>=2*M_PI)
@@ -814,14 +814,14 @@ void wxCairoPathData::AddArc( wxDouble x, wxDouble y, wxDouble r, double startAn
 }
 
 // transforms each point of this path by the matrix
-void wxCairoPathData::Transform( const wxGraphicsMatrixData* matrix ) 
+void wxCairoPathData::Transform( const wxGraphicsMatrixData* matrix )
 {
     // as we don't have a true path object, we have to apply the inverse
     // matrix to the context
     cairo_matrix_t m = *((cairo_matrix_t*) matrix->GetNativeMatrix());
     cairo_matrix_invert( &m );
     cairo_transform(m_pathContext,&m);
-}   
+}
 
 // gets the bounding box enclosing all points (possibly including control points)
 void wxCairoPathData::GetBox(wxDouble *x, wxDouble *y, wxDouble *w, wxDouble *h) const
@@ -839,7 +839,7 @@ void wxCairoPathData::GetBox(wxDouble *x, wxDouble *y, wxDouble *w, wxDouble *h)
         *x = x1;
         *w = x2-x1;
     }
-    
+
     if( y2 < y1 )
     {
         *y = y2;
@@ -868,25 +868,25 @@ wxCairoMatrixData::wxCairoMatrixData(wxGraphicsRenderer* renderer, const cairo_m
         m_matrix = *matrix;
 }
 
-wxCairoMatrixData::~wxCairoMatrixData() 
+wxCairoMatrixData::~wxCairoMatrixData()
 {
     // nothing to do
 }
 
-wxGraphicsObjectRefData *wxCairoMatrixData::Clone() const 
+wxGraphicsObjectRefData *wxCairoMatrixData::Clone() const
 {
     return new wxCairoMatrixData(GetRenderer(),&m_matrix);
 }
 
 // concatenates the matrix
-void wxCairoMatrixData::Concat( const wxGraphicsMatrixData *t ) 
+void wxCairoMatrixData::Concat( const wxGraphicsMatrixData *t )
 {
-    cairo_matrix_multiply( &m_matrix, &m_matrix, (cairo_matrix_t*) t->GetNativeMatrix());           
+    cairo_matrix_multiply( &m_matrix, &m_matrix, (cairo_matrix_t*) t->GetNativeMatrix());
 }
 
 // sets the matrix to the respective values
-void wxCairoMatrixData::Set(wxDouble a, wxDouble b, wxDouble c, wxDouble d, 
-                        wxDouble tx, wxDouble ty) 
+void wxCairoMatrixData::Set(wxDouble a, wxDouble b, wxDouble c, wxDouble d,
+                        wxDouble tx, wxDouble ty)
 {
     cairo_matrix_init( &m_matrix, a, b, c, d, tx, ty);
 }
@@ -904,21 +904,21 @@ void wxCairoMatrixData::Get(wxDouble* a, wxDouble* b,  wxDouble* c,
 }
 
 // makes this the inverse matrix
-void wxCairoMatrixData::Invert() 
+void wxCairoMatrixData::Invert()
 {
     cairo_matrix_invert( &m_matrix );
 }
 
 // returns true if the elements of the transformation matrix are equal ?
-bool wxCairoMatrixData::IsEqual( const wxGraphicsMatrixData* t) const  
+bool wxCairoMatrixData::IsEqual( const wxGraphicsMatrixData* t) const
 {
     const cairo_matrix_t* tm = (cairo_matrix_t*) t->GetNativeMatrix();
-    return ( 
-        m_matrix.xx == tm->xx && 
-        m_matrix.yx == tm->yx && 
-        m_matrix.xy == tm->xy && 
-        m_matrix.yy == tm->yy && 
-        m_matrix.x0 == tm->x0 && 
+    return (
+        m_matrix.xx == tm->xx &&
+        m_matrix.yx == tm->yx &&
+        m_matrix.xy == tm->xy &&
+        m_matrix.yy == tm->yy &&
+        m_matrix.x0 == tm->x0 &&
         m_matrix.y0 == tm->y0 ) ;
 }
 
@@ -946,10 +946,10 @@ void wxCairoMatrixData::Scale( wxDouble xScale , wxDouble yScale )
 }
 
 // add the rotation to this matrix (radians)
-void wxCairoMatrixData::Rotate( wxDouble angle ) 
+void wxCairoMatrixData::Rotate( wxDouble angle )
 {
     cairo_matrix_rotate( &m_matrix, angle) ;
-}	
+}
 
 //
 // apply the transforms
@@ -992,7 +992,7 @@ wxCairoBitmapData::wxCairoBitmapData( wxGraphicsRenderer* renderer, const wxBitm
     wxBitmap bmpSource = bmp;  // we need a non-const instance
     m_buffer = new unsigned char[bw*bh*4];
     wxUint32* data = (wxUint32*)m_buffer;
-    
+
     // Create a surface object and copy the bitmap pixel data to it.  if the
     // image has alpha (or a mask represented as alpha) then we'll use a
     // different format and iterator than if it doesn't...
@@ -1002,7 +1002,7 @@ wxCairoBitmapData::wxCairoBitmapData( wxGraphicsRenderer* renderer, const wxBitm
             m_buffer, CAIRO_FORMAT_ARGB32, bw, bh, bw*4);
         wxAlphaPixelData pixData(bmpSource, wxPoint(0,0), wxSize(bw, bh));
         wxCHECK_RET( pixData, wxT("Failed to gain raw access to bitmap data."));
-        
+
         wxAlphaPixelData::Iterator p(pixData);
         for (int y=0; y<bh; y++)
         {
@@ -1017,16 +1017,16 @@ wxCairoBitmapData::wxCairoBitmapData( wxGraphicsRenderer* renderer, const wxBitm
                 if (alpha == 0)
                     *data = 0;
                 else
-                    *data = ( alpha                      << 24 
-                              | (p.Red() * alpha/255)    << 16 
-                              | (p.Green() * alpha/255)  <<  8 
+                    *data = ( alpha                      << 24
+                              | (p.Red() * alpha/255)    << 16
+                              | (p.Green() * alpha/255)  <<  8
                               | (p.Blue() * alpha/255) );
                 ++data;
                 ++p;
             }
             p = rowStart;
             p.OffsetY(pixData, 1);
-        }        
+        }
     }
     else  // no alpha
     {
@@ -1034,7 +1034,7 @@ wxCairoBitmapData::wxCairoBitmapData( wxGraphicsRenderer* renderer, const wxBitm
             m_buffer, CAIRO_FORMAT_RGB24, bw, bh, bw*4);
         wxNativePixelData pixData(bmpSource, wxPoint(0,0), wxSize(bw, bh));
         wxCHECK_RET( pixData, wxT("Failed to gain raw access to bitmap data."));
-        
+
         wxNativePixelData::Iterator p(pixData);
         for (int y=0; y<bh; y++)
         {
@@ -1051,7 +1051,7 @@ wxCairoBitmapData::wxCairoBitmapData( wxGraphicsRenderer* renderer, const wxBitm
             }
             p = rowStart;
             p.OffsetY(pixData, 1);
-        }        
+        }
     }
     m_pattern = cairo_pattern_create_for_surface(m_surface);
 }
@@ -1143,14 +1143,14 @@ void wxCairoContext::Clip( const wxRegion& region )
         path.AddRectangle(ri.GetX(), ri.GetY(), ri.GetW(), ri.GetH());
         ri++;
     }
-    
+
     // Put it in the context
     cairo_path_t* cp = (cairo_path_t*) path.GetNativePath() ;
     cairo_append_path(m_context, cp);
 
     // clip to that path
     cairo_clip(m_context);
-    path.UnGetNativePath(cp);  
+    path.UnGetNativePath(cp);
 }
 
 void wxCairoContext::Clip( wxDouble x, wxDouble y, wxDouble w, wxDouble h )
@@ -1165,7 +1165,7 @@ void wxCairoContext::Clip( wxDouble x, wxDouble y, wxDouble w, wxDouble h )
 
     // clip to that path
     cairo_clip(m_context);
-    path.UnGetNativePath(cp);  
+    path.UnGetNativePath(cp);
 }
 
 void wxCairoContext::ResetClip()
@@ -1177,7 +1177,7 @@ void wxCairoContext::ResetClip()
 void wxCairoContext::StrokePath( const wxGraphicsPath& path )
 {
     if ( !m_pen.IsNull() )
-    {   
+    {
         cairo_path_t* cp = (cairo_path_t*) path.GetNativePath() ;
         cairo_append_path(m_context,cp);
         ((wxCairoPenData*)m_pen.GetRefData())->Apply(this);
@@ -1263,7 +1263,7 @@ void wxCairoContext::DrawGraphicsBitmapInternal(const wxGraphicsBitmap &bmp, wxD
     cairo_pattern_t* pattern = data->GetCairoPattern();
     wxSize size = data->GetSize();
     PushState();
-    
+
     // In case we're scaling the image by using a width and height different
     // than the bitmap's size create a pattern transformation on the surface and
     // draw the transformed pattern.
@@ -1298,7 +1298,7 @@ void wxCairoContext::DrawText( const wxString &str, wxDouble x, wxDouble y )
 
     if ( str.empty())
         return;
-    
+
     ((wxCairoFontData*)m_font.GetRefData())->Apply(this);
 
     // Cairo's x,y for drawing text is at the baseline, so we need to adjust
@@ -1306,7 +1306,7 @@ void wxCairoContext::DrawText( const wxString &str, wxDouble x, wxDouble y )
     cairo_font_extents_t fe;
     cairo_font_extents(m_context, &fe);
     cairo_move_to(m_context, x, y+fe.ascent);
-    
+
     const wxWX2MBbuf buf(str.mb_str(wxConvUTF8));
     cairo_show_text(m_context,buf);
 }
@@ -1333,7 +1333,7 @@ void wxCairoContext::GetTextExtent( const wxString &str, wxDouble *width, wxDoub
     {
         cairo_font_extents_t fe;
         cairo_font_extents(m_context, &fe);
-    
+
         if (height)
             *height = fe.height;
         if ( descent )
@@ -1356,7 +1356,7 @@ void wxCairoContext::GetPartialTextExtents(const wxString& text, wxArrayDouble& 
     // TODO
 }
 
-void * wxCairoContext::GetNativeContext() 
+void * wxCairoContext::GetNativeContext()
 {
     return m_context;
 }
@@ -1394,7 +1394,7 @@ public :
 
     // Matrix
 
-    virtual wxGraphicsMatrix CreateMatrix( wxDouble a=1.0, wxDouble b=0.0, wxDouble c=0.0, wxDouble d=1.0, 
+    virtual wxGraphicsMatrix CreateMatrix( wxDouble a=1.0, wxDouble b=0.0, wxDouble c=0.0, wxDouble d=1.0,
         wxDouble tx=0.0, wxDouble ty=0.0);
 
 
@@ -1403,17 +1403,17 @@ public :
     virtual wxGraphicsBrush CreateBrush(const wxBrush& brush ) ;
 
     // sets the brush to a linear gradient, starting at (x1,y1) with color c1 to (x2,y2) with color c2
-    virtual wxGraphicsBrush CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2, 
+    virtual wxGraphicsBrush CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
         const wxColour&c1, const wxColour&c2) ;
 
-    // sets the brush to a radial gradient originating at (xo,yc) with color oColor and ends on a circle around (xc,yc) 
+    // sets the brush to a radial gradient originating at (xo,yc) with color oColor and ends on a circle around (xc,yc)
     // with radius r and color cColor
     virtual wxGraphicsBrush CreateRadialGradientBrush( wxDouble xo, wxDouble yo, wxDouble xc, wxDouble yc, wxDouble radius,
         const wxColour &oColor, const wxColour &cColor) ;
 
     // sets the font
     virtual wxGraphicsFont CreateFont( const wxFont &font , const wxColour &col = *wxBLACK ) ;
-    
+
     wxGraphicsBitmap CreateBitmap( const wxBitmap &bitmap ) ;
 
 private :
@@ -1485,7 +1485,7 @@ wxGraphicsPath wxCairoRenderer::CreatePath()
 
 // Matrix
 
-wxGraphicsMatrix wxCairoRenderer::CreateMatrix( wxDouble a, wxDouble b, wxDouble c, wxDouble d, 
+wxGraphicsMatrix wxCairoRenderer::CreateMatrix( wxDouble a, wxDouble b, wxDouble c, wxDouble d,
                                                 wxDouble tx, wxDouble ty)
 
 {
@@ -1496,7 +1496,7 @@ wxGraphicsMatrix wxCairoRenderer::CreateMatrix( wxDouble a, wxDouble b, wxDouble
     return m;
 }
 
-wxGraphicsPen wxCairoRenderer::CreatePen(const wxPen& pen) 
+wxGraphicsPen wxCairoRenderer::CreatePen(const wxPen& pen)
 {
     if ( !pen.Ok() || pen.GetStyle() == wxTRANSPARENT )
         return wxNullGraphicsPen;
@@ -1508,7 +1508,7 @@ wxGraphicsPen wxCairoRenderer::CreatePen(const wxPen& pen)
     }
 }
 
-wxGraphicsBrush wxCairoRenderer::CreateBrush(const wxBrush& brush ) 
+wxGraphicsBrush wxCairoRenderer::CreateBrush(const wxBrush& brush )
 {
     if ( !brush.Ok() || brush.GetStyle() == wxTRANSPARENT )
         return wxNullGraphicsBrush;
@@ -1521,8 +1521,8 @@ wxGraphicsBrush wxCairoRenderer::CreateBrush(const wxBrush& brush )
 }
 
 // sets the brush to a linear gradient, starting at (x1,y1) with color c1 to (x2,y2) with color c2
-wxGraphicsBrush wxCairoRenderer::CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2, 
-                                                                      const wxColour&c1, const wxColour&c2) 
+wxGraphicsBrush wxCairoRenderer::CreateLinearGradientBrush( wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
+                                                                      const wxColour&c1, const wxColour&c2)
 {
     wxGraphicsBrush p;
     wxCairoBrushData* d = new wxCairoBrushData( this );
@@ -1531,10 +1531,10 @@ wxGraphicsBrush wxCairoRenderer::CreateLinearGradientBrush( wxDouble x1, wxDoubl
     return p;
 }
 
-// sets the brush to a radial gradient originating at (xo,yc) with color oColor and ends on a circle around (xc,yc) 
+// sets the brush to a radial gradient originating at (xo,yc) with color oColor and ends on a circle around (xc,yc)
 // with radius r and color cColor
 wxGraphicsBrush wxCairoRenderer::CreateRadialGradientBrush( wxDouble xo, wxDouble yo, wxDouble xc, wxDouble yc, wxDouble radius,
-                                                                      const wxColour &oColor, const wxColour &cColor) 
+                                                                      const wxColour &oColor, const wxColour &cColor)
 {
     wxGraphicsBrush p;
     wxCairoBrushData* d = new wxCairoBrushData( this );
@@ -1544,10 +1544,10 @@ wxGraphicsBrush wxCairoRenderer::CreateRadialGradientBrush( wxDouble xo, wxDoubl
 }
 
 // sets the font
-wxGraphicsFont wxCairoRenderer::CreateFont( const wxFont &font , const wxColour &col ) 
+wxGraphicsFont wxCairoRenderer::CreateFont( const wxFont &font , const wxColour &col )
 {
     if ( font.Ok() )
-    {        
+    {
         wxGraphicsFont p;
         p.SetRefData(new wxCairoFontData( this , font, col ));
         return p;

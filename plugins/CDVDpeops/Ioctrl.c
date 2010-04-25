@@ -108,7 +108,7 @@ int GetIOCTLCDDrives(char * pDList)
       {
        wsprintf(p,"[%d:%d:%d] Drive %c:",
                 iDA,iDT,iDL,cLetter[0]);
-       p+=strlen(p)+1;         
+       p+=strlen(p)+1;
        iCnt++;
       }
     }
@@ -132,7 +132,7 @@ HANDLE OpenIOCTLFile(char cLetter,BOOL bAsync)
  ov.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
  GetVersionEx(&ov);
 
- if((ov.dwPlatformId==VER_PLATFORM_WIN32_NT) &&        
+ if((ov.dwPlatformId==VER_PLATFORM_WIN32_NT) &&
     (ov.dwMajorVersion>4))
       dwFlags = GENERIC_READ|GENERIC_WRITE;            // add gen write on W2k/XP
  else dwFlags = GENERIC_READ;
@@ -150,7 +150,7 @@ HANDLE OpenIOCTLFile(char cLetter,BOOL bAsync)
    if(hF==INVALID_HANDLE_VALUE) return NULL;
   }
 
- return hF;                                          
+ return hF;
 }
 
 /////////////////////////////////////////////////////////
@@ -167,7 +167,7 @@ void GetIOCTLAdapter(HANDLE hF,int * iDA,int * iDT,int * iDL)
 
  pSA=(PSCSI_ADDRESS)szBuf;
  pSA->Length=sizeof(SCSI_ADDRESS);
-                                                   
+
  if(!DeviceIoControl(hF,IOCTL_SCSI_GET_ADDRESS,NULL,
                      0,pSA,sizeof(SCSI_ADDRESS),
                      &dwRet,NULL))
@@ -186,7 +186,7 @@ DWORD IOCTLSendASPI32Command(LPSRB pSRB)
  LPSRB_ExecSCSICmd pSC;DWORD dwRet;BOOL bStat;
 
  if(!pSRB) return SS_ERR;
-    
+
  if(hIOCTL==NULL ||
     pSRB->SRB_Cmd!=SC_EXEC_SCSI_CMD)                   // we only fake exec aspi scsi commands
   {
@@ -214,11 +214,11 @@ DWORD IOCTLSendASPI32Command(LPSRB pSRB)
 
  if(dwIOCTLAttr==FILE_FLAG_OVERLAPPED)                 // async?
   {
-   ovcIOCTL.Internal=0; 
-   ovcIOCTL.InternalHigh=0; 
-   ovcIOCTL.Offset=0; 
-   ovcIOCTL.OffsetHigh=0; 
-   ovcIOCTL.hEvent=hEvent; 
+   ovcIOCTL.Internal=0;
+   ovcIOCTL.InternalHigh=0;
+   ovcIOCTL.Offset=0;
+   ovcIOCTL.OffsetHigh=0;
+   ovcIOCTL.hEvent=hEvent;
    bStat = DeviceIoControl(hIOCTL,
                 IOCTL_SCSI_PASS_THROUGH_DIRECT,
                 &sptIOCTL,
@@ -272,11 +272,11 @@ DWORD ReadIOCTL_Raw(BOOL bWait,FRAMEBUF * f)
 
  if(dwIOCTLAttr==FILE_FLAG_OVERLAPPED)                 // async?
   {
-   ovcIOCTL.Internal=0; 
-   ovcIOCTL.InternalHigh=0; 
-   ovcIOCTL.Offset=0; 
-   ovcIOCTL.OffsetHigh=0; 
-   ovcIOCTL.hEvent=hEvent; 
+   ovcIOCTL.Internal=0;
+   ovcIOCTL.InternalHigh=0;
+   ovcIOCTL.Offset=0;
+   ovcIOCTL.OffsetHigh=0;
+   ovcIOCTL.hEvent=hEvent;
    ResetEvent(hEvent);
    bStat = DeviceIoControl(hIOCTL,
              IOCTL_CDROM_RAW_READ,
@@ -297,11 +297,11 @@ DWORD ReadIOCTL_Raw(BOOL bWait,FRAMEBUF * f)
   {
    DWORD dwErrCode;
    dwErrCode=GetLastError();
-   
-#ifdef DBGOUT  	 
+
+#ifdef DBGOUT
 auxprintf("errorcode %d\n",   dwErrCode);
 #endif
-   
+
    if(dwErrCode==ERROR_IO_PENDING)
     {
      // we do a wait here, not later... no real async mode anyway
@@ -321,7 +321,7 @@ auxprintf("errorcode %d\n",   dwErrCode);
 }
 
 /////////////////////////////////////////////////////////
-// special raw + special sub... dunno if this really 
+// special raw + special sub... dunno if this really
 // works on any drive (teac is working, but giving unprecise
 // subdata)
 
@@ -342,7 +342,7 @@ DWORD ReadIOCTL_Raw_Sub(BOOL bWait,FRAMEBUF * f)
              &rawIOCTL,sizeof(RAW_READ_INFO),
              &(f->BufData[0]),f->dwBufLen,
              &dwRet,NULL);
-             
+
  if(!bStat) {sx.SRB_Status=SS_ERR;return SS_ERR;}
 
  qf.Format=IOCTL_CDROM_CURRENT_POSITION;
@@ -352,7 +352,7 @@ DWORD ReadIOCTL_Raw_Sub(BOOL bWait,FRAMEBUF * f)
              &qf,sizeof(CDROM_SUB_Q_DATA_FORMAT),
              &qd,sizeof(SUB_Q_CHANNEL_DATA),
              &dwRet,NULL);
-                          
+
  p=(unsigned char*)&qd;
 
  SubCData[12]=(p[5]<<4)|(p[5]>>4);

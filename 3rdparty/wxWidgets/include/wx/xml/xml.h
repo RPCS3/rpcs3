@@ -203,7 +203,7 @@ public:
                       const wxString& encoding = wxT("UTF-8"), int flags = wxXMLDOC_NONE);
     virtual bool Load(wxInputStream& stream,
                       const wxString& encoding = wxT("UTF-8"), int flags = wxXMLDOC_NONE);
-    
+
     // Saves document as .xml file.
     virtual bool Save(const wxString& filename, int indentstep = 1) const;
     virtual bool Save(wxOutputStream& stream, int indentstep = 1) const;

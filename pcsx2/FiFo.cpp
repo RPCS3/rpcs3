@@ -68,7 +68,7 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 				GetMTGS().WaitGS();
 				GSreadFIFO(&psHu64(VIF1_FIFO));
 			}
-			if(vif1Regs->stat.FQC > 0)--vif1Regs->stat.FQC;			
+			if(vif1Regs->stat.FQC > 0)--vif1Regs->stat.FQC;
 	}
 
 	out[0] = psHu64(VIF1_FIFO);

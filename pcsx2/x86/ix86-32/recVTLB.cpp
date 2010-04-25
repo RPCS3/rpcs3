@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -53,7 +53,7 @@ public:
 		else
 			xRestoreReg( m_reg );
 	}
-	
+
 	operator xRegisterSSE() const { return m_reg; }
 };
 
@@ -93,7 +93,7 @@ void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
 		xRegisterMMX reg( _allocMMXreg(-1, MMX_TEMP, 0) );
 		xMOVQ( reg, srcRm );
 		xMOVQ( destRm, reg );
-		_freeMMXreg( reg.Id );		
+		_freeMMXreg( reg.Id );
 	}
 	else
 	{
@@ -101,7 +101,7 @@ void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
 		xMOV( destRm, eax );
 		xMOV( eax, srcRm+4 );
 		xMOV( destRm+4, eax );
-	}		
+	}
 }
 
 /*
@@ -117,7 +117,7 @@ void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
 		return 0;
 	}
 	else
-	{	
+	{
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
@@ -321,7 +321,7 @@ void vtlb_DynGenRead64(u32 bits)
 
 	DynGen_IndirectDispatch( 0, bits );
 	DynGen_DirectRead( bits, false );
-	
+
 	*writeback = (uptr)xGetPtr();		// return target for indirect's call/ret
 }
 
@@ -418,7 +418,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 				if( sign )
 					xMOVSX( eax, ptr8[ppf] );
 				else
-					xMOVZX( eax, ptr8[ppf] );					
+					xMOVZX( eax, ptr8[ppf] );
 			break;
 
 			case 16:
@@ -438,7 +438,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		// has to: translate, find function, call function
 		u32 handler = (u8)vmv_ptr;
 		u32 paddr = ppf - handler + 0x80000000;
-		
+
 		int szidx = 0;
 		switch( bits )
 		{
@@ -507,11 +507,11 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 			case 8:
 				xMOV( ptr[ppf], dl );
 			break;
-			
+
 			case 16:
 				xMOV( ptr[ppf], dx );
 			break;
-			
+
 			case 32:
 				xMOV( ptr[ppf], edx );
 			break;
@@ -527,11 +527,11 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 
 	}
 	else
-	{	
+	{
 		// has to: translate, find function, call function
 		u32 handler = (u8)vmv_ptr;
 		u32 paddr = ppf - handler + 0x80000000;
-		
+
 		int szidx = 0;
 		switch( bits )
 		{

@@ -201,7 +201,7 @@ bool wxCrashReportImpl::Generate(int flags, EXCEPTION_POINTERS *ep)
             dumpFlags = (MINIDUMP_TYPE)(MiniDumpScanMemory
 #if _MSC_VER > 1300
                                         |MiniDumpWithIndirectlyReferencedMemory
-#endif                                        
+#endif
                                         );
         }
 

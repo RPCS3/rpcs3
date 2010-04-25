@@ -164,7 +164,7 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 
 	const wxFont fixed( pxGetFixedFont( fontsize ) );
 	const wxFont fixedB( pxGetFixedFont( fontsize+1, wxBOLD ) );
-	
+
 	//const wxFont fixed( fontsize, wxMODERN, wxNORMAL, wxNORMAL );
 	//const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
 
@@ -250,7 +250,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	m_ThawPending				= false;
 
 	SetIcons( wxGetApp().GetIconBundle() );
-		
+
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
 
@@ -290,13 +290,13 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	menuLog.Append(wxID_ANY,	_("Show Legend"),	_("Displays the console color legend.") );
 	menuLog.AppendSeparator();
 	menuLog.Append(wxID_CLOSE, _("&Close"),			_("Close this log window; contents are preserved"));
-	
+
 	// Source Selection/Toggle menu
-	
+
 	m_item_Deci2	= menuSources.AppendCheckItem( wxID_ANY, _("EE Deci2"),		_("Enables debug output from the EEcore.") );
 	m_item_StdoutEE	= menuSources.AppendCheckItem( wxID_ANY, _("EE StdOut"),	_("Enables STDOUT from the EEcore.") );
 	m_item_StdoutIOP= menuSources.AppendCheckItem( wxID_ANY, _("IOP StdOut"),	_("Enables STDOUT from the IOP.") );
-	
+
 	pMenuBar->Append(&menuLog,		_("&Log"));
 	pMenuBar->Append(&menuSources,	_("&Sources"));
 
@@ -331,7 +331,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	Connect( wxEVT_IDLE,			wxIdleEventHandler		(ConsoleLogFrame::OnIdleEvent) );
 	Connect( wxEVT_TIMER,			wxTimerEventHandler		(ConsoleLogFrame::OnFlushLimiterTimer) );
-	
+
 	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
 	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
 	m_item_StdoutIOP	->Check( g_Conf->EmuOptions.Log.StdoutIOP );
@@ -385,7 +385,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	}
 
 	++m_pendingFlushes;
-	
+
 	if( !wxThread::IsMain() )
 	{
 		m_ThreadedLogInQueue = true;
@@ -562,7 +562,7 @@ void ConsoleLogFrame::OnLogSourceChanged( wxCommandEvent& evt )
 	g_Conf->EmuOptions.Log.Deci2	= m_item_Deci2		->IsChecked();
 	g_Conf->EmuOptions.Log.StdoutEE	= m_item_StdoutEE	->IsChecked();
 	g_Conf->EmuOptions.Log.StdoutIOP= m_item_StdoutIOP	->IsChecked();
-	
+
 	CoreThread.ApplySettings( g_Conf->EmuOptions );
 }
 
@@ -601,7 +601,7 @@ void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& )
 {
 	// When the GUI is idle then it's a safe bet we can resume suspended console log
 	// flushing, on the theory that the user's had a good chance to field user input.
-	
+
 	if( m_flushevent_counter > 0 )
 	{
 		m_flushevent_counter = 0;
@@ -860,7 +860,7 @@ static const IConsoleWriter	ConsoleWriter_Window =
 	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
 	ConsoleToWindow_Newline<ConsoleWriter_Null>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_Null>,
-};	
+};
 
 static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 {

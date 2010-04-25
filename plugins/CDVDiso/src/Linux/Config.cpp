@@ -30,7 +30,7 @@ void LoadConf()
 	//sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
 	strcpy(cfg, s_strIniPath);
 	f = fopen(cfg, "r");
-	
+
 	if (f == NULL)
 	{
 		printf("Unable to load %s\n", cfg);
@@ -40,14 +40,14 @@ void LoadConf()
 		SaveConf();
 		return;
 	}
-	
+
 	fscanf(f, "IsoFile = %[^\n]\n", IsoFile);
 	fscanf(f, "CdDev   = %[^\n]\n", CdDev);
 	fscanf(f, "BlockDump   = %d\n", &BlockDump);
-	
+
 	if (!strncmp(IsoFile, "CdDev   =", 9)) *IsoFile = 0; // quick fix
 	if (*CdDev == 0) strcpy(CdDev, CDDEV_DEF);
-	
+
 	fclose(f);
 }
 
@@ -57,18 +57,18 @@ void SaveConf()
 	char cfg[256];
 
 	//sprintf(cfg, "%s/.PS2E", getenv("HOME"));
-	
+
 	//mkdir(cfg, 0755);
 	//sprintf(cfg, "%s/.PS2E/CDVDiso.cfg", getenv("HOME"));
 	strcpy(cfg, s_strIniPath);
-	
+
 	f = fopen(cfg, "w");
 	if (f == NULL)
 	{
 		printf("Unable to save %s\n", cfg);
 		return;
 	}
-	
+
 	fprintf(f, "IsoFile = %s\n", IsoFile);
 	fprintf(f, "CdDev   = %s\n", CdDev);
 	fprintf(f, "BlockDump   = %d\n", BlockDump);
@@ -92,7 +92,7 @@ void SysMessage(char *fmt, ...)
 void OnFile_Ok()
 {
 	gchar *File;
-	
+
 	gtk_widget_hide(FileSel);
 	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	strcpy(IsoFile, File);
@@ -108,7 +108,7 @@ void OnFile_Cancel()
 void CfgOpenFile()
 {
 	GtkWidget *Ok, *Cancel;
-	
+
 	FileSel = gtk_file_selection_new("Select Iso File");
 
 	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
@@ -190,12 +190,12 @@ void OnOk (GtkButton *button,  gpointer user_data)
 	strcpy(IsoFile, tmp);
 	tmp = gtk_entry_get_text(GTK_ENTRY(CdEdit));
 	strcpy(CdDev, tmp);
-	
+
 	if is_checked(ConfDlg, "checkBlockDump")
 		BlockDump = 1;
-	else 
+	else
 		BlockDump = 0;
-	
+
 	SaveConf();
 	gtk_widget_destroy(ConfDlg);
 	gtk_main_quit();
@@ -265,16 +265,16 @@ EXPORT_C_(void) CDVDconfigure()
 	methodlist = NULL;
 	for (i = 0; i < 2; i++)
 		methodlist = g_list_append(methodlist, methods[i]);
-		
+
 	Method = lookup_widget(ConfDlg, "GtkCombo_Method");
 	gtk_combo_set_popdown_strings(GTK_COMBO(Method), methodlist);
 	if (strstr(IsoFile, ".Z") != NULL)
 		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[0]);
-	else 
+	else
 		gtk_entry_set_text(GTK_ENTRY(GTK_COMBO(Method)->entry), methods[1]);
-	
+
 	set_checked(ConfDlg, "checkBlockDump", (BlockDump == 1));
-	
+
 	gtk_widget_show_all(ConfDlg);
 	gtk_main();
 

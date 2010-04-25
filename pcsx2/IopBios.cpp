@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -205,76 +205,76 @@ void bios_printf() // 3f
 	//psxMu32(sp + 8) = a2;
 	//psxMu32(sp + 12) = a3;+
 
-	while (Ra0[i]) 
+	while (Ra0[i])
 	{
-		switch (Ra0[i]) 
+		switch (Ra0[i])
 		{
 			case '%':
 				j = 0;
 				tmp2[j++] = '%';
-			
+
 _start:
-				switch (Ra0[++i]) 
+				switch (Ra0[++i])
 				{
 					case '.':
 					case 'l':
-						tmp2[j++] = Ra0[i]; 
+						tmp2[j++] = Ra0[i];
 						goto _start;
 					default:
-						if (Ra0[i] >= '0' && Ra0[i] <= '9') 
+						if (Ra0[i] >= '0' && Ra0[i] <= '9')
 						{
 							tmp2[j++] = Ra0[i];
 							goto _start;
 						}
 						break;
 				}
-				
+
 				tmp2[j++] = Ra0[i];
 				tmp2[j] = 0;
 
-				switch (Ra0[i]) 
+				switch (Ra0[i])
 				{
 					case 'f': case 'F':
 						ptmp+= sprintf(ptmp, tmp2, (float)iopMemRead32(sp + n * 4));
-						n++; 
+						n++;
 						break;
-					
+
 					case 'a': case 'A':
 					case 'e': case 'E':
 					case 'g': case 'G':
-						ptmp+= sprintf(ptmp, tmp2, (double)iopMemRead32(sp + n * 4)); 
+						ptmp+= sprintf(ptmp, tmp2, (double)iopMemRead32(sp + n * 4));
 						n++;
 						break;
-					
+
 					case 'p':
 					case 'i':
 					case 'd': case 'D':
 					case 'o': case 'O':
 					case 'x': case 'X':
-						ptmp+= sprintf(ptmp, tmp2, (u32)iopMemRead32(sp + n * 4)); 
-						n++; 
+						ptmp+= sprintf(ptmp, tmp2, (u32)iopMemRead32(sp + n * 4));
+						n++;
 						break;
-					
+
 					case 'c':
-						ptmp+= sprintf(ptmp, tmp2, (u8)iopMemRead32(sp + n * 4)); 
-						n++; 
+						ptmp+= sprintf(ptmp, tmp2, (u8)iopMemRead32(sp + n * 4));
+						n++;
 						break;
-					
+
 					case 's':
 						ptmp+= sprintf(ptmp, tmp2, iopVirtMemR<char>(iopMemRead32(sp + n * 4)));
-						n++; 
+						n++;
 						break;
-					
+
 					case '%':
 						*ptmp++ = Ra0[i];
 						break;
-					
+
 					default:
 						break;
 				}
 				i++;
 				break;
-				
+
 			default:
 				*ptmp++ = Ra0[i++];
 				break;
@@ -282,10 +282,10 @@ _start:
 	}
 	*ptmp = 0;
 
-	// Use Read to obtain a write pointer here, since we're just writing back the 
+	// Use Read to obtain a write pointer here, since we're just writing back the
 	// temp buffer we saved earlier.
 	memcpy( (void*)iopVirtMemR<void>(sp), save, 4*4);
-	
+
 	// Use "%s" even though it seems indirect: this avoids chaos if/when the IOP decides
 	// to feed us strings that contain percentages or other printf formatting control chars.
 	Console.Write( ConColor_IOP, L"%s", ShiftJIS_ConvertString(tmp).c_str(), 1023 );
@@ -309,11 +309,11 @@ void (*biosA0[256])();
 void (*biosB0[256])();
 void (*biosC0[256])();
 
-void psxBiosInit() 
+void psxBiosInit()
 {
 	int i;
 
-	for(i = 0; i < 256; i++) 
+	for(i = 0; i < 256; i++)
 	{
 		biosA0[i] = NULL;
 		biosB0[i] = NULL;
@@ -327,7 +327,7 @@ void psxBiosInit()
 
 }
 
-void psxBiosShutdown() 
+void psxBiosShutdown()
 {
 }
 

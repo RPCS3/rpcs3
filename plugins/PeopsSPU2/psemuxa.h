@@ -12,7 +12,7 @@ typedef struct
 } ADPCM_Decode_t;
 
 typedef struct
-{                                                                   
+{
 	int				freq;
 	int				nbits;
 	int				stereo;

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -52,7 +52,7 @@ struct pxAlignmentType
 	int intval;
 
 	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
-	
+
 	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
 	{
 		return Apply( _flgs );
@@ -84,7 +84,7 @@ struct pxStretchType
 		ReserveHidden,
 		FixedMinimum
 	};
-	
+
 	int intval;
 
 	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
@@ -124,7 +124,7 @@ class pxStretchSpacer
 {
 public:
 	int proportion;
-	
+
 	pxStretchSpacer( int prop=0 )
 	{
 		proportion = prop;
@@ -281,7 +281,7 @@ void operator+=( wxSizer* target, const pxWindowAndFlags<WinType>& src )
 namespace pxSizerFlags
 {
 	static const int StdPadding = 5;
-	
+
 	extern wxSizerFlags StdSpace();
 	extern wxSizerFlags StdCenter();
 	extern wxSizerFlags StdExpand();
@@ -359,7 +359,7 @@ public:
 	wxPanelWithHelpers( wxWindow* parent, wxOrientation orient );
 	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
 	explicit wxPanelWithHelpers( wxWindow* parent=NULL );
-	
+
 	wxPanelWithHelpers* AddFrame( const wxString& label, wxOrientation orient=wxVERTICAL );
 
 	pxStaticText*		Text( const wxString& label );
@@ -369,7 +369,7 @@ public:
 	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }
 	int GetIdealWidth() const { return m_idealWidth; }
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
-	
+
 protected:
 	void Init();
 };
@@ -430,7 +430,7 @@ protected:
 class pxTextWrapper : public pxTextWrapperBase
 {
 	typedef pxTextWrapperBase _parent;
-	
+
 protected:
 	wxString m_text;
 
@@ -478,7 +478,7 @@ extern MoreStockCursors StockCursors;
 // --------------------------------------------------------------------------------------
 //  ScopedBusyCursor
 // --------------------------------------------------------------------------------------
-// ... because wxWidgets wxBusyCursor doesn't really do proper nesting (doesn't let me 
+// ... because wxWidgets wxBusyCursor doesn't really do proper nesting (doesn't let me
 // override a partially-busy cursor with a really busy one)
 
 class ScopedBusyCursor
@@ -490,7 +490,7 @@ protected:
 public:
 	ScopedBusyCursor( BusyCursorType busytype );
 	virtual ~ScopedBusyCursor() throw();
-	
+
 	static void SetDefault( BusyCursorType busytype );
 	static void SetManualBusyCursor( BusyCursorType busytype );
 };

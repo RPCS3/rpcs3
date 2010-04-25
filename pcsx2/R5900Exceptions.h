@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef _R5900_EXCEPTIONS_H_
 #define _R5900_EXCEPTIONS_H_
 
@@ -62,7 +62,7 @@ namespace R5900Exception
 
 	public:
 		virtual ~BaseAddressError() throw() {}
-		
+
 	protected:
 		void Init( u32 ps2addr, bool onWrite, const wxString& msg )
 		{
@@ -71,8 +71,8 @@ namespace R5900Exception
 			Address = ps2addr;
 		}
 	};
-	
-	
+
+
 	class AddressError : public BaseAddressError
 	{
 	public:
@@ -83,7 +83,7 @@ namespace R5900Exception
 			BaseAddressError::Init( ps2addr, onWrite, L"Address error" );
 		}
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////
 	//
 	class TLBMiss : public BaseAddressError
@@ -109,7 +109,7 @@ namespace R5900Exception
 			BaseAddressError::Init( ps2addr, onWrite, L"Bus Error" );
 		}
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////
 	//
 	class Trap : public BaseExcept

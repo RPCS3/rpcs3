@@ -65,7 +65,7 @@ void ExecCfg(char *arg) {
 #endif /* VERBOSE FUNCTION_CONF */
   errno = 0;
   nameptr = 0;
-  while((cfgname[nameptr] != NULL) && 
+  while((cfgname[nameptr] != NULL) &&
         (stat(cfgname[nameptr], &filestat) == -1))  nameptr++;
   errno = 0;
 

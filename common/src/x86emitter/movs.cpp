@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -124,7 +124,7 @@ void xImpl_Mov::operator()( const xRegisterInt& to, int imm, bool preserve_flags
 		// Note: MOV does not have (reg16/32,imm8) forms.
 
 		to.prefix16();
-		xWrite8( (to.Is8BitOp() ? 0xb0 : 0xb8) | to.Id ); 
+		xWrite8( (to.Is8BitOp() ? 0xb0 : 0xb8) | to.Id );
 		to.xWriteImm( imm );
 	}
 }

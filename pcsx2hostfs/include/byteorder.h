@@ -26,7 +26,7 @@ htonl(unsigned int x)
         ((x & 0xff000000) >> 24 );
 }
 
-inline unsigned short 
+inline unsigned short
 htons(unsigned short x)
 {
     return ((x & 0xff) << 8 ) | ((x & 0xff00) >> 8 );

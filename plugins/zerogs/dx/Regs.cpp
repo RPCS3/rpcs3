@@ -84,7 +84,7 @@ void __fastcall	GIFPackedRegHandlerNull(u32* data)
 
 void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 {
-	gs.rgba = (data[0] & 0xff) | 
+	gs.rgba = (data[0] & 0xff) |
 			((data[1] & 0xff) <<  8) |
 			((data[2] & 0xff) << 16) |
 			((data[3] & 0xff) << 24);
@@ -102,32 +102,32 @@ void __fastcall GIFPackedRegHandlerSTQ(u32* data)
 void __fastcall GIFPackedRegHandlerUV(u32* data)
 {
 	gs.vertexregs.u = data[0] & 0x3fff;
-	gs.vertexregs.v = data[1] & 0x3fff; 
+	gs.vertexregs.v = data[1] & 0x3fff;
 }
 
-void __forceinline KICK_VERTEX2() 
-{ 
-	if (++gs.primC >= (int)g_primmult[prim->prim]) 
-	{ 
-		if (!(g_GameSettings&GAME_XENOSPECHACK) || !ZeroGS::vb[prim->ctxt].zbuf.zmsk) 
-			(*ZeroGS::drawfn[prim->prim])(); 
-		gs.primC -= g_primsub[prim->prim]; 
-	} 
-} 
+void __forceinline KICK_VERTEX2()
+{
+	if (++gs.primC >= (int)g_primmult[prim->prim])
+	{
+		if (!(g_GameSettings&GAME_XENOSPECHACK) || !ZeroGS::vb[prim->ctxt].zbuf.zmsk)
+			(*ZeroGS::drawfn[prim->prim])();
+		gs.primC -= g_primsub[prim->prim];
+	}
+}
 
-void __forceinline KICK_VERTEX3() 
-{ 
-	if (++gs.primC >= (int)g_primmult[prim->prim]) 
-	{ 
-		gs.primC -= g_primsub[prim->prim]; 
-		if (prim->prim == 5) 
-		{ 
-			/* tri fans need special processing */ 
-			if (gs.nTriFanVert == gs.primIndex) 
-				gs.primIndex = (gs.primIndex+1) % ArraySize(gs.gsvertex); 
-		} 
-	} 
-} 
+void __forceinline KICK_VERTEX3()
+{
+	if (++gs.primC >= (int)g_primmult[prim->prim])
+	{
+		gs.primC -= g_primsub[prim->prim];
+		if (prim->prim == 5)
+		{
+			/* tri fans need special processing */
+			if (gs.nTriFanVert == gs.primIndex)
+				gs.primIndex = (gs.primIndex+1) % ArraySize(gs.gsvertex);
+		}
+	}
+}
 
 void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 {
@@ -142,7 +142,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 		KICK_VERTEX3();
 	}
 	else {
-		KICK_VERTEX2();	
+		KICK_VERTEX2();
 	}
 }
 
@@ -158,7 +158,7 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 		KICK_VERTEX3();
 	}
 	else {
-		KICK_VERTEX2();	
+		KICK_VERTEX2();
 	}
 }
 
@@ -222,11 +222,11 @@ void tex2Write(int i, u32 *data)
 
 	// don't update unless necessary
 	if( (s_uTex0Data[0]&0x03f00000) == (data[0]&0x03f00000) ) { // psm is the same
-		
+
 		if( PSMT_ISCLUT(psm) ) {
 			// have to write the CLUT again if changed
 			if( (s_uTex0Data[1]&0x1fffffe0) == (data[1]&0x1fffffe0) ) {
-				
+
 				if( data[1]&0xe0000000 ) {
 					tex0.cld = (data[1]>>29)&7;
 					ZeroGS::texClutWrite(i);
@@ -266,7 +266,7 @@ void tex2Write(int i, u32 *data)
 	ZeroGS::Flush(i);
 	ZeroGS::vb[i].bVarsTexSync = FALSE;
 	ZeroGS::vb[i].bTexConstsSync = FALSE;
-				
+
 	s_uTex0Data[0] = (s_uTex0Data[0]&~0x03f00000)|(psm<<20);
 	s_uTex0Data[1] = (s_uTex0Data[1]&0x1f)|(data[1]&~0x1f);
 
@@ -276,7 +276,7 @@ void tex2Write(int i, u32 *data)
 		tex0.cbp  = (data[1] >>  5) & 0x3fff;
 		tex0.cpsm = (data[1] >> 19) & 0xe;
 		tex0.csm  = (data[1] >> 23) & 0x1;
-		
+
 		if( tex0.cpsm <= 1 ) tex0.csa = (data[1] >> 24) & 0xf;
 		else tex0.csa = (data[1] >> 24) & 0x1f;
 
@@ -347,7 +347,7 @@ __forceinline void clampWrite(int i, u32 *data)
 	clampInfo& clamp = ZeroGS::vb[i].clamp;
 
 	if( s_uClampData[i] != data[0] || ((clamp.minv>>8)|(clamp.maxv<<2)) != (data[1]&0x0fff) ) {
-		
+
 //		if( ZeroGS::vb[i].bNeedTexCheck )
 //			ZeroGS::vb[i].FlushTexData();
 
@@ -387,9 +387,9 @@ void __fastcall GIFRegHandlerPRIM(u32 *data) {
 	gs.primC = 0;
 	prim->prim = (data[0]) & 0x7;
 	gs._prim[0].prim = (data[0]) & 0x7;
-	gs._prim[1].prim = (data[0]) & 0x7;	
+	gs._prim[1].prim = (data[0]) & 0x7;
 	gs._prim[1]._val = (data[0]>>3)&0xff;
-	
+
 	ZeroGS::Prim();
 }
 
@@ -509,7 +509,7 @@ void tex1Write(int i, u32* data)
 		ZeroGS::Flush(i);
 		ZeroGS::vb[i].bVarsTexSync = FALSE;
 	}
-	tex1.lcm  = (data[0]	  ) & 0x1; 
+	tex1.lcm  = (data[0]	  ) & 0x1;
 	tex1.mxl  = (data[0] >>  2) & 0x7;
 	tex1.mmag = (data[0] >>  5) & 0x1;
 	tex1.mmin = (data[0] >>  6) & 0x7;
@@ -689,7 +689,7 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 	newscissor.y0 = ((data[1]	  ) & 0x7ff) << 3;
 	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
 
-	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 || 
+	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 		newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0 ) {
 
 		ZeroGS::Flush(0);
@@ -710,7 +710,7 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 	newscissor.y0 = ((data[1]	  ) & 0x7ff) << 3;
 	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
 
-	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 || 
+	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 		newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0 ) {
 
 		ZeroGS::Flush(1);
@@ -820,7 +820,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
 
 	int psm = (0x30|((data[0] >> 24) & 0xf));
-	if( zbuf.zbp == (data[0] & 0x1ff) * 32 && 
+	if( zbuf.zbp == (data[0] & 0x1ff) * 32 &&
 		zbuf.psm == psm &&
 		zbuf.zmsk == (data[1] & 0x1) ) {
 		return;
@@ -848,7 +848,7 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 	zbufInfo& zbuf = ZeroGS::vb[1].zbuf;
 
 	int psm = (0x30|((data[0] >> 24) & 0xf));
-	if( zbuf.zbp == (data[0] & 0x1ff) * 32 && 
+	if( zbuf.zbp == (data[0] & 0x1ff) * 32 &&
 		zbuf.psm == psm &&
 		zbuf.zmsk == (data[1] & 0x1) ) {
 		return;
@@ -922,7 +922,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 			case 0: // host->loc
 				ZeroGS::InitTransferHostLocal();
 				break;
-		
+
 			case 1: // loc->host
 
 				ZeroGS::InitTransferLocalHost();
@@ -949,7 +949,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 
 static u32 oldhw[4];
 void __fastcall GIFRegHandlerHWREG(u32* data)
-{	
+{
 	if( gs.imageTransfer == 0 ) {
 		ZeroGS::TransferHostLocal(data, 2);
 	}
@@ -985,16 +985,16 @@ void __fastcall GIFRegHandlerFINISH(u32* data)
 {
 	if(!g_GSMultiThreaded) {
 
-		if (gs.CSRw & 0x2) 
+		if (gs.CSRw & 0x2)
 			CSR->FINISH = 1;
 		if (!IMR->FINISHMSK && GSirq)
 			GSirq();
-		
+
 //		if( gs.CSRw & 2 ) {
 //			//gs.CSRw &= ~2;
 //			//CSR->FINISH = 0;
 //
-//			
+//
 //		}
 //		CSR->FINISH = 1;
 //

@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -96,7 +96,7 @@ public:
 		int speakerConfig;
 
 		if( StereoExpansionEnabled )
-			speakerConfig = 2;  // better not mess with this in wavout :p (rama) 
+			speakerConfig = 2;  // better not mess with this in wavout :p (rama)
 
 		// Any windows driver should support stereo at the software level, I should think!
 		jASSUME( speakerConfig > 1 );
@@ -138,7 +138,7 @@ public:
 		wformat.nBlockAlign		= ((wformat.wBitsPerSample * wformat.nChannels) / 8);
 		wformat.nAvgBytesPerSec	= (wformat.nSamplesPerSec * wformat.nBlockAlign);
 		wformat.cbSize			= 0;
-		
+
 		qbuffer = new StereoOut16[BufferSize*numBuffers];
 
 		woores = waveOutOpen(&hwodevice,WAVE_MAPPER,&wformat,0,0,0);
@@ -176,12 +176,12 @@ public:
 		return 0;
 	}
 
-	void Close() 
+	void Close()
 	{
 		// Stop Thread
 		fprintf(stderr," * SPU2: Waiting for waveOut thread to finish...");
 		waveout_running=false;
-			
+
 		WaitForSingleObject(thread,INFINITE);
 		CloseHandle(thread);
 
@@ -213,14 +213,14 @@ private:
 
 				wchar_t temp[128];
 				INIT_SLIDER( IDC_BUFFERS_SLIDER, 3, MAX_BUFFER_COUNT, 2, 1, 1 );
-				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_WaveOut.NumBuffers); 
+				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_WaveOut.NumBuffers);
 				swprintf_s(temp, 128, L"%d (%d ms latency)",Config_WaveOut.NumBuffers, 1000 / (96000 / (Config_WaveOut.NumBuffers * BufferSize)));
 				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			break;
 
 			case WM_COMMAND:
-				wmId    = LOWORD(wParam); 
-				wmEvent = HIWORD(wParam); 
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
 				// Parse the menu selections:
 				switch (wmId)
 				{
@@ -242,8 +242,8 @@ private:
 			break;
 
 			case WM_HSCROLL:
-				wmId    = LOWORD(wParam); 
-				wmEvent = HIWORD(wParam); 
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
 				switch(wmId) {
 					//case TB_ENDTRACK:
 					//case TB_THUMBPOSITION:
@@ -292,7 +292,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() 
+	int GetEmptySampleCount()
 	{
 		int result = 0;
 		for(int i=0;i<MAX_BUFFER_COUNT;i++)

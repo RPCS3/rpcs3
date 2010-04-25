@@ -21,7 +21,7 @@ enum loadStatus
 	LoadSuccess,
 };
 
-typedef struct 
+typedef struct
 {
 	int lsn;
 	int mode;
@@ -120,7 +120,7 @@ bool cdvdUpdateDiscStatus()
 			return true;
 		}
 	}
-	
+
 	if(change==1)
 	{
 		if(!disc_has_changed)
@@ -275,7 +275,7 @@ void cdvdStopThread()
 	CloseHandle(hThread);
 	CloseHandle(hNotify);
 	CloseHandle(hRequestComplete);
-	
+
 	DeleteCriticalSection( &CacheMutex );
 }
 
@@ -377,23 +377,23 @@ s32 cdvdDirectReadSector(s32 first, s32 mode, char *buffer)
 	if(mode==CDVD_MODE_2048)
 	{
 		offset = 2048*(first-sector);
-		memcpy(buffer,data + offset,2048); 
+		memcpy(buffer,data + offset,2048);
 		return 0;
 	}
-	
+
 	offset  = 2352*(first-sector);
 	s8* bfr = data + offset;
 
 	switch(mode)
 	{
 		case CDVD_MODE_2328:
-			memcpy(buffer,bfr+24,2328); 
+			memcpy(buffer,bfr+24,2328);
 			return 0;
 		case CDVD_MODE_2340:
-			memcpy(buffer,bfr+12,2340); 
+			memcpy(buffer,bfr+12,2340);
 			return 0;
 		default:
-			memcpy(buffer,bfr+12,2352); 
+			memcpy(buffer,bfr+12,2352);
 			return 0;
 	}
 	return 0;
@@ -425,7 +425,7 @@ s32 cdvdRefreshData()
 		else if(mt == 0)	curDiskType = CDVD_TYPE_DETCTDVDS;
 		else				curDiskType = CDVD_TYPE_DETCTDVDD;
 	}
-	
+
 	curTrayStatus = CDVD_TRAY_CLOSE;
 
 	switch(curDiskType)

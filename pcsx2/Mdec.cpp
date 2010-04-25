@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -31,10 +31,10 @@ int iq_y[DCTSIZE2],iq_uv[DCTSIZE2];
 static void idct1(int *block)
 {
 	int i, val;
-	
+
 	val = RANGE(DESCALE(block[0], PASS1_BITS+3));
-	
-	for(i=0;i<DCTSIZE2;i++) 
+
+	for(i=0;i<DCTSIZE2;i++)
 		block[i]=val;
 }
 
@@ -49,23 +49,23 @@ void idct(int *block,int k)
 
   ptr = block;
   for (i = 0; i< DCTSIZE; i++,ptr++) {
-    
+
     if ((ptr[DCTSIZE*1] | ptr[DCTSIZE*2] | ptr[DCTSIZE*3] |
 	 ptr[DCTSIZE*4] | ptr[DCTSIZE*5] | ptr[DCTSIZE*6] |
 	 ptr[DCTSIZE*7]) == 0) {
       ptr[DCTSIZE*0] =
-      ptr[DCTSIZE*1] = 
-      ptr[DCTSIZE*2] = 
-      ptr[DCTSIZE*3] = 
-      ptr[DCTSIZE*4] = 
-      ptr[DCTSIZE*5] = 
-      ptr[DCTSIZE*6] = 
-      ptr[DCTSIZE*7] = 
+      ptr[DCTSIZE*1] =
+      ptr[DCTSIZE*2] =
+      ptr[DCTSIZE*3] =
+      ptr[DCTSIZE*4] =
+      ptr[DCTSIZE*5] =
+      ptr[DCTSIZE*6] =
+      ptr[DCTSIZE*7] =
       	ptr[DCTSIZE*0];
-      
+
       continue;
     }
-    
+
     z10 = ptr[DCTSIZE*0] + ptr[DCTSIZE*4];
     z11 = ptr[DCTSIZE*0] - ptr[DCTSIZE*4];
     z13 = ptr[DCTSIZE*2] + ptr[DCTSIZE*6];
@@ -75,7 +75,7 @@ void idct(int *block,int k)
     tmp3 = z10 - z13;
     tmp1 = z11 + z12;
     tmp2 = z11 - z12;
-    
+
     z13 = ptr[DCTSIZE*3] + ptr[DCTSIZE*5];
     z10 = ptr[DCTSIZE*3] - ptr[DCTSIZE*5];
     z11 = ptr[DCTSIZE*1] + ptr[DCTSIZE*7];
@@ -97,20 +97,20 @@ void idct(int *block,int k)
     ptr[DCTSIZE*3] = (tmp3 - tmp4);
 
   }
-  
+
   ptr = block;
   for (i = 0; i < DCTSIZE; i++ ,ptr+=DCTSIZE) {
-    
+
     if ((ptr[1] | ptr[2] | ptr[3] | ptr[4] | ptr[5] | ptr[6] |
 	 ptr[7]) == 0) {
       ptr[0] =
-      ptr[1] = 
-      ptr[2] = 
-      ptr[3] = 
-      ptr[4] = 
-      ptr[5] = 
-      ptr[6] = 
-      ptr[7] = 
+      ptr[1] =
+      ptr[2] =
+      ptr[3] =
+      ptr[4] =
+      ptr[5] =
+      ptr[6] =
+      ptr[7] =
       	RANGE(DESCALE(ptr[0], PASS1_BITS+3));;
 
       continue;
@@ -159,7 +159,7 @@ void mdecInit(void) {
 
 void mdecWrite0(u32 data) {
 	CDR_LOG("mdec0 write %lx", data);
-	
+
 	mdec.command = data;
 	if ((data&0xf5ff0000)==0x30000000) {
 		mdec.rlsize = data&0xffff;
@@ -202,7 +202,7 @@ void psxDma0(u32 adr, u32 bcr, u32 chcr) {
 		u8 *p = (u8*)PSXM(adr);
 		iqtab_init(iq_y,p);
 		iqtab_init(iq_uv,p+64);
-	} 
+	}
 	else if ((cmd&0xf5ff0000)==0x30000000) {
 		mdec.rl = (u16*)PSXM(adr);
 	}
@@ -289,7 +289,7 @@ unsigned short* rl2blk(int *blk,unsigned short *mdec_rl) {
 			if (k > 63) break;
 			blk[zscan[k]] = (VALOF(rl) * iqtab[k] * q_scale) / 8; // / 16;
 		}
-		
+
 		idct(blk,k+1);
 		blk+=DCTSIZE2;
 	}
@@ -411,7 +411,7 @@ int SaveState::mdecFreeze() {
 	Freeze(mdec);
 	Freeze(iq_y);
 	Freeze(iq_uv);
-	
+
 	return 0;
 
 }

@@ -21,7 +21,7 @@
 
  #ifdef __cplusplus
 extern "C"
-{ 
+{
 #endif
 
 #include "support.h"
@@ -108,7 +108,7 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 EXPORT_C_(void) SPU2configure()
 {
 	//SysMessage("Nothing to Configure");
-	
+
 	Conf = create_Config();
 
 	LoadConfig();
@@ -121,20 +121,20 @@ EXPORT_C_(void) SPU2configure()
 EXPORT_C_(void) SPU2about()
 {
 	//SysMessage("%s %d.%d", libraryName, version, build);
-	
+
 	About = create_About();
 	gtk_widget_show_all(About);
 	gtk_main();
 }
 
-void LoadConfig() 
+void LoadConfig()
 {
 	FILE *f;
 	char cfg[255];
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg, "r");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		printf("failed to open %s\n", s_strIniPath.c_str());
 		SaveConfig();//save and return
@@ -145,19 +145,19 @@ void LoadConfig()
 	fclose(f);
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
 	FILE *f;
 	char cfg[255];
 
 	strcpy(cfg, s_strIniPath.c_str());
 	f = fopen(cfg,"w");
-	if (f == NULL) 
+	if (f == NULL)
 	{
 		printf("failed to open %s\n", s_strIniPath.c_str());
 		return;
 	}
-	
+
 	fprintf(f, "logging = %hhx\n", conf.Log);
 	//fprintf(f, "options = %hhx\n", confOptions);
 	fclose(f);

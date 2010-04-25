@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 /*
 * ix86 definitions v0.6.2
 *  Authors: linuzappz <linuzappz@pcsx.net>
@@ -128,7 +128,7 @@
 #define CMOVLE32RtoR eCMOVLE32RtoR<_EmitterId_>
 #define CMOVLE32MtoR eCMOVLE32MtoR<_EmitterId_>
 //------------------------------------------------------------------
-// arithmetic instructions 
+// arithmetic instructions
 //------------------------------------------------------------------
 #define ADD32ItoEAX eADD32ItoEAX<_EmitterId_>
 #define ADD32ItoR eADD32ItoR<_EmitterId_>
@@ -180,7 +180,7 @@
 #define IDIV32R eIDIV32R<_EmitterId_>
 #define IDIV32M eIDIV32M<_EmitterId_>
 //------------------------------------------------------------------
-// shifting instructions 
+// shifting instructions
 //------------------------------------------------------------------
 #define SHL32ItoR eSHL32ItoR<_EmitterId_>
 #define SHL32ItoM eSHL32ItoM<_EmitterId_>
@@ -371,7 +371,7 @@
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// FPU instructions 
+// FPU instructions
 //------------------------------------------------------------------
 #define FILD32 eFILD32<_EmitterId_>
 #define FISTP32 eFISTP32<_EmitterId_>
@@ -517,7 +517,7 @@
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// *SSE instructions* 
+// *SSE instructions*
 //------------------------------------------------------------------
 #define SSE_STMXCSR eSSE_STMXCSR<_EmitterId_>
 #define SSE_LDMXCSR eSSE_LDMXCSR<_EmitterId_>
@@ -653,7 +653,7 @@
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// *SSE 2 Instructions* 
+// *SSE 2 Instructions*
 //------------------------------------------------------------------
 
 #define SSE2_MOVDQA_M128_to_XMM eSSE2_MOVDQA_M128_to_XMM<_EmitterId_>
@@ -663,87 +663,87 @@
 #define SSE2_MOVDQU_XMM_to_M128 eSSE2_MOVDQU_XMM_to_M128<_EmitterId_>
 #define SSE2_MOVDQU_XMM_to_XMM eSSE2_MOVDQA_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_XMM_to_XMM eSSE2_PSRLW_XMM_to_XMM<_EmitterId_>
-#define SSE2_PSRLW_M128_to_XMM eSSE2_PSRLW_M128_to_XMM<_EmitterId_> 
+#define SSE2_PSRLW_M128_to_XMM eSSE2_PSRLW_M128_to_XMM<_EmitterId_>
 #define SSE2_PSRLW_I8_to_XMM eSSE2_PSRLW_I8_to_XMM<_EmitterId_>
 #define SSE2_PSRLD_XMM_to_XMM eSSE2_PSRLD_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSRLD_M128_to_XMM eSSE2_PSRLD_M128_to_XMM<_EmitterId_>
 #define SSE2_PSRLD_I8_to_XMM eSSE2_PSRLD_I8_to_XMM<_EmitterId_>
-#define SSE2_PSRLQ_XMM_to_XMM eSSE2_PSRLQ_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSRLQ_M128_to_XMM eSSE2_PSRLQ_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSRLQ_I8_to_XMM eSSE2_PSRLQ_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSRLDQ_I8_to_XMM eSSE2_PSRLDQ_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSRAW_XMM_to_XMM eSSE2_PSRAW_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSRAW_M128_to_XMM eSSE2_PSRAW_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSRAW_I8_to_XMM eSSE2_PSRAW_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSRAD_XMM_to_XMM eSSE2_PSRAD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSRAD_M128_to_XMM eSSE2_PSRAD_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSRAD_I8_to_XMM eSSE2_PSRAD_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSLLW_XMM_to_XMM eSSE2_PSLLW_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSLLW_M128_to_XMM eSSE2_PSLLW_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSLLW_I8_to_XMM eSSE2_PSLLW_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSLLD_XMM_to_XMM eSSE2_PSLLD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSLLD_M128_to_XMM eSSE2_PSLLD_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSLLD_I8_to_XMM eSSE2_PSLLD_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSLLQ_XMM_to_XMM eSSE2_PSLLQ_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PSLLQ_M128_to_XMM eSSE2_PSLLQ_M128_to_XMM<_EmitterId_> 
-#define SSE2_PSLLQ_I8_to_XMM eSSE2_PSLLQ_I8_to_XMM<_EmitterId_> 
-#define SSE2_PSLLDQ_I8_to_XMM eSSE2_PSLLDQ_I8_to_XMM<_EmitterId_> 
-#define SSE2_PMAXSW_XMM_to_XMM eSSE2_PMAXSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PMAXSW_M128_to_XMM eSSE2_PMAXSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PMAXUB_XMM_to_XMM eSSE2_PMAXUB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PMAXUB_M128_to_XMM eSSE2_PMAXUB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PMINSW_XMM_to_XMM eSSE2_PMINSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PMINSW_M128_to_XMM eSSE2_PMINSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PMINUB_XMM_to_XMM eSSE2_PMINUB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PMINUB_M128_to_XMM eSSE2_PMINUB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PADDSB_XMM_to_XMM eSSE2_PADDSB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PADDSB_M128_to_XMM eSSE2_PADDSB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PADDSW_XMM_to_XMM eSSE2_PADDSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PADDSW_M128_to_XMM eSSE2_PADDSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PSUBSB_XMM_to_XMM eSSE2_PSUBSB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PSUBSB_M128_to_XMM eSSE2_PSUBSB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PSUBSW_XMM_to_XMM eSSE2_PSUBSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PSUBSW_M128_to_XMM eSSE2_PSUBSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PSUBUSB_XMM_to_XMM eSSE2_PSUBUSB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PSUBUSB_M128_to_XMM eSSE2_PSUBUSB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PSUBUSW_XMM_to_XMM eSSE2_PSUBUSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PSUBUSW_M128_to_XMM eSSE2_PSUBUSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PAND_XMM_to_XMM eSSE2_PAND_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PAND_M128_to_XMM eSSE2_PAND_M128_to_XMM<_EmitterId_>  
-#define SSE2_PANDN_XMM_to_XMM eSSE2_PANDN_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PANDN_M128_to_XMM eSSE2_PANDN_M128_to_XMM<_EmitterId_>  
-#define SSE2_PXOR_XMM_to_XMM eSSE2_PXOR_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PXOR_M128_to_XMM eSSE2_PXOR_M128_to_XMM<_EmitterId_>  
-#define SSE2_PADDW_XMM_to_XMM eSSE2_PADDW_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PADDW_M128_to_XMM eSSE2_PADDW_M128_to_XMM<_EmitterId_> 
-#define SSE2_PADDUSB_XMM_to_XMM eSSE2_PADDUSB_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PADDUSB_M128_to_XMM eSSE2_PADDUSB_M128_to_XMM<_EmitterId_>  
-#define SSE2_PADDUSW_XMM_to_XMM eSSE2_PADDUSW_XMM_to_XMM<_EmitterId_>  
-#define SSE2_PADDUSW_M128_to_XMM eSSE2_PADDUSW_M128_to_XMM<_EmitterId_>  
-#define SSE2_PADDB_XMM_to_XMM eSSE2_PADDB_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PADDB_M128_to_XMM eSSE2_PADDB_M128_to_XMM<_EmitterId_> 
-#define SSE2_PADDD_XMM_to_XMM eSSE2_PADDD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PADDD_M128_to_XMM eSSE2_PADDD_M128_to_XMM<_EmitterId_> 
-#define SSE2_PADDQ_XMM_to_XMM eSSE2_PADDQ_XMM_to_XMM<_EmitterId_> 
-#define SSE2_PADDQ_M128_to_XMM eSSE2_PADDQ_M128_to_XMM<_EmitterId_> 
+#define SSE2_PSRLQ_XMM_to_XMM eSSE2_PSRLQ_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSRLQ_M128_to_XMM eSSE2_PSRLQ_M128_to_XMM<_EmitterId_>
+#define SSE2_PSRLQ_I8_to_XMM eSSE2_PSRLQ_I8_to_XMM<_EmitterId_>
+#define SSE2_PSRLDQ_I8_to_XMM eSSE2_PSRLDQ_I8_to_XMM<_EmitterId_>
+#define SSE2_PSRAW_XMM_to_XMM eSSE2_PSRAW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSRAW_M128_to_XMM eSSE2_PSRAW_M128_to_XMM<_EmitterId_>
+#define SSE2_PSRAW_I8_to_XMM eSSE2_PSRAW_I8_to_XMM<_EmitterId_>
+#define SSE2_PSRAD_XMM_to_XMM eSSE2_PSRAD_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSRAD_M128_to_XMM eSSE2_PSRAD_M128_to_XMM<_EmitterId_>
+#define SSE2_PSRAD_I8_to_XMM eSSE2_PSRAD_I8_to_XMM<_EmitterId_>
+#define SSE2_PSLLW_XMM_to_XMM eSSE2_PSLLW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSLLW_M128_to_XMM eSSE2_PSLLW_M128_to_XMM<_EmitterId_>
+#define SSE2_PSLLW_I8_to_XMM eSSE2_PSLLW_I8_to_XMM<_EmitterId_>
+#define SSE2_PSLLD_XMM_to_XMM eSSE2_PSLLD_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSLLD_M128_to_XMM eSSE2_PSLLD_M128_to_XMM<_EmitterId_>
+#define SSE2_PSLLD_I8_to_XMM eSSE2_PSLLD_I8_to_XMM<_EmitterId_>
+#define SSE2_PSLLQ_XMM_to_XMM eSSE2_PSLLQ_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSLLQ_M128_to_XMM eSSE2_PSLLQ_M128_to_XMM<_EmitterId_>
+#define SSE2_PSLLQ_I8_to_XMM eSSE2_PSLLQ_I8_to_XMM<_EmitterId_>
+#define SSE2_PSLLDQ_I8_to_XMM eSSE2_PSLLDQ_I8_to_XMM<_EmitterId_>
+#define SSE2_PMAXSW_XMM_to_XMM eSSE2_PMAXSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PMAXSW_M128_to_XMM eSSE2_PMAXSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PMAXUB_XMM_to_XMM eSSE2_PMAXUB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PMAXUB_M128_to_XMM eSSE2_PMAXUB_M128_to_XMM<_EmitterId_>
+#define SSE2_PMINSW_XMM_to_XMM eSSE2_PMINSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PMINSW_M128_to_XMM eSSE2_PMINSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PMINUB_XMM_to_XMM eSSE2_PMINUB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PMINUB_M128_to_XMM eSSE2_PMINUB_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDSB_XMM_to_XMM eSSE2_PADDSB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDSB_M128_to_XMM eSSE2_PADDSB_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDSW_XMM_to_XMM eSSE2_PADDSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDSW_M128_to_XMM eSSE2_PADDSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PSUBSB_XMM_to_XMM eSSE2_PSUBSB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSUBSB_M128_to_XMM eSSE2_PSUBSB_M128_to_XMM<_EmitterId_>
+#define SSE2_PSUBSW_XMM_to_XMM eSSE2_PSUBSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSUBSW_M128_to_XMM eSSE2_PSUBSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PSUBUSB_XMM_to_XMM eSSE2_PSUBUSB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSUBUSB_M128_to_XMM eSSE2_PSUBUSB_M128_to_XMM<_EmitterId_>
+#define SSE2_PSUBUSW_XMM_to_XMM eSSE2_PSUBUSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PSUBUSW_M128_to_XMM eSSE2_PSUBUSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PAND_XMM_to_XMM eSSE2_PAND_XMM_to_XMM<_EmitterId_>
+#define SSE2_PAND_M128_to_XMM eSSE2_PAND_M128_to_XMM<_EmitterId_>
+#define SSE2_PANDN_XMM_to_XMM eSSE2_PANDN_XMM_to_XMM<_EmitterId_>
+#define SSE2_PANDN_M128_to_XMM eSSE2_PANDN_M128_to_XMM<_EmitterId_>
+#define SSE2_PXOR_XMM_to_XMM eSSE2_PXOR_XMM_to_XMM<_EmitterId_>
+#define SSE2_PXOR_M128_to_XMM eSSE2_PXOR_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDW_XMM_to_XMM eSSE2_PADDW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDW_M128_to_XMM eSSE2_PADDW_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDUSB_XMM_to_XMM eSSE2_PADDUSB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDUSB_M128_to_XMM eSSE2_PADDUSB_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDUSW_XMM_to_XMM eSSE2_PADDUSW_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDUSW_M128_to_XMM eSSE2_PADDUSW_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDB_XMM_to_XMM eSSE2_PADDB_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDB_M128_to_XMM eSSE2_PADDB_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDD_XMM_to_XMM eSSE2_PADDD_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDD_M128_to_XMM eSSE2_PADDD_M128_to_XMM<_EmitterId_>
+#define SSE2_PADDQ_XMM_to_XMM eSSE2_PADDQ_XMM_to_XMM<_EmitterId_>
+#define SSE2_PADDQ_M128_to_XMM eSSE2_PADDQ_M128_to_XMM<_EmitterId_>
 #define SSE2_PMADDWD_XMM_to_XMM eSSE2_PMADDWD_XMM_to_XMM<_EmitterId_>
-#define SSE2_MOVSD_XMM_to_XMM eSSE2_MOVSD_XMM_to_XMM<_EmitterId_>  
-#define SSE2_MOVQ_M64_to_XMM eSSE2_MOVQ_M64_to_XMM<_EmitterId_>  
-#define SSE2_MOVQ_XMM_to_XMM eSSE2_MOVQ_XMM_to_XMM<_EmitterId_>  
+#define SSE2_MOVSD_XMM_to_XMM eSSE2_MOVSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_MOVQ_M64_to_XMM eSSE2_MOVQ_M64_to_XMM<_EmitterId_>
+#define SSE2_MOVQ_XMM_to_XMM eSSE2_MOVQ_XMM_to_XMM<_EmitterId_>
 #define SSE2_MOVQ_XMM_to_M64 eSSE2_MOVQ_XMM_to_M64<_EmitterId_>
 #define SSE2_MOVDQ2Q_XMM_to_MM eSSE2_MOVDQ2Q_XMM_to_MM<_EmitterId_>
 #define SSE2_MOVQ2DQ_MM_to_XMM eSSE2_MOVQ2DQ_MM_to_XMM<_EmitterId_>
 #define SSE2_MOVDQARtoRm eSSE2_MOVDQARtoRm<_EmitterId_>
 #define SSE2_MOVDQARmtoR eSSE2_MOVDQARmtoR<_EmitterId_>
-#define SSE2_CVTDQ2PS_M128_to_XMM eSSE2_CVTDQ2PS_M128_to_XMM<_EmitterId_>  
-#define SSE2_CVTDQ2PS_XMM_to_XMM eSSE2_CVTDQ2PS_XMM_to_XMM<_EmitterId_>  
-#define SSE2_CVTPS2DQ_M128_to_XMM eSSE2_CVTPS2DQ_M128_to_XMM<_EmitterId_>  
-#define SSE2_CVTPS2DQ_XMM_to_XMM eSSE2_CVTPS2DQ_XMM_to_XMM<_EmitterId_>  
-#define SSE2_CVTTPS2DQ_XMM_to_XMM eSSE2_CVTTPS2DQ_XMM_to_XMM<_EmitterId_>  
-#define SSE2_MAXPD_M128_to_XMM eSSE2_MAXPD_M128_to_XMM<_EmitterId_>  
-#define SSE2_MAXPD_XMM_to_XMM eSSE2_MAXPD_XMM_to_XMM<_EmitterId_>  
-#define SSE2_MINPD_M128_to_XMM eSSE2_MINPD_M128_to_XMM<_EmitterId_>  
-#define SSE2_MINPD_XMM_to_XMM eSSE2_MINPD_XMM_to_XMM<_EmitterId_>  
+#define SSE2_CVTDQ2PS_M128_to_XMM eSSE2_CVTDQ2PS_M128_to_XMM<_EmitterId_>
+#define SSE2_CVTDQ2PS_XMM_to_XMM eSSE2_CVTDQ2PS_XMM_to_XMM<_EmitterId_>
+#define SSE2_CVTPS2DQ_M128_to_XMM eSSE2_CVTPS2DQ_M128_to_XMM<_EmitterId_>
+#define SSE2_CVTPS2DQ_XMM_to_XMM eSSE2_CVTPS2DQ_XMM_to_XMM<_EmitterId_>
+#define SSE2_CVTTPS2DQ_XMM_to_XMM eSSE2_CVTTPS2DQ_XMM_to_XMM<_EmitterId_>
+#define SSE2_MAXPD_M128_to_XMM eSSE2_MAXPD_M128_to_XMM<_EmitterId_>
+#define SSE2_MAXPD_XMM_to_XMM eSSE2_MAXPD_XMM_to_XMM<_EmitterId_>
+#define SSE2_MINPD_M128_to_XMM eSSE2_MINPD_M128_to_XMM<_EmitterId_>
+#define SSE2_MINPD_XMM_to_XMM eSSE2_MINPD_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSHUFD_XMM_to_XMM eSSE2_PSHUFD_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSHUFD_M128_to_XMM eSSE2_PSHUFD_M128_to_XMM<_EmitterId_>
 #define SSE2_PSHUFLW_XMM_to_XMM eSSE2_PSHUFLW_XMM_to_XMM<_EmitterId_>
@@ -756,39 +756,39 @@
 #define SSE2_ORPD_XMM_to_XMM eSSE2_ORPD_XMM_to_XMM<_EmitterId_>
 #define SSE2_XORPD_M128_to_XMM eSSE2_XORPD_M128_to_XMM<_EmitterId_>
 #define SSE2_XORPD_XMM_to_XMM eSSE2_XORPD_XMM_to_XMM<_EmitterId_>
-#define SSE2_ANDPD_M128_to_XMM eSSE2_ANDPD_M128_to_XMM<_EmitterId_> 
+#define SSE2_ANDPD_M128_to_XMM eSSE2_ANDPD_M128_to_XMM<_EmitterId_>
 #define SSE2_ANDPD_XMM_to_XMM eSSE2_ANDPD_XMM_to_XMM<_EmitterId_>
-#define SSE2_ANDNPD_M128_to_XMM eSSE2_ANDNPD_M128_to_XMM<_EmitterId_> 
-#define SSE2_ANDNPD_XMM_to_XMM eSSE2_ANDNPD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_ADDSD_M64_to_XMM eSSE2_ADDSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_ADDSD_XMM_to_XMM eSSE2_ADDSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_SUBSD_M64_to_XMM eSSE2_SUBSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_SUBSD_XMM_to_XMM eSSE2_SUBSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_MULSD_M64_to_XMM eSSE2_MULSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_MULSD_XMM_to_XMM eSSE2_MULSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPEQSD_M64_to_XMM eSSE2_CMPEQSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPEQSD_XMM_to_XMM eSSE2_CMPEQSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPLTSD_M64_to_XMM eSSE2_CMPLTSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPLTSD_XMM_to_XMM eSSE2_CMPLTSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPLESD_M64_to_XMM eSSE2_CMPLESD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPLESD_XMM_to_XMM eSSE2_CMPLESD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPUNORDSD_M64_to_XMM eSSE2_CMPUNORDSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPUNORDSD_XMM_to_XMM eSSE2_CMPUNORDSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPNESD_M64_to_XMM eSSE2_CMPNESD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPNESD_XMM_to_XMM eSSE2_CMPNESD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPNLTSD_M64_to_XMM eSSE2_CMPNLTSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPNLTSD_XMM_to_XMM eSSE2_CMPNLTSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPNLESD_M64_to_XMM eSSE2_CMPNLESD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPNLESD_XMM_to_XMM eSSE2_CMPNLESD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CMPORDSD_M64_to_XMM eSSE2_CMPORDSD_M64_to_XMM<_EmitterId_> 
-#define SSE2_CMPORDSD_XMM_to_XMM eSSE2_CMPORDSD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_UCOMISD_M64_to_XMM eSSE2_UCOMISD_M64_to_XMM<_EmitterId_> 
-#define SSE2_UCOMISD_XMM_to_XMM eSSE2_UCOMISD_XMM_to_XMM<_EmitterId_> 
-#define SSE2_CVTSS2SD_M32_to_XMM eSSE2_CVTSS2SD_M32_to_XMM<_EmitterId_> 
+#define SSE2_ANDNPD_M128_to_XMM eSSE2_ANDNPD_M128_to_XMM<_EmitterId_>
+#define SSE2_ANDNPD_XMM_to_XMM eSSE2_ANDNPD_XMM_to_XMM<_EmitterId_>
+#define SSE2_ADDSD_M64_to_XMM eSSE2_ADDSD_M64_to_XMM<_EmitterId_>
+#define SSE2_ADDSD_XMM_to_XMM eSSE2_ADDSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_SUBSD_M64_to_XMM eSSE2_SUBSD_M64_to_XMM<_EmitterId_>
+#define SSE2_SUBSD_XMM_to_XMM eSSE2_SUBSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_MULSD_M64_to_XMM eSSE2_MULSD_M64_to_XMM<_EmitterId_>
+#define SSE2_MULSD_XMM_to_XMM eSSE2_MULSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPEQSD_M64_to_XMM eSSE2_CMPEQSD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPEQSD_XMM_to_XMM eSSE2_CMPEQSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPLTSD_M64_to_XMM eSSE2_CMPLTSD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPLTSD_XMM_to_XMM eSSE2_CMPLTSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPLESD_M64_to_XMM eSSE2_CMPLESD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPLESD_XMM_to_XMM eSSE2_CMPLESD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPUNORDSD_M64_to_XMM eSSE2_CMPUNORDSD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPUNORDSD_XMM_to_XMM eSSE2_CMPUNORDSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPNESD_M64_to_XMM eSSE2_CMPNESD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPNESD_XMM_to_XMM eSSE2_CMPNESD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPNLTSD_M64_to_XMM eSSE2_CMPNLTSD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPNLTSD_XMM_to_XMM eSSE2_CMPNLTSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPNLESD_M64_to_XMM eSSE2_CMPNLESD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPNLESD_XMM_to_XMM eSSE2_CMPNLESD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CMPORDSD_M64_to_XMM eSSE2_CMPORDSD_M64_to_XMM<_EmitterId_>
+#define SSE2_CMPORDSD_XMM_to_XMM eSSE2_CMPORDSD_XMM_to_XMM<_EmitterId_>
+#define SSE2_UCOMISD_M64_to_XMM eSSE2_UCOMISD_M64_to_XMM<_EmitterId_>
+#define SSE2_UCOMISD_XMM_to_XMM eSSE2_UCOMISD_XMM_to_XMM<_EmitterId_>
+#define SSE2_CVTSS2SD_M32_to_XMM eSSE2_CVTSS2SD_M32_to_XMM<_EmitterId_>
 #define SSE2_CVTSS2SD_XMM_to_XMM eSSE2_CVTSS2SD_XMM_to_XMM<_EmitterId_>
-#define SSE2_CVTSD2SS_M64_to_XMM eSSE2_CVTSD2SS_M64_to_XMM<_EmitterId_> 
+#define SSE2_CVTSD2SS_M64_to_XMM eSSE2_CVTSD2SS_M64_to_XMM<_EmitterId_>
 #define SSE2_CVTSD2SS_XMM_to_XMM eSSE2_CVTSD2SS_XMM_to_XMM<_EmitterId_>
-#define SSE2_MAXSD_M64_to_XMM eSSE2_MAXSD_M64_to_XMM<_EmitterId_> 
+#define SSE2_MAXSD_M64_to_XMM eSSE2_MAXSD_M64_to_XMM<_EmitterId_>
 #define SSE2_MAXSD_XMM_to_XMM eSSE2_MAXSD_XMM_to_XMM<_EmitterId_>
 #define SSE2_MINSD_M64_to_XMM eSSE2_MINSD_M64_to_XMM<_EmitterId_>
 #define SSE2_MINSD_XMM_to_XMM eSSE2_MINSD_XMM_to_XMM<_EmitterId_>
@@ -797,7 +797,7 @@
 #define SSE2_DIVSD_M64_to_XMM eSSE2_DIVSD_M64_to_XMM<_EmitterId_>
 #define SSE2_DIVSD_XMM_to_XMM eSSE2_DIVSD_XMM_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// PACKSSWB,PACKSSDW: Pack Saturate Signed Word 
+// PACKSSWB,PACKSSDW: Pack Saturate Signed Word
 //------------------------------------------------------------------
 #define SSE2_PACKSSWB_XMM_to_XMM	eSSE2_PACKSSWB_XMM_to_XMM<_EmitterId_>
 #define SSE2_PACKSSWB_M128_to_XMM	eSSE2_PACKSSWB_M128_to_XMM<_EmitterId_>
@@ -806,7 +806,7 @@
 #define SSE2_PACKUSWB_XMM_to_XMM	eSSE2_PACKUSWB_XMM_to_XMM<_EmitterId_>
 #define SSE2_PACKUSWB_M128_to_XMM	eSSE2_PACKUSWB_M128_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// PUNPCKHWD: Unpack 16bit high  
+// PUNPCKHWD: Unpack 16bit high
 //------------------------------------------------------------------
 #define SSE2_PUNPCKLBW_XMM_to_XMM	eSSE2_PUNPCKLBW_XMM_to_XMM<_EmitterId_>
 #define SSE2_PUNPCKLBW_M128_to_XMM	eSSE2_PUNPCKLBW_M128_to_XMM<_EmitterId_>
@@ -831,18 +831,18 @@
 #define SSE2_PMULUDQ_XMM_to_XMM		eSSE2_PMULUDQ_XMM_to_XMM<_EmitterId_>
 #define SSE2_PMULUDQ_M128_to_XMM	eSSE2_PMULUDQ_M128_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// PMOVMSKB: Create 16bit mask from signs of 8bit integers 
+// PMOVMSKB: Create 16bit mask from signs of 8bit integers
 //------------------------------------------------------------------
 #define SSE_MOVMSKPS_XMM_to_R32		eSSE_MOVMSKPS_XMM_to_R32<_EmitterId_>
 #define SSE2_PMOVMSKB_XMM_to_R32	eSSE2_PMOVMSKB_XMM_to_R32<_EmitterId_>
 #define SSE2_MOVMSKPD_XMM_to_R32	eSSE2_MOVMSKPD_XMM_to_R32<_EmitterId_>
 //------------------------------------------------------------------
-// PEXTRW,PINSRW: Packed Extract/Insert Word  
+// PEXTRW,PINSRW: Packed Extract/Insert Word
 //------------------------------------------------------------------
 #define SSE_PEXTRW_XMM_to_R32		eSSE_PEXTRW_XMM_to_R32<_EmitterId_>
 #define SSE_PINSRW_R32_to_XMM		eSSE_PINSRW_R32_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// PSUBx: Subtract Packed Integers   
+// PSUBx: Subtract Packed Integers
 //------------------------------------------------------------------
 #define SSE2_PSUBB_XMM_to_XMM		eSSE2_PSUBB_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSUBB_M128_to_XMM		eSSE2_PSUBB_M128_to_XMM<_EmitterId_>
@@ -853,7 +853,7 @@
 #define SSE2_PSUBQ_XMM_to_XMM		eSSE2_PSUBQ_XMM_to_XMM<_EmitterId_>
 #define SSE2_PSUBQ_M128_to_XMM		eSSE2_PSUBQ_M128_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// PCMPxx: Compare Packed Integers   
+// PCMPxx: Compare Packed Integers
 //------------------------------------------------------------------
 #define SSE2_PCMPGTB_XMM_to_XMM		eSSE2_PCMPGTB_XMM_to_XMM<_EmitterId_>
 #define SSE2_PCMPGTB_M128_to_XMM	eSSE2_PCMPGTB_M128_to_XMM<_EmitterId_>
@@ -868,7 +868,7 @@
 #define SSE2_PCMPEQD_XMM_to_XMM		eSSE2_PCMPEQD_XMM_to_XMM<_EmitterId_>
 #define SSE2_PCMPEQD_M128_to_XMM	eSSE2_PCMPEQD_M128_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// MOVD: Move Dword(32bit) to /from XMM reg 
+// MOVD: Move Dword(32bit) to /from XMM reg
 //------------------------------------------------------------------
 #define SSE2_MOVD_M32_to_XMM		eSSE2_MOVD_M32_to_XMM<_EmitterId_>
 #define SSE2_MOVD_R_to_XMM			eSSE2_MOVD_R_to_XMM<_EmitterId_>
@@ -881,14 +881,14 @@
 #define SSE2_MOVQ_XMM_to_R			eSSE2_MOVQ_XMM_to_R<_EmitterId_>
 #define SSE2_MOVQ_R_to_XMM			eSSE2_MOVQ_R_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
-// POR : SSE Bitwise OR   
+// POR : SSE Bitwise OR
 //------------------------------------------------------------------
 #define SSE2_POR_XMM_to_XMM			eSSE2_POR_XMM_to_XMM<_EmitterId_>
 #define SSE2_POR_M128_to_XMM		eSSE2_POR_M128_to_XMM<_EmitterId_>
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
-// SSE3 
+// SSE3
 //------------------------------------------------------------------
 #define SSE3_HADDPS_XMM_to_XMM		eSSE3_HADDPS_XMM_to_XMM<_EmitterId_>
 #define SSE3_HADDPS_M128_to_XMM		eSSE3_HADDPS_M128_to_XMM<_EmitterId_>

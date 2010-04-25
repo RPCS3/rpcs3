@@ -88,7 +88,7 @@ wxGCDC::wxGCDC(const wxMemoryDC& dc)
     Init();
     SetGraphicsContext( wxGraphicsContext::Create(dc) );
 }
-#endif    
+#endif
 
 void wxGCDC::Init()
 {
@@ -120,7 +120,7 @@ void wxGCDC::DoDrawBitmap( const wxBitmap &bmp, wxCoord x, wxCoord y, bool WXUNU
     {
         m_graphicContext->SetPen(*wxTRANSPARENT_PEN);
         m_graphicContext->SetBrush( wxBrush( m_textBackgroundColour , wxSOLID ) );
-        m_graphicContext->DrawRectangle( x , y , bmp.GetWidth() , bmp.GetHeight() );        
+        m_graphicContext->DrawRectangle( x , y , bmp.GetWidth() , bmp.GetHeight() );
         m_graphicContext->SetBrush( wxBrush( m_textForegroundColour , wxSOLID ) );
         m_graphicContext->DrawBitmap( bmp, x , y , bmp.GetWidth() , bmp.GetHeight() );
         m_graphicContext->SetBrush( m_graphicContext->CreateBrush(m_brush));
@@ -141,12 +141,12 @@ void wxGCDC::DoDrawIcon( const wxIcon &icon, wxCoord x, wxCoord y )
     m_graphicContext->DrawIcon( icon , x, y, w, h );
 }
 
-bool wxGCDC::StartDoc( const wxString& WXUNUSED(message) ) 
+bool wxGCDC::StartDoc( const wxString& WXUNUSED(message) )
 {
     return true;
 }
 
-void wxGCDC::EndDoc() 
+void wxGCDC::EndDoc()
 {
 }
 
@@ -154,10 +154,10 @@ void wxGCDC::StartPage()
 {
 }
 
-void wxGCDC::EndPage() 
+void wxGCDC::EndPage()
 {
 }
-    
+
 void wxGCDC::Flush()
 {
 #ifdef __WXMAC__
@@ -232,7 +232,7 @@ void wxGCDC::DestroyClippingRegion()
     int width, height ;
     GetSize( &width , &height ) ;
     m_graphicContext->Clip( DeviceToLogicalX(0) , DeviceToLogicalY(0) , DeviceToLogicalXRel(width), DeviceToLogicalYRel(height) );
-    
+
     m_graphicContext->SetPen( m_pen );
     m_graphicContext->SetBrush( m_brush );
 
@@ -408,7 +408,7 @@ void wxGCDC::SetBrush( const wxBrush &brush )
         m_graphicContext->SetBrush( m_brush );
     }
 }
- 
+
 void wxGCDC::SetBackground( const wxBrush &brush )
 {
     if (m_backgroundBrush == brush)
@@ -779,7 +779,7 @@ bool wxGCDC::DoBlit(
     if ( logical_func == wxNO_OP )
         return true;
     else if ( !m_graphicContext->SetLogicalFunction( logical_func ) )
-    
+
     {
         wxFAIL_MSG( wxT("Logical function is not supported by the graphics context.") );
         return false;

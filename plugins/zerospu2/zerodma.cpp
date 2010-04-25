@@ -28,7 +28,7 @@
 void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int channel)
 {
 	u32 spuaddr = C_SPUADDR(channel);
-	
+
 	SPU2_LOG("SPU2 readDMAMem(%d) size %x, addr: %x\n", channel,  size, pMem);
 
 	for (u32 i = 0; i < size; i++)
@@ -71,23 +71,23 @@ void CALLBACK SPU2readDMA7Mem(u16* pMem, int size)
 // WRITE
 
 // AutoDMA's are used to transfer to the DIRECT INPUT area of the spu2 memory
-// Left and Right channels are always interleaved together in the transfer so 
+// Left and Right channels are always interleaved together in the transfer so
 // the AutoDMA's deinterleaves them and transfers them. An interrupt is
-// generated when half of the buffer (256 short-words for left and 256 
-// short-words for right ) has been transferred. Another interrupt occurs at 
+// generated when half of the buffer (256 short-words for left and 256
+// short-words for right ) has been transferred. Another interrupt occurs at
 // the end of the transfer.
 
 int ADMASWrite(int channel)
 {
 	u32 spuaddr;
 	ADMA *Adma = &adma[channel];
-	
+
 	if (interrupt & 0x2)
 	{
 		WARN_LOG("ADMASWrite(%d) returning for interrupt\n", channel);
 		return 0;
 	}
-	
+
 	if (Adma->AmountLeft <= 0)
 	{
 		WARN_LOG("ADMASWrite(%d) amount left is 0\n", channel);
@@ -98,13 +98,13 @@ int ADMASWrite(int channel)
 	spuaddr = C_SPUADDR(channel);
 	u32 left_addr = spuaddr + 0x2000 + c_offset(channel);
 	u32 right_addr = left_addr + 0x200;
-	
+
 	// SPU2 Deinterleaves the Left and Right Channels
 	memcpy((s16*)(spu2mem + left_addr),(s16*)Adma->MemAddr,512);
 	Adma->MemAddr += 256;
 	memcpy((s16*)(spu2mem + right_addr),(s16*)Adma->MemAddr,512);
 	Adma->MemAddr += 256;
-	
+
 	if (spu2attr(channel).irq && (irq_test1(channel, spuaddr) || irq_test2(channel, spuaddr)))
 	{
 		IRQINFO |= (4 * (channel + 1));
@@ -114,7 +114,7 @@ int ADMASWrite(int channel)
 
 	spuaddr = (spuaddr + 256) & 511;
 	C_SPUADDR_SET(spuaddr, channel);
-	
+
 	Adma->AmountLeft -= 512;
 
 	return (Adma->AmountLeft <= 0);
@@ -132,12 +132,12 @@ void SPU2writeDMAMem(u16* pMem, int size, int channel)
 	if (spu2admas(channel) && (spu2attr(channel).dma == 0) && size)
 	{
 		if (!Adma->Enabled ) Adma->Index = 0;
-	
+
 		Adma->MemAddr = pMem;
 		Adma->AmountLeft = size;
 		SPUTargetCycle[channel] = size;
 		spu2stat_clear_80(channel);
-		if (!Adma->Enabled || (Adma->Index > 384)) 
+		if (!Adma->Enabled || (Adma->Index > 384))
 		{
 			C_SPUADDR_SET(0, channel);
 			if (ADMASWrite(channel))
@@ -160,14 +160,14 @@ void SPU2writeDMAMem(u16* pMem, int size, int channel)
 	memcpy((u8*)(spu2mem + spuaddr),(u8*)pMem,size << 1);
 	spuaddr += size;
 	C_SPUADDR_SET(spuaddr, channel);
-	
+
 	if (spu2attr(channel).irq && (spuaddr < C_IRQA(channel) && (C_IRQA(channel) <= (spuaddr + 0x20))))
 	{
 		IRQINFO |= 4 * (channel + 1);
 		SPU2_LOG("SPU2writeDMAMem:interrupt\n");
 		irqCallbackSPU2();
 	}
-	
+
 	if (spuaddr > 0xFFFFE) spuaddr = 0x2800;
 	C_SPUADDR_SET(spuaddr, channel);
 
@@ -215,13 +215,13 @@ s32 CALLBACK SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProces
 	// Needs implementation.
 	return 0;
 }
- 	
+
 s32 CALLBACK SPU2dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 	// Needs implementation.
 	return 0;
  }
- 
+
 void CALLBACK SPU2dmaInterrupt(s32 channel)
  {
 	LOG_CALLBACK("SPU2dmaInterruptDMA()\n");

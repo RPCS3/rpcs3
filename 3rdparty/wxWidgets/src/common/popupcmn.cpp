@@ -153,7 +153,7 @@ void wxPopupWindowBase::Position(const wxPoint& ptOrigin,
 
     // now check left/right too
     wxCoord x = ptOrigin.x;
-            
+
     if ( wxTheApp->GetLayoutDirection() == wxLayout_RightToLeft )
     {
         // shift the window to the left instead of the right.
@@ -163,7 +163,7 @@ void wxPopupWindowBase::Position(const wxPoint& ptOrigin,
     else
         x += size.x;
 
-    
+
     if ( x + sizeSelf.x > sizeScreen.x )
     {
         // check if there is enough space to the left

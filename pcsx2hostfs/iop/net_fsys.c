@@ -77,7 +77,7 @@ static int fsysOpen( int fd, char *name, int mode)
 {
     struct filedesc_info *fd_info;
     int fsys_fd;
-    
+
     dbgprintf("fsysOpen..\n");
     dbgprintf("  fd: %x, name: %s, mode: %d\n\n", fd, name, mode);
 
@@ -98,13 +98,13 @@ static int fsysClose( int fd)
 {
     struct filedesc_info *fd_info;
     int ret;
-    
+
     dbgprintf("fsys_close..\n"
            "  fd: %x\n\n", fd);
-    
+
     fd_info = (struct filedesc_info *)fd;
     WaitSema(fsys_sema);
-    ret = pcsx2fio_close_file(fd_info->own_fd);    
+    ret = pcsx2fio_close_file(fd_info->own_fd);
     SignalSema(fsys_sema);
 
     return ret;
@@ -141,7 +141,7 @@ static int fsysWrite( int fd, char *buf, int size)
 {
     struct filedesc_info *fd_info;
     int ret;
-    
+
     dbgprintf("fsysWrite..."
            "  fd: %x\n", fd);
 
@@ -220,7 +220,7 @@ static int fsysDopen(int fd, char *name)
 {
     struct filedesc_info *fd_info;
     int fsys_fd;
-    
+
     dbgprintf("fsysDopen..\n");
     dbgprintf("  fd: %x, name: %s\n\n", fd, name);
 
@@ -260,26 +260,26 @@ static int fsysDclose(int fd)
 {
     struct filedesc_info *fd_info;
     int ret;
-    
+
     dbgprintf("fsys_dclose..\n"
            "  fd: %x\n\n", fd);
-    
+
     fd_info = (struct filedesc_info *)fd;
     WaitSema(fsys_sema);
-    ret = pcsx2fio_close_dir(fd_info->own_fd);    
+    ret = pcsx2fio_close_dir(fd_info->own_fd);
     SignalSema(fsys_sema);
 
     return ret;
 }
 
-iop_device_ops_t fsys_functarray = { (void *)fsysInit, (void *)fsysDestroy, (void *)dummy5, 
-	(void *)fsysOpen, (void *)fsysClose, (void *)fsysRead, 
+iop_device_ops_t fsys_functarray = { (void *)fsysInit, (void *)fsysDestroy, (void *)dummy5,
+	(void *)fsysOpen, (void *)fsysClose, (void *)fsysRead,
 	(void *)fsysWrite, (void *)fsysLseek, (void *)dummy5,
 	(void *)fsysRemove, (void *)fsysMkdir, (void *)fsysRmdir,
 	(void *)fsysDopen, (void *)fsysDclose, (void *)fsysDread,
 	(void *)dummy5,  (void *)dummy5 };
 
-iop_device_t fsys_driver = { fsname, 16, 1, "fsys driver", 
+iop_device_t fsys_driver = { fsname, 16, 1, "fsys driver",
 							&fsys_functarray };
 ////////////////////////////////////////////////////////////////////////
 // Entry point for mounting the file system

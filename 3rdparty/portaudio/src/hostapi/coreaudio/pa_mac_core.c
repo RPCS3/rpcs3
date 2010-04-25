@@ -15,7 +15,7 @@
  * Olivier Tristan for feedback and testing
  * Glenn Zelniker and Z-Systems engineering for sponsoring the Blocking I/O
  * interface.
- * 
+ *
  *
  * Based on the Open Source API proposed by Ross Bencina
  * Copyright (c) 1999-2002 Ross Bencina, Phil Burk
@@ -41,13 +41,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -373,7 +373,7 @@ static PaError gatherDeviceInfo(PaMacAUHAL *auhalHostApi)
                 break;
              }
        }
-    }   
+    }
     if( 0 != AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice,
                      &size,
                      &auhalHostApi->defaultOut) ) {
@@ -390,7 +390,7 @@ static PaError gatherDeviceInfo(PaMacAUHAL *auhalHostApi)
                 break;
              }
        }
-    }   
+    }
 
     VDBUG( ( "Default in : %ld\n", auhalHostApi->defaultIn  ) );
     VDBUG( ( "Default out: %ld\n", auhalHostApi->defaultOut ) );
@@ -433,7 +433,7 @@ static PaError GetChannelInfo( PaMacAUHAL *auhalHostApi,
         deviceInfo->maxInputChannels = numChannels;
     else
         deviceInfo->maxOutputChannels = numChannels;
-      
+
     if (numChannels > 0) /* do not try to retrieve the latency if there is no channels. */
     {
        /* Get the latency.  Don't fail if we can't get this. */
@@ -535,12 +535,12 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
     int unixErr;
 
     VVDBUG(("PaMacCore_Initialize(): hostApiIndex=%d\n", hostApiIndex));
-	
+
 	SInt32 major;
 	SInt32 minor;
 	Gestalt(gestaltSystemVersionMajor, &major);
 	Gestalt(gestaltSystemVersionMinor, &minor);
-	
+
 	// Starting with 10.6 systems, the HAL notification thread is created internally
 	if (major == 10 && minor >= 6) {
 		CFRunLoopRef theRunLoop = NULL;
@@ -550,7 +550,7 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
 			goto error;
 		}
 	}
-	
+
     unixErr = initializeXRunListenerList();
     if( 0 != unixErr ) {
        return UNIX_ERR(unixErr);
@@ -586,7 +586,7 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
     (*hostApi)->info.defaultInputDevice = paNoDevice;
     (*hostApi)->info.defaultOutputDevice = paNoDevice;
 
-    (*hostApi)->info.deviceCount = 0;  
+    (*hostApi)->info.deviceCount = 0;
 
     if( auhalHostApi->devCount > 0 )
     {
@@ -665,7 +665,7 @@ error:
             PaUtil_FreeAllAllocations( auhalHostApi->allocations );
             PaUtil_DestroyAllocationGroup( auhalHostApi->allocations );
         }
-                
+
         PaUtil_FreeMemory( auhalHostApi );
     }
     return result;
@@ -714,7 +714,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
                 outputParameters ? outputParameters->channelCount : -1,
                 outputParameters ? outputParameters->sampleFormat : -1,
                 (float) sampleRate ));
- 
+
     /** These first checks are standard PA checks. We do some fancier checks
         later. */
     if( inputParameters )
@@ -726,7 +726,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
             this implementation doesn't support any custom sample formats */
         if( inputSampleFormat & paCustomFormat )
             return paSampleFormatNotSupported;
-            
+
         /* unless alternate device specification is supported, reject the use of
             paUseHostApiSpecificDeviceSpecification */
 
@@ -751,7 +751,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
             this implementation doesn't support any custom sample formats */
         if( outputSampleFormat & paCustomFormat )
             return paSampleFormatNotSupported;
-            
+
         /* unless alternate device specification is supported, reject the use of
             paUseHostApiSpecificDeviceSpecification */
 
@@ -767,7 +767,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
     {
         outputChannelCount = 0;
     }
- 
+
     /* FEEDBACK */
     /*        I think the only way to check a given format SR combo is     */
     /*        to try opening it. This could be disruptive, is that Okay?   */
@@ -785,7 +785,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
        if( err != paNoError && err != paInvalidSampleRate )
           DBUG( ( "OpenStream @ %g returned: %d: %s\n",
                   (float) sampleRate, err, Pa_GetErrorText( err ) ) );
-       if( err ) 
+       if( err )
           return err;
        err = CloseStream( s );
        if( err ) {
@@ -861,7 +861,7 @@ static PaError OpenAndSetupOneAudioUnit(
        outChannelMap = ((PaMacCoreStreamInfo*)outStreamParams->hostApiSpecificStreamInfo)
                   ->channelMap;
        outChannelMapSize = ((PaMacCoreStreamInfo*)outStreamParams->hostApiSpecificStreamInfo)
-                  ->channelMapSize; 
+                  ->channelMapSize;
     }
     /* Override user's flags here, if desired for testing. */
 
@@ -1166,7 +1166,7 @@ static PaError OpenAndSetupOneAudioUnit(
                   (float)sourceFormat.mSampleRate,
                   (float)desiredFormat.mSampleRate ) );
           /* create our converter */
-          ERR_WRAP( AudioConverterNew( 
+          ERR_WRAP( AudioConverterNew(
                              &sourceFormat,
                              &desiredFormat,
                              srConverter ) );
@@ -1302,7 +1302,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     {
         outputChannelCount = outputParameters->channelCount;
         outputSampleFormat = outputParameters->sampleFormat;
-        
+
         /* unless alternate device specification is supported, reject the use of
             paUseHostApiSpecificDeviceSpecification */
 
@@ -1517,7 +1517,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
           result = paInsufficientMemory;
           goto error;
        }
-        
+
        /*
         * If input and output devs are different or we are doing SR conversion,
         * we also need a
@@ -1723,9 +1723,9 @@ static PaTime TimeStampToSecs(PaMacCoreStream *stream, const AudioTimeStamp* tim
 
 #define RING_BUFFER_EMPTY (1000)
 
-static OSStatus ringBufferIOProc( AudioConverterRef inAudioConverter, 
-                             UInt32*ioDataSize, 
-                             void** outData, 
+static OSStatus ringBufferIOProc( AudioConverterRef inAudioConverter,
+                             UInt32*ioDataSize,
+                             void** outData,
                              void*inUserData )
 {
    void *dummyData;
@@ -1741,9 +1741,9 @@ static OSStatus ringBufferIOProc( AudioConverterRef inAudioConverter,
    }
    assert(sizeof(UInt32) == sizeof(ring_buffer_size_t));
    PaUtil_GetRingBufferReadRegions( rb, *ioDataSize,
-                                    outData, (ring_buffer_size_t *)ioDataSize, 
+                                    outData, (ring_buffer_size_t *)ioDataSize,
                                     &dummyData, &dummySize );
-      
+
    assert( *ioDataSize );
    PaUtil_AdvanceRingBufferReadIndex( rb, *ioDataSize );
 
@@ -1876,7 +1876,7 @@ static OSStatus AudioIOProc( void *inRefCon,
        *       -- OR Simplex Output
        *
        * This case handles output data as in the full duplex case,
-       * and, if there is input data, reads it off the ring buffer 
+       * and, if there is input data, reads it off the ring buffer
        * and into the PA buffer processor. If sample rate conversion
        * is required on input, that is done here as well.
        */
@@ -1923,7 +1923,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                UInt32 size;
                float data[ inChan * frames ];
                size = sizeof( data );
-               err = AudioConverterFillBuffer( 
+               err = AudioConverterFillBuffer(
                              stream->inputSRConverter,
                              ringBufferIOProc,
                              &stream->inputRingBuffer,
@@ -1937,7 +1937,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                }
                ERR( err );
                assert( !err );
-               
+
                PaUtil_SetInputFrameCount( &(stream->bufferProcessor), frames );
                PaUtil_SetInterleavedInputChannels( &(stream->bufferProcessor),
                                    0,
@@ -2092,7 +2092,7 @@ static OSStatus AudioIOProc( void *inRefCon,
             long f;
 
             size = sizeof( data );
-            err = AudioConverterFillBuffer( 
+            err = AudioConverterFillBuffer(
                           stream->inputSRConverter,
                           ringBufferIOProc,
                           &stream->inputRingBuffer,

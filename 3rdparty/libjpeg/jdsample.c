@@ -119,7 +119,7 @@ sep_upsample (j_decompress_ptr cinfo,
   /* Not more than the distance to the end of the image.  Need this test
    * in case the image height is not a multiple of max_v_samp_factor:
    */
-  if (num_rows > upsample->rows_to_go) 
+  if (num_rows > upsample->rows_to_go)
     num_rows = upsample->rows_to_go;
   /* And not more than what the client can accept: */
   out_rows_avail -= *out_row_ctr;

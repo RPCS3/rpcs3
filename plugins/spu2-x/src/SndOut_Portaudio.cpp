@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -33,7 +33,7 @@ int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
 	PaStreamCallbackFlags statusFlags,
 	void *userData );
 #endif
-				
+
 class Portaudio : public SndOutModule
 {
 private:
@@ -53,10 +53,10 @@ private:
 	int writtenSoFar;
 	int writtenLastTime;
 	int availableLastTime;
-	
+
 	bool started;
 	PaStream* stream;
-	
+
 #ifndef __LINUX__
         static int PaCallback( const void *inputBuffer, void *outputBuffer,
                 unsigned long framesPerBuffer,
@@ -67,7 +67,7 @@ private:
                 return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
         }
 #endif
-	
+
 public:
 	int ActualPaCallback( const void *inputBuffer, void *outputBuffer,
 		unsigned long framesPerBuffer,
@@ -86,7 +86,7 @@ public:
 
 		return 0;
 	}
-	
+
 	Portaudio()
 	{
 		m_ApiId=-1;
@@ -113,7 +113,7 @@ public:
 		for(int i=0;i<Pa_GetDeviceCount();i++)
 		{
 			const PaDeviceInfo * info = Pa_GetDeviceInfo(i);
-			
+
 			const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(info->hostApi);
 
 			fprintf(stderr," *** Device %d: '%s' (%s)", i, info->name, apiinfo->name);
@@ -152,17 +152,17 @@ public:
 				}
 			}
 		}
-		
+
 		if(deviceIndex>=0)
 		{
 			void* infoPtr = NULL;
 
 #ifdef __WIN32__
-			PaWasapiStreamInfo info = { 
-				sizeof(PaWasapiStreamInfo), 
-				paWASAPI, 
-				1, 
-				paWinWasapiExclusive 
+			PaWasapiStreamInfo info = {
+				sizeof(PaWasapiStreamInfo),
+				paWASAPI,
+				1,
+				paWinWasapiExclusive
 			};
 
 			if((m_ApiId == paWASAPI) && m_WasapiExclusiveMode)
@@ -185,15 +185,15 @@ public:
 				0, //?
 				infoPtr
 			};
-			
+
 			err = Pa_OpenStream(&stream,
 				NULL, &outParams, SampleRate,
 				SndOutPacketSize,
-				paNoFlag, 
+				paNoFlag,
 #ifndef __LINUX__
-				PaCallback, 
+				PaCallback,
 #else
-				PaLinuxCallback, 
+				PaLinuxCallback,
 #endif
 				NULL);
 		}
@@ -203,9 +203,9 @@ public:
 				0, 2, paInt32, 48000,
 				SndOutPacketSize,
 #ifndef __LINUX__
-				PaCallback, 
+				PaCallback,
 #else
-				PaLinuxCallback, 
+				PaLinuxCallback,
 #endif
 				NULL );
 		}
@@ -290,7 +290,7 @@ public:
 	{
 		return L"Portaudio (crossplatform)";
 	}
-	
+
 	void ReadSettings()
 	{
 		wstring api=L"EMPTYEMPTYEMPTY";

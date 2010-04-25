@@ -78,12 +78,12 @@ void Vif1MskPath3() {
 	gifRegs->stat.M3P = vif1Regs->mskpath3;
 	if (!vif1Regs->mskpath3) {
 		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
-		if(gif->chcr.STR == true) 
+		if(gif->chcr.STR == true)
 		{
 			GSTransferStatus.PTH3 = 3;
 			CPU_INT(DMAC_GIF, 4);
 		}
-		
+
 	}
 	else gifRegs->stat.M3P = true;
 
@@ -114,7 +114,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		gifRegs->stat.P2Q = true;
 		//Should probably do this for both types of transfer seen as the GS hates taking 2 seperate chunks
 		//if (isDirectHL) {
-		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE) 
+		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE)
 		{
 			/*if(!isDirectHL) DevCon.WriteLn("Direct: Waiting for Path3 to finish!");
 			else DevCon.WriteLn("DirectHL: Waiting for Path3 to finish!");*/
@@ -186,7 +186,7 @@ vifOp(vifCode_FlushA) {
 	vif1Only();
 	pass1 {
 		// Gif is already transferring so wait for it.
-		if (GSTransferStatus.PTH3 < STOPPED_MODE) { 
+		if (GSTransferStatus.PTH3 < STOPPED_MODE) {
 			//DevCon.WriteLn("FlushA path3 Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);
 			vif1Regs->stat.VGW = true;
 			vifX.vifstalled    = true;
@@ -422,7 +422,7 @@ vifOp(vifCode_STMod) {
 }
 
 vifOp(vifCode_Unpack) {
-	pass1 { 
+	pass1 {
 		if (!idx) vif0UnpackSetup(data);
 		else	  vif1UnpackSetup(data);
 		return 1;

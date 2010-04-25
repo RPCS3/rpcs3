@@ -571,7 +571,7 @@ void wxGridBagSizer::RecalcSizes()
 void wxGridBagSizer::AdjustForOverflow()
 {
     int row, col;
-    
+
     for (row=0; row<(int)m_rowHeights.GetCount(); row++)
     {
         int rowExtra=INT_MAX;
@@ -585,7 +585,7 @@ void wxGridBagSizer::AdjustForOverflow()
 
             int endrow, endcol;
             item->GetEndPos(endrow, endcol);
-            
+
             // If the item starts in this position and doesn't span rows, then
             // just look at the whole item height
             if ( item->GetPos() == pos && endrow == row )
@@ -605,7 +605,7 @@ void wxGridBagSizer::AdjustForOverflow()
 
                 if ( itemHeight < 0 )
                     itemHeight = 0;
-                
+
                 // and check how much is left
                 rowExtra = wxMin(rowExtra, rowHeight - itemHeight);
             }
@@ -628,7 +628,7 @@ void wxGridBagSizer::AdjustForOverflow()
 
             int endrow, endcol;
             item->GetEndPos(endrow, endcol);
-            
+
             if ( item->GetPos() == pos && endcol == col )
             {
                 int itemWidth = item->CalcMin().GetWidth();
@@ -644,7 +644,7 @@ void wxGridBagSizer::AdjustForOverflow()
 
                 if ( itemWidth < 0 )
                     itemWidth = 0;
-                
+
                 colExtra = wxMin(colExtra, colWidth - itemWidth);
             }
         }

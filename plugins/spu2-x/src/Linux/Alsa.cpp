@@ -206,7 +206,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() 
+	int GetEmptySampleCount()
 	{
 		if(handle == NULL) return 0;
 

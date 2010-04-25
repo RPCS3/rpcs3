@@ -108,15 +108,15 @@ wxString wxFileSystemHandler::GetMimeTypeFromExt(const wxString& location)
             wxTheMimeTypesManager->AddFallbacks(fallbacks);
             s_MinimalMimeEnsured = true;
         }
-        
+
         wxFileType *ft = wxTheMimeTypesManager->GetFileTypeFromExtension(ext);
         if ( !ft || !ft -> GetMimeType(&mime) )
         {
             mime = wxEmptyString;
         }
-        
+
         delete ft;
-        
+
         return mime;
     }
     else

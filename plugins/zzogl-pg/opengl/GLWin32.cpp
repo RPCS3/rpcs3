@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "GS.h"
 #include "zerogs.h"
 
@@ -70,7 +70,7 @@ LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 }
 
 bool GLWindow::CreateWindow(void *pDisplay)
-{       
+{
 	RECT rc, rcdesktop;
 	rc.left = 0; rc.top = 0;
 	rc.right = conf.width; rc.bottom = conf.height;
@@ -125,12 +125,12 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	if (GShwnd == NULL) return false;
 
 	if (pDisplay != NULL) *(HWND*)pDisplay = GShwnd;
-	
+
 	return (pDisplay != NULL);
 }
 
 bool GLWindow::ReleaseWindow()
-{       
+{
 	if (hRC)											// Do We Have A Rendering Context?
 	{
 		if (!wglMakeCurrent(NULL,NULL))				 // Are We Able To Release The DC And RC Contexts?
@@ -155,8 +155,8 @@ bool GLWindow::ReleaseWindow()
 }
 
 void GLWindow::CloseWindow()
-{       
-	if( GShwnd != NULL ) 
+{
+	if( GShwnd != NULL )
 	{
 		DestroyWindow(GShwnd);
 		GShwnd = NULL;
@@ -196,7 +196,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	SetWindowLong( GShwnd, GWL_EXSTYLE, dwExStyle );
 
 	SetWindowPos(GShwnd, HWND_TOP, X, Y, rc.right-rc.left, rc.bottom-rc.top, SWP_SHOWWINDOW);
-		
+
 	if (conf.options & GSOPTION_FULLSCREEN) {
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings,0,sizeof(dmScreenSettings));
@@ -234,19 +234,19 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		0,										  // Shift Bit Ignored
 		0,										  // No Accumulation Buffer
 		0, 0, 0, 0,								 // Accumulation Bits Ignored
-		24,										 // 24Bit Z-Buffer (Depth Buffer)  
+		24,										 // 24Bit Z-Buffer (Depth Buffer)
 		8,										  // 8bit Stencil Buffer
 		0,										  // No Auxiliary Buffer
 		PFD_MAIN_PLANE,							 // Main Drawing Layer
 		0,										  // Reserved
 		0, 0, 0									 // Layer Masks Ignored
 	};
-	
+
 	if (!(hDC=GetDC(GShwnd))) {
 		MessageBox(NULL,"(1) Can't Create A GL Device Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
 		return false;
 	}
-	
+
 	if (!(PixelFormat=ChoosePixelFormat(hDC,&pfd))) {
 		MessageBox(NULL,"(2) Can't Find A Suitable PixelFormat.","ERROR",MB_OK|MB_ICONEXCLAMATION);
 		return false;
@@ -266,7 +266,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		MessageBox(NULL,"(5) Can't Activate The GL Rendering Context.","ERROR",MB_OK|MB_ICONEXCLAMATION);
 		return false;
 	}
-	
+
 	UpdateWindow(GShwnd);
 	return true;
 }
@@ -277,7 +277,7 @@ void GLWindow::SwapGLBuffers()
 	SwapBuffers(hDC);
 	lastswaptime = timeGetTime();
 }
-                
+
 void GLWindow::SetTitle(char *strtitle)
 {
 	SetWindowText(GShwnd, strtitle);

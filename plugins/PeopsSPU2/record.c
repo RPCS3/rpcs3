@@ -15,7 +15,7 @@
  *   additional informations.                                              *
  *                                                                         *
  ***************************************************************************/
-              
+
 //*************************************************************************//
 // History of changes:
 //
@@ -70,7 +70,7 @@ void RecordStart()
  // create file
  hWaveFile=mmioOpen(szFileName,NULL,MMIO_CREATE|MMIO_WRITE|MMIO_EXCLUSIVE | MMIO_ALLOCBUF);
  if(!hWaveFile) return;
- 
+
  // setup WAVE, fmt and data chunks
  memset(&mmckMain,0,sizeof(MMCKINFO));
  mmckMain.fccType = mmioFOURCC('W','A','V','E');
@@ -82,7 +82,7 @@ void RecordStart()
  mmckData.cksize  = sizeof(WAVEFORMATEX);
 
  mmioCreateChunk(hWaveFile,&mmckData,0);
- mmioWrite(hWaveFile,(char*)&pcmwf,sizeof(WAVEFORMATEX)); 
+ mmioWrite(hWaveFile,(char*)&pcmwf,sizeof(WAVEFORMATEX));
  mmioAscend(hWaveFile,&mmckData,0);
 
  mmckData.ckid = mmioFOURCC('d','a','t','a');
@@ -172,7 +172,7 @@ BOOL CALLBACK RecordDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
    //--------------------------------------------------// setcursor
    case WM_SETCURSOR:
     {
-     SetCursor(LoadCursor(NULL,IDC_ARROW));            // force the arrow 
+     SetCursor(LoadCursor(NULL,IDC_ARROW));            // force the arrow
      return TRUE;
     }
    //--------------------------------------------------//

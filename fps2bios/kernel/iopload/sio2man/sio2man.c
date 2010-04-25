@@ -56,7 +56,7 @@ struct sio2_packet {
 
 struct sio2common {
 	int evid;
-	int thid;	
+	int thid;
 };
 
 struct sio2common common;
@@ -360,7 +360,7 @@ void sio2_basicThread(void* data) {
 		if (result[0] & 0x01) {
 			ClearEventFlag(common.evid, ~0x1);
 			SetEventFlag(common.evid, 0x02);
-		} else 
+		} else
 		if (result[0] & 0x04) {
 			ClearEventFlag(common.evid, ~0x4);
 			SetEventFlag(common.evid, 0x08);

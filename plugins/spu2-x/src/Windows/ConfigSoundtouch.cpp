@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -54,7 +54,7 @@ void SoundtouchCfg::ReadSettings()
 	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 15 );
 	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 25 );
 
-	ClampValues();		
+	ClampValues();
 }
 
 void SoundtouchCfg::WriteSettings()
@@ -84,10 +84,10 @@ BOOL CALLBACK SoundtouchCfg::DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM
 			SendDialogMsg( hWnd, IDC_SEEKWIN_SLIDER, TBM_SETPOS, TRUE, SeekWindowMS );
 			SendDialogMsg( hWnd, IDC_OVERLAP_SLIDER, TBM_SETPOS, TRUE, OverlapMS );
 		}
-		
+
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			if( wmId == IDOK )
 			{
@@ -104,11 +104,11 @@ BOOL CALLBACK SoundtouchCfg::DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM
 				EndDialog(hWnd,0);
 			}
 		break;
-		
+
 		case WM_HSCROLL:
 			DoHandleScrollMessage( hWnd, wParam, lParam );
 		break;
-		
+
 		default:
 			return FALSE;
 	}

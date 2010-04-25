@@ -21,7 +21,7 @@ enum IsoFS_Type
 	FStype_Joliet	= 2,
 };
 
-class IsoDirectory 
+class IsoDirectory
 {
 public:
 	SectorSource&					internalReader;
@@ -39,11 +39,11 @@ public:
 	bool Exists(const wxString& filePath) const;
 	bool IsFile(const wxString& filePath) const;
 	bool IsDir(const wxString& filePath) const;
-	
+
 	u32 GetFileSize( const wxString& filePath ) const;
 
 	IsoFileDescriptor FindFile(const wxString& filePath) const;
-	
+
 protected:
 	const IsoFileDescriptor& GetEntry(const wxString& fileName) const;
 	const IsoFileDescriptor& GetEntry(int index) const;

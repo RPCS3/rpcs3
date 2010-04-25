@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #include <string.h>
 #include <gtk/gtk.h>
 #include <pthread.h>
@@ -39,7 +39,7 @@ string KeyName(int pad, int key)
 {
 	string tmp;
 	KeyType k = type_of_key(pad, key);
-	
+
 	switch (k)
 		{
 			case PAD_KEYBOARD:
@@ -52,7 +52,7 @@ string KeyName(int pad, int key)
 			{
 				int button = key_to_button(pad, key);
 				tmp.resize(28);
-			
+
 				sprintf(&tmp[0], "JBut %d", button);
 				break;
 			}
@@ -60,7 +60,7 @@ string KeyName(int pad, int key)
 			{
 				int axis = key_to_axis(pad, key);
 				tmp.resize(28);
-			
+
 				sprintf(&tmp[0], "JAxis %d", axis);
 				break;
 			}
@@ -68,21 +68,21 @@ string KeyName(int pad, int key)
 			{
 				int axis = key_to_axis(pad, key);
 				tmp.resize(28);
-			
+
 				switch(key_to_hat_dir(pad, key))
 				{
 					case SDL_HAT_UP:
 						sprintf(&tmp[0], "JPOVU-%d", axis);
 						break;
-					
+
 					case SDL_HAT_RIGHT:
 						sprintf(&tmp[0], "JPOVR-%d", axis);
 						break;
-					
+
 					case SDL_HAT_DOWN:
 						sprintf(&tmp[0], "JPOVD-%d", axis);
 						break;
-					
+
 					case SDL_HAT_LEFT:
 						sprintf(&tmp[0], "JPOVL-%d", axis);
 						break;
@@ -148,7 +148,7 @@ void LoadConfig()
 	FILE *f;
 	char str[256];
 	char cfg[255];
-	
+
 	memset(&conf, 0, sizeof(conf));
 	DefaultValues();
 	conf.log = 0;
@@ -168,7 +168,7 @@ void LoadConfig()
 		{
 			sprintf(str, "[%d][%d] = 0x%%x\n", pad, key);
 			u32 temp;
-			
+
 			if (fscanf(f, str, &temp) == 0) temp = 0;
 			set_key(pad, key, temp);
 		}

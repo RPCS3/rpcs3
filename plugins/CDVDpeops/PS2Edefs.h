@@ -10,7 +10,7 @@
  */
 
 /*
- Notes: 
+ Notes:
  * Since this is still beta things may change.
 
  * OSflags:
@@ -24,7 +24,7 @@
  * reserved keys:
 	F1 to F10 are reserved for the emulator
 
- * plugins should NOT change the current 
+ * plugins should NOT change the current
    working directory.
    (on win32, add flag OFN_NOCHANGEDIR for
     GetOpenFileName)

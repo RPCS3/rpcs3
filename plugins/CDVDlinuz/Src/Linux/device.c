@@ -33,7 +33,7 @@
 
 // missing on some files for some reason.........
 #ifndef CDC_IOCTLS
-#define CDC_IOCTLS 0x400 
+#define CDC_IOCTLS 0x400
 #endif
 
 #include "logfile.h"
@@ -73,12 +73,12 @@ void InitDisc() {
   PrintLog("CDVD device: InitDisc()");
 #endif /* VERBOSE_FUNCTION_DEVICE */
 
-  if((disctype == CDVD_TYPE_PS2DVD) || 
+  if((disctype == CDVD_TYPE_PS2DVD) ||
      (disctype == CDVD_TYPE_DVDV)) {
     InitDVDInfo();
   } // ENDIF- Clean out DVD Disc Info?
 
-  if((disctype == CDVD_TYPE_PS2CD) || 
+  if((disctype == CDVD_TYPE_PS2CD) ||
      (disctype == CDVD_TYPE_PS2CDDA) ||
      (disctype == CDVD_TYPE_PSCD) ||
      (disctype == CDVD_TYPE_PSCDDA) ||
@@ -255,7 +255,7 @@ s32 DeviceGetTD(u8 track, cdvdTD *cdvdtd) {
 s32 DeviceGetDiskType() {
   s32 s32result;
   s32 ioctldisktype;
-  
+
   errno = 0;
 
   if(devicehandle == -1) {

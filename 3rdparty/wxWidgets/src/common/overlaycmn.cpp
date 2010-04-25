@@ -116,7 +116,7 @@ void wxDCOverlay::Init(wxWindowDC *dc, int x , int y , int width , int height )
     m_overlay.BeginDrawing(dc);
 }
 
-void wxDCOverlay::Clear() 
+void wxDCOverlay::Clear()
 {
     m_overlay.Clear(m_dc);
 }
@@ -131,7 +131,7 @@ wxOverlayImpl::wxOverlayImpl()
 {
 #if defined(__WXGTK__) || defined(__WXMSW__)
      m_window = NULL ;
-#endif   
+#endif
      m_x = m_y = m_width = m_height = 0 ;
 }
 
@@ -139,7 +139,7 @@ wxOverlayImpl::~wxOverlayImpl()
 {
 }
 
-bool wxOverlayImpl::IsOk() 
+bool wxOverlayImpl::IsOk()
 {
     return m_bmpSaved.Ok() ;
 }
@@ -149,10 +149,10 @@ void wxOverlayImpl::Init( wxWindowDC* dc, int x , int y , int width , int height
 #if defined(__WXGTK__)
     m_window = dc->m_owner;
 #else
-    #if defined (__WXMSW__) 
+    #if defined (__WXMSW__)
     m_window = dc->GetWindow();
     #endif  // __WXMSW__
-   
+
 #endif
     wxMemoryDC dcMem ;
     m_bmpSaved.Create( width, height );
@@ -171,7 +171,7 @@ void wxOverlayImpl::Init( wxWindowDC* dc, int x , int y , int width , int height
     dcMem.SelectObject( wxNullBitmap );
 }
 
-void wxOverlayImpl::Clear(wxWindowDC* dc) 
+void wxOverlayImpl::Clear(wxWindowDC* dc)
 {
     wxMemoryDC dcMem ;
     dcMem.SelectObject( m_bmpSaved );

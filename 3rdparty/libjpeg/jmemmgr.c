@@ -238,13 +238,13 @@ out_of_memory (j_common_ptr cinfo, int which)
  * machines, but may be too small if longs are 64 bits or more.
  */
 
-static const size_t first_pool_slop[JPOOL_NUMPOOLS] = 
+static const size_t first_pool_slop[JPOOL_NUMPOOLS] =
 {
 	1600,			/* first PERMANENT pool */
 	16000			/* first IMAGE pool */
 };
 
-static const size_t extra_pool_slop[JPOOL_NUMPOOLS] = 
+static const size_t extra_pool_slop[JPOOL_NUMPOOLS] =
 {
 	0,			/* additional PERMANENT pools */
 	5000			/* additional IMAGE pools */

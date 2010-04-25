@@ -28,13 +28,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -64,8 +64,8 @@ typedef struct
     PaHostApiTypeId hostApiType;  /**host API for which this data is intended */
     unsigned long version;        /**structure version */
     unsigned long flags;          /* flags to modify behaviour */
-    SInt32 const * channelMap;    /* Channel map for HAL channel mapping , if not needed, use NULL;*/ 
-    unsigned long channelMapSize; /* Channel map size for HAL channel mapping , if not needed, use 0;*/ 
+    SInt32 const * channelMap;    /* Channel map for HAL channel mapping , if not needed, use NULL;*/
+    unsigned long channelMapSize; /* Channel map size for HAL channel mapping , if not needed, use 0;*/
 } PaMacCoreStreamInfo;
 
 /*
@@ -96,7 +96,7 @@ void PaMacCore_SetupChannelMap( PaMacCoreStreamInfo *data, const SInt32 * const 
  * @return A valid AudioDeviceID, or NULL if an error occurred.
  */
 AudioDeviceID PaMacCore_GetStreamInputDevice( PaStream* s );
- 
+
 /*
  * Retrieve the AudioDeviceID of the output device assigned to an open stream
  *

@@ -51,7 +51,7 @@ DWORD SendIoCtlScsiCommand(HANDLE hDevice, u8 direction,
 
 	pSA=(PSCSI_ADDRESS)szBuf;
 	pSA->Length=sizeof(SCSI_ADDRESS);
-                                                   
+
 	if(!DeviceIoControl(hDevice,IOCTL_SCSI_GET_ADDRESS,NULL,
 						0,pSA,sizeof(SCSI_ADDRESS),
 						&dwRet,NULL))

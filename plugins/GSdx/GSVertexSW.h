@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -58,26 +58,26 @@ __aligned16 union GSVertexSW
 
 		int i;
 
-		if(v12.allfalse()) 
+		if(v12.allfalse())
 		{
 			test = (v01 ^ v02) & (v01 ^ v02.zwxy());
 			vtl = v0;
 			vbr = v1 + (v2 - v0);
-			i = 0; 
+			i = 0;
 		}
-		else if(v02.allfalse()) 
+		else if(v02.allfalse())
 		{
 			test = (v01 ^ v12) & (v01 ^ v12.zwxy());
 			vtl = v1;
 			vbr = v0 + (v2 - v1);
-			i = 1; 
+			i = 1;
 		}
-		else if(v01.allfalse()) 
+		else if(v01.allfalse())
 		{
 			test = (v02 ^ v12) & (v02 ^ v12.zwxy());
 			vtl = v2;
 			vbr = v0 + (v1 - v2);
-			i = 2; 
+			i = 2;
 		}
 		else
 		{
@@ -99,22 +99,22 @@ __aligned16 union GSVertexSW
 		GSVector4 v45 = v4 == v5;
 		GSVector4 v35 = v3 == v5;
 
-		if(v34.allfalse()) 
+		if(v34.allfalse())
 		{
 			test = (v35 ^ v45) & (v35 ^ v45.zwxy()) & (vtl + v5 == v3 + v4) & (vbr == v5);
-			i = 5; 
+			i = 5;
 		}
-		else if(v35.allfalse()) 
+		else if(v35.allfalse())
 		{
 			test = (v34 ^ v45) & (v34 ^ v45.zwxy()) & (vtl + v4 == v3 + v5) & (vbr == v4);
-			i = 4; 
+			i = 4;
 		}
 		else if(v45.allfalse())
 		{
 			test = (v34 ^ v35) & (v34 ^ v35.zwxy()) & (vtl + v3 == v5 + v4) & (vbr == v3);
-			i = 3; 
+			i = 3;
 		}
-		else 
+		else
 		{
 			return false;
 		}

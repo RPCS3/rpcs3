@@ -79,8 +79,8 @@ int wxPalette::GetColoursCount() const
 {
     if (m_refData)
         return M_PALETTEDATA->m_count;
-    
-    return 0;    
+
+    return 0;
 }
 
 bool wxPalette::Create(int n,

@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -476,11 +476,11 @@ End:
 
 void FASTCALL(WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut))
 {
-	const static u32 map[] = 
+	const static u32 map[] =
 	{
 		0, 2, 8, 10, 16, 18, 24, 26,
 		4, 6, 12, 14, 20, 22, 28, 30,
-		1, 3, 9, 11, 17, 19, 25, 27, 
+		1, 3, 9, 11, 17, 19, 25, 27,
 		5, 7, 13, 15, 21, 23, 29, 31
 	};
 
@@ -489,7 +489,7 @@ void FASTCALL(WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut))
 
 	int left = ((u32)(uptr)clut&2) ? 512 : 512-(((u32)(uptr)clut)&0x3ff)/2;
 
-	for(int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32) 
+	for(int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32)
 	{
 		if(left == 32) {
 			assert( left == 32 );
@@ -519,7 +519,7 @@ void FASTCALL(WriteCLUT_T32_I8_CSM1_c(u32* vm, u32* clut))
 	u64* dst = (u64*)clut;
 
 	for(int j = 0; j < 2; j++, src += 32) {
-		for(int i = 0; i < 4; i++, dst+=16, src+=8) 
+		for(int i = 0; i < 4; i++, dst+=16, src+=8)
 		{
 			dst[0] = src[0];
 			dst[1] = src[2];

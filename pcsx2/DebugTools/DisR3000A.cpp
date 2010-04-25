@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -57,10 +57,10 @@ typedef char* (*TdisR3000AF)(u32 code, u32 pc);
 #undef _Im_
 #undef _Target_
 
-#define _Funct_  ((code      ) & 0x3F) // The funct part of the instruction register 
-#define _Rd_     ((code >> 11) & 0x1F) // The rd part of the instruction register 
-#define _Rt_     ((code >> 16) & 0x1F) // The rt part of the instruction register 
-#define _Rs_     ((code >> 21) & 0x1F) // The rs part of the instruction register 
+#define _Funct_  ((code      ) & 0x3F) // The funct part of the instruction register
+#define _Rd_     ((code >> 11) & 0x1F) // The rd part of the instruction register
+#define _Rt_     ((code >> 16) & 0x1F) // The rt part of the instruction register
+#define _Rs_     ((code >> 21) & 0x1F) // The rs part of the instruction register
 #define _Sa_     ((code >>  6) & 0x1F) // The sa part of the instruction register
 #define _Im_     ( code & 0xFFFF)      // The immediate part of the instruction register
 
@@ -299,7 +299,7 @@ TdisR3000AF disR3000A_COP2[] = { // Subset of disR3000F_COP2 (based on funct)
 	disDPCS , disINTPL, disMVMVA, disNCDS , disCDP , disNULL , disNCDT , disNULL,
 	disNULL , disNULL , disNULL , disNCCS , disCC  , disNULL , disNCS  , disNULL,
 	disNCT  , disNULL , disNULL , disNULL , disNULL, disNULL , disNULL , disNULL,
-	disSQR  , disDCPL , disDPCT , disNULL , disNULL, disAVSZ3, disAVSZ4, disNULL, 
+	disSQR  , disDCPL , disDPCT , disNULL , disNULL, disAVSZ3, disAVSZ4, disNULL,
 	disRTPT , disNULL , disNULL , disNULL , disNULL, disNULL , disNULL , disNULL,
 	disNULL , disNULL , disNULL , disNULL , disNULL, disGPF  , disGPL  , disNCCT   };
 
@@ -311,7 +311,7 @@ TdisR3000AF disR3000A[] = {
 	disCOP0       , disNULL      , disCOP2    , disNULL , disNULL, disNULL, disNULL , disNULL ,
 	disNULL       , disNULL      , disNULL    , disNULL , disNULL, disNULL, disNULL , disNULL ,
 	disLB         , disLH        , disLWL     , disLW   , disLBU , disLHU , disLWR  , disNULL ,
-	disSB         , disSH        , disSWL     , disSW   , disNULL, disNULL, disSWR  , disNULL , 
+	disSB         , disSH        , disSWL     , disSW   , disNULL, disNULL, disSWR  , disNULL ,
 	disNULL       , disNULL      , disLWC2    , disNULL , disNULL, disNULL, disNULL , disNULL ,
 	disNULL       , disNULL      , disSWC2    , disNULL  , disNULL, disNULL, disNULL , disNULL };
 

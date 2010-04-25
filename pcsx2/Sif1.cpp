@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -23,7 +23,7 @@
 _sif sif1;
 
 static bool done = false;
-	
+
 static __forceinline void Sif1Init()
 {
 	SIF_LOG("SIF1 DMA start...");
@@ -36,14 +36,14 @@ static __forceinline void Sif1Init()
 static __forceinline bool WriteEEtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
-	
+
 	SIF_LOG("Sif 1: Write EE to Fifo");
 	const int writeSize = min((s32)sif1dma->qwc, sif1.fifo.free() >> 2);
-	
+
 	tDMA_TAG *ptag;
-		
+
 	ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1, false);
-	if (ptag == NULL) 
+	if (ptag == NULL)
 	{
 		DevCon.Warning("Write EE to Fifo: ptag == NULL");
 		return false;
@@ -54,7 +54,7 @@ static __forceinline bool WriteEEtoFifo()
 	sif1dma->madr += writeSize << 4;
 	sif1.ee.cycles += writeSize;		// fixme : BIAS is factored in above
 	sif1dma->qwc -= writeSize;
-	
+
 	return true;
 }
 
@@ -62,10 +62,10 @@ static __forceinline bool WriteEEtoFifo()
 static __forceinline bool WriteFifoToIOP()
 {
 	// If we're reading something, continue to do so.
-	
+
 	SIF_LOG("Sif1: Write Fifo to IOP");
 	const int readSize = min (sif1.iop.counter, sif1.fifo.size);
-	
+
 	SIF_LOG("Sif 1 IOP doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
 	sif1.fifo.read((u32*)iopPhysMem(hw_dma(10).madr), readSize);
@@ -73,7 +73,7 @@ static __forceinline bool WriteFifoToIOP()
 	hw_dma(10).madr += readSize << 2;
 	sif1.iop.cycles += readSize >> 2;		// fixme: should be >> 4
 	sif1.iop.counter -= readSize;
-	
+
 	return true;
 }
 
@@ -83,7 +83,7 @@ static __forceinline bool ProcessEETag()
 	// Chain mode
 	tDMA_TAG *ptag;
 	SIF_LOG("Sif1: ProcessEETag");
-			
+
 	// Process DMA tag at sif1dma->tadr
 	ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
 	if (ptag == NULL)
@@ -147,15 +147,15 @@ static __forceinline bool SIFIOPReadTag()
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.iop.data, 4);
 	//sif1words = (sif1words + 3) & 0xfffffffc; // Round up to nearest 4.
-	SIF_LOG("SIF 1 IOP: dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
+	SIF_LOG("SIF 1 IOP: dest chain tag madr:%08X wc:%04X id:%X irq:%d",
 		sif1data & 0xffffff, sif1words, sif1tag.ID, sif1tag.IRQ);
-		
+
 	// Only use the first 24 bits.
 	hw_dma(10).madr = sif1data & 0xffffff;
-	
+
 	sif1.iop.counter = sif1words;
 	if (sif1tag.IRQ  || (sif1tag.ID & 4)) sif1.iop.end = true;
-	
+
 	return true;
 }
 
@@ -165,18 +165,18 @@ static __forceinline void EndEE()
 	sif1.ee.end = false;
 	sif1.ee.busy = false;
 	SIF_LOG("Sif 1: End EE");
-	
+
 	// Voodoocycles : Okami wants around 100 cycles when booting up
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 	// (Cause of double interrupts on the EE)
-	if (sif1.ee.cycles == 0) 
+	if (sif1.ee.cycles == 0)
 	{
 		SIF_LOG("SIF1 EE: cycles = 0");
 		sif1.ee.cycles = 1;
 	}
 
-	
-	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384)); 
+
+	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384));
 }
 
 // Stop processing IOP, and signal an interrupt.
@@ -191,13 +191,13 @@ static __forceinline void EndIOP()
 	//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 	//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
-	if (sif1.iop.cycles == 0) 
+	if (sif1.iop.cycles == 0)
 	{
 		DevCon.Warning("SIF1 IOP: cycles = 0");
 		sif1.iop.cycles = 1;
 	}
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-	PSX_INT(IopEvt_SIF1, min((sif1.iop.cycles * 26), 1024)); 
+	PSX_INT(IopEvt_SIF1, min((sif1.iop.cycles * 26), 1024));
 }
 
 // Handle the EE transfer.
@@ -215,11 +215,11 @@ static __forceinline void HandleEETransfer()
 		DevCon.Warning("SIF1 stall control"); // STD == fromSIF1
 	}
 
-	/*if (sif1dma->qwc == 0) 
-		if (sif1dma->chcr.MOD == NORMAL_MODE) 
-			if (!sif1.ee.end){ 
-				DevCon.Warning("sif1 irq prevented CHCR %x QWC %x", sif1dma->chcr, sif1dma->qwc); 
-				done = true; 
+	/*if (sif1dma->qwc == 0)
+		if (sif1dma->chcr.MOD == NORMAL_MODE)
+			if (!sif1.ee.end){
+				DevCon.Warning("sif1 irq prevented CHCR %x QWC %x", sif1dma->chcr, sif1dma->qwc);
+				done = true;
 				return;
 			}*/
 
@@ -257,7 +257,7 @@ static __forceinline void HandleIOPTransfer()
 			WriteFifoToIOP();
 		}
 	}
-	
+
 	if (sif1.iop.counter <= 0)
 	{
 		if (sif1.iop.end)
@@ -267,7 +267,7 @@ static __forceinline void HandleIOPTransfer()
 		}
 		else if (sif1.fifo.size >= 4)
 		{
-			
+
 			done = false;
 			SIFIOPReadTag();
 		}
@@ -284,26 +284,26 @@ __forceinline void SIF1Dma()
 {
 	int BusyCheck = 0;
 	Sif1Init();
-	
+
 	do
 	{
 		//I realise this is very hacky in a way but its an easy way of checking if both are doing something
 		BusyCheck = 0;
 
-		if (sif1.ee.busy) 
+		if (sif1.ee.busy)
 		{
 			if(sif1.fifo.free() > 0) BusyCheck++;
 			HandleEETransfer();
 		}
 
-		if (sif1.iop.busy) 
+		if (sif1.iop.busy)
 		{
 			if(sif1.fifo.size >= 4) BusyCheck++;
 			HandleIOPTransfer();
 		}
-		
+
 	} while (!done && BusyCheck > 0);
-	
+
 	Sif1End();
 }
 
@@ -334,7 +334,7 @@ __forceinline void dmaSIF1()
 
 	psHu32(SBUS_F240) |= 0x4000;
 	sif1.ee.busy = true;
-	
+
 	if (sif1.iop.busy)
 	{
         XMMRegisters::Freeze();

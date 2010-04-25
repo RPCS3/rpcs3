@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -314,7 +314,7 @@ static __forceinline ElfObject *loadElf( const wxString filename )
 	IsoFSCDVD isofs;
 	IsoFile file(isofs, filename);
 	ElfObject *elfptr;
-	
+
 	elfptr = new ElfObject(filename, file);
 	return elfptr;
 }
@@ -322,7 +322,7 @@ static __forceinline ElfObject *loadElf( const wxString filename )
 static __forceinline void _reloadElfInfo(wxString elfpath)
 {
 	ScopedPtr<ElfObject> elfptr;
-	
+
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
 
@@ -375,7 +375,7 @@ static __forceinline s32 StrToS32(const wxString& str, int base = 10)
     return l;
 }
 
-void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) 
+void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
 {
 	s32 numbers, letters;
 	u32 key_0_3;
@@ -385,7 +385,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
 
 	// convert the number characters to a real 32 bit number
 	numbers = StrToS32(DiscID(5,5));
-	
+
 	// combine the lower 7 bits of each char
 	// to make the 4 letters fit into a single u32
 	letters =	(s32)((DiscID[3]&0x7F)<< 0) |
@@ -414,11 +414,11 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
             key[14] = key_14;
             key[15] = 0x05;
             break;
-            
+
 //      case 3075:
 //          key[15] = 0x01;
 //          break;
-            
+
         case 4246:
             // 0x0001F2F707 = sector 0x0001F2F7  dec 0x07
             key[ 0] = 0x07;
@@ -428,13 +428,13 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
             key[ 4] = 0x00;
             key[15] = 0x01;
             break;
-            
+
         default:
             key[15] = 0x01;
             break;
     }
 
-	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", 
+	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X",
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 }
 
@@ -775,7 +775,7 @@ __forceinline void cdvdReadInterrupt()
 		}
 
 		cdvd.Reading = false;
-		
+
 		// Any other value besides 0 should be considered invalid here (wtf is that wacky
 		// plugin trying to do?)
 		jASSUME( cdvd.RErr == 0 );
@@ -783,7 +783,7 @@ __forceinline void cdvdReadInterrupt()
 
 	if (cdvdReadSector() == -1)
 	{
-		// This means that the BCR/DMA hasn't finished yet, and rather than fire off the 
+		// This means that the BCR/DMA hasn't finished yet, and rather than fire off the
 		// sector-finished notice too early (which might overwrite game data) we delay a
 		// bit and try to read the sector again later.
 		// An arbitrary delay of some number of cycles probably makes more sense here,
@@ -1853,7 +1853,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			SetResultSize(1);//in:5
 			cdvd.mg_size = 0;
 			cdvd.mg_datatype = 1;//header data
-			Console.WriteLn("[MG] hcode=%d cnum=%d a2=%d length=0x%X", 
+			Console.WriteLn("[MG] hcode=%d cnum=%d a2=%d length=0x%X",
 				cdvd.Param[0], cdvd.Param[3], cdvd.Param[4], cdvd.mg_maxsize = cdvd.Param[1] | (((int)cdvd.Param[2])<<8));
 
 			cdvd.Result[0] = 0; // 0 complete ; 1 busy ; 0x80 error

@@ -106,7 +106,7 @@ ExtraWndProcResult WindowsMessagingWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, 
 				wmk->CheckKey(VK_RMENU);
 				wmk->CheckKey(VK_LMENU);
 			}
-			else 
+			else
 				wmk->UpdateKey(wParam, (uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN));
 			return NO_WND_PROC;
 		}

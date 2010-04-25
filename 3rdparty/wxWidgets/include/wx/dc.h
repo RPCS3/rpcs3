@@ -313,7 +313,7 @@ public:
         return DoBlit(destPt.x, destPt.y, sz.x, sz.y,
                       source, srcPt.x, srcPt.y, rop, useMask, srcPtMask.x, srcPtMask.y);
     }
-    
+
     wxBitmap GetAsBitmap(const wxRect *subrect = (const wxRect *) NULL) const
     {
         return DoGetAsBitmap(subrect);

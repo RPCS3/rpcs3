@@ -350,7 +350,7 @@ static void SuperVUAlloc(int vuindex)
 		// upper 4 bits must be zero!
 		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
 		s_recVUMem = SysMmapEx(0xf1e0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
-		
+
 		// Try again at some other random memory location... whatever. >_<
 		if( s_recVUMem == NULL )
 			s_recVUMem = SysMmapEx(0xc2b0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
@@ -360,7 +360,7 @@ static void SuperVUAlloc(int vuindex)
 			throw Exception::VirtualMemoryMapConflict(
 				// untranslated diagnostic msg, use exception's default for translation
 				wxsFormat( L"SuperVU failed to allocate virtual memory below 256MB." ),
-				
+
 				// Translated message
 				_("Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory ranges required.")
 			);
@@ -2875,14 +2875,14 @@ void SuperVUTestVU0Condition(u32 incstack)
 {
 	if (s_vu && !SUPERVU_CHECKCONDITION) return;  // vu0 only
 
-	// sometimes games spin on vu0, so be careful with 
+	// sometimes games spin on vu0, so be careful with
 	// runCycles value... woody hangs if too high
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
 	MOV32RtoM((uptr)&backupEAX, EAX);
 	MOV32MtoR(EAX, (uptr)&s_TotalVUCycles);
 	CMP32MtoR(EAX, (uptr)&runCycles);
 	MOV32MtoR(EAX, (uptr)&backupEAX);
-	
+
 	if (incstack)
 	{
 		u8* ptr = JB8(0);
@@ -4617,7 +4617,7 @@ recSuperVU0::recSuperVU0()
 	m_Idx = 0;
 	IsInterpreter = false;
 }
-	
+
 void recSuperVU0::Allocate()
 {
 	SuperVUAlloc( 0 );
@@ -4681,11 +4681,11 @@ void recSuperVU1::Execute(u32 cycles)
 	// [TODO] Debugging pre- and post- hooks?
 
 	XMMRegisters::Freeze();
-	
+
 	if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
-		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL); 
+		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL);
 	}
-	
+
 	do { // while loop needed since not always will return finished
 		SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
 	} while( VU0.VI[REG_VPU_STAT].UL&0x100 );

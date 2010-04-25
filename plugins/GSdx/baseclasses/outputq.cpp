@@ -181,14 +181,14 @@ COutputQueue::~COutputQueue()
 DWORD WINAPI COutputQueue::InitialThreadProc(LPVOID pv)
 {
     HRESULT hrCoInit = CAMThread::CoInitializeHelper();
-    
+
     COutputQueue *pSampleQueue = (COutputQueue *)pv;
     DWORD dwReturn = pSampleQueue->ThreadProc();
 
     if(hrCoInit == S_OK) {
         CoUninitialize();
     }
-    
+
     return dwReturn;
 }
 

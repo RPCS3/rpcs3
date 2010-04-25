@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -22,8 +22,8 @@
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -43,8 +43,8 @@ REC_SYS_DEL(JALR, _Rd_);
 #else
 
 ////////////////////////////////////////////////////
-void recJ( void ) 
-{	
+void recJ( void )
+{
 	// SET_FPUSTATE;
 	u32 newpc = (_Target_ << 2) + ( pc & 0xf0000000 );
 	recompileNextInstruction(1);
@@ -52,7 +52,7 @@ void recJ( void )
 }
 
 ////////////////////////////////////////////////////
-void recJAL( void ) 
+void recJAL( void )
 {
 	u32 newpc = (_Target_ << 2) + ( pc & 0xf0000000 );
 	_deleteEEreg(31, 0);
@@ -70,13 +70,13 @@ void recJAL( void )
 *********************************************************/
 
 ////////////////////////////////////////////////////
-void recJR( void ) 
+void recJR( void )
 {
 	SetBranchReg( _Rs_);
 }
 
 ////////////////////////////////////////////////////
-void recJALR( void ) 
+void recJALR( void )
 {
 	_allocX86reg(ESI, X86TYPE_PCWRITEBACK, 0, MODE_WRITE);
 	_eeMoveGPRtoR(ESI, _Rs_);
@@ -86,7 +86,7 @@ void recJALR( void )
 //		MOV32ItoM( (u32)&cpuRegs.pc, g_cpuConstRegs[_Rs_].UL[0] );
 //	else {
 //		int mmreg;
-//		
+//
 //		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ)) >= 0 ) {
 //			SSE_MOVSS_XMM_to_M32((u32)&cpuRegs.pc, mmreg);
 //		}
@@ -100,7 +100,7 @@ void recJALR( void )
 //		}
 //	}
 
-	if ( _Rd_ ) 
+	if ( _Rd_ )
 	{
 		_deleteEEreg(_Rd_, 0);
 		GPR_SET_CONST(_Rd_);

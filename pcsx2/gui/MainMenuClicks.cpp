@@ -60,15 +60,15 @@ static void WipeSettings()
 	UnloadPlugins();
 	wxGetApp().CleanupRestartable();
 	wxGetApp().CleanupResources();
-	
+
 	wxRemoveFile( GetSettingsFilename() );
-	
+
 	// FIXME: wxRmdir doesn't seem to work here for some reason (possible file sharing issue
 	// with a plugin that leaves a file handle dangling maybe?).  But deleting the inis folder
 	// manually from explorer does work.  Can't think of a good work-around at the moment. --air
 
 	//wxRmdir( GetSettingsFolder().ToString() );
-	
+
 	wxGetApp().GetRecentIsoManager().Clear();
 	g_Conf = new AppConfig();
 	sMainFrame.RemoveCdvdMenu();
@@ -215,10 +215,10 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 		{
 			// User has an iso selected from a previous run, but it doesn't exist anymore.
 			// Issue a courtesy popup and then an Iso Selector to choose a new one.
-			
+
 			wxDialogWithHelpers dialog( this, _("ISO file not found!"), wxVERTICAL );
 			dialog += dialog.Heading(
-				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" + 
+				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" +
 				_("Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD.")
 			);
 
@@ -226,7 +226,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 			selector = true;
 		}
-		
+
 		if( selector )
 		{
 			wxString result;
@@ -252,7 +252,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 			return;
 		}
 	}
-	
+
 	sApp.SysReset();
 	sApp.SysExecute( g_Conf->CdvdSource );
 }
@@ -280,7 +280,7 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 	g_Conf->EmuOptions.MultitapPort1_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap1Toggle );
 	AppApplySettings();
 	SaveEmuOptions();
-	
+
 	//evt.Skip();
 }
 
@@ -373,10 +373,10 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 	const int eventId = event.GetId() - MenuId_PluginBase_Settings;
 
 	PluginsEnum_t pid = (PluginsEnum_t)(eventId / PluginMenuId_Interval);
-	
+
 	// Don't try to call the Patches config dialog until we write one.
 	if (event.GetId() == MenuId_Config_Patches) return;
-	
+
 	if( !pxAssertDev( (eventId >= 0) || (pid < PluginId_Count), "Invalid plugin identifier passed to ConfigPlugin event handler." ) ) return;
 
 	LoadPluginsImmediate();

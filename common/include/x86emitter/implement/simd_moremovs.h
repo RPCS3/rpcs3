@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -95,7 +95,7 @@ struct xImplSimd_Blend
 {
 	// [SSE-4.1] Conditionally copies dword values from src to dest, depending on the
 	// mask bits in the immediate operand (bits [3:0]).  Each mask bit corresponds to a
-	// dword element in a 128-bit operand. 
+	// dword element in a 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
@@ -104,25 +104,25 @@ struct xImplSimd_Blend
 
 	// [SSE-4.1] Conditionally copies quadword values from src to dest, depending on the
 	// mask bits in the immediate operand (bits [1:0]).  Each mask bit corresponds to a
-	// quadword element in a 128-bit operand. 
+	// quadword element in a 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
 	//
 	xImplSimd_DestRegImmSSE	PD;
-	
+
 	// [SSE-4.1] Conditionally copies dword values from src to dest, depending on the
 	// mask (bits [3:0]) in XMM0 (yes, the fixed register).  Each mask bit corresponds
-	// to a dword element in the 128-bit operand. 
+	// to a dword element in the 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
 	//
 	xImplSimd_DestRegSSE	VPS;
-	
+
 	// [SSE-4.1] Conditionally copies quadword values from src to dest, depending on the
 	// mask (bits [1:0]) in XMM0 (yes, the fixed register).  Each mask bit corresponds
-	// to a quadword element in the 128-bit operand. 
+	// to a quadword element in the 128-bit operand.
 	//
 	// If a mask bit is 1, then the corresponding dword in the source operand is copied
 	// to dest, else the dword element in dest is left unchanged.
@@ -153,7 +153,7 @@ struct xImplSimd_PMove
 	// and store them in dest.
 	void BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
 	void BQ( const xRegisterSSE& to, const ModSib16& from ) const;
-	
+
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into dword integers
 	// and store them in dest.
 	void WD( const xRegisterSSE& to, const xRegisterSSE& from ) const;

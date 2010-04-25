@@ -1,6 +1,6 @@
 /*  GSnull
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,13 +12,13 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include <stdlib.h>
 
 #include "../GS.h"
 
 extern HINSTANCE hInst;
-void SaveConfig() 
+void SaveConfig()
 {
 
     Config *Conf1 = &conf;
@@ -42,7 +42,7 @@ void LoadConfig() {
     Config *Conf1 = &conf;
 	char *szTemp;
 	char szIniFile[256], szValue[256];
-  
+
 	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
 	szTemp = strrchr(szIniFile, '\\');
 
@@ -51,7 +51,7 @@ void LoadConfig() {
     fp=fopen("inis\\gsnull.ini","rt");//check if gsnull.ini really exists
 	if (!fp)
 	{
-		CreateDirectory("inis",NULL); 
+		CreateDirectory("inis",NULL);
         memset(&conf, 0, sizeof(conf));
         conf.Log = 0;//default value
 		SaveConfig();//save and return

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2010  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef PS2EEXT_H_INCLUDED
 #define PS2EEXT_H_INCLUDED
 
@@ -89,7 +89,7 @@ struct PluginLog
         if (WriteToFile) vfprintf(LogFile, fmt, list);
         if (WriteToConsole) vfprintf(stdout, fmt, list);
         va_end(list);
-        
+
         if (WriteToFile) fprintf(LogFile, "\n");
         if (WriteToConsole) fprintf(stdout, "\n");
     }
@@ -180,7 +180,7 @@ static bool loggingValue = false;
 
 static void __forceinline set_logging(GtkToggleButton *check)
 {
-	loggingValue = gtk_toggle_button_get_active(check); 
+	loggingValue = gtk_toggle_button_get_active(check);
 }
 
 static void __forceinline send_ok(GtkDialog *dialog)
@@ -192,25 +192,25 @@ static void __forceinline send_ok(GtkDialog *dialog)
 static void __forceinline PluginNullConfigure(std::string desc, int &log)
 {
     GtkWidget *dialog, *label, *okay_button, *check_box;
-	
+
     /* Create the widgets */
     dialog = gtk_dialog_new();
     label = gtk_label_new (desc.c_str());
     okay_button = gtk_button_new_with_label("Ok");
     check_box = gtk_check_button_new_with_label("Logging");
-    
+
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check_box), (log != 0));
 
     /* Ensure that the dialog box is destroyed when the user clicks ok, and that we get the check box value. */
     g_signal_connect_swapped(GTK_OBJECT (okay_button), "clicked", G_CALLBACK(send_ok), dialog);
     g_signal_connect_swapped(GTK_OBJECT (check_box), "toggled", G_CALLBACK(set_logging), check_box);
-    
+
     /* Add all our widgets, and show everything we've added to the dialog. */
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area), okay_button);
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), label);
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), check_box);
     gtk_widget_show_all (dialog);
-    
+
     log = gtk_dialog_run (GTK_DIALOG (dialog));
     gtk_widget_destroy (dialog);
 }
@@ -239,7 +239,7 @@ static void __forceinline SysMessage(const char *fmt, ...)
 static void __forceinline PluginNullConfigure(std::string desc, s32 &log)
 {
 	/* To do: Write a dialog box that displays a dialog box with the text in desc,
-	   and a check box that says "Logging", checked if log !=0, and set log to 
+	   and a check box that says "Logging", checked if log !=0, and set log to
 	   1 if it is checked on return, and 0 if it isn't. */
     SysMessage("This space intentionally left blank.");
 }

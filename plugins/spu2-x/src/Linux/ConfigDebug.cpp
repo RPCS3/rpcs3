@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,11 +14,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "Global.h"
 #include "Dialogs.h"
 #include "Config.h"
- 
+
 bool DebugEnabled=false;
 bool _MsgToConsole=false;
 bool _MsgKeyOnOff=false;
@@ -56,7 +56,7 @@ static void set_default_filenames()
 	swprintf(WaveLogFileName, 255, L"logs/SPU2log.wav");
 	swprintf(DMA4LogFileName, 255, L"logs/logs/SPU2dma4.dat");
 	swprintf(DMA7LogFileName, 255, L"logs/SPU2dma7.dat");
-	
+
 	swprintf(CoresDumpFileName, 255, L"logs/SPU2Cores.txt");
 	swprintf(MemDumpFileName, 255, L"logs/SPU2mem.dat");
 	swprintf(RegDumpFileName, 255, L"logs/SPU2regs.dat");
@@ -80,9 +80,9 @@ void ReadSettings()
 	_CoresDump   = CfgReadBool(Section, L"Dump_Info",0);
 	_MemDump     = CfgReadBool(Section, L"Dump_Memory",0);
 	_RegDump     = CfgReadBool(Section, L"Dump_Regs",0);
-	
+
 	set_default_filenames();
-	
+
 	/*CfgReadStr(Section,L"Access_Log_Filename",AccessLogFileName,255,L"logs/SPU2Log.txt");
 	CfgReadStr(Section,L"WaveLog_Filename",   WaveLogFileName,  255,L"logs/SPU2log.wav");
 	CfgReadStr(Section,L"DMA4Log_Filename",   DMA4LogFileName,  255,L"logs/SPU2dma4.dat");
@@ -113,7 +113,7 @@ void WriteSettings()
 	CfgWriteBool(Section,L"Dump_Info",  _CoresDump);
 	CfgWriteBool(Section,L"Dump_Memory",_MemDump);
 	CfgWriteBool(Section,L"Dump_Regs",  _RegDump);
-	
+
 	set_default_filenames();
 	/*CfgWriteStr(Section,L"Access_Log_Filename",AccessLogFileName);
 	CfgWriteStr(Section,L"WaveLog_Filename",   WaveLogFileName);
@@ -123,26 +123,26 @@ void WriteSettings()
 	CfgWriteStr(Section,L"Info_Dump_Filename",CoresDumpFileName);
 	CfgWriteStr(Section,L"Mem_Dump_Filename", MemDumpFileName);
 	CfgWriteStr(Section,L"Reg_Dump_Filename", RegDumpFileName);*/
-	
+
 }
 
 void DisplayDialog()
 {
     GtkWidget *dialog;
     int return_value;
-    
+
     GtkWidget *msg_box, *log_box, *dump_box, *main_box;
     GtkWidget *msg_frame, *log_frame, *dump_frame, *main_frame;
-    
+
     GtkWidget *msg_console_check, *msg_key_check, *msg_voice_check, *msg_dma_check;
     GtkWidget *msg_autodma_check, *msg_overrun_check, *msg_cache_check;
-	
+
     GtkWidget *log_access_check, *log_dma_check, *log_wave_check;
     GtkWidget *dump_core_check, *dump_mem_check, *dump_reg_check;
-	
+
 	ReadSettings();
-	
-    // Create the widgets 
+
+    // Create the widgets
     dialog = gtk_dialog_new_with_buttons (
 		"Spu2-X Config",
 		NULL, // parent window
@@ -152,15 +152,15 @@ void DisplayDialog()
 		GTK_STOCK_CANCEL,
 			GTK_RESPONSE_REJECT,
 		NULL);
-		
+
     main_box = gtk_hbox_new(false, 5);
     main_frame = gtk_frame_new ("Spu2-X Config");
     gtk_container_add (GTK_CONTAINER(main_frame), main_box);
-    
+
     // Message Section
-    
+
     msg_box =  gtk_vbox_new(false, 5);
-    
+
 	msg_console_check = gtk_check_button_new_with_label("Show In Console");
     msg_key_check = gtk_check_button_new_with_label("KeyOn/Off Events");
     msg_voice_check = gtk_check_button_new_with_label("Voice Stop Events");
@@ -168,7 +168,7 @@ void DisplayDialog()
     msg_autodma_check = gtk_check_button_new_with_label("AutoDMA Operations");
     msg_overrun_check = gtk_check_button_new_with_label("Buffer Over/Underruns");
     msg_cache_check = gtk_check_button_new_with_label("ADPCM Cache Statistics");
-    
+
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_console_check);
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_key_check);
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_voice_check);
@@ -176,7 +176,7 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_autodma_check);
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_overrun_check);
 	gtk_container_add(GTK_CONTAINER(msg_box), msg_cache_check);
-	
+
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_console_check), _MsgToConsole);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_key_check), _MsgKeyOnOff);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_voice_check), _MsgVoiceOff);
@@ -184,58 +184,58 @@ void DisplayDialog()
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_autodma_check), _MsgAutoDMA);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_overrun_check), _MsgOverruns);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msg_cache_check), _MsgCache);
-    
+
     msg_frame = gtk_frame_new ("Message/Log Options");
     gtk_container_add (GTK_CONTAINER(msg_frame), msg_box);
-    
+
     // Log Section
     log_box =  gtk_vbox_new(false, 5);
-    
-    log_access_check = gtk_check_button_new_with_label("Log Register/DMA Actions");	
+
+    log_access_check = gtk_check_button_new_with_label("Log Register/DMA Actions");
     log_dma_check = gtk_check_button_new_with_label("Log DMA Writes");
     log_wave_check = gtk_check_button_new_with_label("Log Audio Output");
 
 	gtk_container_add(GTK_CONTAINER(log_box), log_access_check);
 	gtk_container_add(GTK_CONTAINER(log_box), log_dma_check);
 	gtk_container_add(GTK_CONTAINER(log_box), log_wave_check);
-	
+
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_access_check), _AccessLog);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_dma_check), _DMALog);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_wave_check), _WaveLog);
-    
+
     log_frame = gtk_frame_new ("Log Options");
     gtk_container_add (GTK_CONTAINER(log_frame), log_box);
-    
+
     // Dump Section
     dump_box = gtk_vbox_new(false, 5);
-    
+
     dump_core_check = gtk_check_button_new_with_label("Dump Core and Voice State");
     dump_mem_check = gtk_check_button_new_with_label("Dump Memory Contents");
     dump_reg_check = gtk_check_button_new_with_label("Dump Register Data");
-    
+
 	gtk_container_add(GTK_CONTAINER(dump_box), dump_core_check);
 	gtk_container_add(GTK_CONTAINER(dump_box), dump_mem_check);
 	gtk_container_add(GTK_CONTAINER(dump_box), dump_reg_check);
-	
+
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dump_core_check), _CoresDump);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dump_mem_check), _MemDump);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dump_reg_check), _RegDump);
-    
+
     dump_frame = gtk_frame_new ("Dumps (on close)");
     gtk_container_add (GTK_CONTAINER(dump_frame), dump_box);
-    
+
     // Add everything
-    
+
     gtk_container_add (GTK_CONTAINER(main_box), msg_frame);
     gtk_container_add (GTK_CONTAINER(main_box), log_frame);
     gtk_container_add (GTK_CONTAINER(main_box), dump_frame);
-    
-    // Add all our widgets, and show everything we've added to the dialog. 
+
+    // Add all our widgets, and show everything we've added to the dialog.
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
-    
+
     return_value = gtk_dialog_run (GTK_DIALOG (dialog));
-    
+
     if (return_value == GTK_RESPONSE_ACCEPT)
     {
 		_MsgToConsole = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(msg_console_check));
@@ -254,9 +254,9 @@ void DisplayDialog()
 		_MemDump = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dump_mem_check));
 		_RegDump = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dump_reg_check));
     }
-    
+
     gtk_widget_destroy (dialog);
-    
+
     WriteSettings();
 }
 

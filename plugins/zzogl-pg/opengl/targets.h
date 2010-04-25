@@ -37,23 +37,23 @@ namespace ZeroGS {
 	{
 	public:
 		typedef map<u32, CRenderTarget*> MAPTARGETS;
-		
+
 		enum TargetOptions {
 			TO_DepthBuffer = 1,
 			TO_StrictHeight = 2, // height returned has to be the same as requested
 			TO_Virtual = 4
 		};
-		
+
 		~CRenderTargetMngr() { Destroy(); }
-		
+
 		void Destroy();
 		static MAPTARGETS::iterator GetOldestTarg(MAPTARGETS& m);
-		
+
 		CRenderTarget* GetTarg(const frameInfo& frame, u32 Options, int maxposheight);
 		inline CRenderTarget* GetTarg(int fbp, int fbw, VB& curvb) {
 			MAPTARGETS::iterator it = mapTargets.find (GetFrameKey(fbp, fbw, curvb));
 
-/*			if (fbp == 0x3600 && fbw == 0x100 && it == mapTargets.end()) 
+/*			if (fbp == 0x3600 && fbw == 0x100 && it == mapTargets.end())
 			{
 				printf("%x\n", GetFrameKey(fbp, fbw, curvb)) ;
 				printf("%x %x\n", fbp, fbw);
@@ -62,33 +62,33 @@ namespace ZeroGS {
 			}*/
 			return it != mapTargets.end() ? it->second : NULL;
 		}
-		
+
 		// gets all targets with a range
 		void GetTargs(int start, int end, list<ZeroGS::CRenderTarget*>& listTargets) const;
-		
+
 		// resolves all targets within a range
 		__forceinline void Resolve(int start, int end);
 		__forceinline void ResolveAll() {
 			for(MAPTARGETS::iterator it = mapTargets.begin(); it != mapTargets.end(); ++it )
 				it->second->Resolve();
 		}
-		
+
 		void DestroyAllTargs(int start, int end, int fbw);
 		void DestroyIntersecting(CRenderTarget* prndr);
-	
+
 		// promotes a target from virtual to real
 		inline CRenderTarget* Promote(u32 key) {
 			assert( !(key & TARGET_VIRTUAL_KEY) );
-		
+
 			// promote to regular targ
 			CRenderTargetMngr::MAPTARGETS::iterator it = mapTargets.find(key|TARGET_VIRTUAL_KEY);
 			assert( it != mapTargets.end() );
-			
+
 			CRenderTarget* ptarg = it->second;
 			mapTargets.erase(it);
-			
+
 			DestroyIntersecting(ptarg);
-			
+
 			it = mapTargets.find(key);
 			if( it != mapTargets.end() ) {
 				DestroyTarg(it->second);
@@ -96,16 +96,16 @@ namespace ZeroGS {
 			}
 			else
 				mapTargets[key] = ptarg;
-			
+
 		        if( g_GameSettings & GAME_RESOLVEPROMOTED )
                 		ptarg->status = CRenderTarget::TS_Resolved;
 				else
 			ptarg->status = CRenderTarget::TS_NeedUpdate;
 				return ptarg;
 		}
-		
+
 		static void DestroyTarg(CRenderTarget* ptarg);
-		
+
 		MAPTARGETS mapTargets, mapDummyTargs;
 	};
 
@@ -168,10 +168,10 @@ namespace ZeroGS {
 
 		// works in semi logN
 		void Insert(int start, int end);
-		inline void Clear() { 
-			ranges.resize(0); 
+		inline void Clear() {
+			ranges.resize(0);
 		}
-		
+
 		vector<RANGE> ranges; // organized in ascending order, non-intersecting
 	};
 
@@ -188,7 +188,7 @@ namespace ZeroGS {
 		else
 			return (tbw >> ( s_AAz - s_AAx ));
 	}
-	
+
 	// Real rendered height, depends on AA and AAneg.
 	inline int RH(int tbh) {
 		if (s_AAy >= s_AAw)
@@ -236,14 +236,14 @@ inline u32 GetFrameKey (int fbp, int fbw,  VB& curvb) {
 
 inline u16 ShiftHeight (int fbh, int fbp, int fbhCalc) {
 	return fbh;
-}	
+}
 
 //FIXME: this code for P4 ad KH1. It should not be such strange!
 //Dummy targets was deleted from mapTargets, but not erased.
 inline u32 GetFrameKeyDummy (const frameInfo& frame) {
 //	if (frame.fbp > 0x2000 && ZZOgl_fbh_Calc(frame) < 0x400 && ZZOgl_fbh_Calc(frame) != frame.fbh)
 //		printf ("Z %x %x %x %x\n", frame.fbh, frame.fbhCalc, frame.fbp, ZZOgl_fbh_Calc(frame));
-	// height over 1024 would shrink to 1024, so dummy targets with calculated size more than 0x400 should be 
+	// height over 1024 would shrink to 1024, so dummy targets with calculated size more than 0x400 should be
 	// distinct by real height. But in FFX there is 3e0 height target, so I put 0x300 as limit
 	if (/*frame.fbp > 0x2000 && */ZZOgl_fbh_Calc(frame) < 0x300)
 		return (((frame.fbw) << 16) | ZZOgl_fbh_Calc(frame));

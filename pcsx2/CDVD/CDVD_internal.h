@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,20 +12,20 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef __CDVD_INTERNAL_H__
 #define __CDVD_INTERNAL_H__
 
 /*
 Interrupts - values are flag bits.
 
-0x00	 No interrupt		  
-0x01	 Data Ready		  
-0x02	 Command Complete 	  
-0x03	 Acknowledge (reserved) 
-0x04	 End of Data Detected   
-0x05	 Error Detected 	  
-0x06	 Drive Not Ready	
+0x00	 No interrupt
+0x01	 Data Ready
+0x02	 Command Complete
+0x03	 Acknowledge (reserved)
+0x04	 End of Data Detected
+0x05	 Error Detected
+0x06	 Drive Not Ready
 
 In limited experimentation I found that PS2 apps respond actively to use of the
 'Data Ready' flag -- in that they'll almost immediately initiate a DMA transfer
@@ -61,7 +61,7 @@ enum cdvdready
 {
 	CDVD_NOTREADY = 0x00,
 	CDVD_READY1 = 0x40,
-	CDVD_READY2 = 0x4e // This is used in a few places for some reason. 
+	CDVD_READY2 = 0x4e // This is used in a few places for some reason.
 	//It would be worth checking if this was just a typo made at some point.
 };
 
@@ -132,20 +132,20 @@ static const uint Cdvd_FastSeek_Cycles = (PSXCLK*30) / 1000;		// average number 
 static const char *mg_zones[8] = {"Japan", "USA", "Europe", "Oceania", "Asia", "Russia", "China", "Mexico"};
 
 static const char *nCmdName[0x100]= {
-	"CdSync", 
-	"CdNop", 
-	"CdStandby", 
+	"CdSync",
+	"CdNop",
+	"CdStandby",
 	"CdStop",
 	"CdPause",
 	"CdSeek",
-	"CdRead", 
+	"CdRead",
 	"CdReadCDDA",
-	"CdReadDVDV", 
-	"CdGetToc", 
-	"", 
+	"CdReadDVDV",
+	"CdGetToc",
+	"",
 	"NCMD_B",
-	"CdReadKey", 
-	"", 
+	"CdReadKey",
+	"",
 	"sceCdReadXCDDA",
 	"sceCdChgSpdlCtrl",
 };

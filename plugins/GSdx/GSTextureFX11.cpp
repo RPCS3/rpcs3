@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -59,7 +59,7 @@ bool GSDevice11::CreateTextureFX()
 	sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sd.MaxLOD = FLT_MAX;
-	sd.MaxAnisotropy = 16; 
+	sd.MaxAnisotropy = 16;
 	sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
 	hr = m_dev->CreateSamplerState(&sd, &m_palette_ss);
@@ -212,7 +212,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 		};
 
 		CComPtr<ID3D11PixelShader> ps;
-		
+
 		CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
@@ -258,7 +258,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 			sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 
 			sd.MaxLOD = FLT_MAX;
-			sd.MaxAnisotropy = 16; 
+			sd.MaxAnisotropy = 16;
 			sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
 			m_dev->CreateSamplerState(&sd, &ss0);
@@ -302,11 +302,11 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 
 		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
 		{
-			static const D3D11_COMPARISON_FUNC ztst[] = 
+			static const D3D11_COMPARISON_FUNC ztst[] =
 			{
-				D3D11_COMPARISON_NEVER, 
-				D3D11_COMPARISON_ALWAYS, 
-				D3D11_COMPARISON_GREATER_EQUAL, 
+				D3D11_COMPARISON_NEVER,
+				D3D11_COMPARISON_ALWAYS,
+				D3D11_COMPARISON_GREATER_EQUAL,
 				D3D11_COMPARISON_GREATER
 			};
 

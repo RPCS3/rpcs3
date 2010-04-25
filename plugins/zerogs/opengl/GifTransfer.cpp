@@ -15,18 +15,18 @@
  *	along with this program; if not, write to the Free Software
  *	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
  */
- 
+
  #include "GifTransfer.h"
- 
+
  void GIFtag(pathInfo *path, u32 *data) {
-	
+
 	path->tag.nloop	= data[0] & 0x7fff;
 	path->tag.eop	= (data[0] >> 15) & 0x1;
 	u32 tagpre		= (data[1] >> 14) & 0x1;
 	u32 tagprim		= (data[1] >> 15) & 0x7ff;
 	u32 tagflg		= (data[1] >> 26) & 0x3;
 	path->tag.nreg	= (data[1] >> 28)<<2;
-	
+
 	if (path->tag.nreg == 0) path->tag.nreg = 64;
 
 	gs.q = 1;
@@ -108,7 +108,7 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 	while(size > 0)
 	{
 		//LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
-		if (path->tag.nloop == 0) 
+		if (path->tag.nloop == 0)
 		{
 			GIFtag(path, pMem);
 			pMem+= 4;
@@ -117,13 +117,13 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			if ((g_GameSettings & GAME_PATH3HACK) && path == &gs.path3 && gs.path3.tag.eop)
 				nPath3Hack = 1;
 
-			if (path == &gs.path1) 
+			if (path == &gs.path1)
 			{
 				// if too much data, just ignore
-				if (path->tag.nloop * (path->tag.nreg / 4) > (int)size * (path->mode==2?2:1)) 
+				if (path->tag.nloop * (path->tag.nreg / 4) > (int)size * (path->mode==2?2:1))
 				{
 					static int lasttime = 0;
-					if( timeGetTime() - lasttime > 5000 ) 
+					if( timeGetTime() - lasttime > 5000 )
 					{
 						ERROR_LOG("VU1 too much data, ignore if gfx are fine\n");
 						lasttime = timeGetTime();
@@ -132,15 +132,15 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 					return;
 				}
 
-				if (path->mode == 1) 
+				if (path->mode == 1)
 				{
 					// check if 0xb is in any reg, if yes, exit (kh2)
 					for(int i = 0; i < path->tag.nreg; i += 4)
 					{
-						if (((path->regs >> i)&0xf) == 11) 
+						if (((path->regs >> i)&0xf) == 11)
 						{
 							static int lasttime = 0;
-							if( timeGetTime() - lasttime > 5000 ) 
+							if( timeGetTime() - lasttime > 5000 )
 							{
 								ERROR_LOG("Invalid unpack type\n");
 								lasttime = timeGetTime();
@@ -152,12 +152,12 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 				}
 			}
 
-			if(path->tag.nloop == 0 ) 
+			if(path->tag.nloop == 0 )
 			{
-				if( path == &gs.path1 ) 
+				if( path == &gs.path1 )
 				{
 					// ffx hack
-					/*if( g_GameSettings & GAME_FFXHACK ) 
+					/*if( g_GameSettings & GAME_FFXHACK )
 					{*/
 						if( path->tag.eop )
 							return;
@@ -167,7 +167,7 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 					return;
 				}
 
-				if( !path->tag.eop ) 
+				if( !path->tag.eop )
 				{
 					//DEBUG_LOG("continuing from eop\n");
 					continue;
@@ -184,14 +184,14 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			for(; size > 0; size--, pMem += 4)
 			{
 				int reg = (int)((path->regs >> path->regn) & 0xf);
-				
+
 				g_GIFPackedRegHandlers[reg](pMem);
 
 				path->regn += 4;
-				if (path->tag.nreg == path->regn) 
+				if (path->tag.nreg == path->regn)
 				{
 					path->regn = 0;
-					if( path->tag.nloop-- <= 1 ) 
+					if( path->tag.nloop-- <= 1 )
 					{
 						size--;
 						pMem += 4;
@@ -211,10 +211,10 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 				int reg = (int)((path->regs >> path->regn) & 0xf);
 				g_GIFRegHandlers[reg](pMem);
 				path->regn += 4;
-				if (path->tag.nreg == path->regn) 
+				if (path->tag.nreg == path->regn)
 				{
 					path->regn = 0;
-					if( path->tag.nloop-- <= 1 ) 
+					if( path->tag.nloop-- <= 1 )
 					{
 						size--;
 						pMem += 2;
@@ -234,11 +234,11 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 			{
 				int process = min((int)size, path->tag.nloop);
 
-				if( process > 0 ) 
+				if( process > 0 )
 				{
-					if ( gs.imageTransfer ) 
+					if ( gs.imageTransfer )
 						ZeroGS::TransferLocalHost(pMem, process);
-					else 
+					else
 						ZeroGS::TransferHostLocal(pMem, process*4);
 
 					path->tag.nloop -= process;
@@ -248,7 +248,7 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 				}
 				break;
 			}
-			else 
+			else
 			{
 				// simulate
 				int process = min((int)size, path->tag.nloop);
@@ -273,7 +273,7 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size)
 void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
 {
 	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path2.mode, gs.path2.tag.nloop);
-	
+
 	_GSgifTransfer(&gs.path2, pMem, size);
 }
 
@@ -289,9 +289,9 @@ static int count = 0;
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	pathInfo *path = &gs.path1;
-	
+
 	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
-	
+
 	addr &= 0x3fff;
 
 #ifdef _DEBUG

@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -114,7 +114,7 @@ EXPORT_C_(INT32) GSinit()
 
 EXPORT_C GSshutdown()
 {
-	delete s_gs; 
+	delete s_gs;
 
 	s_gs = NULL;
 	s_renderer = -1;
@@ -168,7 +168,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 		switch(renderer)
 		{
-		default: 
+		default:
 		case 0: case 1: case 2: dev = new GSDevice9(); break;
 		case 3: case 4: case 5: dev = new GSDevice11(); break;
 		case 12: case 13: new GSDeviceNull(); break;
@@ -180,7 +180,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 		{
 			switch(renderer)
 			{
-			default: 
+			default:
 			case 0: s_gs = new GSRendererDX9(); break;
 			case 3: s_gs = new GSRendererDX11(); break;
 			case 2: case 5: case 8: case 11: case 13:
@@ -211,7 +211,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 	if( *(HWND*)dsp == NULL )
 	{
 		// old-style API expects us to create and manage our own window:
-		
+
 		int w = theApp.GetConfig("ModeWidth", 0);
 		int h = theApp.GetConfig("ModeHeight", 0);
 
@@ -270,9 +270,9 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 		static bool isdx11avail = GSUtil::IsDirect3D11Available();
 		if (isdx11avail)	renderer = 4; //dx11 sw
 		else				renderer = 1; //dx9 sw
-		mt = 1;	
+		mt = 1;
 	}
-	else 
+	else
 	{
 		// normal init
 		renderer = theApp.GetConfig("renderer", 0);
@@ -286,7 +286,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	{
 		s_gs->SetMultithreaded( !!mt );
 	}
-	
+
 	return retval;
 }
 
@@ -448,7 +448,7 @@ EXPORT_C_(int) GSsetupRecording(int start, void* data)
 	e.key = VK_F12;
 
 	s_gs->KeyEvent(&e, start & 1);
-	
+
 	return 1;
 }
 
@@ -521,13 +521,13 @@ static __forceinline bool LoopDatPacket_Thingamajig(HWND hWnd, uint8 (&regs)[0x2
 			GSgifTransfer1(&buff[0], addr);
 		}
 		break;
-		
+
 		case 1:
 			if(buff.size() < size) buff.resize(size);
 			fread(&buff[0], size, 1, fp);
 			GSgifTransfer2(&buff[0], size / 16);
 		break;
-		
+
 		case 2:
 			if(buff.size() < size) buff.resize(size);
 			fread(&buff[0], size, 1, fp);
@@ -631,7 +631,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 	{
 		GSLocalMemory mem;
 
-		static struct {int psm; const char* name;} s_format[] = 
+		static struct {int psm; const char* name;} s_format[] =
 		{
 			{PSM_PSMCT32, "32"},
 			{PSM_PSMCT24, "24"},
@@ -652,7 +652,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (uint8)i;
 
-		// 
+		//
 
 		for(int tbw = 5; tbw <= 10; tbw++)
 		{
@@ -680,7 +680,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 				BITBLTBUF.DBP = 0;
 				BITBLTBUF.DBW = w / 64;
 				BITBLTBUF.DPSM = s_format[i].psm;
-				
+
 				GIFRegTRXPOS TRXPOS;
 
 				TRXPOS.SSAX = 0;
@@ -798,7 +798,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 		BITBLTBUF.DBP = 0;
 		BITBLTBUF.DBW = 32;
 		BITBLTBUF.DPSM = PSM_PSMCT32;
-			
+
 		GIFRegTRXPOS TRXPOS;
 
 		TRXPOS.DSAX = 0;

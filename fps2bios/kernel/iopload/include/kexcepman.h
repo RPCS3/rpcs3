@@ -14,7 +14,7 @@ struct exHandler {
 void *GetExHandlersTable();											// 3
 
 int RegisterExceptionHandler(int code, struct exHandler *handler);	// 4
-int RegisterPriorityExceptionHandler(int code, int priority, 
+int RegisterPriorityExceptionHandler(int code, int priority,
 									 struct exHandler *handler);	// 5
 int RegisterDefaultExceptionHandler(struct exHandler *handler);		// 6
 int ReleaseExceptionHandler(int excode, struct exHandler *handler);	// 7

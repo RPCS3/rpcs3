@@ -6,13 +6,13 @@
 #define	ERROR_OK		0
 #define ERROR_UNK		-1
 //bad exception code
-#define ERROR_BAD_EXCODE	-50	
+#define ERROR_BAD_EXCODE	-50
 
 //no exception handler for that code
-#define	ERROR_EXCODE_NOTFOUND	-51	
+#define	ERROR_EXCODE_NOTFOUND	-51
 
 //already used
-#define	ERROR_USED_EXCODE	-52	
+#define	ERROR_USED_EXCODE	-52
 #define	ERROR_INTR_CONTEXT	-100
 #define ERROR_DOES_EXIST	-104
 #define ERROR_DOESNOT_EXIST	-105

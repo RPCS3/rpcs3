@@ -2,8 +2,8 @@
 ///
 /// A header file for detecting the Intel MMX instructions set extension.
 ///
-/// Please see 'mmx_win.cpp', 'mmx_cpp.cpp' and 'mmx_non_x86.cpp' for the 
-/// routine implementations for x86 Windows, x86 gnu version and non-x86 
+/// Please see 'mmx_win.cpp', 'mmx_cpp.cpp' and 'mmx_non_x86.cpp' for the
+/// routine implementations for x86 Windows, x86 gnu version and non-x86
 /// platforms, respectively.
 ///
 /// Author        : Copyright (c) Olli Parviainen

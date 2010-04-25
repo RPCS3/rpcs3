@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -37,7 +37,7 @@ __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 		pos += EffectsStartA;
 	}
 	return pos;
-} 
+}
 
 void V_Core::Reverb_AdvanceBuffer()
 {
@@ -84,7 +84,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 
 		// Advance the current reverb buffer pointer, and cache the read/write addresses we'll be
 		// needing for this session of reverb.
-		
+
 		const u32 src_a0 = RevbGetIndexer( RevBuffers.IIR_SRC_A0 );
 		const u32 src_a1 = RevbGetIndexer( RevBuffers.IIR_SRC_A1 );
 		const u32 src_b0 = RevbGetIndexer( RevBuffers.IIR_SRC_B0 );
@@ -94,12 +94,12 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const u32 dest_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 );
 		const u32 dest_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 );
 		const u32 dest_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 );
-		
+
 		const u32 dest2_a0 = RevbGetIndexer( RevBuffers.IIR_DEST_A0 + 2 );
 		const u32 dest2_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 + 2 );
 		const u32 dest2_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 + 2 );
 		const u32 dest2_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 + 2 );
-		
+
 		const u32 acc_src_a0 = RevbGetIndexer( RevBuffers.ACC_SRC_A0 );
 		const u32 acc_src_b0 = RevbGetIndexer( RevBuffers.ACC_SRC_B0 );
 		const u32 acc_src_c0 = RevbGetIndexer( RevBuffers.ACC_SRC_C0 );
@@ -123,7 +123,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// -----------------------------------------
 		//          Optimized IRQ Testing !
 		// -----------------------------------------
-		
+
 		// This test is enhanced by using the reverb effects area begin/end test as a
 		// shortcut, since all buffer addresses are within that area.  If the IRQA isn't
 		// within that zone then the "bulk" of the test is skipped, so this should only
@@ -135,7 +135,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			{
 				if(	(Cores[i].IRQA == src_a0)		||	(Cores[i].IRQA == src_a1)		||
 					(Cores[i].IRQA == src_b0)		||	(Cores[i].IRQA == src_b1)		||
-				
+
 					(Cores[i].IRQA == dest_a0)		||	(Cores[i].IRQA == dest_a1)		||
 					(Cores[i].IRQA == dest_b0)		||	(Cores[i].IRQA == dest_b1)		||
 
@@ -159,7 +159,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 				}
 			}
 		}
-		
+
 		// -----------------------------------------
 		//         Begin Reverb Processing !
 		// -----------------------------------------
@@ -223,7 +223,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]),	// left
 			(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1])		// right
 		) );
-	} 
+	}
 
 	StereoOut32 retval;
 

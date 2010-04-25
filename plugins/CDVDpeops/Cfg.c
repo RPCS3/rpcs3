@@ -42,8 +42,8 @@ void ReadConfig(void)
 
  // init values
 
- iCD_AD=-1;            
- iCD_TA=-1;               
+ iCD_AD=-1;
+ iCD_TA=-1;
  iCD_LU=-1;
  iRType=0;
  iUseSpeedLimit=0;
@@ -108,9 +108,9 @@ void ReadConfig(void)
 
    RegCloseKey(myKey);
   }
-  
- // disabled for now 
- iUsePPF=0; 
+
+ // disabled for now
+ iUsePPF=0;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -119,7 +119,7 @@ void ReadConfig(void)
 void WriteConfig(void)
 {
  HKEY myKey;DWORD myDisp,temp;
-                                   
+
  RegCreateKeyEx(HKEY_CURRENT_USER,"Software\\PS2Eplugin\\CDVD\\CDVDPeops",0,NULL,REG_OPTION_NON_VOLATILE,KEY_ALL_ACCESS,NULL,&myKey,&myDisp);
  temp=iInterfaceMode;
  RegSetValueEx(myKey,"InterfaceMode",0,REG_DWORD,(LPBYTE) &temp,sizeof(temp));
@@ -150,8 +150,8 @@ void WriteConfig(void)
  temp=iUseSubReading;
  RegSetValueEx(myKey,"UseSubReading",0,REG_DWORD,(LPBYTE) &temp,sizeof(temp));
 
- RegSetValueEx(myKey,"PPFFile",0,REG_BINARY,(LPBYTE)szPPF,259);  
- RegSetValueEx(myKey,"SCFile",0,REG_BINARY,(LPBYTE)szSUBF,259);  
+ RegSetValueEx(myKey,"PPFFile",0,REG_BINARY,(LPBYTE)szPPF,259);
+ RegSetValueEx(myKey,"SCFile",0,REG_BINARY,(LPBYTE)szSUBF,259);
 
  RegCloseKey(myKey);
 }
@@ -163,18 +163,18 @@ void OnChooseFile(HWND hW,int iFType)
 {
  OPENFILENAME ofn;char szB[260];BOOL b;
 
- ofn.lStructSize=sizeof(OPENFILENAME); 
- ofn.hwndOwner=hW;                      
- ofn.hInstance=NULL; 
- if(iFType==0)      ofn.lpstrFilter="PPF Files\0*.PPF\0\0\0"; 
- else if(iFType==1) ofn.lpstrFilter="SBI Files\0*.SBI\0M3S Files\0*.M3S\0\0\0"; 
- else if(iFType==2) ofn.lpstrFilter="SUB Files\0*.SUB\0\0\0"; 
- else if(iFType==3) ofn.lpstrFilter="SBI Files\0*.SBI\0\0\0"; 
- else               ofn.lpstrFilter="M3S Files\0*.M3S\0\0\0"; 
+ ofn.lStructSize=sizeof(OPENFILENAME);
+ ofn.hwndOwner=hW;
+ ofn.hInstance=NULL;
+ if(iFType==0)      ofn.lpstrFilter="PPF Files\0*.PPF\0\0\0";
+ else if(iFType==1) ofn.lpstrFilter="SBI Files\0*.SBI\0M3S Files\0*.M3S\0\0\0";
+ else if(iFType==2) ofn.lpstrFilter="SUB Files\0*.SUB\0\0\0";
+ else if(iFType==3) ofn.lpstrFilter="SBI Files\0*.SBI\0\0\0";
+ else               ofn.lpstrFilter="M3S Files\0*.M3S\0\0\0";
 
- ofn.lpstrCustomFilter=NULL; 
+ ofn.lpstrCustomFilter=NULL;
  ofn.nMaxCustFilter=0;
- ofn.nFilterIndex=0; 
+ ofn.nFilterIndex=0;
  if(iFType==0)      GetDlgItemText(hW,IDC_PPFFILE,szB,259);
  else if(iFType==1) GetDlgItemText(hW,IDC_SUBFILE,szB,259);
  else if(iFType==2) GetDlgItemText(hW,IDC_SUBFILEEDIT,szB,259);
@@ -182,26 +182,26 @@ void OnChooseFile(HWND hW,int iFType)
  else               GetDlgItemText(hW,IDC_OUTFILEEDIT,szB,259);
 
  ofn.lpstrFile=szB;
- ofn.nMaxFile=259; 
+ ofn.nMaxFile=259;
  ofn.lpstrFileTitle=NULL;
- ofn.nMaxFileTitle=0; 
+ ofn.nMaxFileTitle=0;
  ofn.lpstrInitialDir=NULL;
- ofn.lpstrTitle=NULL; 
+ ofn.lpstrTitle=NULL;
  if(iFType<3)
-  ofn.Flags=OFN_FILEMUSTEXIST|OFN_NOCHANGEDIR|OFN_HIDEREADONLY;     
+  ofn.Flags=OFN_FILEMUSTEXIST|OFN_NOCHANGEDIR|OFN_HIDEREADONLY;
  else
-  ofn.Flags=OFN_CREATEPROMPT|OFN_NOCHANGEDIR|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT;    
- ofn.nFileOffset=0; 
+  ofn.Flags=OFN_CREATEPROMPT|OFN_NOCHANGEDIR|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT;
+ ofn.nFileOffset=0;
  ofn.nFileExtension=0;
- ofn.lpstrDefExt=0; 
+ ofn.lpstrDefExt=0;
  ofn.lCustData=0;
- ofn.lpfnHook=NULL; 
+ ofn.lpfnHook=NULL;
  ofn.lpTemplateName=NULL;
-    
+
  if(iFType<3)
       b=GetOpenFileName(&ofn);
  else b=GetSaveFileName(&ofn);
-                                                  
+
  if(b)
   {
    if(iFType==0)      SetDlgItemText(hW,IDC_PPFFILE,szB);
@@ -309,7 +309,7 @@ void ShowSubFileStuff(HWND hW)
  int iShow,iSel=ComboBox_GetCurSel(hWC);
 
  if(iSel==2) iShow=SW_SHOW;
- else        iShow=SW_HIDE; 
+ else        iShow=SW_HIDE;
 
  ShowWindow(GetDlgItem(hW,IDC_SFSTATIC),iShow);
  ShowWindow(GetDlgItem(hW,IDC_SUBFILE),iShow);
@@ -325,7 +325,7 @@ void ShowSubFileStuff(HWND hW)
 ////////////////////////////////////////////////////////////////////////
 // init dialog
 
-BOOL OnInitCDRDialog(HWND hW) 
+BOOL OnInitCDRDialog(HWND hW)
 {
  HWND hWC;int i=0;
 
@@ -335,8 +335,8 @@ BOOL OnInitCDRDialog(HWND hW)
  ComboBox_AddString(hWC,"NONE");
  ComboBox_AddString(hWC,"W9X/ME - ASPI scsi commands");
  ComboBox_AddString(hWC,"W2K/XP - IOCTL scsi commands");
- 
-// not supported with my dvd drive - DISABLED! 
+
+// not supported with my dvd drive - DISABLED!
 // ComboBox_AddString(hWC,"W2K/XP - IOCTL raw reading");
 
  ComboBox_SetCurSel(hWC,iInterfaceMode);
@@ -361,7 +361,7 @@ BOOL OnInitCDRDialog(HWND hW)
 
  if(iNoWait)                                           // wait for drive
   CheckDlgButton(hW,IDC_NOWAIT,TRUE);
-     
+
  if(iCheckTrayStatus)                                  // tray status
   CheckDlgButton(hW,IDC_TRAYSTATE,TRUE);
 
@@ -394,12 +394,12 @@ BOOL OnInitCDRDialog(HWND hW)
  SetDlgItemText(hW,IDC_PPFFILE,szPPF);
  SetDlgItemText(hW,IDC_SUBFILE,szSUBF);
 
- return TRUE;	
+ return TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////
 
-void OnCDROK(HWND hW) 
+void OnCDROK(HWND hW)
 {
  int iA,iT,iL,iR;
  HWND hWC=GetDlgItem(hW,IDC_RTYPE);
@@ -469,7 +469,7 @@ void OnCDROK(HWND hW)
 
 ////////////////////////////////////////////////////////////////////////
 
-void OnCDRCancel(HWND hW) 
+void OnCDRCancel(HWND hW)
 {
  EndDialog(hW,FALSE);
 }
@@ -487,12 +487,12 @@ BOOL CALLBACK CDRDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
      switch(LOWORD(wParam))
       {
-       case IDC_SUBCHAN0:   if(HIWORD(wParam)==CBN_SELCHANGE) 
+       case IDC_SUBCHAN0:   if(HIWORD(wParam)==CBN_SELCHANGE)
                              {ShowSubFileStuff(hW);return TRUE;}
-       case IDC_IMODE:      if(HIWORD(wParam)==CBN_SELCHANGE) 
+       case IDC_IMODE:      if(HIWORD(wParam)==CBN_SELCHANGE)
                              {OnIMode(hW);return TRUE;}
                             break;
-       case IDC_CACHE:      if(HIWORD(wParam)==CBN_SELCHANGE) 
+       case IDC_CACHE:      if(HIWORD(wParam)==CBN_SELCHANGE)
                              {OnCache(hW);return TRUE;}
                             break;
        case IDCANCEL:       OnCDRCancel(hW); return TRUE;

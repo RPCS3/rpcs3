@@ -246,7 +246,7 @@ WXHWND wxToolTip::GetToolTipCtrl()
 		   // Let's override it with something usable, like 8 seconds. :) --air
 		   if( wxApp::GetComCtl32Version() >= 470 )
 		       SendMessage((HWND)ms_hwndTT, TTM_SETDELAYTIME, TTDT_AUTOPOP, 8000);
-		   
+
        }
     }
 

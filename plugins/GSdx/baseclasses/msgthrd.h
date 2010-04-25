@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // File: MsgThrd.h
 //
-// Desc: DirectShow base classes - provides support for a worker thread 
+// Desc: DirectShow base classes - provides support for a worker thread
 //       class to which one can asynchronously post messages.
 //
 // Copyright (c) Microsoft Corporation.  All rights reserved.

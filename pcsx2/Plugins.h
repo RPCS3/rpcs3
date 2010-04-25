@@ -125,7 +125,7 @@ namespace Exception
 			PluginId = pid;
 		}
 	};
-	
+
 	// This exception is thrown when a plugin returns an error while trying to save itself.
 	// Typically this should be a very rare occurance since a plugin typically shoudn't
 	// be doing memory allocations or file access during state saving.
@@ -249,7 +249,7 @@ public:
 	virtual void Open( PluginsEnum_t pid ) { pxFail( "Null PluginManager!" ); }
 	virtual void Close( PluginsEnum_t pid ) {}
 	virtual void Close() {}
-	
+
 	virtual bool IsOpen( PluginsEnum_t pid ) const { return false; }
 
 	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { pxFail( "Null PluginManager!" ); }
@@ -308,10 +308,10 @@ public:
 	virtual void Close();
 
 	virtual bool IsOpen( PluginsEnum_t pid ) const { return m_info[pid].IsOpened; }
-	
+
 	virtual bool NeedsClose() const;
 	virtual bool NeedsOpen() const;
-	
+
 	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state );
 	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
 
@@ -329,7 +329,7 @@ protected:
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
-	
+
 	virtual bool OpenPlugin_GS();
 	virtual bool OpenPlugin_CDVD();
 	virtual bool OpenPlugin_PAD();
@@ -337,7 +337,7 @@ protected:
 	virtual bool OpenPlugin_DEV9();
 	virtual bool OpenPlugin_USB();
 	virtual bool OpenPlugin_FW();
-	
+
 	virtual void ClosePlugin_GS();
 	virtual void ClosePlugin_CDVD();
 	virtual void ClosePlugin_PAD();

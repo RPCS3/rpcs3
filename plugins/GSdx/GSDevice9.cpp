@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -24,7 +24,7 @@
 #include "GSDevice9.h"
 #include "resource.h"
 
-GSDevice9::GSDevice9() 
+GSDevice9::GSDevice9()
 	: m_lost(false)
 {
 	m_rbswapped = true;
@@ -41,7 +41,7 @@ GSDevice9::GSDevice9()
 GSDevice9::~GSDevice9()
 {
 	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
-	
+
 	for_each(m_om_bs.begin(), m_om_bs.end(), delete_second());
 	for_each(m_om_dss.begin(), m_om_dss.end(), delete_second());
 	for_each(m_ps_ss.begin(), m_ps_ss.end(), delete_second());
@@ -62,7 +62,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 	// dd
 
 	// Unreferenced
-	/*CComPtr<IDirectDraw7> dd; 
+	/*CComPtr<IDirectDraw7> dd;
 
 	hr = DirectDrawCreateEx(0, (void**)&dd, IID_IDirectDraw7, 0);
 
@@ -70,7 +70,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 
-	m_ddcaps.dwSize = sizeof(DDCAPS); 
+	m_ddcaps.dwSize = sizeof(DDCAPS);
 
 	hr = dd->GetCaps(&m_ddcaps, NULL);
 
@@ -149,7 +149,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	//
 
-	if(!Reset(1, 1)) 
+	if(!Reset(1, 1))
 	{
 		return false;
 	}
@@ -337,7 +337,7 @@ bool GSDevice9::Reset(int w, int h)
 		{
 			flags |= D3DCREATE_PUREDEVICE;
 		}
- 
+
 		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
@@ -797,7 +797,7 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 	if(m_vb == NULL)
 	{
 		HRESULT hr;
-		
+
 		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
 
 		if(FAILED(hr)) return;
@@ -865,7 +865,7 @@ void GSDevice9::VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int 
 	if(vs_cb && vs_cb_len > 0)
 	{
 		int size = vs_cb_len * sizeof(float) * 4;
-		
+
 		if(m_state.vs_cb_len != vs_cb_len || m_state.vs_cb == NULL || memcmp(m_state.vs_cb, vs_cb, size))
 		{
 			if(m_state.vs_cb == NULL || m_state.vs_cb_len < vs_cb_len)
@@ -888,7 +888,7 @@ void GSDevice9::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	IDirect3DTexture9* srv0 = NULL;
 	IDirect3DTexture9* srv1 = NULL;
-	
+
 	if(sr0) srv0 = *(GSTexture9*)sr0;
 	if(sr1) srv1 = *(GSTexture9*)sr1;
 
@@ -915,11 +915,11 @@ void GSDevice9::PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int p
 
 		m_dev->SetPixelShader(ps);
 	}
-	
+
 	if(ps_cb && ps_cb_len > 0)
 	{
 		int size = ps_cb_len * sizeof(float) * 4;
-		
+
 		if(m_state.ps_cb_len != ps_cb_len || m_state.ps_cb == NULL || memcmp(m_state.ps_cb, ps_cb, size))
 		{
 			if(m_state.ps_cb == NULL || m_state.ps_cb_len < ps_cb_len)
@@ -971,7 +971,7 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 
 		m_dev->SetRenderState(D3DRS_ZENABLE, dss->DepthEnable);
 		m_dev->SetRenderState(D3DRS_ZWRITEENABLE, dss->DepthWriteMask);
-		
+
 		if(dss->DepthEnable)
 		{
 			m_dev->SetRenderState(D3DRS_ZFUNC, dss->DepthFunc);
@@ -982,7 +982,7 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 		if(dss->StencilEnable)
 		{
 			m_dev->SetRenderState(D3DRS_STENCILMASK, dss->StencilReadMask);
-			m_dev->SetRenderState(D3DRS_STENCILWRITEMASK, dss->StencilWriteMask);	
+			m_dev->SetRenderState(D3DRS_STENCILWRITEMASK, dss->StencilWriteMask);
 			m_dev->SetRenderState(D3DRS_STENCILFUNC, dss->StencilFunc);
 			m_dev->SetRenderState(D3DRS_STENCILPASS, dss->StencilPassOp);
 			m_dev->SetRenderState(D3DRS_STENCILFAIL, dss->StencilFailOp);

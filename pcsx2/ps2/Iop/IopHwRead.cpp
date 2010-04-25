@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -35,7 +35,7 @@ mem8_t __fastcall iopHwRead8_Page1( u32 addr )
 
 	mem8_t ret;		// using a return var can be helpful in debugging.
 	switch( masked_addr )
-	{		
+	{
 		mcase(HW_SIO_DATA): ret = sioRead8(); break;
 
 		// for use of serial port ignore for now
@@ -108,7 +108,7 @@ mem8_t __fastcall iopHwRead8_Page8( u32 addr )
 		ret = psxHu8( addr );
 
 	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
-	return ret;	
+	return ret;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -142,7 +142,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 
 			case 0x4:
 				ret = psxCounters[cntidx].mode;
-				
+
 				// hmm!  The old code only did this bitwise math for 16 bit reads.
 				// Logic indicates it should do the math consistently.  Question is,
 				// should it do the logic for both 16 and 32, or not do logic at all?
@@ -154,7 +154,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 			case 0x8:
 				ret = psxCounters[cntidx].target;
 			break;
-			
+
 			default:
 				ret = psxHu32(addr);
 			break;
@@ -398,7 +398,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 		{
 			// SIO2 Send commands alternate registers.  First reg maps to Send1, second
 			// to Send2, third to Send1, etc.  And the following clever code does this:
-			
+
 			const int parm = (masked_addr-0x240) / 8;
 			ret = (masked_addr & 4) ? sio2_getSend2( parm ) : sio2_getSend1( parm );
 		}
@@ -413,7 +413,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 				mcase(0x1f808278):		ret = sio2_get8278();	break;
 				mcase(0x1f80827C):		ret = sio2_get827C();	break;
 				mcase(HW_SIO2_INTR):	ret = sio2_getIntr();	break;
-				
+
 				// HW_SIO2_FIFO -- A yet unknown: Should this be ignored on 32 bit writes, or handled as a
 				// 4-byte FIFO input?
 				// The old IOP system just ignored it, so that's what we do here.  I've included commented code

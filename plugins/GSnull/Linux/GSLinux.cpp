@@ -1,6 +1,6 @@
 /*  GSnull
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -50,14 +50,14 @@ void GSCloseWindow()
 }
 
 void GSProcessMessages()
-{	
-	if ( GSKeyEvent ) 
+{
+	if ( GSKeyEvent )
 		{
 		int myKeyEvent = GSKeyEvent;
 		bool myShift = GSShift;
 		GSKeyEvent = 0;
-			
-		switch ( myKeyEvent ) 
+
+		switch ( myKeyEvent )
 		{
 			case XK_F5:
 			 	OnKeyboardF5(myShift);
@@ -67,10 +67,10 @@ void GSProcessMessages()
 				break;
 			case XK_F7:
 				OnKeyboardF7(myShift);
-				break;	
+				break;
 			case XK_F9:
 				OnKeyboardF9(myShift);
-				break;		
+				break;
 		}
 	}
 }
@@ -78,10 +78,10 @@ void GSProcessMessages()
 
 void HandleKeyEvent(keyEvent *ev)
 {
-	switch(ev->evt) 
+	switch(ev->evt)
 	{
 		case KEYPRESS:
-			switch(ev->key) 
+			switch(ev->key)
 			{
 				case XK_F5:
 				case XK_F6:
@@ -102,7 +102,7 @@ void HandleKeyEvent(keyEvent *ev)
 			}
 			break;
 		case KEYRELEASE:
-			switch(ev->key) 
+			switch(ev->key)
 			{
 				case XK_Shift_L:
 				case XK_Shift_R:

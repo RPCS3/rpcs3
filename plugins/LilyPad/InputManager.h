@@ -183,7 +183,7 @@ struct InitInfo {
 
 	// For config screen, need to eat button's message handling.
 	//HWND hWndButton;
-	
+
 	WndProcEater* hWndProc;
 };
 

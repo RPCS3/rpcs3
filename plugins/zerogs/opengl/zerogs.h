@@ -119,7 +119,7 @@ static __forceinline const char *error_name(int err)
 		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(myGLerror)); \
 	} \
 }\
-	
+
 #define GL_REPORT_ERROR() \
 { \
 	err = glGetError(); \
@@ -129,7 +129,7 @@ static __forceinline const char *error_name(int err)
 		ZeroGS::HandleGLError(); \
 	} \
 }
- 
+
  #ifdef _DEBUG
 #define GL_REPORT_ERRORD() \
 { \
@@ -183,7 +183,7 @@ struct FRAGMENTSHADER
 	FRAGMENTSHADER() : prog(0), sMemory(0), sFinal(0), sBitwiseANDX(0), sBitwiseANDY(0), sInterlace(0), sCLUT(0), sOneColor(0), sBitBltZ(0),
 		fTexAlpha2(0), fTexOffset(0), fTexDims(0), fTexBlock(0), fClampExts(0), fTexWrapMode(0),
 		fRealTexDims(0), fTestBlack(0), fPageOffset(0), fTexAlpha(0) {}
-	
+
 	CGprogram prog;
 	CGparameter sMemory, sFinal, sBitwiseANDX, sBitwiseANDY, sCLUT, sInterlace;
 	CGparameter sOneColor, sBitBltZ, sInvTexDims;
@@ -237,64 +237,64 @@ extern u8* g_pbyGSClut; // the temporary clut buffer
 extern CGparameter g_vparamPosXY[2], g_fparamFogColor;
 
 namespace ZeroGS {
-	
+
 	typedef void (*DrawFn)();
-	
+
 	enum RenderFormatType
 	{
 		RFT_byte8 = 0,	  // A8R8G8B8
 		RFT_float16 = 1,	// A32R32B32G32
 	};
-	
+
 	// managers render-to-texture targets
 	class CRenderTarget
 	{
 	public:
 		CRenderTarget();
 		virtual ~CRenderTarget();
-		
+
 		virtual bool Create(const frameInfo& frame);
 		virtual void Destroy();
-		
+
 		// set the GPU_POSXY variable, scissor rect, and current render target
 		void SetTarget(int fbplocal, const Rect2& scissor, int context);
 		void SetViewport();
-		
+
 		// copies/creates the feedback contents
 		inline void CreateFeedback() {
 			if( ptexFeedback == 0 || !(status&TS_FeedbackReady) )
 				_CreateFeedback();
 		}
-		
+
 		virtual void Resolve();
 		virtual void Resolve(int startrange, int endrange); // resolves only in the allowed range
 		virtual void Update(int context, CRenderTarget* pdepth);
 		virtual void ConvertTo32(); // converts a psm==2 target, to a psm==0
 		virtual void ConvertTo16(); // converts a psm==0 target, to a psm==2
-		
+
 		virtual bool IsDepth() { return false; }
 		void SetRenderTarget(int targ);
-		
+
 		void* psys;   // system data used for comparison
 		u32 ptex;
-		
+
 		int fbp, fbw, fbh; // if fbp is negative, virtual target (not mapped to any real addr)
 		int start, end; // in bytes
 		u32 lastused;	// time stamp since last used
 		Vector vposxy;
-		
+
 		u32 fbm;
 		u16 status;
 		u8 psm;
 		u8 resv0;
 		Rect scissorrect;
-		
+
 		//int startresolve, endresolve;
 		u32 nUpdateTarg; // use this target to update the texture if non 0 (one time only)
-	
+
 		// this is optionally used when feedback effects are used (render target is used as a texture when rendering to itself)
 		u32 ptexFeedback;
-		
+
 		enum TargetStatus {
 			TS_Resolved = 1,
 			TS_NeedUpdate = 2,
@@ -303,34 +303,34 @@ namespace ZeroGS {
 			TS_NeedConvert32 = 16,
 			TS_NeedConvert16 = 32,
 		};
-		
+
 	private:
 		void _CreateFeedback();
 	};
-	
+
 	// manages zbuffers
 	class CDepthTarget : public CRenderTarget
 	{
 	public:
 		CDepthTarget();
 		virtual ~CDepthTarget();
-		
+
 		virtual bool Create(const frameInfo& frame);
 		virtual void Destroy();
-		
+
 		virtual void Resolve();
 		virtual void Resolve(int startrange, int endrange); // resolves only in the allowed range
 		virtual void Update(int context, CRenderTarget* prndr);
-		
+
 		virtual bool IsDepth() { return true; }
-		
+
 		void SetDepthStencilSurface();
-		
+
 		u32 pdepth;		 // 24 bit, will contain the stencil buffer if possible
 		u32 pstencil;	   // if not 0, contains the stencil buffer
 		int icount;		 // internal counter
 	};
-	
+
 	// manages contiguous chunks of memory (width is always 1024)
 	class CMemoryTarget
 	{
@@ -343,9 +343,9 @@ namespace ZeroGS {
 			int ref;
 			u8* memptr;  // GPU memory used for comparison
 		};
-		
+
 		inline CMemoryTarget() : ptex(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), channels(0),cpsm(0), clearminy(0), clearmaxy(0), validatecount(0) {}
-			
+
 		inline CMemoryTarget(const CMemoryTarget& r) {
 			ptex = r.ptex;
 			if( ptex != NULL ) ptex->ref++;
@@ -364,25 +364,25 @@ namespace ZeroGS {
 			validatecount = r.validatecount;
 			fmt = r.fmt;
 		}
-		
+
 		~CMemoryTarget() { Destroy(); }
-		
+
 		inline void Destroy() {
 			if( ptex != NULL && ptex->ref > 0 ) {
 				if( --ptex->ref <= 0 )
 					delete ptex;
 			}
-			
+
 			ptex = NULL;
 			}
-		
+
 		// returns true if clut data is synced
 		bool ValidateClut(const tex0Info& tex0);
 		// returns true if tex data is synced
 		bool ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex);
-		
+
 		int clearminy, clearmaxy; // when maxy > 0, need to check for clearing
-		
+
 		// realy is offset in pixels from start of valid region
 		// so texture in memory is [realy,starty+height]
 		// valid texture is [starty,starty+height]
@@ -392,27 +392,27 @@ namespace ZeroGS {
 		u32 usedstamp;
 		TEXTURE* ptex; // can be 16bit
 		u32 fmt;
-		
+
 		int widthmult;
 		int channels;
-	
+
 		int validatecount; // count how many times has been validated, if too many, destroy
-		
+
 		vector<u8> clut; // if nonzero, texture uses CLUT
 		u8 psm, cpsm; // texture and clut format. For psm, only 16bit/32bit differentiation matters
 	};
-	
-	
+
+
 	struct VB
 	{
 		VB();
 		~VB();
-		
+
 		void Destroy();
-		
+
 		__forceinline bool CheckPrim();
 		void CheckFrame(int tbp);
-		
+
 		// context specific state
 		Point offset;
 		Rect2 scissor;
@@ -425,10 +425,10 @@ namespace ZeroGS {
 		clampInfo clamp;
 		pixTest test;
 		u32 ptexClamp[2]; // textures for x and y dir region clamping
-		
+
 	public:
 		void FlushTexData();
-	
+
 		// notify VB that nVerts need to be written to pbuf
 		inline void NotifyWrite(int nVerts) {
 			assert( pBufferData != NULL && nCount <= nNumVertices && nVerts > 0 );
@@ -444,7 +444,7 @@ namespace ZeroGS {
 			}
 		}
 
-		void Init(int nVerts) {				
+		void Init(int nVerts) {
 			if( pBufferData == NULL && nVerts > 0 ) {
 				pBufferData = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU)*nVerts, 256);
 				nNumVertices = nVerts;
@@ -457,7 +457,7 @@ namespace ZeroGS {
 		u8 bNeedZCheck;
 		u8 bNeedTexCheck;
 		u8 dummy0;
-		
+
 		union {
 			struct {
 				u8 bTexConstsSync; // only pixel shader constants that context owns
@@ -467,21 +467,21 @@ namespace ZeroGS {
 			};
 			u32 bSyncVars;
 		};
-		
+
 		int ictx;
 		VertexGPU* pBufferData; // current allocated data
 
 		int nNumVertices;   // size of pBufferData in terms of VertexGPU objects
 		int nCount;
 		primInfo curprim;	// the previous prim the current buffers are set to
-		
+
 		zbufInfo zbuf;
 		frameInfo gsfb; // the real info set by FRAME cmd
 		frameInfo frame;
 		int zprimmask; // zmask for incoming points
 
 		u32 uCurTex0Data[2]; // current tex0 data
-		u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1 
+		u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
 
 		//int nFrameHeights[8];	// frame heights for the past frame changes
 		int nNextFrameHeight;
@@ -492,7 +492,7 @@ namespace ZeroGS {
 	};
 
 	// visible members
-	extern DrawFn drawfn[8];	
+	extern DrawFn drawfn[8];
 	extern VB vb[2];
 	extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
@@ -570,7 +570,7 @@ namespace ZeroGS {
 	void FlushSysMem(const RECT* prc);
 	void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm);
 
-	// returns the first and last addresses aligned to a page that cover 
+	// returns the first and last addresses aligned to a page that cover
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
 	// inits the smallest rectangle in ptexMem that covers this region in ptexMem

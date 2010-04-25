@@ -118,7 +118,7 @@ public:
 	{
 		m_Method = method;
 	}
-	
+
 	pxInvokeAppMethodEvent( const pxInvokeAppMethodEvent& src )
 		: pxPingEvent( src )
 	{
@@ -130,7 +130,7 @@ public:
 		if( m_Method ) (wxGetApp().*m_Method)();
 		if( m_PostBack ) m_PostBack->Post();
 	}
-	
+
 	void SetMethod( FnPtr_AppMethod method )
 	{
 		m_Method = method;
@@ -206,7 +206,7 @@ void FramerateManager::Reset()
 	Resume();
 }
 
-// 
+//
 void FramerateManager::Resume()
 {
 }
@@ -218,7 +218,7 @@ void FramerateManager::DoFrame()
 	m_fpsqueue_writepos = (m_fpsqueue_writepos + 1) % FramerateQueueDepth;
 	m_fpsqueue[m_fpsqueue_writepos] = GetCPUTicks();
 
-	// intentionally leave 1 on the counter here, since ultimately we want to divide the 
+	// intentionally leave 1 on the counter here, since ultimately we want to divide the
 	// final result (in GetFramerate() by QueueDepth-1.
 	if( m_initpause > 1 ) --m_initpause;
 }
@@ -232,7 +232,7 @@ double FramerateManager::GetFramerate() const
 }
 
 // LogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
-// roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
+// roughly 50/60 times a second when frame limiting is enabled, and up to 10,000
 // times a second if not (ok, not quite, but you get the idea... I hope.)
 void Pcsx2App::LogicalVsync()
 {
@@ -272,7 +272,7 @@ void Pcsx2App::LogicalVsync()
 void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
 	CoreThreadStatus status = (CoreThreadStatus)evt.GetInt();
-	
+
 	switch( status )
 	{
 		case CoreThread_Started:
@@ -340,11 +340,11 @@ int Pcsx2App::DoStuckThread( PersistentThread& stuck_thread )
 
 // Opens the specified standard dialog as a modal dialog, or forces the an existing
 // instance of the dialog (ie, it's already open) to be modal.  This is needed for
-// items which are 
+// items which are
 int Pcsx2App::IssueDialogAsModal( const wxString& dlgName )
 {
 	if( dlgName.IsEmpty() ) return wxID_CANCEL;
-	
+
 	if( !wxThread::IsMain() )
 	{
 		MsgboxEventResult result;
@@ -352,13 +352,13 @@ int Pcsx2App::IssueDialogAsModal( const wxString& dlgName )
 		result.WaitForMe.WaitNoCancel();
 		return result.result;
 	}
-	
+
 	if( wxWindow* window = wxFindWindowByName( dlgName ) )
 	{
 		if( wxDialog* dialog = wxDynamicCast( window, wxDialog ) )
 		{
 			window->SetFocus();
-			
+
 			// It's legal to call ShowModal on a non-modal dialog, therefore making
 			// it modal in nature for the needs of whatever other thread of action wants
 			// to block against it:
@@ -386,7 +386,7 @@ int Pcsx2App::IssueDialogAsModal( const wxString& dlgName )
 		if( dlgName == AboutBoxDialog::GetNameStatic() )
 			return AboutBoxDialog().ShowModal();
 	}
-	
+
 	return wxID_CANCEL;
 }
 
@@ -446,7 +446,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error"), wxVERTICAL );
 		dialog += dialog.Heading( ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.") );
 		dialog += new ModalButtonPanel( &dialog, MsgButtons().OKCancel() );
-		
+
 		if( dialog.ShowModal() == wxID_CANCEL )
 			Console.Warning( "User denied option to re-configure BIOS." );
 
@@ -492,10 +492,10 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		// [TODO]  Bind a listener to the CoreThread status, and automatically close the dialog
 		// if the thread starts responding while we're waiting (not hard in fact, but I'm getting
 		// a little tired, so maybe later!)  --air
-	
+
 		Console.Warning( ex.FormatDiagnosticMessage() );
 		wxDialogWithHelpers dialog( NULL, _("PCSX2 Unresponsive Thread"), wxVERTICAL );
-		
+
 		dialog += dialog.Heading( ex.FormatDisplayMessage() + L"\n\n" +
 			pxE( ".Popup Error:Thread Deadlock Actions",
 				L"'Ignore' to continue waiting for the thread to respond.\n"
@@ -505,7 +505,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		);
 
 		int result = pxIssueConfirmation( dialog, MsgButtons().Ignore().Cancel().Custom( _("Terminate") ) );
-		
+
 		if( result == pxID_CUSTOM )
 		{
 			// fastest way to kill the process! (works in Linux and win32, thanks to windows having very
@@ -597,7 +597,7 @@ void AppApplySettings( const AppConfig* oldconf )
 
 	if( g_plugins != NULL )
 		g_plugins->SetSettingsFolder( GetSettingsFolder().ToString() );
-	
+
 	RelocateLogfile();
 
 	// Update the compression attribute on the Memcards folder.
@@ -786,7 +786,7 @@ void Pcsx2App::OpenGsPanel()
 		//   Doing an immediate hide/show didn't work.  So now I'm trying a resize.  Because
 		//   wxWidgets is "clever" (grr!) it optimizes out just force-setting the same size
 		//   over again, so instead I resize it to size-1 and then back to the original size.
-		
+
 		const wxSize oldsize( gsFrame->GetSize() );
 		wxSize newsize( oldsize );
 		newsize.DecBy(1);
@@ -794,7 +794,7 @@ void Pcsx2App::OpenGsPanel()
 		gsFrame->SetSize( newsize );
 		gsFrame->SetSize( oldsize );
 	}
-	
+
 	pxAssumeDev( !GetPluginManager().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
 
 	gsFrame->Show();
@@ -922,7 +922,7 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 		CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
 	else if( CDVD == NULL )
 		CDVDsys_ChangeSource( CDVDsrc_NoDisc );
-	
+
 	if( !CoreThread.HasValidState() )
 		CoreThread.SetElfOverride( _sysexec_elf_override );
 

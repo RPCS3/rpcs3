@@ -18,7 +18,7 @@
 #ifndef CHEATSCPP_H_INCLUDED
 #define CHEATSCPP_H_INCLUDED
 
-class Group 
+class Group
 {
 public:
 	string title;

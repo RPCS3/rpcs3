@@ -1,6 +1,6 @@
 /*  GSnull
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -47,22 +47,22 @@ const char* s_iniFilename = "GSnull.ini";
 
 void (*GSirq)();
 
-EXPORT_C_(u32) PS2EgetLibType() 
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_GS;
 }
 
-EXPORT_C_(char*) PS2EgetLibName() 
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	return libraryName;
 }
 
-EXPORT_C_(u32) PS2EgetLibVersion2(u32 type) 
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (version<<16) | (revision<<8) | build;
 }
 
-void __Log(char *fmt, ...) 
+void __Log(char *fmt, ...)
 {
 	va_list list;
 
@@ -104,7 +104,7 @@ void SysPrintf(const char *fmt, ...)
 EXPORT_C_(s32) GSinit()
 {
 	LoadConfig();
-	
+
 #ifdef GS_LOG
 	gsLog = fopen("logs/gsLog.txt", "w");
 	if (gsLog) setvbuf(gsLog, NULL,  _IONBF, 0);
@@ -131,14 +131,14 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 	int err = 0;
 	GS_LOG("GS open\n");
 	//assert( GSirq != NULL );
-	
+
 	err = GSOpenWindow(pDsp, Title);
 
 	SysPrintf("Opening GSnull\n");
 	return err;
 }
 
-#ifdef USE_GSOPEN2 
+#ifdef USE_GSOPEN2
 EXPORT_C_(s32) GSopen2( void *pDsp, u32 flags )
 {
 	GS_LOG("GS open2\n");
@@ -159,17 +159,17 @@ EXPORT_C_(void) GSclose()
 	//GSCloseWindow();
 }
 
-EXPORT_C_(void) GSirqCallback(void (*callback)()) 
+EXPORT_C_(void) GSirqCallback(void (*callback)())
 {
         GSirq = callback;
 }
 
-EXPORT_C_(s32) GSfreeze(int mode, freezeData *data) 
+EXPORT_C_(s32) GSfreeze(int mode, freezeData *data)
 {
 	return 0;
 }
 
-EXPORT_C_(s32) GStest() 
+EXPORT_C_(s32) GStest()
 {
 	SysPrintf("Testing GSnull\n");
 	return 0;
@@ -227,7 +227,7 @@ EXPORT_C_(void) GSchangeSaveState(int, const char* filename)
 
 EXPORT_C_(void) GSmakeSnapshot(char *path)
 {
-	
+
 	SysPrintf("Taking a snapshot.\n");
 }
 
@@ -258,9 +258,9 @@ EXPORT_C_(int) GSsetupRecording(int start, void* pData)
 {
 	if (start)
 		SysPrintf("Pretending to record.\n");
-	else 
+	else
 		SysPrintf("Pretending to stop recording.\n");
-	
+
 	return 1;
 }
 

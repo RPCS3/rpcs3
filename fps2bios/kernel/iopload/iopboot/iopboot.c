@@ -1,13 +1,13 @@
-// 
+//
 // iopboot.c
-// 
+//
 // this is the c code for the iopboot file in the ps2 rom.
 // this file is located at 0xBFC4A000 in the ps2 bios rom0.
 // modload.irx also from the ps2 bios executes this direct from the rom
 // (no loading to ram first)
-// 
+//
 // this is based on florin's disasm and converted to c code by xorloser and zerofrog
-// 
+//
 
 #include <tamtypes.h>
 #include <stdio.h>
@@ -23,16 +23,16 @@ static int kstrlen(const char* src);
 
 //BOOT_PARAMS boot_params;
 //u32* next_free_address[0x40]; // up to 64 modules
-    
+
 
 // this is the start point of execution at 0xBFC4A000
-// 
+//
 // it loads the IOPBTCONF module list from rom0 and compiles a
 // list of modules and their addresses.
-// 
+//
 // this list is then passed to loadcore as it is executed in order
 // to then load the rest of the modules
-// 
+//
 // args:	total size of IOP ram in MegaBytes
 //			bootinfo flags
 //			string containing the reboot image filepath
@@ -58,7 +58,7 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
     else
         ram_byte_size = ramMBSize;
 	ram_byte_size <<= 20;
-    
+
     // compile module list to send to loadcore
     boot_params = (BOOT_PARAMS*)0x30000; // random address, has to be clear before loadcore call
 	boot_params->ramMBSize	= ramMBSize;
@@ -98,7 +98,7 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
 
     // count the number of lines in conf file
     file_data_ptr = (char*)romfile_info.fileData;
-    file_data_end = (char*)romfile_info.fileData + romfile_info.entry->fileSize;    
+    file_data_end = (char*)romfile_info.fileData + romfile_info.entry->fileSize;
     {
         num_lines = 0;
         while( file_data_ptr < file_data_end ) {
@@ -107,13 +107,13 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
                 if(*file_data_ptr++ < ' ')
                     break;
             }
-            
+
             // loop until a "non-newline" charcter is found
             while(file_data_ptr < file_data_end) {
                 if(*file_data_ptr++ >= ' ')
                     break;
             }
-            
+
             num_lines++;
         }
         num_lines++;
@@ -152,24 +152,24 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
                     strmodule[i] = file_data_ptr[i];
                 }
                 strmodule[i] = 0;
-                
+
                 if( searchFileInRom(&romdir_info, strmodule, &module_fileinfo) == NULL ) {
                     __printf("IOPBOOT: failed to find %s module\n", strmodule);
                     return;
                 }
 
                 //__printf("mod: %s:%x\n", strmodule, module_fileinfo.fileData);
-                                
+
                 *modules_ptr++ = (u32*)module_fileinfo.fileData;
                 *modules_ptr = 0; // don't increment
             }
-            
+
             // loop until a "newline" charcter is found
             while(file_data_ptr < file_data_end) {
                 if(*file_data_ptr++ < ' ')
                     break;
             }
-            
+
             // loop until a "non-newline" charcter is found
             while(file_data_ptr < file_data_end) {
                 if(*file_data_ptr >= ' ')
@@ -201,7 +201,7 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
     }
 
     __printf("SYSMEM success, start addr: %x, alloc start: %x\n", module_load_addr, psysmemstart);
-    
+
     if( searchFileInRom(&romdir_info, "LOADCORE", &romfile_info) == NULL ) {
         __printf("loadElfFile: failed to find SYSMEM module\n");
         return;
@@ -209,7 +209,7 @@ void _start(int ramMBSize, int bootInfo, char* udnlString, int unk)
     loadcore_entry = (void (*)())loadElfFile(&romfile_info, (u32)psysmemstart);
     if( loadcore_entry == 0 )
         return;
-    
+
     boot_params->firstModuleAddr = (u32)module_load_addr + 0x30; // skip elf?
     if(0x1FC10000 < ram_byte_size) {
         boot_params->pos = 0x1FC00000;

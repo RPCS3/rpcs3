@@ -119,7 +119,7 @@ protected:
 	virtual void OnThumbTrack(wxScrollWinEvent& event);
 	virtual void OnThumbRelease(wxScrollWinEvent& event);
 	virtual void OnResize( wxSizeEvent& evt );
-	
+
 	void DispatchEvent( const CoreThreadStatus& status );
 	void DispatchEvent( const PluginEventType& evt );
 };
@@ -174,7 +174,7 @@ protected:
 	pxLogTextCtrl&	m_TextCtrl;
 	wxTimer			m_timer_FlushLimiter;
 	ColorArray		m_ColorTable;
-	
+
 	int				m_flushevent_counter;
 
 	// this int throttles freeze/thaw of the display, by cycling from -2 to 4, roughly.
@@ -182,7 +182,7 @@ protected:
 	//  needed because the wxWidgets Thaw implementation uses a belated paint message,
 	//  and if we Freeze on the very next queued message after thawing, the repaint
 	//  never happens)
-	int				m_ThawThrottle;		
+	int				m_ThawThrottle;
 
 	// If a freeze is executed, this is set true (without this, wx asserts)
 	bool			m_ThawNeeded;
@@ -218,7 +218,7 @@ protected:
 	// Lock object for accessing or modifying the following three vars:
 	//  m_QueueBuffer, m_QueueColorSelection, m_CurQueuePos
 	MutexLockRecursive		m_QueueLock;
-	
+
 	// Describes a series of colored text sections in the m_QueueBuffer.
 	SafeList<ColorSection>	m_QueueColorSection;
 
@@ -233,7 +233,7 @@ protected:
 	// (alternatively you can enable Disasm logging in any recompiler and achieve
 	// a similar effect)
 	ScopedPtr<ConsoleTestThread>	m_threadlogger;
-	
+
 	// ----------------------------------------------------------------------------
 	//  Window and Menu Object Handles
 	// ----------------------------------------------------------------------------

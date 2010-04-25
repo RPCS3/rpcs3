@@ -86,7 +86,7 @@ enum PadCommands
 	CMD_SET_DS2_NATIVE_MODE = 0x4F // SET_DS2_NATIVE_MODE
 };
 
-enum gamePadValues 
+enum gamePadValues
 {
 	PAD_R_LEFT = 27,
 	PAD_R_DOWN = 26,

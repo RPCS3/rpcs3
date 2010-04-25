@@ -10,20 +10,20 @@
 template<class T> class GSVector2T
 {
 public:
-	union 
+	union
 	{
-		struct {T x, y;}; 
-		struct {T r, g;}; 
+		struct {T x, y;};
+		struct {T r, g;};
 		struct {T v[2];};
 	};
 
 	GSVector2T()
 	{
 	}
-	
-	GSVector2T(T x, T y) 
+
+	GSVector2T(T x, T y)
 	{
-		this->x = x; 
+		this->x = x;
 		this->y = y;
 	}
 
@@ -46,11 +46,11 @@ class GSVector4;
 __aligned16 class GSVector4i
 {
 public:
-	union 
+	union
 	{
-		struct {int x, y, z, w;}; 
+		struct {int x, y, z, w;};
 		struct {int r, g, b, a;};
-		struct {int left, top, right, bottom;}; 
+		struct {int left, top, right, bottom;};
 		int v[4];
 		float f32[4];
 		int8 i8[16];
@@ -64,15 +64,15 @@ public:
 		__m128i m;
 	};
 
-	GSVector4i() 
+	GSVector4i()
 	{
 	}
 
-	GSVector4i(int x, int y, int z, int w) 
+	GSVector4i(int x, int y, int z, int w)
 	{
 		// 4 gprs
 
-		// m = _mm_set_epi32(w, z, y, x); 
+		// m = _mm_set_epi32(w, z, y, x);
 
 		// 2 gprs
 
@@ -82,22 +82,22 @@ public:
 		*this = xz.upl32(yw);
 	}
 
-	GSVector4i(int x, int y) 
+	GSVector4i(int x, int y)
 	{
 		*this = load(x).upl32(load(y));
 	}
 
-	GSVector4i(short s0, short s1, short s2, short s3, short s4, short s5, short s6, short s7) 
+	GSVector4i(short s0, short s1, short s2, short s3, short s4, short s5, short s6, short s7)
 	{
 		m = _mm_set_epi16(s7, s6, s5, s4, s3, s2, s1, s0);
 	}
 
-	GSVector4i(char b0, char b1, char b2, char b3, char b4, char b5, char b6, char b7, char b8, char b9, char b10, char b11, char b12, char b13, char b14, char b15) 
+	GSVector4i(char b0, char b1, char b2, char b3, char b4, char b5, char b6, char b7, char b8, char b9, char b10, char b11, char b12, char b13, char b14, char b15)
 	{
 		m = _mm_set_epi8(b15, b14, b13, b12, b11, b10, b9, b8, b7, b6, b5, b4, b3, b2, b1, b0);
 	}
 
-	GSVector4i(const GSVector4i& v) 
+	GSVector4i(const GSVector4i& v)
 	{
 		m = v.m;
 	}
@@ -107,7 +107,7 @@ public:
 		m = _mm_loadl_epi64((__m128i*)&v);
 	}
 
-	explicit GSVector4i(int i) 
+	explicit GSVector4i(int i)
 	{
 		m = _mm_set1_epi32(i);
 	}
@@ -119,22 +119,22 @@ public:
 
 	explicit GSVector4i(const GSVector4& v);
 
-	void operator = (const GSVector4i& v) 
+	void operator = (const GSVector4i& v)
 	{
 		m = v.m;
 	}
 
-	void operator = (int i) 
+	void operator = (int i)
 	{
 		m = _mm_set1_epi32(i);
 	}
 
-	void operator = (__m128i m) 
+	void operator = (__m128i m)
 	{
 		this->m = m;
 	}
 
-	operator __m128i() const 
+	operator __m128i() const
 	{
 		return m;
 	}
@@ -161,7 +161,7 @@ public:
 		return (*this < zwzw()).mask() != 0x00ff;
 	}
 
-	GSVector4i runion(const GSVector4i& a) const 
+	GSVector4i runion(const GSVector4i& a) const
 	{
 		int i = (upl64(a) < uph64(a)).mask();
 
@@ -191,14 +191,14 @@ public:
 		return GSVector4i::zero();
 	}
 
-	GSVector4i rintersect(const GSVector4i& a) const 
+	GSVector4i rintersect(const GSVector4i& a) const
 	{
 		return sat_i32(a);
 	}
 
 	enum RoundMode {Outside, Inside, NegInf, PosInf};
 
-	template<int mode> GSVector4i ralign(const GSVector2i& a) const 
+	template<int mode> GSVector4i ralign(const GSVector2i& a) const
 	{
 		// a must be 1 << n
 
@@ -208,9 +208,9 @@ public:
 
 		switch(mode)
 		{
-		case Inside: v = *this + mask; break; 
+		case Inside: v = *this + mask; break;
 		case Outside: v = *this + mask.zwxy(); break;
-		case NegInf: v = *this; break; 
+		case NegInf: v = *this; break;
 		case PosInf: v = *this + mask.zwzw(); break;
 		default: ASSERT(0); break;
 		}
@@ -252,43 +252,43 @@ public:
 
 	#if _M_SSE >= 0x401
 
-	GSVector4i sat_i8(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_i8(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_i8(a).min_i8(b);
 	}
 
-	GSVector4i sat_i8(const GSVector4i& a) const 
+	GSVector4i sat_i8(const GSVector4i& a) const
 	{
 		return max_i8(a.xyxy()).min_i8(a.zwzw());
 	}
 
 	#endif
 
-	GSVector4i sat_i16(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_i16(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_i16(a).min_i16(b);
 	}
 
-	GSVector4i sat_i16(const GSVector4i& a) const 
+	GSVector4i sat_i16(const GSVector4i& a) const
 	{
 		return max_i16(a.xyxy()).min_i16(a.zwzw());
 	}
 
 	#if _M_SSE >= 0x401
 
-	GSVector4i sat_i32(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_i32(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_i32(a).min_i32(b);
 	}
 
-	GSVector4i sat_i32(const GSVector4i& a) const 
+	GSVector4i sat_i32(const GSVector4i& a) const
 	{
 		return max_i32(a.xyxy()).min_i32(a.zwzw());
 	}
 
 	#else
 
-	GSVector4i sat_i32(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_i32(const GSVector4i& a, const GSVector4i& b) const
 	{
 		GSVector4i v;
 
@@ -300,7 +300,7 @@ public:
 		return v;
 	}
 
-	GSVector4i sat_i32(const GSVector4i& a) const 
+	GSVector4i sat_i32(const GSVector4i& a) const
 	{
 		GSVector4i v;
 
@@ -314,24 +314,24 @@ public:
 
 	#endif
 
-	GSVector4i sat_u8(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_u8(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_u8(a).min_u8(b);
 	}
 
-	GSVector4i sat_u8(const GSVector4i& a) const 
+	GSVector4i sat_u8(const GSVector4i& a) const
 	{
 		return max_u8(a.xyxy()).min_u8(a.zwzw());
 	}
 
 	#if _M_SSE >= 0x401
 
-	GSVector4i sat_u16(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_u16(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_u16(a).min_u16(b);
 	}
 
-	GSVector4i sat_u16(const GSVector4i& a) const 
+	GSVector4i sat_u16(const GSVector4i& a) const
 	{
 		return max_u16(a.xyxy()).min_u16(a.zwzw());
 	}
@@ -340,12 +340,12 @@ public:
 
 	#if _M_SSE >= 0x401
 
-	GSVector4i sat_u32(const GSVector4i& a, const GSVector4i& b) const 
+	GSVector4i sat_u32(const GSVector4i& a, const GSVector4i& b) const
 	{
 		return max_u32(a).min_u32(b);
 	}
 
-	GSVector4i sat_u32(const GSVector4i& a) const 
+	GSVector4i sat_u32(const GSVector4i& a) const
 	{
 		return max_u32(a.xyxy()).min_u32(a.zwzw());
 	}
@@ -466,9 +466,9 @@ public:
 		#if _M_SSE >= 0x401
 
 		return blend16<0xaa>(a);
-		
+
 		#else
-		
+
 		return blend8(a, GSVector4i::xffff0000());
 
 		#endif
@@ -507,12 +507,12 @@ public:
 	{
 		return GSVector4i(_mm_packs_epi32(m, a));
 	}
-	
+
 	GSVector4i ps32() const
 	{
 		return GSVector4i(_mm_packs_epi32(m, m));
 	}
-	
+
 	#if _M_SSE >= 0x401
 
 	GSVector4i pu32(const GSVector4i& a) const
@@ -572,7 +572,7 @@ public:
 		#if 0 // _M_SSE >= 0x401 // TODO: compiler bug
 
 		return GSVector4i(_mm_cvtepu8_epi16(m));
-		
+
 		#else
 
 		return GSVector4i(_mm_unpacklo_epi8(m, _mm_setzero_si128()));
@@ -590,7 +590,7 @@ public:
 		#if 0 //_M_SSE >= 0x401 // TODO: compiler bug
 
 		return GSVector4i(_mm_cvtepu16_epi32(m));
-		
+
 		#else
 
 		return GSVector4i(_mm_unpacklo_epi16(m, _mm_setzero_si128()));
@@ -608,7 +608,7 @@ public:
 		#if 0 //_M_SSE >= 0x401 // TODO: compiler bug
 
 		return GSVector4i(_mm_cvtepu32_epi64(m));
-		
+
 		#else
 
 		return GSVector4i(_mm_unpacklo_epi32(m, _mm_setzero_si128()));
@@ -940,7 +940,7 @@ public:
 
 		#if _M_SSE >= 0x301
 
-		if(shift == 0) 
+		if(shift == 0)
 		{
 			return mul16hrs(f);
 		}
@@ -1347,7 +1347,7 @@ public:
 	template<int src, class T> __forceinline GSVector4i gather32_8(const T* ptr) const
 	{
 		return GSVector4i(
-			(int)ptr[extract8<src + 0>()], 
+			(int)ptr[extract8<src + 0>()],
 			(int)ptr[extract8<src + 1>()],
 			(int)ptr[extract8<src + 2>()],
 			(int)ptr[extract8<src + 3>()]);
@@ -1365,8 +1365,8 @@ public:
 	template<class T> __forceinline GSVector4i gather32_32(const T* ptr) const
 	{
 		return GSVector4i(
-			(int)ptr[extract32<0>()], 
-			(int)ptr[extract32<1>()], 
+			(int)ptr[extract32<0>()],
+			(int)ptr[extract32<1>()],
 			(int)ptr[extract32<2>()],
 			(int)ptr[extract32<3>()]);
 	}
@@ -1374,7 +1374,7 @@ public:
 	template<class T1, class T2> __forceinline GSVector4i gather32_32(const T1* ptr1, const T2* ptr2) const
 	{
 		return GSVector4i(
-			(int)ptr2[ptr1[extract32<0>()]], 
+			(int)ptr2[ptr1[extract32<0>()]],
 			(int)ptr2[ptr1[extract32<1>()]],
 			(int)ptr2[ptr1[extract32<2>()]],
 			(int)ptr2[ptr1[extract32<3>()]]);
@@ -1819,7 +1819,7 @@ public:
 
 		for(int i = 0; i < size; i++)
 		{
-			if(!d[i].eq(s[i])) 
+			if(!d[i].eq(s[i]))
 			{
 				return false;
 			}
@@ -1877,32 +1877,32 @@ public:
 		return v.alltrue();
 	}
 
-	void operator += (const GSVector4i& v) 
+	void operator += (const GSVector4i& v)
 	{
 		m = _mm_add_epi32(m, v);
 	}
 
-	void operator -= (const GSVector4i& v) 
+	void operator -= (const GSVector4i& v)
 	{
 		m = _mm_sub_epi32(m, v);
 	}
 
-	void operator += (int i) 
+	void operator += (int i)
 	{
 		*this += GSVector4i(i);
 	}
 
-	void operator -= (int i) 
+	void operator -= (int i)
 	{
 		*this -= GSVector4i(i);
 	}
 
-	void operator <<= (const int i) 
+	void operator <<= (const int i)
 	{
 		m = _mm_slli_epi32(m, i);
 	}
 
-	void operator >>= (const int i) 
+	void operator >>= (const int i)
 	{
 		m = _mm_srli_epi32(m, i);
 	}
@@ -1912,12 +1912,12 @@ public:
 		m = _mm_and_si128(m, v);
 	}
 
-	void operator |= (const GSVector4i& v) 
+	void operator |= (const GSVector4i& v)
 	{
 		m = _mm_or_si128(m, v);
 	}
 
-	void operator ^= (const GSVector4i& v) 
+	void operator ^= (const GSVector4i& v)
 	{
 		m = _mm_xor_si128(m, v);
 	}
@@ -1927,7 +1927,7 @@ public:
 		return GSVector4i(_mm_add_epi32(v1, v2));
 	}
 
-	friend GSVector4i operator - (const GSVector4i& v1, const GSVector4i& v2) 
+	friend GSVector4i operator - (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_sub_epi32(v1, v2));
 	}
@@ -1936,83 +1936,83 @@ public:
 	{
 		return v + GSVector4i(i);
 	}
-	
+
 	friend GSVector4i operator - (const GSVector4i& v, int i)
 	{
 		return v - GSVector4i(i);
 	}
-	
-	friend GSVector4i operator << (const GSVector4i& v, const int i) 
+
+	friend GSVector4i operator << (const GSVector4i& v, const int i)
 	{
 		return GSVector4i(_mm_slli_epi32(v, i));
 	}
-	
-	friend GSVector4i operator >> (const GSVector4i& v, const int i) 
+
+	friend GSVector4i operator >> (const GSVector4i& v, const int i)
 	{
 		return GSVector4i(_mm_srli_epi32(v, i));
 	}
-	
+
 	friend GSVector4i operator & (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_and_si128(v1, v2));
 	}
-	
+
 	friend GSVector4i operator | (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_or_si128(v1, v2));
 	}
-	
-	friend GSVector4i operator ^ (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator ^ (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_xor_si128(v1, v2));
 	}
-	
-	friend GSVector4i operator & (const GSVector4i& v, int i) 
+
+	friend GSVector4i operator & (const GSVector4i& v, int i)
 	{
 		return v & GSVector4i(i);
 	}
-	
-	friend GSVector4i operator | (const GSVector4i& v, int i) 
+
+	friend GSVector4i operator | (const GSVector4i& v, int i)
 	{
 		return v | GSVector4i(i);
 	}
-	
-	friend GSVector4i operator ^ (const GSVector4i& v, int i) 
+
+	friend GSVector4i operator ^ (const GSVector4i& v, int i)
 	{
 		return v ^ GSVector4i(i);
 	}
-	
-	friend GSVector4i operator ~ (const GSVector4i& v) 
+
+	friend GSVector4i operator ~ (const GSVector4i& v)
 	{
 		return v ^ (v == v);
 	}
 
-	friend GSVector4i operator == (const GSVector4i& v1, const GSVector4i& v2) 
+	friend GSVector4i operator == (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_cmpeq_epi32(v1, v2));
 	}
-	
-	friend GSVector4i operator != (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator != (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return ~(v1 == v2);
 	}
-	
-	friend GSVector4i operator > (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator > (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_cmpgt_epi32(v1, v2));
 	}
-	
-	friend GSVector4i operator < (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator < (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return GSVector4i(_mm_cmplt_epi32(v1, v2));
 	}
-	
-	friend GSVector4i operator >= (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator >= (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return (v1 > v2) | (v1 == v2);
 	}
-	
-	friend GSVector4i operator <= (const GSVector4i& v1, const GSVector4i& v2) 
+
+	friend GSVector4i operator <= (const GSVector4i& v1, const GSVector4i& v2)
 	{
 		return (v1 < v2) | (v1 == v2);
 	}
@@ -2256,11 +2256,11 @@ public:
 __aligned16 class GSVector4
 {
 public:
-	union 
+	union
 	{
-		struct {float x, y, z, w;}; 
-		struct {float r, g, b, a;}; 
-		struct {float left, top, right, bottom;}; 
+		struct {float x, y, z, w;};
+		struct {float r, g, b, a;};
+		struct {float left, top, right, bottom;};
 		float v[4];
 		float f32[4];
 		int8 i8[16];
@@ -2306,7 +2306,7 @@ public:
 		m = _mm_cvtepi32_ps(_mm_unpacklo_epi32(_mm_cvtsi32_si128(x), _mm_cvtsi32_si128(y)));
 	}
 
-	GSVector4(const GSVector4& v) 
+	GSVector4(const GSVector4& v)
 	{
 		m = v.m;
 	}
@@ -2358,7 +2358,7 @@ public:
 		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
 	}
 
-	operator __m128() const 
+	operator __m128() const
 	{
 		return m;
 	}
@@ -2370,22 +2370,22 @@ public:
 
 	static GSVector4 cast(const GSVector4i& v);
 
-	GSVector4 abs() const 
+	GSVector4 abs() const
 	{
 		return *this & cast(GSVector4i::x7fffffff());
 	}
 
-	GSVector4 neg() const 
+	GSVector4 neg() const
 	{
 		return *this ^ cast(GSVector4i::x80000000());
 	}
 
-	GSVector4 rcp() const 
+	GSVector4 rcp() const
 	{
 		return GSVector4(_mm_rcp_ps(m));
 	}
 
-	GSVector4 rcpnr() const 
+	GSVector4 rcpnr() const
 	{
 		GSVector4 v = rcp();
 
@@ -2394,7 +2394,7 @@ public:
 
 	enum RoundMode {NearestInt = 8, NegInf = 9, PosInf = 10};
 
-	template<int mode> GSVector4 round() const 
+	template<int mode> GSVector4 round() const
 	{
 		#if _M_SSE >= 0x401
 
@@ -2425,22 +2425,22 @@ public:
 		#endif
 	}
 
-	GSVector4 floor() const 
+	GSVector4 floor() const
 	{
 		return round<NegInf>();
 	}
 
-	GSVector4 ceil() const 
+	GSVector4 ceil() const
 	{
 		return round<PosInf>();
 	}
 
-	GSVector4 mod2x(const GSVector4& f, const int scale = 256) const 
+	GSVector4 mod2x(const GSVector4& f, const int scale = 256) const
 	{
 		return *this * (f * (2.0f / scale));
 	}
 
-	GSVector4 mod2x(float f, const int scale = 256) const 
+	GSVector4 mod2x(float f, const int scale = 256) const
 	{
 		return mod2x(GSVector4(f), scale);
 	}
@@ -2465,12 +2465,12 @@ public:
 		return -b - *this * a; // TODO: _mm_fmnsub_ps
 	}
 
-	GSVector4 lerp(const GSVector4& v, const GSVector4& f) const 
+	GSVector4 lerp(const GSVector4& v, const GSVector4& f) const
 	{
 		return *this + (v - *this) * f;
 	}
 
-	GSVector4 lerp(const GSVector4& v, float f) const 
+	GSVector4 lerp(const GSVector4& v, float f) const
 	{
 		return lerp(v, GSVector4(f));
 	}
@@ -2494,28 +2494,28 @@ public:
 	}
 
 	#if _M_SSE >= 0x401
-	template<int i> GSVector4 dp(const GSVector4& v) const 
+	template<int i> GSVector4 dp(const GSVector4& v) const
 	{
 		return GSVector4(_mm_dp_ps(m, v.m, i));
 	}
 	#endif
 
-	GSVector4 sat(const GSVector4& a, const GSVector4& b) const 
+	GSVector4 sat(const GSVector4& a, const GSVector4& b) const
 	{
 		return GSVector4(_mm_min_ps(_mm_max_ps(m, a), b));
 	}
 
-	GSVector4 sat(const GSVector4& a) const 
+	GSVector4 sat(const GSVector4& a) const
 	{
 		return GSVector4(_mm_min_ps(_mm_max_ps(m, a.xyxy()), a.zwzw()));
 	}
 
-	GSVector4 sat(const float scale = 255) const 
+	GSVector4 sat(const float scale = 255) const
 	{
 		return sat(zero(), GSVector4(scale));
 	}
 
-	GSVector4 clamp(const float scale = 255) const 
+	GSVector4 clamp(const float scale = 255) const
 	{
 		return min(GSVector4(scale));
 	}
@@ -2556,12 +2556,12 @@ public:
 	GSVector4 l2h(const GSVector4& a) const
 	{
 		return GSVector4(_mm_movelh_ps(m, a));
-	}	
+	}
 
 	GSVector4 h2l(const GSVector4& a) const
 	{
 		return GSVector4(_mm_movehl_ps(m, a));
-	}	
+	}
 
 	GSVector4 andnot(const GSVector4& v) const
 	{
@@ -2599,12 +2599,12 @@ public:
 		#endif
 	}
 
-	static GSVector4 zero() 
+	static GSVector4 zero()
 	{
 		return GSVector4(_mm_setzero_ps());
 	}
 
-	static GSVector4 xffffffff() 
+	static GSVector4 xffffffff()
 	{
 		return zero() == zero();
 	}
@@ -2701,42 +2701,42 @@ public:
 		return neg();
 	}
 
-	void operator += (const GSVector4& v) 
+	void operator += (const GSVector4& v)
 	{
 		m = _mm_add_ps(m, v);
 	}
 
-	void operator -= (const GSVector4& v) 
+	void operator -= (const GSVector4& v)
 	{
 		m = _mm_sub_ps(m, v);
 	}
 
-	void operator *= (const GSVector4& v) 
+	void operator *= (const GSVector4& v)
 	{
 		m = _mm_mul_ps(m, v);
 	}
 
-	void operator /= (const GSVector4& v) 
+	void operator /= (const GSVector4& v)
 	{
 		m = _mm_div_ps(m, v);
 	}
 
-	void operator += (float f) 
+	void operator += (float f)
 	{
 		*this += GSVector4(f);
 	}
 
-	void operator -= (float f) 
+	void operator -= (float f)
 	{
 		*this -= GSVector4(f);
 	}
 
-	void operator *= (float f) 
+	void operator *= (float f)
 	{
 		*this *= GSVector4(f);
 	}
 
-	void operator /= (float f) 
+	void operator /= (float f)
 	{
 		*this /= GSVector4(f);
 	}
@@ -2746,22 +2746,22 @@ public:
 		m = _mm_and_ps(m, v);
 	}
 
-	void operator |= (const GSVector4& v) 
+	void operator |= (const GSVector4& v)
 	{
 		m = _mm_or_ps(m, v);
 	}
 
-	void operator ^= (const GSVector4& v) 
+	void operator ^= (const GSVector4& v)
 	{
 		m = _mm_xor_ps(m, v);
 	}
 
-	friend GSVector4 operator + (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator + (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_add_ps(v1, v2));
 	}
 
-	friend GSVector4 operator - (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator - (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_sub_ps(v1, v2));
 	}
@@ -2771,27 +2771,27 @@ public:
 		return GSVector4(_mm_mul_ps(v1, v2));
 	}
 
-	friend GSVector4 operator / (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator / (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_div_ps(v1, v2));
 	}
 
-	friend GSVector4 operator + (const GSVector4& v, float f) 
+	friend GSVector4 operator + (const GSVector4& v, float f)
 	{
 		return v + GSVector4(f);
 	}
 
-	friend GSVector4 operator - (const GSVector4& v, float f) 
+	friend GSVector4 operator - (const GSVector4& v, float f)
 	{
 		return v - GSVector4(f);
 	}
 
-	friend GSVector4 operator * (const GSVector4& v, float f) 
+	friend GSVector4 operator * (const GSVector4& v, float f)
 	{
 		return v * GSVector4(f);
 	}
 
-	friend GSVector4 operator / (const GSVector4& v, float f) 
+	friend GSVector4 operator / (const GSVector4& v, float f)
 	{
 		return v / GSVector4(f);
 	}
@@ -2800,43 +2800,43 @@ public:
 	{
 		return GSVector4(_mm_and_ps(v1, v2));
 	}
-	
+
 	friend GSVector4 operator | (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_or_ps(v1, v2));
 	}
-	
-	friend GSVector4 operator ^ (const GSVector4& v1, const GSVector4& v2) 
+
+	friend GSVector4 operator ^ (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_xor_ps(v1, v2));
 	}
 
-	friend GSVector4 operator == (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator == (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmpeq_ps(v1, v2));
 	}
 
-	friend GSVector4 operator != (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator != (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmpneq_ps(v1, v2));
 	}
 
-	friend GSVector4 operator > (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator > (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmpgt_ps(v1, v2));
 	}
 
-	friend GSVector4 operator < (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator < (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmplt_ps(v1, v2));
 	}
 
-	friend GSVector4 operator >= (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator >= (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmpge_ps(v1, v2));
 	}
 
-	friend GSVector4 operator <= (const GSVector4& v1, const GSVector4& v2) 
+	friend GSVector4 operator <= (const GSVector4& v1, const GSVector4& v2)
 	{
 		return GSVector4(_mm_cmple_ps(v1, v2));
 	}

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -280,40 +280,40 @@ void zeroEx()
 *********************************************************/
 
 void psxBGEZ()         // Branch if Rs >= 0
-{ 
-	if (_i32(_rRs_) >= 0) doBranch(_BranchTarget_); 
+{
+	if (_i32(_rRs_) >= 0) doBranch(_BranchTarget_);
 }
 
 void psxBGEZAL()   // Branch if Rs >= 0 and link
-{ 
-	if (_i32(_rRs_) >= 0) 
-	{ 
-		_SetLink(31); 
-		doBranch(_BranchTarget_); 
-	} 
+{
+	if (_i32(_rRs_) >= 0)
+	{
+		_SetLink(31);
+		doBranch(_BranchTarget_);
+	}
 }
 
 void psxBGTZ()          // Branch if Rs >  0
-{ 
-	if (_i32(_rRs_) > 0) doBranch(_BranchTarget_); 
+{
+	if (_i32(_rRs_) > 0) doBranch(_BranchTarget_);
 }
 
 void psxBLEZ()         // Branch if Rs <= 0
-{ 
-	if (_i32(_rRs_) <= 0) doBranch(_BranchTarget_); 
+{
+	if (_i32(_rRs_) <= 0) doBranch(_BranchTarget_);
 }
 void psxBLTZ()          // Branch if Rs <  0
-{ 
-	if (_i32(_rRs_) < 0) doBranch(_BranchTarget_); 
+{
+	if (_i32(_rRs_) < 0) doBranch(_BranchTarget_);
 }
 
 void psxBLTZAL()    // Branch if Rs <  0 and link
-{ 
-	if (_i32(_rRs_) < 0) 
+{
+	if (_i32(_rRs_) < 0)
 		{
-			_SetLink(31); 
-			doBranch(_BranchTarget_); 
-		} 
+			_SetLink(31);
+			doBranch(_BranchTarget_);
+		}
 }
 
 /*********************************************************
@@ -322,45 +322,45 @@ void psxBLTZAL()    // Branch if Rs <  0 and link
 *********************************************************/
 
 void psxBEQ()   // Branch if Rs == Rt
-{ 
+{
 	if (_i32(_rRs_) == _i32(_rRt_)) doBranch(_BranchTarget_);
 }
 
 void psxBNE()   // Branch if Rs != Rt
-{ 
-	if (_i32(_rRs_) != _i32(_rRt_)) doBranch(_BranchTarget_); 
+{
+	if (_i32(_rRs_) != _i32(_rRt_)) doBranch(_BranchTarget_);
 }
 
 /*********************************************************
 * Jump to target                                         *
 * Format:  OP target                                     *
 *********************************************************/
-void psxJ()   
-{             
-	doBranch(_JumpTarget_); 
+void psxJ()
+{
+	doBranch(_JumpTarget_);
 }
 
-void psxJAL() 
-{	
+void psxJAL()
+{
 	_SetLink(31);
-	doBranch(_JumpTarget_); 
+	doBranch(_JumpTarget_);
 }
 
 /*********************************************************
 * Register jump                                          *
 * Format:  OP rs, rd                                     *
 *********************************************************/
-void psxJR()   
-{              
+void psxJR()
+{
 	doBranch(_u32(_rRs_));
 }
 
-void psxJALR() 
+void psxJALR()
 {
-	if (_Rd_) 
+	if (_Rd_)
 	{
 		_SetLink(_Rd_);
-	} 
+	}
 	doBranch(_u32(_rRs_));
 }
 
@@ -370,7 +370,7 @@ void psxJALR()
 static __forceinline void execI()
 {
 	psxRegs.code = iopMemRead32(psxRegs.pc);
-	
+
 		PSXCPU_LOG("%s", disR3000AF(psxRegs.code, psxRegs.pc));
 
 	psxRegs.pc+= 4;

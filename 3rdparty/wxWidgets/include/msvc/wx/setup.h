@@ -34,14 +34,14 @@
    include\wx\univ\setup0.h			- The original univ file, not used
 
    The configuration consistency check files:
-   
+
    include\wx\chkconf.h				?
    include\wx\msw\chkconf.h			?
    include\wx\univ\chkconf.h		?
    include\wx\msw\wince\chkconf.h	- Not used in regular builds
 
    Issues:
-   
+
    The Debug build will break in CFrame::InitBitmaps() at the ConvertToImage() line
    with a "assert "wxWidgets Debug Alert, bmp.Ok()" error message, the cause is unknown,
    to me at least.

@@ -244,7 +244,7 @@ private:
 
         if ( !dt.IsValid() && HasDPFlag(wxDP_ALLOWNONE) )
             return;
-        
+
         // notify that we had to change the date after validation
         if ( (dt.IsValid() && (!dtOld.IsValid() || dt != dtOld)) ||
                 (!dt.IsValid() && dtOld.IsValid()) )

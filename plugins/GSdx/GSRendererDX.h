@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -23,7 +23,7 @@
 
 #include "GSRendererHW.h"
 
-template<class Vertex> 
+template<class Vertex>
 class GSRendererDX : public GSRendererHW<Vertex>
 {
 	GSVector2 m_pixelcenter;
@@ -135,10 +135,10 @@ public:
 			{
 				if(om_bsel.a == 0 && om_bsel.b == 1 && om_bsel.c == 0 && om_bsel.d == 1)
 				{
-					// this works because with PABE alpha blending is on when alpha >= 0x80, but since the pixel shader 
+					// this works because with PABE alpha blending is on when alpha >= 0x80, but since the pixel shader
 					// cannot output anything over 0x80 (== 1.0) blending with 0x80 or turning it off gives the same result
 
-					om_bsel.abe = 0; 
+					om_bsel.abe = 0;
 				}
 				else
 				{
@@ -180,7 +180,7 @@ public:
 					ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 					// Fixme : Same as above, I guess.
 					if (m_vt.m_min.p.z > 0xffff)
-					{	
+					{
 						vs_sel.bppz = 2;
 						om_dssel.ztst = ZTST_ALWAYS;
 					}
@@ -196,23 +196,23 @@ public:
 		float oy = (float)(int)context->XYOFFSET.OFY;
 		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
 		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
-		
+
 		//This hack subtracts around half a pixel from OFX and OFY. (Cannot do this directly,
 		//because DX10 and DX9 have a different pixel center.)
 		//
 		//The resulting shifted output aligns better with common blending / corona / blurring effects,
 		//but introduces a few bad pixels on the edges.
-		
+
 		// Edit: Moved to CreateSource() in GSTextureCache.cpp
 		//if (UserHacks_HalfPixelOffset == true)
 		//{
 		//	//DX9 has pixelcenter set to 0.0, so give it some value here
-		//	if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = oy2 = -0.00035f; } 
-		//	
+		//	if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = oy2 = -0.00035f; }
+		//
 		//	if (ox != 0) { ox2 *= upscale_Multiplier(); }
-		//	if (oy != 0) { oy2 *= upscale_Multiplier(); } 
+		//	if (oy != 0) { oy2 *= upscale_Multiplier(); }
 		//}
-		
+
 		vs_cb.VertexScale  = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
 		// gs
@@ -264,7 +264,7 @@ public:
 		{
 			ps_sel.atst = ATST_ALWAYS;
 		}
-		
+
 		if(tex)
 		{
 			ps_sel.wms = context->CLAMP.WMS;

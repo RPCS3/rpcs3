@@ -35,7 +35,7 @@ public:
     wxPalette(int n, const unsigned char *red, const unsigned char *green, const unsigned char *blue);
     virtual ~wxPalette(void);
     bool Create(int n, const unsigned char *red, const unsigned char *green, const unsigned char *blue);
-    
+
     int GetPixel(unsigned char red, unsigned char green, unsigned char blue) const;
     bool GetRGB(int pixel, unsigned char *red, unsigned char *green, unsigned char *blue) const;
 
@@ -49,7 +49,7 @@ public:
     // implemetation
     inline WXHPALETTE GetHPALETTE(void) const { return (M_PALETTEDATA ? M_PALETTEDATA->m_hPalette : 0); }
     void SetHPALETTE(WXHPALETTE pal);
-  
+
 private:
     DECLARE_DYNAMIC_CLASS(wxPalette)
 };

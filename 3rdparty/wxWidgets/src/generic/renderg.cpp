@@ -222,7 +222,7 @@ wxRendererGeneric::DrawHeaderButton(wxWindow* win,
     dc.SetBrush(wxBrush(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE)));
     dc.SetPen(*wxTRANSPARENT_PEN);
     dc.DrawRectangle(rect);
-    
+
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
 
     dc.SetPen(m_penBlack);
@@ -252,7 +252,7 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
                                             wxHeaderButtonParams* params)
 {
     int labelWidth = 0;
-    
+
     // Mark this item as selected.  For the generic version we'll just draw an
     // underline
     if ( flags & wxCONTROL_SELECTED )
@@ -281,7 +281,7 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
         ar.y += (rect.height - ar.height)/2;
         ar.x = ar.x + rect.width - 3*ar.width/2;
         arrowSpace = 3*ar.width/2; // space to preserve when drawing the label
-        
+
         wxPoint triPt[3];
         if ( sortArrow & wxHDR_SORT_ICON_UP )
         {
@@ -306,19 +306,19 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
             params->m_arrowColour : wxSystemSettings::GetColour(wxSYS_COLOUR_3DSHADOW);
         dc.SetPen(wxPen(c));
         dc.SetBrush(wxBrush(c));
-        dc.DrawPolygon( 3, triPt, ar.x, ar.y);                  
+        dc.DrawPolygon( 3, triPt, ar.x, ar.y);
     }
     labelWidth += arrowSpace;
-    
+
     const int margin = 5;   // number of pixels to reserve on either side of the label
     int bmpWidth = 0;
     int txtEnd = 0;
-    
+
     if ( params && params->m_labelBitmap.Ok() )
         bmpWidth = params->m_labelBitmap.GetWidth() + 2;
 
     labelWidth += bmpWidth + 2*margin;
-    
+
     // Draw a label if one is given
     if ( params && !params->m_labelText.empty() )
     {
@@ -328,7 +328,7 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
             params->m_labelColour : win->GetForegroundColour();
 
         wxString label( params->m_labelText );
-        
+
         dc.SetFont(font);
         dc.SetTextForeground(clr);
         dc.SetBackgroundMode(wxTRANSPARENT);
@@ -337,10 +337,10 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
         dc.GetTextExtent( label, &tw, &th, &td);
         labelWidth += tw;
         y = rect.y + wxMax(0, (rect.height - (th+td)) / 2);
-        
+
         // truncate and add an ellipsis (...) if the text is too wide.
         int targetWidth = rect.width - arrowSpace - bmpWidth - 2*margin;
-        if ( tw > targetWidth )        
+        if ( tw > targetWidth )
         {
             int ellipsisWidth;
             dc.GetTextExtent( wxT("..."), &ellipsisWidth, NULL);
@@ -351,7 +351,7 @@ wxRendererGeneric::DrawHeaderButtonContents(wxWindow *win,
             label.append( wxT("...") );
             tw += ellipsisWidth;
         }
-        
+
         switch (params->m_labelAlignment)
         {
             default:

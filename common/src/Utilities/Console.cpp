@@ -633,7 +633,7 @@ bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 }
 
 // --------------------------------------------------------------------------------------
-//  
+//
 // --------------------------------------------------------------------------------------
 
 bool IConsoleWriter::WriteFromStdout( const char* fmt, ... ) const

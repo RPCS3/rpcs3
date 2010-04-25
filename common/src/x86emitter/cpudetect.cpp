@@ -66,7 +66,7 @@ static s64 CPUSpeedHz( u64 time )
 	if( !overrun ) return cycleCount;
 
 	// interference could cause us to overshoot the target time, compensate:
-	
+
 	double cyclesPerTick = (double)cycleCount / (double)timeCount;
 	double newCycleCount = (double)cycleCount - (cyclesPerTick * overrun);
 
@@ -171,7 +171,7 @@ void cpudetectInit()
 		x86caps.EFlags2 = regs[ 2 ];
 		x86caps.EFlags = regs[ 3 ];
 	}
-	  
+
 	// detect multicore for AMD cpu
 
 	if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
@@ -274,7 +274,7 @@ void cpudetectInit()
 	x86caps.hasStreamingSIMD4Extensions2 = ( x86caps.Flags2 >> 20 ) & 1; //sse4.2
 
 	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// SIMD Instruction Support Detection (Second Pass)
 	//
@@ -336,7 +336,7 @@ void cpudetectInit()
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...
-	
+
 	// HACK!  For some reason the "proper" fxsave code below causes some kind of stackframe
 	// corruption in MSVC PGO builds.  The culprit appears to be execution of FXSAVE itself,
 	// since only by not executing FXSAVE is the crash avoided. (note: crash happens later
@@ -344,7 +344,7 @@ void cpudetectInit()
 	//
 	// Workaround: We assume the MXCSR mask from the settings of the CPU.  SSE2 CPUs have
 	// a full mask available.  SSE and earlier CPUs have a few bits reserved (must be zero).
-	
+
 	EstablishMXCSRmask();
 
 	////////////////////////////////////////////////////////////////////////////////////////////

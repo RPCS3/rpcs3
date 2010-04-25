@@ -117,7 +117,7 @@ void Decompress(char *filename)
 		printf("%s is not a compressed image\n", filename);
 		return;
 	}
-	
+
 	if (stat(file, &buf) != -1)
 	{
 		char str[256];
@@ -157,14 +157,14 @@ void Decompress(char *filename)
 
 	switch (argv[1][0])
 	{
-		case 'c': 
-			Compress(argv[2], 1); 
+		case 'c':
+			Compress(argv[2], 1);
 			break;
-		case 'C': 
-			Compress(argv[2], 2); 
+		case 'C':
+			Compress(argv[2], 2);
 			break;
-		case 'd':  
-			Decompress(argv[2]); 
+		case 'd':
+			Decompress(argv[2]);
 			break;
 		default: break;
 	}

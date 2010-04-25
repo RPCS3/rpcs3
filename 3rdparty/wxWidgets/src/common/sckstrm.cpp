@@ -44,7 +44,7 @@ size_t wxSocketOutputStream::OnSysWrite(const void *buffer, size_t size)
     size_t ret = m_o_socket->Write((const char *)buffer, size).LastCount();
     m_lasterror = m_o_socket->Error() ? wxSTREAM_WRITE_ERROR : wxSTREAM_NO_ERROR;
     return ret;
-    
+
     // Patch 1476893 caused Advise to hang, needs further investigation
 #if 0
     const char *buf = (const char *)buffer;
@@ -90,7 +90,7 @@ size_t wxSocketInputStream::OnSysRead(void *buffer, size_t size)
     size_t ret = m_i_socket->Read((char *)buffer, size).LastCount();
     m_lasterror = m_i_socket->Error() ? wxSTREAM_READ_ERROR : wxSTREAM_NO_ERROR;
     return ret;
-    
+
     // Patch 1476893 caused Advise to hang, needs further investigation
 #if 0
     char *buf = (char *)buffer;

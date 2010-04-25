@@ -49,7 +49,7 @@ const u32 build    = 3;    // increase that with each version
 int PadEnum[2][2] = {{0, 2}, {1, 3}};
 
 u32 pads = 0;
-u8 stdpar[2][20] = { 
+u8 stdpar[2][20] = {
 	{0xff, 0x5a, 0xff, 0xff, 0x80, 0x80, 0x80, 0x80,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00},
@@ -77,23 +77,23 @@ u8 unk4c[2][8]    = {
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
-u8 unk4d[2][8]    = { 
+u8 unk4d[2][8]    = {
 	{0xff, 0x5a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 	{0xff, 0x5a, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 };
-u8 cmd4f[2][8]    = { 
+u8 cmd4f[2][8]    = {
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5a},
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5a}
 };
-u8 stdcfg[2][8]   = { 
+u8 stdcfg[2][8]   = {
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 }; // 2 & 3 = 0
-u8 stdmode[2][8]  = { 
+u8 stdmode[2][8]  = {
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 	{0xff, 0x5a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
-u8 stdmodel[2][8] = { 
+u8 stdmodel[2][8] = {
 		{0xff,
 		0x5a,
 		0x03, // 03 - dualshock2, 01 - dualshock
@@ -102,7 +102,7 @@ u8 stdmodel[2][8] = {
 		0x02,
 		0x01,
 		0x00},
-	{0xff, 
+	{0xff,
 	 0x5a,
 	 0x03, // 03 - dualshock2, 01 - dualshock
 	 0x02, // number of modes
@@ -188,7 +188,7 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type)
 	return (version << 16) | (revision << 8) | build;
 }
 
-void __Log(const char *fmt, ...) 
+void __Log(const char *fmt, ...)
 {
 	va_list list;
 
@@ -199,7 +199,7 @@ void __Log(const char *fmt, ...)
 	va_end(list);
 }
 
-void __LogToConsole(const char *fmt, ...) 
+void __LogToConsole(const char *fmt, ...)
 {
 	va_list list;
 
@@ -268,7 +268,7 @@ s32 CALLBACK PADopen(void *pDsp)
 	pthread_spin_init(&s_mutexStatus, PTHREAD_PROCESS_PRIVATE);
 	s_keyPress[0] = s_keyPress[1] = 0;
 	s_keyRelease[0] = s_keyRelease[1] = 0;
-	
+
 #ifdef __LINUX__
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
 #endif
@@ -295,7 +295,7 @@ void UpdateKeys(int pad, int keyPress, int keyRelease)
 {
 	pthread_spin_lock(&s_mutexStatus);
 	s_keyPress[pad] |= keyPress;
-	s_keyPress[pad] &= ~keyRelease; 
+	s_keyPress[pad] &= ~keyRelease;
 	s_keyRelease[pad] |= keyRelease;
 	s_keyRelease[pad] &= ~keyPress;
 	pthread_spin_unlock(&s_mutexStatus);
@@ -341,7 +341,7 @@ void PADsetMode(int pad, int mode)
 u8   CALLBACK PADstartPoll(int pad)
 {
 	//PAD_LOG("PADstartPoll: %d\n", pad);
-	
+
 	curPad = pad - 1;
 	curByte = 0;
 
@@ -355,7 +355,7 @@ u8  _PADpoll(u8 value)
 	if (curByte == 0)
 	{
 		curByte++;
-		
+
 		//PAD_LOG("PADpoll: cmd: %x\n", value);
 
 		curCmd = value;
@@ -381,12 +381,12 @@ u8  _PADpoll(u8 value)
 				stdpar[curPad][5] = Analog::Pad(PAD_RY, curPad);
 				stdpar[curPad][6] = Analog::Pad(PAD_LX, curPad);
 				stdpar[curPad][7] = Analog::Pad(PAD_LY, curPad);
-			
-				if (padMode[curPad] == 1) 
+
+				if (padMode[curPad] == 1)
 					cmdLen = 20;
-				else 
+				else
 					cmdLen = 4;
-			
+
 				button_check2 = stdpar[curPad][2] >> 4;
 				switch (stdpar[curPad][3])
 				{
@@ -454,7 +454,7 @@ u8  _PADpoll(u8 value)
 				buf = stdcfg[curPad];
 				if (stdcfg[curPad][3] == 0xff)
 					return 0xf3;
-				else 
+				else
 					return padID[curPad];
 
 			case CMD_SET_MODE_AND_LOCK: // SET_MODE_AND_LOCK
@@ -570,7 +570,7 @@ u8  _PADpoll(u8 value)
 u8 CALLBACK PADpoll(u8 value)
 {
 	u8 ret;
-	
+
 	ret = _PADpoll(value);
 	//PAD_LOG("PADpoll: %x (%d: %x)\n", value, curByte, ret);
 	return ret;

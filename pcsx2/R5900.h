@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -287,9 +287,9 @@ struct R5900cpu
 	//                 reserved.
 	//
 	void (*Allocate)();
-	
+
 	// Deallocates ram allocated by Allocate and/or by runtime code execution.
-	// 
+	//
 	// Thread Affinity:
 	//   Can be called from any thread.  Execute status must be suspended or stopped
 	//   to prevent multi-thread race conditions.
@@ -329,13 +329,13 @@ struct R5900cpu
 	//
 	void (*Execute)();
 
-	// Checks for execution suspension or cancellation.  In pthreads terms this provides 
+	// Checks for execution suspension or cancellation.  In pthreads terms this provides
 	// a "cancellation point."  Execution state checks are typically performed at Vsyncs
 	// by the generic VM event handlers in R5900.cpp/Counters.cpp (applies to both recs
 	// and ints).
 	//
 	// Implementation note: Because of the nuances of recompiled code execution, setjmp
-	// may be used in place of thread cancellation or C++ exceptions (non-SEH exceptions 
+	// may be used in place of thread cancellation or C++ exceptions (non-SEH exceptions
 	// cannot unwind through the recompiled code stackframes).
 	//
 	// Thread Affinity:
@@ -356,7 +356,7 @@ struct R5900cpu
 	// resets, since TLB remaps affect more than just the code they contain (code that
 	// may reference the remaped blocks via memory loads/stores, for example).
 	//
-	// Thread Affinity Rule: 
+	// Thread Affinity Rule:
 	//   Can be called from any thread (namely for being called from debugging threads)
 	//
 	// Exception Throws: [TODO] Emulator defined?  (probably shouldn't throw, probably

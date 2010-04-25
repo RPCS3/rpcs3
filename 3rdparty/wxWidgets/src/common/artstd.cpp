@@ -238,7 +238,7 @@ wxBitmap wxDefaultArtProvider::CreateBitmap(const wxArtID& id,
 
                 if ((bmp_h < bestSize.x) && (bmp_w < bestSize.y))
                 {
-                    // the caller wants default size, which is larger than 
+                    // the caller wants default size, which is larger than
                     // the image we have; to avoid degrading it visually by
                     // scaling it up, paste it into transparent image instead:
                     wxPoint offset((bestSize.x - bmp_w)/2, (bestSize.y - bmp_h)/2);

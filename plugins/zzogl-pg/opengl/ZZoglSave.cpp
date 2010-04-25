@@ -23,7 +23,7 @@
 #include "zerogs.h"
 #include "targets.h"
 
-//----------------------- Defines     
+//----------------------- Defines
 
 #define VBSAVELIMIT ((u32)((u8*)&vb[0].nNextFrameHeight-(u8*)&vb[0]))
 #define ZEROGS_SAVEVER 0xaa000005
@@ -51,7 +51,7 @@ int ZeroGS::Save(s8* pbydata)
 
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	strcpy((char*)pbydata, libraryNameX);
 	*(u32*)(pbydata+16) = ZEROGS_SAVEVER;
 	pbydata += 32;
@@ -95,10 +95,10 @@ bool ZeroGS::Load(s8* pbydata)
 		GSStateReset();
 		pbydata += 32;
 
-		//int context = *(int*)pbydata; 
+		//int context = *(int*)pbydata;
 		pbydata += 4;
 		u32 savelimit = VBSAVELIMIT;
-		
+
 		savelimit = *(u32*)pbydata; pbydata += 4;
 
 		memcpy(g_pbyGSMemory, pbydata, 0x00400000);
@@ -134,13 +134,13 @@ bool ZeroGS::Load(s8* pbydata)
 		for(int i = 0; i < 2; ++i) {
 			vb[i].Init(VB_BUFFERSIZE);
 			vb[i].bNeedZCheck = vb[i].bNeedFrameCheck = 1;
-			
+
 			vb[i].bSyncVars = 0; vb[i].bNeedTexCheck = 1;
 			memset(vb[i].uCurTex0Data, 0, sizeof(vb[i].uCurTex0Data));
 		}
 
 		icurctx = -1;
-		
+
 		glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, s_uFramebuffer ); // switch to the backbuffer
 		SetFogColor(gs.fogcol);
 

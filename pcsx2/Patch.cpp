@@ -622,7 +622,7 @@ namespace PatchFunc
     struct PatchPieces
     {
 		wxArrayString m_pieces;
-		
+
 		PatchPieces( const wxString& param )
 		{
 			SplitString( m_pieces, param, L"," );
@@ -650,7 +650,7 @@ namespace PatchFunc
 		{
 			if ( patchnumber >= MAX_PATCH )
 				throw wxString( L"Maximum number of patches reached" );
-	        
+
 			Patch[patchnumber].enabled = 0;
 			PatchPieces pieces( param );
 

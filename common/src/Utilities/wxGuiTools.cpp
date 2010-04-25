@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -91,7 +91,7 @@ wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
 		case FixedMinimum:
 			flags.FixedMinSize();
 			break;
-		
+
 		//case Tile:
 		//	pxAssert( "pxTile is an unsupported stretch tag (ignored)." );
 		//break;
@@ -103,7 +103,7 @@ wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 {
 	//return align.Apply( _flgs );
 	wxSizerFlags retval;
-	
+
 	uint allflags = (_flgs.GetFlags() | _flgs2.GetFlags());
 
 	retval.Align( allflags & wxALIGN_MASK );
@@ -111,7 +111,7 @@ wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 	if( allflags & wxSHAPED ) retval.Shaped();
 	if( allflags & wxFIXED_MINSIZE ) retval.FixedMinSize();
 	if( allflags & wxRESERVE_SPACE_EVEN_IF_HIDDEN ) retval.ReserveSpaceEvenIfHidden();
-	
+
 	// Compounding borders is probably a fair approach:
 	retval.Border( allflags & wxALL, _flgs.GetBorderInPixels() + _flgs2.GetBorderInPixels() );
 
@@ -403,7 +403,7 @@ void ScopedBusyCursor::SetDefault( BusyCursorType busytype )
 {
 	if( busytype == m_defBusyType ) return;
 	m_defBusyType = busytype;
-	
+
 	if( m_cursorStack.empty() )
 		SetManualBusyCursor( busytype );
 }
@@ -465,7 +465,7 @@ void pxSetToolTip( wxWindow& wind, const wxString& src )
 wxFont pxGetFixedFont( int ptsize, int weight )
 {
 	return wxFont(
-		ptsize, wxMODERN, wxNORMAL, weight, false 
+		ptsize, wxMODERN, wxNORMAL, weight, false
 #ifdef __WXMSW__
 		,L"Lucida Console"		// better than courier new (win32 only)
 #endif

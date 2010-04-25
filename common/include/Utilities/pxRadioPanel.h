@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -28,14 +28,14 @@ struct RadioPanelItem
 	wxString		Label;
 	wxString		SubText;
 	wxString		ToolTip;
-	
+
 	RadioPanelItem( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString )
 		: Label( label )
 		, SubText( subtext )
 		, ToolTip( tooltip )
 	{
 	}
-	
+
 	RadioPanelItem& SetToolTip( const wxString& tip )
 	{
 		ToolTip = tip;
@@ -61,7 +61,7 @@ struct RadioPanelObjects
 // --------------------------------------------------------------------------------------
 //  pxRadioPanel
 // --------------------------------------------------------------------------------------
-// 
+//
 // Rationale:
 // Radio buttons work best when they are created consecutively, and then their subtext
 // created in a second sweep (this keeps the radio buttons together in the parent window's
@@ -79,7 +79,7 @@ protected:
 
 	ButtonArray		m_buttonStrings;
 	ButtonObjArray	m_objects;
-	
+
 	bool			m_IsRealized;
 
 	wxSize			m_padding;
@@ -104,7 +104,7 @@ public:
 
 	void Reset();
 	void Realize();
-	
+
 	wxStaticText* GetSubText( int idx );
 	const wxStaticText* GetSubText( int idx ) const;
 	pxRadioPanel& Append( const RadioPanelItem& entry );
@@ -129,7 +129,7 @@ public:
 		m_padding.SetHeight( newpad );
 		return *this;
 	}
-	
+
 	pxRadioPanel& SetIndentation( int newdent )
 	{
 		m_Indentation = newdent;
@@ -145,7 +145,7 @@ public:
 	{
 		return Append( RadioPanelItem(label, subtext, tooltip) );
 	}
-	
+
 protected:
 	void Init( const RadioPanelItem* srcArray=NULL, int arrsize=0 );
 	void _setToolTipImmediate( int idx, const wxString &tip );

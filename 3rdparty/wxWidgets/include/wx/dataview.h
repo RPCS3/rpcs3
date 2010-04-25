@@ -198,7 +198,7 @@ private:
     wxDataViewListModel             *m_child;
     wxDataViewSortedIndexArray       m_array;
     wxDataViewListModelNotifier     *m_notifierOnChild;
-    
+
     void InitStatics(); // BAD
 
 protected:
@@ -273,9 +273,9 @@ public:
 
     virtual void SetBitmap( const wxBitmap &bitmap );
     virtual const wxBitmap &GetBitmap();
-    
+
     virtual void SetAlignment( wxAlignment align ) = 0;
-    
+
     virtual void SetSortable( bool sortable ) = 0;
     virtual bool GetSortable() = 0;
     virtual void SetSortOrder( bool ascending ) = 0;
@@ -320,11 +320,11 @@ public:
     wxDataViewListModel* GetModel();
 
     // short cuts
-    bool AppendTextColumn( const wxString &label, unsigned int model_column, 
+    bool AppendTextColumn( const wxString &label, unsigned int model_column,
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT, int width = -1 );
     bool AppendToggleColumn( const wxString &label, unsigned int model_column,
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT, int width = 30 );
-    bool AppendProgressColumn( const wxString &label, unsigned int model_column, 
+    bool AppendProgressColumn( const wxString &label, unsigned int model_column,
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT, int width = 80 );
     bool AppendDateColumn( const wxString &label, unsigned int model_column,
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_ACTIVATABLE, int width = -1 );
@@ -340,7 +340,7 @@ public:
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_ACTIVATABLE, int width = -1 );
     bool AppendBitmapColumn( const wxBitmap &label, unsigned int model_column,
                     wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT, int width = -1 );
-    
+
     virtual bool AppendColumn( wxDataViewColumn *col );
     virtual unsigned int GetNumberOfColumns();
     virtual bool DeleteColumn( unsigned int pos );
@@ -352,7 +352,7 @@ public:
     virtual void Unselect( unsigned int row ) = 0;
     virtual void SetSelectionRange( unsigned int from, unsigned int to ) = 0;
     virtual void SetSelections( const wxArrayInt& aSelections) = 0;
-    
+
     virtual bool IsSelected( unsigned int row ) const = 0;
     virtual int GetSelection() const = 0;
     virtual int GetSelections(wxArrayInt& aSelections) const = 0;

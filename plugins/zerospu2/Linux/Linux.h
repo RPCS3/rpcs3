@@ -15,12 +15,12 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  // Modified by arcum42@gmail.com
- 
+
  #ifndef __LINUX_H__
  #define __LINUX_H__
- 
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -33,7 +33,7 @@
 #include "Targets/SoundTargets.h"
 
 // Make it easier to check and set checkmarks in the gui
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
+#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
 #define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
 
 #endif // __LINUX_H__

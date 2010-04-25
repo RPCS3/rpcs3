@@ -111,7 +111,7 @@ void V_Core::Reset( int index )
 {
 	ConLog( " * SPU2: RESET SPU2 core%d \n", index );
 	memset( this, 0, sizeof(V_Core) );
-	
+
 	const int c = Index = index;
 
 	Regs.STATX		= 0;
@@ -283,7 +283,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 	//  such cases we just want to ignore the TimeUpdate call.
 
 	if( dClocks > (u32)-15 ) return;
-	
+
 	//  But if for some reason our clock value seems way off base (typically due to bad dma
 	//  timings from PCSX2), just mix out a little bit, skip the rest, and hope the ship
 	//  "rights" itself later on.
@@ -830,9 +830,9 @@ static void __fastcall RegWrite_Core( u16 value )
 			// optimized block copy fashion elsewhere, but some games will write this register
 			// directly, so handle those here:
 
-			// Performance Note: The PS2 Bios uses this extensively right before booting games, 
+			// Performance Note: The PS2 Bios uses this extensively right before booting games,
 			// causing massive slowdown if we don't shortcut it here.
-			
+
 			for( int i=0; i<2; i++ )
 			{
 				if(Cores[i].IRQEnable && (Cores[i].IRQA == thiscore.TSA))
@@ -843,7 +843,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			}
 			thiscore.DmaWrite( value );
 		break;
-		
+
 		case REG_C_ATTR:
 		{
 			bool irqe = thiscore.IRQEnable;
@@ -1058,7 +1058,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				thiscore.AdmaInProgress=0;
 			}
 		break;
-		
+
 		default:
 		{
 			const int addr = omem | ( (core == 1) ? 0x400 : 0 );
@@ -1197,7 +1197,7 @@ static void __fastcall RegWrite_Raw( u16 value )
 // --------------------------------------------------------------------------------------
 
 typedef void __fastcall RegWriteHandler( u16 value );
-static RegWriteHandler * const tbl_reg_writes[0x401] = 
+static RegWriteHandler * const tbl_reg_writes[0x401] =
 {
 	VoiceParamsCore(0),	// 0x000 -> 0x180
 	CoreParamsPair(0,REG_S_PMON),
@@ -1215,16 +1215,16 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	CoreParamsPair(0,REG_S_KOFF),
 	CoreParamsPair(0,REG_A_TSA),
 	CoreParamsPair(0,REG__1AC),
-	
+
 	RegWrite_Core<0,REG_S_ADMAS>,
 	REGRAW(0x1b2),
-	
+
 	REGRAW(0x1b4), REGRAW(0x1b6),
 	REGRAW(0x1b8), REGRAW(0x1ba),
 	REGRAW(0x1bc), REGRAW(0x1be),
-	
+
 	// 0x1c0!
-	
+
 	VoiceAddrSet(0, 0),VoiceAddrSet(0, 1),VoiceAddrSet(0, 2),VoiceAddrSet(0, 3),VoiceAddrSet(0, 4),VoiceAddrSet(0, 5),
 	VoiceAddrSet(0, 6),VoiceAddrSet(0, 7),VoiceAddrSet(0, 8),VoiceAddrSet(0, 9),VoiceAddrSet(0,10),VoiceAddrSet(0,11),
 	VoiceAddrSet(0,12),VoiceAddrSet(0,13),VoiceAddrSet(0,14),VoiceAddrSet(0,15),VoiceAddrSet(0,16),VoiceAddrSet(0,17),
@@ -1285,7 +1285,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	REGRAW(0x3E8),REGRAW(0x3EA),REGRAW(0x3EC),REGRAW(0x3EE),
 	REGRAW(0x3F0),REGRAW(0x3F2),REGRAW(0x3F4),REGRAW(0x3F6),
 	REGRAW(0x3F8),REGRAW(0x3FA),REGRAW(0x3FC),REGRAW(0x3FE),
-	
+
 	// AND... we reached 0x400!
 	// Last verse, same as the first:
 
@@ -1305,16 +1305,16 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	CoreParamsPair(1,REG_S_KOFF),
 	CoreParamsPair(1,REG_A_TSA),
 	CoreParamsPair(1,REG__1AC),
-	
+
 	RegWrite_Core<1,REG_S_ADMAS>,
 	REGRAW(0x5b2),
-	
+
 	REGRAW(0x5b4), REGRAW(0x5b6),
 	REGRAW(0x5b8), REGRAW(0x5ba),
 	REGRAW(0x5bc), REGRAW(0x5be),
-	
+
 	// 0x1c0!
-	
+
 	VoiceAddrSet(1, 0),VoiceAddrSet(1, 1),VoiceAddrSet(1, 2),VoiceAddrSet(1, 3),VoiceAddrSet(1, 4),VoiceAddrSet(1, 5),
 	VoiceAddrSet(1, 6),VoiceAddrSet(1, 7),VoiceAddrSet(1, 8),VoiceAddrSet(1, 9),VoiceAddrSet(1,10),VoiceAddrSet(1,11),
 	VoiceAddrSet(1,12),VoiceAddrSet(1,13),VoiceAddrSet(1,14),VoiceAddrSet(1,15),VoiceAddrSet(1,16),VoiceAddrSet(1,17),
@@ -1356,7 +1356,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	REGRAW(0x758),REGRAW(0x75A),REGRAW(0x75C),REGRAW(0x75E),
 
 	// ------ -------
-	
+
 	RegWrite_CoreExt<0,REG_P_MVOLL>,	//     0x0760		// Master Volume Left
 	RegWrite_CoreExt<0,REG_P_MVOLR>,	//     0x0762		// Master Volume Right
 	RegWrite_CoreExt<0,REG_P_EVOLL>,	//     0x0764		// Effect Volume Left
@@ -1375,7 +1375,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	RegWrite_CoreExt<0,R_ACC_COEF_D>,	//     0x077C
 	RegWrite_CoreExt<0,R_IIR_COEF>,		//     0x077E
 	RegWrite_CoreExt<0,R_FB_ALPHA>,		//     0x0780		//feedback alpha (% used)
-	RegWrite_CoreExt<0,R_FB_X>,			//     0x0782		//feedback 
+	RegWrite_CoreExt<0,R_FB_X>,			//     0x0782		//feedback
 	RegWrite_CoreExt<0,R_IN_COEF_L>,	//     0x0784
 	RegWrite_CoreExt<0,R_IN_COEF_R>,	//     0x0786
 
@@ -1399,7 +1399,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	RegWrite_CoreExt<1,R_ACC_COEF_D>,	//     0x077C
 	RegWrite_CoreExt<1,R_IIR_COEF>,		//     0x077E
 	RegWrite_CoreExt<1,R_FB_ALPHA>,		//     0x0780		//feedback alpha (% used)
-	RegWrite_CoreExt<1,R_FB_X>,			//     0x0782		//feedback 
+	RegWrite_CoreExt<1,R_FB_X>,			//     0x0782		//feedback
 	RegWrite_CoreExt<1,R_IN_COEF_L>,	//     0x0784
 	RegWrite_CoreExt<1,R_IN_COEF_R>,	//     0x0786
 
@@ -1409,10 +1409,10 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	//  SPDIF interface
 
 	RegWrite_SPDIF<SPDIF_OUT>,		//    0x07C0		// SPDIF Out: OFF/'PCM'/Bitstream/Bypass
-	RegWrite_SPDIF<SPDIF_IRQINFO>,	//    0x07C2	
+	RegWrite_SPDIF<SPDIF_IRQINFO>,	//    0x07C2
 	REGRAW(0x7C4),
-	RegWrite_SPDIF<SPDIF_MODE>,		//    0x07C6			
-	RegWrite_SPDIF<SPDIF_MEDIA>,	//    0x07C8		// SPDIF Media: 'CD'/DVD	
+	RegWrite_SPDIF<SPDIF_MODE>,		//    0x07C6
+	RegWrite_SPDIF<SPDIF_MEDIA>,	//    0x07C8		// SPDIF Media: 'CD'/DVD
 	REGRAW(0x7CA),
 	RegWrite_SPDIF<SPDIF_PROTECT>,	//	 0x07CC		// SPDIF Copy Protection
 
@@ -1432,14 +1432,14 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 {
 	// Check for these 2 adresses and schedule an interrupt when they get written with 0x3fff.
 	// This is what peops spu2 does, and it helps silent hill origins start a bit more stuff.
-	
+
 	// Update: 0x1f900400 is core0's volume register. Interrupting here is wrong.
 	// So SH:O just set the volume to max, which is a pretty normal operation anyway.
 	// Keeping this in for reference :p
 
 	//if (value == 0x3fff && (rmem == 0x1f900500 || rmem == 0x1f900400) ) {
 	//	// no idea which core ><
-	//	Spdif.Info |= 4 << 0; 
+	//	Spdif.Info |= 4 << 0;
 	//	SetIrqCall();
 	//	ConLog( "SPU2-X: Schedule IRQ for odd register write. rmem = %x , value = %x \n", rmem, value);
 	//}

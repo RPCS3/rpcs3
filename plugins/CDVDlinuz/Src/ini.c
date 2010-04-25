@@ -330,7 +330,7 @@ int INIFindSection(ACTUALHANDLE infile, char *section) {
 
       i = 0;
 
-      while((i < INIMAXLEN) && 
+      while((i < INIMAXLEN) &&
 
             (*(section + i) != 0) &&
 
@@ -408,7 +408,7 @@ int INIFindKeyword(ACTUALHANDLE infile, char *keyword, char *buffer) {
 
     i = 0;
 
-    while((i < INIMAXLEN) && 
+    while((i < INIMAXLEN) &&
 
           (*(keyword + i) != 0) &&
 

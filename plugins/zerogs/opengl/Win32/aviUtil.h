@@ -72,21 +72,21 @@ BOOL AVI_CreateStream(PAVIFILE pfile, PAVISTREAM * ps, int rate, // sample/secon
 		//strhdr.fccHandler	     = mmioFOURCC('M','S','V','C'); // Microsoft video 1
 		//strhdr.fccHandler	     = mmioFOURCC('I','V','5','0'); // Intel video 5.0
 		//strhdr.dwFlags		= AVISTREAMINFO_DISABLED;
-		//strhdr.dwCaps		 = 
-		//strhdr.wPriority	      = 
-		//strhdr.wLanguage	      = 
+		//strhdr.dwCaps		 =
+		//strhdr.wPriority	      =
+		//strhdr.wLanguage	      =
 	strhdr.dwScale		= 1;
 	strhdr.dwRate		 = rate;	       // rate fps
-		//strhdr.dwStart		=  
-		//strhdr.dwLength	       = 
-		//strhdr.dwInitialFrames	= 
+		//strhdr.dwStart		=
+		//strhdr.dwLength	       =
+		//strhdr.dwInitialFrames	=
 	strhdr.dwSuggestedBufferSize  = buffersize;
 		strhdr.dwQuality	      = -1; // use the default
-		//strhdr.dwSampleSize	   = 
+		//strhdr.dwSampleSize	   =
 	SetRect(&strhdr.rcFrame, 0, 0,	      // rectangle for stream
 	    (int) rectwidth,
 	    (int) rectheight);
-		//strhdr.dwEditCount	    = 
+		//strhdr.dwEditCount	    =
 		//strhdr.dwFormatChangeCount    =
 		//strcpy(strhdr.szName, "Full Frames (Uncompressed)");
 
@@ -152,7 +152,7 @@ string dumpAVICOMPRESSOPTIONS(AVICOMPRESSOPTIONS opts)
 	_snprintf(tmp, 255, "LPVOID lpParms = %d\n", (int)opts.lpParms);
 	returnValue += tmp;
 
-	_snprintf(tmp, 255, "DWORD  cbParms = %d\n", opts.cbParms); 
+	_snprintf(tmp, 255, "DWORD  cbParms = %d\n", opts.cbParms);
 	returnValue += tmp;
 
 	_snprintf(tmp, 255, "DWORD  dwInterleaveEvery = %d\n", opts.dwInterleaveEvery);
@@ -164,7 +164,7 @@ string dumpAVICOMPRESSOPTIONS(AVICOMPRESSOPTIONS opts)
 BOOL AVI_SetOptions(PAVISTREAM * ps, PAVISTREAM * psCompressed, LPBITMAPINFOHEADER lpbi,
 					const char* _compressor)
 {
-	 
+
 	AVICOMPRESSOPTIONS opts;
 	AVICOMPRESSOPTIONS FAR * aopts[1] = {&opts};
 
@@ -181,10 +181,10 @@ BOOL AVI_SetOptions(PAVISTREAM * ps, PAVISTREAM * psCompressed, LPBITMAPINFOHEAD
 		//opts.dwQuality
 		//opts.dwBytesPerSecond
 		//opts.dwFlags		= AVICOMPRESSF_KEYFRAMES;
-		//opts.lpFormat 
+		//opts.lpFormat
 		//opts.cbFormat
 		//opts.lpParms
-		//opts.cbParms 
+		//opts.cbParms
 		//opts.dwInterleaveEvery
 
 		/* display the compression options dialog box if specified compressor is unknown */
@@ -197,7 +197,7 @@ BOOL AVI_SetOptions(PAVISTREAM * ps, PAVISTREAM * psCompressed, LPBITMAPINFOHEAD
 
 			//printf("%s", dumpAVICOMPRESSOPTIONS(opts));
 			//MessageBox(NULL, dumpAVICOMPRESSOPTIONS(opts).c_str(), "AVICOMPRESSOPTIONS", MB_OK);
-		}		
+		}
 
 	HRESULT hr = AVIMakeCompressedStream(psCompressed, *ps, &opts, NULL);
 	if (hr != AVIERR_OK) {
@@ -274,7 +274,7 @@ BOOL AVI_AddFrame(PAVISTREAM psCompressed, int time, LPBITMAPINFOHEADER lpbi)
 		MessageBox(NULL, strMsg, "", MB_OK);
 		return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -316,7 +316,7 @@ BOOL AVI_CloseFile(PAVIFILE pfile)
 {
 	if (pfile)
 		AVIFileClose(pfile);
-	
+
 	return TRUE;
 }
 
@@ -345,13 +345,13 @@ BOOL AVI_Exit()
 /* Here are the additional functions we need! */
 
 
-static PAVIFILE pfile = NULL; 
+static PAVIFILE pfile = NULL;
 static PAVISTREAM ps = NULL;
-static PAVISTREAM psCompressed = NULL; 
+static PAVISTREAM psCompressed = NULL;
 static int count = 0;
 
 
-// Initialization... 
+// Initialization...
 bool START_AVI(const char* file_name)
 {
     if(! AVI_Init())
@@ -368,19 +368,19 @@ bool START_AVI(const char* file_name)
 
 	return true;
 }
- 
+
 bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int width, int height, int bits, void* pdata)
 {
 	if(count == 0)
 	{
-		if(! AVI_CreateStream(pfile, &ps, _frameRate, 
-			width*height/bits, 
+		if(! AVI_CreateStream(pfile, &ps, _frameRate,
+			width*height/bits,
 			width,
 			height, _compressor))
 		{
 			//printf("Error - AVI_CreateStream()\n");
 			return false;
-		} 
+		}
 
 		BITMAPINFOHEADER bi;
 		memset(&bi, 0, sizeof(bi));
@@ -412,7 +412,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int widt
 		MessageBox(NULL, strMsg, "", MB_OK);
 		return FALSE;
 	}
-	
+
 	count++;
 	return true;
 }
@@ -424,16 +424,16 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRa
 	LPBITMAPINFOHEADER lpbi;
 	if(count == 0)
 	{
-		lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib); 
-		if(! AVI_CreateStream(pfile, &ps, _frameRate, 
-			(unsigned long) lpbi->biSizeImage, 
-			(int) lpbi->biWidth, 
+		lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib);
+		if(! AVI_CreateStream(pfile, &ps, _frameRate,
+			(unsigned long) lpbi->biSizeImage,
+			(int) lpbi->biWidth,
 			(int) lpbi->biHeight, _compressor))
 		{
 			//printf("Error - AVI_CreateStream()\n");
 			GlobalUnlock(lpbi);
 			return false;
-		} 
+		}
 
 		if(! AVI_SetOptions(&ps, &psCompressed, lpbi, _compressor))
 		{
@@ -445,7 +445,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRa
 		GlobalUnlock(lpbi);
 	}
 
-	lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib); 
+	lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib);
 	if(! AVI_AddFrame(psCompressed, count * 1, lpbi))
 	{
 		//printf("Error - AVI_AddFrame()\n");
@@ -453,12 +453,12 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRa
 		return false;
 	}
 
-	GlobalUnlock(lpbi); 
+	GlobalUnlock(lpbi);
 	count++;
 	return true;
 }
 
-// The end... 
+// The end...
 bool STOP_AVI()
 {
      if(! AVI_CloseStream(ps, psCompressed, NULL))
@@ -472,7 +472,7 @@ bool STOP_AVI()
 		//printf("Error - AVI_CloseFile()\n");
 		return false;
 	 }
-	 
+
      if(! AVI_Exit())
 	 {
 		//printf("Error - AVI_Exit()\n");
@@ -480,5 +480,5 @@ bool STOP_AVI()
 	 }
 
 	 return true;
-} 
+}
 

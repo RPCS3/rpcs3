@@ -28,7 +28,7 @@
 #include "GS.h"
 #include "Config.h"
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...)
 {
 	va_list list;
 	char msg[512];
@@ -41,12 +41,12 @@ void SysMessage(char *fmt, ...)
 	cfgSysMessage(msg);
 }
 
-void GSconfigure() 
+void GSconfigure()
 {
 	CFGconfigure();
 }
 
-void GSabout() 
+void GSabout()
 {
 	CFGabout();
 }

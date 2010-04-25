@@ -43,7 +43,7 @@ void CDVDFS_init(){
 #endif
 
 	//CdInit(0);	already called by plugin loading system ;)
-	
+
 	cdReadMode.trycount = 0;
 	cdReadMode.spindlctrl = CdSpinStm;
 	cdReadMode.datapattern = CdSecS2048;	//isofs driver only needs

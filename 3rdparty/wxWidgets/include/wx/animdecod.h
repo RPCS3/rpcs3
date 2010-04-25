@@ -61,11 +61,11 @@ enum wxAnimationDisposal
     // Do not dispose. The graphic is to be left in place.
     wxANIM_DONOTREMOVE = 0,
 
-    // Restore to background color. The area used by the graphic must be 
+    // Restore to background color. The area used by the graphic must be
     // restored to the background color.
     wxANIM_TOBACKGROUND = 1,
 
-    // Restore to previous. The decoder is required to restore the area 
+    // Restore to previous. The decoder is required to restore the area
     // overwritten by the graphic with what was there prior to rendering the graphic.
     wxANIM_TOPREVIOUS = 2
 };

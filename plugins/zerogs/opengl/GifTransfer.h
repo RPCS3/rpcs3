@@ -15,8 +15,8 @@
  *	along with this program; if not, write to the Free Software
  *	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
  */
- 
- 
+
+
 #include "GS.h"
 #include "Mem.h"
 #include "Regs.h"
@@ -26,6 +26,6 @@ void GIFtag(pathInfo *path, u32 *data);
 void _GSgifPacket(pathInfo *path, u32 *pMem);
 void _GSgifRegList(pathInfo *path, u32 *pMem);
 void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size);
- 
+
 extern GIFRegHandler g_GIFPackedRegHandlers[];
 extern GIFRegHandler g_GIFRegHandlers[];

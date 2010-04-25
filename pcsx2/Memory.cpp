@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -18,7 +18,7 @@
 RAM
 ---
 0x00100000-0x01ffffff this is the physical address for the ram.its cached there
-0x20100000-0x21ffffff uncached 
+0x20100000-0x21ffffff uncached
 0x30100000-0x31ffffff uncached & accelerated
 0xa0000000-0xa1ffffff MIRROR might...???
 0x80000000-0x81ffffff MIRROR might... ????
@@ -192,7 +192,7 @@ void memMapPhy()
 
 	// "Secret" IOP HW mappings - Used by EE Bios Kernel during boot and generally
 	// left untouched after that, as per EE/IOP thread safety rules.
-	
+
 	vtlb_MapHandler(iopHw_by_page_01, 0x1f801000, 0x01000);
 	vtlb_MapHandler(iopHw_by_page_03, 0x1f803000, 0x01000);
 	vtlb_MapHandler(iopHw_by_page_08, 0x1f808000, 0x01000);
@@ -649,7 +649,7 @@ void memAlloc()
 	psER = curpos; curpos += Ps2MemSize::ERom;
 	psH = curpos; curpos += Ps2MemSize::Hardware;
 	psS = curpos; //curpos += Ps2MemSize::Scratch;
-	
+
 	Source_PageFault.Add( mmap_faultHandler );
 }
 

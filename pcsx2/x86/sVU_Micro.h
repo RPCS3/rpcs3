@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -273,7 +273,7 @@ void recVUMI_ESUM(VURegs *vuRegs, int info);
 void recVUMI_ERCPR(VURegs *vuRegs, int info);
 void recVUMI_ESQRT(VURegs *vuRegs, int info);
 void recVUMI_ERSQRT(VURegs *vuRegs, int info);
-void recVUMI_ESIN(VURegs *vuRegs, int info); 
+void recVUMI_ESIN(VURegs *vuRegs, int info);
 void recVUMI_EATAN(VURegs *vuRegs, int info);
 void recVUMI_EEXP(VURegs *vuRegs, int info);
 void recVUMI_XGKICK(VURegs *vuRegs, int info);

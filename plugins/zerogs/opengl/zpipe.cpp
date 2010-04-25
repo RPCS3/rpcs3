@@ -34,10 +34,10 @@ int def(char *src, char *dst, int bytes_to_compress, int *bytes_after_compressed
 	strm.next_in = (Bytef *)src ;
 	strm.next_out = (Bytef *)dst ;
 
-	ret = deflate(&strm, Z_FINISH) ; 
+	ret = deflate(&strm, Z_FINISH) ;
 	have = bytes_to_compress - strm.avail_out ;
 	*bytes_after_compressed = have ;
-	
+
 	assert(ret == Z_STREAM_END);		/* stream will be complete */
 
 	/* clean up and return */
@@ -45,7 +45,7 @@ int def(char *src, char *dst, int bytes_to_compress, int *bytes_after_compressed
 	return Z_OK;
 }
 
-int inf(char *src, char *dst, int bytes_to_decompress, int maximum_after_decompress, int* outbytes) 
+int inf(char *src, char *dst, int bytes_to_decompress, int maximum_after_decompress, int* outbytes)
 {
 	z_stream strm;
 
@@ -78,7 +78,7 @@ int inf(char *src, char *dst, int bytes_to_decompress, int maximum_after_decompr
 	  (void)inflateEnd(&strm);
 	  return ret;
 	}
-	
+
 	assert(strm.avail_in == 0);	 /* all input will be used */
 
 	if( outbytes != NULL )

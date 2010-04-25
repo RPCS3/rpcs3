@@ -23,14 +23,14 @@
 #include "zerogs.h"
 #include "ZeroGSShaders/zerogsshaders.h"
 #include "zpipe.h"
-	
+
 // ----------------- Defines
 
-using namespace ZeroGS; 
+using namespace ZeroGS;
 //------------------ Constants
 
-// ----------------- Global Variables 
-namespace ZeroGS { 
+// ----------------- Global Variables
+namespace ZeroGS {
 	FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
 	FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 }
@@ -46,14 +46,14 @@ void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
 {
 	ERROR_LOG("%s->%s: %s\n", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
 	const char* listing = cgGetLastListing(g_cgcontext);
-	if (listing != NULL) 
+	if (listing != NULL)
 		DEBUG_LOG("	last listing: %s\n", listing);
 }
 
 // This is a helper of cgGLSetParameter4fv, made for debugging purposes.
 // The name could be any string. We must use it on compilation time, because the erronious handler does not
 // return it.
-void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name) 
+void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name)
 {
 	ShaderHandleName = name;
 	cgGLSetParameter4fv(param, v);
@@ -113,14 +113,14 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		cgConnectParameter(g_vparamPosXY[context], p);
 
 	// Set Z-test, log or no log;
-	if (g_GameSettings&GAME_NOLOGZ) 
+	if (g_GameSettings&GAME_NOLOGZ)
 	{
 		g_vdepth = Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
 		vlogz = Vector( 1.0f, 0.0f, 0.0f, 0.0f);
 	}
-	else 
+	else
 	{
-		g_vdepth = Vector( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);	
+		g_vdepth = Vector( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);
 		vlogz = Vector( 0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
@@ -131,7 +131,7 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		p = cgGetNamedParameter(prog, "g_fZMin"); // Switch to flat-z when needed
 		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )  {
 			//ERROR_LOG ("Use flat-z\n");
-			cgGLSetParameter4fv(p, vlogz);			
+			cgGLSetParameter4fv(p, vlogz);
 		}
 		else
 			ERROR_LOG ("Shader file version is outdated! Only is log-Z possible\n");
@@ -242,7 +242,7 @@ bool ZeroGS::LoadExtraEffects()
 //			pvs[2*i+8] = pvs[2*i+8+1] = NULL;
 //		}
 	}
-	
+
 	LOAD_VS(SH_BITBLTVS, pvsBitBlt.prog);
 	pvsBitBlt.sBitBltPos = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltPos");
 	pvsBitBlt.sBitBltTex = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltTex");
@@ -269,7 +269,7 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS(SH_BITBLTDEPTHPS, ppsBitBltDepth);
 	LOAD_PS(SH_CRTCTARGPS, ppsCRTCTarg[0]);
 	LOAD_PS(SH_CRTCTARGINTERPS, ppsCRTCTarg[1]);
-	
+
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS(SH_CRTCPS, ppsCRTC[0]);
 	if( !bLoadSuccess ) {
@@ -284,7 +284,7 @@ bool ZeroGS::LoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ERROR_LOG("Failed to create CRTC shaders\n");
-	
+
 	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
 	LOAD_PS(SH_CRTC24INTERPS, ppsCRTC24[1]);
 	LOAD_PS(SH_ZEROPS, ppsOne);
@@ -318,13 +318,13 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
-	
+
 	assert( index < ARRAY_SIZE(ppsTexture) );
 	FRAGMENTSHADER* pf = ppsTexture+index;
-	
+
 	if( pbFailed != NULL ) *pbFailed = false;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
 
 	if( (g_nPixelShaderVer & SHADER_ACCURATE) && mapShaderResources.find(index+NUM_SHADERS*SHADER_ACCURATE) != mapShaderResources.end() )
@@ -357,7 +357,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 
 	return NULL;
 }
-	
+
 #else // not RELEASE_TO_PUBLIC
 
 #define LOAD_VS(name, prog, shaderver) { \
@@ -466,9 +466,9 @@ bool ZeroGS::LoadExtraEffects()
 	}
 
 	LOAD_PS("BitBltDepthPS", ppsBitBltDepth, cgfProf);
-	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf); 
+	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf);
 	LOAD_PS("CRTCTargInterPS", ppsCRTCTarg[1], cgfProf);
-	
+
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS("CRTCPS", ppsCRTC[0], cgfProf);
 	if( !bLoadSuccess ) {
@@ -483,7 +483,7 @@ bool ZeroGS::LoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ERROR_LOG("Failed to create CRTC shaders\n");
-	
+
 	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
 	LOAD_PS("ZeroPS", ppsOne, cgfProf);
 	LOAD_PS("BaseTexturePS", ppsBaseTexture, cgfProf);
@@ -501,7 +501,7 @@ bool ZeroGS::LoadExtraEffects()
 FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
 {
 	int texwrap;
-	
+
 	assert( texfilter < NUM_FILTERS );
 	//assert( g_nPixelShaderVer == SHADER_30 );
 	if( clamp.wms == clamp.wmt ) {
@@ -524,9 +524,9 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 
 	FRAGMENTSHADER* pf = ppsTexture+index;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
-	
+
 	pf->prog = LoadShaderFromType(EFFECT_DIR, EFFECT_NAME, type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
 	if( pf->prog != NULL ) {

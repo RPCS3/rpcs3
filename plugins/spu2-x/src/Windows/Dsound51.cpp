@@ -1,22 +1,22 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Originally based on SPU2ghz v1.9 beta, by David Quintana.
  *
  * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free 
+ * the terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation; either version 2.1 of the the License, or (at your
  * option) any later version.
- * 
- * This library is distributed in the hope that it will be useful, but WITHOUT 
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
  * for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License along
  * with this library; if not, write to the Free Software Foundation, Inc., 59
  * Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 
 #define _WIN32_DCOM
@@ -144,11 +144,11 @@ DSound51_Driver::DSound51_Driver( SndBuffer *sb ) :
 
 	verifyc(dsound->SetCooperativeLevel(GetDesktopWindow(),DSSCL_PRIORITY));
 	IDirectSoundBuffer* buffer_;
-	DSBUFFERDESC desc; 
+	DSBUFFERDESC desc;
 
-	// Set up WAV format structure. 
+	// Set up WAV format structure.
 
-	memset(&wfx, 0, sizeof(WAVEFORMATEX)); 
+	memset(&wfx, 0, sizeof(WAVEFORMATEX));
 	wfx.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
 	wfx.Format.nSamplesPerSec = SampleRate;
 	wfx.Format.nChannels=6;
@@ -162,13 +162,13 @@ DSound51_Driver::DSound51_Driver( SndBuffer *sb ) :
 
 	verifyc(dsound->SetSpeakerConfig(DSSPEAKER_5POINT1));
 
-	// Set up DSBUFFERDESC structure. 
+	// Set up DSBUFFERDESC structure.
 
-	memset(&desc, 0, sizeof(DSBUFFERDESC)); 
-	desc.dwSize = sizeof(DSBUFFERDESC); 
-	desc.dwFlags = DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY;// _CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY; 
-	desc.dwBufferBytes = DSound51::BufferSizeBytes * numBuffers; 
-	desc.lpwfxFormat = &wfx.Format; 
+	memset(&desc, 0, sizeof(DSBUFFERDESC));
+	desc.dwSize = sizeof(DSBUFFERDESC);
+	desc.dwFlags = DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY;// _CTRLPAN | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY;
+	desc.dwBufferBytes = DSound51::BufferSizeBytes * numBuffers;
+	desc.lpwfxFormat = &wfx.Format;
 
 	desc.dwFlags |=DSBCAPS_LOCSOFTWARE;
 	desc.dwFlags|=DSBCAPS_GLOBALFOCUS;
@@ -275,10 +275,10 @@ DWORD DSound51_Driver::WorkerThread()
 			{
 				// DPL2 code here: inputs s[0] and s[1]. outputs t[0] to t[5]
 				dpl2.Convert( t, s[0], s[1] );
-			
+
 				t+=6;
 				s+=2;
-			}				
+			}
 		}
 
 #ifndef PUBLIC
@@ -330,7 +330,7 @@ BOOL CALLBACK DSound51::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lPar
 		case WM_INITDIALOG:
 
 			haveGuid = ! FAILED(GUIDFromString(Config_DSound51.Device,&DevGuid));
-			SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_RESETCONTENT,0,0); 
+			SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_RESETCONTENT,0,0);
 
 			ndevs=0;
 			DirectSoundEnumerate(DSEnumCallback,NULL);
@@ -359,30 +359,30 @@ BOOL CALLBACK DSound51::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lPar
 			INIT_SLIDER(IDC_LR_CENTER_SLIDER,0,512,64,16,8);
 
 			AssignSliderValue( hWnd, IDC_LEFT_GAIN_SLIDER, IDC_LEFT_GAIN_EDIT, Config_DSound51.GainL );
-			AssignSliderValue( hWnd, IDC_RIGHT_GAIN_SLIDER, IDC_RIGHT_GAIN_EDIT, Config_DSound51.GainR ); 
+			AssignSliderValue( hWnd, IDC_RIGHT_GAIN_SLIDER, IDC_RIGHT_GAIN_EDIT, Config_DSound51.GainR );
 			AssignSliderValue( hWnd, IDC_RLEFT_GAIN_SLIDER, IDC_RLEFT_GAIN_EDIT, Config_DSound51.GainSL );
-			AssignSliderValue( hWnd, IDC_RRIGHT_GAIN_SLIDER, IDC_RRIGHT_GAIN_EDIT, Config_DSound51.GainSR ); 
-			AssignSliderValue( hWnd, IDC_CENTER_GAIN_SLIDER, IDC_CENTER_GAIN_EDIT, Config_DSound51.GainC); 
+			AssignSliderValue( hWnd, IDC_RRIGHT_GAIN_SLIDER, IDC_RRIGHT_GAIN_EDIT, Config_DSound51.GainSR );
+			AssignSliderValue( hWnd, IDC_CENTER_GAIN_SLIDER, IDC_CENTER_GAIN_EDIT, Config_DSound51.GainC);
 			AssignSliderValue( hWnd, IDC_LFE_SLIDER, IDC_LFE_EDIT, Config_DSound51.GainLFE);
-			AssignSliderValue( hWnd, IDC_LR_CENTER_SLIDER, IDC_LR_CENTER_EDIT, Config_DSound51.AddCLR ); 				
+			AssignSliderValue( hWnd, IDC_LR_CENTER_SLIDER, IDC_LR_CENTER_EDIT, Config_DSound51.AddCLR );
 
 			char temp[128];
 			INIT_SLIDER( IDC_BUFFERS_SLIDER, 2, MAX_BUFFER_COUNT, 2, 1, 1 );
-			SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_DSound51.NumBuffers); 
+			SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,Config_DSound51.NumBuffers);
 			sprintf_s(temp, 128, "%d (%d ms latency)",Config_DSound51.NumBuffers, 1000 / (96000 / (Config_DSound51.NumBuffers * BufferSize)));
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL2),temp);
 			break;
 
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
 				case IDOK:
 					{
 						int i = (int)SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_GETCURSEL,0,0);
-						
+
 						if(!devices[i].hasGuid)
 						{
 							Config_DSound51.Device[0]=0; // clear device name to ""
@@ -427,8 +427,8 @@ BOOL CALLBACK DSound51::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lPar
 			break;
 
 		case WM_HSCROLL:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			switch(wmId) {
 				//case TB_ENDTRACK:
 				//case TB_THUMBPOSITION:

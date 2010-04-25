@@ -61,7 +61,7 @@ public:
     void SetArtProvider(wxAuiTabArt* provider);
     wxAuiTabArt* GetArtProvider();
     wxAuiNotebook* GetNotebook() const;
-    
+
 #if wxUSE_MENUS
     wxMenu* GetWindowMenu() const { return m_pWindowMenu; }
     void SetWindowMenu(wxMenu* pMenu);
@@ -147,7 +147,7 @@ public:
 
     virtual void SetIcons(const wxIconBundle& icons);
     virtual const wxIconBundle& GetIcons() const;
-    
+
     virtual void SetIcon(const wxIcon& icon);
     virtual const wxIcon& GetIcon() const;
 
@@ -201,7 +201,7 @@ public:
 
     void SetMDIParentFrame(wxAuiMDIParentFrame* parent);
     wxAuiMDIParentFrame* GetMDIParentFrame() const;
-    
+
 protected:
     void Init();
     virtual bool Show(bool show = true);

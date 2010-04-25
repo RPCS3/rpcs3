@@ -2312,7 +2312,7 @@ bool wxZipOutputStream::Close()
     endrec.Write(*m_parent_o_stream, GetConv());
 
     m_lasterror = m_parent_o_stream->GetLastError();
-    
+
     if (!wxFilterOutputStream::Close() || !IsOk())
         return false;
     m_lasterror = wxSTREAM_EOF;

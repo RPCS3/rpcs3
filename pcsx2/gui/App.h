@@ -284,7 +284,7 @@ struct AppImageIds
 		{
 			Paths		= Plugins	=
 			Speedhacks	= Gamefixes	=
-			Video		= Cpu		= 
+			Video		= Cpu		=
 			MemoryCard	= -1;
 		}
 	} Config;
@@ -380,11 +380,11 @@ protected:
 	EventSource<IEventListener_Plugins>		m_evtsrc_CorePluginStatus;
 	EventSource<IEventListener_CoreThread>	m_evtsrc_CoreThreadStatus;
 	EventSource<IEventListener_AppStatus>	m_evtsrc_AppStatus;
-	
+
 public:
 	void AddListener( IEventListener_Plugins& listener )
 	{
-		m_evtsrc_CorePluginStatus.Add( listener );	
+		m_evtsrc_CorePluginStatus.Add( listener );
 	}
 
 	void AddListener( IEventListener_CoreThread& listener )
@@ -399,7 +399,7 @@ public:
 
 	void RemoveListener( IEventListener_Plugins& listener )
 	{
-		m_evtsrc_CorePluginStatus.Remove( listener );	
+		m_evtsrc_CorePluginStatus.Remove( listener );
 	}
 
 	void RemoveListener( IEventListener_CoreThread& listener )
@@ -414,7 +414,7 @@ public:
 
 	void AddListener( IEventListener_Plugins* listener )
 	{
-		m_evtsrc_CorePluginStatus.Add( listener );	
+		m_evtsrc_CorePluginStatus.Add( listener );
 	}
 
 	void AddListener( IEventListener_CoreThread* listener )
@@ -429,7 +429,7 @@ public:
 
 	void RemoveListener( IEventListener_Plugins* listener )
 	{
-		m_evtsrc_CorePluginStatus.Remove( listener );	
+		m_evtsrc_CorePluginStatus.Remove( listener );
 	}
 
 	void RemoveListener( IEventListener_CoreThread* listener )
@@ -441,7 +441,7 @@ public:
 	{
 		m_evtsrc_AppStatus.Remove( listener );
 	}
-	
+
 	void DispatchEvent( PluginEventType evt )
 	{
 		if( !AffinityAssert_AllowFromMain() ) return;
@@ -461,7 +461,7 @@ public:
 	}
 
 	// ----------------------------------------------------------------------------
-	
+
 public:
 	FramerateManager				FpsManager;
 	CommandDictionary				GlobalCommands;
@@ -587,7 +587,7 @@ protected:
 	void OpenWizardConsole();
 	void PadKeyDispatch( const keyEvent& ev );
 	void CancelLoadingPlugins();
-	
+
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
@@ -650,7 +650,7 @@ protected:
 	virtual void DoCpuReset();
 
 	virtual void DoThreadDeadlocked();
-	
+
 	virtual void CpuInitializeMess();
 };
 

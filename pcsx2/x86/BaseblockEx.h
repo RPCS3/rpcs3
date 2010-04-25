@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -68,7 +68,7 @@ public:
 	{
 		blocks.reserve(0x4000);
 	}
-	
+
 	void SetJITCompile( void (*recompiler_)() )
 	{
 		recompiler = (uptr)recompiler_;
@@ -116,7 +116,7 @@ public:
 			// static jumps get left behind to this block.  Note: Do not clear more than the
 			// first byte, since this code is called during exception handlers and event handlers
 			// both of which expect to be able to return to the recompiled code.
-			
+
 			BASEBLOCKEX effu( blocks[idx] );
 			memset( (void*)effu.fnptr, 0xcc, 1 );
 		}

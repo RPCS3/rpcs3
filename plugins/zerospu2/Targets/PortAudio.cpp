@@ -15,9 +15,9 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  // PortAudio support implemented by Zedr0n.
- 
+
 #include "PortAudio.h"
 #include "Linux.h"
 
@@ -35,7 +35,7 @@ int paSetupSound()
 	}
 	else
 		ERROR_LOG("ZeroSPU2: Initialized portaudio... \n");
-	
+
 	/* Open an audio I/O stream. */
 	err = Pa_OpenDefaultStream( &stream,
 															0,          /* no input channels */
@@ -57,7 +57,7 @@ int paSetupSound()
 		ERROR_LOG("ZeroSPU2: Error opening sound stream...\n");
 		return -1;
 	}
-	else ERROR_LOG("ZeroSPU2: Created sound stream successfully...\n");	
+	else ERROR_LOG("ZeroSPU2: Created sound stream successfully...\n");
 
 	MaxBuffer = 0;
 
@@ -67,13 +67,13 @@ int paSetupSound()
 		ERROR_LOG("ZeroSPU2: Error starting sound stream...\n");
 		return -1;
 	}
-	else ERROR_LOG("ZeroSPU2: Started sound stream successfully...\n");	
+	else ERROR_LOG("ZeroSPU2: Started sound stream successfully...\n");
 
 	return 0;
 }
 
 void paRemoveSound()
-{	
+{
   PaError  err = Pa_StopStream( stream );
 	if( err != paNoError )
 		 ERROR_LOG("ZeroSPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
@@ -89,9 +89,9 @@ void paRemoveSound()
 
 int paSoundGetBytesBuffered()
 {
-	unsigned long l = Pa_GetStreamWriteAvailable(stream); 
-	if(MaxBuffer == 0) MaxBuffer = l; 
-	return MaxBuffer - l;	
+	unsigned long l = Pa_GetStreamWriteAvailable(stream);
+	if(MaxBuffer == 0) MaxBuffer = l;
+	return MaxBuffer - l;
 }
 
 void paSoundFeedVoiceData(unsigned char* pSound, long lBytes)

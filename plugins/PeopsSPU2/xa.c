@@ -60,7 +60,7 @@ static int gauss_window[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 #define gvalr(x) gauss_window[4+((gauss_ptr+x)&3)]
 
 ////////////////////////////////////////////////////////////////////////
-// MIX XA 
+// MIX XA
 ////////////////////////////////////////////////////////////////////////
 
 INLINE void MixXA(void)
@@ -87,7 +87,7 @@ INLINE void MixXA(void)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// FEED XA 
+// FEED XA
 ////////////////////////////////////////////////////////////////////////
 
 INLINE void FeedXA(xa_decode_t *xap)
@@ -122,11 +122,11 @@ INLINE void FeedXA(xa_decode_t *xap)
    dwFPS+=dw-dwLT;iFPSCnt++;
 
    dwLT=dw;
-                                       
+
    if(iFPSCnt>=10)
     {
      if(!dwFPS) dwFPS=1;
-     dw1=1000000/dwFPS; 
+     dw1=1000000/dwFPS;
      if(dw1>=(dwL1-100) && dw1<=(dwL1+100)) dw1=dwL1;
      else dwL1=dw1;
      dw2=(xap->freq*100/xap->nsamples);
@@ -159,7 +159,7 @@ INLINE void FeedXA(xa_decode_t *xap)
      long l1,l2;short s;
      for(i=0;i<iSize;i++)
       {
-       if(iUseInterpolation==2) 
+       if(iUseInterpolation==2)
         {
          while(spos>=0x10000L)
           {
@@ -205,7 +205,7 @@ INLINE void FeedXA(xa_decode_t *xap)
        *XAFeed++=l;
 
        if(XAFeed==XAEnd) XAFeed=XAStart;
-       if(XAFeed==XAPlay) 
+       if(XAFeed==XAPlay)
         {
          if(XAPlay!=XAStart) XAFeed=XAPlay-1;
          break;
@@ -218,7 +218,7 @@ INLINE void FeedXA(xa_decode_t *xap)
     {
      for(i=0;i<iSize;i++)
       {
-       if(iUseInterpolation==2) 
+       if(iUseInterpolation==2)
         {
          while(spos>=0x10000L)
           {
@@ -252,7 +252,7 @@ INLINE void FeedXA(xa_decode_t *xap)
        *XAFeed++=l;
 
        if(XAFeed==XAEnd) XAFeed=XAStart;
-       if(XAFeed==XAPlay) 
+       if(XAFeed==XAPlay)
         {
          if(XAPlay!=XAStart) XAFeed=XAPlay-1;
          break;
@@ -272,7 +272,7 @@ INLINE void FeedXA(xa_decode_t *xap)
      long l1;
      for(i=0;i<iSize;i++)
       {
-       if(iUseInterpolation==2) 
+       if(iUseInterpolation==2)
         {
          while(spos>=0x10000L)
           {
@@ -305,7 +305,7 @@ INLINE void FeedXA(xa_decode_t *xap)
        *XAFeed++=l;
 
        if(XAFeed==XAEnd) XAFeed=XAStart;
-       if(XAFeed==XAPlay) 
+       if(XAFeed==XAPlay)
         {
          if(XAPlay!=XAStart) XAFeed=XAPlay-1;
          break;
@@ -318,7 +318,7 @@ INLINE void FeedXA(xa_decode_t *xap)
     {
      for(i=0;i<iSize;i++)
       {
-       if(iUseInterpolation==2) 
+       if(iUseInterpolation==2)
         {
          while(spos>=0x10000L)
           {
@@ -347,7 +347,7 @@ INLINE void FeedXA(xa_decode_t *xap)
        *XAFeed++=(l|(l<<16));
 
        if(XAFeed==XAEnd) XAFeed=XAStart;
-       if(XAFeed==XAPlay) 
+       if(XAFeed==XAPlay)
         {
          if(XAPlay!=XAStart) XAFeed=XAPlay-1;
          break;

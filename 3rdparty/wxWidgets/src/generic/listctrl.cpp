@@ -622,7 +622,7 @@ public:
     void OnPaint( wxPaintEvent &event );
 
     void OnChildFocus(wxChildFocusEvent& event);
-    
+
     void DrawImage( int index, wxDC *dc, int x, int y );
     void GetImageSize( int index, int &width, int &height ) const;
     int GetTextLength( const wxString &s ) const;

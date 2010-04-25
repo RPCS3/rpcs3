@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "Global.h"
 #include "Dialogs.h"
 
@@ -29,13 +29,13 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 		{
 			ConvertStaticToHyperlink( hDlg, IDC_LINK_GOOGLECODE );
 			ConvertStaticToHyperlink( hDlg, IDC_LINK_WEBSITE );
-			
+
 			wchar_t outstr[256];
 			if( IsDevBuild )
 				swprintf_s( outstr, L"Build r%d -- Compiled on " _T(__DATE__), SVN_REV );
 			else
 				swprintf_s( outstr, L"Release v%d.%d -- Compiled on "  _T(__DATE__),
-					VersionInfo::Release, VersionInfo::Revision ); 
+					VersionInfo::Release, VersionInfo::Revision );
 
 			SetWindowText( GetDlgItem(hDlg, IDC_LABEL_VERSION_INFO), outstr );
 			ShowWindow( hDlg, true );
@@ -60,7 +60,7 @@ static LRESULT WINAPI AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
 				return TRUE;
 			}
 		break;
-		
+
 		default:
 			return FALSE;
 	}

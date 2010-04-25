@@ -153,7 +153,7 @@ class wxFileSystemInternetModule : public wxModule
             return true;
         }
 
-        virtual void OnExit() 
+        virtual void OnExit()
         {
             delete wxFileSystem::RemoveHandler(m_handler);
         }

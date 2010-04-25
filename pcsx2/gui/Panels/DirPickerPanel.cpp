@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -63,12 +63,12 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 		createPathDlg += createPathDlg.Heading( pxE( ".Error:Explore:CreatePath",
 			L"The specified path/directory does not exist.  Would you like to create it?" )
 		);
-		
+
 		wxWindowID result = pxIssueConfirmation( createPathDlg,
 			MsgButtons().Custom(_("Create")).Cancel(),
 			L"DirPicker:CreateOnExplore"
 		);
-		
+
 		if( result == wxID_CANCEL ) return;
 		wxMkdir( path );
 	}
@@ -159,7 +159,7 @@ void Panels::DirPickerPanel::Init( FoldersEnum_t folderid, const wxString& dialo
 		*this += s_lower		| pxExpand.Border(wxLEFT | wxRIGHT, StdPadding);
 	}
 
-	// wx warns when paths don't exist, but this is typically normal when the wizard 
+	// wx warns when paths don't exist, but this is typically normal when the wizard
 	// creates its child controls.  So let's ignore them.
 	wxDoNotLogInThisScope please;
 	AppStatusEvent_OnSettingsApplied();	// forces default settings based on g_Conf

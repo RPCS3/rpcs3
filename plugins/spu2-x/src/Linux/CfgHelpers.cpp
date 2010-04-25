@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,38 +14,38 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
  #include "Dialogs.h"
  #include <wx/fileconf.h>
- 
+
  wxConfigBase *oldConfig;
  wxString path;
- 
+
  wxFileConfig *setIni(const wchar_t* Section)
- { 
+ {
  	wxConfig *tempConfig;
- 	
+
 	oldConfig = wxConfigBase::Get(false);
-	
+
 	tempConfig = new wxFileConfig(L"", L"", path, L"", wxCONFIG_USE_LOCAL_FILE);
 	wxConfigBase::Set(tempConfig);
 	tempConfig->SetPath(L"/");
 	tempConfig->SetPath(Section);
 	return tempConfig;
  }
- 
+
  void writeIni(wxFileConfig *tempConfig)
  {
  	tempConfig->Flush();
- 	
+
 	if (oldConfig != NULL) wxConfigBase::Set(oldConfig);
 	delete tempConfig;
  }
- 
+
 void CfgSetSettingsDir(const char* dir)
 {
 	path = wxString::FromAscii(dir) + L"spu2-x.ini";
-	
+
 }
 
 void CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value)
@@ -72,22 +72,22 @@ void CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wstring& Dat
 bool CfgReadBool(const wchar_t *Section,const wchar_t* Name, bool Default)
 {
 	bool ret;
-	
-	wxConfig *config = setIni(Section);	
+
+	wxConfig *config = setIni(Section);
 	config->Read(Name, &ret, Default);
 	writeIni(config);
-	
+
 	return ret;
 }
 
 int CfgReadInt(const wchar_t* Section, const wchar_t* Name,int Default)
 {
 	int ret;
-	
-	wxConfig *config = setIni(Section);		
+
+	wxConfig *config = setIni(Section);
 	config->Read(Name, &ret, Default);
 	writeIni(config);
-	
+
 	return ret;
 }
 

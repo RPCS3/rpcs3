@@ -36,7 +36,7 @@ bool MsgButtons::Allows( wxWindowID id ) const
 
 		case wxID_ABORT:	return HasAbort();
 		case wxID_RETRY:	return HasRetry();
-		
+
 		// [TODO] : maybe add in an Ignore All?
 		case wxID_IGNORE:	return HasIgnore();
 	}
@@ -61,7 +61,7 @@ static wxString ResultToString( int result )
 			// [TODO] : maybe add in an Ignore All?
 		case wxID_IGNORE:	return L"ignore";
 	}
-	
+
 	return wxEmptyString;
 }
 
@@ -74,7 +74,7 @@ static wxWindowID ParseThatResult( const wxString& src, const MsgButtons& validT
 		wxID_OK,		wxID_CANCEL,	wxID_APPLY,
 		wxID_YES,		wxID_NO,
 		wxID_YESTOALL,	wxID_NOTOALL,
-		
+
 		wxID_ABORT,		wxID_RETRY,		wxID_IGNORE,
 	};
 
@@ -83,7 +83,7 @@ static wxWindowID ParseThatResult( const wxString& src, const MsgButtons& validT
 		if( (validTypes.Allows( retvals[i] )) && (src == ResultToString(retvals[i])) )
 			return retvals[i];
 	}
-	
+
 	return wxID_ANY;
 }
 
@@ -110,11 +110,11 @@ void MsgButtons::SetBestFocus( wxWindow& dialog ) const
 	if( HasNo()			&& pxTrySetFocus( dialog, wxID_NO ) ) return;
 	if( HasClose()		&& pxTrySetFocus( dialog, wxID_CLOSE ) ) return;
 	if( HasRetry()		&& pxTrySetFocus( dialog, wxID_RETRY ) ) return;
-	
+
 	// Other confirmational types of buttons must be explicitly focused by the user or
 	// by an implementing dialog.  We won't do it here implicitly because accidental
 	// "on focus" typed keys could invoke really unwanted actions.
-	
+
 	// (typically close/ok/retry/etc. aren't so bad that accidental clicking does terrible things)
 }
 
@@ -137,12 +137,12 @@ wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButton
 {
 	wxConfigBase* cfg = GetAppConfig();
 
-	if( cfg != NULL ) 
+	if( cfg != NULL )
 	{
 		cfg->SetPath( L"/PopupDisablers" );
 		bool recdef = cfg->IsRecordingDefaults();
 		cfg->SetRecordDefaults( false );
-		
+
 		wxString result = cfg->Read( disablerKey, L"enabled" );
 
 		cfg->SetRecordDefaults( recdef );
@@ -152,7 +152,7 @@ wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButton
 		wxArrayString split;
 		SplitString( split, result, L"," );
 
-		// if only one param (no comma!?) then assume the entry is invalid and force a 
+		// if only one param (no comma!?) then assume the entry is invalid and force a
 		// re-display of the dialog.
 
 		if( split.Count() > 1 )

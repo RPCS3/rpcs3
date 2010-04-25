@@ -18,7 +18,7 @@
 
 // These enums & structures are copied from GSdx, which got them from sp2dev 0.4.0.
 
-// In fact, after looking at both ZeroGS and GSdx, and seeing how similar this section is on both, 
+// In fact, after looking at both ZeroGS and GSdx, and seeing how similar this section is on both,
 // I'm just going to blatantly copy most of GS.h here and localize.
 
 // And if this is kept close enough to GSdx's code, if should make porting GSdx to Linux a bit easier...
@@ -33,7 +33,7 @@
 #ifdef __cplusplus
 extern "C"
 {
-#endif 
+#endif
 #define GSdefs
 #include "PS2Edefs.h"
 #include "PS2Etypes.h"
@@ -69,12 +69,12 @@ enum GS_PRIM_CLASS
 
 enum GS_PSM
 {
-	PSM_PSMCT32		= 0,  // 0000-0000 
-	PSM_PSMCT24		= 1,  // 0000-0001 
-	PSM_PSMCT16		= 2,  // 0000-0010 
-	PSM_PSMCT16S	= 10, // 0000-1010 
-	PSM_PSMT8		= 19, // 0001-0011 
-	PSM_PSMT4		= 20, // 0001-0100 
+	PSM_PSMCT32		= 0,  // 0000-0000
+	PSM_PSMCT24		= 1,  // 0000-0001
+	PSM_PSMCT16		= 2,  // 0000-0010
+	PSM_PSMCT16S	= 10, // 0000-1010
+	PSM_PSMT8		= 19, // 0001-0011
+	PSM_PSMT4		= 20, // 0001-0100
 	PSM_PSMT8H		= 27, // 0001-1011
 	PSM_PSMT4HL		= 36, // 0010-0100
 	PSM_PSMT4HH		= 44, // 0010-1100
@@ -145,7 +145,7 @@ union name			\
 	bool operator != (const union name& r) const {return !((GSVector4i)r).eq(*this);} \
 	operator GSVector4i() const {return GSVector4i::loadl(this);}*/ \
 	struct {		\
-	
+
 #define REG128(name)\
 union name			\
 {					\
@@ -404,8 +404,8 @@ REG64_SET(GSReg)
 	GSRegIMR		IMR;
 	GSRegPMODE		PMODE;
 	GSRegSIGLBLID	SIGLBLID;
-	GSRegSMODE1		SMODE1; 
-	GSRegSMODE2		SMODE2; 
+	GSRegSMODE1		SMODE1;
+	GSRegSMODE2		SMODE2;
 REG_SET_END
 
 //
@@ -694,7 +694,7 @@ REG64_(GIFReg, TEST)
 	u32 _PAD2:32;
 REG_END2
 	__forceinline bool DoFirstPass() {return !ATE || ATST != ATST_NEVER;} // not all pixels fail automatically
-	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z  
+	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z
 	__forceinline bool NoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL == AFAIL_KEEP;} // pixels may fail, no output
 REG_END2
 

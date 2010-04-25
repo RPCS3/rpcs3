@@ -15,26 +15,26 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "GS.h"
 #include "zerogs.h"
 
 #ifdef GL_X11_WINDOW
 
 bool GLWindow::CreateWindow(void *pDisplay)
-{       
+{
     glDisplay = XOpenDisplay(0);
         glScreen = DefaultScreen(glDisplay);
 
         if ( pDisplay == NULL ) return false;
-        
+
     *(Display**)pDisplay = glDisplay;
-        
+
         return true;
 }
 
 bool GLWindow::ReleaseWindow()
-{       
+{
 	if (context)
 	{
 		if (!glXMakeCurrent(glDisplay, None, NULL))
@@ -47,9 +47,9 @@ bool GLWindow::ReleaseWindow()
 	}
 
 	/* switch back to original desktop resolution if we were in fullscreen */
-	if ( glDisplay != NULL ) 
+	if ( glDisplay != NULL )
 	{
-		if (fullScreen) 
+		if (fullScreen)
 		{
 			XF86VidModeSwitchToMode(glDisplay, glScreen, &deskMode);
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
@@ -59,8 +59,8 @@ bool GLWindow::ReleaseWindow()
 }
 
 void GLWindow::CloseWindow()
-{       
-    if ( glDisplay != NULL ) 
+{
+    if ( glDisplay != NULL )
     {
 		XCloseDisplay(glDisplay);
 		glDisplay = NULL;
@@ -78,40 +78,40 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	Atom wmDelete;
 	Window winDummy;
 	unsigned int borderDummy;
-	
+
 	// attributes for a single buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
-	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8, 
-						 GLX_GREEN_SIZE, 8, 
-						 GLX_BLUE_SIZE, 8, 
+	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8,
+						 GLX_GREEN_SIZE, 8,
+						 GLX_BLUE_SIZE, 8,
 						 GLX_DEPTH_SIZE, 24,
 						 None};
 
-	// attributes for a double buffered visual in RGBA format with at least 
+	// attributes for a double buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
-	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER, 
-						  GLX_RED_SIZE, 8, 
-						  GLX_GREEN_SIZE, 8, 
-						  GLX_BLUE_SIZE, 8, 
+	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+						  GLX_RED_SIZE, 8,
+						  GLX_GREEN_SIZE, 8,
+						  GLX_BLUE_SIZE, 8,
 						  GLX_DEPTH_SIZE, 24,
 						  None };
 
 	GLWin.fullScreen = !!(conf.options & GSOPTION_FULLSCREEN);
-	
+
 	/* get an appropriate visual */
 	vi = glXChooseVisual(glDisplay, glScreen, attrListDbl);
-	if (vi == NULL) 
+	if (vi == NULL)
 	{
 		vi = glXChooseVisual(glDisplay, glScreen, attrListSgl);
 		doubleBuffered = false;
 		ERROR_LOG("Only Singlebuffered Visual!\n");
 	}
-	else 
+	else
 	{
 		doubleBuffered = true;
 		ERROR_LOG("Got Doublebuffered Visual!\n");
 	}
-	if (vi == NULL) 
+	if (vi == NULL)
 	{
 		ERROR_LOG("Failed to get buffered Visual!\n");
 		return false;
@@ -119,10 +119,10 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
 	ERROR_LOG("glX-Version %d.%d\n", glxMajorVersion, glxMinorVersion);
-	
+
 	/* create a GLX context */
 	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
-	
+
 	/* create a color map */
 	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
 						   vi->visual, AllocNone);
@@ -132,7 +132,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	// get a connection
 	XF86VidModeQueryVersion(glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
 
-	if (fullScreen) 
+	if (fullScreen)
 	{
 		XF86VidModeModeInfo **modes = NULL;
 		int modeNum = 0;
@@ -142,20 +142,20 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		bestMode = 0;
 		ERROR_LOG("XF86VidModeExtension-Version %d.%d\n", vidModeMajorVersion, vidModeMinorVersion);
 		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
-		
-		if( modeNum > 0 && modes != NULL ) 
+
+		if( modeNum > 0 && modes != NULL )
 		{
 			/* save desktop-resolution before switching modes */
 			deskMode = *modes[0];
-			
+
 			/* look for mode with requested resolution */
-			for (i = 0; i < modeNum; i++) 
+			for (i = 0; i < modeNum; i++)
 			{
 				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height))
 				{
 					bestMode = i;
 				}
-			}	
+			}
 
 			XF86VidModeSwitchToMode(glDisplay, glScreen, modes[bestMode]);
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
@@ -163,7 +163,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			dpyHeight = modes[bestMode]->vdisplay;
 			ERROR_LOG("Resolution %dx%d\n", dpyWidth, dpyHeight);
 			XFree(modes);
-			
+
 			/* create a fullscreen window */
 			attr.override_redirect = True;
 			attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
@@ -176,7 +176,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 			XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
 		}
-		else 
+		else
 		{
 			ERROR_LOG("Failed to start fullscreen. If you received the \n"
 					  "\"XFree86-VidModeExtension\" extension is missing, add\n"
@@ -185,34 +185,34 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			fullScreen = false;
 		}
 	}
-	
-	if (!fullScreen) 
+
+	if (!fullScreen)
 	{
 		// create a window in window mode
 		attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 		glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
 								  0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
 								  CWBorderPixel | CWColormap | CWEventMask, &attr);
-								  
+
 		// only set window title and handle wm_delete_events if in windowed mode
 		wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
-		
+
 		XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
 		XSetStandardProperties(glDisplay, glWindow, "ZZOgl-PG", "ZZOgl-PG", None, NULL, 0, NULL);
 		XMapRaised(glDisplay, glWindow);
-	}	   
+	}
 
 	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
 	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
 	ERROR_LOG("Depth %d\n", depth);
-	if (glXIsDirect(glDisplay, context)) 
+	if (glXIsDirect(glDisplay, context))
 		ERROR_LOG("you have Direct Rendering!\n");
 	else
 		ERROR_LOG("no Direct Rendering possible!\n");
 
 	// better for pad plugin key input (thc)
-	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask | 
+	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask |
 				 ButtonPressMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask |
 				 FocusChangeMask );
 
@@ -223,7 +223,7 @@ void GLWindow::SwapGLBuffers()
 {
     glXSwapBuffers(glDisplay, glWindow);
 }
-                
+
 void GLWindow::SetTitle(char *strtitle)
 {
 	XTextProperty prop;
@@ -237,8 +237,8 @@ void GLWindow::SetTitle(char *strtitle)
 void GLWindow::ResizeCheck()
 {
         XEvent event;
-        
-        while(XCheckTypedEvent(glDisplay, ConfigureNotify, &event)) 
+
+        while(XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
         {
                 if ((event.xconfigure.width != width) || (event.xconfigure.height != height)) {
                         ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);

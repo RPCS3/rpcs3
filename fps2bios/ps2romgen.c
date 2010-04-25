@@ -39,7 +39,7 @@ void writefile(FILE *f, char *name, int offset, int size){
 		size-=10000;
 	}
 
-	fclose(fi);	
+	fclose(fi);
 }
 
 int main(int argc, char* argv[]){

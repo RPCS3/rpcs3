@@ -63,7 +63,7 @@ bool wxPalette::FreeResource(bool WXUNUSED(force))
     {
         DeleteObject((HPALETTE)M_PALETTEDATA->m_hPalette);
     }
-    
+
     return true;
 }
 
@@ -73,7 +73,7 @@ int wxPalette::GetColoursCount() const
     {
         return ::GetPaletteEntries((HPALETTE) M_PALETTEDATA->m_hPalette, 0, 0, NULL );
     }
-    
+
     return 0;
 }
 

@@ -18,7 +18,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "onepad.h"
 #include "controller.h"
 
@@ -37,7 +37,7 @@ __forceinline int get_key(int pad, int index)
 __forceinline KeyType type_of_key(int pad, int index)
  {
 	 int key = conf.keys[pad][index];
-	 
+
 	if (key < 0x10000) return PAD_KEYBOARD;
 	else if (key >= 0x10000 && key < 0x20000) return PAD_JOYBUTTONS;
 	else if (key >= 0x20000 && key < 0x30000) return PAD_JOYSTICK;
@@ -45,12 +45,12 @@ __forceinline KeyType type_of_key(int pad, int index)
 	else if (key >= 0x40000 && key < 0x50000) return PAD_HAT;
 	else return PAD_NULL;
  }
- 
+
   __forceinline int pad_to_key(int pad, int index)
  {
 	return ((conf.keys[pad][index]) & 0xffff);
 }
- 
+
 __forceinline int key_to_joystick_id(int pad, int index)
 {
 	return (((conf.keys[pad][index]) & 0xf000) >> 12);

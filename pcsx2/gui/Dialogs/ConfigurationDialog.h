@@ -73,7 +73,7 @@ namespace Dialogs
 	class SysConfigDialog : public BaseConfigurationDialog
 	{
 	protected:
-	
+
 	public:
 		virtual ~SysConfigDialog() throw() {}
 		SysConfigDialog(wxWindow* parent=NULL);
@@ -116,7 +116,7 @@ namespace Dialogs
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnDoubleClicked( wxCommandEvent& evt );
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  CreateMemoryCardDialog
 	// --------------------------------------------------------------------------------------
@@ -128,8 +128,8 @@ namespace Dialogs
 
 	#ifdef __WXMSW__
 		pxCheckBox*			m_check_CompressNTFS;
-	#endif		
-		
+	#endif
+
 	public:
 		virtual ~CreateMemoryCardDialog()  throw() {}
 		CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );

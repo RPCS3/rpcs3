@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -48,7 +48,7 @@ protected:
 	bool m_framelimit;
 
 	uint8* m_tex_buff;
-	
+
 	virtual GSTexture* GetOutput(int i) = 0;
 
 	GSVertexTrace m_vt;
@@ -85,7 +85,7 @@ public:
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e, int param = 0);
-	virtual bool CanUpscale() 
+	virtual bool CanUpscale()
 	{
 		return !m_nativeres && m_regs->PMODE.EN != 0; // upscale ratio depends on the display size, with no output it may not be set correctly (ps2 logo to game transition)
 	}
@@ -125,7 +125,7 @@ protected:
 		m_vl.RemoveAll();
 	}
 
-	void FlushPrim() 
+	void FlushPrim()
 	{
 		if(m_count == 0) return;
 

@@ -143,7 +143,7 @@ int  fix_imports(struct import *imp, struct export *exp){
 		count++;		//count number of exported functions
 	}
 	_dprintf("%s (%d functions)\n", __FUNCTION__, count);
-	
+
 	for (fs=imp->func; fs->jr_ra; fs++) {
 		if ((fs->addiu0 >> 26) != INS_ADDIU)	break;
 
@@ -194,11 +194,11 @@ int  link_client(struct import *imp){
 			char ename[9], iname[9];
 			*(int*)ename = *(int*)e->name;   *(int*)(ename+4) = *(int*)(e->name+4);  ename[8] = 0;
 			*(int*)iname = *(int*)imp->name; *(int*)(iname+4) = *(int*)(imp->name+4);iname[8] = 0;
-			
+
 			//__printf("loadcore: %s: %s, %s\n", __FUNCTION__, ename, iname);
 		}
 
-		if (!(e->flags & FLAG_NO_AUTO_LINK)){	
+		if (!(e->flags & FLAG_NO_AUTO_LINK)){
             if ( match_name(e, (struct export*)imp)){
 		        if (match_version_major(e, (struct export*)imp)==0) {
 					fix_imports(imp, e);
@@ -207,13 +207,13 @@ int  link_client(struct import *imp){
 					FlushIcache();
 					return 0;
 				} else {
-//					_dprintf("%s: version does not match\n", __FUNCTION__);					
+//					_dprintf("%s: version does not match\n", __FUNCTION__);
 				}
 			} else {
-//				_dprintf("%s: name does not match\n", __FUNCTION__);	
+//				_dprintf("%s: name does not match\n", __FUNCTION__);
 			}
 		} else {
-//			_dprintf("%s: e->flags bit 0 is 0\n", __FUNCTION__);	
+//			_dprintf("%s: e->flags bit 0 is 0\n", __FUNCTION__);
 		}
 	}
 	_dprintf("%s: FAILED to find a match\n", __FUNCTION__);
@@ -275,7 +275,7 @@ int  _UnlinkImports(void *addr, int size)
     struct export *i;
     struct export *tmp;
     void 		*limit = addr + (size & ~0x3);
-	
+
 	for (e = (struct export*)lc_internals.let_next; e; e=(struct export*)e->magic_link){
 		for (i = e->next; i; i=i->next) {
 			if (((u32)i >= (u32)addr) && ((u32)i < (u32)limit)) {
@@ -341,7 +341,7 @@ void _LinkModule(imageInfo *ii)
     imageInfo* p;
 	for (p=lc_internals.image_info; p->next && (p->next < (u32)ii); p=(imageInfo*)p->next);
 
-	ii->next=p->next;	
+	ii->next=p->next;
 	p->next=(u32)ii;
 
 	ii->modid=module_index++;
@@ -365,7 +365,7 @@ u32  _FindImageInfo(void *addr)
 {
 	register imageInfo *ii;
 	for (ii=lc_internals.image_info; ii; ii=(imageInfo*)ii->next)
-		if(((u32)addr>=ii->p1_vaddr) && 
+		if(((u32)addr>=ii->p1_vaddr) &&
 		   ((u32)addr <ii->p1_vaddr + ii->text_size + ii->data_size + ii->bss_size))
 			return (u32)ii;
 	return 0;
@@ -388,11 +388,11 @@ int RegisterLibraryEntries(struct export *es){
 		*(int*)ename = *(int*)es->name;
 		*(int*)(ename+4) = *(int*)(es->name+4);
 		ename[8] = 0;
-		
+
 		__printf("loadcore: %s (%x): %s, %x\n", __FUNCTION__, es, es->name, es->version);
 	}
-		
-		
+
+
 	plast=NULL;
 	for (p=(struct export*)lc_internals.let_next; p; p=(struct export*)p->magic_link) {
 		if (match_name(es, p) == 0 ||
@@ -403,7 +403,7 @@ int RegisterLibraryEntries(struct export *es){
 		_dprintf("%s: found match\n", __FUNCTION__);
 		pnext = p->next;
 		p->next = NULL;
-			
+
 		for (tmp = pnext; tmp; ) {
 			if (tmp->flags & FLAG_NO_AUTO_LINK) {
 				pnext->magic_link = (u32)tmp;
@@ -429,7 +429,7 @@ int RegisterLibraryEntries(struct export *es){
             } else tmp=tmp->next;
         }
     }
-    
+
     es->next=0;
 	while (plast) {
 		snext=plast->next;
@@ -475,7 +475,7 @@ int  ReleaseLibraryEntries(struct export *e)
 		}
 		n=next;
 	}
-    
+
     return 0;
 }
 
@@ -767,7 +767,7 @@ void load_type_4(ELF_HEADER *image, fileInfo *fi)
 	if (ph[1].p_filesz < ph[1].p_memsz) {
         lc_zeromem(ph[1].p_vaddr+ph[1].p_filesz+fi->p1_vaddr, (ph[1].p_memsz-ph[1].p_filesz));
     }
-    
+
 	for (i=1; i<image->e_shnum; i++) {
 		if (sh[i].sh_type==SHT_REL) {
             ELF_REL* rel =(ELF_REL*)(sh[i].sh_offset + (char*)image);
@@ -894,7 +894,7 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
 	BOOTMODE_END = BOOTMODE_START = bootmodes;
 
     //_dprintf("module: %x\n", params.firstModuleAddr);
-    
+
 	lc_internals.let_next = (struct export*)params.firstModuleAddr;
 	lc_internals.let_prev = (struct export*)params.firstModuleAddr;
 	lc_internals.let_next->next = 0;
@@ -914,7 +914,7 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
 	lc_internals.image_info->modid = 1;		// SYSMEM is the first module
 	lc_internals.image_info->next = (u32)&_ftext - 0x30;
 	((imageInfo*)lc_internals.image_info->next)->modid = 2;	// LOADCORE is the second module
-    
+
 	// find & fix LOADCORE imports (to SYSMEM)
 	_LinkImports((u32*)&_ftext, (u32)&_etext - (u32)&_ftext);
 
@@ -925,7 +925,7 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
 
 	if (params.pos)
 		params.pos = (u32)AllocSysMemory(2, params.size, (void*)params.pos);
-        
+
 	sp=(u32)alloca(0x10);
 	s0 = (void**)((sp - 0xDF0) & 0x1FFFFF00);//=0x001ff100
 	recursive_set_a2((int*)s0, (void*)(sp+0x10), 0x11111111);
@@ -976,7 +976,7 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
 			case MODULE_TYPE_2:
 			case MODULE_TYPE_IOPRELEXEC:
 				if (fi.p1_vaddr = (u32)((s1 == 0) ?
-						AllocSysMemory(0, fi.p1_memsz+0x30, 0) : 
+						AllocSysMemory(0, fi.p1_memsz+0x30, 0) :
                                    AllocSysMemory(2, fi.p1_memsz+0x30, (void*)s1)) )
 					fi.p1_vaddr += 0x30;
 				else
@@ -992,12 +992,12 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
             _dprintf("loading module %s: at offset %x, memsz=%x, type=%x, entry=%x\n", fi.moduleinfo->name, fi.p1_vaddr, fi.p1_memsz, fi.type, fi.entry);
 
 			if (0 == _LinkImports((u32*)fi.p1_vaddr, fi.text_size)) {
-                
+
 				FlushIcache();
 				__asm__("move $gp, %0\n" : : "r"(fi.gp_value));
                 // call the entry point
 				s1 = ((IopEntryFn)fi.entry)(0, NULL, s0, NULL);
-                
+
 				if ((s1 & 3) == 0){
 					_LinkModule((imageInfo*)(fi.p1_vaddr - 0x30));
 					if (s1 & ~3)
@@ -1009,11 +1009,11 @@ void loadcore_start(BOOT_PARAMS *pInitParams)
 			}else {
 				FreeSysMemory((void*)((fi.p1_vaddr - 0x30) >> 8 << 8));
             }
-            
+
 			s1 = 0;
 		}
     }
-    
+
 	if (params.pos)
 		FreeSysMemory((void*)params.pos);
 

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -205,7 +205,7 @@ void recMTC0()
 	{
 		switch (_Rd_)
 		{
-			case 12: 
+			case 12:
 				iFlushCall(FLUSH_NODESTROY);
 				xMOV( ecx, g_cpuConstRegs[_Rt_].UL[0] );
 				xCALL( WriteCP0Status );
@@ -241,7 +241,7 @@ void recMTC0()
 				}
 			break;
 
-			case 24: 
+			case 24:
 				SysCtrl_LOG("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
 			break;
 
@@ -254,7 +254,7 @@ void recMTC0()
 	{
 		switch (_Rd_)
 		{
-			case 12: 
+			case 12:
 				iFlushCall(FLUSH_NODESTROY);
 				_eeMoveGPRtoR(ECX, _Rt_);
 				xCALL( WriteCP0Status );
@@ -289,11 +289,11 @@ void recMTC0()
 					break;
 				}
 			break;
-		
-			case 24: 
+
+			case 24:
 				SysCtrl_LOG("MTC0 Breakpoint debug Registers code = %x\n", cpuRegs.code & 0x3FF);
 			break;
-		
+
 			default:
 				_eeMoveGPRtoM((uptr)&cpuRegs.CP0.r[_Rd_], _Rt_);
 			break;

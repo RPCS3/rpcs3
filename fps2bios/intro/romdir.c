@@ -34,7 +34,7 @@ struct rominfo *romdirGetFile(char *name, struct rominfo *ri) {
 			ri->fileOffset+= (rd->fileSize + 15) & ~0xF;
 			continue;
 		}
-		
+
 		ri->fileSize = rd->fileSize;
 		return ri;
 	}

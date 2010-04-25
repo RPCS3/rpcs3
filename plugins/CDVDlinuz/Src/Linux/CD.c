@@ -244,7 +244,7 @@ s32 CDgetBufferOffset() {
 
       case CDVD_MODE_2368: // Unimplemented... as yet.
 
-      default: 
+      default:
 
 #ifdef VERBOSE_WARNINGS
 
@@ -454,7 +454,7 @@ s32 CALLBACK CDgetDiskType(s32 ioctldisktype) {
 
   int tempdisctype;
 
-  
+
 
   offset = 0;
 
@@ -482,7 +482,7 @@ s32 CALLBACK CDgetDiskType(s32 ioctldisktype) {
 
     return(-1);
 
-  } // ENDIF- Cannot read the CD's ISO9660 volume sector? Abort 
+  } // ENDIF- Cannot read the CD's ISO9660 volume sector? Abort
 
   disctype = CDVD_TYPE_DETCTCD;
 

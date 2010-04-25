@@ -58,7 +58,7 @@ bool CanEmitShit()
 {
 	// Under Windows, pre 0.9.6 versions of PCSX2 may not initialize the TLS
 	// register (FS register), so plugins (DLLs) using our x86emitter in multithreaded
-	// mode will just crash/fail if it tries to do the instruction set tests. 
+	// mode will just crash/fail if it tries to do the instruction set tests.
 
 #if x86EMIT_MULTITHREADED
 	static __threadlocal int tls_failcheck;
@@ -101,7 +101,7 @@ SingleCoreAffinity::SingleCoreAffinity()
 			availProcCpus, availSysCpus, i
 		);
 	}
-	
+
 	Sleep( 2 );
 
 	// Sleep Explained: I arbitrarily pick Core 0 to lock to for running the CPU test.  This

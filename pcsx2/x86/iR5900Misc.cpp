@@ -65,7 +65,7 @@ namespace OpcodeImpl {
 //}
 
 
-void recPREF( void ) 
+void recPREF( void )
 {
 }
 
@@ -73,7 +73,7 @@ void recSYNC( void )
 {
 }
 
-void recMFSA( void ) 
+void recMFSA( void )
 {
 	int mmreg;
 	if (!_Rd_) return;
@@ -102,7 +102,7 @@ void recMTSA( void )
 	}
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ)) >= 0 ) {
 			SSE_MOVSS_XMM_to_M32((uptr)&cpuRegs.sa, mmreg);
 		}
@@ -118,7 +118,7 @@ void recMTSA( void )
 	}
 }
 
-void recMTSAB( void ) 
+void recMTSAB( void )
 {
 	if( GPR_IS_CONST1(_Rs_) ) {
 		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0xF) ^ (_Imm_ & 0xF)) );
@@ -131,7 +131,7 @@ void recMTSAB( void )
 	}
 }
 
-void recMTSAH( void ) 
+void recMTSAH( void )
 {
 	if( GPR_IS_CONST1(_Rs_) ) {
 		MOV32ItoM((uptr)&cpuRegs.sa, ((g_cpuConstRegs[_Rs_].UL[0] & 0x7) ^ (_Imm_ & 0x7)) << 1);
@@ -191,32 +191,32 @@ void recMTSAH( void )
 	   //branch = 2;
 	}
 
-	void recTGE( void ) 
+	void recTGE( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TGE );
 	}
 
-	void recTGEU( void ) 
+	void recTGEU( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TGEU );
 	}
 
-	void recTLT( void ) 
+	void recTLT( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TLT );
 	}
 
-	void recTLTU( void ) 
+	void recTLTU( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TLTU );
 	}
 
-	void recTEQ( void ) 
+	void recTEQ( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TEQ );
 	}
 
-	void recTNE( void ) 
+	void recTNE( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TNE );
 	}
@@ -226,27 +226,27 @@ void recMTSAH( void )
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TGEI );
 	}
 
-	void recTGEIU( void ) 
+	void recTGEIU( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TGEIU );
 	}
 
-	void recTLTI( void ) 
+	void recTLTI( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TLTI );
 	}
 
-	void recTLTIU( void ) 
+	void recTLTIU( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TLTIU );
 	}
 
-	void recTEQI( void ) 
+	void recTEQI( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TEQI );
 	}
 
-	void recTNEI( void ) 
+	void recTNEI( void )
 	{
 		recBranchCall( R5900::Interpreter::OpcodeImpl::TNEI );
 	}

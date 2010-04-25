@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -38,7 +38,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
-	if( mem >= IPU_CMD && mem < D0_CHCR ) 
+	if( mem >= IPU_CMD && mem < D0_CHCR )
 	{
 #ifdef PCSX2_DEVBUILD
 		HW_LOG("8bit Hardware IPU Read at 0x%x, value=0x%x", mem, psHu8(mem) );
@@ -78,9 +78,9 @@ __forceinline mem8_t hwRead8(u32 mem)
 			HW_LOG("Hardware Read 8 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu8(mem) );
 			ret = psHu8(mem);
 			return ret;
-		}		
+		}
 }
-#endif	
+#endif
 
 	switch (mem)
 	{
@@ -121,15 +121,15 @@ __forceinline mem8_t hwRead8(u32 mem)
 			{
 				switch (mem)
 				{
-					case SBUS_F240: 
+					case SBUS_F240:
 						ret = psHu32(mem);
 						//psHu32(mem) &= ~0x4000;
 						break;
-					
+
 					case SBUS_F260:
 						ret = 0;
 						break;
-					
+
 					default:
 						ret = psHu32(mem);
 						break;
@@ -154,7 +154,7 @@ __forceinline mem16_t hwRead16(u32 mem)
 
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after the iopHWRead/iopHwWrite files)
-	if( mem >= IPU_CMD && mem < D0_CHCR ) 
+	if( mem >= IPU_CMD && mem < D0_CHCR )
 	{
 #ifdef PCSX2_DEVBUILD
 		HW_LOG("16 bit Hardware IPU Read at 0x%x, value=0x%x", mem, psHu16(mem) );
@@ -191,13 +191,13 @@ __forceinline mem16_t hwRead16(u32 mem)
 				case 0x50: regName = "ASR1"; break;
 				case 0x80: regName = "SADDR"; break;
 			}
-			
+
 			HW_LOG("Hardware Read16 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu16(mem) );
 			ret = psHu16(mem);
 			return ret;
 		}
 }
-#endif		
+#endif
 
 	switch (mem)
 	{
@@ -224,15 +224,15 @@ __forceinline mem16_t hwRead16(u32 mem)
 			{
 				switch (mem)
 				{
-					case SBUS_F240: 
+					case SBUS_F240:
 						ret = psHu16(mem) | 0x0102;
 						psHu32(mem) &= ~0x4000; // not commented out like in bit mode?
 						break;
-					
+
 					case SBUS_F260:
 						ret = 0;
 						break;
-					
+
 					default:
 						ret = psHu32(mem);
 						break;
@@ -300,7 +300,7 @@ static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 	// Performance Note: Visual Studio handles this best if we just manually check for it here,
 	// outside the context of the switch statement below.  This is likely fixed by PGO also,
 	// but it's an easy enough conditional to account for anyways.
-	
+
 	static const uint ics = INTC_STAT & 0xffff;
 	if( mem == ics )		// INTC_STAT
 	{
@@ -409,7 +409,7 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 			HW_LOG("Hardware Read32 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu32(mem) );
 		}
 		break;
-#endif		
+#endif
 		case 0x0e:
 #ifdef PCSX2_DEVBUILD
 			HW_LOG("DMAC Control Regs addr=0x%x Read32, value=0x%x", mem, psHu32(mem));

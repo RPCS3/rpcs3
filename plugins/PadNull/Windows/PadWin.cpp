@@ -24,7 +24,7 @@ HWND GShwnd = NULL;
 
 LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	switch (msg) 
+	switch (msg)
 	{
 		case WM_KEYDOWN:
 			if (lParam & 0x40000000)return TRUE;
@@ -58,8 +58,8 @@ void _PadUpdate(int pad)
 s32 _PADOpen(void *pDsp)
 {
     GShwnd = (HWND)*(long*)pDsp;
-       
-	if (GShwnd != NULL && GSwndProc != NULL) 
+
+	if (GShwnd != NULL && GSwndProc != NULL)
 	{
 		// revert
 		SetWindowLongPtr(GShwnd, GWLP_WNDPROC, (LPARAM)(WNDPROC)(GSwndProc));
@@ -71,8 +71,8 @@ s32 _PADOpen(void *pDsp)
 }
 
 void  _PADClose()
-{ 
-    if (GShwnd != NULL && GSwndProc != NULL) 
+{
+    if (GShwnd != NULL && GSwndProc != NULL)
 	{
         SetWindowLongPtr(GShwnd, GWLP_WNDPROC, (LPARAM)(WNDPROC)(GSwndProc));
         GSwndProc = NULL;

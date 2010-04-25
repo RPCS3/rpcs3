@@ -257,7 +257,7 @@ void wxSpinButton::SetValue(int val)
 }
 
 void wxSpinButton::NormalizeValue()
-{ 
+{
     SetValue( GetValue() );
 }
 

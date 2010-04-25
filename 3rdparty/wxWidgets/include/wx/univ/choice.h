@@ -15,7 +15,7 @@
 #include "wx/combobox.h"
 
 // VS: This is only a *temporary* implementation, real wxChoice should not
-//     derive from wxComboBox and may have different l&f 
+//     derive from wxComboBox and may have different l&f
 class WXDLLEXPORT wxChoice : public wxComboBox
 {
 public:
@@ -52,10 +52,10 @@ public:
                 long style = 0,
                 const wxValidator& validator = wxDefaultValidator,
                 const wxString& name = wxChoiceNameStr);
-    
+
 private:
     void OnComboBox(wxCommandEvent &event);
-    
+
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxChoice)
 };

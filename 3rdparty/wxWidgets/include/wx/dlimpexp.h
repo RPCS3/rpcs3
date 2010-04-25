@@ -235,7 +235,7 @@
 
 /* wx-2.9 introduces new macros for forward declarations, include them
  * here for forward compatibility:
- 
+
    GCC warns about using __attribute__ (and also __declspec in mingw32 case) on
    forward declarations while MSVC complains about forward declarations without
    __declspec for the classes later declared with it, so we need a separate set

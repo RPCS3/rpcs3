@@ -835,7 +835,7 @@ wxString ShiftJIS_ConvertString( const char* src )
 
 	// Implementation Notes:
 	//  * The length of the result (in chars) cannot exceed the length of the source.
-	
+
 	result.reserve( strlen(src) );
 
 	while( *src != 0 )

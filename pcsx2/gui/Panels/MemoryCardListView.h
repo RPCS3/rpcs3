@@ -32,7 +32,7 @@ namespace Panels
 		wxDateTime	DateCreated;
 		wxDateTime	DateModified;
 		wxFileName	Filename;		// full pathname
-		
+
 		int			Port;
 		int			Slot;
 
@@ -55,7 +55,7 @@ namespace Panels
 			return operator==( right );
 		}
 	};
-	
+
 	typedef std::vector<McdListItem> McdList;
 
 	// --------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ namespace Panels
 
 	protected:
 		McdList*		m_KnownCards;
-	
+
 	public:
 		virtual ~MemoryCardListView() throw() { }
 		MemoryCardListView( wxWindow* parent );

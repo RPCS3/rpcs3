@@ -63,11 +63,11 @@ char* ExceptionGetModuleName(u32 epc, u32* r_epc)
 		{
 			if(r_epc)
 				*r_epc = epc -  mod_info->text_start;
-			
+
 			return mod_info->name;
-		}	
+		}
 	}
-	
+
 	return 0;
 }
 
@@ -81,14 +81,14 @@ static void excep_handler2(exception_frame_t *frame)
 	module_name = ExceptionGetModuleName(frame->epc, &r_epc);
 
 	len = strlen(module_name);
-	
+
 
 	buffer[0] = 0x0d02beba; // reverse engineering..
 	buffer++;
-	
+
 	memcpy(buffer, frame, BUFFER_SIZE);
 	buffer+= (sizeof(exception_frame_t)/4);
-	
+
 	buffer[0] = r_epc;
 	buffer[1] = len;
 	buffer+=2;
@@ -112,7 +112,7 @@ void installExceptionHandlers(void)
 
 	for(i=1; i < 8; i++)
 		set_exception_handler(i, excep_handler);
-	
+
 	for(i=10; i < 13; i++)
 		set_exception_handler(i, excep_handler);
 

@@ -35,7 +35,7 @@
 #else
      #define wxCLRBTN_BASE_CLASS wxButton
 #endif
-                                               
+
 class WXDLLIMPEXP_CORE wxGenericColourButton : public wxCLRBTN_BASE_CLASS,
                                                public wxColourPickerWidgetBase
 {

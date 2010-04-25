@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -46,7 +46,7 @@ GSRendererSW::~GSRendererSW()
 	}
 }
 
-void GSRendererSW::Reset() 
+void GSRendererSW::Reset()
 {
 	// TODO: GSreset can come from the main thread too => crash
 	// m_tc->RemoveAll();
@@ -72,7 +72,7 @@ void GSRendererSW::VSync(int field)
 	// if((m_perfmon.GetFrame() & 255) == 0) m_rl.PrintStats();
 }
 
-void GSRendererSW::ResetDevice() 
+void GSRendererSW::ResetDevice()
 {
 	for(int i = 0; i < countof(m_texture); i++)
 	{
@@ -121,7 +121,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 void GSRendererSW::Draw()
 {
-	if(m_dump) 
+	if(m_dump)
 	{
 		m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 	}
@@ -141,7 +141,7 @@ void GSRendererSW::Draw()
 
 		string s;
 
-		if(s_save && s_n >= s_saven && PRIM->TME) 
+		if(s_save && s_n >= s_saven && PRIM->TME)
 		{
 			s = format("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 
@@ -222,10 +222,10 @@ void GSRendererSW::Draw()
 
 	if(0)//stats.ticks > 5000000)
 	{
-		printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n", 
-			m_perfmon.GetFrame(), p.sel.key, 
-			stats.ticks, 
-			stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1, 
+		printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n",
+			m_perfmon.GetFrame(), p.sel.key,
+			stats.ticks,
+			stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1,
 			stats.pixels, stats.pixels > 0 ? (int)(stats.ticks / stats.pixels) : -1);
 	}
 }
@@ -398,9 +398,9 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 			}
 		}
 
-		if(p.sel.date 
+		if(p.sel.date
 		|| p.sel.aba == 1 || p.sel.abb == 1 || p.sel.abc == 1 || p.sel.abd == 1
-		|| p.sel.atst != ATST_ALWAYS && p.sel.afail == AFAIL_RGB_ONLY 
+		|| p.sel.atst != ATST_ALWAYS && p.sel.afail == AFAIL_RGB_ONLY
 		|| p.sel.fpsm == 0 && p.fm != 0 && p.fm != 0xffffffff
 		|| p.sel.fpsm == 1 && (p.fm & 0x00ffffff) != 0 && (p.fm & 0x00ffffff) != 0x00ffffff
 		|| p.sel.fpsm == 2 && (p.fm & 0x80f8f8f8) != 0 && (p.fm & 0x80f8f8f8) != 0x80f8f8f8)
@@ -427,13 +427,13 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 	}
 }
 
-template<uint32 prim, uint32 tme, uint32 fst> 
+template<uint32 prim, uint32 tme, uint32 fst>
 void GSRendererSW::VertexKick(bool skip)
 {
 	const GSDrawingContext* context = m_context;
 
 	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]);
-	
+
 	xy = xy.insert16<3>(m_v.FOG.F);
 	xy = xy.upl16();
 	xy -= context->XYOFFSET;
@@ -470,7 +470,7 @@ void GSRendererSW::VertexKick(bool skip)
 	dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the uint32 => float => uint32 conversion
 
 	int count = 0;
-	
+
 	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 	{
 if(!m_dump)
@@ -521,7 +521,7 @@ if(!m_dump)
 			test |= tmp == tmp.yxwz();
 			break;
 		}
-		
+
 		if(test.mask() & 3)
 		{
 			return;

@@ -29,7 +29,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	ScopedPtr& Delete() throw()
 	{
 		// Thread-safe deletion: Set the pointer to NULL first, and then issue
@@ -64,19 +64,19 @@ public:
 		other.m_ptr = m_ptr;
 		m_ptr = tmp;
 	}
-	
+
 	// ----------------------------------------------------------------------------
 	//  ScopedPtr Operators
 	// ----------------------------------------------------------------------------
 	// I've decided to use the ATL's approach to pointer validity tests, opposed to
 	// the wx/boost approach (which uses some bizarre member method pointer crap, and can't
 	// allow the T* implicit casting.
-	
+
 	bool operator!() const throw()
 	{
 		return m_ptr == NULL;
 	}
-	
+
 	operator T*() const
 	{
 		return m_ptr;
@@ -162,7 +162,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	ScopedArray& Delete() throw()
 	{
 		// Thread-safe deletion: Set the pointer to NULL first, and then issue
@@ -197,19 +197,19 @@ public:
 		other.m_array = m_array;
 		m_array = tmp;
 	}
-	
+
 	// ----------------------------------------------------------------------------
 	//  ScopedPtr Operators
 	// ----------------------------------------------------------------------------
 	// I've decided to use the ATL's approach to pointer validity tests, opposed to
 	// the wx/boost approach (which uses some bizarre member method pointer crap, and can't
 	// allow the T* implicit casting.
-	
+
 	bool operator!() const throw()
 	{
 		return m_array == NULL;
 	}
-	
+
 	// Equality
 	bool operator==(T* pT) const throw()
 	{

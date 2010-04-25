@@ -43,7 +43,7 @@ namespace ZeroGS
 				if( ptarg == vb[i].prndr ) { vb[i].prndr = NULL; vb[i].bNeedFrameCheck = 1; }
 				if( ptarg == vb[i].pdepth ) { vb[i].pdepth = NULL; vb[i].bNeedZCheck = 1; }
 			}
-			
+
 			DestroyChildren(ptarg);
 			delete ptarg;
 		}
@@ -58,7 +58,7 @@ namespace ZeroGS
 
 						// kh hack, sometimes kh movies do this to clear the target, so have a static count that periodically checks end
 						static int count = 0;
-						
+
 						if( it->second->fbw == fbw || (it->second->fbw != fbw && (it->second->start < start || ((count++&0xf)?0:it->second->end > end) )) )
 							it->second->Resolve();
 						else {
@@ -141,7 +141,7 @@ namespace ZeroGS
 
 			CRenderTarget* ptarg = it->second;
 			mapTargets.erase(it);
-			
+
 			DestroyIntersecting(ptarg);
 
 			it = mapTargets.find(key);
@@ -151,7 +151,7 @@ namespace ZeroGS
 			}
 			else
 				mapTargets[key] = ptarg;
-			
+
 			if( g_GameSettings & GAME_RESOLVEPROMOTED )
 				ptarg->status = CRenderTarget::TS_Resolved;
 			else
@@ -222,7 +222,7 @@ namespace ZeroGS
 		// works in semi logN
 		void Insert(int start, int end);
 		inline void Clear() { ranges.resize(0); }
-		
+
 		vector<RANGE> ranges; // organized in ascending order, non-intersecting
 	};
 

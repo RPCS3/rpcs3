@@ -13,7 +13,7 @@
 
 #include "wx/xrc/xmlres.h"
 
-#if wxUSE_XRC 
+#if wxUSE_XRC
 
 #if wxUSE_SPINBTN
 

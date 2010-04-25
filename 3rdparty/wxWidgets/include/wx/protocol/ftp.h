@@ -2,7 +2,7 @@
 // Name:        ftp.h
 // Purpose:     FTP protocol
 // Author:      Vadim Zeitlin
-// Modified by: Mark Johnson, wxWindows@mj10777.de 
+// Modified by: Mark Johnson, wxWindows@mj10777.de
 //              20000917 : RmDir, GetLastResult, GetList
 // Created:     07/07/1997
 // RCS-ID:      $Id: ftp.h 45498 2007-04-16 13:03:05Z VZ $
@@ -81,7 +81,7 @@ public:
 
     // Get the size of a file in the current dir.
     // this function tries its best to deliver the size in bytes using BINARY
-    // (the SIZE command reports different sizes depending on whether 
+    // (the SIZE command reports different sizes depending on whether
     // type is set to ASCII or BINARY)
     // returns -1 if file is non-existant or size could not be found
     int GetFileSize(const wxString& fileName);

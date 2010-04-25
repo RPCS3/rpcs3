@@ -41,12 +41,12 @@
 #define ra		$31		// Function Return Address
 
 // COP0
-#define Index    $0  // Index into the TLB array 
-#define Random   $1  // Randomly generated index into the TLB array 
+#define Index    $0  // Index into the TLB array
+#define Random   $1  // Randomly generated index into the TLB array
 #define EntryLo0 $2  // Low-order portion of the TLB entry for..
 #define EntryLo1 $3  // Low-order portion of the TLB entry for
 #define Context  $4  // Pointer to page table entry in memory
-#define PageMask $5  // Control for variable page size in TLB entries 
+#define PageMask $5  // Control for variable page size in TLB entries
 #define Wired    $6  // Controls the number of fixed ("wired") TLB entries
 #define BadVAddr $8  // Address for the most recent address-related exception
 #define Count    $9  // Processor cycle count

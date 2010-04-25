@@ -66,19 +66,19 @@ int             iQLockPos=-1;
 /////////////////////////////////////////////////////////
 // thread helper vars
 
-HANDLE          hReadThread  = NULL;                           
+HANDLE          hReadThread  = NULL;
 BOOL            bThreadEnded = FALSE;
 HANDLE          hThreadEvent[3];
 HANDLE          hThreadMutex[2];
 
 /////////////////////////////////////////////////////////
-// internal MAXDATACACHE*64KB (4MB) data cache 
+// internal MAXDATACACHE*64KB (4MB) data cache
 
 #define MAXDATACACHE 64
 unsigned long   lDataCacheAddr[MAXDATACACHE];
 unsigned char * pDataCacheBuf[MAXDATACACHE];
 BOOL            bDataCacheHit=FALSE;
-int             iUseDataCache=0; 
+int             iUseDataCache=0;
 
 /////////////////////////////////////////////////////////
 // main init func
@@ -86,15 +86,15 @@ int             iUseDataCache=0;
 void CreateREADBufs(void)
 {
  switch(iUseCaching)
-  { 
+  {
    case 4:  iUseDataCache  = 2; // use a special data cache on threadex reading
-            pReadTrackFunc = DoReadThreadEx; 
+            pReadTrackFunc = DoReadThreadEx;
             pGetPtrFunc    = GetREADThreadExPtr; break;
    case 3:  pReadTrackFunc = DoReadThread;
             pGetPtrFunc    = GetREADThreadPtr;   break;
-   case 2:  pReadTrackFunc = DoReadAsync;        
+   case 2:  pReadTrackFunc = DoReadAsync;
             pGetPtrFunc    = NULL;               break;
-   default: pReadTrackFunc = DoRead;             
+   default: pReadTrackFunc = DoRead;
             pGetPtrFunc    = NULL;               break;
   }
 
@@ -187,7 +187,7 @@ BOOL bReadRetry(FRAMEBUF * f)
 {
  int iRetry=0;
 
- while (iRetry<iMaxRetry) 
+ while (iRetry<iMaxRetry)
   {
    if(pReadFunc(TRUE,f)==SS_COMP) break;               // try sync read
    iRetry++;
@@ -211,7 +211,7 @@ BOOL bReadRetry(FRAMEBUF * f)
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 // sync modes (caching 0 and 1)
-// just reads one or more blocks, and always waits until 
+// just reads one or more blocks, and always waits until
 // reading is done
 /////////////////////////////////////////////////////////
 
@@ -241,9 +241,9 @@ BOOL DoRead(unsigned long addr)
 
  f=(FRAMEBUF *)pMainBuffer;                            // setup read for one sector
 
- f->dwFrameCnt = 1;  
+ f->dwFrameCnt = 1;
  f->dwBufLen   = iUsedBlockSize;
- f->dwFrame    = addr;  
+ f->dwFrame    = addr;
 
  pCurrReadBuf=pFirstReadBuf;
 
@@ -253,7 +253,7 @@ BOOL DoRead(unsigned long addr)
   {
    if((addr+MAXCACHEBLOCK)<lMaxAddr)                   // and big read is possible?
     {
-     f->dwFrameCnt = MAXCACHEBLOCK+1;                  // -> set bigger read 
+     f->dwFrameCnt = MAXCACHEBLOCK+1;                  // -> set bigger read
      f->dwBufLen   = (MAXCACHEBLOCK+1)*iUsedBlockSize;
      lLastAddr     = addr;                             // -> store addr of block
     }
@@ -284,7 +284,7 @@ BOOL DoRead(unsigned long addr)
 // async mode (caching 2)
 // this mode works fine with ASPI...
 // the first read will be done sync, though, only the
-// additional pre-fetching will be done async...  
+// additional pre-fetching will be done async...
 // well, with mdecs most reads will be prefetched, so
 // speed is good... with IOCTL this mode is more like
 // a 'double sync' reading, since IOCTL seems always
@@ -299,7 +299,7 @@ BOOL DoReadAsync(unsigned long addr)
  // 1. check if data is in already filled buffer
 
  if(lLastAddr!=0xFFFFFFFF &&
-    addr>=lLastAddr && 
+    addr>=lLastAddr &&
     addr<=(lLastAddr+MAXCACHEBLOCK))
   {
    pCurrReadBuf=pAsyncFirstReadBuf[iBufSel]+
@@ -328,9 +328,9 @@ BOOL DoReadAsync(unsigned long addr)
 
  ////////////////////////////////////////////////////////
  // 3. check in asyncbuffer. if yes, swap buffers and do next async read
-                                                      
+
  if(lLastAsyncAddr!=0xFFFFFFFF &&
-    addr>=lLastAsyncAddr && 
+    addr>=lLastAsyncAddr &&
     addr<=(lLastAsyncAddr+MAXCACHEBLOCK))
   {
    int iAsyncSel=iBufSel;                              // store old buf num
@@ -351,9 +351,9 @@ BOOL DoReadAsync(unsigned long addr)
     {lLastAsyncAddr=0xFFFFFFFF;return TRUE;}
 
    f=(FRAMEBUF *)ptrBuffer[iAsyncSel];                 // setup prefetch addr
-   f->dwFrameCnt = MAXCACHEBLOCK+1;  
+   f->dwFrameCnt = MAXCACHEBLOCK+1;
    f->dwBufLen   = (MAXCACHEBLOCK+1)*iUsedBlockSize;
-   f->dwFrame    = addr;  
+   f->dwFrame    = addr;
 
    lLastAsyncAddr=addr;                                // store prefetch addr
 
@@ -369,7 +369,7 @@ BOOL DoReadAsync(unsigned long addr)
  iBufSel=0;                                            // read in buf 0
 
  f=(FRAMEBUF *)ptrBuffer[0];
- f->dwFrame = addr;  
+ f->dwFrame = addr;
 
  pCurrReadBuf=pFirstReadBuf;
 
@@ -378,13 +378,13 @@ BOOL DoReadAsync(unsigned long addr)
 
  if((addr+MAXCACHEBLOCK)<lMaxAddr)
   {
-   f->dwFrameCnt = MAXCACHEBLOCK+1;  
+   f->dwFrameCnt = MAXCACHEBLOCK+1;
    f->dwBufLen   = (MAXCACHEBLOCK+1)*iUsedBlockSize;
    lLastAddr     = addr;
   }
  else
   {
-   f->dwFrameCnt = 1;  
+   f->dwFrameCnt = 1;
    f->dwBufLen   = iUsedBlockSize;
    lLastAddr     = 0xFFFFFFFF;
   }
@@ -392,7 +392,7 @@ BOOL DoReadAsync(unsigned long addr)
  ////////////////////////////////////////////////////////
  // start read, wait til finished
 
- if(pReadFunc(TRUE,f)!=SS_COMP) 
+ if(pReadFunc(TRUE,f)!=SS_COMP)
   {
    if(!bReadRetry(f)) return FALSE;
   }
@@ -413,9 +413,9 @@ BOOL DoReadAsync(unsigned long addr)
   {lLastAsyncAddr=0xFFFFFFFF;return TRUE;}
 
  f=(FRAMEBUF *)ptrBuffer[1];                           // setup prefetch into buf 1
- f->dwFrameCnt = MAXCACHEBLOCK+1;  
+ f->dwFrameCnt = MAXCACHEBLOCK+1;
  f->dwBufLen   = (MAXCACHEBLOCK+1)*iUsedBlockSize;
- f->dwFrame    = addr;  
+ f->dwFrame    = addr;
 
  lLastAsyncAddr= addr;
 
@@ -429,12 +429,12 @@ BOOL DoReadAsync(unsigned long addr)
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 // thread mode (caching 3)
-// this mode helps with slower drives using the IOCTL 
+// this mode helps with slower drives using the IOCTL
 // interface (since that one seems to do always blocking
 // reads, even when they are done overlapped).
 // With ASPI, the thread mode performance will be more or less
 // the same as with async caching mode 2...
-// thread reading would be much more powerful, if the main 
+// thread reading would be much more powerful, if the main
 // emu would do:
 // ...
 // CDRreadTrack()
@@ -467,7 +467,7 @@ DWORD WINAPI READThread(LPVOID lpParameter)
 
    lLastAsyncAddr = lNeededAddr;                       // setup read and vars
    f=(FRAMEBUF *)ptrBuffer[!iBufSel];                  // !iSel = async buffer
-   f->dwFrame     = lNeededAddr;  
+   f->dwFrame     = lNeededAddr;
    f->dwFrameCnt  = min((lMaxAddr-lNeededAddr+1),(MAXCACHEBLOCK+1));
    f->dwBufLen    = f->dwFrameCnt*iUsedBlockSize;
 
@@ -497,7 +497,7 @@ BOOL DoReadThread(unsigned long addr)
  bDataCacheHit=FALSE;                                  // init data cache hit flag (even if no cache is used...)
 
  if(lLastAddr!=0xFFFFFFFF &&                           // data is in curr data buffer?
-    addr>=lLastAddr && 
+    addr>=lLastAddr &&
     addr<=(lLastAddr+MAXCACHEBLOCK))
   return TRUE;                                         // -> fine
 
@@ -507,7 +507,7 @@ BOOL DoReadThread(unsigned long addr)
  WaitForSingleObject(hThreadMutex[1],INFINITE);        // wait to access 'buffer 1 vars'
 
  if(lLastAsyncAddr!=0xFFFFFFFF &&                      // data is (or will be soon if reading is going on in thread now) in async buffer?
-    addr>=lLastAsyncAddr && 
+    addr>=lLastAsyncAddr &&
     addr<=(lLastAsyncAddr+MAXCACHEBLOCK))
   {
    ReleaseMutex(hThreadMutex[1]);                      // -> fine
@@ -522,7 +522,7 @@ BOOL DoReadThread(unsigned long addr)
 }
 
 /////////////////////////////////////////////////////////
-// emu says: gimme ptr to needed data... this will 
+// emu says: gimme ptr to needed data... this will
 // automatically do an async data prefetch read as well
 // ... called on CDRgetBuffer()
 
@@ -533,7 +533,7 @@ void GetREADThreadPtr(void)
  if(bDataCacheHit) return;                             // if we had a data cache hit, the readbuf ptr is already fine, nothing else to do
 
  if(lLastAddr!=0xFFFFFFFF &&                           // data is in buffer 0?
-    addr>=lLastAddr && 
+    addr>=lLastAddr &&
     addr<=(lLastAddr+MAXCACHEBLOCK))
   {
    pCurrReadBuf=pAsyncFirstReadBuf[iBufSel]+           // -> ok, return curr data buffer ptr
@@ -557,8 +557,8 @@ void GetREADThreadPtr(void)
  if(iUseDataCache)                                     // data cache used? can be less then 64 kb with thread reading, but that doesn't matter here... will be either 64 k or (max-addr) sectors
   AddToDataCache(lLastAddr,
                  pAsyncFirstReadBuf[iBufSel]);         // -> add the complete data to cache
- 
- pCurrReadBuf=pAsyncFirstReadBuf[iBufSel]+             // -> return the curr data buffer ptr 
+
+ pCurrReadBuf=pAsyncFirstReadBuf[iBufSel]+             // -> return the curr data buffer ptr
                 ((addr-lLastAddr)*iUsedBlockSize);
  if(ppfHead) CheckPPFCache(addr,pCurrReadBuf);
 }
@@ -567,7 +567,7 @@ void GetREADThreadPtr(void)
 /////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////
 // special thread mode (caching 4)
-// this mode helps with certain drives 
+// this mode helps with certain drives
 // basically it does the following:
 // It has a queue for n prefetch reads. If the main emu is
 // asking for an addr, the mode will check, if
@@ -581,7 +581,7 @@ void GetREADThreadPtr(void)
 // do the needed reading as soon as possible :)
 
 /////////////////////////////////////////////////////////
-// reading thread... 
+// reading thread...
 
 DWORD WINAPI READThreadEx(LPVOID lpParameter)
 {
@@ -599,35 +599,35 @@ DWORD WINAPI READThreadEx(LPVOID lpParameter)
      if(lAddrQ[iQPos]==0xFFFFFFFF)                     // nothing to do? strange :)
       {ReleaseMutex(hThreadMutex[1]);break;}
 
-     f=(FRAMEBUF *)ptrBuffer[0];         
+     f=(FRAMEBUF *)ptrBuffer[0];
      lNeededAddr    = lAddrQ[iQPos];                   // store it in 'Neededaddr' for checks outside the thread
-     f->dwFrame     = lNeededAddr;  
+     f->dwFrame     = lNeededAddr;
      f->dwFrameCnt  = min((lMaxAddr-f->dwFrame+1),(MAXCACHEBLOCK+1));
      f->dwBufLen    = f->dwFrameCnt*iUsedBlockSize;
-   
+
      lAddrQ[iQPos++]=0xFFFFFFFF;                       // set this slot as 'done'
      if(iQPos>=MAXQSIZE) iQPos=0;                      // amnd inc the head pos
 
      ReleaseMutex(hThreadMutex[1]);                    // ok, vars have been changed, now that vars are again available for all
      //------------------------------------------------//
      WaitForSingleObject(hThreadMutex[0],INFINITE);    // read mutex: nobody else is allowed to read now
-     if(!iCDROK) 
+     if(!iCDROK)
       {
        ReleaseMutex(hThreadMutex[0]);
        break;
       }
 
-     if(bCDDAPlay)                                     // some cdda security... 
+     if(bCDDAPlay)                                     // some cdda security...
       {                                                // it should just prevent prefetch reads happening in cdda mode, if this one breaks a 'needed' read, we are lost...
        lNeededAddr=0xFFFFFFFF;                         // so maybe we should remove this check? mmm, we will see
        ReleaseMutex(hThreadMutex[0]);
        break;
-      }           
+      }
 
      if(pReadFunc(TRUE,f)!=SS_COMP)                    // do a blocking (sync) read
       {                                                // mmm... if reading fails a number of times, we don't have a chance to return 'bad' to emu with thread reading... life is hard :)
        bReadRetry(f);                                  // but at least our 'wait for data in cache' getptr will not wait forever (just returning wrong data, ehehe)
-      }                                                
+      }
 
      ReleaseMutex(hThreadMutex[0]);                    // ok, read has done
      //------------------------------------------------//
@@ -672,11 +672,11 @@ BOOL DoReadThreadEx(unsigned long addr)
 
 #ifdef THREADEX_STRAIGHT
 
- if(addr>=lNeededAddr && 
+ if(addr>=lNeededAddr &&
     addr<=(lNeededAddr+MAXCACHEBLOCK))
   {
-   ReleaseMutex(hThreadMutex[1]);                        
-   return TRUE;  
+   ReleaseMutex(hThreadMutex[1]);
+   return TRUE;
   }
 
  for(k=0;k<MAXQSIZE;k++)                               // loop max of prefetch blocks
@@ -697,7 +697,7 @@ BOOL DoReadThreadEx(unsigned long addr)
 
  if(addr>=lMaxAddr)                                    // check, if addr too big
   {
-   ReleaseMutex(hThreadMutex[1]);                        
+   ReleaseMutex(hThreadMutex[1]);
    if(k==0) return FALSE;                              // -> if it's the main addr, there is an error
    return TRUE;                                        // -> otherwise we can't simply cache that addr
   }
@@ -732,7 +732,7 @@ BOOL DoReadThreadEx(unsigned long addr)
 
 //-----------------------------------------------------//
 // ok, here is the current ReadThreadEx mode: more
-// complex, and it doesn't arrange the prefetch sectors 
+// complex, and it doesn't arrange the prefetch sectors
 // as straight as the type above, but the final result is
 // still smoother (no more pauses on the tested LG drive)
 
@@ -806,13 +806,13 @@ BOOL DoReadThreadEx(unsigned long addr)
 
 #endif
 
- ReleaseMutex(hThreadMutex[1]);                        
+ ReleaseMutex(hThreadMutex[1]);
 
  return TRUE;
 }
 
 /////////////////////////////////////////////////////////
-// emu says: gimme ptr to needed data... this will 
+// emu says: gimme ptr to needed data... this will
 // automatically do an async data prefetch read as well
 // ... called on CDRgetBuffer()
 
@@ -845,12 +845,12 @@ void AllocDataCache(void)
 {
  bDataCacheHit=FALSE;                                  // init thread cache hit flag
  if(!iUseCaching) iUseDataCache=0;                     // security: no additinal data cache, if no caching active
- if(iUseDataCache) 
+ if(iUseDataCache)
   {
    int i;
    for(i=0;i<MAXDATACACHE;i++)                         // init all cache slots
     {
-     lDataCacheAddr[i] = 0xFFFFFFFF;                      
+     lDataCacheAddr[i] = 0xFFFFFFFF;
      pDataCacheBuf[i]  = malloc(MAXCDBUFFER-FRAMEBUFEXTRA);
     }
   }
@@ -860,10 +860,10 @@ void AllocDataCache(void)
 
 void FreeDataCache(void)
 {
- if(iUseDataCache) 
+ if(iUseDataCache)
   {
    int i;
-   for(i=0;i<MAXDATACACHE;i++) 
+   for(i=0;i<MAXDATACACHE;i++)
     {
      free(pDataCacheBuf[i]);
      pDataCacheBuf[i]=NULL;
@@ -880,7 +880,7 @@ void AddToDataCache(unsigned long addr,unsigned char * pB)
  if(iPos==iQLockPos)                                   // special thread mode lock?
   {iPos++;if(iPos>=MAXDATACACHE) iPos=0;}              // -> don't use that pos, use next one
  lDataCacheAddr[iPos]=addr;
- memcpy(pDataCacheBuf[iPos],pB,                      
+ memcpy(pDataCacheBuf[iPos],pB,
         MAXCDBUFFER-FRAMEBUFEXTRA);
  iPos++; if(iPos>=MAXDATACACHE) iPos=0;
 }
@@ -894,10 +894,10 @@ BOOL CheckDataCache(unsigned long addr)
 
  for(i=0;i<MAXDATACACHE;i++)
   {
-   if(addr>=lDataCacheAddr[i] && 
+   if(addr>=lDataCacheAddr[i] &&
       addr<=(lDataCacheAddr[i]+MAXCACHEBLOCK))
     {
-     pCurrReadBuf=pDataCacheBuf[i]+                
+     pCurrReadBuf=pDataCacheBuf[i]+
                    ((addr-lDataCacheAddr[i])*iUsedBlockSize);
      if(ppfHead) CheckPPFCache(addr,pCurrReadBuf);
      return TRUE;

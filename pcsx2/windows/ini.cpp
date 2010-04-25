@@ -262,7 +262,7 @@ bool LoadConfig()
 		}
 
 		// standard mode operation.  Create the directory.
-		Path::CreateDirectory( "inis" ); 
+		Path::CreateDirectory( "inis" );
 		status = false;		// inform caller that we're not configured.
 	}
 	else
@@ -271,7 +271,7 @@ bool LoadConfig()
 		// crazy ass setup... why not!
 
 		if( Path::IsDirectory( szIniFile ) )
-			throw Exception::Stream( 
+			throw Exception::Stream(
 				"Cannot open or create the Pcsx2 ini file because a directory of\n"
 				"the same name already exists!  Please delete it or reinstall Pcsx2\n"
 				"fresh and try again."

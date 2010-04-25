@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -115,11 +115,11 @@ __emitinline void xJccKnownTarget( JccComparisonType comparison, const void* tar
 	const int slideVal = slideForward ? ((comparison == Jcc_Unconditional) ? 3 : 4) : 0;
 	displacement8 -= slideVal;
 
-	if( slideForward ) 
+	if( slideForward )
 	{
 		pxAssertDev( displacement8 >= 0, "Used slideForward on a backward jump; nothing to slide!" );
 	}
-	
+
 	if( is_s8( displacement8 ) )
 		xJcc8( comparison, displacement8 );
 	else

@@ -122,7 +122,7 @@ union tVIF_FBRST {
 		u32 reserved : 28;
 	};
 	u32 _u32;
-	
+
 	tVIF_FBRST(u32 val)					{ _u32 = val; }
 	bool test		(u32 flags) const	{ return !!(_u32 & flags); }
 	void set_flags	(u32 flags)			{ _u32 |=  flags; }
@@ -141,7 +141,7 @@ union tVIF_ERR {
 		u32 reserved : 29;
 	};
 	u32 _u32;
-	
+
 	tVIF_ERR  (u32 val)					{ _u32 = val; }
 	void write(u32 val)					{ _u32 = val; }
 	bool test		(u32 flags) const	{ return !!(_u32 & flags); }
@@ -151,7 +151,7 @@ union tVIF_ERR {
 	wxString desc() const				{ return wxsFormat(L"Err: 0x%x", _u32); }
 };
 
-struct vifCycle 
+struct vifCycle
 {
 	u8 cl, wl;
 	u8 pad[2];

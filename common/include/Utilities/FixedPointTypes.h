@@ -22,7 +22,7 @@ template< int Precision >
 struct FixedInt
 {
 	s32 Raw;
-	
+
 	FixedInt()
 	{
 		Raw = 0;
@@ -42,7 +42,7 @@ struct FixedInt
 	{
 		Raw = (int)(floval * (float)Precision);
 	}
-	
+
 	bool operator ==( const FixedInt<Precision>& right ) const
 	{
 		return Raw == right.Raw;
@@ -72,7 +72,7 @@ struct FixedInt
 	{
 		return SetRaw( Raw + right.Raw );
 	}
-	
+
 	bool operator>( const FixedInt<Precision>& right ) const		{ return Raw > right.Raw; }
 	bool operator>=( const FixedInt<Precision>& right ) const	{ return Raw >= right.Raw; }
 	bool operator<( const FixedInt<Precision>& right ) const		{ return Raw < right.Raw; }
@@ -188,7 +188,7 @@ struct FixedInt
 	{
 		return (Raw + (Precision/2)) / Precision;
 	}
-	
+
 	static bool TryFromString( FixedInt<Precision>& dest, const wxString& parseFrom )
 	{
 		long whole=0, frac=0;

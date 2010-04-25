@@ -232,7 +232,7 @@ u32 UpdateVSyncRate()
 	//  or progressive scan content.  Indications are that it is also a simple 50/50 timer and
 	//  that it does not actually measure Vblank/Vdraw zones accurately (which would be like
 	//  1/5 and 4/5 ratios).
-	
+
 	Fixed100	framerate;
 	u32		scanlines;
 	bool	isCustom;
@@ -249,7 +249,7 @@ u32 UpdateVSyncRate()
 		framerate = EmuConfig.GS.FramerateNTSC / 2;
 		scanlines = SCANLINES_TOTAL_NTSC;
 	}
-	
+
 	if( vSyncInfo.Framerate != framerate )
 	{
 		vSyncInfoCalc( &vSyncInfo, framerate, scanlines );

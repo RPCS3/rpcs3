@@ -27,13 +27,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -78,7 +78,7 @@ static struct PaUtilAllocationGroupLink *AllocateLinks( long count,
 {
     struct PaUtilAllocationGroupLink *result;
     int i;
-    
+
     result = (struct PaUtilAllocationGroupLink *)PaUtil_AllocateMemory(
             sizeof(struct PaUtilAllocationGroupLink) * count );
     if( result )
@@ -95,7 +95,7 @@ static struct PaUtilAllocationGroupLink *AllocateLinks( long count,
         }
         result[count-1].next = nextSpare;
     }
-    
+
     return result;
 }
 
@@ -147,7 +147,7 @@ void* PaUtil_GroupAllocateMemory( PaUtilAllocationGroup* group, long size )
 {
     struct PaUtilAllocationGroupLink *links, *link;
     void *result = 0;
-    
+
     /* allocate more links if necessary */
     if( !group->spareLinks )
     {
@@ -176,7 +176,7 @@ void* PaUtil_GroupAllocateMemory( PaUtilAllocationGroup* group, long size )
         }
     }
 
-    return result;    
+    return result;
 }
 
 
@@ -208,7 +208,7 @@ void PaUtil_GroupFreeMemory( PaUtilAllocationGroup* group, void *buffer )
 
             break;
         }
-        
+
         previous = current;
         current = current->next;
     }

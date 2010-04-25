@@ -56,7 +56,7 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 
 	bool retval = _parent::Suspend( false );
-	
+
 	if( !retval || isBlocking )
 		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 
@@ -177,13 +177,13 @@ void AppCoreThread::StateCheckInThread()
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	//if( m_ExecMode != ExecMode_Closed ) return;
-	
+
 	Pcsx2Config fixup( src );
 	if( !g_Conf->EnableSpeedHacks )
 		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
 	if( !g_Conf->EnableGameFixes )
 		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
-	
+
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
 	// usually the desired behavior) will be ignored.
@@ -211,7 +211,7 @@ void AppCoreThread::CpuInitializeMess()
 		m_resetVirtualMachine	= false;
 		return;
 	}
-	
+
 	_parent::CpuInitializeMess();
 }
 

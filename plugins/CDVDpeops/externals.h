@@ -61,8 +61,8 @@ extern HINSTANCE hInst;
 
 #ifndef _IN_GENERIC
 
-extern int        iCD_AD;            
-extern int        iCD_TA;               
+extern int        iCD_AD;
+extern int        iCD_TA;
 extern int        iCD_LU;
 extern int        iRType;
 extern int        iUseSpeedLimit;
@@ -117,7 +117,7 @@ extern READTRACKFUNC   pReadTrackFunc;
 extern GETPTRFUNC      pGetPtrFunc;
 
 extern int iUseCaching;
-extern int iUseDataCache; 
+extern int iUseDataCache;
 extern int iTryAsync;
 extern int iBufSel;
 

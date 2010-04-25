@@ -293,7 +293,7 @@ wxFileOffset wxBackedInputStream::FindLength() const
 
     return len;
 }
-    
+
 size_t wxBackedInputStream::OnSysRead(void *buffer, size_t size)
 {
     if (!IsOk())

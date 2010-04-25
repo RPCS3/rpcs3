@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -21,7 +21,7 @@
 _cacheS pCache[64];
 
 namespace R5900{
-namespace Interpreter 
+namespace Interpreter
 {
 #ifdef PCSX2_CACHE_EMU_MEM
 
@@ -32,24 +32,24 @@ int getFreeCache(u32 mem, int mode, int * way) {
 	u8 * t;
 	int number;
 	int i = (mem >> 6) & 0x3F;
-	
+
 	paddr = getMemR(mem);
 	taddr[0] = getMemW(pCache[i].tag[0]);
 	taddr[1] = getMemW(pCache[i].tag[1]);
 
-	if (taddr[0] == paddr && (pCache[i].tag[0] & 0x20)) 
+	if (taddr[0] == paddr && (pCache[i].tag[0] & 0x20))
 	{
 		*way = 0;
 		return i;
 	}
-	else if(taddr[1] == paddr && (pCache[i].tag[1] & 0x20)) 
+	else if(taddr[1] == paddr && (pCache[i].tag[1] & 0x20))
 	{
 		*way = 1;
 		return i;
 	}
 
 	number = ((pCache[i].tag[0]>>4) & 1) ^ ((pCache[i].tag[1]>>4) & 1);
-	
+
 	if(pCache[i].tag[number] & 0x60)	// Valid Dirty
 	{
 		t = (u8*)(taddr[number]);
@@ -63,7 +63,7 @@ int getFreeCache(u32 mem, int mode, int * way) {
 		((u64*)out)[6] = ((u64*)pCache[i].data[number][3].b8._8)[0];
 		((u64*)out)[7] = ((u64*)pCache[i].data[number][3].b8._8)[1];
 	}
-	
+
 	if(mode == 1)
 	{
 		pCache[i].tag[number] |= 0x40;	// Set Dirty Bit if mode == write
@@ -73,7 +73,7 @@ int getFreeCache(u32 mem, int mode, int * way) {
 	pCache[i].tag[number] |= ((mem>>12) & 0xFFFFF) << 12;
 
 
-	t = (u8 *)paddr; 
+	t = (u8 *)paddr;
 	out=  (u8*)(t + (mem & 0xFC0));
 	((u64*)pCache[i].data[number][0].b8._8)[0] = ((u64*)out)[0];
 	((u64*)pCache[i].data[number][0].b8._8)[1] = ((u64*)out)[1];
@@ -86,9 +86,9 @@ int getFreeCache(u32 mem, int mode, int * way) {
 
 	if(pCache[i].tag[number] & 0x10)
 		pCache[i].tag[number] &= ~(0x10);
-	else 
+	else
 		pCache[i].tag[number] |= 0x10;
-	
+
 	pCache[i].tag[number] |= 0x20;
 	*way = number;
 	return i;
@@ -105,7 +105,7 @@ void writeCache8(u32 mem, u8 value) {
 
 void writeCache16(u32 mem, u16 value) {
 	int i, number;
- 
+
 	i = getFreeCache(mem,1,&number);
 //	CACHE_LOG("writeCache16 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 
@@ -171,7 +171,7 @@ void CACHE() {
 			else if(paddr[1] == taddr && (pCache[index].tag[1] & 0x20))
 			{
 				way = 1;
-			} 
+			}
 			else
 			{
 				return;
@@ -207,14 +207,14 @@ void CACHE() {
 			else if(paddr[1] == taddr && (pCache[index].tag[1] & 0x20))
 			{
 				way = 1;
-			} 
+			}
 			else
 			{
 				return;
 			}
 
 			CACHE_LOG("CACHE DHWBIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
-	
+
 			if(pCache[index].tag[way] & 0x60)	// Valid Dirty
 			{
 				char * t = (char *)(taddr);//paddr[way]);
@@ -258,13 +258,13 @@ void CACHE() {
 			else if(paddr[1] == taddr && (pCache[index].tag[1] & 0x20))
 			{
 				way = 1;
-			} 
+			}
 			else
 			{
 				return;
 			}
 			CACHE_LOG("CACHE DHWOIN addr %x, index %d, way %d, Flags %x",addr,index,way,pCache[index].tag[way] & 0x78);
-			
+
 			if(pCache[index].tag[way] & 0x60)	// Valid Dirty
 			{
 				char * t = (char *)(taddr);
@@ -316,12 +316,12 @@ void CACHE() {
 		{
 			int index = (addr >> 6) & 0x3F;
 			int way = addr & 0x1;
-			
+
 			cpuRegs.CP0.r[28] = 0;
 			cpuRegs.CP0.r[28] = pCache[index].tag[way];
 
 			CACHE_LOG("CACHE DXLTG addr %x, index %d, way %d, DATA %x",addr,index,way,cpuRegs.CP0.r[28]);
-			
+
 			break;
 		}
 		case 0x13:

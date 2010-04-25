@@ -50,7 +50,7 @@
 #ifndef __WXFUNCTION__
     /* TODO: add more compilers supporting __FUNCTION__ */
     #if defined(__DMC__)
-        /* 
+        /*
            __FUNCTION__ happens to be not defined within class members
            http://www.digitalmars.com/drn-bin/wwwnews?c%2B%2B.beta/485
         */

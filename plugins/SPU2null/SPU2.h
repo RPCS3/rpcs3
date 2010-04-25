@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #ifndef __SPU2_H__
 #define __SPU2_H__
 
@@ -148,7 +148,7 @@ void SysMessage(char *fmt, ...);
     spu2Ru16(hi) = ((value)>>16)&0x3f; \
     spu2Ru16(lo) = (value)&0xffff; \
     } \
- 
+
 #define C0_IRQA SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI)
 #define C1_IRQA SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI)
 
@@ -169,7 +169,7 @@ struct SPU_CONTROL_
 	u16 irq : 1;
 	u16 dma : 2;       // 1 - no dma, 2 - write, 3 - read
 	u16 extr : 1;      // external reverb
-	u16 cdreverb : 1; 
+	u16 cdreverb : 1;
 	u16 extAudio : 1;
 	u16 extCd : 1;
 };
@@ -200,16 +200,16 @@ struct _SPU_VOICE
 
 	u16 SustainLvl : 4;
 	u16 DecayRate : 4;
-	u16 AttackRate : 7; 
+	u16 AttackRate : 7;
 	u16 AttackExp : 1;     // if 0, linear
-    
+
 	u16 ReleaseRate : 5;
 	u16 ReleaseExp : 1;    // if 0, linear
 	u16 SustainRate : 7;
 	u16 res1 : 1;
 	u16 SustainDec : 1;    // if 0, inc
 	u16 SustainExp : 1;    // if 0, linear
-    
+
 	u16 AdsrVol;
 	u16 Address;           // add / 8
 	u16 RepeatAddr;        // gets reset when sample starts

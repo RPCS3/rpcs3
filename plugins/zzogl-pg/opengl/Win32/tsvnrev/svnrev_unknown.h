@@ -3,7 +3,7 @@
 // This file acts as a placebo for people who do not have TortoiseSVN installed.
 // It provides "empty" revision information to the Pcsx2 Playground projects in
 // the absence of real revisions derived from the repository being built.
-// 
+//
 // This file does not affect application/dll builds in any significant manner,
 // other than the lack of automatic revision tags inserted into the app (which
 // is very convenient but hardly necessary).

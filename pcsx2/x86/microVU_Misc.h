@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -36,12 +36,12 @@ extern const __aligned(32) mVU_Globals mVUglob;
 // Helper Macros
 //------------------------------------------------------------------
 
-#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The ft part of the instruction register 
-#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The fs part of the instruction register 
+#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The ft part of the instruction register
+#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The fs part of the instruction register
 #define _Fd_ ((mVU->code >>  6) & 0x1F)  // The fd part of the instruction register
 
-#define _It_ ((mVU->code >> 16) & 0xF)   // The it part of the instruction register 
-#define _Is_ ((mVU->code >> 11) & 0xF)   // The is part of the instruction register 
+#define _It_ ((mVU->code >> 16) & 0xF)   // The it part of the instruction register
+#define _Is_ ((mVU->code >> 11) & 0xF)   // The is part of the instruction register
 #define _Id_ ((mVU->code >>  6) & 0xF)   // The id part of the instruction register
 
 #define _X	 ((mVU->code>>24) & 0x1)
@@ -246,7 +246,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // flag instances between blocks...
 
 // Constant Propagation
-#define CHECK_VU_CONSTPROP 0 // Set to 1 to turn on vi15 const propagation 
+#define CHECK_VU_CONSTPROP 0 // Set to 1 to turn on vi15 const propagation
 // Enables Constant Propagation for Jumps based on vi15 'link-register'
 // allowing us to know many indirect jump target addresses.
 // Makes GoW a lot slower due to extra recompilation time and extra code-gen!
@@ -256,7 +256,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 //------------------------------------------------------------------
 
 // Status Flag Speed Hack
-#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack) 
+#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack)
 // This hack only updates the Status Flag on blocks that will read it.
 // Most blocks do not read status flags, so this is a big speedup.
 

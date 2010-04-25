@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #ifndef __JOYSTICK_H__
 #define __JOYSTICK_H__
 
@@ -47,80 +47,80 @@ class JoystickInfo
 		void TestForce();
 
 		bool PollButtons(int &jbutton, u32 &pkey);
-		
+
 		bool PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey);
-		
+
 		bool PollHats(int &jbutton, int &dir, u32 &pkey);
-		
+
 		const string& GetName()
 		{
 			return devname;
 		}
-		
+
 		int GetNumButtons()
 		{
 			return numbuttons;
 		}
-		
+
 		int GetNumAxes()
 		{
 			return numaxes;
 		}
-		
+
 		int GetNumHats()
 		{
 			return numhats;
 		}
-		
+
 		int GetId()
 		{
 			return _id;
 		}
-		
+
 		int GetPAD()
 		{
 			return pad;
 		}
-		
+
 		int GetDeadzone(int axis)
 		{
 			return deadzone;
 		}
 
 		void SaveState();
-		
+
 		int GetButtonState(int i)
 		{
 			return vbuttonstate[i];
 		}
-		
+
 		int GetAxisState(int i)
 		{
 			return vaxisstate[i];
 		}
-		
+
 		int GetHatState(int i)
 		{
 			//PAD_LOG("Getting POV State of %d.\n", i);
 			return vhatstate[i];
 		}
-		
+
 		void SetButtonState(int i, int state)
 		{
 			vbuttonstate[i] = state;
 		}
-		
+
 		void SetAxisState(int i, int value)
 		{
 			vaxisstate[i] = value;
 		}
-		
+
 		void SetHatState(int i, int value)
 		{
 			//PAD_LOG("We should set %d to %d.\n", i, value);
 			vhatstate[i] = value;
 		}
-		
+
 		SDL_Joystick* GetJoy()
 		{
 			return joy;

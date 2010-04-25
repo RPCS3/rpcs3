@@ -351,7 +351,7 @@ public:
     };
 };
 
- 
+
 #if defined(DEBUG)
 class CAutoTrace
 {
@@ -364,11 +364,11 @@ public:
     CAutoTrace(const TCHAR* szBlkName, const int level = 15)
         : _szBlkName(szBlkName), _level(level)
     {DbgLog((LOG_TRACE, _level, _szEntering, _szBlkName));}
- 
+
     ~CAutoTrace()
     {DbgLog((LOG_TRACE, _level, _szLeaving, _szBlkName));}
 };
- 
+
 #if defined (__FUNCTION__)
 
 #define AMTRACEFN()  CAutoTrace __trace(TEXT(__FUNCTION__))

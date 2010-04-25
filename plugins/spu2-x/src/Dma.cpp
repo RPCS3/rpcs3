@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -95,7 +95,7 @@ void V_Core::AutoDMAReadBuffer(int mode) //mode: 0= split stereo; 1 = do not spl
 	// addressing, but new PCSX2s have dynamic memory addressing).
 
 	if(mode)
-	{		
+	{
 		if( DMAPtr != NULL )
 			memcpy((ADMATempBuffer+(spos<<1)),DMAPtr+InputDataProgress,0x400);
 		MADR+=0x400;
@@ -231,7 +231,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	PcmCacheEntry* cacheLine = &pcm_cache_data[cacheIdxStart];
 	PcmCacheEntry& cacheEnd = pcm_cache_data[cacheIdxEnd];
 
-	do 
+	do
 	{
 		cacheLine->Validated = false;
 		cacheLine++;
@@ -252,7 +252,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		// second branch needs copied:
 		// It starts at the beginning of memory and moves forward to buff2end
 
-		// endpoint cache should be irrelevant, since it's almost certainly dynamic 
+		// endpoint cache should be irrelevant, since it's almost certainly dynamic
 		// memory below 0x2800 (registers and such)
 		//const u32 endpt2 = (buff2end + roundUp) / indexer_scalar;
 		//memset( pcm_cache_flags, 0, endpt2 );
@@ -291,7 +291,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	{
 		// Buffer doesn't wrap/overflow!
 		// Just set the TDA and check for an IRQ...
-		
+
 		TDA = buff1end;
 
 		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
@@ -323,7 +323,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	TADR		= MADR + (size<<1);
 }
 
-void V_Core::DoDMAread(u16* pMem, u32 size) 
+void V_Core::DoDMAread(u16* pMem, u32 size)
 {
 #ifndef ENABLE_NEW_IOPDMA_SPU2
 	TSA &= 0xffff8;
@@ -394,7 +394,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 #endif
 }
 
-void V_Core::DoDMAwrite(u16* pMem, u32 size) 
+void V_Core::DoDMAwrite(u16* pMem, u32 size)
 {
 #ifndef ENABLE_NEW_IOPDMA_SPU2
 	DMAPtr = pMem;
@@ -516,7 +516,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	bool DmaStarting = !DmaStarted;
 	DmaStarted = true;
 
-	if(bytesLeft<2) 
+	if(bytesLeft<2)
 	{
 		// execute interrupt code early
 		NewDmaInterrupt();
@@ -554,7 +554,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 			s16* mptr = (s16*)data;
 
 			if(false)//(mode)
-			{		
+			{
 				memcpy((ADMATempBuffer+(InputPosWrite<<1)),mptr,0x400);
 				mptr+=0x200;
 

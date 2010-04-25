@@ -48,14 +48,14 @@ typedef int BOOL;
 
 #endif
 
-#if defined(_MSC_VER) 
+#if defined(_MSC_VER)
 #define FASTCALL(fn) __fastcall fn
 #else
 
 #ifdef __x86_64
 #define FASTCALL(fn) fn
 #else
-#define FASTCALL(fn) __attribute__((fastcall)) fn 
+#define FASTCALL(fn) __attribute__((fastcall)) fn
 #endif
 #endif
 
@@ -373,7 +373,7 @@ typedef struct {
 	u32 options;
 	u32 gamesettings; // default game settings
 	int width, height;
-	int winstyle; // window style before full screen 
+	int winstyle; // window style before full screen
 #ifdef GS_LOG
 	u32 log;
 #endif
@@ -453,7 +453,7 @@ typedef struct {
 
 typedef struct {
 	u16 prim;
-	
+
 	union {
 		struct {
 			u16 iip : 1;
@@ -587,12 +587,12 @@ typedef struct {
 	tagInfo tag;
 } pathInfo;
 
-typedef struct {	
+typedef struct {
 	Vertex gsvertex[3];
 	u32 rgba;
 	float q;
 	Vertex vertexregs;
-	
+
 	int primC;		// number of verts current storing
 	int primIndex;	// current prim index
 	int nTriFanVert;
@@ -614,13 +614,13 @@ typedef struct {
 	bufInfo dstbuf, dstbufnew;
 
 	clutInfo clut;
-	
+
 	texaInfo texa;
 	trxposInfo trxpos, trxposnew;
 
 	int imageWtemp, imageHtemp;
 
-	int imageTransfer;		
+	int imageTransfer;
 	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
 
 	pathInfo path1;
@@ -662,7 +662,7 @@ public:
 	inline T* operator->() { return ptr; }
 	inline T* get() { return ptr; }
 
-	inline void release() { 
+	inline void release() {
 		if( ptr != NULL ) { ptr->Release(); ptr = NULL; }
 	}
 

@@ -102,7 +102,7 @@ int CfgReadInt(char *Section, char*Name,int Default) {
 		CfgWriteInt(Section,Name,Default);
 		return Default;
 	}
-	
+
 	return atoi(Data);
 }
 
@@ -110,8 +110,8 @@ void CfgReadStr(char *Section, char*Name,char *Data,int DataSize,char *Default) 
 	int sl;
 	GetPrivateProfileString(Section,Name,"",Data,DataSize,CfgFile);
 
-	if(strlen(Data)==0) { 
-		sl=(int)strlen(Default); 
+	if(strlen(Data)==0) {
+		sl=(int)strlen(Default);
 		strncpy(Data,Default,sl>255?255:sl);
 		CfgWriteStr(Section,Name,Data);
 	}
@@ -172,7 +172,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 			n=0;s=0;
 
-			SendMessage(GetDlgItem(hWnd,IDC_DRIVE),CB_RESETCONTENT,0,0); 
+			SendMessage(GetDlgItem(hWnd,IDC_DRIVE),CB_RESETCONTENT,0,0);
 			SendMessage(GetDlgItem(hWnd,IDC_DRIVE),CB_ADDSTRING,0,(LPARAM)"@ (No disc)");
 			for(char d='A';d<='Z';d++)
 			{
@@ -189,12 +189,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				}
 			}
 
-			SendMessage(GetDlgItem(hWnd,IDC_DRIVE),CB_SETCURSEL,s,0); 
+			SendMessage(GetDlgItem(hWnd,IDC_DRIVE),CB_SETCURSEL,s,0);
 
 			break;
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
@@ -219,7 +219,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	}
 	return TRUE;
 }
- 
+
 void configure()
 {
 	INT_PTR ret;

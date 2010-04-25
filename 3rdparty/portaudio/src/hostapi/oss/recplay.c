@@ -2,7 +2,7 @@
  * recplay.c
  * Phil Burk
  * Minimal record and playback test.
- * 
+ *
  */
 #include <stdio.h>
 #include <unistd.h>

@@ -31,8 +31,8 @@
 
 HINSTANCE hInst=NULL;
 
-BOOL APIENTRY DllMain( HANDLE hModule, 
-                       DWORD  dwReason, 
+BOOL APIENTRY DllMain( HANDLE hModule,
+                       DWORD  dwReason,
                        LPVOID lpReserved
 					 )
 {

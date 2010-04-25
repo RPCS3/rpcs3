@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -47,12 +47,12 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	m_check_Fullscreen	= new pxCheckBox( this, _("Default to fullscreen mode on open") );
 	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for vsync on refresh") );
 	m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
-	
+
 	m_check_VsyncEnable->SetToolTip( pxE( ".Tooltips:Video:Vsync",
 		L"Vsync eliminates screen tearing but typically has a big performance hit. "
 		L"It usually only applies to fullscreen mode, and may not work with all GS plugins."
 	) );
-	
+
 	m_check_HideMouse->SetToolTip( pxE( ".Tooltips:Video:HideMouse",
 		L"Check this to force the mouse cursor invisible inside the GS window; useful if using "
 		L"the mouse as a primary control device for gaming.  By default the mouse auto-hides after "
@@ -73,7 +73,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 		L"Completely closes the often large and bulky GS window when pressing "
 		L"ESC or suspending the emulator."
 	) );
-	
+
 	// ----------------------------------------------------------------------------
 	//  Layout and Positioning
 
@@ -100,7 +100,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	*this += m_check_Fullscreen;
 	*this += m_check_ExclusiveFS;
 	*this += m_check_VsyncEnable;
-	
+
 	wxBoxSizer* centerSizer = new wxBoxSizer( wxVERTICAL );
 	*centerSizer += GetSizer()	| pxCenter;
 	SetSizer( centerSizer, false );

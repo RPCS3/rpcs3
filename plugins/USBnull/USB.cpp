@@ -60,13 +60,13 @@ EXPORT_C_(s32) USBinit()
 
 	// Initialize memory structures here.
 	usbregs = (s8*)malloc(0x10000);
-	
-	if (usbregs == NULL) 
+
+	if (usbregs == NULL)
 	{
-		USBLog.Message("Error allocating memory"); 
+		USBLog.Message("Error allocating memory");
 		return -1;
 	}
-	
+
 	memset(usbregs, 0, 0x10000);
 	return 0;
 }
@@ -81,7 +81,7 @@ EXPORT_C_(void) USBshutdown()
 EXPORT_C_(s32) USBopen(void *pDsp)
 {
 	USBLog.WriteLn("Opening USBnull.");
-	
+
 	// Take care of anything else we need on opening, other then initialization.
 	return 0;
 }
@@ -96,7 +96,7 @@ EXPORT_C_(void) USBclose()
 EXPORT_C_(u8) USBread8(u32 addr)
 {
 	u8 value = 0;
-	
+
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
@@ -115,7 +115,7 @@ EXPORT_C_(u8) USBread8(u32 addr)
 EXPORT_C_(u16) USBread16(u32 addr)
 {
 	u16 value = 0;
-	
+
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
@@ -133,7 +133,7 @@ EXPORT_C_(u16) USBread16(u32 addr)
 EXPORT_C_(u32) USBread32(u32 addr)
 {
 	u32 value = 0;
-	
+
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
@@ -193,7 +193,7 @@ EXPORT_C_(void) USBwrite32(u32 addr, u32 value)
 	}
 }
 
-EXPORT_C_(void) USBirqCallback(USBcallback callback) 
+EXPORT_C_(void) USBirqCallback(USBcallback callback)
 {
 	// Register USBirq, so we can trigger an interrupt with it later.
 	// It will be called as USBirq(cycles); where cycles is the number
@@ -203,7 +203,7 @@ EXPORT_C_(void) USBirqCallback(USBcallback callback)
 
 EXPORT_C_(int) _USBirqHandler(void)
 {
-	// This is our USB irq handler, so if an interrupt gets triggered, 
+	// This is our USB irq handler, so if an interrupt gets triggered,
 	// deal with it here.
 	return 0;
 }
@@ -225,12 +225,12 @@ EXPORT_C_(void) USBsetSettingsDir(const char* dir)
 	// Get the path to the ini directory.
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
- 	
+
 // extended funcs
 
 EXPORT_C_(s32) USBfreeze(int mode, freezeData *data)
 {
-	// This should store or retrieve any information, for if emulation 
+	// This should store or retrieve any information, for if emulation
 	// gets suspended, or for savestates.
 	switch(mode)
 	{

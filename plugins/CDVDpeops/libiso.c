@@ -270,7 +270,7 @@ int _isoReadZ2table(isoFile *iso) {
 		ofs+= Ztable[i];
 	}
 	free(Ztable);
-	
+
 	return 0;
 }
 
@@ -398,7 +398,7 @@ isoFile *isoOpen(const char *filename) {
 	if (iso->flags & (ISOFLAGS_Z | ISOFLAGS_Z2 | ISOFLAGS_BLOCKDUMP)) {
 	} else {
 		_seekfile(iso->handle, 0, SEEK_END);
-		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) / 
+		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) /
 					        (iso->blocksize));
 	}
 /*
@@ -482,13 +482,13 @@ int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks) {
 	printf("blocksize = %d\n", iso->blocksize);
 	printf("blocks = %d\n", iso->blocks);
 	if (iso->flags & ISOFLAGS_Z2) {
-		if (_writefile(iso->handle, "Z V2", 4) < 4) return -1; 
+		if (_writefile(iso->handle, "Z V2", 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;
 	}
 	if (iso->flags & ISOFLAGS_BLOCKDUMP) {
-		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1; 
+		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;

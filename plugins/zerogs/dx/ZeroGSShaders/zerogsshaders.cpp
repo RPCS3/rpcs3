@@ -55,7 +55,7 @@ public:
 			_snprintf(strfile, 255, "%s%s", pEffectDir, pFileName);
 			pfilename = strfile;
 		}
-		
+
 		FILE* f = fopen(pfilename, "rb");
 
 		if( f == NULL )
@@ -83,7 +83,7 @@ public:
 };
 
 void LoadShader(int index, const char* name, const char* pshader, D3DXMACRO* pmacros, ID3DXInclude* pInclude)
-{	
+{
 	LPD3DXBUFFER pShader = NULL, pError = NULL;
 
 	HRESULT hr = D3DXCompileShaderFromFile(srcfilename, pmacros, pInclude, name, pshader, dwFlags, &pShader, &pError, NULL);
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 			break;
 		--i;
 	}
-	
+
 	strdir[i] = 0;
 
 	ZeroGSShaderInclude inc;
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
 	memset(macros, 0, sizeof(macros));
 
 	macros[0].Name = "WRITE_DEPTH";
-	macros[0].Definition = "1";	
+	macros[0].Definition = "1";
 
 	for(i = 0; i < ARRAYSIZE(vsshaders); ++i) {
 		for(int vs30 = 0; vs30 < 2; ++vs30 ) {
@@ -194,7 +194,7 @@ int main(int argc, char** argv)
 	}
 
 	printf("creating shaders, note that ps2hw_ctx0.fx, and ps2hw_ctx1.fx are required\n");
-		
+
 	for(int texwrap = 0; texwrap < NUM_TEXWRAPS; ++texwrap ) {
 
 		int macroindex = 0;
@@ -236,7 +236,7 @@ int main(int argc, char** argv)
 							}
 
 							for(int exactcolor = 0; exactcolor < 2; ++exactcolor ) {
-								
+
 								if( exactcolor ) {
 									macros[macroindex].Name = "EXACT_COLOR";
 									macros[macroindex].Definition = "1";
@@ -274,80 +274,80 @@ int main(int argc, char** argv)
     								// tex32
     								sprintf(str, "Texture%s%d_tex32PS", fog?"Fog":"", texfilter);
     								inc.ps2x = 0;
-  
+
     								macros[macroindex].Name = "ACCURATE_DECOMPRESSION";
     								macros[macroindex].Definition = "1";
-  
+
     								if( texfilter == 0 && exactcolor == 0 ) {
     									LoadShader(GET_SHADER_INDEX(1, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20), str, g_pShaders[SHADER_20], macros, &inc);
     								}
-  
+
     								inc.ps2x = 1;
-  
+
     								LoadShader(GET_SHADER_INDEX(1, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20b), str, g_pShaders[SHADER_20b], macros, &inc);
-  
+
     								macros[macroindex].Name = NULL;
     								macros[macroindex].Definition = NULL;
-  
+
     								LoadShader(GET_SHADER_INDEX(1, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20a), str, g_pShaders[SHADER_20a], macros, &inc);
     								LoadShader(GET_SHADER_INDEX(1, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_30), str, g_pShaders[SHADER_30], macros, &inc);
-  
+
     								// clut32
     								sprintf(str, "Texture%s%d_clut32PS", fog?"Fog":"", texfilter);
     								inc.ps2x = 0;
-  
+
     								macros[macroindex].Name = "ACCURATE_DECOMPRESSION";
     								macros[macroindex].Definition = "1";
-  
+
     								if( texfilter == 0 && exactcolor == 0 ) {
     									LoadShader(GET_SHADER_INDEX(2, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20), str, g_pShaders[SHADER_20], macros, &inc);
     								}
-  
+
     								inc.ps2x = 1;
-    
+
     								LoadShader(GET_SHADER_INDEX(2, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20b), str, g_pShaders[SHADER_20b], macros, &inc);
-    
+
     								macros[macroindex].Name = NULL;
     								macros[macroindex].Definition = NULL;
-    
+
     								LoadShader(GET_SHADER_INDEX(2, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20a), str, g_pShaders[SHADER_20a], macros, &inc);
     								LoadShader(GET_SHADER_INDEX(2, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_30), str, g_pShaders[SHADER_30], macros, &inc);
-    
+
                                     // tex32to16
     								sprintf(str, "Texture%s%d_tex32to16PS", fog?"Fog":"", texfilter);
     								inc.ps2x = 0;
-    
+
     								macros[macroindex].Name = "ACCURATE_DECOMPRESSION";
     								macros[macroindex].Definition = "1";
-    
-    								if( texfilter == 0 && exactcolor == 0 ) {								
+
+    								if( texfilter == 0 && exactcolor == 0 ) {
     									LoadShader(GET_SHADER_INDEX(3, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20), str, g_pShaders[SHADER_20], macros, &inc);
     								}
-    
+
     								inc.ps2x = 1;
-    
+
     								LoadShader(GET_SHADER_INDEX(3, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20b), str, g_pShaders[SHADER_20b], macros, &inc);
-    
+
     								macros[macroindex].Name = NULL;
     								macros[macroindex].Definition = NULL;
-    
+
     								LoadShader(GET_SHADER_INDEX(3, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20a), str, g_pShaders[SHADER_20a], macros, &inc);
     								LoadShader(GET_SHADER_INDEX(3, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_30), str, g_pShaders[SHADER_30], macros, &inc);
-    
+
                                     // tex16to8h
     								sprintf(str, "Texture%s%d_tex16to8hPS", fog?"Fog":"", texfilter);
     								inc.ps2x = 0;
-    
+
     								macros[macroindex].Name = "ACCURATE_DECOMPRESSION";
     								macros[macroindex].Definition = "1";
-    
+
     								inc.ps2x = 1;
-    
+
     								LoadShader(GET_SHADER_INDEX(4, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20b), str, g_pShaders[SHADER_20b], macros, &inc);
-    
+
     								macros[macroindex].Name = NULL;
     								macros[macroindex].Definition = NULL;
-    
+
     								LoadShader(GET_SHADER_INDEX(4, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_20a), str, g_pShaders[SHADER_20a], macros, &inc);
     								LoadShader(GET_SHADER_INDEX(4, texfilter, texwrap, fog, writedepth, testaem, exactcolor, context, SHADER_30), str, g_pShaders[SHADER_30], macros, &inc);
                                 }

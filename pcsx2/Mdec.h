@@ -84,7 +84,7 @@
 	image[n+2] = ROUND(Y); \
 	image[n+1] = ROUND(Y); \
 	image[n+0] = ROUND(Y);
-	
+
 void mdecInit();
 void mdecWrite0(u32 data);
 void mdecWrite1(u32 data);

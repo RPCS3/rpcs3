@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -51,23 +51,23 @@ INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LP
 
 		GSVector4i r;
 		GetWindowRect(hWnd, r);
- 		
+
 		int x = (mi.rcWork.left + mi.rcWork.right - r.width()) / 2;
 		int y = (mi.rcWork.top + mi.rcWork.bottom - r.height()) / 2;
 
 		SetWindowPos(hWnd, NULL, x, y, -1, -1, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
 		dlg->OnInit();
-		
+
 		return true;
 	}
 
 	dlg = (GSDialog*)GetWindowLongPtr(hWnd, GWL_USERDATA);
-	
+
 	return dlg != NULL ? dlg->OnMessage(message, wParam, lParam) : FALSE;
 }
 
-bool GSDialog::OnMessage(UINT message, WPARAM wParam, LPARAM lParam) 
+bool GSDialog::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	return message == WM_COMMAND ? OnCommand((HWND)lParam, LOWORD(wParam), HIWORD(wParam)) : false;
 }
@@ -134,8 +134,8 @@ void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint3
 		if(settings[i].id <= maxid)
 		{
 			string str = settings[i].name;
-			
-			if(settings[i].note != NULL) 
+
+			if(settings[i].note != NULL)
 			{
 				str = str + " (" + settings[i].note + ")";
 			}

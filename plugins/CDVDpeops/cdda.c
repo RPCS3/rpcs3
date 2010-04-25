@@ -45,11 +45,11 @@ BOOL DoCDDAPlay(unsigned long addr)
 // else     dw=PlayFunc(0,1);
  else                                                  // funny stop... but seems to work
   {
-   unsigned char cdb[3000];   
+   unsigned char cdb[3000];
    FRAMEBUF * f=(FRAMEBUF *)cdb;
 
    f->dwFrame     = 16;                                // -> use an existing address (16 will ever exist on ps2 cds/dvds)
-   f->dwFrameCnt  = 1;  
+   f->dwFrameCnt  = 1;
    f->dwBufLen    = 2352;
 
    dw=pReadFunc(1,f);                                  // -> do a simply sync read... seems to stop all audio playing
@@ -64,7 +64,7 @@ BOOL DoCDDAPlay(unsigned long addr)
 /////////////////////////////////////////////////////////
 // get curr playing pos
 
-unsigned char * GetCDDAPlayPosition(void)              
+unsigned char * GetCDDAPlayPosition(void)
 {
  unsigned char * pos;
 

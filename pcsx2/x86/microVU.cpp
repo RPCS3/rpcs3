@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ __aligned16 microVU microVU1;
 const __aligned(32) mVU_Globals mVUglob = {
 	__four(0x7fffffff),		  // absclip
 	__four(0x80000000),		  // signbit
-	__four(0xff7fffff),		  // minvals 
+	__four(0xff7fffff),		  // minvals
 	__four(0x7f7fffff),		  // maxvals
 	__four(0x3f800000),		  // ONE!
 	__four(0x3f490fdb),		  // PI4!
@@ -41,21 +41,21 @@ const __aligned(32) mVU_Globals mVUglob = {
 	__four(0xbd6501c4),		  // T6
 	__four(0x3cb31652),		  // T7
 	__four(0xbb84d7e7),		  // T8
-	__four(0xbe2aaaa4),		  // S2 
+	__four(0xbe2aaaa4),		  // S2
 	__four(0x3c08873e),		  // S3
 	__four(0xb94fb21f),		  // S4
 	__four(0x362e9c14),		  // S5
 	__four(0x3e7fffa8),		  // E1
 	__four(0x3d0007f4),		  // E2
-	__four(0x3b29d3ff),		  // E3 
+	__four(0x3b29d3ff),		  // E3
 	__four(0x3933e553),		  // E4
 	__four(0x36b63510),		  // E5
 	__four(0x353961ac),		  // E6
-	__four(16.0),			  // FTOI_4 
-	__four(4096.0),			  // FTOI_12 
+	__four(16.0),			  // FTOI_4
+	__four(4096.0),			  // FTOI_12
 	__four(32768.0),		  // FTOI_15
-	__four(0.0625f),		  // ITOF_4 
-	__four(0.000244140625),	  // ITOF_12 
+	__four(0.0625f),		  // ITOF_4
+	__four(0.000244140625),	  // ITOF_12
 	__four(0.000030517578125) // ITOF_15
 };
 
@@ -96,7 +96,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
 	mVU->cache = SysMmapEx(NULL, mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
 	if (!mVU->cache) throw Exception::OutOfMemory( "microVU Error: Failed to allocate recompiler memory!" );
-	
+
 	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
@@ -204,7 +204,7 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	float cacheSize = (float)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
 	float cacheUsed =((float)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
-	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)", 
+	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)",
 					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
 	return prog;
 }
@@ -251,7 +251,7 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	if(!quick.prog) { // If null, we need to search for new program
 		deque<microProgram*>::iterator it = list.list->begin();
 		for ( ; it != list.list->end(); it++) {
-			if (mVUcmpProg<vuIndex>(*it[0], 0)) { 
+			if (mVUcmpProg<vuIndex>(*it[0], 0)) {
 				quick.block = it[0]->block[startPC/8];
 				quick.prog  = it[0];
 				list.list->erase(it);
@@ -290,14 +290,14 @@ void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(&microVU1); }
 void recMicroVU0::Allocate() {
 	if(!m_AllocCount) {
 		m_AllocCount++;
-		if (AtomicExchange(mvu0_allocated, 1) == 0) 
+		if (AtomicExchange(mvu0_allocated, 1) == 0)
 			mVUinit(&VU0, 0);
 	}
 }
 void recMicroVU1::Allocate() {
 	if(!m_AllocCount) {
 		m_AllocCount++;
-		if (AtomicExchange(mvu1_allocated, 1) == 0) 
+		if (AtomicExchange(mvu1_allocated, 1) == 0)
 			mVUinit(&VU1, 1);
 	}
 }
@@ -350,9 +350,9 @@ void recMicroVU1::Execute(u32 cycles) {
 
 void recMicroVU0::Clear(u32 addr, u32 size) {
 	pxAssert(mvu0_allocated); // please allocate me first! :|
-	mVUclear(&microVU0, addr, size); 
+	mVUclear(&microVU0, addr, size);
 }
 void recMicroVU1::Clear(u32 addr, u32 size) {
 	pxAssert(mvu1_allocated); // please allocate me first! :|
-	mVUclear(&microVU1, addr, size); 
+	mVUclear(&microVU1, addr, size);
 }

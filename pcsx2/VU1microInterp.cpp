@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -24,15 +24,15 @@ extern void _vuFlushAll(VURegs* VU);
 _vuTables(VU1, VU1);
 
 void _vu1ExecUpper(VURegs* VU, u32 *ptr) {
-	VU->code = ptr[1]; 
+	VU->code = ptr[1];
 	IdebugUPPER(VU1);
-	VU1_UPPER_OPCODE[VU->code & 0x3f](); 
+	VU1_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
 void _vu1ExecLower(VURegs* VU, u32 *ptr) {
-	VU->code = ptr[0]; 
+	VU->code = ptr[0];
 	IdebugLOWER(VU1);
-	VU1_LOWER_OPCODE[VU->code >> 25](); 
+	VU1_LOWER_OPCODE[VU->code >> 25]();
 }
 
 int vu1branch = 0;
@@ -57,10 +57,10 @@ static void _vu1Exec(VURegs* VU)
 		VU->cycle++;
 		return;*/
 	}
-	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL]; 
-	VU->VI[REG_TPC].UL+=8; 		
+	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL];
+	VU->VI[REG_TPC].UL+=8;
 
-	if (ptr[1] & 0x40000000) { /* E flag */ 
+	if (ptr[1] & 0x40000000) { /* E flag */
 		VU->ebit = 2;
 	}
 	if (ptr[1] & 0x10000000) { /* D flag */
@@ -78,14 +78,14 @@ static void _vu1Exec(VURegs* VU)
 
 	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
 
-	VU->code = ptr[1]; 
+	VU->code = ptr[1];
 	VU1regs_UPPER_OPCODE[VU->code & 0x3f](&uregs);
 #ifndef INT_VUSTALLHACK
 	_vuTestUpperStalls(VU, &uregs);
 #endif
 
-	/* check upper flags */ 
-	if (ptr[1] & 0x80000000) { /* I flag */ 
+	/* check upper flags */
+	if (ptr[1] & 0x80000000) { /* I flag */
 		_vu1ExecUpper(VU, ptr);
 
 		VU->VI[REG_I].UL = ptr[0];
@@ -187,7 +187,7 @@ void InterpVU1::Step()
 	vu1Exec( &VU1 );
 }
 
-void InterpVU1::Execute(u32 cycles) 
+void InterpVU1::Execute(u32 cycles)
 {
 	for (int i = (int)cycles; i > 0 ; i--) {
 		if (!(VU0.VI[REG_VPU_STAT].UL & 0x100)) {

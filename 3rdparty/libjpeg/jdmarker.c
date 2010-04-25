@@ -22,24 +22,24 @@ typedef enum {			/* JPEG marker codes */
   M_SOF1  = 0xc1,
   M_SOF2  = 0xc2,
   M_SOF3  = 0xc3,
-  
+
   M_SOF5  = 0xc5,
   M_SOF6  = 0xc6,
   M_SOF7  = 0xc7,
-  
+
   M_JPG   = 0xc8,
   M_SOF9  = 0xc9,
   M_SOF10 = 0xca,
   M_SOF11 = 0xcb,
-  
+
   M_SOF13 = 0xcd,
   M_SOF14 = 0xce,
   M_SOF15 = 0xcf,
-  
+
   M_DHT   = 0xc4,
-  
+
   M_DAC   = 0xcc,
-  
+
   M_RST0  = 0xd0,
   M_RST1  = 0xd1,
   M_RST2  = 0xd2,
@@ -48,7 +48,7 @@ typedef enum {			/* JPEG marker codes */
   M_RST5  = 0xd5,
   M_RST6  = 0xd6,
   M_RST7  = 0xd7,
-  
+
   M_SOI   = 0xd8,
   M_EOI   = 0xd9,
   M_SOS   = 0xda,
@@ -57,7 +57,7 @@ typedef enum {			/* JPEG marker codes */
   M_DRI   = 0xdd,
   M_DHP   = 0xde,
   M_EXP   = 0xdf,
-  
+
   M_APP0  = 0xe0,
   M_APP1  = 0xe1,
   M_APP2  = 0xe2,
@@ -74,13 +74,13 @@ typedef enum {			/* JPEG marker codes */
   M_APP13 = 0xed,
   M_APP14 = 0xee,
   M_APP15 = 0xef,
-  
+
   M_JPG0  = 0xf0,
   M_JPG13 = 0xfd,
   M_COM   = 0xfe,
-  
+
   M_TEM   = 0x01,
-  
+
   M_ERROR = 0x100
 } JPEG_MARKER;
 
@@ -198,7 +198,7 @@ get_soi (j_decompress_ptr cinfo)
 /* Process an SOI marker */
 {
   int i;
-  
+
   TRACEMS(cinfo, 1, JTRC_SOI);
 
   if (cinfo->marker->saw_SOI)
@@ -275,7 +275,7 @@ get_sof (j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
     cinfo->comp_info = (jpeg_component_info *) (*cinfo->mem->alloc_small)
 			((j_common_ptr) cinfo, JPOOL_IMAGE,
 			 cinfo->num_components * SIZEOF(jpeg_component_info));
-  
+
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
     compptr->component_index = ci;
@@ -325,7 +325,7 @@ get_sos (j_decompress_ptr cinfo)
   for (i = 0; i < n; i++) {
     INPUT_BYTE(cinfo, cc, return FALSE);
     INPUT_BYTE(cinfo, c, return FALSE);
-    
+
     for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
 	 ci++, compptr++) {
       if (cc == compptr->component_id)
@@ -339,7 +339,7 @@ get_sos (j_decompress_ptr cinfo)
     cinfo->cur_comp_info[i] = compptr;
     compptr->dc_tbl_no = (c >> 4) & 15;
     compptr->ac_tbl_no = (c     ) & 15;
-    
+
     TRACEMS3(cinfo, 1, JTRC_SOS_COMPONENT, cc,
 	     compptr->dc_tbl_no, compptr->ac_tbl_no);
   }
@@ -379,7 +379,7 @@ get_dac (j_decompress_ptr cinfo)
 
   INPUT_2BYTES(cinfo, length, return FALSE);
   length -= 2;
-  
+
   while (length > 0) {
     INPUT_BYTE(cinfo, index, return FALSE);
     INPUT_BYTE(cinfo, val, return FALSE);
@@ -428,12 +428,12 @@ get_dht (j_decompress_ptr cinfo)
 
   INPUT_2BYTES(cinfo, length, return FALSE);
   length -= 2;
-  
+
   while (length > 16) {
     INPUT_BYTE(cinfo, index, return FALSE);
 
     TRACEMS1(cinfo, 1, JTRC_DHT, index);
-      
+
     bits[0] = 0;
     count = 0;
     for (i = 1; i <= 16; i++) {
@@ -473,7 +473,7 @@ get_dht (j_decompress_ptr cinfo)
 
     if (*htblptr == NULL)
       *htblptr = jpeg_alloc_huff_table((j_common_ptr) cinfo);
-  
+
     MEMCOPY((*htblptr)->bits, bits, SIZEOF((*htblptr)->bits));
     MEMCOPY((*htblptr)->huffval, huffval, SIZEOF((*htblptr)->huffval));
   }
@@ -508,7 +508,7 @@ get_dqt (j_decompress_ptr cinfo)
 
     if (n >= NUM_QUANT_TBLS)
       ERREXIT1(cinfo, JERR_DQT_INDEX, n);
-      
+
     if (cinfo->quant_tbl_ptrs[n] == NULL)
       cinfo->quant_tbl_ptrs[n] = jpeg_alloc_quant_table((j_common_ptr) cinfo);
     quant_ptr = cinfo->quant_tbl_ptrs[n];
@@ -553,7 +553,7 @@ get_dri (j_decompress_ptr cinfo)
   INPUT_VARS(cinfo);
 
   INPUT_2BYTES(cinfo, length, return FALSE);
-  
+
   if (length != 4)
     ERREXIT(cinfo, JERR_BAD_LENGTH);
 
@@ -850,7 +850,7 @@ skip_variable (j_decompress_ptr cinfo)
 
   INPUT_2BYTES(cinfo, length, return FALSE);
   length -= 2;
-  
+
   TRACEMS2(cinfo, 1, JTRC_MISC_MARKER, cinfo->unread_marker, (int) length);
 
   INPUT_SYNC(cinfo);		/* do before skip_input_data */
@@ -1013,32 +1013,32 @@ read_markers (j_decompress_ptr cinfo)
 	return JPEG_SUSPENDED;
       cinfo->unread_marker = 0;	/* processed the marker */
       return JPEG_REACHED_SOS;
-    
+
     case M_EOI:
       TRACEMS(cinfo, 1, JTRC_EOI);
       cinfo->unread_marker = 0;	/* processed the marker */
       return JPEG_REACHED_EOI;
-      
+
     case M_DAC:
       if (! get_dac(cinfo))
 	return JPEG_SUSPENDED;
       break;
-      
+
     case M_DHT:
       if (! get_dht(cinfo))
 	return JPEG_SUSPENDED;
       break;
-      
+
     case M_DQT:
       if (! get_dqt(cinfo))
 	return JPEG_SUSPENDED;
       break;
-      
+
     case M_DRI:
       if (! get_dri(cinfo))
 	return JPEG_SUSPENDED;
       break;
-      
+
     case M_APP0:
     case M_APP1:
     case M_APP2:
@@ -1059,7 +1059,7 @@ read_markers (j_decompress_ptr cinfo)
 		cinfo->unread_marker - (int) M_APP0]) (cinfo))
 	return JPEG_SUSPENDED;
       break;
-      
+
     case M_COM:
       if (! (*((my_marker_ptr) cinfo->marker)->process_COM) (cinfo))
 	return JPEG_SUSPENDED;
@@ -1193,10 +1193,10 @@ jpeg_resync_to_restart (j_decompress_ptr cinfo, int desired)
 {
   int marker = cinfo->unread_marker;
   int action = 1;
-  
+
   /* Always put up a warning. */
   WARNMS2(cinfo, JWRN_MUST_RESYNC, marker, desired);
-  
+
   /* Outer loop handles repeated decision after scanning forward. */
   for (;;) {
     if (marker < (int) M_SOF0)

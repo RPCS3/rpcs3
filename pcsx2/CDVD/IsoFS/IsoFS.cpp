@@ -46,9 +46,9 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 	bool isValid = false;
 	bool done = false;
 	uint i = 16;
-	
+
 	m_fstype = FStype_ISO9660;
-	
+
 	while( !done )
 	{
 		u8 sector[2048];
@@ -60,7 +60,7 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 		        case 0:
                     Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
                     break;
-                    
+
                 case 1:
                     Console.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
                     rootDirEntry.Load( sector+156, 38 );
@@ -72,7 +72,7 @@ IsoDirectory::IsoDirectory(SectorSource& r)
                     Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
                     m_fstype = FStype_Joliet;
                     break;
-			
+
 				case 0xff:
 					// Null terminator.  End of partition information.
 					done = true;

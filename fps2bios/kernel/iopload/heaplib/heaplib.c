@@ -108,7 +108,7 @@ int DestroyHeap(void *heap){
 
 ///////////////////////////////////////////////////////////////////////
 void* HeapMalloc(void *heap, int size) {
-#if 0 
+#if 0
 	struct Heap *_heap = (struct Heap*)heap;
 	void *p;
 
@@ -127,7 +127,7 @@ int HeapFree(void *heap, void *mem) {
 	struct Heap *_heap = (struct Heap*)heap;
 	struct Heap *h;
 
-	if (heap == NULL || 
+	if (heap == NULL ||
 		_heap->plus_one != (long)_heap+1) return -4;
 
 	for (h = (struct Heap*)_heap->l.next; h != &_heap->l; h = (struct Heap*)h->l.next) {
@@ -148,7 +148,7 @@ int HeapFree(void *heap, void *mem) {
 int HeapSize(void *heap) {
 	struct Heap *_heap = (struct Heap*)heap;
 
-	if (heap == NULL || 
+	if (heap == NULL ||
 		_heap->plus_one != (long)_heap+1) return -4;
 
 	for (;; _heap = _heap->plus_one) {

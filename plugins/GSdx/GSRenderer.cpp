@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -34,7 +34,7 @@ GSRenderer::GSRenderer()
 	m_filter = theApp.GetConfig("filter", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
-	
+
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
 	if(m_nativeres) m_upscale_multiplier = 1;
 	else if (m_upscale_multiplier > 6) m_upscale_multiplier = 1;
@@ -107,7 +107,7 @@ bool GSRenderer::Merge(int field)
 
 			baseline = min(dr[i].top, baseline);
 
-			// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]); 
+			// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]);
 		}
 	}
 
@@ -120,10 +120,10 @@ bool GSRenderer::Merge(int field)
 	//
 	// NOTE: probably the technique explained in graphtip.pdf (Antialiasing by Supersampling / 4. Reading Odd/Even Scan Lines Separately with the PCRTC then Blending)
 
-	bool samesrc = 
-		en[0] && en[1] && 
-		m_regs->DISP[0].DISPFB.FBP == m_regs->DISP[1].DISPFB.FBP && 
-		m_regs->DISP[0].DISPFB.FBW == m_regs->DISP[1].DISPFB.FBW && 
+	bool samesrc =
+		en[0] && en[1] &&
+		m_regs->DISP[0].DISPFB.FBP == m_regs->DISP[1].DISPFB.FBP &&
+		m_regs->DISP[0].DISPFB.FBW == m_regs->DISP[1].DISPFB.FBW &&
 		m_regs->DISP[0].DISPFB.PSM == m_regs->DISP[1].DISPFB.PSM;
 
 	bool blurdetected = false;
@@ -225,9 +225,9 @@ bool GSRenderer::Merge(int field)
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
-		
+
 		GSVector2 o(0, 0);
-		
+
 		if(dr[i].top - baseline >= 4) // 2?
 		{
 			o.y = tex[i]->GetScale().y * (dr[i].top - baseline);
@@ -305,7 +305,7 @@ void GSRenderer::VSync(int field)
 		ResetDevice();
 	}
 
-	// osd 
+	// osd
 
 	if((m_perfmon.GetFrame() & 0x1f) == 0 && m_wnd.IsManaged())
 	{
@@ -316,9 +316,9 @@ void GSRenderer::VSync(int field)
 		string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
 
 		GSVector4i r = GetDisplayRect();
-		
+
 		string s = format(
-			"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f", 
+			"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
 			m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
 			s2.c_str(),
 			GSSettingsDlg::g_interlace[m_interlace].name,
@@ -499,10 +499,10 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 		if(vr.z > maxu + 1) vr.z = maxu + 1;
 		break;
 	case CLAMP_REGION_REPEAT:
-		vr.x = maxu; 
+		vr.x = maxu;
 		vr.z = vr.x + (minu + 1);
 		break;
-	default: 
+	default:
 		__assume(0);
 	}
 
@@ -517,7 +517,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 		if(vr.w > maxv + 1) vr.w = maxv + 1;
 		break;
 	case CLAMP_REGION_REPEAT:
-		vr.y = maxv; 
+		vr.y = maxv;
 		vr.w = vr.y + (minv + 1);
 		break;
 	default:
@@ -579,7 +579,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
 			break;
 		case CLAMP_REGION_REPEAT: // TODO
-			//Xenosaga 2 and 3 use it	
+			//Xenosaga 2 and 3 use it
 			//printf("gsdx: CLAMP_REGION_REPEAT not implemented, please report\n");
 			break;
 		default:
@@ -678,43 +678,43 @@ bool GSRenderer::TryAlphaTest(uint32& fm, uint32& zm)
 
 		switch(context->TEST.ATST)
 		{
-		case ATST_NEVER: 
-			pass = false; 
+		case ATST_NEVER:
+			pass = false;
 			break;
-		case ATST_ALWAYS: 
-			pass = true; 
+		case ATST_ALWAYS:
+			pass = true;
 			break;
-		case ATST_LESS: 
+		case ATST_LESS:
 			if(amax < aref) pass = true;
 			else if(amin >= aref) pass = false;
 			else return false;
 			break;
-		case ATST_LEQUAL: 
+		case ATST_LEQUAL:
 			if(amax <= aref) pass = true;
 			else if(amin > aref) pass = false;
 			else return false;
 			break;
-		case ATST_EQUAL: 
+		case ATST_EQUAL:
 			if(amin == aref && amax == aref) pass = true;
 			else if(amin > aref || amax < aref) pass = false;
 			else return false;
 			break;
-		case ATST_GEQUAL: 
+		case ATST_GEQUAL:
 			if(amin >= aref) pass = true;
 			else if(amax < aref) pass = false;
 			else return false;
 			break;
-		case ATST_GREATER: 
+		case ATST_GREATER:
 			if(amin > aref) pass = true;
 			else if(amax <= aref) pass = false;
 			else return false;
 			break;
-		case ATST_NOTEQUAL: 
+		case ATST_NOTEQUAL:
 			if(amin == aref && amax == aref) pass = false;
 			else if(amin > aref || amax < aref) pass = true;
 			else return false;
 			break;
-		default: 
+		default:
 			__assume(0);
 		}
 	}
@@ -747,7 +747,7 @@ bool GSRenderer::IsLinear()
 	}
 	// if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
 	// Fixme : Why should Q be bogus?
-	if(!TEX1.LCM && !PRIM->FST) 
+	if(!TEX1.LCM && !PRIM->FST)
 	{
 		float K = (float)TEX1.K / 16;
 		float f = (float)(1 << TEX1.L) / log(2.0f);

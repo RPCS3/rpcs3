@@ -520,7 +520,7 @@ void RemoveListBuffer(u16 bufnum) {
 
     buffersort[lowerlink].uppos = upperindex;
 
-  } // ENDIF- Was this a BufferList link? 
+  } // ENDIF- Was this a BufferList link?
 
 
 

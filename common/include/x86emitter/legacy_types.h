@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -42,27 +42,27 @@ typedef int x86IntRegType;
 
 typedef int x86MMXRegType;
 
-#define XMM0 0 
-#define XMM1 1 
-#define XMM2 2 
-#define XMM3 3 
-#define XMM4 4 
-#define XMM5 5 
-#define XMM6 6 
-#define XMM7 7 
-#define XMM8 8 
-#define XMM9 9 
-#define XMM10 10 
-#define XMM11 11 
-#define XMM12 12 
-#define XMM13 13 
-#define XMM14 14 
+#define XMM0 0
+#define XMM1 1
+#define XMM2 2
+#define XMM3 3
+#define XMM4 4
+#define XMM5 5
+#define XMM6 6
+#define XMM7 7
+#define XMM8 8
+#define XMM9 9
+#define XMM10 10
+#define XMM11 11
+#define XMM12 12
+#define XMM13 13
+#define XMM14 14
 #define XMM15 15
 
 typedef int x86SSERegType;
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -109,21 +109,21 @@ typedef int x86IntRegType;
 
 typedef int x86MMXRegType;
 
-#define XMM0 0 
-#define XMM1 1 
-#define XMM2 2 
-#define XMM3 3 
-#define XMM4 4 
-#define XMM5 5 
-#define XMM6 6 
-#define XMM7 7 
-#define XMM8 8 
-#define XMM9 9 
-#define XMM10 10 
-#define XMM11 11 
-#define XMM12 12 
-#define XMM13 13 
-#define XMM14 14 
+#define XMM0 0
+#define XMM1 1
+#define XMM2 2
+#define XMM3 3
+#define XMM4 4
+#define XMM5 5
+#define XMM6 6
+#define XMM7 7
+#define XMM8 8
+#define XMM9 9
+#define XMM10 10
+#define XMM11 11
+#define XMM12 12
+#define XMM13 13
+#define XMM14 14
 #define XMM15 15
 
 typedef int x86SSERegType;

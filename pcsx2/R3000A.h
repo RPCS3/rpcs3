@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -135,10 +135,10 @@ extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
 /**** R3000A Instruction Macros ****/
 #define _PC_       psxRegs.pc       // The next PC to be executed
 
-#define _Funct_  ((psxRegs.code      ) & 0x3F)  // The funct part of the instruction register 
-#define _Rd_     ((psxRegs.code >> 11) & 0x1F)  // The rd part of the instruction register 
-#define _Rt_     ((psxRegs.code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Rs_     ((psxRegs.code >> 21) & 0x1F)  // The rs part of the instruction register 
+#define _Funct_  ((psxRegs.code      ) & 0x3F)  // The funct part of the instruction register
+#define _Rd_     ((psxRegs.code >> 11) & 0x1F)  // The rd part of the instruction register
+#define _Rt_     ((psxRegs.code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Rs_     ((psxRegs.code >> 21) & 0x1F)  // The rs part of the instruction register
 #define _Sa_     ((psxRegs.code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _Im_     ((u16)psxRegs.code) // The immediate part of the instruction register
 #define _Target_ (psxRegs.code & 0x03ffffff)    // The target part of the instruction register

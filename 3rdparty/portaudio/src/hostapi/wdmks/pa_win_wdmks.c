@@ -27,13 +27,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however, 
+ * The text above constitutes the entire PortAudio license; however,
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also 
- * requested that these non-binding requests be included along with the 
+ * they can be incorporated into the canonical version. It is also
+ * requested that these non-binding requests be included along with the
  * license above.
  */
 
@@ -1565,10 +1565,10 @@ static PaError FilterCanCreateCapturePin(PaWinWdmFilter* filter,
 
 /**
  * Build the list of available filters
- * Use the SetupDi API to enumerate all devices in the KSCATEGORY_AUDIO which 
- * have a KSCATEGORY_RENDER or KSCATEGORY_CAPTURE alias. For each of these 
- * devices initialise a PaWinWdmFilter structure by calling our NewFilter() 
- * function. We enumerate devices twice, once to count how many there are, 
+ * Use the SetupDi API to enumerate all devices in the KSCATEGORY_AUDIO which
+ * have a KSCATEGORY_RENDER or KSCATEGORY_CAPTURE alias. For each of these
+ * devices initialise a PaWinWdmFilter structure by calling our NewFilter()
+ * function. We enumerate devices twice, once to count how many there are,
  * and once to initialize the PaWinWdmFilter structures.
  */
 static PaError BuildFilterList(PaWinWdmHostApiRepresentation* wdmHostApi)
@@ -2255,7 +2255,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
             stream->recordingPin = FilterCreateCapturePin(pFilter, (const WAVEFORMATEX*)&wfx, &result);
             stream->deviceInputChannels = stream->userInputChannels;
         }
-        
+
         if(result != paNoError)
         {   /* Search through all PaSampleFormats to find one that works */
             hostInputSampleFormat = paFloat32;
@@ -2265,7 +2265,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 stream->bytesPerInputFrame = wfx.Format.nBlockAlign;
                 stream->recordingPin = FilterCreateCapturePin(pFilter, (const WAVEFORMATEX*)&wfx, &result);
                 stream->deviceInputChannels = stream->userInputChannels;
-                
+
                 if(stream->recordingPin == NULL) result = paSampleFormatNotSupported;
                 if(result != paNoError)    hostInputSampleFormat <<= 1;
             }
@@ -2374,7 +2374,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         {
             hostOutputSampleFormat =
                 PaUtil_SelectClosestAvailableFormat( pFilter->formats, outputSampleFormat );
-       
+
             /* Try a WAVE_FORMAT_PCM instead */
             wfx.Format.wFormatTag = WAVE_FORMAT_PCM;
             wfx.Format.cbSize = 0;
@@ -2384,7 +2384,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
             stream->playbackPin = FilterCreateRenderPin(pFilter,(WAVEFORMATEX*)&wfx,&result);
             if(stream->playbackPin == NULL) result = paSampleFormatNotSupported;
         }
-            
+
         if( result != paNoError )
         {
             /* Some or all KS devices can only handle the exact number of channels
@@ -2543,7 +2543,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         p->Header.Size = sizeof(p->Header);
         p->Header.PresentationTime.Numerator = 1;
         p->Header.PresentationTime.Denominator = 1;
-    
+
         p = &(stream->packets[3]);
         p->Signal.hEvent = stream->events[3];
         p->Header.Data = stream->hostBuffer + 2*stream->framesPerHostIBuffer*stream->bytesPerInputFrame + stream->framesPerHostOBuffer*stream->bytesPerOutputFrame;
@@ -2916,7 +2916,7 @@ static DWORD WINAPI ProcessingThread(LPVOID pParam)
                     PaUtil_SetInputChannel(&stream->bufferProcessor,i,((unsigned char*)(stream->packets[inbuf].Header.Data))+(i*stream->inputSampleSize),stream->deviceInputChannels);
                 }
             }
-            
+
             if (stream->recordingPin && stream->playbackPin) /* full duplex */
             {
                 /* Only call the EndBufferProcessing function when the total input frames == total output frames */
@@ -2931,7 +2931,7 @@ static DWORD WINAPI ProcessingThread(LPVOID pParam)
                     framesProcessed = 0;
                 }
             }
-            else 
+            else
             {
                 framesProcessed = PaUtil_EndBufferProcessing(&stream->bufferProcessor,&cbResult);
             }
@@ -2962,7 +2962,7 @@ static DWORD WINAPI ProcessingThread(LPVOID pParam)
             fillPlaybuf = 0;
             emptyRecordbuf = 0;
         }
-            
+
         /*
         if(cbResult != paContinue)
         {

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -61,13 +61,13 @@ void COP2_Unknown()
 //****************************************************************************
 
 __forceinline void _vu0run(bool breakOnMbit, bool addCycles) {
-	
+
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
 	int startcycle = VU0.cycle;
 	u32 runCycles  = breakOnMbit ? vu0RunCycles : 0x7fffffff;
 	VU0.flags	  &= ~VUFLAG_MFLAGSET;
-		
+
 	do { // Run VU until it finishes or M-Bit
 		CpuVU0->Execute(runCycles);
 	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
@@ -100,9 +100,9 @@ namespace OpcodeImpl
 	// HUH why ? doesn't make any sense ...
 	void SQC2() {
 		u32 addr = _Imm_ + cpuRegs.GPR.r[_Rs_].UL[0];
-		//memWrite64(addr,  VU0.VF[_Ft_].UD[0]); 
-		//memWrite64(addr+8,VU0.VF[_Ft_].UD[1]); 
-		memWrite128(addr,  &VU0.VF[_Ft_].UD[0]); 
+		//memWrite64(addr,  VU0.VF[_Ft_].UD[0]);
+		//memWrite64(addr+8,VU0.VF[_Ft_].UD[1]);
+		memWrite128(addr,  &VU0.VF[_Ft_].UD[0]);
 	}
 }}}
 
@@ -114,7 +114,7 @@ void QMFC2() {
 	if (_Rt_ == 0) return;
 	cpuRegs.GPR.r[_Rt_].UD[0] = VU0.VF[_Fs_].UD[0];
 	cpuRegs.GPR.r[_Rt_].UD[1] = VU0.VF[_Fs_].UD[1];
-} 
+}
 
 void QMTC2() {
 	if (cpuRegs.code & 1) {
@@ -125,7 +125,7 @@ void QMTC2() {
 	VU0.VF[_Fs_].UD[1] = cpuRegs.GPR.r[_Rt_].UD[1];
 }
 
-void CFC2() { 
+void CFC2() {
 	if (cpuRegs.code & 1) {
 		_vu0WaitMicro();
 	}
@@ -179,15 +179,15 @@ void CTC2() {
 //---------------------------------------------------------------------------------------
 
 
-__forceinline void SYNCMSFLAGS() 
+__forceinline void SYNCMSFLAGS()
 {
-	VU0.VI[REG_STATUS_FLAG].UL = VU0.statusflag; 
+	VU0.VI[REG_STATUS_FLAG].UL = VU0.statusflag;
 	VU0.VI[REG_MAC_FLAG].UL = VU0.macflag;
 }
 
-__forceinline void SYNCFDIV() 
+__forceinline void SYNCFDIV()
 {
-	VU0.VI[REG_Q].UL = VU0.q.UL; 
+	VU0.VI[REG_Q].UL = VU0.q.UL;
 	VU0.VI[REG_STATUS_FLAG].UL = VU0.statusflag;
 }
 

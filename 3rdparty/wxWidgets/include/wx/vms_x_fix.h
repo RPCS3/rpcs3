@@ -689,7 +689,7 @@
 #define XtCallCallbackList XTCALLCALLBACKLIST
 #define XtCallCallbacks XTCALLCALLBACKS
 #define XtCallConverter XTCALLCONVERTER
-#define XtCalloc XTCALLOC 
+#define XtCalloc XTCALLOC
 #ifndef NOXTDISPLAY
 #define XtClass XTCLASS
 #endif
@@ -798,7 +798,7 @@
 #define XtSetTypeConverter XTSETTYPECONVERTER
 #define XtSetValues XTSETVALUES
 #define XtShellStrings XTSHELLSTRINGS
-#define XtStringConversionWarning XTSTRINGCONVERSIONWARNING 
+#define XtStringConversionWarning XTSTRINGCONVERSIONWARNING
 #define XtStrings XTSTRINGS
 #define XtToolkitInitialize XTTOOLKITINITIALIZE
 #define XtTranslateCoords XTTRANSLATECOORDS
@@ -837,11 +837,11 @@
 #define _XEatData _XEATDATA
 #define _XFlush _XFLUSH
 #define _XFreeTemp _XFREETEMP
-#define _XGetAsyncReply _XGETASYNCREPLY 
+#define _XGetAsyncReply _XGETASYNCREPLY
 #define _XInitImageFuncPtrs _XINITIMAGEFUNCPTRS
 #define _XRead _XREAD
 #define _XReadPad _XREADPAD
-#define _XRegisterFilterByType _XREGISTERFILTERBYTYPE 
+#define _XRegisterFilterByType _XREGISTERFILTERBYTYPE
 #define _XReply _XREPLY
 #define _XSend _XSEND
 #define _XUnregisterFilter _XUNREGISTERFILTER
@@ -1193,7 +1193,7 @@
 #define xmToggleButtonGadgetClass XMTOGGLEBUTTONGADGETCLASS
 #define xmToggleButtonWidgetClass XMTOGGLEBUTTONWIDGETCLASS
 
-#if (__VMS_VER < 80200000) 
+#if (__VMS_VER < 80200000)
 # define SetReqLen(req,n,badlen) \
     if ((req->length + n) > (unsigned)65535) { \
 	    n = badlen; \

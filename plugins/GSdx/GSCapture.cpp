@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -28,7 +28,7 @@
 //
 
 #ifdef __INTEL_COMPILER
-interface __declspec(uuid("59C193BB-C520-41F3-BC1D-E245B80A86FA")) 
+interface __declspec(uuid("59C193BB-C520-41F3-BC1D-E245B80A86FA"))
 #else
 [uuid("59C193BB-C520-41F3-BC1D-E245B80A86FA")] interface
 #endif
@@ -42,7 +42,7 @@ IGSSource : public IUnknown
 #ifdef __INTEL_COMPILER
 class __declspec(uuid("F8BB6F4F-0965-4ED4-BA74-C6A01E6E6C77"))
 #else
-[uuid("F8BB6F4F-0965-4ED4-BA74-C6A01E6E6C77")] class 
+[uuid("F8BB6F4F-0965-4ED4-BA74-C6A01E6E6C77")] class
 #endif
 GSSource : public CBaseFilter, private CCritSec, public IGSSource
 {
@@ -52,7 +52,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 
 	STDMETHODIMP NonDelegatingQueryInterface(REFIID riid, void** ppv)
 	{
-		return 
+		return
 			riid == __uuidof(IGSSource) ? GetInterface((IGSSource*)this, ppv) :
 			__super::NonDelegatingQueryInterface(riid, ppv);
 	}
@@ -115,7 +115,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			pProperties->cbBuffer = m_mt.lSampleSize;
 
 			ALLOCATOR_PROPERTIES Actual;
-			
+
 			if(FAILED(hr = pAlloc->SetProperties(pProperties, &Actual)))
 			{
 				return hr;
@@ -196,7 +196,7 @@ public:
 		return 1;
 	}
 
-	CBasePin* GetPin(int n) 
+	CBasePin* GetPin(int n)
 	{
 		return n == 0 ? m_output : NULL;
 	}
@@ -413,7 +413,7 @@ bool GSCapture::BeginCapture(int fps)
 	if(IDOK != dlg.DoModal()) return false;
 
 	m_size.x = (dlg.m_width + 7) & ~7;
-	m_size.y = (dlg.m_height + 7) & ~7; 
+	m_size.y = (dlg.m_height + 7) & ~7;
 
 	wstring fn(dlg.m_filename.begin(), dlg.m_filename.end());
 
@@ -472,7 +472,7 @@ bool GSCapture::BeginCapture(int fps)
 			pPin->QueryPinInfo(&pi);
 			wstring s(pi.achName);
 			printf("- Pin [%p - %p]: %s (%s)\n", pPin.p, pPinTo.p, string(s.begin(), s.end()).c_str(), pi.dir ? "out" : "in");
- 
+
 			BeginEnumMediaTypes(pPin, pEMT, pmt)
 			{
 			}
@@ -495,9 +495,9 @@ bool GSCapture::DeliverFrame(const void* bits, int pitch, bool rgba)
 {
 	CAutoLock cAutoLock(this);
 
-	if(bits == NULL || pitch == 0) 
+	if(bits == NULL || pitch == 0)
 	{
-		ASSERT(0); 
+		ASSERT(0);
 
 		return false;
 	}

@@ -144,7 +144,7 @@ pkoLoadElf(char *path)
 
     dbgprintf("EE: LoadElf returned %d\n", ret);
 
-    dbgprintf("EE: Creating user thread (ent: %x, gp: %x, st: %x)\n", 
+    dbgprintf("EE: Creating user thread (ent: %x, gp: %x, st: %x)\n",
               elfdata.epc, elfdata.gp, elfdata.sp);
 
     if (elfdata.epc == 0) {
@@ -254,7 +254,7 @@ pkoGSExec(pko_pkt_gsexec_req *cmd) {
 
 ////////////////////////////////////////////////////////////////////////
 // command to dump cmd->size bytes of memory from cmd->offset
-static int 
+static int
 pkoDumpMem(pko_pkt_mem_io *cmd) {
 	int fd;
     int total, len;
@@ -264,7 +264,7 @@ pkoDumpMem(pko_pkt_mem_io *cmd) {
     int ret = 0;
    	size = ntohl(cmd->size);
     offset = ntohl(cmd->offset);
-	scr_printf("dump mem from 0x%x, size %d\n", 
+	scr_printf("dump mem from 0x%x, size %d\n",
 		ntohl(cmd->offset), ntohl(cmd->size)
 		);
     memcpy(path, cmd->argv, PKO_MAX_PATH);
@@ -278,15 +278,15 @@ pkoDumpMem(pko_pkt_mem_io *cmd) {
             } else if ((size - total) < len) {
                 len = size - total;
             }
-            
+
             memcpy(dataBuffer, (void *)offset, len);
-            
+
             if ((ret = fioWrite(fd, (void *)dataBuffer, len)) > 0) {
             } else {
                 printf("EE: pkoDumpMem() fioWrite failed\n");
                 return fd;
-            }	
-            offset = offset + len;	
+            }
+            offset = offset + len;
             total += len;
         }
     }
@@ -303,7 +303,7 @@ pkoWriteMem(pko_pkt_mem_io *cmd) {
     int ret = 0;
    	size = ntohl(cmd->size);
     offset = ntohl(cmd->offset);
-	scr_printf("write mem to 0x%x, size %d\n", 
+	scr_printf("write mem to 0x%x, size %d\n",
 		ntohl(cmd->offset), ntohl(cmd->size)
 		);
     memcpy(path, cmd->argv, PKO_MAX_PATH);

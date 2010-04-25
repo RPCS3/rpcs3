@@ -48,7 +48,7 @@ void FillPPFCache(void)
 {
  PPF_DATA * p;PPF_CACHE * pc;
  long lastaddr;
- 
+
  p=ppfHead;
  lastaddr=-1;
  iPPFNum=0;
@@ -63,14 +63,14 @@ void FillPPFCache(void)
  if(!iPPFNum) return;
 
  pc=ppfCache=(PPF_CACHE *)malloc(iPPFNum*sizeof(PPF_CACHE));
- 
+
  iPPFNum--;
  p=ppfHead;
  lastaddr=-1;
 
  while(p)
   {
-   if(p->addr!=lastaddr) 
+   if(p->addr!=lastaddr)
     {
      pc->addr=p->addr;
      pc->pNext=(void *)p;
@@ -145,7 +145,7 @@ void CheckPPFCache(long addr,unsigned char * pB)
 
 void AddToPPF(long ladr,long pos,long anz,char * ppfmem)
 {
- if(!ppfHead) 
+ if(!ppfHead)
   {
    ppfHead=(PPF_DATA *)malloc(sizeof(PPF_DATA)+anz);
    ppfHead->addr=ladr;
@@ -252,7 +252,7 @@ void BuildPPFCache(void)
       dizyn=1;
       dizlensave=dizlen;
      }
-                        
+
     fseek(ppffile, 56, SEEK_SET);
     fread(&dizlen, 4, 1,ppffile);
     fseek(ppffile, 0, SEEK_END);
@@ -296,13 +296,13 @@ void BuildPPFCache(void)
      {
       seekpos=1084;
       count-=1084;
-     } 
-    else 
+     }
+    else
      {
       seekpos=60;
       count-=60;
      }
-   
+
    break;
 
    default:
@@ -312,15 +312,15 @@ void BuildPPFCache(void)
   }
 
  do                                                    // now do the data reading
-  {                                                
-   fseek(ppffile, seekpos, SEEK_SET);              
-   fread(&pos, 4, 1, ppffile);                     
+  {
+   fseek(ppffile, seekpos, SEEK_SET);
+   fread(&pos, 4, 1, ppffile);
 
    if(method==2) fread(buffer, 4, 1, ppffile);         // skip 4 bytes on ppf3 (no int64 support here)
 
    anz=0;                                              // new! init anz (since it's no unsigned char anymore)
-   fread(&anz, 1, 1, ppffile); 
-   fread(ppfmem, anz, 1, ppffile);   
+   fread(&anz, 1, 1, ppffile);
+   fread(ppfmem, anz, 1, ppffile);
 
    ladr=pos/2352;
    off=pos%2352;
@@ -340,8 +340,8 @@ void BuildPPFCache(void)
      anz+=4;
     }
 
-   seekpos=seekpos+5+anz;   
-   count=count-5-anz;       
+   seekpos=seekpos+5+anz;
+   count=count-5-anz;
   }
  while(count!=0);                                      // loop til end
 

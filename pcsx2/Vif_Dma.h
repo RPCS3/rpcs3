@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -33,7 +33,7 @@ union tBITBLT {
 	};
 	u32 _u32;
 
-	
+
 };
 
 // NOTE, if debugging vif stalls, use sega classics, spyro, gt4, and taito
@@ -44,13 +44,13 @@ struct vifStruct {
 	int cl;
 	int qwcalign;
 	u8 usn;
-	
+
 	bool done;
 	bool vifstalled;
 	bool stallontag;
 	tBITBLT TRXPOS;		//used for reversed fifo operations, sometimes only the GS knows how big (like on HW register fifo read)!
 	u32 GSLastTRXPOS;
-	
+
 
 	u8 irqoffset; // 32bit offset where next vif code is
 	u32 savedtag; // need this for backwards compat with save states

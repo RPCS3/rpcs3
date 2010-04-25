@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -50,7 +50,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 	const uint32* clut = m_renderer->m_mem.m_clut;
-	
+
 	Source* src = NULL;
 
 	list<Source*>& m = m_src.m_map[TEX0.TBP0 >> 5];
@@ -179,7 +179,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 #if 0 //#ifdef USE_UPSCALE_HACKS //not happy with this yet..
 			float x = 1.0f;
 			float y = 1.0f;
-			
+
 			switch(multiplier)
 			{
 				case 2: x = 1.9375; y = 2.0f; break; // x res get's rid of vertical lines in many games
@@ -205,7 +205,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 				hh *= 2;
 			}
 
-			//This vp2 fix doesn't work most of the time 
+			//This vp2 fix doesn't work most of the time
 			if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
 			{
 				hh = 512;
@@ -242,7 +242,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 			break;
 		}
-		else 
+		else
 		{
 			// HACK: try to find something close to the base pointer
 
@@ -275,8 +275,8 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect, bool target)
 {
 	// Fixme. Crashes Dual Hearts, maybe others as well. Was fine before r1549.
-	if (!o) return; 
-	
+	if (!o) return;
+
 	uint32 bp = o->bp;
 	uint32 bw = o->bw;
 	uint32 psm = o->psm;
@@ -422,7 +422,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 					Read(t, r.rintersect(t->m_valid));
 					return;
 				}
-				else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
+				else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S))
 				{
 					// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 					Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
@@ -430,7 +430,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 				}
 				else
 				{
-					if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32) 
+					if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32)
 					{
 						// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
 						Read(t, r.rintersect(t->m_valid));
@@ -446,7 +446,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 			}
 
 			// Grandia3, FFX, FFX-2 pause menus. t->m_TEX0.TBP0 magic number checks because otherwise kills xs2 videos
-			if( (GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && (bp > t->m_TEX0.TBP0) ) 
+			if( (GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && (bp > t->m_TEX0.TBP0) )
 				&& ((t->m_TEX0.TBP0 == 0) || (t->m_TEX0.TBP0==3328) || (t->m_TEX0.TBP0==3584) ))
 			{
 				//printf("first : %d-%d child : %d-%d\n", psm, bp, t->m_TEX0.PSM, t->m_TEX0.TBP0);
@@ -527,7 +527,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	int tw = 1 << TEX0.TW;
 	int th = 1 << TEX0.TH;
 	int tp = TEX0.TBW << 6;
-	
+
 	bool hack = false;
 
 	if(dst == NULL)
@@ -552,18 +552,18 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		src->m_target = true;
 
-		if(dst->m_type != RenderTarget) 
+		if(dst->m_type != RenderTarget)
 		{
 			// TODO
 			delete src;
-			return NULL; 
+			return NULL;
 		}
 
 		dst->Update();
 
 		GSTexture* tmp = NULL;
-		
-		if(dst->m_texture->IsMSAA()) 
+
+		if(dst->m_texture->IsMSAA())
 		{
 			tmp = dst->m_texture;
 
@@ -573,7 +573,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
 
 		int w = (int)(dst->m_texture->GetScale().x * tw);
-		int h = (int)(dst->m_texture->GetScale().y * th); 
+		int h = (int)(dst->m_texture->GetScale().y * th);
 
 		GSVector2i dstsize = dst->m_texture->GetSize();
 
@@ -641,14 +641,14 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		GSVector4 dr(0, 0, w, h);
 
-		if(w > dstsize.x) 
+		if(w > dstsize.x)
 		{
 			scale.x = (float)dstsize.x / tw;
 			dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
 			w = dstsize.x;
 		}
-		
-		if(h > dstsize.y) 
+
+		if(h > dstsize.y)
 		{
 			scale.y = (float)dstsize.y / th;
 			dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
@@ -656,7 +656,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		}
 
 		GSVector4 sr(0, 0, w, h);
-		
+
 		if (UserHacks_HalfPixelOffset && hack)
 		{
 			int multiplier = m_renderer->upscale_Multiplier();
@@ -723,8 +723,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			src->m_fmt = FMT_8H;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
-		case PSM_PSMT8: 
-			//Not sure, this wasn't handled at all. 
+		case PSM_PSMT8:
+			//Not sure, this wasn't handled at all.
 			//Xenosaga 2 and 3 use it, Tales of Legendia as well.
 			//It's always used for fog like effects.
 			src->m_fmt = FMT_8;
@@ -866,7 +866,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	int tw = std::max<int>(1 << m_TEX0.TW, bs.x);
 	int th = std::max<int>(1 << m_TEX0.TH, bs.y);
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs); 
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
 
 	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{
@@ -1079,11 +1079,11 @@ void GSTextureCache::Target::Update()
 			else
 			{
 				static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
-				
+
 				int pitch = ((w + 3) & ~3) * 4;
 
 				m_renderer->m_mem.ReadTexture(o, r, buff, pitch, TEXA);
-				
+
 				t->Update(r.rsize(), buff, pitch);
 			}
 

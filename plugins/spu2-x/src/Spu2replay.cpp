@@ -188,7 +188,7 @@ EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdS
 			break;
 		}
 	}
-	
+
 	//shutdown
 	SPU2close();
 	SPU2shutdown();

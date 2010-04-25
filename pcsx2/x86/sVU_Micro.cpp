@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
@@ -40,8 +40,8 @@
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
-#define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
+#define _Ft_ (( VU->code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Fs_ (( VU->code >> 11) & 0x1F)  // The rd part of the instruction register
 #define _Fd_ (( VU->code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _It_ (_Ft_ & 15)
 #define _Is_ (_Fs_ & 15)
@@ -282,7 +282,7 @@ void _recvuIALUTestStall(VURegs * VU, int reg) {
 
 	VU->ialu[i].enable = 0;
 	vucycle+= cycle;
-	_recvuTestPipes(VU, true); 
+	_recvuTestPipes(VU, true);
 }
 
 void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
@@ -296,12 +296,12 @@ void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
 
 	if (i==8) Console.Error("*PCSX2*: error , out of fmacs");
 //	VUM_LOG("adding FMAC pipe[%d]; reg %d", i, reg);
-	
+
 	VU->fmac[i].enable = 1;
 	VU->fmac[i].sCycle = vucycle;
 	VU->fmac[i].Cycle = 3;
-	VU->fmac[i].xyzw = xyzw; 
-	VU->fmac[i].reg = reg; 
+	VU->fmac[i].xyzw = xyzw;
+	VU->fmac[i].reg = reg;
 }
 
 void _recvuFDIVAdd(VURegs * VU, int cycles) {
@@ -328,7 +328,7 @@ void _recvuIALUAdd(VURegs * VU, int reg, int cycles) {
 	}
 
 	if (i==8) Console.Error("*PCSX2*: error , out of ialus");
-	
+
 	VU->ialu[i].enable = 1;
 	VU->ialu[i].sCycle = vucycle;
 	VU->ialu[i].Cycle = cycles;
@@ -466,16 +466,16 @@ void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs)
 {
 	_VURegsNum* lregs;
 	_VURegsNum* uregs;
-	int *ptr; 
+	int *ptr;
 
 	lregs = pCodeRegs;
 	uregs = pCodeRegs+1;
 
-	ptr = (int*)&VU->Micro[pc]; 
-	pc += 8; 
+	ptr = (int*)&VU->Micro[pc];
+	pc += 8;
 
 	if (ptr[1] & 0x40000000) { // EOP
-		branch |= 8; 
+		branch |= 8;
 	}
 
 	VU->code = ptr[1];
@@ -544,10 +544,10 @@ void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs)
 	if (ptr[1] & 0x80000000) { // I flag
 		info->cycle = vucycle;
 		memzero(*lregs);
-	} 
+	}
 	else {
 
-		VU->code = ptr[0]; 
+		VU->code = ptr[0];
 		if (VU == &VU1) VU1regs_LOWER_OPCODE[VU->code >> 25](lregs);
 		else VU0regs_LOWER_OPCODE[VU->code >> 25](lregs);
 
@@ -688,7 +688,7 @@ int eeVURecompileCode(VURegs *VU, _VURegsNum* regs)
 // Misc VU/VI Allocation Functions
 //------------------------------------------------------------------
 // returns the correct VI addr
-u32 GetVIAddr(VURegs * VU, int reg, int read, int info) 
+u32 GetVIAddr(VURegs * VU, int reg, int read, int info)
 {
 	if( info & PROCESS_VU_SUPER )	 return SuperVUGetVIAddr(reg, read);
 	if( info & PROCESS_VU_COP2 )	 return (uptr)&VU->VI[reg].UL;
@@ -705,7 +705,7 @@ u32 GetVIAddr(VURegs * VU, int reg, int read, int info)
 }
 
 // gets a temp reg that is not EEREC_TEMP
-int _vuGetTempXMMreg(int info) 
+int _vuGetTempXMMreg(int info)
 {
 	int t1reg = -1;
 
@@ -724,7 +724,7 @@ int _vuGetTempXMMreg(int info)
 			}
 		}
 	}
-	
+
 	return t1reg;
 }
 //------------------------------------------------------------------
@@ -747,7 +747,7 @@ void _unpackVFSS_xyzw(int dstreg, int srcreg, int xyzw)
 {
 	switch (xyzw) {
 		case 0: SSE_MOVSS_XMM_to_XMM(dstreg, srcreg); break;
-		case 1: if ( x86caps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(1, 0, 0));	
+		case 1: if ( x86caps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(1, 0, 0));
 				else SSE2_PSHUFLW_XMM_to_XMM(dstreg, srcreg, 0xee);
 				break;
 		case 2: SSE_MOVHLPS_XMM_to_XMM(dstreg, srcreg); break;
@@ -959,10 +959,10 @@ void VU_MERGE_REGS_CUSTOM(int dest, int src, int xyzw) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
 		if ( x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
-			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
+			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3);
 			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
 		}
-		else s_VuMerge[xyzw](dest, src); 
+		else s_VuMerge[xyzw](dest, src);
 	}
 }
 // Doesn't Modify the Source Reg! (ToDo: s_VuMerge2() has room for optimization)
@@ -970,10 +970,10 @@ void VU_MERGE_REGS_SAFE(int dest, int src, int xyzw) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
 		if ( x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
-			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
+			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3);
 			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
 		}
-		else s_VuMerge2[xyzw](dest, src); 
+		else s_VuMerge2[xyzw](dest, src);
 	}
 }
 //------------------------------------------------------------------
@@ -1708,12 +1708,12 @@ void vuFloatExtra( int regd, int XYZW) {
 	SSE_MOVAPS_XMM_to_M128( (uptr)&vuFloatData[0], t1reg );
 	SSE_MOVAPS_XMM_to_M128( (uptr)&vuFloatData[2], t2reg );
 
-	SSE_XORPS_XMM_to_XMM(t1reg, t1reg); 
-	SSE_CMPORDPS_XMM_to_XMM(t1reg, regd); 
+	SSE_XORPS_XMM_to_XMM(t1reg, t1reg);
+	SSE_CMPORDPS_XMM_to_XMM(t1reg, regd);
 	SSE_MOVAPS_XMM_to_XMM(t2reg, regd);
 	SSE_ANDPS_XMM_to_XMM(t2reg, t1reg);
 	VU_MERGE_REGS_CUSTOM(regd, t2reg, XYZW);
-	
+
 	SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)&vuFloatData[0] );
 	SSE_MOVAPS_M128_to_XMM( t2reg, (uptr)&vuFloatData[2] );
 }

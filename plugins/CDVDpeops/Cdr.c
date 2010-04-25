@@ -18,9 +18,9 @@
 
 //*************************************************************************//
 // History of changes:
-// 
+//
 // 2004/12/25 - Pete
-// - added an hack in CDVDgetTD for big dvds 
+// - added an hack in CDVDgetTD for big dvds
 //
 // 2003/11/16 - Pete
 // - generic cleanup for the Peops cdvd release
@@ -40,7 +40,7 @@
 #include "libiso.h"
 
 #ifdef DBGOUT
-#define SMALLDEBUG 1   
+#define SMALLDEBUG 1
 #include <dbgout.h>
 #endif
 
@@ -63,7 +63,7 @@ EXPORT_GCC long            CALLBACK CDVDgetDiskType();
 EXPORT_GCC long            CALLBACK CDVDgetTrayStatus();
 
 /////////////////////////////////////////////////////////
-                                         
+
 const unsigned char version  =  PS2E_CDVD_VERSION;
 const unsigned char revision =  1;
 const unsigned char build    =  3;
@@ -90,7 +90,7 @@ EXPORT_GCC char * CALLBACK PS2EgetLibName()
 {
  return libraryName;
 }
-                             
+
 EXPORT_GCC unsigned long CALLBACK PS2EgetLibType()
 {
  return PS2E_LT_CDVD;
@@ -129,7 +129,7 @@ EXPORT_GCC long CALLBACK CDVDinit()
 {
  szSUBF[0]=0;                                          // just init the filename buffers
  szPPF[0] =0;
- return 0;                                            
+ return 0;
 }
 
 /////////////////////////////////////////////////////////
@@ -155,7 +155,7 @@ EXPORT_GCC long CALLBACK CDVDopen(const char* pTitle)
   }
 
  bIsOpen=TRUE;                                         // ok, open func called once
- 
+
  ReadConfig();                                         // read user config
 
  BuildPPFCache();                                      // build ppf cache
@@ -181,10 +181,10 @@ EXPORT_GCC long CALLBACK CDVDopen(const char* pTitle)
    struct cdVolDesc *volDesc;
    volDesc=(struct cdVolDesc *)CDVDgetBuffer();
    if(volDesc)
-    {                                 
+    {
 
 //todo: CDVD_TYPE_CDDA
-        
+
      if(volDesc->rootToc.tocSize==2048)
           iCDType = CDVD_TYPE_DETCTCD;
      else iCDType = CDVD_TYPE_DETCTDVDS;
@@ -292,7 +292,7 @@ EXPORT_GCC void CALLBACK CDVDclose()
 EXPORT_GCC long CALLBACK CDVDtest()
 {
  return 0;
-}            
+}
 
 /////////////////////////////////////////////////////////
 // readSubQ: read subq from disc (only cds have subq data)
@@ -308,14 +308,14 @@ EXPORT_GCC long CALLBACK CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 	subq->mode		= 1;
 	subq->trackNum	= itob(1);
 	subq->trackIndex= itob(1);
-	
+
 	lba_to_msf(lsn, &min, &sec, &frm);
 	subq->trackM	= itob(min);
 	subq->trackS	= itob(sec);
 	subq->trackF	= itob(frm);
-	
+
 	subq->pad		= 0;
-	
+
 	lba_to_msf(lsn + (2*75), &min, &sec, &frm);
 	subq->discM		= itob(min);
 	subq->discS		= itob(sec);
@@ -333,8 +333,8 @@ EXPORT_GCC long CALLBACK CDVDgetTOC(void* toc)
 
 	if(!bIsOpen)  CDVDopen("DVD");                             // not open? funny emu...
 
- if(!iCDROK) return -1;                                  // cd not ok? 
-   
+ if(!iCDROK) return -1;                                  // cd not ok?
+
   type = CDVDgetDiskType();
 
 	if(	type == CDVD_TYPE_DVDV ||
@@ -345,12 +345,12 @@ EXPORT_GCC long CALLBACK CDVDgetTOC(void* toc)
         // get dvd structure format
 		// scsi command 0x43
 		memset(tocBuff, 0, 2048);
-		
+
         lastaddr = GetLastTrack1Addr();
         if(layer1start > 0 || (layer1start != -2 && lastaddr > 0x280000) ) {
             int off = 0;
             FRAMEBUF* f = (FRAMEBUF*)malloc(sizeof(FRAMEBUF));
-        
+
             f->dwBufLen = iUsedBlockSize;
             f->dwFrameCnt = 1;
 
@@ -444,14 +444,14 @@ EXPORT_GCC long CALLBACK CDVDgetTOC(void* toc)
 		memset(tocBuff, 0, 1024);
 		if (CDVDgetTN(&diskInfo) == -1)	{ diskInfo.etrack = 0;diskInfo.strack = 1; }
 		if (CDVDgetTD(0, &trackInfo) == -1) trackInfo.lsn = 0;
-		
+
 		tocBuff[0] = 0x41;
 		tocBuff[1] = 0x00;
-		
+
 		//Number of FirstTrack
 		tocBuff[2] = 0xA0;
 		tocBuff[7] = itob(diskInfo.strack);
-		
+
 		//Number of LastTrack
 		tocBuff[12] = 0xA1;
 		tocBuff[17] = itob(diskInfo.etrack);
@@ -464,7 +464,7 @@ EXPORT_GCC long CALLBACK CDVDgetTOC(void* toc)
 		tocBuff[29] = itob(frm);
 
 		fprintf(stderr,"Track 0: %d mins %d secs %d frames\n",min,sec,frm);
-		
+
 		for (i=diskInfo.strack; i<=diskInfo.etrack; i++)
 		{
 			err = CDVDgetTD(i, &trackInfo);
@@ -479,7 +479,7 @@ EXPORT_GCC long CALLBACK CDVDgetTOC(void* toc)
 	}
 	else
 		return -1;
-	
+
 	return 0;
 }
 
@@ -490,12 +490,12 @@ EXPORT_GCC long CALLBACK CDVDgetTN(cdvdTN *Buffer)
 {
  if(!bIsOpen)  CDVDopen("DVD");                             // not open? funny emu...
 
- if(!iCDROK)                                           // cd not ok? 
+ if(!iCDROK)                                           // cd not ok?
   {
    Buffer->strack=1;
    Buffer->etrack=1;
    return -1;
-  }      
+  }
 
  ReadTOC();                                            // read the TOC
 
@@ -516,11 +516,11 @@ EXPORT_GCC long CALLBACK CDVDgetTD(unsigned char track, cdvdTD *Buffer)
  u8 t1;
 
  if(!bIsOpen) CDVDopen("DVD");                              // not open? funny emu...
- 
+
  if(!iCDROK)  return -1;                               // cd not ok? bye
 
  ReadTOC();                                            // read toc
- 
+
 /*
 // PSEmu style:
  if(track==0)                                          // 0 = last track
@@ -538,9 +538,9 @@ EXPORT_GCC long CALLBACK CDVDgetTD(unsigned char track, cdvdTD *Buffer)
  Buffer->second = buffer[2];
  Buffer->frame  = buffer[3];
  Buffer->type   = iCDType;
-#ifdef DBGOUT  	
+#ifdef DBGOUT
  auxprintf("Read Toc %d: %u\n",track,lu);
-#endif 
+#endif
 */
 
  lu=0;
@@ -554,15 +554,15 @@ EXPORT_GCC long CALLBACK CDVDgetTD(unsigned char track, cdvdTD *Buffer)
 
  if(track==0)
       Buffer->type   = iCDType;
- else 
+ else
  {
 	lu=0;
 	for(i=sTOC.cFirstTrack;i<track;i++)
 		lu+=sTOC.tracks[i].lAddr;
 
-		CDVDreadTrack(lu+16,CDVD_MODE_2352); 
+		CDVDreadTrack(lu+16,CDVD_MODE_2352);
 		buf=CDVDgetBuffer();
-		
+
 		if(buf!=NULL) memcpy(buffer,buf,2352);
 		else		  memset(buffer,0,2352);
 
@@ -593,7 +593,7 @@ EXPORT_GCC long CALLBACK CDVDreadTrack(unsigned long lsn, int mode)
  if(!iCDROK)    return -1;
  if(bCDDAPlay)  bCDDAPlay=FALSE;
 
-#ifdef DBGOUT  	
+#ifdef DBGOUT
  auxprintf("Read Track %u: %d\n",lsn,mode);
 #endif
 
@@ -607,7 +607,7 @@ EXPORT_GCC long CALLBACK CDVDreadTrack(unsigned long lsn, int mode)
 }
 
 /////////////////////////////////////////////////////////
-// getbuffer: will be called after readtrack, to get ptr 
+// getbuffer: will be called after readtrack, to get ptr
 //            to data
 
 // small helper buffer to get bigger block sizes
@@ -637,50 +637,50 @@ EXPORT_GCC unsigned char * CALLBACK CDVDgetBuffer()
      //------------------------------------------------//
      case CDVD_MODE_2352:
       {
-       if(iUsedBlockSize==2048) 
+       if(iUsedBlockSize==2048)
         {
-         memset(cDataAndSub,0,2368);        
+         memset(cDataAndSub,0,2368);
          memcpy(cDataAndSub+24,pbuffer,2048);
          pbuffer=cDataAndSub;
         }
       }break;
-     //------------------------------------------------// 
+     //------------------------------------------------//
      case CDVD_MODE_2340:
       {
-       if(iUsedBlockSize==2048) 
+       if(iUsedBlockSize==2048)
         {
-         memset(cDataAndSub,0,2368);        
+         memset(cDataAndSub,0,2368);
          memcpy(cDataAndSub+12,pbuffer,2048);
          pbuffer=cDataAndSub;
         }
        else pbuffer+=12;
       }break;
-     //------------------------------------------------// 
+     //------------------------------------------------//
      case CDVD_MODE_2328:
       {
-       if(iUsedBlockSize==2048) 
+       if(iUsedBlockSize==2048)
         {
-         memset(cDataAndSub,0,2368);        
+         memset(cDataAndSub,0,2368);
          memcpy(cDataAndSub+0,pbuffer,2048);
          pbuffer=cDataAndSub;
         }
-       else pbuffer+=24; 
+       else pbuffer+=24;
       }break;
      //------------------------------------------------//
      case CDVD_MODE_2368:
       {
-       if(iUsedBlockSize==2048) 
+       if(iUsedBlockSize==2048)
         {
-         memset(cDataAndSub,0,2368);        
+         memset(cDataAndSub,0,2368);
          memcpy(cDataAndSub+24,pbuffer,2048);
          pbuffer=cDataAndSub;
-         
+
 /*
 // NO SUBCHANNEL SUPPORT RIGHT NOW!!!
     {
      if(subHead)                                           // some sub file?
       CheckSUBCache(lLastAccessedAddr);                    // -> get cached subs
-     else 
+     else
      if(iUseSubReading!=1 && pCurrSubBuf)                  // no direct cd sub read?
       FakeSubData(lLastAccessedAddr);                      // -> fake the data
      memcpy(cDataAndSub,pCurrReadBuf,2352);
@@ -689,14 +689,14 @@ EXPORT_GCC unsigned char * CALLBACK CDVDgetBuffer()
      pbuffer=cDataAndSub;
     }
 */
-         
+
         }
       }break;
-     //------------------------------------------------// 
+     //------------------------------------------------//
     }
   }
 
-#ifdef DBGOUT  	
+#ifdef DBGOUT
  auxprintf("get buf %d\n",iLastAccessedMode);
 
 /*
@@ -704,17 +704,17 @@ EXPORT_GCC unsigned char * CALLBACK CDVDgetBuffer()
  int k;
  for(k=0;k<2352;k++)
   auxprintf("%02x ",*(pbuffer+k));
- auxprintf("\n\n"); 
+ auxprintf("\n\n");
 }
 */
 #endif
 
- return pbuffer;            
+ return pbuffer;
 }
 
 /////////////////////////////////////////////////////////
 
-EXPORT_GCC long CALLBACK CDVDgetDiskType() 
+EXPORT_GCC long CALLBACK CDVDgetDiskType()
 {
  return iCDType;
 }
@@ -722,7 +722,7 @@ EXPORT_GCC long CALLBACK CDVDgetDiskType()
 /////////////////////////////////////////////////////////
 // CDVDgetTrayStatus
 
-EXPORT_GCC long CALLBACK CDVDgetTrayStatus() 
+EXPORT_GCC long CALLBACK CDVDgetTrayStatus()
 {
  static time_t to=0;
  static long lLastTrayState=CDVD_TRAY_CLOSE;
@@ -735,16 +735,16 @@ EXPORT_GCC long CALLBACK CDVDgetTrayStatus()
  if(iCheckTrayStatus)                                    // user really want a tray check
   {
    int iStatus;
-   
+
    LockGenCDAccess();                                    // make sure that no more reading is happening
    iStatus=GetSCSIStatus(iCD_AD,iCD_TA,iCD_LU);          // get device status
    UnlockGenCDAccess();
 
-   if(iStatus==SS_ERR) 
+   if(iStatus==SS_ERR)
     lLastTrayState=CDVD_TRAY_OPEN;
-  }  
+  }
 
-#ifdef DBGOUT  	
+#ifdef DBGOUT
 auxprintf("check %d -> %d\n",to,lLastTrayState);
 #endif
 
@@ -848,7 +848,7 @@ EXPORT_GCC char CALLBACK CDRgetDriveLetter(void)
 //            would block all of my cdr reading if I would use
 //            lotsa scsi commands
 
-struct CdrStat 
+struct CdrStat
 {
  unsigned long Type;
  unsigned long Status;
@@ -877,18 +877,18 @@ struct CdrStat ostat;
 // byte 2 - frame
 
 
-EXPORT_GCC long CALLBACK CDRgetStatus(struct CdrStat *stat) 
+EXPORT_GCC long CALLBACK CDRgetStatus(struct CdrStat *stat)
 {
  int iStatus;
  static time_t to;
 
  if(!bCDDAPlay)  // if not playing update stat only once in a second
-  { 
-   if(to<time(NULL)) 
+  {
+   if(to<time(NULL))
     {
      to = time(NULL);
-    } 
-   else 
+    }
+   else
     {
      memcpy(stat, &ostat, sizeof(struct CdrStat));
      return 0;
@@ -912,7 +912,7 @@ EXPORT_GCC long CALLBACK CDRgetStatus(struct CdrStat *stat)
     }
   }
  else                                                  // cdda not playing?
-  { 
+  {
    stat->Type = 0x01;                                  // -> data
   }
 
@@ -920,7 +920,7 @@ EXPORT_GCC long CALLBACK CDRgetStatus(struct CdrStat *stat)
  iStatus=GetSCSIStatus(iCD_AD,iCD_TA,iCD_LU);          // get device status
  UnlockGenCDAccess();
 
- if(iStatus==SS_ERR) 
+ if(iStatus==SS_ERR)
   {                                                    // no cdrom?
    stat->Type = 0xff;
    stat->Status|= 0x10;

@@ -898,7 +898,7 @@ int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32
 	PSRADItoR(from, 31);
 	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], from);
 	mmxregs[to].inuse = 0;
-	
+
 	return -1;
 }
 
@@ -913,7 +913,7 @@ int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 	PSRADItoR(to, 31);
 	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], to);
 	mmxregs[to].inuse = 0;
-	
+
 	return -1;
 }
 

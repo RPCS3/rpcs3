@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #include <stdio.h>
 #include <windows.h>
 #include <windowsx.h>
@@ -30,7 +30,7 @@ extern HWND hWMain;
 /////////
 HINSTANCE hInst;
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...)
 {
 	va_list list;
 	char tmp[512];
@@ -38,30 +38,30 @@ void SysMessage(char *fmt, ...)
 	va_start(list,fmt);
 	vsprintf_s(tmp,fmt,list);
 	va_end(list);
-	
+
 	MessageBox((hWMain==NULL) ? GetActiveWindow() : hWMain, tmp, "ZeroSPU2 Msg", MB_SETFOREGROUND | MB_OK);
 }
 
-BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) 
+BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    
-	switch(uMsg) 
+
+	switch(uMsg)
 	{
 		case WM_INITDIALOG:
 			LoadConfig();
 			if (conf.Log) CheckDlgButton(hW, IDC_LOGGING, TRUE);
-			if( conf.options & OPTION_REALTIME) 
+			if( conf.options & OPTION_REALTIME)
 				CheckDlgButton(hW, IDC_REALTIME, TRUE);
-			if( conf.options & OPTION_TIMESTRETCH) 
+			if( conf.options & OPTION_TIMESTRETCH)
 				CheckDlgButton(hW, IDC_TIMESTRETCH, TRUE);
-			if( conf.options & OPTION_MUTE) 
+			if( conf.options & OPTION_MUTE)
 				CheckDlgButton(hW, IDC_MUTESOUND, TRUE);
-			if( conf.options & OPTION_RECORDING) 
+			if( conf.options & OPTION_RECORDING)
 				CheckDlgButton(hW, IDC_SNDRECORDING, TRUE);
 			return TRUE;
 
 		case WM_COMMAND:
-			switch(LOWORD(wParam)) 
+			switch(LOWORD(wParam))
 			{
 				case IDCANCEL:
 					EndDialog(hW, TRUE);
@@ -70,9 +70,9 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					conf.options = 0;
 					if (IsDlgButtonChecked(hW, IDC_LOGGING))
 						 conf.Log = 1;
-					else 
+					else
 						conf.Log = 0;
-					
+
 					if (IsDlgButtonChecked(hW, IDC_REALTIME))
 						conf.options |= OPTION_REALTIME;
 					if (IsDlgButtonChecked(hW, IDC_TIMESTRETCH))
@@ -81,7 +81,7 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 						conf.options |= OPTION_MUTE;
 					if (IsDlgButtonChecked(hW, IDC_SNDRECORDING))
 						conf.options |= OPTION_RECORDING;
-					
+
 					SaveConfig();
 					EndDialog(hW, FALSE);
 					return TRUE;
@@ -90,15 +90,15 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) 
+BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	switch(uMsg) 
+	switch(uMsg)
 	{
 		case WM_INITDIALOG:
 			return TRUE;
 
 		case WM_COMMAND:
-			switch(LOWORD(wParam)) 
+			switch(LOWORD(wParam))
 			{
 				case IDOK:
 					EndDialog(hW, FALSE);
@@ -108,19 +108,19 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-void CALLBACK SPU2configure() 
+void CALLBACK SPU2configure()
 {
-    DialogBox(hInst, MAKEINTRESOURCE(IDD_CONFIG), GetActiveWindow(), (DLGPROC)ConfigureDlgProc); 
+    DialogBox(hInst, MAKEINTRESOURCE(IDD_CONFIG), GetActiveWindow(), (DLGPROC)ConfigureDlgProc);
 }
 
-void CALLBACK SPU2about() 
+void CALLBACK SPU2about()
 {
     DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), GetActiveWindow(), (DLGPROC)AboutDlgProc);
 }
 
 
  // DLL INIT
-BOOL APIENTRY DllMain(HANDLE hModule, DWORD  dwReason, LPVOID lpReserved) 
+BOOL APIENTRY DllMain(HANDLE hModule, DWORD  dwReason, LPVOID lpReserved)
 {
 	hInst = (HINSTANCE)hModule;
 	return TRUE;                                          // very quick :)
@@ -144,14 +144,14 @@ void LoadConfig()
 	FILE *fp;
 	Config *Conf1 = &conf;
 	char szValue[256];
-  
+
 	string iniFile( s_strIniPath + "zerospu2.ini" );
 
 	fopen_s(&fp, iniFile.c_str(), "rt");//check if zerospu2.ini really exists
 
 	if (!fp)
 	{
-		CreateDirectory(s_strIniPath.c_str(), NULL); 
+		CreateDirectory(s_strIniPath.c_str(), NULL);
 		memset(&conf, 0, sizeof(conf));
 		conf.Log = 0;//default value
 		conf.options = OPTION_TIMESTRETCH;
@@ -159,7 +159,7 @@ void LoadConfig()
 		return ;
 	}
 	fclose(fp);
-	
+
 	GetPrivateProfileString("Interface", "Logging", NULL, szValue, 20, iniFile.c_str());
 	Conf1->Log = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Interface", "Options", NULL, szValue, 20, iniFile.c_str());

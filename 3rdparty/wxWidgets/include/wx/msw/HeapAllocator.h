@@ -15,7 +15,7 @@ extern void  _freeHeap_wxObject( void* ptr );
 template<typename T>
 class wxStringAllocator
 {
-public : 
+public :
 	//    typedefs
 
 	typedef T value_type;
@@ -26,7 +26,7 @@ public :
 	typedef std::size_t size_type;
 	typedef std::ptrdiff_t difference_type;
 
-public : 
+public :
 	//    convert an allocator<T> to allocator<U>
 
 	template<typename U>
@@ -34,12 +34,12 @@ public :
 		typedef wxStringAllocator<U> other;
 	};
 
-public : 
+public :
 	wxStringAllocator()
 	{
 		_allocateHeap_wxString();
 	}
-	
+
 	~wxStringAllocator()
 	{
 		_destroyHeap_wxString();
@@ -57,20 +57,20 @@ public :
 
 	//    memory allocation
 
-	pointer allocate(size_type cnt, 
+	pointer allocate(size_type cnt,
 		typename std::allocator<void>::const_pointer = 0)
-	{ 
+	{
 		return reinterpret_cast<pointer>( _allocHeap_wxString(cnt * sizeof(T)) );
 	}
 
 	void deallocate(pointer p, size_type)
-	{ 
+	{
 		_freeHeap_wxString( p );
 	}
 
 	//    size
 
-	size_type max_size() const { 
+	size_type max_size() const {
 		return std::numeric_limits<size_type>::max() / sizeof(T);
 	}
 
@@ -83,16 +83,16 @@ public :
 
 	bool operator==(wxStringAllocator const&) { return true; }
 	bool operator!=(wxStringAllocator const& a) { return !operator==(a); }
-};    //    end of class Allocator 
+};    //    end of class Allocator
 
 
 // --------------------------------------------------------------------------------------
-//  
+//
 // --------------------------------------------------------------------------------------
 template<typename T>
 class wxObjectAllocator
 {
-public : 
+public :
 	//    typedefs
 
 	typedef T value_type;
@@ -103,7 +103,7 @@ public :
 	typedef std::size_t size_type;
 	typedef std::ptrdiff_t difference_type;
 
-public : 
+public :
 	//    convert an allocator<T> to allocator<U>
 
 	template<typename U>
@@ -111,7 +111,7 @@ public :
 		typedef wxObjectAllocator<U> other;
 	};
 
-public : 
+public :
 	wxObjectAllocator()
 	{
 		_allocateHeap_wxObject();
@@ -134,20 +134,20 @@ public :
 
 	//    memory allocation
 
-	pointer allocate(size_type cnt, 
+	pointer allocate(size_type cnt,
 		typename std::allocator<void>::const_pointer = 0)
-	{ 
+	{
 		return reinterpret_cast<pointer>( _allocHeap_wxObject(cnt * sizeof(T)) );
 	}
 
 	void deallocate(pointer p, size_type)
-	{ 
+	{
 		_freeHeap_wxObject( p );
 	}
 
 	//    size
 
-	size_type max_size() const { 
+	size_type max_size() const {
 		return std::numeric_limits<size_type>::max() / sizeof(T);
 	}
 
@@ -160,5 +160,5 @@ public :
 
 	bool operator==(wxObjectAllocator const&) { return true; }
 	bool operator!=(wxObjectAllocator const& a) { return !operator==(a); }
-};    //    end of class Allocator 
+};    //    end of class Allocator
 

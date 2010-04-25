@@ -57,7 +57,7 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 {
 	//static bool bShift = false;
 	static bool bAlt = false;
-	
+
 	switch(ev->evt) {
 		case KEYPRESS:
 			switch(ev->key) {
@@ -129,10 +129,10 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	conf.options |= is_checked(Conf, "checkWireframe") ? GSOPTION_WIREFRAME : 0;
 	conf.options |= is_checked(Conf, "checkfullscreen") ? GSOPTION_FULLSCREEN : 0;
 	conf.options |= is_checked(Conf, "checkTGA") ? GSOPTION_TGASNAP : 0;
-	
+
 	if is_checked(Conf, "radiointerlace0")
 		conf.interlace = 0;
-	else if is_checked(Conf, "radiointerlace1") 
+	else if is_checked(Conf, "radiointerlace1")
 		conf.interlace = 1;
 	else
 		conf.interlace = 2;
@@ -143,16 +143,16 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_tree_model_get_iter_first(treemodel, &treeiter);
 
 	conf.gamesettings = 0;
-	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
+	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
 		treeoptval = FALSE;
 		gtk_tree_model_get(treemodel, &treeiter, 0, &treeoptval, -1);
-		
+
 		if(treeoptval) conf.gamesettings |= it->second.value;
-		
-		gtk_tree_model_iter_next(treemodel,&treeiter);		
+
+		gtk_tree_model_iter_next(treemodel,&treeiter);
 	}
-	
+
 	GSsetGameCRC(0, conf.gamesettings);
 	//---------- done getting advanced options ---------//
 
@@ -171,7 +171,7 @@ void OnConf_Ok(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-void OnConf_Cancel(GtkButton *button, gpointer user_data) 
+void OnConf_Cancel(GtkButton *button, gpointer user_data)
 {
 	gtk_widget_destroy(Conf);
 	gtk_main_quit();
@@ -191,10 +191,10 @@ void CALLBACK GSconfigure()
 
 	char strcurdir[256];
 	getcwd(strcurdir, 256);
-	
+
 	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
 	Conf = create_Config();
-	
+
 	// fixme; Need to check "checkInterlace" as well.
 	if (conf.interlace == 0)
 		set_checked(Conf, "radiointerlace0", true);
@@ -202,7 +202,7 @@ void CALLBACK GSconfigure()
 		set_checked(Conf, "radiointerlace1", true);
 	else
 		set_checked(Conf, "radionointerlace", true);
-	
+
 	set_checked(Conf, "checkBilinear", !!conf.bilinear);
 	//set_checked(Conf, "checkbutton6", conf.mrtdepth);
 	set_checked(Conf, "radioAANone", (conf.aa==0));
@@ -236,7 +236,7 @@ void CALLBACK GSconfigure()
 	gtk_tree_view_column_add_attribute(treecol, treerend, "active", 0);//link 'active' attrib to first column of model
 	g_object_set(treerend, "activatable", TRUE, NULL);//set 'activatable' attrib true by default for all rows regardless of model.
 	g_signal_connect(treerend, "toggled", (GCallback) OnToggle_advopts, treestore);//set a global callback, we also pass a reference to our treestore.
-	
+
 	//COLUMN 1 is the text descriptions
 	treecol = gtk_tree_view_column_new();
 	gtk_tree_view_column_set_title(treecol, "Description");
@@ -310,7 +310,7 @@ void CALLBACK GSconfigure()
 	confOpts.value = 0x00200000;
 	confOpts.desc = "32 bit render targets - 00200000";
 	mapConfOpts["00200000"] = confOpts;
-	
+
 	confOpts.value = 0x00400000;
 	confOpts.desc = "Path 3 Hack - 00400000";
 	mapConfOpts["00400000"] = confOpts;
@@ -321,7 +321,7 @@ void CALLBACK GSconfigure()
 	confOpts.desc = "Specular Highlights - 01000000\nMakes xenosaga graphics faster by removing highlights";
 	mapConfOpts["01000000"] = confOpts;
 
-	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it) 
+	for(map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
 		gtk_list_store_append(treestore, &treeiter);//new row
 		itval = (conf.gamesettings&it->second.value)?TRUE:FALSE;
@@ -331,7 +331,7 @@ void CALLBACK GSconfigure()
 
 	gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(treestore));//NB: store is cast as tree model.
 	g_object_unref(treestore);//allow model to be destroyed when the tree is destroyed.
-	
+
 	//don't select/highlight rows
 	gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview)), GTK_SELECTION_NONE);
 	//------treeview done -------//
@@ -350,16 +350,16 @@ void OnToggle_advopts(GtkCellRendererToggle *cell, gchar *path, gpointer user_da
 	gtk_tree_model_get(GTK_TREE_MODEL(user_data), &treeiter, 0, &val, -1);
 	val = !val;
 	gtk_list_store_set(GTK_LIST_STORE(user_data), &treeiter, 0, val, -1);
-	
+
 }
 
-void OnAbout_Ok(GtkButton *button, gpointer user_data) 
+void OnAbout_Ok(GtkButton *button, gpointer user_data)
 {
 	gtk_widget_destroy(About);
 	gtk_main_quit();
 }
 
-void CALLBACK GSabout() 
+void CALLBACK GSabout()
 {
 	About = create_About();
 
@@ -367,20 +367,20 @@ void CALLBACK GSabout()
 	gtk_main();
 }
 
-s32 CALLBACK GStest() 
+s32 CALLBACK GStest()
 {
 	return 0;
 }
 
 GtkWidget *MsgDlg;
 
-void OnMsg_Ok() 
+void OnMsg_Ok()
 {
 	gtk_widget_destroy(MsgDlg);
 	gtk_main_quit();
 }
 
-void SysMessage(char *fmt, ...) 
+void SysMessage(char *fmt, ...)
 {
 	GtkWidget *Ok,*Txt;
 	GtkWidget *Box,*Box1;
@@ -403,7 +403,7 @@ void SysMessage(char *fmt, ...)
 	gtk_widget_show(Box);
 
 	Txt = gtk_label_new(msg);
-	
+
 	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
 	gtk_widget_show(Txt);
 
@@ -417,29 +417,29 @@ void SysMessage(char *fmt, ...)
 	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
 	gtk_widget_show(Ok);
 
-	gtk_widget_show(MsgDlg);	
+	gtk_widget_show(MsgDlg);
 
 	gtk_main();
 }
 
-void *SysLoadLibrary(char *lib) 
+void *SysLoadLibrary(char *lib)
 {
 	return dlopen(lib, RTLD_NOW | RTLD_GLOBAL);
 }
 
-void *SysLoadSym(void *lib, char *sym) 
+void *SysLoadSym(void *lib, char *sym)
 {
 	void *ret = dlsym(lib, sym);
 	if (ret == NULL) printf("null: %s\n", sym);
 	return dlsym(lib, sym);
 }
 
-char *SysLibError() 
+char *SysLibError()
 {
 	return dlerror();
 }
 
-void SysCloseLibrary(void *lib) 
+void SysCloseLibrary(void *lib)
 {
 	dlclose(lib);
 }

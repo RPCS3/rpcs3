@@ -11,7 +11,7 @@
    bzip2/libbzip2 version 1.0.4 of 20 December 2006
    Copyright (C) 1996-2006 Julian Seward <jseward@bzip.org>
 
-   Please read the WARNING, DISCLAIMER and PATENTS sections in the 
+   Please read the WARNING, DISCLAIMER and PATENTS sections in the
    README file.
 
    This program is released under the terms of the license contained
@@ -51,7 +51,7 @@ typedef unsigned short  UInt16;
 
 #ifndef __GNUC__
 #define __inline__  /* */
-#endif 
+#endif
 
 #ifndef BZ_NO_STDIO
 
@@ -109,7 +109,7 @@ extern void bz_internal_error ( int errcode );
 #define BZ_HDR_Z 0x5a   /* 'Z' */
 #define BZ_HDR_h 0x68   /* 'h' */
 #define BZ_HDR_0 0x30   /* '0' */
-  
+
 /*-- Constants for the back end. --*/
 
 #define BZ_MAX_ALPHA_SIZE 258
@@ -269,19 +269,19 @@ typedef
 
 /*-- externs for compression. --*/
 
-extern void 
+extern void
 BZ2_blockSort ( EState* );
 
-extern void 
+extern void
 BZ2_compressBlock ( EState*, Bool );
 
-extern void 
+extern void
 BZ2_bsInitWrite ( EState* );
 
-extern void 
+extern void
 BZ2_hbAssignCodes ( Int32*, UChar*, Int32, Int32, Int32 );
 
-extern void 
+extern void
 BZ2_hbMakeCodeLengths ( UChar*, Int32*, Int32, Int32 );
 
 
@@ -425,7 +425,7 @@ typedef
       Int32    save_N;
       Int32    save_curr;
       Int32    save_zt;
-      Int32    save_zn; 
+      Int32    save_zn;
       Int32    save_zvec;
       Int32    save_zj;
       Int32    save_gSel;
@@ -475,13 +475,13 @@ typedef
 
 /*-- externs for decompression. --*/
 
-extern Int32 
+extern Int32
 BZ2_indexIntoF ( Int32, Int32* );
 
-extern Int32 
+extern Int32
 BZ2_decompress ( DState* );
 
-extern void 
+extern void
 BZ2_hbCreateDecodeTables ( Int32*, Int32*, Int32*, UChar*,
                            Int32,  Int32, Int32 );
 

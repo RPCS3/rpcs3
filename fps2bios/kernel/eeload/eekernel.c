@@ -8,7 +8,7 @@
 //[name]	NA
 //[version]	NA
 //[memory map]	[too many, see mem.txt]
-//[handlers]	
+//[handlers]
 //[entry point]	ENTRYPOINT @ 0x80001000
 //[made by]	[RO]man, zerofrog & others
 #include <tamtypes.h>
@@ -628,7 +628,7 @@ void _DummyDMACHandler(int n)
 }
 
 ////////////////////////////////////////////////////////////////////
-//80001508 
+//80001508
 ////////////////////////////////////////////////////////////////////
 void DefaultCPUTimerHandler()
 {
@@ -969,7 +969,7 @@ int _SetAlarm(short a0, int a1, int a2)
 		}
 	}
 
-	_alarm_unk|= mode << i;	
+	_alarm_unk|= mode << i;
 
 	__asm__("move %0, $gp\n" : "=r"(rcnt3TargetTable[0]) : );
 	dword_80016A78 = a1;
@@ -982,7 +982,7 @@ int _SetAlarm(short a0, int a1, int a2)
 
 	if (RCNT3_MODE < i) {
 		if (rcnt3Count <= 0) {
-			
+
 		}
 	}
 }
@@ -1026,7 +1026,7 @@ void rcnt3Handler()
         addr =  (u32)*(u16*)(ptr+2);
 		__asm__("move %0, $gp\n" : "=r"(storegp) : );
         __asm__("move $gp, %0\n" : : "r"(ptr[0]) );
-        
+
         _excepRet(excepRetPc, ptr[-2], id, addr, ptr[-1]);
 
 		__asm__("move $gp, %0\n" : : "r"(storegp) );
@@ -1081,7 +1081,7 @@ void _excepRet(u32 eretpc, u32 v1, u32 a, u32 a1, u32 a2)
             "mtc0 $26, $12\n"
             "sync\n"
             "eret\n"
-            "nop\n");    
+            "nop\n");
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -1102,7 +1102,7 @@ void _RFU005()
 		"lw   $sp, excepSP\n"
 		"jr   $ra\n"
         "nop\n"
-        
+
 		".set at\n");
 }
 
@@ -1189,7 +1189,7 @@ void _KSeg0(u32 arg)
 //80002C40		SYSCALL 099 GetCop0
 ////////////////////////////////////////////////////////////////////
 int _GetCop0(int reg)
-{ 
+{
 	return table_GetCop0[reg](reg);
 }
 
@@ -1239,11 +1239,11 @@ int GetCop0_Reg31(int reg) 	{ return; }
 int (*table_GetCop0[32])(int reg) = { // 800124E8
 	GetCop0_Index,      GetCop0_Random,   GetCop0_EntryLo0, GetCop0_EntryLo1,
 	GetCop0_Context,    GetCop0_PageMask, GetCop0_Wired,    GetCop0_Reg7,
-	GetCop0_BadVAddr,   GetCop0_Count,    GetCop0_EntryHi,  GetCop0_Compare, 
+	GetCop0_BadVAddr,   GetCop0_Count,    GetCop0_EntryHi,  GetCop0_Compare,
 	GetCop0_Status,     GetCop0_Cause,    GetCop0_ExceptPC, GetCop0_PRevID,
 	GetCop0_Config,     GetCop0_Reg17,    GetCop0_Reg18,    GetCop0_Reg19,
 	GetCop0_Reg20,      GetCop0_Reg21,    GetCop0_Reg22,    GetCop0_Reg23,
-	GetCop0_DebugReg24, GetCop0_Perf,     GetCop0_Reg26,    GetCop0_Reg27, 
+	GetCop0_DebugReg24, GetCop0_Perf,     GetCop0_Reg26,    GetCop0_Reg27,
 	GetCop0_TagLo,      GetCop0_TagHi,    GetCop0_ErrorPC,  GetCop0_Reg31
 };
 
@@ -1301,11 +1301,11 @@ int SetCop0_Reg31(int reg, int val) 	{ return -1; }
 int (*table_SetCop0[32])(int reg, int val) = { // 80012568
 	SetCop0_Index,      SetCop0_Random,   SetCop0_EntryLo0, SetCop0_EntryLo1,
 	SetCop0_Context,    SetCop0_PageMask, SetCop0_Wired,    SetCop0_Reg7,
-	SetCop0_BadVAddr,   SetCop0_Count,    SetCop0_EntryHi,  SetCop0_Compare, 
+	SetCop0_BadVAddr,   SetCop0_Count,    SetCop0_EntryHi,  SetCop0_Compare,
 	SetCop0_Status,     SetCop0_Cause,    SetCop0_ExceptPC, SetCop0_PRevID,
 	SetCop0_Config,     SetCop0_Reg17,    SetCop0_Reg18,    SetCop0_Reg19,
 	SetCop0_Reg20,      SetCop0_Reg21,    SetCop0_Reg22,    SetCop0_Reg23,
-	SetCop0_DebugReg24, SetCop0_Perf,     SetCop0_Reg26,    SetCop0_Reg27, 
+	SetCop0_DebugReg24, SetCop0_Perf,     SetCop0_Reg26,    SetCop0_Reg27,
 	SetCop0_TagLo,      SetCop0_TagHi,    SetCop0_ErrorPC,  SetCop0_Reg31
 };
 
@@ -1341,14 +1341,14 @@ int _DeleteThread(int tid)
         // make sure the return value is also stored
         __asm__("sd $2, 0x20($sp)\n");
 
-        restoreContext();        
+        restoreContext();
         eret();
     }
 
-        
+
     __asm__("mfc0 %0, $14\n" : "=r"(curepc) : ); // EPC
     _ThreadHandler(curepc, SavedSP); // returns entry in $3, stack in $4
-    
+
     __asm__("mtc0 $2, $14\n"
             "move $sp, $3\n");
 
@@ -1367,7 +1367,7 @@ int _StartThread(int tid, void *arg)
 	saveContext();
 
 	ret = __StartThread(tid, arg);
-    
+
     if (ret < 0) {
         __asm__("lw $sp, %0\n" : : "m"(SavedSP));
         // make sure the return value is also stored
@@ -1377,10 +1377,10 @@ int _StartThread(int tid, void *arg)
         eret();
     }
 
-        
+
     __asm__("mfc0 %0, $14\n" : "=r"(curepc) : ); // EPC
     _ThreadHandler(curepc, SavedSP); // returns entry in $3, stack in $4
-    
+
     __asm__("mtc0 $2, $14\n"
             "move $sp, $3\n");
 
@@ -1440,10 +1440,10 @@ int _TerminateThread(int tid)
         restoreContext();
         eret();
     }
-    
+
     __asm__("mfc0 %0, $14\n" : "=r"(curepc) : ); // EPC
     _ThreadHandler(curepc, SavedSP); // returns entry in $3, stack in $4
-    
+
     __asm__("mtc0 $2, $14\n"
             "move $sp, $3\n");
 
@@ -1472,10 +1472,10 @@ void _RotateThreadReadyQueue(int pri)
         restoreContext();
         eret();
     }
-    
+
     __asm__("mfc0 %0, $14\n" : "=r"(curepc) : ); // EPC
     _ThreadHandler(curepc, SavedSP); // returns entry in $3, stack in $4
-    
+
     __asm__("mtc0 $2, $14\n"
             "move $sp, $3\n");
 
@@ -1504,10 +1504,10 @@ void _ReleaseWaitThread(int tid)
         restoreContext();
         eret();
     }
-    
+
     __asm__("mfc0 %0, $14\n" : "=r"(curepc) : ); // EPC
     _ThreadHandler(curepc, SavedSP); // returns entry in $3, stack in $4
-    
+
     __asm__("mtc0 $2, $14\n"
             "move $sp, $3\n");
 
@@ -1530,7 +1530,7 @@ int _SleepThread()
 		register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
 		_ChangeThread(curepc, SavedSP, 1);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1553,13 +1553,13 @@ int _WakeupThread(int tid)
 
 	ret = tid;
 	saveContext();
-    
+
 	ret = iWakeupThread(tid);
     if( ret >= 0 ) {
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ThreadHandler(curepc, SavedSP);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1582,13 +1582,13 @@ int _ResumeThread(int tid)
 
 	ret = tid;
 	saveContext();
-    
+
 	ret = _iResumeThread(tid);
     if( ret >= 0 ) {
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ThreadHandler(curepc, SavedSP);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1611,13 +1611,13 @@ int _WaitSema(int sid)
 
 	ret = sid;
 	saveContext();
-    
+
 	ret = _iWaitSema(sid);
     if( ret == 0xFFFFFFFE ) {
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ChangeThread(curepc, SavedSP, 2);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1639,13 +1639,13 @@ void _SignalSema(int sid)
 
 	ret = sid;
 	saveContext();
-    
+
 	ret = _iSignalSema(sid);
     if( ret >= 0 ) {
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ThreadHandler(curepc, SavedSP);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1668,13 +1668,13 @@ int _DeleteSema(int sid)
 
 	ret = sid;
 	saveContext();
-    
+
 	ret = _iDeleteSema(sid);
     if( ret >= 0 ) {
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ThreadHandler(curepc, SavedSP);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
@@ -1706,14 +1706,14 @@ void _ChangeThreadPriority(int tid, int prio)
         register int curepc __asm__("$4");
         __asm__("mfc0 %0, $14\n" : "=r"(curepc) : );
         _ThreadHandler(curepc, SavedSP);
-        
+
         __asm__("mtc0 $2, $14\n"
                 "sync\n"
                 "move $sp, $3\n");
 		restoreContext();
         eret();
 	}
-    
+
     // why twice?
     __asm__("lw $sp, %0\n"
             "sd %1, 0x20($sp)\n" : : "m"(SavedSP), "r"(ret) );
@@ -1866,7 +1866,7 @@ void restoreContext()
         "mtc1 $26,  $1\n"
         "lwc1 $0,   0x1F8($sp)\n"
         "adda.s $f0, $f1\n"
-        
+
         "lw    $26,  0x1F0($sp)\n"
 		"mtsa  $26\n"
 
@@ -2313,7 +2313,7 @@ int _iWakeupThread(int tid)
 	default:
 		return -1;
 	}
-	
+
 	return tid;
 }
 
@@ -2324,7 +2324,7 @@ int _iWakeupThread(int tid)
 int _SuspendThread(int thid)
 {
 	if (thid<256){
-		if ((threads_array[thid].status==THS_READY) || 
+		if ((threads_array[thid].status==THS_READY) ||
 		    (threads_array[thid].status==THS_RUN)){
 			unsetTCB(thid);
 			threads_array[thid].status=THS_SUSPEND;
@@ -2569,7 +2569,7 @@ void __load_module_EENULL()
 	_SemasInit();
 
 	threadStatus = 0;
-	__load_module("EENULL", (void (*)(void*))0x81FC0, (void*)0x81000, 0x80); 
+	__load_module("EENULL", (void (*)(void*))0x81FC0, (void*)0x81000, 0x80);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -2683,7 +2683,7 @@ int __load_module(char *name, void (*entry)(void*), void *stack_res, int prio)
 	if (romdirGetFile(name, &ri) == NULL) {
 		__printf("# panic ! '%s' not found\n", name);
 		_Exit(1);
-	}	
+	}
 
 	if (ri.fileSize > 0) {
 		int i;
@@ -2725,7 +2725,7 @@ int _LoadPS2Exe(char *filename, int argc, char **argv)
 
     pbuf = eestrcpy(threadArgStrBuffer, "EELOAD");
     pbuf = eestrcpy(pbuf, filename);
-    
+
     if( argc > 0 ) {
         int i;
         for(i = 0; i < argc; ++i)
@@ -2736,7 +2736,7 @@ int _LoadPS2Exe(char *filename, int argc, char **argv)
     threads_array[threadId].argstring = threadArgStrBuffer;
     _CancelWakeupThread(threadId);
     _iChangeThreadPriority(threadId, 0);
-    
+
     // search for RESET
     // search for filename romdir entry
     if( romdirGetFile(filename, &ri) == NULL ) {
@@ -2747,7 +2747,7 @@ int _LoadPS2Exe(char *filename, int argc, char **argv)
     // terminate threads
     curthreadid = 1; // skip main thread?
     curtcb = &threads_array[curthreadid];
-    
+
     while(curthreadid < 256) {
         if( curtcb->status && threadId != curthreadid ) {
             if( curtcb->status == THS_DORMANT ) {
@@ -2765,7 +2765,7 @@ int _LoadPS2Exe(char *filename, int argc, char **argv)
     _SemasInit();
     threadStatus = 0;
     InitPgifHandler2();
-    
+
     Restart();
 
     if( ri.fileSize > 0 ) {
@@ -2779,7 +2779,7 @@ int _LoadPS2Exe(char *filename, int argc, char **argv)
 
     FlushInstructionCache();
     FlushDataCache();
-    
+
 	__asm__("mtc0 %0, $14\n"
             "sync\n" : : "r"(PS2_LOADADDR));
     erase_cpu_regs();
@@ -2799,7 +2799,7 @@ void* __ExecPS2(void * entry, void * gp, int argc, char ** argv)
         for(i = 0; i < argc; ++i)
             pbuf = eestrcpy(pbuf, argv[i]);
     }
-    
+
     threads_array[threadId].entry = entry; //0C
     threads_array[threadId].wakeupCount = 0; //24
     threads_array[threadId].gpReg = gp; //14
@@ -2825,7 +2825,7 @@ int _ExecOSD(int argc, char **argv)
 }
 
 ////////////////////////////////////////////////////////////////////
-//80005900	
+//80005900
 ////////////////////////////////////////////////////////////////////
 int  _RFU004_Exit()
 {
@@ -3199,7 +3199,7 @@ int _SifSetReg(int reg, u32 val)
 		return _sifGetSMFLG();
 	} else
 	if (reg >= 0) {
-		return 0; 
+		return 0;
 	}
 
 	reg&= 0x7FFFFFFF;
@@ -3229,7 +3229,7 @@ int _SifGetReg(int reg)
 		return _sifGetSMFLG();
 	} else
 	if (reg >= 0) {
-		return 0; 
+		return 0;
 	}
 
 	reg&= 0x7FFFFFFF;
@@ -3308,23 +3308,23 @@ void _SetGsCrt(short arg0, short arg1, short arg2)
 	for (count=0x270f; count >= 0; count--) {
 		__asm__ ("nop\nnop\nnop\nnop\nnop\nnop\n");
 	}
-    
+
 	*(int*)0x8001F344 = 0;
 
 	if (arg1 == 2) {
 		if (arg0 != 0) {
 			val = 0x740834504LL;
 			val2 = 0x740814504LL;
-            
+
 			tmp = (hvParam & 0x1) << 25;
 			val|= tmp;
 			val2|= tmp;
-            
+
 			GS_SMODE1 = val;
 			GS_SYNCH1 = 0x7F5B61F06F040LL;
 			GS_SYNCH2 = 0x33A4D8;
 			GS_SYNCV  = 0xC7800601A01801LL;
-            
+
 			GS_SMODE2 = (arg2 << 1) | 1;
 			GS_SRFSH  = 8;
 			GS_SMODE1 = val2;
@@ -3448,11 +3448,11 @@ void _SetGsCrt(short arg0, short arg1, short arg2)
 		}
 		return;
 	}
-    
+
 	if ((u32)(arg1 - 26) >= 0x38) {
 		_SetGsCrt3(arg0, arg1, arg2); return;
 	}
-    
+
 	if (arg1 == 0x52) {
 		_SetGsCrt3(arg0, arg1, arg2); return;
 	}
@@ -3600,7 +3600,7 @@ int __exception()
 
 	__disableInterrupts();
 	__exhandler(1);
-	
+
 	kLoadContext();
 
 	__asm__("eret\n");

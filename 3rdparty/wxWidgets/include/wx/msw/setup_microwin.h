@@ -385,7 +385,7 @@
 //
 // Default is 1.
 //
-// Recommended setting: 1 
+// Recommended setting: 1
 #define wxUSE_MEDIACTRL     1
 
 // Use QuickTime

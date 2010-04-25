@@ -54,7 +54,7 @@ struct StereoOut32
 		Right *= factor;
 		return *this;
 	}
-	
+
 	StereoOut32 operator+( const StereoOut32& right ) const
 	{
 		return StereoOut32(

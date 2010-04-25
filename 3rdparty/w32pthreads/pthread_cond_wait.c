@@ -10,25 +10,25 @@
  *      Pthreads-win32 - POSIX Threads Library for Win32
  *      Copyright(C) 1998 John E. Bossom
  *      Copyright(C) 1999,2005 Pthreads-win32 contributors
- * 
+ *
  *      Contact Email: rpj@callisto.canberra.edu.au
- * 
+ *
  *      The current list of contributors is contained
  *      in the file CONTRIBUTORS included with the source
  *      code distribution. The list can also be seen at the
  *      following World Wide Web location:
  *      http://sources.redhat.com/pthreads-win32/contributors.html
- * 
+ *
  *      This library is free software; you can redistribute it and/or
  *      modify it under the terms of the GNU Lesser General Public
  *      License as published by the Free Software Foundation; either
  *      version 2 of the License, or (at your option) any later version.
- * 
+ *
  *      This library is distributed in the hope that it will be useful,
  *      but WITHOUT ANY WARRANTY; without even the implied warranty of
  *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *      Lesser General Public License for more details.
- * 
+ *
  *      You should have received a copy of the GNU Lesser General Public
  *      License along with this library in the file COPYING.LIB;
  *      if not, write to the Free Software Foundation, Inc.,
@@ -43,7 +43,7 @@
  * algorithm used here is the one referred to as
  *
  *     Algorithm 8a / IMPL_SEM,UNBLOCK_STRATEGY == UNBLOCK_ALL
- * 
+ *
  * presented below in pseudo-code as it appeared:
  *
  *
@@ -55,20 +55,20 @@
  * nWaitersGone - int
  * nWaitersBlocked - int
  * nWaitersToUnblock - int
- * 
+ *
  * wait( timeout ) {
- * 
+ *
  *   [auto: register int result          ]     // error checking omitted
  *   [auto: register int nSignalsWasLeft ]
  *   [auto: register int nWaitersWasGone ]
- * 
+ *
  *   sem_wait( semBlockLock );
  *   nWaitersBlocked++;
  *   sem_post( semBlockLock );
- * 
+ *
  *   unlock( mtxExternal );
  *   bTimedOut = sem_wait( semBlockQueue,timeout );
- * 
+ *
  *   lock( mtxUnblockLock );
  *   if ( 0 != (nSignalsWasLeft = nWaitersToUnblock) ) {
  *     if ( bTimeout ) {                       // timeout (or canceled)
@@ -99,7 +99,7 @@
  *     nWaitersGone = 0;
  *   }
  *   unlock( mtxUnblockLock );
- * 
+ *
  *   if ( 1 == nSignalsWasLeft ) {
  *     if ( 0 != nWaitersWasGone ) {
  *       // sem_adjust( semBlockQueue,-nWaitersWasGone );
@@ -108,19 +108,19 @@
  *       }
  *     } sem_post( semBlockLock );          // open the gate
  *   }
- * 
+ *
  *   lock( mtxExternal );
- * 
+ *
  *   return ( bTimedOut ) ? ETIMEOUT : 0;
  * }
- * 
+ *
  * signal(bAll) {
- * 
+ *
  *   [auto: register int result         ]
  *   [auto: register int nSignalsToIssue]
- * 
+ *
  *   lock( mtxUnblockLock );
- * 
+ *
  *   if ( 0 != nWaitersToUnblock ) {        // the gate is closed!!!
  *     if ( 0 == nWaitersBlocked ) {        // NO-OP
  *       return unlock( mtxUnblockLock );
@@ -153,7 +153,7 @@
  *   else { // NO-OP
  *     return unlock( mtxUnblockLock );
  *   }
- * 
+ *
  *   unlock( mtxUnblockLock );
  *   sem_post( semBlockQueue,nSignalsToIssue );
  *   return result;
@@ -161,7 +161,7 @@
  * -------------------------------------------------------------
  *
  *     Algorithm 9 / IMPL_SEM,UNBLOCK_STRATEGY == UNBLOCK_ALL
- * 
+ *
  * presented below in pseudo-code; basically 8a...
  *                                      ...BUT W/O "spurious wakes" prevention:
  *
@@ -174,19 +174,19 @@
  * nWaitersGone - int
  * nWaitersBlocked - int
  * nWaitersToUnblock - int
- * 
+ *
  * wait( timeout ) {
- * 
+ *
  *   [auto: register int result          ]     // error checking omitted
  *   [auto: register int nSignalsWasLeft ]
- * 
+ *
  *   sem_wait( semBlockLock );
  *   ++nWaitersBlocked;
  *   sem_post( semBlockLock );
- * 
+ *
  *   unlock( mtxExternal );
  *   bTimedOut = sem_wait( semBlockQueue,timeout );
- * 
+ *
  *   lock( mtxUnblockLock );
  *   if ( 0 != (nSignalsWasLeft = nWaitersToUnblock) ) {
  *     --nWaitersToUnblock;
@@ -200,23 +200,23 @@
  *     nWaitersGone = 0;
  *   }
  *   unlock( mtxUnblockLock );
- * 
+ *
  *   if ( 1 == nSignalsWasLeft ) {
  *     sem_post( semBlockLock );               // open the gate
  *   }
- * 
+ *
  *   lock( mtxExternal );
- * 
+ *
  *   return ( bTimedOut ) ? ETIMEOUT : 0;
  * }
- * 
+ *
  * signal(bAll) {
- * 
+ *
  *   [auto: register int result         ]
  *   [auto: register int nSignalsToIssue]
- * 
+ *
  *   lock( mtxUnblockLock );
- * 
+ *
  *   if ( 0 != nWaitersToUnblock ) {        // the gate is closed!!!
  *     if ( 0 == nWaitersBlocked ) {        // NO-OP
  *       return unlock( mtxUnblockLock );
@@ -483,11 +483,11 @@ pthread_cond_wait (pthread_cond_t * cond, pthread_mutex_t * mutex)
       *
       *      2)      This routine atomically releases 'mutex' and causes
       *              the calling thread to block on the condition variable.
-      *              The blocked thread may be awakened by 
-      *                      pthread_cond_signal or 
+      *              The blocked thread may be awakened by
+      *                      pthread_cond_signal or
       *                      pthread_cond_broadcast.
       *
-      * Upon successful completion, the 'mutex' has been locked and 
+      * Upon successful completion, the 'mutex' has been locked and
       * is owned by the calling thread.
       *
       *
@@ -542,8 +542,8 @@ pthread_cond_timedwait (pthread_cond_t * cond,
       *
       *      2)      This routine atomically releases 'mutex' and causes
       *              the calling thread to block on the condition variable.
-      *              The blocked thread may be awakened by 
-      *                      pthread_cond_signal or 
+      *              The blocked thread may be awakened by
+      *                      pthread_cond_signal or
       *                      pthread_cond_broadcast.
       *
       *

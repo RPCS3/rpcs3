@@ -25,51 +25,51 @@ namespace ZeroGS {
 	{
 	public:
 		typedef map<u32, CRenderTarget*> MAPTARGETS;
-		
+
 		enum TargetOptions
 			{
 				TO_DepthBuffer = 1,
 				TO_StrictHeight = 2, // height returned has to be the same as requested
 				TO_Virtual = 4
 			};
-		
+
 		~CRenderTargetMngr() { Destroy(); }
-		
+
 		void Destroy();
 		static MAPTARGETS::iterator GetOldestTarg(MAPTARGETS& m);
-		
+
 		CRenderTarget* GetTarg(const frameInfo& frame, u32 Options, int maxposheight);
 		inline CRenderTarget* GetTarg(int fbp, int fbw) {
 			MAPTARGETS::iterator it = mapTargets.find(fbp|(fbw<<16));
 			return it != mapTargets.end() ? it->second : NULL;
 		}
-		
+
 		// gets all targets with a range
 		void GetTargs(int start, int end, list<ZeroGS::CRenderTarget*>& listTargets) const;
-		
+
 		// resolves all targets within a range
 		__forceinline void Resolve(int start, int end);
 		__forceinline void ResolveAll() {
 			for(MAPTARGETS::iterator it = mapTargets.begin(); it != mapTargets.end(); ++it )
 				it->second->Resolve();
 		}
-		
+
 		void DestroyAllTargs(int start, int end, int fbw);
 		void DestroyIntersecting(CRenderTarget* prndr);
-	
+
 		// promotes a target from virtual to real
 		inline CRenderTarget* Promote(u32 key) {
 			assert( !(key & TARGET_VIRTUAL_KEY) );
-		
+
 			// promote to regular targ
 			CRenderTargetMngr::MAPTARGETS::iterator it = mapTargets.find(key|TARGET_VIRTUAL_KEY);
 			assert( it != mapTargets.end() );
-			
+
 			CRenderTarget* ptarg = it->second;
 			mapTargets.erase(it);
-			
+
 			DestroyIntersecting(ptarg);
-			
+
 			it = mapTargets.find(key);
 			if( it != mapTargets.end() ) {
 				DestroyTarg(it->second);
@@ -77,16 +77,16 @@ namespace ZeroGS {
 			}
 			else
 				mapTargets[key] = ptarg;
-			
+
             if( g_GameSettings & GAME_RESOLVEPROMOTED )
                 ptarg->status = CRenderTarget::TS_Resolved;
             else
                 ptarg->status = CRenderTarget::TS_NeedUpdate;
 			return ptarg;
 		}
-		
+
 		static void DestroyTarg(CRenderTarget* ptarg);
-		
+
 		MAPTARGETS mapTargets, mapDummyTargs;
 	};
 
@@ -150,7 +150,7 @@ namespace ZeroGS {
 		// works in semi logN
 		void Insert(int start, int end);
 		inline void Clear() { ranges.resize(0); }
-		
+
 		vector<RANGE> ranges; // organized in ascending order, non-intersecting
 	};
 

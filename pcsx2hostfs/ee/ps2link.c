@@ -801,7 +801,7 @@ main(int argc, char *argv[])
 		char* params_argv  = params_ptr + 8;
 
 		nprintf("Magic = %c%c%c%c, argc=%d, argv[0]=%s\n", params_ptr[0], params_ptr[1], params_ptr[2], params_ptr[3], *params_argc, params_argv );
-		
+
 		if(params_ptr[0] == 'E' && params_ptr[1] == '2' && params_ptr[2] == 'S' && params_ptr[3] == 'P')
 		{
 			int i;
@@ -825,7 +825,7 @@ main(int argc, char *argv[])
 	nprintf("Loading elf '%s'...", elfFile);
 
 	pko_pkt_execee_req cmd;
-	
+
 	cmd.argc = 1;
 	strcpy(cmd.argv, elfFile);
 	cmd.argv[strlen(cmd.argv)+1] = 0; // second null char to end argv

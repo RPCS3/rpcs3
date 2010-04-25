@@ -47,7 +47,7 @@ void IEventListener_CoreThread::DispatchEvent( const CoreThreadStatus& status )
 		case CoreThread_Suspended:	CoreThread_OnSuspended();		break;
 		case CoreThread_Reset:		CoreThread_OnReset();			break;
 		case CoreThread_Stopped:	CoreThread_OnStopped();			break;
-		
+
 		jNO_DEFAULT;
 	}
 }
@@ -74,7 +74,7 @@ void IEventListener_Plugins::DispatchEvent( const PluginEventType& pevt )
 		case CorePlugins_Closed:	CorePlugins_OnClosed();		break;
 		case CorePlugins_Shutdown:	CorePlugins_OnShutdown();	break;
 		case CorePlugins_Unloaded:	CorePlugins_OnUnloaded();	break;
-		
+
 		jNO_DEFAULT;
 	}
 }

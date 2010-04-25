@@ -565,7 +565,7 @@ void wxTCPEventHandler::Client_OnRequest(wxSocketEvent &event)
 
     format = (wxIPCFormat)codeci->Read8();
     size = codeci->Read32();
-    
+
     data = connection->GetBufferAtLeast( size );
     wxASSERT_MSG(data != NULL,
                  _T("Buffer too small in wxTCPEventHandler::Client_OnRequest") );

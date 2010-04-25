@@ -14,13 +14,13 @@ namespace Unicode
 		SourceExhausted,	/* partial character in source, but hit end */
 		SourceIllegal		/* source sequence is illegal/malformed */
 	};
-	
+
 	/// <summary>
 	///   Converts from UTF-16 to UTF-8.
 	/// </summary>
 	void Convert( const std::wstring& src, std::string& dest );
 	std::string Convert( const std::wstring& src );
-	
+
 	/// <summary>
 	///   Converts from UTF-16 to UTF-8.
 	/// </summary>
@@ -35,7 +35,7 @@ namespace Exception
 	{
 	public:
 		const ResultType PartialResult;
-		
+
 		virtual ~UTFConversion() throw() {}
 		UTFConversion( const ResultType& result, const std::string& msg ) :
 			runtime_error( msg ),

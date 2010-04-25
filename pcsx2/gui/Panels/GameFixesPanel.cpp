@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -19,11 +19,11 @@
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
-        	
+
 	*this	+= new pxStaticHeading( this, _("Some games need special settings.\nEnable them here."));
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
-	
+
 	// NOTE: Order of checkboxes must match the order of the bits in the GamefixOptions structure!
 	// NOTE2: Don't make this static, because translations can change at run-time :)
 
@@ -32,7 +32,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		wxString label, tooltip;
 	};
 
-	const CheckTextMess check_text[NUM_OF_GAME_FIXES] = 
+	const CheckTextMess check_text[NUM_OF_GAME_FIXES] =
 	{
 		{
 			_("VU Add Hack - fixes Tri-Ace games boot crash (Enable IPU hack as well.)"),
@@ -69,12 +69,12 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		groupSizer += (m_checkbox[i] = new pxCheckBox( this, check_text[i].label ));
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
 	}
-	
+
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
 		_("(Warning, can cause compatibility or performance issues!)"));
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled."));
 	m_check_Enable		->SetValue( g_Conf->EnableGameFixes );
-	
+
 	*this	+= groupSizer	| wxSF.Centre();
 
 	*this	+= m_check_Enable;
@@ -84,7 +84,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	));
 	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
 	EnableStuff();
-	
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -92,7 +92,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 void Panels::GameFixesPanel::Apply()
 {
 	g_Conf->EnableGameFixes = m_check_Enable->GetValue();
-	
+
 	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
     for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
     {

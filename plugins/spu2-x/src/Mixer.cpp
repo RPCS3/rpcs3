@@ -365,7 +365,7 @@ static __forceinline void CalculateADSR( V_Core& thiscore, uint voiceidx )
    Tension: 65535 is high, 32768 is normal, 0 is low
 */
 template<s32 i_tension>
- __forceinline 
+ __forceinline
 static s32 HermiteInterpolate(
 	s32 y0, // 16.0
 	s32 y1, // 16.0
@@ -389,7 +389,7 @@ static s32 HermiteInterpolate(
 	return(val + (y1<<1));
 }
 
-__forceinline 
+__forceinline
 static s32 CatmullRomInterpolate(
 	s32 y0, // 16.0
 	s32 y1, // 16.0
@@ -415,7 +415,7 @@ static s32 CatmullRomInterpolate(
 	return (a0 + val);
 }
 
-__forceinline 
+__forceinline
 static s32 CubicInterpolate(
 	s32 y0, // 16.0
 	s32 y1, // 16.0
@@ -468,7 +468,7 @@ static __forceinline s32 GetVoiceValues( V_Core& thiscore, uint voiceidx )
 
 		jNO_DEFAULT;
 	}
-	
+
 	return 0;		// technically unreachable!
 }
 
@@ -560,7 +560,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 				case 2: Value = GetVoiceValues<2>( thiscore, voiceidx ); break;
 				case 3: Value = GetVoiceValues<3>( thiscore, voiceidx ); break;
 				case 4: Value = GetVoiceValues<4>( thiscore, voiceidx ); break;
-				
+
 				jNO_DEFAULT;
 			}
 		}
@@ -657,7 +657,7 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	TD.Right += Ext.Right & DryGate.ExtR;
 
 	if( EffectsDisabled ) return TD;
-	
+
 	// ----------------------------------------------------------------------------
 	//    Reverberation Effects Processing
 	// ----------------------------------------------------------------------------
@@ -666,7 +666,7 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	// but it does not actually disable reverb effects processing.  In practical terms
 	// this means that when a game turns off reverb, an existing reverb effect should trail
 	// off naturally, instead of being chopped off dead silent.
-	
+
 	Reverb_AdvanceBuffer();
 
 	StereoOut32 TW;

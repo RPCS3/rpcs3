@@ -83,8 +83,8 @@ bool wxHyperlinkCtrl::Create(wxWindow *parent, wxWindowID id,
     int alignment = (int)((style & wxHL_ALIGN_LEFT) != 0) +
                     (int)((style & wxHL_ALIGN_CENTRE) != 0) +
                     (int)((style & wxHL_ALIGN_RIGHT) != 0);
-    wxASSERT_MSG(alignment == 1, 
-        wxT("Specify exactly one align flag!")); 
+    wxASSERT_MSG(alignment == 1,
+        wxT("Specify exactly one align flag!"));
 #endif
 
     if (!wxControl::Create(parent, id, pos, size, style, wxDefaultValidator, name))
@@ -116,7 +116,7 @@ bool wxHyperlinkCtrl::Create(wxWindow *parent, wxWindowID id,
     SetFont(f);
 
     SetInitialSize(size);
-    
+
     return true;
 }
 
@@ -205,7 +205,7 @@ void wxHyperlinkCtrl::OnLeftDown(wxMouseEvent& event)
 void wxHyperlinkCtrl::OnLeftUp(wxMouseEvent& event)
 {
     // the click must be started and ended in the hyperlink rect
-    if (!m_clicking || !GetLabelRect().Contains(event.GetPosition())) 
+    if (!m_clicking || !GetLabelRect().Contains(event.GetPosition()))
         return;
 
     SetForegroundColour(m_visitedColour);

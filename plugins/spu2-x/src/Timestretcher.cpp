@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
 * Developed and maintained by the Pcsx2 Development Team.
-* 
+*
 * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
 *
 * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -258,7 +258,7 @@ static void CvtPacketToFloat( StereoOut32* srcdest )
 static void CvtPacketToInt( StereoOut32* srcdest, uint size )
 {
 	//jASSUME( (size & 127) == 0 );
-	
+
 	const StereoOutFloat* src = (StereoOutFloat*)srcdest;
 	StereoOut32* dest = srcdest;
 
@@ -287,7 +287,7 @@ void SndBuffer::timeStretchWrite()
 	{
 		// Hint: It's assumed that pSoundTouch will return chunks of 128 bytes (it always does as
 		// long as the SSE optimizations are enabled), which means we can do our own SSE opts here.
-		
+
 		CvtPacketToInt( sndTempBuffer, tempProgress );
 		_WriteSamples( sndTempBuffer, tempProgress );
 		progress = true;

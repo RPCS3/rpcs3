@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -32,12 +32,12 @@ struct sifFifo
 	s32 readPos;
 	s32 writePos;
 	s32 size;
-	
+
 	s32 free()
 	{
 		return FIFO_SIF_W - size;
 	}
-	
+
 	void write(u32 *from, int words)
 	{
 		if (words > 0)
@@ -53,7 +53,7 @@ struct sifFifo
 		}
 		SIF_LOG("  SIF + %d = %d (pos=%d)", words, size, writePos);
 	}
-	
+
 	void read(u32 *to, int words)
 	{
 		if (words > 0)
@@ -92,16 +92,16 @@ struct sif_ee
 {
 	bool end; // Only used for EE.
 	bool busy;
-	
+
 	s32 cycles;
 };
 struct sif_iop
 {
 	bool end;
 	bool busy;
-	
+
 	s32 cycles;
-	
+
 	s32 counter; // Used to keep track of how much is left in IOP.
 	struct sifData data; // Only used in IOP.
 };

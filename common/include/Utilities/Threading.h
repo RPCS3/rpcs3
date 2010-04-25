@@ -79,7 +79,7 @@ namespace Exception
 			m_thread = &_thread;
 			BaseException::InitBaseEx( "Unspecified thread error" );
 		}
-		
+
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
 

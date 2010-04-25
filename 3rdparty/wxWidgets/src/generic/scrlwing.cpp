@@ -319,7 +319,7 @@ wxScrollHelper::wxScrollHelper(wxWindow *win)
     m_handler = NULL;
 
     m_win = win;
-    
+
     m_win->SetScrollHelper( this );
 
     // by default, the associated window is also the target window
@@ -1384,7 +1384,7 @@ void wxScrollHelper::HandleOnChildFocus(wxChildFocusEvent& event)
         win->GetParent() == m_targetWindow)
         // if win is a wxPanel and receives the focus, it should not be
         // scrolled into view
-        return; 
+        return;
 
     wxSize view(m_targetWindow->GetClientSize());
 
@@ -1404,7 +1404,7 @@ void wxScrollHelper::HandleOnChildFocus(wxChildFocusEvent& event)
         if (parent_size.GetWidth() <= view.GetWidth() &&
             parent_size.GetHeight() <= view.GetHeight())
             // make the immediate parent visible instead of the focused control
-            win=parent; 
+            win=parent;
     }
 
     // if the child is not fully visible, try to scroll it into view:

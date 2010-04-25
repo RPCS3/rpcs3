@@ -43,7 +43,7 @@ struct export excepman_stub __attribute__((section(".text"))) ={
 
 void* *extable;
 struct exHandler *handlers[16];
-void *defhandler; 
+void *defhandler;
 
 void iopException();
 
@@ -206,7 +206,7 @@ int RegisterPriorityExceptionHandler(int code, int priority, struct exHandler *h
 	} else {
 		p_prev->next = n;
 	}
-	
+
 	registerEH();
 	return 0;
 }
@@ -219,7 +219,7 @@ int RegisterDefaultExceptionHandler(struct exHandler *handler)
 		_dprintf("%s ERROR_USED_EXCODE\n", __FUNCTION__);
 		return ERROR_USED_EXCODE;
 	}
-	
+
 	handler->next = defhandler;
 	defhandler = &handler->funccode;
 
@@ -293,8 +293,8 @@ void iopException() {
 
 		/* 0x0040 */
 		/* This the breakpoint exception vector location. */
-		
-		"sw    $26, 0x0420($0)\n" 
+
+		"sw    $26, 0x0420($0)\n"
 		"mfc0  $27, $14\n"
 		"mfc0  $26, $13\n"
 		"sw    $27, 0x0424($0)\n"

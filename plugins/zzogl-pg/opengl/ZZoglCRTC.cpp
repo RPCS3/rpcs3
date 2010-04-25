@@ -18,7 +18,7 @@
  */
 
 // Realisation of RenderCRTC function ONLY.
-// It draw picture direct on screen, so here we have interlacing and frame skipping. 
+// It draw picture direct on screen, so here we have interlacing and frame skipping.
 
 //------------------ Includes
 #include <stdlib.h>
@@ -58,7 +58,7 @@ extern int s_frameskipping;
 extern float fFPS;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
 
-extern u32 g_SaveFrameNum; 
+extern u32 g_SaveFrameNum;
 extern int s_nWriteDepthCount;
 extern int s_nWireframeCount;
 extern int s_nWriteDestAlphaTest;
@@ -73,7 +73,7 @@ extern int s_nLastResolveReset;
 extern int g_nDepthUpdateCount;
 extern int s_nResolveCounts[30]; // resolve counts for last 30 frames
 static int s_nCurResolveIndex = 0;
-int s_nResolved = 0; // number of targets resolved this frame 
+int s_nResolved = 0; // number of targets resolved this frame
 extern int g_nDepthUsed; // ffx2 pal movies
 
 extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
@@ -88,23 +88,23 @@ namespace ZeroGS {
 	extern void ProcessMessages();
 	void AdjustTransToAspect(Vector& v);
 
-	// Interlace texture is lazy 1*(height) array of 1 and 0. 
+	// Interlace texture is lazy 1*(height) array of 1 and 0.
 	// It height (it named s_nInterlaceTexWidth here) hanging we must redone
-	// the texture. 
+	// the texture.
 	// FIXME: If this function would spammed to often, we could use
 	// width < s_nInterlaceTexWidth as correct for old texture
 	static int s_nInterlaceTexWidth = 0;				// width of texture
 	inline u32 CreateInterlaceTex(int width) {
-		if (width == s_nInterlaceTexWidth && s_ptexInterlace != 0) 
+		if (width == s_nInterlaceTexWidth && s_ptexInterlace != 0)
 			return s_ptexInterlace;
 
 		SAFE_RELEASE_TEX(s_ptexInterlace);
 		s_nInterlaceTexWidth = width;
 
 		vector<u32> data(width);
-		for (int i = 0; i < width; ++i) 
+		for (int i = 0; i < width; ++i)
 			data[i] = (i & 1) ? 0xffffffff : 0;
-	
+
 		glGenTextures(1, &s_ptexInterlace);
 		glBindTexture(GL_TEXTURE_RECTANGLE_NV, s_ptexInterlace);
 		glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, width, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
@@ -117,15 +117,15 @@ namespace ZeroGS {
 //------------------ Code
 
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
-void ZeroGS::AdjustTransToAspect(Vector& v) 
+void ZeroGS::AdjustTransToAspect(Vector& v)
 {
 	double temp;
 	float f;
 
-	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth) 
+	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth)
 	{
 		// limited by width
-		
+
 		// change in ratio
 		f = ((float)nBackbufferWidth / (float)conf.width) / ((float)nBackbufferHeight / (float)conf.height);
 		v.y *= f;
@@ -135,10 +135,10 @@ void ZeroGS::AdjustTransToAspect(Vector& v)
 		v.y += (1-(float)modf(v.y*(float)nBackbufferHeight*0.5f+0.05f, &temp))*2.0f/(float)nBackbufferHeight;
 		v.w += (1-(float)modf(v.w*(float)nBackbufferHeight*0.5f+0.05f, &temp))*2.0f/(float)nBackbufferHeight;
 	}
-	else 
+	else
 	{
 		// limited by height
-		
+
 		f = ((float)nBackbufferHeight / (float)conf.height) / ((float)nBackbufferWidth / (float)conf.width);
 		f -= (float)modf(f*nBackbufferWidth, &temp)/(float)nBackbufferWidth;
 		v.x *= f;
@@ -167,14 +167,14 @@ inline bool FrameSkippingHelper() {
 		}
 		g_nFrameRender--;
 	}
-	
+
 
 #if defined _DEBUG
 	if (timeGetTime() - TimeLastSkip > 15000 && ShouldSkip) {
 		ERROR_LOG("ZZogl Skipped frames\n");
 		TimeLastSkip = timeGetTime();
 	}
-#endif	
+#endif
 	return ShouldSkip;
 }
 
@@ -184,7 +184,7 @@ inline void FrameSavingHelper() {
 		if( vb[0].prndr != NULL ) {
 			SaveTexture("frame1.tga", GL_TEXTURE_RECTANGLE_NV, vb[0].prndr->ptex, RW(vb[0].prndr->fbw), RH(vb[0].prndr->fbh));
 		}
-		
+
 		if( vb[1].prndr != NULL && vb[0].prndr != vb[1].prndr ) {
 			SaveTexture("frame2.tga", GL_TEXTURE_RECTANGLE_NV, vb[1].prndr->ptex, RW(vb[1].prndr->fbw), RH(vb[1].prndr->fbh));
 		}
@@ -210,7 +210,7 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo) {
 		GSRegDISPLAY* pd = i ? DISPLAY2 : DISPLAY1;
 		int magh = pd->MAGH+1;
 		int magv = pd->MAGV+1;
-		
+
 		dispinfo[i].tbp0 =  pfb->FBP << 5;
 		dispinfo[i].tbw = pfb->FBW << 6;
 		dispinfo[i].tw = (pd->DW + 1) / magh;
@@ -241,7 +241,7 @@ inline void RenderStartHelper(u32 bInterlace){
 	if( conf.mrtdepth && pvs[8] == NULL ) {
 		conf.mrtdepth = 0;
 		s_bWriteDepth = FALSE;
-#ifdef DEBUG		
+#ifdef DEBUG
 		ERROR_LOG("Disabling MRT depth writing\n");
 #endif
 	}
@@ -264,7 +264,7 @@ inline void RenderStartHelper(u32 bInterlace){
 	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
 
 	// if interlace, only clear every other vsync
-	if(!bInterlace ) 
+	if(!bInterlace )
 	{
 		//u32 color = COLOR_ARGB(0, BGCOLOR->R, BGCOLOR->G, BGCOLOR->B);
 		glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
@@ -275,9 +275,9 @@ inline void RenderStartHelper(u32 bInterlace){
 	SET_STREAM();
 	GL_REPORT_ERRORD();
 
-	if( conf.options & GSOPTION_WIREFRAME ) 
+	if( conf.options & GSOPTION_WIREFRAME )
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	
+
 	DisableAllgl() ;
 	GL_REPORT_ERRORD();
 
@@ -302,7 +302,7 @@ inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 		valpha.x = 0;
 		valpha.y = 1;
 	}
-	
+
 	if (bInterlace) {
 		if( interlace == (conf.interlace&1)  ) {
 			// pass if odd
@@ -328,7 +328,7 @@ inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 // Put interlaced texture in use for shader prog.
 // Note: if frame interlaced it's th is halved, so we should x2 it.
 inline void RenderCreateInterlaceTex(u32 bInterlace, int th, FRAGMENTSHADER* prog) {
-	if (!bInterlace) 
+	if (!bInterlace)
 		return;
 
 	int interlacetex = CreateInterlaceTex(2*th);
@@ -376,28 +376,28 @@ inline void RenderUpdateStencil(int i, bool* bUsingStencil) {
 	glStencilMask(1<<i);
 }
 
-// CRTC24 could not be rendered 
+// CRTC24 could not be rendered
 inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm) {
 	ERROR_LOG("ZZogl: CRTC24!!! I trying to show something\n");
 	SetShaderCaller("RenderCRTC24helper");
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
 	SETPIXELSHADER(ppsCRTC24[bInterlace].prog);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);				
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
 // Maybe I do this function global-defined. Calculate bits per pixel for
-// each psm. It's obly place with PSMCT16 which have diffetent bpp. 
+// each psm. It's obly place with PSMCT16 which have diffetent bpp.
 // FIXME: check PSMCT16S
 inline int RenderGetBpp(int psm) {
 	if (psm == PSMCT16S) {
 		return 3;
 #ifdef _DEBUG
 		ERROR_LOG("ZZogl: 16S target\n");
-#endif 		
+#endif
 	}
-	if (PSMT_ISHALF(psm)) 
-		return 2;	
+	if (PSMT_ISHALF(psm))
+		return 2;
 	return 4;
 }
 
@@ -438,8 +438,8 @@ inline Vector RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace) 
 
 // Important stuff. We could use this coordinated to change viewport position on frame
 // For example use tw / X and tw / X magnify the vieport.
-// Interlaced output is little out of VB, it could be see as evil blinking line on top 
-// and bottom, so we try to remove it 
+// Interlaced output is little out of VB, it could be see as evil blinking line on top
+// and bottom, so we try to remove it
 inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool isInterlace) {
 	SetShaderCaller("RenderSetTargetBitTex");
 
@@ -457,7 +457,7 @@ inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 }
 
 // Translator for POSITION coordinats (-1.0:+1.0f at x axis, +1.0f:-1.0y at y) into target frame ones
-// We don't need x coordinate, bvecause interlacing is y-axis only. 
+// We don't need x coordinate, bvecause interlacing is y-axis only.
 inline Vector RenderSetTargetBitTrans(int th) {
 	SetShaderCaller("RenderSetTargetBitTrans");
 	Vector v = Vector( float(th), -float(th), float(th), float(th));
@@ -470,7 +470,7 @@ inline Vector RenderSetTargetBitTrans(int th) {
 inline Vector RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHADER* prog) {
 	SetShaderCaller("RenderSetTargetInvTex");
 
-	Vector v = Vector(0, 0, 0, 0); 
+	Vector v = Vector(0, 0, 0, 0);
 	if (prog->sInvTexDims) {
 		v.x = 1.0f / (float)tw;
 		v.y = 1.0f / (float)th;
@@ -502,7 +502,7 @@ inline bool RenderLookForABetterTarget(int fbp, int tbp, list<CRenderTarget*>& l
 	return false;
 }
 
-// First try to draw frame from targets. It's 
+// First try to draw frame from targets. It's
 inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& listTargs, int i, bool* bUsingStencil, int interlace, int bInterlace) {
 	// get the start and end addresses of the buffer
 	int bpp = RenderGetBpp(texframe.psm);
@@ -515,11 +515,11 @@ inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 	s_RTs.GetTargs(start, end, listTargs);
 
 	for(list<CRenderTarget*>::iterator it = listTargs.begin(); it != listTargs.end(); ) {
-	
+
 		CRenderTarget* ptarg = *it;
 		if( ptarg->fbw == texframe.tbw && !(ptarg->status&CRenderTarget::TS_NeedUpdate) && ((256/bpp)*(texframe.tbp0-ptarg->fbp))%texframe.tbw == 0 ) {
 
-			if (RenderLookForABetterTarget(ptarg->fbp, texframe.tbp0, listTargs, it)) 
+			if (RenderLookForABetterTarget(ptarg->fbp, texframe.tbp0, listTargs, it))
 			       continue;
 
 			if( g_bSaveFinalFrame )
@@ -532,17 +532,17 @@ inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 
 			if( dh >= 64 ) {
 
-				if( ptarg->fbh - dby < texframe.th - movy && !(*bUsingStencil) ) 
+				if( ptarg->fbh - dby < texframe.th - movy && !(*bUsingStencil) )
 					RenderUpdateStencil(i, bUsingStencil);
-				
+
 				SetShaderCaller("RenderCheckForTargets");
 				// Texture
 				Vector v = RenderSetTargetBitTex((float)RW(texframe.tw), (float)RH(dh), (float)RW(pfb->DBX), (float)RH(dby), INTERLACE_COUNT );
 				// dest rect
 				v = RenderSetTargetBitPos(dh, texframe.th, movy, INTERLACE_COUNT);
 				v = RenderSetTargetBitTrans(ptarg->fbh);
-				v = RenderSetTargetInvTex(bInterlace, texframe.tbw, ptarg->fbh, &ppsCRTCTarg[bInterlace]) ; 	// FIXME. This is no use 
-				
+				v = RenderSetTargetInvTex(bInterlace, texframe.tbw, ptarg->fbh, &ppsCRTCTarg[bInterlace]) ; 	// FIXME. This is no use
+
 				Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
 
 				// inside vb[0]'s target area, so render that region only
@@ -599,7 +599,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(texframe.tw,texframe.th,-0.5f,-0.5f), "g_fBitBltTex");
 	else
 		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(1,1,-0.5f/(float)texframe.tw,-0.5f/(float)texframe.th), "g_fBitBltTex");
-			
+
 	v = RenderSetTargetBitTrans(texframe.th);
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
 
@@ -622,7 +622,7 @@ inline void AfterRenderDisplayFPS() {
 
 // Swaping buffers, so we could use another windows
 inline void AfterRenderSwapBuffers() {
-	if (glGetError() != GL_NO_ERROR) 
+	if (glGetError() != GL_NO_ERROR)
 		DEBUG_LOG("glerror before swap!\n");
 
 	GLWin.SwapGLBuffers();
@@ -641,7 +641,7 @@ inline void AfterRenderMadeSnapshoot() {
 		char str[255];
 		sprintf(str, "saved %s\n", strSnapshot.c_str());
 		AddMessage(str, 500);
-	}	
+	}
 }
 
 // If needed reset
@@ -676,7 +676,7 @@ inline void AfterRenderCountStatistics() {
 inline void AfterRendererUnimportantJob() {
 	ProcessMessages();
 
-	if( g_bDisplayFPS ) 
+	if( g_bDisplayFPS )
 		AfterRenderDisplayFPS();
 
 	AfterRenderSwapBuffers();
@@ -686,12 +686,12 @@ inline void AfterRendererUnimportantJob() {
 		s_nWireframeCount = 1;
 	}
 
-	if( g_bMakeSnapshot ) {	
+	if( g_bMakeSnapshot ) {
 		AfterRenderMadeSnapshoot();
 		g_bMakeSnapshot = 0;
 	}
 
-	if( s_avicapturing ) 
+	if( s_avicapturing )
 		CaptureFrame();
 
 	AfterRenderCountStatistics();
@@ -784,21 +784,21 @@ void ZeroGS::RenderCRTC(int interlace)
 			continue;
 
 		if (SMODE2->INT && SMODE2->FFMD)
-			texframe.th >>= 1;		
+			texframe.th >>= 1;
 
-		if( i == 0 ) 
+		if( i == 0 )
 			RenderSetupBlending();
-		
-		if( bUsingStencil ) 
+
+		if( bUsingStencil )
 			RenderSetupStencil(i);
 
 		if( texframe.psm == 0x12 ) {
 			RenderCRTC24helper(bInterlace, interlace, texframe.psm);
 			continue;
 		}
-	
+
 		// We shader targets between two functions, so declare it here;
-		list<CRenderTarget*> listTargs; 
+		list<CRenderTarget*> listTargs;
 
 		// if we could not draw image from target's do it from memory
 		if ( !RenderCheckForTargets(texframe, listTargs, i, &bUsingStencil, interlace, bInterlace) )
@@ -806,9 +806,9 @@ void ZeroGS::RenderCRTC(int interlace)
 	}
 
 	GL_REPORT_ERRORD();
-		
+
 	glDisable(GL_BLEND);
-	
+
 	AfterRendererUnimportantJob();
 	AfterRendererSwitchBackToTextures();
 	AfterRendererAutoresetTargets();

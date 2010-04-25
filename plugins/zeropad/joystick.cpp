@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include "joystick.h"
 
 //////////////////////////
@@ -31,7 +31,7 @@ void UpdateJoysticks()
 	vector<JoystickInfo*>::iterator itjoy = s_vjoysticks.begin();
 
 	SDL_JoystickUpdate();
-	
+
 	// Save everything in the vector s_vjoysticks.
 	while (itjoy != s_vjoysticks.end())
 	{
@@ -62,10 +62,10 @@ const char *HatName(int value)
 			return "SDL_HAT_LEFTUP";
 		case SDL_HAT_LEFTDOWN:
 			return "SDL_HAT_LEFTDOWN";
-		default:	
+		default:
 			return "Unknown";
 	}
-						
+
 	return "Unknown";
 }
 
@@ -83,18 +83,18 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 		SDL_JoystickEventState(SDL_QUERY);
 		s_bSDLInit = true;
 	}
-	
+
 	vector<JoystickInfo*>::iterator it = vjoysticks.begin();
-	
+
 	// Delete everything in the vector vjoysticks.
 	while (it != vjoysticks.end())
 	{
 		delete *it;
 		it ++;
 	}
-	
+
 	vjoysticks.resize(SDL_NumJoysticks());
-	
+
 	for (int i = 0; i < (int)vjoysticks.size(); ++i)
 	{
 		vjoysticks[i] = new JoystickInfo();
@@ -106,7 +106,7 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 	{
 		// select the right joystick id
 		int joyid = -1;
-		
+
 		for (int i = 0; i < PADKEYS; ++i)
 		{
 			if (IS_JOYSTICK(conf.keys[pad][i]) || IS_JOYBUTTONS(conf.keys[pad][i]))
@@ -124,7 +124,7 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 JoystickInfo::JoystickInfo()
 {
 	joy = NULL;
-	
+
 	_id = -1;
 	pad = -1;
 	axisrange = 0x7fff;
@@ -156,7 +156,7 @@ bool JoystickInfo::Init(int id, bool bStartThread)
 	numbuttons = SDL_JoystickNumButtons(joy);
 	numhats = SDL_JoystickNumHats(joy);
 	devname = SDL_JoystickName(id);
-	
+
 	vaxisstate.resize(numaxes);
 	vbuttonstate.resize(numbuttons);
 	vhatstate.resize(numhats);
@@ -207,7 +207,7 @@ bool JoystickInfo::PollButtons(int &jbutton, u32 &pkey)
 	for (int i = 0; i < GetNumButtons(); ++i)
 	{
 		int but = SDL_JoystickGetButton(GetJoy(), i);
-		
+
 		if (but != GetButtonState(i))
 		{
 			if (!but)    // released, we don't really want this
@@ -221,8 +221,8 @@ bool JoystickInfo::PollButtons(int &jbutton, u32 &pkey)
 			return true;
 		}
 	}
-	
-	return false;	
+
+	return false;
 }
 
 bool JoystickInfo::PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey)
@@ -245,7 +245,7 @@ bool JoystickInfo::PollAxes(bool pov, int &jbutton, bool &negative,  u32 &pkey)
 			if (abs(value) > 0x3fff)
 			{
 				jbutton = i;
-				
+
 				if (pov)
 				{
 					negative = (value < 0);

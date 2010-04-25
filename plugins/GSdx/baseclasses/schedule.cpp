@@ -154,7 +154,7 @@ REFERENCE_TIME CAMSchedule::Advise( const REFERENCE_TIME & rtTime )
         if (DbgCheckModuleLevel(LOG_TIMING, 4)) DumpLinkedList();
     #endif
 
-    //  Note - DON'T cache the difference, it might overflow 
+    //  Note - DON'T cache the difference, it might overflow
     while ( rtTime >= (rtNextTime = (pAdvise=head.m_next)->m_rtEventTime) &&
             !pAdvise->IsZ() )
     {
@@ -271,7 +271,7 @@ void CAMSchedule::DumpLinkedList()
     for ( CAdvisePacket * p = &head
         ; p
         ; p = p->m_next         , i++
-        )	
+        )
     {
         DbgLog((LOG_TIMING, 1, TEXT("Advise List # %lu, Cookie %d,  RefTime %lu"),
             i,

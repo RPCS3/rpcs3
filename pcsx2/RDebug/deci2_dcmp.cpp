@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -43,7 +43,7 @@ void D2_DCMP(const u8 *inbuffer, u8 *outbuffer, char *message){
 	DECI2_DCMP_HEADER	*in=(DECI2_DCMP_HEADER*)inbuffer,
 						*out=(DECI2_DCMP_HEADER*)outbuffer;
 	u8	*data=(u8*)in+sizeof(DECI2_DCMP_HEADER);
-    
+
 	//DECI2_DCMP_CONNECT	*connect=(DECI2_DCMP_CONNECT*)data;
 	//DECI2_DCMP_ECHO		*echo	=(DECI2_DCMP_ECHO*)data;
 

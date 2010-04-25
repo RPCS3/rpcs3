@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "RedtapeWindows.h"
 #include "x86emitter/tools.h"
@@ -41,7 +41,7 @@ __forceinline void Threading::EnableHiresScheduler()
 	// This improves accuracy of Sleep() by some amount, and only adds a negligible amount of
 	// overhead on modern CPUs.  Typically desktops are already set pretty low, but laptops in
 	// particular may have a scheduler Period of 15 or 20ms to extend battery life.
-	
+
 	// (note: this same trick is used by most multimedia software and games)
 
 	timeBeginPeriod( 1 );
@@ -82,7 +82,7 @@ u64 Threading::PersistentThread::GetCpuTime() const
 
 	if( GetThreadTimes( (HANDLE)m_native_handle, &dummy, &dummy, &kernel.filetime, &user.filetime ) )
 		return user.u64time + kernel.u64time;
-	
+
 	return 0;	// thread prolly doesn't exist anymore.
 }
 

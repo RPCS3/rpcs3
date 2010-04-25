@@ -154,12 +154,12 @@ void OnDecompress(GtkButton *button,  gpointer user_data)
 	{
 		return;
 	}
-	
-	if (Zmode == 1) 
+
+	if (Zmode == 1)
 		c = s = buf.st_size / 6;
-	else 
+	else
 		c = s = (buf.st_size / 4) - 1;
-	
+
 	f = fopen(table, "rb");
 	Ztable = (char*)malloc(buf.st_size);
 	fread(Ztable, 1, buf.st_size, f);
@@ -171,9 +171,9 @@ void OnDecompress(GtkButton *button,  gpointer user_data)
 		return;
 	}
 
-	if (Zmode == 1) 
+	if (Zmode == 1)
 		IsoFile[strlen(IsoFile) - 2] = 0;
-	else 
+	else
 		IsoFile[strlen(IsoFile) - 3] = 0;
 
 	f = fopen(IsoFile, "wb");
@@ -220,9 +220,9 @@ void OnDecompress(GtkButton *button,  gpointer user_data)
 		}
 
 		size = CD_FRAMESIZE_RAW * blocks;
-		if (Zmode == 1) 
+		if (Zmode == 1)
 			uncompress(cdbuffer, &size, Zbuf, ssize);
-		else 
+		else
 			BZ2_bzBuffToBuffDecompress(cdbuffer, (unsigned int*)&size, Zbuf, ssize, 0, 0);
 
 		fwrite(cdbuffer, 1, size, f);
@@ -230,10 +230,10 @@ void OnDecompress(GtkButton *button,  gpointer user_data)
 		p++;
 
 		per = ((float)p / s);
-		
+
 		gtk_progress_bar_update(GTK_PROGRESS_BAR(Progress), per);
 		while (gtk_events_pending()) gtk_main_iteration();
-		
+
 		if (stop) break;
 	}
 	if (!stop) gtk_entry_set_text(GTK_ENTRY(Edit), IsoFile);
@@ -521,7 +521,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 		blocks = 10;
 		if (strstr(IsoFile, ".bz") == NULL) strcat(IsoFile, ".bz");
 	}
-	
+
 	if (stat(IsoFile, &buf) == 0)
 	{
 		printf("File %s Already exists\n", IsoFile);
@@ -529,13 +529,13 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 	}
 
 	strcpy(table, IsoFile);
-	if (Zmode == 1) 
+	if (Zmode == 1)
 		strcat(table, ".table");
-	else 
+	else
 		strcat(table, ".index");
 
 	t = fopen(table, "wb");
-	
+
 	if (t == NULL) return;
 	if (CDR_open() == -1) return;
 
@@ -545,7 +545,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 		CDR_close();
 		return;
 	}
-	
+
 	if (CDR_getTD(ltrack, end) == -1)
 	{
 		printf("Error getting TD\n");
@@ -585,7 +585,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 		{
 			if ((param[0] == end[0]) & (param[1] == end[1]) & (param[2] == end[2]))
 				break;
-			
+
 			buffer = CDR_readTrack(param);
 			if (buffer == NULL)
 			{
@@ -596,7 +596,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 					buffer = CDR_readTrack(param);
 					if (buffer != NULL) break;
 				}
-				
+
 				if (buffer == NULL)
 				{
 					printf("Error Reading %2d:%2d:%2d\n", param[0], param[1], param[2]);
@@ -615,9 +615,9 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 			break;
 
 		size = CD_FRAMESIZE_RAW * blocks * 2;
-		if (Zmode == 1) 
+		if (Zmode == 1)
 			compress(Zbuf, &size, cdbuffer, CD_FRAMESIZE_RAW);
-		else 
+		else
 			BZ2_bzBuffToBuffCompress(Zbuf, (unsigned int*)&size, cdbuffer, CD_FRAMESIZE_RAW * 10, 1, 0, 30);
 
 		fwrite(&c, 1, 4, t);
@@ -641,10 +641,10 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 
 		p++;
 		per = ((float)p / s);
-		
+
 		gtk_progress_bar_update(GTK_PROGRESS_BAR(Progress), per);
 		while (gtk_events_pending()) gtk_main_iteration();
-		
+
 		if (stop) break;
 	}
 	if (Zmode == 2) fwrite(&c, 1, 4, f);

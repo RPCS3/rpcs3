@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "Global.h"
 #include "Dialogs.h"
 
@@ -64,7 +64,7 @@ __forceinline void Verifyc(HRESULT hr, const char* fn)
 void AssignSliderValue( HWND idcwnd, HWND hwndDisplay, int value )
 {
 	value = std::min( std::max( value, 0 ), 512 );
-	SendMessage(idcwnd,TBM_SETPOS,TRUE,value); 
+	SendMessage(idcwnd,TBM_SETPOS,TRUE,value);
 
 	wchar_t tbox[32];
 	swprintf_s( tbox, L"%d", value );
@@ -81,8 +81,8 @@ void AssignSliderValue( HWND hWnd, int idc, int editbox, int value )
 // updating a custom label.
 BOOL DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam )
 {
-	int wmId    = LOWORD(wParam); 
-	int wmEvent = HIWORD(wParam); 
+	int wmId    = LOWORD(wParam);
+	int wmEvent = HIWORD(wParam);
 	static char temp[64];
 	switch(wmId)
 	{

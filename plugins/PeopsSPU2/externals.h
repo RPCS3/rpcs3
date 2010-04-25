@@ -53,10 +53,10 @@
 // sound buffer sizes
 // 500 ms complete sound buffer
 #define SOUNDSIZE   76800
-                    
+
 // 200 ms test buffer... if less than that is buffered, a new upload will happen
 #define TESTSIZE    26304//13152
-                    
+
 // num of channels
 #define MAXCHAN     48
 #define HLFCHAN     24
@@ -100,8 +100,8 @@ typedef struct
  int            ReleaseModeExp;
  unsigned long  ReleaseVal;
  long           ReleaseTime;
- long           ReleaseStartTime; 
- long           ReleaseVol; 
+ long           ReleaseStartTime;
+ long           ReleaseVol;
  long           lTime;
  long           lVolume;
 } ADSRInfo;
@@ -123,7 +123,7 @@ typedef struct
  long           lDummy1;
  long           lDummy2;
 } ADSRInfoEx;
-              
+
 ///////////////////////////////////////////////////////////
 
 // Tmp Flags
@@ -156,18 +156,18 @@ typedef struct
  unsigned char *   pLoop;                              // loop ptr in sound mem
 
  int               iStartAdr;
- int               iLoopAdr; 
- int               iNextAdr; 
+ int               iLoopAdr;
+ int               iNextAdr;
 
  int               bOn;                                // is channel active (sample playing?)
  int               bStop;                              // is channel stopped (sample _can_ still be playing, ADSR Release phase)
  int               bEndPoint;                          // end point reached
  int               bReverbL;                           // can we do reverb on this channel? must have ctrl register bit, to get active
- int               bReverbR; 
- 
+ int               bReverbR;
+
  int               bVolumeL;                           // Volume on/off
  int               bVolumeR;
- 
+
  int               iActFreq;                           // current psx pitch
  int               iUsedFreq;                          // current pc pitch
  int               iLeftVolume;                        // left volume
@@ -183,7 +183,7 @@ typedef struct
  int               bRVBActive;                         // reverb active flag
  int               bNoise;                             // noise active flag
  int               bFMod;                              // freq mod (0=off, 1=sound channel, 2=freq channel)
- int               iOldNoise;                          // old noise val for this channel   
+ int               iOldNoise;                          // old noise val for this channel
  ADSRInfo          ADSR;                               // active ADSR settings
  ADSRInfoEx        ADSRX;                              // next ADSR settings (will be moved to active on sample start)
 
@@ -252,7 +252,7 @@ extern HINSTANCE hInst;
 
 // psx buffers / addresses
 
-extern unsigned short  regArea[];                        
+extern unsigned short  regArea[];
 extern unsigned short  spuMem[];
 extern unsigned char * spuMemC;
 extern unsigned char * pSpuIrq[];
@@ -283,7 +283,7 @@ extern unsigned long  spuAddr2[];
 extern unsigned long   spuRvbAddr2[];
 extern unsigned long   spuRvbAEnd2[];
 
-extern int      bEndThread; 
+extern int      bEndThread;
 extern int      bThreadEnded;
 extern int      bSpuInit;
 

@@ -215,7 +215,7 @@ finish_pass (j_compress_ptr cinfo)
  */
 
 LOCAL(void)
-arith_encode (j_compress_ptr cinfo, unsigned char *st, int val) 
+arith_encode (j_compress_ptr cinfo, unsigned char *st, int val)
 {
   extern const INT32 jaritab[];
   register arith_entropy_ptr e = (arith_entropy_ptr) cinfo->entropy;

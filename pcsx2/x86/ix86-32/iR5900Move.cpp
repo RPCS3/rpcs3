@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -26,8 +26,8 @@
 //#pragma warning(disable:4761)
 #endif
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -197,7 +197,7 @@ void recMTHILO(int hi)
 			xmmregs[regs] = xmmregs[reghi];
 			xmmregs[reghi].inuse = 0;
 			xmmregs[regs].mode |= MODE_WRITE;
-			
+
 		}
 		else {
 			regs = _checkMMXreg(MMX_GPR+_Rs_, MODE_READ);
@@ -274,17 +274,17 @@ void recMTHILO(int hi)
 	}
 }
 
-void recMFHI( void ) 
+void recMFHI( void )
 {
 	recMFHILO(1);
 }
 
-void recMFLO( void ) 
+void recMFLO( void )
 {
 	recMFHILO(0);
 }
 
-void recMTHI( void ) 
+void recMTHI( void )
 {
 	recMTHILO(1);
 }
@@ -361,7 +361,7 @@ void recMTHILO1(int hi)
 
 	if( reghi >= 0 ) {
 		if( regs >= 0 ) {
-			SSE2_PUNPCKLQDQ_XMM_to_XMM(reghi, regs);	
+			SSE2_PUNPCKLQDQ_XMM_to_XMM(reghi, regs);
 		}
 		else {
 			_deleteEEreg(_Rs_, 1);
@@ -433,7 +433,7 @@ void recMOVZtemp_consts(int info)
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[_Rs_].UL[0] );
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], g_cpuConstRegs[_Rs_].UL[1] );
 
-	x86SetJ8( j8Ptr[ 0 ] ); 
+	x86SetJ8( j8Ptr[ 0 ] );
 }
 
 void recMOVZtemp_constt(int info)
@@ -465,7 +465,7 @@ void recMOVZtemp_(int info)
 	OR32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 	j8Ptr[ 0 ] = JNZ8( 0 );
 
-	if( t0reg >= 0 ) {	
+	if( t0reg >= 0 ) {
 		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
 		_freeMMXreg(t0reg);
@@ -512,7 +512,7 @@ void recMOVNtemp_consts(int info)
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[_Rs_].UL[0] );
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], g_cpuConstRegs[_Rs_].UL[1] );
 
-	x86SetJ8( j8Ptr[ 0 ] ); 
+	x86SetJ8( j8Ptr[ 0 ] );
 }
 
 void recMOVNtemp_constt(int info)
@@ -544,7 +544,7 @@ void recMOVNtemp_(int info)
 	OR32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 	j8Ptr[ 0 ] = JZ8( 0 );
 
-	if( t0reg >= 0 ) {	
+	if( t0reg >= 0 ) {
 		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
 		_freeMMXreg(t0reg);

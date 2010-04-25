@@ -92,7 +92,7 @@ void SysCoreThread::OnResumeReady()
 {
 	if( m_resetVirtualMachine )
 		m_hasValidState = false;
-	
+
 	if( !m_hasValidState )
 		m_resetRecompilers = true;
 }
@@ -181,7 +181,7 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 							  ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= ( src.Profiler != EmuConfig.Profiler );
 	m_resetVsyncTimers		= ( src.GS != EmuConfig.GS );
-	
+
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
 	sys_paused.Resume();
 }
@@ -217,7 +217,7 @@ struct ScopedBool_ClearOnError
 {
 	bool&	m_target;
 	bool	m_success;
-	
+
 	ScopedBool_ClearOnError( bool& target ) :
 		m_target( target ), m_success( false )
 	{
@@ -228,7 +228,7 @@ struct ScopedBool_ClearOnError
 	{
 		m_target = m_success;
 	}
-	
+
 	void Success() { m_success = true; }
 };
 
@@ -255,7 +255,7 @@ void SysCoreThread::_reset_stuff_as_needed()
 		frameLimitReset();
 		m_resetVsyncTimers = false;
 	}
-	
+
 	SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
 }
 
@@ -311,9 +311,9 @@ void SysCoreThread::ExecuteTaskInThread()
 	Threading::EnableHiresScheduler();
 	tls_coreThread = this;
 	m_sem_event.WaitWithoutYield();
-	
+
 	m_mxcsr_saved.bitmask = _mm_getcsr();
-	
+
 	PCSX2_PAGEFAULT_PROTECT {
 		do {
 			StateCheckInThread();

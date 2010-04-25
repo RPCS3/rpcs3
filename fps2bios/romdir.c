@@ -77,6 +77,6 @@ int main(int argc, char *argv[]) {
 
 	fclose(romdir);
 	fclose(extinfo);
-	
+
 	return 0;
 }

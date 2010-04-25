@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -31,16 +31,16 @@ GSTextureCache9::GSTextureCache9(GSRenderer* r)
 
 void GSTextureCache9::Read(Target* t, const GSVector4i& r)
 {
-	if(t->m_type != RenderTarget) 
+	if(t->m_type != RenderTarget)
 	{
 		// TODO
 
-		return; 
+		return;
 	}
 
 	const GIFRegTEX0& TEX0 = t->m_TEX0;
 
-	if(TEX0.PSM != PSM_PSMCT32 
+	if(TEX0.PSM != PSM_PSMCT32
 	&& TEX0.PSM != PSM_PSMCT24
 	&& TEX0.PSM != PSM_PSMCT16
 	&& TEX0.PSM != PSM_PSMCT16S)

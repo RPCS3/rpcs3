@@ -26,7 +26,7 @@ static __pagealigned u8 nVifUpkExec[__pagesize*4];
 
 // Merges xmm vectors without modifying source reg
 void mergeVectors(int dest, int src, int temp, int xyzw) {
-	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15) 
+	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
 	|| (xyzw==12) || (xyzw==11) || (xyzw==8) || (xyzw==3)) {
 		mVUmergeRegs(dest, src, xyzw);
 	}
@@ -252,8 +252,8 @@ void VifUnpackSSE_Base::xUnpack( int upknum ) const
 		case 14: xUPK_V4_8();	break;
 		case 15: xUPK_V4_5();	break;
 
-		case 3:  
-		case 7:  
+		case 3:
+		case 7:
 		case 11:
 			pxFailRel( wxsFormat( L"Vpu/Vif - Invalid Unpack! [%d]", upknum ) );
 		break;
@@ -294,7 +294,7 @@ static void nVifGen(int usn, int mask, int curCycle) {
 		nVifCall& ucall( nVifUpk[((usnpart+maskpart+i) * 4) + curCycle] );
 		ucall = NULL;
 		if( nVifT[i] == 0 ) continue;
-		
+
 		ucall = (nVifCall)xGetAlignedCallTarget();
 		vpugen.xUnpack(i);
 		vpugen.xMovDest();

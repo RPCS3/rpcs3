@@ -40,7 +40,7 @@ enum XMMSSEType
 #else
 #	if !PCSX2_THREAD_LOCAL
 		// No TLS support?  Force-clear the MT flag:
-#		pragma message("x86emitter: TLS not available, multithreaded emitter disabled.")		
+#		pragma message("x86emitter: TLS not available, multithreaded emitter disabled.")
 #		undef x86EMIT_MULTITHREADED
 #		define x86EMIT_MULTITHREADED	0
 #	endif
@@ -363,7 +363,7 @@ template< typename T > void xWrite( T val );
 
 		bool operator==( const xRegisterSSE& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegisterSSE& src ) const	{ return this->Id != src.Id; }
-		
+
 		xRegisterSSE& operator++()
 		{
 			++Id &= (iREGCNT_XMM-1);

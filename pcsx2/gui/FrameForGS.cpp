@@ -31,15 +31,15 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels.Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
 	m_Accels.Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
 	m_Accels.Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
-	
+
 	m_Accels.Map( AAC( WXK_F4 ),				"Frameskip_Toggle" );
 	m_Accels.Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
 	m_Accels.Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_MasterToggle" );
-	
+
 	m_Accels.Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels.Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
 	m_Accels.Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle" );
-	
+
 	//m_Accels.Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
 	m_Accels.Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
 	m_Accels.Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
@@ -53,7 +53,7 @@ GSPanel::GSPanel( wxWindow* parent )
 {
 	m_CursorShown	= true;
 	m_HasFocus		= false;
-	
+
 	if ( !wxWindow::Create(parent, wxID_ANY) )
 		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
 
@@ -188,7 +188,7 @@ void GSPanel::OnKeyDown( wxKeyEvent& evt )
 		evt.Skip();		// Let the global APP handle it if it wants
 		return;
 	}
-	
+
 	if( cmd != NULL )
 	{
 		DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
@@ -200,7 +200,7 @@ void GSPanel::OnFocus( wxFocusEvent& evt )
 {
 	evt.Skip();
 	m_HasFocus = true;
-	
+
 	if( g_Conf->GSWindow.AlwaysHideMouse )
 	{
 		SetCursor( wxCursor(wxCURSOR_BLANK) );
@@ -236,7 +236,7 @@ static const uint TitleBarUpdateMs = 333;
 
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	: wxFrame(parent, wxID_ANY, title,
-		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ), 
+		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ),
 		(g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
 			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
 	)
@@ -256,7 +256,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	GSPanel* gsPanel = new GSPanel( this );
 	gsPanel->Show( !EmuConfig.GS.DisableOutput );
 	m_id_gspanel = gsPanel->GetId();
-	
+
 	// TODO -- Implement this GS window status window!  Whee.
 	// (main concern is retaining proper client window sizes when closing/re-opening the window).
 	//m_statusbar = CreateStatusBar( 2 );
@@ -316,7 +316,7 @@ bool GSFrame::Show( bool shown )
 
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
 			label->Show( EmuConfig.GS.DisableOutput );
-		
+
 		m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 	}
 	else
@@ -346,11 +346,11 @@ GSPanel* GSFrame::GetViewport()
 void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 {
 	double fps = wxGetApp().FpsManager.GetFramerate();
-	
+
 	char gsDest[128];
 	GSgetTitleInfo( gsDest );
 
-	
+
 	const wxChar* limiterStr = L"None";
 
 	if( g_Conf->EmuOptions.GS.FrameLimitEnable )
@@ -369,7 +369,7 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 		m_CpuUsage.UpdateStats();
 		cpuUsage = wxsFormat( L" | EE: %3d%% | GS: %3d%% | UI: %3d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
 	}
-	
+
 	const u64& smode2 = *(u64*)PS2GS_BASE(GS_SMODE2);
 
 	SetTitle( wxsFormat( L"%s | %s (%s) | Limiter: %s | fps: %6.02f%s",

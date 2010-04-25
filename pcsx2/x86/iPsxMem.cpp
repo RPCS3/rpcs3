@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -96,7 +96,7 @@ spuread:
 int psxRecMemConstRead8(u32 x86reg, u32 mem, u32 sign)
 {
 	u32 t = (mem >> 16) & 0x1fff;
-	
+
 	switch(t) {
 		case 0x1f80:
 			return psxHwConstRead8(x86reg, mem&0x1fffffff, sign);
@@ -158,7 +158,7 @@ sifread:
 		and edx, 0xf0
 		cmp dl, 0x60
 		je Sif60
-		
+
 
 		mov eax, dword ptr [edx+PS2MEM_BASE_+0x1000f200]
 
@@ -272,7 +272,7 @@ sifread:
 		and edx, 0xf0
 		cmp dl, 0x60
 		je Sif60
-		
+
 		// do the read from ps2 mem
 		mov eax, dword ptr [edx+PS2MEM_BASE_+0x1000f200]
 
@@ -458,7 +458,7 @@ sifwrite:
 		je Sif60
 		cmp dl, 0x40
 		je Sif40
-		
+
 		mov word ptr [edx+PS2MEM_BASE_+0x1000f200], ax
 		ret
 
@@ -470,7 +470,7 @@ Sif40:
 		// psHu16(0x1000F240) |= 0x2000;
 		and bx, 0x0fff
 		or bx, 0x2000
-		
+
 Sif40_2:
 		// if(psHu16(0x1000F240) & temp) psHu16(0x1000F240) &= ~temp;
 		// else psHu16(0x1000F240) |= temp;
@@ -572,7 +572,7 @@ int psxRecMemConstWrite16(u32 mem, int mmreg)
 			PUSH32I(mem&0x1fffffff);
 			CALLFunc((uptr)SPU2write);
 			return 0;
-			
+
 		case 0x1000:
 			_recPushReg(mmreg);
 			PUSH32I(mem&0x1fffffff);
@@ -631,7 +631,7 @@ sifwrite:
 		je Sif30
 		cmp dl, 0x20
 		je Sif20
-		
+
 		mov dword ptr [edx+PS2MEM_BASE_+0x1000f200], eax
 		ret
 
@@ -643,7 +643,7 @@ Sif40:
 		// psHu16(0x1000F240) |= 0x2000;
 		and bx, 0x0fff
 		or bx, 0x2000
-		
+
 Sif40_2:
 		// if(psHu16(0x1000F240) & temp) psHu16(0x1000F240) &= ~temp;
 		// else psHu16(0x1000F240) |= temp;
@@ -798,7 +798,7 @@ int psxRecMemConstWrite32(u32 mem, int mmreg)
 				u8* ptrs[9];
 
 				_eeWriteConstMem32((uptr)&writectrl, mmreg);
-		
+
 				if( IS_PSXCONSTREG(mmreg) ) {
 					switch (g_psxConstRegs[(mmreg>>16)&0x1f]) {
 						case 0x800: case 0x804:

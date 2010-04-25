@@ -24,7 +24,7 @@ class WXDLLEXPORT wxWindowDC;
 #define wxGCDC wxDC
 #endif
 
-class WXDLLEXPORT wxGCDC: 
+class WXDLLEXPORT wxGCDC:
 #ifdef __WXMAC__
     public wxDCBase
 #else
@@ -38,7 +38,7 @@ public:
     wxGCDC(const wxWindowDC& dc);
 #ifdef __WXMSW__
     wxGCDC( const wxMemoryDC& dc);
-#endif    
+#endif
     wxGCDC();
     virtual ~wxGCDC();
 
@@ -55,7 +55,7 @@ public:
 
     virtual void StartPage();
     virtual void EndPage();
-    
+
     // to be virtualized on next major
     // flushing the content of this dc immediately onto screen
     void Flush();
@@ -93,7 +93,7 @@ public:
 
     wxGraphicsContext* GetGraphicsContext() { return m_graphicContext; }
     virtual void SetGraphicsContext( wxGraphicsContext* ctx );
-    
+
 protected:
     // the true implementations
     virtual bool DoFloodFill(wxCoord x, wxCoord y, const wxColour& col,

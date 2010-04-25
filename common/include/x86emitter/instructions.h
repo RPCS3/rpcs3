@@ -98,12 +98,12 @@ namespace x86Emitter
 		xCMOVNZ, xCMOVNE,
 		xCMOVO, xCMOVNO,
 		xCMOVC, xCMOVNC,
-		
+
 		xCMOVS, xCMOVNS,
 		xCMOVPE, xCMOVPO;
 
 	// ------------------------------------------------------------------------
-	extern const xImpl_Set 
+	extern const xImpl_Set
 		xSETA, xSETAE,
 		xSETB, xSETBE,
 		xSETG, xSETGE,

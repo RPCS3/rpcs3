@@ -299,7 +299,7 @@ typedef struct
 //          %%% PROTOTYPES - User Callable ASPI for Win32 Functions %%%
 //*****************************************************************************
 
-typedef struct 
+typedef struct
 {
   BYTE      SRB_Cmd;
   BYTE      SRB_Status;

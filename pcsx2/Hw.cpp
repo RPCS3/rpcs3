@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -36,7 +36,7 @@ void hwInit()
 	ipuInit();
 }
 
-/*void hwShutdown() 
+/*void hwShutdown()
 {
 	ipuShutdown();
 }*/
@@ -80,37 +80,37 @@ __forceinline void dmacInterrupt()
 {
     if ((cpuRegs.CP0.n.Status.val & 0x10807) != 0x10801) return;
 
-	if( ((psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT)) == 0 ) && 
+	if( ((psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT)) == 0 ) &&
 		( psHu16(DMAC_STAT) & 0x8000) == 0 ) return;
 
 	if (!(dmacRegs->ctrl.DMAE)) return;
-	
-	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) || 
+
+	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) ||
 								  psHu16(DMAC_STAT) & 0x8000));
 
 	cpuException(0x800, cpuRegs.branch);
 }
 
-void hwIntcIrq(int n) 
+void hwIntcIrq(int n)
 {
 	psHu32(INTC_STAT) |= 1<<n;
 	cpuTestINTCInts();
 }
 
-void hwDmacIrq(int n) 
+void hwDmacIrq(int n)
 {
 	psHu32(DMAC_STAT) |= 1<<n;
-	cpuTestDMACInts();	
+	cpuTestDMACInts();
 }
 
 // Write 'size' bytes to memory address 'addr' from 'data'.
-bool hwMFIFOWrite(u32 addr, u8 *data, u32 size) 
+bool hwMFIFOWrite(u32 addr, u8 *data, u32 size)
 {
 	u32 msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
 	u8 *dst;
 
 	addr = dmacRegs->rbor.ADDR + (addr & dmacRegs->rbsr.RMSK);
-	
+
 	// Check if the transfer should wrap around the ring buffer
 	if ((addr+size) >= msize) {
 		int s1 = msize - addr;
@@ -125,7 +125,7 @@ bool hwMFIFOWrite(u32 addr, u8 *data, u32 size)
 		dst = (u8*)PSM(dmacRegs->rbor.ADDR);
 		if (dst == NULL) return false;
 		memcpy_fast(dst, &data[s1], s2);
-	} 
+	}
 	else {
 		// it doesn't, so just copy 'size' bytes from 'data' to 'addr'
 		dst = (u8*)PSM(addr);
@@ -157,7 +157,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			return false;
 		}
 		case TAG_REF: // Ref - Transfer QWC from ADDR field
-		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
+		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
             //Set TADR to next tag
 			dma->tadr += 16;
 			return false;
@@ -167,7 +167,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 		    // Store the address in MADR in temp, and set MADR to the data following the tag.
 			u32 temp = dma->madr;
 			dma->madr = dma->tadr + 16;
-			
+
 			// Stash an address on the address stack pointer.
 			switch(dma->chcr.ASP)
             {
@@ -176,32 +176,32 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
                     dma->asr0 = dma->madr + (dma->qwc << 4);
                     dma->chcr.ASP++;
                     break;
-                    
-                case 1: 
+
+                case 1:
                     // Store the succeeding tag in asr1, and mark chcr as having 2 addresses.
                     dma->asr1 = dma->madr + (dma->qwc << 4);
                     dma->chcr.ASP++;
                     break;
-                    
+
                 default:
                     Console.Warning("Call Stack Overflow (report if it fixes/breaks anything)");
                     return true;
 			}
-			
+
 			// Set TADR to the address from MADR we stored in temp.
 			dma->tadr = temp;
-											
+
 			return false;
 		}
-		
+
 		case TAG_RET: // Ret - Transfer QWC following the tag, load next tag
             //Set MADR to data following the tag.
 			dma->madr = dma->tadr + 16;
-			
+
 			// Snag an address from the address stack pointer.
 			switch(dma->chcr.ASP)
             {
-                case 2: 
+                case 2:
                     // Pull asr1 from the stack, give it to TADR, and decrease the # of addresses.
                     dma->tadr = dma->asr1;
                     dma->asr1 = 0;
@@ -228,7 +228,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
             }
 			return false;
 
-		case TAG_END: // End - Transfer QWC following the tag 
+		case TAG_END: // End - Transfer QWC following the tag
             //Set MADR to data following the tag, and end the transfer.
 			dma->madr = dma->tadr + 16;
 			//Don't Increment tadr; breaks Soul Calibur II and III
@@ -238,11 +238,11 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 	return false;
 }
 
-bool hwDmacSrcChain(DMACh *dma, int id) 
+bool hwDmacSrcChain(DMACh *dma, int id)
 {
 	u32 temp;
 
-	switch (id) 
+	switch (id)
 	{
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
             // End the transfer.

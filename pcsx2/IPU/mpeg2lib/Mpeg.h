@@ -53,7 +53,7 @@ enum picture_structure
 	BOTTOM_FIELD = 2,
 	FRAME_PICTURE = 3
 };
-	
+
 /* picture coding type */
 enum picture_coding_type
 {
@@ -161,7 +161,7 @@ struct decoder_t {
 
 	/* pointer to the zigzag scan we're supposed to be using */
 	const u8 * scan;
-	
+
 	int second_field;
 
 	int mpeg1;
@@ -198,5 +198,5 @@ void mpeg2_idct_init ();
 #else
 #define BigEndian(out, in) out = __builtin_bswap32(in) // or we could use the asm function bswap...
 #endif
-	
+
 #endif//__MPEG_H__

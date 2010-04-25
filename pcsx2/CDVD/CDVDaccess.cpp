@@ -214,7 +214,7 @@ static int FindDiskType(int mType)
 		switch (iCDType)
 		{
 			case CDVD_TYPE_PS2CD:
-				iCDType=CDVD_TYPE_PS2CDDA; 
+				iCDType=CDVD_TYPE_PS2CDDA;
 				break;
 			case CDVD_TYPE_PSCD:
 				iCDType=CDVD_TYPE_PSCDDA;

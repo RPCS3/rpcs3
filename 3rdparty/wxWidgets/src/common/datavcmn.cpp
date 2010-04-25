@@ -312,7 +312,7 @@ wxDataViewSortedListModel::wxDataViewSortedListModel( wxDataViewListModel *child
   m_array( wxDataViewIntermediateCmp )
 {
     m_child = child;
-    
+
     m_ascending = true;
 
     m_notifierOnChild = new wxDataViewSortedListModelNotifier( this );
@@ -340,7 +340,7 @@ void wxDataViewSortedListModel::InitStatics()
 void wxDataViewSortedListModel::Resort()
 {
     InitStatics();
-    
+
     m_array.Clear();
     unsigned int n = m_child->GetNumberOfRows();
     unsigned int i;
@@ -715,7 +715,7 @@ wxDataViewColumnBase::wxDataViewColumnBase(const wxString& title,
                                            wxDataViewRenderer *renderer,
                                            unsigned int model_column,
                                            int WXUNUSED(width),
-                                           int flags ) 
+                                           int flags )
 {
     m_renderer = renderer;
     m_model_column = model_column;
@@ -729,7 +729,7 @@ wxDataViewColumnBase::wxDataViewColumnBase(const wxBitmap& bitmap,
                                            wxDataViewRenderer *renderer,
                                            unsigned int model_column,
                                            int WXUNUSED(width),
-                                           int flags ) 
+                                           int flags )
 {
     m_renderer = renderer;
     m_model_column = model_column;
@@ -801,70 +801,70 @@ wxDataViewListModel* wxDataViewCtrlBase::GetModel()
 bool wxDataViewCtrlBase::AppendTextColumn( const wxString &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewTextRenderer( wxT("string"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendToggleColumn( const wxString &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewToggleRenderer( wxT("bool"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendProgressColumn( const wxString &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewProgressRenderer( wxEmptyString, wxT("long"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendDateColumn( const wxString &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewDateRenderer( wxT("datetime"), mode), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendBitmapColumn( const wxString &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewBitmapRenderer( wxT("wxBitmap"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendTextColumn( const wxBitmap &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewTextRenderer( wxT("string"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendToggleColumn( const wxBitmap &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewToggleRenderer( wxT("bool"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendProgressColumn( const wxBitmap &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewProgressRenderer( wxEmptyString, wxT("long"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendDateColumn( const wxBitmap &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewDateRenderer( wxT("datetime"), mode ), model_column, width ) );
 }
 
 bool wxDataViewCtrlBase::AppendBitmapColumn( const wxBitmap &label, unsigned int model_column,
                             wxDataViewCellMode mode, int width )
 {
-    return AppendColumn( new wxDataViewColumn( label, 
+    return AppendColumn( new wxDataViewColumn( label,
         new wxDataViewBitmapRenderer( wxT("wxBitmap"), mode ), model_column, width ) );
 }
 

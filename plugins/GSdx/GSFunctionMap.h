@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -29,12 +29,12 @@ struct GSRasterizerStats
 	int64 ticks;
 	int prims, pixels;
 
-	GSRasterizerStats() 
+	GSRasterizerStats()
 	{
 		Reset();
 	}
 
-	void Reset() 
+	void Reset()
 	{
 		ticks = 0;
 		pixels = prims = 0;
@@ -59,8 +59,8 @@ protected:
 	virtual VALUE GetDefaultFunction(KEY key) = 0;
 
 public:
-	GSFunctionMap() 
-		: m_active(NULL) 
+	GSFunctionMap()
+		: m_active(NULL)
 	{
 	}
 
@@ -121,7 +121,7 @@ public:
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
 			ActivePtr* p = i->second;
-			
+
 			if(p->frames)
 			{
 				ttpf += p->ticks / p->frames;
@@ -139,11 +139,11 @@ public:
 				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
 				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
-				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n", 
+				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n",
 					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
-					(float)(tpf * 10000 / 50000000) / 100, 
-					(float)(tpf * 10000 / ttpf) / 100, 
-					p->frames, p->pixels, 
+					(float)(tpf * 10000 / 50000000) / 100,
+					(float)(tpf * 10000 / ttpf) / 100,
+					p->frames, p->pixels,
 					tpp, tpf, ppf);
 			}
 		}

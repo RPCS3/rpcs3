@@ -2,7 +2,7 @@
 // File: OutputQ.h
 //
 // Desc: DirectShow base classes -  defines the COutputQueue class, which
-//       makes a queue of samples and sends them to an output pin.  The 
+//       makes a queue of samples and sends them to an output pin.  The
 //       class will optionally send the samples to the pin directly.
 //
 // Copyright (c) Microsoft Corporation.  All rights reserved.

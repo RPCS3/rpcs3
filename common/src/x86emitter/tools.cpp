@@ -32,25 +32,25 @@ namespace MMXRegisters
 {
     u8 stack_depth = 0;
     __aligned16 u64 data[8];
-    
+
     __forceinline bool Saved()
     {
         return ( stack_depth > 0);
     }
-    
+
     __forceinline void Freeze()
     {
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("MMXRegisters::Freeze: depth[%d]\n", stack_depth);
         stack_depth++;
-		
+
         if (stack_depth > 1)
         {
             //DevCon.Warning("MMX Already Saved!\n");
             return;
         }
-            
+
 #ifdef _MSC_VER
         __asm {
             mov ecx, offset data
@@ -80,13 +80,13 @@ namespace MMXRegisters
         );
 #endif
     }
-    
+
     __forceinline void Thaw()
     {
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("MMXRegisters::Thaw: depth[%d]\n", stack_depth);
-            
+
         if (!Saved())
         {
             //DevCon.Warning("MMX Not Saved!\n");
@@ -95,7 +95,7 @@ namespace MMXRegisters
         stack_depth--;
 
         if (Saved()) return;
-		
+
 #ifdef _MSC_VER
         __asm {
             mov ecx, offset data
@@ -124,7 +124,7 @@ namespace MMXRegisters
             ".att_syntax\n" : :  [data]"r"(data) : "memory"
         );
 #endif
-    }  
+    }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -132,23 +132,23 @@ namespace MMXRegisters
 //
 
 namespace XMMRegisters
-{  
+{
     u8 stack_depth = 0;
     __aligned16 u64 data[2*iREGCNT_XMM];
-    
+
     __forceinline bool Saved()
     {
         return ( stack_depth > 0);
     }
-    
+
     __forceinline void Freeze()
     {
         if (!g_EEFreezeRegs) return;
-            
+
         //DevCon.Warning("XMMRegisters::Freeze: depth[%d]\n", Depth());
-            
+
         stack_depth++;
-        
+
         if (stack_depth > 1)
         {
             //DevCon.Warning("XMM Already saved\n");
@@ -181,14 +181,14 @@ namespace XMMRegisters
             ".att_syntax\n" : : [data]"r"(data) : "memory"
         );
 #endif // _MSC_VER
-    }  
-        
+    }
+
     __forceinline void Thaw()
     {
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("XMMRegisters::Thaw: depth[%d]\n", Depth());
-            
+
         if (!Saved())
         {
             //DevCon.Warning("XMM Regs not saved!\n");
@@ -239,16 +239,16 @@ namespace Registers
     {
         return (XMMRegisters::Saved() || MMXRegisters::Saved());
     }
-    
+
     __forceinline void Freeze()
     {
         XMMRegisters::Freeze();
         MMXRegisters::Freeze();
-    }  
-    
+    }
+
     __forceinline void Thaw()
     {
         XMMRegisters::Thaw();
         MMXRegisters::Thaw();
-    }  
+    }
 }

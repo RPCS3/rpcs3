@@ -152,7 +152,7 @@ extern float g_fiGPU_TEXWIDTH;
 #define GAME_PARTIALPOINTERS 0x02000000 // whenver the texture or render target are small, tries to look for bigger ones to read from
 #define GAME_PARTIALDEPTH 0x04000000 // tries to save depth targets as much as possible across height changes
 #define GAME_RELAXEDDEPTH 0x08000000 // tries to save depth targets as much as possible across height changes
-									
+
 #define USEALPHABLENDING 1//(!(g_GameSettings&GAME_NOALPHABLEND))
 #define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
 
@@ -274,7 +274,7 @@ namespace ZeroGS
 			int ref;
 		};
 
-		inline CMemoryTarget() : ptex(NULL), ptexsys(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), 
+		inline CMemoryTarget() : ptex(NULL), ptexsys(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0),
 			cpsm(0), memory(NULL), clearminy(0), clearmaxy(0), validatecount(0) {}
 		inline CMemoryTarget(const CMemoryTarget& r) {
 			ptex = r.ptex;
@@ -326,12 +326,12 @@ namespace ZeroGS
 		int starty, height; // assert(starty >= realy)
 		int realy, realheight; // this is never touched once allocated
 		u32 usedstamp;
-		LPD3DTEX ptex; // can be 16bit if 
+		LPD3DTEX ptex; // can be 16bit if
 		LPD3DTEX ptexsys;
 		D3DFORMAT fmt;
 
 		int widthmult;
-		
+
 		int validatecount; // count how many times has been validated, if too many, destroy
 
 		vector<BYTE> clut; // if nonzero, texture uses CLUT
@@ -373,7 +373,7 @@ namespace ZeroGS
 		LPD3DTEX ptexClamp[2]; // textures for x and y dir region clamping
 
 	public:
-		
+
 		void FlushTexData();
 
 		u8 bNeedFrameCheck;
@@ -403,7 +403,7 @@ namespace ZeroGS
 		int zprimmask; // zmask for incoming points
 
 		u32 uCurTex0Data[2]; // current tex0 data
-		u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1 
+		u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
 
 		//int nFrameHeights[8];	// frame heights for the past frame changes
 		int nNextFrameHeight;
@@ -415,7 +415,7 @@ namespace ZeroGS
 	};
 
 	// visible members
-	extern DrawFn drawfn[8];	
+	extern DrawFn drawfn[8];
 	extern VB vb[2];
 	extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 	extern LONG width, height;
@@ -490,7 +490,7 @@ namespace ZeroGS
 	void FlushSysMem(const RECT* prc);
 	void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm, u32 fbm);
 
-	// returns the first and last addresses aligned to a page that cover 
+	// returns the first and last addresses aligned to a page that cover
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
 	// inits the smallest rectangle in ptexMem that covers this region in ptexMem

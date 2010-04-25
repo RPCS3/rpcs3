@@ -86,7 +86,7 @@ protected:
 	// Issue a Wait against this mutex for performing actions that require the thread
 	// to be suspended.
 	Mutex					m_RunningLock;
-	
+
 	// Protects the thread from re-entrant resume requests while dependent resources are
 	// being constructed.
 	NonblockingMutex		m_ResumeProtection;
@@ -119,7 +119,7 @@ public:
 	virtual bool Suspend( bool isBlocking = true );
 	virtual void Resume();
 	virtual bool Pause();
-	
+
 	virtual bool AcquireResumeLock() { return m_ResumeProtection.TryAcquire(); }
 	virtual void ReleaseResumeLock() { m_ResumeProtection.Release(); }
 
@@ -183,7 +183,7 @@ protected:
 	bool			m_CoreCancelDamnit;
 
 	wxString		m_elf_override;
-	
+
 	SSE_MXCSR		m_mxcsr_saved;
 
 public:
@@ -199,7 +199,7 @@ public:
 	virtual void RecoverState();
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool Cancel( const wxTimeSpan& timeout );
-	
+
 	bool HasValidState()
 	{
 		return m_hasValidState;
@@ -209,7 +209,7 @@ public:
 	virtual void StateCheckInThread();
 	virtual void VsyncInThread();
 	virtual void PostVsyncToUI()=0;
-	
+
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );
 	virtual void ChangeCdvdSource( CDVD_SourceType type );
@@ -225,7 +225,7 @@ protected:
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
 	virtual void DoCpuReset();
-	
+
 	void _StateCheckThrows();
 };
 

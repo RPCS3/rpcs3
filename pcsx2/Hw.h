@@ -249,7 +249,7 @@ enum GSRegisterAddresses
 // bleh, I'm graindead -- air
 union tGS_SMODE2
 {
-	struct  
+	struct
 	{
 		u32 INT:1;
 		u32 FFMD:1;

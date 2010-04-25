@@ -123,7 +123,7 @@ void SysMessage(char *fmt, ...) {
 #else
 
 GLWindow GLWin;
-u32 THR_KeyEvent = 0; // Value for key event processing between threads 
+u32 THR_KeyEvent = 0; // Value for key event processing between threads
 bool THR_bShift = false;
 
 #endif
@@ -202,7 +202,7 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 {
 	s_frameskipping |= frameskip;
 	if( frameskip && g_nFrameRender > 1 ) {
-		
+
 		for(int i = 0; i < 16; ++i) {
 			g_GIFPackedRegHandlers[i] = GIFPackedRegHandlerNOP;
 		}
@@ -250,7 +250,7 @@ void CALLBACK GSreset() {
 	memset(&gs, 0, sizeof(gs));
 
 	ZeroGS::GSStateReset();
-	
+
 	gs.prac = 1;
 	prim = &gs._prim[0];
 	gs.nTriFanVert = -1;
@@ -316,7 +316,7 @@ void OnKeyboardF5(int shift)
 		if( conf.interlace < 2 ) sprintf(strtitle, "interlace on - mode %d", conf.interlace);
 		else sprintf(strtitle, "interlace off");
 	}
-	
+
 	ZeroGS::AddMessage(strtitle);
 	SaveConfig();
 }
@@ -326,7 +326,7 @@ void OnKeyboardF6(int shift)
 	char strtitle[256];
 	if( shift ) {
 		conf.aa--; // -1
-		if( conf.aa > 4 ) conf.aa = 4;					// u8 in unsigned, so negative value is 255. 
+		if( conf.aa > 4 ) conf.aa = 4;					// u8 in unsigned, so negative value is 255.
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
 		ZeroGS::SetAA(conf.aa);
 	}
@@ -336,7 +336,7 @@ void OnKeyboardF6(int shift)
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
 		ZeroGS::SetAA(conf.aa);
 	}
-	
+
 	ZeroGS::AddMessage(strtitle);
 	SaveConfig();
 }
@@ -422,7 +422,7 @@ extern HINSTANCE hInst;
 void CALLBACK GSconfigure() {
 	DialogBox(hInst,
 				MAKEINTRESOURCE(IDD_CONFIG),
-				GetActiveWindow(),	
+				GetActiveWindow(),
 				(DLGPROC)ConfigureDlgProc);
 
 	if( g_nPixelShaderVer == SHADER_REDUCED )
@@ -444,12 +444,12 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
 	LoadConfig();
 
 	strcpy(GStitle, Title);
-	
+
 	RECT rc, rcdesktop;
 	rc.left = 0; rc.top = 0;
 	rc.right = conf.width; rc.bottom = conf.height;
 
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L, 
+	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, MsgProc, 0L, 0L,
 					GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
 					"PS2EMU_ZEROGS", NULL };
 	RegisterClassEx( &wc );
@@ -513,7 +513,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread) {
 
 void ProcessMessages()
 {
-	MSG msg; 
+	MSG msg;
 	ZeroMemory( &msg, sizeof(msg) );
 	while( 1 ) {
 		if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
@@ -535,7 +535,7 @@ void ProcessMessages()
 					else if( msg.wParam == VK_ESCAPE ) {
 
 						if( conf.options & GSOPTION_FULLSCREEN ) {
-							// destroy that msg				 
+							// destroy that msg
 							conf.options &= ~GSOPTION_FULLSCREEN;
 							conf.winstyle = GetWindowLong( GShwnd, GWL_STYLE );
 							conf.winstyle &= ~WS_MAXIMIZE & ~WS_MINIMIZE; // remove minimize/maximize style
@@ -549,7 +549,7 @@ void ProcessMessages()
 							return;
 						}
 					}
-			
+
 					break;
 			}
 
@@ -592,9 +592,9 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	LoadConfig();
 
 	strcpy(GStitle, Title);
-    
+
     GLWin.CreateWindow(pDsp);
-    
+
 	ERROR_LOG("creating zerogs\n");
 	//if (conf.record) recOpen();
 	if( !ZeroGS::Create(conf.width, conf.height) )
@@ -642,12 +642,12 @@ void ProcessMessages()
 				break;
 			case XK_F7:
 						OnKeyboardF7(my_bShift);
-				break;	
+				break;
 			case XK_F9:
 						OnKeyboardF9(my_bShift);
-				break;		
+				break;
 		}
-	}	
+	}
 }
 
 #endif // linux
@@ -684,9 +684,9 @@ void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 void CALLBACK GSmakeSnapshot(char *path)
 {
 	FILE *bmpfile;
-	char filename[256];	 
+	char filename[256];
 	u32 snapshotnr = 0;
-	
+
 	// increment snapshot value & try to get filename
 	for (;;) {
 		snapshotnr++;
@@ -701,7 +701,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	// try opening new snapshot file
 	if((bmpfile=fopen(filename,"wb"))==NULL) {
 		char strdir[255];
-		
+
 #ifdef _WIN32
 		sprintf(strdir, "%s", path);
 		CreateDirectory(strdir, NULL);
@@ -734,11 +734,11 @@ void CALLBACK GSvsync(int interlace)
 	char strtitle[256];
 
 	GL_REPORT_ERRORD();
-	
+
 	g_nRealFrame++;
 
 	ZeroGS::RenderCRTC(!interlace);
-	
+
 	ProcessMessages();
 
 	if( --nToNextUpdate <= 0 ) {
@@ -757,7 +757,7 @@ void CALLBACK GSvsync(int interlace)
 			conf.aa ? s_aa[conf.aa] : "",
 			g_pShaders[g_nPixelShaderVer], (ppf&0xfffff)/(float)UPDATE_FRAMES);
 #else
-		sprintf(strtitle, "%d | %.1f fps (sk:%d%%) | g: %.1f, t: %.1f, a: %.1f, r: %.1f | p: %.1f | tex: %d %d (%d kbpf)", g_nFrame, fFPS, 
+		sprintf(strtitle, "%d | %.1f fps (sk:%d%%) | g: %.1f, t: %.1f, a: %.1f, r: %.1f | p: %.1f | tex: %d %d (%d kbpf)", g_nFrame, fFPS,
 			100*g_nFramesSkipped/g_nFrame,
 			g_nGenVars/(float)UPDATE_FRAMES, g_nTexVars/(float)UPDATE_FRAMES, g_nAlphaVars/(float)UPDATE_FRAMES,
 			g_nResolve/(float)UPDATE_FRAMES, (ppf&0xfffff)/(float)UPDATE_FRAMES,
@@ -775,7 +775,7 @@ void CALLBACK GSvsync(int interlace)
 		if( !(conf.options&GSOPTION_FULLSCREEN) )
 			SetWindowText(GShwnd, strtitle);
 #else // linux
-		if (!(conf.options & GSOPTION_FULLSCREEN)) 
+		if (!(conf.options & GSOPTION_FULLSCREEN))
             GLWin.SetTitle(strtitle);
 #endif
 
@@ -838,7 +838,7 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	return 1;
 }
 
-s32 CALLBACK GSfreeze(int mode, freezeData *data) 
+s32 CALLBACK GSfreeze(int mode, freezeData *data)
 {
 	switch (mode)
 	{
@@ -855,7 +855,7 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 		default:
 			break;
 	}
-	
+
 	return 0;
 }
 
@@ -888,7 +888,7 @@ struct DVPROFSTRUCT
 	{
 		DATA(u64 time, u32 user = 0) : dwTime(time), dwUserData(user) {}
 		DATA() : dwTime(0), dwUserData(0) {}
-		
+
 		u64 dwTime;
 		u32 dwUserData;
 	};
@@ -903,7 +903,7 @@ struct DVPROFSTRUCT
 
 	list<DATA> listTimes;		 // before DVProfEnd is called, contains the global time it started
 								// after DVProfEnd is called, contains the time it lasted
-								// the list contains all the tracked times 
+								// the list contains all the tracked times
 	char pname[256];
 
 	list<DVPROFSTRUCT*> listpChild;	 // other profilers called during this profiler period
@@ -930,7 +930,7 @@ void DVProfRegister(char* pname)
 		return;
 
 	list<DVPROFSTRUCT*>::iterator it = g_listAllProfilers.begin();
-	
+
 //	while(it != g_listAllProfilers.end() ) {
 //
 //		if( _tcscmp(pname, (*it)->pname) == 0 ) {
@@ -947,7 +947,7 @@ void DVProfRegister(char* pname)
 
 	// else add in a new profiler to the appropriate parent profiler
 	DVPROFSTRUCT* pprof = NULL;
-	
+
 	if( g_listCurTracking.size() > 0 ) {
 		assert( g_listCurTracking.back().pprof != NULL );
 		g_listCurTracking.back().pprof->listpChild.push_back(new DVPROFSTRUCT());
@@ -1008,8 +1008,8 @@ u64 DVProfWriteStruct(FILE* f, DVPROFSTRUCT* p, int ident)
 
 	while(ittime != p->listTimes.end() ) {
 		utime += (u32)ittime->dwTime;
-		
-		if( ittime->dwUserData ) 
+
+		if( ittime->dwUserData )
 			fprintf(f, "time: %d, user: 0x%8.8x", (u32)ittime->dwTime, ittime->dwUserData);
 		else
 			fprintf(f, "time: %d", (u32)ittime->dwTime);

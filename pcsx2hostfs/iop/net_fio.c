@@ -28,7 +28,7 @@ static int send_packet[PACKET_MAXSIZE] __attribute__((aligned(16)));
 #define dbgprintf(args...) do { } while(0)
 #endif
 
-//---------------------------------------------------------------------- 
+//----------------------------------------------------------------------
 //
 #define PCSX2_FIO_BASE ((volatile unsigned int*)0x1d000800)
 #define PCSX2_FIO_RDID (PCSX2_FIO_BASE + 0) // [f0] on read: returns the FIO magic number 'E2SP'
@@ -64,7 +64,7 @@ char *strcpy(char *dest, const char *src)
 	return dest;
 }
 
-//---------------------------------------------------------------------- 
+//----------------------------------------------------------------------
 //
 void
 pcsx2fio_close_fsys(void)

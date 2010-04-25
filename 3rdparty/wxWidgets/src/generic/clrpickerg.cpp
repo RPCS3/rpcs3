@@ -127,13 +127,13 @@ void wxGenericColourButton::UpdateColour()
     sz.y -= 2*GetMarginY();
 
     wxPoint topleft;
-    
+
     if ( sz.x < 1 )
         sz.x = 1;
     else
     if ( sz.y < 1 )
         sz.y = 1;
-    
+
     wxBitmap bmp(sz.x, sz.y);
     {
         wxMemoryDC memdc(bmp);

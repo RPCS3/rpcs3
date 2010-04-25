@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -64,7 +64,7 @@ void cpuReset()
 	memzero(fpuRegs);
 	memzero(tlb);
 
-	cpuRegs.pc				= 0xbfc00000; //set pc reg to stack 
+	cpuRegs.pc				= 0xbfc00000; //set pc reg to stack
 	cpuRegs.CP0.n.Config	= 0x440;
 	cpuRegs.CP0.n.Status.val= 0x70400004; //0x10900000 <-- wrong; // COP0 enabled | BEV = 1 | TS = 1
 	cpuRegs.CP0.n.PRid		= 0x00002e20; // PRevID = Revision ID, same as R5900
@@ -93,7 +93,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 {
 	bool errLevel2, checkStatus;
 	u32 offset;
-	
+
     cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
 	cpuRegs.CP0.n.Cause = code & 0xffff;
 
@@ -102,12 +102,12 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		//Error Level 0-1
 		errLevel2 = FALSE;
 		checkStatus = (cpuRegs.CP0.n.Status.b.BEV == 0); //  for TLB/general exceptions
-		
-		if (((code & 0x7C) >= 0x8) && ((code & 0x7C) <= 0xC)) 
+
+		if (((code & 0x7C) >= 0x8) && ((code & 0x7C) <= 0xC))
 			offset = 0x0; //TLB Refill
-		else if ((code & 0x7C) == 0x0) 
+		else if ((code & 0x7C) == 0x0)
 			offset = 0x200; //Interrupt
-		else	
+		else
 			offset = 0x180; // Everything else
 	}
 	else
@@ -115,58 +115,58 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		//Error Level 2
 		errLevel2 = TRUE;
 		checkStatus = (cpuRegs.CP0.n.Status.b.DEV == 0); // for perf/debug exceptions
-		
+
 		Console.Error("*PCSX2* FIX ME: Level 2 cpuException");
-		if ((code & 0x38000) <= 0x8000 ) 
+		if ((code & 0x38000) <= 0x8000 )
 		{
 			//Reset / NMI
 			cpuRegs.pc = 0xBFC00000;
 			Console.Warning("Reset request");
 			UpdateCP0Status();
 			return;
-		} 
-		else if((code & 0x38000) == 0x10000) 
+		}
+		else if((code & 0x38000) == 0x10000)
 			offset = 0x80; //Performance Counter
-		else if((code & 0x38000) == 0x18000)  
+		else if((code & 0x38000) == 0x18000)
 			offset = 0x100; //Debug
-		else 
+		else
 			Console.Error("Unknown Level 2 Exception!! Cause %x", code);
 	}
-	
-	if (cpuRegs.CP0.n.Status.b.EXL == 0) 
+
+	if (cpuRegs.CP0.n.Status.b.EXL == 0)
 	{
 		cpuRegs.CP0.n.Status.b.EXL = 1;
-		if (bd) 
+		if (bd)
 		{
 			Console.Warning("branch delay!!");
 			cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
 			cpuRegs.CP0.n.Cause |= 0x80000000;
-		} 
-		else 
+		}
+		else
 		{
 			cpuRegs.CP0.n.EPC = cpuRegs.pc;
 			cpuRegs.CP0.n.Cause &= ~0x80000000;
 		}
-	} 
-	else 
+	}
+	else
 	{
-		offset = 0x180; //Override the cause		
+		offset = 0x180; //Override the cause
 		if (errLevel2) Console.Warning("cpuException: Status.EXL = 1 cause %x", code);
 	}
-	
+
 	if (checkStatus)
 		cpuRegs.pc = 0x80000000 + offset;
-	else 
+	else
 		cpuRegs.pc = 0xBFC00200 + offset;
-	
+
 	UpdateCP0Status();
 }
 
-void cpuTlbMiss(u32 addr, u32 bd, u32 excode) 
+void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 {
 	Console.Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
 		cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
-		
+
 	if (bd) Console.Warning("branch delay!!");
 
 	pxFail( "TLB Miss handler is uninished code." ); // temporary
@@ -211,7 +211,7 @@ __forceinline void _cpuTestMissingINTC() {
 
 __forceinline void _cpuTestMissingDMAC() {
 	if (cpuRegs.CP0.n.Status.val & 0x800 &&
-		(psHu16(0xe012) & psHu16(0xe010) || 
+		(psHu16(0xe012) & psHu16(0xe010) ||
 		 psHu16(0xe010) & 0x8000)) {
 		if ((cpuRegs.interrupt & (1 << 31)) == 0) {
 			Console.Error("*PCSX2*: Error, missing DMAC Interrupt");
@@ -349,7 +349,7 @@ static __forceinline void _cpuTestPERF()
 
 static bool cpuIntsEnabled()
 {
-	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE && 
+	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
 		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0);
 }
 
@@ -510,7 +510,7 @@ __forceinline void cpuTestDMACInts()
 	if ( cpuRegs.interrupt & (1 << 31) ) return;
 	if ((cpuRegs.CP0.n.Status.val & 0x10807) != 0x10801) return;
 
-	if ( ( (psHu16(0xe012) & psHu16(0xe010)) == 0) && 
+	if ( ( (psHu16(0xe012) & psHu16(0xe010)) == 0) &&
 		 ( (psHu16(0xe010) & 0x8000) == 0) ) return;
 
 	cpuRegs.interrupt|= 1 << 31;

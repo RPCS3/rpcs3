@@ -852,7 +852,7 @@ CTransInPlaceInputPin::GetAllocatorRequirements(ALLOCATOR_PROPERTIES *pProps)
 
 
 // CTransInPlaceInputPin::CompleteConnect() calls CBaseInputPin::CompleteConnect()
-// and then calls CTransInPlaceFilter::CompleteConnect().  It does this because 
+// and then calls CTransInPlaceFilter::CompleteConnect().  It does this because
 // CTransInPlaceFilter::CompleteConnect() can reconnect a pin and we do not
 // want to reconnect a pin if CBaseInputPin::CompleteConnect() fails.
 HRESULT
@@ -949,10 +949,10 @@ CTransInPlaceOutputPin::SetAllocator(IMemAllocator * pAllocator)
 
 
 // CTransInPlaceOutputPin::CompleteConnect() calls CBaseOutputPin::CompleteConnect()
-// and then calls CTransInPlaceFilter::CompleteConnect().  It does this because 
-// CTransInPlaceFilter::CompleteConnect() can reconnect a pin and we do not want to 
-// reconnect a pin if CBaseOutputPin::CompleteConnect() fails.  
-// CBaseOutputPin::CompleteConnect() often fails when our output pin is being connected 
+// and then calls CTransInPlaceFilter::CompleteConnect().  It does this because
+// CTransInPlaceFilter::CompleteConnect() can reconnect a pin and we do not want to
+// reconnect a pin if CBaseOutputPin::CompleteConnect() fails.
+// CBaseOutputPin::CompleteConnect() often fails when our output pin is being connected
 // to the Video Mixing Renderer.
 HRESULT
 CTransInPlaceOutputPin::CompleteConnect(IPin *pReceivePin)

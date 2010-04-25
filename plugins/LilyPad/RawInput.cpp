@@ -69,7 +69,7 @@ static int rawMouseActivatedCount = 0;
 class RawInputKeyboard : public WindowsKeyboard {
 public:
 	HANDLE hDevice;
-	
+
 	RawInputKeyboard(HANDLE hDevice, wchar_t *name, wchar_t *instanceID=0) : WindowsKeyboard(RAW, name, instanceID) {
 		this->hDevice = hDevice;
 	}
@@ -130,7 +130,7 @@ public:
 			GetMouseCapture(hWndProc->hWndEaten);
 			if (!rawKeyboardActivatedCount)
 				hWndProc->Eat(RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
-			
+
 			if (!GetRawMice(hWndProc->hWndEaten)) {
 				Deactivate();
 				return 0;

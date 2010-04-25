@@ -11,7 +11,7 @@
    bzip2/libbzip2 version 1.0.4 of 20 December 2006
    Copyright (C) 1996-2006 Julian Seward <jseward@bzip.org>
 
-   Please read the WARNING, DISCLAIMER and PATENTS sections in the 
+   Please read the WARNING, DISCLAIMER and PATENTS sections in the
    README file.
 
    This program is released under the terms of the license contained

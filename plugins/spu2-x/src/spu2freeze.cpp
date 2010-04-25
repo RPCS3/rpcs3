@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -83,7 +83,7 @@ s32 __fastcall Savestate::ThawIt( DataBlock& spud )
 		else
 			fprintf(stderr, "\tThe savestate you are trying to load was not made with this plugin.\n");
 
-		fprintf(stderr, 
+		fprintf(stderr,
 			"\tAudio may not recover correctly.  Save your game to memorycard, reset,\n\n"
 			"\tand then continue from there.\n\n"
 		);

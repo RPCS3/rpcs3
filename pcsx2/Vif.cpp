@@ -36,7 +36,7 @@ void vif0Reset()
 
 	psHu64(VIF0_FIFO) = 0;
 	psHu64(VIF0_FIFO + 8) = 0;
-	
+
 	vif0Regs->stat.VPS = VPS_IDLE;
 	vif0Regs->stat.FQC = 0;
 
@@ -230,7 +230,7 @@ _f void vif1FBRST(u32 value) {
                         CPU_INT(DMAC_VIF1, 0);
                         break;
 				}
-				
+
 				vif1ch->chcr.STR = true;
 			}
 		}
@@ -249,7 +249,7 @@ _f void vif1STAT(u32 value) {
 	}
 
 	vif1Regs->stat.FDR = VIF_STAT(value).FDR;
-	
+
 	if (vif1Regs->stat.FDR) // Vif transferring to memory.
 	{
 	    // Hack but it checks this is true before transfer? (fatal frame)
@@ -261,7 +261,7 @@ _f void vif1STAT(u32 value) {
 
 		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastTRXPOS);
 		//Console.Warning("Reversing VIF Transfer for %x QWC", vif1.GSLastTRXPOS);
-		
+
 	}
 	else // Memory transferring to Vif.
 	{

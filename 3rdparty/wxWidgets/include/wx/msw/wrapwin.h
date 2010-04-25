@@ -57,10 +57,10 @@
 // #undef the macros defined in winsows.h which conflict with code elsewhere
 #include "wx/msw/winundef.h"
 
-// Types DWORD_PTR, ULONG_PTR and so on are used for 64-bit compatability 
+// Types DWORD_PTR, ULONG_PTR and so on are used for 64-bit compatability
 // in the WINAPI SDK (they are an integral type that is the size of a
-// pointer) on MSVC 7 and later. However, they are not available in older 
-// Platform SDKs, and since they are typedefs and not #defines we simply 
+// pointer) on MSVC 7 and later. However, they are not available in older
+// Platform SDKs, and since they are typedefs and not #defines we simply
 // overwrite them if there is a chance that they're not defined
 #if (!defined(_MSC_VER) || (_MSC_VER < 1300)) && !defined(__WIN64__)
     #define UINT_PTR unsigned int

@@ -15,8 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
- 
+
+
 #ifndef __REG_H__
 #define __REG_H__
 
@@ -35,7 +35,7 @@ enum
  REG_VP_VOLXL    			 = 0x000C, // Current Voice Volume Left
  REG_VP_VOLXR    			 = 0x000E, // Current Voice Volume Right
 // end unimplemented section
-	
+
  REG_C0_FMOD1    			 = 0x0180, // Pitch Modulation Spec.
  REG_C0_FMOD2    			 = 0x0182,
  REG_S_NON        			 = 0x0184, // Alloc Noise Generator - unimplemented
@@ -62,7 +62,7 @@ enum
  REG_C0_DMACTRL  			 = 0x01AE, // unimplemented
  REG_C0_ADMAS     			 = 0x01B0, // AutoDMA Status
 
- // Section Unimplemented 
+ // Section Unimplemented
  // Actually, some are implemented but weren't using the constants.
  REG_VA_SSA      			 = 0x01C0, // Waveform data starting address
  REG_VA_LSAX    			 = 0x01C4, // Loop point address
@@ -92,11 +92,11 @@ R_MIX_DEST_B0       			 = 0x0334,
 R_MIX_DEST_B1       			 = 0x0338,
  REG_A_EEA         			 = 0x033C, // Address: End address of working area for effects processing (upper part of address only!)
  // end unimplemented section
- 
+
  REG_C0_END1     			 = 0x0340, // End Point passed flag
  REG_C0_END2      			 = 0x0342,
  REG_C0_SPUSTAT 			 = 0x0344, // Status register?
- 
+
  // core 1 has the same registers with 0x400 added, and ends at 0x746.
  REG_C1_FMOD1   			 = 0x0580,
  REG_C1_FMOD2   			 = 0x0582,
@@ -120,7 +120,7 @@ R_MIX_DEST_B1       			 = 0x0338,
  REG_C1_END1      			 = 0x0740,
  REG_C1_END2     			 = 0x0742,
  REG_C1_SPUSTAT  			 = 0x0744,
- 
+
  // Interesting to note that *most* of the volume controls aren't implemented in Zerospu2.
  REG_P_MVOLL     			 = 0x0760, // Master Volume Left - unimplemented
  REG_P_MVOLR    			 = 0x0762, // Master Volume Right - unimplemented
@@ -132,7 +132,7 @@ R_MIX_DEST_B1       			 = 0x0338,
  REG_C0_BVOLR     			 = 0x076E, // Sound Data Volume Right
  REG_P_MVOLXL   			 = 0x0770, // Current Master Volume Left - unimplemented
  REG_P_MVOLXR   			 = 0x0772, // Current Master Volume Right - unimplemented
- 
+
  // Another unimplemented section
  R_IIR_ALPHA   				 = 0x0774, // IIR alpha (% used)
  R_ACC_COEF_A   			 = 0x0776,
@@ -141,27 +141,27 @@ R_MIX_DEST_B1       			 = 0x0338,
  R_ACC_COEF_D   			 = 0x077C,
  R_IIR_COEF   				 = 0x077E,
  R_FB_ALPHA   				 = 0x0780, // feedback alpha (% used)
- R_FB_X   					 = 0x0782, // feedback 
+ R_FB_X   					 = 0x0782, // feedback
  R_IN_COEF_L   				 = 0x0784,
  R_IN_COEF_R   			 = 0x0786,
   // end unimplemented section
-  
+
  REG_C1_BVOLL    			 = 0x0794,
  REG_C1_BVOLR   			 = 0x0796,
- 
+
  SPDIF_OUT          			 = 0x07C0, // SPDIF Out: OFF/'PCM'/Bitstream/Bypass - unimplemented
- REG_IRQINFO     			 = 0x07C2, 
+ REG_IRQINFO     			 = 0x07C2,
  SPDIF_MODE      			 = 0x07C6, // unimplemented
  SPDIF_MEDIA     			 = 0x07C8, // SPDIF Media: 'CD'/DVD - unimplemented
- SPDIF_COPY_PROT     		 = 0x07CC  // SPDIF Copy Protection - unimplemented 
+ SPDIF_COPY_PROT     		 = 0x07CC  // SPDIF Copy Protection - unimplemented
  // NOTE: SPDIF_COPY is defined in Linux kernel headers as 0x0004.
-};			
+};
 
 // Not sure if this is a good idea, but I don't feel like retyping it, so I'll leave it in for now.
  /*struct core_registers
  {
 	 u16 pad[179];
-	 
+
 	 u16 fmod1; u16 pad1;
 	 u16 fmod2; u16 pad2;
 	 u16 s_non; u16 pad3[3];
@@ -183,8 +183,8 @@ R_MIX_DEST_B1       			 = 0x0338,
 	 u16 spu_addr_lo; u16 pad19;
 	 u16 spu_data; u16 pad20;
 	 u16 dma_ctrl; u16 pad21;
-	 u16 admas; u16 pad22[16]; 
-	 
+	 u16 admas; u16 pad22[16];
+
 	 // Not complete past this point (not padded properly)
 	 u16 va_ssa; u16 pad23[3];	//0x01C0, // Waveform data starting address
  	 u16 va_lsax; u16 pad24[3];	//0x01C4, // Loop point address
@@ -212,12 +212,12 @@ R_MIX_DEST_B1       			 = 0x0338,
 	 u16 mix_dest_a1; u16 pad46;	//0x0330,
 	 u16 mix_dest_b0; u16 pad47;	//0x0334,
 	 u16 mix_dest_b1;  u16 pad48;	// 0x0338,
- 	 u16 a_eea; u16 pad49;	//0x033C, 
+ 	 u16 a_eea; u16 pad49;	//0x033C,
 	 u16 end1; u16 pad 50;	//0x0340, // End Point passed flag
 	 u16 end2; u16 pad 51; 	//0x0342,
 	 u16 statx; //0x0344, // Status register?
  };*/
- 
+
 // These SPDIF defines aren't used yet - swiped from spu2ghz, like a number of the registers I added in.
 // -- arcum42
 #define SPDIF_OUT_OFF        0x0000		//no spdif output

@@ -232,7 +232,7 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, u32 *data)
 }
 
 // --------------------------------------------------------------------------------------
-//  Main table for function unpacking. 
+//  Main table for function unpacking.
 // --------------------------------------------------------------------------------------
 // The extra data bsize/dsize/etc are all duplicated between the doMask enabled and
 // disabled versions.  This is probably simpler and more efficient than bothering
@@ -310,7 +310,7 @@ _vifT void vifUnpackSetup(u32 *data) {
 
 	vifX.usn   = (vifXRegs->code >> 14) & 0x01;
 	int vifNum = (vifXRegs->code >> 16) & 0xff;
-	
+
 	if (vifNum == 0) vifNum = 256;
 	vifXRegs->num =  vifNum;
 

@@ -54,7 +54,7 @@ public:
 
 protected:
 	void AppStatusEvent_OnSettingsApplied();
-	
+
 #ifdef __WXMSW__
 	virtual WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
 #endif

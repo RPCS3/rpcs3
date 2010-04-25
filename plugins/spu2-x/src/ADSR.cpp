@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -79,7 +79,7 @@ bool V_ADSR::Calculate()
 
 			if( Value < 0 )
 			{
-				// We hit the ceiling. 
+				// We hit the ceiling.
 				Phase++;
 				Value = ADSR_MAX_VOL;
 			}
@@ -114,7 +114,7 @@ bool V_ADSR::Calculate()
 				{
 					u32 off = InvExpOffsets[(Value>>28)&7];
 					Value -= PsxRates[(SustainRate^0x7f)-0x1b+off+32];
-				} 
+				}
 				else // linear
 					Value -= PsxRates[(SustainRate^0x7f)-0xf+32];
 
@@ -123,7 +123,7 @@ bool V_ADSR::Calculate()
 					Value = 0;
 					Phase++;
 				}
-			} 
+			}
 			else // increasing
 			{
 				if( (SustainMode&4) && (Value>=0x60000000) )
@@ -152,7 +152,7 @@ bool V_ADSR::Calculate()
 			{
 				u32 off=InvExpOffsets[(Value>>28)&7];
 				Value-=PsxRates[((ReleaseRate^0x1f)*4)-0x18+off+32];
-			} 
+			}
 			else // linear
 			{
 				//Value-=PsxRates[((ReleaseRate^0x1f)*4)-0xc+32];
@@ -173,7 +173,7 @@ bool V_ADSR::Calculate()
 
 		jNO_DEFAULT
 	}
-	
+
 	// returns true if the voice is active, or false if it's stopping.
 	return Phase != 6;
 }
@@ -190,10 +190,10 @@ bool V_ADSR::Calculate()
 void V_VolumeSlide::Update()
 {
 	if( !(Mode & VOLFLAG_SLIDE_ENABLE) ) return;
-		
+
 	// Volume slides use the same basic logic as ADSR, but simplified (single-stage
 	// instead of multi-stage)
-	
+
 	if( Increment == 0x7f ) return;
 
 	if (Mode & VOLFLAG_DECREMENT)

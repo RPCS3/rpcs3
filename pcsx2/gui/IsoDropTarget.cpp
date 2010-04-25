@@ -69,7 +69,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		if( SysHasValidState() )
 		{
 			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset"), wxVERTICAL );
-			
+
 			dialog += dialog.Heading(
 				_("You have dropped the following ELF binary into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" + GetMsg_ConfirmSysReset()
@@ -112,7 +112,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		if( SysHasValidState() )
 		{
 			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset"), wxVERTICAL );
-						
+
 			dialog += dialog.Heading(_("You have dropped the following ISO image into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" +
 				_("Do you want to swap discs or boot the new image (via system reset)?")

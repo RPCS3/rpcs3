@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 // File: SysClock.cpp
 //
-// Desc: DirectShow base classes - implements a system clock based on 
+// Desc: DirectShow base classes - implements a system clock based on
 //       IReferenceClock.
 //
 // Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -67,7 +67,7 @@ CSystemClock::GetClassID(CLSID *pClsID)
 }
 
 
-STDMETHODIMP 
+STDMETHODIMP
 CSystemClock::SetClockDelta(REFERENCE_TIME rtDelta)
 {
     return SetTimeDelta(rtDelta);

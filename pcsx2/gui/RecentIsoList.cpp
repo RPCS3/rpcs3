@@ -46,7 +46,7 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 	{
 		if( (m_Items[i].ItemPtr != NULL) && (m_Items[i].ItemPtr->GetId() == evt.GetId()) ) break;
 	}
-	
+
 	if( i >= m_Items.size() )
 	{
 		evt.Skip();
@@ -54,7 +54,7 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 	}
 
 	m_cursel = i;
-	
+
 	bool resume = CoreThread.Suspend();
 	SysUpdateIsoSrcFile( m_Items[i].Filename );
 	if( resume ) CoreThread.Resume();
@@ -72,7 +72,7 @@ void RecentIsoManager::RemoveAllFromMenu()
 		m_Menu->Destroy( curitem.ItemPtr );
 		curitem.ItemPtr = NULL;
 	}
-	
+
 	if( m_Separator != NULL )
 	{
 		m_Menu->Destroy( m_Separator );
@@ -93,7 +93,7 @@ void RecentIsoManager::Repopulate()
 	if( cnt <= 0 ) return;
 
 	m_Separator = m_Menu->AppendSeparator();
-	
+
 	for( int i=0; i<cnt; ++i )
 		InsertIntoMenu( i );
 }
@@ -172,7 +172,7 @@ void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEvent
 	else
 	{
 		RemoveAllFromMenu();
-		
+
 		m_MaxLength = g_Conf->RecentIsoCount;
 		IniScopedGroup groupie( ini, L"RecentIso" );
 		for( uint i=0; i<m_MaxLength; ++i )

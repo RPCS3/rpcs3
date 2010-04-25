@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -105,7 +105,7 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 
 	static char line[1024];
 	int i, s;
-	
+
 	memcpy(outbuffer, inbuffer, 128*1024);//BUFFERSIZE
 	//out->h.length=sizeof(DECI2_DBGP_HEADER);
 	out->type++;
@@ -174,7 +174,7 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 					case 10:memcpy(eregs[i].value, &VU1.VI[eregs[i].number], 4);break;
 					default:
 						eregs[0].value[0]++;//dummy; might be assert(0)
-					}				
+					}
 			break;
 		case 0x06://ok
             sprintf(line, "%s/PUTREG count=%d kind[0]=%d number[0]=%d value=%016I64X_%016I64X",
@@ -224,7 +224,7 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 					case 10:memcpy(&VU1.VI[eregs[i].number], eregs[i].value, 4);break;
 					default:
 						;//dummy; might be assert(0)
-					}				
+					}
 			break;
 		case 0x08://ok
 		{
@@ -300,7 +300,7 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 					out->result=0x11;
 					strcat(line, " ADDRESS ERROR");
 					break;
-				}				
+				}
 			else
 				switch(mem->space){
 				case 0:
@@ -358,11 +358,11 @@ void D2_DBGP(const u8 *inbuffer, u8 *outbuffer, char *message, char *eepc, char 
 			if (in->h.destination=='I')
 				;
 			else{
-				out->result = ( pcsx2_InterlockedExchange(&runStatus, STOP)==STOP ? 
+				out->result = ( pcsx2_InterlockedExchange(&runStatus, STOP)==STOP ?
 					0x20 : 0x21 );
 				out->code=0xFF;
 				Sleep(50);
-			}		
+			}
 			break;
 		case 0x16://ok, [w/o iop]
 			sprintf(line, "%s/CONTINUE code=%s count=%d",

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -42,9 +42,9 @@ namespace R5900
 /// ********
 
 #define DECODE_FUNCTION     ((cpuRegs.code) & 0x3F)
-#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register 
-#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register 
-#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register 
+#define DECODE_RD     ((cpuRegs.code >> 11) & 0x1F) // The rd part of the instruction register
+#define DECODE_RT     ((cpuRegs.code >> 16) & 0x1F) // The rt part of the instruction register
+#define DECODE_RS     ((cpuRegs.code >> 21) & 0x1F) // The rs part of the instruction register
 #define DECODE_SA     ((cpuRegs.code >>  6) & 0x1F) // The sa part of the instruction register
 #define DECODE_IMMED     ( cpuRegs.code & 0xFFFF)      // The immediate part of the instruction register
 #define DECODE_OFFSET  ((((short)DECODE_IMMED * 4) + opcode_addr + 4))
@@ -53,7 +53,7 @@ namespace R5900
 #define DECODE_BREAK        (DECODE_SYSCALL)
 #define DECODE_C0BC         ((cpuRegs.code >> 16) & 0x03)
 #define DECODE_C1BC         ((cpuRegs.code >> 16) & 0x03)
-#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)   
+#define DECODE_C2BC         ((cpuRegs.code >> 16) & 0x03)
 */
 /*************************CPUS REGISTERS**************************/
 static const char * const GPR_REG[32] = {
@@ -108,138 +108,138 @@ void P_COP2_BC2( string& output );
 //****************************************************************************
 //** COP2 - (VU0)                                                           **
 //****************************************************************************
-void P_QMFC2( string& output ); 
-void P_CFC2( string& output ); 
+void P_QMFC2( string& output );
+void P_CFC2( string& output );
 void P_QMTC2( string& output );
-void P_CTC2( string& output );  
+void P_CTC2( string& output );
 void P_BC2F( string& output );
 void P_BC2T( string& output );
 void P_BC2FL( string& output );
 void P_BC2TL( string& output );
 //*****************SPECIAL 1 VUO TABLE*******************************
-void P_VADDx( string& output );       
-void P_VADDy( string& output );       
-void P_VADDz( string& output );       
-void P_VADDw( string& output );       
-void P_VSUBx( string& output );        
-void P_VSUBy( string& output );        
+void P_VADDx( string& output );
+void P_VADDy( string& output );
+void P_VADDz( string& output );
+void P_VADDw( string& output );
+void P_VSUBx( string& output );
+void P_VSUBy( string& output );
 void P_VSUBz( string& output );
-void P_VSUBw( string& output ); 
+void P_VSUBw( string& output );
 void P_VMADDx( string& output );
 void P_VMADDy( string& output );
 void P_VMADDz( string& output );
 void P_VMADDw( string& output );
 void P_VMSUBx( string& output );
 void P_VMSUBy( string& output );
-void P_VMSUBz( string& output );       
-void P_VMSUBw( string& output ); 
-void P_VMAXx( string& output );       
-void P_VMAXy( string& output );       
-void P_VMAXz( string& output );       
-void P_VMAXw( string& output );       
-void P_VMINIx( string& output );       
-void P_VMINIy( string& output );       
-void P_VMINIz( string& output );       
-void P_VMINIw( string& output ); 
-void P_VMULx( string& output );       
-void P_VMULy( string& output );       
-void P_VMULz( string& output );       
-void P_VMULw( string& output );       
-void P_VMULq( string& output );        
-void P_VMAXi( string& output );        
-void P_VMULi( string& output );        
+void P_VMSUBz( string& output );
+void P_VMSUBw( string& output );
+void P_VMAXx( string& output );
+void P_VMAXy( string& output );
+void P_VMAXz( string& output );
+void P_VMAXw( string& output );
+void P_VMINIx( string& output );
+void P_VMINIy( string& output );
+void P_VMINIz( string& output );
+void P_VMINIw( string& output );
+void P_VMULx( string& output );
+void P_VMULy( string& output );
+void P_VMULz( string& output );
+void P_VMULw( string& output );
+void P_VMULq( string& output );
+void P_VMAXi( string& output );
+void P_VMULi( string& output );
 void P_VMINIi( string& output );
 void P_VADDq( string& output );
-void P_VMADDq( string& output );      
-void P_VADDi( string& output );       
-void P_VMADDi( string& output );      
-void P_VSUBq( string& output );        
-void P_VMSUBq( string& output );       
-void P_VSUbi( string& output );        
-void P_VMSUBi( string& output ); 
-void P_VADD( string& output );        
-void P_VMADD( string& output );       
-void P_VMUL( string& output );        
-void P_VMAX( string& output );        
-void P_VSUB( string& output );         
-void P_VMSUB( string& output );       
-void P_VOPMSUB( string& output );      
-void P_VMINI( string& output );  
-void P_VIADD( string& output );       
-void P_VISUB( string& output );       
-void P_VIADDI( string& output );        
-void P_VIAND( string& output );        
-void P_VIOR( string& output );        
-void P_VCALLMS( string& output );     
-void P_CALLMSR( string& output );   
+void P_VMADDq( string& output );
+void P_VADDi( string& output );
+void P_VMADDi( string& output );
+void P_VSUBq( string& output );
+void P_VMSUBq( string& output );
+void P_VSUbi( string& output );
+void P_VMSUBi( string& output );
+void P_VADD( string& output );
+void P_VMADD( string& output );
+void P_VMUL( string& output );
+void P_VMAX( string& output );
+void P_VSUB( string& output );
+void P_VMSUB( string& output );
+void P_VOPMSUB( string& output );
+void P_VMINI( string& output );
+void P_VIADD( string& output );
+void P_VISUB( string& output );
+void P_VIADDI( string& output );
+void P_VIAND( string& output );
+void P_VIOR( string& output );
+void P_VCALLMS( string& output );
+void P_CALLMSR( string& output );
 //***********************************END OF SPECIAL1 VU0 TABLE*****************************
 //******************************SPECIAL2 VUO TABLE*****************************************
-void P_VADDAx( string& output );      
-void P_VADDAy( string& output );      
-void P_VADDAz( string& output );      
-void P_VADDAw( string& output );      
-void P_VSUBAx( string& output );      
-void P_VSUBAy( string& output );      
-void P_VSUBAz( string& output );      
+void P_VADDAx( string& output );
+void P_VADDAy( string& output );
+void P_VADDAz( string& output );
+void P_VADDAw( string& output );
+void P_VSUBAx( string& output );
+void P_VSUBAy( string& output );
+void P_VSUBAz( string& output );
 void P_VSUBAw( string& output );
-void P_VMADDAx( string& output );     
-void P_VMADDAy( string& output );     
-void P_VMADDAz( string& output );     
-void P_VMADDAw( string& output );     
-void P_VMSUBAx( string& output );     
-void P_VMSUBAy( string& output );     
-void P_VMSUBAz( string& output );     
+void P_VMADDAx( string& output );
+void P_VMADDAy( string& output );
+void P_VMADDAz( string& output );
+void P_VMADDAw( string& output );
+void P_VMSUBAx( string& output );
+void P_VMSUBAy( string& output );
+void P_VMSUBAz( string& output );
 void P_VMSUBAw( string& output );
-void P_VITOF0( string& output );      
-void P_VITOF4( string& output );      
-void P_VITOF12( string& output );     
-void P_VITOF15( string& output );     
-void P_VFTOI0( string& output );      
-void P_VFTOI4( string& output );      
-void P_VFTOI12( string& output );     
+void P_VITOF0( string& output );
+void P_VITOF4( string& output );
+void P_VITOF12( string& output );
+void P_VITOF15( string& output );
+void P_VFTOI0( string& output );
+void P_VFTOI4( string& output );
+void P_VFTOI12( string& output );
 void P_VFTOI15( string& output );
-void P_VMULAx( string& output );      
-void P_VMULAy( string& output );      
-void P_VMULAz( string& output );      
-void P_VMULAw( string& output );      
-void P_VMULAq( string& output );      
-void P_VABS( string& output );        
-void P_VMULAi( string& output );      
+void P_VMULAx( string& output );
+void P_VMULAy( string& output );
+void P_VMULAz( string& output );
+void P_VMULAw( string& output );
+void P_VMULAq( string& output );
+void P_VABS( string& output );
+void P_VMULAi( string& output );
 void P_VCLIPw( string& output );
-void P_VADDAq( string& output );      
-void P_VMADDAq( string& output );     
-void P_VADDAi( string& output );      
-void P_VMADDAi( string& output );     
-void P_VSUBAq( string& output );      
-void P_VMSUBAq( string& output );     
-void P_VSUBAi( string& output );      
+void P_VADDAq( string& output );
+void P_VMADDAq( string& output );
+void P_VADDAi( string& output );
+void P_VMADDAi( string& output );
+void P_VSUBAq( string& output );
+void P_VMSUBAq( string& output );
+void P_VSUBAi( string& output );
 void P_VMSUBAi( string& output );
-void P_VADDA( string& output );       
-void P_VMADDA( string& output );      
-void P_VMULA( string& output );       
-void P_VSUBA( string& output );       
-void P_VMSUBA( string& output );      
-void P_VOPMULA( string& output );     
-void P_VNOP( string& output );   
-void P_VMONE( string& output );       
-void P_VMR32( string& output );       
-void P_VLQI( string& output );        
-void P_VSQI( string& output );        
-void P_VLQD( string& output );        
-void P_VSQD( string& output );   
-void P_VDIV( string& output );        
-void P_VSQRT( string& output );       
-void P_VRSQRT( string& output );      
-void P_VWAITQ( string& output );     
-void P_VMTIR( string& output );       
-void P_VMFIR( string& output );       
-void P_VILWR( string& output );       
-void P_VISWR( string& output );  
-void P_VRNEXT( string& output );      
-void P_VRGET( string& output );       
-void P_VRINIT( string& output );      
-void P_VRXOR( string& output );  
-//************************************END OF SPECIAL2 VUO TABLE****************************     
+void P_VADDA( string& output );
+void P_VMADDA( string& output );
+void P_VMULA( string& output );
+void P_VSUBA( string& output );
+void P_VMSUBA( string& output );
+void P_VOPMULA( string& output );
+void P_VNOP( string& output );
+void P_VMONE( string& output );
+void P_VMR32( string& output );
+void P_VLQI( string& output );
+void P_VSQI( string& output );
+void P_VLQD( string& output );
+void P_VSQD( string& output );
+void P_VDIV( string& output );
+void P_VSQRT( string& output );
+void P_VRSQRT( string& output );
+void P_VWAITQ( string& output );
+void P_VMTIR( string& output );
+void P_VMFIR( string& output );
+void P_VILWR( string& output );
+void P_VISWR( string& output );
+void P_VRNEXT( string& output );
+void P_VRGET( string& output );
+void P_VRINIT( string& output );
+void P_VRXOR( string& output );
+//************************************END OF SPECIAL2 VUO TABLE****************************
 
 
 /*
@@ -338,7 +338,7 @@ void P_VRXOR( string& output );
     ------6----------------------------------------------------6-----
     |--000--|--001--|--010--|--011--| lo
 000 |  ---  | PABSW | PCEQW | PMINW |
-001 |PADSBH | PABSH | PCEQH | PMINH | 
+001 |PADSBH | PABSH | PCEQH | PMINH |
 010 |  ---  |  ---  | PCEQB |  ---  |
 011 |  ---  |  ---  |  ---  |  ---  |
 100 |PADDUW |PSUBUW |PEXTUW |  ---  |
@@ -356,7 +356,7 @@ void P_VRXOR( string& output );
     ------6----------------------------------------------------6-----
     |--000--|--001--|--010--|--011--| lo
 000 |PMADDW |  ---  |PSLLVW |PSRLVW |
-001 |PMSUBW |  ---  |  ---  |  ---  | 
+001 |PMSUBW |  ---  |  ---  |  ---  |
 010 |PMFHI  |PMFLO  |PINTH  |  ---  |
 011 |PMULTW |PDIVW  |PCPYLD |  ---  |
 100 |PMADDH |PHMADH | PAND  |  PXOR |
@@ -373,7 +373,7 @@ void P_VRXOR( string& output );
     ------6----------------------------------------------------6-----
     |--000--|--001--|--010--|--011--| lo
 000 |PMADDUW|  ---  |  ---  |PSRAVW |
-001 |  ---  |  ---  |  ---  |  ---  | 
+001 |  ---  |  ---  |  ---  |  ---  |
 010 |PMTHI  | PMTLO |PINTEH |  ---  |
 011 |PMULTUW| PDIVUW|PCPYUD |  ---  |
 100 |  ---  |  ---  |  POR  | PNOR  |
@@ -435,8 +435,8 @@ void P_VRXOR( string& output );
  10 | *2    |  ---  |  ---  |  ---  | *3    |  ---  |  ---  |  ---  |
  11 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
  hi |-------|-------|-------|-------|-------|-------|-------|-------|
-     *1 = BC instructions, see BC1 list   *2 = S instr, see FPU list            
-     *3 = W instr, see FPU list 
+     *1 = BC instructions, see BC1 list   *2 = S instr, see FPU list
+     *3 = W instr, see FPU list
 */
 /*
     BC1: Instructions encoded by the rt field when opcode = COP1 & rs field=BC1
@@ -448,7 +448,7 @@ void P_VRXOR( string& output );
  01 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
  10 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
  11 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
- hi |-------|-------|-------|-------|-------|-------|-------|-------|   
+ hi |-------|-------|-------|-------|-------|-------|-------|-------|
 */
 /*
     FPU: Instructions encoded by the function field when opcode = COP1
@@ -465,7 +465,7 @@ void P_VRXOR( string& output );
 101 | MAX.S | MIN.S |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 110 | C.F   | ---   | C.EQ  |  ---  | C.LT  |  ---  |  C.LE |  ---  |
 111 | ---   | ---   |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
- hi |-------|-------|-------|-------|-------|-------|-------|-------| 
+ hi |-------|-------|-------|-------|-------|-------|-------|-------|
 */
 /*
     FPU: Instructions encoded by the function field when opcode = COP1
@@ -482,13 +482,13 @@ void P_VRXOR( string& output );
 101 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 110 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 111 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
- hi |-------|-------|-------|-------|-------|-------|-------|-------|       
-*/  
+ hi |-------|-------|-------|-------|-------|-------|-------|-------|
+*/
 
 //*************************************************************
 // COP2 TABLES :)   [VU0 as a Co-Processor to the EE]
 //*************************************************************
-/* 
+/*
    COP2: Instructions encoded by the fmt field when opcode = COP2.
     31--------26-25------21 ----------------------------------------0
     |  = COP2   |   fmt   |                                         |
@@ -507,7 +507,7 @@ void (*COP2PrintTable[32])( string& output ) = {
     P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL,
 	P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL, P_COP2_SPECIAL,
 
-    
+
 };
 /*
     BC2: Instructions encoded by the rt field when opcode = COP2 & rs field=BC1
@@ -519,14 +519,14 @@ void (*COP2PrintTable[32])( string& output ) = {
  01 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
  10 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
  11 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
- hi |-------|-------|-------|-------|-------|-------|-------|-------|   
+ hi |-------|-------|-------|-------|-------|-------|-------|-------|
  */
 void (*COP2BC2PrintTable[32])( string& output ) = {
     P_BC2F,         P_BC2T,         P_BC2FL,        P_BC2TL,        P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown,
     P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown,
     P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown,
     P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown, P_COP2_Unknown,
-}; 
+};
 /*
     Special1 table : instructions encode by function field when opcode=COP2 & rs field=Special1
     31---------26---------------------------------------------------0
@@ -541,19 +541,19 @@ void (*COP2BC2PrintTable[32])( string& output ) = {
 101 |VADD   |VMADD  |VMUL   |VMAX   |VSUB   |VMSUB  |VOPMSUB|VMINI  |
 110 |VIADD  |VISUB  |VIADDI |  ---  |VIAND  |VIOR   |  ---  |  ---  |
 111 |VCALLMS|CALLMSR|  ---  |  ---  |  *1   |  *1   |  *1   |  *1   |
- hi |-------|-------|-------|-------|-------|-------|-------|-------| 
-    *1=see special2 table  
+ hi |-------|-------|-------|-------|-------|-------|-------|-------|
+    *1=see special2 table
 */
-void (*COP2SPECIAL1PrintTable[64])( string& output ) = 
-{ 
- P_VADDx,       P_VADDy,       P_VADDz,       P_VADDw,       P_VSUBx,        P_VSUBy,        P_VSUBz,        P_VSUBw,  
- P_VMADDx,      P_VMADDy,      P_VMADDz,      P_VMADDw,      P_VMSUBx,       P_VMSUBy,       P_VMSUBz,       P_VMSUBw, 
- P_VMAXx,       P_VMAXy,       P_VMAXz,       P_VMAXw,       P_VMINIx,       P_VMINIy,       P_VMINIz,       P_VMINIw, 
+void (*COP2SPECIAL1PrintTable[64])( string& output ) =
+{
+ P_VADDx,       P_VADDy,       P_VADDz,       P_VADDw,       P_VSUBx,        P_VSUBy,        P_VSUBz,        P_VSUBw,
+ P_VMADDx,      P_VMADDy,      P_VMADDz,      P_VMADDw,      P_VMSUBx,       P_VMSUBy,       P_VMSUBz,       P_VMSUBw,
+ P_VMAXx,       P_VMAXy,       P_VMAXz,       P_VMAXw,       P_VMINIx,       P_VMINIy,       P_VMINIz,       P_VMINIw,
  P_VMULx,       P_VMULy,       P_VMULz,       P_VMULw,       P_VMULq,        P_VMAXi,        P_VMULi,        P_VMINIi,
- P_VADDq,       P_VMADDq,      P_VADDi,       P_VMADDi,      P_VSUBq,        P_VMSUBq,       P_VSUbi,        P_VMSUBi, 
- P_VADD,        P_VMADD,       P_VMUL,        P_VMAX,        P_VSUB,         P_VMSUB,        P_VOPMSUB,      P_VMINI,  
+ P_VADDq,       P_VMADDq,      P_VADDi,       P_VMADDi,      P_VSUBq,        P_VMSUBq,       P_VSUbi,        P_VMSUBi,
+ P_VADD,        P_VMADD,       P_VMUL,        P_VMAX,        P_VSUB,         P_VMSUB,        P_VOPMSUB,      P_VMINI,
  P_VIADD,       P_VISUB,       P_VIADDI,      P_COP2_Unknown,P_VIAND,        P_VIOR,         P_COP2_Unknown, P_COP2_Unknown,
- P_VCALLMS,     P_CALLMSR,     P_COP2_Unknown,P_COP2_Unknown,P_COP2_SPECIAL2,P_COP2_SPECIAL2,P_COP2_SPECIAL2,P_COP2_SPECIAL2,  
+ P_VCALLMS,     P_CALLMSR,     P_COP2_Unknown,P_COP2_Unknown,P_COP2_SPECIAL2,P_COP2_SPECIAL2,P_COP2_SPECIAL2,P_COP2_SPECIAL2,
 
 };
 /*
@@ -576,22 +576,22 @@ void (*COP2SPECIAL1PrintTable[64])( string& output ) =
 1010 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 1011 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 1100 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
-1101 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  | 
+1101 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 1110 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
 1111 |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |  ---  |
- hi  |-------|-------|-------|-------|-------|-------|-------|-------| 
+ hi  |-------|-------|-------|-------|-------|-------|-------|-------|
 */
-void (*COP2SPECIAL2PrintTable[128])( string& output ) = 
+void (*COP2SPECIAL2PrintTable[128])( string& output ) =
 {
  P_VADDAx      ,P_VADDAy      ,P_VADDAz      ,P_VADDAw      ,P_VSUBAx      ,P_VSUBAy      ,P_VSUBAz      ,P_VSUBAw,
  P_VMADDAx     ,P_VMADDAy     ,P_VMADDAz     ,P_VMADDAw     ,P_VMSUBAx     ,P_VMSUBAy     ,P_VMSUBAz     ,P_VMSUBAw,
  P_VITOF0      ,P_VITOF4      ,P_VITOF12     ,P_VITOF15     ,P_VFTOI0      ,P_VFTOI4      ,P_VFTOI12     ,P_VFTOI15,
  P_VMULAx      ,P_VMULAy      ,P_VMULAz      ,P_VMULAw      ,P_VMULAq      ,P_VABS        ,P_VMULAi      ,P_VCLIPw,
  P_VADDAq      ,P_VMADDAq     ,P_VADDAi      ,P_VMADDAi     ,P_VSUBAq      ,P_VMSUBAq     ,P_VSUBAi      ,P_VMSUBAi,
- P_VADDA       ,P_VMADDA      ,P_VMULA       ,P_COP2_Unknown,P_VSUBA       ,P_VMSUBA      ,P_VOPMULA     ,P_VNOP,   
- P_VMONE       ,P_VMR32       ,P_COP2_Unknown,P_COP2_Unknown,P_VLQI        ,P_VSQI        ,P_VLQD        ,P_VSQD,   
- P_VDIV        ,P_VSQRT       ,P_VRSQRT      ,P_VWAITQ      ,P_VMTIR       ,P_VMFIR       ,P_VILWR       ,P_VISWR,  
- P_VRNEXT      ,P_VRGET       ,P_VRINIT      ,P_VRXOR       ,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown, 
+ P_VADDA       ,P_VMADDA      ,P_VMULA       ,P_COP2_Unknown,P_VSUBA       ,P_VMSUBA      ,P_VOPMULA     ,P_VNOP,
+ P_VMONE       ,P_VMR32       ,P_COP2_Unknown,P_COP2_Unknown,P_VLQI        ,P_VSQI        ,P_VLQD        ,P_VSQD,
+ P_VDIV        ,P_VSQRT       ,P_VRSQRT      ,P_VWAITQ      ,P_VMTIR       ,P_VMFIR       ,P_VILWR       ,P_VISWR,
+ P_VRNEXT      ,P_VRGET       ,P_VRINIT      ,P_VRXOR       ,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,
  P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,
  P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,
  P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,P_COP2_Unknown,
@@ -708,7 +708,7 @@ void COP1_Unknown( string& output )
 
 //********************* Standard Opcodes***********************
 void J( string& output )      { output += "j\t";        jump_decode(output);}
-void JAL( string& output )    { output += "jal\t";      jump_decode(output);} 
+void JAL( string& output )    { output += "jal\t";      jump_decode(output);}
 void BEQ( string& output )    { _sap("beq\t%s, %s, ")          GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); offset_decode(output); }
 void BNE( string& output )    { _sap("bne\t%s, %s, ")          GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); offset_decode(output); }
 void BLEZ( string& output )   { _sap("blez\t%s, ")             GPR_REG[DECODE_RS]); offset_decode(output); }
@@ -789,7 +789,7 @@ void MTLO( string& output )    { _sap("mtlo\t%s")          GPR_REG[DECODE_RS]); 
 void DSLLV( string& output )   { _sap("dsllv\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
 void DSRLV( string& output )   { _sap("dsrlv\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
 void DSRAV( string& output )   { _sap("dsrav\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
-void MULT( string& output )    { _sap("mult\t%s, %s, %s")  GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]);}	
+void MULT( string& output )    { _sap("mult\t%s, %s, %s")  GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]);}
 void MULTU( string& output )   { _sap("multu\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]);}
 void DIV( string& output )     { _sap("div\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void DIVU( string& output )    { _sap("divu\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
@@ -810,7 +810,7 @@ void DSUBU( string& output )   { _sap("dsubu\t%s, %s, %s") GPR_REG[DECODE_RD], G
 void TGE( string& output )     { _sap("tge\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void TGEU( string& output )    { _sap("tgeu\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void TLT( string& output )     { _sap("tlt\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void TLTU( string& output )    { _sap("tltu\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void TLTU( string& output )    { _sap("tltu\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void TEQ( string& output )     { _sap("teq\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void TNE( string& output )     { _sap("tne\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void DSLL( string& output )    { _sap("dsll\t%s, %s, 0x%02X")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], DECODE_SA); }
@@ -821,7 +821,7 @@ void DSRL32( string& output )  { _sap("dsrl32\t%s, %s, 0x%02X") GPR_REG[DECODE_R
 void DSRA32( string& output )  { _sap("dsra32\t%s, %s, 0x%02X") GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], DECODE_SA); }
 void MOVZ( string& output )    { _sap("movz\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void MOVN( string& output )    { _sap("movn\t%s, %s, %s") GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void MFSA( string& output )    { _sap("mfsa\t%s")          GPR_REG[DECODE_RD]);} 
+void MFSA( string& output )    { _sap("mfsa\t%s")          GPR_REG[DECODE_RD]);}
 void MTSA( string& output )    { _sap("mtsa\t%s")          GPR_REG[DECODE_RS]);}
 //*** unsupport (yet) cpu opcodes
 void SYSCALL( string& output ) { output +="syscall ---";/*_sap("syscall\t0x%05X")   DECODE_SYSCALL);*/}
@@ -874,91 +874,91 @@ void PSRAW( string& output )   { _sap( "psraw   \t%s, %s, 0x%02X")   GPR_REG[DEC
 //***************************END OF SPECIAL OPCODES******************
 //*************************MMI0 OPCODES************************
 
-void PADDW( string& output ){  _sap( "paddw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PSUBW( string& output ){  _sap( "psubw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PCGTW( string& output ){  _sap( "pcgtw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PMAXW( string& output ){  _sap( "pmaxw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PADDH( string& output ){  _sap( "paddh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PSUBH( string& output ){  _sap( "psubh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PCGTH( string& output ){  _sap( "pcgth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PMAXH( string& output ){  _sap( "pmaxh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PADDB( string& output ){  _sap( "paddb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PSUBB( string& output ){  _sap( "psubb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
+void PADDW( string& output ){  _sap( "paddw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSUBW( string& output ){  _sap( "psubw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PCGTW( string& output ){  _sap( "pcgtw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMAXW( string& output ){  _sap( "pmaxw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PADDH( string& output ){  _sap( "paddh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSUBH( string& output ){  _sap( "psubh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PCGTH( string& output ){  _sap( "pcgth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMAXH( string& output ){  _sap( "pmaxh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PADDB( string& output ){  _sap( "paddb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSUBB( string& output ){  _sap( "psubb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PCGTB( string& output ){  _sap( "pcgtb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PADDSW( string& output ){ _sap( "paddsw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PSUBSW( string& output ){ _sap( "psubsw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXTLW( string& output ){ _sap( "pextlw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PPACW( string& output ) { _sap( "ppacw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PADDSH( string& output ){ _sap( "paddsh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PADDSW( string& output ){ _sap( "paddsw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSUBSW( string& output ){ _sap( "psubsw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXTLW( string& output ){ _sap( "pextlw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PPACW( string& output ) { _sap( "ppacw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PADDSH( string& output ){ _sap( "paddsh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PSUBSH( string& output ){ _sap( "psubsh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PEXTLH( string& output ){ _sap( "pextlh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PPACH( string& output ) { _sap( "ppach\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PADDSB( string& output ){ _sap( "paddsb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PSUBSB( string& output ){ _sap( "psubsb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXTLB( string& output ){ _sap( "pextlb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PPACB( string& output ) { _sap( "ppacb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXT5( string& output ) { _sap( "pext5\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }  
-void PPAC5( string& output ) { _sap( "ppac5\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); } 
+void PEXTLH( string& output ){ _sap( "pextlh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PPACH( string& output ) { _sap( "ppach\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PADDSB( string& output ){ _sap( "paddsb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSUBSB( string& output ){ _sap( "psubsb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXTLB( string& output ){ _sap( "pextlb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PPACB( string& output ) { _sap( "ppacb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXT5( string& output ) { _sap( "pext5\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
+void PPAC5( string& output ) { _sap( "ppac5\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
 //**********END OF MMI0 OPCODES*********************************
 //**********MMI1 OPCODES**************************************
 void PABSW( string& output ){  _sap( "pabsw%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
 void PCEQW( string& output ){  _sap( "pceqw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PMINW( string& output ){  _sap( "pminw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PMINW( string& output ){  _sap( "pminw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PADSBH( string& output ){ _sap( "padsbh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PABSH( string& output ){  _sap( "pabsh%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
 void PCEQH( string& output ){  _sap( "pceqh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PMINH( string& output ){  _sap( "pminh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
-void PCEQB( string& output ){  _sap( "pceqb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PMINH( string& output ){  _sap( "pminh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PCEQB( string& output ){  _sap( "pceqb\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PADDUW( string& output ){ _sap( "padduw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PSUBUW( string& output ){ _sap( "psubuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXTUW( string& output ){ _sap( "pextuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
+void PSUBUW( string& output ){ _sap( "psubuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXTUW( string& output ){ _sap( "pextuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PADDUH( string& output ){ _sap( "padduh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PSUBUH( string& output ){ _sap( "psubuh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXTUH( string& output ){ _sap( "pextuh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PSUBUH( string& output ){ _sap( "psubuh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXTUH( string& output ){ _sap( "pextuh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PADDUB( string& output ){ _sap( "paddub\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PSUBUB( string& output ){ _sap( "psubub\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PEXTUB( string& output ){ _sap( "pextub\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void QFSRV( string& output ) { _sap( "qfsrv\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void QFSRV( string& output ) { _sap( "qfsrv\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 //********END OF MMI1 OPCODES***********************************
 //*********MMI2 OPCODES***************************************
-void PMADDW( string& output ){ _sap( "pmaddw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PSLLVW( string& output ){ _sap( "psllvw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PSRLVW( string& output ){ _sap( "psrlvw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PMSUBW( string& output ){ _sap( "msubw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PMADDW( string& output ){ _sap( "pmaddw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSLLVW( string& output ){ _sap( "psllvw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PSRLVW( string& output ){ _sap( "psrlvw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMSUBW( string& output ){ _sap( "msubw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PMFHI( string& output ){  _sap( "pmfhi\t%s")          GPR_REG[DECODE_RD]); }
-void PMFLO( string& output ){  _sap( "pmflo\t%s")          GPR_REG[DECODE_RD]); } 
-void PINTH( string& output ){  _sap( "pinth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PMULTW( string& output ){ _sap( "pmultw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PDIVW( string& output ){  _sap( "pdivw\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PCPYLD( string& output ){ _sap( "pcpyld\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PMADDH( string& output ){ _sap( "pmaddh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PHMADH( string& output ){ _sap( "phmadh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PMFLO( string& output ){  _sap( "pmflo\t%s")          GPR_REG[DECODE_RD]); }
+void PINTH( string& output ){  _sap( "pinth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMULTW( string& output ){ _sap( "pmultw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PDIVW( string& output ){  _sap( "pdivw\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PCPYLD( string& output ){ _sap( "pcpyld\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMADDH( string& output ){ _sap( "pmaddh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PHMADH( string& output ){ _sap( "phmadh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PAND( string& output ){   _sap( "pand\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PXOR( string& output ){   _sap( "pxor\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PMSUBH( string& output ){ _sap( "pmsubh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PHMSBH( string& output ){ _sap( "phmsbh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXEH( string& output ){  _sap( "pexeh\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); } 
-void PREVH( string& output ){  _sap( "prevh\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }  
-void PMULTH( string& output ){ _sap( "pmulth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PDIVBW( string& output ){ _sap( "pdivbw\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PEXEW( string& output ){  _sap( "pexew\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); } 
-void PROT3W( string& output ){ _sap( "prot3w\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); } 
+void PMSUBH( string& output ){ _sap( "pmsubh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PHMSBH( string& output ){ _sap( "phmsbh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXEH( string& output ){  _sap( "pexeh\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
+void PREVH( string& output ){  _sap( "prevh\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
+void PMULTH( string& output ){ _sap( "pmulth\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PDIVBW( string& output ){ _sap( "pdivbw\t%s, %s")      GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PEXEW( string& output ){  _sap( "pexew\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
+void PROT3W( string& output ){ _sap( "prot3w\t%s, %s")      GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]); }
 //*****END OF MMI2 OPCODES***********************************
 //*************************MMI3 OPCODES************************
 void PMADDUW( string& output ){ _sap("pmadduw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
-void PSRAVW( string& output ){  _sap("psravw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }  
+void PSRAVW( string& output ){  _sap("psravw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RT], GPR_REG[DECODE_RS]); }
 void PMTHI( string& output ){   _sap("pmthi\t%s")          GPR_REG[DECODE_RS]); }
 void PMTLO( string& output ){   _sap("pmtlo\t%s")          GPR_REG[DECODE_RS]); }
-void PINTEH( string& output ){  _sap("pinteh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
-void PMULTUW( string& output ){ _sap("pmultuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PINTEH( string& output ){  _sap("pinteh\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
+void PMULTUW( string& output ){ _sap("pmultuw\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PDIVUW( string& output ){  _sap("pdivuw\t%s, %s")       GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PCPYUD( string& output ){  _sap("pcpyud\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); } 
+void PCPYUD( string& output ){  _sap("pcpyud\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void POR( string& output ){     _sap("por\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
-void PNOR( string& output ){    _sap("pnor\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }  
+void PNOR( string& output ){    _sap("pnor\t%s, %s, %s")   GPR_REG[DECODE_RD], GPR_REG[DECODE_RS], GPR_REG[DECODE_RT]); }
 void PEXCH( string& output ){   _sap("pexch\t%s, %s")       GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]);}
-void PCPYH( string& output ){   _sap("pcpyh\t%s, %s")       GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]);} 
+void PCPYH( string& output ){   _sap("pcpyh\t%s, %s")       GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]);}
 void PEXCW( string& output ){   _sap("pexcw\t%s, %s")       GPR_REG[DECODE_RD], GPR_REG[DECODE_RT]);}
-//**********************END OF MMI3 OPCODES******************** 
+//**********************END OF MMI3 OPCODES********************
 
 //****************************************************************************
 //** COP0                                                                   **
@@ -990,21 +990,21 @@ void BC1F( string& output ){   output += "bc1f\t";      offset_decode(output); }
 void BC1T( string& output ){   output += "bc1t\t";      offset_decode(output); }
 void BC1FL( string& output ){  output += "bc1fl\t";     offset_decode(output); }
 void BC1TL( string& output ){  output += "bc1tl\t";     offset_decode(output); }
-void ADD_S( string& output ){  _sap("add.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}  
-void SUB_S( string& output ){  _sap("sub.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}  
-void MUL_S( string& output ){  _sap("mul.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}  
-void DIV_S( string& output ){  _sap("div.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }  
-void SQRT_S( string& output ){ _sap("sqrt.s\t%s, %s")   COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FT]); } 
-void ABS_S( string& output ){  _sap("abs.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); }  
-void MOV_S( string& output ){  _sap("mov.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); } 
-void NEG_S( string& output ){  _sap("neg.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]);} 
-void RSQRT_S( string& output ){_sap("rsqrt.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}  
-void ADDA_S( string& output ){ _sap("adda.s\t%s, %s")     COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
-void SUBA_S( string& output ){ _sap("suba.s\t%s, %s")     COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
+void ADD_S( string& output ){  _sap("add.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}
+void SUB_S( string& output ){  _sap("sub.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}
+void MUL_S( string& output ){  _sap("mul.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}
+void DIV_S( string& output ){  _sap("div.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
+void SQRT_S( string& output ){ _sap("sqrt.s\t%s, %s")   COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FT]); }
+void ABS_S( string& output ){  _sap("abs.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); }
+void MOV_S( string& output ){  _sap("mov.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); }
+void NEG_S( string& output ){  _sap("neg.s\t%s, %s")     COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]);}
+void RSQRT_S( string& output ){_sap("rsqrt.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}
+void ADDA_S( string& output ){ _sap("adda.s\t%s, %s")     COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
+void SUBA_S( string& output ){ _sap("suba.s\t%s, %s")     COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void MULA_S( string& output ){ _sap("mula.s\t%s, %s")   COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
-void MADD_S( string& output ){ _sap("madd.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
-void MSUB_S( string& output ){ _sap("msub.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
-void MADDA_S( string& output ){_sap("madda.s\t%s, %s")   COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
+void MADD_S( string& output ){ _sap("madd.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
+void MSUB_S( string& output ){ _sap("msub.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
+void MADDA_S( string& output ){_sap("madda.s\t%s, %s")   COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void MSUBA_S( string& output ){_sap("msuba.s\t%s, %s")   COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void CVT_W( string& output ){  _sap("cvt.w.s\t%s, %s")   COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); }
 void MAX_S( string& output ){  _sap("max.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]);}
@@ -1012,7 +1012,7 @@ void MIN_S( string& output ){  _sap("min.s\t%s, %s, %s") COP1_REG_FP[DECODE_FD],
 void C_F( string& output ){    _sap("c.f.s\t%s, %s")     COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void C_EQ( string& output ){   _sap("c.eq.s\t%s, %s")    COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void C_LT( string& output ){   _sap("c.lt.s\t%s, %s")    COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
-void C_LE( string& output ){   _sap("c.le.s\t%s, %s")    COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); } 
+void C_LE( string& output ){   _sap("c.le.s\t%s, %s")    COP1_REG_FP[DECODE_FS], COP1_REG_FP[DECODE_FT]); }
 void CVT_S( string& output ){  _sap("cvt.s.w\t%s, %s")   COP1_REG_FP[DECODE_FD], COP1_REG_FP[DECODE_FS]); }
 //****************************************************************************
 //** END OF COP1                                                            **
@@ -1023,10 +1023,10 @@ void CVT_S( string& output ){  _sap("cvt.s.w\t%s, %s")   COP1_REG_FP[DECODE_FD],
 //****************************************************************************
 //** COP2 - (VU0)                                                           **
 //****************************************************************************
-void P_QMFC2( string& output ){   _sap("qmfc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_FP[DECODE_FS]);  } 
-void P_CFC2( string& output ){    _sap("cfc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_CTL[DECODE_FS]); } 
-void P_QMTC2( string& output ){   _sap("qmtc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_FP[DECODE_FS]); } 
-void P_CTC2( string& output ){    _sap("ctc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_CTL[DECODE_FS]); }  
+void P_QMFC2( string& output ){   _sap("qmfc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_FP[DECODE_FS]);  }
+void P_CFC2( string& output ){    _sap("cfc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_CTL[DECODE_FS]); }
+void P_QMTC2( string& output ){   _sap("qmtc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_FP[DECODE_FS]); }
+void P_CTC2( string& output ){    _sap("ctc2\t%s, %s")      GPR_REG[DECODE_RT], COP2_REG_CTL[DECODE_FS]); }
 void P_BC2F( string& output ){    output += "bc2f\t";      offset_decode(output); }
 void P_BC2T( string& output ){    output += "bc2t\t";      offset_decode(output); }
 void P_BC2FL( string& output ){   output += "bc2fl\t";     offset_decode(output); }
@@ -1041,13 +1041,13 @@ const char *dest_string(void)
 {
 	static char str[5];
 	int i = 0;
-	
+
 	if(_X) str[i++] = 'x';
 	if(_Y) str[i++] = 'y';
 	if(_Z) str[i++] = 'z';
 	if(_W) str[i++] = 'w';
 	str[i++] = 0;
-	
+
 	return (const char *)str;
 }
 
@@ -1185,6 +1185,6 @@ void P_VRNEXT( string& output ){_sap("vrnext %s%s, R") COP2_REG_CTL[DECODE_FT], 
 void P_VRGET( string& output ){_sap("vrget %s%s, R") COP2_REG_CTL[DECODE_FT], dest_string());}
 void P_VRINIT( string& output ){_sap("vrinit R, %s%s") COP2_REG_CTL[DECODE_FS], dest_string());}
 void P_VRXOR( string& output ){_sap("vrxor R, %s%s") COP2_REG_CTL[DECODE_FS], dest_string());}
-//************************************END OF SPECIAL2 VUO TABLE****************************     
+//************************************END OF SPECIAL2 VUO TABLE****************************
 
 }

@@ -32,6 +32,6 @@ int main(int argc, char *argv[]) {
 	fputc(0, f);
 
 	fclose(f);
-	
+
 	return 0;
 }

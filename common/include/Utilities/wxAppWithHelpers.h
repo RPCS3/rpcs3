@@ -91,7 +91,7 @@ public:
 
 	MsgButtons& OKCancel()	{ m_OK = m_Cancel = true; return *this; }
 	MsgButtons& YesNo()		{ m_Yes = m_No = true; return *this; }
-		
+
 	bool HasOK() const		{ return m_OK; }
 	bool HasCancel() const	{ return m_Cancel; }
 	bool HasApply() const	{ return m_Apply; }
@@ -104,7 +104,7 @@ public:
 	bool HasIgnore() const	{ return m_Ignore; }
 	bool HasReset() const	{ return m_Reset; }
 	bool HasClose() const	{ return m_Close; }
-	
+
 	bool HasCustom() const	{ return !m_CustomLabel.IsEmpty(); }
 	const wxString& GetCustomLabel() const { return m_CustomLabel; }
 
@@ -192,7 +192,7 @@ class pxMessageBoxEvent : public BaseMessageBoxEvent
 protected:
 	wxString			m_Title;
 	MsgButtons			m_Buttons;
-	
+
 public:
 	virtual ~pxMessageBoxEvent() throw() { }
 	virtual pxMessageBoxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
@@ -234,7 +234,7 @@ public:
 
 protected:
 	virtual int _DoDialog() const;
-	
+
 };
 
 // --------------------------------------------------------------------------------------
@@ -290,7 +290,7 @@ typedef void FnType_VoidMethod();
 class wxAppWithHelpers : public wxApp
 {
 	typedef wxApp _parent;
-	
+
 	DECLARE_DYNAMIC_CLASS(wxAppWithHelpers)
 
 protected:
@@ -306,7 +306,7 @@ public:
 	virtual ~wxAppWithHelpers() {}
 
 	void CleanUp();
-	
+
 	void DeleteObject( IDeletableObject& obj );
 	void DeleteObject( IDeletableObject* obj )
 	{

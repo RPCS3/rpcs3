@@ -110,9 +110,9 @@ u32 g_columnTable32[8][8] = {
 };
 
 u32 g_columnTable16[8][16] = {
-    {   0,   2,   8,  10,  16,  18,  24,  26, 
+    {   0,   2,   8,  10,  16,  18,  24,  26,
         1,   3,   9,  11,  17,  19,  25,  27 },
-    {   4,   6,  12,  14,  20,  22,  28,  30, 
+    {   4,   6,  12,  14,  20,  22,  28,  30,
         5,   7,  13,  15,  21,  23,  29,  31 },
     {  32,  34,  40,  42,  48,  50,  56,  58,
        33,  35,  41,  43,  49,  51,  57,  59 },
@@ -139,7 +139,7 @@ u32 g_columnTable8[16][16] = {
        43,  47,  59,  63,  11,  15,  27,  31 },
     {  96, 100, 112, 116,  64,  68,  80,  84,   // column 1
        98, 102, 114, 118,  66,  70,  82,  86 },
-    { 104, 108, 120, 124,  72,  76,  88,  92, 
+    { 104, 108, 120, 124,  72,  76,  88,  92,
       106, 110, 122, 126,  74,  78,  90,  94 },
     {  65,  69,  81,  85,  97, 101, 113, 117,
        67,  71,  83,  87,  99, 103, 115, 119 },
@@ -174,7 +174,7 @@ u32 g_columnTable4[16][32] = {
        22,  30,  54,  62,  86,  94, 118, 126 },
     {  65,  73,  97, 105,   1,   9,  33,  41,
        67,  75,  99, 107,   3,  11,  35,  43,
-       69,  77, 101, 109,   5,  13,  37,  45, 
+       69,  77, 101, 109,   5,  13,  37,  45,
        71,  79, 103, 111,   7,  15,  39,  47 },
     {  81,  89, 113, 121,  17,  25,  49,  57,
        83,  91, 115, 123,  19,  27,  51,  59,
@@ -190,7 +190,7 @@ u32 g_columnTable4[16][32] = {
       214, 222, 246, 254, 150, 158, 182, 190 },
     { 129, 137, 161, 169, 193, 201, 225, 233,
       131, 139, 163, 171, 195, 203, 227, 235,
-      133, 141, 165, 173, 197, 205, 229, 237, 
+      133, 141, 165, 173, 197, 205, 229, 237,
       135, 143, 167, 175, 199, 207, 231, 239 },
     { 145, 153, 177, 185, 209, 217, 241, 249,
       147, 155, 179, 187, 211, 219, 243, 251,
@@ -206,7 +206,7 @@ u32 g_columnTable4[16][32] = {
       278, 286, 310, 318, 342, 350, 374, 382 },
     { 321, 329, 353, 361, 257, 265, 289, 297,
       323, 331, 355, 363, 259, 267, 291, 299,
-      325, 333, 357, 365, 261, 269, 293, 301, 
+      325, 333, 357, 365, 261, 269, 293, 301,
       327, 335, 359, 367, 263, 271, 295, 303 },
     { 337, 345, 369, 377, 273, 281, 305, 313,
       339, 347, 371, 379, 275, 283, 307, 315,
@@ -222,7 +222,7 @@ u32 g_columnTable4[16][32] = {
       470, 478, 502, 510, 406, 414, 438, 446 },
     { 385, 393, 417, 425, 449, 457, 481, 489,
       387, 395, 419, 427, 451, 459, 483, 491,
-      389, 397, 421, 429, 453, 461, 485, 493, 
+      389, 397, 421, 429, 453, 461, 485, 493,
       391, 399, 423, 431, 455, 463, 487, 495 },
     { 401, 409, 433, 441, 465, 473, 497, 505,
       403, 411, 435, 443, 467, 475, 499, 507,
@@ -624,16 +624,16 @@ DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 //void TransferHostLocal4(const void* pbyMem, u32 nQWordSize)
 //{
 //	START_HOSTLOCAL();
-//	
+//
 //	const T* pbuf = (const T*)pbyMem;
 //	u32 nSize = nQWordSize*16*2/TRANSMIT_PITCH_4(2, T);
 //	nSize = min(nSize, gs.imageWnew * gs.imageHnew);
-//	
+//
 //	int endY = ROUND_UPPOW2(i, blockheight);
 //	int alignedY = ROUND_DOWNPOW2(gs.imageEndY, blockheight);
 //	int alignedX = ROUND_DOWNPOW2(gs.imageEndX, blockwidth);
 //	bool bCanAlign = MOD_POW2(gs.trxpos.dx, blockwidth) == 0 && (j == gs.trxpos.dx) && (alignedY > endY) && alignedX > gs.trxpos.dx;
-//	
+//
 //	if( (gs.imageEndX-gs.trxpos.dx)%widthlimit ) {
 //		/* hack */
 //		if( abs((int)nSize - (gs.imageEndY-i)*(gs.imageEndX-gs.trxpos.dx)+(j-gs.trxpos.dx)) <= widthlimit ) {
@@ -643,15 +643,15 @@ DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 //		}
 //		bCanAlign = false;
 //	}
-//	
+//
 //	/* first align on block boundary */
 //	if( MOD_POW2(i, blockheight) || !bCanAlign ) {
-//		
+//
 //		if( !bCanAlign )
 //			endY = gs.imageEndY; /* transfer the whole image */
 //		else
 //			assert( endY < gs.imageEndY); /* part of alignment condition */
-//		
+//
 //		if( (DSTPSM == 0x13 || DSTPSM == 0x14) && ((gs.imageEndX-gs.trxpos.dx)%widthlimit) ) {
 //			/* transmit with a width of 1 */
 //			TRANSMIT_HOSTLOCAL_Y_4(4, T, (1+(DSTPSM == 0x14)), endY);
@@ -659,24 +659,24 @@ DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 //		else {
 //			TRANSMIT_HOSTLOCAL_Y_4(4, T, widthlimit, endY);
 //		}
-//		
+//
 //		if( nSize == 0 || i == gs.imageEndY )
 //			goto End;
 //	}
-//	
+//
 //	assert( MOD_POW2(i, blockheight) == 0 && j == gs.trxpos.dx);
-//	
+//
 //	/* can align! */
 //	int pitch = gs.imageEndX-gs.trxpos.dx;
 //	u32 area = pitch*blockheight;
 //	int fracX = gs.imageEndX-alignedX;
-//	
+//
 //	/* on top of checking whether pbuf is alinged, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */
 //	bool bAligned = !((u32)pbuf & 0xf) && (TRANSMIT_PITCH_4(pitch, T)&0xf) == 0;
-//	
+//
 //	/* transfer aligning to blocks */
 //	for(; i < alignedY && nSize >= area; i += blockheight, nSize -= area) {
-//		
+//
 //		if( bAligned || ((DSTPSM==PSMCT24) || (DSTPSM==PSMT8H) || (DSTPSM==PSMT4HH) || (DSTPSM==PSMT4HL)) ) {
 //			for(int tempj = gs.trxpos.dx; tempj < alignedX; tempj += blockwidth, pbuf += TRANSMIT_PITCH_4(blockwidth, T)/sizeof(T)) {
 //				SwizzleBlock4(pstart + getPixelAddress4_0(tempj, i, gs.dstbuf.bw)*blockbits/8,
@@ -689,7 +689,7 @@ DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 //					(u8*)pbuf, TRANSMIT_PITCH_4(pitch, T));
 //			}
 //		}
-//		
+//
 //		/* transfer the rest */
 //		if( alignedX < gs.imageEndX ) {
 //			TRANSMIT_HOSTLOCAL_X_4(4, T, widthlimit, blockheight, alignedX);
@@ -698,13 +698,13 @@ DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 //		else pbuf += (blockheight-1)*TRANSMIT_PITCH_4(pitch, T)/sizeof(T);
 //		j = 0;
 //	}
-//	
+//
 //	if( TRANSMIT_PITCH_4(nSize, T)/4 > 0 ) {
 //		TRANSMIT_HOSTLOCAL_Y_4(4, T, widthlimit, gs.imageEndY);
 //		/* sometimes wrong sizes are sent (tekken tag) */
 //		assert( gs.imageTransfer == -1 || TRANSMIT_PITCH_4(nSize,T)/4 <= 2 );
 //	}
-//	
+//
 //	END_HOSTLOCAL();
 //}
 

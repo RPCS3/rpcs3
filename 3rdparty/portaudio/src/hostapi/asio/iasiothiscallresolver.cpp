@@ -71,7 +71,7 @@
     (IUnknown functions)
     0   virtual HRESULT STDMETHODCALLTYPE (*QueryInterface)(REFIID riid, void **ppv) = 0;
     4   virtual ULONG STDMETHODCALLTYPE (*AddRef)() = 0;
-    8   virtual ULONG STDMETHODCALLTYPE (*Release)() = 0;      
+    8   virtual ULONG STDMETHODCALLTYPE (*Release)() = 0;
 
     (IASIO functions)
     12	virtual ASIOBool (*init)(void *sysHandle) = 0;
@@ -128,7 +128,7 @@
     with MSVC, and requires that you ship the OpenASIO DLL with your
     application.
 
-    
+
     ACKNOWLEDGEMENTS
 
     Ross Bencina: worked out the thiscall details above, wrote the original
@@ -186,7 +186,7 @@ extern IASIO* theAsioDriver;
 
 // The following macros define the inline assembler for BORLAND first then gcc
 
-#if defined(__BCPLUSPLUS__) || defined(__BORLANDC__)          
+#if defined(__BCPLUSPLUS__) || defined(__BORLANDC__)
 
 
 #define CALL_THISCALL_0( resultName, thisPtr, funcOffset )\
@@ -383,7 +383,7 @@ ULONG STDMETHODCALLTYPE IASIOThiscallResolver::AddRef()
 ULONG STDMETHODCALLTYPE IASIOThiscallResolver::Release()
 {
     assert( false ); // this function should never be called by the ASIO SDK.
-    
+
     return 1;
 }
 
@@ -465,7 +465,7 @@ ASIOError IASIOThiscallResolver::getSampleRate(ASIOSampleRate *sampleRate)
 }
 
 ASIOError IASIOThiscallResolver::setSampleRate(ASIOSampleRate sampleRate)
-{    
+{
     ASIOBool result;
     CALL_THISCALL_1_DOUBLE( result, that_, 56, sampleRate );
     return result;

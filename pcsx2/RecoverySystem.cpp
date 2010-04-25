@@ -78,7 +78,7 @@ public:
 		current_state_thread = NULL;
 		state_buffer_lock.Release();		// just in case;
 	}
-	
+
 	virtual bool IsFreezing() const=0;
 
 protected:
@@ -119,7 +119,7 @@ protected:
 class StateThread_Freeze : public _BaseStateThread
 {
 	typedef _BaseStateThread _parent;
-	
+
 public:
 	StateThread_Freeze( FnType_OnThreadComplete* onFinished ) : _BaseStateThread( "Freeze", onFinished )
 	{
@@ -186,8 +186,8 @@ public:
 	{
 		if( m_gzfp != NULL ) gzclose( m_gzfp );
 	}
-	
-	bool IsFreezing() const { return true; }	
+
+	bool IsFreezing() const { return true; }
 
 protected:
 	void OnStart()
@@ -228,10 +228,10 @@ protected:
 			curidx += thisBlockSize;
 			Yield( 1 );
 		} while( curidx < state_buffer.GetSizeInBytes() );
-		
+
 		Console.WriteLn( "State saved to disk without error." );
 	}
-	
+
 	void OnCleanupInThread()
 	{
 		SendFinishEvent( SaveStateAction_ZipToDiskFinished );
@@ -254,7 +254,7 @@ protected:
 	// set true only once the whole file has finished loading.  IF the thread is canceled or
 	// an error occurs, this will remain false.
 	bool			m_finished;
-	
+
 public:
 	StateThread_UnzipFromDisk( FnType_OnThreadComplete* onFinished, bool resume_done, const wxString& file )
 		: _BaseStateThread( "UnzipFromDisk", onFinished )
@@ -298,13 +298,13 @@ protected:
 
 			u32 savever;
 			gzread(m_gzfp, &savever, sizeof(g_SaveVersion));
-			
+
 			if( (savever >> 16) != (g_SaveVersion >> 16) )
 				throw Exception::SaveStateLoadError( m_filename,
 					wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
 					_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
 				);
-			
+
 			if( savever > g_SaveVersion )
 				throw Exception::SaveStateLoadError( m_filename,
 					wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
@@ -319,7 +319,7 @@ protected:
 			throw;
 		}
 	}
-	
+
 	void ExecuteTaskInThread()
 	{
 		// fixme: should start initially with the file size, and then grow from there.
@@ -335,7 +335,7 @@ protected:
 			curidx += BlockSize;
 			TestCancel();
 		} while( !gzeof(m_gzfp) );
-		
+
 		m_finished = true;
 	}
 
@@ -363,10 +363,10 @@ void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 		--sys_resume_lock;
 
 		m_evtsrc_SaveState.Dispatch( (SaveStateActionType)evt.GetInt() );
-		
+
 		thr->RethrowException();
 	}
-	
+
 	if( fn_tmp != NULL ) fn_tmp( evt );
 }
 
@@ -390,7 +390,7 @@ static void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 
 	// Phase 2: Record to disk!!
 	(new StateThread_ZipToDisk( NULL, !!evt.GetExtraLong(), zip_dest_filename ))->Start();
-	
+
 	CoreThread.Resume();
 }
 
@@ -562,12 +562,12 @@ public:
 
 		m_Acquired = true;
 	}
-	
+
 	virtual ~Acquire_And_Block() throw()
 	{
 		if( m_DisposeWhenFinished )
 			state_buffer.Dispose();
-		
+
 		if( m_Acquired )
 			state_buffer_lock.Release();
 	}

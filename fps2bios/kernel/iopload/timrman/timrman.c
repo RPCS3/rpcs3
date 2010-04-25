@@ -51,7 +51,7 @@ int  AllocHardTimer(int source, int size, int prescale){
 	if (QueryIntrContext())	return ERROR_INTR_CONTEXT;	//intrman
 
 	CpuSuspendIntr(&x);					//intrman
-	
+
 	for (i=0; i<6; i++)
 		if (!t[i].allocated   && (t[i].source & source) &&
 		    (t[i].size==size) && (t[i].prescale>=prescale)){
@@ -72,7 +72,7 @@ int  ReferHardTimer(int source, int size, int mode, int modemask){
 	if (QueryIntrContext())	return ERROR_INTR_CONTEXT;	//intrman
 
 	CpuSuspendIntr(&x);					//intrman
-	
+
 	for (i=0; i<6; i++)
 		if (t[i].allocated && (t[i].source & source) && (t[i].size==size) &&
 		    (int)(GetTimerStatus(t[i].hwreg>>2) & modemask)==mode){

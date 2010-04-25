@@ -107,7 +107,7 @@ CRenderTarget::CRenderTarget(const frameInfo& frame, CRenderTarget& r)
 	// round down to nearest block and scanline
 	int startheight = ((256*(fbp-r.fbp))/scanlinewidth) * blockheight;
 	int offset = ((256*(fbp-r.fbp))%scanlinewidth) / 0x2000;
-	
+
 	targoffx = offset*64;
 	targoffy = startheight;
 	targheight = r.targheight;
@@ -340,7 +340,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 
 		if( fbp != resolvefbp )
 			locksrc.pBits = (u8*)locksrc.pBits + ((resolvefbp-fbp)*256/scanlinewidth)*blockheight*locksrc.Pitch;
-				
+
 		_Resolve(locksrc, resolvefbp, fbw, resolveheight, psm, fbm);
 		psys->UnlockRect();
 
@@ -363,7 +363,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	SETRS(D3DRS_ZENABLE, FALSE);
 	SETRS(D3DRS_ZWRITEENABLE, FALSE);
 	SETRS(D3DRS_COLORWRITEENABLE, 0xf);
-	
+
 	pd3dDevice->SetVertexShader(pvsBitBlt);
 	pd3dDevice->SetStreamSource(0, pvbRect, 0, sizeof(VertexGPU));
 
@@ -395,7 +395,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 			nUpdateTarg = 0;
 		}
 	}
-	
+
 	if( nUpdateTarg ) {
 
 		pd3dDevice->SetTexture(SAMP_FINAL, ittarg->second->ptex);
@@ -442,12 +442,12 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		assert( psurf != NULL );
 
 		SetViewport();
-		
+
 		if( conf.options & GSOPTION_WIREFRAME ) SETRS(D3DRS_FILLMODE, D3DFILL_SOLID);
 
 		if( ZeroGS::IsWriteDestAlphaTest() ) {
 			SETRS(D3DRS_STENCILENABLE, TRUE);
-			SETRS(D3DRS_STENCILWRITEMASK, 0xff); 
+			SETRS(D3DRS_STENCILWRITEMASK, 0xff);
 			SETRS(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
 			SETRS(D3DRS_STENCILPASS, D3DSTENCILOP_ZERO);
 		}
@@ -484,7 +484,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	status = TS_Resolved;
 
 	// reset since settings changed
-	vb[0].bVarsTexSync = 0; 
+	vb[0].bVarsTexSync = 0;
 	ZeroGS::ResetAlphaVariables();
 }
 
@@ -505,7 +505,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	}
 
 	V(ptexConv->GetSurfaceLevel(0, &psurfConv));
-	
+
 	if( !s_bBeginScene ) {
 		pd3dDevice->BeginScene();
 		s_bBeginScene = TRUE;
@@ -673,10 +673,10 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	// TODO, reset depth?
 	if( ZeroGS::icurctx >= 0 ) {
 		// reset since settings changed
-		vb[icurctx].bVarsTexSync = 0; 
+		vb[icurctx].bVarsTexSync = 0;
 		vb[icurctx].bVarsSetTarg = 0;
 	}
-	vb[0].bVarsTexSync = 0; 
+	vb[0].bVarsTexSync = 0;
 }
 
 // use when texture is not tiled and converting from 32bit to 16bit
@@ -688,7 +688,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 {
 	LPD3DTEX ptexConv;
 	LPD3DSURF psurfConv;
-	
+
 	s_RTs.DestroyChildren(this);
 
 	// create
@@ -701,7 +701,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	}
 
 	V(ptexConv->GetSurfaceLevel(0, &psurfConv));
-	
+
 	if( !s_bBeginScene ) {
 		pd3dDevice->BeginScene();
 		s_bBeginScene = TRUE;
@@ -841,7 +841,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 				temp[0] = ((col>>16)&0xff)/255.0f;
 				temp[3] = 2*(((col>>24)&0xff)/255.0f);
 				D3DXFloat32To16Array((D3DXFLOAT16*)pdst, temp, 4);
-				
+
 			}
 		}
 		psys->UnlockRect();
@@ -885,7 +885,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	// TODO, reset depth?
 	if( ZeroGS::icurctx >= 0 ) {
 		// reset since settings changed
-		vb[icurctx].bVarsTexSync = 0; 
+		vb[icurctx].bVarsTexSync = 0;
 		vb[icurctx].bVarsSetTarg = 0;
 	}
 	vb[0].bVarsTexSync = 0;
@@ -920,7 +920,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	SETRS(D3DRS_ZWRITEENABLE, FALSE);
 	SETRS(D3DRS_STENCILENABLE, FALSE);
 	SETRS(D3DRS_COLORWRITEENABLE, 0xf);
-	
+
 	// assume depth already set
 //	if( conf.mrtdepth && bIndepWriteMasks ) SETRS(D3DRS_COLORWRITEENABLE1, 0);
 //	else
@@ -977,7 +977,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	// TODO, reset depth?
 	if( ZeroGS::icurctx >= 0 ) {
 		// reset since settings changed
-		vb[icurctx].bVarsTexSync = 0; 
+		vb[icurctx].bVarsTexSync = 0;
 	}
 }
 
@@ -1033,7 +1033,7 @@ void ZeroGS::CDepthTarget::Resolve()
 		if( vb[0].prndr == this || vb[0].pdepth == this ) Flush(0);
 		if( vb[1].prndr == this || vb[1].pdepth == this ) Flush(1);
 
-		if( !(status & TS_Virtual) || targoffx != 0 || targoffy != 0 ) 
+		if( !(status & TS_Virtual) || targoffx != 0 || targoffy != 0 )
 			status |= TS_Resolved;
 	}
 
@@ -1050,7 +1050,7 @@ void ZeroGS::CDepthTarget::Resolve(int startrange, int endrange)
 		if( vb[0].prndr == this || vb[0].pdepth == this ) Flush(0);
 		if( vb[1].prndr == this || vb[1].pdepth == this ) Flush(1);
 
-		if( !(status & TS_Virtual) ) 
+		if( !(status & TS_Virtual) )
 			status |= TS_Resolved;
 	}
 
@@ -1164,7 +1164,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	if( conf.options & GSOPTION_WIREFRAME ) SETRS(D3DRS_FILLMODE, D3DFILL_SOLID);
 
 	pd3dDevice->SetDepthStencilSurface(pdepth);
-	
+
 	if( pusetarg != NULL ) {
 		pd3dDevice->SetPixelShader(ppsBitBltDepthTex[conf.mrtdepth]);
 	}
@@ -1239,7 +1239,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 
 					it = mapTargets.insert(MAPTARGETS::value_type(key, itnew->second)).first; // readd
 					mapTargets.erase(itnew); // delete old
-					
+
 					bfound = true;
 				}
 			}
@@ -1314,7 +1314,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 			it->second->lastused = timeGetTime();
 			return Promote(it->first&~TARGET_VIRTUAL_KEY);
 		}
-		
+
 		// check if there exists a more recent target that this target could update from
 		// only update if target isn't mirrored
 		bool bCheckHalfCovering = (g_GameSettings&GAME_FULL16BITRES) && (it->second->psm&2) && it->second->fbh +32 < frame.fbh;
@@ -1322,7 +1322,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 		for(MAPTARGETS::iterator itnew = mapTargets.begin(); itnew != mapTargets.end(); ++itnew) {
 			if( itnew->second != it->second && itnew->second->ptex != it->second->ptex && itnew->second->ptexFeedback != it->second->ptex &&
 				itnew->second->lastused > it->second->lastused && !(itnew->second->status & CRenderTarget::TS_NeedUpdate) ) {
-				
+
 				// if new target totally encompasses the current one
 				if( itnew->second->start <= it->second->start && itnew->second->end >= it->second->end ) {
 					it->second->status |= CRenderTarget::TS_NeedUpdate;
@@ -1387,7 +1387,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 //							//break;
 //						}
 //						else {
-						if( (g_GameSettings&GAME_FASTUPDATE) || (it->second->fbw == frame.fbw && 
+						if( (g_GameSettings&GAME_FASTUPDATE) || (it->second->fbw == frame.fbw &&
 							// check depth targets only if partialdepth option
 							(it->second->fbp != frame.fbp|| ((g_GameSettings&GAME_PARTIALDEPTH)&&(opts&CRenderTargetMngr::TO_DepthBuffer))) ) ) {
 
@@ -1505,7 +1505,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, DWORD 
 			}
 		}
 	}
-	
+
 	if( (opts & CRenderTargetMngr::TO_Virtual) ) {
 		ptarg->status = CRenderTarget::TS_Virtual;
 		key |= TARGET_VIRTUAL_KEY;
@@ -1673,7 +1673,7 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	// lock and compare
 	D3DLOCKED_RECT lock;
 	assert( ptex != NULL );
-	
+
 	if( memory != NULL ) {
 		assert( memory->ptr != NULL );
 		lock.pBits = memory->ptr;
@@ -1822,7 +1822,7 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	// find the target and destroy
 	list<CMemoryTarget>::iterator itprev = it; ++it;
 	listClearedTargets.splice(listClearedTargets.end(), listTargets, itprev);
-	
+
 	if( listClearedTargets.size() > TEXDESTROY_THRESH ) {
 		listClearedTargets.pop_front();
 	}
@@ -1880,7 +1880,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 			if( PSMT_ISCLUT(tex0.psm) ) {
 				assert( it->clut.size() > 0 );
-				
+
 				if( it->psm != tex0.psm || it->cpsm != tex0.cpsm || it->clut.size() != clutsize ) {
 					// wrong clut
 					list<CMemoryTarget>::iterator itprev = it;
@@ -1939,7 +1939,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 			it->usedstamp = curstamp;
 			it->validatecount = 0;
-			
+
 			return &(*it);
 		}
 #ifdef SORT_TARGETS
@@ -1961,7 +1961,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	if( (PSMT_ISCLUT(tex0.psm) && tex0.cpsm > 1) || tex0.psm == PSMCT16 || tex0.psm == PSMCT16S) {
 		fmt = D3DFMT_A1R5G5B5;
 	}
-	
+
 	int widthmult = 1;
 	if( g_MaxTexHeight < 4096 ) {
 		if( end-start > g_MaxTexHeight )
@@ -2024,7 +2024,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		targ->cpsm = tex0.cpsm;
 		targ->clut.reserve(256*4); // no matter what
 		targ->clut.resize(clutsize);
-		
+
 		if( tex0.cpsm <= 1 ) { // 32 bit
 			memcpy_amd(&targ->clut[0], ZeroGS::g_pbyGSClut+nClutOffset, clutsize);
 		}
@@ -2074,7 +2074,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		targ->psm = tex0.psm;
 		targ->cpsm = tex0.cpsm;
 		targ->widthmult = widthmult;
-	
+
 		// alloc the mem
 		while( FAILED(pd3dDevice->CreateTexture(GPU_TEXWIDTH*channels*widthmult, (targ->realheight+widthmult-1)/widthmult, 1, 0, fmt, D3DPOOL_DEFAULT, &targ->ptex, NULL)) ) {
 
@@ -2088,7 +2088,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 				DestroyOldest();
 			}
 		}
-		
+
 		// lock
 		V(pd3dDevice->CreateTexture(GPU_TEXWIDTH*channels*widthmult, (targ->realheight+widthmult-1)/widthmult, 1, 0, fmt, D3DPOOL_SYSTEMMEM, &targ->ptexsys, NULL));
 		assert( targ->ptexsys != NULL );
@@ -2100,7 +2100,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	D3DLOCKED_RECT lock;
 	targ->ptexsys->LockRect(0, &lock, NULL, 0);
-	
+
 	// fill with data
 	if( PSMT_ISCLUT(tex0.psm) ) {
 
@@ -2123,7 +2123,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		else {
 			u16* pclut = (u16*)&targ->clut[0];
 			u16* pdst = (u16*)lock.pBits;
-			
+
 			BUILDCLUT();
 		}
 	}
@@ -2293,7 +2293,7 @@ void ZeroGS::CMemoryTargetMngr::ClearRange(int nbStartY, int nbEndY)
 //					continue;
 //				}
 //			}
-//			
+//
 //			++it;
 //		}
 //	}
@@ -2306,7 +2306,7 @@ void ZeroGS::CMemoryTargetMngr::DestroyCleared()
 			it = listClearedTargets.erase(it);
 			continue;
 		}
-		
+
 		++it;
 	}
 
@@ -2332,7 +2332,7 @@ void ZeroGS::CMemoryTargetMngr::DestroyOldest()
 
 	list<CMemoryTarget>::iterator it, itbest;
 	it = itbest = listTargets.begin();
-	
+
 	while(it != listTargets.end()) {
 		if( it->usedstamp < itbest->usedstamp )
 			itbest = it;
@@ -2382,7 +2382,7 @@ LPD3DTEX ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, LPD3DTEX ptexDoNot
 void ZeroGS::CRangeManager::Insert(int start, int end)
 {
 	int imin = 0, imax = (int)ranges.size(), imid;
-	
+
 #ifdef PCSX2_DEBUG
 	// sanity check
 	for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
@@ -2492,7 +2492,7 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 		assert( end >= ranges.front().start );
 		if( start < ranges.front().start ) ranges.front().start = start;
 		if( end > ranges.front().end ) ranges.front().end = end;
-		
+
 #ifdef PCSX2_DEBUG
 		// sanity check
 		for(int i = 0; i < (int)ranges.size()-1; ++i) assert( ranges[i].end < ranges[i+1].start );
@@ -2531,7 +2531,7 @@ void ResolveInRange(int start, int end)
 		Flush(0);
 		Flush(1);
 
-		listTargs.clear(); 
+		listTargs.clear();
 		s_DepthRTs.GetTargs(start, end, listTargs);
 		s_RTs.GetTargs(start, end, listTargs);
 
@@ -2604,7 +2604,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 				if( !(g_GameSettings & GAME_NOQUICKRESOLVE) ) {
 					if( ptarg->fbp != vb[0].gsfb.fbp ) {//&& (vb[0].prndr == NULL || ptarg->fbp != vb[0].prndr->fbp) ) {
-					
+
 						if( ptarg->fbp != vb[1].gsfb.fbp ) { //&& (vb[1].prndr == NULL || ptarg->fbp != vb[1].prndr->fbp) ) {
 							// this render target currently isn't used and is not in the texture's way, so can safely ignore
 							// resolving it. Also the range has to be big enough compared to the target to really call it resolved
@@ -2659,7 +2659,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 							}
 						}
 					}
-					
+
 					ptarg->status |= CRenderTarget::TS_Resolved;
 					if( !ptarg->IsDepth() || (!(g_GameSettings & GAME_NODEPTHUPDATE) || end-start > 0x1000) )
 						ptarg->status |= CRenderTarget::TS_NeedUpdate;
@@ -2694,7 +2694,7 @@ void InitTransferHostLocal()
 	gs.imageEndY = gs.imageY + gs.imageHnew;
 	s_vTransferCache.resize(0);
 
-	assert( gs.imageEndX < 2048 && gs.imageEndY < 2048 );	
+	assert( gs.imageEndX < 2048 && gs.imageEndY < 2048 );
 
 	// hack! viewful joe
 	if( gs.dstbuf.psm == 63 )
@@ -2829,7 +2829,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 //{
 //	assert( gs.imageTransfer == 0 );
 //	u8* pstart = g_pbyGSMemory + gs.dstbuf.bp*256;
-//	
+//
 //	const u8* pendbuf = (const u8*)pbyMem + nQWordSize*4;
 //	int i = gs.imageY, j = gs.imageX;
 //
@@ -3027,7 +3027,7 @@ void TransferLocalHost(void* pbyMem, u32 nQWordSize)
 	}
 }
 
-// dir depends on trxpos.dir 
+// dir depends on trxpos.dir
 void TransferLocalLocal()
 {
 	assert( gs.imageTransfer == 2 );
@@ -3040,7 +3040,7 @@ void TransferLocalLocal()
 		WARN_LOG("Transfer error, dst width exceeds\n");
 
 	int srcstart, srcend, dststart, dstend;
-	
+
 	GetRectMemAddress(srcstart, srcend, gs.srcbuf.psm, gs.trxpos.sx, gs.trxpos.sy, gs.imageWnew, gs.imageHnew, gs.srcbuf.bp, gs.srcbuf.bw);
 	GetRectMemAddress(dststart, dstend, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
 
@@ -3165,15 +3165,15 @@ void TransferLocalLocal()
 
 		case PSMT8:
 			if( gs.dstbuf.psm == PSMT8 ) {
-				TRANSFERLOCALLOCAL(8, 8, 4); 
+				TRANSFERLOCALLOCAL(8, 8, 4);
 			}
 			else {
-				TRANSFERLOCALLOCAL(8, 8H, 4); 
+				TRANSFERLOCALLOCAL(8, 8H, 4);
 			}
 			break;
 
 		case PSMT4:
-			
+
 			switch(gs.dstbuf.psm ) {
 				case PSMT4: TRANSFERLOCALLOCAL_4(4, 4); break;
 				case PSMT4HL: TRANSFERLOCALLOCAL_4(4, 4HL); break;
@@ -3183,10 +3183,10 @@ void TransferLocalLocal()
 
 		case PSMT8H:
 			if( gs.dstbuf.psm == PSMT8 ) {
-				TRANSFERLOCALLOCAL(8H, 8, 4); 
+				TRANSFERLOCALLOCAL(8H, 8, 4);
 			}
 			else {
-				TRANSFERLOCALLOCAL(8H, 8H, 4); 
+				TRANSFERLOCALLOCAL(8H, 8H, 4);
 			}
 			break;
 
@@ -3272,7 +3272,7 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 		end = 0x00400000;
 		return;
 	}
-		
+
 	if( (psm&0x30) == 0x30 || psm == 0xa ) {
 
 		const BLOCK& b = m_Blocks[psm];
@@ -3343,7 +3343,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 			imask |= 0xff000000;
 		}
 	}
-	
+
 #define RESOLVE_32BIT(psm, T, Tsrc, blockbits, blockwidth, blockheight, convfn, frame, aax, aay) \
 	{ \
 		Tsrc* src = (Tsrc*)locksrc.pBits; \
@@ -3407,7 +3407,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16S, u16, u32, 16, 16, 8, RGBA32to16, Frame, 0, 0);
 				}
-				
+
 				break;
 			case PSMT32Z:
 			case PSMT24Z:
@@ -3420,7 +3420,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(32Z, u32, u32, 32, 8, 8, (u32), Frame, 0, 0);
 				}
-				
+
 				break;
 			case PSMT16Z:
 				if( s_AAy ) {
@@ -3432,7 +3432,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16Z, u16, u32, 16, 16, 8, (u16), Frame, 0, 0);
 				}
-				
+
 				break;
 			case PSMT16SZ:
 				if( s_AAy ) {
@@ -3444,7 +3444,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16SZ, u16, u32, 16, 16, 8, (u16), Frame, 0, 0);
 				}
-				
+
 				break;
 		}
 	}
@@ -3461,7 +3461,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(32, u32, Vector_16F, 32, 8, 8, Float16ToARGB, Frame16, 0, 0);
 				}
-				
+
 				break;
 			case PSMCT16:
 				if( s_AAy ) {
@@ -3473,7 +3473,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16, u16, Vector_16F, 16, 16, 8, Float16ToARGB16, Frame16, 0, 0);
 				}
-				
+
 				break;
 			case PSMCT16S:
 				if( s_AAy ) {
@@ -3485,7 +3485,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16S, u16, Vector_16F, 16, 16, 8, Float16ToARGB16, Frame16, 0, 0);
 				}
-				
+
 				break;
 			case PSMT32Z:
 			case PSMT24Z:
@@ -3498,7 +3498,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(32Z, u32, Vector_16F, 32Z, 8, 8, Float16ToARGB_Z, Frame16, 0, 0);
 				}
-				
+
 				break;
 			case PSMT16Z:
 				if( s_AAy ) {
@@ -3510,7 +3510,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16Z, u16, Vector_16F, 16Z, 16, 8, Float16ToARGB16_Z, Frame16, 0, 0);
 				}
-				
+
 				break;
 			case PSMT16SZ:
 				if( s_AAy ) {
@@ -3522,7 +3522,7 @@ void _Resolve(const D3DLOCKED_RECT& locksrc, int fbp, int fbw, int fbh, int psm,
 				else {
 					RESOLVE_32BIT(16SZ, u16, Vector_16F, 16Z, 16, 8, Float16ToARGB16_Z, Frame16, 0, 0);
 				}
-				
+
 				break;
 		}
 	}
@@ -3538,7 +3538,7 @@ void SaveTex(tex0Info* ptex, int usevid)
 {
 	LPD3DTEX pTexture;
 	pd3dDevice->CreateTexture(ptex->tw, ptex->th, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexture, NULL);
-	
+
 	D3DLOCKED_RECT lockdst;
 	pTexture->LockRect(0, &lockdst, NULL, 0);
 
@@ -3589,7 +3589,7 @@ void SaveTex(tex0Info* ptex, int usevid)
 						u = RGBA16to32(u);
 					}
 					else u = 0;
-					
+
 					break;
 				case PSMCT16S:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
@@ -3721,7 +3721,7 @@ void SaveTex(tex0Info* ptex, int usevid)
 	}
 
 	D3DXSaveTextureToFile("tex.tga", D3DXIFF_TGA, pTexture, NULL);
-	
+
 	SAFE_RELEASE(pTexture);
 
 }

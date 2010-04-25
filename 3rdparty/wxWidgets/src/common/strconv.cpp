@@ -2773,7 +2773,7 @@ public:
 
     virtual void CreateIfNeeded() const
     {
-        if ( m_MB2WC_converter == NULL && m_WC2MB_converter == NULL && 
+        if ( m_MB2WC_converter == NULL && m_WC2MB_converter == NULL &&
             m_char_encoding != kTextEncodingUnknown && m_unicode_encoding != kTextEncodingUnknown )
         {
             OSStatus status = noErr ;
@@ -2878,7 +2878,7 @@ public:
             m_WC2MB_converter, (ConstTextPtr) ubuf, byteInLen, &byteInLen,
             (TextPtr) (buf ? buf : tbuf), byteBufferLen, &byteOutLen);
         }
-        
+
 #if SIZEOF_WCHAR_T == 4
         free( ubuf ) ;
 #endif
@@ -2996,7 +2996,7 @@ public :
             m_WC2MB_converter, (ConstTextPtr) dcubuf, dcubufwritten, &dcubufread,
             (TextPtr) (buf ? buf : tbuf), byteBufferLen, &byteOutLen);
         }
-        
+
         free( dcubuf );
 
 #if SIZEOF_WCHAR_T == 4

@@ -116,7 +116,7 @@ void OnInitDialog(HWND hW)
 }
 
 void OnOK(HWND hW) {
-	
+
 	u32 newinterlace = IsDlgButtonChecked(hW, IDC_CONFIG_INTERLACE);
 
 	if( !conf.interlace ) conf.interlace = newinterlace;
@@ -216,12 +216,12 @@ s32 CALLBACK GStest() {
 void CALLBACK GSabout() {
 	DialogBox(hInst,
 			  MAKEINTRESOURCE(IDD_ABOUT),
-			  GetActiveWindow(),  
+			  GetActiveWindow(),
 			  (DLGPROC)AboutDlgProc);
 }
 
 BOOL APIENTRY DllMain(HANDLE hModule,				  // DLL INIT
-					  DWORD  dwReason, 
+					  DWORD  dwReason,
 					  LPVOID lpReserved) {
 	hInst = (HINSTANCE)hModule;
 	return TRUE;										  // very quick :)

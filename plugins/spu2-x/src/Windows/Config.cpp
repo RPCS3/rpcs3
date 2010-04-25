@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -92,7 +92,7 @@ void ReadSettings()
 	// -------------
 
 	Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
-	
+
 	if( mods[OutputModule] == NULL )
 	{
 		// Unsupported or legacy module.
@@ -125,7 +125,7 @@ void WriteSettings()
 	CfgWriteInt(L"DSP PLUGIN",L"ModuleNum",dspPluginModule);
 	CfgWriteBool(L"DSP PLUGIN",L"Enabled",dspPluginEnabled);
 
-	DSoundOut->WriteSettings();	
+	DSoundOut->WriteSettings();
 	SoundtouchCfg::WriteSettings();
 	DebugConfig::WriteSettings();
 
@@ -143,23 +143,23 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 		case WM_INITDIALOG:
 		{
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_RESETCONTENT,0,0 ); 
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_RESETCONTENT,0,0 );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"0 - Nearest (fastest/bad quality)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"1 - Linear (simple/nice)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"2 - Cubic (slower/good highs)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"3 - Hermite (slower/better highs)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"4 - Catmull-Rom (slow/hq)" );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 ); 
-			
-			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_RESETCONTENT,0,0 ); 
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 );
+
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_RESETCONTENT,0,0 );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"1X - Normal Reverb Volume" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"2X - Reverb Volume * 2" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"4X - Reverb Volume * 4" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"8X - Reverb Volume * 8" );
-			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_SETCURSEL,ReverbBoost,0 ); 
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_SETCURSEL,ReverbBoost,0 );
 
 			SendDialogMsg( hWnd, IDC_OUTPUT, CB_RESETCONTENT,0,0 );
-			
+
 			int modidx = 0;
 			while( mods[modidx] != NULL )
 			{
@@ -173,13 +173,13 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			int maxexp = (int)(pow( (double)LATENCY_MAX+2, 1.0/3.0 ) * 128.0);
 			INIT_SLIDER( IDC_LATENCY_SLIDER, minexp, maxexp, 200, 42, 1 );
 
-			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)((pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) + 1) ); 
+			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)((pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) + 1) );
 			swprintf_s(temp,L"%d ms (avg)",SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
-			
+
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
-			
+
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
 			SET_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
 			SET_CHECK(IDC_TS_ENABLE,		timeStretchEnabled);
@@ -189,8 +189,8 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		break;
 
 		case WM_COMMAND:
-			wmId    = LOWORD(wParam); 
-			wmEvent = HIWORD(wParam); 
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{
@@ -220,7 +220,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					mods[module]->Configure((uptr)hWnd);
 				}
 				break;
-				
+
 				case IDC_OPEN_CONFIG_DEBUG:
 				{
 					// Quick Hack -- DebugEnabled is re-loaded with the DebugConfig's API,
@@ -242,7 +242,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchEnabled);
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 				break;
-				
+
 				HANDLE_CHECKNB(IDC_DEBUG_ENABLE,DebugEnabled);
 					DebugConfig::EnableControls( hWnd );
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
@@ -252,12 +252,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					return FALSE;
 			}
 		break;
-		
+
 		case WM_HSCROLL:
 		{
-			wmEvent = LOWORD(wParam); 
+			wmEvent = LOWORD(wParam);
 			HWND hwndDlg = (HWND)lParam;
-			
+
 			// TB_THUMBTRACK passes the curpos in wParam.  Other messages
 			// have to use TBM_GETPOS, so they will override this assignment (see below)
 
@@ -295,13 +295,13 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			}
 		}
 		break;
-		
+
 		default:
 			return FALSE;
 	}
 	return TRUE;
 }
- 
+
 void configure()
 {
 	INT_PTR ret;

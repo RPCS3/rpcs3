@@ -39,7 +39,7 @@
 #include "ZeroGSShaders/zerogsshaders.h"
 #include "targets.h"
 
-//----------------------- Defines     
+//----------------------- Defines
 
 //-------------------------- Typedefs
 typedef void (APIENTRYP _PFNSWAPINTERVAL) (int);
@@ -54,8 +54,8 @@ extern int g_nFrame, g_nRealFrame;
 //-------------------------- Variables
 
 #ifdef _WIN32
-HDC		 hDC=NULL;	   // Private GDI Device Context		
-HGLRC	   hRC=NULL;	   // Permanent Rendering Context		
+HDC		 hDC=NULL;	   // Private GDI Device Context
+HGLRC	   hRC=NULL;	   // Permanent Rendering Context
 #endif
 
 bool g_bIsLost = 0;									// ZZ
@@ -100,7 +100,7 @@ CGparameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
 map<int, SHADERHEADER*> mapShaderResources;
 
-bool s_bTexFlush = FALSE;			
+bool s_bTexFlush = FALSE;
 int s_nLastResolveReset = 0;
 int s_nWireframeCount = 0;
 int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
@@ -118,12 +118,12 @@ namespace ZeroGS
 	Vector g_vdepth, vlogz;
 
 //       	= Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
-//	Vector g_vdepth = Vector( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);	
+//	Vector g_vdepth = Vector( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
 
-	extern CRangeManager s_RangeMngr; // manages overwritten memory				
+	extern CRangeManager s_RangeMngr; // manages overwritten memory
 	GLenum GetRenderTargetFormat() { return GetRenderFormat()==RFT_byte8?4:g_internalRGBAFloat16Fmt; }
 
-	// returns the first and last addresses aligned to a page that cover 
+	// returns the first and last addresses aligned to a page that cover
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
 //	bool LoadEffects();
@@ -134,7 +134,7 @@ namespace ZeroGS
 	void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 
 	void ProcessMessages();
-	void RenderCustom(float fAlpha); // intro anim				
+	void RenderCustom(float fAlpha); // intro anim
 
 	struct MESSAGE
 	{
@@ -204,7 +204,7 @@ void ZeroGS::HandleGLError()
 	// check the error status of this framebuffer */
 	GLenum error = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 
-	// if error != GL_FRAMEBUFFER_COMPLETE_EXT, there's an error of some sort 
+	// if error != GL_FRAMEBUFFER_COMPLETE_EXT, there's an error of some sort
 	if( error != 0 ) {
 		int w, h;
 		GLint fmt;
@@ -286,9 +286,9 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	FUNCLOG
 	cgGLDisableProfile(cgvProf);
 	cgGLDisableProfile(cgfProf);
-	
+
 	glColor3f(((color>>16)&0xff)/255.0f, ((color>>8)&0xff)/255.0f, (color&0xff)/255.0f);
-	
+
 	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight,0);
 	cgGLEnableProfile(cgvProf);
 	cgGLEnableProfile(cgfProf);
@@ -325,7 +325,7 @@ void ZeroGS::Reset()
 	FUNCLOG
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
-	
+
 	vb[0].nCount = 0;
 	vb[1].nCount = 0;
 
@@ -371,16 +371,16 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 }
 
 
-void ZeroGS::SetNegAA(int mode) {	
+void ZeroGS::SetNegAA(int mode) {
 	FUNCLOG
 	// need to flush all targets
 	s_RTs.ResolveAll();
 	s_RTs.Destroy();
 	s_DepthRTs.ResolveAll();
 	s_DepthRTs.Destroy();
-	
+
 	s_AAz = s_AAw = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-	if (mode > 0) 
+	if (mode > 0)
 	{
 		s_AAz = (mode+1) / 2;		// ( 1, 0 ) ; (  1, 1 ) -- it's used as binary shift, so x << s_AAz, y << s_AAw
 		s_AAw = mode / 2;
@@ -397,15 +397,15 @@ void ZeroGS::SetAA(int mode)
 {
 	FUNCLOG
 	float f;
-	
+
 	// need to flush all targets
 	s_RTs.ResolveAll();
 	s_RTs.Destroy();
 	s_DepthRTs.ResolveAll();
 	s_DepthRTs.Destroy();
-	
+
 	s_AAx = s_AAy = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-	if (mode > 0) 
+	if (mode > 0)
 	{
 		s_AAx = (mode+1) / 2;		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) -- it's used as binary shift, so x >> s_AAx, y >> s_AAy
 		s_AAy = mode / 2;
@@ -416,7 +416,7 @@ void ZeroGS::SetAA(int mode)
 
 	vb[0].prndr = NULL; vb[0].pdepth = NULL; vb[0].bNeedFrameCheck = 1; vb[0].bNeedZCheck = 1;
 	vb[1].prndr = NULL; vb[1].pdepth = NULL; vb[1].bNeedFrameCheck = 1; vb[1].bNeedZCheck = 1;
-	
+
 	f = mode > 0 ? 2.0f : 1.0f;
 	glPointSize(f);
 }
@@ -449,7 +449,7 @@ void ZeroGS::ProcessMessages()
 	if( listMsgs.size() > 0 ) {
 		int left = 25, top = 15;
 		list<MESSAGE>::iterator it = listMsgs.begin();
-		
+
 		while( it != listMsgs.end() ) {
 			DrawText(it->str, left+1, top+1, 0xff000000);
 			DrawText(it->str, left, top, 0xffffff30);
@@ -537,7 +537,7 @@ void ZeroGS::Restore()
 //////////////////////////
 
 
-__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb) 
+__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
 {
 	p->z = curvb.zprimmask==0xffff?min((u32)0xffff, gsz):gsz;
 }
@@ -549,41 +549,41 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 
 
 int Values[100]={0,};
-__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb) 
-{ 
-	int index = Index; 
-	
+__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+{
+	int index = Index;
+
 	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x)>>1)&0xffff;
 	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y)>>1)&0xffff;
-	
+
 	/*x = ((int)gs.gsvertex[index].x - curvb.offset.x);
 	y = ((int)gs.gsvertex[index].y - curvb.offset.y);
 	p.x = (x&0x7fff) | (x < 0 ? 0x8000 : 0);
 	p.y = (y&0x7fff) | (y < 0 ? 0x8000 : 0);*/
-	
+
 	p->f = ((s16)gs.gsvertex[index].f<<7)|0x7f;
 	MOVZ(p, gs.gsvertex[index].z, curvb);
 	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
 
-// 	This code is somehow icorrect	
-//	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0)) 
+// 	This code is somehow icorrect
+//	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0))
 //		p->rgba = 0;
 
 	if (g_GameSettings & GAME_TEXAHACK) {
-		u32 B = (( p->rgba & 0xfe000000 ) >> 1) + 
+		u32 B = (( p->rgba & 0xfe000000 ) >> 1) +
 			            (0x01000000 * curvb.fba.fba) ;
 		p->rgba = ( p->rgba & 0xffffff ) + B;
 	}
 
-	if (prim->tme ) 
+	if (prim->tme )
 	{
-		if( prim->fst ) 
+		if( prim->fst )
 		{
 			p->s = (float)gs.gsvertex[index].u * fiTexWidth[prim->ctxt];
 			p->t = (float)gs.gsvertex[index].v * fiTexHeight[prim->ctxt];
 			p->q = 1;
 		}
-		else 
+		else
 		{
 			p->s = gs.gsvertex[index].s;
 			p->t = gs.gsvertex[index].t;
@@ -593,11 +593,11 @@ __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 }
 
 static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
-{	
+{
 #ifdef PRIM_LOG
-		PRIM_LOG("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n", 
+		PRIM_LOG("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
 			id==0?'*':' ', id, prim->prim, vert.x/8, vert.y/8, vert.z, vert.f/128,
-		vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10)); 
+		vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10));
 #endif
 }
 
@@ -713,10 +713,10 @@ void ZeroGS::KickTriangleFan()
 	OUTPUT_VERT(p[2], 2);
 }
 
-__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb) 
+__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 {
-	SET_VERTEX(p, next, curvb); 
-	MOVZ(p, v.z, curvb);	
+	SET_VERTEX(p, next, curvb);
+	MOVZ(p, v.z, curvb);
 	MOVFOG(p, v);
 }
 
@@ -725,7 +725,7 @@ void ZeroGS::KickSprite()
 	FUNCLOG
 	assert( gs.primC >= 2 );
 	VB& curvb = vb[prim->ctxt];
-	
+
 	if (curvb.bNeedTexCheck) curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
@@ -740,7 +740,7 @@ void ZeroGS::KickSprite()
 	int last = (gs.primIndex+2)%ARRAY_SIZE(gs.gsvertex);
 
 	// sprite is too small and AA shows lines (tek4)
-	if ( s_AAx ) 
+	if ( s_AAx )
 	{
 		gs.gsvertex[last].x += 4;
 		if( s_AAy ) gs.gsvertex[last].y += 4;
@@ -751,19 +751,19 @@ void ZeroGS::KickSprite()
 	  //return;
 
 	VertexGPU* p = curvb.pBufferData+curvb.nCount;
-	
+
 	SetKickVertex(&p[0], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[3], gs.gsvertex[last], next, curvb);
 	SetKickVertex(&p[1], gs.gsvertex[last], last, curvb);
 	SetKickVertex(&p[4], gs.gsvertex[last], last, curvb);
 	SetKickVertex(&p[2], gs.gsvertex[last], next, curvb);
-	
+
 	p[2].s = p[1].s;
 	p[2].x = p[1].x;
 
 	SetKickVertex(&p[5], gs.gsvertex[last], last, curvb);
 	p[5].s = p[0].s;
-	p[5].x = p[0].x;	
+	p[5].x = p[0].x;
 
 	curvb.nCount += 6;
 
@@ -830,12 +830,12 @@ void ZeroGS::ExtWrite()
 //	case 6: ASSERT(0); return false; // ffx2 menu
 //	case 7: ASSERT(0); return false;
 //	default: __assume(0);
-	
+
 bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
 {
 	int cpsm = ZZOglGet_cpsm_TexBits(highdword);
 	int csm = ZZOglGet_csm_TexBits(highdword);
-	
+
 	if (cpsm > 1 || csm)
 	{
 		// Mana Khemia triggers this.
@@ -885,7 +885,7 @@ Start:
 		movq mm7, [edx+56]
 		pcmpeqd mm6, [ecx+40]
 		pcmpeqd mm7, [ecx+56]
-		
+
 		pand mm0, mm4
 		pand mm6, mm7
 		pand mm0, mm6
@@ -902,11 +902,11 @@ Continue:
 
 		test ebx, 0x10
 		jz AddEcx
-		sub ecx, 448 // go back and down one column, 
+		sub ecx, 448 // go back and down one column,
 AddEcx:
 		add ecx, 256 // go to the right block
 
-	
+
 		jne Continue1
 		add ecx, 256 // skip whole block
 Continue1:
@@ -991,7 +991,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 	FUNCLOG
 	int cld = ZZOglGet_cld_TexBits(highdword);
 	int cbp = ZZOglGet_cbp_TexBits(highdword);
-	
+
 	// processing the CLUT after tex0/2 are written
 	//ERROR_LOG("high == 0x%x; cld == %d\n", highdword, cld);
 	switch(cld) {
@@ -1020,9 +1020,9 @@ void ZeroGS::texClutWrite(int ctx)
 
 	tex0Info& tex0 = vb[ctx].tex0;
 	assert( PSMT_ISCLUT(tex0.psm) );
-	
+
 	// processing the CLUT after tex0/2 are written
-	switch(tex0.cld) 
+	switch(tex0.cld)
 	{
 		case 0: return;
 		case 1: break; // tex0.cld is usually 1.
@@ -1044,7 +1044,7 @@ void ZeroGS::texClutWrite(int ctx)
 
 	int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
 
-	if (tex0.csm) 
+	if (tex0.csm)
 	{
 		switch (tex0.cpsm)
 		{
@@ -1055,33 +1055,33 @@ void ZeroGS::texClutWrite(int ctx)
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 				break;
 			}
-			
+
 			case PSMCT16S:
 			{
 				u16* src = (u16*)g_pbyGSMemory + tex0.cbp*128;
 				u16 *dst = (u16*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0));
 
-				for (int i = 0; i < entries; ++i) 
+				for (int i = 0; i < entries; ++i)
 				{
 					*dst = src[getPixelAddress16S_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 					dst += 2;
-					
+
 					// check for wrapping
 					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut+2);
 				}
 			break;
 			}
-		
+
 			case PSMCT32:
 			case PSMCT24:
 			{
@@ -1089,17 +1089,17 @@ void ZeroGS::texClutWrite(int ctx)
 				u32 *dst = (u32*)(g_pbyGSClut+64*tex0.csa);
 
 				// check if address exceeds src
-				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 ) 
+				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 )
 					ERROR_LOG("texClutWrite out of bounds\n");
-				else 
-					for(int i = 0; i < entries; ++i) 
+				else
+					for(int i = 0; i < entries; ++i)
 					{
 						*dst = src[getPixelAddress32_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
 						dst++;
 					}
 			break;
 			}
-			
+
 			default:
 			{
 #ifndef RELEASE_TO_PUBLIC
@@ -1109,7 +1109,7 @@ void ZeroGS::texClutWrite(int ctx)
 			}
 		}
 	}
-	else 
+	else
 	{
 		switch (tex0.cpsm)
 		{
@@ -1117,17 +1117,17 @@ void ZeroGS::texClutWrite(int ctx)
 			case PSMCT32:
 				if( entries == 16 )
 					WriteCLUT_T32_I4_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
-				else 
+				else
 					WriteCLUT_T32_I8_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut+64*tex0.csa));
 				break;
-				
+
 			default:
 				if( entries == 16 )
 					WriteCLUT_T16_I4_CSM1((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				else // sse2 for 256 is more complicated, so use regular
 					WriteCLUT_T16_I8_CSM1_c((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut+32*(tex0.csa&15)+(tex0.csa>=16?2:0)));
 				break;
-			
+
 		}
 	}
 }

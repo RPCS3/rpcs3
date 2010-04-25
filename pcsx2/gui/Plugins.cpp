@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -65,7 +65,7 @@ public:
 		_parent::Init();
 		sApp.PostPluginStatus( CorePlugins_Init );
 	}
-	
+
 	void Shutdown()
 	{
 		_parent::Shutdown();
@@ -80,7 +80,7 @@ public:
 		_parent::Close();
 		sApp.PostPluginStatus( CorePlugins_Closed );
 	}
-	
+
 	void Open()
 	{
 		SetSettingsFolder( GetSettingsFolder().ToString() );
@@ -104,7 +104,7 @@ public:
 
 		if( g_LimiterMode == Limit_Turbo )
 			GSsetVsync( false );
-			
+
 		return retval;
 	}
 
@@ -131,7 +131,7 @@ public:
 	{
 		_parent::Open( pid );
 	}
-	
+
 	void Close( PluginsEnum_t pid )
 	{
 		_parent::Close( pid );
@@ -149,7 +149,7 @@ public:
 class LoadPluginsTask : public PersistentThread
 {
 	typedef PersistentThread _parent;
-	
+
 public:
 	PluginManager* Result;
 
@@ -223,7 +223,7 @@ SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
 
 SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 {
-	
+
 	try
 	{
 		if( m_validstate )
@@ -308,7 +308,7 @@ void Pcsx2App::ReloadPlugins()
 void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 {
 	FnType_OnThreadComplete* fn_tmp = Callback_PluginsLoadComplete;
-	
+
 	if( LoadPluginsTask* pluginthread = (LoadPluginsTask*)evt.GetClientData() )
 	{
 		// scoped ptr ensures the thread object is cleaned up even on exception:
@@ -323,7 +323,7 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 		killTask->RethrowException();
 		m_CorePlugins = killTask->Result;
 	}
-	
+
 	if( fn_tmp != NULL ) fn_tmp( evt );
 }
 

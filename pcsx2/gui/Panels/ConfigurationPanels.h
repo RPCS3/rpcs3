@@ -58,18 +58,18 @@ namespace Panels
 
 		DirPickerPanel& SetStaticDesc( const wxString& msg );
 		DirPickerPanel& SetToolTip( const wxString& tip );
-		
+
 		wxWindowID GetId() const;
 		wxWindowID GetPanelId() const { return m_windowId; }
 
 	protected:
 		void Init( FoldersEnum_t folderid, const wxString& dialogLabel, bool isCompact );
-		
+
 		void UseDefaultPath_Click( wxCommandEvent &event );
 		void Explore_Click( wxCommandEvent &event );
 		void UpdateCheckStatus( bool someNoteworthyBoolean );
 	};
- 
+
 	// --------------------------------------------------------------------------------------
 	//  UsermodeSelectionPanel / LanguageSelectionPanel
 	// --------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ namespace Panels
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 		wxWindowID GetDirPickerId() const { return m_dirpicker_custom ? m_dirpicker_custom->GetId() : 0; }
-		
+
 	protected:
 		void OnRadioChanged( wxCommandEvent& evt );
 	};
@@ -196,17 +196,17 @@ namespace Panels
 		wxSpinCtrl*		m_spin_FramesToDraw;
 		//pxCheckBox*		m_check_EnableSkip;
 		//pxCheckBox*		m_check_EnableSkipOnTurbo;
-		
+
 		pxRadioPanel*	m_radio_SkipMode;
 
 	public:
 		FrameSkipPanel( wxWindow* parent );
 		virtual	~FrameSkipPanel() throw() {}
-		
+
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  FramelimiterPanel
 	// --------------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ namespace Panels
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  GSWindowSettingsPanel
 	// --------------------------------------------------------------------------------------
@@ -250,7 +250,7 @@ namespace Panels
 
 		wxTextCtrl*		m_text_WindowWidth;
 		wxTextCtrl*		m_text_WindowHeight;
-		
+
 	public:
 		GSWindowSettingsPanel( wxWindow* parent );
 		virtual ~GSWindowSettingsPanel() throw() {}
@@ -492,7 +492,7 @@ namespace Panels
 			wxDirName GetPluginsPath() const { return m_FolderPicker.GetPath(); }
 			DirPickerPanel& GetDirPicker() { return m_FolderPicker; }
 			void Reset();
-			
+
 		};
 
 		// ----------------------------------------------------------------------------
@@ -531,7 +531,7 @@ namespace Panels
 
 	protected:
 		void DispatchEvent( const PluginEventType& evt );
-		
+
 		void OnConfigure_Clicked( wxCommandEvent& evt );
 		void OnShowStatusBar( wxCommandEvent& evt );
 		void OnPluginSelected( wxCommandEvent& evt );

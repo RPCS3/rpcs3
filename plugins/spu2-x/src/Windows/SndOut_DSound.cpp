@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -45,7 +45,7 @@ private:
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Instance vars
-	
+
 	int channel;
 	int myLastWrite;	// last write position, in bytes
 
@@ -76,11 +76,11 @@ private:
 		while( dsound_running )
 		{
 			u32 rv = WaitForMultipleObjects(m_NumBuffers,buffer_events,FALSE,200);
-	 
+
 			T* p1, *oldp1;
 			LPVOID p2;
 			DWORD s1,s2;
-	 
+
 			u32 poffset = BufferSizeBytes * rv;
 
 			if( FAILED(buffer->Lock(poffset,BufferSizeBytes,(LPVOID*)&p1,&s1,&p2,&s2,0) ) )
@@ -116,11 +116,11 @@ public:
 		{
 			if( m_Device.empty() )
 				throw std::runtime_error( "screw it" );
-			
+
 			// Convert from unicode to ANSI:
 			char guid[256];
 			sprintf_s( guid, "%S", m_Device.c_str() );
-			
+
 			if( (FAILED(GUIDFromString( guid, &cGuid ))) ||
 				FAILED( DirectSoundCreate8(&cGuid,&dsound,NULL) ) )
 					throw std::runtime_error( "try again?" );
@@ -134,19 +134,19 @@ public:
 
 		if( FAILED(dsound->SetCooperativeLevel(GetDesktopWindow(),DSSCL_PRIORITY)) )
 			throw std::runtime_error( "DirectSound Error: Cooperative level could not be set." );
-		
+
 		// Determine the user's speaker configuration, and select an expansion option as needed.
 		// FAIL : Directsound doesn't appear to support audio expansion >_<
-		
+
 		DWORD speakerConfig = 2;
 		//dsound->GetSpeakerConfig( &speakerConfig );
 
 		IDirectSoundBuffer* buffer_;
- 		DSBUFFERDESC desc; 
-	 
-		// Set up WAV format structure. 
-	 
-		memset(&wfx, 0, sizeof(WAVEFORMATEX)); 
+ 		DSBUFFERDESC desc;
+
+		// Set up WAV format structure.
+
+		memset(&wfx, 0, sizeof(WAVEFORMATEX));
 		wfx.wFormatTag		= WAVE_FORMAT_PCM;
 		wfx.nSamplesPerSec	= SampleRate;
 		wfx.nChannels		= (WORD)speakerConfig;
@@ -156,21 +156,21 @@ public:
 		wfx.cbSize			= 0;
 
 		uint BufferSizeBytes = BufferSize * wfx.nBlockAlign;
-	 
-		// Set up DSBUFFERDESC structure. 
-	 
-		memset(&desc, 0, sizeof(DSBUFFERDESC)); 
-		desc.dwSize = sizeof(DSBUFFERDESC); 
+
+		// Set up DSBUFFERDESC structure.
+
+		memset(&desc, 0, sizeof(DSBUFFERDESC));
+		desc.dwSize = sizeof(DSBUFFERDESC);
 		desc.dwFlags =  DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY;
 		desc.dwBufferBytes = BufferSizeBytes * m_NumBuffers;
 		desc.lpwfxFormat = &wfx;
-	 
+
 		// Try a hardware buffer first, and then fall back on a software buffer if
 		// that one fails.
-	 
+
 		desc.dwFlags |= m_UseHardware ? DSBCAPS_LOCHARDWARE : DSBCAPS_LOCSOFTWARE;
 		desc.dwFlags |= m_DisableGlobalFocus ? DSBCAPS_STICKYFOCUS : DSBCAPS_GLOBALFOCUS;
-	 
+
 		if( FAILED(dsound->CreateSoundBuffer(&desc, &buffer_, 0) ) )
 		{
 			if( m_UseHardware )
@@ -191,24 +191,24 @@ public:
 		verifyc( buffer->QueryInterface(IID_IDirectSoundNotify8,(void**)&buffer_notify) );
 
 		DSBPOSITIONNOTIFY not[MAX_BUFFER_COUNT];
-	 
+
 		for(uint i=0;i<m_NumBuffers;i++)
 		{
 			buffer_events[i] = CreateEvent(NULL,FALSE,FALSE,NULL);
 			not[i].dwOffset = (wfx.nBlockAlign + BufferSizeBytes*(i+1)) % desc.dwBufferBytes;
 			not[i].hEventNotify = buffer_events[i];
 		}
-	 
+
 		buffer_notify->SetNotificationPositions(m_NumBuffers,not);
-	 
+
 		LPVOID p1=0,p2=0;
 		DWORD s1=0,s2=0;
-	 
+
 		verifyc(buffer->Lock(0,desc.dwBufferBytes,&p1,&s1,&p2,&s2,0));
 		assert(p2==0);
 		memset(p1,0,s1);
 		verifyc(buffer->Unlock(p1,s1,p2,s2));
-	 
+
 		//Play the buffer !
 		verifyc(buffer->Play(0,0,DSBPLAY_LOOPING));
 
@@ -226,7 +226,7 @@ public:
 		// Stop Thread
 		fprintf(stderr," * SPU2: Waiting for DSound thread to finish...");
 		dsound_running=false;
-			
+
 		WaitForSingleObject(thread,INFINITE);
 		CloseHandle(thread);
 
@@ -238,7 +238,7 @@ public:
 		if( buffer != NULL )
 		{
 			buffer->Stop();
-		 
+
 			for(u32 i=0;i<m_NumBuffers;i++)
 			{
 				if( buffer_events[i] != NULL )
@@ -285,11 +285,11 @@ private:
 			case WM_INITDIALOG:
 			{
 				wchar_t temp[128];
-				
+
 				char temp2[192];
 				sprintf_s( temp2, "%S", m_Device.c_str() );
 				haveGuid = ! FAILED(GUIDFromString(temp2,&DevGuid));
-				SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_RESETCONTENT,0,0); 
+				SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_RESETCONTENT,0,0);
 
 				ndevs=0;
 				DirectSoundEnumerate( DSEnumCallback, NULL );
@@ -306,10 +306,10 @@ private:
 					SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_SETCURSEL,tSel,0);
 
 				INIT_SLIDER( IDC_BUFFERS_SLIDER, 2, MAX_BUFFER_COUNT, 2, 1, 1 );
-				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,m_NumBuffers); 
+				SendMessage(GetDlgItem(hWnd,IDC_BUFFERS_SLIDER),TBM_SETPOS,TRUE,m_NumBuffers);
 				swprintf_s(temp, L"%d (%d ms latency)",m_NumBuffers, 1000 / (96000 / (m_NumBuffers * BufferSize)));
 				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
-				
+
 				SET_CHECK( IDC_GLOBALFOCUS_DISABLE, m_DisableGlobalFocus );
 				SET_CHECK( IDC_USE_HARDWARE, m_UseHardware );
 			}
@@ -319,15 +319,15 @@ private:
 			{
 				wchar_t temp[128];
 
-				wmId    = LOWORD(wParam); 
-				wmEvent = HIWORD(wParam); 
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
 				// Parse the menu selections:
 				switch (wmId)
 				{
 					case IDOK:
 					{
 						int i = (int)SendMessage(GetDlgItem(hWnd,IDC_DS_DEVICE),CB_GETCURSEL,0,0);
-						
+
 						if(!m_devices[i].hasGuid)
 						{
 							m_Device[0] = 0; // clear device name to ""
@@ -374,8 +374,8 @@ private:
 
 			case WM_HSCROLL:
 			{
-				wmId    = LOWORD(wParam); 
-				wmEvent = HIWORD(wParam); 
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
 				switch(wmId)
 				{
 					//case TB_ENDTRACK:
@@ -429,7 +429,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() 
+	int GetEmptySampleCount()
 	{
 		DWORD play, write;
 		buffer->GetCurrentPosition( &play, &write );
@@ -452,7 +452,7 @@ public:
 	{
 		return L"DirectSound (nice)";
 	}
-	
+
 	void ReadSettings()
 	{
 		CfgReadStr( L"DSOUNDOUT", L"Device", m_Device, 254, L"default" );
@@ -476,7 +476,7 @@ public:
 BOOL CALLBACK DSound::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
 	return DS._ConfigProc( hWnd, uMsg, wParam, lParam );
-}	
+}
 
 BOOL CALLBACK DSound::DSEnumCallback( LPGUID lpGuid, LPCTSTR lpcstrDescription, LPCTSTR lpcstrModule, LPVOID lpContext )
 {

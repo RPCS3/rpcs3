@@ -165,7 +165,7 @@ int CdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode){
 		default:
 			return 0;
 	}
-	
+
 	for (i=0; i<sectors; i++){
 		if (CDVDreadTrack(lsn+i, rmode)==-1)
 			return 0;
@@ -197,7 +197,7 @@ int DvdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode){
 //		switch (mode->datapattern){
 //			case CdSecS2064:
 				((u32*)buf)[0] = i + 0x30000;
-				memcpy((u8*)buf+12, buff, 2048); 
+				memcpy((u8*)buf+12, buff, 2048);
 				(u8*)buf+= 2064; break;
 //			default:
 //				return 0;
@@ -430,7 +430,7 @@ int CDVD_findfile(char* fname, struct TocEntry* tocEntry){
 
 			if ((strnicmp(localTocEntry.filename, filename, strlen(filename)) == 0) ||
 				((filename[strlen(filename)-2] == ';') &&
-				 (localTocEntry.filename[strlen(localTocEntry.filename)-2] == ';') && 
+				 (localTocEntry.filename[strlen(localTocEntry.filename)-2] == ';') &&
 				 (strnicmp(localTocEntry.filename, filename, strlen(filename)-2) == 0)))
 			{
 				// if the filename matches then copy the toc Entry
@@ -687,7 +687,7 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 	}
 
 
-	// THIS SHOULD BE UNREACHABLE - 
+	// THIS SHOULD BE UNREACHABLE -
 	// since we are trying to count ALL matching entries, rather than upto a limit
 
 
@@ -761,7 +761,7 @@ int CDVD_GetDir_RPC_get_entries(struct TocEntry tocEntry[], int req_entries){
 		}
 
 		// This must be incremented even if the filename doesnt match extension list
-		getDirTocData.current_entry++;  
+		getDirTocData.current_entry++;
 
 		// We've found a file in this directory
 		// now check if it matches our extension list (if there is one)
@@ -804,7 +804,7 @@ int CDVD_GetDir_RPC_get_entries(struct TocEntry tocEntry[], int req_entries){
 
 				// increment this here, rather than in the main for loop
 				// since this should count the number of matching entries
-				toc_entry_num++; 
+				toc_entry_num++;
 			}
 
 			getDirTocData.current_sector_offset += tocEntryPointer->length;
@@ -812,7 +812,7 @@ int CDVD_GetDir_RPC_get_entries(struct TocEntry tocEntry[], int req_entries){
 		}
 		else
 		{
-			toc_entry_num++; 
+			toc_entry_num++;
 			getDirTocData.current_sector_offset += tocEntryPointer->length;
 			(char*)tocEntryPointer = toc + getDirTocData.current_sector_offset;
 		}

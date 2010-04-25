@@ -63,25 +63,25 @@ public:
 	wxString GetPageURL(){ return m_currentURL; }
     void SetPageTitle(const wxString& title) { m_pageTitle = title; }
 	wxString GetPageTitle(){ return m_pageTitle; }
-    
+
     // since these worked in 2.6, add wrappers
     void SetTitle(const wxString& title) { SetPageTitle(title); }
     wxString GetTitle() { return GetPageTitle(); }
-    
+
     wxString GetSelection();
-    
+
     bool CanIncreaseTextSize();
     void IncreaseTextSize();
     bool CanDecreaseTextSize();
     void DecreaseTextSize();
-    
+
     void Print(bool showPrompt=FALSE);
-    
+
     void MakeEditable(bool enable=TRUE);
     bool IsEditable();
-    
+
     wxString RunScript(const wxString& javascript);
-    
+
     void SetScrollPos(int pos);
     int GetScrollPos();
 
@@ -98,9 +98,9 @@ private:
     wxWindowID m_windowID;
     wxString m_currentURL;
     wxString m_pageTitle;
-    
+
     struct objc_object *m_webView;
-    
+
     // we may use this later to setup our own mouse events,
     // so leave it in for now.
     void* m_webKitCtrlEventHandler;
@@ -136,7 +136,7 @@ enum {
 class wxWebKitBeforeLoadEvent : public wxCommandEvent
 {
     DECLARE_DYNAMIC_CLASS( wxWebKitBeforeLoadEvent )
-    
+
 public:
     bool IsCancelled() { return m_cancelled; }
     void Cancel(bool cancel = true) { m_cancelled = cancel; }
@@ -209,7 +209,7 @@ END_DECLARE_EVENT_TYPES()
                             (wxObjectEventFunction)   \
                             (wxWebKitStateChangedEventFunction) & func, \
                             (wxObject *) NULL ),
-                            
+
 #define EVT_WEBKIT_BEFORE_LOAD(func) \
             DECLARE_EVENT_TABLE_ENTRY( wxEVT_WEBKIT_BEFORE_LOAD, \
                             wxID_ANY, \

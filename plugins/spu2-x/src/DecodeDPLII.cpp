@@ -1,22 +1,22 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Originally based on SPU2ghz v1.9 beta, by David Quintana.
  *
  * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free 
+ * the terms of the GNU Lesser General Public License as published by the Free
  * Software Foundation; either version 2.1 of the the License, or (at your
  * option) any later version.
- * 
- * This library is distributed in the hope that it will be useful, but WITHOUT 
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
  * for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License along
  * with this library; if not, write to the Free Software Foundation, Inc., 59
  * Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  */
 
 #include "Spu2.h"
@@ -67,7 +67,7 @@ void DPLII::Convert( s16 *obuffer, s32 ValL, s32 ValR )
 	ValR >>= 2;
 	if(PlayMode&4)
 	{
-		spdif_get_samples(spdif_data); 
+		spdif_get_samples(spdif_data);
 	}
 	else
 	{
@@ -193,7 +193,7 @@ void DPLII::Convert( s16 *obuffer, s32 ValL, s32 ValR )
 		if(-ValL>LMax) LMax = -ValL;
 		if(ValR>RMax) RMax = ValR;
 		if(-ValR>RMax) RMax = -ValR;
-		
+
 		ANum++;
 		if(ANum>=128)
 		{

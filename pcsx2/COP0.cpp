@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -95,7 +95,7 @@ void UnmapTLB(int i)
 		return;
 	}
 
-	if (tlb[i].EntryLo0 & 0x2) 
+	if (tlb[i].EntryLo0 & 0x2)
 	{
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = tlb[i].VPN2 >> 12;
@@ -123,7 +123,7 @@ void UnmapTLB(int i)
 	}
 }
 
-void WriteTLB(int i) 
+void WriteTLB(int i)
 {
 	tlb[i].PageMask = cpuRegs.CP0.n.PageMask;
 	tlb[i].EntryHi = cpuRegs.CP0.n.EntryHi;
@@ -144,7 +144,7 @@ void WriteTLB(int i)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Performance Counters Update Stuff!
-// 
+//
 // Note regarding updates of PERF and TIMR registers: never allow increment to be 0.
 // That happens when a game loads the MFC0 twice in the same recompiled block (before the
 // cpuRegs.cycles update), and can cause games to lock up since it's an unexpected result.
@@ -219,7 +219,7 @@ __forceinline void COP0_UpdatePCCR()
 
 	// TODO : Implement memory mode checks here (kernel/super/user)
 	// For now we just assume kernel mode.
-	
+
 	if( cpuRegs.PERF.n.pccr.val & 0xf )
 	{
 		// ----------------------------------
@@ -235,7 +235,7 @@ __forceinline void COP0_UpdatePCCR()
 			//u32 prev = cpuRegs.PERF.n.pcr0;
 			cpuRegs.PERF.n.pcr0 += incr;
 			s_iLastPERFCycle[0] = cpuRegs.cycle;
-			
+
 			//prev ^= (1UL<<31);		// XOR is fun!
 			//if( (prev & cpuRegs.PERF.n.pcr0) & (1UL<<31) )
 			if( (cpuRegs.PERF.n.pcr0 & 0x80000000) && (cpuRegs.CP0.n.Status.b.ERL == 1) && cpuRegs.PERF.n.pccr.b.CTE)
@@ -243,7 +243,7 @@ __forceinline void COP0_UpdatePCCR()
 				// TODO: Vector to the appropriate exception here.
 				// This code *should* be correct, but is untested (and other parts of the emu are
 				// not prepared to handle proper Level 2 exception vectors yet)
-				
+
 				//branch == 1 is probably not the best way to check for the delay slot, but it beats nothing! (Refraction)
 			/*	if( branch == 1 )
 				{
@@ -255,7 +255,7 @@ __forceinline void COP0_UpdatePCCR()
 					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc;
 					cpuRegs.CP0.n.Cause &= ~0x40000000;
 				}
-				
+
 				if( cpuRegs.CP0.n.Status.b.DEV )
 				{
 					// Bootstrap vector
@@ -270,13 +270,13 @@ __forceinline void COP0_UpdatePCCR()
 			}
 		}
 	}
-	
+
 	if( cpuRegs.PERF.n.pccr.b.U1 )
 	{
 		// ----------------------------------
 		//    Update Performance Counter 1
 		// ----------------------------------
-		
+
 		if( PERF_ShouldCountEvent( cpuRegs.PERF.n.pccr.b.Event1 ) )
 		{
 			u32 incr = cpuRegs.cycle - s_iLastPERFCycle[1];
@@ -290,7 +290,7 @@ __forceinline void COP0_UpdatePCCR()
 				// TODO: Vector to the appropriate exception here.
 				// This code *should* be correct, but is untested (and other parts of the emu are
 				// not prepared to handle proper Level 2 exception vectors yet)
-				
+
 				//branch == 1 is probably not the best way to check for the delay slot, but it beats nothing! (Refraction)
 
 				/*if( branch == 1 )
@@ -303,7 +303,7 @@ __forceinline void COP0_UpdatePCCR()
 					cpuRegs.CP0.n.ErrorEPC = cpuRegs.pc;
 					cpuRegs.CP0.n.Cause &= ~0x40000000;
 				}
-				
+
 				if( cpuRegs.CP0.n.Status.b.DEV )
 				{
 					// Bootstrap vector
@@ -333,7 +333,7 @@ void MFC0()
 	// Note on _Rd_ Condition 9: CP0.Count should be updated even if _Rt_ is 0.
 	if ((_Rd_ != 9) && !_Rt_ ) return;
 	if (_Rd_ != 9) { COP0_LOG("%s", disR5900Current.getCString() ); }
-	
+
 	//if(bExecBIOS == FALSE && _Rd_ == 25) Console.WriteLn("MFC0 _Rd_ %x = %x", _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
@@ -341,7 +341,7 @@ void MFC0()
 			cpuRegs.GPR.r[_Rt_].SD[0] = (s32)(cpuRegs.CP0.r[_Rd_] & 0xf0c79c1f);
 		break;
 
-		case 25: 
+		case 25:
 		    switch(_Imm_ & 0x3F)
 		    {
 			    case 0:		// MFPS  [LSB is clear]
@@ -362,7 +362,7 @@ void MFC0()
 		    cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
 		break;
 
-		case 24: 
+		case 24:
 			Console.WriteLn("MFC0 Breakpoint debug Registers code = %x", cpuRegs.code & 0x3FF);
 		break;
 
@@ -390,16 +390,16 @@ void MTC0()
 			s_iLastCOP0Cycle = cpuRegs.cycle;
 			cpuRegs.CP0.r[9] = cpuRegs.GPR.r[_Rt_].UL[0];
 		break;
-		
-		case 12: 
-			WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]); 
+
+		case 12:
+			WriteCP0Status(cpuRegs.GPR.r[_Rt_].UL[0]);
 		break;
-		
-		case 24: 
+
+		case 24:
 			Console.WriteLn("MTC0 Breakpoint debug Registers code = %x", cpuRegs.code & 0x3FF);
 		break;
-		
-		case 25: 
+
+		case 25:
 			/*if(bExecBIOS == FALSE && _Rd_ == 25) Console.WriteLn("MTC0 PCCR = %x PCR0 = %x PCR1 = %x IMM= %x", params
 				cpuRegs.PERF.n.pccr, cpuRegs.PERF.n.pcr0, cpuRegs.PERF.n.pcr1, _Imm_ & 0x3F);*/
 			switch(_Imm_ & 0x3F)
@@ -410,21 +410,21 @@ void MTC0()
 					cpuRegs.PERF.n.pccr.val = cpuRegs.GPR.r[_Rt_].UL[0];
 					COP0_DiagnosticPCCR();
 				break;
-				
+
 				case 1:		// MTPC [LSB is set] - set PCR0
 					cpuRegs.PERF.n.pcr0 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[0] = cpuRegs.cycle;
 				break;
-				
+
 				case 3:		// MTPC [LSB is set] - set PCR0
 					cpuRegs.PERF.n.pcr1 = cpuRegs.GPR.r[_Rt_].UL[0];
 					s_iLastPERFCycle[1] = cpuRegs.cycle;
 				break;
 			}
 		break;
-			
+
 		default:
-			cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0]; 
+			cpuRegs.CP0.r[_Rd_] = cpuRegs.GPR.r[_Rt_].UL[0];
 		break;
 	}
 }
@@ -436,25 +436,25 @@ int CPCOND0() {
 //#define CPCOND0	1
 
 void BC0F() {
-	if (CPCOND0() == 0) intDoBranch(_BranchTarget_); 
+	if (CPCOND0() == 0) intDoBranch(_BranchTarget_);
 }
 
 void BC0T() {
-	if (CPCOND0() == 1) intDoBranch(_BranchTarget_); 
+	if (CPCOND0() == 1) intDoBranch(_BranchTarget_);
 }
-	
+
 void BC0FL() {
-	if (CPCOND0() == 0) 
-		intDoBranch(_BranchTarget_); 
-	else 
+	if (CPCOND0() == 0)
+		intDoBranch(_BranchTarget_);
+	else
 		cpuRegs.pc+= 4;
-	
+
 }
 
 void BC0TL() {
-	if (CPCOND0() == 1) 
-		intDoBranch(_BranchTarget_); 
-	else 
+	if (CPCOND0() == 1)
+		intDoBranch(_BranchTarget_);
+	else
 		cpuRegs.pc+= 4;
 }
 
@@ -471,7 +471,7 @@ void TLBR() {
 	cpuRegs.CP0.n.EntryLo1 =(tlb[i].EntryLo1&~1)|((tlb[i].EntryHi>>12)&1);
 }
 
-void TLBWI() { 
+void TLBWI() {
 	int j = cpuRegs.CP0.n.Index & 0x3f;
 
 	if (j > 48) return;
@@ -484,7 +484,7 @@ void TLBWI() {
 	WriteTLB(j);
 }
 
-void TLBWR() { 
+void TLBWR() {
 	int j = cpuRegs.CP0.n.Random & 0x3f;
 
 	if (j > 48) return;
@@ -502,7 +502,7 @@ void TLBWR() {
 
 void TLBP() {
 	int i;
-	
+
 	union {
 		struct {
 			u32 VPN2:19;

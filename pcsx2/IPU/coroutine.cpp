@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -23,12 +23,12 @@ struct coroutine {
 	void *pcurstack;
 
     uptr storeebx, storeesi, storeedi, storeebp;
-	
+
     s32 restore; // if nonzero, restore the registers
     s32 alloc;
 	//struct s_coroutine *caller;
 	//struct s_coroutine *restarget;
-	
+
 };
 
 #define CO_STK_ALIGN 256
@@ -97,8 +97,8 @@ RestoreRegs:
         mov [eax+20], ebp
         mov edi, ecx
         mov ebp, edx
-        
-CallFn: 
+
+CallFn:
         mov [g_pCurrentRoutine], eax
         mov ecx, esp
         mov esp, [eax+4]

@@ -48,18 +48,18 @@ extern "C" {
 
 //Windows have no snprintf
 #if defined(_WIN32)
-#	define snprintf sprintf_s 
+#	define snprintf sprintf_s
 #endif
 //------------------ Constants
 
-//------------------ Global Variables 
+//------------------ Global Variables
 int TexNumber = 0;
 int s_aviinit = 0;
 
 //------------------ Code
 
 // Set variables need to made a snapshoot when it's possible
-void 
+void
 ZeroGS::SaveSnapshot(const char* filename)
 {
 	g_bMakeSnapshot = 1;
@@ -67,7 +67,7 @@ ZeroGS::SaveSnapshot(const char* filename)
 }
 
 // Save curent renderer in jpeg or TGA format
-bool 
+bool
 ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int jpeg)
 {
 	bool bflip = height < 0;
@@ -87,32 +87,32 @@ ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int jpeg)
 		}
 	}
 
-	if (jpeg) 
+	if (jpeg)
 		return SaveJPEG(filename, width, height, &data[0], 70);
-	
+
 	return SaveTGA(filename, width, height, &data[0]);
 }
 
 // Save selected texture as TGA
-bool 
+bool
 ZeroGS::SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
 {
 	vector<u32> data(width*height);
 	glBindTexture(textarget, tex);
 	glGetTexImage(textarget, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
-	if (glGetError() != GL_NO_ERROR) 
+	if (glGetError() != GL_NO_ERROR)
 		return false;
 
 	return SaveTGA(filename, width, height, &data[0]);
 }
 
 // save image as JPEG
-bool 
+bool
 ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const void* pdata, int quality)
 {
 	u8* image_buffer = new u8[image_width * image_height * 3];
 	u8* psrc = (u8*)pdata;
-	
+
 	// input data is rgba format, so convert to rgb
 	u8* p = image_buffer;
 	for(int i = 0; i < image_height; ++i) {
@@ -253,7 +253,7 @@ struct TGA_HEADER
 	s16 height;			// image height in pixels
 	u8  bits;			// image bits per pixel 8,16,24,32
 	u8  descriptor;		 	// image descriptor bits (vh flip bits)
-	
+
 					// pixel data follows header
 #if defined(_MSC_VER)
 };
@@ -263,7 +263,7 @@ struct TGA_HEADER
 #endif
 
 // Save image as TGA
-bool 
+bool
 ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 {
 	int err = 0;
@@ -273,7 +273,7 @@ ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 		return false;
 
 	assert( sizeof(TGA_HEADER) == 18 && sizeof(hdr) == 18 );
-	
+
 	memset(&hdr, 0, sizeof(hdr));
 	hdr.imagetype = 2;
 	hdr.bits = 32;
@@ -325,7 +325,7 @@ void ZeroGS::CaptureFrame()
 
 #ifdef _WIN32
 	int fps = SMODE1->CMOD == 3 ? 50 : 60;
-	
+
 	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, nBackbufferWidth, nBackbufferHeight, 32, &data[0]);
 
 	if( !bSuccess ) {
@@ -340,12 +340,12 @@ void ZeroGS::CaptureFrame()
 }
 
 // It's nearly the same as save texture
-void 
+void
 ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 {
 	vector<u32> data(ptex->tw*ptex->th);
 	vector<u8> srcdata;
-	
+
 	u32* dst = &data[0];
 	u8* psrc = g_pbyGSMemory;
 
@@ -355,17 +355,17 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 		pmemtarg = g_MemTargs.GetMemoryTarget(*ptex, 0);
 		assert( pmemtarg != NULL );
-		
+
 		glBindTexture(GL_TEXTURE_RECTANGLE_NV, pmemtarg->ptex->tex);
 		srcdata.resize(pmemtarg->realheight * GPU_TEXWIDTH * pmemtarg->widthmult * 4 * 8); // max of 8 cannels
 
 		glGetTexImage(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGBA, pmemtarg->fmt, &srcdata[0]);
 
 		u32 offset = pmemtarg->realy * 4 * GPU_TEXWIDTH;
-		
-		if (ptex->psm == PSMT8) 
+
+		if (ptex->psm == PSMT8)
 			offset *= PSMT_IS32BIT(ptex->cpsm) ? 4 : 2;
-		else if (ptex->psm == PSMT4) 
+		else if (ptex->psm == PSMT4)
 			offset *= PSMT_IS32BIT(ptex->cpsm) ? 8 : 4;
 
 		psrc = &srcdata[0] - offset;
@@ -380,14 +380,14 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 					addr = getPixelAddress32(j, i, ptex->tbp0, ptex->tbw);
 					if (addr * 4 < 0x00400000)
 						u = readPixel32(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else 
+					else
 						u = 0;
 					break;
 				case PSMCT24:
 					addr = getPixelAddress24(j, i, ptex->tbp0, ptex->tbw);
 					if (addr * 4 < 0x00400000)
 						u = readPixel24(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else 
+					else
 						u = 0;
 					break;
 				case PSMCT16:
@@ -396,8 +396,8 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 						u = readPixel16(psrc, j, i, ptex->tbp0, ptex->tbw);
 						u = RGBA16to32(u);
 					}
-					else 
-						u = 0;					
+					else
+						u = 0;
 					break;
 				case PSMCT16S:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
@@ -411,16 +411,16 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 				case PSMT8:
 					addr = getPixelAddress8(j, i, ptex->tbp0, ptex->tbw);
 					if (addr < 0x00400000) {
-						if (usevid) { 
-							if (PSMT_IS32BIT(ptex->cpsm)) 
+						if (usevid) {
+							if (PSMT_IS32BIT(ptex->cpsm))
 								u = *(u32*)(psrc+4*addr);
-							else 
+							else
 								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
 							u = readPixel8(psrc, j, i, ptex->tbp0, ptex->tbw);
 					}
-					else 
+					else
 						u = 0;
 					break;
 
@@ -429,9 +429,9 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( addr < 2*0x00400000 ) {
 						if( usevid ) {
-							if (PSMT_IS32BIT(ptex->cpsm)) 
+							if (PSMT_IS32BIT(ptex->cpsm))
 								u = *(u32*)(psrc+4*addr);
-							else 
+							else
 							u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
@@ -445,9 +445,9 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if (PSMT_IS32BIT(ptex->cpsm)) 
+							if (PSMT_IS32BIT(ptex->cpsm))
 								u = *(u32*)(psrc+4*addr);
-							else 
+							else
 								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
@@ -462,9 +462,9 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if (PSMT_IS32BIT(ptex->cpsm)) 
+							if (PSMT_IS32BIT(ptex->cpsm))
 								u = *(u32*)(psrc+4*addr);
-							else 
+							else
 								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
@@ -478,9 +478,9 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 					if( 4*addr < 0x00400000 ) {
 						if( usevid ) {
-							if (PSMT_IS32BIT(ptex->cpsm)) 
+							if (PSMT_IS32BIT(ptex->cpsm))
 								u = *(u32*)(psrc+4*addr);
-							else 
+							else
 								u = RGBA16to32(*(u16*)(psrc+2*addr));
 						}
 						else
@@ -537,7 +537,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 // Do the save texture and return file name of it
 // Do not forget to call free(), other wise there would be memory leak!
-char* 
+char*
 ZeroGS::NamedSaveTex(tex0Info* ptex, int usevid){
 	SaveTex(ptex, usevid);
 	char* Name = (char*)malloc(TGA_FILE_NAME_MAX_LENGTH);
@@ -556,6 +556,6 @@ ZeroGS::Stop_Avi(){
 #ifdef _WIN32
 	STOP_AVI();
 #else
-// Does not support yet	
+// Does not support yet
 #endif
 }

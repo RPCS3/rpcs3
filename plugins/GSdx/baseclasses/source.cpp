@@ -423,7 +423,7 @@ DWORD CSourceStream::ThreadProc(void) {
 	case CMD_RUN:
 	    DbgLog((LOG_ERROR, 1, TEXT("CMD_RUN received before a CMD_PAUSE???")));
 	    // !!! fall through???
-	
+
 	case CMD_PAUSE:
 	    Reply(NOERROR);
 	    DoBufferProcessingLoop();

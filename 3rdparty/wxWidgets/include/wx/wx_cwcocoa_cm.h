@@ -77,7 +77,7 @@
     */
 #elif defined( __WXCOCOA__) //tommy
     #if defined(__OBJC__)
-        #include "CocoaHeaders.m"        
+        #include "CocoaHeaders.m"
     #endif //defined(__OBJC__)
 #endif
 

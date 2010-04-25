@@ -9,6 +9,6 @@
 void main() {
 	__printf("LOADER start\n");
 
-	menuStart();	
+	menuStart();
 }
 

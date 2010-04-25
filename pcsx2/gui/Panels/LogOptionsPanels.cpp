@@ -40,7 +40,7 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	s_misc.Add( m_Memory	= new pxCheckBox( m_miscPanel, L"Memory" ) );
 	s_misc.Add( m_Cache		= new pxCheckBox( m_miscPanel, L"Cache" ));
 	s_misc.Add( m_SysCtrl	= new pxCheckBox( m_miscPanel, L"SysCtrl / MMU" ) );
-		
+
 	s_disasm.Add( m_R5900		= new pxCheckBox( m_disasmPanel, L"R5900" ));
 	s_disasm.Add( m_COP0		= new pxCheckBox( m_disasmPanel, L"COP0 (MMU/SysCtrl)" ));
 	s_disasm.Add( m_COP1		= new pxCheckBox( m_disasmPanel, L"COP1 (FPU)" ));
@@ -61,7 +61,7 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	m_Cache->SetToolTip(_("(not implemented yet)"));
 
 	wxFlexGridSizer& eeTable( *new wxFlexGridSizer( 2, 5 ) );
-	
+
 	eeTable.Add( &s_misc, SubGroup() );
 	eeTable.Add( m_hwPanel, SubGroup() );
 	eeTable.Add( m_evtPanel, SubGroup() );
@@ -226,7 +226,7 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	*this		+= s_misc								| StdSpace().Centre();
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
-	
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -237,13 +237,13 @@ void Panels::LogOptionsPanel::AppStatusEvent_OnSettingsApplied()
 	m_masterEnabler->SetValue( conf.Enabled );
 	m_SIF->SetValue( conf.SIF );
 	m_Elf->SetValue( g_Conf->EmuOptions.Log.ELF );
-	
+
 	SetCheckValue( EE, VIFunpack );
 	SetCheckValue( EE, GIFtag );
 
-	m_eeSection.OnSettingsChanged();	
+	m_eeSection.OnSettingsChanged();
 	m_iopSection.OnSettingsChanged();
-	
+
 	OnUpdateEnableAll();
 }
 
@@ -270,7 +270,7 @@ void Panels::LogOptionsPanel::OnCheckBoxClicked(wxCommandEvent &evt)
 void Panels::LogOptionsPanel::Apply()
 {
 	if( !m_IsDirty ) return;
-	
+
 	g_Conf->EmuOptions.Trace.Enabled	= m_masterEnabler->GetValue();
 	g_Conf->EmuOptions.Trace.SIF		= m_SIF->GetValue();
 	g_Conf->EmuOptions.Log.ELF			= m_Elf->GetValue();
@@ -306,7 +306,7 @@ void Panels::eeLogOptionsPanel::Apply()
 	GetSet(m_COP2);
 	GetSet(m_VU0micro);
 	GetSet(m_VU1micro);
-	
+
 	GetSet(m_KnownHw);
 	GetSet(m_UnknownHw);
 	GetSet(m_DMA);
@@ -317,7 +317,7 @@ void Panels::eeLogOptionsPanel::Apply()
 	GetSet(m_SPR);
 	GetSet(m_IPU);
 }
-	
+
 void Panels::iopLogOptionsPanel::Apply()
 {
 	TraceFiltersIOP& conf( g_Conf->EmuOptions.Trace.IOP );

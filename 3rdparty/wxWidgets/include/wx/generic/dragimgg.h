@@ -159,9 +159,9 @@ public:
 
     // For efficiency, tell wxGenericDragImage to use a bitmap that's already
     // created (e.g. from last drag)
-    void SetBackingBitmap(wxBitmap* bitmap) { 
+    void SetBackingBitmap(wxBitmap* bitmap) {
 #ifndef wxHAS_NATIVE_OVERLAY
-        m_pBackingBitmap = bitmap; 
+        m_pBackingBitmap = bitmap;
 #endif
     }
 

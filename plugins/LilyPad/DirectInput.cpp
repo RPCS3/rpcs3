@@ -30,7 +30,7 @@ inline static u32 flipLong(u32 l) {
 static void GUIDtoString(wchar_t *data, const GUID *pg) {
 	wsprintfW(data, L"%08X-%04X-%04X-%04X-%04X%08X",
 		pg->Data1, (u32)pg->Data2, (u32)pg->Data3,
-		flipShort(((u16*)pg->Data4)[0]), 
+		flipShort(((u16*)pg->Data4)[0]),
 		flipShort(((u16*)pg->Data4)[1]),
 		flipLong(((u32*)pg->Data4)[1]));
 }
@@ -480,21 +480,21 @@ BOOL IsXInputDevice( const GUID* pGuidProductFromDirectInput )
     if( FAILED(hr) || pIWbemLocator == NULL )
         goto LCleanup;
 
-    bstrNamespace = SysAllocString( L"\\\\.\\root\\cimv2" );if( bstrNamespace == NULL ) goto LCleanup;        
-    bstrClassName = SysAllocString( L"Win32_PNPEntity" );   if( bstrClassName == NULL ) goto LCleanup;        
-    bstrDeviceID  = SysAllocString( L"DeviceID" );          if( bstrDeviceID == NULL )  goto LCleanup;        
-    
-    // Connect to WMI 
-    hr = pIWbemLocator->ConnectServer( bstrNamespace, NULL, NULL, 0L, 
+    bstrNamespace = SysAllocString( L"\\\\.\\root\\cimv2" );if( bstrNamespace == NULL ) goto LCleanup;
+    bstrClassName = SysAllocString( L"Win32_PNPEntity" );   if( bstrClassName == NULL ) goto LCleanup;
+    bstrDeviceID  = SysAllocString( L"DeviceID" );          if( bstrDeviceID == NULL )  goto LCleanup;
+
+    // Connect to WMI
+    hr = pIWbemLocator->ConnectServer( bstrNamespace, NULL, NULL, 0L,
                                        0L, NULL, NULL, &pIWbemServices );
     if( FAILED(hr) || pIWbemServices == NULL )
         goto LCleanup;
 
-    // Switch security level to IMPERSONATE. 
-    CoSetProxyBlanket( pIWbemServices, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL, 
-                       RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE );                    
+    // Switch security level to IMPERSONATE.
+    CoSetProxyBlanket( pIWbemServices, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL,
+                       RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE );
 
-    hr = pIWbemServices->CreateInstanceEnum( bstrClassName, 0, NULL, &pEnumDevices ); 
+    hr = pIWbemServices->CreateInstanceEnum( bstrClassName, 0, NULL, &pEnumDevices );
     if( FAILED(hr) || pEnumDevices == NULL )
         goto LCleanup;
 
@@ -515,7 +515,7 @@ BOOL IsXInputDevice( const GUID* pGuidProductFromDirectInput )
             if( SUCCEEDED( hr ) && var.vt == VT_BSTR && var.bstrVal != NULL )
             {
                 // Check if the device ID contains "IG_".  If it does, then it's an XInput device
-				    // This information can not be found from DirectInput 
+				    // This information can not be found from DirectInput
                 if( wcsstr( var.bstrVal, L"IG_" ) )
                 {
                     // If it does, then get the VID/PID from var.bstrVal
@@ -537,7 +537,7 @@ BOOL IsXInputDevice( const GUID* pGuidProductFromDirectInput )
                         goto LCleanup;
                     }
                 }
-            }   
+            }
             SAFE_RELEASE( pDevices[iDevice] );
         }
     }

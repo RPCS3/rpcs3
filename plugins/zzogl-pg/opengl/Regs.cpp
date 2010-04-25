@@ -72,7 +72,7 @@ GIFRegHandler g_GIFRegHandlers[] = {
 C_ASSERT(sizeof(g_GIFRegHandlers)/sizeof(g_GIFRegHandlers[0]) == 100 );
 
 // values for keeping track of changes
-u32 s_uTex1Data[2][2] = {{0,}}; 
+u32 s_uTex1Data[2][2] = {{0,}};
 u32 s_uClampData[2] = {0,};
 
 u32 results[65535] = {0,};
@@ -82,7 +82,7 @@ inline bool NoHighlights(int i) {
 //	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
 
 	// I'd have thought we could just test prim->_val and ZeroGS::vb[i].zbuf.psm directly...
-	int resultA = prim->iip + ((prim->tme) << 1) + ((prim->fge) << 2) + ((prim->abe) << 3) + ((prim->aa1) << 4) + ((prim->fst) << 5) + ((prim->ctxt) << 6) + ((prim->fix)<< 7) + 
+	int resultA = prim->iip + ((prim->tme) << 1) + ((prim->fge) << 2) + ((prim->abe) << 3) + ((prim->aa1) << 4) + ((prim->fst) << 5) + ((prim->ctxt) << 6) + ((prim->fix)<< 7) +
 			((ZeroGS::vb[i].zbuf.psm ) << 8);
 //	if ( results[resultA] == 0 ) {
 //		results[resultA] = 1;
@@ -103,10 +103,10 @@ inline bool NoHighlights(int i) {
 
 	// if psm is 16S or 24, tme, abe, & fst are true, the rest are false, result is 0x302 or 0x700, and there is a mask.
 	if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
-	
+
 	// if psm is 24, abe is true, tme doesn't matter, the rest are false, result is 0x54c or 0x50c and there is a mask.
 	if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Okage
-	
+
 	// if psm is 24, abe & tme are true, the rest are false, and no result.
 	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
 	// if psm is 16S, tme, abe, fst, and ctxt are true, the rest are false, result is 0x330 or 0x500, and there is a mask.
@@ -126,7 +126,7 @@ void __fastcall GIFPackedRegHandlerNull(u32* data)
 void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 {
 	FUNCLOG
-	gs.rgba = (data[0] & 0xff) | 
+	gs.rgba = (data[0] & 0xff) |
 			((data[1] & 0xff) <<  8) |
 			((data[2] & 0xff) << 16) |
 			((data[3] & 0xff) << 24);
@@ -146,34 +146,34 @@ void __fastcall GIFPackedRegHandlerUV(u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.u = data[0] & 0x3fff;
-	gs.vertexregs.v = data[1] & 0x3fff; 
+	gs.vertexregs.v = data[1] & 0x3fff;
 }
 
-void __forceinline KICK_VERTEX2() 
-{ 
+void __forceinline KICK_VERTEX2()
+{
 	FUNCLOG
-	if (++gs.primC >= (int)g_primmult[prim->prim]) 
-	{ 
+	if (++gs.primC >= (int)g_primmult[prim->prim])
+	{
 		if ( NoHighlights(prim->ctxt) )
-			(*ZeroGS::drawfn[prim->prim])(); 
-		gs.primC -= g_primsub[prim->prim]; 
-	} 
-} 
+			(*ZeroGS::drawfn[prim->prim])();
+		gs.primC -= g_primsub[prim->prim];
+	}
+}
 
-void __forceinline KICK_VERTEX3() 
-{ 
+void __forceinline KICK_VERTEX3()
+{
 	FUNCLOG
-	if (++gs.primC >= (int)g_primmult[prim->prim]) 
-	{ 
-		gs.primC -= g_primsub[prim->prim]; 
-		if (prim->prim == 5) 
-		{ 
-			/* tri fans need special processing */ 
-			if (gs.nTriFanVert == gs.primIndex) 
-				gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex); 
-		} 
-	} 
-} 
+	if (++gs.primC >= (int)g_primmult[prim->prim])
+	{
+		gs.primC -= g_primsub[prim->prim];
+		if (prim->prim == 5)
+		{
+			/* tri fans need special processing */
+			if (gs.nTriFanVert == gs.primIndex)
+				gs.primIndex = (gs.primIndex+1)%ArraySize(gs.gsvertex);
+		}
+	}
+}
 
 void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 {
@@ -189,7 +189,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 		KICK_VERTEX3();
 	}
 	else {
-		KICK_VERTEX2(); 
+		KICK_VERTEX2();
 	}
 }
 
@@ -206,7 +206,7 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 		KICK_VERTEX3();
 	}
 	else {
-		KICK_VERTEX2(); 
+		KICK_VERTEX2();
 	}
 }
 
@@ -236,7 +236,7 @@ void tex0Write(int i, u32 *data)
 	FUNCLOG
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
-	if ( m_Blocks[psm].bpp == 0 ) 
+	if ( m_Blocks[psm].bpp == 0 )
 	{
 		// kh and others
 		return;
@@ -247,15 +247,15 @@ void tex0Write(int i, u32 *data)
 	ZeroGS::vb[i].bNeedTexCheck = 1;
 
 	// don't update unless necessary
-	if (PSMT_ISCLUT(psm)) 
+	if (PSMT_ISCLUT(psm))
 	{
-		if (ZeroGS::CheckChangeInClut(data[1], psm)) 
+		if (ZeroGS::CheckChangeInClut(data[1], psm))
 		{
 			// loading clut, so flush whole texture
 			ZeroGS::vb[i].FlushTexData();
 		}
 		// check if csa is the same!! (ffx bisaid island, grass)
-		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000)) 
+		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000))
 		{
 			ZeroGS::Flush(i); // flush any previous entries
 		}
@@ -275,8 +275,8 @@ void tex2Write(int i, u32 *data) {
 
 	// don't update unless necessary
 //	if( ZZOglGet_psm_TexBitsFix(*s_uTex0Data) == ZZOglGet_psm_TexBitsFix(data[0]) ) { // psm is the same
-	if (ZZOglAllExceptClutIsSame(s_uTex0Data, data)) {	
-		if (!PSMT_ISCLUT(psm)) 
+	if (ZZOglAllExceptClutIsSame(s_uTex0Data, data)) {
+		if (!PSMT_ISCLUT(psm))
 			return;
 
 		// have to write the CLUT again if changed
@@ -294,13 +294,13 @@ void tex2Write(int i, u32 *data) {
 	ZeroGS::Flush(i);
 	ZeroGS::vb[i].bVarsTexSync = FALSE;
 	ZeroGS::vb[i].bTexConstsSync = FALSE;
-				
+
 	s_uTex0Data[0] = (s_uTex0Data[0]&~0x03f00000)|(psm<<20);
 	s_uTex0Data[1] = (s_uTex0Data[1]&0x1f)|(data[1]&~0x1f);
 
 	tex0.psm  = ZZOglGet_psm_TexBitsFix(data[0]);
 
-	if( PSMT_ISCLUT(tex0.psm) ) 
+	if( PSMT_ISCLUT(tex0.psm) )
 		ZeroGS::CluttingForFlushedTex(&tex0, data[1], i);
 }
 
@@ -308,10 +308,10 @@ __forceinline void frameWrite(int i, u32 *data) {
 	FUNCLOG
 	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
 
-	if ((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) && 
+	if ((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) &&
 		(gsfb.fbw == ZZOglGet_fbw_FrameBitsMult(data[0])) &&
-		(gsfb.psm == ZZOglGet_psm_FrameBits(data[0])) && 
-		(gsfb.fbm == ZZOglGet_fbm_FrameBits(data[0])) ) 
+		(gsfb.psm == ZZOglGet_psm_FrameBits(data[0])) &&
+		(gsfb.fbm == ZZOglGet_fbm_FrameBits(data[0])) )
 	{
 		return;
 	}
@@ -356,7 +356,7 @@ __forceinline void clampWrite(int i, u32 *data)
 	clampInfo& clamp = ZeroGS::vb[i].clamp;
 
 	if ((s_uClampData[i] != data[0]) || (((clamp.minv>>8) | (clamp.maxv<<2)) != (data[1]&0x0fff))) {
-		
+
 		ZeroGS::Flush(i);
 		s_uClampData[i] = data[0];
 
@@ -396,9 +396,9 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 	gs.primC = 0;
 	prim->prim = (data[0]) & 0x7;
 	gs._prim[0].prim = (data[0]) & 0x7;
-	gs._prim[1].prim = (data[0]) & 0x7; 
+	gs._prim[1].prim = (data[0]) & 0x7;
 	gs._prim[1]._val = (data[0]>>3)&0xff;
-	
+
 	ZeroGS::Prim();
 }
 
@@ -532,7 +532,7 @@ void tex1Write(int i, u32* data)
 		ZeroGS::Flush(i);
 		ZeroGS::vb[i].bVarsTexSync = FALSE;
 	}
-	tex1.lcm  = (data[0]	  ) & 0x1; 
+	tex1.lcm  = (data[0]	  ) & 0x1;
 	tex1.mxl  = (data[0] >>  2) & 0x7;
 	tex1.mmag = (data[0] >>  5) & 0x1;
 	tex1.mmin = (data[0] >>  6) & 0x7;
@@ -731,7 +731,7 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 	newscissor.y0 = ((data[1]	  ) & 0x7ff) << 3;
 	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
 
-	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 || 
+	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 		newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0 ) {
 
 		ZeroGS::Flush(0);
@@ -753,7 +753,7 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 	newscissor.y0 = ((data[1]	  ) & 0x7ff) << 3;
 	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
 
-	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 || 
+	if( newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 		newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0 ) {
 
 		ZeroGS::Flush(1);
@@ -876,7 +876,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
 
 	int psm = (0x30|((data[0] >> 24) & 0xf));
-	if( zbuf.zbp == (data[0] & 0x1ff) * 32 && 
+	if( zbuf.zbp == (data[0] & 0x1ff) * 32 &&
 		zbuf.psm == psm &&
 		zbuf.zmsk == (data[1] & 0x1) ) {
 		return;
@@ -905,7 +905,7 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 	zbufInfo& zbuf = ZeroGS::vb[1].zbuf;
 
 	int psm = (0x30|((data[0] >> 24) & 0xf));
-	if( zbuf.zbp == (data[0] & 0x1ff) * 32 && 
+	if( zbuf.zbp == (data[0] & 0x1ff) * 32 &&
 		zbuf.psm == psm &&
 		zbuf.zmsk == (data[1] & 0x1) ) {
 		return;
@@ -983,7 +983,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 			case 0: // host->loc
 				ZeroGS::InitTransferHostLocal();
 				break;
-		
+
 			case 1: // loc->host
 
 				ZeroGS::InitTransferLocalHost();
@@ -1009,7 +1009,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 }
 
 void __fastcall GIFRegHandlerHWREG(u32* data)
-{   
+{
 	FUNCLOG
 	if( gs.imageTransfer == 0 ) {
 		ZeroGS::TransferHostLocal(data, 2);
@@ -1048,16 +1048,16 @@ void __fastcall GIFRegHandlerFINISH(u32* data)
 	FUNCLOG
 	if(!g_GSMultiThreaded) {
 
-		if (gs.CSRw & 0x2) 
+		if (gs.CSRw & 0x2)
 			CSR->FINISH = 1;
 		if (!IMR->FINISHMSK && GSirq)
 			GSirq();
-		
+
 //	  if( gs.CSRw & 2 ) {
 //		  //gs.CSRw &= ~2;
 //		  //CSR->FINISH = 0;
 //
-//		  
+//
 //	  }
 //	  CSR->FINISH = 1;
 //

@@ -322,7 +322,7 @@ struct Pcsx2Config
 				fpuOverflow		:1,
 				fpuExtraOverflow:1,
 				fpuFullMode		:1;
-				
+
 			bool
 				StackFrameChecks:1;
 		BITFIELD_END
@@ -378,7 +378,7 @@ struct Pcsx2Config
 		bool	FrameLimitEnable;
 		bool	FrameSkipEnable;
 		bool	VsyncEnable;
-		
+
 		// The region mode controls the default Maximum/Minimum FPS settings and also
 		// regulates the vsync rates (which in turn control the IOP's SPU2 tick sync and ensure
 		// proper audio playback speed).

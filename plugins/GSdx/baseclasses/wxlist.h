@@ -59,14 +59,14 @@ const int DEFAULTCACHE = 10;    /* Default node object cache size */
    to the object that it looks after.
    All of these pointers can be retrieved or set through member functions.
 */
-class CBaseList 
+class CBaseList
 #ifdef DEBUG
     : public CBaseObject
 #endif
 {
     /* Making these classes inherit from CBaseObject does nothing
        functionally but it allows us to check there are no memory
-       leaks in debug builds. 
+       leaks in debug builds.
     */
 
 public:

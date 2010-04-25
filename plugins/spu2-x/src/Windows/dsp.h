@@ -39,7 +39,7 @@ typedef struct winampDSPModule {
   // (typically numsamples, but no more than twice numsamples, and no less than half numsamples)
   // numsamples should always be at least 128. should, but I'm not sure
   int (*ModifySamples)(struct winampDSPModule *this_mod, short int *samples, int numsamples, int bps, int nch, int srate);
-			
+
   void (*Quit)(struct winampDSPModule *this_mod);    // called when unloading
 
   void *userData; // user data, optional

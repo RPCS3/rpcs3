@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -22,8 +22,8 @@
 
 namespace Interp = R5900::Interpreter::OpcodeImpl;
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -62,7 +62,7 @@ void recWritebackHILO(int info, int writed, int upper)
 		MOV32RtoR( ECX, EDX );
 
 	if( g_pCurInstInfo->regs[XMMGPR_LO] & testlive ) {
-		
+
 		_deleteMMXreg(XMMGPR_LO, 2);
 
 		if( (reglo = _checkXMMreg(XMMTYPE_GPRREG, XMMGPR_LO, MODE_READ)) >= 0 ) {
@@ -299,7 +299,7 @@ void recWritebackConstHILO(u64 res, int writed, int upper)
 void recMULT_const()
 {
 	s64 res = (s64)g_cpuConstRegs[_Rs_].SL[0] * (s64)g_cpuConstRegs[_Rt_].SL[0];
-	
+
 	recWritebackConstHILO(res, 1, 0);
 }
 
@@ -489,7 +489,7 @@ void recDIVconst(int upper)
 		quot = (s32)0x80000000;
 		rem = 0;
 	}
-	else if (g_cpuConstRegs[_Rt_].SL[0] != 0) 
+	else if (g_cpuConstRegs[_Rt_].SL[0] != 0)
 	{
         quot = g_cpuConstRegs[_Rs_].SL[0] / g_cpuConstRegs[_Rt_].SL[0];
         rem = g_cpuConstRegs[_Rs_].SL[0] % g_cpuConstRegs[_Rt_].SL[0];
@@ -509,14 +509,14 @@ void recDIV_const()
 
 void recDIVsuper(int info, int sign, int upper, int process)
 {
-	if( process & PROCESS_CONSTT ) 
+	if( process & PROCESS_CONSTT )
 		MOV32ItoR( ECX, g_cpuConstRegs[_Rt_].UL[0] );
-	else 
+	else
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 
 	if( process & PROCESS_CONSTS )
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
-	else 
+	else
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 
 	u8 *end1;
@@ -626,17 +626,17 @@ void recDIV1_const()
 	recDIVconst(1);
 }
 
-void recDIV1_(int info) 
+void recDIV1_(int info)
 {
 	recDIVsuper(info, 1, 1, 0);
 }
 
-void recDIV1_consts(int info) 
+void recDIV1_consts(int info)
 {
 	recDIVsuper(info, 1, 1, PROCESS_CONSTS);
 }
 
-void recDIV1_constt(int info) 
+void recDIV1_constt(int info)
 {
 	recDIVsuper(info, 1, 1, PROCESS_CONSTT);
 }
@@ -648,17 +648,17 @@ void recDIVU1_const()
 	recDIVUconst(1);
 }
 
-void recDIVU1_(int info) 
+void recDIVU1_(int info)
 {
 	recDIVsuper(info, 0, 1, 0);
 }
 
-void recDIVU1_consts(int info) 
+void recDIVU1_consts(int info)
 {
 	recDIVsuper(info, 0, 1, PROCESS_CONSTS);
 }
 
-void recDIVU1_constt(int info) 
+void recDIVU1_constt(int info)
 {
 	recDIVsuper(info, 0, 1, PROCESS_CONSTT);
 }
@@ -766,7 +766,7 @@ void recMADDU()
 		MOV32RtoM( (int)&cpuRegs.HI.UL[1], EDX );
 		return;
 	}
-		
+
 	_deleteEEreg(XMMGPR_LO, 1);
 	_deleteEEreg(XMMGPR_HI, 1);
 	_deleteGPRtoXMMreg(_Rs_, 1);
@@ -836,7 +836,7 @@ void recMADD1()
 		MOV32RtoM( (int)&cpuRegs.HI.UL[3], EDX );
 		return;
 	}
-		
+
 	_deleteEEreg(XMMGPR_LO, 1);
 	_deleteEEreg(XMMGPR_HI, 1);
 	_deleteGPRtoXMMreg(_Rs_, 1);
@@ -908,7 +908,7 @@ void recMADDU1()
 		MOV32RtoM( (int)&cpuRegs.HI.UL[3], EDX );
 		return;
 	}
-		
+
 	_deleteEEreg(XMMGPR_LO, 1);
 	_deleteEEreg(XMMGPR_HI, 1);
 	_deleteGPRtoXMMreg(_Rs_, 1);

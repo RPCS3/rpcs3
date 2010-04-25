@@ -5,7 +5,7 @@
 
 // searches between beginning and end addresses for a romdir structure.
 // if found it returns info about it in romDirInfo.
-// 
+//
 // args:	address to start searching from
 //			address to stop searching at
 //			gets filled in with info if found
@@ -30,18 +30,18 @@ ROMDIR_INFO* searchRomDir(const u32* searchStartAddr, const u32* searchEndAddr, 
 			romDirInfo->extinfoPtr	= (u32)dir_entry + dir_entry[1].fileSize;	// start of extinfo
 			return romDirInfo;
 		}
-		
+
 		dir_entry++;
 		offset += sizeof(ROMDIR_ENTRY);
 	}
-	
+
 	// not found
 	romDirInfo->romdirPtr = NULL;
 	return NULL;
 }
 
 // find a file in the romdir table and return info about it
-// 
+//
 // args:	info about romdir to search through
 //			filename to search for
 //			structure to get info about file into
@@ -52,9 +52,9 @@ ROMFILE_INFO* searchFileInRom(const ROMDIR_INFO* romdirInfo, const char* filenam
 	register ROMDIR_ENTRY* dir_entry;
 	register ext_offset=0, file_offset=0;
 	int i;
-    
+
 	for (dir_entry = romdirInfo->romdirPtr; dir_entry->name[0]; dir_entry++) {
-        
+
         for(i = 0; i < 10; ++i) {
             if( filename[i] == 0 )
                 break;
@@ -63,7 +63,7 @@ ROMFILE_INFO* searchFileInRom(const ROMDIR_INFO* romdirInfo, const char* filenam
                 break;
             }
         }
-        
+
 		if (i > 0 ) {
 			fileinfo->entry		= dir_entry;
 			fileinfo->fileData	= file_offset + romdirInfo->romPtr;	// address of file in rom
@@ -77,30 +77,30 @@ ROMFILE_INFO* searchFileInRom(const ROMDIR_INFO* romdirInfo, const char* filenam
         file_offset += ROUND_UP(dir_entry->fileSize,16);
         ext_offset += dir_entry->extSize;
 	}
-	
+
 	// error - file not found
 	return NULL;
 }
 
 // gets a hex number from *addr and updates the pointer
-// 
+//
 // args:	pointer to string buffer containing a hex number
 // returns:	the value of the hex number
 u32 getHexNumber(char** addr)
 {
 	register char *p;		//a1
 	register u32   h = 0;	//a2;
-	
+
 	for (p=*addr; *p >= '0'; p++)
 	{
 		int num;
 		if(*p <= '9')		num = *p - '0';
 		else if(*p >= 'a')	num = *p - 'a' + 10;
 		else				num = *p - 'A' + 10;
-		
+
 		h = h*16 + num;
 	}
-	
+
 	*addr = p;
 	return h;
 }

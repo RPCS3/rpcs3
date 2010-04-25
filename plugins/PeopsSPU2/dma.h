@@ -25,4 +25,4 @@
 //*************************************************************************//
 
 void InterruptDMA4(void);
-void InterruptDMA7(void); 
+void InterruptDMA7(void);

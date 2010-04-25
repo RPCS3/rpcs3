@@ -83,7 +83,7 @@ public:
                long style = 0,
                const wxValidator& validator = wxDefaultValidator,
                const wxString& name = wxTextCtrlNameStr)
-        : wxScrollHelper(this) 
+        : wxScrollHelper(this)
     {
         Init();
 

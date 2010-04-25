@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -20,8 +20,8 @@
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
 
-namespace R5900 { 
-namespace Dynarec { 
+namespace R5900 {
+namespace Dynarec {
 namespace OpcodeImpl
 {
 
@@ -48,12 +48,12 @@ REC_FUNC_DEL(SLTIU, _Rt_);
 #else
 
 //// ADDI
-void recADDI_const( void ) 
+void recADDI_const( void )
 {
 	g_cpuConstRegs[_Rt_].SD[0] = (s64)(g_cpuConstRegs[_Rs_].SL[0] + (s32)_Imm_);
 }
 
-void recADDI_(int info) 
+void recADDI_(int info)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
@@ -76,21 +76,21 @@ void recADDI_(int info)
 EERECOMPILE_CODEX(eeRecompileCode1, ADDI);
 
 ////////////////////////////////////////////////////
-void recADDIU( void ) 
+void recADDIU( void )
 {
 	recADDI( );
 }
 
 ////////////////////////////////////////////////////
-void recDADDI_const( void ) 
+void recDADDI_const( void )
 {
 	g_cpuConstRegs[_Rt_].SD[0] = g_cpuConstRegs[_Rs_].SD[0] + (s64)_Imm_;
 }
 
-void recDADDI_(int info) 
+void recDADDI_(int info)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	
+
 	if( _Rt_ == _Rs_ ) {
 		ADD32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], _Imm_);
 		ADC32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], _Imm_<0?0xffffffff:0);
@@ -115,7 +115,7 @@ void recDADDI_(int info)
 EERECOMPILE_CODEX(eeRecompileCode1, DADDI);
 
 //// DADDIU
-void recDADDIU( void ) 
+void recDADDIU( void )
 {
 	recDADDI( );
 }
@@ -139,10 +139,10 @@ void recSLTIU_(int info)
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ], (s32)_Imm_ );
 	j8Ptr[1] = JB8(0);
-	
+
 	x86SetJ8(j8Ptr[2]);
 	XOR32RtoR(EAX, EAX);
-	
+
 	x86SetJ8(j8Ptr[0]);
 	x86SetJ8(j8Ptr[1]);
 
@@ -169,13 +169,13 @@ void recSLTI_(int info)
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ], (s32)_Imm_ );
 	j8Ptr[1] = JB8(0);
-	
+
 	x86SetJ8(j8Ptr[2]);
 	XOR32RtoR(EAX, EAX);
-	
+
 	x86SetJ8(j8Ptr[0]);
 	x86SetJ8(j8Ptr[1]);
-	
+
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
 	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
 }

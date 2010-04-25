@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -116,7 +116,7 @@ enum SSE_RoundMode
 union SSE_MXCSR
 {
 	u32		bitmask;
-	struct 
+	struct
 	{
 		u32
 			InvalidOpFlag		:1,
@@ -141,25 +141,25 @@ union SSE_MXCSR
 			RoundingControl		:2,
 			FlushToZero			:1;
 	};
-	
+
 	SSE_RoundMode GetRoundMode() const;
 	SSE_MXCSR& SetRoundMode( SSE_RoundMode mode );
 	SSE_MXCSR& ClearExceptionFlags();
 	SSE_MXCSR& EnableExceptions();
 	SSE_MXCSR& DisableExceptions();
-	
+
 	SSE_MXCSR& ApplyReserveMask();
 
 	bool operator ==( const SSE_MXCSR& right ) const
 	{
 		return bitmask == right.bitmask;
 	}
-	
+
 	bool operator !=( const SSE_MXCSR& right ) const
 	{
 		return bitmask != right.bitmask;
 	}
-	
+
 	operator x86Emitter::ModSib32() const;
 };
 

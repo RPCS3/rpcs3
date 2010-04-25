@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -31,7 +31,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 {
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
-	
+
 	m_check_LimiterDisable->SetToolTip( pxE( ".Tooltip:Framelimiter:Disable",
 		L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
 		L"be available either."
@@ -104,7 +104,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
-	
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -119,7 +119,7 @@ void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
 	m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );
 	m_spin_SlomoPct		->SetValue( appfps.SlomoScalar.Raw );
-	
+
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
 }
@@ -134,7 +134,7 @@ void Panels::FramelimiterPanel::Apply()
 	appfps.NominalScalar.Raw	= m_spin_NominalPct	->GetValue();
 	appfps.TurboScalar.Raw		= m_spin_TurboPct	->GetValue();
 	appfps.SlomoScalar.Raw		= m_spin_SlomoPct	->GetValue();
-	
+
 	try {
 		gsconf.FramerateNTSC	= Fixed100::FromString( m_text_BaseNtsc->GetValue() );
 		gsconf.FrameratePAL		= Fixed100::FromString( m_text_BasePal->GetValue() );
@@ -160,7 +160,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 	m_check_EnableSkip = new pxCheckBox( this, _("Use Frameskip"),
 		_(".") );
-	
+
 	m_check_EnableSkip->SetToolTip( pxE( ".Tooltip:Frameskip:Disable",
 		L""
 		L""
@@ -171,7 +171,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 		L" just trying to speed through stuff."
 	) );*/
 
-	const RadioPanelItem FrameskipOptions[] = 
+	const RadioPanelItem FrameskipOptions[] =
 	{
 		RadioPanelItem(
 			_("Disabled [default]")
@@ -187,7 +187,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 			_("Normal and Turbo limit rates skip frames.  Slow motion mode will still disable frameskipping.")
 		),
 	};
-	
+
 	m_radio_SkipMode = new pxRadioPanel( this, FrameskipOptions );
 	//m_radio_SkipMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
 	m_radio_SkipMode->Realize();
@@ -203,7 +203,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 	//*this += m_check_EnableSkipOnTurbo;
 	//*this += m_check_EnableSkip;
-	
+
 	*this += m_radio_SkipMode;
 
 	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 4 ) );
@@ -236,9 +236,9 @@ void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 
 	//m_check_EnableSkip			->SetValue( !appfps.SkipOnLimit );
 	//m_check_EnableSkipOnTurbo	->SetValue( !appfps.SkipOnTurbo );
-	
+
 	m_radio_SkipMode	->SetSelection( appfps.SkipOnLimit ? 2 : (appfps.SkipOnTurbo ? 1 : 0) );
-	
+
 	m_spin_FramesToDraw	->SetValue( gsconf.FramesToDraw );
 	m_spin_FramesToSkip	->SetValue( gsconf.FramesToSkip );
 }
@@ -302,7 +302,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	m_button_OpenWindowSettings = new wxButton( left, wxID_ANY, _("Open Window Settings...") );
 
 	pxSetToolTip( m_button_OpenWindowSettings, _("For editing GS window position, aspect ratio, and other display options.") );
-	
+
 	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
 	//winpan->AddFrame(_("Display/Window"));
 
@@ -311,7 +311,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 	FramelimiterPanel* fpan = new FramelimiterPanel( left );
 	fpan->AddFrame(_("Framelimiter"));
-		
+
 	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
 	s_table->AddGrowableCol( 0 );
 	s_table->AddGrowableCol( 1 );
@@ -324,7 +324,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	*left		+= fpan		| pxExpand;
 	*left		+= 5;
 	*left		+= m_button_OpenWindowSettings;
-	
+
 	*s_table	+= left		| StdExpand();
 	*s_table	+= right	| StdExpand();
 

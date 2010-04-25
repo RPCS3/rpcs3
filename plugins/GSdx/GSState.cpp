@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -36,7 +36,7 @@ GSState::GSState()
 	, m_vkf(NULL)
 {
 	m_sssize = 0;
-	
+
 	m_sssize += sizeof(m_version);
 	m_sssize += sizeof(m_env.PRIM);
 	m_sssize += sizeof(m_env.PRMODE);
@@ -54,7 +54,7 @@ GSState::GSState()
 	m_sssize += sizeof(m_env.TRXPOS);
 	m_sssize += sizeof(m_env.TRXREG);
 	m_sssize += sizeof(m_env.TRXREG); // obsolete
-	
+
 	for(int i = 0; i < 2; i++)
 	{
 		m_sssize += sizeof(m_env.CTXT[i].XYOFFSET);
@@ -114,7 +114,7 @@ void GSState::SetMultithreaded( bool isMT )
 	// in multithreaded mode (possibly because ZeroGS itself would assert in such
 	// cases), and didn't bind them to a dummy callback either.  PCSX2 handles all
 	// IRQs internally when multithreaded anyway -- so let's ignore them here:
-	
+
 	m_mt = isMT;
 	if( isMT )
 	{
@@ -284,7 +284,7 @@ GSVector2i GSState::GetDeviceSize(int i)
 	{
 		h = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
 	}*/
-	
+
 	//Fixme : Just slightly better than the hack above
 	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1){
 		if (!IsEnabled(0) || !IsEnabled(1)){h >>= 1;}
@@ -298,11 +298,11 @@ bool GSState::IsEnabled(int i)
 {
 	ASSERT(i >= 0 && i < 2);
 
-	if(i == 0 && m_regs->PMODE.EN1) 
+	if(i == 0 && m_regs->PMODE.EN1)
 	{
 		return m_regs->DISP[0].DISPLAY.DW || m_regs->DISP[0].DISPLAY.DH;
 	}
-	else if(i == 1 && m_regs->PMODE.EN2) 
+	else if(i == 1 && m_regs->PMODE.EN2)
 	{
 		return m_regs->DISP[1].DISPLAY.DW || m_regs->DISP[1].DISPLAY.DH;
 	}
@@ -521,7 +521,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(GIFReg* r)
 
 	if(wt || PRIM->CTXT == i && r->TEX0 != m_env.CTXT[i].TEX0)
 	{
-		Flush(); 
+		Flush();
 	}
 
 	if(r->TEX0.TW > 10) r->TEX0.TW = 10;
@@ -853,7 +853,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
 
-		r->ZBUF.ZMSK = 1; 
+		r->ZBUF.ZMSK = 1;
 	}
 
 	r->ZBUF.PSM |= 0x30;
@@ -937,7 +937,7 @@ void GSState::GIFRegHandlerTRXDIR(GIFReg* r)
 	case 2: // local -> local
 		Move();
 		break;
-	case 3: 
+	case 3:
 		ASSERT(0);
 		break;
 	}
@@ -995,7 +995,7 @@ void GSState::FlushWrite()
 	m_perfmon.Put(GSPerfMon::Swizzle, len);
 
 	GSVector4i r;
-	
+
 	r.left = m_env.TRXPOS.DSAX;
 	r.top = y;
 	r.right = r.left + m_env.TRXREG.RRW;
@@ -1005,8 +1005,8 @@ void GSState::FlushWrite()
 /*
 	static int n = 0;
 	string s;
-	s = format("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp", 
-		n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM, 
+	s = format("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp",
+		n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM,
 		r.left, r.top, r.right, r.bottom);
 	m_mem.SaveBMP(s, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
 */
@@ -1033,7 +1033,7 @@ void GSState::Write(uint8* mem, int len)
 		FlushPrim();
 	}
 
-	if(m_tr.end == 0 && len >= m_tr.total) 
+	if(m_tr.end == 0 && len >= m_tr.total)
 	{
 		// received all data in one piece, no need to buffer it
 
@@ -1046,7 +1046,7 @@ void GSState::Write(uint8* mem, int len)
 		m_perfmon.Put(GSPerfMon::Swizzle, len);
 
 		GSVector4i r;
-		
+
 		r.left = m_env.TRXPOS.DSAX;
 		r.top = m_env.TRXPOS.DSAY;
 		r.right = r.left + m_env.TRXREG.RRW;
@@ -1095,14 +1095,14 @@ void GSState::Read(uint8* mem, int len)
 	m_mem.ReadImageX(m_tr.x, m_tr.y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
 }
 
-// Use version 1 of the optimized local > local transfer, as per revision 887. 
+// Use version 1 of the optimized local > local transfer, as per revision 887.
 // Later (more optimized?) versions cause a crash in Dark Cloud 2.
 #if 1
 void GSState::Move()
 {
         // ffxii uses this to move the top/bottom of the scrolling menus offscreen and then blends them back over the text to create a shading effect
         // guitar hero copies the far end of the board to do a similar blend too
-		
+
         int sx = m_env.TRXPOS.SSAX;
         int dx = m_env.TRXPOS.DSAX;
         int sy = m_env.TRXPOS.SSAY;
@@ -1130,7 +1130,7 @@ void GSState::Move()
 
                         DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
                         int* doffset = dpsm.rowOffset[dy & 7];
-                        
+
                         for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
                         {
                                 m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
@@ -1146,7 +1146,7 @@ void GSState::Move()
 
                         DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
                         int* doffset = dpsm.rowOffset[dy & 7];
-                        
+
                         for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
                         {
                                 (m_mem.*dpsm.wpa)(dbase + doffset[dx], (m_mem.*spsm.rpa)(sbase + soffset[sx]));
@@ -1176,7 +1176,7 @@ void GSState::Move()
 	if(m_env.TRXPOS.DIRX) {sx += w - 1; dx += w - 1; xinc = -1;}
 	if(m_env.TRXPOS.DIRY) {sy += h - 1; dy += h - 1; yinc = -1;}
 /*
-	printf("%05x %d %d => %05x %d %d (%d%d), %d %d %d %d %d %d\n", 
+	printf("%05x %d %d => %05x %d %d (%d%d), %d %d %d %d %d %d\n",
 		m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW, m_env.BITBLTBUF.SPSM,
 		m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM,
 		m_env.TRXPOS.DIRX, m_env.TRXPOS.DIRY,
@@ -1317,7 +1317,7 @@ void GSState::Move()
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
-				
+
 				for(int x = 0; x < w; x++) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
 			}
 		}
@@ -1330,7 +1330,7 @@ void GSState::Move()
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
-				
+
 				for(int x = 0; x > -w; x--) m_mem.WritePixel4(dbase + dcol[x], m_mem.ReadPixel4(sbase + scol[x]));
 			}
 		}
@@ -1346,7 +1346,7 @@ void GSState::Move()
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
-				
+
 				for(int x = 0; x < w; x++) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
 			}
 		}
@@ -1359,7 +1359,7 @@ void GSState::Move()
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
-				
+
 				for(int x = 0; x > -w; x--) (m_mem.*dpsm.wpa)(dbase + dcol[x], (m_mem.*spsm.rpa)(sbase + scol[x]));
 			}
 		}
@@ -1495,7 +1495,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 					size--;
 				}
 				while(path.StepReg() && size > 0);
-			
+
 				if(size & 1) mem += sizeof(GIFReg);
 
 				size /= 2;
@@ -1522,16 +1522,16 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 					case 0:
 						Write(mem, len * 16);
 						break;
-					case 1: 
+					case 1:
 						Read(mem, len * 16);
 						break;
-					case 2: 
+					case 2:
 						Move();
 						break;
-					case 3: 
+					case 3:
 						ASSERT(0);
 						break;
-					default: 
+					default:
 						__assume(0);
 					}
 
@@ -1542,7 +1542,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 
 				break;
 
-			default: 
+			default:
 				__assume(0);
 			}
 		}
@@ -1598,7 +1598,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 		fd->size = m_sssize;
 		return 0;
 	}
-	
+
 	if(!fd->data || fd->size < m_sssize)
 	{
 		return -1;
@@ -1668,12 +1668,12 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 
 int GSState::Defrost(const GSFreezeData* fd)
 {
-	if(!fd || !fd->data || fd->size == 0) 
+	if(!fd || !fd->data || fd->size == 0)
 	{
 		return -1;
 	}
 
-	if(fd->size < m_sssize) 
+	if(fd->size < m_sssize)
 	{
 		return -1;
 	}
@@ -1732,7 +1732,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 		if(version <= 4)
 		{
-			data += sizeof(uint32) * 7; // skip 
+			data += sizeof(uint32) * 7; // skip
 		}
 	}
 
@@ -1941,7 +1941,7 @@ bool GSC_MetalGearSolid3(const GSFrameInfo& fi, int& skip)
 			skip = 1000; // 69
 		}
 	}
-	else 
+	else
 	{
 		if(!fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32)
 		{
@@ -2013,7 +2013,7 @@ bool GSC_Bully(const GSFrameInfo& fi, int& skip)
 			skip = 6;
 		}
 	}
-	else 
+	else
 	{
 		if(!fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01180) && fi.FPSM == PSM_PSMCT32)
 		{
@@ -2318,8 +2318,8 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 			{
 				skip = 29; // shadows
 			}
-			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000 
-				&& (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) 
+			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000
+				&& (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4)
 				&& ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000))){
 					skip = 1; // wall of fog
 			}
@@ -2495,7 +2495,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		inited = true;
 
 		memset(map, 0, sizeof(map));
-		
+
 		map[CRC::Okami] = GSC_Okami;
 		map[CRC::MetalGearSolid3] = GSC_MetalGearSolid3;
 		map[CRC::DBZBT2] = GSC_DBZBT2;

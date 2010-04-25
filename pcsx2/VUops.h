@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -131,10 +131,10 @@ void _vuITOF0(VURegs * VU) ;
 void _vuITOF4(VURegs * VU) ;
 void _vuITOF12(VURegs * VU);
 void _vuITOF15(VURegs * VU);
-void _vuCLIP(VURegs * VU); 
-/******************************/ 
-/*   VU Lower instructions    */ 
-/******************************/ 
+void _vuCLIP(VURegs * VU);
+/******************************/
+/*   VU Lower instructions    */
+/******************************/
 void _vuDIV(VURegs * VU);
 void _vuSQRT(VURegs * VU);
 void _vuRSQRT(VURegs * VU);
@@ -304,10 +304,10 @@ void _vuRegsITOF0(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsITOF4(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsITOF12(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsITOF15(VURegs * VU, _VURegsNum *VUregsn);
-void _vuRegsCLIP(VURegs * VU, _VURegsNum *VUregsn); 
-/******************************/ 
-/*   VU Lower instructions    */ 
-/******************************/ 
+void _vuRegsCLIP(VURegs * VU, _VURegsNum *VUregsn);
+/******************************/
+/*   VU Lower instructions    */
+/******************************/
 void _vuRegsDIV(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsSQRT(VURegs * VU, _VURegsNum *VUregsn);
 void _vuRegsRSQRT(VURegs * VU, _VURegsNum *VUregsn);

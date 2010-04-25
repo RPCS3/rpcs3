@@ -17,16 +17,16 @@
   1. Redistributions of source code must retain the above copyright
      notice, this list of conditions and the following disclaimer.
 
-  2. The origin of this software must not be misrepresented; you must 
-     not claim that you wrote the original software.  If you use this 
-     software in a product, an acknowledgment in the product 
+  2. The origin of this software must not be misrepresented; you must
+     not claim that you wrote the original software.  If you use this
+     software in a product, an acknowledgment in the product
      documentation would be appreciated but is not required.
 
   3. Altered source versions must be plainly marked as such, and must
      not be misrepresented as being the original software.
 
-  4. The name of the author may not be used to endorse or promote 
-     products derived from this software without specific prior written 
+  4. The name of the author may not be used to endorse or promote
+     products derived from this software without specific prior written
      permission.
 
   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
@@ -100,7 +100,7 @@
 
 
 /*---------------------------------------------------*/
-void BZ2_hbMakeCodeLengths ( UChar *len, 
+void BZ2_hbMakeCodeLengths ( UChar *len,
                              Int32 *freq,
                              Int32 alphaSize,
                              Int32 maxLen )
@@ -114,7 +114,7 @@ void BZ2_hbMakeCodeLengths ( UChar *len,
 
    Int32 heap   [ BZ_MAX_ALPHA_SIZE + 2 ];
    Int32 weight [ BZ_MAX_ALPHA_SIZE * 2 ];
-   Int32 parent [ BZ_MAX_ALPHA_SIZE * 2 ]; 
+   Int32 parent [ BZ_MAX_ALPHA_SIZE * 2 ];
 
    for (i = 0; i < alphaSize; i++)
       weight[i+1] = (freq[i] == 0 ? 1 : freq[i]) << 8;
@@ -136,7 +136,7 @@ void BZ2_hbMakeCodeLengths ( UChar *len,
       }
 
       AssertH( nHeap < (BZ_MAX_ALPHA_SIZE+2), 2001 );
-   
+
       while (nHeap > 1) {
          n1 = heap[1]; heap[1] = heap[nHeap]; nHeap--; DOWNHEAP(1);
          n2 = heap[1]; heap[1] = heap[nHeap]; nHeap--; DOWNHEAP(1);
@@ -159,7 +159,7 @@ void BZ2_hbMakeCodeLengths ( UChar *len,
          len[i-1] = j;
          if (j > maxLen) tooLong = True;
       }
-      
+
       if (! tooLong) break;
 
       /* 17 Oct 04: keep-going condition for the following loop used

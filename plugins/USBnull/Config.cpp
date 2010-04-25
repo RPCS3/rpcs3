@@ -61,7 +61,7 @@ void LoadConfig()
 		SaveConfig();
 		return;
 	}
-	
+
 	conf.Log = Ini.ReadInt("logging", 0);
 	setLoggingState();
 	Ini.Close();
@@ -75,7 +75,7 @@ void SaveConfig()
 		USBLog.WriteLn("Failed to open %s", IniPath.c_str());
 		return;
 	}
-	
+
 	Ini.WriteInt("logging", conf.Log);
 	Ini.Close();
 }

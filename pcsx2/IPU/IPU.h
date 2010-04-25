@@ -67,11 +67,11 @@ struct IPUStatus {
 // Bitfield Structures
 //
 
-struct tIPU_CMD 
+struct tIPU_CMD
 {
-	union 
+	union
 	{
-		struct 
+		struct
 		{
 			u32 OPTION : 28;	// VDEC decoded value
 			u32 CMD : 4;	// last command
@@ -80,7 +80,7 @@ struct tIPU_CMD
 	};
 	u32 BUSY;
 };
-			
+
 union tIPU_CTRL {
 	struct {
 		u32 IFC : 4;	// Input FIFO counter
@@ -102,7 +102,7 @@ union tIPU_CTRL {
 	u32 _u32;
 
 	tIPU_CTRL( u32 val ) { _u32 = val; }
-	
+
     // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
     // minus the reserved bits. (18-19; 27-29) [0x47f30000]
 	void write(u32 value) { _u32 = (value & 0x47f30000) | (_u32 & 0x8000ffff); }
@@ -146,7 +146,7 @@ union tIPU_CMD_IDEC
 	u32 _u32;
 
 	tIPU_CMD_IDEC( u32 val ) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -194,7 +194,7 @@ union tIPU_CMD_BDEC
 	u32 _u32;
 
 	tIPU_CMD_BDEC( u32 val ) { _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -236,7 +236,7 @@ union tIPU_CMD_CSC
 	u32 _u32;
 
 	tIPU_CMD_CSC( u32 val ){ _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -281,9 +281,9 @@ union tIPU_DMA
 		bool SIFSTALL : 1;
 	};
 	u32 _u32;
-	
+
 	tIPU_DMA( u32 val ){ _u32 = val; }
-	
+
 	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
@@ -291,7 +291,7 @@ union tIPU_DMA
 	wxString desc() const
 	{
 		wxString temp(L"g_nDMATransfer[");
-		
+
 		if (GIFSTALL) temp += L" GIFSTALL ";
 		if (TIE0) temp += L" TIE0 ";
 		if (TIE1) temp += L" TIE1 ";
@@ -301,7 +301,7 @@ union tIPU_DMA
 		if (FIREINT1) temp += L" FIREINT1 ";
 		if (VIFSTALL) temp += L" VIFSTALL ";
 		if (SIFSTALL) temp += L" SIFSTALL ";
-		
+
 		temp += L"]";
 		return temp;
 	}

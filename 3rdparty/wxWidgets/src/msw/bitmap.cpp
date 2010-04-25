@@ -815,7 +815,7 @@ bool wxBitmap::CreateFromImage(const wxImage& image, int depth, WXHDC hdc)
 
     if (depth == -1)
       depth = dib.GetDepth();
-      
+
     // store the bitmap parameters
     wxBitmapRefData * const refData = new wxBitmapRefData;
     refData->m_width = w;
@@ -1102,7 +1102,7 @@ wxBitmap wxBitmap::GetSubBitmapOfHDC( const wxRect& rect, WXHDC hdc ) const
 
     {
         SelectInHDC selectDst(dcDst, GetHbitmapOf(ret));
-		
+
         if ( !selectDst )
         {
             wxLogLastError(_T("SelectObject(destBitmap)"));
@@ -1379,7 +1379,7 @@ wxMask::wxMask(const wxMask &mask)
     SelectObject(destDC, (HBITMAP) m_maskBitmap);
 
     BitBlt(destDC, 0, 0, w, h, srcDC, 0, 0, SRCCOPY);
-    
+
     SelectObject(srcDC, 0);
     DeleteDC(srcDC);
     SelectObject(destDC, 0);

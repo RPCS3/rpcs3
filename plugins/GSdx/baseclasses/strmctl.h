@@ -90,7 +90,7 @@ public:
     // We need a clock to see what time it is.  This is for the
     // "discard in a timely fashion" logic.  If we discard everything as
     // quick as possible, a whole 60 minute file could get discarded in the
-    // first 10 seconds, and if somebody wants to turn streaming on at 30 
+    // first 10 seconds, and if somebody wants to turn streaming on at 30
     // minutes into the file, and they make the call more than a few seconds
     // after the graph is run, it may be too late!
     // So we hold every sample until it's time has gone, then we discard it.

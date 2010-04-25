@@ -2,7 +2,7 @@
 // File: WXDebug.cpp
 //
 // Desc: DirectShow base classes - implements ActiveX system debugging
-//       facilities.    
+//       facilities.
 //
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
@@ -395,7 +395,7 @@ DWORD WINAPI MsgBoxThread(
         pmsg->szTitle,
         pmsg->szMessage,
         pmsg->dwFlags);
-    
+
     return 0;
 }
 
@@ -513,15 +513,15 @@ void WINAPI DbgBreakPoint(const TCHAR *pCondition,const TCHAR *pFileName,INT iLi
 
 void WINAPI DbgBreakPoint(const TCHAR *pFileName,INT iLine,const TCHAR* szFormatString,...)
 {
-    // A debug break point message can have at most 2000 characters if 
+    // A debug break point message can have at most 2000 characters if
     // ANSI or UNICODE characters are being used.  A debug break point message
-    // can have between 1000 and 2000 double byte characters in it.  If a 
+    // can have between 1000 and 2000 double byte characters in it.  If a
     // particular message needs more characters, then the value of this constant
     // should be increased.
     const DWORD MAX_BREAK_POINT_MESSAGE_SIZE = 2000;
 
     TCHAR szBreakPointMessage[MAX_BREAK_POINT_MESSAGE_SIZE];
-    
+
     const DWORD MAX_CHARS_IN_BREAK_POINT_MESSAGE = sizeof(szBreakPointMessage) / sizeof(TCHAR);
 
     va_list va;
@@ -530,7 +530,7 @@ void WINAPI DbgBreakPoint(const TCHAR *pFileName,INT iLine,const TCHAR* szFormat
     HRESULT hr = StringCchVPrintf( szBreakPointMessage, MAX_CHARS_IN_BREAK_POINT_MESSAGE, szFormatString, va );
 
     va_end(va);
-    
+
     if( S_OK != hr ) {
         DbgBreak( "ERROR in DbgBreakPoint().  The variable length debug message could not be displayed because _vsnprintf() failed." );
         return;
@@ -580,7 +580,7 @@ BOOL WINAPI DbgCheckModuleLevel(DWORD Type,DWORD Level)
 	// speed up unconditional output.
 	if (0==Level)
 	    return(TRUE);
-	
+
         for (LONG lKeyPos = 0;lKeyPos < iMAXLEVELS;lKeyPos++) {
             if (Type & Mask) {
                 if (Level <= (m_Levels[lKeyPos] & ~LOG_FORCIBLY_SET)) {
@@ -616,10 +616,10 @@ void WINAPI DbgSetAutoRefreshLevels(bool fAuto)
 }
 
 #ifdef UNICODE
-// 
+//
 // warning -- this function is implemented twice for ansi applications
 // linking to the unicode library
-// 
+//
 void WINAPI DbgLogInfo(DWORD Type,DWORD Level,const CHAR *pFormat,...)
 {
     /* Check the current level for this type combination */
@@ -748,13 +748,13 @@ void WINAPI DbgKernelAssert(const CHAR *pCondition,const CHAR *pFileName,INT iLi
    have their own copy of this code. It therefore helps if the module name is
    included on the output so that the offending code can be easily found */
 
-// 
+//
 // warning -- this function is implemented twice for ansi applications
 // linking to the unicode library
-// 
+//
 void WINAPI DbgLogInfo(DWORD Type,DWORD Level,const TCHAR *pFormat,...)
 {
-    
+
     /* Check the current level for this type combination */
 
     BOOL bAccept = DbgCheckModuleLevel(Type,Level);
@@ -939,18 +939,18 @@ void WINAPI DbgDumpObjectRegister()
         if(pObject->m_wszName) {
             #ifdef UNICODE
             LPCTSTR FORMAT_STRING = TEXT("%5d (%8x) %30s");
-            #else 
+            #else
             LPCTSTR FORMAT_STRING = TEXT("%5d (%8x) %30S");
-            #endif 
+            #endif
 
             (void)StringCchPrintf(szInfo,NUMELMS(szInfo), FORMAT_STRING, pObject->m_dwCookie, &pObject, pObject->m_wszName);
 
         } else {
             #ifdef UNICODE
             LPCTSTR FORMAT_STRING = TEXT("%5d (%8x) %30S");
-            #else 
+            #else
             LPCTSTR FORMAT_STRING = TEXT("%5d (%8x) %30s");
-            #endif 
+            #endif
 
             (void)StringCchPrintf(szInfo,NUMELMS(szInfo),FORMAT_STRING,pObject->m_dwCookie, &pObject, pObject->m_szName);
         }
@@ -1021,7 +1021,7 @@ void WINAPI DbgSetWaitTimeout(DWORD dwTimeout)
         }
 
 	// !!! add something to print FOURCC guids?
-	
+
 	// shouldn't this print the hex CLSID?
         return "Unknown GUID Name";
     }
@@ -1065,11 +1065,11 @@ CDisp::CDisp(REFCLSID clsid)
     WCHAR strClass[CHARS_IN_GUID+1];
     StringFromGUID2(clsid, strClass, sizeof(strClass) / sizeof(strClass[0]));
     ASSERT(sizeof(m_String)/sizeof(m_String[0]) >= CHARS_IN_GUID+1);
-    #ifdef UNICODE 
+    #ifdef UNICODE
     (void)StringCchPrintf(m_String, NUMELMS(m_String), TEXT("%s"), strClass);
     #else
     (void)StringCchPrintf(m_String, NUMELMS(m_String), TEXT("%S"), strClass);
-    #endif  
+    #endif
 };
 
 #ifdef __STREAMS__
@@ -1149,7 +1149,7 @@ CDisp::CDisp(IPin *pPin)
     LPCTSTR FORMAT_STRING = TEXT("%S(%s)");
     #else
     LPCTSTR FORMAT_STRING = TEXT("%s(%s)");
-    #endif 
+    #endif
 
     (void)StringCchPrintf(m_pString, len, FORMAT_STRING, GuidNames[clsid], str);
 }
@@ -1175,7 +1175,7 @@ CDisp::CDisp(IUnknown *pUnk)
                 LPCTSTR FORMAT_STRING = TEXT("%s");
                 #else
                 LPCTSTR FORMAT_STRING = TEXT("%S");
-                #endif 
+                #endif
 
                 (void)StringCchPrintf(m_pString, len, FORMAT_STRING, fi.achName);
             }
@@ -1345,7 +1345,7 @@ void WINAPI DumpGraph(IFilterGraph *pGraph, DWORD dwLevel)
 	    QueryFilterInfoReleaseGraph(info);
 
 	    // !!! should QueryVendorInfo here!
-	
+
 	    DbgLog((LOG_TRACE,dwLevel,TEXT("    Filter [%x]  '%ls'"), pFilter, info.achName));
 
 	    IEnumPins *pins;
@@ -1406,7 +1406,7 @@ void WINAPI DumpGraph(IFilterGraph *pGraph, DWORD dwLevel)
 	    }
 
 	}
-	
+
 	pFilter->Release();
     }
 

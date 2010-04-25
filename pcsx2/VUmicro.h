@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -64,7 +64,7 @@ public:
 	virtual void Shutdown()=0;
 	virtual void Reset()=0;
 	virtual void Execute(u32 cycles)=0;
-	virtual void ExecuteBlock(bool startUp)=0; 
+	virtual void ExecuteBlock(bool startUp)=0;
 
 	virtual void Step()=0;
 	virtual void Clear(u32 Addr, u32 Size)=0;
@@ -72,7 +72,7 @@ public:
 	// C++ Calling Conventions are unstable, and some compilers don't even allow us to take the
 	// address of C++ methods.  We need to use a wrapper function to invoke the ExecuteBlock from
 	// recompiled code.
-	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu ) 
+	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu )
 	{
 		cpu->Execute(1024);
 	}
@@ -206,7 +206,7 @@ public:
 //  recSuperVU0 / recSuperVU1
 // --------------------------------------------------------------------------------------
 
-class recSuperVU0 : public BaseVUmicroCPU 
+class recSuperVU0 : public BaseVUmicroCPU
 {
 public:
 	recSuperVU0();
@@ -221,7 +221,7 @@ public:
 	void Clear(u32 Addr, u32 Size);
 };
 
-class recSuperVU1 : public BaseVUmicroCPU 
+class recSuperVU1 : public BaseVUmicroCPU
 {
 public:
 	recSuperVU1();
@@ -519,7 +519,7 @@ void VU0MI_ESUM();
 void VU0MI_ERCPR();
 void VU0MI_ESQRT();
 void VU0MI_ERSQRT();
-void VU0MI_ESIN(); 
+void VU0MI_ESIN();
 void VU0MI_EATAN();
 void VU0MI_EEXP();
 void VU0MI_XGKICK();
@@ -694,7 +694,7 @@ void VU0regsMI_ESUM(_VURegsNum *VUregsn);
 void VU0regsMI_ERCPR(_VURegsNum *VUregsn);
 void VU0regsMI_ESQRT(_VURegsNum *VUregsn);
 void VU0regsMI_ERSQRT(_VURegsNum *VUregsn);
-void VU0regsMI_ESIN(_VURegsNum *VUregsn); 
+void VU0regsMI_ESIN(_VURegsNum *VUregsn);
 void VU0regsMI_EATAN(_VURegsNum *VUregsn);
 void VU0regsMI_EEXP(_VURegsNum *VUregsn);
 void VU0regsMI_XGKICK(_VURegsNum *VUregsn);
@@ -869,7 +869,7 @@ void VU1MI_ESUM();
 void VU1MI_ERCPR();
 void VU1MI_ESQRT();
 void VU1MI_ERSQRT();
-void VU1MI_ESIN(); 
+void VU1MI_ESIN();
 void VU1MI_EATAN();
 void VU1MI_EEXP();
 void VU1MI_XGKICK();
@@ -1044,7 +1044,7 @@ void VU1regsMI_ESUM(_VURegsNum *VUregsn);
 void VU1regsMI_ERCPR(_VURegsNum *VUregsn);
 void VU1regsMI_ESQRT(_VURegsNum *VUregsn);
 void VU1regsMI_ERSQRT(_VURegsNum *VUregsn);
-void VU1regsMI_ESIN(_VURegsNum *VUregsn); 
+void VU1regsMI_ESIN(_VURegsNum *VUregsn);
 void VU1regsMI_EATAN(_VURegsNum *VUregsn);
 void VU1regsMI_EEXP(_VURegsNum *VUregsn);
 void VU1regsMI_XGKICK(_VURegsNum *VUregsn);

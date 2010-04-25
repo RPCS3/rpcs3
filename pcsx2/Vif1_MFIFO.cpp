@@ -81,7 +81,7 @@ static __forceinline bool mfifoVIF1rbTransfer()
 static __forceinline bool mfifo_VIF1chain()
 {
     bool ret;
-    
+
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
 	{
