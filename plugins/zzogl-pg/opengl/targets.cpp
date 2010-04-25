@@ -391,12 +391,12 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 			if( ittarg == s_DepthRTs.mapTargets.end() )
 				nUpdateTarg = 0;
 			else if( ittarg->second == this ) {
-				ERROR_LOG("updating self");
+				ZZLog::Error_Log("Updating self.");
 				nUpdateTarg = 0;
 			}
 		}
 		else if( ittarg->second == this ) {
-			ERROR_LOG("updating self");
+			ZZLog::Error_Log("Updating self.");
 			nUpdateTarg = 0;
 		}
 	}
@@ -490,10 +490,10 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	FUNCLOG
 
 	u32 ptexConv;
-//	ERROR_LOG("ZZogl: Convert to 32, report if something missing\n");
+//	ZZLog::Error_Log("Convert to 32, report if something missing.");
 	// create new target
 	if ( ! InitialiseDefaultTexture ( &ptexConv, RW(fbw), RH(fbh)/2 ) ) {
-		ERROR_LOG("Failed to create target for ConvertTo32 %dx%d\n", RW(fbw), RH(fbh)/2);
+		ZZLog::Error_Log("Failed to create target for ConvertTo32 %dx%d.", RW(fbw), RH(fbh)/2);
 		return;
 	}
 
@@ -588,10 +588,10 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 
 	u32 ptexConv;
 
-//	ERROR_LOG("ZZogl: Convert to 16, report if something missing\n");
+//	ZZLog::Error_Log("Convert to 16, report if something missing.");
 	// create new target
 	if ( ! InitialiseDefaultTexture ( &ptexConv, RW(fbw), RH(fbh)*2 ) ) {
-		ERROR_LOG("Failed to create target for ConvertTo16 %dx%d\n", RW(fbw), RH(fbh)*2);
+		ZZLog::Error_Log("Failed to create target for ConvertTo16 %dx%d.", RW(fbw), RH(fbh)*2);
 		return;
 	}
 
@@ -687,7 +687,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	if( ptexFeedback == 0 ) {
 		// create
 		if ( ! InitialiseDefaultTexture( &ptexFeedback, RW(fbw), RH(fbh) ) ) {
-			ERROR_LOG("Failed to create feedback %dx%d\n", RW(fbw), RH(fbh));
+			ZZLog::Error_Log("Failed to create feedback %dx%d.", RW(fbw), RH(fbh));
 			return;
 		}
 	}
@@ -796,7 +796,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 			glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_STENCIL_INDEX8_EXT, RW(fbw), RH(fbh));
 
 			if( glGetError() != GL_NO_ERROR ) {
-				ERROR_LOG("failed to create depth buffer %dx%d\n", RW(fbw), RH(fbh));
+				ZZLog::Error_Log("Failed to create depth buffer %dx%d.", RW(fbw), RH(fbh));
 				return false;
 			}
 		}
@@ -1146,12 +1146,10 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		// can be both 16bit and 32bit
 		if( PSMT_ISHALF(frame.psm) != PSMT_ISHALF(it->second->psm) ) {
-			// a lot of games do this actually...
-#ifdef _DEBUG
-			WARN_LOG("Really bad formats! %d %d\n", frame.psm, it->second->psm);
-#endif
+			// a lot of games do this, actually...
+			ZZLog::Debug_Log("Really bad formats! %d %d", frame.psm, it->second->psm);
 
-//			This code SHOULD be commented, until I redone _Resolve function
+//			This code SHOULD be commented, until I redo the _Resolve function
 			if( !(opts&TO_StrictHeight) ) {
 				if( (g_GameSettings & GAME_VSSHACKOFF) ) {
 					if (PSMT_ISHALF(it->second->psm)) {
@@ -1172,7 +1170,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			// certain variables have to be reset every time
 			if( (it->second->psm&~1) != (frame.psm&~1) ) {
 #ifndef RELEASE_TO_PUBLIC
-				WARN_LOG("bad formats 2: %d %d\n", frame.psm, it->second->psm);
+				ZZLog::Warn_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
 #endif
 				it->second->psm = frame.psm;
 
@@ -1182,7 +1180,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		}
 
 		if( it->second->fbm != frame.fbm ) {
-			//WARN_LOG("bad fbm: 0x%8.8x 0x%8.8x, psm: %d\n", frame.fbm, it->second->fbm, frame.psm);
+			//ZZLog::Warn_Log("Bad fbm: 0x%8.8x 0x%8.8x, psm: %d", frame.fbm, it->second->fbm, frame.psm);
 		}
 
 		it->second->fbm &= frame.fbm;
@@ -1362,7 +1360,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 				if( pmngrs[cur] == NULL ) {
 					cur = !cur;
 					if( pmngrs[cur] == NULL ) {
-						WARN_LOG("Out of memory!\n");
+						ZZLog::Warn_Log("Out of memory!");
 						delete ptarg;
 						return NULL;
 					}
@@ -2035,7 +2033,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 				int disalignment = 16 - ((u32)(uptr)dst)%16 ;		// This is value of shift. It could be 0 < disalignment <= 15
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
 				dst = (u16*)ptexdata;
-				GS_LOG("Made alignment for texdata, 0x%x\n", dst );
+				ZZLog::GS_Log("Made alignment for texdata, 0x%x", dst );
 				assert( ((u32)(uptr)dst)%16 == 0 );			// Assert, because at future could be vectors with uncontigious spaces
 			}
 
@@ -2082,7 +2080,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		{
 			if (listTargets.size() == 0)
 			{
-				ERROR_LOG("Failed to create %dx%x texture\n", GPU_TEXWIDTH*channels*widthmult, (realheight+widthmult-1)/widthmult);
+				ZZLog::Error_Log("Failed to create %dx%x texture.", GPU_TEXWIDTH*channels*widthmult, (realheight+widthmult-1)/widthmult);
 				channels = 1;
 				return NULL;
 			}
@@ -2237,15 +2235,13 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 		}
 	}
 
-	if (glGetError() != GL_NO_ERROR )
-		ERROR_LOG ("Error before creation of bitmask texture\n");
+	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error before creation of bitmask texture.");
 
 	// create a new tex
 	u32 ptex;
 	glGenTextures(1, &ptex);
 
-	if (glGetError() != GL_NO_ERROR )
-		ERROR_LOG ("Error on generation of bitmask texture\n");
+	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on generation of bitmask texture.");
 
 	vector<u16> data(GPU_TEXMASKWIDTH+1);
 	for(u32 i = 0; i < GPU_TEXMASKWIDTH; ++i)
@@ -2254,13 +2250,11 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 
-	if (glGetError() != GL_NO_ERROR )
-		ERROR_LOG ("Error on binding bitmask texture\n");
+	if (glGetError() != GL_NO_ERROR ) ZZLog::Error_Log("Error on binding bitmask texture.");
 
 	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_LUMINANCE16, GPU_TEXMASKWIDTH+1, 1, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data[0]);
 
-	if (glGetError() != GL_NO_ERROR )
-		ERROR_LOG ("Error on puting bitmask texture\n");
+	if (glGetError() != GL_NO_ERROR ) ZZLog::Error_Log("Error on applying bitmask texture.");
 
 //	Removing clamping, as it seems lead to numerous troubles at some drivers
 //	Need to observe, may be clamping is not really needed.
@@ -2271,12 +2265,12 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	if( Error != GL_NO_ERROR ) {
 		ERROR_LOG_SPAM_TEST("Failed to create bitmask texture; \t");
 		if (SPAM_PASS) {
-			ERROR_LOG("bitmask cache %d; \t",  mapTextures.size());
+			ZZLog::Log("bitmask cache %d; \t",  mapTextures.size());
 			switch (Error) {
-				case GL_INVALID_ENUM: ERROR_LOG("Invalid enumerator\n") ; break;
-				case GL_INVALID_VALUE: ERROR_LOG("Invalid value\n"); break;
-				case GL_INVALID_OPERATION: ERROR_LOG("Invalid operation\n"); break;
-				default: ERROR_LOG("Error number: %d \n", Error);
+				case GL_INVALID_ENUM: ZZLog::Error_Log("Invalid enumerator.") ; break;
+				case GL_INVALID_VALUE: ZZLog::Error_Log("Invalid value."); break;
+				case GL_INVALID_OPERATION: ZZLog::Error_Log("Invalid operation."); break;
+				default: ZZLog::Error_Log("Error number: %d.", Error);
 			}
 		}
 		return 0;
@@ -2468,7 +2462,7 @@ void ResolveInRange(int start, int end)
 			if ((*it)->created == 123 )
 				(*it)->Resolve();
 			else
-				ERROR_LOG("Resolving non-existing object! Destroy code %d\n", (*it)->created);
+				ZZLog::Error_Log("Resolving non-existing object! Destroy code %d.", (*it)->created);
 		}
 	}
 }
@@ -2619,7 +2613,7 @@ void InitTransferHostLocal()
 
 #ifndef RELEASE_TO_PUBLIC
 	if( gs.trxpos.dx+gs.imageWnew > gs.dstbuf.bw )
-		WARN_LOG("Transfer error, width exceeds\n");
+		ZZLog::Warn_Log("Transfer error, width exceeded.");
 #endif
 
 	//bool bHasFlushed = false;
@@ -2639,7 +2633,7 @@ void InitTransferHostLocal()
 	GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
 
 	if( end > 0x00400000 ) {
-		WARN_LOG("host local out of bounds!\n");
+		ZZLog::Warn_Log("Host local out of bounds!");
 		//gs.imageTransfer = -1;
 		end = 0x00400000;
 	}
@@ -2651,7 +2645,7 @@ void InitTransferHostLocal()
 	if( vb[1].nCount > 0 )
 		Flush(1);
 
-	//PRIM_LOG("trans: bp:%x x:%x y:%x w:%x h:%x\n", gs.dstbuf.bp, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew);
+	//ZZLog::Prim_Log("trans: bp:%x x:%x y:%x w:%x h:%x\n", gs.dstbuf.bp, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew);
 
 //  if( !bHasFlushed && (vb[0].bNeedFrameCheck || vb[0].bNeedZCheck || vb[1].bNeedFrameCheck || vb[1].bNeedZCheck)) {
 //	  Flush(0);
@@ -2712,7 +2706,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 			if( (ptarg->status & CRenderTarget::TS_Virtual) )
 				continue;
 
-			//ERROR_LOG("resolving to alpha channel\n");
+			//ZZLog::Error_Log("Resolving to alpha channel.");
 			ptarg->Resolve();
 		}
 	}
@@ -2776,7 +2770,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 //  const T* pbuf = (const T*)pbyMem; \
 //  u32 nSize = nQWordSize*(4/sizeof(T)); \
 //  assert( (nSize%widthlimit) == 0 && widthlimit <= 4 ); \
-//  if( ((gs.imageEndX-gs.trxpos.dx)%widthlimit) ) ERROR_LOG("Bad Transmission! %d %d, psm: %d\n", gs.trxpos.dx, gs.imageEndX, DSTPSM); \
+//  if( ((gs.imageEndX-gs.trxpos.dx)%widthlimit) ) ZZLog::Error_Log("Bad Transmission! %d %d, psm: %d.", gs.trxpos.dx, gs.imageEndX, DSTPSM); \
 //  for(; i < gs.imageEndY; ++i) { \
 //	  for(; j < gs.imageEndX && nSize > 0; j += widthlimit, nSize -= widthlimit, pbuf += widthlimit) { \
 //		  /* write as many pixel at one time as possible */ \
@@ -2844,7 +2838,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 ////				// hack
 ////				if( abs((int)nQWordSize*8 - (gs.imageEndY-i)*(gs.imageEndX-gs.trxpos.dx)+(j-gs.trxpos.dx)) <= 8 ) {
 ////					// don't transfer
-////					ERROR_LOG("bad texture 4: %d %d %d\n", gs.trxpos.dx, gs.imageEndX, nQWordSize);
+////					ZZLog::Error_Log("bad texture 4: %d %d %d.", gs.trxpos.dx, gs.imageEndX, nQWordSize);
 ////					gs.imageEndX = gs.trxpos.dx + (gs.imageEndX-gs.trxpos.dx)&~7;
 ////					//i = gs.imageEndY;
 ////					//goto End;
@@ -2892,7 +2886,7 @@ void InitTransferLocalHost()
 
 #ifndef RELEASE_TO_PUBLIC
 	if( gs.trxpos.sx+gs.imageWnew > gs.srcbuf.bw )
-		WARN_LOG("Transfer error, width exceeds\n");
+		ZZLog::Warn_Log("Transfer error, width exceeded.");
 #endif
 
 	gs.imageX = gs.trxpos.sx;
@@ -3004,10 +2998,10 @@ void TransferLocalLocal()
 	assert( gs.trxpos.sx+gs.imageWnew < 2048 && gs.trxpos.sy+gs.imageHnew < 2048 );
 	assert( gs.trxpos.dx+gs.imageWnew < 2048 && gs.trxpos.dy+gs.imageHnew < 2048 );
 	assert( (gs.srcbuf.psm&0x7) == (gs.dstbuf.psm&0x7) );
-	if( gs.trxpos.sx+gs.imageWnew > gs.srcbuf.bw )
-		WARN_LOG("Transfer error, src width exceeds\n");
-	if( gs.trxpos.dx+gs.imageWnew > gs.dstbuf.bw )
-		WARN_LOG("Transfer error, dst width exceeds\n");
+	if (gs.trxpos.sx+gs.imageWnew > gs.srcbuf.bw)
+		ZZLog::Warn_Log("Transfer error, src width exceeded.");
+	if (gs.trxpos.dx+gs.imageWnew > gs.dstbuf.bw)
+		ZZLog::Warn_Log("Transfer error, dst width exceeded.");
 
 	int srcstart, srcend, dststart, dstend;
 
@@ -3238,7 +3232,7 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 {
 	FUNCLOG
 	if( m_Blocks[psm].bpp == 0 ) {
-		ERROR_LOG("ZeroGS: Bad psm 0x%x\n", psm);
+		ZZLog::Error_Log("ZeroGS: Bad psm 0x%x.", psm);
 		start = 0;
 		end = 0x00400000;
 		return;
@@ -3432,7 +3426,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	// Targets over 2000 should be shuffle. FFX and KH2 (0x2100)
 	int X = (psm == 0) ? 0 : 0;
 //if (X == 1)
-//ERROR_LOG("resolve: %x %x %x %x (%x-%x)\n", psm, fbp, fbw, fbh, start, end);
+//ZZLog::Error_Log("resolve: %x %x %x %x (%x-%x).", psm, fbp, fbw, fbh, start, end);
 
 
 #define RESOLVE_32BIT(psm, T, Tsrc, blockbits, blockwidth, blockheight, convfn, frame, aax, aay) \

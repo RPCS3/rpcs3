@@ -338,13 +338,13 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
 #ifdef STATS
 	st_out_bit_counts[st_current_index] += n;
 #endif
-	//	DEBUG_LOG("put_bits=%d %x\n", n, value);
+	//	ZZLog::Debug_Log("put_bits=%d %x.", n, value);
 	assert(n == 32 || value < (1U << n));
 
 	bit_buf = s->bit_buf;
 	bit_left = s->bit_left;
 
-	//	DEBUG_LOG("n=%d value=%x cnt=%d buf=%x\n", n, value, bit_cnt, bit_buf);
+	//	ZZLog::Debug_Log("n=%d value=%x cnt=%d buf=%x.", n, value, bit_cnt, bit_buf);
 	/* XXX: optimize */
 	if (n < bit_left) {
 		bit_buf = (bit_buf<<n) | value;
@@ -361,7 +361,7 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
 		} else
 #endif
 		*(uint32_t *)s->buf_ptr = be2me_32(bit_buf);
-		//DEBUG_LOG("bitbuf = %08x\n", bit_buf);
+		//ZZLog::Debug_Log("bitbuf = %08x.", bit_buf);
 		s->buf_ptr+=4;
 	bit_left+=32 - n;
 		bit_buf = value;
@@ -403,7 +403,7 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
 
 	ptr[0] |= be2me_32(value>>(index&31));
 	ptr[1]  = be2me_32(value<<(32-(index&31)));
-//if(n>24) DEBUG_LOG("%d %d\n", n, value);
+//	if (n > 24) ZZLog::Debug_Log("%d %d", n, value);
 	index+= n;
 	s->index= index;
 #		endif
@@ -431,7 +431,7 @@ static inline void put_bits(PutBitContext *s, int n, unsigned int value)
 
 	ptr[0] |= be2me_32(value<<(32-n-(index&7) ));
 	ptr[1] = 0;
-//if(n>24) DEBUG_LOG("%d %d\n", n, value);
+//	if (n > 24) ZZLog::Debug_Log("%d %d", n, value);
 	index+= n;
 	s->index= index;
 #		endif
@@ -882,20 +882,22 @@ static always_inline int get_vlc2(GetBitContext *s, VLC_TYPE (*table)[2],
 #ifdef TRACE
 
 static inline void print_bin(int bits, int n){
+#if _DEBUG
 	int i;
 
 	for(i=n-1; i>=0; i--){
-		DEBUG_LOG("%d", (bits>>i)&1);
+		ZZLog::Log("%d", (bits>>i)&1);
 	}
 	for(i=n; i<24; i++)
-		DEBUG_LOG(" ");
+		ZZLog::Log(" ");
+#endif
 }
 
 static inline int get_bits_trace(GetBitContext *s, int n, char *file, char *func, int line){
 	int r= get_bits(s, n);
 
 	print_bin(r, n);
-	DEBUG_LOG("%5d %2d %3d bit @%5d in %s %s:%d\n", r, n, r, get_bits_count(s)-n, file, func, line);
+	ZZLog::Debug_Log("%5d %2d %3d bit @%5d in %s %s:%d", r, n, r, get_bits_count(s)-n, file, func, line);
 	return r;
 }
 static inline int get_vlc_trace(GetBitContext *s, VLC_TYPE (*table)[2], int bits, int max_depth, char *file, char *func, int line){
@@ -907,7 +909,7 @@ static inline int get_vlc_trace(GetBitContext *s, VLC_TYPE (*table)[2], int bits
 
 	print_bin(bits2, len);
 
-	DEBUG_LOG("%5d %2d %3d vlc @%5d in %s %s:%d\n", bits2, len, r, pos, file, func, line);
+	ZZLog::Debug_Log("%5d %2d %3d vlc @%5d in %s %s:%d", bits2, len, r, pos, file, func, line);
 	return r;
 }
 static inline int get_xbits_trace(GetBitContext *s, int n, char *file, char *func, int line){
@@ -915,7 +917,7 @@ static inline int get_xbits_trace(GetBitContext *s, int n, char *file, char *fun
 	int r= get_xbits(s, n);
 
 	print_bin(show, n);
-	DEBUG_LOG("%5d %2d %3d xbt @%5d in %s %s:%d\n", show, n, r, get_bits_count(s)-n, file, func, line);
+	ZZLog::Debug_Log("%5d %2d %3d xbt @%5d in %s %s:%d", show, n, r, get_bits_count(s)-n, file, func, line);
 	return r;
 }
 

@@ -99,20 +99,20 @@ using namespace std;
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
 // sends a message to output window if assert fails
-#define BMSG(x, str)			{ if( !(x) ) { GS_LOG(str); GS_LOG(str); } }
-#define BMSG_RETURN(x, str)	{ if( !(x) ) { GS_LOG(str); GS_LOG(str); return; } }
-#define BMSG_RETURNX(x, str, rtype)	{ if( !(x) ) { GS_LOG(str); GS_LOG(str); return (##rtype); } }
-#define B(x)				{ if( !(x) ) { GS_LOG(_#x"\n"); GS_LOG(#x"\n"); } }
-#define B_RETURN(x)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); return; } }
-#define B_RETURNX(x, rtype)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); return (##rtype); } }
-#define B_G(x, action)			{ if( !(x) ) { ERROR_LOG("%s:%d: %s\n", __FILE__, (u32)__LINE__, #x); action; } }
+#define BMSG(x, str)			{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); } }
+#define BMSG_RETURN(x, str)	{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); return; } }
+#define BMSG_RETURNX(x, str, rtype)	{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); return (##rtype); } }
+#define B(x)				{ if( !(x) ) { ZZLog::Log(_#x"\n"); ZZLog::Log(#x"\n"); } }
+#define B_RETURN(x)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); return; } }
+#define B_RETURNX(x, rtype)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); return (##rtype); } }
+#define B_G(x, action)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); action; } }
 
 #define GL_REPORT_ERROR() \
 { \
 	GLenum err = glGetError(); \
 	if( err != GL_NO_ERROR ) \
 	{ \
-		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(err)); \
+		ZZLog::Error_Log("%s:%d: gl error %s", __FILE__, (int)__LINE__, error_name(err)); \
 		ZeroGS::HandleGLError(); \
 	} \
 }
@@ -123,7 +123,7 @@ using namespace std;
 	GLenum err = glGetError(); \
 	if( err != GL_NO_ERROR ) \
 	{ \
-		ERROR_LOG("%s:%d: gl error %s\n", __FILE__, (int)__LINE__, error_name(err)); \
+		ZZLog::Error_Log("%s:%d: gl error %s", __FILE__, (int)__LINE__, error_name(err)); \
 		ZeroGS::HandleGLError(); \
 	} \
 }

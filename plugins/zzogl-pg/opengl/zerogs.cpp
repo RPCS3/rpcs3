@@ -217,31 +217,31 @@ void ZeroGS::HandleGLError()
 			case GL_FRAMEBUFFER_COMPLETE_EXT:
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
-				ERROR_LOG("Error! missing a required image/buffer attachment!\n");
+				ZZLog::Error_Log("Error! missing a required image/buffer attachment!");
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT:
-				ERROR_LOG("Error! has no images/buffers attached!\n");
+				ZZLog::Error_Log("Error! has no images/buffers attached!");
 				break;
 //			case GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT:
-//				ERROR_LOG("Error! has an image/buffer attached in multiple locations!\n");
+//				ZZLog::Error_Log("Error! has an image/buffer attached in multiple locations!");
 //				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
-				ERROR_LOG("Error! has mismatched image/buffer dimensions!\n");
+				ZZLog::Error_Log("Error! has mismatched image/buffer dimensions!");
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
-				ERROR_LOG("Error! colorbuffer attachments have different types!\n");
+				ZZLog::Error_Log("Error! colorbuffer attachments have different types!");
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
-				ERROR_LOG("Error! trying to draw to non-attached color buffer!\n");
+				ZZLog::Error_Log("Error! trying to draw to non-attached color buffer!");
 				break;
 			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
-				ERROR_LOG("Error! trying to read from a non-attached color buffer!\n");
+				ZZLog::Error_Log("Error! trying to read from a non-attached color buffer!");
 				break;
 			case GL_FRAMEBUFFER_UNSUPPORTED_EXT:
-				ERROR_LOG("Error! format is not supported by current graphics card/driver!\n");
+				ZZLog::Error_Log("Error! format is not supported by current graphics card/driver!");
 				break;
 			default:
-				ERROR_LOG("*UNKNOWN ERROR* reported from glCheckFramebufferStatusEXT() for %s!\n");
+				ZZLog::Error_Log("*UNKNOWN ERROR* reported from glCheckFramebufferStatusEXT() for %s!");
 				break;
 		}
 	}
@@ -354,10 +354,12 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 	//int oldscreen = s_nFullscreen;
 
 	int oldwidth = nBackbufferWidth, oldheight = nBackbufferHeight;
-	if( !Create(nNewWidth&~7, nNewHeight&~7) ) {
-		ERROR_LOG("Failed to recreate, changing to old\n");
-		if( !Create(oldwidth, oldheight) ) {
-			SysMessage("failed to create dev, exiting...\n");
+	if (!Create(nNewWidth&~7, nNewHeight&~7)) 
+	{
+		ZZLog::Error_Log("Failed to recreate, changing to old device.");
+		if ( Create(oldwidth, oldheight)) 
+		{
+			SysMessage("Failed to create device, exiting...");
 			exit(0);
 		}
 	}
@@ -594,8 +596,8 @@ __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 
 static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
 {
-#ifdef PRIM_LOG
-		PRIM_LOG("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
+#ifdef WRITE_PRIM_LOGS
+		ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
 			id==0?'*':' ', id, prim->prim, vert.x/8, vert.y/8, vert.z, vert.f/128,
 		vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10));
 #endif
@@ -774,7 +776,7 @@ void ZeroGS::KickSprite()
 void ZeroGS::KickDummy()
 {
 	FUNCLOG
-	//GREG_LOG("Kicking bad primitive: %.8x\n", *(u32*)prim);
+	//ZZLog::Greg_Log("Kicking bad primitive: %.8x\n", *(u32*)prim);
 }
 
 void ZeroGS::SetFogColor(u32 fog)
@@ -806,7 +808,7 @@ void ZeroGS::SetFogColor(u32 fog)
 void ZeroGS::ExtWrite()
 {
 	FUNCLOG
-	WARN_LOG("ExtWrite\n");
+	ZZLog::Warn_Log("A hollow voice says 'EXTWRITE'! Nothing happens.");
 
 	// use local DISPFB, EXTDATA, EXTBUF, and PMODE
 //  int bpp, start, end;
@@ -843,7 +845,7 @@ bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
 	if (cpsm > 1 || csm)
 	{
 		// Mana Khemia triggers this.
-		//ERROR_LOG("16 bit clut not supported.\n");
+		//ZZLog::Error_Log("16 bit clut not supported.");
 		return true;
 	}
 
@@ -997,7 +999,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 	int cbp = ZZOglGet_cbp_TexBits(highdword);
 
 	// processing the CLUT after tex0/2 are written
-	//ERROR_LOG("high == 0x%x; cld == %d\n", highdword, cld);
+	//ZZLog::Error_Log("high == 0x%x; cld == %d", highdword, cld);
 	switch(cld) {
 		case 0: return false;
 		case 1: break;
@@ -1040,7 +1042,7 @@ void ZeroGS::texClutWrite(int ctx)
 			if (gs.cbp[1] == tex0.cbp) return;
 			gs.cbp[1] = tex0.cbp;
 			break;
-		default:  //DEBUG_LOG("cld isn't 0-5!");
+		default:  //ZZLog::Debug_Log("cld isn't 0-5!");
 			break;
 	}
 
@@ -1094,7 +1096,7 @@ void ZeroGS::texClutWrite(int ctx)
 
 				// check if address exceeds src
 				if( src+getPixelAddress32_0(gs.clut.cou+entries-1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000 )
-					ERROR_LOG("texClutWrite out of bounds\n");
+					ZZLog::Error_Log("texClutWrite out of bounds.");
 				else
 					for(int i = 0; i < entries; ++i)
 					{
@@ -1107,7 +1109,7 @@ void ZeroGS::texClutWrite(int ctx)
 			default:
 			{
 #ifndef RELEASE_TO_PUBLIC
-			//DEBUG_LOG("unknown cpsm: %x (%x)\n", tex0.cpsm, tex0.psm);
+			//ZZLog::Debug_Log("Unknown cpsm: %x (%x).", tex0.cpsm, tex0.psm);
 #endif
 				break;
 			}

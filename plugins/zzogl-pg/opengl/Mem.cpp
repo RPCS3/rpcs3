@@ -63,8 +63,8 @@ static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFun
 		if ((testwidth <= data.widthlimit) && (testwidth >= -data.widthlimit))
 		{
 			/* don't transfer */
-			/*DEBUG_LOG("bad texture %s: %d %d %d\n", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/
-			//ERROR_LOG("bad texture: testwidth = %d; data.widthlimit = %d\n", testwidth, data.widthlimit);
+			/*ZZLog::Debug_Log("Bad texture %s: %d %d %d", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/
+			//ZZLog::Error_Log("Bad texture: testwidth = %d; data.widthlimit = %d", testwidth, data.widthlimit);
 			gs.imageTransfer = -1;
 		}
 		bCanAlign = false;

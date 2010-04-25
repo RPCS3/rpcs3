@@ -105,7 +105,7 @@ typedef struct
 		regs = tag.REGS;
 		reg = 0;
 
-        //      GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+        //      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
         //                      data[3], data[2], data[1], data[0],
         //                      path->eop, path->nloop, mode, path->nreg, tag.PRE);
 	}
@@ -146,7 +146,7 @@ typedef struct
                 nreg    = tag.NREG << 2;
                 if (nreg == 0) nreg = 64;
 
-        //      GS_LOG("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d\n",
+        //      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
         //                      data[3], data[2], data[1], data[0],
         //                      path->eop, path->nloop, tagflg, path->nreg, tagpre);
 

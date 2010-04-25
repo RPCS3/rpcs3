@@ -185,21 +185,21 @@ static bool SPAM_PASS;
 
 #define ERROR_LOG_SPAM(text) { \
 	if( timeGetTime() - lasttime > BigTime ) { \
-		ERROR_LOG(text); \
+		ZZLog::Error_Log(text); \
 		lasttime = timeGetTime(); \
 	} \
 }
 // The same macro with one-argument substitution.
 #define ERROR_LOG_SPAMA(fmt, value) { \
 	if( timeGetTime() - lasttime > BigTime ) { \
-		ERROR_LOG(fmt, value); \
+		ZZLog::Error_Log(fmt, value); \
 		lasttime = timeGetTime(); \
 	} \
 }
 
 #define ERROR_LOG_SPAM_TEST(text) {\
 	if( timeGetTime() - lasttime > BigTime ) { \
-		ERROR_LOG(text); \
+		ZZLog::Error_Log(text); \
 		lasttime = timeGetTime(); \
 		SPAM_PASS = true; \
 	} \
@@ -215,7 +215,7 @@ static bool SPAM_PASS;
 	static unsigned long int waslasttime = 0; \
 	if (!Was_Here && FILE_IS_IN_CHECK) { \
 		Was_Here = true;\
-		ERROR_LOG("%s:%d %s\n", __FILE__, __LINE__, __func__); \
+		ZZLog::Error_Log("%s:%d %s", __FILE__, __LINE__, __func__); \
 		waslasttime = timeGetTime(); \
 	} \
 	if (FILE_IS_IN_CHECK && (timeGetTime() - waslasttime > BigTime ))  { \
@@ -225,6 +225,8 @@ static bool SPAM_PASS;
 #else
 #define FUNCLOG
 #endif
+
+//#define WRITE_PRIM_LOGS
 
 extern void __LogToConsole(const char *fmt, ...);
 
@@ -243,15 +245,6 @@ namespace ZZLog
 	extern void Warn_Log(const char *fmt, ...);
 	extern void Error_Log(const char *fmt, ...);
 };
-
-#define GREG_LOG ZZLog::Greg_Log
-#define PRIM_LOG ZZLog::Prim_Log
-#define WARN_LOG ZZLog::Warn_Log
-#define GS_LOG ZZLog::GS_Log
-#define DEBUG_LOG ZZLog::Debug_Log
-#define ERROR_LOG ZZLog::Error_Log
-//ZZLog::Error_Log
-
 
 #define REG64(name) \
 union name			\

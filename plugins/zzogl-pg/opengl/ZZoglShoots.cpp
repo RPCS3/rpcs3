@@ -301,7 +301,7 @@ void ZeroGS::StartCapture()
 		s_aviinit = 1;
 	}
 	else {
-		ERROR_LOG("Continuing from previous capture");
+		ZZLog::Error_Log("Continuing from previous capture.");
 	}
 
 	s_avicapturing = 1;

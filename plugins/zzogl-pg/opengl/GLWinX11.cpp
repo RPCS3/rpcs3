@@ -39,7 +39,7 @@ bool GLWindow::ReleaseWindow()
 	{
 		if (!glXMakeCurrent(glDisplay, None, NULL))
 		{
-			ERROR_LOG("Could not release drawing context.\n");
+			ZZLog::Error_Log("Could not release drawing context.");
 		}
 
 		glXDestroyContext(glDisplay, context);
@@ -104,21 +104,21 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	{
 		vi = glXChooseVisual(glDisplay, glScreen, attrListSgl);
 		doubleBuffered = false;
-		ERROR_LOG("Only Singlebuffered Visual!\n");
+		ZZLog::Error_Log("Only Singlebuffered Visual!");
 	}
 	else
 	{
 		doubleBuffered = true;
-		ERROR_LOG("Got Doublebuffered Visual!\n");
+		ZZLog::Error_Log("Got Doublebuffered Visual!");
 	}
 	if (vi == NULL)
 	{
-		ERROR_LOG("Failed to get buffered Visual!\n");
+		ZZLog::Error_Log("Failed to get buffered Visual!");
 		return false;
 	}
 
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
-	ERROR_LOG("glX-Version %d.%d\n", glxMajorVersion, glxMinorVersion);
+	ZZLog::Error_Log("glX-Version %d.%d", glxMajorVersion, glxMinorVersion);
 
 	/* create a GLX context */
 	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
@@ -140,7 +140,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 		// set best mode to current
 		bestMode = 0;
-		ERROR_LOG("XF86VidModeExtension-Version %d.%d\n", vidModeMajorVersion, vidModeMinorVersion);
+		ZZLog::Error_Log("XF86VidModeExtension-Version %d.%d.", vidModeMajorVersion, vidModeMinorVersion);
 		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
 
 		if( modeNum > 0 && modes != NULL )
@@ -161,7 +161,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
 			dpyWidth = modes[bestMode]->hdisplay;
 			dpyHeight = modes[bestMode]->vdisplay;
-			ERROR_LOG("Resolution %dx%d\n", dpyWidth, dpyHeight);
+			ZZLog::Error_Log("Resolution %dx%d.", dpyWidth, dpyHeight);
 			XFree(modes);
 
 			/* create a fullscreen window */
@@ -178,10 +178,10 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		}
 		else
 		{
-			ERROR_LOG("Failed to start fullscreen. If you received the \n"
+			ZZLog::Error_Log("Failed to start fullscreen. If you received the \n"
 					  "\"XFree86-VidModeExtension\" extension is missing, add\n"
 					  "Load \"extmod\"\n"
-					  "to your X configuration file (under the Module Section)\n");
+					  "to your X configuration file (under the Module Section)");
 			fullScreen = false;
 		}
 	}
@@ -205,11 +205,11 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
 	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
-	ERROR_LOG("Depth %d\n", depth);
+	ZZLog::Error_Log("Depth %d", depth);
 	if (glXIsDirect(glDisplay, context))
-		ERROR_LOG("you have Direct Rendering!\n");
+		ZZLog::Error_Log("You have Direct Rendering!");
 	else
-		ERROR_LOG("no Direct Rendering possible!\n");
+		ZZLog::Error_Log("No Direct Rendering possible!");
 
 	// better for pad plugin key input (thc)
 	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask |

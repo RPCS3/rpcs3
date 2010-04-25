@@ -44,10 +44,10 @@ const char* ShaderHandleName = "";
 // Error handler. Setup in ZZogl_Create once.
 void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
 {
-	ERROR_LOG("%s->%s: %s\n", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
+	ZZLog::Error_Log("%s->%s: %s", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
 	const char* listing = cgGetLastListing(g_cgcontext);
 	if (listing != NULL)
-		DEBUG_LOG("	last listing: %s\n", listing);
+		ZZLog::Debug_Log("	Last listing: %s", listing);
 }
 
 // This is a helper of cgGLSetParameter4fv, made for debugging purposes.
@@ -130,11 +130,11 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 
 		p = cgGetNamedParameter(prog, "g_fZMin"); // Switch to flat-z when needed
 		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )  {
-			//ERROR_LOG ("Use flat-z\n");
+			//ZZLog::Error_Log("Use flat-z");
 			cgGLSetParameter4fv(p, vlogz);
 		}
 		else
-			ERROR_LOG ("Shader file version is outdated! Only is log-Z possible\n");
+			ZZLog::Error_Log("Shader file version is outdated! Only log-Z is possible.");
 	}
 
 	Vector vnorm = Vector(g_filog32, 0, 0,0);
@@ -163,11 +163,11 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 	assert( (header) != NULL && (header)->index == (Index) ); \
 	prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgvProf, NULL, NULL); \
 	if( !cgIsProgram(prog) ) { \
-		ERROR_LOG("Failed to load vs %d: \n%s\n", Index, cgGetLastListing(g_cgcontext)); \
+		ZZLog::Error_Log("Failed to load vs %d: \n%s.", Index, cgGetLastListing(g_cgcontext)); \
 		return false; \
 	} \
 	cgGLLoadProgram(prog); \
-	if( cgGetError() != CG_NO_ERROR ) ERROR_LOG("failed to load program %d\n", Index); \
+	if( cgGetError() != CG_NO_ERROR ) ZZLog::Error_Log("failed to load program %d.", Index); \
 	SetupVertexProgramParameters(prog, !!(Index&SH_CONTEXT1));			\
 } \
 
@@ -177,12 +177,12 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 	header = mapShaderResources[Index]; \
 	fragment.prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgfProf, NULL, NULL); \
 	if( !cgIsProgram(fragment.prog) ) { \
-		ERROR_LOG("Failed to load ps %d: \n%s\n", Index, cgGetLastListing(g_cgcontext)); \
+		ZZLog::Error_Log("Failed to load ps %d: \n%s.", Index, cgGetLastListing(g_cgcontext)); \
 		return false; \
 	} \
 	cgGLLoadProgram(fragment.prog); \
 	if( cgGetError() != CG_NO_ERROR ) { \
-		ERROR_LOG("failed to load program %d\n", Index);		   \
+		ZZLog::Error_Log("failed to load program %d.", Index);		   \
 		bLoadSuccess = false; \
 	} \
 	SetupFragmentProgramParameters(&fragment, !!(Index&SH_CONTEXT1), 0);  \
@@ -263,7 +263,7 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS(SH_BITBLTPS, ppsBitBlt[0]);
 	LOAD_PS(SH_BITBLTAAPS, ppsBitBlt[1]);
 	if( !bLoadSuccess ) {
-		ERROR_LOG("Failed to load BitBltAAPS, using BitBltPS\n");
+		ZZLog::Error_Log("Failed to load BitBltAAPS, using BitBltPS.");
 		LOAD_PS(SH_BITBLTPS, ppsBitBlt[1]);
 	}
 	LOAD_PS(SH_BITBLTDEPTHPS, ppsBitBltDepth);
@@ -283,7 +283,7 @@ bool ZeroGS::LoadExtraEffects()
 	}
 
 	if( !bLoadSuccess )
-		ERROR_LOG("Failed to create CRTC shaders\n");
+		ZZLog::Error_Log("Failed to create CRTC shaders.");
 
 	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
 	LOAD_PS(SH_CRTC24INTERPS, ppsCRTC24[1]);
@@ -333,10 +333,10 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	assert( mapShaderResources.find(index) != mapShaderResources.end() );
 	SHADERHEADER* header = mapShaderResources[index];
 	if( header == NULL )
-		ERROR_LOG("%d %d\n", index, g_nPixelShaderVer);
+		ZZLog::Error_Log("%d %d", index, g_nPixelShaderVer);
 	assert( header != NULL );
 
-	//DEBUG_LOG("shader:\n%s\n", (char*)(s_lpShaderResources + (header)->offset));
+	//ZZLog::Debug_Log("Shader:\n%s.", (char*)(s_lpShaderResources + (header)->offset));
 	pf->prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgfProf, NULL, NULL);
 	if( pf->prog != NULL && cgIsProgram(pf->prog) && cgGetError() == CG_NO_ERROR ) {
 		SetupFragmentProgramParameters(pf, context, type);
@@ -344,7 +344,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 		if( cgGetError() != CG_NO_ERROR ) {
 //		  cgGLLoadProgram(pf->prog);
 //		  if( cgGetError() != CG_NO_ERROR ) {
-				ERROR_LOG("Failed to load shader %d,%d,%d,%d\n", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
+				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 				if( pbFailed != NULL ) *pbFailed = true;
 				return pf;
 //		  }
@@ -352,7 +352,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 		return pf;
 	}
 
-	ERROR_LOG("Failed to create shader %d,%d,%d,%d\n", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
+	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 	if( pbFailed != NULL ) *pbFailed = true;
 
 	return NULL;
@@ -363,11 +363,11 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 #define LOAD_VS(name, prog, shaderver) { \
 	prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, EFFECT_NAME, shaderver, name, args); \
 	if( !cgIsProgram(prog) ) { \
-		ERROR_LOG("Failed to load vs %s: \n%s\n", name, cgGetLastListing(g_cgcontext)); \
+		ZZLog::Error_Log("Failed to load vs %s: \n%s.", name, cgGetLastListing(g_cgcontext)); \
 		return false; \
 	} \
 	cgGLLoadProgram(prog); \
-	if( cgGetError() != CG_NO_ERROR ) ERROR_LOG("failed to load program %s\n", name); \
+	if( cgGetError() != CG_NO_ERROR ) ZZLog::Error_Log("failed to load program %s.", name); \
 	SetupVertexProgramParameters(prog, args[0]==context1); \
 } \
 
@@ -381,12 +381,12 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	bLoadSuccess = true; \
 	fragment.prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, EFFECT_NAME, shaderver, name, args); \
 	if( !cgIsProgram(fragment.prog) ) { \
-		ERROR_LOG("Failed to load ps %s: \n%s\n", name, cgGetLastListing(g_cgcontext)); \
+		ZZLog::Error_Log("Failed to load ps %s: \n%s.", name, cgGetLastListing(g_cgcontext)); \
 		return false; \
 	} \
 	cgGLLoadProgram(fragment.prog); \
 	if( cgGetError() != CG_NO_ERROR ) { \
-		ERROR_LOG("failed to load program %s\n", name);		   \
+		ZZLog::Error_Log("failed to load program %s.", name);		   \
 		bLoadSuccess = false; \
 	} \
 	SetupFragmentProgramParameters(&fragment, args[0]==context1, 0);  \
@@ -461,7 +461,7 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS("BitBltPS", ppsBitBlt[0], cgfProf);
 	LOAD_PS("BitBltAAPS", ppsBitBlt[1], cgfProf);
 	if( !bLoadSuccess ) {
-		ERROR_LOG("Failed to load BitBltAAPS, using BitBltPS\n");
+		ZZLog::Error_Log("Failed to load BitBltAAPS, using BitBltPS.");
 		LOAD_PS("BitBltPS", ppsBitBlt[1], cgfProf);
 	}
 
@@ -481,8 +481,7 @@ bool ZeroGS::LoadExtraEffects()
 		LOAD_PS("CRTCInterPS", ppsCRTC[1], cgfProf);
 	}
 
-	if( !bLoadSuccess )
-		ERROR_LOG("Failed to create CRTC shaders\n");
+	if (!bLoadSuccess) ZZLog::Error_Log("Failed to create CRTC shaders.");
 
 	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
 	LOAD_PS("ZeroPS", ppsOne, cgfProf);
@@ -491,7 +490,7 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS("Convert32to16PS", ppsConvert32to16, cgfProf);
 
 //	if( !conf.mrtdepth ) {
-//		ERROR_LOG("Disabling MRT depth writing\n");
+//		ZZLog::Error_Log("Disabling MRT depth writing.");
 //		s_bWriteDepth = FALSE;
 //	}
 
@@ -541,7 +540,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 			// try again
 //			cgGLLoadProgram(pf->prog);
 //			if( cgGetError() != CG_NO_ERROR ) {
-				ERROR_LOG("Failed to load shader %d,%d,%d,%d\n", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
+				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 				if( pbFailed != NULL ) *pbFailed = true;
 				//assert(0);
 				// NULL makes things crash
@@ -551,7 +550,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 		return pf;
 	}
 
-	ERROR_LOG("Failed to create shader %d,%d,%d,%d\n", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
+	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 	if( pbFailed != NULL ) *pbFailed = true;
 
 	return NULL;

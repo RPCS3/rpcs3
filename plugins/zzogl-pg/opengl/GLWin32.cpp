@@ -41,7 +41,7 @@ LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 		case WM_ACTIVATE:
 
 			if( wParam != WA_INACTIVE ) {
-				//DEBUG_LOG("restoring device\n");
+				//ZZLog::Debug_Log("Restoring device.");
 				ZeroGS::Restore();
 			}
 

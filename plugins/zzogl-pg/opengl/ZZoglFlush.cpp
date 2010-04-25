@@ -290,19 +290,19 @@ long BufferNumber = 0;
 // This is debug function. It's print all buffer info and save current texture into the file, than printf file name.
 inline void
 VisualBufferMessage(int context) {
-#if defined(PRIM_LOG) && defined(_DEBUG)
+#if defined(WRITE_PRIM_LOGS) && defined(_DEBUG)
 	BufferNumber++;
 	ZeroGS::VB& curvb = vb[context];
 	static const char* patst[8] = { "NEVER", "ALWAYS", "LESS", "LEQUAL", "EQUAL", "GEQUAL", "GREATER", "NOTEQUAL"};
 	static const char* pztst[4] = { "NEVER", "ALWAYS", "GEQUAL", "GREATER" };
 	static const char* pafail[4] = { "KEEP", "FB_ONLY", "ZB_ONLY", "RGB_ONLY" };
-	ERROR_LOG("**Drawing ctx %d, num %d, fbp: 0x%x, zbp: 0x%x, fpsm: %d, zpsm: %d, fbw: %d\n", context, vb[context].nCount, curvb.prndr->fbp, curvb.zbuf.zbp, curvb.prndr->psm, curvb.zbuf.psm, curvb.prndr->fbw);
-	ERROR_LOG("prim: prim=%x iip=%x tme=%x fge=%x abe=%x aa1=%x fst=%x ctxt=%x fix=%x\n",
+	ZZLog::Error_Log("**Drawing ctx %d, num %d, fbp: 0x%x, zbp: 0x%x, fpsm: %d, zpsm: %d, fbw: %d", context, vb[context].nCount, curvb.prndr->fbp, curvb.zbuf.zbp, curvb.prndr->psm, curvb.zbuf.psm, curvb.prndr->fbw);
+	ZZLog::Error_Log("prim: prim=%x iip=%x tme=%x fge=%x abe=%x aa1=%x fst=%x ctxt=%x fix=%x",
 			 curvb.curprim.prim, curvb.curprim.iip, curvb.curprim.tme, curvb.curprim.fge, curvb.curprim.abe, curvb.curprim.aa1, curvb.curprim.fst, curvb.curprim.ctxt, curvb.curprim.fix);
-	ERROR_LOG("test: ate:%d, atst: %s, aref: %d, afail: %s, date: %d, datm: %d, zte: %d, ztst: %s, fba: %d\n",
+	ZZLog::Error_Log("test: ate:%d, atst: %s, aref: %d, afail: %s, date: %d, datm: %d, zte: %d, ztst: %s, fba: %d",
 		curvb.test.ate, patst[curvb.test.atst], curvb.test.aref, pafail[curvb.test.afail], curvb.test.date, curvb.test.datm, curvb.test.zte, pztst[curvb.test.ztst], curvb.fba.fba);
-	ERROR_LOG("alpha: A%d B%d C%d D%d FIX:%d pabe: %d; aem: %d, ta0: %d, ta1: %d\n", curvb.alpha.a, curvb.alpha.b, curvb.alpha.c, curvb.alpha.d, curvb.alpha.fix, gs.pabe, gs.texa.aem, gs.texa.ta[0], gs.texa.ta[1]);
-	ERROR_LOG("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d\n",
+	ZZLog::Error_Log("alpha: A%d B%d C%d D%d FIX:%d pabe: %d; aem: %d, ta0: %d, ta1: %d\n", curvb.alpha.a, curvb.alpha.b, curvb.alpha.c, curvb.alpha.d, curvb.alpha.fix, gs.pabe, gs.texa.aem, gs.texa.ta[0], gs.texa.ta[1]);
+	ZZLog::Error_Log("tex0: tbp0=0x%x, tbw=%d, psm=0x%x, tw=%d, th=%d, tcc=%d, tfx=%d, cbp=0x%x, cpsm=0x%x, csm=%d, csa=%d, cld=%d",
 			 curvb.tex0.tbp0, curvb.tex0.tbw, curvb.tex0.psm, curvb.tex0.tw,
 			 curvb.tex0.th, curvb.tex0.tcc, curvb.tex0.tfx, curvb.tex0.cbp,
 			 curvb.tex0.cpsm, curvb.tex0.csm, curvb.tex0.csa, curvb.tex0.cld);
@@ -312,10 +312,10 @@ VisualBufferMessage(int context) {
 			Name = NamedSaveTex(&curvb.tex0, 1);
 //		else
 //			Name = NamedSaveTex(&curvb.tex0, 0);
-		ERROR_LOG("TGA name %s\n", Name);
+		ZZLog::Error_Log("TGA name '%s'.", Name);
 		free(Name);
 //	}
-	ERROR_LOG("frame: %d, buffer %ld\n\n", g_SaveFrameNum, BufferNumber);
+	ZZLog::Error_Log("frame: %d, buffer %ld.\n", g_SaveFrameNum, BufferNumber);
 #endif
 }
 
@@ -861,7 +861,7 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 		IsAlphaTestExpansion(curvb), exactcolor, curvb.clamp, context, NULL);
 
 	if (pfragment == NULL)
-		ERROR_LOG("Could not find memory target shader\n");
+		ZZLog::Error_Log("Could not find memory target shader.");
 
 	return pfragment;
 }
@@ -907,7 +907,7 @@ inline FRAGMENTSHADER* FlushRendererStage(VB& curvb, u32& dwFilterOpts, CRenderT
 			pfragment = FlushMadeNewTarget(curvb, exactcolor, context);
 
 		if (pfragment == NULL) {
-			ERROR_LOG("Shader does not found\n");
+			ZZLog::Error_Log("Shader is not found.");
 //			return NULL;
 		}
 		FlushSetTexture(curvb, pfragment, ptextarg, context);
@@ -974,7 +974,7 @@ inline u32 AlphaSetupBlendTest(VB& curvb) {
 
 	u32 oldabe = curvb.curprim.abe;
 	if (gs.pabe) {
-		//ERROR_LOG("PBE!\n");
+		//ZZLog::Error_Log("PABE!");
 		curvb.curprim.abe = 1;
 		glEnable(GL_BLEND);
 	}
@@ -1035,8 +1035,9 @@ inline void AlphaRenderStencil(VB& curvb, bool s_bDestAlphaTest, bool bCanRender
 	}
 
 #ifdef _DEBUG
-	if (bDestAlphaColor == 1) {
-		WARN_LOG("dest alpha blending! manipulate alpha here\n");
+	if (bDestAlphaColor == 1) 
+	{
+		ZZLog::Debug_Log("Dest alpha blending! Manipulate alpha here.");
 	}
 #endif
 
@@ -1121,7 +1122,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 	}
 
 #ifdef NOALFAFAIL
-	ERROR_LOG("Alpha job here %d %d %d %d %d %d\n", s_dwColorWrite, curtest.atst, curtest.afail, curtest.aref, gs.pabe, s_bWriteDepth);
+	ZZLog::Error_Log("Alpha job here %d %d %d %d %d %d", s_dwColorWrite, curtest.atst, curtest.afail, curtest.aref, gs.pabe, s_bWriteDepth);
 //	return;
 #endif
 
@@ -1691,8 +1692,8 @@ void ZeroGS::SetContextTarget(int context)
 
 	curvb.prndr->SetTarget(curvb.frame.fbp, curvb.scissor, context);
 
-	if( (curvb.zbuf.zbp-curvb.pdepth->fbp) != (curvb.frame.fbp - curvb.prndr->fbp) && curvb.test.zte )
-		WARN_LOG("frame and zbuf not aligned\n");
+	if ((curvb.zbuf.zbp-curvb.pdepth->fbp) != (curvb.frame.fbp - curvb.prndr->fbp) && curvb.test.zte)
+		ZZLog::Warn_Log("Frame and zbuf not aligned.");
 
 	curvb.bVarsSetTarg = TRUE;
 	if( vb[!context].prndr != curvb.prndr ) vb[!context].bVarsSetTarg = FALSE;
@@ -2002,7 +2003,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	}
 
 	if( m_Blocks[tex0.psm].bpp == 0 ) {
-		ERROR_LOG("Undefined tex psm 0x%x!\n", tex0.psm);
+		ZZLog::Error_Log("Undefined tex psm 0x%x!", tex0.psm);
 		return;
 	}
 
@@ -2399,7 +2400,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 			 break;
      			 }
 		default: {
-			ERROR_LOG ( "Bad alpha code %d | %d %d %d\n", code, a.a, a.b, a.d );
+			ZZLog::Error_Log("Bad alpha code %d | %d %d %d", code, a.a, a.b, a.d);
 		}
 	}
 /*

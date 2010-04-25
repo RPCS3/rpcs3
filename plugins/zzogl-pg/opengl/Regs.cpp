@@ -86,7 +86,7 @@ inline bool NoHighlights(int i) {
 			((ZeroGS::vb[i].zbuf.psm ) << 8);
 //	if ( results[resultA] == 0 ) {
 //		results[resultA] = 1;
-//		ERROR_LOG("%x = %d %d %d %d %d %d %d %d psm: %x\n", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix), ZeroGS::vb[i].zbuf.psm) ;
+//		ZZLog::Error_Log("%x = %d %d %d %d %d %d %d %d psm: %x", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix), ZeroGS::vb[i].zbuf.psm) ;
 //	}
 //	if (resultA == 0xb && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
@@ -96,7 +96,7 @@ inline bool NoHighlights(int i) {
 //	if (resultA == 0xb)
 //		if ( results[result] == 0) {
 //			results[result] = 1;
-//			ERROR_LOG("0x%x = %d %d %d %d %d %d %d %d \n", result, curtest.ate, curtest.atst, curtest.aref, curtest.afail, curtest.date, curtest.datm, curtest.zte, curtest.ztst);
+//			ZZLog::Error_Log("0x%x = %d %d %d %d %d %d %d %d ", result, curtest.ate, curtest.atst, curtest.aref, curtest.afail, curtest.date, curtest.datm, curtest.zte, curtest.ztst);
 //		}
 //	0, -50b, -500, !-300, -30a, -50a, -5cb, +100 (zte==1), -50d
 //	if (result == 0x50b && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
@@ -120,7 +120,7 @@ inline bool NoHighlights(int i) {
 void __fastcall GIFPackedRegHandlerNull(u32* data)
 {
 	FUNCLOG
-	DEBUG_LOG("Unexpected packed reg handler %8.8lx_%8.8lx %x\n", data[0], data[1], data[2]);
+	ZZLog::Debug_Log("Unexpected packed reg handler %8.8lx_%8.8lx %x.", data[0], data[1], data[2]);
 }
 
 void __fastcall GIFPackedRegHandlerRGBA(u32* data)
@@ -375,12 +375,12 @@ void __fastcall GIFRegHandlerNull(u32* data)
 {
 	FUNCLOG
 #ifdef _DEBUG
-	if( (((uptr)&data[2])&0xffff) == 0 )
-		return;
+	if ((((uptr)&data[2])&0xffff) == 0) return;
 
 	// 0x7f happens on a lot of games
-	if( data[2] != 0x7f && (data[0] || data[1]) ) {
-		DEBUG_LOG("Unexpected reg handler %x %x %x\n", data[0], data[1], data[2]);
+	if (data[2] != 0x7f && (data[0] || data[1])) 
+	{
+		ZZLog::Debug_Log("Unexpected reg handler %x %x %x.", data[0], data[1], data[2]);
 	}
 #endif
 }
@@ -388,8 +388,9 @@ void __fastcall GIFRegHandlerNull(u32* data)
 void __fastcall GIFRegHandlerPRIM(u32 *data)
 {
 	FUNCLOG
-	if (data[0] & ~0x3ff) {
-		//WARN_LOG("warning: unknown bits in prim %8.8lx_%8.8lx\n", data[1], data[0]);
+	if (data[0] & ~0x3ff) 
+	{
+		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
 	}
 
 	gs.nTriFanVert = gs.primIndex;
@@ -1002,7 +1003,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 	}
 	else {
 #ifndef RELEASE_TO_PUBLIC
-		WARN_LOG("ZeroGS: dummy transfer\n");
+		ZZLog::Warn_Log("Dummy transfer.");
 #endif
 		gs.imageTransfer = -1;
 	}
@@ -1016,7 +1017,7 @@ void __fastcall GIFRegHandlerHWREG(u32* data)
 	}
 	else {
 #ifndef RELEASE_TO_PUBLIC
-		ERROR_LOG("ZeroGS: HWREG!? %8.8x_%8.8x\n", data[0], data[1]);
+		ZZLog::Error_Log("ZeroGS: HWREG!? %8.8x_%8.8x", data[0], data[1]);
 		//assert(0);
 #endif
 	}

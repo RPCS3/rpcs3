@@ -221,7 +221,7 @@ namespace ZZLog
 	
 	void Prim_Log(const char *fmt, ...)
 	{
-#if ZEROGS_DEVBUILD
+#if defined(ZEROGS_DEVBUILD) && defined(WRITE_PRIM_LOGS)
 		va_list list;
 		char tmp[512];
 
@@ -246,9 +246,14 @@ namespace ZZLog
 
 		va_start(list,fmt);
 		
-		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		if (IsLogging())
+		{
+			 vfprintf(gsLog, fmt, list);
+			 fprintf(gsLog,"\n");
+		}
 		printf("ZZogl-PG(GS): ");
 		vprintf(fmt,list);
+		printf("\n");
 		va_end(list);
 #endif
 	}
@@ -259,10 +264,15 @@ namespace ZZLog
 		va_list list;
 
 		va_start(list,fmt);
-		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		if (IsLogging())
+		{
+			 vfprintf(gsLog, fmt, list);
+			 fprintf(gsLog,"\n");
+		}
 		printf("ZZogl-PG(Warning): ");
 		vprintf(fmt, list);
 		va_end(list);
+		printf("\n");
 #endif
 	}
 	
@@ -272,9 +282,14 @@ namespace ZZLog
 		va_list list;
 
 		va_start(list,fmt);
-		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		if (IsLogging()) 
+		{
+			vfprintf(gsLog, fmt, list);
+			fprintf(gsLog,"\n");
+		}
 		printf("ZZogl-PG(Debug): ");
 		vprintf(fmt, list);
+		printf("\n");
 		va_end(list);
 		
 		
@@ -287,9 +302,14 @@ namespace ZZLog
 
 		va_start(list,fmt);
 		
-		if (IsLogging()) vfprintf(gsLog, fmt, list);
+		if (IsLogging())
+		{
+			 vfprintf(gsLog, fmt, list);
+			 fprintf(gsLog,"\n");
+		}
 		printf("ZZogl-PG(Error): ");
 		vprintf(fmt,list);
+		printf("\n");
 		va_end(list);
 	}
 };
@@ -311,9 +331,9 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	conf.mrtdepth = ((conf.gamesettings & GAME_DISABLEMRTDEPTH) != 0);
 
 	if (!conf.mrtdepth)
-		ERROR_LOG("Disabling MRT depth writing\n");
+		ZZLog::Error_Log("Disabling MRT depth writing.");
 	else
-		ERROR_LOG("Enabling MRT depth writing\n");
+		ZZLog::Error_Log("Enabling MRT depth writing.");
 
 	g_GameSettings |= GAME_PATH3HACK;
 
@@ -460,20 +480,22 @@ s32 CALLBACK GSinit()
 
 	memcpy(g_GIFTempRegHandlers, g_GIFPackedRegHandlers, sizeof(g_GIFTempRegHandlers));
 
-#ifdef GS_LOG
 	gsLog = fopen("logs/gsLog.txt", "w");
-	if (gsLog == NULL) {
+	if (gsLog == NULL) 
+	{
 		gsLog = fopen("gsLog.txt", "w");
-		if (gsLog == NULL) {
-			SysMessage("Can't create gsLog.txt"); return -1;
+		if (gsLog == NULL) 
+		{
+			SysMessage("Can't create gsLog.txt"); 
+			return -1;
 		}
 	}
+	
 	setvbuf(gsLog, NULL,	_IONBF, 0);
-	GS_LOG("GSinit\n");
-#endif
+	ZZLog::GS_Log("Calling GSinit.");
 
 	GSreset();
-	GS_LOG("GSinit ok\n");
+	ZZLog::GS_Log("GSinit finished.");
 	return 0;
 }
 
@@ -481,10 +503,7 @@ void CALLBACK GSshutdown()
 {
 	FUNCLOG
 
-#ifdef GS_LOG
-	if (gsLog != NULL)
-		fclose(gsLog);
-#endif
+	if (gsLog != NULL) fclose(gsLog);
 }
 
 // keyboard functions
@@ -669,7 +688,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	g_GSMultiThreaded = multithread;
 
-	GS_LOG("GSopen\n");
+	ZZLog::GS_Log("Calling GSopen.");
 
 #ifdef _DEBUG
 	g_hCurrentThread = GetCurrentThread();
@@ -683,12 +702,12 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	if (!err)
 	{
-		GS_LOG("Failed to create window. Exiting...");
+		ZZLog::GS_Log("Failed to create window. Exiting...");
 		return -1;
 	}
 
-	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ERROR_LOG("creating zerogs\n");
+	ZZLog::Error_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+	ZZLog::Error_Log("Creating ZZOgl.");
 	//if (conf.record) recOpen();
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
@@ -717,7 +736,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	UpdateWindow( GShwnd );
 	SetFocus(GShwnd);
 
-	GS_LOG("GSopen ok\n");
+	ZZLog::GS_Log("GSopen finished.");
 
 	LARGE_INTEGER temp;
 	QueryPerformanceFrequency(&temp);
@@ -808,7 +827,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
 
-	GS_LOG("GSopen\n");
+	ZZLog::GS_Log("Calling GSopen.");
 
 //	assert( GSirq != NULL );
 	LoadConfig();
@@ -817,12 +836,12 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	GLWin.CreateWindow(pDsp);
 
-	ERROR_LOG("Using %s:%d.%d.%d\n", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ERROR_LOG("Creating zerogs\n");
+	ZZLog::Error_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+	ZZLog::Error_Log("Creating zerogs.");
 	//if (conf.record) recOpen();
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
-	ERROR_LOG("initialization successful\n");
+	ZZLog::Error_Log("Initialization successful.");
 
 	if( conf.bilinear == 2 )
 	{
@@ -839,7 +858,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 		ZeroGS::AddMessage(strtitle,1000);
 	}
 
-	GS_LOG("GSopen ok\n");
+	ZZLog::GS_Log("GSopen finished.");
 
 	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
 	luPerfFreq = 1;
@@ -964,7 +983,7 @@ void CALLBACK GSvsync(int interlace)
 {
 	FUNCLOG
 
-	//GS_LOG("GSvsync\n");
+	//ZZLog::GS_Log("Calling GSvsync.");
 
 	static u32 dwTime = timeGetTime();
 	static int nToNextUpdate = 1;
@@ -1010,7 +1029,7 @@ void CALLBACK GSvsync(int interlace)
 #endif
 
 //		if( g_nFrame > 100 && fFPS > 60.0f ) {
-//			DEBUG_LOG("set profile\n");
+//			ZZLog::Debug_Log("Set profile.");
 //			g_bWriteProfile = 1;
 //		}
 		if (!(conf.options & GSOPTION_FULLSCREEN)) GLWin.SetTitle(strtitle);
@@ -1044,7 +1063,7 @@ void CALLBACK GSreadFIFO(u64 *pMem)
 {
 	FUNCLOG
 
-	//GS_LOG("GSreadFIFO\n");
+	//ZZLog::GS_Log("Calling GSreadFIFO.");
 
 	ZeroGS::TransferLocalHost((u32*)pMem, 1);
 }
@@ -1053,7 +1072,7 @@ void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
 {
 	FUNCLOG
 
-	//GS_LOG("GSreadFIFO2\n");
+	//ZZLog::GS_Log("Calling GSreadFIFO2.");
 
 	ZeroGS::TransferLocalHost((u32*)pMem, qwc);
 }
@@ -1067,14 +1086,14 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 			return 1;
 		ZeroGS::StartCapture();
 		conf.options |= GSOPTION_CAPTUREAVI;
-		WARN_LOG("ZeroGS: started recording at zerogs.avi\n");
+		ZZLog::Warn_Log("Started recording zerogs.avi.");
 	}
 	else {
 		if( !(conf.options & GSOPTION_CAPTUREAVI) )
 			return 1;
 		conf.options &= ~GSOPTION_CAPTUREAVI;
 		ZeroGS::StopCapture();
-		WARN_LOG("ZeroGS: stopped recording\n");
+		ZZLog::Warn_Log("Stopped recording.");
 	}
 
 	return 1;
@@ -1087,7 +1106,7 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 	switch (mode)
 	{
 		case FREEZE_LOAD:
-			if (!ZeroGS::Load(data->data)) ERROR_LOG("GS: Bad load format!");
+			if (!ZeroGS::Load(data->data)) ZZLog::Error_Log("GS: Bad load format!");
 			g_nRealFrame += 100;
 			break;
 		case FREEZE_SAVE:

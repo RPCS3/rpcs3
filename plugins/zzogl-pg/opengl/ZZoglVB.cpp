@@ -225,7 +225,7 @@ ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 
 #ifdef DEVBUILD
 	if (frame.fbh == 0xe2)
-		ERROR_LOG ("Const: %x %x %d| %x %d %x %x\n", frame.fbh, frame.fbw, ConstraintReson, noscissorpos, ConstrainR1, tbp, frame.fbp);
+		ZZLog::Error_Log ("Const: %x %x %d| %x %d %x %x", frame.fbh, frame.fbw, ConstraintReson, noscissorpos, ConstrainR1, tbp, frame.fbp);
 #endif
 
 // 	Fixme: Reserved psm for framebuffers
@@ -290,7 +290,7 @@ ZeroGS::VB::CheckFrameResolveRender(int tbp) {
 		}
 	}
 
-	PRIM_LOG("frame_%d: fbp=0x%x fbw=%d fbh=%d(%d) psm=0x%x fbm=0x%x\n", ictx, gsfb.fbp, gsfb.fbw, gsfb.fbh, pnewtarg->fbh, gsfb.psm, gsfb.fbm);
+	ZZLog::Prim_Log("frame_%d: fbp=0x%x fbw=%d fbh=%d(%d) psm=0x%x fbm=0x%x\n", ictx, gsfb.fbp, gsfb.fbw, gsfb.fbh, pnewtarg->fbh, gsfb.psm, gsfb.fbm);
 
 	if( (pprevrndr != pnewtarg) || (pprevrndr != NULL && (pprevrndr->status & CRenderTarget::TS_NeedUpdate)) )
 		result = 1;
@@ -328,12 +328,12 @@ void ZeroGS::VB::CheckFrame(int tbp)
 {
 	static int bChanged;
 	if( bNeedZCheck ) {
-		PRIM_LOG("zbuf_%d: zbp=0x%x psm=0x%x, zmsk=%d\n", ictx, zbuf.zbp, zbuf.psm, zbuf.zmsk);
+		ZZLog::Prim_Log("zbuf_%d: zbp=0x%x psm=0x%x, zmsk=%d\n", ictx, zbuf.zbp, zbuf.psm, zbuf.zmsk);
 		//zbuf = *zb;
 	}
 
 	if( m_Blocks[gsfb.psm].bpp == 0 ) {
-		ERROR_LOG("CheckFrame invalid bpp %d\n", gsfb.psm);
+		ZZLog::Error_Log("CheckFrame invalid bpp %d.", gsfb.psm);
 		return;
 	}
 

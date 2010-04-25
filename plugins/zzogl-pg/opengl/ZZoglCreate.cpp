@@ -36,7 +36,7 @@
 #ifdef _WIN32
 #define GL_LOADFN(name) { \
 		if( (*(void**)&name = (void*)wglGetProcAddress(#name)) == NULL ) { \
-		ERROR_LOG("Failed to find %s, exiting\n", #name); \
+		ZZLog::Error_Log("Failed to find %s, exiting.", #name); \
 	} \
 }
 #else
@@ -209,28 +209,28 @@ inline bool ZeroGS::CreateImportantCheck() {
 #ifndef _WIN32
 	int const glew_ok = glewInit();
 	if( glew_ok != GLEW_OK ) {
-		ERROR_LOG("glewInit() is not ok!\n");
+		ZZLog::Error_Log("glewInit() is not ok!");
 		bSuccess = false;
 	}
 #endif
 
 	if( !IsGLExt("GL_EXT_framebuffer_object") ) {
-		ERROR_LOG("*********\nZZogl: ERROR: Need GL_EXT_framebufer_object for multiple render targets\nZZogl: *********\n");
+		ZZLog::Error_Log("*********\nZZogl: ERROR: Need GL_EXT_framebufer_object for multiple render targets\nZZogl: *********");
 		bSuccess = false;
 	}
 
 	if( !IsGLExt("GL_EXT_secondary_color") ) {
-		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_secondary_color\nZZogl: *********\n");
+		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_secondary_color\nZZogl: *********");
 		bSuccess = false;
 	}
 
 	// load the effect & find the best profiles (if any)
 	if( cgGLIsProfileSupported(CG_PROFILE_ARBVP1) != CG_TRUE ) {
-		ERROR_LOG("arbvp1 not supported\n");
+		ZZLog::Error_Log("arbvp1 not supported.");
 		bSuccess = false;
 	}
 	if( cgGLIsProfileSupported(CG_PROFILE_ARBFP1) != CG_TRUE ) {
-		ERROR_LOG("arbfp1 not supported\n");
+		ZZLog::Error_Log("arbfp1 not supported.");
 		bSuccess = false;
 	}
 
@@ -240,21 +240,21 @@ inline bool ZeroGS::CreateImportantCheck() {
 // This is a check for less important open gl extensions.
 inline void ZeroGS::CreateOtherCheck() {
 	if( !IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL ) {
-		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_equation_separate\nZZogl: *********\n");
+		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_equation_separate\nZZogl: *********");
 		zgsBlendEquationSeparateEXT = glBlendEquationSeparateDummy;
 	}
 	else
 		zgsBlendEquationSeparateEXT = glBlendEquationSeparateEXT;
 
 	if( !IsGLExt("GL_EXT_blend_func_separate") || glBlendFuncSeparateEXT == NULL ) {
-		ERROR_LOG("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_func_separate\nZZogl: *********\n");
+		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_func_separate\nZZogl: *********");
 		zgsBlendFuncSeparateEXT = glBlendFuncSeparateDummy;
 	}
 	else
 		zgsBlendFuncSeparateEXT = glBlendFuncSeparateEXT;
 
 	if( !IsGLExt("GL_ARB_draw_buffers") && !IsGLExt("GL_ATI_draw_buffers") ) {
-		ERROR_LOG("*********\nZZogl: OGL WARNING: multiple render targets not supported, some effects might look bad\nZZogl: *********\n");
+		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: multiple render targets not supported, some effects might look bad\nZZogl: *********");
 		conf.mrtdepth = 0;
 	}
 
@@ -265,27 +265,27 @@ inline void ZeroGS::CreateOtherCheck() {
 
 
 	if  (!IsGLExt("GL_ARB_multitexture"))
-		ERROR_LOG("No multitexturing\n");
+		ZZLog::Error_Log("No multitexturing.");
 	else
-		ERROR_LOG("Using multitexturing\n");
+		ZZLog::Error_Log("Using multitexturing.");
 
 	GLint Max_Texture_Size_NV = 0;
 	GLint Max_Texture_Size_2d = 0;
 
 	glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_NV, &Max_Texture_Size_NV);
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &Max_Texture_Size_2d);
-	ERROR_LOG("Maximum texture size is %d for Tex_2d and %d for Tex_NV\n", Max_Texture_Size_2d, Max_Texture_Size_NV);
+	ZZLog::Error_Log("Maximum texture size is %d for Tex_2d and %d for Tex_NV.", Max_Texture_Size_2d, Max_Texture_Size_NV);
 	if (Max_Texture_Size_NV < 1024)
-		ERROR_LOG("Could not properly make bitmasks, so some textures will be missed\n");
+		ZZLog::Error_Log("Could not properly make bitmasks, so some textures will be missed.");
 
 	/* Zeydlitz: we don't support 128-bit targets yet. they are slow and weirdo
 	if( g_GameSettings & GAME_32BITTARGS ) {
 		g_RenderFormatType = RFT_byte8;
-		ERROR_LOG("Setting 32 bit render target\n");
+		ZZLog::Error_Log("Setting 32 bit render target.");
 	}
 	else {
 		if( !IsGLExt("GL_NV_float_buffer") && !IsGLExt("GL_ARB_color_buffer_float") && !IsGLExt("ATI_pixel_format_float") ) {
-			ERROR_LOG("******\nZZogl: GS WARNING: Floating point render targets not supported, switching to 32bit\nZZogl: *********\n");
+			ZZLog::Error_Log("******\nZZogl: GS WARNING: Floating point render targets not supported, switching to 32bit\nZZogl: *********");
 			g_RenderFormatType = RFT_byte8;
 		}
 	}*/
@@ -305,7 +305,7 @@ inline void ZeroGS::CreateOtherCheck() {
 		if( swapinterval )
 			swapinterval(0);
 		else
-			ERROR_LOG("no support for SwapInterval (framerate clamped to monitor refresh rate)\n");
+			ZZLog::Error_Log("No support for SwapInterval (framerate clamped to monitor refresh rate),");
 	}
 #endif
 }
@@ -325,7 +325,7 @@ inline bool ZeroGS::CreateOpenShadersFile() {
 	if( fres == NULL ) {
 		fres = fopen("plugins/ps2hw.dat", "rb");
 		if( fres == NULL ) {
-			ERROR_LOG("Cannot find ps2hw.dat in working directory. Exiting\n");
+			ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
 			return false;
 		}
 	}
@@ -353,7 +353,7 @@ inline bool ZeroGS::CreateOpenShadersFile() {
 		f = fopen(EFFECT_NAME, "r");
 
 		if( f == NULL ) {
-			ERROR_LOG("Failed to find %s, try compiling a non-devbuild\n", EFFECT_NAME);
+			ZZLog::Error_Log("Failed to find %s, try compiling a non-devbuild.", EFFECT_NAME);
 			return false;
 		}
 	}
@@ -469,7 +469,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	glGenFramebuffersEXT( 1, &s_uFramebuffer);
 	if( s_uFramebuffer == 0 ) {
-		ERROR_LOG("Failed to create the renderbuffer\n");
+		ZZLog::Error_Log("Failed to create the renderbuffer.");
 	}
 
 	assert( glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT );
@@ -584,10 +584,10 @@ bool ZeroGS::Create(int _width, int _height)
 		BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, 2, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_R, GL_UNSIGNED_SHORT, &vBlockData[0]);
 		if( glGetError() != GL_NO_ERROR ) {
-			ERROR_LOG("ZZogl ERROR: could not fill blocks\n");
+			ZZLog::Error_Log("Could not fill blocks.");
 			return false;
 		}
-		ERROR_LOG("Using non-bilinear fill\n");
+		ZZLog::Error_Log("Using non-bilinear fill.");
 	}
 	else {
 		// fill in the bilinear blocks
@@ -599,11 +599,13 @@ bool ZeroGS::Create(int _width, int _height)
 			g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
 			g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
 			glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-			ERROR_LOG("ZZogl Fill bilinear blocks\n");
+			ZZLog::Error_Log("ZZogl Fill bilinear blocks.");
 			B_G(glGetError() == GL_NO_ERROR, return false);
 		}
 		else
-			ERROR_LOG("Fill bilinear blocks failed!\n");
+		{
+			ZZLog::Error_Log("Fill bilinear blocks failed!");
+		}
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -700,7 +702,7 @@ bool ZeroGS::Create(int _width, int _height)
 	g_vparamPosXY[0] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
 	g_vparamPosXY[1] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
 
-	ERROR_LOG("Creating effects\n");
+	ZZLog::Error_Log("Creating effects.");
 	B_G(LoadEffects(), return false);
 
 	g_bDisplayMsg = 0;
@@ -723,7 +725,7 @@ bool ZeroGS::Create(int _width, int _height)
 			cgGLLoadProgram(pfrag->prog);
 		if( bFailed || pfrag == NULL || cgGetError() != CG_NO_ERROR ) {
 			g_nPixelShaderVer = SHADER_REDUCED;
-			ERROR_LOG("Basic shader test failed\n");
+			ZZLog::Error_Log("Basic shader test failed.");
 		}
 	}
 
@@ -731,10 +733,10 @@ bool ZeroGS::Create(int _width, int _height)
 	if( g_nPixelShaderVer & SHADER_REDUCED )
 		conf.bilinear = 0;
 
-	ERROR_LOG("Creating extra effects\n");
+	ZZLog::Error_Log("Creating extra effects.");
 	B_G(LoadExtraEffects(), return false);
 
-	ERROR_LOG("using %s shaders\n", g_pShaders[g_nPixelShaderVer]);
+	ZZLog::Error_Log("Using %s shaders.", g_pShaders[g_nPixelShaderVer]);
 
 	GL_REPORT_ERROR();
 	if( err != GL_NO_ERROR ) bSuccess = false;
@@ -764,7 +766,7 @@ bool ZeroGS::Create(int _width, int _height)
 	if (glGetError() == GL_NO_ERROR)
 		return bSuccess;
 	else {
-		ERROR_LOG("ZZogl ERROR: in final init");
+		ZZLog::Error_Log("In final init!");
 		return false;
 	}
 }
@@ -774,7 +776,7 @@ void ZeroGS::Destroy(BOOL bD3D)
 	if( s_aviinit ) {
 		StopCapture();
 		Stop_Avi();
-		ERROR_LOG("zerogs.avi stopped");
+		ZZLog::Error_Log("zerogs.avi stopped.");
 		s_aviinit = 0;
 	}
 

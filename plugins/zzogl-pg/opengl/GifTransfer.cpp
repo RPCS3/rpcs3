@@ -77,14 +77,14 @@ __forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 	if( conf.log /*& 0x20*/ )
 	{
 		static int nSaveIndex = 0;
-		GS_LOG("%d: p:%d %x\n", nSaveIndex++, index + 1, size);
+		ZZLog::GS_Log("%d: p:%d %x", nSaveIndex++, index + 1, size);
 		int vals[4] = {0};
 		for(u32 i = 0; i < size; i++)
 		{
 			for(u32 j = 0; j < 4; ++j )
 				vals[j] ^= pMem[4*i+j];
 		}
-		GS_LOG("%x %x %x %x\n", vals[0], vals[1], vals[2], vals[3]);
+		ZZLog::GS_Log("%x %x %x %x", vals[0], vals[1], vals[2], vals[3]);
 	}
 #endif
 }
@@ -166,8 +166,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 					case GIF_FLG_REGLIST:
 					{
 						// Needs to be looked at.
-
-                        //GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
+                        //ZZLog::GS_Log("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
 
 						size *= 2;
 
@@ -219,7 +218,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
                         break;
 					}
 					default: // GIF_IMAGE
-                        GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
+                        ZZLog::GS_Log("*** WARNING **** Unexpected GIFTag flag.");
                         assert(0);
                         path->nloop = 0;
                         break;
@@ -257,10 +256,10 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	FUNCLOG
 
-	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
+	//ZZLog::GS_Log("GSgifTransfer1 0x%x (mode %d).", addr, path->mode);
 
 #ifdef _DEBUG
-	PRIM_LOG("count: %d\n", count);
+	ZZLog::Prim_Log("count: %d\n", count);
 	count++;
 #endif
 
@@ -271,7 +270,7 @@ void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
-	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path[1].mode, gs.path[1].tag.nloop);
+	//ZZLog::GS_Log("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d).", size, gs.path[1].mode, gs.path[1].tag.nloop);
 
 	_GSgifTransfer<1>(pMem, size);
 }
@@ -280,7 +279,7 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
-	//GS_LOG("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d)\n", size, gs.path[2].mode, gs.path[2].tag.nloop);
+	//ZZLog::GS_Log("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d).", size, gs.path[2].mode, gs.path[2].tag.nloop);
 
 	_GSgifTransfer<2>(pMem, size);
 }
@@ -340,7 +339,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 
                                 /*if( !path->eop )
                                 {
-                                        //DEBUG_LOG("continuing from eop\n");
+                                        //ZZLog::Debug_Log("Continuing from eop.");
                                         continue;
                                 }*/
 
@@ -378,7 +377,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
                 }
                 case GIF_FLG_REGLIST:
                 {
-                        //GS_LOG("%8.8x%8.8x %d L\n", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
+                        //GS_LOG("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
                         assert( path->nloop > 0 );
                         size *= 2;
 
@@ -441,7 +440,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
                         break;
                 }
                 default: // GIF_IMAGE
-                        GS_LOG("*** WARNING **** Unexpected GIFTag flag\n");
+                        ZZLog::GS_Log("*** WARNING **** Unexpected GIFTag flag.");
                         assert(0);
                         path->nloop = 0;
                         break;
@@ -466,12 +465,12 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 
 	pathInfo *path = &gs.path[0];
 
-	//GS_LOG("GSgifTransfer1 0x%x (mode %d)\n", addr, path->mode);
+	//ZZLog::GS_Log("GSgifTransfer1 0x%x (mode %d).", addr, path->mode);
 
 //	addr &= 0x3fff;
 
 #ifdef _DEBUG
-	PRIM_LOG("count: %d\n", count);
+	ZZLog::Prim_Log("count: %d\n", count);
 	count++;
 #endif
 
@@ -483,7 +482,7 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	{
 		assert( (addr&0xf) == 0 ); //BUG
 		path->nloop = 0;
-		ERROR_LOG("Transfer1 - 2\n");
+		ZZLog::Error_Log("Transfer1 - 2.");
 		return;
 	}
 }
@@ -492,7 +491,7 @@ void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
-	//GS_LOG("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d)\n", size, gs.path[1].mode, gs.path[1].tag.nloop);
+	//ZZLog::GS_Log("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d).", size, gs.path[1].mode, gs.path[1].tag.nloop);
 
 	_GSgifTransfer<1>(pMem, size);
 }
@@ -501,7 +500,7 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
-	//GS_LOG("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d)\n", size, gs.path[2].mode, gs.path[2].tag.nloop);
+	//ZZLog::GS_Log("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d).", size, gs.path[2].mode, gs.path[2].tag.nloop);
 
 	nPath3Hack = 0;
 	_GSgifTransfer<2>(pMem, size);

@@ -17,7 +17,7 @@ static __forceinline const T *TransmitHostLocalY_(_writePixel_0 wp, u32 widthlim
 	assert( (nSize%widthlimit) == 0 && widthlimit <= 4 );
 	if ((gs.imageEndX-gs.trxpos.dx) % widthlimit)
 	{
-		// GS_LOG("Bad Transmission! %d %d, psm: %d\n", gs.trxpos.dx, gs.imageEndX, DSTPSM);
+		// ZZLog::GS_Log("Bad Transmission! %d %d, psm: %d", gs.trxpos.dx, gs.imageEndX, DSTPSM);
 
 		for(; tempY < endY; ++tempY)
 		{
@@ -74,7 +74,7 @@ static __forceinline const T *TransmitHostLocalY_24(_writePixel_0 wp, u32 widthl
 {
 	if (widthlimit != 8 || ((gs.imageEndX-gs.trxpos.dx)%widthlimit))
 	{
-		//GS_LOG("Bad Transmission! %d %d, psm: %d\n", gs.trxpos.dx, gs.imageEndX, DSTPSM);
+		//ZZLog::GS_Log("Bad Transmission! %d %d, psm: %d", gs.trxpos.dx, gs.imageEndX, DSTPSM);
 		for(; tempY < endY; ++tempY)
 		{
 			for(; tempX < gs.imageEndX && nSize > 0; tempX += 1, nSize -= 1, buf += 3)

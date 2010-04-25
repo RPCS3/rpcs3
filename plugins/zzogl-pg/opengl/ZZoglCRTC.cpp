@@ -180,7 +180,7 @@ inline bool FrameSkippingHelper()
 
 #if defined _DEBUG
 	if (timeGetTime() - TimeLastSkip > 15000 && ShouldSkip) {
-		ERROR_LOG("ZZogl Skipped frames\n");
+		ZZLog::Debug_Log("ZZogl Skipped frames.");
 		TimeLastSkip = timeGetTime();
 	}
 #endif
@@ -247,12 +247,12 @@ inline void RenderStartHelper(u32 bInterlace){
 //	  return;
 //	}
 //#endif
-	if( conf.mrtdepth && pvs[8] == NULL ) {
+	if (conf.mrtdepth && pvs[8] == NULL) 
+	{
 		conf.mrtdepth = 0;
 		s_bWriteDepth = FALSE;
-#ifdef DEBUG
-		ERROR_LOG("Disabling MRT depth writing\n");
-#endif
+
+		ZZLog::Debug_Log("Disabling MRT depth writing\n");
 	}
 
 	Flush(0);
@@ -387,7 +387,7 @@ inline void RenderUpdateStencil(int i, bool* bUsingStencil) {
 
 // CRTC24 could not be rendered
 inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm) {
-	ERROR_LOG("ZZogl: CRTC24!!! I trying to show something\n");
+	ZZLog::Error_Log("ZZogl: CRTC24!!! I'm trying to show something.");
 	SetShaderCaller("RenderCRTC24helper");
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
@@ -398,12 +398,13 @@ inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm) {
 // Maybe I do this function global-defined. Calculate bits per pixel for
 // each psm. It's obly place with PSMCT16 which have diffetent bpp.
 // FIXME: check PSMCT16S
-inline int RenderGetBpp(int psm) {
-	if (psm == PSMCT16S) {
+inline int RenderGetBpp(int psm) 
+{
+	if (psm == PSMCT16S) 
+	{
 		return 3;
-#ifdef _DEBUG
-		ERROR_LOG("ZZogl: 16S target\n");
-#endif
+		
+		ZZLog::Debug_Log("ZZogl: 16S target.");
 	}
 	if (PSMT_ISHALF(psm))
 		return 2;
@@ -590,7 +591,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	// context has to be 0
 	CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
 	if ((pmemtarg == NULL) || (bInterlace >= 2))
-		ERROR_LOG("CRCR Check for memory shader fault");
+		ZZLog::Error_Log("CRCR Check for memory shader fault.");
 
 	SetShaderCaller("RenderCheckForMemory");
 
@@ -633,7 +634,7 @@ inline void AfterRenderDisplayFPS() {
 // Swaping buffers, so we could use another windows
 inline void AfterRenderSwapBuffers() {
 	if (glGetError() != GL_NO_ERROR)
-		DEBUG_LOG("glerror before swap!\n");
+		ZZLog::Debug_Log("glError before swap!");
 
 	GLWin.SwapGLBuffers();
 }
@@ -722,8 +723,9 @@ inline void AfterRendererSwitchBackToTextures() {
 		glDeleteTextures((GLsizei)s_vecTempTextures.size(), &s_vecTempTextures[0]);
 	s_vecTempTextures.clear();
 
-	if( EXTWRITE->WRITE&1 ) {
-		WARN_LOG("EXTWRITE\n");
+	if (EXTWRITE->WRITE & 1) 
+	{
+		ZZLog::Warn_Log("EXTWRITE!");
 		ExtWrite();
 		EXTWRITE->WRITE = 0;
 	}
@@ -750,7 +752,7 @@ inline void AfterRendererAutoresetTargets() {
 		if( total / ARRAY_SIZE(s_nResolveCounts) > 3 ) {
 			if( s_nLastResolveReset > (int)(fFPS * 8) ) {
 				// reset
-				ERROR_LOG("video mem reset\n");
+				ZZLog::Error_Log("Video memory reset.");
 				s_nLastResolveReset = 0;
 				memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
 
