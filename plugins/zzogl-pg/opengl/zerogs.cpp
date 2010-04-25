@@ -554,8 +554,8 @@ int Values[100]={0,};
 __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 {
 	int index = Index;
-	p->x = (((int)gs.gsvertex[index].x - curvb.offset.x >> 1) & 0xffff);
-	p->y = (((int)gs.gsvertex[index].y - curvb.offset.y >> 1) & 0xffff);
+	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);
+	p->y = ((((int)gs.gsvertex[index].y - curvb.offset.y) >> 1) & 0xffff);
 	
 #ifdef LSD_MODE
 	int diffX = (int)gs.gsvertex[index].x - curvb.offset.x;
