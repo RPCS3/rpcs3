@@ -248,7 +248,7 @@ __forceinline u32 ipuRead32(u32 mem)
 			ipuRegs->ipubp |= g_BP.IFC << 8;
 			ipuRegs->ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
 
-			IPU_LOG("Ipu read32: IPU_BP=0x%08X", *(u32*)&g_BP);
+			IPU_LOG("Ipu read32: IPU_BP=0x%08X", ipuRegs->ipubp);
 			return ipuRegs->ipubp;
 		default:
 			IPU_LOG("Ipu read32: Addr=0x%x Value = 0x%08X", mem, *(u32*)(((u8*)ipuRegs) + mem));
@@ -1408,6 +1408,8 @@ int IPU1dma()
 
 					ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
 					IPU1Status.ChainMode = ptag->ID;
+
+					if(ipu1dma->chcr.TTE) DevCon.Warning("TTE?");
 
 					switch (IPU1Status.ChainMode)
 					{

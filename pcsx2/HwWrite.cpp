@@ -109,7 +109,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 		func();
 		Registers::Thaw();
 	}
-	else
+	else if(reg->chcr.STR)
 	{
 		//DevCon.Warning(L"8bit %s DMA Start while DMAC Disabled\n",ChcrName(mem));
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem & ~0xf)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
@@ -165,7 +165,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 		func();
 		Registers::Thaw();
 	}
-	else
+	else if(reg->chcr.STR)
 	{
 		//DevCon.Warning(L"16bit %s DMA Start while DMAC Disabled\n",ChcrName(mem));
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
