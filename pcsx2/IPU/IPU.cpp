@@ -1366,6 +1366,15 @@ int IPU1dma()
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
     //if(!WaitGSPaths()) return totalqwc;
 
+	if(ipu1dma->chcr.STR == false)
+	{
+		//We MUST stop the IPU from trying to fill the FIFO with more data if the DMA has been suspended
+		//if we don't, we risk causing the data to go out of sync with the fifo and we end up losing some!
+		//This is true for Dragons Quest 8 and probably others which suspend the DMA.
+		//DevCon.Warning("IPU1 running when IPU1 DMA disabled! CHCR %x QWC %x", ipu1dma->chcr._u32, ipu1dma->qwc);
+		return 0;
+	}
+
 	IPU_LOG("IPU1 DMA Called QWC %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 
 	switch(IPU1Status.DMAMode)
@@ -1580,7 +1589,6 @@ __forceinline void dmaIPU1() // toIPU
 		if(ipu1dma->qwc == 0)
 		{
 			IPU1Status.InProgress = false;
-			IPU1Status.TagFollow = IPU1_TAG_NONE;
 			IPU1Status.DMAFinished = false;
 		}
 		else
