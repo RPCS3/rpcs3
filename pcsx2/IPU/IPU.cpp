@@ -714,7 +714,7 @@ void IPUCMD_WRITE(u32 val)
 	{
 		case SCE_IPU_BCLR:
 			ipuBCLR(val);
-			//IPU_INTERRUPT(); //DMAC_TO_IPU
+			IPU_INTERRUPT(); //DMAC_TO_IPU
 			return;
 
 		case SCE_IPU_VDEC:
