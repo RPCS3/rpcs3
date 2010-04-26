@@ -76,6 +76,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 			{
 				//DevCon.Warning(L"8bit %s DMA Stopped on Suspend", ChcrName(mem & ~0xf));
 				cpuClearInt( ChannelNumber(mem & ~0xf) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf));
 			}
 			//Here we update the CHCR STR (Busy) bit, we don't touch anything else.
 			reg->chcr.STR = value;
@@ -132,6 +133,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 			{
 				//DevCon.Warning(L"16bit %s DMA Stopped on Suspend", ChcrName(mem));
 				cpuClearInt( ChannelNumber(mem) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
 			//Here we update the lower part of the CHCR, we dont touch the tag as it is only a 16bit value
 			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
@@ -187,11 +189,12 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"32bit %s DMA Stopped on Suspend", ChcrName(mem));
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 				cpuClearInt( ChannelNumber(mem) );
 			}
 			//Sanity Check for possible future bug fix0rs ;p
 			//Spams on Persona 4 opening.
-			if(reg->chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
+			//if(reg->chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
 			//Here we update the LOWER CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
 			//But we need to preserve the existing tag for now
 			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());

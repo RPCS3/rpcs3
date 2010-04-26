@@ -34,8 +34,6 @@ void IPU_Fifo::init()
 void IPU_Fifo_Input::clear()
 {
 	memzero(data);
-	ipu1dma->chcr.STR = 0; //It forcebly ends, so we should clear the dma too (Kingdom Hearts)
-	ipu1dma->qwc = 0;
 	g_BP.IFC = 0;
 	ipuRegs->ctrl.IFC = 0;
 	readpos = 0;
@@ -118,8 +116,14 @@ int IPU_Fifo_Input::read(void *value)
 	// wait until enough data
 	if (g_BP.IFC == 0)
 	{
-		// This is the only spot that wants a return value for IPU1dma.
-		if (IPU1dma() == 0) return 0;
+		// IPU FIFO is empty and DMA is waiting so lets tell the DMA we are ready to put data in the FIFO
+		if(cpuRegs.interrupt & (1<<4) && cpuRegs.eCycle[4] == 1024)
+		{
+			//DevCon.Warning("Setting ECycle");
+			cpuRegs.eCycle[4] = 4;
+		}
+		
+		/*if (IPU1dma() == 0)*/ return 0;
 		pxAssert(g_BP.IFC > 0);
 	}
 

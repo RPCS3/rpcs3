@@ -230,7 +230,7 @@ __forceinline u32 ipuRead32(u32 mem)
 	pxAssert((mem & ~0xff) == 0x10002000);
 	mem &= 0xff;	// ipu repeats every 0x100
 
-	IPUProcessInterrupt();
+	//IPUProcessInterrupt();
 
 	switch (mem)
 	{
@@ -265,7 +265,7 @@ __forceinline u64 ipuRead64(u32 mem)
 	pxAssert((mem & ~0xff) == 0x10002000);
 	mem &= 0xff;	// ipu repeats every 0x100
 
-	IPUProcessInterrupt();
+	//IPUProcessInterrupt();
 
 	switch (mem)
 	{
@@ -714,7 +714,7 @@ void IPUCMD_WRITE(u32 val)
 	{
 		case SCE_IPU_BCLR:
 			ipuBCLR(val);
-			IPU_INTERRUPT(); //DMAC_TO_IPU
+			//IPU_INTERRUPT(); //DMAC_TO_IPU
 			return;
 
 		case SCE_IPU_VDEC:
@@ -799,7 +799,7 @@ void IPUCMD_WRITE(u32 val)
 	// have to resort to the thread
 	ipu_cmd.current = val >> 28;
 	ipuRegs->ctrl.BUSY = 1;
-	if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+	if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 }
 
 void IPUWorker()
@@ -811,7 +811,7 @@ void IPUWorker()
 		case SCE_IPU_VDEC:
 			if (!ipuVDEC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -821,7 +821,7 @@ void IPUWorker()
 		case SCE_IPU_FDEC:
 			if (!ipuFDEC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -831,7 +831,7 @@ void IPUWorker()
 		case SCE_IPU_SETIQ:
 			if (!ipuSETIQ(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -839,7 +839,7 @@ void IPUWorker()
 		case SCE_IPU_SETVQ:
 			if (!ipuSETVQ(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -847,7 +847,7 @@ void IPUWorker()
 		case SCE_IPU_CSC:
 			if (!ipuCSC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0&& ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR)  IPU_INT0_FROM();
@@ -856,7 +856,7 @@ void IPUWorker()
 		case SCE_IPU_PACK:
 			if (!ipuPACK(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -865,7 +865,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -884,7 +884,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				if(ipu1dma->qwc == 0) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -1332,13 +1332,19 @@ static __forceinline int IPU1chain() {
 		//Update TADR etc
 		if(IPU1Status.DMAMode == DMA_MODE_CHAIN) ipuDmacSrcChain();
 		//If the transfer has finished or we have room in the FIFO, schedule to the interrupt code.
-		if(IPU1Status.DMAFinished == true || g_BP.IFC < 8)
-		{
-			IPU_INT_TO(4);
-		}
+		
 		//No data left
 		IPU1Status.InProgress = false;
 	} //If we still have data the commands should pull this across when need be.
+
+	
+	if(totalqwc > 0 || ipu1dma->qwc == 0)
+	{
+		IPU_INT_TO(totalqwc * BIAS);
+		if(ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
+	}
+	else IPU_INT_TO(1024);
+		
 
 	return totalqwc;
 }
@@ -1366,12 +1372,12 @@ int IPU1dma()
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
     //if(!WaitGSPaths()) return totalqwc;
 
-	if(ipu1dma->chcr.STR == false)
+	if(ipu1dma->chcr.STR == false || IPU1Status.DMAMode == 2)
 	{
 		//We MUST stop the IPU from trying to fill the FIFO with more data if the DMA has been suspended
 		//if we don't, we risk causing the data to go out of sync with the fifo and we end up losing some!
 		//This is true for Dragons Quest 8 and probably others which suspend the DMA.
-		//DevCon.Warning("IPU1 running when IPU1 DMA disabled! CHCR %x QWC %x", ipu1dma->chcr._u32, ipu1dma->qwc);
+		DevCon.Warning("IPU1 running when IPU1 DMA disabled! CHCR %x QWC %x", ipu1dma->chcr._u32, ipu1dma->qwc);
 		return 0;
 	}
 
@@ -1545,7 +1551,7 @@ int IPU0dma()
 		//This was IPU_INT_FROM(readsize*BIAS );
 		//This broke vids in Digital Devil Saga
 		//Note that interrupting based on totalsize is just guessing..
-		IPU_INT_FROM( totalsize * BIAS );
+		IPU_INT_FROM( readsize * BIAS );
 		totalsize = 0;
 	}
 
@@ -1602,7 +1608,7 @@ __forceinline void dmaIPU1() // toIPU
 
 		IPU1Status.DMAMode = DMA_MODE_CHAIN;
 		IPU1dma();
-		if (ipuRegs->ctrl.BUSY) IPUWorker();
+		//if (ipuRegs->ctrl.BUSY) IPUWorker();
 	}
 	else //Normal Mode
 	{
@@ -1624,7 +1630,7 @@ __forceinline void dmaIPU1() // toIPU
 			IPU1Status.DMAFinished = true;
 			IPU1Status.DMAMode = DMA_MODE_NORMAL;
 			IPU1dma();
-			if (ipuRegs->ctrl.BUSY) IPUWorker();
+			//if (ipuRegs->ctrl.BUSY) IPUWorker();
 		}
 	}
 }
@@ -1683,13 +1689,12 @@ IPU_FORCEINLINE void ipu1Interrupt()
 
 	if(IPU1Status.DMAFinished == false || IPU1Status.InProgress == true)  //Sanity Check
 	{
-		//Console.Warning("IPU1 finishing when not finished!");
 		IPU1dma();
-		if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
 		return;
 	}
 
 	IPU_LOG("ipu1 finish %x:", cpuRegs.cycle);
 	ipu1dma->chcr.STR = false;
+	IPU1Status.DMAMode = 2;
 	hwDmacIrq(DMAC_TO_IPU);
 }
