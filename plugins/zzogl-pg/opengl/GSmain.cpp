@@ -681,7 +681,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	//if (conf.record) recOpen();
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
-	ERROR_LOG("initialization successful\n");
+	ZZLog::Error_Log("initialization successful");
 
 	if( conf.bilinear == 2 )
 	{

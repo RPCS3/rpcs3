@@ -189,7 +189,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 					case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
 					{
 						int len = min(size, path->nloop);
-						//ERROR_LOG("GIF_FLG_IMAGE(%d)=%d\n", gs.imageTransfer, len);
+						//ZZLog::Error_Log("GIF_FLG_IMAGE(%d)=%d", gs.imageTransfer, len);
 
 						switch(gs.imageTransfer)
 						{
@@ -201,7 +201,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 								break;
 							case 2:
 								//Move();
-								//ERROR_LOG("GIF_FLG_IMAGE MOVE");
+								//ZZLog::Error_Log("GIF_FLG_IMAGE MOVE");
 								break;
 							case 3:
 								//assert(0);
