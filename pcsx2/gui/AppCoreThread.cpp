@@ -296,12 +296,12 @@ protected:
 	
 	void _post_and_wait( IScopedCoreThread& core )
 	{
+		ScopedLock lock( m_mtx_resume );
+
 		PostResult();
 
 		if( m_resume )
 		{
-			ScopedLock lock( m_mtx_resume );
-
 			// If the sender of the message requests a non-blocking resume, then we need
 			// to deallocate the m_sync object, since the sender will likely leave scope and
 			// invalidate it.
