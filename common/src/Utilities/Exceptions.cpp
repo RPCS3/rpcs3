@@ -135,9 +135,9 @@ __forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
 //  Exception Namespace Implementations  (Format message handlers for general exceptions)
 // --------------------------------------------------------------------------------------
 
-Exception::BaseException::~BaseException() throw() {}
+BaseException::~BaseException() throw() {}
 
-void Exception::BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
+void BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
 {
 	m_message_diag = msg_eng;
 	m_message_user = msg_xlt.IsEmpty() ? msg_eng : msg_xlt;
@@ -155,7 +155,7 @@ void Exception::BaseException::InitBaseEx( const wxString& msg_eng, const wxStri
 
 // given message is assumed to be a translation key, and will be stored in translated
 // and untranslated forms.
-void Exception::BaseException::InitBaseEx( const char* msg_eng )
+void BaseException::InitBaseEx( const char* msg_eng )
 {
 	m_message_diag = GetEnglish( msg_eng );
 	m_message_user = GetTranslation( msg_eng );
@@ -166,9 +166,20 @@ void Exception::BaseException::InitBaseEx( const char* msg_eng )
 #endif
 }
 
-wxString Exception::BaseException::FormatDiagnosticMessage() const
+wxString BaseException::FormatDiagnosticMessage() const
 {
 	return m_message_diag + L"\n\n" + m_stacktrace;
+}
+
+// ------------------------------------------------------------------------
+Exception::RuntimeError::RuntimeError( const std::runtime_error& ex, const wxString& prefix )
+{
+	const wxString msg( wxsFormat( L"%sSTL Runtime Error: %s",
+		(prefix.IsEmpty() ? prefix : wxsFormat(L"(%s) ", prefix)),
+		fromUTF8( ex.what() ).c_str()
+	) );
+
+	BaseException::InitBaseEx( msg, msg );
 }
 
 // ------------------------------------------------------------------------

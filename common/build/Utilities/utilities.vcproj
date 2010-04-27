@@ -208,10 +208,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Utilities\EventSource.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Utilities\Exceptions.cpp"
 				>
 			</File>
@@ -427,6 +423,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\src\Utilities\RwMutex.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\src\Utilities\Semaphore.cpp"
 					>
 				</File>
@@ -502,15 +502,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\Utilities\PersistentThread.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Utilities\PrecompiledHeader.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\pxCheckBox.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\pxEvents.h"
 				>
 			</File>
 			<File
@@ -556,6 +556,14 @@
 			<Filter
 				Name="Threading"
 				>
+				<File
+					RelativePath="..\..\include\Utilities\PersistentThread.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\Utilities\RwMutex.h"
+					>
+				</File>
 				<File
 					RelativePath="..\..\include\Utilities\Threading.h"
 					>

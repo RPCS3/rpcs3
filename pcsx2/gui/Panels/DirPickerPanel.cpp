@@ -70,7 +70,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 		);
 
 		if( result == wxID_CANCEL ) return;
-		wxMkdir( path );
+		wxDirName(path).Mkdir();
 	}
 
 	pxExplore( path );
@@ -108,8 +108,8 @@ void Panels::DirPickerPanel::Init( FoldersEnum_t folderid, const wxString& dialo
 		// The default path is invalid... What should we do here? hmm..
 	}
 
-	if( !wxDir::Exists( normalized ) )
-		wxMkdir( normalized );
+	//if( !wxDir::Exists( normalized ) )
+	//	wxMkdir( normalized );
 
 	if( !isCompact )
 	{
@@ -191,10 +191,21 @@ void Panels::DirPickerPanel::Reset()
 
 	if( m_pickerCtrl )
 	{
-		m_pickerCtrl->Enable( m_checkCtrl ? !isDefault : true );
+		// Important!  The dirpicker panel stuff, due to however it's put together
+		// needs to check the enable status of this panel before setting the child
+		// panel's enable status.
+
+		m_pickerCtrl->Enable( IsEnabled() ? ( m_checkCtrl ? !isDefault : true ) : false );
 		m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
 	}
 }
+
+bool Panels::DirPickerPanel::Enable( bool enable )
+{
+	m_pickerCtrl->Enable( enable ? (!m_checkCtrl || m_checkCtrl->GetValue()) : false );
+	return _parent::Enable( enable );
+}
+
 
 void Panels::DirPickerPanel::AppStatusEvent_OnSettingsApplied()
 {
@@ -204,6 +215,21 @@ void Panels::DirPickerPanel::AppStatusEvent_OnSettingsApplied()
 void Panels::DirPickerPanel::Apply()
 {
 	if( !m_pickerCtrl ) return;
+
+	const wxString path( m_pickerCtrl->GetPath() );
+
+	if( !wxDir::Exists( path ) )
+	{
+		wxDialogWithHelpers dialog( NULL, _("Create folder?"), wxVERTICAL );
+		dialog += dialog.Heading( _("A configured folder does not exist.  Should PCSX2 to create it?") );
+		dialog += 12;
+		dialog += dialog.Heading( path );
+
+		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create")).Cancel(), L"CreateNewFolder" ) )
+			throw Exception::CannotApplySettings( this );
+	}
+
+	wxDirName(path).Mkdir();
 	g_Conf->Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl ? m_checkCtrl->GetValue() : false );
 }
 

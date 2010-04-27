@@ -155,7 +155,13 @@ public:
 
 	virtual ~ConsoleIndentScope() throw()
 	{
+		if( m_amount != 0 ) Console.SetIndent( -m_amount );
+	}
+	
+	void EndScope()
+	{
 		Console.SetIndent( -m_amount );
+		m_amount = 0;
 	}
 };
 

@@ -22,7 +22,6 @@
 namespace Threading
 {
 	extern const wxTimeSpan	def_yieldgui_interval;
-	extern const wxTimeSpan	def_deadlock_timeout;
 
 	extern bool _WaitGui_RecursionGuard( const char* guardname );
 }

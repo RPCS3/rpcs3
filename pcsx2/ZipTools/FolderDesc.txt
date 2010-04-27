@@ -1,0 +1,10 @@
+
+-------------------
+ ZipTools (folder)
+-------------------
+
+Contains C++ interfaces for zipping to/from various formats
+(primarily gzip and 7zip).
+
+Notice: This folder is intended to be moved to a utility folder
+outside the main PCSX2 folders at a later date.

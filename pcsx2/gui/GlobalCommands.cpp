@@ -15,6 +15,8 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "GSFrame.h"
+
 #include "HostGui.h"
 #include "AppSaveStates.h"
 #include "GS.h"
@@ -91,7 +93,7 @@ namespace Implementations
 			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
 			Console.WriteLn("(FrameLimiter) Turbo ENABLED." );
 		}
-		pauser.Resume();
+		pauser.AllowResume();
 	}
 
 	void Framelimiter_SlomoToggle()
@@ -117,7 +119,7 @@ namespace Implementations
 			Console.WriteLn("(FrameLimiter) SlowMotion ENABLED." );
 			g_Conf->EmuOptions.GS.FrameLimitEnable = true;
 		}
-		pauser.Resume();
+		pauser.AllowResume();
 	}
 
 	void Framelimiter_MasterToggle()
@@ -126,7 +128,7 @@ namespace Implementations
 		g_Conf->EmuOptions.GS.FrameLimitEnable = !g_Conf->EmuOptions.GS.FrameLimitEnable;
 		GSsetVsync( g_Conf->EmuOptions.GS.FrameLimitEnable && g_Conf->EmuOptions.GS.VsyncEnable );
 		Console.WriteLn("(FrameLimiter) %s.", g_Conf->EmuOptions.GS.FrameLimitEnable ? "ENABLED" : "DISABLED" );
-		pauser.Resume();
+		pauser.AllowResume();
 	}
 
 	void Sys_Suspend()
@@ -142,13 +144,11 @@ namespace Implementations
 
 	void Sys_TakeSnapshot()
 	{
-		GSmakeSnapshot( g_Conf->Folders.Snapshots.ToAscii().data() );
+		GSmakeSnapshot( g_Conf->Folders.Snapshots.ToAscii() );
 	}
 
 	void Sys_RenderToggle()
 	{
-		if( g_plugins == NULL ) return;
-
 		SaveSinglePluginHelper helper( PluginId_GS );
 		renderswitch = !renderswitch;
 	}

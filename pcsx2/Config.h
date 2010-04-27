@@ -484,8 +484,8 @@ struct Pcsx2Config
 			CdvdDumpBlocks		:1,		// enables cdvd block dumping
 			EnablePatches		:1,		// enables patch detection and application
 
-		// when enabled performs bios stub execution, skipping full sony bios + splash screens
-			SkipBiosSplash		:1,
+		// when enabled uses BOOT2 injection, skipping sony bios splashes
+			UseBOOT2Injection	:1,
 
 		// enables simulated ejection of memory cards when loading savestates
 			McdEnableEjection	:1,

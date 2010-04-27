@@ -16,60 +16,48 @@
 #pragma once
 
 #include "Utilities/PersistentThread.h"
+#include "Utilities/RwMutex.h"
 #include "x86emitter/tools.h"
 
+#include "CDVD/CDVDaccess.h"
+
 using namespace Threading;
-
-// --------------------------------------------------------------------------------------
-//  ISysThread
-// --------------------------------------------------------------------------------------
-class ISysThread : public virtual IThread
-{
-public:
-	ISysThread() {}
-	virtual ~ISysThread() throw() {}
-
-	virtual bool Suspend( bool isBlocking = true ) { return false; }
-	virtual bool Pause() { return false; }
-	virtual void Resume() {}
-};
 
 // --------------------------------------------------------------------------------------
 //  SysThreadBase
 // --------------------------------------------------------------------------------------
 
-class SysThreadBase : public PersistentThread, public virtual ISysThread
+class SysThreadBase : public PersistentThread
 {
 	typedef PersistentThread _parent;
 
 public:
-	// Important: The order of these enumerations matters.  All "not-open" statuses must
-	// be listed before ExecMode_Closed, since there are "optimized" tests that rely on the
-	// assumption that "ExecMode <= ExecMode_Closed" equates to a closed thread status.
+	// Important: The order of these enumerations matters!  Optimized tests are used for both
+	// Closed and Paused states.
 	enum ExecutionMode
 	{
 		// Thread has not been created yet.  Typically this is the same as IsRunning()
 		// returning FALSE.
 		ExecMode_NoThreadYet,
 
-		// Close signal has been sent to the thread, but the thread's response is still
-		// pending (thread is busy/running).
-		ExecMode_Closing,
-
 		// Thread is safely paused, with plugins in a "closed" state, and waiting for a
 		// resume/open signal.
 		ExecMode_Closed,
 
+		// Thread is safely paused, with plugins in an "open" state, and waiting for a
+		// resume/open signal.
+		ExecMode_Paused,
+
 		// Thread is active and running, with pluigns in an "open" state.
 		ExecMode_Opened,
+
+		// Close signal has been sent to the thread, but the thread's response is still
+		// pending (thread is busy/running).
+		ExecMode_Closing,
 
 		// Pause signal has been sent to the thread, but the thread's response is still
 		// pending (thread is busy/running).
 		ExecMode_Pausing,
-
-		// Thread is safely paused, with plugins in an "open" state, and waiting for a
-		// resume/open signal.
-		ExecMode_Paused,
 	};
 
 protected:
@@ -77,20 +65,19 @@ protected:
 
 	// This lock is used to avoid simultaneous requests to Suspend/Resume/Pause from
 	// contending threads.
-	MutexLockRecursive		m_ExecModeMutex;
+	MutexRecursive		m_ExecModeMutex;
 
 	// Used to wake up the thread from sleeping when it's in a suspended state.
-	Semaphore				m_ResumeEvent;
+	Semaphore			m_sem_Resume;
+	
+	// Used to synchronize inline changes from paused to suspended status.
+	Semaphore			m_sem_ChangingExecMode;
 
 	// Locked whenever the thread is not in a suspended state (either closed or paused).
 	// Issue a Wait against this mutex for performing actions that require the thread
 	// to be suspended.
-	Mutex					m_RunningLock;
-
-	// Protects the thread from re-entrant resume requests while dependent resources are
-	// being constructed.
-	NonblockingMutex		m_ResumeProtection;
-
+	Mutex				m_RunningLock;
+	
 public:
 	explicit SysThreadBase();
 	virtual ~SysThreadBase() throw();
@@ -102,8 +89,12 @@ public:
 	// first.
 	bool IsOpen() const
 	{
-		return m_ExecMode > ExecMode_Closed;
+		return IsRunning() && (m_ExecMode > ExecMode_Closed);
 	}
+
+	bool IsClosed() const { return !IsOpen(); }
+	
+	bool IsPaused() const { return !IsRunning() || (m_ExecMode <= ExecMode_Paused); }
 
 	bool HasPendingStateChangeRequest() const
 	{
@@ -111,23 +102,14 @@ public:
 		return (mode == ExecMode_Closing) || (mode == ExecMode_Pausing);
 	}
 
-	bool IsClosed() const { return !IsOpen(); }
-
 	ExecutionMode GetExecutionMode() const { return m_ExecMode; }
 	Mutex& ExecutionModeMutex() { return m_ExecModeMutex; }
 
-	virtual bool Suspend( bool isBlocking = true );
+	virtual void Suspend( bool isBlocking = true );
 	virtual void Resume();
-	virtual bool Pause();
-
-	virtual bool AcquireResumeLock() { return m_ResumeProtection.TryAcquire(); }
-	virtual void ReleaseResumeLock() { m_ResumeProtection.Release(); }
-
-	virtual wxTimeSpan GetDeadlockTimeout() const;
-	virtual void ThrowDeadlockException();
-
+	virtual void Pause();
+	
 protected:
-	virtual void DoThreadDeadlocked();
 	virtual void OnStart();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
@@ -146,14 +128,14 @@ protected:
 	// handles invocation by the following guidelines: Called *in thread* from StateCheckInThread()
 	// prior to suspending the thread (ie, when Suspend() has been called on a separate
 	// thread, requesting this thread suspend itself temporarily).  After this is called,
-	// the thread enters a waiting state on the m_ResumeEvent semaphore.
+	// the thread enters a waiting state on the m_sem_Resume semaphore.
 	virtual void OnSuspendInThread()=0;
 
 	// Extending classes should implement this, but should not call it.  The parent class
 	// handles invocation by the following guidelines: Called *in thread* from StateCheckInThread()
 	// prior to pausing the thread (ie, when Pause() has been called on a separate thread,
 	// requesting this thread pause itself temporarily).  After this is called, the thread
-	// enters a waiting state on the m_ResumeEvent semaphore.
+	// enters a waiting state on the m_sem_Resume semaphore.
 	virtual void OnPauseInThread()=0;
 
 	// Extending classes should implement this, but should not call it.  The parent class
@@ -165,6 +147,7 @@ protected:
 	virtual void OnResumeInThread( bool isSuspended )=0;
 };
 
+
 // --------------------------------------------------------------------------------------
 //  SysCoreThread class
 // --------------------------------------------------------------------------------------
@@ -173,6 +156,8 @@ class SysCoreThread : public SysThreadBase
 	typedef SysThreadBase _parent;
 
 protected:
+	s32				m_CloseTemporary;
+
 	bool			m_resetRecompilers;
 	bool			m_resetProfilers;
 	bool			m_resetVsyncTimers;
@@ -183,7 +168,7 @@ protected:
 	bool			m_CoreCancelDamnit;
 
 	wxString		m_elf_override;
-
+	
 	SSE_MXCSR		m_mxcsr_saved;
 
 public:
@@ -199,7 +184,7 @@ public:
 	virtual void RecoverState();
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool Cancel( const wxTimeSpan& timeout );
-
+	
 	bool HasValidState()
 	{
 		return m_hasValidState;
@@ -209,55 +194,52 @@ public:
 	virtual void StateCheckInThread();
 	virtual void VsyncInThread();
 	virtual void PostVsyncToUI()=0;
-
+	
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );
-	virtual void ChangeCdvdSource( CDVD_SourceType type );
-
+	
 protected:
 	void _reset_stuff_as_needed();
 
 	virtual void CpuInitializeMess();
 	virtual void Start();
+	virtual void OnStart();
 	virtual void OnSuspendInThread();
 	virtual void OnPauseInThread() {}
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
 	virtual void DoCpuReset();
-
+	virtual void DoCpuExecute();
+	
 	void _StateCheckThrows();
 };
 
-// --------------------------------------------------------------------------------------
-//  ScopedCoreThreadSuspend
-// --------------------------------------------------------------------------------------
-// This class behaves a bit differently from other scoped classes due to the "standard"
-// assumption that we actually do *not* want to resume CoreThread operations when an
-// exception occurs.  Because of this, the destructor of this class does *not* unroll the
-// suspend operation.  Instead you must manually instruct the class to resume using a call
-// to the provisioned Resume() method.
-//
-// If the class leaves scope without having been resumed, a log is written to the console.
-// This can be useful for troubleshooting, and also allows the log a second line of info
-// indicating the status of CoreThread execution at the time of the exception.
-//
-struct ScopedCoreThreadSuspend
-{
-	bool m_ResumeWhenDone;
 
-	ScopedCoreThreadSuspend();
-	virtual ~ScopedCoreThreadSuspend() throw();
-	virtual void Resume();
+struct SysStateUnlockedParams
+{
+	SysStateUnlockedParams() {}
 };
 
-struct ScopedCoreThreadPause
+// --------------------------------------------------------------------------------------
+//  IEventListener_SaveStateThread
+// --------------------------------------------------------------------------------------
+class IEventListener_SysState : public IEventDispatcher<SysStateUnlockedParams>
 {
-	bool m_ResumeWhenDone;
+public:
+	typedef SysStateUnlockedParams EvtParams;
 
-	ScopedCoreThreadPause();
-	virtual ~ScopedCoreThreadPause() throw();
-	virtual void Resume();
+public:
+	IEventListener_SysState() {}
+	virtual ~IEventListener_SysState() throw() {}
+
+	virtual void DispatchEvent( const SysStateUnlockedParams& status )
+	{
+		SysStateAction_OnUnlocked();
+	}
+
+protected:
+	virtual void SysStateAction_OnUnlocked();
 };
 
 // GetCoreThread() is a required external implementation. This function is *NOT*
@@ -266,5 +248,3 @@ struct ScopedCoreThreadPause
 // them to extend the class and override virtual methods).
 //
 extern SysCoreThread& GetCoreThread();
-
-extern int sys_resume_lock;

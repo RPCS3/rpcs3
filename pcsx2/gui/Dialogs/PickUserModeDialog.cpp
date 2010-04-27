@@ -23,7 +23,7 @@ using namespace Panels;
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent )
 	: BaseApplicableDialog( parent, _("PCSX2 First Time configuration"), wxVERTICAL )
 {
-	m_panel_usersel = new UsermodeSelectionPanel( this, false );
+	m_panel_usersel = new DocsFolderPickerPanel( this, false );
 	m_panel_langsel = new LanguageSelectionPanel( this );
 
 	*this	+= new pxStaticHeading( this, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );

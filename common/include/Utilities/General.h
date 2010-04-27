@@ -53,6 +53,9 @@ public:
 	bool IsReentrant() const { return Counter > 1; }
 };
 
+// --------------------------------------------------------------------------------------
+//  ICloneable / IActionInvocation / IDeletableObject
+// --------------------------------------------------------------------------------------
 class IActionInvocation
 {
 public:
@@ -60,8 +63,30 @@ public:
 	virtual void InvokeAction()=0;
 };
 
+class ICloneable
+{
+public:
+	virtual ICloneable* Clone() const=0;
+};
+
+class IDeletableObject
+{
+public:
+	virtual ~IDeletableObject() throw() {}
+
+	virtual void DeleteSelf()=0;
+	virtual bool IsBeingDeleted()=0;
+
+protected:
+	// This function is GUI implementation dependent!  It's implemented by PCSX2's AppHost,
+	// but if the SysCore is being linked to another front end, you'll need to implement this
+	// yourself.  Most GUIs have built in message pumps.  If a platform lacks one then you'll
+	// need to implement one yourself (yay?).
+	virtual void DoDeletion()=0;
+};
+
 // --------------------------------------------------------------------------------------
-//  IDeletableObject
+//  BaseDeletableObject
 // --------------------------------------------------------------------------------------
 // Oh the fruits and joys of multithreaded C++ coding conundrums!  This class provides a way
 // to be deleted from arbitraty threads, or to delete themselves (which is considered unsafe
@@ -83,14 +108,14 @@ public:
 //   (sigh).  And, finally, it requires quite a bit of red tape to implement wxObjects because
 //   of the wx-custom runtime type information.  So I made my own.
 //
-class IDeletableObject
+class BaseDeletableObject : public virtual IDeletableObject
 {
 protected:
 	volatile long	m_IsBeingDeleted;
 
 public:
-	IDeletableObject();
-	virtual ~IDeletableObject() throw();
+	BaseDeletableObject();
+	virtual ~BaseDeletableObject() throw();
 
 	void DeleteSelf();
 	bool IsBeingDeleted() { return !!m_IsBeingDeleted; }

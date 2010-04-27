@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "Threading.h"
+
 using Threading::ScopedLock;
 
 template< typename ListenerType >
@@ -77,7 +79,7 @@ __forceinline void EventSource<ListenerType>::_DispatchRaw( ListenerIterator ite
 				Console.Error( L"Ignoring runtime error thrown from event listener: " + ex.FormatDiagnosticMessage() );
 			}
 		}
-		catch( Exception::BaseException& ex )
+		catch( BaseException& ex )
 		{
 			if( IsDevBuild )
 			{

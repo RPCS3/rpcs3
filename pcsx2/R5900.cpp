@@ -82,7 +82,7 @@ void cpuReset()
 	psxReset();
 
 	g_GameStarted = false;
-	g_SkipBiosHack = EmuConfig.SkipBiosSplash;
+	g_SkipBiosHack = EmuConfig.UseBOOT2Injection;
 
 	ElfCRC = 0;
 	DiscID = L"";

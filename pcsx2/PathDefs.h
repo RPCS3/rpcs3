@@ -42,7 +42,6 @@ namespace PathDefs
 	// complete pathnames are returned by these functions
 	// For 99% of all code, you should use these.
 
-	extern wxDirName GetDocuments();
 	extern wxDirName GetSnapshots();
 	extern wxDirName GetBios();
 	extern wxDirName GetThemes();
@@ -51,7 +50,6 @@ namespace PathDefs
 	extern wxDirName GetMemoryCards();
 	extern wxDirName GetSettings();
 	extern wxDirName GetLogs();
-	extern wxDirName GetThemes();
 
 	extern wxDirName Get( FoldersEnum_t folderidx );
 

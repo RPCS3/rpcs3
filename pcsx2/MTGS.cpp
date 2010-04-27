@@ -399,9 +399,9 @@ void SysMtgsThread::ExecuteTaskInThread()
 						{
 							MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
 							int mode = tag.data[0];
-							data->retval = GetPluginManager().DoFreeze( PluginId_GS, mode, data->fdata );
-							break;
+							data->retval = GetCorePlugins().DoFreeze( PluginId_GS, mode, data->fdata );
 						}
+						break;
 
 						case GS_RINGTYPE_RECORD:
 						{
@@ -488,8 +488,7 @@ void SysMtgsThread::ClosePlugin()
 {
 	if( !m_PluginOpened ) return;
 	m_PluginOpened = false;
-	if( g_plugins != NULL )
-		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
+	GetCorePlugins().Close( PluginId_GS );
 }
 
 void SysMtgsThread::OnSuspendInThread()
@@ -998,7 +997,7 @@ void SysMtgsThread::WaitForOpen()
 
 void SysMtgsThread::Freeze( int mode, MTGS_FreezeData& data )
 {
-	GetPluginManager().Open( PluginId_GS );
+	GetCorePlugins().Open( PluginId_GS );
 	SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
 	Resume();
 	WaitGS();

@@ -36,6 +36,8 @@ Threading::Mutex::Mutex()
 	pthread_mutex_init( &m_mutex, NULL );
 }
 
+static wxTimeSpan def_detach_timeout( 0, 0, 6, 0 );
+
 void Threading::Mutex::Detach()
 {
 	if( EBUSY != pthread_mutex_destroy(&m_mutex) ) return;
@@ -52,7 +54,7 @@ void Threading::Mutex::Detach()
 		if( pxAssertDev( result != EBUSY, "Detachment of a recursively-locked mutex (self-locked!)." ) ) return;
 	}
 
-	if( Wait(def_deadlock_timeout) )
+	if( Wait(def_detach_timeout) )
 		pthread_mutex_destroy( &m_mutex );
 	else
 		Console.Error( "(Thread Log) Mutex cleanup failed due to possible deadlock.");
@@ -65,7 +67,7 @@ Threading::Mutex::~Mutex() throw()
 	} DESTRUCTOR_CATCHALL;
 }
 
-Threading::MutexLockRecursive::MutexLockRecursive() : Mutex( false )
+Threading::MutexRecursive::MutexRecursive() : Mutex( false )
 {
 	if( _InterlockedIncrement( &_attr_refcount ) == 1 )
 	{
@@ -79,7 +81,7 @@ Threading::MutexLockRecursive::MutexLockRecursive() : Mutex( false )
 	err = pthread_mutex_init( &m_mutex, &_attr_recursive );
 }
 
-Threading::MutexLockRecursive::~MutexLockRecursive() throw()
+Threading::MutexRecursive::~MutexRecursive() throw()
 {
 	if( _InterlockedDecrement( &_attr_refcount ) == 0 )
 		pthread_mutexattr_destroy( &_attr_recursive );
@@ -100,7 +102,7 @@ void Threading::Mutex::Recreate()
 //   unlocked.
 bool Threading::Mutex::RecreateIfLocked()
 {
-	if( !Wait(def_deadlock_timeout) )
+	if( !Wait(def_detach_timeout) )
 	{
 		Recreate();
 		return true;
@@ -151,8 +153,7 @@ void Threading::Mutex::Acquire()
 	}
 	else if( _WaitGui_RecursionGuard( "Mutex::Acquire" ) )
 	{
-		if( !AcquireWithoutYield(def_deadlock_timeout) )
-			throw Exception::ThreadDeadlock();
+		AcquireWithoutYield();
 	}
 	else
 	{
@@ -177,12 +178,6 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 	else if( _WaitGui_RecursionGuard( "Mutex::Acquire(timeout)" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
-
-		if( timeout > def_deadlock_timeout )
-		{
-			if( AcquireWithoutYield(def_deadlock_timeout) ) return true;
-			throw Exception::ThreadDeadlock();
-		}
 		return AcquireWithoutYield( timeout );
 	}
 	else
@@ -198,9 +193,6 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 
 		return countdown.GetMilliseconds() > 0;
 	}
-
-	// Looks like a potential deadlock; throw an exception!
-	throw Exception::ThreadDeadlock();
 
 #else
 	return AcquireWithoutYield();
@@ -220,6 +212,12 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 void Threading::Mutex::Wait()
 {
 	Acquire();
+	Release();
+}
+
+void Threading::Mutex::WaitWithoutYield()
+{
+	AcquireWithoutYield();
 	Release();
 }
 
@@ -243,3 +241,69 @@ bool Threading::Mutex::Wait( const wxTimeSpan& timeout )
 	return false;
 }
 
+bool Threading::Mutex::WaitWithoutYield( const wxTimeSpan& timeout )
+{
+	if( AcquireWithoutYield(timeout) )
+	{
+		Release();
+		return true;
+	}
+	return false;
+}
+
+// --------------------------------------------------------------------------------------
+//  ScopedLock Implementations
+// --------------------------------------------------------------------------------------
+
+Threading::ScopedLock::~ScopedLock() throw()
+{
+	if( m_IsLocked && m_lock )
+		m_lock->Release();
+}
+
+Threading::ScopedLock::ScopedLock( const Mutex* locker )
+{
+	AssignAndLock( locker );
+}
+
+Threading::ScopedLock::ScopedLock( const Mutex& locker )
+{
+	AssignAndLock( locker );
+}
+
+void Threading::ScopedLock::AssignAndLock( const Mutex& locker )
+{
+	AssignAndLock( &locker );
+}
+
+void Threading::ScopedLock::AssignAndLock( const Mutex* locker )
+{
+	m_lock = const_cast<Mutex*>(locker);
+	if( !m_lock ) return;
+
+	m_IsLocked = true;
+	m_lock->Acquire();		
+}
+
+// Provides manual unlocking of a scoped lock prior to object destruction.
+void Threading::ScopedLock::Release()
+{
+	if( !m_IsLocked ) return;
+	m_IsLocked = false;
+	if( m_lock ) m_lock->Release();
+}
+
+// provides manual locking of a scoped lock, to re-lock after a manual unlocking.
+void Threading::ScopedLock::Acquire()
+{
+	if( m_IsLocked || !m_lock ) return;
+	m_lock->Acquire();
+	m_IsLocked = true;
+}
+
+Threading::ScopedLock::ScopedLock( const Mutex& locker, bool isTryLock )
+{
+	m_lock = const_cast<Mutex*>(&locker);
+	if( !m_lock ) return;
+	m_IsLocked = isTryLock ? m_lock->TryAcquire() : false;
+}

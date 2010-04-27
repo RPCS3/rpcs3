@@ -92,14 +92,15 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 
 		//evt.Veto( true );
 
-		if( StateCopy_InvokeOnSaveComplete( new InvokeAction_MenuCommand( MenuId_Exit ) ) ) return;
 	}
-
-	m_menuCDVD.Remove( MenuId_IsoSelector );
-	//m_menuCDVD.Delete( MenuId_IsoSelector );
 
 	wxGetApp().PrepForExit();
 	sApp.OnMainFrameClosed( GetId() );
+
+	if( m_menubar.FindItem(MenuId_IsoSelector) )
+		m_menuCDVD.Remove(MenuId_IsoSelector);
+
+	RemoveEventHandler( &wxGetApp().GetRecentIsoManager() );
 
 	evt.Skip();
 }
@@ -169,14 +170,14 @@ void MainEmuFrame::ConnectMenus()
 		ConnectMenu( MenuId_PluginBase_Settings + (i*PluginMenuId_Interval), Menu_ConfigPlugin_Click);
 
 	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
+	ConnectMenu( MenuId_Boot_CDVD2,			Menu_BootCdvd2_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
 	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
-	ConnectMenu( MenuId_SkipBiosToggle,		Menu_SkipBiosToggle_Click );
 	ConnectMenu( MenuId_EnablePatches,      Menu_EnablePatches_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
-	ConnectMenu( MenuId_Sys_Reset,			Menu_SysReset_Click );
+	ConnectMenu( MenuId_Sys_Restart,		Menu_SysReset_Click );
 	ConnectMenu( MenuId_Sys_Shutdown,		Menu_SysShutdown_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
@@ -229,14 +230,12 @@ void MainEmuFrame::DispatchEvent( const PluginEventType& plugin_evt )
 	}
 	else if( plugin_evt == CorePlugins_Loaded )
 	{
-		if( !pxAssertDev( g_plugins!=NULL, wxNullChar ) ) return;
-
 		for( int i=0; i<PluginId_Count; ++i )
 			m_PluginMenuPacks[i].OnLoaded();
 
 		// bleh this makes the menu too cluttered. --air
 		//m_menuCDVD.SetLabel( MenuId_Src_Plugin, wxsFormat( L"%s (%s)", _("Plugin"),
-		//	g_plugins->GetName( PluginId_CDVD ).c_str() ) );
+		//	GetCorePlugins().GetName( PluginId_CDVD ).c_str() ) );
 	}
 }
 
@@ -304,9 +303,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
 
-	m_menubar.Append( &m_menuBoot,		_("&Boot") );
-	m_menubar.Append( &m_menuCDVD,		_("CD&VD") );
+	//m_menubar.Append( &m_menuBoot,		_("&Boot") );
 	m_menubar.Append( &m_menuSys,		_("&System") );
+	m_menubar.Append( &m_menuCDVD,		_("CD&VD") );
 	m_menubar.Append( &m_menuConfig,	_("&Config") );
 	m_menubar.Append( &m_menuMisc,		_("&Misc") );
 #ifdef PCSX2_DEVBUILD
@@ -364,36 +363,17 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	InitLogBoxPosition( g_Conf->ProgLogBox );
 
 	// ------------------------------------------------------------------------
+	// Some of the items in the System menu are configured by the UpdateCoreStatus() method.
+	
+	m_menuSys.Append(MenuId_Boot_CDVD,			_("Initializing..."));
 
-	m_menuBoot.Append(MenuId_Boot_CDVD,		_("Run CDVD"),
-		_("For booting DVD discs or Isos, depending on the configured CDVD source."));
+	m_menuSys.Append(MenuId_Boot_CDVD2,			_("Initializing..."));
 
-	m_menuBoot.Append(MenuId_Boot_ELF,		_("Run ELF File..."),
-		_("For running raw binaries directly"));
+	m_menuSys.Append(MenuId_Boot_ELF,	_("Run ELF..."),
+		_("For running raw PS2 binaries directly"));
 
-	m_menuBoot.AppendSeparator();
-	m_menuBoot.Append(MenuId_Exit,			_("Exit"),
-		_("Closing PCSX2 may be hazardous to your health"));
-
-	// ------------------------------------------------------------------------
-	wxMenu& isoRecents( wxGetApp().GetRecentIsoMenu() );
-
-	//m_menuCDVD.AppendSeparator();
-	m_menuCDVD.Append( MenuId_IsoSelector,	_("Iso Selector"), &isoRecents );
-	m_menuCDVD.Append( GetPluginMenuId_Settings(PluginId_CDVD), _("Plugin Menu"), m_PluginMenuPacks[PluginId_CDVD] );
-
-	m_menuCDVD.AppendSeparator();
-	m_menuCDVD.Append( MenuId_Src_Iso,		_("Iso"),		_("Makes the specified ISO image the CDVD source."), wxITEM_RADIO );
-	m_menuCDVD.Append( MenuId_Src_Plugin,	_("Plugin"),	_("Uses an external plugin as the CDVD source."), wxITEM_RADIO );
-	m_menuCDVD.Append( MenuId_Src_NoDisc,	_("No disc"),	_("Use this to boot into your virtual PS2's BIOS configuration."), wxITEM_RADIO );
-
-	m_menuCDVD.AppendSeparator();
-	m_menuCDVD.Append( MenuId_SkipBiosToggle,_("Enable Skip BIOS Hack"),
-		_("Skips PS2 splash screens when booting from Iso or CDVD media"), wxITEM_CHECK );
-
-	// ------------------------------------------------------------------------
-	m_menuSys.Append(MenuId_Sys_SuspendResume,		_("Suspend") )->Enable( SysHasValidState() );
-
+	m_menuSys.AppendSeparator();
+	m_menuSys.Append(MenuId_Sys_SuspendResume,	_("Initializing..."));
 	m_menuSys.AppendSeparator();
 
 	//m_menuSys.Append(MenuId_Sys_Close,		_("Close"),
@@ -408,11 +388,29 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.AppendSeparator();
-	m_menuSys.Append(MenuId_Sys_Reset,		_("Reset"),
-		_("Resets the VM state and re-runs current CDVD image."));
 
 	m_menuSys.Append(MenuId_Sys_Shutdown,	_("Shutdown"),
 		_("Wipes all internal VM states and shuts down plugins."));
+
+	m_menuSys.Append(MenuId_Exit,			_("Exit"),
+		_("Closing PCSX2 may be hazardous to your health"));
+
+
+	// ------------------------------------------------------------------------
+	wxMenu& isoRecents( wxGetApp().GetRecentIsoMenu() );
+
+	//m_menuCDVD.AppendSeparator();
+	m_menuCDVD.Append( MenuId_IsoSelector,	_("Iso Selector"), &isoRecents );
+	m_menuCDVD.Append( GetPluginMenuId_Settings(PluginId_CDVD), _("Plugin Menu"), m_PluginMenuPacks[PluginId_CDVD] );
+
+	m_menuCDVD.AppendSeparator();
+	m_menuCDVD.Append( MenuId_Src_Iso,		_("Iso"),		_("Makes the specified ISO image the CDVD source."), wxITEM_RADIO );
+	m_menuCDVD.Append( MenuId_Src_Plugin,	_("Plugin"),	_("Uses an external plugin as the CDVD source."), wxITEM_RADIO );
+	m_menuCDVD.Append( MenuId_Src_NoDisc,	_("No disc"),	_("Use this to boot into your virtual PS2's BIOS configuration."), wxITEM_RADIO );
+
+	//m_menuCDVD.AppendSeparator();
+	//m_menuCDVD.Append( MenuId_SkipBiosToggle,_("Enable BOOT2 injection"),
+	//	_("Skips PS2 splash screens when booting from Iso or DVD media"), wxITEM_CHECK );
 
     // ------------------------------------------------------------------------
 
@@ -478,7 +476,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler		(MainEmuFrame::OnActivate) );
 
+	PushEventHandler( &wxGetApp().GetRecentIsoManager() );
 	SetDropTarget( new IsoDropTarget( this ) );
+	ApplyCoreStatus();
 }
 
 MainEmuFrame::~MainEmuFrame() throw()
@@ -486,7 +486,7 @@ MainEmuFrame::~MainEmuFrame() throw()
 	if( m_RestartEmuOnDelete )
 	{
 		sApp.SetExitOnFrameDelete( false );
-		sApp.PostMethod( &Pcsx2App::DetectCpuAndUserMode );
+		sApp.PostAppMethod( &Pcsx2App::DetectCpuAndUserMode );
 		sApp.WipeUserModeSettings();
 	}
 }
@@ -520,38 +520,71 @@ void MainEmuFrame::ApplyCoreStatus()
 {
 	wxMenuBar& menubar( *GetMenuBar() );
 
-	wxMenuItem& susres( *menubar.FindItem( MenuId_Sys_SuspendResume ) );
-	if( !pxAssertMsg( &susres!=NULL, "Suspend/Resume Menubar Item is NULL!" ) ) return;
+	wxMenuItem& susres	(*menubar.FindItem( MenuId_Sys_SuspendResume ));
+	wxMenuItem& cdvd	(*menubar.FindItem( MenuId_Boot_CDVD ));
+	wxMenuItem& cdvd2	(*menubar.FindItem( MenuId_Boot_CDVD2 ));
+
+	if( !pxAssertMsg( (&susres) && (&cdvd) && (&cdvd2), "Unexpected NULL Menubar Item!" ) ) return;
+
+	wxMenuItem* restart	= menubar.FindItem( MenuId_Sys_Restart );
 
 	if( SysHasValidState() )
 	{
 		susres.Enable();
 		if( CoreThread.IsOpen() )
 		{
-			susres.SetHelp( _("Safely pauses emulation and preserves the PS2 state.") );
-			susres.SetText( _("Suspend") );
+			susres.SetText(_("Suspend"));
+			susres.SetHelp(_("Safely pauses emulation and preserves the PS2 state."));
 		}
 		else
 		{
-			susres.SetHelp( _("Resumes the suspended emulation state.") );
-			susres.SetText( _("Resume") );
+			susres.SetText(_("Resume"));
+			susres.SetHelp(_("Resumes the suspended emulation state."));
 		}
+
+		if( restart )
+		{
+			restart->SetText(_("Restart"));
+			restart->SetHelp(_("Simulates hardware reset of the PS2 virtual machine."));
+		}
+		
+		cdvd.SetText(_("Reboot CDVD (full)"));
+		cdvd.SetHelp(_("Hard reset of the active VM."));
+
+		cdvd2.SetText(_("Reboot CDVD (fast)"));
+		cdvd2.SetHelp(_("Reboot using BOOT2 injection (skips splash screens)"));
+
 	}
 	else
 	{
 		susres.Enable( false );
+		susres.SetText(_("Suspend/Resume"));
 		susres.SetHelp( _("No emulation state is active; cannot suspend or resume.") );
+
+		if( restart )
+		{
+			restart->Enable( false );
+			restart->SetHelp( _("No emulation state is active; boot something first.") );
+		}
+
+		cdvd.SetText(_("Boot CDVD (full)"));
+		cdvd.SetHelp(_("Boot the VM using the current DVD or Iso source media"));
+
+		cdvd2.SetText(_("Boot CDVD (fast)"));
+		cdvd2.SetHelp(_("Use BOOT2 injection to skip PS2 startup and splash screens"));
+
+		// Old style... 
+		//restart.SetHelp(_("Starts execution of the PS2 virtual machine."));
+		//restart.SetText(_("Start"));
 	}
 
-	menubar.Enable( MenuId_Sys_Reset, true );
-	menubar.Enable( MenuId_Sys_Shutdown, SysHasValidState() || (g_plugins!=NULL) );
+	menubar.Enable( MenuId_Sys_Shutdown, SysHasValidState() || CorePlugins.AreAnyInitialized() );
 }
 
 void MainEmuFrame::ApplySettings()
 {
 	wxMenuBar& menubar( *GetMenuBar() );
 
-	menubar.Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
 	menubar.Check( MenuId_EnablePatches, g_Conf->EmuOptions.EnablePatches );
 	menubar.Check( MenuId_CDVD_Info, g_Conf->EmuOptions.CdvdVerboseReads );
 #ifdef __LINUX__
@@ -615,8 +648,9 @@ void PerPluginMenuInfo::OnUnloaded()
 
 void PerPluginMenuInfo::OnLoaded()
 {
+	if( !CorePlugins.IsLoaded(PluginId) ) return;
 	MyMenu.SetLabel( GetPluginMenuId_Name(PluginId),
-		g_plugins->GetName( PluginId ) + L" " + g_plugins->GetVersion( PluginId )
+		CorePlugins.GetName( PluginId ) + L" " + CorePlugins.GetVersion( PluginId )
 	);
 	MyMenu.Enable( GetPluginMenuId_Settings(PluginId), true );
 }

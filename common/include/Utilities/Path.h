@@ -60,6 +60,7 @@ public:
 	bool IsWritable() const { return IsDirWritable(); }
 	bool IsReadable() const { return IsDirReadable(); }
 	bool Exists() const { return DirExists(); }
+	bool FileExists() const { return wxFileName::FileExists(); }
 	bool IsOk() const { return wxFileName::IsOk(); }
 	bool IsRelative() const { return wxFileName::IsRelative(); }
 	bool IsAbsolute() const { return wxFileName::IsAbsolute(); }

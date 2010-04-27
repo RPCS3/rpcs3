@@ -92,8 +92,7 @@ void Threading::Semaphore::Wait()
 	else if( _WaitGui_RecursionGuard( "Semaphore::Wait" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
-		if( !WaitWithoutYield(def_yieldgui_interval) )	// default is 4 seconds
-			throw Exception::ThreadDeadlock();
+		WaitWithoutYield();
 	}
 	else
 	{
@@ -128,11 +127,6 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 	else if( _WaitGui_RecursionGuard( "Semaphore::Wait(timeout)" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
-		if( timeout > def_deadlock_timeout )
-		{
-			if( WaitWithoutYield(def_deadlock_timeout) ) return true;
-			throw Exception::ThreadDeadlock();
-		}
 		return WaitWithoutYield( timeout );
 	}
 	else
@@ -165,7 +159,8 @@ void Threading::Semaphore::WaitNoCancel()
 {
 	int oldstate;
 	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-	WaitWithoutYield();
+	//WaitWithoutYield();
+	Wait();
 	pthread_setcancelstate( oldstate, NULL );
 }
 
@@ -173,7 +168,8 @@ void Threading::Semaphore::WaitNoCancel( const wxTimeSpan& timeout )
 {
 	int oldstate;
 	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-	WaitWithoutYield( timeout );
+	//WaitWithoutYield( timeout );
+	Wait( timeout );
 	pthread_setcancelstate( oldstate, NULL );
 }
 

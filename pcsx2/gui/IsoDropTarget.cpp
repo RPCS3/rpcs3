@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "MainFrame.h"
 #include "IsoDropTarget.h"
 
 #include "Dialogs/ModalPopups.h"
@@ -34,7 +35,7 @@ wxString GetMsg_ConfirmSysReset()
 
 bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
 {
-	ScopedCoreThreadSuspend stopped_core;
+	ScopedCoreThreadPopup stopped_core;
 
 	if( filenames.GetCount() > 1 )
 	{
@@ -53,7 +54,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	wxFileInputStream filechk( filenames[0] );
 
 	if( !filechk.IsOk() )
-		throw Exception::CreateStream( filenames[0] );
+		throw Exception::CannotCreateStream( filenames[0] );
 
 	u8 ident[16];
 	filechk.Read( ident, 16 );
@@ -82,8 +83,9 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		{
 			sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
 		}
+		else
+			stopped_core.AllowResume();
 
-		stopped_core.Resume();
 		return true;
 	}
 	}
@@ -97,45 +99,18 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	//   hack ;)
 
 	isoFile iso;
-	memzero( iso );
-	iso.handle = _openfile( filenames[0].ToUTF8(), O_RDONLY);
+	memzero(iso);
+	iso.handle = _openfile(filenames[0].ToUTF8(), O_RDONLY);
 
 	if( iso.handle == NULL )
-		throw Exception::CreateStream( filenames[0] );
+		throw Exception::CannotCreateStream( filenames[0] );
 
 	if (isoDetect(&iso))
 	{
 		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
-
-		wxWindowID result = wxID_RESET;
-
-		if( SysHasValidState() )
-		{
-			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset"), wxVERTICAL );
-
-			dialog += dialog.Heading(_("You have dropped the following ISO image into PCSX2:\n\n") +
-				filenames[0] + L"\n\n" +
-				_("Do you want to swap discs or boot the new image (via system reset)?")
-			);
-
-			result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootIso" );
-		}
-
-		if( result != wxID_CANCEL )
-		{
-			SysUpdateIsoSrcFile( filenames[0] );
-			if( result != wxID_RESET )
-			{
-				CoreThread.ChangeCdvdSource( CDVDsrc_Iso );
-			}
-			else
-			{
-				sApp.SysExecute( CDVDsrc_Iso );
-			}
-		}
+		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], _("You have dropped the following ISO image into PCSX2:\n\n"));
 	}
 
 	_closefile( iso.handle );
-	stopped_core.Resume();
 	return true;
 }

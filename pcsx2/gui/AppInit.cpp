@@ -53,15 +53,6 @@ static void CpuCheckSSE2()
 	g_Conf->EmuOptions.Cpu.Recompiler.EnableVU1	= false;
 }
 
-
-void Pcsx2App::OpenWizardConsole()
-{
-	if( !IsDebugBuild ) return;
-	g_Conf->ProgLogBox.Visible = true;
-	m_id_ProgramLogBox = (new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ProgLogBox ))->GetId();
-	EnableAllLogging();
-}
-
 void Pcsx2App::WipeUserModeSettings()
 {
 	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
@@ -116,14 +107,14 @@ void Pcsx2App::ReadUserModeSettings()
 			L"It will likely crash on all games, devour your young, and make you an object of shame and disgrace among your family and friends. "
 			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. ", wxALIGN_CENTER
 		);
-
+		
 		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
 		hackedVersion.ShowModal();
 	}
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
 	bool forceWiz = m_ForceWizard || !hasGroup;
-
+	
 	if( !forceWiz )
 	{
 		conf_usermode->SetPath( groupname );
@@ -141,18 +132,17 @@ void Pcsx2App::ReadUserModeSettings()
 
 			preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
 			preAlpha += new pxStaticText( &preAlpha,
-				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the "
+				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
 				L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
 				L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
 				L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
 			);
-
+			
 			preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
 			preAlpha.ShowModal();
 		}
-
+	
 		// first time startup, so give the user the choice of user mode:
-		OpenWizardConsole();
 		FirstTimeWizard wiz( NULL );
 		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
 			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
@@ -178,7 +168,6 @@ void Pcsx2App::ReadUserModeSettings()
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
 			// (we skip the first page since it's a usermode.ini thing)
 
-			OpenWizardConsole();
 			FirstTimeWizard wiz( NULL );
 			if( !wiz.RunWizard( wiz.GetPostUsermodePage() ) )
 				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
@@ -190,11 +179,10 @@ void Pcsx2App::ReadUserModeSettings()
 			AppSaveSettings();
 		}
 	}
-
-	// force a reset here to unload plugins loaded by the wizard.  If we don't do this
-	// the recompilers might fail to allocate the memory they need to function.
-	SysReset();
-	sys_resume_lock = 0;
+	
+	// force unload plugins loaded by the wizard.  If we don't do this the recompilers might
+	// fail to allocate the memory they need to function.
+	UnloadPlugins();
 }
 
 void Pcsx2App::DetectCpuAndUserMode()
@@ -211,9 +199,9 @@ void Pcsx2App::DetectCpuAndUserMode()
 	ReadUserModeSettings();
 	AppConfig_OnChangedSettingsFolder();
 
-	PostMethod( &Pcsx2App::OpenMainFrame );
-	PostMethod( &Pcsx2App::OpenConsoleLog );
-	PostMethod( &Pcsx2App::AllocateCoreStuffs );
+	PostAppMethod( &Pcsx2App::OpenMainFrame );
+	PostAppMethod( &Pcsx2App::OpenConsoleLog );
+	PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
 }
 
 void Pcsx2App::OpenMainFrame()
@@ -222,14 +210,13 @@ void Pcsx2App::OpenMainFrame()
 
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, L"PCSX2" );
 	m_id_MainFrame = mainFrame->GetId();
-	mainFrame->PushEventHandler( &GetRecentIsoManager() );
 
 	if( wxWindow* deleteme = GetProgramLog() )
 	{
 		deleteme->Destroy();
 		g_Conf->ProgLogBox.Visible = true;
 		m_id_ProgramLogBox = wxID_ANY;
-		PostIdleMethod( &Pcsx2App::OpenConsoleLog );
+		PostIdleAppMethod( &Pcsx2App::OpenConsoleLog );
 	}
 
 	SetTopWindow( mainFrame );		// not really needed...
@@ -259,7 +246,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
 			// the user already has all interps configured, for example, then no point in
 			// popping up this dialog.
-
+			
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
 
 			exconf += 12;
@@ -273,7 +260,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			);
 
 			exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
-
+			
 			if( !m_CoreAllocs->IsRecAvailable_EE() )
 			{
 				scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
@@ -333,7 +320,7 @@ void Pcsx2App::AllocateCoreStuffs()
 		}
 	}
 
-	LoadPluginsPassive( NULL );
+	LoadPluginsPassive();
 }
 
 
@@ -414,15 +401,13 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 	return true;
 }
 
-typedef void (wxEvtHandler::*pxInvokeMethodEventFunction)(pxInvokeAppMethodEvent&);
+typedef void (wxEvtHandler::*pxInvokeAppMethodEventFunction)(Pcsx2AppMethodEvent&);
 typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
 bool Pcsx2App::OnInit()
 {
-#define pxMethodEventHandler(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeMethodEventFunction, &func )
-
-	Connect( pxEvt_OpenModalDialog,			wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
+#define pxAppMethodEventHandler(func) \
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeAppMethodEventFunction, &func )
 
 	pxDoAssert = AppDoAssert;
 
@@ -436,14 +421,7 @@ bool Pcsx2App::OnInit()
 	m_StderrRedirHandle = NewPipeRedir(stderr);
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
-	Connect( pxEvt_FreezeThreadFinished,	wxCommandEventHandler	(Pcsx2App::OnFreezeThreadFinished) );
-	Connect( pxEvt_CoreThreadStatus,		wxCommandEventHandler	(Pcsx2App::OnCoreThreadStatus) );
-	Connect( pxEvt_LoadPluginsComplete,		wxCommandEventHandler	(Pcsx2App::OnLoadPluginsComplete) );
-	Connect( pxEvt_PluginStatus,			wxCommandEventHandler	(Pcsx2App::OnPluginStatus) );
-	Connect( pxEvt_SysExecute,				wxCommandEventHandler	(Pcsx2App::OnSysExecute) );
-	Connect( pxEvt_InvokeMethod,			pxMethodEventHandler	(Pcsx2App::OnInvokeMethod) );
-
-	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
+	Connect( pxID_PadHandler_Keydown,	wxEVT_KEY_DOWN,		wxKeyEventHandler		(Pcsx2App::OnEmuKeyDown) );
 
 	// User/Admin Mode Dual Setup:
 	//   PCSX2 now supports two fundamental modes of operation.  The default is Classic mode,
@@ -467,6 +445,7 @@ bool Pcsx2App::OnInit()
 		pxDwm_Load();
 #endif
 
+		SysExecutorThread.Start();
 		DetectCpuAndUserMode();
 	}
 	// ----------------------------------------------------------------------------
@@ -502,25 +481,17 @@ bool Pcsx2App::OnInit()
 // OnExit() must use CleanupOnExit instead.
 void Pcsx2App::CleanupRestartable()
 {
-	AffinityAssert_AllowFromMain();
+	AffinityAssert_AllowFrom_MainUI();
 
-	// app is shutting down, so don't let the system resume for anything.  (sometimes
-	// there are pending Resume messages in the queue from previous user actions, and
-	// this will block them from executing).
-	sys_resume_lock += 10;
+	ShutdownPlugins();
+	SysExecutorThread.ShutdownQueue();
 
-	PingDispatcher( "Cleanup" );
-	DeletionDispatcher();
-
-	CoreThread.Cancel();
-
-	if( m_CorePlugins )
-		m_CorePlugins->Shutdown();
+	//PingDispatcher( "Cleanup" );
+	//DeletionDispatcher();
+	IdleEventDispatcher( "Cleanup" );
 
 	if( g_Conf )
 		AppSaveSettings();
-
-	sMainFrame.RemoveEventHandler( &GetRecentIsoManager() );
 }
 
 // This cleanup handler can be called from OnExit (it doesn't need a running message pump),
@@ -529,14 +500,13 @@ void Pcsx2App::CleanupRestartable()
 // to be friendly to the OnExit scenario (no message pump).
 void Pcsx2App::CleanupOnExit()
 {
-	AffinityAssert_AllowFromMain();
+	AffinityAssert_AllowFrom_MainUI();
 
 	try
 	{
 		CleanupRestartable();
 		CleanupResources();
 	}
-	catch( Exception::ThreadDeadlock& )		{ throw; }
 	catch( Exception::CancelEvent& )		{ throw; }
 	catch( Exception::RuntimeError& ex )
 	{
@@ -551,13 +521,13 @@ void Pcsx2App::CleanupOnExit()
 #ifdef __WXMSW__
 	pxDwm_Unload();
 #endif
-
+	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.
 	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for
 	// closing out all the windows.  So just leave it be and let the plugins get unloaded
 	// during the wxApp destructor. -- air
-
+	
 	// FIXME: performing a wxYield() here may fix that problem. -- air
 
 	pxDoAssert = pxAssertImpl_LogIt;
@@ -581,9 +551,30 @@ int Pcsx2App::OnExit()
 	return wxApp::OnExit();
 }
 
-
-Pcsx2App::Pcsx2App()
+// --------------------------------------------------------------------------------------
+//  SysEventHandler
+// --------------------------------------------------------------------------------------
+class SysEvtHandler : public pxEvtHandler
 {
+public:
+	wxString GetEvtHandlerName() const { return L"SysExecutor"; }
+
+protected:
+	// When the SysExec message queue is finally empty, we should check the state of
+	// the menus and make sure they're all consistent to the current emulation states.
+	void DoIdle()
+	{
+		UI_UpdateSysControls();
+	}
+};
+
+
+Pcsx2App::Pcsx2App() 
+	: SysExecutorThread( new SysEvtHandler() )
+{
+	m_PendingSaves			= 0;
+	m_ScheduledTermination	= false;
+
 	m_id_MainFrame		= wxID_ANY;
 	m_id_GsFrame		= wxID_ANY;
 	m_id_ProgramLogBox	= wxID_ANY;

@@ -25,37 +25,39 @@
 
 using namespace pxSizerFlags;
 
+DEFINE_EVENT_TYPE( pxEvt_OnThreadCleanup );
+
 // --------------------------------------------------------------------------------------
-//  IDeletableObject Implementation
+//  BaseDeletableObject Implementation
 // --------------------------------------------------------------------------------------
 // This code probably deserves a better home.  It's general purpose non-GUI code (the single
 // wxApp/Gui dependency is in wxGuiTools.cpp for now).
 //
-bool IDeletableObject::MarkForDeletion()
+bool BaseDeletableObject::MarkForDeletion()
 {
 	return !_InterlockedExchange( &m_IsBeingDeleted, true );
 }
 
-void IDeletableObject::DeleteSelf()
+void BaseDeletableObject::DeleteSelf()
 {
 	if( MarkForDeletion() )
 		DoDeletion();
 }
 
-IDeletableObject::IDeletableObject()
+BaseDeletableObject::BaseDeletableObject()
 {
 	#ifdef _MSC_VER
 	// Bleh, this fails because _CrtIsValidHeapPointer calls HeapValidate on the
 	// pointer, but the pointer is a virtual base class, so it's not a valid block. >_<
-	//pxAssertDev( _CrtIsValidHeapPointer( this ), "IDeletableObject types cannot be created on the stack or as temporaries!" );
+	//pxAssertDev( _CrtIsValidHeapPointer( this ), "BaseDeletableObject types cannot be created on the stack or as temporaries!" );
 	#endif
 
 	m_IsBeingDeleted = false;
 }
 
-IDeletableObject::~IDeletableObject() throw()
+BaseDeletableObject::~BaseDeletableObject() throw()
 {
-	AffinityAssert_AllowFromMain();
+	AffinityAssert_AllowFrom_MainUI();
 }
 
 
@@ -333,7 +335,6 @@ pxStaticHeading* wxPanelWithHelpers::Heading( const wxString& label )
 {
 	return new pxStaticHeading( this, label );
 }
-
 
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel )
 	: wxPanel( parent )

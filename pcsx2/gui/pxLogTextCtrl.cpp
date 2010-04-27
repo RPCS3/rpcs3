@@ -83,7 +83,7 @@ void pxLogTextCtrl::OnThumbTrack(wxScrollWinEvent& evt)
 	//Console.Warning( "Thumb Tracking!!!" );
 	m_FreezeWrites = true;
 	if( !m_IsPaused )
-		m_IsPaused = CoreThread.Pause();
+		m_IsPaused = new ScopedCoreThreadPause();
 
 	evt.Skip();
 }
@@ -94,8 +94,8 @@ void pxLogTextCtrl::OnThumbRelease(wxScrollWinEvent& evt)
 	m_FreezeWrites = false;
 	if( m_IsPaused )
 	{
-		CoreThread.Resume();
-		m_IsPaused = false;
+		m_IsPaused->AllowResume();
+		m_IsPaused.Delete();
 	}
 	evt.Skip();
 }

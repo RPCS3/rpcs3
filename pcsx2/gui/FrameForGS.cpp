@@ -15,6 +15,8 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "GSFrame.h"
+
 #include "GS.h"
 #include "MSWstuff.h"
 
@@ -295,6 +297,8 @@ void GSFrame::CoreThread_OnSuspended()
 	// Could stop the timer outright here, tho no harm in having an occasional
 	// update here or there, just in case some state info changes while emu is suspended.
 	m_timer_UpdateTitle.Start( TitleBarUpdateMs );
+
+	if( g_Conf->GSWindow.CloseOnEsc ) Hide();
 }
 
 // overrides base Show behavior.
@@ -331,7 +335,7 @@ void GSFrame::AppStatusEvent_OnSettingsApplied()
 {
 	if( IsBeingDeleted() ) return;
 	ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
-	Show( !g_Conf->GSWindow.CloseOnEsc || ((g_plugins==NULL) || !SysHasValidState()) );
+	Show( !g_Conf->GSWindow.CloseOnEsc || !CorePlugins.IsOpen(PluginId_GS) || !SysHasValidState() );
 
 	if( wxStaticText* label = GetLabel_OutputDisabled() )
 		label->Show( !EmuConfig.GS.DisableOutput );

@@ -93,7 +93,7 @@ FILE *_cdvdOpenMechaVer()
 		if (fd == NULL)
 		{
 			Console.Error( "MEC File Creation failed!" );
-			throw Exception::CreateStream( file );
+			throw Exception::CannotCreateStream( file );
 			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", file);
 			//exit(1);
 		}
@@ -133,7 +133,7 @@ FILE *_cdvdOpenNVM()
 		if (fd == NULL)
 		{
 			Console.Error( "NVM File Creation failed!" );
-			throw Exception::CreateStream( file );
+			throw Exception::CannotCreateStream( file );
 		}
 		for (int i=0; i<1024; i++) fputc(0, fd);
 	}
@@ -305,7 +305,7 @@ s32 cdvdWriteConfig(const u8* config)
 	}
 }
 
-static MutexLockRecursive Mutex_NewDiskCB;
+static MutexRecursive Mutex_NewDiskCB;
 
 // Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
 static __forceinline ElfObject *loadElf( const wxString filename )
@@ -566,11 +566,11 @@ static void cdvdDetectDisk()
 
 void cdvdNewDiskCB()
 {
-	if( !Mutex_NewDiskCB.TryAcquire() ) return;
+	ScopedTryLock lock( Mutex_NewDiskCB );
+	if( lock.Failed() ) return;
+	
 	DoCDVDresetDiskTypeCache();
-
-	try { cdvdDetectDisk(); }
-	catch(...) { Mutex_NewDiskCB.Release(); }		// ensure mutex gets unlocked.
+	cdvdDetectDisk();
 }
 
 static void mechaDecryptBytes( u32 madr, int size )

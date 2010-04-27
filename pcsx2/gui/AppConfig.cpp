@@ -93,9 +93,9 @@ namespace PathDefs
 
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
-	wxDirName GetDocuments()
+	wxDirName GetDocuments( DocsModeType mode )
 	{
-		switch( DocsFolderMode )
+		switch( mode )
 		{
 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
 			case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
@@ -105,6 +105,11 @@ namespace PathDefs
 		}
 
 		return wxDirName();
+	}
+	
+	wxDirName GetDocuments()
+	{
+		return GetDocuments( DocsFolderMode );
 	}
 
 	wxDirName GetSnapshots()

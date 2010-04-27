@@ -14,78 +14,104 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "MainFrame.h"
-#include "ps2/BiosTools.h"
+#include "App.h"
+#include "AppSaveStates.h"
 
+#include "ps2/BiosTools.h"
 #include "GS.h"
 
 __aligned16 SysMtgsThread mtgsThread;
 __aligned16 AppCoreThread CoreThread;
 
+static void PostCoreStatus( CoreThreadStatus pevt )
+{
+	sApp.PostAction( CoreThreadStatusEvent( pevt ) );
+}
+
+// --------------------------------------------------------------------------------------
+//  AppCoreThread Implementations
+// --------------------------------------------------------------------------------------
 AppCoreThread::AppCoreThread() : SysCoreThread()
 {
 }
 
 AppCoreThread::~AppCoreThread() throw()
 {
-	AppCoreThread::Cancel();
+	_parent::Cancel();		// use parent's, skips thread affinity check.
 }
 
 void AppCoreThread::Cancel( bool isBlocking )
 {
-	if( !_parent::Cancel( wxTimeSpan( 0, 0, 2, 0 ) ) )
-	{
-		// Possible deadlock!
-		throw Exception::ThreadDeadlock( this );
-	}
+	AffinityAssert_AllowFrom_SysExecutor();
+	_parent::Cancel( wxTimeSpan(0, 0, 2, 0) );
 }
 
-void AppCoreThread::Reset()
+void AppCoreThread::Shutdown()
 {
-	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
+	AffinityAssert_AllowFrom_SysExecutor();
 	_parent::Reset();
+	CorePlugins.Shutdown();
 }
 
-void AppCoreThread::DoThreadDeadlocked()
+ExecutorThread& GetSysExecutorThread()
 {
-	wxGetApp().DoStuckThread( *this );
+	return wxGetApp().SysExecutorThread;
 }
 
-bool AppCoreThread::Suspend( bool isBlocking )
+typedef void (AppCoreThread::*FnPtr_CoreThreadMethod)();
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_InvokeCoreThreadMethod
+// --------------------------------------------------------------------------------------
+class SysExecEvent_InvokeCoreThreadMethod : public SysExecEvent
 {
-	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
+protected:
+	FnPtr_CoreThreadMethod	m_method;
 
-	bool retval = _parent::Suspend( false );
-
-	if( !retval || isBlocking )
-		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
-
-	if( g_Conf->GSWindow.CloseOnEsc )
+public:
+	virtual ~SysExecEvent_InvokeCoreThreadMethod() throw() {}
+	SysExecEvent_InvokeCoreThreadMethod* Clone() const { return new SysExecEvent_InvokeCoreThreadMethod(*this); }
+	
+	SysExecEvent_InvokeCoreThreadMethod( FnPtr_CoreThreadMethod method )
 	{
-		sGSFrame.Hide();
+		m_method = method;
 	}
+	
+protected:
+	void _DoInvoke()
+	{
+		if( m_method ) (CoreThread.*m_method)();
+	}
+};
 
-	return retval;
+bool ProcessingMethodViaThread( FnPtr_CoreThreadMethod method )
+{
+	if( GetSysExecutorThread().IsSelf() ) return false;
+	SysExecEvent_InvokeCoreThreadMethod evt( method );
+	GetSysExecutorThread().ProcessEvent( evt );
+	return false;
+}
+
+static void _Suspend()
+{
+	GetCoreThread().Suspend(true);
+}
+
+void AppCoreThread::Suspend( bool isBlocking )
+{
+	if( !GetSysExecutorThread().SelfProcessMethod( _Suspend ) )
+		_parent::Suspend(true);
 }
 
 static int resume_tries = 0;
 
 void AppCoreThread::Resume()
 {
-	// Thread control (suspend / resume) should only be performed from the main/gui thread.
-	if( !AffinityAssert_AllowFromMain() ) return;
-	if( m_ExecMode == ExecMode_Opened ) return;
-	if( m_ResumeProtection.IsLocked() ) return;
+	if( !AffinityAssert_AllowFrom_SysExecutor() ) return;
+	if( m_ExecMode == ExecMode_Opened || (m_CloseTemporary > 0) ) return;
 
-	if( !pxAssert( g_plugins != NULL ) ) return;
+	if( !pxAssert( CorePlugins.AreLoaded() ) ) return;
 
-	if( sys_resume_lock > 0 )
-	{
-		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
-		return;
-	}
-
-	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 	_parent::Resume();
 
 	if( m_ExecMode != ExecMode_Opened )
@@ -93,7 +119,7 @@ void AppCoreThread::Resume()
 		// Resume failed for some reason, so update GUI statuses and post a message to
 		// try again on the resume.
 
-		wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Suspended );
+		PostCoreStatus( CoreThread_Suspended );
 
 		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
 		{
@@ -109,29 +135,30 @@ void AppCoreThread::Resume()
 	resume_tries = 0;
 }
 
-void AppCoreThread::ChangeCdvdSource( CDVD_SourceType type )
+void AppCoreThread::ChangeCdvdSource()
 {
-	g_Conf->CdvdSource = type;
-	_parent::ChangeCdvdSource( type );
-	sMainFrame.UpdateIsoSrcSelection();
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		GetSysExecutorThread().PostEvent( new SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::ChangeCdvdSource) );
+		return;
+	}
+
+	CDVD_SourceType cdvdsrc( g_Conf->CdvdSource );
+	if( cdvdsrc == CDVDsys_GetSourceType() ) return;
+
+	// Fast change of the CDVD source only -- a Pause will suffice.
+
+	ScopedCoreThreadPause paused_core;
+	GetCorePlugins().Close( PluginId_CDVD );
+	CDVDsys_ChangeSource( cdvdsrc );
+	paused_core.AllowResume();
 
 	// TODO: Add a listener for CDVDsource changes?  Or should we bother?
-}
-
-void AppCoreThread::DoCpuReset()
-{
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Reset );
-	_parent::DoCpuReset();
 }
 
 void AppCoreThread::OnResumeReady()
 {
 	ApplySettings( g_Conf->EmuOptions );
-
-	if( !wxFile::Exists( g_Conf->CurrentIso ) )
-		g_Conf->CurrentIso.Clear();
-
-	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 
 	AppSaveSettings();
@@ -139,45 +166,8 @@ void AppCoreThread::OnResumeReady()
 	_parent::OnResumeReady();
 }
 
-void AppCoreThread::OnResumeInThread( bool isSuspended )
-{
-	_parent::OnResumeInThread( isSuspended );
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Resumed );
-}
-
-void AppCoreThread::OnSuspendInThread()
-{
-	_parent::OnSuspendInThread();
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Suspended );
-}
-
-// Called whenever the thread has terminated, for either regular or irregular reasons.
-// Typically the thread handles all its own errors, so there's no need to have error
-// handling here.  However it's a good idea to update the status of the GUI to reflect
-// the new (lack of) thread status, so this posts a message to the App to do so.
-void AppCoreThread::OnCleanupInThread()
-{
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Stopped );
-	_parent::OnCleanupInThread();
-}
-
-void AppCoreThread::PostVsyncToUI()
-{
-	wxGetApp().LogicalVsync();
-}
-
-void AppCoreThread::StateCheckInThread()
-{
-	_parent::StateCheckInThread();
-}
-
-// To simplify settings application rules and re-entry conditions, the main App's implementation
-// of ApplySettings requires that the caller manually ensure that the thread has been properly
-// suspended.  If the thread has not been suspended, this call will fail *silently*.
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
-	//if( m_ExecMode != ExecMode_Closed ) return;
-
 	Pcsx2Config fixup( src );
 	if( !g_Conf->EnableSpeedHacks )
 		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
@@ -192,9 +182,63 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	RecursionGuard guard( localc );
 	if( guard.IsReentrant() ) return;
 	if( fixup == EmuConfig ) return;
-	_parent::ApplySettings( fixup );
+
+	if( m_ExecMode >= ExecMode_Opened )
+	{
+		ScopedCoreThreadPause paused_core;
+		_parent::ApplySettings( fixup );
+		paused_core.AllowResume();
+	}
+	else
+	{
+		_parent::ApplySettings( fixup );
+	}
 }
 
+// --------------------------------------------------------------------------------------
+//  AppCoreThread *Worker* Implementations
+//    (Called from the context of this thread only)
+// --------------------------------------------------------------------------------------
+
+void AppCoreThread::DoCpuReset()
+{
+	PostCoreStatus( CoreThread_Reset );
+	_parent::DoCpuReset();
+}
+
+void AppCoreThread::OnResumeInThread( bool isSuspended )
+{
+	_parent::OnResumeInThread( isSuspended );
+	PostCoreStatus( CoreThread_Resumed );
+}
+
+void AppCoreThread::OnSuspendInThread()
+{
+	_parent::OnSuspendInThread();
+	PostCoreStatus( CoreThread_Suspended );
+}
+
+// Called whenever the thread has terminated, for either regular or irregular reasons.
+// Typically the thread handles all its own errors, so there's no need to have error
+// handling here.  However it's a good idea to update the status of the GUI to reflect
+// the new (lack of) thread status, so this posts a message to the App to do so.
+void AppCoreThread::OnCleanupInThread()
+{
+	PostCoreStatus( CoreThread_Stopped );
+	_parent::OnCleanupInThread();
+}
+
+void AppCoreThread::PostVsyncToUI()
+{
+	wxGetApp().LogicalVsync();
+}
+
+void AppCoreThread::StateCheckInThread()
+{
+	_parent::StateCheckInThread();
+}
+
+// Thread Affinity: This function is called from the SysCoreThread. :)
 void AppCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
@@ -205,33 +249,278 @@ void AppCoreThread::CpuInitializeMess()
 		// in order to ensure the plugins are in the proper (loaded/opened) state.
 
 		SysClearExecutionCache();
-		StateCopy_ThawFromMem_Blocking();
+		memLoadingState( StateCopy_GetBuffer() ).FreezeAll();
+		StateCopy_Clear();
 
 		m_hasValidState			= true;
 		m_resetVirtualMachine	= false;
 		return;
 	}
-
+	
 	_parent::CpuInitializeMess();
 }
 
 
 void AppCoreThread::ExecuteTaskInThread()
 {
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Started );
+	PostCoreStatus( CoreThread_Started );
 	_parent::ExecuteTaskInThread();
-
-	// ----------------------------------------------------------------------------
-	/*catch( Exception::PluginError& ex )
-	{
-		if( g_plugins != NULL ) g_plugins->Close();
-		Console.Error( ex.FormatDiagnosticMessage() );
-		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
-
-		if( HandlePluginError( ex ) )
-		{
-		// fixme: automatically re-try emu startup here...
-		}
-	}*/
 }
 
+enum
+{
+	FullStop_BlockingResume
+,	FullStop_NonblockingResume
+,	FullStop_SkipResume
+};
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_FullStop
+// --------------------------------------------------------------------------------------
+class SysExecEvent_FullStop : public SysExecEvent
+{
+protected:
+	SynchronousActionState*		m_resume;
+	Threading::Mutex*			m_mtx_resume;
+
+public:
+	virtual ~SysExecEvent_FullStop() throw() {}
+	SysExecEvent_FullStop* Clone() const
+	{
+		return new SysExecEvent_FullStop( *this );
+	}
+	
+	SysExecEvent_FullStop( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: SysExecEvent( sync )
+	{
+		m_resume		= resume_sync;
+		m_mtx_resume	= mtx_resume;
+	}
+
+	SysExecEvent_FullStop( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
+		: SysExecEvent( sync )
+	{
+		m_resume		= &resume_sync;
+		m_mtx_resume	= &mtx_resume;
+	}
+	
+protected:
+	void _DoInvoke()
+	{
+		ScopedCoreThreadClose closed_core;
+		PostResult();
+
+		if( m_resume )
+		{
+			ScopedLock lock( m_mtx_resume );
+
+			// If the sender of the message requests a non-blocking resume, then we need
+			// to deallocate the m_sync object, since the sender will likely leave scope and
+			// invalidate it.
+			switch( m_resume->WaitForResult() )
+			{
+				case FullStop_SkipResume: return;
+
+				case FullStop_BlockingResume:
+					if( m_sync ) m_sync->ClearResult();
+				break;
+
+				case FullStop_NonblockingResume:
+					m_sync = NULL;
+				break;
+			}
+		}
+
+		closed_core.AllowResume();
+	}	
+};
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_FullStop
+// --------------------------------------------------------------------------------------
+class SysExecEvent_Pause : public SysExecEvent
+{
+protected:
+	SynchronousActionState*		m_resume;
+	Threading::Mutex*			m_mtx_resume;
+
+public:
+	virtual ~SysExecEvent_Pause() throw() {}
+	SysExecEvent_Pause* Clone() const
+	{
+		return new SysExecEvent_Pause( *this );
+	}
+	
+	SysExecEvent_Pause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: SysExecEvent( sync )
+	{
+		m_resume		= resume_sync;
+		m_mtx_resume	= mtx_resume;
+	}
+
+	SysExecEvent_Pause( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
+		: SysExecEvent( sync )
+	{
+		m_resume		= &resume_sync;
+		m_mtx_resume	= &mtx_resume;
+	}
+	
+protected:
+	void _DoInvoke()
+	{
+		ScopedCoreThreadPause paused_core;
+		PostResult();
+
+		if( m_resume )
+		{
+			ScopedLock lock( m_mtx_resume );
+
+			// If the sender of the message requests a non-blocking resume, then we need
+			// to deallocate the m_sync object, since the sender will likely leave scope and
+			// invalidate it.
+			switch( m_resume->WaitForResult() )
+			{
+				case FullStop_SkipResume: return;
+
+				case FullStop_BlockingResume:
+					if( m_sync ) m_sync->ClearResult();
+				break;
+
+				case FullStop_NonblockingResume:
+					m_sync = NULL;
+				break;
+			}
+		}
+
+		paused_core.AllowResume();
+	}	
+};
+
+// --------------------------------------------------------------------------------------
+//  ScopedCoreThreadClose / ScopedCoreThreadPause
+// --------------------------------------------------------------------------------------
+
+static __threadlocal bool ScopedCore_IsPaused = false;
+static __threadlocal bool ScopedCore_IsFullyClosed = false;
+
+BaseScopedCoreThread::BaseScopedCoreThread()
+{
+	//AffinityAssert_AllowFrom_MainUI();
+
+	m_allowResume		= false;
+	m_alreadyStopped	= false;
+	m_alreadyScoped		= false;
+}
+
+BaseScopedCoreThread::~BaseScopedCoreThread() throw()
+{
+}
+
+// Allows the object to resume execution upon object destruction.  Typically called as the last thing
+// in the object's scope.  Any code prior to this call that causes exceptions will not resume the emulator,
+// which is *typically* the intended behavior when errors occur.
+void BaseScopedCoreThread::AllowResume()
+{
+	m_allowResume = true;
+}
+
+void BaseScopedCoreThread::DisallowResume()
+{
+	m_allowResume = false;
+}
+
+void BaseScopedCoreThread::DoResume()
+{
+	if( m_alreadyStopped ) return;
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		//DbgCon.WriteLn("(ScopedCoreThreadPause) Threaded Scope Created!");
+		m_sync_resume.PostResult( m_allowResume ? FullStop_NonblockingResume : FullStop_SkipResume );
+		m_mtx_resume.Wait();
+	}
+	else
+		CoreThread.Resume();
+}
+
+
+ScopedCoreThreadClose::ScopedCoreThreadClose()
+{
+	if( ScopedCore_IsFullyClosed )
+	{
+		// tracks if we're already in scope or not.
+		m_alreadyScoped = true;
+		return;
+	}
+	
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		//DbgCon.WriteLn("(ScopedCoreThreadClose) Threaded Scope Created!");
+
+		GetSysExecutorThread().PostEvent( SysExecEvent_FullStop(m_sync, m_sync_resume, m_mtx_resume) );
+		m_sync.WaitForResult();
+		m_sync.RethrowException();
+	}
+	else if( !(m_alreadyStopped = CoreThread.IsClosed()) )
+		CoreThread.Suspend();
+
+	ScopedCore_IsFullyClosed = true;
+}
+
+ScopedCoreThreadClose::~ScopedCoreThreadClose() throw()
+{
+	if( m_alreadyScoped ) return;
+	_parent::DoResume();
+	ScopedCore_IsFullyClosed = false;
+}
+
+ScopedCoreThreadPause::ScopedCoreThreadPause()
+{
+	if( ScopedCore_IsFullyClosed || ScopedCore_IsPaused )
+	{
+		// tracks if we're already in scope or not.
+		m_alreadyScoped = true;
+		return;
+	}
+
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		//DbgCon.WriteLn("(ScopedCoreThreadPause) Threaded Scope Created!");
+
+		GetSysExecutorThread().PostEvent( SysExecEvent_Pause(m_sync, m_sync_resume, m_mtx_resume) );
+		m_sync.WaitForResult();
+		m_sync.RethrowException();
+	}
+	else if( !(m_alreadyStopped = CoreThread.IsPaused()) )
+		CoreThread.Pause();
+
+	ScopedCore_IsPaused = true;
+}
+
+ScopedCoreThreadPause::~ScopedCoreThreadPause() throw()
+{
+	if( m_alreadyScoped ) return;
+	_parent::DoResume();
+	ScopedCore_IsPaused = false;
+}
+
+ScopedCoreThreadPopup::ScopedCoreThreadPopup()
+{
+	// The old style GUI (without GSopen2) must use a full close of the CoreThread, in order to
+	// ensure that the GS window isn't blocking the popup, and to avoid crashes if the GS window
+	// is maximized or fullscreen.
+
+	if( !GSopen2 )
+		m_scoped_core = new ScopedCoreThreadClose();
+	else
+		m_scoped_core = new ScopedCoreThreadPause();
+};
+
+void ScopedCoreThreadPopup::AllowResume()
+{
+	if( m_scoped_core ) m_scoped_core->AllowResume();
+}
+
+void ScopedCoreThreadPopup::DisallowResume()
+{
+	if( m_scoped_core ) m_scoped_core->DisallowResume();
+}

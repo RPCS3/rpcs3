@@ -27,7 +27,7 @@
 // friendly error log in their wake.
 //
 #define __DESTRUCTOR_CATCHALL( funcname ) \
-	catch( Exception::BaseException& ex ) \
+	catch( BaseException& ex ) \
 	{ \
 		Console.Error( "Unhandled BaseException in %s (ignored!):", funcname ); \
 		Console.Error( ex.FormatDiagnosticMessage() ); \
@@ -155,6 +155,8 @@ namespace Exception
 		bool	IsSilent;
 	public:
 		DEFINE_RUNTIME_EXCEPTION( RuntimeError, wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") )
+
+		RuntimeError( const std::runtime_error& ex, const wxString& prefix=wxEmptyString );
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -243,7 +245,7 @@ namespace Exception
 
 	// ---------------------------------------------------------------------------------------
 	// Streaming (file) Exceptions:
-	//   Stream / BadStream / CreateStream / FileNotFound / AccessDenied / EndOfStream
+	//   Stream / BadStream / CannotCreateStream / FileNotFound / AccessDenied / EndOfStream
 	// ---------------------------------------------------------------------------------------
 
 #define DEFINE_STREAM_EXCEPTION( classname, defmsg ) \
@@ -308,22 +310,22 @@ namespace Exception
 
 	// A generic exception for odd-ball stream creation errors.
 	//
-	class CreateStream : public virtual Stream
+	class CannotCreateStream : public virtual Stream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( CreateStream, wxLt("File could not be created or opened.") )
+		DEFINE_STREAM_EXCEPTION( CannotCreateStream, wxLt("File could not be created or opened.") )
 	};
 
 	// Exception thrown when an attempt to open a non-existent file is made.
 	// (this exception can also mean file permissions are invalid)
 	//
-	class FileNotFound : public virtual CreateStream
+	class FileNotFound : public virtual CannotCreateStream
 	{
 	public:
 		DEFINE_STREAM_EXCEPTION( FileNotFound, wxLt("File not found.") )
 	};
 
-	class AccessDenied : public virtual CreateStream
+	class AccessDenied : public virtual CannotCreateStream
 	{
 	public:
 		DEFINE_STREAM_EXCEPTION( AccessDenied, wxLt("Permission denied to file.") )
@@ -358,3 +360,5 @@ namespace Exception
 	};
 #endif
 }
+
+using Exception::BaseException;

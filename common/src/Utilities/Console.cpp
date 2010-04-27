@@ -292,10 +292,11 @@ class FormatBuffer : public Mutex
 public:
 	bool&				clearbit;
 	SafeArray<CharType>	buffer;
+	wxMBConvUTF8		ConvUTF8;
 
-	FormatBuffer( bool& bit_to_clear_on_destruction ) :
-		clearbit( bit_to_clear_on_destruction )
-	,	buffer( 4096, wxsFormat( L"%s Format Buffer", (sizeof(CharType)==1) ? "Ascii" : "Unicode" ) )
+	FormatBuffer( bool& bit_to_clear_on_destruction )
+		: clearbit( bit_to_clear_on_destruction )
+		, buffer( 4096, wxsFormat( L"%s Format Buffer", (sizeof(CharType)==1) ? "Ascii" : "Unicode" ) )
 	{
 	}
 
@@ -376,12 +377,20 @@ static wxString ascii_format_string(const char* fmt, va_list argptr)
 {
 	if( ascii_buffer_is_deleted )
 	{
+		// This means that the program is shutting down and the C++ destructors are
+		// running, randomly deallocating static variables from existence.  We handle it
+		// as gracefully as possible by allocating local vars to do our bidding (slow, but
+		// ultimately necessary!)
+	
 		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
 		format_that_ascii_mess( localbuf, fmt, argptr );
 		return fromUTF8( localbuf.GetPtr() );
 	}
 	else
 	{
+		// This is normal operation.  The static buffers are available for use, and we use
+		// them for sake of efficiency (fewer heap allocs, for sure!)
+
 		ScopedLock locker( ascii_buffer );
 		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
 		return fromUTF8( ascii_buffer.buffer.GetPtr() );
@@ -391,6 +400,8 @@ static wxString ascii_format_string(const char* fmt, va_list argptr)
 
 static wxString unicode_format_string(const wxChar* fmt, va_list argptr)
 {
+	// See above for the explanation on the _is_deleted flags.
+	
 	if( unicode_buffer_is_deleted )
 	{
 		SafeArray<wxChar> localbuf( 4096, L"Temporary Unicode Formatting Buffer" );

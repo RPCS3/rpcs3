@@ -110,7 +110,7 @@ namespace Exception
 class SaveStateBase
 {
 protected:
-	SafeArray<u8>& m_memory;
+	SafeArray<u8>* m_memory;
 	char m_tagspace[32];
 
 	u32 m_version;		// version of the savestate being loaded.
@@ -123,6 +123,7 @@ protected:
 
 public:
 	SaveStateBase( SafeArray<u8>& memblock );
+	SaveStateBase( SafeArray<u8>* memblock );
 	virtual ~SaveStateBase() { }
 
 	static wxString GetFilename( int slot );
@@ -159,7 +160,7 @@ public:
 
 	u8* GetBlockPtr()
 	{
-		return &m_memory[m_idx];
+		return m_memory->GetPtr(m_idx);
 	}
 
 	void CommitBlock( int size )
@@ -190,6 +191,7 @@ public:
 	void gsFreeze();
 
 protected:
+	void Init( SafeArray<u8>* memblock );
 
 	// Load/Save functions for the various components of our glorious emulator!
 
@@ -233,6 +235,7 @@ protected:
 public:
 	virtual ~memSavingState() throw() { }
 	memSavingState( SafeArray<u8>& save_to );
+	memSavingState( SafeArray<u8>* save_to );
 
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
@@ -245,13 +248,15 @@ class memLoadingState : public SaveStateBase
 {
 public:
 	virtual ~memLoadingState() throw();
+
 	memLoadingState( const SafeArray<u8>& load_from );
+	memLoadingState( const SafeArray<u8>* load_from );
 
 	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
 	bool SeekToSection( PluginsEnum_t pid );
 
 	bool IsSaving() const { return false; }
-	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
+	bool IsFinished() const { return m_idx >= m_memory->GetSizeInBytes(); }
 };
 

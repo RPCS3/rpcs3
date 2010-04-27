@@ -15,99 +15,11 @@
 
  #pragma once
 
-#include <wx/wx.h>
-#include <wx/image.h>
-#include <wx/docview.h>
-
 #include "App.h"
 #include "AppSaveStates.h"
-#include "CpuUsageProvider.h"
 
-enum LimiterModeType
-{
-	Limit_Nominal,
-	Limit_Turbo,
-	Limit_Slomo,
-};
-
-extern LimiterModeType g_LimiterMode;
-
-// --------------------------------------------------------------------------------------
-//  GSPanel
-// --------------------------------------------------------------------------------------
-class GSPanel : public wxWindow, public EventListener_AppStatus
-{
-	typedef wxWindow _parent;
-
-protected:
-	AcceleratorDictionary		m_Accels;
-	wxTimer						m_HideMouseTimer;
-	bool						m_CursorShown;
-	bool						m_HasFocus;
-
-public:
-	GSPanel( wxWindow* parent );
-	virtual ~GSPanel() throw();
-
-	void DoResize();
-	void DoShowMouse();
-
-protected:
-	void AppStatusEvent_OnSettingsApplied();
-
-#ifdef __WXMSW__
-	virtual WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
-#endif
-
-	void InitDefaultAccelerators();
-
-	void OnCloseWindow( wxCloseEvent& evt );
-	void OnResize(wxSizeEvent& event);
-	void OnShowMouse( wxMouseEvent& evt );
-	void OnHideMouseTimeout( wxTimerEvent& evt );
-	void OnKeyDown( wxKeyEvent& evt );
-	void OnFocus( wxFocusEvent& evt );
-	void OnFocusLost( wxFocusEvent& evt );
-};
-
-// --------------------------------------------------------------------------------------
-//  GSFrame
-// --------------------------------------------------------------------------------------
-class GSFrame : public wxFrame,
-	public EventListener_AppStatus,
-	public EventListener_CoreThread
-{
-	typedef wxFrame _parent;
-
-protected:
-	wxTimer					m_timer_UpdateTitle;
-	wxWindowID				m_id_gspanel;
-	wxWindowID				m_id_OutputDisabled;
-	wxStaticText*			m_label_Disabled;
-	wxStatusBar*			m_statusbar;
-
-	CpuUsageProvider		m_CpuUsage;
-
-public:
-	GSFrame(wxWindow* parent, const wxString& title);
-	virtual ~GSFrame() throw();
-
-	GSPanel* GetViewport();
-	void SetFocus();
-	bool Show( bool shown=true );
-	wxStaticText* GetLabel_OutputDisabled() const;
-
-protected:
-	void OnCloseWindow( wxCloseEvent& evt );
-	void OnMove( wxMoveEvent& evt );
-	void OnResize( wxSizeEvent& evt );
-	void OnActivate( wxActivateEvent& evt );
-	void OnUpdateTitle( wxTimerEvent& evt );
-
-	void AppStatusEvent_OnSettingsApplied();
-	void CoreThread_OnResumed();
-	void CoreThread_OnSuspended();
-};
+#include <wx/image.h>
+#include <wx/docview.h>
 
 struct PluginMenuAddition
 {
@@ -162,18 +74,25 @@ public:
 	operator const wxMenu*() const { return &MyMenu; }
 };
 
-class InvokeAction_MenuCommand : public IActionInvocation
+// --------------------------------------------------------------------------------------
+//  InvokeMenuCommand_OnSysStateUnlocked
+// --------------------------------------------------------------------------------------
+class InvokeMenuCommand_OnSysStateUnlocked
+	: public IEventListener_SysState
+	, public BaseDeletableObject
 {
 protected:
 	MenuIdentifiers		m_menu_cmd;
 
 public:
-	InvokeAction_MenuCommand( MenuIdentifiers menu_command )
+	InvokeMenuCommand_OnSysStateUnlocked( MenuIdentifiers menu_command )
 	{
 		m_menu_cmd = menu_command;
 	}
+	
+	virtual ~InvokeMenuCommand_OnSysStateUnlocked() throw() {}
 
-	virtual void InvokeAction()
+	virtual void SaveStateAction_OnCreateFinished()
 	{
 		wxGetApp().PostMenuAction( m_menu_cmd );
 	}
@@ -188,10 +107,6 @@ class MainEmuFrame : public wxFrame,
 	public EventListener_AppStatus
 {
 protected:
-// 	EventListenerHelper_Plugins<MainEmuFrame>		m_listener_plugins;
-// 	EventListenerHelper_CoreThread<MainEmuFrame>	m_listener_corethread;
-// 	EventListenerHelper_AppStatus<MainEmuFrame>		m_listener_appstatus;
-
 	bool			m_RestartEmuOnDelete;
 
     wxStatusBar&	m_statusbar;
@@ -248,10 +163,10 @@ protected:
 	void Menu_ResetAllSettings_Click(wxCommandEvent &event);
 
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
-	void Menu_SkipBiosToggle_Click(wxCommandEvent &event);
 	void Menu_EnablePatches_Click(wxCommandEvent &event);
 
 	void Menu_BootCdvd_Click(wxCommandEvent &event);
+	void Menu_BootCdvd2_Click(wxCommandEvent &event);
 	void Menu_OpenELF_Click(wxCommandEvent &event);
 	void Menu_CdvdSource_Click(wxCommandEvent &event);
 	void Menu_LoadStates_Click(wxCommandEvent &event);
@@ -277,6 +192,7 @@ protected:
 	void Menu_PrintCDVD_Info(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
+	void _DoBootCdvd();
 	bool _DoSelectIsoBrowser( wxString& dest );
 	bool _DoSelectELFBrowser();
 

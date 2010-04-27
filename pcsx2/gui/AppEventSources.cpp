@@ -42,12 +42,14 @@ void IEventListener_CoreThread::DispatchEvent( const CoreThreadStatus& status )
 {
 	switch( status )
 	{
+		case CoreThread_Indeterminate: break;
+
 		case CoreThread_Started:	CoreThread_OnStarted();			break;
 		case CoreThread_Resumed:	CoreThread_OnResumed();			break;
 		case CoreThread_Suspended:	CoreThread_OnSuspended();		break;
 		case CoreThread_Reset:		CoreThread_OnReset();			break;
 		case CoreThread_Stopped:	CoreThread_OnStopped();			break;
-
+		
 		jNO_DEFAULT;
 	}
 }
@@ -74,7 +76,7 @@ void IEventListener_Plugins::DispatchEvent( const PluginEventType& pevt )
 		case CorePlugins_Closed:	CorePlugins_OnClosed();		break;
 		case CorePlugins_Shutdown:	CorePlugins_OnShutdown();	break;
 		case CorePlugins_Unloaded:	CorePlugins_OnUnloaded();	break;
-
+		
 		jNO_DEFAULT;
 	}
 }
@@ -101,4 +103,72 @@ void IEventListener_AppStatus::DispatchEvent( const AppEventInfo& evtinfo )
 		case AppStatus_SettingsApplied:	AppStatusEvent_OnSettingsApplied();	break;
 		case AppStatus_Exiting:			AppStatusEvent_OnExit();			break;
 	}
+}
+
+
+void Pcsx2App::DispatchEvent( PluginEventType evt )
+{
+	if( !AffinityAssert_AllowFrom_MainUI() ) return;
+	m_evtsrc_CorePluginStatus.Dispatch( evt );
+}
+
+void Pcsx2App::DispatchEvent( AppEventType evt )
+{
+	if( !AffinityAssert_AllowFrom_MainUI() ) return;
+	m_evtsrc_AppStatus.Dispatch( AppEventInfo( evt ) );
+}
+
+void Pcsx2App::DispatchEvent( CoreThreadStatus evt )
+{
+	switch( evt )
+	{
+		case CoreThread_Started:
+		case CoreThread_Reset:
+		case CoreThread_Stopped:
+			FpsManager.Reset();
+		break;
+
+		case CoreThread_Resumed:
+		case CoreThread_Suspended:
+			FpsManager.Resume();
+		break;
+	}
+
+	// Clear the sticky key statuses, because hell knows what'll change while the PAD
+	// plugin is suspended.
+
+	m_kevt.m_shiftDown		= false;
+	m_kevt.m_controlDown	= false;
+	m_kevt.m_altDown		= false;
+
+	m_evtsrc_CoreThreadStatus.Dispatch( evt );
+	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
+	CoreThread.RethrowException();
+}
+
+void Pcsx2App::DispatchEvent( IniInterface& ini )
+{
+	if( !AffinityAssert_AllowFrom_MainUI() ) return;
+	m_evtsrc_AppStatus.Dispatch( AppSettingsEventInfo( ini ) );
+}
+
+
+// --------------------------------------------------------------------------------------
+//  CoreThreadStatusEvent Implementations
+// --------------------------------------------------------------------------------------
+CoreThreadStatusEvent::CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState* sema )
+	: pxInvokeActionEvent( sema )
+{
+	m_evt = evt;
+}
+
+CoreThreadStatusEvent::CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState& sema )
+	: pxInvokeActionEvent( sema )
+{
+	m_evt = evt;
+}
+
+void CoreThreadStatusEvent::_DoInvoke()
+{
+	sApp.DispatchEvent( m_evt );
 }

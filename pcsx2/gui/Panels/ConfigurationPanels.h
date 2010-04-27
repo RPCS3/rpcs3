@@ -39,6 +39,8 @@ namespace Panels
 	//
 	class DirPickerPanel : public BaseApplicableConfigPanel
 	{
+		typedef BaseApplicableConfigPanel _parent;
+
 	protected:
 		FoldersEnum_t		m_FolderId;
 		wxDirPickerCtrl*	m_pickerCtrl;
@@ -48,9 +50,6 @@ namespace Panels
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& dialogLabel );
 		virtual ~DirPickerPanel() throw() { }
-
-		void Apply();
-		void AppStatusEvent_OnSettingsApplied();
 
 		void Reset();
 		wxDirName GetPath() const;
@@ -62,6 +61,12 @@ namespace Panels
 		wxWindowID GetId() const;
 		wxWindowID GetPanelId() const { return m_windowId; }
 
+		// Overrides!
+		
+		void Apply();
+		void AppStatusEvent_OnSettingsApplied();
+		bool Enable( bool enable=true );
+
 	protected:
 		void Init( FoldersEnum_t folderid, const wxString& dialogLabel, bool isCompact );
 
@@ -71,20 +76,22 @@ namespace Panels
 	};
 
 	// --------------------------------------------------------------------------------------
-	//  UsermodeSelectionPanel / LanguageSelectionPanel
+	//  DocsFolderPickerPanel / LanguageSelectionPanel
 	// --------------------------------------------------------------------------------------
-	class UsermodeSelectionPanel : public BaseApplicableConfigPanel
+	class DocsFolderPickerPanel : public BaseApplicableConfigPanel
 	{
 	protected:
 		pxRadioPanel*	m_radio_UserMode;
 		DirPickerPanel*	m_dirpicker_custom;
 
 	public:
-		virtual ~UsermodeSelectionPanel() throw() { }
-		UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime = true );
+		virtual ~DocsFolderPickerPanel() throw() { }
+		DocsFolderPickerPanel( wxWindow* parent, bool isFirstTime = true );
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+		
+		DocsModeType GetDocsMode() const;
 		wxWindowID GetDirPickerId() const { return m_dirpicker_custom ? m_dirpicker_custom->GetId() : 0; }
 
 	protected:

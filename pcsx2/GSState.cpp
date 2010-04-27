@@ -118,8 +118,8 @@ void LoadGSState(const wxString& file)
 
 	RunGSState( f );
 
-	g_plugins->Close( PluginId_GS );
-	g_plugins->Close( PluginId_PAD );
+	GetCorePlugins().Close( PluginId_GS );
+	GetCorePlugins().Close( PluginId_PAD );
 }
 
 struct GSStatePacket

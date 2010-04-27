@@ -33,15 +33,33 @@ template class EventSource< EventListener_Thread >;
 // to avoid gui deadlock).
 const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
 
-// three second interval for deadlock protection on waitgui.
-const wxTimeSpan	Threading::def_deadlock_timeout( 0, 0, 3, 0 );
+class StaticMutex : public Mutex
+{
+protected:
+	bool&	m_DeletedFlag;
+
+public:
+	StaticMutex( bool& deletedFlag )
+		: m_DeletedFlag( deletedFlag )
+	{
+	}
+
+	virtual ~StaticMutex() throw()
+	{
+		m_DeletedFlag = true;
+	}
+};
 
 static pthread_key_t	curthread_key = NULL;
 static s32				total_key_count = 0;
-static Mutex			total_key_lock;
+
+static bool				tkl_destructed = false;
+static StaticMutex		total_key_lock( tkl_destructed );
 
 static void make_curthread_key()
 {
+	pxAssumeDev( !tkl_destructed, "total_key_lock is destroyed; program is shutting down; cannot create new thread key." );
+
 	ScopedLock lock( total_key_lock );
 	if( total_key_count++ != 0 ) return;
 
@@ -54,13 +72,21 @@ static void make_curthread_key()
 
 static void unmake_curthread_key()
 {
-	ScopedLock lock( total_key_lock );
+	ScopedLock lock;
+	if( !tkl_destructed )
+		lock.AssignAndLock( total_key_lock );
+
 	if( --total_key_count > 0 ) return;
 
 	if( curthread_key != NULL )
 		pthread_key_delete( curthread_key );
 
 	curthread_key = NULL;
+}
+
+void Threading::pxTestCancel()
+{
+	pthread_testcancel();
 }
 
 // Returns a handle to the current persistent thread.  If the current thread does not belong
@@ -158,20 +184,6 @@ Threading::PersistentThread::~PersistentThread() throw()
 		Threading::Sleep( 1 );
 		Detach();
 	}
-	catch( Exception::ThreadDeadlock& ex )
-	{
-		// Windows allows for a thread to be terminated forcefully, but it's not really
-		// a safe thing to do since typically threads are acquiring and releasing locks
-		// and semaphores all the time.  And terminating threads isn't really cross-platform
-		// either so let's just not bother.
-
-		// Additionally since this is a destructor most of our derived class info is lost,
-		// so we can't allow for customized deadlock handlers, least not in any useful
-		// context.  So let's just log the condition and move on.
-
-		Console.Error( L"(Thread Log) Thread destructor for '%s' timed out with error:\n\t",
-			m_name.c_str(), ex.FormatDiagnosticMessage().c_str() );
-	}
 	DESTRUCTOR_CATCHALL
 }
 
@@ -265,7 +277,6 @@ bool Threading::PersistentThread::Detach()
 
 bool Threading::PersistentThread::_basecancel()
 {
-	// Prevent simultaneous startup and cancel:
 	if( !m_running ) return false;
 
 	if( m_detached )
@@ -339,6 +350,12 @@ void Threading::PersistentThread::Block()
 	WaitOnSelf( m_lock_InThread );
 }
 
+bool Threading::PersistentThread::Block( const wxTimeSpan& timeout )
+{
+	AffinityAssert_DisallowFromSelf(pxDiagSpot);
+	return WaitOnSelf( m_lock_InThread, timeout );
+}
+
 bool Threading::PersistentThread::IsSelf() const
 {
 	// Detached threads may have their pthread handles recycled as newer threads, causing
@@ -402,7 +419,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 
 	while( true )
 	{
-		if( sem.Wait( wxTimeSpan(0, 0, 0, 333) ) ) return;
+		if( sem.WaitWithoutYield( wxTimeSpan(0, 0, 0, 333) ) ) return;
 		_selfRunningTest( L"semaphore" );
 	}
 }
@@ -426,7 +443,7 @@ void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
 
 	while( true )
 	{
-		if( mutex.Wait( wxTimeSpan(0, 0, 0, 333) ) ) return;
+		if( mutex.WaitWithoutYield( wxTimeSpan(0, 0, 0, 333) ) ) return;
 		_selfRunningTest( L"mutex" );
 	}
 }
@@ -442,7 +459,7 @@ bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& 
 	while( runningout.GetMilliseconds() > 0 )
 	{
 		const wxTimeSpan interval( (SelfWaitInterval < runningout) ? SelfWaitInterval : runningout );
-		if( sem.Wait( interval ) ) return true;
+		if( sem.WaitWithoutYield( interval ) ) return true;
 		_selfRunningTest( L"semaphore" );
 		runningout -= interval;
 	}
@@ -458,7 +475,7 @@ bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& ti
 	while( runningout.GetMilliseconds() > 0 )
 	{
 		const wxTimeSpan interval( (SelfWaitInterval < runningout) ? SelfWaitInterval : runningout );
-		if( mutex.Wait( interval ) ) return true;
+		if( mutex.WaitWithoutYield( interval ) ) return true;
 		_selfRunningTest( L"mutex" );
 		runningout -= interval;
 	}
@@ -487,17 +504,7 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	//
 	catch( std::runtime_error& ex )
 	{
-		m_except = new Exception::RuntimeError(
-			// Diagnostic message:
-			wxsFormat( L"(thread: %s) STL Runtime Error: %s",
-				GetName().c_str(), fromUTF8( ex.what() ).c_str()
-			),
-
-			// User Message (not translated, std::exception doesn't have that kind of fancy!
-			wxsFormat( L"A runtime error occurred in %s:\n\n%s (STL)",
-				GetName().c_str(), fromUTF8( ex.what() ).c_str()
-			)
-		);
+		m_except = new Exception::RuntimeError( ex, GetName().c_str() );
 	}
 
 	// ----------------------------------------------------------------------------
@@ -513,20 +520,20 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	// the MSVC debugger (or by silent random annoying fail on debug-less linux).
 	/*catch( std::logic_error& ex )
 	{
-		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s",
+		throw BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}
 	catch( std::exception& ex )
 	{
-		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s",
+		throw BaseException( wxsFormat( L"(thread: %s) STL exception: %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}*/
 	// ----------------------------------------------------------------------------
 	// BaseException --  same deal as LogicErrors.
 	//
-	catch( Exception::BaseException& ex )
+	catch( BaseException& ex )
 	{
 		m_except = ex.Clone();
 		m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
@@ -541,6 +548,10 @@ void Threading::PersistentThread::_ThreadCleanup()
 	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 	m_lock_InThread.Release();
+
+	// Must set m_running LAST, as thread destructors depend on this value (it is used
+	// to avoid destruction of the thread until all internal data use has stopped.
+	m_running = false;
 }
 
 wxString Threading::PersistentThread::GetName() const
@@ -590,12 +601,10 @@ void Threading::PersistentThread::OnStart()
 	m_sem_startup.Reset();
 }
 
-// Extending classes that override this method shoul always call it last from their
+// Extending classes that override this method should always call it last from their
 // personal implementations.
 void Threading::PersistentThread::OnCleanupInThread()
 {
-	m_running = false;
-
 	if( curthread_key != NULL )
 		pthread_setspecific( curthread_key, NULL );
 
@@ -605,6 +614,8 @@ void Threading::PersistentThread::OnCleanupInThread()
 
 	m_native_handle = NULL;
 	m_native_id		= 0;
+	
+	m_evtsrc_OnDelete.Dispatch( 0 );
 }
 
 // passed into pthread_create, and is used to dispatch the thread's object oriented

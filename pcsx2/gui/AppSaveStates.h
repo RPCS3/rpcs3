@@ -15,63 +15,39 @@
 
 #pragma once
 
+#include "App.h"
 #include "SaveState.h"
 
-enum SaveStateActionType
-{
-	SaveStateAction_CreateFinished,
-	SaveStateAction_RestoreFinished,
-	SaveStateAction_ZipToDiskFinished,
-	SaveStateAction_UnzipFromDiskFinished,
-};
-
 // --------------------------------------------------------------------------------------
-//  IEventListener_SaveStateThread
+//  SaveSinglePluginHelper
 // --------------------------------------------------------------------------------------
-class IEventListener_SaveStateThread : public IEventDispatcher<SaveStateActionType>
+// A scoped convenience class for closing a single plugin and saving its state to memory.
+// Emulation is suspended as needed, and is restored when the object leaves scope.  Within
+// the scope of the object, code is free to call plugin re-configurations or even unload
+// a plugin entirely and re-load a different plugin in its place.
+//
+class SaveSinglePluginHelper
 {
-public:
-	typedef SaveStateActionType EvtParams;
-
-public:
-	IEventListener_SaveStateThread() {}
-	virtual ~IEventListener_SaveStateThread() throw() {}
-
-	virtual void DispatchEvent( const SaveStateActionType& status )
-	{
-		switch( status )
-		{
-			case SaveStateAction_CreateFinished:		SaveStateAction_OnCreateFinished();			break;
-			case SaveStateAction_RestoreFinished:		SaveStateAction_OnRestoreFinished();		break;
-			case SaveStateAction_ZipToDiskFinished:		SaveStateAction_OnZipToDiskFinished();		break;
-			case SaveStateAction_UnzipFromDiskFinished:	SaveStateAction_OnUnzipFromDiskFinished();	break;
-
-			jNO_DEFAULT;
-		}
-	}
-
 protected:
-	virtual void SaveStateAction_OnCreateFinished() {}
-	virtual void SaveStateAction_OnRestoreFinished() {}
-	virtual void SaveStateAction_OnZipToDiskFinished() {}
-	virtual void SaveStateAction_OnUnzipFromDiskFinished() {}
+	SafeArray<u8>			m_plugstore;
+	bool					m_validstate;
+	PluginsEnum_t			m_pid;
+	
+	ScopedCoreThreadPause	m_scoped_pause;
+
+public:
+	SaveSinglePluginHelper( PluginsEnum_t pid );
+	virtual ~SaveSinglePluginHelper() throw();
 };
 
 
-extern bool StateCopy_InvokeOnSaveComplete( IActionInvocation* sst );
-extern bool StateCopy_InvokeOnCopyComplete( IActionInvocation* sst );
+extern SafeArray<u8>& StateCopy_GetBuffer();
 extern bool StateCopy_IsValid();
 
 extern void StateCopy_FreezeToMem();
-extern void StateCopy_FreezeToMem_Blocking();
-extern void StateCopy_ThawFromMem_Blocking();
 
 extern void StateCopy_SaveToFile( const wxString& file );
 extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );
 extern void StateCopy_LoadFromSlot( uint slot );
 extern void StateCopy_Clear();
-extern bool StateCopy_IsBusy();
-
-
-extern const SafeArray<u8>* StateCopy_GetBuffer();

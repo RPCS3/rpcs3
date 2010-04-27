@@ -26,16 +26,20 @@ static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;
 
 class FirstTimeWizard : public wxWizard
 {
+	typedef wxWizard _parent;
+
 protected:
 	class UsermodePage : public ApplicableWizardPage
 	{
 	protected:
 		Panels::DirPickerPanel*			m_dirpick_settings;
 		Panels::LanguageSelectionPanel*	m_panel_LangSel;
-		Panels::UsermodeSelectionPanel*	m_panel_UserSel;
+		Panels::DocsFolderPickerPanel*	m_panel_UserSel;
 
 	public:
 		UsermodePage( wxWizard* parent );
+		virtual ~UsermodePage() throw() { }
+		bool PrepForApply();
 
 	protected:
 		void OnUsermodeChanged( wxCommandEvent& evt );
@@ -61,6 +65,8 @@ public:
 	{
 		m_panel_PluginSel.OnShown();
 	}
+	
+	int ShowModal();
 
 protected:
 	virtual void OnPageChanging( wxWizardEvent& evt );
@@ -88,7 +94,7 @@ namespace Dialogs
 	class PickUserModeDialog : public BaseApplicableDialog
 	{
 	protected:
-		Panels::UsermodeSelectionPanel* m_panel_usersel;
+		Panels::DocsFolderPickerPanel* m_panel_usersel;
 		Panels::LanguageSelectionPanel* m_panel_langsel;
 
 	public:

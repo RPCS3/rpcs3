@@ -57,25 +57,27 @@ void SysCoreThread::Cancel( bool isBlocking )
 {
 	m_CoreCancelDamnit = true;
 	_parent::Cancel();
-	ReleaseResumeLock();
 }
 
 bool SysCoreThread::Cancel( const wxTimeSpan& span )
 {
 	m_CoreCancelDamnit = true;
 	if( _parent::Cancel( span ) )
-	{
-		ReleaseResumeLock();
 		return true;
-	}
+
 	return false;
+}
+
+void SysCoreThread::OnStart()
+{
+	m_CoreCancelDamnit = false;
+	_parent::OnStart();
 }
 
 void SysCoreThread::Start()
 {
-	if( g_plugins == NULL ) return;
-	g_plugins->Init();
-	m_CoreCancelDamnit = false;		// belongs in OnStart actually, but I'm tired :P
+	if( !GetCorePlugins().AreLoaded() ) return;
+	GetCorePlugins().Init();
 	_parent::Start();
 }
 
@@ -101,8 +103,8 @@ void SysCoreThread::OnResumeReady()
 // resumed manually).
 void SysCoreThread::RecoverState()
 {
-	Pause();
-	m_resetVirtualMachine	= true;
+	pxAssumeDev( IsPaused(), "Unsafe use of RecoverState function; Corethread is not paused/closed." );
+	m_resetRecompilers		= true;
 	m_hasValidState			= false;
 }
 
@@ -122,50 +124,6 @@ void SysCoreThread::SetElfOverride( const wxString& elf )
 	m_elf_override = elf;
 }
 
-ScopedCoreThreadSuspend::ScopedCoreThreadSuspend()
-{
-	m_ResumeWhenDone = GetCoreThread().Suspend();
-}
-
-ScopedCoreThreadSuspend::~ScopedCoreThreadSuspend() throw()
-{
-	if( m_ResumeWhenDone )
-	{
-		Console.WriteLn( Color_Gray, "Scoped CoreThread suspend was not allowed to resume." );
-	}
-}
-
-// Resumes CoreThread execution, but *only* if it was in a running state when this object
-// was instanized.  Subsequent calls to Resume() will be ignored.
-void ScopedCoreThreadSuspend::Resume()
-{
-	if( m_ResumeWhenDone )
-		GetCoreThread().Resume();
-	m_ResumeWhenDone = false;
-}
-
-ScopedCoreThreadPause::ScopedCoreThreadPause()
-{
-	m_ResumeWhenDone = GetCoreThread().Pause();
-}
-
-ScopedCoreThreadPause::~ScopedCoreThreadPause() throw()
-{
-	if( m_ResumeWhenDone )
-	{
-		Console.WriteLn( Color_Gray, "Scoped CoreThread pause was not allowed to resume." );
-	}
-}
-
-// Resumes CoreThread execution, but *only* if it was in a running state when this object
-// was instanized.  Subsequent calls to Resume() will be ignored.
-void ScopedCoreThreadPause::Resume()
-{
-	if( m_ResumeWhenDone )
-		GetCoreThread().Resume();
-	m_ResumeWhenDone = false;
-}
-
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
@@ -175,27 +133,14 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 
-	ScopedCoreThreadPause sys_paused;
-
+	if( !pxAssertDev( IsPaused(), "CoreThread is not paused; settings cannot be applied." ) ) return;
+	
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Recompiler != EmuConfig.Recompiler ) ||
 							  ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= ( src.Profiler != EmuConfig.Profiler );
 	m_resetVsyncTimers		= ( src.GS != EmuConfig.GS );
 
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
-	sys_paused.Resume();
-}
-
-void SysCoreThread::ChangeCdvdSource( CDVD_SourceType type )
-{
-	if( type == CDVDsys_GetSourceType() ) return;
-
-	// Fast change of the CDVD source only -- a Pause will suffice.
-
-	bool resumeWhenDone = Pause();
-	GetPluginManager().Close( PluginId_CDVD );
-	CDVDsys_ChangeSource( type );
-	if( resumeWhenDone ) Resume();
 }
 
 // --------------------------------------------------------------------------------------
@@ -306,6 +251,13 @@ void SysCoreThread::StateCheckInThread()
 	_reset_stuff_as_needed();		// kinda redundant but could catch unexpected threaded state changes...
 }
 
+// Allows an override point and solves an SEH "exception-type boundary" problem (can't mix
+// SEH and C++ exceptions in the same function).
+void SysCoreThread::DoCpuExecute()
+{
+	Cpu->Execute();
+}
+
 void SysCoreThread::ExecuteTaskInThread()
 {
 	Threading::EnableHiresScheduler();
@@ -317,21 +269,19 @@ void SysCoreThread::ExecuteTaskInThread()
 	PCSX2_PAGEFAULT_PROTECT {
 		do {
 			StateCheckInThread();
-			Cpu->Execute();
+			DoCpuExecute();
 		} while( true );
 	} PCSX2_PAGEFAULT_EXCEPT;
 }
 
 void SysCoreThread::OnSuspendInThread()
 {
-	if( g_plugins != NULL )
-		g_plugins->Close();
+	GetCorePlugins().Close();
 }
 
 void SysCoreThread::OnResumeInThread( bool isSuspended )
 {
-	if( g_plugins != NULL )
-		g_plugins->Open();
+	GetCorePlugins().Open();
 
 	CpuInitializeMess();
 }
@@ -346,8 +296,7 @@ void SysCoreThread::OnCleanupInThread()
 
 	Threading::DisableHiresScheduler();
 
-	if( g_plugins != NULL )
-		g_plugins->Close();
+	GetCorePlugins().Close();
 
 	tls_coreThread = NULL;
 	_parent::OnCleanupInThread();

@@ -21,6 +21,8 @@
 #include "PS2Edefs.h"
 #include "PluginCallbacks.h"
 
+#include "Utilities/Threading.h"
+
 #include <wx/dynlib.h>
 
 #ifdef _MSC_VER
@@ -125,7 +127,7 @@ namespace Exception
 			PluginId = pid;
 		}
 	};
-
+	
 	// This exception is thrown when a plugin returns an error while trying to save itself.
 	// Typically this should be a very rare occurance since a plugin typically shoudn't
 	// be doing memory allocations or file access during state saving.
@@ -222,57 +224,20 @@ public:
 
 extern SysPluginBindings SysPlugins;
 
-
-// --------------------------------------------------------------------------------------
-//  PluginManagerBase Class
-// --------------------------------------------------------------------------------------
-// Provides a basic placebo "do-nothing" interface for plugin management.  This is used
-// to avoid NULL pointer exceptions/segfaults when referencing the plugin manager global
-// handle.
-//
-// Note: The Init and Freeze methods of this class will cause debug assertions, but Close
-// methods fail silently, on the premise that Close and Shutdown are typically run from
-// exception handlers or cleanup code, and null pointers should be silently ignored in
-// favor of continuing cleanup.
-//
-class PluginManagerBase
-{
-	DeclareNoncopyableObject( PluginManagerBase );
-
-public:
-	PluginManagerBase() {}
-	virtual ~PluginManagerBase() {}
-
-	virtual void Init() { pxFail( "Null PluginManager!" ); }
-	virtual void Shutdown() {}
-	virtual void Open() { }
-	virtual void Open( PluginsEnum_t pid ) { pxFail( "Null PluginManager!" ); }
-	virtual void Close( PluginsEnum_t pid ) {}
-	virtual void Close() {}
-
-	virtual bool IsOpen( PluginsEnum_t pid ) const { return false; }
-
-	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { pxFail( "Null PluginManager!" ); }
-	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
-	{
-		pxFail( "Null PluginManager!" );
-		return false;
-	}
-
-	virtual bool KeyEvent( const keyEvent& evt ) { return false; }
-};
-
 // --------------------------------------------------------------------------------------
 //  PluginManager Class
 // --------------------------------------------------------------------------------------
 //
-class PluginManager : public PluginManagerBase
+class PluginManager
 {
 	DeclareNoncopyableObject( PluginManager );
 
 protected:
-	struct PluginStatus_t
+	class PluginStatus_t
 	{
+	public:
+		PluginsEnum_t pid;
+
 		bool		IsInitialized;
 		bool		IsOpened;
 
@@ -283,22 +248,43 @@ protected:
 		LegacyPluginAPI_Common	CommonBindings;
 		wxDynamicLibrary		Lib;
 
+	public:
 		PluginStatus_t()
 		{
 			IsInitialized	= false;
 			IsOpened		= false;
 		}
+
+		PluginStatus_t( PluginsEnum_t _pid, const wxString& srcfile );
+		virtual ~PluginStatus_t() throw() { }
+		
+	protected:
+		void BindCommon( PluginsEnum_t pid );
+		void BindRequired( PluginsEnum_t pid );
+		void BindOptional( PluginsEnum_t pid );
 	};
 
-	const PS2E_LibraryAPI*	m_mcdPlugin;
-	wxString m_SettingsFolder;
+	const PS2E_LibraryAPI*		m_mcdPlugin;
+	wxString					m_SettingsFolder;
+	Threading::MutexRecursive	m_mtx_PluginStatus;
 
 public:		// hack until we unsuck plugins...
-	PluginStatus_t			m_info[PluginId_Count];
+	ScopedPtr<PluginStatus_t>	m_info[PluginId_Count];
 
 public:
-	PluginManager( const wxString (&folders)[PluginId_Count] );
+	PluginManager();
 	virtual ~PluginManager() throw();
+
+	void Load( PluginsEnum_t pid, const wxString& srcfile );
+	void Load( const wxString (&folders)[PluginId_Count] );
+	void Unload();
+	void Unload( PluginsEnum_t pid );
+
+	bool AreLoaded() const;
+	bool AreAnyLoaded() const;
+	bool AreAnyInitialized() const;
+	
+	Threading::Mutex& GetMutex() { return m_mtx_PluginStatus; }
 
 	virtual void Init();
 	virtual void Shutdown();
@@ -307,11 +293,10 @@ public:
 	virtual void Close( PluginsEnum_t pid );
 	virtual void Close();
 
-	virtual bool IsOpen( PluginsEnum_t pid ) const { return m_info[pid].IsOpened; }
-
-	virtual bool NeedsClose() const;
-	virtual bool NeedsOpen() const;
-
+	virtual bool IsOpen( PluginsEnum_t pid ) const;
+	virtual bool IsInitialized( PluginsEnum_t pid ) const;
+	virtual bool IsLoaded( PluginsEnum_t pid ) const;
+	
 	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state );
 	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
 
@@ -320,15 +305,18 @@ public:
 	virtual void SetSettingsFolder( const wxString& folder );
 	virtual void SendSettingsFolder();
 
-	const wxString& GetName( PluginsEnum_t pid ) const { return m_info[pid].Name; }
-	const wxString& GetVersion( PluginsEnum_t pid ) const { return m_info[pid].Version; }
-
-	friend PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
+	const wxString GetName( PluginsEnum_t pid ) const;
+	const wxString GetVersion( PluginsEnum_t pid ) const;
 
 protected:
-	void BindCommon( PluginsEnum_t pid );
-	void BindRequired( PluginsEnum_t pid );
-	void BindOptional( PluginsEnum_t pid );
+	virtual bool NeedsClose() const;
+	virtual bool NeedsOpen() const;
+
+	virtual bool NeedsShutdown() const;
+	virtual bool NeedsInit() const;
+	
+	virtual bool NeedsLoad() const;
+	virtual bool NeedsUnload() const;
 
 	virtual bool OpenPlugin_GS();
 	virtual bool OpenPlugin_CDVD();
@@ -337,6 +325,8 @@ protected:
 	virtual bool OpenPlugin_DEV9();
 	virtual bool OpenPlugin_USB();
 	virtual bool OpenPlugin_FW();
+	
+	void _generalclose( PluginsEnum_t pid );
 
 	virtual void ClosePlugin_GS();
 	virtual void ClosePlugin_CDVD();
@@ -350,11 +340,13 @@ protected:
 };
 
 extern const PluginInfo tbl_PluginInfo[];
-extern PluginManager* g_plugins;
 
-extern PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
+// GetPluginManager() is a required external implementation. This function is *NOT*
+// provided by the PCSX2 core library.  It provides an interface for the linking User
+// Interface apps or DLLs to reference their own instance of PluginManager (also allowing
+// them to extend the class and override virtual methods).
 
-extern PluginManagerBase& GetPluginManager();
+extern PluginManager& GetCorePlugins();
 
 // Hack to expose internal MemoryCard plugin:
 

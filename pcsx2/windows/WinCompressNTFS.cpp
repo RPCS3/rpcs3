@@ -32,10 +32,10 @@ void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode
 			throw Exception::AccessDenied( streamname );
 
 		case EMFILE:	// Too many open files!
-			throw Exception::CreateStream( streamname, "Too many open files" );	// File handle allocation failure
+			throw Exception::CannotCreateStream( streamname, "Too many open files" );	// File handle allocation failure
 
 		case EEXIST:
-			throw Exception::CreateStream( streamname, "File already exists" );
+			throw Exception::CannotCreateStream( streamname, "File already exists" );
 
 		case ENOENT:	// File not found!
 			throw Exception::FileNotFound( streamname );
@@ -70,7 +70,7 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 			throw Exception::FileNotFound( streamname );
 
 		case ERROR_TOO_MANY_OPEN_FILES:
-			throw Exception::CreateStream( streamname, "Too many open files" );
+			throw Exception::CannotCreateStream( streamname, "Too many open files" );
 
 		case ERROR_ACCESS_DENIED:
 			throw Exception::AccessDenied( streamname );

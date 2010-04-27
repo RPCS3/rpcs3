@@ -101,7 +101,7 @@ protected:
 	int		m_win32_LinesPerPage;
 	int		m_win32_LinesPerScroll;
 #endif
-	bool	m_IsPaused;
+	ScopedPtr<ScopedCoreThreadPause>	m_IsPaused;
 	bool	m_FreezeWrites;
 
 public:
@@ -217,7 +217,7 @@ protected:
 
 	// Lock object for accessing or modifying the following three vars:
 	//  m_QueueBuffer, m_QueueColorSelection, m_CurQueuePos
-	MutexLockRecursive		m_QueueLock;
+	MutexRecursive		m_QueueLock;
 
 	// Describes a series of colored text sections in the m_QueueBuffer.
 	SafeList<ColorSection>	m_QueueColorSection;

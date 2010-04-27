@@ -14,7 +14,8 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "MainFrame.h"
+#include "GSFrame.h"
+
 #include "MSWstuff.h"
 #include <wx/listbook.h>
 #include <wx/listctrl.h>

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Utilities/EventSource.h"
+#include "Utilities/pxEvents.h"
 
 enum CoreThreadStatus
 {
@@ -241,4 +242,29 @@ protected:
 	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) { Owner.AppStatusEvent_OnSettingsLoadSave( evtinfo ); }
 	virtual void AppStatusEvent_OnSettingsApplied() { Owner.AppStatusEvent_OnSettingsApplied(); }
 	virtual void AppStatusEvent_OnExit() { Owner.AppStatusEvent_OnExit(); }
+};
+
+
+// --------------------------------------------------------------------------------------
+//  CoreThreadStatusEvent
+// --------------------------------------------------------------------------------------
+class CoreThreadStatusEvent : public pxInvokeActionEvent
+{
+	typedef pxInvokeActionEvent _parent;
+
+protected:
+	CoreThreadStatus		m_evt;
+
+public:
+	virtual ~CoreThreadStatusEvent() throw() {}
+	CoreThreadStatusEvent* Clone() const { return new CoreThreadStatusEvent( *this ); }
+
+	explicit CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState* sema=NULL );
+	explicit CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState& sema );
+
+	void SetEventType( CoreThreadStatus evt ) { m_evt = evt; }
+	CoreThreadStatus GetEventType() { return m_evt; }
+
+protected:
+	void _DoInvoke();
 };

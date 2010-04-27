@@ -156,12 +156,14 @@
 		<Unit filename="../../include/Utilities/Path.h" />
 		<Unit filename="../../include/Utilities/PersistentThread.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
+		<Unit filename="../../include/Utilities/RwMutex.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
 		<Unit filename="../../include/Utilities/pxCheckBox.h" />
+		<Unit filename="../../include/Utilities/pxEvents.h" />
 		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/pxStaticText.h" />
 		<Unit filename="../../include/Utilities/win_memzero.h" />
@@ -182,6 +184,7 @@
 		<Unit filename="../../src/Utilities/PathUtils.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.h" />
+		<Unit filename="../../src/Utilities/RwMutex.cpp" />
 		<Unit filename="../../src/Utilities/Semaphore.cpp" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />

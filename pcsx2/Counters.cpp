@@ -222,8 +222,7 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 
 u32 UpdateVSyncRate()
 {
-	XMMRegisters::Freeze();
-	MMXRegisters::Freeze();
+	Registers::Freeze();
 
 	// Notice:  (and I probably repeat this elsewhere, but it's worth repeating)
 	//  The PS2's vsync timer is an *independent* crystal that is fixed to either 59.94 (NTSC)
@@ -234,8 +233,8 @@ u32 UpdateVSyncRate()
 	//  1/5 and 4/5 ratios).
 
 	Fixed100	framerate;
-	u32		scanlines;
-	bool	isCustom;
+	u32			scanlines;
+	bool		isCustom;
 
 	if( gsRegionMode == Region_PAL )
 	{
@@ -278,8 +277,7 @@ u32 UpdateVSyncRate()
 
 	m_iStart = GetCPUTicks();
 
-	XMMRegisters::Thaw();
-	MMXRegisters::Thaw();
+	Registers::Thaw();
 
 	return (u32)m_iTicks;
 }

@@ -291,6 +291,10 @@ namespace pxSizerFlags
 	extern wxSizerFlags Checkbox();
 };
 
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE( pxEvt_OnThreadCleanup, -1 );
+END_DECLARE_EVENT_TYPES()
+
 // --------------------------------------------------------------------------------------
 //  wxDialogWithHelpers
 // --------------------------------------------------------------------------------------

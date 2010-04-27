@@ -179,5 +179,7 @@ public:
 	);
 
 	virtual ~ApplicableWizardPage() throw() { m_ApplyState.DoCleanup(); }
+	
+	virtual bool PrepForApply();
 };
 

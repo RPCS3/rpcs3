@@ -1881,6 +1881,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppCorePlugins.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\AppCoreThread.cpp"
 				>
 			</File>
@@ -1941,6 +1945,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\ExecutorThread.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\FrameForGS.cpp"
 				>
 			</File>
@@ -1981,10 +1989,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\Plugins.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\pxLogTextCtrl.cpp"
 				>
 			</File>
@@ -1993,11 +1997,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\RecoverySystem.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\Saveslots.cpp"
+				RelativePath="..\..\gui\UpdateUI.cpp"
 				>
 			</File>
 			<Filter
@@ -2654,6 +2654,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\AppCorePlugins.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\AppCoreThread.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\AppEventListeners.h"
 					>
 				</File>
@@ -2682,6 +2690,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\GSFrame.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\HostGui.h"
 					>
 				</File>
@@ -2695,6 +2707,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\MainFrame.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\pxEventThread.h"
 					>
 				</File>
 				<File
@@ -2819,6 +2835,38 @@
 				</File>
 				<File
 					RelativePath="..\cheats\cheats.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="VM States"
+				>
+				<File
+					RelativePath="..\..\gui\Saveslots.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\SysState.cpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="ZipTools"
+				>
+				<File
+					RelativePath="..\..\ZipTools\FolderDesc.txt"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ZipTools\thread_gzip.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ZipTools\thread_lzma.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\ZipTools\ThreadedZipTools.h"
 					>
 				</File>
 			</Filter>

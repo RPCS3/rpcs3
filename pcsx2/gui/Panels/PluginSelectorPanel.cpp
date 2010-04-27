@@ -39,11 +39,13 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(pxEVT_EnumeratedNext, -1)
 	DECLARE_EVENT_TYPE(pxEVT_EnumerationFinished, -1)
 	DECLARE_EVENT_TYPE(pxEVT_ShowStatusBar, -1)
+	DECLARE_EVENT_TYPE(pxEvt_SysExecEventComplete, -1)
 END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(pxEVT_EnumeratedNext)
 DEFINE_EVENT_TYPE(pxEVT_EnumerationFinished);
 DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
+DEFINE_EVENT_TYPE(pxEvt_SysExecEventComplete)
 
 typedef s32		(CALLBACK* TestFnptr)();
 typedef void	(CALLBACK* ConfigureFnptr)();
@@ -60,7 +62,6 @@ namespace Exception
 // --------------------------------------------------------------------------------------
 //  PluginEnumerator class
 // --------------------------------------------------------------------------------------
-
 class PluginEnumerator
 {
 protected:
@@ -134,10 +135,162 @@ public:
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  ApplyPluginsDialog
+// --------------------------------------------------------------------------------------
+class ApplyPluginsDialog : public wxDialogWithHelpers
+{
+	DECLARE_DYNAMIC_CLASS_NO_COPY(ApplyPluginsDialog)
+
+	typedef wxDialogWithHelpers _parent;
+
+protected:
+	BaseApplicableConfigPanel*			m_panel;
+	ScopedPtr<BaseException> m_Exception;
+	SynchronousActionState				m_sync;
+
+public:
+	ApplyPluginsDialog( BaseApplicableConfigPanel* panel=NULL );
+	virtual ~ApplyPluginsDialog() throw() {}
+
+	virtual void RethrowException();
+	virtual int ShowModal();
+
+	BaseApplicableConfigPanel* GetApplicableConfigPanel() const { return m_panel; }
+
+protected:
+	void OnSysExecComplete( wxCommandEvent& evt );
+};
+
+
+// --------------------------------------------------------------------------------------
+//  ApplyOverValidStateEvent
+// --------------------------------------------------------------------------------------
+class ApplyOverValidStateEvent : public pxInvokeActionEvent
+{
+	//DeclareNoncopyableObject( ApplyOverValidStateEvent );
+	typedef pxInvokeActionEvent _parent;
+
+protected:
+	ApplyPluginsDialog*		m_owner;
+
+public:
+	ApplyOverValidStateEvent( ApplyPluginsDialog* owner=NULL )
+	{
+		m_owner = owner;
+	}
+
+	virtual ~ApplyOverValidStateEvent() throw() { }
+	virtual ApplyOverValidStateEvent *Clone() const { return new ApplyOverValidStateEvent(*this); }
+
+protected:
+	void _DoInvoke();
+};
+
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_ApplyPlugins
+// --------------------------------------------------------------------------------------
+class SysExecEvent_ApplyPlugins : public SysExecEvent
+{
+protected:
+	ApplyPluginsDialog*	m_dialog;
+	
+public:
+	virtual ~SysExecEvent_ApplyPlugins() throw() {}
+	SysExecEvent_ApplyPlugins* Clone() const { return new SysExecEvent_ApplyPlugins( *this ); }
+
+	SysExecEvent_ApplyPlugins( ApplyPluginsDialog* parent, SynchronousActionState& sync )
+		: SysExecEvent( &sync )
+	{
+		m_dialog = parent;
+	}
+
+protected:
+	void _DoInvoke();
+};
+
+IMPLEMENT_DYNAMIC_CLASS(ApplyPluginsDialog, wxDialogWithHelpers)
+
+ApplyPluginsDialog::ApplyPluginsDialog( BaseApplicableConfigPanel* panel )
+	: wxDialogWithHelpers( NULL, _("Applying settings..."), wxVERTICAL )
+{
+	Connect( pxEvt_SysExecEventComplete, wxCommandEventHandler(ApplyPluginsDialog::OnSysExecComplete) );
+	GetSysExecutorThread().PostEvent( new SysExecEvent_ApplyPlugins( this, m_sync ) );
+}
+
+void ApplyOverValidStateEvent::_DoInvoke()
+{
+	wxDialogWithHelpers dialog( m_owner, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
+
+	dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
+		L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
+		L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
+		L"incompatible the recovery may fail, and current progress will be lost."
+		L"\n\n"
+		L"Are you sure you want to apply settings now?"
+	) );
+
+	int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector:ConfirmShutdown" );
+
+	if( result == wxID_CANCEL )
+		throw Exception::CannotApplySettings( m_owner->GetApplicableConfigPanel(), "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
+}
+
+void SysExecEvent_ApplyPlugins::_DoInvoke()
+{
+	ScopedCoreThreadPause paused_core;
+
+	if( SysHasValidState() )
+	{
+		paused_core.AllowResume();
+		wxGetApp().ProcessEvent( ApplyOverValidStateEvent( m_dialog ) );
+		paused_core.DisallowResume();
+
+		// FIXME : We only actually have to save plugins here, except the recovery code
+		// in SysCoreThread isn't quite set up yet to handle that (I think...) --air
+
+		memSavingState( StateCopy_GetBuffer() ).FreezeAll();
+	}
+
+	ScopedCoreThreadClose closed_core;
+
+	CorePlugins.Shutdown();
+	CorePlugins.Unload();
+	LoadPluginsImmediate();
+
+	wxCommandEvent tevt( pxEvt_SysExecEventComplete );
+	m_dialog->GetEventHandler()->AddPendingEvent( tevt );
+
+	closed_core.AllowResume();
+	paused_core.AllowResume();
+}
+
+
+void ApplyPluginsDialog::OnSysExecComplete( wxCommandEvent& evt )
+{
+	evt.Skip();
+	m_sync.WaitForResult();
+	EndModal( wxID_OK );
+}
+
+void ApplyPluginsDialog::RethrowException()
+{
+	if( m_Exception ) m_Exception->Rethrow();
+}
+
+int ApplyPluginsDialog::ShowModal()
+{
+	int result = _parent::ShowModal();
+	RethrowException();
+	return result;
+}
+
+
 static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
 // --------------------------------------------------------------------------------------
-//  PluginSelectorPanel  implementations
+//  PluginSelectorPanel::StatusPanel  implementations
 // --------------------------------------------------------------------------------------
 
 Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent )
@@ -176,9 +329,9 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 // Id for all Configure buttons (any non-negative arbitrary integer will do)
 static const int ButtonId_Configure = 51;
 
-// =====================================================================================================
-//  PluginSelectorPanel::ComboBoxPanel
-// =====================================================================================================
+// --------------------------------------------------------------------------------------
+//  PluginSelectorPanel::ComboBoxPanel  implementations
+// --------------------------------------------------------------------------------------
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
 	, m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
@@ -224,9 +377,6 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 	}
 }
 
-// =====================================================================================================
-//  PluginSelectorPanel
-// =====================================================================================================
 void Panels::PluginSelectorPanel::DispatchEvent( const PluginEventType& evt )
 {
 	if( (evt != CorePlugins_Loaded) && (evt != CorePlugins_Unloaded) ) return;		// everything else we don't care about
@@ -337,64 +487,47 @@ void Panels::PluginSelectorPanel::Apply()
 			break;
 	} while( ++pi, pi->shortname != NULL );
 
-	bool isSuspended = false;
+	if( pi->shortname == NULL ) return;		// no plugins changed? nothing left to do!
 
-	if( pi->shortname != NULL )
+	// ----------------------------------------------------------------------------
+	// Plugin names are not up-to-date -- RELOAD!
+
+	ApplyPluginsDialog applyDlg( this );
+	
+	wxBoxSizer& paddedMsg( *new wxBoxSizer( wxHORIZONTAL ) );
+	paddedMsg += 24;
+	paddedMsg += applyDlg.Heading(_("Applying Settings..."));
+	paddedMsg += 24;
+	
+	applyDlg += 12;
+	applyDlg += paddedMsg;
+	applyDlg += 12;
+	applyDlg += new wxButton( &applyDlg, wxID_CANCEL )	| pxCenter;
+	applyDlg += 6;
+
+	//applyDlg.GetEventHandler()->AddPendingEvent(  );
+
+	try
 	{
-		if( CoreThread.IsRunning() )
-		{
-			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
-			wxDialogWithHelpers dialog( this, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
-
-			dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
-				L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
-				L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
-				L"incompatible the recovery may fail, and current progress will be lost."
-				L"\n\n"
-				L"Are you sure you want to apply settings now?"
-			) );
-
-			int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector:ConfirmShutdown" );
-
-			if( result == wxID_CANCEL )
-				throw Exception::CannotApplySettings( this, "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
-
-			// FIXME : We only actually have to save plugins here, except the recovery code
-			// in SysCoreThread isn't quite set up yet to handle that (I think...) --air
-
-			isSuspended = CoreThread.Suspend();
-			StateCopy_FreezeToMem_Blocking();
-		}
-
-		// Don't use SysShutdown, it clears the StateCopy.
-		CoreThread.Cancel();
-		wxGetApp().m_CorePlugins = NULL;
+		if( wxID_CANCEL == applyDlg.ShowModal() )
+			throw Exception::CannotApplySettings( this, "User canceled plugin load process.", false );
 	}
-
-	if( !wxGetApp().m_CorePlugins )
+	catch( Exception::PluginError& ex )
 	{
-		try {
-			LoadPluginsImmediate();
-		}
-		catch( Exception::PluginError& ex )
-		{
-			// Rethrow PluginLoadErrors as a failure to Apply...
+		// Rethrow PluginLoadErrors as a failure to Apply...
 
-			wxString plugname( tbl_PluginInfo[ex.PluginId].GetShortname() );
+		wxString plugname( tbl_PluginInfo[ex.PluginId].GetShortname() );
 
-			throw Exception::CannotApplySettings( this,
-				// Diagnostic
-				ex.FormatDiagnosticMessage(),
+		throw Exception::CannotApplySettings( this,
+			// Diagnostic
+			ex.FormatDiagnosticMessage(),
 
-				// Translated
-				wxsFormat( _("The selected %s plugin failed to load.\n\nReason: %s\n\n"),
-					plugname.c_str(), ex.FormatDisplayMessage().c_str()
-				) + GetApplyFailedMsg()
-			);
-		}
+			// Translated
+			wxsFormat( _("The selected %s plugin failed to load.\n\nReason: %s\n\n"),
+				plugname.c_str(), ex.FormatDisplayMessage().c_str()
+			) + GetApplyFailedMsg()
+		);
 	}
-
-	if( isSuspended ) CoreThread.Resume();
 }
 
 void Panels::PluginSelectorPanel::CancelRefresh()
@@ -480,9 +613,9 @@ void Panels::PluginSelectorPanel::OnPluginSelected( wxCommandEvent& evt )
 			//   (a) plugins aren't even loaded yet.
 			//   (b) current selection matches exactly the currently configured/loaded plugin.
 
-			bool isSame = (g_plugins==NULL) || g_Conf->FullpathMatchTest( pi->id, (*m_FileList)[(int)box.GetClientData(box.GetSelection())] );
+			bool isSame = (!CorePlugins.AreLoaded()) || g_Conf->FullpathMatchTest( pi->id, (*m_FileList)[(int)box.GetClientData(box.GetSelection())] );
 			m_ComponentBoxes->GetConfigButton( pi->id ).Enable( isSame );
-
+			
 			if( !isSame ) evt.Skip();		// enabled Apply button! :D
 			return;
 		}
@@ -504,7 +637,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 	const wxString filename( (*m_FileList)[(int)m_ComponentBoxes->Get(pid).GetClientData(sel)] );
 
-	if( g_plugins != NULL && !g_Conf->FullpathMatchTest( pid, filename ) )
+	if( CorePlugins.AreLoaded() && !g_Conf->FullpathMatchTest( pid, filename ) )
 	{
 		Console.Warning( "(PluginSelector) Plugin name mismatch, configuration request ignored." );
 		return;
@@ -544,7 +677,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 		else if( m_ComponentBoxes->Get(pid).GetSelection() == wxNOT_FOUND )
 		{
 			m_ComponentBoxes->Get(pid).SetSelection( 0 );
-			m_ComponentBoxes->GetConfigButton(pid).Enable( g_plugins == NULL );
+			m_ComponentBoxes->GetConfigButton(pid).Enable( CorePlugins.AreLoaded() );
 		}
 	} while( ++pi, pi->shortname != NULL );
 

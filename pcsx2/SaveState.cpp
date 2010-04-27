@@ -47,8 +47,18 @@ wxString SaveStateBase::GetFilename( int slot )
 }
 
 SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )
-	: m_memory( memblock )
 {
+	Init( &memblock );
+}
+
+SaveStateBase::SaveStateBase( SafeArray<u8>* memblock )
+{
+	Init( memblock );
+}
+
+void SaveStateBase::Init( SafeArray<u8>* memblock )
+{
+	m_memory	= memblock;
 	m_version	= g_SaveVersion;
 	m_idx		= 0;
 	m_sectid	= FreezeId_Unknown;
@@ -58,12 +68,14 @@ SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )
 
 void SaveStateBase::PrepBlock( int size )
 {
+	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
+
 	const int end = m_idx+size;
 	if( IsSaving() )
-		m_memory.MakeRoomFor( end );
+		m_memory->MakeRoomFor( end );
 	else
 	{
-		if( m_memory.GetSizeInBytes() < end )
+		if( m_memory->GetSizeInBytes() < end )
 			throw Exception::SaveStateLoadError();
 	}
 }
@@ -203,7 +215,7 @@ void SaveStateBase::WritebackSectionLength( int seekpos, int sectlen, const wxCh
 	if( IsSaving() )
 	{
 		// write back the section length...
-		*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
+		*((u32*)m_memory->GetPtr(seekpos-4)) = realsectsize;
 	}
 	else	// IsLoading!!
 	{
@@ -304,7 +316,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 			if( isSeeking )
 				m_idx += sectlen;
 			else
-				g_plugins->Freeze( (PluginsEnum_t)m_pid, *this );
+				GetCorePlugins().Freeze( (PluginsEnum_t)m_pid, *this );
 
 			WritebackSectionLength( seekpos, sectlen, L"Plugins" );
 
@@ -364,19 +376,26 @@ memSavingState::memSavingState( SafeArray<u8>& save_to )
 {
 }
 
+memSavingState::memSavingState( SafeArray<u8>* save_to )
+	: SaveStateBase( save_to )
+{
+}
+
 // Saving of state data
 void memSavingState::FreezeMem( void* data, int size )
 {
-	m_memory.MakeRoomFor( m_idx+size );
-	memcpy_fast( m_memory.GetPtr(m_idx), data, size );
+	m_memory->MakeRoomFor( m_idx+size );
+	memcpy_fast( m_memory->GetPtr(m_idx), data, size );
 	m_idx += size;
 }
 
 void memSavingState::FreezeAll()
 {
+	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
+
 	// 90% of all savestates fit in under 45 megs (and require more than 43 megs, so might as well...)
-	m_memory.ChunkSize = ReallocThreshold;
-	m_memory.MakeRoomFor( MemoryBaseAllocSize );
+	m_memory->ChunkSize = ReallocThreshold;
+	m_memory->MakeRoomFor( MemoryBaseAllocSize );
 
 	_parent::FreezeAll();
 }
@@ -386,12 +405,17 @@ memLoadingState::memLoadingState( const SafeArray<u8>& load_from )
 {
 }
 
+memLoadingState::memLoadingState( const SafeArray<u8>* load_from )
+	: SaveStateBase( const_cast<SafeArray<u8>*>(load_from) )
+{
+}
+
 memLoadingState::~memLoadingState() throw() { }
 
 // Loading of state data
 void memLoadingState::FreezeMem( void* data, int size )
 {
-	const u8* const src = m_memory.GetPtr(m_idx);
+	const u8* const src = m_memory->GetPtr(m_idx);
 	m_idx += size;
 	memcpy_fast( data, src, size );
 }

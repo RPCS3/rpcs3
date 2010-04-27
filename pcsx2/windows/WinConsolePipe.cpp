@@ -226,7 +226,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 		Cleanup();
 		throw Exception::RuntimeError( ex.FormatDiagnosticMessage(), ex.FormatDisplayMessage() );
 	}
-	catch( Exception::BaseException& ex )
+	catch( BaseException& ex )
 	{
 		Cleanup();
 		ex.DiagMsg() = (wxString)((stdstream==stdout) ? L"STDOUT" : L"STDERR") + L" Redirection Init failed: " + ex.DiagMsg();

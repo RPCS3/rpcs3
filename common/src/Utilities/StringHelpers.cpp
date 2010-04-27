@@ -20,7 +20,16 @@ const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDe
 
 __forceinline wxString fromUTF8( const char* src )
 {
-	return wxString::FromUTF8( src );
+	// IMPORTANT:  We cannot use wxString::FromUTF8 because it *stupidly* relies on a C++ global instance of
+	// wxMBConvUTF8().  C++ initializes and destroys these globals at random, so any object constructor or
+	// destructor that attempts to do logging may crash the app (either during startup or during exit) unless
+	// we use a LOCAL instance of wxMBConvUTF8(). --air
+
+	// Performance?  No worries.  wxMBConvUTF8() is virtually free.  Initializing a stack copy of the class
+	// is just as efficient as passing a pointer to a pre-instanced global. (which makes me wonder wh wxWidgets
+	// uses the stupid globals in the first place!)  --air
+
+	return wxString( src, wxMBConvUTF8() );
 }
 
 __forceinline wxString fromAscii( const char* src )

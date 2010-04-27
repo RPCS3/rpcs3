@@ -288,7 +288,7 @@ CDVD_SourceType CDVDsys_GetSourceType()
 
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
-	GetPluginManager().Close( PluginId_CDVD );
+	GetCorePlugins().Close( PluginId_CDVD );
 
 	switch( m_CurrentSourceType = type )
 	{

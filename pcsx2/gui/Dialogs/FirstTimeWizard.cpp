@@ -32,6 +32,15 @@ ApplicableWizardPage::ApplicableWizardPage( wxWizard* parent, wxWizardPage* prev
 {
 }
 
+// This is a hack feature substitute for prioritized apply events.  This callback is issued prior
+// to the apply chain being run, allowing a panel to do some pre-apply prepwork.  PAnels implementing
+// this function should not modify the g_conf state.
+bool ApplicableWizardPage::PrepForApply()
+{
+	return true;
+}
+
+
 // ----------------------------------------------------------------------------
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
@@ -63,7 +72,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 
 	m_dirpick_settings	= new SettingsDirPickerPanel( &panel );
 	m_panel_LangSel		= new LanguageSelectionPanel( &panel );
-	m_panel_UserSel		= new UsermodeSelectionPanel( &panel );
+	m_panel_UserSel		= new DocsFolderPickerPanel( &panel );
 
 	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured."));
 
@@ -91,6 +100,37 @@ void FirstTimeWizard::UsermodePage::OnUsermodeChanged( wxCommandEvent& evt )
 void FirstTimeWizard::UsermodePage::OnCustomDirChanged( wxCommandEvent& evt )
 {
 	OnUsermodeChanged( evt );
+}
+
+bool FirstTimeWizard::UsermodePage::PrepForApply()
+{
+	wxDirName path( PathDefs::GetDocuments(m_panel_UserSel->GetDocsMode()) );
+
+	if( path.FileExists() )
+	{
+		// FIXME: There's already a file by the same name.. not sure what we should do here.
+		throw Exception::BadStream( path.ToString(),
+			L"Targeted documents folder is already occupied by a file.",
+			pxE( "Error:DocsFolderFileConflict",
+				L"PCSX2 cannot create a documents folder in the requested location.  "
+				L"The path name matches an existing file.  Delete the file or change the documents location, "
+				L"and then try again."
+			)
+		);
+	}
+
+	if( !path.Exists() )
+	{
+		wxDialogWithHelpers dialog( NULL, _("Create folder?"), wxVERTICAL );
+		dialog += dialog.Heading( _("PCSX2 will create the following folder for documents.  You can change this setting later, at any time.") );
+		dialog += 12;
+		dialog += dialog.Heading( path.ToString() );
+
+		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create")).Cancel(), L"CreateNewFolder" ) )
+			return false;
+	}
+	path.Mkdir();
+	return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -141,6 +181,18 @@ FirstTimeWizard::~FirstTimeWizard() throw()
 
 }
 
+static void _OpenConsole()
+{
+	g_Conf->ProgLogBox.Visible = true;
+	wxGetApp().OpenConsoleLog();
+}
+
+int FirstTimeWizard::ShowModal()
+{
+	if( IsDebugBuild ) wxGetApp().PostIdleMethod( _OpenConsole );
+	return _parent::ShowModal();
+}
+
 void FirstTimeWizard::OnDoubleClicked( wxCommandEvent& evt )
 {
 	wxWindow* forwardButton = FindWindow( wxID_FORWARD );
@@ -166,7 +218,7 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 		{
 			if( ApplicableWizardPage* page = wxDynamicCast( GetCurrentPage(), ApplicableWizardPage ) )
 			{
-				if( !page->GetApplyState().ApplyAll() )
+				if( !page->PrepForApply() || !page->GetApplyState().ApplyAll() )
 				{
 					evt.Veto();
 					return;
