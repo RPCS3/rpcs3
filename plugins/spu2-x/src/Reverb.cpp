@@ -236,7 +236,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	// Notes:
 	//  the first -1 is to adjust for the null padding in every other upbuf sample (which
 	//  halves the overall volume).
-	//  The second -1 divides by two, which is part of Neill's suggestion to divide by 3.
+	//  The second +1 divides by two, which is part of Neill's suggestion to divide by 3.
 	//
 	// According Neill the final result should be divided by 3, but currently the output
 	// is way too quiet for that to fly.  In fact no division at all might be better.

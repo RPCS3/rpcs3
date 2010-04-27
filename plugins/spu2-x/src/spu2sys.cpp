@@ -288,7 +288,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 	//  timings from PCSX2), just mix out a little bit, skip the rest, and hope the ship
 	//  "rights" itself later on.
 
-	if( dClocks > TickInterval*SanityInterval )
+	if( dClocks > (u32)(TickInterval*SanityInterval) )
 	{
 		ConLog( " * SPU2 > TimeUpdate Sanity Check (Tick Delta: %d) (PS2 Ticks: %d)\n", dClocks/TickInterval, cClocks/TickInterval );
 		dClocks = TickInterval * SanityInterval;
@@ -1430,20 +1430,6 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 
 __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 {
-	// Check for these 2 adresses and schedule an interrupt when they get written with 0x3fff.
-	// This is what peops spu2 does, and it helps silent hill origins start a bit more stuff.
-
-	// Update: 0x1f900400 is core0's volume register. Interrupting here is wrong.
-	// So SH:O just set the volume to max, which is a pretty normal operation anyway.
-	// Keeping this in for reference :p
-
-	//if (value == 0x3fff && (rmem == 0x1f900500 || rmem == 0x1f900400) ) {
-	//	// no idea which core ><
-	//	Spdif.Info |= 4 << 0;
-	//	SetIrqCall();
-	//	ConLog( "SPU2-X: Schedule IRQ for odd register write. rmem = %x , value = %x \n", rmem, value);
-	//}
-
 	tbl_reg_writes[(rmem&0x7ff)/2]( value );
 }
 
@@ -1459,23 +1445,22 @@ void StartVoices(int core, u32 value)
 
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
-		if ((value>>vc) & 1)
+		if( !(value>>vc) & 1 ) continue;
+
+		Cores[core].Voices[vc].Start();
+
+		if( IsDevBuild )
 		{
-			Cores[core].Voices[vc].Start();
+			V_Voice& thisvc( Cores[core].Voices[vc] );
 
-			if( IsDevBuild )
-			{
-				V_Voice& thisvc( Cores[core].Voices[vc] );
-
-				if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
-					core,vc,thisvc.StartA,
-					(Cores[core].VoiceGates[vc].DryL)?"+":"-",(Cores[core].VoiceGates[vc].DryR)?"+":"-",
-					(Cores[core].VoiceGates[vc].WetL)?"+":"-",(Cores[core].VoiceGates[vc].WetR)?"+":"-",
-					*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
-					thisvc.Pitch,
-					thisvc.Volume.Left.Value>>16,thisvc.Volume.Right.Value>>16,
-					thisvc.ADSR.regADSR1,thisvc.ADSR.regADSR2);
-			}
+			if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
+				core,vc,thisvc.StartA,
+				(Cores[core].VoiceGates[vc].DryL)?"+":"-",(Cores[core].VoiceGates[vc].DryR)?"+":"-",
+				(Cores[core].VoiceGates[vc].WetL)?"+":"-",(Cores[core].VoiceGates[vc].WetR)?"+":"-",
+				*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
+				thisvc.Pitch,
+				thisvc.Volume.Left.Value>>16,thisvc.Volume.Right.Value>>16,
+				thisvc.ADSR.regADSR1,thisvc.ADSR.regADSR2);
 		}
 	}
 }
@@ -1485,11 +1470,10 @@ void StopVoices(int core, u32 value)
 	if( value == 0 ) return;
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
-		if ((value>>vc) & 1)
-		{
-			Cores[core].Voices[vc].ADSR.Releasing = true;
-			//if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOff: Core %d; Voice %d.\n",core,vc);
-		}
+		if( !(value>>vc) & 1 ) continue;
+
+		Cores[core].Voices[vc].ADSR.Releasing = true;
+		//if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOff: Core %d; Voice %d.\n",core,vc);
 	}
 }
 

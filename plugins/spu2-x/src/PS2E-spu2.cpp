@@ -334,10 +334,14 @@ EXPORT_C_(s32) SPU2init()
 	{
 		SysMessage("SPU2: Error allocating Memory\n"); return -1;
 	}
+	
+	// Patch up a copy of regtable that directly maps "NULLs" to SPU2 memory.
+	
+	memcpy(regtable, regtable_original, sizeof(regtable));
 
 	for(int mem=0;mem<0x800;mem++)
 	{
-		u16 *ptr=regtable[mem>>1];
+		u16 *ptr = regtable[mem>>1];
 		if(!ptr) {
 			regtable[mem>>1] = &(spu2Ru16(mem));
 		}

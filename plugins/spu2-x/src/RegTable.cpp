@@ -48,7 +48,9 @@
 	PCORE(c,Revb.n)+1, \
 	PCORE(c,Revb.n)
 
-u16* regtable[0x401] =
+u16* regtable[0x401];
+
+u16 const* const regtable_original[0x401] =
 {
 	// Voice Params: 8 params, 24 voices = 0x180 bytes
 	PVC(0, 0),PVC(0, 1),PVC(0, 2),PVC(0, 3),PVC(0, 4),PVC(0, 5),
