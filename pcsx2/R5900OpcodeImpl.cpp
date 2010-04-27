@@ -119,8 +119,8 @@ const char * const R5900::bios[256]=
 	"Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize",
 };
 
-static u32 *deci2addr = NULL;
-static u32 deci2handler;
+static u32 deci2addr = 0;
+static u32 deci2handler = 0;
 static char deci2buffer[256];
 
 void Deci2Reset()
@@ -155,21 +155,21 @@ static int __Deci2Call(int call, u32 *addr)
 		case 1: // open
 			if( addr != NULL )
 			{
-				deci2addr = (u32*)PSM(addr[1]);
+				deci2addr = addr[1];
 				BIOS_LOG("deci2open: %x,%x,%x,%x",
 						 addr[3], addr[2], addr[1], addr[0]);
 				deci2handler = addr[2];
 			}
 			else
 			{
-				deci2handler = NULL;
+				deci2handler = 0;
 				DevCon.Warning( "Deci2Call.Open > NULL address ignored." );
 			}
 			return 1;
 
 		case 2: // close
-			deci2addr = NULL;
-			deci2handler = NULL;
+			deci2addr = 0;
+			deci2handler = 0;
 			return 1;
 
 		case 3: // reqsend
@@ -178,32 +178,34 @@ static int __Deci2Call(int call, u32 *addr)
 			if( addr != NULL )
 				sprintf( reqaddr, "%x %x %x %x", addr[3], addr[2], addr[1], addr[0] );
 
-			if (deci2addr == NULL) return 1;
+			if (!deci2addr) return 1;
+			
+			const u32* d2ptr = (u32*)PSM(deci2addr);
 
 			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x",
 				(( addr == NULL ) ? "NULL" : reqaddr),
-				deci2addr[7], deci2addr[6], deci2addr[5], deci2addr[4],
-				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
+				d2ptr[7], d2ptr[6], d2ptr[5], d2ptr[4],
+				d2ptr[3], d2ptr[2], d2ptr[1], d2ptr[0]);
 
 //			cpuRegs.pc = deci2handler;
-//			Console.WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
+//			Console.WriteLn("deci2msg: %s",  (char*)PSM(d2ptr[4]+0xc));
 
-			if (deci2addr[1]>0xc){
+			if (d2ptr[1]>0xc){
 				// this looks horribly wrong, justification please?
-				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc, false);
+				u8* pdeciaddr = (u8*)dmaGetAddr(d2ptr[4]+0xc, false);
 				if( pdeciaddr == NULL )
-					pdeciaddr = (u8*)PSM(deci2addr[4]+0xc);
+					pdeciaddr = (u8*)PSM(d2ptr[4]+0xc);
 				else
-					pdeciaddr += (deci2addr[4]+0xc) % 16;
+					pdeciaddr += (d2ptr[4]+0xc) % 16;
 
-				const int copylen = std::min<uint>(255, deci2addr[1]-0xc);
+				const int copylen = std::min<uint>(255, d2ptr[1]-0xc);
 				memcpy(deci2buffer, pdeciaddr, copylen );
 				deci2buffer[255] = '\0';
 
 				if( EmuConfig.Log.Deci2 )
 					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
 			}
-			deci2addr[3] = 0;
+			((u32*)PSM(deci2addr))[3] = 0;
 			return 1;
 		}
 

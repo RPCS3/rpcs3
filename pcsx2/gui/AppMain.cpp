@@ -415,6 +415,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	{
 		// Saved state load failed.
 		Console.Warning( ex.FormatDiagnosticMessage() );
+		StateCopy_Clear();
 		CoreThread.Resume();
 	}
 	catch( Exception::PluginInitError& ex )
