@@ -1445,7 +1445,7 @@ void StartVoices(int core, u32 value)
 
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
-		if( !(value>>vc) & 1 ) continue;
+		if( !((value>>vc) & 1) ) continue;
 
 		Cores[core].Voices[vc].Start();
 
@@ -1470,7 +1470,7 @@ void StopVoices(int core, u32 value)
 	if( value == 0 ) return;
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
-		if( !(value>>vc) & 1 ) continue;
+		if( !((value>>vc) & 1) ) continue;
 
 		Cores[core].Voices[vc].ADSR.Releasing = true;
 		//if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOff: Core %d; Voice %d.\n",core,vc);
