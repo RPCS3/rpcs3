@@ -448,7 +448,7 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 	// has responded (it updates status after the plugins are loaded and emulation has
 	// engaged successfully).
 
-	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, false );
+	EnableMenuItem( MenuId_Sys_SuspendResume, false );
 	GetSysExecutorThread().PostEvent( new SysExecEvent_ToggleSuspend() );
 }
 

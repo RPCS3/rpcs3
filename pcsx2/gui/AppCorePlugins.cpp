@@ -400,8 +400,9 @@ SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
 
 SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 {
-	try
-	{
+	bool allowResume = true;
+
+	try {
 		if( m_validstate )
 		{
 			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
@@ -413,7 +414,19 @@ SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 
 		s_DisableGsWindow = false;
 	}
-	DESTRUCTOR_CATCHALL;
+	catch( BaseException& ex )
+	{
+		allowResume = false;
+		Console.Error( "Unhandled BaseException in %s (ignored!):", __pxFUNCTION__ );
+		Console.Error( ex.FormatDiagnosticMessage() );
+	}
+	catch( std::exception& ex )
+	{
+		allowResume = false;
+		Console.Error( "Unhandled std::exception in %s (ignored!):", __pxFUNCTION__ );
+		Console.Error( ex.what() );
+	}
 
 	s_DisableGsWindow = false;
+	if( allowResume ) m_scoped_pause.AllowResume();
 }

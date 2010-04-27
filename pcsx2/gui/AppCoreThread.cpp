@@ -275,14 +275,62 @@ enum
 };
 
 // --------------------------------------------------------------------------------------
-//  SysExecEvent_FullStop
+//  BaseSysExecEvent_ScopedCore
 // --------------------------------------------------------------------------------------
-class SysExecEvent_FullStop : public SysExecEvent
+class BaseSysExecEvent_ScopedCore : public SysExecEvent
 {
 protected:
 	SynchronousActionState*		m_resume;
 	Threading::Mutex*			m_mtx_resume;
 
+public:
+	virtual ~BaseSysExecEvent_ScopedCore() throw() {}
+
+protected:
+	BaseSysExecEvent_ScopedCore( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: SysExecEvent( sync )
+	{
+		m_resume		= resume_sync;
+		m_mtx_resume	= mtx_resume;
+	}
+	
+	void _post_and_wait( IScopedCoreThread& core )
+	{
+		PostResult();
+
+		if( m_resume )
+		{
+			ScopedLock lock( m_mtx_resume );
+
+			// If the sender of the message requests a non-blocking resume, then we need
+			// to deallocate the m_sync object, since the sender will likely leave scope and
+			// invalidate it.
+			switch( m_resume->WaitForResult() )
+			{
+				case FullStop_BlockingResume:
+					if( m_sync ) m_sync->ClearResult();
+					core.AllowResume();
+				break;
+
+				case FullStop_NonblockingResume:
+					m_sync = NULL;
+					core.AllowResume();
+				break;
+
+				case FullStop_SkipResume:
+					m_sync = NULL;
+				break;
+			}
+		}
+	}
+
+};
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_FullStop
+// --------------------------------------------------------------------------------------
+class SysExecEvent_FullStop : public BaseSysExecEvent_ScopedCore
+{
 public:
 	virtual ~SysExecEvent_FullStop() throw() {}
 	SysExecEvent_FullStop* Clone() const
@@ -291,46 +339,16 @@ public:
 	}
 	
 	SysExecEvent_FullStop( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
-		: SysExecEvent( sync )
-	{
-		m_resume		= resume_sync;
-		m_mtx_resume	= mtx_resume;
-	}
+		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
 
 	SysExecEvent_FullStop( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
-		: SysExecEvent( sync )
-	{
-		m_resume		= &resume_sync;
-		m_mtx_resume	= &mtx_resume;
-	}
+		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
 	
 protected:
 	void _DoInvoke()
 	{
 		ScopedCoreThreadClose closed_core;
-		PostResult();
-
-		if( m_resume )
-		{
-			ScopedLock lock( m_mtx_resume );
-
-			// If the sender of the message requests a non-blocking resume, then we need
-			// to deallocate the m_sync object, since the sender will likely leave scope and
-			// invalidate it.
-			switch( m_resume->WaitForResult() )
-			{
-				case FullStop_SkipResume: return;
-
-				case FullStop_BlockingResume:
-					if( m_sync ) m_sync->ClearResult();
-				break;
-
-				case FullStop_NonblockingResume:
-					m_sync = NULL;
-				break;
-			}
-		}
-
+		_post_and_wait(closed_core);
 		closed_core.AllowResume();
 	}	
 };
@@ -338,12 +356,8 @@ protected:
 // --------------------------------------------------------------------------------------
 //  SysExecEvent_FullStop
 // --------------------------------------------------------------------------------------
-class SysExecEvent_Pause : public SysExecEvent
+class SysExecEvent_Pause : public BaseSysExecEvent_ScopedCore
 {
-protected:
-	SynchronousActionState*		m_resume;
-	Threading::Mutex*			m_mtx_resume;
-
 public:
 	virtual ~SysExecEvent_Pause() throw() {}
 	SysExecEvent_Pause* Clone() const
@@ -352,46 +366,16 @@ public:
 	}
 	
 	SysExecEvent_Pause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
-		: SysExecEvent( sync )
-	{
-		m_resume		= resume_sync;
-		m_mtx_resume	= mtx_resume;
-	}
+		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
 
 	SysExecEvent_Pause( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
-		: SysExecEvent( sync )
-	{
-		m_resume		= &resume_sync;
-		m_mtx_resume	= &mtx_resume;
-	}
+		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
 	
 protected:
 	void _DoInvoke()
 	{
 		ScopedCoreThreadPause paused_core;
-		PostResult();
-
-		if( m_resume )
-		{
-			ScopedLock lock( m_mtx_resume );
-
-			// If the sender of the message requests a non-blocking resume, then we need
-			// to deallocate the m_sync object, since the sender will likely leave scope and
-			// invalidate it.
-			switch( m_resume->WaitForResult() )
-			{
-				case FullStop_SkipResume: return;
-
-				case FullStop_BlockingResume:
-					if( m_sync ) m_sync->ClearResult();
-				break;
-
-				case FullStop_NonblockingResume:
-					m_sync = NULL;
-				break;
-			}
-		}
-
+		_post_and_wait(paused_core);
 		paused_core.AllowResume();
 	}	
 };

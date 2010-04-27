@@ -17,11 +17,19 @@
 #include "Mainframe.h"
 #include "GSFrame.h"
 
+// This is necessary because this stupid wxWdigets thing has implicit debug errors
+// in the FindItem call that asserts if the menu options are missing.  This is bad
+// mojo for configurable/dynamic menus. >_<
+void MainEmuFrame::EnableMenuItem( int id, bool enable )
+{
+	if( wxMenuItem* item = m_menubar.FindItem(id) )
+		item->Enable( enable );
+}
 
 static void _SaveLoadStuff( bool enabled )
 {
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_LoadStates, enabled );
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_SaveStates, enabled );
+	sMainFrame.EnableMenuItem( MenuId_Sys_LoadStates, enabled );
+	sMainFrame.EnableMenuItem( MenuId_Sys_SaveStates, enabled );
 }
 
 // Updates the enable/disable status of all System related controls: menus, toolbars,
@@ -35,11 +43,10 @@ void UI_UpdateSysControls()
 	_SaveLoadStuff( true );
 }
 
-
 void UI_DisableSysReset()
 {
 	if( wxGetApp().PostMethodMyself( UI_DisableSysReset ) ) return;
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Restart, false );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
 
 	_SaveLoadStuff( false );
 }
@@ -48,16 +55,16 @@ void UI_DisableSysShutdown()
 {
 	if( wxGetApp().PostMethodMyself( &UI_DisableSysShutdown ) ) return;
 
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Restart, false );
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Shutdown, false );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, false );
 }
 
 void UI_EnableSysShutdown()
 {
 	if( wxGetApp().PostMethodMyself( &UI_EnableSysShutdown ) ) return;
 
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Restart, true );
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Shutdown, true );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, true );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, true );
 }
 
 
@@ -65,16 +72,16 @@ void UI_DisableSysActions()
 {
 	if( wxGetApp().PostMethodMyself( &UI_DisableSysShutdown ) ) return;
 
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Restart, false );
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Shutdown, false );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, false );
 }
 
 void UI_EnableSysActions()
 {
 	if( wxGetApp().PostMethodMyself( &UI_EnableSysShutdown ) ) return;
 
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Restart, true );
-	sMainFrame.GetMenuBar()->Enable( MenuId_Sys_Shutdown, true );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, true );
+	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, true );
 }
 
 
