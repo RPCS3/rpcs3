@@ -39,8 +39,7 @@
  * See the comments at the top of pthread_cond_wait.c.
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 static INLINE int
 ptw32_cond_unblock (pthread_cond_t * cond, int unblockAll)

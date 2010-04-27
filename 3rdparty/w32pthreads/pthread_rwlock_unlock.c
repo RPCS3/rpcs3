@@ -34,11 +34,8 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include <errno.h>
-#include <limits.h>
+#include "ptw32pch.h"
 
-#include "pthread.h"
-#include "implement.h"
 
 int
 pthread_rwlock_unlock (pthread_rwlock_t * rwlock)

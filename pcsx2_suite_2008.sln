@@ -55,7 +55,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "3rdparty\bzip2\bzi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LilyPad", "plugins\LilyPad\LilyPad_VC2008.vcproj", "{E4081455-398C-4610-A87C-90A8A7D72DC3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads.v3", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads.v4", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "plugins\zerospu2\Windows\ZeroSPU2_2008.vcproj", "{7F059854-568D-4E08-9D00-1E78E203E4DC}"
 	ProjectSection(ProjectDependencies) = postProject

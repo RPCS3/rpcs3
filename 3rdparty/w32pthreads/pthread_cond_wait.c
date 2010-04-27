@@ -258,8 +258,7 @@
  *
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 /*
  * Arguments for cond_wait_cleanup, since we can only pass a

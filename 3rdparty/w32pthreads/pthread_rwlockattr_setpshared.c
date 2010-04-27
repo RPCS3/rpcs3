@@ -34,11 +34,10 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+#include "ptw32pch.h"
+
 #include <errno.h>
 #include <limits.h>
-
-#include "pthread.h"
-#include "implement.h"
 
 int
 pthread_rwlockattr_setpshared (pthread_rwlockattr_t * attr, int pshared)

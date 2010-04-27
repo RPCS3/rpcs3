@@ -34,11 +34,18 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include <errno.h>
-#include <limits.h>
+#include "ptw32pch.h"
 
-#include "pthread.h"
-#include "implement.h"
+// FIXME : This function can return EBUSY when the rwlock is available for reading.
+// How?  Because it uses a single "mtxExclusiveAccess" lock to wrangle control of the
+// RwLock's internals -- so if two read locks are attempted in parallel, this function
+// will falsely report the lock as being busy even though both locks should be allowed
+// access to the object.
+//
+// (note: double check this against OpenGroup behavior definitions -- though even if
+//  OpenGroup 'allows' this behavior, we should probably strive to avoid it unless
+//  it's explicitly "expected", since programs would typically have much more desirable
+//  behavior if simultaneous read locks do not EBUSY.)
 
 int
 pthread_rwlock_tryrdlock (pthread_rwlock_t * rwlock)
