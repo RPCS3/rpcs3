@@ -218,6 +218,8 @@ protected:
 	void sio2Freeze();
 
 	void gifPathFreeze();		// called by gsFreeze
+	
+	void deci2Freeze();
 };
 
 // --------------------------------------------------------------------------------------

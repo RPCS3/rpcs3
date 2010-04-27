@@ -204,6 +204,10 @@ void SaveStateBase::FreezeRegisters()
 	sio2Freeze();
 	cdrFreeze();
 	cdvdFreeze();
+	
+	// technically this is HLE BIOS territory, but we don't have enough such stuff
+	// to merit an HLE Bios sub-section... yet.
+	deci2Freeze();
 
 	if( IsLoading() )
 		PostLoadPrep();

@@ -59,68 +59,175 @@ static __forceinline s64 _add32_Overflow( s32 x, s32 y )
 }
 
 
-namespace R5900
+const R5900::OPCODE& R5900::GetCurrentInstruction()
 {
-	const OPCODE& GetCurrentInstruction()
+	const OPCODE* opcode = &R5900::OpcodeTables::tbl_Standard[_Opcode_];
+
+	while( opcode->getsubclass != NULL )
+		opcode = &opcode->getsubclass();
+
+	return *opcode;
+}
+
+const char * const R5900::bios[256]=
+{
+//0x00
+	"RFU000_FullReset", "ResetEE",				"SetGsCrt",				"RFU003",
+	"Exit",				"RFU005",				"LoadExecPS2",			"ExecPS2",
+	"RFU008",			"RFU009",				"AddSbusIntcHandler",	"RemoveSbusIntcHandler",
+	"Interrupt2Iop",	"SetVTLBRefillHandler", "SetVCommonHandler",	"SetVInterruptHandler",
+//0x10
+	"AddIntcHandler",	"RemoveIntcHandler",	"AddDmacHandler",		"RemoveDmacHandler",
+	"_EnableIntc",		"_DisableIntc",			"_EnableDmac",			"_DisableDmac",
+	"_SetAlarm",		"_ReleaseAlarm",		"_iEnableIntc",			"_iDisableIntc",
+	"_iEnableDmac",		"_iDisableDmac",		"_iSetAlarm",			"_iReleaseAlarm",
+//0x20
+	"CreateThread",			"DeleteThread",		"StartThread",			"ExitThread",
+	"ExitDeleteThread",		"TerminateThread",	"iTerminateThread",		"DisableDispatchThread",
+	"EnableDispatchThread",		"ChangeThreadPriority", "iChangeThreadPriority",	"RotateThreadReadyQueue",
+	"iRotateThreadReadyQueue",	"ReleaseWaitThread",	"iReleaseWaitThread",		"GetThreadId",
+//0x30
+	"ReferThreadStatus","iReferThreadStatus",	"SleepThread",		"WakeupThread",
+	"_iWakeupThread",   "CancelWakeupThread",	"iCancelWakeupThread",	"SuspendThread",
+	"iSuspendThread",   "ResumeThread",		"iResumeThread",	"JoinThread",
+	"RFU060",	    "RFU061",			"EndOfHeap",		 "RFU063",
+//0x40
+	"CreateSema",	    "DeleteSema",	"SignalSema",		"iSignalSema",
+	"WaitSema",	    "PollSema",		"iPollSema",		"ReferSemaStatus",
+	"iReferSemaStatus", "RFU073",		"SetOsdConfigParam", 	"GetOsdConfigParam",
+	"GetGsHParam",	    "GetGsVParam",	"SetGsHParam",		"SetGsVParam",
+//0x50
+	"RFU080_CreateEventFlag",	"RFU081_DeleteEventFlag",
+	"RFU082_SetEventFlag",		"RFU083_iSetEventFlag",
+	"RFU084_ClearEventFlag",	"RFU085_iClearEventFlag",
+	"RFU086_WaitEventFlag",		"RFU087_PollEventFlag",
+	"RFU088_iPollEventFlag",	"RFU089_ReferEventFlagStatus",
+	"RFU090_iReferEventFlagStatus", "RFU091_GetEntryAddress",
+	"EnableIntcHandler_iEnableIntcHandler",
+	"DisableIntcHandler_iDisableIntcHandler",
+	"EnableDmacHandler_iEnableDmacHandler",
+	"DisableDmacHandler_iDisableDmacHandler",
+//0x60
+	"KSeg0",				"EnableCache",	"DisableCache",			"GetCop0",
+	"FlushCache",			"RFU101",		"CpuConfig",			"iGetCop0",
+	"iFlushCache",			"RFU105",		"iCpuConfig", 			"sceSifStopDma",
+	"SetCPUTimerHandler",	"SetCPUTimer",	"SetOsdConfigParam2",	"SetOsdConfigParam2",
+//0x70
+	"GsGetIMR_iGsGetIMR",				"GsGetIMR_iGsPutIMR",	"SetPgifHandler", 				"SetVSyncFlag",
+	"RFU116",							"print", 				"sceSifDmaStat_isceSifDmaStat", "sceSifSetDma_isceSifSetDma",
+	"sceSifSetDChain_isceSifSetDChain", "sceSifSetReg",			"sceSifGetReg",					"ExecOSD",
+	"Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize",
+};
+
+static u32 *deci2addr = NULL;
+static u32 deci2handler;
+static char deci2buffer[256];
+
+void Deci2Reset()
+{
+	deci2handler	= NULL;
+	deci2addr		= NULL;
+	memzero( deci2buffer );
+}
+
+void SaveStateBase::deci2Freeze()
+{
+	FreezeTag( "deci2" );
+
+	Freeze( deci2addr );
+	Freeze( deci2handler );
+	Freeze( deci2buffer );
+}
+
+/*
+ *	int Deci2Call(int, u_int *);
+ *
+ *  HLE implementation of the Deci2 interface.
+ */
+
+static int __Deci2Call(int call, u32 *addr)
+{
+	if (call > 0x10)
+		return -1;
+
+	switch (call)
 	{
-		const OPCODE* opcode = &R5900::OpcodeTables::tbl_Standard[_Opcode_];
+		case 1: // open
+			if( addr != NULL )
+			{
+				deci2addr = (u32*)PSM(addr[1]);
+				BIOS_LOG("deci2open: %x,%x,%x,%x",
+						 addr[3], addr[2], addr[1], addr[0]);
+				deci2handler = addr[2];
+			}
+			else
+			{
+				deci2handler = NULL;
+				DevCon.Warning( "Deci2Call.Open > NULL address ignored." );
+			}
+			return 1;
 
-		while( opcode->getsubclass != NULL )
-			opcode = &opcode->getsubclass();
+		case 2: // close
+			deci2addr = NULL;
+			deci2handler = NULL;
+			return 1;
 
-		return *opcode;
+		case 3: // reqsend
+		{
+			char reqaddr[128];
+			if( addr != NULL )
+				sprintf( reqaddr, "%x %x %x %x", addr[3], addr[2], addr[1], addr[0] );
+
+			if (deci2addr == NULL) return 1;
+
+			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x",
+				(( addr == NULL ) ? "NULL" : reqaddr),
+				deci2addr[7], deci2addr[6], deci2addr[5], deci2addr[4],
+				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
+
+//			cpuRegs.pc = deci2handler;
+//			Console.WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
+
+			if (deci2addr[1]>0xc){
+				// this looks horribly wrong, justification please?
+				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc, false);
+				if( pdeciaddr == NULL )
+					pdeciaddr = (u8*)PSM(deci2addr[4]+0xc);
+				else
+					pdeciaddr += (deci2addr[4]+0xc) % 16;
+
+				const int copylen = std::min<uint>(255, deci2addr[1]-0xc);
+				memcpy(deci2buffer, pdeciaddr, copylen );
+				deci2buffer[255] = '\0';
+
+				if( EmuConfig.Log.Deci2 )
+					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
+			}
+			deci2addr[3] = 0;
+			return 1;
+		}
+
+		case 4: // poll
+			if( addr != NULL )
+				BIOS_LOG("deci2poll: %x,%x,%x,%x\n", addr[3], addr[2], addr[1], addr[0]);
+			return 1;
+
+		case 5: // exrecv
+			return 1;
+
+		case 6: // exsend
+			return 1;
+
+		case 0x10://kputs
+			if( addr != NULL && EmuConfig.Log.Deci2 )
+				Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString((char*)PSM(*addr)).c_str() );
+			return 1;
 	}
 
-	const char * const bios[256]=
-	{
-	//0x00
-		"RFU000_FullReset", "ResetEE",				"SetGsCrt",				"RFU003",
-		"Exit",				"RFU005",				"LoadExecPS2",			"ExecPS2",
-		"RFU008",			"RFU009",				"AddSbusIntcHandler",	"RemoveSbusIntcHandler",
-		"Interrupt2Iop",	"SetVTLBRefillHandler", "SetVCommonHandler",	"SetVInterruptHandler",
-	//0x10
-		"AddIntcHandler",	"RemoveIntcHandler",	"AddDmacHandler",		"RemoveDmacHandler",
-		"_EnableIntc",		"_DisableIntc",			"_EnableDmac",			"_DisableDmac",
-		"_SetAlarm",		"_ReleaseAlarm",		"_iEnableIntc",			"_iDisableIntc",
-		"_iEnableDmac",		"_iDisableDmac",		"_iSetAlarm",			"_iReleaseAlarm",
-	//0x20
-		"CreateThread",			"DeleteThread",		"StartThread",			"ExitThread",
-		"ExitDeleteThread",		"TerminateThread",	"iTerminateThread",		"DisableDispatchThread",
-		"EnableDispatchThread",		"ChangeThreadPriority", "iChangeThreadPriority",	"RotateThreadReadyQueue",
-		"iRotateThreadReadyQueue",	"ReleaseWaitThread",	"iReleaseWaitThread",		"GetThreadId",
-	//0x30
-		"ReferThreadStatus","iReferThreadStatus",	"SleepThread",		"WakeupThread",
-		"_iWakeupThread",   "CancelWakeupThread",	"iCancelWakeupThread",	"SuspendThread",
-		"iSuspendThread",   "ResumeThread",		"iResumeThread",	"JoinThread",
-		"RFU060",	    "RFU061",			"EndOfHeap",		 "RFU063",
-	//0x40
-		"CreateSema",	    "DeleteSema",	"SignalSema",		"iSignalSema",
-		"WaitSema",	    "PollSema",		"iPollSema",		"ReferSemaStatus",
-		"iReferSemaStatus", "RFU073",		"SetOsdConfigParam", 	"GetOsdConfigParam",
-		"GetGsHParam",	    "GetGsVParam",	"SetGsHParam",		"SetGsVParam",
-	//0x50
-		"RFU080_CreateEventFlag",	"RFU081_DeleteEventFlag",
-		"RFU082_SetEventFlag",		"RFU083_iSetEventFlag",
-		"RFU084_ClearEventFlag",	"RFU085_iClearEventFlag",
-		"RFU086_WaitEventFlag",		"RFU087_PollEventFlag",
-		"RFU088_iPollEventFlag",	"RFU089_ReferEventFlagStatus",
-		"RFU090_iReferEventFlagStatus", "RFU091_GetEntryAddress",
-		"EnableIntcHandler_iEnableIntcHandler",
-		"DisableIntcHandler_iDisableIntcHandler",
-		"EnableDmacHandler_iEnableDmacHandler",
-		"DisableDmacHandler_iDisableDmacHandler",
-	//0x60
-		"KSeg0",				"EnableCache",	"DisableCache",			"GetCop0",
-		"FlushCache",			"RFU101",		"CpuConfig",			"iGetCop0",
-		"iFlushCache",			"RFU105",		"iCpuConfig", 			"sceSifStopDma",
-		"SetCPUTimerHandler",	"SetCPUTimer",	"SetOsdConfigParam2",	"SetOsdConfigParam2",
-	//0x70
-		"GsGetIMR_iGsGetIMR",				"GsGetIMR_iGsPutIMR",	"SetPgifHandler", 				"SetVSyncFlag",
-		"RFU116",							"print", 				"sceSifDmaStat_isceSifDmaStat", "sceSifSetDma_isceSifSetDma",
-		"sceSifSetDChain_isceSifSetDChain", "sceSifSetReg",			"sceSifGetReg",					"ExecOSD",
-		"Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize",
-	};
+	return 0;
+}
 
+namespace R5900 {
 namespace Interpreter {
 namespace OpcodeImpl {
 
@@ -732,94 +839,6 @@ void MOVN() {
 * Format:  OP                                            *
 *********************************************************/
 
-/*
-int __Deci2Call(int call, u32 *addr);
-*/
-u32 *deci2addr = NULL;
-u32 deci2handler;
-char deci2buffer[256];
-
-/*
- *	int Deci2Call(int, u_int *);
- *
- *  HLE implementation of the Deci2 interface.
- */
-
-int __Deci2Call(int call, u32 *addr)
-{
-	if (call > 0x10)
-		return -1;
-
-	switch (call)
-	{
-		case 1: // open
-			if( addr != NULL )
-			{
-				deci2addr = (u32*)PSM(addr[1]);
-				BIOS_LOG("deci2open: %x,%x,%x,%x",
-						 addr[3], addr[2], addr[1], addr[0]);
-				deci2handler = addr[2];
-			}
-			else
-			{
-				deci2handler = NULL;
-				DevCon.Warning( "Deci2Call.Open > NULL address ignored." );
-			}
-			return 1;
-
-		case 2: // close
-			return 1;
-
-		case 3: // reqsend
-		{
-			char reqaddr[128];
-			if( addr != NULL )
-				sprintf( reqaddr, "%x %x %x %x", addr[3], addr[2], addr[1], addr[0] );
-
-			BIOS_LOG("deci2reqsend: %s: deci2addr: %x,%x,%x,buf=%x %x,%x,len=%x,%x",
-				(( addr == NULL ) ? "NULL" : reqaddr),
-				deci2addr[7], deci2addr[6], deci2addr[5], deci2addr[4],
-				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
-
-//			cpuRegs.pc = deci2handler;
-//			Console.WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
-			if (deci2addr == NULL) return 1;
-			if (deci2addr[1]>0xc){
-				// this looks horribly wrong, justification please?
-				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc, false);
-				if( pdeciaddr == NULL )
-					pdeciaddr = (u8*)PSM(deci2addr[4]+0xc);
-				else
-					pdeciaddr += (deci2addr[4]+0xc) % 16;
-				memcpy(deci2buffer, pdeciaddr, deci2addr[1]-0xc);
-				deci2buffer[(deci2addr[1]-0xc>=255) ? 255 : (deci2addr[1]-0xc)] = '\0';
-
-				if( EmuConfig.Log.Deci2 )
-					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
-			}
-			deci2addr[3] = 0;
-			return 1;
-		}
-
-		case 4: // poll
-			if( addr != NULL )
-				BIOS_LOG("deci2poll: %x,%x,%x,%x\n", addr[3], addr[2], addr[1], addr[0]);
-			return 1;
-
-		case 5: // exrecv
-			return 1;
-
-		case 6: // exsend
-			return 1;
-
-		case 0x10://kputs
-			if( addr != NULL && EmuConfig.Log.Deci2 )
-				Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString((char*)PSM(*addr)).c_str() );
-			return 1;
-	}
-
-	return 0;
-}
 
 // This function is the only one that uses Sifcmd.h in Pcsx2.
 #include "Sifcmd.h"
@@ -833,7 +852,7 @@ void SYSCALL()
 	else
 		call = cpuRegs.GPR.n.v1.UC[0];
 
-	BIOS_LOG("Bios call: %s (%x)", bios[call], call);
+	BIOS_LOG("Bios call: %s (%x)", R5900::bios[call], call);
 
 	if (call == 0x7c)
 	{
@@ -862,7 +881,7 @@ void SYSCALL()
 			dmat = (t_sif_dma_transfer*)PSM(addr);
 
 			BIOS_LOG("bios_%s: n_transfer=%d, size=%x, attr=%x, dest=%x, src=%x",
-				bios[cpuRegs.GPR.n.v1.UC[0]], n_transfer,
+				R5900::bios[cpuRegs.GPR.n.v1.UC[0]], n_transfer,
 				dmat->size, dmat->attr,
 				dmat->dest, dmat->src);
 		}

@@ -80,6 +80,9 @@ void cpuReset()
 	vif1Reset();
 	rcntInit();
 	psxReset();
+	
+	extern void Deci2Reset();		// lazy, no good header for it yet.
+	Deci2Reset();
 
 	g_GameStarted = false;
 	g_SkipBiosHack = EmuConfig.UseBOOT2Injection;
