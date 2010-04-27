@@ -1131,7 +1131,9 @@ void PluginManager::Close( PluginsEnum_t pid )
 	pxAssume( (uint)pid < PluginId_Count );
 
 	if( !IsOpen(pid) ) return;
-	Console.Indent().WriteLn( "Closing %s", tbl_PluginInfo[pid].shortname );
+	
+	if( !GetMTGS().IsSelf() )		// stop the spam!
+		Console.Indent().WriteLn( "Closing %s", tbl_PluginInfo[pid].shortname );
 
 	switch( pid )
 	{

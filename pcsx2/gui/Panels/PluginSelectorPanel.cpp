@@ -37,13 +37,13 @@ using namespace Threading;
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(pxEVT_EnumeratedNext, -1)
-	DECLARE_EVENT_TYPE(pxEVT_EnumerationFinished, -1)
+	DECLARE_EVENT_TYPE(pxEvt_EnumerationFinished, -1)
 	DECLARE_EVENT_TYPE(pxEVT_ShowStatusBar, -1)
 	DECLARE_EVENT_TYPE(pxEvt_SysExecEventComplete, -1)
 END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(pxEVT_EnumeratedNext)
-DEFINE_EVENT_TYPE(pxEVT_EnumerationFinished);
+DEFINE_EVENT_TYPE(pxEvt_EnumerationFinished);
 DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
 DEFINE_EVENT_TYPE(pxEvt_SysExecEventComplete)
 
@@ -258,6 +258,7 @@ void SysExecEvent_ApplyPlugins::_DoInvoke()
 	CorePlugins.Shutdown();
 	CorePlugins.Unload();
 	LoadPluginsImmediate();
+	CoreThread.RecoverState();
 
 	wxCommandEvent tevt( pxEvt_SysExecEventComplete );
 	m_dialog->GetEventHandler()->AddPendingEvent( tevt );
@@ -419,7 +420,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
 
 	Connect( pxEVT_EnumeratedNext,				wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
-	Connect( pxEVT_EnumerationFinished,			wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
+	Connect( pxEvt_EnumerationFinished,			wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
 	Connect( pxEVT_ShowStatusBar,				wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
 	Connect( wxEVT_COMMAND_COMBOBOX_SELECTED,	wxCommandEventHandler( PluginSelectorPanel::OnPluginSelected ) );
 
@@ -595,7 +596,11 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 
 	m_FileList.SwapPtr( pluginlist );
 
-	m_StatusPanel->SetGaugeLength( pluggers );
+	// set the gague length a little shorter than the plugin count.  2 reasons:
+	//  * some of the plugins might be duds.
+	//  * on high end machines and Win7, the statusbar lags a lot and never gets to 100% before being hidden.
+	
+	m_StatusPanel->SetGaugeLength( std::max( 1, (pluggers-1) - (pluggers/8) ) );
 
 	return validated;
 }
@@ -706,7 +711,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 		const int nextidx = evtidx+1;
 		if( nextidx == m_FileList->Count() )
 		{
-			wxCommandEvent done( pxEVT_EnumerationFinished );
+			wxCommandEvent done( pxEvt_EnumerationFinished );
 			GetEventHandler()->AddPendingEvent( done );
 		}
 		else
@@ -808,12 +813,11 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 		// speed isn't critical here, but the pretty status bar sure is.  Sleep off
 		// some brief cycles to give the status bar time to refresh.
 
-		Sleep( 2 );
-
+		Sleep( 5 );
 		//Sleep(150);		// uncomment this to slow down the selector, for debugging threading.
 	}
 
-	wxCommandEvent done( pxEVT_EnumerationFinished );
+	wxCommandEvent done( pxEvt_EnumerationFinished );
 	done.SetClientData( this );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 

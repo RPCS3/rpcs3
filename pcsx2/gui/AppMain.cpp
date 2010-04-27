@@ -562,11 +562,13 @@ GSFrame& Pcsx2App::GetGsFrame() const
 	return *gsFrame;
 }
 
+// NOTE: Plugins are *not* applied by this function.  Changes to plugins need to handled
+// manually.  The PluginSelectorPanel does this, for example.
 void AppApplySettings( const AppConfig* oldconf )
 {
 	AffinityAssert_AllowFrom_MainUI();
 
-	ScopedCoreThreadClose suspend_core;
+	ScopedCoreThreadPause paused_core;
 
 	g_Conf->Folders.ApplyDefaults();
 
@@ -601,7 +603,7 @@ void AppApplySettings( const AppConfig* oldconf )
 	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
 	sApp.DispatchEvent( AppStatus_SettingsApplied );
 
-	suspend_core.AllowResume();
+	paused_core.AllowResume();
 }
 
 

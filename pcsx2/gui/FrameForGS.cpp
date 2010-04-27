@@ -334,11 +334,15 @@ bool GSFrame::Show( bool shown )
 void GSFrame::AppStatusEvent_OnSettingsApplied()
 {
 	if( IsBeingDeleted() ) return;
-	ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
-	Show( !g_Conf->GSWindow.CloseOnEsc || !CorePlugins.IsOpen(PluginId_GS) || !SysHasValidState() );
+
+	if( g_Conf->GSWindow.CloseOnEsc )
+	{
+		if( IsShown() && !CorePlugins.IsOpen(PluginId_GS) )
+			Show( false );
+	}
 
 	if( wxStaticText* label = GetLabel_OutputDisabled() )
-		label->Show( !EmuConfig.GS.DisableOutput );
+		label->Show( EmuConfig.GS.DisableOutput );
 }
 
 GSPanel* GSFrame::GetViewport()
