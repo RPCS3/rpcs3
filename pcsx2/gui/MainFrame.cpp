@@ -269,10 +269,6 @@ static int GetPluginMenuId_Name( PluginsEnum_t pid )
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
     : wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) )
 
-// 	, m_listener_plugins	( this )
-// 	, m_listener_corethread	( this )
-// 	, m_listener_appstatus	( this )
-
 	, m_statusbar( *CreateStatusBar(2, 0) )
 	, m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() )
 
@@ -365,11 +361,11 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	// ------------------------------------------------------------------------
 	// Some of the items in the System menu are configured by the UpdateCoreStatus() method.
 	
-	m_menuSys.Append(MenuId_Boot_CDVD,			_("Initializing..."));
+	m_menuSys.Append(MenuId_Boot_CDVD,		_("Initializing..."));
 
-	m_menuSys.Append(MenuId_Boot_CDVD2,			_("Initializing..."));
+	m_menuSys.Append(MenuId_Boot_CDVD2,		_("Initializing..."));
 
-	m_menuSys.Append(MenuId_Boot_ELF,	_("Run ELF..."),
+	m_menuSys.Append(MenuId_Boot_ELF,		_("Run ELF..."),
 		_("For running raw PS2 binaries directly"));
 
 	m_menuSys.AppendSeparator();
@@ -489,6 +485,12 @@ MainEmuFrame::~MainEmuFrame() throw()
 		sApp.PostAppMethod( &Pcsx2App::DetectCpuAndUserMode );
 		sApp.WipeUserModeSettings();
 	}
+}
+
+void MainEmuFrame::DoGiveHelp(const wxString& text, bool show)
+{
+	_parent::DoGiveHelp(text, show);
+	wxGetApp().GetProgramLog()->DoGiveHelp(text, show);
 }
 
 // ----------------------------------------------------------------------------

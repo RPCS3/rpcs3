@@ -106,6 +106,8 @@ class MainEmuFrame : public wxFrame,
 	public EventListener_CoreThread,
 	public EventListener_AppStatus
 {
+	typedef wxFrame _parent;
+	
 protected:
 	bool			m_RestartEmuOnDelete;
 
@@ -146,6 +148,8 @@ public:
 	void EnableMenuItem( int id, bool enable );
 
 protected:
+	void DoGiveHelp(const wxString& text, bool show);
+
 	void ApplySettings();
 	void ApplyCoreStatus();
 	void SaveEmuOptions();

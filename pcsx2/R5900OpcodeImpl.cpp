@@ -125,8 +125,8 @@ static char deci2buffer[256];
 
 void Deci2Reset()
 {
-	deci2handler	= NULL;
-	deci2addr		= NULL;
+	deci2handler	= 0;
+	deci2addr		= 0;
 	memzero( deci2buffer );
 }
 
