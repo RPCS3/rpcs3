@@ -133,7 +133,13 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 //   (anything else) - Standard swap, no reset.  (hotswap!)
 wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, const wxString& isoFilename, const wxString& descpart1 )
 {
-	wxWindowID result = wxID_RESET;
+	wxWindowID result = wxID_CANCEL;
+
+	if( g_Conf->CdvdSource == CDVDsrc_Iso && isoFilename == g_Conf->CurrentIso )
+	{
+		core_control.AllowResume();
+		return result;
+	}
 
 	if( SysHasValidState() )
 	{
@@ -146,24 +152,26 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		);
 
 		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootSwapIso" );
+		if( result == wxID_CANCEL )
+		{
+			core_control.AllowResume();
+			return result;
+		}
 	}
 
-	if( result != wxID_CANCEL )
+	SysUpdateIsoSrcFile( isoFilename );
+	if( result != wxID_RESET )
 	{
-		SysUpdateIsoSrcFile( isoFilename );
-		if( result != wxID_RESET )
-		{
-			Console.Indent().WriteLn( "HotSwapping to new ISO src image!" );
-			g_Conf->CdvdSource = CDVDsrc_Iso;
-			sMainFrame.UpdateIsoSrcSelection();
-			CoreThread.ChangeCdvdSource();
-			core_control.AllowResume();
-		}
-		else
-		{
-			core_control.DisallowResume();
-			sApp.SysExecute( CDVDsrc_Iso );
-		}
+		Console.Indent().WriteLn( "HotSwapping to new ISO src image!" );
+		g_Conf->CdvdSource = CDVDsrc_Iso;
+		sMainFrame.UpdateIsoSrcSelection();
+		CoreThread.ChangeCdvdSource();
+		core_control.AllowResume();
+	}
+	else
+	{
+		core_control.DisallowResume();
+		sApp.SysExecute( CDVDsrc_Iso );
 	}
 
 	return result;
@@ -188,23 +196,27 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 		);
 
 		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootSwapIso" );
+
+		if( result == wxID_CANCEL )
+		{
+			core.AllowResume();
+			return result;
+		}
 	}
 
-	if( result != wxID_CANCEL )
+	CDVD_SourceType oldsrc = g_Conf->CdvdSource;
+	g_Conf->CdvdSource = newsrc;
+
+	if( result != wxID_RESET )
 	{
-		if( result != wxID_RESET )
-		{
-			Console.Indent().WriteLn( L"(CdvdSource) HotSwapping CDVD source types from %s to %s.", CDVD_SourceLabels[g_Conf->CdvdSource], CDVD_SourceLabels[newsrc] );
-			g_Conf->CdvdSource = newsrc;
-			CoreThread.ChangeCdvdSource();
-			core.AllowResume();
-		}
-		else
-		{
-			core.DisallowResume();
-			g_Conf->CdvdSource = newsrc;
-			sApp.SysExecute( newsrc );
-		}
+		Console.Indent().WriteLn( L"(CdvdSource) HotSwapping CDVD source types from %s to %s.", CDVD_SourceLabels[oldsrc], CDVD_SourceLabels[newsrc] );
+		CoreThread.ChangeCdvdSource();
+		core.AllowResume();
+	}
+	else
+	{
+		core.DisallowResume();
+		sApp.SysExecute( g_Conf->CdvdSource );
 	}
 
 	return result;
@@ -341,12 +353,13 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	ScopedCoreThreadPopup core;
 	wxString isofile;
 
-	if( !_DoSelectIsoBrowser(isofile) ||
-		(wxID_CANCEL == SwapOrReset_Iso(this, core, isofile, GetMsg_IsoImageChanged())) )
+	if( !_DoSelectIsoBrowser(isofile) )
 	{
 		core.AllowResume();
 		return;
 	}
+	
+	SwapOrReset_Iso(this, core, isofile, GetMsg_IsoImageChanged());
 }
 
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )

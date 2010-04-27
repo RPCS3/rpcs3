@@ -162,7 +162,7 @@ void pxEvtHandler::PostEvent( SysExecEvent* evt )
 
 	ScopedLock synclock( m_mtx_pending );
 	
-	DbgCon.WriteLn( L"(%s) Posting event: %s  (queue count=%d)", GetEventHandlerName().c_str(), evt->GetEventName().c_str(), m_pendingEvents.size() );
+	//DbgCon.WriteLn( L"(%s) Posting event: %s  (queue count=%d)", GetEventHandlerName().c_str(), evt->GetEventName().c_str(), m_pendingEvents.size() );
 	
 	m_pendingEvents.push_back( evt );
 	if( m_pendingEvents.size() == 1)

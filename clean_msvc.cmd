@@ -13,7 +13,6 @@
 
 del /s "%~dp0\*.ncb"
 del /s "%~dp0\*.obj"
-del /s "%~dp0\*.tmp"
 del /s "%~dp0\bin\*.ilk"
 del /s "%~dp0\*.idb"
 del /s "%~dp0\*.bsc"
@@ -22,3 +21,9 @@ del /s "%~dp0\*.pch"
 del /s "%~dp0\*.pdb"
 
 del /s /q "%~dp0\deps"
+
+:: These two can't be used currently because they match unwanted 4+ letter extensions, such
+:: as *.resx and *.tmpl ... wow, stupid. >_<
+
+:: del /s "%~dp0\*.tmp"
+:: del /s "%~dp0\*.res"
