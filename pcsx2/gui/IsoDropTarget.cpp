@@ -81,6 +81,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 
 		if( confirmed )
 		{
+			g_Conf->EmuOptions.UseBOOT2Injection = true;
 			sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
 		}
 		else

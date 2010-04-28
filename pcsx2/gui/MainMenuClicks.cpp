@@ -383,6 +383,7 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent&)
 	ScopedCoreThreadClose stopped_core;
 	if( _DoSelectELFBrowser() )
 	{
+		g_Conf->EmuOptions.UseBOOT2Injection = true;
 		sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
 	}
 

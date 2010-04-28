@@ -597,6 +597,7 @@ void __fastcall eeloadReplaceOSDSYS()
 
 	if (!elf_override.IsEmpty()) {
 		loadElfFile(elf_override);
+		eeGameStarting();
 		return;
 	}
 

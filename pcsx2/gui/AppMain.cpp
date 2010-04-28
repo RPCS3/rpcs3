@@ -844,6 +844,7 @@ class SysExecuteEvent : public SysExecEvent
 {
 protected:
 	bool				m_UseCDVDsrc;
+	bool				m_UseELFOverride;
 	CDVD_SourceType		m_cdvdsrc_type;
 	wxString			m_elf_override;
 
@@ -862,21 +863,17 @@ public:
 	}
 	
 	SysExecuteEvent()
+		: m_UseCDVDsrc(false)
+		, m_UseELFOverride(false)
 	{
-		m_UseCDVDsrc = false;
-	}
-
-	SysExecuteEvent( const wxString& elf_override )
-		: m_elf_override( elf_override )
-	{
-		m_UseCDVDsrc = false;
 	}
 
 	SysExecuteEvent( CDVD_SourceType srctype, const wxString& elf_override )
-		: m_elf_override( elf_override )
+		: m_UseCDVDsrc(true)
+		, m_UseELFOverride(true)
+		, m_cdvdsrc_type(srctype)
+		, m_elf_override( elf_override )
 	{
-		m_cdvdsrc_type = srctype;
-		m_UseCDVDsrc = true;
 	}
 
 protected:
@@ -897,7 +894,7 @@ protected:
 		else if( CDVD == NULL )
 			CDVDsys_ChangeSource( CDVDsrc_NoDisc );
 
-		if( !CoreThread.HasValidState() )
+		if( m_UseELFOverride && !CoreThread.HasValidState() )
 			CoreThread.SetElfOverride( m_elf_override );
 
 		CoreThread.Resume();
@@ -908,7 +905,7 @@ protected:
 // configured CDVD source device.
 void Pcsx2App::SysExecute()
 {
-	SysExecutorThread.PostEvent( new SysExecuteEvent(CoreThread.GetElfOverride()) );
+	SysExecutorThread.PostEvent( new SysExecuteEvent() );
 }
 
 // Executes the specified cdvd source and optional elf file.  This command performs a
@@ -916,7 +913,7 @@ void Pcsx2App::SysExecute()
 // sources.
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override )
 {
-	SysExecutorThread.PostEvent( new SysExecuteEvent(cdvdsrc, CoreThread.GetElfOverride()) );
+	SysExecutorThread.PostEvent( new SysExecuteEvent(cdvdsrc, elf_override) );
 }
 
 // --------------------------------------------------------------------------------------

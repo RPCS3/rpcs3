@@ -275,8 +275,6 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( EnablePatches );
 	IniBitBool( ConsoleToStdio );
 
-	IniBitBool( UseBOOT2Injection );
-
 	IniBitBool( McdEnableEjection );
 	IniBitBool( MultitapPort0_Enabled );
 	IniBitBool( MultitapPort1_Enabled );
