@@ -43,6 +43,8 @@ void SaveConfig()
 	fprintf(f, "gamesettings = %x\n", conf.gamesettings); //u32
 	fprintf(f, "width = %x\n", conf.width); //u32
 	fprintf(f, "height = %x\n", conf.height); //u32
+	fprintf(f, "x = %x\n", conf.x); //u32
+	fprintf(f, "y = %x\n", conf.y); //u32
 	fprintf(f, "log = %x\n", conf.log); //u32
 	fclose(f);
 }
@@ -57,6 +59,8 @@ void LoadConfig()
 	conf.bilinear = 1;
 	conf.width = 640;
 	conf.height = 480;
+	conf.x = 0;
+	conf.y = 0;
 	conf.aa = 0;
 	conf.log = 1;
 
@@ -76,6 +80,8 @@ void LoadConfig()
 	err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
 	err = fscanf(f, "width = %x\n", &conf.width);//u32
 	err = fscanf(f, "height = %x\n", &conf.height);//u32
+	err = fscanf(f, "x = %x\n", &conf.x);//u32
+	err = fscanf(f, "y = %x\n", &conf.y);//u32
 	err = fscanf(f, "log = %x\n", &conf.log);//u32
 	fclose(f);
 
@@ -111,6 +117,11 @@ void LoadConfig()
 	{
 		conf.width = 640;
 		conf.height = 480;
+	}
+	if( conf.x <= 0 || conf.y <= 0 )
+	{
+		conf.x = 0;
+		conf.y = 0;
 	}
 }
 

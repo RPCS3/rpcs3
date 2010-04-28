@@ -60,6 +60,9 @@ bool GLWindow::ReleaseWindow()
 
 void GLWindow::CloseWindow()
 {
+	conf.x = x;
+	conf.y = y;
+	SaveConfig();
     if ( glDisplay != NULL )
     {
 		XCloseDisplay(glDisplay);
@@ -79,6 +82,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	Window winDummy;
 	unsigned int borderDummy;
 
+	x = conf.x;
+	y = conf.y;
+	
 	// attributes for a single buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
 	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8,
@@ -200,6 +206,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
 		XSetStandardProperties(glDisplay, glWindow, "ZZOgl-PG", "ZZOgl-PG", None, NULL, 0, NULL);
 		XMapRaised(glDisplay, glWindow);
+		XMoveWindow(glDisplay, glWindow, x, y);
 	}
 
 	// connect the glx-context to the window
@@ -240,10 +247,16 @@ void GLWindow::ResizeCheck()
 
         while(XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
         {
-                if ((event.xconfigure.width != width) || (event.xconfigure.height != height)) {
+                if ((event.xconfigure.width != width) || (event.xconfigure.height != height)) 
+                {
                         ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
                         width = event.xconfigure.width;
                         height = event.xconfigure.height;
+                }
+                if ((event.xconfigure.x != x) || (event.xconfigure.y != y)) 
+                {
+                        x = event.xconfigure.x;
+                        y = event.xconfigure.y;
                 }
         }
 }

@@ -194,7 +194,6 @@ ZeroGS::Create_Window(int _width, int _height) {
 	nBackbufferHeight = _height;
 	fiRendWidth = 1.0f / nBackbufferWidth;
 	fiRendHeight = 1.0f / nBackbufferHeight;
-
 	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
 	s_nFullscreen = (conf.options & GSOPTION_FULLSCREEN) ? 1 : 0;

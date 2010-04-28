@@ -160,6 +160,7 @@ typedef struct
 	u32 options; // game options -- different hacks.
 	u32 gamesettings;// default game settings
 	int width, height; // View target size, has no impact towards speed
+	int x, y; // Lets try for a persistant window position.
 	bool isWideScreen; // Widescreen support
 	u32 log;
 } GSconf;
