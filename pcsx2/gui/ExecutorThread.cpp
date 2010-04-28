@@ -28,7 +28,7 @@ void SysExecEvent::SetException( BaseException* ex )
 {
 	if( !ex ) return;
 
-	const wxString& prefix( wxsFormat(L"(%s) ", GetEventName()) );
+	const wxString& prefix( wxsFormat(L"(%s) ", GetEventName().c_str()) );
 	ex->DiagMsg() = prefix + ex->DiagMsg();
 	//ex->UserMsg() = prefix + ex->UserMsg();
 

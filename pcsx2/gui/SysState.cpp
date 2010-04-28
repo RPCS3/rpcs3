@@ -16,10 +16,10 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 
-#include "SysThreads.h"
+#include "System/SysThreads.h"
 #include "SaveState.h"
 
-#include "ZipTools\ThreadedZipTools.h"
+#include "ZipTools/ThreadedZipTools.h"
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
 static SafeArray<u8> state_buffer( L"Public Savestate Buffer" );
@@ -153,7 +153,8 @@ public:
 
 	SysExecEvent_ZipToDisk* Clone() const { return new SysExecEvent_ZipToDisk( *this ); }
 
-	SysExecEvent_ZipToDisk( ScopedPtr<SafeArray<u8>>& src, const wxString& filename )
+// Yep, gcc doesn't like >> again.
+	SysExecEvent_ZipToDisk( ScopedPtr<SafeArray<u8> >& src, const wxString& filename )
 		: m_filename( filename )
 	{
 		m_src_buffer = src.DetachPtr();
@@ -262,7 +263,7 @@ void StateCopy_FreezeToMem()
 
 void StateCopy_SaveToFile( const wxString& file )
 {
-	ScopedPtr<SafeArray<u8>> zipbuf(new SafeArray<u8>( L"Zippable Savestate" ));
+	ScopedPtr<SafeArray<u8> > zipbuf(new SafeArray<u8>( L"Zippable Savestate" ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState( zipbuf ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk( zipbuf, file ));
 }

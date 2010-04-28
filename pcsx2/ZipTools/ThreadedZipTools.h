@@ -93,7 +93,7 @@ protected:
 
 public:
 	CompressThread_gzip( const wxString& file, SafeArray<u8>* srcdata, FnType_WriteCompressedHeader* writeHeader=NULL );
-	CompressThread_gzip( const wxString& file, ScopedPtr<SafeArray<u8>>& srcdata, FnType_WriteCompressedHeader* writeHeader=NULL );
+	CompressThread_gzip( const wxString& file, ScopedPtr<SafeArray<u8> >& srcdata, FnType_WriteCompressedHeader* writeHeader=NULL );
 	virtual ~CompressThread_gzip() throw();
 
 protected:

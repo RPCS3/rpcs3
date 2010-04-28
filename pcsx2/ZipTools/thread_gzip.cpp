@@ -26,7 +26,8 @@ CompressThread_gzip::CompressThread_gzip( const wxString& file, SafeArray<u8>* s
 	m_gzfp	= NULL;
 }
 
-CompressThread_gzip::CompressThread_gzip( const wxString& file, ScopedPtr<SafeArray<u8>>& srcdata, FnType_WriteCompressedHeader* writeheader )
+// Believe it or not, the space in > > is required.
+CompressThread_gzip::CompressThread_gzip( const wxString& file, ScopedPtr<SafeArray<u8> >& srcdata, FnType_WriteCompressedHeader* writeheader )
 	: BaseCompressThread( file, srcdata.DetachPtr(), writeheader )
 {
 	m_gzfp	= NULL;

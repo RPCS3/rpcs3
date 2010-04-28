@@ -14,10 +14,10 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Mainframe.h"
+#include "MainFrame.h"
 #include "GSFrame.h"
 
-// This is necessary because this stupid wxWdigets thing has implicit debug errors
+// This is necessary because this stupid wxWidgets thing has implicit debug errors
 // in the FindItem call that asserts if the menu options are missing.  This is bad
 // mojo for configurable/dynamic menus. >_<
 void MainEmuFrame::EnableMenuItem( int id, bool enable )

@@ -261,6 +261,7 @@ protected:
 	{
 		CorePlugins.Load( m_folders );
 	}
+	~LoadCorePluginsEvent() throw() {}
 };
 
 // --------------------------------------------------------------------------------------

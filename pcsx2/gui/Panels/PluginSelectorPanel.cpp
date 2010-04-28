@@ -244,7 +244,8 @@ void SysExecEvent_ApplyPlugins::_DoInvoke()
 	if( SysHasValidState() )
 	{
 		paused_core.AllowResume();
-		wxGetApp().ProcessEvent( ApplyOverValidStateEvent( m_dialog ) );
+		ApplyOverValidStateEvent aEvt( m_dialog );
+		wxGetApp().ProcessEvent( aEvt );
 		paused_core.DisallowResume();
 
 		// FIXME : We only actually have to save plugins here, except the recovery code

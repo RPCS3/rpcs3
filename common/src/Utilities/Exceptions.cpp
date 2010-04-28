@@ -175,7 +175,7 @@ wxString BaseException::FormatDiagnosticMessage() const
 Exception::RuntimeError::RuntimeError( const std::runtime_error& ex, const wxString& prefix )
 {
 	const wxString msg( wxsFormat( L"%sSTL Runtime Error: %s",
-		(prefix.IsEmpty() ? prefix : wxsFormat(L"(%s) ", prefix)),
+		(prefix.IsEmpty() ? prefix.c_str() : wxsFormat(L"(%s) ", prefix.c_str()).c_str()),
 		fromUTF8( ex.what() ).c_str()
 	) );
 

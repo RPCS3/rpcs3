@@ -346,8 +346,9 @@
 		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
-		<Unit filename="../gui/AppCoreThread.cpp" />
 		<Unit filename="../gui/AppCorePlugins.cpp" />
+		<Unit filename="../gui/AppCorePlugins.h" />
+		<Unit filename="../gui/AppCoreThread.cpp" />
 		<Unit filename="../gui/AppCoreThread.h" />
 		<Unit filename="../gui/AppEventListeners.h" />
 		<Unit filename="../gui/AppEventSources.cpp" />
@@ -380,6 +381,7 @@
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
 		<Unit filename="../gui/Dialogs/StuckThreadDialog.cpp" />
 		<Unit filename="../gui/Dialogs/SysConfigDialog.cpp" />
+		<Unit filename="../gui/ExecutorThread.cpp" />
 		<Unit filename="../gui/ExecutorThread.h" />
 		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/GlobalCommands.cpp" />
@@ -497,11 +499,11 @@
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/SysState.cpp" />
 		<Unit filename="../gui/UpdateUI.cpp" />
+		<Unit filename="../gui/gsFrame.h" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-		<Unit filename="../gui/gsFrame.h" />
-		<Unit filename="../gui/pxLogTextCtrl.cpp" />
 		<Unit filename="../gui/pxEvtThread.h" />
+		<Unit filename="../gui/pxLogTextCtrl.cpp" />
 		<Unit filename="../pcsx2hostfs.cpp" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
