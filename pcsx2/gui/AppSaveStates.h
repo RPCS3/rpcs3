@@ -29,7 +29,7 @@
 class SaveSinglePluginHelper
 {
 protected:
-	SafeArray<u8>			m_plugstore;
+	VmStateBuffer			m_plugstore;
 	bool					m_validstate;
 	PluginsEnum_t			m_pid;
 	
@@ -41,7 +41,7 @@ public:
 };
 
 
-extern SafeArray<u8>& StateCopy_GetBuffer();
+extern VmStateBuffer& StateCopy_GetBuffer();
 extern bool StateCopy_IsValid();
 
 extern void StateCopy_FreezeToMem();

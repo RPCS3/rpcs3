@@ -1486,12 +1486,12 @@ const wxString PluginManager::GetName( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
-	return m_info[pid] ? m_info[pid]->Name : wxT("Unloaded Plugin");
+	return m_info[pid] ? m_info[pid]->Name : (wxString)_("Unloaded Plugin");
 }
 
 const wxString PluginManager::GetVersion( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
-	return m_info[pid] ? m_info[pid]->Version : wxT("0.0");
+	return m_info[pid] ? m_info[pid]->Version : L"0.0";
 }

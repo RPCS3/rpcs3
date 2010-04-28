@@ -101,6 +101,8 @@ namespace Exception
 	};
 }
 
+typedef SafeArray<u8> VmStateBuffer;
+
 // --------------------------------------------------------------------------------------
 //  SaveStateBase class
 // --------------------------------------------------------------------------------------
@@ -110,7 +112,7 @@ namespace Exception
 class SaveStateBase
 {
 protected:
-	SafeArray<u8>* m_memory;
+	VmStateBuffer* m_memory;
 	char m_tagspace[32];
 
 	u32 m_version;		// version of the savestate being loaded.
@@ -122,8 +124,8 @@ protected:
 	bool m_DidBios;
 
 public:
-	SaveStateBase( SafeArray<u8>& memblock );
-	SaveStateBase( SafeArray<u8>* memblock );
+	SaveStateBase( VmStateBuffer& memblock );
+	SaveStateBase( VmStateBuffer* memblock );
 	virtual ~SaveStateBase() { }
 
 	static wxString GetFilename( int slot );
@@ -191,7 +193,7 @@ public:
 	void gsFreeze();
 
 protected:
-	void Init( SafeArray<u8>* memblock );
+	void Init( VmStateBuffer* memblock );
 
 	// Load/Save functions for the various components of our glorious emulator!
 
@@ -236,8 +238,8 @@ protected:
 
 public:
 	virtual ~memSavingState() throw() { }
-	memSavingState( SafeArray<u8>& save_to );
-	memSavingState( SafeArray<u8>* save_to );
+	memSavingState( VmStateBuffer& save_to );
+	memSavingState( VmStateBuffer* save_to );
 
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
@@ -251,8 +253,8 @@ class memLoadingState : public SaveStateBase
 public:
 	virtual ~memLoadingState() throw();
 
-	memLoadingState( const SafeArray<u8>& load_from );
-	memLoadingState( const SafeArray<u8>* load_from );
+	memLoadingState( const VmStateBuffer& load_from );
+	memLoadingState( const VmStateBuffer* load_from );
 
 	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );

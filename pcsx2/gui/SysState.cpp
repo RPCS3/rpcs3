@@ -22,7 +22,7 @@
 #include "ZipTools/ThreadedZipTools.h"
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
-static SafeArray<u8> state_buffer( L"Public Savestate Buffer" );
+static VmStateBuffer state_buffer( L"Public Savestate Buffer" );
 
 static const char SavestateIdentString[] = "PCSX2 Savestate";
 static const uint SavestateIdentLen = sizeof(SavestateIdentString);
@@ -108,12 +108,12 @@ public:
 class SysExecEvent_DownloadState : public SysExecEvent
 {
 protected:
-	SafeArray<u8>*	m_dest_buffer;
+	VmStateBuffer*	m_dest_buffer;
 
 public:
 	virtual ~SysExecEvent_DownloadState() throw() {}
 	SysExecEvent_DownloadState* Clone() const { return new SysExecEvent_DownloadState( *this ); }
-	SysExecEvent_DownloadState( SafeArray<u8>* dest=&state_buffer )
+	SysExecEvent_DownloadState( VmStateBuffer* dest=&state_buffer )
 	{
 		m_dest_buffer = dest;
 	}
@@ -140,7 +140,7 @@ protected:
 class SysExecEvent_ZipToDisk : public SysExecEvent
 {
 protected:
-	SafeArray<u8>*		m_src_buffer;
+	VmStateBuffer*		m_src_buffer;
 	wxString			m_filename;
 
 public:
@@ -154,13 +154,13 @@ public:
 	SysExecEvent_ZipToDisk* Clone() const { return new SysExecEvent_ZipToDisk( *this ); }
 
 // Yep, gcc doesn't like >> again.
-	SysExecEvent_ZipToDisk( ScopedPtr<SafeArray<u8> >& src, const wxString& filename )
+	SysExecEvent_ZipToDisk( ScopedPtr<VmStateBuffer>& src, const wxString& filename )
 		: m_filename( filename )
 	{
 		m_src_buffer = src.DetachPtr();
 	}
 
-	SysExecEvent_ZipToDisk( SafeArray<u8>* src, const wxString& filename )
+	SysExecEvent_ZipToDisk( VmStateBuffer* src, const wxString& filename )
 		: m_filename( filename )
 	{
 		m_src_buffer = src;
@@ -246,7 +246,7 @@ protected:
 //  StateCopy Public Interface
 // =====================================================================================================
 
-SafeArray<u8>& StateCopy_GetBuffer()
+VmStateBuffer& StateCopy_GetBuffer()
 {
 	return state_buffer;
 }
@@ -263,7 +263,7 @@ void StateCopy_FreezeToMem()
 
 void StateCopy_SaveToFile( const wxString& file )
 {
-	ScopedPtr<SafeArray<u8> > zipbuf(new SafeArray<u8>( L"Zippable Savestate" ));
+	ScopedPtr<VmStateBuffer> zipbuf(new VmStateBuffer( L"Zippable Savestate" ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState( zipbuf ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk( zipbuf, file ));
 }
