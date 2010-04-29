@@ -114,16 +114,16 @@ int IPU_Fifo_Output::write(const u32 *value, int size)
 int IPU_Fifo_Input::read(void *value)
 {
 	// wait until enough data
-	if (g_BP.IFC == 0)
+	if (g_BP.IFC < 8)
 	{
 		// IPU FIFO is empty and DMA is waiting so lets tell the DMA we are ready to put data in the FIFO
-		if(cpuRegs.interrupt & (1<<4) && cpuRegs.eCycle[4] == 1024)
+		if(cpuRegs.eCycle[4] == 0x9999)
 		{
 			//DevCon.Warning("Setting ECycle");
-			cpuRegs.eCycle[4] = 4;
+			CPU_INT( DMAC_TO_IPU, 4 );
 		}
 		
-		/*if (IPU1dma() == 0)*/ return 0;
+		if (g_BP.IFC == 0) return 0;
 		pxAssert(g_BP.IFC > 0);
 	}
 

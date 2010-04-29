@@ -37,19 +37,11 @@
 // IPU Inline'd IRQs : Calls the IPU interrupt handlers directly instead of
 // feeding them through the EE's branch test. (see IPU.h for details)
 
-#ifdef IPU_INLINE_IRQS
-#	define IPU_INT_TO( cycles )  ipu1Interrupt()
-#	define IPU_INT_FROM( cycles )  ipu0Interrupt()
-#	define IPU_FORCEINLINE
-#else
-#	define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
-#	define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
-#	define IPU_FORCEINLINE __forceinline
-#endif
+
 
 static tIPU_DMA g_nDMATransfer(0);
 static tIPU_cmd ipu_cmd;
-static IPUStatus IPU1Status;
+
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
@@ -799,7 +791,7 @@ void IPUCMD_WRITE(u32 val)
 	// have to resort to the thread
 	ipu_cmd.current = val >> 28;
 	ipuRegs->ctrl.BUSY = 1;
-	if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+	if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 }
 
 void IPUWorker()
@@ -811,7 +803,7 @@ void IPUWorker()
 		case SCE_IPU_VDEC:
 			if (!ipuVDEC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -821,7 +813,7 @@ void IPUWorker()
 		case SCE_IPU_FDEC:
 			if (!ipuFDEC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			ipuRegs->cmd.BUSY = 0;
@@ -831,7 +823,7 @@ void IPUWorker()
 		case SCE_IPU_SETIQ:
 			if (!ipuSETIQ(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -839,7 +831,7 @@ void IPUWorker()
 		case SCE_IPU_SETVQ:
 			if (!ipuSETVQ(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -847,7 +839,7 @@ void IPUWorker()
 		case SCE_IPU_CSC:
 			if (!ipuCSC(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0&& ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR)  IPU_INT0_FROM();
@@ -856,7 +848,7 @@ void IPUWorker()
 		case SCE_IPU_PACK:
 			if (!ipuPACK(ipuRegs->cmd.DATA))
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -865,7 +857,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -884,7 +876,7 @@ void IPUWorker()
 			so_call(s_routine);
 			if (!s_RoutineDone)
 			{
-				if(ipu1dma->qwc == 0 && ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
@@ -957,7 +949,8 @@ u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
 		inc_readbits();
 		g_BP.FP = 1;
 	}
-	else if ((g_BP.FP < 2) && (*(int*)pointer + size) >= 128)
+	
+	if ((g_BP.FP < 2) && (*(int*)pointer + size) >= 128)
 	{
 		if (ipu_fifo.in.read(next_readbits())) g_BP.FP += 1;
 	}
@@ -1337,15 +1330,6 @@ static __forceinline int IPU1chain() {
 		IPU1Status.InProgress = false;
 	} //If we still have data the commands should pull this across when need be.
 
-	
-	if(totalqwc > 0 || ipu1dma->qwc == 0)
-	{
-		IPU_INT_TO(totalqwc * BIAS);
-		if(ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
-	}
-	else IPU_INT_TO(1024);
-		
-
 	return totalqwc;
 }
 
@@ -1495,6 +1479,18 @@ int IPU1dma()
 			break;
 	}
 
+	//Do this here to prevent double settings on Chain DMA's
+	if(totalqwc > 0 || ipu1dma->qwc == 0)
+	{
+		IPU_INT_TO(totalqwc * BIAS);
+		if(ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
+	}
+	else 
+	{
+		IPU_LOG("Here");
+		cpuRegs.eCycle[4] = 0x9999;//IPU_INT_TO(2048);
+	}
+
 	IPU_LOG("Completed Call IPU1 DMA QWC Remaining %x Finished %d In Progress %d tadr %x", ipu1dma->qwc, IPU1Status.DMAFinished, IPU1Status.InProgress, ipu1dma->tadr);
 	return totalqwc;
 }
@@ -1599,7 +1595,7 @@ __forceinline void dmaIPU1() // toIPU
 		}
 		else
 		{   //Attempting to continue a previous chain
-			DevCon.Warning("Resuming DMA TAG %x", (ipu1dma->chcr.TAG >> 12));
+			IPU_LOG("Resuming DMA TAG %x", (ipu1dma->chcr.TAG >> 12));
 			//We MUST check the CHCR for the tag it last knew, it can be manipulated!
 			IPU1Status.ChainMode = (ipu1dma->chcr.TAG >> 12) & 0x7;
 			IPU1Status.InProgress = true;

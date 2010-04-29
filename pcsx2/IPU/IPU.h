@@ -43,6 +43,16 @@
 #define ipumsk( src ) ( (src) & 0xff )
 #define ipucase( src ) case ipumsk(src)
 
+#ifdef IPU_INLINE_IRQS
+#	define IPU_INT_TO( cycles )  ipu1Interrupt()
+#	define IPU_INT_FROM( cycles )  ipu0Interrupt()
+#	define IPU_FORCEINLINE
+#else
+#	define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
+#	define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
+#	define IPU_FORCEINLINE __forceinline
+#endif
+
 struct IPUStatus {
 	bool InProgress;
 	u8 DMAMode;
@@ -54,6 +64,8 @@ struct IPUStatus {
 	u8 ChainMode;
 	u32 NextMem;
 };
+
+static IPUStatus IPU1Status;
 
 #define DMA_MODE_NORMAL 0
 #define DMA_MODE_CHAIN 1

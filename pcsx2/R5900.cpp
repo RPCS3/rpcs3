@@ -285,7 +285,7 @@ static __forceinline void TESTINT( u8 n, void (*callback)() )
 
 static __forceinline void _cpuTestInterrupts()
 {
-	if (!dmacRegs->ctrl.DMAE || psHu16(DMAC_ENABLER + 2))
+	if (!dmacRegs->ctrl.DMAE || psHu8(DMAC_ENABLER+2) == 1)
 	{
 		//Console.Write("DMAC Disabled or suspended");
 		return;
@@ -302,7 +302,7 @@ static __forceinline void _cpuTestInterrupts()
 	// The following ints are rarely called.  Encasing them in a conditional
 	// as follows helps speed up most games.
 
-	if( cpuRegs.interrupt & ( 1 | (3 << 3) | (3<<8) | (3<<10)) )
+	if( cpuRegs.interrupt & 0xF19 ) // Bits 0 3 4 8 9 10 11 ( 111100011001 )
 	{
 		TESTINT(0, vif0Interrupt);
 #ifndef IPU_INLINE_IRQS
