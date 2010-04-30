@@ -222,7 +222,7 @@ void vifMFIFOInterrupt()
 	g_vifCycles = 0;
 	VIF_LOG("vif mfifo interrupt");
 
-	if (schedulepath3msk) Vif1MskPath3();
+	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{

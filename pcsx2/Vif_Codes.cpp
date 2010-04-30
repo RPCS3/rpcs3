@@ -85,7 +85,6 @@ void Vif1MskPath3() {
 		}
 
 	}
-	else gifRegs->stat.M3P = true;
 
 	schedulepath3msk = 0;
 }

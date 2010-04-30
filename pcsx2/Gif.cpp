@@ -239,11 +239,11 @@ void GIFdma()
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
 			GIF_LOG("PTH3 MASK Transferring");
-			GIFchain();
-			CPU_INT(DMAC_GIF, gscycles * BIAS);
-			return;
-		}
-		//else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
+			GIFchain();					
+		}//else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
+		CPU_INT(DMAC_GIF, gscycles * BIAS);	
+		return;
+		
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF

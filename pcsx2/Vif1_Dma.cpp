@@ -220,7 +220,7 @@ __forceinline void vif1Interrupt()
 		gifRegs->stat.clear_flags(GIF_STAT_APATH2|GIF_STAT_OPH);
 	}
 
-	if (schedulepath3msk) Vif1MskPath3();
+	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{
