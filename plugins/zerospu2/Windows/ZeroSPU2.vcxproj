@@ -68,11 +68,12 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <CustomBuildStep>
       <Command>
-</Command>
+      </Command>
     </CustomBuildStep>
     <ClCompile>
       <PreprocessorDefinitions>_USRDLL;ZEROSPU2_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -80,8 +81,8 @@
       </PrecompiledHeader>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>dsound.lib;winmm.lib;soundtouch.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
+      <AdditionalDependencies>dsound.lib;winmm.lib;soundtouch-dbg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>ZeroSPU2.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
@@ -121,8 +122,8 @@
       </PrecompiledHeader>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>dsound.lib;winmm.lib;soundtouch.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dev.dll</OutputFile>
+      <AdditionalDependencies>dsound.lib;winmm.lib;soundtouch-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>ZeroSPU2.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>

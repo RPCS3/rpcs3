@@ -98,7 +98,6 @@
     <ClCompile Include="..\..\src\Utilities\AlignedMalloc.cpp" />
     <ClCompile Include="..\..\src\Utilities\CheckedStaticBox.cpp" />
     <ClCompile Include="..\..\src\Utilities\Console.cpp" />
-    <ClCompile Include="..\..\src\Utilities\EventSource.cpp" />
     <ClCompile Include="..\..\src\Utilities\Exceptions.cpp" />
     <ClCompile Include="..\..\src\Utilities\HashTools.cpp" />
     <ClCompile Include="..\..\src\Utilities\x86\MemcpyFast.cpp" />
@@ -135,6 +134,7 @@
     <ClCompile Include="..\..\src\Utilities\Windows\WinMisc.cpp" />
     <ClCompile Include="..\..\src\Utilities\Windows\WinThreads.cpp" />
     <ClCompile Include="..\..\src\Utilities\Mutex.cpp" />
+	<ClCompile Include="..\..\src\Utilities\RwMutex.cpp" />
     <ClCompile Include="..\..\src\Utilities\Semaphore.cpp" />
     <ClCompile Include="..\..\src\Utilities\ThreadTools.cpp" />
   </ItemGroup>
@@ -163,9 +163,9 @@
     <ClInclude Include="..\..\include\Utilities\lnx_memzero.h" />
     <ClInclude Include="..\..\include\Utilities\MemcpyFast.h" />
     <ClInclude Include="..\..\include\Utilities\Path.h" />
-    <ClInclude Include="..\..\include\Utilities\PersistentThread.h" />
     <ClInclude Include="..\..\src\Utilities\PrecompiledHeader.h" />
     <ClInclude Include="..\..\include\Utilities\pxCheckBox.h" />
+	<ClInclude Include="..\..\include\Utilities\pxEvents.h" />
     <ClInclude Include="..\..\include\Utilities\pxRadioPanel.h" />
     <ClInclude Include="..\..\include\Utilities\pxStaticText.h" />
     <ClInclude Include="..\..\include\Utilities\RedtapeWindows.h" />
@@ -177,6 +177,8 @@
     <ClInclude Include="..\..\include\Utilities\wxBaseTools.h" />
     <ClInclude Include="..\..\include\Utilities\wxGuiTools.h" />
     <ClInclude Include="..\..\include\Utilities\Threading.h" />
+	<ClInclude Include="..\..\include\Utilities\PersistentThread.h" />
+	<ClInclude Include="..\..\include\Utilities\RwMutex.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\3rdparty\wxWidgets\build\msw\wx_base.vcxproj">

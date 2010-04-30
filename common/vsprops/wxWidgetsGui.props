@@ -10,8 +10,22 @@
       <PreprocessorDefinitions>wxUSE_UNICODE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
-    <Link>
+    <Link Condition="'$(Configuration)'=='Release' 
+				  or '$(Configuration)'=='Release SSE2'
+				  or '$(Configuration)'=='Release SSE4'
+				  or '$(Configuration)'=='Release SSSE3'">
       <AdditionalDependencies>wxAdv28.lib;wxBase28.lib;wxCore28.lib;zlib.lib;libjpeg7.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug' 
+				  or '$(Configuration)'=='Debug SSE2'
+				  or '$(Configuration)'=='Debug SSE4'
+				  or '$(Configuration)'=='Debug SSSE3'">
+      <AdditionalDependencies>wxAdv28-dbg.lib;wxBase28-dbg.lib;wxCore28-dbg.lib;zlib-dbg.lib;libjpeg7-dbg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Devel'">
+      <AdditionalDependencies>wxAdv28-dev.lib;wxBase28-dev.lib;wxCore28-dev.lib;zlib-dev.lib;libjpeg7-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SvnRootDir)\deps\$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

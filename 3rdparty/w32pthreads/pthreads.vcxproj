@@ -15,7 +15,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>w32pthreads.v3</ProjectName>
+    <ProjectName>w32pthreads.v4</ProjectName>
     <ProjectGuid>{26511268-2902-4997-8421-ECD7055F9E28}</ProjectGuid>
     <RootNamespace>pthreads</RootNamespace>
     <Keyword>Win32Proj</Keyword>
@@ -73,8 +73,10 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectName)-dbg</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)bin\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)bin\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -87,7 +89,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(SolutionDir)bin\$(ProjectName).debug.dll</OutputFile>
+      <OutputFile>$(SolutionDir)bin\$(TargetName)$(TargetExt)</OutputFile>
       <ImportLibrary>$(OutDir)$(ProjectName).lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
@@ -102,6 +104,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(SolutionDir)bin\$(TargetName)$(TargetExt)</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
@@ -115,6 +118,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(SolutionDir)bin\$(TargetName)$(TargetExt)</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -184,26 +188,31 @@
     <ClCompile Include="sched_getscheduler.c" />
     <ClCompile Include="sched_setscheduler.c" />
     <ClCompile Include="sched_yield.c" />
-    <ClCompile Include="ptw32_rwlock_cancelwrwait.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ptw32_rwlock_check_need_init.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="pthread_timechange_handler_np.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ptw32_cond_check_need_init.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="pthread_rwlock_destroy.c" />
+    <ClCompile Include="pthread_rwlock_init.c" />
+    <ClCompile Include="pthread_rwlock_rdlock.c" />
+    <ClCompile Include="pthread_rwlock_timedrdlock.c" />
+    <ClCompile Include="pthread_rwlock_timedwrlock.c" />
+    <ClCompile Include="pthread_rwlock_tryrdlock.c" />
+    <ClCompile Include="pthread_rwlock_trywrlock.c" />
+    <ClCompile Include="pthread_rwlock_unlock.c" />
+    <ClCompile Include="pthread_rwlock_wrlock.c" />
+    <ClCompile Include="pthread_rwlockattr_destroy.c" />
+    <ClCompile Include="pthread_rwlockattr_getpshared.c" />
+    <ClCompile Include="pthread_rwlockattr_init.c" />
+    <ClCompile Include="pthread_rwlockattr_setpshared.c" />
+    <ClCompile Include="ptw32_rwlock_cancelwrwait.c" />
+    <ClCompile Include="ptw32_rwlock_check_need_init.c" />
+    <ClCompile Include="pthread_cond_destroy.c" />
+    <ClCompile Include="pthread_cond_init.c" />
+    <ClCompile Include="pthread_cond_signal.c" />
+    <ClCompile Include="pthread_cond_wait.c" />
+    <ClCompile Include="pthread_condattr_destroy.c" />
+    <ClCompile Include="pthread_condattr_getpshared.c" />
+    <ClCompile Include="pthread_condattr_init.c" />
+    <ClCompile Include="pthread_condattr_setpshared.c" />
+    <ClCompile Include="pthread_timechange_handler_np.c" />
+    <ClCompile Include="ptw32_cond_check_need_init.c" />
     <ClCompile Include="pthread_attr_destroy.c" />
     <ClCompile Include="pthread_attr_getdetachstate.c" />
     <ClCompile Include="pthread_attr_getinheritsched.c" />

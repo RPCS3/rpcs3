@@ -63,7 +63,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>user32.lib;kernel32.lib;dxguid.lib;dinput8.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <ModuleDefinitionFile>PadSSSPSX.def</ModuleDefinitionFile>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <TargetMachine>MachineX86</TargetMachine>

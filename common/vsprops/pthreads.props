@@ -10,8 +10,20 @@
       <PreprocessorDefinitions>WIN32_PTHREADS;__CLEANUP_SEH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>w32pthreads.v3.lib;w32pthreads_lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    <Link Condition="'$(Configuration)'=='Release' 
+				  or '$(Configuration)'=='Release SSE2'
+				  or '$(Configuration)'=='Release SSE4'
+				  or '$(Configuration)'=='Release SSSE3'">
+      <AdditionalDependencies>w32pthreads_lib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug' 
+				  or '$(Configuration)'=='Debug SSE2'
+				  or '$(Configuration)'=='Debug SSE4'
+				  or '$(Configuration)'=='Debug SSSE3'">
+      <AdditionalDependencies>w32pthreads_lib-dbg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Devel'">
+      <AdditionalDependencies>w32pthreads_lib-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 </Project>

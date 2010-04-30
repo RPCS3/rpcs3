@@ -62,7 +62,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <Link>
-      <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <ModuleDefinitionFile>DEV9null.def</ModuleDefinitionFile>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>

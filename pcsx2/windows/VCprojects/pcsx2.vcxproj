@@ -84,6 +84,7 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
@@ -101,7 +102,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zlib-dbg.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName)-dbg.exe</OutputFile>
     </Link>
   </ItemDefinitionGroup>
@@ -123,8 +124,8 @@
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dev.exe</OutputFile>
+      <AdditionalDependencies>zlib-dev.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -578,6 +579,7 @@
     <ClCompile Include="..\..\CDVD\IsoFS\IsoFSCDVD.cpp" />
     <ClCompile Include="..\..\gui\AppAssert.cpp" />
     <ClCompile Include="..\..\gui\AppConfig.cpp" />
+    <ClCompile Include="..\..\gui\AppCorePlugins.cpp" />
     <ClCompile Include="..\..\gui\AppCoreThread.cpp" />
     <ClCompile Include="..\..\gui\AppEventSources.cpp" />
     <ClCompile Include="..\..\gui\AppInit.cpp" />
@@ -591,6 +593,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\gui\CpuUsageProviderMSW.cpp" />
+    <ClCompile Include="..\..\gui\ExecutorThread.cpp" />
     <ClCompile Include="..\..\gui\FrameForGS.cpp" />
     <ClCompile Include="..\..\gui\GlobalCommands.cpp" />
     <ClCompile Include="..\..\gui\i18n.cpp" />
@@ -601,11 +604,9 @@
     <ClCompile Include="..\..\gui\MemoryCardFile.cpp" />
     <ClCompile Include="..\..\gui\MessageBoxes.cpp" />
     <ClCompile Include="..\..\gui\MSWstuff.cpp" />
-    <ClCompile Include="..\..\gui\Plugins.cpp" />
     <ClCompile Include="..\..\gui\pxLogTextCtrl.cpp" />
     <ClCompile Include="..\..\gui\RecentIsoList.cpp" />
-    <ClCompile Include="..\..\RecoverySystem.cpp" />
-    <ClCompile Include="..\..\gui\Saveslots.cpp" />
+    <ClCompile Include="..\..\gui\UpdateUI.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\AboutBoxDialog.cpp" />
     <ClCompile Include="..\..\gui\AdvancedDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\AssertionDialog.cpp" />
@@ -660,6 +661,10 @@
       <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(IntDir)win32.pch</PrecompiledHeaderOutputFile>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\gui\Saveslots.cpp" />
+    <ClCompile Include="..\..\gui\SysState.cpp" />
+    <ClCompile Include="..\..\ZipTools\thread_gzip.cpp" />
+    <ClCompile Include="..\..\ZipTools\thread_lzma.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h" />
@@ -807,6 +812,8 @@
     <ClInclude Include="..\..\gui\App.h" />
     <ClInclude Include="..\..\gui\AppCommon.h" />
     <ClInclude Include="..\..\gui\AppConfig.h" />
+    <ClInclude Include="..\..\gui\AppCorePlugins.h" />
+    <ClInclude Include="..\..\gui\AppCoreThread.h" />
     <ClInclude Include="..\..\gui\AppEventListeners.h" />
     <ClInclude Include="..\..\gui\AppForwardDefs.h" />
     <ClInclude Include="..\..\gui\ApplyState.h" />
@@ -814,12 +821,15 @@
     <ClInclude Include="..\..\gui\ConsoleLogger.h" />
     <ClInclude Include="..\..\gui\CpuUsageProvider.h" />
     <ClInclude Include="..\..\gui\Resources\EmbeddedImage.h" />
+    <ClInclude Include="..\..\gui\GSFrame.h" />
     <ClInclude Include="..\..\HostGui.h" />
     <ClInclude Include="..\..\gui\IniInterface.h" />
     <ClInclude Include="..\..\gui\IsoDropTarget.h" />
     <ClInclude Include="..\..\gui\MainFrame.h" />
+    <ClInclude Include="..\..\gui\pxEventThread.h" />
     <ClInclude Include="..\..\gui\RecentIsoList.h" />
     <ClInclude Include="..\cheats\cheats.h" />
+    <ClInclude Include="..\..\ZipTools\ThreadedZipTools.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\3rdparty\wxWidgets\include\wx\msw\wx.rc">

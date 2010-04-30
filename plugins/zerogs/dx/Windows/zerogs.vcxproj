@@ -66,6 +66,7 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
     <Midl>
@@ -88,8 +89,8 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;ddraw.lib;dxerr.lib;dxguid.lib;d3dx9.lib;d3d9.lib;odbc32.lib;odbccp32.lib;winmm.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dev.dll</OutputFile>
+      <AdditionalDependencies>zlib-dev.lib;ddraw.lib;dxerr.lib;dxguid.lib;d3dx9.lib;d3d9.lib;odbc32.lib;odbccp32.lib;winmm.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\GSsoftdx.def</ModuleDefinitionFile>
@@ -104,8 +105,8 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>zlib.lib;ddraw.lib;dxerr.lib;dxguid.lib;d3dx9.lib;d3d9.lib;odbc32.lib;odbccp32.lib;winmm.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
+      <AdditionalDependencies>zlib-dbg.lib;ddraw.lib;dxerr.lib;dxguid.lib;d3dx9.lib;d3d9.lib;odbc32.lib;odbccp32.lib;winmm.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>.\GSsoftdx.def</ModuleDefinitionFile>
@@ -135,7 +136,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>zlib.lib;ddraw.lib;dxerr.lib;dxguid.lib;d3dx9.lib;d3d9.lib;odbc32.lib;odbccp32.lib;winmm.lib;Vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName).dll</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\GSsoftdx.def</ModuleDefinitionFile>

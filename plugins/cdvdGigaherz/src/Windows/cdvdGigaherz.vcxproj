@@ -94,7 +94,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <OutputFile>$(OutDir)$(ProjectName)-dbg.dll</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <ModuleDefinitionFile>.\plugin.def</ModuleDefinitionFile>
     </Link>
