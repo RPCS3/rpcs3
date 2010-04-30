@@ -296,6 +296,9 @@ extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
 
 // Copied from Utilities; remove later.
 #ifdef __LINUX__
+
+#include <sys/time.h>
+
 static __forceinline void InitCPUTicks()
 {
 }
