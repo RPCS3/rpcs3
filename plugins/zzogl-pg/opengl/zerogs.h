@@ -27,26 +27,27 @@
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
 
-#ifndef _WIN32
-// adding glew support instead of glXGetProcAddress (thanks to scaught)
-#	include <GL/glew.h>
-#endif
-
 // Need this before gl.h
 #ifdef _WIN32
-#	include <windows.h>
-#endif
 
+#include <windows.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
+#include "glprocs.h"
 
-#ifndef _WIN32
-#	include <GL/glx.h>
-	inline void* wglGetProcAddress(const char* x) {
-		return (void*)glXGetProcAddress((const GLubyte*)x);
-	}
 #else
-#	include "glprocs.h"
+
+// adding glew support instead of glXGetProcAddress (thanks to scaught)
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include <GL/glx.h>
+
+inline void* wglGetProcAddress(const char* x) 
+{
+	return (void*)glXGetProcAddress((const GLubyte*)x);
+}
+
 #endif
 
 #include <Cg/cg.h>
@@ -348,9 +349,10 @@ extern float g_fiGPU_TEXWIDTH;
 #define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR) // bitwise mask width for region repeat mode
 
 #ifdef _WIN32
-extern HDC	hDC;	   // Private GDI Device Context
-extern HGLRC	   hRC;	   // Permanent Rendering Context
+extern HDC		hDC;	   // Private GDI Device Context
+extern HGLRC	hRC;	   // Permanent Rendering Context
 #endif
+
 extern bool g_bIsLost;     // Context is lost -- could not draw
 
 extern u32 ptexBlocks;		// holds information on block tiling

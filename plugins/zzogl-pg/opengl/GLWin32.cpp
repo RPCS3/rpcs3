@@ -125,6 +125,13 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	if (GShwnd == NULL) return false;
 
 	if (pDisplay != NULL) *(HWND*)pDisplay = GShwnd;
+	
+	// set just in case
+	SetWindowLongPtr(GShwnd, GWLP_WNDPROC, (LPARAM)(WNDPROC)MsgProc);
+
+	ShowWindow( GShwnd, SW_SHOWDEFAULT );
+	UpdateWindow( GShwnd );
+	SetFocus(GShwnd);
 
 	return (pDisplay != NULL);
 }

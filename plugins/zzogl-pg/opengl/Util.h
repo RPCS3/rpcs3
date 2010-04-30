@@ -95,13 +95,8 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 
 inline unsigned long timeGetTime()
 {
-#ifdef _WIN32
-	_timeb t;
-	_ftime(&t);
-#else
 	timeb t;
 	ftime(&t);
-#endif
 
 	return (unsigned long)(t.time*1000+t.millitm);
 }
@@ -297,6 +292,44 @@ extern void SysMessage(const char *fmt, ...);
 #else
 extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
+#endif
+
+// Copied from Utilities; remove later.
+#ifdef __LINUX__
+static __forceinline void InitCPUTicks()
+{
+}
+
+static __forceinline u64 GetTickFrequency()
+{
+	return 1000000;		// unix measures in microseconds
+}
+
+static __forceinline u64 GetCPUTicks()
+{
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
+}
+#else
+static __aligned16 LARGE_INTEGER lfreq;
+
+static __forceinline void InitCPUTicks()
+{
+	QueryPerformanceFrequency( &lfreq );
+}
+
+static __forceinline u64 GetTickFrequency()
+{
+	return lfreq.QuadPart;
+}
+
+static __forceinline u64 GetCPUTicks()
+{
+	LARGE_INTEGER count;
+	QueryPerformanceCounter( &count );
+	return count.QuadPart;
+}
 #endif
 
 template <typename T>

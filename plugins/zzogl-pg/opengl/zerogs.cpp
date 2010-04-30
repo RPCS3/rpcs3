@@ -54,8 +54,8 @@ extern int g_nFrame, g_nRealFrame;
 //-------------------------- Variables
 
 #ifdef _WIN32
-HDC		 hDC=NULL;	   // Private GDI Device Context
-HGLRC	   hRC=NULL;	   // Permanent Rendering Context
+HDC			hDC=NULL;	   // Private GDI Device Context
+HGLRC		hRC=NULL;	   // Permanent Rendering Context
 #endif
 
 bool g_bIsLost = 0;									// ZZ
@@ -182,9 +182,7 @@ public:
 		g_pbyGSClut = (u8*)_aligned_malloc(256*8, 1024); // need 512 alignment!
 		memset(g_pbyGSClut, 0, 256*8);
 
-//#ifndef _WIN32
 		memset(&GLWin, 0, sizeof(GLWin));
-//#endif
 	}
 	~ZeroGSInit() {
 		_aligned_free(g_pbyGSMemory); g_pbyGSMemory = NULL;

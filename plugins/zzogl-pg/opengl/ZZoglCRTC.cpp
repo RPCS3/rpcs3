@@ -45,8 +45,8 @@ BOOL g_bSaveFinalFrame = 0; // saves the input to the CRTC
 //------------------ variables
 
 #ifdef _WIN32
-extern 		HDC		hDC;	   // Private GDI Device Context
-extern		HGLRC	 	hRC;	   // Permanent Rendering Context
+extern HDC		hDC;	   // Private GDI Device Context
+extern HGLRC	hRC;	   // Permanent Rendering Context
 #endif
 
 BOOL g_bCRTCBilinear = TRUE;

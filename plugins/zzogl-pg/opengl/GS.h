@@ -444,7 +444,7 @@ union tex_0_info
 		if (tbw == 0)
 			return 64;
 		else
-			return (tbw << 6);
+			return ((u32)tbw << 6);
 	}
 	u32 psm_fix()
 	{

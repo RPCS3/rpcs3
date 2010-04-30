@@ -115,24 +115,11 @@ static u64 luPerfFreq;
 GLWindow GLWin;
 
 #ifdef _WIN32
-
 HWND GShwnd = NULL;
-
-void SysMessage(const char *fmt, ...) {
-	va_list list;
-	char tmp[512];
-
-	va_start(list,fmt);
-	vsprintf(tmp,fmt,list);
-	va_end(list);
-	MessageBox(0, tmp, "GSsoftdx Msg", 0);
-}
-#else
+#endif
 
 u32 THR_KeyEvent = 0; // Value for key event processing between threads
 bool THR_bShift = false;
-
-#endif
 
 namespace ZZLog
 {
@@ -639,35 +626,32 @@ void OnKeyboardF1(int shift) {
 HANDLE g_hCurrentThread = NULL;
 #endif
 
+
 extern LRESULT WINAPI MsgProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 extern HINSTANCE hInst;
-void CALLBACK GSconfigure() {
-	DialogBox(hInst,
-				MAKEINTRESOURCE(IDD_CONFIG),
-				GetActiveWindow(),
-				(DLGPROC)ConfigureDlgProc);
-
-	if( g_nPixelShaderVer == SHADER_REDUCED )
-		conf.bilinear = 0;
-}
+#endif
 
 
 s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
+	FUNCLOG
+	
 	bool err;
 
 	g_GSMultiThreaded = multithread;
 
 	ZZLog::GS_Log("Calling GSopen.");
 
+#ifdef _WIN32
 #ifdef _DEBUG
 	g_hCurrentThread = GetCurrentThread();
 #endif
-
-//	assert( GSirq != NULL );
+#endif
+	
 	LoadConfig();
 
 	strcpy(GStitle, Title);
+
 	err = GLWin.CreateWindow(pDsp);
 
 	if (!err)
@@ -675,92 +659,91 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 		ZZLog::GS_Log("Failed to create window. Exiting...");
 		return -1;
 	}
-
+	
 	ZZLog::Error_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ZZLog::Error_Log("Creating ZZOgl.");
-	//if (conf.record) recOpen();
+	ZZLog::Error_Log("Creating ZZOgl window.");
+	
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
-	ZZLog::Error_Log("initialization successful");
+	ZZLog::Error_Log("Initialization successful.");
 
-	if( conf.bilinear == 2 )
+	switch(conf.bilinear)
 	{
-		ZeroGS::AddMessage("forced bilinear filtering - on", 1000);
-	}
-	else if( conf.bilinear == 1 )
-	{
-		ZeroGS::AddMessage("normal bilinear filtering - on", 1000);
-	}
+		case 2:
+			ZeroGS::AddMessage("bilinear filtering - forced", 1000);
+			break;
 
-	if( conf.aa )
+		case 1:
+			ZeroGS::AddMessage("bilinear filtering - normal", 1000);
+			break;
+
+		default:
+			break;
+	}
+	
+	if (conf.aa)
 	{
 		char strtitle[64];
-		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa], 1000);
-		ZeroGS::AddMessage(strtitle);
+		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
+		ZeroGS::AddMessage(strtitle,1000);
 	}
 
-	// set just in case
-	SetWindowLongPtr(GShwnd, GWLP_WNDPROC, (LPARAM)(WNDPROC)MsgProc);
-
-	ShowWindow( GShwnd, SW_SHOWDEFAULT );
-	UpdateWindow( GShwnd );
-	SetFocus(GShwnd);
-
-	ZZLog::GS_Log("GSopen finished.");
-
-	LARGE_INTEGER temp;
-	QueryPerformanceFrequency(&temp);
-	luPerfFreq = temp.QuadPart;
-
+	luPerfFreq = GetCPUTicks();
 	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
+	
+	ZZLog::GS_Log("GSopen finished.");
 
 	return 0;
 }
 
+#ifdef _WIN32
 void ProcessMessages()
 {
 	MSG msg;
+	
 	ZeroMemory( &msg, sizeof(msg) );
+	
 	while( 1 )
 	{
-		if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
+		if (PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE))
 		{
 			switch( msg.message )
 			{
 				case WM_KEYDOWN :
-					if( msg.wParam == VK_F5 )
+					int my_KeyEvent = msg.wParam;
+					bool my_bShift = !!(GetKeyState(VK_SHIFT) & 0x8000);
+				
+					switch (msg.wParam)
 					{
-						OnKeyboardF5(GetKeyState(VK_SHIFT)&0x8000);
+						case VK_F5:
+							OnKeyboardF5(my_bShift);
+							break;
+						case VK_F6:
+							OnKeyboardF6(my_bShift);
+							break;
+						case VK_F7:
+							OnKeyboardF7(my_bShift);
+							break;
+						case VK_F9:
+							OnKeyboardF9(my_bShift);
+							break;
+						case VK_ESCAPE:
+							if (conf.options & GSOPTION_FULLSCREEN) 
+							{
+								// destroy that msg
+								conf.options &= ~GSOPTION_FULLSCREEN;
+								ZeroGS::ChangeDeviceSize(conf.width, conf.height);
+								UpdateWindow(GShwnd);
+								continue; // so that msg doesn't get sent
+							}
+							else 
+							{
+								SendMessage(GShwnd, WM_DESTROY, 0, 0);
+								//g_bHidden = 1;
+								return;
+							}
+							break;
 					}
-					else if( msg.wParam == VK_F6 )
-					{
-						OnKeyboardF6(GetKeyState(VK_SHIFT)&0x8000);
-					}
-					else if( msg.wParam == VK_F7 )
-					{
-						OnKeyboardF7(GetKeyState(VK_SHIFT)&0x8000);
-					}
-					else if( msg.wParam == VK_F9 )
-					{
-						OnKeyboardF9(GetKeyState(VK_SHIFT)&0x8000);
-					}
-					else if( msg.wParam == VK_ESCAPE )
-					{
-
-						if( conf.options & GSOPTION_FULLSCREEN ) {
-							// destroy that msg
-							conf.options &= ~GSOPTION_FULLSCREEN;
-							ZeroGS::ChangeDeviceSize(conf.width, conf.height);
-							UpdateWindow(GShwnd);
-							continue; // so that msg doesn't get sent
-						}
-						else {
-							SendMessage(GShwnd, WM_DESTROY, 0, 0);
-							//g_bHidden = 1;
-							return;
-						}
-					}
-
 					break;
 			}
 
@@ -773,7 +756,7 @@ void ProcessMessages()
 		}
 	}
 
-	if ((GetKeyState(VK_MENU)&0x8000) && (GetKeyState(VK_RETURN)&0x8000))
+	if ((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_RETURN) & 0x8000))
 	{
 		conf.options ^= GSOPTION_FULLSCREEN;
 
@@ -781,60 +764,9 @@ void ProcessMessages()
 			(conf.options&GSOPTION_FULLSCREEN) ? 1280 : conf.width,
 			(conf.options&GSOPTION_FULLSCREEN) ? 960 : conf.height);
 	}
-
-//	if( conf.fullscreen && (GetKeyState(VK_ESCAPE)&0x8000)) {
-//		conf.fullscreen &= ~GSOPTION_FULLSCREEN;
-//		ZeroGS::SetChangeDeviceSize(conf.width, conf.height);
-//	}
-
-	//if( conf.interlace && g_nGenVars + g_nTexVars + g_nAlphaVars + g_nResolve == 0 )
-	//	CSR->FIELD = 0; // 0 should always be the repeating at 0
 }
 
 #else // linux
-
-s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
-{
-	FUNCLOG
-
-	ZZLog::GS_Log("Calling GSopen.");
-
-//	assert( GSirq != NULL );
-	LoadConfig();
-
-	strcpy(GStitle, Title);
-
-	GLWin.CreateWindow(pDsp);
-
-	ZZLog::Error_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ZZLog::Error_Log("Creating zerogs.");
-	//if (conf.record) recOpen();
-	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
-
-	ZZLog::Error_Log("Initialization successful.");
-
-	if( conf.bilinear == 2 )
-	{
-		ZeroGS::AddMessage("bilinear filtering - forced", 1000);
-	}
-	else if( conf.bilinear == 1 )
-	{
-		ZeroGS::AddMessage("bilinear filtering - normal", 1000);
-	}
-	if( conf.aa )
-	{
-		char strtitle[64];
-		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
-		ZeroGS::AddMessage(strtitle,1000);
-	}
-
-	ZZLog::GS_Log("GSopen finished.");
-
-	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
-	luPerfFreq = 1;
-
-	return 0;
-}
 
 void ProcessMessages()
 {
@@ -843,7 +775,7 @@ void ProcessMessages()
 	// check resizing
 	GLWin.ResizeCheck();
 
-	if ( THR_KeyEvent ) { // This values was passed from GSKeyEvents witch could be in another thread
+	if ( THR_KeyEvent ) { // This values was passed from GSKeyEvents which could be in another thread
 		int my_KeyEvent = THR_KeyEvent;
 		bool my_bShift = THR_bShift;
 		THR_KeyEvent = 0;
@@ -1100,18 +1032,7 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 #include <map>
 using namespace std;
 
-#ifdef _WIN32
-
-__forceinline u64 GET_PROFILE_TIME()
-{
-	LARGE_INTEGER lu;
-	QueryPerformanceCounter(&lu);
-	return lu.QuadPart;
-}
-#else
-#define GET_PROFILE_TIME() //GetCpuTick()
-#endif
-
+#define GET_PROFILE_TIME() GetCPUTicks()
 
 struct DVPROFSTRUCT;
 

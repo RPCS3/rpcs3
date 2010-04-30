@@ -5,6 +5,7 @@
 #include "resrc1.h"
 
 #include "GS.h"
+#include "zerogsshaders.h"
 #include "Win32.h"
 
 #include <map>
@@ -210,6 +211,15 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return FALSE;
 }
 
+void CALLBACK GSconfigure() {
+	DialogBox(hInst,
+				MAKEINTRESOURCE(IDD_CONFIG),
+				GetActiveWindow(),
+				(DLGPROC)ConfigureDlgProc);
+
+	if (g_nPixelShaderVer == SHADER_REDUCED) conf.bilinear = 0;
+}
+
 s32 CALLBACK GStest() {
 	return 0;
 }
@@ -249,4 +259,14 @@ char *SysLibError() {
 
 void SysCloseLibrary(void *lib) {
 	FreeLibrary((HINSTANCE)lib);
+}
+
+void SysMessage(const char *fmt, ...) {
+	va_list list;
+	char tmp[512];
+
+	va_start(list,fmt);
+	vsprintf(tmp,fmt,list);
+	va_end(list);
+	MessageBox(0, tmp, "GSsoftdx Msg", 0);
 }

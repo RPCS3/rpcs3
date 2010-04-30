@@ -19,12 +19,6 @@
 
 // Realisation of Flush -- drawing function of GS
 
-//------------------ Includes
-//#if defined(_WIN32)
-//#	include <windows.h>
-//#	include "resource.h"
-//#endif
-
 #include <stdlib.h>
 
 #include "GS.h"
@@ -1244,23 +1238,23 @@ inline void AlphaSaveTarget(VB& curvb) {
 #ifdef _DEBUG
 	return; // Do nothing
 
-	if( g_bSaveFlushedFrame & 0xf ) {
-#ifdef _WIN32
-		CreateDirectory("frames", NULL);
-#else
-		char* strdir="";
-		sprintf(strdir, "mkdir %s", "frames");
-		system(strdir);
-#endif
-		char str[255];
-		sprintf(str, "frames/frame%.4d.tga", g_SaveFrameNum++);
-		if( (g_bSaveFlushedFrame & 2) ) {
-			//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
-			//glFlush();
-			//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
-			SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
-		}
-	}
+//	if( g_bSaveFlushedFrame & 0xf ) {
+//#ifdef _WIN32
+//		CreateDirectory("frames", NULL);
+//#else
+//		char* strdir="";
+//		sprintf(strdir, "mkdir %s", "frames");
+//		system(strdir);
+//#endif
+//		char str[255];
+//		sprintf(str, "frames/frame%.4d.tga", g_SaveFrameNum++);
+//		if( (g_bSaveFlushedFrame & 2) ) {
+//			//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
+//			//glFlush();
+//			//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
+//			SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
+//		}
+//	}
 #endif
 }
 
