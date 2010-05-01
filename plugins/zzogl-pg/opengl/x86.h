@@ -106,7 +106,7 @@ extern void __fastcall WriteCLUT_T32_I8_CSM1_c(u32* vm, u32* clut);
 extern void __fastcall WriteCLUT_T16_I4_CSM1_c(u32* vm, u32* clut);
 extern void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut);
 
-extern void SSE2_UnswizzleZ16Target( u16* dst, u16* src, int iters );
+extern void SSE2_UnswizzleZ16Target(u16* dst, u16* src, int iters);
 
 #ifdef ZEROGS_SSE2
 

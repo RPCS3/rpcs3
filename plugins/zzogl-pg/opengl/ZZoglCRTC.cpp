@@ -584,7 +584,7 @@ inline bool RenderLookForABetterTarget(int fbp, int tbp, list<CRenderTarget*>& l
 	return false;
 }
 
-// First try to draw frame from targets. It's
+// First try to draw frame from targets. 
 inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& listTargs, int i, bool* bUsingStencil, int interlace, int bInterlace)
 {
 	// get the start and end addresses of the buffer
@@ -662,9 +662,15 @@ inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 // The same as the previous, but from memory.
 // If you ever wondered why a picture from a minute ago suddenly flashes on the screen (say, in Mana Khemia),
 // this is the function that does it.
-inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listTargs, int interlace, int bInterlace)
+inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listTargs, int i, bool* bUsingStencil, int interlace, int bInterlace)
 {
-
+	// get the start and end addresses of the buffer
+	int bpp = RenderGetBpp(texframe.psm);
+	GSRegDISPFB* pfb = i ? DISPFB2 : DISPFB1;
+	
+	int start, end;
+	GetRectMemAddress(start, end, texframe.psm, 0, 0, texframe.tw, texframe.th, texframe.tbp0, texframe.tbw);
+	
 	for (list<CRenderTarget*>::iterator it = listTargs.begin(); it != listTargs.end(); ++it)
 	{
 		(*it)->Resolve();
@@ -676,34 +682,36 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	if ((pmemtarg == NULL) || (bInterlace >= 2))
 		ZZLog::Error_Log("CRCR Check for memory shader fault.");
 
+	//if (!(*bUsingStencil)) RenderUpdateStencil(i, bUsingStencil);
+		
 	SetShaderCaller("RenderCheckForMemory");
 
 	SetTexVariablesInt(0, g_bCRTCBilinear ? 2 : 0, texframe, pmemtarg, &ppsCRTC[bInterlace], 1);
-	cgGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, pmemtarg->ptex->tex);
-	cgGLEnableTextureParameter(ppsCRTC[bInterlace].sMemory);
-
 	if (g_bSaveFinalFrame) SaveTex(&texframe, g_bSaveFinalFrame - 1 > 0);
-
-	// finally render from the memory (note that the stencil buffer will keep previous regions)
-	Vector v = RenderSetTargetBitPos(1, 1, 0, INTERLACE_COUNT);
-
+	Vector v;
+	
 	// Fixme: Why is this here?
 	// We should probably call RenderSetTargetBitTex instead.
 	if (g_bCRTCBilinear)
-		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(texframe.tw, texframe.th, -0.5f, -0.5f), "g_fBitBltTex");
+		v = RenderSetTargetBitTex(texframe.tw, texframe.th, -0.5f, -0.5f, INTERLACE_COUNT);
 	else
-		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, Vector(1, 1, -0.5f / (float)texframe.tw, -0.5f / (float)texframe.th), "g_fBitBltTex");
+		v = RenderSetTargetBitTex(1, 1, -0.5f / (float)texframe.tw, -0.5f / (float)texframe.th, INTERLACE_COUNT);
 
+	// finally render from the memory (note that the stencil buffer will keep previous regions)
+	v = RenderSetTargetBitPos(1, 1, 0, INTERLACE_COUNT);
+	
 	v = RenderSetTargetBitTrans(texframe.th);
 
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
 
 	Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
 
+	cgGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, pmemtarg->ptex->tex);
+	cgGLEnableTextureParameter(ppsCRTC[bInterlace].sMemory);
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
 
 	SETPIXELSHADER(ppsCRTC[bInterlace].prog);
-
+	GL_REPORT_ERRORD();
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
@@ -909,7 +917,6 @@ void ZeroGS::RenderCRTC(int interlace)
 	// start from the last circuit
 	for (int i = !PMODE->SLBG; i >= 0; --i)
 	{
-
 		tex0Info& texframe = dispinfo[i];
 
 		if (texframe.th <= 1) continue;
@@ -928,7 +935,7 @@ void ZeroGS::RenderCRTC(int interlace)
 
 		// if we could not draw image from target's do it from memory
 		if (!RenderCheckForTargets(texframe, listTargs, i, &bUsingStencil, interlace, bInterlace))
-			RenderCheckForMemory(texframe, listTargs, interlace, bInterlace);
+			RenderCheckForMemory(texframe, listTargs, i, &bUsingStencil, interlace, bInterlace);
 	}
 
 	GL_REPORT_ERRORD();

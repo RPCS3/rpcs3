@@ -36,6 +36,7 @@ using namespace std;
 
 class GLWindow
 {
+
 	private:
 #ifdef GL_X11_WINDOW
 		Display *glDisplay;
@@ -248,6 +249,7 @@ extern u8* g_pBasePS2Mem;
 	(((tag).ai32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
 
 // PS2 vertex
+
 struct VertexGPU
 {
 	// gained from XYZ2, XYZ3, XYZF2, XYZF3,
@@ -264,6 +266,7 @@ struct VertexGPU
 };
 
 // Almost same with previous, controlled by prim.fst flagf
+
 struct Vertex
 {
 	u16 x, y, f, resv0;		// note: xy is 12d3
@@ -281,7 +284,8 @@ extern int ppf;
 
 // PSM values
 // PSM types == Texture Storage Format
-enum PSM_value{
+enum PSM_value
+{
 	PSMCT32		= 0,		// 000000
 	PSMCT24		= 1,		// 000001
 	PSMCT16		= 2,		// 000010
@@ -328,7 +332,8 @@ inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
 //----------------------- Data from registers -----------------------
 
-typedef union {
+typedef union
+{
 	s64 SD;
 	u64 UD;
 	s32 SL[2];
@@ -340,7 +345,9 @@ typedef union {
 } reg64;
 
 /* general purpose regs structs */
-typedef struct {
+
+typedef struct
+{
 	int fbp;
 	int fbw;
 	int fbh;
@@ -349,7 +356,8 @@ typedef struct {
 } frameInfo;
 
 // Create frame structure from known data
-inline frameInfo CreateFrame(int fbp, int fbw, int fbh, int psm, u32 fbm){
+inline frameInfo CreateFrame(int fbp, int fbw, int fbh, int psm, u32 fbm)
+{
 	frameInfo frame;
 	frame.fbp = fbp;
 	frame.fbw = fbw;
@@ -359,11 +367,14 @@ inline frameInfo CreateFrame(int fbp, int fbw, int fbh, int psm, u32 fbm){
 	return frame;
 }
 
-typedef struct {
+typedef struct 
+{
 	u16 prim;
 
-	union {
-		struct {
+	union 
+	{
+		struct 
+		{
 			u16 iip : 1;
 			u16 tme : 1;
 			u16 fge : 1;
@@ -380,8 +391,10 @@ typedef struct {
 
 extern primInfo *prim;
 
-typedef union {
-	struct {
+typedef union 
+{
+	struct 
+	{
 		u32 ate : 1;
 		u32 atst : 3;
 		u32 aref : 8;
@@ -395,13 +408,15 @@ typedef union {
 	u32 _val;
 } pixTest;
 
-typedef struct {
+typedef struct
+{
 	int bp;
 	int bw;
 	int psm;
 } bufInfo;
 
-typedef struct {
+typedef struct
+{
 	int tbp0;
 	int tbw;
 	int cbp;
@@ -432,13 +447,17 @@ union tex_0_info
 		u64 csa : 5;
 		u64 cld : 3;
 	};
+
 	u64 _u64;
 	u32 _u32[2];
 	u16 _u16[4];
 	u8 _u8[8];
 	tex_0_info(u64 data) { _u64 = data; }
+
 	tex_0_info(u32 data) { _u32[0] = data; _u32[1] = 0; }
+
 	tex_0_info(u32 data0, u32 data1) { _u32[0] = data0; _u32[1] = data1; }
+
 	u32 tbw_mult()
 	{
 		if (tbw == 0)
@@ -446,26 +465,34 @@ union tex_0_info
 		else
 			return ((u32)tbw << 6);
 	}
+
 	u32 psm_fix()
 	{
-	//	printf ("psm %d\n", psm);
-		if ( psm == 9 ) return 1;
+		//	printf ("psm %d\n", psm);
+		if (psm == 9) return 1;
+
 		return psm;
 	}
+
 	u32 tw_exp()
 	{
-		if (tw > 10) return (1<<10);
-		return (1<<tw);
+		if (tw > 10) return (1 << 10);
+
+		return (1 << tw);
 	}
+
 	u32 th_exp()
 	{
-		if (th > 10) return (1<<10);
-		return (1<<th);
+		if (th > 10) return (1 << 10);
+
+		return (1 << th);
 	}
+
 	u32 cpsm_fix()
 	{
 		return cpsm & 0xe;
 	}
+
 	u32 csa_fix()
 	{
 		if (cpsm < 2)
@@ -480,7 +507,8 @@ union tex_0_info
 #define TEX_HIGHLIGHT 2
 #define TEX_HIGHLIGHT2 3
 
-typedef struct {
+typedef struct
+{
 	int lcm;
 	int mxl;
 	int mmag;
@@ -490,7 +518,8 @@ typedef struct {
 	int k;
 } tex1Info;
 
-typedef struct {
+typedef struct
+{
 	int wms;
 	int wmt;
 	int minu;
@@ -499,24 +528,28 @@ typedef struct {
 	int maxv;
 } clampInfo;
 
-typedef struct {
+typedef struct
+{
 	int cbw;
 	int cou;
 	int cov;
 } clutInfo;
 
-typedef struct {
+typedef struct
+{
 	int tbp[3];
 	int tbw[3];
 } miptbpInfo;
 
-typedef struct {
+typedef struct
+{
 	u16 aem;
 	u8 ta[2];
 	float fta[2];
 } texaInfo;
 
-typedef struct {
+typedef struct
+{
 	int sx;
 	int sy;
 	int dx;
@@ -524,9 +557,12 @@ typedef struct {
 	int dir;
 } trxposInfo;
 
-typedef struct {
-	union {
-		struct {
+typedef struct 
+{
+	union 
+	{
+		struct 
+		{
 			u8 a : 2;
 			u8 b : 2;
 			u8 c : 2;
@@ -538,17 +574,20 @@ typedef struct {
 	u8 fix : 8;
 } alphaInfo;
 
-typedef struct {
+typedef struct
+{
 	u16 zbp;		// u16 address / 64
 	u8 psm;
 	u8 zmsk;
 } zbufInfo;
 
-typedef struct {
+typedef struct
+{
 	int fba;
 } fbaInfo;
 
-typedef struct {
+typedef struct
+{
 	Vertex gsvertex[3];
 	u32 rgba;
 	float q;
@@ -593,36 +632,41 @@ extern GSinternal gs;
 static __forceinline u16 RGBA32to16(u32 c)
 {
 	return (u16)((((c) & 0x000000f8) >>  3) |
-				(((c) & 0x0000f800) >>  6) |
-				(((c) & 0x00f80000) >>  9) |
-				(((c) & 0x80000000) >> 16));
+				 (((c) & 0x0000f800) >>  6) |
+				 (((c) & 0x00f80000) >>  9) |
+				 (((c) & 0x80000000) >> 16));
 }
 
 static __forceinline u32 RGBA16to32(u16 c)
 {
-	return 	(((c) & 0x001f) <<  3) |
-			(((c) & 0x03e0) <<  6) |
-			(((c) & 0x7c00) <<  9) |
-			(((c) & 0x8000) ? 0xff000000 : 0);
+	return	(((c) & 0x001f) <<  3) |
+		   (((c) & 0x03e0) <<  6) |
+		   (((c) & 0x7c00) <<  9) |
+		   (((c) & 0x8000) ? 0xff000000 : 0);
 }
 
 // converts float16 [0,1] to BYTE [0,255] (assumes value is in range, otherwise will take lower 8bits)
 // f is a u16
-static __forceinline u16 Float16ToBYTE(u16 f) {
+static __forceinline u16 Float16ToBYTE(u16 f)
+{
 	//assert( !(f & 0x8000) );
-	if( f & 0x8000 ) return 0;
+	if (f & 0x8000) return 0;
 
-	u16 d = ((((f&0x3ff)|0x400)*255)>>(10-((f>>10)&0x1f)+15));
+	u16 d = ((((f & 0x3ff) | 0x400) * 255) >> (10 - ((f >> 10) & 0x1f) + 15));
+
 	return d > 255 ? 255 : d;
 }
 
-static __forceinline u16 Float16ToALPHA(u16 f) {
+static __forceinline u16 Float16ToALPHA(u16 f)
+{
 	//assert( !(f & 0x8000) );
-	if( f & 0x8000 ) return 0;
+	if (f & 0x8000) return 0;
 
 	// round up instead of down (crash and burn), too much and charlie breaks
-	u16 d = (((((f&0x3ff)|0x400))*255)>>(10-((f>>10)&0x1f)+15));
-	d = (d)>>1;
+	u16 d = (((((f & 0x3ff) | 0x400)) * 255) >> (10 - ((f >> 10) & 0x1f) + 15));
+
+	d = (d) >> 1;
+
 	return d > 255 ? 255 : d;
 }
 
@@ -650,12 +694,14 @@ static __forceinline u16 Float16ToALPHA(u16 f) {
 
 inline float Clamp(float fx, float fmin, float fmax)
 {
-	if( fx < fmin ) return fmin;
+	if (fx < fmin) return fmin;
+
 	return fx > fmax ? fmax : fx;
 }
 
 // PSMT16, 16S have shorter color per pixel, also cluted textures with half storage.
-inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0) {
+inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0)
+{
 	if (PSMT_IS16BIT(tex0.psm) || (PSMT_ISCLUT(tex0.psm) && tex0.cpsm > 1))
 		return true;
 	else
@@ -670,7 +716,7 @@ inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0) {
 static __forceinline int ZZOglGet_tbp0_TexBits(u32 data)
 {
 	//return tex_0_info(data).tbp0;
-	return (data	  ) & 0x3fff;
+	return (data) & 0x3fff;
 }
 
 // Obtain tbw -- Texture Buffer Width (Texels/64) -- from data, do not multiply to 64. Bits 14-19
@@ -686,6 +732,7 @@ static __forceinline int ZZOglGet_tbw_TexBitsMult(u32 data)
 {
 	//return text_0_info(data).tbw_mult();
 	int result = ZZOglGet_tbw_TexBits(data);
+
 	if (result == 0)
 		return 64;
 	else
@@ -697,7 +744,7 @@ static __forceinline int ZZOglGet_tbw_TexBitsMult(u32 data)
 static __forceinline int ZZOglGet_psm_TexBits(u32 data)
 {
 	//return tex_0_info(data).psm;
-	return 	((data >> 20) & 0x3f);
+	return	((data >> 20) & 0x3f);
 }
 
 // Obtain psm -- Pixel Storage Format -- from data. Bits 20-25. Fix incorrect psm == 9
@@ -706,7 +753,9 @@ static __forceinline int ZZOglGet_psm_TexBitsFix(u32 data)
 	//return tex_0_info(data).psm_fix();
 	int result = ZZOglGet_psm_TexBits(data) ;
 //	printf ("result %d\n", result);
-	if ( result == 9 ) result = 1;
+
+	if (result == 9) result = 1;
+
 	return result;
 }
 
@@ -715,7 +764,7 @@ static __forceinline int ZZOglGet_psm_TexBitsFix(u32 data)
 static __forceinline u16 ZZOglGet_tw_TexBits(u32 data)
 {
 	//return tex_0_info(data).tw;
-	return 	((data >> 26) & 0xf);
+	return	((data >> 26) & 0xf);
 }
 
 // Obtain tw -- Texture Width (Width = TW) -- from data. Width could newer be more than 1024.
@@ -723,8 +772,10 @@ static __forceinline u16 ZZOglGet_tw_TexBitsExp(u32 data)
 {
 	//return tex_0_info(data).tw_exp();
 	u16 result = ZZOglGet_tw_TexBits(data);
+
 	if (result > 10) result = 10;
-	return (1<<result);
+
+	return (1 << result);
 }
 
 // TH set at the border of upper and higher words.
@@ -741,8 +792,10 @@ static __forceinline u16 ZZOglGet_th_TexBitsExp(u32 dataLO, u32 dataHI)
 {
 	//return tex_0_info(dataLO, dataHI).th_exp();
 	u16 result = ZZOglGet_th_TexBits(dataLO, dataHI);
+
 	if (result > 10) result = 10;
-	return 	(1<<result);
+
+	return	(1 << result);
 }
 
 // Tex0Info bits, higher word.
@@ -751,7 +804,7 @@ static __forceinline u16 ZZOglGet_th_TexBitsExp(u32 dataLO, u32 dataHI)
 static __forceinline u8 ZZOglGet_tcc_TexBits(u32 data)
 {
 	//return tex_0_info(0, data).tcc;
-	return  ((data >>  2) & 0x1);
+	return ((data >>  2) & 0x1);
 }
 
 // Obtain tfx -- Texture Function (0=modulate, 1=decal, 2=hilight, 3=hilight2) -- from data. Bit 4-5
@@ -759,7 +812,7 @@ static __forceinline u8 ZZOglGet_tcc_TexBits(u32 data)
 static __forceinline u8 ZZOglGet_tfx_TexBits(u32 data)
 {
 	//return tex_0_info(0, data).tfx;
-	return  ((data >>  3) & 0x3);
+	return ((data >>  3) & 0x3);
 }
 
 // Obtain cbp from data -- Clut Buffer Base Pointer (Address/256) -- Bits 5-18
@@ -767,7 +820,7 @@ static __forceinline u8 ZZOglGet_tfx_TexBits(u32 data)
 static __forceinline int ZZOglGet_cbp_TexBits(u32 data)
 {
 	//return tex_0_info(0, data).cbp;
-	return  ((data >>  5) & 0x3fff);
+	return ((data >>  5) & 0x3fff);
 }
 
 // Obtain cpsm from data -- Clut pixel Storage Format -- Bits 19-22. 22nd is at no use.
@@ -794,7 +847,7 @@ static __forceinline u8 ZZOglGet_csa_TexBits(u32 data)
 {
 	//return tex_0_info(0, data).csa_fix();
 
-	if ((data & 0x700000) == 0 ) // it is cpsm < 2 check
+	if ((data & 0x700000) == 0)  // it is cpsm < 2 check
 		return ((data >> 24) & 0xf);
 	else
 		return ((data >> 24) & 0x1f);
@@ -805,79 +858,81 @@ static __forceinline u8 ZZOglGet_csa_TexBits(u32 data)
 static __forceinline u8 ZZOglGet_cld_TexBits(u32 data)
 {
 	//return tex_0_info(0, data).cld;
-	return  ((data >> 29) & 0x7);
+	return ((data >> 29) & 0x7);
 }
 
 //-------------------------- frames
 // FrameInfo bits.
 // Obtain fbp -- frame Buffer Base Pointer (Word Address/2048) -- from data. Bits 0-15
-inline int
-ZZOglGet_fbp_FrameBits(u32 data) {
-	return ((data      ) & 0x1ff);
+inline int ZZOglGet_fbp_FrameBits(u32 data)
+{
+	return ((data) & 0x1ff);
 }
 
-// So we got adress / 64, henceby frame fbp and tex tbp have the same dimension -- "real adress" is x64.
-inline int
-ZZOglGet_fbp_FrameBitsMult(u32 data) {
+// So we got address / 64, henceby frame fbp and tex tbp have the same dimension -- "real address" is x64.
+inline int ZZOglGet_fbp_FrameBitsMult(u32 data)
+{
 	return (ZZOglGet_fbp_FrameBits(data) << 5);
 }
 
 // Obtain fbw -- width (Texels/64) -- from data. Bits 16-23
-inline int
-ZZOglGet_fbw_FrameBits(u32 data) {
+inline int ZZOglGet_fbw_FrameBits(u32 data)
+{
 	return ((data >> 16) & 0x3f);
 }
 
-inline int
-ZZOglGet_fbw_FrameBitsMult(u32 data) {
+inline int ZZOglGet_fbw_FrameBitsMult(u32 data)
+{
 	return (ZZOglGet_fbw_FrameBits(data) << 6);
 }
 
 
 // Obtain psm -- Pixel Storage Format -- from data. Bits 24-29.
 // (data & 0x3f000000) >> 24
-inline int
-ZZOglGet_psm_FrameBits(u32 data) {
-	return 	((data >> 24) & 0x3f);
+inline int ZZOglGet_psm_FrameBits(u32 data)
+{
+	return	((data >> 24) & 0x3f);
 }
 
 // Function for calculating overal height from frame data.
-inline int
-ZZOgl_fbh_Calc (int fbp, int fbw, int psm) {
-	int fbh = ( 1024 * 1024 - 64 * fbp ) / fbw;
+inline int ZZOgl_fbh_Calc(int fbp, int fbw, int psm)
+{
+	int fbh = (1024 * 1024 - 64 * fbp) / fbw;
 	fbh &= ~0x1f;
-	if (PSMT_ISHALF(psm))
-		fbh *= 2;
-	if (fbh > 1024)
-		fbh = 1024;
+
+	if (PSMT_ISHALF(psm)) fbh *= 2;
+	if (fbh > 1024) fbh = 1024;
+
 	return fbh ;
 }
-inline int
-ZZOgl_fbh_Calc (frameInfo frame) {
+
+inline int ZZOgl_fbh_Calc(frameInfo frame)
+{
 	return ZZOgl_fbh_Calc(frame.fbp, frame.fbw, frame.psm);
 }
 
 // Calculate fbh from data, It does not set in register
-inline int
-ZZOglGet_fbh_FrameBitsCalc (u32 data) {
+inline int ZZOglGet_fbh_FrameBitsCalc(u32 data)
+{
 	int fbh = 0;
 	int fbp = ZZOglGet_fbp_FrameBits(data);
 	int fbw = ZZOglGet_fbw_FrameBits(data);
 	int psm = ZZOglGet_psm_FrameBits(data);
-	if (fbw > 0)
-		fbh = ZZOgl_fbh_Calc(fbp, fbw, psm) ;
+
+	if (fbw > 0) fbh = ZZOgl_fbh_Calc(fbp, fbw, psm) ;
+
 	return fbh ;
 }
 
 // Obtain fbm -- frame mask -- from data. All higher word.
-inline u32
-ZZOglGet_fbm_FrameBits(u32 data) {
-	return 	(data);
+inline u32 ZZOglGet_fbm_FrameBits(u32 data)
+{
+	return (data);
 }
 
 // Obtain fbm -- frame mask -- from data. All higher word. Fixed from psm == PCMT24 (without alpha)
-inline u32
-ZZOglGet_fbm_FrameBitsFix(u32 dataLO, u32 dataHI) {
+inline u32 ZZOglGet_fbm_FrameBitsFix(u32 dataLO, u32 dataHI)
+{
 	if (PSMT_BITMODE(ZZOglGet_psm_FrameBits(dataLO)) == 1)
 		return (dataHI | 0xff000000);
 	else
@@ -885,53 +940,51 @@ ZZOglGet_fbm_FrameBitsFix(u32 dataLO, u32 dataHI) {
 }
 
 // obtain colormask RED
-inline u32
-ZZOglGet_fbmRed_FrameBits(u32 data) {
+inline u32 ZZOglGet_fbmRed_FrameBits(u32 data)
+{
 	return (data & 0xff);
 }
 
 // obtain colormask Green
-inline u32
-ZZOglGet_fbmGreen_FrameBits(u32 data) {
+inline u32 ZZOglGet_fbmGreen_FrameBits(u32 data)
+{
 	return ((data >> 8) & 0xff);
 }
 
 // obtain colormask Blue
-inline u32
-ZZOglGet_fbmBlue_FrameBits(u32 data) {
+inline u32 ZZOglGet_fbmBlue_FrameBits(u32 data)
+{
 	return ((data >> 16) & 0xff);
 }
 
 // obtain colormask Alpha
-inline u32
-ZZOglGet_fbmAlpha_FrameBits(u32 data) {
+inline u32 ZZOglGet_fbmAlpha_FrameBits(u32 data)
+{
 	return ((data >> 24) & 0xff);
 }
 
 // obtain colormask Alpha
-inline u32
-ZZOglGet_fbmHighByte(u32 data) {
+inline u32 ZZOglGet_fbmHighByte(u32 data)
+{
 	return (!!(data & 0x80000000));
 }
 
-
-
 //-------------------------- tex0 comparison
 // Check if old and new tex0 registers have only clut difference
-inline bool
-ZZOglAllExceptClutIsSame( u32* oldtex, u32* newtex) {
+inline bool ZZOglAllExceptClutIsSame(u32* oldtex, u32* newtex)
+{
 	return ((oldtex[0] == newtex[0]) && ((oldtex[1] & 0x1f) == (newtex[1] & 0x1f)));
 }
 
 // Check if the CLUT registers are same, except CLD
-inline bool
-ZZOglClutMinusCLDunchanged( u32* oldtex, u32* newtex) {
+inline bool ZZOglClutMinusCLDunchanged(u32* oldtex, u32* newtex)
+{
 	return ((oldtex[1] & 0x1fffffe0) == (newtex[1] & 0x1fffffe0));
 }
 
 // Check if CLUT storage mode is not changed (CSA, CSM and CSPM)
-inline bool
-ZZOglClutStorageUnchanged( u32* oldtex, u32* newtex) {
+inline bool ZZOglClutStorageUnchanged(u32* oldtex, u32* newtex)
+{
 	return ((oldtex[1] & 0x1ff10000) == (newtex[1] & 0x1ff10000));
 }
 

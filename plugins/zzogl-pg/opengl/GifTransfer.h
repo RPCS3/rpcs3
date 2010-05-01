@@ -39,29 +39,33 @@ union GIFTag
 {
 	u64 ai64[2];
 	u32 ai32[4];
+
 	struct
 	{
-		u32 NLOOP:15;
-		u32 EOP:1;
-		u32 _PAD1:16;
-		u32 _PAD2:14;
-		u32 PRE:1;
-		u32 PRIM:11;
-		u32 FLG:2; // enum GIF_FLG
-		u32 NREG:4;
-		u64 REGS:64;
+		u32 NLOOP : 15;
+		u32 EOP : 1;
+		u32 _PAD1 : 16;
+		u32 _PAD2 : 14;
+		u32 PRE : 1;
+		u32 PRIM : 11;
+		u32 FLG : 2; // enum GIF_FLG
+		u32 NREG : 4;
+		u64 REGS : 64;
 	};
+
 	void set(u32 *data)
 	{
-		for(int i = 0; i <= 3; i++)
+		for (int i = 0; i <= 3; i++)
 		{
 			ai32[i] = data[i];
 		}
 	}
+
 	GIFTag(u32 *data)
 	{
 		set(data);
 	}
+
 	GIFTag(){ ai64[0] = 0; ai64[1] = 0; }
 };
 
@@ -101,13 +105,12 @@ typedef struct
 		// Hmm....
 		nreg	= tag.NREG << 2;
 		if (nreg == 0) nreg = 64;
-
 		regs = tag.REGS;
 		reg = 0;
 
-        //      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
-        //                      data[3], data[2], data[1], data[0],
-        //                      path->eop, path->nloop, mode, path->nreg, tag.PRE);
+		//      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
+		//                      data[3], data[2], data[1], data[0],
+		//                      path->eop, path->nloop, mode, path->nreg, tag.PRE);
 	}
 
 	u32 GetReg()
@@ -124,49 +127,48 @@ typedef struct
 			reg = 0;
 			nloop--;
 
-			if (nloop == 0)
-			{
-				return false;
-			}
+			if (nloop == 0) return false;
 		}
+
 		return true;
 	}
+
 #else
-        void setTag(u32 *data)
-        {
-                tag.set(data);
+	void setTag(u32 *data)
+	{
+		tag.set(data);
 
-                nloop   = tag.NLOOP;
-                eop     = tag.EOP;
-                u32 tagpre              = tag.PRE;
-                u32 tagprim             = tag.PRIM;
-                u32 tagflg              = tag.FLG;
+		nloop   = tag.NLOOP;
+		eop     = tag.EOP;
+		u32 tagpre              = tag.PRE;
+		u32 tagprim             = tag.PRIM;
+		u32 tagflg              = tag.FLG;
 
-                // Hmm....
-                nreg    = tag.NREG << 2;
-                if (nreg == 0) nreg = 64;
+		// Hmm....
+		nreg    = tag.NREG << 2;
+		if (nreg == 0) nreg = 64;
 
-        //      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
-        //                      data[3], data[2], data[1], data[0],
-        //                      path->eop, path->nloop, tagflg, path->nreg, tagpre);
+		//      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
+		//                      data[3], data[2], data[1], data[0],
+		//                      path->eop, path->nloop, tagflg, path->nreg, tagpre);
 
-                mode = tagflg;
+		mode = tagflg;
 
-                switch (mode)
-                {
-					case GIF_FLG_PACKED:
-						regs = *(u64 *)(data+2);
-						regn = 0;
-						if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
+		switch (mode)
+		{
+			case GIF_FLG_PACKED:
+				regs = *(u64 *)(data + 2);
+				regn = 0;
+				if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
+				break;
 
-						break;
+			case GIF_FLG_REGLIST:
+				regs = *(u64 *)(data + 2);
+				regn = 0;
+				break;
+		}
+	}
 
-					case GIF_FLG_REGLIST:
-						regs = *(u64 *)(data+2);
-						regn = 0;
-						break;
-                }
-        }
 #endif
 } pathInfo;
 

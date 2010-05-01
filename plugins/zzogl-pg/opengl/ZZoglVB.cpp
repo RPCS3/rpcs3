@@ -337,7 +337,7 @@ inline int ZeroGS::VB::CheckFrameResolveRender(int tbp)
 }
 
 // After frame resetting, it is possible that 16 to 32 or 32 to 16 (color bits) conversion should be made.
-inline void ZeroGS::VB::CheckFrame16vs32Convesion()
+inline void ZeroGS::VB::CheckFrame16vs32Conversion()
 {
 	if (prndr->status & CRenderTarget::TS_NeedConvert32)
 	{
@@ -393,7 +393,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 
 		bChanged = CheckFrameResolveRender(tbp);
 
-		CheckFrame16vs32Convesion();
+		CheckFrame16vs32Conversion();
 	}
 	else if (bNeedZCheck)
 	{

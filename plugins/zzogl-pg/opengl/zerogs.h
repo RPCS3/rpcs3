@@ -43,7 +43,7 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 
-inline void* wglGetProcAddress(const char* x) 
+inline void* wglGetProcAddress(const char* x)
 {
 	return (void*)glXGetProcAddress((const GLubyte*)x);
 }
@@ -143,11 +143,13 @@ using namespace std;
 extern const char* ShaderCallerName;
 extern const char* ShaderHandleName;
 
-inline void SetShaderCaller(const char* Name) {
+inline void SetShaderCaller(const char* Name)
+{
 	ShaderCallerName = Name;
 }
 
-inline void SetHandleName(const char* Name) {
+inline void SetHandleName(const char* Name)
+{
 	ShaderHandleName = Name;
 }
 
@@ -160,14 +162,14 @@ extern void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* n
 		g_vsprog = prog; \
 	} \
 } \
-
+ 
 #define SETPIXELSHADER(prog) { \
 	if( (prog) != g_psprog ) { \
 		cgGLBindProgram(prog); \
 		g_psprog = prog; \
 	} \
 } \
-
+ 
 #ifndef ARRAY_SIZE
 #	define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
@@ -180,66 +182,76 @@ const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 
 //------------------------ Inlines -------------------------
 
-inline const char *error_name(int err) {
-	switch (err) {
+inline const char *error_name(int err)
+{
+	switch (err)
+	{
 		case GL_NO_ERROR:
 			return "GL_NO_ERROR";
+
 		case GL_INVALID_ENUM:
 			return "GL_INVALID_ENUM";
+
 		case GL_INVALID_VALUE:
 			return "GL_INVALID_VALUE";
+
 		case GL_INVALID_OPERATION:
 			return "GL_INVALID_OPERATION";
+
 		case GL_STACK_OVERFLOW:
 			return "GL_STACK_OVERFLOW";
+
 		case GL_STACK_UNDERFLOW:
 			return "GL_STACK_UNDERFLOW";
+
 		case GL_OUT_OF_MEMORY:
 			return "GL_OUT_OF_MEMORY";
+
 		case GL_TABLE_TOO_LARGE:
 			return "GL_TABLE_TOO_LARGE";
+
 		default:
 			return "Unknown GL error";
 	}
 }
 
-// inline for extemely ofthen used sequence
+// inline for an extemely often used sequence
 // This is turning off all gl functions. Safe to do updates.
-inline void
-DisableAllgl () {
+inline void DisableAllgl()
+{
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(0);
 	glDisable(GL_STENCIL_TEST);
-	glColorMask(1,1,1,1);
+	glColorMask(1, 1, 1, 1);
 }
 
 // Calculate maximum height for target
-inline int
-get_maxheight(int fbp, int fbw, int psm)
+inline int get_maxheight(int fbp, int fbw, int psm)
 {
 	int ret;
 
 	if (fbw == 0) return 0;
+
 	if (PSMT_ISHALF(psm))
-		ret = (((0x00100000 - 64 * fbp)/fbw ) & ~0x1f) * 2;
+		ret = (((0x00100000 - 64 * fbp) / fbw) & ~0x1f) * 2;
 	else
-		ret = (((0x00100000 - 64 * fbp)/fbw ) & ~0x1f);
+		ret = (((0x00100000 - 64 * fbp) / fbw) & ~0x1f);
 
 	return ret;
 }
 
-// Does psm need Alpha test with alpha expansion
-inline int
-nNeedAlpha(u8 psm) {
+// Does psm need Alpha test with alpha expansion?
+inline int nNeedAlpha(u8 psm)
+{
 	return (psm == PSMCT24 || psm == PSMCT16 || psm == PSMCT16S);
 }
 
 // Get color storage model psm, that is important on flush stage.
-inline u8
-GetTexCPSM(const tex0Info& tex) {
+inline u8 GetTexCPSM(const tex0Info& tex)
+{
 	if (PSMT_ISCLUT(tex.psm))
 		return tex.cpsm;
 	else
@@ -249,19 +261,20 @@ GetTexCPSM(const tex0Info& tex) {
 //--------------------- Dummies
 
 #ifdef _WIN32
-	extern void (__stdcall *zgsBlendEquationSeparateEXT)(GLenum, GLenum);
-	extern void (__stdcall *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum);
+extern void (__stdcall *zgsBlendEquationSeparateEXT)(GLenum, GLenum);
+extern void (__stdcall *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum);
 #else
-	extern void (APIENTRY *zgsBlendEquationSeparateEXT)(GLenum, GLenum);
-	extern void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum);
+extern void (APIENTRY *zgsBlendEquationSeparateEXT)(GLenum, GLenum);
+extern void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum);
 #endif
 
 // ------------------------ Types -------------------------
+
 struct FRAGMENTSHADER
 {
 	FRAGMENTSHADER() : prog(0), sMemory(0), sFinal(0), sBitwiseANDX(0), sBitwiseANDY(0), sInterlace(0), sCLUT(0), sOneColor(0), sBitBltZ(0),
-		fTexAlpha2(0), fTexOffset(0), fTexDims(0), fTexBlock(0), fClampExts(0), fTexWrapMode(0),
-		fRealTexDims(0), fTestBlack(0), fPageOffset(0), fTexAlpha(0) {}
+			fTexAlpha2(0), fTexOffset(0), fTexDims(0), fTexBlock(0), fClampExts(0), fTexWrapMode(0),
+			fRealTexDims(0), fTestBlack(0), fPageOffset(0), fTexAlpha(0) {}
 
 	CGprogram prog;
 	CGparameter sMemory, sFinal, sBitwiseANDX, sBitwiseANDY, sInterlace, sCLUT;
@@ -275,6 +288,7 @@ struct FRAGMENTSHADER
 	{
 		CGparameter p;
 		p = cgGetNamedParameter(prog, name);
+
 		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE) var = p;
 	}
 
@@ -283,12 +297,14 @@ struct FRAGMENTSHADER
 		CGparameter p;
 
 		p = cgGetNamedParameter(prog, name);
-		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		{
 			cgGLSetTextureParameter(p, texobj);
 			cgGLEnableTextureParameter(p);
 			return true;
 		}
+
 		return false;
 	}
 
@@ -297,11 +313,13 @@ struct FRAGMENTSHADER
 		CGparameter p;
 
 		p = cgGetNamedParameter(prog, name);
-		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		{
 			cgConnectParameter(tex, p);
 			return true;
 		}
+
 		return false;
 	}
 
@@ -310,12 +328,14 @@ struct FRAGMENTSHADER
 		CGparameter p;
 
 		p = cgGetNamedParameter(prog, name);
-		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		{
 			//cgGLEnableTextureParameter(p);
 			tex = p;
 			return true;
 		}
+
 		return false;
 	}
 
@@ -325,11 +345,12 @@ struct FRAGMENTSHADER
 
 		p = cgGetNamedParameter(prog, name);
 
-		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		{
 			cgGLSetParameter4fv(p, v);
 			return true;
 		}
+
 		return false;
 	}
 };
@@ -337,9 +358,11 @@ struct FRAGMENTSHADER
 struct VERTEXSHADER
 {
 	VERTEXSHADER() : prog(0), sBitBltPos(0), sBitBltTex(0) {}
+
 	CGprogram prog;
 	CGparameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
 };
+
 // ------------------------ Variables -------------------------
 // all textures have this width
 //#define GPU_TEXWIDTH		512
@@ -458,7 +481,7 @@ enum GAME_HACK_OPTIONS
 	GAME_32BITTARGS			=	0x00200000,
 	GAME_PATH3HACK			=	0x00400000,
 	GAME_DOPARALLELCTX		=	0x00800000, // tries to parallelize both contexts so that render calls are reduced (xenosaga)
-											// makes the game faster, but can be buggy
+	// makes the game faster, but can be buggy
 	GAME_XENOSPECHACK		=	0x01000000, // xenosaga specularity hack (ignore any zmask=1 draws)
 	GAME_PARTIALPOINTERS	=	0x02000000, // whenver the texture or render target are small, tries to look for bigger ones to read from
 	GAME_PARTIALDEPTH		=	0x04000000, // tries to save depth targets as much as possible across height changes
@@ -469,191 +492,191 @@ enum GAME_HACK_OPTIONS
 
 #define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
 
-
 // CRC Information
-        enum Title_Info
-        {
-                Unknown_Title,
-                MetalSlug6,
-                TomoyoAfter,
-                Clannad,
-                Lamune,
-                KyuuketsuKitanMoonties,
-                PiaCarroteYoukosoGPGakuenPrincess,
-                KazokuKeikakuKokoroNoKizuna,
-                DuelSaviorDestiny,
-                FFX,
-                FFX2,
-                FFXII,
-                ShadowHearts,
-                Okami,
-                MetalGearSolid3,
-                DBZBT2,
-                DBZBT3,
-                SFEX3,
-                Bully,
-                BullyCC,
-                SoTC,
-                OnePieceGrandAdventure,
-                OnePieceGrandBattle,
-                ICO,
-                GT4,
-                WildArms5,
-                Manhunt2,
-                CrashBandicootWoC,
-                ResidentEvil4,
-                Spartan,
-                AceCombat4,
-                Drakengard2,
-                Tekken5,
-                IkkiTousen,
-                GodOfWar,
-                GodOfWar2,
-                JackieChanAdv,
-                HarvestMoon,
-                NamcoXCapcom,
-                GiTS,
-                Onimusha3,
-                MajokkoALaMode2,
-                TalesOfAbyss,
-                SonicUnleashed,
-                SimpsonsGame,
-                Genji,
-                StarOcean3,
-                ValkyrieProfile2,
-                RadiataStories,
-                SMTNocturne,
-                SMTDDS1,
-                SMTDDS2,
-                RozenMaidenGebetGarden,
-                Xenosaga,
-                Espgaluda,
-                OkageShadowKing,
-                ShadowTheHedgehog,
-                AtelierIris1,
-                AtelierIris2,
-                AtelierIris3,
-                AtelierJudie,
-                AtelierLilie,
-                AtelierViorate,
-                ArTonelico1,
-                ArTonelico2,
-				ManaKhemia1,
-                ManaKhemia2,
-                DarkCloud1,
-                DarkCloud2,
-                GhostInTheShell,
-                TitleCount,
-        };
+enum Title_Info
+{
+	Unknown_Title,
+	MetalSlug6,
+	TomoyoAfter,
+	Clannad,
+	Lamune,
+	KyuuketsuKitanMoonties,
+	PiaCarroteYoukosoGPGakuenPrincess,
+	KazokuKeikakuKokoroNoKizuna,
+	DuelSaviorDestiny,
+	FFX,
+	FFX2,
+	FFXII,
+	ShadowHearts,
+	Okami,
+	MetalGearSolid3,
+	DBZBT2,
+	DBZBT3,
+	SFEX3,
+	Bully,
+	BullyCC,
+	SoTC,
+	OnePieceGrandAdventure,
+	OnePieceGrandBattle,
+	ICO,
+	GT4,
+	WildArms5,
+	Manhunt2,
+	CrashBandicootWoC,
+	ResidentEvil4,
+	Spartan,
+	AceCombat4,
+	Drakengard2,
+	Tekken5,
+	IkkiTousen,
+	GodOfWar,
+	GodOfWar2,
+	JackieChanAdv,
+	HarvestMoon,
+	NamcoXCapcom,
+	GiTS,
+	Onimusha3,
+	MajokkoALaMode2,
+	TalesOfAbyss,
+	SonicUnleashed,
+	SimpsonsGame,
+	Genji,
+	StarOcean3,
+	ValkyrieProfile2,
+	RadiataStories,
+	SMTNocturne,
+	SMTDDS1,
+	SMTDDS2,
+	RozenMaidenGebetGarden,
+	Xenosaga,
+	Espgaluda,
+	OkageShadowKing,
+	ShadowTheHedgehog,
+	AtelierIris1,
+	AtelierIris2,
+	AtelierIris3,
+	AtelierJudie,
+	AtelierLilie,
+	AtelierViorate,
+	ArTonelico1,
+	ArTonelico2,
+	ManaKhemia1,
+	ManaKhemia2,
+	DarkCloud1,
+	DarkCloud2,
+	GhostInTheShell,
+	TitleCount,
+};
 
-        enum Region_Info
-        {
-                Unknown_Region,
-                US,
-                EU,
-                JP,
-                JPUNDUB,
-                RU,
-                FR,
-                DE,
-                IT,
-                ES,
-                ASIA,
-                RegionCount,
-        };
+enum Region_Info
+{
+	Unknown_Region,
+	US,
+	EU,
+	JP,
+	JPUNDUB,
+	RU,
+	FR,
+	DE,
+	IT,
+	ES,
+	ASIA,
+	RegionCount,
+};
 
-	struct Game_Info
-	{
-			u32 crc;
-			Title_Info title;
-			Region_Info region;
-			u32 flags;
-			s32 v_thresh, t_thresh;
-	};
-	
-	// Note; all the options surrounded by /**/ are ones that were getting chosen previously because of missing break statements, and might not be appropriate.
-	// I'll have to check and see if they work better with or without them.
-	static const Game_Info crc_game_list[] =
-	{
-		{0xA3D63039, Xenosaga, JP, GAME_DOPARALLELCTX, 64, 32},
-		{0x0E7807B2, Xenosaga, US, GAME_DOPARALLELCTX, 64, 32},
-		{0x7D2FE035, Espgaluda, JP, 0/*GAME_BIGVALIDATE*/, 24, -1},
-		{0x21068223, Okami, US, GAME_XENOSPECHACK, -1, -1},
-		{0x891f223f, Okami, FR, GAME_XENOSPECHACK, -1, -1},
-		{0xC5DEFEA0, Okami, JP, GAME_XENOSPECHACK, -1, -1},
-		{0xe0426fc6, OkageShadowKing, Unknown_Region, GAME_XENOSPECHACK, -1, -1},
-		
-		{0xD6385328, GodOfWar, US, GAME_FULL16BITRES, -1, -1},
-		{0xFB0E6D72, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
-		{0xEB001875, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
-		{0xA61A4C6D, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		{0xE23D532B, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		{0xDF1AF973, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		{0xD6385328, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		
-		//{0x2F123FD8, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		//{0x44A8A22A, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		//{0x4340C7C6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		//{0xF8CD3DF6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		//{0x0B82BFF7, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
-		
-		{0xF0A6D880, HarvestMoon, US, GAME_NOSTENCIL, -1, -1},
-		//{0x304C115C, HarvestMoon, Unknown, GAME_NOSTENCIL, -1, -1},
-		{0xFB236A46, SonicUnleashed, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
-		{0xa5d29941, ShadowTheHedgehog, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
-		
-		{0x7acf7e03, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
-		{0xF0457CEF, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
-		{0xE3981DBB, AtelierIris1, US, GAME_GUSTHACK, -1, -1},
-		{0x9AC65D6A, AtelierIris2, US, GAME_GUSTHACK, -1, -1},
-		{0x4CCC9212, AtelierIris3, US, GAME_GUSTHACK, -1, -1},
-		{0xCA295E61, AtelierIris3, JP, GAME_GUSTHACK, -1, -1},
-		//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK, -1, -1},
-		{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK, -1, -1},
-		{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK, -1, -1},
-		{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK , -1, -1},
-		{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
-		//{0xda11c6d4, AtelierJudie, JP, GAME_GUSTHACK, -1, -1},
-		//{0x3e72c085, AtelierLilie, JP, GAME_GUSTHACK, -1, -1},
-		//{0x6eac076b, AtelierViorate, JP, GAME_GUSTHACK, -1, -1},
-		
-		{0xbaa8dd8, DarkCloud1, US, GAME_NOTARGETRESOLVE, -1, -1},
-		{0xA5C05C78, DarkCloud1, Unknown_Region, GAME_NOTARGETRESOLVE, -1, -1},
-		//{0x1DF41F33, DarkCloud2, US, 0, -1, -1},
-		{0x95cc86ef, GhostInTheShell, Unknown_Region, GAME_NOALPHAFAIL, -1, -1}
-		
-        //{0xC164550A, WildArms5, JPUNDUB, 0, -1, -1},
-        //{0xC1640D2C, WildArms5, US, 0, -1, -1},
-        //{0x0FCF8FE4, WildArms5, EU, 0, -1, -1},
-        //{0x2294D322, WildArms5, JP, 0, -1, -1},
-        //{0x565B6170, WildArms5, JP, 0, -1, -1},
-        //{0xD7273511, SMTDDS1, US, 0, -1, -1},          // SMT Digital Devil Saga
-        //{0x1683A6BE, SMTDDS1, EU, 0, -1, -1},          // SMT Digital Devil Saga
-        //{0x44865CE1, SMTDDS1, JP, 0, -1, -1},          // SMT Digital Devil Saga
-        //{0xD382C164, SMTDDS2, US, 0, -1, -1},          // SMT Digital Devil Saga 2
-        //{0xE47C1A9C, SMTDDS2, JP, 0, -1, -1},          // SMT Digital Devil Saga 2
-	};
-	
-	#define GAME_INFO_INDEX (sizeof(crc_game_list)/sizeof(Game_Info))
-	
+struct Game_Info
+{
+	u32 crc;
+	Title_Info title;
+	Region_Info region;
+	u32 flags;
+	s32 v_thresh, t_thresh;
+};
+
+static const Game_Info crc_game_list[] =
+{
+	{0xA3D63039, Xenosaga, JP, GAME_DOPARALLELCTX, 64, 32},
+	{0x0E7807B2, Xenosaga, US, GAME_DOPARALLELCTX, 64, 32},
+	{0x7D2FE035, Espgaluda, JP, 0/*GAME_BIGVALIDATE*/, 24, -1},
+	{0x21068223, Okami, US, GAME_XENOSPECHACK, -1, -1},
+	{0x891f223f, Okami, FR, GAME_XENOSPECHACK, -1, -1},
+	{0xC5DEFEA0, Okami, JP, GAME_XENOSPECHACK, -1, -1},
+	{0xe0426fc6, OkageShadowKing, Unknown_Region, GAME_XENOSPECHACK, -1, -1},
+
+	{0xD6385328, GodOfWar, US, GAME_FULL16BITRES, -1, -1},
+	{0xFB0E6D72, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
+	{0xEB001875, GodOfWar, EU, GAME_FULL16BITRES, -1, -1},
+	{0xA61A4C6D, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	{0xE23D532B, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	{0xDF1AF973, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	{0xD6385328, GodOfWar, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+
+	//{0x2F123FD8, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	//{0x44A8A22A, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	//{0x4340C7C6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	//{0xF8CD3DF6, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+	//{0x0B82BFF7, GodOfWar2, Unknown_Region, GAME_FULL16BITRES, -1, -1},
+
+	{0xF0A6D880, HarvestMoon, US, GAME_NOSTENCIL, -1, -1},
+	//{0x304C115C, HarvestMoon, Unknown, GAME_NOSTENCIL, -1, -1},
+	{0xFB236A46, SonicUnleashed, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
+	{0xa5d29941, ShadowTheHedgehog, US, GAME_FASTUPDATE | GAME_NOALPHAFAIL, -1, -1},
+
+	{0x7acf7e03, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
+	{0xF0457CEF, AtelierIris1, Unknown_Region, GAME_GUSTHACK, -1, -1},
+	{0xE3981DBB, AtelierIris1, US, GAME_GUSTHACK, -1, -1},
+	{0x9AC65D6A, AtelierIris2, US, GAME_GUSTHACK, -1, -1},
+	{0x4CCC9212, AtelierIris3, US, GAME_GUSTHACK, -1, -1},
+	{0xCA295E61, AtelierIris3, JP, GAME_GUSTHACK, -1, -1},
+	//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK, -1, -1},
+	{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK, -1, -1},
+	{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK, -1, -1},
+	{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK , -1, -1},
+	{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
+	//{0xda11c6d4, AtelierJudie, JP, GAME_GUSTHACK, -1, -1},
+	//{0x3e72c085, AtelierLilie, JP, GAME_GUSTHACK, -1, -1},
+	//{0x6eac076b, AtelierViorate, JP, GAME_GUSTHACK, -1, -1},
+
+	{0xbaa8dd8, DarkCloud1, US, GAME_NOTARGETRESOLVE, -1, -1},
+	{0xA5C05C78, DarkCloud1, Unknown_Region, GAME_NOTARGETRESOLVE, -1, -1},
+	//{0x1DF41F33, DarkCloud2, US, 0, -1, -1},
+	{0x95cc86ef, GhostInTheShell, Unknown_Region, GAME_NOALPHAFAIL, -1, -1}
+
+	//{0xC164550A, WildArms5, JPUNDUB, 0, -1, -1},
+	//{0xC1640D2C, WildArms5, US, 0, -1, -1},
+	//{0x0FCF8FE4, WildArms5, EU, 0, -1, -1},
+	//{0x2294D322, WildArms5, JP, 0, -1, -1},
+	//{0x565B6170, WildArms5, JP, 0, -1, -1},
+	//{0xD7273511, SMTDDS1, US, 0, -1, -1},          // SMT Digital Devil Saga
+	//{0x1683A6BE, SMTDDS1, EU, 0, -1, -1},          // SMT Digital Devil Saga
+	//{0x44865CE1, SMTDDS1, JP, 0, -1, -1},          // SMT Digital Devil Saga
+	//{0xD382C164, SMTDDS2, US, 0, -1, -1},          // SMT Digital Devil Saga 2
+	//{0xE47C1A9C, SMTDDS2, JP, 0, -1, -1},          // SMT Digital Devil Saga 2
+};
+
+#define GAME_INFO_INDEX (sizeof(crc_game_list)/sizeof(Game_Info))
+
 extern int nBackbufferWidth, nBackbufferHeight;
 extern u8* g_pbyGSMemory;
 extern u8* g_pbyGSClut; // the temporary clut buffer
 extern CGparameter g_vparamPosXY[2], g_fparamFogColor;
 
-namespace ZeroGS {
+namespace ZeroGS
+{
 
-	typedef void (*DrawFn)();
+typedef void (*DrawFn)();
 
-	enum RenderFormatType
-	{
-		RFT_byte8 = 0,	  // A8R8G8B8
-		RFT_float16 = 1,	// A32R32B32G32
-	};
+enum RenderFormatType
+{
+	RFT_byte8 = 0,	  // A8R8G8B8
+	RFT_float16 = 1,	// A32R32B32G32
+};
 
-	// managers render-to-texture targets
-	class CRenderTarget
-	{
+// managers render-to-texture targets
+
+class CRenderTarget
+{
+
 	public:
 		CRenderTarget();
 		virtual ~CRenderTarget();
@@ -666,8 +689,9 @@ namespace ZeroGS {
 		void SetViewport();
 
 		// copies/creates the feedback contents
-		inline void CreateFeedback() {
-			if( ptexFeedback == 0 || !(status&TS_FeedbackReady) )
+		inline void CreateFeedback()
+		{
+			if (ptexFeedback == 0 || !(status&TS_FeedbackReady))
 				_CreateFeedback();
 		}
 
@@ -678,6 +702,7 @@ namespace ZeroGS {
 		virtual void ConvertTo16(); // converts a psm==0 target, to a psm==2
 
 		virtual bool IsDepth() { return false; }
+
 		void SetRenderTarget(int targ);
 
 		void* psys;   // system data used for comparison
@@ -702,7 +727,8 @@ namespace ZeroGS {
 		// this is optionally used when feedback effects are used (render target is used as a texture when rendering to itself)
 		u32 ptexFeedback;
 
-		enum TargetStatus {
+		enum TargetStatus
+		{
 			TS_Resolved = 1,
 			TS_NeedUpdate = 2,
 			TS_Virtual = 4, // currently not mapped to memory
@@ -712,14 +738,17 @@ namespace ZeroGS {
 		};
 		inline Vector DefaultBitBltPos() ;
 		inline Vector DefaultBitBltTex() ;
+
 	private:
 		void _CreateFeedback();
-		inline bool InitialiseDefaultTexture ( u32 *p_ptr, int fbw, int fbh ) ;
-	};
+		inline bool InitialiseDefaultTexture(u32 *p_ptr, int fbw, int fbh) ;
+};
 
-	// manages zbuffers
-	class CDepthTarget : public CRenderTarget
-	{
+// manages zbuffers
+
+class CDepthTarget : public CRenderTarget
+{
+
 	public:
 		CDepthTarget();
 		virtual ~CDepthTarget();
@@ -738,16 +767,18 @@ namespace ZeroGS {
 		u32 pdepth;		 // 24 bit, will contain the stencil buffer if possible
 		u32 pstencil;	   // if not 0, contains the stencil buffer
 		int icount;		 // internal counter
-	};
+};
 
-	// manages contiguous chunks of memory (width is always 1024)
-	class CMemoryTarget
-	{
+// manages contiguous chunks of memory (width is always 1024)
+
+class CMemoryTarget
+{
 	public:
 		struct TEXTURE
 		{
 			inline TEXTURE() : tex(0), memptr(NULL), ref(0) {}
 			inline ~TEXTURE() { glDeleteTextures(1, &tex); _aligned_free(memptr); }
+
 			u32 tex;
 			u8* memptr;  // GPU memory used for comparison
 			int ref;
@@ -755,9 +786,12 @@ namespace ZeroGS {
 
 		inline CMemoryTarget() : ptex(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), cpsm(0), channels(0), clearminy(0), clearmaxy(0), validatecount(0) {}
 
-		inline CMemoryTarget(const CMemoryTarget& r) {
+		inline CMemoryTarget(const CMemoryTarget& r)
+		{
 			ptex = r.ptex;
-			if( ptex != NULL ) ptex->ref++;
+
+			if (ptex != NULL) ptex->ref++;
+
 			starty = r.starty;
 			height = r.height;
 			realy = r.realy;
@@ -776,14 +810,15 @@ namespace ZeroGS {
 
 		~CMemoryTarget() { Destroy(); }
 
-		inline void Destroy() {
-			if( ptex != NULL && ptex->ref > 0 ) {
-				if( --ptex->ref <= 0 )
-					delete ptex;
+		inline void Destroy()
+		{
+			if (ptex != NULL && ptex->ref > 0)
+			{
+				if (--ptex->ref <= 0) delete ptex;
 			}
 
 			ptex = NULL;
-			}
+		}
 
 		// returns true if clut data is synced
 		bool ValidateClut(const tex0Info& tex0);
@@ -810,257 +845,268 @@ namespace ZeroGS {
 		int validatecount; // count how many times has been validated, if too many, destroy
 
 		vector<u8> clut; // if nonzero, texture uses CLUT
-	};
+};
 
 
-	struct VB
+struct VB
+{
+	VB();
+	~VB();
+
+	void Destroy();
+
+	inline bool CheckPrim()
 	{
-		VB();
-		~VB();
+		static const int PRIMMASK = 0x0e;   // for now ignore 0x10 (AA)
 
-		void Destroy();
+		if ((PRIMMASK & prim->_val) != (PRIMMASK & curprim._val) || primtype[prim->prim] != primtype[curprim.prim])
+			return nCount > 0;
 
-		inline bool CheckPrim() {
-			static const int PRIMMASK = 0x0e;   // for now ignore 0x10 (AA)
-			if( (PRIMMASK & prim->_val) != (PRIMMASK & curprim._val) || primtype[prim->prim] != primtype[curprim.prim] )
-				return nCount > 0;
-			return false;
+		return false;
+	}
+
+	void CheckFrame(int tbp);
+
+	// context specific state
+	Point offset;
+	Rect2 scissor;
+	tex0Info tex0;
+	tex1Info tex1;
+	miptbpInfo miptbp0;
+	miptbpInfo miptbp1;
+	alphaInfo alpha;
+	fbaInfo fba;
+	clampInfo clamp;
+	pixTest test;
+	u32 ptexClamp[2]; // textures for x and y dir region clamping
+
+public:
+	void FlushTexData();
+	inline int CheckFrameAddConstraints(int tbp);
+	inline void CheckScissors(int maxpos);
+	inline void CheckFrame32bitRes(int maxpos);
+	inline int FindMinimalMemoryConstrain(int tbp, int maxpos);
+	inline int FindZbufferMemoryConstrain(int tbp, int maxpos);
+	inline int FindMinimalHeightConstrain(int maxpos);
+
+	inline int CheckFrameResolveRender(int tbp);
+	inline void CheckFrame16vs32Conversion();
+	inline int CheckFrameResolveDepth(int tbp);
+
+	inline void FlushTexUnchangedClutDontUpdate() ;
+	inline void FlushTexClutDontUpdate() ;
+	inline void FlushTexClutting() ;
+	inline void FlushTexSetNewVars(u32 psm) ;
+
+	// notify VB that nVerts need to be written to pbuf
+	inline void NotifyWrite(int nVerts)
+	{
+		assert(pBufferData != NULL && nCount <= nNumVertices && nVerts > 0);
+
+		if (nCount + nVerts > nNumVertices)
+		{
+			// recreate except with a bigger count
+			VertexGPU* ptemp = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nNumVertices * 2, 256);
+			memcpy_amd(ptemp, pBufferData, sizeof(VertexGPU) * nCount);
+			nNumVertices *= 2;
+			assert(nCount + nVerts <= nNumVertices);
+			_aligned_free(pBufferData);
+			pBufferData = ptemp;
+		}
+	}
+
+	void Init(int nVerts)
+	{
+		if (pBufferData == NULL && nVerts > 0)
+		{
+			pBufferData = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nVerts, 256);
+			nNumVertices = nVerts;
 		}
 
-		void CheckFrame(int tbp);
+		nCount = 0;
+	}
 
-		// context specific state
-		Point offset;
-		Rect2 scissor;
-		tex0Info tex0;
-		tex1Info tex1;
-		miptbpInfo miptbp0;
-		miptbpInfo miptbp1;
-		alphaInfo alpha;
-		fbaInfo fba;
-		clampInfo clamp;
-		pixTest test;
-		u32 ptexClamp[2]; // textures for x and y dir region clamping
+	u8 bNeedFrameCheck;
+	u8 bNeedZCheck;
+	u8 bNeedTexCheck;
+	u8 dummy0;
 
-	public:
-		void FlushTexData();
-		inline int CheckFrameAddConstraints(int tbp);
-		inline void CheckScissors (int maxpos);
-		inline void CheckFrame32bitRes(int maxpos);
-		inline int FindMinimalMemoryConstrain(int tbp, int maxpos);
-		inline int FindZbufferMemoryConstrain(int tbp, int maxpos);
-		inline int FindMinimalHeightConstrain(int maxpos);
-
-		inline int CheckFrameResolveRender(int tbp);
-		inline void CheckFrame16vs32Convesion();
-		inline int CheckFrameResolveDepth(int tbp);
-
-		inline void FlushTexUnchangedClutDontUpdate() ;
-		inline void FlushTexClutDontUpdate() ;
-		inline void FlushTexClutting() ;
-		inline void FlushTexSetNewVars(u32 psm) ;
-
-		// notify VB that nVerts need to be written to pbuf
-		inline void NotifyWrite(int nVerts) {
-			assert( pBufferData != NULL && nCount <= nNumVertices && nVerts > 0 );
-
-			if( nCount + nVerts > nNumVertices ) {
-				// recreate except with a bigger count
-				VertexGPU* ptemp = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU)*nNumVertices*2, 256);
-				memcpy_amd(ptemp, pBufferData, sizeof(VertexGPU) * nCount);
-				nNumVertices *= 2;
-				assert( nCount + nVerts <= nNumVertices );
-				_aligned_free(pBufferData);
-				pBufferData = ptemp;
-			}
-		}
-
-		void Init(int nVerts) {
-			if( pBufferData == NULL && nVerts > 0 ) {
-				pBufferData = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU)*nVerts, 256);
-				nNumVertices = nVerts;
-			}
-
-			nCount = 0;
-		}
-
-		u8 bNeedFrameCheck;
-		u8 bNeedZCheck;
-		u8 bNeedTexCheck;
-		u8 dummy0;
-
-		union {
-			struct {
-				u8 bTexConstsSync; // only pixel shader constants that context owns
-				u8 bVarsTexSync; // texture info
-				u8 bVarsSetTarg;
-				u8 dummy1;
-			};
-			u32 bSyncVars;
+	union
+	{
+		struct
+		{
+			u8 bTexConstsSync; // only pixel shader constants that context owns
+			u8 bVarsTexSync; // texture info
+			u8 bVarsSetTarg;
+			u8 dummy1;
 		};
 
-		int ictx;
-		VertexGPU* pBufferData; // current allocated data
-
-		int nNumVertices;   // size of pBufferData in terms of VertexGPU objects
-		int nCount;
-		primInfo curprim;	// the previous prim the current buffers are set to
-
-		zbufInfo zbuf;
-		frameInfo gsfb; // the real info set by FRAME cmd
-		frameInfo frame;
-		int zprimmask; // zmask for incoming points
-
-		u32 uCurTex0Data[2]; // current tex0 data
-		u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
-
-		//int nFrameHeights[8];	// frame heights for the past frame changes
-		int nNextFrameHeight;
-
-		CMemoryTarget* pmemtarg; // the current mem target set
-		CRenderTarget* prndr;
-		CDepthTarget* pdepth;
+		u32 bSyncVars;
 	};
 
-	// Return, if tcc, aem or psm mode told us, than Alpha test should be used
-	// if tcc == 0 than no alpha used, aem used for alpha expanding and I am not sure
-	// that it's correct, psm -- color mode,
-	inline bool
-	IsAlphaTestExpansion(VB& curvb){
-		return (curvb.tex0.tcc && gs.texa.aem && nNeedAlpha(GetTexCPSM(curvb.tex0)));
-	}
+	int ictx;
+	VertexGPU* pBufferData; // current allocated data
 
-	// visible members
-	extern DrawFn drawfn[8];
+	int nNumVertices;   // size of pBufferData in terms of VertexGPU objects
+	int nCount;
+	primInfo curprim;	// the previous prim the current buffers are set to
 
-	// VB variables
-	extern VB vb[2];
-	extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
-	extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
-	extern GLuint vboRect;
-	extern int g_nCurVBOIndex;
+	zbufInfo zbuf;
+	frameInfo gsfb; // the real info set by FRAME cmd
+	frameInfo frame;
+	int zprimmask; // zmask for incoming points
 
-	// Shaders variables
-	extern Vector g_vdepth;
-	extern Vector vlogz;
-	extern VERTEXSHADER pvsBitBlt;
-	extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-	extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-	bool LoadEffects();
-	bool LoadExtraEffects();
-	FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
+	u32 uCurTex0Data[2]; // current tex0 data
+	u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
 
-	extern RenderFormatType g_RenderFormatType;
+	//int nFrameHeights[8];	// frame heights for the past frame changes
+	int nNextFrameHeight;
 
-	void AddMessage(const char* pstr, u32 ms = 5000);
-	void DrawText(const char* pstr, int left, int top, u32 color);
-	void ChangeWindowSize(int nNewWidth, int nNewHeight);
-	void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
-	void ChangeDeviceSize(int nNewWidth, int nNewHeight);
-	void SetAA(int mode);
-	void SetNegAA(int mode);
-	void SetCRC(int crc);
+	CMemoryTarget* pmemtarg; // the current mem target set
+	CRenderTarget* prndr;
+	CDepthTarget* pdepth;
+};
 
-	void ReloadEffects();
+// Return, if tcc, aem or psm mode told us, than Alpha test should be used
+// if tcc == 0 than no alpha used, aem used for alpha expanding and I am not sure
+// that it's correct, psm -- color mode,
+inline bool
+IsAlphaTestExpansion(VB& curvb)
+{
+	return (curvb.tex0.tcc && gs.texa.aem && nNeedAlpha(GetTexCPSM(curvb.tex0)));
+}
 
-	// Methods //
-	bool IsGLExt( const char* szTargetExtension ); ///< returns true if the the opengl extension is supported
-	inline bool Create_Window(int _width, int _height);
-	bool Create(int width, int height);
-	void Destroy(BOOL bD3D);
+// visible members
+extern DrawFn drawfn[8];
 
-	void Restore(); // call to restore device
-	void Reset(); // call to destroy video resources
+// VB variables
+extern VB vb[2];
+extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
+extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
+extern GLuint vboRect;
+extern int g_nCurVBOIndex;
 
-	void GSStateReset();
-	void HandleGLError();
+// Shaders variables
+extern Vector g_vdepth;
+extern Vector vlogz;
+extern VERTEXSHADER pvsBitBlt;
+extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
+extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
+bool LoadEffects();
+bool LoadExtraEffects();
+FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
-	// called on a primitive switch
-	void Prim();
+extern RenderFormatType g_RenderFormatType;
 
-	void SetTexFlush();
-	// flush current vertices, call before setting new registers (the main render method)
-	void Flush(int context);
+void AddMessage(const char* pstr, u32 ms = 5000);
+void DrawText(const char* pstr, int left, int top, u32 color);
+void ChangeWindowSize(int nNewWidth, int nNewHeight);
+void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
+void ChangeDeviceSize(int nNewWidth, int nNewHeight);
+void SetAA(int mode);
+void SetNegAA(int mode);
+void SetCRC(int crc);
 
-	void ExtWrite();
+void ReloadEffects();
 
-	void SetWriteDepth();
-	bool IsWriteDepth();
+// Methods //
+bool IsGLExt(const char* szTargetExtension);   ///< returns true if the the opengl extension is supported
+inline bool Create_Window(int _width, int _height);
+bool Create(int width, int height);
+void Destroy(BOOL bD3D);
 
-	void SetDestAlphaTest();
-	bool IsWriteDestAlphaTest();
+void Restore(); // call to restore device
+void Reset(); // call to destroy video resources
 
-	void SetFogColor(u32 fog);
-	void SaveTex(tex0Info* ptex, int usevid);
-	char* NamedSaveTex(tex0Info* ptex, int usevid);
+void GSStateReset();
+void HandleGLError();
 
-	// called when trxdir is accessed. If host is involved, transfers memory to temp buffer byTransferBuf.
-	// Otherwise performs the transfer. TODO: Perhaps divide the transfers into chunks?
-	void InitTransferHostLocal();
-	void TransferHostLocal(const void* pbyMem, u32 nQWordSize);
+// called on a primitive switch
+void Prim();
 
-	void InitTransferLocalHost();
-	void TransferLocalHost(void* pbyMem, u32 nQWordSize);
-	inline void TerminateLocalHost() {}
+void SetTexFlush();
+// flush current vertices, call before setting new registers (the main render method)
+void Flush(int context);
 
-	void TransferLocalLocal();
+void ExtWrite();
 
-	// switches the render target to the real target, flushes the current render targets and renders the real image
-	void RenderCRTC(int interlace);
-	void ResetRenderTarget(int index);
+void SetWriteDepth();
+bool IsWriteDepth();
 
-	bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
+void SetDestAlphaTest();
+bool IsWriteDestAlphaTest();
 
-	// call to load CLUT data (depending on CLD)
-	void texClutWrite(int ctx);
-	RenderFormatType GetRenderFormat();
-	GLenum GetRenderTargetFormat();
+void SetFogColor(u32 fog);
+void SaveTex(tex0Info* ptex, int usevid);
+char* NamedSaveTex(tex0Info* ptex, int usevid);
 
-	int Save(s8* pbydata);
-	bool Load(s8* pbydata);
+// called when trxdir is accessed. If host is involved, transfers memory to temp buffer byTransferBuf.
+// Otherwise performs the transfer. TODO: Perhaps divide the transfers into chunks?
+void InitTransferHostLocal();
+void TransferHostLocal(const void* pbyMem, u32 nQWordSize);
 
-	void SaveSnapshot(const char* filename);
-	bool SaveRenderTarget(const char* filename, int width, int height, int jpeg);
-	bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
-	bool SaveJPEG(const char* filename, int width, int height, const void* pdata, int quality);
-	bool SaveTGA(const char* filename, int width, int height, void* pdata);
-	void Stop_Avi();
+void InitTransferLocalHost();
+void TransferLocalHost(void* pbyMem, u32 nQWordSize);
+inline void TerminateLocalHost() {}
 
-	// private methods
-	void FlushSysMem(const RECT* prc);
-	void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
+void TransferLocalLocal();
 
-	// returns the first and last addresses aligned to a page that cover
-	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
+// switches the render target to the real target, flushes the current render targets and renders the real image
+void RenderCRTC(int interlace);
+void ResetRenderTarget(int index);
 
-	// inits the smallest rectangle in ptexMem that covers this region in ptexMem
-	// returns the offset that needs to be added to the locked rect to get the beginning of the buffer
-	//void GetMemRect(RECT& rc, int psm, int x, int y, int w, int h, int bp, int bw);
+bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
 
-	void SetContextTarget(int context) ;
+// call to load CLUT data (depending on CLD)
+void texClutWrite(int ctx);
+RenderFormatType GetRenderFormat();
+GLenum GetRenderTargetFormat();
 
-	void NeedFactor(int w);
-	// only sets a limited amount of state (for Update)
-	void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
-	void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, ZeroGS::CMemoryTarget* pmemtarg, FRAGMENTSHADER* pfragment, int force);
+int Save(s8* pbydata);
+bool Load(s8* pbydata);
 
-	void ResetAlphaVariables();
+void SaveSnapshot(const char* filename);
+bool SaveRenderTarget(const char* filename, int width, int height, int jpeg);
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
+bool SaveJPEG(const char* filename, int width, int height, const void* pdata, int quality);
+bool SaveTGA(const char* filename, int width, int height, void* pdata);
+void Stop_Avi();
 
-	void StartCapture();
-	void StopCapture();
-	void CaptureFrame();
+// private methods
+void FlushSysMem(const RECT* prc);
+void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
 
-	// Perform clutting for flushed texture. Better check if it needs a prior call.
-	inline void
-	CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx) {
-		tex0->cbp  = ZZOglGet_cbp_TexBits(Data);
-		tex0->cpsm = ZZOglGet_cpsm_TexBits(Data);
-		tex0->csm  = ZZOglGet_csm_TexBits(Data);
-		tex0->csa  = ZZOglGet_csa_TexBits(Data);
-		tex0->cld  = ZZOglGet_cld_TexBits(Data);
+// returns the first and last addresses aligned to a page that cover
+void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
-		ZeroGS::texClutWrite(ictx);
-	}
+// inits the smallest rectangle in ptexMem that covers this region in ptexMem
+// returns the offset that needs to be added to the locked rect to get the beginning of the buffer
+//void GetMemRect(RECT& rc, int psm, int x, int y, int w, int h, int bp, int bw);
+
+void SetContextTarget(int context) ;
+
+void NeedFactor(int w);
+// only sets a limited amount of state (for Update)
+void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
+void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, ZeroGS::CMemoryTarget* pmemtarg, FRAGMENTSHADER* pfragment, int force);
+
+void ResetAlphaVariables();
+
+void StartCapture();
+void StopCapture();
+void CaptureFrame();
+
+// Perform clutting for flushed texture. Better check if it needs a prior call.
+inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
+{
+	tex0->cbp  = ZZOglGet_cbp_TexBits(Data);
+	tex0->cpsm = ZZOglGet_cpsm_TexBits(Data);
+	tex0->csm  = ZZOglGet_csm_TexBits(Data);
+	tex0->csa  = ZZOglGet_csa_TexBits(Data);
+	tex0->cld  = ZZOglGet_cld_TexBits(Data);
+
+	ZeroGS::texClutWrite(ictx);
+}
 };
 
 // GL prototypes

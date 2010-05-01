@@ -70,21 +70,22 @@ extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file 
 // declare linux equivalents
 static __forceinline void* pcsx2_aligned_malloc(size_t size, size_t align)
 {
-	assert( align < 0x10000 );
-	char* p = (char*)malloc(size+align);
-	int off = 2+align - ((int)(uptr)(p+2) % align);
+	assert(align < 0x10000);
+	char* p = (char*)malloc(size + align);
+	int off = 2 + align - ((int)(uptr)(p + 2) % align);
 
 	p += off;
-	*(u16*)(p-2) = off;
+	*(u16*)(p - 2) = off;
 
 	return p;
 }
 
 static __forceinline void pcsx2_aligned_free(void* pmem)
 {
-	if( pmem != NULL ) {
+	if (pmem != NULL)
+	{
 		char* p = (char*)pmem;
-		free(p - (int)*(u16*)(p-2));
+		free(p - (int)*(u16*)(p - 2));
 	}
 }
 
@@ -98,7 +99,7 @@ inline unsigned long timeGetTime()
 	timeb t;
 	ftime(&t);
 
-	return (unsigned long)(t.time*1000+t.millitm);
+	return (unsigned long)(t.time*1000 + t.millitm);
 }
 
 struct RECT
@@ -113,20 +114,24 @@ struct RECT
 #define min(a,b)			(((a) < (b)) ? (a) : (b))
 
 
-typedef struct {
+typedef struct
+{
 	int x, y, w, h;
 } Rect;
 
-typedef struct {
+typedef struct
+{
 	int x, y;
 } Point;
 
-typedef struct {
+typedef struct
+{
 	int x0, y0;
 	int x1, y1;
 } Rect2;
 
-typedef struct {
+typedef struct
+{
 	int x, y, c;
 } PointC;
 
@@ -145,6 +150,7 @@ typedef struct {
 #define GSOPTION_LOADED		0x8000
 
 //Configuration values.
+
 typedef struct
 {
 	u8 mrtdepth; // write color in render target
@@ -227,18 +233,18 @@ extern void __LogToConsole(const char *fmt, ...);
 
 namespace ZZLog
 {
-	extern void Message(const char *fmt, ...);
-	extern void Log(const char *fmt, ...);
-	extern void WriteToConsole(const char *fmt, ...);
-	extern void Print(const char *fmt, ...);
-	
-	extern void Greg_Log(const char *fmt, ...);
-	extern void Prim_Log(const char *fmt, ...);
-	extern void GS_Log(const char *fmt, ...);
-	
-	extern void Debug_Log(const char *fmt, ...);
-	extern void Warn_Log(const char *fmt, ...);
-	extern void Error_Log(const char *fmt, ...);
+extern void Message(const char *fmt, ...);
+extern void Log(const char *fmt, ...);
+extern void WriteToConsole(const char *fmt, ...);
+extern void Print(const char *fmt, ...);
+
+extern void Greg_Log(const char *fmt, ...);
+extern void Prim_Log(const char *fmt, ...);
+extern void GS_Log(const char *fmt, ...);
+
+extern void Debug_Log(const char *fmt, ...);
+extern void Warn_Log(const char *fmt, ...);
+extern void Error_Log(const char *fmt, ...);
 };
 
 #define REG64(name) \
@@ -247,14 +253,14 @@ union name			\
 	u64 i64;		\
 	u32 ai32[2];	\
 	struct {		\
-
+ 
 #define REG128(name)\
 union name			\
 {					\
 	u64 ai64[2];	\
 	u32 ai32[4];	\
 	struct {		\
-
+ 
 #define REG64_(prefix, name) REG64(prefix##name)
 #define REG128_(prefix, name) REG128(prefix##name)
 
@@ -266,13 +272,13 @@ union name			\
 {					\
 	u64 i64;		\
 	u32 ai32[2];	\
-
+ 
 #define REG128_SET(name)\
 union name			\
 {					\
 	u64 ai64[2];	\
 	u32 ai32[4];	\
-
+ 
 #define REG_SET_END };
 
 extern void LoadConfig();
@@ -310,16 +316,18 @@ static __forceinline u64 GetTickFrequency()
 
 static __forceinline u64 GetCPUTicks()
 {
+
 	struct timeval t;
 	gettimeofday(&t, NULL);
-	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
+	return ((u64)t.tv_sec*GetTickFrequency()) + t.tv_usec;
 }
+
 #else
 static __aligned16 LARGE_INTEGER lfreq;
 
 static __forceinline void InitCPUTicks()
 {
-	QueryPerformanceFrequency( &lfreq );
+	QueryPerformanceFrequency(&lfreq);
 }
 
 static __forceinline u64 GetTickFrequency()
@@ -330,42 +338,47 @@ static __forceinline u64 GetTickFrequency()
 static __forceinline u64 GetCPUTicks()
 {
 	LARGE_INTEGER count;
-	QueryPerformanceCounter( &count );
+	QueryPerformanceCounter(&count);
 	return count.QuadPart;
 }
+
 #endif
 
 template <typename T>
+
 class CInterfacePtr
 {
-public:
-	inline CInterfacePtr() : ptr(NULL) {}
-	inline explicit CInterfacePtr(T* newptr) : ptr(newptr) { if ( ptr != NULL ) ptr->AddRef(); }
-	inline ~CInterfacePtr() { if( ptr != NULL ) ptr->Release(); }
 
-	inline T* operator* () { assert( ptr != NULL); return *ptr; }
-	inline T* operator->() { return ptr; }
-	inline T* get() { return ptr; }
+	public:
+		inline CInterfacePtr() : ptr(NULL) {}
+		inline explicit CInterfacePtr(T* newptr) : ptr(newptr) { if (ptr != NULL) ptr->AddRef(); }
+		inline ~CInterfacePtr() { if (ptr != NULL) ptr->Release(); }
+		inline T* operator*() { assert(ptr != NULL); return *ptr; }
+		inline T* operator->() { return ptr; }
+		inline T* get() { return ptr; }
 
-	inline void release() {
-		if( ptr != NULL ) { ptr->Release(); ptr = NULL; }
-	}
+		inline void release()
+		{
+			if (ptr != NULL) { ptr->Release(); ptr = NULL; }
+		}
 
-	inline operator T*() { return ptr; }
+		inline operator T*() { return ptr; }
+		inline bool operator==(T* rhs) { return ptr == rhs; }
+		inline bool operator!=(T* rhs) { return ptr != rhs; }
 
-	inline bool operator==(T* rhs) { return ptr == rhs; }
-	inline bool operator!=(T* rhs) { return ptr != rhs; }
+		inline CInterfacePtr& operator= (T* newptr)
+		{
+			if (ptr != NULL) ptr->Release();
 
-	inline CInterfacePtr& operator= (T* newptr) {
-		if( ptr != NULL ) ptr->Release();
-		ptr = newptr;
+			ptr = newptr;
 
-		if( ptr != NULL ) ptr->AddRef();
-		return *this;
-	}
+			if (ptr != NULL) ptr->AddRef();
 
-private:
-	T* ptr;
+			return *this;
+		}
+
+	private:
+		T* ptr;
 };
 
 
@@ -380,24 +393,25 @@ void DVProfClear();						// clears all the profilers
 
 class DVProfileFunc
 {
-public:
-	u32 dwUserData;
-	DVProfileFunc(char* pname) { DVProfRegister(pname); dwUserData = 0; }
-	DVProfileFunc(char* pname, u32 dwUserData) : dwUserData(dwUserData) { DVProfRegister(pname); }
-	~DVProfileFunc() { DVProfEnd(dwUserData); }
+	public:
+		u32 dwUserData;
+		DVProfileFunc(char* pname) { DVProfRegister(pname); dwUserData = 0; }
+		DVProfileFunc(char* pname, u32 dwUserData) : dwUserData(dwUserData) { DVProfRegister(pname); }
+		~DVProfileFunc() { DVProfEnd(dwUserData); }
 };
 
 #else
 
 class DVProfileFunc
 {
-public:
-	u32 dwUserData;
-	static __forceinline DVProfileFunc(char* pname) {}
-	static __forceinline DVProfileFunc(char* pname, u32 dwUserData) { }
-	~DVProfileFunc() {}
+
+	public:
+		u32 dwUserData;
+		static __forceinline DVProfileFunc(char* pname) {}
+		static __forceinline DVProfileFunc(char* pname, u32 dwUserData) { }
+		~DVProfileFunc() {}
 };
 
 #endif
-        
+
 #endif // UTIL_H_INCLUDED
