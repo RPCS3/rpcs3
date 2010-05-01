@@ -46,31 +46,38 @@ extern u32 s_uTex1Data[2][2], s_uClampData[2];
 
 int ZeroGS::Save(s8* pbydata)
 {
-	if( pbydata == NULL )
+	if (pbydata == NULL)
 		return 40 + 0x00400000 + sizeof(gs) + 2*VBSAVELIMIT + 2*sizeof(frameInfo) + 4 + 256*4;
 
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
 
 	strcpy((char*)pbydata, libraryNameX);
-	*(u32*)(pbydata+16) = ZEROGS_SAVEVER;
-	pbydata += 32;
 
-	*(int*)pbydata = icurctx; pbydata += 4;
-	*(int*)pbydata = VBSAVELIMIT; pbydata += 4;
+	*(u32*)(pbydata + 16) = ZEROGS_SAVEVER;
+
+	pbydata += 32;
+	*(int*)pbydata = icurctx;
+
+	pbydata += 4;
+	*(int*)pbydata = VBSAVELIMIT;
+
+	pbydata += 4;
 
 	memcpy(pbydata, g_pbyGSMemory, 0x00400000);
 	pbydata += 0x00400000;
 
 	memcpy(pbydata, g_pbyGSClut, 256*4);
-	pbydata += 256*4;
+	pbydata += 256 * 4;
 
 	*(int*)pbydata = sizeof(gs);
 	pbydata += 4;
+
 	memcpy(pbydata, &gs, sizeof(gs));
 	pbydata += sizeof(gs);
 
-	for(int i = 0; i < 2; ++i) {
+	for (int i = 0; i < 2; ++i)
+	{
 		memcpy(pbydata, &vb[i], VBSAVELIMIT);
 		pbydata += VBSAVELIMIT;
 	}
@@ -86,10 +93,10 @@ bool ZeroGS::Load(s8* pbydata)
 	g_nCurVBOIndex = 0;
 
 	// first 32 bytes are the id
-	u32 savever = *(u32*)(pbydata+16);
+	u32 savever = *(u32*)(pbydata + 16);
 
-	if( strncmp((char*)pbydata, libraryNameX, 6) == 0 && (savever == ZEROGS_SAVEVER || savever == 0xaa000004) ) {
-
+	if (strncmp((char*)pbydata, libraryNameX, 6) == 0 && (savever == ZEROGS_SAVEVER || savever == 0xaa000004))
+	{
 		g_MemTargs.Destroy();
 
 		GSStateReset();
@@ -99,25 +106,31 @@ bool ZeroGS::Load(s8* pbydata)
 		pbydata += 4;
 		u32 savelimit = VBSAVELIMIT;
 
-		savelimit = *(u32*)pbydata; pbydata += 4;
+		savelimit = *(u32*)pbydata;
+		pbydata += 4;
 
 		memcpy(g_pbyGSMemory, pbydata, 0x00400000);
 		pbydata += 0x00400000;
 
 		memcpy(g_pbyGSClut, pbydata, 256*4);
-		pbydata += 256*4;
+		pbydata += 256 * 4;
 
 		memset(&gs, 0, sizeof(gs));
 
 		int savedgssize;
-		if( savever == 0xaa000004 )
+
+		if (savever == 0xaa000004)
+		{
 			savedgssize = 0x1d0;
-		else {
+		}
+		else
+		{
 			savedgssize = *(int*)pbydata;
 			pbydata += 4;
 		}
 
 		memcpy(&gs, pbydata, savedgssize);
+
 		pbydata += savedgssize;
 		prim = &gs._prim[gs.prac];
 
@@ -131,17 +144,19 @@ bool ZeroGS::Load(s8* pbydata)
 		pbydata += savelimit;
 		vb[1].pBufferData = NULL;
 
-		for(int i = 0; i < 2; ++i) {
+		for (int i = 0; i < 2; ++i)
+		{
 			vb[i].Init(VB_BUFFERSIZE);
 			vb[i].bNeedZCheck = vb[i].bNeedFrameCheck = 1;
 
-			vb[i].bSyncVars = 0; vb[i].bNeedTexCheck = 1;
+			vb[i].bSyncVars = 0;
+			vb[i].bNeedTexCheck = 1;
 			memset(vb[i].uCurTex0Data, 0, sizeof(vb[i].uCurTex0Data));
 		}
 
 		icurctx = -1;
 
-		glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, s_uFramebuffer ); // switch to the backbuffer
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, s_uFramebuffer);   // switch to the backbuffer
 		SetFogColor(gs.fogcol);
 
 		GL_REPORT_ERRORD();

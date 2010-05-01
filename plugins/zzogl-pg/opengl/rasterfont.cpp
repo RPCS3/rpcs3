@@ -1,4 +1,3 @@
-
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -9,7 +8,8 @@
 #include "rasterfont.h"
 // globals
 
-GLubyte rasters[][13] = {
+GLubyte rasters[][13] =
+{
 	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 	{0x00, 0x00, 0x18, 0x18, 0x00, 0x00, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18},
 	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x36, 0x36, 0x36},
@@ -113,9 +113,11 @@ RasterFont::RasterFont()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	// create the raster font
-	fontOffset = glGenLists (128);
-	for (int i = 32; i < 127; i++) {
-		glNewList(i+fontOffset, GL_COMPILE);
+	fontOffset = glGenLists(128);
+
+	for (int i = 32; i < 127; i++)
+	{
+		glNewList(i + fontOffset, GL_COMPILE);
 		glBitmap(8, 13, 0.0f, 2.0f, 10.0f, 0.0f, rasters[i-32]);
 		glEndList();
 	}
@@ -131,16 +133,16 @@ void RasterFont::printString(const char *s, double x, double y, double z)
 	// go to the right spot
 	glRasterPos3d(x, y, z);
 
-	glPushAttrib (GL_LIST_BIT);
+	glPushAttrib(GL_LIST_BIT);
 	glListBase(fontOffset);
 	glCallLists(strlen(s), GL_UNSIGNED_BYTE, (GLubyte *) s);
-	glPopAttrib ();
+	glPopAttrib();
 }
 
 void RasterFont::printCenteredString(const char *s, double y, int screen_width, double z)
 {
 	int length = strlen(s);
-	int x = int(screen_width/2.0 - (length/2.0)*char_width);
+	int x = int(screen_width / 2.0 - (length / 2.0) * char_width);
 
 	printString(s, x, y, z);
 }

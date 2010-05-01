@@ -191,10 +191,10 @@ void __fastcall Frame16SwizzleBlock16Z##type##c(u16* dst, Vector_16F* src, int s
 		src += srcpitch << incsrc; \
 	} \
 } \
-
+ 
 _FrameSwizzleBlock(_, src[j], src[j], 0);
-_FrameSwizzleBlock(A2_, (src[2*j]+src[2*j+1])>>1, src[2*j], 0);
-_FrameSwizzleBlock(A4_, (src[2*j]+src[2*j+1]+src[2*j+srcpitch]+src[2*j+srcpitch+1])>>2, src[2*j], 1);
+_FrameSwizzleBlock(A2_, (src[2*j] + src[2*j+1]) >> 1, src[2*j], 0);
+_FrameSwizzleBlock(A4_, (src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2, src[2*j], 1);
 
 #ifdef ZEROGS_SSE2
 
@@ -266,9 +266,9 @@ extern "C" void __fastcall WriteCLUT_T32_I8_CSM1_sse2(u32* vm, u32* clut)
 	__m128i* src = (__m128i*)vm;
 	__m128i* dst = (__m128i*)clut;
 
-	for(int j = 0; j < 64; j += 32, src += 32, dst += 32)
+	for (int j = 0; j < 64; j += 32, src += 32, dst += 32)
 	{
-		for(int i = 0; i < 16; i += 4)
+		for (int i = 0; i < 16; i += 4)
 		{
 			__m128i r0 = _mm_load_si128(&src[i+0]);
 			__m128i r1 = _mm_load_si128(&src[i+1]);
@@ -310,16 +310,19 @@ extern "C" void __fastcall WriteCLUT_T32_I4_CSM1_sse2(u32* vm, u32* clut)
 }
 
 
-extern "C" {
-PCSX2_ALIGNED16(int s_clut16mask2[4]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
-PCSX2_ALIGNED16(int s_clut16mask[8]) = { 0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000,
-										0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff};
+extern "C"
+{
+	PCSX2_ALIGNED16(int s_clut16mask2[4]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
+	PCSX2_ALIGNED16(int s_clut16mask[8]) = { 0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000,
+										   0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff
+										   };
 }
 
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {
 #if defined(_MSC_VER)
-	__asm {
+	__asm
+	{
 		mov eax, vm
 		mov ecx, clut
 		movdqa xmm0, qword ptr [eax]
@@ -428,122 +431,125 @@ WriteUnaligned:
 
 		movdqa [ecx+16], xmm2
 		movdqa [ecx+48], xmm3
+
 End:
 	}
 #else
 	__asm__(".intel_syntax noprefix\n"
-		"movdqa xmm0, xmmword ptr [ecx]\n"
-		"movdqa xmm1, xmmword ptr [ecx+16]\n"
-		"movdqa xmm2, xmmword ptr [ecx+32]\n"
-		"movdqa xmm3, xmmword ptr [ecx+48]\n"
+	"movdqa xmm0, xmmword ptr [ecx]\n"
+	"movdqa xmm1, xmmword ptr [ecx+16]\n"
+	"movdqa xmm2, xmmword ptr [ecx+32]\n"
+	"movdqa xmm3, xmmword ptr [ecx+48]\n"
 
-		// rearrange
-		"pshuflw xmm0, xmm0, 0x88\n"
-		"pshufhw xmm0, xmm0, 0x88\n"
-		"pshuflw xmm1, xmm1, 0x88\n"
-		"pshufhw xmm1, xmm1, 0x88\n"
-		"pshuflw xmm2, xmm2, 0x88\n"
-		"pshufhw xmm2, xmm2, 0x88\n"
-		"pshuflw xmm3, xmm3, 0x88\n"
-		"pshufhw xmm3, xmm3, 0x88\n"
+	// rearrange
+	"pshuflw xmm0, xmm0, 0x88\n"
+	"pshufhw xmm0, xmm0, 0x88\n"
+	"pshuflw xmm1, xmm1, 0x88\n"
+	"pshufhw xmm1, xmm1, 0x88\n"
+	"pshuflw xmm2, xmm2, 0x88\n"
+	"pshufhw xmm2, xmm2, 0x88\n"
+	"pshuflw xmm3, xmm3, 0x88\n"
+	"pshufhw xmm3, xmm3, 0x88\n"
 
-		"shufps xmm0, xmm1, 0x88\n"
-		"shufps xmm2, xmm3, 0x88\n"
+	"shufps xmm0, xmm1, 0x88\n"
+	"shufps xmm2, xmm3, 0x88\n"
 
-		"pshufd xmm0, xmm0, 0xd8\n"
-		"pshufd xmm2, xmm2, 0xd8\n"
+	"pshufd xmm0, xmm0, 0xd8\n"
+	"pshufd xmm2, xmm2, 0xd8\n"
 
-		"pxor xmm6, xmm6\n"
+	"pxor xmm6, xmm6\n"
 
-		"test edx, 15\n"
-		"jnz WriteUnaligned\n"
+	"test edx, 15\n"
+	"jnz WriteUnaligned\n"
 
-		"movdqa xmm7, [%[s_clut16mask]]\n" // saves upper 16 bits
+	"movdqa xmm7, [%[s_clut16mask]]\n" // saves upper 16 bits
 
-		// have to save interlaced with the old data
-		"movdqa xmm4, [edx]\n"
-		"movdqa xmm5, [edx+32]\n"
-		"movhlps xmm1, xmm0\n"
-		"movlhps xmm0, xmm2\n"// lower 8 colors
+	// have to save interlaced with the old data
+	"movdqa xmm4, [edx]\n"
+	"movdqa xmm5, [edx+32]\n"
+	"movhlps xmm1, xmm0\n"
+	"movlhps xmm0, xmm2\n"// lower 8 colors
 
-		"pand xmm4, xmm7\n"
-		"pand xmm5, xmm7\n"
+	"pand xmm4, xmm7\n"
+	"pand xmm5, xmm7\n"
 
-		"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
-		"movdqa xmm2, xmm0\n"
-		"movdqa xmm3, xmm1\n"
+	"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
+	"movdqa xmm2, xmm0\n"
+	"movdqa xmm3, xmm1\n"
 
-		"punpcklwd xmm0, xmm6\n"
-		"punpcklwd xmm1, xmm6\n"
-		"por xmm0, xmm4\n"
-		"por xmm1, xmm5\n"
+	"punpcklwd xmm0, xmm6\n"
+	"punpcklwd xmm1, xmm6\n"
+	"por xmm0, xmm4\n"
+	"por xmm1, xmm5\n"
 
-		"punpckhwd xmm2, xmm6\n"
-		"punpckhwd xmm3, xmm6\n"
+	"punpckhwd xmm2, xmm6\n"
+	"punpckhwd xmm3, xmm6\n"
 
-		"movdqa [edx], xmm0\n"
-		"movdqa [edx+32], xmm1\n"
+	"movdqa [edx], xmm0\n"
+	"movdqa [edx+32], xmm1\n"
 
-		"movdqa xmm5, xmm7\n"
-		"pand xmm7, [edx+16]\n"
-		"pand xmm5, [edx+48]\n"
+	"movdqa xmm5, xmm7\n"
+	"pand xmm7, [edx+16]\n"
+	"pand xmm5, [edx+48]\n"
 
-		"por xmm2, xmm7\n"
-		"por xmm3, xmm5\n"
+	"por xmm2, xmm7\n"
+	"por xmm3, xmm5\n"
 
-		"movdqa [edx+16], xmm2\n"
-		"movdqa [edx+48], xmm3\n"
-		"jmp WriteCLUT_T16_I4_CSM1_End\n"
+	"movdqa [edx+16], xmm2\n"
+	"movdqa [edx+48], xmm3\n"
+	"jmp WriteCLUT_T16_I4_CSM1_End\n"
 
-"WriteUnaligned:\n"
-		// %edx is offset by 2
-		"sub edx, 2\n"
+	"WriteUnaligned:\n"
+	// %edx is offset by 2
+	"sub edx, 2\n"
 
-		"movdqa xmm7, [%[s_clut16mask2]]\n" // saves lower 16 bits
+	"movdqa xmm7, [%[s_clut16mask2]]\n" // saves lower 16 bits
 
-		// have to save interlaced with the old data
-		"movdqa xmm4, [edx]\n"
-		"movdqa xmm5, [edx+32]\n"
-		"movhlps xmm1, xmm0\n"
-		"movlhps xmm0, xmm2\n" // lower 8 colors
+	// have to save interlaced with the old data
+	"movdqa xmm4, [edx]\n"
+	"movdqa xmm5, [edx+32]\n"
+	"movhlps xmm1, xmm0\n"
+	"movlhps xmm0, xmm2\n" // lower 8 colors
 
-		"pand xmm4, xmm7\n"
-		"pand xmm5, xmm7\n"
+	"pand xmm4, xmm7\n"
+	"pand xmm5, xmm7\n"
 
-		"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
-		"movdqa xmm2, xmm0\n"
-		"movdqa xmm3, xmm1\n"
+	"shufps xmm1, xmm2, 0xe4\n" // upper 8 colors
+	"movdqa xmm2, xmm0\n"
+	"movdqa xmm3, xmm1\n"
 
-		"punpcklwd xmm0, xmm6\n"
-		"punpcklwd xmm1, xmm6\n"
-		"pslld xmm0, 16\n"
-		"pslld xmm1, 16\n"
-		"por xmm0, xmm4\n"
-		"por xmm1, xmm5\n"
+	"punpcklwd xmm0, xmm6\n"
+	"punpcklwd xmm1, xmm6\n"
+	"pslld xmm0, 16\n"
+	"pslld xmm1, 16\n"
+	"por xmm0, xmm4\n"
+	"por xmm1, xmm5\n"
 
-		"punpckhwd xmm2, xmm6\n"
-		"punpckhwd xmm3, xmm6\n"
-		"pslld xmm2, 16\n"
-		"pslld xmm3, 16\n"
+	"punpckhwd xmm2, xmm6\n"
+	"punpckhwd xmm3, xmm6\n"
+	"pslld xmm2, 16\n"
+	"pslld xmm3, 16\n"
 
-		"movdqa [edx], xmm0\n"
-		"movdqa [edx+32], xmm1\n"
+	"movdqa [edx], xmm0\n"
+	"movdqa [edx+32], xmm1\n"
 
-		"movdqa xmm5, xmm7\n"
-		"pand xmm7, [edx+16]\n"
-		"pand xmm5, [edx+48]\n"
+	"movdqa xmm5, xmm7\n"
+	"pand xmm7, [edx+16]\n"
+	"pand xmm5, [edx+48]\n"
 
-		"por xmm2, xmm7\n"
-		"por xmm3, xmm5\n"
+	"por xmm2, xmm7\n"
+	"por xmm3, xmm5\n"
 
-		"movdqa [edx+16], xmm2\n"
-		"movdqa [edx+48], xmm3\n"
-"WriteCLUT_T16_I4_CSM1_End:\n"
-		".att_syntax\n"
-        : [s_clut16mask]"=m"(s_clut16mask), [s_clut16mask2]"=m"(s_clut16mask2)
-	);
+	"movdqa [edx+16], xmm2\n"
+	"movdqa [edx+48], xmm3\n"
+	"WriteCLUT_T16_I4_CSM1_End:\n"
+	".att_syntax\n"
+
+: [s_clut16mask]"=m"(s_clut16mask), [s_clut16mask2]"=m"(s_clut16mask2)
+		   );
 #endif // _MSC_VER
 }
+
 #endif // ZEROGS_SSE2
 
 void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
@@ -559,27 +565,31 @@ void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
 	u16* vm = (u16*)_vm;
 	u16* clut = (u16*)_clut;
 
-	int left = ((u32)(uptr)clut&2) ? 512 : 512-(((u32)(uptr)clut)&0x3ff)/2;
+	int left = ((u32)(uptr)clut & 2) ? 512 : 512 - (((u32)(uptr)clut) & 0x3ff) / 2;
 
-	for(int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32)
+	for (int j = 0; j < 8; j++, vm += 32, clut += 64, left -= 32)
 	{
-		if(left == 32) {
-			assert( left == 32 );
-			for(int i = 0; i < 16; i++)
+		if (left == 32)
+		{
+			assert(left == 32);
+
+			for (int i = 0; i < 16; i++)
 				clut[2*i] = vm[map[i]];
 
 			clut = (u16*)((uptr)clut & ~0x3ff) + 1;
 
-			for(int i = 16; i < 32; i++)
+			for (int i = 16; i < 32; i++)
 				clut[2*i] = vm[map[i]];
 		}
-		else {
-			if( left == 0 ) {
+		else
+		{
+			if (left == 0)
+			{
 				clut = (u16*)((uptr)clut & ~0x3ff) + 1;
 				left = -1;
 			}
 
-			for(int i = 0; i < 32; i++)
+			for (int i = 0; i < 32; i++)
 				clut[2*i] = vm[map[i]];
 		}
 	}
@@ -590,8 +600,9 @@ void __fastcall WriteCLUT_T32_I8_CSM1_c(u32* vm, u32* clut)
 	u64* src = (u64*)vm;
 	u64* dst = (u64*)clut;
 
-	for(int j = 0; j < 2; j++, src += 32) {
-		for(int i = 0; i < 4; i++, dst+=16, src+=8)
+	for (int j = 0; j < 2; j++, src += 32)
+	{
+		for (int i = 0; i < 4; i++, dst += 16, src += 8)
 		{
 			dst[0] = src[0];
 			dst[1] = src[2];
@@ -619,14 +630,22 @@ void __fastcall WriteCLUT_T16_I4_CSM1_c(u32* _vm, u32* _clut)
 	u16* dst = (u16*)_clut;
 	u16* src = (u16*)_vm;
 
-	dst[0] = src[0]; dst[2] = src[2];
-	dst[4] = src[8]; dst[6] = src[10];
-	dst[8] = src[16]; dst[10] = src[18];
-	dst[12] = src[24]; dst[14] = src[26];
-	dst[16] = src[4]; dst[18] = src[6];
-	dst[20] = src[12]; dst[22] = src[14];
-	dst[24] = src[20]; dst[26] = src[22];
-	dst[28] = src[28]; dst[30] = src[30];
+	dst[0] = src[0];
+	dst[2] = src[2];
+	dst[4] = src[8];
+	dst[6] = src[10];
+	dst[8] = src[16];
+	dst[10] = src[18];
+	dst[12] = src[24];
+	dst[14] = src[26];
+	dst[16] = src[4];
+	dst[18] = src[6];
+	dst[20] = src[12];
+	dst[22] = src[14];
+	dst[24] = src[20];
+	dst[26] = src[22];
+	dst[28] = src[28];
+	dst[30] = src[30];
 }
 
 void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut)
@@ -644,10 +663,12 @@ void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut)
 	dst[7] = src[7];
 }
 
-void SSE2_UnswizzleZ16Target( u16* dst, u16* src, int iters ) {
+void SSE2_UnswizzleZ16Target(u16* dst, u16* src, int iters)
+{
 
 #if defined(_MSC_VER)
-	__asm {
+	__asm
+	{
 		mov edx, iters
 		pxor xmm7, xmm7
 		mov eax, dst
@@ -698,51 +719,52 @@ Z16Loop:
 #else // _MSC_VER
 
 	__asm__(".intel_syntax\n"
-		"pxor %%xmm7, %%xmm7\n"
+	"pxor %%xmm7, %%xmm7\n"
 
-		"Z16Loop:\n"
-		// unpack 64 bytes at a time
-		"movdqa %%xmm0, [%0]\n"
-		"movdqa %%xmm2, [%0+16]\n"
-		"movdqa %%xmm4, [%0+32]\n"
-		"movdqa %%xmm6, [%0+48]\n"
+	"Z16Loop:\n"
+	// unpack 64 bytes at a time
+	"movdqa %%xmm0, [%0]\n"
+	"movdqa %%xmm2, [%0+16]\n"
+	"movdqa %%xmm4, [%0+32]\n"
+	"movdqa %%xmm6, [%0+48]\n"
 
-		"movdqa %%xmm1, %%xmm0\n"
-		"movdqa %%xmm3, %%xmm2\n"
-		"movdqa %%xmm5, %%xmm4\n"
+	"movdqa %%xmm1, %%xmm0\n"
+	"movdqa %%xmm3, %%xmm2\n"
+	"movdqa %%xmm5, %%xmm4\n"
 
-		"punpcklwd %%xmm0, %%xmm7\n"
-		"punpckhwd %%xmm1, %%xmm7\n"
-		"punpcklwd %%xmm2, %%xmm7\n"
-		"punpckhwd %%xmm3, %%xmm7\n"
+	"punpcklwd %%xmm0, %%xmm7\n"
+	"punpckhwd %%xmm1, %%xmm7\n"
+	"punpcklwd %%xmm2, %%xmm7\n"
+	"punpckhwd %%xmm3, %%xmm7\n"
 
-		// start saving
-		"movdqa [%1], %%xmm0\n"
-		"movdqa [%1+16], %%xmm1\n"
+	// start saving
+	"movdqa [%1], %%xmm0\n"
+	"movdqa [%1+16], %%xmm1\n"
 
-		"punpcklwd %%xmm4, %%xmm7\n"
-		"punpckhwd %%xmm5, %%xmm7\n"
+	"punpcklwd %%xmm4, %%xmm7\n"
+	"punpckhwd %%xmm5, %%xmm7\n"
 
-		"movdqa [%1+32], %%xmm2\n"
-		"movdqa [%1+48], %%xmm3\n"
+	"movdqa [%1+32], %%xmm2\n"
+	"movdqa [%1+48], %%xmm3\n"
 
-		"movdqa %%xmm0, %%xmm6\n"
-		"punpcklwd %%xmm6, %%xmm7\n"
+	"movdqa %%xmm0, %%xmm6\n"
+	"punpcklwd %%xmm6, %%xmm7\n"
 
-		"movdqa [%1+64], %%xmm4\n"
-		"movdqa [%1+80], %%xmm5\n"
+	"movdqa [%1+64], %%xmm4\n"
+	"movdqa [%1+80], %%xmm5\n"
 
-		"punpckhwd %%xmm0, %%xmm7\n"
+	"punpckhwd %%xmm0, %%xmm7\n"
 
-		"movdqa [%1+96], %%xmm6\n"
-		"movdqa [%1+112], %%xmm0\n"
+	"movdqa [%1+96], %%xmm6\n"
+	"movdqa [%1+112], %%xmm0\n"
 
-		"add %0, 64\n"
-		"add %1, 128\n"
-		"sub %2, 1\n"
-		"jne Z16Loop\n"
-		".att_syntax\n" : "=r"(src), "=r"(dst), "=r"(iters) : "0"(src), "1"(dst), "2"(iters)
-       );
+	"add %0, 64\n"
+	"add %1, 128\n"
+	"sub %2, 1\n"
+	"jne Z16Loop\n"
+
+".att_syntax\n" : "=r"(src), "=r"(dst), "=r"(iters) : "0"(src), "1"(dst), "2"(iters)
+				   );
 #endif // _MSC_VER
 }
 

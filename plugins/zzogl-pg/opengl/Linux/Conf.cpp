@@ -26,8 +26,8 @@
 
 void SaveConfig()
 {
-	const std::string iniFile( s_strIniPath + "zzogl-pg.ini" );
-	FILE* f = fopen(iniFile.c_str(),"w");
+	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
+	FILE* f = fopen(iniFile.c_str(), "w");
 
 	if (f == NULL)
 	{
@@ -36,6 +36,7 @@ void SaveConfig()
 	}
 
 	fprintf(f, "interlace = %hhx\n", conf.interlace);
+
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
 	fprintf(f, "options = %x\n", conf.options); //u32
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
@@ -64,15 +65,18 @@ void LoadConfig()
 	conf.aa = 0;
 	conf.log = 1;
 
-	const std::string iniFile( s_strIniPath + "zzogl-pg.ini" );
+	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	FILE* f = fopen(iniFile.c_str(), "r");
+
 	if (f == NULL)
 	{
 		printf("failed to open %s\n", iniFile.c_str());
 		SaveConfig();//save and return
 		return;
 	}
+
 	err = fscanf(f, "interlace = %hhx\n", &conf.interlace);
+
 	err = fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
 	err = fscanf(f, "options = %x\n", &conf.options);//u32
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
@@ -86,23 +90,29 @@ void LoadConfig()
 	fclose(f);
 
 	// filter bad files
+
 	if ((conf.aa < 0) || (conf.aa > 4)) conf.aa = 0;
 
 	conf.isWideScreen = conf.options & GSOPTION_WIDESCREEN;
-	switch(conf.options & GSOPTION_WINDIMS)
+
+	switch (conf.options & GSOPTION_WINDIMS)
 	{
+
 		case GSOPTION_WIN640:
 			conf.width = 640;
 			conf.height = conf.isWideScreen ? 360 : 480;
 			break;
+
 		case GSOPTION_WIN800:
 			conf.width = 800;
 			conf.height = conf.isWideScreen ? 450 : 600;
 			break;
+
 		case GSOPTION_WIN1024:
 			conf.width = 1024;
 			conf.height = conf.isWideScreen ? 576 : 768;
 			break;
+
 		case GSOPTION_WIN1280:
 			conf.width = 1280;
 			conf.height = conf.isWideScreen ? 720 : 960;
@@ -111,14 +121,16 @@ void LoadConfig()
 
 	// turn off all hacks by default
 	conf.options &= ~(GSOPTION_WIREFRAME | GSOPTION_CAPTUREAVI);
+
 	conf.options |= GSOPTION_LOADED;
 
-	if( conf.width <= 0 || conf.height <= 0 )
+	if (conf.width <= 0 || conf.height <= 0)
 	{
 		conf.width = 640;
 		conf.height = 480;
 	}
-	if( conf.x <= 0 || conf.y <= 0 )
+
+	if (conf.x <= 0 || conf.y <= 0)
 	{
 		conf.x = 0;
 		conf.y = 0;

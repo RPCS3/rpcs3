@@ -59,6 +59,12 @@ public:
 
 	inline void Set3(const float* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; }
 	inline void Set4(const float* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; w = pvals[3]; }
+	inline void SetColor(u32 color) 
+	{
+		x = (color & 0xff) / 255.0f;
+		y = ((color >> 8) & 0xff) / 255.0f;
+		z = ((color >> 16) & 0xff) / 255.0f;
+	}
 
 	// 3 dim cross product, w is not touched
 	/// this = this x v

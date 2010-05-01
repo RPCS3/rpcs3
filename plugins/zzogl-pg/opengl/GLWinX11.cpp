@@ -23,14 +23,14 @@
 
 bool GLWindow::CreateWindow(void *pDisplay)
 {
-    glDisplay = XOpenDisplay(0);
-        glScreen = DefaultScreen(glDisplay);
+	glDisplay = XOpenDisplay(0);
+	glScreen = DefaultScreen(glDisplay);
 
-        if ( pDisplay == NULL ) return false;
+	if (pDisplay == NULL) return false;
 
-    *(Display**)pDisplay = glDisplay;
+	*(Display**)pDisplay = glDisplay;
 
-        return true;
+	return true;
 }
 
 bool GLWindow::ReleaseWindow()
@@ -43,11 +43,12 @@ bool GLWindow::ReleaseWindow()
 		}
 
 		glXDestroyContext(glDisplay, context);
+
 		context = NULL;
 	}
 
 	/* switch back to original desktop resolution if we were in fullscreen */
-	if ( glDisplay != NULL )
+	if (glDisplay != NULL)
 	{
 		if (fullScreen)
 		{
@@ -55,6 +56,7 @@ bool GLWindow::ReleaseWindow()
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
 		}
 	}
+
 	return true;
 }
 
@@ -63,8 +65,9 @@ void GLWindow::CloseWindow()
 	conf.x = x;
 	conf.y = y;
 	SaveConfig();
-    if ( glDisplay != NULL )
-    {
+
+	if (glDisplay != NULL)
+	{
 		XCloseDisplay(glDisplay);
 		glDisplay = NULL;
 	}
@@ -84,14 +87,15 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	x = conf.x;
 	y = conf.y;
-	
+
 	// attributes for a single buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
 	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8,
 						 GLX_GREEN_SIZE, 8,
 						 GLX_BLUE_SIZE, 8,
 						 GLX_DEPTH_SIZE, 24,
-						 None};
+						 None
+						};
 
 	// attributes for a double buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
@@ -100,12 +104,14 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 						  GLX_GREEN_SIZE, 8,
 						  GLX_BLUE_SIZE, 8,
 						  GLX_DEPTH_SIZE, 24,
-						  None };
+						  None
+						};
 
 	GLWin.fullScreen = !!(conf.options & GSOPTION_FULLSCREEN);
 
 	/* get an appropriate visual */
 	vi = glXChooseVisual(glDisplay, glScreen, attrListDbl);
+
 	if (vi == NULL)
 	{
 		vi = glXChooseVisual(glDisplay, glScreen, attrListSgl);
@@ -117,6 +123,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		doubleBuffered = true;
 		ZZLog::Error_Log("Got Doublebuffered Visual!");
 	}
+
 	if (vi == NULL)
 	{
 		ZZLog::Error_Log("Failed to get buffered Visual!");
@@ -124,6 +131,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	}
 
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
+
 	ZZLog::Error_Log("glX-Version %d.%d", glxMajorVersion, glxMinorVersion);
 
 	/* create a GLX context */
@@ -149,12 +157,13 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		ZZLog::Error_Log("XF86VidModeExtension-Version %d.%d.", vidModeMajorVersion, vidModeMinorVersion);
 		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
 
-		if( modeNum > 0 && modes != NULL )
+		if (modeNum > 0 && modes != NULL)
 		{
 			/* save desktop-resolution before switching modes */
 			deskMode = *modes[0];
 
 			/* look for mode with requested resolution */
+
 			for (i = 0; i < modeNum; i++)
 			{
 				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height))
@@ -164,6 +173,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			}
 
 			XF86VidModeSwitchToMode(glDisplay, glScreen, modes[bestMode]);
+
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
 			dpyWidth = modes[bestMode]->hdisplay;
 			dpyHeight = modes[bestMode]->vdisplay;
@@ -174,9 +184,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 			attr.override_redirect = True;
 			attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 			glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-									  0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
-									  CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,
-									  &attr);
+									 0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
+									 CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,
+									 &attr);
 			XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 0, 0);
 			XMapRaised(glDisplay, glWindow);
 			XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
@@ -185,9 +195,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		else
 		{
 			ZZLog::Error_Log("Failed to start fullscreen. If you received the \n"
-					  "\"XFree86-VidModeExtension\" extension is missing, add\n"
-					  "Load \"extmod\"\n"
-					  "to your X configuration file (under the Module Section)");
+							 "\"XFree86-VidModeExtension\" extension is missing, add\n"
+							 "Load \"extmod\"\n"
+							 "to your X configuration file (under the Module Section)");
 			fullScreen = false;
 		}
 	}
@@ -197,8 +207,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		// create a window in window mode
 		attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 		glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-								  0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
-								  CWBorderPixel | CWColormap | CWEventMask, &attr);
+								 0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
+								 CWBorderPixel | CWColormap | CWEventMask, &attr);
 
 		// only set window title and handle wm_delete_events if in windowed mode
 		wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
@@ -211,8 +221,11 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
+
 	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
+
 	ZZLog::Error_Log("Depth %d", depth);
+
 	if (glXIsDirect(glDisplay, context))
 		ZZLog::Error_Log("You have Direct Rendering!");
 	else
@@ -221,14 +234,14 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	// better for pad plugin key input (thc)
 	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask |
 				 ButtonPressMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask |
-				 FocusChangeMask );
+				 FocusChangeMask);
 
 	return true;
 }
 
 void GLWindow::SwapGLBuffers()
 {
-    glXSwapBuffers(glDisplay, glWindow);
+	glXSwapBuffers(glDisplay, glWindow);
 }
 
 void GLWindow::SetTitle(char *strtitle)
@@ -236,29 +249,32 @@ void GLWindow::SetTitle(char *strtitle)
 	XTextProperty prop;
 	memset(&prop, 0, sizeof(prop));
 	char* ptitle = strtitle;
-	if( XStringListToTextProperty(&ptitle, 1, &prop) )
+
+	if (XStringListToTextProperty(&ptitle, 1, &prop))
 		XSetWMName(glDisplay, glWindow, &prop);
+
 	XFree(prop.value);
 }
 
 void GLWindow::ResizeCheck()
 {
-        XEvent event;
+	XEvent event;
 
-        while(XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
-        {
-                if ((event.xconfigure.width != width) || (event.xconfigure.height != height)) 
-                {
-                        ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
-                        width = event.xconfigure.width;
-                        height = event.xconfigure.height;
-                }
-                if ((event.xconfigure.x != x) || (event.xconfigure.y != y)) 
-                {
-                        x = event.xconfigure.x;
-                        y = event.xconfigure.y;
-                }
-        }
+	while (XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
+	{
+		if ((event.xconfigure.width != width) || (event.xconfigure.height != height))
+		{
+			ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
+			width = event.xconfigure.width;
+			height = event.xconfigure.height;
+		}
+
+		if ((event.xconfigure.x != x) || (event.xconfigure.y != y))
+		{
+			x = event.xconfigure.x;
+			y = event.xconfigure.y;
+		}
+	}
 }
 
 #endif

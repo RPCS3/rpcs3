@@ -30,9 +30,11 @@ using namespace ZeroGS;
 //------------------ Constants
 
 // ----------------- Global Variables
-namespace ZeroGS {
-	FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-	FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
+
+namespace ZeroGS
+{
+FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
+FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 }
 
 // Debug variable, store name of the function that call the shader.
@@ -46,8 +48,8 @@ void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
 {
 	ZZLog::Error_Log("%s->%s: %s", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
 	const char* listing = cgGetLastListing(g_cgcontext);
-	if (listing != NULL)
-		ZZLog::Debug_Log("	Last listing: %s", listing);
+
+	if (listing != NULL) ZZLog::Debug_Log("	Last listing: %s", listing);
 }
 
 // This is a helper of cgGLSetParameter4fv, made for debugging purposes.
@@ -82,14 +84,24 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 	pf->set_texture(ptexBlocks, "g_sBlocks");
 
 	// cg parameter usage is wrong, so do it manually
-	switch(type)
+
+	switch (type)
 	{
-		case 3: pf->set_texture(ptexConv16to32, "g_sConv16to32"); break;
-		case 4: pf->set_texture(ptexConv32to16, "g_sConv32to16"); break;
-		default: pf->set_texture(ptexBilinearBlocks, "g_sBilinearBlocks"); break;
+		case 3:
+			pf->set_texture(ptexConv16to32, "g_sConv16to32");
+			break;
+
+		case 4:
+			pf->set_texture(ptexConv32to16, "g_sConv32to16");
+			break;
+
+		default:
+			pf->set_texture(ptexBilinearBlocks, "g_sBilinearBlocks");
+			break;
 	}
 
 	pf->set_texture(pf->sMemory, "g_sMemory");
+
 	pf->set_texture(pf->sFinal, "g_sSrcFinal");
 	pf->set_texture(pf->sBitwiseANDX, "g_sBitwiseANDX");
 	pf->set_texture(pf->sBitwiseANDY, "g_sBitwiseANDY");
@@ -97,11 +109,11 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 	pf->set_texture(pf->sInterlace, "g_sInterlace");
 
 	// set global shader constants
-	pf->set_shader_const(Vector(0.5f, (g_GameSettings&GAME_EXACTCOLOR)?0.9f/256.0f:0.5f/256.0f, 0,1/255.0f), "g_fExactColor");
-	pf->set_shader_const(Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f ), "g_fBilinear");
-	pf->set_shader_const(Vector(1.0f/256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
-	pf->set_shader_const(Vector(0,1, 0.001f, 0.5f), "g_fc0");
-	pf->set_shader_const(Vector(1/1024.0f, 0.2f/1024.0f, 1/128.0f, 1/512.0f), "g_fMult");
+	pf->set_shader_const(Vector(0.5f, (g_GameSettings&GAME_EXACTCOLOR) ? 0.9f / 256.0f : 0.5f / 256.0f, 0, 1 / 255.0f), "g_fExactColor");
+	pf->set_shader_const(Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f), "g_fBilinear");
+	pf->set_shader_const(Vector(1.0f / 256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
+	pf->set_shader_const(Vector(0, 1, 0.001f, 0.5f), "g_fc0");
+	pf->set_shader_const(Vector(1 / 1024.0f, 0.2f / 1024.0f, 1 / 128.0f, 1 / 512.0f), "g_fMult");
 }
 
 void SetupVertexProgramParameters(CGprogram prog, int context)
@@ -109,50 +121,62 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 	CGparameter p;
 
 	p = cgGetNamedParameter(prog, "g_fPosXY");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		cgConnectParameter(g_vparamPosXY[context], p);
 
 	// Set Z-test, log or no log;
 	if (g_GameSettings&GAME_NOLOGZ)
 	{
-		g_vdepth = Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
-		vlogz = Vector( 1.0f, 0.0f, 0.0f, 0.0f);
+		g_vdepth = Vector(255.0 / 256.0f,  255.0 / 65536.0f, 255.0f / (65535.0f * 256.0f), 1.0f / (65536.0f * 65536.0f));
+		vlogz = Vector(1.0f, 0.0f, 0.0f, 0.0f);
 	}
 	else
 	{
-		g_vdepth = Vector( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);
-		vlogz = Vector( 0.0f, 1.0f, 0.0f, 0.0f);
+		g_vdepth = Vector(256.0f * 65536.0f, 65536.0f, 256.0f, 65536.0f * 65536.0f);
+		vlogz = Vector(0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
 	p = cgGetNamedParameter(prog, "g_fZ");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE ) {
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
+	{
 		cgGLSetParameter4fv(p, g_vdepth);
 
 		p = cgGetNamedParameter(prog, "g_fZMin"); // Switch to flat-z when needed
-		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )  {
+
+		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
+		{
 			//ZZLog::Error_Log("Use flat-z");
 			cgGLSetParameter4fv(p, vlogz);
 		}
 		else
+		{
 			ZZLog::Error_Log("Shader file version is outdated! Only log-Z is possible.");
+		}
 	}
 
-	Vector vnorm = Vector(g_filog32, 0, 0,0);
+	Vector vnorm = Vector(g_filog32, 0, 0, 0);
+
 	p = cgGetNamedParameter(prog, "g_fZNorm");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
 		cgGLSetParameter4fv(p, vnorm);
 
 	p = cgGetNamedParameter(prog, "g_fBilinear");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f ));
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
+		cgGLSetParameter4fv(p, Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f));
 
 	p = cgGetNamedParameter(prog, "g_fZBias");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(1.0f/256.0f, 1.0004f, 1, 0.5f));
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
+		cgGLSetParameter4fv(p, Vector(1.0f / 256.0f, 1.0004f, 1, 0.5f));
 
 	p = cgGetNamedParameter(prog, "g_fc0");
-	if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )
-		cgGLSetParameter4fv(p, Vector(0,1, 0.001f, 0.5f));
+
+	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
+		cgGLSetParameter4fv(p, Vector(0, 1, 0.001f, 0.5f));
 }
 
 #ifndef DEVBUILD
@@ -170,7 +194,7 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 	if( cgGetError() != CG_NO_ERROR ) ZZLog::Error_Log("failed to load program %d.", Index); \
 	SetupVertexProgramParameters(prog, !!(Index&SH_CONTEXT1));			\
 } \
-
+ 
 #define LOAD_PS(Index, fragment) {  \
 	bLoadSuccess = true; \
 	assert( mapShaderResources.find(Index) != mapShaderResources.end() ); \
@@ -187,37 +211,42 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 	} \
 	SetupFragmentProgramParameters(&fragment, !!(Index&SH_CONTEXT1), 0);  \
 } \
-
+ 
 bool ZeroGS::LoadEffects()
 {
-	assert( s_lpShaderResources != NULL );
+	assert(s_lpShaderResources != NULL);
 
 	// process the header
 	u32 num = *(u32*)s_lpShaderResources;
-	int compressed_size = *(int*)(s_lpShaderResources+4);
-	int real_size = *(int*)(s_lpShaderResources+8);
+	int compressed_size = *(int*)(s_lpShaderResources + 4);
+	int real_size = *(int*)(s_lpShaderResources + 8);
 	int out;
 
 	char* pbuffer = (char*)malloc(real_size);
-	inf((char*)s_lpShaderResources+12, &pbuffer[0], compressed_size, real_size, &out);
+	inf((char*)s_lpShaderResources + 12, &pbuffer[0], compressed_size, real_size, &out);
 	assert(out == real_size);
 
 	s_lpShaderResources = (u8*)pbuffer;
 	SHADERHEADER* header = (SHADERHEADER*)s_lpShaderResources;
 
 	mapShaderResources.clear();
-	while(num-- > 0 ) {
+
+	while (num-- > 0)
+	{
 		mapShaderResources[header->index] = header;
 		++header;
 	}
 
 	// clear the textures
-	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+	{
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		ppsTexture[i].prog = NULL;
 	}
+
 #ifndef _DEBUG
 	memset(ppsTexture, 0, sizeof(ppsTexture));
+
 #endif
 
 	return true;
@@ -231,12 +260,13 @@ bool ZeroGS::LoadExtraEffects()
 
 	const int vsshaders[4] = { SH_REGULARVS, SH_TEXTUREVS, SH_REGULARFOGVS, SH_TEXTUREFOGVS };
 
-	for(int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 4; ++i)
+	{
 		LOAD_VS(vsshaders[i], pvs[2*i]);
 		LOAD_VS((vsshaders[i] | SH_CONTEXT1), pvs[2*i+1]);
 		//if( conf.mrtdepth ) {
-			LOAD_VS((vsshaders[i] | SH_WRITEDEPTH), pvs[2*i+8]);
-			LOAD_VS((vsshaders[i] | SH_WRITEDEPTH | SH_CONTEXT1), pvs[2*i+8+1]);
+		LOAD_VS((vsshaders[i] | SH_WRITEDEPTH), pvs[2*i+8]);
+		LOAD_VS((vsshaders[i] | SH_WRITEDEPTH | SH_CONTEXT1), pvs[2*i+8+1]);
 //		}
 //		else {
 //			pvs[2*i+8] = pvs[2*i+8+1] = NULL;
@@ -244,6 +274,7 @@ bool ZeroGS::LoadExtraEffects()
 	}
 
 	LOAD_VS(SH_BITBLTVS, pvsBitBlt.prog);
+
 	pvsBitBlt.sBitBltPos = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltPos");
 	pvsBitBlt.sBitBltTex = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltTex");
 	pvsBitBlt.fBitBltTrans = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltTrans");
@@ -251,38 +282,50 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS(SH_REGULARPS, ppsRegular[0]);
 	LOAD_PS(SH_REGULARFOGPS, ppsRegular[1]);
 
-	if( conf.mrtdepth ) {
+	if (conf.mrtdepth)
+	{
 		LOAD_PS(SH_REGULARPS, ppsRegular[2]);
-		if( !bLoadSuccess )
+
+		if (!bLoadSuccess)
 			conf.mrtdepth = 0;
+
 		LOAD_PS(SH_REGULARFOGPS, ppsRegular[3]);
-		if( !bLoadSuccess )
+
+		if (!bLoadSuccess)
 			conf.mrtdepth = 0;
 	}
 
 	LOAD_PS(SH_BITBLTPS, ppsBitBlt[0]);
+
 	LOAD_PS(SH_BITBLTAAPS, ppsBitBlt[1]);
-	if( !bLoadSuccess ) {
+
+	if (!bLoadSuccess)
+	{
 		ZZLog::Error_Log("Failed to load BitBltAAPS, using BitBltPS.");
 		LOAD_PS(SH_BITBLTPS, ppsBitBlt[1]);
 	}
+
 	LOAD_PS(SH_BITBLTDEPTHPS, ppsBitBltDepth);
+
 	LOAD_PS(SH_CRTCTARGPS, ppsCRTCTarg[0]);
 	LOAD_PS(SH_CRTCTARGINTERPS, ppsCRTCTarg[1]);
 
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS(SH_CRTCPS, ppsCRTC[0]);
-	if( !bLoadSuccess ) {
+
+	if (!bLoadSuccess)
+	{
 		// switch to simpler
 		g_bCRTCBilinear = FALSE;
 		LOAD_PS(SH_CRTC_NEARESTPS, ppsCRTC[0]);
 		LOAD_PS(SH_CRTCINTER_NEARESTPS, ppsCRTC[0]);
 	}
-	else {
+	else
+	{
 		LOAD_PS(SH_CRTCINTERPS, ppsCRTC[1]);
 	}
 
-	if( !bLoadSuccess )
+	if (!bLoadSuccess)
 		ZZLog::Error_Log("Failed to create CRTC shaders.");
 
 	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
@@ -298,62 +341,85 @@ bool ZeroGS::LoadExtraEffects()
 FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
 {
 	int texwrap;
-	assert( texfilter < NUM_FILTERS );
+	assert(texfilter < NUM_FILTERS);
 
-	if(g_nPixelShaderVer&SHADER_REDUCED)
-		texfilter = 0;
-	assert(!(g_nPixelShaderVer&SHADER_REDUCED) || !exactcolor);
+	if (g_nPixelShaderVer & SHADER_REDUCED) texfilter = 0;
 
-	if( clamp.wms == clamp.wmt ) {
-		switch( clamp.wms ) {
-			case 0: texwrap = TEXWRAP_REPEAT; break;
-			case 1: texwrap = TEXWRAP_CLAMP; break;
-			case 2: texwrap = TEXWRAP_CLAMP; break;
-			default: texwrap = TEXWRAP_REGION_REPEAT; break;
+	assert(!(g_nPixelShaderVer & SHADER_REDUCED) || !exactcolor);
+
+	if (clamp.wms == clamp.wmt)
+	{
+		switch (clamp.wms)
+		{
+			case 0:
+				texwrap = TEXWRAP_REPEAT;
+				break;
+
+			case 1:
+				texwrap = TEXWRAP_CLAMP;
+				break;
+
+			case 2:
+				texwrap = TEXWRAP_CLAMP;
+				break;
+
+			default:
+				texwrap = TEXWRAP_REGION_REPEAT;
+				break;
 		}
 	}
-	else if( clamp.wms==3||clamp.wmt==3)
+	else if (clamp.wms == 3 || clamp.wmt == 3)
 		texwrap = TEXWRAP_REGION_REPEAT;
 	else
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
 
-	assert( index < ARRAY_SIZE(ppsTexture) );
-	FRAGMENTSHADER* pf = ppsTexture+index;
+	assert(index < ARRAY_SIZE(ppsTexture));
 
-	if( pbFailed != NULL ) *pbFailed = false;
+	FRAGMENTSHADER* pf = ppsTexture + index;
 
-	if( pf->prog != NULL )
-		return pf;
+	if (pbFailed != NULL) *pbFailed = false;
 
-	if( (g_nPixelShaderVer & SHADER_ACCURATE) && mapShaderResources.find(index+NUM_SHADERS*SHADER_ACCURATE) != mapShaderResources.end() )
-		index += NUM_SHADERS*SHADER_ACCURATE;
+	if (pf->prog != NULL) return pf;
 
-	assert( mapShaderResources.find(index) != mapShaderResources.end() );
+	if ((g_nPixelShaderVer & SHADER_ACCURATE) && mapShaderResources.find(index + NUM_SHADERS*SHADER_ACCURATE) != mapShaderResources.end())
+		index += NUM_SHADERS * SHADER_ACCURATE;
+
+	assert(mapShaderResources.find(index) != mapShaderResources.end());
+
 	SHADERHEADER* header = mapShaderResources[index];
-	if( header == NULL )
-		ZZLog::Error_Log("%d %d", index, g_nPixelShaderVer);
-	assert( header != NULL );
+
+	if (header == NULL) ZZLog::Error_Log("%d %d", index, g_nPixelShaderVer);
+
+	assert(header != NULL);
 
 	//ZZLog::Debug_Log("Shader:\n%s.", (char*)(s_lpShaderResources + (header)->offset));
 	pf->prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgfProf, NULL, NULL);
-	if( pf->prog != NULL && cgIsProgram(pf->prog) && cgGetError() == CG_NO_ERROR ) {
+
+	if (pf->prog != NULL && cgIsProgram(pf->prog) && cgGetError() == CG_NO_ERROR)
+	{
 		SetupFragmentProgramParameters(pf, context, type);
 		cgGLLoadProgram(pf->prog);
-		if( cgGetError() != CG_NO_ERROR ) {
+
+		if (cgGetError() != CG_NO_ERROR)
+		{
 //		  cgGLLoadProgram(pf->prog);
 //		  if( cgGetError() != CG_NO_ERROR ) {
-				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-				if( pbFailed != NULL ) *pbFailed = true;
-				return pf;
+			ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms + clamp.wmt);
+
+			if (pbFailed != NULL) *pbFailed = true;
+
+			return pf;
+
 //		  }
 		}
 		return pf;
 	}
 
-	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-	if( pbFailed != NULL ) *pbFailed = true;
+	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d", type, fog, texfilter, 4*clamp.wms + clamp.wmt);
+
+	if (pbFailed != NULL) *pbFailed = true;
 
 	return NULL;
 }
@@ -370,7 +436,7 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	if( cgGetError() != CG_NO_ERROR ) ZZLog::Error_Log("failed to load program %s.", name); \
 	SetupVertexProgramParameters(prog, args[0]==context1); \
 } \
-
+ 
 #ifdef _DEBUG
 #define SET_PSFILENAME(frag, name) frag.filename = name
 #else
@@ -392,16 +458,18 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 	SetupFragmentProgramParameters(&fragment, args[0]==context1, 0);  \
 	SET_PSFILENAME(fragment, name); \
 } \
-
+ 
 bool ZeroGS::LoadEffects()
 {
 	// clear the textures
-	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+	{
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
 
 #ifndef _DEBUG
 	memset(ppsTexture, 0, sizeof(ppsTexture));
+
 #endif
 
 	return true;
@@ -418,7 +486,8 @@ bool ZeroGS::LoadExtraEffects()
 
 	const char* pvsshaders[4] = { "RegularVS", "TextureVS", "RegularFogVS", "TextureFogVS" };
 
-	for(int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 4; ++i)
+	{
 		args[0] = context0;
 		args[1] = NULL;
 		LOAD_VS(pvsshaders[i], pvs[2*i], cgvProf);
@@ -426,11 +495,11 @@ bool ZeroGS::LoadExtraEffects()
 		LOAD_VS(pvsshaders[i], pvs[2*i+1], cgvProf);
 
 		//if( conf.mrtdepth ) {
-			args[0] = context0;
-			args[1] = write_depth;
-			LOAD_VS(pvsshaders[i], pvs[2*i+8], cgvProf);
-			args[0] = context1;
-			LOAD_VS(pvsshaders[i], pvs[2*i+8+1], cgvProf);
+		args[0] = context0;
+		args[1] = write_depth;
+		LOAD_VS(pvsshaders[i], pvs[2*i+8], cgvProf);
+		args[0] = context1;
+		LOAD_VS(pvsshaders[i], pvs[2*i+8+1], cgvProf);
 //		}
 //		else {
 //			pvs[2*i+8] = pvs[2*i+8+1] = NULL;
@@ -438,6 +507,7 @@ bool ZeroGS::LoadExtraEffects()
 	}
 
 	args[0] = context0;
+
 	args[1] = NULL;
 	LOAD_VS("BitBltVS", pvsBitBlt.prog, cgvProf);
 	pvsBitBlt.sBitBltPos = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltPos");
@@ -447,20 +517,24 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS("RegularPS", ppsRegular[0], cgfProf);
 	LOAD_PS("RegularFogPS", ppsRegular[1], cgfProf);
 
-	if( conf.mrtdepth ) {
+	if (conf.mrtdepth)
+	{
 		args[0] = context0;
 		args[1] = write_depth;
 		LOAD_PS("RegularPS", ppsRegular[2], cgfProf);
-		if( !bLoadSuccess )
-			conf.mrtdepth = 0;
+
+		if (!bLoadSuccess) conf.mrtdepth = 0;
+
 		LOAD_PS("RegularFogPS", ppsRegular[3], cgfProf);
-		if( !bLoadSuccess )
-			conf.mrtdepth = 0;
+
+		if (!bLoadSuccess) conf.mrtdepth = 0;
 	}
 
 	LOAD_PS("BitBltPS", ppsBitBlt[0], cgfProf);
 	LOAD_PS("BitBltAAPS", ppsBitBlt[1], cgfProf);
-	if( !bLoadSuccess ) {
+
+	if (!bLoadSuccess)
+	{
 		ZZLog::Error_Log("Failed to load BitBltAAPS, using BitBltPS.");
 		LOAD_PS("BitBltPS", ppsBitBlt[1], cgfProf);
 	}
@@ -471,19 +545,23 @@ bool ZeroGS::LoadExtraEffects()
 
 	g_bCRTCBilinear = TRUE;
 	LOAD_PS("CRTCPS", ppsCRTC[0], cgfProf);
-	if( !bLoadSuccess ) {
+
+	if (!bLoadSuccess)
+	{
 		// switch to simpler
 		g_bCRTCBilinear = FALSE;
 		LOAD_PS("CRTCPS_Nearest", ppsCRTC[0], cgfProf);
 		LOAD_PS("CRTCInterPS_Nearest", ppsCRTC[0], cgfProf);
 	}
-	else {
+	else
+	{
 		LOAD_PS("CRTCInterPS", ppsCRTC[1], cgfProf);
 	}
 
 	if (!bLoadSuccess) ZZLog::Error_Log("Failed to create CRTC shaders.");
 
-	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
+	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf);
+	LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
 	LOAD_PS("ZeroPS", ppsOne, cgfProf);
 	LOAD_PS("BaseTexturePS", ppsBaseTexture, cgfProf);
 	LOAD_PS("Convert16to32PS", ppsConvert16to32, cgfProf);
@@ -501,57 +579,77 @@ FRAGMENTSHADER* ZeroGS::LoadShadeEffect(int type, int texfilter, int fog, int te
 {
 	int texwrap;
 
-	assert( texfilter < NUM_FILTERS );
+	assert(texfilter < NUM_FILTERS);
 	//assert( g_nPixelShaderVer == SHADER_30 );
-	if( clamp.wms == clamp.wmt ) {
-		switch( clamp.wms ) {
-			case 0: texwrap = TEXWRAP_REPEAT; break;
-			case 1: texwrap = TEXWRAP_CLAMP; break;
-			case 2: texwrap = TEXWRAP_CLAMP; break;
+
+	if (clamp.wms == clamp.wmt)
+	{
+		switch (clamp.wms)
+		{
+			case 0:
+				texwrap = TEXWRAP_REPEAT;
+				break;
+
+			case 1:
+				texwrap = TEXWRAP_CLAMP;
+				break;
+
+			case 2:
+				texwrap = TEXWRAP_CLAMP;
+				break;
+
 			default:
-				texwrap = TEXWRAP_REGION_REPEAT; break;
+				texwrap = TEXWRAP_REGION_REPEAT;
+				break;
 		}
 	}
-	else if( clamp.wms==3||clamp.wmt==3)
+	else if (clamp.wms == 3 || clamp.wmt == 3)
 		texwrap = TEXWRAP_REGION_REPEAT;
 	else
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
 
-	if( pbFailed != NULL ) *pbFailed = false;
+	if (pbFailed != NULL) *pbFailed = false;
 
-	FRAGMENTSHADER* pf = ppsTexture+index;
+	FRAGMENTSHADER* pf = ppsTexture + index;
 
-	if( pf->prog != NULL )
-		return pf;
+	if (pf->prog != NULL) return pf;
 
 	pf->prog = LoadShaderFromType(EFFECT_DIR, EFFECT_NAME, type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
-	if( pf->prog != NULL ) {
+	if (pf->prog != NULL)
+	{
 #ifdef _DEBUG
 		char str[255];
-		sprintf(str, "Texture%s%d_%sPS", fog?"Fog":"", texfilter, g_pTexTypes[type]);
+		sprintf(str, "Texture%s%d_%sPS", fog ? "Fog" : "", texfilter, g_pTexTypes[type]);
 		pf->filename = str;
 #endif
 		SetupFragmentProgramParameters(pf, context, type);
 		cgGLLoadProgram(pf->prog);
-		if( cgGetError() != CG_NO_ERROR ) {
+
+		if (cgGetError() != CG_NO_ERROR)
+		{
 			// try again
 //			cgGLLoadProgram(pf->prog);
 //			if( cgGetError() != CG_NO_ERROR ) {
-				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-				if( pbFailed != NULL ) *pbFailed = true;
-				//assert(0);
-				// NULL makes things crash
-				return pf;
+			ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms + clamp.wmt);
+
+			if (pbFailed != NULL) *pbFailed = true;
+
+			//assert(0);
+			// NULL makes things crash
+			return pf;
+
 //			}
 		}
+
 		return pf;
 	}
 
-	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-	if( pbFailed != NULL ) *pbFailed = true;
+	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms + clamp.wmt);
+
+	if (pbFailed != NULL) *pbFailed = true;
 
 	return NULL;
 }

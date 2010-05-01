@@ -32,7 +32,8 @@
 #include "Mem.h"
 
 
-extern "C" {
+extern "C"
+{
 #ifdef _WIN32
 #	define XMD_H
 #	undef FAR
@@ -59,64 +60,65 @@ int s_aviinit = 0;
 //------------------ Code
 
 // Set variables need to made a snapshoot when it's possible
-void
-ZeroGS::SaveSnapshot(const char* filename)
+void ZeroGS::SaveSnapshot(const char* filename)
 {
 	g_bMakeSnapshot = 1;
 	strSnapshot = filename;
 }
 
 // Save curent renderer in jpeg or TGA format
-bool
-ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int jpeg)
+bool ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int jpeg)
 {
 	bool bflip = height < 0;
 	height = abs(height);
 	vector<u32> data(width*height);
 	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
-	if (glGetError() != GL_NO_ERROR)
-		return false;
 
-	if (bflip) {
+	if (glGetError() != GL_NO_ERROR) return false;
+
+	if (bflip)
+	{
 		// swap scanlines
 		vector<u32> scanline(width);
-		for (int i = 0; i < height/2; ++i) {
+
+		for (int i = 0; i < height / 2; ++i)
+		{
 			memcpy(&scanline[0], &data[i * width], width * 4);
 			memcpy(&data[i * width], &data[(height - i - 1) * width], width * 4);
 			memcpy(&data[(height - i - 1) * width], &scanline[0], width * 4);
 		}
 	}
 
-	if (jpeg)
-		return SaveJPEG(filename, width, height, &data[0], 70);
+	if (jpeg) return SaveJPEG(filename, width, height, &data[0], 70);
 
 	return SaveTGA(filename, width, height, &data[0]);
 }
 
 // Save selected texture as TGA
-bool
-ZeroGS::SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
+bool ZeroGS::SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
 {
 	vector<u32> data(width*height);
 	glBindTexture(textarget, tex);
 	glGetTexImage(textarget, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
-	if (glGetError() != GL_NO_ERROR)
-		return false;
+
+	if (glGetError() != GL_NO_ERROR) return false;
 
 	return SaveTGA(filename, width, height, &data[0]);
 }
 
 // save image as JPEG
-bool
-ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const void* pdata, int quality)
+bool ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const void* pdata, int quality)
 {
 	u8* image_buffer = new u8[image_width * image_height * 3];
 	u8* psrc = (u8*)pdata;
 
 	// input data is rgba format, so convert to rgb
 	u8* p = image_buffer;
-	for(int i = 0; i < image_height; ++i) {
-		for(int j = 0; j < image_width; ++j) {
+
+	for (int i = 0; i < image_height; ++i)
+	{
+		for (int j = 0; j < image_width; ++j)
+		{
 			p[0] = psrc[0];
 			p[1] = psrc[1];
 			p[2] = psrc[2];
@@ -131,7 +133,9 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	* compression/decompression processes, in existence at once.  We refer
 	* to any one struct (and its associated working data) as a "JPEG object".
 	*/
+
 	struct jpeg_compress_struct cinfo;
+
 	/* This struct represents a JPEG error handler.  It is declared separately
 	* because applications often want to supply a specialized error handler
 	* (see the second half of this file for an example).  But here we just
@@ -140,10 +144,14 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	* Note that this struct must live as long as the main JPEG parameter
 	* struct, to avoid dangling-pointer problems.
 	*/
+
 	struct jpeg_error_mgr jerr;
+
 	/* More stuff */
 	FILE * outfile;	 /* target file */
+
 	JSAMPROW row_pointer[1];	/* pointer to JSAMPLE row[s] */
+
 	int row_stride;	 /* physical row width in image buffer */
 
 	/* Step 1: allocate and initialize JPEG compression object */
@@ -154,6 +162,7 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	* address which we place into the link field in cinfo.
 	*/
 	cinfo.err = jpeg_std_error(&jerr);
+
 	/* Now we can initialize the JPEG compression object. */
 	jpeg_create_compress(&cinfo);
 
@@ -165,10 +174,12 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	* VERY IMPORTANT: use "b" option to fopen() if you are on a machine that
 	* requires it in order to write binary files.
 	*/
-	if ((outfile = fopen(filename, "wb")) == NULL) {
+	if ((outfile = fopen(filename, "wb")) == NULL)
+	{
 		fprintf(stderr, "can't open %s\n", filename);
 		exit(1);
 	}
+
 	jpeg_stdio_dest(&cinfo, outfile);
 
 	/* Step 3: set parameters for compression */
@@ -207,8 +218,9 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	*/
 	row_stride = image_width * 3;   /* JSAMPLEs per row in image_buffer */
 
-	while (cinfo.next_scanline < cinfo.image_height) {
-  		/* jpeg_write_scanlines expects an array of pointers to scanlines.
+	while (cinfo.next_scanline < cinfo.image_height)
+	{
+		/* jpeg_write_scanlines expects an array of pointers to scanlines.
 		* Here the array is only one element long, but you could pass
 		* more than one scanline at a time if that's more convenient.
 		*/
@@ -219,6 +231,7 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	/* Step 6: Finish compression */
 
 	jpeg_finish_compress(&cinfo);
+
 	/* After finish_compress, we can close the output file. */
 	fclose(outfile);
 
@@ -228,6 +241,7 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 	jpeg_destroy_compress(&cinfo);
 
 	delete image_buffer;
+
 	/* And we're done! */
 	return true;
 }
@@ -237,6 +251,7 @@ ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const 
 #endif
 
 // This is the defenition of TGA header. We need it to function bellow
+
 struct TGA_HEADER
 {
 	u8  identsize;		  	// size of ID field that follows 18 u8 header (0 usually)
@@ -254,36 +269,41 @@ struct TGA_HEADER
 	u8  bits;			// image bits per pixel 8,16,24,32
 	u8  descriptor;		 	// image descriptor bits (vh flip bits)
 
-					// pixel data follows header
+	// pixel data follows header
 #if defined(_MSC_VER)
 };
+
 #	pragma pack(pop)
 #	else
-} __attribute__((packed));
+}
+
+__attribute__((packed));
 #endif
 
 // Save image as TGA
-bool
-ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
+bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 {
 	int err = 0;
 	TGA_HEADER hdr;
 	FILE* f = fopen(filename, "wb");
-	if (f == NULL)
-		return false;
 
-	assert( sizeof(TGA_HEADER) == 18 && sizeof(hdr) == 18 );
+	if (f == NULL) return false;
+
+	assert(sizeof(TGA_HEADER) == 18 && sizeof(hdr) == 18);
 
 	memset(&hdr, 0, sizeof(hdr));
+
 	hdr.imagetype = 2;
 	hdr.bits = 32;
 	hdr.width = width;
 	hdr.height = height;
-	hdr.descriptor |= 8|(1<<5); 	// 8bit alpha, flip vertical
+	hdr.descriptor |= 8 | (1 << 5); 	// 8bit alpha, flip vertical
 
 	err = fwrite(&hdr, sizeof(hdr), 1, f);
 	err = fwrite(pdata, width * height * 4, 1, f);
+
 	fclose(f);
+
 	return true;
 }
 
@@ -291,8 +311,8 @@ ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 // AVI start -- set needed glabal variables
 void ZeroGS::StartCapture()
 {
-	if( !s_aviinit ) {
-
+	if (!s_aviinit)
+	{
 #ifdef _WIN32
 		START_AVI("zerogs.avi");
 #else // linux
@@ -300,7 +320,8 @@ void ZeroGS::StartCapture()
 #endif
 		s_aviinit = 1;
 	}
-	else {
+	else
+	{
 		ZZLog::Error_Log("Continuing from previous capture.");
 	}
 
@@ -317,10 +338,11 @@ void ZeroGS::StopCapture()
 // Does not work on linux
 void ZeroGS::CaptureFrame()
 {
-	assert( s_avicapturing && s_aviinit );
+	assert(s_avicapturing && s_aviinit);
 
 	vector<u32> data(nBackbufferWidth*nBackbufferHeight);
 	glReadPixels(0, 0, nBackbufferWidth, nBackbufferHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
+
 	if (glGetError() != GL_NO_ERROR) return;
 
 #ifdef _WIN32
@@ -328,12 +350,14 @@ void ZeroGS::CaptureFrame()
 
 	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, nBackbufferWidth, nBackbufferHeight, 32, &data[0]);
 
-	if( !bSuccess ) {
+	if (!bSuccess)
+	{
 		s_avicapturing = 0;
 		STOP_AVI();
 		ZeroGS::AddMessage("Failed to create avi");
 		return;
 	}
+
 #else // linux
 	//TODO
 #endif // _WIN32
@@ -351,10 +375,10 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 	CMemoryTarget* pmemtarg = NULL;
 
-	if (usevid) {
-
+	if (usevid)
+	{
 		pmemtarg = g_MemTargs.GetMemoryTarget(*ptex, 0);
-		assert( pmemtarg != NULL );
+		assert(pmemtarg != NULL);
 
 		glBindTexture(GL_TEXTURE_RECTANGLE_NV, pmemtarg->ptex->tex);
 		srcdata.resize(pmemtarg->realheight * GPU_TEXWIDTH * pmemtarg->widthmult * 4 * 8); // max of 8 cannels
@@ -371,11 +395,15 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 		psrc = &srcdata[0] - offset;
 	}
 
-	for (int i = 0; i < ptex->th; ++i) {
-		for (int j = 0; j < ptex->tw; ++j) {
+	for (int i = 0; i < ptex->th; ++i)
+	{
+		for (int j = 0; j < ptex->tw; ++j)
+		{
 			u32 u = 0;
-		        u32 addr;
-			switch (ptex->psm) {
+			u32 addr;
+
+			switch (ptex->psm)
+			{
 				case PSMCT32:
 					addr = getPixelAddress32(j, i, ptex->tbp0, ptex->tbw);
 					if (addr * 4 < 0x00400000)
@@ -383,6 +411,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 					else
 						u = 0;
 					break;
+
 				case PSMCT24:
 					addr = getPixelAddress24(j, i, ptex->tbp0, ptex->tbw);
 					if (addr * 4 < 0x00400000)
@@ -390,135 +419,174 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 					else
 						u = 0;
 					break;
+
 				case PSMCT16:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 2 < 0x00400000) {
+					if (addr * 2 < 0x00400000)
+					{
 						u = readPixel16(psrc, j, i, ptex->tbp0, ptex->tbw);
 						u = RGBA16to32(u);
 					}
 					else
+					{
 						u = 0;
+					}
 					break;
+
 				case PSMCT16S:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 2 < 0x00400000) {
+					if (addr * 2 < 0x00400000)
+					{
 						u = readPixel16S(psrc, j, i, ptex->tbp0, ptex->tbw);
 						u = RGBA16to32(u);
 					}
-					else u = 0;
+					else 
+					{
+						u = 0;
+					}
 					break;
 
 				case PSMT8:
 					addr = getPixelAddress8(j, i, ptex->tbp0, ptex->tbw);
-					if (addr < 0x00400000) {
-						if (usevid) {
+					if (addr < 0x00400000)
+					{
+						if (usevid)
+						{
 							if (PSMT_IS32BIT(ptex->cpsm))
-								u = *(u32*)(psrc+4*addr);
+								u = *(u32*)(psrc + 4 * addr);
 							else
-								u = RGBA16to32(*(u16*)(psrc+2*addr));
+								u = RGBA16to32(*(u16*)(psrc + 2 * addr));
 						}
 						else
+						{
 							u = readPixel8(psrc, j, i, ptex->tbp0, ptex->tbw);
+						}
 					}
 					else
+					{
 						u = 0;
+					}
 					break;
 
 				case PSMT4:
 					addr = getPixelAddress4(j, i, ptex->tbp0, ptex->tbw);
-
-					if( addr < 2*0x00400000 ) {
-						if( usevid ) {
+					if (addr < 2*0x00400000)
+					{
+						if (usevid)
+						{
 							if (PSMT_IS32BIT(ptex->cpsm))
-								u = *(u32*)(psrc+4*addr);
+								u = *(u32*)(psrc + 4 * addr);
 							else
-							u = RGBA16to32(*(u16*)(psrc+2*addr));
+								u = RGBA16to32(*(u16*)(psrc + 2 * addr));
 						}
 						else
+						{
 							u = readPixel4(psrc, j, i, ptex->tbp0, ptex->tbw);
+						}
 					}
-					else u = 0;
+					else 
+					{
+						u = 0;
+					}
+
 					break;
 
 				case PSMT8H:
 					addr = getPixelAddress8H(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 4*addr < 0x00400000 ) {
-						if( usevid ) {
+					if (4*addr < 0x00400000)
+					{
+						if (usevid)
+						{
 							if (PSMT_IS32BIT(ptex->cpsm))
-								u = *(u32*)(psrc+4*addr);
+								u = *(u32*)(psrc + 4 * addr);
 							else
-								u = RGBA16to32(*(u16*)(psrc+2*addr));
+								u = RGBA16to32(*(u16*)(psrc + 2 * addr));
 						}
 						else
+						{
 							u = readPixel8H(psrc, j, i, ptex->tbp0, ptex->tbw);
+						}
 					}
-					else u = 0;
-
+					else 
+					{
+						u = 0;
+					}
 					break;
 
 				case PSMT4HL:
 					addr = getPixelAddress4HL(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 4*addr < 0x00400000 ) {
-						if( usevid ) {
+					if (4*addr < 0x00400000)
+					{
+						if (usevid)
+						{
 							if (PSMT_IS32BIT(ptex->cpsm))
-								u = *(u32*)(psrc+4*addr);
+								u = *(u32*)(psrc + 4 * addr);
 							else
-								u = RGBA16to32(*(u16*)(psrc+2*addr));
+								u = RGBA16to32(*(u16*)(psrc + 2 * addr));
 						}
 						else
+						{
 							u = readPixel4HL(psrc, j, i, ptex->tbp0, ptex->tbw);
+						}
 					}
-					else u = 0;
+					else 
+					{
+						u = 0;
+					}
 					break;
 
 				case PSMT4HH:
 					addr = getPixelAddress4HH(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 4*addr < 0x00400000 ) {
-						if( usevid ) {
+					if (4*addr < 0x00400000)
+					{
+						if (usevid)
+						{
 							if (PSMT_IS32BIT(ptex->cpsm))
-								u = *(u32*)(psrc+4*addr);
+								u = *(u32*)(psrc + 4 * addr);
 							else
-								u = RGBA16to32(*(u16*)(psrc+2*addr));
+								u = RGBA16to32(*(u16*)(psrc + 2 * addr));
 						}
 						else
+						{
 							u = readPixel4HH(psrc, j, i, ptex->tbp0, ptex->tbw);
+						}
 					}
-					else u = 0;
+					else
+					{
+						u = 0;
+					}
 					break;
 
 				case PSMT32Z:
 					addr = getPixelAddress32Z(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 4*addr < 0x00400000 )
+					if (4*addr < 0x00400000)
 						u = readPixel32Z(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else u = 0;
+					else 
+						u = 0;
 					break;
 
 				case PSMT24Z:
 					addr = getPixelAddress24Z(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 4*addr < 0x00400000 )
+					if (4*addr < 0x00400000)
 						u = readPixel24Z(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else u = 0;
+					else 
+						u = 0;
 					break;
 
 				case PSMT16Z:
 					addr = getPixelAddress16Z(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 2*addr < 0x00400000 )
+					if (2*addr < 0x00400000)
 						u = readPixel16Z(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else u = 0;
+					else 
+						u = 0;
 					break;
 
 				case PSMT16SZ:
 					addr = getPixelAddress16SZ(j, i, ptex->tbp0, ptex->tbw);
-
-					if( 2*addr < 0x00400000 )
+					if (2*addr < 0x00400000)
 						u = readPixel16SZ(psrc, j, i, ptex->tbp0, ptex->tbw);
-					else u = 0;
+					else 
+						u = 0;
 					break;
 
 				default:
@@ -530,29 +598,30 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 	}
 
 	char Name[TGA_FILE_NAME_MAX_LENGTH];
-	snprintf( Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber );
+
+	snprintf(Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber);
 	SaveTGA(Name, ptex->tw, ptex->th, &data[0]);
 }
 
 
 // Do the save texture and return file name of it
 // Do not forget to call free(), other wise there would be memory leak!
-char*
-ZeroGS::NamedSaveTex(tex0Info* ptex, int usevid){
+char* ZeroGS::NamedSaveTex(tex0Info* ptex, int usevid)
+{
 	SaveTex(ptex, usevid);
 	char* Name = (char*)malloc(TGA_FILE_NAME_MAX_LENGTH);
-	snprintf( Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber );
+	snprintf(Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber);
 
 	TexNumber++;
-	if (TexNumber > MAX_NUMBER_SAVED_TGA)
-		TexNumber = 0;
+
+	if (TexNumber > MAX_NUMBER_SAVED_TGA) TexNumber = 0;
 
 	return Name;
 }
 
-// Special function, wich is safe to call from any other file, without aviutils problems.
-void
-ZeroGS::Stop_Avi(){
+// Special function, which is safe to call from any other file, without aviutils problems.
+void ZeroGS::Stop_Avi()
+{
 #ifdef _WIN32
 	STOP_AVI();
 #else
