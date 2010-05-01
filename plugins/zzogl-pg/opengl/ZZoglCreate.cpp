@@ -178,9 +178,9 @@ int s_nFullscreen = 0;
 u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
-BOOL g_bDisplayMsg = 1;
+bool g_bDisplayMsg = 1;
 int g_nDepthBias = 0;
-BOOL g_bSaveFlushedFrame = 0;
+bool g_bSaveFlushedFrame = 0;
 
 //------------------ Code
 
@@ -550,7 +550,7 @@ bool ZeroGS::Create(int _width, int _height)
 	GL_STENCILFUNC(GL_ALWAYS, 0, 0);
 
 	//g_GameSettings |= 0;//GAME_VSSHACK|GAME_FULL16BITRES|GAME_NODEPTHRESOLVE|GAME_FASTUPDATE;
-	//s_bWriteDepth = TRUE;
+	//s_bWriteDepth = true;
 
 	GL_BLEND_ALL(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);					 // Reset The Current Viewport
@@ -902,7 +902,7 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 }
 
-void ZeroGS::Destroy(BOOL bD3D)
+void ZeroGS::Destroy(bool bD3D)
 {
 	if (s_aviinit)
 	{

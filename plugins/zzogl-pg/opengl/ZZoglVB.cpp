@@ -413,7 +413,7 @@ inline void ZeroGS::VB::FlushTexUnchangedClutDontUpdate()
 	{
 		ZeroGS::texClutWrite(ictx);
 		// invalidate to make sure target didn't change!
-		bVarsTexSync = FALSE;
+		bVarsTexSync = false;
 	}
 }
 
@@ -432,7 +432,7 @@ inline void ZeroGS::VB::FlushTexClutDontUpdate()
 
 	ZeroGS::texClutWrite(ictx);
 
-	bVarsTexSync = FALSE;
+	bVarsTexSync = false;
 }
 
 
@@ -487,8 +487,8 @@ void ZeroGS::VB::FlushTexData()
 	// Made the full update
 	ZeroGS::Flush(ictx);
 
-	bVarsTexSync = FALSE;
-	bTexConstsSync = FALSE;
+	bVarsTexSync = false;
+	bTexConstsSync = false;
 
 	uCurTex0Data[0] = uNextTex0Data[0];
 	uCurTex0Data[1] = uNextTex0Data[1];

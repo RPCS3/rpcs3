@@ -384,11 +384,11 @@ extern u32 ptexBilinearBlocks;
 extern u32 ptexConv32to16;
 extern int g_MaxTexWidth, g_MaxTexHeight;
 extern float g_fBlockMult;
-extern BOOL g_bDisplayMsg;
-extern BOOL g_bDisplayFPS;
+extern bool g_bDisplayMsg;
+extern bool g_bDisplayFPS;
 
 extern int g_nDepthBias;
-extern BOOL g_bSaveFlushedFrame;
+extern bool g_bSaveFlushedFrame;
 extern u8* s_lpShaderResources;
 extern u32 g_SaveFrameNum;
 extern int s_nWriteDepthCount;
@@ -446,9 +446,9 @@ extern GLenum g_internalRGBAFloatFmt;
 extern GLenum g_internalRGBAFloat16Fmt;
 
 extern CGprogram g_vsprog, g_psprog;
-extern BOOL g_bMakeSnapshot;
+extern bool g_bMakeSnapshot;
 extern string strSnapshot;
-extern BOOL g_bCRTCBilinear;
+extern bool g_bCRTCBilinear;
 
 // AVI Capture
 extern int s_aviinit;
@@ -1013,7 +1013,7 @@ void ReloadEffects();
 bool IsGLExt(const char* szTargetExtension);   ///< returns true if the the opengl extension is supported
 inline bool Create_Window(int _width, int _height);
 bool Create(int width, int height);
-void Destroy(BOOL bD3D);
+void Destroy(bool bD3D);
 
 void Restore(); // call to restore device
 void Reset(); // call to destroy video resources

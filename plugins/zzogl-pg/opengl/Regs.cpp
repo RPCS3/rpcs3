@@ -309,7 +309,7 @@ void tex2Write(int i, u32 *data)
 			{
 				ZeroGS::texClutWrite(i);
 				// invalidate to make sure target didn't change!
-				ZeroGS::vb[i].bVarsTexSync = FALSE;
+				ZeroGS::vb[i].bVarsTexSync = false;
 			}
 
 			return;
@@ -318,8 +318,8 @@ void tex2Write(int i, u32 *data)
 
 	ZeroGS::Flush(i);
 
-	ZeroGS::vb[i].bVarsTexSync = FALSE;
-	ZeroGS::vb[i].bTexConstsSync = FALSE;
+	ZeroGS::vb[i].bVarsTexSync = false;
+	ZeroGS::vb[i].bTexConstsSync = false;
 
 	s_uTex0Data[0] = (s_uTex0Data[0] & ~0x03f00000) | (psm << 20);
 	s_uTex0Data[1] = (s_uTex0Data[1] & 0x1f) | (data[1] & ~0x1f);
@@ -394,7 +394,7 @@ __forceinline void clampWrite(int i, u32 *data)
 		clamp.minv = ((data[0] >> 24) & 0xff) | ((data[1] & 0x3) << 8);
 		clamp.maxv = (data[1] >> 2) & 0x3ff;
 
-		ZeroGS::vb[i].bTexConstsSync = FALSE;
+		ZeroGS::vb[i].bTexConstsSync = false;
 	}
 }
 
@@ -563,7 +563,7 @@ void tex1Write(int i, u32* data)
 	if (conf.bilinear == 1 && (tex1.mmag != ((data[0] >>  5) & 0x1) || tex1.mmin != ((data[0] >>  6) & 0x7)))
 	{
 		ZeroGS::Flush(i);
-		ZeroGS::vb[i].bVarsTexSync = FALSE;
+		ZeroGS::vb[i].bVarsTexSync = false;
 	}
 
 	tex1.lcm  = (data[0]) & 0x1;
@@ -736,8 +736,8 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 		gs.texa.fta[0] = newinfo.ta[0] / 255.0f;
 		gs.texa.fta[1] = newinfo.ta[1] / 255.0f;
 
-		ZeroGS::vb[0].bTexConstsSync = FALSE;
-		ZeroGS::vb[1].bTexConstsSync = FALSE;
+		ZeroGS::vb[0].bTexConstsSync = false;
+		ZeroGS::vb[1].bTexConstsSync = false;
 	}
 }
 

@@ -33,8 +33,8 @@ using namespace ZeroGS;
 #define g_bSaveFrame 0
 #define g_bSaveFinalFrame 0
 #else
-BOOL g_bSaveFrame = 0;  // saves the current psurfTarget
-BOOL g_bSaveFinalFrame = 0; // saves the input to the CRTC
+bool g_bSaveFrame = 0;  // saves the current psurfTarget
+bool g_bSaveFinalFrame = 0; // saves the input to the CRTC
 #endif // !defined(ZEROGS_DEVBUILD)
 
 #define INTERLACE_COUNT (bInterlace && interlace == (conf.interlace))
@@ -49,7 +49,7 @@ extern HDC		hDC;	   // Private GDI Device Context
 extern HGLRC	hRC;	   // Permanent Rendering Context
 #endif
 
-BOOL g_bCRTCBilinear = TRUE;
+bool g_bCRTCBilinear = true;
 extern bool g_bIsLost;
 int g_nFrameRender = 10;
 int g_nFramesSkipped = 0;
@@ -65,7 +65,7 @@ extern int s_nWriteDestAlphaTest;
 
 extern int g_PrevBitwiseTexX, g_PrevBitwiseTexY; // textures stored in SAMP_BITWISEANDX and SAMP_BITWISEANDY
 
-BOOL g_bDisplayFPS = FALSE;
+bool g_bDisplayFPS = false;
 
 extern bool s_bDestAlphaTest;
 extern int s_ClutResolve;
@@ -278,7 +278,7 @@ inline void RenderStartHelper(u32 bInterlace)
 	if (conf.mrtdepth && pvs[8] == NULL)
 	{
 		conf.mrtdepth = 0;
-		s_bWriteDepth = FALSE;
+		s_bWriteDepth = false;
 
 		ZZLog::Debug_Log("Disabling MRT depth writing\n");
 	}
@@ -769,7 +769,7 @@ inline void AfterRenderCountStatistics()
 
 		if (--s_nWriteDepthCount <= 0)
 		{
-			s_bWriteDepth = FALSE;
+			s_bWriteDepth = false;
 		}
 	}
 
@@ -777,7 +777,7 @@ inline void AfterRenderCountStatistics()
 	{
 		if (--s_nWriteDestAlphaTest <= 0)
 		{
-			s_bDestAlphaTest = FALSE;
+			s_bDestAlphaTest = false;
 		}
 	}
 
@@ -845,9 +845,9 @@ inline void AfterRendererSwitchBackToTextures()
 
 	if (icurctx >= 0)
 	{
-		vb[icurctx].bVarsSetTarg = FALSE;
-		vb[icurctx].bVarsTexSync = FALSE;
-		vb[0].bVarsTexSync = FALSE;
+		vb[icurctx].bVarsSetTarg = false;
+		vb[icurctx].bVarsTexSync = false;
+		vb[0].bVarsTexSync = false;
 	}
 }
 

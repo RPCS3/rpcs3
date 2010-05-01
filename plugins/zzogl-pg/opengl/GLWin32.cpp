@@ -108,7 +108,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 		dwStyle = WS_OVERLAPPEDWINDOW;
 	}
 
-	AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
+	AdjustWindowRectEx(&rc, dwStyle, false, dwExStyle);
 
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
 
@@ -193,7 +193,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 		dwExStyle = WS_EX_APPWINDOW;
 		dwStyle = WS_POPUP;
-		ShowCursor(FALSE);
+		ShowCursor(false);
 	}
 	else
 	{
@@ -207,7 +207,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	rc.top = 0;
 	rc.right = nBackbufferWidth;
 	rc.bottom = nBackbufferHeight;
-	AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
+	AdjustWindowRectEx(&rc, dwStyle, false, dwExStyle);
 	int X = (rcdesktop.right - rcdesktop.left) / 2 - (rc.right - rc.left) / 2;
 	int Y = (rcdesktop.bottom - rcdesktop.top) / 2 - (rc.bottom - rc.top) / 2;
 

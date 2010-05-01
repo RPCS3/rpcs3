@@ -310,13 +310,13 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS(SH_CRTCTARGPS, ppsCRTCTarg[0]);
 	LOAD_PS(SH_CRTCTARGINTERPS, ppsCRTCTarg[1]);
 
-	g_bCRTCBilinear = TRUE;
+	g_bCRTCBilinear = true;
 	LOAD_PS(SH_CRTCPS, ppsCRTC[0]);
 
 	if (!bLoadSuccess)
 	{
 		// switch to simpler
-		g_bCRTCBilinear = FALSE;
+		g_bCRTCBilinear = false;
 		LOAD_PS(SH_CRTC_NEARESTPS, ppsCRTC[0]);
 		LOAD_PS(SH_CRTCINTER_NEARESTPS, ppsCRTC[0]);
 	}
@@ -543,13 +543,13 @@ bool ZeroGS::LoadExtraEffects()
 	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf);
 	LOAD_PS("CRTCTargInterPS", ppsCRTCTarg[1], cgfProf);
 
-	g_bCRTCBilinear = TRUE;
+	g_bCRTCBilinear = true;
 	LOAD_PS("CRTCPS", ppsCRTC[0], cgfProf);
 
 	if (!bLoadSuccess)
 	{
 		// switch to simpler
-		g_bCRTCBilinear = FALSE;
+		g_bCRTCBilinear = false;
 		LOAD_PS("CRTCPS_Nearest", ppsCRTC[0], cgfProf);
 		LOAD_PS("CRTCInterPS_Nearest", ppsCRTC[0], cgfProf);
 	}
@@ -569,7 +569,7 @@ bool ZeroGS::LoadExtraEffects()
 
 //	if( !conf.mrtdepth ) {
 //		ZZLog::Error_Log("Disabling MRT depth writing.");
-//		s_bWriteDepth = FALSE;
+//		s_bWriteDepth = false;
 //	}
 
 	return true;

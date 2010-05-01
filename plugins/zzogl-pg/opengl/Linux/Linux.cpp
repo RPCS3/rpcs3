@@ -106,9 +106,9 @@ void CreateGameHackTable(GtkWidget *treeview)
 	gtk_tree_view_column_set_title(treecol, "Select");
 	gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), treecol);
 	treerend = gtk_cell_renderer_toggle_new();
-	gtk_tree_view_column_pack_start(treecol, treerend, TRUE);
+	gtk_tree_view_column_pack_start(treecol, treerend, true);
 	gtk_tree_view_column_add_attribute(treecol, treerend, "active", 0);//link 'active' attrib to first column of model
-	g_object_set(treerend, "activatable", TRUE, NULL);//set 'activatable' attrib true by default for all rows regardless of model.
+	g_object_set(treerend, "activatable", true, NULL);//set 'activatable' attrib true by default for all rows regardless of model.
 	g_signal_connect(treerend, "toggled", (GCallback) OnToggle_advopts, treestore);//set a global callback, we also pass a reference to our treestore.
 
 	//COLUMN 1 is the text descriptions
@@ -116,7 +116,7 @@ void CreateGameHackTable(GtkWidget *treeview)
 	gtk_tree_view_column_set_title(treecol, "Description");
 	gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), treecol);
 	treerend = gtk_cell_renderer_text_new();
-	gtk_tree_view_column_pack_start(treecol, treerend, TRUE);
+	gtk_tree_view_column_pack_start(treecol, treerend, true);
 	gtk_tree_view_column_add_attribute(treecol, treerend, "text", 1);//link 'text' attrib to second column of model
 
 	//setup the model with all our rows of option data
@@ -149,7 +149,7 @@ void CreateGameHackTable(GtkWidget *treeview)
 	for (map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
 		gtk_list_store_append(treestore, &treeiter);//new row
-		itval = (conf.gamesettings & it->second.value) ? TRUE : FALSE;
+		itval = (conf.gamesettings & it->second.value) ? true : false;
 		snprintf(descbuf, 254, "%s", it->second.desc);
 		gtk_list_store_set(treestore, &treeiter, 0, itval, 1, descbuf, -1);
 	}
@@ -177,7 +177,7 @@ void SaveGameHackTable(GtkWidget *treeview)
 
 	for (map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		treeoptval = FALSE;
+		treeoptval = false;
 		gtk_tree_model_get(treemodel, &treeiter, 0, &treeoptval, -1);
 
 		if (treeoptval) conf.gamesettings |= it->second.value;

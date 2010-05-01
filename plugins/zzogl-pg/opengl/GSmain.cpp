@@ -58,7 +58,7 @@ u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 
-//static BOOL g_bHidden = 0;
+//static bool g_bHidden = 0;
 int g_GameSettings = 0;
 int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
@@ -95,7 +95,7 @@ extern int g_nFramesSkipped;
 #if !defined(ZEROGS_DEVBUILD)
 #define g_bWriteProfile 0
 #else
-BOOL g_bWriteProfile = 0;
+bool g_bWriteProfile = 0;
 #endif
 
 int s_frameskipping = 0;
@@ -577,7 +577,7 @@ void OnKeyboardF7(int shift)
 
 	if (!shift)
 	{
-		extern BOOL g_bDisplayFPS;
+		extern bool g_bDisplayFPS;
 		g_bDisplayFPS ^= 1;
 	}
 	else

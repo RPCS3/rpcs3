@@ -61,7 +61,7 @@ HGLRC		hRC = NULL;	 // Permanent Rendering Context
 
 bool g_bIsLost = 0;									// ZZ
 
-BOOL g_bMakeSnapshot = 0;
+bool g_bMakeSnapshot = 0;
 string strSnapshot;
 
 CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
@@ -101,7 +101,7 @@ CGparameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
 map<int, SHADERHEADER*> mapShaderResources;
 
-bool s_bTexFlush = FALSE;
+bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
 int s_nWireframeCount = 0;
 int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames

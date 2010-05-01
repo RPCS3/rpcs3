@@ -67,7 +67,7 @@ CMemoryTargetMngr g_MemTargs;
 extern u32 s_ptexCurSet[2];
 extern u32 ptexBilinearBlocks;
 extern u32 ptexConv32to16;
-BOOL g_bSaveZUpdate = 0;
+bool g_bSaveZUpdate = 0;
 
 // ------------------------- Usefull inlines ------------------------------------
 

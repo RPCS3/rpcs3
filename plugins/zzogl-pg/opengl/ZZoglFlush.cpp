@@ -144,8 +144,8 @@ static u32 s_ptexNextSet[2] = {0};				// ZZ
 vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
 
 extern bool s_bTexFlush;
-bool s_bWriteDepth = FALSE;
-bool s_bDestAlphaTest = FALSE;
+bool s_bWriteDepth = false;
+bool s_bDestAlphaTest = false;
 int s_ClutResolve = 0;						// ZZ
 int g_nDepthUsed = 0; 						// ffx2 pal movies
 int s_nWriteDepthCount = 0;					// ZZ
@@ -1929,9 +1929,9 @@ void ZeroGS::SetContextTarget(int context)
 	if ((curvb.zbuf.zbp - curvb.pdepth->fbp) != (curvb.frame.fbp - curvb.prndr->fbp) && curvb.test.zte)
 		ZZLog::Warn_Log("Frame and zbuf not aligned.");
 
-	curvb.bVarsSetTarg = TRUE;
+	curvb.bVarsSetTarg = true;
 
-	if (vb[!context].prndr != curvb.prndr) vb[!context].bVarsSetTarg = FALSE;
+	if (vb[!context].prndr != curvb.prndr) vb[!context].bVarsSetTarg = false;
 
 	assert(!(curvb.prndr->status&CRenderTarget::TS_NeedUpdate));
 	assert(curvb.pdepth == NULL || !(curvb.pdepth->status&CRenderTarget::TS_NeedUpdate));
@@ -1955,20 +1955,20 @@ void ZeroGS::SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
 			if (vb[context].pmemtarg != pmemtarg)
 			{
 				SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);
-				vb[context].bVarsTexSync = TRUE;
+				vb[context].bVarsTexSync = true;
 			}
 		}
 		else
 		{
 			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);
-			vb[context].bVarsTexSync = TRUE;
+			vb[context].bVarsTexSync = true;
 
 			INC_TEXVARS();
 		}
 	}
 	else
 	{
-		vb[context].bVarsTexSync = FALSE;
+		vb[context].bVarsTexSync = false;
 	}
 }
 
@@ -2238,7 +2238,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 
 		SetTexClamping(context, pfragment);
 
-		vb[context].bTexConstsSync = TRUE;
+		vb[context].bTexConstsSync = true;
 	}
 
 	if (s_bTexFlush)
@@ -2246,7 +2246,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		if (PSMT_ISCLUT(tex0.psm))
 			texClutWrite(context);
 		else
-			s_bTexFlush = FALSE;
+			s_bTexFlush = false;
 	}
 }
 
@@ -2366,7 +2366,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 
 	vb[context].pmemtarg = pmemtarg;
 
-	vb[context].bVarsTexSync = FALSE;
+	vb[context].bVarsTexSync = false;
 }
 
 #define SET_ALPHA_COLOR_FACTOR(sign) \
@@ -2927,7 +2927,7 @@ void ZeroGS::SetWriteDepth()
 
 	if (conf.mrtdepth)
 	{
-		s_bWriteDepth = TRUE;
+		s_bWriteDepth = true;
 		s_nWriteDepthCount = 4;
 	}
 }
@@ -2947,14 +2947,14 @@ bool ZeroGS::IsWriteDestAlphaTest()
 void ZeroGS::SetDestAlphaTest()
 {
 	FUNCLOG
-	s_bDestAlphaTest = TRUE;
+	s_bDestAlphaTest = true;
 	s_nWriteDestAlphaTest = 4;
 }
 
 void ZeroGS::SetTexFlush()
 {
 	FUNCLOG
-	s_bTexFlush = TRUE;
+	s_bTexFlush = true;
 
 //	if( PSMT_ISCLUT(vb[0].tex0.psm) )
 //		texClutWrite(0);

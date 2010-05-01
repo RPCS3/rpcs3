@@ -199,14 +199,14 @@ bool ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, c
 	/* Now you can set any non-default parameters you wish to.
 	* Here we just illustrate the use of quality (quantization table) scaling:
 	*/
-	jpeg_set_quality(&cinfo, quality, TRUE /* limit to baseline-JPEG values */);
+	jpeg_set_quality(&cinfo, quality, true /* limit to baseline-JPEG values */);
 
 	/* Step 4: Start compressor */
 
-	/* TRUE ensures that we will write a complete interchange-JPEG file.
-	* Pass TRUE unless you are very sure of what you're doing.
+	/* true ensures that we will write a complete interchange-JPEG file.
+	* Pass true unless you are very sure of what you're doing.
 	*/
-	jpeg_start_compress(&cinfo, TRUE);
+	jpeg_start_compress(&cinfo, true);
 
 	/* Step 5: while (scan lines remain to be written) */
 	/*		   jpeg_write_scanlines(...); */
