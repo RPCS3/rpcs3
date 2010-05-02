@@ -148,6 +148,7 @@
     <ClCompile Include="..\memcpy_amd.cpp" />
     <ClCompile Include="..\rasterfont.cpp" />
     <ClCompile Include="..\Regs.cpp" />
+    <ClCompile Include="..\Profile.cpp" />
     <ClCompile Include="..\targets.cpp" />
     <ClCompile Include="Win32.cpp" />
     <ClCompile Include="..\x86.cpp" />
@@ -191,6 +192,7 @@
     <ClInclude Include="..\PS2Etypes.h" />
     <ClInclude Include="..\rasterfont.h" />
     <ClInclude Include="..\Regs.h" />
+    <ClInclude Include="..\Profile.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resrc1.h" />
     <ClInclude Include="..\targets.h" />

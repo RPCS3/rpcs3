@@ -21,6 +21,10 @@ void SaveConfig()
 	WritePrivateProfileString("Settings", "Options", szValue, iniFile.c_str());
 	sprintf(szValue, "%u", conf.gamesettings);
 	WritePrivateProfileString("Settings", "AdvancedOptions", szValue, iniFile.c_str());
+	sprintf(szValue, "%u", conf.width);
+	WritePrivateProfileString("Settings", "Width", szValue, iniFile.c_str());
+	sprintf(szValue, "%u", conf.height);
+	WritePrivateProfileString("Settings", "Height", szValue, iniFile.c_str());
 }
 
 void LoadConfig()
@@ -57,6 +61,10 @@ void LoadConfig()
 	conf.gamesettings = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, iniFile.c_str());
 	conf.bilinear = strtoul(szValue, NULL, 10);
+	GetPrivateProfileString("Settings", "Width", NULL, szValue, 20, iniFile.c_str());
+	conf.width = strtoul(szValue, NULL, 10);
+	GetPrivateProfileString("Settings", "Height", NULL, szValue, 20, iniFile.c_str());
+	conf.height = strtoul(szValue, NULL, 10);
 
 	if (conf.aa < 0 || conf.aa > 4) conf.aa = 0;
 

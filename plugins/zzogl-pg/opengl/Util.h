@@ -135,19 +135,22 @@ typedef struct
 	int x, y, c;
 } PointC;
 
-#define GSOPTION_FULLSCREEN 	0x2
-#define GSOPTION_TGASNAP 	0x4
-#define GSOPTION_CAPTUREAVI 	0x8
+enum GSOption
+{
+	GSOPTION_FULLSCREEN = 0x2,
+	GSOPTION_TGASNAP = 0x4,
+	GSOPTION_CAPTUREAVI = 0x8,
 
-#define GSOPTION_WINDIMS	0x30
-#define GSOPTION_WIN640		0x00
-#define GSOPTION_WIN800		0x10
-#define GSOPTION_WIN1024	0x20
-#define GSOPTION_WIN1280	0x30
-#define GSOPTION_WIDESCREEN	0x40
+	GSOPTION_WINDIMS = 0x30,
+	GSOPTION_WIN640 = 0x00,
+	GSOPTION_WIN800 = 0x10,
+	GSOPTION_WIN1024 = 0x20,
+	GSOPTION_WIN1280 = 0x30,
+	GSOPTION_WIDESCREEN = 0x40,
 
-#define GSOPTION_WIREFRAME	0x100
-#define GSOPTION_LOADED		0x8000
+	GSOPTION_WIREFRAME = 0x100,
+	GSOPTION_LOADED = 0x8000
+};
 
 //Configuration values.
 
@@ -298,120 +301,6 @@ extern void SysMessage(const char *fmt, ...);
 #else
 extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
-#endif
-
-// Copied from Utilities; remove later.
-#ifdef __LINUX__
-
-#include <sys/time.h>
-
-static __forceinline void InitCPUTicks()
-{
-}
-
-static __forceinline u64 GetTickFrequency()
-{
-	return 1000000;		// unix measures in microseconds
-}
-
-static __forceinline u64 GetCPUTicks()
-{
-
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return ((u64)t.tv_sec*GetTickFrequency()) + t.tv_usec;
-}
-
-#else
-static __aligned16 LARGE_INTEGER lfreq;
-
-static __forceinline void InitCPUTicks()
-{
-	QueryPerformanceFrequency(&lfreq);
-}
-
-static __forceinline u64 GetTickFrequency()
-{
-	return lfreq.QuadPart;
-}
-
-static __forceinline u64 GetCPUTicks()
-{
-	LARGE_INTEGER count;
-	QueryPerformanceCounter(&count);
-	return count.QuadPart;
-}
-
-#endif
-
-template <typename T>
-
-class CInterfacePtr
-{
-
-	public:
-		inline CInterfacePtr() : ptr(NULL) {}
-		inline explicit CInterfacePtr(T* newptr) : ptr(newptr) { if (ptr != NULL) ptr->AddRef(); }
-		inline ~CInterfacePtr() { if (ptr != NULL) ptr->Release(); }
-		inline T* operator*() { assert(ptr != NULL); return *ptr; }
-		inline T* operator->() { return ptr; }
-		inline T* get() { return ptr; }
-
-		inline void release()
-		{
-			if (ptr != NULL) { ptr->Release(); ptr = NULL; }
-		}
-
-		inline operator T*() { return ptr; }
-		inline bool operator==(T* rhs) { return ptr == rhs; }
-		inline bool operator!=(T* rhs) { return ptr != rhs; }
-
-		inline CInterfacePtr& operator= (T* newptr)
-		{
-			if (ptr != NULL) ptr->Release();
-
-			ptr = newptr;
-
-			if (ptr != NULL) ptr->AddRef();
-
-			return *this;
-		}
-
-	private:
-		T* ptr;
-};
-
-
-// IMPORTANT: For every Register there must be an End
-void DVProfRegister(char* pname);			// first checks if this profiler exists in g_listProfilers
-void DVProfEnd(u32 dwUserData);
-void DVProfWrite(char* pfilename, u32 frames = 0);
-void DVProfClear();						// clears all the profilers
-
-#define DVPROFILE
-#ifdef DVPROFILE
-
-class DVProfileFunc
-{
-	public:
-		u32 dwUserData;
-		DVProfileFunc(char* pname) { DVProfRegister(pname); dwUserData = 0; }
-		DVProfileFunc(char* pname, u32 dwUserData) : dwUserData(dwUserData) { DVProfRegister(pname); }
-		~DVProfileFunc() { DVProfEnd(dwUserData); }
-};
-
-#else
-
-class DVProfileFunc
-{
-
-	public:
-		u32 dwUserData;
-		static __forceinline DVProfileFunc(char* pname) {}
-		static __forceinline DVProfileFunc(char* pname, u32 dwUserData) { }
-		~DVProfileFunc() {}
-};
-
 #endif
 
 #endif // UTIL_H_INCLUDED

@@ -298,6 +298,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Profile.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\targets.cpp"
 				>
 			</File>
@@ -423,6 +427,10 @@
 			</File>
 			<File
 				RelativePath="..\Regs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Profile.h"
 				>
 			</File>
 			<File
