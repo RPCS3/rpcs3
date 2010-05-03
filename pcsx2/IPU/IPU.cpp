@@ -41,7 +41,7 @@
 
 static tIPU_DMA g_nDMATransfer(0);
 static tIPU_cmd ipu_cmd;
-
+static IPUStatus IPU1Status;
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated

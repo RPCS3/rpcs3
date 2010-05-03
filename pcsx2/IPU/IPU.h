@@ -65,8 +65,6 @@ struct IPUStatus {
 	u32 NextMem;
 };
 
-static IPUStatus IPU1Status;
-
 #define DMA_MODE_NORMAL 0
 #define DMA_MODE_CHAIN 1
 

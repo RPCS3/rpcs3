@@ -354,7 +354,9 @@ AppConfig::AppConfig()
 	Toolbar_ImageSize	= 24;
 	Toolbar_ShowLabels	= true;
 
+	#ifdef __WXMSW__
 	McdCompressNTFS		= true;
+	#endif
 	McdEnableEjection	= true;
 	EnableSpeedHacks	= false;
 	EnableGameFixes		= false;
@@ -440,7 +442,9 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( EnableSpeedHacks );
 	IniEntry( EnableGameFixes );
 	
+	#ifdef __WXMSW__
 	IniEntry( McdCompressNTFS );
+	#endif
 	IniEntry( McdEnableEjection );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );

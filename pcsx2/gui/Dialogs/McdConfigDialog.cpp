@@ -57,27 +57,33 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 		)
 	);
 
+	*this += m_check_Ejection		| pxExpand;
+	
 	#ifdef __WXMSW__
 	m_check_CompressNTFS = new pxCheckBox( this,
 		_("Enable NTFS Compression on all cards by default."),
 		GetMsg_McdNtfsCompress()
 	);
+	
+ 	*this += m_check_CompressNTFS	| pxExpand;
 	#endif
-
-	*this += m_check_Ejection		| pxExpand;
-	*this += m_check_CompressNTFS	| pxExpand;
 }
 
 void Panels::McdConfigPanel_Toggles::Apply()
 {
 	g_Conf->McdEnableEjection	= m_check_Ejection->GetValue();
+	
+	#ifdef __WXMSW__
 	g_Conf->McdCompressNTFS		= m_check_CompressNTFS->GetValue();
+	#endif
 }
 
 void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 {
 	m_check_Ejection		->SetValue( g_Conf->McdEnableEjection );
+	#ifdef __WXMSW__
 	m_check_CompressNTFS	->SetValue( g_Conf->McdCompressNTFS );
+	#endif
 }
 
 Panels::McdConfigPanel_Standard::McdConfigPanel_Standard(wxWindow *parent) : _parent( parent )

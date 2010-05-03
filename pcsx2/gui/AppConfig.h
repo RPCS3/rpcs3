@@ -205,10 +205,9 @@ public:
 	// Enables display of toolbar text labels.
 	bool		Toolbar_ShowLabels;
 
-	#ifdef __WXMSW__
 	// uses automatic ntfs compression when creating new memory cards (Win32 only)
+	// (Used in several places, so it's easier
 	bool		McdCompressNTFS;
-	#endif
 
 	// Force-ejects modified memory cards when loading savestates (avoids corruption)
 	bool		McdEnableEjection;
