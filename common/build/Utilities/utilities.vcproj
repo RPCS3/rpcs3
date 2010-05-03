@@ -431,6 +431,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\src\Utilities\ThreadingDialogs.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\src\Utilities\ThreadingInternal.h"
 					>
 				</File>
@@ -566,6 +570,10 @@
 				</File>
 				<File
 					RelativePath="..\..\include\Utilities\Threading.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\Utilities\ThreadingDialogs.h"
 					>
 				</File>
 				<File

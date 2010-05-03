@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
-#include "MemoryCardListView.h"
+#include "MemoryCardPanels.h"
 
 #include "Dialogs/ConfigurationDialog.h"
 
@@ -81,7 +81,7 @@ MemoryCardListView::MemoryCardListView( wxWindow* parent )
 	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView::OnListDrag));
 }
 
-void Panels::MemoryCardListView::OnListDrag(wxListEvent& evt)
+void MemoryCardListView::OnListDrag(wxListEvent& evt)
 {
 	evt.Skip();
 
@@ -94,7 +94,7 @@ void Panels::MemoryCardListView::OnListDrag(wxListEvent& evt)
 }
 
 // return the text for the given column of the given item
-wxString Panels::MemoryCardListView::OnGetItemText(long item, long column) const
+wxString MemoryCardListView::OnGetItemText(long item, long column) const
 {
 	if( m_KnownCards == NULL ) return _parent::OnGetItemText(item, column);
 
@@ -123,19 +123,19 @@ wxString Panels::MemoryCardListView::OnGetItemText(long item, long column) const
 // return the icon for the given item. In report view, OnGetItemImage will
 // only be called for the first column. See OnGetItemColumnImage for
 // details.
-int Panels::MemoryCardListView::OnGetItemImage(long item) const
+int MemoryCardListView::OnGetItemImage(long item) const
 {
 	return _parent::OnGetItemImage( item );
 }
 
 // return the icon for the given item and column.
-int Panels::MemoryCardListView::OnGetItemColumnImage(long item, long column) const
+int MemoryCardListView::OnGetItemColumnImage(long item, long column) const
 {
 	return _parent::OnGetItemColumnImage( item, column );
 }
 
 // return the attribute for the item (may return NULL if none)
-wxListItemAttr* Panels::MemoryCardListView::OnGetItemAttr(long item) const
+wxListItemAttr* MemoryCardListView::OnGetItemAttr(long item) const
 {
 	wxListItemAttr* retval = _parent::OnGetItemAttr(item);
 	//const McdListItem& it( (*m_KnownCards)[item] );
@@ -155,34 +155,58 @@ MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot
 	SetMinSize( wxSize(128, 48) );
 
 	Connect( wxEVT_PAINT, wxPaintEventHandler(MemoryCardInfoPanel::paintEvent) );
+}
 
-	AppStatusEvent_OnSettingsApplied();
+static void DrawTextCentered( wxDC& dc, const wxString msg )
+{
+	int tWidth, tHeight;
+	dc.GetTextExtent( msg, &tWidth, &tHeight );
+	dc.DrawText( msg, (dc.GetSize().GetWidth() - tWidth) / 2, 0 );
 }
 
 void MemoryCardInfoPanel::paintEvent(wxPaintEvent & evt)
 {
+	// Collect Info and Format Strings
+	
+	wxString fname( m_filename.GetFullPath() );
+	if( fname.IsEmpty() ) fname = _("No Card (empty)");
+
+	// Create DC and plot some text (and images!)
+
 	wxPaintDC dc( this );
+	wxFont normal( dc.GetFont() );
+	wxFont bold( normal );
+	normal.SetWeight( wxNORMAL );
+	bold.SetWeight( wxBOLD );
 
-	wxFont woot( dc.GetFont() );
-	woot.SetWeight( wxBOLD );
-	dc.SetFont( woot );
+	dc.SetFont( bold );
+	DrawTextCentered( dc, fname );
 
-	wxString msg;
-	msg = _("No Card (empty)");
-
-	int tWidth, tHeight;
-	dc.GetTextExtent( msg, &tWidth, &tHeight );
-
-	dc.DrawText( msg, (dc.GetSize().GetWidth() - tWidth) / 2, 0 );
 	//dc.DrawCircle( dc.GetSize().GetWidth()/2, 24, dc.GetSize().GetWidth()/4 );
 }
 
 void MemoryCardInfoPanel::Apply()
 {
+	if( m_filename.IsDir() )
+	{
+		throw Exception::CannotApplySettings( this, 
+			wxLt("Cannot use or create memorycard: the filename is an existing directory."),
+			true
+		);
+	}
+
+	if( m_filename.FileExists() )
+	{
+		// TODO : Prompt user to create	non-existing files.  For now we just creat them implicitly.
+	}
+
+	g_Conf->Mcd[m_port][m_slot].Filename = m_filename;
 }
 
 void MemoryCardInfoPanel::AppStatusEvent_OnSettingsApplied()
 {
+	m_filename = g_Conf->Mcd[m_port][m_slot].Filename;
+	Refresh();
 }
 
 
@@ -194,73 +218,20 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 {
 	m_panel_AllKnownCards = new MemoryCardListPanel( this );
 
-	m_idealWidth -= 48;
-	m_check_Ejection = new pxCheckBox( this,
-		_("Auto-eject memorycards when loading savestates"),
-		pxE( ".Dialog:Memorycards:EnableEjection",
-			L"Avoids memorycard corruption by forcing games to re-index card contents after "
-			L"loading from savestates.  May not be compatible with all games (Guitar Hero)."
-		)
-	);
-	m_idealWidth += 48;
-
-	wxPanelWithHelpers* columns[2];
 
 	for( uint port=0; port<2; ++port )
 	{
-		columns[port] = new wxPanelWithHelpers( this, wxVERTICAL );
-		columns[port]->SetIdealWidth( (columns[port]->GetIdealWidth()-12) / 2 );
-
-		/*m_check_Multitap[port] = new pxCheckBox( columns[port], wxsFormat(_("Enable Multitap on Port %u"), port+1) );
-		m_check_Multitap[port]->SetClientData( (void*) port );
-		m_check_Multitap[port]->SetFont( wxFont( m_check_Multitap[port]->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );*/
-
 		for( uint slot=0; slot<1; ++slot )
 		{
-			m_panel_cardinfo[port][slot] = new MemoryCardInfoPanel( columns[port], port, slot );
+			m_panel_cardinfo[port][slot] = new MemoryCardInfoPanel( this, port, slot );
 		}
-
-		//Connect( m_check_Multitap[port]->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(MemoryCardsPanel::OnMultitapChecked));
 	}
 
 	// ------------------------------------
 	//       Sizer / Layout Section
 	// ------------------------------------
 
-	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
-	s_table->AddGrowableCol( 0 );
-	s_table->AddGrowableCol( 1 );
-
-	for( uint port=0; port<2; ++port )
-	{
-		wxStaticBoxSizer& portSizer( *new wxStaticBoxSizer( wxVERTICAL, columns[port], wxsFormat(_("Port %u"), port+1) ) );
-
-		*columns[port] += portSizer | SubGroup();
-
-		portSizer += m_panel_cardinfo[port][0]			| SubGroup();
-		//portSizer += new wxStaticLine( columns[port] )	| pxExpand.Border( wxTOP, StdPadding );
-		//portSizer += m_check_Multitap[port]				| pxCenter.Border( wxBOTTOM, StdPadding );
-
-		/*for( uint slot=1; slot<4; ++slot )
-		{
-			//portSizer += new wxStaticText( columns[port], wxID_ANY, wxsFormat(_("Slot #%u"), slot+1) ); // | pxCenter;
-			wxStaticBoxSizer& staticbox( *new wxStaticBoxSizer( wxVERTICAL, columns[port] ) );
-			staticbox += m_panel_cardinfo[port][slot]	| pxExpand;
-			portSizer += staticbox | SubGroup();
-
-		}*/
-
-		*s_table += columns[port]	| StdExpand();
-	}
-
-	wxBoxSizer& s_checks( *new wxBoxSizer( wxVERTICAL ) );
-	s_checks += m_check_Ejection;
-
-	*this += s_table				| pxExpand;
 	*this += m_panel_AllKnownCards	| StdExpand();
-	*this += s_checks				| StdExpand();
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::MemoryCardsPanel::OnMultitapChecked( wxCommandEvent& evt )

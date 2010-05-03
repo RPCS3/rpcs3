@@ -108,6 +108,7 @@ enum MenuIdentifiers
 
 	// Config Subsection
 	MenuId_Config_SysSettings,
+	MenuId_Config_McdSettings,
 	MenuId_Config_AppSettings,
 	MenuId_Config_BIOS,
 
@@ -635,7 +636,7 @@ DECLARE_APP(Pcsx2App)
 //  AppOpenDialog
 // --------------------------------------------------------------------------------------
 template<typename DialogType>
-void AppOpenDialog( wxWindow* parent )
+void AppOpenDialog( wxWindow* parent=NULL )
 {
 	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
 		window->SetFocus();
@@ -673,6 +674,9 @@ extern __aligned16 AppPluginManager CorePlugins;
 
 
 extern void UI_UpdateSysControls();
+
+extern void UI_DisableStateActions();
+extern void UI_EnableStateActions();
 
 extern void UI_DisableSysActions();
 extern void UI_EnableSysActions();

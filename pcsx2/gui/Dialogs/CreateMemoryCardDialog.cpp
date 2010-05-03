@@ -21,6 +21,8 @@
 
 using namespace pxSizerFlags;
 
+extern wxString GetMsg_McdNtfsCompress();
+
 wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, uint slotidx, const wxString& filename=wxEmptyString )
 {
 	return new wxFilePickerCtrl( parent, wxID_ANY, filename,
@@ -47,10 +49,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	#ifdef __WXMSW__
 	m_check_CompressNTFS = new pxCheckBox( this,
 		_("Use NTFS compression on this card"),
-		pxE( ".Dialog:Memorycards:NtfsCompress",
-			L"NTFS compression is built-in, fast, and completely reliable.  Memorycards typically compress "
-			L"very well, and run faster as a result, so this option is highly recommended."
-		)
+		GetMsg_McdNtfsCompress()
 	);
 	#endif
 

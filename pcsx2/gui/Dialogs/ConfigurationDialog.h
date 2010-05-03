@@ -45,6 +45,8 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	class BaseConfigurationDialog : public BaseApplicableDialog
 	{
+		typedef BaseApplicableDialog _parent;
+	
 	protected:
 		wxListbook&			m_listbook;
 		wxArrayString		m_labels;
@@ -53,10 +55,13 @@ namespace Dialogs
 		virtual ~BaseConfigurationDialog() throw();
 		BaseConfigurationDialog(wxWindow* parent, const wxString& title, wxImageList& bookicons, int idealWidth);
 
-	protected:
+	public:
+		void AddOkCancel( wxSizer* sizer=NULL );
+
 		template< typename T >
 		void AddPage( const char* label, int iconid );
 
+	protected:
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
@@ -72,8 +77,6 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	class SysConfigDialog : public BaseConfigurationDialog
 	{
-	protected:
-
 	public:
 		virtual ~SysConfigDialog() throw() {}
 		SysConfigDialog(wxWindow* parent=NULL);
@@ -81,6 +84,20 @@ namespace Dialogs
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
+	};
+
+	// --------------------------------------------------------------------------------------
+	//  McdConfigDialog
+	// --------------------------------------------------------------------------------------
+	class McdConfigDialog : public BaseConfigurationDialog
+	{
+	public:
+		virtual ~McdConfigDialog() throw() {}
+		McdConfigDialog(wxWindow* parent=NULL);
+		static const wxChar* GetNameStatic() { return L"Dialog:MemoryCardSettings"; }
+
+	protected:
+		virtual wxString& GetConfSettingsTabName() const { return g_Conf->McdSettingsTabName; }
 	};
 
 	// --------------------------------------------------------------------------------------

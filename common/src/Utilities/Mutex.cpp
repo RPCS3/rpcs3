@@ -141,9 +141,6 @@ bool Threading::Mutex::TryAcquire()
 // This is a wxApp-safe rendition of AcquireWithoutYield, which makes sure to execute pending app events
 // and messages *if* the lock is performed from the main GUI thread.
 //
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
-//
 void Threading::Mutex::Acquire()
 {
 #if wxUSE_GUI
@@ -151,23 +148,22 @@ void Threading::Mutex::Acquire()
 	{
 		pthread_mutex_lock( &m_mutex );
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Acquire" ) )
+	else if( _WaitGui_RecursionGuard( L"Mutex::Acquire" ) )
 	{
-		AcquireWithoutYield();
+		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
+		pthread_mutex_lock( &m_mutex );
 	}
 	else
 	{
+		//ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		while( !AcquireWithoutYield(def_yieldgui_interval) )
-			wxTheApp->Yield( true );
+			YieldToMain();
 	}
 #else
 	pthread_mutex_lock( &m_mutex );
 #endif
 }
 
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
-//
 bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 {
 #if wxUSE_GUI
@@ -175,19 +171,19 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 	{
 		return AcquireWithoutYield(timeout);
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Acquire(timeout)" ) )
+	else if( _WaitGui_RecursionGuard( L"Mutex::TimedAcquire" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
 		return AcquireWithoutYield( timeout );
 	}
 	else
 	{
-		ScopedBusyCursor hourglass( Cursor_KindaBusy );
+		//ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		wxTimeSpan countdown( (timeout) );
 
 		do {
 			if( AcquireWithoutYield( def_yieldgui_interval ) ) break;
-			wxTheApp->Yield(true);
+			YieldToMain();
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
 
@@ -205,9 +201,6 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 // determine if the thread is running or completed, for example).
 //
 // Implemented internally as a simple Acquire/Release pair.
-//
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 void Threading::Mutex::Wait()
 {
@@ -227,9 +220,6 @@ void Threading::Mutex::WaitWithoutYield()
 // Returns:
 //   true if the mutex was freed and is in an unlocked state; or false if the wait timed out
 //   and the mutex is still locked by another thread.
-//
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 bool Threading::Mutex::Wait( const wxTimeSpan& timeout )
 {
@@ -283,6 +273,16 @@ void Threading::ScopedLock::AssignAndLock( const Mutex* locker )
 
 	m_IsLocked = true;
 	m_lock->Acquire();		
+}
+
+void Threading::ScopedLock::Assign( const Mutex& locker )
+{
+	m_lock = const_cast<Mutex*>(&locker);
+}
+
+void Threading::ScopedLock::Assign( const Mutex* locker )
+{
+	m_lock = const_cast<Mutex*>(locker);
 }
 
 // Provides manual unlocking of a scoped lock prior to object destruction.

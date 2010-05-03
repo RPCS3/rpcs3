@@ -40,16 +40,54 @@ bool States_isSlotUsed(int num)
 		return wxFileExists( SaveStateBase::GetFilename( num ) );
 }
 
+static volatile u32 IsSavingOrLoading = false;
+
+class SysExecEvent_ClearSavingLoadingFlag : public SysExecEvent
+{
+public:
+	wxString GetEventName() const { return L"ClearSavingLoadingFlag"; }
+
+	virtual ~SysExecEvent_ClearSavingLoadingFlag() throw() { }
+	SysExecEvent_ClearSavingLoadingFlag()
+	{
+	}
+	
+	SysExecEvent_ClearSavingLoadingFlag* Clone() const { return new SysExecEvent_ClearSavingLoadingFlag(); }
+	
+protected:
+	void InvokeEvent()
+	{
+		AtomicExchange(IsSavingOrLoading, false);
+	}
+};
+
 void States_FreezeCurrentSlot()
 {
+	if( AtomicExchange(IsSavingOrLoading, true) )
+	{
+		Console.WriteLn( "Load or save action is already pending." );
+		return;
+	}
+
 	GSchangeSaveState( StatesC, SaveStateBase::GetFilename( StatesC ).ToUTF8() );
 	StateCopy_SaveToSlot( StatesC );
+	
+	GetSysExecutorThread().PostIdleEvent( SysExecEvent_ClearSavingLoadingFlag() );
 }
 
 void States_DefrostCurrentSlot()
 {
+	if( AtomicExchange(IsSavingOrLoading, true) )
+	{
+		Console.WriteLn( "Load or save action is already pending." );
+		return;
+	}
+
 	GSchangeSaveState( StatesC, SaveStateBase::GetFilename( StatesC ).ToUTF8() );
 	StateCopy_LoadFromSlot( StatesC );
+
+	GetSysExecutorThread().PostIdleEvent( SysExecEvent_ClearSavingLoadingFlag() );
+
 	//SysStatus( wxsFormat( _("Loaded State (slot %d)"), StatesC ) );
 }
 

@@ -38,9 +38,14 @@ void MainEmuFrame::SaveEmuOptions()
 	}
 }
 
-void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_SysSettings_Click(wxCommandEvent &event)
 {
 	AppOpenDialog<SysConfigDialog>( this );
+}
+
+void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
+{
+	AppOpenDialog<McdConfigDialog>( this );
 }
 
 void MainEmuFrame::Menu_AppSettings_Click(wxCommandEvent &event)
@@ -425,7 +430,7 @@ public:
 	wxString GetEventName() const { return L"ToggleSuspendResume"; }
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( CoreThread.IsOpen() )
 			CoreThread.Suspend();
@@ -447,7 +452,7 @@ public:
 	}
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		sApp.SysShutdown();
 		sApp.SysExecute();

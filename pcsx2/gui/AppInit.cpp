@@ -562,7 +562,7 @@ public:
 protected:
 	// When the SysExec message queue is finally empty, we should check the state of
 	// the menus and make sure they're all consistent to the current emulation states.
-	void DoIdle()
+	void _DoIdle()
 	{
 		UI_UpdateSysControls();
 	}

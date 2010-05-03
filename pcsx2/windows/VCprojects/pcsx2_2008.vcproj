@@ -2060,6 +2060,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Dialogs\McdConfigDialog.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Dialogs\ModalPopups.h"
 					>
 				</File>
@@ -2610,7 +2614,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\Panels\MemoryCardListView.h"
+					RelativePath="..\..\gui\Panels\MemoryCardPanels.h"
 					>
 				</File>
 				<File

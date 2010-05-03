@@ -76,7 +76,7 @@ public:
 	PluginEventType GetEventType() { return m_evt; }
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		sApp.DispatchEvent( m_evt );
 	}
@@ -154,7 +154,7 @@ public:
 	}
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( m_method ) (CorePlugins.*m_method)();
 	}
@@ -257,7 +257,7 @@ public:
 	}
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		CorePlugins.Load( m_folders );
 	}
@@ -337,13 +337,15 @@ void ScopedCoreThreadClose::LoadPlugins()
 class SysExecEvent_UnloadPlugins : public SysExecEvent
 {
 public:
+	wxString GetEventName() const { return L"UnloadPlugins"; }
+
 	virtual ~SysExecEvent_UnloadPlugins() throw() {}
 	SysExecEvent_UnloadPlugins* Clone() const { return new SysExecEvent_UnloadPlugins(*this); }
 
 	virtual bool AllowCancelOnExit() const { return false; }
 	virtual bool IsCriticalEvent() const { return true; }
 
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		CoreThread.Cancel();
 		CorePlugins.Unload();
@@ -353,13 +355,15 @@ public:
 class SysExecEvent_ShutdownPlugins : public SysExecEvent
 {
 public:
+	wxString GetEventName() const { return L"ShutdownPlugins"; }
+
 	virtual ~SysExecEvent_ShutdownPlugins() throw() {}
 	SysExecEvent_ShutdownPlugins* Clone() const { return new SysExecEvent_ShutdownPlugins(*this); }
 
 	virtual bool AllowCancelOnExit() const { return false; }
 	virtual bool IsCriticalEvent() const { return true; }
 
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		CoreThread.Cancel();
 		CorePlugins.Shutdown();

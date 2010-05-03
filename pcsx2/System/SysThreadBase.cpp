@@ -79,9 +79,6 @@ void SysThreadBase::OnStart()
 //      Suspension must cancel itself forcefully or risk crashing whatever other action is
 //      in progress.
 //
-//   ThreadDeadlock - thrown if isBlocking is true and the thread to suspend fails to
-//      respond within the timeout period returned by GetDeadlockTimeout().
-//
 void SysThreadBase::Suspend( bool isBlocking )
 {
 	if( IsSelf() || !IsRunning() ) return;

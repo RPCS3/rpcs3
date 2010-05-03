@@ -23,7 +23,7 @@
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
 
-#include <wx/filepicker.h>
+//#include <wx/filepicker.h>
 
 using namespace Panels;
 
@@ -34,7 +34,6 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<MemoryCardsPanel>	( wxLt("MemoryCards"),	cfgid.MemoryCard );
 	AddPage<CpuPanelEE>			( wxLt("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>			( wxLt("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>			( wxLt("GS"),			cfgid.Video );
@@ -44,8 +43,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 
 	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
 
-	// For some reason adding pages un-does the Apply button, so we need to re-disable it here.
-	FindWindow( wxID_APPLY )->Disable();
+	AddOkCancel();
 }
 
 Dialogs::AppConfigDialog::AppConfigDialog(wxWindow* parent)
@@ -60,6 +58,5 @@ Dialogs::AppConfigDialog::AppConfigDialog(wxWindow* parent)
 
 	MSW_ListView_SetIconSpacing( m_listbook, GetClientSize().GetWidth() );
 
-	// For some reason adding pages un-does the Apply button, so we need to re-disable it here.
-	FindWindow( wxID_APPLY )->Disable();
+	AddOkCancel();
 }

@@ -20,6 +20,17 @@
 #include "ThreadedZipTools.h"
 
 
+BaseCompressThread::~BaseCompressThread() throw()
+{
+	if( m_PendingSaveFlag ) wxGetApp().ClearPendingSave();
+}
+
+void BaseCompressThread::SetPendingSave()
+{
+	wxGetApp().StartPendingSave();
+	m_PendingSaveFlag = true;
+}
+
 CompressThread_gzip::CompressThread_gzip( const wxString& file, SafeArray<u8>* srcdata, FnType_WriteCompressedHeader* writeheader )
 	: BaseCompressThread( file, srcdata, writeheader )
 {
@@ -35,6 +46,8 @@ CompressThread_gzip::CompressThread_gzip( const wxString& file, ScopedPtr< SafeA
 
 CompressThread_gzip::~CompressThread_gzip() throw()
 {
+	_parent::Cancel();
+
 	if( m_gzfp ) gzclose( m_gzfp );
 }
 
@@ -46,11 +59,21 @@ void CompressThread_gzip::Write( const void* data, size_t size )
 
 void CompressThread_gzip::ExecuteTaskInThread()
 {
+	// TODO : Add an API to PersistentThread for this! :)  --air
+	//SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
+
 	if( !m_src_buffer ) return;
+
+	SetPendingSave();
 
 	Yield( 3 );
 
-	if( !(m_gzfp = gzopen(m_filename.ToUTF8(), "wb")) )
+	// Safeguard against corruption by writing to a temp file, and then
+	// copying the final result over the original:
+	
+	wxString tempfile( m_filename + L".tmp" );
+
+	if( !(m_gzfp = gzopen(tempfile.ToUTF8(), "wb")) )
 		throw Exception::CannotCreateStream( m_filename );
 
 	gzsetparams(m_gzfp, Z_BEST_SPEED, Z_FILTERED); // Best speed at good compression
@@ -67,14 +90,21 @@ void CompressThread_gzip::ExecuteTaskInThread()
 		if( gzwrite( m_gzfp, m_src_buffer->GetPtr(curidx), thisBlockSize ) < thisBlockSize )
 			throw Exception::BadStream( m_filename );
 		curidx += thisBlockSize;
-		Yield( 3 );
+		Yield( 2 );
 	} while( curidx < m_src_buffer->GetSizeInBytes() );
-	
+
+	gzclose( m_gzfp );
+	m_gzfp = NULL;
+
+	if( !wxRenameFile( tempfile, m_filename, true ) )
+		throw Exception::BadStream( m_filename, "Failed to move or copy the temporary archive to the destination filename." );
+
 	Console.WriteLn( "(gzipThread) Data saved to disk without error." );
 }
 
 void CompressThread_gzip::OnCleanupInThread()
 {
+	_parent::OnCleanupInThread();
 	wxGetApp().DeleteThread( this );
 }
 

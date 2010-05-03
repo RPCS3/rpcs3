@@ -17,6 +17,8 @@
 #include "App.h"
 #include "AppSaveStates.h"
 
+#include "Utilities/TlsVariable.inl"
+
 #include "ps2/BiosTools.h"
 #include "GS.h"
 
@@ -78,7 +80,7 @@ public:
 	}
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( m_method ) (CoreThread.*m_method)();
 	}
@@ -99,7 +101,7 @@ static void _Suspend()
 
 void AppCoreThread::Suspend( bool isBlocking )
 {
-	if( !GetSysExecutorThread().SelfProcessMethod( _Suspend ) )
+	if( !GetSysExecutorThread().ProcessMethodSelf( _Suspend ) )
 		_parent::Suspend(true);
 }
 
@@ -107,7 +109,13 @@ static int resume_tries = 0;
 
 void AppCoreThread::Resume()
 {
-	if( !AffinityAssert_AllowFrom_SysExecutor() ) return;
+	//if( !AffinityAssert_AllowFrom_SysExecutor() ) return;
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		GetSysExecutorThread().PostEvent( SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::Resume) );
+		return;
+	}
+
 	if( m_ExecMode == ExecMode_Opened || (m_CloseTemporary > 0) ) return;
 
 	if( !pxAssert( CorePlugins.AreLoaded() ) ) return;
@@ -327,25 +335,27 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  SysExecEvent_FullStop
+//  SysExecEvent_CoreThreadClose
 // --------------------------------------------------------------------------------------
-class SysExecEvent_FullStop : public BaseSysExecEvent_ScopedCore
+class SysExecEvent_CoreThreadClose : public BaseSysExecEvent_ScopedCore
 {
 public:
-	virtual ~SysExecEvent_FullStop() throw() {}
-	SysExecEvent_FullStop* Clone() const
+	wxString GetEventName() const { return L"CloseCoreThread"; }
+
+	virtual ~SysExecEvent_CoreThreadClose() throw() {}
+	SysExecEvent_CoreThreadClose* Clone() const
 	{
-		return new SysExecEvent_FullStop( *this );
+		return new SysExecEvent_CoreThreadClose( *this );
 	}
 	
-	SysExecEvent_FullStop( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+	SysExecEvent_CoreThreadClose( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
 		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
 
-	SysExecEvent_FullStop( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
+	SysExecEvent_CoreThreadClose( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
 		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		ScopedCoreThreadClose closed_core;
 		_post_and_wait(closed_core);
@@ -354,25 +364,27 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  SysExecEvent_FullStop
+//  SysExecEvent_CoreThreadPause
 // --------------------------------------------------------------------------------------
-class SysExecEvent_Pause : public BaseSysExecEvent_ScopedCore
+class SysExecEvent_CoreThreadPause : public BaseSysExecEvent_ScopedCore
 {
 public:
-	virtual ~SysExecEvent_Pause() throw() {}
-	SysExecEvent_Pause* Clone() const
+	wxString GetEventName() const { return L"PauseCoreThread"; }
+
+	virtual ~SysExecEvent_CoreThreadPause() throw() {}
+	SysExecEvent_CoreThreadPause* Clone() const
 	{
-		return new SysExecEvent_Pause( *this );
+		return new SysExecEvent_CoreThreadPause( *this );
 	}
 	
-	SysExecEvent_Pause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+	SysExecEvent_CoreThreadPause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
 		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
 
-	SysExecEvent_Pause( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
+	SysExecEvent_CoreThreadPause( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
 		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		ScopedCoreThreadPause paused_core;
 		_post_and_wait(paused_core);
@@ -384,8 +396,8 @@ protected:
 //  ScopedCoreThreadClose / ScopedCoreThreadPause
 // --------------------------------------------------------------------------------------
 
-static __threadlocal bool ScopedCore_IsPaused = false;
-static __threadlocal bool ScopedCore_IsFullyClosed = false;
+static DeclareTls(bool) ScopedCore_IsPaused			= false;
+static DeclareTls(bool) ScopedCore_IsFullyClosed	= false;
 
 BaseScopedCoreThread::BaseScopedCoreThread()
 {
@@ -440,7 +452,7 @@ ScopedCoreThreadClose::ScopedCoreThreadClose()
 	{
 		//DbgCon.WriteLn("(ScopedCoreThreadClose) Threaded Scope Created!");
 
-		GetSysExecutorThread().PostEvent( SysExecEvent_FullStop(m_sync, m_sync_resume, m_mtx_resume) );
+		GetSysExecutorThread().PostEvent( SysExecEvent_CoreThreadClose(m_sync, m_sync_resume, m_mtx_resume) );
 		m_sync.WaitForResult();
 		m_sync.RethrowException();
 	}
@@ -470,7 +482,7 @@ ScopedCoreThreadPause::ScopedCoreThreadPause()
 	{
 		//DbgCon.WriteLn("(ScopedCoreThreadPause) Threaded Scope Created!");
 
-		GetSysExecutorThread().PostEvent( SysExecEvent_Pause(m_sync, m_sync_resume, m_mtx_resume) );
+		GetSysExecutorThread().PostEvent( SysExecEvent_CoreThreadPause(m_sync, m_sync_resume, m_mtx_resume) );
 		m_sync.WaitForResult();
 		m_sync.RethrowException();
 	}

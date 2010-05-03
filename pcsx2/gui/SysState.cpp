@@ -68,6 +68,8 @@ static void SaveStateFile_ReadHeader( IStreamReader& thr )
 //
 class gzipReader : public IStreamReader
 {
+	DeclareNoncopyableObject(gzipReader);
+
 protected:
 	wxString		m_filename;
 	gzFile			m_gzfp;
@@ -100,6 +102,9 @@ public:
 	}
 };
 
+static bool IsSavingOrLoading = false;
+
+
 // --------------------------------------------------------------------------------------
 //  SysExecEvent_DownloadState
 // --------------------------------------------------------------------------------------
@@ -111,6 +116,8 @@ protected:
 	VmStateBuffer*	m_dest_buffer;
 
 public:
+	wxString GetEventName() const { return L"VM_Download"; }
+
 	virtual ~SysExecEvent_DownloadState() throw() {}
 	SysExecEvent_DownloadState* Clone() const { return new SysExecEvent_DownloadState( *this ); }
 	SysExecEvent_DownloadState( VmStateBuffer* dest=&state_buffer )
@@ -118,10 +125,11 @@ public:
 		m_dest_buffer = dest;
 	}
 
+	bool IsCriticalEvent() const { return true; }
 	bool AllowCancelOnExit() const { return false; }
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		ScopedCoreThreadPause paused_core;
 
@@ -130,7 +138,58 @@ protected:
 
 		memSavingState(m_dest_buffer).FreezeAll();
 
+		UI_EnableStateActions();
 		paused_core.AllowResume();
+	}
+};
+
+// It's bad mojo to have savestates trying to read and write from the same file at the
+// same time.  To prevent that we use this mutex lock, which is used by both the
+// CompressThread and the UnzipFromDisk events.  (note that CompressThread locks the
+// mutex during OnStartInThread, which ensures that the ZipToDisk event blocks; preventing
+// the SysExecutor's Idle Event from re-enabing savestates and slots.)
+//
+static Mutex mtx_CompressToDisk;
+
+// --------------------------------------------------------------------------------------
+//  CompressThread_VmState
+// --------------------------------------------------------------------------------------
+class VmStateZipThread : public CompressThread_gzip
+{
+	typedef CompressThread_gzip _parent;
+
+protected:
+	ScopedLock		m_lock_Compress;
+
+public:
+	VmStateZipThread( const wxString& file, VmStateBuffer* srcdata )
+		: _parent( file, srcdata, SaveStateFile_WriteHeader )
+	{
+		m_lock_Compress.Assign(mtx_CompressToDisk);
+	}
+
+	VmStateZipThread( const wxString& file, ScopedPtr<VmStateBuffer>& srcdata )
+		: _parent( file, srcdata, SaveStateFile_WriteHeader )
+	{
+		m_lock_Compress.Assign(mtx_CompressToDisk);
+	}
+
+	virtual ~VmStateZipThread() throw()
+	{
+		
+	}
+	
+protected:
+	void OnStartInThread()
+	{
+		_parent::OnStartInThread();
+		m_lock_Compress.Acquire();
+	}
+
+	void OnCleanupInThread()
+	{
+		m_lock_Compress.Release();
+		_parent::OnCleanupInThread();
 	}
 };
 
@@ -144,7 +203,7 @@ protected:
 	wxString			m_filename;
 
 public:
-	wxString GetEventName() const { return L"SysState_ZipToDisk"; }
+	wxString GetEventName() const { return L"VM_ZipToDisk"; }
 
 	virtual ~SysExecEvent_ZipToDisk() throw()
 	{
@@ -153,7 +212,6 @@ public:
 
 	SysExecEvent_ZipToDisk* Clone() const { return new SysExecEvent_ZipToDisk( *this ); }
 
-// Yep, gcc doesn't like >> again.
 	SysExecEvent_ZipToDisk( ScopedPtr<VmStateBuffer>& src, const wxString& filename )
 		: m_filename( filename )
 	{
@@ -170,9 +228,9 @@ public:
 	bool AllowCancelOnExit() const { return false; }
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
-		 (new CompressThread_gzip( m_filename, m_src_buffer, SaveStateFile_WriteHeader ))->Start();
+		 (new VmStateZipThread( m_filename, m_src_buffer ))->Start();
 		 m_src_buffer = NULL;
 	}
 };
@@ -188,25 +246,27 @@ class SysExecEvent_UnzipFromDisk : public SysExecEvent
 {
 protected:
 	wxString		m_filename;
-	gzipReader		m_gzreader;
 
 public:
-	wxString GetEventName() const { return L"SysState_UnzipFromDisk"; }
+	wxString GetEventName() const { return L"VM_UnzipFromDisk"; }
 	
 	virtual ~SysExecEvent_UnzipFromDisk() throw() {}
 	SysExecEvent_UnzipFromDisk* Clone() const { return new SysExecEvent_UnzipFromDisk( *this ); }
 	SysExecEvent_UnzipFromDisk( const wxString& filename )
 		: m_filename( filename )
-		, m_gzreader( filename )
 	{
-		SaveStateFile_ReadHeader( m_gzreader );
 	}
 
 	wxString GetStreamName() const { return m_filename; }
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
+		ScopedLock lock( mtx_CompressToDisk );
+
+		gzipReader m_gzreader(m_filename );
+		SaveStateFile_ReadHeader( m_gzreader );
+
 		// We use direct Suspend/Resume control here, since it's desirable that emulation
 		// *ALWAYS* start execution after the new savestate is loaded.
 
@@ -263,6 +323,8 @@ void StateCopy_FreezeToMem()
 
 void StateCopy_SaveToFile( const wxString& file )
 {
+	UI_DisableStateActions();
+
 	ScopedPtr<VmStateBuffer> zipbuf(new VmStateBuffer( L"Zippable Savestate" ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState( zipbuf ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk( zipbuf, file ));

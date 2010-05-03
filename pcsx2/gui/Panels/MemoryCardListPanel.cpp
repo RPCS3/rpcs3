@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
-#include "MemoryCardListView.h"
+#include "MemoryCardPanels.h"
 
 #include <wx/filepicker.h>
 #include <wx/ffile.h>
@@ -81,7 +81,7 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 // =====================================================================================================
 //  MemoryCardListPanel
 // =====================================================================================================
-MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
+Panels::MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 	: BaseSelectorPanel( parent )
 {
 	m_FolderPicker = new DirPickerPanel( this, FolderId_MemoryCards,
@@ -113,18 +113,16 @@ MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 	*this += m_listview		| pxExpand;
 	*this += s_buttons		| pxExpand;
 
-	m_listview->SetMinSize( wxSize( wxDefaultCoord, 120 ) );
-
-	AppStatusEvent_OnSettingsApplied();
+	m_listview->SetMinSize( wxSize( m_idealWidth, 120 ) );
 
 	Disable();
 }
 
-void MemoryCardListPanel::Apply()
+void Panels::MemoryCardListPanel::Apply()
 {
 }
 
-void MemoryCardListPanel::AppStatusEvent_OnSettingsApplied()
+void Panels::MemoryCardListPanel::AppStatusEvent_OnSettingsApplied()
 {
 
 }
@@ -139,7 +137,7 @@ bool Panels::MemoryCardListPanel::OnDropFiles(wxCoord x, wxCoord y, const wxArra
 	return false;
 }
 
-bool MemoryCardListPanel::ValidateEnumerationStatus()
+bool Panels::MemoryCardListPanel::ValidateEnumerationStatus()
 {
 	bool validated = true;
 
@@ -163,7 +161,7 @@ bool MemoryCardListPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
-void MemoryCardListPanel::DoRefresh()
+void Panels::MemoryCardListPanel::DoRefresh()
 {
 	if( !m_KnownCards ) return;
 

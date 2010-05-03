@@ -17,13 +17,38 @@
 #include "App.h"
 
 
-// This is called from InvokeAction after various affinity and state checks have verified the
-// message as executable.  Override this when possible.  Only override InvokeAction if you
+wxString SysExecEvent::GetEventName() const
+{
+	pxFail( "Warning: Unnamed SysExecutor Event!  Please overload GetEventName() in all SysExecEvent derived classes." );
+	return wxEmptyString;
+}
+
+wxString SysExecEvent::GetEventMessage() const
+{
+	return GetEventName();
+}
+
+// This is called from _DoInvokeEvent after various affinity and state checks have verified the
+// message as executable.  Override this when possible.  Only override _DoInvokeEvent if you
 // need some kind of additional low-level ability.
-void SysExecEvent::_DoInvoke()
+void SysExecEvent::InvokeEvent()
 {
 }
 
+// This is called by _DoInvokeEvent *always* -- even when exceptions occur during InvokeEvent(),
+// making this function a bit like a C# 'finally' block (try/catch/finally -- a nice feature lacking
+// from C++ prior to the new C++0x10 standard).
+//
+// This function calls PostResult by default, and should be invoked by derived classes overriding
+// CleanupEvent(), unless you want to change the PostResult behavior.
+void SysExecEvent::CleanupEvent()
+{
+	PostResult();
+}
+
+// Transports the specified exception to the thread/context that invoked this event.
+// Events are run from a try/catch block in the event handler that automatically transports
+// exceptions as neeeded, so there shouldn't be much need to use this method directly.
 void SysExecEvent::SetException( BaseException* ex )
 {
 	if( !ex ) return;
@@ -55,14 +80,15 @@ void SysExecEvent::SetException( const BaseException& ex )
 }
 
 
-// This method calls _DoInvoke after performing some setup and affinity checks.
-// Override _DoInvoke instead, which is the intended method of implementing derived class invocation.
-void SysExecEvent::InvokeAction()
+// This method calls _DoInvoke after performing some setup, exception handling, and
+// affinity checks.  For implementing behavior of your event, override _DoInvoke
+// instead, which is the intended method of implementing derived class invocation.
+void SysExecEvent::_DoInvokeEvent()
 {
 	//pxAssumeDev( !IsBeingDeleted(), "Attempted to process a deleted SysExecutor event." );
 	AffinityAssert_AllowFrom_SysExecutor();
 	try {
-		_DoInvoke();
+		InvokeEvent();
 	}
 	catch( BaseException& ex )
 	{
@@ -73,19 +99,32 @@ void SysExecEvent::InvokeAction()
 		SetException( new Exception::RuntimeError(ex) );
 	}
 
-	PostResult();
+	CleanupEvent();
 }
 
+// Posts an empty result to the invoking context/thread of this message, if one exists.
+// If the invoking thread posted the event in non-blocking fashion then no action is
+// taken.
 void SysExecEvent::PostResult() const 
 {
 	if( m_sync ) m_sync->PostResult();
 }
 
+// --------------------------------------------------------------------------------------
+//  pxEvtHandler Implementations
+// --------------------------------------------------------------------------------------
 pxEvtHandler::pxEvtHandler()
 {
 	AtomicExchange( m_Quitting, false );
+	m_qpc_Start = 0;
 }
 
+// Puts the event queue into Shutdown mode, which does *not* immediately stop nor cancel
+// the queue's processing.  Instead it marks the queue inaccessible to all new events
+// and continues procesing queued events for critical events that should not be ignored.
+// (typically these are shutdown events critical to closing the app cleanly). Once
+// all such events have been processed, the thread is stopped.
+//
 void pxEvtHandler::ShutdownQueue()
 {
 	if( m_Quitting ) return;
@@ -108,48 +147,73 @@ struct ScopedThreadCancelDisable
 	}
 };
 
-void pxEvtHandler::ProcessPendingEvents()
+void pxEvtHandler::ProcessEvents( pxEvtList& list )
 {
 	ScopedLock synclock( m_mtx_pending );
     
     pxEvtList::iterator node;
-    while( node = m_pendingEvents.begin(), node != m_pendingEvents.end() )
+    while( node = list.begin(), node != list.end() )
     {
-        ScopedPtr<SysExecEvent> deleteMe(wx_static_cast(SysExecEvent *, *node));
+        ScopedPtr<SysExecEvent> deleteMe(*node);
 
-		m_pendingEvents.erase( node );
+		list.erase( node );
 		if( !m_Quitting || deleteMe->IsCriticalEvent() )
 		{
-			// Some messages can be blocking, so we should release the mutex lock
-			// to avoid having cases where the main thread deadlocks simply trying
-			// to add a message to the queue.
+			// Some messages can be blocking, so we should release the mutex lock while
+			// processing, to avoid having cases where the main thread deadlocks simply
+			// trying to add a message to the queue due to the basic mutex acquire needed.
+
+			m_qpc_Start = GetCPUTicks();
 
 			synclock.Release();
 
+			DevCon.WriteLn( L"(pxEvtHandler) Executing Event: %s [%s]", deleteMe->GetEventName().c_str(), deleteMe->AllowCancelOnExit() ? L"Cancelable" : L"Noncancelable" );
+
 			if( deleteMe->AllowCancelOnExit() )
-				deleteMe->InvokeAction();
+				deleteMe->_DoInvokeEvent();
 			else
 			{
 				ScopedThreadCancelDisable thr_cancel_scope;
-				deleteMe->InvokeAction();
+				deleteMe->_DoInvokeEvent();
 			}
 
+			u64 qpc_end = GetCPUTicks();
+			DevCon.WriteLn( L"(pxEvtHandler) Event '%s' completed in %dms", deleteMe->GetEventName().c_str(), ((qpc_end-m_qpc_Start)*100) / GetTickFrequency() );
+
 			synclock.Acquire();
+			m_qpc_Start = 0;		// lets the main thread know the message completed.
 		}
 		else
 		{
-			Console.WriteLn( L"(pxEvtHandler:Skipping Event) %s", deleteMe->GetEventName().c_str() );
+			Console.WriteLn( L"(pxEvtHandler) Skipping Event: %s", deleteMe->GetEventName().c_str() );
 			deleteMe->PostResult();
 		}
 	}
 }
 
-// This method is provided for wxWidgets API conformance.
+void pxEvtHandler::ProcessIdleEvents()
+{
+	ProcessEvents( m_idleEvents );
+}
+
+void pxEvtHandler::ProcessPendingEvents()
+{
+	ProcessEvents( m_pendingEvents );
+}
+
+// This method is provided for wxWidgets API conformance.  I like to use PostEvent instead
+// since it's remenicient of PostMessage in Windows (and behaves rather similarly).
 void pxEvtHandler::AddPendingEvent( SysExecEvent& evt )
 {
 	PostEvent( evt );
 }
 
+// Adds an event to the event queue in non-blocking fashion.  The thread executing this
+// event queue will be woken up if it's idle/sleeping.
+// IMPORTANT:  The pointer version of this function will *DELETE* the event object passed
+// to it automatically when the event has been executed.  If you are using a scoped event
+// you should use the Reference/Handle overload instead!
+//
 void pxEvtHandler::PostEvent( SysExecEvent* evt )
 {
 	if( !evt ) return;
@@ -171,16 +235,33 @@ void pxEvtHandler::PostEvent( SysExecEvent* evt )
 
 void pxEvtHandler::PostEvent( const SysExecEvent& evt )
 {
+	PostEvent( evt.Clone() );
+}
+
+void pxEvtHandler::PostIdleEvent( SysExecEvent* evt )
+{
+	if( !evt ) return;
+
 	if( m_Quitting )
 	{
-		evt.PostResult();
+		evt->PostResult();
 		return;
 	}
 
 	ScopedLock synclock( m_mtx_pending );
-	m_pendingEvents.push_back( evt.Clone() );
-	if( m_pendingEvents.size() == 1)
+
+	if( m_idleEvents.size() == 0)
+	{
+		m_pendingEvents.push_back( evt );
 		m_wakeup.Post();
+	}
+	else
+		m_idleEvents.push_back( evt );
+}
+
+void pxEvtHandler::PostIdleEvent( const SysExecEvent& evt )
+{
+	PostIdleEvent( evt.Clone() );
 }
 
 void pxEvtHandler::ProcessEvent( SysExecEvent& evt )
@@ -193,23 +274,7 @@ void pxEvtHandler::ProcessEvent( SysExecEvent& evt )
 		sync.WaitForResult();
 	}
 	else
-		evt.InvokeAction();
-}
-
-bool pxEvtHandler::SelfProcessMethod( FnType_Void* method )
-{
-	if( wxThread::GetCurrentId() != m_OwnerThreadId )
-	{
-		SynchronousActionState sync;
-		SysExecEvent_Method evt(method);
-		evt.SetSyncState( sync );
-		PostEvent( evt );
-		sync.WaitForResult();
-
-		return true;
-	}
-	
-	return false;
+		evt._DoInvokeEvent();
 }
 
 void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
@@ -226,13 +291,38 @@ void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
 	else
 	{
 		ScopedPtr<SysExecEvent> deleteMe( evt );
-		deleteMe->InvokeAction();
+		deleteMe->_DoInvokeEvent();
 	}
 }
 
+bool pxEvtHandler::ProcessMethodSelf( FnType_Void* method )
+{
+	if( wxThread::GetCurrentId() != m_OwnerThreadId )
+	{
+		SynchronousActionState sync;
+		SysExecEvent_MethodVoid evt(method);
+		evt.SetSyncState( sync );
+		PostEvent( evt );
+		sync.WaitForResult();
+
+		return true;
+	}
+	
+	return false;
+}
+
+// This method invokes the derived class Idle implementations (if any) and then enters
+// the sleep state until such time that new messages are received.
+//
+// FUTURE: Processes idle messages from the idle message queue (not implemented yet).
+//
+// Extending: Derived classes should override _DoIdle instead, unless it is necessary
+// to implement post-wakeup behavior.
+//
 void pxEvtHandler::Idle()
 {
-	DoIdle();
+	ProcessIdleEvents();
+	_DoIdle();
 	m_wakeup.WaitWithoutYield();
 }
 
@@ -244,6 +334,9 @@ void pxEvtHandler::SetActiveThread()
 // --------------------------------------------------------------------------------------
 //  WaitingForThreadedTaskDialog
 // --------------------------------------------------------------------------------------
+// Note: currently unused (legacy code).  May be utilized at a later date, so I'm leaving
+// it in (for now!)
+//
 class WaitingForThreadedTaskDialog
 	: public wxDialogWithHelpers
 {
@@ -303,6 +396,7 @@ ExecutorThread::ExecutorThread( pxEvtHandler* evthandler )
 	m_EvtHandler = evthandler;
 }
 
+// Exposes the internal pxEvtHandler::ShutdownQueue API.  See pxEvtHandler for details.
 void ExecutorThread::ShutdownQueue()
 {
 	if( !m_EvtHandler || m_EvtHandler->IsShuttingDown() ) return;
@@ -310,6 +404,7 @@ void ExecutorThread::ShutdownQueue()
 	Block();
 }
 
+// Exposes the internal pxEvtHandler::PostEvent API.  See pxEvtHandler for details.
 void ExecutorThread::PostEvent( SysExecEvent* evt )
 {
 	if( !pxAssert( m_EvtHandler ) ) return;
@@ -322,6 +417,20 @@ void ExecutorThread::PostEvent( const SysExecEvent& evt )
 	m_EvtHandler->PostEvent( evt );
 }
 
+// Exposes the internal pxEvtHandler::PostIdleEvent API.  See pxEvtHandler for details.
+void ExecutorThread::PostIdleEvent( SysExecEvent* evt )
+{
+	if( !pxAssert( m_EvtHandler ) ) return;
+	m_EvtHandler->PostIdleEvent( evt );
+}
+
+void ExecutorThread::PostIdleEvent( const SysExecEvent& evt )
+{
+	if( !pxAssert( m_EvtHandler ) ) return;
+	m_EvtHandler->PostIdleEvent( evt );
+}
+
+// Exposes the internal pxEvtHandler::ProcessEvent API.  See pxEvtHandler for details.
 void ExecutorThread::ProcessEvent( SysExecEvent* evt )
 {
 	if( m_EvtHandler )
@@ -329,7 +438,7 @@ void ExecutorThread::ProcessEvent( SysExecEvent* evt )
 	else
 	{
 		ScopedPtr<SysExecEvent> deleteMe( evt );
-		deleteMe->InvokeAction();
+		deleteMe->_DoInvokeEvent();
 	}
 }
 
@@ -338,7 +447,7 @@ void ExecutorThread::ProcessEvent( SysExecEvent& evt )
 	if( m_EvtHandler )
 		m_EvtHandler->ProcessEvent( evt );
 	else
-		evt.InvokeAction();
+		evt._DoInvokeEvent();
 }
 
 void ExecutorThread::OnStart()
@@ -379,7 +488,7 @@ void ExecutorThread::OnCleanupInThread()
 // This event is called when the SysExecutorThread's timer triggers, which means the
 // VM/system task has taken an oddly long period of time to complete. The task is able
 // to invoke a modal dialog from here that will grant the user some options for handling
-// the unresponsive thread.
+// the unresponsive task.
 void Pcsx2App::OnSysExecutorTaskTimeout( wxTimerEvent& evt )
 {
 	if( !SysExecutorThread.IsRunning() ) return;

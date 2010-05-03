@@ -263,6 +263,13 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	s_buttons.Realize();
 }
 
+void wxDialogWithHelpers::AddOkCancel( wxSizer *sizer, bool hasApply )
+{
+	if( sizer == NULL ) sizer = GetSizer();
+	pxAssume( sizer );
+	AddOkCancel( *sizer, hasApply );
+}
+
 // --------------------------------------------------------------------------------------
 //  wxPanelWithHelpers Implementations
 // --------------------------------------------------------------------------------------

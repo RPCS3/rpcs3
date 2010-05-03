@@ -79,9 +79,6 @@ bool Threading::Semaphore::WaitWithoutYield( const wxTimeSpan& timeout )
 // user input continues to be handled and that windoes continue to repaint.  If the Wait is
 // called from another thread, no message pumping is performed.
 //
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
-//
 void Threading::Semaphore::Wait()
 {
 #if wxUSE_GUI
@@ -89,16 +86,16 @@ void Threading::Semaphore::Wait()
 	{
 		sem_wait( &m_sema );
 	}
-	else if( _WaitGui_RecursionGuard( "Semaphore::Wait" ) )
+	else if( _WaitGui_RecursionGuard( L"Semaphore::Wait" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
-		WaitWithoutYield();
+		sem_wait( &m_sema );
 	}
 	else
 	{
-		ScopedBusyCursor hourglass( Cursor_KindaBusy );
+		//ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		while( !WaitWithoutYield( def_yieldgui_interval ) )
-			wxTheApp->Yield( true );
+			YieldToMain();
 	}
 #else
 	sem_wait( &m_sema );
@@ -114,9 +111,6 @@ void Threading::Semaphore::Wait()
 //   false if the wait timed out before the semaphore was signaled, or true if the signal was
 //   reached prior to timeout.
 //
-// Exceptions:
-//   ThreadDeadlock - See description of ThreadDeadlock for details
-//
 bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 {
 #if wxUSE_GUI
@@ -124,19 +118,19 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 	{
 		return WaitWithoutYield( timeout );
 	}
-	else if( _WaitGui_RecursionGuard( "Semaphore::Wait(timeout)" ) )
+	else if( _WaitGui_RecursionGuard( L"Semaphore::TimedWait" ) )
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
 		return WaitWithoutYield( timeout );
 	}
 	else
 	{
-		ScopedBusyCursor hourglass( Cursor_KindaBusy );
+		//ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		wxTimeSpan countdown( (timeout) );
 
 		do {
 			if( WaitWithoutYield( def_yieldgui_interval ) ) break;
-			wxTheApp->Yield(true);
+			YieldToMain();
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
 

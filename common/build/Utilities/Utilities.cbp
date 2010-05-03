@@ -161,6 +161,7 @@
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
+		<Unit filename="../../include/Utilities/ThreadingDialogs.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
 		<Unit filename="../../include/Utilities/pxCheckBox.h" />
 		<Unit filename="../../include/Utilities/pxEvents.h" />
@@ -188,6 +189,7 @@
 		<Unit filename="../../src/Utilities/Semaphore.cpp" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />
+		<Unit filename="../../src/Utilities/ThreadingDialogs.cpp" />
 		<Unit filename="../../src/Utilities/ThreadingInternal.h" />
 		<Unit filename="../../src/Utilities/pxCheckBox.cpp" />
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />

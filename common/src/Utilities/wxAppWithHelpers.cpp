@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "wxAppWithHelpers.h"
 
+#include "ThreadingInternal.h"
 #include "PersistentThread.h"
 
 DEFINE_EVENT_TYPE( pxEvt_DeleteObject );
@@ -33,6 +34,47 @@ void BaseDeletableObject::DoDeletion()
 	wxAppWithHelpers* app = wxDynamicCast( wxApp::GetInstance(), wxAppWithHelpers );
 	pxAssume( app != NULL );
 	app->DeleteObject( *this );
+}
+
+
+// --------------------------------------------------------------------------------------
+//  SynchronousActionState Implementations
+// --------------------------------------------------------------------------------------
+
+void SynchronousActionState::RethrowException() const
+{
+	if( m_exception ) m_exception->Rethrow();
+}
+
+int SynchronousActionState::WaitForResult()
+{
+	m_sema.WaitNoCancel();
+	RethrowException();
+	return return_value;
+}
+
+int SynchronousActionState::WaitForResult_NoExceptions()
+{
+	m_sema.WaitNoCancel();
+	return return_value;
+}
+
+void SynchronousActionState::PostResult( int res )
+{
+	return_value = res;
+	PostResult();
+}
+
+void SynchronousActionState::ClearResult()
+{
+	m_posted = false;
+}
+
+void SynchronousActionState::PostResult()
+{
+	if( m_posted ) return;
+	m_posted = true;
+	m_sema.Post();
 }
 
 // --------------------------------------------------------------------------------------
@@ -181,7 +223,7 @@ public:
 	}
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( m_Method ) m_Method();
 	}
@@ -197,7 +239,7 @@ pxExceptionEvent::pxExceptionEvent( const BaseException& ex )
 	m_except = ex.Clone();
 }
 
-void pxExceptionEvent::_DoInvoke()
+void pxExceptionEvent::InvokeEvent()
 {
 	ScopedPtr<BaseException> deleteMe( m_except );
 	if( deleteMe ) deleteMe->Rethrow();
@@ -322,12 +364,12 @@ void wxAppWithHelpers::CleanUp()
 	_parent::CleanUp();
 }
 
-void pxInvokeActionEvent::InvokeAction()
+void pxInvokeActionEvent::_DoInvokeEvent()
 {
 	AffinityAssert_AllowFrom_MainUI();
 
 	try {
-		_DoInvoke();
+		InvokeEvent();
 	}
 	catch( BaseException& ex )
 	{
@@ -387,10 +429,21 @@ void wxAppWithHelpers::IdleEventDispatcher( const char* action )
 
 	DbgCon.WriteLn( Color_Gray, "App IdleQueue (%s) -> %u events.", action, size );
 
+	std::vector<wxEvent*> postponed;
+	
 	for( size_t i=0; i<size; ++i )
-		ProcessEvent( *m_IdleEventQueue[i] );
+	{
+		if( !Threading::AllowDeletions() && (m_IdleEventQueue[i]->GetEventType() == pxEvt_DeleteThread) )
+			postponed.push_back(m_IdleEventQueue[i]);
+		else
+		{
+			lock.Release();
+			ProcessEvent( *m_IdleEventQueue[i] );
+			lock.Acquire();
+		}
+	}
 
-	m_IdleEventQueue.clear();
+	m_IdleEventQueue = postponed;
 }
 
 void wxAppWithHelpers::OnIdleEvent( wxIdleEvent& evt )
@@ -464,7 +517,7 @@ void wxAppWithHelpers::ProcessAction( pxInvokeActionEvent& evt )
 		sync.WaitForResult();
 	}
 	else
-		evt.InvokeAction();
+		evt._DoInvokeEvent();
 }
 
 
@@ -508,7 +561,7 @@ bool wxAppWithHelpers::OnInit()
 
 void wxAppWithHelpers::OnInvokeAction( pxInvokeActionEvent& evt )
 {
-	evt.InvokeAction();		// wow this is easy!
+	evt._DoInvokeEvent();		// wow this is easy!
 }
 
 void wxAppWithHelpers::OnDeleteObject( wxCommandEvent& evt )

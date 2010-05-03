@@ -344,6 +344,7 @@ wxString AppConfig::FullpathToMcd( uint port, uint slot ) const
 AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
 	, SysSettingsTabName( L"Cpu" )
+	, McdSettingsTabName( L"Standard" )
 	, AppSettingsTabName( L"GS Window" )
 	, DeskTheme( L"default" )
 {
@@ -353,7 +354,8 @@ AppConfig::AppConfig()
 	Toolbar_ImageSize	= 24;
 	Toolbar_ShowLabels	= true;
 
-	McdEnableNTFS		= true;
+	McdCompressNTFS		= true;
+	McdEnableEjection	= true;
 	EnableSpeedHacks	= false;
 	EnableGameFixes		= false;
 
@@ -423,6 +425,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 
 	IniEntry( MainGuiPosition );
 	IniEntry( SysSettingsTabName );
+	IniEntry( McdSettingsTabName );
 	IniEntry( AppSettingsTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
 	IniEntry( RecentIsoCount );
@@ -436,6 +439,9 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 
 	IniEntry( EnableSpeedHacks );
 	IniEntry( EnableGameFixes );
+	
+	IniEntry( McdCompressNTFS );
+	IniEntry( McdEnableEjection );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 }

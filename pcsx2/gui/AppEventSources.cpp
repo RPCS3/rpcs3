@@ -168,7 +168,7 @@ CoreThreadStatusEvent::CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousA
 	m_evt = evt;
 }
 
-void CoreThreadStatusEvent::_DoInvoke()
+void CoreThreadStatusEvent::InvokeEvent()
 {
 	sApp.DispatchEvent( m_evt );
 }

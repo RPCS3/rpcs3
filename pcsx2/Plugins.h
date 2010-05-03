@@ -86,7 +86,7 @@ namespace Exception
 	class PluginLoadError : public virtual PluginError, public virtual BadStream
 	{
 	public:
-		DEFINE_EXCEPTION_COPYTORS( PluginLoadError )
+		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginLoadError )
 
 		PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng );
 
@@ -103,7 +103,7 @@ namespace Exception
 	class PluginInitError : public virtual PluginError
 	{
 	public:
-		DEFINE_EXCEPTION_COPYTORS( PluginInitError )
+		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginInitError )
 
 		explicit PluginInitError( PluginsEnum_t pid,
 			const char* msg=wxLt("%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.") )
@@ -118,7 +118,7 @@ namespace Exception
 	class PluginOpenError : public virtual PluginError
 	{
 	public:
-		DEFINE_EXCEPTION_COPYTORS( PluginOpenError )
+		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginOpenError )
 
 		explicit PluginOpenError( PluginsEnum_t pid,
 			const char* msg=wxLt("%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.") )

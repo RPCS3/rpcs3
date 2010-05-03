@@ -312,6 +312,10 @@ namespace Threading
 		explicit ScopedLock( const Mutex& locker );
 		void AssignAndLock( const Mutex& locker );
 		void AssignAndLock( const Mutex* locker );
+
+		void Assign( const Mutex& locker );
+		void Assign( const Mutex* locker );
+
 		void Release();
 		void Acquire();
 

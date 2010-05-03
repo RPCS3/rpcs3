@@ -64,7 +64,7 @@ BaseMessageBoxEvent::BaseMessageBoxEvent( const BaseMessageBoxEvent& event )
 }
 
 // Thread Safety: Must be called from the GUI thread ONLY.
-void BaseMessageBoxEvent::_DoInvoke()
+void BaseMessageBoxEvent::InvokeEvent()
 {
 	int result = _DoDialog();
 	if( m_state ) m_state->PostResult( result );
@@ -104,7 +104,7 @@ pxMessageBoxEvent::pxMessageBoxEvent( const pxMessageBoxEvent& event )
 
 int pxMessageBoxEvent::_DoDialog() const
 {
-	return pxMessageDialog( m_Content, m_Title, m_Buttons );
+	return pxMessageDialog( m_Title, m_Content, m_Buttons );
 }
 
 // --------------------------------------------------------------------------------------

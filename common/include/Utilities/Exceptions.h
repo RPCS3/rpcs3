@@ -128,10 +128,23 @@ namespace Exception
 //     The text string will be passed through the translator, so if it's int he gettext database
 //     it will be optionally translated.
 //
+// BUGZ??  I'd rather use 'classname' on the Clone() prototype, but for some reason it generates
+// ambiguity errors on virtual inheritence (it really shouldn't!).  So I have to force it to the
+// BaseException base class.  Not sure if this is Stupid Standard Tricks or Stupid MSVC Tricks. --air
+//
+// (update: web searches indicate it's MSVC specific -- happens in 2008, not sure about 2010).
+//
 #define DEFINE_EXCEPTION_COPYTORS( classname ) \
 	virtual ~classname() throw() {} \
 	virtual void Rethrow() const { throw *this; } \
 	virtual BaseException* Clone() const { return new classname( *this ); }
+
+// This is here because MSVC's support for covariant return types on Clone() is broken, and will
+// not work with virtual class inheritance (see DEFINE_EXCEPTION_COPYTORS for details)
+#define DEFINE_EXCEPTION_COPYTORS_COVARIANT( classname ) \
+	virtual ~classname() throw() {} \
+	virtual void Rethrow() const { throw *this; } \
+	virtual classname* Clone() const { return new classname( *this ); }
 
 #define DEFINE_RUNTIME_EXCEPTION( classname, defmsg ) \
 	DEFINE_EXCEPTION_COPYTORS( classname ) \

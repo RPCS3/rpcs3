@@ -162,7 +162,8 @@ protected:
 	void OnFocus( wxFocusEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
 
-	void Menu_ConfigSettings_Click(wxCommandEvent &event);
+	void Menu_SysSettings_Click(wxCommandEvent &event);
+	void Menu_McdSettings_Click(wxCommandEvent &event);
 	void Menu_AppSettings_Click(wxCommandEvent &event);
 	void Menu_SelectBios_Click(wxCommandEvent &event);
 	void Menu_ResetAllSettings_Click(wxCommandEvent &event);

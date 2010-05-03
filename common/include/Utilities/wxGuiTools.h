@@ -315,6 +315,7 @@ public:
 
     void Init();
 	void AddOkCancel( wxSizer& sizer, bool hasApply=false );
+	void AddOkCancel( wxSizer* sizer=NULL, bool hasApply=false );
 
 	virtual void SmartCenterFit();
 	virtual int ShowModal();

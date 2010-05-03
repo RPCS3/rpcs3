@@ -70,18 +70,34 @@ void UI_EnableSysShutdown()
 
 void UI_DisableSysActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_DisableSysShutdown ) ) return;
+	if( wxGetApp().PostMethodMyself( &UI_DisableSysActions ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, false );
+	
+	_SaveLoadStuff( false );
 }
 
 void UI_EnableSysActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_EnableSysShutdown ) ) return;
+	if( wxGetApp().PostMethodMyself( &UI_EnableSysActions ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, true );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, true );
+	
+	_SaveLoadStuff( true );
+}
+
+void UI_DisableStateActions()
+{
+	if( wxGetApp().PostMethodMyself( &UI_DisableStateActions ) ) return;
+	_SaveLoadStuff( false );
+}
+
+void UI_EnableStateActions()
+{
+	if( wxGetApp().PostMethodMyself( &UI_EnableStateActions ) ) return;
+	_SaveLoadStuff( true );
 }
 
 

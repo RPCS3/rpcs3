@@ -56,7 +56,7 @@ Dialogs::BaseApplicableDialog::~BaseApplicableDialog() throw()
 }
 
 Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, const wxString& title, wxImageList& bookicons, int idealWidth )
-	: BaseApplicableDialog( parent, title, wxVERTICAL )
+	: _parent( parent, title, wxVERTICAL )
 	, m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
 	m_idealWidth = idealWidth;
@@ -64,13 +64,7 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	m_listbook.SetImageList( &bookicons );
 	m_ApplyState.StartBook( &m_listbook );
 
-	wxBitmapButton& screenshotButton( *new wxBitmapButton( this, wxID_SAVE, EmbeddedImage<res_ButtonIcon_Camera>().Get() ) );
-	screenshotButton.SetToolTip( _("Saves a snapshot of this settings panel to a PNG file.") );
-
-	*this += m_listbook;
-	AddOkCancel( *GetSizer(), true );
-
-	*m_extraButtonSizer += screenshotButton;
+	*this += m_listbook		| pxExpand.Border( wxLEFT | wxRIGHT, 2 );
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnCancel_Click ) );
@@ -98,8 +92,17 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	ConnectSomethingChanged( SPINCTRL_UPDATED );
 	ConnectSomethingChanged( SLIDER_UPDATED );
 	ConnectSomethingChanged( DIRPICKER_CHANGED );
+}
 
+void Dialogs::BaseConfigurationDialog::AddOkCancel( wxSizer* sizer )
+{
+	_parent::AddOkCancel( sizer, true );
 	FindWindow( wxID_APPLY )->Disable();
+
+	wxBitmapButton& screenshotButton( *new wxBitmapButton( this, wxID_SAVE, EmbeddedImage<res_ButtonIcon_Camera>().Get() ) );
+	screenshotButton.SetToolTip( _("Saves a snapshot of this settings panel to a PNG file.") );
+
+	*m_extraButtonSizer += screenshotButton;
 }
 
 Dialogs::BaseConfigurationDialog::~BaseConfigurationDialog() throw()
@@ -112,7 +115,7 @@ void Dialogs::BaseConfigurationDialog::OnSomethingChanged( wxCommandEvent& evt )
 	evt.Skip();
 	if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
 	{
-		FindWindow( wxID_APPLY )->Enable();
+		if( wxWindow *apply = FindWindow( wxID_APPLY ) ) apply->Enable();
 	}
 }
 

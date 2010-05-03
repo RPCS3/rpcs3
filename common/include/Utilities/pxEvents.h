@@ -31,12 +31,12 @@ class SynchronousActionState
 	DeclareNoncopyableObject( SynchronousActionState );
 
 protected:
-	bool								m_posted;
-	Threading::Semaphore				m_sema;
+	bool						m_posted;
+	Threading::Semaphore		m_sema;
 	ScopedPtr<BaseException>	m_exception;
 
 public:
-	sptr								return_value;
+	sptr						return_value;
 
 	SynchronousActionState()
 	{
@@ -59,35 +59,12 @@ public:
 	Threading::Semaphore& GetSemaphore() { return m_sema; }
 	const Threading::Semaphore& GetSemaphore() const { return m_sema; }
 
-	void RethrowException() const
-	{
-		if( m_exception ) m_exception->Rethrow();
-	}
-
-	int WaitForResult()
-	{
-		m_sema.WaitNoCancel();
-		RethrowException();
-		return return_value;
-	}
-
-	void PostResult( int res )
-	{
-		return_value = res;
-		PostResult();
-	}
-
-	void ClearResult()
-	{
-		m_posted = false;
-	}
-
-	void PostResult()
-	{
-		if( m_posted ) return;
-		m_posted = true;
-		m_sema.Post();
-	}
+	void RethrowException() const;
+	int WaitForResult();
+	int WaitForResult_NoExceptions();
+	void PostResult( int res );
+	void ClearResult();
+	void PostResult();
 };
 
 
@@ -117,7 +94,7 @@ public:
 // --------------------------------------------------------------------------------------
 //  pxInvokeActionEvent
 // --------------------------------------------------------------------------------------
-class pxInvokeActionEvent : public wxEvent, public virtual IActionInvocation
+class pxInvokeActionEvent : public wxEvent
 {
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeActionEvent)
 
@@ -143,10 +120,10 @@ public:
 	virtual void SetException( BaseException* ex );
 	void SetException( const BaseException& ex );
 
-	virtual void InvokeAction();
+	virtual void _DoInvokeEvent();
 	
 protected:
-	virtual void _DoInvoke() {};
+	virtual void InvokeEvent() {}
 };
 
 
@@ -168,11 +145,14 @@ public:
 
 	pxExceptionEvent( const BaseException& ex );
 
-	virtual ~pxExceptionEvent() throw() { }
+	virtual ~pxExceptionEvent() throw()
+	{
+	}
+
 	virtual pxExceptionEvent *Clone() const { return new pxExceptionEvent(*this); }
 
 protected:
-	void _DoInvoke();
+	void InvokeEvent();
 };
 
 // --------------------------------------------------------------------------------------
@@ -226,7 +206,7 @@ public:
 	BaseMessageBoxEvent( const BaseMessageBoxEvent& event );
 
 protected:
-	virtual void _DoInvoke();
+	virtual void InvokeEvent();
 	virtual int _DoDialog() const;
 };
 

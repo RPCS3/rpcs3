@@ -151,7 +151,7 @@ ConsoleLogFrame::ColorArray::ColorArray( int fontsize ) :
 	Create( fontsize );
 }
 
-ConsoleLogFrame::ColorArray::~ColorArray()
+ConsoleLogFrame::ColorArray::~ColorArray() throw()
 {
 	Cleanup();
 }
@@ -351,7 +351,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 {
 	pthread_testcancel();
 
-	ScopedLock lock( m_QueueLock );
+	ScopedLock lock( m_mtx_Queue );
 
 	if( m_QueueColorSection.GetLength() == 0 )
 	{
@@ -378,10 +378,22 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 
 	if( !m_pendingFlushMsg )
 	{
+		m_pendingFlushMsg = true;
+
+		// wxWidgets may have aggressive locks on event processing, so best to release
+		// our own mutex lest wx get hung for an extended period of time and cause all
+		// of our own stuff to get sluggish.
+		lock.Release();
+
 		wxCommandEvent evt( pxEvt_FlushQueue );
 		evt.SetInt( 0 );
-		GetEventHandler()->AddPendingEvent( evt );
-		m_pendingFlushMsg = true;
+		if( wxThread::IsMain() )
+			GetEventHandler()->ProcessEvent( evt );
+		else
+		{
+			GetEventHandler()->AddPendingEvent( evt );
+		}
+		lock.Acquire();
 	}
 
 	++m_pendingFlushes;
@@ -624,7 +636,7 @@ void ConsoleLogFrame::OnFlushLimiterTimer( wxTimerEvent& )
 
 void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
 {
-	ScopedLock locker( m_QueueLock );
+	ScopedLock locker( m_mtx_Queue );
 	m_pendingFlushMsg = false;
 
 	// recursion guard needed due to Mutex lock/acquire code below, which can end up yielding

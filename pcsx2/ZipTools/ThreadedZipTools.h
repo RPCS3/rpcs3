@@ -67,15 +67,19 @@ protected:
 
 	const wxString					m_filename;
 	ScopedPtr< SafeArray< u8 > >	m_src_buffer;
+	bool							m_PendingSaveFlag;
 
 	BaseCompressThread( const wxString& file, SafeArray<u8>* srcdata, FnType_WriteCompressedHeader* writeHeader=NULL)
 		: m_filename( file )
 		, m_src_buffer( srcdata )
 	{
-		m_WriteHeaderInThread = writeHeader;
+		m_WriteHeaderInThread	= writeHeader;
+		m_PendingSaveFlag		= false;
 	}
 
-	virtual ~BaseCompressThread() throw() {}
+	virtual ~BaseCompressThread() throw();
+	
+	void SetPendingSave();
 
 public:
 	wxString GetStreamName() const { return m_filename; }

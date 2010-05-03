@@ -102,7 +102,7 @@ FileMemoryCard::FileMemoryCard()
 			// [TODO] : Add memcard size detection and report it to the console log.
 			//   (8MB, 256Mb, whatever)
 
-			NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
+			NTFS_CompressFile( str, g_Conf->McdCompressNTFS );
 
 			if( !m_file[port][slot].Open( str.c_str(), L"r+b" ) )
 			{

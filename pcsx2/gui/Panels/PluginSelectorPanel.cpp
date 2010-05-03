@@ -14,15 +14,18 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "App.h"
-#include "AppSaveStates.h"
-#include "Plugins.h"
-#include "Utilities/ScopedPtr.h"
-#include "ConfigurationPanels.h"
-#include "Dialogs/ModalPopups.h"
 
 #include <wx/dynlib.h>
 #include <wx/dir.h>
+
+#include "App.h"
+#include "AppSaveStates.h"
+#include "Plugins.h"
+#include "ConfigurationPanels.h"
+
+#include "Dialogs/ModalPopups.h"
+
+#include "Utilities/ThreadingDialogs.h"
 
 // Allows us to force-disable threading for debugging/troubleshooting
 static const bool DisableThreading =
@@ -36,19 +39,19 @@ using namespace pxSizerFlags;
 using namespace Threading;
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE(pxEVT_EnumeratedNext, -1)
+	DECLARE_EVENT_TYPE(pxEvt_EnumeratedNext, -1)
 	DECLARE_EVENT_TYPE(pxEvt_EnumerationFinished, -1)
 	DECLARE_EVENT_TYPE(pxEVT_ShowStatusBar, -1)
-	DECLARE_EVENT_TYPE(pxEvt_SysExecEventComplete, -1)
 END_DECLARE_EVENT_TYPES()
 
-DEFINE_EVENT_TYPE(pxEVT_EnumeratedNext)
+DEFINE_EVENT_TYPE(pxEvt_EnumeratedNext);
 DEFINE_EVENT_TYPE(pxEvt_EnumerationFinished);
 DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
-DEFINE_EVENT_TYPE(pxEvt_SysExecEventComplete)
 
 typedef s32		(CALLBACK* TestFnptr)();
 typedef void	(CALLBACK* ConfigureFnptr)();
+
+static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
 namespace Exception
 {
@@ -138,28 +141,20 @@ public:
 // --------------------------------------------------------------------------------------
 //  ApplyPluginsDialog
 // --------------------------------------------------------------------------------------
-class ApplyPluginsDialog : public wxDialogWithHelpers
+class ApplyPluginsDialog : public WaitForTaskDialog
 {
 	DECLARE_DYNAMIC_CLASS_NO_COPY(ApplyPluginsDialog)
 
 	typedef wxDialogWithHelpers _parent;
 
 protected:
-	BaseApplicableConfigPanel*			m_panel;
-	ScopedPtr<BaseException> m_Exception;
-	SynchronousActionState				m_sync;
+	BaseApplicableConfigPanel*		m_panel;
 
 public:
 	ApplyPluginsDialog( BaseApplicableConfigPanel* panel=NULL );
 	virtual ~ApplyPluginsDialog() throw() {}
 
-	virtual void RethrowException();
-	virtual int ShowModal();
-
 	BaseApplicableConfigPanel* GetApplicableConfigPanel() const { return m_panel; }
-
-protected:
-	void OnSysExecComplete( wxCommandEvent& evt );
 };
 
 
@@ -184,7 +179,7 @@ public:
 	virtual ApplyOverValidStateEvent *Clone() const { return new ApplyOverValidStateEvent(*this); }
 
 protected:
-	void _DoInvoke();
+	void InvokeEvent();
 };
 
 
@@ -193,10 +188,14 @@ protected:
 // --------------------------------------------------------------------------------------
 class SysExecEvent_ApplyPlugins : public SysExecEvent
 {
+	typedef SysExecEvent _parent;
+
 protected:
 	ApplyPluginsDialog*	m_dialog;
 	
 public:
+	wxString GetEventName() const { return L"PluginSelectorPanel::ApplyPlugins"; }
+
 	virtual ~SysExecEvent_ApplyPlugins() throw() {}
 	SysExecEvent_ApplyPlugins* Clone() const { return new SysExecEvent_ApplyPlugins( *this ); }
 
@@ -207,19 +206,27 @@ public:
 	}
 
 protected:
-	void _DoInvoke();
+	void InvokeEvent();
+	void CleanupEvent();
+	
+	void PostFinishToDialog();
 };
 
-IMPLEMENT_DYNAMIC_CLASS(ApplyPluginsDialog, wxDialogWithHelpers)
+// --------------------------------------------------------------------------------------
+//  ApplyPluginsDialog Implementations
+// --------------------------------------------------------------------------------------
+IMPLEMENT_DYNAMIC_CLASS(ApplyPluginsDialog, WaitForTaskDialog)
 
 ApplyPluginsDialog::ApplyPluginsDialog( BaseApplicableConfigPanel* panel )
-	: wxDialogWithHelpers( NULL, _("Applying settings..."), wxVERTICAL )
+	: WaitForTaskDialog( _("Applying settings...") )
 {
-	Connect( pxEvt_SysExecEventComplete, wxCommandEventHandler(ApplyPluginsDialog::OnSysExecComplete) );
 	GetSysExecutorThread().PostEvent( new SysExecEvent_ApplyPlugins( this, m_sync ) );
 }
 
-void ApplyOverValidStateEvent::_DoInvoke()
+// --------------------------------------------------------------------------------------
+//  ApplyOverValidStateEvent Implementations
+// --------------------------------------------------------------------------------------
+void ApplyOverValidStateEvent::InvokeEvent()
 {
 	wxDialogWithHelpers dialog( m_owner, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
 
@@ -237,7 +244,10 @@ void ApplyOverValidStateEvent::_DoInvoke()
 		throw Exception::CannotApplySettings( m_owner->GetApplicableConfigPanel(), "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
 }
 
-void SysExecEvent_ApplyPlugins::_DoInvoke()
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_ApplyPlugins Implementations
+// --------------------------------------------------------------------------------------
+void SysExecEvent_ApplyPlugins::InvokeEvent()
 {
 	ScopedCoreThreadPause paused_core;
 
@@ -261,35 +271,25 @@ void SysExecEvent_ApplyPlugins::_DoInvoke()
 	LoadPluginsImmediate();
 	CoreThread.RecoverState();
 
-	wxCommandEvent tevt( pxEvt_SysExecEventComplete );
-	m_dialog->GetEventHandler()->AddPendingEvent( tevt );
+	PostFinishToDialog();
 
 	closed_core.AllowResume();
 	paused_core.AllowResume();
 }
 
-
-void ApplyPluginsDialog::OnSysExecComplete( wxCommandEvent& evt )
+void SysExecEvent_ApplyPlugins::PostFinishToDialog()
 {
-	evt.Skip();
-	m_sync.WaitForResult();
-	EndModal( wxID_OK );
+	if( !m_dialog ) return;
+	wxCommandEvent tevt( pxEvt_ThreadedTaskComplete );
+	m_dialog->GetEventHandler()->AddPendingEvent( tevt );
+	m_dialog = NULL;
 }
 
-void ApplyPluginsDialog::RethrowException()
+void SysExecEvent_ApplyPlugins::CleanupEvent()
 {
-	if( m_Exception ) m_Exception->Rethrow();
+	PostFinishToDialog();	
+	_parent::CleanupEvent();
 }
-
-int ApplyPluginsDialog::ShowModal()
-{
-	int result = _parent::ShowModal();
-	RethrowException();
-	return result;
-}
-
-
-static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
 // --------------------------------------------------------------------------------------
 //  PluginSelectorPanel::StatusPanel  implementations
@@ -420,7 +420,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 	//s_main.Add( refresh );
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
 
-	Connect( pxEVT_EnumeratedNext,				wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
+	Connect( pxEvt_EnumeratedNext,				wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( pxEvt_EnumerationFinished,			wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
 	Connect( pxEVT_ShowStatusBar,				wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
 	Connect( wxEVT_COMMAND_COMBOBOX_SELECTED,	wxCommandEventHandler( PluginSelectorPanel::OnPluginSelected ) );
@@ -494,24 +494,9 @@ void Panels::PluginSelectorPanel::Apply()
 	// ----------------------------------------------------------------------------
 	// Plugin names are not up-to-date -- RELOAD!
 
-	ApplyPluginsDialog applyDlg( this );
-	
-	wxBoxSizer& paddedMsg( *new wxBoxSizer( wxHORIZONTAL ) );
-	paddedMsg += 24;
-	paddedMsg += applyDlg.Heading(_("Applying Settings..."));
-	paddedMsg += 24;
-	
-	applyDlg += 12;
-	applyDlg += paddedMsg;
-	applyDlg += 12;
-	applyDlg += new wxButton( &applyDlg, wxID_CANCEL )	| pxCenter;
-	applyDlg += 6;
-
-	//applyDlg.GetEventHandler()->AddPendingEvent(  );
-
 	try
 	{
-		if( wxID_CANCEL == applyDlg.ShowModal() )
+		if( wxID_CANCEL == ApplyPluginsDialog( this ).ShowModal() )
 			throw Exception::CannotApplySettings( this, "User canceled plugin load process.", false );
 	}
 	catch( Exception::PluginError& ex )
@@ -794,7 +779,7 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 		Console.Warning( ex.FormatDiagnosticMessage() );
 	}
 
-	wxCommandEvent yay( pxEVT_EnumeratedNext );
+	wxCommandEvent yay( pxEvt_EnumeratedNext );
 	yay.SetClientData( this );
 	yay.SetExtraLong( curidx );
 	m_master.GetEventHandler()->AddPendingEvent( yay );

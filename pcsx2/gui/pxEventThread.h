@@ -23,9 +23,25 @@
 // --------------------------------------------------------------------------------------
 //  SysExecEvent
 // --------------------------------------------------------------------------------------
-class SysExecEvent
-	: public IActionInvocation
-	, public ICloneable
+// Base class for all pxEvtHandler processable events.
+//
+// Rules for deriving:
+//  * Override InvokeEvent(), *NOT* _DoInvokeEvent().  _DoInvokeEvent() performs setup and
+//    wraps exceptions for transport to the invoking context/thread, and then itself calls
+//    InvokeEvent() to perform the derived class implementation.
+//
+//  * Derived classes must implement their own versions of an empty constructor and
+//    Clone(), or else the class will fail to be copied to the event handler's thread
+//    context correctly.
+//
+//  * This class is not abstract, and gives no error if the invocation method is not
+//    overridden:  It can be used as a simple ping device against the event queue,  Re-
+//    awaking the invoking thread as soon as the queue has caught up to and processed
+//    the event.
+//
+//  * Avoid using virtual class inheritence.  It's unreliable at best.
+//
+class SysExecEvent : public ICloneable
 {
 protected:
 	SynchronousActionState*		m_sync;
@@ -63,11 +79,11 @@ public:
 	// data.
 	virtual bool AllowCancelOnExit() const { return true; }
 
-	virtual void InvokeAction();
+	virtual void _DoInvokeEvent();
 	virtual void PostResult() const;
 
-	virtual wxString GetEventName() const	{ return wxEmptyString; }
-	virtual wxString GetEventMessage() const { return wxEmptyString; }
+	virtual wxString GetEventName() const;
+	virtual wxString GetEventMessage() const;
 	
 	virtual int GetResult()
 	{
@@ -80,28 +96,31 @@ public:
 	void SetException( const BaseException& ex );
 
 protected:
-	virtual void _DoInvoke();
+	virtual void InvokeEvent();
+	virtual void CleanupEvent();
 };
 
 // --------------------------------------------------------------------------------------
-//  SysExecEvent_Method
+//  SysExecEvent_MethodVoid
 // --------------------------------------------------------------------------------------
-class SysExecEvent_Method : public SysExecEvent
+class SysExecEvent_MethodVoid : public SysExecEvent
 {
 protected:
 	FnType_Void*	m_method;
 
 public:
-	virtual ~SysExecEvent_Method() throw() {}
-	SysExecEvent_Method* Clone() const { return new SysExecEvent_Method( *this ); }
+	wxString GetEventName() const { return L"MethodVoid"; }
 
-	explicit SysExecEvent_Method( FnType_Void* method = NULL )	
+	virtual ~SysExecEvent_MethodVoid() throw() {}
+	SysExecEvent_MethodVoid* Clone() const { return new SysExecEvent_MethodVoid( *this ); }
+
+	explicit SysExecEvent_MethodVoid( FnType_Void* method = NULL )	
 	{
 		m_method = method;
 	}
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( m_method ) m_method();
 	}
@@ -113,17 +132,38 @@ typedef std::list<SysExecEvent*> pxEvtList;
 // --------------------------------------------------------------------------------------
 //  pxEvtHandler
 // --------------------------------------------------------------------------------------
-// wxWidgets Event Queue (wxEvtHandler) isn't thread-safe (uses static vars and checks/modifies wxApp globals
-// while processing), so it's useless to us.  Have to roll our own. -_-
+// Purpose: To provide a safe environment for queuing tasks that must be executed in
+// sequential order (in blocking fashion).  Unlike the wxWidgets event handlers, instances
+// of this handler can be stalled for extended periods of time without affecting the
+// responsiveness of the GUI or frame updates of the DirectX output windows.  This class
+// is mostly intended to be used from the context of an ExecutorThread.
+//
+// Rationales:
+//  * Using the main event handler of wxWidgets is dangerous because it must call itself
+//    recursively when waiting on threaded events such as semaphore and mutexes.  Thus,
+//    tasks such as suspending the VM would invoke the event queue while waiting,
+//    running events that expect the suspend to be complete while the suspend was still
+//    pending.
+//
+//  * wxWidgets Event Queue (wxEvtHandler) isn't thread-safe and isn't even
+//    intended for use for anything other than wxWindow events (it uses static vars
+//    and checks/modifies wxApp globals while processing), so it's useless to us.
+//    Have to roll our own. -_-
 //
 class pxEvtHandler
 {
 protected:
 	pxEvtList					m_pendingEvents;
+	pxEvtList					m_idleEvents;
+
 	Threading::MutexRecursive	m_mtx_pending;
 	Threading::Semaphore		m_wakeup;
 	wxThreadIdType				m_OwnerThreadId;
 	volatile u32				m_Quitting;
+
+	// Used for performance measuring the execution of individual events,
+	// and also for detecting deadlocks during message processing.
+	volatile u64				m_qpc_Start;
 
 public:
 	pxEvtHandler();
@@ -134,27 +174,33 @@ public:
 	virtual void ShutdownQueue();
 	bool IsShuttingDown() const { return !!m_Quitting; }
 
+	void ProcessEvents( pxEvtList& list );
 	void ProcessPendingEvents();
+	void ProcessIdleEvents();
+	void Idle();
+
 	void AddPendingEvent( SysExecEvent& evt );
 	void PostEvent( SysExecEvent* evt );
 	void PostEvent( const SysExecEvent& evt );
+	void PostIdleEvent( SysExecEvent* evt );
+	void PostIdleEvent( const SysExecEvent& evt );
 
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
-	
-	bool SelfProcessMethod( FnType_Void* method );
 
-	void Idle();
-	
+	bool ProcessMethodSelf( FnType_Void* method );
 	void SetActiveThread();
 
 protected:
-	virtual void DoIdle() {}
+	virtual void _DoIdle() {}
 };
 
 // --------------------------------------------------------------------------------------
 //  ExecutorThread
 // --------------------------------------------------------------------------------------
+// Threaded wrapper class for implementing pxEvtHandler.  Simply create the desired
+// EvtHandler, start the thread, and enjoy queued event execution in fully blocking fashion.
+//
 class ExecutorThread : public Threading::PersistentThread
 {
 	typedef Threading::PersistentThread _parent;
@@ -172,12 +218,15 @@ public:
 	void PostEvent( SysExecEvent* evt );
 	void PostEvent( const SysExecEvent& evt );
 
+	void PostIdleEvent( SysExecEvent* evt );
+	void PostIdleEvent( const SysExecEvent& evt );
+
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
 
-	bool SelfProcessMethod( void (*evt)() )
+	bool ProcessMethodSelf( void (*evt)() )
 	{
-		return m_EvtHandler ? m_EvtHandler->SelfProcessMethod( evt ) : false;
+		return m_EvtHandler ? m_EvtHandler->ProcessMethodSelf( evt ) : false;
 	}
 
 protected:

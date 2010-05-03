@@ -182,6 +182,7 @@ public:
 	// Because remembering the last used tab on the settings panel is cool (tab is remembered
 	// by it's UTF/ASCII name).
 	wxString	SysSettingsTabName;
+	wxString	McdSettingsTabName;
 	wxString	AppSettingsTabName;
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
@@ -204,8 +205,13 @@ public:
 	// Enables display of toolbar text labels.
 	bool		Toolbar_ShowLabels;
 
-	// enables automatic ntfs compression of memory cards (Win32 only)
-	bool		McdEnableNTFS;
+	#ifdef __WXMSW__
+	// uses automatic ntfs compression when creating new memory cards (Win32 only)
+	bool		McdCompressNTFS;
+	#endif
+
+	// Force-ejects modified memory cards when loading savestates (avoids corruption)
+	bool		McdEnableEjection;
 
 	// Master toggle for enabling or disabling all speedhacks in one fail-free swoop.
 	// (the toggle is applied when a new EmuConfig is sent through AppCoreThread::ApplySettings)

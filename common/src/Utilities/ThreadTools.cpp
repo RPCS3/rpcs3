@@ -125,8 +125,10 @@ void Threading::pxYield( int ms )
 // (intended for internal use only)
 // Returns true if the Wait is recursive, or false if the Wait is safe and should be
 // handled via normal yielding methods.
-bool Threading::_WaitGui_RecursionGuard( const char* guardname )
+bool Threading::_WaitGui_RecursionGuard( const wxChar* name )
 {
+	AffinityAssert_AllowFrom_MainUI();
+	
 	// In order to avoid deadlock we need to make sure we cut some time to handle messages.
 	// But this can result in recursive yield calls, which would crash the app.  Protect
 	// against them here and, if recursion is detected, perform a standard blocking wait.
@@ -134,12 +136,11 @@ bool Threading::_WaitGui_RecursionGuard( const char* guardname )
 	static int __Guard = 0;
 	RecursionGuard guard( __Guard );
 
-	if( guard.IsReentrant() )
-	{
-		Console.WriteLn( "(Thread Log) Possible yield recursion detected in %s; performing blocking wait.", guardname );
-		return true;
-	}
-	return false;
+	//if( pxAssertDev( !guard.IsReentrant(), "Recursion during UI-bound threading wait object." ) ) return false;
+
+	if( !guard.IsReentrant() ) return false;
+	Console.WriteLn( "(Thread:%s) Yield recursion in %s; opening modal dialog.", pxGetCurrentThreadName().c_str(), name );
+	return true;
 }
 
 __forceinline void Threading::Timeslice()
@@ -383,11 +384,26 @@ void Threading::PersistentThread::RethrowException() const
 	m_except->Rethrow();
 }
 
+static bool m_BlockDeletions = false;
+
+bool Threading::AllowDeletions()
+{
+	AffinityAssert_AllowFrom_MainUI();
+	return !m_BlockDeletions;
+}
+
+void Threading::YieldToMain()
+{
+	m_BlockDeletions = true;
+	wxTheApp->Yield( true );
+	m_BlockDeletions = false;
+}
+
 void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 {
 	if( HasPendingException() )
 	{
-		Console.Error( L"(Thread Error) An exception was thrown from blocking thread '%s' while waiting on a %s.",
+		Console.Error( L"(Thread:%s) An exception was thrown while waiting on a %s.",
 			GetName().c_str(), name
 		);
 		RethrowException();
@@ -400,6 +416,13 @@ void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 			GetName().c_str(), name )
 		);
 	}
+
+	// Thread is still alive and kicking (for now) -- yield to other messages and hope
+	// that impending chaos does not ensue.  [it shouldn't since we block PersistentThread
+	// objects from being deleted until outside the scope of a mutex/semaphore wait).
+
+	if( (wxTheApp != NULL) && wxThread::IsMain() && !_WaitGui_RecursionGuard( L"WaitForSelf" ) )
+		Threading::YieldToMain();
 }
 
 // This helper function is a deadlock-safe method of waiting on a semaphore in a PersistentThread.  If the
@@ -666,7 +689,7 @@ void Threading::BaseTaskThread::WaitForResult()
 {
 	if( m_detached || !m_running ) return;
 	if( m_TaskPending )
-	#ifdef wxUSE_GUI
+	#if wxUSE_GUI
 		m_post_TaskComplete.Wait();
 	#else
 		m_post_TaskComplete.WaitWithoutYield();

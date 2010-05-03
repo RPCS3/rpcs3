@@ -266,5 +266,5 @@ public:
 	CoreThreadStatus GetEventType() { return m_evt; }
 
 protected:
-	void _DoInvoke();
+	void InvokeEvent();
 };

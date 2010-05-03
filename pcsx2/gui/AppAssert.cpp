@@ -106,14 +106,13 @@ static wxString pxGetStackTrace( const FnChar_t* calledFrom )
 
 #ifdef __WXDEBUG__
 
-static TlsVariable< int > _reentrant_lock( 0 );
-
-// This override of wx's implementation provides thread safe assertion message reporting.  If we aren't
-// on the main gui thread then the assertion message box needs to be passed off to the main gui thread
-// via messages.
+// This override of wx's implementation provides thread safe assertion message reporting.
+// If we aren't on the main gui thread then the assertion message box needs to be passed
+// off to the main gui thread via messages.
 void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg )
 {
 	// Re-entrant assertions are bad mojo -- trap immediately.
+	static DeclareTls(int) _reentrant_lock( 0 );
 	RecursionGuard guard( _reentrant_lock );
 	if( guard.IsReentrant() ) wxTrap();
 

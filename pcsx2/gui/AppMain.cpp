@@ -47,94 +47,106 @@ bool					UseDefaultSettingsFolder = true;
 ScopedPtr<AppConfig>	g_Conf;
 ConfigOverrides			OverrideOptions;
 
-class NamedDialogBoxEvent : public BaseMessageBoxEvent
+template<typename DialogType>
+int AppOpenModalDialog( wxWindow* parent=NULL )
 {
-	typedef BaseMessageBoxEvent _parent;
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(NamedDialogBoxEvent)
-
-public:
-	virtual ~NamedDialogBoxEvent() throw() { }
-	virtual NamedDialogBoxEvent *Clone() const { return new NamedDialogBoxEvent(*this); }
-
-	NamedDialogBoxEvent() {}
-	NamedDialogBoxEvent( const wxString& name, SynchronousActionState& sync )
-		: BaseMessageBoxEvent( name, sync ) {}
-	NamedDialogBoxEvent( const wxString& name, SynchronousActionState* sync=NULL )
-		: BaseMessageBoxEvent( name, sync ) {}
-
-protected:
-	int _DoDialog() const
+	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
 	{
-		const wxString& dlgName( m_Content );
-
-		if( dlgName.IsEmpty() ) return wxID_CANCEL;
-
-		if( wxWindow* window = wxFindWindowByName( dlgName ) )
+		window->SetFocus();
+		if( wxDialog* dialog = wxDynamicCast( window, wxDialog ) )
 		{
-			if( wxDialog* dialog = wxDynamicCast( window, wxDialog ) )
+			// It's legal to call ShowModal on a non-modal dialog, therefore making
+			// it modal in nature for the needs of whatever other thread of action wants
+			// to block against it:
+
+			if( !dialog->IsModal() )
 			{
-				window->SetFocus();
-
-				// It's legal to call ShowModal on a non-modal dialog, therefore making
-				// it modal in nature for the needs of whatever other thread of action wants
-				// to block against it:
-
-				if( !dialog->IsModal() )
-				{
-					int result = dialog->ShowModal();
-					dialog->Destroy();
-					return result;
-				}
+				int result = dialog->ShowModal();
+				dialog->Destroy();
+				return result;
 			}
 		}
-		else
-		{
-			using namespace Dialogs;
-
-			if( dlgName == SysConfigDialog::GetNameStatic() )
-				return SysConfigDialog().ShowModal();
-			if( dlgName == AppConfigDialog::GetNameStatic() )
-				return AppConfigDialog().ShowModal();
-			if( dlgName == BiosSelectorDialog::GetNameStatic() )
-				return BiosSelectorDialog().ShowModal();
-			if( dlgName == LogOptionsDialog::GetNameStatic() )
-				return LogOptionsDialog().ShowModal();
-			if( dlgName == AboutBoxDialog::GetNameStatic() )
-				return AboutBoxDialog().ShowModal();
-		}
-
+		pxFailDev( "Can only show wxDialog class windows as modal!" );
 		return wxID_CANCEL;
 	}
-};
-
-IMPLEMENT_DYNAMIC_CLASS( NamedDialogBoxEvent, BaseMessageBoxEvent );
-
-// Opens the specified standard dialog as a modal dialog, or forces the an existing
-// instance of the dialog (ie, it's already open) to be modal.  This is needed for
-// items which are 
-static int IssueDialogAsModal( const wxString& dlgName )
-{
-	BaseMessageBoxEvent tevt( dlgName );
-	return Msgbox::ShowModal( tevt );
+	else
+		return DialogType( parent ).ShowModal();
 }
 
-static bool HandlePluginError( Exception::PluginError& ex )
+static bool HandlePluginError( Exception::BaseException& ex )
 {
-	if( pxDialogExists( L"CoreSettings" ) ) return true;
-
-	bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
-		_("\n\nPress Ok to go to the Plugin Configuration Panel.")
-	);
-
-	if( result )
+	if( !pxDialogExists( L"CoreSettings" ) )
 	{
-		g_Conf->SysSettingsTabName = L"Plugins";
-
-		// fixme: Send a message to the panel to select the failed plugin.
-		if( IssueDialogAsModal( Dialogs::SysConfigDialog::GetNameStatic() ) == wxID_CANCEL )
-			return false;
+		if( !Msgbox::OkCancel( ex.FormatDisplayMessage() +
+				_("\n\nPress Ok to go to the Plugin Configuration Panel.")
+			) )
+		return false;
 	}
-	return result;
+
+	g_Conf->SysSettingsTabName = L"Plugins";
+
+	// TODO: Send a message to the panel to select the failed plugin.
+
+	return AppOpenModalDialog<Dialogs::SysConfigDialog>() != wxID_CANCEL;
+}
+
+class PluginErrorEvent : public pxExceptionEvent
+{
+	typedef pxExceptionEvent _parent;
+
+public:
+	PluginErrorEvent( BaseException* ex=NULL ) : _parent( ex ) {}
+	PluginErrorEvent( const BaseException& ex ) : _parent( ex ) {}
+
+	virtual ~PluginErrorEvent() throw() { }
+	virtual PluginErrorEvent *Clone() const { return new PluginErrorEvent(*this); }
+
+protected:
+	void InvokeEvent();
+};
+
+class PluginInitErrorEvent : public pxExceptionEvent
+{
+	typedef pxExceptionEvent _parent;
+
+public:
+	PluginInitErrorEvent( BaseException* ex=NULL ) : _parent( ex ) {}
+	PluginInitErrorEvent( const BaseException& ex ) : _parent( ex ) {}
+
+	virtual ~PluginInitErrorEvent() throw() { }
+	virtual PluginInitErrorEvent *Clone() const { return new PluginInitErrorEvent(*this); }
+
+protected:
+	void InvokeEvent();
+
+};
+
+void PluginErrorEvent::InvokeEvent()
+{
+	if( !m_except ) return;
+
+	ScopedPtr<BaseException> deleteMe( m_except );
+	m_except = NULL;
+
+	if( !HandlePluginError( *deleteMe ) )
+	{
+		Console.Error( L"User-canceled plugin configuration; Plugins not loaded!" );
+		Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
+	}
+}
+
+void PluginInitErrorEvent::InvokeEvent()
+{
+	if( !m_except ) return;
+
+	ScopedPtr<BaseException> deleteMe( m_except );
+	m_except = NULL;
+
+	if( !HandlePluginError( *deleteMe ) )
+	{
+		Console.Error( L"User-canceled plugin configuration after plugin initialization failure.  Plugins unloaded." );
+		Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
+	}
 }
 
 // Allows for activating menu actions from anywhere in PCSX2.
@@ -194,7 +206,7 @@ public:
 	}
 	
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		if( m_Method ) (wxGetApp().*m_Method)();
 	}
@@ -324,25 +336,6 @@ void Pcsx2App::LogicalVsync()
 //         Pcsx2App Event Handlers
 // ----------------------------------------------------------------------------
 
-/*int Pcsx2App::DoStuckThread( PersistentThread& stuck_thread )
-{
-	if( !wxThread::IsMain() )
-	{
-		//PostCommand( &stuck_thread, pxEvt_OpenDialog_StuckThread );
-	}
-
-	// Parent the dialog to the GS window if it belongs to PCSX2.  If not
-	// we should bind it to the Main window, and if that's not around, use NULL.
-
-	wxWindow* parent = GetGsFramePtr();
-	if( parent == NULL )
-		parent = GetMainFramePtr();
-
-	pxStuckThreadEvent evt( stuck_thread );
-	return Msgbox::ShowModal( evt );
-}*/
-
-
 HashTools::HashMap<int, const GlobalCommandDescriptor*> GlobalAccels( 0, 0xffffffff );
 
 void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
@@ -403,10 +396,8 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		if( dialog.ShowModal() == wxID_CANCEL )
 			Console.Warning( "User denied option to re-configure BIOS." );
 
-		if( IssueDialogAsModal( Dialogs::BiosSelectorDialog::GetNameStatic() ) != wxID_CANCEL )
-		{
+		if( AppOpenModalDialog<Dialogs::BiosSelectorDialog>() != wxID_CANCEL )
 			SysExecute();
-		}
 		else
 			Console.Warning( "User canceled BIOS configuration." );
 	}
@@ -418,27 +409,20 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		StateCopy_Clear();
 		CoreThread.Resume();
 	}
+	// ----------------------------------------------------------------------------
 	catch( Exception::PluginInitError& ex )
 	{
-		CorePlugins.Shutdown();
+		ShutdownPlugins();
 
 		Console.Error( ex.FormatDiagnosticMessage() );
-		if( !HandlePluginError( ex ) )
-		{
-			Console.Error( L"User-canceled plugin configuration after plugin initialization failure.  Plugins unloaded." );
-			Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
-		}
+		AddIdleEvent( PluginInitErrorEvent(ex) );
 	}
 	catch( Exception::PluginError& ex )
 	{
-		CorePlugins.Close();
+		UnloadPlugins();
 
 		Console.Error( ex.FormatDiagnosticMessage() );
-		if( !HandlePluginError( ex ) )
-		{
-			Console.Error( L"User-canceled plugin configuration; Plugins not loaded!" );
-			Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
-		}
+		AddIdleEvent( PluginErrorEvent(ex) );
 	}
 	// ----------------------------------------------------------------------------
 	#if 0
@@ -501,7 +485,7 @@ void Pcsx2App::StartPendingSave()
 
 void Pcsx2App::ClearPendingSave()
 {
-	if( PostAppMethodMyself(&Pcsx2App::StartPendingSave) ) return;
+	if( PostAppMethodMyself(&Pcsx2App::ClearPendingSave) ) return;
 
 	--m_PendingSaves;
 	pxAssumeDev( m_PendingSaves >= 0, "Pending saves count mismatch (pending count is less than 0)" );
@@ -529,8 +513,13 @@ void Pcsx2App::PrepForExit()
 
 	if( m_PendingSaves != 0 )
 	{
+		// When the thread finishes, it will call ClearPendingSave, which in turn will
+		// exit the app once all pending saves have "logged out."  (if one does not track
+		// itself using our PendingSaves feature, it would be lost -- too bad!)
+
 		Console.WriteLn( "App: Saves are pending; exit postponed..." );
-		sApp.SetExitOnFrameDelete( false );
+		SetExitOnFrameDelete( false );
+		m_ScheduledTermination = true;
 		return;
 	}
 
@@ -600,7 +589,7 @@ void AppApplySettings( const AppConfig* oldconf )
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
 
-	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
+	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdCompressNTFS );
 	sApp.DispatchEvent( AppStatus_SettingsApplied );
 
 	paused_core.AllowResume();
@@ -838,9 +827,9 @@ void Pcsx2App::OnMainFrameClosed( wxWindowID id )
 }
 
 // --------------------------------------------------------------------------------------
-//  SysExecuteEvent
+//  SysExecEvent_Execute
 // --------------------------------------------------------------------------------------
-class SysExecuteEvent : public SysExecEvent
+class SysExecEvent_Execute : public SysExecEvent
 {
 protected:
 	bool				m_UseCDVDsrc;
@@ -849,8 +838,8 @@ protected:
 	wxString			m_elf_override;
 
 public:
-	virtual ~SysExecuteEvent() throw() {}
-	SysExecuteEvent* Clone() const { return new SysExecuteEvent(*this); }
+	virtual ~SysExecEvent_Execute() throw() {}
+	SysExecEvent_Execute* Clone() const { return new SysExecEvent_Execute(*this); }
 
 	wxString GetEventName() const
 	{
@@ -862,13 +851,13 @@ public:
 		return _("Executing PS2 Virtual Machine...");
 	}
 	
-	SysExecuteEvent()
+	SysExecEvent_Execute()
 		: m_UseCDVDsrc(false)
 		, m_UseELFOverride(false)
 	{
 	}
 
-	SysExecuteEvent( CDVD_SourceType srctype, const wxString& elf_override )
+	SysExecEvent_Execute( CDVD_SourceType srctype, const wxString& elf_override )
 		: m_UseCDVDsrc(true)
 		, m_UseELFOverride(true)
 		, m_cdvdsrc_type(srctype)
@@ -877,7 +866,7 @@ public:
 	}
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		wxGetApp().ProcessMethod( AppSaveSettings );
 
@@ -905,7 +894,7 @@ protected:
 // configured CDVD source device.
 void Pcsx2App::SysExecute()
 {
-	SysExecutorThread.PostEvent( new SysExecuteEvent() );
+	SysExecutorThread.PostEvent( new SysExecEvent_Execute() );
 }
 
 // Executes the specified cdvd source and optional elf file.  This command performs a
@@ -913,7 +902,7 @@ void Pcsx2App::SysExecute()
 // sources.
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override )
 {
-	SysExecutorThread.PostEvent( new SysExecuteEvent(cdvdsrc, elf_override) );
+	SysExecutorThread.PostEvent( new SysExecEvent_Execute(cdvdsrc, elf_override) );
 }
 
 // --------------------------------------------------------------------------------------
@@ -933,7 +922,7 @@ public:
 	}
 
 protected:
-	void _DoInvoke()
+	void InvokeEvent()
 	{
 		StateCopy_Clear();
 		CoreThread.Shutdown();

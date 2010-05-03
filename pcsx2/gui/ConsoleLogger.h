@@ -144,7 +144,7 @@ protected:
 		wxTextAttr				m_color_default;
 
 	public:
-		virtual ~ColorArray();
+		virtual ~ColorArray() throw();
 		ColorArray( int fontsize=8 );
 
 		void Create( int fontsize );
@@ -217,7 +217,7 @@ protected:
 
 	// Lock object for accessing or modifying the following three vars:
 	//  m_QueueBuffer, m_QueueColorSelection, m_CurQueuePos
-	MutexRecursive		m_QueueLock;
+	MutexRecursive			m_mtx_Queue;
 
 	// Describes a series of colored text sections in the m_QueueBuffer.
 	SafeList<ColorSection>	m_QueueColorSection;

@@ -155,7 +155,8 @@ void MainEmuFrame::ConnectMenus()
 	#define ConnectMenuRange( id_start, inc, handler ) \
 		Connect( id_start, id_start + inc, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
-	ConnectMenu( MenuId_Config_SysSettings,	Menu_ConfigSettings_Click );
+	ConnectMenu( MenuId_Config_SysSettings,	Menu_SysSettings_Click );
+	ConnectMenu( MenuId_Config_McdSettings,	Menu_McdSettings_Click );
 	ConnectMenu( MenuId_Config_AppSettings,	Menu_AppSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
@@ -412,6 +413,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_AppSettings,	_("App Settings") );
+	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&MemoryCards") );
 	m_menuConfig.AppendSeparator();
 
 
