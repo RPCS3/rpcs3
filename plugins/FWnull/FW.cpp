@@ -1,5 +1,5 @@
 /*  FWnull
- *  Copyright (C) 2004-2009 PCSX2 Team
+ *  Copyright (C) 2004-2010  PCSX2 Dev Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
