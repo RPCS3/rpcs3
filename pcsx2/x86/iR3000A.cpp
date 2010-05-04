@@ -42,7 +42,6 @@ using namespace x86Emitter;
 
 extern u32 g_psxNextBranchCycle;
 extern void psxBREAK();
-extern void zeroEx();
 
 u32 g_psxMaxRecMem = 0;
 u32 s_psxrecblocks[] = {0};
@@ -662,14 +661,33 @@ void psxRecompileCodeConst0(R3000AFNPTR constcode, R3000AFNPTR_INFO constscode, 
 void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
 {
     if ( ! _Rt_ ) {
-        if( (psxRegs.code>>26) == 9 ) {
-            //ADDIU, call bios
-			if( IsDevBuild )
-			{
-				MOV32ItoM( (uptr)&psxRegs.code, psxRegs.code );
-				MOV32ItoM( (uptr)&psxRegs.pc, psxpc );
-				_psxFlushCall(FLUSH_NODESTROY);
-				CALLFunc((uptr)zeroEx);
+		// check for iop module import table magic
+        if (psxRegs.code >> 16 == 0x2400) {
+			MOV32ItoM( (uptr)&psxRegs.code, psxRegs.code );
+			MOV32ItoM( (uptr)&psxRegs.pc, psxpc );
+			_psxFlushCall(FLUSH_NODESTROY);
+
+			const char *libname = irxImportLibname(psxpc);
+			u16 index = psxRegs.code & 0xffff;
+#ifdef PCSX2_DEVBUILD
+			const char *funcname = irxImportFuncname(libname, index);
+			irxDEBUG debug = irxImportDebug(libname, index);
+
+			if (macTrace.IOP.Bios()) {
+				xMOV(ecx, (uptr)libname);
+				xMOV(edx, index);
+				xPUSH((uptr)funcname);
+				xCALL(irxImportLog);
+			}
+
+			if (debug)
+				xCALL(debug);
+#endif
+			irxHLE hle = irxImportHLE(libname, index);
+			if (hle) {
+				xCALL(hle);
+				xCMP(eax, 0);
+				xJNE(iopDispatcherReg);
 			}
 		}
         return;

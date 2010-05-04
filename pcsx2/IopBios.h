@@ -16,10 +16,17 @@
 #ifndef __PSXBIOS_H__
 #define __PSXBIOS_H__
 
+typedef int (*irxHLE)(); // return 1 if handled, otherwise 0
+typedef void (*irxDEBUG)();
+
 namespace R3000A
 {
-	extern int ioman_write();
-	extern int sysmem_Kprintf();
-
+	const char* irxImportLibname(u32 entrypc);
+	const char* irxImportFuncname(const char libname[8], u16 index);
+	irxHLE irxImportHLE(const char libname[8], u16 index);
+	irxDEBUG irxImportDebug(const char libname[8], u16 index);
+	void __fastcall irxImportLog(const char libname[8], u16 index, const char *funcname);
+	int __fastcall irxImportExec(const char libname[8], u16 index);
 }
+
 #endif /* __PSXBIOS_H__ */
