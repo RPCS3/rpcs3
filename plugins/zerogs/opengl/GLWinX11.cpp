@@ -110,7 +110,7 @@ void GLWindow::DisplayWindow(int _width, int _height)
 	if (vi == NULL)
 	{
 		ERROR_LOG("Failed to get buffered Visual!\n");
-		return false;
+		return;
 	}
 
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);

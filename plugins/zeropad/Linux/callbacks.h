@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 
+#define VERSION "0.3"
 
 void
 OnAbout_Ok                             (GtkDialog       *dialog,

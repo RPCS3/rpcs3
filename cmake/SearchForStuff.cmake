@@ -80,6 +80,10 @@ if(Linux)			# Linux only
 	endif(X11_FOUND)
 endif(Linux)
 
+    # Manually find Xxf86vm because it is not done in the module...
+    FIND_LIBRARY(X11_Xxf86vm_LIB Xxf86vm       ${X11_LIB_SEARCH_PATH})
+    MARK_AS_ADVANCED(X11_Xxf86vm_LIB)
+
 #------------------------------------------------------------
 
 # ALSA optional
@@ -153,6 +157,7 @@ endif(PORTAUDIO_FOUND)
 #------------------------------------------------------------
 
 # SDL optional
+set(SDL_BUILDING_LIBRARY TRUE)
 find_package(SDL)
 
 # SDL found

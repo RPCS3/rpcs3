@@ -156,7 +156,6 @@ set(pcsx2Sources
 	R5900.cpp
 	R5900OpcodeImpl.cpp
 	R5900OpcodeTables.cpp
-	RecoverySystem.cpp
 	SaveState.cpp
 	ShiftJisToUnicode.cpp
 	Sif.cpp
@@ -167,7 +166,6 @@ set(pcsx2Sources
 	SPR.cpp
 	Stats.cpp
 	System.cpp
-	Vif_Commands.cpp
 	Vif0_Dma.cpp
 	Vif1_Dma.cpp
 	Vif1_MFIFO.cpp
@@ -288,6 +286,7 @@ set(pcsx2GuiSources
 	gui/AdvancedDialog.cpp
 	gui/AppAssert.cpp
 	gui/AppConfig.cpp
+	gui/AppCorePlugins.cpp
 	gui/AppCoreThread.cpp
 	gui/AppEventSources.cpp
 	gui/AppInit.cpp
@@ -308,9 +307,11 @@ set(pcsx2GuiSources
 	gui/Dialogs/FirstTimeWizard.cpp
 	gui/Dialogs/ImportSettingsDialog.cpp
 	gui/Dialogs/LogOptionsDialog.cpp
+	gui/Dialogs/McdConfigDialog.cpp
 	gui/Dialogs/PickUserModeDialog.cpp
 	gui/Dialogs/StuckThreadDialog.cpp
 	gui/Dialogs/SysConfigDialog.cpp
+	gui/ExecutorThread.cpp
 	gui/FrameForGS.cpp
 	gui/GlobalCommands.cpp
 	gui/i18n.cpp
@@ -319,8 +320,8 @@ set(pcsx2GuiSources
 	gui/MainFrame.cpp
 	gui/MainMenuClicks.cpp
 	gui/MemoryCardFile.cpp
+	gui/Panels/BaseApplicableConfigPanel.cpp
 	gui/Panels/MemoryCardListPanel.cpp
-	gui/Panels/MemoryCardListView.h
 	gui/MessageBoxes.cpp
 	gui/MSWstuff.cpp
 	gui/Panels/AudioPanel.cpp
@@ -336,10 +337,11 @@ set(pcsx2GuiSources
 	gui/Panels/PluginSelectorPanel.cpp
 	gui/Panels/SpeedhacksPanel.cpp
 	gui/Panels/VideoPanel.cpp
-	gui/Plugins.cpp
 	gui/pxLogTextCtrl.cpp
 	gui/RecentIsoList.cpp
 	gui/Saveslots.cpp
+	gui/SysState.cpp
+	gui/UpdateUI.cpp
 	)
 
 # gui headers
@@ -349,6 +351,7 @@ set(pcsx2GuiHeaders
 	gui/ApplyState.h
 	gui/AppCommon.h
 	gui/AppConfig.h
+	gui/AppCorePlugins.h
 	gui/AppEventListeners.h
 	gui/AppForwardDefs.h
 	gui/ConsoleLogger.h
@@ -363,6 +366,7 @@ set(pcsx2GuiHeaders
 	gui/MSWstuff.h
 	gui/Panels/ConfigurationPanels.h
 	gui/Panels/LogOptionsPanels.h
+	gui/Panels/MemoryCardPanels.h
 	gui/RecentIsoList.h
 	)
 
@@ -440,6 +444,16 @@ set(pcsx2UtilitiesSources
 # Utilities headers
 set(pcsx2UtilitiesHeaders
 	Utilities/AsciiFile.h)
+
+# Zip tools utilies sources
+set(pcsx2ZipToolsSources
+    ZipTools/thread_gzip.cpp
+    ZipTools/thread_lzma.cpp)
+
+# Zip tools utilies headers
+set(pcsx2ZipToolsHeaders
+    ZipTools/ThreadedZipTools.h)
+
 
 # Windows sources
 set(pcsx2WindowsSources
@@ -572,6 +586,8 @@ set(Common
 	${pcsx2UtilitiesHeaders}
 	${pcsx2x86Sources}
 	${pcsx2x86Headers}
+	${pcsx2ZipToolsSources}
+	${pcsx2ZipToolsHeaders}
 	${pcsx2SSources})
 
 # platform sources

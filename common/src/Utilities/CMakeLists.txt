@@ -119,6 +119,7 @@ set(UtilitiesSources
 	pxStaticText.cpp
 	Semaphore.cpp
 	StringHelpers.cpp
+	ThreadingDialogs.cpp
 	ThreadTools.cpp
 	vssprintf.cpp
 	wxAppWithHelpers.cpp
@@ -153,6 +154,7 @@ set(UtilitiesHeaders
 	../../include/Utilities/ScopedPtr.h
 	../../include/Utilities/StringHelpers.h
 	../../include/Utilities/Threading.h
+	../../include/Utilities/ThreadingDialogs.h
 	../../include/Utilities/wxAppWithHelpers.h
 	../../include/Utilities/wxBaseTools.h
 	../../include/Utilities/wxGuiTools.h
