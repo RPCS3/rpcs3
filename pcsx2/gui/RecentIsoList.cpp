@@ -15,7 +15,10 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "IsoDropTarget.h"
 #include "IniInterface.h"
+
+extern wxString GetMsg_IsoImageChanged();
 
 // FIXME : This needs to handle removed/missing ISOs somehow, although I'm not sure the
 // best approach.  I think I'd prefer for missing entries to only be removed when they
@@ -57,8 +60,9 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 
 	// TODO: Dialog asking for hotswap or reset!!!!
 
-	ScopedCoreThreadClose stopped_core;
-	SysUpdateIsoSrcFile( m_Items[i].Filename );
+	ScopedCoreThreadPopup stopped_core;
+	//SysUpdateIsoSrcFile( m_Items[i].Filename );
+	SwapOrReset_Iso( m_Menu->GetWindow(), stopped_core, m_Items[i].Filename, GetMsg_IsoImageChanged());
 	stopped_core.AllowResume();
 }
 

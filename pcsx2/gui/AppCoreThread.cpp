@@ -71,6 +71,7 @@ protected:
 	FnPtr_CoreThreadMethod	m_method;
 
 public:
+	wxString GetEventName() const { return L"CoreThreadMethod"; }
 	virtual ~SysExecEvent_InvokeCoreThreadMethod() throw() {}
 	SysExecEvent_InvokeCoreThreadMethod* Clone() const { return new SysExecEvent_InvokeCoreThreadMethod(*this); }
 	

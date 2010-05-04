@@ -169,7 +169,6 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 	{
 		Console.Indent().WriteLn( "HotSwapping to new ISO src image!" );
 		g_Conf->CdvdSource = CDVDsrc_Iso;
-		sMainFrame.UpdateIsoSrcSelection();
 		CoreThread.ChangeCdvdSource();
 		core_control.AllowResume();
 	}
@@ -205,6 +204,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 		if( result == wxID_CANCEL )
 		{
 			core.AllowResume();
+			sMainFrame.UpdateIsoSrcSelection();
 			return result;
 		}
 	}
@@ -216,6 +216,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 	{
 		Console.Indent().WriteLn( L"(CdvdSource) HotSwapping CDVD source types from %s to %s.", CDVD_SourceLabels[oldsrc], CDVD_SourceLabels[newsrc] );
 		CoreThread.ChangeCdvdSource();
+		sMainFrame.UpdateIsoSrcSelection();
 		core.AllowResume();
 	}
 	else
@@ -348,7 +349,7 @@ void MainEmuFrame::Menu_BootCdvd2_Click( wxCommandEvent &event )
 	_DoBootCdvd();
 }
 
-static wxString GetMsg_IsoImageChanged()
+wxString GetMsg_IsoImageChanged()
 {
 	return _("You have selected the following ISO image into PCSX2:\n\n");
 }
@@ -365,6 +366,7 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	}
 	
 	SwapOrReset_Iso(this, core, isofile, GetMsg_IsoImageChanged());
+	AppSaveSettings();		// save the new iso selection; update menus!
 }
 
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
