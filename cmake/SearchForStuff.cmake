@@ -52,13 +52,13 @@ endif(wxWidgets_FOUND)
 find_package(ZLIB)
 
 # if we found zlib on the system, use it else use project one
-if(ZLIB_FOUND)
-	# add zlib include directories
-	include_directories(${ZLIB_INCLUDE_DIRS})
-else(ZLIB_FOUND)
+#if(ZLIB_FOUND)
+#	# add zlib include directories
+#	include_directories(${ZLIB_INCLUDE_DIRS})
+#else(ZLIB_FOUND)
 	# use project one
 	set(projectZLIB TRUE)
-endif(ZLIB_FOUND)
+#endif(ZLIB_FOUND)
 
 #------------------------------------------------------------
 
@@ -102,13 +102,13 @@ find_package(BZip2)
 
 # if we found bzip2 on the system,
 # use it else use project one
-if(BZIP2_FOUND)
-	# add zlib include directories
-	include_directories(${BZIP2_INCLUDE_DIR})
-else(BZIP2_FOUND)
+#if(BZIP2_FOUND)
+#	# add zlib include directories
+#	include_directories(${BZIP2_INCLUDE_DIR})
+#else(BZIP2_FOUND)
 	# use project one
 	set(projectBZip2 TRUE)
-endif(BZIP2_FOUND)
+#endif(BZIP2_FOUND)
 
 #------------------------------------------------------------
 
@@ -172,16 +172,16 @@ endif(SDL_FOUND)
 #include(${PROJECT_SOURCE_DIR}/cmake/FindSoundTouch.cmake)
 
 # found SoundTouch	
-if(SOUNDTOUCH_FOUND)
-	# add SoundTouch include directories
-	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
-else(SOUNDTOUCH_FOUND)
+#if(SOUNDTOUCH_FOUND)
+#	# add SoundTouch include directories
+#	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
+#else(SOUNDTOUCH_FOUND)
 	# use project one
 	set(projectSoundTouch TRUE)
 
 	# found
 	set(SOUNDTOUCH_FOUND TRUE)
-endif(SOUNDTOUCH_FOUND)
+#endif(SOUNDTOUCH_FOUND)
 
 #------------------------------------------------------------
 
