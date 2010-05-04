@@ -178,7 +178,7 @@ void pxEvtHandler::ProcessEvents( pxEvtList& list )
 			}
 
 			u64 qpc_end = GetCPUTicks();
-			DevCon.WriteLn( L"(pxEvtHandler) Event '%s' completed in %dms", deleteMe->GetEventName().c_str(), ((qpc_end-m_qpc_Start)*100) / GetTickFrequency() );
+			DevCon.WriteLn( L"(pxEvtHandler) Event '%s' completed in %dms", deleteMe->GetEventName().c_str(), ((qpc_end-m_qpc_Start)*1000) / GetTickFrequency() );
 
 			synclock.Acquire();
 			m_qpc_Start = 0;		// lets the main thread know the message completed.
