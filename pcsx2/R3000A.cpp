@@ -63,11 +63,9 @@ void psxReset()
 	g_psxNextBranchCycle = psxRegs.cycle + 4;
 
 	psxHwReset();
-	psxBiosInit();
 }
 
 void psxShutdown() {
-	psxBiosShutdown();
 	//psxCpu->Shutdown();
 }
 
@@ -102,38 +100,6 @@ void __fastcall psxException(u32 code, u32 bd)
 		// "hokuto no ken" / "Crash Bandicot 2" ... fix
 		PSXMu32(psxRegs.CP0.n.EPC)&= ~0x02000000;
 	}*/
-
-	if (!CHECK_IOPREC)
-	{
-		// HLE Bios Handlers, enabled for interpreters only.
-
-		u32 call = psxRegs.GPR.n.t1 & 0xff;
-		switch (psxRegs.pc & 0x1fffff) {
-			case 0xa0:
-
-				if (call != 0x28 && call != 0xe)
-					PSXBIOS_LOG("Bios call a0: %s (%x) %x,%x,%x,%x", biosA0n[call], call, psxRegs.GPR.n.a0, psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
-
-				if (biosA0[call])
-			   		biosA0[call]();
-				break;
-
-			case 0xb0:
-				if (call != 0x17 && call != 0xb)
-					PSXBIOS_LOG("Bios call b0: %s (%x) %x,%x,%x,%x", biosB0n[call], call, psxRegs.GPR.n.a0, psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
-
-				if (biosB0[call])
-			   		biosB0[call]();
-				break;
-
-			case 0xc0:
-				PSXBIOS_LOG("Bios call c0: %s (%x) %x,%x,%x,%x", biosC0n[call], call, psxRegs.GPR.n.a0, psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
-
-				if (biosC0[call])
-			   		biosC0[call]();
-				break;
-		}
-	}
 
 	/*if (psxRegs.CP0.n.Cause == 0x400 && (!(psxHu32(0x1450) & 0x8))) {
 		hwIntcIrq(INTC_SBUS);

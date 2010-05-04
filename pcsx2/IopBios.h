@@ -18,21 +18,8 @@
 
 namespace R3000A
 {
-	extern const char *biosA0n[256];
-	extern const char *biosB0n[256];
-	extern const char *biosC0n[256];
-
-	void psxBiosInit();
-	void psxBiosShutdown();
-	void psxBiosException();
-	void psxBiosFreeze(int Mode);
-
-	extern void (*biosA0[256])();
-	extern void (*biosB0[256])();
-	extern void (*biosC0[256])();
-
-	extern void bios_write();
-	extern void bios_printf();
+	extern int ioman_write();
+	extern int sysmem_Kprintf();
 
 }
 #endif /* __PSXBIOS_H__ */

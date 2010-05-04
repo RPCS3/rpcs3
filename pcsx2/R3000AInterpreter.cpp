@@ -231,15 +231,12 @@ void zeroEx()
 
 	if (!strncmp(lib, "ioman", 5) && code == 7) {
 		if (psxRegs.GPR.n.a0 == 1) {
-			pc = psxRegs.pc;
-			bios_write();
-			psxRegs.pc = pc;
+			ioman_write();
 		}
 	}
 
 	if (!strncmp(lib, "sysmem", 6) && code == 0xe) {
-		bios_printf();
-		psxRegs.pc = psxRegs.GPR.n.ra;
+		sysmem_Kprintf();
 	}
 
 	{
