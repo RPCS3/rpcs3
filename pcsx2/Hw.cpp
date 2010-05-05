@@ -85,7 +85,7 @@ __forceinline void dmacInterrupt()
 
 	if (!(dmacRegs->ctrl.DMAE)) return;
 
-	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) ||
+	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) |
 								  psHu16(DMAC_STAT) & 0x8000));
 
 	cpuException(0x800, cpuRegs.branch);
