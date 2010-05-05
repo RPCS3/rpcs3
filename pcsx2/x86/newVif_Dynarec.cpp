@@ -209,7 +209,8 @@ static _f void dVifRecLimit(int idx) {
 	}
 }
 
-_f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
+// Gcc complains about recursive functions being inlined.
+void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 
 	const nVifStruct& v		= nVif[idx];
 	const u8	upkType		= v.vif->cmd & 0x1f | ((!!v.vif->usn) << 5);

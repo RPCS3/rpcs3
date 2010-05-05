@@ -69,8 +69,8 @@ set(OptimizationFlags
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# clear flags
-	set(CMAKE_C_FLAGS_DEBUG)
-	set(CMAKE_CXX_FLAGS_DEBUG)
+	set(CMAKE_C_FLAGS_DEBUG " ")
+	set(CMAKE_CXX_FLAGS_DEBUG " ")
 	
 	# executable name
 	set(pcsx2Name pcsx2-dbg)
@@ -82,27 +82,27 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# clear flags
-	set(CMAKE_C_FLAGS_DEVEL)
-	set(CMAKE_CXX_FLAGS_DEVEL)
+	set(CMAKE_C_FLAGS_DEVEL " ")
+	set(CMAKE_CXX_FLAGS_DEVEL " ")
 
 	# executable name
 	set(pcsx2Name pcsx2-dev)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL -DWX_PRECOMP)
+	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# clear flags
-	set(CMAKE_C_FLAGS_RELEASE)
-	set(CMAKE_CXX_FLAGS_RELEASE)
+	set(CMAKE_C_FLAGS_RELEASE " ")
+	set(CMAKE_CXX_FLAGS_RELEASE " ")
 
 	# executable name
 	set(pcsx2Name pcsx2)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags} -DWX_PRECOMP)
+	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags} -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # get svn revision and generate svnrev.h

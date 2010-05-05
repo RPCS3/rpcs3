@@ -213,6 +213,12 @@ set(CDVDnull TRUE)
 #---------------------------------------
 
 #---------------------------------------
+#			CDVDiso
+#---------------------------------------
+set(CDVDiso TRUE)
+#---------------------------------------
+
+#---------------------------------------
 #			dev9null
 #---------------------------------------
 set(dev9null TRUE)
@@ -261,6 +267,18 @@ endif(SDL_FOUND)
 #---------------------------------------
 
 #---------------------------------------
+#			zeropad
+#---------------------------------------
+# requires: -SDL
+#---------------------------------------
+if(SDL_FOUND)
+	set(zeropad TRUE)
+else(SDL_FOUND)
+	set(zeropad FALSE)
+endif(SDL_FOUND)
+#---------------------------------------
+
+#---------------------------------------
 #			spu2-x
 #---------------------------------------
 # requires: -SoundTouch
@@ -303,7 +321,7 @@ endif(SOUNDTOUCH_FOUND AND ALSA_FOUND)
 #-------------------------------------------------------------------------------
 #			[TODO] Write CMakeLists.txt for these plugins.
 set(cdvdGigaherz FALSE)
-set(CDVDiso FALSE)
+#set(CDVDiso FALSE)
 set(CDVDisoEFP FALSE)
 set(CDVDlinuz FALSE)
 set(CDVDolio FALSE)
@@ -313,6 +331,6 @@ set(LilyPad FALSE)
 set(PeopsSPU2 FALSE)
 set(SSSPSXPAD FALSE)
 set(xpad FALSE)
-set(zeropad FALSE)
+#set(zeropad FALSE)
 #-------------------------------------------------------------------------------
 
