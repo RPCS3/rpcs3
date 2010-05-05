@@ -30,6 +30,7 @@
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
+					<Add option="-O2" />
 					<Add option="-W" />
 					<Add option="-g" />
 					<Add option="-DZEROGS_DEVBUILD" />
@@ -63,9 +64,9 @@
 			<Add option="-Wno-unused-value" />
 			<Add option="-Wunused-variable" />
 			<Add option="-m32" />
-			<Add option="-I/opt/cg/include -L/opt/cg/lib" />
-			<Add option="-fno-strict-aliasing" />
-			<Add option="-pipe -msse -msse2" />
+			<Add option="-I/opt/cg/include" />
+			<Add option="-L/opt/cg/lib" />
+			<Add option="-msse2" />
 			<Add option="-fno-regmove" />
 			<Add option="-DZEROGS_SSE2" />
 			<Add directory="../../Linux" />

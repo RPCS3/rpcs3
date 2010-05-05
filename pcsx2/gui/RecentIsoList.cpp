@@ -62,7 +62,13 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 
 	ScopedCoreThreadPopup stopped_core;
 	//SysUpdateIsoSrcFile( m_Items[i].Filename );
+#ifdef __LINUX__
+	// Likely not what was intended, but it compiles for the moment...
+	SwapOrReset_Iso( NULL, stopped_core, m_Items[i].Filename, GetMsg_IsoImageChanged());
+#else
+	// Getting a window from the menu?
 	SwapOrReset_Iso( m_Menu->GetWindow(), stopped_core, m_Items[i].Filename, GetMsg_IsoImageChanged());
+#endif
 	stopped_core.AllowResume();
 }
 
