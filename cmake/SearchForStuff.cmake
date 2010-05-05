@@ -11,6 +11,9 @@ set(minimal_SDL_version 1.2)
 # need to know on which OS we are currenty working/running
 detectOperatingSystem()
 
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
+SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
+
 #-------------------------------------------------------------------------------
 #									FindStuff
 #-------------------------------------------------------------------------------
