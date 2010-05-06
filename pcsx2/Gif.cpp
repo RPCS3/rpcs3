@@ -210,7 +210,6 @@ void GIFdma()
 	}
 	gifRegs->stat.clear_flags(GIF_STAT_P3Q);
 	gifRegs->stat.APATH = GIF_APATH3;
-	gifRegs->stat.OPH = true;
 
 	if (vif1Regs->mskpath3 || gifRegs->mode.M3R)
 	{

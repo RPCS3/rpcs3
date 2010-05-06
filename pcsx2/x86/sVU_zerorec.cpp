@@ -4341,13 +4341,10 @@ void recVUMI_XGKICK_(VURegs *VU)
 	_freeX86regs();
 	_freeXMMregs();
 
-	OR32ItoM((uptr)&psHu32(GIF_STAT), (GIF_STAT_APATH1 | GIF_STAT_OPH)); // Set PATH1 GIF Status Flags
-
 	xMOV(edx, xRegister32(s_XGKICKReg));
 	xMOV(ecx, (uptr)VU->Mem);
 	xCALL(VU1XGKICK_MTGSTransfer);
 
-	AND32ItoM((uptr)&psHu32(GIF_STAT), ~(GIF_STAT_APATH1 | GIF_STAT_OPH)); // Clear PATH1 GIF Status Flags
 	s_ScheduleXGKICK = 0;
 }
 

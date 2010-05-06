@@ -24,16 +24,32 @@ struct vifCode {
    u16 cl;
 };
 
-union tBITBLT {
+union tBITBLTBUF {
+	u64 _u64;
 	struct {
-		u32 reserved : 8;
-		u32 BLTDIVIDE : 8; // This is the value we want to work out the divider for the reverse transfer
-		u32 reserved2 : 6;
-		u32 TRXPOS : 16;
+		u32 SBP : 14;
+		u32 pad14 : 2;
+		u32 SBW : 6;
+		u32 pad22 : 2;
+		u32 SPSM : 6;
+		u32 pad30 : 2;
+		u32 DBP : 14;
+		u32 pad46 : 2;
+		u32 DBW : 6;
+		u32 pad54 : 2;
+		u32 DPSM : 6;
+		u32 pad62 : 2;
 	};
-	u32 _u32;
+};
 
-
+union tTRXREG {
+	u64 _u64;
+	struct {
+		u32 RRW : 12;
+		u32 pad12 : 20;
+		u32 RRH : 12;
+		u32 pad44 : 20;
+	};
 };
 
 // NOTE, if debugging vif stalls, use sega classics, spyro, gt4, and taito
@@ -48,9 +64,12 @@ struct vifStruct {
 	bool done;
 	bool vifstalled;
 	bool stallontag;
-	tBITBLT TRXPOS;		//used for reversed fifo operations, sometimes only the GS knows how big (like on HW register fifo read)!
-	u32 GSLastTRXPOS;
 
+	// GS registers used for calculating the size of the last local->host transfer initiated on the GS
+	// Transfer size calculation should be restricted to GS emulation in the future
+	tBITBLTBUF BITBLTBUF;
+	tTRXREG TRXREG;
+	u32 GSLastDownloadSize;
 
 	u8 irqoffset; // 32bit offset where next vif code is
 	u32 savedtag; // need this for backwards compat with save states

@@ -81,8 +81,8 @@ void vif1TransferToMemory()
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
-	if(vif1.GSLastTRXPOS > vif1ch->qwc)
-		vif1Regs->stat.FQC = vif1.GSLastTRXPOS - vif1ch->qwc;
+	if(vif1.GSLastDownloadSize > vif1ch->qwc)
+		vif1Regs->stat.FQC = vif1.GSLastDownloadSize - vif1ch->qwc;
 	else
 		vif1Regs->stat.FQC = 0;
 
@@ -217,7 +217,7 @@ __forceinline void vif1Interrupt()
 	//Simulated GS transfer time done, clear the flags
 	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
 	{
-		gifRegs->stat.clear_flags(GIF_STAT_APATH2|GIF_STAT_OPH);
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
 	}
 
 	if (schedulepath3msk & 0x10) Vif1MskPath3();

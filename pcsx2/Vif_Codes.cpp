@@ -124,8 +124,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		}
 		//}
 		gifRegs->stat.clear_flags(GIF_STAT_P2Q);
-		gifRegs->stat.APATH =  GIF_APATH2;
-		gifRegs->stat.OPH = true;
 
 		Registers::Freeze();
 		nVifStruct&	v	 = nVif[1];
@@ -146,11 +144,11 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 			vif1.tag.size = 0;
 			vif1.cmd = 0;
 			v.bSize  = 0;
-			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
+			gifRegs->stat.APATH = GIF_APATH_IDLE;
 		}
 		else { // Partial Transfer
 			//DevCon.WriteLn("DirectHL: Partial Transfer [%d]", size);
-			gifRegs->stat.set_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
+			gifRegs->stat.APATH = GIF_APATH2;
 			memcpy_fast(&v.buffer[v.bSize], data, size);
 			v.bSize		  += size;
 			vif1.tag.size -= ret;

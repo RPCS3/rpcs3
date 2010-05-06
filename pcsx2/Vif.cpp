@@ -256,11 +256,11 @@ _f void vif1STAT(u32 value) {
 		// Update Refraction: Use of this function has been investigated and understood.
 		// Before this ever happens, a DIRECT/HL command takes place sending the transfer info to the GS
 		// One of the registers told about this is TRXREG which tells us how much data is going to transfer (th x tw) in words
-		// As far as the GS is concerned, the transfer starts as soon as TRXREG is accessed, which is why fatal frame
+		// As far as the GS is concerned, the transfer starts as soon as TRXDIR is accessed, which is why fatal frame
 		// was expecting data, the GS should already be sending it over (buffering in the FIFO)
 
-		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastTRXPOS);
-		//Console.Warning("Reversing VIF Transfer for %x QWC", vif1.GSLastTRXPOS);
+		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
+		//Console.Warning("Reversing VIF Transfer for %x QWC", vif1.GSLastDownloadSize);
 
 	}
 	else // Memory transferring to Vif.

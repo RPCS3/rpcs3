@@ -277,51 +277,56 @@ void SaveStateBase::gifPathFreeze()
 
 static __forceinline void gsHandler(const u8* pMem)
 {
-	const int handler = pMem[8];
+	const int reg = pMem[8];
 
-	if(handler == 0x50)
+	if (reg == 0x50)
+		vif1.BITBLTBUF._u64 = *(u64*)pMem;
+	else if (reg == 0x52)
+		vif1.TRXREG._u64 = *(u64*)pMem;
+	else if (reg == 0x53)
 	{
-		const u16* pMem16 = (const u16*)pMem;
-
-		vif1.TRXPOS._u32 = pMem16[1];
-		//Console.Warning("BLITBUF = %x %x_%x_%x_%x", vif1.TRXPOS.BLTDIVIDE, pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
-		switch(vif1.TRXPOS.BLTDIVIDE & 0x3)
+		// local -> host
+		if ((pMem[0] & 3) == 1)
 		{
-			case 0x3:
-				VIF_LOG("8bit");
-				vif1.TRXPOS.BLTDIVIDE = 16; //8bit
+			//Onimusha does TRXREG without BLTDIVIDE first, so we "assume" 32bit for this equation, probably isnt important.
+			// ^ WTF, seriously? This is really important (pseudonym)
+			u8 bpp = 32;
+
+			switch(vif1.BITBLTBUF.SPSM & 7)
+			{
+			case 0:
+				bpp = 32;
 				break;
-			case 0x2:
-				VIF_LOG("16bit");
-				vif1.TRXPOS.BLTDIVIDE = 8; //16bit
+			case 1:
+				bpp = 24;
 				break;
-			case 0x1:
-				VIF_LOG("24bit");
-				vif1.TRXPOS.BLTDIVIDE = 5; //24bit
+			case 2:
+				bpp = 16;
 				break;
+			case 3:
+				bpp = 8;
+				break;
+			// 4 is 4 bit but this is forbidden
 			default:
-				VIF_LOG("32bit");
-				vif1.TRXPOS.BLTDIVIDE = 4; //32bit
-				break;
+				Console.Error("Illegal format for GS upload: SPSM=0%02o", vif1.BITBLTBUF.SPSM);
+			}
+
+			VIF_LOG("GS Download %dx%d SPSM= bpp=%d", vif1.TRXREG.RRW, vif1.TRXREG.RRH, vif1.BITBLTBUF.SPSM, bpp);
+
+			// qwords, rounded down; any extra bits are lost
+			// games must take care to ensure transfer rectangles are exact multiples of a qword
+			vif1.GSLastDownloadSize = vif1.TRXREG.RRW * vif1.TRXREG.RRH * bpp >> 7;
+
+			gifRegs->stat.OPH = true;
 		}
 	}
-	if(handler == 0x52)
-	{
-		const u16* pMem16 = (const u16*)pMem;
-		VIF_LOG("TRX REG = %x_%x_%x_%x", pMem16[0], pMem16[1], pMem16[2], pMem16[3]);
-
-		//Onimusha does TRXREG without BLTDIVIDE first, so we "assume" 32bit for this equasion, probably isnt important.
-		if(vif1.TRXPOS.BLTDIVIDE) vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / (u8)vif1.TRXPOS.BLTDIVIDE;
-		else vif1.GSLastTRXPOS = (pMem16[0] * pMem16[2]) / 4;
-
-	}
-	if (handler >= 0x60)
+	if (reg >= 0x60)
 	{
 		// Question: What happens if an app writes to uncharted register space on real PS2
 		// hardware (handler 0x63 and higher)?  Probably a silent ignorance, but not tested
 		// so just guessing... --air
 
-		s_gifPath.Handlers[handler-0x60]((const u32*)pMem);
+		s_gifPath.Handlers[reg-0x60]((const u32*)pMem);
 	}
 }
 
