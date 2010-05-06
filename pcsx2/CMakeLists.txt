@@ -1,7 +1,18 @@
 # pcsx2
 
+# Clear default flags
+set(CMAKE_C_FLAGS "")
+set(CMAKE_CXX_FLAGS "")
+set(CMAKE_C_FLAGS_DEBUG "")
+set(CMAKE_CXX_FLAGS_DEBUG "")
+set(CMAKE_C_FLAGS_DEVEL "")
+set(CMAKE_CXX_FLAGS_DEVEL "")
+set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
+
 # set common flags
 set(CommonFlags 
+	-pthread
 	-fno-guess-branch-probability
 	-fno-dse
 	-fno-tree-dse
@@ -68,9 +79,6 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	# clear flags
-	set(CMAKE_C_FLAGS_DEBUG " ")
-	set(CMAKE_CXX_FLAGS_DEBUG " ")
 	
 	# executable name
 	set(pcsx2Name pcsx2-dbg)
@@ -81,9 +89,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	# clear flags
-	set(CMAKE_C_FLAGS_DEVEL " ")
-	set(CMAKE_CXX_FLAGS_DEVEL " ")
 
 	# executable name
 	set(pcsx2Name pcsx2-dev)
@@ -94,9 +99,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-	# clear flags
-	set(CMAKE_C_FLAGS_RELEASE " ")
-	set(CMAKE_CXX_FLAGS_RELEASE " ")
 
 	# executable name
 	set(pcsx2Name pcsx2)
@@ -105,17 +107,17 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags} -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
-# get svn revision and generate svnrev.h
-if(SVN)
-	# execute subversion
-	Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
-	
-	# write svnrev.h
-	file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
-else(SVN)
-	# write svnrev.h
-	file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
-endif(SVN)
+# you must have both svn client executable and a source that contains svn metadata
+if((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
+    # execute subversion
+    Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
+
+    # write svnrev.h
+    file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
+else((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
+    # write svnrev.h
+    file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
+endif((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
 
 # variable with sources of this executable
 set(pcsx2Sources

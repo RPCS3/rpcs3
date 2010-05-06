@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 2.6)
 include(${PROJECT_SOURCE_DIR}/cmake/Pcsx2Utils.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SearchForStuff.cmake)
 
-#set(CMAKE_BUILD_TYPE Devel)
+set(CMAKE_BUILD_TYPE Devel)
 
 #-------------------------------------------------------------------------------
 # if no build type is set, use Debug as default

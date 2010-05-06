@@ -3,8 +3,19 @@
 # library name
 set(x86emitterName x86emitter)
 
+# Clear default flags
+set(CMAKE_C_FLAGS "")
+set(CMAKE_CXX_FLAGS "")
+set(CMAKE_C_FLAGS_DEBUG "")
+set(CMAKE_CXX_FLAGS_DEBUG "")
+set(CMAKE_C_FLAGS_DEVEL "")
+set(CMAKE_CXX_FLAGS_DEVEL "")
+set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
+
 # set common flags
 set(CommonFlags 
+	-pthread
 	-fno-guess-branch-probability
 	-fno-dse
 	-fno-tree-dse
@@ -72,9 +83,6 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	# clear flags
-	set(CMAKE_C_FLAGS_DEBUG)
-	set(CMAKE_CXX_FLAGS_DEBUG)
 
 	# add defines
 	add_definitions(${CommonFlags} ${DebugFlags} -DPCSX2_DEVBUILD -DPCSX2_DEBUG)
@@ -82,9 +90,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	# clear flags
-	set(CMAKE_C_FLAGS_DEVEL)
-	set(CMAKE_CXX_FLAGS_DEVEL)
 
 	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL)
@@ -92,9 +97,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-	# clear flags
-	set(CMAKE_C_FLAGS_RELEASE)
-	set(CMAKE_CXX_FLAGS_RELEASE)
 	
 	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags})

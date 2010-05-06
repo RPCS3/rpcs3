@@ -215,8 +215,13 @@ set(CDVDnull TRUE)
 #---------------------------------------
 #			CDVDiso
 #---------------------------------------
-set(CDVDiso TRUE)
+# requires: -BZip2
 #---------------------------------------
+if(BZIP2_FOUND)
+    set(CDVDiso TRUE)
+else(BZIP2_FOUND)
+    set(CDVDiso FALSE)
+endif(BZIP2_FOUND)
 
 #---------------------------------------
 #			dev9null
