@@ -149,7 +149,7 @@ protected:
 public:
     typedef T element_type;
 
-    wxEXPLICIT ScopedArray(T * ptr = NULL) :
+    wxEXPLICIT ScopedArray(T * ptr = NULL)
     {
 		m_array			= ptr;
 		m_valid_range	= 0xffffffff;

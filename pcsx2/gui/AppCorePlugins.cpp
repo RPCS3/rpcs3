@@ -166,7 +166,7 @@ public:
 		m_pid		= pid;
 		m_method	= method;
 	}
-
+	
 protected:
 	void InvokeEvent()
 	{
@@ -203,10 +203,11 @@ AppPluginManager::~AppPluginManager() throw()
 }
 
 void AppPluginManager::Load( PluginsEnum_t pid, const wxString& srcfile )
-{
+{ 
 	if( !wxThread::IsMain() )
 	{
-		wxGetApp().ProcessAction( LoadSinglePluginEvent( pid, srcfile ) );
+		LoadSinglePluginEvent evt( pid, srcfile );
+		wxGetApp().ProcessAction( evt);
 		Sleep( 5 );
 		return;
 	}
@@ -218,7 +219,8 @@ void AppPluginManager::Unload( PluginsEnum_t pid )
 {
 	if( !wxThread::IsMain() )
 	{
-		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Unload, pid ) );
+		SinglePluginMethodEvent evt( &AppPluginManager::Unload, pid );
+		wxGetApp().ProcessAction( evt );
 		Sleep( 5 );
 		return;
 	}
@@ -245,7 +247,9 @@ void AppPluginManager::Init( PluginsEnum_t pid )
 {
 	if( !wxThread::IsMain() )
 	{
-		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Init, pid ) );
+		//pxInvokeActionEvent& evt = SinglePluginMethodEvent( &AppPluginManager::Init, pid );
+		SinglePluginMethodEvent evt(&AppPluginManager::Init, pid);
+		wxGetApp().ProcessAction( evt );
 		Sleep( 5 );
 		return;
 	}
@@ -257,7 +261,8 @@ void AppPluginManager::Shutdown( PluginsEnum_t pid )
 {
 	if( !wxThread::IsMain() )
 	{
-		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Shutdown, pid ) );
+		SinglePluginMethodEvent evt( &AppPluginManager::Shutdown, pid );
+		wxGetApp().ProcessAction( evt );
 		Sleep( 5 );
 		return;
 	}

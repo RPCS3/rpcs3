@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Threading.h"
+using Threading::ScopedLock;
 
 // --------------------------------------------------------------------------------------
 //  ScopedPtrMT
@@ -44,7 +45,7 @@ public:
 
 	ScopedPtrMT& Reassign(T * ptr = NULL)
 	{
-		TPtr doh = (TPtr)AtomicExchangePointer( m_ptr, ptr );
+		TPtr doh = (TPtr)Threading::AtomicExchangePointer( m_ptr, ptr );
 		if ( ptr != doh ) delete doh;
 		return *this;
 	}
