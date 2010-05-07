@@ -190,98 +190,10 @@ bool GSUtil::CheckSSE()
 }
 
 typedef IDirect3D9* (WINAPI * LPDIRECT3DCREATE9) (UINT);
-typedef HRESULT     (WINAPI * LPCREATEDXGIFACTORY)(REFIID, void ** );
-typedef HRESULT     (WINAPI * LPD3D11CREATEDEVICE)( IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, CONST D3D_FEATURE_LEVEL*, UINT, UINT, ID3D11Device**, D3D_FEATURE_LEVEL *, ID3D11DeviceContext**);
-
-// ---------------------------------------------------------------------------------
-//  DX10/11 Detection (includes DXGI detection and dynamic library method bindings)
-// ---------------------------------------------------------------------------------
-//  Code 'Borrowed' from DXGI sources -- Modified to suit our needs. --air
-
-static IDXGIFactory*		m_DXGIFactory = NULL;
-static bool					m_D3D11Available = false;
 
 static HMODULE				s_hModD3D9 = NULL;
 static LPDIRECT3DCREATE9	s_DynamicDirect3DCreate9 = NULL;
 
-/*static LPD3DPERF_BEGINEVENT s_DynamicD3DPERF_BeginEvent = NULL;
-static LPD3DPERF_ENDEVENT s_DynamicD3DPERF_EndEvent = NULL;
-static LPD3DPERF_SETMARKER s_DynamicD3DPERF_SetMarker = NULL;
-static LPD3DPERF_SETREGION s_DynamicD3DPERF_SetRegion = NULL;
-static LPD3DPERF_QUERYREPEATFRAME s_DynamicD3DPERF_QueryRepeatFrame = NULL;
-static LPD3DPERF_SETOPTIONS s_DynamicD3DPERF_SetOptions = NULL;
-static LPD3DPERF_GETSTATUS s_DynamicD3DPERF_GetStatus = NULL;
-*/
-
-static HMODULE					s_hModD3D11 = NULL;
-static LPD3D11CREATEDEVICE		s_DynamicD3D11CreateDevice = NULL;
-
-static HMODULE					s_hModDXGI = NULL;
-static LPCREATEDXGIFACTORY		s_DynamicCreateDXGIFactory = NULL;
-
-
-static bool DXUT_EnsureD3D11APIs( void )
-{
-	// If any function pointer is non-NULL, this function has already been called.
-	if( s_DynamicD3D11CreateDevice )
-		return true;
-
-	s_hModDXGI = LoadLibrary( _T("dxgi.dll") );
-	if( s_hModDXGI )
-	{
-		s_DynamicCreateDXGIFactory = (LPCREATEDXGIFACTORY)GetProcAddress( s_hModDXGI, "CreateDXGIFactory" );
-	}
-
-	// If DXGI isn't installed then this system isn't even capable of DX11 support; so no point
-	// in checking for DX11 DLLs.
-	if( s_DynamicCreateDXGIFactory == NULL ) return false;
-
-	// Check for DX11 DLLs.
-
-	s_hModD3D11 = LoadLibrary( _T("d3d11.dll") );
-	if( s_hModD3D11 == NULL ) LoadLibrary( _T("d3d11_beta.dll") );
-
-	if( s_hModD3D11 != NULL )
-	{
-		s_DynamicD3D11CreateDevice = (LPD3D11CREATEDEVICE)GetProcAddress( s_hModD3D11, "D3D11CreateDevice" );
-	}
-
-	return ( s_DynamicD3D11CreateDevice != NULL );
-}
-
-
-static bool WINAPI DXUT_Dynamic_CreateDXGIFactory( REFIID rInterface, void ** ppOut )
-{
-	if( !DXUT_EnsureD3D11APIs() ) return false;
-
-	return s_DynamicCreateDXGIFactory( rInterface, ppOut ) == S_OK;
-}
-
-static bool DXUTDelayLoadDXGI()
-{
-	if( m_DXGIFactory == NULL )
-	{
-		DXUT_Dynamic_CreateDXGIFactory( __uuidof( IDXGIFactory ), (LPVOID*)&m_DXGIFactory );
-		m_D3D11Available = ( m_DXGIFactory != NULL );
-	}
-
-	return m_D3D11Available;
-}
-
-bool GSUtil::IsDirect3D11Available()
-{
-	return DXUTDelayLoadDXGI();
-	//return m_D3D11Available;
-}
-
-void GSUtil::UnloadDynamicLibraries()
-{
-	if( s_hModD3D11 ) FreeLibrary(s_hModD3D11);
-	if( s_hModDXGI ) FreeLibrary(s_hModDXGI);
-
-	s_hModD3D11 = NULL;
-	s_hModDXGI = NULL;
-}
 
 char* GSUtil::GetLibName()
 {

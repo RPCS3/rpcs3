@@ -36,9 +36,13 @@ public:
 	static bool CheckDirectX();
 	static bool CheckSSE();
 
-	static bool IsDirect3D11Available();
 	static void UnloadDynamicLibraries();
-	
 	static char* GetLibName();
+
+	// These should probably be located more closely to their respective DX9/DX11 driver files,
+	// and not here in GSUtil (which should be DirectX independent, generally speaking) --air
+
+	static void* GetDX9Proc( const char* methodname );
+	static bool IsDirect3D11Available();
 };
 

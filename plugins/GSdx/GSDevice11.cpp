@@ -22,7 +22,92 @@
 #include "stdafx.h"
 #include "GSdx.h"
 #include "GSDevice11.h"
+#include "GSUtil.h"
 #include "resource.h"
+
+// ---------------------------------------------------------------------------------
+//  DX11 Detection (includes DXGI detection and dynamic library method bindings)
+// ---------------------------------------------------------------------------------
+//  Code 'Borrowed' from Microsoft's DXGI sources -- Modified to suit our needs. --air
+
+static IDXGIFactory*		m_DXGIFactory = NULL;
+static bool					m_D3D11Available = false;
+
+static HMODULE					s_hModD3D11 = NULL;
+static FnPtr_D3D11CreateDevice		s_DynamicD3D11CreateDevice = NULL;
+
+static HMODULE					s_hModDXGI = NULL;
+static FnPtr_CreateDXGIFactory		s_DynamicCreateDXGIFactory = NULL;
+
+
+static bool DXUT_EnsureD3D11APIs( void )
+{
+	// If any function pointer is non-NULL, this function has already been called.
+	if( s_DynamicD3D11CreateDevice )
+		return true;
+
+	s_hModDXGI = LoadLibrary( _T("dxgi.dll") );
+	if( s_hModDXGI )
+	{
+		s_DynamicCreateDXGIFactory = (FnPtr_CreateDXGIFactory)GetProcAddress( s_hModDXGI, "CreateDXGIFactory" );
+	}
+
+	// If DXGI isn't installed then this system isn't even capable of DX11 support; so no point
+	// in checking for DX11 DLLs.
+	if( s_DynamicCreateDXGIFactory == NULL ) return false;
+
+	// Check for DX11 DLLs.
+
+	s_hModD3D11 = LoadLibrary( _T("d3d11.dll") );
+	if( s_hModD3D11 == NULL ) LoadLibrary( _T("d3d11_beta.dll") );
+
+	if( s_hModD3D11 != NULL )
+	{
+		s_DynamicD3D11CreateDevice				= (FnPtr_D3D11CreateDevice)GetProcAddress( s_hModD3D11, "D3D11CreateDevice" );
+	}
+
+	return ( s_DynamicD3D11CreateDevice != NULL );
+}
+
+static bool WINAPI DXUT_Dynamic_CreateDXGIFactory( REFIID rInterface, void ** ppOut )
+{
+	if( !DXUT_EnsureD3D11APIs() ) return false;
+
+	return s_DynamicCreateDXGIFactory( rInterface, ppOut ) == S_OK;
+}
+
+static bool DXUTDelayLoadDXGI()
+{
+	if( m_DXGIFactory == NULL )
+	{
+		DXUT_Dynamic_CreateDXGIFactory( __uuidof( IDXGIFactory ), (LPVOID*)&m_DXGIFactory );
+		m_D3D11Available = ( m_DXGIFactory != NULL );
+	}
+
+	return m_D3D11Available;
+}
+
+static void* GetDX11Proc( const char* methodname )
+{
+	if( !DXUT_EnsureD3D11APIs() ) return NULL;
+	return GetProcAddress( s_hModD3D11, methodname );
+}
+
+bool GSUtil::IsDirect3D11Available()
+{
+	return DXUTDelayLoadDXGI();
+	//return m_D3D11Available;
+}
+
+void GSUtil::UnloadDynamicLibraries()
+{
+	if( s_hModD3D11 ) FreeLibrary(s_hModD3D11);
+	if( s_hModDXGI ) FreeLibrary(s_hModDXGI);
+
+	s_hModD3D11 = NULL;
+	s_hModDXGI = NULL;
+}
+
 
 GSDevice11::GSDevice11()
 {
@@ -865,8 +950,8 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 
 		vp.TopLeftX = 0;
 		vp.TopLeftY = 0;
-		vp.Width = rt->GetWidth();
-		vp.Height = rt->GetHeight();
+		vp.Width = (FLOAT)rt->GetWidth();
+		vp.Height = (FLOAT)rt->GetHeight();
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 
@@ -965,7 +1050,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
-
+	
 	if(error)
 	{
 		printf("%s\n", (const char*)error->GetBufferPointer());
