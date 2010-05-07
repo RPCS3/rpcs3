@@ -565,8 +565,9 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	//
 	catch( BaseException& ex )
 	{
-		m_except = ex.Clone();
-		m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
+		BaseException* woot = ex.Clone();
+		woot->DiagMsg() += wxsFormat( L"(thread:%s)", GetName().c_str() );
+		m_except = woot;
 	}
 #endif
 }
