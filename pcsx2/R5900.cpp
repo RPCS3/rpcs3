@@ -305,10 +305,10 @@ static __forceinline void _cpuTestInterrupts()
 	if( cpuRegs.interrupt & 0xF19 ) // Bits 0 3 4 8 9 10 11 ( 111100011001 )
 	{
 		TESTINT(0, vif0Interrupt);
-#ifndef IPU_INLINE_IRQS
+
 		TESTINT(3, ipu0Interrupt);
 		TESTINT(4, ipu1Interrupt);
-#endif
+
 		TESTINT(8, SPRFROMinterrupt);
 		TESTINT(9, SPRTOinterrupt);
 
@@ -550,9 +550,10 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
 	}
 
-	//if (ecycle > 8192 && n != DMAC_TO_IPU && n != DMAC_FROM_IPU) {
-	//	DevCon.Warning( "EE cycles high: %d, n %d", ecycle, n );
-	//}
+	// Abusing the IPU hack to also fix EE events to happen 1 cycle in the future.
+	// This can be used on games with PATH3 masking issues for example, or when
+	// some FMV look bad.
+	if(CHECK_IPUWAITHACK) ecycle = 1;
 
 	cpuRegs.interrupt|= 1 << n;
 	cpuRegs.sCycle[n] = cpuRegs.cycle;

@@ -59,8 +59,8 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 			wxEmptyString
 		},
 		{
-			_("IPU Wait Hack - Fix Ripping/Corrupted videos (FFX, Digital Devil Saga), Causes others to cut short"),
-			wxEmptyString
+			_("EE timing hack / FFX videos fix - Multi purpose hack. Try if all else fails."),
+				_("Known to affect following games:\n * Final Fantasy 10 (Fixes FMV)\n * Digital Devil Saga (Fixes FMV and crashes)\n * SSX (Fixes bad graphics and crashes)\n * Resident Evil: Dead Aim (Causes garbled textures)")
 		}
 	};
 

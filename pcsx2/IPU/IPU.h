@@ -20,38 +20,17 @@
 #include "coroutine.h"
 #include "IPU_Fifo.h"
 
-// IPU_INLINE_IRQS
-// Scheduling ints into the future is a purist approach to emulation, and
-// is mostly cosmetic since the emulator itself performs all actions instantly
-// (as far as the emulated CPU is concerned).  In some cases this can actually
-// cause more sync problems than it supposedly solves, due to accumulated
-// delays incurred by the recompiler's low cycle update rate and also Pcsx2
-// failing to properly handle pre-emptive DMA/IRQs or cpu exceptions.
-
-// Uncomment the following line to enable inline IRQs for the IPU.  Tests show
-// that it doesn't have any effect on compatibility or audio/video sync, and it
-// speeds up movie playback by some 6-8%. But it lacks the purist touch, so it's
-// not enabled by default.
-
-//#define IPU_INLINE_IRQS
-
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
 
-
 #define ipumsk( src ) ( (src) & 0xff )
 #define ipucase( src ) case ipumsk(src)
 
-#ifdef IPU_INLINE_IRQS
-#	define IPU_INT_TO( cycles )  ipu1Interrupt()
-#	define IPU_INT_FROM( cycles )  ipu0Interrupt()
-#	define IPU_FORCEINLINE
-#else
-#	define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
-#	define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
-#	define IPU_FORCEINLINE __forceinline
-#endif
+#define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
+#define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
+
+#define IPU_FORCEINLINE __forceinline
 
 struct IPUStatus {
 	bool InProgress;
