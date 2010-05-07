@@ -159,6 +159,7 @@
 		<Unit filename="../../include/Utilities/RwMutex.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
+		<Unit filename="../../include/Utilities/ScopedPtrMT.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
 		<Unit filename="../../include/Utilities/ThreadingDialogs.h" />

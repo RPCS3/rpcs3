@@ -247,7 +247,6 @@ void AppPluginManager::Init( PluginsEnum_t pid )
 {
 	if( !wxThread::IsMain() )
 	{
-		//pxInvokeActionEvent& evt = SinglePluginMethodEvent( &AppPluginManager::Init, pid );
 		SinglePluginMethodEvent evt(&AppPluginManager::Init, pid);
 		wxGetApp().ProcessAction( evt );
 		Sleep( 5 );
