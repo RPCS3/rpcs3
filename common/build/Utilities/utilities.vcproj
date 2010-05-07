@@ -538,6 +538,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\ScopedPtrMT.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\StringHelpers.h"
 				>
 			</File>

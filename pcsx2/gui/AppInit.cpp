@@ -488,7 +488,7 @@ void Pcsx2App::CleanupRestartable()
 
 	//PingDispatcher( "Cleanup" );
 	//DeletionDispatcher();
-	IdleEventDispatcher( "Cleanup" );
+	IdleEventDispatcher( L"Cleanup" );
 
 	if( g_Conf )
 		AppSaveSettings();

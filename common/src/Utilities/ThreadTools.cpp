@@ -380,8 +380,14 @@ void Threading::PersistentThread::AddListener( EventListener_Thread& evt )
 // the thread will have allowed itself to terminate properly.
 void Threading::PersistentThread::RethrowException() const
 {
-	if( !m_except ) return;
-	m_except->Rethrow();
+	// Thread safety note: always detach the m_except pointer.  If we checked it for NULL, the
+	// pointer might still be invalid after detachment, so might as well just detach and check
+	// after.
+
+	ScopedPtr<BaseException> ptr( const_cast<PersistentThread*>(this)->m_except.DetachPtr() );
+	if( ptr ) ptr->Rethrow();
+
+	//m_except->Rethrow();
 }
 
 static bool m_BlockDeletions = false;
@@ -533,8 +539,9 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	// ----------------------------------------------------------------------------
 	catch( Exception::RuntimeError& ex )
 	{
-		m_except = ex.Clone();
-		m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
+		BaseException* woot = ex.Clone();
+		woot->DiagMsg() += wxsFormat( L"(thread:%s)", GetName().c_str() );
+		m_except = woot;
 	}
 #ifndef PCSX2_DEVBUILD
 	// ----------------------------------------------------------------------------
@@ -543,13 +550,13 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	// the MSVC debugger (or by silent random annoying fail on debug-less linux).
 	/*catch( std::logic_error& ex )
 	{
-		throw BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s",
+		throw BaseException( wxsFormat( L"STL Logic Error (thread:%s): %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}
 	catch( std::exception& ex )
 	{
-		throw BaseException( wxsFormat( L"(thread: %s) STL exception: %s",
+		throw BaseException( wxsFormat( L"STL exception (thread:%s): %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}*/
@@ -803,6 +810,24 @@ __forceinline s32 Threading::AtomicIncrement( volatile s32& Target )
 __forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
+}
+
+__forceinline void* Threading::_AtomicExchangePointer( volatile uptr& target, uptr value )
+{
+#ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
+	return (void*)_InterlockedExchange64( &(volatile s64&)target, value );
+#else
+	return (void*)_InterlockedExchange( (volatile long*)&target, value );
+#endif
+}
+
+__forceinline void* Threading::_AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand )
+{
+#ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
+	return (void*)_InterlockedCompareExchange64( &(volatile s64&)target, value );
+#else
+	return (void*)_InterlockedCompareExchange( &(volatile long&)target, value, comparand );
+#endif
 }
 
 // --------------------------------------------------------------------------------------

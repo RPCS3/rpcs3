@@ -35,9 +35,13 @@ public:
 	virtual ~AppPluginManager() throw();
 
 	void Load( const wxString (&folders)[PluginId_Count] );
+	void Load( PluginsEnum_t pid, const wxString& srcfile );
+	void Unload( PluginsEnum_t pid );
 	void Unload();
 	
 	void Init();
+	void Init( PluginsEnum_t pid );
+	void Shutdown( PluginsEnum_t pid );
 	void Shutdown();
 	void Close();	
 	void Open();

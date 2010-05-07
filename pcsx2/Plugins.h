@@ -275,10 +275,10 @@ public:
 	PluginManager();
 	virtual ~PluginManager() throw();
 
-	void Load( PluginsEnum_t pid, const wxString& srcfile );
-	void Load( const wxString (&folders)[PluginId_Count] );
-	void Unload();
-	void Unload( PluginsEnum_t pid );
+	virtual void Load( PluginsEnum_t pid, const wxString& srcfile );
+	virtual void Load( const wxString (&folders)[PluginId_Count] );
+	virtual void Unload();
+	virtual void Unload( PluginsEnum_t pid );
 
 	bool AreLoaded() const;
 	bool AreAnyLoaded() const;
@@ -287,6 +287,8 @@ public:
 	Threading::Mutex& GetMutex() { return m_mtx_PluginStatus; }
 
 	virtual void Init();
+	virtual void Init( PluginsEnum_t pid );
+	virtual void Shutdown( PluginsEnum_t pid );
 	virtual void Shutdown();
 	virtual void Open();
 	virtual void Open( PluginsEnum_t pid );

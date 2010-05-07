@@ -523,8 +523,11 @@ void SysMtgsThread::WaitGS()
 	if( volatize(m_RingPos) != m_WritePos )
 	{
 		SetEvent();
+		RethrowException();
+
 		do {
 			m_lock_RingBufferBusy.Wait();
+			RethrowException();
 		} while( volatize(m_RingPos) != m_WritePos );
 	}
 }

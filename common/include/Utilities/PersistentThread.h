@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Threading.h"
+#include "ScopedPtrMT.h"
 #include "EventSource.h"
 
 namespace Threading
@@ -130,7 +131,7 @@ namespace Threading
 
 		// exception handle, set non-NULL if the thread terminated with an exception
 		// Use RethrowException() to re-throw the exception using its original exception type.
-		ScopedPtr<BaseException> m_except;
+		ScopedPtrMT<BaseException> m_except;
 
 		EventSource<EventListener_Thread> m_evtsrc_OnDelete;
 

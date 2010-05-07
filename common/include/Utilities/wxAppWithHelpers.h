@@ -43,6 +43,8 @@ public:
 
 typedef void FnType_Void();
 
+typedef std::list<wxEvent*> wxEventList;
+
 // --------------------------------------------------------------------------------------
 //  wxAppWithHelpers
 // --------------------------------------------------------------------------------------
@@ -53,9 +55,9 @@ class wxAppWithHelpers : public wxApp
 	DECLARE_DYNAMIC_CLASS(wxAppWithHelpers)
 
 protected:
-	std::vector<wxEvent*>			m_IdleEventQueue;
-	Threading::Mutex				m_IdleEventMutex;
-	wxTimer							m_IdleEventTimer;
+	wxEventList					m_IdleEventQueue;
+	Threading::MutexRecursive	m_IdleEventMutex;
+	wxTimer						m_IdleEventTimer;
 
 public:
 	wxAppWithHelpers();
@@ -105,7 +107,7 @@ public:
 	bool ProcessEvent( pxInvokeActionEvent* evt );
 
 protected:
-	void IdleEventDispatcher( const char* action );
+	void IdleEventDispatcher( const wxChar* action );
 
 	void OnIdleEvent( wxIdleEvent& evt );
 	void OnStartIdleEventTimer( wxEvent& evt );

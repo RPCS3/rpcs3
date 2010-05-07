@@ -867,19 +867,17 @@ void PluginManager::Load( PluginsEnum_t pid, const wxString& srcfile )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
-	Console.WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), srcfile.c_str() );
+	Console.Indent().WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), srcfile.c_str() );
 	m_info[pid] = new PluginStatus_t( pid, srcfile );
 }
 
 void PluginManager::Load( const wxString (&folders)[PluginId_Count] )
 {
-	ScopedLock lock( m_mtx_PluginStatus );
-
 	if( !NeedsLoad() ) return;
 
 	wxDoNotLogInThisScope please;
 	
-	Console.WriteLn( Color_StrongBlue, "Loading plugins..." );
+	Console.WriteLn( Color_StrongBlue, "\nLoading plugins..." );
 
 	ConsoleIndentScope indent;
 	const PluginInfo* pi = tbl_PluginInfo; do
@@ -939,8 +937,6 @@ void PluginManager::Unload(PluginsEnum_t pid)
 
 void PluginManager::Unload()
 {
-	ScopedLock lock( m_mtx_PluginStatus );
-
 	if( NeedsShutdown() )
 		Console.Warning( "(SysCorePlugins) Warning: Unloading plugins prior to shutdown!" );
 
@@ -954,7 +950,6 @@ void PluginManager::Unload()
 		Unload( tbl_PluginInfo[i].id );
 
 	DbgCon.WriteLn( Color_StrongBlue, "Plugins unloaded successfully." );
-
 }
 
 // Exceptions:
@@ -1167,6 +1162,29 @@ void PluginManager::Close()
 	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }
 
+void PluginManager::Init( PluginsEnum_t pid )
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+
+	if( !m_info[pid] || m_info[pid]->IsInitialized ) return;
+
+	Console.Indent().WriteLn( "Init %s", tbl_PluginInfo[pid].shortname );
+	if( NULL != m_info[pid]->CommonBindings.Init() )
+		throw Exception::PluginInitError( pid );
+
+	m_info[pid]->IsInitialized = true;
+}
+
+void PluginManager::Shutdown( PluginsEnum_t pid )
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+
+	if( !m_info[pid] || !m_info[pid]->IsInitialized ) return;
+	DevCon.Indent().WriteLn( "Shutdown %s", tbl_PluginInfo[pid].shortname );
+	m_info[pid]->IsInitialized = false;
+	m_info[pid]->CommonBindings.Shutdown();
+}
+
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
 // session.  During a session emulation can be paused/resumed using Open/Close, and should be
 // terminated using Shutdown().
@@ -1177,26 +1195,11 @@ void PluginManager::Close()
 //
 void PluginManager::Init()
 {
-	ScopedLock lock( m_mtx_PluginStatus );
-	
 	if( !NeedsInit() ) return;
 
-	bool printlog = false;
-	const PluginInfo* pi = tbl_PluginInfo; do
-	{
-		const PluginsEnum_t pid = pi->id;
-
-		if( !m_info[pid] || m_info[pid]->IsInitialized ) continue;
-		if( !printlog )
-		{
-			Console.WriteLn( Color_StrongBlue, "Initializing plugins..." );
-			printlog = true;
-		}
-		Console.Indent().WriteLn( "Init %s", tbl_PluginInfo[pid].shortname );
-		if( 0 != m_info[pid]->CommonBindings.Init() )
-			throw Exception::PluginInitError( pid );
-
-		m_info[pid]->IsInitialized = true;
+	Console.WriteLn( Color_StrongBlue, "\nInitializing plugins..." );
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		Init( pi->id );
 	} while( ++pi, pi->shortname != NULL );
 
 	if( SysPlugins.Mcd == NULL )
@@ -1209,9 +1212,9 @@ void PluginManager::Init()
 		}
 	}
 
-	if( printlog )
-		Console.WriteLn( Color_StrongBlue, "Plugins initialized successfully.\n" );
+	Console.WriteLn( Color_StrongBlue, "Plugins initialized successfully.\n" );
 }
+
 
 // Shuts down all plugins.  Plugins are closed first, if necessary.
 //
@@ -1221,7 +1224,6 @@ void PluginManager::Init()
 //
 void PluginManager::Shutdown()
 {
-	ScopedLock lock( m_mtx_PluginStatus );
 	if( !NeedsShutdown() ) return;
 
 	pxAssumeDev( !NeedsClose(), "Cannot shut down plugins prior to Close()" );
@@ -1235,11 +1237,7 @@ void PluginManager::Shutdown()
 
 	for( int i=PluginId_Count-1; i>=0; --i )
 	{
-		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
-		if( !m_info[pid] || !m_info[pid]->IsInitialized ) continue;
-		DevCon.Indent().WriteLn( "Shutdown %s", tbl_PluginInfo[pid].shortname );
-		m_info[pid]->IsInitialized = false;
-		m_info[pid]->CommonBindings.Shutdown();
+		Shutdown( tbl_PluginInfo[i].id );
 	}
 
 	// More memorycard hacks!!
@@ -1448,6 +1446,8 @@ bool PluginManager::NeedsUnload() const
 
 bool PluginManager::NeedsInit() const
 {
+	ScopedLock lock( m_mtx_PluginStatus );
+
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( !IsInitialized(pi->id) ) return true;
 	} while( ++pi, pi->shortname != NULL );
@@ -1457,6 +1457,8 @@ bool PluginManager::NeedsInit() const
 
 bool PluginManager::NeedsShutdown() const
 {
+	ScopedLock lock( m_mtx_PluginStatus );
+
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( IsInitialized(pi->id) ) return true;
 	} while( ++pi, pi->shortname != NULL );

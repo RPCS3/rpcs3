@@ -98,46 +98,8 @@ static void ConvertPluginFilenames( wxString (&passins)[PluginId_Count] )
 	} while( ++pi, pi->shortname != NULL );
 }
 
-// --------------------------------------------------------------------------------------
-//  AppPluginManager
-// --------------------------------------------------------------------------------------
-AppPluginManager::AppPluginManager()
-{
-}
-
-AppPluginManager::~AppPluginManager() throw()
-{
-}
-
-void AppPluginManager::Load( const wxString (&folders)[PluginId_Count] )
-{
-	if( !pxAssert(!AreLoaded()) ) return;
-
-	SetSettingsFolder( GetSettingsFolder().ToString() );
-	_parent::Load( folders );
-	PostPluginStatus( CorePlugins_Loaded );
-}
-
-void AppPluginManager::Unload()
-{
-	_parent::Unload();
-	PostPluginStatus( CorePlugins_Unloaded );
-}
-
-void AppPluginManager::Init()
-{
-	SetSettingsFolder( GetSettingsFolder().ToString() );
-	_parent::Init();
-	PostPluginStatus( CorePlugins_Init );
-}
-
-void AppPluginManager::Shutdown()
-{
-	_parent::Shutdown();
-	PostPluginStatus( CorePlugins_Shutdown );
-}
-
 typedef void (AppPluginManager::*FnPtr_AppPluginManager)();
+typedef void (AppPluginManager::*FnPtr_AppPluginPid)( PluginsEnum_t pid );
 
 class SysExecEvent_AppPluginManager : public SysExecEvent
 {
@@ -159,6 +121,162 @@ protected:
 		if( m_method ) (CorePlugins.*m_method)();
 	}
 };
+
+class LoadSinglePluginEvent : public pxInvokeActionEvent
+{
+	typedef pxInvokeActionEvent _parent;
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(LoadSinglePluginEvent)
+
+protected:
+	wxString		m_filename;
+	PluginsEnum_t	m_pid;
+
+public:
+	virtual ~LoadSinglePluginEvent() throw() { }
+	virtual LoadSinglePluginEvent *Clone() const { return new LoadSinglePluginEvent(*this); }
+	
+	LoadSinglePluginEvent( PluginsEnum_t pid = PluginId_GS, const wxString& filename=wxEmptyString )
+		: m_filename( filename )
+	{
+		m_pid = pid;
+	}
+
+protected:
+	void InvokeEvent()
+	{
+		GetCorePlugins().Load( m_pid, m_filename );
+	}
+};
+
+class SinglePluginMethodEvent : public pxInvokeActionEvent
+{
+	typedef pxInvokeActionEvent _parent;
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(SinglePluginMethodEvent)
+
+protected:
+	PluginsEnum_t			m_pid;
+	FnPtr_AppPluginPid		m_method;
+
+public:
+	virtual ~SinglePluginMethodEvent() throw() { }
+	virtual SinglePluginMethodEvent *Clone() const { return new SinglePluginMethodEvent(*this); }
+	
+	SinglePluginMethodEvent( FnPtr_AppPluginPid method=NULL,  PluginsEnum_t pid = PluginId_GS )
+	{
+		m_pid		= pid;
+		m_method	= method;
+	}
+
+protected:
+	void InvokeEvent()
+	{
+		//GetCorePlugins().Unload( m_pid );
+		if( m_method ) (CorePlugins.*m_method)( m_pid );
+	}
+};
+
+IMPLEMENT_DYNAMIC_CLASS( LoadSinglePluginEvent,	 pxInvokeActionEvent );
+IMPLEMENT_DYNAMIC_CLASS( SinglePluginMethodEvent, pxInvokeActionEvent );
+
+// --------------------------------------------------------------------------------------
+//  AppPluginManager
+// --------------------------------------------------------------------------------------
+//
+// Thread Affinity Notes:
+//  It's important to ensure that Load/Unload/Init/Shutdown are all called from the
+//  MAIN/UI Thread only.  Those APIs are allowed to issue modal popups, and as such
+//  are only safe when invoked form the UI thread.  Under windows the popups themselves
+//  will typically work from any thread, but some common control activities will fail
+//  (such as opening the browser windows).  On Linux it's probably just highly unsafe, period.
+//
+//  My implementation is to execute the main Load/Init/Shutdown/Unload procedure on the
+//  SysExecutor, and then dispatch each individual plugin to the main thread.  This keeps
+//  the main thread from being completely busy while plugins are loaded and initialized.
+//  (responsiveness is bliss!!) -- air
+//
+AppPluginManager::AppPluginManager()
+{
+}
+
+AppPluginManager::~AppPluginManager() throw()
+{
+}
+
+void AppPluginManager::Load( PluginsEnum_t pid, const wxString& srcfile )
+{
+	if( !wxThread::IsMain() )
+	{
+		wxGetApp().ProcessAction( LoadSinglePluginEvent( pid, srcfile ) );
+		Sleep( 5 );
+		return;
+	}
+	
+	_parent::Load( pid, srcfile );
+}
+
+void AppPluginManager::Unload( PluginsEnum_t pid )
+{
+	if( !wxThread::IsMain() )
+	{
+		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Unload, pid ) );
+		Sleep( 5 );
+		return;
+	}
+
+	_parent::Unload( pid );
+}
+
+void AppPluginManager::Load( const wxString (&folders)[PluginId_Count] )
+{
+	if( !pxAssert(!AreLoaded()) ) return;
+
+	SetSettingsFolder( GetSettingsFolder().ToString() );
+	_parent::Load( folders );
+	PostPluginStatus( CorePlugins_Loaded );
+}
+
+void AppPluginManager::Unload()
+{
+	_parent::Unload();
+	PostPluginStatus( CorePlugins_Unloaded );
+}
+
+void AppPluginManager::Init( PluginsEnum_t pid )
+{
+	if( !wxThread::IsMain() )
+	{
+		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Init, pid ) );
+		Sleep( 5 );
+		return;
+	}
+
+	_parent::Init( pid );
+}
+
+void AppPluginManager::Shutdown( PluginsEnum_t pid )
+{
+	if( !wxThread::IsMain() )
+	{
+		wxGetApp().ProcessAction( SinglePluginMethodEvent( &AppPluginManager::Shutdown, pid ) );
+		Sleep( 5 );
+		return;
+	}
+
+	_parent::Shutdown( pid );
+}
+
+void AppPluginManager::Init()
+{
+	SetSettingsFolder( GetSettingsFolder().ToString() );
+	_parent::Init();
+	PostPluginStatus( CorePlugins_Init );
+}
+
+void AppPluginManager::Shutdown()
+{
+	_parent::Shutdown();
+	PostPluginStatus( CorePlugins_Shutdown );
+}
 
 void AppPluginManager::Close()
 {
@@ -413,8 +531,8 @@ SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
 			memLoadingState load( m_plugstore );
 			//if( m_plugstore.IsDisposed() ) load.SeekToSection( m_pid );
+			GetCorePlugins().Open( m_pid );
 			GetCorePlugins().Freeze( m_pid, load );
-			GetCorePlugins().Close( m_pid );
 		}
 
 		s_DisableGsWindow = false;
@@ -422,14 +540,18 @@ SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 	catch( BaseException& ex )
 	{
 		allowResume = false;
-		Console.Error( "Unhandled BaseException in %s (ignored!):", __pxFUNCTION__ );
-		Console.Error( ex.FormatDiagnosticMessage() );
+		wxGetApp().PostEvent( pxExceptionEvent( ex ) );
+
+		//Console.Error( "Unhandled BaseException in %s (ignored!):", __pxFUNCTION__ );
+		//Console.Error( ex.FormatDiagnosticMessage() );
 	}
 	catch( std::exception& ex )
 	{
 		allowResume = false;
-		Console.Error( "Unhandled std::exception in %s (ignored!):", __pxFUNCTION__ );
-		Console.Error( ex.what() );
+		wxGetApp().PostEvent( pxExceptionEvent(new Exception::RuntimeError( ex, L"SaveSinglePlugin" )) );
+
+		//Console.Error( "Unhandled std::exception in %s (ignored!):", __pxFUNCTION__ );
+		//Console.Error( ex.what() );
 	}
 
 	s_DisableGsWindow = false;

@@ -156,15 +156,11 @@ namespace Threading
 
 	extern bool AtomicBitTestAndReset( volatile u32& bitset, u8 bit );
 
-	extern void* _AtomicExchangePointer( void * volatile * const target, void* const value );
-	extern void* _AtomicCompareExchangePointer( void * volatile * const target, void* const value, void* const comparand );
+	extern void* _AtomicExchangePointer( volatile uptr& target, uptr value );
+	extern void* _AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand );
 
-#define AtomicExchangePointer( target, value ) \
-	_InterlockedExchangePointer( &target, value )
-
-#define AtomicCompareExchangePointer( target, value, comparand ) \
-	_InterlockedCompareExchangePointer( &target, value, comparand )
-
+#define AtomicExchangePointer( dest, src )				_AtomicExchangePointer( (uptr&)dest, (uptr)src )
+#define AtomicCompareExchangePointer( dest, comp, src )	_AtomicExchangePointer( (uptr&)dest, (uptr)comp, (uptr)src )
 
 	// pthread Cond is an evil api that is not suited for Pcsx2 needs.
 	// Let's not use it. Use mutexes and semaphores instead to create waits. (Air)

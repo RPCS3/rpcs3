@@ -420,27 +420,37 @@ void wxAppWithHelpers::OnStartIdleEventTimer( wxEvent& evt )
 		m_IdleEventTimer.Start( 100, true );
 }
 
-void wxAppWithHelpers::IdleEventDispatcher( const char* action )
+void wxAppWithHelpers::IdleEventDispatcher( const wxChar* action )
 {
+	// Recursion is possible thanks to modal dialogs being issued from the idle event handler.
+	// (recursion shouldn't hurt anything anyway, since the node system re-creates the iterator
+	// on each pass)
+	
+	//static int __guard=0;
+	//RecursionGuard guard(__guard);
+	//if( !pxAssertDev(!guard.IsReentrant(), "Re-entrant call to IdleEventdispatcher caught on camera!") ) return;
+
+	wxEventList postponed;
+	wxEventList::iterator node;
+
 	ScopedLock lock( m_IdleEventMutex );
 
-	size_t size = m_IdleEventQueue.size();
-	if( size == 0 ) return;
-
-	DbgCon.WriteLn( Color_Gray, "App IdleQueue (%s) -> %u events.", action, size );
-
-	std::vector<wxEvent*> postponed;
-	
-	for( size_t i=0; i<size; ++i )
+	while( node = m_IdleEventQueue.begin(), node != m_IdleEventQueue.end() )
 	{
-		if( !Threading::AllowDeletions() && (m_IdleEventQueue[i]->GetEventType() == pxEvt_DeleteThread) )
-			postponed.push_back(m_IdleEventQueue[i]);
+		ScopedPtr<wxEvent> deleteMe(*node);
+		m_IdleEventQueue.erase( node );
+
+		lock.Release();
+		if( !Threading::AllowDeletions() && (deleteMe->GetEventType() == pxEvt_DeleteThread) )
+		{
+			postponed.push_back(deleteMe.DetachPtr());
+		}
 		else
 		{
-			lock.Release();
-			ProcessEvent( *m_IdleEventQueue[i] );
-			lock.Acquire();
+			DbgCon.WriteLn( Color_Gray, L"(AppIdleQueue:%s) -> Dispatching event '%s'", action, deleteMe->GetClassInfo()->GetClassName() );
+			ProcessEvent( *deleteMe );		// dereference to prevent auto-deletion by ProcessEvent
 		}
+		lock.Acquire();
 	}
 
 	m_IdleEventQueue = postponed;
@@ -449,12 +459,12 @@ void wxAppWithHelpers::IdleEventDispatcher( const char* action )
 void wxAppWithHelpers::OnIdleEvent( wxIdleEvent& evt )
 {
 	m_IdleEventTimer.Stop();
-	IdleEventDispatcher( "Idle" );
+	IdleEventDispatcher( L"Idle" );
 }
 
 void wxAppWithHelpers::OnIdleEventTimeout( wxTimerEvent& evt )
 {
-	IdleEventDispatcher( "Timeout" );
+	IdleEventDispatcher( L"Timeout" );
 }
 
 void wxAppWithHelpers::Ping()

@@ -170,6 +170,7 @@ namespace Exception
 		DEFINE_RUNTIME_EXCEPTION( RuntimeError, wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") )
 
 		RuntimeError( const std::runtime_error& ex, const wxString& prefix=wxEmptyString );
+		RuntimeError( const std::exception& ex, const wxString& prefix=wxEmptyString );
 	};
 
 	// --------------------------------------------------------------------------------------
