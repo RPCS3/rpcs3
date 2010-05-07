@@ -30,9 +30,9 @@ GSSetting GSSettingsDlg::g_renderers[] =
 	{0, "Direct3D9 (Hardware)", NULL},
 	{1, "Direct3D9 (Software)", NULL},
 	{2, "Direct3D9 (Null)", NULL},
-	{3, "Direct3D11 (Hardware)", NULL},
-	{4, "Direct3D11 (Software)", NULL},
-	{5, "Direct3D11 (Null)", NULL},
+	{3, "Direct3D10/11 (Hardware)", NULL},
+	{4, "Direct3D10/11 (Software)", NULL},
+	{5, "Direct3D10/11 (Null)", NULL},
 	{12, "Null (Software)", NULL},
 	{13, "Null (Null)", NULL},
 };

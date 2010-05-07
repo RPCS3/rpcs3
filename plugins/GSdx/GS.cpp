@@ -119,6 +119,8 @@ EXPORT_C GSshutdown()
 	s_gs = NULL;
 	s_renderer = -1;
 
+	GSUtil::UnloadDynamicLibraries();
+	
 #ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))

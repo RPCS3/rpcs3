@@ -37,7 +37,8 @@ public:
 	static bool CheckSSE();
 
 	static bool IsDirect3D11Available();
-
+	static void UnloadDynamicLibraries();
+	
 	static char* GetLibName();
 };
 

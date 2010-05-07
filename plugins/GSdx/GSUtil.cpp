@@ -189,23 +189,125 @@ bool GSUtil::CheckSSE()
 	return true;
 }
 
+typedef IDirect3D9* (WINAPI * LPDIRECT3DCREATE9) (UINT);
+typedef HRESULT     (WINAPI * LPCREATEDXGIFACTORY)(REFIID, void ** );
+typedef HRESULT     (WINAPI * LPD3D11CREATEDEVICE)( IDXGIAdapter*, D3D10_DRIVER_TYPE, HMODULE, UINT, UINT32, ID3D10Device** );
+typedef HRESULT     (WINAPI * LPD3D11CREATESTATEBLOCK)( ID3D10Device *pDevice, D3D10_STATE_BLOCK_MASK *pStateBlockMask, ID3D10StateBlock **ppStateBlock );
+
+
+// ---------------------------------------------------------------------------------
+//  DX10/11 Detection (includes DXGI detection and dynamic library method bindings)
+// ---------------------------------------------------------------------------------
+//  Code 'Borrowed' from DXGI sources -- Modified to suit our needs. --air
+
+static IDXGIFactory*		m_DXGIFactory = NULL;
+static bool					m_D3D11Available = false;
+
+static HMODULE				s_hModD3D9 = NULL;
+static LPDIRECT3DCREATE9	s_DynamicDirect3DCreate9 = NULL;
+
+/*static LPD3DPERF_BEGINEVENT s_DynamicD3DPERF_BeginEvent = NULL;
+static LPD3DPERF_ENDEVENT s_DynamicD3DPERF_EndEvent = NULL;
+static LPD3DPERF_SETMARKER s_DynamicD3DPERF_SetMarker = NULL;
+static LPD3DPERF_SETREGION s_DynamicD3DPERF_SetRegion = NULL;
+static LPD3DPERF_QUERYREPEATFRAME s_DynamicD3DPERF_QueryRepeatFrame = NULL;
+static LPD3DPERF_SETOPTIONS s_DynamicD3DPERF_SetOptions = NULL;
+static LPD3DPERF_GETSTATUS s_DynamicD3DPERF_GetStatus = NULL;
+*/
+
+static HMODULE					s_hModD3D11 = NULL;
+static LPD3D11CREATESTATEBLOCK	s_DynamicD3D11CreateStateBlock = NULL;
+static LPD3D11CREATEDEVICE		s_DynamicD3D11CreateDevice = NULL;
+
+/*static LPD3D10STATEBLOCKMASKUNION s_DynamicD3D10StateBlockMaskUnion = NULL;
+static LPD3D10STATEBLOCKMASKINTERSECT s_DynamicD3D10StateBlockMaskIntersect = NULL;
+static LPD3D10STATEBLOCKMASKDIFFERENCE s_DynamicD3D10StateBlockMaskDifference = NULL;
+static LPD3D10STATEBLOCKMASKENABLECAPTURE s_DynamicD3D10StateBlockMaskEnableCapture = NULL;
+static LPD3D10STATEBLOCKMASKDISABLECAPTURE s_DynamicD3D10StateBlockMaskDisableCapture = NULL;
+static LPD3D10STATEBLOCKMASKENABLEALL s_DynamicD3D10StateBlockMaskEnableAll = NULL;
+static LPD3D10STATEBLOCKMASKDISABLEALL s_DynamicD3D10StateBlockMaskDisableAll = NULL;
+static LPD3D10STATEBLOCKMASKGETSETTING s_DynamicD3D10StateBlockMaskGetSetting = NULL;
+*/
+
+static HMODULE					s_hModDXGI = NULL;
+static LPCREATEDXGIFACTORY		s_DynamicCreateDXGIFactory = NULL;
+
+
+static bool DXUT_EnsureD3D11APIs( void )
+{
+	// If any module is non-NULL, this function has already been called.  Note
+	// that this doesn't guarantee that all ProcAddresses were found.
+	if( s_hModD3D11 != NULL || s_hModDXGI != NULL )
+		return true;
+
+	s_hModDXGI = LoadLibrary( _T("dxgi.dll") );
+	if( s_hModDXGI )
+	{
+		s_DynamicCreateDXGIFactory = (LPCREATEDXGIFACTORY)GetProcAddress( s_hModDXGI, "CreateDXGIFactory" );
+	}
+	
+	// If DXGI isn't installed then this system isn't even capable of DX10 support; so no point
+	// in checking for DX10 DLLs.
+	if( s_DynamicCreateDXGIFactory == NULL ) return false;
+
+
+	// Check for DX11 and DX10 DLLs.  DX11 is fully backward compat, so we can just use the single
+	// module handle for either of them.
+	
+	s_hModD3D11 = LoadLibrary( _T("d3d11.dll") );
+	if( s_hModD3D11 == NULL ) LoadLibrary( _T("d3d11_beta.dll") );
+	if( s_hModD3D11 == NULL ) LoadLibrary( _T("d3d11.dll") );
+	
+	if( s_hModD3D11 != NULL )
+	{
+		s_DynamicD3D11CreateStateBlock = (LPD3D11CREATESTATEBLOCK)GetProcAddress( s_hModD3D11, "D3D10CreateStateBlock" );
+		s_DynamicD3D11CreateDevice = (LPD3D11CREATEDEVICE)GetProcAddress( s_hModD3D11, "D3D10CreateDevice" );
+
+		/*s_DynamicD3D10StateBlockMaskUnion = (LPD3D10STATEBLOCKMASKUNION)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskUnion" );
+		s_DynamicD3D10StateBlockMaskIntersect = (LPD3D10STATEBLOCKMASKINTERSECT)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskIntersect" );
+		s_DynamicD3D10StateBlockMaskDifference = (LPD3D10STATEBLOCKMASKDIFFERENCE)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskDifference" );
+		s_DynamicD3D10StateBlockMaskEnableCapture = (LPD3D10STATEBLOCKMASKENABLECAPTURE)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskEnableCapture" );
+		s_DynamicD3D10StateBlockMaskDisableCapture = (LPD3D10STATEBLOCKMASKDISABLECAPTURE)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskDisableCapture" );
+		s_DynamicD3D10StateBlockMaskEnableAll = (LPD3D10STATEBLOCKMASKENABLEALL)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskEnableAll" );
+		s_DynamicD3D10StateBlockMaskDisableAll = (LPD3D10STATEBLOCKMASKDISABLEALL)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskDisableAll" );
+		s_DynamicD3D10StateBlockMaskGetSetting = (LPD3D10STATEBLOCKMASKGETSETTING)GetProcAddress( s_hModD3D10, "D3D10StateBlockMaskGetSetting" );*/
+	}
+
+	return ( s_DynamicD3D11CreateDevice != NULL );
+}
+
+
+static bool WINAPI DXUT_Dynamic_CreateDXGIFactory( REFIID rInterface, void ** ppOut )
+{
+	if( !DXUT_EnsureD3D11APIs() ) return false;
+
+	return s_DynamicCreateDXGIFactory( rInterface, ppOut ) == S_OK;
+}
+
+static bool DXUTDelayLoadDXGI()
+{
+	if( m_DXGIFactory == NULL )
+	{
+		DXUT_Dynamic_CreateDXGIFactory( __uuidof( IDXGIFactory ), (LPVOID*)&m_DXGIFactory );
+		m_D3D11Available = ( m_DXGIFactory != NULL );
+	}
+
+	return m_D3D11Available;
+}
+
 bool GSUtil::IsDirect3D11Available()
 {
-	if(HMODULE hModule = LoadLibrary(_T("d3d11.dll")))
-	{
-		FreeLibrary(hModule);
+	return DXUTDelayLoadDXGI();
+	//return m_D3D11Available;
+}
 
-		return true;
-	}
+void GSUtil::UnloadDynamicLibraries()
+{
+	if( s_hModD3D11 ) FreeLibrary(s_hModD3D11);
+	if( s_hModDXGI ) FreeLibrary(s_hModDXGI);
 
-	if(HMODULE hModule = LoadLibrary(_T("d3d11_beta.dll")))
-	{
-		FreeLibrary(hModule);
-
-		return true;
-	}
-
-	return false;
+	s_hModD3D11 = NULL;
+	s_hModDXGI = NULL;
 }
 
 char* GSUtil::GetLibName()
