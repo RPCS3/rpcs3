@@ -18,6 +18,7 @@
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
 					<Add library="../../../../deps/debug/libUtilities.a" />
 					<Add library="../../../../deps/debug/libx86emitter.a" />
+					<Add library="../../../../deps/debug/liba52.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -33,6 +34,7 @@
 					<Add library="../../../../deps/libsoundtouch.a" />
 					<Add library="../../../../deps/debug/libUtilities.a" />
 					<Add library="../../../../deps/debug/libx86emitter.a" />
+					<Add library="../../../../deps/debug/liba52.a" />
 				</Linker>
 			</Target>
 		</Build>
@@ -46,8 +48,6 @@
 			<Add option="-msse2" />
 			<Add directory="../Linux" />
 			<Add directory="../../src" />
-			<Add directory="../3rdparty" />
-			<Add directory="../3rdparty/liba52" />
 			<Add directory="../../../../common/include" />
 			<Add directory="../../../../3rdparty/SoundTouch" />
 			<Add directory="../../../../3rdparty" />
@@ -55,6 +55,7 @@
 			<Add directory="../../../../common/include/Utilities" />
 			<Add directory="../../../../common/src" />
 			<Add directory="../../../../common/src/Utilities" />
+			<Add directory="../../../../3rdparty/liba52" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />

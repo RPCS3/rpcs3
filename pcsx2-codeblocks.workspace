@@ -12,6 +12,7 @@
 		<Project filename="3rdparty/SoundTouch/SoundTouch.cbp" />
 		<Project filename="3rdparty/zlib/zlib.cbp" />
 		<Project filename="3rdparty/bzip2/bzip2.cbp" />
+		<Project filename="3rdparty/liba52/liba52.cbp" />
 		<Project filename="plugins/FWnull/Linux/FWnull.cbp" />
 		<Project filename="plugins/USBnull/Linux/USBnull.cbp" />
 		<Project filename="plugins/dev9null/Linux/Dev9null.cbp" />
@@ -26,6 +27,7 @@
 			<Depends filename="common/build/x86emitter/x86emitter.cbp" />
 			<Depends filename="common/build/Utilities/Utilities.cbp" />
 			<Depends filename="3rdparty/SoundTouch/SoundTouch.cbp" />
+			<Depends filename="3rdparty/liba52/liba52.cbp" />
 		</Project>
 		<Project filename="plugins/zerospu2/Linux/ZeroSPU2.cbp">
 			<Depends filename="3rdparty/SoundTouch/SoundTouch.cbp" />
