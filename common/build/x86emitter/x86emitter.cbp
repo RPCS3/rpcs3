@@ -63,6 +63,7 @@
 					<Add option="-ftree-pre" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-DPCSX2_DEVEL" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -109,6 +110,7 @@
 					<Add option="-falign-loops  -falign-labels" />
 					<Add option="-ftree-vrp" />
 					<Add option="-ftree-pre" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

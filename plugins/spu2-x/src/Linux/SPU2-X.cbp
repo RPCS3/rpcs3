@@ -27,6 +27,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/libsoundtouch.a" />

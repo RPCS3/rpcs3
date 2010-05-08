@@ -22,6 +22,7 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -41,10 +42,10 @@
 			<Add option="`pkg-config gtk+-2.0 --libs`" />
 			<Add option="-shared" />
 		</Linker>
-		<Unit filename="../FW.cpp" />
-		<Unit filename="../FW.h" />
 		<Unit filename="../Config.cpp" />
 		<Unit filename="../Config.h" />
+		<Unit filename="../FW.cpp" />
+		<Unit filename="../FW.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Extensions>
 			<code_completion />

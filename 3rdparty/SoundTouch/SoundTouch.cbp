@@ -18,22 +18,6 @@
 					<Add option="-O0" />
 				</Compiler>
 			</Target>
-			<Target title="Release">
-				<Option output="../../deps/libsoundtouch" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="" />
-				<Option object_output="./.objs/release" />
-				<Option type="2" />
-				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Compiler>
-					<Add option="-fexpensive-optimizations" />
-					<Add option="-O3" />
-					<Add option="-W" />
-				</Compiler>
-				<Linker>
-					<Add option="-s" />
-				</Linker>
-			</Target>
 			<Target title="Devel">
 				<Option output="../../deps/devel/libsoundtouch-dev" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
@@ -45,7 +29,25 @@
 					<Add option="-O1" />
 					<Add option="-W" />
 					<Add option="-g" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="../../deps/libsoundtouch" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="./.objs/release" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-fexpensive-optimizations" />
+					<Add option="-O3" />
+					<Add option="-W" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
 			</Target>
 		</Build>
 		<Compiler>

@@ -35,7 +35,7 @@
 
 //#include "PS2Edefs.h"
 
-static void __forceinline SysMessage(const char *fmt, ...);
+static void SysMessage(const char *fmt, ...);
 static void __forceinline PluginNullConfigure(std::string desc, s32 &log);
 static void __forceinline PluginNullAbout(const char *aboutText);
 
@@ -155,7 +155,7 @@ struct PluginConf
 
 #ifdef __LINUX__
 
-static void __forceinline SysMessage(const char *fmt, ...)
+static void SysMessage(const char *fmt, ...)
 {
     va_list list;
     char msg[512];

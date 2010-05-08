@@ -45,7 +45,7 @@ bool EffectsDisabled = false;
 int ReverbBoost = 0;
 
 // OUTPUT
-u32 OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
+u32 OutputModule = 0;
 int SndOutLatencyMS = 160;
 bool timeStretchEnabled = true;
 bool asyncMixingEnabled = false;

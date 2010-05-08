@@ -34,6 +34,7 @@
 					<Add option="-W" />
 					<Add option="-g" />
 					<Add option="-DZEROGS_DEVBUILD" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../../deps/release/libUtilities.a" />
@@ -50,6 +51,7 @@
 					<Add option="-O2" />
 					<Add option="-W" />
 					<Add option="-DRELEASE_TO_PUBLIC" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

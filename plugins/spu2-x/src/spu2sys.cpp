@@ -57,7 +57,7 @@ __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 	return (_spu2mem+addr);
 }
 
-__forceinline s16 __fastcall spu2M_Read( u32 addr )
+s16 __fastcall spu2M_Read( u32 addr )
 {
 	return *GetMemPtr( addr & 0xfffff );
 }
@@ -1428,7 +1428,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 };
 
 
-__forceinline void SPU2_FastWrite( u32 rmem, u16 value )
+void SPU2_FastWrite( u32 rmem, u16 value )
 {
 	tbl_reg_writes[(rmem&0x7ff)/2]( value );
 }

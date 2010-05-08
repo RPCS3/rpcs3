@@ -19,6 +19,19 @@
 					<Add option="-O0" />
 				</Compiler>
 			</Target>
+			<Target title="Devel">
+				<Option output="../../deps/devel/zlib" prefix_auto="0" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="./.objs/devel" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-W" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+			</Target>
 			<Target title="Release">
 				<Option output="../../deps/release/zlib" prefix_auto="0" extension_auto="1" />
 				<Option working_dir="" />
@@ -30,18 +43,7 @@
 					<Add option="-fexpensive-optimizations" />
 					<Add option="-O3" />
 					<Add option="-W" />
-				</Compiler>
-			</Target>
-			<Target title="Devel">
-				<Option output="../../deps/devel/zlib" prefix_auto="0" extension_auto="1" />
-				<Option working_dir="" />
-				<Option object_output="./.objs/devel" />
-				<Option type="2" />
-				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Compiler>
-					<Add option="-W" />
-					<Add option="-O2" />
+					<Add option="-DNDEBUG" />
 				</Compiler>
 			</Target>
 		</Build>

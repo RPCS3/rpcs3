@@ -30,6 +30,7 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-DNDEBUG" />
 					<Add directory="../Linux" />
 					<Add directory="../../opengl" />
 					<Add directory="../../../../common/include" />

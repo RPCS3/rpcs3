@@ -63,6 +63,7 @@
 					<Add option="-ftree-pre" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-DPCSX2_DEVEL" />
+					<Add option="-DNDEBUG" />
 					<Add directory="../../include" />
 					<Add directory="../../include/Utilities" />
 				</Compiler>
@@ -108,6 +109,7 @@
 					<Add option="-falign-loops  -falign-labels" />
 					<Add option="-ftree-vrp" />
 					<Add option="-ftree-pre" />
+					<Add option="-DNDEBUG" />
 					<Add directory="../../include" />
 					<Add directory="../../include/Utilities" />
 				</Compiler>
