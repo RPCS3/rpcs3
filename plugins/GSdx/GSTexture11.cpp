@@ -133,7 +133,7 @@ bool GSTexture11::Save(const string& fn, bool dds)
 		{
 			for(uint32 x = 0; x < desc.Width; x++)
 			{
-				((uint32*)d)[x] = (uint32)(((float*)s)[x*2] * UINT_MAX);
+				((uint32*)d)[x] = (uint32)(ldexpf(((float*)s)[x*2], 32));
 			}
 		}
 
