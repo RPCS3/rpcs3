@@ -107,14 +107,18 @@ void vif1TransferToMemory()
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
-	if(vif1.GSLastDownloadSize > vif1ch->qwc)
+	if(vif1.GSLastDownloadSize >= vif1ch->qwc)
 	{
 		vif1.GSLastDownloadSize -= vif1ch->qwc;
 		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
+		if (vif1.GSLastDownloadSize <= 16)
+			gifRegs->stat.OPH = false;
 	}
 	else
 	{
 		vif1Regs->stat.FQC = 0;
+		vif1.GSLastDownloadSize = 0;
+		gifRegs->stat.OPH = false;
 	}
 
 	vif1ch->qwc = 0;
@@ -377,7 +381,7 @@ void dmaVIF1()
 		vif1.dmamode = VIF_CHAIN_MODE;
 	}
 
-	vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
+	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 
 	// Chain Mode
 	vif1Interrupt();

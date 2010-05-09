@@ -65,23 +65,19 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 	if(vif1Regs->stat.FQC == 0) Console.Warning("FQC = 0 on VIF FIFO READ!");
 	if (vif1Regs->stat.FDR)
 	{
-			if(vif1Regs->stat.FQC > vif1.GSLastDownloadSize)
-			{
-				DevCon.Warning("Warning! GS Download size < FIFO count!");
-			}
-			if (vif1Regs->stat.FQC > 0)
-			{
-				GetMTGS().WaitGS();
-				GSreadFIFO(&psHu64(VIF1_FIFO));
-			}
-			if(vif1Regs->stat.FQC > 0)
-			{
-				--vif1.GSLastDownloadSize;
-				vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
-			}
-
-			if(vif1Regs->stat.FQC == 0) //We're out of data now so clear this..
+		if(vif1Regs->stat.FQC > vif1.GSLastDownloadSize)
+		{
+			DevCon.Warning("Warning! GS Download size < FIFO count!");
+		}
+		if (vif1Regs->stat.FQC > 0)
+		{
+			GetMTGS().WaitGS();
+			GSreadFIFO(&psHu64(VIF1_FIFO));
+			vif1.GSLastDownloadSize--;
+			if (vif1.GSLastDownloadSize <= 16)
 				gifRegs->stat.OPH = false;
+			vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
+		}
 	}
 
 	out[0] = psHu64(VIF1_FIFO);
