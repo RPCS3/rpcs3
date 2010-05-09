@@ -70,7 +70,9 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 				GSreadFIFO(&psHu64(VIF1_FIFO));
 			}
 			if(vif1Regs->stat.FQC > 0)--vif1Regs->stat.FQC;
-			else gifRegs->stat.OPH = false;
+
+			if(vif1Regs->stat.FQC == 0) //We're out of data now so clear this..
+				gifRegs->stat.OPH = false;
 	}
 
 	out[0] = psHu64(VIF1_FIFO);
