@@ -31,7 +31,7 @@ __forceinline void vif1FLUSH()
 
 void vif1TransferToMemory()
 {
-	int size;
+	u32 size;
 	u64* pMem = (u64*)dmaGetAddr(vif1ch->madr, false);
 
 	// VIF from gsMemory
@@ -53,38 +53,69 @@ void vif1TransferToMemory()
 	//Console.Warning("Real QWC %x", vif1ch->qwc);
     XMMRegisters::Freeze();
 
+	size = min((u32)vif1ch->qwc, vif1.GSLastDownloadSize);
+
 	if (GSreadFIFO2 == NULL)
 	{
-		for (size = vif1ch->qwc; size > 0; --size)
+		for (;size > 0; --size)
 		{
-			if (size > 1)
-			{
-				GetMTGS().WaitGS();
-				GSreadFIFO(&psHu64(VIF1_FIFO));
-			}
+			GetMTGS().WaitGS();
+			GSreadFIFO(&psHu64(VIF1_FIFO));
+
 			pMem[0] = psHu64(VIF1_FIFO);
 			pMem[1] = psHu64(VIF1_FIFO + 8);
 			pMem += 2;
+		}
+		if(vif1ch->qwc > vif1.GSLastDownloadSize)
+		{
+			DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
+			for (size = vif1ch->qwc - vif1.GSLastDownloadSize; size > 0; --size)
+			{
+				psHu64(VIF1_FIFO) = 0;
+				psHu64(VIF1_FIFO + 8) = 0;
+				pMem[0] = psHu64(VIF1_FIFO);
+				pMem[1] = psHu64(VIF1_FIFO + 8);
+				pMem += 2;
+			}
 		}
 	}
 	else
 	{
 		GetMTGS().WaitGS();
-		GSreadFIFO2(pMem, vif1ch->qwc);
+		GSreadFIFO2(pMem, size);
 
 		// set incase read
-		psHu64(VIF1_FIFO) = pMem[2*vif1ch->qwc-2];
-		psHu64(VIF1_FIFO + 8) = pMem[2*vif1ch->qwc-1];
+		psHu64(VIF1_FIFO) = pMem[2*size-2];
+		psHu64(VIF1_FIFO + 8) = pMem[2*size-1];
+		pMem += size * 2;
+		if(vif1ch->qwc > vif1.GSLastDownloadSize)
+		{
+			DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
+			for (size = vif1ch->qwc - vif1.GSLastDownloadSize; size > 0; --size)
+			{
+				psHu64(VIF1_FIFO) = 0;
+				psHu64(VIF1_FIFO + 8) = 0;
+				pMem[0] = psHu64(VIF1_FIFO);
+				pMem[1] = psHu64(VIF1_FIFO + 8);
+				pMem += 2;
+			}
+		}
 	}
+
 
     XMMRegisters::Thaw();
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes
 	if(vif1.GSLastDownloadSize > vif1ch->qwc)
-		vif1Regs->stat.FQC = vif1.GSLastDownloadSize - vif1ch->qwc;
+	{
+		vif1.GSLastDownloadSize -= vif1ch->qwc;
+		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
+	}
 	else
+	{
 		vif1Regs->stat.FQC = 0;
+	}
 
 	vif1ch->qwc = 0;
 }
@@ -213,7 +244,8 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 
-	vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+	//We need to check the direction, if it is downloading from the GS, we handle that seperately (KH2 for testing)
+	if (vif1ch->chcr.DIR)vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	//Simulated GS transfer time done, clear the flags
 	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
 	{

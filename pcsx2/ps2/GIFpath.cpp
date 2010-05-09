@@ -311,12 +311,12 @@ static __forceinline void gsHandler(const u8* pMem)
 				Console.Error("Illegal format for GS upload: SPSM=0%02o", vif1.BITBLTBUF.SPSM);
 			}
 
-			VIF_LOG("GS Download %dx%d SPSM= bpp=%d", vif1.TRXREG.RRW, vif1.TRXREG.RRH, vif1.BITBLTBUF.SPSM, bpp);
+			VIF_LOG("GS Download %dx%d SPSM=%x bpp=%d", vif1.BITBLTBUF.DBP, vif1.TRXREG.RRH, vif1.BITBLTBUF.SPSM, bpp);
 
 			// qwords, rounded down; any extra bits are lost
 			// games must take care to ensure transfer rectangles are exact multiples of a qword
 			vif1.GSLastDownloadSize = vif1.TRXREG.RRW * vif1.TRXREG.RRH * bpp >> 7;
-
+			VIF_LOG("GS Download size %x", vif1.GSLastDownloadSize);
 			gifRegs->stat.OPH = true;
 		}
 	}
