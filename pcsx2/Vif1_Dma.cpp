@@ -111,14 +111,11 @@ void vif1TransferToMemory()
 	{
 		vif1.GSLastDownloadSize -= vif1ch->qwc;
 		vif1Regs->stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
-		if (vif1.GSLastDownloadSize <= 16)
-			gifRegs->stat.OPH = false;
 	}
 	else
 	{
 		vif1Regs->stat.FQC = 0;
 		vif1.GSLastDownloadSize = 0;
-		gifRegs->stat.OPH = false;
 	}
 
 	vif1ch->qwc = 0;
@@ -334,7 +331,7 @@ __forceinline void vif1Interrupt()
 #endif
 
 	vif1Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
-	if((vif1ch->chcr.DIR == VIF_NORMAL_TO_MEM_MODE) && (vif1Regs->stat.FQC == 0)) 
+	if((vif1ch->chcr.DIR == VIF_NORMAL_TO_MEM_MODE) && vif1.GSLastDownloadSize <= 16) 
 	{   //Reverse fifo has finished and nothing is left, so lets clear the outputting flag
 		gifRegs->stat.OPH = false;
 	}
