@@ -213,7 +213,7 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 
-	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+	vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	//Simulated GS transfer time done, clear the flags
 	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
 	{
@@ -298,7 +298,10 @@ __forceinline void vif1Interrupt()
 #endif
 
 	vif1Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
-	if(gifRegs->stat.OPH == true && vif1Regs->stat.FQC == 0) gifRegs->stat.OPH = false;
+	if((vif1ch->chcr.DIR == VIF_NORMAL_TO_MEM_MODE) && (vif1Regs->stat.FQC == 0)) 
+	{   //Reverse fifo has finished and nothing is left, so lets clear the outputting flag
+		gifRegs->stat.OPH = false;
+	}
 	vif1ch->chcr.STR = false;
 	g_vifCycles = 0;
 	VIF_LOG("VIF1 End");
