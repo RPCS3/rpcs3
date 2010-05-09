@@ -58,7 +58,7 @@ __forceinline void gsInterrupt()
 
 	if (GSTransferStatus.PTH3 == STOPPED_MODE)
 	{
-	    gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH);
+	    gifRegs->stat.clear_flags(GIF_STAT_APATH3);
 	}
 
 	if ((gif->qwc > 0) || (!gspath3done))
@@ -80,7 +80,7 @@ __forceinline void gsInterrupt()
 	gif->chcr.STR = false;
 	vif1Regs->stat.VGW = false;
 	if(GSTransferStatus.PTH3 == 3) GSTransferStatus.PTH3 = STOPPED_MODE;
-	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_FQC);
+	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_FQC);
 
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
@@ -538,7 +538,6 @@ void gifMFIFOInterrupt()
 	if (GSTransferStatus.PTH3 == STOPPED_MODE)
 	{
 	     gifRegs->stat.APATH = GIF_APATH_IDLE;
-	     gifRegs->stat.OPH = false;
 	}
 
 	if ((spr0->chcr.STR) && (spr0->qwc == 0))
@@ -590,7 +589,7 @@ void gifMFIFOInterrupt()
 	gspath3done = false;
 	gscycles = 0;
 
-	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
+	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 
 	vif1Regs->stat.VGW = false;
 	gif->chcr.STR = false;

@@ -298,6 +298,7 @@ __forceinline void vif1Interrupt()
 #endif
 
 	vif1Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
+	if(gifRegs->stat.OPH == true && vif1Regs->stat.FQC == 0) gifRegs->stat.OPH = false;
 	vif1ch->chcr.STR = false;
 	g_vifCycles = 0;
 	VIF_LOG("VIF1 End");

@@ -17,6 +17,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
+#include "Gif.h"
 #include "GS.h"
 #include "Vif.h"
 #include "IPU/IPU.h"
@@ -69,6 +70,7 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 				GSreadFIFO(&psHu64(VIF1_FIFO));
 			}
 			if(vif1Regs->stat.FQC > 0)--vif1Regs->stat.FQC;
+			else gifRegs->stat.OPH = false;
 	}
 
 	out[0] = psHu64(VIF1_FIFO);

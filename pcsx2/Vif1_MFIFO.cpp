@@ -224,6 +224,11 @@ void vifMFIFOInterrupt()
 
 	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
+	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
+	{
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+	}
+
 	if ((vif1Regs->stat.VGW))
 	{
 		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE)
