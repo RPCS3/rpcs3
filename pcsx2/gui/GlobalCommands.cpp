@@ -149,8 +149,9 @@ namespace Implementations
 
 	void Sys_RenderToggle()
 	{
-		SaveSinglePluginHelper helper( PluginId_GS );
+		ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(PluginId_GS) );
 		renderswitch = !renderswitch;
+		paused_core.AllowResume();
 	}
 
 	void Sys_LoggingToggle()

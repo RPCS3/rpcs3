@@ -41,6 +41,30 @@ void BaseDeletableObject::DoDeletion()
 //  SynchronousActionState Implementations
 // --------------------------------------------------------------------------------------
 
+void SynchronousActionState::SetException( const BaseException& ex )
+{
+	m_exception = ex.Clone();
+}
+
+void SynchronousActionState::SetException( BaseException* ex )
+{
+	if( !m_posted )
+	{
+		m_exception = ex;
+	}
+	else if( wxTheApp )
+	{
+		// transport the exception to the main thread, since the message is fully
+		// asynchronous, or has already entered an asynchronous state.  Message is sent
+		// as a non-blocking action since proper handling of user errors on async messages
+		// is *usually* to log/ignore it (hah), or to suspend emulation and issue a dialog
+		// box to the user.
+
+		pxExceptionEvent ev( ex );
+		wxTheApp->AddPendingEvent( ev );
+	}
+}
+
 void SynchronousActionState::RethrowException() const
 {
 	if( m_exception ) m_exception->Rethrow();
@@ -67,7 +91,8 @@ void SynchronousActionState::PostResult( int res )
 
 void SynchronousActionState::ClearResult()
 {
-	m_posted = false;
+	m_posted	= false;
+	m_exception	= NULL;
 }
 
 void SynchronousActionState::PostResult()

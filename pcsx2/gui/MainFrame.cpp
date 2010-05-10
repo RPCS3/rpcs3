@@ -524,62 +524,80 @@ void MainEmuFrame::ApplyCoreStatus()
 {
 	wxMenuBar& menubar( *GetMenuBar() );
 
-	wxMenuItem& susres	(*menubar.FindItem( MenuId_Sys_SuspendResume ));
-	wxMenuItem& cdvd	(*menubar.FindItem( MenuId_Boot_CDVD ));
-	wxMenuItem& cdvd2	(*menubar.FindItem( MenuId_Boot_CDVD2 ));
-
-	if( !pxAssertMsg( (&susres) && (&cdvd) && (&cdvd2), "Unexpected NULL Menubar Item!" ) ) return;
-
+	wxMenuItem* susres	= menubar.FindItem( MenuId_Sys_SuspendResume );
+	wxMenuItem* cdvd	= menubar.FindItem( MenuId_Boot_CDVD );
+	wxMenuItem* cdvd2	= menubar.FindItem( MenuId_Boot_CDVD2 );
 	wxMenuItem* restart	= menubar.FindItem( MenuId_Sys_Restart );
 
-	if( SysHasValidState() )
+	// [TODO] : Ideally each of these items would bind a listener instance to the AppCoreThread
+	// dispatcher, and modify their states accordingly.  This is just a hack (for now) -- air
+
+	bool vm = SysHasValidState();
+
+	if( susres )
 	{
-		susres.Enable();
 		if( CoreThread.IsOpen() )
 		{
-			susres.SetText(_("Suspend"));
-			susres.SetHelp(_("Safely pauses emulation and preserves the PS2 state."));
+			susres->Enable();
+			susres->SetText(_("Suspend"));
+			susres->SetHelp(_("Safely pauses emulation and preserves the PS2 state."));
 		}
 		else
 		{
-			susres.SetText(_("Resume"));
-			susres.SetHelp(_("Resumes the suspended emulation state."));
+			susres->Enable(vm);
+			if( vm )
+			{
+				susres->SetText(_("Resume"));
+				susres->SetHelp(_("Resumes the suspended emulation state."));
+			}
+			else
+			{
+				susres->SetText(_("Suspend/Resume"));
+				susres->SetHelp(_("No emulation state is active; cannot suspend or resume."));
+			}
 		}
+	}
 
-		if( restart )
+	if( restart )
+	{
+		if( vm )	
 		{
 			restart->SetText(_("Restart"));
 			restart->SetHelp(_("Simulates hardware reset of the PS2 virtual machine."));
 		}
-		
-		cdvd.SetText(_("Reboot CDVD (full)"));
-		cdvd.SetHelp(_("Hard reset of the active VM."));
-
-		cdvd2.SetText(_("Reboot CDVD (fast)"));
-		cdvd2.SetHelp(_("Reboot using BOOT2 injection (skips splash screens)"));
-
-	}
-	else
-	{
-		susres.Enable( false );
-		susres.SetText(_("Suspend/Resume"));
-		susres.SetHelp( _("No emulation state is active; cannot suspend or resume.") );
-
-		if( restart )
+		else
 		{
 			restart->Enable( false );
-			restart->SetHelp( _("No emulation state is active; boot something first.") );
+			restart->SetHelp(_("No emulation state is active; boot something first."));
 		}
+	}
 
-		cdvd.SetText(_("Boot CDVD (full)"));
-		cdvd.SetHelp(_("Boot the VM using the current DVD or Iso source media"));
+	if( cdvd )
+	{
+		if( vm )
+		{
+			cdvd->SetText(_("Reboot CDVD (full)"));
+			cdvd->SetHelp(_("Hard reset of the active VM."));
+		}
+		else
+		{
+			cdvd->SetText(_("Boot CDVD (full)"));
+			cdvd->SetHelp(_("Boot the VM using the current DVD or Iso source media"));
+		}	
+	}
 
-		cdvd2.SetText(_("Boot CDVD (fast)"));
-		cdvd2.SetHelp(_("Use BOOT2 injection to skip PS2 startup and splash screens"));
-
-		// Old style... 
-		//restart.SetHelp(_("Starts execution of the PS2 virtual machine."));
-		//restart.SetText(_("Start"));
+	if( cdvd2 )
+	{
+		if( vm )
+		{
+			cdvd2->SetText(_("Reboot CDVD (fast)"));
+			cdvd2->SetHelp(_("Reboot using BOOT2 injection (skips splash screens)"));
+		}
+		else
+		{
+			cdvd2->SetText(_("Boot CDVD (fast)"));
+			cdvd2->SetHelp(_("Use BOOT2 injection to skip PS2 startup and splash screens"));
+		}
 	}
 
 	menubar.Enable( MenuId_Sys_Shutdown, SysHasValidState() || CorePlugins.AreAnyInitialized() );

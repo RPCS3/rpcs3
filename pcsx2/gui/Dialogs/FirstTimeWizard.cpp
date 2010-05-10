@@ -184,7 +184,7 @@ FirstTimeWizard::~FirstTimeWizard() throw()
 static void _OpenConsole()
 {
 	g_Conf->ProgLogBox.Visible = true;
-	wxGetApp().OpenConsoleLog();
+	wxGetApp().OpenProgramLog();
 }
 
 int FirstTimeWizard::ShowModal()

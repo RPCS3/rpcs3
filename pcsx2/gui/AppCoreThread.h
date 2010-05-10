@@ -18,12 +18,100 @@
 #include "System/SysThreads.h"
 #include "AppCommon.h"
 #include "AppCorePlugins.h"
+#include "SaveState.h"
 
 #define AffinityAssert_AllowFrom_CoreThread() \
 	pxAssertMsg( GetCoreThread().IsSelf(), "Thread affinity violation: Call allowed from SysCoreThread only." )
 
 #define AffinityAssert_DisallowFrom_CoreThread() \
 	pxAssertMsg( !GetCoreThread().IsSelf(), "Thread affinity violation: Call is *not* allowed from SysCoreThread." )
+
+class IScopedCoreThread;
+class BaseScopedCoreThread;
+
+enum ScopedCoreResumeType
+{
+	ScopedCore_BlockingResume
+,	ScopedCore_NonblockingResume
+,	ScopedCore_SkipResume
+};
+
+
+// --------------------------------------------------------------------------------------
+//  BaseSysExecEvent_ScopedCore
+// --------------------------------------------------------------------------------------
+class BaseSysExecEvent_ScopedCore : public SysExecEvent
+{
+protected:
+	SynchronousActionState*		m_resume;
+	Threading::Mutex*			m_mtx_resume;
+
+public:
+	virtual ~BaseSysExecEvent_ScopedCore() throw() {}
+
+	BaseSysExecEvent_ScopedCore& SetResumeStates( SynchronousActionState* sync, Threading::Mutex* mutex )
+	{
+		m_resume = sync;
+		m_mtx_resume = mutex;
+		return *this;
+	}
+
+	BaseSysExecEvent_ScopedCore& SetResumeStates( SynchronousActionState& sync, Threading::Mutex& mutex )
+	{
+		m_resume = &sync;
+		m_mtx_resume = &mutex;
+		return *this;
+	}
+
+protected:
+	BaseSysExecEvent_ScopedCore( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: SysExecEvent( sync )
+	{
+		m_resume		= resume_sync;
+		m_mtx_resume	= mtx_resume;
+	}
+	
+	void _post_and_wait( IScopedCoreThread& core );
+
+	virtual void DoScopedTask() {}
+};
+
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_CoreThreadClose
+// --------------------------------------------------------------------------------------
+class SysExecEvent_CoreThreadClose : public BaseSysExecEvent_ScopedCore
+{
+public:
+	wxString GetEventName() const { return L"CloseCoreThread"; }
+
+	virtual ~SysExecEvent_CoreThreadClose() throw() {}
+	SysExecEvent_CoreThreadClose* Clone() const { return new SysExecEvent_CoreThreadClose( *this ); }
+	
+	SysExecEvent_CoreThreadClose( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
+
+protected:
+	void InvokeEvent();
+};
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_CoreThreadPause
+// --------------------------------------------------------------------------------------
+class SysExecEvent_CoreThreadPause : public BaseSysExecEvent_ScopedCore
+{
+public:
+	wxString GetEventName() const { return L"PauseCoreThread"; }
+
+	virtual ~SysExecEvent_CoreThreadPause() throw() {}
+	SysExecEvent_CoreThreadPause* Clone() const { return new SysExecEvent_CoreThreadPause( *this ); }
+	
+	SysExecEvent_CoreThreadPause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
+		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
+
+protected:
+	void InvokeEvent();
+};
 
 // --------------------------------------------------------------------------------------
 //  AppCoreThread class
@@ -41,8 +129,10 @@ public:
 	virtual void Shutdown();
 	virtual void Cancel( bool isBlocking=true );
 	virtual void StateCheckInThread();
-	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void ChangeCdvdSource();
+
+	virtual void ApplySettings( const Pcsx2Config& src );
+	virtual void UploadStateCopy( const VmStateBuffer& copy );
 
 protected:
 	virtual void OnResumeReady();
@@ -52,10 +142,11 @@ protected:
 	virtual void PostVsyncToUI();
 	virtual void ExecuteTaskInThread();
 	virtual void DoCpuReset();
-	virtual void CpuInitializeMess();
-
 };
 
+// --------------------------------------------------------------------------------------
+//  IScopedCoreThread / BaseScopedCoreThread
+// --------------------------------------------------------------------------------------
 class IScopedCoreThread
 {
 protected:
@@ -66,7 +157,6 @@ public:
 	virtual void AllowResume()=0;
 	virtual void DisallowResume()=0;
 };
-
 
 class BaseScopedCoreThread : public IScopedCoreThread
 {
@@ -86,8 +176,11 @@ public:
 	virtual ~BaseScopedCoreThread() throw()=0;
 	virtual void AllowResume();
 	virtual void DisallowResume();
-	
+
+	virtual bool PostToSysExec( BaseSysExecEvent_ScopedCore* msg );
+
 protected:
+	// Called from destructors -- do not make virtual!!
 	void DoResume();
 };
 
@@ -116,16 +209,16 @@ class ScopedCoreThreadClose : public BaseScopedCoreThread
 public:
 	ScopedCoreThreadClose();
 	virtual ~ScopedCoreThreadClose() throw();
-	
+
 	void LoadPlugins();
 };
 
-struct ScopedCoreThreadPause  : public BaseScopedCoreThread
+struct ScopedCoreThreadPause : public BaseScopedCoreThread
 {
 	typedef BaseScopedCoreThread _parent;
 
 public:
-	ScopedCoreThreadPause();
+	ScopedCoreThreadPause( BaseSysExecEvent_ScopedCore* abuse_me=NULL );
 	virtual ~ScopedCoreThreadPause() throw();
 };
 

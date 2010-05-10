@@ -22,7 +22,7 @@
 #include "ZipTools/ThreadedZipTools.h"
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
-static VmStateBuffer state_buffer( L"Public Savestate Buffer" );
+//static VmStateBuffer state_buffer( L"Public Savestate Buffer" );
 
 static const char SavestateIdentString[] = "PCSX2 Savestate";
 static const uint SavestateIdentLen = sizeof(SavestateIdentString);
@@ -120,7 +120,7 @@ public:
 
 	virtual ~SysExecEvent_DownloadState() throw() {}
 	SysExecEvent_DownloadState* Clone() const { return new SysExecEvent_DownloadState( *this ); }
-	SysExecEvent_DownloadState( VmStateBuffer* dest=&state_buffer )
+	SysExecEvent_DownloadState( VmStateBuffer* dest=NULL )
 	{
 		m_dest_buffer = dest;
 	}
@@ -238,9 +238,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  SysExecEvent_UnzipFromDisk
 // --------------------------------------------------------------------------------------
-// Note: Unzipping always goes directly into the state_buffer, and is always a blocking
-// action on the SysExecutor thread (the system cannot execute other commands while states
-// are unzipping or uplading into the system).
+// Note: Unzipping always goes directly into the SysCoreThread's static VM state, and is
+// always a blocking action on the SysExecutor thread (the system cannot execute other
+// commands while states are unzipping or uploading into the system).
 //
 class SysExecEvent_UnzipFromDisk : public SysExecEvent
 {
@@ -263,7 +263,6 @@ protected:
 	void InvokeEvent()
 	{
 		ScopedLock lock( mtx_CompressToDisk );
-
 		gzipReader m_gzreader(m_filename );
 		SaveStateFile_ReadHeader( m_gzreader );
 
@@ -275,13 +274,14 @@ protected:
 		// fixme: should start initially with the file size, and then grow from there.
 
 		static const int BlockSize = 0x100000;
-		state_buffer.MakeRoomFor( 0x800000 );		// start with an 8 meg buffer to avoid frequent reallocation.
+
+		VmStateBuffer buffer( 0x800000, L"StateBuffer_UnzipFromDisk" );		// start with an 8 meg buffer to avoid frequent reallocation.
 		int curidx = 0;
 
 		try {
 			while(true) {
-				state_buffer.MakeRoomFor( curidx+BlockSize );
-				m_gzreader.Read( state_buffer.GetPtr(curidx), BlockSize );
+				buffer.MakeRoomFor( curidx+BlockSize );
+				m_gzreader.Read( buffer.GetPtr(curidx), BlockSize );
 				curidx += BlockSize;
 				Threading::pxTestCancel();
 			}
@@ -295,9 +295,10 @@ protected:
 		// Optional shutdown of plugins when loading states?  I'm not implementing it yet because some
 		// things, like the SPU2-recovery trick, rely on not resetting the plugins prior to loading
 		// the new savestate data.
-		
 		//if( ShutdownOnStateLoad ) GetCoreThread().Cancel();
-		GetCoreThread().RecoverState();
+
+
+		GetCoreThread().UploadStateCopy( buffer );
 		GetCoreThread().Resume();	// force resume regardless of emulation state earlier.
 	}
 };
@@ -305,21 +306,6 @@ protected:
 // =====================================================================================================
 //  StateCopy Public Interface
 // =====================================================================================================
-
-VmStateBuffer& StateCopy_GetBuffer()
-{
-	return state_buffer;
-}
-
-bool StateCopy_IsValid()
-{
-	return !state_buffer.IsDisposed();
-}
-
-void StateCopy_FreezeToMem()
-{
-	GetSysExecutorThread().PostEvent( new SysExecEvent_DownloadState() );
-}
 
 void StateCopy_SaveToFile( const wxString& file )
 {
@@ -365,9 +351,3 @@ void StateCopy_LoadFromSlot( uint slot )
 
 	StateCopy_LoadFromFile( file );
 }
-
-void StateCopy_Clear()
-{
-	state_buffer.Dispose();
-}
-

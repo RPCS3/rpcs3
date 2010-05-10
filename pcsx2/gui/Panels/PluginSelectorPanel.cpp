@@ -251,6 +251,8 @@ void SysExecEvent_ApplyPlugins::InvokeEvent()
 {
 	ScopedCoreThreadPause paused_core;
 
+	ScopedPtr< VmStateBuffer > buffer;
+	
 	if( SysHasValidState() )
 	{
 		paused_core.AllowResume();
@@ -261,7 +263,7 @@ void SysExecEvent_ApplyPlugins::InvokeEvent()
 		// FIXME : We only actually have to save plugins here, except the recovery code
 		// in SysCoreThread isn't quite set up yet to handle that (I think...) --air
 
-		memSavingState( StateCopy_GetBuffer() ).FreezeAll();
+		memSavingState( *(buffer.Reassign(new VmStateBuffer(L"StateBuffer_ApplyNewPlugins"))) ).FreezeAll();
 	}
 
 	ScopedCoreThreadClose closed_core;
@@ -269,7 +271,8 @@ void SysExecEvent_ApplyPlugins::InvokeEvent()
 	CorePlugins.Shutdown();
 	CorePlugins.Unload();
 	LoadPluginsImmediate();
-	CoreThread.RecoverState();
+	
+	if( buffer ) CoreThread.UploadStateCopy( *buffer );
 
 	PostFinishToDialog();
 
@@ -639,7 +642,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	if( ConfigureFnptr configfunc = (ConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
 		wxWindowDisabler disabler;
-		SaveSinglePluginHelper helper( pid );
+		ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(pid) );
 		configfunc();
 	}
 }

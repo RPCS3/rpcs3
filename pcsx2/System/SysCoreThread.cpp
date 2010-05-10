@@ -31,8 +31,6 @@
 
 #include <xmmintrin.h>
 
-static DeclareTls(SysCoreThread*) tls_coreThread( NULL );
-
 // --------------------------------------------------------------------------------------
 //  SysCoreThread *External Thread* Implementations
 //    (Called from outside the context of this thread)
@@ -45,7 +43,8 @@ SysCoreThread::SysCoreThread()
 	m_resetProfilers		= true;
 	m_resetVsyncTimers		= true;
 	m_resetVirtualMachine	= true;
-	m_hasValidState			= false;
+
+	m_hasActiveMachine		= false;
 }
 
 SysCoreThread::~SysCoreThread() throw()
@@ -55,13 +54,13 @@ SysCoreThread::~SysCoreThread() throw()
 
 void SysCoreThread::Cancel( bool isBlocking )
 {
-	m_CoreCancelDamnit = true;
+	m_hasActiveMachine = false;
 	_parent::Cancel();
 }
 
 bool SysCoreThread::Cancel( const wxTimeSpan& span )
 {
-	m_CoreCancelDamnit = true;
+	m_hasActiveMachine = false;
 	if( _parent::Cancel( span ) )
 		return true;
 
@@ -70,7 +69,6 @@ bool SysCoreThread::Cancel( const wxTimeSpan& span )
 
 void SysCoreThread::OnStart()
 {
-	m_CoreCancelDamnit = false;
 	_parent::OnStart();
 }
 
@@ -93,26 +91,10 @@ void SysCoreThread::Start()
 void SysCoreThread::OnResumeReady()
 {
 	if( m_resetVirtualMachine )
-		m_hasValidState = false;
+		m_hasActiveMachine = false;
 
-	if( !m_hasValidState )
+	if( !m_hasActiveMachine )
 		m_resetRecompilers = true;
-}
-
-// Tells the thread to recover from the in-memory state copy when it resumes.  (thread must be
-// resumed manually).
-void SysCoreThread::RecoverState()
-{
-	pxAssumeDev( IsPaused(), "Unsafe use of RecoverState function; Corethread is not paused/closed." );
-	m_resetRecompilers		= true;
-	m_hasValidState			= false;
-}
-
-void SysCoreThread::Reset()
-{
-	Suspend();
-	m_resetVirtualMachine	= true;
-	m_hasValidState			= false;
 }
 
 // This function *will* reset the emulator in order to allow the specified elf file to
@@ -120,10 +102,16 @@ void SysCoreThread::Reset()
 // the context of a reset/restart.
 void SysCoreThread::SetElfOverride( const wxString& elf )
 {
-	pxAssertDev( !m_hasValidState, "Thread synchronization error while assigning ELF override." );
+	//pxAssertDev( !m_hasValidMachine, "Thread synchronization error while assigning ELF override." );
 	m_elf_override = elf;
 }
 
+void SysCoreThread::Reset()
+{
+	Suspend();
+	m_resetVirtualMachine	= true;
+	m_hasActiveMachine		= false;
+}
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
@@ -143,39 +131,23 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
 }
 
+void SysCoreThread::UploadStateCopy( const VmStateBuffer& copy )
+{
+	if( !pxAssertDev( IsPaused(), "CoreThread is not paused; new VM state cannot be uploaded." ) ) return;
+
+	SysClearExecutionCache();
+	memLoadingState( copy ).FreezeAll();
+	m_resetVirtualMachine = false;
+}
+
 // --------------------------------------------------------------------------------------
 //  SysCoreThread *Worker* Implementations
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
-SysCoreThread& SysCoreThread::Get()
-{
-	pxAssertMsg( tls_coreThread != NULL, L"This function must be called from the context of a running SysCoreThread." );
-	return *tls_coreThread;
-}
-
 bool SysCoreThread::HasPendingStateChangeRequest() const
 {
-	return m_CoreCancelDamnit || GetMTGS().HasPendingException() || _parent::HasPendingStateChangeRequest();
+	return !m_hasActiveMachine || GetMTGS().HasPendingException() || _parent::HasPendingStateChangeRequest();
 }
-
-struct ScopedBool_ClearOnError
-{
-	bool&	m_target;
-	bool	m_success;
-
-	ScopedBool_ClearOnError( bool& target ) :
-		m_target( target ), m_success( false )
-	{
-		m_target = true;
-	}
-
-	virtual ~ScopedBool_ClearOnError()
-	{
-		m_target = m_success;
-	}
-
-	void Success() { m_success = true; }
-};
 
 void SysCoreThread::_reset_stuff_as_needed()
 {
@@ -198,7 +170,7 @@ void SysCoreThread::_reset_stuff_as_needed()
 	{
 		UpdateVSyncRate();
 		frameLimitReset();
-		m_resetVsyncTimers = false;
+		m_resetVsyncTimers		= false;
 	}
 
 	SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
@@ -208,17 +180,6 @@ void SysCoreThread::DoCpuReset()
 {
 	AffinityAssert_AllowFromSelf( pxDiagSpot );
 	cpuReset();
-}
-
-void SysCoreThread::CpuInitializeMess()
-{
-	if( m_hasValidState ) return;
-
-	_reset_stuff_as_needed();
-
-	ScopedBool_ClearOnError sbcoe( m_hasValidState );
-
-	sbcoe.Success();
 }
 
 void SysCoreThread::PostVsyncToUI()
@@ -245,32 +206,30 @@ void SysCoreThread::StateCheckInThread()
 	GetMTGS().RethrowException();
 	_parent::StateCheckInThread();
 
-	if( !m_hasValidState )
-		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
-
 	_reset_stuff_as_needed();		// kinda redundant but could catch unexpected threaded state changes...
 }
 
-// Allows an override point and solves an SEH "exception-type boundary" problem (can't mix
-// SEH and C++ exceptions in the same function).
+// Runs CPU cycles indefinitely, until the user or another thread requests execution to break.
+// Rationale: This very short function allows an override point and solves an SEH
+// "exception-type boundary" problem (can't mix SEH and C++ exceptions in the same function).
 void SysCoreThread::DoCpuExecute()
 {
+	m_hasActiveMachine = true;
 	Cpu->Execute();
 }
 
 void SysCoreThread::ExecuteTaskInThread()
 {
 	Threading::EnableHiresScheduler();
-	tls_coreThread = this;
 	m_sem_event.WaitWithoutYield();
 
 	m_mxcsr_saved.bitmask = _mm_getcsr();
 
 	PCSX2_PAGEFAULT_PROTECT {
-		do {
+		while(true) {
 			StateCheckInThread();
 			DoCpuExecute();
-		} while( true );
+		}
 	} PCSX2_PAGEFAULT_EXCEPT;
 }
 
@@ -282,23 +241,19 @@ void SysCoreThread::OnSuspendInThread()
 void SysCoreThread::OnResumeInThread( bool isSuspended )
 {
 	GetCorePlugins().Open();
-
-	CpuInitializeMess();
 }
 
 
 // Invoked by the pthread_exit or pthread_cancel.
 void SysCoreThread::OnCleanupInThread()
 {
-	m_hasValidState = false;
-
-	_mm_setcsr( m_mxcsr_saved.bitmask );
-
-	Threading::DisableHiresScheduler();
+	m_hasActiveMachine = false;
 
 	GetCorePlugins().Close();
+	GetCorePlugins().Shutdown();
 
-	tls_coreThread = NULL;
+	_mm_setcsr( m_mxcsr_saved.bitmask );
+	Threading::DisableHiresScheduler();
 	_parent::OnCleanupInThread();
 }
 

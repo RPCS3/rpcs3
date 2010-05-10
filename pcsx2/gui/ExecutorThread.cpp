@@ -37,7 +37,7 @@ void SysExecEvent::InvokeEvent()
 
 // This is called by _DoInvokeEvent *always* -- even when exceptions occur during InvokeEvent(),
 // making this function a bit like a C# 'finally' block (try/catch/finally -- a nice feature lacking
-// from C++ prior to the new C++0x10 standard).
+// from C++ prior to the new C++0x standard).
 //
 // This function calls PostResult by default, and should be invoked by derived classes overriding
 // CleanupEvent(), unless you want to change the PostResult behavior.
@@ -53,8 +53,7 @@ void SysExecEvent::SetException( BaseException* ex )
 {
 	if( !ex ) return;
 
-	const wxString& prefix( wxsFormat(L"(%s) ", GetEventName().c_str()) );
-	ex->DiagMsg() = prefix + ex->DiagMsg();
+	ex->DiagMsg() += wxsFormat(L"(%s) ", GetEventName().c_str());
 	//ex->UserMsg() = prefix + ex->UserMsg();
 
 	if( m_sync )
@@ -66,9 +65,10 @@ void SysExecEvent::SetException( BaseException* ex )
 	else
 	{
 		// transport the exception to the main thread, since the message is fully
-		// asynchronous.  Message is sent as a non-blocking action since proper handling
-		// of user errors on async messages is *usually* to log/ignore it (hah), or to
-		// suspend emulation and issue a dialog box to the user.
+		// asynchronous, or has already entered an asynchronous state.  Message is sent
+		// as a non-blocking action since proper handling of user errors on async messages
+		// is *usually* to log/ignore it (hah), or to suspend emulation and issue a dialog
+		// box to the user.
 
 		wxGetApp().PostEvent( pxExceptionEvent( ex ) );
 	}
@@ -85,8 +85,8 @@ void SysExecEvent::SetException( const BaseException& ex )
 // instead, which is the intended method of implementing derived class invocation.
 void SysExecEvent::_DoInvokeEvent()
 {
-	//pxAssumeDev( !IsBeingDeleted(), "Attempted to process a deleted SysExecutor event." );
 	AffinityAssert_AllowFrom_SysExecutor();
+
 	try {
 		InvokeEvent();
 	}
@@ -99,7 +99,18 @@ void SysExecEvent::_DoInvokeEvent()
 		SetException( new Exception::RuntimeError(ex) );
 	}
 
-	CleanupEvent();
+	// Cleanup Execution -- performed regardless of exception or not above.
+	try {
+		CleanupEvent();
+	}
+	catch( BaseException& ex )
+	{
+		SetException( ex );
+	}
+	catch( std::runtime_error& ex )
+	{
+		SetException( new Exception::RuntimeError(ex) );
+	}
 }
 
 // Posts an empty result to the invoking context/thread of this message, if one exists.
@@ -399,8 +410,11 @@ ExecutorThread::ExecutorThread( pxEvtHandler* evthandler )
 // Exposes the internal pxEvtHandler::ShutdownQueue API.  See pxEvtHandler for details.
 void ExecutorThread::ShutdownQueue()
 {
-	if( !m_EvtHandler || m_EvtHandler->IsShuttingDown() ) return;
-	m_EvtHandler->ShutdownQueue();
+	if( !m_EvtHandler ) return;
+	
+	if( !m_EvtHandler->IsShuttingDown() )
+		m_EvtHandler->ShutdownQueue();
+
 	Block();
 }
 

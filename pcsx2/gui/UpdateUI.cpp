@@ -17,6 +17,12 @@
 #include "MainFrame.h"
 #include "GSFrame.h"
 
+// General Notes:
+//  * It's very important that we re-discover menu items by ID every time we change them,
+//    because the modern era of configurable GUIs means that we can't be assured the IDs
+//    exist anymore.
+
+
 // This is necessary because this stupid wxWidgets thing has implicit debug errors
 // in the FindItem call that asserts if the menu options are missing.  This is bad
 // mojo for configurable/dynamic menus. >_<

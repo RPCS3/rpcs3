@@ -245,6 +245,8 @@ void AppPluginManager::Unload()
 
 void AppPluginManager::Init( PluginsEnum_t pid )
 {
+	if( !wxTheApp ) return;
+
 	if( !wxThread::IsMain() )
 	{
 		SinglePluginMethodEvent evt(&AppPluginManager::Init, pid);
@@ -258,7 +260,7 @@ void AppPluginManager::Init( PluginsEnum_t pid )
 
 void AppPluginManager::Shutdown( PluginsEnum_t pid )
 {
-	if( !wxThread::IsMain() )
+	if( !wxThread::IsMain() && wxTheApp )
 	{
 		SinglePluginMethodEvent evt( &AppPluginManager::Shutdown, pid );
 		wxGetApp().ProcessAction( evt );
@@ -280,6 +282,9 @@ void AppPluginManager::Shutdown()
 {
 	_parent::Shutdown();
 	PostPluginStatus( CorePlugins_Shutdown );
+
+	// Precautionary, in case an error occurs during saving a single plugin.
+	sApp.CloseGsPanel();
 }
 
 void AppPluginManager::Close()
@@ -502,62 +507,39 @@ void ShutdownPlugins()
 	GetSysExecutorThread().PostEvent( new SysExecEvent_ShutdownPlugins() );
 }
 
-// --------------------------------------------------------------------------------------
-//  SaveSinglePluginHelper  (Implementations)
-// --------------------------------------------------------------------------------------
-
-SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
-	: m_plugstore( L"PluginConf Savestate" )
+void SysExecEvent_SaveSinglePlugin::InvokeEvent()
 {
-	s_DisableGsWindow = true;
+	s_DisableGsWindow = true;		// keeps the GS window smooth by avoiding closing the window
 
-	m_pid			= pid;
-	m_validstate	= SysHasValidState();
-
+	ScopedCoreThreadPause paused_core;
 	_LoadPluginsImmediate();
-	if( !CorePlugins.AreLoaded() ) return;
 
-	if( !m_validstate ) return;
-	Console.WriteLn( Color_Green, L"Suspending single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+	ScopedPtr<VmStateBuffer> plugstore;
 
-	memSavingState save( m_plugstore );
-	GetCorePlugins().Freeze( m_pid, save );
-	GetCorePlugins().Close( pid );
-}
-
-SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
-{
-	bool allowResume = true;
-
-	try {
-		if( m_validstate )
-		{
-			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
-			memLoadingState load( m_plugstore );
-			//if( m_plugstore.IsDisposed() ) load.SeekToSection( m_pid );
-			GetCorePlugins().Open( m_pid );
-			GetCorePlugins().Freeze( m_pid, load );
-		}
-
-		s_DisableGsWindow = false;
-	}
-	catch( BaseException& ex )
+	if( CoreThread.HasActiveMachine() )
 	{
-		allowResume = false;
-		wxGetApp().PostEvent( pxExceptionEvent( ex ) );
-
-		//Console.Error( "Unhandled BaseException in %s (ignored!):", __pxFUNCTION__ );
-		//Console.Error( ex.FormatDiagnosticMessage() );
+		Console.WriteLn( Color_Green, L"Suspending single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+		memSavingState save( plugstore=new VmStateBuffer(L"StateCopy_SinglePlugin") );
+		GetCorePlugins().Freeze( m_pid, save );
 	}
-	catch( std::exception& ex )
-	{
-		allowResume = false;
-		wxGetApp().PostEvent( pxExceptionEvent(new Exception::RuntimeError( ex, L"SaveSinglePlugin" )) );
+		
+	GetCorePlugins().Close( m_pid );
+	_post_and_wait( paused_core );
 
-		//Console.Error( "Unhandled std::exception in %s (ignored!):", __pxFUNCTION__ );
-		//Console.Error( ex.what() );
+	if( plugstore )
+	{
+		Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+		memLoadingState load( plugstore );
+		GetCorePlugins().Freeze( m_pid, load );
+		GetCorePlugins().Close( m_pid );		// hack for stupid GS plugins.
 	}
 
 	s_DisableGsWindow = false;
-	if( allowResume ) m_scoped_pause.AllowResume();
+	paused_core.AllowResume();
+}
+
+void SysExecEvent_SaveSinglePlugin::CleanupEvent()
+{
+	s_DisableGsWindow = false;
+	_parent::CleanupEvent();
 }

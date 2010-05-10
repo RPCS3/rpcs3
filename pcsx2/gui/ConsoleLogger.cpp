@@ -283,13 +283,13 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 		_("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
 	//menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes );
 
-	menuLog.Append(wxID_SAVE,  _("&Save..."),		_("Save log contents to file"));
-	menuLog.Append(wxID_CLEAR, _("C&lear"),			_("Clear the log window contents"));
+	menuLog.Append(wxID_SAVE,	_("&Save..."),		_("Save log contents to file"));
+	menuLog.Append(wxID_CLEAR,	_("C&lear"),		_("Clear the log window contents"));
 	menuLog.AppendSeparator();
 	menuLog.AppendSubMenu( &menuAppear, _("Appearance") );
 	menuLog.Append(wxID_ANY,	_("Show Legend"),	_("Displays the console color legend.") );
 	menuLog.AppendSeparator();
-	menuLog.Append(wxID_CLOSE, _("&Close"),			_("Close this log window; contents are preserved"));
+	menuLog.Append(wxID_CLOSE,	_("&Close"),		_("Close this log window; contents are preserved"));
 
 	// Source Selection/Toggle menu
 

@@ -46,15 +46,8 @@ public:
 
 	virtual ~SynchronousActionState() throw()  {}
 
-	void SetException( const BaseException& ex )
-	{
-		m_exception = ex.Clone();
-	}
-
-	void SetException( BaseException* ex )
-	{
-		m_exception = ex;
-	}
+	void SetException( const BaseException& ex );
+	void SetException( BaseException* ex );
 
 	Threading::Semaphore& GetSemaphore() { return m_sema; }
 	const Threading::Semaphore& GetSemaphore() const { return m_sema; }

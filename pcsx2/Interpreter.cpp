@@ -381,9 +381,6 @@ static void intExecute()
 {
 	g_EEFreezeRegs = false;
 
-	// Mem protection should be handled by the caller here so that it can be
-	// done in a more optimized fashion.
-
 	try {
 		if (g_SkipBiosHack) {
 			do

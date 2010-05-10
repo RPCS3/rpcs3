@@ -404,10 +404,18 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::SaveStateLoadError& ex)
 	{
-		// Saved state load failed.
+		// Saved state load failed prior to the system getting corrupted (ie, file not found
+		// or some zipfile error) -- so log it and resume emulation.
 		Console.Warning( ex.FormatDiagnosticMessage() );
-		StateCopy_Clear();
 		CoreThread.Resume();
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::PluginOpenError& ex )
+	{
+		// Should need to do much here -- all systems should be in an inert and (sorta safe!) state.
+		
+		Console.Error( ex.FormatDiagnosticMessage() );
+		AddIdleEvent( PluginInitErrorEvent(ex) );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginInitError& ex )
@@ -417,6 +425,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		Console.Error( ex.FormatDiagnosticMessage() );
 		AddIdleEvent( PluginInitErrorEvent(ex) );
 	}
+	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
 		UnloadPlugins();
@@ -885,7 +894,7 @@ protected:
 		else if( CDVD == NULL )
 			CDVDsys_ChangeSource( CDVDsrc_NoDisc );
 
-		if( m_UseELFOverride && !CoreThread.HasValidState() )
+		if( m_UseELFOverride && !CoreThread.HasActiveMachine() )
 			CoreThread.SetElfOverride( m_elf_override );
 
 		CoreThread.Resume();
@@ -926,7 +935,6 @@ public:
 protected:
 	void InvokeEvent()
 	{
-		StateCopy_Clear();
 		CoreThread.Shutdown();
 	}
 
@@ -945,7 +953,7 @@ void Pcsx2App::SysShutdown()
 // state (such as saving it), you *must* suspend the Corethread first!
 __forceinline bool SysHasValidState()
 {
-	return CoreThread.HasValidState() || StateCopy_IsValid();
+	return CoreThread.HasActiveMachine();
 }
 
 // Writes text to console and updates the window status bar and/or HUD or whateverness.

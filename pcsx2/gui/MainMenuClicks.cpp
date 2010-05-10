@@ -498,12 +498,8 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 
 	if( !pxAssertDev( (eventId >= 0) || (pid < PluginId_Count), "Invalid plugin identifier passed to ConfigPlugin event handler." ) ) return;
 
-	// This could probably just load a single plugin as needed now, but for design safety
-	// I'm leaving it force-load everything until the individual plugin management is
-	// better tested.
-
 	wxWindowDisabler disabler;
-	SaveSinglePluginHelper helper( pid );
+	ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(pid) );
 	GetCorePlugins().Configure( pid );
 }
 

@@ -63,8 +63,8 @@ public:
 	const SynchronousActionState* GetSyncState() const { return m_sync; }
 	SynchronousActionState* GetSyncState() { return m_sync; }
 
-	void SetSyncState( SynchronousActionState* obj ) { m_sync = obj; }
-	void SetSyncState( SynchronousActionState& obj ) { m_sync = &obj; }
+	SysExecEvent& SetSyncState( SynchronousActionState* obj ) { m_sync = obj;	return *this; }
+	SysExecEvent& SetSyncState( SynchronousActionState& obj ) { m_sync = &obj;	return *this; }
 
 	// Tells the Event Handler whether or not this event can be skipped when the system
 	// is being quit or reset.  Typically set this to true for events which shut down the

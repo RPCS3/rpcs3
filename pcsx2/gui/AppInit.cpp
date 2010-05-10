@@ -200,7 +200,7 @@ void Pcsx2App::DetectCpuAndUserMode()
 	AppConfig_OnChangedSettingsFolder();
 
 	PostAppMethod( &Pcsx2App::OpenMainFrame );
-	PostAppMethod( &Pcsx2App::OpenConsoleLog );
+	PostAppMethod( &Pcsx2App::OpenProgramLog );
 	PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
 }
 
@@ -216,7 +216,7 @@ void Pcsx2App::OpenMainFrame()
 		deleteme->Destroy();
 		g_Conf->ProgLogBox.Visible = true;
 		m_id_ProgramLogBox = wxID_ANY;
-		PostIdleAppMethod( &Pcsx2App::OpenConsoleLog );
+		PostIdleAppMethod( &Pcsx2App::OpenProgramLog );
 	}
 
 	SetTopWindow( mainFrame );		// not really needed...
@@ -224,11 +224,14 @@ void Pcsx2App::OpenMainFrame()
 	mainFrame->Show();
 }
 
-void Pcsx2App::OpenConsoleLog()
+void Pcsx2App::OpenProgramLog()
 {
 	if( GetProgramLog() != NULL ) return;
+	wxWindow* m_current_focus = wxGetActiveWindow();
 	m_id_ProgramLogBox	= (new ConsoleLogFrame( GetMainFramePtr(), L"PCSX2 Program Log", g_Conf->ProgLogBox ))->GetId();
 	EnableAllLogging();
+	
+	if( m_current_focus ) m_current_focus->SetFocus();
 }
 
 void Pcsx2App::AllocateCoreStuffs()

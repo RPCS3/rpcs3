@@ -25,41 +25,6 @@
 __aligned16 SysMtgsThread mtgsThread;
 __aligned16 AppCoreThread CoreThread;
 
-static void PostCoreStatus( CoreThreadStatus pevt )
-{
-	sApp.PostAction( CoreThreadStatusEvent( pevt ) );
-}
-
-// --------------------------------------------------------------------------------------
-//  AppCoreThread Implementations
-// --------------------------------------------------------------------------------------
-AppCoreThread::AppCoreThread() : SysCoreThread()
-{
-}
-
-AppCoreThread::~AppCoreThread() throw()
-{
-	_parent::Cancel();		// use parent's, skips thread affinity check.
-}
-
-void AppCoreThread::Cancel( bool isBlocking )
-{
-	AffinityAssert_AllowFrom_SysExecutor();
-	_parent::Cancel( wxTimeSpan(0, 0, 2, 0) );
-}
-
-void AppCoreThread::Shutdown()
-{
-	AffinityAssert_AllowFrom_SysExecutor();
-	_parent::Reset();
-	CorePlugins.Shutdown();
-}
-
-ExecutorThread& GetSysExecutorThread()
-{
-	return wxGetApp().SysExecutorThread;
-}
-
 typedef void (AppCoreThread::*FnPtr_CoreThreadMethod)();
 
 // --------------------------------------------------------------------------------------
@@ -95,6 +60,41 @@ bool ProcessingMethodViaThread( FnPtr_CoreThreadMethod method )
 	return false;
 }
 
+static void PostCoreStatus( CoreThreadStatus pevt )
+{
+	sApp.PostAction( CoreThreadStatusEvent( pevt ) );
+}
+
+// --------------------------------------------------------------------------------------
+//  AppCoreThread Implementations
+// --------------------------------------------------------------------------------------
+AppCoreThread::AppCoreThread() : SysCoreThread()
+{
+}
+
+AppCoreThread::~AppCoreThread() throw()
+{
+	_parent::Cancel();		// use parent's, skips thread affinity check.
+}
+
+void AppCoreThread::Cancel( bool isBlocking )
+{
+	AffinityAssert_AllowFrom_SysExecutor();
+	_parent::Cancel( wxTimeSpan(0, 0, 2, 0) );
+}
+
+void AppCoreThread::Shutdown()
+{
+	AffinityAssert_AllowFrom_SysExecutor();
+	_parent::Reset();
+	CorePlugins.Shutdown();
+}
+
+ExecutorThread& GetSysExecutorThread()
+{
+	return wxGetApp().SysExecutorThread;
+}
+
 static void _Suspend()
 {
 	GetCoreThread().Suspend(true);
@@ -106,8 +106,6 @@ void AppCoreThread::Suspend( bool isBlocking )
 		_parent::Suspend(true);
 }
 
-static int resume_tries = 0;
-
 void AppCoreThread::Resume()
 {
 	//if( !AffinityAssert_AllowFrom_SysExecutor() ) return;
@@ -117,31 +115,11 @@ void AppCoreThread::Resume()
 		return;
 	}
 
-	if( m_ExecMode == ExecMode_Opened || (m_CloseTemporary > 0) ) return;
-
-	if( !pxAssert( CorePlugins.AreLoaded() ) ) return;
+	//if( m_ExecMode == ExecMode_Opened ) return;
+	//if( !pxAssert( CorePlugins.AreLoaded() ) ) return;
 
 	_parent::Resume();
 
-	if( m_ExecMode != ExecMode_Opened )
-	{
-		// Resume failed for some reason, so update GUI statuses and post a message to
-		// try again on the resume.
-
-		PostCoreStatus( CoreThread_Suspended );
-
-		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
-		{
-			if( ++resume_tries <= 2 )
-			{
-				sApp.SysExecute();
-			}
-			else
-				Console.WriteLn( Color_Orange, "SysResume: Multiple resume retries failed.  Giving up..." );
-		}
-	}
-
-	resume_tries = 0;
 }
 
 void AppCoreThread::ChangeCdvdSource()
@@ -247,28 +225,12 @@ void AppCoreThread::StateCheckInThread()
 	_parent::StateCheckInThread();
 }
 
-// Thread Affinity: This function is called from the SysCoreThread. :)
-void AppCoreThread::CpuInitializeMess()
+void AppCoreThread::UploadStateCopy( const VmStateBuffer& copy )
 {
-	if( m_hasValidState ) return;
-
-	if( StateCopy_IsValid() )
-	{
-		// Automatic recovery system if a state exists in memory.  This is executed here
-		// in order to ensure the plugins are in the proper (loaded/opened) state.
-
-		SysClearExecutionCache();
-		memLoadingState( StateCopy_GetBuffer() ).FreezeAll();
-		StateCopy_Clear();
-
-		m_hasValidState			= true;
-		m_resetVirtualMachine	= false;
-		return;
-	}
-	
-	_parent::CpuInitializeMess();
+	ScopedCoreThreadPause paused_core;
+	_parent::UploadStateCopy( copy );
+	paused_core.AllowResume();
 }
-
 
 void AppCoreThread::ExecuteTaskInThread()
 {
@@ -276,122 +238,56 @@ void AppCoreThread::ExecuteTaskInThread()
 	_parent::ExecuteTaskInThread();
 }
 
-enum
-{
-	FullStop_BlockingResume
-,	FullStop_NonblockingResume
-,	FullStop_SkipResume
-};
-
 // --------------------------------------------------------------------------------------
-//  BaseSysExecEvent_ScopedCore
+//  BaseSysExecEvent_ScopedCore / SysExecEvent_CoreThreadClose / SysExecEvent_CoreThreadPause
 // --------------------------------------------------------------------------------------
-class BaseSysExecEvent_ScopedCore : public SysExecEvent
+void BaseSysExecEvent_ScopedCore::_post_and_wait( IScopedCoreThread& core )
 {
-protected:
-	SynchronousActionState*		m_resume;
-	Threading::Mutex*			m_mtx_resume;
+	DoScopedTask();
 
-public:
-	virtual ~BaseSysExecEvent_ScopedCore() throw() {}
+	ScopedLock lock( m_mtx_resume );
+	PostResult();
 
-protected:
-	BaseSysExecEvent_ScopedCore( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
-		: SysExecEvent( sync )
+	if( m_resume )
 	{
-		m_resume		= resume_sync;
-		m_mtx_resume	= mtx_resume;
-	}
-	
-	void _post_and_wait( IScopedCoreThread& core )
-	{
-		ScopedLock lock( m_mtx_resume );
-
-		PostResult();
-
-		if( m_resume )
+		// If the sender of the message requests a non-blocking resume, then we need
+		// to deallocate the m_sync object, since the sender will likely leave scope and
+		// invalidate it.
+		switch( m_resume->WaitForResult() )
 		{
-			// If the sender of the message requests a non-blocking resume, then we need
-			// to deallocate the m_sync object, since the sender will likely leave scope and
-			// invalidate it.
-			switch( m_resume->WaitForResult() )
-			{
-				case FullStop_BlockingResume:
-					if( m_sync ) m_sync->ClearResult();
-					core.AllowResume();
-				break;
+			case ScopedCore_BlockingResume:
+				if( m_sync ) m_sync->ClearResult();
+				core.AllowResume();
+			break;
 
-				case FullStop_NonblockingResume:
-					m_sync = NULL;
-					core.AllowResume();
-				break;
+			case ScopedCore_NonblockingResume:
+				m_sync = NULL;
+				core.AllowResume();
+			break;
 
-				case FullStop_SkipResume:
-					m_sync = NULL;
-				break;
-			}
+			case ScopedCore_SkipResume:
+				m_sync = NULL;
+			break;
 		}
 	}
+}
 
-};
 
-// --------------------------------------------------------------------------------------
-//  SysExecEvent_CoreThreadClose
-// --------------------------------------------------------------------------------------
-class SysExecEvent_CoreThreadClose : public BaseSysExecEvent_ScopedCore
+void SysExecEvent_CoreThreadClose::InvokeEvent()
 {
-public:
-	wxString GetEventName() const { return L"CloseCoreThread"; }
+	ScopedCoreThreadClose closed_core;
+	_post_and_wait(closed_core);
+	closed_core.AllowResume();
+}	
 
-	virtual ~SysExecEvent_CoreThreadClose() throw() {}
-	SysExecEvent_CoreThreadClose* Clone() const
-	{
-		return new SysExecEvent_CoreThreadClose( *this );
-	}
-	
-	SysExecEvent_CoreThreadClose( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
-		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
 
-	SysExecEvent_CoreThreadClose( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
-		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
-	
-protected:
-	void InvokeEvent()
-	{
-		ScopedCoreThreadClose closed_core;
-		_post_and_wait(closed_core);
-		closed_core.AllowResume();
-	}	
-};
-
-// --------------------------------------------------------------------------------------
-//  SysExecEvent_CoreThreadPause
-// --------------------------------------------------------------------------------------
-class SysExecEvent_CoreThreadPause : public BaseSysExecEvent_ScopedCore
+void SysExecEvent_CoreThreadPause::InvokeEvent()
 {
-public:
-	wxString GetEventName() const { return L"PauseCoreThread"; }
+	ScopedCoreThreadPause paused_core;
+	_post_and_wait(paused_core);
+	paused_core.AllowResume();
+}	
 
-	virtual ~SysExecEvent_CoreThreadPause() throw() {}
-	SysExecEvent_CoreThreadPause* Clone() const
-	{
-		return new SysExecEvent_CoreThreadPause( *this );
-	}
-	
-	SysExecEvent_CoreThreadPause( SynchronousActionState* sync=NULL, SynchronousActionState* resume_sync=NULL, Threading::Mutex* mtx_resume=NULL )
-		: BaseSysExecEvent_ScopedCore( sync, resume_sync, mtx_resume ) { }
-
-	SysExecEvent_CoreThreadPause( SynchronousActionState& sync, SynchronousActionState& resume_sync, Threading::Mutex& mtx_resume )
-		: BaseSysExecEvent_ScopedCore( &sync, &resume_sync, &mtx_resume ) { }
-	
-protected:
-	void InvokeEvent()
-	{
-		ScopedCoreThreadPause paused_core;
-		_post_and_wait(paused_core);
-		paused_core.AllowResume();
-	}	
-};
 
 // --------------------------------------------------------------------------------------
 //  ScopedCoreThreadClose / ScopedCoreThreadPause
@@ -432,13 +328,29 @@ void BaseScopedCoreThread::DoResume()
 	if( !GetSysExecutorThread().IsSelf() )
 	{
 		//DbgCon.WriteLn("(ScopedCoreThreadPause) Threaded Scope Created!");
-		m_sync_resume.PostResult( m_allowResume ? FullStop_NonblockingResume : FullStop_SkipResume );
+		m_sync_resume.PostResult( m_allowResume ? ScopedCore_NonblockingResume : ScopedCore_SkipResume );
 		m_mtx_resume.Wait();
 	}
 	else
 		CoreThread.Resume();
 }
 
+// Returns TRUE if the event is posted to the SysExecutor.
+// Returns FALSE if the thread *is* the SysExecutor (no message is posted, calling code should
+//  handle the code directly).
+bool BaseScopedCoreThread::PostToSysExec( BaseSysExecEvent_ScopedCore* msg )
+{
+	if( !msg || GetSysExecutorThread().IsSelf()) return false;
+
+	msg->SetSyncState(m_sync);
+	msg->SetResumeStates(m_sync_resume, m_mtx_resume);
+
+	GetSysExecutorThread().PostEvent( msg );
+	m_sync.WaitForResult();
+	m_sync.RethrowException();
+
+	return true;
+}
 
 ScopedCoreThreadClose::ScopedCoreThreadClose()
 {
@@ -449,16 +361,11 @@ ScopedCoreThreadClose::ScopedCoreThreadClose()
 		return;
 	}
 	
-	if( !GetSysExecutorThread().IsSelf() )
+	if( !PostToSysExec(new SysExecEvent_CoreThreadClose()) )
 	{
-		//DbgCon.WriteLn("(ScopedCoreThreadClose) Threaded Scope Created!");
-
-		GetSysExecutorThread().PostEvent( SysExecEvent_CoreThreadClose(m_sync, m_sync_resume, m_mtx_resume) );
-		m_sync.WaitForResult();
-		m_sync.RethrowException();
+		if( !(m_alreadyStopped = CoreThread.IsClosed()) )
+			CoreThread.Suspend();
 	}
-	else if( !(m_alreadyStopped = CoreThread.IsClosed()) )
-		CoreThread.Suspend();
 
 	ScopedCore_IsFullyClosed = true;
 }
@@ -470,7 +377,7 @@ ScopedCoreThreadClose::~ScopedCoreThreadClose() throw()
 	ScopedCore_IsFullyClosed = false;
 }
 
-ScopedCoreThreadPause::ScopedCoreThreadPause()
+ScopedCoreThreadPause::ScopedCoreThreadPause( BaseSysExecEvent_ScopedCore* abuse_me )
 {
 	if( ScopedCore_IsFullyClosed || ScopedCore_IsPaused )
 	{
@@ -479,16 +386,12 @@ ScopedCoreThreadPause::ScopedCoreThreadPause()
 		return;
 	}
 
-	if( !GetSysExecutorThread().IsSelf() )
+	if( !abuse_me ) abuse_me = new SysExecEvent_CoreThreadPause();
+	if( !PostToSysExec( abuse_me ) )
 	{
-		//DbgCon.WriteLn("(ScopedCoreThreadPause) Threaded Scope Created!");
-
-		GetSysExecutorThread().PostEvent( SysExecEvent_CoreThreadPause(m_sync, m_sync_resume, m_mtx_resume) );
-		m_sync.WaitForResult();
-		m_sync.RethrowException();
+		if( !(m_alreadyStopped = CoreThread.IsPaused()) )
+			CoreThread.Pause();
 	}
-	else if( !(m_alreadyStopped = CoreThread.IsPaused()) )
-		CoreThread.Pause();
 
 	ScopedCore_IsPaused = true;
 }

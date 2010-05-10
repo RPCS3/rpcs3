@@ -26,6 +26,8 @@ static const int PCSX2_VersionLo	= 7;
 class SysCoreThread;
 class CpuInitializerSet;
 
+typedef SafeArray<u8> VmStateBuffer;
+
 // --------------------------------------------------------------------------------------
 //  SysCoreAllocations class
 // --------------------------------------------------------------------------------------

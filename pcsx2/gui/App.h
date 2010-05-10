@@ -503,7 +503,7 @@ public:
 	// --------------------------------------------------------------------------
 
 	void DetectCpuAndUserMode();
-	void OpenConsoleLog();
+	void OpenProgramLog();
 	void OpenMainFrame();
 	void PrepForExit();
 	void CleanupRestartable();

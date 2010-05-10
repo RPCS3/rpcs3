@@ -15,13 +15,15 @@
 
 #pragma once
 
+#include "System.h"
+
 #include "Utilities/PersistentThread.h"
-#include "Utilities/RwMutex.h"
 #include "x86emitter/tools.h"
 
-#include "CDVD/CDVDaccess.h"
 
 using namespace Threading;
+
+typedef SafeArray<u8> VmStateBuffer;
 
 // --------------------------------------------------------------------------------------
 //  SysThreadBase
@@ -156,44 +158,40 @@ class SysCoreThread : public SysThreadBase
 	typedef SysThreadBase _parent;
 
 protected:
-	s32				m_CloseTemporary;
-
 	bool			m_resetRecompilers;
 	bool			m_resetProfilers;
 	bool			m_resetVsyncTimers;
 	bool			m_resetVirtualMachine;
-	bool			m_hasValidState;
 
-	// Used by SETJMP only, but ifdef'ing it out clutters up the code.
-	bool			m_CoreCancelDamnit;
+	// Indicates if the system has an active virtual machine state.  Pretty much always
+	// true anytime between plugins being initialized and plugins being shutdown.  Gets
+	// set false when plugins are shutdown, the corethread is canceled, or when an error
+	// occurs while trying to upload a new state into the VM.
+	volatile bool	m_hasActiveMachine;
 
 	wxString		m_elf_override;
 	
 	SSE_MXCSR		m_mxcsr_saved;
 
 public:
-	static SysCoreThread& Get();
-
-public:
 	explicit SysCoreThread();
 	virtual ~SysCoreThread() throw();
 
-	virtual void ApplySettings( const Pcsx2Config& src );
+	bool HasPendingStateChangeRequest() const;
+
 	virtual void OnResumeReady();
 	virtual void Reset();
-	virtual void RecoverState();
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool Cancel( const wxTimeSpan& timeout );
-	
-	bool HasValidState()
-	{
-		return m_hasValidState;
-	}
 
-	bool HasPendingStateChangeRequest() const;
 	virtual void StateCheckInThread();
 	virtual void VsyncInThread();
 	virtual void PostVsyncToUI()=0;
+
+	virtual void ApplySettings( const Pcsx2Config& src );
+	virtual void UploadStateCopy( const VmStateBuffer& copy );
+
+	virtual bool HasActiveMachine() const { return m_hasActiveMachine; }
 	
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );
@@ -201,7 +199,6 @@ public:
 protected:
 	void _reset_stuff_as_needed();
 
-	virtual void CpuInitializeMess();
 	virtual void Start();
 	virtual void OnStart();
 	virtual void OnSuspendInThread();
