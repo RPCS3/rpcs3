@@ -1281,6 +1281,18 @@
 							RelativePath="..\..\CDVD\IsoFileTools.h"
 							>
 						</File>
+						<Filter
+							Name="Game DataBase"
+							>
+							<File
+								RelativePath="..\..\DataBase_Loader.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\File_Reader.h"
+								>
+							</File>
+						</Filter>
 					</Filter>
 				</Filter>
 				<Filter
