@@ -2315,8 +2315,10 @@ Serial = SLUS-20261
 Name   = ESPN - NBA 2 Night 2002
 Region = NTSC-U
 ---------------------------------------------
-Serial = Rugby 2002
-Name   = NTSC-U
+Serial = SLUS-20262
+Name   = Rugby 2002
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-20263
 Name   = Madden NFL 2002
 Region = NTSC-U
@@ -4057,8 +4059,10 @@ Serial = SLUS-20748
 Name   = Super Trucks Racing
 Region = NTSC-U
 ---------------------------------------------
-Serial = Rugby 2004
-Name   = NTSC-U
+Serial = SLUS-20749
+Name   = Rugby 2004
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-20750
 Name   = FIFA Soccer 2004
 Region = NTSC-U
@@ -5595,8 +5599,10 @@ Serial = SLUS-21157
 Name   = Flipnic - Ultimate Pinball
 Region = NTSC-U
 ---------------------------------------------
-Serial = Rugby 2005
-Name   = NTSC-U
+Serial = SLUS-21158
+Name   = Rugby 2005
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21159
 Name   = Moto GP 4
 Region = NTSC-U
@@ -9307,10 +9313,6 @@ Serial = SCAJ-25037
 Name   = Astro Boy Atom
 Region = NTSC-Unk
 ---------------------------------------------
-Serial = SCAJ-25040
-Name   = zzz_untranslated_asian_title
-Region = NTSC-Unk
----------------------------------------------
 Serial = SCAJ-25045
 Name   = Sakura Taisen V - Episode 0
 Region = NTSC-Unk
@@ -9619,10 +9621,6 @@ Serial = SCPS-11021
 Name   = Yoake no Mariko 2nd Act
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-11022
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-11023
 Name   = Bravo Music - Chou-Meikyokuban
 Region = NTSC-J
@@ -9645,10 +9643,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-11028
 Name   = Let's Bravo Music
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-11029
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-11030
@@ -9723,14 +9717,6 @@ Serial = SCPS-15013
 Name   = Poinie's Poin
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-15014
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-15015
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-15016
 Name   = Minna no Golf 3
 Region = NTSC-J
@@ -9775,14 +9761,6 @@ Serial = SCPS-15026
 Name   = Boku no Natsuyasumi 2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-15027
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-15028
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-15029
 Name   = Xi (Sai) Jumbo
 Region = NTSC-J
@@ -9811,10 +9789,6 @@ Serial = SCPS-15035
 Name   = Train Simulator Real, The - Keihin Keikyu
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-15036
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-15037
 Name   = Ratchet & Clank
 Region = NTSC-J
@@ -9833,14 +9807,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15041
 Name   = Arc the Lad - Seirei no Koukon
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-15042
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-15043
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15044
@@ -10063,10 +10029,6 @@ Serial = SCPS-15099
 Name   = Ratchet & Clank - Giga Battle
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-15100
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-15101
 Name   = Bleach - Hanatareshi Yabou
 Region = NTSC-J
@@ -10247,10 +10209,6 @@ Serial = SCPS-19211
 Name   = Ratchet & Clank [PlayStation 2 The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-19212
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-19213
 Name   = Operator's Side [PlayStation 2 The Best] [with Microphone]
 Region = NTSC-J
@@ -10325,10 +10283,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-19313
 Name   = Wild ARMs - The 4th Detonator [PlayStation 2 The Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SCPS-19314
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-19315
@@ -10579,10 +10533,6 @@ Serial = SCPS-55032
 Name   = Fantavision - For You and Me
 Region = NTSC-J
 ---------------------------------------------
-Serial = SCPS-55034
-Name   = zzz_unknown_asian_title
-Region = NTSC-J
----------------------------------------------
 Serial = SCPS-55035
 Name   = Ape Escape 2
 Region = NTSC-J
@@ -10775,10 +10725,6 @@ Serial = SLAJ-25053
 Name   = Burnout 3 - Takedown
 Region = NTSC-Unk
 ---------------------------------------------
-Serial = SLAJ-25054
-Name   = zzz_unknown_asian_title
-Region = NTSC-Unk
----------------------------------------------
 Serial = SLAJ-25055
 Name   = Def Jam - Fight for N.Y.
 Region = NTSC-Unk
@@ -10897,10 +10843,6 @@ Region = NTSC-Unk
 ---------------------------------------------
 Serial = SLAJ-35001
 Name   = Sakura Wars
-Region = NTSC-Unk
----------------------------------------------
-Serial = SLAJ-35002
-Name   = zzz_unknown_asian_title
 Region = NTSC-Unk
 ---------------------------------------------
 Serial = SLAJ-35003
@@ -11311,16 +11253,8 @@ Serial = SLPM-62002
 Name   = Live World Soccer 2000
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62003
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62004
 Name   = Mahjong Yarouze 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62005
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62006
@@ -11363,18 +11297,6 @@ Serial = SLPM-62016
 Name   = Super Bust-A-Move
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62017
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62019
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62020
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62021
 Name   = Angelique Trois [Premium Box]
 Region = NTSC-J
@@ -11385,18 +11307,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62023
 Name   = Winback
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62024
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62025
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62026
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62027
@@ -11411,10 +11321,6 @@ Serial = SLPM-62029
 Name   = Dance Summit 2001
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62030
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62031
 Name   = Primal Image for Printer
 Region = NTSC-J
@@ -11423,28 +11329,8 @@ Serial = SLPM-62032
 Name   = ESPN NBA 2Night
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62034
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62035
 Name   = Got to Do! Hot Spring Table Tennis
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62036
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62037
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62038
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62039
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62040
@@ -11455,16 +11341,8 @@ Serial = SLPM-62041
 Name   = ESPN National Hockey Night
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62042
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62044
 Name   = RC Revenge Pro
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62045
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62046
@@ -11507,16 +11385,8 @@ Serial = SLPM-62056
 Name   = DNA - Dark Native Apostle
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62058
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62060
 Name   = Winning Post 4 Maximum 2001
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62061
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62062
@@ -11525,18 +11395,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62063
 Name   = Gradius III & IV [Konami The Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62064
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62065
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62066
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62067
@@ -11555,20 +11413,12 @@ Serial = SLPM-62070
 Name   = Uchu-Jintte Naani
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62071
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62072
 Name   = Horse Breaker
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62073
 Name   = Tam Tam Paradise
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62074
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62075
@@ -11587,10 +11437,6 @@ Serial = SLPM-62078
 Name   = Maestro Music 2, The
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62079
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62081
 Name   = Ever Blue
 Region = NTSC-J
@@ -11603,10 +11449,6 @@ Serial = SLPM-62084
 Name   = ESPN X-Games Skateboarding
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62085
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62087
 Name   = Touge 3
 Region = NTSC-J
@@ -11615,28 +11457,12 @@ Serial = SLPM-62088
 Name   = J-League Winning Eleven 5
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62089
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62090
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62091
 Name   = Ring of Red
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62092
 Name   = XG3 Extreme G Racing
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62093
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62094
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62095
@@ -11655,10 +11481,6 @@ Serial = SLPM-62098
 Name   = Busin - Wizardry Alternative
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62099
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62100
 Name   = Rez [Special Package]
 Region = NTSC-J
@@ -11671,16 +11493,8 @@ Serial = SLPM-62102
 Name   = Crazy Taxi
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62103
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62104
 Name   = Choro-Q HG2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62105
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62107
@@ -11695,28 +11509,12 @@ Serial = SLPM-62109
 Name   = Hippa Linda
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62111
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62112
 Name   = Itadaki Street 3
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62113
 Name   = World Soccer Winning Eleven 5 - Final Evolution
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62114
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62115
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62116
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62117
@@ -11727,20 +11525,8 @@ Serial = SLPM-62118
 Name   = Bomberman Kart
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62119
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62120
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62121
 Name   = ESPN NBA 2Night 2002
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62122
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62123
@@ -11753,10 +11539,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62125
 Name   = Gauntlet - Dark Legacy
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62126
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62127
@@ -11791,10 +11573,6 @@ Serial = SLPM-62134
 Name   = Final Fantasy XI [Beta Edition]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62136
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62137
 Name   = Psyvariar Complete Edition [Special Sound Box]
 Region = NTSC-J
@@ -11805,14 +11583,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62139
 Name   = Psyvariar Complete Edition
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62140
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62141
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62142
@@ -11827,32 +11597,12 @@ Serial = SLPM-62144
 Name   = Super Bust-A-Move
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62145
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62146
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62147
 Name   = Bass Strike
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62148
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62150
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62151
 Name   = Live GI Stable 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62152
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62153
@@ -11867,10 +11617,6 @@ Serial = SLPM-62155
 Name   = Baseball 2002, The
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62156
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62157
 Name   = Building Baku
 Region = NTSC-J
@@ -11881,10 +11627,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62159
 Name   = World Soccer Winning Eleven 6
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62160
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62161
@@ -11907,24 +11649,8 @@ Serial = SLPM-62169
 Name   = Live World Soccer 2002
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62170
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62171
 Name   = Simple 2000 Series Vol.05 - The Blockbuster Hyper
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62172
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62173
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62174
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62175
@@ -11939,32 +11665,12 @@ Serial = SLPM-62177
 Name   = Kuusen [Kadokawa The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62178
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62179
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62180
 Name   = Simple 2000 Series Vol.01 - The Shougi
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62181
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62182
 Name   = Top Gun - Ace of the Sky
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62183
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62184
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62185
@@ -11975,44 +11681,12 @@ Serial = SLPM-62186
 Name   = Get Backers - The Stolen City of Infinite
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62187
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62188
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62189
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62190
 Name   = High Heat - Major League Baseball 2003
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62191
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62192
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62193
 Name   = J League Perfect Striker 5
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62194
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62195
-Name   = zzz_untranslated_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62196
-Name   = zzz_untranslated_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62197
@@ -12099,10 +11773,6 @@ Serial = SLPM-62219
 Name   = Simple 2000 Series Vol.08 - The Tennis
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62220
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62221
 Name   = Winning Post 5 - Max 2002
 Region = NTSC-J
@@ -12135,10 +11805,6 @@ Serial = SLPM-62230
 Name   = Silent Scope 3
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62231
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62232
 Name   = Simple 2000 Series Vol.15 - The Rugby
 Region = NTSC-J
@@ -12169,10 +11835,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62239
 Name   = Supercar Street Challenge
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62242
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62244
@@ -12229,10 +11891,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62258
 Name   = GTC Africa
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62259
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62260
@@ -12311,16 +11969,8 @@ Serial = SLPM-62279
 Name   = Winning Post 5 - Maximum 2002
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62281
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62282
 Name   = Silent Scope 2 - Innocent Sweeper
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62283
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62284
@@ -12331,10 +11981,6 @@ Serial = SLPM-62285
 Name   = Waku Waku Volley 2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62286
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62287
 Name   = Fire Pro Wrestling Z [Limited Edition]
 Region = NTSC-J
@@ -12343,24 +11989,12 @@ Serial = SLPM-62288
 Name   = Pop'n Music - Best Hits
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62289
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62290
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62291
 Name   = Bomberman Land 2
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62292
 Name   = Warrior Blade - Rasten vs. Barbarian
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62293
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62294
@@ -12395,16 +12029,8 @@ Serial = SLPM-62301
 Name   = Aerobics Revolution
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62302
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62305
 Name   = Othello [SuperLite 2000]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62306
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62307
@@ -12415,24 +12041,8 @@ Serial = SLPM-62308
 Name   = Simple 2000 Series Vol.24 - The Bowling
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62309
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62310
 Name   = Souten Ryuu - The Arcade
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62311
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62312
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62313
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62314
@@ -12447,10 +12057,6 @@ Serial = SLPM-62316
 Name   = Table Mahjong [Superlite 2000 Series]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62317
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62318
 Name   = XII Stag
 Region = NTSC-J
@@ -12459,20 +12065,12 @@ Serial = SLPM-62319
 Name   = Romance of the Three Kingdoms VIII
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62320
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62321
 Name   = Robocop
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62322
 Name   = Conveti 3, The
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62323
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62324
@@ -12493,26 +12091,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62328
 Name   = Simple 2000 Series Vol.27 - The Pro Yakyuu 2003 Pennent Race
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62329
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62330
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62331
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62332
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62333
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62334
@@ -12563,10 +12141,6 @@ Serial = SLPM-62345
 Name   = Simple 2000 Series Vol.32 - The Tank
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62346
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62348
 Name   = Run-Dim Mechsmith
 Region = NTSC-J
@@ -12577,10 +12151,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62350
 Name   = Hudson Selection Vol.2 - Star Soldier
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62352
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62353
@@ -12597,10 +12167,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62356
 Name   = World Soccer Winning Eleven 7
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62361
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62362
@@ -12623,10 +12189,6 @@ Serial = SLPM-62367
 Name   = Sega Ages 2500 Series Vol.01 - Phantasy Star [Limited Edition]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62368
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62369
 Name   = Karaoke Revolution - J-Pop Vol.1
 Region = NTSC-J
@@ -12637,10 +12199,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62371
 Name   = Psyvariar Revision [Superlite 2000 Series]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62372
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62373
@@ -12695,18 +12253,6 @@ Serial = SLPM-62385
 Name   = Sega Ages 2500 Series Vol.05 - Golden Axe
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62386
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62387
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62388
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62389
 Name   = Big Bass - Bass Tsuri Kanzen Kouryaku [SuperLite 2000 Series]
 Region = NTSC-J
@@ -12723,10 +12269,6 @@ Serial = SLPM-62392
 Name   = G1 Jockey 3 2003
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62393
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62394
 Name   = Power Smash 2 [Sega The Best - 2800 Series]
 Region = NTSC-J
@@ -12735,20 +12277,8 @@ Serial = SLPM-62395
 Name   = Simple 2000 Series Vol.37 - The Shooting - Double Shienryu
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62396
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62397
 Name   = Simple 2000 Honkaku Shikou Vol.5 - Kiryoku Kentei
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62398
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62399
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62400
@@ -12759,20 +12289,12 @@ Serial = SLPM-62401
 Name   = Death Crimson OX+
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62402
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62403
 Name   = Chou Aniki - Seinaru Protein Densetsu
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62404
 Name   = Hudson Selection Vol.1 - Cubic Lode Runner
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62405
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62406
@@ -12793,10 +12315,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62410
 Name   = Silent Scope 3 [Konami The Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62411
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62412
@@ -12825,14 +12343,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62418
 Name   = Hudson Selection Vol.3 - PC Genjin
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62419
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62421
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62422
@@ -12869,10 +12379,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62430
 Name   = Simple 2000 Series Vol.43 - The Saiban
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62431
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62432
@@ -12933,10 +12439,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62451
 Name   = Karaoke Revolution - J-Pop Vol.5
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62452
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62453
@@ -13007,10 +12509,6 @@ Serial = SLPM-62469
 Name   = Gunbird 1&2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62470
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62471
 Name   = Uno [SuperLite 2000 Series]
 Region = NTSC-J
@@ -13075,20 +12573,12 @@ Serial = SLPM-62486
 Name   = Chou Saisoku! Zokusha King B.U. [Simple Series DX]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62487
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62488
 Name   = Hot Gimmick Cosplay Mahjong
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62489
 Name   = Yoshinoya
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62490
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62491
@@ -13117,10 +12607,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62497
 Name   = Simple 2000 Series Vol.51 - The Battleship
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62498
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62499
@@ -13153,10 +12639,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62506
 Name   = Vampire Panic
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62507
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62508
@@ -13207,10 +12689,6 @@ Serial = SLPM-62519
 Name   = Sangokushi VIII [Koei The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62520
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62521
 Name   = Kiwame Mahjong DXII - The 4th Mondo 21 Cup Competition [Athena Best Collection]
 Region = NTSC-J
@@ -13251,16 +12729,8 @@ Serial = SLPM-62532
 Name   = Ys III - Wanderers from Ys [Limited Edition]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62533
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62534
 Name   = Simple 2000 Series Vol.63 - Women's Swim Meet
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62535
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62536
@@ -13407,10 +12877,6 @@ Serial = SLPM-62572
 Name   = Boboboubo Boubobo - Shuumare! Taikan Boubobo
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62573
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62574
 Name   = Shoubushi Densetsu - Tetsuya Digest [Athena Best Collection Vol.3]
 Region = NTSC-J
@@ -13467,16 +12933,8 @@ Serial = SLPM-62589
 Name   = Simple 2000 Series Vol.72 - Ninhaza
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62590
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62591
 Name   = GI Jockey 3 2005
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62592
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62593
@@ -13577,10 +13035,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62618
 Name   = Simple 2000 Series Vol.78 - The Uchuu Daisensou
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62619
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62620
@@ -13723,10 +13177,6 @@ Serial = SLPM-62656
 Name   = Sega Ages 2500 Series Vol.12 - Puyo Puyo Perfect Set
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62657
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62658
 Name   = Kyoushuu Kidou Butai - Kougeki Helicopter Senki [Taito The Best]
 Region = NTSC-J
@@ -13763,24 +13213,12 @@ Serial = SLPM-62668
 Name   = Sega Ages 2500 Series Vol.03 - Fantasy Zone
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62669
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62670
 Name   = Sega Ages 2500 Series Vol.05 - Golden Axe
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62671
 Name   = Sega Ages 2500 Series Vol.06 - Bonanza Bros. & Tant-R
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62672
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62674
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62675
@@ -13935,14 +13373,6 @@ Serial = SLPM-62714
 Name   = Shin Sangoku Musou Series Collection Joukan
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62715
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62716
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62717
 Name   = Sega Ages 2500 Series Vol.26 - Dynamite Deka
 Region = NTSC-J
@@ -13983,10 +13413,6 @@ Serial = SLPM-62727
 Name   = Spectral vs. Generation
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-62728
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-62729
 Name   = Oretachi Geasen Zoku Sono Vol.15 - Akumajou Dracula
 Region = NTSC-J
@@ -14017,10 +13443,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62740
 Name   = Saikyo Shogi Gekisashi Special
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-62742
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62743
@@ -14247,22 +13669,6 @@ Serial = SLPM-65026
 Name   = Beatmania IIDX - 4th Style
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65027
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65028
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65029
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65030
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65032
 Name   = Tokyo Bus Guide - Annai
 Region = NTSC-J
@@ -14273,10 +13679,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65034
 Name   = Sangokushi North Winds
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65037
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65038
@@ -14307,16 +13709,8 @@ Serial = SLPM-65044
 Name   = Aizouban Angelique Trois [Koei The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65046
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65047
 Name   = Capcom vs. SNK 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65048
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65049
@@ -14407,16 +13801,8 @@ Serial = SLPM-65078
 Name   = Metal Gear Solid 2 - Sons of Liberty
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65079
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65080
 Name   = Tokimeki Memorial 3
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65081
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65082
@@ -14567,10 +13953,6 @@ Serial = SLPM-65130
 Name   = Dramatic Soccer Game - Becoming a National Team Member
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65131
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65132
 Name   = Warriors of Might and Magic
 Region = NTSC-J
@@ -14585,10 +13967,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65135
 Name   = NBA 2K2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65136
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65137
@@ -14615,32 +13993,12 @@ Serial = SLPM-65143
 Name   = Anime Super Remix, The - Ashita no Joe 2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65144
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65145
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65147
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65148
 Name   = Densha de Go! Ryojouhen
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65149
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65150
 Name   = Aero Dancing 4 - New Generation
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65151
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65152
@@ -14665,10 +14023,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65158
 Name   = Riding Spirits
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65159
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65160
@@ -14701,10 +14055,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65170
 Name   = Shin Sangoku Musou 2 - Mushouden
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65171
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65173
@@ -14755,14 +14105,6 @@ Serial = SLPM-65187
 Name   = Thread Colors
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65188
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65190
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65191
 Name   = V-Rally 3
 Region = NTSC-J
@@ -14781,10 +14123,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65197
 Name   = Nobunaga's Ambition Online
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65198
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65199
@@ -14837,10 +14175,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65215
 Name   = Chou Battle Houshin - Bundle #2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65217
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65218
@@ -14927,10 +14261,6 @@ Serial = SLPM-65239
 Name   = Angelic Concert
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65240
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65241
 Name   = Shin Megami Tensei 3 - Nocturne [Limited Edition]
 Region = NTSC-J
@@ -14967,14 +14297,6 @@ Serial = SLPM-65249
 Name   = Chaos Legion
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65250
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65251
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65254
 Name   = Galaxy Angel
 Region = NTSC-J
@@ -14991,20 +14313,8 @@ Serial = SLPM-65257
 Name   = Silent Hill 3
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65258
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65259
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65260
 Name   = Air Land Force
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65261
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65262
@@ -15041,10 +14351,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65271
 Name   = Over the Monochrome Rainbow featuring Shogo Hamada
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65272
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65273
@@ -15123,14 +14429,6 @@ Serial = SLPM-65291
 Name   = Merge Marginal
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65292
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65293
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65294
 Name   = Cafe Little Wish - Mahou no Recipe [Limited Edition]
 Region = NTSC-J
@@ -15169,10 +14467,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65303
 Name   = Virtual On - Marz
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65304
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65305
@@ -15355,24 +14649,8 @@ Serial = SLPM-65350
 Name   = Simple 2000 Series Ultimate Vol.11 - Wonder Bass
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65351
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65352
 Name   = Simple 2000 Series Ultimate Vol.10 - Love Songs
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65353
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65354
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65355
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65356
@@ -15387,20 +14665,12 @@ Serial = SLPM-65358
 Name   = Dance Dance Revolution Extreme
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65359
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65361
 Name   = Anubis Zone of Enders [Special Edition LE]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65362
 Name   = NHK Tensai Bit-Kun - Guramon Battle
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65363
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65364
@@ -15423,16 +14693,8 @@ Serial = SLPM-65368
 Name   = D.N. Angel - TV Animation Series
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65369
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65370
 Name   = Prince of Tennis - Sweat & Tears 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65371
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65372
@@ -15523,10 +14785,6 @@ Serial = SLPM-65395
 Name   = Digi-Charat Fantasy
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65396
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65397
 Name   = Prince of Tennis - Kiss of Prince - Ice Version
 Region = NTSC-J
@@ -15545,10 +14803,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65401
 Name   = Tengai Makyou II - Manji Maru
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65403
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65404
@@ -15593,10 +14847,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65414
 Name   = Simple 2000 Series Vol.45 - The Love and Tears and Memory
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65415
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65416
@@ -15731,10 +14981,6 @@ Serial = SLPM-65454
 Name   = Prince of Tennis - Smash Hit! 2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65455
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65456
 Name   = Magical Nurse Witch Komugi-chan [Limited Edition]
 Region = NTSC-J
@@ -15781,10 +15027,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65468
 Name   = Roommate Asami - D-Collection
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65469
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65470
@@ -15837,10 +15079,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65484
 Name   = WISP - Word Image Sound Play
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65485
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65486
@@ -15951,10 +15189,6 @@ Serial = SLPM-65515
 Name   = Sakura Taisen - Mysterious Paris
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65516
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65517
 Name   = Sengoku Musou
 Region = NTSC-J
@@ -15973,10 +15207,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65521
 Name   = Tentama 2 Wins
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65522
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65523
@@ -16025,10 +15255,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65535
 Name   = Oshiete! Popotan
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65536
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65537
@@ -16143,10 +15369,6 @@ Serial = SLPM-65567
 Name   = Corda D'Oro, La
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65568
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65569
 Name   = Kita He - Diamond Dust + Kiss is Beginning
 Region = NTSC-J
@@ -16177,14 +15399,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65576
 Name   = Tantei Jingiji Saburo - Kind of Blue
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65577
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65578
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65579
@@ -16439,14 +15653,6 @@ Serial = SLPM-65644
 Name   = Guilty Gear Isuka
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65646
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65647
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65648
 Name   = Medal of Honor - Frontline [EA Best Hits]
 Region = NTSC-J
@@ -16483,16 +15689,8 @@ Serial = SLPM-65657
 Name   = World Soccer Winning Eleven 8
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65660
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65661
 Name   = Densha de Go! Professional 2 [Taito Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65662
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65663
@@ -16529,10 +15727,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65672
 Name   = W - Wish
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65673
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65674
@@ -16675,14 +15869,6 @@ Serial = SLPM-65710
 Name   = Apocripha Zero
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65711
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65713
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65714
 Name   = Angelique Etoile [Premium Box]
 Region = NTSC-J
@@ -16805,10 +15991,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65746
 Name   = FIFA Total Football 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65747
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65748
@@ -17059,10 +16241,6 @@ Serial = SLPM-65813
 Name   = Fu-un Bakumatsu Den
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65814
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65815
 Name   = Tom Clancy's Splinter Cell - Pandora Tomorrow
 Region = NTSC-J
@@ -17109,10 +16287,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65826
 Name   = Tsukiyo ni Saraba
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65827
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65828
@@ -17199,10 +16373,6 @@ Serial = SLPM-65848
 Name   = Soriaro no Fuukin Remix
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65850
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65853
 Name   = Let's Make a Baseball Team 3
 Region = NTSC-J
@@ -17251,10 +16421,6 @@ Serial = SLPM-65864
 Name   = Nobunaga no Yabou - Tenka Sousei [with Power-Up Kit]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65865
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65866
 Name   = Izuku e Iku no, Anohi
 Region = NTSC-J
@@ -17297,10 +16463,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65876
 Name   = Busin 0 - Wizardry Alternative Neo [Atlus Best Collection]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65877
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65878
@@ -17363,16 +16525,8 @@ Serial = SLPM-65892
 Name   = Zill O'll Infinite
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65893
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65894
 Name   = Winning Post 6 - 2005 Version
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65895
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65896
@@ -17409,10 +16563,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65904
 Name   = Baldr Force EXE
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65905
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65906
@@ -17545,10 +16695,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65939
 Name   = Memories Off - After Rain Vol.3
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65940
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65941
@@ -17707,10 +16853,6 @@ Serial = SLPM-65982
 Name   = Tokyo Bus Guide 2
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-65983
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-65984
 Name   = Grand Theft Auto - San Andreas
 Region = NTSC-J
@@ -17741,10 +16883,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65991
 Name   = Anubis ZOE - Special Edition [Konami Dendou Collection]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65993
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65994
@@ -17781,10 +16919,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66002
 Name   = Prince of Persia - Warrior Within
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66003
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66006
@@ -17943,10 +17077,6 @@ Serial = SLPM-66047
 Name   = FIFA Street
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66048
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66049
 Name   = D.C.P.S. - Da Capo Plus Situation [Kadokawa the Best]
 Region = NTSC-J
@@ -18015,10 +17145,6 @@ Serial = SLPM-66065
 Name   = Pop'n Music 11
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66067
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66068
 Name   = Richard Burns Rally
 Region = NTSC-J
@@ -18047,10 +17173,6 @@ Serial = SLPM-66074
 Name   = Sonic Gems Collection
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66075
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66076
 Name   = Meine Liebe - Yuubinaru kioku [Konami the Best]
 Region = NTSC-J
@@ -18063,10 +17185,6 @@ Serial = SLPM-66078
 Name   = White Princess the Second
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66079
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66080
 Name   = Generation of Chaos 3 [IF Collection]
 Region = NTSC-J
@@ -18077,10 +17195,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66082
 Name   = Fire Pro Wrestling Returns
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66083
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66084
@@ -18097,10 +17211,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66087
 Name   = Winning Post 7
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66088
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66089
@@ -18127,10 +17237,6 @@ Serial = SLPM-66094
 Name   = Shin Sangoku Musou 2 [Koei Selection Series]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66095
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66096
 Name   = Shin Sangoku Musou 2 - Mushouden [Koei Selection Series]
 Region = NTSC-J
@@ -18141,10 +17247,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66098
 Name   = True Crime - Streets of L.A. [CapKore]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66099
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66100
@@ -18231,10 +17333,6 @@ Serial = SLPM-66125
 Name   = Final Fantasy X-2 [Ultimate Hits]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66127
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66129
 Name   = Guilty Gear XX #Reload
 Region = NTSC-J
@@ -18249,10 +17347,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66132
 Name   = Gladiator - Road to Freedom - Remix
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66133
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66134
@@ -18335,10 +17429,6 @@ Serial = SLPM-66153
 Name   = Konneko - Keep a Memory Green
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66154
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66155
 Name   = Flame of Recca - Final Burning [Konami Palace Selection]
 Region = NTSC-J
@@ -18361,14 +17451,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66160
 Name   = Devil May Cry 3 [Special Edition]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66161
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66162
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66163
@@ -18405,14 +17487,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66171
 Name   = NBA Live '06
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66172
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66173
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66175
@@ -18615,10 +17689,6 @@ Serial = SLPM-66229
 Name   = GI Jockey 4
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66230
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66231
 Name   = Karutagura - Tamashii no Kunou
 Region = NTSC-J
@@ -18699,10 +17769,6 @@ Serial = SLPM-66251
 Name   = EX Jinsei Game II [Takara Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66252
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66253
 Name   = Finalist [Limited First Edition]
 Region = NTSC-J
@@ -18713,10 +17779,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66255
 Name   = World Soccer Winning Eleven 9 [Bonus Pack]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66256
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66257
@@ -18911,10 +17973,6 @@ Serial = SLPM-66308
 Name   = Harukanaru Toki no Naka Premium Boxset
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66312
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66313
 Name   = Guitar Freaks V & DrumMania V
 Region = NTSC-J
@@ -18967,10 +18025,6 @@ Serial = SLPM-66325
 Name   = Castlevania - Lament of Innocence [Konami Palace Selection]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66326
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66327
 Name   = Wallace and Gromit - The Curse of the Were-Rabbit
 Region = NTSC-J
@@ -19001,10 +18055,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66334
 Name   = WRC - World Rally Championship 4 [Spike the Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66335
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66336
@@ -19039,14 +18089,6 @@ Serial = SLPM-66343
 Name   = Shin Sangoku Musou 4 - Empires
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66344
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66347
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66348
 Name   = Harukanaru Jikuu no Kade 3 - Unmei no Meikyuu
 Region = NTSC-J
@@ -19077,10 +18119,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66356
 Name   = Baldr Force EXE [Alchemist Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66357
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66358
@@ -19255,10 +18293,6 @@ Serial = SLPM-66413
 Name   = Cross+Channel - To All People [2800 Collection]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-66414
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-66415
 Name   = Mystereet [First Print - Limited Edition]
 Region = NTSC-J
@@ -19293,10 +18327,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66424
 Name   = La Corda D'oro [Koei the Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66425
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66426
@@ -19357,10 +18387,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66441
 Name   = Oookuki
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-66442
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-66443
@@ -21503,20 +20529,8 @@ Serial = SLPM-74212
 Name   = Sengoku Musou [PlayStation 2 The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-74213
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-74215
 Name   = Shin Sangoku Musou 3 [PlayStation 2 The Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-74216
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-74217
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74218
@@ -21537,10 +20551,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74222
 Name   = Samurai Kanzenban [PlayStation 2 The Best]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-74223
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74224
@@ -21667,10 +20677,6 @@ Serial = SLPM-74301
 Name   = Ryu ga Gotoku 2 [PlayStation 2 the Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-74401
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-74402
 Name   = Capcom vs. SNK 2 [PlayStation 2 The Best]
 Region = NTSC-J
@@ -21715,10 +20721,6 @@ Serial = SLPM-74412
 Name   = Kengo 2 [PlayStation 2 The Best]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-74413
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPM-74414
 Name   = Energy Airforce
 Region = NTSC-J
@@ -21729,10 +20731,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74416
 Name   = Clock Tower 3
-Region = NTSC-J
----------------------------------------------
-Serial = SLPM-74419
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74420
@@ -21755,10 +20753,6 @@ Serial = SLPS-20003
 Name   = Street Fighter EX3
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20004
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20005
 Name   = EX Billiards
 Region = NTSC-J
@@ -21769,10 +20763,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20007
 Name   = Driving Emotion Type S
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20008
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20009
@@ -21793,10 +20783,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20013
 Name   = Primal Image Vol.01
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20014
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20015
@@ -21855,10 +20841,6 @@ Serial = SLPS-20029
 Name   = Surfroid
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20030
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20031
 Name   = Mechsmith, The - Run-Dim
 Region = NTSC-J
@@ -21887,10 +20869,6 @@ Serial = SLPS-20038
 Name   = Grappler Baki - Baki Saidai no Tournament
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20039
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20040
 Name   = Moto GP
 Region = NTSC-J
@@ -21911,24 +20889,12 @@ Serial = SLPS-20044
 Name   = F1 Championship Season 2000
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20045
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20046
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20047
 Name   = Toudai Shogi
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20048
 Name   = Sim Theme Park
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20049
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20050
@@ -21955,10 +20921,6 @@ Serial = SLPS-20055
 Name   = Technictix
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20056
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20057
 Name   = Dog of Bay
 Region = NTSC-J
@@ -21973,10 +20935,6 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20060
 Name   = Dream Audition 2
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20061
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20062
@@ -22015,30 +20973,6 @@ Serial = SLPS-20073
 Name   = NBA Live 2001
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20074
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20075
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20077
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20078
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20080
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20081
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20082
 Name   = Saikyou Toudai Shogi 3 [Mycom Best]
 Region = NTSC-J
@@ -22063,10 +20997,6 @@ Serial = SLPS-20089
 Name   = Gun-Heats
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20090
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20091
 Name   = Gekisha Boy 2
 Region = NTSC-J
@@ -22075,20 +21005,12 @@ Serial = SLPS-20092
 Name   = Tiger Woods PGA Tour 2001
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20093
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20094
 Name   = Shinseiki Evangelion - Typing Project-E [TVware Information Revolution Series]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20095
 Name   = Knockout Kings 2001
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20096
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20097
@@ -22127,20 +21049,8 @@ Serial = SLPS-20106
 Name   = Growlanser II - The Sense of Justice
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20107
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20108
 Name   = Quake III - Revolution
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20109
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20110
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20111
@@ -22155,22 +21065,6 @@ Serial = SLPS-20113
 Name   = Time Crisis II [with Guncon 2]
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20114
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20115
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20116
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20117
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20120
 Name   = Formula One 2001
 Region = NTSC-J
@@ -22183,40 +21077,16 @@ Serial = SLPS-20122
 Name   = Time Crisis II
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20123
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20124
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20125
 Name   = Shanghai - The Four Elements [Super Value 2800]
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20126
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20127
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20128
 Name   = Toshiyuki Morikawa Private Collection - Puppet Princess of Marl's Kingdom
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPS-20129
-Name   = zzz_unknown_japanese_title
-Region = NTSC-J
----------------------------------------------
 Serial = SLPS-20130
 Name   = New Best Play Professional Baseball
-Region = NTSC-J
----------------------------------------------
-Serial = SLPS-20131
-Name   = zzz_unknown_japanese_title
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20132
@@ -30389,8 +29259,10 @@ Serial = SLES-51362
 Name   = Simpsons Skateboarding
 Region = PAL-Unk
 ---------------------------------------------
-Serial = Music 3000
-Name   = PAL-Unk
+Serial = SLES-51363
+Name   = Music 3000
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-51365
 Name   = BMX XXX
 Region = PAL-Unk
@@ -33715,10 +32587,14 @@ Serial = SLES-53093
 Name   = Cold Winter
 Region = PAL-Unk
 ---------------------------------------------
-Serial = Rugby 2005
-Name   = PAL-Unk
-Serial = Rugby 2005
-Name   = PAL-Unk
+Serial = SLES-53094
+Name   = Rugby 2005
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53095
+Name   = Rugby 2005
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-53096
 Name   = Worms 4 - Mayhem
 Region = PAL-Unk
@@ -34089,10 +32965,6 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53360
 Name   = Alarm for Cobra 11 Vol.2 - Hot Pursuit
-Region = PAL-Unk
----------------------------------------------
-Serial = SLES-53361
-Name   = zzz_unknown_pal_title
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53363
@@ -35481,10 +34353,6 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54140
 Name   = Playwize Poker & Casino
-Region = PAL-Unk
----------------------------------------------
-Serial = SLES-54147
-Name   = zzz_unknown_european_title
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54150

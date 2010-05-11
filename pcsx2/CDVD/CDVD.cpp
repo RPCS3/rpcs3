@@ -27,6 +27,7 @@
 #include "GS.h"			// for gsRegionMode
 #include "Elfheader.h"
 #include "ps2/BiosTools.h"
+#include "DataBase_Loader.h"
 
 wxString DiscID;
 
@@ -335,7 +336,6 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 		DiscID = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
 
 	Console.WriteLn("Disc ID = %s", DiscID.ToUTF8().data());
-
 	elfptr = loadElf(elfpath);
 
 	ElfCRC = elfptr->getCRC();
@@ -345,6 +345,9 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	Console.WriteLn("Entry point = 0x%08x", ElfEntry);
 
 	elfptr.Delete();
+
+	DataBase_Loader dbLoader("DataBase.dbf", "Serial", DiscID.ToUTF8().data());
+	Console.WriteLn("Game = %s (%s)", dbLoader.getString("Name").c_str(), dbLoader.getString("Region").c_str());
 }
 
 void cdvdReloadElfInfo()
