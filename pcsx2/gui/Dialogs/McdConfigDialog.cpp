@@ -115,6 +115,8 @@ Panels::McdConfigPanel_Multitap::McdConfigPanel_Multitap(wxWindow *parent, int p
 	m_check_Multitap = new pxCheckBox( this, wxsFormat(_("Enable Multitap on Port %u"), m_port+1) );
 	m_check_Multitap->SetFont( wxFont( m_check_Multitap->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 
+	*this += m_check_Multitap;
+
 	Connect( m_check_Multitap->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigPanel_Multitap::OnMultitapChecked));
 }
 
@@ -152,12 +154,30 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	AddPage<McdConfigPanel_Multitap>	( wxLt("Multitap 1"),	cfgid.MemoryCard );
 	AddPage<McdConfigPanel_Multitap2>	( wxLt("Multitap 2"),	cfgid.MemoryCard );
 
-	//MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
+	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
+
+	m_panel_mcdlist = new MemoryCardListPanel( this );
 
 	*this += StdPadding;
-	*this += new wxStaticLine( this )			| pxExpand;
+	*this += new wxStaticLine( this )	| StdExpand();
 	*this += StdPadding;
-	*this += new MemoryCardListPanel( this )	| pxExpand;
+	*this += m_panel_mcdlist			| StdExpand();
 
 	AddOkCancel();
+}
+
+bool Dialogs::McdConfigDialog::Show( bool show )
+{
+	if( show && m_panel_mcdlist )
+		m_panel_mcdlist->OnShown();
+
+	return _parent::Show( show );
+}
+
+int Dialogs::McdConfigDialog::ShowModal()
+{
+	if( m_panel_mcdlist )
+		m_panel_mcdlist->OnShown();
+
+	return _parent::ShowModal();
 }

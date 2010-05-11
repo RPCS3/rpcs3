@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
+using namespace pxSizerFlags;
+
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
@@ -60,7 +62,13 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		},
 		{
 			_("EE timing hack / FFX videos fix - Multi purpose hack. Try if all else fails."),
-				_("Known to affect following games:\n * Final Fantasy 10 (Fixes FMV)\n * Digital Devil Saga (Fixes FMV and crashes)\n * SSX (Fixes bad graphics and crashes)\n * Resident Evil: Dead Aim (Causes garbled textures)")
+			pxE( ".Tooltips:Gamefixes:EE Timing Hack",
+				L"Known to affect following games:\n"
+				L" * Final Fantasy 10 (Fixes FMV)\n"
+				L" * Digital Devil Saga (Fixes FMV and crashes)\n"
+				L" * SSX (Fixes bad graphics and crashes)\n"
+				L" * Resident Evil: Dead Aim (Causes garbled textures)"
+			)
 		}
 	};
 
@@ -71,21 +79,21 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	}
 
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
-		_("(Warning, can cause compatibility or performance issues!)"));
+		_("(Warning!  Game fixes can cause compatibility or performance issues!)"));
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled."));
-	m_check_Enable		->SetValue( g_Conf->EnableGameFixes );
+	m_check_Enable->SetValue( g_Conf->EnableGameFixes );
 
-	*this	+= groupSizer	| wxSF.Centre();
+	*this	+= groupSizer		| pxCenter;
 
-	*this	+= m_check_Enable;
-	*this	+= new pxStaticHeading( this, pxE( ".Panels:Gamefixes:Compat Warning",
+	*this	+= m_check_Enable	| StdExpand();
+	*this	+= Heading( pxE( ".Panels:Gamefixes:Compat Warning",
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
 	));
-	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
-	EnableStuff();
 
-	AppStatusEvent_OnSettingsApplied();
+	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
+
+	EnableStuff();
 }
 
 // I could still probably get rid of the for loop, but I think this is clearer.

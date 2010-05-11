@@ -109,7 +109,7 @@ public:
 	virtual ~pxLogTextCtrl() throw();
 
 	bool HasWriteLock() const { return m_FreezeWrites; }
-	void ConcludeIssue( int lines );
+	void ConcludeIssue();
 
 #ifdef __WXMSW__
 	virtual void WriteText(const wxString& text);
@@ -173,32 +173,15 @@ protected:
 	ConLogConfig&	m_conf;
 	pxLogTextCtrl&	m_TextCtrl;
 	wxTimer			m_timer_FlushLimiter;
+	wxTimer			m_timer_FlushUnlocker;
 	ColorArray		m_ColorTable;
 
 	int				m_flushevent_counter;
-
-	// this int throttles freeze/thaw of the display, by cycling from -2 to 4, roughly.
-	// (negative values force thaw, positive values indicate thaw is disabled.  This is
-	//  needed because the wxWidgets Thaw implementation uses a belated paint message,
-	//  and if we Freeze on the very next queued message after thawing, the repaint
-	//  never happens)
-	int				m_ThawThrottle;
-
-	// If a freeze is executed, this is set true (without this, wx asserts)
-	bool			m_ThawNeeded;
-
-	// Set true when a Thaw message is sent (avoids cluttering the message pump with redundant
-	// requests)
-	bool			m_ThawPending;
-
+	bool			m_FlushRefreshLocked;
+	
 	// ----------------------------------------------------------------------------
 	//  Queue State Management Vars
 	// ----------------------------------------------------------------------------
-
-	// This is a counter of the total number of pending flushes across all threads.
-	// If the value exceeds a threshold, threads begin throttling to avoid deadlocking
-	// the GUI.
-	volatile int			m_pendingFlushes;
 
 	// Boolean indicating if a flush message is already in the Main message queue.  Used
 	// to prevent spamming the main thread with redundant messages.
@@ -217,7 +200,7 @@ protected:
 
 	// Lock object for accessing or modifying the following three vars:
 	//  m_QueueBuffer, m_QueueColorSelection, m_CurQueuePos
-	MutexRecursive			m_mtx_Queue;
+	Mutex					m_mtx_Queue;
 
 	// Describes a series of colored text sections in the m_QueueBuffer.
 	SafeList<ColorSection>	m_QueueColorSection;
@@ -271,14 +254,14 @@ protected:
 
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );
-	void OnIdleEvent( wxIdleEvent& event );
-	void OnFlushLimiterTimer( wxTimerEvent& evt );
+	void OnFlushUnlockerTimer( wxTimerEvent& evt );
 	void OnFlushEvent( wxCommandEvent& event );
 
 	// common part of OnClose() and OnCloseWindow()
 	virtual void DoClose();
 	void DoFlushQueue();
-
+	void DoFlushEvent( bool isPending );
+	
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );

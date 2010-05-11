@@ -35,7 +35,7 @@ enum McdColumnType
 	McdCol_Formatted,
 	McdCol_DateModified,
 	McdCol_DateCreated,
-	McdCol_Path,
+	//McdCol_Path,
 	McdCol_Count
 };
 
@@ -55,50 +55,40 @@ void MemoryCardListView::CreateColumns()
 		{ _("Formatted"),		wxLIST_FORMAT_CENTER },
 		{ _("Last Modified"),	wxLIST_FORMAT_LEFT },
 		{ _("Created On"),		wxLIST_FORMAT_LEFT },
-		{ _("Path"),			wxLIST_FORMAT_LEFT }
+		//{ _("Path"),			wxLIST_FORMAT_LEFT }
 	};
 
 	for( int i=0; i<McdCol_Count; ++i )
 		InsertColumn( i, columns[i].name, columns[i].align, -1 );
 }
 
-void MemoryCardListView::AssignCardsList( McdList* knownCards, int length )
+void MemoryCardListView::SetCardCount( int length )
 {
-	if( knownCards == NULL ) length = 0;
-	m_KnownCards = knownCards;
-
+	if( !m_CardsList ) length = 0;
 	SetItemCount( length );
-	RefreshItems( 0, length );
+	Refresh();
 }
 
 MemoryCardListView::MemoryCardListView( wxWindow* parent )
-	: wxListView( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL )
+	: wxListView( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_VIRTUAL )
 {
-	m_KnownCards = NULL;
+	m_CardsList = NULL;
 	CreateColumns();
 
-	//m_KnownCards;
 	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView::OnListDrag));
 }
 
 void MemoryCardListView::OnListDrag(wxListEvent& evt)
 {
 	evt.Skip();
-
-	wxFileDataObject my_data;
-	my_data.AddFile( (*m_KnownCards)[ GetItemData(GetFirstSelected()) ].Filename.GetFullPath() );
-
-	wxDropSource dragSource( this );
-	dragSource.SetData( my_data );
-	wxDragResult result = dragSource.DoDragDrop();
 }
 
 // return the text for the given column of the given item
 wxString MemoryCardListView::OnGetItemText(long item, long column) const
 {
-	if( m_KnownCards == NULL ) return _parent::OnGetItemText(item, column);
+	if( !m_CardsList ) return _parent::OnGetItemText(item, column);
 
-	const McdListItem& it( (*m_KnownCards)[item] );
+	const McdListItem& it( m_CardsList->Get(item) );
 
 	switch( column )
 	{
@@ -113,7 +103,7 @@ wxString MemoryCardListView::OnGetItemText(long item, long column) const
 		case McdCol_Formatted:		return it.IsFormatted ? L"Yes" : L"No";
 		case McdCol_DateModified:	return it.DateModified.FormatDate();
 		case McdCol_DateCreated:	return it.DateModified.FormatDate();
-		case McdCol_Path:			return it.Filename.GetPath();
+		//case McdCol_Path:			return it.Filename.GetPath();
 	}
 
 	pxFail( "Unknown column index in MemoryCardListView -- returning an empty string." );

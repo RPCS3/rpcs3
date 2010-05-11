@@ -230,24 +230,17 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	: wxFrame(parent, wxID_ANY, title)
 	, m_conf( options )
 	, m_TextCtrl( *new pxLogTextCtrl(this) )
-	, m_timer_FlushLimiter( this )
+	, m_timer_FlushUnlocker( this )
 	, m_ColorTable( options.FontSize )
 
 	, m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
 	, m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
 	, m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
 {
-	m_flushevent_counter		= 0;
-
 	m_CurQueuePos				= 0;
-	m_pendingFlushes			= 0;
 	m_WaitingThreadsForFlush	= 0;
-	m_ThreadedLogInQueue		= false;
 	m_pendingFlushMsg			= false;
-
-	m_ThawThrottle				= 0;
-	m_ThawNeeded				= false;
-	m_ThawPending				= false;
+	m_FlushRefreshLocked		= false;
 
 	SetIcons( wxGetApp().GetIconBundle() );
 
@@ -329,8 +322,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( pxEvt_DockConsole,		wxCommandEventHandler	(ConsoleLogFrame::OnDockedMove) );
 	Connect( pxEvt_FlushQueue,		wxCommandEventHandler	(ConsoleLogFrame::OnFlushEvent) );
 
-	Connect( wxEVT_IDLE,			wxIdleEventHandler		(ConsoleLogFrame::OnIdleEvent) );
-	Connect( wxEVT_TIMER,			wxTimerEventHandler		(ConsoleLogFrame::OnFlushLimiterTimer) );
+	Connect( m_timer_FlushUnlocker.GetId(),	wxEVT_TIMER,	wxTimerEventHandler	(ConsoleLogFrame::OnFlushUnlockerTimer) );
 
 	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
 	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
@@ -388,26 +380,27 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 		wxCommandEvent evt( pxEvt_FlushQueue );
 		evt.SetInt( 0 );
 		if( wxThread::IsMain() )
-			GetEventHandler()->ProcessEvent( evt );
-		else
 		{
-			GetEventHandler()->AddPendingEvent( evt );
+			OnFlushEvent( evt );
+			return;
 		}
+		else
+			GetEventHandler()->AddPendingEvent( evt );
+
 		lock.Acquire();
 	}
 
-	++m_pendingFlushes;
-
 	if( !wxThread::IsMain() )
 	{
-		m_ThreadedLogInQueue = true;
-
-		if( m_pendingFlushes > 48 )
+		// Too many color changes causes huge slowdowns when decorating the rich textview, so
+		// include a secodary check to avoid having a colorful log spam from killing gui responsiveness.
+		
+		if( m_CurQueuePos > 0x100000 || m_QueueColorSection.GetLength() > 256 )
 		{
 			++m_WaitingThreadsForFlush;
 			lock.Release();
 
-			if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,500 ) ) )
+			if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,250 ) ) )
 			{
 				// Necessary since the main thread could grab the lock and process before
 				// the above function actually returns (gotta love threading!)
@@ -418,7 +411,6 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 			{
 				// give gui thread time to repaint and handle other pending messages.
 
-				//pxYield( 1 );
 				wxGetApp().Ping();
 			}
 		}
@@ -609,36 +601,8 @@ void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 	SetTitle( event.GetString() );
 }
 
-void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& )
+void ConsoleLogFrame::DoFlushEvent( bool isPending )
 {
-	// When the GUI is idle then it's a safe bet we can resume suspended console log
-	// flushing, on the theory that the user's had a good chance to field user input.
-
-	if( m_flushevent_counter > 0 )
-	{
-		m_flushevent_counter = 0;
-		m_timer_FlushLimiter.Stop();
-
-		wxCommandEvent sendevt( pxEvt_FlushQueue );
-		GetEventHandler()->AddPendingEvent( sendevt );
-	}
-}
-
-void ConsoleLogFrame::OnFlushLimiterTimer( wxTimerEvent& )
-{
-	if( m_flushevent_counter == 0 ) return;
-
-	m_flushevent_counter = 0;
-
-	wxCommandEvent sendevt( pxEvt_FlushQueue );
-	GetEventHandler()->AddPendingEvent( sendevt );
-}
-
-void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
-{
-	ScopedLock locker( m_mtx_Queue );
-	m_pendingFlushMsg = false;
-
 	// recursion guard needed due to Mutex lock/acquire code below, which can end up yielding
 	// to the gui and attempting to process more messages (which in turn would result in re-
 	// entering this handler).
@@ -647,38 +611,11 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
 	RecursionGuard recguard( recursion_counter );
 	if( recguard.IsReentrant() ) return;
 
+	ScopedLock locker( m_mtx_Queue );
+
 	if( m_CurQueuePos != 0 )
 	{
-		if( !m_timer_FlushLimiter.IsRunning() )
-		{
-			m_timer_FlushLimiter.Start( 500, true );
-			m_flushevent_counter = 0;
-		}
-		else
-		{
-			if( m_flushevent_counter >= 1000 )
-				return;
-			++m_flushevent_counter;
-		}
-
-		if( m_ThreadedLogInQueue && (m_pendingFlushes < 20) )
-		{
-			// Hacky Speedup -->
-			// Occasionally the EEcore thread can send ups some serious amounts of spam, and
-			// if we don't sleep the main thread some, the stupid text control refresh will
-			// drive framerates toward zero as it tries to refresh for every single log.
-			// This hack checks if a thread has been posting logs and, if so, we "rest" the
-			// main thread so that other threads can accumulate a more sizable log chunk.
-
-			locker.Release();
-			Sleep( 2 );
-			locker.Acquire();
-		}
-
-		if( m_CurQueuePos != 0 )
-			DoFlushQueue();
-
-		//m_TextCtrl.Thaw();
+		DoFlushQueue();
 	}
 
 	// Implementation note: I tried desperately to move this into wxEVT_IDLE, on the theory that
@@ -695,6 +632,24 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
 		int count = m_sem_QueueFlushed.Count();
 		while( count < 0 ) m_sem_QueueFlushed.Post();
 	}
+
+	m_pendingFlushMsg = isPending;
+}
+
+void ConsoleLogFrame::OnFlushUnlockerTimer( wxTimerEvent& )
+{
+	m_FlushRefreshLocked = false;
+	DoFlushEvent( false );
+}
+
+void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
+{
+	if( m_FlushRefreshLocked ) return;
+
+	DoFlushEvent( true );
+
+	m_FlushRefreshLocked = true;
+	m_timer_FlushUnlocker.Start( 100, true );
 }
 
 void ConsoleLogFrame::DoFlushQueue()
@@ -710,12 +665,14 @@ void ConsoleLogFrame::DoFlushQueue()
 	// Manual InsertionPoint tracking avoids a lot of overhead in SetInsertionPointEnd()
 	wxTextPos insertPoint = m_TextCtrl.GetLastPosition();
 
-	// cap at 256k for now...
-	// fixme - 256k runs well on win32 but appears to be very sluggish on linux (but that could
+	// cap at 512k for now...
+	// fixme - 512k runs well on win32 but appears to be very sluggish on linux (but that could
 	// be a result of my using Xming + CoLinux).  Might need platform dependent defaults here. --air
-	if( (insertPoint + m_CurQueuePos) > 0x40000 )
+	
+	static const int BufferSize = 0x80000;
+	if( (insertPoint + m_CurQueuePos) > BufferSize )
 	{
-		int toKeep = 0x40000 - m_CurQueuePos;
+		int toKeep = BufferSize - m_CurQueuePos;
 		if( toKeep <= 10 )
 		{
 			m_TextCtrl.Clear();
@@ -723,14 +680,21 @@ void ConsoleLogFrame::DoFlushQueue()
 		}
 		else
 		{
-			int toRemove = 0x40000 - toKeep;
-			if( toRemove < 0x10000 ) toRemove = 0x10000;
+			int toRemove = BufferSize - toKeep;
+			if( toRemove < BufferSize / 4 ) toRemove = BufferSize;
 			m_TextCtrl.Remove( 0, toRemove );
 			insertPoint -= toRemove;
 		}
 	}
 
 	m_TextCtrl.SetInsertionPoint( insertPoint );
+
+	// fixme : Writing a lot of colored logs to the console can be quite slow when "spamming"
+	// is happening, due to the overhead of SetDefaultStyle and WriteText calls.  I'm not sure
+	// if there's a better way to go about this?  Using Freeze/Thaw helps a little bit, but it's
+	// still magnitudes slower than dumping a straight run. --air
+
+	if( len > 64 ) m_TextCtrl.Freeze();
 
 	for( int i=0; i<len; ++i )
 	{
@@ -740,12 +704,12 @@ void ConsoleLogFrame::DoFlushQueue()
 		m_TextCtrl.WriteText( &m_QueueBuffer[m_QueueColorSection[i].startpoint] );
 	}
 
-	m_TextCtrl.ConcludeIssue( m_pendingFlushes );
+	if( len > 64 ) m_TextCtrl.Thaw();
+
+	m_TextCtrl.ConcludeIssue();
 
 	m_QueueColorSection.Clear();
 	m_CurQueuePos		= 0;
-	m_pendingFlushes	= 0;
-	m_ThreadedLogInQueue= false;
 }
 
 ConsoleLogFrame* Pcsx2App::GetProgramLog()

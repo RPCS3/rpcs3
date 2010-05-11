@@ -339,21 +339,9 @@ bool AppPluginManager::OpenPlugin_GS()
 	return retval;
 }
 
-static int _guard = 0;
-
 // Yay, this plugin is guaranteed to always be opened first and closed last.
 void AppPluginManager::ClosePlugin_GS()
 {
-	/*if( GSopen2 == NULL || CloseViewportWithPlugins )
-	{
-		// All other plugins must be closed before the GS, because they all rely on
-		// the GS window handle being valid.  The recursion guard will protect this
-		// function from being called a million times. ;)
-
-		RecursionGuard mess( _guard );
-		if( !mess.IsReentrant() ) Close();
-	}*/
-
 	_parent::ClosePlugin_GS();
 	if( GetMTGS().IsSelf() && GSopen2 && CloseViewportWithPlugins ) sApp.CloseGsPanel();
 }

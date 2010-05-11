@@ -93,8 +93,6 @@ Panels::MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 
 	wxButton* button_Create		= new wxButton(this, wxID_ANY, _("Create new card..."));
 
-	//Connect( m_list_AllKnownCards->GetId(), wxEVT_COMMAND_LEFT_CLICK, MemoryCardsPanel::OnListDrag);
-
 	// ------------------------------------
 	//       Sizer / Layout Section
 	// ------------------------------------
@@ -114,8 +112,9 @@ Panels::MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 	*this += s_buttons		| pxExpand;
 
 	m_listview->SetMinSize( wxSize( m_idealWidth, 120 ) );
-
-	Disable();
+	
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListPanel::OnListDrag));
+	Connect( button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel::OnCreateNewCard));
 }
 
 void Panels::MemoryCardListPanel::Apply()
@@ -124,7 +123,6 @@ void Panels::MemoryCardListPanel::Apply()
 
 void Panels::MemoryCardListPanel::AppStatusEvent_OnSettingsApplied()
 {
-
 }
 
 bool Panels::MemoryCardListPanel::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
@@ -155,7 +153,7 @@ bool Panels::MemoryCardListPanel::ValidateEnumerationStatus()
 	if( !m_KnownCards || (*mcdlist != *m_KnownCards) )
 		validated = false;
 
-	m_listview->AssignCardsList( NULL );
+	m_listview->SetInterface( NULL );
 	m_KnownCards.SwapPtr( mcdlist );
 
 	return validated;
@@ -164,9 +162,6 @@ bool Panels::MemoryCardListPanel::ValidateEnumerationStatus()
 void Panels::MemoryCardListPanel::DoRefresh()
 {
 	if( !m_KnownCards ) return;
-
-	//m_listview->ClearAll();
-	//m_listview->CreateColumns();
 
 	for( size_t i=0; i<m_KnownCards->size(); ++i )
 	{
@@ -189,5 +184,38 @@ void Panels::MemoryCardListPanel::DoRefresh()
 		}
 	}
 
-	m_listview->AssignCardsList( m_KnownCards );
+	m_listview->SetInterface( this );
+	//m_listview->SetCardCount( m_KnownCards->size() );
+}
+
+void Panels::MemoryCardListPanel::OnCreateNewCard(wxCommandEvent& evt)
+{
+
+}
+
+void Panels::MemoryCardListPanel::OnListDrag(wxListEvent& evt)
+{
+	wxFileDataObject my_data;
+	my_data.AddFile( (*m_KnownCards)[m_listview->GetItemData(m_listview->GetFirstSelected())].Filename.GetFullPath() );
+
+	wxDropSource dragSource( m_listview );
+	dragSource.SetData( my_data );
+	wxDragResult result = dragSource.DoDragDrop();
+}
+
+int Panels::MemoryCardListPanel::GetLength() const
+{
+	return m_KnownCards ? m_KnownCards->size() : 0;
+}
+
+const McdListItem& Panels::MemoryCardListPanel::Get( int idx ) const
+{
+	pxAssume(!!m_KnownCards);
+	return (*m_KnownCards)[idx];
+}
+
+McdListItem& Panels::MemoryCardListPanel::Get( int idx )
+{
+	pxAssume(!!m_KnownCards);
+	return (*m_KnownCards)[idx];
 }

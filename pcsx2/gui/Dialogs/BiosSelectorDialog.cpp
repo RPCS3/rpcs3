@@ -24,6 +24,7 @@
 #include <wx/filepicker.h>
 
 using namespace Panels;
+using namespace pxSizerFlags;
 
 // ----------------------------------------------------------------------------
 Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent )
@@ -33,15 +34,29 @@ Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent )
 
 	m_idealWidth = 500;
 
-	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( this );
+	m_selpan = new Panels::BiosSelectorPanel( this );
 
-	*this += selpan		| pxSizerFlags::StdExpand();
-	AddOkCancel( *GetSizer(), false );
+	*this += m_selpan		| StdExpand();
+	AddOkCancel();
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,			wxCommandEventHandler(BiosSelectorDialog::OnOk_Click) );
 	Connect(				wxEVT_COMMAND_LISTBOX_DOUBLECLICKED,	wxCommandEventHandler(BiosSelectorDialog::OnDoubleClicked) );
+}
 
-	selpan->OnShown();
+bool Dialogs::BiosSelectorDialog::Show( bool show )
+{
+	if( show && m_selpan )
+		m_selpan->OnShown();
+
+	return _parent::Show( show );
+}
+
+int Dialogs::BiosSelectorDialog::ShowModal()
+{
+	if( m_selpan )
+		m_selpan->OnShown();
+		
+	return _parent::ShowModal();
 }
 
 void Dialogs::BiosSelectorDialog::OnOk_Click( wxCommandEvent& evt )

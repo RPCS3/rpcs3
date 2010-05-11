@@ -20,6 +20,10 @@
 using namespace pxSizerFlags;
 using namespace Threading;
 
+// NOTE: Currently unused module.  Stuck Threads are not detected or handled at this time,
+// though I would like to have something in place in the distant future. --air
+
+
 Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, PersistentThread& stuck_thread )
 	: wxDialogWithHelpers( parent, _("PCSX2 Thread is not responding"), wxVERTICAL )
 {

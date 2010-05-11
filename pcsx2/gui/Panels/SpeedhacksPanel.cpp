@@ -107,7 +107,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	) );
 
 	m_check_Enable = new pxCheckBox( this, _("Enable speedhacks"),
-		_("(Warning, can cause false FPS readings and many bugs!)"));
+		_("(Warning! Speedhacks can cause false FPS readings, choppy audio, and many other bugs!)"));
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all speedhacks are completely disabled."));
 
 	m_button_Defaults = new wxButton( this, wxID_DEFAULT, _("Restore Defaults") );
@@ -266,8 +266,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
 	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::OnEnable_Toggled ) );
 	Connect( wxID_DEFAULT,					wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::Defaults_Click ) );
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::SpeedHacksPanel::EnableStuff()

@@ -104,7 +104,7 @@ pxLogTextCtrl::~pxLogTextCtrl() throw()
 {
 }
 
-void pxLogTextCtrl::ConcludeIssue( int lines )
+void pxLogTextCtrl::ConcludeIssue()
 {
 	if( HasWriteLock() ) return;
 	SetInsertionPointEnd();

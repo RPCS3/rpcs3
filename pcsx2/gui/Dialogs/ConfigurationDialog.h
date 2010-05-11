@@ -22,6 +22,12 @@
 #include "AppCommon.h"
 #include "ApplyState.h"
 
+namespace Panels
+{
+	class BaseSelectorPanel;
+	class MemoryCardListPanel;
+}
+
 namespace Dialogs
 {
 	class BaseApplicableDialog : public wxDialogWithHelpers, public IApplyState
@@ -91,10 +97,18 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	class McdConfigDialog : public BaseConfigurationDialog
 	{
+		typedef BaseApplicableDialog _parent;
+
+	protected:
+		Panels::MemoryCardListPanel*	m_panel_mcdlist;
+
 	public:
 		virtual ~McdConfigDialog() throw() {}
 		McdConfigDialog(wxWindow* parent=NULL);
 		static const wxChar* GetNameStatic() { return L"Dialog:MemoryCardSettings"; }
+
+		virtual bool Show( bool show=true );
+		virtual int ShowModal();
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->McdSettingsTabName; }
@@ -121,13 +135,19 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	class BiosSelectorDialog : public BaseApplicableDialog
 	{
+		typedef BaseApplicableDialog _parent;
+
 	protected:
+		Panels::BaseSelectorPanel*	m_selpan;
 
 	public:
 		virtual ~BiosSelectorDialog()  throw() {}
 		BiosSelectorDialog( wxWindow* parent=NULL );
 
 		static const wxChar* GetNameStatic() { return L"Dialog:BiosSelector"; }
+
+		virtual bool Show( bool show=true );
+		virtual int ShowModal();
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );

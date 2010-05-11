@@ -56,6 +56,14 @@ struct McdListItem
 
 typedef std::vector<McdListItem> McdList;
 
+class IMemoryCardList
+{
+public:
+	virtual int GetLength() const=0;
+	virtual const McdListItem& Get( int idx ) const=0;
+	virtual McdListItem& Get( int idx )=0;
+};
+
 // --------------------------------------------------------------------------------------
 //  MemoryCardListView
 // --------------------------------------------------------------------------------------
@@ -64,7 +72,7 @@ class MemoryCardListView : public wxListView
 	typedef wxListView _parent;
 
 protected:
-	McdList*		m_KnownCards;
+	IMemoryCardList*	m_CardsList;
 
 public:
 	virtual ~MemoryCardListView() throw() { }
@@ -72,7 +80,12 @@ public:
 
 	virtual void OnListDrag(wxListEvent& evt);
 	virtual void CreateColumns();
-	virtual void AssignCardsList( McdList* knownCards, int length=0 );
+	virtual void SetCardCount( int length );
+	virtual void SetInterface( IMemoryCardList* face )
+	{
+		m_CardsList = face;
+		SetCardCount( m_CardsList ? m_CardsList->GetLength() : 0 );
+	}
 
 protected:
 	// Overrides for wxLC_VIRTUAL
@@ -90,6 +103,7 @@ namespace Panels
 	class MemoryCardListPanel
 		: public BaseSelectorPanel
 		, public wxFileDropTarget
+		, public IMemoryCardList
 	{
 	protected:
 		DirPickerPanel*		m_FolderPicker;
@@ -100,7 +114,14 @@ namespace Panels
 		virtual ~MemoryCardListPanel() throw() {}
 		MemoryCardListPanel( wxWindow* parent );
 
+		// Interface Implementation for IMemoryCardList
+		virtual int GetLength() const;
+		virtual const McdListItem& Get( int idx ) const;
+		virtual McdListItem& Get( int idx );
+
 	protected:
+		virtual void OnCreateNewCard(wxCommandEvent& evt);
+		virtual void OnListDrag(wxListEvent& evt);
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
 
 		virtual void Apply();

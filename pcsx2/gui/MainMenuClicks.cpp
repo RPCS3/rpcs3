@@ -103,31 +103,6 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 		}
 	}
 
-	// Old 'auto-restart' method; avoids shutting down the PCSX2 process, but tends to
-	// be bug prone in odd ways (namely QueryPerformanceFrequency hangs for a number of
-	// seconds .. wtf?)
-	
-	/*
-	m_RestartEmuOnDelete = true;
-	Destroy();
-
-	if( CoreThread.IsRunning() )
-	{
-		new RestartEverything_WhenCoreThreadStops();
-
-		if( StateCopy_IsBusy() )
-		{
-			new CancelCoreThread_WhenSaveStateDone();
-			throw Exception::CancelEvent( "Savestate in progress, app restart event delayed until action is complete." );
-		}
-		CoreThread.Cancel();
-	}
-	else
-	{
-		WipeSettings();
-	}
-	*/
-	
 	WipeSettings();
 	wxGetApp().PostMenuAction( MenuId_Exit );
 }
@@ -328,9 +303,9 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 
 	switch( event.GetId() )
 	{
-	case MenuId_Src_Iso:	newsrc = CDVDsrc_Iso;		break;
-	case MenuId_Src_Plugin:	newsrc = CDVDsrc_Plugin;	break;
-	case MenuId_Src_NoDisc: newsrc = CDVDsrc_NoDisc;	break;
+		case MenuId_Src_Iso:	newsrc = CDVDsrc_Iso;		break;
+		case MenuId_Src_Plugin:	newsrc = CDVDsrc_Plugin;	break;
+		case MenuId_Src_NoDisc: newsrc = CDVDsrc_NoDisc;	break;
 		jNO_DEFAULT
 	}
 
