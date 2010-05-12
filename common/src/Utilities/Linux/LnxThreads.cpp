@@ -16,7 +16,10 @@
 
 #include "../PrecompiledHeader.h"
 #include "PersistentThread.h"
-#include "x86emitter/tools.h"
+
+// We wont need this until we actually have this more then just stubbed out, so I'm commenting this out
+// to remove an unneeded dependency.
+//#include "x86emitter/tools.h"
 
 #if !defined(__LINUX__) && !defined(__WXMAC__)
 

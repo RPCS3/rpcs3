@@ -16,14 +16,14 @@
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
-					<Add library="../../../../deps/debug/libUtilities.a" />
 					<Add library="../../../../deps/debug/libx86emitter.a" />
+					<Add library="../../../../deps/debug/libUtilities.a" />
 					<Add library="../../../../deps/debug/liba52.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="../../../../bin/plugins/libspu2-x.so" prefix_auto="0" extension_auto="0" />
-				<Option object_output="obj/Debug/" />
+				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -32,9 +32,9 @@
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/libsoundtouch.a" />
-					<Add library="../../../../deps/debug/libUtilities.a" />
-					<Add library="../../../../deps/debug/libx86emitter.a" />
-					<Add library="../../../../deps/debug/liba52.a" />
+					<Add library="../../../../deps/release/libx86emitter.a" />
+					<Add library="../../../../deps/release/libUtilities.a" />
+					<Add library="../../../../deps/release/liba52.a" />
 				</Linker>
 			</Target>
 		</Build>

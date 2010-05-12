@@ -25,7 +25,6 @@
 					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
-					<Add library="$(SvnRootDir)/deps/debug/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/debug/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/debug/libUtilities.a" />
 				</Linker>
@@ -80,7 +79,6 @@
 					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
-					<Add library="$(SvnRootDir)/deps/devel/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/devel/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/devel/libUtilities.a" />
 				</Linker>
@@ -134,7 +132,6 @@
 				</ResourceCompiler>
 				<Linker>
 					<Add option="-s" />
-					<Add library="$(SvnRootDir)/deps/release/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/release/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/release/libUtilities.a" />
 				</Linker>
@@ -167,6 +164,7 @@
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />
+			<Add library="z" />
 		</Linker>
 		<Unit filename="../../common/include/PS2Edefs.h" />
 		<Unit filename="../../common/include/PS2Etypes.h" />
