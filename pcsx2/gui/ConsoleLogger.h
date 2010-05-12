@@ -250,7 +250,6 @@ protected:
 	void OnLogSourceChanged(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
-	virtual void OnDestroyWindow(wxWindowDestroyEvent& event);
 
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );

@@ -271,6 +271,7 @@ void SysExecEvent_ApplyPlugins::InvokeEvent()
 	CorePlugins.Shutdown();
 	CorePlugins.Unload();
 	LoadPluginsImmediate();
+	CorePlugins.Init();
 	
 	if( buffer ) CoreThread.UploadStateCopy( *buffer );
 

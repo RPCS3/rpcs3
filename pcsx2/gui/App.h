@@ -576,8 +576,8 @@ protected:
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
 	void OnEmuKeyDown( wxKeyEvent& evt );
-
 	void OnSysExecutorTaskTimeout( wxTimerEvent& evt );
+	void OnDestroyWindow( wxWindowDestroyEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

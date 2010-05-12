@@ -426,6 +426,8 @@ bool Pcsx2App::OnInit()
 
 	Connect( pxID_PadHandler_Keydown,	wxEVT_KEY_DOWN,		wxKeyEventHandler		(Pcsx2App::OnEmuKeyDown) );
 
+	Connect( wxEVT_DESTROY,		wxWindowDestroyEventHandler	(Pcsx2App::OnDestroyWindow) );
+
 	// User/Admin Mode Dual Setup:
 	//   PCSX2 now supports two fundamental modes of operation.  The default is Classic mode,
 	//   which uses the Current Working Directory (CWD) for all user data files, and requires
@@ -552,6 +554,24 @@ int Pcsx2App::OnExit()
 	CleanupOnExit();
 
 	return wxApp::OnExit();
+}
+
+void Pcsx2App::OnDestroyWindow( wxWindowDestroyEvent& evt )
+{
+	// Precautions:
+	//  * Whenever windows are destroyed, make sure to check if it matches our "active"
+	//    console logger.  If so, we need to disable logging to the console window, or else
+	//    it'll crash.  (this is because the console log system uses a cached window handle
+	//    instead of looking the window up via it's ID -- fast but potentially unsafe).
+	//
+	//  * The virtual machine's plugins usually depend on the GS window handle being valid,
+	//    so if the GS window is the one being shut down then we need to make sure to close
+	//    out the Corethread before it vanishes completely from existence.
+	
+
+	OnProgramLogClosed( evt.GetId() );
+	OnGsFrameClosed( evt.GetId() );
+	evt.Skip();
 }
 
 // --------------------------------------------------------------------------------------

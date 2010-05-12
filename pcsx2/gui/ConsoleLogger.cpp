@@ -313,7 +313,6 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(ConsoleLogFrame::OnCloseWindow) );
-	Connect( wxEVT_DESTROY,			wxWindowDestroyEventHandler	(ConsoleLogFrame::OnDestroyWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler			(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler			(ConsoleLogFrame::OnResize) );
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler		(ConsoleLogFrame::OnActivate) );
@@ -512,12 +511,6 @@ void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 		wxGetApp().OnProgramLogClosed( GetId() );
 		event.Skip();
 	}
-}
-
-void ConsoleLogFrame::OnDestroyWindow(wxWindowDestroyEvent& event)
-{
-	m_threadlogger = NULL;
-	wxGetApp().OnProgramLogClosed( GetId() );
 }
 
 void ConsoleLogFrame::OnOpen(wxCommandEvent& WXUNUSED(event))

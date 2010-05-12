@@ -105,11 +105,6 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 	evt.Skip();
 }
 
-void MainEmuFrame::OnDestroyWindow( wxWindowDestroyEvent& evt )
-{
-	evt.Skip();
-}
-
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
 	// Uncomment this when doing logger stress testing (and then move the window around
@@ -468,7 +463,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler			(MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(MainEmuFrame::OnCloseWindow) );
-	Connect( wxEVT_DESTROY,			wxWindowDestroyEventHandler	(MainEmuFrame::OnDestroyWindow) );
 
 	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler			(MainEmuFrame::OnFocus) );
 

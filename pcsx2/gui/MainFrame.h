@@ -157,7 +157,6 @@ protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
 	void OnCloseWindow( wxCloseEvent& evt );
-	void OnDestroyWindow( wxWindowDestroyEvent& evt );
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnFocus( wxFocusEvent& evt );
 	void OnActivate( wxActivateEvent& evt );

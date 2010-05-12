@@ -816,8 +816,10 @@ void Pcsx2App::CloseGsPanel()
 	}
 }
 
-void Pcsx2App::OnGsFrameClosed()
+void Pcsx2App::OnGsFrameClosed( wxWindowID id )
 {
+	if( (m_id_GsFrame == wxID_ANY) || (m_id_GsFrame != id) ) return;
+
 	CoreThread.Suspend();
 	m_id_GsFrame = wxID_ANY;
 }
