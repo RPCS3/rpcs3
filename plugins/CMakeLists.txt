@@ -105,6 +105,11 @@ if(zerogs)
 	add_subdirectory(zerogs)
 endif(zerogs)
 
+# make zzogl-pg
+#if(zzogl)
+#	add_subdirectory(zzogl-pg)
+#endif(zzogl)
+
 # make zeropad
 if(zeropad)
 	add_subdirectory(zeropad)
