@@ -281,6 +281,11 @@ void CDVDsys_SetFile( CDVD_SourceType srctype, const wxString& newfile )
 	m_SourceFilename[srctype] = newfile;
 }
 
+const wxString& CDVDsys_GetFile( CDVD_SourceType srctype )
+{
+	return m_SourceFilename[srctype];
+}
+
 CDVD_SourceType CDVDsys_GetSourceType()
 {
 	return m_CurrentSourceType;

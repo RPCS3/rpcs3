@@ -70,6 +70,7 @@ static void PostCoreStatus( CoreThreadStatus pevt )
 // --------------------------------------------------------------------------------------
 AppCoreThread::AppCoreThread() : SysCoreThread()
 {
+	m_resetCdvd = false;
 }
 
 AppCoreThread::~AppCoreThread() throw()
@@ -146,6 +147,13 @@ void AppCoreThread::ChangeCdvdSource()
 void AppCoreThread::OnResumeReady()
 {
 	ApplySettings( g_Conf->EmuOptions );
+
+	CDVD_SourceType cdvdsrc( g_Conf->CdvdSource );
+	if( cdvdsrc != CDVDsys_GetSourceType() || (cdvdsrc==CDVDsrc_Iso && (CDVDsys_GetFile(cdvdsrc) != g_Conf->CurrentIso)) )
+	{
+		m_resetCdvd = true;
+	}
+
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 
 	AppSaveSettings();
@@ -195,6 +203,13 @@ void AppCoreThread::DoCpuReset()
 
 void AppCoreThread::OnResumeInThread( bool isSuspended )
 {
+	if( m_resetCdvd )
+	{
+		GetCorePlugins().Close( PluginId_CDVD );
+		CDVDsys_ChangeSource( g_Conf->CdvdSource );
+		m_resetCdvd = false;	
+	}
+
 	_parent::OnResumeInThread( isSuspended );
 	PostCoreStatus( CoreThread_Resumed );
 }

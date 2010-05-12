@@ -202,4 +202,4 @@ public:
 	}
 };
 
-extern DataBase_Loader GameDB;
+extern ScopedPtr<DataBase_Loader> GameDB;

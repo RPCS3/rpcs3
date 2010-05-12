@@ -578,8 +578,12 @@ void __fastcall eeGameStarting()
 {
 	if (!g_GameStarted && ElfCRC) {
 		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
-		wxString gameName = GameDB.getStringWX("Name");
-		gameName += L" (" + GameDB.getStringWX("Region") + L")";
+		wxString gameName;
+		if( GameDB )
+		{
+			gameName = GameDB->getStringWX("Name");
+			gameName += L" (" + GameDB->getStringWX("Region") + L")";
+		}
 		gameName += L" [" + DiscID  + L"]";
 		gameName += L" [" + gameCRC + L"]";
 
