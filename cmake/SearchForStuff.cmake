@@ -190,6 +190,10 @@ endif(SDL_FOUND)
 
 # Subversion optional
 find_package(Subversion)
+ 
+# Liba52 optional
+# Must be fixed properly
+set(A52_LIBRARIES liba52.so)
 
 # subversion found
 if(Subversion_FOUND)
@@ -298,16 +302,31 @@ endif(SOUNDTOUCH_FOUND)
 #---------------------------------------
 #			zerogs
 #---------------------------------------
-# requires: -GLEW
+# requires:	-GLEW
 #			-OpenGL
 #			-X11
+#			-CG
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 	set(zerogs TRUE)
-else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
+else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 	set(zerogs FALSE)
-endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
+endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 #---------------------------------------
+
+#---------------------------------------
+#			zzogl-pg
+#---------------------------------------
+# requires:	-GLEW
+#			-OpenGL
+#			-X11
+#			-CG
+#---------------------------------------
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+	set(zzogl TRUE)
+else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+	set(zzogl FALSE)
+endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 
 #---------------------------------------
 #			zerospu2

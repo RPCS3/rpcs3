@@ -205,6 +205,7 @@
 		<Unit filename="../Config.h" />
 		<Unit filename="../Counters.cpp" />
 		<Unit filename="../Counters.h" />
+		<Unit filename="../DataBase_Loader.h" />
 		<Unit filename="../DebugTools/Debug.h" />
 		<Unit filename="../DebugTools/DisASM.h" />
 		<Unit filename="../DebugTools/DisR3000A.cpp" />
@@ -224,6 +225,7 @@
 		<Unit filename="../Elfheader.h" />
 		<Unit filename="../FPU.cpp" />
 		<Unit filename="../FiFo.cpp" />
+		<Unit filename="../File_Reader.h" />
 		<Unit filename="../GS.cpp" />
 		<Unit filename="../GS.h" />
 		<Unit filename="../GSState.cpp" />

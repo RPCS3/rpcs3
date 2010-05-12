@@ -406,7 +406,8 @@ static __forceinline const wxChar* ChcrName(u32 addr)
     }
 }
 
-static __forceinline const int ChannelNumber(u32 addr)
+// Believe it or not, making this const can generate compiler warnings in gcc.
+static __forceinline int ChannelNumber(u32 addr)
 {
     switch (addr)
     {

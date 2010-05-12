@@ -57,6 +57,9 @@ private:
 		keyPair.key = "";
 	}
 	void extract(string& line, key_pair& keyPair) {
+		int eol = line.rfind("\r");
+		if (eol != string::npos) line = line.substr(0, eol);
+		
 		stringstream ss(line);
 		string t;
 		keyPair.key   = "";
@@ -77,7 +80,8 @@ private:
 			return;
 		}
 		keyPair.value = t;
-		for (;!ss.eof() && !ss.fail();) {
+		int temp = 0;
+		while (!ss.eof() && !ss.fail()) {
 			ss >> t;
 			if (isComment(t)) break; 
 			keyPair.value += " ";
