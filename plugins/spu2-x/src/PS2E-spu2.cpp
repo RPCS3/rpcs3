@@ -314,8 +314,8 @@ EXPORT_C_(s32) SPU2init()
 
 	IsInitialized = true;
 
-	spu2regs  = (short*)malloc(0x010000);
-	_spu2mem  = (short*)malloc(0x200000);
+	spu2regs  = (s16*)malloc(0x010000);
+	_spu2mem  = (s16*)malloc(0x200000);
 
 	// adpcm decoder cache:
 	//  the cache data size is determined by taking the number of adpcm blocks
@@ -326,8 +326,7 @@ EXPORT_C_(s32) SPU2init()
 
 	pcm_cache_data = (PcmCacheEntry*)calloc( pcm_BlockCount, sizeof(PcmCacheEntry) );
 
-	if( (spu2regs == NULL) || (_spu2mem == NULL) ||
-		(pcm_cache_data == NULL) )
+	if( (spu2regs == NULL) || (_spu2mem == NULL) || (pcm_cache_data == NULL) )
 	{
 		SysMessage("SPU2: Error allocating Memory\n"); return -1;
 	}
@@ -465,10 +464,6 @@ EXPORT_C_(void) SPU2shutdown()
 	safe_free(_spu2mem);
 	safe_free( pcm_cache_data );
 
-	spu2regs = NULL;
-	_spu2mem = NULL;
-	pcm_cache_data = NULL;
-
 #ifdef SPU2_LOG
 	if(!AccessLog()) return;
 	FileLog("[%10d] SPU2shutdown\n",Cycles);
@@ -481,11 +476,11 @@ EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
 	cyclePtr = ptr;
 }
 
-bool numpad_plus = false, numpad_plus_old = false;
+static bool numpad_plus = false, numpad_plus_old = false;
 
 #ifdef DEBUG_KEYS
-u32 lastTicks;
-bool lState[5];
+static u32 lastTicks;
+static bool lState[5];
 #endif
 
 EXPORT_C_(void) SPU2async(u32 cycles)

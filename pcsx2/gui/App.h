@@ -495,7 +495,7 @@ public:
 
 	void OpenGsPanel();
 	void CloseGsPanel();
-	void OnGsFrameClosed();
+	void OnGsFrameClosed( wxWindowID id );
 	void OnMainFrameClosed( wxWindowID id );
 
 	// --------------------------------------------------------------------------

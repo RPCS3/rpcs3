@@ -522,8 +522,8 @@ extern s16		InputPos;
 // SPU Mixing Cycles ("Ticks mixed" counter)
 extern u32		Cycles;
 
-extern short*	spu2regs;
-extern short*	_spu2mem;
+extern s16*		spu2regs;
+extern s16*		_spu2mem;
 extern int		PlayMode;
 
 extern void SetIrqCall();

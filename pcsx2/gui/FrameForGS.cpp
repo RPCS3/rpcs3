@@ -277,7 +277,7 @@ GSFrame::~GSFrame() throw()
 
 void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	sApp.OnGsFrameClosed();
+	sApp.OnGsFrameClosed( GetId() );
 	evt.Skip();		// and close it.
 }
 
