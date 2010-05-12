@@ -13,6 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
 #include "File_Reader.h"
 
 struct key_pair {
@@ -20,6 +21,14 @@ struct key_pair {
 	string value;
 	key_pair(string _key, string _value)
 		: key(_key) , value(_value) {}
+};
+
+class Game_Data {
+public:
+	string id;				// Serial Identification Code 
+	deque<key_pair> kList;	// List of all (key, value) pairs for game data
+	Game_Data(string _id) 
+		: id(_id) {}
 };
 
 // DataBase_Loader:
@@ -50,6 +59,8 @@ private:
 	void extract(string& line, key_pair& keyPair) {
 		stringstream ss(line);
 		string t;
+		keyPair.key   = "";
+		keyPair.value = "";
 		ss >> keyPair.key;
 		if (!line.length() || isComment(keyPair.key)) {
 			doError(line, keyPair);
@@ -78,60 +89,113 @@ private:
 		}
 	}
 public:
-	deque<key_pair> kList;
-	DataBase_Loader(string file, string key, string value) {
+	deque<Game_Data*> gList;
+	Game_Data* curGame;
+
+	DataBase_Loader(string file, string key, string value = "") {
+		curGame	= NULL;
 		if (!fileExists(file)) {
 			Console.Error("DataBase_Loader: DataBase Not Found! [%s]", file.c_str());
 		}
 		File_Reader reader(file);
 		key_pair    keyPair("", "");
-		string      s0, s1;
+		string      s0;
 		try {
 			for(;;) {
-				keyPair.key   = "";
-				keyPair.value = "";
-				s0 = reader.getLine();
-				extract(s0, keyPair);
-				if ((keyPair.key.compare(key)     == 0) 
-				&&	(keyPair.value.compare(value) == 0)) break;
-			}
-			Console.WriteLn("DataBase_Loader: Found Game! [%s]", value.c_str());
-			kList.push_back(keyPair);
-			for (;;) {
-				s0 = reader.getLine();
-				extract(s0, keyPair);
-				if (keyPair.key.compare("")  == 0) continue;
-				if (keyPair.key.compare(key) == 0) break;
-				kList.push_back(keyPair);
+				for(;;) { // Find first game
+					s0 = reader.getLine();
+					extract(s0, keyPair);
+					if (keyPair.key.compare(key) == 0) break;
+				}
+				Game_Data* game = new Game_Data(keyPair.value);
+				game->kList.push_back(keyPair);
+				for (;;) { // Fill game data, find new game, repeat...
+					s0 = reader.getLine();
+					extract(s0, keyPair);
+					if (keyPair.key.compare("")  == 0) continue;
+					if (keyPair.key.compare(key) == 0) {
+						gList.push_back(game);
+						game = new Game_Data(keyPair.value);
+					}
+					game->kList.push_back(keyPair);
+				}
 			}
 		}
-		catch(...) {}
-		if (!kList.size()) Console.Warning("DataBase_Loader: Game Not Found! [%s]", value.c_str());
+		catch(int& i) { i = 0; }
+		if (!value.compare("")) return;
+		if (setGame(value)) Console.WriteLn("DataBase_Loader: Found Game! [%s]",     value.c_str());
+		else				Console.Warning("DataBase_Loader: Game Not Found! [%s]", value.c_str());
 	}
-	~DataBase_Loader() {}
+
+	~DataBase_Loader() {
+		deque<Game_Data*>::iterator it = gList.begin();
+		for ( ; it != gList.end(); ++it) {
+			delete it[0];
+		}
+	}
+
+	// Sets the current game to the one matching the serial id given
+	// Returns true if game found, false if not found...
+	bool setGame(string id) {
+		deque<Game_Data*>::iterator it = gList.begin();
+		for ( ; it != gList.end(); ++it) {
+			if (!it[0]->id.compare(id)) {
+				curGame = it[0];
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Gets a string representation of the 'value' for the given key
 	string getString(string key) {
-		deque<key_pair>::iterator it = kList.begin();
-		for ( ; it != kList.end(); ++it) {
-			if (!it[0].key.compare(key)) {
-				return it[0].value;
+		if (curGame) {
+			deque<key_pair>::iterator it = curGame->kList.begin();
+			for ( ; it != curGame->kList.end(); ++it) {
+				if (!it[0].key.compare(key)) {
+					return it[0].value;
+				}
 			}
 		}
-		return string("???");
+		else Console.Error("DataBase_Loader: Game not set!");
+		return string("");
 	}
+
+	// Gets a wxString representation of the 'value' for the given key
+	wxString getStringWX(string key) {
+		string s = getString(key);
+		return wxString(fromAscii(s.c_str()));
+	}
+
+	// Gets a double representation of the 'value' for the given key
 	double getDouble(string key) {
 		string v = getString(key);
 		return atof(v.c_str());
 	}
+
+	// Gets a float representation of the 'value' for the given key
 	float getFloat(string key) {
 		string v = getString(key);
 		return (float)atof(v.c_str());
 	}
+
+	// Gets an integer representation of the 'value' for the given key
 	int getInt(string key) {
 		string v = getString(key);
 		return strtoul(v.c_str(), NULL, 0);
 	}
+
+	// Gets a u8 representation of the 'value' for the given key
 	u8 getU8(string key) {
 		string v = getString(key);
 		return (u8)atoi(v.c_str());
 	}
+
+	// Gets a bool representation of the 'value' for the given key
+	u8 getBool(string key) {
+		string v = getString(key);
+		return !!atoi(v.c_str());
+	}
 };
+
+extern DataBase_Loader GameDB;

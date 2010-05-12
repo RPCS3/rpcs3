@@ -29,6 +29,7 @@
 #include "ps2/BiosTools.h"
 #include "DataBase_Loader.h"
 
+DataBase_Loader GameDB("DataBase.dbf", "Serial");
 wxString DiscID;
 
 static cdvdStruct cdvd;
@@ -346,8 +347,9 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 
 	elfptr.Delete();
 
-	DataBase_Loader dbLoader("DataBase.dbf", "Serial", DiscID.ToUTF8().data());
-	Console.WriteLn("Game = %s (%s)", dbLoader.getString("Name").c_str(), dbLoader.getString("Region").c_str());
+	// Set the Game DataBase to the correct game based on Game Serial Code...
+	GameDB.setGame(DiscID.ToUTF8().data());
+	Console.WriteLn("Game = %s (%s)", GameDB.getString("Name").c_str(), GameDB.getString("Region").c_str());
 }
 
 void cdvdReloadElfInfo()

@@ -30,6 +30,7 @@
 #include "Elfheader.h"
 #include "CDVD/CDVD.h"
 #include "Patch.h"
+#include "DataBase_Loader.h"
 
 using namespace R5900;	// for R5900 disasm tools
 
@@ -576,12 +577,16 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 void __fastcall eeGameStarting()
 {
 	if (!g_GameStarted && ElfCRC) {
-		wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
+		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
+		wxString gameName = GameDB.getStringWX("Name");
+		gameName += L" (" + GameDB.getStringWX("Region") + L")";
+		gameName += L" [" + DiscID  + L"]";
+		gameName += L" [" + gameCRC + L"]";
 
-		// if patches found the following status msg will be overwritten
-		Console.SetTitle(L"Game running [CRC=" + filename +L"]");
+		// if patches found the following title will be overwritten
+		Console.SetTitle(gameName);
 
-		if (EmuConfig.EnablePatches) InitPatch(filename);
+		if (EmuConfig.EnablePatches) InitPatch(gameCRC);
 		GetMTGS().SendGameCRC(ElfCRC);
 
 		g_GameStarted = true;
