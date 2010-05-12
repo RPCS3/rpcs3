@@ -120,7 +120,7 @@ Section "${APP_NAME} (required)"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
   File           /oname=pcsx2-r${SVNREV}.exe      ..\bin\pcsx2.exe
   File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
-  File ..\bin\w32pthreads.v2.dll
+  File ..\bin\w32pthreads.v4.dll
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
   ; -- Languages and Patches --
@@ -235,7 +235,7 @@ FunctionEnd
 ; --------------------------------------
 ; Uninstaller
 
-Function .removeShorties
+Function un.removeShorties
 
     ; Remove shortcuts, if any
     Delete "$SMPROGRAMS\pcsx2\${UNINST_EXE}-r${SVNREV}.lnk"
@@ -250,7 +250,7 @@ FunctionEnd
 ; Languages, patches, and null plugins should only be removed if all previous versions of 
 ; PCSX2 have been uninstalled.  And we know that's happened when the pcsx2\versions registry
 ; key is empty.
-Function .removeSharedJunk
+Function un.removeSharedJunk
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Patches"
 
@@ -273,9 +273,9 @@ Section "Un.Basic Removal (removes only files installed by this package) ${APP_N
   !insertmacro UNINSTALL.LOG_END_UNINSTALL
 
   ; Remove registry keys
-  DeleteRegKey HKLM ${INSTDIR_REG_KEY}
+  DeleteRegKey HKLM "${INSTDIR_REG_KEY}"
 
-  Call .removeShorties
+  Call un.removeShorties
 
   DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
 
@@ -285,13 +285,13 @@ Section "Un.Basic Removal (removes only files installed by this package) ${APP_N
 
 SectionEnd
 
-Section Un.Full Removal (completely removes all PCSX2 program files and folders)
+Section "Un.Full Removal (completely removes all PCSX2 program files and folders)"
 
   MessageBox MB_YESNO "WARNING!  This will remove *all* files in $INSTDIR -- are you sure you want to proceed?" IDYES true IDNO false
   true:
 
   RMDir /r "$INSTDIR"
-  Call .removeShorties
+  Call un.removeShorties
 
   DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
   DeleteRegKey HKLM Software\pcsx2
