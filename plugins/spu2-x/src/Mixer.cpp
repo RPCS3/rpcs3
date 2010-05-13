@@ -15,6 +15,7 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #include "Global.h"
 //#include <float.h>
 
