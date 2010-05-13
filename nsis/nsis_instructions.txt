@@ -7,6 +7,9 @@
 
  * Download the latest Visual C++ Redistributable (currently 2008 SP1 as of this writing) and
    save it to this nsis/ folder. 
+
+ * Download the DirectX Web Installer (vcwebsetup.exe) from Microsoft's website and save it to
+   this nsis/ folder.  (currently required, might be made optional later).
  
  * Load the PCSX2 Suite solution and rebuild all in the following targets:
     * Release SSE2

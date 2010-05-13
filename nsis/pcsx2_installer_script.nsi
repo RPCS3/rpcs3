@@ -1,7 +1,8 @@
+
 ; PCSX2 NSIS installer script
 ; loosely based on a collection of examples and on information from the wikipedia
 
-; Application version, changed for each release to match the verision
+; Application version, changed for each release to match the version
 
 ; ----------------------------------------
 ; Determine the revision numbers of the various components
@@ -32,6 +33,8 @@
 
 !define APP_NAME "PCSX2 0.9.7.r${SVNREV}"
 !define APP_FILENAME "pcsx2-0.9.7.r${SVNREV}"
+
+!define UNINSTALL_LOG "Uninst-${APP_FILENAME}"
 
 !define INSTDIR_REG_ROOT "HKLM"
 !define INSTDIR_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
@@ -81,17 +84,22 @@ Function un.DeleteDirIfEmpty
 FunctionEnd
 
 ; ----------------------------------------
+
 ; The name of the installer
 Name "${APP_NAME}"
 
 OutFile "${APP_FILENAME}-setup.exe"
 
 ; The default installation directory
-InstallDir "$PROGRAMFILES\PCSX2 0.9.7 beta"
+InstallDir "$PROGRAMFILES\PCSX2 0.9.7"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
 InstallDirRegKey HKLM "Software\pcsx2" "Install_Dir"
+
+
+Var DirectXSetupError
+
 
 ; Request application privileges for Windows Vista (shouldn't be needed anymore!  -- air)
 ;RequestExecutionLevel admin
@@ -115,20 +123,27 @@ Section "${APP_NAME} (required)"
 
   SectionIn RO
   
-  ; Put file there. It's catched by the uninstaller script
-  SetOutPath $INSTDIR
+  ; Note that v3 pthreads is compatible with v4 pthreads, so we just copy v4 oover both
+  ; filenames.  This allows many older plugin versions to continue to work.  (note that
+  ; v3 will be removed for 0.9.8).
+  
+  SetOutPath "$INSTDIR"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
   File           /oname=pcsx2-r${SVNREV}.exe      ..\bin\pcsx2.exe
-  File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
-  File ..\bin\w32pthreads.v4.dll
+  ;File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
+  File                                            ..\bin\w32pthreads.v4.dll
+  File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
   ; -- Languages and Patches --
 
-  SetOutPath $INSTDIR\Langs
-  !insertmacro UNINSTALL.LOG_OPEN_INSTALL
-  File /nonfatal /r ..\bin\Langs\*.mo
-  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+  ; In 0.9.7 there is only English, so including the other mo files (for now) is pointless.
+  ; This code will be re-enabled when the new GUI is translated.
+  
+  ;SetOutPath $INSTDIR\Langs
+  ;!insertmacro UNINSTALL.LOG_OPEN_INSTALL
+  ;File /nonfatal /r ..\bin\Langs\*.mo
+  ;!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
   SetOutPath $INSTDIR\Patches
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
@@ -137,10 +152,12 @@ Section "${APP_NAME} (required)"
 
 
   ; NULL plugins are required, and really there should be more but we don't have working
-  ; SPU2 or GS null plugins right now.  (note: no install logging performed here -- nulls
+  ; SPU2 null plugins right now.  (note: no install logging performed here -- nulls
   ; are removed manually by name)
   
   SetOutPath $INSTDIR\Plugins
+  File ..\bin\Plugins\GSnull.dll
+  ;File ..\bin\Plugins\SPU2null.dll            
   File ..\bin\Plugins\USBnull.dll
   File ..\bin\Plugins\DEV9null.dll
   File ..\bin\Plugins\FWnull.dll
@@ -150,7 +167,7 @@ Section "${APP_NAME} (required)"
 
 !ifdef INC_PLUGINS
 
-  SetOutPath $INSTDIR\Plugins
+  SetOutPath "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
 
   File /nonfatal /oname=gsdx-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse2.dll
@@ -171,10 +188,10 @@ Section "${APP_NAME} (required)"
   
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "${INSTDIR_REG_KEY}" "DisplayName" "PCSX2 - Playstation 2 Emulator"
-  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "UninstallString" '"$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe"'
+  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "UninstallString" "${UNINST_EXE}"
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoRepair" 1
-  WriteUninstaller "${UNINST_EXE}-r${SVNREV}.exe"
+  WriteUninstaller "${UNINST_EXE}"
 
 SectionEnd
 
@@ -185,7 +202,9 @@ SectionEnd
 Section "Microsoft Visual C++ 2008 SP1 Redist (required)"
 
   SectionIn RO
-  SetOutPath $TEMP
+
+  SetOutPath "$TEMP"
+  
   File "vcredist_x86.exe"
   Call CheckVCRedist
   StrCmp $R0 "-1" installRedist
@@ -198,21 +217,42 @@ Section "Microsoft Visual C++ 2008 SP1 Redist (required)"
 SkipRedist:  
 SectionEnd
 
+
 ; ----------------------------------------
-; Optional sections (can be disabled by the user)
+; Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
 
-  SetOutPath $INSTDIR
+  SetOutPath "$INSTDIR"
     
   CreateDirectory "$SMPROGRAMS\pcsx2"
-  CreateShortCut "$SMPROGRAMS\pcsx2\${UNINST_EXE}-r${SVNREV}.lnk"  "$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe"  "" "$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe" 0
-  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-r${SVNREV}.lnk"          "$INSTDIR\pcsx2-r${SVNREV}.exe"          "" "$INSTDIR\pcsx2-r${SVNREV}.exe" 0
+  CreateShortCut "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}" 0
+  CreateShortCut "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"            "${APP_FILENAME}" "" "${APP_FILENAME}" 0
 
-  IfFileExists ..\bin\pcsx2-dev.exe 0 +2
-    CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
-      "PCSX2 Devel (has additional logging support)"
+  ;IfFileExists ..\bin\pcsx2-dev.exe 0 +2
+  ;  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
+  ;    "PCSX2 Devel (has additional logging support)"
 
 SectionEnd
+
+; ----------------------------------------
+; This section needs to be last, so that in case it fails, the rest of the program will
+; be installed cleanly.  It's also optional, just because (though highly recommended).
+;                                    
+Section "DirectX Web Setup" SEC_DIRECTX                                       
+                                                                              
+ ;SectionIn RO                                                                
+                                                                              
+ SetOutPath "$TEMP"                                                           
+ File "dxwebsetup.exe"                                                        
+ DetailPrint "Running DirectX Web Setup..."                                   
+ ExecWait '"$TEMP\dxwebsetup.exe" /Q' $DirectXSetupError                      
+ DetailPrint "Finished DirectX Web Setup"                                     
+                                                                              
+ Delete "$TEMP\dxwebsetup.exe"                                                
+                                                                              
+ SetOutPath "$INSTDIR"                                                        
+                                                                              
+SectionEnd                                                                    
 
 ;--------------------------------
 
@@ -237,10 +277,15 @@ FunctionEnd
 
 Function un.removeShorties
 
+  CreateDirectory "$SMPROGRAMS\pcsx2"                                                                   
+  CreateShortCut "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}" 0  
+  CreateShortCut "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"            "${APP_FILENAME}" "" "${APP_FILENAME}" 0
+  
+  
     ; Remove shortcuts, if any
-    Delete "$SMPROGRAMS\pcsx2\${UNINST_EXE}-r${SVNREV}.lnk"
-    Delete "$SMPROGRAMS\pcsx2\pcsx2-r${SVNREV}.lnk"
-    Delete "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"
+    Delete "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"
+    Delete "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"
+    ;Delete "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"
     
     StrCpy $0 "$SMPROGRAMS\pcsx2"
     Call un.DeleteDirIfEmpty
@@ -254,6 +299,8 @@ Function un.removeSharedJunk
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Patches"
 
+    Delete "$INSTDIR\Plugins\GSnull.dll"
+    ;Delete "$INSTDIR\Plugins\SPU2null.dll"
     Delete "$INSTDIR\Plugins\USBnull.dll"
     Delete "$INSTDIR\Plugins\DEV9null.dll"
     Delete "$INSTDIR\Plugins\FWnull.dll"
@@ -300,7 +347,7 @@ Section "Un.Full Removal (completely removes all PCSX2 program files and folders
 SectionEnd
 
 ; --------------------------------------
-Function UN.onInit
+Function un.onInit
 
          ;begin uninstall, could be added on top of uninstall section instead
          !insertmacro UNINSTALL.LOG_BEGIN_UNINSTALL
