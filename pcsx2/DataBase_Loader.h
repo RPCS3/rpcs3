@@ -163,6 +163,13 @@ public:
 		return false;
 	}
 
+	// Returns true if a game is currently loaded into the database
+	// Returns false if otherwise (this means you need to call setGame()
+	// or it could mean the game was not found in the database at all...)
+	bool gameLoaded() {
+		return !!curGame;
+	}
+
 	// Saves changes to the database
 	void saveToFile(string file = "DataBase.dbf") {
 		File_Writer writer(file);

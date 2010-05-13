@@ -578,22 +578,19 @@ void __fastcall eeGameStarting()
 {
 	if (!g_GameStarted && ElfCRC) {
 		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
-		wxString gameName;
-		if (GameDB) {
+		wxString gameName   = L"Unknown Game (\?\?\?)";
+		wxString gameSerial = L" [" + DiscID  + L"]";
+		wxString gameCompat = L" [Status = Unknown]";
+
+		if (GameDB && GameDB->gameLoaded()) {
 			int compat = GameDB->getInt("Compat");
 			gameName   = GameDB->getStringWX("Name");
-			gameName += L" (" + GameDB->getStringWX("Region") + L")";
-			gameName += L" [" + DiscID  + L"]";
-			gameName += L" [Status = "+compatToStringWX(compat)+L"]";
-		}
-		else {
-			gameName += L" [" + DiscID  + L"]";
-			gameName += L" [" + gameCRC + L"]";
-			gameName += L" [Status = Unknown]";
+			gameName  += L" (" + GameDB->getStringWX("Region") + L")";
+			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 		}
 
 		// if patches found the following title will be overwritten
-		Console.SetTitle(gameName);
+		Console.SetTitle(gameName + gameSerial + gameCompat);
 
 		if (EmuConfig.EnablePatches) InitPatch(gameCRC);
 		GetMTGS().SendGameCRC(ElfCRC);

@@ -19,6 +19,18 @@
 -- saved properly by pcsx2's database writer.
 
 ---------------------------------------------
+-- Compatibility Status (Compat = n)
+---------------------------------------------
+-- The compatibility info is numerically based.
+-- 0 = Unknown Compatibility Status
+-- 1 = Nothing
+-- 2 = Intro
+-- 3 = Menu
+-- 4 = In-game
+-- 5 = Playable
+-- 6 = Perfect
+
+---------------------------------------------
 -- Game List
 ---------------------------------------------
 Serial = PBPX-95503
