@@ -583,20 +583,19 @@ void __fastcall eeGameStarting()
 			gameName = GameDB->getStringWX("Name");
 			gameName += L" (" + GameDB->getStringWX("Region") + L")";
 			gameName += L" [" + DiscID  + L"]";
-			gameName += L" [" + gameCRC + L"]";
 			int compat = GameDB->getInt("Compat");
-			if		(compat >= 600) gameName += L" [Compatibility = Perfect]";
-			else if (compat >= 500) gameName += L" [Compatibility = Playable]";
-			else if (compat >= 400) gameName += L" [Compatibility = In-Game]";
-			else if (compat >= 300) gameName += L" [Compatibility = Menu]";
-			else if (compat >= 200) gameName += L" [Compatibility = Intro]";
-			else if (compat >= 100) gameName += L" [Compatibility = Nothing]";
-			else					gameName += L" [Compatibility = Unknown]";
+			if		(compat >= 600) gameName += L" [Status = Perfect]";
+			else if (compat >= 500) gameName += L" [Status = Playable]";
+			else if (compat >= 400) gameName += L" [Status = In-Game]";
+			else if (compat >= 300) gameName += L" [Status = Menu]";
+			else if (compat >= 200) gameName += L" [Status = Intro]";
+			else if (compat >= 100) gameName += L" [Status = Nothing]";
+			else					gameName += L" [Status = Unknown]";
 		}
 		else {
 			gameName += L" [" + DiscID  + L"]";
 			gameName += L" [" + gameCRC + L"]";
-			gameName += L" [Compatibility = Unknown]";
+			gameName += L" [Status = Unknown]";
 		}
 
 		// if patches found the following title will be overwritten
