@@ -221,7 +221,7 @@ void Panels::DirPickerPanel::Apply()
 	if( !wxDir::Exists( path ) )
 	{
 		wxDialogWithHelpers dialog( NULL, _("Create folder?"), wxVERTICAL );
-		dialog += dialog.Heading( _("A configured folder does not exist.  Should PCSX2 to create it?") );
+		dialog += dialog.Heading( _("A configured folder does not exist.  Should PCSX2 try to create it?") );
 		dialog += 12;
 		dialog += dialog.Heading( path );
 

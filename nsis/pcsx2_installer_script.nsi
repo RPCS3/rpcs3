@@ -4,6 +4,9 @@
 
 ; Application version, changed for each release to match the version
 
+; Always include plugins for now
+!define INC_PLUGINS
+
 ; ----------------------------------------
 ; Determine the revision numbers of the various components
 
@@ -211,11 +214,12 @@ SectionEnd
 ; Start Menu - Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
 
-  SetOutPath "$SMPROGRAMS"
-    
-  CreateDirectory "PCSX2"
-  CreateShortCut "PCSX2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}"  0
-  CreateShortCut "PCSX2\${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0
+	; CreateShortCut gets the working directory from OutPath
+  SetOutPath "$INSTDIR"
+  
+  CreateDirectory "$SMPROGRAMS\PCSX2"
+  CreateShortCut "$SMPROGRAMS\PCSX2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}"  0
+  CreateShortCut "$SMPROGRAMS\PCSX2\${APP_NAME}.lnk"            "$INSTDIR\${APP_EXE}"      "" "$INSTDIR\${APP_EXE}"     0
 
   ;IfFileExists ..\bin\pcsx2-dev.exe 0 +2
   ;  CreateShortCut "PCSX2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
@@ -227,8 +231,10 @@ SectionEnd
 ; Desktop Icon - Optional section (can be disabled by the user)
 Section "Desktop Shortcut"
 
-  SetOutPath "$DESKTOP"
-  CreateShortCut "${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
+  ; CreateShortCut gets the working directory from OutPath
+  SetOutPath "$INSTDIR"
+  
+  CreateShortCut "$DESKTOP\${APP_NAME}.lnk"            "$INSTDIR\${APP_EXE}"      "" "$INSTDIR\${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
     
 SectionEnd
 
@@ -362,7 +368,7 @@ Section "Un.Full Removal (completely removes all PCSX2 program files and folders
   RMDir /r "$INSTDIR"
   Call un.removeShorties
 
-  ; Killt he entire PCSX2 registry key, along with installer junk.
+  ; Kill the entire PCSX2 registry key, along with installer junk.
   DeleteRegKey HKLM Software\PCSX2
   DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
 
