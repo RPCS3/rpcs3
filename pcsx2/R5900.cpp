@@ -579,13 +579,25 @@ void __fastcall eeGameStarting()
 	if (!g_GameStarted && ElfCRC) {
 		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
 		wxString gameName;
-		if( GameDB )
-		{
+		if (GameDB) {
 			gameName = GameDB->getStringWX("Name");
 			gameName += L" (" + GameDB->getStringWX("Region") + L")";
+			gameName += L" [" + DiscID  + L"]";
+			gameName += L" [" + gameCRC + L"]";
+			int compat = GameDB->getInt("Compat");
+			if		(compat >= 600) gameName += L" [Compatibility = Perfect]";
+			else if (compat >= 500) gameName += L" [Compatibility = Playable]";
+			else if (compat >= 400) gameName += L" [Compatibility = In-Game]";
+			else if (compat >= 300) gameName += L" [Compatibility = Menu]";
+			else if (compat >= 200) gameName += L" [Compatibility = Intro]";
+			else if (compat >= 100) gameName += L" [Compatibility = Nothing]";
+			else					gameName += L" [Compatibility = Unknown]";
 		}
-		gameName += L" [" + DiscID  + L"]";
-		gameName += L" [" + gameCRC + L"]";
+		else {
+			gameName += L" [" + DiscID  + L"]";
+			gameName += L" [" + gameCRC + L"]";
+			gameName += L" [Compatibility = Unknown]";
+		}
 
 		// if patches found the following title will be overwritten
 		Console.SetTitle(gameName);

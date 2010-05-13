@@ -94,6 +94,26 @@ public:
 	}
 };
 
+class String_Stream {
+public:
+	stringstream* ss;
+	String_Stream()  {
+		ss = new stringstream(stringstream::in | stringstream::out);
+	}
+	~String_Stream() {
+		delete ss;
+	}
+	template<class T> void write(T t) {
+		(*ss) << t;
+	}
+	template<class T> void read(T &t) {
+		(*ss) >> t;
+	}
+	string toString() {
+		return ss->str();
+	}
+};
+
 static bool fileExists(string file) {
 	FILE  *f = fopen(file.c_str(), "r");
 	if   (!f)  return false;

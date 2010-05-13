@@ -48,6 +48,13 @@ public:
 
 class DataBase_Loader {
 private:
+	template<class T> string toString(T value) {
+		stringstream ss(ios_base::in | ios_base::out);
+		string tString;
+		ss <<  value;
+		ss >>  tString;
+		return tString;
+	}
 	bool isComment(string& s) {
 		string sub = s.substr(0, 2);
 		return (sub.compare("--") == 0) || (sub.compare("//") == 0);
@@ -80,7 +87,6 @@ private:
 			return;
 		}
 		keyPair.value = t;
-		int temp = 0;
 		while (!ss.eof() && !ss.fail()) {
 			ss >> t;
 			if (isComment(t)) break; 
@@ -93,23 +99,28 @@ private:
 		}
 	}
 public:
-	deque<Game_Data*> gList;
-	Game_Data* curGame;
+	deque<Game_Data*> gList; // List of all game data
+	Game_Data*    curGame;   // Current game data
+	String_Stream header;    // Header of the database
+	string		  baseKey;	 // Key to separate games by ("Serial")
 
 	DataBase_Loader(string file, string key, string value = "") {
 		curGame	= NULL;
+		baseKey = key;
 		if (!fileExists(file)) {
 			Console.Error("DataBase_Loader: DataBase Not Found! [%s]", file.c_str());
 		}
-		File_Reader reader(file);
-		key_pair    keyPair("", "");
-		string      s0;
+		File_Reader   reader(file);
+		key_pair      keyPair("", "");
+		string        s0;
 		try {
 			for(;;) {
 				for(;;) { // Find first game
 					s0 = reader.getLine();
 					extract(s0, keyPair);
 					if (keyPair.key.compare(key) == 0) break;
+					header.write(s0);
+					header.write("\n");
 				}
 				Game_Data* game = new Game_Data(keyPair.value);
 				game->kList.push_back(keyPair);
@@ -148,7 +159,39 @@ public:
 				return true;
 			}
 		}
+		curGame = NULL;
 		return false;
+	}
+
+	// Saves changes to the database
+	void saveToFile(string file = "DataBase.dbf") {
+		File_Writer writer(file);
+		writer.write(header.toString());
+		deque<Game_Data*>::iterator it = gList.begin();
+		for ( ; it != gList.end(); ++it) {
+			deque<key_pair>::iterator i = it[0]->kList.begin();
+			for ( ; i != it[0]->kList.end(); ++i) {
+				writer.write(i[0].key);
+				for (int a = 6 - i[0].key.length(); a > 0; a--) {
+					writer.write(" "); // Padding for nice formatting on small key-names
+				}
+				writer.write(" = ");
+				writer.write(i[0].value);
+				writer.write("\n");
+			}
+			writer.write("---------------------------------------------\n");
+		}
+	}
+
+	// Adds new game data to the database, and sets curGame to the new game...
+	// If searchDB is true, it searches the database to see if game already exists.
+	void addGame(string id, bool searchDB = true) {
+		if (searchDB && setGame(id)) return;
+		Game_Data* game = new Game_Data(id);
+		key_pair   kp(baseKey, id);
+		game->kList.push_back(kp);
+		gList.push_back(game);
+		curGame = game;
 	}
 
 	// Gets a string representation of the 'value' for the given key
@@ -199,6 +242,52 @@ public:
 	u8 getBool(string key) {
 		string v = getString(key);
 		return !!atoi(v.c_str());
+	}
+
+	// Write a string value to the specified key
+	void writeString(string key, string value) {
+		if (curGame) {
+			deque<key_pair>::iterator it = curGame->kList.begin();
+			for ( ; it != curGame->kList.end(); ++it) {
+				if (!it[0].key.compare(key)) {
+					it[0].value = value;
+					return;
+				}
+			}
+			key_pair tKey(key, value);
+			curGame->kList.push_back(tKey);
+		}
+		else Console.Error("DataBase_Loader: Game not set!");
+	}
+
+	// Write a wxString value to the specified key
+	void writeStringWX(string key, wxString value) {
+		writeString(key, string(value.ToUTF8().data()));
+	}
+
+	// Write a double value to the specified key
+	void writeDouble(string key, double value) {
+		writeString(key, toString(value));
+	}
+	
+	// Write a float value to the specified key
+	void writeFloat(string key, float value) {
+		writeString(key, toString(value));
+	}
+	
+	// Write an integer value to the specified key
+	void writeInt(string key, int value) {
+		writeString(key, toString(value));
+	}
+	
+	// Write a u8 value to the specified key
+	void writeU8(string key, u8 value) {
+		writeString(key, toString(value));
+	}
+	
+	// Write a bool value to the specified key
+	void writeBool(string key, bool value) {
+		writeString(key, toString(value?1:0));
 	}
 };
 
