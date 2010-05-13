@@ -31,8 +31,9 @@
 
 ; ----------------------------------------
 
-!define APP_NAME "PCSX2 0.9.7.r${SVNREV}"
-!define APP_FILENAME "pcsx2-0.9.7.r${SVNREV}"
+!define APP_NAME "PCSX2 0.9.7 (r${SVNREV})"
+!define APP_FILENAME "pcsx2-r${SVNREV}"
+!define APP_EXE "${APP_FILENAME}.exe"
 
 !define UNINSTALL_LOG "Uninst-${APP_FILENAME}"
 
@@ -65,24 +66,6 @@ VSRedistInstalled:
    
 FunctionEnd
 
-; -------------------------------------
-; Safe directory deletion code. :)
-; 
-Function un.DeleteDirIfEmpty
-  FindFirst $R0 $R1 "$0\*.*"
-  strcmp $R1 "." 0 NoDelete
-   FindNext $R0 $R1
-   strcmp $R1 ".." 0 NoDelete
-    ClearErrors
-    FindNext $R0 $R1
-    IfErrors 0 NoDelete
-     FindClose $R0
-     Sleep 1000
-     RMDir "$0"
-  NoDelete:
-   FindClose $R0
-FunctionEnd
-
 ; ----------------------------------------
 
 ; The name of the installer
@@ -95,15 +78,21 @@ InstallDir "$PROGRAMFILES\PCSX2 0.9.7"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
-InstallDirRegKey HKLM "Software\pcsx2" "Install_Dir"
+InstallDirRegKey HKLM "Software\PCSX2" "Install_Dir"
+
+; Allow PCSX2 users to be hardcore!
+AllowRootDirInstall true
+
+XPStyle on
+
+; Request application privileges for Windows Vista (shouldn't be needed anymore!  -- air)
+;RequestExecutionLevel admin
 
 
 Var DirectXSetupError
 
 
-; Request application privileges for Windows Vista (shouldn't be needed anymore!  -- air)
-;RequestExecutionLevel admin
-
+; ----------------------------------------
 ; Pages
 
   !insertmacro UNATTENDED_UNINSTALL
@@ -129,7 +118,7 @@ Section "${APP_NAME} (required)"
   
   SetOutPath "$INSTDIR"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
-  File           /oname=pcsx2-r${SVNREV}.exe      ..\bin\pcsx2.exe
+  File           /oname=${APP_EXE}                ..\bin\pcsx2.exe
   ;File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
   File                                            ..\bin\w32pthreads.v4.dll
   File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
@@ -184,7 +173,7 @@ Section "${APP_NAME} (required)"
 !endif
 
   ; Write the installation path into the registry
-  WriteRegStr HKLM Software\pcsx2 "Install_Dir" "$INSTDIR"
+  WriteRegStr HKLM Software\PCSX2 "Install_Dir" "$INSTDIR"
   
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "${INSTDIR_REG_KEY}" "DisplayName" "PCSX2 - Playstation 2 Emulator"
@@ -219,26 +208,35 @@ SectionEnd
 
 
 ; ----------------------------------------
-; Optional section (can be disabled by the user)
+; Start Menu - Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
 
-  SetOutPath "$INSTDIR"
+  SetOutPath "$SMPROGRAMS"
     
-  CreateDirectory "$SMPROGRAMS\pcsx2"
-  CreateShortCut "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}" 0
-  CreateShortCut "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"            "${APP_FILENAME}" "" "${APP_FILENAME}" 0
+  CreateDirectory "PCSX2"
+  CreateShortCut "PCSX2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}"  0
+  CreateShortCut "PCSX2\${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0
 
   ;IfFileExists ..\bin\pcsx2-dev.exe 0 +2
-  ;  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
+  ;  CreateShortCut "PCSX2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
   ;    "PCSX2 Devel (has additional logging support)"
 
+SectionEnd
+
+; ----------------------------------------
+; Desktop Icon - Optional section (can be disabled by the user)
+Section "Desktop Shortcut"
+
+  SetOutPath "$DESKTOP"
+  CreateShortCut "${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
+    
 SectionEnd
 
 ; ----------------------------------------
 ; This section needs to be last, so that in case it fails, the rest of the program will
 ; be installed cleanly.  It's also optional, just because (though highly recommended).
 ;                                    
-Section "DirectX Web Setup" SEC_DIRECTX                                       
+Section "DirectX Web Setup (recommended)" SEC_DIRECTX
                                                                               
  ;SectionIn RO                                                                
                                                                               
@@ -272,22 +270,39 @@ Function .onInstSuccess
 FunctionEnd
 
 
-; --------------------------------------
-; Uninstaller
+; -------------------------------------------
+;             Uninstaller Section
+; -------------------------------------------
+
+; -------------------------------------
+; Safe directory deletion code. :)
+; 
+Function un.DeleteDirIfEmpty
+  FindFirst $R0 $R1 "$0\*.*"
+  strcmp $R1 "." 0 NoDelete
+   FindNext $R0 $R1
+   strcmp $R1 ".." 0 NoDelete
+    ClearErrors
+    FindNext $R0 $R1
+    IfErrors 0 NoDelete
+     FindClose $R0
+     Sleep 1000
+     RMDir "$0"
+  NoDelete:
+   FindClose $R0
+FunctionEnd
 
 Function un.removeShorties
 
-  CreateDirectory "$SMPROGRAMS\pcsx2"                                                                   
-  CreateShortCut "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"   "" "${UNINST_EXE}" 0  
-  CreateShortCut "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"            "${APP_FILENAME}" "" "${APP_FILENAME}" 0
-  
-  
     ; Remove shortcuts, if any
-    Delete "$SMPROGRAMS\pcsx2\Uninstall ${APP_NAME}.lnk"
-    Delete "$SMPROGRAMS\pcsx2\${APP_NAME}.lnk"
-    ;Delete "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"
+
+    Delete "$DESKTOP\${APP_NAME}.lnk"
+
+    Delete "$SMPROGRAMS\PCSX2\Uninstall ${APP_NAME}.lnk"
+    Delete "$SMPROGRAMS\PCSX2\${APP_NAME}.lnk"
+    ;Delete "$SMPROGRAMS\PCSX2\pcsx2-dev-r${SVNREV}.lnk"
     
-    StrCpy $0 "$SMPROGRAMS\pcsx2"
+    StrCpy $0 "$SMPROGRAMS\PCSX2"
     Call un.DeleteDirIfEmpty
 
 FunctionEnd
@@ -316,17 +331,24 @@ Section "Un.Basic Removal (removes only files installed by this package) ${APP_N
   true:
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
   false:
+    !insertmacro UNINSTALL.LOG_END_UNINSTALL
 
-  !insertmacro UNINSTALL.LOG_END_UNINSTALL
-
-  ; Remove registry keys
+  ; Remove registry keys (but only the ones related to the installer -- user options remain)
   DeleteRegKey HKLM "${INSTDIR_REG_KEY}"
+  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
 
   Call un.removeShorties
 
-  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
+  ; And remove the various install dir(s) but only if they're clean of user content:
+  StrCpy $0 "$INSTDIR\patches"
+  Call un.DeleteDirIfEmpty
 
-  ; And remove the install dir but only if it's clean of user content:
+  StrCpy $0 "$INSTDIR\langs"
+  Call un.DeleteDirIfEmpty
+
+  StrCpy $0 "$INSTDIR\plugins"
+  Call un.DeleteDirIfEmpty
+
   StrCpy $0 "$INSTDIR"
   Call un.DeleteDirIfEmpty
 
@@ -334,14 +356,15 @@ SectionEnd
 
 Section "Un.Full Removal (completely removes all PCSX2 program files and folders)"
 
-  MessageBox MB_YESNO "WARNING!  This will remove *all* files in $INSTDIR -- are you sure you want to proceed?" IDYES true IDNO false
+  MessageBox MB_YESNO "WARNING!  This will remove *all* files in $INSTDIR.  If you have multiple versions of PCSX2 installed, this *will* break them all!  Are you sure you want to proceed?" IDYES true IDNO false
   true:
 
   RMDir /r "$INSTDIR"
   Call un.removeShorties
 
+  ; Killt he entire PCSX2 registry key, along with installer junk.
+  DeleteRegKey HKLM Software\PCSX2
   DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
-  DeleteRegKey HKLM Software\pcsx2
 
   false:
 SectionEnd
