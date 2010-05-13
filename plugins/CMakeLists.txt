@@ -101,14 +101,14 @@ endif(USBnull)
 #endif(xpad)
 
 # make zerogs
-if(zerogs)
-	add_subdirectory(zerogs)
-endif(zerogs)
+#if(zerogs)
+#	add_subdirectory(zerogs)
+#endif(zerogs)
 
 # make zzogl-pg
-#if(zzogl)
-#	add_subdirectory(zzogl-pg)
-#endif(zzogl)
+if(zzogl)
+	add_subdirectory(zzogl-pg)
+endif(zzogl)
 
 # make zeropad
 if(zeropad)

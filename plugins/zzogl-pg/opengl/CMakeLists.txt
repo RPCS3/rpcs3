@@ -19,22 +19,35 @@ set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 # plugin name
 set(zzoglName zzogl)
 
+set(CommonFlags
+    -pthread
+    -m32
+    -Wno-format
+    -Wno-unused-parameter
+    -Wno-unused-value
+    -Wunused-variable
+    -msse2
+    -fno-regmove
+    -DZEROGS_SSE2
+    )
+
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     # add defines
-    add_definitions(-Wall -m32 -g)
+    add_definitions(${CommonFlags} -g -Wall -D_DEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
     # add defines
-    add_definitions(-Wall -m32 -O2)
+    add_definitions(${CommonFlags} -g -O2 -W -DZEROGS_DEVBUILD)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     # add defines
-    add_definitions(-Wall -m32 -O2 -s)
+    add_definitions(${CommonFlags} -O2 -W -DRELEASE_TO_PUBLIC)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zzogl sources
