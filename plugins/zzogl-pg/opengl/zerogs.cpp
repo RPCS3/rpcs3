@@ -1036,24 +1036,24 @@ Return:
 		".intel_syntax\n"
 		"jmp Return\n"
 		"Continue:\n"
-		"cmp %%ebx, 16\n"
+		"cmp %%esi, 16\n"
 		"jle Return\n"
-		"test %%ebx, 0x10\n"
+		"test %%esi, 0x10\n"
 		"jz AddEcx\n"
 		"sub %%edx, 448\n" // go back and down one column
 		"AddEcx:\n"
 		"add %%edx, 256\n" // go to the right block
-		"cmp %%ebx, 0x90\n"
+		"cmp %%esi, 0x90\n"
 		"jne Continue1\n"
 		"add %%edx, 256\n" // skip whole block
 		"Continue1:\n"
 		"add %%ecx, 64\n"
-		"sub %%ebx, 16\n"
+		"sub %%esi, 16\n"
 		"jmp Start\n"
 		"Return:\n"
 		"emms\n"
 
-	".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory");
+	".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "S"(entries) : "eax", "memory");
 
 #endif // _WIN32
 	return bRet;
