@@ -61,7 +61,7 @@ if(ZLIB_FOUND)
 else(ZLIB_FOUND)
 	# use project one
 	set(projectZLIB TRUE)
-#endif(ZLIB_FOUND)
+endif(ZLIB_FOUND)
 
 #------------------------------------------------------------
 
@@ -111,7 +111,7 @@ if(BZIP2_FOUND)
 else(BZIP2_FOUND)
 	# use project one
 	set(projectBZip2 TRUE)
-#endif(BZIP2_FOUND)
+endif(BZIP2_FOUND)
 
 #------------------------------------------------------------
 
