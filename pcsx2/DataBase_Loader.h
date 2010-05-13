@@ -291,4 +291,16 @@ public:
 	}
 };
 
+static wxString compatToStringWX(int compat) {
+	switch (compat) {
+		case 6:  return wxString(L"Perfect");
+		case 5:  return wxString(L"Playable");
+		case 4:  return wxString(L"In-Game");
+		case 3:  return wxString(L"Menu");
+		case 2:  return wxString(L"Intro");
+		case 1:  return wxString(L"Nothing");
+		default: return wxString(L"Unknown");
+	}
+}
+
 extern ScopedPtr<DataBase_Loader> GameDB;

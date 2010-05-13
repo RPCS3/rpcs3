@@ -580,17 +580,11 @@ void __fastcall eeGameStarting()
 		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
 		wxString gameName;
 		if (GameDB) {
-			gameName = GameDB->getStringWX("Name");
+			int compat = GameDB->getInt("Compat");
+			gameName   = GameDB->getStringWX("Name");
 			gameName += L" (" + GameDB->getStringWX("Region") + L")";
 			gameName += L" [" + DiscID  + L"]";
-			int compat = GameDB->getInt("Compat");
-			if		(compat >= 600) gameName += L" [Status = Perfect]";
-			else if (compat >= 500) gameName += L" [Status = Playable]";
-			else if (compat >= 400) gameName += L" [Status = In-Game]";
-			else if (compat >= 300) gameName += L" [Status = Menu]";
-			else if (compat >= 200) gameName += L" [Status = Intro]";
-			else if (compat >= 100) gameName += L" [Status = Nothing]";
-			else					gameName += L" [Status = Unknown]";
+			gameName += L" [Status = "+compatToStringWX(compat)+L"]";
 		}
 		else {
 			gameName += L" [" + DiscID  + L"]";
