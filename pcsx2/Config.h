@@ -13,7 +13,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #pragma once
 
 #include "x86emitter/tools.h"

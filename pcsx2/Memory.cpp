@@ -34,7 +34,6 @@ BIOS
 0xBFC00000 - 0xBFFFFFFF un-cached
 */
 
-
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 
