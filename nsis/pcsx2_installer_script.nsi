@@ -88,6 +88,19 @@ AllowRootDirInstall true
 
 XPStyle on
 
+; [TODO] / FIXME !!
+; We need to detect the user's accessibility mode in order to select the right shell context.  If the
+; user is an admin, Windows7 and Vista will DEFAULT to an "all" shell context (installing shortcuts for all
+; users), even if we don't want it to (which causes the uninstaller to fail!)
+; If the user is not an admin, setting Shell Context to all will cause the installer to fail because the
+; user won't have permission enough to install it at all (sigh).
+;
+; Solution! Detect the user's permission level, and install accordingly.  I've included a script to do
+; the detection in IsUserAdmin.nsh (untested, dunno if it compiles with latest NSIS).  Now we just
+; need to include it and call it, etc. :)
+
+SetShellVarContext all
+
 ; Request application privileges for Windows Vista (shouldn't be needed anymore!  -- air)
 ;RequestExecutionLevel admin
 
@@ -246,17 +259,15 @@ Section "DirectX Web Setup (recommended)" SEC_DIRECTX
                                                                               
  ;SectionIn RO                                                                
                                                                               
- SetOutPath "$TEMP"                                                           
- File "dxwebsetup.exe"                                                        
- DetailPrint "Running DirectX Web Setup..."                                   
- ExecWait '"$TEMP\dxwebsetup.exe" /Q' $DirectXSetupError                      
+ SetOutPath "$TEMP"
+ File "dxwebsetup.exe"
+ DetailPrint "Running DirectX Web Setup..."
+ ExecWait '"$TEMP\dxwebsetup.exe" /Q' $DirectXSetupError
  DetailPrint "Finished DirectX Web Setup"                                     
                                                                               
- Delete "$TEMP\dxwebsetup.exe"                                                
-                                                                              
- SetOutPath "$INSTDIR"                                                        
-                                                                              
-SectionEnd                                                                    
+ Delete "$TEMP\dxwebsetup.exe"
+
+SectionEnd
 
 ;--------------------------------
 
@@ -276,9 +287,9 @@ Function .onInstSuccess
 FunctionEnd
 
 
-; -------------------------------------------
-;             Uninstaller Section
-; -------------------------------------------
+; ---------------------------------------------------
+;                 Uninstaller Section
+; ---------------------------------------------------
 
 ; -------------------------------------
 ; Safe directory deletion code. :)
@@ -344,6 +355,11 @@ Section "Un.Basic Removal (removes only files installed by this package) ${APP_N
   DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
 
   Call un.removeShorties
+
+  ; Use $TEMP as the out dir when removing directories, since NSIS won't let us remove the
+  ; "current" directory.
+
+  SetOutPath "$TEMP"
 
   ; And remove the various install dir(s) but only if they're clean of user content:
   StrCpy $0 "$INSTDIR\patches"

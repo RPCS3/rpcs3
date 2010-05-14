@@ -397,8 +397,8 @@ namespace Panels
 	{
 	protected:
 		ScopedPtr<wxArrayString>	m_BiosList;
-		wxListBox&					m_ComboBox;
-		DirPickerPanel&				m_FolderPicker;
+		wxListBox*					m_ComboBox;
+		DirPickerPanel*				m_FolderPicker;
 
 	public:
 		BiosSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );

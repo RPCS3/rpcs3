@@ -152,6 +152,16 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	m_page_plugins	+= m_panel_PluginSel		| StdExpand();
 	m_page_bios		+= m_panel_BiosSel			| StdExpand();
 
+	// Temporary tutorial message for the BIOS, needs proof-reading!!
+	m_page_bios		+= 12;
+	m_page_bios		+= new pxStaticHeading( &m_page_bios,
+		pxE( ".Wizard:Bios:Tutorial",
+			L"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
+			L"You cannot use a copy obtained from a friend or the internet.\n"
+			L"You must dump the BIOS from your *own* Playstation 2 console."
+		)
+	);
+
 	// Assign page indexes as client data
 	m_page_usermode	.SetClientData( (void*)0 );
 	m_page_plugins	.SetClientData( (void*)1 );
