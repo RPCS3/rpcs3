@@ -111,6 +111,7 @@ public:
 	virtual void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true) {}
 
 	virtual void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1) {}
+	virtual void PSSetShaderResource(int i, GSTexture* sr) {}
 	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL) {}
 
 	GSTexture* GetCurrent();

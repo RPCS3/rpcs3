@@ -66,6 +66,10 @@ bool GSDevice11::CreateTextureFX()
 
 	if(FAILED(hr)) return false;
 
+	hr = m_dev->CreateSamplerState(&sd, &m_rt_ss);
+
+	if(FAILED(hr)) return false;
+
 	// create layout
 
 	VSSelector sel;
@@ -90,17 +94,19 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[3];
+		string str[4];
 
 		str[0] = format("%d", sel.bppz);
 		str[1] = format("%d", sel.tme);
 		str[2] = format("%d", sel.fst);
+		str[3] = format("%d", sel.rtcopy);
 
 		D3D11_SHADER_MACRO macro[] =
 		{
 			{"VS_BPPZ", str[0].c_str()},
 			{"VS_TME", str[1].c_str()},
 			{"VS_FST", str[2].c_str()},
+			{"VS_RTCOPY", str[3].c_str()},
 			{NULL, NULL},
 		};
 
@@ -175,7 +181,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 
 	if(i == m_ps.end())
 	{
-		string str[14];
+		string str[15];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -191,6 +197,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 		str[11] = format("%d", sel.aout);
 		str[12] = format("%d", sel.ltf);
 		str[13] = format("%d", sel.colclip);
+		str[14] = format("%d", sel.date);
 
 		D3D11_SHADER_MACRO macro[] =
 		{
@@ -208,6 +215,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 			{"PS_AOUT", str[11].c_str()},
 			{"PS_LTF", str[12].c_str()},
 			{"PS_COLCLIP", str[13].c_str()},
+			{"PS_DATE", str[14].c_str()},
 			{NULL, NULL},
 		};
 
@@ -226,8 +234,6 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 
 		ctx->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
-
-	PSSetShader(i->second, m_ps_cb);
 
 	ID3D11SamplerState* ss0 = NULL;
 	ID3D11SamplerState* ss1 = NULL;
@@ -272,7 +278,9 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 		}
 	}
 
-	PSSetSamplerState(ss0, ss1);
+	PSSetSamplerState(ss0, ss1, sel.date ? m_rt_ss : NULL);
+
+	PSSetShader(i->second, m_ps_cb);
 }
 
 void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)

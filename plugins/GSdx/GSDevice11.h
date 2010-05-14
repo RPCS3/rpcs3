@@ -65,6 +65,8 @@ class GSDevice11 : public GSDeviceDX
 	CComPtr<ID3D11Buffer> m_vb;
 	CComPtr<ID3D11Buffer> m_vb_old;
 
+	bool m_srv_changed, m_ss_changed;
+
 	struct
 	{
 		ID3D11Buffer* vb;
@@ -74,10 +76,10 @@ class GSDevice11 : public GSDeviceDX
 		ID3D11VertexShader* vs;
 		ID3D11Buffer* vs_cb;
 		ID3D11GeometryShader* gs;
-		ID3D11ShaderResourceView* ps_srv[2];
+		ID3D11ShaderResourceView* ps_srv[3];
 		ID3D11PixelShader* ps;
 		ID3D11Buffer* ps_cb;
-		ID3D11SamplerState* ps_ss[2];
+		ID3D11SamplerState* ps_ss[3];
 		GSVector2i viewport;
 		GSVector4i scissor;
 		ID3D11DepthStencilState* dss;
@@ -132,6 +134,7 @@ public: // TODO
 	CComPtr<ID3D11Buffer> m_ps_cb;
 	hash_map<uint32, CComPtr<ID3D11SamplerState> > m_ps_ss;
 	CComPtr<ID3D11SamplerState> m_palette_ss;
+	CComPtr<ID3D11SamplerState> m_rt_ss;
 	hash_map<uint32, CComPtr<ID3D11DepthStencilState> > m_om_dss;
 	hash_map<uint32, CComPtr<ID3D11BlendState> > m_om_bs;
 
@@ -178,8 +181,9 @@ public:
 	void VSSetShader(ID3D11VertexShader* vs, ID3D11Buffer* vs_cb);
 	void GSSetShader(ID3D11GeometryShader* gs);
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
+	void PSSetShaderResource(int i, GSTexture* sr);
 	void PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb);
-	void PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1);
+	void PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1, ID3D11SamplerState* ss2 = NULL);
 	void OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
@@ -189,6 +193,9 @@ public:
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+
+	bool HasStencil() { return true; }
+	bool HasDepth32() { return true; }
 
 	ID3D11Device* operator->() {return m_dev;}
 	operator ID3D11Device*() {return m_dev;}

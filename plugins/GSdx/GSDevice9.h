@@ -83,6 +83,7 @@ class GSDevice9 : public GSDeviceDX
 	CComPtr<IDirect3DVertexBuffer9> m_vb;
 	CComPtr<IDirect3DVertexBuffer9> m_vb_old;
 	bool m_lost;
+	D3DFORMAT m_depth_format;
 
 	struct
 	{
@@ -93,7 +94,7 @@ class GSDevice9 : public GSDeviceDX
 		IDirect3DVertexShader9* vs;
 		float* vs_cb;
 		int vs_cb_len;
-		IDirect3DTexture9* ps_srvs[2];
+		IDirect3DTexture9* ps_srvs[3];
 		IDirect3DPixelShader9* ps;
 		float* ps_cb;
 		int ps_cb_len;
@@ -191,6 +192,7 @@ public:
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
 	void VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len);
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
+	void PSSetShaderResource(int i, GSTexture* sr);
 	void PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len);
 	void PSSetSamplerState(Direct3DSamplerState9* ss);
 	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss);
@@ -208,4 +210,7 @@ public:
 	void SetupGS(GSSelector sel) {}
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+
+	bool HasStencil() { return m_depth_format == D3DFMT_D24S8; }
+	bool HasDepth32() { return m_depth_format != D3DFMT_D24S8; }
 };

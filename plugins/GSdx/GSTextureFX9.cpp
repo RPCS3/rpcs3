@@ -73,12 +73,13 @@ void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[4];
+		string str[5];
 
 		str[0] = format("%d", sel.bppz);
 		str[1] = format("%d", sel.tme);
 		str[2] = format("%d", sel.fst);
 		str[3] = format("%d", sel.logz);
+		str[4] = format("%d", sel.rtcopy);
 
 		D3DXMACRO macro[] =
 		{
@@ -86,6 +87,7 @@ void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			{"VS_TME", str[1].c_str()},
 			{"VS_FST", str[2].c_str()},
 			{"VS_LOGZ", str[3].c_str()},
+			{"VS_RTCOPY", str[4].c_str()},
 			{NULL, NULL},
 		};
 
@@ -121,7 +123,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 		{
 			if(GSTexture* t = CreateMskFix(size.z, cb->MskFix.x, cb->MskFix.z))
 			{
-				m_dev->SetTexture(2, *(GSTexture9*)t);
+				m_dev->SetTexture(3, *(GSTexture9*)t);
 			}
 		}
 
@@ -129,7 +131,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 		{
 			if(GSTexture* t = CreateMskFix(size.w, cb->MskFix.y, cb->MskFix.w))
 			{
-				m_dev->SetTexture(3, *(GSTexture9*)t);
+				m_dev->SetTexture(4, *(GSTexture9*)t);
 			}
 		}
 	}
@@ -138,7 +140,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 
 	if(i == m_ps.end())
 	{
-		string str[13];
+		string str[14];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -153,6 +155,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 		str[10] = format("%d", sel.rt);
 		str[11] = format("%d", sel.ltf);
 		str[12] = format("%d", sel.colclip);
+		str[13] = format("%d", sel.date);
 
 		D3DXMACRO macro[] =
 		{
@@ -169,6 +172,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 			{"PS_RT", str[10].c_str()},
 			{"PS_LTF", str[11].c_str()},
 			{"PS_COLCLIP", str[12].c_str()},
+			{"PS_DATE", str[13].c_str()},
 			{NULL, NULL},
 		};
 

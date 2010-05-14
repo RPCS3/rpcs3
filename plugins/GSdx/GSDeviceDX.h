@@ -75,12 +75,13 @@ public:
 				uint32 tme:1;
 				uint32 fst:1;
 				uint32 logz:1;
+				uint32 rtcopy:1;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x1f;}
+		operator uint32() {return key & 0x3f;}
 
 		VSSelector() : key(0) {}
 	};
@@ -171,12 +172,13 @@ public:
 				uint32 rt:1;
 				uint32 ltf:1;
 				uint32 colclip:2;
+				uint32 date:2;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0xffffff;}
+		operator uint32() {return key & 0x3ffffff;}
 
 		PSSelector() : key(0) {}
 	};
@@ -284,4 +286,7 @@ public:
 	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
 
 	virtual void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm)=0;
+
+	virtual bool HasStencil() = 0;
+	virtual bool HasDepth32() = 0;
 };

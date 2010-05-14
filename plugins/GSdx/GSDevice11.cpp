@@ -632,9 +632,9 @@ void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 
 	// ps
 
-	PSSetShader(ps, ps_cb);
-	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
 	PSSetShaderResources(st, NULL);
+	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
+	PSSetShader(ps, ps_cb);
 
 	//
 
@@ -718,8 +718,8 @@ void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaV
 		GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
 
 		PSSetShaderResources(rt2, NULL);
-		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
 		PSSetSamplerState(m_convert.pt, NULL);
+		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
 
 		//
 
@@ -853,20 +853,31 @@ void GSDevice11::GSSetShader(ID3D11GeometryShader* gs)
 
 void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
-	ID3D11ShaderResourceView* srv0 = NULL;
-	ID3D11ShaderResourceView* srv1 = NULL;
+	PSSetShaderResource(0, sr0);
+	PSSetShaderResource(1, sr1);
+	PSSetShaderResource(2, NULL);
+}
 
-	if(sr0) srv0 = *(GSTexture11*)sr0;
-	if(sr1) srv1 = *(GSTexture11*)sr1;
+void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
+{
+	ID3D11ShaderResourceView* srv = NULL;
+	if (sr) srv = *(GSTexture11*)sr;
 
-	if(m_state.ps_srv[0] != srv0 || m_state.ps_srv[1] != srv1)
+	if (m_state.ps_srv[i] != srv) {
+		m_state.ps_srv[i] = srv;
+		m_srv_changed = true;
+	}
+}
+
+void GSDevice11::PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1, ID3D11SamplerState* ss2)
+{
+	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1 || m_state.ps_ss[2] != ss2)
 	{
-		m_state.ps_srv[0] = srv0;
-		m_state.ps_srv[1] = srv1;
+		m_state.ps_ss[0] = ss0;
+		m_state.ps_ss[1] = ss1;
+		m_state.ps_ss[2] = ss2;
 
-		ID3D11ShaderResourceView* srvs[] = {srv0, srv1};
-
-		m_ctx->PSSetShaderResources(0, 2, srvs);
+		m_ss_changed = true;
 	}
 }
 
@@ -879,24 +890,21 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 		m_ctx->PSSetShader(ps, NULL, 0);
 	}
 
+	if (m_srv_changed) {
+		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
+		m_srv_changed = false;
+	}
+
+	if (m_ss_changed) {
+		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
+		m_ss_changed = false;
+	}
+
 	if(m_state.ps_cb != ps_cb)
 	{
 		m_state.ps_cb = ps_cb;
 
 		m_ctx->PSSetConstantBuffers(0, 1, &ps_cb);
-	}
-}
-
-void GSDevice11::PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1)
-{
-	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1)
-	{
-		m_state.ps_ss[0] = ss0;
-		m_state.ps_ss[1] = ss1;
-
-		ID3D11SamplerState* sss[] = {ss0, ss1};
-
-		m_ctx->PSSetSamplers(0, 2, sss);
 	}
 }
 

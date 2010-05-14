@@ -22,6 +22,10 @@
 #include "stdafx.h"
 #include "GSState.h"
 
+//#define DISABLE_BITMASKING
+//#define DISABLE_COLCLAMP
+//#define DISABLE_DATE
+
 GSState::GSState()
 	: m_mt(false)
 	, m_irq(NULL)
@@ -805,6 +809,9 @@ template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
 	}
 
 	m_env.CTXT[i].TEST = (GSVector4i)r->TEST;
+#ifdef DISABLE_DATE
+	m_env.CTXT[i].TEST.DATE = 0;
+#endif
 }
 
 void GSState::GIFRegHandlerPABE(GIFReg* r)

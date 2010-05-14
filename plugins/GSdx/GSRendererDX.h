@@ -66,30 +66,39 @@ public:
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
 
+		const GSVector2i& rtsize = rt->GetSize();
+		const GSVector2& rtscale = rt->GetScale();
+		bool DATE = m_context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
+
+		GSTexture *rtcopy = NULL;
+
 		assert(m_dev != NULL);
 
 		GSDeviceDX& dev = (GSDeviceDX&)*m_dev;
 
-		//
-		if(m_context->TEST.DATE)
+		if(DATE)
 		{
-			const GSVector2i& size = rt->GetSize();
+			if (dev.HasStencil()) {
+				GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
+				GSVector4 o = GSVector4(-1.0f, 1.0f);
 
-			GSVector4 s = GSVector4(rt->GetScale().x / size.x, rt->GetScale().y / size.y);
-			GSVector4 o = GSVector4(-1.0f, 1.0f);
+				GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+				GSVector4 dst = src * 2.0f + o.xxxx();
 
-			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
-			GSVector4 dst = src * 2.0f + o.xxxx();
+				GSVertexPT1 vertices[] =
+				{
+					{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
+					{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
+					{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
+					{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
+				};
 
-			GSVertexPT1 vertices[] =
-			{
-				{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-				{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-				{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-				{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-			};
-
-			dev.SetupDATE(rt, ds, vertices, m_context->TEST.DATM );
+				dev.SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
+			} else {
+				rtcopy = m_dev->CreateRenderTarget(rtsize.x, rtsize.y, false, rt->GetFormat());
+				// I'll use VertexTrace when I consider it more trustworthy
+				m_dev->CopyRect(rt, rtcopy, GSVector4i(rtsize).zwxy());
+			}
 		}
 
 		//
@@ -108,11 +117,6 @@ public:
 		else
 		{
 			om_dssel.ztst = ZTST_ALWAYS;
-		}
-
-		if(context->FRAME.PSM != PSM_PSMCT24)
-		{
-			om_dssel.date = context->TEST.DATE;
 		}
 
 		if(m_fba)
@@ -156,7 +160,8 @@ public:
 
 		vs_sel.tme = PRIM->TME;
 		vs_sel.fst = PRIM->FST;
-		vs_sel.logz = m_logz ? 1 : 0;
+		vs_sel.logz = dev.HasDepth32() ? 0 : m_logz ? 1 : 0;
+		vs_sel.rtcopy = !!rtcopy;
 
 		// The real GS appears to do no masking based on the Z buffer format and writing larger Z values
 		// than the buffer supports seems to be an error condition on the real GS, causing it to crash.
@@ -193,12 +198,12 @@ public:
 
 		GSDeviceDX::VSConstantBuffer vs_cb;
 
-		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
-		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
+		float sx = 2.0f * rtscale.x / (rtsize.x << 4);
+		float sy = 2.0f * rtscale.y / (rtsize.y << 4);
 		float ox = (float)(int)context->XYOFFSET.OFX;
 		float oy = (float)(int)context->XYOFFSET.OFY;
-		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
-		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
+		float ox2 = 2.0f * m_pixelcenter.x / rtsize.x;
+		float oy2 = 2.0f * m_pixelcenter.y / rtsize.y;
 
 		//This hack subtracts around half a pixel from OFX and OFY. (Cannot do this directly,
 		//because DX10 and DX9 have a different pixel center.)
@@ -230,6 +235,14 @@ public:
 		GSDeviceDX::PSSelector ps_sel;
 		GSDeviceDX::PSSamplerSelector ps_ssel;
 		GSDeviceDX::PSConstantBuffer ps_cb;
+
+		if(DATE)
+		{
+			if (dev.HasStencil())
+				om_dssel.date = 1;
+			else
+				ps_sel.date = 1 + context->TEST.DATM;
+		}
 
 		if (env.COLCLAMP.CLAMP == 0) {
 			ps_sel.colclip = 1;
@@ -316,10 +329,12 @@ public:
 
 		// rs
 
-		GSVector4i scissor = GSVector4i(GSVector4(rt->GetScale()).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
+		GSVector4i scissor = GSVector4i(GSVector4(rtscale).xyxy() * context->scissor.in).rintersect(GSVector4i(rtsize).zwxy());
 
 		dev.OMSetRenderTargets(rt, ds, &scissor);
-		dev.PSSetShaderResources(tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
+		dev.PSSetShaderResource(0, tex ? tex->m_texture : NULL);
+		dev.PSSetShaderResource(1, tex ? tex->m_palette : NULL);
+		dev.PSSetShaderResource(2, rtcopy);
 
 		uint8 afix = context->ALPHA.FIX;
 
@@ -417,6 +432,8 @@ public:
 		}
 
 		dev.EndScene();
+
+		m_dev->Recycle(rtcopy);
 
 		if(om_dssel.fba) UpdateFBA(rt);
 	}
