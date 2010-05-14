@@ -31,3 +31,7 @@ EXPORTS
 	SPU2irqCallback			@26
 	SPU2setDMABaseAddr		@27
 	SPU2setupRecording	    @28
+	
+	SPU2setSettingsDir
+	
+	LIBRARY	"ZeroSPU2"

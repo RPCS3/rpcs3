@@ -34,3 +34,5 @@ EXPORTS
 	DEV9dmaRead
 	DEV9dmaWrite
 	DEV9dmaInterrupt
+	
+	DEV9setSettingsDir

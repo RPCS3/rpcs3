@@ -306,6 +306,10 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
+				RelativePath=".\ZeroSPU2.def"
+				>
+			</File>
+			<File
 				RelativePath=".\ZeroSPU2.rc"
 				>
 			</File>

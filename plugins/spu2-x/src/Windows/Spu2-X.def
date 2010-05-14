@@ -37,9 +37,11 @@ EXPORTS
     SPU2writeDMA7Mem    @15
     SPU2interruptDMA4   @16
     SPU2interruptDMA7   @17
+    
     SPU2dmaRead
     SPU2dmaWrite
     SPU2dmaInterrupt
+    SPU2setSettingsDir
     
 	SPU2irqCallback		@18
 
