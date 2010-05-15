@@ -128,24 +128,6 @@ VIProductVersion "${APP_VERSION}.${SVNREV}"
 ;                            Installer Sections
 ; =======================================================================
 
-; -------------------------------------
-; Test if Visual Studio Redistributables 2008 SP1 installed
-; Returns -1 if there is no VC redistributables intstalled
-;
-Function CheckVCRedist
-
-   Push $R0
-   ClearErrors
-   ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{9A25302D-30C0-39D9-BD6F-21E6EC160475}" "Version"
-
-   IfErrors 0 VSRedistInstalled
-   StrCpy $R0 "-1"
-
-VSRedistInstalled:
-   Exch $R0
-   
-FunctionEnd
-
 ; -----------------------------------------------------------------------
 ; Basic section (emulation proper)
 Section "${APP_NAME} (required)"
@@ -296,20 +278,12 @@ Section "Microsoft Visual C++ 2008 SP1 Redist (required)"
 
   SetOutPath "$TEMP"
   File "vcredist_x86.exe"
+  DetailPrint "Running Visual C++ 2008 SP1 Redistributable Setup..."
+  ExecWait '"$TEMP\vcredist_x86.exe" /qb'
+  DetailPrint "Finished Visual C++ 2008 SP1 Redistributable Setup"
+  
+  Delete "$TEMP\vcredist_x86.exe"
 
-  ; For some reason the redist check isn't reliable on some fresh XP installs?  Whatever, we can
-  ; just re-run the stupid thing every time.  It'll ask to "modify" or "repair", but until we
-  ; get a better solution, this will have to do --air
-
-  ;Call CheckVCRedist
-  ;StrCmp $R0 "-1" skipRedist
-  ExecWait "$TEMP\vcredist_x86.exe"
-  ;Goto done
-
-;skipRedist:  
-  ;DetailPrint "Visual C++ 2008 SP1 Redistributable already installed, skipping..."
-
-;done:
 SectionEnd
 
 ; -----------------------------------------------------------------------
