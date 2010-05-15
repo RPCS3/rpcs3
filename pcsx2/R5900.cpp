@@ -589,7 +589,7 @@ void __fastcall eeGameStarting()
 			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 		}
 
-		// if patches found the following title will be overwritten
+		// this title can be overwritten by patches if they set the gametitle key
 		Console.SetTitle(gameName + gameSerial + gameCompat);
 
 		if (EmuConfig.EnablePatches) InitPatch(gameCRC);

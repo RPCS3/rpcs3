@@ -21,6 +21,26 @@ struct key_pair {
 	string value;
 	key_pair(string _key, string _value)
 		: key(_key) , value(_value) {}
+	string toString() {
+		string t;
+		if (key[0] == '[') {
+			t  = key + "\n";
+			t += value;
+			stringstream ss(key);
+			string t2;
+			ss >>  t2;
+			t += "[/" + t2.substr(1, t2.length()-1);
+			if (t2.compare(t)) t += "]";
+		}
+		else {
+			t = key;
+			for (int a = 6 - key.length(); a > 0; a--) {
+				t += " "; // Padding for nice formatting on small key-names
+			}
+			t += " = " + value;
+		}
+		return t;
+	}
 };
 
 class Game_Data {
@@ -63,7 +83,21 @@ private:
 		if (doMsg) Console.Error("DataBase_Loader: Bad file data [%s]", line.c_str());
 		keyPair.key = "";
 	}
-	void extract(string& line, key_pair& keyPair) {
+	void extractMultiLine(string& line, key_pair& keyPair, File_Reader& reader, stringstream& ss) {
+		string t = "";
+		string endString;
+		endString = "[/" + keyPair.key.substr(1, keyPair.key.length()-1);
+		if (keyPair.key[keyPair.key.length()-1] != ']') {
+			endString += "]";
+			keyPair.key = line;
+		}
+		for(;;) {
+			t = reader.getLine();
+			if (!t.compare(endString)) break;
+			keyPair.value += t + "\n";
+		}
+	}
+	void extract(string& line, key_pair& keyPair, File_Reader& reader) {
 		int eol = line.rfind("\r");
 		if (eol != string::npos) line = line.substr(0, eol);
 		
@@ -75,6 +109,10 @@ private:
 		if (!line.length() || isComment(keyPair.key)) {
 			doError(line, keyPair);
 			return; 
+		}
+		if (keyPair.key[0] == '[') {
+			extractMultiLine(line, keyPair, reader, ss);
+			return;
 		}
 		ss >> t;
 		if (t.compare("=") != 0) {
@@ -90,8 +128,7 @@ private:
 		while (!ss.eof() && !ss.fail()) {
 			ss >> t;
 			if (isComment(t)) break; 
-			keyPair.value += " ";
-			keyPair.value += t;
+			keyPair.value += " " + t;
 		}
 		if (ss.fail()) {
 			doError(line, keyPair);
@@ -117,7 +154,7 @@ public:
 			for(;;) {
 				for(;;) { // Find first game
 					s0 = reader.getLine();
-					extract(s0, keyPair);
+					extract(s0, keyPair, reader);
 					if (keyPair.key.compare(key) == 0) break;
 					header.write(s0);
 					header.write("\n");
@@ -126,7 +163,7 @@ public:
 				game->kList.push_back(keyPair);
 				for (;;) { // Fill game data, find new game, repeat...
 					s0 = reader.getLine();
-					extract(s0, keyPair);
+					extract(s0, keyPair, reader);
 					if (keyPair.key.compare("")  == 0) continue;
 					if (keyPair.key.compare(key) == 0) {
 						gList.push_back(game);
@@ -178,13 +215,7 @@ public:
 		for ( ; it != gList.end(); ++it) {
 			deque<key_pair>::iterator i = it[0]->kList.begin();
 			for ( ; i != it[0]->kList.end(); ++i) {
-				writer.write(i[0].key);
-				for (int a = 6 - i[0].key.length(); a > 0; a--) {
-					writer.write(" "); // Padding for nice formatting on small key-names
-				}
-				writer.write(" = ");
-				writer.write(i[0].value);
-				writer.write("\n");
+				writer.write(i[0].toString() + "\n");
 			}
 			writer.write("---------------------------------------------\n");
 		}
@@ -199,6 +230,20 @@ public:
 		game->kList.push_back(kp);
 		gList.push_back(game);
 		curGame = game;
+	}
+
+	// Searches the current game's data to see if the given key exists
+	bool keyExists(string key) {
+		if (curGame) {
+			deque<key_pair>::iterator it = curGame->kList.begin();
+			for ( ; it != curGame->kList.end(); ++it) {
+				if (!it[0].key.compare(key)) {
+					return true;
+				}
+			}
+		}
+		else Console.Error("DataBase_Loader: Game not set!");
+		return false;
 	}
 
 	// Gets a string representation of the 'value' for the given key

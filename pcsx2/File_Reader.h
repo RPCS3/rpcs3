@@ -95,10 +95,15 @@ public:
 };
 
 class String_Stream {
+private:
+	char buff[2048];
 public:
 	stringstream* ss;
 	String_Stream()  {
 		ss = new stringstream(stringstream::in | stringstream::out);
+	}
+	String_Stream(string& str) {
+		ss = new stringstream(str, stringstream::in | stringstream::out);
 	}
 	~String_Stream() {
 		delete ss;
@@ -111,6 +116,17 @@ public:
 	}
 	string toString() {
 		return ss->str();
+	}
+	string getLine() {
+		ss->getline(buff, sizeof(buff));
+		return string(buff);
+	}
+	wxString getLineWX() {
+		ss->getline(buff, sizeof(buff));
+		return wxString(fromAscii(buff));
+	}
+	bool finished() {
+		return ss->eof() || ss->fail();
 	}
 };
 

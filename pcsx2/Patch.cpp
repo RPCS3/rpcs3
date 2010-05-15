@@ -19,8 +19,7 @@
 
 #include "IopCommon.h"
 #include "Patch.h"
-
-#include <wx/textfile.h>
+#include "DataBase_Loader.h"
 
 IniPatch Patch[ MAX_PATCH ];
 
@@ -418,12 +417,16 @@ void inifile_command( const wxString& cmd )
 
 // This routine recieves a file from inifile_read, trims it,
 // Then sends the command to be parsed.
-void inifile_process(wxTextFile &f1 )
+void inifile_process(string& s)
 {
-    for (uint i = 0; i < f1.GetLineCount(); i++)
-    {
-        inifile_trim(f1[i]);
-        if (!f1[i].IsEmpty()) inifile_command(f1[i]);
+	String_Stream ss(s);
+	wxString buff;
+    while (!ss.finished())
+	{
+		buff = ss.getLineWX();
+		//Console.Error("%s", buff.ToAscii());
+        inifile_trim(buff);
+        if (!buff.IsEmpty()) inifile_command(buff);
     }
 }
 
@@ -431,28 +434,27 @@ void inifile_process(wxTextFile &f1 )
 // loads it, trims the commands, and sends them to be parsed.
 void inifile_read(const wxString& name )
 {
-	wxTextFile f1;
-	wxString buffer;
-
+	bool   patchFound = false;
+	string patch;
+	string crc = string(name.ToAscii());
 	patchnumber = 0;
-
-	// FIXME : We need to add a 'patches' folder to the AppConfig, and use that instead. --air
-
-	buffer = Path::Combine(L"patches", name + L".pnach");
-
-	if(!f1.Open(buffer) && wxFileName::IsCaseSensitive())
-	{
-		f1.Open( Path::Combine(L"patches", name.Upper() + L".pnach") );
+	
+	if (GameDB && GameDB->gameLoaded()) {
+		if (GameDB->keyExists("[patches = " + crc + "]")) {
+			patch = GameDB->getString("[patches = " + crc + "]");
+			patchFound = true;
+		}
+		else if (GameDB->keyExists("[patches]")) {
+			patch = GameDB->getString("[patches]");
+			patchFound = true;
+		}
 	}
 
-	if(!f1.IsOpened())
-	{
-		Console.WriteLn( Color_Gray, "No patch found. Resuming execution without a patch (this is NOT an error)." );
-		return;
+	if (patchFound) {
+		Console.WriteLn(Color_Green, "Patch found!");
+		inifile_process(patch);
 	}
-
-	Console.WriteLn( Color_Green, "Patch found!");
-	inifile_process( f1 );
+	else Console.WriteLn(Color_Gray, "No patch found. Resuming execution without a patch (this is NOT an error).");
 }
 
 void _ApplyPatch(IniPatch *p)

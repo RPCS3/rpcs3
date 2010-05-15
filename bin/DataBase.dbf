@@ -1189,6 +1189,14 @@ Serial = SCUS-97464
 Name   = Sly 3 - Honor Amongst Thieves
 Region = NTSC-U
 Compat = 4
+[patches = 8BC95883]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,002aa040,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SCUS-97465
 Name   = Ratchet - Deadlocked
@@ -1973,6 +1981,17 @@ Serial = SLUS-20103
 Name   = F1 2000 Championship Edition
 Region = NTSC-U
 Compat = 4
+[patches = E138094A]
+	
+	comment=patches by nachbrenner
+	
+	//Skip Intro Videos
+	patch=0,EE,00221a14,word,00000000
+	//Skip All Videos
+	patch=0,EE,00241bc0,word,03E00008
+	patch=0,EE,00241bc4,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20104
 Name   = Tiger Woods PGA Tour 2001
@@ -2068,6 +2087,18 @@ Serial = SLUS-20141
 Name   = CART Fury - Championship Racing
 Region = NTSC-U
 Compat = 4
+[patches = 116154AD]
+	
+	comment=patches by Nachbrenner
+	
+	//skip PSX2_Mpeg_PlayFile__FPc
+	patch=0,EE,00107a00,word,03e00008
+	patch=0,EE,00107a04,word,24020001
+	//skip SuperSync__Fi
+	patch=0,EE,00100eb0,word,03e00008
+	patch=0,EE,00100eb4,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20143
 Name   = ESPN - NBA 2 Night
@@ -2112,6 +2143,14 @@ Serial = SLUS-20151
 Name   = Klonoa 2 - Lunatea's Veil
 Region = NTSC-U
 Compat = 5
+[patches = 2F56CBC9]
+	
+	comment=patches by nachbrenner
+	
+	//Skip sceIpuSync
+	patch=0,EE,00305b90,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20152
 Name   = Ace Combat 4 - Shattered Skies
@@ -2122,6 +2161,14 @@ Serial = SLUS-20153
 Name   = RC Revenge Pro
 Region = NTSC-U
 Compat = 1
+[patches = A8083AE6]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,001ceaf8,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20154
 Name   = NFL Quarterback Club 2002
@@ -2294,6 +2341,30 @@ Serial = SLUS-20202
 Name   = Crazy Taxi
 Region = NTSC-U
 Compat = 2
+[patches = 4C9EE7DF]
+	
+	comment=patches by Nachbrenner
+	
+	//skip movie "PlaySega"
+	patch=0,EE,001a1950,word,03e00008
+	patch=0,EE,001a1954,word,00000000
+	//skip movie "PlayAcclaim"
+	patch=0,EE,001a1ae8,word,03e00008
+	patch=0,EE,001a1aec,word,00000000
+	//skip music.str (for blockdump)
+	// patch=0,EE,001a0bb0,word,0000000
+	//skip voice.str (for blockdump)
+	// patch=0,EE,001a0b9c,word,0000000
+	//Infinite arcade time
+	patch=1,EE,002F0C64,word,00000e00
+	//Japanese mode
+	//patch=0,EE,00118514,word,af8095a4
+	//controller setting B
+	patch=1,EE,002152DF,byte,01
+	//skip nlWaitVSync / TaxiBlankInterrupt (obsolete)
+	//patch=0,EE,0019a590,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20204
 Name   = Smuggler's Run 2 - Hostile Territory
@@ -2322,6 +2393,19 @@ Serial = SLUS-20209
 Name   = Midnight Club II
 Region = NTSC-U
 Compat = 4
+[patches = C1625F14]
+	
+	comment=patches by Nachbrenner
+	
+	//skip videos
+	patch=0,EE,0013D5E0,word,00000000
+	//skip sceIpuSync
+	patch=0,EE,003ef4e8,word,03e00008
+	patch=0,EE,003ef4ec,word,00000000
+	//skip network check "BT_ok_to_initialize_networking"
+	patch=0,EE,00123c70,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20210
 Name   = 18 Wheeler - American Pro Trucker
@@ -2602,6 +2686,14 @@ Serial = SLUS-20275
 Name   = Kessen 2
 Region = NTSC-U
 Compat = 1
+[patches = 53A803AF]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos by General Plot
+	patch=0,EE,00108970,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20277
 Name   = Dynasty Warriors 3
@@ -2718,6 +2810,14 @@ Serial = SLUS-20306
 Name   = Contra - Shattered Soldier
 Region = NTSC-U
 Compat = 5
+[patches = 582EED0D]
+	
+	comment=patches by nachbrenner
+	
+	//skip FMV (sceMpegIsEnd)
+	patch=0,EE,0063d950,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20307
 Name   = Burnout
@@ -2983,6 +3083,14 @@ Serial = SLUS-20367
 Name   = Freekstyle
 Region = NTSC-U
 Compat = 5
+[patches = 77ECAAA0]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,00107808,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20368
 Name   = Medal of Honor - Frontline
@@ -2993,6 +3101,24 @@ Serial = SLUS-20369
 Name   = Knockout Kings 2002
 Region = NTSC-U
 Compat = 4
+[patches = 36FEEE3A]
+	
+	comment=patches by Nachbrenner
+	
+	//fix DMA loop
+	patch=0,EE,001d8020,word,1000000f
+	//Skip MPC videos
+	patch=0,EE,0018c0a8,word,03e00008
+	patch=0,EE,0018c0ac,word,24020001
+	//Fight commentary off
+	patch=1,EE,00273380,word,00000000
+	//Music vol.=0
+	patch=1,EE,002721A4,word,00000000
+	//Skip sound streaming
+	patch=0,EE,00138b68,word,03e00008
+	patch=0,EE,00138b6c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20370
 Name   = Kingdom Hearts
@@ -3137,6 +3263,14 @@ Serial = SLUS-20402
 Name   = Britney's Dance Beat
 Region = NTSC-U
 Compat = 5
+[patches = 3EAD47FE]
+	
+	comment=Kill BNE
+	
+	//Patch made by CKemu
+	patch=0,EE,0022581c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20403
 Name   = Evil Dead - A Fistful of Boomstick
@@ -4395,6 +4529,14 @@ Serial = SLUS-20698
 Name   = SD Gundam Force Showdown
 Region = NTSC-U
 Compat = 4
+[patches = C04FB5FD]
+	
+	comment=Captain Gundam The Secret Defender Of Neotopia 
+	
+	//Skip Videos
+	patch=0,EE,0010c660,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20699
 Name   = Cowboy Bebop
@@ -4854,6 +4996,17 @@ Serial = SLUS-20809
 Name   = Godzilla - Save the Earth
 Region = NTSC-U
 Compat = 1
+[patches = 1025D50A]
+	
+	comment=patches by nachbrenner
+	
+	//EEREC fix: borked memory write
+	patch=0,EE,0028b2d0,word,00000000
+	//DMA fix menus
+	patch=0,EE,0022c568,word,00000000
+	patch=0,EE,0022c540,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20810
 Name   = Nightshade
@@ -5018,6 +5171,14 @@ Serial = SLUS-20850
 Name   = Blowout
 Region = NTSC-U
 Compat = 5
+[patches = 71584BAC]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos 
+	patch=0,EE,002c4a18,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20851
 Name   = Ace Combat 5 - The Unsung War
@@ -5182,6 +5343,14 @@ Serial = SLUS-20884
 Name   = Spyro - A Hero's Tail
 Region = NTSC-U
 Compat = 2
+[patches = 94C56923]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,003faaf0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20885
 Name   = Red Star, The
@@ -5547,6 +5716,17 @@ Serial = SLUS-20961
 Name   = Neo Contra
 Region = NTSC-U
 Compat = 4
+[patches = 08901101]
+	
+	comment=Patches By Nachbrenner
+	
+	//fix IPU busy! ingame
+	patch=0,EE,003a9538,word,03e00008
+	patch=0,EE,003a953c,word,00000000
+	patch=0,EE,003a9460,word,03e00008
+	patch=0,EE,003a9464,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20962
 Name   = Castle of Shikigami 2
@@ -5905,6 +6085,14 @@ Serial = SLUS-21039
 Name   = TOCA Race Driver 2 - The Ultimate Racing Simulator
 Region = NTSC-U
 Compat = 3
+[patches = 22C36E63]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,00452a48,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21040
 Name   = Shield, The
@@ -6022,6 +6210,14 @@ Serial = SLUS-21066
 Name   = Urbz, The - Sims in the City
 Region = NTSC-U
 Compat = 5
+[patches = 09D35D3F]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,004226d0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21067
 Name   = Digimon Rumble Arena 2
@@ -6192,6 +6388,12 @@ Serial = SLUS-21104
 Name   = MX vs. ATV Unleashed
 Region = NTSC-U
 Compat = 5
+[patches = 95BB1901]
+	
+	//Skip Movies
+	patch=0,EE,00339bc0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21105
 Name   = Tom Clancy's Ghost Recon 2
@@ -6341,6 +6543,14 @@ Serial = SLUS-21136
 Name   = Graffiti Kingdom
 Region = NTSC-U
 Compat = 5
+[patches = EF5B6AAD]
+	
+	comment=Video Skip by Refraction
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,00108590,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21137
 Name   = Tom Clancy's Splinter Cell 3 - Chaos Theory
@@ -6770,6 +6980,14 @@ Serial = SLUS-21230
 Name   = We Love Katamari
 Region = NTSC-U
 Compat = 5
+[patches = 337B927C]
+	
+	comment=Video Skip
+	
+	//Skip Videos
+	patch=0,EE,0010ec5c,word,10000041
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21231
 Name   = Sniper Elite
@@ -6944,6 +7162,14 @@ Serial = SLUS-21267
 Name   = Need for Speed - Most Wanted
 Region = NTSC-U
 Compat = 5
+[patches = 0518D275]
+	
+	comment=Skips Video - deny file By General Plot
+	
+	//Skip Videos
+	patch=0,EE,00242414,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21268
 Name   = 24 - The Game
@@ -7339,6 +7565,14 @@ Serial = SLUS-21351
 Name   = Need for Speed - Most Wanted [Black Edition]
 Region = NTSC-U
 Compat = 5
+[patches = 0518D274]
+	
+	comment=Skips Video - deny file By General Plot
+	
+	//Skip Videos
+	patch=0,EE,00242418,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21352
 Name   = Dai Senryaku VII Exceed
@@ -7373,6 +7607,14 @@ Serial = SLUS-21358
 Name   = Naruto - Ultimate Ninja
 Region = NTSC-U
 Compat = 4
+[patches = 7377BC6F]
+	
+	comment=Video Skip by Refraction
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,0011bbb0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21359
 Name   = Metal Gear Solid 3 - Subsistence [Limited Edition] [Disc2of3]
@@ -7717,6 +7959,14 @@ Serial = SLUS-21432
 Name   = NRA Gun Club
 Region = NTSC-U
 Compat = 5
+[patches = 5A7635C1]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,001091c0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21433
 Name   = FIFA Soccer '07
@@ -8581,6 +8831,14 @@ Serial = SLUS-21652
 Name   = Guilty Gear XX - Accent Core
 Region = NTSC-U
 Compat = 5
+[patches = A8A76AAC]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,002bdb88,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21653
 Name   = Kiki Kai Kai
@@ -9777,11 +10035,35 @@ Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
 Compat = 4
+[patches = CA6243B9]
+	
+	comment=patches by Nachbrenner
+	
+	//fix IPU DMA 
+	patch=1,EE,00166814,word,00000000
+	patch=1,EE,003a36b8,word,00000000
+	patch=1,EE,003a36f4,word,00000000
+	//Skip Videos
+	patch=1,EE,001e3718,word,03e00008 
+	patch=1,EE,001e371c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = PCPX-96649
 Name   = Gran Turismo 4 [Demo]
 Region = NTSC-J
 Compat = 4
+[patches = E906EA37]
+	
+	comment=patches by mdr61
+	
+	//Timelimit counter stop
+	patch=0,EE,002EF740,word,00000000
+	//Pause counter stop
+	patch=0,EE,002C7394,word,00000000
+	patch=0,EE,002F1F40,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCAJ-10001
 Name   = Makai Senki Disgaea
@@ -10621,6 +10903,14 @@ Serial = SCAJ-30007
 Name   = Gran Turismo 4
 Region = NTSC-Unk
 Compat = 4
+[patches = 7ABDBB5E]
+	
+	comment=patches by nachbrenner
+	
+	//skip Videos
+	patch=1,EE,00100D84,word,24100001
+	
+[/patches]
 ---------------------------------------------
 Serial = SCAJ-30008
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
@@ -10846,6 +11136,14 @@ Serial = SCPS-11008
 Name   = Boku to Mao
 Region = NTSC-J
 Compat = 5
+[patches = EE838B5C]
+	
+	comment=patches by Nachbrenner 
+	
+	//Skip OP.PSS
+	patch=0,EE,001d6258,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SCPS-11009
 Name   = Ka (Mosquito)
@@ -10995,6 +11293,15 @@ Serial = SCPS-15010
 Name   = Gran Turismo - Concept 2001 Tokyo
 Region = NTSC-J
 Compat = 4
+[patches = C220951A]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Video
+	patch=1,EE,001295b8,word,03e00008
+	patch=1,EE,001295bc,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCPS-15011
 Name   = Extermination
@@ -11127,6 +11434,19 @@ Serial = SCPS-15050
 Name   = Flipnic
 Region = NTSC-J
 Compat = 1
+[patches = 25433CBD]
+	
+	comment=patches by Nachbrenner
+	
+	// fix D3_CHCR (might be redundant)
+	patch=0,EE,0011c1b8,word,00000000
+	// skip sceIpuSync
+	patch=0,EE,00208eb0,word,03e00008
+	patch=0,EE,00208eb4,word,00000000
+	// fix sceIpuRestartDMA
+	patch=0,EE,00208e04,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCPS-15051
 Name   = MLB 2003
@@ -12901,6 +13221,14 @@ Serial = SLPM-62139
 Name   = Psyvariar Complete Edition
 Region = NTSC-J
 Compat = 5
+[patches = 9BE3F92D]
+	
+	comment=patch by Nachbrenner
+	
+	//skip movie
+	patch=0,EE,0010019c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62142
 Name   = World Grand Prix
@@ -13529,6 +13857,12 @@ Serial = SLPM-62371
 Name   = Psyvariar Revision [Superlite 2000 Series]
 Region = NTSC-J
 Compat = 5
+[patches = A74F99CD]
+	
+	//Skip Videos
+	patch=0,EE,00155938,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62373
 Name   = Simple 2000 Series Vol.35 - The Helicopter
@@ -13677,6 +14011,12 @@ Serial = SLPM-62418
 Name   = Hudson Selection Vol.3 - PC Genjin
 Region = NTSC-J
 Compat = 5
+[patches = 4043F228]
+	
+	//Skip Videos ("sceMpegIsEnd")
+	patch=0,EE,0020f9e0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62422
 Name   = Hudson Selection Vol.4 - Adventure Island (Takahashi Meijin no Bouken Jima)
@@ -13943,6 +14283,14 @@ Serial = SLPM-62494
 Name   = Simple 2000 Series Vol.55 - The Cat Fight
 Region = NTSC-J
 Compat = 4
+[patches = 561BE340]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,00191560,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62495
 Name   = Simple 2000 Series Vol.53 - The Camera Kozo
@@ -14055,6 +14403,15 @@ Serial = SLPM-62525
 Name   = Simple 2000 Series Vol.61 - The O-Ane-Chan Bara
 Region = NTSC-J
 Compat = 4
+[patches = 5D67AE48]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,001de758,word,24020001
+	
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62526
 Name   = Giant Robo - The Animation
@@ -14413,6 +14770,14 @@ Serial = SLPM-62623
 Name   = Elemental Gerad
 Region = NTSC-J
 Compat = 4
+[patches = B99379B7]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,002861c8,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-62624
 Name   = Indoor Helicopter Adventure 2
@@ -15061,6 +15426,17 @@ Serial = SLPM-65038
 Name   = Devil May Cry
 Region = NTSC-J
 Compat = 3
+[patches = 96B2F56D]
+	
+	comment=Skips Movies
+	
+	//skip Movie_Set
+	patch=0,EE,001cdea0,word,03e00008
+	patch=0,EE,001cdea4,word,03e00008
+	//skip MovieEndCheck
+	patch=0,EE,001ce44c,word,70001428
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65039
 Name   = Densha de Go! Shinkansen
@@ -15112,6 +15488,19 @@ Serial = SLPM-65053
 Name   = Shin Sangoku Musou 2
 Region = NTSC-J
 Compat = 5
+[patches = EEC3B310]
+	
+	comment=patches by nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,0019d360,word,24020001
+	//Skip Intro
+	patch=0,EE,00160ac0,word,03E00008
+	patch=0,EE,00160ac4,word,00000000
+	//GS_CSR fix 
+	patch=0,EE,0017647c,word,34840001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65054
 Name   = Princess Abarenbou
@@ -16836,6 +17225,14 @@ Serial = SLPM-65583
 Name   = World Rally Championship 3
 Region = NTSC-J
 Compat = 4
+[patches = C4467D30]
+	
+	comment=patch by Nachbrenner
+	
+	//Skip sceIpuSync
+	patch=1,EE,0027c808,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65585
 Name   = Princess Holiday
@@ -19299,6 +19696,16 @@ Serial = SLPM-66271
 Name   = Dirge of Cerberus - Final Fantasy VII
 Region = NTSC-J
 Compat = 5
+[patches = AFAC88EF]
+	
+	comment=patches by Nachbrenner
+	
+	//Fix "**** SQTHREAD ERROR : BAD LOCK STATE" 
+	patch=0,EE,0047d228,word,00000000
+	//fix ingame DMA0
+	patch=0,EE,00283060,word,10000020
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-66272
 Name   = I-O
@@ -19516,6 +19923,14 @@ Serial = SLPM-66333
 Name   = Guilty Gear XX Slash
 Region = NTSC-J
 Compat = 5
+[patches = 06DE61E0]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,002743d8,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-66334
 Name   = WRC - World Rally Championship 4 [Spike the Best]
@@ -20950,6 +21365,14 @@ Serial = SLPM-66746
 Name   = Guilty Gear XX - Accent Core
 Region = NTSC-J
 Compat = 5
+[patches = 6175FE7D]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,002bcc48,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPM-66747
 Name   = Baroque
@@ -22866,6 +23289,15 @@ Serial = SLPS-20329
 Name   = Kamen Rider 555
 Region = NTSC-J
 Compat = 4
+[patches = 0B359BBF]
+	
+	comment=patches by Nachbrenner
+	
+	//skip "PlayMpeg"
+	patch=0,EE,0022f590,word,03e00008
+	patch=0,EE,0022f594,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-20330
 Name   = Taiko no Tatsujin 4 - Waku Waku Anime Maturi
@@ -23101,6 +23533,14 @@ Serial = SLPS-20402
 Name   = Kamen Rider Blade
 Region = NTSC-J
 Compat = 4
+[patches = 37BA81B1]
+	
+	comment=patches by Nachbrenner
+	
+	//skip "PlayMpeg"
+	patch=0,EE,00158dec,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-20403
 Name   = Shanghai - Sangoku Pai Tatagi [Super Value 2800]
@@ -23122,6 +23562,16 @@ Serial = SLPS-20408
 Name   = Card Captor Sakura - Sakura-Chan to Asobo!
 Region = NTSC-J
 Compat = 4
+[patches = 08FB9DCF]
+	
+	comment=patches by Nachbrenner
+	
+	//skip eyetoy check
+	patch=0,EE,013385b0,word,00000000
+	//skip MC & Start screen
+	patch=0,EE,01337c20,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-20409
 Name   = Phantom Kingdom [Limited Edition]
@@ -23200,6 +23650,12 @@ Serial = SLPS-20430
 Name   = Simple 2000 Series Vol.91 - The All-Star Kakutou
 Region = NTSC-J
 Compat = 4
+[patches = 37C07E96]
+	
+	//Skip Movies
+	patch=0,EE,0010b720,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-20431
 Name   = Simple 2000 Series Vol.86 - The Menkyou Shutoku Simulation
@@ -23294,6 +23750,14 @@ Serial = SLPS-20461
 Name   = Simple 2000 Series Vol.99 - The Genshijin
 Region = NTSC-J
 Compat = 5
+[patches = 41A3191C]
+	
+	comment=patch by parotaku
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,00109e40,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-20462
 Name   = Ougon Kishi Garo [Limited Edition]
@@ -25854,6 +26318,15 @@ Serial = SLPS-25697
 Name   = CR Fever Powerful Zero
 Region = NTSC-J
 Compat = 4
+[patches = B2BDE9F3]
+	
+	//Skip sceIpuSync
+	patch=0,EE,00100dd8,word,03e00008
+	//IPU VQ fix 
+	patch=0,EE,0021b2cc,word,00000000 // ?
+	patch=0,EE,0021b08c,word,00000000 // _pictureData0
+	
+[/patches]
 ---------------------------------------------
 Serial = SLPS-25698
 Name   = Fatal Fury - Battle Archives 2
@@ -27151,6 +27624,14 @@ Serial = SCES-50354
 Name   = Klonoa 2 - Lunatea's Veil
 Region = PAL-Unk
 Compat = 5
+[patches = 7EBEEBBD]
+	
+	comment=Patch By CKemu
+	
+	//Skips IUP blitz
+	patch=0,EE,003078F4,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-50360
 Name   = Twisted Metal - Black
@@ -27319,6 +27800,15 @@ Serial = SCES-50858
 Name   = Gran Turismo - Concept 2002 Tokyo-Geneva
 Region = PAL-M6
 Compat = 4
+[patches = 60013EBD]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Video
+	patch=1,EE,00129600,word,03e00008
+	patch=1,EE,00129604,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-50878
 Name   = Tekken 4
@@ -27439,6 +27929,20 @@ Serial = SCES-51135
 Name   = Primal
 Region = PAL-M5
 Compat = 4
+[patches = DCC4EEEA]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,003ec7d4,word,00000000
+	patch=0,EE,003ec4e0,word,00000000
+	//Skip custom IPU routine
+	patch=0,EE,003c44ac,word,00000000
+	patch=0,EE,003c4568,word,00000000
+	//fix VU wm 25.06.06
+	patch=0,EE,00391efc,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-51159
 Name   = Getaway, The
@@ -27483,6 +27987,17 @@ Serial = SCES-51463
 Name   = Ghosthunter
 Region = PAL-Unk
 Compat = 4
+[patches = 3BD85DA4]
+	
+	comment=patches by nachbrenner
+	
+	//fix VU0/DMA crap
+	patch=0,EE,003e8928,word,03e00008
+	patch=0,EE,003e892c,word,00000000
+	patch=0,EE,003831c8,word,00000000
+	patch=0,EE,003831d4,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-51480
 Name   = Twisted Metal - Black - Online
@@ -27504,6 +28019,17 @@ Serial = SCES-51592
 Name   = Formula One 2003
 Region = PAL-Unk
 Compat = 4
+[patches = 93223BE4]
+	
+	comment=patches by Nachbrenner
+	
+	//skip sceIpuSync
+	patch=0,EE,00379f78,word,03e00008
+	//skip Videos
+	patch=0,EE,00376f80,word,03e00008
+	patch=0,EE,00376f84,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-51593
 Name   = Hardware Online Arena [Beta, Promo & Full Release]
@@ -27570,6 +28096,13 @@ Serial = SCES-51719
 Name   = Gran Turismo 4
 Region = PAL-Unk
 Compat = 4
+[patches = 44A61C8F]
+	
+	comment=patches by nachbrenner
+	//skip Videos
+	patch=1,EE,00100D84,word,24100001
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-51844
 Name   = Time Crisis 3
@@ -27711,6 +28244,17 @@ Serial = SCES-52438
 Name   = Gran Turismo 4 - Prologue
 Region = PAL-Unk
 Compat = 4
+[patches = 3FB69323]
+	
+	//fix IPU DMA 
+	patch=1,EE,00175018,word,00000000
+	patch=1,EE,0046bba8,word,00000000
+	patch=1,EE,0046bbe4,word,00000000
+	//Skip Videos
+	patch=1,EE,0020c790,word,03e00008 
+	patch=1,EE,0020c794,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SCES-52456
 Name   = Ratchet & Clank 3
@@ -28393,6 +28937,14 @@ Serial = SLES-50038
 Name   = Gradius III & IV
 Region = PAL-Unk
 Compat = 5
+[patches = 6ADBC24B]
+	
+	comment=patches by nachbrenner
+	
+	//Skip videos
+	patch=0,EE,001009e4,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50039
 Name   = International Superstar Soccer
@@ -28418,6 +28970,14 @@ Serial = SLES-50046
 Name   = F1 Racing Championship
 Region = PAL-Unk
 Compat = 4
+[patches = EDD7E0FF]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,0024ddc0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50047
 Name   = F1 Racing Championship
@@ -28677,6 +29237,19 @@ Serial = SLES-50177
 Name   = Oni
 Region = PAL-G
 Compat = 4
+[patches = 32629F36]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,001c67d8,word,03e00008
+	patch=0,EE,001c67dc,word,00000000
+	//skip "branch if copro 0 condition false"
+	patch=0,EE,001cef7c,word,00000000 // bc0f $001cef7c
+	//skip sceGsExecStoreImage
+	patch=0,EE,001d4454,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50182
 Name   = MTV Music Generator 2
@@ -28735,6 +29308,13 @@ Serial = SLES-50202
 Name   = DNA - Dark Native Apostle
 Region = PAL-M5
 Compat = 4
+[patches = 9B1EE9EB]
+	comment=patches by Nachbrenner
+	
+	//Skip PSSPLAY.ELF
+	patch=1,EE,001691F0,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50203
 Name   = Bloody Roar 3
@@ -28767,6 +29347,12 @@ Serial = SLES-50212
 Name   = Paris-Dakar Rally
 Region = PAL-Unk
 Compat = 3
+[patches = A5BF36A8]
+	
+	//Skip Videos
+	patch=0,EE,001098e8,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50213
 Name   = NFL Quarterback Club 2002
@@ -28781,6 +29367,18 @@ Serial = SLES-50215
 Name   = Crazy Taxi
 Region = PAL-M4
 Compat = 4
+[patches = C9C145BF]
+	
+	comment=patches by Nachbrenner
+	
+	//skip movie "PlaySega"
+	patch=0,EE,001a42d0,word,03e00008
+	patch=0,EE,001a42d4,word,00000000
+	//skip movie "PlayAcclaim"
+	patch=0,EE,001a4468,word,03e00008
+	patch=0,EE,001a446c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50217
 Name   = Dave Mirra Freestyle BMX 2
@@ -28832,6 +29430,20 @@ Serial = SLES-50230
 Name   = Lotus Challenge
 Region = PAL-Unk
 Compat = 4
+[patches = D48A92E1]
+	
+	comment=patches by nachbrenner
+	
+	//skip Videos
+	//patch=0,EE,001cc5dc,word,00000000
+	//recheck_wheel_connection__10cPauseMenuFv
+	patch=0,EE,001fef50,word,03e00008
+	patch=0,EE,001fef54,word,00000000
+	//getClosestPoint__FP11sGameSplineP8sVector4PiPScPi
+	patch=0,EE,00198d40,word,03e00008
+	patch=0,EE,00198d44,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50231
 Name   = International League Soccer
@@ -28841,6 +29453,12 @@ Serial = SLES-50232
 Name   = Off-Road Wide Open
 Region = PAL-Unk
 Compat = 5
+[patches = 78168525]
+	
+	//skip FMV
+	patch=0,EE,002953f0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50233
 Name   = Army Men - Air Attack - Blade's Revenge
@@ -29036,6 +29654,15 @@ Serial = SLES-50358
 Name   = Devil May Cry
 Region = PAL-E
 Compat = 3
+[patches = 7D8F539A]
+	
+	//Skip Videos
+	patch=0,EE,0015BC78,word,00000000
+	patch=0,EE,001CE340,word,03E00008
+	patch=0,EE,001CE344,word,00000000
+	patch=0,EE,001CE8EC,word,70001428
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50362
 Name   = Jonny Moseley Mad Trix
@@ -29231,6 +29858,14 @@ Serial = SLES-50457
 Name   = Rayman M
 Region = PAL-M5
 Compat = 5
+[patches = DDA2FA6A]
+	
+	comment=Patch by CKemu
+	
+	//Kill '002FA6A0 1060FFFA: beq	v1, zero, 0x002FA68C' (IPU)
+	patch=0,EE,002FA6A0,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50460
 Name   = Official PlayStation 2 Magazine Demo 11
@@ -29438,6 +30073,18 @@ Serial = SLES-50553
 Name   = Project Eden
 Region = PAL-M5
 Compat = 5
+[patches = A3ACF3C7]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip EC_LOGO Video
+	patch=0,EE,0013af54,word,00000000
+	patch=0,EE,0013af60,word,00000000
+	//Skip INTRO Video
+	patch=0,EE,0013b060,word,00000000
+	patch=0,EE,0013b06c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50554
 Name   = Thunderhawk - Operation Pheonix
@@ -29660,6 +30307,14 @@ Serial = SLES-50704
 Name   = Godai - Elemental Force
 Region = PAL-F-G
 Compat = 4
+[patches = 9D6F46F0]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,00211c90,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50706
 Name   = Army Men - Real Time Strategy
@@ -29718,6 +30373,22 @@ Serial = SLES-50725
 Name   = V-Rally 3
 Region = PAL-Unk
 Compat = 4
+[patches = 163F0461]
+	
+	comment=patches by Nachbrenner
+	
+	//IPU DMA fix
+	patch=0,EE,0012655c,word,00000000 // gcc2_compiled.
+	// disable menu music ( Vr3SoundMidiInstall__FP10_vr3_midi_)
+	patch=0,EE,002698fc,word,00000000
+	//skip edSoundFlush__Fv
+	patch=0,EE,00197530,word,03e00008
+	patch=0,EE,00197534,word,00000000
+	//skip edDspSetCommand__Fii
+	patch=0,EE,001ab6b0,word,03e00008
+	patch=0,EE,001ab6b4,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50726
 Name   = Myst III - Exile
@@ -29739,16 +30410,49 @@ Serial = SLES-50731
 Name   = Need for Speed - Hot Pursuit 2
 Region = PAL-M6
 Compat = 4
+[patches = 1D2818AF]
+	
+	comment=patches by Nachbrenner
+	
+	//for blockdump:
+	//disable sound streaming
+	patch=0,EE,00274080,word,03e00008
+	patch=0,EE,00274084,word,00000000
+	//Skip Logo and Intro AVI
+	patch=0,EE,0016f094,word,00000000
+	//Skip AVI streaming
+	patch=0,EE,0016ce30,word,03e00008
+	patch=0,EE,0016ce34,word,00000000
+	//American Mode (Skip language select menu)
+	patch=0,EE,0012EF78,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50735
 Name   = Jade Cocoon 2
 Region = PAL-Unk
 Compat = 5
+[patches = 7FD7A1B9]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,00118110,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50738
 Name   = Star Trek Voyager - Elite Force
 Region = PAL-Unk
 Compat = 2
+[patches = 624F11F1]
+	
+	//Skip Videos
+	patch=0,EE,002945E8,word,24020001
+	//suppress message: SPR0 stall 1
+	patch=0,EE,0027fd18,byte,49 // 0027fd20: sw v0, $0000(v1) (D_CTRL)
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50739
 Name   = Soldier of Fortune - Gold Edition
@@ -29820,6 +30524,14 @@ Serial = SLES-50773
 Name   = Donald Duck Phantomias Platyrhynchos Kineticus
 Region = PAL-Unk
 Compat = 4
+[patches = D4781770]
+	
+	comment=patches by Nachbrenner
+	
+	//fix inf. loop on video playback
+	patch=0,EE,002d8b94,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50777
 Name   = Battle Engine Aquila
@@ -29933,6 +30645,14 @@ Serial = SLES-50816
 Name   = DTM Race Driver
 Region = PAL-Unk
 Compat = 5
+[patches = 129C8600]
+	
+	comment=patches by nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,003876c8,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50818
 Name   = Pro Race Driver
@@ -30094,6 +30814,17 @@ Serial = SLES-50879
 Name   = Paris-Dakar 2
 Region = PAL-Unk
 Compat = 4
+[patches = CB4EBD11]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Intro Videos
+	patch=0,EE,00139188,word,10000029
+	//KOSMOS fix
+	patch=0,EE,00171874,word,00000000 // D1_CHCR
+	patch=0,EE,001718c4,word,00000000 // GS_CSR
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50880
 Name   = BMX XXX
@@ -30245,6 +30976,14 @@ Serial = SLES-50972
 Name   = Barbarian
 Region = PAL-Unk
 Compat = 5
+[patches = 5CCA0737]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip SAMPLE.PSS
+	patch=0,EE,0010afc8,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50974
 Name   = Zapper - One Wicked Cricket!
@@ -30259,6 +30998,14 @@ Serial = SLES-50976
 Name   = Thing, The (Das Ding)
 Region = PAL-G
 Compat = 4
+[patches = 789D6B71]
+	
+	comment=patches by nachbrenner
+	
+	//Skip videos (for blockdump)
+	patch=0,EE,006ef130,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-50978
 Name   = Onimusha 2 - Samurai's Destiny
@@ -30555,6 +31302,12 @@ Serial = SLES-51124
 Name   = Turok Evolution
 Region = PAL-G
 Compat = 4
+[patches = A929A697]
+	
+	//Skip Videos  (sceMpegIsEnd)
+	patch=0,EE,001cf280,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51125
 Name   = Sega Soccer Slam
@@ -30688,6 +31441,14 @@ Serial = SLES-51197
 Name   = FIFA 2003
 Region = PAL-M7
 Compat = 4
+[patches = 722BBD62]
+	
+	comment=patches by nachbrenner
+	
+	// fix WaitForDMACompletion__Q212EAGLInternal6DmaMgr
+	patch=0,EE,0037b310,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51198
 Name   = NBA Live 2003
@@ -30722,6 +31483,17 @@ Serial = SLES-51209
 Name   = Haven - Call of the King
 Region = PAL-Unk
 Compat = 3
+[patches = 83D0CE43]
+	
+	comment=patches by Nachbrenner
+	
+	//disable 3D for menus and mashed music
+	patch=1,EE,00114c90,word,03e00008
+	patch=1,EE,00114c94,word,00000000
+	patch=1,EE,0010a980,word,03e00008
+	patch=1,EE,0010a984,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51214
 Name   = 18 Wheeler - American Pro Trucker
@@ -30748,6 +31520,18 @@ Serial = SLES-51227
 Name   = Tomb Raider - Angel of Darkness
 Region = PAL-Unk
 Compat = 4
+[patches = 54AD76D7]
+	
+	comment=patches by nachbrenner
+	
+	//Skip videos
+	patch=0,EE,00104de0,word,03E00008
+	patch=0,EE,00104de4,word,24020001
+	patch=0,EE,00104d60,word,03E00008
+	patch=0,EE,00104d64,word,24020001
+	patch=0,EE,0021bf68,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51229
 Name   = Virtua Cop - Elite Edition
@@ -30780,6 +31564,14 @@ Serial = SLES-51244
 Name   = XIII
 Region = PAL-M5
 Compat = 4
+[patches = 200BC0E6]
+	
+	comment=patches by nachbrenner
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,001114a0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51247
 Name   = Inspector Gadget - Mad Robots Invasion
@@ -30995,6 +31787,22 @@ Serial = SLES-51348
 Name   = Die Hard - Vendetta
 Region = PAL-Unk
 Compat = 4
+[patches = 62F6F886]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,002570FC,word,00000000
+	
+[/patches]
+[patches = F9E575D0]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,002570FC,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51349
 Name   = Evolution Skateboarding
@@ -31012,6 +31820,15 @@ Serial = SLES-51355
 Name   = Big Mutha Truckers
 Region = PAL-Unk
 Compat = 3
+[patches = 506644B3]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,002d1438,word,24020001 //sceMpegIsEnd
+	patch=0,EE,001ca00c,word,00000000 //sceMpegGetPicture
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51356
 Name   = Road Trip Adventure
@@ -31057,6 +31874,12 @@ Serial = SLES-51374
 Name   = RoboCop
 Region = PAL-Unk
 Compat = 5
+[patches = D08648B6]
+	
+	//Skip Videos
+	patch=0,EE,002ebf70,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51381
 Name   = Everblue 2
@@ -31124,6 +31947,16 @@ Serial = SLES-51402
 Name   = Tenchu - Wrath of Heaven
 Region = PAL-Unk
 Compat = 4
+[patches = 83261085]
+	
+	comment=patches by Nachbrenner
+	
+	//fix _waitIpuIdle for intro videos
+	patch=0,EE,00107a10,word,00000000
+	//fix D3_CHCR for tutorial's mini-videos
+	patch=0,EE,00310dc4,word,00000000 
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51403
 Name   = Tenchu - Wrath of Heaven
@@ -31263,6 +32096,19 @@ Serial = SLES-51495
 Name   = SX Superstar
 Region = PAL-Unk
 Compat = 4
+[patches = 96B76E56]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Intro Movies (for blockdump) 
+	patch=0,EE,002f1088,word,03e00008
+	patch=0,EE,002f108c,word,00000000
+	//No ingame music (for blockdump)
+	patch=0,EE,00223cac,word,00000000
+	//fix IPU DMA for "MAINMENU.IPU" (enable to go ingame)
+	patch=0,EE,003befe4,word,001003e0
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51496
 Name   = Breath of Fire - Dragon Quarter
@@ -32180,6 +33026,14 @@ Serial = SLES-51958
 Name   = Whiplash
 Region = PAL-Unk
 Compat = 4
+[patches = B1BE3E51]
+	
+	comment=patches by nachbrenner
+	
+	//fix jalr crash
+	patch=0,EE,0040db84,word,0010c370
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51959
 Name   = Football Generation
@@ -32228,6 +33082,16 @@ Serial = SLES-51978
 Name   = Baphomets Fluch - Der Schlafende Drache
 Region = PAL-G
 Compat = 5
+[patches = 1248FE3A]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,00243fa0,word,24020001
+	//Fix obscure infinite loop
+	patch=0,EE,00216764,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51980
 Name   = TT Superbikes
@@ -32332,6 +33196,14 @@ Serial = SLES-52026
 Name   = Wallace & Gromit in Project Zoo
 Region = PAL-G
 Compat = 4
+[patches = C502AD6E]
+	
+	comment=patches by Nachbrenner
+	
+	//skip sceIpuSync
+	patch=0,EE,00472c78,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52028
 Name   = Junior Sports Basketball
@@ -32513,6 +33385,14 @@ Serial = SLES-52143
 Name   = Carmen Sandiego - The Secret of the Stolen Drums
 Region = PAL-Unk
 Compat = 4
+[patches = 49DA19CE]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip MpegPlay
+	patch=0,EE,0011efd0,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52149
 Name   = Tom Clancy's Splinter Cell - Pandora Tomorrow
@@ -32807,6 +33687,23 @@ Serial = SLES-52336
 Name   = Max Payne 2 - The Fall of Max Payne
 Region = PAL-Unk
 Compat = 4
+[patches = D03BEF2A]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos 
+	patch=0,EE,002c8650,word,03e00008
+	patch=0,EE,002c8654,word,00000000
+	//fix obscure inf. loop
+	patch=0,EE,001aa610,word,03e00008
+	patch=0,EE,001aa614,word,24020000
+	//Language Modifier (sceScfGetLanguage)
+	patch=0,EE,00445ce4,word,24020001 // english
+	//patch=0,EE,00445ce4,word,24020004 // deutsch
+	//fix "SleepThread vs. RTFSSIOP.IRX"
+	patch=0,EE,001b3208,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52337
 Name   = Max Payne 2 - The Fall of Max Payne
@@ -33132,6 +34029,14 @@ Serial = SLES-52510
 Name   = Neo Contra
 Region = PAL-Unk
 Compat = 4
+[patches = EEE2F6A3]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,003b8050,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52511
 Name   = Headhunter - Redemption (EX)
@@ -33145,6 +34050,15 @@ Serial = SLES-52515
 Name   = Ultimate Casino
 Region = PAL-Unk
 Compat = 4
+[patches = 4F3D3CF0]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip logo.pss
+	patch=0,EE,00115778,word,24020001
+	patch=0,EE,0012eb90,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52516
 Name   = World Fighting
@@ -33291,6 +34205,14 @@ Serial = SLES-52568
 Name   = Crash Twinsanity
 Region = PAL-Unk
 Compat = 2
+[patches = 1510E1D1]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,002b85d0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52569
 Name   = Spyro - A Hero's Tale
@@ -33383,6 +34305,16 @@ Serial = SLES-52602
 Name   = GT Racers
 Region = PAL-Unk
 Compat = 4
+[patches = E2F1DB6B]
+	
+	comment=patches by nachbrenner
+	
+	//Skip INTRO.PSS
+	patch=0,EE,00160a2c,word,00000000
+	//fix "sound end command"
+	patch=0,EE,00167f14,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52603
 Name   = Room Zoom - Race for Impact
@@ -34183,6 +35115,14 @@ Serial = SLES-52967
 Name   = Guilty Gear X2 Reloaded
 Region = PAL-Unk
 Compat = 5
+[patches = B234036E]
+	
+	comment=Patch By CKemu
+	
+	//Skip Videos
+	patch=0,EE,00250418,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52968
 Name   = Burnout 2 - Point of Impact
@@ -34289,6 +35229,14 @@ Serial = SLES-53007
 Name   = Tom Clancy's Splinter Cell - Chaos Theory
 Region = PAL-M5
 Compat = 4
+[patches = 4C4D7072]
+	
+	comment=patches by Nachbrenner
+	
+	//fix sceIpuStopDMA
+	patch=0,EE,0020b884,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53011
 Name   = Gallop Racer 2
@@ -34521,6 +35469,14 @@ Serial = SLES-53096
 Name   = Worms 4 - Mayhem
 Region = PAL-Unk
 Compat = 4
+[patches = DC85FC8F]
+	
+	comment=Patch by CKemu
+	
+	//Skip SceMpegIsEnd
+	patch=0,EE,00520d40,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53098
 Name   = Conspiracy - Weapons of Mass Destruction
@@ -34793,6 +35749,14 @@ Serial = SLES-53280
 Name   = 7 Sins
 Region = PAL-Unk
 Compat = 2
+[patches = 6926B199]
+	
+	comment=patch by Nachbrenner & Refraction
+	
+	//fix "SleepThread vs. RTFSSIOP.IRX"
+	patch=0,EE,004afc7c,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53281
 Name   = Fantastic Four
@@ -34807,6 +35771,14 @@ Serial = SLES-53284
 Name   = Guilty Gear Isuka
 Region = PAL-Unk
 Compat = 5
+[patches = 46A7ECA4]
+	
+	comment=Patch By CKemu
+	
+	//Skip Videos
+	patch=0,EE,00107f10,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53297
 Name   = 7 Sins
@@ -34994,6 +35966,14 @@ Serial = SLES-53408
 Name   = Fighting Angels
 Region = PAL-Unk
 Compat = 4
+[patches = B0621C55]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,00192a38,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53411
 Name   = Kuon
@@ -35291,6 +36271,14 @@ Serial = SLES-53557
 Name   = Need for Speed - Most Wanted
 Region = PAL-E
 Compat = 4
+[patches = 692CBA8E]
+	
+	comment=Skips Video - deny file By Refraction
+	
+	//Skip Videos
+	patch=0,EE,00242414,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53558
 Name   = Need for Speed - Most Wanted
@@ -35329,11 +36317,27 @@ Serial = SLES-53570
 Name   = Ninjabread Man
 Region = PAL-Unk
 Compat = 4
+[patches = C488EC04]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip Videos
+	patch=0,EE,00169e78,word,03e00008
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53571
 Name   = Anubis II
 Region = PAL-Unk
 Compat = 5
+[patches = 6D70F0E0]
+	
+	comment=Patch by CKemu
+	
+	//Skip Videos (scempegisend)
+	patch=0,EE,002DAFD0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53572
 Name   = Rig Racer 2
@@ -35527,6 +36531,14 @@ Serial = SLES-53699
 Name   = Swords of Destiny
 Region = PAL-Unk
 Compat = 5
+[patches = 54D6BEE3]
+	
+	comment=patch by Refraction
+	
+	//skip movies - brute force
+	patch=0,EE,00235440,word,10000003
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53701
 Name   = Super Monkey Ball Adventure
@@ -35937,6 +36949,14 @@ Serial = SLES-53908
 Name   = Tomb Raider - Legends
 Region = PAL-Unk
 Compat = 4
+[patches = 05177ECE]
+	
+	comment=Patch by CKemu
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,00369988,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-53909
 Name   = Full Spectrum Warrior - Ten Hammers
@@ -36117,6 +37137,14 @@ Serial = SLES-54002
 Name   = FlatOut 2
 Region = PAL-Unk
 Compat = 4
+[patches = 3F0452DE]
+	
+	comment=Video Skip by Refraction
+	
+	//Skip Videos (sceMpegIsEnd)
+	patch=0,EE,003dd1d0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-54003
 Name   = Flatout 2
@@ -36230,6 +37258,14 @@ Serial = SLES-54084
 Name   = PowerShot Pinball
 Region = PAL-Unk
 Compat = 4
+[patches = 3CFE3B37]
+	
+	comment=patches by auMatt
+	
+	//Skip Video
+	patch=0,EE,0029c990,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-54085
 Name   = Street Fighter Alpha Anthology
@@ -36461,6 +37497,24 @@ Serial = SLES-54185
 Name   = Dirge of Cerberus - Final Fantasy VII
 Region = PAL-E
 Compat = 4
+[patches = 33F7D21A]
+	
+	comment=patches by nachbrenner
+	
+	//Fix "**** SQTHREAD ERROR : BAD LOCK STATE" 
+	patch=0,EE,0042d768,word,00000000
+	//Skip mcDelayThread (calls SleepThread)
+	patch=0,EE,00458008,word,00000000
+	//Skip Videos (for blockdump)
+	patch=0,EE,00241bac,word,00000000
+	//override sceScfGetLanguage
+	//patch=0,EE,002486d8,word,24020000 //japanese
+	patch=0,EE,002486d8,word,24020001 //english
+	//patch=0,EE,002486d8,word,24020004 //german
+	//intro 3D - fix DMA0 vs. VU0REC
+	patch=0,EE,0026f960,word,10000020
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-54186
 Name   = Devil May Cry 3 - Dante's Awakening [Special Edition]
@@ -37331,6 +38385,17 @@ Serial = SLES-53685
 Name   = Codename: Kids Next Door - Operation V.I.D.E.O.G.A.M.E
 Region = PAL-E
 Compat = 4
+[patches = A88ACA28]
+	
+	comment=patches by nachbrenner
+	
+	// skip SFD movies
+	patch=0,EE,00208220,word,03e00008
+	patch=0,EE,00208224,word,00000000
+	patch=0,EE,00208190,word,03e00008
+	patch=0,EE,00208194,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-55470
 Name   = Coraline
@@ -37351,6 +38416,14 @@ Serial = SLES-53403
 Name   = Demolition Girl
 Region = PAL-E
 Compat = 4
+[patches = 4C0C821D]
+	
+	comment=Skips Video (sceMpegIsEnd)
+	
+	//Skip Videos
+	patch=0,EE,0020b5c0,word,24020001
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21826
 Name   = Disney - Sing It
@@ -37366,6 +38439,16 @@ Serial = SCES-50960
 Name   = Disney's Stitch: Experiment 626
 Region = PAL-E
 Compat = 5
+[patches = A7A2F7C5]
+	
+	comment=patches by Nachbrenner
+	
+	//Skip music
+	patch=0,EE,001d1de0,word,03e00008
+	patch=0,EE,001d1de4,word,00000000
+	patch=1,EE,00A02FAC,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21480
 Name   = Dot Hack GU Volume 1 - Rebirth - Terminal Disc
@@ -37869,11 +38952,6 @@ Compat = 5
 ---------------------------------------------
 Serial = SLUS-21849
 Name   = Winter Sports 2 - The Next Challenge
-Region = NTSC-U
-Compat = 5
----------------------------------------------
-Serial = SLUS-21810
-Name   = WWE Smackdown VS Raw 2009
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
