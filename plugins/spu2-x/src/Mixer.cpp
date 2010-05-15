@@ -695,9 +695,9 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	switch (ReverbBoost)
 	{
 		case 0: break;
-		case 1: temp = 2;
-		case 2: temp = 4;
-		case 3: temp = 8;
+		case 1: temp = 2; break;
+		case 2: temp = 4; break;
+		case 3: temp = 8; break;
 	}
 	// Mix Dry + Wet
 	// (master volume is applied later to the result of both outputs added together).
