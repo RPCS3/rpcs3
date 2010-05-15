@@ -53,7 +53,6 @@ namespace PatchFunc
     PATCHTABLEFUNC gametitle;
     PATCHTABLEFUNC patch;
     PATCHTABLEFUNC roundmode;
-    PATCHTABLEFUNC zerogs;
 }
 
 void inifile_read( const wxString& name );
@@ -64,8 +63,6 @@ void InitPatch(const wxString& crc);
 int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
 void ApplyPatch( int place = 1);
 void ResetPatch( void );
-
-extern int g_ZeroGSOptions;
 
 void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu);
 

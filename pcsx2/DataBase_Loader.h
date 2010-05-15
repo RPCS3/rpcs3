@@ -23,9 +23,11 @@ struct key_pair {
 		: key(_key) , value(_value) {}
 	string toString() {
 		string t;
+			
 		if (key[0] == '[') {
 			t  = key + "\n";
 			t += value;
+			
 			stringstream ss(key);
 			string t2;
 			ss >>  t2;
@@ -93,14 +95,14 @@ private:
 		}
 		for(;;) {
 			t = reader.getLine();
+			int eol = t.rfind("\r");
+			if (eol != string::npos) t = t.substr(0, eol);
+			
 			if (!t.compare(endString)) break;
 			keyPair.value += t + "\n";
 		}
 	}
 	void extract(string& line, key_pair& keyPair, File_Reader& reader) {
-		int eol = line.rfind("\r");
-		if (eol != string::npos) line = line.substr(0, eol);
-		
 		stringstream ss(line);
 		string t;
 		keyPair.key   = "";

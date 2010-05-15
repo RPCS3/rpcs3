@@ -27,7 +27,7 @@ u32 SkipCount = 0, IterationCount = 0;
 u32 IterationIncrement = 0, ValueIncrement = 0;
 u32 PrevCheatType = 0, PrevCheatAddr = 0,LastType = 0;
 
-int g_ZeroGSOptions = 0, patchnumber;
+int patchnumber;
 
 wxString strgametitle;
 
@@ -43,17 +43,11 @@ static const PatchTextTable commands[] =
 	{ 1, L"comment", PatchFunc::comment },
 	{ 2, L"gametitle", PatchFunc::gametitle },
 	{ 3, L"patch", PatchFunc::patch },
-	{ 4, L"fastmemory", NULL }, // enable for faster but bugger mem (mvc2 is faster)
-	{ 5, L"roundmode", PatchFunc::roundmode }, // changes rounding mode for floating point
+	{ 4, L"roundmode", PatchFunc::roundmode }, // changes rounding mode for floating point
 											// syntax: roundmode=X,Y
 											// possible values for X,Y: NEAR, DOWN, UP, CHOP
 											// X - EE rounding mode (default is NEAR)
 											// Y - VU rounding mode (default is CHOP)
-	{ 6, L"zerogs", PatchFunc::zerogs }, // zerogs=hex
-	{ 7, L"vunanmode", NULL },
-	{ 8, L"ffxhack", NULL},			// *obsolete*
-	{ 9, L"xkickdelay", NULL},
-
 	{ 0, wxEmptyString, NULL }		// Array Terminator
 };
 
@@ -723,12 +717,6 @@ namespace PatchFunc
         }
 
         SetRoundMode(eetype,vutype);
-    }
-
-    void zerogs(const wxString& cmd, const wxString& param)
-    {
-        DevCon.WriteLn( cmd + L" " + param);
-        g_ZeroGSOptions = StrToU32(param, 16);
     }
 }
 

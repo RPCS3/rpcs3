@@ -62,7 +62,12 @@ public:
 		if (fs->eof())  throw 1;
 		fs->getline(buff, sizeof(buff));
 		if (fs->fail()) throw 1;
-		return string(buff);
+		
+		string ret(buff);
+		int eol = ret.rfind("\r");
+		if (eol != string::npos) ret = ret.substr(0, eol);
+			
+		return ret;
 	}
 	template<class T> void readLine(T& str) {
 		if (fs->eof())  throw 1;
