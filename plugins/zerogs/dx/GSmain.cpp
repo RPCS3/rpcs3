@@ -286,11 +286,15 @@ s32 CALLBACK GSinit()
 	if (gsLog == NULL) {
 		gsLog = fopen("gsLog.txt", "w");
 		if (gsLog == NULL) {
-			SysMessage("Can't create gsLog.txt"); return -1;
+			printf("ZeroGS: Can't create gsLog.txt. (Not an emulation error).\n"); 
+			//return -1;
 		}
 	}
-	setvbuf(gsLog, NULL,  _IONBF, 0);
-	GS_LOG("GSinit\n");
+
+	if (gsLog != NULL) {
+		setvbuf(gsLog, NULL,  _IONBF, 0);
+		GS_LOG("GSinit\n");
+	}
 #endif
 
 	GSreset();
