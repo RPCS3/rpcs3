@@ -95,8 +95,6 @@ private:
 		}
 		for(;;) {
 			t = reader.getLine();
-			int eol = t.rfind("\r");
-			if (eol != string::npos) t = t.substr(0, eol);
 			
 			if (!t.compare(endString)) break;
 			keyPair.value += t + "\n";
