@@ -210,16 +210,14 @@ public:
 		//
 		//The resulting shifted output aligns better with common blending / corona / blurring effects,
 		//but introduces a few bad pixels on the edges.
-
-		// Edit: Moved to CreateSource() in GSTextureCache.cpp
-		//if (UserHacks_HalfPixelOffset == true)
-		//{
-		//	//DX9 has pixelcenter set to 0.0, so give it some value here
-		//	if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = oy2 = -0.00035f; }
-		//
-		//	if (ox != 0) { ox2 *= upscale_Multiplier(); }
-		//	if (oy != 0) { oy2 *= upscale_Multiplier(); }
-		//}
+		if (rt->LikelyOffset == true)
+		{
+			//DX9 has pixelcenter set to 0.0, so give it some value here
+			if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = -0.0003f; oy2 = -0.0003f; }
+		
+			ox2 *= rt->OffsetHack_modx;
+			oy2 *= rt->OffsetHack_mody;
+		}
 
 		vs_cb.VertexScale  = GSVector4(sx, -sy, ldexpf(1, -32), 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);

@@ -27,5 +27,6 @@ GSTexture::GSTexture()
 	, m_size(0, 0)
 	, m_type(None)
 	, m_msaa(false)
+	, LikelyOffset (false)
 {
 }

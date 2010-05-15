@@ -656,24 +656,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		}
 
 		GSVector4 sr(0, 0, w, h);
-
-		if (UserHacks_HalfPixelOffset && hack)
-		{
-			int multiplier = m_renderer->upscale_Multiplier();
-			float modx;
-			float mody;
-			switch (multiplier)
-			{
-				case 2: modx = 1.0f; mody = 0.8f; break;
-				case 3: modx = 1.7f; mody = 1.5f; break;
-				case 4: modx = 2.5f; mody = 2.3f; break;
-				case 5: modx = 3.5f; mody = 3.2f; break;
-				case 6: modx = 4.3f; mody = 4.0f; break;
-				default: modx = 0.0f; mody = 0.0f; break;
-			}
-			sr -= GSVector4 (0.0f, 0.0f, modx, mody);
-		}
-
+		
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
 		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 
@@ -746,6 +729,27 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 			dst->m_texture = tmp;
 		}
+
+		// Offset hack. Can be enabled via GSdx options.
+		// The offset will be used in Draw().
+		float modx = 0.0f;
+		float mody = 0.0f;
+		if (UserHacks_HalfPixelOffset && hack)
+		{
+			int multiplier = m_renderer->upscale_Multiplier();
+			switch (multiplier)
+			{
+			case 2:  modx = 2.2f; mody = 2.2f; dst->m_texture->LikelyOffset = true;  break;
+			case 3:  modx = 3.1f; mody = 3.1f; dst->m_texture->LikelyOffset = true;  break;
+			case 4:  modx = 4.2f; mody = 4.2f; dst->m_texture->LikelyOffset = true;  break;
+			case 5:  modx = 5.3f; mody = 5.3f; dst->m_texture->LikelyOffset = true;  break;
+			case 6:  modx = 6.2f; mody = 6.2f; dst->m_texture->LikelyOffset = true;  break;
+			default: modx = 0.0f; mody = 0.0f; dst->m_texture->LikelyOffset = false; break;
+			}
+		}
+		dst->m_texture->OffsetHack_modx = modx;
+		dst->m_texture->OffsetHack_mody = mody;
+
 	}
 
 	if(src->m_texture == NULL)

@@ -59,4 +59,8 @@ public:
 	int GetFormat() const {return m_format;}
 
 	bool IsMSAA() const {return m_msaa;}
+	
+	bool LikelyOffset;
+	float OffsetHack_modx;
+	float OffsetHack_mody;
 };
