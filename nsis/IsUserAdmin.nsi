@@ -1,53 +1,60 @@
-; Author: Lilla (lilla@earthlink.net) 2003-06-13
-; function IsUserAdmin uses plugin \NSIS\PlusgIns\UserInfo.dll
-; This function is based upon code in \NSIS\Contrib\UserInfo\UserInfo.nsi
-; This function was tested under NSIS 2 beta 4 (latest CVS as of this writing).
-;
-; Usage:
-;   Call IsUserAdmin
-;   Pop $R0   ; at this point $R0 is "true" or "false"
-;
+
 Function IsUserAdmin
-  Push $R0
-  Push $R1
-  Push $R2
- 
+
   ClearErrors
   UserInfo::GetName
   IfErrors Win9x
-  Pop $R1
-  UserInfo::GetAccountType
-  Pop $R2
- 
-  StrCmp $R2 "Admin" 0 Continue
 
-  ; Observation: I get here when running Win98SE. (Lilla)
-  ; The functions UserInfo.dll looks for are there on Win98 too, 
-  ; but just don't work. So UserInfo.dll, knowing that admin isn't required
-  ; on Win98, returns admin anyway. (per kichik)
-  ; MessageBox MB_OK 'User "$R1" is in the Administrators group'
-  StrCpy $R0 "true"
-  Goto Done
+  Pop $0
+  UserInfo::GetAccountType
+  Pop $1
  
-  Continue:
-    ; You should still check for an empty string because the functions
-    ; UserInfo.dll looks for may not be present on Windows 95. (per kichik)
-    StrCmp $R2 "" Win9x
-    StrCpy $R0 "false"
-    ;MessageBox MB_OK 'User "$R1" is in the "$R2" group'
-  Goto Done
+  # GetOriginalAccountType will check the tokens of the original user of the
+  # current thread/process. If the user tokens were elevated or limited for
+  # this process, GetOriginalAccountType will return the non-restricted
+  # account type.
+  # On Vista with UAC, for example, this is not the same value when running
+  # with `RequestExecutionLevel user`. GetOriginalAccountType will return
+  # "admin" while GetAccountType will return "user".
+  UserInfo::GetOriginalAccountType
+  Pop $2
+
+  ; Windows9x can sometimes return empty strings... 
+  StrCmp $1 "" 0 +2
+    Goto Win9x
+
+  StrCmp $1 "Admin" 0 +3
+    DetailPrint '(UAC) User "$0" is in the Administrators group'
+    Goto done
+  
+  StrCmp $1 "Power" 0 +3
+    DetailPrint '(UAC) User "$0" is in the Power Users group'
+    Goto done
+  
+  StrCmp $1 "User" 0 +3
+    DetailPrint '(UAC) User "$0" is just a regular user'
+    Goto done
+
+  StrCmp $1 "Guest" 0 +3
+    ; Guest account?  Probably doomed to failure, but might as well try, just in case some shit
+    ; is being mis-reported.
+    DetailPrint '(UAC) User "$0" is a guest -- this installer is probably going to fail.  Good luck.'
+    Goto done
+
+  ;MessageBox MB_OK "Unknown error while trying to detect "
+  DetailPrint "(UAC) Unknown error while trying to detect account type; assuming USER mode."
+  StrCpy $1 "User"
+  Goto done
+
+Win9x:
+  # This one means you don't need to care about admin or
+  # not admin because Windows 9x doesn't either
+  MessageBox MB_OK "Error! PCSX2 requires Windows 2000 or newer to install and run!"
+  Quit
+
+done:
+
+  ; How to return the admin modeas a variable?  NSIS confuses me -- air
+  ;Exch $R0
  
-  Win9x:
-    ; comment/message below is by UserInfo.nsi author:
-    ; This one means you don't need to care about admin or
-    ; not admin because Windows 9x doesn't either
-    ;MessageBox MB_OK "Error! This DLL can't run under Windows 9x!"
-    StrCpy $R0 "true"
- 
-  Done:
-    ;MessageBox MB_OK 'User= "$R1"  AccountType= "$R2"  IsUserAdmin= "$R0"'
- 
-  Pop $R2
-  Pop $R1
-  Exch $R0
 FunctionEnd
