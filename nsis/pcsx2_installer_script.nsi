@@ -238,10 +238,10 @@ Section "${APP_NAME} (required)"
   WriteRegStr HKLM Software\PCSX2 "Install_Dir" "$INSTDIR"
   
   ; Write the uninstall keys for Windows
-  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "DisplayName" "PCSX2 - Playstation 2 Emulator"
-  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "UninstallString" "${UNINST_EXE}"
-  WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoModify" 1
-  WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoRepair" 1
+  WriteRegStr   HKLM "${INSTDIR_REG_KEY}"  "DisplayName"      "PCSX2 - Playstation 2 Emulator"
+  WriteRegStr   HKLM "${INSTDIR_REG_KEY}"  "UninstallString"  "${UNINST_EXE}"
+  WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoModify" 1
+  WriteRegDWORD HKLM "${INSTDIR_REG_KEY}"  "NoRepair" 1
   WriteUninstaller "${UNINST_EXE}"
 
 SectionEnd
@@ -270,7 +270,7 @@ Section "Desktop Shortcut"
   ; CreateShortCut gets the working directory from OutPath
   SetOutPath "$INSTDIR"
   
-  CreateShortCut "$DESKTOP\${APP_NAME}.lnk"            "$INSTDIR\${APP_EXE}"      "" "$INSTDIR\${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
+  CreateShortCut "$DESKTOP\${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
     
 SectionEnd
 
@@ -283,14 +283,21 @@ Section "Microsoft Visual C++ 2008 SP1 Redist (required)"
   SectionIn RO
 
   SetOutPath "$TEMP"
-  
   File "vcredist_x86.exe"
-  Call CheckVCRedist
-  StrCmp $R0 "-1" skipRedist
-  ExecWait "$TEMP\vcredist_x86.exe"
 
-skipRedist:  
-  DetailPrint "Visual C++ 2008 SP1 Redistributable already installed, skipping..."
+  ; For some reason the redist check isn't reliable on some fresh XP installs?  Whatever, we can
+  ; just re-run the stupid thing every time.  It'll ask to "modify" or "repair", but until we
+  ; get a better solution, this will have to do --air
+
+  ;Call CheckVCRedist
+  ;StrCmp $R0 "-1" skipRedist
+  ExecWait "$TEMP\vcredist_x86.exe"
+  ;Goto done
+
+;skipRedist:  
+  ;DetailPrint "Visual C++ 2008 SP1 Redistributable already installed, skipping..."
+
+;done:
 SectionEnd
 
 ; -----------------------------------------------------------------------
@@ -384,7 +391,6 @@ Section "Un.Core Executables ${APP_NAME}"
 
   ; Remove registry keys (but only the ones related to the installer -- user options remain)
   DeleteRegKey HKLM "${INSTDIR_REG_KEY}"
-  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
 
   Call un.removeShorties
 
@@ -401,7 +407,7 @@ Section "Un.Shared Components (DLLs, Languages, etc)"
     !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
 
     ; Kill the entire PCSX2 registry key.
-    DeleteRegKey HKLM Software\PCSX2
+    DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
 
   false:
     ; User cancelled -- do nothing!!
