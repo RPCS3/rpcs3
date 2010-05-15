@@ -5948,6 +5948,12 @@ Serial = SLUS-21008
 Name   = Katamari Damacy
 Region = NTSC-U
 Compat = 4
+[patches = FA7E3081]
+
+	//Skip Intro Videos
+	patch=0,EE,0018e9e8,word,24020001
+
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21009
 Name   = Sega Classics Collection
