@@ -31,6 +31,18 @@
 -- 6 = Perfect
 
 ---------------------------------------------
+-- Patches
+---------------------------------------------
+-- Patches must be specified in blocks.
+-- [patches] or [patches = crc] is acceptable.
+-- The blocks must end with a [/patch] tag.
+-- The block tags must be on their own lines.
+-- pcsx2 only loads the first [patches] block that matches the game.
+-- The [patches] block based on crc takes priority when pcsx2 searches for patches...
+-- Everything inside the patches block gets fed to pcsx2's old patch parser.
+-- Currently the patch syntax is the same as pcsx2's old *.pnach system...
+
+---------------------------------------------
 -- Game List
 ---------------------------------------------
 Serial = PBPX-95503
@@ -25035,6 +25047,12 @@ Serial = SLPS-25360
 Name   = Katamari Damacy
 Region = NTSC-J
 Compat = 5
+[patches = B130E5BA]
+
+	//Skip Videos ("sceMpegIsEnd")
+	patch=0,EE,0018d798,word,24020001
+
+[/patches]
 ---------------------------------------------
 Serial = SLPS-25361
 Name   = Smash Court Professional Tournament 2
