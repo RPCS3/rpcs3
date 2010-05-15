@@ -167,9 +167,12 @@ void Pcsx2App::ReadUserModeSettings()
 		{
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
 			// (we skip the first page since it's a usermode.ini thing)
-
+			
+			// Fixme : Skipping the first page is a bad idea, as it does a lot of file / directory checks on hitting Apply.
+			// If anything is missing, the first page prompts to fix it.
+			// If we skip this check, it's very likely that actions like creating Memory Cards will fail.
 			FirstTimeWizard wiz( NULL );
-			if( !wiz.RunWizard( wiz.GetPostUsermodePage() ) )
+			if( !wiz.RunWizard( /*wiz.GetPostUsermodePage()*/ wiz.GetUsermodePage() ) )
 				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
 
 			// Save user's new settings

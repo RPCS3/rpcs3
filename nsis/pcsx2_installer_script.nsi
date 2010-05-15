@@ -182,9 +182,15 @@ Section "${APP_NAME} (required)"
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
   ; ------------------------------------------
-  ;        -- Languages and Patches --
+  ;        -- Game Database and Languages --
   ; ------------------------------------------
 
+	!insertmacro UNINSTALL.LOG_OPEN_INSTALL
+  File                                             ..\bin\DataBase.dbf
+  ; HostFS is not enabled by default, so no need to bundle it yet
+  ;File                                             ..\bin\pcsx2hostfs_ldr.elf
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+  
   ; In 0.9.7 there is only English, so including the other mo files (for now) is pointless.
   ; This code will be re-enabled when the new GUI is translated.
   
@@ -218,13 +224,19 @@ Section "${APP_NAME} (required)"
 
   File /nonfatal /oname=gsdx-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse2.dll
   File /nonfatal /oname=gsdx-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx-ssse3.dll 
-  File /nonfatal /oname=gsdx-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse4.dll  
-  File /nonfatal /oname=spu2-x-r${SVNREV_SPU2X}.dll      ..\bin\Plugins\spu2-x.dll     
-  File /nonfatal /oname=cdvdiso-r${SVNREV_CDVDISO}.dll   ..\bin\Plugins\cdvdiso.dll    
+  File /nonfatal /oname=gsdx-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse4.dll
+  File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll     ..\bin\Plugins\zerogs.dll
+  
+  File /nonfatal /oname=spu2-x-r${SVNREV_SPU2X}.dll      ..\bin\Plugins\spu2-x.dll
+  File /nonfatal /oname=zerospu2-r${SVNREV_ZEROSPU2}.dll ..\bin\Plugins\zerospu2.dll
+  
+  File /nonfatal /oname=cdvdiso-r${SVNREV_CDVDISO}.dll   ..\bin\Plugins\cdvdiso.dll
+  File                                                   ..\bin\Plugins\cdvdGigaherz.dll
+  
   File /nonfatal /oname=lilypad-r${SVNREV_LILYPAD}.dll   ..\bin\Plugins\lilypad.dll
-
-  File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll     ..\bin\Plugins\zerogs.dll     
-  File /nonfatal /oname=zerospu2-r${SVNREV_ZEROSPU2}.dll ..\bin\Plugins\zerospu2.dll   
+  File                                                   ..\bin\Plugins\PadSSSPSX.dll
+  
+  ;File                                                   ..\bin\Plugins\FWlinuz.dll
 
 !endif
 

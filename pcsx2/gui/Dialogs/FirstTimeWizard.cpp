@@ -157,7 +157,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	m_page_bios		+= new pxStaticHeading( &m_page_bios,
 		pxE( ".Wizard:Bios:Tutorial",
 			L"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
-			L"You cannot use a copy obtained from a friend or the internet.\n"
+			L"You cannot use a copy obtained from a friend or the Internet.\n"
 			L"You must dump the BIOS from your *own* Playstation 2 console."
 		)
 	);
