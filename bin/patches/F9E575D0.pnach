@@ -1,4 +1,0 @@
-gametitle=Die Hard - Vendetta [SLES 51348] (E)
-comment= patches by Nachbrenner
-//Skip Videos
-patch=0,EE,002570FC,word,00000000

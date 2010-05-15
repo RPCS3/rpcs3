@@ -1,4 +1,0 @@
-gametitle= Klonoa 2 - Lunatea's Veil [SCES 50354] (E) [7EBEEBBD]
-comment=Patch By CKemu
-//Skips IUP blitz
-patch=0,EE,003078F4,word,00000000

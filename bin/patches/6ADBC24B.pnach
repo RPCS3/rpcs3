@@ -1,6 +1,0 @@
-gametitle=Gradius III & IV [SLES 50038] (E)
-comment=patches by nachbrenner
-//Skip videos
-patch=0,EE,001009e4,word,00000000
-//ZeroGS Patch - GAME_INTERLACE2X
-zerogs=00000004

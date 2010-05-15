@@ -1,8 +1,0 @@
-gametitle=Ninjabread Man [SLES 53570] (E)
-comment=patches by Nachbrenner
-//Skip Videos
-patch=0,EE,00169e78,word,03e00008
-//Skip Music (for blockdumps)
-//patch=0,EE,00106d6c,word,00000000
-//patch=0,EE,0014352c,word,00000000
-//patch=0,EE,00151738,word,00000000

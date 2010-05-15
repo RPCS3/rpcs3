@@ -1,4 +1,0 @@
-gametitle=DTM Race Driver [SLES 50816] (E)
-comment=patches by nachbrenner
-//Skip Videos
-patch=0,EE,003876c8,word,24020001

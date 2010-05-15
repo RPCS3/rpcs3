@@ -1,9 +1,0 @@
-gametitle=Oni [SLES 50177] (G)
-comment=patches by Nachbrenner
-//Skip Videos
-patch=0,EE,001c67d8,word,03e00008
-patch=0,EE,001c67dc,word,00000000
-//skip "branch if copro 0 condition false"
-patch=0,EE,001cef7c,word,00000000 // bc0f $001cef7c
-//skip sceGsExecStoreImage
-patch=0,EE,001d4454,word,00000000

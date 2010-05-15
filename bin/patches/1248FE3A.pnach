@@ -1,6 +1,0 @@
-gametitle=Baphomets Fluch - Der Schlafende Drache [SLES 51978] (G)
-comment=patches by Nachbrenner
-//Skip Videos
-patch=0,EE,00243fa0,word,24020001
-//Fix obscure infinite loop
-patch=0,EE,00216764,word,00000000

@@ -1,4 +1,0 @@
-gametitle=Simple Series 2000 - Vol. 55 - The Catfight - Joneko Densetsu [SLPM 62494] (J) [561BE340]
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,00191560,word,24020001

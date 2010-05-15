@@ -1,5 +1,0 @@
-gametitle=Gitaroo man (J)
-comment= patch by parotaku
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,0012ea48,word,24020001
-roundmode=DOWN,CHOP

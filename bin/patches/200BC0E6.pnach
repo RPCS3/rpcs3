@@ -1,4 +1,0 @@
-gametitle=XIII [SLES 51244] (E)
-comment=patches by nachbrenner
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,001114a0,word,24020001

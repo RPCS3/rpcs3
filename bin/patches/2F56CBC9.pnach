@@ -1,4 +1,0 @@
-gametitle= Klonoa 2 - Lunatea's Veil [SLUS 20151] (U)
-comment=patches by nachbrenner
-//Skip sceIpuSync
-patch=0,EE,00305b90,word,03e00008

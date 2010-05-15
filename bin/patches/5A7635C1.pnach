@@ -1,4 +1,0 @@
-gametitle=NRA Gun Club SLUS 21432 (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,001091c0,word,24020001

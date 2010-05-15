@@ -1,4 +1,0 @@
-gametitle=Gungrave US/C NTSC
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,001c07b0,word,24020001

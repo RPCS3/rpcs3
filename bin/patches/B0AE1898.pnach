@@ -1,6 +1,0 @@
-gametitle=smackdown shut your mouth
-comment=patched by prafull
-//skip sceipusync
-patch=0,EE,0010b880,word,00000000
-patch=0,EE,0010b798,word,00000000
-patch=0,EE,0010b7c8,word,00000000

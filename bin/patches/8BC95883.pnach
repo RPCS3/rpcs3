@@ -1,4 +1,0 @@
-gametitle= Sly 3 - Honor Among Thieves [SCUS 97464] (U) [8BC95883]
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,002aa040,word,24020001

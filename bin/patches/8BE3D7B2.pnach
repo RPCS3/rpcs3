@@ -1,4 +1,0 @@
-gametitle= Shadow Hearts [SLUS 20347] (U) 
-comment=
-//ZeroGS Patch - GAME_NODEPTHUPDATE|GAME_AUTORESET|GAME_NOQUICKRESOLVE
-zerogs=00000A02

@@ -1,4 +1,0 @@
-gametitle=Fast and The Furious
-comment= Skip Videos By Refraction
-//Skip Videos
-patch=0,EE,003d2570,word,24020001

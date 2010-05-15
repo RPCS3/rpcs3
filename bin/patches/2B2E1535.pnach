@@ -1,5 +1,0 @@
-
-gametitle=Arc the Lad
-comment=Skips Video by Rudy_x
-//Skip introVideo(s)
-patch=0,EE,001d7df8,word,24020001

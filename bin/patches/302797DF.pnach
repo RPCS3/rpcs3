@@ -1,5 +1,0 @@
-gametitle=CYGirls
-comment=
-//patches by Refraction
-//Skip Videos
-patch=0,EE,00135130,word,00000000

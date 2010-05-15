@@ -1,8 +1,0 @@
-gametitle=CART Fury Championship Racing [SLUS 20141] (U)
-comment=patches by Nachbrenner
-//skip PSX2_Mpeg_PlayFile__FPc
-patch=0,EE,00107a00,word,03e00008
-patch=0,EE,00107a04,word,24020001
-//skip SuperSync__Fi
-patch=0,EE,00100eb0,word,03e00008
-patch=0,EE,00100eb4,word,24020001

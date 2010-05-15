@@ -1,4 +1,0 @@
-gametitle= Freestyle [SLUS 20367] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,00107808,word,24020001

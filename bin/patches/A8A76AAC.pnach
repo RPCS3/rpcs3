@@ -1,4 +1,0 @@
-gametitle=Guilty Gear XX - Accent Core [SLUS 21652] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,002bdb88,word,24020001

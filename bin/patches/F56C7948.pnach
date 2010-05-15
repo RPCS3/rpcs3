@@ -1,4 +1,0 @@
-gametitle=heavy metal thunder (J)
-comment= patch by parotaku
-//Skip Videos (sceMpegIsEnd)
-patch=0,EE,00108890,word,24020001

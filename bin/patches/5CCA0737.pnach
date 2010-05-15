@@ -1,7 +1,0 @@
-gametitle=Barbarian [SLES 50972] (E)
-comment=patches by Nachbrenner
-//Skip SAMPLE.PSS
-patch=0,EE,0010afc8,word,00000000
-//skip audio streams
-//patch=0,EE,0016fb40,word,03e00008
-//patch=0,EE,0016fb44,word,00000000

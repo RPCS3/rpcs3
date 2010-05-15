@@ -1,8 +1,0 @@
-gametitle=Project Eden [SLES 50553] (E)
-comment=patches by Nachbrenner
-//Skip EC_LOGO Video
-patch=0,EE,0013af54,word,00000000
-patch=0,EE,0013af60,word,00000000
-//Skip INTRO Video
-patch=0,EE,0013b060,word,00000000
-patch=0,EE,0013b06c,word,00000000

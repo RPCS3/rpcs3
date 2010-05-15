@@ -1,4 +1,0 @@
-gametitle=Madagascar
-comment=Keep thread alive
-//Sleepthread syscall
-patch=0,EE,002f8e44,word,00000000

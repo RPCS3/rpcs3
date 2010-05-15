@@ -1,7 +1,0 @@
-gametitle=Ghosthunter [SCES 51463] (E)
-comment=patches by nachbrenner
-//fix VU0/DMA crap
-patch=0,EE,003e8928,word,03e00008
-patch=0,EE,003e892c,word,00000000
-patch=0,EE,003831c8,word,00000000
-patch=0,EE,003831d4,word,00000000

@@ -1,8 +1,0 @@
-gametitle=Gran Turismo 4 Prologue [SCES 52438] (E)
-//fix IPU DMA 
-patch=1,EE,00175018,word,00000000
-patch=1,EE,0046bba8,word,00000000
-patch=1,EE,0046bbe4,word,00000000
-//Skip Videos
-patch=1,EE,0020c790,word,03e00008 
-patch=1,EE,0020c794,word,00000000

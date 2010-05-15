@@ -1,5 +1,0 @@
-gametitle=Guitaroo man
-comment=Skip Videos
-roundmode=DOWN,CHOP
-//Skip Videos
-patch=0,EE,0012aa28,word,24020001

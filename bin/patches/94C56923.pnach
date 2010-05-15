@@ -1,4 +1,0 @@
-gametitle=Spyro: A Hero's Tale [SLUS 20884] (U)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,003faaf0,word,24020001

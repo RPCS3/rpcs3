@@ -1,4 +1,0 @@
-gametitle= Guilty Gear XX - Slash Midnight Carnival [SLPM 66333] (J)
-comment=Skips Video (sceMpegIsEnd)
-//Skip Videos
-patch=0,EE,002743d8,word,24020001

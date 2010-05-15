@@ -1,7 +1,0 @@
-gametitle=Devil May Cry [SLPM 65038] (J)
-comment=Skips Movies
-//skip Movie_Set
-patch=0,EE,001cdea0,word,03e00008
-patch=0,EE,001cdea4,word,03e00008
-//skip MovieEndCheck
-patch=0,EE,001ce44c,word,70001428

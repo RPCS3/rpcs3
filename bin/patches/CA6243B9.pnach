@@ -1,9 +1,0 @@
-gametitle=Gran Turismo 4 Prologue China [PBPX 95524] (J)
-comment=patches by Nachbrenner
-//fix IPU DMA 
-patch=1,EE,00166814,word,00000000
-patch=1,EE,003a36b8,word,00000000
-patch=1,EE,003a36f4,word,00000000
-//Skip Videos
-patch=1,EE,001e3718,word,03e00008 
-patch=1,EE,001e371c,word,00000000

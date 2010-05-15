@@ -1,4 +1,0 @@
-gametitle=worldtvfighters NTSC JPN
-comment=skip intro pss
-//Skip Videos ("sceMpegIsEnd")
-patch=0,EE,002d8df8,word,24020001

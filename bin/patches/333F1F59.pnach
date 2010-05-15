@@ -1,3 +1,0 @@
-gametitle=Simple 2000: The neko mura NTSC JAP
-//Skip Videos ("sceMpegIsEnd")
-patch=0,EE,00109420,word,24020001

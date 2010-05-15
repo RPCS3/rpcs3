@@ -1,4 +1,0 @@
-gametitle=Rayman M [SLES 50457] (E) [DDA2FA6A]
-comment=Patch by CKemu
-//Kill '002FA6A0 1060FFFA: beq	v1, zero, 0x002FA68C' (IPU)
-patch=0,EE,002FA6A0,word,00000000
