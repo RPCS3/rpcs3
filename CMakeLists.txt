@@ -5,9 +5,12 @@ project(Pcsx2)
 # need cmake version >=2.6
 cmake_minimum_required(VERSION 2.6)
 
+# set module path
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 # include modules
-include(${PROJECT_SOURCE_DIR}/cmake/Pcsx2Utils.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/SearchForStuff.cmake)
+include(Pcsx2Utils)
+include(SearchForStuff)
 
 set(CMAKE_BUILD_TYPE Devel)
 

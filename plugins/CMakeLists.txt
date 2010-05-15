@@ -81,9 +81,9 @@ if(SPU2null)
 endif(SPU2null)
 
 # make spu2-x
-#if(spu2-x)
-#	add_subdirectory(spu2-x)
-#endif(spu2-x)
+if(spu2-x)
+	add_subdirectory(spu2-x)
+endif(spu2-x)
 
 # make SSSPSXPAD
 #if(SSSPSXPAD)

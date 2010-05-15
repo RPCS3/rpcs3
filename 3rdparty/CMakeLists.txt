@@ -16,3 +16,6 @@ if(projectSoundTouch)
 	add_subdirectory(SoundTouch)
 endif(projectSoundTouch)
 
+
+# make liba52
+add_subdirectory(liba52)

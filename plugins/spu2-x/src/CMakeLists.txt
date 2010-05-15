@@ -108,7 +108,7 @@ set_target_properties(${spu2xName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with project internal libraries
-target_link_libraries(${spu2xName} Utilities x86emitter)
+target_link_libraries(${spu2xName} Utilities x86emitter Utilities)
 
 # link target with ALSA
 target_link_libraries(${spu2xName} ${ALSA_LIBRARIES})
@@ -126,6 +126,5 @@ else(projectSoundTouch)
 endif(projectSoundTouch)
 
 # link target with A52
-target_link_libraries(${spu2xName} ${A52_LIBRARIES})
-
+target_link_libraries(${spu2xName} a52)
 target_link_libraries(${spu2xName} -m32)

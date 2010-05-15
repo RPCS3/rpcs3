@@ -116,7 +116,7 @@ endif(BZIP2_FOUND)
 #------------------------------------------------------------
 
 # Cg optional
-include(${PROJECT_SOURCE_DIR}/cmake/FindCg.cmake)
+include(FindCg)
 
 # found Cg
 if(CG_FOUND)
@@ -127,7 +127,7 @@ endif(CG_FOUND)
 #------------------------------------------------------------
 
 # GLEW optional
-include(${PROJECT_SOURCE_DIR}/cmake/FindGlew.cmake)
+include(FindGlew)
 
 # found GLEW
 if(GLEW_FOUND)
@@ -149,7 +149,7 @@ endif(OPENGL_FOUND)
 #------------------------------------------------------------
 
 # PortAudio optional
-include(${PROJECT_SOURCE_DIR}/cmake/FindPortAudio.cmake)
+include(FindPortAudio)
 
 # found PortAudio
 if(PORTAUDIO_FOUND)
@@ -172,7 +172,7 @@ endif(SDL_FOUND)
 #------------------------------------------------------------
 
 # SoundTouch optional
-#include(${PROJECT_SOURCE_DIR}/cmake/FindSoundTouch.cmake)
+#include(FindSoundTouch)
 
 # found SoundTouch	
 #if(SOUNDTOUCH_FOUND)
@@ -190,10 +190,6 @@ endif(SDL_FOUND)
 
 # Subversion optional
 find_package(Subversion)
- 
-# Liba52 optional
-# Must be fixed properly
-set(A52_LIBRARIES liba52.so)
 
 # subversion found
 if(Subversion_FOUND)

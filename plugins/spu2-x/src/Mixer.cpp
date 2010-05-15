@@ -46,9 +46,9 @@ static const s32 tbl_XA_Factor[5][2] =
 //   precision.
 //
 #ifdef MSC_VER
-__forceinline		// gcc can't inline this function, presumably because of it's exceeding complexity?
-#endif
-s32 MulShr32( s32 srcval, s32 mulval )
+
+// gcc can't inline this function, presumably because of it's exceeding complexity?
+__forceinline s32 MulShr32( s32 srcval, s32 mulval )
 {
 	s64 tmp = ((s64)srcval * mulval );
 
@@ -57,6 +57,21 @@ s32 MulShr32( s32 srcval, s32 mulval )
 	// It won't fly on big endian machines though... :)
 	return ((s32*)&tmp)[1];
 }
+
+#else
+
+// gcc can't inline this function, presumably because of it's exceeding complexity?
+s32 MulShr32( s32 srcval, s32 mulval )
+{
+    s32 tmp;
+    __asm__(
+            ".att_syntax\n"
+            "imull %2\n" // do eax*%2 -> edx contains high 32 bits and eax contains low 32 bits
+            ".att_syntax\n" : "=d" (tmp) : "a" (srcval), "g" (mulval)
+           );
+    return tmp;
+}
+#endif
 
 __forceinline s32 clamp_mix( s32 x, u8 bitshift )
 {
