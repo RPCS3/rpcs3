@@ -64,7 +64,7 @@ set_target_properties(${CDVDisoName} PROPERTIES
 # Link with bz2
 target_link_libraries(${CDVDisoName} ${BZIP2_LIBRARIES})
 
-# Set link flags
+# Force the linker into 32 bits mode
 target_link_libraries(${CDVDisoName} -m32)
  
 # Linker strip option

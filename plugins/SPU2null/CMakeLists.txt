@@ -64,6 +64,10 @@ add_library(${SPU2nullName} SHARED
 			${SPU2nullLinuxSources}
 			${SPU2nullLinuxHeaders})
  
+ 
+# Force the linker into 32 bits mode
+target_link_libraries(${SPU2nullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${SPU2nullName} -s)

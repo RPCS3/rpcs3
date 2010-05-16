@@ -82,6 +82,9 @@ add_library(${GSnullName} SHARED
 			${GSnullLinuxSources}
 			${GSnullLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${GSnullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${GSnullName} -s)

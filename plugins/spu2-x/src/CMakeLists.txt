@@ -127,8 +127,9 @@ endif(projectSoundTouch)
 
 # link target with A52
 target_link_libraries(${spu2xName} a52)
-target_link_libraries(${spu2xName} -m32)
 
+# Force the linker into 32 bits mode
+target_link_libraries(${spu2xName} -m32)
 
 # Linker strip option
 if (CMAKE_BUILD_STRIP)

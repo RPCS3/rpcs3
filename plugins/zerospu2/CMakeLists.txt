@@ -101,6 +101,9 @@ else(projectSoundTouch)
 	target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
 endif(projectSoundTouch)
  
+# Force the linker into 32 bits mode
+target_link_libraries(${zerospu2Name} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${zerospu2Name} -s)

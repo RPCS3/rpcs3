@@ -150,6 +150,9 @@ add_library(${x86emitterName} STATIC ${x86emitterSources} ${x86emitterHeaders})
 # link target with wx
 target_link_libraries(${x86emitterName} ${wxWidgets_LIBRARIES})
 
+# Force the linker into 32 bits mode
+target_link_libraries(${x86emitterName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${x86emitterName} -s)

@@ -42,6 +42,11 @@ find_package(wxWidgets REQUIRED base core adv)
 
 # wx found
 if(wxWidgets_FOUND)
+    if(Linux)			# Linux only
+        # Force the use of 32 bit library
+        STRING(REGEX REPLACE "/usr/lib/wx" "${32_LD_LIBRARY_PATH}/wx"
+            wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+    endif(Linux)
 	include(${wxWidgets_USE_FILE})
 #else(wxWidgets_FOUND)
 #	message(FATAL_ERROR "wxWidgets libraries and include files not found.\

@@ -71,6 +71,9 @@ add_library(${onepadName} SHARED
 			${onepadLinuxSources}
 			${onepadLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${onepadName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${onepadName} -s)

@@ -79,7 +79,7 @@ set_target_properties(${zeropadName} PROPERTIES
 # link target with SDL
 target_link_libraries(${zeropadName} ${SDL_LIBRARY})
 
-# Set link flag
+# Force the linker into 32 bits mode
 target_link_libraries(${zeropadName} -m32)
  
 # Linker strip option

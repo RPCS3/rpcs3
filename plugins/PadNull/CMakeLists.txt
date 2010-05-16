@@ -68,6 +68,9 @@ add_library(${PadNullName} SHARED
 			${PadNullLinuxSources}
 			${PadNullLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${PadNullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${PadNullName} -s)

@@ -154,10 +154,10 @@ target_link_libraries(${zzoglName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zzoglName} ${X11_Xxf86vm_LIB})
-
-# Set link flag
-target_link_libraries(${zzoglName} -m32)
  
+# Force the linker into 32 bits mode
+target_link_libraries(${zzoglName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${zzoglName} -s)

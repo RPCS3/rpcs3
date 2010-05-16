@@ -60,6 +60,9 @@ add_library(${USBnullName} SHARED
 			${USBnullLinuxSources}
 			${USBnullLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${USBnullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${USBnullName} -s)

@@ -42,4 +42,7 @@ set(a52Headers
     tendra.h)
 
 # add library
-add_library(${a52Name} STATIC ${a52Sources} ${a52Headers})
+add_library(${a52Name} STATIC ${a52Sources} ${a52Headers}) 
+
+# Force the linker into 32 bits mode
+target_link_libraries(${a52Name} -m32)

@@ -167,8 +167,10 @@ add_library(${UtilitiesName} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${Ut
 
 # link target with wx
 target_link_libraries(${UtilitiesName} ${wxWidgets_LIBRARIES})
-
  
+# Force the linker into 32 bits mode
+target_link_libraries(${UtilitiesName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${UtilitiesName} -s)

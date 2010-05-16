@@ -56,3 +56,6 @@ inftrees.h )
 # add library
 add_library(${zlibName} STATIC ${zlibSources} ${zlibHeaders})
 
+# Force the linker into 32 bits mode
+target_link_libraries(${zlibName} -m32)
+

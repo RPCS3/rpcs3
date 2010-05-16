@@ -644,6 +644,9 @@ else(projectZLIB)
 	target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
 endif(projectZLIB)
 
+# Force the linker into 32 bits mode
+target_link_libraries(${pcsx2Name} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${pcsx2Name} -s)

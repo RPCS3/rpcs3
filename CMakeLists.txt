@@ -5,6 +5,24 @@ project(Pcsx2)
 # need cmake version >=2.6
 cmake_minimum_required(VERSION 2.6)
 
+#-------------------------------------------------------------------------------
+# Detect the 32bit/64bit and set the 32bit library path 32_LD_LIBRARY_PATH
+#-------------------------------------------------------------------------------
+if (UNIX)
+    if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        # 64 bits machine
+        if (EXISTS /usr/lib32)
+            # 32 bits library in /usr/lib32
+            set(32_LD_LIBRARY_PATH /usr/lib32)
+        else (EXISTS /usr/lib32)
+            set(32_LD_LIBRARY_PATH /usr/lib)
+        endif (EXISTS /usr/lib32)
+    else (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        # 32 bits machine
+        set(32_LD_LIBRARY_PATH /usr/lib)
+    endif (CMAKE_SIZEOF_VOID_P MATCHES "8")
+endif (UNIX)
+
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

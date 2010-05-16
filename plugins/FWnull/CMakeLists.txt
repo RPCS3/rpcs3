@@ -60,6 +60,9 @@ add_library(${FWnullName} SHARED
 			${FWnullLinuxSources}
 			${FWnullLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${FWnullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${FWnullName} -s)

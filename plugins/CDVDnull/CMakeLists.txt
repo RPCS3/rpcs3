@@ -62,6 +62,9 @@ add_library(${CDVDnullName} SHARED
 			${CDVDnullLinuxSources}
 			${CDVDnullLinuxHeaders})
  
+# Force the linker into 32 bits mode
+target_link_libraries(${CDVDnullName} -m32)
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${CDVDnullName} -s)
