@@ -77,6 +77,20 @@ private:
 		ss >>  tString;
 		return tString;
 	}
+	string toLower(string s) {
+		for (uint i = 0; i < s.length(); i++) {
+			char& c = s[i];
+			if (c >= 'A' && c <= 'Z') {
+				c += 'a' - 'A';
+			}
+		}
+		return s;
+	}
+	bool strCompare(string& s1, string& s2) {
+		string t1 = toLower(s1);
+		string t2 = toLower(s2);
+		return !t1.compare(t2);
+	}
 	bool isComment(string& s) {
 		string sub = s.substr(0, 2);
 		return (sub.compare("--") == 0) || (sub.compare("//") == 0);
@@ -141,7 +155,7 @@ public:
 	String_Stream header;    // Header of the database
 	string		  baseKey;	 // Key to separate games by ("Serial")
 
-	DataBase_Loader(string file, string key, string value = "") {
+	DataBase_Loader(string file, string key = "Serial", string value = "") {
 		curGame	= NULL;
 		baseKey = key;
 		if (!fileExists(file)) {
@@ -191,8 +205,8 @@ public:
 	bool setGame(string id) {
 		deque<Game_Data*>::iterator it = gList.begin();
 		for ( ; it != gList.end(); ++it) {
-			if (!it[0]->id.compare(id)) {
-				curGame = it[0];
+			if (strCompare(it[0]->id, id)) {
+				curGame =  it[0];
 				return true;
 			}
 		}
@@ -237,7 +251,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (!it[0].key.compare(key)) {
+				if (strCompare(it[0].key, key)) {
 					return true;
 				}
 			}
@@ -251,7 +265,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (!it[0].key.compare(key)) {
+				if (strCompare(it[0].key, key)) {
 					return it[0].value;
 				}
 			}
@@ -301,7 +315,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (!it[0].key.compare(key)) {
+				if (strCompare(it[0].key, key)) {
 					it[0].value = value;
 					return;
 				}

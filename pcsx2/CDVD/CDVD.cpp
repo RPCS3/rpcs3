@@ -541,7 +541,7 @@ void cdvdReset()
  	cdvd.RTC.month = (u8)curtime.GetMonth(wxDateTime::GMT9) + 1; // WX returns Jan as "0"
  	cdvd.RTC.year = (u8)(curtime.GetYear(wxDateTime::GMT9) - 2000);
 
-	GameDB = new DataBase_Loader("DataBase.dbf", "Serial");
+	GameDB = new DataBase_Loader("DataBase.dbf");
 }
 
 struct Freeze_v10Compat

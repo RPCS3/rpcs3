@@ -581,6 +581,7 @@ void __fastcall eeGameStarting()
 		wxString gameName   = L"Unknown Game (\?\?\?)";
 		wxString gameSerial = L" [" + DiscID  + L"]";
 		wxString gameCompat = L" [Status = Unknown]";
+		wxString gamePatch  = L"";
 
 		if (GameDB && GameDB->gameLoaded()) {
 			int compat = GameDB->getInt("Compat");
@@ -588,11 +589,17 @@ void __fastcall eeGameStarting()
 			gameName  += L" (" + GameDB->getStringWX("Region") + L")";
 			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 		}
-
-		// this title can be overwritten by patches if they set the gametitle key
-		Console.SetTitle(gameName + gameSerial + gameCompat);
-
-		if (EmuConfig.EnablePatches) InitPatch(gameCRC);
+		
+		if (EmuConfig.EnablePatches) {
+			int patches = InitPatch(gameCRC);
+			if (patches) {
+				wxString pString( wxsFormat( L"%d", patches ) );
+				gamePatch = L" [Patches = " + pString + L"]";
+			}
+		}
+		
+		Console.SetTitle(gameName + gameSerial + gameCompat + gamePatch);
+		
 		GetMTGS().SendGameCRC(ElfCRC);
 
 		g_GameStarted = true;

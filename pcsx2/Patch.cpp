@@ -526,10 +526,11 @@ void ApplyPatch(int place)
 	}
 }
 
-void InitPatch(const wxString& crc)
+int InitPatch(const wxString& crc)
 {
     inifile_read(crc);
     Console.WriteLn("patchnumber: %d", patchnumber);
+	return patchnumber;
 }
 
 void ResetPatch( void )
