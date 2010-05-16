@@ -45,7 +45,7 @@ static const s32 tbl_XA_Factor[5][2] =
 //   caller to  extend the inputs so that they make use of all 32 bits of
 //   precision.
 //
-#ifdef MSC_VER
+#ifdef _MSC_VER
 
 // gcc can't inline this function, presumably because of it's exceeding complexity?
 __forceinline s32 MulShr32( s32 srcval, s32 mulval )
@@ -60,7 +60,6 @@ __forceinline s32 MulShr32( s32 srcval, s32 mulval )
 
 #else
 
-// gcc can't inline this function, presumably because of it's exceeding complexity?
 s32 MulShr32( s32 srcval, s32 mulval )
 {
     s32 tmp;
