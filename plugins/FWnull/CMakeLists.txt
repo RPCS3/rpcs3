@@ -18,7 +18,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2 -s)
+	add_definitions(-Wall -fPIC -m32 -O2)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # FWnull sources
@@ -59,6 +59,11 @@ add_library(${FWnullName} SHARED
 			${FWnullHeaders}
 			${FWnullLinuxSources}
 			${FWnullLinuxHeaders})
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${FWnullName} -s)
+endif (CMAKE_BUILD_STRIP)
 
 # set output directory
 set_target_properties(${FWnullName} PROPERTIES

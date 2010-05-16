@@ -66,4 +66,8 @@ target_link_libraries(${CDVDisoName} ${BZIP2_LIBRARIES})
 
 # Set link flags
 target_link_libraries(${CDVDisoName} -m32)
-
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${CDVDisoName} -s)
+endif (CMAKE_BUILD_STRIP)

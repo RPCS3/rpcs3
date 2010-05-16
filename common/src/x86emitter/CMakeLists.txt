@@ -35,10 +35,6 @@ set(DebugFlags
 	-W
 	-g)
 
-# set linker flags
-set(LinkerFlags
-	-s)
-
 # set optimization flags
 set(OptimizationFlags
 	-falign-functions
@@ -80,7 +76,6 @@ set(OptimizationFlags
 	-ftree-vrp
 	-funit-at-a-time)
 
-
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 
@@ -99,7 +94,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags})
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # variable with all sources of this library
@@ -155,3 +150,7 @@ add_library(${x86emitterName} STATIC ${x86emitterSources} ${x86emitterHeaders})
 # link target with wx
 target_link_libraries(${x86emitterName} ${wxWidgets_LIBRARIES})
 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${x86emitterName} -s)
+endif (CMAKE_BUILD_STRIP)

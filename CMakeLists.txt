@@ -23,6 +23,21 @@ if(CMAKE_BUILD_TYPE STREQUAL "")
 endif(CMAKE_BUILD_TYPE STREQUAL "")
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+# Set default strip option. Can be set with -DCMAKE_BUILD_STRIP=TRUE/FALSE
+#-------------------------------------------------------------------------------
+if(NOT DEFINED CMAKE_BUILD_STRIP)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_STRIP TRUE)
+        message(STATUS "Enable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
+    else(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_STRIP FALSE)
+        message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
+    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
+endif(NOT DEFINED CMAKE_BUILD_STRIP)
+ 
+ #-------------------------------------------------------------------------------
+ 
 # add additional project-wide include directories
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty
 					${PROJECT_SOURCE_DIR}/common/include

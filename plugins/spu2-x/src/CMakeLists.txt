@@ -28,7 +28,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -s -DNDEBUG)
+	add_definitions(-Wall -fPIC -m32 -msse2 -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # spu2x sources
@@ -128,3 +128,9 @@ endif(projectSoundTouch)
 # link target with A52
 target_link_libraries(${spu2xName} a52)
 target_link_libraries(${spu2xName} -m32)
+
+
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${spu2xName} -s)
+endif (CMAKE_BUILD_STRIP)

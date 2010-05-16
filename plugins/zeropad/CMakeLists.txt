@@ -81,3 +81,8 @@ target_link_libraries(${zeropadName} ${SDL_LIBRARY})
 
 # Set link flag
 target_link_libraries(${zeropadName} -m32)
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${zeropadName} -s)
+endif (CMAKE_BUILD_STRIP)

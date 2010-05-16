@@ -18,7 +18,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2 -s)
+	add_definitions(-Wall -fPIC -m32 -O2)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # CDVDnull sources
@@ -61,6 +61,11 @@ add_library(${CDVDnullName} SHARED
 			${CDVDnullHeaders}
 			${CDVDnullLinuxSources}
 			${CDVDnullLinuxHeaders})
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${CDVDnullName} -s)
+endif (CMAKE_BUILD_STRIP)
 
 # set output directory
 set_target_properties(${CDVDnullName} PROPERTIES

@@ -18,7 +18,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -m32 -O2 -s)
+	add_definitions(-Wall -m32 -O2)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zerogs sources
@@ -129,4 +129,8 @@ target_link_libraries(${zerogsName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zerogsName} ${X11_Xxf86vm_LIB})
-
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${zerogsName} -s)
+endif (CMAKE_BUILD_STRIP)

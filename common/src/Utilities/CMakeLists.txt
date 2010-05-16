@@ -35,10 +35,6 @@ set(DebugFlags
 	-g
 	-W)
 
-# set linker flags
-set(LinkerFlags
-	-s)
-
 # set optimization flags
 set(OptimizationFlags
 	-falign-functions
@@ -98,7 +94,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags})
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # variable with all sources of this library
@@ -172,3 +168,8 @@ add_library(${UtilitiesName} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${Ut
 # link target with wx
 target_link_libraries(${UtilitiesName} ${wxWidgets_LIBRARIES})
 
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${UtilitiesName} -s)
+endif (CMAKE_BUILD_STRIP)

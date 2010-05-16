@@ -32,10 +32,6 @@ set(DebugFlags
 	-W
 	-g)
 
-# set linker flags
-set(LinkerFlags
-	-s)
-
 # set optimization flags
 set(OptimizationFlags
 	-falign-functions
@@ -104,7 +100,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 	set(pcsx2Name pcsx2)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags} -DWX_PRECOMP -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags} -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # you must have both svn client executable and a source that contains svn metadata
@@ -648,3 +644,7 @@ else(projectZLIB)
 	target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
 endif(projectZLIB)
 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${pcsx2Name} -s)
+endif (CMAKE_BUILD_STRIP)

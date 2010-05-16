@@ -157,3 +157,8 @@ target_link_libraries(${zzoglName} ${X11_Xxf86vm_LIB})
 
 # Set link flag
 target_link_libraries(${zzoglName} -m32)
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${zzoglName} -s)
+endif (CMAKE_BUILD_STRIP)

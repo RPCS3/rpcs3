@@ -18,7 +18,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2 -s)
+	add_definitions(-Wall -fPIC -m32 -O2)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # PadNull sources
@@ -67,6 +67,11 @@ add_library(${PadNullName} SHARED
 			${PadNullHeaders}
 			${PadNullLinuxSources}
 			${PadNullLinuxHeaders})
+ 
+# Linker strip option
+if (CMAKE_BUILD_STRIP)
+    target_link_libraries(${PadNullName} -s)
+endif (CMAKE_BUILD_STRIP)
 
 # set output directory
 set_target_properties(${PadNullName} PROPERTIES
