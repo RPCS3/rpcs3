@@ -164,6 +164,7 @@ public:
 		File_Reader   reader(file);
 		key_pair      keyPair("", "");
 		string        s0;
+		Game_Data*	  game = NULL;
 		try {
 			for(;;) {
 				for(;;) { // Find first game
@@ -173,7 +174,7 @@ public:
 					header.write(s0);
 					header.write("\n");
 				}
-				Game_Data* game = new Game_Data(keyPair.value);
+				game = new Game_Data(keyPair.value);
 				game->kList.push_back(keyPair);
 				for (;;) { // Fill game data, find new game, repeat...
 					s0 = reader.getLine();
@@ -187,7 +188,9 @@ public:
 				}
 			}
 		}
-		catch(int& i) { i = 0; }
+		catch(int& i) { // Add Last Game if EOF
+			if (i==1 && game) gList.push_back(game);
+		}
 		if (!value.compare("")) return;
 		if (setGame(value)) Console.WriteLn("DataBase_Loader: Found Game! [%s]",     value.c_str());
 		else				Console.Warning("DataBase_Loader: Game Not Found! [%s]", value.c_str());
