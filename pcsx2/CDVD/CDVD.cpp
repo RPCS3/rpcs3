@@ -357,7 +357,7 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 		if (GameDB->setGame(gameSerial.ToUTF8().data())) { // Game Found
 			Console.WriteLn ("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
 		}
-		else Console.Warning("Game not found in database [%s]", gameSerial.ToAscii().data());
+		else Console.Warning(L"Game not found in database [%s]", gameSerial.c_str());
 	}
 }
 
@@ -546,7 +546,7 @@ void cdvdReset()
  	cdvd.RTC.month = (u8)curtime.GetMonth(wxDateTime::GMT9) + 1; // WX returns Jan as "0"
  	cdvd.RTC.year = (u8)(curtime.GetYear(wxDateTime::GMT9) - 2000);
 
-	GameDB = new DataBase_Loader("DataBase.dbf");
+	GameDB = new DataBase_Loader("GameIndex.dbf");
 }
 
 struct Freeze_v10Compat

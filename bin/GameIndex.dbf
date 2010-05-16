@@ -31,10 +31,18 @@
 -- 6 = Perfect
 
 ---------------------------------------------
--- Patches
+-- Round Modes (eeRoundMode = n and vuRoundMode = n)
+---------------------------------------------
+-- The rounding modes are numerically based.
+-- 0 = Nearest
+-- 1 = Negative Infinity
+-- 2 = Positive Infinity
+-- 3 = Chop (Zero)
+
+---------------------------------------------
+-- Patches ([patches] or [patches = crc])
 ---------------------------------------------
 -- Patches must be specified in blocks.
--- [patches] or [patches = crc] is acceptable.
 -- The blocks must end with a [/patch] tag.
 -- The block tags must be on their own lines.
 -- pcsx2 only loads the first [patches] block that matches the game.
@@ -2797,11 +2805,12 @@ Serial = SLUS-20294
 Name   = Gitaroo Man
 Region = NTSC-U
 Compat = 5
+eeRoundMode = 1
+vuRoundMode = 3
 [patches = 7130C553]
 	
 	comment=Skip Videos
-	roundmode=DOWN,CHOP
-	
+
 	//Skip Videos
 	patch=0,EE,0012aa28,word,24020001
 	
@@ -15477,11 +15486,12 @@ Serial = SLPM-65012
 Name   = Gitaroo Man
 Region = NTSC-J
 Compat = 5
+eeRoundMode = 1
+vuRoundMode = 3
 [patches = C1767D64]
 	
 	comment=patch by parotaku
-	roundmode=DOWN,CHOP
-	
+
 	//Skip Videos (sceMpegIsEnd)
 	patch=0,EE,0012ea48,word,24020001
 	

@@ -15,6 +15,7 @@
 
 #pragma once
 #include "File_Reader.h"
+#include "Patch.h"
 
 struct key_pair {
 	string key;
@@ -280,7 +281,7 @@ public:
 	// Gets a wxString representation of the 'value' for the given key
 	wxString getStringWX(string key) {
 		string s = getString(key);
-		return wxString(fromAscii(s.c_str()));
+		return wxString(fromUTF8(s.c_str()));
 	}
 
 	// Gets a double representation of the 'value' for the given key
@@ -369,6 +370,22 @@ static wxString compatToStringWX(int compat) {
 		case 2:  return wxString(L"Intro");
 		case 1:  return wxString(L"Nothing");
 		default: return wxString(L"Unknown");
+	}
+}
+
+static void loadGameSettings(DataBase_Loader* gameDB) {
+	if (gameDB && gameDB->gameLoaded()) {
+		SSE_MXCSR  eeMX = EmuConfig.Cpu.sseMXCSR;
+		SSE_MXCSR  vuMX = EmuConfig.Cpu.sseVUMXCSR;
+		int eeRM = eeMX.GetRoundMode();
+		int vuRM = vuMX.GetRoundMode();
+		bool rm = 0;
+		if (gameDB->keyExists("eeRoundMode")) { eeRM = gameDB->getInt("eeRoundMode"); rm=1; }
+		if (gameDB->keyExists("vuRoundMode")) { vuRM = gameDB->getInt("vuRoundMode"); rm=1; }
+		if (rm && eeRM<4 && vuRM<4) { 
+			Console.WriteLn("Game DataBase: Changing roundmodes!");
+			SetRoundMode((SSE_RoundMode)eeRM, (SSE_RoundMode)vuRM); 
+		}
 	}
 }
 

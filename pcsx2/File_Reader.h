@@ -128,7 +128,7 @@ public:
 	}
 	wxString getLineWX() {
 		ss->getline(buff, sizeof(buff));
-		return wxString(fromAscii(buff));
+		return wxString(fromUTF8(buff));
 	}
 	bool finished() {
 		return ss->eof() || ss->fail();

@@ -596,12 +596,12 @@ void __fastcall eeGameStarting()
 				wxString pString( wxsFormat( L"%d", patches ) );
 				gamePatch = L" [Patches = " + pString + L"]";
 			}
+			loadGameSettings(GameDB);
 		}
 		
 		Console.SetTitle(gameName + gameSerial + gameCompat + gamePatch);
 		
 		GetMTGS().SendGameCRC(ElfCRC);
-
 		g_GameStarted = true;
 	}
 
