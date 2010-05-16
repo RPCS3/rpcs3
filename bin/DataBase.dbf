@@ -38599,6 +38599,10 @@ Serial = TCES-51613
 Name   = This Is Football 2004 [Beta]
 Region = PAL-E-S
 ---------------------------------------------
+Serial = TCES-51904
+Name   = SOCOM II - U.S. Navy SEALs [Beta]
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-53481
 Name   = 10,000 Bullets
 Region = PAL-E
@@ -39265,6 +39269,11 @@ Compat = 5
 ---------------------------------------------
 Serial = SLUS-21849
 Name   = Winter Sports 2 - The Next Challenge
+Region = NTSC-U
+Compat = 5
+---------------------------------------------
+Serial = SLUS-21810
+Name   = WWE Smackdown VS Raw 2009
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
