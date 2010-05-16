@@ -9434,6 +9434,10 @@ Name   = Cabela's Legendary Adventures
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
+Serial = SLUS-21890
+Name   = Mana Khemia 2 : Fall Of Alchemy
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-28002
 Name   = Red Faction [Trade Demo]
 Region = NTSC-U
@@ -15867,6 +15871,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65130
 Name   = Dramatic Soccer Game - Becoming a National Team Member
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-65131
+Name   = Atelier Judie: Gramnad no Renkinjutsushi
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65132

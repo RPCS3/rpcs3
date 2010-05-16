@@ -357,7 +357,7 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 		if (GameDB->setGame(gameSerial.ToUTF8().data())) { // Game Found
 			Console.WriteLn ("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
 		}
-		else Console.Warning("Game not found in database [%s]", gameSerial.ToAscii());
+		else Console.Warning("Game not found in database [%s]", gameSerial.ToAscii().data());
 	}
 }
 
