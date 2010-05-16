@@ -349,10 +349,15 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	elfptr.Delete();
 
 	// Set the Game DataBase to the correct game based on Game Serial Code...
-	if( GameDB )
-	{
-		GameDB->setGame(DiscID.ToUTF8().data());
-		Console.WriteLn("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
+	if (GameDB) {
+		wxString gameSerial = DiscID;
+		if (DiscID.IsEmpty()) { // Search for crc if no Serial Code
+			gameSerial = wxString(wxsFormat( L"%8.8x", ElfCRC ));
+		}
+		if (GameDB->setGame(gameSerial.ToUTF8().data())) { // Game Found
+			Console.WriteLn ("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
+		}
+		else Console.Warning("Game not found in database [%s]", gameSerial.ToAscii());
 	}
 }
 
