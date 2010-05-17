@@ -600,8 +600,7 @@ void __fastcall eeGameStarting()
 			loadGameSettings(GameDB);
 		}
 
-		// ToDo: EmuConfig.EnableCheats option...
-		if (EmuConfig.EnablePatches) {
+		if (EmuConfig.EnableCheats) {
 			int cheats = InitCheats(gameCRC);
 			if (cheats) {
 				wxString cString( wxsFormat( L"%d", cheats ) );

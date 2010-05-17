@@ -199,7 +199,7 @@ void SysCoreThread::VsyncInThread()
 {
 	PostVsyncToUI();
 	if (EmuConfig.EnablePatches) ApplyPatch();
-	if (EmuConfig.EnablePatches) ApplyCheat(); // ToDo: EnableCheats Option...
+	if (EmuConfig.EnableCheats)  ApplyCheat();
 }
 
 void SysCoreThread::StateCheckInThread()

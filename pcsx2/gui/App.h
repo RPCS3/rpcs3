@@ -96,6 +96,7 @@ enum MenuIdentifiers
 	MenuId_Sys_LoadStates,		// Opens load states submenu
 	MenuId_Sys_SaveStates,		// Opens save states submenu
 	MenuId_EnablePatches,
+	MenuId_EnableCheats,
 
 	MenuId_State_Load,
 	MenuId_State_LoadOther,

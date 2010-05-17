@@ -25,8 +25,8 @@
 IniPatch Patch[ MAX_PATCH ];
 IniPatch Cheat[ MAX_CHEAT ];
 
-int patchnumber;
-int cheatnumber;
+int patchnumber = 0;
+int cheatnumber = 0;
 
 wxString strgametitle;
 

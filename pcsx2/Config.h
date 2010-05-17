@@ -483,6 +483,7 @@ struct Pcsx2Config
 			CdvdVerboseReads	:1,		// enables cdvd read activity verbosely dumped to the console
 			CdvdDumpBlocks		:1,		// enables cdvd block dumping
 			EnablePatches		:1,		// enables patch detection and application
+			EnableCheats		:1,		// enables cheat detection and application
 
 		// when enabled uses BOOT2 injection, skipping sony bios splashes
 			UseBOOT2Injection	:1,

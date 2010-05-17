@@ -273,6 +273,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( CdvdVerboseReads );
 	IniBitBool( CdvdDumpBlocks );
 	IniBitBool( EnablePatches );
+	IniBitBool( EnableCheats );
 	IniBitBool( ConsoleToStdio );
 
 	IniBitBool( McdEnableEjection );
