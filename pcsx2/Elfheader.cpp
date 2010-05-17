@@ -25,7 +25,7 @@ u32 ElfCRC;
 u32 ElfEntry;
 
 // uncomment this to enable pcsx2hostfs loading when using "load elf"
-//#define USE_HOSTFS
+#define USE_HOSTFS
 
 #if 0
 // fixme: ELF command line option system.
@@ -430,30 +430,35 @@ void ElfObject::loadHeaders()
 //
 // Throws exceptions on errors. Not called if not skipping the bios.
 //
-#ifdef USE_HOSTFS
 void loadElfFile(const wxString& _filename)
-#else
-void loadElfFile(const wxString& filename)
-#endif
 {
 	ScopedPtr<ElfObject> elfptr;
-
-#ifdef USE_HOSTFS
 	wxString filename = _filename;
-	wxString parameters = _filename; //
-#endif
-
+	
 	if (filename.IsEmpty()) return;
-
 	Console.WriteLn( L"loadElfFile: " + filename );
 
 #ifdef USE_HOSTFS
-	parameters = filename;
-	filename = wxT("pcsx2hostfs_ldr.elf");
-#endif
+	wxString parameters = filename;
+	bool	 bHostFs	= true;
+
+	filename  = wxT("pcsx2hostfs_ldr.elf");
+	int fSize = Path::GetFileSize(filename);
+	if (fSize == -1) {
+		wxString error1 = L"Error! pcsx2hostfs_ldr.elf was not found!";
+		wxString error2 = L"\n\nAttempting to load elf file without hostfs support...";
+		Console.Error(error1);
+		Msgbox::Alert(error1 + error2);
+		bHostFs  = false;
+		filename = parameters;
+		elfptr   = new ElfObject(filename, Path::GetFileSize(filename));
+	}
+	else {
+		elfptr   = new ElfObject(filename, fSize);
+		filename = wxT("host:pcsx2hostfs_ldr.elf");
+	}
+#else
 	elfptr = new ElfObject(filename, Path::GetFileSize(filename));
-#ifdef USE_HOSTFS
-	filename = wxT("host:pcsx2hostfs_ldr.elf");
 #endif
 
 	if (!elfptr->hasProgramHeaders())
@@ -469,30 +474,30 @@ void loadElfFile(const wxString& filename)
 	elfptr.Delete();
 
 	//2002-09-19 (Florin)
-	//args_ptr = 0xFFFFFFFF;	//big value, searching for minimum [used by parseCommandLine]
+	//args_ptr = 0xFFFFFFFF; // big value, searching for minimum [used by parseCommandLine]
 
 	cpuRegs.pc = ElfEntry; //set pc to proper place
 	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
-	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );		// see #ifdef'd out parseCommendLine for details.
+	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename ); // see #ifdef'd out parseCommendLine for details.
 
 #ifdef USE_HOSTFS
-
-	//HACK!!!!!!!!!!!!!
-	uptr params_addr = 0x1FFFC00; // elf loader will check this address for params
-	s8*  params_ptr  = (s8*)PSM(params_addr);
-	s8*  params_magic = params_ptr + 0;
-	s8*  params_argc = params_ptr + 4;
-	s8*  params_argv = params_ptr + 8;
-	*(u32*)params_magic = 'PS2E';
-	*(u32*)params_argc = 2;
-	strcpy(params_argv,filename.ToAscii());
-	params_argv += strlen(params_argv)+1;
-	strcpy(params_argv,parameters.ToAscii());
-	params_argv += strlen(params_argv)+1;
-	strcpy(params_argv,"");
-
+	if (bHostFs) {
+		//HACK!!!!!!!!!!!!!
+		uptr params_addr  = 0x1FFFC00; // elf loader will check this address for params
+		s8*  params_ptr   = (s8*)PSM(params_addr);
+		s8*  params_magic = params_ptr + 0;
+		s8*  params_argc  = params_ptr + 4;
+		s8*  params_argv  = params_ptr + 8;
+		*(u32*)params_magic = 'PS2E';
+		*(u32*)params_argc  = 2;
+		strcpy(params_argv,filename.ToAscii());
+		params_argv += strlen(params_argv)+1;
+		strcpy(params_argv,parameters.ToAscii());
+		params_argv += strlen(params_argv)+1;
+		strcpy(params_argv,"");
+	}
 #endif
 
 	return;
