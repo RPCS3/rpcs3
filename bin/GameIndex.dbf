@@ -2909,6 +2909,7 @@ Serial = SLUS-20312
 Name   = Final Fantasy X
 Region = NTSC-U
 Compat = 5
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLUS-20313
 Name   = Wave Rally
@@ -6336,6 +6337,7 @@ Serial = SLUS-21067
 Name   = Digimon Rumble Arena 2
 Region = NTSC-U
 Compat = 1
+FpuCompareHack = 1
 ---------------------------------------------
 Serial = SLUS-21068
 Name   = Vietcong - Purple Haze
@@ -8563,6 +8565,7 @@ Serial = SLUS-21569
 Name   = Shin Megami Tensei - Persona 3
 Region = NTSC-U
 Compat = 5
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLUS-21570
 Name   = Heatseeker
@@ -8803,6 +8806,7 @@ Serial = SLUS-21621
 Name   = Shin Megami Tensei - Persona 3 FES
 Region = NTSC-U
 Compat = 5
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLUS-21622
 Name   = Bee Movie Game
@@ -10911,6 +10915,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20182
 Name   = Tales of Destiny
 Region = NTSC-Unk
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SCAJ-20183
 Name   = Wild ARMs - The Vth Vanguard
@@ -10943,6 +10948,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20193
 Name   = Tales of Destiny [Director's Cut] [Premium Box]
 Region = NTSC-Unk
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SCAJ-20194
 Name   = Minna no Golf 4 [PlayStation 2 the Best]
@@ -11211,6 +11217,7 @@ Region = NTSC-K
 Serial = SCKA-20099
 Name   = Persona 3
 Region = NTSC-K
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SCKA-20101
 Name   = Seiken Densetsu 4 (Dawn of Mana)
@@ -11223,6 +11230,7 @@ Region = NTSC-K
 Serial = SCKA-20109
 Name   = Persona 3 - Fes [Independent Starting Version]
 Region = NTSC-K
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SCKA-20114
 Name   = Obscure II - The Aftermath
@@ -12753,6 +12761,7 @@ Region = NTSC-K
 Serial = SLKA-25214
 Name   = Final Fantasy X - International [PlayStation 2 - Big Hit Series]
 Region = NTSC-K
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLKA-25215
 Name   = Shining Wild
@@ -14928,6 +14937,7 @@ Serial = SLPM-62623
 Name   = Elemental Gerad
 Region = NTSC-J
 Compat = 4
+XgKickHack = 1
 [patches = B99379B7]
 	
 	comment=patches by Nachbrenner
@@ -15846,6 +15856,7 @@ Region = NTSC-J
 Serial = SLPM-65115
 Name   = Final Fantasy X International
 Region = NTSC-J
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPM-65116
 Name   = Lilie no Atelier Plus - Salburg no Renkinjutsushi 3
@@ -19395,6 +19406,7 @@ Region = NTSC-J
 Serial = SLPM-66124
 Name   = Final Fantasy X [Ultimate Hits]
 Region = NTSC-J
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPM-66125
 Name   = Final Fantasy X-2 [Ultimate Hits]
@@ -20508,6 +20520,7 @@ Region = NTSC-J
 Serial = SLPM-66445
 Name   = Persona 3
 Region = NTSC-J
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLPM-66446
 Name   = Beat Down - Fists of Vengeance [CapKore]
@@ -21353,6 +21366,7 @@ Compat = 5
 Serial = SLPM-66677
 Name   = Final Fantasy X - International [Ultimate Hits]
 Region = NTSC-J
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPM-66678
 Name   = Final Fantasy X-2 - International + Last Mission [Ultimate Hits]
@@ -21378,10 +21392,12 @@ Region = NTSC-J
 Serial = SLPM-66689
 Name   = Persona 3 - Fes [Append Edition]
 Region = NTSC-J
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLPM-66690
 Name   = Persona 3 - Fes [Independent Starting Version]
 Region = NTSC-J
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLPM-66691
 Name   = Sengoku Basara 2 [CapKore]
@@ -22441,6 +22457,7 @@ Region = NTSC-J
 Serial = SLPM-66978
 Name   = Persona 4 [Konami-style Special Edition]
 Region = NTSC-J
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLPM-66987
 Name   = Kowloon Youma Gakuen Ki [Best Version]
@@ -22545,6 +22562,7 @@ Region = NTSC-J
 Serial = SLPM-67513
 Name   = Final Fantasy X International
 Region = NTSC-K
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPM-67528
 Name   = Hajime no Ippo - Victorious Boxers [Championship Edition]
@@ -24357,6 +24375,7 @@ Serial = SLPS-25050
 Name   = Final Fantasy X
 Region = NTSC-J
 Compat = 5
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPS-25051
 Name   = Missing Blue
@@ -24452,6 +24471,7 @@ Serial = SLPS-25088
 Name   = Final Fantasy X International
 Region = NTSC-J
 Compat = 5
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPS-25094
 Name   = Reveal Fantasia
@@ -26110,6 +26130,8 @@ Region = NTSC-J
 Serial = SLPS-25569
 Name   = Kidou Senshi Gundam SEED - Rengou vs. Z.A.F.T.
 Region = NTSC-J
+eeRoundMode = 1
+FpuNegDivHack = 1
 ---------------------------------------------
 Serial = SLPS-25570
 Name   = Kino no Tabi 2 - The Beautiful World
@@ -26677,6 +26699,7 @@ Region = NTSC-J
 Serial = SLPS-25715
 Name   = Tales of Destiny
 Region = NTSC-J
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SLPS-25716
 Name   = Digimon Savers - Another Mission
@@ -26689,6 +26712,8 @@ Region = NTSC-J
 Serial = SLPS-25718
 Name   = Mobile Suit Gundam Seed Destiny - Rengou vs. Z.A.F.T. II Plus
 Region = NTSC-J
+eeRoundMode = 1
+FpuNegDivHack = 1
 ---------------------------------------------
 Serial = SLPS-25719
 Name   = Happiness! Deluxe [First Print Limited Edition]
@@ -27148,10 +27173,12 @@ Region = NTSC-J
 Serial = SLPS-25841
 Name   = Tales of Destiny [Director's Cut] [Premium Box]
 Region = NTSC-J
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SLPS-25842
 Name   = Tales of Destiny [Director's Cut]
 Region = NTSC-J
+FpuMulHack = 1
 ---------------------------------------------
 Serial = SLPS-25843
 Name   = Tir-Na-Nog
@@ -27278,6 +27305,7 @@ Region = NTSC-J
 Serial = SLPS-72501
 Name   = Final Fantasy X [Mega Hits]
 Region = NTSC-J
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SLPS-72502
 Name   = Tales of Destiny 2 [Mega Hits]
@@ -27682,6 +27710,7 @@ Region = NTSC-J
 Serial = TCPS-10111
 Name   = Eremental Gerad
 Region = NTSC-J
+XgKickHack = 1
 ---------------------------------------------
 Serial = TCPS-10113
 Name   = Mushihime-sama
@@ -27794,6 +27823,7 @@ Region = PAL-Unk
 Serial = SCED-50642
 Name   = Final Fantasy X [Demo] [Final Fantasy VI PS1 - Bonus Disc]
 Region = PAL-E
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCED-50748
 Name   = Official PlayStation 2 Magazine Demo 26
@@ -27802,6 +27832,7 @@ Region = PAL-Unk
 Serial = SCED-50907
 Name   = Final Fantasy X [Bonus Disc - Beyond Final Fantasy]
 Region = PAL-Unk
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCED-51531
 Name   = Official PlayStation 2 Magazine Demo 33
@@ -27959,23 +27990,28 @@ Serial = SCES-50490
 Name   = Final Fantasy X
 Region = PAL-E
 Compat = 5
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCES-50491
 Name   = Final Fantasy X
 Region = PAL-F
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCES-50492
 Name   = Final Fantasy X
 Region = PAL-G
 Compat = 5
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCES-50493
 Name   = Final Fantasy X
 Region = PAL-I
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCES-50494
 Name   = Final Fantasy X
 Region = PAL-S
+IPUWaitHack = 1
 ---------------------------------------------
 Serial = SCES-50499
 Name   = Ecco the Dolphin - Defender of the Future
@@ -34689,6 +34725,7 @@ Region = PAL-Unk
 Serial = SLES-52631
 Name   = Digimon Rumble Arena 2
 Region = PAL-Unk
+FpuCompareHack = 1
 ---------------------------------------------
 Serial = SLES-52636
 Name   = Colin McRae Rally 2005
@@ -39180,16 +39217,19 @@ Serial = SLMP-66445
 Name   = Shin Megami Tensei - Persona 3
 Region = NTSC-J
 Compat = 5
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLUS-21782
 Name   = Shin Megami Tensei - Persona 4
 Region = NTSC-U
 Compat = 5
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLES-55018
 Name   = Shin Megami Tensei: Persona 3
 Region = PAL-E
 Compat = 5
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLUS-21790
 Name   = Shrek's Carnival Craze

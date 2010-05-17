@@ -554,7 +554,7 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 	// Abusing the IPU hack to also fix EE events to happen 1 cycle in the future.
 	// This can be used on games with PATH3 masking issues for example, or when
 	// some FMV look bad.
-	if(CHECK_IPUWAITHACK) ecycle = 1;
+	//if(CHECK_IPUWAITHACK) ecycle = 1;
 
 	cpuRegs.interrupt|= 1 << n;
 	cpuRegs.sCycle[n] = cpuRegs.cycle;
