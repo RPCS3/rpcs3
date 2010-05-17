@@ -274,6 +274,8 @@
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
+		<Unit filename="../Patch_Memory.cpp" />
+		<Unit filename="../Patch_Obsolete.h" />
 		<Unit filename="../PathDefs.h" />
 		<Unit filename="../Pcsx2Config.cpp" />
 		<Unit filename="../PluginManager.cpp" />
