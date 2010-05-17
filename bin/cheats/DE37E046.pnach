@@ -1,0 +1,15 @@
+comment=Persona 4 Cheats
+
+// Max Courage
+//patch=1,EE,007973F4,word,000000FF
+
+// Inf Money
+//patch=1,EE,2079B68C,word,05F5E0FF
+
+// Inf Health
+patch=1,EE,207973CC,word,000003E7
+patch=1,EE,007973CC,word,000003E7
+
+// Inf Spirit
+patch=1,EE,207973CE,word,000003E7
+patch=1,EE,007973CE,word,000003E7

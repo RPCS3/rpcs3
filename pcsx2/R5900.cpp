@@ -582,6 +582,7 @@ void __fastcall eeGameStarting()
 		wxString gameSerial = L" [" + DiscID  + L"]";
 		wxString gameCompat = L" [Status = Unknown]";
 		wxString gamePatch  = L"";
+		wxString gameCheats = L"";
 
 		if (GameDB && GameDB->gameLoaded()) {
 			int compat = GameDB->getInt("Compat");
@@ -591,15 +592,24 @@ void __fastcall eeGameStarting()
 		}
 		
 		if (EmuConfig.EnablePatches) {
-			int patches = InitPatch(gameCRC);
+			int patches = InitPatches(gameCRC);
 			if (patches) {
 				wxString pString( wxsFormat( L"%d", patches ) );
 				gamePatch = L" [Patches = " + pString + L"]";
 			}
 			loadGameSettings(GameDB);
 		}
-		
-		Console.SetTitle(gameName + gameSerial + gameCompat + gamePatch);
+
+		// ToDo: EmuConfig.EnableCheats option...
+		if (EmuConfig.EnablePatches) {
+			int cheats = InitCheats(gameCRC);
+			if (cheats) {
+				wxString cString( wxsFormat( L"%d", cheats ) );
+				gameCheats = L" [Cheats = " + cString + L"]";
+			}
+		}
+
+		Console.SetTitle(gameName + gameSerial + gameCompat + gamePatch + gameCheats);
 		
 		GetMTGS().SendGameCRC(ElfCRC);
 		g_GameStarted = true;

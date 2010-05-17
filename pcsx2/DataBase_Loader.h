@@ -373,6 +373,8 @@ static wxString compatToStringWX(int compat) {
 	}
 }
 
+// Load Game Settings found in database
+// (game fixes, round modes, clamp modes, etc...)
 static void loadGameSettings(DataBase_Loader* gameDB) {
 	if (gameDB && gameDB->gameLoaded()) {
 		SSE_MXCSR  eeMX = EmuConfig.Cpu.sseMXCSR;

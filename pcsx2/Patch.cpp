@@ -20,6 +20,7 @@
 #include "IopCommon.h"
 #include "Patch.h"
 #include "DataBase_Loader.h"
+#include <wx/textfile.h>
 
 IniPatch Patch[ MAX_PATCH ];
 
@@ -409,28 +410,26 @@ void inifile_command( const wxString& cmd )
     int code = PatchTableExecute( set, commands );
 }
 
-// This routine recieves a file from inifile_read, trims it,
+// This routine receives a string containing patches, trims it,
 // Then sends the command to be parsed.
-void inifile_process(string& s)
+void TrimPatches(string& s)
 {
 	String_Stream ss(s);
 	wxString buff;
-    while (!ss.finished())
-	{
+    while (!ss.finished()) {
 		buff = ss.getLineWX();
-		//Console.Error("%s", buff.ToAscii());
-        inifile_trim(buff);
-        if (!buff.IsEmpty()) inifile_command(buff);
-    }
+		inifile_trim(buff);
+		if (!buff.IsEmpty()) inifile_command(buff);
+	}
 }
 
-// This routine creates a pnach filename from the games crc,
-// loads it, trims the commands, and sends them to be parsed.
-void inifile_read(const wxString& name )
+// This routine loads patches from the game database
+// Returns number of patches loaded
+int InitPatches(const wxString& name)
 {
 	bool   patchFound = false;
 	string patch;
-	string crc = string(name.ToAscii());
+	string crc  = string(name.ToUTF8().data());
 	patchnumber = 0;
 	
 	if (GameDB && GameDB->gameLoaded()) {
@@ -446,9 +445,55 @@ void inifile_read(const wxString& name )
 
 	if (patchFound) {
 		Console.WriteLn(Color_Green, "Patch found!");
-		inifile_process(patch);
+		TrimPatches(patch);
 	}
 	else Console.WriteLn(Color_Gray, "No patch found. Resuming execution without a patch (this is NOT an error).");
+	
+	Console.WriteLn("Patches Loaded: %d", patchnumber);
+	return patchnumber;
+}
+
+// This routine receives a file from inifile_read, trims it,
+// Then sends the command to be parsed.
+void inifile_process(wxTextFile &f1 )
+{
+    for (uint i = 0; i < f1.GetLineCount(); i++)
+    {
+        inifile_trim(f1[i]);
+        if (!f1[i].IsEmpty()) inifile_command(f1[i]);
+    }
+}
+
+// This routine loads cheats from *.pnach files
+// Returns number of cheats loaded
+// Note: Should be called after InitPatches()
+int InitCheats(const wxString& name)
+{
+	wxTextFile f1;
+	wxString buffer;
+	int cheatsNumber = patchnumber;
+
+	// FIXME : We need to add a 'cheats' folder to the AppConfig, and use that instead. --air
+
+	buffer = Path::Combine(L"cheats", name + L".pnach");
+
+	if(!f1.Open(buffer) && wxFileName::IsCaseSensitive())
+	{
+		f1.Open( Path::Combine(L"cheats", name.Upper() + L".pnach") );
+	}
+
+	if(!f1.IsOpened())
+	{
+		Console.WriteLn( Color_Gray, "No cheats found. Resuming execution without cheats..." );
+		return 0;
+	}
+
+	Console.WriteLn( Color_Green, "Cheats found!");
+	inifile_process( f1 );
+
+	cheatsNumber = patchnumber - cheatsNumber;
+	Console.WriteLn("Cheats Loaded: %d", cheatsNumber);
+	return cheatsNumber;
 }
 
 void _ApplyPatch(IniPatch *p)
@@ -524,13 +569,6 @@ void ApplyPatch(int place)
 	    if (Patch[i].placetopatch == place)
             _ApplyPatch(&Patch[i]);
 	}
-}
-
-int InitPatch(const wxString& crc)
-{
-    inifile_read(crc);
-    Console.WriteLn("patchnumber: %d", patchnumber);
-	return patchnumber;
 }
 
 void ResetPatch( void )
@@ -611,9 +649,11 @@ namespace PatchFunc
 
     void gametitle( const wxString& text1, const wxString& text2 )
     {
-        Console.WriteLn( L"gametitle: " + text2 );
-        strgametitle = text2;
-        Console.SetTitle( strgametitle );
+		// Setting Game Title through patches is obsolete now
+		// Use database instead!
+		//Console.WriteLn( L"gametitle: " + text2 );
+		//strgametitle = text2;
+		//Console.SetTitle( strgametitle );
     }
 
     struct PatchPieces
