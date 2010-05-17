@@ -224,7 +224,7 @@ static bool SPAM_PASS;
 #endif
 
 //#define WRITE_PRIM_LOGS
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(ZEROGS_DEVBUILD)
 #define ZEROGS_DEVBUILD
 #endif
 

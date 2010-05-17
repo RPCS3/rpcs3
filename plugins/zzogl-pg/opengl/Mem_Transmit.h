@@ -12,7 +12,7 @@ extern u8* pstart;
 
 // transfers whole rows
 template <class T>
-static __forceinline const T *TransmitHostLocalY_(_writePixel_0 wp, u32 widthlimit, u32 endY, const T *buf)
+static __forceinline const T *TransmitHostLocalY_(_writePixel_0 wp, s32 widthlimit, int endY, const T *buf)
 {
 	assert((nSize % widthlimit) == 0 && widthlimit <= 4);
 
@@ -73,7 +73,7 @@ static __forceinline const T *TransmitHostLocalY_(_writePixel_0 wp, u32 widthlim
 
 // transfers whole rows
 template <class T>
-static __forceinline const T *TransmitHostLocalY_24(_writePixel_0 wp, u32 widthlimit, u32 endY, const T *buf)
+static __forceinline const T *TransmitHostLocalY_24(_writePixel_0 wp, s32 widthlimit, int endY, const T *buf)
 {
 	if (widthlimit != 8 || ((gs.imageEndX - gs.trxpos.dx) % widthlimit))
 	{
@@ -146,7 +146,7 @@ static __forceinline const T *TransmitHostLocalY_24(_writePixel_0 wp, u32 widthl
 
 // meant for 4bit transfers
 template <class T>
-static __forceinline const T *TransmitHostLocalY_4(_writePixel_0 wp, u32 widthlimit, u32 endY, const T *buf)
+static __forceinline const T *TransmitHostLocalY_4(_writePixel_0 wp, s32 widthlimit, int endY, const T *buf)
 {
 	for (; tempY < endY; ++tempY)
 	{
@@ -194,7 +194,7 @@ static __forceinline const T *TransmitHostLocalY_4(_writePixel_0 wp, u32 widthli
 }
 
 template <class T>
-static __forceinline const T *TransmitHostLocalY(TransferData data, _writePixel_0 wp, u32 widthlimit, u32 endY, const T *buf)
+static __forceinline const T *TransmitHostLocalY(TransferData data, _writePixel_0 wp, s32 widthlimit, int endY, const T *buf)
 {
 	switch (data.psm)
 	{
