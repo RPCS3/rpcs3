@@ -17,7 +17,8 @@
 
 #include "Pcsx2Defs.h"
 
-#define MAX_PATCH 1024
+#define MAX_PATCH 512
+#define MAX_CHEAT 1024
 
 enum patch_cpu_type {
 	NO_CPU,
@@ -50,21 +51,21 @@ struct IniPatch
 namespace PatchFunc
 {
 	PATCHTABLEFUNC comment;
-    PATCHTABLEFUNC gametitle;
-    PATCHTABLEFUNC patch;
-    PATCHTABLEFUNC roundmode;
+	PATCHTABLEFUNC gametitle;
+	PATCHTABLEFUNC patch;
+	PATCHTABLEFUNC cheat;
 }
 
 int  InitCheats(const wxString& name);
-void inifile_command(const wxString& cmd);
+void inifile_command(bool isCheat, const wxString& cmd);
 void inifile_trim(wxString& buffer);
 
 int  InitPatches(const wxString& name);
 int  AddPatch(int Mode, int Place, int Address, int Size, u64 data);
-void ApplyPatch( int place = 1);
-void ResetPatch( void );
-
-void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu);
+void ResetPatch(void);
+void ApplyPatch(int place = 1);
+void ApplyCheat(int place = 1);
+void _ApplyPatch(IniPatch *p);
 
 #endif /* __PATCH_H__ */
 

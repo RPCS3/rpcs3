@@ -616,6 +616,7 @@ void __fastcall eeGameStarting()
 	}
 
 	ApplyPatch(0);
+	ApplyCheat(0);
 }
 
 void __fastcall eeloadReplaceOSDSYS()

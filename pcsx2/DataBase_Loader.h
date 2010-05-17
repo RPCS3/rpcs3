@@ -15,7 +15,6 @@
 
 #pragma once
 #include "File_Reader.h"
-#include "Patch.h"
 
 struct key_pair {
 	string key;
@@ -386,7 +385,7 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 		if (gameDB->keyExists("vuRoundMode")) { vuRM = gameDB->getInt("vuRoundMode"); rm=1; }
 		if (rm && eeRM<4 && vuRM<4) { 
 			Console.WriteLn("Game DataBase: Changing roundmodes!");
-			SetRoundMode((SSE_RoundMode)eeRM, (SSE_RoundMode)vuRM); 
+			SetCPUState(eeMX.SetRoundMode((SSE_RoundMode)eeRM), vuMX.SetRoundMode((SSE_RoundMode)vuRM));
 		}
 	}
 }

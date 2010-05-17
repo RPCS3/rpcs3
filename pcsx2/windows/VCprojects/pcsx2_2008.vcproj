@@ -261,14 +261,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Patch.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\Patch.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\PrecompiledHeader.cpp"
 				>
 				<FileConfiguration
@@ -329,6 +321,26 @@
 				</File>
 				<File
 					RelativePath="..\..\File_Reader.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Patch"
+				>
+				<File
+					RelativePath="..\..\Patch.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Patch.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Patch_Memory.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Patch_Obsolete.h"
 					>
 				</File>
 			</Filter>
