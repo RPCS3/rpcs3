@@ -15,6 +15,7 @@
 
 #pragma once
 #include "File_Reader.h"
+#include "AppConfig.h"
 
 struct key_pair {
 	string key;
@@ -308,7 +309,7 @@ public:
 	}
 
 	// Gets a bool representation of the 'value' for the given key
-	u8 getBool(string key) {
+	bool getBool(string key) {
 		string v = getString(key);
 		return !!atoi(v.c_str());
 	}
@@ -372,6 +373,14 @@ static wxString compatToStringWX(int compat) {
 	}
 }
 
+#define checkGamefix(gFix) {									\
+	if (gameDB->keyExists(#gFix)) {								\
+		SetGameFixConfig().##gFix = gameDB->getBool(#gFix);		\
+		wxString sKey = L#gFix;									\
+		Console.WriteLn(L"Loading Gamefix: %s", sKey.c_str());	\
+	}															\
+}
+
 // Load Game Settings found in database
 // (game fixes, round modes, clamp modes, etc...)
 static void loadGameSettings(DataBase_Loader* gameDB) {
@@ -387,6 +396,13 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 			Console.WriteLn("Game DataBase: Changing roundmodes!");
 			SetCPUState(eeMX.SetRoundMode((SSE_RoundMode)eeRM), vuMX.SetRoundMode((SSE_RoundMode)vuRM));
 		}
+		checkGamefix(VuAddSubHack);
+		checkGamefix(VuClipFlagHack);
+		checkGamefix(FpuCompareHack);
+		checkGamefix(FpuMulHack);
+		checkGamefix(FpuNegDivHack);
+		checkGamefix(XgKickHack);
+		checkGamefix(IPUWaitHack);
 	}
 }
 

@@ -40,6 +40,17 @@
 -- 3 = Chop (Zero)
 
 ---------------------------------------------
+-- Game Fixes (gameFixName = 1)
+---------------------------------------------
+-- VuAddSubHack 	= 1 // Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
+-- VuClipFlagHack	= 1 // Persona games, maybe others. It's to do with the VU clip flag (sVU-only).
+-- FpuCompareHack	= 1 // Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+-- FpuMulHack	= 1 // Tales of Destiny hangs.
+-- FpuNegDivHack	= 1 // Gundam games messed up camera-view.
+-- XgKickHack	= 1 // Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+-- IPUWaitHack    = 1 // FFX video hack?
+
+---------------------------------------------
 -- Patches ([patches] or [patches = crc])
 ---------------------------------------------
 -- Patches must be specified in blocks.
@@ -3700,6 +3711,7 @@ Serial = SLUS-20488
 Name   = Star Ocean 3 - Till the End of Time [Disc1of2]
 Region = NTSC-U
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLUS-20489
 Name   = Whirl Tour
@@ -5469,6 +5481,7 @@ Compat = 5
 Serial = SLUS-20891
 Name   = Star Ocean 3 - Till the End of Time [Disc2of2]
 Region = NTSC-U
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLUS-20892
 Name   = Xenosaga - Episode II - Jenseits von Gut und Bose [Disc1of2]
@@ -7237,6 +7250,7 @@ Serial = SLUS-21262
 Name   = Radiata Stories
 Region = NTSC-U
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLUS-21263
 Name   = Romancing SaGa
@@ -8171,6 +8185,7 @@ Serial = SLUS-21452
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-U
 Compat = 5
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLUS-21453
 Name   = Disney's Meet the Robinsons
@@ -10472,6 +10487,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20070
 Name   = Star Ocean 3 [Director's Cut]
 Region = NTSC-Unk
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20072
 Name   = Ghost in the Shell - Stand Alone Complex
@@ -10644,6 +10660,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20118
 Name   = Radiata Stories
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20119
 Name   = Gladiator - Road to Freedom
@@ -10873,6 +10890,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20177
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-Unk
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20178
 Name   = Ape Escape - Million Monkeys
@@ -10941,6 +10959,7 @@ Region = NTSC-Ch
 Serial = SCAJ-20197
 Name   = Valkyrie Profile 2 - Silmeria [Ultimate Hits]
 Region = NTSC-Unk
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20198
 Name   = Everybody's Tennis [PlayStation 2 the Best]
@@ -11171,6 +11190,7 @@ Region = NTSC-K
 Serial = SCKA-20079
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-K
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCKA-20081
 Name   = Tekken 5 [PlayStation 2 Big Hit Series]
@@ -12215,6 +12235,7 @@ Region = NTSC-J
 Serial = SCPS-55019
 Name   = Star Ocean 3 - Till the End of Time
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCPS-55020
 Name   = Kengo 2
@@ -16100,6 +16121,7 @@ Region = NTSC-J
 Serial = SLPM-65209
 Name   = Star Ocean 3 [Limited Edition]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65210
 Name   = Chou Battle Houshin - Bundle #1
@@ -16905,10 +16927,12 @@ Region = NTSC-J
 Serial = SLPM-65438
 Name   = Star Ocean 3 [Director's Cut] [Disc1of2]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65439
 Name   = Star Ocean 3 [Director's Cut] [Disc2of2]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65441
 Name   = Ashita no Joe - Masshiro ni Moetsukuru
@@ -18199,6 +18223,7 @@ Region = NTSC-J
 Serial = SLPM-65800
 Name   = Radiata Stories
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-65801
 Name   = Crash Bandicoot 5
@@ -20392,6 +20417,7 @@ Serial = SLPM-66419
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-J
 Compat = 1
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66420
 Name   = Front Mission 4 [Ultimate Hits]
@@ -20614,10 +20640,12 @@ Region = NTSC-J
 Serial = SLPM-66478
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc1of2]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66479
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc2of2]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66480
 Name   = Dragon Quest V - Bride of the Sky [Ultimate Hits]
@@ -21708,6 +21736,7 @@ Region = NTSC-J
 Serial = SLPM-66782
 Name   = Valkyrie Profile 2 - Silmeria [Ultimate Hits]
 Region = NTSC-J
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66783
 Name   = Idol Janshi Suchie-Pai 4 [Limited Edition]
@@ -38532,10 +38561,12 @@ Region = PAL-Unk
 Serial = SLES-82028
 Name   = Star Ocean 3 - Till the End of Time [Disc1of2]
 Region = PAL-E
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLES-82029
 Name   = Star Ocean 3 - Till the End of Time [Disc2of2]
 Region = PAL-E
+VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLES-82030
 Name   = Shadow Hearts - Covenant [Disc1of2]

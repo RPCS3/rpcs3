@@ -68,6 +68,15 @@ Pcsx2Config::GSOptions& SetGSConfig()
 	return const_cast<Pcsx2Config::GSOptions&>(EmuConfig.GS);
 }
 
+// Provides an accessor for quick modification of Gamefix options.
+// Used by loadGameSettings() to set gamefixes via database at game startup.
+Pcsx2Config::GamefixOptions& SetGameFixConfig()
+{
+	//DbgCon.WriteLn( "Direct modification of EmuConfig.Gamefixes detected" );
+	AffinityAssert_AllowFrom_MainUI();
+	return const_cast<Pcsx2Config::GamefixOptions&>(EmuConfig.Gamefixes);
+}
+
 ConsoleLogFilters& SetConsoleConfig()
 {
 	//DbgCon.WriteLn( "Direct modification of EmuConfig.Log detected" );
