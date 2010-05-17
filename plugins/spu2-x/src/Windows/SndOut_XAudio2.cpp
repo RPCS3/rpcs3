@@ -265,8 +265,11 @@ public:
 			XAUDIO2_DEVICE_DETAILS deviceDetails;
 			pXAudio2->GetDeviceDetails( 0, &deviceDetails );
 
+			// Defaults to Stereo
+			int speakers = 2;
+			// nChannels gives the current Windows' Speaker setup (6 if 5.1)
 			if( StereoExpansionEnabled )
-				deviceDetails.OutputFormat.Format.nChannels	= 6;
+				speakers = deviceDetails.OutputFormat.Format.nChannels;	
 
 			// Any windows driver should support stereo at the software level, I should think!
 			jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
@@ -274,14 +277,14 @@ public:
 			//
 			// Create a mastering voice
 			//
-			if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, deviceDetails.OutputFormat.Format.nChannels, SampleRate ) ) )
+			if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, speakers, SampleRate ) ) )
 			{
 				SysMessage( "Failed creating mastering voice: %#X\n", hr );
 				CoUninitialize();
 				return -1;
 			}
 
-			switch( deviceDetails.OutputFormat.Format.nChannels )
+			switch( speakers )
 			{
 				case 2:
 					ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
