@@ -53,7 +53,7 @@ bool dspPluginEnabled = false;
 int  dspPluginModule = 0;
 wchar_t dspPlugin[256];
 
-bool StereoExpansionEnabled = false;
+int numSpeakers = 0;
 
 /*****************************************************************************/
 
@@ -66,7 +66,7 @@ void ReadSettings()
 	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
-	StereoExpansionEnabled = CfgReadBool( L"OUTPUT", L"Enable_StereoExpansion", false );
+	numSpeakers = CfgReadInt( L"OUTPUT", L"XAudio2_SpeakerConfiguration", 0);
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
 
 	wchar_t omodid[128];
@@ -115,7 +115,7 @@ void WriteSettings()
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
 	CfgWriteBool(L"OUTPUT",L"Enable_Timestretch", timeStretchEnabled);
 	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
-	CfgWriteBool(L"OUTPUT",L"Enable_StereoExpansion", StereoExpansionEnabled);
+	CfgWriteInt(L"OUTPUT",L"XAudio2_SpeakerConfiguration", numSpeakers);
 
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
 	CfgWriteStr(L"WAVEOUT",L"Device",Config_WaveOut.Device);
@@ -157,6 +157,13 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"4X - Reverb Volume * 4" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"8X - Reverb Volume * 8" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_SETCURSEL,ReverbBoost,0 );
+			
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_RESETCONTENT,0,0 );
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_ADDSTRING,0,(LPARAM) L"Stereo (none, default)" );
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_ADDSTRING,0,(LPARAM) L"Quadrafonic" );
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_ADDSTRING,0,(LPARAM) L"Surround 5.1" );
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_ADDSTRING,0,(LPARAM) L"Surround 7.1" );			
+			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_SETCURSEL,numSpeakers,0 );
 
 			SendDialogMsg( hWnd, IDC_OUTPUT, CB_RESETCONTENT,0,0 );
 
@@ -181,7 +188,6 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
-			SET_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
 			SET_CHECK(IDC_TS_ENABLE,		timeStretchEnabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
@@ -202,7 +208,8 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 					Interpolation = (int)SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_GETCURSEL,0,0 );
 					ReverbBoost = (int)SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_GETCURSEL,0,0 );
-					OutputModule  = (int)SendDialogMsg( hWnd, IDC_OUTPUT, CB_GETCURSEL,0,0 );
+					OutputModule = (int)SendDialogMsg( hWnd, IDC_OUTPUT, CB_GETCURSEL,0,0 );
+					numSpeakers = (int)SendDialogMsg( hWnd, IDC_SPEAKERS, CB_GETCURSEL,0,0 );
 
 					WriteSettings();
 					EndDialog(hWnd,0);
@@ -238,7 +245,6 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
-				HANDLE_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
 				HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchEnabled);
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 				break;

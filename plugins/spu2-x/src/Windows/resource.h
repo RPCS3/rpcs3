@@ -25,6 +25,7 @@
 #define IDC_REVERB_BOOST                1012
 #define IDC_OUTPUT                      1013
 #define IDC_BUFFERS_SLIDER              1014
+#define IDC_SPEAKERS		            1015
 #define IDC_MSGKEY                      1020
 #define IDC_MSGDMA                      1021
 #define IDC_MSGADMA                     1022
@@ -44,7 +45,6 @@
 #define IDC_OVERLAP_SLIDER              1045
 #define IDC_MSG_PUBLIC_BUILD            1048
 #define IDC_XA2_TRIBLE_BUFFER           1050
-#define IDC_EXPANSION_ENABLE            1051
 #define IDC_LABEL_VERSION_INFO          1054
 #define IDC_LINK_WEBSITE                1055
 #define IDC_LINK_GOOGLECODE             1056

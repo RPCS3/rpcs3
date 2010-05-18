@@ -63,6 +63,7 @@ extern wchar_t RegDumpFileName[255];
 
 extern int Interpolation;
 extern int ReverbBoost;
+extern int numSpeakers;
 extern bool EffectsDisabled;
 
 extern u32 OutputModule;
@@ -75,7 +76,6 @@ extern wchar_t dspPlugin[];
 extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
-extern bool StereoExpansionEnabled;
 #endif
 
 namespace SoundtouchCfg

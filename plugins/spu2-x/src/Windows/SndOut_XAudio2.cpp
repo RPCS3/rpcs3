@@ -265,11 +265,19 @@ public:
 			XAUDIO2_DEVICE_DETAILS deviceDetails;
 			pXAudio2->GetDeviceDetails( 0, &deviceDetails );
 
-			// Defaults to Stereo
-			int speakers = 2;
-			// nChannels gives the current Windows' Speaker setup (6 if 5.1)
-			if( StereoExpansionEnabled )
-				speakers = deviceDetails.OutputFormat.Format.nChannels;	
+			// Stereo Expansion was planned to grab the currently configured number of
+			// Speakers from Windows's audio config.
+			// This doesn't always work though, so let it be a user configurable option.
+
+			int speakers;		
+			switch(numSpeakers) // speakers = (numSpeakers + 1) *2; ?
+			{
+				case 0: speakers = 2; break; // Stereo
+				case 1: speakers = 4; break; // Quadrafonic
+				case 2: speakers = 6; break; // Surround 5.1
+				case 3: speakers = 8; break; // Surround 7.1
+				default: speakers = 2;
+			}
 
 			// Any windows driver should support stereo at the software level, I should think!
 			jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
