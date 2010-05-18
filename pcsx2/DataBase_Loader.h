@@ -393,8 +393,22 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 		if (gameDB->keyExists("eeRoundMode")) { eeRM = gameDB->getInt("eeRoundMode"); rm=1; }
 		if (gameDB->keyExists("vuRoundMode")) { vuRM = gameDB->getInt("vuRoundMode"); rm=1; }
 		if (rm && eeRM<4 && vuRM<4) { 
-			Console.WriteLn("Game DataBase: Changing roundmodes!");
+			Console.WriteLn("Game DataBase: Changing roundmodes! [ee=%d] [vu=%d]", eeRM, vuRM);
 			SetCPUState(eeMX.SetRoundMode((SSE_RoundMode)eeRM), vuMX.SetRoundMode((SSE_RoundMode)vuRM));
+		}
+		if (gameDB->keyExists("eeClampMode")) {
+			int clampMode = gameDB->getInt("eeClampMode");
+			Console.WriteLn("Game DataBase: Changing EE/FPU clamp mode [mode=%d]", clampMode);
+			SetRecompilerConfig().fpuOverflow		= clampMode >= 1;
+			SetRecompilerConfig().fpuExtraOverflow	= clampMode >= 2;
+			SetRecompilerConfig().fpuFullMode		= clampMode >= 3;
+		}
+		if (gameDB->keyExists("vuClampMode")) {
+			int clampMode = gameDB->getInt("vuClampMode");
+			Console.WriteLn("Game DataBase: Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
+			SetRecompilerConfig().vuOverflow		= clampMode >= 1;
+			SetRecompilerConfig().vuExtraOverflow	= clampMode >= 2;
+			SetRecompilerConfig().vuSignOverflow	= clampMode >= 3;
 		}
 		checkGamefix(VuAddSubHack);
 		checkGamefix(VuClipFlagHack);

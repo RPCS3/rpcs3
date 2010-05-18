@@ -17,6 +17,8 @@
 -- You can use c++ style 1-line comments (//) or (--)
 -- All comments must be written in this header or they will not be
 -- saved properly by pcsx2's database writer.
+-- For gamefixes/roundmodes/clampmodes, pcsx2 will use the current user
+-- settings if the game database does not explicitly change the values.
 
 ---------------------------------------------
 -- Compatibility Status (Compat = n)
@@ -38,6 +40,17 @@
 -- 1 = Negative Infinity
 -- 2 = Positive Infinity
 -- 3 = Chop (Zero)
+
+---------------------------------------------
+-- Clamp Modes (eeClampMode = n and vuClampMode = n)
+---------------------------------------------
+-- The clamp modes are numerically based.
+-- eeClampMode refers to the EE's FPU co-processor
+-- vuClampMode refers to the VU's and COP2
+-- 0 = Disables clamping completely
+-- 1 = Clamp Normally (only clamp results)
+-- 2 = Clamp Extra (clamp results as well as operands)
+-- 3 = Full Clamping for FPU / Extra+Preserve Sign Clamping for VU
 
 ---------------------------------------------
 -- Game Fixes (gameFixName = 1)

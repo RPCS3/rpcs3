@@ -541,6 +541,7 @@ struct Pcsx2Config
 extern const Pcsx2Config EmuConfig;
 
 Pcsx2Config::GSOptions&			SetGSConfig();
+Pcsx2Config::RecompilerOptions& SetRecompilerConfig();
 Pcsx2Config::GamefixOptions&	SetGameFixConfig();
 ConsoleLogFilters&				SetConsoleConfig();
 TraceLogFilters&				SetTraceConfig();
