@@ -4,38 +4,38 @@
 
 EXPORTS
     ; Explicit exports can go here
-	PS2EgetLibType		@2
-	PS2EgetLibName		@3
-	PS2EgetLibVersion2	@4
-	GSinit		@5
-	GSopen		@6
-	GSclose		@7
-	GSshutdown		@8
-	GSvsync		@9
-	GSgifTransfer1		@10
-	GSgifTransfer2		@11
-	GSgifTransfer3		@12
-	GSgetLastTag		@13
-	GSgifSoftReset				@14
-	GSreadFIFO		@15
-	GSreadFIFO2		@16
-	GSkeyEvent		@17
+	PS2EgetLibType			@2
+	PS2EgetLibName			@3
+	PS2EgetLibVersion2		@4
+	GSinit					@5
+	GSopen					@6
+	GSclose					@7
+	GSshutdown				@8
+	GSvsync					@9
+	GSgifTransfer1			@10
+	GSgifTransfer2			@11
+	GSgifTransfer3			@12
+	GSgetLastTag			@13
+	GSgifSoftReset			@14
+	GSreadFIFO				@15
+	GSreadFIFO2				@16
+	GSkeyEvent				@17
 	GSchangeSaveState		@18
-	GSmakeSnapshot		@19
-	GSmakeSnapshot2		@20
-	GSirqCallback		@21
-	GSprintf		@22
-	GSsetBaseMem		@23
-	GSsetGameCRC		@24
-	GSsetFrameSkip		@25
+	GSmakeSnapshot			@19
+	GSmakeSnapshot2			@20
+	GSirqCallback			@21
+	GSprintf				@22
+	GSsetBaseMem			@23
+	GSsetGameCRC			@24
+	GSsetFrameSkip			@25
 	GSsetupRecording		@26
-	GSreset		@27
-	GSwriteCSR		@28
-	GSgetDriverInfo		@29
-	GSsetWindowInfo		@30
-	GSfreeze		@31
-	GSconfigure		@32
-	GSabout		@33
-	GStest		@34
+	GSreset					@27
+	GSwriteCSR				@28
+	GSgetDriverInfo			@29
+	GSsetWindowInfo			@30
+	GSfreeze				@31
+	GSconfigure				@32
+	GSabout					@33
+	GStest					@34
 
 
