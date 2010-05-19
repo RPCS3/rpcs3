@@ -37,34 +37,37 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	const CheckTextMess check_text[NUM_OF_GAME_FIXES] =
 	{
 		{
-			_("VU Add Hack - fixes Tri-Ace games boot crash (Enable IPU hack as well.)"),
+			_("VU Add Hack - Fixes Tri-Ace games boot crash."),
 			_("Games that need this hack to boot:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
 		},
 		{
-			_("VU Clip Flag Hack - for Persona games (SuperVU recompiler only!)"),
+			_("VU Clip Flag Hack - For Persona games (SuperVU recompiler only!)"),
 			wxEmptyString
 		},
 		{
-			_("FPU Compare Hack - for Digimon Rumble Arena 2."),
+			_("FPU Compare Hack - For Digimon Rumble Arena 2."),
 			wxEmptyString
 		},
 		{
-			_("FPU Multiply Hack - for Tales of Destiny."),
+			_("FPU Multiply Hack - For Tales of Destiny."),
 			wxEmptyString
 		},
 		{
-			_("FPU Negative Div Hack - for Gundam games."),
+			_("FPU Negative Div Hack - For Gundam games."),
 			wxEmptyString
 		},
 		{
-			_("VU XGkick Hack - for Erementar Gerad."),
+			_("VU XGkick Hack - For Erementar Gerad."),
 			wxEmptyString
 		},
 		{
-			_("EE timing hack / FFX videos fix - Multi purpose hack. Try if all else fails."),
+			_("FFX videos fix - Fixes bad graphics overlay in FFX videos."),
+			wxEmptyString
+		},
+		{
+			_("EE timing hack - Multi purpose hack. Try if all else fails."),
 			pxE( ".Tooltips:Gamefixes:EE Timing Hack",
 				L"Known to affect following games:\n"
-				L" * Final Fantasy 10 (Fixes FMV)\n"
 				L" * Digital Devil Saga (Fixes FMV and crashes)\n"
 				L" * SSX (Fixes bad graphics and crashes)\n"
 				L" * Resident Evil: Dead Aim (Causes garbled textures)"

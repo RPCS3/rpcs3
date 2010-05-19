@@ -258,6 +258,7 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( FpuNegDivHack );
 	IniBitBool( XgKickHack );
 	IniBitBool( IPUWaitHack );
+	IniBitBool( EETimingHack );
 }
 
 Pcsx2Config::Pcsx2Config()

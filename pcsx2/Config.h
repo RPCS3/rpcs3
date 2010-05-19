@@ -431,7 +431,8 @@ struct Pcsx2Config
 				FpuMulHack		:1,		// Tales of Destiny hangs.
 				FpuNegDivHack	:1,		// Gundam games messed up camera-view.
 				XgKickHack		:1,		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
-				IPUWaitHack     :1;
+				IPUWaitHack     :1,		// FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
+				EETimingHack	:1;		// General purpose timing hack.
 		BITFIELD_END
 
 		// all gamefixes are disabled by default.
@@ -559,7 +560,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().IsRecAvailable_IOP())
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define NUM_OF_GAME_FIXES 7
+#define NUM_OF_GAME_FIXES 8
 
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
@@ -568,6 +569,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_FPUNEGDIVHACK			(EmuConfig.Gamefixes.FpuNegDivHack) // Special Fix for Gundam games messed up camera-view.
 #define CHECK_XGKICKHACK			(EmuConfig.Gamefixes.XgKickHack) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
 #define CHECK_IPUWAITHACK			(EmuConfig.Gamefixes.IPUWaitHack) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
+#define CHECK_EETIMINGHACK			(EmuConfig.Gamefixes.EETimingHack) // Fix all scheduled events to happen in 1 cycle.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)
