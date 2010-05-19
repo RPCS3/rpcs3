@@ -373,12 +373,11 @@ static wxString compatToStringWX(int compat) {
 	}
 }
 
-#define checkGamefix(gFix) {									\
-	if (gameDB->keyExists(#gFix)) {								\
-		SetGameFixConfig().##gFix = gameDB->getBool(#gFix);		\
-		wxString sKey = L#gFix;									\
-		Console.WriteLn(L"Loading Gamefix: %s", sKey.c_str());	\
-	}															\
+#define checkGamefix(gFix) {										\
+	if (gameDB->keyExists(#gFix)) {									\
+		SetGameFixConfig().gFix = gameDB->getBool(#gFix);			\
+		Console.Write(L"Loading Gamefix:"); Console.WriteLn(#gFix);	\
+	}																\
 }
 
 // Load Game Settings found in database
