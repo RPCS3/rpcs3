@@ -65,6 +65,9 @@ struct ParsedAssignmentString
 	ParsedAssignmentString( const wxString& src );
 };
 
+extern wxString FastFormatString_Ascii(const char* fmt, va_list argptr);
+extern wxString FastFormatString_Unicode(const wxChar* fmt, va_list argptr);
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Custom internal sprintf functions, which are ASCII only (even in UNICODE builds)

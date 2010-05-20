@@ -86,7 +86,8 @@ void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 	#endif
 }
 
-Panels::McdConfigPanel_Standard::McdConfigPanel_Standard(wxWindow *parent) : _parent( parent )
+Panels::McdConfigPanel_Standard::McdConfigPanel_Standard(wxWindow *parent)
+	: _parent( parent )
 {
 	m_panel_cardinfo[0] = new MemoryCardInfoPanel( this, 0, 0 );
 	m_panel_cardinfo[1] = new MemoryCardInfoPanel( this, 1, 0 );
@@ -139,29 +140,43 @@ using namespace Panels;
 using namespace pxSizerFlags;
 
 Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
-	: BaseConfigurationDialog( parent, _("MemoryCard Settings - PCSX2"), wxGetApp().GetImgList_Config(), 600 )
+	: BaseConfigurationDialog( parent, _("MemoryCard Manager"), 600 )
 {
-	SetName( GetNameStatic() );
-
 	// [TODO] : Discover and use a good multitap port icon!  Possibility might be a
 	//   simple 3x memorycards icon, in cascading form.
 	//  (for now everything defaults to the redundant memorycard icon)
 
-	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
+	if( false ) //g_Conf->McdAdvancedMode )
+	{
+		m_panel_mcdlist	= new MemoryCardListPanel_Advanced( this );
 
-	AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
-	AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
-	AddPage<McdConfigPanel_Multitap>	( wxLt("Multitap 1"),	cfgid.MemoryCard );
-	AddPage<McdConfigPanel_Multitap2>	( wxLt("Multitap 2"),	cfgid.MemoryCard );
+		CreateListbook( wxGetApp().GetImgList_Config() );
+		
+		const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
+		AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
+		AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
+		AddPage<McdConfigPanel_Multitap>	( wxLt("Multitap 1"),	cfgid.MemoryCard );
+		AddPage<McdConfigPanel_Multitap2>	( wxLt("Multitap 2"),	cfgid.MemoryCard );
 
-	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
+		MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
 
-	m_panel_mcdlist = new MemoryCardListPanel( this );
+		AddListbook();
 
-	*this += StdPadding;
-	*this += new wxStaticLine( this )	| StdExpand();
-	*this += StdPadding;
-	*this += m_panel_mcdlist			| StdExpand();
+		*this += StdPadding;
+		*this += new wxStaticLine( this )	| StdExpand();
+		*this += StdPadding;
+		*this += m_panel_mcdlist			| StdExpand();
+	}
+	else
+	{
+		m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
+
+		*this	+= m_panel_mcdlist			| StdExpand();
+		//*this	+= StdPadding;
+		*this	+= new wxStaticLine( this )	| StdExpand();
+		*this	+= StdPadding;
+		*this	+= new McdConfigPanel_Toggles( this )	| StdExpand();
+	}
 
 	AddOkCancel();
 }

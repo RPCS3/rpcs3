@@ -167,12 +167,6 @@ void BaseApplicableConfigPanel::SetFocusToMe()
 	m_OwnerBook->SetSelection( m_OwnerPage );
 }
 
-BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEvt_ApplySettings, -1 )
-END_DECLARE_EVENT_TYPES()
-
-DEFINE_EVENT_TYPE( pxEvt_ApplySettings )
-
 void BaseApplicableConfigPanel::Init()
 {
 	// We need to bind to an event that occurs *after* all window and child
@@ -196,7 +190,6 @@ void BaseApplicableConfigPanel::Init()
 	AddPendingEvent( applyEvent );
 }
 
-//void BaseApplicableConfigPanel::OnCreateWindow( wxWindowCreateEvent& evt )
 void BaseApplicableConfigPanel::OnSettingsApplied( wxCommandEvent& evt )
 {
 	evt.Skip();

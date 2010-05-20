@@ -411,7 +411,7 @@ namespace Panels
 		virtual bool ValidateEnumerationStatus();
 	};
 
-	class MemoryCardListPanel;
+	class MemoryCardListPanel_Advanced;
 	class MemoryCardInfoPanel;
 
 	// --------------------------------------------------------------------------------------
@@ -420,7 +420,7 @@ namespace Panels
 	class MemoryCardsPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		MemoryCardListPanel*	m_panel_AllKnownCards;
+		MemoryCardListPanel_Advanced*	m_panel_AllKnownCards;
 		MemoryCardInfoPanel*	m_panel_cardinfo[2][4];
 		pxCheckBox*				m_check_Ejection;
 		pxCheckBox*				m_check_Multitap[2];

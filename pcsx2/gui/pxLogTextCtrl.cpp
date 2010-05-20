@@ -70,7 +70,7 @@ void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
 	// Windows has retarded console window update patterns.  This helps smarten them up.
 	int ctrly = GetSize().y;
 	int fonty;
-	GetTextExtent( L"blaH yeah", NULL, &fonty );
+	GetTextExtent( L"blH yh", NULL, &fonty );
 	m_win32_LinesPerPage	= (ctrly / fonty) + 1;
 	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.40;
 #endif

@@ -27,7 +27,7 @@ using namespace pxSizerFlags;
 using namespace Panels;
 
 
-enum McdColumnType
+enum McdColumnType_Advanced
 {
 	McdCol_Filename,
 	McdCol_Mounted,
@@ -35,11 +35,10 @@ enum McdColumnType
 	McdCol_Formatted,
 	McdCol_DateModified,
 	McdCol_DateCreated,
-	//McdCol_Path,
 	McdCol_Count
 };
 
-void MemoryCardListView::CreateColumns()
+void MemoryCardListView_Advanced::CreateColumns()
 {
 	struct ColumnInfo
 	{
@@ -62,33 +61,31 @@ void MemoryCardListView::CreateColumns()
 		InsertColumn( i, columns[i].name, columns[i].align, -1 );
 }
 
-void MemoryCardListView::SetCardCount( int length )
+void MemoryCardListView_Advanced::SetCardCount( int length )
 {
-	if( !m_CardsList ) length = 0;
+	if( !m_CardProvider ) length = 0;
 	SetItemCount( length );
 	Refresh();
 }
 
-MemoryCardListView::MemoryCardListView( wxWindow* parent )
-	: wxListView( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_VIRTUAL )
+MemoryCardListView_Advanced::MemoryCardListView_Advanced( wxWindow* parent )
+	: _parent( parent )
 {
-	m_CardsList = NULL;
 	CreateColumns();
-
-	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView::OnListDrag));
+	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView_Advanced::OnListDrag));
 }
 
-void MemoryCardListView::OnListDrag(wxListEvent& evt)
+void MemoryCardListView_Advanced::OnListDrag(wxListEvent& evt)
 {
 	evt.Skip();
 }
 
 // return the text for the given column of the given item
-wxString MemoryCardListView::OnGetItemText(long item, long column) const
+wxString MemoryCardListView_Advanced::OnGetItemText(long item, long column) const
 {
-	if( !m_CardsList ) return _parent::OnGetItemText(item, column);
+	if( !m_CardProvider ) return _parent::OnGetItemText(item, column);
 
-	const McdListItem& it( m_CardsList->Get(item) );
+	const McdListItem& it( m_CardProvider->GetCard(item) );
 
 	switch( column )
 	{
@@ -106,26 +103,26 @@ wxString MemoryCardListView::OnGetItemText(long item, long column) const
 		//case McdCol_Path:			return it.Filename.GetPath();
 	}
 
-	pxFail( "Unknown column index in MemoryCardListView -- returning an empty string." );
+	pxFail( "Unknown column index in MemoryCardListView_Advanced -- returning an empty string." );
 	return wxEmptyString;
 }
 
 // return the icon for the given item. In report view, OnGetItemImage will
 // only be called for the first column. See OnGetItemColumnImage for
 // details.
-int MemoryCardListView::OnGetItemImage(long item) const
+int MemoryCardListView_Advanced::OnGetItemImage(long item) const
 {
 	return _parent::OnGetItemImage( item );
 }
 
 // return the icon for the given item and column.
-int MemoryCardListView::OnGetItemColumnImage(long item, long column) const
+int MemoryCardListView_Advanced::OnGetItemColumnImage(long item, long column) const
 {
 	return _parent::OnGetItemColumnImage( item, column );
 }
 
 // return the attribute for the item (may return NULL if none)
-wxListItemAttr* MemoryCardListView::OnGetItemAttr(long item) const
+wxListItemAttr* MemoryCardListView_Advanced::OnGetItemAttr(long item) const
 {
 	wxListItemAttr* retval = _parent::OnGetItemAttr(item);
 	//const McdListItem& it( (*m_KnownCards)[item] );
@@ -145,57 +142,129 @@ MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot
 	SetMinSize( wxSize(128, 48) );
 
 	Connect( wxEVT_PAINT, wxPaintEventHandler(MemoryCardInfoPanel::paintEvent) );
+	
+	// [TODO] Add Unmount button.
 }
 
-static void DrawTextCentered( wxDC& dc, const wxString msg )
-{
-	int tWidth, tHeight;
-	dc.GetTextExtent( msg, &tWidth, &tHeight );
-	dc.DrawText( msg, (dc.GetSize().GetWidth() - tWidth) / 2, 0 );
-}
 
 void MemoryCardInfoPanel::paintEvent(wxPaintEvent & evt)
 {
-	// Collect Info and Format Strings
-	
-	wxString fname( m_filename.GetFullPath() );
-	if( fname.IsEmpty() ) fname = _("No Card (empty)");
+	wxPaintDC dc( this );
+	pxWindowTextWriter writer( dc );
+
+	writer.Bold();
 
 	// Create DC and plot some text (and images!)
-
-	wxPaintDC dc( this );
-	wxFont normal( dc.GetFont() );
-	wxFont bold( normal );
-	normal.SetWeight( wxNORMAL );
-	bold.SetWeight( wxBOLD );
-
-	dc.SetFont( bold );
-	DrawTextCentered( dc, fname );
+	writer.WriteLn( m_DisplayName );
 
 	//dc.DrawCircle( dc.GetSize().GetWidth()/2, 24, dc.GetSize().GetWidth()/4 );
+
+	if( !m_ErrorMessage.IsEmpty() )
+	{
+		writer.WriteLn();
+		writer.WriteLn( m_ErrorMessage );
+	}
+	else if( m_cardInfo )
+	{
+		writer.Normal();
+
+		writer.WriteLn( wxsFormat( L"%d MB (%s)",
+			m_cardInfo->SizeInMB,
+			m_cardInfo->IsFormatted ? _("Formatted") : _("Unformatted") )
+		);
+	}
+}
+
+void MemoryCardInfoPanel::Eject()
+{
+	m_cardInfo = NULL;
+	Refresh();
 }
 
 void MemoryCardInfoPanel::Apply()
 {
-	if( m_filename.IsDir() )
+	if( m_cardInfo && m_cardInfo->Filename.GetFullName().IsEmpty() ) m_cardInfo = NULL;
+	
+	if( m_cardInfo )
 	{
-		throw Exception::CannotApplySettings( this, 
-			wxLt("Cannot use or create memorycard: the filename is an existing directory."),
-			true
-		);
-	}
+		wxFileName absfile( Path::Combine( g_Conf->Folders.MemoryCards, m_cardInfo->Filename ) );
 
-	if( m_filename.FileExists() )
+		// The following checks should be theoretically unreachable, unless the user's
+		// filesystem is changed form under our nose.  A little validation goes a
+		// long way. :p
+		
+		if( absfile.IsDir() )
+		{
+			Eject();
+			throw Exception::CannotApplySettings( this, 
+				// Diagnostic
+				wxsFormat( L"Memorycard in Port %u, Slot %u conflicts with an existing directory.", m_port, m_slot ),
+				// Translated
+				wxsFormat(
+					_("Cannot use or create the memorycard in Port %u, Slot %u: the filename conflicts with an existing directory."),
+					m_port, m_slot
+				)
+			);
+		}
+
+		if( !absfile.FileExists() )
+		{
+			Eject();
+			throw Exception::CannotApplySettings( this, 
+				// Diagnostic
+				wxsFormat( L"Memorycard in Port %u, Slot %u is no longer valid.", m_port, m_slot ),
+				// Translated
+				wxsFormat(
+					_("The configured memorycard in Port %u, Slot %u no longer exists.  Please create a new memory card, or leave the slot unmounted."),
+					m_port, m_slot
+				)
+			);
+		}
+
+		g_Conf->Mcd[m_port][m_slot].Filename = m_cardInfo->Filename;
+		g_Conf->Mcd[m_port][m_slot].Enabled = true;
+	}
+	else
 	{
-		// TODO : Prompt user to create	non-existing files.  For now we just creat them implicitly.
-	}
+		// Card is either disabled or in an error state.
 
-	g_Conf->Mcd[m_port][m_slot].Filename = m_filename;
+		g_Conf->Mcd[m_port][m_slot].Enabled = false;
+		g_Conf->Mcd[m_port][m_slot].Filename.Clear();
+	}
 }
 
 void MemoryCardInfoPanel::AppStatusEvent_OnSettingsApplied()
 {
-	m_filename = g_Conf->Mcd[m_port][m_slot].Filename;
+	m_cardInfo = NULL;
+
+	// Collect Info and Format Strings
+
+	wxString fname( g_Conf->Mcd[m_port][m_slot].Filename.GetFullPath() );
+	if( fname.IsEmpty() )
+	{
+		m_DisplayName = _("No Card (empty)");
+		m_cardInfo = NULL;
+	}
+	else
+	{
+		wxFileName absfile( Path::Combine( g_Conf->Folders.MemoryCards, fname ) );
+		wxFileName relfile( fname );
+
+		if( !m_cardInfo )
+		{
+			m_cardInfo = new McdListItem();
+			if( !EnumerateMemoryCard( *m_cardInfo, absfile.GetFullPath() ) )
+			{
+				m_ErrorMessage = _("Read Error: Card is truncated or corrupted.");
+			}
+		}
+
+		absfile.Normalize();
+		relfile.Normalize();
+
+		m_DisplayName = ( absfile == relfile ) ? relfile.GetFullName() : relfile.GetFullPath();
+	}
+
 	Refresh();
 }
 
@@ -206,8 +275,7 @@ void MemoryCardInfoPanel::AppStatusEvent_OnSettingsApplied()
 Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	m_panel_AllKnownCards = new MemoryCardListPanel( this );
-
+	m_panel_AllKnownCards = new MemoryCardListPanel_Advanced( this );
 
 	for( uint port=0; port<2; ++port )
 	{
@@ -251,4 +319,3 @@ void Panels::MemoryCardsPanel::AppStatusEvent_OnSettingsApplied()
 		//m_panel_cardinfo[port][slot]->Enable( emuconf.MultitapEnabled(port) );
 	}
 }
-

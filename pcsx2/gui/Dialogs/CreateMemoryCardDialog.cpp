@@ -39,7 +39,7 @@ wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, ui
 	) );*/
 
 Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath )
-	: BaseApplicableDialog( parent, _("Create a new MemoryCard..."), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("Create a new MemoryCard..."), wxVERTICAL )
 {
 	m_idealWidth = 620;
 

@@ -36,10 +36,17 @@ static bool IsMcdFormatted( wxFFile& fhand )
 	return memcmp( formatted_string, dest, fmtstrlen ) == 0;
 }
 
-static bool EnumerateMemoryCard( McdListItem& dest, const wxString& filename )
+bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename )
 {
-	Console.WriteLn( filename.c_str() );
-	wxFFile mcdFile( filename );
+	dest.IsFormatted	= false;
+	dest.IsEnabled		= false;
+	dest.IsPresent		= false;
+
+	const wxString fullpath( filename.GetFullPath() );
+	if( !filename.FileExists() ) return false;
+
+	Console.WriteLn( fullpath );
+	wxFFile mcdFile( fullpath );
 	if( !mcdFile.IsOpened() ) return false;	// wx should log the error for us.
 	if( mcdFile.Length() < (1024*528) )
 	{
@@ -47,10 +54,12 @@ static bool EnumerateMemoryCard( McdListItem& dest, const wxString& filename )
 		return false;
 	}
 
+	dest.IsPresent		= true;
+	dest.IsEnabled		= true;
 	dest.Filename		= filename;
 	dest.SizeInMB		= (uint)(mcdFile.Length() / (1024 * 528 * 2));
 	dest.IsFormatted	= IsMcdFormatted( mcdFile );
-	wxFileName(filename).GetTimes( NULL, &dest.DateModified, &dest.DateCreated );
+	filename.GetTimes( NULL, &dest.DateModified, &dest.DateCreated );
 
 	return true;
 }
@@ -77,19 +86,55 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 	return pushed;
 }
 
+// =====================================================================================================
+//  BaseMcdListPanel (implementations)
+// =====================================================================================================
+Panels::BaseMcdListPanel::BaseMcdListPanel( wxWindow* parent )
+	: _parent( parent )
+{
+	m_FolderPicker = new DirPickerPanel( this, FolderId_MemoryCards,
+		//_("MemoryCard Search Path:"),				// static box label
+		_("Select folder with PS2 MemoryCards")		// dir picker popup label
+	);
+	
+	m_listview = NULL;
+	
+	m_btn_Refresh = new wxButton( this, wxID_ANY, _("Refresh list") );
+
+	Connect( m_btn_Refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(BaseMcdListPanel::OnRefresh) );
+}
+
+void Panels::BaseMcdListPanel::CreateLayout()
+{
+	if( m_listview ) m_listview->SetMinSize( wxSize( m_idealWidth, 140 ) );
+
+	wxBoxSizer& s_buttons(*new wxBoxSizer( wxHORIZONTAL ));
+	s_leftside_buttons	= new wxBoxSizer( wxHORIZONTAL );
+	s_rightside_buttons	= new wxBoxSizer( wxHORIZONTAL );
+
+	s_buttons += s_leftside_buttons		| pxAlignLeft;
+	s_buttons += pxStretchSpacer();
+	s_buttons += s_rightside_buttons	| pxAlignRight;
+
+	if( m_FolderPicker )	*this += m_FolderPicker | pxExpand;
+	if( m_listview )		*this += m_listview		| pxExpand;
+							*this += s_buttons		| pxExpand;
+
+	*s_leftside_buttons += m_btn_Refresh;
+}
 
 // =====================================================================================================
-//  MemoryCardListPanel
+//  MemoryCardListPanel_Advanced (implementations)
 // =====================================================================================================
-Panels::MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
-	: BaseSelectorPanel( parent )
+Panels::MemoryCardListPanel_Advanced::MemoryCardListPanel_Advanced( wxWindow* parent )
+	: _parent( parent )
 {
 	m_FolderPicker = new DirPickerPanel( this, FolderId_MemoryCards,
 		//_("MemoryCard Search Path:"),				// static box label
 		_("Select folder with PS2 MemoryCards")		// dir picker popup label
 	);
 
-	m_listview = new MemoryCardListView(this);
+	m_listview = new MemoryCardListView_Advanced(this);
 
 	wxButton* button_Create		= new wxButton(this, wxID_ANY, _("Create new card..."));
 
@@ -97,35 +142,22 @@ Panels::MemoryCardListPanel::MemoryCardListPanel( wxWindow* parent )
 	//       Sizer / Layout Section
 	// ------------------------------------
 
-	wxBoxSizer& s_buttons	(*new wxBoxSizer( wxHORIZONTAL ));
-	wxBoxSizer& s_leftside	(*new wxBoxSizer( wxHORIZONTAL ));
-	wxBoxSizer& s_rightside	(*new wxBoxSizer( wxHORIZONTAL ));
-
-	s_leftside	+= button_Create	| StdSpace();
-
-	s_buttons += s_leftside		| pxAlignLeft;
-	s_buttons += pxStretchSpacer();
-	s_buttons += s_rightside	| pxAlignRight;
-
-	*this += m_FolderPicker | pxExpand;
-	*this += m_listview		| pxExpand;
-	*this += s_buttons		| pxExpand;
-
-	m_listview->SetMinSize( wxSize( m_idealWidth, 120 ) );
+	CreateLayout();
+	*s_leftside_buttons	+= button_Create	| StdSpace();
 	
-	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListPanel::OnListDrag));
-	Connect( button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel::OnCreateNewCard));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListPanel_Advanced::OnListDrag));
+	Connect( button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Advanced::OnCreateNewCard));
 }
 
-void Panels::MemoryCardListPanel::Apply()
+void Panels::MemoryCardListPanel_Advanced::Apply()
 {
 }
 
-void Panels::MemoryCardListPanel::AppStatusEvent_OnSettingsApplied()
+void Panels::MemoryCardListPanel_Advanced::AppStatusEvent_OnSettingsApplied()
 {
 }
 
-bool Panels::MemoryCardListPanel::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
+bool Panels::MemoryCardListPanel_Advanced::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
 {
 	if( filenames.GetCount() == 1 && wxFileName(filenames[0]).IsDir() )
 	{
@@ -135,7 +167,7 @@ bool Panels::MemoryCardListPanel::OnDropFiles(wxCoord x, wxCoord y, const wxArra
 	return false;
 }
 
-bool Panels::MemoryCardListPanel::ValidateEnumerationStatus()
+bool Panels::MemoryCardListPanel_Advanced::ValidateEnumerationStatus()
 {
 	bool validated = true;
 
@@ -159,7 +191,7 @@ bool Panels::MemoryCardListPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
-void Panels::MemoryCardListPanel::DoRefresh()
+void Panels::MemoryCardListPanel_Advanced::DoRefresh()
 {
 	if( !m_KnownCards ) return;
 
@@ -188,12 +220,12 @@ void Panels::MemoryCardListPanel::DoRefresh()
 	//m_listview->SetCardCount( m_KnownCards->size() );
 }
 
-void Panels::MemoryCardListPanel::OnCreateNewCard(wxCommandEvent& evt)
+void Panels::MemoryCardListPanel_Advanced::OnCreateNewCard(wxCommandEvent& evt)
 {
 
 }
 
-void Panels::MemoryCardListPanel::OnListDrag(wxListEvent& evt)
+void Panels::MemoryCardListPanel_Advanced::OnListDrag(wxListEvent& evt)
 {
 	wxFileDataObject my_data;
 	my_data.AddFile( (*m_KnownCards)[m_listview->GetItemData(m_listview->GetFirstSelected())].Filename.GetFullPath() );
@@ -203,19 +235,218 @@ void Panels::MemoryCardListPanel::OnListDrag(wxListEvent& evt)
 	wxDragResult result = dragSource.DoDragDrop();
 }
 
-int Panels::MemoryCardListPanel::GetLength() const
+int Panels::MemoryCardListPanel_Advanced::GetLength() const
 {
 	return m_KnownCards ? m_KnownCards->size() : 0;
 }
 
-const McdListItem& Panels::MemoryCardListPanel::Get( int idx ) const
+const McdListItem& Panels::MemoryCardListPanel_Advanced::GetCard( int idx ) const
 {
 	pxAssume(!!m_KnownCards);
 	return (*m_KnownCards)[idx];
 }
 
-McdListItem& Panels::MemoryCardListPanel::Get( int idx )
+McdListItem& Panels::MemoryCardListPanel_Advanced::GetCard( int idx )
 {
 	pxAssume(!!m_KnownCards);
 	return (*m_KnownCards)[idx];
+}
+
+uint Panels::MemoryCardListPanel_Advanced::GetPort( int idx ) const
+{
+	pxAssume(!!m_KnownCards);
+	return (*m_KnownCards)[idx].Port;
+}
+
+uint Panels::MemoryCardListPanel_Advanced::GetSlot( int idx ) const
+{
+	pxAssume(!!m_KnownCards);
+	return (*m_KnownCards)[idx].Slot;
+}
+
+// =====================================================================================================
+//  MemoryCardListPanel_Simple (implementations)
+// =====================================================================================================
+Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent )
+	: _parent( parent )
+{
+	m_MultitapEnabled[0] = false;
+	m_MultitapEnabled[1] = false;
+
+	m_listview = new MemoryCardListView_Simple(this);
+
+	m_button_Create	= new wxButton(this, wxID_ANY, _("Create"));
+	m_button_Mount	= new wxButton(this, wxID_ANY, _("Mount"));
+
+	// ------------------------------------
+	//       Sizer / Layout Section
+	// ------------------------------------
+
+	CreateLayout();
+
+	*s_leftside_buttons	+= m_button_Create;
+	*s_leftside_buttons	+= 2;
+	*s_leftside_buttons	+= m_button_Mount;
+	//*s_leftside_buttons	+= 2;
+
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(MemoryCardListPanel_Simple::OnListDrag));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
+
+	Connect( m_button_Mount->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard));
+	Connect( m_button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateCard));
+}
+
+void Panels::MemoryCardListPanel_Simple::UpdateUI()
+{
+	if( !m_listview ) return;
+	
+	int sel = m_listview->GetFirstSelected();
+
+	/*if( !pxAssertDev( m_listview->GetItemData(sel), "Selected memorycard item data is NULL!" ) )
+	{
+		m_button_Create->Disable();
+		m_button_Mount->Disable();
+		return;
+	}*/
+
+	//const McdListItem& item( *(McdListItem*)m_listview->GetItemData(sel) );
+	const McdListItem& item( m_Cards[GetPort(sel)][GetSlot(sel)] );
+
+	m_button_Create->SetLabel( item.IsPresent ? _("Delete") : _("Create") );
+	pxSetToolTip( m_button_Create,
+		item.IsPresent
+			? _("Deletes the existing MemoryCard from disk (all contents are lost)." )
+			: _("Creates a new MemoryCard in the empty slot." )
+	);
+
+	m_button_Mount->Enable( item.IsPresent );
+	m_button_Mount->SetLabel( item.IsEnabled ? _("Disable") : _("Enable") );
+	pxSetToolTip( m_button_Mount,
+		item.IsEnabled
+			? _("Disables the selected MemoryCard, so that it will not be seen by games or BIOS.")
+			: _("Mounts the selected MemoryCard, so that games can see it again.")
+	);
+
+}
+
+void Panels::MemoryCardListPanel_Simple::Apply()
+{
+}
+
+void Panels::MemoryCardListPanel_Simple::AppStatusEvent_OnSettingsApplied()
+{
+}
+
+bool Panels::MemoryCardListPanel_Simple::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
+{
+	if( filenames.GetCount() == 1 && wxFileName(filenames[0]).IsDir() )
+	{
+		m_FolderPicker->SetPath( filenames[0] );
+		return true;
+	}
+	return false;
+}
+
+static wxString GetAutoMcdName(uint port, uint slot)
+{
+	if( slot > 0 )
+		return wxsFormat( L"mcd-port%u-slot%02u.ps2", port+1, slot+1 );
+	else
+		return wxsFormat( L"Mcd%03u.ps2", port+1 );
+}
+
+bool Panels::MemoryCardListPanel_Simple::ValidateEnumerationStatus()
+{
+	if( m_listview ) m_listview->SetInterface( NULL );
+	return false;
+}
+
+void Panels::MemoryCardListPanel_Simple::DoRefresh()
+{
+	for( uint port=0; port<2; ++port )
+	{
+		for( uint slot=0; slot<4; ++slot )
+		{
+			wxFileName fullpath( m_FolderPicker->GetPath() + GetAutoMcdName(port,slot) );
+			EnumerateMemoryCard( m_Cards[port][slot], fullpath );
+
+			if( (slot > 0) && !m_MultitapEnabled[port] )
+				m_Cards[port][slot].IsEnabled = false;
+		}
+	}
+	
+	if( m_listview ) m_listview->SetInterface( this );
+}
+
+void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
+{
+
+}
+
+void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
+{
+
+}
+
+void Panels::MemoryCardListPanel_Simple::OnListDrag(wxListEvent& evt)
+{
+	wxFileDataObject my_data;
+	/*my_data.AddFile( (*m_KnownCards)[m_listview->GetItemData(m_listview->GetFirstSelected())].Filename.GetFullPath() );
+
+	wxDropSource dragSource( m_listview );
+	dragSource.SetData( my_data );
+	wxDragResult result = dragSource.DoDragDrop();*/
+}
+
+void Panels::MemoryCardListPanel_Simple::OnListSelectionChanged(wxListEvent& evt)
+{
+	UpdateUI();
+}
+
+// Interface Implementation for IMcdList
+int Panels::MemoryCardListPanel_Simple::GetLength() const
+{
+	uint baselen = 2;
+	if( m_MultitapEnabled[0] ) baselen += 3;
+	if( m_MultitapEnabled[1] ) baselen += 3;
+	return baselen;
+}
+
+const McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx ) const
+{
+	return m_Cards[GetPort(idx)][GetSlot(idx)];
+}
+
+McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
+{
+	return m_Cards[GetPort(idx)][GetSlot(idx)];
+}
+
+uint Panels::MemoryCardListPanel_Simple::GetPort( int idx ) const
+{
+	if( !m_MultitapEnabled[0] && !m_MultitapEnabled[1] )
+	{
+		pxAssume( idx < 2 );
+		return idx;
+	}
+
+	if( !m_MultitapEnabled[0] )
+		return (idx==0) ? 0 : 1;
+	else
+		return idx / 4;
+}
+
+uint Panels::MemoryCardListPanel_Simple::GetSlot( int idx ) const
+{
+	if( !m_MultitapEnabled[0] && !m_MultitapEnabled[1] )
+	{
+		pxAssume( idx < 2 );
+		return 0;
+	}
+
+	if( !m_MultitapEnabled[0] )
+		return (idx==0) ? 0 : (idx-1);
+	else
+		return idx & 3;
 }

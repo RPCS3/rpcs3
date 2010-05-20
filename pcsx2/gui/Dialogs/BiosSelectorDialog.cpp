@@ -30,8 +30,6 @@ using namespace pxSizerFlags;
 Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent )
 	: BaseApplicableDialog( parent, _("BIOS Selector"), wxVERTICAL )
 {
-	SetName( GetNameStatic() );
-
 	m_idealWidth = 500;
 
 	m_selpan = new Panels::BiosSelectorPanel( this );

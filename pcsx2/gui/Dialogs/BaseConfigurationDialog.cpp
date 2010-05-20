@@ -28,6 +28,9 @@
 #include <wx/filepicker.h>
 #include <wx/listbook.h>
 
+DEFINE_EVENT_TYPE( pxEvt_OnWindowCreated )
+DEFINE_EVENT_TYPE( pxEvt_ApplySettings )
+
 using namespace Panels;
 
 // configure the orientation of the listbox based on the platform
@@ -38,33 +41,63 @@ using namespace Panels;
 	static const int s_orient = wxBK_LEFT;
 #endif
 
-IMPLEMENT_DYNAMIC_CLASS(Dialogs::BaseApplicableDialog, wxDialogWithHelpers)
+IMPLEMENT_DYNAMIC_CLASS(BaseApplicableDialog, wxDialogWithHelpers)
 
-Dialogs::BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title )
+BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title )
 	: wxDialogWithHelpers( parent, title, false )
 {
+	Init();
 }
 
-Dialogs::BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title, wxOrientation sizerOrient )
+BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title, wxOrientation sizerOrient )
 	: wxDialogWithHelpers( parent, title, sizerOrient )
 {
+	Init();
 }
 
-Dialogs::BaseApplicableDialog::~BaseApplicableDialog() throw()
+BaseApplicableDialog::~BaseApplicableDialog() throw()
 {
 	m_ApplyState.DoCleanup();
 }
 
-Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, const wxString& title, wxImageList& bookicons, int idealWidth )
-	: _parent( parent, title, wxVERTICAL )
-	, m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
+wxString BaseApplicableDialog::GetDialogName() const
 {
-	m_idealWidth = idealWidth;
+	pxFailDev( "This class must implement GetDialogName!" );
+	return L"Unnamed";
+}
 
-	m_listbook.SetImageList( &bookicons );
-	m_ApplyState.StartBook( &m_listbook );
 
-	*this += m_listbook		| pxExpand.Border( wxLEFT | wxRIGHT, 2 );
+void BaseApplicableDialog::Init()
+{
+	Connect( pxEvt_OnWindowCreated,	wxCommandEventHandler	(BaseApplicableDialog::OnWindowCreated) );
+	Connect( pxEvt_ApplySettings,	wxCommandEventHandler	(BaseApplicableDialog::OnSettingsApplied) );
+
+	wxCommandEvent applyEvent( pxEvt_ApplySettings );
+	applyEvent.SetId( GetId() );
+	AddPendingEvent( applyEvent );
+}
+
+void BaseApplicableDialog::OnSettingsApplied( wxCommandEvent& evt )
+{
+	evt.Skip();
+	if( evt.GetId() == GetId() ) AppStatusEvent_OnSettingsApplied();
+}
+
+void BaseApplicableDialog::OnWindowCreated( wxCommandEvent& evt )
+{
+	evt.Skip();
+	if( evt.GetId() == GetId() ) SetName( L"Dialog:" + GetDialogName() );
+}
+
+
+// --------------------------------------------------------------------------------------
+//  BaseConfigurationDialog  Implementations
+// --------------------------------------------------------------------------------------
+Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, const wxString& title, int idealWidth )
+	: _parent( parent, title, wxVERTICAL )
+{
+	m_idealWidth	= idealWidth;
+	m_listbook		= NULL;
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnCancel_Click ) );
@@ -92,6 +125,19 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	ConnectSomethingChanged( SPINCTRL_UPDATED );
 	ConnectSomethingChanged( SLIDER_UPDATED );
 	ConnectSomethingChanged( DIRPICKER_CHANGED );
+}
+
+void Dialogs::BaseConfigurationDialog::AddListbook( wxSizer* sizer )
+{
+	if( !sizer ) sizer = GetSizer();
+	sizer += m_listbook	| pxExpand.Border( wxLEFT | wxRIGHT, 2 );
+}
+
+void Dialogs::BaseConfigurationDialog::CreateListbook( wxImageList& bookicons )
+{
+	m_listbook = new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient );
+	m_listbook->SetImageList( &bookicons );
+	m_ApplyState.StartBook( m_listbook );
 }
 
 void Dialogs::BaseConfigurationDialog::AddOkCancel( wxSizer* sizer )
@@ -131,7 +177,7 @@ void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 	if( m_ApplyState.ApplyAll() )
 	{
 		FindWindow( wxID_APPLY )->Disable();
-		GetConfSettingsTabName() = m_labels[m_listbook.GetSelection()];
+		if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 		AppSaveSettings();
 		evt.Skip();
 	}
@@ -140,7 +186,7 @@ void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 void Dialogs::BaseConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
 {
 	evt.Skip();
-	GetConfSettingsTabName() = m_labels[m_listbook.GetSelection()];
+	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 }
 
 void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
@@ -148,7 +194,7 @@ void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 	if( m_ApplyState.ApplyAll() )
 		FindWindow( wxID_APPLY )->Disable();
 
-	GetConfSettingsTabName() = m_labels[m_listbook.GetSelection()];
+	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 	AppSaveSettings();
 }
 
@@ -164,8 +210,9 @@ void Dialogs::BaseConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 	memDC.Blit( wxPoint(), dcsize, &dc, wxPoint() );
 	}
 
+	wxString pagename( m_listbook ? (L"_" + m_listbook->GetPageText( m_listbook->GetSelection() )) : wxString() );
 	wxString filenameDefault;
-	filenameDefault.Printf( L"pcsx2_settings_%s.png", m_listbook.GetPageText( m_listbook.GetSelection() ).c_str() );
+	filenameDefault.Printf( L"pcsx2_%s%s.png", GetDialogName().c_str(), pagename.c_str() );
 	filenameDefault.Replace( L"/", L"-" );
 
 	wxString filename( wxFileSelector( _("Save dialog screenshots to..."), g_Conf->Folders.Snapshots.ToString(),

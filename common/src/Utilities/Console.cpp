@@ -281,141 +281,6 @@ const IConsoleWriter ConsoleWriter_wxError =
 	0,		// instance-level indentation (should always be 0)
 };
 
-// Sanity check: truncate strings if they exceed 512k in length.  Anything like that
-// is either a bug or really horrible code that needs to be stopped before it causes
-// system deadlock.
-static const int MaxFormattedStringLength = 0x80000;
-
-template< typename CharType >
-class FormatBuffer : public Mutex
-{
-public:
-	bool&				clearbit;
-	SafeArray<CharType>	buffer;
-	wxMBConvUTF8		ConvUTF8;
-
-	FormatBuffer( bool& bit_to_clear_on_destruction )
-		: clearbit( bit_to_clear_on_destruction )
-		, buffer( 4096, wxsFormat( L"%s Format Buffer", (sizeof(CharType)==1) ? "Ascii" : "Unicode" ) )
-	{
-	}
-
-	virtual ~FormatBuffer() throw()
-	{
-		clearbit = true;
-		Wait();		// lock the mutex, just in case.
-	}
-
-};
-
-static bool ascii_buffer_is_deleted = false;
-static bool unicode_buffer_is_deleted = false;
-
-static FormatBuffer<char>	ascii_buffer( ascii_buffer_is_deleted );
-static FormatBuffer<wxChar>	unicode_buffer( unicode_buffer_is_deleted );
-
-static void format_that_ascii_mess( SafeArray<char>& buffer, const char* fmt, va_list argptr )
-{
-
-	while( true )
-	{
-		int size = buffer.GetLength();
-		int len = vsnprintf(buffer.GetPtr(), size, fmt, argptr);
-
-		// some implementations of vsnprintf() don't NUL terminate
-		// the string if there is not enough space for it so
-		// always do it manually
-		buffer[size-1] = '\0';
-
-		if( size >= MaxFormattedStringLength ) break;
-
-		// vsnprintf() may return either -1 (traditional Unix behavior) or the
-		// total number of characters which would have been written if the
-		// buffer were large enough (newer standards such as Unix98)
-
-		if ( len < 0 )
-			len = size + (size/4);
-
-		if ( len < size ) break;
-		buffer.ExactAlloc( len + 1 );
-	};
-
-	// performing an assertion or log of a truncated string is unsafe, so let's not; even
-	// though it'd be kinda nice if we did.
-}
-
-static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* fmt, va_list argptr)
-{
-	while( true )
-	{
-		int size = buffer.GetLength();
-		int len = wxVsnprintf(buffer.GetPtr(), size, fmt, argptr);
-
-		// some implementations of vsnprintf() don't NUL terminate
-		// the string if there is not enough space for it so
-		// always do it manually
-		buffer[size-1] = L'\0';
-
-		if( size >= MaxFormattedStringLength ) break;
-
-		// vsnprintf() may return either -1 (traditional Unix behavior) or the
-		// total number of characters which would have been written if the
-		// buffer were large enough (newer standards such as Unix98)
-
-		if ( len < 0 )
-			len = size + (size/4);
-
-		if ( len < size ) break;
-		buffer.ExactAlloc( len + 1 );
-	};
-
-	// performing an assertion or log of a truncated string is unsafe, so let's not; even
-	// though it'd be kinda nice if we did.
-}
-
-static wxString ascii_format_string(const char* fmt, va_list argptr)
-{
-	if( ascii_buffer_is_deleted )
-	{
-		// This means that the program is shutting down and the C++ destructors are
-		// running, randomly deallocating static variables from existence.  We handle it
-		// as gracefully as possible by allocating local vars to do our bidding (slow, but
-		// ultimately necessary!)
-	
-		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
-		format_that_ascii_mess( localbuf, fmt, argptr );
-		return fromUTF8( localbuf.GetPtr() );
-	}
-	else
-	{
-		// This is normal operation.  The static buffers are available for use, and we use
-		// them for sake of efficiency (fewer heap allocs, for sure!)
-
-		ScopedLock locker( ascii_buffer );
-		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
-		return fromUTF8( ascii_buffer.buffer.GetPtr() );
-	}
-}
-
-
-static wxString unicode_format_string(const wxChar* fmt, va_list argptr)
-{
-	// See above for the explanation on the _is_deleted flags.
-	
-	if( unicode_buffer_is_deleted )
-	{
-		SafeArray<wxChar> localbuf( 4096, L"Temporary Unicode Formatting Buffer" );
-		format_that_unicode_mess( localbuf, fmt, argptr );
-		return localbuf.GetPtr();
-	}
-	else
-	{
-		ScopedLock locker( unicode_buffer );
-		format_that_unicode_mess( unicode_buffer.buffer, fmt, argptr );
-		return unicode_buffer.buffer.GetPtr();
-	}
-}
-
 // =====================================================================================================
 //  IConsole Interfaces
 // =====================================================================================================
@@ -494,7 +359,7 @@ bool IConsoleWriter::Write( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( ascii_format_string(fmt, args) );
+	DoWrite( FastFormatString_Ascii(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -507,7 +372,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( ascii_format_string(fmt, args) );
+	DoWrite( FastFormatString_Ascii(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -519,7 +384,7 @@ bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( ascii_format_string(fmt, args), conlog_Indent ) );
+	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -531,7 +396,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( ascii_format_string(fmt, args), conlog_Indent ) );
+	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -544,7 +409,7 @@ bool IConsoleWriter::Error( const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( ascii_format_string(fmt, args) ) );
+	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args) ) );
 	va_end(args);
 
 	return false;
@@ -557,7 +422,7 @@ bool IConsoleWriter::Warning( const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( ascii_format_string(fmt, args) ) );
+	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args) ) );
 	va_end(args);
 
 	return false;
@@ -573,7 +438,7 @@ bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( unicode_format_string( fmt, args ) );
+	DoWrite( FastFormatString_Unicode( fmt, args ) );
 	va_end(args);
 
 	return false;
@@ -586,7 +451,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( unicode_format_string( fmt, args ) );
+	DoWrite( FastFormatString_Unicode( fmt, args ) );
 	va_end(args);
 
 	return false;
@@ -598,7 +463,7 @@ bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( unicode_format_string( fmt, args ), conlog_Indent ) );
+	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -611,7 +476,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) cons
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( unicode_format_string( fmt, args ), conlog_Indent ) );
+	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -624,7 +489,7 @@ bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( unicode_format_string( fmt, args ) ) );
+	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ) ) );
 	va_end(args);
 
 	return false;
@@ -637,7 +502,7 @@ bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( unicode_format_string( fmt, args ) ) );
+	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ) ) );
 	va_end(args);
 
 	return false;
@@ -653,7 +518,7 @@ bool IConsoleWriter::WriteFromStdout( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( ascii_format_string(fmt, args) );
+	DoWrite( FastFormatString_Ascii(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -666,7 +531,7 @@ bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... 
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( ascii_format_string(fmt, args) );
+	DoWrite( FastFormatString_Ascii(fmt, args) );
 	va_end(args);
 
 	return false;

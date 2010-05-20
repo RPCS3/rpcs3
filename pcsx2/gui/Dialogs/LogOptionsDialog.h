@@ -32,7 +32,8 @@ public:
 	LogOptionsDialog( wxWindow* parent=NULL );
 	virtual ~LogOptionsDialog() throw() { }
 
-	static const wxChar* GetNameStatic() { return L"Dialog:TraceLogSettings"; }
+	static wxString GetNameStatic() { return L"TraceLogSettings"; }
+	wxString GetDialogName() const { return GetNameStatic(); }
 
 protected:
 	void OnOk_Click( wxCommandEvent& evt );

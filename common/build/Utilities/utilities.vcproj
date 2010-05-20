@@ -212,6 +212,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\FastFormatString.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\HashTools.cpp"
 				>
 			</File>
@@ -261,6 +265,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\Utilities\pxStaticText.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\pxWindowTextWriter.cpp"
 				>
 			</File>
 			<File

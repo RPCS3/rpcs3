@@ -50,7 +50,7 @@ ConfigOverrides			OverrideOptions;
 template<typename DialogType>
 int AppOpenModalDialog( wxWindow* parent=NULL )
 {
-	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
+	if( wxWindow* window = wxFindWindowByName( L"Dialog:" + DialogType::GetNameStatic() ) )
 	{
 		window->SetFocus();
 		if( wxDialog* dialog = wxDynamicCast( window, wxDialog ) )

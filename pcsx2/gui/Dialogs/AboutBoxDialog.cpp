@@ -53,8 +53,6 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
 	)
 {
-	SetName( GetNameStatic() );
-
 	static const wxString LabelAuthors = fromUTF8(
 		"Developers"
 		"\n\n"

@@ -28,10 +28,9 @@
 using namespace Panels;
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), wxGetApp().GetImgList_Config(), 600 )
+	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), 600 )
 {
-	SetName( GetNameStatic() );
-
+	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
 	AddPage<CpuPanelEE>			( wxLt("EE/IOP"),		cfgid.Cpu );
@@ -43,14 +42,14 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 
 	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
 
+	AddListbook();
 	AddOkCancel();
 }
 
 Dialogs::AppConfigDialog::AppConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("Application Settings - PCSX2"), wxGetApp().GetImgList_Config(), 600 )
+	: BaseConfigurationDialog( parent, _("Application Settings - PCSX2"),  600 )
 {
-	SetName( GetNameStatic() );
-
+	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
 	AddPage<GSWindowSettingsPanel>	( wxLt("GS Window"),	cfgid.Paths );
@@ -58,5 +57,6 @@ Dialogs::AppConfigDialog::AppConfigDialog(wxWindow* parent)
 
 	MSW_ListView_SetIconSpacing( m_listbook, GetClientSize().GetWidth() );
 
+	AddListbook();
 	AddOkCancel();
 }

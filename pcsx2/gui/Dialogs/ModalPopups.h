@@ -87,7 +87,8 @@ namespace Dialogs
 		AboutBoxDialog( wxWindow* parent=NULL );
 		virtual ~AboutBoxDialog() throw() {}
 
-		static const wxChar* GetNameStatic() { return L"Dialog:AboutBox"; }
+		static wxString GetNameStatic() { return L"AboutBox"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
 	};
 
 

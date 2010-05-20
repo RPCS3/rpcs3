@@ -639,7 +639,7 @@ DECLARE_APP(Pcsx2App)
 template<typename DialogType>
 void AppOpenDialog( wxWindow* parent=NULL )
 {
-	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
+	if( wxWindow* window = wxFindWindowByName( L"Dialog:" + DialogType::GetNameStatic() ) )
 		window->SetFocus();
 	else
 		(new DialogType( parent ))->Show();

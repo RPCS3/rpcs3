@@ -60,6 +60,13 @@ void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width )
 #endif
 }
 
+void MSW_ListView_SetIconSpacing( wxListbook* listbook, int width )
+{
+	if( listbook == NULL ) return;
+	MSW_ListView_SetIconSpacing( *listbook, width );
+}
+
+
 #ifdef __WXMSW__
 WXLRESULT GSPanel::MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam)
 {

@@ -456,6 +456,81 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
+//  pxWindowTextWriter
+// --------------------------------------------------------------------------------------
+class pxWindowTextWriter
+{
+protected:
+	wxDC&		m_dc;
+
+	wxAlignment	m_align;
+	wxPoint		m_curpos;
+	int			m_leading;
+
+	virtual void _DoWriteLn( const wxChar* msg );
+	void _DoWrite( const wxChar* msg );
+
+public:
+	pxWindowTextWriter( wxDC& dc )
+		: m_dc( dc )
+	{
+		m_curpos = wxPoint();
+		m_align = wxALIGN_CENTER;
+		m_leading = 2;
+		
+		OnFontChanged();	
+	}
+
+	virtual ~pxWindowTextWriter() throw()
+	{
+	
+	}
+	
+	virtual void OnFontChanged();
+
+	pxWindowTextWriter& WriteLn();
+	pxWindowTextWriter& WriteLn( const wxChar* fmt, ... );
+	pxWindowTextWriter& SetFont( const wxFont& font );
+	pxWindowTextWriter& Align( const wxAlignment& align );
+		
+	pxWindowTextWriter& SetLeading( int lead )
+	{
+		m_leading = lead;
+		return *this;
+	}
+
+	pxWindowTextWriter& SetWeight( int weight );
+	pxWindowTextWriter& SetStyle( int style );
+	pxWindowTextWriter& Normal();
+
+	pxWindowTextWriter& Bold()
+	{
+		return SetWeight(wxBOLD);
+	}
+
+	pxWindowTextWriter& Italic()
+	{
+		return SetStyle(wxITALIC);
+	}
+
+	pxWindowTextWriter& SetPos( const wxPoint& pos );
+	pxWindowTextWriter& MovePos( const wxSize& delta );
+
+	pxWindowTextWriter& SetPos( int xpos, int ypos )
+	{
+		return SetPos( wxPoint(xpos,ypos) );
+	}
+
+	pxWindowTextWriter& MovePos( int xdelta, int ydelta )
+	{
+		return MovePos( wxSize(xdelta, ydelta) );
+	}
+
+	pxWindowTextWriter& SetY( int ypos );
+	pxWindowTextWriter& MoveY( int ydelta );
+};
+
+// --------------------------------------------------------------------------------------
 //  MoreStockCursors
 // --------------------------------------------------------------------------------------
 // Because (inexplicably) the ArrowWait cursor isn't in wxWidgets stock list.

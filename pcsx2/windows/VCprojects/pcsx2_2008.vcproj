@@ -2666,6 +2666,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Panels\MemoryCardListView.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Panels\MemoryCardPanels.h"
 					>
 				</File>

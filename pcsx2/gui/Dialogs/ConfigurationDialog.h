@@ -25,27 +25,13 @@
 namespace Panels
 {
 	class BaseSelectorPanel;
-	class MemoryCardListPanel;
+	class MemoryCardListPanel_Advanced;
+	class McdConfigPanel_Toggles;
+	class BaseMcdListPanel;
 }
 
 namespace Dialogs
 {
-	class BaseApplicableDialog : public wxDialogWithHelpers, public IApplyState
-	{
-		DECLARE_DYNAMIC_CLASS_NO_COPY(BaseApplicableDialog)
-
-	public:
-		BaseApplicableDialog() {}
-
-	protected:
-		BaseApplicableDialog(wxWindow* parent, const wxString& title );
-		BaseApplicableDialog(wxWindow* parent, const wxString& title, wxOrientation sizerOrient );
-
-	public:
-		virtual ~BaseApplicableDialog() throw();
-		//ApplyStateStruct& GetApplyState() { return m_ApplyState; }
-	};
-
 	// --------------------------------------------------------------------------------------
 	//  BaseConfigurationDialog
 	// --------------------------------------------------------------------------------------
@@ -54,15 +40,17 @@ namespace Dialogs
 		typedef BaseApplicableDialog _parent;
 	
 	protected:
-		wxListbook&			m_listbook;
+		wxListbook*			m_listbook;
 		wxArrayString		m_labels;
 
 	public:
 		virtual ~BaseConfigurationDialog() throw();
-		BaseConfigurationDialog(wxWindow* parent, const wxString& title, wxImageList& bookicons, int idealWidth);
+		BaseConfigurationDialog(wxWindow* parent, const wxString& title, int idealWidth);
 
 	public:
 		void AddOkCancel( wxSizer* sizer=NULL );
+		void AddListbook( wxSizer* sizer=NULL );
+		void CreateListbook( wxImageList& bookicons );
 
 		template< typename T >
 		void AddPage( const char* label, int iconid );
@@ -86,7 +74,8 @@ namespace Dialogs
 	public:
 		virtual ~SysConfigDialog() throw() {}
 		SysConfigDialog(wxWindow* parent=NULL);
-		static const wxChar* GetNameStatic() { return L"Dialog:CoreSettings"; }
+		static wxString GetNameStatic() { return L"CoreSettings"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
@@ -97,15 +86,16 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	class McdConfigDialog : public BaseConfigurationDialog
 	{
-		typedef BaseApplicableDialog _parent;
+		typedef BaseConfigurationDialog _parent;
 
 	protected:
-		Panels::MemoryCardListPanel*	m_panel_mcdlist;
+		Panels::BaseMcdListPanel*	m_panel_mcdlist;
 
 	public:
 		virtual ~McdConfigDialog() throw() {}
 		McdConfigDialog(wxWindow* parent=NULL);
-		static const wxChar* GetNameStatic() { return L"Dialog:MemoryCardSettings"; }
+		static wxString GetNameStatic() { return L"McdConfig"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
 
 		virtual bool Show( bool show=true );
 		virtual int ShowModal();
@@ -124,7 +114,8 @@ namespace Dialogs
 	public:
 		virtual ~AppConfigDialog() throw() {}
 		AppConfigDialog(wxWindow* parent=NULL);
-		static const wxChar* GetNameStatic() { return L"Dialog:AppSettings"; }
+		static wxString GetNameStatic() { return L"AppSettings"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->AppSettingsTabName; }
@@ -144,7 +135,8 @@ namespace Dialogs
 		virtual ~BiosSelectorDialog()  throw() {}
 		BiosSelectorDialog( wxWindow* parent=NULL );
 
-		static const wxChar* GetNameStatic() { return L"Dialog:BiosSelector"; }
+		static wxString GetNameStatic() { return L"BiosSelector"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
 
 		virtual bool Show( bool show=true );
 		virtual int ShowModal();
@@ -157,7 +149,7 @@ namespace Dialogs
 	// --------------------------------------------------------------------------------------
 	//  CreateMemoryCardDialog
 	// --------------------------------------------------------------------------------------
-	class CreateMemoryCardDialog : public BaseApplicableDialog
+	class CreateMemoryCardDialog : public wxDialogWithHelpers
 	{
 	protected:
 		wxFilePickerCtrl*	m_filepicker;
@@ -170,8 +162,6 @@ namespace Dialogs
 	public:
 		virtual ~CreateMemoryCardDialog()  throw() {}
 		CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );
-
-		static const wxChar* GetNameStatic() { return L"Dialog:CreateMemoryCard"; }
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );

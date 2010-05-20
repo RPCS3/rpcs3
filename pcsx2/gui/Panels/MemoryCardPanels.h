@@ -25,27 +25,43 @@
 // --------------------------------------------------------------------------------------
 struct McdListItem
 {
-	uint		SizeInMB;		// size, in megabytes!
+	bool		IsPresent;
+	bool		IsEnabled;
 	bool		IsFormatted;
+
+	uint		SizeInMB;		// size, in megabytes!
 	wxDateTime	DateCreated;
 	wxDateTime	DateModified;
-	wxFileName	Filename;		// full pathname
 
 	int			Port;
 	int			Slot;
+
+	wxFileName	Filename;		// full pathname (optional)
 
 	McdListItem()
 	{
 		Port = -1;
 		Slot = -1;
+		
+		IsPresent = false;
+		IsEnabled = false;
 	}
 
+	// Compares two cards -- If this equality comparison is used on items where
+	// no filename is specified, then the check will include port and slot.
 	bool operator==( const McdListItem& right ) const
 	{
-		return
+		bool fileEqu;
+
+		if( Filename.GetFullName().IsEmpty() )
+			fileEqu = OpEqu(Port) && OpEqu(Slot);
+		else
+			fileEqu = OpEqu(Filename);
+
+		return fileEqu &&
+			OpEqu(IsPresent)	&& OpEqu(IsEnabled)		&&
 			OpEqu(SizeInMB)		&& OpEqu(IsFormatted)	&&
-			OpEqu(DateCreated)	&& OpEqu(DateModified)	&&
-			OpEqu(Filename);
+			OpEqu(DateCreated)	&& OpEqu(DateModified);
 	}
 
 	bool operator!=( const McdListItem& right ) const
@@ -56,36 +72,79 @@ struct McdListItem
 
 typedef std::vector<McdListItem> McdList;
 
-class IMemoryCardList
+class IMcdList
 {
 public:
 	virtual int GetLength() const=0;
-	virtual const McdListItem& Get( int idx ) const=0;
-	virtual McdListItem& Get( int idx )=0;
+	virtual const McdListItem& GetCard( int idx ) const=0;
+	virtual McdListItem& GetCard( int idx )=0;
+
+	virtual uint GetPort( int idx ) const=0;
+	virtual uint GetSlot( int idx ) const=0;
 };
 
-// --------------------------------------------------------------------------------------
-//  MemoryCardListView
-// --------------------------------------------------------------------------------------
-class MemoryCardListView : public wxListView
+class BaseMcdListView : public wxListView
 {
 	typedef wxListView _parent;
 
 protected:
-	IMemoryCardList*	m_CardsList;
+	const IMcdList*		m_CardProvider;
 
 public:
-	virtual ~MemoryCardListView() throw() { }
-	MemoryCardListView( wxWindow* parent );
+	virtual ~BaseMcdListView() throw() { }
+	BaseMcdListView( wxWindow* parent )
+		: _parent( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_VIRTUAL )
+	{
+		m_CardProvider = NULL;
+	}
+
+	virtual void SetCardCount( int length )=0;
+
+	virtual void SetInterface( IMcdList* face )
+	{
+		m_CardProvider = face;
+		SetCardCount( m_CardProvider ? m_CardProvider->GetLength() : 0 );
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  MemoryCardListView_Simple
+// --------------------------------------------------------------------------------------
+class MemoryCardListView_Simple : public BaseMcdListView
+{
+	typedef BaseMcdListView _parent;
+
+public:
+	virtual ~MemoryCardListView_Simple() throw() { }
+	MemoryCardListView_Simple( wxWindow* parent );
 
 	virtual void OnListDrag(wxListEvent& evt);
-	virtual void CreateColumns();
+	void CreateColumns();
 	virtual void SetCardCount( int length );
-	virtual void SetInterface( IMemoryCardList* face )
-	{
-		m_CardsList = face;
-		SetCardCount( m_CardsList ? m_CardsList->GetLength() : 0 );
-	}
+
+protected:
+	// Overrides for wxLC_VIRTUAL
+	virtual wxString OnGetItemText(long item, long column) const;
+	virtual int OnGetItemImage(long item) const;
+	virtual int OnGetItemColumnImage(long item, long column) const;
+	virtual wxListItemAttr *OnGetItemAttr(long item) const;
+};
+
+
+// --------------------------------------------------------------------------------------
+//  MemoryCardListView_Advanced
+// --------------------------------------------------------------------------------------
+class MemoryCardListView_Advanced : public BaseMcdListView
+{
+	typedef BaseMcdListView _parent;
+
+public:
+	virtual ~MemoryCardListView_Advanced() throw() { }
+	MemoryCardListView_Advanced( wxWindow* parent );
+
+	virtual void OnListDrag(wxListEvent& evt);
+	void CreateColumns();
+	virtual void SetCardCount( int length );
 
 protected:
 	// Overrides for wxLC_VIRTUAL
@@ -98,29 +157,102 @@ protected:
 namespace Panels
 {
 	// --------------------------------------------------------------------------------------
-	//  MemoryCardListPanel
+	//  BaseMcdListPanel
 	// --------------------------------------------------------------------------------------
-	class MemoryCardListPanel
+	class BaseMcdListPanel
 		: public BaseSelectorPanel
 		, public wxFileDropTarget
-		, public IMemoryCardList
 	{
+		typedef BaseSelectorPanel _parent;
+		
 	protected:
 		DirPickerPanel*		m_FolderPicker;
-		MemoryCardListView*	m_listview;
+		BaseMcdListView*	m_listview;
+		wxButton*			m_btn_Refresh;
+
+		wxBoxSizer*			s_leftside_buttons;
+		wxBoxSizer*			s_rightside_buttons;
+
+	public:
+		virtual ~BaseMcdListPanel() throw() {}
+		BaseMcdListPanel( wxWindow* parent );
+
+		void CreateLayout();
+	};
+
+	// --------------------------------------------------------------------------------------
+	//  MemoryCardListPanel_Simple
+	// --------------------------------------------------------------------------------------
+	class MemoryCardListPanel_Simple
+		: public BaseMcdListPanel
+		, public IMcdList
+	{
+		typedef BaseMcdListPanel _parent;
+
+	protected:
+		McdListItem		m_Cards[2][4]; 
+		
+		// Doubles as Create and Delete buttons
+		wxButton*		m_button_Create;
+		
+		// Doubles as Mount and Unmount buttons
+		wxButton*		m_button_Mount;
+		
+		bool			m_MultitapEnabled[2];
+
+	public:
+		virtual ~MemoryCardListPanel_Simple() throw() {}
+		MemoryCardListPanel_Simple( wxWindow* parent );
+
+		void UpdateUI();
+
+		// Interface Implementation for IMcdList
+		virtual int GetLength() const;
+		virtual const McdListItem& GetCard( int idx ) const;
+		virtual McdListItem& GetCard( int idx );
+		virtual uint GetPort( int idx ) const;
+		virtual uint GetSlot( int idx ) const;
+
+	protected:
+		void OnCreateCard(wxCommandEvent& evt);
+		void OnMountCard(wxCommandEvent& evt);
+		
+		virtual void OnListDrag(wxListEvent& evt);
+		virtual void OnListSelectionChanged(wxListEvent& evt);
+		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
+
+		virtual void Apply();
+		virtual void AppStatusEvent_OnSettingsApplied();
+		virtual void DoRefresh();
+		virtual bool ValidateEnumerationStatus();
+	};
+
+	// --------------------------------------------------------------------------------------
+	//  MemoryCardListPanel_Advanced
+	// --------------------------------------------------------------------------------------
+	class MemoryCardListPanel_Advanced
+		: public BaseMcdListPanel
+		, public IMcdList
+	{
+		typedef BaseMcdListPanel _parent;
+
+	protected:
 		ScopedPtr<McdList>	m_KnownCards;
 
 	public:
-		virtual ~MemoryCardListPanel() throw() {}
-		MemoryCardListPanel( wxWindow* parent );
+		virtual ~MemoryCardListPanel_Advanced() throw() {}
+		MemoryCardListPanel_Advanced( wxWindow* parent );
 
-		// Interface Implementation for IMemoryCardList
+		// Interface Implementation for IMcdList
 		virtual int GetLength() const;
-		virtual const McdListItem& Get( int idx ) const;
-		virtual McdListItem& Get( int idx );
+		virtual const McdListItem& GetCard( int idx ) const;
+		virtual McdListItem& GetCard( int idx );
+		virtual uint GetPort( int idx ) const;
+		virtual uint GetSlot( int idx ) const;
 
 	protected:
-		virtual void OnCreateNewCard(wxCommandEvent& evt);
+		void OnCreateNewCard(wxCommandEvent& evt);
+
 		virtual void OnListDrag(wxListEvent& evt);
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
 
@@ -139,12 +271,15 @@ namespace Panels
 		uint			m_port;
 		uint			m_slot;
 
-		wxFileName		m_filename;
+		wxString		m_DisplayName;
+		wxString		m_ErrorMessage;
+		ScopedPtr<McdListItem> m_cardInfo;
 		
 	public:
 		virtual ~MemoryCardInfoPanel() throw() {}
 		MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot );
 		void Apply();
+		void Eject();
 
 	protected:
 		void AppStatusEvent_OnSettingsApplied();
@@ -211,3 +346,6 @@ namespace Panels
 	};
 
 };
+
+extern bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename );
+//extern bool EnumerateMemoryCard( SimpleMcdItem& dest, const wxFileName& filename );

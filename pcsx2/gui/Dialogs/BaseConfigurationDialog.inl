@@ -23,6 +23,6 @@ void Dialogs::BaseConfigurationDialog::AddPage( const char* label, int iconid )
 	const wxString labelstr( fromUTF8( label ) );
 	const int curidx = m_labels.Add( labelstr );
 	m_ApplyState.SetCurrentPage( curidx );
-	m_listbook.AddPage( new T( &m_listbook ), wxGetTranslation( labelstr ),
+	m_listbook->AddPage( new T( m_listbook ), wxGetTranslation( labelstr ),
 		( labelstr == GetConfSettingsTabName() ), iconid );
 }
