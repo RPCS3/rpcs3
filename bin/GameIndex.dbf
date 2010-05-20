@@ -28359,6 +28359,7 @@ Serial = SCES-51592
 Name   = Formula One 2003
 Region = PAL-Unk
 Compat = 4
+XgKickHack = 1
 [patches = 93223BE4]
 	
 	comment=patches by Nachbrenner
