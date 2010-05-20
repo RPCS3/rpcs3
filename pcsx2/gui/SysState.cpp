@@ -81,7 +81,9 @@ public:
 		if(	NULL == (m_gzfp = gzopen( m_filename.ToUTF8(), "rb" )) )
 			throw Exception::CannotCreateStream( m_filename, "Cannot open file for reading." );
 
-		gzbuffer(m_gzfp, 0x100000); // 1mb buffer for zlib internal operations
+		#if defined(ZLIB_VERNUM) && (ZLIB_VERNUM >= 0x1240)
+			gzbuffer(m_gzfp, 0x100000); // 1mb buffer for zlib internal operations
+		#endif
 	}
 	
 	virtual ~gzipReader() throw ()

@@ -77,7 +77,10 @@ void CompressThread_gzip::ExecuteTaskInThread()
 		throw Exception::CannotCreateStream( m_filename );
 
 	gzsetparams(m_gzfp, Z_BEST_SPEED, Z_FILTERED); // Best speed at good compression
+
+#if defined(ZLIB_VERNUM) && (ZLIB_VERNUM >= 0x1240)
 	gzbuffer(m_gzfp, 0x100000); // 1mb buffer size for less file fragments (Windows/NTFS)
+#endif
 
 	if( m_WriteHeaderInThread )
 		m_WriteHeaderInThread( *this );
