@@ -376,7 +376,7 @@ static wxString compatToStringWX(int compat) {
 #define checkGamefix(gFix) {										\
 	if (gameDB->keyExists(#gFix)) {									\
 		SetGameFixConfig().gFix = gameDB->getBool(#gFix);			\
-		Console.Write(L"Loading Gamefix:"); Console.WriteLn(#gFix);	\
+		Console.WriteLn("Loading Gamefix: " #gFix);					\
 	}																\
 }
 
@@ -416,6 +416,7 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 		checkGamefix(FpuNegDivHack);
 		checkGamefix(XgKickHack);
 		checkGamefix(IPUWaitHack);
+		checkGamefix(EETimingHack);
 	}
 }
 

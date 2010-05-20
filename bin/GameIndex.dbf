@@ -46,7 +46,7 @@
 ---------------------------------------------
 -- The clamp modes are numerically based.
 -- eeClampMode refers to the EE's FPU co-processor
--- vuClampMode refers to the VU's and COP2
+-- vuClampMode refers to the VU's and COP2 (VU0 Macro-mode)
 -- 0 = Disables clamping completely
 -- 1 = Clamp Normally (only clamp results)
 -- 2 = Clamp Extra (clamp results as well as operands)
@@ -61,7 +61,8 @@
 -- FpuMulHack	= 1 // Tales of Destiny hangs.
 -- FpuNegDivHack	= 1 // Gundam games messed up camera-view.
 -- XgKickHack	= 1 // Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
--- IPUWaitHack    = 1 // FFX video hack?
+-- IPUWaitHack    = 1 // FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
+-- EETimingHack	= 1 // General purpose timing hack.
 
 ---------------------------------------------
 -- Patches ([patches] or [patches = crc])
