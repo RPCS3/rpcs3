@@ -180,6 +180,7 @@
 		<Unit filename="../../src/Utilities/Console.cpp" />
 		<Unit filename="../../src/Utilities/EventSource.cpp" />
 		<Unit filename="../../src/Utilities/Exceptions.cpp" />
+		<Unit filename="../../src/Utilities/FastFormatString.cpp" />
 		<Unit filename="../../src/Utilities/HashTools.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxHostSys.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxMisc.cpp" />
@@ -197,6 +198,7 @@
 		<Unit filename="../../src/Utilities/pxCheckBox.cpp" />
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/pxStaticText.cpp" />
+		<Unit filename="../../src/Utilities/pxWindowTextWriter.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
 		<Unit filename="../../src/Utilities/wxAppWithHelpers.cpp" />
 		<Unit filename="../../src/Utilities/wxGuiTools.cpp" />

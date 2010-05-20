@@ -413,6 +413,7 @@
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
 		<Unit filename="../gui/Panels/MemoryCardListPanel.cpp" />
+		<Unit filename="../gui/Panels/MemoryCardListView.cpp" />
 		<Unit filename="../gui/Panels/MemoryCardPanels.h" />
 		<Unit filename="../gui/Panels/MemoryCardsPanel.cpp" />
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
