@@ -84,8 +84,8 @@ PaWasapiFlags;
 /* Host processor. Allows to skip internal PA processing completely.
    You must set paWinWasapiRedirectHostProcessor flag to PaWasapiStreamInfo::flags member
    in order to have host processor redirected to your callback.
-   Use with caution! inputFrames and outputFrames depend solely on final device setup (buffer
-   size is just recommendation) but are not changing during run-time once stream is started.
+   Use with caution! inputFrames and outputFrames depend solely on final device setup.
+   To query maximal values of inputFrames/outputFrames use PaWasapi_GetFramesPerHostBuffer.
 */
 typedef void (*PaWasapiHostProcessorCallback) (void *inputBuffer,  long inputFrames,
                                                void *outputBuffer, long outputFrames,
@@ -164,11 +164,11 @@ PaWasapiStreamInfo;
 /** Returns default sound format for device. Format is represented by PaWinWaveFormat or
     WAVEFORMATEXTENSIBLE structure.
 
- @param pFormat pointer to PaWinWaveFormat or WAVEFORMATEXTENSIBLE structure.
- @param nFormatSize pize of PaWinWaveFormat or WAVEFORMATEXTENSIBLE structure in bytes.
- @param nDevice device index.
+ @param pFormat Pointer to PaWinWaveFormat or WAVEFORMATEXTENSIBLE structure.
+ @param nFormatSize Size of PaWinWaveFormat or WAVEFORMATEXTENSIBLE structure in bytes.
+ @param nDevice Device index.
 
- @return A non-negative value indicating the number of bytes copied into format decriptor
+ @return Non-negative value indicating the number of bytes copied into format decriptor
          or, a PaErrorCode (which are always negative) if PortAudio is not initialized
          or an error is encountered.
 */
@@ -179,7 +179,7 @@ int PaWasapi_GetDeviceDefaultFormat( void *pFormat, unsigned int nFormatSize, Pa
 
  @param nDevice device index.
 
- @return A non-negative value indicating device role or, a PaErrorCode (which are always negative)
+ @return Non-negative value indicating device role or, a PaErrorCode (which are always negative)
          if PortAudio is not initialized or an error is encountered.
 */
 int/*PaWasapiDeviceRole*/ PaWasapi_GetDeviceRole( PaDeviceIndex nDevice );
@@ -188,14 +188,14 @@ int/*PaWasapiDeviceRole*/ PaWasapi_GetDeviceRole( PaDeviceIndex nDevice );
 /** Boost thread priority of calling thread (MMCSS). Use it for Blocking Interface only for thread
     which makes calls to Pa_WriteStream/Pa_ReadStream.
 
- @param hTask a handle to pointer to priority task. Must be used with PaWasapi_RevertThreadPriority
+ @param hTask Handle to pointer to priority task. Must be used with PaWasapi_RevertThreadPriority
               method to revert thread priority to initial state.
 
- @param nPriorityClass an Id of thread priority of PaWasapiThreadPriority type. Specifying
+ @param nPriorityClass Id of thread priority of PaWasapiThreadPriority type. Specifying
                        eThreadPriorityNone does nothing.
 
  @return Error code indicating success or failure.
- @see PaWasapi_RevertThreadPriority
+ @see    PaWasapi_RevertThreadPriority
 */
 PaError PaWasapi_ThreadPriorityBoost( void **hTask, PaWasapiThreadPriority nPriorityClass );
 
@@ -203,11 +203,24 @@ PaError PaWasapi_ThreadPriorityBoost( void **hTask, PaWasapiThreadPriority nPrio
 /** Boost thread priority of calling thread (MMCSS). Use it for Blocking Interface only for thread
     which makes calls to Pa_WriteStream/Pa_ReadStream.
 
- @param hTask Task handle obtained by PaWasapi_BoostThreadPriority method.
+ @param  hTask Task handle obtained by PaWasapi_BoostThreadPriority method.
  @return Error code indicating success or failure.
- @see PaWasapi_BoostThreadPriority
+ @see    PaWasapi_BoostThreadPriority
 */
 PaError PaWasapi_ThreadPriorityRevert( void *hTask );
+
+
+/** Get number of frames per host buffer. This is maximal value of frames of WASAPI buffer which
+    can be locked for operations. Use this method as helper to findout maximal values of
+    inputFrames/outputFrames of PaWasapiHostProcessorCallback.
+
+ @param  pStream Pointer to PaStream to query.
+ @param  nInput  Pointer to variable to receive number of input frames. Can be NULL.
+ @param  nOutput Pointer to variable to receive number of output frames. Can be NULL.
+ @return Error code indicating success or failure.
+ @see    PaWasapiHostProcessorCallback
+*/
+PaError PaWasapi_GetFramesPerHostBuffer( PaStream *pStream, unsigned int *nInput, unsigned int *nOutput );
 
 
 /*
@@ -228,24 +241,31 @@ PaError PaWasapi_ThreadPriorityRevert( void *hTask );
         two versions:
 
         1) Event-Driven:
-        This is the most powerful WASAPI implementation which is capable to provides glitch-free
-        audio at 2ms latency in Exclusive mode. Lowest possible latency for this mode is
-        usually - 2ms for HD Audio class audio chips (including on-board audio, 2ms was achieved
-        on Realtek ALC888/S/T). For Shared mode latency can not go lower than 20ms.
+        This is the most powerful WASAPI implementation which provides glitch-free
+        audio at around 3ms latency in Exclusive mode. Lowest possible latency for this mode is
+        usually - 1.4(Vista only)-3ms(Windows 7+) for HD Audio class audio chips. For the
+        Shared mode latency can not be lower than 20ms.
 
         2) Poll-Driven:
         Polling is another 2-nd method to operate with WASAPI. It is less efficient than Event-Driven
-        and provides latency at around 12-13ms. Polling must be used to overcome a system bug
-        under Windows Vista x64 when application is WOW64(32-bit) and Event-Driven method simply times
-        out (event handle is never signalled on buffer completion). Please note, such Vista bug
-        does not exist in Windows 7 x64.
-        Polling is setup by speciying 'paWinWasapiPolling' flag.
-        Thread priority can be boosted by specifying 'paWinWasapiBlockingThreadPriorityPro' flag.
+        and provides latency at around 10-13ms. Polling must be used to overcome a system bug
+        under Windows Vista x64 when application is WOW64(32-bit) and Event-Driven method simply
+        times out (event handle is never signalled on buffer completion). Please note, such WOW64 bug
+        does not exist in Vista x86 or Windows 7.
+        Polling can be setup by speciying 'paWinWasapiPolling' flag. Our WASAPI implementation detects
+        WOW64 bug and sets 'paWinWasapiPolling' automatically.
+
+    Thread priority:
+
+        Normally thread priority is set automatically and does not require modification. Although
+        if user wants some tweaking thread priority can be modified by setting 'paWinWasapiThreadPriority'
+        flag and specifying 'PaWasapiStreamInfo::threadPriority' with value from PaWasapiThreadPriority
+        enum.
 
     Blocking Interface:
 
         Blocking interface is implemented but due to above described Poll-Driven method can not
-        deliver low latency audio. Specifying too low latency in Shared mode will result in
+        deliver lowest possible latency. Specifying too low latency in Shared mode will result in
         distorted audio although Exclusive mode adds stability.
 
     Pa_IsFormatSupported:

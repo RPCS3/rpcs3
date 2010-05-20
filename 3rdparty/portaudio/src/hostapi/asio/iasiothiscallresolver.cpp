@@ -156,7 +156,7 @@
 // We only need IASIOThiscallResolver at all if we are on Win32. For other
 // platforms we simply bypass the IASIOThiscallResolver definition to allow us
 // to be safely #include'd whatever the platform to keep client code portable
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32__)) && !defined(_WIN64)
 
 
 // If microsoft compiler we can call IASIO directly so IASIOThiscallResolver
@@ -276,6 +276,7 @@ extern IASIO* theAsioDriver;
                           "call *"#funcOffset"(%%edx)\n\t"                  \
                           :"=a"(resultName) /* Output Operands */           \
                           :"c"(thisPtr)     /* Input Operands */            \
+                          : "%edx" /* Clobbered Registers */                \
                          );                                                 \
 
 
@@ -286,6 +287,7 @@ extern IASIO* theAsioDriver;
                           :                 /* Output Operands */           \
                           :"r"(param1),     /* Input Operands */            \
                            "c"(thisPtr)                                     \
+                          : "%edx" /* Clobbered Registers */                \
                          );                                                 \
 
 
@@ -296,20 +298,25 @@ extern IASIO* theAsioDriver;
                           :"=a"(resultName) /* Output Operands */           \
                           :"r"(param1),     /* Input Operands */            \
                            "c"(thisPtr)                                     \
+                          : "%edx" /* Clobbered Registers */                \
                           );                                                \
 
 
 #define CALL_THISCALL_1_DOUBLE( resultName, thisPtr, funcOffset, param1 )   \
-    __asm__ __volatile__ ("pushl 4(%1)\n\t"                                 \
-                          "pushl (%1)\n\t"                                  \
-                          "movl (%2), %%edx\n\t"                            \
-                          "call *"#funcOffset"(%%edx);\n\t"                 \
-                          :"=a"(resultName) /* Output Operands */           \
-                          :"a"(&param1),    /* Input Operands */            \
-                           /* Note: Using "r" above instead of "a" fails */ \
-                           /* when using GCC 3.3.3, and maybe later versions*/\
-                           "c"(thisPtr)                                     \
-                          );                                                \
+    do {                                                                    \
+    double param1f64 = param1; /* Cast explicitly to double */              \
+    double *param1f64Ptr = &param1f64; /* Make pointer to address */        \
+     __asm__ __volatile__ ("pushl 4(%1)\n\t"                                \
+                           "pushl (%1)\n\t"                                 \
+                           "movl (%2), %%edx\n\t"                           \
+                           "call *"#funcOffset"(%%edx);\n\t"                \
+                           : "=a"(resultName) /* Output Operands */         \
+                           : "r"(param1f64Ptr),  /* Input Operands */       \
+                           "c"(thisPtr),                                    \
+                           "m"(*param1f64Ptr) /* Using address */           \
+                           : "%edx" /* Clobbered Registers */               \
+                           );                                               \
+    } while (0);                                                            \
 
 
 #define CALL_THISCALL_2( resultName, thisPtr, funcOffset, param1, param2 )  \
@@ -321,6 +328,7 @@ extern IASIO* theAsioDriver;
                           :"r"(param2),     /* Input Operands */            \
                            "r"(param1),                                     \
                            "c"(thisPtr)                                     \
+                          : "%edx" /* Clobbered Registers */                \
                           );                                                \
 
 
@@ -337,6 +345,7 @@ extern IASIO* theAsioDriver;
                            "r"(param2),                                     \
                            "r"(param1),                                     \
                            "c"(thisPtr)                                     \
+                          : "%edx" /* Clobbered Registers */                \
                           );                                                \
 
 #endif

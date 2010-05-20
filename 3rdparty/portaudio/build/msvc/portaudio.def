@@ -45,3 +45,4 @@ PaWasapi_GetDeviceDefaultFormat     @56
 PaWasapi_GetDeviceRole              @57
 PaWasapi_ThreadPriorityBoost        @58
 PaWasapi_ThreadPriorityRevert       @59
+PaWasapi_GetFramesPerHostBuffer     @60
