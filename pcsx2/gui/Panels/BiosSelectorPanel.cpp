@@ -33,19 +33,11 @@ Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL )
 {
 	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler	(BaseSelectorPanel::OnFolderChanged) );
-	//Connect( wxEVT_ACTIVATE,					wxActivateEventHandler		(BaseSelectorPanel::OnActivate) );
 	Connect( wxEVT_SHOW,						wxShowEventHandler			(BaseSelectorPanel::OnShow) );
 }
 
 Panels::BaseSelectorPanel::~BaseSelectorPanel() throw()
 {
-}
-
-void Panels::BaseSelectorPanel::OnActivate(wxActivateEvent& evt)
-{
-	evt.Skip();
-	if( !evt.GetActive() ) return;
-	OnShown();
 }
 
 void Panels::BaseSelectorPanel::OnShow(wxShowEvent& evt)

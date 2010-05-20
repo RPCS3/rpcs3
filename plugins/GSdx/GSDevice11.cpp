@@ -30,14 +30,14 @@
 // ---------------------------------------------------------------------------------
 //  Code 'Borrowed' from Microsoft's DXGI sources -- Modified to suit our needs. --air
 
-static IDXGIFactory*		m_DXGIFactory = NULL;
-static bool					m_D3D11Available = false;
+static IDXGIFactory*			m_DXGIFactory = NULL;
+static bool						m_D3D11Available = false;
 
 static HMODULE					s_hModD3D11 = NULL;
-static FnPtr_D3D11CreateDevice		s_DynamicD3D11CreateDevice = NULL;
+static FnPtr_D3D11CreateDevice	s_DynamicD3D11CreateDevice = NULL;
 
 static HMODULE					s_hModDXGI = NULL;
-static FnPtr_CreateDXGIFactory		s_DynamicCreateDXGIFactory = NULL;
+static FnPtr_CreateDXGIFactory	s_DynamicCreateDXGIFactory = NULL;
 
 
 static bool DXUT_EnsureD3D11APIs( void )
@@ -63,7 +63,7 @@ static bool DXUT_EnsureD3D11APIs( void )
 
 	if( s_hModD3D11 != NULL )
 	{
-		s_DynamicD3D11CreateDevice				= (FnPtr_D3D11CreateDevice)GetProcAddress( s_hModD3D11, "D3D11CreateDevice" );
+		s_DynamicD3D11CreateDevice	= (FnPtr_D3D11CreateDevice)GetProcAddress( s_hModD3D11, "D3D11CreateDevice" );
 	}
 
 	return ( s_DynamicD3D11CreateDevice != NULL );
@@ -180,6 +180,8 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
+
+	//return false;
 
 	if(FAILED(hr)) return false;
 

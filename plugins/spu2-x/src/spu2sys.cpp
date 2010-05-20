@@ -269,7 +269,7 @@ void V_Voice::Stop()
 	ADSR.Phase = 0;
 }
 
-int TickInterval = 768;
+uint TickInterval = 768;
 static const int SanityInterval = 4800;
 
 //#define USE_ASYNC_MIXING

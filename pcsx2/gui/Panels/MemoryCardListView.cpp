@@ -85,10 +85,10 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 	{
 		case McdColS_PortSlot:		return wxsFormat( L"%u/%u", m_CardProvider->GetPort(item)+1, m_CardProvider->GetSlot(item)+1);
 		case McdColS_Status:		return it.IsPresent ? ( it.IsEnabled ? _("Enabled") : _("Disabled")) : _("Missing");
-		case McdColS_Size:			return it.IsPresent ? wxsFormat( L"%u MB", it.SizeInMB ) : wxT("N/A");
+		case McdColS_Size:			return it.IsPresent ? wxsFormat( L"%u MB", it.SizeInMB ) : (wxString)_("N/A");
 		case McdColS_Formatted:		return it.IsFormatted ? _("Yes") : _("No");
-		case McdColS_DateModified:	return it.DateModified.FormatDate();
-		case McdColS_DateCreated:	return it.DateCreated.FormatDate();
+		case McdColS_DateModified:	return it.IsPresent ? it.DateModified.FormatDate()	: (wxString)_("N/A");
+		case McdColS_DateCreated:	return it.IsPresent ? it.DateCreated.FormatDate()	: (wxString)_("N/A");
 		//case McdCol_Path:			return it.Filename.GetPath();
 	}
 

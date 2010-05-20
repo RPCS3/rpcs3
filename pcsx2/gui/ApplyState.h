@@ -24,7 +24,6 @@ class BaseApplicableConfigPanel;
 class BaseApplicableDialog;
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEvt_OnWindowCreated, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_ApplySettings, -1 )
 END_DECLARE_EVENT_TYPES()
 
@@ -138,7 +137,6 @@ protected:
 	BaseApplicableDialog(wxWindow* parent, const wxString& title, wxOrientation sizerOrient );
 
 	void OnSettingsApplied( wxCommandEvent& evt );
-	void OnWindowCreated( wxCommandEvent& evt );
 
 	// Note: This method *will* be called automatically after a successful Apply, but will not
 	// be called after a failed Apply (canceled due to error).

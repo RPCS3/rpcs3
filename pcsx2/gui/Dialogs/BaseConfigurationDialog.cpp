@@ -28,7 +28,6 @@
 #include <wx/filepicker.h>
 #include <wx/listbook.h>
 
-DEFINE_EVENT_TYPE( pxEvt_OnWindowCreated )
 DEFINE_EVENT_TYPE( pxEvt_ApplySettings )
 
 using namespace Panels;
@@ -69,7 +68,9 @@ wxString BaseApplicableDialog::GetDialogName() const
 
 void BaseApplicableDialog::Init()
 {
-	Connect( pxEvt_OnWindowCreated,	wxCommandEventHandler	(BaseApplicableDialog::OnWindowCreated) );
+	SetExtraStyle(GetExtraStyle() | wxMINIMIZE_BOX );
+	SetExtraStyle(GetExtraStyle() & ~wxTOPLEVEL_EX_DIALOG);
+
 	Connect( pxEvt_ApplySettings,	wxCommandEventHandler	(BaseApplicableDialog::OnSettingsApplied) );
 
 	wxCommandEvent applyEvent( pxEvt_ApplySettings );
@@ -81,12 +82,6 @@ void BaseApplicableDialog::OnSettingsApplied( wxCommandEvent& evt )
 {
 	evt.Skip();
 	if( evt.GetId() == GetId() ) AppStatusEvent_OnSettingsApplied();
-}
-
-void BaseApplicableDialog::OnWindowCreated( wxCommandEvent& evt )
-{
-	evt.Skip();
-	if( evt.GetId() == GetId() ) SetName( L"Dialog:" + GetDialogName() );
 }
 
 

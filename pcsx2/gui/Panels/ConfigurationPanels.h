@@ -386,7 +386,6 @@ namespace Panels
 	protected:
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
-		void OnActivate(wxActivateEvent& evt);
 		void OnShow(wxShowEvent& evt);
 	};
 

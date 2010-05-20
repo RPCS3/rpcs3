@@ -25,8 +25,6 @@
 
 using namespace pxSizerFlags;
 
-DEFINE_EVENT_TYPE( pxEvt_OnThreadCleanup );
-
 // --------------------------------------------------------------------------------------
 //  BaseDeletableObject Implementation
 // --------------------------------------------------------------------------------------
@@ -103,6 +101,8 @@ bool pxDialogExists( const wxString& name )
 //  wxDialogWithHelpers Class Implementations
 // =====================================================================================================
 
+DEFINE_EVENT_TYPE( pxEvt_OnDialogCreated )
+
 IMPLEMENT_DYNAMIC_CLASS(wxDialogWithHelpers, wxDialog)
 
 wxDialogWithHelpers::wxDialogWithHelpers()
@@ -150,11 +150,27 @@ void wxDialogWithHelpers::Init()
 	// an updated version will fix it later.  I tried to fix it using a manual Connect but it
 	// didn't do any good.  (problem could also be my Co-Linux / x-window manager)
 
-	//Connect( wxEVT_ACTIVATE, wxActivateEventHandler(wxDialogWithHelpers::OnActivate) );
+	Connect( pxEvt_OnDialogCreated,	wxCommandEventHandler	(wxDialogWithHelpers::OnDialogCreated) );
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler	(wxDialogWithHelpers::OnOkCancel) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler	(wxDialogWithHelpers::OnOkCancel) );
 	Connect(				wxEVT_CLOSE_WINDOW,				wxCloseEventHandler		(wxDialogWithHelpers::OnCloseWindow) );
+
+	wxCommandEvent createEvent( pxEvt_OnDialogCreated );
+	createEvent.SetId( GetId() );
+	AddPendingEvent( createEvent );
+}
+
+void wxDialogWithHelpers::OnDialogCreated( wxCommandEvent& evt )
+{
+	evt.Skip();
+	if( (evt.GetId() == GetId()) && !GetDialogName().IsEmpty() )
+		SetName( L"Dialog:" + GetDialogName() );
+}
+
+wxString wxDialogWithHelpers::GetDialogName() const
+{
+	return wxEmptyString;
 }
 
 void wxDialogWithHelpers::SmartCenterFit()
@@ -219,12 +235,6 @@ void wxDialogWithHelpers::OnOkCancel( wxCommandEvent& evt )
 {
 	Close();
 	evt.Skip();
-}
-
-
-void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
-{
-	//evt.Skip();
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )

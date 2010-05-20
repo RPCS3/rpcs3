@@ -292,7 +292,8 @@ namespace pxSizerFlags
 };
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEvt_OnThreadCleanup, -1 );
+	// Added to the event queue by pxDialogWithHelpers
+	DECLARE_EVENT_TYPE( pxEvt_OnDialogCreated, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // --------------------------------------------------------------------------------------
@@ -321,6 +322,12 @@ public:
 	virtual int ShowModal();
 	virtual bool Show( bool show=true );
 
+	// Must return the same thing as GetNameStatic; a name ideal for use in uniquely
+	// identifying dialogs.  (this version is the 'instance' version, which is called
+	// by BaseConfigurationDialog to assign the wxWidgets dialog name, and for saving
+	// screenshots to disk)
+	virtual wxString GetDialogName() const;
+
 	virtual pxStaticText*		Text( const wxString& label );
 	virtual pxStaticHeading*	Heading( const wxString& label );
 
@@ -330,7 +337,7 @@ public:
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
 
 protected:
-	void OnActivate(wxActivateEvent& evt);
+	void OnDialogCreated( wxCommandEvent& evt );
 	void OnOkCancel(wxCommandEvent& evt);
 	void OnCloseWindow(wxCloseEvent& event);
 };

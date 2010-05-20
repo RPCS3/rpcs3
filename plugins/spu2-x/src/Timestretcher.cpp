@@ -200,7 +200,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch()
 	}
 }
 
-extern int TickInterval;
+extern uint TickInterval;
 void SndBuffer::UpdateTempoChangeAsyncMixing()
 {
 	float statusPct = GetStatusPct();
