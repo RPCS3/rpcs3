@@ -42,7 +42,7 @@ struct Module
 	}
 	wxString ToString(u32 total_ticks)
 	{
-		return wxsFormat( L"%s: %d ", name, (ticks*100) / (double)total_ticks );
+		return wxsFormat( L"| %s: %2.2f%% |", name.c_str(), (float)(((double)ticks*100.0) / (double)total_ticks) );
 	}
 	bool Inside(uptr val) { return val>=base && val<=end; }
 	void FromAddress(const void* ptr,bool getname)
@@ -209,16 +209,25 @@ int __stdcall ProfilerThread(void* nada)
 
 		if (tick_count>500)
 		{
-			wxString rv = L"|";
+			wxString rT = L"";
+			wxString rv = L"";
 			u32 subtotal=0;
 			for (size_t i=0;i<ProfModules.size();i++)
 			{
-				rv+=ProfModules[i].ToString(tick_count);
+				wxString t  = ProfModules[i].ToString(tick_count);
+				bool	 b0 = EmuConfig.Cpu.Recompiler.UseMicroVU0;
+				bool	 b1 = EmuConfig.Cpu.Recompiler.UseMicroVU1;
+				if		( b0 &&  b1) { if (t.Find(L"sVU")  == -1) rT+=t;}
+				else if (!b0 && !b1) { if (t.Find(L"mVU")  == -1) rT+=t;}
+				else if (!b0)		 { if (t.Find(L"mVU0") == -1) rT+=t;}
+				else if (!b1)		 { if (t.Find(L"mVU1") == -1) rT+=t;}
+				else rT+=t;
+				
 				subtotal+=ProfModules[i].ticks;
 				ProfModules[i].ticks=0;
 			}
 
-			rv += wxsFormat( L" Total %d\n|", (subtotal*100) / (double)tick_count );
+			rT += wxsFormat( L"| Recs Total: %2.2f%% |", (float)(((double)subtotal*100.0) / (double)tick_count));
 			vector<MapType::mapped_type> lst;
 			for (MapType::iterator i=ProfUnknownHash.begin();i!=ProfUnknownHash.end();i++)
 			{
@@ -231,7 +240,8 @@ int __stdcall ProfilerThread(void* nada)
 				rv += lst[i].ToString(tick_count);
 			}
 
-			Console.WriteLn( L"+Sampling Profiler Results-\n%s\n+>", rv.c_str() );
+			Console.WriteLn( L"Sampling Profiler Results:\n%s\n%s\n", rT.c_str(), rv.c_str() );
+			Console.SetTitle(rT);
 
 			tick_count=0;
 
@@ -265,7 +275,7 @@ void ProfilerInit()
 	if (ProfRunning)
 		return;
 
-	//Console.Msg( "Profiler Thread Initializing..." );
+	Console.Write( "Profiler Thread Initializing..." );
 	ProfRunning=true;
 	DuplicateHandle(GetCurrentProcess(),
 		GetCurrentThread(),
@@ -279,12 +289,12 @@ void ProfilerInit()
 
 	hProfThread=CreateThread(0,0,(LPTHREAD_START_ROUTINE)ProfilerThread,0,0,0);
 	SetThreadPriority(hProfThread,THREAD_PRIORITY_HIGHEST);
-	//Console.WriteLn( " Done!" );
+	Console.WriteLn( " Done!" );
 }
 
 void ProfilerTerm()
 {
-	//Console.Msg( "Profiler Terminating..." );
+	Console.Write( "Profiler Terminating..." );
 	if (!ProfRunning)
 		return;
 
@@ -304,7 +314,7 @@ void ProfilerTerm()
 		CloseHandle( hMtgsThread );
 
 	DeleteCriticalSection( &ProfModulesLock );
-	//Console.WriteLn( " Done!" );
+	Console.WriteLn( " Done!" );
 }
 
 void ProfilerSetEnabled(bool Enabled)

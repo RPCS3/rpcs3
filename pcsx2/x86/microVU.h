@@ -25,6 +25,7 @@ using namespace x86Emitter;
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 #include "x86emitter/x86emitter.h"
+#include "SamplProf.h"
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 

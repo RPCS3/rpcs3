@@ -601,7 +601,7 @@ static void recAlloc()
 
 	// No errors.. Proceed with initialization:
 
-	ProfilerRegisterSource( "EERec", recMem, REC_CACHEMEM+0x1000 );
+	ProfilerRegisterSource( "EE Rec", recMem, REC_CACHEMEM+0x1000 );
 	_DynGen_Dispatchers();
 
 	x86FpuState = FPU_STATE;

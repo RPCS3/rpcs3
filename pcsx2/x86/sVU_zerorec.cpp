@@ -366,7 +366,7 @@ static void SuperVUAlloc(int vuindex)
 			);
 		}
 
-		ProfilerRegisterSource("VURec", s_recVUMem, VU_EXESIZE);
+		ProfilerRegisterSource("sVU Rec", s_recVUMem, VU_EXESIZE);
 
 		if (recVUStack == NULL) recVUStack = new u8[SUPERVU_STACKSIZE * 4];
 	}

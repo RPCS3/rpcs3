@@ -31,6 +31,7 @@
 #include "CDVD/CDVD.h"
 #include "Patch.h"
 #include "DataBase_Loader.h"
+#include "SamplProf.h"
 
 using namespace R5900;	// for R5900 disasm tools
 
@@ -612,6 +613,8 @@ void __fastcall eeGameStarting()
 		
 		GetMTGS().SendGameCRC(ElfCRC);
 		g_GameStarted = true;
+		
+		if (0) ProfilerSetEnabled(true);
 	}
 
 	ApplyPatch(0);

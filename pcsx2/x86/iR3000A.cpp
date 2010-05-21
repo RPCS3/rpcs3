@@ -798,7 +798,7 @@ static void recAlloc()
 	if( s_pInstCache == NULL )
 		throw Exception::OutOfMemory( "R3000a Init > Failed to allocate memory for pInstCache." );
 
-	ProfilerRegisterSource( "IOPRec", recMem, RECMEM_SIZE );
+	ProfilerRegisterSource( "IOP Rec", recMem, RECMEM_SIZE );
 	_DynGen_Dispatchers();
 }
 

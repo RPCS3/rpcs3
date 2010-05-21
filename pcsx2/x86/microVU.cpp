@@ -98,6 +98,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	if (!mVU->cache) throw Exception::OutOfMemory( "microVU Error: Failed to allocate recompiler memory!" );
 
 	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
+	ProfilerRegisterSource(isVU1?"mVU1 Rec":"mVU0 Rec", mVU->cache, mVU->cacheSize);
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		mVU->prog.prog[i].list = new deque<microProgram*>();
