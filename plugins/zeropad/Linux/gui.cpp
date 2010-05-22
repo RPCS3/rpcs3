@@ -41,10 +41,9 @@ void SaveConfig()
 {
 	int i, j;
 	FILE *f;
-	char cfg[255];
-
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "w");
+	
+	const std::string iniFile(s_strIniPath + "zeropad.ini");
+	f = fopen(iniFile.c_str(), "w");
 	if (f == NULL)
 	{
 		printf("ZeroPAD: failed to save ini %s\n", s_strIniPath.c_str());
@@ -67,7 +66,6 @@ void LoadConfig()
 {
 	FILE *f;
 	char str[256];
-	char cfg[255];
 	int i, j;
 
 	memset(&conf, 0, sizeof(conf));
@@ -87,8 +85,8 @@ void LoadConfig()
 	conf.keys[0][15] = XK_s;			// LEFT
 	conf.log = 0;
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
+	const std::string iniFile(s_strIniPath + "zeropad.ini");
+	f = fopen(iniFile.c_str(), "r");
 	if (f == NULL)
 	{
 		printf("ZeroPAD: failed to load ini %s\n", s_strIniPath.c_str());

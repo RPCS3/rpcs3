@@ -40,7 +40,7 @@ keyEvent event;
 u16 status[2];
 int pressure;
 static keyEvent s_event;
-string s_strIniPath = "inis/zeropad.ini";
+string s_strIniPath = "inis";
 
 const u32 version  = PS2E_PAD_VERSION;
 const u32 revision = 0;
@@ -232,13 +232,6 @@ s32 CALLBACK PADinit(u32 flags)
 	status[0] = 0xffff;
 	status[1] = 0xffff;
 
-#ifdef __LINUX__
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/zeropad.ini";
-#endif
-
 	LoadConfig();
 
 	PADsetMode(0, 0);
@@ -273,6 +266,12 @@ s32 CALLBACK PADopen(void *pDsp)
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
 #endif
 	return _PADopen(pDsp);
+}
+
+void CALLBACK PADsetSettingsDir(const char* dir)
+{
+	// Get the path to the ini directory.
+    s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
 void CALLBACK PADclose()
