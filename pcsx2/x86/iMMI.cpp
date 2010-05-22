@@ -798,20 +798,22 @@ void recPADDSW( void )
 		SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
 
-	SSE2_PXOR_XMM_to_XMM(t1reg, t0reg); // Sign(Rs) != Sign(Rt)
-	SSE2_PXOR_XMM_to_XMM(t0reg, EEREC_D); // Sign(Rs) != Sign(Rd)
+	SSE2_PXOR_XMM_to_XMM(t0reg, t1reg); // Sign(Rs) != Sign(Rt)
+	SSE2_PXOR_XMM_to_XMM(t1reg, EEREC_D); // Sign(Rs) != Sign(Rd)
 	SSE2_PANDN_XMM_to_XMM(t0reg, t1reg); // (Sign(Rs) == Sign(Rt)) & (Sign(Rs) != Sign(Rd))
 	SSE2_PSRAD_I8_to_XMM(t0reg, 31);
 
 	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t1reg);
+	SSE2_PXOR_XMM_to_XMM(t0reg, t1reg); // could've been avoided if Intel wasn't too prudish for a PORN instruction
 	SSE2_PSLLD_I8_to_XMM(t1reg, 31); // 0x80000000
 
 	SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_D);
 	SSE2_PSRAD_I8_to_XMM(t2reg, 31);
-	SSE2_PXOR_XMM_to_XMM(t2reg, t1reg); // t2reg = (Rd < 0) ? 0x80000000 : 0x7fffffff
-	SSE2_PAND_XMM_to_XMM(t2reg, t0reg);
-	SSE2_PANDN_XMM_to_XMM(EEREC_D, t0reg);
-	SSE2_POR_XMM_to_XMM(EEREC_D, t2reg);
+	SSE2_PXOR_XMM_to_XMM(t1reg, t2reg); // t2reg = (Rd < 0) ? 0x7fffffff : 0x80000000
+
+	SSE2_PAND_XMM_to_XMM(EEREC_D, t0reg);
+	SSE2_PANDN_XMM_to_XMM(t0reg, t1reg);
+	SSE2_POR_XMM_to_XMM(EEREC_D, t0reg);
 
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
