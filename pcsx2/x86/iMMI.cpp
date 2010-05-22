@@ -26,6 +26,8 @@
 #include "iR5900.h"
 #include "iMMI.h"
 
+using namespace x86Emitter;
+
 namespace Interp = R5900::Interpreter::OpcodeImpl::MMI;
 
 namespace R5900 {
@@ -787,8 +789,6 @@ void recPADDSW( void )
 	// get sign bit
 	SSEX_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
 	SSEX_MOVDQA_XMM_to_XMM(t1reg, EEREC_T);
-	SSE2_PSRLD_I8_to_XMM(t0reg, 31);
-	SSE2_PSRLD_I8_to_XMM(t1reg, 31);
 
 	// normal addition
 	if( EEREC_D == EEREC_S ) SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
@@ -798,22 +798,20 @@ void recPADDSW( void )
 		SSE2_PADDD_XMM_to_XMM(EEREC_D, EEREC_T);
 	}
 
-	// overflow check
-	// t2reg = 0xffffffff if overflow, else 0
-	SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_D);
-	SSE2_PSRLD_I8_to_XMM(t2reg, 31);
-	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t0reg); // Sign(Rs) == Sign(Rt)
-	SSE2_PCMPEQD_XMM_to_XMM(t2reg, t0reg); // Sign(Rs) == Sign(Rd)
-	SSE2_PANDN_XMM_to_XMM(t2reg, t1reg); // (Sign(Rs) == Sign(Rt)) & ~(Sign(Rs) == Sign(Rd))
-	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t1reg);
-	SSE2_PSRLD_I8_to_XMM(t1reg, 1); // 0x7fffffff
-	SSE2_PADDD_XMM_to_XMM(t1reg, t0reg); // t1reg = (Rs < 0) ? 0x80000000 : 0x7fffffff
+	SSE2_PXOR_XMM_to_XMM(t1reg, t0reg); // Sign(Rs) != Sign(Rt)
+	SSE2_PXOR_XMM_to_XMM(t0reg, EEREC_D); // Sign(Rs) != Sign(Rd)
+	SSE2_PANDN_XMM_to_XMM(t0reg, t1reg); // (Sign(Rs) == Sign(Rt)) & (Sign(Rs) != Sign(Rd))
+	SSE2_PSRAD_I8_to_XMM(t0reg, 31);
 
-	// saturation
-	SSE2_PAND_XMM_to_XMM(t1reg, t2reg);
-	SSE2_PANDN_XMM_to_XMM(t2reg, EEREC_D);
-	SSE2_POR_XMM_to_XMM(t1reg, t2reg);
-	SSEX_MOVDQA_XMM_to_XMM(EEREC_D, t1reg);
+	SSE2_PCMPEQD_XMM_to_XMM(t1reg, t1reg);
+	SSE2_PSLLD_I8_to_XMM(t1reg, 31); // 0x80000000
+
+	SSEX_MOVDQA_XMM_to_XMM(t2reg, EEREC_D);
+	SSE2_PSRAD_I8_to_XMM(t2reg, 31);
+	SSE2_PXOR_XMM_to_XMM(t2reg, t1reg); // t2reg = (Rd < 0) ? 0x80000000 : 0x7fffffff
+	SSE2_PAND_XMM_to_XMM(t2reg, t0reg);
+	SSE2_PANDN_XMM_to_XMM(EEREC_D, t0reg);
+	SSE2_POR_XMM_to_XMM(EEREC_D, t2reg);
 
 	_freeXMMreg(t0reg);
 	_freeXMMreg(t1reg);
@@ -1464,58 +1462,29 @@ void recPEXTUH()
 	_clearNeededXMMregs();
 }
 
-////////////////////////////////////////////////////
-// Both Macros are 16 bytes so we can use a shift instead of a Mul instruction
-#define QFSRVhelper0() {  \
-	ajmp[0] = JMP32(0);  \
-	x86Ptr += 11;  \
-}
-
-#define QFSRVhelper(shift1, shift2) {  \
-	SSE2_PSRLDQ_I8_to_XMM(EEREC_D, shift1);  \
-	SSE2_PSLLDQ_I8_to_XMM(t0reg, shift2);  \
-	ajmp[shift1] = JMP32(0);  \
-	x86Ptr += 1;  \
-}
+static __aligned16 u32 tempqw[8];
 
 void recQFSRV()
 {
 	if ( !_Rd_ ) return;
 	//Console.WriteLn("recQFSRV()");
 
+	if (_Rs_ == _Rt_ + 1) {
+		int info = eeRecompileCodeXMM(XMMINFO_WRITED);
+
+		xMOV(eax, ptr32[&cpuRegs.sa]);
+		_deleteGPRtoXMMreg(_Rs_, 1);
+		_deleteGPRtoXMMreg(_Rt_, 1);
+		xMOVDQU(xRegisterSSE(EEREC_D), ptr32[eax + &cpuRegs.GPR.r[_Rt_]]);
+		return;
+	}
+		
 	int info = eeRecompileCodeXMM( XMMINFO_READS | XMMINFO_READT | XMMINFO_WRITED );
 
-	u32 *ajmp[16];
-	int i, j;
-	int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-
-	SSE2_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);
-	SSE2_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-
-	MOV32MtoR(EAX, (uptr)&cpuRegs.sa);
-	SHL32ItoR(EAX, 4); // Multiply SA bytes by 16 bytes (the amount of bytes in QFSRVhelper() macros)
-	AND32ItoR(EAX, 0xf0); // This can possibly be removed but keeping it incase theres garbage in SA (cottonvibes)
-	ADD32ItoR(EAX, (uptr)x86Ptr + 7); // ADD32 = 5 bytes, JMPR = 2 bytes
-	JMPR(EAX); // Jumps to a QFSRVhelper() case below (a total of 16 different cases)
-
-	// Case 0:
-	QFSRVhelper0();
-
-	// Cases 1 to 15:
-	for (i = 1, j = 15; i < 16; i++, j--) {
-		QFSRVhelper(i, j);
-	}
-
-	// Set jump addresses for the JMP32's in QFSRVhelper()
-	for (i = 1; i < 16; i++) {
-		x86SetJ32(ajmp[i]);
-	}
-
-	// Concatenate the regs after appropriate shifts have been made
-	SSE2_POR_XMM_to_XMM(EEREC_D, t0reg);
-
-	x86SetJ32(ajmp[0]); // Case 0 jumps to here (to skip the POR)
-	_freeXMMreg(t0reg);
+	xMOV(eax, ptr32[&cpuRegs.sa]);
+	xMOVDQA(ptr32[&tempqw[0]], xRegisterSSE(EEREC_T));
+	xMOVDQA(ptr32[&tempqw[4]], xRegisterSSE(EEREC_S));
+	xMOVDQU(xRegisterSSE(EEREC_D), ptr32[eax + &tempqw]);
 
 	_clearNeededXMMregs();
 }
@@ -2763,13 +2732,9 @@ void recPOR( void )
 			SSEX_POR_XMM_to_XMM(EEREC_D, EEREC_S);
 		}
 		else {
-			if( _Rs_ == 0 ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-			else if( _Rt_ == 0 ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
-			else {
-				SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
-				if( EEREC_S != EEREC_T ) {
-					SSEX_POR_XMM_to_XMM(EEREC_D, EEREC_S);
-				}
+			SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_T);
+			if( EEREC_S != EEREC_T ) {
+				SSEX_POR_XMM_to_XMM(EEREC_D, EEREC_S);
 			}
 		}
 	}
