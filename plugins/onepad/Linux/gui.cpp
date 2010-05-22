@@ -35,7 +35,6 @@ extern "C"
 #include "callbacks.h"
 }
 
-extern string s_strIniPath;
 GtkWidget *Conf, *About, *MsgDlg;
 GtkWidget *s_devicecombo;
 

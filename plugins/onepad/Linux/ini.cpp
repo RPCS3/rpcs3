@@ -35,6 +35,8 @@ extern "C"
 #include "callbacks.h"
 }
 
+extern std::string s_strIniPath;
+
 string KeyName(int pad, int key)
 {
 	string tmp;
@@ -123,11 +125,11 @@ void SaveConfig()
 	FILE *f;
 	char cfg[255];
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "w");
+	const std::string iniFile(s_strIniPath + "OnePAD.ini");
+	f = fopen(iniFile.c_str(), "w");
 	if (f == NULL)
 	{
-		printf("ZeroPAD: failed to save ini %s\n", s_strIniPath.c_str());
+		printf("ZeroPAD: failed to save ini %s\n", iniFile.c_str());
 		return;
 	}
 
@@ -147,17 +149,16 @@ void LoadConfig()
 {
 	FILE *f;
 	char str[256];
-	char cfg[255];
 
 	memset(&conf, 0, sizeof(conf));
 	DefaultValues();
 	conf.log = 0;
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
+	const std::string iniFile(s_strIniPath + "OnePAD.ini");
+	f = fopen(iniFile.c_str(), "r");
 	if (f == NULL)
 	{
-		printf("OnePAD: failed to load ini %s\n", s_strIniPath.c_str());
+		printf("OnePAD: failed to load ini %s\n", iniFile.c_str());
 		SaveConfig(); //save and return
 		return;
 	}

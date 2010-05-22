@@ -338,11 +338,6 @@ void OnConf_Key(GtkButton *button, gpointer user_data)
 
 EXPORT_C_(void) PADconfigure()
 {
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/OnePAD.ini";
-
 	LoadConfig();
 
 	Conf = create_Conf();

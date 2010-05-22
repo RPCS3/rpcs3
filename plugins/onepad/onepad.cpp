@@ -43,7 +43,7 @@ keyEvent event;
 u16 status[2];
 int pressure;
 static keyEvent s_event;
-string s_strIniPath = "inis/OnePAD.ini";
+std::string s_strIniPath("inis/");
 bool toggleAutoRepeat = true;
 
 const u32 version  = PS2E_PAD_VERSION;
@@ -243,13 +243,6 @@ EXPORT_C_(s32) PADinit(u32 flags)
 	status[0] = 0xffff;
 	status[1] = 0xffff;
 
-#ifdef __LINUX__
-	/*char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/OnePAD.ini";*/
-#endif
-
 	LoadConfig();
 
 	PADsetMode(0, 0);
@@ -285,6 +278,13 @@ EXPORT_C_(s32) PADopen(void *pDsp)
 #endif
 	return _PADopen(pDsp);
 }
+
+void CALLBACK PADsetSettingsDir(const char* dir)
+{
+	// Get the path to the ini directory.
+    s_strIniPath = (dir==NULL) ? "inis/" : dir;
+}
+
 
 EXPORT_C_(void) PADclose()
 {

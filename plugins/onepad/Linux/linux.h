@@ -37,7 +37,6 @@ extern "C"
 }
 
 extern GtkWidget *Conf, *s_devicecombo;
-extern string s_strIniPath;
 extern void init_tree_view();
 extern void destroy_tree_view();
 
