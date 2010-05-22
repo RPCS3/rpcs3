@@ -119,6 +119,8 @@ void _eeOnWriteReg(int reg, int signext);
 // if 0, only flushes if not an xmm reg (used when overwriting lower 64bits of reg)
 void _deleteEEreg(int reg, int flush);
 
+void _flushEEreg(int reg);
+
 // allocates memory on the instruction size and returns the pointer
 u32* recGetImm64(u32 hi, u32 lo);
 

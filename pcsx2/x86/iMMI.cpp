@@ -1472,11 +1472,11 @@ void recQFSRV()
 	//Console.WriteLn("recQFSRV()");
 
 	if (_Rs_ == _Rt_ + 1) {
+		_flushEEreg(_Rs_);
+		_flushEEreg(_Rt_);
 		int info = eeRecompileCodeXMM(XMMINFO_WRITED);
 
 		xMOV(eax, ptr32[&cpuRegs.sa]);
-		_deleteGPRtoXMMreg(_Rs_, 1);
-		_deleteGPRtoXMMreg(_Rt_, 1);
 		xMOVDQU(xRegisterSSE(EEREC_D), ptr32[eax + &cpuRegs.GPR.r[_Rt_]]);
 		return;
 	}
