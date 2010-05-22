@@ -30,14 +30,12 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(Pcsx2Utils)
 include(SearchForStuff)
 
-set(CMAKE_BUILD_TYPE Devel)
-
 #-------------------------------------------------------------------------------
-# if no build type is set, use Debug as default
+# if no build type is set, use Devel as default
 #-------------------------------------------------------------------------------
 if(CMAKE_BUILD_TYPE STREQUAL "")
 	set(CMAKE_BUILD_TYPE Debug)
-	message(STATUS "BuildType set to Debug!!! by default")
+	message(STATUS "BuildType set to Devel by default")
 endif(CMAKE_BUILD_TYPE STREQUAL "")
 #-------------------------------------------------------------------------------
 

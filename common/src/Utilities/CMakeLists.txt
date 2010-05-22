@@ -105,6 +105,7 @@ set(UtilitiesSources
 	Console.cpp
 	EventSource.cpp
 	Exceptions.cpp
+	FastFormatString.cpp
 	HashTools.cpp
 	Linux/LnxHostSys.cpp
 	Linux/LnxMisc.cpp
@@ -115,6 +116,7 @@ set(UtilitiesSources
 	pxCheckBox.cpp
 	pxRadioPanel.cpp
 	pxStaticText.cpp
+	pxWindowTextWriter.cpp
 	Semaphore.cpp
 	StringHelpers.cpp
 	ThreadingDialogs.cpp

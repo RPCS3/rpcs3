@@ -144,6 +144,7 @@ set(pcsx2Sources
 	MMI.cpp
 	MTGS.cpp
 	Patch.cpp
+	Patch_Memory.cpp
 	Pcsx2Config.cpp
 	pcsx2hostfs.cpp
 	PluginManager.cpp
@@ -193,7 +194,9 @@ set(pcsx2Headers
 	Counters.h
 	Dmac.h
 	Dump.h
+	DataBase_Loader.h
 	Elfheader.h
+	File_Reader.h
 	Gif.h
 	GS.h
 	Hardware.h
@@ -211,6 +214,7 @@ set(pcsx2Headers
 	MemoryTypes.h
 	NakedAsm.h
 	Patch.h
+	Patch_Obsolete.h
 	PathDefs.h
 	Plugins.h
 	PrecompiledHeader.h
@@ -297,6 +301,7 @@ set(pcsx2GuiSources
 	gui/Dialogs/AppConfigDialog.cpp
 	gui/Dialogs/AssertionDialog.cpp
 	gui/Panels/BaseApplicableConfigPanel.cpp
+	gui/Panels/MemoryCardListView.cpp
 	gui/Dialogs/BaseConfigurationDialog.cpp
 	gui/Dialogs/BaseConfigurationDialog.inl
 	gui/Dialogs/BiosSelectorDialog.cpp
