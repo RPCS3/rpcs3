@@ -34,8 +34,8 @@ include(SearchForStuff)
 # if no build type is set, use Devel as default
 #-------------------------------------------------------------------------------
 if(CMAKE_BUILD_TYPE STREQUAL "")
-	set(CMAKE_BUILD_TYPE Debug)
-	message(STATUS "BuildType set to Devel by default")
+	set(CMAKE_BUILD_TYPE Devel)
+	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
 endif(CMAKE_BUILD_TYPE STREQUAL "")
 #-------------------------------------------------------------------------------
 
