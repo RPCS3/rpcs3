@@ -95,11 +95,7 @@ if(PORTAUDIO_FOUND)
 endif(PORTAUDIO_FOUND)
 
 # link target with SoundTouch
-if(projectSoundTouch)
-	target_link_libraries(${zerospu2Name} SoundTouch)
-else(projectSoundTouch)
-	target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
-endif(projectSoundTouch)
+target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
  
 # Force the linker into 32 bits mode
 target_link_libraries(${zerospu2Name} -m32)

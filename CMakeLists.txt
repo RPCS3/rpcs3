@@ -26,10 +26,6 @@ endif (UNIX)
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# include modules
-include(Pcsx2Utils)
-include(SearchForStuff)
-
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default
 #-------------------------------------------------------------------------------
@@ -54,6 +50,46 @@ endif(NOT DEFINED CMAKE_BUILD_STRIP)
  
  #-------------------------------------------------------------------------------
  
+# Force the choice of 3rd party library either system one or pcsx2 one
+# Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
+# Use a52         internal lib: -DFORCE_INTERNAL_A52=TRUE
+# Use bzip        internal lib: -DFORCE_INTERNAL_BZIP2=TRUE
+# Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
+# Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
+#-------------------------------------------------------------------------------
+
+# There have been issues in the past with sound quality depending on the version
+# of Soundtouch, so for the moment, we'll use the internal version.
+set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
+
+if(FORCE_INTERNAL_ALL)
+    set(FORCE_INTERNAL_A52 TRUE)
+    set(FORCE_INTERNAL_BZIP2 TRUE)
+    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
+    set(FORCE_INTERNAL_ZLIB TRUE)
+endif(FORCE_INTERNAL_ALL)
+
+if(NOT DEFINED FORCE_INTERNAL_A52)
+    set(FORCE_INTERNAL_A52 FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_A52)
+
+if(NOT DEFINED FORCE_INTERNAL_BZIP2)
+    set(FORCE_INTERNAL_BZIP2 FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_BZIP2)
+
+if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+    set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+
+if(NOT DEFINED FORCE_INTERNAL_ZLIB)
+    set(FORCE_INTERNAL_ZLIB FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
+
+#-------------------------------------------------------------------------------
+# include modules
+include(Pcsx2Utils)
+include(SearchForStuff)
+
 # add additional project-wide include directories
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty
 					${PROJECT_SOURCE_DIR}/common/include

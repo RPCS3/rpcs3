@@ -60,13 +60,13 @@ endif(wxWidgets_FOUND)
 find_package(ZLIB)
 
 # if we found zlib on the system, use it else use project one
-if(ZLIB_FOUND)
+if(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 	# add zlib include directories
 	include_directories(${ZLIB_INCLUDE_DIRS})
-else(ZLIB_FOUND)
+else(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 	# use project one
 	set(projectZLIB TRUE)
-endif(ZLIB_FOUND)
+endif(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 
 #------------------------------------------------------------
 
@@ -94,6 +94,21 @@ endif(Linux)
 
 #------------------------------------------------------------
 
+# A52 optional
+include(FindA52)
+
+# if we found A52 on the system,
+# use it else use project one
+if(A52_FOUND AND NOT FORCE_INTERNAL_A52)
+	# add a52 include directories
+	include_directories(${A52_INCLUDE_DIR})
+else(A52_FOUND AND NOT FORCE_INTERNAL_A52)
+	# use project one
+	set(projectA52 TRUE)
+    set(A52_LIBRARIES A52)
+endif(A52_FOUND AND NOT FORCE_INTERNAL_A52)
+
+
 # ALSA optional
 find_package(ALSA)
 
@@ -110,13 +125,14 @@ find_package(BZip2)
 
 # if we found bzip2 on the system,
 # use it else use project one
-if(BZIP2_FOUND)
+if(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 	# add zlib include directories
 	include_directories(${BZIP2_INCLUDE_DIR})
-else(BZIP2_FOUND)
+else(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 	# use project one
 	set(projectBZip2 TRUE)
-endif(BZIP2_FOUND)
+	set(BZIP2_LIBRARIES bzip2)
+endif(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 
 #------------------------------------------------------------
 
@@ -180,16 +196,17 @@ endif(SDL_FOUND)
 #include(FindSoundTouch)
 
 # found SoundTouch	
-#if(SOUNDTOUCH_FOUND)
-#	# add SoundTouch include directories
-#	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
-#else(SOUNDTOUCH_FOUND)
+if(SOUNDTOUCH_FOUND AND NOT FORCE_INTERNAL_SOUNDTOUCH)
+	# add SoundTouch include directories
+	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
+else(SOUNDTOUCH_FOUND AND NOT FORCE_INTERNAL_SOUNDTOUCH)
 	# use project one
 	set(projectSoundTouch TRUE)
+	set(SOUNDTOUCH_LIBRARIES SoundTouch)
 
 	# found
 	set(SOUNDTOUCH_FOUND TRUE)
-#endif(SOUNDTOUCH_FOUND)
+endif(SOUNDTOUCH_FOUND AND NOT FORCE_INTERNAL_SOUNDTOUCH)
 
 #------------------------------------------------------------
 

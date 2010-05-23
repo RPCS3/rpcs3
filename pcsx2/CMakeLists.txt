@@ -643,11 +643,7 @@ if(Linux)
 endif(Linux)
 
 # link target with zlib
-if(projectZLIB)
-	target_link_libraries(${pcsx2Name} zlib)
-else(projectZLIB)
-	target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
-endif(projectZLIB)
+target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
 
 # Force the linker into 32 bits mode
 target_link_libraries(${pcsx2Name} -m32)

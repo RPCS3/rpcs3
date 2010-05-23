@@ -119,14 +119,10 @@ if(PORTAUDIO_FOUND)
 endif(PORTAUDIO_FOUND)
 
 # link target with SoundTouch
-if(projectSoundTouch)
-	target_link_libraries(${spu2xName} SoundTouch)
-else(projectSoundTouch)
-	target_link_libraries(${spu2xName} ${SOUNDTOUCH_LIBRARIES})
-endif(projectSoundTouch)
+target_link_libraries(${spu2xName} ${SOUNDTOUCH_LIBRARIES})
 
 # link target with A52
-target_link_libraries(${spu2xName} a52)
+target_link_libraries(${spu2xName} ${A52_LIBRARIES})
 
 # Force the linker into 32 bits mode
 target_link_libraries(${spu2xName} -m32)
