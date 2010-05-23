@@ -90,7 +90,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	set(pcsx2Name pcsx2-dev)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL -DWX_PRECOMP -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build

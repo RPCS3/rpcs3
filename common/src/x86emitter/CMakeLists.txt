@@ -87,7 +87,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL)
+	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build

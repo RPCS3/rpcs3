@@ -47,7 +47,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     # add defines
-    add_definitions(${CommonFlags} -O2 -W -DRELEASE_TO_PUBLIC)
+    add_definitions(${CommonFlags} -O2 -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zzogl sources
