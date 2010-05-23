@@ -59,7 +59,11 @@ public:
 	int GetFormat() const {return m_format;}
 
 	bool IsMSAA() const {return m_msaa;}
-	
+
+	// frame number (arbitrary base) the texture was recycled on
+	// different purpose than texture cache ages, do not attempt to merge
+	unsigned last_frame_used;
+
 	bool LikelyOffset;
 	float OffsetHack_modx;
 	float OffsetHack_mody;

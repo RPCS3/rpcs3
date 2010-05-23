@@ -32,6 +32,7 @@ GSDevice::GSDevice()
 	, m_weavebob(NULL)
 	, m_blend(NULL)
 	, m_1x1(NULL)
+	, m_frame(0)
 {
 	memset(&m_vertices, 0, sizeof(m_vertices));
 
@@ -143,6 +144,7 @@ void GSDevice::Recycle(GSTexture* t)
 {
 	if(t)
 	{
+		t->last_frame_used = m_frame;
 		m_pool.push_front(t);
 		//printf("%d\n",m_pool.size());
 		while(m_pool.size() > 300)
@@ -151,6 +153,16 @@ void GSDevice::Recycle(GSTexture* t)
 
 			m_pool.pop_back();
 		}
+	}
+}
+
+void GSDevice::AgePool()
+{
+	m_frame++;
+	while (m_pool.size() > 20 && m_frame - m_pool.back()->last_frame_used > 10)
+	{
+		delete m_pool.back();
+		m_pool.pop_back();
 	}
 }
 

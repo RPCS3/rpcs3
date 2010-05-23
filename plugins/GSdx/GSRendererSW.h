@@ -49,4 +49,9 @@ public:
 
 	template<uint32 prim, uint32 tme, uint32 fst>
 	void VertexKick(bool skip);
+
+	void InvalidateTextureCache()
+	{
+		m_tc->RemoveAll();
+	}
 };

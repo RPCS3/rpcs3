@@ -66,6 +66,7 @@ protected:
 	struct {size_t stride, start, count, limit;} m_vertices;
 	uint32 m_msaa;
 	DXGI_SAMPLE_DESC m_msaa_desc;
+	unsigned m_frame; // for ageing the pool
 
 	virtual GSTexture* Create(int type, int w, int h, bool msaa, int format) = 0;
 
@@ -146,4 +147,6 @@ public:
 	}
 
 	bool SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode); // TODO: GSDeviceDX
+
+	void AgePool();
 };

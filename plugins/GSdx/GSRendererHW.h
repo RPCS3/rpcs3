@@ -467,6 +467,7 @@ protected:
 		__super::VSync(field);
 
 		m_tc->IncAge();
+		m_dev->AgePool();
 
 		m_skip = 0;
 
@@ -478,10 +479,14 @@ protected:
 		}
 	}
 
+	void InvalidateTextureCache()
+	{
+		m_tc->RemoveAll();
+	}
+
 	void ResetDevice()
 	{
 		__super::ResetDevice();
-		m_tc->RemoveAll();
 	}
 
 	GSTexture* GetOutput(int i)

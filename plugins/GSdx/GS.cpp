@@ -368,6 +368,7 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 	}
 	else if(mode == FREEZE_LOAD)
 	{
+		s_gs->ResetDevice();
 		return s_gs->Defrost(data);
 	}
 
