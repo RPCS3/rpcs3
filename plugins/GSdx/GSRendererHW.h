@@ -455,7 +455,7 @@ protected:
 	void Reset()
 	{
 		// TODO: GSreset can come from the main thread too => crash
-		// m_tc->RemoveAll();
+		 m_tc->RemoveAll();
 
 		m_reset = true;
 

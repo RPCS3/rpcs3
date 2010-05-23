@@ -44,7 +44,7 @@ GSDevice::GSDevice()
 GSDevice::~GSDevice()
 {
 	for_each(m_pool.begin(), m_pool.end(), delete_object());
-
+	m_pool.clear();
 	delete m_backbuffer;
 	delete m_merge;
 	delete m_weavebob;

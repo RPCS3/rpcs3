@@ -137,12 +137,10 @@ EXPORT_C GSclose()
 {
 	if( !s_gs ) return;
 
-	s_gs->ResetDevice();
-
-	delete s_gs->m_dev;
-	s_gs->m_dev = NULL;
-
 	s_gs->m_wnd.Detach();
+	
+	delete s_gs;
+	s_gs = NULL;
 }
 
 static INT32 _GSopen(void* dsp, char* title, int renderer)
@@ -158,16 +156,6 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	try
 	{
-		if (s_renderer != renderer)
-		{
-			// Emulator has made a render change request, which requires a completely
-			// new s_gs -- if the emu doesn't save/restore the GS state across this
-			// GSopen call then they'll get corrupted graphics, but that's not my problem.
-
-			delete s_gs;
-			s_gs = NULL;
-		}
-
 		switch(renderer)
 		{
 		default:
@@ -245,6 +233,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 {
+	GSclose();
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
 	{
@@ -261,6 +250,7 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
+	GSclose();
 	int renderer;
 
 	// Legacy GUI expects to acquire vsync from the configuration files.

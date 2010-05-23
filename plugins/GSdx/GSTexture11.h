@@ -35,6 +35,7 @@ class GSTexture11 : public GSTexture
 
 public:
 	explicit GSTexture11(ID3D11Texture2D* texture);
+	virtual ~GSTexture11() {};
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);
 	bool Map(GSMap& m, const GSVector4i* r);
