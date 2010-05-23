@@ -16,10 +16,14 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 #include "MemoryCardPanels.h"
+#include "System.h"
 
 #include <wx/filepicker.h>
 #include <wx/ffile.h>
 #include <wx/dir.h>
+#include "Dialogs/ConfigurationDialog.h"
+
+#include "MemoryCardFile.h"
 
 
 using namespace pxSizerFlags;
@@ -86,6 +90,48 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 	return pushed;
 }
 
+// --------------------------------------------------------------------------------------
+//  McdListItem  (implementations)
+// --------------------------------------------------------------------------------------
+bool McdListItem::IsMultitapSlot() const
+{
+	return FileMcd_IsMultitapSlot(Slot);
+}
+
+uint McdListItem::GetMtapPort() const
+{
+	return FileMcd_GetMtapPort(Slot);
+}
+
+uint McdListItem::GetMtapSlot() const
+{
+	return FileMcd_GetMtapSlot(Slot);
+}
+
+// Compares two cards -- If this equality comparison is used on items where
+// no filename is specified, then the check will include port and slot.
+bool McdListItem::operator==( const McdListItem& right ) const
+{
+	bool fileEqu;
+
+	if( Filename.GetFullName().IsEmpty() )
+		fileEqu = OpEqu(Slot);
+	else
+		fileEqu = OpEqu(Filename);
+
+	return fileEqu &&
+		OpEqu(IsPresent)	&& OpEqu(IsEnabled)		&&
+		OpEqu(SizeInMB)		&& OpEqu(IsFormatted)	&&
+		OpEqu(DateCreated)	&& OpEqu(DateModified);
+}
+
+bool McdListItem::operator!=( const McdListItem& right ) const
+{
+	return operator==( right );
+}
+
+//DEFINE_EVENT_TYPE( pxEvt_RefreshSelections );
+
 // =====================================================================================================
 //  BaseMcdListPanel (implementations)
 // =====================================================================================================
@@ -101,8 +147,22 @@ Panels::BaseMcdListPanel::BaseMcdListPanel( wxWindow* parent )
 	
 	m_btn_Refresh = new wxButton( this, wxID_ANY, _("Refresh list") );
 
-	Connect( m_btn_Refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(BaseMcdListPanel::OnRefresh) );
+	Connect( m_btn_Refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(BaseMcdListPanel::OnRefreshSelections) );
+	//Connect( pxEvt_RefreshSelections, wxCommandEventHandler(BaseMcdListPanel::OnRefreshSelections) );
 }
+
+void Panels::BaseMcdListPanel::RefreshMcds() const
+{
+	wxCommandEvent refit( wxEVT_COMMAND_BUTTON_CLICKED );
+	refit.SetId( m_btn_Refresh->GetId() );
+	GetEventHandler()->AddPendingEvent( refit );
+}
+
+/*void Panels::BaseMcdListPanel::OnEvent_McdRefresh( wxCommandEvent& evt ) const
+{
+	RefreshSelections();
+	evt.Skip();
+}*/
 
 void Panels::BaseMcdListPanel::CreateLayout()
 {
@@ -145,8 +205,8 @@ Panels::MemoryCardListPanel_Advanced::MemoryCardListPanel_Advanced( wxWindow* pa
 	CreateLayout();
 	*s_leftside_buttons	+= button_Create	| StdSpace();
 	
-	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListPanel_Advanced::OnListDrag));
-	Connect( button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Advanced::OnCreateNewCard));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler		(MemoryCardListPanel_Advanced::OnListDrag));
+	Connect( button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler	(MemoryCardListPanel_Advanced::OnCreateNewCard));
 }
 
 void Panels::MemoryCardListPanel_Advanced::Apply()
@@ -185,7 +245,7 @@ bool Panels::MemoryCardListPanel_Advanced::ValidateEnumerationStatus()
 	if( !m_KnownCards || (*mcdlist != *m_KnownCards) )
 		validated = false;
 
-	m_listview->SetInterface( NULL );
+	m_listview->SetMcdProvider( NULL );
 	m_KnownCards.SwapPtr( mcdlist );
 
 	return validated;
@@ -199,10 +259,9 @@ void Panels::MemoryCardListPanel_Advanced::DoRefresh()
 	{
 		McdListItem& mcditem( (*m_KnownCards)[i] );
 
-		for( int port=0; port<2; ++port )
-		for( int slot=0; slot<4; ++slot )
+		for( int slot=0; slot<8; ++slot )
 		{
-			wxFileName right( g_Conf->FullpathToMcd(port, slot) );
+			wxFileName right( g_Conf->FullpathToMcd(slot) );
 			right.MakeAbsolute();
 
 			wxFileName left( mcditem.Filename );
@@ -210,13 +269,12 @@ void Panels::MemoryCardListPanel_Advanced::DoRefresh()
 
 			if( left == right )
 			{
-				mcditem.Port = port;
 				mcditem.Slot = slot;
 			}
 		}
 	}
 
-	m_listview->SetInterface( this );
+	m_listview->SetMcdProvider( this );
 	//m_listview->SetCardCount( m_KnownCards->size() );
 }
 
@@ -232,7 +290,7 @@ void Panels::MemoryCardListPanel_Advanced::OnListDrag(wxListEvent& evt)
 
 	wxDropSource dragSource( m_listview );
 	dragSource.SetData( my_data );
-	wxDragResult result = dragSource.DoDragDrop();
+	wxDragResult result = dragSource.DoDragDrop(wxDrag_AllowMove);
 }
 
 int Panels::MemoryCardListPanel_Advanced::GetLength() const
@@ -252,17 +310,223 @@ McdListItem& Panels::MemoryCardListPanel_Advanced::GetCard( int idx )
 	return (*m_KnownCards)[idx];
 }
 
-uint Panels::MemoryCardListPanel_Advanced::GetPort( int idx ) const
+// --------------------------------------------------------------------------------------
+//  McdDataObject
+// --------------------------------------------------------------------------------------
+class WXDLLEXPORT McdDataObject : public wxDataObjectSimple
 {
-	pxAssume(!!m_KnownCards);
-	return (*m_KnownCards)[idx].Port;
-}
+	DECLARE_NO_COPY_CLASS(McdDataObject)
 
-uint Panels::MemoryCardListPanel_Advanced::GetSlot( int idx ) const
+protected:
+	int  m_slot;
+
+public:
+	McdDataObject(int slot = -1)
+		: wxDataObjectSimple( wxDF_PRIVATE )
+	{
+		m_slot = slot;
+	}
+	
+	uint GetSlot() const
+	{
+		pxAssumeDev( m_slot >= 0, "Memorycard Index is uninitialized (invalid drag&drop object state)" );
+		return (uint)m_slot;
+	}
+
+	size_t GetDataSize() const
+	{
+		return sizeof(u32);
+	}
+
+	bool GetDataHere(void *buf) const
+	{
+		*(u32*)buf = GetSlot();
+		return true;
+	}
+
+	virtual bool SetData(size_t len, const void *buf)
+	{
+		if( !pxAssertDev( len == sizeof(u32), "Data length mismatch on memorycard drag&drop operation." ) ) return false;
+		
+		m_slot = *(u32*)buf;
+		return ( (uint)m_slot < 8 );		// sanity check (unsigned, so that -1 also is invalid) :)
+	}
+
+	// Must provide overloads to avoid hiding them (and warnings about it)
+	virtual size_t GetDataSize(const wxDataFormat&) const
+	{
+		return GetDataSize();
+	}
+
+	virtual bool GetDataHere(const wxDataFormat&, void *buf) const
+	{
+		return GetDataHere(buf);
+	}
+
+	virtual bool SetData(const wxDataFormat&, size_t len, const void *buf)
+	{
+		return SetData(len, buf);
+	}
+};
+
+class McdDropTarget : public wxDropTarget
 {
-	pxAssume(!!m_KnownCards);
-	return (*m_KnownCards)[idx].Slot;
-}
+protected:
+	BaseMcdListView*	m_listview;
+
+public:
+	McdDropTarget( BaseMcdListView* listview=NULL )
+	{
+		m_listview = listview;
+		SetDataObject(new McdDataObject());
+	}
+
+	// these functions are called when data is moved over position (x, y) and
+	// may return either wxDragCopy, wxDragMove or wxDragNone depending on
+	// what would happen if the data were dropped here.
+	//
+	// the last parameter is what would happen by default and is determined by
+	// the platform-specific logic (for example, under Windows it's wxDragCopy
+	// if Ctrl key is pressed and wxDragMove otherwise) except that it will
+	// always be wxDragNone if the carried data is in an unsupported format.
+
+
+	// called when the mouse moves in the window - shouldn't take long to
+	// execute or otherwise mouse movement would be too slow.
+	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
+	{
+		int flags = 0;
+		int idx = m_listview->HitTest( wxPoint(x,y), flags);
+		m_listview->SetTargetedItem( idx );
+
+		if( wxNOT_FOUND == idx ) return wxDragNone;
+
+		return def;
+	}
+	
+	virtual void OnLeave()
+	{
+		m_listview->SetTargetedItem( wxNOT_FOUND );
+	}
+
+	// this function is called when data is dropped at position (x, y) - if it
+	// returns true, OnData() will be called immediately afterwards which will
+	// allow to retrieve the data dropped.
+	virtual bool OnDrop(wxCoord x, wxCoord y)
+	{
+		int flags = 0;
+		int idx = m_listview->HitTest( wxPoint(x,y), flags);
+		return ( wxNOT_FOUND != idx );
+	}
+
+	// may be called *only* from inside OnData() and will fill m_dataObject
+	// with the data from the drop source if it returns true
+	virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
+	{
+		m_listview->SetTargetedItem( wxNOT_FOUND );
+
+		int flags = 0;
+		int idx = m_listview->HitTest( wxPoint(x,y), flags);
+		if( wxNOT_FOUND == idx ) return wxDragNone;
+
+		if ( !GetData() ) return wxDragNone;
+
+		McdDataObject *dobj = (McdDataObject *)m_dataObject;
+
+		wxDragResult result = OnDropMcd(
+			m_listview->GetMcdProvider().GetCard(dobj->GetSlot()),
+			m_listview->GetMcdProvider().GetCard(idx),
+			def
+		);
+
+		if( wxDragNone == result ) return wxDragNone;
+		m_listview->GetMcdProvider().RefreshMcds();
+
+		return result;
+	}
+	
+	virtual wxDragResult OnDropMcd( const McdListItem& src, const McdListItem& dest, wxDragResult def )
+	{
+		if( src.Slot == dest.Slot ) return wxDragNone;
+		if( !pxAssert( (src.Slot >= 0) && (dest.Slot >= 0) ) ) return wxDragNone;
+	
+		const wxDirName basepath( m_listview->GetMcdProvider().GetMcdPath() );
+		wxFileName srcfile( basepath + g_Conf->Mcd[src.Slot].Filename );
+		wxFileName destfile( basepath + g_Conf->Mcd[dest.Slot].Filename );
+
+		if( wxDragCopy == def )
+		{
+			// user is force invoking copy mode, which means we need to check the destination
+			// and prompt if it looks valuable (formatted).
+
+			if( dest.IsPresent && dest.IsFormatted )
+			{
+				wxsFormat( pxE( ".Popup:Mcd:Overwrite", 
+					L"This will copy the contents of the MemoryCard in slot %u over the Memorycard in slot %u. "
+					L"All data on the target slot will be lost.  Are you sure?" ), 
+					src.Slot, dest.Slot
+				);
+
+				//if( !Msgbox::OkCancel(  ) )
+				//	return wxDragNone;
+			}
+			
+			ScopedBusyCursor doh( Cursor_ReallyBusy );
+			if( !wxCopyFile( srcfile.GetFullPath(), destfile.GetFullPath(),	true ) )
+			{
+				wxString heading;
+				heading.Printf( pxE( ".Error:Mcd:Copy Failed", 
+					L"Error!  Could not copy the MemoryCard into slot %u.  The destination file is in use." ),
+					dest.Slot
+				);
+				
+				wxString content;
+
+				Msgbox::Alert( heading + L"\n\n" + content, _("Copy failed!") );
+				return wxDragNone;
+			}
+		}
+		else if( wxDragMove == def )
+		{
+			// Move always performs a swap :)
+
+			const bool srcExists( srcfile.FileExists() );
+			const bool destExists( destfile.FileExists() );
+
+			bool result = true;
+
+			if( destExists && srcExists) 
+			{
+				wxFileName tempname;
+				tempname.AssignTempFileName( basepath.ToString() ); 
+
+				// Neat trick to handle errors.
+				result = result && wxRenameFile( srcfile.GetFullPath(), tempname.GetFullPath(), true );
+				result = result && wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath(), false );
+				result = result && wxRenameFile( tempname.GetFullPath(), srcfile.GetFullPath(), true );
+			}
+			else if( destExists )
+			{
+				result = wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath() );
+			}
+			else if( srcExists )
+			{
+				result = wxRenameFile( srcfile.GetFullPath(), destfile.GetFullPath() );
+			}
+			
+			if( !result )
+			{
+				// TODO : Popup an error to the user.
+
+				Console.Error( "(McdFile) Memorycard swap failed." );
+				Console.Indent().WriteLn( L"Src : " + srcfile.GetFullPath() );
+				Console.Indent().WriteLn( L"Dest: " + destfile.GetFullPath() );
+			}
+		}
+		
+		return def;
+	}
+};
 
 // =====================================================================================================
 //  MemoryCardListPanel_Simple (implementations)
@@ -274,6 +538,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	m_MultitapEnabled[1] = false;
 
 	m_listview = new MemoryCardListView_Simple(this);
+	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
 	m_button_Create	= new wxButton(this, wxID_ANY, _("Create"));
 	m_button_Mount	= new wxButton(this, wxID_ANY, _("Mount"));
@@ -291,7 +556,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(MemoryCardListPanel_Simple::OnListDrag));
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
-	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_DESELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
 
 	Connect( m_button_Mount->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard));
 	Connect( m_button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateCard));
@@ -303,6 +568,13 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	
 	int sel = m_listview->GetFirstSelected();
 
+	if( wxNOT_FOUND == sel )
+	{
+		m_button_Create->Disable();
+		m_button_Mount->Disable();
+		return;
+	}
+
 	/*if( !pxAssertDev( m_listview->GetItemData(sel), "Selected memorycard item data is NULL!" ) )
 	{
 		m_button_Create->Disable();
@@ -310,9 +582,9 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 		return;
 	}*/
 
-	//const McdListItem& item( *(McdListItem*)m_listview->GetItemData(sel) );
-	const McdListItem& item( m_Cards[GetPort(sel)][GetSlot(sel)] );
+	const McdListItem& item( m_Cards[sel] );
 
+	m_button_Create->Enable();
 	m_button_Create->SetLabel( item.IsPresent ? _("Delete") : _("Create") );
 	pxSetToolTip( m_button_Create,
 		item.IsPresent
@@ -348,55 +620,88 @@ bool Panels::MemoryCardListPanel_Simple::OnDropFiles(wxCoord x, wxCoord y, const
 	return false;
 }
 
-static wxString GetAutoMcdName(uint port, uint slot)
-{
-	if( slot > 0 )
-		return wxsFormat( L"mcd-port%u-slot%02u.ps2", port+1, slot+1 );
-	else
-		return wxsFormat( L"Mcd%03u.ps2", port+1 );
-}
-
 bool Panels::MemoryCardListPanel_Simple::ValidateEnumerationStatus()
 {
-	if( m_listview ) m_listview->SetInterface( NULL );
+	if( m_listview ) m_listview->SetMcdProvider( NULL );
 	return false;
 }
 
 void Panels::MemoryCardListPanel_Simple::DoRefresh()
 {
-	for( uint port=0; port<2; ++port )
+	for( uint slot=0; slot<8; ++slot )
 	{
-		for( uint slot=0; slot<4; ++slot )
-		{
-			wxFileName fullpath( m_FolderPicker->GetPath() + GetAutoMcdName(port,slot) );
-			EnumerateMemoryCard( m_Cards[port][slot], fullpath );
+		wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
+		EnumerateMemoryCard( m_Cards[slot], fullpath );
 
-			if( (slot > 0) && !m_MultitapEnabled[port] )
-				m_Cards[port][slot].IsEnabled = false;
-		}
+		m_Cards[slot].Slot = slot;
+
+		if( FileMcd_IsMultitapSlot(slot) && !m_MultitapEnabled[FileMcd_GetMtapPort(slot)] )
+			m_Cards[slot].IsEnabled = false;
 	}
 	
-	if( m_listview ) m_listview->SetInterface( this );
+	if( m_listview ) m_listview->SetMcdProvider( this );
+	UpdateUI();
 }
 
 void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 {
+	const int	sel		= m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == sel ) return;
+	const uint	slot	= sel;
 
+	if( m_Cards[slot].IsPresent )
+	{
+		wxWindowID result = wxID_YES;
+		if( m_Cards[slot].IsFormatted )
+		{
+			wxString content;
+			content.Printf(wxsFormat(
+				pxE(".Popup:DeleteMemoryCard",
+					L"You are about to delete the formatted memory card in slot %u. "
+					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
+				), slot )
+			);
+
+			result = Msgbox::YesNo( content, _("Delete MemoryCard?") );
+		}
+
+		if( result == wxID_YES )
+		{
+			wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
+			wxRemoveFile( fullpath.GetFullPath() );
+		}
+	}
+	else
+		Dialogs::CreateMemoryCardDialog( this, slot, m_FolderPicker->GetPath() ).ShowModal();
+
+	RefreshSelections();
 }
+
+/*void Panels::MemoryCardListPanel_Simple::OnSwapPorts(wxCommandEvent& evt)
+{
+	
+}*/
 
 void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 {
+	const int	sel		= m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == sel ) return;
+	const uint	slot	= sel;
 
+	m_Cards[slot].IsEnabled = !m_Cards[slot].IsEnabled;
+	RefreshSelections();
 }
 
 void Panels::MemoryCardListPanel_Simple::OnListDrag(wxListEvent& evt)
 {
-	wxFileDataObject my_data;
-	/*my_data.AddFile( (*m_KnownCards)[m_listview->GetItemData(m_listview->GetFirstSelected())].Filename.GetFullPath() );
+	int selection = m_listview->GetFirstSelected();
 
+	if( selection < 0 ) return;
+	McdDataObject my_data( selection );
+	
 	wxDropSource dragSource( m_listview );
 	dragSource.SetData( my_data );
-	wxDragResult result = dragSource.DoDragDrop();*/
+	wxDragResult result = dragSource.DoDragDrop( wxDrag_AllowMove );
 }
 
 void Panels::MemoryCardListPanel_Simple::OnListSelectionChanged(wxListEvent& evt)
@@ -415,38 +720,10 @@ int Panels::MemoryCardListPanel_Simple::GetLength() const
 
 const McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx ) const
 {
-	return m_Cards[GetPort(idx)][GetSlot(idx)];
+	return m_Cards[idx];
 }
 
 McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
 {
-	return m_Cards[GetPort(idx)][GetSlot(idx)];
-}
-
-uint Panels::MemoryCardListPanel_Simple::GetPort( int idx ) const
-{
-	if( !m_MultitapEnabled[0] && !m_MultitapEnabled[1] )
-	{
-		pxAssume( idx < 2 );
-		return idx;
-	}
-
-	if( !m_MultitapEnabled[0] )
-		return (idx==0) ? 0 : 1;
-	else
-		return idx / 4;
-}
-
-uint Panels::MemoryCardListPanel_Simple::GetSlot( int idx ) const
-{
-	if( !m_MultitapEnabled[0] && !m_MultitapEnabled[1] )
-	{
-		pxAssume( idx < 2 );
-		return 0;
-	}
-
-	if( !m_MultitapEnabled[0] )
-		return (idx==0) ? 0 : (idx-1);
-	else
-		return idx & 3;
+	return m_Cards[idx];
 }

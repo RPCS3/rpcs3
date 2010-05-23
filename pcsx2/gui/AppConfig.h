@@ -222,7 +222,10 @@ public:
 	wxString				CurrentELF;
 	CDVD_SourceType			CdvdSource;
 
-	McdOptions				Mcd[2][4];
+	// Memorycard options - first 2 are default slots, last 6 are multitap 1 and 2
+	// slots (3 each)
+	McdOptions				Mcd[8];
+	
 	ConsoleLogOptions		ProgLogBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
@@ -239,7 +242,7 @@ public:
 	AppConfig();
 
 	wxString FullpathToBios() const;
-	wxString FullpathToMcd( uint port, uint slot ) const;
+	wxString FullpathToMcd( uint slot ) const;
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 
 	bool FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const;
@@ -254,7 +257,7 @@ public:
 struct ConfigOverrides
 {
 	AppConfig::FilenameOptions	Filenames;
-	wxString		SettingsFolder;
+	wxString					SettingsFolder;
 };
 
 extern ConfigOverrides OverrideOptions;

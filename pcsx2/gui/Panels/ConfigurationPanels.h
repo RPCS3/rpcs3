@@ -378,12 +378,15 @@ namespace Panels
 		virtual ~BaseSelectorPanel() throw();
 		BaseSelectorPanel( wxWindow* parent );
 
+		virtual void RefreshSelections();
+
 		virtual bool Show( bool visible=true );
-		virtual void OnRefresh( wxCommandEvent& evt );
 		virtual void OnShown();
 		virtual void OnFolderChanged( wxFileDirPickerEvent& evt );
 
 	protected:
+		void OnRefreshSelections( wxCommandEvent& evt );
+
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
 		void OnShow(wxShowEvent& evt);
@@ -420,11 +423,11 @@ namespace Panels
 	{
 	protected:
 		MemoryCardListPanel_Advanced*	m_panel_AllKnownCards;
-		MemoryCardInfoPanel*	m_panel_cardinfo[2][4];
+		MemoryCardInfoPanel*	m_panel_cardinfo[8];
 		pxCheckBox*				m_check_Ejection;
 		pxCheckBox*				m_check_Multitap[2];
 
-		uint					m_Bindings[2][4];
+		uint					m_Bindings[8];
 
 	public:
 		MemoryCardsPanel( wxWindow* parent );

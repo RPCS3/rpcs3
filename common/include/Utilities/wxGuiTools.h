@@ -307,7 +307,7 @@ protected:
 	bool				m_hasContextHelp;
 	int					m_idealWidth;
 	wxBoxSizer*			m_extraButtonSizer;
-
+	
 public:
 	wxDialogWithHelpers();
 	wxDialogWithHelpers(wxWindow* parent, const wxString& title, bool hasContextHelp=false, bool resizable=false );

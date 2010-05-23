@@ -59,7 +59,6 @@ MemoryCardListView_Simple::MemoryCardListView_Simple( wxWindow* parent )
 	: _parent( parent )
 {
 	CreateColumns();
-	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView_Advanced::OnListDrag));
 }
 
 void MemoryCardListView_Simple::SetCardCount( int length )
@@ -67,11 +66,6 @@ void MemoryCardListView_Simple::SetCardCount( int length )
 	if( !m_CardProvider ) length = 0;
 	SetItemCount( length );
 	Refresh();
-}
-
-void MemoryCardListView_Simple::OnListDrag(wxListEvent& evt)
-{
-	evt.Skip();
 }
 
 // return the text for the given column of the given item
@@ -83,16 +77,15 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 
 	switch( column )
 	{
-		case McdColS_PortSlot:		return wxsFormat( L"%u/%u", m_CardProvider->GetPort(item)+1, m_CardProvider->GetSlot(item)+1);
+		case McdColS_PortSlot:		return wxsFormat( L"%u", item+1);
 		case McdColS_Status:		return it.IsPresent ? ( it.IsEnabled ? _("Enabled") : _("Disabled")) : _("Missing");
 		case McdColS_Size:			return it.IsPresent ? wxsFormat( L"%u MB", it.SizeInMB ) : (wxString)_("N/A");
 		case McdColS_Formatted:		return it.IsFormatted ? _("Yes") : _("No");
 		case McdColS_DateModified:	return it.IsPresent ? it.DateModified.FormatDate()	: (wxString)_("N/A");
 		case McdColS_DateCreated:	return it.IsPresent ? it.DateCreated.FormatDate()	: (wxString)_("N/A");
-		//case McdCol_Path:			return it.Filename.GetPath();
 	}
 
-	pxFail( "Unknown column index in MemoryCardListView_Advanced -- returning an empty string." );
+	pxFail( "Unknown column index in MemoryCardListView -- returning an empty string." );
 	return wxEmptyString;
 }
 
@@ -110,10 +103,24 @@ int MemoryCardListView_Simple::OnGetItemColumnImage(long item, long column) cons
 	return _parent::OnGetItemColumnImage( item, column );
 }
 
+static wxListItemAttr m_ItemAttr;
+
 // return the attribute for the item (may return NULL if none)
 wxListItemAttr* MemoryCardListView_Simple::OnGetItemAttr(long item) const
 {
-	wxListItemAttr* retval = _parent::OnGetItemAttr(item);
-	//const McdListItem& it( (*m_KnownCards)[item] );
-	return retval;
+	//m_disabled.SetTextColour( wxLIGHT_GREY );
+	//m_targeted.SetBackgroundColour( wxColour(L"Yellow") );
+
+	if( !m_CardProvider ) return _parent::OnGetItemAttr(item);
+	const McdListItem& it( m_CardProvider->GetCard(item) );
+
+	m_ItemAttr = wxListItemAttr();		// Wipe it clean!
+
+	if( !it.IsEnabled )
+		m_ItemAttr.SetTextColour( *wxLIGHT_GREY );
+
+	if( m_TargetedItem == item )
+		m_ItemAttr.SetBackgroundColour( wxColour(L"Wheat") );
+
+	return &m_ItemAttr;
 }

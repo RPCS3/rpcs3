@@ -29,11 +29,16 @@ struct RadioPanelItem
 	wxString		SubText;
 	wxString		ToolTip;
 
+	int				SomeInt;
+	void*			SomePtr;
+
 	RadioPanelItem( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString )
 		: Label( label )
 		, SubText( subtext )
 		, ToolTip( tooltip )
 	{
+		SomeInt = 0;
+		SomePtr = NULL;
 	}
 
 	RadioPanelItem& SetToolTip( const wxString& tip )
@@ -45,6 +50,18 @@ struct RadioPanelItem
 	RadioPanelItem& SetSubText( const wxString& text )
 	{
 		SubText = text;
+		return *this;
+	}
+	
+	RadioPanelItem& SetInt( int intval )
+	{
+		SomeInt = intval;
+		return *this;	
+	}
+
+	RadioPanelItem& SetPtr( void* ptrval )
+	{
+		SomePtr = ptrval;
 		return *this;
 	}
 };
@@ -114,9 +131,15 @@ public:
 	pxRadioPanel& SetDefaultItem( int idx );
 	pxRadioPanel& EnableItem( int idx, bool enable=true );
 
+	const RadioPanelItem& Item(int idx) const;
+	RadioPanelItem& Item(int idx);
+
 	int GetSelection() const;
 	wxWindowID GetSelectionId() const;
 	bool IsSelected( int idx ) const;
+
+	const RadioPanelItem&	SelectedItem() const	{ return Item(GetSelection()); }
+	RadioPanelItem&			SelectedItem()			{ return Item(GetSelection()); }
 
 	wxRadioButton* GetButton( int idx );
 	const wxRadioButton* GetButton( int idx ) const;

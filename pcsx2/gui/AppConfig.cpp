@@ -19,6 +19,8 @@
 #include "IniInterface.h"
 #include "Plugins.h"
 
+#include "MemoryCardFile.h"
+
 #include <wx/stdpaths.h>
 #include "DebugTools/Debug.h"
 
@@ -336,9 +338,9 @@ wxString GetSettingsFilename()
 
 
 wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
-wxString AppConfig::FullpathToMcd( uint port, uint slot ) const
+wxString AppConfig::FullpathToMcd( uint slot ) const
 {
-	return Path::Combine( Folders.MemoryCards, Mcd[port][slot].Filename );
+	return Path::Combine( Folders.MemoryCards, Mcd[slot].Filename );
 }
 
 AppConfig::AppConfig()
@@ -363,13 +365,11 @@ AppConfig::AppConfig()
 
 	CdvdSource			= CDVDsrc_Iso;
 
-	for( uint port=0; port<2; ++port )
+	// To be moved to FileMemoryCard pluign (someday)
+	for( uint slot=0; slot<8; ++slot )
 	{
-		for( uint slot=0; slot<4; ++slot )
-		{
-			Mcd[port][slot].Enabled		= (slot==0);	// enables main 2 slots
-			Mcd[port][slot].Filename	= FilenameDefs::Memcard( port, slot );
-		}
+		Mcd[slot].Enabled	= !FileMcd_IsMultitapSlot(slot);	// enables main 2 slots
+		Mcd[slot].Filename	= FileMcd_GetDefaultName( slot );
 	}
 }
 
@@ -409,15 +409,23 @@ void AppConfig::LoadSaveMemcards( IniInterface& ini )
 	AppConfig defaults;
 	IniScopedGroup path( ini, L"MemoryCards" );
 
-	for( uint port=0; port<2; ++port )
+	for( uint slot=0; slot<2; ++slot )
 	{
-		for( int slot=0; slot<4; ++slot )
-		{
-			ini.Entry( wxsFormat( L"Port%d_Slot%d_Enable", port, slot ),
-				Mcd[port][slot].Enabled, defaults.Mcd[port][slot].Enabled );
-			ini.Entry( wxsFormat( L"Port%d_Slot%d_Filename", port, slot ),
-				Mcd[port][slot].Filename, defaults.Mcd[port][slot].Filename );
-		}
+		ini.Entry( wxsFormat( L"Slot%u_Enable", slot+1 ),
+			Mcd[slot].Enabled, defaults.Mcd[slot].Enabled );
+		ini.Entry( wxsFormat( L"Slot%u_Filename", slot+1 ),
+			Mcd[slot].Filename, defaults.Mcd[slot].Filename );
+	}
+
+	for( uint slot=2; slot<8; ++slot )
+	{
+		int mtport = FileMcd_GetMtapPort(slot)+1;
+		int mtslot = FileMcd_GetMtapSlot(slot)+1;
+
+		ini.Entry( wxsFormat( L"Multitap%u_Slot%d_Enable", mtport, mtslot ),
+			Mcd[slot].Enabled, defaults.Mcd[slot].Enabled );
+		ini.Entry( wxsFormat( L"Multitap%u_Slot%d_Filename", mtport, mtslot ),
+			Mcd[slot].Filename, defaults.Mcd[slot].Filename );
 	}
 }
 

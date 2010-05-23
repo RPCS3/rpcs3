@@ -61,10 +61,15 @@ bool Panels::BaseSelectorPanel::Show( bool visible )
 	return BaseApplicableConfigPanel::Show( visible );
 }
 
-void Panels::BaseSelectorPanel::OnRefresh( wxCommandEvent& evt )
+void Panels::BaseSelectorPanel::RefreshSelections()
 {
 	ValidateEnumerationStatus();
 	DoRefresh();
+}
+
+void Panels::BaseSelectorPanel::OnRefreshSelections( wxCommandEvent& evt )
+{
+	RefreshSelections();
 }
 
 void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
@@ -100,7 +105,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 	*this	+= 8;
 	*this	+= m_FolderPicker	| StdExpand();
 	
-	Connect( refreshButton->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BaseSelectorPanel::OnRefresh) );
+	Connect( refreshButton->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BiosSelectorPanel::OnRefreshSelections) );
 }
 
 Panels::BiosSelectorPanel::~BiosSelectorPanel() throw ()

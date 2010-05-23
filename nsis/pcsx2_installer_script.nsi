@@ -11,7 +11,7 @@
 !endif
 
 !ifndef INC_CRT_2008
-  !define INC_CRT_2008  1
+  !define INC_CRT_2008  0
 !endif
 
 !ifndef INC_CRT_2010
@@ -313,7 +313,13 @@ LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite c
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTMENU}   $(DESC_STARTMENU)
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DESKTOP}     $(DESC_DESKTOP)
 
+!if ${INC_CRT_2008} > 0
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CRT2008}     $(DESC_CRT2008)
+!endif
+
+!if ${INC_CRT_2010} > 0
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CRT2010}     $(DESC_CRT2010)
+!endif
+
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DIRECTX}     $(DESC_DIRECTX)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

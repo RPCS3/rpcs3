@@ -2770,6 +2770,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\MemoryCardFile.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\pxEventThread.h"
 					>
 				</File>

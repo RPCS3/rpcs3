@@ -72,12 +72,6 @@ MemoryCardListView_Advanced::MemoryCardListView_Advanced( wxWindow* parent )
 	: _parent( parent )
 {
 	CreateColumns();
-	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView_Advanced::OnListDrag));
-}
-
-void MemoryCardListView_Advanced::OnListDrag(wxListEvent& evt)
-{
-	evt.Skip();
 }
 
 // return the text for the given column of the given item
@@ -91,8 +85,8 @@ wxString MemoryCardListView_Advanced::OnGetItemText(long item, long column) cons
 	{
 		case McdCol_Mounted:
 		{
-			if( (it.Port == -1) && (it.Slot == -1) ) return L"No";
-			return wxsFormat( L"%u / %u", it.Port+1, it.Slot+1);
+			if( !it.IsEnabled ) return _("No");
+			return wxsFormat( L"%u", it.Slot+1);
 		}
 
 		case McdCol_Filename:		return it.Filename.GetName();
@@ -133,10 +127,9 @@ wxListItemAttr* MemoryCardListView_Advanced::OnGetItemAttr(long item) const
 // =====================================================================================================
 //  MemoryCardInfoPanel
 // =====================================================================================================
-MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot )
+MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint slot )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL ) //, wxEmptyString )
 {
-	m_port = port;
 	m_slot = slot;
 
 	SetMinSize( wxSize(128, 48) );
@@ -198,11 +191,11 @@ void MemoryCardInfoPanel::Apply()
 			Eject();
 			throw Exception::CannotApplySettings( this, 
 				// Diagnostic
-				wxsFormat( L"Memorycard in Port %u, Slot %u conflicts with an existing directory.", m_port, m_slot ),
+				wxsFormat( L"Memorycard in slot %u conflicts with an existing directory.", m_slot ),
 				// Translated
 				wxsFormat(
-					_("Cannot use or create the memorycard in Port %u, Slot %u: the filename conflicts with an existing directory."),
-					m_port, m_slot
+					_("Cannot use or create the memorycard in slot %u: the filename conflicts with an existing directory."),
+					m_slot
 				)
 			);
 		}
@@ -212,24 +205,24 @@ void MemoryCardInfoPanel::Apply()
 			Eject();
 			throw Exception::CannotApplySettings( this, 
 				// Diagnostic
-				wxsFormat( L"Memorycard in Port %u, Slot %u is no longer valid.", m_port, m_slot ),
+				wxsFormat( L"Memorycard in slot %u is no longer valid.", m_slot ),
 				// Translated
 				wxsFormat(
-					_("The configured memorycard in Port %u, Slot %u no longer exists.  Please create a new memory card, or leave the slot unmounted."),
-					m_port, m_slot
+					_("The configured memorycard in slot %u no longer exists.  Please create a new memory card, or leave the slot unmounted."),
+					m_slot
 				)
 			);
 		}
 
-		g_Conf->Mcd[m_port][m_slot].Filename = m_cardInfo->Filename;
-		g_Conf->Mcd[m_port][m_slot].Enabled = true;
+		g_Conf->Mcd[m_slot].Filename = m_cardInfo->Filename;
+		g_Conf->Mcd[m_slot].Enabled = true;
 	}
 	else
 	{
 		// Card is either disabled or in an error state.
 
-		g_Conf->Mcd[m_port][m_slot].Enabled = false;
-		g_Conf->Mcd[m_port][m_slot].Filename.Clear();
+		g_Conf->Mcd[m_slot].Enabled = false;
+		g_Conf->Mcd[m_slot].Filename.Clear();
 	}
 }
 
@@ -239,7 +232,7 @@ void MemoryCardInfoPanel::AppStatusEvent_OnSettingsApplied()
 
 	// Collect Info and Format Strings
 
-	wxString fname( g_Conf->Mcd[m_port][m_slot].Filename.GetFullPath() );
+	wxString fname( g_Conf->Mcd[m_slot].Filename.GetFullPath() );
 	if( fname.IsEmpty() )
 	{
 		m_DisplayName = _("No Card (empty)");
@@ -277,12 +270,9 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 {
 	m_panel_AllKnownCards = new MemoryCardListPanel_Advanced( this );
 
-	for( uint port=0; port<2; ++port )
+	for( uint slot=0; slot<2; ++slot )
 	{
-		for( uint slot=0; slot<1; ++slot )
-		{
-			m_panel_cardinfo[port][slot] = new MemoryCardInfoPanel( this, port, slot );
-		}
+		m_panel_cardinfo[slot] = new MemoryCardInfoPanel( this, slot );
 	}
 
 	// ------------------------------------

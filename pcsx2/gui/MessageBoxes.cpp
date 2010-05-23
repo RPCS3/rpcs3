@@ -172,9 +172,7 @@ namespace Msgbox
 	// Always returns false.
 	bool Alert( const wxString& text, const wxString& caption, int icon )
 	{
-		MsgButtons buttons( MsgButtons().OK() );
-
-		ShowModal( caption, text, buttons );
+		ShowModal( caption, text, MsgButtons().OK() );
 		return false;
 	}
 

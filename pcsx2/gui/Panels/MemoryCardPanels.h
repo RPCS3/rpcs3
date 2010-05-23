@@ -33,41 +33,25 @@ struct McdListItem
 	wxDateTime	DateCreated;
 	wxDateTime	DateModified;
 
-	int			Port;
 	int			Slot;
 
 	wxFileName	Filename;		// full pathname (optional)
 
 	McdListItem()
 	{
-		Port = -1;
-		Slot = -1;
+		//Port = -1;
+		Slot		= -1;
 		
 		IsPresent = false;
 		IsEnabled = false;
 	}
+	
+	bool IsMultitapSlot() const;
+	uint GetMtapPort() const;
+	uint GetMtapSlot() const;
 
-	// Compares two cards -- If this equality comparison is used on items where
-	// no filename is specified, then the check will include port and slot.
-	bool operator==( const McdListItem& right ) const
-	{
-		bool fileEqu;
-
-		if( Filename.GetFullName().IsEmpty() )
-			fileEqu = OpEqu(Port) && OpEqu(Slot);
-		else
-			fileEqu = OpEqu(Filename);
-
-		return fileEqu &&
-			OpEqu(IsPresent)	&& OpEqu(IsEnabled)		&&
-			OpEqu(SizeInMB)		&& OpEqu(IsFormatted)	&&
-			OpEqu(DateCreated)	&& OpEqu(DateModified);
-	}
-
-	bool operator!=( const McdListItem& right ) const
-	{
-		return operator==( right );
-	}
+	bool operator==( const McdListItem& right ) const;
+	bool operator!=( const McdListItem& right ) const;
 };
 
 typedef std::vector<McdListItem> McdList;
@@ -75,12 +59,12 @@ typedef std::vector<McdListItem> McdList;
 class IMcdList
 {
 public:
+	virtual void RefreshMcds() const=0;
 	virtual int GetLength() const=0;
 	virtual const McdListItem& GetCard( int idx ) const=0;
 	virtual McdListItem& GetCard( int idx )=0;
 
-	virtual uint GetPort( int idx ) const=0;
-	virtual uint GetSlot( int idx ) const=0;
+	virtual wxDirName GetMcdPath() const=0;
 };
 
 class BaseMcdListView : public wxListView
@@ -89,6 +73,9 @@ class BaseMcdListView : public wxListView
 
 protected:
 	const IMcdList*		m_CardProvider;
+
+	// specifies the target of a drag&drop operation
+	int					m_TargetedItem;
 
 public:
 	virtual ~BaseMcdListView() throw() { }
@@ -100,10 +87,25 @@ public:
 
 	virtual void SetCardCount( int length )=0;
 
-	virtual void SetInterface( IMcdList* face )
+	virtual void SetMcdProvider( IMcdList* face )
 	{
 		m_CardProvider = face;
 		SetCardCount( m_CardProvider ? m_CardProvider->GetLength() : 0 );
+	}
+	
+	virtual const IMcdList& GetMcdProvider() const
+	{
+		pxAssume( m_CardProvider );
+		return *m_CardProvider;
+	}
+	
+	virtual void SetTargetedItem( int sel )
+	{
+		if( m_TargetedItem == sel ) return;
+
+		if( m_TargetedItem >= 0 ) RefreshItem( m_TargetedItem );
+		m_TargetedItem = sel;
+		RefreshItem( sel );
 	}
 };
 
@@ -118,7 +120,6 @@ public:
 	virtual ~MemoryCardListView_Simple() throw() { }
 	MemoryCardListView_Simple( wxWindow* parent );
 
-	virtual void OnListDrag(wxListEvent& evt);
 	void CreateColumns();
 	virtual void SetCardCount( int length );
 
@@ -142,7 +143,6 @@ public:
 	virtual ~MemoryCardListView_Advanced() throw() { }
 	MemoryCardListView_Advanced( wxWindow* parent );
 
-	virtual void OnListDrag(wxListEvent& evt);
 	void CreateColumns();
 	virtual void SetCardCount( int length );
 
@@ -162,6 +162,7 @@ namespace Panels
 	class BaseMcdListPanel
 		: public BaseSelectorPanel
 		, public wxFileDropTarget
+		, public IMcdList		// derived classes need to implement this
 	{
 		typedef BaseSelectorPanel _parent;
 		
@@ -172,6 +173,14 @@ namespace Panels
 
 		wxBoxSizer*			s_leftside_buttons;
 		wxBoxSizer*			s_rightside_buttons;
+
+		virtual void RefreshMcds() const;
+
+		virtual wxDirName GetMcdPath() const
+		{
+			pxAssume(m_FolderPicker);
+			return m_FolderPicker->GetPath();
+		}
 
 	public:
 		virtual ~BaseMcdListPanel() throw() {}
@@ -185,12 +194,11 @@ namespace Panels
 	// --------------------------------------------------------------------------------------
 	class MemoryCardListPanel_Simple
 		: public BaseMcdListPanel
-		, public IMcdList
 	{
 		typedef BaseMcdListPanel _parent;
 
 	protected:
-		McdListItem		m_Cards[2][4]; 
+		McdListItem		m_Cards[8]; 
 		
 		// Doubles as Create and Delete buttons
 		wxButton*		m_button_Create;
@@ -208,10 +216,9 @@ namespace Panels
 
 		// Interface Implementation for IMcdList
 		virtual int GetLength() const;
+
 		virtual const McdListItem& GetCard( int idx ) const;
 		virtual McdListItem& GetCard( int idx );
-		virtual uint GetPort( int idx ) const;
-		virtual uint GetSlot( int idx ) const;
 
 	protected:
 		void OnCreateCard(wxCommandEvent& evt);
@@ -232,7 +239,6 @@ namespace Panels
 	// --------------------------------------------------------------------------------------
 	class MemoryCardListPanel_Advanced
 		: public BaseMcdListPanel
-		, public IMcdList
 	{
 		typedef BaseMcdListPanel _parent;
 
@@ -247,8 +253,6 @@ namespace Panels
 		virtual int GetLength() const;
 		virtual const McdListItem& GetCard( int idx ) const;
 		virtual McdListItem& GetCard( int idx );
-		virtual uint GetPort( int idx ) const;
-		virtual uint GetSlot( int idx ) const;
 
 	protected:
 		void OnCreateNewCard(wxCommandEvent& evt);
@@ -268,7 +272,7 @@ namespace Panels
 	class MemoryCardInfoPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		uint			m_port;
+		//uint			m_port;
 		uint			m_slot;
 
 		wxString		m_DisplayName;
@@ -277,7 +281,7 @@ namespace Panels
 		
 	public:
 		virtual ~MemoryCardInfoPanel() throw() {}
-		MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot );
+		MemoryCardInfoPanel( wxWindow* parent, uint slot );
 		void Apply();
 		void Eject();
 
@@ -332,7 +336,6 @@ namespace Panels
 
 	protected:
 		int				m_port;
-
 		pxCheckBox*		m_check_Multitap;
 
 	public:

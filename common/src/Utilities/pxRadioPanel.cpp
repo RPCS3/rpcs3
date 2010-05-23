@@ -177,6 +177,15 @@ pxRadioPanel& pxRadioPanel::EnableItem( int idx, bool enable )
 	return *this;
 }
 
+const RadioPanelItem& pxRadioPanel::Item(int idx) const
+{
+	return m_buttonStrings[idx];
+}
+
+RadioPanelItem& pxRadioPanel::Item(int idx)
+{
+	return m_buttonStrings[idx];
+}
 
 int pxRadioPanel::GetSelection() const
 {

@@ -89,8 +89,8 @@ void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 Panels::McdConfigPanel_Standard::McdConfigPanel_Standard(wxWindow *parent)
 	: _parent( parent )
 {
-	m_panel_cardinfo[0] = new MemoryCardInfoPanel( this, 0, 0 );
-	m_panel_cardinfo[1] = new MemoryCardInfoPanel( this, 1, 0 );
+	m_panel_cardinfo[0] = new MemoryCardInfoPanel( this, 0 );
+	m_panel_cardinfo[1] = new MemoryCardInfoPanel( this, 1 );
 	
 	for( uint port=0; port<2; ++port )
 	{
