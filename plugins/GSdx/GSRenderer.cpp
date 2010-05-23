@@ -52,12 +52,14 @@ GSRenderer::GSRenderer()
 
 GSRenderer::~GSRenderer()
 {
-	if(m_dev)
+	/*if(m_dev)
 	{
-		m_dev->Reset(1, 1);
-		delete m_dev;
-	}
+		m_dev->Reset(1, 1, GSDevice::Windowed);
+	}*/
+
 	_aligned_free( m_tex_buff );
+
+	delete m_dev;
 }
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)

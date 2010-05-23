@@ -32,6 +32,5 @@ protected:
 	void Read(Target* t, const GSVector4i& r);
 
 public:
-	virtual ~GSTextureCache11() {};
 	GSTextureCache11(GSRenderer* r);
 };
