@@ -125,7 +125,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	// Cycle stealing works by 'fast-forwarding' the EE by an arbitrary number of cycles whenever VU1 micro-programs
 	// are run, which works as a rough-guess skipping of what would normally be idle time spent running on the EE.
 
-	wxPanelWithHelpers* eeSliderPanel = new wxPanelWithHelpers( left, wxVERTICAL, _("EE Cyclerate") );
+	wxPanelWithHelpers* eeSliderPanel = new wxPanelWithHelpers( left, wxVERTICAL, _("EE Cyclerate [Not Recommended]") );
 
 	m_slider_eecycle = new wxSlider( eeSliderPanel, wxID_ANY, 1, 1, 3,
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
@@ -146,7 +146,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
 
-	wxPanelWithHelpers* vuSliderPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("VU Cycle Stealing") );
+	wxPanelWithHelpers* vuSliderPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("VU Cycle Stealing [Not Recommended]") );
 
 	m_slider_vustealer = new wxSlider( vuSliderPanel, wxID_ANY, 0, 0, 3, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
@@ -169,10 +169,10 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	wxPanelWithHelpers* vuHacksPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("microVU Hacks") );
 
 	m_check_vuFlagHack = new pxCheckBox( vuHacksPanel, _("mVU Flag Hack"),
-		_("Large Speedup and High Compatibility; may cause garbage graphics, SPS, etc...") );
+		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
 
 	m_check_vuMinMax = new pxCheckBox( vuHacksPanel, _("mVU Min/Max Hack"),
-		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc...") );
+		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc... [Not Recommended]") );
 
 	m_check_vuFlagHack->SetToolTip( pxE( ".Tooltips:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
@@ -193,10 +193,10 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		_("Huge speedup for some games, with almost no compatibility side effects. [Recommended]") );
 
 	m_check_waitloop = new pxCheckBox( miscHacksPanel, _("Enable Wait Loop Detection"),
-		_("Moderate speedup for some games, with no known side effects. [Recommended???]" ) );
+		_("Moderate speedup for some games, with no known side effects. [Recommended]" ) );
 
 	m_check_IOPx2 = new pxCheckBox( miscHacksPanel, _("IOP x2 cycle rate hack"),
-		_("Small Speedup and works well with most games; may cause some games to hang during startup.") );
+		_("Small Speedup. Works well with some games but may cause issues in others. [Not Recommended]") );
 
 
 	m_check_intc->SetToolTip( pxE( ".Tooltips:Speedhacks:INTC",

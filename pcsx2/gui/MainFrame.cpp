@@ -424,7 +424,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),			m_PluginMenuPacks[PluginId_FW]);
 
 	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches"),	wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches (unimplemented)"),	wxEmptyString);
 	m_menuConfig.Append(MenuId_Config_BIOS,		_("BIOS") );
 
 	m_menuConfig.AppendSeparator();

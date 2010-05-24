@@ -124,22 +124,21 @@ void Pcsx2App::ReadUserModeSettings()
 
 	if( forceWiz )
 	{
-		// Pre-Alpha Warning!  Why didn't I think to add this sooner?!
+		// Beta Warning!
 
 		if( !hasGroup )
 		{
-			wxDialogWithHelpers preAlpha( NULL, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), wxVERTICAL );
+			wxDialogWithHelpers beta( NULL, _("PCSX2 0.9.7 Beta"), wxVERTICAL );
 
-			preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
-			preAlpha += new pxStaticText( &preAlpha,
-				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
-				L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
-				L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
-				L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
+			beta.SetSizer( new wxBoxSizer( wxVERTICAL ) );
+			beta += new pxStaticText( &beta,
+				L"This is a *Beta* build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
+				L"user interface, and some parts of the program have *NOT* been implemented yet.  Options will be missing.  "
+				L"Some things may crash or hang without warning.", wxALIGN_CENTER
 			);
 			
-			preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
-			preAlpha.ShowModal();
+			beta += new wxButton( &beta, wxID_OK ) | pxSizerFlags::StdCenter();
+			beta.ShowModal();
 		}
 	
 		// first time startup, so give the user the choice of user mode:

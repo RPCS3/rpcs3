@@ -129,7 +129,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	m_picker = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 
-	*this	+= Text(_("Select a language: ")) | pxMiddle;
+	*this	+= Text(_("Select a language: (unimplemented)")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
 

@@ -280,7 +280,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	menuLog.Append(wxID_CLEAR,	_("C&lear"),		_("Clear the log window contents"));
 	menuLog.AppendSeparator();
 	menuLog.AppendSubMenu( &menuAppear, _("Appearance") );
-	menuLog.Append(wxID_ANY,	_("Show Legend"),	_("Displays the console color legend.") );
+	menuLog.Append(wxID_ANY,	_("Show Legend (unimplemented)"),	_("Displays the console color legend.") );
 	menuLog.AppendSeparator();
 	menuLog.Append(wxID_CLOSE,	_("&Close"),		_("Close this log window; contents are preserved"));
 
