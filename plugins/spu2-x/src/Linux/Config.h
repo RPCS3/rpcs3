@@ -20,6 +20,7 @@
 
 #include <gtk/gtk.h>
 #include <string>
+#include <wx/fileconf.h>
 
 extern bool DebugEnabled;
 
@@ -109,5 +110,6 @@ void ReadSettings();
 void WriteSettings();
 void configure();
 void AboutBox();
-
+extern wxFileConfig *spuConfig;
+extern bool pathSet;
 #endif // CONFIG_H_INCLUDED

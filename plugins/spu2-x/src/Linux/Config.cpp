@@ -54,6 +54,14 @@ bool asyncMixingEnabled = false;
 
 void ReadSettings()
 {
+	// For some reason this can be called before we know what ini file we're writing to.
+	// Lets not try to read it if that happens.
+	if (!pathSet) 
+	{
+		FileLog("Read called without the path set.\n");
+		return;
+	}
+	
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
@@ -76,12 +84,19 @@ void ReadSettings()
 	Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
 
 	WriteSettings();
+	spuConfig->Flush();
 }
 
 /*****************************************************************************/
 
 void WriteSettings()
 {
+	if (!pathSet) 
+	{
+		FileLog("Write called without the path set.\n");
+		return;
+	}
+	
 	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
 	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
