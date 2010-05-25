@@ -271,8 +271,6 @@ namespace Panels
 		pxCheckBox*		m_check_SynchronousGS;
 		pxCheckBox*		m_check_DisableOutput;
 
-		wxButton*		m_button_OpenWindowSettings;
-
 	public:
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}

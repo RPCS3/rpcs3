@@ -299,10 +299,6 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 		L"Warning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."
 	) );
 
-	m_button_OpenWindowSettings = new wxButton( left, wxID_ANY, _("Open Window Settings...") );
-
-	pxSetToolTip( m_button_OpenWindowSettings, _("For editing GS window position, aspect ratio, and other display options.") );
-
 	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
 	//winpan->AddFrame(_("Display/Window"));
 
@@ -323,14 +319,11 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 	*left		+= fpan		| pxExpand;
 	*left		+= 5;
-	*left		+= m_button_OpenWindowSettings;
 
 	*s_table	+= left		| StdExpand();
 	*s_table	+= right	| StdExpand();
 
 	*this		+= s_table	| pxExpand;
-
-	Connect( m_button_OpenWindowSettings->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VideoPanel::OnOpenWindowSettings) );
 
 	AppStatusEvent_OnSettingsApplied();
 }
