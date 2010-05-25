@@ -46,9 +46,8 @@ int ReverbBoost = 0;
 
 // OUTPUT
 u32 OutputModule = 0;
-int SndOutLatencyMS = 160;
-bool timeStretchEnabled = true;
-bool asyncMixingEnabled = false;
+int SndOutLatencyMS = 150;
+int SynchMode = 0; // Time Stretch, Async or Disabled
 
 /*****************************************************************************/
 
@@ -71,8 +70,7 @@ void ReadSettings()
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
-	timeStretchEnabled = CfgReadBool( L"OUTPUT", L"Enable_Timestretch", true );
-	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
+	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 
 	PortaudioOut->ReadSettings();
 	SoundtouchCfg::ReadSettings();
@@ -103,8 +101,7 @@ void WriteSettings()
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
-	CfgWriteBool(L"OUTPUT",L"Enable_Timestretch", timeStretchEnabled);
-	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
+	CfgWriteInt(L"OUTPUT",L"Synch_Mode", SynchMode);
 
 	PortaudioOut->WriteSettings();
 	SoundtouchCfg::WriteSettings();
@@ -221,7 +218,8 @@ void DisplayDialog()
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), timeStretchEnabled);
+	// Fixme
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), /*timeStretchEnabled*/ 1);
 
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
@@ -248,7 +246,8 @@ void DisplayDialog()
 			OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 
     	SndOutLatencyMS = gtk_range_get_value(GTK_RANGE(latency_slide));
-    	timeStretchEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_check));
+		// Fixme
+    	//timeStretchEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_check));
     }
 
     gtk_widget_destroy (dialog);

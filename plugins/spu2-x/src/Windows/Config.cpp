@@ -40,8 +40,7 @@ bool EffectsDisabled = false;
 
 // OUTPUT
 int SndOutLatencyMS = 150;
-bool timeStretchEnabled = true;
-bool asyncMixingEnabled = false;
+int SynchMode = 0; // Time Stretch, Async or Disabled
 
 u32 OutputModule = 0;
 
@@ -62,8 +61,7 @@ void ReadSettings()
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
-	timeStretchEnabled = CfgReadBool( L"OUTPUT", L"Enable_Timestretch", true );
-	asyncMixingEnabled = CfgReadBool( L"OUTPUT", L"Enable_AsyncMixing", false );
+	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
 	numSpeakers = CfgReadInt( L"OUTPUT", L"XAudio2_SpeakerConfiguration", 0);
@@ -113,8 +111,7 @@ void WriteSettings()
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
-	CfgWriteBool(L"OUTPUT",L"Enable_Timestretch", timeStretchEnabled);
-	CfgWriteBool(L"OUTPUT",L"Enable_AsyncMixing", asyncMixingEnabled);
+	CfgWriteInt(L"OUTPUT",L"Synch_Mode", SynchMode);
 	CfgWriteInt(L"OUTPUT",L"XAudio2_SpeakerConfiguration", numSpeakers);
 
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
@@ -157,6 +154,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"4X - Reverb Volume * 4" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"8X - Reverb Volume * 8" );
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_SETCURSEL,ReverbBoost,0 );
+
+			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_RESETCONTENT,0,0 );
+			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_ADDSTRING,0,(LPARAM) L"TimeStretch (Recommended)" );
+			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_ADDSTRING,0,(LPARAM) L"Async Mix (Breaks some games!)" );
+			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_ADDSTRING,0,(LPARAM) L"None (Audio can skip.)" );
+			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_SETCURSEL,SynchMode,0 );
 			
 			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_RESETCONTENT,0,0 );
 			SendDialogMsg( hWnd, IDC_SPEAKERS, CB_ADDSTRING,0,(LPARAM) L"Stereo (none, default)" );
@@ -184,11 +187,10 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			swprintf_s(temp,L"%d ms (avg)",SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 
-			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
+			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), (SynchMode == 0) );
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
-			SET_CHECK(IDC_TS_ENABLE,		timeStretchEnabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
 		}
@@ -209,6 +211,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					Interpolation = (int)SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_GETCURSEL,0,0 );
 					ReverbBoost = (int)SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_GETCURSEL,0,0 );
 					OutputModule = (int)SendDialogMsg( hWnd, IDC_OUTPUT, CB_GETCURSEL,0,0 );
+					SynchMode = (int)SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_GETCURSEL,0,0 );
 					numSpeakers = (int)SendDialogMsg( hWnd, IDC_SPEAKERS, CB_GETCURSEL,0,0 );
 
 					WriteSettings();
@@ -245,8 +248,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
-				HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchEnabled);
-					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
+				
+				// Fixme : Eh, how to update this based on drop list selections? :p
+				// IDC_TS_ENABLE already deleted!
+
+				//HANDLE_CHECKNB(IDC_TS_ENABLE,timeStretchEnabled);
+				//	EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), timeStretchEnabled );
 				break;
 
 				HANDLE_CHECKNB(IDC_DEBUG_ENABLE,DebugEnabled);

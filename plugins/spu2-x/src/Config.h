@@ -68,8 +68,7 @@ extern bool EffectsDisabled;
 
 extern u32 OutputModule;
 extern int SndOutLatencyMS;
-extern bool timeStretchEnabled;
-extern bool asyncMixingEnabled;
+extern int SynchMode;
 
 #ifndef __LINUX__
 extern wchar_t dspPlugin[];

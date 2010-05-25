@@ -272,8 +272,6 @@ void V_Voice::Stop()
 uint TickInterval = 768;
 static const int SanityInterval = 4800;
 
-//#define USE_ASYNC_MIXING
-
 __forceinline void TimeUpdate(u32 cClocks)
 {
 	u32 dClocks = cClocks - lClocks;
@@ -296,8 +294,9 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 
 	//UpdateDebugDialog();
-	if(asyncMixingEnabled)
+	if( SynchMode == 1 ) // AsyncMix on
 		SndBuffer::UpdateTempoChangeAsyncMixing();
+	else TickInterval = 768; // Reset to default, in case the user hotswitched from async to something else.
 
 	//Update Mixing Progress
 	while(dClocks>=TickInterval)
@@ -858,7 +857,7 @@ static void __fastcall RegWrite_Core( u16 value )
 
 				// Async mixing can cause a scheduled reset to happen untimely, ff12 hates it and dies.
 				// So do the next best thing and reset the core directly.
-				if(cyclePtr != NULL && !asyncMixingEnabled)
+				if(cyclePtr != NULL && SynchMode != 1) // !AsyncMix
 				{
 					thiscore.InitDelay  = 1;
 					thiscore.Regs.STATX = 0;

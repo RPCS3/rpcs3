@@ -79,8 +79,7 @@ extern wchar_t dspPlugin[];
 extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
-extern bool timeStretchEnabled;
-extern bool asyncMixingEnabled;
+extern int SynchMode;
 
 namespace SoundtouchCfg
 {
