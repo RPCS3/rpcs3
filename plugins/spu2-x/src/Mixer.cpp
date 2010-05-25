@@ -45,35 +45,10 @@ static const s32 tbl_XA_Factor[5][2] =
 //   caller to  extend the inputs so that they make use of all 32 bits of
 //   precision.
 //
-#ifdef _MSC_VER
-
-// gcc can't inline this function, presumably because of it's exceeding complexity?
 __forceinline s32 MulShr32( s32 srcval, s32 mulval )
 {
-	s64 tmp = ((s64)srcval * mulval );
-
-	// Performance note: Using the temp var and memory reference
-	// actually ends up being roughly 2x faster than using a bitshift.
-	// It won't fly on big endian machines though... :)
-	return ((s32*)&tmp)[1];
+	return (s64)srcval * mulval >> 32;
 }
-
-#else
-
-s32 MulShr32( s32 srcval, s32 mulval )
-{
-    s32 tmp, dummy;
-    __asm__(
-            ".att_syntax\n"
-            "imull %3\n" // do eax*%2 -> edx contains high 32 bits and eax contains low 32 bits
-            // Note: imul changes the value of eax. You must say it to gcc.
-            // Because you can not put a register in both input and the clobber list, the only
-            // solution is to add the register in the output list hence the dummy value.
-            ".att_syntax\n" : "=d" (tmp), "=a" (dummy) : "a" (srcval), "g" (mulval) :
-           );
-    return tmp;
-}
-#endif
 
 __forceinline s32 clamp_mix( s32 x, u8 bitshift )
 {
