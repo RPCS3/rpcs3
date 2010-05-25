@@ -21,6 +21,7 @@
 
 namespace R3000A {
 
+#define v0 (psxRegs.GPR.n.v0)
 #define a0 (psxRegs.GPR.n.a0)
 #define a1 (psxRegs.GPR.n.a1)
 #define a2 (psxRegs.GPR.n.a2)
@@ -42,6 +43,7 @@ namespace ioman {
 		{
 			Console.Write(ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra1, a2).c_str());
 			pc = ra;
+			v0 = a2;
 			return 1;
 		}
 #endif

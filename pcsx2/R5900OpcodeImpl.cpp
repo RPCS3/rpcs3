@@ -200,7 +200,7 @@ static int __Deci2Call(int call, u32 *addr)
 
 				const int copylen = std::min<uint>(255, d2ptr[1]-0xc);
 				memcpy(deci2buffer, pdeciaddr, copylen );
-				deci2buffer[255] = '\0';
+				deci2buffer[copylen] = '\0';
 
 				if( EmuConfig.Log.Deci2 )
 					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
