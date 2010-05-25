@@ -39,7 +39,7 @@ void CfgSetSettingsDir(const char* dir)
 	FileLog("CfgSetSettingsDir(%s)\n", dir);
 	path = wxString::FromAscii(dir) + L"/spu2-x.ini";
 	pathSet = true;
-	initIni();
+	//initIni();
 }
 
 void CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value)

@@ -112,4 +112,5 @@ void configure();
 void AboutBox();
 extern wxFileConfig *spuConfig;
 extern bool pathSet;
+extern void initIni();
 #endif // CONFIG_H_INCLUDED

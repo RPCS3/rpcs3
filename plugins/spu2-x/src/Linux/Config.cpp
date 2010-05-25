@@ -257,7 +257,9 @@ void DisplayDialog()
 
 void configure()
 {
+	initIni();
 	ReadSettings();
 	DisplayDialog();
 	WriteSettings();
+	delete spuConfig;
 }
