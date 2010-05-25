@@ -262,4 +262,5 @@ void configure()
 	DisplayDialog();
 	WriteSettings();
 	delete spuConfig;
+	spuConfig = NULL;
 }

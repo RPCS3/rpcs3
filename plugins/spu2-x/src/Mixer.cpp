@@ -62,11 +62,14 @@ __forceinline s32 MulShr32( s32 srcval, s32 mulval )
 
 s32 MulShr32( s32 srcval, s32 mulval )
 {
-    s32 tmp;
+    s32 tmp, dummy;
     __asm__(
             ".att_syntax\n"
-            "imull %2\n" // do eax*%2 -> edx contains high 32 bits and eax contains low 32 bits
-            ".att_syntax\n" : "=d" (tmp) : "a" (srcval), "g" (mulval)
+            "imull %3\n" // do eax*%2 -> edx contains high 32 bits and eax contains low 32 bits
+            // Note: imul changes the value of eax. You must say it to gcc.
+            // Because you can not put a register in both input and the clobber list, the only
+            // solution is to add the register in the output list hence the dummy value.
+            ".att_syntax\n" : "=d" (tmp), "=a" (dummy) : "a" (srcval), "g" (mulval) :
            );
     return tmp;
 }
