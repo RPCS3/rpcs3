@@ -421,14 +421,6 @@ void ConsoleLogFrame::Newline()
 	Write( Color_Current, L"\n" );
 }
 
-void ConsoleLogFrame::DoClose()
-{
-    // instead of closing just hide the window to be able to Show() it later
-    Show(false);
-	if( wxWindow* main = GetParent() )
-		wxStaticCast( main, MainEmuFrame )->OnLogBoxHidden();
-}
-
 void ConsoleLogFrame::DockedMove()
 {
 	SetPosition( m_conf.DisplayPosition );
@@ -504,9 +496,18 @@ void ConsoleLogFrame::OnActivate( wxActivateEvent& evt )
 void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 {
 	if( event.CanVeto() )
-		DoClose();
+	{
+		// instead of closing just hide the window to be able to Show() it later
+		Show( false );
+
+		// Can't do this via a Connect() on the MainFrame because Close events are not commands,
+		// and thus do not propagate up/down the event chain.
+		if( wxWindow* main = GetParent() )
+			wxStaticCast( main, MainEmuFrame )->OnLogBoxHidden();
+	}
 	else
 	{
+		// This is sent when the app is exiting typically, so do a full close.
 		m_threadlogger = NULL;
 		wxGetApp().OnProgramLogClosed( GetId() );
 		event.Skip();
@@ -520,7 +521,7 @@ void ConsoleLogFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
 
 void ConsoleLogFrame::OnClose( wxCommandEvent& event )
 {
-	DoClose();
+	Close( false );
 }
 
 void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))

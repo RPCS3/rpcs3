@@ -487,7 +487,7 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions()
 	: DisplayPosition( wxDefaultPosition )
 	, DisplaySize( wxSize( 680, 560 ) )
 {
-	Visible		= false;
+	Visible		= true;
 	AutoDock	= true;
 	FontSize	= 8;
 }

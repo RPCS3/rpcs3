@@ -256,8 +256,6 @@ protected:
 	void OnFlushUnlockerTimer( wxTimerEvent& evt );
 	void OnFlushEvent( wxCommandEvent& event );
 
-	// common part of OnClose() and OnCloseWindow()
-	virtual void DoClose();
 	void DoFlushQueue();
 	void DoFlushEvent( bool isPending );
 	

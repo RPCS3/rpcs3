@@ -469,9 +469,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler			(MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(MainEmuFrame::OnCloseWindow) );
-
 	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler			(MainEmuFrame::OnFocus) );
-
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler		(MainEmuFrame::OnActivate) );
 
 	PushEventHandler( &wxGetApp().GetRecentIsoManager() );

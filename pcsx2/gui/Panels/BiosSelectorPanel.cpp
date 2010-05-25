@@ -114,12 +114,12 @@ Panels::BiosSelectorPanel::~BiosSelectorPanel() throw ()
 
 void Panels::BiosSelectorPanel::Apply()
 {
+	// User never visited this tab, so there's nothing to apply.
+	if( !m_BiosList ) return;
+
 	int sel = m_ComboBox->GetSelection();
 	if( sel == wxNOT_FOUND )
 	{
-		// If we already have a bios, lets not worry about it.
-		if (g_Conf->BaseFilenames.Bios.IsOk() && wxFileName::FileExists(g_Conf->BaseFilenames.Bios.GetFullPath()) && !g_Conf->BaseFilenames.Bios.IsDir()) return;
-		
 		throw Exception::CannotApplySettings( this,
 			// English Log
 			L"User did not specify a valid BIOS selection.",
