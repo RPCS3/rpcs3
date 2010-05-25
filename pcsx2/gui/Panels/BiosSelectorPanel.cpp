@@ -94,7 +94,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 
 	m_ComboBox->SetFont( wxFont( m_ComboBox->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox->SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox->GetMinSize().GetHeight(), 96 ) ) );
-
+	
 	m_FolderPicker->SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
 
 	wxButton* refreshButton = new wxButton( this, wxID_ANY, _("Refresh list") );
@@ -117,6 +117,9 @@ void Panels::BiosSelectorPanel::Apply()
 	int sel = m_ComboBox->GetSelection();
 	if( sel == wxNOT_FOUND )
 	{
+		// If we already have a bios, lets not worry about it.
+		if (g_Conf->BaseFilenames.Bios.IsOk() && wxFileName::FileExists(g_Conf->BaseFilenames.Bios.GetFullPath()) && !g_Conf->BaseFilenames.Bios.IsDir()) return;
+		
 		throw Exception::CannotApplySettings( this,
 			// English Log
 			L"User did not specify a valid BIOS selection.",

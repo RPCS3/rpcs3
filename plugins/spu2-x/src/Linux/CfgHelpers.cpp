@@ -18,7 +18,6 @@
  #include "Dialogs.h"
  #include <wx/fileconf.h>
 
- wxConfigBase *oldConfig;
  wxFileConfig *spuConfig;
  wxString path(L"~/.pcsx2/inis/spu2-x.ini");
  bool pathSet = false;
@@ -39,7 +38,6 @@ void CfgSetSettingsDir(const char* dir)
 	FileLog("CfgSetSettingsDir(%s)\n", dir);
 	path = wxString::FromAscii(dir) + L"/spu2-x.ini";
 	pathSet = true;
-	//initIni();
 }
 
 void CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value)
