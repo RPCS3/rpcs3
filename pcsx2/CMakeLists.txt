@@ -366,6 +366,7 @@ set(pcsx2GuiHeaders
 	gui/IniInterface.h
 	gui/IsoDropTarget.h
 	gui/MainFrame.h
+	gui/MemoryCardFile.h
 	gui/MSWstuff.h
 	gui/Panels/ConfigurationPanels.h
 	gui/Panels/LogOptionsPanels.h

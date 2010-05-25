@@ -6,6 +6,7 @@
 		<Option platforms="Windows;Unix;" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option virtualFolders="Memory Card/;" />
 		<Build>
 			<Target title="Debug">
 				<Option platforms="Windows;Unix;" />
@@ -381,7 +382,9 @@
 		<Unit filename="../gui/Dialogs/ImportSettingsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />
-		<Unit filename="../gui/Dialogs/McdConfigDialog.cpp" />
+		<Unit filename="../gui/Dialogs/McdConfigDialog.cpp">
+			<Option virtualFolder="Memory Card/" />
+		</Unit>
 		<Unit filename="../gui/Dialogs/ModalPopups.h" />
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
 		<Unit filename="../gui/Dialogs/StuckThreadDialog.cpp" />
@@ -399,7 +402,10 @@
 		<Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
-		<Unit filename="../gui/MemoryCardFile.cpp" />
+		<Unit filename="../gui/MemoryCardFile.cpp">
+			<Option virtualFolder="Memory Card/" />
+		</Unit>
+		<Unit filename="../gui/MemoryCardFile.h" />
 		<Unit filename="../gui/MessageBoxes.cpp" />
 		<Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BaseApplicableConfigPanel.cpp" />
@@ -412,10 +418,16 @@
 		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
-		<Unit filename="../gui/Panels/MemoryCardListPanel.cpp" />
-		<Unit filename="../gui/Panels/MemoryCardListView.cpp" />
+		<Unit filename="../gui/Panels/MemoryCardListPanel.cpp">
+			<Option virtualFolder="Memory Card/" />
+		</Unit>
+		<Unit filename="../gui/Panels/MemoryCardListView.cpp">
+			<Option virtualFolder="Memory Card/" />
+		</Unit>
 		<Unit filename="../gui/Panels/MemoryCardPanels.h" />
-		<Unit filename="../gui/Panels/MemoryCardsPanel.cpp" />
+		<Unit filename="../gui/Panels/MemoryCardsPanel.cpp">
+			<Option virtualFolder="Memory Card/" />
+		</Unit>
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
 		<Unit filename="../gui/Panels/PathsPanel.cpp" />
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />

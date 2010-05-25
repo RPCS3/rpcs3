@@ -61,7 +61,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	if( m_radio_CardSize ) m_radio_CardSize->Realize();
 
 	wxBoxSizer& s_buttons( *new wxBoxSizer(wxHORIZONTAL) );
-	s_buttons += new wxButton( this, wxID_OK )		| pxProportion(2);
+	s_buttons += new wxButton( this, wxID_OK, _("Create") )		| pxProportion(2);
 	s_buttons += pxStretchSpacer(3);
 	s_buttons += new wxButton( this, wxID_CANCEL ) 	| pxProportion(2);
 
@@ -88,7 +88,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	*this += s_padding | StdExpand();
 
 
-	FindItem( wxID_OK )->SetLabel(_("Create"));
+	//FindItem( wxID_OK )->SetLabel(_("Create"));
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
 	//Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnApply_Click ) );
 }
