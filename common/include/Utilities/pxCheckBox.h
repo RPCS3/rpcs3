@@ -50,10 +50,12 @@ public:
 	wxCheckBox* GetWxPtr() { return m_checkbox; }
 	const wxCheckBox* GetWxPtr() const { return m_checkbox; }
 
-	wxWindowID GetId() const { pxAssert( m_checkbox != NULL ); return m_checkbox->GetId(); }
+	//wxWindowID GetId() const { pxAssert( m_checkbox != NULL ); return m_checkbox->GetId(); }
 
 protected:
 	void Init( const wxString& label, const wxString& subtext );
+	void OnCheckpartCommand( wxCommandEvent& evt );
+	void OnSubtextClicked( wxCommandEvent& evt );
 };
 
 extern void operator+=( wxSizer& target, pxCheckBox* src );

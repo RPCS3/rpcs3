@@ -337,7 +337,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 void Panels::VideoPanel::OnOpenWindowSettings( wxCommandEvent& evt )
 {
-	AppOpenDialog<Dialogs::AppConfigDialog>( this );
+	AppOpenDialog<Dialogs::ComponentsConfigDialog>( this );
 
 	// don't evt.skip, this prevents the Apply button from being activated. :)
 }

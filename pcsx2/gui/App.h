@@ -136,7 +136,7 @@ enum MenuIdentifiers
 	MenuId_PluginBase_Settings = 0x101,
 
 	MenuId_Video_CoreSettings = 0x200,// includes frame timings and skippings settings
-
+	MenuId_Video_WindowSettings,
 
 	// Miscellaneous Menu!  (Misc)
 	MenuId_Website,				// Visit our awesome website!
@@ -636,13 +636,18 @@ DECLARE_APP(Pcsx2App)
 // --------------------------------------------------------------------------------------
 //  AppOpenDialog
 // --------------------------------------------------------------------------------------
+// Returns a wxWindow handle to the opened window.
+//
 template<typename DialogType>
-void AppOpenDialog( wxWindow* parent=NULL )
+wxWindow* AppOpenDialog( wxWindow* parent=NULL )
 {
-	if( wxWindow* window = wxFindWindowByName( L"Dialog:" + DialogType::GetNameStatic() ) )
-		window->SetFocus();
-	else
-		(new DialogType( parent ))->Show();
+	wxWindow* window = wxFindWindowByName( L"Dialog:" + DialogType::GetNameStatic() );
+	
+	if( !window ) window = new DialogType( parent );
+
+	window->Show();
+	window->SetFocus();
+	return window;
 }
 
 extern pxDoAssertFnType AppDoAssert;

@@ -413,31 +413,7 @@ namespace Panels
 		virtual bool ValidateEnumerationStatus();
 	};
 
-	class MemoryCardListPanel_Advanced;
 	class MemoryCardInfoPanel;
-
-	// --------------------------------------------------------------------------------------
-	//  MemoryCardsPanel
-	// --------------------------------------------------------------------------------------
-	class MemoryCardsPanel : public BaseApplicableConfigPanel
-	{
-	protected:
-		MemoryCardListPanel_Advanced*	m_panel_AllKnownCards;
-		MemoryCardInfoPanel*	m_panel_cardinfo[8];
-		pxCheckBox*				m_check_Ejection;
-		pxCheckBox*				m_check_Multitap[2];
-
-		uint					m_Bindings[8];
-
-	public:
-		MemoryCardsPanel( wxWindow* parent );
-		virtual ~MemoryCardsPanel() throw() { }
-		void Apply();
-
-	protected:
-		void OnMultitapChecked( wxCommandEvent& evt );
-		void AppStatusEvent_OnSettingsApplied();
-	};
 
 	// --------------------------------------------------------------------------------------
 	//  PluginSelectorPanel

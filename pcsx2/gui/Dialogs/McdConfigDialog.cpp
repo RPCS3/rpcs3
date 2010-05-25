@@ -57,22 +57,41 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 		)
 	);
 
-	*this += m_check_Ejection		| pxExpand;
-	
-	#ifdef __WXMSW__
+#ifdef __WXMSW__
 	m_check_CompressNTFS = new pxCheckBox( this,
 		_("Enable NTFS Compression on all cards by default."),
 		GetMsg_McdNtfsCompress()
-	);
-	
+		);
+#endif
+
+	for( uint i=0; i<2; ++i )
+	{
+		m_check_Multitap[i] = new pxCheckBox( this, wxsFormat(_("Enable Multitap on Port %u"), i+1) );
+		m_check_Multitap[i]->SetClientData( (void*)i );
+		m_check_Multitap[i]->SetName(wxsFormat( L"CheckBox::Multitap%u", i ));
+	}
+
+	// ------------------------------
+	//   Sizers and Layout Section
+	// ------------------------------
+
+	for( uint i=0; i<2; ++i )
+		*this += m_check_Multitap[i]| pxExpand;	
+		
+	*this += 4;
+
+	*this += m_check_Ejection		| pxExpand;	
+	#ifdef __WXMSW__
  	*this += m_check_CompressNTFS	| pxExpand;
 	#endif
 }
 
 void Panels::McdConfigPanel_Toggles::Apply()
 {
+	g_Conf->EmuOptions.MultitapPort0_Enabled = m_check_Multitap[0]->GetValue();
+	g_Conf->EmuOptions.MultitapPort1_Enabled = m_check_Multitap[1]->GetValue();
+
 	g_Conf->McdEnableEjection	= m_check_Ejection->GetValue();
-	
 	#ifdef __WXMSW__
 	g_Conf->McdCompressNTFS		= m_check_CompressNTFS->GetValue();
 	#endif
@@ -80,9 +99,12 @@ void Panels::McdConfigPanel_Toggles::Apply()
 
 void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 {
-	m_check_Ejection		->SetValue( g_Conf->McdEnableEjection );
+	m_check_Multitap[0]	->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
+	m_check_Multitap[1]	->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
+
+	m_check_Ejection	->SetValue( g_Conf->McdEnableEjection );
 	#ifdef __WXMSW__
-	m_check_CompressNTFS	->SetValue( g_Conf->McdCompressNTFS );
+	m_check_CompressNTFS->SetValue( g_Conf->McdCompressNTFS );
 	#endif
 }
 
@@ -142,43 +164,36 @@ using namespace pxSizerFlags;
 Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	: BaseConfigurationDialog( parent, _("MemoryCard Manager"), 600 )
 {
-	// [TODO] : Discover and use a good multitap port icon!  Possibility might be a
-	//   simple 3x memorycards icon, in cascading form.
-	//  (for now everything defaults to the redundant memorycard icon)
+	m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
 
-	if( false ) //g_Conf->McdAdvancedMode )
+	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
+	// to configure the names of each memorycard slot.
+
+	//AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
+	//AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
+
+	*this	+= m_panel_mcdlist			| StdExpand();
+	//*this	+= StdPadding;
+	*this	+= new wxStaticLine( this )	| StdExpand();
+	*this	+= StdPadding;
+	*this	+= new McdConfigPanel_Toggles( this )	| StdExpand();
+
+	for( uint i=0; i<2; ++i )
 	{
-		m_panel_mcdlist	= new MemoryCardListPanel_Advanced( this );
-
-		CreateListbook( wxGetApp().GetImgList_Config() );
-		
-		const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
-		AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
-		AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
-		AddPage<McdConfigPanel_Multitap>	( wxLt("Multitap 1"),	cfgid.MemoryCard );
-		AddPage<McdConfigPanel_Multitap2>	( wxLt("Multitap 2"),	cfgid.MemoryCard );
-
-		MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
-
-		AddListbook();
-
-		*this += StdPadding;
-		*this += new wxStaticLine( this )	| StdExpand();
-		*this += StdPadding;
-		*this += m_panel_mcdlist			| StdExpand();
-	}
-	else
-	{
-		m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
-
-		*this	+= m_panel_mcdlist			| StdExpand();
-		//*this	+= StdPadding;
-		*this	+= new wxStaticLine( this )	| StdExpand();
-		*this	+= StdPadding;
-		*this	+= new McdConfigPanel_Toggles( this )	| StdExpand();
+		if( pxCheckBox* check = (pxCheckBox*)FindWindow(wxsFormat( L"CheckBox::Multitap%u", i )) )
+			Connect( check->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigDialog::OnMultitapClicked) );
 	}
 
 	AddOkCancel();
+}
+
+void Dialogs::McdConfigDialog::OnMultitapClicked( wxCommandEvent& evt )
+{
+	evt.Skip();
+	if( !m_panel_mcdlist ) return;
+
+	if( pxCheckBox* box = (pxCheckBox*)evt.GetEventObject() )
+		m_panel_mcdlist->SetMultitapEnabled( (int)box->GetClientData(), box->IsChecked() );
 }
 
 bool Dialogs::McdConfigDialog::Show( bool show )

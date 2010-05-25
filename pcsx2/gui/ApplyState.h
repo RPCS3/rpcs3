@@ -136,7 +136,7 @@ protected:
 	BaseApplicableDialog(wxWindow* parent, const wxString& title );
 	BaseApplicableDialog(wxWindow* parent, const wxString& title, wxOrientation sizerOrient );
 
-	void OnSettingsApplied( wxCommandEvent& evt );
+	virtual void OnSettingsApplied( wxCommandEvent& evt );
 
 	// Note: This method *will* be called automatically after a successful Apply, but will not
 	// be called after a failed Apply (canceled due to error).

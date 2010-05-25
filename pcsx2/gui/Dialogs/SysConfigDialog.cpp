@@ -16,14 +16,11 @@
 #include "PrecompiledHeader.h"
 #include "System.h"
 #include "App.h"
-#include "MSWstuff.h"
 
 #include "ConfigurationDialog.h"
 #include "BaseConfigurationDialog.inl"
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
-
-//#include <wx/filepicker.h>
 
 using namespace Panels;
 
@@ -33,29 +30,26 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<CpuPanelEE>			( wxLt("EE/IOP"),		cfgid.Cpu );
-	AddPage<CpuPanelVU>			( wxLt("VUs"),			cfgid.Cpu );
-	AddPage<VideoPanel>			( wxLt("GS"),			cfgid.Video );
-	AddPage<SpeedHacksPanel>	( wxLt("Speedhacks"),	cfgid.Speedhacks );
-	AddPage<GameFixesPanel>		( wxLt("Game Fixes"),	cfgid.Gamefixes );
-	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
-
-	MSW_ListView_SetIconSpacing( m_listbook, m_idealWidth );
+	AddPage<CpuPanelEE>				( wxLt("EE/IOP"),		cfgid.Cpu );
+	AddPage<CpuPanelVU>				( wxLt("VUs"),			cfgid.Cpu );
+	AddPage<VideoPanel>				( wxLt("GS"),			cfgid.Cpu );
+	AddPage<GSWindowSettingsPanel>	( wxLt("Window"),		cfgid.Video );
+	AddPage<SpeedHacksPanel>		( wxLt("Speedhacks"),	cfgid.Speedhacks );
+	AddPage<GameFixesPanel>			( wxLt("Game Fixes"),	cfgid.Gamefixes );
 
 	AddListbook();
 	AddOkCancel();
 }
 
-Dialogs::AppConfigDialog::AppConfigDialog(wxWindow* parent)
+Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 	: BaseConfigurationDialog( parent, _("Application Settings - PCSX2"),  600 )
 {
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<GSWindowSettingsPanel>	( wxLt("GS Window"),	cfgid.Paths );
+	AddPage<PluginSelectorPanel>	( wxLt("Plugins"),		cfgid.Plugins );
+	AddPage<BiosSelectorPanel>		( wxLt("BIOS"),			cfgid.Cpu );
 	AddPage<StandardPathsPanel>		( wxLt("Folders"),		cfgid.Paths );
-
-	MSW_ListView_SetIconSpacing( m_listbook, GetClientSize().GetWidth() );
 
 	AddListbook();
 	AddOkCancel();

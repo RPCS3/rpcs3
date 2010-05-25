@@ -48,14 +48,24 @@ void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
 	AppOpenDialog<McdConfigDialog>( this );
 }
 
-void MainEmuFrame::Menu_AppSettings_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent &event)
 {
-	AppOpenDialog<AppConfigDialog>( this );
+	wxCommandEvent evt( pxEvt_SetSettingsPage );
+	evt.SetString( L"Window" );
+	AppOpenDialog<SysConfigDialog>( this )->GetEventHandler()->ProcessEvent( evt );
 }
 
-void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_GSSettings_Click(wxCommandEvent &event)
 {
-	AppOpenDialog<BiosSelectorDialog>( this );
+	wxCommandEvent evt( pxEvt_SetSettingsPage );
+	evt.SetString( L"GS" );
+	AppOpenDialog<SysConfigDialog>( this )->GetEventHandler()->ProcessEvent( evt );
+}
+
+void MainEmuFrame::Menu_SelectPluginsBios_Click(wxCommandEvent &event)
+{
+	//AppOpenDialog<BiosSelectorDialog>( this );
+	AppOpenDialog<ComponentsConfigDialog>( this );
 }
 
 

@@ -25,10 +25,13 @@
 namespace Panels
 {
 	class BaseSelectorPanel;
-	class MemoryCardListPanel_Advanced;
 	class McdConfigPanel_Toggles;
 	class BaseMcdListPanel;
 }
+
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE( pxEvt_SetSettingsPage, -1 )
+END_DECLARE_EVENT_TYPES()
 
 namespace Dialogs
 {
@@ -56,11 +59,15 @@ namespace Dialogs
 		void AddPage( const char* label, int iconid );
 
 	protected:
+		void OnSettingsApplied( wxCommandEvent& evt );
+
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
 		void OnScreenshot_Click( wxCommandEvent& evt );
 		void OnCloseWindow( wxCloseEvent& evt );
+
+		void OnSetSettingsPage( wxCommandEvent& evt );
 
 		virtual void OnSomethingChanged( wxCommandEvent& evt );
 		virtual wxString& GetConfSettingsTabName() const=0;
@@ -102,18 +109,19 @@ namespace Dialogs
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->McdSettingsTabName; }
+		void OnMultitapClicked( wxCommandEvent& evt );
 	};
 
 	// --------------------------------------------------------------------------------------
-	//  AppConfigDialog
+	//  ComponentsConfigDialog
 	// --------------------------------------------------------------------------------------
-	class AppConfigDialog : public BaseConfigurationDialog
+	class ComponentsConfigDialog : public BaseConfigurationDialog
 	{
 	protected:
 
 	public:
-		virtual ~AppConfigDialog() throw() {}
-		AppConfigDialog(wxWindow* parent=NULL);
+		virtual ~ComponentsConfigDialog() throw() {}
+		ComponentsConfigDialog(wxWindow* parent=NULL);
 		static wxString GetNameStatic() { return L"AppSettings"; }
 		wxString GetDialogName() const { return GetNameStatic(); }
 

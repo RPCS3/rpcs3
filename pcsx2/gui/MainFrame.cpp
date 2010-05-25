@@ -152,12 +152,16 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_Config_SysSettings,	Menu_SysSettings_Click );
 	ConnectMenu( MenuId_Config_McdSettings,	Menu_McdSettings_Click );
-	ConnectMenu( MenuId_Config_AppSettings,	Menu_AppSettings_Click );
-	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
+	ConnectMenu( MenuId_Config_AppSettings,	Menu_WindowSettings_Click );
+	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectPluginsBios_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
 	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
+
+	ConnectMenu( MenuId_Video_WindowSettings,	Menu_WindowSettings_Click );
+	ConnectMenu( MenuId_Video_CoreSettings,		Menu_GSSettings_Click );
+
 
 	ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
 	ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
@@ -411,21 +415,19 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
     // ------------------------------------------------------------------------
 
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
-	m_menuConfig.Append(MenuId_Config_AppSettings,	_("App Settings") );
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&MemoryCards") );
+	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector...") );
 	m_menuConfig.AppendSeparator();
 
-
-	m_menuConfig.Append(MenuId_Config_GS,		_("Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);
-	m_menuConfig.Append(MenuId_Config_SPU2,		_("Audio (SPU2)"),		m_PluginMenuPacks[PluginId_SPU2]);
-	m_menuConfig.Append(MenuId_Config_PAD,		_("Controllers (PAD)"),	m_PluginMenuPacks[PluginId_PAD]);
+	m_menuConfig.Append(MenuId_Config_GS,		_("&Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);
+	m_menuConfig.Append(MenuId_Config_SPU2,		_("&Audio (SPU2)"),		m_PluginMenuPacks[PluginId_SPU2]);
+	m_menuConfig.Append(MenuId_Config_PAD,		_("&Controllers (PAD)"),	m_PluginMenuPacks[PluginId_PAD]);
 	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),				m_PluginMenuPacks[PluginId_DEV9]);
 	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),				m_PluginMenuPacks[PluginId_USB]);
 	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),			m_PluginMenuPacks[PluginId_FW]);
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches (unimplemented)"),	wxEmptyString);
-	m_menuConfig.Append(MenuId_Config_BIOS,		_("BIOS") );
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_Multitap0Toggle,	_("Multitap 1"),	wxEmptyString, wxITEM_CHECK );
@@ -637,8 +639,12 @@ void PerPluginMenuInfo::Populate( PluginsEnum_t pid )
 
 	if( PluginId == PluginId_GS )
 	{
-		MyMenu.Append( MenuId_Video_CoreSettings, _("Core Settings..."),
-			_("Modify video emulation settings regulated by the PCSX2 core virtual machine."), wxITEM_CHECK );
+		MyMenu.Append( MenuId_Video_CoreSettings, _("Core GS Settings..."),
+			_("Modify hardware emulation settings regulated by the PCSX2 core virtual machine.") );
+
+		MyMenu.Append( MenuId_Video_WindowSettings, _("Window Settings..."),
+			_("Modify window and appearance options, including aspect ratio.") );
+
 		MyMenu.AppendSeparator();
 	}
 

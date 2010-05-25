@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "System.h"
 #include "App.h"
+#include "MSWstuff.h"
 
 #include "ConfigurationDialog.h"
 #include "ModalPopups.h"
@@ -29,6 +30,7 @@
 #include <wx/listbook.h>
 
 DEFINE_EVENT_TYPE( pxEvt_ApplySettings )
+DEFINE_EVENT_TYPE( pxEvt_SetSettingsPage )
 
 using namespace Panels;
 
@@ -101,6 +103,8 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 
 	Connect(				wxEVT_CLOSE_WINDOW,				wxCloseEventHandler(BaseConfigurationDialog::OnCloseWindow) );
 
+	Connect( pxEvt_SetSettingsPage, wxCommandEventHandler( BaseConfigurationDialog::OnSetSettingsPage ) );
+
 	// ----------------------------------------------------------------------------
 	// Bind a variety of standard "something probably changed" events.  If the user invokes
 	// any of these, we'll automatically de-gray the Apply button for this dialog box. :)
@@ -138,7 +142,7 @@ void Dialogs::BaseConfigurationDialog::CreateListbook( wxImageList& bookicons )
 void Dialogs::BaseConfigurationDialog::AddOkCancel( wxSizer* sizer )
 {
 	_parent::AddOkCancel( sizer, true );
-	FindWindow( wxID_APPLY )->Disable();
+	if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Disable();
 
 	wxBitmapButton& screenshotButton( *new wxBitmapButton( this, wxID_SAVE, EmbeddedImage<res_ButtonIcon_Camera>().Get() ) );
 	screenshotButton.SetToolTip( _("Saves a snapshot of this settings panel to a PNG file.") );
@@ -150,13 +154,28 @@ Dialogs::BaseConfigurationDialog::~BaseConfigurationDialog() throw()
 {
 }
 
+void Dialogs::BaseConfigurationDialog::OnSetSettingsPage( wxCommandEvent& evt )
+{
+	if( !m_listbook ) return;
+	
+	size_t pages = m_labels.GetCount();
+	
+	for( size_t i=0; i<pages; ++i )
+	{
+		if( evt.GetString() == m_labels[i] )
+		{
+			m_listbook->SetSelection( i );
+			break;
+		}
+	}
+}
 
 void Dialogs::BaseConfigurationDialog::OnSomethingChanged( wxCommandEvent& evt )
 {
 	evt.Skip();
 	if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
 	{
-		if( wxWindow *apply = FindWindow( wxID_APPLY ) ) apply->Enable();
+		if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Enable();
 	}
 }
 
@@ -171,7 +190,7 @@ void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
 	if( m_ApplyState.ApplyAll() )
 	{
-		FindWindow( wxID_APPLY )->Disable();
+		if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Disable();
 		if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 		AppSaveSettings();
 		evt.Skip();
@@ -218,4 +237,10 @@ void Dialogs::BaseConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 		ScopedBusyCursor busy( Cursor_ReallyBusy );
 		memBmp.SaveFile( filename, wxBITMAP_TYPE_PNG );
 	}
+}
+
+void Dialogs::BaseConfigurationDialog::OnSettingsApplied( wxCommandEvent& evt )
+{
+	evt.Skip();
+	MSW_ListView_SetIconSpacing( m_listbook, GetClientSize().GetWidth() );
 }

@@ -163,8 +163,9 @@ protected:
 
 	void Menu_SysSettings_Click(wxCommandEvent &event);
 	void Menu_McdSettings_Click(wxCommandEvent &event);
-	void Menu_AppSettings_Click(wxCommandEvent &event);
-	void Menu_SelectBios_Click(wxCommandEvent &event);
+	void Menu_WindowSettings_Click(wxCommandEvent &event);
+	void Menu_GSSettings_Click(wxCommandEvent &event);
+	void Menu_SelectPluginsBios_Click(wxCommandEvent &event);
 	void Menu_ResetAllSettings_Click(wxCommandEvent &event);
 
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);

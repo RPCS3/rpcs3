@@ -22,6 +22,9 @@
 using namespace pxSizerFlags;
 using namespace Panels;
 
+// --------------------------------------------------------------------------------------
+//  MemoryCardListView_Simple  (implementations)
+// --------------------------------------------------------------------------------------
 enum McdColumnType_Simple
 {
 	McdColS_PortSlot,	// port and slot of the card
@@ -32,6 +35,12 @@ enum McdColumnType_Simple
 	McdColS_DateCreated,
 	McdColS_Count
 };
+
+MemoryCardListView_Simple::MemoryCardListView_Simple( wxWindow* parent )
+	: _parent( parent )
+{
+	CreateColumns();
+}
 
 void MemoryCardListView_Simple::CreateColumns()
 {
@@ -53,12 +62,6 @@ void MemoryCardListView_Simple::CreateColumns()
 
 	for( int i=0; i<McdColS_Count; ++i )
 		InsertColumn( i, columns[i].name, columns[i].align, -1 );
-}
-
-MemoryCardListView_Simple::MemoryCardListView_Simple( wxWindow* parent )
-	: _parent( parent )
-{
-	CreateColumns();
 }
 
 void MemoryCardListView_Simple::SetCardCount( int length )
@@ -123,4 +126,102 @@ wxListItemAttr* MemoryCardListView_Simple::OnGetItemAttr(long item) const
 		m_ItemAttr.SetBackgroundColour( wxColour(L"Wheat") );
 
 	return &m_ItemAttr;
+}
+
+// --------------------------------------------------------------------------------------
+//  MemoryCardListView_Advanced  (implementations)
+// --------------------------------------------------------------------------------------
+enum McdColumnType_Advanced
+{
+	McdColA_Filename,
+	McdColA_Mounted,
+	McdColA_Size,
+	McdColA_Formatted,
+	McdColA_DateModified,
+	McdColA_DateCreated,
+	McdColA_Count
+};
+
+MemoryCardListView_Advanced::MemoryCardListView_Advanced( wxWindow* parent )
+	: _parent( parent )
+{
+	CreateColumns();
+}
+
+void MemoryCardListView_Advanced::CreateColumns()
+{
+	struct ColumnInfo
+	{
+		wxString			name;
+		wxListColumnFormat	align;
+	};
+
+	const ColumnInfo columns[] =
+	{
+		{ _("Filename"),		wxLIST_FORMAT_LEFT },
+		{ _("Mounted"),			wxLIST_FORMAT_CENTER },
+		{ _("Size"),			wxLIST_FORMAT_LEFT },
+		{ _("Formatted"),		wxLIST_FORMAT_CENTER },
+		{ _("Last Modified"),	wxLIST_FORMAT_LEFT },
+		{ _("Created On"),		wxLIST_FORMAT_LEFT },
+		//{ _("Path"),			wxLIST_FORMAT_LEFT }
+	};
+
+	for( int i=0; i<McdColA_Count; ++i )
+		InsertColumn( i, columns[i].name, columns[i].align, -1 );
+}
+
+void MemoryCardListView_Advanced::SetCardCount( int length )
+{
+	if( !m_CardProvider ) length = 0;
+	SetItemCount( length );
+	Refresh();
+}
+
+// return the text for the given column of the given item
+wxString MemoryCardListView_Advanced::OnGetItemText(long item, long column) const
+{
+	if( !m_CardProvider ) return _parent::OnGetItemText(item, column);
+
+	const McdListItem& it( m_CardProvider->GetCard(item) );
+
+	switch( column )
+	{
+		case McdColA_Mounted:
+		{
+			if( !it.IsEnabled ) return _("No");
+			return wxsFormat( L"%u", it.Slot+1);
+		}
+
+		case McdColA_Filename:		return it.Filename.GetName();
+		case McdColA_Size:			return wxsFormat( L"%u MB", it.SizeInMB );
+		case McdColA_Formatted:		return it.IsFormatted ? L"Yes" : L"No";
+		case McdColA_DateModified:	return it.DateModified.FormatDate();
+		case McdColA_DateCreated:	return it.DateModified.FormatDate();
+	}
+
+	pxFail( "Unknown column index in MemoryCardListView_Advanced -- returning an empty string." );
+	return wxEmptyString;
+}
+
+// return the icon for the given item. In report view, OnGetItemImage will
+// only be called for the first column. See OnGetItemColumnImage for
+// details.
+int MemoryCardListView_Advanced::OnGetItemImage(long item) const
+{
+	return _parent::OnGetItemImage( item );
+}
+
+// return the icon for the given item and column.
+int MemoryCardListView_Advanced::OnGetItemColumnImage(long item, long column) const
+{
+	return _parent::OnGetItemColumnImage( item, column );
+}
+
+// return the attribute for the item (may return NULL if none)
+wxListItemAttr* MemoryCardListView_Advanced::OnGetItemAttr(long item) const
+{
+	wxListItemAttr* retval = _parent::OnGetItemAttr(item);
+	//const McdListItem& it( (*m_KnownCards)[item] );
+	return retval;
 }

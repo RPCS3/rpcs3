@@ -174,6 +174,8 @@ namespace Panels
 		wxBoxSizer*			s_leftside_buttons;
 		wxBoxSizer*			s_rightside_buttons;
 
+		bool				m_MultitapEnabled[2];
+
 		virtual void RefreshMcds() const;
 
 		virtual wxDirName GetMcdPath() const
@@ -187,6 +189,13 @@ namespace Panels
 		BaseMcdListPanel( wxWindow* parent );
 
 		void CreateLayout();
+		void SetMultitapEnabled( uint port, bool enabled )
+		{
+			m_MultitapEnabled[port] = enabled;
+			RefreshMcds();
+		}
+
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -205,8 +214,6 @@ namespace Panels
 		
 		// Doubles as Mount and Unmount buttons
 		wxButton*		m_button_Mount;
-		
-		bool			m_MultitapEnabled[2];
 
 	public:
 		virtual ~MemoryCardListPanel_Simple() throw() {}
@@ -224,40 +231,10 @@ namespace Panels
 		void OnCreateCard(wxCommandEvent& evt);
 		void OnMountCard(wxCommandEvent& evt);
 		
-		virtual void OnListDrag(wxListEvent& evt);
-		virtual void OnListSelectionChanged(wxListEvent& evt);
-		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
-
-		virtual void Apply();
-		virtual void AppStatusEvent_OnSettingsApplied();
-		virtual void DoRefresh();
-		virtual bool ValidateEnumerationStatus();
-	};
-
-	// --------------------------------------------------------------------------------------
-	//  MemoryCardListPanel_Advanced
-	// --------------------------------------------------------------------------------------
-	class MemoryCardListPanel_Advanced
-		: public BaseMcdListPanel
-	{
-		typedef BaseMcdListPanel _parent;
-
-	protected:
-		ScopedPtr<McdList>	m_KnownCards;
-
-	public:
-		virtual ~MemoryCardListPanel_Advanced() throw() {}
-		MemoryCardListPanel_Advanced( wxWindow* parent );
-
-		// Interface Implementation for IMcdList
-		virtual int GetLength() const;
-		virtual const McdListItem& GetCard( int idx ) const;
-		virtual McdListItem& GetCard( int idx );
-
-	protected:
-		void OnCreateNewCard(wxCommandEvent& evt);
-
-		virtual void OnListDrag(wxListEvent& evt);
+		void OnListDrag(wxListEvent& evt);
+		void OnListSelectionChanged(wxListEvent& evt);
+		void OnOpenItemContextMenu(wxListEvent& evt);
+		
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
 
 		virtual void Apply();
@@ -299,6 +276,7 @@ namespace Panels
 		typedef BaseApplicableConfigPanel _parent;
 
 	protected:
+		pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
 
 		#ifdef __WXMSW__
@@ -312,6 +290,7 @@ namespace Panels
 
 	protected:
 		void AppStatusEvent_OnSettingsApplied();
+		void OnMultitapClicked();
 	};
 
 	class McdConfigPanel_Standard : public BaseApplicableConfigPanel

@@ -32,8 +32,6 @@ Panels::BasePathsPanel::BasePathsPanel( wxWindow* parent )
 Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 	BasePathsPanel( parent )
 {
-	//wxSizer& s_main( *GetSizer() );
-
 	*this += BetweenFolderSpace;
 	*this += (new DirPickerPanel( this, FolderId_Savestates,
 		_("Savestates:"),
@@ -64,6 +62,7 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 		)
 	) | SubGroup();
 
+	/*
 	*this += BetweenFolderSpace;
 	*this += (new DirPickerPanel( this, FolderId_MemoryCards,
 		_("Memorycards:"),
@@ -72,9 +71,9 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 			L"This is the default path where PCSX2 loads or creates its memory cards, and can be "
 			L"overridden in the MemoryCard Configuration by using absolute filenames."
 		)
-	) | SubGroup();
+	) | SubGroup();*/
 
-	*this += 5;
+	*this += BetweenFolderSpace;
 
 	GetSizer()->SetMinSize( wxSize( 475, GetSizer()->GetMinSize().GetHeight() ) );
 }

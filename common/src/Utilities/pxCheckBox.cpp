@@ -48,6 +48,8 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 
 		*this += &spaced;
 	}
+	
+	Connect( m_checkbox->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(pxCheckBox::OnCheckpartCommand) );
 }
 
 // applies the tooltip to both both the checkbox and it's static subtext (if present), and
@@ -75,6 +77,26 @@ void operator+=( wxSizer& target, pxCheckBox* src )
 {
 	if( !pxAssert( src != NULL ) ) return;
 	target.Add( src, pxExpand );
+}
+
+// Forwards checkbox actions on the internal checkbox (called 'checkpart') to listeners
+// bound to the pxCheckBox "parent" panel. This helps the pxCheckBox behave more like a
+// traditional checkbox.
+void pxCheckBox::OnCheckpartCommand( wxCommandEvent& evt )
+{
+	evt.Skip();
+	
+	wxCommandEvent newevt( evt );
+	newevt.SetEventObject( this );
+	newevt.SetId( GetId() );
+	GetEventHandler()->ProcessEvent( newevt );
+}
+
+void pxCheckBox::OnSubtextClicked( wxCommandEvent& evt )
+{
+	// TODO?
+	// We can enable the ability to allow clicks on the subtext desc/label to toggle
+	// the checkmark.  Not sure if that's desirable.
 }
 
 void operator+=( wxSizer& target, pxCheckBox& src )

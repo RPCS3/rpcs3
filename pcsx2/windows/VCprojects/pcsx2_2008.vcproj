@@ -2029,10 +2029,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\MemoryCardFile.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\MessageBoxes.cpp"
 				>
 			</File>
@@ -2109,10 +2105,6 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Dialogs\LogOptionsDialog.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\Dialogs\McdConfigDialog.cpp"
 					>
 				</File>
 				<File
@@ -2662,22 +2654,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\Panels\MemoryCardListPanel.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\Panels\MemoryCardListView.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\Panels\MemoryCardPanels.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\Panels\MemoryCardsPanel.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\gui\Panels\MiscPanelStuff.cpp"
 					>
 				</File>
@@ -2933,6 +2909,42 @@
 					RelativePath="..\..\ZipTools\ThreadedZipTools.h"
 					>
 				</File>
+			</Filter>
+			<Filter
+				Name="MemoryCardFile"
+				>
+				<File
+					RelativePath="..\..\gui\MemoryCardFile.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Readme-MemoryCardFile.txt"
+					>
+				</File>
+				<Filter
+					Name="gui"
+					>
+					<File
+						RelativePath="..\..\gui\Dialogs\McdConfigDialog.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\gui\Panels\MemoryCardListPanel.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\gui\Panels\MemoryCardListView.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\gui\Panels\MemoryCardPanels.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\gui\Panels\MemoryCardsPanel.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 	</Files>
