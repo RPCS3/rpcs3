@@ -134,7 +134,7 @@ void DisplayDialog()
 
     GtkWidget *output_frame, *output_box;
     GtkWidget *mod_label, *mod_box;
-    GtkWidget *latency_slide;
+    GtkWidget *latency_label, *latency_slide;
     GtkWidget *sync_label, *sync_box;
     GtkWidget *advanced_button;
 
@@ -180,6 +180,7 @@ void DisplayDialog()
 	else
 		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 1);
 
+    latency_label = gtk_label_new ("Latency:");
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
     gtk_range_set_value(GTK_RANGE(latency_slide), SndOutLatencyMS);
 
@@ -206,18 +207,19 @@ void DisplayDialog()
 
 	gtk_container_add(GTK_CONTAINER(mixing_box), int_label);
 	gtk_container_add(GTK_CONTAINER(mixing_box), int_box);
-	gtk_container_add(GTK_CONTAINER(mixing_box), effects_check);
 	gtk_container_add(GTK_CONTAINER(mixing_box), reverb_label);
 	gtk_container_add(GTK_CONTAINER(mixing_box), reverb_box);
+	gtk_container_add(GTK_CONTAINER(mixing_box), effects_check);
 	gtk_container_add(GTK_CONTAINER(mixing_box), debug_check);
 	gtk_container_add(GTK_CONTAINER(mixing_box), debug_button);
 
 	gtk_container_add(GTK_CONTAINER(output_box), mod_label);
 	gtk_container_add(GTK_CONTAINER(output_box), mod_box);
+	gtk_container_add(GTK_CONTAINER(output_box), sync_label);
+	gtk_container_add(GTK_CONTAINER(output_box), sync_box);
+	gtk_container_add(GTK_CONTAINER(output_box), latency_label);
 	gtk_container_add(GTK_CONTAINER(output_box), latency_slide);
 	gtk_container_add(GTK_CONTAINER(output_box), advanced_button);
-	gtk_container_add(GTK_CONTAINER(mixing_box), sync_label);
-	gtk_container_add(GTK_CONTAINER(mixing_box), sync_box);
 
 	gtk_container_add(GTK_CONTAINER(main_box), mixing_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), output_frame);
