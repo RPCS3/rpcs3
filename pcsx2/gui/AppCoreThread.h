@@ -16,6 +16,8 @@
 #pragma once
 
 #include "System/SysThreads.h"
+#include "pxEventThread.h"
+
 #include "AppCommon.h"
 #include "AppCorePlugins.h"
 #include "SaveState.h"

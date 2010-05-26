@@ -61,9 +61,9 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	if( m_radio_CardSize ) m_radio_CardSize->Realize();
 
 	wxBoxSizer& s_buttons( *new wxBoxSizer(wxHORIZONTAL) );
-	s_buttons += new wxButton( this, wxID_OK, _("Create") )		| pxProportion(2);
+	s_buttons += new wxButton( this, wxID_OK, _("Create") )	| pxProportion(2);
 	s_buttons += pxStretchSpacer(3);
-	s_buttons += new wxButton( this, wxID_CANCEL ) 	| pxProportion(2);
+	s_buttons += new wxButton( this, wxID_CANCEL )			| pxProportion(2);
 
 	wxBoxSizer& s_padding( *new wxBoxSizer(wxVERTICAL) );
 
@@ -73,13 +73,14 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 		s_padding += m_filepicker			| StdExpand();
 	else
 	{
-		s_padding += Heading( _( "(new card will be saved to:" ) );
+		s_padding += Heading( _( "New card will be saved to:" ) );
 		s_padding += Heading( (m_mcdpath + m_mcdfile).GetFullPath() );
 	}
 	
-	s_padding += m_radio_CardSize		| StdExpand();
+	s_padding += m_radio_CardSize			| StdExpand();
 	#ifdef __WXMSW__
-	if( m_check_CompressNTFS )	s_padding += m_check_CompressNTFS	| StdExpand();
+	if( m_check_CompressNTFS )
+		s_padding += m_check_CompressNTFS	| StdExpand();
 	#endif
 	
 	s_padding += 12;
@@ -87,8 +88,6 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 
 	*this += s_padding | StdExpand();
 
-
-	//FindItem( wxID_OK )->SetLabel(_("Create"));
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
 	//Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnApply_Click ) );
 }
@@ -126,7 +125,7 @@ static bool CreateIt( const wxString& mcdFile, uint sizeInMB )
 void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 {
 	if( !CreateIt(
-		m_filepicker		? m_filepicker->GetPath()					: m_mcdfile,
+		m_filepicker		? m_filepicker->GetPath()					: (m_mcdpath + m_mcdfile).GetFullPath(),
 		m_radio_CardSize	? m_radio_CardSize->SelectedItem().SomeInt	: 8
 	) )
 	{

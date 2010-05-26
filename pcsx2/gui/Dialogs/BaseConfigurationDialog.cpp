@@ -170,13 +170,16 @@ void Dialogs::BaseConfigurationDialog::OnSetSettingsPage( wxCommandEvent& evt )
 	}
 }
 
+void Dialogs::BaseConfigurationDialog::SomethingChanged()
+{
+	if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Enable();
+}
+
 void Dialogs::BaseConfigurationDialog::OnSomethingChanged( wxCommandEvent& evt )
 {
 	evt.Skip();
 	if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
-	{
-		if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Enable();
-	}
+		SomethingChanged();
 }
 
 

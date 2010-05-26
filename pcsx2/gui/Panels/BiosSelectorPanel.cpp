@@ -69,6 +69,7 @@ void Panels::BaseSelectorPanel::RefreshSelections()
 
 void Panels::BaseSelectorPanel::OnRefreshSelections( wxCommandEvent& evt )
 {
+	evt.Skip();
 	RefreshSelections();
 }
 
@@ -104,7 +105,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 	*this	+= refreshButton	| pxBorder(wxLEFT, StdPadding);
 	*this	+= 8;
 	*this	+= m_FolderPicker	| StdExpand();
-	
+
 	Connect( refreshButton->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(BiosSelectorPanel::OnRefreshSelections) );
 }
 

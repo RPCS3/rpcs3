@@ -450,7 +450,7 @@ typedef struct _PS2E_VersionInfo
 //  PS2E_SessionInfo
 // --------------------------------------------------------------------------------------
 // This struct is populated by the emulator prior to starting emulation, and is passed to
-// each plugin via a call to PS2E_PluginLibAPI::EmuStart().
+// each plugin via a call to PS2E_PluginLibAPI::EmuOpen().
 //
 typedef struct _PS2E_SessionInfo
 {
@@ -649,7 +649,7 @@ typedef struct _PS2E_FreezeData
 //
 typedef struct _PS2E_ComponentAPI
 {
-	// EmuStart
+	// EmuOpen
 	// This function is called by the emulator when an emulation session is started.  The
 	// plugin should take this opportunity to bind itself to the given window handle, open
 	// necessary audio/video/input devices, etc.
@@ -658,14 +658,14 @@ typedef struct _PS2E_ComponentAPI
 	//   session - provides relevant emulation session information.  Provided pointer is
 	//      valid until after the subsequent call to EmuClose()
 	//
-	// Threading: EmuStart is called from the GUI thread. All other emulation threads are
+	// Threading: EmuOpen is called from the GUI thread. All other emulation threads are
 	//   guaranteed to be suspended or closed at the time of this call (no locks required).
 	//
-	void (PS2E_CALLBACK* EmuStart)( PS2E_THISPTR thisptr, const PS2E_SessionInfo *session );
+	void (PS2E_CALLBACK* EmuOpen)( PS2E_THISPTR thisptr, const PS2E_SessionInfo *session );
 
 	// EmuClose
 	// This function is called by the emulator prior to stopping emulation.  The window
-	// handle specified in EmuStart is guaranteed to be valid at the time EmuClose is called,
+	// handle specified in EmuOpen is guaranteed to be valid at the time EmuClose is called,
 	// and the plugin should unload/unbind all window dependencies at this time.
 	//
 	// Threading: EmuClose is called from the GUI thread.  All other emulation threads are
@@ -691,7 +691,7 @@ typedef struct _PS2E_ComponentAPI
 	// This function should make a complete copy of the plugin's emulation state into the
 	// provided dest->Data pointer.  The plugin is allowed to reduce the dest->Size value
 	// but is not allowed to make it larger.  The plugin will only receive calls to Freeze
-	// and Thaw while a plugin is in an EmuStart() state.
+	// and Thaw while a plugin is in an EmuOpen() state.
 	//
 	// Parameters:
 	//   dest - a pointer to the Data/Size destination buffer (never NULL).
@@ -704,7 +704,7 @@ typedef struct _PS2E_ComponentAPI
 
 	// Thaw
 	// Plugin should restore a complete emulation state from the given FreezeData.  The
-	// plugin will only receive calls to Freeze and Thaw while a plugin is in an EmuStart()
+	// plugin will only receive calls to Freeze and Thaw while a plugin is in an EmuOpen()
 	// state.
 	//
 	// Thread Safety:
@@ -719,10 +719,10 @@ typedef struct _PS2E_ComponentAPI
 	// this plugin is grayed out.
 	//
 	// All emulation is suspended and the plugin's state is saved to memory prior to this
-	// function being called.  Configure is only called outside the context of EmuStart()
+	// function being called.  Configure is only called outside the context of EmuOpen()
 	// (after a call to EmuClose()).
 	//
-	// Plugin authors should ensure to re-read and re-apply all settings on EmuStart(),
+	// Plugin authors should ensure to re-read and re-apply all settings on EmuOpen(),
 	// which will ensure that any user changes will be applied immediately.  For changes
 	// that can be applied without emulation suspension, see/use the GUI extensions for
 	// menu and toolbar shortcuts.

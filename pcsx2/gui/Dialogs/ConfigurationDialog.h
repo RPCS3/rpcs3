@@ -55,6 +55,8 @@ namespace Dialogs
 		void AddListbook( wxSizer* sizer=NULL );
 		void CreateListbook( wxImageList& bookicons );
 
+		virtual void SomethingChanged();
+
 		template< typename T >
 		void AddPage( const char* label, int iconid );
 
@@ -68,8 +70,8 @@ namespace Dialogs
 		void OnCloseWindow( wxCloseEvent& evt );
 
 		void OnSetSettingsPage( wxCommandEvent& evt );
+		void OnSomethingChanged( wxCommandEvent& evt );
 
-		virtual void OnSomethingChanged( wxCommandEvent& evt );
 		virtual wxString& GetConfSettingsTabName() const=0;
 	};
 

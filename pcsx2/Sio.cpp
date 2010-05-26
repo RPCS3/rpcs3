@@ -26,7 +26,9 @@ static const u8 cardh[4] = { 0xFF, 0xFF, 0x5a, 0x5d };
 // Memory Card Specs : Sector size etc.
 static const mc_command_0x26_tag mc_command_0x26= {'+', 512, 16, 0x4000, 0x52, 0x5A};
 
-static int m_PostSavestateCards[2] = { 0, 0 };
+// Ejection timeout management belongs in the MemoryCardFile plugin, except the plugin
+// interface is not yet complete.
+static int m_ForceEjectionTimeout[2];
 
 // SIO Inline'd IRQs : Calls the SIO interrupt handlers directly instead of
 // feeding them through the IOP's branch test. (see SIO.H for details)
@@ -88,7 +90,7 @@ static u8 sio_xor( const u8 *buf, uint length )
 void sioInit()
 {
 	memzero(sio);
-	memzero(m_PostSavestateCards);
+	memzero(m_ForceEjectionTimeout);
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
@@ -602,7 +604,18 @@ void InitializeSIO(u8 value)
 			const uint port = sio.GetMemcardIndex();
 			const uint slot = sio.activeMemcardSlot[port];
 
-			if( SysPlugins.McdIsPresent( port, slot ) )
+			// forced ejection logic.  Technically belongs in the McdIsPresent handler for
+			// the plugin, once the memorycard plugin system is completed.
+			//  (ejection is only supported for the default non-multitap cards at this time)
+
+			bool forceEject = false;
+			if( slot == 0 && m_ForceEjectionTimeout[port] )
+			{
+				--m_ForceEjectionTimeout[port];
+				forceEject = true;
+			}
+			
+			if( !forceEject && SysPlugins.McdIsPresent( port, slot ) )
 			{
 				sio2.packet.recvVal1 = 0x1100;
 				PAD_LOG("START MEMCARD [port:%d, slot:%d] - Present", port, slot );
@@ -654,19 +667,29 @@ void SaveStateBase::sioFreeze()
 	FreezeTag( "sio" );
     Freeze( sio );
 
+	// TODO : This stuff should all be moved to the memorycard plugin eventually,
+	// but that requires adding memorycard plugin to the savestate, and I'm not in
+	// the mood to do that (let's plan it for 0.9.8) --air
+
+	// Note: The Ejection system only works for the default non-multitap MemoryCards
+	// only.  This is because it could become very (very!) slow to do a full CRC check
+	// on multiple 32 or 64 meg carts.  I have chosen to save 
+
 	if( IsSaving() )
 	{
-		for( int port=0; port<2; ++port )
+		for( uint port=0; port<2; ++port )
+		//for( uint slot=0; slot<4; ++slot )
 		{
-			for( int slot=0; slot<4; ++slot )
-				m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
+			const int slot = 0;		// see above comment about multitap slowness
+			m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
 		}
 	}
+
 	Freeze( m_mcdCRCs );
 
 	if( IsLoading() && EmuConfig.McdEnableEjection )
 	{
-		// Notes:
+		// Notes on the ForceEjectionTimeout:
 		//  * TOTA works with values as low as 20 here.
 		//    It "times out" with values around 1800 (forces user to check the memcard
 		//    twice to find it).  Other games could be different. :|
@@ -680,14 +703,14 @@ void SaveStateBase::sioFreeze()
 		//    ejecting it, the game freezes (which is actually good emulation, but annoying!)
 
 		for( int port=0; port<2; ++port )
+		//for( int slot=0; slot<4; ++slot )
 		{
-			for( int slot=0; slot<4; ++slot )
+			const int slot = 0;		// see above comment about multitap slowness
+			u64 newCRC = SysPlugins.McdGetCRC( port, slot );
+			if( newCRC != m_mcdCRCs[port][slot] )
 			{
-				u64 newCRC = SysPlugins.McdGetCRC( port, slot );
-				if( newCRC != m_mcdCRCs[port][slot] )
-				{
-					m_mcdCRCs[port][slot] = newCRC;
-				}
+				//m_mcdCRCs[port][slot] = newCRC;
+				m_ForceEjectionTimeout[port] = 128;
 			}
 		}
 	}

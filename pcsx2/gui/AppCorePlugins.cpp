@@ -500,26 +500,29 @@ void SysExecEvent_SaveSinglePlugin::InvokeEvent()
 	s_DisableGsWindow = true;		// keeps the GS window smooth by avoiding closing the window
 
 	ScopedCoreThreadPause paused_core;
-	_LoadPluginsImmediate();
+	//_LoadPluginsImmediate();
 
-	ScopedPtr<VmStateBuffer> plugstore;
-
-	if( CoreThread.HasActiveMachine() )
+	if( CorePlugins.AreLoaded() )
 	{
-		Console.WriteLn( Color_Green, L"Suspending single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
-		memSavingState save( plugstore=new VmStateBuffer(L"StateCopy_SinglePlugin") );
-		GetCorePlugins().Freeze( m_pid, save );
-	}
-		
-	GetCorePlugins().Close( m_pid );
-	_post_and_wait( paused_core );
+		ScopedPtr<VmStateBuffer> plugstore;
 
-	if( plugstore )
-	{
-		Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
-		memLoadingState load( plugstore );
-		GetCorePlugins().Freeze( m_pid, load );
-		GetCorePlugins().Close( m_pid );		// hack for stupid GS plugins.
+		if( CoreThread.HasActiveMachine() )
+		{
+			Console.WriteLn( Color_Green, L"Suspending single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+			memSavingState save( plugstore=new VmStateBuffer(L"StateCopy_SinglePlugin") );
+			GetCorePlugins().Freeze( m_pid, save );
+		}
+			
+		GetCorePlugins().Close( m_pid );
+		_post_and_wait( paused_core );
+
+		if( plugstore )
+		{
+			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+			memLoadingState load( plugstore );
+			GetCorePlugins().Freeze( m_pid, load );
+			GetCorePlugins().Close( m_pid );		// hack for stupid GS plugins.
+		}
 	}
 
 	s_DisableGsWindow = false;

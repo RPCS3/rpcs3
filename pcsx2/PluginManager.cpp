@@ -1020,6 +1020,17 @@ bool PluginManager::OpenPlugin_FW()
 	return true;
 }
 
+bool PluginManager::OpenPlugin_Mcd()
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+
+	// [TODO] Fix up and implement PS2E_SessionInfo here!!  (the currently NULL parameter)
+	if( SysPlugins.Mcd )
+		SysPlugins.Mcd->Base.EmuOpen( (PS2E_THISPTR) SysPlugins.Mcd, NULL );
+
+	return true;
+}
+
 void PluginManager::Open( PluginsEnum_t pid )
 {
 	pxAssume( (uint)pid < PluginId_Count );
@@ -1039,6 +1050,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 		case PluginId_USB:	result = OpenPlugin_USB();	break;
 		case PluginId_FW:	result = OpenPlugin_FW();	break;
 		case PluginId_DEV9:	result = OpenPlugin_DEV9();	break;
+
 		jNO_DEFAULT;
 	}
 	if( !result )
@@ -1067,6 +1079,12 @@ void PluginManager::Open()
 	} while( ++pi, pi->shortname != NULL );
 
 	if (GSopen2) GetMTGS().WaitForOpen();
+
+	if( !AtomicExchange( m_mcdOpen, true ) )
+	{
+		DbgCon.Indent().WriteLn( "Opening Memorycards");
+		OpenPlugin_Mcd();
+	}
 
 	Console.WriteLn( Color_StrongBlue, "Plugins opened successfully." );
 }
@@ -1120,6 +1138,11 @@ void PluginManager::ClosePlugin_FW()
 	_generalclose( PluginId_FW );
 }
 
+void PluginManager::ClosePlugin_Mcd()
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+	if( SysPlugins.Mcd ) SysPlugins.Mcd->Base.EmuClose( (PS2E_THISPTR) SysPlugins.Mcd );
+}
 
 void PluginManager::Close( PluginsEnum_t pid )
 {
@@ -1139,6 +1162,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 		case PluginId_USB:	ClosePlugin_USB();	break;
 		case PluginId_FW:	ClosePlugin_FW();	break;
 		case PluginId_DEV9:	ClosePlugin_DEV9();	break;
+		case PluginId_Mcd:	ClosePlugin_Mcd();	break;
 		
 		jNO_DEFAULT;
 	}
@@ -1156,9 +1180,15 @@ void PluginManager::Close()
 
 	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
 
+	if( AtomicExchange( m_mcdOpen, false ) )
+	{
+		DbgCon.Indent().WriteLn( "Closing Memorycards");
+		ClosePlugin_Mcd();
+	}
+
 	for( int i=PluginId_Count-1; i>=0; --i )
 		Close( tbl_PluginInfo[i].id );
-
+	
 	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }
 

@@ -23,6 +23,8 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEvt_SynchronousCommand, -1 )
 END_DECLARE_EVENT_TYPES()
 
+typedef void FnType_Void();
+
 // --------------------------------------------------------------------------------------
 //  SynchronousActionState
 // --------------------------------------------------------------------------------------

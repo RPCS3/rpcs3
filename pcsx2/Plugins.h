@@ -217,7 +217,7 @@ public:
 	void McdRead( uint port, uint slot, u8 *dest, u32 adr, int size );
 	void McdSave( uint port, uint slot, const u8 *src, u32 adr, int size );
 	void McdEraseBlock( uint port, uint slot, u32 adr );
-	u64 McdGetCRC( uint port, uint slot );
+	u64  McdGetCRC( uint port, uint slot );
 
 	friend class PluginManager;
 };
@@ -267,6 +267,9 @@ protected:
 	const PS2E_LibraryAPI*		m_mcdPlugin;
 	wxString					m_SettingsFolder;
 	Threading::MutexRecursive	m_mtx_PluginStatus;
+
+	// Lovely hack until the new PS2E API is completed.
+	volatile u32				m_mcdOpen;
 
 public:		// hack until we unsuck plugins...
 	ScopedPtr<PluginStatus_t>	m_info[PluginId_Count];
@@ -327,7 +330,8 @@ protected:
 	virtual bool OpenPlugin_DEV9();
 	virtual bool OpenPlugin_USB();
 	virtual bool OpenPlugin_FW();
-	
+	virtual bool OpenPlugin_Mcd();
+
 	void _generalclose( PluginsEnum_t pid );
 
 	virtual void ClosePlugin_GS();
@@ -337,6 +341,7 @@ protected:
 	virtual void ClosePlugin_DEV9();
 	virtual void ClosePlugin_USB();
 	virtual void ClosePlugin_FW();
+	virtual void ClosePlugin_Mcd();
 
 	friend class SysMtgsThread;
 };

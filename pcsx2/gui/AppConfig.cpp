@@ -100,7 +100,7 @@ namespace PathDefs
 		switch( mode )
 		{
 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
-			case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
+			//case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
 			case DocsFolder_Custom: return CustomDocumentsFolder;
 
 			jNO_DEFAULT
@@ -561,7 +561,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	{
 		ApplyDefaults();
 
-		if( DocsFolderMode != DocsFolder_CWD )
+		//if( DocsFolderMode != DocsFolder_CWD )
 		{
 			for( int i=0; i<FolderId_COUNT; ++i )
 				operator[]( (FoldersEnum_t)i ).Normalize();
@@ -719,7 +719,7 @@ void RelocateLogfile()
 //
 void AppConfig_OnChangedSettingsFolder( bool overwrite )
 {
-	if( DocsFolderMode != DocsFolder_CWD )
+	//if( DocsFolderMode != DocsFolder_CWD )
 		PathDefs::GetDocuments().Mkdir();
 
 	GetSettingsFolder().Mkdir();

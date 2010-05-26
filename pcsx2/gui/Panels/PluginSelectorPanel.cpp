@@ -672,7 +672,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 		else if( m_ComponentBoxes->Get(pid).GetSelection() == wxNOT_FOUND )
 		{
 			m_ComponentBoxes->Get(pid).SetSelection( 0 );
-			m_ComponentBoxes->GetConfigButton(pid).Enable( CorePlugins.AreLoaded() );
+			m_ComponentBoxes->GetConfigButton(pid).Enable( !CorePlugins.AreLoaded() );
 		}
 	} while( ++pi, pi->shortname != NULL );
 

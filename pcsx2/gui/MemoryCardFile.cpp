@@ -58,6 +58,9 @@ public:
 	void Lock();
 	void Unlock();
 
+	void Open();
+	void Close();
+
 	s32 IsPresent	( uint slot );
 	s32 Read		( uint slot, u8 *dest, u32 adr, int size );
 	s32 Save		( uint slot, const u8 *src, u32 adr, int size );
@@ -132,17 +135,44 @@ wxString FileMcd_GetDefaultName(uint slot)
 FileMemoryCard::FileMemoryCard()
 {
 	memset8<0xff>( m_effeffs );
+}
 
+void FileMemoryCard::Open()
+{
 	for( int slot=0; slot<8; ++slot )
 	{
-		if( !g_Conf->Mcd[slot].Enabled || g_Conf->Mcd[slot].Filename.GetFullName().IsEmpty() ) continue;
+		if( FileMcd_IsMultitapSlot(slot) )
+		{
+			if( !EmuConfig.MultitapPort0_Enabled && (FileMcd_GetMtapPort(slot) == 0) ) continue;
+			if( !EmuConfig.MultitapPort1_Enabled && (FileMcd_GetMtapPort(slot) == 1) ) continue;
+		}
 
 		wxFileName fname( g_Conf->FullpathToMcd( slot ) );
 		wxString str( fname.GetFullPath() );
+		bool cont = false;
+
+		if( fname.GetFullName().IsEmpty() )
+		{
+			str = L"[empty filename]";
+			cont = true;
+		}
+
+		if( !g_Conf->Mcd[slot].Enabled )
+		{
+			str = L"[disabled]";
+			cont = true;
+		}
+
+		Console.WriteLn( cont ? Color_Gray : Color_Green, L"McdSlot %u: " + str, slot );
+		if( cont ) continue;
 
 		const wxULongLong fsz = fname.GetSize();
 		if( (fsz == 0) || (fsz == wxInvalidSize) )
 		{
+			// FIXME : Ideally this should prompt the user for the size of the
+			// memorycard file they would like to create, instead of trying to
+			// create one automatically.
+		
 			if( !Create( str, 8 ) )
 			{
 				Msgbox::Alert(
@@ -153,7 +183,7 @@ FileMemoryCard::FileMemoryCard()
 		}
 
 		// [TODO] : Add memcard size detection and report it to the console log.
-		//   (8MB, 256Mb, whatever)
+		//   (8MB, 256Mb, formatted, unformatted, etc ...)
 
 #ifdef __WXMSW__
 		NTFS_CompressFile( str, g_Conf->McdCompressNTFS );
@@ -169,6 +199,12 @@ FileMemoryCard::FileMemoryCard()
 			);
 		}
 	}
+}
+
+void FileMemoryCard::Close()
+{
+	for( int slot=0; slot<8; ++slot )
+		m_file[slot].Close();
 }
 
 // Returns FALSE if the seek failed (is outside the bounds of the file).
@@ -308,6 +344,16 @@ uint FileMcd_ConvertToSlot( uint port, uint slot )
 	return slot + 4;					// multitap 2
 }
 
+static void PS2E_CALLBACK FileMcd_EmuOpen( PS2E_THISPTR thisptr, const PS2E_SessionInfo *session )
+{
+	thisptr->impl.Open();
+}
+
+static void PS2E_CALLBACK FileMcd_EmuClose( PS2E_THISPTR thisptr )
+{
+	thisptr->impl.Close();
+}
+
 static s32 PS2E_CALLBACK FileMcd_IsPresent( PS2E_THISPTR thisptr, uint port, uint slot )
 {
 	return thisptr->impl.IsPresent( FileMcd_ConvertToSlot( port, slot ) );
@@ -336,6 +382,9 @@ static u64 PS2E_CALLBACK FileMcd_GetCRC( PS2E_THISPTR thisptr, uint port, uint s
 Component_FileMcd::Component_FileMcd()
 {
 	memzero( api );
+
+	api.Base.EmuOpen	= FileMcd_EmuOpen;
+	api.Base.EmuClose	= FileMcd_EmuClose;
 
 	api.McdIsPresent	= FileMcd_IsPresent;
 	api.McdRead			= FileMcd_Read;

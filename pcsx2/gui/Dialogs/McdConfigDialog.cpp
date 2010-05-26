@@ -172,6 +172,9 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	//AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
 	//AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
 
+	*this	+= Heading(_("Drag items in the list over other items to swap or copy MemoryCards."));
+	*this	+= StdPadding;
+
 	*this	+= m_panel_mcdlist			| StdExpand();
 	//*this	+= StdPadding;
 	*this	+= new wxStaticLine( this )	| StdExpand();

@@ -41,8 +41,6 @@ public:
 	virtual void OnActionButtonClicked( wxCommandEvent& evt );
 };
 
-typedef void FnType_Void();
-
 typedef std::list<wxEvent*> wxEventList;
 
 // --------------------------------------------------------------------------------------

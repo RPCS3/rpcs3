@@ -52,12 +52,6 @@ Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isF
 		),
 
 		RadioPanelItem(
-			_("Current working folder (intended for developer use only)"),
-			_("Location: ") + wxGetCwd(),
-			_("This setting requires administration privileges from your operating system.")
-		),
-
-		RadioPanelItem(
 			_("Custom folder:"),
 			wxEmptyString,
 			_("This setting may require administration privileges from your operating system, depending on how your system is configured.")

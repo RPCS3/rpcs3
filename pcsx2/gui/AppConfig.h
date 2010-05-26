@@ -25,7 +25,7 @@ enum DocsModeType
 	DocsFolder_User,
 	
 	// uses the current working directory for program data
-	DocsFolder_CWD,
+	//DocsFolder_CWD,
 	
 	// uses a custom location for program data
 	DocsFolder_Custom,

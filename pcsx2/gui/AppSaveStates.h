@@ -41,7 +41,7 @@ public:
 
 	SysExecEvent_SaveSinglePlugin( PluginsEnum_t pid=PluginId_GS )
 	{
-		m_pid		= pid;
+		m_pid = pid;
 	}
 	
 	SysExecEvent_SaveSinglePlugin& SetPluginId( PluginsEnum_t pid )

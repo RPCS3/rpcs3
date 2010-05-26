@@ -14,9 +14,11 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "AppCoreThread.h"
+#include "System.h"
+
 #include "ConfigurationPanels.h"
 #include "MemoryCardPanels.h"
-#include "System.h"
 
 #include <wx/filepicker.h>
 #include <wx/ffile.h>
@@ -490,7 +492,10 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 void Panels::MemoryCardListPanel_Simple::Apply()
 {
 	//_parent::Apply();
-	
+
+	ScopedCoreThreadClose closed_core;
+	closed_core.AllowResume();
+
 	for( uint slot=0; slot<8; ++slot )
 	{
 		g_Conf->Mcd[slot].Enabled = m_Cards[slot].IsEnabled && m_Cards[slot].IsPresent;
@@ -581,6 +586,8 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 
 void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 {
+	evt.Skip();
+
 	const int	sel		= m_listview->GetFirstSelected();
 	if( wxNOT_FOUND == sel ) return;
 	const uint	slot	= sel;
