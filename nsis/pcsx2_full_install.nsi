@@ -1,24 +1,28 @@
 
-; PCSX2 NSIS installer script
+; PCSX2 Full/Complete Install Package!
+; (a NSIS installer script)
+;
 ; Copyright 2009-2010  PCSX2 Dev Team
+;
 
-; Application version, changed for each release to match the version
-
-; Uncomment this to create a package that includes binaries and binary dependencies only.
 
 !ifndef INC_PLUGINS
+  ; Set to 0 to include the core binaries only (no plugins)
   !define INC_PLUGINS   1
 !endif
 
 !ifndef INC_CRT_2008
-  !define INC_CRT_2008  0
+  ; Set to 0 to disable inclusion of Visual Studio 2008 SP1 CRT Redists
+  !define INC_CRT_2008  1
 !endif
 
 !ifndef INC_CRT_2010
+  ; Set to 0 to disable inclusion of Visual Studio 2010 CRT Redists
   !define INC_CRT_2010  1
 !endif
 
 !ifndef INC_LANGS
+  ; Set to 1 to enable inclusion of Languages folders (which are currently missing in 0.9.7)
   !define INC_LANGS     0
 !endif
 
