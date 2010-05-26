@@ -264,6 +264,7 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 Pcsx2Config::Pcsx2Config()
 {
 	bitset = 0;
+	McdEnableEjection = true;
 }
 
 void Pcsx2Config::LoadSave( IniInterface& ini )

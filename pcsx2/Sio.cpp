@@ -715,7 +715,7 @@ void SaveStateBase::sioFreeze()
 		for( uint port=0; port<2; ++port )
 		//for( uint slot=0; slot<4; ++slot )
 		{
-			const int slot = 0;		// see above comment about multitap slowness
+			const uint slot = 0;		// see above comment about multitap slowness
 			m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
 		}
 	}
@@ -737,10 +737,10 @@ void SaveStateBase::sioFreeze()
 		//    it has a "rule" that the memcard should never be ejected during a song.  So by
 		//    ejecting it, the game freezes (which is actually good emulation, but annoying!)
 
-		for( int port=0; port<2; ++port )
+		for( uint port=0; port<2; ++port )
 		//for( int slot=0; slot<4; ++slot )
 		{
-			const int slot = 0;		// see above comment about multitap slowness
+			const uint slot = 0;		// see above comment about multitap slowness
 			u64 newCRC = SysPlugins.McdGetCRC( port, slot );
 			if( newCRC != m_mcdCRCs[port][slot] )
 			{

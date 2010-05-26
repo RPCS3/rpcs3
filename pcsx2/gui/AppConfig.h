@@ -210,9 +210,6 @@ public:
 	bool		McdCompressNTFS;
 #endif
 
-	// Force-ejects modified memory cards when loading savestates (avoids corruption)
-	bool		McdEnableEjection;
-
 	// Master toggle for enabling or disabling all speedhacks in one fail-free swoop.
 	// (the toggle is applied when a new EmuConfig is sent through AppCoreThread::ApplySettings)
 	bool		EnableSpeedHacks;

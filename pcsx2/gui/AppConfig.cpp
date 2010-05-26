@@ -359,7 +359,6 @@ AppConfig::AppConfig()
 	#ifdef __WXMSW__
 	McdCompressNTFS		= true;
 	#endif
-	McdEnableEjection	= true;
 	EnableSpeedHacks	= false;
 	EnableGameFixes		= false;
 
@@ -390,14 +389,30 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 	static const wxChar* DocsFolderModeNames[] =
 	{
 		L"User",
-		L"CWD",
 		L"Custom",
 	};
+
+	if( ini.IsLoading() )
+	{
+		// HACK!  When I removed the CWD option, the option became the cause of bad
+		// crashes.  This detects presence of CWD, and replaces it with a custom mode
+		// that points to the CWD.
+		//
+		// The ini contents are rewritten and the CWD is removed.  So after 0.9.7 is released,
+		// this code is ok to be deleted/removed. :)  --air
+		
+		wxString oldmode( ini.GetConfig().Read( L"DocumentsFolderMode", L"User" ) );
+		if( oldmode == L"CWD")
+		{
+			ini.GetConfig().Write( L"DocumentsFolderMode", L"Custom" );
+			ini.GetConfig().Write( L"CustomDocumentsFolder", Path::Normalize(wxGetCwd()) );
+		}
+	}
 
 	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, DocsFolder_User );
 
 	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder,	true );
-	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		wxDirName() );
+	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		(wxDirName)Path::Normalize(wxGetCwd()) );
 	ini.Entry( L"SettingsFolder",			SettingsFolder,				PathDefs::GetSettings() );
 
 	ini.Flush();
@@ -453,7 +468,6 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	#ifdef __WXMSW__
 	IniEntry( McdCompressNTFS );
 	#endif
-	IniEntry( McdEnableEjection );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 }

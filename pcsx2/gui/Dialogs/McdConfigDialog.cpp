@@ -91,7 +91,7 @@ void Panels::McdConfigPanel_Toggles::Apply()
 	g_Conf->EmuOptions.MultitapPort0_Enabled = m_check_Multitap[0]->GetValue();
 	g_Conf->EmuOptions.MultitapPort1_Enabled = m_check_Multitap[1]->GetValue();
 
-	g_Conf->McdEnableEjection	= m_check_Ejection->GetValue();
+	g_Conf->EmuOptions.McdEnableEjection	= m_check_Ejection->GetValue();
 	#ifdef __WXMSW__
 	g_Conf->McdCompressNTFS		= m_check_CompressNTFS->GetValue();
 	#endif
@@ -102,7 +102,8 @@ void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 	m_check_Multitap[0]	->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
 	m_check_Multitap[1]	->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	m_check_Ejection	->SetValue( g_Conf->McdEnableEjection );
+	m_check_Ejection	->SetValue( g_Conf->EmuOptions.McdEnableEjection );
+
 	#ifdef __WXMSW__
 	m_check_CompressNTFS->SetValue( g_Conf->McdCompressNTFS );
 	#endif

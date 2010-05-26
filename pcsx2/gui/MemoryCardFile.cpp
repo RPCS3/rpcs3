@@ -37,7 +37,7 @@ struct Component_FileMcd;
 static const int MCD_SIZE	= 1024 *  8  * 16;		// Legacy PSX card default size
 
 static const int MC2_MBSIZE	= 1024 * 528 * 2;		// Size of a single megabyte of card data
-static const int MC2_SIZE	= MC2_SIZE * 8;			// PS2 card default size (8MB)
+static const int MC2_SIZE	= MC2_MBSIZE * 8;		// PS2 card default size (8MB)
 
 // --------------------------------------------------------------------------------------
 //  FileMemoryCard
@@ -326,8 +326,10 @@ u64 FileMemoryCard::GetCRC( uint slot )
 
 	// Process the file in 4k chunks.  Speeds things up significantly.
 	u64 retval = 0;
-	u64 buffer[0x1000];
-	for( uint i=MC2_SIZE/sizeof(buffer); i; --i )
+	u64 buffer[528*8];		// use 528 (sector size), ensures even divisibility
+	
+	const uint filesize = mcfp.Length() / sizeof(buffer);
+	for( uint i=filesize; i; --i )
 	{
 		mcfp.Read( &buffer, sizeof(buffer) );
 		for( uint t=0; t<ArraySize(buffer); ++t )
