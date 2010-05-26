@@ -45,12 +45,12 @@ static const int
 #pragma pack(1)
 #endif
 struct mc_command_0x26_tag{
-	u8	field_151;	//+02 flags
-	u16	sectorSize;	//+03 divide to it
-	u16 field_2C;	//+05 divide to it
-	u32	mc_size;	//+07
-	u8	mc_xor;		//+0b don't forget to recalculate it!!!
-	u8	Z;			//+0c
+	u8	field_151;			//+02 flags
+	u16	sectorSize;			//+03 Size of each sector(page), in bytes.
+	u16 eraseBlocks;		//+05 Number of sectors in the erase block
+	u32	mcdSizeInSectors;	//+07 card size in sectors (pages).
+	u8	mc_xor;				//+0b XOR Checksum of the superblock? (minus format ident and version?)
+	u8	Z;					//+0c terminator?  Appears to be overwritten/unused.
 #ifdef _MSC_VER
 };
 #pragma pack()

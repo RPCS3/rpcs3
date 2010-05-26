@@ -547,6 +547,8 @@ void Panels::MemoryCardListPanel_Simple::DoRefresh()
 
 void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 {
+	ScopedCoreThreadClose closed_core;
+
 	const int	sel		= m_listview->GetFirstSelected();
 	if( wxNOT_FOUND == sel ) return;
 	const uint	slot	= sel;
@@ -574,9 +576,13 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 		}
 	}
 	else
-		Dialogs::CreateMemoryCardDialog( this, slot, m_FolderPicker->GetPath() ).ShowModal();
+	{
+		wxWindowID result = Dialogs::CreateMemoryCardDialog( this, slot, m_FolderPicker->GetPath() ).ShowModal();
+		m_Cards[slot].IsEnabled = (result != wxID_CANCEL);
+	}
 
 	RefreshSelections();
+	closed_core.AllowResume();
 }
 
 /*void Panels::MemoryCardListPanel_Simple::OnSwapPorts(wxCommandEvent& evt)

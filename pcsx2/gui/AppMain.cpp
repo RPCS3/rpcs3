@@ -87,7 +87,7 @@ static bool HandlePluginError( Exception::BaseException& ex )
 
 	// TODO: Send a message to the panel to select the failed plugin.
 
-	return AppOpenModalDialog<Dialogs::SysConfigDialog>() != wxID_CANCEL;
+	return AppOpenModalDialog<Dialogs::ComponentsConfigDialog>() != wxID_CANCEL;
 }
 
 class PluginErrorEvent : public pxExceptionEvent

@@ -214,6 +214,7 @@ public:
 	}
 
 	bool McdIsPresent( uint port, uint slot );
+	void McdGetSizeInfo( uint port, uint slot, PS2E_McdSizeInfo& outways );
 	void McdRead( uint port, uint slot, u8 *dest, u32 adr, int size );
 	void McdSave( uint port, uint slot, const u8 *src, u32 adr, int size );
 	void McdEraseBlock( uint port, uint slot, u32 adr );

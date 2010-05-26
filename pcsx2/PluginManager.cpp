@@ -36,6 +36,12 @@ bool SysPluginBindings::McdIsPresent( uint port, uint slot )
 	return !!Mcd->McdIsPresent( (PS2E_THISPTR) Mcd, port, slot );
 }
 
+void SysPluginBindings::McdGetSizeInfo( uint port, uint slot, PS2E_McdSizeInfo& outways )
+{
+	if( Mcd->McdGetSizeInfo )
+		Mcd->McdGetSizeInfo( (PS2E_THISPTR) Mcd, port, slot, &outways );
+}
+
 void SysPluginBindings::McdRead( uint port, uint slot, u8 *dest, u32 adr, int size )
 {
 	Mcd->McdRead( (PS2E_THISPTR) Mcd, port, slot, dest, adr, size );

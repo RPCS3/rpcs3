@@ -61,11 +61,12 @@ public:
 	void Open();
 	void Close();
 
-	s32 IsPresent	( uint slot );
-	s32 Read		( uint slot, u8 *dest, u32 adr, int size );
-	s32 Save		( uint slot, const u8 *src, u32 adr, int size );
-	s32 EraseBlock	( uint slot, u32 adr );
-	u64 GetCRC		( uint slot );
+	s32  IsPresent	( uint slot );
+	void GetSizeInfo( uint slot, PS2E_McdSizeInfo& outways );
+	s32  Read		( uint slot, u8 *dest, u32 adr, int size );
+	s32  Save		( uint slot, const u8 *src, u32 adr, int size );
+	s32  EraseBlock	( uint slot, u32 adr );
+	u64  GetCRC		( uint slot );
 
 protected:
 	bool Seek( wxFFile& f, u32 adr );
@@ -253,6 +254,17 @@ s32 FileMemoryCard::IsPresent( uint slot )
 	return m_file[slot].IsOpened();
 }
 
+void FileMemoryCard::GetSizeInfo( uint slot, PS2E_McdSizeInfo& outways )
+{
+	outways.SectorSize			= 512;
+	outways.EraseBlockSizeInSectors			= 16;
+
+	if( pxAssert( m_file[slot].IsOpened() ) )
+		outways.McdSizeInSectors	= m_file[slot].Length() / (outways.SectorSize + outways.EraseBlockSizeInSectors);
+	else
+		outways.McdSizeInSectors	= 0x4000;
+}
+
 s32 FileMemoryCard::Read( uint slot, u8 *dest, u32 adr, int size )
 {
 	wxFFile& mcfp( m_file[slot] );
@@ -359,6 +371,11 @@ static s32 PS2E_CALLBACK FileMcd_IsPresent( PS2E_THISPTR thisptr, uint port, uin
 	return thisptr->impl.IsPresent( FileMcd_ConvertToSlot( port, slot ) );
 }
 
+static void PS2E_CALLBACK FileMcd_GetSizeInfo( PS2E_THISPTR thisptr, uint port, uint slot, PS2E_McdSizeInfo* outways )
+{
+	thisptr->impl.GetSizeInfo( FileMcd_ConvertToSlot( port, slot ), *outways );
+}
+
 static s32 PS2E_CALLBACK FileMcd_Read( PS2E_THISPTR thisptr, uint port, uint slot, u8 *dest, u32 adr, int size )
 {
 	return thisptr->impl.Read( FileMcd_ConvertToSlot( port, slot ), dest, adr, size );
@@ -387,6 +404,7 @@ Component_FileMcd::Component_FileMcd()
 	api.Base.EmuClose	= FileMcd_EmuClose;
 
 	api.McdIsPresent	= FileMcd_IsPresent;
+	api.McdGetSizeInfo	= FileMcd_GetSizeInfo;
 	api.McdRead			= FileMcd_Read;
 	api.McdSave			= FileMcd_Save;
 	api.McdEraseBlock	= FileMcd_EraseBlock;

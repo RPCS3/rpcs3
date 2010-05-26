@@ -225,10 +225,10 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	DefEnableSizer	+= m_check_Enable		| StdSpace().Align( wxALIGN_RIGHT );
 
 	*eeSliderPanel	+= m_slider_eecycle		| sliderFlags;
-	*eeSliderPanel	+= m_msg_eecycle;
+	*eeSliderPanel	+= m_msg_eecycle		| sliderFlags;
 
 	*vuSliderPanel	+= m_slider_vustealer	| sliderFlags;
-	*vuSliderPanel	+= m_msg_vustealer;
+	*vuSliderPanel	+= m_msg_vustealer		| sliderFlags;
 
 	*vuHacksPanel	+= m_check_vuFlagHack;
 	*vuHacksPanel	+= m_check_vuMinMax;

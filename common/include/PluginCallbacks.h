@@ -1013,6 +1013,17 @@ typedef struct _PS2E_ComponentAPI_GS
 
 } PS2E_ComponentAPI_GS;
 
+
+// --------------------------------------------------------------------------------------
+//  PS2E_McdSizeInfo
+// --------------------------------------------------------------------------------------
+struct PS2E_McdSizeInfo
+{
+	u16	SectorSize;					// Size of each sector, in bytes.  (only 512 and 1024 are valid)
+	u16 EraseBlockSizeInSectors;	// Size of the erase block, in sectors (max is 16)
+	u32	McdSizeInSectors;			// Total size of the card, in sectors (no upper limit)
+};
+
 // --------------------------------------------------------------------------------------
 //  PS2E_ComponentAPI_Mcd
 // --------------------------------------------------------------------------------------
@@ -1036,6 +1047,16 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	//   False if the card is not available, or True if it is available.
 	//
 	BOOL (PS2E_CALLBACK* McdIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
+
+	// McdGetSectorSize  (can be NULL)
+	// Requests memorycard formatting information from the Mcd provider.  See the description of
+	// PS2E_McdSizeInfo for details on each field.  If the Mcd provider supports only standard 8MB
+	// carts, then this function can be NULL.
+	// 
+	// Returns:
+	//   Assigned values for memorycard sector size and sector count in 'outways.' 
+	//
+	void (PS2E_CALLBACK* McdGetSizeInfo)( PS2E_THISPTR thisptr, uint port, uint slot, PS2E_McdSizeInfo* outways );
 
 	// McdRead
 	// Requests that a block of data be loaded from the memorycard into the specified dest
