@@ -135,7 +135,7 @@ void DisplayDialog()
     GtkWidget *output_frame, *output_box;
     GtkWidget *mod_label, *mod_box;
     GtkWidget *latency_slide;
-    GtkWidget *time_check;
+    GtkWidget *sync_label, *sync_box;
     GtkWidget *advanced_button;
 
     /* Create the widgets */
@@ -183,7 +183,12 @@ void DisplayDialog()
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
     gtk_range_set_value(GTK_RANGE(latency_slide), SndOutLatencyMS);
 
-    time_check = gtk_check_button_new_with_label("Enable Time Stretch");
+    sync_label = gtk_label_new ("Synchronization Mode:");
+    sync_box = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(sync_box), "TimeStretch (Recommended)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(sync_box), "Async Mix (Breaks some games!)");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(sync_box), "None (Audio can skip.)");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(sync_box), SynchMode);
 
 	advanced_button = gtk_button_new_with_label("Advanced...");
 
@@ -211,15 +216,14 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(output_box), mod_box);
 	gtk_container_add(GTK_CONTAINER(output_box), latency_slide);
 	gtk_container_add(GTK_CONTAINER(output_box), advanced_button);
-	gtk_container_add(GTK_CONTAINER(output_box), time_check);
+	gtk_container_add(GTK_CONTAINER(mixing_box), sync_label);
+	gtk_container_add(GTK_CONTAINER(mixing_box), sync_box);
 
 	gtk_container_add(GTK_CONTAINER(main_box), mixing_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), output_frame);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
-	// Fixme
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), /*timeStretchEnabled*/ 1);
 
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
@@ -246,8 +250,9 @@ void DisplayDialog()
 			OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 
     	SndOutLatencyMS = gtk_range_get_value(GTK_RANGE(latency_slide));
-		// Fixme
-    	//timeStretchEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_check));
+    	
+    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(sync_box)) != -1)
+			SynchMode = gtk_combo_box_get_active(GTK_COMBO_BOX(sync_box));
     }
 
     gtk_widget_destroy (dialog);
