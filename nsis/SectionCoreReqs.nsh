@@ -31,17 +31,17 @@
   ; filenames.  This allows many older plugin versions to continue to work.  (note that
   ; v3 will be removed for 0.9.8).
 
-    SetOutPath "$INSTDIR"
-
     File                                            ..\bin\w32pthreads.v4.dll
     File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\GameIndex.dbf
 
-    ; Note: HostFS is not enabled by default, so no need to bundle it yet
-    ;File                                             ..\bin\pcsx2hostfs_ldr.elf
-
+    ; HostFS is now enabled by default
+    File                                             ..\bin\pcsx2hostfs_ldr.elf
+	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+	
     SetOutPath "$INSTDIR\Plugins"
-
+    
+	!insertmacro UNINSTALL.LOG_OPEN_INSTALL
     ; NULL plugins are required, because the PCSX2 plugin selector needs a dummy plugin in every slot
     ; in order to run (including CDVD!) -- and really there should be more but we don't have working
     ; SPU2 null plugins right now.
@@ -52,7 +52,6 @@
     File ..\bin\Plugins\DEV9null.dll
     File ..\bin\Plugins\FWnull.dll
     File ..\bin\Plugins\CDVDnull.dll
-
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
   
   ; In 0.9.7 there is only English, so including the other mo files (for now) is pointless.
