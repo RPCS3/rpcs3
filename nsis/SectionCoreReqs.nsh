@@ -17,10 +17,10 @@
   ;SetShellVarContext current
   
   SetOutPath "$INSTDIR"
+
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
     File           /oname=${APP_EXE}                ..\bin\pcsx2.exe
     ;File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
-  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
  
   ; ------------------------------------------
   ;       -- Shared Core Components --
@@ -30,8 +30,6 @@
   ; Note that v3 pthreads is compatible with v4 pthreads, so we just copy v4 oover both
   ; filenames.  This allows many older plugin versions to continue to work.  (note that
   ; v3 will be removed for 0.9.8).
-
-  !insertmacro UNINSTALL.LOG_OPEN_INSTALL_SECTION CoreShared
 
     SetOutPath "$INSTDIR"
 
@@ -55,7 +53,7 @@
     File ..\bin\Plugins\FWnull.dll
     File ..\bin\Plugins\CDVDnull.dll
 
-  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL_SECTION CoreShared
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
   
   ; In 0.9.7 there is only English, so including the other mo files (for now) is pointless.
   ; This code will be re-enabled when the new GUI is translated.

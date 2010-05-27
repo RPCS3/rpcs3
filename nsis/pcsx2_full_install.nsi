@@ -26,68 +26,21 @@
   !define INC_LANGS     0
 !endif
 
+!define OUTFILE_POSTFIX "setup"
 !include "SharedSettings.nsh"
-
-; The name of the installer
-Name "${APP_NAME}"
-
-OutFile "${APP_FILENAME}-setup.exe"
-
-; The default installation directory
-InstallDir "$PROGRAMFILES\PCSX2 ${APP_VERSION}"
-
-; Registry key to check for directory (so if you install again, it will 
-; overwrite the old one automatically)
-InstallDirRegKey ${INSTDIR_REG_ROOT} "Software\PCSX2" "Install_Dir"
-
-; These defines are dependent on NSIS vars assigned above.
-
-!define APP_EXE          "$INSTDIR\${APP_FILENAME}.exe"
-!define INSTDIR_REG_KEY  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_FILENAME}"
-
-Var DirectXSetupError
-
-
 !include "MUI2.nsh"
 !include "AdvUninstLog.nsh"
-
-; UNINSTALL.LOG_OPEN_INSTALL_SECTION {section_name}
-; UNINSTALL.LOG_CLOSE_INSTALL_SECTION {section_name}
-;
-; Advanced Uninstaller Extension: This allows us to safely log to arbitrary "sections" of
-; installation of our choosing, without having to rely on $OUTDIR (which is how the default
-; provided LOG_OPEN_INSTALL works).  In other words, different files in the same folder can
-; be added to different install lists. :)
-;
-!macro UNINSTALL.LOG_OPEN_INSTALL_SECTION SectionName
-  !verbose push
-     !verbose ${UNINST_LOG_VERBOSE}
-
-        StrCmp $unlog_error "error" +2
-        ${uninstall.log_install} "${EXCLU_LIST}" "${UNINST_DAT}" "${SectionName}"
-
-  !verbose pop
-!macroend
-
-!macro UNINSTALL.LOG_CLOSE_INSTALL_SECTION SectionName
-  !verbose push
-     !verbose ${UNINST_LOG_VERBOSE}
-
-   !define ID ${__LINE__}
-
-        ${uninstall.log_install} "${UNLOG_PART}${ID}" "${EXCLU_LIST}" "${SectionName}"
-        ${uninstall.log_mergeID} "${UNLOG_PART}${ID}"
-
-   !undef ID ${__LINE__}
-
-  !verbose pop
-!macroend
 
 ; =======================================================================
 ;                          Vista/Win7 UAC Stuff
 ; =======================================================================
 
 !include "IsUserAdmin.nsi"
+
+; Reserve features for improved performance with solid archiving.
+;  (uncomment if we add our own install options ini files)
+;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
+;!insertmacro MUI_RESERVEFILE_LANGDLL
 
 ; Allow admin-rights PCSX2 users to be hardcore!
 AllowRootDirInstall true
@@ -104,7 +57,6 @@ RequestExecutionLevel admin
 
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "banner.bmp"
-;!define MUI_COMPONENTSPAGE_NODESC
 !define MUI_COMPONENTSPAGE_SMALLDESC
 
 !insertmacro MUI_PAGE_COMPONENTS 
@@ -130,7 +82,7 @@ Section "!${APP_NAME} (required)" SEC_CORE
 
   SectionIn RO
 
-!include "SectionCoreReqs.nsh"
+  !include "SectionCoreReqs.nsh"
 
   ; ------------------------------------------
   ;          -- Plugins Section --
@@ -272,7 +224,7 @@ SectionEnd
 ; =======================================================================
 
 ; -----------------------------------------------------------------------
-Section "Un.Core Executables ${APP_NAME}"
+Section "Un.Exes and Plugins ${APP_NAME}"
 
   SetShellVarContext all
 
@@ -283,23 +235,23 @@ Section "Un.Core Executables ${APP_NAME}"
 
   Call un.removeShorties
 
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
+
 SectionEnd
 
-; -----------------------------------------------------------------------
-Section "Un.Shared Components (DLLs, Languages, etc)"
+Section "Un.Complete Registry Cleanup"
 
-  MessageBox MB_YESNO "WARNING!  If you have multiple versions of PCSX2 installed, removing all shared files will probably break them.  Are you sure you want to proceed?" \
-    IDYES true IDNO false
+  ; Kill the entire PCSX2 registry key!
+  DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
 
-  true:
-    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
-    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
+  ; Kill AppData/PCSX2 entry!
 
-    ; Kill the entire PCSX2 registry key.
-    DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
-
-  false:
-    ; User cancelled -- do nothing!!
+  SetShellVarContext current
+  StrCpy $0 $LOCALAPPDATA\PCSX2
+  Call un.DeleteDirIfEmpty
+  StrCpy $0 $APPDATA\PCSX2
+  Call un.DeleteDirIfEmpty
 
 SectionEnd
 
@@ -308,8 +260,8 @@ LangString DESC_CORE       ${LANG_ENGLISH} "Core components (binaries, plugins, 
 LangString DESC_STARTMENU  ${LANG_ENGLISH} "Adds shortcuts for PCSX2 to the start menu (all users)."
 LangString DESC_DESKTOP    ${LANG_ENGLISH} "Adds a shortcut for PCSX2 to the desktop (all users)."
 
-LangString DESC_CRT2008    ${LANG_ENGLISH} "The 2008 Redist is required by the PCSX2 binaries packaged in this installer."
-LangString DESC_CRT2010    ${LANG_ENGLISH} "The 2010 Redist will be used by future PCSX2 plugins and updates, but is not (yet) necessary."
+LangString DESC_CRT2008    ${LANG_ENGLISH} "Required by the PCSX2 binaries packaged in this installer."
+LangString DESC_CRT2010    ${LANG_ENGLISH} "This will be used by future PCSX2 plugins and updates, but is not (yet) necessary."
 LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite certain your Direct3D runtimes are up to date."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN

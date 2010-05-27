@@ -13,67 +13,26 @@
   !define INC_PLUGINS   1
 !endif
 
+!ifndef INC_ZZOGL
+  ; Includes ZZOGL and CG Toolkit (via web install).  Currently not supported (work in progress)
+  !define INC_ZZOGL	0
+!endif 
+
 !ifndef INC_LANGS
   ; Set to 1 to enable inclusion of Languages folders (which are currently missing in 0.9.7)
   !define INC_LANGS     0
 !endif
 
+!define OUTFILE_POSTFIX "websetup"
 !include "SharedSettings.nsh"
-
-; The name of the installer
-Name "${APP_NAME}"
-
-OutFile "${APP_FILENAME}-setup.exe"
-
-; The default installation directory
-InstallDir "$PROGRAMFILES\PCSX2 ${APP_VERSION}"
-
-; Registry key to check for directory (so if you install again, it will 
-; overwrite the old one automatically)
-InstallDirRegKey ${INSTDIR_REG_ROOT} "Software\PCSX2" "Install_Dir"
-
-; These defines are dependent on NSIS vars assigned above.
-
-!define APP_EXE          "$INSTDIR\${APP_FILENAME}.exe"
-!define INSTDIR_REG_KEY  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_FILENAME}"
-
-Var DirectXSetupError
-
 
 !include "MUI2.nsh"
 !include "AdvUninstLog.nsh"
 
-; UNINSTALL.LOG_OPEN_INSTALL_SECTION {section_name}
-; UNINSTALL.LOG_CLOSE_INSTALL_SECTION {section_name}
-;
-; Advanced Uninstaller Extension: This allows us to safely log to arbitrary "sections" of
-; installation of our choosing, without having to rely on $OUTDIR (which is how the default
-; provided LOG_OPEN_INSTALL works).  In other words, different files in the same folder can
-; be added to different install lists. :)
-;
-!macro UNINSTALL.LOG_OPEN_INSTALL_SECTION SectionName
-  !verbose push
-     !verbose ${UNINST_LOG_VERBOSE}
-
-        StrCmp $unlog_error "error" +2
-        ${uninstall.log_install} "${EXCLU_LIST}" "${UNINST_DAT}" "${SectionName}"
-
-  !verbose pop
-!macroend
-
-!macro UNINSTALL.LOG_CLOSE_INSTALL_SECTION SectionName
-  !verbose push
-     !verbose ${UNINST_LOG_VERBOSE}
-
-   !define ID ${__LINE__}
-
-        ${uninstall.log_install} "${UNLOG_PART}${ID}" "${EXCLU_LIST}" "${SectionName}"
-        ${uninstall.log_mergeID} "${UNLOG_PART}${ID}"
-
-   !undef ID ${__LINE__}
-
-  !verbose pop
-!macroend
+; Reserve features for improved performance with solid archiving.
+;  (uncomment if we add our own install options ini files)
+;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
+;!insertmacro MUI_RESERVEFILE_LANGDLL
 
 ; =======================================================================
 ;                          Vista/Win7 UAC Stuff
@@ -130,6 +89,9 @@ Section "!${APP_NAME} (required)" SEC_CORE
 
 !if ${INC_PLUGINS} > 0
 
+  ; [TODO]  :  Eventually the 'latest' plugin packages should be downloaded from one
+  ;   of our mirrors.  For now plugins are included in the web installer.
+
   SetOutPath "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
 
@@ -154,6 +116,27 @@ Section "!${APP_NAME} (required)" SEC_CORE
 !endif
 
 SectionEnd
+
+!if ${INC_ZZOGL} > 0
+Section "ZZogl Plugin (requires OpenGL)"
+
+  SetOutPath "$INSTDIR\Plugins"
+  !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+    File /oname=zzogl-pg-r${SVNREV_ZZOGL}.dll     ..\bin\Plugins\zzogl-pg.dll
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+
+SectionEnd
+
+Section "Nvidia's CG Toolkit"
+
+  ; This section is required by anything using OpenGL, typically.
+  ; It should be automatically checked when ZZogl is enabled.
+
+ ; CG Toolkit would be downloaded from here:
+ ; http://developer.download.nvidia.com/cg/Cg_2.2/Cg-2.2_February2010_Setup.exe
+  
+SectionEnd
+!endif
 
 ; -----------------------------------------------------------------------
 ; Start Menu - Optional section (can be disabled by the user)
@@ -226,9 +209,11 @@ Section "Microsoft Visual C++ 2008 SP1 Redist (required)"  SEC_CRT2008
 
 SectionEnd
 
-Section "Microsoft Visual C++ 2010 Redist (recommended)" SEC_CRT2010
+Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
 
-  ;SectionIn RO
+  ; Make this required on the web installer, since it has a fully reliable check to
+  ; see if it needs to be downloaded and installed or not.
+  SectionIn RO
 
   ; Detection made easy: Unlike previous redists, VC2010 now generates a platform
   ; independent key for checking availability.
@@ -305,7 +290,7 @@ SectionEnd
 ; =======================================================================
 
 ; -----------------------------------------------------------------------
-Section "Un.Core Executables ${APP_NAME}"
+Section "Un.${APP_NAME} (EXEs, DLLs, game database, etc)"
 
   SetShellVarContext all
 
@@ -316,33 +301,37 @@ Section "Un.Core Executables ${APP_NAME}"
 
   Call un.removeShorties
 
-SectionEnd
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
 
-; -----------------------------------------------------------------------
-Section "Un.Shared Components (DLLs, Languages, etc)"
-
-  MessageBox MB_YESNO "WARNING!  If you have multiple versions of PCSX2 installed, removing all shared files will probably break them.  Are you sure you want to proceed?" \
-    IDYES true IDNO false
-
-  true:
-    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
-    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
-
-    ; Kill the entire PCSX2 registry key.
-    DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
-
-  false:
-    ; User cancelled -- do nothing!!
+  ; Kill the entire PCSX2 registry key... ?  (not recommended)
+  ;DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
 
 SectionEnd
+
+Section "Un.Complete Registry Cleanup"
+
+  ; Kill the entire PCSX2 registry key!
+  DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
+
+  ; Kill AppData/PCSX2 entry!
+
+  SetShellVarContext current
+  StrCpy $0 $LOCALAPPDATA\PCSX2
+  Call un.DeleteDirIfEmpty
+  StrCpy $0 $APPDATA\PCSX2
+  Call un.DeleteDirIfEmpty
+
+SectionEnd
+
 
 LangString DESC_CORE       ${LANG_ENGLISH} "Core components (binaries, plugins, languages, etc)."
 
 LangString DESC_STARTMENU  ${LANG_ENGLISH} "Adds shortcuts for PCSX2 to the start menu (all users)."
 LangString DESC_DESKTOP    ${LANG_ENGLISH} "Adds a shortcut for PCSX2 to the desktop (all users)."
 
-LangString DESC_CRT2008    ${LANG_ENGLISH} "The 2008 Redist is required by the PCSX2 binaries packaged in this installer."
-LangString DESC_CRT2010    ${LANG_ENGLISH} "The 2010 Redist will be used by future PCSX2 plugins and updates, but is not (yet) necessary."
+LangString DESC_CRT2008    ${LANG_ENGLISH} "Required!  Only uncheck if you are certain this component is already installed."
+LangString DESC_CRT2010    ${LANG_ENGLISH} "Will only be downloaded if you don't already have it installed."
 LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite certain your Direct3D runtimes are up to date."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
