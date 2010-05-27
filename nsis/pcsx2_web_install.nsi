@@ -185,28 +185,32 @@ Section "Microsoft Visual C++ 2008 SP1 Redist (required)"  SEC_CRT2008
   SetOutPath "$TEMP"
 
   DetailPrint "Downloading Visual C++ 2008 SP1 Redistributable Setup..."
-
+  DetailPrint "Contacting Microsoft.com..."
   NSISdl::download /TIMEOUT=15000 "http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe" "vcredist_2008_sp1_x86.exe"
 
   Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=15000 "http://code.google.com/vcredist_x86.exe" "vcredist_2008_sp1_x86.exe"
+  StrCmp $R0 "success" OnSuccess
+  DetailPrint "Cound not contact Microsoft.com, or the file has been (re)moved!"
+  DetailPrint "Contacting Googlecode.com..."
+  NSISdl::download /TIMEOUT=20000 "http://pcsx2.googlecode.com/files/vcredist_2008_sp1_x86.exe" "vcredist_2008_sp1_x86.exe"
 
-  Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=15000 "http://www.pcsx2.net/vcredist_x86.exe" "vcredist_2008_sp1_x86.exe"
-
+  ; [TODO] Provide a mirror for this file hosted from pcsx2.net .. ?  or emudev.net .. ?
+  ;Pop $R0 ;Get the return value
+  ;StrCmp $R0 "success" +2
+  ;NSISdl::download /TIMEOUT=15000 "http://www.pcsx2.net/vcredist_x86.exe" "vcredist_2008_sp1_x86.exe"
 
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" +2
     MessageBox MB_OK "Could not download Visual Studio 2008 Redist; none of the mirrors appear to be functional."
+    Goto done
 
+OnSuccess:
   DetailPrint "Running Visual C++ 2008 SP1 Redistributable Setup..."
   ExecWait '"$TEMP\vcredist_2008_sp1_x86.exe" /qb'
   DetailPrint "Finished Visual C++ 2008 SP1 Redistributable Setup"
-  
   Delete "$TEMP\vcredist_2008_sp1_x86.exe"
 
+done:
 SectionEnd
 
 Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
@@ -228,21 +232,26 @@ Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
   SetOutPath "$TEMP"
 
   DetailPrint "Downloading Visual C++ 2010 Redistributable Setup..."
+  DetailPrint "Contacting Microsoft.com..."
   NSISdl::download /TIMEOUT=15000 "http://download.microsoft.com/download/5/B/C/5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E/vcredist_x86.exe" "vcredist_2010_x86.exe"
 
   Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=15000 "http://code.google.com/vcredist_x86.exe" "vcredist_2010_x86.exe"
+  StrCmp $R0 "success" OnSuccess
+  DetailPrint "Cound not contact Microsoft.com, or the file has been (re)moved!"
+  DetailPrint "Contacting Googlecode.com..."
+  NSISdl::download /TIMEOUT=20000 "http://pcsx2.googlecode.com/files/vcredist_2010_x86.exe" "vcredist_2010_x86.exe"
 
-  Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=30000 "http://www.pcsx2.net/vcredist_x86.exe" "vcredist_2010_x86.exe"
-
+  ; [TODO] Provide a mirror for this file hosted from pcsx2.net .. ?  or emudev.net .. ?
+  ;Pop $R0 ;Get the return value
+  ;StrCmp $R0 "success" +2
+  ;NSISdl::download /TIMEOUT=30000 "http://www.pcsx2.net/vcredist_x86.exe" "vcredist_2010_x86.exe"
 
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" +2
     MessageBox MB_OK "Could not download Visual Studio 2010 Redist; none of the mirrors appear to be functional."
+    Goto done
 
+OnSuccess:
   DetailPrint "Running Visual C++ 2010 SP1 Redistributable Setup..."
   ExecWait '"$TEMP\vcredist_2010_x86.exe" /qb'
   DetailPrint "Finished Visual C++ 2010 SP1 Redistributable Setup"
@@ -266,22 +275,36 @@ Section "DirectX Web Setup (recommended)" SEC_DIRECTX
   SetOutPath "$TEMP"
  
   DetailPrint "Downloading DirectX Web Setup..."
-
+  DetailPrint "Contacting Microsoft.com..."
   NSISdl::download /TIMEOUT=15000 "http://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe" dxwebsetup.exe
 
-  Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=15000 "http://code.google.com/dxwebsetup.exe" "dxwebsetup.exe"
+  ; No mirrors provided for the dx web setup.  Either we get it from Microsoft, or we don't bother.
+  ; (this is done because there's a good chance the dxwebsetup we provide won't work anyway, if Microsoft
+  ;  has in fact re-arranged their website (again)).
+
+  ;Pop $R0 ;Get the return value
+  ;StrCmp $R0 "success" OnSuccess
+  ;DetailPrint "Cound not contact Microsoft.com, or the file has been (re)moved!"
+  ;DetailPrint "Contacting Googlecode.com..."
+  ;NSISdl::download /TIMEOUT=20000 "http://code.google.com/dxwebsetup01.exe" "dxwebsetup.exe"
 
   Pop $R0 ;Get the return value
-  StrCmp $R0 "success" +2
-  NSISdl::download /TIMEOUT=30000 "http://www.pcsx2.net/dxwebsetup.exe" "dxwebsetup.exe"
+  StrCmp $R0 "success" OnSuccess
+  DetailPrint "Cound not contact Microsoft.com, or the file has been (re)moved!"
+  MessageBox MB_OK "Could not download the DirectX Web Setup.  Microsoft probably rearranged their website.  Please do an internet search for 'DirectX Setup' and download and install it yourself after this installer has finished."
+  Goto done
 
+  ;Pop $R0 ;Get the return value
+  ;StrCmp $R0 "success" +2
+  ;NSISdl::download /TIMEOUT=30000 "http://www.pcsx2.net/dxwebsetup.exe" "dxwebsetup.exe"
+
+OnSuccess:
   DetailPrint "Running DirectX Web Setup..."
   ExecWait '"$TEMP\dxwebsetup.exe" /Q' $DirectXSetupError
   DetailPrint "Finished DirectX Web Setup"                                     
-                                                                              
   Delete "$TEMP\dxwebsetup.exe"
+
+done:
 
 SectionEnd
 
