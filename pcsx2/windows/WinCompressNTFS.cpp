@@ -132,6 +132,7 @@ void NTFS_CompressFile( const wxString& file, bool compressStatus )
 	bool isFile = !wxDirExists( file );
 
 	if( isFile && !wxFileExists( file ) ) return;
+	if( GetFileAttributes(file) & FILE_ATTRIBUTE_COMPRESSED ) return;
 	if( !wxIsWritable( file ) ) return;
 
 	const DWORD flags = isFile ? FILE_ATTRIBUTE_NORMAL : (FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_DIRECTORY);

@@ -48,7 +48,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 {
 	m_idealWidth	= 472;
 	m_filepicker	= NULL;
-	m_slot = slot;
+	m_slot			= slot;
 
 	CreateControls();
 

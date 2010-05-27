@@ -176,7 +176,7 @@ namespace Dialogs
 	public:
 		virtual ~CreateMemoryCardDialog()  throw() {}
 		//CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );
-		CreateMemoryCardDialog( wxWindow* parent, uint port, const wxDirName& mcdpath, const wxString& mcdfile=wxEmptyString );
+		CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& mcdfile=wxEmptyString );
 
 		wxDirName GetPathToMcds() const;
 

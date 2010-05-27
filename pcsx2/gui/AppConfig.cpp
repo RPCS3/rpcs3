@@ -437,9 +437,9 @@ void AppConfig::LoadSaveMemcards( IniInterface& ini )
 		int mtport = FileMcd_GetMtapPort(slot)+1;
 		int mtslot = FileMcd_GetMtapSlot(slot)+1;
 
-		ini.Entry( wxsFormat( L"Multitap%u_Slot%d_Enable", mtport, mtslot ),
+		ini.Entry( wxsFormat( L"Multitap%u_Slot%u_Enable", mtport, mtslot ),
 			Mcd[slot].Enabled, defaults.Mcd[slot].Enabled );
-		ini.Entry( wxsFormat( L"Multitap%u_Slot%d_Filename", mtport, mtslot ),
+		ini.Entry( wxsFormat( L"Multitap%u_Slot%u_Filename", mtport, mtslot ),
 			Mcd[slot].Filename, defaults.Mcd[slot].Filename );
 	}
 }
