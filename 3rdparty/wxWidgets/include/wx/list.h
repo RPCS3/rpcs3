@@ -174,10 +174,10 @@ private:
     };                                                                        \
                                                                               \
     VC6_WORKAROUND(elT, liT, decl)                                            \
-    decl liT : public std::list<elT>                                          \
+    decl liT : public std::list< elT, wxObjectAllocator< elT > >              \
     {                                                                         \
     private:                                                                  \
-        typedef std::list<elT> BaseListType;                                  \
+        typedef std::list< elT, wxObjectAllocator< elT > > BaseListType;      \
         static BaseListType EmptyList;                                        \
                                                                               \
         bool m_destroy;                                                       \
@@ -187,7 +187,7 @@ private:
         {                                                                     \
         private:                                                              \
             /* Workaround for broken VC6 nested class name resolution */      \
-            typedef std::list<elT>::iterator iterator;                        \
+            typedef std::list<elT, wxObjectAllocator< elT > >::iterator iterator; \
             friend class liT;                                                 \
                                                                               \
             iterator m_iter;                                                  \

@@ -179,7 +179,11 @@ bool wxTextFile::OnRead(const wxMBConv& conv)
     }
 #endif // wxUSE_UNICODE
 
-    free(buf.release()); // we don't need this memory any more
+	// we don't need this memory any more
+	// PCSX2 : So let's free it using the buffer object's API, instead of some idiotic
+	//   low-level hack (bug found thanks to the use of custom heap allocation). --air
+	//free(buf.release());
+	buf.reset();
 
 
     // now break the buffer in lines

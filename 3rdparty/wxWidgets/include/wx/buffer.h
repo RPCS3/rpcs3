@@ -13,8 +13,7 @@
 #define _WX_BUFFER_H
 
 #include "wx/wxchar.h"
-
-#include <stdlib.h>             // malloc() and free()
+#include "wx/msw/HeapAllocator.h"
 
 // ----------------------------------------------------------------------------
 // Special classes for (wide) character strings: they use malloc/free instead
@@ -31,13 +30,13 @@ public:                                                                     \
     }                                                                       \
                                                                             \
     classname(size_t len)                                                   \
-        : m_str((chartype *)malloc((len + 1)*sizeof(chartype)))             \
+        : m_str((chartype *)_allocHeap_wxString((len + 1)*sizeof(chartype)))  \
     {                                                                       \
         m_str[len] = (chartype)0;                                           \
     }                                                                       \
                                                                             \
     /* no need to check for NULL, free() does it */                         \
-    ~classname() { free(m_str); }                                           \
+    ~classname() { _freeHeap_wxString(m_str); }                             \
                                                                             \
     /*                                                                      \
         WARNING:                                                            \
@@ -66,7 +65,7 @@ public:                                                                     \
                                                                             \
     void reset()                                                            \
     {                                                                       \
-        free(m_str);                                                        \
+        _freeHeap_wxString(m_str);                                          \
         m_str = NULL;                                                       \
     }                                                                       \
                                                                             \
@@ -77,14 +76,14 @@ public:                                                                     \
                                                                             \
     classname& operator=(const chartype *str)                               \
     {                                                                       \
-        free(m_str);                                                        \
+        _freeHeap_wxString(m_str);                                          \
         m_str = str ? strdupfunc(str) : NULL;                               \
         return *this;                                                       \
     }                                                                       \
                                                                             \
     classname& operator=(const classname& src)                              \
     {                                                                       \
-        free(m_str);                                                        \
+        _freeHeap_wxString(m_str);                                          \
         m_str = src.release();                                              \
                                                                             \
         return *this;                                                       \
@@ -93,7 +92,7 @@ public:                                                                     \
     bool extend(size_t len)                                                 \
     {                                                                       \
         chartype *                                                          \
-            str = (chartype *)realloc(m_str, (len + 1)*sizeof(chartype));   \
+            str = (chartype *)_reallocHeap_wxString(m_str, (len + 1)*sizeof(chartype));   \
         if ( !str )                                                         \
             return false;                                                   \
                                                                             \
@@ -124,14 +123,14 @@ public:                                                                     \
 }
 #endif // wxABI_VERSION >= 20804
 
-DEFINE_BUFFER(wxCharBuffer, char, wxStrdupA);
+DEFINE_BUFFER(wxCharBuffer, char, _mswHeap_Strdup);
 #if wxABI_VERSION >= 20804
 DEFINE_WRITABLE_BUFFER(wxWritableCharBuffer, wxCharBuffer, char);
 #endif
 
 #if wxUSE_WCHAR_T
 
-DEFINE_BUFFER(wxWCharBuffer, wchar_t, wxStrdupW);
+DEFINE_BUFFER(wxWCharBuffer, wchar_t, _mswHeap_Strdup);
 #if wxABI_VERSION >= 20804
 DEFINE_WRITABLE_BUFFER(wxWritableWCharBuffer, wxWCharBuffer, wchar_t);
 #endif
@@ -173,10 +172,10 @@ public:
     // everyting is private as it can only be used by wxMemoryBuffer
 private:
     wxMemoryBufferData(size_t size = wxMemoryBufferData::DefBufSize)
-        : m_data(size ? malloc(size) : NULL), m_size(size), m_len(0), m_ref(0)
+        : m_data(size ? _allocHeap_wxObject(size) : NULL), m_size(size), m_len(0), m_ref(0)
     {
     }
-    ~wxMemoryBufferData() { free(m_data); }
+    ~wxMemoryBufferData() { _freeHeap_wxObject(m_data); }
 
 
     void ResizeIfNeeded(size_t newSize)
@@ -184,10 +183,10 @@ private:
         if (newSize > m_size)
         {
             void *dataOld = m_data;
-            m_data = realloc(m_data, newSize + wxMemoryBufferData::DefBufSize);
+            m_data = _reallocHeap_wxObject(m_data, newSize + wxMemoryBufferData::DefBufSize);
             if ( !m_data )
             {
-                free(dataOld);
+                _freeHeap_wxObject(dataOld);
             }
 
             m_size = newSize + wxMemoryBufferData::DefBufSize;

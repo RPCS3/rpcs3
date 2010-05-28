@@ -59,7 +59,9 @@ wxStringInputStream::~wxStringInputStream()
 {
 #if wxUSE_UNICODE
     // Note: wx[W]CharBuffer uses malloc()/free()
-    free(m_buf);
+    // PCSX2 : wx[W]CharBuffer now uses the wxString local heap!  --air
+    //free(m_buf);
+    _freeHeap_wxString(m_buf);
 #endif
 }
 

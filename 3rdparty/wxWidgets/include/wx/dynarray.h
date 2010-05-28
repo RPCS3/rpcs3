@@ -113,7 +113,7 @@ private:
    _WX_DECLARE_BASEARRAY_2(T, name, name##_Predicate, classexp)
 
 #define  _WX_DECLARE_BASEARRAY_2(T, name, predicate, classexp)      \
-classexp name : public std::vector<T>                               \
+classexp name : public std::vector< T,wxStringAllocator< T > >                               \
 {                                                                   \
   typedef predicate Predicate;                                      \
   typedef predicate::CMPFUNC SCMPFUNC;                              \
