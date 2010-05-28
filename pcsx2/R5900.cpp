@@ -616,8 +616,8 @@ void __fastcall eeGameStarting()
 		if (0) ProfilerSetEnabled(true);
 	}
 
-	ApplyPatch(0);
-	ApplyCheat(0);
+	if (EmuConfig.EnablePatches) ApplyPatch(0);
+	if (EmuConfig.EnableCheats)  ApplyCheat(0);
 }
 
 void __fastcall eeloadReplaceOSDSYS()
