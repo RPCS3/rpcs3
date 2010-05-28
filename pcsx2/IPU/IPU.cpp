@@ -142,11 +142,7 @@ int ipuInit()
 
 void ipuReset()
 {
-	memzero(*ipuRegs);
-	g_nDMATransfer.reset();
-	IPU1Status.InProgress = false;
-	IPU1Status.DMAMode = DMA_MODE_NORMAL;
-	IPU1Status.DMAFinished = true;
+	ipuInit();
 }
 
 void ipuShutdown()

@@ -532,13 +532,11 @@ void Panels::MemoryCardListPanel_Simple::DoRefresh()
 {
 	for( uint slot=0; slot<8; ++slot )
 	{
+		if( FileMcd_IsMultitapSlot(slot) && !m_MultitapEnabled[FileMcd_GetMtapPort(slot)] ) continue;
+
 		wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
 		EnumerateMemoryCard( m_Cards[slot], fullpath );
-
 		m_Cards[slot].Slot = slot;
-
-		if( FileMcd_IsMultitapSlot(slot) && !m_MultitapEnabled[FileMcd_GetMtapPort(slot)] )
-			m_Cards[slot].IsEnabled = false;
 	}
 	
 	if( m_listview ) m_listview->SetMcdProvider( this );

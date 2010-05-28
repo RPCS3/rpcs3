@@ -60,13 +60,12 @@ EXPORT_C_(s32) FWinit()
 	FWLog.WriteLn("Initializing FWnull");
 
 	// Initializing our registers.
-	fwregs = (s8*)malloc(0x10000);
+	fwregs = (s8*)calloc(0x10000,1);
 	if (fwregs == NULL)
 	{
 		FWLog.Message("Error allocating Memory");
 		return -1;
 	}
-	memset(fwregs, 0, 0x10000);
 	return 0;
 }
 
@@ -74,6 +73,8 @@ EXPORT_C_(void) FWshutdown()
 {
 	// Freeing the registers.
 	free(fwregs);
+	fwregs = NULL;
+
 	FWLog.Close();
 }
 

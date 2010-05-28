@@ -17,6 +17,7 @@
 #include "Common.h"
 
 #include "Hardware.h"
+#include "newVif.h"
 
 using namespace R5900;
 
@@ -25,14 +26,22 @@ u8  *psH; // hw mem
 const int rdram_devices = 2;	// put 8 for TOOL and 2 for PS2 and PSX
 int rdram_sdevid = 0;
 
+static bool hwInitialized = false;
+
 void hwInit()
 {
-	gsInit();
+	if( hwInitialized ) return;
+
+	VifUnpackSSE_Init();
 	vif0Init();
 	vif1Init();
+
+	gsInit();
 	sifInit();
 	sprInit();
 	ipuInit();
+
+	hwInitialized = true;
 }
 
 /*void hwShutdown()
@@ -52,8 +61,13 @@ void hwReset()
 	psHu32(DMAC_ENABLEW) = 0x1201;
 	psHu32(DMAC_ENABLER) = 0x1201;
 
+	sifInit();
+	sprInit();
+
 	gsReset();
 	ipuReset();
+	vif0Reset();
+	vif1Reset();
 }
 
 __forceinline void intcInterrupt()

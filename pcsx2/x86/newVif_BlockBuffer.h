@@ -26,34 +26,61 @@
 // deletion/cleanup respectfully...
 class BlockBuffer {
 protected:
-	u32 mSize;  // Cur Size
-	u32 mSizeT; // Total Size
-	u8* mData;  // Data Ptr
+	u32 mSize;		// Cur Size (in bytes)
+	u32 mSizeT;		// Total Size (in bytes)
+	u32 mGrowBy;	// amount to grow by when buffer fills (in bytes)
+	u8* mData;		// Data Ptr (allocated via SysMmap)
+
 	void alloc(int size) {
 		mData = SysMmapEx(NULL, size, 0, "nVif_BlockBuffer");
 		if (!mData) throw Exception::OutOfMemory("nVif Error: Failed to allocate recompiler memory!");
-		memset(mData, 0xcc, size);
+		clear();
 	}
 	void dealloc(u8* &dPtr, int size) {
-		if (dPtr) { HostSys::Munmap(dPtr, size); dPtr = NULL; }
+		SafeSysMunmap( dPtr, size );
 	}
+
 public:
-	BlockBuffer(u32 tSize)	{ mSizeT = tSize; mSize = 0; alloc(mSizeT); }
-	~BlockBuffer()			{ dealloc(mData, mSizeT); }
+	virtual ~BlockBuffer() throw() {
+		dealloc(mData, mSizeT);
+	}
+
+	BlockBuffer(u32 tSize, u32 growby=_1mb*2) {
+		mSizeT	= tSize;
+		mGrowBy	= growby;
+		mSize	= 0;
+		alloc(mSizeT);
+	}
+
 	void append(void *addr, u32 size) {
-		if (mSize + size > mSizeT) grow(mSize*2 + size);
-		memcpy(&mData[mSize], addr, size);
+		if ((mSize + size) > mSizeT) grow(mSizeT + mGrowBy);
+		memcpy_fast(&mData[mSize], addr, size);
 		mSize += size;
 	}
+
+	// Increases the allocation size.  Warning:  Unlike 'realloc' this function will
+	// CLEAR all contents of the buffer.  This is because copying contents of recompiled
+	// caches is mostly useless since it invalidates any pointers into the block.
+	//  (code relocation techniques are possible, but are difficult, potentially slow,
+	//   and easily bug prone.  Not recommended at this time). --air
 	void grow(u32 newSize) {
+		pxAssume( newSize > mSizeT );
 		u8* temp = mData;
-		alloc  (newSize);
-		memcpy (mData, temp, mSize);
+		alloc(newSize);
 		dealloc(temp, mSizeT);
+		clear();
 		mSizeT = newSize;
 	}
-	void clear()      { mSize = 0; }
-	u32  getCurSize() { return mSize;  }
-	u32  getSize()    { return mSizeT; }
-	u8*  getBlock()   { return mData;  }
+
+	// clears the entire buffer to recompiler fill (0xcc), and sets mSize to 0.
+	// (indicating none of the buffer is allocated).
+	void clear() {
+		if( mSize == 0 ) return;		// no clears needed if nothing's been written/modified
+		mSize = 0;
+		memset(mData, 0xcc, mSizeT);
+	}
+
+	u32  getCurSize()	{ return mSize;  }
+	u32  getAllocSize()	{ return mSizeT; }
+	u8*  getBlock()		{ return mData;  }
 };

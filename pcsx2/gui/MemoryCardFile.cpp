@@ -95,6 +95,8 @@ uint FileMcd_GetMtapPort(uint slot)
 	return 0;		// technically unreachable.
 }
 
+// Returns the multitap slot number, range 1 to 3 (slot 0 refers to the standard
+// 1st and 2nd player slots).
 uint FileMcd_GetMtapSlot(uint slot)
 {
 	switch( slot )
@@ -103,8 +105,8 @@ uint FileMcd_GetMtapSlot(uint slot)
 			pxFailDev( "Invalid parameter in call to GetMtapSlot -- specified slot is one of the base slots, not a Multitap slot." );
 		break;
 
-		case 2: case 3: case 4: return slot-2;
-		case 5: case 6: case 7: return slot-5;
+		case 2: case 3: case 4: return slot-1;
+		case 5: case 6: case 7: return slot-4;
 
 		jNO_DEFAULT
 	}

@@ -355,12 +355,13 @@ void BaseScopedCoreThread::DoResume()
 //  handle the code directly).
 bool BaseScopedCoreThread::PostToSysExec( BaseSysExecEvent_ScopedCore* msg )
 {
-	if( !msg || GetSysExecutorThread().IsSelf()) return false;
+	ScopedPtr<BaseSysExecEvent_ScopedCore> smsg( msg );
+	if( !smsg || GetSysExecutorThread().IsSelf()) return false;
 
 	msg->SetSyncState(m_sync);
 	msg->SetResumeStates(m_sync_resume, m_mtx_resume);
 
-	GetSysExecutorThread().PostEvent( msg );
+	GetSysExecutorThread().PostEvent( smsg.DetachPtr() );
 	m_sync.WaitForResult();
 	m_sync.RethrowException();
 

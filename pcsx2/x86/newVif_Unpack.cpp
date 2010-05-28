@@ -69,7 +69,11 @@ static const __aligned16 Fnptr_VifUnpackLoop UnpackSingleTable[2][2][2] = {
 };
 // ----------------------------------------------------------------------------
 
-void initNewVif(int idx) {
+void resetNewVif(int idx)
+{
+	// Safety Reset : Reassign all VIF structure info, just in case the VU1 pointers have
+	// changed for some reason.
+
 	nVif[idx].idx			= idx;
 	nVif[idx].VU			= idx ? &VU1     : &VU0;
 	nVif[idx].vif			= idx ? &vif1    : &vif0;
@@ -80,12 +84,17 @@ void initNewVif(int idx) {
 	nVif[idx].bSize			= 0;
 	memzero(nVif[idx].buffer);
 
-	VifUnpackSSE_Init();
+	if (newVifDynaRec) dVifReset(idx);
+}
+
+void initNewVif(int idx) {
+	resetNewVif(idx);
 	if (newVifDynaRec) dVifInit(idx);
 }
 
-void closeNewVif(int idx) { if (newVifDynaRec) dVifClose(idx); }
-void resetNewVif(int idx) { closeNewVif(idx); initNewVif(idx); }
+void closeNewVif(int idx) {
+	if (newVifDynaRec) dVifClose(idx);
+}
 
 static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));

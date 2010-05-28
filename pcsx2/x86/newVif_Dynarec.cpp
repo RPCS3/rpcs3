@@ -21,13 +21,40 @@
 #include "newVif_UnpackSSE.h"
 
 static __aligned16 nVifBlock _vBlock = {0};
+static bool dVifIsInitialized[2] = { false, false };
 
 void dVifInit(int idx) {
+	nVif[idx].vifCache	=  NULL;
+	nVif[idx].vifBlocks =  NULL;
 	nVif[idx].numBlocks =  0;
-	nVif[idx].vifCache	=  new BlockBuffer(_1mb*4); // 4mb Rec Cache
-	nVif[idx].vifBlocks =  new HashBucket<_tParams>();
+	nVif[idx].recPtr	=  NULL;
+	nVif[idx].recEnd	=  NULL;
+	
+	dVifIsInitialized[idx] = true;
+}
+
+void dVifReset(int idx) {
+	if( !dVifIsInitialized[idx] ) return;
+
+	// If the VIF cache is greater than 12mb, then it's due for a complete reset back
+	// down to a reasonable starting point of 4mb.
+	if( nVif[idx].vifCache && (nVif[idx].vifCache->getAllocSize() > _1mb*12) )
+		safe_delete(nVif[idx].vifCache);
+
+	if( !nVif[idx].vifCache )
+		nVif[idx].vifCache = new BlockBuffer(_1mb*4);
+	else
+		nVif[idx].vifCache->clear();
+
+	if( !nVif[idx].vifBlocks )
+		nVif[idx].vifBlocks = new HashBucket<_tParams>();
+	else
+		nVif[idx].vifBlocks->clear();
+
+	nVif[idx].numBlocks =  0;
+
 	nVif[idx].recPtr	=  nVif[idx].vifCache->getBlock();
-	nVif[idx].recEnd	= &nVif[idx].recPtr[nVif[idx].vifCache->getSize()-(_1mb/4)]; // .25mb Safe Zone
+	nVif[idx].recEnd	= &nVif[idx].recPtr[nVif[idx].vifCache->getAllocSize()-(_1mb/4)]; // .25mb Safe Zone
 }
 
 void dVifClose(int idx) {
@@ -201,11 +228,14 @@ static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 	return ptr;
 }
 
+// [TODO] :  Finish implementing support for VIF's growable recBlocks buffer.  Currently
+//    it clears the buffer only.
 static _f void dVifRecLimit(int idx) {
 	if (nVif[idx].recPtr > nVif[idx].recEnd) {
 		DevCon.WriteLn("nVif Rec - Out of Rec Cache! [%x > %x]", nVif[idx].recPtr, nVif[idx].recEnd);
 		nVif[idx].vifBlocks->clear();
 		nVif[idx].recPtr = nVif[idx].vifCache->getBlock();
+		nVif[idx].recEnd = &nVif[idx].recPtr[nVif[idx].vifCache->getAllocSize()-(_1mb/4)]; // .25mb Safe Zone
 	}
 }
 
@@ -255,6 +285,8 @@ void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine();
 	nVif[idx].recPtr = xGetPtr();
 
+	// [TODO] : Ideally we should test recompile buffer limits prior to each instruction,
+	//   which would be safer and more memory efficient than using an 0.25 meg recEnd marker.
 	dVifRecLimit(idx);
 
 	// Run the block we just compiled.  Various conditions may force us to still use

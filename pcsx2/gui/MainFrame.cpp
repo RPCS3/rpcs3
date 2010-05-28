@@ -278,7 +278,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	, m_menubar( *new wxMenuBar() )
 
-	, m_menuBoot	( *new wxMenu() )
 	, m_menuCDVD	( *new wxMenu() )
 	, m_menuSys		( *new wxMenu() )
 	, m_menuConfig	( *new wxMenu() )

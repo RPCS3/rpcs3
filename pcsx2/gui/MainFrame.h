@@ -116,7 +116,6 @@ protected:
 
 	wxMenuBar&		m_menubar;
 
-	wxMenu&			m_menuBoot;
 	wxMenu&			m_menuCDVD;
 	wxMenu&			m_menuSys;
 	wxMenu&			m_menuConfig;

@@ -251,7 +251,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 
 	wxStaticText* label = new wxStaticText( this, wxID_ANY, _("GS Output is Disabled!") );
 	m_id_OutputDisabled = label->GetId();
-	label->SetFont( *new wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
+	label->SetFont( wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
 	label->SetForegroundColour( *wxWHITE );
 	label->Show( EmuConfig.GS.DisableOutput );
 

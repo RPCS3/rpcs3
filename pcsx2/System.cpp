@@ -17,10 +17,13 @@
 #include "Common.h"
 #include "HostGui.h"
 
-#include "sVU_zerorec.h"		// for SuperVUDestroy
-
 #include "System/PageFaultSource.h"
 #include "Utilities/EventSource.inl"
+
+// Includes needed for cleanup, since we don't have a good system (yet) for
+// cleaning up these things.
+#include "sVU_zerorec.h"
+#include "DataBase_Loader.h"
 
 extern void closeNewVif(int idx);
 extern void resetNewVif(int idx);
@@ -323,6 +326,10 @@ void SysCoreAllocations::CleanupMess() throw()
 {
 	try
 	{
+		GameDB.Delete();
+		closeNewVif(0);
+		closeNewVif(1);
+
 		// Special SuperVU "complete" terminator (stupid hacky recompiler)
 		SuperVUDestroy( -1 );
 
@@ -330,8 +337,6 @@ void SysCoreAllocations::CleanupMess() throw()
 		recCpu.Shutdown();
 
 		vuMicroMemShutdown();
-		closeNewVif(0);
-		closeNewVif(1);
 		psxMemShutdown();
 		memShutdown();
 		vtlb_Core_Shutdown();
@@ -389,12 +394,11 @@ void SysClearExecutionCache()
 
 	Cpu->Reset();
 	psxCpu->Reset();
+	CpuVU0->Reset();
+	CpuVU1->Reset();
 
 	resetNewVif(0);
 	resetNewVif(1);
-
-	CpuVU0->Reset();
-	CpuVU1->Reset();
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the

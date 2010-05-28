@@ -227,11 +227,12 @@ void pxEvtHandler::AddPendingEvent( SysExecEvent& evt )
 //
 void pxEvtHandler::PostEvent( SysExecEvent* evt )
 {
-	if( !evt ) return;
-	
+	ScopedPtr<SysExecEvent> sevt( evt );
+	if( !sevt ) return;
+
 	if( m_Quitting )
 	{
-		evt->PostResult();
+		sevt->PostResult();
 		return;
 	}
 
@@ -239,7 +240,7 @@ void pxEvtHandler::PostEvent( SysExecEvent* evt )
 	
 	//DbgCon.WriteLn( L"(%s) Posting event: %s  (queue count=%d)", GetEventHandlerName().c_str(), evt->GetEventName().c_str(), m_pendingEvents.size() );
 	
-	m_pendingEvents.push_back( evt );
+	m_pendingEvents.push_back( sevt.DetachPtr() );
 	if( m_pendingEvents.size() == 1)
 		m_wakeup.Post();
 }
@@ -421,7 +422,7 @@ void ExecutorThread::ShutdownQueue()
 // Exposes the internal pxEvtHandler::PostEvent API.  See pxEvtHandler for details.
 void ExecutorThread::PostEvent( SysExecEvent* evt )
 {
-	if( !pxAssert( m_EvtHandler ) ) return;
+	if( !pxAssert( m_EvtHandler ) ) { delete evt; return; }
 	m_EvtHandler->PostEvent( evt );
 }
 

@@ -56,7 +56,7 @@ EXPORT_C_(s32) USBinit()
 	USBLog.WriteLn("Initializing USBnull");
 
 	// Initialize memory structures here.
-	usbregs = (s8*)malloc(0x10000);
+	usbregs = (s8*)calloc(0x10000, 1);
 
 	if (usbregs == NULL)
 	{
@@ -64,7 +64,6 @@ EXPORT_C_(s32) USBinit()
 		return -1;
 	}
 
-	memset(usbregs, 0, 0x10000);
 	return 0;
 }
 
@@ -73,6 +72,9 @@ EXPORT_C_(void) USBshutdown()
 	// Yes, we close things in the Shutdown routine, and
 	// don't do anything in the close routine.
 	USBLog.Close();
+	
+	free(usbregs);
+	usbregs = NULL;
 }
 
 EXPORT_C_(s32) USBopen(void *pDsp)

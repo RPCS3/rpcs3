@@ -57,7 +57,7 @@ public:
 			mBucket[i].Size		= 0;
 		}
 	}
-	~HashBucket() { clear(); }
+	virtual ~HashBucket() throw() { clear(); }
 	int quickFind(u32 data) {
 		return mBucket[data % hSize].Size;
 	}

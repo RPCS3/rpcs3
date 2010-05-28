@@ -78,8 +78,6 @@ void cpuReset()
 	EEoCycle = cpuRegs.cycle;
 
 	hwReset();
-	vif0Reset();
-	vif1Reset();
 	rcntInit();
 	psxReset();
 	
