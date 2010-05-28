@@ -627,7 +627,10 @@ void __fastcall eeloadReplaceOSDSYS()
 
 	const wxString &elf_override = GetCoreThread().GetElfOverride();
 
-	cdvdReloadElfInfo(L"host:" + elf_override);
+	if (!elf_override.IsEmpty())
+		cdvdReloadElfInfo(L"host:" + elf_override);
+	else
+		cdvdReloadElfInfo();
 
 	// didn't recognise an ELF
 	if (ElfEntry == -1) {
