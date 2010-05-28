@@ -155,6 +155,12 @@ ihatemsvc:
 		paddsw xmm2, xmm6
 		paddsw xmm5, xmm7
 
+		// 0x80; a constant is probably so much better
+		pcmpeqb xmm7, xmm7
+		psllw xmm7, 15
+		psrlw xmm7, 8
+		packuswb xmm7, xmm7
+
 		// round
 		movaps xmm6, xmmword ptr [edx+ROUND_1BIT]
 		paddw xmm0, xmm6
@@ -288,6 +294,12 @@ ihatemsvc:
 		"paddsw xmm4, xmm7\n"
 		"paddsw xmm2, xmm6\n"
 		"paddsw xmm5, xmm7\n"
+
+		// 0x80; a constant is probably so much better
+		"pcmpeqb xmm7, xmm7\n"
+		"psllw xmm7, 15\n"
+		"psrlw xmm7, 8\n"
+		"packuswb xmm7, xmm7\n"
 
 		// round
 		"movaps xmm6, xmmword ptr [%[sse2_tables]+%c[ROUND_1BIT]]\n"
