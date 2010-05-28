@@ -72,13 +72,18 @@ namespace Implementations
 
 	void Framelimiter_TurboToggle()
 	{
+		ScopedCoreThreadPause pauser;
+		
 		if( !g_Conf->EmuOptions.GS.FrameLimitEnable )
 		{
-			Console.WriteLn( "(FrameLimiter) Turbo toggle ignored; framelimiter is currently disabled." );
+			g_Conf->EmuOptions.GS.FrameLimitEnable = true;
+			g_LimiterMode = Limit_Turbo;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
+			Console.WriteLn("(FrameLimiter) Turbo + FrameLimit ENABLED." );
+			pauser.AllowResume();
 			return;
 		}
 
-		ScopedCoreThreadPause pauser;
 		if( g_LimiterMode == Limit_Turbo )
 		{
 			GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
