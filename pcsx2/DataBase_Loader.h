@@ -14,13 +14,16 @@
  */
 
 #pragma once
+
 #include "File_Reader.h"
 #include "AppConfig.h"
 
 struct key_pair {
 	string key;
 	string value;
-	key_pair(string _key, string _value)
+	
+	key_pair() {}
+	key_pair(const string& _key, const string& _value)
 		: key(_key) , value(_value) {}
 	string toString() {
 		string t;
@@ -50,7 +53,7 @@ class Game_Data {
 public:
 	string id;				// Serial Identification Code 
 	deque<key_pair> kList;	// List of all (key, value) pairs for game data
-	Game_Data(string _id) 
+	Game_Data(const string& _id) 
 		: id(_id) {}
 };
 
@@ -78,30 +81,31 @@ private:
 		ss >>  tString;
 		return tString;
 	}
-	string toLower(string s) {
+	string toLower(const string& s) {
+		string retval( s );
 		for (uint i = 0; i < s.length(); i++) {
-			char& c = s[i];
+			char& c = retval[i];
 			if (c >= 'A' && c <= 'Z') {
 				c += 'a' - 'A';
 			}
 		}
-		return s;
+		return retval;
 	}
-	bool strCompare(string& s1, string& s2) {
-		string t1 = toLower(s1);
-		string t2 = toLower(s2);
+	bool strCompare(const string& s1, const string& s2) {
+		const string t1( toLower(s1) );
+		const string t2( toLower(s2) );
 		return !t1.compare(t2);
 	}
-	bool isComment(string& s) {
-		string sub = s.substr(0, 2);
+	bool isComment(const string& s) {
+		const string sub( s.substr(0, 2) );
 		return (sub.compare("--") == 0) || (sub.compare("//") == 0);
 	}
-	void doError(string& line, key_pair& keyPair, bool doMsg = false) {
+	void doError(const string& line, key_pair& keyPair, bool doMsg = false) {
 		if (doMsg) Console.Error("DataBase_Loader: Bad file data [%s]", line.c_str());
-		keyPair.key = "";
+		keyPair.key.clear();
 	}
-	void extractMultiLine(string& line, key_pair& keyPair, File_Reader& reader, stringstream& ss) {
-		string t = "";
+	void extractMultiLine(const string& line, key_pair& keyPair, File_Reader& reader, const stringstream& ss) {
+		string t;
 		string endString;
 		endString = "[/" + keyPair.key.substr(1, keyPair.key.length()-1);
 		if (keyPair.key[keyPair.key.length()-1] != ']') {
@@ -115,11 +119,11 @@ private:
 			keyPair.value += t + "\n";
 		}
 	}
-	void extract(string& line, key_pair& keyPair, File_Reader& reader) {
+	void extract(const string& line, key_pair& keyPair, File_Reader& reader) {
 		stringstream ss(line);
 		string t;
-		keyPair.key   = "";
-		keyPair.value = "";
+		keyPair.key.clear();
+		keyPair.value.clear();
 		ss >> keyPair.key;
 		if (!line.length() || isComment(keyPair.key)) {
 			doError(line, keyPair);
@@ -156,14 +160,14 @@ public:
 	String_Stream header;    // Header of the database
 	string		  baseKey;	 // Key to separate games by ("Serial")
 
-	DataBase_Loader(string file, string key = "Serial", string value = "") {
+	DataBase_Loader(const string& file, const string& key = "Serial", const string& value = "" ) {
 		curGame	= NULL;
 		baseKey = key;
 		if (!fileExists(file)) {
 			Console.Error("DataBase_Loader: DataBase Not Found! [%s]", file.c_str());
 		}
 		File_Reader   reader(file);
-		key_pair      keyPair("", "");
+		key_pair      keyPair;
 		string        s0;
 		Game_Data*	  game = NULL;
 		try {
@@ -197,16 +201,16 @@ public:
 		else				Console.Warning("DataBase_Loader: Game Not Found! [%s]", value.c_str());
 	}
 
-	~DataBase_Loader() {
+	virtual ~DataBase_Loader() throw() {
 		deque<Game_Data*>::iterator it = gList.begin();
 		for ( ; it != gList.end(); ++it) {
-			delete it[0];
+			delete *it;
 		}
 	}
 
 	// Sets the current game to the one matching the serial id given
 	// Returns true if game found, false if not found...
-	bool setGame(string id) {
+	bool setGame(const string& id) {
 		deque<Game_Data*>::iterator it = gList.begin();
 		for ( ; it != gList.end(); ++it) {
 			if (strCompare(it[0]->id, id)) {
@@ -226,7 +230,7 @@ public:
 	}
 
 	// Saves changes to the database
-	void saveToFile(string file = "DataBase.dbf") {
+	void saveToFile(const string& file = "DataBase.dbf") {
 		File_Writer writer(file);
 		writer.write(header.toString());
 		deque<Game_Data*>::iterator it = gList.begin();
@@ -241,7 +245,7 @@ public:
 
 	// Adds new game data to the database, and sets curGame to the new game...
 	// If searchDB is true, it searches the database to see if game already exists.
-	void addGame(string id, bool searchDB = true) {
+	void addGame(const string& id, bool searchDB = true) {
 		if (searchDB && setGame(id)) return;
 		Game_Data* game = new Game_Data(id);
 		key_pair   kp(baseKey, id);
@@ -251,7 +255,7 @@ public:
 	}
 
 	// Searches the current game's data to see if the given key exists
-	bool keyExists(string key) {
+	bool keyExists(const string& key) {
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
@@ -265,7 +269,7 @@ public:
 	}
 
 	// Gets a string representation of the 'value' for the given key
-	string getString(string key) {
+	string getString(const string& key) {
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
@@ -275,47 +279,41 @@ public:
 			}
 		}
 		else Console.Error("DataBase_Loader: Game not set!");
-		return string("");
+		return string();
 	}
 
 	// Gets a wxString representation of the 'value' for the given key
-	wxString getStringWX(string key) {
-		string s = getString(key);
-		return wxString(fromUTF8(s.c_str()));
+	wxString getStringWX(const string& key) {
+		return wxString(fromUTF8(getString(key).c_str()));
 	}
 
 	// Gets a double representation of the 'value' for the given key
-	double getDouble(string key) {
-		string v = getString(key);
-		return atof(v.c_str());
+	double getDouble(const string& key) {
+		return atof(getString(key).c_str());
 	}
 
 	// Gets a float representation of the 'value' for the given key
-	float getFloat(string key) {
-		string v = getString(key);
-		return (float)atof(v.c_str());
+	float getFloat(const string& key) {
+		return (float)atof(getString(key).c_str());
 	}
 
 	// Gets an integer representation of the 'value' for the given key
-	int getInt(string key) {
-		string v = getString(key);
-		return strtoul(v.c_str(), NULL, 0);
+	int getInt(const string& key) {
+		return strtoul(getString(key).c_str(), NULL, 0);
 	}
 
 	// Gets a u8 representation of the 'value' for the given key
-	u8 getU8(string key) {
-		string v = getString(key);
-		return (u8)atoi(v.c_str());
+	u8 getU8(const string& key) {
+		return (u8)atoi(getString(key).c_str());
 	}
 
 	// Gets a bool representation of the 'value' for the given key
-	bool getBool(string key) {
-		string v = getString(key);
-		return !!atoi(v.c_str());
+	bool getBool(const string& key) {
+		return !!atoi(getString(key).c_str());
 	}
 
 	// Write a string value to the specified key
-	void writeString(string key, string value) {
+	void writeString(const string& key, const string& value) {
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
@@ -331,32 +329,32 @@ public:
 	}
 
 	// Write a wxString value to the specified key
-	void writeStringWX(string key, wxString value) {
-		writeString(key, string(value.ToUTF8().data()));
+	void writeStringWX(const string& key, const wxString& value) {
+		writeString(key, value.ToUTF8().data());
 	}
 
 	// Write a double value to the specified key
-	void writeDouble(string key, double value) {
+	void writeDouble(const string& key, double value) {
 		writeString(key, toString(value));
 	}
 	
 	// Write a float value to the specified key
-	void writeFloat(string key, float value) {
+	void writeFloat(const string& key, float value) {
 		writeString(key, toString(value));
 	}
 	
 	// Write an integer value to the specified key
-	void writeInt(string key, int value) {
+	void writeInt(const string& key, int value) {
 		writeString(key, toString(value));
 	}
 	
 	// Write a u8 value to the specified key
-	void writeU8(string key, u8 value) {
+	void writeU8(const string& key, u8 value) {
 		writeString(key, toString(value));
 	}
 	
 	// Write a bool value to the specified key
-	void writeBool(string key, bool value) {
+	void writeBool(const string& key, bool value) {
 		writeString(key, toString(value?1:0));
 	}
 };
