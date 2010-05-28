@@ -41,7 +41,11 @@ public:
 	virtual void OnActionButtonClicked( wxCommandEvent& evt );
 };
 
-typedef std::list<wxEvent*> wxEventList;
+#ifdef _MSC_VER
+	typedef std::list< wxEvent*, wxObjectAllocator<wxEvent*> > wxEventList;
+#else
+	typedef std::list< wxEvent* > wxEventList;
+#endif
 
 // --------------------------------------------------------------------------------------
 //  wxAppWithHelpers

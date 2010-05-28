@@ -38,12 +38,11 @@ extern void pcsx2_aligned_free(void* pmem);
 #define safe_delete_array( ptr ) \
 	((void) (delete[] (ptr)), (ptr) = NULL)
 
-// fixme: I'm pretty sure modern libc implementations under gcc and msvc check null status
-// inside free(), meaning we shouldn't have to do it ourselves.  But legacy implementations
-// didn't always check, so best to be cautious unless absolutely certain it's being covered on
-// all ported platforms.
+// No checks for NULL -- wxWidgets says it's safe to skip NULL checks and it runs on 
+// just about every compiler and libc implementation of any recentness.
 #define safe_free( ptr ) \
-	((void) (( ( (ptr) != NULL ) && (free( ptr ), !!0) ), (ptr) = NULL))
+	( (void) (free( ptr ), !!0), (ptr) = NULL )
+	//((void) (( ( (ptr) != NULL ) && (free( ptr ), !!0) ), (ptr) = NULL))
 
 #define safe_fclose( ptr ) \
 	((void) (( ( (ptr) != NULL ) && (fclose( ptr ), !!0) ), (ptr) = NULL))
@@ -86,12 +85,13 @@ protected:
 	// use its own memory allocation (with an aligned memory, for example).
 	// Throws:
 	//   Exception::OutOfMemory if the allocated_mem pointer is NULL.
-	explicit SafeArray( const wxChar* name, T* allocated_mem, int initSize ) :
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( allocated_mem )
-	, m_size( initSize )
+	explicit SafeArray( const wxChar* name, T* allocated_mem, int initSize )
+		: Name( name )
 	{
+		ChunkSize	= DefaultChunkSize;
+		m_ptr		= allocated_mem;
+		m_size		= initSize;
+
 		if( m_ptr == NULL )
 			throw Exception::OutOfMemory();
 	}
@@ -110,20 +110,21 @@ public:
 		safe_free( m_ptr );
 	}
 
-	explicit SafeArray( const wxChar* name=L"Unnamed" ) :
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( NULL )
-	, m_size( 0 )
+	explicit SafeArray( const wxChar* name=L"Unnamed" )
+		: Name( name )
 	{
+		ChunkSize	= DefaultChunkSize;
+		m_ptr		= NULL;
+		m_size		= 0;
 	}
 
-	explicit SafeArray( int initialSize, const wxChar* name=L"Unnamed" ) :
-	  Name( name )
-	, ChunkSize( DefaultChunkSize )
-	, m_ptr( (initialSize==0) ? NULL : (T*)malloc( initialSize * sizeof(T) ) )
-	, m_size( initialSize )
+	explicit SafeArray( int initialSize, const wxChar* name=L"Unnamed" )
+		: Name( name )
 	{
+		ChunkSize	= DefaultChunkSize;
+		m_ptr		= (initialSize==0) ? NULL : (T*)malloc( initialSize * sizeof(T) );
+		m_size		= initialSize;
+
 		if( (initialSize != 0) && (m_ptr == NULL) )
 			throw Exception::OutOfMemory();
 	}

@@ -126,8 +126,11 @@ protected:
 	}
 };
 
-
-typedef std::list<SysExecEvent*> pxEvtList;
+#ifdef _MSC_VER
+	typedef std::list< SysExecEvent*, wxObjectAllocator<SysExecEvent*> > pxEvtList;
+#else
+	typedef std::list<SysExecEvent*> pxEvtList;
+#endif
 
 // --------------------------------------------------------------------------------------
 //  pxEvtHandler
