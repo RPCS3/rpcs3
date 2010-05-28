@@ -1167,14 +1167,14 @@ void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn)
 			if ((p[0] < s_thresh[0]) && (p[1] < s_thresh[0]) && (p[2] < s_thresh[0]))
 				*(u32*)p = 0;
 			else
-				p[3] = ((p[1] < s_thresh[1]) && (p[2] < s_thresh[1]) && (p[3] < s_thresh[1])) ? 0x40 : 0x80;
+				p[3] = ((p[0] < s_thresh[1]) && (p[1] < s_thresh[1]) && (p[2] < s_thresh[1])) ? 0x40 : 0x80;
 		}
 	}
 	else if (s_thresh[1] > 0)
 	{
 		for (i = 0; i < 64*4; i++, p += 4)
 		{
-			p[3] = ((p[1] < s_thresh[1]) && (p[2] < s_thresh[1]) && (p[3] < s_thresh[1])) ? 0x40 : 0x80;
+			p[3] = ((p[0] < s_thresh[1]) && (p[1] < s_thresh[1]) && (p[2] < s_thresh[1])) ? 0x40 : 0x80;
 		}
 	}
 	else
