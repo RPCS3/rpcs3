@@ -21,6 +21,10 @@
 #include <ctype.h>
 #include <string.h>
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 namespace R3000A {
 
 #define v0 (psxRegs.GPR.n.v0)

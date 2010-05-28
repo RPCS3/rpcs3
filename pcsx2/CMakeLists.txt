@@ -146,7 +146,6 @@ set(pcsx2Sources
 	Patch.cpp
 	Patch_Memory.cpp
 	Pcsx2Config.cpp
-	pcsx2hostfs.cpp
 	PluginManager.cpp
 	PrecompiledHeader.cpp
 	R3000A.cpp

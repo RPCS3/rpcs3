@@ -28,7 +28,7 @@
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-g" />
+					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>

@@ -80,7 +80,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
 		"\n\n"
 		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
-		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87"
+		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos, gregory"
 	);
 
 	// This sizer holds text of the authors and a logo!
