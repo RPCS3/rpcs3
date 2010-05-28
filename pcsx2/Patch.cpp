@@ -152,12 +152,12 @@ int InitPatches(const wxString& name)
 	}
 
 	if (patchFound) {
-		Console.WriteLn(Color_Green, "Patch found!");
+		Console.WriteLn(Color_Green, "Patch found in the Database!");
 		TrimPatches(patch);
+		Console.WriteLn(Color_Green, "Patches Loaded: %d", patchnumber);
 	}
-	else Console.WriteLn(Color_Gray, "No patch found. Resuming execution without a patch (this is NOT an error).");
+	else Console.WriteLn(Color_Gray, "No patch for this game in the Database.");
 	
-	Console.WriteLn("Patches Loaded: %d", patchnumber);
 	return patchnumber;
 }
 
