@@ -331,6 +331,11 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
 
+	if (elfpath == LastELF)
+		return;
+
+	LastELF = elfpath;
+
 	wxString fname = elfpath.AfterLast('\\');
 	if (!fname)
 		fname = elfpath.AfterLast('/');
@@ -374,20 +379,17 @@ void cdvdReloadElfInfo(wxString elfoverride)
 	wxString elfpath;
 	u32 discType = GetPS2ElfName(elfpath);
 
-    if (ElfCRC == 0)
+	switch (discType)
     {
-        switch (discType)
-        {
-            case 2: // Is a PS2 disc.
-                _reloadElfInfo(elfpath);
-                break;
-            case 1: // Is a PS1 disc.
-                if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(elfpath);
-                break;
-            default: // Isn't a disc we recognise.
-                break;
-        }
-    }
+		case 2: // Is a PS2 disc.
+			_reloadElfInfo(elfpath);
+			break;
+		case 1: // Is a PS1 disc.
+			if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(elfpath);
+			break;
+		default: // Isn't a disc we recognise.
+			break;
+	}
 }
 
 static __forceinline s32 StrToS32(const wxString& str, int base = 10)

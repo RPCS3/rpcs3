@@ -92,6 +92,7 @@ void cpuReset()
 	ElfCRC = 0;
 	DiscID = L"";
 	ElfEntry = -1;
+	LastELF = L"";
 }
 
 __releaseinline void cpuException(u32 code, u32 bd)

@@ -23,6 +23,7 @@ using namespace std;
 
 u32 ElfCRC;
 u32 ElfEntry;
+wxString LastELF;
 
 #if 0
 // fixme: ELF command line option system.

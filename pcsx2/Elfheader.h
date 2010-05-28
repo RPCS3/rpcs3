@@ -165,5 +165,6 @@ extern int  GetPS2ElfName( wxString& dest );
 
 extern u32 ElfCRC;
 extern u32 ElfEntry;
+extern wxString LastELF;
 
 #endif
