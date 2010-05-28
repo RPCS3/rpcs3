@@ -1203,7 +1203,7 @@ void mpeg2sliceIDEC(void* pdone)
 				}
 				else
 				{
-					ipu_csc(decoder->mb8, decoder->rgb32, decoder->dte);
+					ipu_csc(decoder->mb8, decoder->rgb32, decoder->sgn);
 					ipu_dither(decoder->rgb32, decoder->rgb16, decoder->dte);
 
 					g_nIPU0Data = 32;
