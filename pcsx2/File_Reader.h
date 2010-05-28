@@ -28,16 +28,16 @@ private:
 	}
 public:
 	fstream* fs;
-	File_Reader(string filename) {
+	File_Reader(const string& filename) {
 		fs = new fstream(filename.c_str(), ios_base::in);
 	}
-	~File_Reader() {
+	virtual ~File_Reader() throw() {
 		if (fs) fs->close();
 		delete fs;
 	}
 	template<class T> void read(T &t) {
 		long pos = fs->tellp();
-		string s = _read<string>(); 
+		string s( _read<string>() );
 		if (s.length() >= 2) {
 			if (s[0] == '/' && s[1] == '/') {
 				fs->seekp(pos);
@@ -80,19 +80,17 @@ public:
 
 class File_Writer {
 public:
-	fstream* fs;
-	File_Writer(string filename) {
+	ScopedPtr<fstream> fs;
+	File_Writer(const string& filename) {
 		fs = new fstream(filename.c_str(), ios_base::out);
 	}
-	~File_Writer() {
-		if (fs) fs->close();
-		delete fs;
-	}
-	template<class T> void write(T t) {
+	virtual ~File_Writer() throw() { }
+
+	template<class T> void write(const T& t) {
 		(*fs) << t;
 	}
-	void writeRaw(void* ptr, int size) {
-		u8* p = (u8*)ptr;
+	void writeRaw(const void* ptr, int size) {
+		const u8* p = (u8*)ptr;
 		for (int i = 0; i < size; i++) {
 			write(p[i]);
 		}
@@ -107,16 +105,16 @@ public:
 	String_Stream()  {
 		ss = new stringstream(stringstream::in | stringstream::out);
 	}
-	String_Stream(string& str) {
+	String_Stream(const string& str) {
 		ss = new stringstream(str, stringstream::in | stringstream::out);
 	}
-	~String_Stream() {
+	virtual ~String_Stream() throw() {
 		delete ss;
 	}
-	template<class T> void write(T t) {
+	template<class T> void write(const T& t) {
 		(*ss) << t;
 	}
-	template<class T> void read(T &t) {
+	template<class T> void read(T& t) {
 		(*ss) >> t;
 	}
 	string toString() {
@@ -124,7 +122,7 @@ public:
 	}
 	string getLine() {
 		ss->getline(buff, sizeof(buff));
-		return string(buff);
+		return buff;
 	}
 	wxString getLineWX() {
 		ss->getline(buff, sizeof(buff));
@@ -135,7 +133,7 @@ public:
 	}
 };
 
-static bool fileExists(string file) {
+static bool fileExists(const string& file) {
 	FILE  *f = fopen(file.c_str(), "r");
 	if   (!f)  return false;
 	fclose(f);
