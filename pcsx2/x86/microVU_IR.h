@@ -36,7 +36,7 @@ struct __aligned16 microRegInfo { // Ordered for Faster Compares
 	u8 p;
 	u8 r;
 	u8 xgkick;
-	u8 viBackUp;
+	u8 viBackUp;		// VI reg number that was written to on branch-delay slot
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2

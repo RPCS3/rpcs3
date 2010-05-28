@@ -349,6 +349,49 @@ _f void mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 
 _f void analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	if (!xReg) return;
+	int i, j = 0;
+	int iEnd = 4;
+	int bPC  = iPC;
+	incPC2(-2);
+	for (i = 0; i < iEnd; i++) {
+		if (i == mVUcount) {
+			bool warn = 0;
+			if (i == 1) warn = 1;
+			if (mVUpBlock->pState.viBackUp == xReg) {
+				if (i == 0) warn = 1;
+				infoVar = 1;
+				j = i; i++;
+			}
+			if (warn) DevCon.Warning("microVU%d: Warning Branch VI-Delay with small block (%d) [%04x]", getIndex, i, xPC);
+			break; // if (warn), we don't have enough information to always guarantee the correct result.
+		}
+		if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {
+			if (mVUlow.readFlags) {
+				if (i) DevCon.Warning("microVU%d: Warning Branch VI-Delay with Read Flags Set (%d) [%04x]", getIndex, i, xPC);
+				break; // Not sure if on the above "if (i)" case, if we need to "continue" or if we should "break"
+			}
+			j = i;
+		}
+		elif (i == 0) break;
+		incPC2(-2);
+	}
+	if (i) {
+		if (!infoVar) {
+			iPC = bPC;
+			incPC2(-2*(j+1));
+			mVUlow.backupVI = 1;
+			infoVar = 1;
+		}
+		iPC = bPC;
+		Console.WriteLn(Color_Green, "microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, j+1, xPC);
+	}
+	else iPC = bPC;
+}
+
+/*
+// Dead Code... the old version of analyzeBranchVI()
+_f void analyzeBranchVI(mV, int xReg, bool &infoVar) {
+	if (!xReg) return;
 	int i;
 	int iEnd = aMin(5, (mVUcount+1));
 	int bPC = iPC;
@@ -381,6 +424,7 @@ _f void analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	}
 	else iPC = bPC;
 }
+*/
 
 // Branch in Branch Delay-Slots
 _f int mVUbranchCheck(mV) {
