@@ -582,6 +582,7 @@ void __fastcall eeGameStarting()
 		wxString gameSerial = L" [" + DiscID  + L"]";
 		wxString gameCompat = L" [Status = Unknown]";
 		wxString gamePatch  = L"";
+		wxString gameFixes  = L"";
 		wxString gameCheats = L"";
 
 		if (GameDB && GameDB->gameLoaded()) {
@@ -597,7 +598,11 @@ void __fastcall eeGameStarting()
 				wxString pString( wxsFormat( L"%d", patches ) );
 				gamePatch = L" [Patches = " + pString + L"]";
 			}
-			loadGameSettings(GameDB);
+			int fixes = loadGameSettings(GameDB);
+			if (fixes) {
+				wxString pString( wxsFormat( L"%d", fixes ) );
+				gameFixes = L" [Fixes = " + pString + L"]";
+			}
 		}
 
 		if (EmuConfig.EnableCheats) {
@@ -608,7 +613,7 @@ void __fastcall eeGameStarting()
 			}
 		}
 
-		Console.SetTitle(gameName + gameSerial + gameCompat + gamePatch + gameCheats);
+		Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
 		
 		GetMTGS().SendGameCRC(ElfCRC);
 		g_GameStarted = true;

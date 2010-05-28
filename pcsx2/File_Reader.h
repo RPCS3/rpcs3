@@ -41,7 +41,7 @@ public:
 		if (s.length() >= 2) {
 			if (s[0] == '/' && s[1] == '/') {
 				fs->seekp(pos);
-				fs->getline(buff, 1024);
+				fs->getline(buff, sizeof(buff));
 				read(t);
 				return;
 			}

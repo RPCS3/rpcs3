@@ -375,20 +375,23 @@ static wxString compatToStringWX(int compat) {
 	if (gameDB->keyExists(#gFix)) {									\
 		SetGameFixConfig().gFix = gameDB->getBool(#gFix);			\
 		Console.WriteLn("Loading Gamefix: " #gFix);					\
+		gf++;														\
 	}																\
 }
 
 // Load Game Settings found in database
 // (game fixes, round modes, clamp modes, etc...)
-static void loadGameSettings(DataBase_Loader* gameDB) {
+// Returns number of gamefixes set
+static int loadGameSettings(DataBase_Loader* gameDB) {
 	if (gameDB && gameDB->gameLoaded()) {
 		SSE_MXCSR  eeMX = EmuConfig.Cpu.sseMXCSR;
 		SSE_MXCSR  vuMX = EmuConfig.Cpu.sseVUMXCSR;
 		int eeRM = eeMX.GetRoundMode();
 		int vuRM = vuMX.GetRoundMode();
-		bool rm = 0;
-		if (gameDB->keyExists("eeRoundMode")) { eeRM = gameDB->getInt("eeRoundMode"); rm=1; }
-		if (gameDB->keyExists("vuRoundMode")) { vuRM = gameDB->getInt("vuRoundMode"); rm=1; }
+		bool rm  = 0;
+		int  gf  = 0;
+		if (gameDB->keyExists("eeRoundMode")) { eeRM = gameDB->getInt("eeRoundMode"); rm=1; gf++; }
+		if (gameDB->keyExists("vuRoundMode")) { vuRM = gameDB->getInt("vuRoundMode"); rm=1; gf++; }
 		if (rm && eeRM<4 && vuRM<4) { 
 			Console.WriteLn("Game DataBase: Changing roundmodes! [ee=%d] [vu=%d]", eeRM, vuRM);
 			SetCPUState(eeMX.SetRoundMode((SSE_RoundMode)eeRM), vuMX.SetRoundMode((SSE_RoundMode)vuRM));
@@ -399,6 +402,7 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 			SetRecompilerConfig().fpuOverflow		= clampMode >= 1;
 			SetRecompilerConfig().fpuExtraOverflow	= clampMode >= 2;
 			SetRecompilerConfig().fpuFullMode		= clampMode >= 3;
+			gf++;
 		}
 		if (gameDB->keyExists("vuClampMode")) {
 			int clampMode = gameDB->getInt("vuClampMode");
@@ -406,6 +410,7 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 			SetRecompilerConfig().vuOverflow		= clampMode >= 1;
 			SetRecompilerConfig().vuExtraOverflow	= clampMode >= 2;
 			SetRecompilerConfig().vuSignOverflow	= clampMode >= 3;
+			gf++;
 		}
 		checkGamefix(VuAddSubHack);
 		checkGamefix(VuClipFlagHack);
@@ -415,7 +420,9 @@ static void loadGameSettings(DataBase_Loader* gameDB) {
 		checkGamefix(XgKickHack);
 		checkGamefix(IPUWaitHack);
 		checkGamefix(EETimingHack);
+		return gf;
 	}
+	return 0;
 }
 
 extern ScopedPtr<DataBase_Loader> GameDB;
