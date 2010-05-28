@@ -499,6 +499,10 @@ irxHLE irxImportHLE(const char libname[8], u16 index)
 {
 #ifdef PCSX2_DEVBUILD
 	// debugging output
+	MODULE(sysmem)
+		EXPORT_H( 14, Kprintf)
+	END_MODULE
+#endif
 	MODULE(ioman)
 		EXPORT_H(  4, open)
 		EXPORT_H(  5, close)
@@ -506,10 +510,6 @@ irxHLE irxImportHLE(const char libname[8], u16 index)
 		EXPORT_H(  7, write)
 		EXPORT_H(  8, lseek)
 	END_MODULE
-	MODULE(sysmem)
-		EXPORT_H( 14, Kprintf)
-	END_MODULE
-#endif
 
 	return 0;
 }
