@@ -35,8 +35,6 @@
     File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\GameIndex.dbf
 
-    ; HostFS is now enabled by default
-    File                                             ..\bin\pcsx2hostfs_ldr.elf
 	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 	
     SetOutPath "$INSTDIR\Plugins"
