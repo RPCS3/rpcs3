@@ -39,11 +39,18 @@ bool MsgButtons::Allows( wxWindowID id ) const
 
 		// [TODO] : maybe add in an Ignore All?
 		case wxID_IGNORE:	return HasIgnore();
+		
+		case wxID_RESET:	return HasReset();
+		case wxID_CLOSE:	return HasClose();
 	}
+
+	if (id <= wxID_LOWEST)
+		return HasCustom();
+
 	return false;
 }
 
-static wxString ResultToString( int result )
+static wxString ResultToString( int result, const MsgButtons& buttons )
 {
 	switch( result )
 	{
@@ -60,7 +67,13 @@ static wxString ResultToString( int result )
 
 			// [TODO] : maybe add in an Ignore All?
 		case wxID_IGNORE:	return L"ignore";
+
+		case wxID_RESET:	return L"reset";
+		case wxID_CLOSE:	return L"close";
 	}
+
+	if (result <= wxID_LOWEST)
+		return buttons.GetCustomLabel();
 
 	return wxEmptyString;
 }
@@ -76,15 +89,18 @@ static wxWindowID ParseThatResult( const wxString& src, const MsgButtons& validT
 		wxID_YESTOALL,	wxID_NOTOALL,
 
 		wxID_ABORT,		wxID_RETRY,		wxID_IGNORE,
+
+		wxID_RESET,
+		wxID_ANY,
 	};
 
 	for( int i=0; i<ArraySize( retvals ); ++i )
 	{
-		if( (validTypes.Allows( retvals[i] )) && (src == ResultToString(retvals[i])) )
+		if( (validTypes.Allows( retvals[i] )) && (src == ResultToString(retvals[i], validTypes)) )
 			return retvals[i];
 	}
 
-	return wxID_ANY;
+	return wxID_NONE;
 }
 
 static bool pxTrySetFocus( wxWindow& parent, wxWindowID id )
@@ -188,7 +204,7 @@ wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButton
 
 	if( cfg != NULL )
 	{
-		wxString cfgResult = ResultToString( modalResult );
+		wxString cfgResult = ResultToString( modalResult, buttons );
 		if( DisablerCtrl->IsChecked() && !cfgResult.IsEmpty() )
 		{
 			cfg->SetPath( L"/PopupDisablers" );
