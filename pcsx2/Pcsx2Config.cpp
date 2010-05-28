@@ -277,6 +277,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( EnablePatches );
 	IniBitBool( EnableCheats );
 	IniBitBool( ConsoleToStdio );
+	IniBitBool( HostFs );
 
 	IniBitBool( McdEnableEjection );
 	IniBitBool( MultitapPort0_Enabled );

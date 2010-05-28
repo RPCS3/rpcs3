@@ -32,10 +32,6 @@ static const uint m_psxMemSize =
 	0x00010000 +		// psxP
 	0x00000100 ;		// psxS
 
-// TODO: move to a header
-void Pcsx2HostFSwrite32(u32 addr, u32 value);
-u32 Pcsx2HostFSread32(u32 addr);
-
 void psxMemAlloc()
 {
 	if( m_psxAllMem == NULL )
@@ -262,8 +258,6 @@ u32 __fastcall iopMemRead32(u32 mem)
 				case 0x60:
 					ret = 0;
 					break;
-				case 0x800:
-					return Pcsx2HostFSread32(mem);
 
 				default:
 					ret = psxHu32(mem);
@@ -468,10 +462,6 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 					case 0x60:
 						psHu32(SBUS_F260) = 0;
 					return;
-
-					case 0x800:
-						Pcsx2HostFSwrite32(mem, value);
-						return;
 
 				}
 				psxSu32(mem) = value;

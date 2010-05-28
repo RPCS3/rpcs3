@@ -376,6 +376,12 @@ void MainEmuFrame::Menu_EnableCheats_Click( wxCommandEvent& )
     SaveEmuOptions();
 }
 
+void MainEmuFrame::Menu_EnableHostFs_Click( wxCommandEvent& )
+{
+	g_Conf->EmuOptions.HostFs = GetMenuBar()->IsChecked( MenuId_EnableHostFs );
+    SaveEmuOptions();
+}
+
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent&)
 {
 	ScopedCoreThreadClose stopped_core;

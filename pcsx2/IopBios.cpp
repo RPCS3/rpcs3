@@ -16,8 +16,10 @@
 
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
+#include "R5900.h" // for g_GameStarted
 
 #include <ctype.h>
+#include <string.h>
 
 namespace R3000A {
 
@@ -35,11 +37,280 @@ namespace R3000A {
 #define Ra2 (iopVirtMemR<char>(a2))
 #define Ra3 (iopVirtMemR<char>(a3))
 
+// TODO: sandbox option, other permissions
+class HostFile : public IOManFile
+{
+public:
+	int fd;
+
+	HostFile(int hostfd)
+	{
+		fd = hostfd;
+	}
+
+	static __forceinline int translate_error(int err)
+	{
+		if (err >= 0)
+			return err;
+
+		switch(err)
+		{
+			case -ENOENT:
+				return -IOP_ENOENT;
+			case -EACCES:
+				return -IOP_EACCES;
+			case -EISDIR:
+				return -IOP_EISDIR;
+			case -EIO:
+			default:
+				return -IOP_EIO;
+		}
+	}
+
+	static int open(IOManFile **file, const char *name, s32 flags, u16 mode)
+	{
+		const char *path = strchr(name, ':') + 1;
+
+		if (flags != IOP_O_RDONLY)
+			return -IOP_EROFS;
+
+		int hostfd = ::open(path, O_BINARY | O_RDONLY);
+		if (hostfd < 0)
+			return translate_error(hostfd);
+
+		*file = new HostFile(hostfd);
+		if (!*file)
+			return -IOP_ENOMEM;
+
+		return 0;
+	}
+
+	virtual void close()
+	{
+		::close(fd);
+		delete this;
+	}
+
+	virtual int lseek(s32 offset, s32 whence)
+	{
+		int err;
+
+		switch (whence)
+		{
+			case IOP_SEEK_SET:
+				err = ::lseek(fd, offset, SEEK_SET);
+				break;
+			case IOP_SEEK_CUR:
+				err = ::lseek(fd, offset, SEEK_CUR);
+				break;
+			case IOP_SEEK_END:
+				err = ::lseek(fd, offset, SEEK_END);
+				break;
+			default:
+				return -IOP_EIO;
+		}
+
+		return translate_error(err);
+	}
+
+	virtual int read(void *buf, u32 count)
+	{
+		return translate_error(::read(fd, buf, count));
+	}
+};
+
 namespace ioman {
+	const int firstfd = 0x100;
+	const int maxfds = 0x100;
+	int openfds = 0;
+
+	int freefdcount()
+	{
+		return maxfds - openfds;
+	}
+
+	struct filedesc
+	{
+		enum {
+			FILE_FREE,
+			FILE_FILE,
+			FILE_DIR,
+		} type;
+		union {
+			IOManFile *file;
+			IOManDir *dir;
+		};
+
+		operator bool() const { return type != FILE_FREE; }
+		operator IOManFile*() const { return type == FILE_FILE ? file : NULL; }
+		operator IOManDir*() const { return type == FILE_DIR ? dir : NULL; }
+		void operator=(IOManFile *f) { type = FILE_FILE; file = f; openfds++; }
+		void operator=(IOManDir *d) { type = FILE_DIR; dir = d; openfds++; }
+
+		void close()
+		{
+			if (type == FILE_FREE)
+				return;
+
+			switch (type)
+			{
+				case FILE_FILE:
+					file->close();
+					file = NULL;
+					break;
+				case FILE_DIR:
+					dir->close();
+					dir = NULL;
+					break;
+			}
+
+			type = FILE_FREE;
+			openfds--;
+		}
+	};
+
+	filedesc fds[maxfds];
+
+	template<typename T>
+	T* getfd(int fd)
+	{
+		fd -= firstfd;
+
+		if (fd < 0 || fd >= maxfds)
+			return NULL;
+
+		return fds[fd];
+	}
+
+	template <typename T>
+	int allocfd(T *obj)
+	{
+		for (int i = 0; i < maxfds; i++)
+		{
+			if (!fds[i])
+			{
+				fds[i] = obj;
+				return firstfd + i;
+			}
+		}
+
+		obj->close();
+		return -IOP_EMFILE;
+	}
+
+	void freefd(int fd)
+	{
+		fd -= firstfd;
+
+		if (fd < 0 || fd >= maxfds)
+			return;
+
+		fds[fd].close();
+	}
+
+	void reset()
+	{
+		for (int i = 0; i < maxfds; i++)
+			fds[i].close();
+	}
+
+	int open_HLE()
+	{
+		IOManFile *file = NULL;
+		const char *name = Ra0;
+		s32 flags = a1;
+		u16 mode = a2;
+
+		if ((!g_GameStarted || EmuConfig.HostFs)
+			&& !strncmp(name, "host", 4) && name[4 + strspn(name + 4, "0123456789")] == ':')
+		{
+			if (!freefdcount())
+			{
+				v0 = -IOP_EMFILE;
+				pc = ra;
+				return 1;
+			}
+
+			int err = HostFile::open(&file, name, flags, mode);
+
+			if (err != 0 || !file)
+			{
+				if (err == 0) // ???
+					err = -IOP_EIO;
+				if (file) // ??????
+					file->close();
+				v0 = err;
+			}
+			else
+			{
+				v0 = allocfd(file);
+				if (v0 < 0)
+					file->close();
+			}
+
+			pc = ra;
+			return 1;
+		}
+
+		return 0;
+	}
+
+	int close_HLE()
+	{
+		s32 fd = a0;
+
+		if (getfd<IOManFile>(fd))
+		{
+			freefd(fd);
+			v0 = 0;
+			pc = ra;
+			return 1;
+		}
+
+		return 0;
+	}
+
+	int lseek_HLE()
+	{
+		s32 fd = a0;
+		s32 offset = a1;
+		s32 whence = a2;
+
+		if (IOManFile *file = getfd<IOManFile>(fd))
+		{
+			v0 = file->lseek(offset, whence);
+			pc = ra;
+			return 1;
+		}
+
+		return 0;
+	}
+
+	int read_HLE()
+	{
+		s32 fd = a0;
+		u32 buf = a1;
+		u32 count = a2;
+
+		if (IOManFile *file = getfd<IOManFile>(fd))
+		{
+			if (!iopVirtMemR<void>(buf))
+				return 0;
+
+			v0 = file->read(iopVirtMemW<void>(buf), count);
+			pc = ra;
+			return 1;
+		}
+
+		return 0;
+	}
+
 	int write_HLE()
 	{
+		int fd = a0;
+
 #ifdef PCSX2_DEVBUILD
-		if (a0 == 1) // stdout
+		if (fd == 1) // stdout
 		{
 			Console.Write(ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra1, a2).c_str());
 			pc = ra;
@@ -225,7 +496,11 @@ irxHLE irxImportHLE(const char libname[8], u16 index)
 #ifdef PCSX2_DEVBUILD
 	// debugging output
 	MODULE(ioman)
+		EXPORT_H(  4, open)
+		EXPORT_H(  5, close)
+		EXPORT_H(  6, read)
 		EXPORT_H(  7, write)
+		EXPORT_H(  8, lseek)
 	END_MODULE
 	MODULE(sysmem)
 		EXPORT_H( 14, Kprintf)

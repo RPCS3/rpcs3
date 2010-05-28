@@ -313,7 +313,9 @@ static MutexRecursive Mutex_NewDiskCB;
 // Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
 static __forceinline ElfObject *loadElf( const wxString filename )
 {
-	// Note: calling loadElfFile here causes bad things to happen.
+	if (filename.StartsWith(L"host"))
+		return new ElfObject(filename.After(':'), Path::GetFileSize(filename.After(':')));
+
 	IsoFSCDVD isofs;
 	IsoFile file(isofs, filename);
 	ElfObject *elfptr;
@@ -361,8 +363,14 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	}
 }
 
-void cdvdReloadElfInfo()
+void cdvdReloadElfInfo(wxString elfoverride)
 {
+	if (!elfoverride.IsEmpty())
+	{
+		_reloadElfInfo(elfoverride);
+		return;
+	}
+
 	wxString elfpath;
 	u32 discType = GetPS2ElfName(elfpath);
 

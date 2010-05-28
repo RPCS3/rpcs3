@@ -24,9 +24,6 @@ using namespace std;
 u32 ElfCRC;
 u32 ElfEntry;
 
-// uncomment this to enable pcsx2hostfs loading when using "load elf"
-#define USE_HOSTFS
-
 #if 0
 // fixme: ELF command line option system.
 // It parses a command line and pastes it into PS2 memory, and then points the a0 register at it.
@@ -416,91 +413,6 @@ void ElfObject::loadHeaders()
 {
 	loadProgramHeaders();
 	loadSectionHeaders();
-}
-
-// Loads the elf binary data from the specified file into PS2 memory, and injects the ELF's
-// starting execution point into cpuRegs.pc.  If the filename is a cdrom URI in the form
-// of "cdrom0:" or "cdrom1:" then the CDVD is used as the source; otherwise the ELF is loaded
-// from the host filesystem.
-//
-// If it starts with "cdrom:", an exception is thrown, unless PS1 emulation is being attempted.
-//
-// If the specified filename is empty then no action is taken (PS2 will continue booting
-// normally as if it has no CD.
-//
-// Throws exceptions on errors. Not called if not skipping the bios.
-//
-void loadElfFile(const wxString& _filename)
-{
-	ScopedPtr<ElfObject> elfptr;
-	wxString filename = _filename;
-	
-	if (filename.IsEmpty()) return;
-	Console.WriteLn( L"loadElfFile: " + filename );
-
-#ifdef USE_HOSTFS
-	wxString parameters = filename;
-	bool	 bHostFs	= true;
-
-	filename  = wxT("pcsx2hostfs_ldr.elf");
-	int fSize = Path::GetFileSize(filename);
-	if (fSize == -1) {
-		wxString error1 = L"Error! pcsx2hostfs_ldr.elf was not found!";
-		wxString error2 = L"\n\nAttempting to load elf file without hostfs support...";
-		Console.Error(error1);
-		Msgbox::Alert(error1 + error2);
-		bHostFs  = false;
-		filename = parameters;
-		elfptr   = new ElfObject(filename, Path::GetFileSize(filename));
-	}
-	else {
-		elfptr   = new ElfObject(filename, fSize);
-		filename = wxT("host:pcsx2hostfs_ldr.elf");
-	}
-#else
-	elfptr = new ElfObject(filename, Path::GetFileSize(filename));
-#endif
-
-	if (!elfptr->hasProgramHeaders())
-	{
-		throw Exception::BadStream(filename, wxLt("Invalid ELF file."));
-	}
-
-	elfptr->loadHeaders();
-
-	ElfCRC = elfptr->getCRC();
-	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
-	ElfEntry = elfptr->header.e_entry;
-	elfptr.Delete();
-
-	//2002-09-19 (Florin)
-	//args_ptr = 0xFFFFFFFF; // big value, searching for minimum [used by parseCommandLine]
-
-	cpuRegs.pc = ElfEntry; //set pc to proper place
-	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
-	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
-	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
-	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename ); // see #ifdef'd out parseCommendLine for details.
-
-#ifdef USE_HOSTFS
-	if (bHostFs) {
-		//HACK!!!!!!!!!!!!!
-		uptr params_addr  = 0x1FFFC00; // elf loader will check this address for params
-		s8*  params_ptr   = (s8*)PSM(params_addr);
-		s8*  params_magic = params_ptr + 0;
-		s8*  params_argc  = params_ptr + 4;
-		s8*  params_argv  = params_ptr + 8;
-		*(u32*)params_magic = 'PS2E';
-		*(u32*)params_argc  = 2;
-		strcpy(params_argv,filename.ToAscii());
-		params_argv += strlen(params_argv)+1;
-		strcpy(params_argv,parameters.ToAscii());
-		params_argv += strlen(params_argv)+1;
-		strcpy(params_argv,"");
-	}
-#endif
-
-	return;
 }
 
 // return value:

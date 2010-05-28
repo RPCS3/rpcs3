@@ -495,7 +495,8 @@ struct Pcsx2Config
 			MultitapPort0_Enabled:1,
 			MultitapPort1_Enabled:1,
 
-			ConsoleToStdio:1;
+			ConsoleToStdio		:1,
+			HostFs				:1;
 	BITFIELD_END
 
 	CpuOptions			Cpu;

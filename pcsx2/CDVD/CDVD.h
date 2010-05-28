@@ -143,6 +143,6 @@ extern void cdvdNewDiskCB();
 extern u8 cdvdRead(u8 key);
 extern void cdvdWrite(u8 key, u8 rt);
 
-extern void cdvdReloadElfInfo();
+extern void cdvdReloadElfInfo(wxString elfoverride = wxEmptyString);
 
 extern wxString DiscID;

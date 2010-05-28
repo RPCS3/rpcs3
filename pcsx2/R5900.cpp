@@ -627,13 +627,7 @@ void __fastcall eeloadReplaceOSDSYS()
 
 	const wxString &elf_override = GetCoreThread().GetElfOverride();
 
-	if (!elf_override.IsEmpty()) {
-		loadElfFile(elf_override);
-		eeGameStarting();
-		return;
-	}
-
-	cdvdReloadElfInfo();
+	cdvdReloadElfInfo(L"host:" + elf_override);
 
 	// didn't recognise an ELF
 	if (ElfEntry == -1) {
@@ -664,9 +658,24 @@ void __fastcall eeloadReplaceOSDSYS()
 	}
 	pxAssert(osdsys_p);
 
-	wxString elfname;
-	if (GetPS2ElfName(elfname) == 2) {
-		strcpy((char*)PSM(safemem), elfname.ToUTF8());
+	string elfname;
+
+	if (!elf_override.IsEmpty())
+	{
+		elfname += "host:";
+		elfname += elf_override.ToUTF8();
+	}
+	else
+	{
+		wxString boot2;
+		if (GetPS2ElfName(boot2) == 2)
+			elfname = boot2.ToUTF8();
+	}
+
+	if (!elfname.empty())
+	{
+		strcpy((char*)PSM(safemem), elfname.c_str());
 		memWrite32(osdsys_p, safemem);
 	}
+	// else... uh...?
 }

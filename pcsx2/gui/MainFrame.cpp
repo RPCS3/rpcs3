@@ -175,6 +175,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
 	ConnectMenu( MenuId_EnablePatches,      Menu_EnablePatches_Click );
 	ConnectMenu( MenuId_EnableCheats,       Menu_EnableCheats_Click );
+	ConnectMenu( MenuId_EnableHostFs,       Menu_EnableHostFs_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
@@ -385,6 +386,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.Append(MenuId_EnableCheats,	_("Enable Cheats"),
+		wxEmptyString, wxITEM_CHECK);
+
+	m_menuSys.Append(MenuId_EnableHostFs,	_("Enable Host Filesystem"),
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.AppendSeparator();
@@ -607,6 +611,7 @@ void MainEmuFrame::ApplySettings()
 
 	menubar.Check( MenuId_EnablePatches, g_Conf->EmuOptions.EnablePatches );
 	menubar.Check( MenuId_EnableCheats,  g_Conf->EmuOptions.EnableCheats );
+	menubar.Check( MenuId_EnableHostFs,  g_Conf->EmuOptions.HostFs );
 	menubar.Check( MenuId_CDVD_Info,     g_Conf->EmuOptions.CdvdVerboseReads );
 #ifdef __LINUX__
 	menubar.Check( MenuId_Console_Stdio, g_Conf->EmuOptions.ConsoleToStdio );

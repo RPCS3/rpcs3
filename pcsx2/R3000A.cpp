@@ -63,6 +63,8 @@ void psxReset()
 	g_psxNextBranchCycle = psxRegs.cycle + 4;
 
 	psxHwReset();
+
+	ioman::reset();
 }
 
 void psxShutdown() {

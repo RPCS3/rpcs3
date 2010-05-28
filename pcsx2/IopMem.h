@@ -29,11 +29,11 @@ extern const uptr *psxMemRLUT;
 // If the address maps to read-only memory, NULL is returned.
 // Hacky!  This should really never be used, ever, since it bypasses the iop's Hardware
 // Register handler and SPU/DEV/USB maps.
-/*template<typename T>
+template<typename T>
 static __forceinline T* iopVirtMemW( u32 mem )
 {
 	return (psxMemWLUT[(mem) >> 16] == 0) ? NULL : (T*)(psxMemWLUT[(mem) >> 16] + ((mem) & 0xffff));
-}*/
+}
 
 // Obtains a read-safe pointer into the IOP's physical memory, with TLB address translation.
 // Returns NULL if the address maps to an invalid/unmapped physical address.

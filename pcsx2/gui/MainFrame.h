@@ -171,6 +171,7 @@ protected:
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_EnablePatches_Click(wxCommandEvent &event);
 	void Menu_EnableCheats_Click(wxCommandEvent &event);
+	void Menu_EnableHostFs_Click(wxCommandEvent &event);
 
 	void Menu_BootCdvd_Click(wxCommandEvent &event);
 	void Menu_BootCdvd2_Click(wxCommandEvent &event);
