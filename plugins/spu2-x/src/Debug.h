@@ -21,10 +21,14 @@
 
 extern FILE *spu2Log;
 
-void FileLog(const char *fmt, ...);
-void ConLog(const char *fmt, ...);
+extern void FileLog(const char *fmt, ...);
+extern void ConLog(const char *fmt, ...);
 
-void DoFullDump();
+extern void DoFullDump();
+
+extern FILE* OpenBinaryLog( const wxString& logfile );
+extern FILE* OpenLog( const wxString& logfile );
+extern FILE* OpenDump( const wxString& logfile );
 
 namespace WaveDump
 {

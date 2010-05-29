@@ -48,17 +48,18 @@ extern int		GetSliderValue( HWND hWnd, int idc );
 extern BOOL		DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam );
 
 extern void		CfgSetSettingsDir( const char* dir );
+extern void		CfgSetLogDir( const char* dir );
+
 extern bool		CfgFindName( const TCHAR *Section, const TCHAR* Name);
 
 extern void		CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value);
 extern void		CfgWriteInt(const TCHAR* Section, const TCHAR* Name, int Value);
-extern void		CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wstring& Data);
+extern void		CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wxString& Data);
 
 extern bool		CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default);
-extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default);
+extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, wxString& Data, const TCHAR* Default);
 extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default);
 extern int		CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default);
-
 
 // Items Specific to DirectSound
 #define STRFY(x) #x
@@ -68,7 +69,7 @@ extern void Verifyc(HRESULT hr, const char* fn);
 
 struct ds_device_data
 {
-	std::wstring name;
+	wxString name;
 	GUID guid;
 	bool hasGuid;
 };

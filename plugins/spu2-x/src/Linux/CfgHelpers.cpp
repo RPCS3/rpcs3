@@ -52,7 +52,7 @@ void CfgWriteInt(const wchar_t* Section, const wchar_t* Name, int Value)
 	spuConfig->Write(Name, Value);
 }
 
-void CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wstring& Data)
+void CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wxString& Data)
 {
 	setIni(Section);
 	spuConfig->Write(Name, Data);
@@ -90,7 +90,7 @@ void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int
 	Data = spuConfig->Read(Name, Default);
 }
 
-void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wstring& Data, int DataSize, const wchar_t* Default)
+void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int DataSize, const wchar_t* Default)
 {
 	wxString temp;
 	CfgReadStr(Section, Name, temp, DataSize, Default);

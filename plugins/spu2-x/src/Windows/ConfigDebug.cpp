@@ -17,6 +17,7 @@
 
 #include "Global.h"
 #include "Dialogs.h"
+#include "Utilities\Path.h"
 
 
 bool DebugEnabled=false;
@@ -36,21 +37,49 @@ bool _CoresDump=false;
 bool _MemDump=false;
 bool _RegDump=false;
 
+// this is set true if PCSX2 invokes the SetLogDir callback, which tells SPU2-X to use that over
+// the configured crap in the ini file.
+static bool LogLocationSetByPcsx2 = false;
 
+static wxString CfgLogsFolder;
+static wxString CfgDumpsFolder;
 
-wchar_t AccessLogFileName[255];
-wchar_t WaveLogFileName[255];
+static wxDirName LogsFolder;
+static wxDirName DumpsFolder;
 
-wchar_t DMA4LogFileName[255];
-wchar_t DMA7LogFileName[255];
+wxString AccessLogFileName;
+wxString DMA4LogFileName;
+wxString DMA7LogFileName;
 
-wchar_t CoresDumpFileName[255];
-wchar_t MemDumpFileName[255];
-wchar_t RegDumpFileName[255];
+wxString CoresDumpFileName;
+wxString MemDumpFileName;
+wxString RegDumpFileName;
+
+void CfgSetLogDir( const char* dir )
+{
+	LogsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
+	DumpsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
+	LogLocationSetByPcsx2 = (dir!=NULL);
+}
+
+FILE* OpenBinaryLog( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(LogsFolder, logfile), L"wb" );
+}
+
+FILE* OpenLog( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(LogsFolder, logfile), L"w" );
+}
+
+FILE* OpenDump( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(DumpsFolder, logfile), L"w" );
+}
 
 namespace DebugConfig {
 
-static const TCHAR* Section = L"DEBUG";
+static const wxChar* Section = L"DEBUG";
 
 void ReadSettings()
 {
@@ -71,14 +100,22 @@ void ReadSettings()
 	_MemDump     = CfgReadBool(Section, L"Dump_Memory",0);
 	_RegDump     = CfgReadBool(Section, L"Dump_Regs",0);
 
-	CfgReadStr(Section,L"Access_Log_Filename",AccessLogFileName,255,L"logs\\SPU2Log.txt");
-	CfgReadStr(Section,L"WaveLog_Filename",   WaveLogFileName,  255,L"logs\\SPU2log.wav");
-	CfgReadStr(Section,L"DMA4Log_Filename",   DMA4LogFileName,  255,L"logs\\SPU2dma4.dat");
-	CfgReadStr(Section,L"DMA7Log_Filename",   DMA7LogFileName,  255,L"logs\\SPU2dma7.dat");
+	CfgReadStr(Section,L"Logs_Folder", CfgLogsFolder, L"logs");
+	CfgReadStr(Section,L"Dumps_Folder",CfgDumpsFolder,L"logs");
 
-	CfgReadStr(Section,L"Info_Dump_Filename",CoresDumpFileName,255,L"logs\\SPU2Cores.txt");
-	CfgReadStr(Section,L"Mem_Dump_Filename", MemDumpFileName,  255,L"logs\\SPU2mem.dat");
-	CfgReadStr(Section,L"Reg_Dump_Filename", RegDumpFileName,  255,L"logs\\SPU2regs.dat");
+	CfgReadStr(Section,L"Access_Log_Filename",AccessLogFileName, L"SPU2Log.txt");
+	CfgReadStr(Section,L"DMA4Log_Filename",   DMA4LogFileName,   L"SPU2dma4.dat");
+	CfgReadStr(Section,L"DMA7Log_Filename",   DMA7LogFileName,   L"SPU2dma7.dat");
+
+	CfgReadStr(Section,L"Info_Dump_Filename", CoresDumpFileName, L"SPU2Cores.txt");
+	CfgReadStr(Section,L"Mem_Dump_Filename",  MemDumpFileName,   L"SPU2mem.dat");
+	CfgReadStr(Section,L"Reg_Dump_Filename",  RegDumpFileName,   L"SPU2regs.dat");
+
+	if( !LogLocationSetByPcsx2 )
+	{
+		LogsFolder	= CfgLogsFolder;
+		DumpsFolder = CfgLogsFolder;
+	}
 }
 
 
@@ -102,15 +139,18 @@ void WriteSettings()
 	CfgWriteBool(Section,L"Dump_Memory",_MemDump);
 	CfgWriteBool(Section,L"Dump_Regs",  _RegDump);
 
+	// None of the logs strings are changable via GUI, so no point in bothering to
+	// write them back out.
+	CfgWriteStr(Section,L"Logs_Folder", CfgLogsFolder);
+	CfgWriteStr(Section,L"Dumps_Folder",CfgDumpsFolder);
+
 	CfgWriteStr(Section,L"Access_Log_Filename",AccessLogFileName);
-	CfgWriteStr(Section,L"WaveLog_Filename",   WaveLogFileName);
 	CfgWriteStr(Section,L"DMA4Log_Filename",   DMA4LogFileName);
 	CfgWriteStr(Section,L"DMA7Log_Filename",   DMA7LogFileName);
 
 	CfgWriteStr(Section,L"Info_Dump_Filename",CoresDumpFileName);
 	CfgWriteStr(Section,L"Mem_Dump_Filename", MemDumpFileName);
 	CfgWriteStr(Section,L"Reg_Dump_Filename", RegDumpFileName);
-
 }
 
 static void EnableMessages( HWND hWnd )

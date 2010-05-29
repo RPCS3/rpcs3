@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="SPU2-X"
 	ProjectGUID="{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
 	RootNamespace="spu2x"
@@ -366,14 +366,6 @@
 			>
 			<File
 				RelativePath="..\Config.h"
-				>
-			</File>
-			<File
-				RelativePath="..\ConvertUTF.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\ConvertUTF.h"
 				>
 			</File>
 			<File

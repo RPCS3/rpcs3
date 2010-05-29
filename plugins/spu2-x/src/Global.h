@@ -42,9 +42,6 @@ namespace soundtouch
 #include <string>
 #include <algorithm>
 
-using std::string;
-using std::wstring;
-
 // This will be brought in later anyways, but if we bring it in now, it'll avoid
 // warnings about redefining __LINUX__.
 #include "Utilities/Dependencies.h"
@@ -104,8 +101,6 @@ extern void SysMessage(const wchar_t *fmt, ...);
 
 #include "Utilities/Exceptions.h"
 #include "Utilities/SafeArray.h"
-
-#include "ConvertUTF.h"
 
 #include "defs.h"
 #include "regs.h"

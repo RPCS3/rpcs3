@@ -26,21 +26,20 @@ static FILE *DMA4LogFile		= NULL;
 static FILE *DMA7LogFile		= NULL;
 static FILE *ADMA4LogFile		= NULL;
 static FILE *ADMA7LogFile		= NULL;
-static FILE *ADMAOutLogFile	= NULL;
+static FILE *ADMAOutLogFile		= NULL;
 
 static FILE *REGWRTLogFile[2] = {0,0};
 
 void DMALogOpen()
 {
 	if(!DMALog()) return;
-	DMA4LogFile    = fopen( Unicode::Convert( DMA4LogFileName ).c_str(), "wb");
-	DMA7LogFile    = fopen( Unicode::Convert( DMA7LogFileName ).c_str(), "wb");
-	ADMA4LogFile   = fopen( "logs/adma4.raw", "wb" );
-	ADMA7LogFile   = fopen( "logs/adma7.raw", "wb" );
-	ADMAOutLogFile = fopen( "logs/admaOut.raw", "wb" );
-	//REGWRTLogFile[0]=fopen("logs/RegWrite0.raw","wb");
-	//REGWRTLogFile[1]=fopen("logs/RegWrite1.raw","wb");
+	DMA4LogFile    = OpenBinaryLog( DMA4LogFileName );
+	DMA7LogFile    = OpenBinaryLog( DMA7LogFileName );
+	ADMA4LogFile   = OpenBinaryLog( L"adma4.raw" );
+	ADMA7LogFile   = OpenBinaryLog( L"adma7.raw" );
+	ADMAOutLogFile = OpenBinaryLog( L"admaOut.raw" );
 }
+
 void DMA4LogWrite(void *lpData, u32 ulSize) {
 	if(!DMALog()) return;
 	if (!DMA4LogFile) return;

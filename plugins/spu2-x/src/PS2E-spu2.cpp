@@ -197,6 +197,11 @@ EXPORT_C_(void) CALLBACK SPU2setSettingsDir(const char* dir)
 	CfgSetSettingsDir( dir );
 }
 
+EXPORT_C_(void) CALLBACK SPU2setLogDir(const char* dir)
+{
+	CfgSetLogDir( dir );
+}
+
 EXPORT_C_(s32)  SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 	if(channel==4)
@@ -299,7 +304,7 @@ EXPORT_C_(s32) SPU2init()
 #ifdef SPU2_LOG
 	if(AccessLog())
 	{
-		spu2Log = fopen( Unicode::Convert( AccessLogFileName ).c_str(), "w" );
+		spu2Log = OpenLog( AccessLogFileName );
 		setvbuf(spu2Log, NULL,  _IONBF, 0);
 		FileLog("SPU2init\n");
 	}
@@ -335,7 +340,7 @@ EXPORT_C_(s32) SPU2init()
 	
 	memcpy(regtable, regtable_original, sizeof(regtable));
 
-	for(int mem=0;mem<0x800;mem++)
+	for(uint mem=0;mem<0x800;mem++)
 	{
 		u16 *ptr = regtable[mem>>1];
 		if(!ptr) {
@@ -349,26 +354,7 @@ EXPORT_C_(s32) SPU2init()
 	Cores[1].Reset(1);
 
 	DMALogOpen();
-
-	/*for(v=0;v<16384;v++)
-	{
-		logvolume[v]=(s32)(s32)floor(log((double)(v+1))*3376.7);
-	}*/
-
-	// Initializes lowpass filter for reverb in mixer.cpp
-	//LowPassFilterInit();
 	InitADSR();
-
-#ifdef STREAM_DUMP
-	il0=fopen("logs/spu2input0.pcm","wb");
-	il1=fopen("logs/spu2input1.pcm","wb");
-#endif
-
-#ifdef EFFECTS_DUMP
-	el0=fopen("logs/spu2fx0.pcm","wb");
-	el1=fopen("logs/spu2fx1.pcm","wb");
-#endif
-
 
 #ifdef S2R_ENABLE
 	if(!replay_mode)

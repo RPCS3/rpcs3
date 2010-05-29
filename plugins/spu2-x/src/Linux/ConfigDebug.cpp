@@ -36,30 +36,57 @@ bool _CoresDump=false;
 bool _MemDump=false;
 bool _RegDump=false;
 
-wchar_t AccessLogFileName[255];
-wchar_t WaveLogFileName[255];
+// this is set true if PCSX2 invokes the SetLogDir callback, which tells SPU2-X to use that over
+// the configured crap in the ini file.
+static bool LogLocationSetByPcsx2 = false;
 
-wchar_t DMA4LogFileName[255];
-wchar_t DMA7LogFileName[255];
+static wxDirName LogsFolder;
+static wxDirName DumpsFolder;
 
-wchar_t CoresDumpFileName[255];
-wchar_t MemDumpFileName[255];
-wchar_t RegDumpFileName[255];
+wxString AccessLogFileName;
+wxString DMA4LogFileName;
+wxString DMA7LogFileName;
+
+wxString CoresDumpFileName;
+wxString MemDumpFileName;
+wxString RegDumpFileName;
 
 namespace DebugConfig {
+
+void CfgSetLogDir( const char* dir )
+{
+	LogsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
+	DumpsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
+	LogLocationSetByPcsx2 = (dir!=NULL);
+}
+
+FILE* OpenBinaryLog( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(LogsFolder, logfile), L"wb" );
+}
+
+FILE* OpenLog( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(LogsFolder, logfile), L"w" );
+}
+
+FILE* OpenDump( const wxString& logfile )
+{
+	return wxFopen( Path::Combine(DumpsFolder, logfile), L"w" );
+}
 
 static const wchar_t* Section = L"DEBUG";
 
 static void set_default_filenames()
 {
-	swprintf(AccessLogFileName, 255, L"logs/SPU2Log.txt");
-	swprintf(WaveLogFileName, 255, L"logs/SPU2log.wav");
-	swprintf(DMA4LogFileName, 255, L"logs/logs/SPU2dma4.dat");
-	swprintf(DMA7LogFileName, 255, L"logs/SPU2dma7.dat");
+	AccessLogFileName = L"SPU2Log.txt";
+	WaveLogFileName = L"SPU2log.wav";
+	DMA4LogFileName = L"SPU2dma4.dat";
+	DMA7LogFileName = L"SPU2dma7.dat";
 
-	swprintf(CoresDumpFileName, 255, L"logs/SPU2Cores.txt");
-	swprintf(MemDumpFileName, 255, L"logs/SPU2mem.dat");
-	swprintf(RegDumpFileName, 255, L"logs/SPU2regs.dat");
+	CoresDumpFileName = L"SPU2Cores.txt";
+	MemDumpFileName = L"SPU2mem.dat";
+	RegDumpFileName = L"SPU2regs.dat";
 }
 
 void ReadSettings()

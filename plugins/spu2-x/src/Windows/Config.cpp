@@ -78,7 +78,7 @@ void ReadSettings()
 	dspPluginEnabled= CfgReadBool(L"DSP PLUGIN",L"Enabled",false);
 
 	// Read DSOUNDOUT and WAVEOUT configs:
-	CfgReadStr( L"WAVEOUT", L"Device", Config_WaveOut.Device, 254, L"default" );
+	CfgReadStr( L"WAVEOUT", L"Device", Config_WaveOut.Device, L"default" );
 	Config_WaveOut.NumBuffers = CfgReadInt( L"WAVEOUT", L"Buffer_Count", 4 );
 
 	DSoundOut->ReadSettings();

@@ -21,7 +21,7 @@ int crazy_debug=0;
 
 char s[4096];
 
-FILE *spu2Log;
+FILE *spu2Log = NULL;
 
 void FileLog(const char *fmt, ...) {
 #ifdef SPU2_LOG
@@ -98,7 +98,7 @@ void DoFullDump()
 
 	if(MemDump())
 	{
-		dump = fopen( Unicode::Convert( MemDumpFileName ).c_str(), "wb" );
+		dump = fopen( wxString(MemDumpFileName).ToUTF8(), "wb" );
 		if (dump)
 		{
 			fwrite(_spu2mem,0x200000,1,dump);
@@ -107,7 +107,7 @@ void DoFullDump()
 	}
 	if(RegDump())
 	{
-		dump = fopen( Unicode::Convert( RegDumpFileName ).c_str(), "wb" );
+		dump = fopen( wxString(RegDumpFileName).ToUTF8(), "wb" );
 		if (dump)
 		{
 			fwrite(spu2regs,0x2000,1,dump);
@@ -116,7 +116,7 @@ void DoFullDump()
 	}
 
 	if(!CoresDump()) return;
-	dump = fopen( Unicode::Convert( CoresDumpFileName ).c_str(), "wt" );
+	dump = fopen( wxString(CoresDumpFileName).ToUTF8(), "wt" );
 	if (dump)
 	{
 		for(c=0;c<2;c++)

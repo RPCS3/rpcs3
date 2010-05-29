@@ -43,7 +43,7 @@ namespace Exception
 
 	public:
 		const HRESULT ErrorCode;
-		string m_Message;
+		std::string m_Message;
 
 		const char* CMessage() const
 		{

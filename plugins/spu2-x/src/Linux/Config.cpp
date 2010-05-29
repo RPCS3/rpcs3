@@ -65,8 +65,8 @@ void ReadSettings()
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
-	wstring temp;
-	CfgReadStr( L"OUTPUT", L"Output_Module", temp, 127, PortaudioOut->GetIdent() );
+	wxString temp;
+	CfgReadStr( L"OUTPUT", L"Output_Module", temp, PortaudioOut->GetIdent() );
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);

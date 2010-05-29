@@ -41,7 +41,7 @@ private:
 	// Configuration Vars (unused still)
 
 	int m_ApiId;
-	wstring m_Device;
+	wxString m_Device;
 
 	bool m_UseHardware;
 
@@ -293,10 +293,10 @@ public:
 
 	void ReadSettings()
 	{
-		wstring api=L"EMPTYEMPTYEMPTY";
+		wxString api( L"EMPTYEMPTYEMPTY" );
 		m_Device = L"EMPTYEMPTYEMPTY";
-		CfgReadStr( L"PORTAUDIO", L"HostApi", api, 254, L"Unknown" );
-		CfgReadStr( L"PORTAUDIO", L"Device", m_Device, 254, L"default" );
+		CfgReadStr( L"PORTAUDIO", L"HostApi", api, L"Unknown" );
+		CfgReadStr( L"PORTAUDIO", L"Device", m_Device, L"default" );
 
 		m_ApiId = -1;
 		if(api == L"InDevelopment") m_ApiId = paInDevelopment; /* use while developing support for a new host API */
@@ -319,7 +319,7 @@ public:
 
 	void WriteSettings() const
 	{
-		wstring api;
+		wxString api;
 		switch(m_ApiId)
 		{
 		case paInDevelopment:	api = L"InDevelopment"; break; /* use while developing support for a new host API */

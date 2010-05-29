@@ -33,7 +33,7 @@ private:
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Configuration Vars
 
-	wstring m_Device;
+	wxString m_Device;
 	u8 m_NumBuffers;
 	bool m_DisableGlobalFocus;
 	bool m_UseHardware;
@@ -455,7 +455,7 @@ public:
 
 	void ReadSettings()
 	{
-		CfgReadStr( L"DSOUNDOUT", L"Device", m_Device, 254, L"default" );
+		CfgReadStr( L"DSOUNDOUT", L"Device", m_Device, L"default" );
 		m_NumBuffers = CfgReadInt( L"DSOUNDOUT", L"Buffer_Count", 5 );
 		m_DisableGlobalFocus = CfgReadBool( L"DSOUNDOUT", L"Disable_Global_Focus", false );
 		m_UseHardware = CfgReadBool( L"DSOUNDOUT", L"Use_Hardware", false );

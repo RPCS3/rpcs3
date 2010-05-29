@@ -37,7 +37,7 @@ extern HINSTANCE hInstance;
 
 struct CONFIG_XAUDIO2
 {
-	std::wstring Device;
+	wxString Device;
 	s8 NumBuffers;
 
 	CONFIG_XAUDIO2() :
@@ -49,7 +49,7 @@ struct CONFIG_XAUDIO2
 
 struct CONFIG_WAVEOUT
 {
-	std::wstring Device;
+	wxString Device;
 	s8 NumBuffers;
 
 	CONFIG_WAVEOUT() :

@@ -92,9 +92,9 @@ void CfgWriteInt(const TCHAR* Section, const TCHAR* Name, int Value)
 WritePrivateProfileString( Section, Name, Data, CfgFile );
 }*/
 
-void CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wstring& Data)
+void CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wxString& Data)
 {
-	WritePrivateProfileString( Section, Name, Data.c_str(), CfgFile );
+	WritePrivateProfileString( Section, Name, Data, CfgFile );
 }
 
 /*****************************************************************************/
@@ -143,10 +143,10 @@ void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSi
 	}
 }
 
-void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default)
+void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wxString& Data, const TCHAR* Default)
 {
 	wchar_t workspace[512];
-	GetPrivateProfileString(Section,Name,L"",workspace,DataSize,CfgFile);
+	GetPrivateProfileString(Section,Name,L"",workspace,ArraySize(workspace),CfgFile);
 
 	Data = workspace;
 
