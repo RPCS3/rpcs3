@@ -41,6 +41,7 @@ u16 status[2];
 int pressure;
 static keyEvent s_event;
 string s_strIniPath = "inis";
+string s_strLogPath = "logs";
 
 const u32 version  = PS2E_PAD_VERSION;
 const u32 revision = 0;
@@ -217,10 +218,25 @@ void initLogging()
 #ifdef PAD_LOG
 	if (padLog == NULL)
 	{
-		padLog = fopen("logs/padLog.txt", "w");
-		if (padLog) setvbuf(padLog, NULL,  _IONBF, 0);
+		const std::string LogFile(s_strLogPath + "/padLog.txt");
+		padLog = fopen(LogFile.c_str(), "w");
+		if (padLog == NULL)
+			SysMessage("Can't create log file %s\n", LogFile.c_str());
+		else
+			setvbuf(padLog, NULL,  _IONBF, 0);
 	}
 	PAD_LOG("PADinit\n");
+#endif
+}
+
+void CloseLogging()
+{
+#ifdef PAD_LOG
+	if (padLog != NULL) 
+	{
+		fclose(padLog);
+		padLog = NULL;
+	}
 #endif
 }
 
@@ -273,6 +289,17 @@ void CALLBACK PADsetSettingsDir(const char* dir)
 	// Get the path to the ini directory.
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
+ 
+void CALLBACK PADSetLogFolder(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	CloseLogging();
+	initLogging();
+}
+
 
 void CALLBACK PADclose()
 {
