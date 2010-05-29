@@ -181,6 +181,8 @@ struct LegacyPluginAPI_Common
 
 	void (CALLBACK* KeyEvent)( keyEvent* evt );
 	void (CALLBACK* SetSettingsDir)( const char* dir );
+	void (CALLBACK* SetLogFolder)( const char* dir );
+
 	s32  (CALLBACK* Freeze)(int mode, freezeData *data);
 	s32  (CALLBACK* Test)();
 	void (CALLBACK* Configure)();
@@ -267,6 +269,7 @@ protected:
 
 	const PS2E_LibraryAPI*		m_mcdPlugin;
 	wxString					m_SettingsFolder;
+	wxString					m_LogFolder;
 	Threading::MutexRecursive	m_mtx_PluginStatus;
 
 	// Lovely hack until the new PS2E API is completed.
@@ -310,6 +313,9 @@ public:
 	virtual void Configure( PluginsEnum_t pid );
 	virtual void SetSettingsFolder( const wxString& folder );
 	virtual void SendSettingsFolder();
+    virtual void SetLogFolder( const wxString& folder );
+	virtual void SendLogFolder();
+
 
 	const wxString GetName( PluginsEnum_t pid ) const;
 	const wxString GetVersion( PluginsEnum_t pid ) const;

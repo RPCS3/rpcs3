@@ -43,6 +43,8 @@ DocsModeType			DocsFolderMode = DocsFolder_User;
 wxDirName				SettingsFolder;
 wxDirName				CustomDocumentsFolder;
 bool					UseDefaultSettingsFolder = true;
+wxDirName               Logs;
+bool					UseDefaultLogs = true;
 
 ScopedPtr<AppConfig>	g_Conf;
 ConfigOverrides			OverrideOptions;

@@ -137,6 +137,7 @@ static s32  CALLBACK fallback_freeze(int mode, freezeData *data)
 
 static void CALLBACK fallback_keyEvent(keyEvent *ev) {}
 static void CALLBACK fallback_setSettingsDir(const char* dir) {}
+static void CALLBACK fallback_SetLogFolder(const char* dir) {}
 static void CALLBACK fallback_configure() {}
 static void CALLBACK fallback_about() {}
 static s32  CALLBACK fallback_test() { return 0; }
@@ -291,6 +292,7 @@ static const LegacyApi_CommonMethod s_MethMessCommon[] =
 
 	{	"keyEvent",			(vMeth*)fallback_keyEvent },
 	{	"setSettingsDir",	(vMeth*)fallback_setSettingsDir },
+	{	"SetLogFolder",	    (vMeth*)fallback_SetLogFolder },
 
 	{	"freeze",			(vMeth*)fallback_freeze	},
 	{	"test",				(vMeth*)fallback_test },
@@ -931,6 +933,7 @@ void PluginManager::Load( const wxString (&folders)[PluginId_Count] )
 		throw Exception::PluginLoadError( PluginId_Mcd, wxEmptyString, "Internal Memorycard Plugin failed to load." );
 	}
 
+	SendLogFolder();
 	SendSettingsFolder();
 }
 
@@ -1402,6 +1405,33 @@ void PluginManager::SetSettingsFolder( const wxString& folder )
 	if( m_SettingsFolder == fixedfolder ) return;
 	m_SettingsFolder = fixedfolder;
 	SendSettingsFolder();
+}
+
+void PluginManager::SendLogFolder()
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+	if( m_LogFolder.IsEmpty() ) return;
+
+	wxCharBuffer utf8buffer( m_LogFolder.ToUTF8() );
+
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogFolder( utf8buffer );
+	} while( ++pi, pi->shortname != NULL );
+}
+
+void PluginManager::SetLogFolder( const wxString& folder )
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+
+	wxString fixedfolder( folder );
+	if( !fixedfolder.IsEmpty() && (fixedfolder[fixedfolder.length()-1] != wxFileName::GetPathSeparator() ) )
+	{
+		fixedfolder += wxFileName::GetPathSeparator();
+	}
+
+	if( m_LogFolder == fixedfolder ) return;
+	m_LogFolder = fixedfolder;
+	SendLogFolder();
 }
 
 void PluginManager::Configure( PluginsEnum_t pid )

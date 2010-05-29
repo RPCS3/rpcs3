@@ -326,6 +326,11 @@ bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto
 	return left == right;
 }
 
+wxDirName GetLogFolder()
+{
+	return UseDefaultLogs ? PathDefs::GetLogs() : Logs;
+}
+
 wxDirName GetSettingsFolder()
 {
 	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;

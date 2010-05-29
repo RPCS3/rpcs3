@@ -45,9 +45,12 @@ extern DocsModeType		DocsFolderMode;				//
 extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
 extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
 extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
+extern wxDirName		Logs;
+extern bool			    UseDefaultLogs;
 
 wxDirName GetSettingsFolder();
 wxString  GetSettingsFilename();
+wxDirName GetLogFolder();
 
 enum AspectRatioType
 {

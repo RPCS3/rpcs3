@@ -232,7 +232,9 @@ void AppPluginManager::Load( const wxString (&folders)[PluginId_Count] )
 {
 	if( !pxAssert(!AreLoaded()) ) return;
 
+	SetLogFolder( GetSettingsFolder().ToString() );
 	SetSettingsFolder( GetSettingsFolder().ToString() );
+
 	_parent::Load( folders );
 	PostPluginStatus( CorePlugins_Loaded );
 }
@@ -273,6 +275,7 @@ void AppPluginManager::Shutdown( PluginsEnum_t pid )
 
 void AppPluginManager::Init()
 {
+    SetLogFolder( GetLogFolder().ToString() );
 	SetSettingsFolder( GetSettingsFolder().ToString() );
 	_parent::Init();
 	PostPluginStatus( CorePlugins_Init );
@@ -314,6 +317,7 @@ void AppPluginManager::Open()
 		return;
 	}*/
 
+    SetLogFolder( GetLogFolder().ToString() );
 	SetSettingsFolder( GetSettingsFolder().ToString() );
 
 	if( !NeedsOpen() ) return;
