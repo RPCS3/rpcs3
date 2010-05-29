@@ -19,6 +19,7 @@ using namespace std;
 
 #include "USB.h"
 string s_strIniPath="inis/";
+string s_strLogPath="logs/";
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
@@ -31,6 +32,23 @@ Config conf;
 PluginLog USBLog;
 
 s8 *usbregs, *ram;
+
+void LogInit()
+{
+	const std::string LogFile(s_strLogPath + "/USBnull.log");
+	setLoggingState();
+	USBLog.Open(LogFile);
+}
+
+EXPORT_C_(void) PADSetLogFolder(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	
+	// Reload the log file after updated the path
+	USBLog.Close();
+	LogInit();
+}
 
 EXPORT_C_(u32) PS2EgetLibType()
 {
@@ -50,8 +68,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 EXPORT_C_(s32) USBinit()
 {
 	LoadConfig();
-	setLoggingState();
-	USBLog.Open("logs/USBnull.log");
+	LogInit();
 	USBLog.WriteLn("USBnull plugin version %d,%d", revision, build);
 	USBLog.WriteLn("Initializing USBnull");
 

@@ -44,8 +44,27 @@ void (*DEV9irq)(int);
 __aligned16 s8 dev9regs[0x10000];
 
 string s_strIniPath = "inis/";
+string s_strLogPath="logs/";
+
 PluginLog Dev9Log;
 Config conf;
+
+void LogInit()
+{
+	const std::string LogFile(s_strLogPath + "/dev9null.log");
+	setLoggingState();
+	Dev9Log.Open(LogFile);
+}
+
+EXPORT_C_(void) PADSetLogFolder(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	
+	// Reload the log file after updated the path
+	Dev9Log.Close();
+	LogInit();
+}
 
 EXPORT_C_(u32) PS2EgetLibType()
 {
@@ -66,8 +85,7 @@ EXPORT_C_(s32) DEV9init()
 {
 	LoadConfig();
 	setLoggingState();
-
-	Dev9Log.Open("logs/dev9null.log");
+	LogInit();
 	Dev9Log.WriteLn("dev9null plugin version %d,%d", revision, build);
 	Dev9Log.WriteLn("Initializing dev9null");
 	// Initialize anything that needs to be initialized.

@@ -29,12 +29,30 @@ const u8 build    = 6;    // increase that with each version
 static char *libraryName = "FWnull Driver";
 
 string s_strIniPath="inis/";
-
+string s_strLogPath = "logs/";
+	
 s8 *fwregs;
 Config conf;
 PluginLog FWLog;
 
 void (*FWirq)();
+
+void LogInit()
+{
+	const std::string LogFile(s_strLogPath + "/FWnull.log");
+	setLoggingState();
+	FWLog.Open(LogFile);
+}
+
+EXPORT_C_(void) PADSetLogFolder(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	
+	// Reload the log file after updated the path
+	FWLog.Close();
+	LogInit();
+}
 
 EXPORT_C_(u32) PS2EgetLibType()
 {
@@ -54,8 +72,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 EXPORT_C_(s32) FWinit()
 {
 	LoadConfig();
-	setLoggingState();
-	FWLog.Open("logs/FWnull.log");
+	LogInit();
 	FWLog.WriteLn("FWnull plugin version %d,%d", revision, build);
 	FWLog.WriteLn("Initializing FWnull");
 
