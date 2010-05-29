@@ -1110,39 +1110,12 @@ static void iBranchTest(u32 newpc)
 		xSUB(eax, &g_nextBranchCycle);
 
 		if (newpc == 0xffffffff)
-		{
-			xJNS( DispatcherEvent );
-			xJMP( DispatcherReg );
-		}
+			xJS( DispatcherReg );
 		else
-		{
-			recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
-			xJMP( DispatcherEvent );
-		}
-	}
+			recBlocks.Link(HWADDR(newpc), xJcc32(Jcc_Signed));
 
-	/*
-	else
-	{
-		xMOV(eax, &cpuRegs.cycle);
-		xADD(eax, eeScaleBlockCycles());
-		xMOV(&cpuRegs.cycle, eax); // update cycles
-		xSUB(eax, &g_nextBranchCycle);
-		if (!noDispatch)
-		{
-			if (newpc == 0xffffffff)
-				xJS( DispatcherReg );
-			else
-			{
-				xMOV( ptr32[&cpuRegs.pc], newpc );
-				recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
-			}
-		}
+		xJMP( DispatcherEvent );
 	}
-	xCALL( recEventTest );
-	xJMP( DispatcherReg );
-
-	*/
 }
 
 void recompileNextInstruction(int delayslot)
