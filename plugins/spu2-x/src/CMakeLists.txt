@@ -34,7 +34,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 # spu2x sources
 set(spu2xSources
     ADSR.cpp
-    ConvertUTF.cpp
     Debug.cpp
     Decoder.cpp
     Dma.cpp
@@ -59,7 +58,6 @@ set(spu2xSources
 # spu2x headers
 set(spu2xHeaders
     Config.h
-    ConvertUTF.h
     Debug.h
     defs.h
     Dma.h

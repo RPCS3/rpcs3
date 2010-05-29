@@ -84,16 +84,8 @@ void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wchar_t* Data, int 
 	wcscpy(Data, spuConfig->Read(Name, Default));
 }
 
-void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int DataSize, const wchar_t* Default)
+void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, const wchar_t* Default)
 {
 	setIni(Section);
 	Data = spuConfig->Read(Name, Default);
 }
-
-void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int DataSize, const wchar_t* Default)
-{
-	wxString temp;
-	CfgReadStr(Section, Name, temp, DataSize, Default);
-	Data = temp.c_str();
-}
-

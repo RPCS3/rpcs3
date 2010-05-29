@@ -92,8 +92,6 @@
 		<Unit filename="../3rdparty/liba52/tendra.h" />
 		<Unit filename="../ADSR.cpp" />
 		<Unit filename="../Config.h" />
-		<Unit filename="../ConvertUTF.cpp" />
-		<Unit filename="../ConvertUTF.h" />
 		<Unit filename="../DPLII.h" />
 		<Unit filename="../Debug.cpp" />
 		<Unit filename="../Debug.h" />

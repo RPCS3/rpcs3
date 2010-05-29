@@ -18,6 +18,7 @@
 #include "Global.h"
 #include "Dialogs.h"
 #include "Config.h"
+#include "Utilities/Path.h"
 
 bool DebugEnabled=false;
 bool _MsgToConsole=false;
@@ -44,14 +45,13 @@ static wxDirName LogsFolder;
 static wxDirName DumpsFolder;
 
 wxString AccessLogFileName;
+wxString WaveLogFileName;
 wxString DMA4LogFileName;
 wxString DMA7LogFileName;
 
 wxString CoresDumpFileName;
 wxString MemDumpFileName;
 wxString RegDumpFileName;
-
-namespace DebugConfig {
 
 void CfgSetLogDir( const char* dir )
 {
@@ -75,6 +75,7 @@ FILE* OpenDump( const wxString& logfile )
 	return wxFopen( Path::Combine(DumpsFolder, logfile), L"w" );
 }
 
+namespace DebugConfig {
 static const wchar_t* Section = L"DEBUG";
 
 static void set_default_filenames()

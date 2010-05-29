@@ -58,13 +58,13 @@ static __forceinline bool MemDump() { return _MemDump & DebugEnabled; }
 static __forceinline bool RegDump() { return _RegDump & DebugEnabled; }*/
 
 
-extern wchar_t AccessLogFileName[255];
-extern wchar_t WaveLogFileName[255];
-extern wchar_t DMA4LogFileName[255];
-extern wchar_t DMA7LogFileName[255];
-extern wchar_t CoresDumpFileName[255];
-extern wchar_t MemDumpFileName[255];
-extern wchar_t RegDumpFileName[255];
+//extern wchar_t AccessLogFileName[255];
+//extern wchar_t WaveLogFileName[255];
+//extern wchar_t DMA4LogFileName[255];
+//extern wchar_t DMA7LogFileName[255];
+//extern wchar_t CoresDumpFileName[255];
+//extern wchar_t MemDumpFileName[255];
+//extern wchar_t RegDumpFileName[255];
 
 extern int Interpolation;
 extern int ReverbBoost;
