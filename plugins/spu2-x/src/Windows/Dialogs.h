@@ -58,6 +58,7 @@ extern void		CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wxString
 
 extern bool		CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default);
 extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, wxString& Data, const TCHAR* Default);
+extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default);
 extern int		CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default);
 
 // Items Specific to DirectSound
