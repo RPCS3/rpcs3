@@ -86,6 +86,9 @@ Function un.removeShorties
   Delete "$SMPROGRAMS\PCSX2\${APP_NAME}.lnk"
   ;Delete "$SMPROGRAMS\PCSX2\pcsx2-dev-r${SVNREV}.lnk"
 
+  Delete "$SMPROGRAMS\PCSX2\Readme ${APP_VERSION}.lnk"
+  Delete "$SMPROGRAMS\PCSX2\Frequently Asked Questions ${APP_VERSION}.lnk"
+
   StrCpy $0 "$SMPROGRAMS\PCSX2"
   Call un.DeleteDirIfEmpty
 

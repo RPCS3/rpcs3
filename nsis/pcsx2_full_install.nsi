@@ -115,33 +115,7 @@ Section "!${APP_NAME} (required)" SEC_CORE
 
 SectionEnd
 
-; -----------------------------------------------------------------------
-; Start Menu - Optional section (can be disabled by the user)
-Section "Start Menu Shortcuts" SEC_STARTMENU
-
-  ; CreateShortCut gets the working directory from OutPath
-  SetOutPath "$INSTDIR"
-  
-  CreateDirectory "$SMPROGRAMS\PCSX2"
-  CreateShortCut "$SMPROGRAMS\PCSX2\Uninstall ${APP_NAME}.lnk"  "${UNINST_EXE}"      ""    "${UNINST_EXE}"    0
-  CreateShortCut "$SMPROGRAMS\PCSX2\${APP_NAME}.lnk"            "${APP_EXE}"         ""    "${APP_EXE}"       0
-
-  ;IfFileExists ..\bin\pcsx2-dev.exe 0 +2
-  ;  CreateShortCut "PCSX2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
-  ;    "PCSX2 Devel (has additional logging support)"
-
-SectionEnd
-
-; -----------------------------------------------------------------------
-; Desktop Icon - Optional section (can be disabled by the user)
-Section "Desktop Shortcut" SEC_DESKTOP
-
-  ; CreateShortCut gets the working directory from OutPath
-  SetOutPath "$INSTDIR"
-  
-  CreateShortCut "$DESKTOP\${APP_NAME}.lnk"            "${APP_EXE}"      "" "${APP_EXE}"     0 "" "" "A Playstation 2 Emulator"
-    
-SectionEnd
+!include "SectionShortcuts.nsh"
 
 ; -----------------------------------------------------------------------
 ; MSVC Redistributable - required if the user does not already have it
@@ -219,41 +193,7 @@ Section "DirectX Web Setup (recommended)" SEC_DIRECTX
 
 SectionEnd
 
-; =======================================================================
-;                           Un.Installer Sections
-; =======================================================================
-
-; -----------------------------------------------------------------------
-Section "Un.Exes and Plugins ${APP_NAME}"
-
-  SetShellVarContext all
-
-  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR"
-
-  ; Remove registry keys (but only the ones related to the installer -- user options remain)
-  DeleteRegKey HKLM "${INSTDIR_REG_KEY}"
-
-  Call un.removeShorties
-
-  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
-  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
-
-SectionEnd
-
-Section "Un.Complete Registry Cleanup"
-
-  ; Kill the entire PCSX2 registry key!
-  DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
-
-  ; Kill AppData/PCSX2 entry!
-
-  SetShellVarContext current
-  StrCpy $0 $LOCALAPPDATA\PCSX2
-  Call un.DeleteDirIfEmpty
-  StrCpy $0 $APPDATA\PCSX2
-  Call un.DeleteDirIfEmpty
-
-SectionEnd
+!include "SectionUninstaller.nsh"
 
 LangString DESC_CORE       ${LANG_ENGLISH} "Core components (binaries, plugins, languages, etc)."
 
@@ -279,3 +219,4 @@ LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite c
 
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DIRECTX}     $(DESC_DIRECTX)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
+

@@ -17,11 +17,10 @@
   ;SetShellVarContext current
   
   SetOutPath "$INSTDIR"
-
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
     File           /oname=${APP_EXE}                ..\bin\pcsx2.exe
     ;File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
- 
+
   ; ------------------------------------------
   ;       -- Shared Core Components --
   ; ------------------------------------------
@@ -36,9 +35,13 @@
     File                                            ..\bin\GameIndex.dbf
 
 	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
-	
-    SetOutPath "$INSTDIR\Plugins"
+
+    SetOutPath "$INSTDIR\Docs"
+    !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+    File                                            ..\bin\docs\*
+    !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
     
+    SetOutPath "$INSTDIR\Plugins"
 	!insertmacro UNINSTALL.LOG_OPEN_INSTALL
     ; NULL plugins are required, because the PCSX2 plugin selector needs a dummy plugin in every slot
     ; in order to run (including CDVD!) -- and really there should be more but we don't have working
