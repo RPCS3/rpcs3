@@ -546,8 +546,6 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 			return;
 		}
 	}
-
-	wxLogStatus(this, L"Log saved to the file '%s'.", filename.c_str());
 }
 
 void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
