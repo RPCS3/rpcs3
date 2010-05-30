@@ -72,6 +72,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 				L" * SSX (Fixes bad graphics and crashes)\n"
 				L" * Resident Evil: Dead Aim (Causes garbled textures)"
 			)
+		},
+		{
+			_("Skip MPEG hack - Skips videos/FMV's in games to avoid game hanging/freezes."),
+			wxEmptyString
 		}
 	};
 

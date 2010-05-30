@@ -1289,6 +1289,30 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 #endif
 }
 
+// Skip MPEG Game-Fix
+bool skipMPEG_By_Pattern(u32 sPC) {
+
+	if (!CHECK_SKIPMPEGHACK) return 0;
+
+	// sceMpegIsEnd: lw reg, 0x40(a0); jr ra; lw v0, 0(reg)
+	if ((s_nEndBlock == sPC + 12) && (vtlb_memRead32(sPC + 4) == 0x03e00008)) {
+		u32 code = vtlb_memRead32(sPC);
+		u32 p1   = 0x8c800040;
+		u32 p2	 = 0x8c020000 | (code & 0x1f0000) << 5;
+		if ((code & 0xffe0ffff)   != p1) return 0;
+		if (vtlb_memRead32(sPC+8) != p2) return 0;
+		xMOV(ptr32[&cpuRegs.GPR.n.v0.UL[0]], 1);
+		xMOV(ptr32[&cpuRegs.GPR.n.v0.UL[1]], 0);
+		xMOV(eax, ptr32[&cpuRegs.GPR.n.ra.UL[0]]);
+		xMOV(ptr32[&cpuRegs.pc], eax);
+		iBranchTest();
+		branch = 1;
+		pc = s_nEndBlock;
+		return 1;
+	}
+	return 0;
+}
+
 static void __fastcall recRecompile( const u32 startpc )
 {
 	u32 i = 0;
@@ -1690,10 +1714,15 @@ StartRecomp:
             break;
 	}
 
-	// Finally: Generate x86 recompiled code!
-	g_pCurInstInfo = s_pInstCache;
-	while (!branch && pc < s_nEndBlock) {
-		recompileNextInstruction(0);		// For the love of recursion, batman!
+	// Skip Recompilation if sceMpegIsEnd Pattern detected
+	bool doRecompilation = !skipMPEG_By_Pattern(startpc);
+
+	if (doRecompilation) {
+		// Finally: Generate x86 recompiled code!
+		g_pCurInstInfo = s_pInstCache;
+		while (!branch && pc < s_nEndBlock) {
+			recompileNextInstruction(0);		// For the love of recursion, batman!
+		}
 	}
 
 #ifdef PCSX2_DEBUG

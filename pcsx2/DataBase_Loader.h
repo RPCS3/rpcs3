@@ -420,6 +420,7 @@ static int loadGameSettings(DataBase_Loader* gameDB) {
 		checkGamefix(XgKickHack);
 		checkGamefix(IPUWaitHack);
 		checkGamefix(EETimingHack);
+		checkGamefix(SkipMPEGHack);
 		return gf;
 	}
 	return 0;
