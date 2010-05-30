@@ -8,55 +8,13 @@
 ; PCSX2 from a variety of mirror hosts.  Packages are only downloaded on an as-needed
 ; basis; this most importantly applies to the very bulky VS 2008 and VS2010 packages.
 
-!ifndef INC_PLUGINS
-  ; Set to 0 to include the core binaries only (no plugins)
-  !define INC_PLUGINS   1
-!endif
-
 !ifndef INC_ZZOGL
   ; Includes ZZOGL and CG Toolkit (via web install).  Currently not supported (work in progress)
-  !define INC_ZZOGL	0
-!endif 
-
-!ifndef INC_LANGS
-  ; Set to 1 to enable inclusion of Languages folders (which are currently missing in 0.9.7)
-  !define INC_LANGS     0
+  !define INC_ZZOGL	    0
 !endif
 
 !define OUTFILE_POSTFIX "websetup"
-!include "SharedSettings.nsh"
-
-!include "MUI2.nsh"
-!include "AdvUninstLog.nsh"
-
-; Reserve features for improved performance with solid archiving.
-;  (uncomment if we add our own install options ini files)
-;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
-;!insertmacro MUI_RESERVEFILE_LANGDLL
-
-; =======================================================================
-;                          Vista/Win7 UAC Stuff
-; =======================================================================
-
-!include "IsUserAdmin.nsi"
-
-; Allow admin-rights PCSX2 users to be hardcore!
-AllowRootDirInstall true
-
-; FIXME !!
-; Request application privileges for Windows Vista/7; I'd love for this to be sensible about which
-; execution level it requests, but UAC is breaking my mind.  I included some code for User type
-; detection in function IsUserAdmin, but not really using it constructively yet.  (see also our
-; uses of SetShellVarContext in the installer sections) 
-RequestExecutionLevel admin
-
-; This defines the Advanced Uninstaller mode of operation...
-!insertmacro UNATTENDED_UNINSTALL
-
-!define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "banner.bmp"
-;!define MUI_COMPONENTSPAGE_NODESC
-!define MUI_COMPONENTSPAGE_SMALLDESC
+!include "SharedBase.nsh"
 
 !insertmacro MUI_PAGE_COMPONENTS 
 !insertmacro MUI_PAGE_DIRECTORY
@@ -117,6 +75,8 @@ Section "!${APP_NAME} (required)" SEC_CORE
 
 SectionEnd
 
+!include "SectionShortcuts.nsh"
+
 !if ${INC_ZZOGL} > 0
 Section "ZZogl Plugin (requires OpenGL)"
 
@@ -137,8 +97,6 @@ Section "Nvidia's CG Toolkit"
   
 SectionEnd
 !endif
-
-!include "SectionShortcuts.nsh"
 
 ; -----------------------------------------------------------------------
 ; MSVC Redistributable - required if the user does not already have it
@@ -283,7 +241,6 @@ done:
 SectionEnd
 
 !include "SectionUninstaller.nsh"
-
 
 LangString DESC_CORE       ${LANG_ENGLISH} "Core components (binaries, plugins, languages, etc)."
 

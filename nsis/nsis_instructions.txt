@@ -8,7 +8,7 @@
  * Download the Visual C++ 2008 SP1 Redistributable and save it to this nsis/ folder under the name:
      vcredist_2008_sp1_x86.exe
 
- * Download the Visual C++ 2010 Redistributable  and save it to this nsis/ folder.
+ * Download the Visual C++ 2010 Redistributable and save it to this nsis/ folder.
      vcredist_2010_x86.exe
 
   [both files can be obtained from Microsoft's website, just google for them]
@@ -26,24 +26,34 @@
     You may selectively unload plugins you do not wish to package prior to running the NSIS
     script.
 
- * Compile script, and Enjoy :)
+ * Compile script!  Output executable will be generated to the output/ folder.
  
  
 --------------------------------------------
   Compilation Targets and Plugin Inclusion
 --------------------------------------------
 
-pcsx2-dev.exe is included into the installer as well *if* present (but is not required).
-The Release mode (without -dev) is required, and the script errors if it's missing.
-
-To include non-NULL plugins into the installer you must specify /DINC_PLUGINS on the command
-line when compiling the script.  The installer will include plugins only if they are present.
-If you do not build plugins, or remove some (or all) plugins before running the nsis script,
-only PCSX2 and whatever remaining plugins will be packaged.
+The installer will include plugins only if they are present.  If you do not build plugins, or
+remove some (or all) plugins before running the nsis script, only PCSX2 and whatever remaining
+plugins will be packaged.
 
 GSdx SSE2, SSSE3, and SSE4 versions are all included into the installer *if* they are present.
 You will need to follow the above instructions and compile all release targets to get all the
 GSdx DLLs.
+
+
+--------------------------------------------
+      Recommendations to Developers
+--------------------------------------------
+
+From Air:  I use Eclipse to edit NSIS scripts.  Do a google search for 'nsis eclipse' and it
+should take you to the NSIS wiki with instructions on how to set up a NSIS environment in
+Eclipse.  This typically only takes me a few minutes (yes it's really that painless).  Via
+Eclipse you can use F2 and F3 for online help and context help on NSIS commands, and the syntax
+highlighting is very clean and NSIS-specific.  Additionally it'll give you Visual Studio-style
+hyperlinks for errors during compilation, so that you can simply click on an error and be taken
+right to the offending line of code.  Highly recommended! :)
+
 
 --------------------------------------------
             TODO / Wish List!!

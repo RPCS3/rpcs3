@@ -1,5 +1,4 @@
 
-
 ; =======================================================================
 ;                             Plugin Includes
 ; =======================================================================
@@ -13,7 +12,7 @@
   !system 'SubWCRev.exe ..\plugins\zerogs\dx  templates\svnrev_zerogs.nsh   svnrev_zerogs.nsh'
   ;!system 'SubWCRev.exe ..\plugins\zzogl-pg   templates\svnrev_zzogl.nsh    svnrev_zzogl.nsh'
   !system 'SubWCRev.exe ..\plugins\zerospu2   templates\svnrev_zerospu2.nsh svnrev_zerospu2.nsh'
-
+ 
   !include "svnrev_gsdx.nsh"
   !include "svnrev_spu2x.nsh"
   !include "svnrev_cdvdiso.nsh"
@@ -27,15 +26,13 @@
 ;                         Shared Install Functions
 ; =======================================================================
 
-; ==================================================================================
-
 Function .onInit
 
   ;prepare Advanced Uninstall log always within .onInit function
   !insertmacro UNINSTALL.LOG_PREPARE_INSTALL
 
   ; MORE UAC HELL ---------- >
-  call IsUserAdmin
+  ;call IsUserAdmin
 
 FunctionEnd
 
@@ -109,6 +106,9 @@ Function un.onUninstSuccess
   Call un.DeleteDirIfEmpty
 
   StrCpy $0 "$INSTDIR\plugins"
+  Call un.DeleteDirIfEmpty
+
+  StrCpy $0 "$INSTDIR\docs"
   Call un.DeleteDirIfEmpty
 
   StrCpy $0 "$INSTDIR"

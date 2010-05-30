@@ -5,12 +5,6 @@
 ; Copyright 2009-2010  PCSX2 Dev Team
 ;
 
-
-!ifndef INC_PLUGINS
-  ; Set to 0 to include the core binaries only (no plugins)
-  !define INC_PLUGINS   1
-!endif
-
 !ifndef INC_CRT_2008
   ; Set to 0 to disable inclusion of Visual Studio 2008 SP1 CRT Redists
   !define INC_CRT_2008  1
@@ -21,43 +15,13 @@
   !define INC_CRT_2010  1
 !endif
 
-!ifndef INC_LANGS
-  ; Set to 1 to enable inclusion of Languages folders (which are currently missing in 0.9.7)
-  !define INC_LANGS     0
-!endif
-
 !define OUTFILE_POSTFIX "setup"
-!include "SharedSettings.nsh"
-!include "MUI2.nsh"
-!include "AdvUninstLog.nsh"
-
-; =======================================================================
-;                          Vista/Win7 UAC Stuff
-; =======================================================================
-
-!include "IsUserAdmin.nsi"
+!include "SharedBase.nsh"
 
 ; Reserve features for improved performance with solid archiving.
 ;  (uncomment if we add our own install options ini files)
 ;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
 ;!insertmacro MUI_RESERVEFILE_LANGDLL
-
-; Allow admin-rights PCSX2 users to be hardcore!
-AllowRootDirInstall true
-
-; FIXME !!
-; Request application privileges for Windows Vista/7; I'd love for this to be sensible about which
-; execution level it requests, but UAC is breaking my mind.  I included some code for User type
-; detection in function IsUserAdmin, but not really using it constructively yet.  (see also our
-; uses of SetShellVarContext in the installer sections) 
-RequestExecutionLevel admin
-
-; This defines the Advanced Uninstaller mode of operation...
-!insertmacro UNATTENDED_UNINSTALL
-
-!define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "banner.bmp"
-!define MUI_COMPONENTSPAGE_SMALLDESC
 
 !insertmacro MUI_PAGE_COMPONENTS 
 !insertmacro MUI_PAGE_DIRECTORY
