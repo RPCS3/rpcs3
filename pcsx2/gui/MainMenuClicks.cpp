@@ -100,7 +100,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 	{
 		ScopedCoreThreadPopup suspender;
 		if( !Msgbox::OkCancel(
-			pxE( ".Popup Warning:DeleteSettings",
+			pxE_Popup( "DeleteSettings",
 				L"This command clears PCSX2 settings and allows you to re-run the First-Time Wizard.  You will need to "
 				L"manually restart PCSX2 after this operation.\n\n"
 				L"WARNING!!  Click OK to delete *ALL* settings for PCSX2 and force PCSX2 to shudown, losing any current emulation progress.  Are you absolutely sure?"

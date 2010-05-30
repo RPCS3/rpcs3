@@ -363,7 +363,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 // are multiple variations on the BIOS and BIOS folder checks).
 wxString BIOS_GetMsg_Required()
 {
-	return pxE( ".Popup:BiosDumpRequired",
+	return pxE_Popup( "BiosDumpRequired",
 		L"\n\n"
 		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
 		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"

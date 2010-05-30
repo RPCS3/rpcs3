@@ -71,7 +71,7 @@ bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename )
 static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 {
 	int pushed = 0;
-	Console.WriteLn( Color_StrongBlue, "Enumerating MemoryCards..." );
+	Console.WriteLn( Color_StrongBlue, "Enumerating memory cards..." );
 	for( size_t i=0; i<files.GetCount(); ++i )
 	{
 		ConsoleIndentScope con_indent;
@@ -83,9 +83,9 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 		}
 	}
 	if( pushed > 0 )
-		Console.WriteLn( Color_StrongBlue, "MemoryCard Enumeration Complete." );
+		Console.WriteLn( Color_StrongBlue, "Memory card Enumeration Complete." );
 	else
-		Console.WriteLn( Color_StrongBlue, "No valid MemoryCards found." );
+		Console.WriteLn( Color_StrongBlue, "No valid memory card found." );
 
 	return pushed;
 }
@@ -139,8 +139,8 @@ Panels::BaseMcdListPanel::BaseMcdListPanel( wxWindow* parent )
 	: _parent( parent )
 {
 	m_FolderPicker = new DirPickerPanel( this, FolderId_MemoryCards,
-		//_("MemoryCard Search Path:"),				// static box label
-		_("Select folder with PS2 MemoryCards")		// dir picker popup label
+		//_("memory card Search Path:"),				// static box label
+		_("Select folder with PS2 memory cards")		// dir picker popup label
 	);
 	
 	m_listview = NULL;
@@ -208,7 +208,7 @@ public:
 	
 	uint GetSlot() const
 	{
-		pxAssumeDev( m_slot >= 0, "Memorycard Index is uninitialized (invalid drag&drop object state)" );
+		pxAssumeDev( m_slot >= 0, "memory card Index is uninitialized (invalid drag&drop object state)" );
 		return (uint)m_slot;
 	}
 
@@ -225,7 +225,7 @@ public:
 
 	virtual bool SetData(size_t len, const void *buf)
 	{
-		if( !pxAssertDev( len == sizeof(u32), "Data length mismatch on memorycard drag&drop operation." ) ) return false;
+		if( !pxAssertDev( len == sizeof(u32), "Data length mismatch on memory card drag&drop operation." ) ) return false;
 		
 		m_slot = *(u32*)buf;
 		return ( (uint)m_slot < 8 );		// sanity check (unsigned, so that -1 also is invalid) :)
@@ -340,8 +340,8 @@ public:
 
 			if( dest.IsPresent && dest.IsFormatted )
 			{
-				wxsFormat( pxE( ".Popup:Mcd:Overwrite", 
-					L"This will copy the contents of the MemoryCard in slot %u over the Memorycard in slot %u. "
+				wxsFormat( pxE_Popup( "Mcd:Overwrite", 
+					L"This will copy the contents of the memory card in slot %u over the memory card in slot %u. "
 					L"All data on the target slot will be lost.  Are you sure?" ), 
 					src.Slot, dest.Slot
 				);
@@ -354,8 +354,8 @@ public:
 			if( !wxCopyFile( srcfile.GetFullPath(), destfile.GetFullPath(),	true ) )
 			{
 				wxString heading;
-				heading.Printf( pxE( ".Error:Mcd:Copy Failed", 
-					L"Error!  Could not copy the MemoryCard into slot %u.  The destination file is in use." ),
+				heading.Printf( pxE_Error( "Mcd:Copy Failed", 
+					L"Error!  Could not copy the memory card into slot %u.  The destination file is in use." ),
 					dest.Slot
 				);
 				
@@ -397,7 +397,7 @@ public:
 			{
 				// TODO : Popup an error to the user.
 
-				Console.Error( "(McdFile) Memorycard swap failed." );
+				Console.Error( "(FileMcd) memory card swap failed." );
 				Console.Indent().WriteLn( L"Src : " + srcfile.GetFullPath() );
 				Console.Indent().WriteLn( L"Dest: " + destfile.GetFullPath() );
 			}
@@ -475,16 +475,16 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	m_button_Create->SetLabel( item.IsPresent ? _("Delete") : _("Create") );
 	pxSetToolTip( m_button_Create,
 		item.IsPresent
-			? _("Deletes the existing MemoryCard from disk (all contents are lost)." )
-			: _("Creates a new MemoryCard in the empty slot." )
+			? _("Deletes the existing memory card from disk (all contents are lost)." )
+			: _("Creates a new memory card in the empty slot." )
 	);
 
 	m_button_Mount->Enable( item.IsPresent );
 	m_button_Mount->SetLabel( item.IsEnabled ? _("Disable") : _("Enable") );
 	pxSetToolTip( m_button_Mount,
 		item.IsEnabled
-			? _("Disables the selected MemoryCard, so that it will not be seen by games or BIOS.")
-			: _("Mounts the selected MemoryCard, so that games can see it again.")
+			? _("Disables the selected memory card, so that it will not be seen by games or BIOS.")
+			: _("Mounts the selected memory card, so that games can see it again.")
 	);
 
 }
@@ -558,13 +558,13 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 		{
 			wxString content;
 			content.Printf(wxsFormat(
-				pxE(".Popup:DeleteMemoryCard",
+				pxE_Popup("Mcd:Delete",
 					L"You are about to delete the formatted memory card in slot %u. "
 					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
 				), slot )
 			);
 
-			result = Msgbox::YesNo( content, _("Delete MemoryCard?") );
+			result = Msgbox::YesNo( content, _("Delete memory card?") );
 		}
 
 		if( result == wxID_YES )

@@ -60,7 +60,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 
 		createPathDlg += createPathDlg.Text( path ) | StdCenter();
 
-		createPathDlg += createPathDlg.Heading( pxE( ".Error:Explore:CreatePath",
+		createPathDlg += createPathDlg.Heading( pxE_Error( "DirPicker:CreatePath",
 			L"The specified path/directory does not exist.  Would you like to create it?" )
 		);
 
@@ -115,7 +115,7 @@ void Panels::DirPickerPanel::Init( FoldersEnum_t folderid, const wxString& dialo
 	{
 		m_checkCtrl = new pxCheckBox( this, _("Use default setting") );
 
-		pxSetToolTip( m_checkCtrl, pxE( ".Tooltip:DirPicker:UseDefault",
+		pxSetToolTip( m_checkCtrl, pxE_Tooltip( "DirPicker:UseDefault",
 			L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
 		);
 

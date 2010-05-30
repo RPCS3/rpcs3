@@ -45,7 +45,7 @@ bool ApplicableWizardPage::PrepForApply()
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
 {
-	pxSetToolTip( this, pxE( ".Tooltips:Folders:Settings",
+	pxSetToolTip( this, pxE_Tooltip( "Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
 		L"by most plugins (some older plugins may not respect this value)."
 	) );
@@ -53,7 +53,7 @@ Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 	// Insert this into the top of the staticboxsizer created by the constructor.
 	GetSizer()->Insert( 0,
 		new wxStaticText( this, wxID_ANY,
-			pxE( ".Dialogs:SettingsDirPicker",
+			pxE_Panel( "SettingsDirPicker",
 				L"You may optionally specify a location for your PCSX2 settings here.  If the location \n"
 				L"contains existing PCSX2 settings, you will be given the option to import or overwrite them."
 			), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
@@ -111,7 +111,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 		// FIXME: There's already a file by the same name.. not sure what we should do here.
 		throw Exception::BadStream( path.ToString(),
 			L"Targeted documents folder is already occupied by a file.",
-			pxE( "Error:DocsFolderFileConflict",
+			pxE_Error( "DocsFolderFileConflict",
 				L"PCSX2 cannot create a documents folder in the requested location.  "
 				L"The path name matches an existing file.  Delete the file or change the documents location, "
 				L"and then try again."
@@ -155,7 +155,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	// Temporary tutorial message for the BIOS, needs proof-reading!!
 	m_page_bios		+= 12;
 	m_page_bios		+= new pxStaticHeading( &m_page_bios,
-		pxE( ".Wizard:Bios:Tutorial",
+		pxE_Wizard( "Bios:Tutorial",
 			L"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
 			L"You cannot use a copy obtained from a friend or the Internet.\n"
 			L"You must dump the BIOS from your *own* Playstation 2 console."

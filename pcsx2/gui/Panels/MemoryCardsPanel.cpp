@@ -94,10 +94,10 @@ void MemoryCardInfoPanel::Apply()
 			Eject();
 			throw Exception::CannotApplySettings( this, 
 				// Diagnostic
-				wxsFormat( L"Memorycard in slot %u conflicts with an existing directory.", m_slot ),
+				wxsFormat( L"Memory card in slot %u conflicts with an existing directory.", m_slot ),
 				// Translated
 				wxsFormat(
-					_("Cannot use or create the memorycard in slot %u: the filename conflicts with an existing directory."),
+					_("Cannot use or create the memory card in slot %u: the filename conflicts with an existing directory."),
 					m_slot
 				)
 			);
@@ -108,10 +108,10 @@ void MemoryCardInfoPanel::Apply()
 			Eject();
 			throw Exception::CannotApplySettings( this, 
 				// Diagnostic
-				wxsFormat( L"Memorycard in slot %u is no longer valid.", m_slot ),
+				wxsFormat( L"Memory card in slot %u is no longer valid.", m_slot ),
 				// Translated
 				wxsFormat(
-					_("The configured memorycard in slot %u no longer exists.  Please create a new memory card, or leave the slot unmounted."),
+					_("The configured memory card in slot %u no longer exists.  Please create a new memory card, or leave the slot unmounted."),
 					m_slot
 				)
 			);

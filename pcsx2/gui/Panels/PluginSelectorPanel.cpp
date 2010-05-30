@@ -230,7 +230,7 @@ void ApplyOverValidStateEvent::InvokeEvent()
 {
 	wxDialogWithHelpers dialog( m_owner, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
 
-	dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
+	dialog += dialog.Heading( pxE_Popup( "PluginSelector:ConfirmShutdown",
 		L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
 		L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
 		L"incompatible the recovery may fail, and current progress will be lost."
@@ -446,7 +446,7 @@ void Panels::PluginSelectorPanel::AppStatusEvent_OnSettingsApplied()
 
 static wxString GetApplyFailedMsg()
 {
-	return pxE( ".Popup Error:PluginSelector:ApplyFailed",
+	return pxE_Error( "PluginSelector:ApplyFailed",
 		L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
 		L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
 		L"press cancel to close the Configuration panel."

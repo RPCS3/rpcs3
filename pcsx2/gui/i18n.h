@@ -45,5 +45,25 @@ extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
 // source code identifiers, and then reference the source code to see what the current
 // english version is.
 //
-#define pxE(key,english)		pxExpandMsg( wxT(key), english )
+//#define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
+// Key-based translation of a panel or dialog text; usually either a header or checkbox description,
+// by may also include some controls with long labels.
+#define pxE_Panel(key, english)		pxExpandMsg( wxT(".Panel:")		wxT(key),	english )
+
+// Key-based translation of a popup dialog box; either a notice or confirmation.  Popup erros should
+// use pxE_Error instead.
+#define pxE_Popup(key, english)		pxExpandMsg( wxT(".Popup:")		wxT(key),	english )
+
+// Key-based translation of a popup error.
+#define pxE_Error(key, english)		pxExpandMsg( wxT(".Error:")		wxT(key),	english )
+
+// Key-based translation of a heading, checkbox item, description, or other text associated with
+// the First-time wizard.  Translation of these items is considered lower-priority to most other
+// messages; but equal or higher priority to tooltips.
+#define pxE_Wizard(key, english)	pxExpandMsg( wxT(".Wizard:")	wxT(key),	english )
+
+// Key-based translation of a tooltip for a control on a dialog/panel.  Tanslation of these items
+// is typically considered "lowest priority" as they usually provide the most tertiary of info
+// to the user.
+#define pxE_Tooltip(key, english)	pxExpandMsg( wxT(".Error:")		wxT(key),	english )

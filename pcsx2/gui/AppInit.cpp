@@ -39,7 +39,7 @@ static void CpuCheckSSE2()
 
 	wxDialogWithHelpers exconf( NULL, _("PCSX2 - SSE2 Recommended"), wxVERTICAL );
 
-	exconf += exconf.Heading( pxE( ".Error:Startup:NoSSE2",
+	exconf += exconf.Heading( pxE_Error( "Startup:NoSSE2",
 		L"Warning: Your computer does not support SSE2, which is required by many PCSX2 recompilers and plugins. "
 		L"Your options will be limited and emulation will be *very* slow." )
 	);
@@ -255,7 +255,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
 
 			exconf += 12;
-			exconf += exconf.Heading( pxE( ".Error:RecompilerInit",
+			exconf += exconf.Heading( pxE_Error( "RecompilerInit",
 				L"Warning: Some of the configured PS2 recompilers failed to initialize and will not be available for this session:\n" )
 			);
 

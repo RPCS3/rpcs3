@@ -29,7 +29,7 @@ extern wxString GetMsg_McdNtfsCompress();
 wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, uint slotidx, const wxString& filename=wxEmptyString )
 {
 	return new wxFilePickerCtrl( parent, wxID_ANY, filename,
-		wxsFormat(_("Select memorycard for Port %u / Slot %u"), portidx+1, slotidx+1),	// picker window title
+		wxsFormat(_("Select memory card for Port %u / Slot %u"), portidx+1, slotidx+1),	// picker window title
 		L"*.ps2",	// default wildcard
 		wxDefaultPosition, wxDefaultSize,
 		wxFLP_DEFAULT_STYLE & ~wxFLP_FILE_MUST_EXIST
@@ -37,12 +37,8 @@ wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, ui
 
 }
 
-	/*pxSetToolTip( m_button_Recreate, pxE( ".Tooltip:MemoryCard:Recreate",
-		L"Deletes the existing memory card and creates a new one.  All existing card contents will be lost."
-	) );*/
-
 Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& mcdfile )
-	: wxDialogWithHelpers( parent, _("Create new MemoryCard"), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("Create new memory card"), wxVERTICAL )
 	, m_mcdpath( mcdpath.IsOk() ? mcdpath : (wxDirName)g_Conf->Mcd[slot].Filename.GetPath() )
 	, m_mcdfile( mcdfile.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName() : mcdfile )
 {
@@ -67,7 +63,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 
 	wxBoxSizer& s_padding( *new wxBoxSizer(wxVERTICAL) );
 
-	//s_padding += Heading(_("Select the size for your new MemoryCard."));
+	//s_padding += Heading(_("Select the size for your new memory card."));
 
 	if( m_filepicker )
 		s_padding += m_filepicker			| StdExpand();
@@ -107,7 +103,7 @@ static bool CreateIt( const wxString& mcdFile, uint sizeInMB )
 	u8	m_effeffs[528*16];
 	memset8<0xff>( m_effeffs );
 
-	Console.WriteLn( L"(FileMcd) Creating new %uMB MemoryCard: " + mcdFile, sizeInMB );
+	Console.WriteLn( L"(FileMcd) Creating new %uMB memory card: " + mcdFile, sizeInMB );
 
 	wxFFile fp( mcdFile, L"wb" );
 	if( !fp.IsOpened() ) return false;
@@ -130,8 +126,8 @@ void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 	) )
 	{
 		Msgbox::Alert(
-			_("Error: The MemoryCard could not be created."),
-			_("MemoryCard creation error")
+			_("Error: The memory card could not be created."),
+			_("memory card creation error")
 		);
 		return;
 	}
@@ -150,19 +146,19 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 	const RadioPanelItem tbl_CardSizes[] =
 	{
 		RadioPanelItem(_("8 MB [most compatible]"), _("This is the standard Sony-provisioned size, and is supported by all games and BIOS versions."))
-		.	SetToolTip(_("Always use this option if you want the safest and surest MemoryCard behavior."))
+		.	SetToolTip(_("Always use this option if you want the safest and surest memory card behavior."))
 		.	SetInt(8),
 
-		RadioPanelItem(_("16 MB"), _("A typical size for 3rd-party MemoryCards which should work with most games."))
+		RadioPanelItem(_("16 MB"), _("A typical size for 3rd-party memory cards which should work with most games."))
 		.	SetToolTip(_("16 and 32 MB cards have roughly the same compatibility factor."))
 		.	SetInt(16),
 
-		RadioPanelItem(_("32 MB"), _("A typical size for 3rd-party MemoryCards which should work with most games."))
+		RadioPanelItem(_("32 MB"), _("A typical size for 3rd-party memory cards which should work with most games."))
 		.	SetToolTip(_("16 and 32 MB cards have roughly the same compatibility factor."))
 		.	SetInt(32),
 
 		RadioPanelItem(_("64 MB"), _("Low compatibility warning: Yes it's very big, but may not work with many games."))
-		.	SetToolTip(_("Use at your own risk.  Erratic memorycard behavior is possible (though unlikely)."))
+		.	SetToolTip(_("Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."))
 		.	SetInt(64)
 	};
 

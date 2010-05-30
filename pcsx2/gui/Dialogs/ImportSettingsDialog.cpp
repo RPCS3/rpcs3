@@ -25,7 +25,7 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 {
 	m_idealWidth = 440;
 
-	pxStaticText* heading = new pxStaticHeading( this, pxE( ".Popup:ImportExistingSettings",
+	pxStaticText* heading = new pxStaticHeading( this, pxE_Popup( "ImportExistingSettings",
 		L"Existing PCSX2 settings have been found in the configured settings folder.  "
 		L"Would you like to import these settings or overwrite them with PCSX2 default values?"
 		L"\n\n(or press Cancel to select a different settings folder)" )

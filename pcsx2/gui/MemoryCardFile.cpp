@@ -74,9 +74,9 @@ protected:
 
 	wxString GetDisabledMessage( uint slot ) const
 	{
-		return pxE( ".Popup:MemoryCard:HasBeenDisabled", wxsFormat(
-			L"The MemoryCard in slot %d has been automatically disabled.  You can correct the problem\n"
-			L"and re-enable the MemoryCard at any time using Config:MemoryCards from the main menu.",
+		return pxE_Popup( "Mcd:HasBeenDisabled", wxsFormat(
+			L"The memory card in slot %d has been automatically disabled.  You can correct the problem\n"
+			L"and re-enable the memory card at any time using Config:Memory cards from the main menu.",
 			slot
 		) );
 	}
@@ -173,13 +173,13 @@ void FileMemoryCard::Open()
 		if( (fsz == 0) || (fsz == wxInvalidSize) )
 		{
 			// FIXME : Ideally this should prompt the user for the size of the
-			// memorycard file they would like to create, instead of trying to
+			// memory card file they would like to create, instead of trying to
 			// create one automatically.
 		
 			if( !Create( str, 8 ) )
 			{
 				Msgbox::Alert(
-					wxsFormat(_( "Could not create a MemoryCard file: \n\n%s\n\n" ), str.c_str()) +
+					wxsFormat(_( "Could not create a memory card file: \n\n%s\n\n" ), str.c_str()) +
 					GetDisabledMessage( slot )
 				);
 			}
@@ -197,7 +197,7 @@ void FileMemoryCard::Open()
 			// Translation note: detailed description should mention that the memory card will be disabled
 			// for the duration of this session.
 			Msgbox::Alert(
-				wxsFormat(_( "Access denied to MemoryCard file: \n\n%s\n\n" ), str.c_str()) +
+				wxsFormat(_( "Access denied to memory card file: \n\n%s\n\n" ), str.c_str()) +
 				GetDisabledMessage( slot )
 			);
 		}
@@ -238,7 +238,7 @@ bool FileMemoryCard::Create( const wxString& mcdFile, uint sizeInMB )
 {
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
 
-	Console.WriteLn( L"(FileMcd) Creating new %uMB MemoryCard: " + mcdFile, sizeInMB );
+	Console.WriteLn( L"(FileMcd) Creating new %uMB memory card: " + mcdFile, sizeInMB );
 
 	wxFFile fp( mcdFile, L"wb" );
 	if( !fp.IsOpened() ) return false;
@@ -272,7 +272,7 @@ s32 FileMemoryCard::Read( uint slot, u8 *dest, u32 adr, int size )
 	wxFFile& mcfp( m_file[slot] );
 	if( !mcfp.IsOpened() )
 	{
-		DevCon.Error( "MemoryCard: Ignoring attempted read from disabled card." );
+		DevCon.Error( "(FileMcd) Ignoring attempted read from disabled card." );
 		memset(dest, 0, size);
 		return 1;
 	}
@@ -286,7 +286,7 @@ s32 FileMemoryCard::Save( uint slot, const u8 *src, u32 adr, int size )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon.Error( "MemoryCard: Ignoring attempted save/write to disabled card." );
+		DevCon.Error( "(FileMcd) Ignoring attempted save/write to disabled card." );
 		return 1;
 	}
 
@@ -297,7 +297,7 @@ s32 FileMemoryCard::Save( uint slot, const u8 *src, u32 adr, int size )
 	for (int i=0; i<size; i++)
 	{
 		if ((m_currentdata[i] & src[i]) != src[i])
-			Console.Warning("MemoryCard: (warning) writing to uncleared data.");
+			Console.Warning("(FileMcd) Warning: writing to uncleared data.");
 		m_currentdata[i] &= src[i];
 	}
 
