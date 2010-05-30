@@ -248,7 +248,7 @@ namespace ioman {
 			else
 			{
 				v0 = allocfd(file);
-				if (v0 < 0)
+				if ((s32)v0 < 0)
 					file->close();
 			}
 
