@@ -1308,6 +1308,7 @@ bool skipMPEG_By_Pattern(u32 sPC) {
 		iBranchTest();
 		branch = 1;
 		pc = s_nEndBlock;
+		Console.WriteLn(Color_StrongGreen, "sceMpegIsEnd pattern found! Recompiling skip video fix...");
 		return 1;
 	}
 	return 0;
