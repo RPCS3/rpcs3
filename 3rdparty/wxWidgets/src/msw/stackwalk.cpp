@@ -318,6 +318,8 @@ void wxStackWalker::WalkFrom(const _EXCEPTION_POINTERS *ep, size_t skip)
 
 void wxStackWalker::WalkFromException()
 {
+// PCSX2 : Added wxUSE_ON_FATAL_EXCEPTION check, which was missing. --air
+#if wxUSE_ON_FATAL_EXCEPTION
     extern EXCEPTION_POINTERS *wxGlobalSEInformation;
 
     wxCHECK_RET( wxGlobalSEInformation,
@@ -325,6 +327,7 @@ void wxStackWalker::WalkFromException()
 
     // don't skip any frames, the first one is where we crashed
     WalkFrom(wxGlobalSEInformation, 0);
+#endif
 }
 
 void wxStackWalker::Walk(size_t skip, size_t WXUNUSED(maxDepth))

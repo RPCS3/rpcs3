@@ -134,7 +134,7 @@
 // Default is 1
 //
 // Recommended setting: 1 if your compiler supports it.
-#define wxUSE_ON_FATAL_EXCEPTION 1
+#define wxUSE_ON_FATAL_EXCEPTION 0
 
 // Set this to 1 to be able to generate a human-readable (unlike
 // machine-readable minidump created by wxCrashReport::Generate()) stack back
@@ -230,13 +230,13 @@
 #define wxUSE_LOG 1
 
 // Recommended setting: 1
-#define wxUSE_LOGWINDOW 1
+#define wxUSE_LOGWINDOW 0
 
 // Recommended setting: 1
-#define wxUSE_LOGGUI 1
+#define wxUSE_LOGGUI 0
 
 // Recommended setting: 1
-#define wxUSE_LOG_DIALOG 1
+#define wxUSE_LOG_DIALOG 0
 
 // Support for command line parsing using wxCmdLineParser class.
 //
@@ -349,7 +349,7 @@
 // Default is 1
 //
 // Recommended setting: 1 (but may be safely disabled if you don't use it)
-#define wxUSE_FSVOLUME      1
+#define wxUSE_FSVOLUME      0
 
 // Use wxStandardPaths class which allows to retrieve some standard locations
 // in the file system
@@ -449,16 +449,16 @@
 #define wxUSE_SOCKETS       1
 
 // Set to 1 to enable virtual file systems (required by wxHTML)
-#define wxUSE_FILESYSTEM    1
+#define wxUSE_FILESYSTEM    0
 
 // Set to 1 to enable virtual ZIP filesystem (requires wxUSE_FILESYSTEM)
-#define wxUSE_FS_ZIP        1
+#define wxUSE_FS_ZIP        0
 
 // Set to 1 to enable virtual archive filesystem (requires wxUSE_FILESYSTEM)
-#define wxUSE_FS_ARCHIVE    1
+#define wxUSE_FS_ARCHIVE    0
 
 // Set to 1 to enable virtual Internet filesystem (requires wxUSE_FILESYSTEM)
-#define wxUSE_FS_INET       1
+#define wxUSE_FS_INET       0
 
 // wxArchive classes for accessing archives such as zip and tar
 #define wxUSE_ARCHIVE_STREAMS     1
@@ -489,7 +489,7 @@
 #define wxUSE_FONTMAP 1
 
 // wxMimeTypesManager class
-#define wxUSE_MIMETYPE 1
+#define wxUSE_MIMETYPE 0
 
 // wxProtocol and related classes: if you want to use either of wxFTP, wxHTTP
 // or wxURL you need to set this to 1.
@@ -547,7 +547,7 @@
 // Default is 1.
 //
 // Recommended setting: 1
-#define wxUSE_MEDIACTRL     1
+#define wxUSE_MEDIACTRL     0
 
 // Use GStreamer for Unix (req a lot of dependancies)
 //
@@ -640,11 +640,11 @@
 #define wxUSE_COLLPANE      1   // wxCollapsiblePane
 #define wxUSE_COLOURPICKERCTRL 1    // wxColourPickerCtrl
 #define wxUSE_COMBOBOX      1   // wxComboBox
-#define wxUSE_DATAVIEWCTRL  1   // wxDataViewCtrl
+#define wxUSE_DATAVIEWCTRL  0   // wxDataViewCtrl
 #define wxUSE_DATEPICKCTRL  1   // wxDatePickerCtrl
 #define wxUSE_DIRPICKERCTRL 1   // wxDirPickerCtrl
 #define wxUSE_FILEPICKERCTRL 1  // wxFilePickerCtrl
-#define wxUSE_FONTPICKERCTRL 1  // wxFontPickerCtrl
+#define wxUSE_FONTPICKERCTRL 0  // wxFontPickerCtrl
 #define wxUSE_GAUGE         1   // wxGauge
 #define wxUSE_HYPERLINKCTRL 1   // wxHyperlinkCtrl
 #define wxUSE_LISTBOX       1   // wxListBox
@@ -731,7 +731,7 @@
 // Default is 1.
 //
 // Recommended setting: 1
-#define wxUSE_TOOLBOOK 1
+#define wxUSE_TOOLBOOK 0
 
 // wxTabDialog is a generic version of wxNotebook but it is incompatible with
 // the new class. It shouldn't be used in new code.
@@ -748,7 +748,7 @@
 //
 // Recommended setting: 1
 //
-#define wxUSE_GRID         1
+#define wxUSE_GRID         0
 
 // wxMiniFrame class: a frame with narrow title bar
 //
@@ -940,7 +940,7 @@
 //
 // Recommended setting: 1 but can be set to 0 to save some space if you don't
 //                      use this function
-#define wxUSE_ABOUTDLG 1
+#define wxUSE_ABOUTDLG 0
 
 // ----------------------------------------------------------------------------
 // Metafiles support
@@ -994,7 +994,7 @@
 //
 // Recommended setting: 1 (wxHTML is great!), set to 0 if you want compile a
 // smaller library.
-#define wxUSE_HTML          1
+#define wxUSE_HTML          0
 
 // Setting wxUSE_GLCANVAS to 1 enables OpenGL support. You need to have OpenGL
 // headers and libraries to be able to compile the library with wxUSE_GLCANVAS
@@ -1078,13 +1078,13 @@
 //
 // Recommended setting: 1, only set to 0 if you have trouble compiling
 // wxCHMHelpController (could be a problem with really ancient compilers)
-#define wxUSE_MS_HTML_HELP 1
+#define wxUSE_MS_HTML_HELP 0
 
 
 // Use wxHTML-based help controller?
-#define wxUSE_WXHTML_HELP 1
+#define wxUSE_WXHTML_HELP 0
 
-#define wxUSE_RESOURCES   1
+#define wxUSE_RESOURCES   0
                                 // 0 for no wxGetResource/wxWriteResource
 #define wxUSE_CONSTRAINTS 0
                                 // 0 for no window layout constraint system
@@ -1190,7 +1190,7 @@
 #define wxUSE_IFF           0
 
 // Set to 1 for XPM format support
-#define wxUSE_XPM           1
+#define wxUSE_XPM           0
 
 // Set to 1 for MS Icons and Cursors format support
 #define wxUSE_ICO_CUR       1
@@ -1349,7 +1349,7 @@
 // Default is 1 if supported by the compiler (VC++ and recent BC++ only).
 //
 // Recommended setting: 1, set to 0 if your programs never crash
-#define wxUSE_CRASHREPORT 1
+#define wxUSE_CRASHREPORT 0
 
 // ----------------------------------------------------------------------------
 // obsolete settings
