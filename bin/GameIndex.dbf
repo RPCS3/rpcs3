@@ -63,6 +63,7 @@
 -- XgKickHack	= 1 // Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
 -- IPUWaitHack    = 1 // FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
 -- EETimingHack	= 1 // General purpose timing hack.
+-- SkipMPEGHack	= 1 // Finds sceMpegIsEnd pattern in games and then recompiles code to say the videos are finished.
 
 ---------------------------------------------
 -- Patches ([patches] or [patches = crc])
@@ -6070,12 +6071,7 @@ Serial = SLUS-21008
 Name   = Katamari Damacy
 Region = NTSC-U
 Compat = 4
-[patches = FA7E3081]
-
-	//Skip Intro Videos
-	patch=0,EE,0018e9e8,word,24020001
-
-[/patches]
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21009
 Name   = Sega Classics Collection
@@ -7109,14 +7105,7 @@ Serial = SLUS-21230
 Name   = We Love Katamari
 Region = NTSC-U
 Compat = 5
-[patches = 337B927C]
-	
-	comment=Video Skip
-	
-	//Skip Videos
-	patch=0,EE,0010ec5c,word,10000041
-	
-[/patches]
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21231
 Name   = Sniper Elite
@@ -10534,6 +10523,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20079
 Name   = Katamari Damacy
 Region = NTSC-Unk
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCAJ-20080
 Name   = Kaena
@@ -10747,6 +10737,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20135
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-Unk
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCAJ-20136
 Name   = Ace Combat 5 - The Unsung War [PlayStation2 The Best]
@@ -11090,6 +11081,7 @@ Region = NTSC-K
 Serial = SCKA-20025
 Name   = Katamari Damacy
 Region = NTSC-K
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCKA-20026
 Name   = Gungrave O.D.
@@ -11146,6 +11138,7 @@ Region = NTSC-K
 Serial = SCKA-20051
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-K
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCKA-20053
 Name   = SOCOM II - U.S. Navy SEALs [PlayStation 2 Big Hit Series]
@@ -25341,12 +25334,7 @@ Serial = SLPS-25360
 Name   = Katamari Damacy
 Region = NTSC-J
 Compat = 5
-[patches = B130E5BA]
-
-	//Skip Videos ("sceMpegIsEnd")
-	patch=0,EE,0018d798,word,24020001
-
-[/patches]
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25361
 Name   = Smash Court Professional Tournament 2
@@ -27416,6 +27404,7 @@ Region = NTSC-J
 Serial = SLPS-73210
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-73211
 Name   = Summon Night 3 [PlayStation 2 The Best]
@@ -27528,10 +27517,12 @@ Region = NTSC-J
 Serial = SLPS-73240
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-73241
 Name   = Minna Daisuki Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-73242
 Name   = Tales of Legendia [PlayStation 2 The Best]
@@ -37212,6 +37203,7 @@ Region = PAL-Unk
 Serial = SLES-53828
 Name   = We Love Katamari
 Region = PAL-Unk
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-53829
 Name   = Raiden III
