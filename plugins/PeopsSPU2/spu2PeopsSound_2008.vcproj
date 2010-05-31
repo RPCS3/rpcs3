@@ -5,7 +5,6 @@
 	Name="spu2PeopsSound"
 	ProjectGUID="{F9E64144-301B-48BC-8D35-A2686DBB1982}"
 	RootNamespace="spu2PeopsSound"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
