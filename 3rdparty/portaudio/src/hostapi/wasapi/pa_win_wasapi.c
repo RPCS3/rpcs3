@@ -58,6 +58,10 @@
 	#include <functiondiscoverykeys.h>
 	#undef INITGUID
 #endif
+#ifndef __MWERKS__
+#include <malloc.h>
+#include <memory.h>
+#endif /* __MWERKS__ */
 
 #include "pa_util.h"
 #include "pa_allocation.h"
@@ -2741,10 +2745,10 @@ static PaError ReadStream( PaStream* s, void *_buffer, unsigned long _frames )
 
 	HRESULT hr = S_OK;
 	UINT32 frames;
-	BYTE *buffer = (BYTE *)_buffer;
-	BYTE *data = NULL;
+	BYTE *user_buffer = (BYTE *)_buffer;
+	BYTE *wasapi_buffer = NULL;
 	DWORD flags = 0;
-	UINT32 buffer_size;
+	UINT32 i;
 
 	// validate
 	if (!stream->running)
@@ -2755,10 +2759,24 @@ static PaError ReadStream( PaStream* s, void *_buffer, unsigned long _frames )
 	// Notify blocking op has begun
 	ResetEvent(stream->hBlockingOpStreamRD);
 
+    // make a local copy of the user buffer pointer(s), this is necessary
+	// because PaUtil_CopyOutput() advances these pointers every time it is called
+    if (!stream->bufferProcessor.userInputIsInterleaved)
+    {
+		user_buffer = (BYTE *)alloca(sizeof(BYTE *) * stream->bufferProcessor.inputChannelCount);
+        if (user_buffer == NULL)
+            return paInsufficientMemory;
+
+        for (i = 0; i < stream->bufferProcessor.inputChannelCount; ++i)
+            ((BYTE **)user_buffer)[i] = ((BYTE **)_buffer)[i];
+    }
+
 	while (_frames != 0)
 	{
+		UINT32 processed, processed_size;
+
 		// Get the available data in the shared buffer.
-		if ((hr = IAudioCaptureClient_GetBuffer(stream->cclient, &data, &frames, &flags, NULL, NULL)) != S_OK)
+		if ((hr = IAudioCaptureClient_GetBuffer(stream->cclient, &wasapi_buffer, &frames, &flags, NULL, NULL)) != S_OK)
 		{
 			if (hr == AUDCLNT_S_BUFFER_EMPTY)
 			{
@@ -2779,19 +2797,35 @@ static PaError ReadStream( PaStream* s, void *_buffer, unsigned long _frames )
 		if (frames > _frames)
 			frames = _frames;
 
-		// Copy
-		buffer_size = frames * stream->in.wavex.Format.nBlockAlign;
-		memcpy(buffer, data, buffer_size);
-		buffer += buffer_size;
+		// Register available frames to processor
+        PaUtil_SetInputFrameCount(&stream->bufferProcessor, frames);
+		
+		// Register host buffer pointer to processor
+        PaUtil_SetInterleavedInputChannels(&stream->bufferProcessor, 0, wasapi_buffer,	stream->bufferProcessor.inputChannelCount);
+		
+		// Copy user data to host buffer (with conversion if applicable)
+		processed = PaUtil_CopyInput(&stream->bufferProcessor, (void **)&user_buffer, frames);
 
-		// Release buffer
-		if ((hr = IAudioCaptureClient_ReleaseBuffer(stream->cclient, frames)) != S_OK)
+		// Advance user buffer to consumed portion
+		processed_size = processed * stream->in.wavex.Format.nBlockAlign;
+		if (stream->bufferProcessor.userInputIsInterleaved)
+		{
+			user_buffer += processed_size;
+		}
+		else
+		{
+			for (i = 0; i < stream->bufferProcessor.inputChannelCount; ++i)
+				((BYTE **)user_buffer)[i] = ((BYTE **)user_buffer)[i] + processed_size;
+		}
+
+		// Release host buffer
+		if ((hr = IAudioCaptureClient_ReleaseBuffer(stream->cclient, processed)) != S_OK)
 		{
 			LogHostError(hr);
 			goto stream_rd_end;
 		}
 
-		_frames -= frames;
+		_frames -= processed;
 	}
 
 stream_rd_end:
@@ -2808,8 +2842,8 @@ static PaError WriteStream( PaStream* s, const void *_buffer, unsigned long _fra
     PaWasapiStream *stream = (PaWasapiStream*)s;
 
 	UINT32 frames;
-	const BYTE *buffer = (BYTE *)_buffer;
-	BYTE *data;
+	const BYTE *user_buffer = (const BYTE *)_buffer;
+	BYTE *wasapi_buffer;
 	HRESULT hr = S_OK;
 	UINT32 next_rev_sleep, blocks, block_sleep_ms;
 	UINT32 i;
@@ -2854,11 +2888,22 @@ static PaError WriteStream( PaStream* s, const void *_buffer, unsigned long _fra
 		Sleep(stream->out.prevSleep);
 	stream->out.prevSleep = next_rev_sleep;
 
+    // make a local copy of the user buffer pointer(s), this is necessary
+	// because PaUtil_CopyOutput() advances these pointers every time it is called
+    if (!stream->bufferProcessor.userOutputIsInterleaved)
+    {
+        user_buffer = (const BYTE *)alloca(sizeof(const BYTE *) * stream->bufferProcessor.outputChannelCount);
+        if (user_buffer == NULL)
+            return paInsufficientMemory;
+
+        for (i = 0; i < stream->bufferProcessor.outputChannelCount; ++i)
+            ((const BYTE **)user_buffer)[i] = ((const BYTE **)_buffer)[i];
+    }
+
 	// Feed engine
 	for (i = 0; i < blocks; ++i)
 	{
-		UINT32 available;
-		UINT32 buffer_size;
+		UINT32 available, processed;
 
 		// Get block frames
 		frames = stream->out.framesPerHostCallback;
@@ -2871,6 +2916,7 @@ static PaError WriteStream( PaStream* s, const void *_buffer, unsigned long _fra
 		while (frames != 0)
 		{
 			UINT32 padding = 0;
+			UINT32 processed_size;
 
 			// Check if blocking call must be interrupted
 			if (WaitForSingleObject(stream->hCloseRequest, 0) != WAIT_TIMEOUT)
@@ -2884,14 +2930,14 @@ static PaError WriteStream( PaStream* s, const void *_buffer, unsigned long _fra
 				goto stream_wr_end;
 			}
 
-			// Get frames available
+			// Calculate frames available
 			if (frames >= padding)
 				available = frames - padding;
 			else
 				available = frames;
 
-			// Get buffer
-			if ((hr = IAudioRenderClient_GetBuffer(stream->rclient, available, &data)) != S_OK)
+			// Get pointer to host buffer
+			if ((hr = IAudioRenderClient_GetBuffer(stream->rclient, available, &wasapi_buffer)) != S_OK)
 			{
 				// Buffer size is too big, waiting
 				if (hr == AUDCLNT_E_BUFFER_TOO_LARGE)
@@ -2900,19 +2946,36 @@ static PaError WriteStream( PaStream* s, const void *_buffer, unsigned long _fra
 				goto stream_wr_end;
 			}
 
-			// Copy
-			buffer_size = available * stream->out.wavex.Format.nBlockAlign;
-			memcpy(data, buffer, buffer_size);
-			buffer += buffer_size;
+			// Register available frames to processor
+            PaUtil_SetOutputFrameCount(&stream->bufferProcessor, available);
+			
+			// Register host buffer pointer to processor
+            PaUtil_SetInterleavedOutputChannels(&stream->bufferProcessor, 0, wasapi_buffer,	stream->bufferProcessor.outputChannelCount);
+			
+			// Copy user data to host buffer (with conversion if applicable)
+			processed = PaUtil_CopyOutput(&stream->bufferProcessor, (const void **)&user_buffer, available);
 
-			// Release buffer
-			if ((hr = IAudioRenderClient_ReleaseBuffer(stream->rclient, available, 0)) != S_OK)
+			// Advance user buffer to consumed portion
+			processed_size = processed * stream->out.wavex.Format.nBlockAlign;
+			if (stream->bufferProcessor.userOutputIsInterleaved)
+			{
+				user_buffer += processed_size;
+			}
+			else
+			{
+				for (i = 0; i < stream->bufferProcessor.outputChannelCount; ++i)
+					((const BYTE **)user_buffer)[i] = ((const BYTE **)user_buffer)[i] + processed_size;
+			}
+
+			// Release host buffer
+			if ((hr = IAudioRenderClient_ReleaseBuffer(stream->rclient, processed, 0)) != S_OK)
 			{
 				LogHostError(hr);
 				goto stream_wr_end;
 			}
 
-			frames -= available;
+			// Deduct frames
+			frames -= processed;
 		}
 
 		_frames -= frames;

@@ -759,6 +759,9 @@ static PaError AddOutputDeviceInfoFromDirectSound(
                             case DSSPEAKER_SURROUND:         count = 4; break;
                             case DSSPEAKER_5POINT1:          count = 6; break;
                             case DSSPEAKER_7POINT1:          count = 8; break;
+#ifndef DSSPEAKER_7POINT1_SURROUND
+#define DSSPEAKER_7POINT1_SURROUND 0x00000008
+#endif                            
                             case DSSPEAKER_7POINT1_SURROUND: count = 8; break;
 #ifndef DSSPEAKER_5POINT1_SURROUND
 #define DSSPEAKER_5POINT1_SURROUND 0x00000009

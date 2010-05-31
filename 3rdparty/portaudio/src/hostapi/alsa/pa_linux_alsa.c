@@ -122,6 +122,7 @@ typedef struct
     int userInterleaved, hostInterleaved;
     int canMmap;
     void *nonMmapBuffer;
+    unsigned int nonMmapBufferSize;
     PaDeviceIndex device;     /* Keep the device index */
 
     snd_pcm_t *pcm;
@@ -809,10 +810,8 @@ static PaError BuildDeviceList( PaAlsaHostApiRepresentation *alsaApi )
 
 	    if( predefined )
 	    {
-		hwDevInfos[numDeviceNames - 1].hasPlayback =
-		    predefined->hasPlayback;
-		hwDevInfos[numDeviceNames - 1].hasCapture =
-		    predefined->hasCapture;
+                hwDevInfos[numDeviceNames - 1].hasPlayback = predefined->hasPlayback;
+                hwDevInfos[numDeviceNames - 1].hasCapture = predefined->hasCapture;
 	    }
 	    else
 	    {
@@ -1191,6 +1190,7 @@ static PaError PaAlsaStreamComponent_Initialize( PaAlsaStreamComponent *self, Pa
     self->streamDir = streamDir;
     self->canMmap = 0;
     self->nonMmapBuffer = NULL;
+    self->nonMmapBufferSize = 0;
 
     if( !callbackMode && !self->userInterleaved )
     {
@@ -1233,7 +1233,6 @@ static PaError PaAlsaStreamComponent_InitialConfigure( PaAlsaStreamComponent *se
 
     PaError result = paNoError;
     snd_pcm_access_t accessMode, alternateAccessMode;
-    snd_pcm_access_t rwAccessMode, alternateRwAccessMode;
     int dir = 0;
     snd_pcm_t *pcm = self->pcm;
     double sr = *sampleRate;
@@ -1253,41 +1252,46 @@ static PaError PaAlsaStreamComponent_InitialConfigure( PaAlsaStreamComponent *se
     if( self->userInterleaved )
     {
         accessMode = SND_PCM_ACCESS_MMAP_INTERLEAVED;
-        rwAccessMode = SND_PCM_ACCESS_RW_INTERLEAVED;
         alternateAccessMode = SND_PCM_ACCESS_MMAP_NONINTERLEAVED;
-        alternateRwAccessMode = SND_PCM_ACCESS_RW_NONINTERLEAVED;
+
+        /* test if MMAP supported */
+        self->canMmap = snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ||
+                        snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0;
+        if (!self->canMmap)
+        {
+            accessMode          = SND_PCM_ACCESS_RW_INTERLEAVED;
+            alternateAccessMode = SND_PCM_ACCESS_RW_NONINTERLEAVED;
+    }
     }
     else
     {
         accessMode = SND_PCM_ACCESS_MMAP_NONINTERLEAVED;
-        rwAccessMode = SND_PCM_ACCESS_RW_NONINTERLEAVED;
         alternateAccessMode = SND_PCM_ACCESS_MMAP_INTERLEAVED;
-        alternateRwAccessMode = SND_PCM_ACCESS_RW_INTERLEAVED;
+
+        /* test if MMAP supported */
+        self->canMmap = snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ||
+                        snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0;
+        if (!self->canMmap)
+        {
+            accessMode          = SND_PCM_ACCESS_RW_NONINTERLEAVED;
+            alternateAccessMode = SND_PCM_ACCESS_RW_INTERLEAVED;
     }
+    }
+    PA_DEBUG(("%s: device can MMAP: %s\n", __FUNCTION__, (self->canMmap ? "YES" : "NO"))); 
+
     /* If requested access mode fails, try alternate mode */
-    self->canMmap = 1;
     if( snd_pcm_hw_params_set_access( pcm, hwParams, accessMode ) < 0 )
     {
-        if( snd_pcm_hw_params_set_access( pcm, hwParams, rwAccessMode ) >= 0 )
-            self->canMmap = 0;
-        else
-        {
-            if( snd_pcm_hw_params_set_access( pcm, hwParams, alternateAccessMode ) < 0 )
-            {
                 int err = 0;
-                if( (err = snd_pcm_hw_params_set_access( pcm, hwParams, alternateRwAccessMode )) >= 0)
-                    self->canMmap = 0;
-                else
+        if( (err = snd_pcm_hw_params_set_access( pcm, hwParams, alternateAccessMode )) < 0)
                 {
                     result = paUnanticipatedHostError;
                     PaUtil_SetLastHostErrorInfo( paALSA, err, snd_strerror( err ) );
                     goto error;
                 }
-            }
             /* Flip mode */
             self->hostInterleaved = !self->userInterleaved;
         }
-    }
 
     ENSURE_( snd_pcm_hw_params_set_format( pcm, hwParams, self->nativeFormat ), paUnanticipatedHostError );
 
@@ -2028,6 +2032,9 @@ static PaError CloseStream( PaStream* s )
     PaError result = paNoError;
     PaAlsaStream *stream = (PaAlsaStream*)s;
 
+	free(stream->playback.nonMmapBuffer);
+	free(stream->capture.nonMmapBuffer);
+
     PaUtil_TerminateBufferProcessor( &stream->bufferProcessor );
     PaUtil_TerminateStreamRepresentation( &stream->streamRepresentation );
 
@@ -2400,7 +2407,7 @@ static PaError PaAlsaStream_HandleXrun( PaAlsaStream *self )
     snd_pcm_status_t *st;
     PaTime now = PaUtil_GetTime();
     snd_timestamp_t t;
-    int errplayback = 0, errcapture = 0;
+    int restartAlsa = 0; /* do not restart Alsa by default */
 
     snd_pcm_status_alloca( &st );
 
@@ -2411,7 +2418,17 @@ static PaError PaAlsaStream_HandleXrun( PaAlsaStream *self )
         {
             snd_pcm_status_get_trigger_tstamp( st, &t );
             self->underrun = now * 1000 - ((PaTime) t.tv_sec * 1000 + (PaTime) t.tv_usec / 1000);
-            errplayback = snd_pcm_recover( self->playback.pcm, -EPIPE, 0 );
+
+            if (!self->playback.canMmap)
+            {
+                if (snd_pcm_recover( self->playback.pcm, -EPIPE, 0 ) < 0)
+                {
+                    PA_DEBUG(( "%s: [playback] non-MMAP-PCM failed recovering from XRUN, will restart Alsa\n", __FUNCTION__ ));
+                    ++ restartAlsa; /* did not manage to recover */
+        }
+    }
+            else
+                ++ restartAlsa; /* always restart MMAPed device */
         }
     }
     if( self->capture.pcm )
@@ -2421,12 +2438,25 @@ static PaError PaAlsaStream_HandleXrun( PaAlsaStream *self )
         {
             snd_pcm_status_get_trigger_tstamp( st, &t );
             self->overrun = now * 1000 - ((PaTime) t.tv_sec * 1000 + (PaTime) t.tv_usec / 1000);
-            errcapture = snd_pcm_recover( self->capture.pcm, -EPIPE, 0 );
+
+            if (!self->capture.canMmap)
+            {
+                if (snd_pcm_recover( self->capture.pcm, -EPIPE, 0 ) < 0)
+                {
+                    PA_DEBUG(( "%s: [capture] non-MMAP-PCM failed recovering from XRUN, will restart Alsa\n", __FUNCTION__ ));
+                    ++ restartAlsa; /* did not manage to recover */
+        }
+    }
+            else
+                ++ restartAlsa; /* always restart MMAPed device */
         }
     }
 
-    if( errplayback || errcapture )
+    if( restartAlsa )
+    {
+        PA_DEBUG(( "%s: restarting Alsa to recover from XRUN\n", __FUNCTION__ ));
         PA_ENSURE( AlsaRestart( self ) );
+    }
 
 end:
     return result;
@@ -2609,8 +2639,10 @@ static PaError PaAlsaStreamComponent_EndProcessing( PaAlsaStreamComponent *self,
         res = snd_pcm_mmap_commit( self->pcm, self->offset, numFrames );
     else
     {
+        /* using realloc for optimisation
         free( self->nonMmapBuffer );
         self->nonMmapBuffer = NULL;
+        */
     }
 
     if( res == -EPIPE || res == -ESTRPIPE )
@@ -2784,6 +2816,12 @@ static PaError PaAlsaStreamComponent_EndPolling( PaAlsaStreamComponent* self, st
             *xrun = 1;
         }
         else
+        if( revents & POLLHUP )
+        {
+            *xrun = 1;
+            PA_DEBUG(( "%s: revents has POLLHUP, processing as XRUN\n", __FUNCTION__ ));
+        }
+        else
             self->ready = 1;
 
         *shouldPoll = 0;
@@ -2865,7 +2903,8 @@ static PaError PaAlsaStream_WaitForFrames( PaAlsaStream *self, unsigned long *fr
     PaError result = paNoError;
     int pollPlayback = self->playback.pcm != NULL, pollCapture = self->capture.pcm != NULL;
     int pollTimeout = self->pollTimeout;
-    int xrun = 0;
+    int xrun = 0, timeouts = 0;
+    int pollResults;
 
     assert( self );
     assert( framesAvail );
@@ -2912,18 +2951,51 @@ static PaError PaAlsaStream_WaitForFrames( PaAlsaStream *self, unsigned long *fr
             totalFds += self->playback.nfds;
         }
 
-        if( poll( self->pfds, totalFds, pollTimeout ) < 0 )
+        pollResults = poll( self->pfds, totalFds, pollTimeout );
+
+        if( pollResults < 0 )
         {
             /*  XXX: Depend on preprocessor condition? */
             if( errno == EINTR )
             {
                 /* gdb */
+                Pa_Sleep( 1 ); /* avoid hot loop */
                 continue;
             }
 
             /* TODO: Add macro for checking system calls */
             PA_ENSURE( paInternalError );
         }
+        else
+        if (pollResults == 0)
+        {
+
+           /* Suspended, paused or failed device can provide 0 poll results. To avoid deadloop in such situation
+            * we simply run counter 'timeouts' which detects 0 poll result and accumulates. As soon as 64 timouts
+            * are achieved we simply fail function with paTimedOut to notify waiting methods that device is not capable
+            * of providing audio data anymore and needs some corresponding recovery action.
+            * Note that 'timeouts' is reset to 0 if poll() managed to return non 0 results.
+            */
+
+            /*PA_DEBUG(( "%s: poll == 0 results, timed out, %d times left\n", __FUNCTION__, 64 - timeouts ));*/
+
+            ++ timeouts;
+            if (timeouts > 1) /* sometimes device times out, but normally once, so we do not sleep any time */
+            {
+                Pa_Sleep( 1 ); /* avoid hot loop */
+            }
+            /* not else ! */
+            if (timeouts >= 64) /* audio device not working, shall return error to notify waiters */
+            {
+                PA_DEBUG(( "%s: poll timed out, returning error\n", __FUNCTION__, timeouts ));
+                PA_ENSURE( paTimedOut );
+            }
+        }
+        else
+        if (pollResults > 0)
+        {
+            /* reset timouts counter */
+            timeouts = 0;
 
         /* check the return status of our pfds */
         if( pollCapture )
@@ -2937,6 +3009,7 @@ static PaError PaAlsaStream_WaitForFrames( PaAlsaStream *self, unsigned long *fr
         if( xrun )
         {
             break;
+        }
         }
 
         /* @concern FullDuplex If only one of two pcms is ready we may want to compromise between the two.
@@ -3040,8 +3113,20 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
     }
     else
     {
+        /* using realloc for optimisation
         free( self->nonMmapBuffer );
         self->nonMmapBuffer = calloc( self->numHostChannels, snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 ) );
+        */
+        unsigned int bufferSize = self->numHostChannels * snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 );
+        if (bufferSize > self->nonMmapBufferSize)
+        {
+            self->nonMmapBuffer = realloc(self->nonMmapBuffer, (self->nonMmapBufferSize = bufferSize));
+            if (!self->nonMmapBuffer) 
+            {
+                result = paInsufficientMemory;
+                goto error;
+    }
+        }
     }
 
     if( self->hostInterleaved )
@@ -3100,8 +3185,11 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
         {
             *xrun = 1;
             *numFrames = 0;
+
+            /* using realloc for optimisation
             free( self->nonMmapBuffer );
             self->nonMmapBuffer = NULL;
+            */
         }
     }
 
