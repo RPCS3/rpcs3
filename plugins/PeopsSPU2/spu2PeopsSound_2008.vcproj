@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="spu2PeopsSound"
 	ProjectGUID="{F9E64144-301B-48BC-8D35-A2686DBB1982}"
+	RootNamespace="spu2PeopsSound"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -54,7 +55,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				StringPooling="true"
 				ExceptionHandling="0"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="false"
 				EnableEnhancedInstructionSet="1"
 				UsePrecompiledHeader="0"
@@ -112,7 +113,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(TargetPath)&quot; ..\..\..\bin\plugins"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)\..\..\bin\plugins&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -150,7 +151,7 @@
 				Optimization="0"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\Debug/spu2PeopsSound.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -158,7 +159,7 @@
 				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -206,7 +207,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(TargetPath)&quot; ..\..\..\bin\plugins"
+				CommandLine="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)\..\..\bin\plugins&quot;"
 			/>
 		</Configuration>
 	</Configurations>

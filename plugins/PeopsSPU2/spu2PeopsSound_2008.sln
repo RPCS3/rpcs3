@@ -1,6 +1,6 @@
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spu2PeopsSound", "spu2PeopsSound_2005.vcproj", "{F9E64144-301B-48BC-8D35-A2686DBB1982}"
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spu2PeopsSound", "spu2PeopsSound_2008.vcproj", "{F9E64144-301B-48BC-8D35-A2686DBB1982}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
