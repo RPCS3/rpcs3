@@ -4,24 +4,24 @@
 ** Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>
 ** Copyright (C) 2002, Lev Povalahev
 ** All rights reserved.
-**
-** Redistribution and use in source and binary forms, with or without
+** 
+** Redistribution and use in source and binary forms, with or without 
 ** modification, are permitted provided that the following conditions are met:
-**
-** * Redistributions of source code must retain the above copyright notice,
+** 
+** * Redistributions of source code must retain the above copyright notice, 
 **   this list of conditions and the following disclaimer.
-** * Redistributions in binary form must reproduce the above copyright notice,
-**   this list of conditions and the following disclaimer in the documentation
+** * Redistributions in binary form must reproduce the above copyright notice, 
+**   this list of conditions and the following disclaimer in the documentation 
 **   and/or other materials provided with the distribution.
-** * The name of the author may be used to endorse or promote products
+** * The name of the author may be used to endorse or promote products 
 **   derived from this software without specific prior written permission.
 **
-** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
 ** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
 ** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 ** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 ** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
@@ -31,7 +31,7 @@
 
 /*
 ** Copyright (c) 2007 The Khronos Group Inc.
-**
+** 
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and/or associated documentation files (the
 ** "Materials"), to deal in the Materials without restriction, including
@@ -39,10 +39,10 @@
 ** distribute, sublicense, and/or sell copies of the Materials, and to
 ** permit persons to whom the Materials are furnished to do so, subject to
 ** the following conditions:
-**
+** 
 ** The above copyright notice and this permission notice shall be included
 ** in all copies or substantial portions of the Materials.
-**
+** 
 ** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 ** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 ** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -62,11 +62,12 @@
 
 #define __wglext_h_
 
-#if !defined(APIENTRY) && !defined(__CYGWIN__)
+#if !defined(WINAPI)
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN 1
 #  endif
 #include <windows.h>
+#  undef WIN32_LEAN_AND_MEAN
 #endif
 
 /*
@@ -117,6 +118,46 @@ typedef BOOL (WINAPI * PFNWGLSETSTEREOEMITTERSTATE3DLPROC) (HDC hDC, UINT uState
 
 #endif /* WGL_3DL_stereo_control */
 
+/* ------------------------ WGL_AMD_gpu_association ------------------------ */
+
+#ifndef WGL_AMD_gpu_association
+#define WGL_AMD_gpu_association 1
+
+#define WGL_GPU_VENDOR_AMD 0x1F00
+#define WGL_GPU_RENDERER_STRING_AMD 0x1F01
+#define WGL_GPU_OPENGL_VERSION_STRING_AMD 0x1F02
+#define WGL_GPU_FASTEST_TARGET_GPUS_AMD 0x21A2
+#define WGL_GPU_RAM_AMD 0x21A3
+#define WGL_GPU_CLOCK_AMD 0x21A4
+#define WGL_GPU_NUM_PIPES_AMD 0x21A5
+#define WGL_GPU_NUM_SIMD_AMD 0x21A6
+#define WGL_GPU_NUM_RB_AMD 0x21A7
+#define WGL_GPU_NUM_SPI_AMD 0x21A8
+
+typedef VOID (WINAPI * PFNWGLBLITCONTEXTFRAMEBUFFERAMDPROC) (HGLRC dstCtx, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+typedef HGLRC (WINAPI * PFNWGLCREATEASSOCIATEDCONTEXTAMDPROC) (UINT id);
+typedef HGLRC (WINAPI * PFNWGLCREATEASSOCIATEDCONTEXTATTRIBSAMDPROC) (UINT id, HGLRC hShareContext, const int* attribList);
+typedef BOOL (WINAPI * PFNWGLDELETEASSOCIATEDCONTEXTAMDPROC) (HGLRC hglrc);
+typedef UINT (WINAPI * PFNWGLGETCONTEXTGPUIDAMDPROC) (HGLRC hglrc);
+typedef HGLRC (WINAPI * PFNWGLGETCURRENTASSOCIATEDCONTEXTAMDPROC) (void);
+typedef UINT (WINAPI * PFNWGLGETGPUIDSAMDPROC) (UINT maxCount, UINT* ids);
+typedef INT (WINAPI * PFNWGLGETGPUINFOAMDPROC) (UINT id, INT property, GLenum dataType, UINT size, void* data);
+typedef BOOL (WINAPI * PFNWGLMAKEASSOCIATEDCONTEXTCURRENTAMDPROC) (HGLRC hglrc);
+
+#define wglBlitContextFramebufferAMD WGLEW_GET_FUN(__wglewBlitContextFramebufferAMD)
+#define wglCreateAssociatedContextAMD WGLEW_GET_FUN(__wglewCreateAssociatedContextAMD)
+#define wglCreateAssociatedContextAttribsAMD WGLEW_GET_FUN(__wglewCreateAssociatedContextAttribsAMD)
+#define wglDeleteAssociatedContextAMD WGLEW_GET_FUN(__wglewDeleteAssociatedContextAMD)
+#define wglGetContextGPUIDAMD WGLEW_GET_FUN(__wglewGetContextGPUIDAMD)
+#define wglGetCurrentAssociatedContextAMD WGLEW_GET_FUN(__wglewGetCurrentAssociatedContextAMD)
+#define wglGetGPUIDsAMD WGLEW_GET_FUN(__wglewGetGPUIDsAMD)
+#define wglGetGPUInfoAMD WGLEW_GET_FUN(__wglewGetGPUInfoAMD)
+#define wglMakeAssociatedContextCurrentAMD WGLEW_GET_FUN(__wglewMakeAssociatedContextCurrentAMD)
+
+#define WGLEW_AMD_gpu_association WGLEW_GET_VAR(__WGLEW_AMD_gpu_association)
+
+#endif /* WGL_AMD_gpu_association */
+
 /* ------------------------- WGL_ARB_buffer_region ------------------------- */
 
 #ifndef WGL_ARB_buffer_region
@@ -160,6 +201,19 @@ typedef HGLRC (WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShar
 #define WGLEW_ARB_create_context WGLEW_GET_VAR(__WGLEW_ARB_create_context)
 
 #endif /* WGL_ARB_create_context */
+
+/* --------------------- WGL_ARB_create_context_profile -------------------- */
+
+#ifndef WGL_ARB_create_context_profile
+#define WGL_ARB_create_context_profile 1
+
+#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
+#define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+#define WGL_CONTEXT_PROFILE_MASK_ARB 0x9126
+
+#define WGLEW_ARB_create_context_profile WGLEW_GET_VAR(__WGLEW_ARB_create_context_profile)
+
+#endif /* WGL_ARB_create_context_profile */
 
 /* ----------------------- WGL_ARB_extensions_string ----------------------- */
 
@@ -752,6 +806,19 @@ typedef BOOL (WINAPI * PFNWGLQUERYFRAMETRACKINGI3DPROC) (DWORD* pFrameCount, DWO
 
 #endif /* WGL_I3D_swap_frame_usage */
 
+/* --------------------------- WGL_NV_copy_image --------------------------- */
+
+#ifndef WGL_NV_copy_image
+#define WGL_NV_copy_image 1
+
+typedef BOOL (WINAPI * PFNWGLCOPYIMAGESUBDATANVPROC) (HGLRC hSrcRC, GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, HGLRC hDstRC, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei width, GLsizei height, GLsizei depth);
+
+#define wglCopyImageSubDataNV WGLEW_GET_FUN(__wglewCopyImageSubDataNV)
+
+#define WGLEW_NV_copy_image WGLEW_GET_VAR(__WGLEW_NV_copy_image)
+
+#endif /* WGL_NV_copy_image */
+
 /* -------------------------- WGL_NV_float_buffer -------------------------- */
 
 #ifndef WGL_NV_float_buffer
@@ -781,11 +848,11 @@ typedef BOOL (WINAPI * PFNWGLQUERYFRAMETRACKINGI3DPROC) (DWORD* pFrameCount, DWO
 
 DECLARE_HANDLE(HGPUNV);
 typedef struct _GPU_DEVICE {
-  DWORD cb;
-  CHAR DeviceName[32];
-  CHAR DeviceString[128];
-  DWORD Flags;
-  RECT rcVirtualScreen;
+  DWORD cb; 
+  CHAR DeviceName[32]; 
+  CHAR DeviceString[128]; 
+  DWORD Flags; 
+  RECT rcVirtualScreen; 
 } GPU_DEVICE, *PGPU_DEVICE;
 
 typedef HDC (WINAPI * PFNWGLCREATEAFFINITYDCNVPROC) (const HGPUNV *phGpuList);
@@ -863,7 +930,7 @@ typedef BOOL (WINAPI * PFNWGLBINDSWAPBARRIERNVPROC) (GLuint group, GLuint barrie
 typedef BOOL (WINAPI * PFNWGLJOINSWAPGROUPNVPROC) (HDC hDC, GLuint group);
 typedef BOOL (WINAPI * PFNWGLQUERYFRAMECOUNTNVPROC) (HDC hDC, GLuint* count);
 typedef BOOL (WINAPI * PFNWGLQUERYMAXSWAPGROUPSNVPROC) (HDC hDC, GLuint* maxGroups, GLuint *maxBarriers);
-typedef BOOL (WINAPI * PFNWGLQUERYSWAPGROUPNVPROC) (HDC hDC, GLuint* group);
+typedef BOOL (WINAPI * PFNWGLQUERYSWAPGROUPNVPROC) (HDC hDC, GLuint* group, GLuint *barrier);
 typedef BOOL (WINAPI * PFNWGLRESETFRAMECOUNTNVPROC) (HDC hDC);
 
 #define wglBindSwapBarrierNV WGLEW_GET_FUN(__wglewBindSwapBarrierNV)
@@ -969,6 +1036,16 @@ struct WGLEWContextStruct
 
 WGLEW_EXPORT PFNWGLSETSTEREOEMITTERSTATE3DLPROC __wglewSetStereoEmitterState3DL;
 
+WGLEW_EXPORT PFNWGLBLITCONTEXTFRAMEBUFFERAMDPROC __wglewBlitContextFramebufferAMD;
+WGLEW_EXPORT PFNWGLCREATEASSOCIATEDCONTEXTAMDPROC __wglewCreateAssociatedContextAMD;
+WGLEW_EXPORT PFNWGLCREATEASSOCIATEDCONTEXTATTRIBSAMDPROC __wglewCreateAssociatedContextAttribsAMD;
+WGLEW_EXPORT PFNWGLDELETEASSOCIATEDCONTEXTAMDPROC __wglewDeleteAssociatedContextAMD;
+WGLEW_EXPORT PFNWGLGETCONTEXTGPUIDAMDPROC __wglewGetContextGPUIDAMD;
+WGLEW_EXPORT PFNWGLGETCURRENTASSOCIATEDCONTEXTAMDPROC __wglewGetCurrentAssociatedContextAMD;
+WGLEW_EXPORT PFNWGLGETGPUIDSAMDPROC __wglewGetGPUIDsAMD;
+WGLEW_EXPORT PFNWGLGETGPUINFOAMDPROC __wglewGetGPUInfoAMD;
+WGLEW_EXPORT PFNWGLMAKEASSOCIATEDCONTEXTCURRENTAMDPROC __wglewMakeAssociatedContextCurrentAMD;
+
 WGLEW_EXPORT PFNWGLCREATEBUFFERREGIONARBPROC __wglewCreateBufferRegionARB;
 WGLEW_EXPORT PFNWGLDELETEBUFFERREGIONARBPROC __wglewDeleteBufferRegionARB;
 WGLEW_EXPORT PFNWGLRESTOREBUFFERREGIONARBPROC __wglewRestoreBufferRegionARB;
@@ -1054,6 +1131,8 @@ WGLEW_EXPORT PFNWGLENDFRAMETRACKINGI3DPROC __wglewEndFrameTrackingI3D;
 WGLEW_EXPORT PFNWGLGETFRAMEUSAGEI3DPROC __wglewGetFrameUsageI3D;
 WGLEW_EXPORT PFNWGLQUERYFRAMETRACKINGI3DPROC __wglewQueryFrameTrackingI3D;
 
+WGLEW_EXPORT PFNWGLCOPYIMAGESUBDATANVPROC __wglewCopyImageSubDataNV;
+
 WGLEW_EXPORT PFNWGLCREATEAFFINITYDCNVPROC __wglewCreateAffinityDCNV;
 WGLEW_EXPORT PFNWGLDELETEDCNVPROC __wglewDeleteDCNV;
 WGLEW_EXPORT PFNWGLENUMGPUDEVICESNVPROC __wglewEnumGpuDevicesNV;
@@ -1089,8 +1168,10 @@ WGLEW_EXPORT PFNWGLWAITFORMSCOMLPROC __wglewWaitForMscOML;
 WGLEW_EXPORT PFNWGLWAITFORSBCOMLPROC __wglewWaitForSbcOML;
 WGLEW_EXPORT GLboolean __WGLEW_3DFX_multisample;
 WGLEW_EXPORT GLboolean __WGLEW_3DL_stereo_control;
+WGLEW_EXPORT GLboolean __WGLEW_AMD_gpu_association;
 WGLEW_EXPORT GLboolean __WGLEW_ARB_buffer_region;
 WGLEW_EXPORT GLboolean __WGLEW_ARB_create_context;
+WGLEW_EXPORT GLboolean __WGLEW_ARB_create_context_profile;
 WGLEW_EXPORT GLboolean __WGLEW_ARB_extensions_string;
 WGLEW_EXPORT GLboolean __WGLEW_ARB_framebuffer_sRGB;
 WGLEW_EXPORT GLboolean __WGLEW_ARB_make_current_read;
@@ -1117,6 +1198,7 @@ WGLEW_EXPORT GLboolean __WGLEW_I3D_genlock;
 WGLEW_EXPORT GLboolean __WGLEW_I3D_image_buffer;
 WGLEW_EXPORT GLboolean __WGLEW_I3D_swap_frame_lock;
 WGLEW_EXPORT GLboolean __WGLEW_I3D_swap_frame_usage;
+WGLEW_EXPORT GLboolean __WGLEW_NV_copy_image;
 WGLEW_EXPORT GLboolean __WGLEW_NV_float_buffer;
 WGLEW_EXPORT GLboolean __WGLEW_NV_gpu_affinity;
 WGLEW_EXPORT GLboolean __WGLEW_NV_present_video;

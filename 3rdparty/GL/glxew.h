@@ -4,24 +4,24 @@
 ** Copyright (C) 2002-2008, Marcelo E. Magallon <mmagallo[]debian org>
 ** Copyright (C) 2002, Lev Povalahev
 ** All rights reserved.
-**
-** Redistribution and use in source and binary forms, with or without
+** 
+** Redistribution and use in source and binary forms, with or without 
 ** modification, are permitted provided that the following conditions are met:
-**
-** * Redistributions of source code must retain the above copyright notice,
+** 
+** * Redistributions of source code must retain the above copyright notice, 
 **   this list of conditions and the following disclaimer.
-** * Redistributions in binary form must reproduce the above copyright notice,
-**   this list of conditions and the following disclaimer in the documentation
+** * Redistributions in binary form must reproduce the above copyright notice, 
+**   this list of conditions and the following disclaimer in the documentation 
 **   and/or other materials provided with the distribution.
-** * The name of the author may be used to endorse or promote products
+** * The name of the author may be used to endorse or promote products 
 **   derived from this software without specific prior written permission.
 **
-** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
 ** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
 ** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 ** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 ** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
@@ -55,7 +55,7 @@
 
 /*
 ** Copyright (c) 2007 The Khronos Group Inc.
-**
+** 
 ** Permission is hereby granted, free of charge, to any person obtaining a
 ** copy of this software and/or associated documentation files (the
 ** "Materials"), to deal in the Materials without restriction, including
@@ -63,10 +63,10 @@
 ** distribute, sublicense, and/or sell copies of the Materials, and to
 ** permit persons to whom the Materials are furnished to do so, subject to
 ** the following conditions:
-**
+** 
 ** The above copyright notice and this permission notice shall be included
 ** in all copies or substantial portions of the Materials.
-**
+** 
 ** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 ** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 ** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -83,13 +83,16 @@
 #ifdef __glxext_h_
 #error glxext.h included before glxew.h
 #endif
-#ifdef GLX_H
+
+#if defined(GLX_H) || defined(__GLX_glx_h__) || defined(__glx_h__)
 #error glx.h included before glxew.h
 #endif
 
 #define __glxext_h_
-#define __GLX_glx_h__
+
 #define GLX_H
+#define __GLX_glx_h__
+#define __glx_h__
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -138,7 +141,7 @@ typedef struct __glXContextRec *GLXContext;
 typedef struct __GLXcontextRec *GLXContext;
 #endif
 
-typedef unsigned int GLXVideoDeviceNV;
+typedef unsigned int GLXVideoDeviceNV; 
 
 extern Bool glXQueryExtension (Display *dpy, int *errorBase, int *eventBase);
 extern Bool glXQueryVersion (Display *dpy, int *major, int *minor);
@@ -260,21 +263,21 @@ typedef XID GLXPbuffer;
 typedef struct __GLXFBConfigRec *GLXFBConfig;
 
 typedef struct {
-  int event_type;
-  int draw_type;
-  unsigned long serial;
-  Bool send_event;
-  Display *display;
-  GLXDrawable drawable;
-  unsigned int buffer_mask;
-  unsigned int aux_buffer;
-  int x, y;
-  int width, height;
-  int count;
+  int event_type; 
+  int draw_type; 
+  unsigned long serial; 
+  Bool send_event; 
+  Display *display; 
+  GLXDrawable drawable; 
+  unsigned int buffer_mask; 
+  unsigned int aux_buffer; 
+  int x, y; 
+  int width, height; 
+  int count; 
 } GLXPbufferClobberEvent;
 typedef union __GLXEvent {
-  GLXPbufferClobberEvent glxpbufferclobber;
-  long pad[24];
+  GLXPbufferClobberEvent glxpbufferclobber; 
+  long pad[24]; 
 } GLXEvent;
 
 typedef GLXFBConfig* ( * PFNGLXCHOOSEFBCONFIGPROC) (Display *dpy, int screen, const int *attrib_list, int *nelements);
@@ -362,6 +365,19 @@ typedef GLXContext ( * PFNGLXCREATECONTEXTATTRIBSARBPROC) (Display* dpy, GLXFBCo
 
 #endif /* GLX_ARB_create_context */
 
+/* --------------------- GLX_ARB_create_context_profile -------------------- */
+
+#ifndef GLX_ARB_create_context_profile
+#define GLX_ARB_create_context_profile 1
+
+#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
+#define GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+#define GLX_CONTEXT_PROFILE_MASK_ARB 0x9126
+
+#define GLXEW_ARB_create_context_profile GLXEW_GET_VAR(__GLXEW_ARB_create_context_profile)
+
+#endif /* GLX_ARB_create_context_profile */
+
 /* ------------------------- GLX_ARB_fbconfig_float ------------------------ */
 
 #ifndef GLX_ARB_fbconfig_float
@@ -407,6 +423,17 @@ extern void ( * glXGetProcAddressARB (const GLubyte *procName)) (void);
 #define GLXEW_ARB_multisample GLXEW_GET_VAR(__GLXEW_ARB_multisample)
 
 #endif /* GLX_ARB_multisample */
+
+/* ---------------------- GLX_ARB_vertex_buffer_object --------------------- */
+
+#ifndef GLX_ARB_vertex_buffer_object
+#define GLX_ARB_vertex_buffer_object 1
+
+#define GLX_CONTEXT_ALLOW_BUFFER_BYTE_ORDER_MISMATCH_ARB 0x2095
+
+#define GLXEW_ARB_vertex_buffer_object GLXEW_GET_VAR(__GLXEW_ARB_vertex_buffer_object)
+
+#endif /* GLX_ARB_vertex_buffer_object */
 
 /* ----------------------- GLX_ATI_pixel_format_float ---------------------- */
 
@@ -529,6 +556,22 @@ typedef int ( * PFNGLXQUERYCONTEXTINFOEXTPROC) (Display* dpy, GLXContext context
 
 #endif /* GLX_EXT_scene_marker */
 
+/* -------------------------- GLX_EXT_swap_control ------------------------- */
+
+#ifndef GLX_EXT_swap_control
+#define GLX_EXT_swap_control 1
+
+#define GLX_SWAP_INTERVAL_EXT 0x20F1
+#define GLX_MAX_SWAP_INTERVAL_EXT 0x20F2
+
+typedef void ( * PFNGLXSWAPINTERVALEXTPROC) (Display* dpy, GLXDrawable drawable, int interval);
+
+#define glXSwapIntervalEXT GLXEW_GET_FUN(__glewXSwapIntervalEXT)
+
+#define GLXEW_EXT_swap_control GLXEW_GET_VAR(__GLXEW_EXT_swap_control)
+
+#endif /* GLX_EXT_swap_control */
+
 /* ---------------------- GLX_EXT_texture_from_pixmap ---------------------- */
 
 #ifndef GLX_EXT_texture_from_pixmap
@@ -615,6 +658,20 @@ typedef void ( * PFNGLXRELEASETEXIMAGEEXTPROC) (Display* display, GLXDrawable dr
 
 #endif /* GLX_EXT_visual_rating */
 
+/* -------------------------- GLX_INTEL_swap_event ------------------------- */
+
+#ifndef GLX_INTEL_swap_event
+#define GLX_INTEL_swap_event 1
+
+#define GLX_EXCHANGE_COMPLETE_INTEL 0x8180
+#define GLX_COPY_COMPLETE_INTEL 0x8181
+#define GLX_FLIP_COMPLETE_INTEL 0x8182
+#define GLX_BUFFER_SWAP_COMPLETE_INTEL_MASK 0x04000000
+
+#define GLXEW_INTEL_swap_event GLXEW_GET_VAR(__GLXEW_INTEL_swap_event)
+
+#endif /* GLX_INTEL_swap_event */
+
 /* -------------------------- GLX_MESA_agp_offset -------------------------- */
 
 #ifndef GLX_MESA_agp_offset
@@ -682,6 +739,19 @@ typedef GLboolean ( * PFNGLXSET3DFXMODEMESAPROC) (GLint mode);
 #define GLXEW_MESA_set_3dfx_mode GLXEW_GET_VAR(__GLXEW_MESA_set_3dfx_mode)
 
 #endif /* GLX_MESA_set_3dfx_mode */
+
+/* --------------------------- GLX_NV_copy_image --------------------------- */
+
+#ifndef GLX_NV_copy_image
+#define GLX_NV_copy_image 1
+
+typedef void ( * PFNGLXCOPYIMAGESUBDATANVPROC) (Display *dpy, GLXContext srcCtx, GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLXContext dstCtx, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei width, GLsizei height, GLsizei depth);
+
+#define glXCopyImageSubDataNV GLXEW_GET_FUN(__glewXCopyImageSubDataNV)
+
+#define GLXEW_NV_copy_image GLXEW_GET_VAR(__GLXEW_NV_copy_image)
+
+#endif /* GLX_NV_copy_image */
 
 /* -------------------------- GLX_NV_float_buffer -------------------------- */
 
@@ -928,32 +998,32 @@ typedef XVisualInfo* ( * PFNGLXGETVISUALFROMFBCONFIGSGIXPROC) (Display *dpy, GLX
 #define GLX_HYPERPIPE_ID_SGIX 0x8030
 
 typedef struct {
-  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
-  int  networkId;
+  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX]; 
+  int  networkId; 
 } GLXHyperpipeNetworkSGIX;
 typedef struct {
-  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
-  int XOrigin;
-  int YOrigin;
-  int maxHeight;
-  int maxWidth;
+  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX]; 
+  int XOrigin; 
+  int YOrigin; 
+  int maxHeight; 
+  int maxWidth; 
 } GLXPipeRectLimits;
 typedef struct {
-  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
-  int channel;
-  unsigned int participationType;
-  int timeSlice;
+  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX]; 
+  int channel; 
+  unsigned int participationType; 
+  int timeSlice; 
 } GLXHyperpipeConfigSGIX;
 typedef struct {
-  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX];
-  int srcXOrigin;
-  int srcYOrigin;
-  int srcWidth;
-  int srcHeight;
-  int destXOrigin;
-  int destYOrigin;
-  int destWidth;
-  int destHeight;
+  char pipeName[GLX_HYPERPIPE_PIPE_NAME_LENGTH_SGIX]; 
+  int srcXOrigin; 
+  int srcYOrigin; 
+  int srcWidth; 
+  int srcHeight; 
+  int destXOrigin; 
+  int destYOrigin; 
+  int destWidth; 
+  int destHeight; 
 } GLXPipeRect;
 
 typedef int ( * PFNGLXBINDHYPERPIPESGIXPROC) (Display *dpy, int hpId);
@@ -1217,6 +1287,8 @@ extern PFNGLXGETCONTEXTIDEXTPROC __glewXGetContextIDEXT;
 extern PFNGLXIMPORTCONTEXTEXTPROC __glewXImportContextEXT;
 extern PFNGLXQUERYCONTEXTINFOEXTPROC __glewXQueryContextInfoEXT;
 
+extern PFNGLXSWAPINTERVALEXTPROC __glewXSwapIntervalEXT;
+
 extern PFNGLXBINDTEXIMAGEEXTPROC __glewXBindTexImageEXT;
 extern PFNGLXRELEASETEXIMAGEEXTPROC __glewXReleaseTexImageEXT;
 
@@ -1229,6 +1301,8 @@ extern PFNGLXCREATEGLXPIXMAPMESAPROC __glewXCreateGLXPixmapMESA;
 extern PFNGLXRELEASEBUFFERSMESAPROC __glewXReleaseBuffersMESA;
 
 extern PFNGLXSET3DFXMODEMESAPROC __glewXSet3DfxModeMESA;
+
+extern PFNGLXCOPYIMAGESUBDATANVPROC __glewXCopyImageSubDataNV;
 
 extern PFNGLXBINDVIDEODEVICENVPROC __glewXBindVideoDeviceNV;
 extern PFNGLXENUMERATEVIDEODEVICESNVPROC __glewXEnumerateVideoDevicesNV;
@@ -1318,24 +1392,29 @@ GLXEW_EXPORT GLboolean __GLXEW_VERSION_1_3;
 GLXEW_EXPORT GLboolean __GLXEW_VERSION_1_4;
 GLXEW_EXPORT GLboolean __GLXEW_3DFX_multisample;
 GLXEW_EXPORT GLboolean __GLXEW_ARB_create_context;
+GLXEW_EXPORT GLboolean __GLXEW_ARB_create_context_profile;
 GLXEW_EXPORT GLboolean __GLXEW_ARB_fbconfig_float;
 GLXEW_EXPORT GLboolean __GLXEW_ARB_framebuffer_sRGB;
 GLXEW_EXPORT GLboolean __GLXEW_ARB_get_proc_address;
 GLXEW_EXPORT GLboolean __GLXEW_ARB_multisample;
+GLXEW_EXPORT GLboolean __GLXEW_ARB_vertex_buffer_object;
 GLXEW_EXPORT GLboolean __GLXEW_ATI_pixel_format_float;
 GLXEW_EXPORT GLboolean __GLXEW_ATI_render_texture;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_fbconfig_packed_float;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_framebuffer_sRGB;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_import_context;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_scene_marker;
+GLXEW_EXPORT GLboolean __GLXEW_EXT_swap_control;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_texture_from_pixmap;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_visual_info;
 GLXEW_EXPORT GLboolean __GLXEW_EXT_visual_rating;
+GLXEW_EXPORT GLboolean __GLXEW_INTEL_swap_event;
 GLXEW_EXPORT GLboolean __GLXEW_MESA_agp_offset;
 GLXEW_EXPORT GLboolean __GLXEW_MESA_copy_sub_buffer;
 GLXEW_EXPORT GLboolean __GLXEW_MESA_pixmap_colormap;
 GLXEW_EXPORT GLboolean __GLXEW_MESA_release_buffers;
 GLXEW_EXPORT GLboolean __GLXEW_MESA_set_3dfx_mode;
+GLXEW_EXPORT GLboolean __GLXEW_NV_copy_image;
 GLXEW_EXPORT GLboolean __GLXEW_NV_float_buffer;
 GLXEW_EXPORT GLboolean __GLXEW_NV_present_video;
 GLXEW_EXPORT GLboolean __GLXEW_NV_swap_group;
