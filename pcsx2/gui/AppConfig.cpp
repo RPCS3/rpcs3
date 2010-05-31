@@ -108,7 +108,7 @@ namespace PathDefs
 
 		return wxDirName();
 	}
-	
+
 	wxDirName GetDocuments()
 	{
 		return GetDocuments( DocsFolderMode );

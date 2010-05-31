@@ -150,7 +150,7 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 				vc.Stop();
 				if( IsDevBuild )
 				{
-					if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by EndPoint: %d \n", voiceidx);
+					if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by EndPoint: %d \n", voiceidx);
 				}
 			}
 		}
@@ -173,7 +173,7 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 			vc.Prev1 = vc.SBuffer[27];
 			vc.Prev2 = vc.SBuffer[26];
 
-			//ConLog( " * SPU2 : Cache Hit! NextA=0x%x, cacheIdx=0x%x\n", vc.NextA, cacheIdx );
+			//ConLog( "* SPU2-X: Cache Hit! NextA=0x%x, cacheIdx=0x%x\n", vc.NextA, cacheIdx );
 
 			if( IsDevBuild )
 				g_counter_cache_hits++;
@@ -344,7 +344,7 @@ static __forceinline void CalculateADSR( V_Core& thiscore, uint voiceidx )
 	{
 		if( IsDevBuild )
 		{
-			if(MsgVoiceOff()) ConLog(" * SPU2: Voice Off by ADSR: %d \n", voiceidx);
+			if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by ADSR: %d \n", voiceidx);
 		}
 		vc.Stop();
 		thiscore.Regs.ENDX |= (1 << voiceidx);

@@ -102,14 +102,14 @@ public:
 		PaError err = Pa_Initialize();
 		if( err != paNoError )
 		{
-			fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+			fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 			return -1;
 		}
 		started=true;
 
 		int deviceIndex = -1;
 
-		fprintf(stderr," * SPU2: Enumerating PortAudio devices:");
+		fprintf(stderr,"* SPU2-X: Enumerating PortAudio devices:");
 		for(int i=0;i<Pa_GetDeviceCount();i++)
 		{
 			const PaDeviceInfo * info = Pa_GetDeviceInfo(i);
@@ -211,7 +211,7 @@ public:
 		}
 		if( err != paNoError )
 		{
-			fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+			fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 			Pa_Terminate();
 			return -1;
 		}
@@ -219,7 +219,7 @@ public:
 		err = Pa_StartStream( stream );
 		if( err != paNoError )
 		{
-			fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+			fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 			Pa_CloseStream(stream);
 			stream=NULL;
 			Pa_Terminate();
@@ -240,19 +240,19 @@ public:
 				{
 					err = Pa_StopStream(stream);
 					if( err != paNoError )
-						fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+						fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 				}
 
 				err = Pa_CloseStream(stream);
 				if( err != paNoError )
-					fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+					fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 
 				stream=NULL;
 			}
 
 			PaError err = Pa_Terminate();
 			if( err != paNoError )
-				fprintf(stderr," * SPU2: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+				fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 
 			started=false;
 		}

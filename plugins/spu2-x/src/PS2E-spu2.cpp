@@ -113,6 +113,9 @@ static bool cpu_detected = false;
 
 static bool CheckSSE()
 {
+	return true;
+
+	#if 0
 	if( !cpu_detected )
 	{
 		cpudetectInit();
@@ -124,6 +127,7 @@ static bool CheckSSE()
 		return false;
 	}
 	return true;
+	#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibType()
@@ -298,7 +302,14 @@ EXPORT_C_(s32) SPU2init()
 {
 	assert( regtable[0x400] == NULL );
 
-	//s32 c=0,v=0;
+	if (IsInitialized)
+	{
+		printf( " * SPU2-X: Already initialized - Ignoring SPU2init signal." );
+		return 0;
+	}
+
+	IsInitialized = true;
+
 	ReadSettings();
 
 #ifdef SPU2_LOG
@@ -310,14 +321,6 @@ EXPORT_C_(s32) SPU2init()
 	}
 #endif
 	srand((unsigned)time(NULL));
-
-	if (IsInitialized)
-	{
-		ConLog( " * SPU2: Already initialized - Ignoring SPU2init signal." );
-		return 0;
-	}
-
-	IsInitialized = true;
 
 	spu2regs  = (s16*)malloc(0x010000);
 	_spu2mem  = (s16*)malloc(0x200000);
@@ -333,7 +336,7 @@ EXPORT_C_(s32) SPU2init()
 
 	if( (spu2regs == NULL) || (_spu2mem == NULL) || (pcm_cache_data == NULL) )
 	{
-		SysMessage("SPU2: Error allocating Memory\n"); return -1;
+		SysMessage("SPU2-X: Error allocating Memory\n"); return -1;
 	}
 	
 	// Patch up a copy of regtable that directly maps "NULLs" to SPU2 memory.
@@ -424,7 +427,7 @@ EXPORT_C_(void) SPU2shutdown()
 	if(!IsInitialized) return;
 	IsInitialized = false;
 
-	ConLog( " * SPU2: Shutting down.\n" );
+	ConLog( "* SPU2-X: Shutting down.\n" );
 
 	SPU2close();
 
@@ -542,7 +545,7 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 		else if( (mem&0xFFFF) >= 0x800 )
 		{
 			ret = spu2Ru16(mem);
-			ConLog(" * SPU2: Read from reg>=0x800: %x value %x\n",mem,ret);
+			ConLog("* SPU2-X: Read from reg>=0x800: %x value %x\n",mem,ret);
 		}
 		else
 		{

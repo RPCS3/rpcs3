@@ -238,7 +238,7 @@ public:
 // returns the translated error message for the Virtual Machine failing to allocate!
 static wxString GetMemoryErrorVM()
 {
-	return pxE_Error( "EmuCore::MemoryForVM",
+	return pxE( ".Error:EmuCore::MemoryForVM",
 		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
 		L"Close out some memory hogging background tasks and try again."
 	);

@@ -126,7 +126,7 @@ void Panels::BiosSelectorPanel::Apply()
 			L"User did not specify a valid BIOS selection.",
 
 			// Translated
-			pxE_Error( "BIOS:InvalidSelection",
+			pxE( ".Error:BIOS:InvalidSelection",
 				L"Please select a valid BIOS.  If you are unable to make a valid selection "
 				L"then press cancel to close the Configuration panel."
 			)

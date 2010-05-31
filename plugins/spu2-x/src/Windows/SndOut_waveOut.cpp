@@ -179,7 +179,7 @@ public:
 	void Close()
 	{
 		// Stop Thread
-		fprintf(stderr," * SPU2: Waiting for waveOut thread to finish...");
+		fprintf(stderr,"* SPU2-X: Waiting for waveOut thread to finish...");
 		waveout_running=false;
 
 		WaitForSingleObject(thread,INFINITE);

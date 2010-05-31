@@ -127,7 +127,7 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 #ifndef ENABLE_NEW_IOPDMA_SPU2
 	int size = (sz)&(~511);
 
-	if(MsgAutoDMA()) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
+	if(MsgAutoDMA()) ConLog("* SPU2-X: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
 		GetDmaIndexChar(), size<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
 
 	InputDataProgress = 0;
@@ -236,7 +236,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		cacheLine++;
 	} while ( cacheLine != &cacheEnd );
 
-	//ConLog( " * SPU2 : Cache Clear Range!  TSA=0x%x, TDA=0x%x (low8=0x%x, high8=0x%x, len=0x%x)\n",
+	//ConLog( "* SPU2-X: Cache Clear Range!  TSA=0x%x, TDA=0x%x (low8=0x%x, high8=0x%x, len=0x%x)\n",
 	//	TSA, buff1end, flagTSA, flagTDA, clearLen );
 
 
@@ -421,7 +421,7 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	}
 	else
 	{
-		if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x). IRQE = %d IRQA = %x \n",
+		if(MsgDMA()) ConLog("* SPU2-X: DMA%c Transfer of %d bytes to %x (%02x %x %04x). IRQE = %d IRQA = %x \n",
 			GetDmaIndexChar(),size<<1,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff,
 			Cores[0].IRQEnable, Cores[0].IRQA);
 
@@ -534,9 +534,9 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	if(adma_enable)
 	{
 		TSA&=0x1fff;
-		//Console.Error(" * SPU2: AutoDMA transfers not supported yet! (core %d)\n", Index);
+		//Console.Error("* SPU2-X: AutoDMA transfers not supported yet! (core %d)\n", Index);
 
-		if(MsgAutoDMA() && DmaStarting) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
+		if(MsgAutoDMA() && DmaStarting) ConLog("* SPU2-X: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
 			GetDmaIndexChar(), bytesLeft<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
 
 		u32 processed = 0;
@@ -635,7 +635,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	}
 	else
 	{
-		if(MsgDMA() && DmaStarting) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
+		if(MsgDMA() && DmaStarting) ConLog("* SPU2-X: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
 			GetDmaIndexChar(),bytesLeft,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
 
 		if(bytesLeft> 2048)

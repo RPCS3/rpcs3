@@ -32,7 +32,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
 
-	m_check_LimiterDisable->SetToolTip( pxE_Tooltip( "Framelimiter:Disable",
+	m_check_LimiterDisable->SetToolTip( pxE( ".Tooltip:Framelimiter:Disable",
 		L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
 		L"be available either."
 	) );
@@ -100,7 +100,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	*this	+= 5;
 
-	*this	+= Heading( pxE_Panel( "Framelimiter:Heading",
+	*this	+= Heading( pxE( ".Panel:Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
@@ -166,7 +166,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 		L""
 	) );
 
-	m_check_EnableSkipOnTurbo->SetToolTip( pxE_Tooltip( "Frameskip:UseForTurbo",
+	m_check_EnableSkipOnTurbo->SetToolTip( pxE( ".Tooltip:Frameskip:UseForTurbo",
 		L"Recommended option! Since frameskipping glitches typically aren't as annoying when you're "
 		L" just trying to speed through stuff."
 	) );*/
@@ -221,7 +221,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 	*this	+= s_spins	| StdExpand();
 
-	*this	+= Heading( pxE_Panel( "Frameskip:Heading",
+	*this	+= Heading( pxE( ".Panel:Frameskip:Heading",
 		L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
 		L"Enabling it will cause severe graphical errors in some games, and so it should be considered a speedhack." )
 	);
@@ -292,11 +292,11 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 		_("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
 	);
 
-	m_check_SynchronousGS->SetToolTip( pxE_Tooltip( "GS:SyncMTGS",
+	m_check_SynchronousGS->SetToolTip( pxE( ".Tooltip:GS:SyncMTGS",
 		L"Enable this if you think MTGS thread sync is causing crashes or graphical errors.")
 	) ;
 
-	m_check_DisableOutput->SetToolTip( pxE_Tooltip( "GS:DisableOutput",
+	m_check_DisableOutput->SetToolTip( pxE( ".Tooltip:GS:DisableOutput",
 		L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: "
 		L"save a state at an ideal scene, enable this option, and re-load the savestate.\n\n"
 		L"Warning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."

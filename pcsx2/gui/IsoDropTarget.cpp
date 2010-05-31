@@ -27,7 +27,7 @@
 
 wxString GetMsg_ConfirmSysReset()
 {
-	return pxE_Popup( "ConfirmSysReset",
+	return pxE( ".Popup:ConfirmSysReset",
 		L"This action will reset the existing PS2 virtual machine state; "
 		L"all current progress will be lost.  Are you sure?"
 	);

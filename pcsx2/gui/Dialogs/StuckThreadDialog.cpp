@@ -32,7 +32,7 @@ Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActi
 	stuck_thread.AddListener( this );
 
 	*this += Heading( wxsFormat(
-		pxE_Panel( "StuckThread:Heading",
+		pxE( ".Panel:StuckThread:Heading",
 			L"The thread '%s' is not responding.  It could be deadlocked, or it might "
 			L"just be running *really* slowly."
 		),

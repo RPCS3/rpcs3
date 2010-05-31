@@ -32,17 +32,17 @@ const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 	switch( val )
 	{
 		case 1:
-			return pxE_Panel( "Speedhacks:EECycleX1",
+			return pxE( ".Panel:Speedhacks:EECycleX1",
 				L"1 - Default cyclerate. This closely matches the actual speed of a real PS2 EmotionEngine."
 			);
 
 		case 2:
-			return pxE_Panel( "Speedhacks:EECycleX2",
+			return pxE( ".Panel:Speedhacks:EECycleX2",
 				L"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games with high compatibility."
 			);
 
 		case 3:
-			return pxE_Panel( "Speedhacks:EECycleX3",
+			return pxE( ".Panel:Speedhacks:EECycleX3",
 				L"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* cause stuttering "
 				L"audio on many FMVs."
 			);
@@ -59,23 +59,23 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 	switch( val )
 	{
 		case 0:
-			return pxE_Panel( "Speedhacks:VUCycleStealOff",
+			return pxE( ".Panel:Speedhacks:VUCycleStealOff",
 				L"0 - Disables VU Cycle Stealing.  Most compatible setting!"
 			);
 
 		case 1:
-			return pxE_Panel( "Speedhacks:VUCycleSteal1",
+			return pxE( ".Panel:Speedhacks:VUCycleSteal1",
 				L"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most games."
 			);
 
 		case 2:
-			return pxE_Panel( "Speedhacks:VUCycleSteal2",
+			return pxE( ".Panel:Speedhacks:VUCycleSteal2",
 				L"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant speedups in some games."
 			);
 
 		case 3:
 			// TODO: Mention specific games that benefit from this setting here.
-			return pxE_Panel( "Speedhacks:VUCycleSteal3",
+			return pxE( ".Panel:Speedhacks:VUCycleSteal3",
 				L"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause flickering "
 				L"visuals or slowdown in most games."
 			);
@@ -101,7 +101,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 {
 	const wxSizerFlags sliderFlags( wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
 
-	pxStaticText* heading = new pxStaticHeading( this, pxE_Panel( "Speedhacks:Overview",
+	pxStaticText* heading = new pxStaticHeading( this, pxE( ".Panel:Speedhacks:Overview",
 		L"These hacks will usually improve the speed of PCSX2 emulation, but compromise compatibility. "
 		L"If you have issues, always try disabling these hacks first."
 	) );
@@ -134,7 +134,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_eecycle->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 3) ) );
 
-	const wxChar* ee_tooltip = pxE_Tooltip( "Speedhacks:EECycleRate Slider",
+	const wxChar* ee_tooltip = pxE( ".Tooltip:Speedhacks:EECycleRate Slider",
 		L"Setting higher values on this slider effectively reduces the clock speed of the EmotionEngine's "
 		L"R5900 core cpu, and typically brings big speedups to games that fail to utilize "
 		L"the full potential of the real PS2 hardware."
@@ -155,7 +155,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_vustealer->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 3) ) );
 
-	const wxChar* vu_tooltip = pxE_Tooltip( "Speedhacks:VUCycleStealing Slider",
+	const wxChar* vu_tooltip = pxE( ".Tooltip:Speedhacks:VUCycleStealing Slider",
 		L"This slider controls the amount of cycles the VU unit steals from the EmotionEngine.  Higher values increase the number of "
 		L"cycles stolen from the EE for each VU microprogram the game runs."
 	);
@@ -174,12 +174,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuMinMax = new pxCheckBox( vuHacksPanel, _("mVU Min/Max Hack"),
 		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc... [Not Recommended]") );
 
-	m_check_vuFlagHack->SetToolTip( pxE_Tooltip( "Speedhacks:vuFlagHack",
+	m_check_vuFlagHack->SetToolTip( pxE( ".Tooltip:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
 		L"This is safe most of the time, and Super VU does something similar by default."
 	) );
 
-	m_check_vuMinMax->SetToolTip( pxE_Tooltip( "Speedhacks:vuMinMax",
+	m_check_vuMinMax->SetToolTip( pxE( ".Tooltip:Speedhacks:vuMinMax",
 		L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines. "
 		L"Known to break Gran Turismo 4, Tekken 5."
 	) );
@@ -199,19 +199,19 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		_("Small Speedup. Works well with some games but may cause issues in others. [Not Recommended]") );
 
 
-	m_check_intc->SetToolTip( pxE_Tooltip( "Speedhacks:INTC",
+	m_check_intc->SetToolTip( pxE( ".Tooltip:Speedhacks:INTC",
 		L"This hack works best for games that use the INTC Status register to wait for vsyncs, which includes primarily non-3D "
 		L"RPG titles. Games that do not use this method of vsync will see little or no speedup from this hack."
 	) );
 
-	m_check_waitloop->SetToolTip( pxE_Tooltip( "Speedhacks:BIFC0",
+	m_check_waitloop->SetToolTip( pxE( ".Tooltip:Speedhacks:BIFC0",
 		L"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this hack attempts to "
 		L"detect loops whose bodies are guaranteed to result in the same machine state for every iteration "
 		L"until a scheduled event triggers emulation of another unit.  After a single iteration of such loops, "
 		L"we advance to the time of the next event or the end of the processor's timeslice, whichever comes first."
 	) );
 
-	m_check_IOPx2->SetToolTip( pxE_Tooltip( "Speedhacks:IOPx2",
+	m_check_IOPx2->SetToolTip( pxE( ".Tooltip:Speedhacks:IOPx2",
 		L"Halves the cycle rate of the IOP, giving it an effective emulated speed of roughly 18 MHz. "
 		L"The speedup is very minor, so this hack is generally not recommended."
 	) );

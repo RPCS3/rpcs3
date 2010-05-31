@@ -75,7 +75,7 @@ __forceinline void __fastcall spu2M_Write( u32 addr, s16 value )
 		const int cacheIdx = addr / pcm_WordsPerBlock;
 		pcm_cache_data[cacheIdx].Validated = false;
 
-		ConLog( " * SPU2 : PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
+		ConLog( "* SPU2-X: PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
 	}
 	*GetMemPtr( addr ) = value;
 }
@@ -109,7 +109,7 @@ V_Core::~V_Core() throw()
 
 void V_Core::Reset( int index )
 {
-	ConLog( " * SPU2: RESET SPU2 core%d \n", index );
+	ConLog( "* SPU2-X: RESET SPU2 core%d \n", index );
 	memset( this, 0, sizeof(V_Core) );
 
 	const int c = Index = index;
@@ -303,7 +303,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 	{
 		if(has_to_call_irq)
 		{
-			ConLog(" * SPU2: Irq Called (%04x) at cycle %d.\n", Spdif.Info, Cycles);
+			ConLog("* SPU2-X: Irq Called (%04x) at cycle %d.\n", Spdif.Info, Cycles);
 			has_to_call_irq=false;
 			if(_irqcallback) _irqcallback();
 		}
@@ -386,7 +386,7 @@ __forceinline void UpdateSpdifMode()
 	if(Spdif.Out&0x4) // use 24/32bit PCM data streaming
 	{
 		PlayMode=8;
-		ConLog(" * SPU2: WARNING: Possibly CDDA mode set!\n");
+		ConLog("* SPU2-X: WARNING: Possibly CDDA mode set!\n");
 		return;
 	}
 
@@ -406,7 +406,7 @@ __forceinline void UpdateSpdifMode()
 	}
 	if(OPM!=PlayMode)
 	{
-		ConLog(" * SPU2: Play Mode Set to %s (%d).\n",
+		ConLog("* SPU2-X: Play Mode Set to %s (%d).\n",
 			(PlayMode==0) ? "Normal" : ((PlayMode==1) ? "PCM Clone" : ((PlayMode==2) ? "PCM Bypass" : "BitStream Bypass")),PlayMode);
 	}
 }
@@ -853,7 +853,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
-				ConLog( " * SPU2: Runtime core%d reset\n", core );
+				ConLog( "* SPU2-X: Runtime core%d reset\n", core );
 
 				// Async mixing can cause a scheduled reset to happen untimely, ff12 hates it and dies.
 				// So do the next best thing and reset the core directly.
@@ -887,16 +887,16 @@ static void __fastcall RegWrite_Core( u16 value )
 
 			if(value&0x000E)
 			{
-				ConLog(" * SPU2: Core %d ATTR unknown bits SET! value=%04x\n",core,value);
+				ConLog("* SPU2-X: Core %d ATTR unknown bits SET! value=%04x\n",core,value);
 			}
 
 			if(thiscore.AttrBit0!=bit0)
 			{
-				ConLog(" * SPU2: ATTR bit 0 set to %d\n",thiscore.AttrBit0);
+				ConLog("* SPU2-X: ATTR bit 0 set to %d\n",thiscore.AttrBit0);
 			}
 			if(thiscore.IRQEnable!=irqe)
 			{
-				ConLog(" * SPU2: IRQ %s at cycle %d\n",((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles);
+				ConLog("* SPU2-X: IRQ %s at cycle %d\n",((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles);
 				if(!thiscore.IRQEnable)
 					Spdif.Info &= ~(4 << thiscore.Index);
 			}
@@ -1049,7 +1049,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_S_ADMAS:
-			//ConLog(" * SPU2: Core %d AutoDMAControl set to %d (%d)\n",core,value, Cycles);
+			//ConLog("* SPU2-X: Core %d AutoDMAControl set to %d (%d)\n",core,value, Cycles);
 			thiscore.AutoDMACtrl=value;
 
 			if(value==0)
@@ -1452,7 +1452,7 @@ void StartVoices(int core, u32 value)
 		{
 			V_Voice& thisvc( Cores[core].Voices[vc] );
 
-			if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
+			if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
 				core,vc,thisvc.StartA,
 				(Cores[core].VoiceGates[vc].DryL)?"+":"-",(Cores[core].VoiceGates[vc].DryR)?"+":"-",
 				(Cores[core].VoiceGates[vc].WetL)?"+":"-",(Cores[core].VoiceGates[vc].WetR)?"+":"-",
@@ -1472,7 +1472,7 @@ void StopVoices(int core, u32 value)
 		if( !((value>>vc) & 1) ) continue;
 
 		Cores[core].Voices[vc].ADSR.Releasing = true;
-		//if(MsgKeyOnOff()) ConLog(" * SPU2: KeyOff: Core %d; Voice %d.\n",core,vc);
+		//if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOff: Core %d; Voice %d.\n",core,vc);
 	}
 }
 

@@ -38,7 +38,7 @@ namespace Panels
 
 wxString GetMsg_McdNtfsCompress()
 {
-	return pxE_Panel( "Mcd:NtfsCompress", 
+	return pxE( ".Panel:Mcd:NtfsCompress", 
 		L"NTFS compression is built-in, fast, and completely reliable; and typically compresses memory cards "
 		L"very well (this option is highly recommended)."
 	);
@@ -51,7 +51,7 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 
 	m_check_Ejection = new pxCheckBox( this,
 		_("Auto-eject memory cards when loading savestates"),
-		pxE_Panel( "Mcd:EnableEjection",
+		pxE( ".Panel:Mcd:EnableEjection",
 			L"Avoids memory card corruption by forcing games to re-index card contents after "
 			L"loading from savestates.  May not be compatible with all games (Guitar Hero)."
 		)
@@ -173,7 +173,7 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	//AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
 	//AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
 
-	*this	+= Heading(_("Drag items in the list over other items to swap or copy memory cards."));
+	*this	+= Heading(_("Drag items over other items in the list to swap or copy memory cards."));
 	*this	+= StdPadding;
 
 	*this	+= m_panel_mcdlist			| StdExpand();

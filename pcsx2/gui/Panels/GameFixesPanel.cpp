@@ -66,7 +66,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		},
 		{
 			_("EE timing hack - Multi purpose hack. Try if all else fails."),
-			pxE_Tooltip( "Gamefixes:EE Timing Hack",
+			pxE( ".Tooltip:Gamefixes:EE Timing Hack",
 				L"Known to affect following games:\n"
 				L" * Digital Devil Saga (Fixes FMV and crashes)\n"
 				L" * SSX (Fixes bad graphics and crashes)\n"
@@ -93,7 +93,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	*this	+= groupSizer		| pxCenter;
 
 	*this	+= m_check_Enable	| StdExpand();
-	*this	+= Heading( pxE_Panel( "Gamefixes:Compat Warning",
+	*this	+= Heading( pxE( ".Panel:Gamefixes:Compat Warning",
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
 	));

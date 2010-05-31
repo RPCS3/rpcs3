@@ -86,7 +86,7 @@ private:
 			if( FAILED(buffer->Lock(poffset,BufferSizeBytes,(LPVOID*)&p1,&s1,&p2,&s2,0) ) )
 			{
 				assert( 0 );
-				fputs( " * SPU2 : Directsound Warning > Buffer lock failure.  You may need to increase\n\tyour configured DSound buffer count.\n", stderr );
+				fputs( "* SPU2-X: Directsound Warning > Buffer lock failure.  You may need to increase\n\tyour configured DSound buffer count.\n", stderr );
 				continue;
 			}
 			oldp1 = p1;
@@ -224,7 +224,7 @@ public:
 	void Close()
 	{
 		// Stop Thread
-		fprintf(stderr," * SPU2: Waiting for DSound thread to finish...");
+		fprintf(stderr,"* SPU2-X: Waiting for DSound thread to finish...");
 		dsound_running=false;
 
 		WaitForSingleObject(thread,INFINITE);

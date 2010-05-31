@@ -117,6 +117,29 @@ void i18n_EnumeratePackages( LangPackList& langs )
 //
 const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
 {
+#ifdef PCSX2_DEVBUILD
+	static const wxChar* tbl_pxE_Prefixes[] =
+	{
+		L".Panel:",
+		L".Popup:",
+		L".Error:",
+		L".Wizard:",
+		L".Tooltip:",
+		NULL
+	};
+
+	// test the prefix of the key for consistency to valid/known prefix types.
+	const wxChar** prefix = tbl_pxE_Prefixes;
+	while( *prefix != NULL )
+	{
+		if( wxString(key).StartsWith(*prefix) ) break;
+		++prefix;
+	}
+	pxAssertDev( *prefix != NULL,
+		wxsFormat( L"Invalid pxE key prefix in key '%s'.  Prefix must be one of the valid prefixes listed in pxExpandMsg.", key )
+	);
+#endif
+
 	const wxLanguageInfo* info = wxLocale::GetLanguageInfo( g_Conf->LanguageId );
 
 	if( ( info == NULL ) || IsEnglish( info->Language ) )
