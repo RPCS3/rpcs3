@@ -20,6 +20,8 @@
 #include "Common.h"
 #include "System/PageFaultSource.h"
 
+#if PCSX2_SEH
+
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
 	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
@@ -28,6 +30,8 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	Source_PageFault.Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
 	return Source_PageFault.WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
+
+#endif
 
 void InstallSignalHandler()
 {
