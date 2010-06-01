@@ -4,6 +4,6 @@
 #include "resrc1.h"
 #include "Win32/resource.h"
 
-bool CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
+BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif /* __WIN32_H__ */
