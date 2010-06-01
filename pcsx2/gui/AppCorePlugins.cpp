@@ -232,7 +232,7 @@ void AppPluginManager::Load( const wxString (&folders)[PluginId_Count] )
 {
 	if( !pxAssert(!AreLoaded()) ) return;
 
-	SetLogFolder( GetSettingsFolder().ToString() );
+	SetLogFolder( GetLogFolder().ToString() );
 	SetSettingsFolder( GetSettingsFolder().ToString() );
 
 	_parent::Load( folders );
