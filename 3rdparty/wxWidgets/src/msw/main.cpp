@@ -211,18 +211,19 @@ int wxEntry(int& argc, wxChar **argv)
     wxSEH_HANDLE(-1)
 }
 
-#else // !wxUSE_ON_FATAL_EXCEPTION
-
+// PCSX2: Moved this to inside the wxUSE_ON_FATAL_EXCEPTION condition --air
 #if defined(__VISUALC__) && !defined(__WXWINCE__)
 
 static void
 wxSETranslator(unsigned int WXUNUSED(code), EXCEPTION_POINTERS * WXUNUSED(ep))
 {
-    // see wxSETranslator() version for wxUSE_ON_FATAL_EXCEPTION above
-    throw;
+	// see wxSETranslator() version for wxUSE_ON_FATAL_EXCEPTION above
+	throw;
 }
 
 #endif // __VISUALC__
+
+#else // !wxUSE_ON_FATAL_EXCEPTION
 
 int wxEntry(int& argc, wxChar **argv)
 {

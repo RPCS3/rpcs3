@@ -167,18 +167,21 @@ wxImage::wxImage(const char* const* xpmData)
     Create(xpmData);
 }
 
+#if wxUSE_XPM
 bool wxImage::Create(const char* const* xpmData)
 {
-#if wxUSE_XPM
     UnRef();
 
     wxXPMDecoder decoder;
     (*this) = decoder.ReadData(xpmData);
     return Ok();
-#else
-    return false;
-#endif
 }
+#else
+bool wxImage::Create( const char* const* WXUNUSED(xpmData) )
+{
+    return false;
+}
+#endif
 
 bool wxImage::Create( int width, int height, bool clear )
 {
