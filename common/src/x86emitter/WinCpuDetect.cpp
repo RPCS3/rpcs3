@@ -17,12 +17,12 @@
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
 
-void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
+void x86capabilities::CountLogicalCores()
 {
 	DWORD vProcessCPUs;
 	DWORD vSystemCPUs;
 
-	x86caps.LogicalCores = 1;
+	LogicalCores = 1;
 
 	if( !GetProcessAffinityMask (GetCurrentProcess (),
 		&vProcessCPUs, &vSystemCPUs) ) return;
@@ -36,11 +36,11 @@ void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhys
 			CPUs++;
 	}
 
-	x86caps.LogicalCores = CPUs;
+	LogicalCores = CPUs;
 	if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
 		LogicalCoresPerPhysicalCPU = CPUs;
 
-	x86caps.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
+	PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 }
 
 bool _test_instruction( void* pfnCall )

@@ -116,6 +116,8 @@ void SysLogMachineCaps()
 
 	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
 
+	u32 speed = x86caps.CalculateMHz();
+
 	Console.Indent().WriteLn(
 		L"CPU vendor name  =  %s\n"
 		L"FamilyID         =  %x\n"
@@ -127,9 +129,9 @@ void SysLogMachineCaps()
 		L"x86EFlags        =  %8.8x",
 			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
 			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
-			x86caps.Speed / 1000, x86caps.Speed % 1000,
+			speed / 1000, speed % 1000,
 			x86caps.PhysicalCores, x86caps.LogicalCores,
-			fromUTF8( x86caps.TypeName ).c_str(),
+			x86caps.GetTypeName().c_str(),
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
 	);

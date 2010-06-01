@@ -17,82 +17,111 @@
 
 #include "x86emitter.h"
 
-// this is all that needs to be called and will fill up the below structs
-extern void cpudetectInit();
-
-// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
-extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
-
-// --------------------------------------------------------------------------------------
-//  x86CPU_INFO
-// --------------------------------------------------------------------------------------
-struct x86CPU_INFO
+enum x86VendorType
 {
-	u32 FamilyID;		// Processor Family
-	u32 Model;			// Processor Model
-	u32 TypeID;			// Processor Type
-	u32 StepID;			// Stepping ID
+	x86Vendor_Intel=0,
+	x86Vendor_AMD,
+	x86Vendor_Unknown,
+};
+
+// --------------------------------------------------------------------------------------
+//  x86capabilities
+// --------------------------------------------------------------------------------------
+class x86capabilities
+{
+public:
+	bool isIdentified;
+	u32 LogicalCoresPerPhysicalCPU;
+	u32 PhysicalCoresPerPhysicalCPU;
+
+public:
+	x86VendorType VendorID;
+
+	uint FamilyID;		// Processor Family
+	uint Model;			// Processor Model
+	uint TypeID;		// Processor Type
+	uint StepID;		// Stepping ID
+
 	u32 Flags;			// Feature Flags
 	u32 Flags2;			// More Feature Flags
 	u32 EFlags;			// Extended Feature Flags
 	u32 EFlags2;		// Extended Feature Flags pg2
 
-	u32 PhysicalCores;
-	u32 LogicalCores;
-
 	char VendorName[16];	// Vendor/Creator ID
-	char TypeName[20];      // cpu type
 	char FamilyName[50];    // the original cpu name
-
-	// Speed - speed of cpu in mhz
-	// This is a rough "real" measure of the cpu speed, taken at application startup.
-	// Not to be considered totally accurate: Power saving CPUs and SpeedStep can skew
-	// results considerably.
-	u32 Speed;
 
 	// ----------------------------------------------------------------------------
 	//   x86 CPU Capabilities Section (all boolean flags!)
 	// ----------------------------------------------------------------------------
 
-   u32 hasFloatingPointUnit:1;
-   u32 hasVirtual8086ModeEnhancements:1;
-   u32 hasDebuggingExtensions:1;
-   u32 hasPageSizeExtensions:1;
-   u32 hasTimeStampCounter:1;
-   u32 hasModelSpecificRegisters:1;
-   u32 hasPhysicalAddressExtension:1;
-   u32 hasCOMPXCHG8BInstruction:1;
-   u32 hasAdvancedProgrammableInterruptController:1;
-   u32 hasSEPFastSystemCall:1;
-   u32 hasMemoryTypeRangeRegisters:1;
-   u32 hasPTEGlobalFlag:1;
-   u32 hasMachineCheckArchitecture:1;
-   u32 hasConditionalMoveAndCompareInstructions:1;
-   u32 hasFGPageAttributeTable:1;
-   u32 has36bitPageSizeExtension:1;
-   u32 hasProcessorSerialNumber:1;
-   u32 hasCFLUSHInstruction:1;
-   u32 hasDebugStore:1;
-   u32 hasACPIThermalMonitorAndClockControl:1;
-   u32 hasMultimediaExtensions:1;
-   u32 hasFastStreamingSIMDExtensionsSaveRestore:1;
-   u32 hasStreamingSIMDExtensions:1;
-   u32 hasStreamingSIMD2Extensions:1;
-   u32 hasSelfSnoop:1;
-   u32 hasMultiThreading:1;			// is TRUE for both multi-core and Hyperthreaded CPUs.
-   u32 hasThermalMonitor:1;
-   u32 hasIntel64BitArchitecture:1;
-   u32 hasStreamingSIMD3Extensions:1;
-   u32 hasSupplementalStreamingSIMD3Extensions:1;
-   u32 hasStreamingSIMD4Extensions:1;
-   u32 hasStreamingSIMD4Extensions2:1;
+	u32 hasFloatingPointUnit						:1;
+	u32 hasVirtual8086ModeEnhancements				:1;
+	u32 hasDebuggingExtensions						:1;
+	u32 hasPageSizeExtensions						:1;
+	u32 hasTimeStampCounter							:1;
+	u32 hasModelSpecificRegisters					:1;
+	u32 hasPhysicalAddressExtension					:1;
+	u32 hasCOMPXCHG8BInstruction					:1;
+	u32 hasAdvancedProgrammableInterruptController	:1;
+	u32 hasSEPFastSystemCall						:1;
+	u32 hasMemoryTypeRangeRegisters					:1;
+	u32 hasPTEGlobalFlag							:1;
+	u32 hasMachineCheckArchitecture					:1;
+	u32 hasConditionalMoveAndCompareInstructions	:1;
+	u32 hasFGPageAttributeTable						:1;
+	u32 has36bitPageSizeExtension					:1;
+	u32 hasProcessorSerialNumber					:1;
+	u32 hasCFLUSHInstruction						:1;
+	u32 hasDebugStore								:1;
+	u32 hasACPIThermalMonitorAndClockControl		:1;
+	u32 hasMultimediaExtensions						:1;
+	u32 hasFastStreamingSIMDExtensionsSaveRestore	:1;
+	u32 hasStreamingSIMDExtensions					:1;
+	u32 hasStreamingSIMD2Extensions					:1;
+	u32 hasSelfSnoop								:1;
 
-   // AMD-specific CPU Features
-   u32 hasMultimediaExtensionsExt:1;
-   u32 hasAMD64BitArchitecture:1;
-   u32 has3DNOWInstructionExtensionsExt:1;
-   u32 has3DNOWInstructionExtensions:1;
-   u32 hasStreamingSIMD4ExtensionsA:1;
+	// is TRUE for both multi-core and Hyperthreaded CPUs.
+	u32 hasMultiThreading							:1;
+
+	u32 hasThermalMonitor							:1;
+	u32 hasIntel64BitArchitecture					:1;
+	u32 hasStreamingSIMD3Extensions					:1;
+	u32 hasSupplementalStreamingSIMD3Extensions		:1;
+	u32 hasStreamingSIMD4Extensions					:1;
+	u32 hasStreamingSIMD4Extensions2				:1;
+
+	// AMD-specific CPU Features
+	u32 hasMultimediaExtensionsExt					:1;
+	u32 hasAMD64BitArchitecture						:1;
+	u32 has3DNOWInstructionExtensionsExt			:1;
+	u32 has3DNOWInstructionExtensions				:1;
+	u32 hasStreamingSIMD4ExtensionsA				:1;
+
+	// Core Counts!
+	u32 PhysicalCores;
+	u32 LogicalCores;
+
+public:
+	x86capabilities()
+	{
+		isIdentified = false;
+		VendorID = x86Vendor_Unknown;
+		LogicalCoresPerPhysicalCPU = 1;
+		PhysicalCoresPerPhysicalCPU = 1;
+	}
+
+	void Identify();
+	void CountCores();
+	wxString GetTypeName() const;
+
+	u32 CalculateMHz() const;
+
+	void SIMD_ExceptionTest();
+	void SIMD_EstablishMXCSRmask();
+
+protected:
+	s64 _CPUSpeedHz( u64 time ) const;
+	void CountLogicalCores();
 };
 
 enum SSE_RoundMode
@@ -168,7 +197,7 @@ extern SSE_MXCSR	MXCSR_Mask;
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
-extern __aligned16 x86CPU_INFO x86caps;
+extern __aligned16 x86capabilities x86caps;
 
 extern bool g_EEFreezeRegs;
 

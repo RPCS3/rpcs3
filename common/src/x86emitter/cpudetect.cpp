@@ -19,7 +19,11 @@
 
 using namespace x86Emitter;
 
-__aligned16 x86CPU_INFO x86caps;
+__aligned16 x86capabilities x86caps;
+
+// Recompiled code buffer for SSE and MXCSR feature testing.
+static __pagealigned u8 recSSE[__pagesize];
+static __pagealigned u8 targetFXSAVE[512];
 
 #ifdef __LINUX__
 #	include <sys/time.h>
@@ -31,34 +35,71 @@ static const char* bool_to_char( bool testcond )
 	return testcond ? "true" : "false";
 }
 
-static s64 CPUSpeedHz( u64 time )
+// Warning!  We've had problems with the MXCSR detection code causing stack corruption in
+// MSVC PGO builds.  The problem was fixed when I moved the MXCSR code to this function, and
+// moved the recSSE[] array to a global static (it was local to cpudetectInit).  Commented
+// here in case the nutty crash ever re-surfaces. >_<
+void x86capabilities::SIMD_EstablishMXCSRmask()
+{
+	if( !hasStreamingSIMDExtensions ) return;
+
+	MXCSR_Mask.bitmask = 0xFFBF;		// MMX/SSE default
+
+	if( hasStreamingSIMD2Extensions )
+	{
+		// This is generally safe assumption, but FXSAVE is the "correct" way to
+		// detect MXCSR masking features of the cpu, so we use it's result below
+		// and override this.
+
+		MXCSR_Mask.bitmask = 0xFFFF;	// SSE2 features added
+	}
+
+	if( !CanEmitShit() ) return;
+
+	// the fxsave buffer must be 16-byte aligned to avoid GPF.  I just save it to an
+	// unused portion of recSSE, since it has plenty of room to spare.
+
+	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
+
+	xSetPtr( recSSE );
+	xFXSAVE( targetFXSAVE );
+	xRET();
+
+	HostSys::MemProtectStatic( recSSE, Protect_ReadOnly, true );
+
+	CallAddress( recSSE );
+
+	u32 result = (u32&)targetFXSAVE[28];			// bytes 28->32 are the MXCSR_Mask.
+	if( result != 0 )
+		MXCSR_Mask.bitmask = result;
+}
+
+// Counts the number of cpu cycles executed over the requested number of PerformanceCounter
+// ticks. Returns that exact count.
+// For best results you should pick a period of time long enough to get a reading that won't
+// be prone to rounding error; but short enough that it'll be highly unlikely to be interrupted
+// by the operating system task switches.
+s64 x86capabilities::_CPUSpeedHz( u64 time ) const
 {
 	u64 timeStart, timeStop;
 	s64 startCycle, endCycle;
 
-	if( ! x86caps.hasTimeStampCounter )
+	if( ! hasTimeStampCounter )
 		return 0;
 
 	SingleCoreAffinity affinity_lock;
 
 	// Align the cpu execution to a cpuTick boundary.
 
-	do { timeStart = GetCPUTicks();
+	do {
+		timeStart = GetCPUTicks();
+		startCycle = __rdtsc();
 	} while( GetCPUTicks() == timeStart );
 
-	do
-	{
-		timeStop = GetCPUTicks();
-		startCycle = __rdtsc();
-	} while( ( timeStop - timeStart ) == 0 );
-
-	timeStart = timeStop;
-	do
-	{
+	do {
 		timeStop = GetCPUTicks();
 		endCycle = __rdtsc();
-	}
-	while( ( timeStop - timeStart ) < time );
+	} while( ( timeStop - timeStart ) < time );
 
 	s64 cycleCount = endCycle - startCycle;
 	s64 timeCount = timeStop - timeStart;
@@ -73,92 +114,111 @@ static s64 CPUSpeedHz( u64 time )
 	return (s64)newCycleCount;
 }
 
-// Recompiled code buffer for SSE and MXCSR feature testing.
-static __pagealigned u8 recSSE[__pagesize];
-
-// Warning!  We've had problems with the MXCSR detection code causing stack corruption in
-// MSVC PGO builds.  The problem was fixed when I moved the MXCSR code to this function, and
-// moved the recSSE[] array to a global static (it was local to cpudetectInit).  Commented
-// here in case the nutty crash ever re-surfaces. >_<
-
-void EstablishMXCSRmask()
+wxString x86capabilities::GetTypeName() const
 {
-	if( !x86caps.hasStreamingSIMDExtensions ) return;
-
-	MXCSR_Mask.bitmask = 0xFFBF;		// MMX/SSE default
-
-	if( x86caps.hasStreamingSIMD2Extensions )
+	switch( TypeID )
 	{
-		// This is generally safe assumption, but FXSAVE is the "correct" way to
-		// detect MXCSR masking features of the cpu, so we use it's result below
-		// and override this.
-
-		MXCSR_Mask.bitmask = 0xFFFF;	// SSE2 features added
+		case 0:		return L"Standard OEM";
+		case 1:		return L"Overdrive";
+		case 2:		return L"Dual";
+		case 3:		return L"Reserved";
+		default:	return L"Unknown";
 	}
-
-	if( !CanEmitShit() ) return;
-
-	// the fxsave buffer must be 16-byte aligned to avoid GPF.  I just save it to an
-	// unused portion of recSSE, since it has plenty of room to spare.
-
-	xSetPtr( recSSE );
-	xFXSAVE( recSSE + 1024 );
-	xRET();
-
-	CallAddress( recSSE );
-
-	u32 result = (u32&)recSSE[1024+28];			// bytes 28->32 are the MXCSR_Mask.
-	if( result != 0 )
-		MXCSR_Mask.bitmask = result;
 }
 
-void cpudetectInit()
+void x86capabilities::CountCores()
 {
+	Identify();
+
 	s32 regs[ 4 ];
 	u32 cmds;
+
+	LogicalCoresPerPhysicalCPU = 0;
+	PhysicalCoresPerPhysicalCPU = 1;
+
+	// detect multicore for Intel cpu
+
+	__cpuid( regs, 0 );
+	cmds = regs[ 0 ];
+	
+	if( cmds >= 0x00000001 )
+		LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
+
+	if ((cmds >= 0x00000004) && (VendorID == x86Vendor_Intel))
+	{
+		__cpuid( regs, 0x00000004 );
+		PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
+	}
+
+	__cpuid( regs, 0x80000000 );
+	cmds = regs[ 0 ];
+
+	// detect multicore for AMD cpu
+
+	if ((cmds >= 0x80000008) && (VendorID == x86Vendor_AMD) )
+	{
+		__cpuid( regs, 0x80000008 );
+		PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
+	}
+
+	if( !hasMultiThreading || LogicalCoresPerPhysicalCPU == 0 )
+		LogicalCoresPerPhysicalCPU = 1;
+
+	// This will assign values into LogicalCores and PhysicalCores
+	CountLogicalCores();
+}
+
+static const char* tbl_x86vendors[] = 
+{
+	"GenuineIntel",
+	"AuthenticAMD"
+	"Unknown     ",
+};
+
+// Performs all _cpuid-related activity.  This fills *most* of the x86caps structure, except for
+// the cpuSpeed and the mxcsr masks.  Those must be completed manually.
+void x86capabilities::Identify()
+{
+	if( isIdentified ) return;
+	isIdentified = true;
+
+	s32 regs[ 4 ];
+	u32 cmds;
+
 	//AMD 64 STUFF
 	u32 x86_64_8BITBRANDID;
 	u32 x86_64_12BITBRANDID;
 
-	memzero( x86caps.VendorName );
-	x86caps.FamilyID	= 0;
-	x86caps.Model	= 0;
-	x86caps.TypeID	= 0;
-	x86caps.StepID	= 0;
-	x86caps.Flags	= 0;
-	x86caps.EFlags	= 0;
-
+	memzero( VendorName );
 	__cpuid( regs, 0 );
 
 	cmds = regs[ 0 ];
-	((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
-	((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
-	((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
+	((u32*)VendorName)[ 0 ] = regs[ 1 ];
+	((u32*)VendorName)[ 1 ] = regs[ 3 ];
+	((u32*)VendorName)[ 2 ] = regs[ 2 ];
 
-	u32 LogicalCoresPerPhysicalCPU = 0;
-	u32 PhysicalCoresPerPhysicalCPU = 1;
+	// Determine Vendor Specifics!
+	// It's really not recommended that we base much (if anything) on CPU vendor names,
+	// however it's currently necessary in order to gain a (pseudo)reliable count of cores
+	// and threads used by the CPU (AMD and Intel can't agree on how to make this info available).
+
+	int& vid = (int&)VendorID;
+	for( vid=0; vid<x86Vendor_Unknown; ++vid )
+	{
+		if( memcmp( VendorName, tbl_x86vendors[vid], 12 ) == 0 ) break;
+	}
 
 	if ( cmds >= 0x00000001 )
 	{
 		__cpuid( regs, 0x00000001 );
 
-		x86caps.StepID		=  regs[ 0 ]        & 0xf;
-		x86caps.Model		= (regs[ 0 ] >>  4) & 0xf;
-		x86caps.FamilyID	= (regs[ 0 ] >>  8) & 0xf;
-		x86caps.TypeID		= (regs[ 0 ] >> 12) & 0x3;
+		StepID		=  regs[ 0 ]        & 0xf;
+		Model		= (regs[ 0 ] >>  4) & 0xf;
+		FamilyID	= (regs[ 0 ] >>  8) & 0xf;
+		TypeID		= (regs[ 0 ] >> 12) & 0x3;
 		x86_64_8BITBRANDID	=  regs[ 1 ] & 0xff;
-		x86caps.Flags		=  regs[ 3 ];
-		x86caps.Flags2		=  regs[ 2 ];
-
-		LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
-	}
-
-	// detect multicore for Intel cpu
-
-	if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
-	{
-		__cpuid( regs, 0x00000004 );
-		PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
+		Flags		=  regs[ 3 ];
+		Flags2		=  regs[ 2 ];
 	}
 
 	__cpuid( regs, 0x80000000 );
@@ -168,111 +228,82 @@ void cpudetectInit()
 		__cpuid( regs, 0x80000001 );
 
 		x86_64_12BITBRANDID = regs[1] & 0xfff;
-		x86caps.EFlags2 = regs[ 2 ];
-		x86caps.EFlags = regs[ 3 ];
+		EFlags2 = regs[ 2 ];
+		EFlags = regs[ 3 ];
 	}
 
-	// detect multicore for AMD cpu
+	memzero( FamilyName );
+	__cpuid( (int*)FamilyName,		0x80000002);
+	__cpuid( (int*)(FamilyName+16),	0x80000003);
+	__cpuid( (int*)(FamilyName+32),	0x80000004);
 
-	if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
-	{
-		__cpuid( regs, 0x80000008 );
-		PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
-	}
+	hasFloatingPointUnit						= ( Flags >>  0 ) & 1;
+	hasVirtual8086ModeEnhancements				= ( Flags >>  1 ) & 1;
+	hasDebuggingExtensions						= ( Flags >>  2 ) & 1;
+	hasPageSizeExtensions						= ( Flags >>  3 ) & 1;
+	hasTimeStampCounter							= ( Flags >>  4 ) & 1;
+	hasModelSpecificRegisters					= ( Flags >>  5 ) & 1;
+	hasPhysicalAddressExtension					= ( Flags >>  6 ) & 1;
+	hasMachineCheckArchitecture					= ( Flags >>  7 ) & 1;
+	hasCOMPXCHG8BInstruction					= ( Flags >>  8 ) & 1;
+	hasAdvancedProgrammableInterruptController	= ( Flags >>  9 ) & 1;
+	hasSEPFastSystemCall						= ( Flags >> 11 ) & 1;
+	hasMemoryTypeRangeRegisters					= ( Flags >> 12 ) & 1;
+	hasPTEGlobalFlag							= ( Flags >> 13 ) & 1;
+	hasMachineCheckArchitecture					= ( Flags >> 14 ) & 1;
+	hasConditionalMoveAndCompareInstructions	= ( Flags >> 15 ) & 1;
+	hasFGPageAttributeTable						= ( Flags >> 16 ) & 1;
+	has36bitPageSizeExtension					= ( Flags >> 17 ) & 1;
+	hasProcessorSerialNumber					= ( Flags >> 18 ) & 1;
+	hasCFLUSHInstruction						= ( Flags >> 19 ) & 1;
+	hasDebugStore								= ( Flags >> 21 ) & 1;
+	hasACPIThermalMonitorAndClockControl		= ( Flags >> 22 ) & 1;
+	hasMultimediaExtensions						= ( Flags >> 23 ) & 1; //mmx
+	hasFastStreamingSIMDExtensionsSaveRestore	= ( Flags >> 24 ) & 1;
+	hasStreamingSIMDExtensions					= ( Flags >> 25 ) & 1; //sse
+	hasStreamingSIMD2Extensions					= ( Flags >> 26 ) & 1; //sse2
+	hasSelfSnoop								= ( Flags >> 27 ) & 1;
+	hasMultiThreading							= ( Flags >> 28 ) & 1;
+	hasThermalMonitor							= ( Flags >> 29 ) & 1;
+	hasIntel64BitArchitecture					= ( Flags >> 30 ) & 1;
 
-	switch(x86caps.TypeID)
-	{
-		case 0:
-			strcpy( x86caps.TypeName, "Standard OEM");
-		break;
-		case 1:
-			strcpy( x86caps.TypeName, "Overdrive");
-		break;
-		case 2:
-			strcpy( x86caps.TypeName, "Dual");
-		break;
-		case 3:
-			strcpy( x86caps.TypeName, "Reserved");
-		break;
-		default:
-			strcpy( x86caps.TypeName, "Unknown");
-		break;
-	}
+	// -------------------------------------------------
+	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
+	// -------------------------------------------------
 
-	#if 0
-	// vendor identification, currently unneeded.
-	// It's really not recommended that we base much (if anything) on CPU vendor names.
-	// But the code is left in as an ifdef, for possible future reference.
+	hasStreamingSIMD3Extensions					= ( Flags2 >> 0 ) & 1; //sse3
+	hasSupplementalStreamingSIMD3Extensions		= ( Flags2 >> 9 ) & 1; //ssse3
+	hasStreamingSIMD4Extensions					= ( Flags2 >> 19 ) & 1; //sse4.1
+	hasStreamingSIMD4Extensions2				= ( Flags2 >> 20 ) & 1; //sse4.2
 
-	int cputype=0;            // Cpu type
-	static const char* Vendor_Intel	= "GenuineIntel";
-	static const char* Vendor_AMD	= "AuthenticAMD";
+	// Ones only for AMDs:
+	hasMultimediaExtensionsExt					= ( EFlags >> 22 ) & 1; //mmx2
+	hasAMD64BitArchitecture						= ( EFlags >> 29 ) & 1; //64bit cpu
+	has3DNOWInstructionExtensionsExt			= ( EFlags >> 30 ) & 1; //3dnow+
+	has3DNOWInstructionExtensions				= ( EFlags >> 31 ) & 1; //3dnow
+	hasStreamingSIMD4ExtensionsA				= ( EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
-	if( memcmp( x86caps.VendorName, Vendor_Intel, 12 ) == 0 ) { cputype = 0; } else
-	if( memcmp( x86caps.VendorName, Vendor_AMD, 12 ) == 0 ) { cputype = 1; }
+	isIdentified = true;
+}
 
-	if ( x86caps.VendorName[ 0 ] == 'G' ) { cputype = 0; }
-	if ( x86caps.VendorName[ 0 ] == 'A' ) { cputype = 1; }
-	#endif
-
-	memzero( x86caps.FamilyName );
-	__cpuid( (int*)x86caps.FamilyName,		0x80000002);
-	__cpuid( (int*)(x86caps.FamilyName+16),	0x80000003);
-	__cpuid( (int*)(x86caps.FamilyName+32),	0x80000004);
-
-	//capabilities
-	x86caps.hasFloatingPointUnit                         = ( x86caps.Flags >>  0 ) & 1;
-	x86caps.hasVirtual8086ModeEnhancements               = ( x86caps.Flags >>  1 ) & 1;
-	x86caps.hasDebuggingExtensions                       = ( x86caps.Flags >>  2 ) & 1;
-	x86caps.hasPageSizeExtensions                        = ( x86caps.Flags >>  3 ) & 1;
-	x86caps.hasTimeStampCounter                          = ( x86caps.Flags >>  4 ) & 1;
-	x86caps.hasModelSpecificRegisters                    = ( x86caps.Flags >>  5 ) & 1;
-	x86caps.hasPhysicalAddressExtension                  = ( x86caps.Flags >>  6 ) & 1;
-	x86caps.hasMachineCheckArchitecture                  = ( x86caps.Flags >>  7 ) & 1;
-	x86caps.hasCOMPXCHG8BInstruction                     = ( x86caps.Flags >>  8 ) & 1;
-	x86caps.hasAdvancedProgrammableInterruptController   = ( x86caps.Flags >>  9 ) & 1;
-	x86caps.hasSEPFastSystemCall                         = ( x86caps.Flags >> 11 ) & 1;
-	x86caps.hasMemoryTypeRangeRegisters                  = ( x86caps.Flags >> 12 ) & 1;
-	x86caps.hasPTEGlobalFlag                             = ( x86caps.Flags >> 13 ) & 1;
-	x86caps.hasMachineCheckArchitecture                  = ( x86caps.Flags >> 14 ) & 1;
-	x86caps.hasConditionalMoveAndCompareInstructions     = ( x86caps.Flags >> 15 ) & 1;
-	x86caps.hasFGPageAttributeTable                      = ( x86caps.Flags >> 16 ) & 1;
-	x86caps.has36bitPageSizeExtension                    = ( x86caps.Flags >> 17 ) & 1;
-	x86caps.hasProcessorSerialNumber                     = ( x86caps.Flags >> 18 ) & 1;
-	x86caps.hasCFLUSHInstruction                         = ( x86caps.Flags >> 19 ) & 1;
-	x86caps.hasDebugStore                                = ( x86caps.Flags >> 21 ) & 1;
-	x86caps.hasACPIThermalMonitorAndClockControl         = ( x86caps.Flags >> 22 ) & 1;
-	x86caps.hasMultimediaExtensions                      = ( x86caps.Flags >> 23 ) & 1; //mmx
-	x86caps.hasFastStreamingSIMDExtensionsSaveRestore    = ( x86caps.Flags >> 24 ) & 1;
-	x86caps.hasStreamingSIMDExtensions                   = ( x86caps.Flags >> 25 ) & 1; //sse
-	x86caps.hasStreamingSIMD2Extensions                  = ( x86caps.Flags >> 26 ) & 1; //sse2
-	x86caps.hasSelfSnoop                                 = ( x86caps.Flags >> 27 ) & 1;
-	x86caps.hasMultiThreading                            = ( x86caps.Flags >> 28 ) & 1;
-	x86caps.hasThermalMonitor                            = ( x86caps.Flags >> 29 ) & 1;
-	x86caps.hasIntel64BitArchitecture                    = ( x86caps.Flags >> 30 ) & 1;
-
-	//that is only for AMDs
-	x86caps.hasMultimediaExtensionsExt                   = ( x86caps.EFlags >> 22 ) & 1; //mmx2
-	x86caps.hasAMD64BitArchitecture                      = ( x86caps.EFlags >> 29 ) & 1; //64bit cpu
-	x86caps.has3DNOWInstructionExtensionsExt             = ( x86caps.EFlags >> 30 ) & 1; //3dnow+
-	x86caps.has3DNOWInstructionExtensions                = ( x86caps.EFlags >> 31 ) & 1; //3dnow
-	x86caps.hasStreamingSIMD4ExtensionsA                 = ( x86caps.EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
-
+u32 x86capabilities::CalculateMHz() const
+{
 	InitCPUTicks();
 	u64 span = GetTickFrequency();
 
 	if( (span % 1000) < 400 )	// helps minimize rounding errors
-		x86caps.Speed = (u32)( CPUSpeedHz( span / 1000 ) / 1000 );
+		return (u32)( _CPUSpeedHz( span / 1000 ) / 1000 );
 	else
-		x86caps.Speed = (u32)( CPUSpeedHz( span / 500 ) / 2000 );
+		return (u32)( _CPUSpeedHz( span / 500 ) / 2000 );
+}
 
-	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
-
-	x86caps.hasStreamingSIMD3Extensions  = ( x86caps.Flags2 >> 0 ) & 1; //sse3
-	x86caps.hasSupplementalStreamingSIMD3Extensions = ( x86caps.Flags2 >> 9 ) & 1; //ssse3
-	x86caps.hasStreamingSIMD4Extensions  = ( x86caps.Flags2 >> 19 ) & 1; //sse4.1
-	x86caps.hasStreamingSIMD4Extensions2 = ( x86caps.Flags2 >> 20 ) & 1; //sse4.2
-
+// Special extended version of SIMD testning, which uses exceptions to double-check the presence
+// of SSE2/3/4 instructions.  Useful if you don't trust cpuid (at least one report of an invalid
+// cpuid has been reported on a Core2 Quad -- the user fixed it by clearing his CMOS).
+//
+// Results of CPU
+void x86capabilities::SIMD_ExceptionTest()
+{
 	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -299,6 +330,8 @@ void cpudetectInit()
 		xMOVDQU( xmm1, ptr[ecx] );
 		xRET();
 
+		HostSys::MemProtectStatic( recSSE, Protect_ReadOnly, true );
+
 		bool sse3_result = _test_instruction( recSSE );  // sse3
 		bool ssse3_result = _test_instruction( funcSSSE3 );
 		bool sse41_result = _test_instruction( funcSSE41 );
@@ -308,52 +341,32 @@ void cpudetectInit()
 		// more reliable gauge of the cpu's actual ability.  But since a difference in bit
 		// and actual ability may represent a cmos/bios problem, we report it to the user.
 
-		if( sse3_result != !!x86caps.hasStreamingSIMD3Extensions )
+		if( sse3_result != !!hasStreamingSIMD3Extensions )
 		{
 			Console.Warning( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				bool_to_char( !!x86caps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
+				bool_to_char( !!hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
 
-			x86caps.hasStreamingSIMD3Extensions = sse3_result;
+			hasStreamingSIMD3Extensions = sse3_result;
 		}
 
-		if( ssse3_result != !!x86caps.hasSupplementalStreamingSIMD3Extensions )
+		if( ssse3_result != !!hasSupplementalStreamingSIMD3Extensions )
 		{
 			Console.Warning( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				bool_to_char( !!x86caps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
+				bool_to_char( !!hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
 
-			x86caps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
+			hasSupplementalStreamingSIMD3Extensions = ssse3_result;
 		}
 
-		if( sse41_result != !!x86caps.hasStreamingSIMD4Extensions )
+		if( sse41_result != !!hasStreamingSIMD4Extensions )
 		{
 			Console.Warning( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
-				bool_to_char( !!x86caps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
+				bool_to_char( !!hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
 
-			x86caps.hasStreamingSIMD4Extensions = sse41_result;
+			hasStreamingSIMD4Extensions = sse41_result;
 		}
 
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////
-	// Establish MXCSR Mask...
-
-	// HACK!  For some reason the "proper" fxsave code below causes some kind of stackframe
-	// corruption in MSVC PGO builds.  The culprit appears to be execution of FXSAVE itself,
-	// since only by not executing FXSAVE is the crash avoided. (note: crash happens later
-	// in SysDetect).  Using a #pragma optimize("",off) also fixes it.
-	//
-	// Workaround: We assume the MXCSR mask from the settings of the CPU.  SSE2 CPUs have
-	// a full mask available.  SSE and earlier CPUs have a few bits reserved (must be zero).
-
-	EstablishMXCSRmask();
-
-	////////////////////////////////////////////////////////////////////////////////////////////
-	//  Core Counting!
-
-	if( !x86caps.hasMultiThreading || LogicalCoresPerPhysicalCPU == 0 )
-		LogicalCoresPerPhysicalCPU = 1;
-
-	// This will assign values into x86caps.LogicalCores and PhysicalCores
-	CountLogicalCores( LogicalCoresPerPhysicalCPU, PhysicalCoresPerPhysicalCPU );
+	SIMD_EstablishMXCSRmask();
 }
 

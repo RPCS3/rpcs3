@@ -189,9 +189,9 @@ void Pcsx2App::ReadUserModeSettings()
 
 void Pcsx2App::DetectCpuAndUserMode()
 {
-	cpudetectInit();
-	//x86caps.Identify();
-	//x86caps.SIMD_EstablishMXCSRmask();
+	x86caps.Identify();
+	x86caps.CountCores();
+	x86caps.SIMD_EstablishMXCSRmask();
 
 	if( !x86caps.hasMultimediaExtensions )
 	{
@@ -413,6 +413,8 @@ typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
 bool Pcsx2App::OnInit()
 {
+	InitCPUTicks();
+
 #define pxAppMethodEventHandler(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeAppMethodEventFunction, &func )
 
