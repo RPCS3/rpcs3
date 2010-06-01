@@ -40,7 +40,7 @@ void LogInit()
 	USBLog.Open(LogFile);
 }
 
-EXPORT_C_(void) PADSetLogFolder(const char* dir)
+EXPORT_C_(void)  USBsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;

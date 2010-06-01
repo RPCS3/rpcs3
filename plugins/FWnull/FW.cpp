@@ -44,7 +44,7 @@ void LogInit()
 	FWLog.Open(LogFile);
 }
 
-EXPORT_C_(void) PADSetLogFolder(const char* dir)
+EXPORT_C_(void)  FWsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;

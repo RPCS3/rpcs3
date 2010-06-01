@@ -56,7 +56,7 @@ void LogInit()
 	Dev9Log.Open(LogFile);
 }
 
-EXPORT_C_(void) PADSetLogFolder(const char* dir)
+EXPORT_C_(void)  DEV9setLogDir(const char* dir)
 {
 	// Get the path to the log directory.
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;

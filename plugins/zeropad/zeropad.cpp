@@ -290,7 +290,7 @@ void CALLBACK PADsetSettingsDir(const char* dir)
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
  
-void CALLBACK PADSetLogFolder(const char* dir)
+void CALLBACK PADsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;

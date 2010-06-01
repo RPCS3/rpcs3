@@ -137,7 +137,7 @@ static s32  CALLBACK fallback_freeze(int mode, freezeData *data)
 
 static void CALLBACK fallback_keyEvent(keyEvent *ev) {}
 static void CALLBACK fallback_setSettingsDir(const char* dir) {}
-static void CALLBACK fallback_SetLogFolder(const char* dir) {}
+static void CALLBACK fallback_setLogDir(const char* dir) {}
 static void CALLBACK fallback_configure() {}
 static void CALLBACK fallback_about() {}
 static s32  CALLBACK fallback_test() { return 0; }
@@ -292,7 +292,7 @@ static const LegacyApi_CommonMethod s_MethMessCommon[] =
 
 	{	"keyEvent",			(vMeth*)fallback_keyEvent },
 	{	"setSettingsDir",	(vMeth*)fallback_setSettingsDir },
-	{	"SetLogFolder",	    (vMeth*)fallback_SetLogFolder },
+	{	"setLogDir",	    (vMeth*)fallback_setLogDir },
 
 	{	"freeze",			(vMeth*)fallback_freeze	},
 	{	"test",				(vMeth*)fallback_test },

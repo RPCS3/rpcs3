@@ -271,7 +271,7 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 	},
 
 	{	"Framelimiter_SlomoToggle",
-		Implementations::Framelimiter_TurboToggle,
+		Implementations::Framelimiter_SlomoToggle,
 		NULL,
 		NULL,
 	},
