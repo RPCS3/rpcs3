@@ -333,7 +333,6 @@ set(pcsx2GuiSources
 	gui/Panels/GameFixesPanel.cpp
 	gui/Panels/GSWindowPanel.cpp
 	gui/Panels/LogOptionsPanels.cpp
-	gui/Panels/MemoryCardsPanel.cpp
 	gui/Panels/MiscPanelStuff.cpp
 	gui/Panels/PathsPanel.cpp
 	gui/Panels/PluginSelectorPanel.cpp

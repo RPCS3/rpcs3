@@ -425,9 +425,6 @@
 			<Option virtualFolder="Memory Card/" />
 		</Unit>
 		<Unit filename="../gui/Panels/MemoryCardPanels.h" />
-		<Unit filename="../gui/Panels/MemoryCardsPanel.cpp">
-			<Option virtualFolder="Memory Card/" />
-		</Unit>
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
 		<Unit filename="../gui/Panels/PathsPanel.cpp" />
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />
