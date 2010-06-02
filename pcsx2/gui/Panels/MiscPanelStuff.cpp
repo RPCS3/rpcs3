@@ -32,6 +32,8 @@ using namespace pxSizerFlags;
 Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isFirstTime )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL, _("Usermode Selection") )
 {
+	SetMinSize( wxSize( GetIdealWidth() - 16, wxDefaultCoord ) );
+
 	const wxString usermodeExplained( pxE( ".Panel:Usermode:Explained",
 		L"Please select your preferred default location for PCSX2 user-level documents below "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
@@ -64,7 +66,7 @@ Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isF
 	
 	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
 
-	*this	+= Text( isFirstTime ? usermodeExplained : usermodeWarning );
+	*this	+= new pxStaticTextImproved( this, 3, isFirstTime ? usermodeExplained : usermodeWarning ) | pxExpand;
 	*this	+= m_radio_UserMode		| StdExpand();
 	*this	+= m_dirpicker_custom	| pxExpand.Border( wxLEFT, StdPadding + m_radio_UserMode->GetIndentation() );
 	*this	+= 4;

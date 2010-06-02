@@ -349,6 +349,12 @@ pxTextWrapper& pxTextWrapper::Wrap( const wxWindow& win, const wxString& text, i
 	return *this;
 }
 
+pxTextWrapper& pxTextWrapper::Wrap( const wxWindow* win, const wxString& text, int widthMax )
+{
+	if( win ) _parent::Wrap( *win, text, widthMax );
+	return *this;
+}
+
 void pxTextWrapper::OnOutputLine(const wxString& line)
 {
 	m_text += line;

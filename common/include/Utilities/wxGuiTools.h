@@ -456,6 +456,7 @@ public:
     }
 
 	pxTextWrapper& Wrap( const wxWindow& win, const wxString& text, int widthMax );
+	pxTextWrapper& Wrap( const wxWindow* win, const wxString& text, int widthMax );
 
 protected:
     virtual void OnOutputLine(const wxString& line);
@@ -484,8 +485,8 @@ public:
 		m_curpos = wxPoint();
 		m_align = wxALIGN_CENTER;
 		m_leading = 2;
-		
-		OnFontChanged();	
+
+		OnFontChanged();
 	}
 
 	virtual ~pxWindowTextWriter() throw()
@@ -536,6 +537,35 @@ public:
 	pxWindowTextWriter& SetY( int ypos );
 	pxWindowTextWriter& MoveY( int ydelta );
 };
+
+// --------------------------------------------------------------------------------------
+//  pxStaticTextImproved
+// --------------------------------------------------------------------------------------
+class pxStaticTextImproved : public wxPanelWithHelpers
+{
+	typedef wxPanelWithHelpers _parent;
+
+protected:
+	wxAlignment		m_align;
+	wxString		m_wrappedLabel;
+	bool			m_autowrap;
+	int				m_wrappedWidth;
+	int				m_padding_horiz;
+
+public:
+	pxStaticTextImproved( wxWindow* parent=NULL, const wxString& label=wxEmptyString, wxAlignment align=wxALIGN_CENTER );
+	pxStaticTextImproved( wxWindow* parent, int heightInLines, const wxString& label=wxEmptyString, wxAlignment align=wxALIGN_CENTER );
+	virtual ~pxStaticTextImproved() throw() {}
+
+	virtual void SetLabel(const wxString& label);
+	pxStaticTextImproved& Unwrapped();
+	
+protected:
+	void Init();
+	void paintEvent(wxPaintEvent& evt);
+	void UpdateWrapping( bool textChanged );
+};
+
 
 // --------------------------------------------------------------------------------------
 //  MoreStockCursors

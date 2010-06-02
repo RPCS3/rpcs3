@@ -100,7 +100,8 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	*this	+= 5;
 
-	*this	+= Heading( pxE( ".Panel:Framelimiter:Heading",
+	//*this	+= Heading( pxE( ".Panel:Framelimiter:Heading",
+	*this	+= new pxStaticTextImproved( this, pxE( ".Panel:Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);

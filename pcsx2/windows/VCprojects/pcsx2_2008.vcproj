@@ -493,54 +493,6 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="Linux"
-				>
-				<File
-					RelativePath="..\..\x86\aMicroVU.S"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\ix86-32\aR5900-32.S"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\aVif.S"
-					>
-				</File>
-				<File
-					RelativePath="..\..\x86\aVUzerorec.S"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Linux\LnxHostSys.cpp"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Devel|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-				</File>
-			</Filter>
-			<Filter
 				Name="Ps2"
 				>
 				<File
@@ -2934,10 +2886,6 @@
 					</File>
 					<File
 						RelativePath="..\..\gui\Panels\MemoryCardPanels.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Panels\MemoryCardsPanel.cpp"
 						>
 					</File>
 				</Filter>

@@ -411,8 +411,6 @@ namespace Panels
 		virtual bool ValidateEnumerationStatus();
 	};
 
-	class MemoryCardInfoPanel;
-
 	// --------------------------------------------------------------------------------------
 	//  PluginSelectorPanel
 	// --------------------------------------------------------------------------------------

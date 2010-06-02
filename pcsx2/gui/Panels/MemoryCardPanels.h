@@ -244,31 +244,6 @@ namespace Panels
 	};
 
 	// --------------------------------------------------------------------------------------
-	//  MemoryCardInfoPanel
-	// --------------------------------------------------------------------------------------
-	class MemoryCardInfoPanel : public BaseApplicableConfigPanel
-	{
-	protected:
-		//uint			m_port;
-		uint			m_slot;
-
-		wxString		m_DisplayName;
-		wxString		m_ErrorMessage;
-		ScopedPtr<McdListItem> m_cardInfo;
-		
-	public:
-		virtual ~MemoryCardInfoPanel() throw() {}
-		MemoryCardInfoPanel( wxWindow* parent, uint slot );
-		void Apply();
-		void Eject();
-
-	protected:
-		void AppStatusEvent_OnSettingsApplied();
-		void paintEvent( wxPaintEvent& evt );
-
-	};
-
-	// --------------------------------------------------------------------------------------
 	//  McdConfigPanel_Toggles / McdConfigPanel_Standard / McdConfigPanel_Multitap
 	// --------------------------------------------------------------------------------------
 	class McdConfigPanel_Toggles : public BaseApplicableConfigPanel
@@ -291,40 +266,6 @@ namespace Panels
 	protected:
 		void AppStatusEvent_OnSettingsApplied();
 		void OnMultitapClicked();
-	};
-
-	class McdConfigPanel_Standard : public BaseApplicableConfigPanel
-	{
-		typedef BaseApplicableConfigPanel _parent;
-
-	protected:
-		MemoryCardInfoPanel*	m_panel_cardinfo[2];
-
-	public:
-		McdConfigPanel_Standard( wxWindow* parent );
-		virtual ~McdConfigPanel_Standard() throw() { }
-		void Apply();
-
-	protected:
-		void AppStatusEvent_OnSettingsApplied();
-	};
-
-	class McdConfigPanel_Multitap : public BaseApplicableConfigPanel
-	{
-		typedef BaseApplicableConfigPanel _parent;
-
-	protected:
-		int				m_port;
-		pxCheckBox*		m_check_Multitap;
-
-	public:
-		McdConfigPanel_Multitap( wxWindow* parent, int port=0 );
-		virtual ~McdConfigPanel_Multitap() throw() { }
-		void Apply();
-
-	protected:
-		void OnMultitapChecked( wxCommandEvent& evt );
-		void AppStatusEvent_OnSettingsApplied();
 	};
 
 };

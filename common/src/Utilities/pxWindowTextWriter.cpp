@@ -134,3 +134,120 @@ pxWindowTextWriter& pxWindowTextWriter::WriteLn( const wxChar* fmt, ... )
 	va_end(args);	
 	return *this;
 }
+
+// --------------------------------------------------------------------------------------
+//  pxStaticTextImproved  (implementations)
+// --------------------------------------------------------------------------------------
+pxStaticTextImproved::pxStaticTextImproved( wxWindow* parent, const wxString& label, wxAlignment align )
+	: wxPanelWithHelpers( parent )
+{
+	Init();
+
+	m_align			= align;
+	SetLabel( label );
+}
+
+pxStaticTextImproved::pxStaticTextImproved( wxWindow* parent, int heightInLines, const wxString& label, wxAlignment align )
+	: wxPanelWithHelpers( parent )
+{
+	SetMinSize( wxSize( wxDefaultCoord, heightInLines*16 ) );
+	Init();
+
+	m_align			= align;
+	SetLabel( label );
+}
+
+void pxStaticTextImproved::Init()
+{
+	m_autowrap		= true;
+	m_wrappedWidth	= -1;
+	m_padding_horiz	= 8;
+
+	Connect( wxEVT_PAINT, wxPaintEventHandler(pxStaticTextImproved::paintEvent) );
+}
+
+pxStaticTextImproved& pxStaticTextImproved::Unwrapped()
+{
+	m_autowrap = false;
+	UpdateWrapping( false );
+	return *this;
+}
+
+void pxStaticTextImproved::UpdateWrapping( bool textChanged )
+{
+	if( !m_autowrap )
+	{
+		m_wrappedLabel = wxEmptyString;
+		m_wrappedWidth = -1;
+		return;
+	}
+
+	wxString wrappedLabel;
+	const int newWidth( GetSize().GetWidth() );
+
+	if( !textChanged && (newWidth == m_wrappedWidth) ) return;
+
+	// Note: during various stages of sizer-calc, width can be 1, 0, or -1.
+	// We ignore wrapping in these cases.  (the PaintEvent also checks the wrapping
+	// and updates it if needed, in case the control's size isn't figured out prior
+	// to being painted).
+	
+	m_wrappedWidth = newWidth;
+	if( m_wrappedWidth > 1 )
+	{
+		wxString label( GetLabel() );
+		wrappedLabel = pxTextWrapper().Wrap( this, label, m_wrappedWidth-(m_padding_horiz*2) ).GetResult();
+	}
+
+	if( m_wrappedLabel == wrappedLabel ) return;
+	m_wrappedLabel = wrappedLabel;
+	Refresh();
+}
+
+void pxStaticTextImproved::SetLabel(const wxString& label)
+{
+	const bool labelChanged( label != GetLabel() );
+	if( labelChanged )
+	{
+		_parent::SetLabel( label );
+		Refresh();
+	}
+
+	// Always update wrapping, in case window width or something else also changed.
+	UpdateWrapping( labelChanged );
+}
+
+void pxStaticTextImproved::paintEvent(wxPaintEvent& evt)
+{
+	wxPaintDC dc( this );
+	const int dcWidth( dc.GetSize().GetWidth() );
+	if( dcWidth < 1 ) return;
+
+	dc.SetFont( GetFont() );
+	pxWindowTextWriter writer( dc );
+	wxString label;
+
+	if( m_autowrap )
+	{
+		if( m_wrappedLabel.IsEmpty() || m_wrappedWidth != dcWidth )
+		{
+			const wxString original( GetLabel() );
+			if( original.IsEmpty() ) return;
+			m_wrappedLabel = pxTextWrapper().Wrap( this, original, dcWidth-(m_padding_horiz*2) ).GetResult();
+		}
+		label = m_wrappedLabel;
+	}
+	else
+	{
+		label = GetLabel();
+	}
+
+	int tWidth, tHeight;
+	GetTextExtent( label, &tWidth, &tHeight );
+	
+	writer.Align( m_align );
+	if( m_align & wxALIGN_CENTER_VERTICAL )
+		writer.SetY( (dc.GetSize().GetHeight() - tHeight) / 2 );
+
+	writer.WriteLn( label );
+}

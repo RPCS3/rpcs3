@@ -25,17 +25,6 @@
 
 using namespace pxSizerFlags;
 
-namespace Panels
-{
-	// Helper class since the 'AddPage' template system needs a single-parameter constructor.
-	class McdConfigPanel_Multitap2 : public McdConfigPanel_Multitap
-	{
-	public:
-		McdConfigPanel_Multitap2( wxWindow* parent ) : McdConfigPanel_Multitap( parent, 1 ) {}
-		virtual ~McdConfigPanel_Multitap2() throw() { }
-	};
-}
-
 wxString GetMsg_McdNtfsCompress()
 {
 	return pxE( ".Panel:Mcd:NtfsCompress", 
@@ -109,55 +98,6 @@ void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 	#endif
 }
 
-Panels::McdConfigPanel_Standard::McdConfigPanel_Standard(wxWindow *parent)
-	: _parent( parent )
-{
-	m_panel_cardinfo[0] = new MemoryCardInfoPanel( this, 0 );
-	m_panel_cardinfo[1] = new MemoryCardInfoPanel( this, 1 );
-	
-	for( uint port=0; port<2; ++port )
-	{
-		wxStaticBoxSizer& portSizer( *new wxStaticBoxSizer( wxVERTICAL, this, wxsFormat(_("Port %u"), port+1) ) );
-		portSizer += m_panel_cardinfo[port]		| pxExpand;
-
-		*this += portSizer	| StdExpand();
-	}
-}
-
-void Panels::McdConfigPanel_Standard::Apply()
-{
-}
-
-void Panels::McdConfigPanel_Standard::AppStatusEvent_OnSettingsApplied()
-{
-}
-
-Panels::McdConfigPanel_Multitap::McdConfigPanel_Multitap(wxWindow *parent, int port) : _parent( parent )
-{
-	m_port = port;
-
-	m_check_Multitap = new pxCheckBox( this, wxsFormat(_("Enable Multitap on Port %u"), m_port+1) );
-	m_check_Multitap->SetFont( wxFont( m_check_Multitap->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
-
-	*this += m_check_Multitap;
-
-	Connect( m_check_Multitap->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigPanel_Multitap::OnMultitapChecked));
-}
-
-void Panels::McdConfigPanel_Multitap::OnMultitapChecked( wxCommandEvent& evt )
-{
-
-}
-
-void Panels::McdConfigPanel_Multitap::Apply()
-{
-
-}
-
-void Panels::McdConfigPanel_Multitap::AppStatusEvent_OnSettingsApplied()
-{
-
-}
 
 using namespace Panels;
 using namespace pxSizerFlags;
