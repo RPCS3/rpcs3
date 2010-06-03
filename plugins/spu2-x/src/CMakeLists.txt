@@ -122,10 +122,8 @@ target_link_libraries(${spu2xName} Utilities x86emitter Utilities)
 # link target with ALSA
 target_link_libraries(${spu2xName} ${ALSA_LIBRARIES})
 
-# # link target with PortAudio
-if(PORTAUDIO_FOUND)
-    target_link_libraries(${spu2xName} ${PORTAUDIO_LIBRARIES})
-endif(PORTAUDIO_FOUND)
+# link target with PortAudio
+target_link_libraries(${spu2xName} ${PORTAUDIO_LIBRARIES})
 
 # link target with SoundTouch
 target_link_libraries(${spu2xName} ${SOUNDTOUCH_LIBRARIES})

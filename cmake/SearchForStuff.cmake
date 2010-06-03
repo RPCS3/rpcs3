@@ -29,7 +29,7 @@ if(Linux)			# Linux only
 		# add gtk include directories
 		include_directories(${GTK2_INCLUDE_DIRS})
 	#else(GTK2_FOUND)
-	#	message(FATAL_ERROR "GTK2 libraries and include files not found. 
+	#	message(FATAL_ERROR "GTK2 libraries and include files not found.
 	#			Please install GTK2 version ${minimal_GTK2_version} or higher.")
 	endif(GTK2_FOUND)
 
@@ -67,6 +67,7 @@ else(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 	# use project one
 	set(projectZLIB TRUE)
     set(ZLIB_LIBRARIES zlib)
+    set(ZLIB_FOUND TRUE)
 endif(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 
 #------------------------------------------------------------
@@ -84,7 +85,7 @@ if(Linux)			# Linux only
 		# add x11 include directories
 		include_directories(${X11_INCLUDE_DIR})
 	#else(X11_FOUND)
-	#	message(FATAL_ERROR "X11 libraries and include files not found. 
+	#	message(FATAL_ERROR "X11 libraries and include files not found.
 	#			Please install X11.")
 	endif(X11_FOUND)
 endif(Linux)
@@ -107,6 +108,7 @@ else(A52_FOUND AND NOT FORCE_INTERNAL_A52)
 	# use project one
 	set(projectA52 TRUE)
     set(A52_LIBRARIES A52)
+    set(A52_FOUND TRUE)
 endif(A52_FOUND AND NOT FORCE_INTERNAL_A52)
 
 
@@ -133,6 +135,7 @@ else(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 	# use project one
 	set(projectBZip2 TRUE)
 	set(BZIP2_LIBRARIES bzip2)
+    set(BZIP2_FOUND TRUE)
 endif(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 
 #------------------------------------------------------------
@@ -196,7 +199,7 @@ endif(SDL_FOUND)
 # SoundTouch optional
 #include(FindSoundTouch)
 
-# found SoundTouch	
+# found SoundTouch
 if(SOUNDTOUCH_FOUND AND NOT FORCE_INTERNAL_SOUNDTOUCH)
 	# add SoundTouch include directories
 	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
@@ -310,12 +313,15 @@ endif(SDL_FOUND)
 #			spu2-x
 #---------------------------------------
 # requires: -SoundTouch
+#			-ALSA
+#           -Portaudio
+#           -A52
 #---------------------------------------
-if(SOUNDTOUCH_FOUND)
+if(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
 	set(spu2-x TRUE)
-else(SOUNDTOUCH_FOUND)
+else(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
 	set(spu2-x FALSE)
-endif(SOUNDTOUCH_FOUND)
+endif(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
 #---------------------------------------
 
 #---------------------------------------
