@@ -153,7 +153,7 @@ set(USBnull TRUE)
 #			[TODO] Write CMakeLists.txt for these plugins.
 set(cdvdGigaherz FALSE)
 set(CDVDisoEFP FALSE)
-set(CDVDlinuz TRUE)
+set(CDVDlinuz FALSE)
 set(CDVDolio FALSE)
 set(CDVDpeops FALSE)
 set(GSdx FALSE)
