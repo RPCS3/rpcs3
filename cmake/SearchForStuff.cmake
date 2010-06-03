@@ -66,6 +66,7 @@ if(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 else(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 	# use project one
 	set(projectZLIB TRUE)
+    set(ZLIB_LIBRARIES zlib)
 endif(ZLIB_FOUND AND NOT FORCE_INTERNAL_ZLIB)
 
 #------------------------------------------------------------
@@ -126,7 +127,7 @@ find_package(BZip2)
 # if we found bzip2 on the system,
 # use it else use project one
 if(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
-	# add zlib include directories
+	# add bzip include directories
 	include_directories(${BZIP2_INCLUDE_DIR})
 else(BZIP2_FOUND AND NOT FORCE_INTERNAL_BZIP2)
 	# use project one
