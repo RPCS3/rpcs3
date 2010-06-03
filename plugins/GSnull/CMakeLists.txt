@@ -3,29 +3,40 @@
 # plugin name
 set(GSnullName GSnull)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    -msse2
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2 -msse2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # GSnull sources
 set(GSnullSources
 	GifTransfer.cpp
 	GS.cpp)
-	
+
 # GSnull headers
 set(GSnullHeaders
 	GifTransfer.h
@@ -53,7 +64,7 @@ set(GSnullLinuxHeaders
 # GSnull null sources
 set(GSnullnullSources
 	null/GSnull.cpp)
-	
+
 # GSnull null headers
 set(GSnullnullHeaders
 	null/GSnull.h)
@@ -74,14 +85,14 @@ set(GSnullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${GSnullName} SHARED 
+add_library(${GSnullName} SHARED
 			${GSnullSources}
 			${GSnullHeaders}
 			${GSnullnullSources}
 			${GSnullnullHeaders}
 			${GSnullLinuxSources}
 			${GSnullLinuxHeaders})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${GSnullName} -m32)
 

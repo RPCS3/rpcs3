@@ -3,22 +3,35 @@
 # plugin name
 set(CDVDlinuzName CDVDlinuz)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    -D_LARGEFILE64_SOURCE
+    )
+
+set(OptimizationFlags
+    -O2
+    -DNDEBUG
+    -fomit-frame-pointer
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     # add defines
-    add_definitions(-Wall -m32 -g -fPIC -D_LARGEFILE64_SOURCE)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
     # add defines
-    add_definitions(-Wall -m32 -O2 -fPIC -fomit-frame-pointer -D_LARGEFILE64_SOURCE -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     # add defines
-    add_definitions(-Wall -m32 -O2 -fPIC -fomit-frame-pointer -D_LARGEFILE64_SOURCE -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # CDVDlinuz sources

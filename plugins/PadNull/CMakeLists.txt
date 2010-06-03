@@ -3,28 +3,38 @@
 # plugin name
 set(PadNullName PadNull)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # PadNull sources
 set(PadNullSources
 	Pad.cpp)
-	
+
 # PadNull headers
 set(PadNullHeaders
 	Pad.h)
@@ -62,12 +72,12 @@ include_directories(.
 					Linux)
 
 # add library
-add_library(${PadNullName} SHARED 
+add_library(${PadNullName} SHARED
 			${PadNullSources}
 			${PadNullHeaders}
 			${PadNullLinuxSources}
 			${PadNullLinuxHeaders})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${PadNullName} -m32)
 

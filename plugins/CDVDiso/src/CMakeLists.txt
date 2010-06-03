@@ -3,22 +3,33 @@
 # plugin name
 set(CDVDisoName CDVDiso)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fpic
+    -fpermissive
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     # add defines
-    add_definitions(-Wall -m32 -g -fpic -fpermissive)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
     # add defines
-    add_definitions(-Wall -m32 -O2 -fpic -fomit-frame-pointer -fpermissive)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     # add defines
-    add_definitions(-Wall -m32 -O2 -fpic -fomit-frame-pointer -fpermissive)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # CDVDiso sources
@@ -66,7 +77,7 @@ target_link_libraries(${CDVDisoName} ${BZIP2_LIBRARIES})
 
 # Force the linker into 32 bits mode
 target_link_libraries(${CDVDisoName} -m32)
- 
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${CDVDisoName} -s)

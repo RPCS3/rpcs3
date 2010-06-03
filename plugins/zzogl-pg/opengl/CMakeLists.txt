@@ -31,6 +31,9 @@ set(CommonFlags
     -DZEROGS_SSE2
     )
 
+set(OptimizationFlags
+    -O2
+    )
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
@@ -41,13 +44,13 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
     # add defines
-    add_definitions(${CommonFlags} -g -O2 -W -DZEROGS_DEVBUILD)
+    add_definitions(${CommonFlags} ${OptimizationFlags} -g -W -DZEROGS_DEVBUILD)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     # add defines
-    add_definitions(${CommonFlags} -O2 -W)
+    add_definitions(${CommonFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zzogl sources
@@ -154,7 +157,7 @@ target_link_libraries(${zzoglName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zzoglName} ${X11_Xxf86vm_LIB})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${zzoglName} -m32)
 

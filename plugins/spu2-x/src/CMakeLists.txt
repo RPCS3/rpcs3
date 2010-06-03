@@ -13,22 +13,33 @@ set(CMAKE_CXX_FLAGS_DEVEL "")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 
+set(CommonFlags
+    -Wall
+    -m32
+    -FPIC
+    -msse2
+    )
+
+set(OptimizationFlags
+    -DNDEBUG
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -DNDEBUG)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # spu2x sources

@@ -3,29 +3,39 @@
 # plugin name
 set(dev9nullName dev9null)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # dev9null sources
 set(dev9nullSources
 	Config.cpp
 	DEV9.cpp)
-	
+
 # dev9null headers
 set(dev9nullHeaders
 	Config.h
@@ -51,12 +61,12 @@ set(dev9nullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${dev9nullName} SHARED 
+add_library(${dev9nullName} SHARED
 			${dev9nullSources}
 			${dev9nullHeaders}
 			${dev9nullLinuxSources}
 			${dev9nullLinuxHeaders})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${dev9nullName} -m32)
 

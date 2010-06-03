@@ -3,29 +3,39 @@
 # plugin name
 set(USBnullName USBnull)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # USBnull sources
 set(USBnullSources
 	Config.cpp
 	USB.cpp)
-	
+
 # USBnull headers
 set(USBnullHeaders
 	Config.h
@@ -54,12 +64,12 @@ set(USBnullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${USBnullName} SHARED 
+add_library(${USBnullName} SHARED
 			${USBnullSources}
 			${USBnullHeaders}
 			${USBnullLinuxSources}
 			${USBnullLinuxHeaders})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${USBnullName} -m32)
 

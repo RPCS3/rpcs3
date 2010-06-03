@@ -3,22 +3,33 @@
 # plugin name
 set(zerospu2Name zerospu2)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fPIC
+    -msse2
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zerospu2 sources
@@ -27,7 +38,7 @@ set(zerospu2Sources
 	zerodma.cpp
 	zerospu2.cpp
 	zeroworker.cpp)
-	
+
 # zerospu2 headers
 set(zerospu2Headers
 	misc.h
@@ -76,7 +87,7 @@ include_directories(.
 					Targets)
 
 # add library
-add_library(${zerospu2Name} SHARED 
+add_library(${zerospu2Name} SHARED
 			${zerospu2Sources}
 			${zerospu2Headers}
 			${zerospu2LinuxSources}
@@ -96,7 +107,7 @@ endif(PORTAUDIO_FOUND)
 
 # link target with SoundTouch
 target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${zerospu2Name} -m32)
 

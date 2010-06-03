@@ -3,22 +3,31 @@
 # plugin name
 set(zerogsName zerogs)
 
+set(CommonFlags
+    -Wall
+    -m32
+    )
+
+set(OptimizationFlags
+    -O2
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -m32 -g)
+    add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -m32 -O2)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zerogs sources
@@ -35,7 +44,7 @@ set(zerogsSources
 	x86.cpp
 	zerogs.cpp
 	zpipe.cpp)
-	
+
 # zerogs headers
 set(zerogsHeaders
 	common.h
@@ -99,7 +108,7 @@ set_source_files_properties(${zerogsSSources} PROPERTIES LANGUAGE CXX)
 include_directories(.)
 
 # add library
-add_library(${zerogsName} SHARED 
+add_library(${zerogsName} SHARED
 			${zerogsSources}
 			${zerogsHeaders}
 			${zerogsSSources}
@@ -129,7 +138,7 @@ target_link_libraries(${zerogsName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zerogsName} ${X11_Xxf86vm_LIB})
- 
+
 # Force the linker into 32 bits mode
 target_link_libraries(${zerogsName} -m32)
 

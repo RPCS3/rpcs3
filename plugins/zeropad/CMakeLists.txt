@@ -3,22 +3,34 @@
 # plugin name
 set(zeropadName zeropad)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -fpic
+    )
+
+set(OptimizationFlags
+    -O2
+    -fomit-frame-pointer
+    )
+
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-Wall -m32 -g -fpic)
+	add_definitions(${CommonFlags} -g)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-Wall -m32 -O2 -fpic -fomit-frame-pointer)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-Wall -m32 -O2 -fpic -fomit-frame-pointer)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zeropad sources
@@ -81,7 +93,7 @@ target_link_libraries(${zeropadName} ${SDL_LIBRARY})
 
 # Force the linker into 32 bits mode
 target_link_libraries(${zeropadName} -m32)
- 
+
 # Linker strip option
 if (CMAKE_BUILD_STRIP)
     target_link_libraries(${zeropadName} -s)
