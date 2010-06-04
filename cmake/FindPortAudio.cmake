@@ -14,8 +14,10 @@ find_path(PORTAUDIO_INCLUDE_DIR portaudio.h)
 
 # finally the library itself
 find_library(libPortAudio NAMES portaudio)
-find_library(libPortAudioCpp NAMES portaudiocpp)
-set(PORTAUDIO_LIBRARIES ${libPortAudio} ${libPortAudioCpp})
+# Seems to run OK without libportaudiocpp so do not pull additional dependency
+# find_library(libPortAudioCpp NAMES portaudiocpp)
+# set(PORTAUDIO_LIBRARIES ${libPortAudio} ${libPortAudioCpp})
+set(PORTAUDIO_LIBRARIES ${libPortAudio})
 
 # handle the QUIETLY and REQUIRED arguments and set PORTAUDIO_FOUND to TRUE if 
 # all listed variables are TRUE

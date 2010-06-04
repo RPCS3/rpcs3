@@ -16,6 +16,9 @@ detectOperatingSystem()
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 
+# Do not search Lib in /usr/lib64. Hope it is not overwritten in find_package or others macro
+SET(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
+
 #-------------------------------------------------------------------------------
 #									FindStuff
 #-------------------------------------------------------------------------------

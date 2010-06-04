@@ -3,22 +3,34 @@
 # library name
 set(a52Name a52)
 
+set(CommonFlags
+    -Wall
+    -m32
+    -g
+    )
+
+set(OptimizationFlags
+    -O2
+    -Os
+    )
+
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-g -Wall)
+	add_definitions(${CommonFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-O2 -Wall -g -Os)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-O2 -Wall -g -Os)
+	add_definitions(${CommonFlags} ${OptimizationFlags})
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # variable with all sources of this library

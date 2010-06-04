@@ -3,22 +3,28 @@
 # library name
 set(bzip2Name bzip2)
 
+set(CommonFlags
+    -m32
+    -march=athlon-xp
+    -march=prescott
+    )
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	# add defines
-	add_definitions(-g -O0 -march=athlon-xp -march=prescott)
+	add_definitions(${CommonFlags} -g -O0)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	# add defines
-	add_definitions(-O1 -g -W -march=athlon-xp -march=prescott)
+	add_definitions(${CommonFlags} -O1 -g -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
-	add_definitions(-fexpensive-optimizations -O3 -Os -W -march=athlon-xp -march=prescott)
+	add_definitions(${CommonFlags} -fexpensive-optimizations -O3 -Os -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # variable with all sources of this library
