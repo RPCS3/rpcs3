@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "Common.h"
 #include "File_Reader.h"
 #include "AppConfig.h"
 
@@ -35,8 +36,9 @@ struct key_pair {
 			stringstream ss(key);
 			string t2;
 			ss >>  t2;
+			if (t[t.length()-1] != '\n') t += "\n";
 			t += "[/" + t2.substr(1, t2.length()-1);
-			if (t2.compare(t)) t += "]";
+			if (t2.compare(key)) t += "]";
 		}
 		else {
 			t = key;
@@ -74,93 +76,20 @@ public:
 
 class DataBase_Loader {
 private:
-	template<class T> string toString(const T& value) {
-		stringstream ss(ios_base::in | ios_base::out);
-		string tString;
-		ss <<  value;
-		ss >>  tString;
-		return tString;
-	}
-	string toLower(const string& s) {
-		string retval( s );
-		for (uint i = 0; i < s.length(); i++) {
-			char& c = retval[i];
-			if (c >= 'A' && c <= 'Z') {
-				c += 'a' - 'A';
-			}
-		}
-		return retval;
-	}
-	bool strCompare(const string& s1, const string& s2) {
-		const string t1( toLower(s1) );
-		const string t2( toLower(s2) );
-		return !t1.compare(t2);
-	}
-	bool isComment(const string& s) {
-		const string sub( s.substr(0, 2) );
-		return (sub.compare("--") == 0) || (sub.compare("//") == 0);
-	}
-	void doError(const string& line, key_pair& keyPair, bool doMsg = false) {
-		if (doMsg) Console.Error("DataBase_Loader: Bad file data [%s]", line.c_str());
-		keyPair.key.clear();
-	}
-	void extractMultiLine(const string& line, key_pair& keyPair, File_Reader& reader, const stringstream& ss) {
-		string t;
-		string endString;
-		endString = "[/" + keyPair.key.substr(1, keyPair.key.length()-1);
-		if (keyPair.key[keyPair.key.length()-1] != ']') {
-			endString += "]";
-			keyPair.key = line;
-		}
-		for(;;) {
-			t = reader.getLine();
-			
-			if (!t.compare(endString)) break;
-			keyPair.value += t + "\n";
-		}
-	}
-	void extract(const string& line, key_pair& keyPair, File_Reader& reader) {
-		stringstream ss(line);
-		string t;
-		keyPair.key.clear();
-		keyPair.value.clear();
-		ss >> keyPair.key;
-		if (!line.length() || isComment(keyPair.key)) {
-			doError(line, keyPair);
-			return; 
-		}
-		if (keyPair.key[0] == '[') {
-			extractMultiLine(line, keyPair, reader, ss);
-			return;
-		}
-		ss >> t;
-		if (t.compare("=") != 0) {
-			doError(line, keyPair, true);
-			return; 
-		}
-		ss >> t;
-		if (isComment(t)) {
-			doError(line, keyPair, true);
-			return;
-		}
-		keyPair.value = t;
-		while (!ss.eof() && !ss.fail()) {
-			ss >> t;
-			if (isComment(t)) break; 
-			keyPair.value += " " + t;
-		}
-		if (ss.fail()) {
-			doError(line, keyPair);
-			return;
-		}
-	}
+	template<class T> string toString(const T& value);
+	string toLower(const string& s);
+	bool strCompare(const string& s1, const string& s2);
+	bool isComment(const string& s);
+	void doError(const string& line, key_pair& keyPair, bool doMsg = false);
+	void extractMultiLine(const string& line, key_pair& keyPair, File_Reader& reader, const stringstream& ss);
+	void extract(const string& line, key_pair& keyPair, File_Reader& reader);
 public:
 	deque<Game_Data*> gList; // List of all game data
 	Game_Data*    curGame;   // Current game data
 	String_Stream header;    // Header of the database
 	string		  baseKey;	 // Key to separate games by ("Serial")
 
-	DataBase_Loader(const string& file, const string& key = "Serial", const string& value = "" ) {
+	DataBase_Loader(const string& file = "GameIndex.dbf", const string& key = "Serial", const string& value = "" ) {
 		curGame	= NULL;
 		baseKey = key;
 		if (!fileExists(file)) {
@@ -230,7 +159,7 @@ public:
 	}
 
 	// Saves changes to the database
-	void saveToFile(const string& file = "DataBase.dbf") {
+	void saveToFile(const string& file = "GameIndex.dbf") {
 		File_Writer writer(file);
 		writer.write(header.toString());
 		deque<Game_Data*>::iterator it = gList.begin();
@@ -266,6 +195,20 @@ public:
 		}
 		else Console.Error("DataBase_Loader: Game not set!");
 		return false;
+	}
+
+	// Totally Deletes the specified key/pair value from the current game's data
+	void deleteKey(const string& key) {
+		if (curGame) {
+			deque<key_pair>::iterator it = curGame->kList.begin();
+			for ( ; it != curGame->kList.end(); ++it) {
+				if (strCompare(it[0].key, key)) {
+					curGame->kList.erase(it);
+					return;
+				}
+			}
+		}
+		else Console.Error("DataBase_Loader: Game not set!");
 	}
 
 	// Gets a string representation of the 'value' for the given key
@@ -358,6 +301,12 @@ public:
 		writeString(key, toString(value?1:0));
 	}
 };
+
+template string DataBase_Loader::toString<double>(const double& value);
+template string DataBase_Loader::toString<float> (const float& value);
+template string DataBase_Loader::toString<int>   (const int& value);
+template string DataBase_Loader::toString<u8>    (const u8& value);
+template string DataBase_Loader::toString<bool>  (const bool& value);
 
 static wxString compatToStringWX(int compat) {
 	switch (compat) {

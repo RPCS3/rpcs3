@@ -577,7 +577,7 @@ public:
 
 extern void pxFitToDigits( wxWindow* win, int digits );
 extern void pxFitToDigits( wxSpinCtrl* win, int digits );
-extern wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits );
+extern wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits, long flags = wxTE_RIGHT );
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////

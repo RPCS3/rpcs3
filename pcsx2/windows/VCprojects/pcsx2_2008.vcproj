@@ -316,6 +316,10 @@
 				Name="Game DataBase"
 				>
 				<File
+					RelativePath="..\..\DataBase_Loader.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\DataBase_Loader.h"
 					>
 				</File>
@@ -2583,6 +2587,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\DirPickerPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\GameDatabasePanel.cpp"
 					>
 				</File>
 				<File

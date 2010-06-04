@@ -98,7 +98,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		)
 	) | StdExpand();
 
-	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
+	Connect( m_check_Enable->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
 
 	EnableStuff();
 }

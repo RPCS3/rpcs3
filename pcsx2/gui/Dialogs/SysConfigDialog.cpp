@@ -36,6 +36,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	AddPage<GSWindowSettingsPanel>	( wxLt("Window"),		cfgid.Video );
 	AddPage<SpeedHacksPanel>		( wxLt("Speedhacks"),	cfgid.Speedhacks );
 	AddPage<GameFixesPanel>			( wxLt("Game Fixes"),	cfgid.Gamefixes );
+	AddPage<GameDatabasePanel>		( wxLt("Game Database"),cfgid.Plugins );
 
 	AddListbook();
 	AddOkCancel();

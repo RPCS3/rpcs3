@@ -64,10 +64,10 @@ BaseDeletableObject::~BaseDeletableObject() throw()
 
 // Creates a text control which is right-justified and has it's minimum width configured to suit
 // the number of digits requested.
-wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
+wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits, long flags )
 {
 	wxTextCtrl* ctrl = new wxTextCtrl( parent, wxID_ANY );
-	ctrl->SetWindowStyleFlag( wxTE_RIGHT );
+	ctrl->SetWindowStyleFlag( flags );
 	pxFitToDigits( ctrl, digits );
 	return ctrl;
 }

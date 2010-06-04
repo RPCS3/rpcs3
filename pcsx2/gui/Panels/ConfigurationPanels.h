@@ -342,6 +342,33 @@ namespace Panels
 		void AppStatusEvent_OnSettingsApplied();
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  GameDatabasePanel
+	// --------------------------------------------------------------------------------------
+	class GameDatabasePanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		//wxTextCtrl*	searchBox;
+		//wxComboBox*	searchType;
+		//wxListBox*	searchList;
+		wxButton*	searchBtn;
+		wxTextCtrl*	serialBox;
+		wxTextCtrl*	nameBox;
+		wxTextCtrl*	regionBox;
+		wxTextCtrl*	compatBox;
+		wxTextCtrl*	commentBox;
+		wxTextCtrl*	patchesBox;
+		pxCheckBox*	gameFixes[NUM_OF_GAME_FIXES];
+	public:
+		GameDatabasePanel( wxWindow* parent );
+		virtual ~GameDatabasePanel() throw() { }
+		void PopulateFields();
+		void WriteFieldsToDB();
+		void Search_Click( wxCommandEvent& evt );
+		void Apply();
+		void AppStatusEvent_OnSettingsApplied();
+	};
+
 	class SettingsDirPickerPanel : public DirPickerPanel
 	{
 	public:
