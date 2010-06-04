@@ -204,6 +204,7 @@
 		<Unit filename="../Config.h" />
 		<Unit filename="../Counters.cpp" />
 		<Unit filename="../Counters.h" />
+		<Unit filename="../DataBase_Loader.cpp" />
 		<Unit filename="../DataBase_Loader.h" />
 		<Unit filename="../DebugTools/Debug.h" />
 		<Unit filename="../DebugTools/DisASM.h" />
@@ -415,6 +416,7 @@
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
 		<Unit filename="../gui/Panels/DirPickerPanel.cpp" />
 		<Unit filename="../gui/Panels/GSWindowPanel.cpp" />
+		<Unit filename="../gui/Panels/GameDatabasePanel.cpp" />
 		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />

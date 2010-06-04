@@ -76,7 +76,13 @@ public:
 
 class DataBase_Loader {
 private:
-	template<class T> string toString(const T& value);
+	template<class T> string toString(const T& value) {
+		stringstream ss(ios_base::in | ios_base::out);
+		string tString;
+		ss <<  value;
+		ss >>  tString;
+		return tString;
+	}
 	string toLower(const string& s);
 	bool strCompare(const string& s1, const string& s2);
 	bool isComment(const string& s);

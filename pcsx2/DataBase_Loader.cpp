@@ -6,13 +6,7 @@
 // DataBase_Loader - Private Methods
 //------------------------------------------------------------------
 
-template<class T> string DataBase_Loader::toString(const T& value) {
-	stringstream ss(ios_base::in | ios_base::out);
-	string tString;
-	ss <<  value;
-	ss >>  tString;
-	return tString;
-}
+//template<class T> string DataBase_Loader::toString(const T& value);
 
 string DataBase_Loader::toLower(const string& s) {
 	string retval( s );
