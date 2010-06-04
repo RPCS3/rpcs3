@@ -76,6 +76,8 @@ public:
 
 class DataBase_Loader {
 private:
+// Fix me
+#ifdef __LINUX__
 	template<class T> string toString(const T& value) {
 		stringstream ss(ios_base::in | ios_base::out);
 		string tString;
@@ -83,6 +85,9 @@ private:
 		ss >>  tString;
 		return tString;
 	}
+#else
+	template<class T> string toString(const T& value);
+#endif
 	string toLower(const string& s);
 	bool strCompare(const string& s1, const string& s2);
 	bool isComment(const string& s);
