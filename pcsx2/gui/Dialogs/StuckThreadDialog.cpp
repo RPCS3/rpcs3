@@ -25,7 +25,7 @@ using namespace Threading;
 
 
 Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, PersistentThread& stuck_thread )
-	: wxDialogWithHelpers( parent, _("PCSX2 Thread is not responding"), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("PCSX2 Thread is not responding") )
 {
 	stuck_thread.AddListener( this );
 

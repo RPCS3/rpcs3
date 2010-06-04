@@ -37,7 +37,7 @@ static void CpuCheckSSE2()
 	if( checked ) return;
 	checked = true;
 
-	wxDialogWithHelpers exconf( NULL, _("PCSX2 - SSE2 Recommended"), wxVERTICAL );
+	wxDialogWithHelpers exconf( NULL, _("PCSX2 - SSE2 Recommended") );
 
 	exconf += exconf.Heading( pxE( ".Popup:Startup:NoSSE2",
 		L"Warning: Your computer does not support SSE2, which is required by many PCSX2 recompilers and plugins. "
@@ -99,13 +99,12 @@ void Pcsx2App::ReadUserModeSettings()
 
 	if (IOP_ENABLE_SIF_HACK == 1)
 	{
-		wxDialogWithHelpers hackedVersion( NULL, _("It will devour your young! - PCSX2 Shub-Niggurath edition"), wxVERTICAL );
-
-		hackedVersion.SetSizer( new wxBoxSizer( wxVERTICAL ) );
-		hackedVersion += new pxStaticText( &hackedVersion,
+		wxDialogWithHelpers hackedVersion( NULL, _("It will devour your young! - PCSX2 Shub-Niggurath edition") );
+		hackedVersion.SetMinWidth( 520 );
+		hackedVersion += hackedVersion.Text(
 			L"NOTICE!! This is a version of Pcsx2 with hacks enabled meant for developers only. "
 			L"It will likely crash on all games, devour your young, and make you an object of shame and disgrace among your family and friends. "
-			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. ", wxALIGN_CENTER
+			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. "
 		);
 		
 		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
@@ -128,9 +127,8 @@ void Pcsx2App::ReadUserModeSettings()
 
 		if( !hasGroup )
 		{
-			wxDialogWithHelpers beta( NULL, _("PCSX2 0.9.7 Beta"), wxVERTICAL );
+			wxDialogWithHelpers beta( NULL, _("PCSX2 0.9.7 Beta") );
 
-			beta.SetSizer( new wxBoxSizer( wxVERTICAL ) );
 			beta += new pxStaticText( &beta,
 				L"This is a *Beta* build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
 				L"user interface, and some parts of the program have *NOT* been implemented yet.  Options will be missing.  "
@@ -254,7 +252,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			// the user already has all interps configured, for example, then no point in
 			// popping up this dialog.
 			
-			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
+			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)") );
 
 			exconf += 12;
 			exconf += exconf.Heading( pxE( ".Popup:RecompilerInit",

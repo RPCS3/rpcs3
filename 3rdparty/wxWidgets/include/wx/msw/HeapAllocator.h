@@ -26,7 +26,7 @@ template<class T> inline
 void _pxDestroy_(T* _Ptr)
 {
 #ifdef _MSC_VER
-	_Destroy( _Ptr );
+	std::_Destroy( _Ptr );
 #else
 	(_Ptr)->~T();
 #endif

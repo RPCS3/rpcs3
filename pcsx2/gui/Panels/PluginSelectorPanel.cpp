@@ -228,7 +228,7 @@ ApplyPluginsDialog::ApplyPluginsDialog( BaseApplicableConfigPanel* panel )
 // --------------------------------------------------------------------------------------
 void ApplyOverValidStateEvent::InvokeEvent()
 {
-	wxDialogWithHelpers dialog( m_owner, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
+	wxDialogWithHelpers dialog( m_owner, _("Shutdown PS2 virtual machine?") );
 
 	dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
 		L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "

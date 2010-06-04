@@ -38,7 +38,7 @@ wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, ui
 }
 
 Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& mcdfile )
-	: wxDialogWithHelpers( parent, _("Create new memory card"), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("Create new memory card") )
 	, m_mcdpath( mcdpath.IsOk() ? mcdpath : (wxDirName)g_Conf->Mcd[slot].Filename.GetPath() )
 	, m_mcdfile( mcdfile.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName() : mcdfile )
 {

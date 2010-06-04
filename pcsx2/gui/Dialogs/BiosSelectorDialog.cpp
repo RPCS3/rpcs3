@@ -28,7 +28,7 @@ using namespace pxSizerFlags;
 
 // ----------------------------------------------------------------------------
 Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent )
-	: BaseApplicableDialog( parent, _("BIOS Selector"), wxVERTICAL )
+	: BaseApplicableDialog( parent, _("BIOS Selector") )
 {
 	m_selpan = new Panels::BiosSelectorPanel( this );
 

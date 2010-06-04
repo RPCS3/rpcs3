@@ -236,7 +236,7 @@ wxSizerFlags pxSizerFlags::StdExpand()
 // manually by using a spacer.
 wxSizerFlags pxSizerFlags::TopLevelBox()
 {
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding ).Expand();
+	return pxBorder( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding ).Expand();
 }
 
 // Flags intended for use on grouped StaticBox controls.  These flags are ideal for
@@ -247,7 +247,7 @@ wxSizerFlags pxSizerFlags::SubGroup()
 {
 	// Groups look better with a slightly smaller margin than standard.
 	// (basically this accounts for the group's frame)
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding-2 ).Expand();
+	return pxBorder( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding-2 ).Expand();
 }
 
 // This force-aligns the std button sizer to the right, where (at least) us win32 platform
@@ -255,7 +255,7 @@ wxSizerFlags pxSizerFlags::SubGroup()
 // just because it's *not* where win32 sticks it.  Too bad!
 wxSizerFlags pxSizerFlags::StdButton()
 {
-	return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
+	return pxBorder().Align( wxALIGN_RIGHT );
 }
 
 wxSizerFlags pxSizerFlags::Checkbox()

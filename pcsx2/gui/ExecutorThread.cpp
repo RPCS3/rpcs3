@@ -372,7 +372,7 @@ protected:
 //  WaitingForThreadedTaskDialog Implementations
 // --------------------------------------------------------------------------------------
 WaitingForThreadedTaskDialog::WaitingForThreadedTaskDialog( PersistentThread* thr, wxWindow* parent, const wxString& title, const wxString& content )
-	: wxDialogWithHelpers( parent, title, wxVERTICAL )
+	: wxDialogWithHelpers( parent, title )
 {
 	SetMinWidth( 500 );
 

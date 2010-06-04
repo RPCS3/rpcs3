@@ -27,7 +27,7 @@ DEFINE_EVENT_TYPE(pxEvt_ThreadedTaskComplete);
 IMPLEMENT_DYNAMIC_CLASS(WaitForTaskDialog, wxDialogWithHelpers)
 
 Threading::WaitForTaskDialog::WaitForTaskDialog( const wxString& title, const wxString& heading )
-	: wxDialogWithHelpers( NULL, _("Waiting for tasks..."), wxVERTICAL )
+	: wxDialogWithHelpers( NULL, _("Waiting for tasks...") )
 	//, m_Timer(this)
 {
 	//m_sem	= sem;

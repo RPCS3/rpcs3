@@ -44,14 +44,8 @@ using namespace Panels;
 
 IMPLEMENT_DYNAMIC_CLASS(BaseApplicableDialog, wxDialogWithHelpers)
 
-BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title )
-	: wxDialogWithHelpers( parent, title, false )
-{
-	Init();
-}
-
-BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title, wxOrientation sizerOrient )
-	: wxDialogWithHelpers( parent, title, sizerOrient )
+BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags )
+	: wxDialogWithHelpers( parent, title, cflags.MinWidth(425).Minimize() )
 {
 	Init();
 }
@@ -70,7 +64,8 @@ wxString BaseApplicableDialog::GetDialogName() const
 
 void BaseApplicableDialog::Init()
 {
-	SetExtraStyle(GetExtraStyle() | wxMINIMIZE_BOX );
+	// This fixes it so that the dialogs show up in the task bar in Vista:
+	// (otherwise they go stupid iconized mode if the user minimizes them)
 	SetExtraStyle(GetExtraStyle() & ~wxTOPLEVEL_EX_DIALOG);
 
 	Connect( pxEvt_ApplySettings,	wxCommandEventHandler	(BaseApplicableDialog::OnSettingsApplied) );
@@ -91,7 +86,7 @@ void BaseApplicableDialog::OnSettingsApplied( wxCommandEvent& evt )
 //  BaseConfigurationDialog  Implementations
 // --------------------------------------------------------------------------------------
 Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, const wxString& title, int idealWidth )
-	: _parent( parent, title, wxVERTICAL )
+	: _parent( parent, title )
 {
 	SetMinWidth( idealWidth );
 	m_listbook		= NULL;

@@ -25,6 +25,8 @@ using namespace pxSizerFlags;
 Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	: CheckedStaticBox( parent, wxVERTICAL, L"EE Logs" )
 {
+	SetMinWidth( 260 );
+
 	m_disasmPanel	= new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
 	m_hwPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
 	m_evtPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Events" );
@@ -62,13 +64,16 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 
 	wxFlexGridSizer& eeTable( *new wxFlexGridSizer( 2, 5 ) );
 
-	eeTable.Add( &s_misc, SubGroup() );
-	eeTable.Add( m_hwPanel, SubGroup() );
-	eeTable.Add( m_evtPanel, SubGroup() );
-	eeTable.Add( m_disasmPanel, SubGroup() );
+	eeTable.AddGrowableCol(0);
+	eeTable.AddGrowableCol(1);
 
-	ThisSizer.AddSpacer( 4 );
-	ThisSizer.Add( &eeTable );
+	eeTable	+= s_misc			| SubGroup();
+	eeTable += m_hwPanel		| SubGroup();
+	eeTable += m_evtPanel		| SubGroup();
+	eeTable += m_disasmPanel	| SubGroup();
+
+	ThisSizer	+= 4;
+	ThisSizer	+= eeTable | pxExpand;
 
 	SetValue( true );
 }
@@ -76,6 +81,8 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 	: CheckedStaticBox( parent, wxVERTICAL, L"IOP Logs" )
 {
+	SetMinWidth( 260 );
+
 	m_disasmPanel	= new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
 	m_hwPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
 	m_evtPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Events" );
@@ -87,34 +94,37 @@ Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 	wxStaticBoxSizer& s_misc = *new wxStaticBoxSizer( wxVERTICAL, this, L"General" );
 	wxPanelWithHelpers* m_miscPanel = this;		// helper for our newCheckBox macro.
 
-	s_misc.Add( m_Bios		= new pxCheckBox( m_miscPanel, L"Bios" ));
-	s_misc.Add( m_Memory	= new pxCheckBox( m_miscPanel, L"Memory" ));
-	s_misc.Add( m_GPU		= new pxCheckBox( m_miscPanel, L"GPU (PS1 only)", L"(Not implemented yet)" ));
+	s_misc		+= m_Bios		= new pxCheckBox( m_miscPanel, L"Bios" );
+	s_misc		+= m_Memory		= new pxCheckBox( m_miscPanel, L"Memory" );
+	s_misc		+= m_GPU		= new pxCheckBox( m_miscPanel, L"GPU (PS1 only)", L"(Not implemented yet)" );
 
-	s_disasm.Add( m_R3000A	= new pxCheckBox( m_disasmPanel, L"R3000A" ));
-	s_disasm.Add( m_COP2	= new pxCheckBox( m_disasmPanel, L"COP2 (Geometry)" ));
+	s_disasm	+= m_R3000A		= new pxCheckBox( m_disasmPanel, L"R3000A" );
+	s_disasm	+= m_COP2		= new pxCheckBox( m_disasmPanel, L"COP2 (Geometry)" );
 
-	s_hw.Add( m_KnownHw		= new pxCheckBox( m_hwPanel, L"Registers" ));
-	s_hw.Add( m_UnknownHw	= new pxCheckBox( m_hwPanel, L"UnknownRegs" ));
-	s_hw.Add( m_DMA			= new pxCheckBox( m_hwPanel, L"DMA" ));
+	s_hw		+= m_KnownHw	= new pxCheckBox( m_hwPanel, L"Registers" );
+	s_hw		+= m_UnknownHw	= new pxCheckBox( m_hwPanel, L"UnknownRegs" );
+	s_hw		+= m_DMA		= new pxCheckBox( m_hwPanel, L"DMA" );
 
-	s_evt.Add( m_Counters	= new pxCheckBox( m_evtPanel, L"Counters" ));
-	s_evt.Add( m_Memcards	= new pxCheckBox( m_evtPanel, L"Memcards" ));
-	s_evt.Add( m_PAD		= new pxCheckBox( m_evtPanel, L"Pad" ));
-	s_evt.Add( m_SPU2		= new pxCheckBox( m_evtPanel, L"SPU2" ));
-	s_evt.Add( m_CDVD		= new pxCheckBox( m_evtPanel, L"CDVD" ));
-	s_evt.Add( m_USB		= new pxCheckBox( m_evtPanel, L"USB" ));
-	s_evt.Add( m_FW			= new pxCheckBox( m_evtPanel, L"FW" ));
+	s_evt		+= m_Counters	= new pxCheckBox( m_evtPanel, L"Counters" );
+	s_evt		+= m_Memcards	= new pxCheckBox( m_evtPanel, L"Memcards" );
+	s_evt		+= m_PAD		= new pxCheckBox( m_evtPanel, L"Pad" );
+	s_evt		+= m_SPU2		= new pxCheckBox( m_evtPanel, L"SPU2" );
+	s_evt		+= m_CDVD		= new pxCheckBox( m_evtPanel, L"CDVD" );
+	s_evt		+= m_USB		= new pxCheckBox( m_evtPanel, L"USB" );
+	s_evt		+= m_FW			= new pxCheckBox( m_evtPanel, L"FW" );
 
 	wxFlexGridSizer& iopTable( *new wxFlexGridSizer( 2, 5 ) );
 
-	iopTable.Add( &s_misc, SubGroup() );
-	iopTable.Add( m_hwPanel, SubGroup() );
-	iopTable.Add( m_evtPanel, SubGroup() );
-	iopTable.Add( m_disasmPanel, SubGroup() );
+	iopTable.AddGrowableCol(0);
+	iopTable.AddGrowableCol(1);
 
-	ThisSizer.AddSpacer( 4 );
-	ThisSizer.Add( &iopTable );
+	iopTable	+= s_misc			| SubGroup();
+	iopTable	+= m_hwPanel		| SubGroup();
+	iopTable	+= m_evtPanel		| SubGroup();
+	iopTable	+= m_disasmPanel	| SubGroup();
+
+	ThisSizer	+= 4;
+	ThisSizer	+= iopTable	| pxExpand;
 
 	SetValue( true );
 }
@@ -124,8 +134,6 @@ Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 
 void Panels::eeLogOptionsPanel::OnSettingsChanged()
 {
-	SetMinWidth( 230 );
-
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
 	SetValue( conf.EE.m_EnableAll );
@@ -160,8 +168,6 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 
 void Panels::iopLogOptionsPanel::OnSettingsChanged()
 {
-	SetMinWidth( 230 );
-
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
 	SetValue( conf.IOP.m_EnableAll );
@@ -198,8 +204,8 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	, m_iopSection	( *new iopLogOptionsPanel( this ) )
 {
 	m_masterEnabler = new pxCheckBox( this, _("Enable Trace Logging"),
-		_("Trace logs are all written to emulog.txt.  Warning: Enabling trace logs is typically very slow, and is a leading cause of 'What happened to my FPS?' problems. :)") );
-	m_masterEnabler->SetToolTip( _("On-the-fly hotkey support: Toggle trace logging at any time using F10.") );
+		_("Trace logs are all written to emulog.txt.  Toggle trace logging at any time using F10.") );
+	m_masterEnabler->SetToolTip( _("Warning: Enabling trace logs is typically very slow, and is a leading cause of 'What happened to my FPS?' problems. :)") );
 
 	m_SIF		= new pxCheckBox( this, L"SIF (EE<->IOP)" );
 	m_VIFunpack	= new pxCheckBox( this, L"VIFunpack" );
@@ -212,21 +218,24 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	m_Elf		->SetToolTip(_("Logging of Elf headers."));
 
 
-	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
+	wxFlexGridSizer&	topSizer	= *new wxFlexGridSizer( 2 );
 	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
 
-	topSizer	+= m_eeSection		| StdSpace();
-	topSizer	+= m_iopSection		| StdSpace();
+	topSizer.AddGrowableCol(0);
+	topSizer.AddGrowableCol(1);
+
+	topSizer	+= m_eeSection		| StdExpand();
+	topSizer	+= m_iopSection		| StdExpand();
 
 	s_misc		+= m_SIF;
 	s_misc		+= m_VIFunpack;
 	s_misc		+= m_GIFtag;
 	s_misc		+= m_Elf;
 
-	*this		+= m_masterEnabler						| StdSpace();
+	*this		+= m_masterEnabler						| StdExpand();
 	*this		+= new wxStaticLine( this, wxID_ANY )	| StdExpand().Border(wxLEFT | wxRIGHT, 20);
 	*this		+= 5;
-	*this		+= topSizer;
+	*this		+= topSizer								| StdExpand();
 	*this		+= s_misc								| StdSpace().Centre();
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );

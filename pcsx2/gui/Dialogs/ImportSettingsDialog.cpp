@@ -21,7 +21,7 @@
 using namespace pxSizerFlags;
 
 Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, _("Import Existing Settings?"), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("Import Existing Settings?") )
 {
 	SetMinWidth( 440 );
 

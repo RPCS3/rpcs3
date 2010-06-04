@@ -27,28 +27,12 @@
 
 using namespace pxSizerFlags;
 
-namespace Dialogs
-{
-	// Helper class for creating wxStaticText labels which are aligned to center.
-	// (automates the passing of wxDefaultSize and wxDefaultPosition)
-	//
-	class StaticTextCentered : public wxStaticText
-	{
-	public:
-		StaticTextCentered( wxWindow* parent, const wxString& text, int id=wxID_ANY ) :
-			wxStaticText( parent, id, text, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER )
-		{
-		}
-	};
-
-}
-
 // --------------------------------------------------------------------------------------
 //  AboutBoxDialog  Implementation
 // --------------------------------------------------------------------------------------
 
 Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, _("About PCSX2"), wxVERTICAL )
+	: wxDialogWithHelpers( parent, _("About PCSX2") )
 	, m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
 	)
@@ -92,11 +76,11 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	wxStaticBoxSizer& aboutUs = *new wxStaticBoxSizer( wxVERTICAL, this );
 	wxStaticBoxSizer& contribs = *new wxStaticBoxSizer( wxVERTICAL, this );
 
-	StaticTextCentered* label_auth   = new StaticTextCentered( this, LabelAuthors );
-	StaticTextCentered* label_greets = new StaticTextCentered( this, LabelGreets );
+	pxStaticText& label_auth   = Text( LabelAuthors );
+	pxStaticText& label_greets = Text( LabelGreets );
 
-	label_auth->Wrap( 340 );
-	label_greets->Wrap( 200 );
+	//label_auth->Wrap( 340 );
+	//label_greets->Wrap( 200 );
 
 	aboutUs		+= label_auth		| StdExpand();
 	contribs	+= label_greets		| StdExpand();

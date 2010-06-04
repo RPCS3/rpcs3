@@ -20,11 +20,13 @@
 #include <wx/statline.h>
 
 using namespace Panels;
+using namespace pxSizerFlags;
+
 
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
-	: BaseApplicableDialog( parent, _("Trace Logging"), wxVERTICAL )
+	: BaseApplicableDialog( parent, _("Trace Logging"), pxDialogFlags().Resize() )
 {
-	*this += new LogOptionsPanel( this );
+	*this += new LogOptionsPanel( this ) | StdExpand();
 
 	AddOkCancel( *GetSizer(), true );
 	FindWindow( wxID_APPLY )->Disable();

@@ -133,8 +133,7 @@ public:
 protected:
 	void Init();
 
-	BaseApplicableDialog(wxWindow* parent, const wxString& title );
-	BaseApplicableDialog(wxWindow* parent, const wxString& title, wxOrientation sizerOrient );
+	BaseApplicableDialog(wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags = pxDialogCreationFlags() );
 
 	virtual void OnSettingsApplied( wxCommandEvent& evt );
 

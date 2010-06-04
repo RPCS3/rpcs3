@@ -55,7 +55,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 	wxString path( m_pickerCtrl->GetPath() );
 	if( !wxDirExists(path) )
 	{
-		wxDialogWithHelpers createPathDlg( NULL, _("Path does not exist"), wxVERTICAL );
+		wxDialogWithHelpers createPathDlg( NULL, _("Path does not exist") );
 		createPathDlg.SetMinWidth( 600 );
 
 		createPathDlg += createPathDlg.Text( path ) | StdCenter();
@@ -220,7 +220,7 @@ void Panels::DirPickerPanel::Apply()
 
 	if( !wxDir::Exists( path ) )
 	{
-		wxDialogWithHelpers dialog( NULL, _("Create folder?"), wxVERTICAL );
+		wxDialogWithHelpers dialog( NULL, _("Create folder?") );
 		dialog += dialog.Heading( _("A configured folder does not exist.  Should PCSX2 try to create it?") );
 		dialog += 12;
 		dialog += dialog.Heading( path );

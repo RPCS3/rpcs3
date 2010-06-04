@@ -116,7 +116,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 
 	if( !path.Exists() )
 	{
-		wxDialogWithHelpers dialog( NULL, _("Create folder?"), wxVERTICAL );
+		wxDialogWithHelpers dialog( NULL, _("Create folder?") );
 		dialog += dialog.Heading( _("PCSX2 will create the following folder for documents.  You can change this setting later, at any time.") );
 		dialog += 12;
 		dialog += dialog.Heading( path.ToString() );

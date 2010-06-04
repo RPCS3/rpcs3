@@ -391,7 +391,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::BiosLoadFailed& ex )
 	{
-		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error"), wxVERTICAL );
+		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error") );
 		dialog += dialog.Heading( ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.") );
 		dialog += new ModalButtonPanel( &dialog, MsgButtons().OKCancel() );
 		

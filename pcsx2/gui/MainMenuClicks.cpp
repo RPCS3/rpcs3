@@ -134,7 +134,7 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 	if( SysHasValidState() )
 	{
 		core_control.DisallowResume();
-		wxDialogWithHelpers dialog( owner, _("Confirm ISO image change"), wxVERTICAL );
+		wxDialogWithHelpers dialog( owner, _("Confirm ISO image change") );
 
 		dialog += dialog.Heading(descpart1 +
 			isoFilename + L"\n\n" +
@@ -174,7 +174,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 
 	if( SysHasValidState() )
 	{
-		wxDialogWithHelpers dialog( owner, _("Confirm CDVD source change"), wxVERTICAL );
+		wxDialogWithHelpers dialog( owner, _("Confirm CDVD source change") );
 
 		wxString changeMsg;
 		changeMsg.Printf(_("You've selected to switch the CDVD source from %s to %s."),
@@ -267,7 +267,7 @@ void MainEmuFrame::_DoBootCdvd()
 			// User has an iso selected from a previous run, but it doesn't exist anymore.
 			// Issue a courtesy popup and then an Iso Selector to choose a new one.
 
-			wxDialogWithHelpers dialog( this, _("ISO file not found!"), wxVERTICAL );
+			wxDialogWithHelpers dialog( this, _("ISO file not found!") );
 			dialog += dialog.Heading(
 				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" +
 				_("Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD.")
@@ -293,7 +293,7 @@ void MainEmuFrame::_DoBootCdvd()
 
 	if( SysHasValidState() )
 	{
-		wxDialogWithHelpers dialog( this, _("Confirm PS2 Reset"), wxVERTICAL );
+		wxDialogWithHelpers dialog( this, _("Confirm PS2 Reset") );
 		dialog += dialog.Heading( GetMsg_ConfirmSysReset() );
 		bool confirmed = (pxIssueConfirmation( dialog, MsgButtons().Yes().Cancel(), L"BootCdvd:ConfirmReset" ) != wxID_CANCEL);
 

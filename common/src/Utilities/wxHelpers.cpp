@@ -25,6 +25,12 @@
 
 using namespace pxSizerFlags;
 
+pxDialogCreationFlags pxDialogFlags()
+{
+	return pxDialogCreationFlags().CloseBox().SystemMenu().Caption().Vertical();
+}
+
+
 // --------------------------------------------------------------------------------------
 //  BaseDeletableObject Implementation
 // --------------------------------------------------------------------------------------
@@ -113,24 +119,18 @@ wxDialogWithHelpers::wxDialogWithHelpers()
 	Init();
 }
 
-wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, const wxString& title, bool hasContextHelp, bool resizable )
-	: wxDialog( parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize,
-		wxDEFAULT_DIALOG_STYLE | (resizable ? wxRESIZE_BORDER : 0)
-	)
+wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags )
+	: wxDialog( parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, cflags.GetWxWindowFlags() )
 {
-	m_hasContextHelp	= hasContextHelp;
-	Init();
-}
+	m_hasContextHelp	= cflags.hasContextHelp;
+	if( (int)cflags.BoxSizerOrient != 0 )
+	{
+		SetSizer( new wxBoxSizer( cflags.BoxSizerOrient ) );
+		*this += StdPadding;
+	}
 
-wxDialogWithHelpers::wxDialogWithHelpers(wxWindow* parent, const wxString& title, wxOrientation orient)
-	: wxDialog( parent, wxID_ANY, title )
-{
-	m_hasContextHelp	= false;
-	SetSizer( new wxBoxSizer( orient ) );
 	Init();
-
-	SetMinWidth( 500 );
-	*this += StdPadding;
+	SetMinWidth( cflags.MinimumWidth );
 }
 
 wxDialogWithHelpers::~wxDialogWithHelpers() throw()
