@@ -32,8 +32,7 @@ include(SearchForStuff)
 include(SelectPcsx2Plugins)
 
 # add additional project-wide include directories
-include_directories(${PROJECT_SOURCE_DIR}/3rdparty
-					${PROJECT_SOURCE_DIR}/common/include
+include_directories(${PROJECT_SOURCE_DIR}/common/include
 					${PROJECT_SOURCE_DIR}/common/include/Utilities
 					${PROJECT_SOURCE_DIR}/common/include/x86emitter)
 
@@ -41,13 +40,17 @@ include_directories(${PROJECT_SOURCE_DIR}/3rdparty
 add_subdirectory(3rdparty)
 
 # make common
-add_subdirectory(common)
+if(common_libs)
+    add_subdirectory(common)
+endif(common_libs)
 
 # make tools
 add_subdirectory(tools)
 
 # make pcsx2
-add_subdirectory(pcsx2)
+if(pcsx2_core)
+    add_subdirectory(pcsx2)
+endif(pcsx2_core)
 
 # make plugins
 add_subdirectory(plugins)

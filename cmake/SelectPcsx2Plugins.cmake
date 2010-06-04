@@ -1,4 +1,43 @@
 #-------------------------------------------------------------------------------
+#								Pcsx2 core & common libs
+#-------------------------------------------------------------------------------
+# Check for additional dependencies.
+# If all dependencies are available, including OS, build it
+#-------------------------------------------------------------------------------
+
+#---------------------------------------
+#			Common libs
+# requires: -wx
+#---------------------------------------
+if(wxWidgets_FOUND)
+    set(common_libs TRUE)
+else(wxWidgets_FOUND)
+    set(common_libs FALSE)
+    message(STATUS "Skip build of common libraries: miss some dependencies")
+endif(wxWidgets_FOUND)
+
+#---------------------------------------
+#			Pcsx2 core
+# requires: -wx
+#           -gtk2 (linux)
+#           -zlib
+#           -common_libs
+#---------------------------------------
+# Common dependancy
+if(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+    set(pcsx2_core TRUE)
+else(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+    set(pcsx2_core FALSE)
+    message(STATUS "Skip build of pcsx2 core: miss some dependencies")
+endif(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+# Linux need also gtk2
+if(Linux AND NOT GTK2_FOUND)
+    set(pcsx2_core FALSE)
+    message(STATUS "Skip build of pcsx2 core: miss some dependencies")
+endif(Linux AND NOT GTK2_FOUND)
+
+
+#-------------------------------------------------------------------------------
 #								Plugins
 #-------------------------------------------------------------------------------
 # Check all plugins for additional dependencies.
@@ -65,13 +104,14 @@ endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 #			-OpenGL
 #			-X11
 #			-CG
+#           -common_libs
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
 	set(zzogl TRUE)
-else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
 	set(zzogl FALSE)
     message(STATUS "Skip build of zzogl: miss some dependencies")
-endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
+endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
 #---------------------------------------
 
 #---------------------------------------
@@ -119,13 +159,14 @@ set(SPU2null TRUE)
 #			-ALSA
 #           -Portaudio
 #           -A52
+#           -common_libs
 #---------------------------------------
-if(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
+if(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 	set(spu2-x TRUE)
-else(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
+else(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 	set(spu2-x FALSE)
     message(STATUS "Skip build of spu2-x: miss some dependencies")
-endif(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND)
+endif(A52_FOUND AND ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 #---------------------------------------
 
 #---------------------------------------
