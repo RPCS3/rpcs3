@@ -62,7 +62,7 @@ void x86capabilities::SIMD_EstablishMXCSRmask()
 	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
 
 	xSetPtr( recSSE );
-	xFXSAVE( targetFXSAVE );
+	xFXSAVE( ptr[&targetFXSAVE] );
 	xRET();
 
 	HostSys::MemProtectStatic( recSSE, Protect_ReadOnly, true );

@@ -370,11 +370,11 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 		switch( bits )
 		{
 			case 64:
-				iMOV64_Smart( ptr[edx], ptr[ppf] );
+				iMOV64_Smart( ptr[edx], ptr[(void*)ppf] );
 			break;
 
 			case 128:
-				iMOV128_SSE( ptr[edx], ptr[ppf] );
+				iMOV128_SSE( ptr[edx], ptr[(void*)ppf] );
 			break;
 
 			jNO_DEFAULT
@@ -416,20 +416,20 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		{
 			case 8:
 				if( sign )
-					xMOVSX( eax, ptr8[ppf] );
+					xMOVSX( eax, ptr8[(u8*)ppf] );
 				else
-					xMOVZX( eax, ptr8[ppf] );
+					xMOVZX( eax, ptr8[(u8*)ppf] );
 			break;
 
 			case 16:
 				if( sign )
-					xMOVSX( eax, ptr16[ppf] );
+					xMOVSX( eax, ptr16[(u16*)ppf] );
 				else
-					xMOVZX( eax, ptr16[ppf] );
+					xMOVZX( eax, ptr16[(u16*)ppf] );
 			break;
 
 			case 32:
-				xMOV( eax, ptr[ppf] );
+				xMOV( eax, ptr[(void*)ppf] );
 			break;
 		}
 	}
@@ -450,7 +450,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		// Shortcut for the INTC_STAT register, which many games like to spin on heavily.
 		if( (bits == 32) && !EmuConfig.Speedhacks.IntcStat && (paddr == INTC_STAT) )
 		{
-			xMOV( eax, &psHu32( INTC_STAT ) );
+			xMOV( eax, ptr[&psHu32( INTC_STAT )] );
 		}
 		else
 		{
@@ -505,23 +505,23 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 		{
 			//8 , 16, 32 : data on EDX
 			case 8:
-				xMOV( ptr[ppf], dl );
+				xMOV( ptr[(void*)ppf], dl );
 			break;
 
 			case 16:
-				xMOV( ptr[ppf], dx );
+				xMOV( ptr[(void*)ppf], dx );
 			break;
 
 			case 32:
-				xMOV( ptr[ppf], edx );
+				xMOV( ptr[(void*)ppf], edx );
 			break;
 
 			case 64:
-				iMOV64_Smart( ptr[ppf], ptr[edx] );
+				iMOV64_Smart( ptr[(void*)ppf], ptr[edx] );
 			break;
 
 			case 128:
-				iMOV128_SSE( ptr[ppf], ptr[edx] );
+				iMOV128_SSE( ptr[(void*)ppf], ptr[edx] );
 			break;
 		}
 

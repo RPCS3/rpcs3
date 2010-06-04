@@ -62,7 +62,7 @@ SSE_MXCSR& SSE_MXCSR::ApplyReserveMask()
 
 SSE_MXCSR::operator x86Emitter::ModSib32() const
 {
-	return &bitmask;
+	return x86Emitter::ptr32[&bitmask];
 }
 
 namespace x86Emitter {

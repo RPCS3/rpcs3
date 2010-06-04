@@ -89,9 +89,9 @@ static ModSib8 _mhlp8( x86IntRegType to1, x86IntRegType to2 )
 #define DEFINE_LEGACY_HELPER( cod, bits ) \
 	emitterT void cod##bits##RtoR( x86IntRegType to, x86IntRegType from )	{ x##cod( xRegister##bits(to), xRegister##bits(from) ); } \
 	emitterT void cod##bits##ItoR( x86IntRegType to, u##bits imm )			{ x##cod( xRegister##bits(to), imm ); } \
-	emitterT void cod##bits##MtoR( x86IntRegType to, uptr from )			{ x##cod( xRegister##bits(to), (void*)from ); } \
-	emitterT void cod##bits##RtoM( uptr to, x86IntRegType from )			{ x##cod( (void*)to, xRegister##bits(from) ); } \
-	emitterT void cod##bits##ItoM( uptr to, u##bits imm )					{ x##cod( ptr##bits[to], imm ); }  \
+	emitterT void cod##bits##MtoR( x86IntRegType to, uptr from )			{ x##cod( xRegister##bits(to), ptr[(void*)from] ); } \
+	emitterT void cod##bits##RtoM( uptr to, x86IntRegType from )			{ x##cod( ptr[(void*)to], xRegister##bits(from) ); } \
+	emitterT void cod##bits##ItoM( uptr to, u##bits imm )					{ x##cod( ptr##bits[(u##bits*)to], imm ); }  \
 	emitterT void cod##bits##ItoRm( x86IntRegType to, u##bits imm, int offset )	{ x##cod( _mhlp##bits(to) + offset, imm ); } \
 	emitterT void cod##bits##RmtoR( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( xRegister##bits(to), _mhlp##bits(from) + offset ); } \
 	emitterT void cod##bits##RtoRm( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( _mhlp##bits(to) + offset, xRegister##bits(from) ); } \
@@ -103,14 +103,14 @@ static ModSib8 _mhlp8( x86IntRegType to1, x86IntRegType to2 )
 #define DEFINE_LEGACY_SHIFT_HELPER( cod, bits ) \
 	emitterT void cod##bits##CLtoR( x86IntRegType to )						{ x##cod( xRegister##bits(to), cl ); } \
 	emitterT void cod##bits##ItoR( x86IntRegType to, u8 imm )				{ x##cod( xRegister##bits(to), imm ); } \
-	emitterT void cod##bits##CLtoM( uptr to )								{ x##cod( ptr##bits[to], cl ); } \
-	emitterT void cod##bits##ItoM( uptr to, u8 imm )						{ x##cod( ptr##bits[to], imm ); }  \
+	emitterT void cod##bits##CLtoM( uptr to )								{ x##cod( ptr##bits[(u##bits*)to], cl ); } \
+	emitterT void cod##bits##ItoM( uptr to, u8 imm )						{ x##cod( ptr##bits[(u##bits*)to], imm ); }  \
 	emitterT void cod##bits##ItoRm( x86IntRegType to, u8 imm, int offset )	{ x##cod( _mhlp##bits(to) + offset, imm ); } \
 	emitterT void cod##bits##CLtoRm( x86IntRegType to, int offset )			{ x##cod( _mhlp##bits(to) + offset, cl ); }
 
 #define DEFINE_LEGACY_ONEREG_HELPER( cod, bits ) \
 	emitterT void cod##bits##R( x86IntRegType to )					{ x##cod( xRegister##bits(to) ); } \
-	emitterT void cod##bits##M( uptr to )							{ x##cod( ptr##bits[to] ); } \
+	emitterT void cod##bits##M( uptr to )							{ x##cod( ptr##bits[(u##bits*)to] ); } \
 	emitterT void cod##bits##Rm( x86IntRegType to, uptr offset )	{ x##cod( _mhlp##bits(to) + offset ); }
 
 #define DEFINE_OPCODE_LEGACY( cod ) \
@@ -159,7 +159,7 @@ DEFINE_OPCODE_ONEREG_LEGACY( NEG )
 #define DEFINE_LEGACY_MOVEXTEND( form, destbits, srcbits ) \
 	emitterT void MOV##form##destbits##R##srcbits##toR( x86IntRegType to, x86IntRegType from )				{ xMOV##form( xRegister##destbits( to ), xRegister##srcbits( from ) ); } \
 	emitterT void MOV##form##destbits##Rm##srcbits##toR( x86IntRegType to, x86IntRegType from, int offset )	{ xMOV##form( xRegister##destbits( to ), ptr##srcbits[xAddressReg( from ) + offset] ); } \
-	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ xMOV##form( xRegister##destbits( to ), ptr##srcbits[from] ); }
+	emitterT void MOV##form##destbits##M##srcbits##toR( x86IntRegType to, u32 from )						{ xMOV##form( xRegister##destbits( to ), ptr##srcbits[(u##srcbits*)from] ); }
 
 DEFINE_LEGACY_MOVEXTEND( SX, 32, 16 )
 DEFINE_LEGACY_MOVEXTEND( ZX, 32, 16 )
@@ -170,17 +170,17 @@ DEFINE_LEGACY_MOVEXTEND( SX, 16, 8 )
 DEFINE_LEGACY_MOVEXTEND( ZX, 16, 8 )
 
 emitterT void TEST32ItoR( x86IntRegType to, u32 from )				{ xTEST( xRegister32(to), from ); }
-emitterT void TEST32ItoM( uptr to, u32 from )						{ xTEST( ptr32[to], from ); }
+emitterT void TEST32ItoM( uptr to, u32 from )						{ xTEST( ptr32[(u32*)to], from ); }
 emitterT void TEST32RtoR( x86IntRegType to, x86IntRegType from )	{ xTEST( xRegister32(to), xRegister32(from) ); }
 emitterT void TEST32ItoRm( x86IntRegType to, u32 from )				{ xTEST( ptr32[xAddressReg(to)], from ); }
 
 emitterT void TEST16ItoR( x86IntRegType to, u16 from )				{ xTEST( xRegister16(to), from ); }
-emitterT void TEST16ItoM( uptr to, u16 from )						{ xTEST( ptr16[to], from ); }
+emitterT void TEST16ItoM( uptr to, u16 from )						{ xTEST( ptr16[(u16*)to], from ); }
 emitterT void TEST16RtoR( x86IntRegType to, x86IntRegType from )	{ xTEST( xRegister16(to), xRegister16(from) ); }
 emitterT void TEST16ItoRm( x86IntRegType to, u16 from )				{ xTEST( ptr16[xAddressReg(to)], from ); }
 
 emitterT void TEST8ItoR( x86IntRegType to, u8 from )				{ xTEST( xRegister8(to), from ); }
-emitterT void TEST8ItoM( uptr to, u8 from )							{ xTEST( ptr8[to], from ); }
+emitterT void TEST8ItoM( uptr to, u8 from )							{ xTEST( ptr8[(u8*)to], from ); }
 emitterT void TEST8RtoR( x86IntRegType to, x86IntRegType from )		{ xTEST( xRegister8(to), xRegister8(from) ); }
 emitterT void TEST8ItoRm( x86IntRegType to, u8 from )				{ xTEST( ptr8[xAddressReg(to)], from ); }
 
@@ -207,7 +207,7 @@ emitterT void AND32I8toR( x86IntRegType to, s8 from )
 
 emitterT void AND32I8toM( uptr to, s8 from )
 {
-	xAND( ptr8[to], from );
+	xAND( ptr8[(u8*)to], from );
 }
 
 /* cmove r32 to r32*/
@@ -233,9 +233,9 @@ emitterT void MUL32R( x86IntRegType from )		{ xUMUL( xRegister32(from) ); }
 /* imul eax by r32 to edx:eax */
 emitterT void IMUL32R( x86IntRegType from )		{ xMUL( xRegister32(from) ); }
 /* mul eax by m32 to edx:eax */
-emitterT void MUL32M( u32 from )				{ xUMUL( ptr32[from] ); }
+emitterT void MUL32M( u32 from )				{ xUMUL( ptr32[(u32*)from] ); }
 /* imul eax by m32 to edx:eax */
-emitterT void IMUL32M( u32 from )				{ xMUL( ptr32[from] ); }
+emitterT void IMUL32M( u32 from )				{ xMUL( ptr32[(u32*)from] ); }
 
 /* imul r32 by r32 to r32 */
 emitterT void IMUL32RtoR( x86IntRegType to, x86IntRegType from )
@@ -248,9 +248,9 @@ emitterT void DIV32R( x86IntRegType from )		{ xUDIV( xRegister32(from) ); }
 /* idiv eax by r32 to edx:eax */
 emitterT void IDIV32R( x86IntRegType from )		{ xDIV( xRegister32(from) ); }
 /* div eax by m32 to edx:eax */
-emitterT void DIV32M( u32 from )				{ xUDIV( ptr32[from] ); }
+emitterT void DIV32M( u32 from )				{ xUDIV( ptr32[(u32*)from] ); }
 /* idiv eax by m32 to edx:eax */
-emitterT void IDIV32M( u32 from )				{ xDIV( ptr32[from] ); }
+emitterT void IDIV32M( u32 from )				{ xDIV( ptr32[(u32*)from] ); }
 
 
 emitterT void LEA32RtoR(x86IntRegType to, x86IntRegType from, s32 offset)
@@ -310,7 +310,7 @@ emitterT void PUSH32R( x86IntRegType from )  { xPUSH( xRegister32( from ) ); }
 /* push m32 */
 emitterT void PUSH32M( u32 from )
 {
-	xPUSH( ptr[from] );
+	xPUSH( ptr[(void*)from] );
 }
 
 /* pop r32 */
@@ -458,7 +458,7 @@ emitterT void JMPR( x86IntRegType to )
 // jmp m32
 emitterT void JMP32M( uptr to )
 {
-	xJMP( ptr32[to] );
+	xJMP( ptr32[(u32*)to] );
 }
 
 /* jp rel8 */
@@ -719,7 +719,7 @@ emitterT void CALL32R( x86IntRegType to )
 /* call m32 */
 emitterT void CALL32M( u32 to )
 {
-	xCALL( ptr32[to] );
+	xCALL( ptr32[(u32*)to] );
 }
 
 emitterT void BSRRtoR(x86IntRegType to, x86IntRegType from)

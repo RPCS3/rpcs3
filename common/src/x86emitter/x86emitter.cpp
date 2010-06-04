@@ -882,12 +882,12 @@ __emitinline void xBSWAP( const xRegister32& to )
 
 __emitinline void xStoreReg( const xRegisterSSE& src )
 {
-	xMOVDQA( &XMMRegisters::data[src.Id*2], src );
+	xMOVDQA( ptr[&XMMRegisters::data[src.Id*2]], src );
 }
 
 __emitinline void xRestoreReg( const xRegisterSSE& dest )
 {
-	xMOVDQA( dest, &XMMRegisters::data[dest.Id*2] );
+	xMOVDQA( dest, ptr[&XMMRegisters::data[dest.Id*2]] );
 }
 
 }

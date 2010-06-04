@@ -646,16 +646,6 @@ template< typename T > void xWrite( T val );
 			// no reduction necessary :D
 		}
 
-		ModSibBase( const void* target )
-		{
-			Base		= xEmptyReg;
-			Index		= xEmptyReg;
-			Scale		= 0;
-			Displacement= (s32)target;
-
-			// no reduction necessary :D
-		}
-
 		virtual uint GetOperandSize() const { pxFail( "Invalid operation on ModSibBase" ); return 0; }
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
 
@@ -682,7 +672,6 @@ template< typename T > void xWrite( T val );
 	protected:
 		explicit ModSib32orLess( const xAddressInfo& src ) : _parent( src ) {}
 		explicit ModSib32orLess( s32 disp ) : _parent( disp ) {}
-		ModSib32orLess( const void* target ) : _parent( target ) {}
 		ModSib32orLess( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) :
 			_parent( base, index, scale, displacement ) {}
 	};
@@ -701,7 +690,6 @@ template< typename T > void xWrite( T val );
 	public: \
 		explicit ModSib##bits( const xAddressInfo& src ) : _parent( src ) {} \
 		explicit ModSib##bits( s32 disp ) : _parent( disp ) {} \
-		ModSib##bits( const u##bits* target ) : _parent( target ) {} \
 		ModSib##bits( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) : \
 			_parent( base, index, scale, displacement ) {} \
  \
@@ -754,11 +742,6 @@ template< typename T > void xWrite( T val );
 		}
 
 		xModSibType operator[]( const xAddressInfo& src ) const
-		{
-			return xModSibType( src );
-		}
-
-		xModSibType operator[]( uptr src ) const
 		{
 			return xModSibType( src );
 		}

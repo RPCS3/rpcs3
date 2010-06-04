@@ -375,25 +375,25 @@ static void _DynGen_StackFrameCheck()
 
 	// --------- EBP Here -----------
 
-	xCMP( ebp, &s_store_ebp );
+	xCMP( ebp, ptr[&s_store_ebp] );
 	xForwardJE8 skipassert_ebp;
 
 	xMOV( ecx, 1 );					// 1 specifies EBP
 	xMOV( edx, ebp );
 	xCALL( StackFrameCheckFailed );
-	xMOV( ebp, &s_store_ebp );		// half-hearted frame recovery attempt!
+	xMOV( ebp, ptr[&s_store_ebp] );		// half-hearted frame recovery attempt!
 
 	skipassert_ebp.SetTarget();
 
 	// --------- ESP There -----------
 
-	xCMP( esp, &s_store_esp );
+	xCMP( esp, ptr[&s_store_esp] );
 	xForwardJE8 skipassert_esp;
 
 	xXOR( ecx, ecx );				// 0 specifies ESP
 	xMOV( edx, esp );
 	xCALL( StackFrameCheckFailed );
-	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
+	xMOV( esp, ptr[&s_store_esp] );		// half-hearted frame recovery attempt!
 
 	skipassert_esp.SetTarget();
 }
@@ -407,10 +407,10 @@ static DynGenFunc* _DynGen_JITCompile()
 	u8* retval = xGetAlignedCallTarget();
 	_DynGen_StackFrameCheck();
 
-	xMOV( ecx, &cpuRegs.pc );
+	xMOV( ecx, ptr[&cpuRegs.pc] );
 	xCALL( recRecompile );
 
-	xMOV( eax, &cpuRegs.pc );
+	xMOV( eax, ptr[&cpuRegs.pc] );
 	xMOV( ebx, eax );
 	xSHR( eax, 16 );
 	xMOV( ecx, ptr[recLUT + (eax*4)] );
@@ -432,7 +432,7 @@ static DynGenFunc* _DynGen_DispatcherReg()
 	u8* retval = xGetPtr();		// fallthrough target, can't align it!
 	_DynGen_StackFrameCheck();
 
-	xMOV( eax, &cpuRegs.pc );
+	xMOV( eax, ptr[&cpuRegs.pc] );
 	xMOV( ebx, eax );
 	xSHR( eax, 16 );
 	xMOV( ecx, ptr[recLUT + (eax*4)] );
@@ -475,8 +475,8 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	xMOV( ptr32[esp+0x18], ebp );
 	xLEA( ebp, ptr32[esp+0x18] );
 
-	xMOV( &s_store_esp, esp );
-	xMOV( &s_store_ebp, ebp );
+	xMOV( ptr[&s_store_esp], esp );
+	xMOV( ptr[&s_store_ebp], ebp );
 
 	xJMP( ptr32[&DispatcherReg] );
 
@@ -1104,10 +1104,10 @@ static void iBranchTest(u32 newpc)
 	}
 	else
 	{
-		xMOV(eax, &cpuRegs.cycle);
+		xMOV(eax, ptr[&cpuRegs.cycle]);
 		xADD(eax, eeScaleBlockCycles());
-		xMOV(&cpuRegs.cycle, eax); // update cycles
-		xSUB(eax, &g_nextBranchCycle);
+		xMOV(ptr[&cpuRegs.cycle], eax); // update cycles
+		xSUB(eax, ptr[&g_nextBranchCycle]);
 
 		if (newpc == 0xffffffff)
 			xJS( DispatcherReg );

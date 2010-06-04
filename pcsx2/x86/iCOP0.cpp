@@ -114,14 +114,14 @@ void recDI()
 
 	//CALLFunc( (uptr)Interp::DI );
 
-	xMOV(eax, ptr32[&cpuRegs.CP0.n.Status]);
+	xMOV(eax, ptr[&cpuRegs.CP0.n.Status]);
 	xTEST(eax, 0x20006); // EXL | ERL | EDI
 	xForwardJNZ8 iHaveNoIdea;
 	xTEST(eax, 0x18); // KSU
 	xForwardJNZ8 inUserMode;
 	iHaveNoIdea.SetTarget();
 	xAND(eax, ~(u32)0x10000); // EIE
-	xMOV(ptr32[&cpuRegs.CP0.n.Status], eax);
+	xMOV(ptr[&cpuRegs.CP0.n.Status], eax);
 	inUserMode.SetTarget();
 }
 
@@ -171,12 +171,12 @@ void recMFC0( void )
 			case 1:
 				iFlushCall(FLUSH_NODESTROY);
 				xCALL( COP0_UpdatePCCR );
-				xMOV(eax, &cpuRegs.PERF.n.pcr0);
+				xMOV(eax, ptr[&cpuRegs.PERF.n.pcr0]);
 				break;
 			case 3:
 				iFlushCall(FLUSH_NODESTROY);
 				xCALL( COP0_UpdatePCCR );
-				xMOV(eax, &cpuRegs.PERF.n.pcr1);
+				xMOV(eax, ptr[&cpuRegs.PERF.n.pcr1]);
 			break;
 		}
 		_deleteEEreg(_Rt_, 0);

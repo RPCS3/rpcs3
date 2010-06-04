@@ -148,25 +148,25 @@ static void _DynGen_StackFrameCheck()
 
 	// --------- EBP Here -----------
 
-	xCMP( ebp, &s_store_ebp );
+	xCMP( ebp, ptr[&s_store_ebp] );
 	xForwardJE8 skipassert_ebp;
 
 	xMOV( ecx, 1 );					// 1 specifies EBP
 	xMOV( edx, ebp );
 	xCALL( StackFrameCheckFailed );
-	xMOV( ebp, &s_store_ebp );		// half-hearted frame recovery attempt!
+	xMOV( ebp, ptr[&s_store_ebp] );		// half-hearted frame recovery attempt!
 
 	skipassert_ebp.SetTarget();
 
 	// --------- ESP There -----------
 
-	xCMP( esp, &s_store_esp );
+	xCMP( esp, ptr[&s_store_esp] );
 	xForwardJE8 skipassert_esp;
 
 	xXOR( ecx, ecx );				// 0 specifies ESP
 	xMOV( edx, esp );
 	xCALL( StackFrameCheckFailed );
-	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
+	xMOV( esp, ptr[&s_store_esp] );		// half-hearted frame recovery attempt!
 
 	skipassert_esp.SetTarget();
 }
@@ -180,10 +180,10 @@ static DynGenFunc* _DynGen_JITCompile()
 	u8* retval = xGetPtr();
 	_DynGen_StackFrameCheck();
 
-	xMOV( ecx, &psxRegs.pc );
+	xMOV( ecx, ptr[&psxRegs.pc] );
 	xCALL( iopRecRecompile );
 
-	xMOV( eax, &psxRegs.pc );
+	xMOV( eax, ptr[&psxRegs.pc] );
 	xMOV( ebx, eax );
 	xSHR( eax, 16 );
 	xMOV( ecx, ptr[psxRecLUT + (eax*4)] );
@@ -205,7 +205,7 @@ static DynGenFunc* _DynGen_DispatcherReg()
 	u8* retval = xGetPtr();
 	_DynGen_StackFrameCheck();
 
-	xMOV( eax, &psxRegs.pc );
+	xMOV( eax, ptr[&psxRegs.pc] );
 	xMOV( ebx, eax );
 	xSHR( eax, 16 );
 	xMOV( ecx, ptr[psxRecLUT + (eax*4)] );
@@ -312,8 +312,8 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 
 	if( IsDevBuild )
 	{
-		xMOV( &s_store_esp, esp );
-		xMOV( &s_store_ebp, ebp );
+		xMOV( ptr[&s_store_esp], esp );
+		xMOV( ptr[&s_store_ebp], ebp );
 	}
 
 	xJMP( iopDispatcherReg );

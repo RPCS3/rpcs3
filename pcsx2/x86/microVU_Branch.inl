@@ -132,7 +132,7 @@ void normBranch(mV, microFlagCycles& mFC) {
 
 void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 	mVUsetupBranch(mVU, mFC);
-	xCMP(ptr16[&mVU->branch], 0);
+	xCMP(ptr16[(u16*)&mVU->branch], 0);
 	incPC(3);
 	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
 		mVUendProgram(mVU, &mFC, 2);

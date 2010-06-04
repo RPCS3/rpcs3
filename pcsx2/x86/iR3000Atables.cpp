@@ -704,7 +704,7 @@ static void rpsxSB()
 
 	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
 	if (_Imm_) ADD32ItoR(ECX, _Imm_);
-	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xMOV( edx, ptr[&psxRegs.GPR.r[_Rt_]] );
 	xCALL( iopMemWrite8 );
 }
 
@@ -715,7 +715,7 @@ static void rpsxSH()
 
 	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
 	if (_Imm_) ADD32ItoR(ECX, _Imm_);
-	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xMOV( edx, ptr[&psxRegs.GPR.r[_Rt_]] );
 	xCALL( iopMemWrite16 );
 }
 
@@ -726,7 +726,7 @@ static void rpsxSW()
 
 	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
 	if (_Imm_) ADD32ItoR(ECX, _Imm_);
-	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xMOV( edx, ptr[&psxRegs.GPR.r[_Rt_]] );
 	xCALL( iopMemWrite32 );
 }
 
