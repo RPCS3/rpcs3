@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 
+using namespace pxSizerFlags;
 
 wxString SysExecEvent::GetEventName() const
 {
@@ -373,13 +374,14 @@ protected:
 WaitingForThreadedTaskDialog::WaitingForThreadedTaskDialog( PersistentThread* thr, wxWindow* parent, const wxString& title, const wxString& content )
 	: wxDialogWithHelpers( parent, title, wxVERTICAL )
 {
+	SetMinWidth( 500 );
+
 	m_thread		= thr;
-	m_idealWidth	= 500;
 	
-	*this += Heading( content );
+	*this += Text( content )	| StdExpand();
 	*this += 15;
-	*this += Heading( _("Press Cancel to attempt to cancel the action.") );
-	*this += Heading( _("Press Terminate to kill PCSX2 immediately.") );
+	*this += Heading( _("Press Cancel to attempt to cancel the action.") )	| pxExpand;
+	*this += Heading( _("Press Terminate to kill PCSX2 immediately.") )		| pxExpand;
 	
 	*this += new wxButton( this, wxID_CANCEL );
 	*this += new wxButton( this, wxID_ANY, _("Terminate App") );

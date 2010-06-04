@@ -72,7 +72,7 @@ struct RadioPanelItem
 struct RadioPanelObjects
 {
 	wxRadioButton*		LabelObj;
-	wxStaticText*		SubTextObj;
+	pxStaticText*		SubTextObj;
 };
 
 // --------------------------------------------------------------------------------------
@@ -122,8 +122,8 @@ public:
 	void Reset();
 	void Realize();
 
-	wxStaticText* GetSubText( int idx );
-	const wxStaticText* GetSubText( int idx ) const;
+	pxStaticText* GetSubText( int idx );
+	const pxStaticText* GetSubText( int idx ) const;
 	pxRadioPanel& Append( const RadioPanelItem& entry );
 
 	pxRadioPanel& SetToolTip( int idx, const wxString& tip );

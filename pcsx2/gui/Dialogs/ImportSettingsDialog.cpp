@@ -23,9 +23,9 @@ using namespace pxSizerFlags;
 Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 	: wxDialogWithHelpers( parent, _("Import Existing Settings?"), wxVERTICAL )
 {
-	m_idealWidth = 440;
+	SetMinWidth( 440 );
 
-	pxStaticText* heading = new pxStaticHeading( this, pxE( ".Popup:ImportExistingSettings",
+	pxStaticText& heading = Text( pxE( ".Popup:ImportExistingSettings",
 		L"Existing PCSX2 settings have been found in the configured settings folder.  "
 		L"Would you like to import these settings or overwrite them with PCSX2 default values?"
 		L"\n\n(or press Cancel to select a different settings folder)" )
@@ -45,7 +45,7 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 	s_buttons += new wxButton( this, wxID_CANCEL ) | StdButton();
 
 	*this += 4;
-	*this += heading;
+	*this += heading		| StdExpand();
 	*this += 12;
 	*this += &s_buttons		| StdCenter();
 

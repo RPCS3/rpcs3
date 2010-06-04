@@ -18,12 +18,9 @@
 
 using namespace pxSizerFlags;
 
-Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
+Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
-
-	*this	+= new pxStaticHeading( this, _("Some games need special settings.\nEnable them here."));
-
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
 
 	// NOTE: Order of checkboxes must match the order of the bits in the GamefixOptions structure!
@@ -90,13 +87,16 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled."));
 	m_check_Enable->SetValue( g_Conf->EnableGameFixes );
 
+	*this	+= Heading(_("Some games need special settings.\nEnable them here.")).Bold()	| StdExpand();
 	*this	+= groupSizer		| pxCenter;
 
 	*this	+= m_check_Enable	| StdExpand();
-	*this	+= Heading( pxE( ".Panel:Gamefixes:Compat Warning",
-		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
-		L"will need to turn off fixes manually when changing games."
-	));
+	*this	+= Heading(
+		pxE( ".Panel:Gamefixes:Compat Warning",
+			L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
+			L"will need to turn off fixes manually when changing games."
+		)
+	) | StdExpand();
 
 	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
 

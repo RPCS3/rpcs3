@@ -160,7 +160,7 @@ void Panels::BaseMcdListPanel::RefreshMcds() const
 
 void Panels::BaseMcdListPanel::CreateLayout()
 {
-	if( m_listview ) m_listview->SetMinSize( wxSize( m_idealWidth, 140 ) );
+	//if( m_listview ) m_listview->SetMinSize( wxSize( 480, 140 ) );
 
 	wxBoxSizer& s_buttons(*new wxBoxSizer( wxHORIZONTAL ));
 	s_leftside_buttons	= new wxBoxSizer( wxHORIZONTAL );

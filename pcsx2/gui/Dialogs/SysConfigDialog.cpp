@@ -25,7 +25,7 @@
 using namespace Panels;
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), 600 )
+	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), 580 )
 {
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );

@@ -93,9 +93,9 @@ void BaseApplicableDialog::OnSettingsApplied( wxCommandEvent& evt )
 Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, const wxString& title, int idealWidth )
 	: _parent( parent, title, wxVERTICAL )
 {
-	m_idealWidth	= idealWidth;
+	SetMinWidth( idealWidth );
 	m_listbook		= NULL;
-
+	
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnCancel_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnApply_Click ) );

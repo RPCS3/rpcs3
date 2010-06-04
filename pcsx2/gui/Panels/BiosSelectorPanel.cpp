@@ -82,10 +82,10 @@ void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
 // =====================================================================================================
 //  BiosSelectorPanel
 // =====================================================================================================
-Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
+Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent )
 	: BaseSelectorPanel( parent )
 {
-	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
+	SetMinWidth( 480 );
 
 	m_ComboBox		= new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_SORT | wxLB_NEEDED_SB );
 	m_FolderPicker	= new DirPickerPanel( this, FolderId_Bios,
@@ -100,7 +100,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 
 	wxButton* refreshButton = new wxButton( this, wxID_ANY, _("Refresh list") );
 
-	*this	+= Text(_("Select a BIOS rom:"));
+	*this	+= Label(_("Select a BIOS rom:"));
 	*this	+= m_ComboBox		| StdExpand();
 	*this	+= refreshButton	| pxBorder(wxLEFT, StdPadding);
 	*this	+= 8;

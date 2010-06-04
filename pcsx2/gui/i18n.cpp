@@ -24,17 +24,17 @@ static bool IsEnglish( int id )
 	return ( id == wxLANGUAGE_ENGLISH || id == wxLANGUAGE_ENGLISH_US );
 }
 
-LangPackEnumeration::LangPackEnumeration( wxLanguage langId ) :
-	wxLangId( langId )
-,	englishName( wxLocale::GetLanguageName( wxLangId ) )
-,	xlatedName( IsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
+LangPackEnumeration::LangPackEnumeration( wxLanguage langId )
+	: wxLangId( langId )
+	, englishName( wxLocale::GetLanguageName( wxLangId ) )
+	, xlatedName( IsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
 {
 }
 
-LangPackEnumeration::LangPackEnumeration() :
-	wxLangId( wxLANGUAGE_DEFAULT )
-,	englishName( L" System Default" )		// left-side space forces it to sort to the front of the lists
-,	xlatedName()
+LangPackEnumeration::LangPackEnumeration()
+	: wxLangId( wxLANGUAGE_DEFAULT )
+	, englishName( L" System Default" )		// left-side space forces it to sort to the front of the lists
+	, xlatedName()
 {
 	int sysLang( wxLocale::GetSystemLanguage() );
 	if( sysLang != wxLANGUAGE_UNKNOWN )

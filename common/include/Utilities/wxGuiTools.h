@@ -58,6 +58,11 @@ struct pxAlignmentType
 		return Apply( _flgs );
 	}
 
+	wxSizerFlags Expand() const
+	{
+		return Apply().Expand();
+	}
+
 	wxSizerFlags Border( int dir, int padding ) const
 	{
 		return Apply().Border( dir, padding );
@@ -280,7 +285,7 @@ void operator+=( wxSizer* target, const pxWindowAndFlags<WinType>& src )
 
 namespace pxSizerFlags
 {
-	static const int StdPadding = 5;
+	static const int StdPadding = 4;
 
 	extern wxSizerFlags StdSpace();
 	extern wxSizerFlags StdCenter();
@@ -305,7 +310,6 @@ class wxDialogWithHelpers : public wxDialog
 
 protected:
 	bool				m_hasContextHelp;
-	int					m_idealWidth;
 	wxBoxSizer*			m_extraButtonSizer;
 	
 public:
@@ -328,13 +332,11 @@ public:
 	// screenshots to disk)
 	virtual wxString GetDialogName() const;
 
-	virtual pxStaticText*		Text( const wxString& label );
-	virtual pxStaticHeading*	Heading( const wxString& label );
+	virtual wxStaticText&	Label( const wxString& label );
+	virtual pxStaticText&	Text( const wxString& label );
+	virtual pxStaticText&	Heading( const wxString& label );
 
-	virtual wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
-
-	int GetIdealWidth() const { return m_idealWidth; }
-	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
+	virtual wxDialogWithHelpers& SetMinWidth( int newWidth );
 
 protected:
 	void OnDialogCreated( wxCommandEvent& evt );
@@ -363,9 +365,6 @@ class wxPanelWithHelpers : public wxPanel
 {
 	DECLARE_DYNAMIC_CLASS_NO_COPY(wxPanelWithHelpers)
 
-protected:
-	int		m_idealWidth;
-
 public:
 	wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel );
 	wxPanelWithHelpers( wxWindow* parent, wxOrientation orient );
@@ -374,13 +373,11 @@ public:
 
 	wxPanelWithHelpers* AddFrame( const wxString& label, wxOrientation orient=wxVERTICAL );
 
-	pxStaticText*		Text( const wxString& label );
-	pxStaticHeading*	Heading( const wxString& label );
+	wxStaticText&	Label( const wxString& label );
+	pxStaticText&	Text( const wxString& label );
+	pxStaticText&	Heading( const wxString& label );
 
-	// TODO : Propagate to children?
-	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }
-	int GetIdealWidth() const { return m_idealWidth; }
-	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
+	virtual wxPanelWithHelpers& SetMinWidth( int newWidth );
 
 protected:
 	void Init();
@@ -479,25 +476,14 @@ protected:
 	void _DoWrite( const wxChar* msg );
 
 public:
-	pxWindowTextWriter( wxDC& dc )
-		: m_dc( dc )
-	{
-		m_curpos = wxPoint();
-		m_align = wxALIGN_CENTER;
-		m_leading = 2;
-
-		OnFontChanged();
-	}
-
-	virtual ~pxWindowTextWriter() throw()
-	{
-	
-	}
+	pxWindowTextWriter( wxDC& dc );
+	virtual ~pxWindowTextWriter() throw() { }
 	
 	virtual void OnFontChanged();
 
 	pxWindowTextWriter& WriteLn();
-	pxWindowTextWriter& WriteLn( const wxChar* fmt, ... );
+	pxWindowTextWriter& FormatLn( const wxChar* fmt, ... );
+	pxWindowTextWriter& WriteLn( const wxChar* fmt );
 	pxWindowTextWriter& SetFont( const wxFont& font );
 	pxWindowTextWriter& Align( const wxAlignment& align );
 		
@@ -537,35 +523,6 @@ public:
 	pxWindowTextWriter& SetY( int ypos );
 	pxWindowTextWriter& MoveY( int ydelta );
 };
-
-// --------------------------------------------------------------------------------------
-//  pxStaticTextImproved
-// --------------------------------------------------------------------------------------
-class pxStaticTextImproved : public wxPanelWithHelpers
-{
-	typedef wxPanelWithHelpers _parent;
-
-protected:
-	wxAlignment		m_align;
-	wxString		m_wrappedLabel;
-	bool			m_autowrap;
-	int				m_wrappedWidth;
-	int				m_padding_horiz;
-
-public:
-	pxStaticTextImproved( wxWindow* parent=NULL, const wxString& label=wxEmptyString, wxAlignment align=wxALIGN_CENTER );
-	pxStaticTextImproved( wxWindow* parent, int heightInLines, const wxString& label=wxEmptyString, wxAlignment align=wxALIGN_CENTER );
-	virtual ~pxStaticTextImproved() throw() {}
-
-	virtual void SetLabel(const wxString& label);
-	pxStaticTextImproved& Unwrapped();
-	
-protected:
-	void Init();
-	void paintEvent(wxPaintEvent& evt);
-	void UpdateWrapping( bool textChanged );
-};
-
 
 // --------------------------------------------------------------------------------------
 //  MoreStockCursors

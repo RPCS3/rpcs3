@@ -37,16 +37,15 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 	static const int Indentation = 23;
 	if( !subtext.IsEmpty() )
 	{
-		m_subtext = new pxStaticText( this, subtext );
-		if( HasIdealWidth() )
-			m_subtext->SetWrapWidth( m_idealWidth - Indentation );
+		m_subtext = new pxStaticText( this, subtext, wxALIGN_LEFT );
 
-		wxBoxSizer& spaced( *new wxBoxSizer( wxHORIZONTAL ) );
+		wxFlexGridSizer& spaced( *new wxFlexGridSizer(3) );
+		spaced.AddGrowableCol( 1 );
 		spaced += Indentation;
-		spaced += m_subtext | pxBorder( wxBOTTOM, 9 );
+		spaced += m_subtext | pxBorder( wxBOTTOM, 9 ).Expand();
 		spaced += pxSizerFlags::StdPadding;
 
-		*this += &spaced;
+		*this += &spaced | pxExpand;
 	}
 	
 	Connect( m_checkbox->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(pxCheckBox::OnCheckpartCommand) );

@@ -42,7 +42,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	, m_mcdpath( mcdpath.IsOk() ? mcdpath : (wxDirName)g_Conf->Mcd[slot].Filename.GetPath() )
 	, m_mcdfile( mcdfile.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName() : mcdfile )
 {
-	m_idealWidth	= 472;
+	SetMinWidth( 472 );
 	m_filepicker	= NULL;
 	m_slot			= slot;
 
@@ -69,8 +69,8 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 		s_padding += m_filepicker			| StdExpand();
 	else
 	{
-		s_padding += Heading( _( "New card will be saved to:" ) );
-		s_padding += Heading( (m_mcdpath + m_mcdfile).GetFullPath() );
+		s_padding += Heading( _( "New card will be saved to:" ) )					| StdExpand();
+		s_padding += Heading( (m_mcdpath + m_mcdfile).GetFullPath() ).Unwrapped()	| StdExpand();
 	}
 	
 	s_padding += m_radio_CardSize			| StdExpand();

@@ -56,7 +56,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 	if( !wxDirExists(path) )
 	{
 		wxDialogWithHelpers createPathDlg( NULL, _("Path does not exist"), wxVERTICAL );
-		createPathDlg.SetIdealWidth( 600 );
+		createPathDlg.SetMinWidth( 600 );
 
 		createPathDlg += createPathDlg.Text( path ) | StdCenter();
 
@@ -167,7 +167,7 @@ void Panels::DirPickerPanel::Init( FoldersEnum_t folderid, const wxString& dialo
 
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
 {
-	(new pxStaticText( this, msg ))->InsertAt( *GetSizer(), 0 );
+	GetSizer()->Insert( 0, &Heading( msg ), pxExpand );
 	return *this;
 }
 

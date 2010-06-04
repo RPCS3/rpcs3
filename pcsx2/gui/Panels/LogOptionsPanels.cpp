@@ -124,6 +124,8 @@ Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 
 void Panels::eeLogOptionsPanel::OnSettingsChanged()
 {
+	SetMinWidth( 230 );
+
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
 	SetValue( conf.EE.m_EnableAll );
@@ -158,6 +160,8 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 
 void Panels::iopLogOptionsPanel::OnSettingsChanged()
 {
+	SetMinWidth( 230 );
+
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
 	SetValue( conf.IOP.m_EnableAll );

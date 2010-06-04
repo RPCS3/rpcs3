@@ -401,7 +401,7 @@ namespace Panels
 		DirPickerPanel*				m_FolderPicker;
 
 	public:
-		BiosSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+		BiosSelectorPanel( wxWindow* parent );
 		virtual ~BiosSelectorPanel() throw();
 
 	protected:
@@ -505,7 +505,7 @@ namespace Panels
 
 	public:
 		virtual ~PluginSelectorPanel() throw();
-		PluginSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+		PluginSelectorPanel( wxWindow* parent );
 
 		void CancelRefresh();		// used from destructor, stays non-virtual
 		void Apply();

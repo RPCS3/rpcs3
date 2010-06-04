@@ -129,7 +129,7 @@ wxDialogWithHelpers::wxDialogWithHelpers(wxWindow* parent, const wxString& title
 	SetSizer( new wxBoxSizer( orient ) );
 	Init();
 
-	m_idealWidth = 500;
+	SetMinWidth( 500 );
 	*this += StdPadding;
 }
 
@@ -139,7 +139,6 @@ wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 
 void wxDialogWithHelpers::Init()
 {
-	m_idealWidth		= wxDefaultCoord;
 	m_extraButtonSizer	= NULL;
 
 	if( m_hasContextHelp )
@@ -215,14 +214,19 @@ bool wxDialogWithHelpers::Show( bool show )
 	return wxDialog::Show( show );
 }
 
-pxStaticText* wxDialogWithHelpers::Text( const wxString& label )
+wxStaticText& wxDialogWithHelpers::Label( const wxString& label )
 {
-	return new pxStaticText( this, label );
+	return *new wxStaticText( this, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_VERTICAL );
 }
 
-pxStaticHeading* wxDialogWithHelpers::Heading( const wxString& label )
+pxStaticText& wxDialogWithHelpers::Text( const wxString& label )
 {
-	return new pxStaticHeading( this, label );
+	return *new pxStaticText( this, label );
+}
+
+pxStaticText& wxDialogWithHelpers::Heading( const wxString& label )
+{
+	return *new pxStaticHeading( this, label );
 }
 
 void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
@@ -280,6 +284,14 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer *sizer, bool hasApply )
 	AddOkCancel( *sizer, hasApply );
 }
 
+wxDialogWithHelpers& wxDialogWithHelpers::SetMinWidth( int newWidth )
+{
+	SetMinSize( wxSize( newWidth, GetMinHeight() ) );
+	if( wxSizer* sizer = GetSizer() )
+		sizer->SetMinSize( wxSize( newWidth, sizer->GetMinSize().GetHeight() ) );
+	return *this;
+}
+
 // --------------------------------------------------------------------------------------
 //  wxPanelWithHelpers Implementations
 // --------------------------------------------------------------------------------------
@@ -288,42 +300,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxPanelWithHelpers, wxPanel)
 
 void wxPanelWithHelpers::Init()
 {
-	m_idealWidth = wxDefaultCoord;
-
-	// Find the first parent with a fixed width:
-	wxWindow* millrun = this->GetParent();
-	while( (m_idealWidth == wxDefaultCoord) && millrun != NULL )
-	{
-		if( wxIsKindOf( millrun, wxPanelWithHelpers ) )
-			m_idealWidth = ((wxPanelWithHelpers*)millrun)->GetIdealWidth();
-
-		else if( wxIsKindOf( millrun, wxDialogWithHelpers ) )
-			m_idealWidth = ((wxDialogWithHelpers*)millrun)->GetIdealWidth();
-
-		millrun = millrun->GetParent();
-	}
-
-	if( m_idealWidth == wxDefaultCoord || GetParent() == NULL )
-		return;
-
-	// Check for a StaticBox -- if we belong to one then we'll want to "downgrade" the
-	// inherited textbox width automatically.
-
-	wxSizer* guess = GetSizer();
-	if( guess == NULL ) guess = GetParent()->GetSizer();
-	if( guess == NULL ) guess = GetParent()->GetContainingSizer();
-
-	if( guess != NULL )
-	{
-		if( wxIsKindOf( guess, wxStaticBoxSizer ) )
-		{
-			int top=0, others=0;
-			((wxStaticBoxSizer*)guess)->GetStaticBox()->GetBordersForSizer( &top, &others );
-			m_idealWidth -= others*2;
-		}
-		else
-			m_idealWidth -= 2;				// generic padding compensation (no exact sciences to be found here)
-	}
 }
 
 // Creates a Static Box container for this panel.  the static box sizer becomes the default
@@ -343,14 +319,19 @@ wxPanelWithHelpers* wxPanelWithHelpers::AddFrame( const wxString& label, wxOrien
 	return this;
 }
 
-pxStaticText* wxPanelWithHelpers::Text( const wxString& label )
+wxStaticText& wxPanelWithHelpers::Label( const wxString& label )
 {
-	return new pxStaticText( this, label );
+	return *new wxStaticText( this, wxID_ANY, label );
 }
 
-pxStaticHeading* wxPanelWithHelpers::Heading( const wxString& label )
+pxStaticText& wxPanelWithHelpers::Text( const wxString& label )
 {
-	return new pxStaticHeading( this, label );
+	return *new pxStaticText( this, label );
+}
+
+pxStaticText& wxPanelWithHelpers::Heading( const wxString& label )
+{
+	return *new pxStaticHeading( this, label );
 }
 
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel )
@@ -377,4 +358,12 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, co
 	: wxPanel( parent, wxID_ANY, pos, size )
 {
 	Init();
+}
+
+wxPanelWithHelpers& wxPanelWithHelpers::SetMinWidth( int newWidth )
+{
+	SetMinSize( wxSize( newWidth, GetMinHeight() ) );
+	if( wxSizer* sizer = GetSizer() )
+		sizer->SetMinSize( wxSize( newWidth, sizer->GetMinSize().GetHeight() ) );
+	return *this;
 }

@@ -29,6 +29,8 @@ using namespace pxSizerFlags;
 Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
+	SetMinWidth( 280 );
+
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
 
@@ -56,22 +58,22 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 5 ) );
 	s_spins.AddGrowableCol( 0 );
 
-	s_spins += Text(_("Base Framerate Adjust:"));
+	s_spins += Label(_("Base Framerate Adjust:"))	| StdExpand();
 	s_spins += 5;
-	s_spins += m_spin_NominalPct	| pxBorder(wxTOP, 3);
-	s_spins += Text(L"%" );
-	s_spins += 5;
-
-	s_spins += Text(_("Slow Motion Adjust:"));
-	s_spins += 5;
-	s_spins += m_spin_SlomoPct		| pxBorder(wxTOP, 3);
-	s_spins += Text(L"%" );
+	s_spins += m_spin_NominalPct					| pxBorder(wxTOP, 3);
+	s_spins += Label(L"%")							| StdExpand();
 	s_spins += 5;
 
-	s_spins	+= Text(_("Turbo Adjust:"));
+	s_spins += Label(_("Slow Motion Adjust:"))		| StdExpand();
+	s_spins += 5;
+	s_spins += m_spin_SlomoPct						| pxBorder(wxTOP, 3);
+	s_spins += Label(L"%")							| StdExpand();
+	s_spins += 5;
+
+	s_spins	+= Label(_("Turbo Adjust:"))			| StdExpand();
 	s_spins	+= 5;
-	s_spins	+= m_spin_TurboPct		| pxBorder(wxTOP, 3);
-	s_spins	+= Text(L"%" );
+	s_spins	+= m_spin_TurboPct						| pxBorder(wxTOP, 3);
+	s_spins	+= Label(L"%" )							| StdExpand();
 	s_spins	+= 5;
 
 	s_spins	+= 15;
@@ -83,16 +85,16 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	wxFlexGridSizer& s_fps( *new wxFlexGridSizer( 5 ) );
 	s_fps.AddGrowableCol( 0 );
 
-	s_fps	+= Text(_("NTSC Framerate:"));
+	s_fps	+= Label(_("NTSC Framerate:"))	| StdExpand();
 	s_fps	+= 5;
-	s_fps	+= m_text_BaseNtsc	| wxSF.Right().Border(wxTOP, 3);
-	s_fps	+= Text(_("FPS"));
+	s_fps	+= m_text_BaseNtsc				| pxBorder(wxTOP, 2).Right();
+	s_fps	+= Label(_("FPS"))				| StdExpand();
 	s_fps	+= 5;
 
-	s_fps	+= Text(_("PAL Framerate:"));
+	s_fps	+= Label(_("PAL Framerate:"))	| StdExpand();
 	s_fps	+= 5;
-	s_fps	+= m_text_BasePal	| wxSF.Right().Border(wxTOP, 3);
-	s_fps	+= Text(_("FPS"));
+	s_fps	+= m_text_BasePal				| pxBorder(wxTOP, 2).Right();
+	s_fps	+= Label(_("FPS"))				| StdExpand();
 	s_fps	+= 5;
 
 	*this	+= s_spins	| pxExpand;
@@ -101,7 +103,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	*this	+= 5;
 
 	//*this	+= Heading( pxE( ".Panel:Framelimiter:Heading",
-	*this	+= new pxStaticTextImproved( this, pxE( ".Panel:Framelimiter:Heading",
+	*this	+= new pxStaticText( this, pxE( ".Panel:Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
@@ -157,6 +159,7 @@ void Panels::FramelimiterPanel::Apply()
 Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
+	SetMinWidth( 280 );
 	/*m_check_EnableSkipOnTurbo = new pxCheckBox( this, _("Use Frameskip for Turbo") );
 
 	m_check_EnableSkip = new pxCheckBox( this, _("Use Frameskip"),
@@ -190,7 +193,6 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	};
 
 	m_radio_SkipMode = new pxRadioPanel( this, FrameskipOptions );
-	//m_radio_SkipMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
 	m_radio_SkipMode->Realize();
 
 	pxFitToDigits( m_spin_FramesToDraw	= new wxSpinCtrl( this ), 6 );
@@ -210,22 +212,22 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 4 ) );
 	//s_spins.AddGrowableCol( 0 );
 
-	s_spins += m_spin_FramesToDraw		| pxBorder(wxTOP, 3);
+	s_spins += m_spin_FramesToDraw			| pxBorder(wxTOP, 2);
 	s_spins += 10;
-	s_spins += Text(_("Frames to Draw"));
+	s_spins += Label(_("Frames to Draw"))	| StdExpand();
 	s_spins += 10;
 
-	s_spins += m_spin_FramesToSkip		| pxBorder(wxTOP, 3);
+	s_spins += m_spin_FramesToSkip			| pxBorder(wxTOP, 2);
 	s_spins += 10;
-	s_spins += Text(_("Frames to Skip"));
+	s_spins += Label(_("Frames to Skip"))	| StdExpand();
 	s_spins += 10;
 
 	*this	+= s_spins	| StdExpand();
 
-	*this	+= Heading( pxE( ".Panel:Frameskip:Heading",
+	*this	+= Text( pxE( ".Panel:Frameskip:Heading",
 		L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
-		L"Enabling it will cause severe graphical errors in some games, and so it should be considered a speedhack." )
-	);
+		L"Enabling it will cause severe graphical errors in some games." )
+	) | StdExpand();
 
 	AppStatusEvent_OnSettingsApplied();
 }
@@ -235,7 +237,7 @@ void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
 	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
-	//m_check_EnableSkip			->SetValue( !appfps.SkipOnLimit );
+	//m_check_EnableSkip		->SetValue( !appfps.SkipOnLimit );
 	//m_check_EnableSkipOnTurbo	->SetValue( !appfps.SkipOnTurbo );
 
 	m_radio_SkipMode	->SetSelection( appfps.SkipOnLimit ? 2 : (appfps.SkipOnTurbo ? 1 : 0) );
@@ -282,8 +284,6 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 {
 	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
-	left->SetIdealWidth( (left->GetIdealWidth()) / 2 );
-	right->SetIdealWidth( (right->GetIdealWidth()-24) / 2 );
 
 	m_check_SynchronousGS = new pxCheckBox( right, _("Use Synchronized MTGS"),
 		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
@@ -313,8 +313,8 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	fpan->AddFrame(_("Framelimiter"));
 
 	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
-	s_table->AddGrowableCol( 0 );
-	s_table->AddGrowableCol( 1 );
+	s_table->AddGrowableCol( 0, 1 );
+	s_table->AddGrowableCol( 1, 1 );
 
 	*right		+= span		| pxExpand;
 	*right		+= 5;

@@ -115,8 +115,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
-	left->SetIdealWidth( (left->GetIdealWidth() - 16) / 2 );
-	right->SetIdealWidth( (right->GetIdealWidth() - 16) / 2 );
 
 	// ------------------------------------------------------------------------
 	// EE Cyclerate Hack Section:
@@ -130,7 +128,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_slider_eecycle = new wxSlider( eeSliderPanel, wxID_ANY, 1, 1, 3,
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
-	m_msg_eecycle = new pxStaticHeading( eeSliderPanel ) ;//, GetEEcycleSliderMsg( 1 ) );
+	m_msg_eecycle = new pxStaticHeading( eeSliderPanel );
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_eecycle->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 3) ) );
 
@@ -151,7 +149,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_slider_vustealer = new wxSlider( vuSliderPanel, wxID_ANY, 0, 0, 3, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
-	m_msg_vustealer = new pxStaticHeading( vuSliderPanel ); //, GetVUcycleSliderMsg( 0 ) );
+	m_msg_vustealer = new pxStaticHeading( vuSliderPanel );
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_vustealer->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 3) ) );
 
@@ -219,10 +217,13 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	// ------------------------------------------------------------------------
 	//  Layout and Size ---> (!!)
 
-	wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 2, 0, 12 ) );
+	wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 3, 0, 12 ) );
 	DefEnableSizer.AddGrowableCol( 1, 1 );
+	DefEnableSizer.AddGrowableCol( 2, 10 );
+	//DefEnableSizer.AddGrowableCol( 1, 1 );
 	DefEnableSizer	+= m_button_Defaults	| StdSpace().Align( wxALIGN_LEFT );
-	DefEnableSizer	+= m_check_Enable		| StdSpace().Align( wxALIGN_RIGHT );
+	DefEnableSizer	+= pxStretchSpacer(1);
+	DefEnableSizer	+= m_check_Enable		| StdExpand().Align( wxALIGN_RIGHT );
 
 	*eeSliderPanel	+= m_slider_eecycle		| sliderFlags;
 	*eeSliderPanel	+= m_msg_eecycle		| sliderFlags;
@@ -244,12 +245,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	*right	+= vuHacksPanel		| StdExpand();
 
 	s_table = new wxFlexGridSizer( 2 );
-	s_table->AddGrowableCol( 0 );
-	s_table->AddGrowableCol( 1 );
+	s_table->AddGrowableCol( 0, 1 );
+	s_table->AddGrowableCol( 1, 1 );
 	*s_table+= left				| pxExpand;
 	*s_table+= right			| pxExpand;
 
-	*this	+= heading;
+	*this	+= heading->Bold()	| pxExpand;
 	*this	+= s_table			| pxExpand;
 	*this	+= DefEnableSizer	| pxExpand;
 

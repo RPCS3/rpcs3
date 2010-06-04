@@ -308,7 +308,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent )
 
 	m_gauge.SetToolTip( _("I'm givin' her all she's got, Captain!") );
 
-	*this	+= new pxStaticHeading( this, _( "Enumerating available plugins..." ) );
+	*this	+= Heading(_( "Enumerating available plugins..." )).Bold()	| StdExpand();
 	*this	+= m_gauge	| pxExpand.Border( wxLEFT | wxRIGHT, 32 );
 	*this	+= m_label	| StdExpand();
 
@@ -352,15 +352,14 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		const PluginsEnum_t pid = pi->id;
-		wxStaticText* text = new wxStaticText( this, wxID_ANY, pi->GetShortname() );
 
 		m_combobox[pid] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 
 		m_configbutton[pid] = new wxButton( this, ButtonId_Configure, L"Configure..." );
 		m_configbutton[pid]->SetClientData( (void*)(int)pid );
 
-		s_plugin	+= text				| pxBorder( wxTOP | wxLEFT, 2 );
-		s_plugin	+= m_combobox[pid]	| pxExpand;
+		s_plugin	+= Label( pi->GetShortname() )	| pxBorder( wxTOP | wxLEFT, 2 );
+		s_plugin	+= m_combobox[pid]				| pxExpand;
 		s_plugin	+= m_configbutton[pid];
 	} while( ++pi, pi->shortname != NULL );
 
@@ -403,11 +402,9 @@ void Panels::PluginSelectorPanel::DispatchEvent( const PluginEventType& evt )
 
 }
 
-Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWidth )
+Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent )
 	: BaseSelectorPanel( parent )
 {
-	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
-
 	m_StatusPanel		= new StatusPanel( this );
 	m_ComponentBoxes	= new ComboBoxPanel( this );
 

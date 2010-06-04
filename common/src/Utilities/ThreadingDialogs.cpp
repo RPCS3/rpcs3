@@ -17,6 +17,7 @@
 #include "ThreadingDialogs.h"
 #include "pxStaticText.h"
 
+using namespace pxSizerFlags;
 
 DEFINE_EVENT_TYPE(pxEvt_ThreadedTaskComplete);
 
@@ -40,13 +41,8 @@ Threading::WaitForTaskDialog::WaitForTaskDialog( const wxString& title, const wx
 
 	Connect( pxEvt_ThreadedTaskComplete, wxCommandEventHandler(WaitForTaskDialog::OnTaskComplete) );
 
-	wxBoxSizer& paddedMsg( *new wxBoxSizer( wxHORIZONTAL ) );
-	paddedMsg += 24;
-	paddedMsg += Heading(m_heading);
-	paddedMsg += 24;
-
 	*this += 12;
-	*this += paddedMsg;
+	*this += Heading(m_heading)	| StdExpand();
 	*this += 12;
 	
 	// TODO : Implement a cancel button.  Not quite sure the best way to do

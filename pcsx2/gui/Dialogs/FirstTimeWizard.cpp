@@ -42,41 +42,34 @@ bool ApplicableWizardPage::PrepForApply()
 
 
 // ----------------------------------------------------------------------------
-Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
-	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
+Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent )
+	: DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
 {
 	pxSetToolTip( this, pxE( ".Tooltip:Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
 		L"by most plugins (some older plugins may not respect this value)."
 	) );
 
-	// Insert this into the top of the staticboxsizer created by the constructor.
-	GetSizer()->Insert( 0,
-		new wxStaticText( this, wxID_ANY,
-			pxE( ".Panel:SettingsDirPicker",
-				L"You may optionally specify a location for your PCSX2 settings here.  If the location \n"
-				L"contains existing PCSX2 settings, you will be given the option to import or overwrite them."
-			), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
-		), wxSizerFlags().Expand().Border( wxBOTTOM, 6 )
-	);
+	SetStaticDesc( pxE( ".Panel:Folders:Settings",
+		L"You may optionally specify a location for your PCSX2 settings here.  If the location "
+		L"contains existing PCSX2 settings, you will be given the option to import or overwrite them."
+	) );
 }
 
 // ----------------------------------------------------------------------------
 FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 	ApplicableWizardPage( parent )
 {
+	SetMinSize( wxSize(640, GetMinHeight()) );
 	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
-	wxPanelWithHelpers& panel( *new wxPanelWithHelpers( this, wxVERTICAL ) );
-	panel.SetIdealWidth( 640 );
+	wxPanelWithHelpers& panel( *new wxPanelWithHelpers( this, wxVERTICAL ) );	
 
 	m_dirpick_settings	= new SettingsDirPickerPanel( &panel );
 	m_panel_LangSel		= new LanguageSelectionPanel( &panel );
 	m_panel_UserSel		= new DocsFolderPickerPanel( &panel );
 
-	panel += new pxStaticTextImproved( this,
-		_("PCSX2 is starting from a new or unknown folder and needs to be configured.")
-	) | pxExpand;
+	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured.")).Bold() | pxExpand;
 
 	panel += m_panel_LangSel		| StdCenter();
 	panel += m_panel_UserSel		| pxExpand.Border( wxALL, 8 );
@@ -162,7 +155,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 			L"You cannot use a copy obtained from a friend or the Internet.\n"
 			L"You must dump the BIOS from your *own* Playstation 2 console."
 		)
-	);
+	) | StdExpand();
 
 	// Assign page indexes as client data
 	m_page_usermode	.SetClientData( (void*)0 );
@@ -179,9 +172,6 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 
 	// this doesn't descent from wxDialogWithHelpers, so we need to explicitly
 	// fit and center it. :(
-
-	Fit();
-	CenterOnScreen();
 
 	Connect( wxEVT_WIZARD_PAGE_CHANGED,				wxWizardEventHandler	(FirstTimeWizard::OnPageChanged) );
 	Connect( wxEVT_WIZARD_PAGE_CHANGING,			wxWizardEventHandler	(FirstTimeWizard::OnPageChanging) );

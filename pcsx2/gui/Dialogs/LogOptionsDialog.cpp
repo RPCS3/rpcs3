@@ -24,8 +24,6 @@ using namespace Panels;
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
 	: BaseApplicableDialog( parent, _("Trace Logging"), wxVERTICAL )
 {
-	m_idealWidth = 480;
-
 	*this += new LogOptionsPanel( this );
 
 	AddOkCancel( *GetSizer(), true );

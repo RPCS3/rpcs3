@@ -36,8 +36,6 @@ wxString GetMsg_McdNtfsCompress()
 Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	: _parent( parent )
 {
-	m_idealWidth -= 48;
-
 	m_check_Ejection = new pxCheckBox( this,
 		_("Auto-eject memory cards when loading savestates"),
 		pxE( ".Panel:Mcd:EnableEjection",
@@ -113,7 +111,7 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	//AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
 	//AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
 
-	*this	+= Heading(_("Drag items over other items in the list to swap or copy memory cards."));
+	*this	+= Heading(_("Drag items over other items in the list to swap or copy memory cards."))	| StdExpand();
 	*this	+= StdPadding;
 
 	*this	+= m_panel_mcdlist			| StdExpand();

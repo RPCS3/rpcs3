@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "pxRadioPanel.h"
-
+#include "pxStaticText.h"
 
 // ===========================================================================================
 //  pxRadioPanel Implementations
@@ -80,9 +80,7 @@ void pxRadioPanel::Realize()
 	{
 		m_objects[i].SubTextObj = NULL;
 		if( m_buttonStrings[i].SubText.IsEmpty() ) continue;
-		m_objects[i].SubTextObj = new wxStaticText( this, wxID_ANY, m_buttonStrings[i].SubText );
-		if( (m_idealWidth > 0) && pxAssertMsg( m_idealWidth > 40, "Unusably short text wrapping specified!" ) )
-			m_objects[i].SubTextObj->Wrap( m_idealWidth - m_Indentation );
+		m_objects[i].SubTextObj = new pxStaticText( this, m_buttonStrings[i].SubText );
 	}
 
 	pxAssert( GetSizer() != NULL );
@@ -91,9 +89,9 @@ void pxRadioPanel::Realize()
 	{
 		*this += m_objects[i].LabelObj	| pxSizerFlags::StdExpand();
 
-		if( wxStaticText* subobj = m_objects[i].SubTextObj )
+		if( pxStaticText* subobj = m_objects[i].SubTextObj )
 		{
-			*this += subobj	| pxBorder( wxLEFT, m_Indentation );
+			*this += subobj	| pxBorder( wxLEFT, m_Indentation ).Expand();
 			*this += 9 + m_padding.GetHeight();
 		}
 		if( !m_buttonStrings[i].ToolTip.IsEmpty() )
@@ -109,7 +107,7 @@ void pxRadioPanel::_setToolTipImmediate( int idx, const wxString &tip )
 	if( wxRadioButton* woot = m_objects[idx].LabelObj )
 		woot->SetToolTip( wrapped );
 
-	if( wxStaticText* woot = m_objects[idx].SubTextObj )
+	if( pxStaticText* woot = m_objects[idx].SubTextObj )
 		woot->SetToolTip( wrapped );
 }
 
@@ -222,13 +220,13 @@ bool pxRadioPanel::IsSelected( int idx ) const
 	return m_objects[idx].LabelObj->GetValue();
 }
 
-wxStaticText* pxRadioPanel::GetSubText( int idx )
+pxStaticText* pxRadioPanel::GetSubText( int idx )
 {
 	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].SubTextObj;
 }
 
-const wxStaticText* pxRadioPanel::GetSubText( int idx ) const
+const pxStaticText* pxRadioPanel::GetSubText( int idx ) const
 {
 	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].SubTextObj;

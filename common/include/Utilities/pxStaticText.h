@@ -21,12 +21,6 @@
 // --------------------------------------------------------------------------------------
 //  pxStaticText
 // --------------------------------------------------------------------------------------
-// Important:
-//   Proper use of this class requires using it's custom AddTo( wxSizer& ) method, in the
-//   place of wxSizer.Add().  You can also use the += operator (recommended):
-//
-//     mySizer += new pxStaticText( this, _("omg translate me?") );
-//
 // This class's purpose is to overcome two fundamental annoyances in wxWidgets design:
 //
 //   * An inability to wrap text to conform to a fitted window (a limitation imposed by
@@ -38,85 +32,72 @@
 //     control within it's containing sizer.  If both alignment flags do not match the result
 //     is typically undesirable.
 //
-// The first one is very hard to fix properly.  Currently this class employs a hack where it
-// grabs the "ideal" fitting width from it's containing panel/window, and then wraps text to
-// fit within those confines.  Under this design, pxStaticText controls will typically be the
-// "regulators" of the window's display size, since they cannot really participate in the
-// normal sizer system (since their minimum height is unknown until width-based sizes are
-// determined).
-//
-// Note that if another control in the window has extends that blow the window size larger
-// than the "ideal" width, then the pxStaticText will remain consistent in it's size.  It
-// will not attempt to grow to fit the expanded area.  That might be fixable behavior, but
-// it was hard enough for me to get this much working. ;)
-//
-class pxStaticText : public wxStaticText
+class pxStaticText : public wxPanel
 {
-	typedef wxStaticText _parent;
+	typedef wxPanel _parent;
 
 protected:
-	wxString		m_message;
-	int				m_wrapwidth;
-	int				m_alignflags;
-	bool			m_unsetLabel;
-	double			m_centerPadding;
+	wxAlignment		m_align;
+	wxString		m_wrappedLabel;
+	bool			m_autowrap;
+	int				m_wrappedWidth;
+	int				m_heightInLines;
+
+	int				m_paddingPix_horiz;
+	int				m_paddingPix_vert;
+	float			m_paddingPct_horiz;
+	float			m_paddingPct_vert;
+
+protected:
+	explicit pxStaticText( wxWindow* parent=NULL );
 
 public:
-	explicit pxStaticText( wxWindow* parent, const wxString& label=wxEmptyString, int style=wxALIGN_LEFT );
-	explicit pxStaticText( wxWindow* parent, int style );
-
+	pxStaticText( wxWindow* parent, const wxString& label, wxAlignment align=wxALIGN_CENTRE_HORIZONTAL );
+	pxStaticText( wxWindow* parent, int heightInLines, const wxString& label, wxAlignment align=wxALIGN_CENTRE_HORIZONTAL );
 	virtual ~pxStaticText() throw() {}
 
-	void SetLabel( const wxString& label );
-	pxStaticText& SetWrapWidth( int newwidth );
-	pxStaticText& SetToolTip( const wxString& tip );
+	wxFont GetFontOk() const;
 
-	wxSize GetMinSize() const;
-	//void DoMoveWindow(int x, int y, int width, int height);
+	virtual void SetLabel(const wxString& label);
+	pxStaticText& SetHeight( int lines );
+	pxStaticText& Bold();
+	pxStaticText& WrapAt( int width );
 
-	void AddTo( wxSizer& sizer, wxSizerFlags flags=pxSizerFlags::StdSpace() );
-	void AddTo( wxSizer* sizer, const wxSizerFlags& flags=pxSizerFlags::StdSpace() ) { AddTo( *sizer, flags ); }
+	pxStaticText& Unwrapped();
 
-	void InsertAt( wxSizer& sizer, int position, wxSizerFlags flags=pxSizerFlags::StdSpace() );
-	int GetIdealWidth() const;
+	pxStaticText& PaddingPixH( int pixels );
+	pxStaticText& PaddingPixV( int pixels );
+
+	pxStaticText& PaddingPctH( float pct );
+	pxStaticText& PaddingPctV( float pct );
+	//pxStaticText& DoBestGuessHeight();
 
 protected:
-	void _setLabel();
+	void SetPaddingDefaults();
+	void Init( const wxString& label );
+
+	wxSize GetBestWrappedSize( const wxClientDC& dc ) const;
+	wxSize DoGetBestSize() const;
+
+	int calcPaddingWidth( int newWidth ) const;
+	int calcPaddingHeight( int newHeight ) const;
+
+	void paintEvent(wxPaintEvent& evt);
+
+	void UpdateWrapping( bool textChanged );
+	bool _updateWrapping( bool textChanged );
 };
 
-extern void operator+=( wxSizer& target, pxStaticText* src );
-extern void operator+=( wxSizer& target, pxStaticText& src );
-extern void operator+=( wxSizer* target, pxStaticText& src );
 
-template<>
-inline void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
-{
-	src.window->AddTo( target, src.flags );
-	//target.Add( src.window, src.flags );
-}
-
-template<>
-inline void operator+=( wxSizer* target, const pxWindowAndFlags<pxStaticText>& src )
-{
-	src.window->AddTo( target, src.flags );
-	//target.Add( src.window, src.flags );
-}
-
-// --------------------------------------------------------------------------------------
-//  pxStaticHeading
-// --------------------------------------------------------------------------------------
-// Basically like a pxStaticText, except it defaults to wxALIGN_CENTRE, and it has expanded
-// left and right side padding.
-//
-// The padding is not an exact science and, if there isn't any other controls in the form
-// that are equal to or exceeding the IdealWidth, the control will end up fitting tightly
-// to the heading (padding will be nullified).
-//
 class pxStaticHeading : public pxStaticText
 {
+	typedef pxStaticText _parent;
+
 public:
-	pxStaticHeading( wxWindow* parent, const wxString& label=wxEmptyString, int style=wxALIGN_CENTRE );
+	pxStaticHeading( wxWindow* parent=NULL, const wxString& label=wxEmptyString );
+	pxStaticHeading( wxWindow* parent, int heightInLines, const wxString& label=wxEmptyString );
 	virtual ~pxStaticHeading() throw() {}
 
-	//using pxStaticText::operator wxSizerFlags;
+protected:
+	void SetPaddingDefaults();
 };

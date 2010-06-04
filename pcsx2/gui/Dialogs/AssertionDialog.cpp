@@ -22,7 +22,7 @@ using namespace pxSizerFlags;
 Dialogs::AssertionDialog::AssertionDialog( const wxString& text, const wxString& stacktrace )
 	: wxDialogWithHelpers( NULL, _("PCSX2 Assertion Failure"), false, !stacktrace.IsEmpty() )
 {
-	m_idealWidth = 720;
+	SetMinWidth( 720 );
 
 	wxFlexGridSizer* flexgrid = new wxFlexGridSizer( 1 );
 	flexgrid->AddGrowableCol( 0 );
@@ -46,19 +46,19 @@ Dialogs::AssertionDialog::AssertionDialog( const wxString& text, const wxString&
 		traceArea->GetTextExtent( L"blaH yeah", NULL, &fonty );
 
 		traceArea->WriteText( stacktrace );
-		traceArea->SetMinSize( wxSize( GetIdealWidth()-24, (fonty+1)*18 ) );
+		traceArea->SetMinSize( wxSize( traceArea->GetMinWidth(), (fonty+1)*18 ) );
 		traceArea->SetInsertionPoint( 0 );
 		traceArea->ShowPosition( 0 );
 	}
 
-	*this += Heading( text );
+	*this += Heading( text ) | StdExpand();
 
 	if( traceArea != NULL ) *this += traceArea | pxExpand.Border(wxTOP|wxLEFT|wxRIGHT,8);
 
 	*this += Heading(
 		L"\nDo you want to stop the program [Yes/No]?"
 		L"\nOr press [Ignore] to suppress further assertions."
-	);
+	) | StdExpand();
 
 	*this += new ModalButtonPanel( this, MsgButtons().YesNo().Ignore() ) | StdCenter();
 

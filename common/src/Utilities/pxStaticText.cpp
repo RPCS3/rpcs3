@@ -15,124 +15,328 @@
 
 #include "PrecompiledHeader.h"
 #include "pxStaticText.h"
+#include <wx/wizard.h>
 
 // --------------------------------------------------------------------------------------
-//  pxStaticText Implementations
+//  pxStaticText  (implementations)
 // --------------------------------------------------------------------------------------
-
-pxStaticText::pxStaticText( wxWindow* parent, const wxString& label, int style )
-	: wxStaticText( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, style )
-	, m_message( label )
+pxStaticText::pxStaticText( wxWindow* parent )
+	: _parent( parent )
 {
-	m_alignflags	= style & wxALIGN_MASK;
-	m_wrapwidth		= wxDefaultCoord;
-	m_centerPadding = 0.08;
+	m_heightInLines = 1;
 }
 
-pxStaticText::pxStaticText( wxWindow* parent, int style )
-	: wxStaticText( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, style )
+pxStaticText::pxStaticText( wxWindow* parent, const wxString& label, wxAlignment align )
+	: _parent( parent )
 {
-	m_alignflags	= style & wxALIGN_MASK;
-	m_wrapwidth		= wxDefaultCoord;
-	m_centerPadding = 0.08;
+	m_heightInLines = 1;
+	m_align			= align;
+
+	SetPaddingDefaults();
+	Init( label );
 }
 
-pxStaticText& pxStaticText::SetWrapWidth( int newwidth )
+void pxStaticText::Init( const wxString& label )
 {
-	m_wrapwidth = newwidth;
-	SetLabel( m_message );
+	m_autowrap			= true;
+	m_wrappedWidth		= -1;
+
+	//SetHeight( 1 );
+	SetLabel( label );
+	Connect( wxEVT_PAINT, wxPaintEventHandler(pxStaticText::paintEvent) );
+}
+
+void pxStaticText::SetPaddingDefaults()
+{
+	m_paddingPix_horiz	= 7;
+	m_paddingPix_vert	= 1;
+
+	m_paddingPct_horiz	= 0.0f;
+	m_paddingPct_vert	= 0.0f;
+}
+
+pxStaticText& pxStaticText::SetHeight( int lines )
+{
+	if( !pxAssert(lines > 0) ) lines = 2;
+	m_heightInLines = lines;
+
+	int width, height;
+	GetTextExtent( _("MyjS 23"), &width, &height );
+	const int newHeight = ((height+1)*m_heightInLines) + (m_paddingPix_vert*2);
+	SetMinSize( wxSize(GetMinWidth(), newHeight) );
+
 	return *this;
 }
 
-void pxStaticText::SetLabel( const wxString& label )
+pxStaticText& pxStaticText::Bold()
 {
-	m_message		= label;
-	_setLabel();
-}
-
-void pxStaticText::_setLabel()
-{
-	_parent::SetLabel( pxTextWrapper().Wrap( *this, m_message, GetIdealWidth() ).GetResult() );
-}
-
-pxStaticText& pxStaticText::SetToolTip( const wxString& tip )
-{
-	pxSetToolTip( this, tip );
+	wxFont bold( GetFont() );
+	bold.SetWeight(wxBOLD);
+	SetFont( bold );
 	return *this;
 }
 
-void pxStaticText::AddTo( wxSizer& sizer, wxSizerFlags flags )
+pxStaticText& pxStaticText::PaddingPixH( int pixels )
 {
-	sizer.Add( this, flags.Align( m_alignflags | (flags.GetFlags() & wxALIGN_MASK) ) );
-	_setLabel();
+	m_paddingPix_horiz = pixels;
+	UpdateWrapping( false );
+	Refresh();
+	return *this;
 }
 
-void pxStaticText::InsertAt( wxSizer& sizer, int position, wxSizerFlags flags )
+pxStaticText& pxStaticText::PaddingPixV( int pixels )
 {
-	sizer.Insert( position, this, flags.Align( m_alignflags | (flags.GetFlags() & wxALIGN_MASK) ) );
-	_setLabel();
+	m_paddingPix_vert = pixels;
+	Refresh();
+	return *this;
 }
 
-int pxStaticText::GetIdealWidth() const
+pxStaticText& pxStaticText::PaddingPctH( float pct )
 {
-	if( m_wrapwidth != wxDefaultCoord ) return m_wrapwidth;
+	pxAssume( pct < 0.5 );
 
-	//pxAssertDev( GetContainingSizer() != NULL, "The Static Text must first belong to a Sizer!!" );
+	m_paddingPct_horiz = pct;
+	UpdateWrapping( false );
+	Refresh();
+	return *this;
+}
+
+pxStaticText& pxStaticText::PaddingPctV( float pct )
+{
+	pxAssume( pct < 0.5 );
+
+	m_paddingPct_vert = pct;
+	Refresh();
+	return *this;
+}
+
+pxStaticText& pxStaticText::Unwrapped()
+{
+	m_autowrap = false;
+	UpdateWrapping( false );
+	return *this;
+}
+
+int pxStaticText::calcPaddingWidth( int newWidth ) const
+{
+	return (int)(newWidth*m_paddingPct_horiz*2) + (m_paddingPix_horiz*2);
+}
+
+int pxStaticText::calcPaddingHeight( int newHeight ) const
+{
+	return (int)(newHeight*m_paddingPct_vert*2) + (m_paddingPix_vert*2);
+}
+
+wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
+{
+	pxAssume( m_autowrap );
+
+	// Find an ideal(-ish) width, based on a search of all parent controls and their
+	// valid Minimum sizes.
+
 	int idealWidth = wxDefaultCoord;
-
-	// Find the first parent with a fixed width:
-	wxWindow* millrun = this->GetParent();
-	while( (idealWidth == wxDefaultCoord) && millrun != NULL )
+	int parentalAdjust = 0;
+	const wxWindow* millrun = this;
+	
+	while( millrun )
 	{
-		if( wxPanelWithHelpers* panel = wxDynamicCast( millrun, wxPanelWithHelpers ) )
-			idealWidth = panel->GetIdealWidth();
+		// IMPORTANT : wxWizard changes its min size and then expects everything else
+		// to play nice and NOT resize according to the new min size.  (wtf stupid)
+		// Anyway, this fixes it -- ignore min size specifier on wxWizard!
+		if( wxIsKindOf( millrun, wxWizard ) ) break;
 
-		else if( wxDialogWithHelpers* dialog = wxDynamicCast( millrun, wxDialogWithHelpers ) )
-			idealWidth = dialog->GetIdealWidth();
+		int min = millrun->GetMinWidth() - parentalAdjust;
+		
+		if( min > 0 && ((idealWidth < 0 ) || (min < idealWidth)) )
+		{
+			idealWidth = min;
+		}
 
+		parentalAdjust += pxSizerFlags::StdPadding*2;
 		millrun = millrun->GetParent();
 	}
 
-	if( idealWidth != wxDefaultCoord )
+	if( idealWidth <= 0 )
 	{
-		idealWidth -= 6;
-
-		if( GetWindowStyle() & wxALIGN_CENTRE )
-			idealWidth *= (1.0 - m_centerPadding);
+		// FIXME: The minimum size of this control is unknown, so let's just pick a guess based on some
+		// heuristics of the string content.. maybe?  For now I just return 360.  It's round.  And happy.
+		
+		idealWidth = 360;
 	}
 
-	return idealWidth;
+	wxString label(GetLabel());
+	return dc.GetMultiLineTextExtent(pxTextWrapper().Wrap( this, label, idealWidth - calcPaddingWidth(idealWidth) ).GetResult());
 }
 
-wxSize pxStaticText::GetMinSize() const
+pxStaticText& pxStaticText::WrapAt( int width )
 {
-	int ideal = GetIdealWidth();
-	wxSize minSize( _parent::GetMinSize() );
-	if( ideal == wxDefaultCoord ) return minSize;
-	return wxSize( std::min( ideal, minSize.x ), minSize.y );
+	m_autowrap = false;
+
+	if( (width <= 1) || (width == m_wrappedWidth) ) return *this;
+
+	wxString wrappedLabel;
+	m_wrappedWidth = width;
+
+	if( width > 1 )
+	{
+		wxString label( GetLabel() );
+		wrappedLabel = pxTextWrapper().Wrap( this, label, width ).GetResult();
+	}
+
+	if(m_wrappedLabel != wrappedLabel )
+	{
+		m_wrappedLabel = wrappedLabel;
+		wxSize area = wxClientDC( this ).GetMultiLineTextExtent(m_wrappedLabel);
+		SetMinSize( wxSize(
+			area.GetWidth() + calcPaddingWidth(area.GetWidth()),
+			area.GetHeight() + calcPaddingHeight(area.GetHeight())
+		) );
+	}
+	return *this;
+}
+
+bool pxStaticText::_updateWrapping( bool textChanged )
+{
+	if( !m_autowrap )
+	{
+		//m_wrappedLabel = wxEmptyString;
+		//m_wrappedWidth = -1;
+		return false;
+	}
+
+	wxString wrappedLabel;
+	int newWidth = GetSize().GetWidth();
+	newWidth -= (int)(newWidth*m_paddingPct_horiz*2) + (m_paddingPix_horiz*2);
+
+	if( !textChanged && (newWidth == m_wrappedWidth) ) return false;
+
+	// Note: during various stages of sizer-calc, width can be 1, 0, or -1.
+	// We ignore wrapping in these cases.  (the PaintEvent also checks the wrapping
+	// and updates it if needed, in case the control's size isn't figured out prior
+	// to being painted).
+	
+	m_wrappedWidth = newWidth;
+	if( m_wrappedWidth > 1 )
+	{
+		wxString label( GetLabel() );
+		wrappedLabel = pxTextWrapper().Wrap( this, label, m_wrappedWidth ).GetResult();
+	}
+
+	if( m_wrappedLabel == wrappedLabel ) return false;
+	m_wrappedLabel = wrappedLabel;
+
+	return true;
+}
+
+void pxStaticText::UpdateWrapping( bool textChanged )
+{
+	if( _updateWrapping( textChanged ) ) Refresh();
+}
+
+void pxStaticText::SetLabel(const wxString& label)
+{
+	const bool labelChanged( label != GetLabel() );
+	if( labelChanged )
+	{
+		_parent::SetLabel( label );
+		Refresh();
+	}
+
+	// Always update wrapping, in case window width or something else also changed.
+	UpdateWrapping( labelChanged );
+}
+
+wxFont pxStaticText::GetFontOk() const
+{
+	wxFont font( GetFont() );
+	if( !font.Ok() ) return wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
+	return font;
+}
+
+void pxStaticText::paintEvent(wxPaintEvent& evt)
+{
+	wxPaintDC dc( this );
+	const int dcWidth	= dc.GetSize().GetWidth();
+	const int dcHeight	= dc.GetSize().GetHeight();
+	if( dcWidth < 1 ) return;
+	dc.SetFont( GetFontOk() );
+	
+	dc.SetTextForeground(GetForegroundColour());
+
+	pxWindowTextWriter writer( dc );
+	writer.Align( m_align );
+
+	wxString label;
+
+	if( m_autowrap )
+	{
+		_updateWrapping( false );
+		label = m_wrappedLabel;
+	}
+	else
+	{
+		label = GetLabel();
+	}
+
+	int tWidth, tHeight;
+	dc.GetMultiLineTextExtent( label, &tWidth, &tHeight );
+	
+	writer.Align( m_align );
+	if( m_align & wxALIGN_CENTER_VERTICAL )
+		writer.SetY( (dcHeight - tHeight) / 2 );
+	else
+		writer.SetY( (int)(dcHeight*m_paddingPct_vert) + m_paddingPix_vert );
+	
+	writer.WriteLn( label );	// without formatting please.
+	
+	//dc.SetBrush( *wxTRANSPARENT_BRUSH );
+	//dc.DrawRectangle(wxPoint(), dc.GetSize());
+}
+
+// Overloaded form wxPanel and friends.
+wxSize pxStaticText::DoGetBestSize() const
+{
+    wxClientDC dc( const_cast<pxStaticText*>(this) );
+    dc.SetFont( GetFontOk() );
+
+	wxSize best;
+
+	if( m_autowrap )
+	{
+		best = GetBestWrappedSize(dc);
+		best.x = wxDefaultCoord;
+	}
+	else
+	{
+		// No autowrapping, so we can force a specific size here!
+		best = dc.GetMultiLineTextExtent( GetLabel() );
+		best.x += calcPaddingWidth( best.x );
+	}
+
+	best.y += calcPaddingHeight( best.y );
+
+    CacheBestSize(best);
+    return best;
 }
 
 // --------------------------------------------------------------------------------------
-//  pxStaticHeading Implementations
+//  pxStaticHeading  (implementations)
 // --------------------------------------------------------------------------------------
-pxStaticHeading::pxStaticHeading( wxWindow* parent, const wxString& label, int style )
-	: pxStaticText( parent, label, style )
+pxStaticHeading::pxStaticHeading( wxWindow* parent, const wxString& label )
+	: _parent( parent )
 {
-	m_centerPadding = 0.18;
+	m_align			= wxALIGN_CENTER;
+
+	SetPaddingDefaults();
+	Init( label );
 }
 
-void operator+=( wxSizer& target, pxStaticText* src )
+void pxStaticHeading::SetPaddingDefaults()
 {
-	if( !pxAssert( src != NULL ) ) return;
-	src->AddTo( target );
+	m_paddingPix_horiz	= 4;
+	m_paddingPix_vert	= 1;
+
+	m_paddingPct_horiz	= 0.08f;
+	m_paddingPct_vert	= 0.0f;
 }
 
-void operator+=( wxSizer& target, pxStaticText& src )
-{
-	src.AddTo( target );
-}
-
-void operator+=( wxSizer* target, pxStaticText& src )
-{
-	src.AddTo( target );
-}

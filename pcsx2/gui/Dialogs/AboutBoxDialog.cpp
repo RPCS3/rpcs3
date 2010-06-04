@@ -111,7 +111,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 
 	// Main (top-level) layout
 
-	*this	+= Text(_("PCSX2  -  Playstation 2 Emulator"));
+	*this	+= Text(_("PCSX2  -  Playstation 2 Emulator"))			| StdCenter();
 	*this	+= AuthLogoSizer										| StdSpace();
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,

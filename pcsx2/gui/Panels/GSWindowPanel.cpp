@@ -79,16 +79,16 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
 	s_customsize	+= m_text_WindowWidth;
-	s_customsize	+= Text( L"x" );
+	s_customsize	+= Label( L"x" )	| StdExpand();
 	s_customsize	+= m_text_WindowHeight;
 
 	wxFlexGridSizer& s_AspectRatio( *new wxFlexGridSizer( 2, StdPadding, StdPadding ) );
 	//s_AspectRatio.AddGrowableCol( 0 );
 	s_AspectRatio.AddGrowableCol( 1 );
 
-	s_AspectRatio += Text(_("Aspect Ratio:"))		| pxMiddle;
+	s_AspectRatio += Label(_("Aspect Ratio:"))		| pxMiddle;
 	s_AspectRatio += m_combo_AspectRatio			| pxExpand;
-	s_AspectRatio += Text(_("Custom Window Size:"))	| pxMiddle;
+	s_AspectRatio += Label(_("Custom Window Size:"))	| pxMiddle;
 	s_AspectRatio += s_customsize					| pxAlignRight;
 
 	*this += s_AspectRatio				| StdExpand();
