@@ -1,30 +1,39 @@
-
 # Project Name
 project(Pcsx2)
 
 # need cmake version >=2.6
 cmake_minimum_required(VERSION 2.6)
 
+# set module path
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+# include some generic functions
+include(Pcsx2Utils)
+
+# Detect current OS
+detectOperatingSystem()
+
+# These lines remove some defaults options that can cause some failure later.
+# In particular, it remove the build option -rdynamic on pcsx2
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
+SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
+
 #-------------------------------------------------------------------------------
 # Detect the 32bit/64bit and set the 32bit library path 32_LD_LIBRARY_PATH
 # Note: Must be done before SearchForStuff
 #-------------------------------------------------------------------------------
-if (UNIX)
-    if (CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
+if(Linux)
+    if(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
         # 64 bits machine with 32 bits library in /usr/lib32
             set(32_LD_LIBRARY_PATH /usr/lib32)
-    else (CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
+    else(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
         # default case
         set(32_LD_LIBRARY_PATH /usr/lib)
-    endif (CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
-endif (UNIX)
-
-# set module path
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+    endif(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
+endif(Linux)
 
 #-------------------------------------------------------------------------------
-# include modules
-include(Pcsx2Utils)
+# Include specific module
 # BuildParameters Must be done before SearchForStuff
 include(BuildParameters)
 # SearchForStuff be done before SelectPcsx2Plugins

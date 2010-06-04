@@ -1,21 +1,3 @@
-# Search for additional software.
-
-#-------------------------------------------------------------------------------
-# Minmal required version of libraries
-#-------------------------------------------------------------------------------
-set(minimal_wxWidgets_version 2.8.0)
-set(minimal_GTK2_version 2.10)
-set(minimal_SDL_version 1.2)
-
-# to set the proper dependencies and decide which plugins should be build we
-# need to know on which OS we are currenty working/running
-detectOperatingSystem()
-
-# These lines remove some defaults options that can cause some failure later.
-# In particular, it remove the build option -rdynamic
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
-SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
-
 #-------------------------------------------------------------------------------
 #						Search all libraries on the system
 #-------------------------------------------------------------------------------

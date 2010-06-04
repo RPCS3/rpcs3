@@ -12,10 +12,10 @@
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default
 #-------------------------------------------------------------------------------
-if(CMAKE_BUILD_TYPE STREQUAL "")
+if(NOT DEFINED CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Devel)
 	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
-endif(CMAKE_BUILD_TYPE STREQUAL "")
+endif(NOT DEFINED CMAKE_BUILD_TYPE)
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -31,13 +31,9 @@ if(NOT DEFINED CMAKE_BUILD_STRIP)
     endif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif(NOT DEFINED CMAKE_BUILD_STRIP)
 
- #-------------------------------------------------------------------------------
-
-
-# There have been issues in the past with sound quality depending on the version
-# of Soundtouch, so for the moment, we'll use the internal version.
-set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
-
+#-------------------------------------------------------------------------------
+# Select library system vs 3rdparty
+#-------------------------------------------------------------------------------
 if(FORCE_INTERNAL_ALL)
     set(FORCE_INTERNAL_A52 TRUE)
     set(FORCE_INTERNAL_BZIP2 TRUE)
@@ -54,7 +50,11 @@ if(NOT DEFINED FORCE_INTERNAL_BZIP2)
 endif(NOT DEFINED FORCE_INTERNAL_BZIP2)
 
 if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
-    set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
+    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
+    message(STATUS "Use internal version of Soundtouch by default.
+    Note: There have been issues in the past with sound quality depending on the version of Soundtouch
+    Use -DFORCE_INTERNAL_SOUNDTOUCH=FALSE at your own risk")
+    # set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
 
 if(NOT DEFINED FORCE_INTERNAL_ZLIB)
