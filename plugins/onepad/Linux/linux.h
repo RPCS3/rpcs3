@@ -28,12 +28,4 @@
 #include <gdk/gdkkeysyms.h>
 #include <pthread.h>
 
-
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
-
 extern void DisplayDialog();

@@ -23,6 +23,10 @@
 #include <gdk/gdkx.h>
 
 extern string KeyName(int pad, int key);
+
+void config_key(int pad, int key);
+void on_conf_key(GtkButton *button, gpointer user_data);
+
 int current_pad = 0;
 GtkWidget *rev_lx_check, *rev_ly_check, *force_feedback_check, *rev_rx_check, *rev_ry_check;
 
@@ -136,11 +140,10 @@ class keys_tree
 		
 		void init()
 		{
-			
 			treestore = gtk_tree_store_new(NUM_COLS,
-										 G_TYPE_STRING,
-										 G_TYPE_STRING,
-										 G_TYPE_STRING,
+										G_TYPE_STRING,
+										G_TYPE_STRING,
+										G_TYPE_STRING,
 										G_TYPE_UINT,
 										G_TYPE_UINT);
 
@@ -155,7 +158,6 @@ class keys_tree
 
 			gtk_tree_selection_set_mode(gtk_tree_view_get_selection(view),
 									  GTK_SELECTION_SINGLE);
-
 		}
 		
 		void clear_all()
@@ -163,8 +165,8 @@ class keys_tree
 			clearPAD();
 			init();
 		}
-
-		void remove_selected()
+		
+		bool get_selected(int &pad, int &key)
 		{
 			GtkTreeSelection *selection;
 			GtkTreeIter iter;
@@ -172,16 +174,27 @@ class keys_tree
 			selection = gtk_tree_view_get_selection(view);
 			if (gtk_tree_selection_get_selected(selection, &model, &iter))
 			{
-				int pad;
-				int key;
-
 				gtk_tree_model_get(model, &iter, COL_PAD_NUM, &pad, COL_VALUE, &key,-1);
+				return true;
+			}
+			return false;
+		}
+		
+		void remove_selected()
+		{
+			int key, pad;
+			if (get_selected(pad, key))
+			{
 				set_key(pad, key, 0);
 				init();
 			}
-			else
+		}
+		void modify_selected()
+		{
+			int key, pad;
+			if (get_selected(pad, key))
 			{
-				// Not selected.
+				config_key(pad,key);
 			}
 		}
 };
@@ -219,8 +232,6 @@ void populate_new_joysticks(GtkComboBox *box)
 	}
 }
 
-extern void on_conf_key(GtkButton *button, gpointer user_data);
-
 typedef struct
 {
 	GtkWidget *widget;
@@ -235,17 +246,9 @@ typedef struct
 	}
 } dialog_buttons;
 
-void on_conf_key(GtkButton *button, gpointer user_data)
+void config_key(int pad, int key)
 {
 	bool captured = false;
-
-	dialog_buttons *btn = (dialog_buttons *)user_data;
-	int id = btn->index;
-
-	if (id == -1) return;
-
-	int pad = current_pad; //id / MAX_KEYS;
-	int key = id; // % MAX_KEYS;
 
 	// save the joystick states
 	UpdateJoysticks();
@@ -318,6 +321,16 @@ void on_conf_key(GtkButton *button, gpointer user_data)
 	}
 
 	fir->init();
+}
+
+void on_conf_key(GtkButton *button, gpointer user_data)
+{
+	dialog_buttons *btn = (dialog_buttons *)user_data;
+	int key = btn->index;
+
+	if (key == -1) return;
+	
+	config_key(current_pad, key);
 }
 
 void on_remove_clicked(GtkButton *button, gpointer user_data)

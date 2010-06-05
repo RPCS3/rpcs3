@@ -28,13 +28,6 @@
 #include "onepad.h"
 #include "linux.h"
 
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
-
 extern std::string s_strIniPath;
 
 string KeyName(int pad, int key)
