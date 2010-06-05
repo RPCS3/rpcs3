@@ -81,7 +81,7 @@ public:
 	{
 		InvalidateTextureCache();
 		ResetPrim();
-		m_dev->Reset(1, 1);
+		if( m_dev ) m_dev->Reset(1, 1);
 	}
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);

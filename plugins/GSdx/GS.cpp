@@ -232,6 +232,10 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	if( !s_gs->CreateDevice(dev) )
 	{
+		// This probably means the user has DX11 configured with a video card that is only DX9
+		// compliant.  Cound mean drivr issues of some sort also, but to be sure, that's the most
+		// common cause of device creation errors. :)  --air
+
 		GSclose();
 		return -1;
 	}
