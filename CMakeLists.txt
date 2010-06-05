@@ -19,20 +19,6 @@ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 
 #-------------------------------------------------------------------------------
-# Detect the 32bit/64bit and set the 32bit library path 32_LD_LIBRARY_PATH
-# Note: Must be done before SearchForStuff
-#-------------------------------------------------------------------------------
-if(Linux)
-    if(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
-        # 64 bits machine with 32 bits library in /usr/lib32
-            set(32_LD_LIBRARY_PATH /usr/lib32)
-    else(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
-        # default case
-        set(32_LD_LIBRARY_PATH /usr/lib)
-    endif(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
-endif(Linux)
-
-#-------------------------------------------------------------------------------
 # Include specific module
 # BuildParameters Must be done before SearchForStuff
 include(BuildParameters)

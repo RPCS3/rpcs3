@@ -155,10 +155,14 @@ endif(Subversion_FOUND)
 # Wx
 if(wxWidgets_FOUND)
     if(Linux)
-        # Force the use of 32 bit library
-        STRING(REGEX REPLACE "/usr/lib/wx" "${32_LD_LIBRARY_PATH}/wx"
-            wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+        # Force the use of 32 bit library configuration on
+        # 64 bits machine with 32 bits library in /usr/lib32
+        if(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
+            STRING(REGEX REPLACE "/usr/lib/wx" "/usr/lib32/wx"
+                wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+        endif(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
     endif(Linux)
+
 	include(${wxWidgets_USE_FILE})
 endif(wxWidgets_FOUND)
 

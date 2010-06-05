@@ -21,6 +21,7 @@ set(CommonFlags
     )
 
 set(OptimizationFlags
+    -O2
     -DNDEBUG
     )
 
