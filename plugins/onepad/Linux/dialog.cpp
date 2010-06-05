@@ -343,6 +343,10 @@ void on_clear_clicked(GtkButton *button, gpointer user_data)
 	fir->clear_all();
 }
 
+void on_modify_clicked(GtkButton *button, gpointer user_data)
+{
+	fir->modify_selected();
+}
 
 void joy_changed(GtkComboBox *box, gpointer user_data)
 {
@@ -444,13 +448,13 @@ void DisplayDialog()
     GtkWidget *keys_frame, *keys_box;
     
     GtkWidget *keys_tree_frame, *keys_tree_box;
-    GtkWidget *keys_tree_clear_btn, *keys_tree_remove_btn;
+    GtkWidget *keys_tree_clear_btn, *keys_tree_remove_btn, *keys_tree_modify_btn;
     GtkWidget *keys_btn_box, *keys_btn_frame;
     
     GtkWidget *keys_static_frame, *keys_static_box;
     GtkWidget *keys_static_area;
     dialog_buttons btn[29];
-    
+	LoadConfig();
 	fir = new keys_tree;
 	
     /* Create the widgets */
@@ -486,6 +490,10 @@ void DisplayDialog()
 	keys_tree_remove_btn = gtk_button_new_with_label("Remove");
 	g_signal_connect(GTK_OBJECT (keys_tree_remove_btn), "clicked", G_CALLBACK(on_remove_clicked), NULL);
     gtk_widget_set_size_request(keys_tree_remove_btn, 64, 24);
+    
+	keys_tree_modify_btn = gtk_button_new_with_label("Modify");
+	g_signal_connect(GTK_OBJECT (keys_tree_modify_btn), "clicked", G_CALLBACK(on_modify_clicked), NULL);
+    gtk_widget_set_size_request(keys_tree_modify_btn, 64, 24);
 		
     main_box = gtk_vbox_new(false, 5);
     main_frame = gtk_frame_new ("Onepad Config");
@@ -582,6 +590,7 @@ void DisplayDialog()
 	gtk_box_pack_start (GTK_BOX (keys_tree_box), fir->view_widget(), true, true, 0);
 	gtk_box_pack_end (GTK_BOX (keys_btn_box), keys_tree_clear_btn, false, false, 0);
 	gtk_box_pack_end (GTK_BOX (keys_btn_box), keys_tree_remove_btn, false, false, 0);
+	gtk_box_pack_end (GTK_BOX (keys_btn_box), keys_tree_modify_btn, false, false, 0);
     
 	gtk_container_add(GTK_CONTAINER(pad_choose_box), pad_choose_cbox);
 	gtk_container_add(GTK_CONTAINER(joy_choose_box), joy_choose_cbox);
