@@ -152,6 +152,7 @@
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"

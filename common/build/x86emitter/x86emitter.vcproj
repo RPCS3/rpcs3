@@ -77,7 +77,7 @@
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\vsprops\CommonLibrary.vsprops;..\..\vsprops\CodeGen_Release.vsprops;..\..\vsprops\pthreads.vsprops"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -98,6 +98,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				WholeProgramOptimization="false"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"

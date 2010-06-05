@@ -84,7 +84,7 @@
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -103,6 +103,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;;&quot;$(ProjectRootDir)\src\png&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
 				PreprocessorDefinitions="wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"

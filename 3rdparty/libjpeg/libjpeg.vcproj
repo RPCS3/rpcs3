@@ -80,7 +80,7 @@
 			ConfigurationType="4"
 			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -102,6 +102,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				WholeProgramOptimization="false"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool

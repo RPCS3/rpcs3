@@ -5,6 +5,7 @@
 	Name="wxAdv28"
 	ProjectGUID="{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}"
 	RootNamespace="wxAdvanced"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -86,7 +87,7 @@
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -105,6 +106,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"
@@ -385,11 +387,11 @@
 			Name="Setup Headers"
 			>
 			<File
-				RelativePath="..\..\include\wx\msw\setup.h"
+				RelativePath="..\..\include\wx\univ\setup.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\wx\univ\setup.h"
+				RelativePath="..\..\include\wx\msw\setup.h"
 				>
 			</File>
 		</Filter>
