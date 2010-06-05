@@ -35,7 +35,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(onepadSources
 	analog.cpp
 	controller.cpp
-	dialog.cpp
 	joystick.cpp
 	keyboard.cpp
 	onepad.cpp)
@@ -51,18 +50,13 @@ set(onepadHeaders
 
 # onepad Linux sources
 set(onepadLinuxSources
-#	Linux/callbacks.c
-	Linux/gui.cpp
 	Linux/ini.cpp
-	Linux/interface.c
-	Linux/linux.cpp
-	Linux/support.c)
+	Linux/dialog.cpp
+	Linux/linux.cpp)
 
 # onepad Linux headers
 set(onepadLinuxHeaders
-	Linux/callbacks.h
-	Linux/interface.h
-	Linux/support.h)
+	Linux/linux.h)
 
 # onepad Windows sources
 set(onepadWindowsSources

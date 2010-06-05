@@ -23,13 +23,26 @@
 #include <gdk/gdkx.h>
 
 extern string KeyName(int pad, int key);
-extern const char* s_pGuiKeyMap[];
+int current_pad = 0;
+GtkWidget *rev_lx_check, *rev_ly_check, *force_feedback_check, *rev_rx_check, *rev_ry_check;
+
+const char* s_pGuiKeyMap[] =
+{
+	"L2", "R2", "L1", "R1",
+	"Triangle", "Circle", "Cross", "Square",
+	"Select", "L3", "R3", "Start",
+	"Up", "Right", "Down", "Left",
+	"Lx", "Rx", "Ly", "Ry",
+	"L_Up", "L_Right", "L_Down", "L_Left",
+	"R_Up", "R_Right", "R_Down", "R_Left"
+};
 
 enum
 {
 	COL_PAD = 0,
 	COL_BUTTON,
 	COL_KEY,
+	COL_PAD_NUM,
 	COL_VALUE,
 	NUM_COLS
 };
@@ -39,10 +52,10 @@ class keys_tree
 	private:
 		GtkTreeStore *treestore;
 		GtkTreeModel *model;
+		GtkTreeView *view;
 		bool has_columns;
-	public:
-		GtkWidget *keys_tree_view;
-		void populate_tree_view()
+		
+		void populate()
 		{
 			GtkTreeIter toplevel;
 
@@ -54,11 +67,21 @@ class keys_tree
 				{
 					if (get_key(pad, key) != 0)
 					{
+						string pad_value;
+						switch(pad)
+						{
+							case 0: pad_value = "Pad 1"; break;
+							case 2: pad_value = "Pad 1"; break;
+							case 1: pad_value = "Pad 2"; break;
+							case 3: pad_value = "Pad 2"; break;
+							default: pad_value = "Invalid"; break;
+						}
 						gtk_tree_store_append(treestore, &toplevel, NULL);
 						gtk_tree_store_set(treestore, &toplevel,
-							COL_PAD, pad,
+							COL_PAD, pad_value.c_str(),
 							COL_BUTTON, s_pGuiKeyMap[key],
 							COL_KEY, KeyName(pad, key).c_str(),
+							COL_PAD_NUM, pad,
 							COL_VALUE, key,
 						-1);
 					}
@@ -66,7 +89,7 @@ class keys_tree
 			}
 		}
 
-		void create_a_column(GtkWidget *view, const char *name, int num, bool visible)
+		void create_a_column(const char *name, int num, bool visible)
 		{
 			GtkCellRenderer     *renderer;
 			GtkTreeViewColumn   *col;
@@ -75,7 +98,7 @@ class keys_tree
 			gtk_tree_view_column_set_title(col, name);
 
 			/* pack tree view column into tree view */
-			gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+			gtk_tree_view_append_column(view, col);
 
 			renderer = gtk_cell_renderer_text_new();
 
@@ -92,32 +115,45 @@ class keys_tree
 		{
 			if (!has_columns)
 			{
-				create_a_column(view, "Pad #", COL_PAD, true);
-				create_a_column(view, "Pad Button", COL_BUTTON, true);
-				create_a_column(view, "Key Value", COL_KEY, true);
-				create_a_column(view, "Internal", COL_VALUE, false);
+				create_a_column("Pad #", COL_PAD, true);
+				create_a_column("Pad Button", COL_BUTTON, true);
+				create_a_column("Key Value", COL_KEY, true);
+				create_a_column("Pad Num", COL_PAD_NUM, false);
+				create_a_column("Internal", COL_VALUE, false);
 				has_columns = true;
 			}
 		}
-
-		void init_tree_view()
+	public:
+		GtkWidget *view_widget()
 		{
+			return GTK_WIDGET(view);
+		}
+	
+		void new_tree()
+		{
+			view = GTK_TREE_VIEW(gtk_tree_view_new());
+		}
+		
+		void init()
+		{
+			
 			treestore = gtk_tree_store_new(NUM_COLS,
-										 G_TYPE_UINT,
 										 G_TYPE_STRING,
 										 G_TYPE_STRING,
-						 G_TYPE_UINT);
+										 G_TYPE_STRING,
+										G_TYPE_UINT,
+										G_TYPE_UINT);
 
-			populate_tree_view();
-			create_columns(keys_tree_view);
+			populate();
+			create_columns(GTK_WIDGET(view));
 
 			model = GTK_TREE_MODEL(treestore);
 
-			gtk_tree_view_set_model(GTK_TREE_VIEW(keys_tree_view), model);
+			gtk_tree_view_set_model(view, model);
 
 			g_object_unref(model); /* destroy model automatically with view */
 
-			gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(keys_tree_view)),
+			gtk_tree_selection_set_mode(gtk_tree_view_get_selection(view),
 									  GTK_SELECTION_SINGLE);
 
 		}
@@ -125,7 +161,7 @@ class keys_tree
 		void clear_all()
 		{
 			clearPAD();
-			init_tree_view();
+			init();
 		}
 
 		void remove_selected()
@@ -133,15 +169,15 @@ class keys_tree
 			GtkTreeSelection *selection;
 			GtkTreeIter iter;
 
-			selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(keys_tree_view));
+			selection = gtk_tree_view_get_selection(view);
 			if (gtk_tree_selection_get_selected(selection, &model, &iter))
 			{
 				int pad;
 				int key;
 
-				gtk_tree_model_get(model, &iter, COL_PAD, &pad, COL_VALUE, &key,-1);
+				gtk_tree_model_get(model, &iter, COL_PAD_NUM, &pad, COL_VALUE, &key,-1);
 				set_key(pad, key, 0);
-				init_tree_view();
+				init();
 			}
 			else
 			{
@@ -189,7 +225,7 @@ typedef struct
 {
 	GtkWidget *widget;
 	int index;
-	void put(char* lbl, int i, GtkFixed *fix, int x, int y)
+	void put(const char* lbl, int i, GtkFixed *fix, int x, int y)
 	{
 		widget = gtk_button_new_with_label(lbl);
 		gtk_fixed_put(fix, widget, x, y);
@@ -208,8 +244,8 @@ void on_conf_key(GtkButton *button, gpointer user_data)
 
 	if (id == -1) return;
 
-	int pad = id / MAX_KEYS;
-	int key = id % MAX_KEYS;
+	int pad = current_pad; //id / MAX_KEYS;
+	int key = id; // % MAX_KEYS;
 
 	// save the joystick states
 	UpdateJoysticks();
@@ -281,7 +317,7 @@ void on_conf_key(GtkButton *button, gpointer user_data)
 		}
 	}
 
-	fir->init_tree_view();
+	fir->init();
 }
 
 void on_remove_clicked(GtkButton *button, gpointer user_data)
@@ -293,6 +329,91 @@ void on_clear_clicked(GtkButton *button, gpointer user_data)
 {
 	fir->clear_all();
 }
+
+
+void joy_changed(GtkComboBox *box, gpointer user_data)
+{
+	int joyid = gtk_combo_box_get_active(box);
+
+	// unassign every joystick with this pad
+	for (int i = 0; i < (int)s_vjoysticks.size(); ++i)
+	{
+		if (s_vjoysticks[i]->GetPAD() == s_selectedpad) s_vjoysticks[i]->Assign(-1);
+	}
+
+	if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->Assign(current_pad);
+}
+
+void pad_changed(GtkComboBox *box, gpointer user_data)
+{
+	int temp = gtk_combo_box_get_active(box);
+	if (temp != -1) current_pad = temp;
+	fir->init();
+    int options = (conf.options >> (16 * current_pad));
+	
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_lx_check), (options & PADOPTION_REVERTLX));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_ly_check), (options & PADOPTION_REVERTLY));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_rx_check), (options & PADOPTION_REVERTRX));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_ry_check), (options & PADOPTION_REVERTRY));
+}
+
+void on_rev_lx(GtkComboBox *box, gpointer user_data)
+{
+    int mask = (PADOPTION_REVERTLX << (16 * current_pad));
+    
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(rev_lx_check)))
+		conf.options |= mask;
+	else
+		conf.options &= ~mask;
+}
+
+void on_rev_ly(GtkComboBox *box, gpointer user_data)
+{
+    int mask = (PADOPTION_REVERTLY << (16 * current_pad));
+    
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(rev_ly_check)))
+		conf.options |= mask;
+	else
+		conf.options &= ~mask;
+}
+
+void on_rev_rx(GtkComboBox *box, gpointer user_data)
+{
+    int mask = (PADOPTION_REVERTRX << (16 * current_pad));
+    
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(rev_rx_check)))
+		conf.options |= mask;
+	else
+		conf.options &= ~mask;
+}
+
+void on_rev_ry(GtkComboBox *box, gpointer user_data)
+{
+    int mask = (PADOPTION_REVERTRY << (16 * current_pad));
+    
+    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(rev_ry_check)))
+		conf.options |= mask;
+	else
+		conf.options &= ~mask;
+}
+
+//void on_forcefeedback_toggled(GtkToggleButton *togglebutton, gpointer user_data)
+//{
+//	int mask = PADOPTION_REVERTLX << (16 * s_selectedpad);
+//
+//	if (gtk_toggle_button_get_active(togglebutton))
+//	{
+//		conf.options |= mask;
+//
+//		int joyid = gtk_combo_box_get_active(GTK_COMBO_BOX(s_devicecombo));
+//
+//		if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->TestForce();
+//	}
+//	else
+//	{
+//		conf.options &= ~mask;
+//	}
+//}
 
 void DisplayDialog()
 {
@@ -316,7 +437,7 @@ void DisplayDialog()
     GtkWidget *keys_static_frame, *keys_static_box;
     GtkWidget *keys_static_area;
     dialog_buttons btn[29];
-    GtkWidget *rev_lx_check, *rev_ly_check, *force_feedback_check, *rev_rx_check, *rev_ry_check;
+    
 	fir = new keys_tree;
 	
     /* Create the widgets */
@@ -336,17 +457,23 @@ void DisplayDialog()
     gtk_combo_box_append_text(GTK_COMBO_BOX(pad_choose_cbox), "Pad 1 (alt)");
     gtk_combo_box_append_text(GTK_COMBO_BOX(pad_choose_cbox), "Pad 2 (alt)");
     gtk_combo_box_set_active(GTK_COMBO_BOX(pad_choose_cbox), 0);
+    current_pad = 0;
+	g_signal_connect(GTK_OBJECT (pad_choose_cbox), "changed", G_CALLBACK(pad_changed), NULL);
     
     joy_choose_cbox = gtk_combo_box_new_text ();
     populate_new_joysticks(GTK_COMBO_BOX(joy_choose_cbox));
     gtk_combo_box_set_active(GTK_COMBO_BOX(joy_choose_cbox), Get_Current_Joystick());
-
-    fir->keys_tree_view = gtk_tree_view_new();
+	g_signal_connect(GTK_OBJECT (joy_choose_cbox), "changed", G_CALLBACK(joy_changed), NULL);
+	
+	fir->new_tree();
 	keys_tree_clear_btn = gtk_button_new_with_label("Clear All");
 	g_signal_connect(GTK_OBJECT (keys_tree_clear_btn), "clicked", G_CALLBACK(on_clear_clicked), NULL);
+	gtk_widget_set_size_request(keys_tree_clear_btn, 64, 24);
+	
 	keys_tree_remove_btn = gtk_button_new_with_label("Remove");
 	g_signal_connect(GTK_OBJECT (keys_tree_remove_btn), "clicked", G_CALLBACK(on_remove_clicked), NULL);
-    
+    gtk_widget_set_size_request(keys_tree_remove_btn, 64, 24);
+		
     main_box = gtk_vbox_new(false, 5);
     main_frame = gtk_frame_new ("Onepad Config");
     gtk_container_add (GTK_CONTAINER(main_frame), main_box);
@@ -414,11 +541,32 @@ void DisplayDialog()
 	btn[26].put("Down", 26, GTK_FIXED(keys_static_area), static_offset + 392, 312);
 	btn[27].put("Left", 27, GTK_FIXED(keys_static_area), static_offset + 328, 272);
     
+    int options = (conf.options >> (16 * current_pad));
+    rev_lx_check = gtk_check_button_new_with_label("Reverse Lx");
+	gtk_fixed_put(GTK_FIXED(keys_static_area), rev_lx_check, static_offset + 40, 344);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_lx_check), (options & PADOPTION_REVERTLX));
+	g_signal_connect(GTK_OBJECT (rev_lx_check), "toggled", G_CALLBACK(on_rev_lx), NULL);
+	
+    rev_ly_check = gtk_check_button_new_with_label("Reverse Ly");
+	gtk_fixed_put(GTK_FIXED(keys_static_area), rev_ly_check, static_offset + 40, 368);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_ly_check), (options & PADOPTION_REVERTLY));
+	g_signal_connect(GTK_OBJECT (rev_ly_check), "toggled", G_CALLBACK(on_rev_ly), NULL);
+	
+    rev_rx_check = gtk_check_button_new_with_label("Reverse Rx");
+	gtk_fixed_put(GTK_FIXED(keys_static_area), rev_rx_check, static_offset + 368, 344);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_rx_check), (options & PADOPTION_REVERTRX));
+	g_signal_connect(GTK_OBJECT (rev_rx_check), "toggled", G_CALLBACK(on_rev_rx), NULL);
+	
+    rev_ry_check = gtk_check_button_new_with_label("Reverse Ry");
+	gtk_fixed_put(GTK_FIXED(keys_static_area), rev_ry_check, static_offset + 368, 368);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_ry_check), (options & PADOPTION_REVERTRY));
+	g_signal_connect(GTK_OBJECT (rev_ry_check), "toggled", G_CALLBACK(on_rev_ry), NULL);
+    
     keys_box = gtk_hbox_new(false, 5);
     keys_frame = gtk_frame_new ("Key Settings");
     gtk_container_add (GTK_CONTAINER(keys_frame), keys_box);
     
-	gtk_box_pack_start (GTK_BOX (keys_tree_box), fir->keys_tree_view, true, true, 0);
+	gtk_box_pack_start (GTK_BOX (keys_tree_box), fir->view_widget(), true, true, 0);
 	gtk_box_pack_end (GTK_BOX (keys_btn_box), keys_tree_clear_btn, false, false, 0);
 	gtk_box_pack_end (GTK_BOX (keys_btn_box), keys_tree_remove_btn, false, false, 0);
     
@@ -434,7 +582,7 @@ void DisplayDialog()
 
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     
-    fir->init_tree_view();
+    fir->init();
     
     gtk_widget_show_all (dialog);
 
@@ -443,24 +591,6 @@ void DisplayDialog()
     if (return_value == GTK_RESPONSE_ACCEPT)
     {
 		SaveConfig();
-//		DebugEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(debug_check));
-//    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1)
-//    		Interpolation = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
-//
-//    	EffectsDisabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(effects_check));
-//
-//    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box)) != -1)
-//			ReverbBoost = gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box));
-//
-//    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(mod_box)) != 1)
-//			OutputModule = 0;
-//		else
-//			OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
-//
-//    	SndOutLatencyMS = gtk_range_get_value(GTK_RANGE(latency_slide));
-//    	
-//    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(sync_box)) != -1)
-//			SynchMode = gtk_combo_box_get_active(GTK_COMBO_BOX(sync_box));
     }
 	
 	LoadConfig();

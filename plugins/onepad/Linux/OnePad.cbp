@@ -48,21 +48,11 @@
 			<Add option="`pkg-config sdl --libs`" />
 			<Add option="-shared" />
 		</Linker>
-		<Unit filename="callbacks.h" />
 		<Unit filename="dialog.cpp" />
-		<Unit filename="gui.cpp" />
 		<Unit filename="ini.cpp" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
 		<Unit filename="linux.cpp" />
 		<Unit filename="linux.h" />
 		<Unit filename="onepad.glade" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
 		<Unit filename="../analog.cpp" />
 		<Unit filename="../analog.h" />
 		<Unit filename="../bitwise.h" />

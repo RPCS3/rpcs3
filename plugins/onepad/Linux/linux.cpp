@@ -24,19 +24,38 @@
 
 Display *GSdsp;
 
-const char* s_pGuiKeyMap[] =
-{
-	"L2", "R2", "L1", "R1",
-	"Triangle", "Circle", "Cross", "Square",
-	"Select", "L3", "R3", "Start",
-	"Up", "Right", "Down", "Left",
-	"Lx", "Rx", "Ly", "Ry",
-	"L_Up", "L_Right", "L_Down", "L_Left",
-	"R_Up", "R_Right", "R_Down", "R_Left"
-};
-
 extern string KeyName(int pad, int key);
-extern void DisplayDialog();
+
+void __forceinline SysMessage(const char *fmt, ...)
+{
+    va_list list;
+    char msg[512];
+
+    va_start(list, fmt);
+    vsprintf(msg, fmt, list);
+    va_end(list);
+
+    if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
+
+    GtkWidget *dialog;
+    dialog = gtk_message_dialog_new (NULL,
+                                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                                     GTK_MESSAGE_INFO,
+                                     GTK_BUTTONS_OK,
+                                     "%s", msg);
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    gtk_widget_destroy (dialog);
+}
+
+EXPORT_C_(void) PADabout()
+{
+	SysMessage("OnePad is a rewrite of Zerofrog's ZeroPad, done by arcum42.");
+}
+
+EXPORT_C_(s32) PADtest()
+{
+	return 0;
+}
 
 s32  _PADopen(void *pDsp)
 {
@@ -199,178 +218,11 @@ EXPORT_C_(void) PADupdate(int pad)
 	}
 }
 
-void UpdateConf(int pad)
-{
-	initLogging();
-	s_selectedpad = pad;
-	init_tree_view();
-	int i;
-	GtkWidget *Btn;
-	for (i = 0; i < ArraySize(s_pGuiKeyMap); i++)
-	{
-
-		if (s_pGuiKeyMap[i] == NULL) continue;
-
-		Btn = lookup_widget(Conf, s_pGuiKeyMap[i]);
-		if (Btn == NULL)
-		{
-			PAD_LOG("OnePAD: cannot find key %s\n", s_pGuiKeyMap[i]);
-			continue;
-		}
-
-		gtk_object_set_user_data(GTK_OBJECT(Btn), (void*)(MAX_KEYS * pad + i));
-	}
-
-	// check bounds
-	int joyid = _GetJoystickIdFromPAD(pad);
-
-	if (JoystickIdWithinBounds(joyid))
-		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), joyid); // select the combo
-	else
-		gtk_combo_box_set_active(GTK_COMBO_BOX(s_devicecombo), s_vjoysticks.size()); // no gamepad
-
-	int padopts = conf.options >> (16 * pad);
-
-	set_checked(Conf, "checkbutton_reverselx", padopts & PADOPTION_REVERTLX);
-	set_checked(Conf, "checkbutton_reversely", padopts & PADOPTION_REVERTLY);
-	set_checked(Conf, "checkbutton_reverserx", padopts & PADOPTION_REVERTRX);
-	set_checked(Conf, "checkbutton_reversery", padopts & PADOPTION_REVERTRY);
-	set_checked(Conf, "forcefeedback", padopts & PADOPTION_FORCEFEEDBACK);
-}
-
-int GetLabelId(GtkWidget *label)
-{
-	if (label == NULL)
-	{
-		PAD_LOG("couldn't find correct label\n");
-		return -1;
-	}
-
-	return (int)(uptr)gtk_object_get_user_data(GTK_OBJECT(label));
-}
-
-void OnConf_Key(GtkButton *button, gpointer user_data)
-{
-	bool captured = false;
-
-	const char* buttonname = gtk_widget_get_name(GTK_WIDGET(button));
-	GtkWidget* label =  lookup_widget(Conf, buttonname);
-
-	int id = GetLabelId(label);
-
-	if (id == -1) return;
-
-	int pad = id / MAX_KEYS;
-	int key = id % MAX_KEYS;
-
-	// save the joystick states
-	UpdateJoysticks();
-
-	while (!captured)
-	{
-		vector<JoystickInfo*>::iterator itjoy;
-		char *tmp;
-
-		u32 pkey = get_key(pad, key);
-		if (PollX11Keyboard(tmp, pkey))
-		{
-			set_key(pad, key, pkey);
-			PAD_LOG("%s\n", KeyName(pad, key).c_str());
-			captured = true;
-			break;
-		}
-
-		SDL_JoystickUpdate();
-
-		itjoy = s_vjoysticks.begin();
-		while ((itjoy != s_vjoysticks.end()) && (!captured))
-		{
-			int button_id, direction;
-
-			pkey = get_key(pad, key);
-			if ((*itjoy)->PollButtons(button_id, pkey))
-			{
-				set_key(pad, key, pkey);
-				PAD_LOG("%s\n", KeyName(pad, key).c_str());
-				captured = true;
-				break;
-			}
-
-			bool sign = false;
-			bool pov = (!((key == PAD_RY) || (key == PAD_LY) || (key == PAD_RX) || (key == PAD_LX)));
-
-			int axis_id;
-
-			if (pov)
-			{
-				if ((*itjoy)->PollPOV(axis_id, sign, pkey))
-				{
-					set_key(pad, key, pkey);
-					PAD_LOG("%s\n", KeyName(pad, key).c_str());
-					captured = true;
-					break;
-				}
-			}
-			else
-			{
-				if ((*itjoy)->PollAxes(axis_id, pkey))
-				{
-					set_key(pad, key, pkey);
-					PAD_LOG("%s\n", KeyName(pad, key).c_str());
-					captured = true;
-					break;
-				}
-			}
-
-			if ((*itjoy)->PollHats(axis_id, direction, pkey))
-			{
-				set_key(pad, key, pkey);
-				PAD_LOG("%s\n", KeyName(pad, key).c_str());
-				captured = true;
-				break;
-			}
-			itjoy++;
-		}
-	}
-
-	init_tree_view();
-}
-
-void populate_joysticks()
-{
-	// recreate
-	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
-
-	s_devicecombo = lookup_widget(Conf, "joydevicescombo");
-
-	// fill the combo
-	char str[255];
-	vector<JoystickInfo*>::iterator it = s_vjoysticks.begin();
-
-	// Delete everything in the vector vjoysticks.
-	while (it != s_vjoysticks.end())
-	{
-		sprintf(str, "%d: %s - but: %d, axes: %d, hats: %d", (*it)->GetId(), (*it)->GetName().c_str(),
-		        (*it)->GetNumButtons(), (*it)->GetNumAxes(), (*it)->GetNumHats());
-		gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), str);
-		it++;
-	}
-
-	gtk_combo_box_append_text(GTK_COMBO_BOX(s_devicecombo), "No Gamepad");
-
-	UpdateConf(0);
-}
 
 EXPORT_C_(void) PADconfigure()
 {
 	LoadConfig();
 
-	//DisplayDialog();
-	//return;
-	Conf = create_Conf();
-	
-	populate_joysticks();
-
-	gtk_widget_show_all(Conf);
-	gtk_main();
+	DisplayDialog();
+	return;
 }
