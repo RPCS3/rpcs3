@@ -19,15 +19,14 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
- #include <string.h>
+#include <string.h>
 #include <gtk/gtk.h>
-#include <pthread.h>
 
 #include "joystick.h"
-
 #include "onepad.h"
 #include "linux.h"
 
+extern char* KeysymToChar(int keysym);
 extern std::string s_strIniPath;
 
 string KeyName(int pad, int key)
@@ -116,7 +115,6 @@ void DefaultValues()
 void SaveConfig()
 {
 	FILE *f;
-	char cfg[255];
 
 	const std::string iniFile(s_strIniPath + "OnePAD.ini");
 	f = fopen(iniFile.c_str(), "w");

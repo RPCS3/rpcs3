@@ -96,24 +96,24 @@ namespace Analog
 		}
 	}
 
-	bool RevertPad(u8 index)
+	bool ReversePad(u8 index)
 	{
 		switch (index)
 		{
 			case PAD_LX:
-				return ((conf.options & PADOPTION_REVERTLX) != 0);
+				return ((conf.options & PADOPTION_REVERSELX) != 0);
 				break;
 
 			case PAD_RX:
-				return ((conf.options & PADOPTION_REVERTRX) != 0);
+				return ((conf.options & PADOPTION_REVERSERX) != 0);
 				break;
 
 			case PAD_LY:
-				return ((conf.options & PADOPTION_REVERTLY) != 0);
+				return ((conf.options & PADOPTION_REVERSELY) != 0);
 				break;
 
 			case PAD_RY:
-				return ((conf.options & PADOPTION_REVERTRY) != 0);
+				return ((conf.options & PADOPTION_REVERSERY) != 0);
 				break;
 
 			default:
@@ -126,7 +126,7 @@ namespace Analog
 	{
 		Pad(pad, index);
 		SetPad(pad, index, value / 256);
-		if (RevertPad(index)) InvertPad(pad,index);
+		if (ReversePad(index)) InvertPad(pad,index);
 		SetPad(pad, index, Pad(pad, index) + 0x80);
 	}
 

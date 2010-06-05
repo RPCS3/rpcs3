@@ -133,7 +133,7 @@ class JoystickInfo
 		{
 			return joy;
 		}
-
+		int GetAxisFromKey(int pad, int index);
 	private:
 
 		string devname; // pretty device name

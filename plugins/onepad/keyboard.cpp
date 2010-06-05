@@ -23,9 +23,10 @@
   * Theoretically, this header is for anything to do with keyboard input.
   * Pragmatically, event handing's going in here too.
   */
-
- #include "keyboard.h"
-
+  
+#include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
+#include "keyboard.h"
 
 int FindKey(int key, int pad)
 {

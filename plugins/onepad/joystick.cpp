@@ -307,3 +307,8 @@ bool JoystickInfo::PollHats(int &jbutton, int &dir, u32 &pkey)
 	}
 	return false;
 }
+
+int JoystickInfo::GetAxisFromKey(int pad, int index)
+{
+	return SDL_JoystickGetAxis(GetJoy(), key_to_axis(pad, index));
+}

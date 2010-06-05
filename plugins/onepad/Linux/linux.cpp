@@ -19,9 +19,16 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "joystick.h"
+#include "onepad.h"
+
+#include <string.h>
+#include <gtk/gtk.h>
 #include "linux.h"
 #include <gdk/gdkx.h>
 
+extern void PollForKeyboardInput(int pad);
+extern void SetAutoRepeat(bool autorep);
 Display *GSdsp;
 
 extern string KeyName(int pad, int key);
@@ -96,37 +103,6 @@ void _PADclose()
 	s_vjoysticks.clear();
 }
 
-int _GetJoystickIdFromPAD(int pad)
-{
-	// select the right joystick id
-	u32 joyid = -1;
-
-	for (int p = 0; p < MAX_SUB_KEYS; p++)
-	{
-		for (int i = 0; i < MAX_KEYS; ++i)
-		{
-			KeyType k = type_of_key(PadEnum[pad][p],i);
-
-			if (k == PAD_JOYSTICK || k == PAD_JOYBUTTONS)
-			{
-				joyid = key_to_joystick_id(PadEnum[pad][p],i);
-				return joyid;
-			}
-		}
-	}
-
-	if (!JoystickIdWithinBounds(joyid))
-	{
-		// get first unused joystick
-		for (joyid = 0; joyid < s_vjoysticks.size(); ++joyid)
-		{
-			if (s_vjoysticks[joyid]->GetPAD() < 0) break;
-		}
-	}
-
-	return joyid;
-}
-
 EXPORT_C_(void) PADupdate(int pad)
 {
 	// Poll keyboard.
@@ -174,7 +150,7 @@ EXPORT_C_(void) PADupdate(int pad)
 				}
 			case PAD_POV:
 				{
-					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
+					int value = pjoy->GetAxisFromKey(cpad, i);
 
 					PAD_LOG("%s: %d (%d)\n", KeyName(cpad, i).c_str(), value, key_to_pov_sign(cpad, i));
 					if (key_to_pov_sign(cpad, i) && (value < -2048))
@@ -196,7 +172,7 @@ EXPORT_C_(void) PADupdate(int pad)
 				}
 				case PAD_JOYSTICK:
 				{
-					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
+					int value = pjoy->GetAxisFromKey(cpad, i);
 
 					switch (i)
 					{
