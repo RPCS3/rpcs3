@@ -27,7 +27,7 @@ void x86capabilities::CountLogicalCores()
 	if( !GetProcessAffinityMask (GetCurrentProcess (),
 		&vProcessCPUs, &vSystemCPUs) ) return;
 
-	int CPUs = 0;
+	uint CPUs = 0;
 	DWORD bit;
 
 	for (bit = 1; bit != 0; bit <<= 1)

@@ -36,7 +36,8 @@ static int pxMessageDialog( const wxString& caption, const wxString& content, co
 	// And in either case the emulation should be paused/suspended for the user.
 
 	wxDialogWithHelpers dialog( NULL, caption );
-	dialog += dialog.Heading( content );
+	dialog.SetMinWidth( (content.Length() > 256) ? 525 : 460 );
+	dialog += dialog.Heading( content )	| StdExpand();
 	return pxIssueConfirmation( dialog, buttons );
 }
 

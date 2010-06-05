@@ -30,6 +30,8 @@ Threading::WaitForTaskDialog::WaitForTaskDialog( const wxString& title, const wx
 	: wxDialogWithHelpers( NULL, _("Waiting for tasks...") )
 	//, m_Timer(this)
 {
+	SetMinWidth( 300 );
+
 	//m_sem	= sem;
 	//m_mutex	= mutex;
 
@@ -42,7 +44,7 @@ Threading::WaitForTaskDialog::WaitForTaskDialog( const wxString& title, const wx
 	Connect( pxEvt_ThreadedTaskComplete, wxCommandEventHandler(WaitForTaskDialog::OnTaskComplete) );
 
 	*this += 12;
-	*this += Heading(m_heading)	| StdExpand();
+	*this += Heading(m_heading).Unwrapped()	| StdExpand();
 	*this += 12;
 	
 	// TODO : Implement a cancel button.  Not quite sure the best way to do

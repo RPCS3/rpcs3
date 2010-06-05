@@ -491,8 +491,36 @@ xAddressInfo& xAddressInfo::Add( const xAddressInfo& src )
 	return *this;
 }
 
+ModSibBase::ModSibBase( const xAddressInfo& src )
+{
+	Base		= src.Base;
+	Index		= src.Index;
+	Scale		= src.Factor;
+	Displacement= src.Displacement;
 
-// ------------------------------------------------------------------------
+	Reduce();
+}
+
+ModSibBase::ModSibBase( s32 disp )
+{
+	Base		= xEmptyReg;
+	Index		= xEmptyReg;
+	Scale		= 0;
+	Displacement= disp;
+
+	// no reduction necessary :D
+}
+
+ModSibBase::ModSibBase( xAddressReg base, xAddressReg index, int scale, s32 displacement )
+{
+	Base		= base;
+	Index		= index;
+	Scale		= scale;
+	Displacement= displacement;
+
+	Reduce();
+}
+
 // Generates a 'reduced' ModSib form, which has valid Base, Index, and Scale values.
 // Necessary because by default ModSib compounds registers into Index when possible.
 //
@@ -570,6 +598,17 @@ void ModSibBase::Reduce()
 	}
 }
 
+uint ModSibBase::GetOperandSize() const
+{
+	pxFail( "Invalid operation on ModSibBase" );
+	return 0;
+}
+
+ModSibBase& ModSibBase::Add( s32 imm )
+{
+	Displacement += imm;
+	return *this;
+}
 
 // ------------------------------------------------------------------------
 // Internal implementation of EmitSibMagic which has been custom tailored

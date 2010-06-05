@@ -616,44 +616,14 @@ template< typename T > void xWrite( T val );
 		s32				Displacement;	// offset applied to the Base/Index registers.
 
 	public:
-		explicit ModSibBase( const xAddressInfo& src )
-		{
-			Base		= src.Base;
-			Index		= src.Index;
-			Scale		= src.Factor;
-			Displacement= src.Displacement;
+		explicit ModSibBase( const xAddressInfo& src );
+		explicit ModSibBase( s32 disp );
+		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 );
 
-			Reduce();
-		}
+		virtual uint GetOperandSize() const;
+		ModSibBase& Add( s32 imm );
 
-		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 )
-		{
-			Base		= base;
-			Index		= index;
-			Scale		= scale;
-			Displacement= displacement;
-
-			Reduce();
-		}
-
-		explicit ModSibBase( s32 disp )
-		{
-			Base		= xEmptyReg;
-			Index		= xEmptyReg;
-			Scale		= 0;
-			Displacement= disp;
-
-			// no reduction necessary :D
-		}
-
-		virtual uint GetOperandSize() const { pxFail( "Invalid operation on ModSibBase" ); return 0; }
 		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
-
-		ModSibBase& Add( s32 imm )
-		{
-			Displacement += imm;
-			return *this;
-		}
 
 		__forceinline ModSibBase operator+( const s32 imm ) const { return ModSibBase( *this ).Add( imm ); }
 		__forceinline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
@@ -690,8 +660,8 @@ template< typename T > void xWrite( T val );
 	public: \
 		explicit ModSib##bits( const xAddressInfo& src ) : _parent( src ) {} \
 		explicit ModSib##bits( s32 disp ) : _parent( disp ) {} \
-		ModSib##bits( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) : \
-			_parent( base, index, scale, displacement ) {} \
+		ModSib##bits( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) \
+			: _parent( base, index, scale, displacement ) {} \
  \
 		virtual uint GetOperandSize() const { return bits / 8; } \
  \
@@ -730,8 +700,9 @@ template< typename T > void xWrite( T val );
 	// xAddressReg types go in, and ModSibBase derived types come out.
 	//
 	template< typename xModSibType >
-	struct xAddressIndexer
+	class xAddressIndexer
 	{
+	public:
 		// passthrough instruction, allows ModSib to pass silently through ptr translation
 		// without doing anything and without compiler error.
 		const xModSibType& operator[]( const xModSibType& src ) const { return src; }
