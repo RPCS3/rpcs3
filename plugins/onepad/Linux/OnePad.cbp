@@ -49,6 +49,7 @@
 			<Add option="-shared" />
 		</Linker>
 		<Unit filename="callbacks.h" />
+		<Unit filename="dialog.cpp" />
 		<Unit filename="gui.cpp" />
 		<Unit filename="ini.cpp" />
 		<Unit filename="interface.c">

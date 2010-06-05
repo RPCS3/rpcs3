@@ -35,6 +35,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(onepadSources
 	analog.cpp
 	controller.cpp
+	dialog.cpp
 	joystick.cpp
 	keyboard.cpp
 	onepad.cpp)
