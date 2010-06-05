@@ -47,7 +47,7 @@ void SetIrqCall()
 	has_to_call_irq=true;
 }
 
-__forceinline s16 * __fastcall GetMemPtr(u32 addr)
+__forceinline s16* GetMemPtr(u32 addr)
 {
 #ifndef DEBUG_FAST
 	// In case you're wondering, this assert is the reason SPU2-X
@@ -57,14 +57,14 @@ __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 	return (_spu2mem+addr);
 }
 
-s16 __fastcall spu2M_Read( u32 addr )
+__forceinline s16 spu2M_Read( u32 addr )
 {
 	return *GetMemPtr( addr & 0xfffff );
 }
 
 // writes a signed value to the SPU2 ram
 // Invalidates the ADPCM cache in the process.
-__forceinline void __fastcall spu2M_Write( u32 addr, s16 value )
+__forceinline void spu2M_Write( u32 addr, s16 value )
 {
 	// Make sure the cache is invalidated:
 	// (note to self : addr address WORDs, not bytes)
@@ -81,7 +81,7 @@ __forceinline void __fastcall spu2M_Write( u32 addr, s16 value )
 }
 
 // writes an unsigned value to the SPU2 ram
-__inline void __fastcall spu2M_Write( u32 addr, u16 value )
+__forceinline void spu2M_Write( u32 addr, u16 value )
 {
 	spu2M_Write( addr, (s16)value );
 }

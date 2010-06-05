@@ -26,10 +26,10 @@
 #define spu2Rs16(mmem)	(*(s16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
 #define spu2Ru16(mmem)	(*(u16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
 
-extern s16*	__fastcall GetMemPtr(u32 addr);
-extern s16	__fastcall spu2M_Read( u32 addr );
-extern void	__fastcall spu2M_Write( u32 addr, s16 value );
-extern void	__fastcall spu2M_Write( u32 addr, u16 value );
+extern s16*	GetMemPtr(u32 addr);
+extern s16	spu2M_Read( u32 addr );
+extern void	spu2M_Write( u32 addr, s16 value );
+extern void	spu2M_Write( u32 addr, u16 value );
 
 
 struct V_VolumeLR

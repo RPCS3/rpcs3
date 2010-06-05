@@ -16,6 +16,7 @@
  */
 
 #include "Global.h"
+
 //#include <float.h>
 
 extern void	spdif_update();
@@ -131,7 +132,7 @@ int g_counter_cache_ignores = 0;
 #define XAFLAG_LOOP			(1ul<<1)
 #define XAFLAG_LOOP_START	(1ul<<2)
 
-static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
+static __forceinline s32 GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
@@ -211,7 +212,7 @@ _Increment:
 	return vc.SBuffer[vc.SCurrent++];
 }
 
-static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voiceidx)
+static __forceinline void GetNextDataDummy(V_Core& thiscore, uint voiceidx)
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
@@ -467,7 +468,7 @@ static __forceinline s32 GetVoiceValues( V_Core& thiscore, uint voiceidx )
 // Noise values need to be mixed without going through interpolation, since it
 // can wreak havoc on the noise (causing muffling or popping).  Not that this noise
 // generator is accurate in its own right.. but eh, ah well :)
-static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voiceidx )
+static __forceinline s32 GetNoiseValues( V_Core& thiscore, uint voiceidx )
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
