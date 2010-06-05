@@ -59,7 +59,7 @@ class keys_tree
 		GtkTreeView *view;
 		bool has_columns;
 		
-		void populate()
+		void repopulate()
 		{
 			GtkTreeIter toplevel;
 
@@ -115,7 +115,7 @@ class keys_tree
 			gtk_tree_view_column_set_visible(col, visible);
 		}
 
-		void create_columns(GtkWidget *view)
+		void create_columns()
 		{
 			if (!has_columns)
 			{
@@ -133,13 +133,10 @@ class keys_tree
 			return GTK_WIDGET(view);
 		}
 	
-		void new_tree()
-		{
-			view = GTK_TREE_VIEW(gtk_tree_view_new());
-		}
-		
 		void init()
 		{
+			has_columns = false;
+			view = GTK_TREE_VIEW(gtk_tree_view_new());
 			treestore = gtk_tree_store_new(NUM_COLS,
 										G_TYPE_STRING,
 										G_TYPE_STRING,
@@ -147,23 +144,22 @@ class keys_tree
 										G_TYPE_UINT,
 										G_TYPE_UINT);
 
-			populate();
-			create_columns(GTK_WIDGET(view));
-
 			model = GTK_TREE_MODEL(treestore);
-
 			gtk_tree_view_set_model(view, model);
-
 			g_object_unref(model); /* destroy model automatically with view */
-
-			gtk_tree_selection_set_mode(gtk_tree_view_get_selection(view),
-									  GTK_SELECTION_SINGLE);
+			gtk_tree_selection_set_mode(gtk_tree_view_get_selection(view), GTK_SELECTION_SINGLE);
+		}
+		
+		void update()
+		{
+			create_columns();
+			repopulate();
 		}
 		
 		void clear_all()
 		{
 			clearPAD();
-			init();
+			update();
 		}
 		
 		bool get_selected(int &pad, int &key)
@@ -186,7 +182,7 @@ class keys_tree
 			if (get_selected(pad, key))
 			{
 				set_key(pad, key, 0);
-				init();
+				update();
 			}
 		}
 		void modify_selected()
@@ -195,6 +191,7 @@ class keys_tree
 			if (get_selected(pad, key))
 			{
 				config_key(pad,key);
+				// Config key calls update.
 			}
 		}
 };
@@ -320,7 +317,7 @@ void config_key(int pad, int key)
 		}
 	}
 
-	fir->init();
+	fir->update();
 }
 
 void on_conf_key(GtkButton *button, gpointer user_data)
@@ -365,7 +362,7 @@ void pad_changed(GtkComboBox *box, gpointer user_data)
 {
 	int temp = gtk_combo_box_get_active(box);
 	if (temp != -1) current_pad = temp;
-	fir->init();
+	fir->update();
     int options = (conf.options >> (16 * current_pad));
 	
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rev_lx_check), (options & PADOPTION_REVERTLX));
@@ -482,7 +479,7 @@ void DisplayDialog()
     gtk_combo_box_set_active(GTK_COMBO_BOX(joy_choose_cbox), Get_Current_Joystick());
 	g_signal_connect(GTK_OBJECT (joy_choose_cbox), "changed", G_CALLBACK(joy_changed), NULL);
 	
-	fir->new_tree();
+	fir->init();
 	keys_tree_clear_btn = gtk_button_new_with_label("Clear All");
 	g_signal_connect(GTK_OBJECT (keys_tree_clear_btn), "clicked", G_CALLBACK(on_clear_clicked), NULL);
 	gtk_widget_set_size_request(keys_tree_clear_btn, 64, 24);
@@ -604,7 +601,7 @@ void DisplayDialog()
 
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     
-    fir->init();
+    fir->update();
     
     gtk_widget_show_all (dialog);
 
