@@ -33,7 +33,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	AddPage<CpuPanelEE>				( wxLt("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>				( wxLt("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>				( wxLt("GS"),			cfgid.Cpu );
-	AddPage<GSWindowSettingsPanel>	( wxLt("Window"),		cfgid.Video );
+	AddPage<GSWindowSettingsPanel>	( wxLt("GS Window"),	cfgid.Video );
 	AddPage<SpeedHacksPanel>		( wxLt("Speedhacks"),	cfgid.Speedhacks );
 	AddPage<GameFixesPanel>			( wxLt("Game Fixes"),	cfgid.Gamefixes );
 	AddPage<GameDatabasePanel>		( wxLt("Game Database"),cfgid.Plugins );

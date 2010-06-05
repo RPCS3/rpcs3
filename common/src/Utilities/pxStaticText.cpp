@@ -136,6 +136,7 @@ wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
 
 	int idealWidth = wxDefaultCoord;
 	int parentalAdjust = 0;
+	double parentalFactor = 1.0;
 	const wxWindow* millrun = this;
 	
 	while( millrun )
@@ -145,8 +146,8 @@ wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
 		// Anyway, this fixes it -- ignore min size specifier on wxWizard!
 		if( wxIsKindOf( millrun, wxWizard ) ) break;
 
-		int min = millrun->GetMinWidth() - parentalAdjust;
-		
+		int min = (int)((millrun->GetMinWidth() - parentalAdjust) * parentalFactor);
+
 		if( min > 0 && ((idealWidth < 0 ) || (min < idealWidth)) )
 		{
 			idealWidth = min;
@@ -253,6 +254,16 @@ wxFont pxStaticText::GetFontOk() const
 	return font;
 }
 
+bool pxStaticText::Enable( bool enabled )
+{
+	if( _parent::Enable(enabled))
+	{
+		Refresh();
+		return true;
+	}
+	return false;
+}
+
 void pxStaticText::paintEvent(wxPaintEvent& evt)
 {
 	wxPaintDC dc( this );
@@ -261,7 +272,10 @@ void pxStaticText::paintEvent(wxPaintEvent& evt)
 	if( dcWidth < 1 ) return;
 	dc.SetFont( GetFontOk() );
 	
-	dc.SetTextForeground(GetForegroundColour());
+	if( IsEnabled() )
+		dc.SetTextForeground(GetForegroundColour());
+	else
+		dc.SetTextForeground(*wxLIGHT_GREY);
 
 	pxWindowTextWriter writer( dc );
 	writer.Align( m_align );

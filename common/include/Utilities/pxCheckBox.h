@@ -32,6 +32,10 @@ protected:
 	wxCheckBox*		m_checkbox;
 	pxStaticText*	m_subtext;
 
+	// padding below the subtext (if there's subtext).  If there's no subtext, this value is unused.
+	int				m_subPadding;
+
+	wxSizerItem*	m_sizerItem_subtext;
 public:
 	pxCheckBox( wxWindow* parent, const wxString& label, const wxString& subtext=wxEmptyString );
 	virtual ~pxCheckBox() throw() {}
@@ -39,6 +43,7 @@ public:
 	bool HasSubText() const { return m_subtext != NULL; }
 	const pxStaticText* GetSubText() const { return m_subtext; }
 
+	pxCheckBox& SetSubPadding( int pad );
 	pxCheckBox& SetToolTip( const wxString& tip );
 	pxCheckBox& SetValue( bool val );
 	bool GetValue() const;

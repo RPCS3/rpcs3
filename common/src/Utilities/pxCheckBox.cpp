@@ -17,6 +17,8 @@
 #include "pxCheckBox.h"
 #include "pxStaticText.h"
 
+using namespace pxSizerFlags;
+
 // --------------------------------------------------------------------------------------
 //  pxCheckBox Implementations
 // --------------------------------------------------------------------------------------
@@ -30,6 +32,7 @@ pxCheckBox::pxCheckBox(wxWindow* parent, const wxString& label, const wxString& 
 void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 {
 	m_subtext	= NULL;
+	m_subPadding= StdPadding*2;
 	m_checkbox	= new wxCheckBox( this, wxID_ANY, label );
 
 	*this += m_checkbox | pxSizerFlags::StdExpand();
@@ -42,13 +45,24 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 		wxFlexGridSizer& spaced( *new wxFlexGridSizer(3) );
 		spaced.AddGrowableCol( 1 );
 		spaced += Indentation;
-		spaced += m_subtext | pxBorder( wxBOTTOM, 9 ).Expand();
-		spaced += pxSizerFlags::StdPadding;
+		m_sizerItem_subtext = spaced.Add( m_subtext, pxBorder( wxBOTTOM, m_subPadding ).Expand() );
+		//spaced += pxSizerFlags::StdPadding;
 
 		*this += &spaced | pxExpand;
 	}
 	
 	Connect( m_checkbox->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(pxCheckBox::OnCheckpartCommand) );
+}
+
+pxCheckBox& pxCheckBox::SetSubPadding( int pad )
+{
+	m_subPadding = pad;
+	if( m_sizerItem_subtext )
+	{
+		m_sizerItem_subtext->SetBorder( m_subPadding );
+		Fit();
+	}
+	return *this;
 }
 
 // applies the tooltip to both both the checkbox and it's static subtext (if present), and

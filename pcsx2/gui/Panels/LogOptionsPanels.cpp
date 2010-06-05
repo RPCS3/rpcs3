@@ -232,11 +232,11 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	s_misc		+= m_GIFtag;
 	s_misc		+= m_Elf;
 
-	*this		+= m_masterEnabler						| StdExpand();
-	*this		+= new wxStaticLine( this, wxID_ANY )	| StdExpand().Border(wxLEFT | wxRIGHT, 20);
+	*this		+= m_masterEnabler				| StdExpand();
+	*this		+= new wxStaticLine( this )		| StdExpand().Border(wxLEFT | wxRIGHT, 20);
 	*this		+= 5;
-	*this		+= topSizer								| StdExpand();
-	*this		+= s_misc								| StdSpace().Centre();
+	*this		+= topSizer						| StdExpand();
+	*this		+= s_misc						| StdSpace().Centre();
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
 

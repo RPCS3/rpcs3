@@ -88,7 +88,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 	s_AspectRatio += Label(_("Aspect Ratio:"))		| pxMiddle;
 	s_AspectRatio += m_combo_AspectRatio			| pxExpand;
-	s_AspectRatio += Label(_("Custom Window Size:"))	| pxMiddle;
+	s_AspectRatio += Label(_("Custom Window Size:"))| pxMiddle;
 	s_AspectRatio += s_customsize					| pxAlignRight;
 
 	*this += s_AspectRatio				| StdExpand();

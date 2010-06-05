@@ -101,20 +101,22 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 {
 	const wxSizerFlags sliderFlags( wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
 
-	pxStaticText* heading = new pxStaticHeading( this, pxE( ".Panel:Speedhacks:Overview",
-		L"These hacks will usually improve the speed of PCSX2 emulation, but compromise compatibility. "
-		L"If you have issues, always try disabling these hacks first."
-	) );
-
 	m_check_Enable = new pxCheckBox( this, _("Enable speedhacks"),
-		_("(Warning! Speedhacks can cause false FPS readings, choppy audio, and many other bugs!)"));
-	m_check_Enable->SetToolTip(_("The safest way to make sure that all speedhacks are completely disabled."));
-
-	m_button_Defaults = new wxButton( this, wxID_DEFAULT, _("Restore Defaults") );
-	pxSetToolTip( m_button_Defaults, _("Resets all speedhack options to their defaults, which consequently turns them all OFF.") );
+		pxE( ".Panel:Speedhacks:Overview",
+			L"Speedhacks usually improve emulation speed, but can cause glitches, broken audio, and "
+			L"false FPS readings.  When having emulation problems, disable this panel first."
+		)
+	);
+	m_check_Enable->SetToolTip(_("A safe and easy way to make sure that all speedhacks are completely disabled.")).SetSubPadding( 1 );
 
 	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
+
+	left->SetMinWidth( 300 );
+	right->SetMinWidth( 300 );
+
+	m_button_Defaults = new wxButton( right, wxID_DEFAULT, _("Restore Defaults") );
+	pxSetToolTip( m_button_Defaults, _("Resets all speedhack options to their defaults, which consequently turns them all OFF.") );
 
 	// ------------------------------------------------------------------------
 	// EE Cyclerate Hack Section:
@@ -217,13 +219,13 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	// ------------------------------------------------------------------------
 	//  Layout and Size ---> (!!)
 
-	wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 3, 0, 12 ) );
-	DefEnableSizer.AddGrowableCol( 1, 1 );
-	DefEnableSizer.AddGrowableCol( 2, 10 );
+	//wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 3, 0, 12 ) );
 	//DefEnableSizer.AddGrowableCol( 1, 1 );
-	DefEnableSizer	+= m_button_Defaults	| StdSpace().Align( wxALIGN_LEFT );
-	DefEnableSizer	+= pxStretchSpacer(1);
-	DefEnableSizer	+= m_check_Enable		| StdExpand().Align( wxALIGN_RIGHT );
+	//DefEnableSizer.AddGrowableCol( 2, 10 );
+	//DefEnableSizer.AddGrowableCol( 1, 1 );
+	//DefEnableSizer	+= m_button_Defaults	| StdSpace().Align( wxALIGN_LEFT );
+	//DefEnableSizer	+= pxStretchSpacer(1);
+	//DefEnableSizer	+= m_check_Enable		| StdExpand().Align( wxALIGN_RIGHT );
 
 	*eeSliderPanel	+= m_slider_eecycle		| sliderFlags;
 	*eeSliderPanel	+= m_msg_eecycle		| sliderFlags;
@@ -243,6 +245,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	*right	+= vuSliderPanel	| StdExpand();
 	*right	+= vuHacksPanel		| StdExpand();
+	*right	+= StdPadding;
+	*right	+= m_button_Defaults| StdButton();
 
 	s_table = new wxFlexGridSizer( 2 );
 	s_table->AddGrowableCol( 0, 1 );
@@ -250,9 +254,10 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	*s_table+= left				| pxExpand;
 	*s_table+= right			| pxExpand;
 
-	*this	+= heading->Bold()	| pxExpand;
-	*this	+= s_table			| pxExpand;
-	*this	+= DefEnableSizer	| pxExpand;
+	*this	+= m_check_Enable;
+	*this	+= new wxStaticLine( this )	| pxExpand.Border(wxLEFT | wxRIGHT, 20);
+	*this	+= StdPadding;
+	*this	+= s_table					| pxExpand;
 
 	// ------------------------------------------------------------------------
 

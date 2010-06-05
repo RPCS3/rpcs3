@@ -57,6 +57,8 @@ public:
 	virtual ~pxStaticText() throw() {}
 
 	wxFont GetFontOk() const;
+	bool Enable( bool enabled=true );
+
 
 	virtual void SetLabel(const wxString& label);
 	pxStaticText& SetHeight( int lines );
