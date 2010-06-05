@@ -46,7 +46,7 @@ static const s32 tbl_XA_Factor[5][2] =
 //   caller to  extend the inputs so that they make use of all 32 bits of
 //   precision.
 //
-__forceinline s32 MulShr32( s32 srcval, s32 mulval )
+static __forceinline s32 MulShr32( s32 srcval, s32 mulval )
 {
 	return (s64)srcval * mulval >> 32;
 }
