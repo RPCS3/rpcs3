@@ -190,40 +190,11 @@ void recSetBranchEQ(int info, int bne, int process)
 
 void recSetBranchL(int ltz)
 {
-	// Fixme: MMX problem
-	int regs;/* = _checkMMXreg(MMX_GPR+_Rs_, MODE_READ);*/
-
-	/*if( regs >= 0 ) {
-
-		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-
-		SetMMXstate();
-
-		PXORRtoR(t0reg, t0reg);
-		PCMPGTDRtoR(t0reg, regs);
-		PMOVMSKBMMXtoR(EAX, t0reg);
-
-		_freeMMXreg(t0reg);
-		_eeFlushAllUnused();
-
-		TEST8ItoR( EAX, 0x80 );
-
-		if( ltz ) j32Ptr[ 0 ] = JZ32( 0 );
-		else j32Ptr[ 0 ] = JNZ32( 0 );
-
-		return;
-	}*/
-
-	regs = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ);
+	int regs = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ);
 
 	if( regs >= 0 ) {
+		SSE_MOVMSKPS_XMM_to_R32(EAX, regs);
 
-		int t0reg = _allocTempXMMreg(XMMT_INT, -1);
-		SSE_XORPS_XMM_to_XMM(t0reg, t0reg);
-		SSE2_PCMPGTD_XMM_to_XMM(t0reg, regs);
-		SSE_MOVMSKPS_XMM_to_R32(EAX, t0reg);
-
-		_freeXMMreg(t0reg);
 		_eeFlushAllUnused();
 
 		TEST8ItoR( EAX, 2 );
