@@ -61,6 +61,7 @@ Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isF
 	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
 	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingVert() + 4 );
 	m_radio_UserMode->Realize();
+	if( pxStaticText* woot = m_radio_UserMode->GetSubText(0) ) woot->Unwrapped();		// wrapping sucks for path names!
 	
 	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
 
@@ -96,7 +97,10 @@ void Panels::DocsFolderPickerPanel::OnRadioChanged( wxCommandEvent& evt )
 	if( !m_radio_UserMode ) return;
 
 	if( m_dirpicker_custom )
-		m_dirpicker_custom->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_Custom );	
+		m_dirpicker_custom->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_Custom );
+
+	if( pxStaticText* woot = m_radio_UserMode->GetSubText(0) )
+		woot->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_User );
 }
 
 // --------------------------------------------------------------------------------------

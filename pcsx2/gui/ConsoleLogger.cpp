@@ -821,13 +821,13 @@ typedef void __concall DoWriteFn(const wxString&);
 
 static const IConsoleWriter	ConsoleWriter_Window =
 {
-	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
-	ConsoleToWindow_DoWriteLn<ConsoleWriter_Null>,
-	ConsoleToWindow_DoSetColor<ConsoleWriter_Null>,
+	ConsoleToWindow_DoWrite<ConsoleWriter_Stdout>,
+	ConsoleToWindow_DoWriteLn<ConsoleWriter_Stdout>,
+	ConsoleToWindow_DoSetColor<ConsoleWriter_Stdout>,
 
-	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
-	ConsoleToWindow_Newline<ConsoleWriter_Null>,
-	ConsoleToWindow_SetTitle<ConsoleWriter_Null>,
+	ConsoleToWindow_DoWrite<ConsoleWriter_Stdout>,
+	ConsoleToWindow_Newline<ConsoleWriter_Stdout>,
+	ConsoleToWindow_SetTitle<ConsoleWriter_Stdout>,
 };
 
 static const IConsoleWriter	ConsoleWriter_WindowAndFile =
@@ -841,14 +841,29 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 	ConsoleToWindow_SetTitle<ConsoleWriter_File>,
 };
 
-void Pcsx2App::EnableAllLogging() const
+void Pcsx2App::EnableAllLogging()
 {
 	const bool logBoxOpen = (GetProgramLog() != NULL);
+	const IConsoleWriter* newHandler = NULL;
 
 	if( emuLog )
-		Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );
+	{
+		if( !m_StdoutRedirHandle ) m_StdoutRedirHandle = NewPipeRedir(stdout);
+		if( !m_StderrRedirHandle ) m_StderrRedirHandle = NewPipeRedir(stderr);
+		newHandler = logBoxOpen ? (IConsoleWriter*)&ConsoleWriter_WindowAndFile : (IConsoleWriter*)&ConsoleWriter_File;
+	}
 	else
-		Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
+	{
+		if( logBoxOpen )
+		{
+			if( !m_StdoutRedirHandle ) m_StdoutRedirHandle = NewPipeRedir(stdout);
+			if( !m_StderrRedirHandle ) m_StderrRedirHandle = NewPipeRedir(stderr);
+			newHandler = &ConsoleWriter_Window;
+		}
+		else
+			newHandler = &ConsoleWriter_Stdout;
+	}
+	Console_SetActiveHandler( *newHandler );
 }
 
 // Used to disable the emuLog disk logger, typically used when disabling or re-initializing the

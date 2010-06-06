@@ -17,6 +17,8 @@
 #include "Threading.h"
 #include "TlsVariable.inl"
 
+#include "RedtapeWindows.h"
+
 using namespace Threading;
 
 // thread-local console indentation setting.
@@ -135,18 +137,30 @@ static __forceinline const wxChar* GetLinuxConsoleColor(ConsoleColors color)
 // One possible default write action at startup and shutdown is to use the stdout.
 static void __concall ConsoleStdout_DoWrite( const wxString& fmt )
 {
+#ifdef __WXMSW__
+	OutputDebugString( fmt );	
+#else
 	wxPrintf( fmt );
+#endif
 }
 
 // Default write action at startup and shutdown is to use the stdout.
 static void __concall ConsoleStdout_DoWriteLn( const wxString& fmt )
 {
+#ifdef __WXMSW__
+	OutputDebugString( fmt + L"\n" );
+#else
 	wxPrintf( fmt + L"\n" );
+#endif
 }
 
 static void __concall ConsoleStdout_Newline()
 {
+#ifdef __WXMSW__
+	OutputDebugString( L"\n" );
+#else
 	wxPrintf( L"\n" );
+#endif
 }
 
 static void __concall ConsoleStdout_DoSetColor( ConsoleColors color )
@@ -170,10 +184,9 @@ const IConsoleWriter ConsoleWriter_Stdout =
 	ConsoleStdout_DoWriteLn,
 	ConsoleStdout_DoSetColor,
 
-	ConsoleNull_DoWrite,			// writes from stdout are ignored here, lest we create infinite loop hell >_<
+	ConsoleNull_DoWrite,			// writes from re-piped stdout are ignored here, lest we create infinite loop hell >_<
 	ConsoleStdout_Newline,
 	ConsoleStdout_SetTitle,
-
 	0,		// instance-level indentation (should always be 0)
 };
 
@@ -531,7 +544,7 @@ bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... 
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( FastFormatString_Ascii(fmt, args) );
+	DoWriteFromStdout( FastFormatString_Ascii(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -541,16 +554,8 @@ bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... 
 // --------------------------------------------------------------------------------------
 //  Default Writer for C++ init / startup:
 // --------------------------------------------------------------------------------------
-// In GUI modes under Windows I default to Assert, because windows lacks a qualified universal
-// program console.  In console mode I use Stdio instead, since the program is pretty well
-// promised a valid console in any platform (except maybe Macs, which probably consider consoles
-// a fundamental design flaw or something).
 
-#if wxUSE_GUI && defined(__WXMSW__)
-#	define _DefaultWriter_	ConsoleWriter_Assert
-#else
-#	define _DefaultWriter_	ConsoleWriter_Stdout
-#endif
+#define _DefaultWriter_	ConsoleWriter_Stdout
 
 // Important!  Only Assert and Null console loggers are allowed for initial console targeting.
 // Other log targets rely on the static buffer and a threaded mutex lock, which are only valid

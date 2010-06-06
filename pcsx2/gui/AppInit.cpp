@@ -26,6 +26,8 @@
 #include <wx/intl.h>
 #include <wx/stdpaths.h>
 
+using namespace pxSizerFlags;
+
 static bool m_ForceWizard = false;
 
 static void CpuCheckSSE2()
@@ -59,7 +61,7 @@ void Pcsx2App::WipeUserModeSettings()
 	if( !usrlocaldir.Exists() ) return;
 
 	wxString cwd( Path::Normalize( wxGetCwd() ) );
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
+	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( usrlocaldir.ToString() );
@@ -89,27 +91,13 @@ void Pcsx2App::ReadUserModeSettings()
 	}
 
 	wxString cwd( Path::Normalize( wxGetCwd() ) );
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
+	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
 	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
-
-	if (IOP_ENABLE_SIF_HACK == 1)
-	{
-		wxDialogWithHelpers hackedVersion( NULL, _("It will devour your young! - PCSX2 Shub-Niggurath edition") );
-		hackedVersion.SetMinWidth( 520 );
-		hackedVersion += hackedVersion.Text(
-			L"NOTICE!! This is a version of Pcsx2 with hacks enabled meant for developers only. "
-			L"It will likely crash on all games, devour your young, and make you an object of shame and disgrace among your family and friends. "
-			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. "
-		);
-		
-		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
-		hackedVersion.ShowModal();
-	}
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
 	bool forceWiz = m_ForceWizard || !hasGroup;
@@ -124,20 +112,21 @@ void Pcsx2App::ReadUserModeSettings()
 	if( forceWiz )
 	{
 		// Beta Warning!
-
+		#if 0
 		if( !hasGroup )
 		{
-			wxDialogWithHelpers beta( NULL, _("PCSX2 0.9.7 Beta") );
+			wxDialogWithHelpers beta( NULL, wxsFormat(_("Welcome to PCSX2 %u.%u.%u (r%u)")), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo, SVN_REV );
+			beta.SetMinWidth(480);
 
-			beta += new pxStaticText( &beta,
-				L"This is a *Beta* build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
-				L"user interface, and some parts of the program have *NOT* been implemented yet.  Options will be missing.  "
-				L"Some things may crash or hang without warning.", wxALIGN_CENTER
-			);
+			beta += beta.Heading(
+				L"a work-in-progress.  We are in the middle of major rewrites of the user interface, and some parts "
+				L"of the program have *NOT* been re-implemented yet.  Options will be missing or disabled.  Horrible crashes might be present.  Enjoy!"
+			) | StdExpand();
 			
-			beta += new wxButton( &beta, wxID_OK ) | pxSizerFlags::StdCenter();
+			beta += new wxButton( &beta, wxID_OK ) | StdCenter();
 			beta.ShowModal();
 		}
+		#endif
 	
 		// first time startup, so give the user the choice of user mode:
 		FirstTimeWizard wiz( NULL );
@@ -200,10 +189,6 @@ void Pcsx2App::DetectCpuAndUserMode()
 
 	ReadUserModeSettings();
 	AppConfig_OnChangedSettingsFolder();
-
-	PostAppMethod( &Pcsx2App::OpenMainFrame );
-	PostAppMethod( &Pcsx2App::OpenProgramLog );
-	PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
 }
 
 void Pcsx2App::OpenMainFrame()
@@ -411,26 +396,25 @@ typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
 bool Pcsx2App::OnInit()
 {
+	EnableAllLogging();
+	Console.WriteLn("Interface is initializing.  Entering Pcsx2App::OnInit!");
+
 	InitCPUTicks();
+
+	pxDoAssert = AppDoAssert;
+	g_Conf = new AppConfig();
+    wxInitAllImageHandlers();
+
+	Console.WriteLn("Begin parsing commandline...");
+	if( !_parent::OnInit() ) return false;
+
+	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
 #define pxAppMethodEventHandler(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeAppMethodEventFunction, &func )
 
-	pxDoAssert = AppDoAssert;
-
-	g_Conf = new AppConfig();
-	EnableAllLogging();
-
-    wxInitAllImageHandlers();
-	if( !_parent::OnInit() ) return false;
-
-	m_StdoutRedirHandle = NewPipeRedir(stdout);
-	m_StderrRedirHandle = NewPipeRedir(stderr);
-	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
-
-	Connect( pxID_PadHandler_Keydown,	wxEVT_KEY_DOWN,		wxKeyEventHandler		(Pcsx2App::OnEmuKeyDown) );
-
-	Connect( wxEVT_DESTROY,		wxWindowDestroyEventHandler	(Pcsx2App::OnDestroyWindow) );
+	Connect( pxID_PadHandler_Keydown,	wxEVT_KEY_DOWN,		wxKeyEventHandler			(Pcsx2App::OnEmuKeyDown) );
+	Connect(							wxEVT_DESTROY,		wxWindowDestroyEventHandler	(Pcsx2App::OnDestroyWindow) );
 
 	// User/Admin Mode Dual Setup:
 	//   PCSX2 now supports two fundamental modes of operation.  The default is Classic mode,
@@ -453,9 +437,12 @@ bool Pcsx2App::OnInit()
 #ifdef __WXMSW__
 		pxDwm_Load();
 #endif
-
 		SysExecutorThread.Start();
 		DetectCpuAndUserMode();
+
+		PostAppMethod( &Pcsx2App::OpenMainFrame );
+		PostAppMethod( &Pcsx2App::OpenProgramLog );
+		PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::StartupAborted& ex )		// user-aborted, no popups needed.

@@ -107,7 +107,7 @@ TraceLogFilters& SetTraceConfig()
 // This function should be called once during program execution.
 void SysLogMachineCaps()
 {
-	Console.WriteLn( Color_StrongGreen, "PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Console.WriteLn( Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 

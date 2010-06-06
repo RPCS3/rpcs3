@@ -80,7 +80,7 @@ void pxRadioPanel::Realize()
 	{
 		m_objects[i].SubTextObj = NULL;
 		if( m_buttonStrings[i].SubText.IsEmpty() ) continue;
-		m_objects[i].SubTextObj = new pxStaticText( this, m_buttonStrings[i].SubText );
+		m_objects[i].SubTextObj = new pxStaticText( this, m_buttonStrings[i].SubText, wxALIGN_LEFT );
 	}
 
 	pxAssert( GetSizer() != NULL );

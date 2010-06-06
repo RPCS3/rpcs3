@@ -195,10 +195,6 @@ static __forceinline void _psxTestInterrupts()
 #endif
 	IopTestEvent(IopEvt_CdvdRead,	cdvdReadInterrupt);
 
-#if IOP_ENABLE_SIF_HACK
-	IopTestEvent(IopEvt_SIFhack,	sifHackInterrupt);
-#endif
-
 	// Profile-guided Optimization (sorta)
 	// The following ints are rarely called.  Encasing them in a conditional
 	// as follows helps speed up most games.
@@ -249,20 +245,6 @@ __releaseinline void psxBranchTest()
 			// thread sleep hangs and allow the IOP to "come back to life."
 			psxRegs.interrupt &= ~IopEvt_SIFhack;
 		}
-	}
-
-	if( IOP_ENABLE_SIF_HACK && !iopBranchAction && !(psxRegs.interrupt & IopEvt_SIFhack) )
-	{
-		// Safeguard: since we're not executing an exception vector, we should schedule a SIF wakeup
-		// just in case.  (and don't reschedule it if it's already scheduled, since that would just
-		// delay the previously scheduled one, and we don't want that)
-
-		// (TODO: The endless loop in question is a branch instruction that branches to itself endlessly,
-		//  waiting for SIF to wake it up via any cpuException.  We could check for that instruction
-		//  location and only schedule a SIF fix when it's detected...  But for now this is easy and gives
-		//  us good control over testing parameters...)
-
-		PSX_INT( IopEvt_SIFhack, 96 );
 	}
 }
 

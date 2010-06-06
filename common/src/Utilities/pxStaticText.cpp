@@ -159,10 +159,10 @@ wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
 
 	if( idealWidth <= 0 )
 	{
-		// FIXME: The minimum size of this control is unknown, so let's just pick a guess based on some
-		// heuristics of the string content.. maybe?  For now I just return 360.  It's round.  And happy.
-		
-		idealWidth = 360;
+		// FIXME: The minimum size of this control is unknown, so let's just pick a guess based on
+		// the size of the user's display area.
+
+		idealWidth = (int)(wxGetDisplaySize().GetWidth() * 0.66) - (parentalAdjust*2);
 	}
 
 	wxString label(GetLabel());

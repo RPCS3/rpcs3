@@ -621,8 +621,5 @@ TraceLogFilters&				SetTraceConfig();
 // commented, so this is for development purposes only.
 #define ENABLE_LOADING_PS1_GAMES 0
 
-// Change to 1 to enable SIF wakeup hack:
-#define IOP_ENABLE_SIF_HACK 0
-
 // Change to 1 to cause all logs to be written to the console. (Very slow)
 #define LOG_TO_CONSOLE 0

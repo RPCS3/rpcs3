@@ -557,7 +557,7 @@ public:
 	ConsoleLogFrame* GetProgramLog();
 	const ConsoleLogFrame* GetProgramLog() const;
 	void ProgramLog_PostEvent( wxEvent& evt );
-	void EnableAllLogging() const;
+	void EnableAllLogging();
 	void DisableWindowLogging() const;
 	void DisableDiskLogging() const;
 	void OnProgramLogClosed( wxWindowID id );
