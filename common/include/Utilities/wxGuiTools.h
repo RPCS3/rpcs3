@@ -310,7 +310,7 @@ END_DECLARE_EVENT_TYPES()
 class pxDialogCreationFlags
 {
 public:
-	int				MinimumWidth;
+	wxSize			MinimumSize;
 	wxOrientation	BoxSizerOrient;
 
 	bool			isResizable;
@@ -326,7 +326,7 @@ public:
 	
 	pxDialogCreationFlags()
 	{
-		MinimumWidth	= wxDefaultCoord;
+		MinimumSize		= wxDefaultSize;
 		BoxSizerOrient	= wxVERTICAL;
 		isResizable		= false;
 		hasContextHelp	= false;
@@ -362,6 +362,8 @@ public:
 		return *this;
 	}
 
+	// NOTE: Enabling system menu on dialogs usually doesn't work, and might cause
+	// other unwanted behavior, such as a missing close button.
 	pxDialogCreationFlags& SetSystemMenu( bool enable=true )
 	{
 		hasSystemMenu = enable;
@@ -388,10 +390,20 @@ public:
 
 	pxDialogCreationFlags& SetMinWidth( int width )
 	{
-		if( width > MinimumWidth ) MinimumWidth = width;
+		if( width > MinimumSize.x ) MinimumSize.SetWidth( width );
 		return *this;
 	}
 
+	pxDialogCreationFlags& SetMinHeight( int height )
+	{
+		if( height > MinimumSize.y ) MinimumSize.SetHeight( height );
+		return *this;
+	}
+
+	pxDialogCreationFlags& SetMinSize( const wxSize& size )
+	{
+		return SetMinWidth(size.x).SetMinHeight(size.y);
+	}
 
 
 	pxDialogCreationFlags Horizontal() const
@@ -424,6 +436,8 @@ public:
 		return pxDialogCreationFlags(*this).SetMaximize( enable );
 	}
 
+	// NOTE: Enabling system menu on dialogs usually doesn't work, and might cause
+	// other unwanted behavior, such as a missing close button.
 	pxDialogCreationFlags SystemMenu( bool enable=true ) const
 	{
 		return pxDialogCreationFlags(*this).SetSystemMenu( false );
@@ -473,6 +487,21 @@ public:
 	{
 		return pxDialogCreationFlags(*this).SetMinWidth( width );
 	}
+
+	pxDialogCreationFlags MinHeight( int height ) const
+	{
+		return pxDialogCreationFlags(*this).SetMinHeight( height );
+	}
+
+	pxDialogCreationFlags MinSize( const wxSize& size ) const
+	{
+		return pxDialogCreationFlags(*this).SetMinSize( size );
+	}
+
+	pxDialogCreationFlags MinSize( int width, int height ) const
+	{
+		return pxDialogCreationFlags(*this).SetMinWidth( width ).SetMinHeight( height );
+	}
 	
 	int GetWxWindowFlags() const
 	{
@@ -498,13 +527,14 @@ class wxDialogWithHelpers : public wxDialog
 protected:
 	bool				m_hasContextHelp;
 	wxBoxSizer*			m_extraButtonSizer;
-	
+	wxRect				m_CreatedRect;
+
 public:
 	wxDialogWithHelpers();
 	wxDialogWithHelpers(wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags = pxDialogCreationFlags() );
 	virtual ~wxDialogWithHelpers() throw();
 
-    void Init();
+    void Init( const pxDialogCreationFlags& cflags );
 	void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 	void AddOkCancel( wxSizer* sizer=NULL, bool hasApply=false );
 
@@ -522,12 +552,15 @@ public:
 	virtual pxStaticText&	Text( const wxString& label );
 	virtual pxStaticText&	Heading( const wxString& label );
 
-	virtual wxDialogWithHelpers& SetMinWidth( int newWidth );
+	wxDialogWithHelpers& SetMinWidth( int newWidth );
+	wxDialogWithHelpers& SetMinHeight( int newHeight );
 
 protected:
 	void OnDialogCreated( wxCommandEvent& evt );
 	void OnOkCancel(wxCommandEvent& evt);
 	void OnCloseWindow(wxCloseEvent& event);
+	
+	void DoAutoCenter();
 };
 
 // --------------------------------------------------------------------------------------

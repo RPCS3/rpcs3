@@ -14,11 +14,11 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "IniInterface.h"
 #include "MainFrame.h"
 #include "ConsoleLogger.h"
 #include "MSWstuff.h"
 
+#include "Utilities/IniInterface.h"
 #include "DebugTools/Debug.h"
 #include "Dialogs/ModalPopups.h"
 
@@ -61,6 +61,9 @@ void Pcsx2App::WipeUserModeSettings()
 	if( !usrlocaldir.Exists() ) return;
 
 	wxString cwd( Path::Normalize( wxGetCwd() ) );
+#ifdef __WXMSW__
+	cwd.MakeLower();
+#endif
 	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
@@ -91,6 +94,10 @@ void Pcsx2App::ReadUserModeSettings()
 	}
 
 	wxString cwd( Path::Normalize( wxGetCwd() ) );
+#ifdef __WXMSW__
+	cwd.MakeLower();
+#endif
+
 	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );

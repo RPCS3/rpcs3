@@ -21,13 +21,13 @@
 //  pxStaticText  (implementations)
 // --------------------------------------------------------------------------------------
 pxStaticText::pxStaticText( wxWindow* parent )
-	: _parent( parent )
+	: _parent( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER )
 {
 	m_heightInLines = 1;
 }
 
 pxStaticText::pxStaticText( wxWindow* parent, const wxString& label, wxAlignment align )
-	: _parent( parent )
+	: _parent( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER )
 {
 	m_heightInLines = 1;
 	m_align			= align;
@@ -40,10 +40,17 @@ void pxStaticText::Init( const wxString& label )
 {
 	m_autowrap			= true;
 	m_wrappedWidth		= -1;
-
-	//SetHeight( 1 );
-	SetLabel( label );
+	m_label				= label;
 	Connect( wxEVT_PAINT, wxPaintEventHandler(pxStaticText::paintEvent) );
+}
+
+// we need to refresh the window after changing its size as the standard
+// control doesn't always update itself properly (fials typically on window resizes where
+// the control is expanded to fit -- ie the control's size changes but the position does not)
+void pxStaticText::DoSetSize(int x, int y, int w, int h, int sizeFlags)
+{
+	_parent::DoSetSize(x, y, w, h, sizeFlags);
+	Refresh();
 }
 
 void pxStaticText::SetPaddingDefaults()
@@ -53,6 +60,18 @@ void pxStaticText::SetPaddingDefaults()
 
 	m_paddingPct_horiz	= 0.0f;
 	m_paddingPct_vert	= 0.0f;
+}
+
+pxStaticText& pxStaticText::SetMinWidth( int width )
+{
+	SetMinSize( wxSize( width, GetMinHeight() ) );
+	return *this;
+}
+
+pxStaticText& pxStaticText::SetMinHeight( int height )
+{
+	SetMinSize( wxSize( GetMinWidth(), height) );
+	return *this;
 }
 
 pxStaticText& pxStaticText::SetHeight( int lines )
@@ -165,8 +184,7 @@ wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
 		idealWidth = (int)(wxGetDisplaySize().GetWidth() * 0.66) - (parentalAdjust*2);
 	}
 
-	wxString label(GetLabel());
-	return dc.GetMultiLineTextExtent(pxTextWrapper().Wrap( this, label, idealWidth - calcPaddingWidth(idealWidth) ).GetResult());
+	return dc.GetMultiLineTextExtent(pxTextWrapper().Wrap( this, m_label, idealWidth - calcPaddingWidth(idealWidth) ).GetResult());
 }
 
 pxStaticText& pxStaticText::WrapAt( int width )
@@ -179,10 +197,7 @@ pxStaticText& pxStaticText::WrapAt( int width )
 	m_wrappedWidth = width;
 
 	if( width > 1 )
-	{
-		wxString label( GetLabel() );
-		wrappedLabel = pxTextWrapper().Wrap( this, label, width ).GetResult();
-	}
+		wrappedLabel = pxTextWrapper().Wrap( this, m_label, width ).GetResult();
 
 	if(m_wrappedLabel != wrappedLabel )
 	{
@@ -218,10 +233,7 @@ bool pxStaticText::_updateWrapping( bool textChanged )
 	
 	m_wrappedWidth = newWidth;
 	if( m_wrappedWidth > 1 )
-	{
-		wxString label( GetLabel() );
-		wrappedLabel = pxTextWrapper().Wrap( this, label, m_wrappedWidth ).GetResult();
-	}
+		wrappedLabel = pxTextWrapper().Wrap( this, m_label, m_wrappedWidth ).GetResult();
 
 	if( m_wrappedLabel == wrappedLabel ) return false;
 	m_wrappedLabel = wrappedLabel;
@@ -236,10 +248,10 @@ void pxStaticText::UpdateWrapping( bool textChanged )
 
 void pxStaticText::SetLabel(const wxString& label)
 {
-	const bool labelChanged( label != GetLabel() );
+	const bool labelChanged( label != m_label );
 	if( labelChanged )
 	{
-		_parent::SetLabel( label );
+		m_label = label;
 		Refresh();
 	}
 
@@ -280,17 +292,8 @@ void pxStaticText::paintEvent(wxPaintEvent& evt)
 	pxWindowTextWriter writer( dc );
 	writer.Align( m_align );
 
-	wxString label;
-
-	if( m_autowrap )
-	{
-		_updateWrapping( false );
-		label = m_wrappedLabel;
-	}
-	else
-	{
-		label = GetLabel();
-	}
+	const wxString& label( m_autowrap ? m_wrappedLabel : m_label );
+	if( m_autowrap ) _updateWrapping( false );
 
 	int tWidth, tHeight;
 	dc.GetMultiLineTextExtent( label, &tWidth, &tHeight );

@@ -1965,10 +1965,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\IniInterface.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\IsoDropTarget.cpp"
 				>
 			</File>
@@ -2687,10 +2683,6 @@
 				</File>
 				<File
 					RelativePath="..\..\HostGui.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\IniInterface.h"
 					>
 				</File>
 				<File

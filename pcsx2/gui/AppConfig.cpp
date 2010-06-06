@@ -16,10 +16,11 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "MainFrame.h"
-#include "IniInterface.h"
 #include "Plugins.h"
 
 #include "MemoryCardFile.h"
+
+#include "Utilities/IniInterface.h"
 
 #include <wx/stdpaths.h>
 #include "DebugTools/Debug.h"
@@ -317,13 +318,10 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 // rather than any other type of more direct string comparison!
 bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const
 {
-	wxFileName right( cmpto );
-	wxFileName left( FullpathTo(pluginId) );
+	// Implementation note: wxFileName automatically normalizes things as needed in it's
+	// equality comparison implementations, so we can do a simple comparison as follows:
 
-	left.MakeAbsolute();
-	right.MakeAbsolute();
-
-	return left == right;
+	return wxFileName(cmpto).SameAs( FullpathTo(pluginId) );
 }
 
 wxDirName GetLogFolder()
@@ -352,7 +350,7 @@ AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
 	, SysSettingsTabName( L"Cpu" )
 	, McdSettingsTabName( L"Standard" )
-	, AppSettingsTabName( L"GS Window" )
+	, AppSettingsTabName( L"Plugins" )
 	, DeskTheme( L"default" )
 {
 	LanguageId			= wxLANGUAGE_DEFAULT;

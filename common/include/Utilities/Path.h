@@ -129,7 +129,7 @@ namespace Path
 	extern s64		GetFileSize( const wxString& path );
 
 	extern wxString Normalize( const wxString& srcpath );
-	extern wxString Normalize( wxDirName srcpath );
+	extern wxString Normalize( const wxDirName& srcpath );
 
 	extern wxString	Combine( const wxString& srcPath, const wxString& srcFile );
 	extern wxString	Combine( const wxDirName& srcPath, const wxFileName& srcFile );

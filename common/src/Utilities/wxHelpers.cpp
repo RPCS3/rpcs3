@@ -18,6 +18,7 @@
 #include "wxGuiTools.h"
 #include "pxStaticText.h"
 #include "Threading.h"
+#include "IniInterface.h"
 
 #include <wx/cshelp.h>
 #include <wx/tooltip.h>
@@ -27,7 +28,7 @@ using namespace pxSizerFlags;
 
 pxDialogCreationFlags pxDialogFlags()
 {
-	return pxDialogCreationFlags().CloseBox().SystemMenu().Caption().Vertical();
+	return pxDialogCreationFlags().CloseBox().Caption().Vertical();
 }
 
 
@@ -116,7 +117,7 @@ wxDialogWithHelpers::wxDialogWithHelpers()
 	m_hasContextHelp	= false;
 	m_extraButtonSizer	= NULL;
 
-	Init();
+	Init( pxDialogFlags() );
 }
 
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags )
@@ -129,16 +130,21 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, const wxString& titl
 		*this += StdPadding;
 	}
 
-	Init();
-	SetMinWidth( cflags.MinimumWidth );
+	Init( cflags );
+	SetMinSize( cflags.MinimumSize );
 }
 
 wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 {
 }
 
-void wxDialogWithHelpers::Init()
+void wxDialogWithHelpers::Init( const pxDialogCreationFlags& cflags )
 {
+	// This fixes it so that the dialogs show up in the task bar in Vista:
+	// (otherwise they go stupid iconized mode if the user minimizes them)
+	if( cflags.hasMinimizeBox )
+		SetExtraStyle(GetExtraStyle() & ~wxTOPLEVEL_EX_DIALOG);
+
 	m_extraButtonSizer	= NULL;
 
 	if( m_hasContextHelp )
@@ -172,10 +178,8 @@ wxString wxDialogWithHelpers::GetDialogName() const
 	return wxEmptyString;
 }
 
-void wxDialogWithHelpers::SmartCenterFit()
+void wxDialogWithHelpers::DoAutoCenter()
 {
-	Fit();
-
 	// Smart positioning logic!  If our parent window is larger than our window by some
 	// good amount, then we center on that.  If not, center relative to the screen.  This
 	// avoids the popup automatically eclipsing the parent window (which happens in PCSX2
@@ -196,12 +200,50 @@ void wxDialogWithHelpers::SmartCenterFit()
 	if( centerfail ) CenterOnScreen();
 }
 
+void wxDialogWithHelpers::SmartCenterFit()
+{
+	Fit();
+
+	const wxString dlgName( GetDialogName() );
+	if( dlgName.IsEmpty() )
+	{
+		DoAutoCenter(); return;
+	}
+
+	if( wxConfigBase* cfg = wxConfigBase::Get( false ) )
+	{
+		wxRect screenRect( GetScreenRect() );
+
+		IniLoader loader( cfg );
+		IniScopedGroup group( loader, L"DialogPositions" );
+		cfg->SetRecordDefaults( false );
+
+		if( GetWindowStyle() & wxRESIZE_BORDER )
+		{
+			wxSize size;
+			loader.Entry( dlgName + L"_Size", size, screenRect.GetSize() );
+			SetSize( size );
+		}
+
+		if( !cfg->Exists( dlgName + L"_Pos" ) )
+			DoAutoCenter();
+		else
+		{
+			wxPoint pos;
+			loader.Entry( dlgName + L"_Pos", pos, screenRect.GetPosition() );
+			SetPosition( pos );
+		}
+		cfg->SetRecordDefaults( true );
+	}
+}
+
 // Overrides wxDialog behavior to include automatic Fit() and CenterOnParent/Screen.  The centering
 // is based on a heuristic the centers against the parent window if the parent window is at least
 // 75% larger than the fitted dialog.
 int wxDialogWithHelpers::ShowModal()
 {
 	SmartCenterFit();
+	m_CreatedRect = GetScreenRect();
 	return wxDialog::ShowModal();
 }
 
@@ -210,7 +252,11 @@ int wxDialogWithHelpers::ShowModal()
 // 75% larger than the fitted dialog.
 bool wxDialogWithHelpers::Show( bool show )
 {
-	if( show ) SmartCenterFit();
+	if( show )
+	{
+		SmartCenterFit();
+		m_CreatedRect = GetScreenRect();
+	}
 	return wxDialog::Show( show );
 }
 
@@ -231,6 +277,30 @@ pxStaticText& wxDialogWithHelpers::Heading( const wxString& label )
 
 void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
 {
+	// Save the dialog position if the dialog is named...
+	// FIXME : This doesn't get called if the app is exited by alt-f4'ing the main app window.
+	//   ... not sure how to fix that yet.  I could register a list of open windows into wxAppWithHelpers
+	//   that systematically get closed.  Seems like work, maybe later.  --air
+	
+	if( wxConfigBase* cfg = wxConfigBase::Get( false ) )
+	{
+		const wxString dlgName( GetDialogName() );
+		const wxRect screenRect( GetScreenRect() );
+		if( !dlgName.IsEmpty() && ( m_CreatedRect != screenRect) )
+		{
+			wxPoint pos( screenRect.GetPosition() );
+			IniSaver saver( cfg );
+			IniScopedGroup group( saver, L"DialogPositions" );
+
+			if( GetWindowStyle() & wxRESIZE_BORDER )
+			{
+				wxSize size( screenRect.GetSize() );
+				saver.Entry( dlgName + L"_Size", size, screenRect.GetSize() );
+			}
+			saver.Entry( dlgName + L"_Pos", pos, screenRect.GetPosition() );
+		}
+	}
+
 	if( !IsModal() ) Destroy();
 	evt.Skip();
 }
@@ -289,6 +359,14 @@ wxDialogWithHelpers& wxDialogWithHelpers::SetMinWidth( int newWidth )
 	SetMinSize( wxSize( newWidth, GetMinHeight() ) );
 	if( wxSizer* sizer = GetSizer() )
 		sizer->SetMinSize( wxSize( newWidth, sizer->GetMinSize().GetHeight() ) );
+	return *this;
+}
+
+wxDialogWithHelpers& wxDialogWithHelpers::SetMinHeight( int newHeight )
+{
+	SetMinSize( wxSize( GetMinWidth(), newHeight ) );
+	if( wxSizer* sizer = GetSizer() )
+		sizer->SetMinSize( wxSize( sizer->GetMinSize().GetWidth(), newHeight ) );
 	return *this;
 }
 

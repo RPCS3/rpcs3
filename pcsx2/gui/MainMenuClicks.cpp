@@ -20,12 +20,13 @@
 #include "GS.h"
 
 #include "MainFrame.h"
+#include "IsoDropTarget.h"
+
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
 
-#include "IniInterface.h"
-#include "IsoDropTarget.h"
+#include "Utilities/IniInterface.h"
 
 using namespace Dialogs;
 
@@ -51,7 +52,7 @@ void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent &event)
 {
 	wxCommandEvent evt( pxEvt_SetSettingsPage );
-	evt.SetString( L"Window" );
+	evt.SetString( L"GS Window" );
 	AppOpenDialog<SysConfigDialog>( this )->GetEventHandler()->ProcessEvent( evt );
 }
 
@@ -64,7 +65,6 @@ void MainEmuFrame::Menu_GSSettings_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_SelectPluginsBios_Click(wxCommandEvent &event)
 {
-	//AppOpenDialog<BiosSelectorDialog>( this );
 	AppOpenDialog<ComponentsConfigDialog>( this );
 }
 

@@ -15,11 +15,13 @@
 
 #pragma once
 
+#include "FixedPointTypes.h"
+#include "path.h"
 #include <wx/config.h>
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// IniInterface class (abstract base class)
-//
+// --------------------------------------------------------------------------------------
+//  IniInterface (abstract base class) 
+// --------------------------------------------------------------------------------------
 // This is used as an interchangable interface for both loading and saving options from an
 // ini/configuration file.  The LoadSave code takes an IniInterface, and the interface
 // implementation defines whether the options are read or written.
@@ -29,17 +31,19 @@
 class IniInterface
 {
 protected:
-	wxConfigBase& m_Config;
+	wxConfigBase*	m_Config;
 
 public:
 	virtual ~IniInterface();
 	explicit IniInterface();
 	explicit IniInterface( wxConfigBase& config );
+	explicit IniInterface( wxConfigBase* config );
 
 	void SetPath( const wxString& path );
 	void Flush();
 
-	wxConfigBase& GetConfig() { return m_Config; }
+	wxConfigBase& GetConfig() { pxAssume( m_Config ); return *m_Config; }
+	bool IsOk() const { return m_Config != NULL; }
 
 	virtual bool IsLoading() const=0;
 	bool IsSaving() const { return !IsLoading(); }
@@ -76,8 +80,9 @@ protected:
 	virtual void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )=0;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  IniScopedGroup
+// --------------------------------------------------------------------------------------
 class IniScopedGroup
 {
 protected:
@@ -88,9 +93,9 @@ public:
 	virtual ~IniScopedGroup();
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// IniLoader class
-//
+// --------------------------------------------------------------------------------------
+//  IniLoader
+// --------------------------------------------------------------------------------------
 // Implementation of the IniInterface base class, which maps ini actions to loading from
 // an ini source file.
 //
@@ -102,6 +107,7 @@ public:
 	virtual ~IniLoader() throw();
 	explicit IniLoader();
 	explicit IniLoader( wxConfigBase& config );
+	explicit IniLoader( wxConfigBase* config );
 
 	bool IsLoading() const { return true; }
 
@@ -125,9 +131,9 @@ protected:
 	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue );
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// IniSaver class
-//
+// --------------------------------------------------------------------------------------
+//  IniSaver
+// --------------------------------------------------------------------------------------
 // Implementation of the IniInterface base class, which maps ini actions to saving to
 // an ini dest file.
 //
@@ -139,6 +145,7 @@ public:
 	virtual ~IniSaver();
 	explicit IniSaver();
 	explicit IniSaver( wxConfigBase& config );
+	explicit IniSaver( wxConfigBase* config );
 
 	bool IsLoading() const { return false; }
 

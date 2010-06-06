@@ -220,6 +220,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\IniInterface.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\x86\MemcpyFast.cpp"
 				>
 			</File>
@@ -379,6 +383,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\HashMap.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\IniInterface.h"
 				>
 			</File>
 			<File

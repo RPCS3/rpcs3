@@ -32,16 +32,13 @@ using namespace pxSizerFlags;
 // --------------------------------------------------------------------------------------
 
 Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, _("About PCSX2") )
+	: wxDialogWithHelpers( parent, _("About PCSX2"), pxDialogFlags().Resize().MinWidth( 460 ) )
 	, m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
 	)
 {
 	static const wxString LabelAuthors = fromUTF8(
-		"Developers"
-		"\n\n"
-		"v0.9.6+: Arcum42, Refraction, "
-		"drk||raziel, cottonvibes, gigaherz, "
+		"Arcum42, Refraction, drk||raziel, cottonvibes, gigaherz, "
 		"rama, Jake.Stine, saqib, Tmkk, pseudonym"
 		"\n\n"
 		"Previous versions: Alexey silinov, Aumatt, "
@@ -56,38 +53,36 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	);
 
 	static const wxString LabelGreets = fromUTF8(
-		"Contributors"
-		"\n\n"
-		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu)"
+		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), gregory (linux distros)"
 		"\n\n"
 		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp), "
 		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
 		"\n\n"
 		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
-		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos, gregory"
+		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos"
 	);
 
 	// This sizer holds text of the authors and a logo!
-	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
+	wxFlexGridSizer& AuthLogoSizer = *new wxFlexGridSizer( 2, 0, StdPadding );
+	AuthLogoSizer.AddGrowableCol(0, 4);
+	AuthLogoSizer.AddGrowableCol(1, 3);
 
 	// this sizer holds text of the contributors/testers, and a ps2 image!
 	wxBoxSizer& ContribSizer = *new wxBoxSizer( wxHORIZONTAL );
 
-	wxStaticBoxSizer& aboutUs = *new wxStaticBoxSizer( wxVERTICAL, this );
-	wxStaticBoxSizer& contribs = *new wxStaticBoxSizer( wxVERTICAL, this );
+	wxStaticBoxSizer& aboutUs	= *new wxStaticBoxSizer( wxVERTICAL, this );
+	wxStaticBoxSizer& contribs	= *new wxStaticBoxSizer( wxVERTICAL, this );
 
-	pxStaticText& label_auth   = Text( LabelAuthors );
-	pxStaticText& label_greets = Text( LabelGreets );
+	pxStaticText& label_auth	= Text( LabelAuthors ).SetMinWidth(240);
+	pxStaticText& label_greets	= Text( LabelGreets ).SetMinWidth(200);
 
-	//label_auth->Wrap( 340 );
-	//label_greets->Wrap( 200 );
+	aboutUs		+= Heading(L"Developers").Bold()	| StdExpand();
+	aboutUs		+= label_auth						| StdExpand();
+	contribs	+= Heading(L"Contributors").Bold()	| StdExpand();
+	contribs	+= label_greets						| StdExpand();
 
-	aboutUs		+= label_auth		| StdExpand();
-	contribs	+= label_greets		| StdExpand();
-
-	AuthLogoSizer	+= aboutUs;
-	AuthLogoSizer	+= 7;
-	AuthLogoSizer	+= contribs;
+	AuthLogoSizer	+= aboutUs		| StdExpand();
+	AuthLogoSizer	+= contribs		| StdExpand();
 
 	ContribSizer	+= pxStretchSpacer( 1 );
 	ContribSizer	+= m_bitmap_dualshock	| StdSpace();
@@ -95,17 +90,23 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 
 	// Main (top-level) layout
 
-	*this	+= Text(_("PCSX2  -  Playstation 2 Emulator"))			| StdCenter();
-	*this	+= AuthLogoSizer										| StdSpace();
+	*this	+= StdPadding;
+	*this	+= Text(_("PCSX2")).Bold()					| pxExpand;
+	*this	+= Text(_("A Playstation 2 Emulator"))		| pxExpand;
+	*this	+= AuthLogoSizer							| StdExpand();
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
-		_("Pcsx2 Official Website and Forums"), L"http://www.pcsx2.net"
-	) | wxSizerFlags(1).Center().Border( wxALL, 3 );
+		_("PCSX2 Official Website and Forums"), L"http://www.pcsx2.net"
+	) | pxProportion(1).Center().Border( wxALL, 3 );
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
-		_("Pcsx2 Official Svn Repository at Googlecode"), L"http://code.google.com/p/pcsx2"
-	) | wxSizerFlags(1).Center().Border( wxALL, 3 );
+		_("PCSX2 Official Svn Repository at Googlecode"), L"http://code.google.com/p/pcsx2"
+	) | pxProportion(1).Center().Border( wxALL, 3 );
 
 	*this	+= ContribSizer											| StdExpand();
 	*this	+= new wxButton( this, wxID_OK, L"I've seen enough")	| StdCenter();
+
+	int bestHeight = GetBestSize().GetHeight();
+	if( bestHeight < 400 ) bestHeight = 400;
+	SetMinHeight( bestHeight );
 }

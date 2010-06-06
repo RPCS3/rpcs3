@@ -16,7 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "IsoDropTarget.h"
-#include "IniInterface.h"
+#include "Utilities/IniInterface.h"
 
 extern wxString GetMsg_IsoImageChanged();
 

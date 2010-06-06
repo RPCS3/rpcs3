@@ -26,19 +26,21 @@
 //   * An inability to wrap text to conform to a fitted window (a limitation imposed by
 //     wxWidgets inability to fit individual directions, ie fit widths and then fit heights,
 //     which would allow a textbox to wrap text to a sizer-determined width, and then grow
-//     the sizers vertically to fit the calcuated text-wrapped height).
+//     the sizers vertically to fit the calculated text-wrapped height).
 //
 //   * Textbox alignment requires aligning both the textbox contents, and aligning the text
 //     control within it's containing sizer.  If both alignment flags do not match the result
 //     is typically undesirable.
 //
-class pxStaticText : public wxPanel
+class pxStaticText : public wxWindow
 {
-	typedef wxPanel _parent;
+	typedef wxWindow _parent;
 
 protected:
-	wxAlignment		m_align;
+	wxString		m_label;
 	wxString		m_wrappedLabel;
+	
+	wxAlignment		m_align;
 	bool			m_autowrap;
 	int				m_wrappedWidth;
 	int				m_heightInLines;
@@ -51,6 +53,11 @@ protected:
 protected:
 	explicit pxStaticText( wxWindow* parent=NULL );
 
+	// wxWindow overloads!
+	bool AcceptsFocus() const { return false; }
+	bool HasTransparentBackground() { return true; }
+	void DoSetSize(int x, int y, int w, int h, int sizeFlags = wxSIZE_AUTO);
+	
 public:
 	pxStaticText( wxWindow* parent, const wxString& label, wxAlignment align=wxALIGN_CENTRE_HORIZONTAL );
 	pxStaticText( wxWindow* parent, int heightInLines, const wxString& label, wxAlignment align=wxALIGN_CENTRE_HORIZONTAL );
@@ -61,6 +68,11 @@ public:
 
 
 	virtual void SetLabel(const wxString& label);
+	virtual wxString GetLabel() const { return m_label; }
+
+	pxStaticText& SetMinWidth( int width );
+	pxStaticText& SetMinHeight( int height );
+
 	pxStaticText& SetHeight( int lines );
 	pxStaticText& Bold();
 	pxStaticText& WrapAt( int width );

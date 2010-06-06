@@ -87,8 +87,9 @@ pxWindowTextWriter& pxWindowTextWriter::MoveY( int ydelta )
 void pxWindowTextWriter::_DoWriteLn( const wxChar* msg )
 {
 	pxAssume( msg );
+
 	int	tWidth, tHeight;
-	m_dc.GetTextExtent( msg, &tWidth, &tHeight );
+	m_dc.GetMultiLineTextExtent( msg, &tWidth, &tHeight );
 
 	wxPoint dispos( m_curpos );
 

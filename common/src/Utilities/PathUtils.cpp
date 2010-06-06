@@ -20,7 +20,7 @@
 #include <wx/utils.h>
 
 // ---------------------------------------------------------------------------------
-//  wxDirName Implementations
+//  wxDirName (implementations)
 // ---------------------------------------------------------------------------------
 
 wxFileName wxDirName::Combine( const wxFileName& right ) const
@@ -116,10 +116,9 @@ wxString Path::Normalize( const wxString& src )
 	return normalize.GetFullPath();
 }
 
-wxString Path::Normalize( wxDirName src )
+wxString Path::Normalize( const wxDirName& src )
 {
-	src.Normalize();
-	return src.ToString();
+	return wxDirName(src).Normalize().ToString();
 }
 
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)

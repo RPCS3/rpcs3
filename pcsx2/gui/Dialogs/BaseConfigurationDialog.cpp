@@ -64,10 +64,6 @@ wxString BaseApplicableDialog::GetDialogName() const
 
 void BaseApplicableDialog::Init()
 {
-	// This fixes it so that the dialogs show up in the task bar in Vista:
-	// (otherwise they go stupid iconized mode if the user minimizes them)
-	SetExtraStyle(GetExtraStyle() & ~wxTOPLEVEL_EX_DIALOG);
-
 	Connect( pxEvt_ApplySettings,	wxCommandEventHandler	(BaseApplicableDialog::OnSettingsApplied) );
 
 	wxCommandEvent applyEvent( pxEvt_ApplySettings );

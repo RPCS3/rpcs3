@@ -132,7 +132,7 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 			proglog->SetPosition( g_Conf->ProgLogBox.DisplayPosition );
 	}
 
-	//evt.Skip();
+	evt.Skip();
 }
 
 void MainEmuFrame::OnLogBoxHidden()

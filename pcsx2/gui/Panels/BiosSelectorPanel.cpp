@@ -165,8 +165,7 @@ void Panels::BiosSelectorPanel::DoRefresh()
 
 	m_ComboBox->Clear();
 
-	wxFileName right( g_Conf->FullpathToBios() );
-	right.MakeAbsolute();
+	const wxFileName right( g_Conf->FullpathToBios() );
 
 	for( size_t i=0; i<m_BiosList->GetCount(); ++i )
 	{
@@ -174,10 +173,7 @@ void Panels::BiosSelectorPanel::DoRefresh()
 		if( !IsBIOS((*m_BiosList)[i], description) ) continue;
 		int sel = m_ComboBox->Append( description, (void*)i );
 
-		wxFileName left( (*m_BiosList)[i] );
-		left.MakeAbsolute();
-
-		if( left == right )
+		if( wxFileName((*m_BiosList)[i] ) == right )
 			m_ComboBox->SetSelection( sel );
 	}
 }

@@ -14,7 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "System.h"
 #include "IniInterface.h"
 
 static int _calcEnumLength( const wxChar* const* enumArray )
@@ -29,37 +28,8 @@ static int _calcEnumLength( const wxChar* const* enumArray )
 	return cnt;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-IniInterface::IniInterface( wxConfigBase& config ) :
-	m_Config( config )
-{
-}
-
-IniInterface::IniInterface() :
-	m_Config( *wxConfigBase::Get() )
-{
-}
-
-IniInterface::~IniInterface()
-{
-	Flush();
-}
-
-void IniInterface::SetPath( const wxString& path )
-{
-	m_Config.SetPath( path );
-}
-
-void IniInterface::Flush()
-{
-	m_Config.Flush();
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-IniScopedGroup::IniScopedGroup( IniInterface& mommy, const wxString& group ) :
-	m_mom( mommy )
+IniScopedGroup::IniScopedGroup( IniInterface& mommy, const wxString& group )
+	: m_mom( mommy )
 {
 	pxAssertDev( wxStringTokenize( group, L"/" ).Count() <= 1, L"Cannot nest more than one group deep per instance of IniScopedGroup." );
 	m_mom.SetPath( group );
@@ -70,12 +40,45 @@ IniScopedGroup::~IniScopedGroup()
 	m_mom.SetPath( L".." );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-
-IniLoader::IniLoader( wxConfigBase& config ) : IniInterface( config )
+// --------------------------------------------------------------------------------------
+//  IniInterface (implementations)
+// --------------------------------------------------------------------------------------
+IniInterface::IniInterface( wxConfigBase& config )
 {
+	m_Config = &config;
 }
+
+IniInterface::IniInterface( wxConfigBase* config )
+{
+	m_Config = config;
+}
+
+IniInterface::IniInterface()
+{
+	m_Config = wxConfigBase::Get( false );
+}
+
+IniInterface::~IniInterface()
+{
+	Flush();
+}
+
+void IniInterface::SetPath( const wxString& path )
+{
+	if( m_Config ) m_Config->SetPath( path );
+}
+
+void IniInterface::Flush()
+{
+	if( m_Config ) m_Config->Flush();
+}
+
+
+// --------------------------------------------------------------------------------------
+//  IniLoader  (implementations)
+// --------------------------------------------------------------------------------------
+IniLoader::IniLoader( wxConfigBase& config ) : IniInterface( config ) { }
+IniLoader::IniLoader( wxConfigBase* config ) : IniInterface( config ) { }
 
 IniLoader::IniLoader() : IniInterface() {}
 IniLoader::~IniLoader() throw() {}
@@ -83,13 +86,16 @@ IniLoader::~IniLoader() throw() {}
 
 void IniLoader::Entry( const wxString& var, wxString& value, const wxString& defvalue )
 {
-	m_Config.Read( var, &value, defvalue );
+	if( m_Config )
+		m_Config->Read( var, &value, defvalue );
+	else
+		value = defvalue;
 }
 
 void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
 {
 	wxString dest;
-	m_Config.Read( var, &dest, wxEmptyString );
+	if( m_Config ) m_Config->Read( var, &dest, wxEmptyString );
 
 	if( dest.IsEmpty() )
 		value = defvalue;
@@ -99,26 +105,32 @@ void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& d
 
 void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
 {
-	wxString dest;
-	m_Config.Read( var, &dest, defvalue.GetFullPath() );
+	wxString dest( defvalue.GetFullPath() );
+	if( m_Config ) m_Config->Read( var, &dest, defvalue.GetFullPath() );
 	value = dest;
 }
 
 void IniLoader::Entry( const wxString& var, int& value, const int defvalue )
 {
-	m_Config.Read( var, &value, defvalue );
+	if( m_Config )
+		m_Config->Read( var, &value, defvalue );
+	else
+		value = defvalue;
 }
 
 void IniLoader::Entry( const wxString& var, uint& value, const uint defvalue )
 {
-	m_Config.Read( var, (int*)&value, (int)defvalue );
+	if( m_Config )
+		m_Config->Read( var, (int*)&value, (int)defvalue );
+	else
+		value = defvalue;
 }
 
 void IniLoader::Entry( const wxString& var, bool& value, const bool defvalue )
 {
 	// TODO : Stricter value checking on enabled/disabled?
-	wxString dest;
-	m_Config.Read( var, &dest, defvalue ? L"enabled" : L"disabled" );
+	wxString dest(defvalue ? L"enabled" : L"disabled");
+	if( m_Config ) m_Config->Read( var, &dest, dest );
 	value = (dest == L"enabled") || (dest == L"1");
 }
 
@@ -143,23 +155,35 @@ void IniLoader::Entry( const wxString& var, Fixed100& value, const Fixed100& def
 	// has way too much rounding error so we really need to do things out manually.. >_<
 
 	wxString readval( value.ToString() );
-	m_Config.Read( var, &readval );
+	if( m_Config ) m_Config->Read( var, &readval );
 	value = Fixed100::FromString( readval, value );
 }
 
 void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
 {
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
+	if( !m_Config )
+	{
+		value = defvalue; return;
+	}
+	TryParse( value, m_Config->Read( var, ToString( defvalue ) ), defvalue );
 }
 
 void IniLoader::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
 {
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
+	if( !m_Config )
+	{
+		value = defvalue; return;
+	}
+	TryParse( value, m_Config->Read( var, ToString( defvalue ) ), defvalue );
 }
 
 void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
 {
-	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
+	if( !m_Config )
+	{
+		value = defvalue; return;
+	}
+	TryParse( value, m_Config->Read( var, ToString( defvalue ) ), defvalue );
 }
 
 void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )
@@ -175,8 +199,14 @@ void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const
 
 	// Sanity confirmed, proceed with craziness!
 
+	if( !m_Config )
+	{
+		value = defvalue;
+		return;
+	}
+
 	wxString retval;
-	m_Config.Read( var, &retval, enumArray[defvalue] );
+	m_Config->Read( var, &retval, enumArray[defvalue] );
 
 	int i=0;
 	while( enumArray[i] != NULL && ( retval != enumArray[i] ) ) i++;
@@ -192,82 +222,95 @@ void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const
 		value = i;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  IniSaver  (implementations)
+// --------------------------------------------------------------------------------------
 
-IniSaver::IniSaver( wxConfigBase& config ) : IniInterface( config )
-{
-}
+IniSaver::IniSaver( wxConfigBase& config ) : IniInterface( config ) { }
+IniSaver::IniSaver( wxConfigBase* config ) : IniInterface( config ) { }
+
 
 IniSaver::IniSaver() : IniInterface() {}
 IniSaver::~IniSaver() {}
 
 void IniSaver::Entry( const wxString& var, wxString& value, const wxString& defvalue )
 {
-	m_Config.Write( var, value );
+	if( !m_Config ) return;
+	m_Config->Write( var, value );
 }
 
 void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
 {
+	if( !m_Config ) return;
+
 	/*if( value == defvalue )
-		m_Config.Write( var, wxString() );
+		m_Config->Write( var, wxString() );
 	else*/
-		m_Config.Write( var, value.ToString() );
+		m_Config->Write( var, value.ToString() );
 }
 
 void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
 {
-	m_Config.Write( var, value.GetFullPath() );
+	if( !m_Config ) return;
+	m_Config->Write( var, value.GetFullPath() );
 }
 
 void IniSaver::Entry( const wxString& var, int& value, const int defvalue )
 {
-	m_Config.Write( var, value );
+	if( !m_Config ) return;
+	m_Config->Write( var, value );
 }
 
 void IniSaver::Entry( const wxString& var, uint& value, const uint defvalue )
 {
-	m_Config.Write( var, (int)value );
+	if( !m_Config ) return;
+	m_Config->Write( var, (int)value );
 }
 
 void IniSaver::Entry( const wxString& var, bool& value, const bool defvalue )
 {
-	m_Config.Write( var, value ? L"enabled" : L"disabled" );
+	if( !m_Config ) return;
+	m_Config->Write( var, value ? L"enabled" : L"disabled" );
 }
 
 bool IniSaver::EntryBitBool( const wxString& var, bool value, const bool defvalue )
 {
-	m_Config.Write( var, value ? L"enabled" : L"disabled" );
+	if( m_Config ) m_Config->Write( var, value ? L"enabled" : L"disabled" );
 	return value;
 }
 
 int IniSaver::EntryBitfield( const wxString& var, int value, const int defvalue )
 {
-	m_Config.Write( var, value );
+	if( m_Config ) m_Config->Write( var, value );
 	return value;
 }
 
 void IniSaver::Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue )
 {
+	if( !m_Config ) return;
+
 	// Note: the "easy" way would be to convert to double and load/save that, but floating point
 	// has way too much rounding error so we really need to do things out manually, using strings.
 
-	m_Config.Write( var, value.ToString() );
+	m_Config->Write( var, value.ToString() );
 }
 
 void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
 {
-	m_Config.Write( var, ToString( value ) );
+	if( !m_Config ) return;
+	m_Config->Write( var, ToString( value ) );
 }
 
 void IniSaver::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
 {
-	m_Config.Write( var, ToString( value ) );
+	if( !m_Config ) return;
+	m_Config->Write( var, ToString( value ) );
 }
 
 void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
 {
-	m_Config.Write( var, ToString( value ) );
+	if( !m_Config ) return;
+	m_Config->Write( var, ToString( value ) );
 }
 
 void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )
@@ -281,6 +324,8 @@ void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const*
 		Console.Error( "(SaveSettings) Default enumeration index is out of bounds. Truncating." );
 		defvalue = cnt-1;
 	}
+
+	if( !m_Config ) return;
 
 	if( value >= cnt )
 	{
@@ -297,6 +342,6 @@ void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const*
 		value = defvalue;
 	}
 
-	m_Config.Write( var, enumArray[value] );
+	m_Config->Write( var, enumArray[value] );
 }
 

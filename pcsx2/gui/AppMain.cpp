@@ -14,7 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "IniInterface.h"
 #include "MainFrame.h"
 #include "GSFrame.h"
 
@@ -26,6 +25,7 @@
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
 
+#include "Utilities/IniInterface.h"
 #include "Utilities/HashMap.h"
 
 #ifdef __WXMSW__
