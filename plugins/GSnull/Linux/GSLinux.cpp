@@ -46,7 +46,8 @@ int GSOpenWindow2(void *pDsp, u32 flags)
 
 void GSCloseWindow()
 {
-	XCloseDisplay(display);
+    if (display != NULL)
+        XCloseDisplay(display);
 }
 
 void GSProcessMessages()
