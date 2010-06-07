@@ -107,6 +107,7 @@ set(UtilitiesSources
 	Exceptions.cpp
 	FastFormatString.cpp
 	HashTools.cpp
+	IniInterface.cpp
 	Linux/LnxHostSys.cpp
 	Linux/LnxMisc.cpp
 	Linux/LnxThreads.cpp

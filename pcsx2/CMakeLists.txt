@@ -318,7 +318,6 @@ set(pcsx2GuiSources
 	gui/FrameForGS.cpp
 	gui/GlobalCommands.cpp
 	gui/i18n.cpp
-	gui/IniInterface.cpp
 	gui/IsoDropTarget.cpp
 	gui/MainFrame.cpp
 	gui/MainMenuClicks.cpp
@@ -363,7 +362,6 @@ set(pcsx2GuiHeaders
 	gui/Dialogs/LogOptionsDialog.h
 	gui/Dialogs/ModalPopups.h
 	gui/i18n.h
-	gui/IniInterface.h
 	gui/IsoDropTarget.h
 	gui/MainFrame.h
 	gui/MemoryCardFile.h

@@ -394,8 +394,6 @@
 		<Unit filename="../gui/ExecutorThread.h" />
 		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/GlobalCommands.cpp" />
-		<Unit filename="../gui/IniInterface.cpp" />
-		<Unit filename="../gui/IniInterface.h" />
 		<Unit filename="../gui/IsoDropTarget.cpp" />
 		<Unit filename="../gui/IsoDropTarget.h" />
 		<Unit filename="../gui/MSWstuff.cpp" />
