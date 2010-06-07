@@ -25,9 +25,6 @@ vifStruct  vif0;
 vifStruct  vif1;
 tGSTransferStatus GSTransferStatus((STOPPED_MODE<<4) | (STOPPED_MODE<<2) | STOPPED_MODE);
 
-void vif0Init() { initNewVif(0); }
-void vif1Init() { initNewVif(1); }
-
 void vif0Reset()
 {
 	/* Reset the whole VIF, meaning the internal pcsx2 vars and all the registers */

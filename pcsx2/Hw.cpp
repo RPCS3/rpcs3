@@ -30,11 +30,12 @@ static bool hwInitialized = false;
 
 void hwInit()
 {
+	// [TODO] / FIXME:  PCSX2 no longer works on an Init system.  It assumes that the
+	// static global vars for the process will be initialized when the process is created, and
+	// then issues *resets only* from then on.  All PCSX2
 	if( hwInitialized ) return;
 
 	VifUnpackSSE_Init();
-	vif0Init();
-	vif1Init();
 
 	gsInit();
 	sifInit();

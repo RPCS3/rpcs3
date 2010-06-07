@@ -87,11 +87,6 @@ void resetNewVif(int idx)
 	if (newVifDynaRec) dVifReset(idx);
 }
 
-void initNewVif(int idx) {
-	resetNewVif(idx);
-	if (newVifDynaRec) dVifInit(idx);
-}
-
 void closeNewVif(int idx) {
 	if (newVifDynaRec) dVifClose(idx);
 }

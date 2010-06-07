@@ -21,21 +21,8 @@
 #include "newVif_UnpackSSE.h"
 
 static __aligned16 nVifBlock _vBlock = {0};
-static bool dVifIsInitialized[2] = { false, false };
-
-void dVifInit(int idx) {
-	nVif[idx].vifCache	=  NULL;
-	nVif[idx].vifBlocks =  NULL;
-	nVif[idx].numBlocks =  0;
-	nVif[idx].recPtr	=  NULL;
-	nVif[idx].recEnd	=  NULL;
-	
-	dVifIsInitialized[idx] = true;
-}
 
 void dVifReset(int idx) {
-	if( !dVifIsInitialized[idx] ) return;
-
 	// If the VIF cache is greater than 12mb, then it's due for a complete reset back
 	// down to a reasonable starting point of 4mb.
 	if( nVif[idx].vifCache && (nVif[idx].vifCache->getAllocSize() > _1mb*12) )
