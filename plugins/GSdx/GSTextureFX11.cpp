@@ -142,7 +142,7 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 void GSDevice11::SetupGS(GSSelector sel)
 {
-	ID3D11GeometryShader* gs = NULL;
+	CComPtr<ID3D11GeometryShader> gs;
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
 	{
@@ -235,8 +235,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 		ctx->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	ID3D11SamplerState* ss0 = NULL;
-	ID3D11SamplerState* ss1 = NULL;
+	CComPtr<ID3D11SamplerState> ss0, ss1;
 
 	if(sel.tfx != 4)
 	{
