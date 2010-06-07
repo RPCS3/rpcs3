@@ -1,122 +1,122 @@
 # Plugins
 
 # make cdvdGigaherz
-#if(cdvdGigaherz)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/cdvdGigaherz" AND cdvdGigaherz)
 #	add_subdirectory(cdvdGigaherz)
-#endif(cdvdGigaherz)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/cdvdGigaherz" AND cdvdGigaherz)
 
 # make CDVDiso
-if(CDVDiso)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDiso" AND CDVDiso)
 	add_subdirectory(CDVDiso)
-endif(CDVDiso)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDiso" AND CDVDiso)
 
 # make CDVDisoEFP
-if(CDVDisoEFP)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
 	add_subdirectory(CDVDisoEFP)
-endif(CDVDisoEFP)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
 
 # make CDVDlinuz
-if(CDVDlinuz)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDlinuz" AND CDVDlinuz)
 	add_subdirectory(CDVDlinuz)
-endif(CDVDlinuz)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDlinuz" AND CDVDlinuz)
 
 # make CDVDnull
-if(CDVDnull)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDnull" AND CDVDnull)
 	add_subdirectory(CDVDnull)
-endif(CDVDnull)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDnull" AND CDVDnull)
 
 # make CDVDolio
-if(CDVDolio)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
 	add_subdirectory(CDVDolio)
-endif(CDVDolio)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
 
 # make CDVDpeops
-#if(CDVDpeops)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDpeops" AND CDVDpeops)
 #	add_subdirectory(CDVDpeops)
-#endif(CDVDpeops)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDpeops" AND CDVDpeops)
 
 # make dev9null
-if(dev9null)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/dev9null" AND dev9null)
 	add_subdirectory(dev9null)
-endif(dev9null)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/dev9null" AND dev9null)
 
 # make FWnull
-if(FWnull)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/FWnull" AND FWnull)
 	add_subdirectory(FWnull)
-endif(FWnull)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/FWnull" AND FWnull)
 
 # make GSdx
-#if(GSdx)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
 #	add_subdirectory(GSdx)
-#endif(GSdx)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
 
 # make GSnull
-if(GSnull)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSnull" AND GSnull)
 	add_subdirectory(GSnull)
-endif(GSnull)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSnull" AND GSnull)
 
 # make LilyPad
-#if(LilyPad)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/LilyPad" AND LilyPad)
 #	add_subdirectory(LilyPad)
-#endif(LilyPad)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/LilyPad" AND LilyPad)
 
 # make onepad
-if(onepad)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/onepad" AND onepad)
 	add_subdirectory(onepad)
-endif(onepad)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/onepad" AND onepad)
 
 # make PadNull
-if(PadNull)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PadNull" AND PadNull)
 	add_subdirectory(PadNull)
-endif(PadNull)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PadNull" AND PadNull)
 
 # make PeopsSPU2
-if(PeopsSPU2)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
 	add_subdirectory(PeopsSPU2)
-endif(PeopsSPU2)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
 
 # make SPU2null
-if(SPU2null)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SPU2null" AND SPU2null)
 	add_subdirectory(SPU2null)
-endif(SPU2null)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SPU2null" AND SPU2null)
 
 # make spu2-x
-if(spu2-x)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/spu2-x" AND spu2-x)
 	add_subdirectory(spu2-x)
-endif(spu2-x)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/spu2-x" AND spu2-x)
 
 # make SSSPSXPAD
-#if(SSSPSXPAD)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SSSPSXPAD" AND SSSPSXPAD)
 #	add_subdirectory(SSSPSXPAD)
-#endif(SSSPSXPAD)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SSSPSXPAD" AND SSSPSXPAD)
 
 # make USBnull
-if(USBnull)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/USBnull" AND USBnull)
 	add_subdirectory(USBnull)
-endif(USBnull)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/USBnull" AND USBnull)
 
 # make xpad
-#if(xpad)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/xpad" AND xpad)
 #	add_subdirectory(xpad)
-#endif(xpad)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/xpad" AND xpad)
 
 # make zerogs
-#if(zerogs)
+#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zerogs" AND zerogs)
 #	add_subdirectory(zerogs)
-#endif(zerogs)
+#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zerogs" AND zerogs)
 
 # make zzogl-pg
-if(zzogl)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 	add_subdirectory(zzogl-pg)
-endif(zzogl)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 
 # make zeropad
-if(zeropad)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zeropad" AND zeropad)
 	add_subdirectory(zeropad)
-endif(zeropad)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zeropad" AND zeropad)
 
 # make zerospu2
-if(zerospu2)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zerospu2" AND zerospu2)
 	add_subdirectory(zerospu2)
-endif(zerospu2)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zerospu2" AND zerospu2)
 

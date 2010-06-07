@@ -46,9 +46,7 @@ if(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
     set(ZLIB_FOUND TRUE)
     # Set path
     set(ZLIB_LIBRARIES zlib)
-    # XXX Need to be updated when repository will be updated
-    # For the moment include are done with the last fallback in bottom of the file
-    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/zlib)
+    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/zlib)
 endif(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
 
 if(NOT BZIP2_FOUND OR FORCE_INTERNAL_BZIP2)
@@ -57,9 +55,7 @@ if(NOT BZIP2_FOUND OR FORCE_INTERNAL_BZIP2)
     set(BZIP2_FOUND TRUE)
     # Set path
 	set(BZIP2_LIBRARIES bzip2)
-    # XXX Need to be updated when repository will be updated
-    # For the moment include are done with the last fallback in bottom of the file
-    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/bzip)
+    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/bzip2)
 endif(NOT BZIP2_FOUND OR FORCE_INTERNAL_BZIP2)
 
 if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)

@@ -13,9 +13,8 @@ endif(SOUNDTOUCH_INCLUDE_DIR AND SOUNDTOUCH_LIBRARIES)
 find_path(SOUNDTOUCH_INCLUDE_DIR soundtouch/SoundTouch.h)
 
 # finally the library itself
-find_library(libBPM NAMES BPM)
 find_library(libSoundTouch NAMES SoundTouch)
-set(SOUNDTOUCH_LIBRARIES ${libBPM} ${libSoundTouch})
+set(SOUNDTOUCH_LIBRARIES ${libSoundTouch})
 
 # handle the QUIETLY and REQUIRED arguments and set SOUNDTOUCH_FOUND to TRUE if 
 # all listed variables are TRUE

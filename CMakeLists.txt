@@ -32,7 +32,9 @@ include_directories(${PROJECT_SOURCE_DIR}/common/include
 					${PROJECT_SOURCE_DIR}/common/include/x86emitter)
 
 # make 3rdParty
-add_subdirectory(3rdparty)
+if(EXISTS "${PROJECT_SOURCE_DIR}/3rdparty")
+    add_subdirectory(3rdparty)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/3rdparty")
 
 # make common
 if(common_libs)
@@ -43,12 +45,14 @@ endif(common_libs)
 add_subdirectory(tools)
 
 # make pcsx2
-if(pcsx2_core)
+if(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
     add_subdirectory(pcsx2)
-endif(pcsx2_core)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
 
 # make plugins
-add_subdirectory(plugins)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
+    add_subdirectory(plugins)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
 
 #-------------------------------------------------------------------------------
 #								Resources
