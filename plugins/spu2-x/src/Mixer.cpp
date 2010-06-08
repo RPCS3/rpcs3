@@ -57,7 +57,13 @@ __forceinline s32 clamp_mix( s32 x, u8 bitshift )
 }
 
 #if _MSC_VER
-__forceinline		// gcc forceinline fails here... ?
+__forceinline
+// Without the keyword static, gcc compilation fails on the inlining...
+// Unfortunately the function is also used in Reverb.cpp. In order to keep the code 
+// clean we just disable it.
+// We will need link-time code generation / Whole Program optimization to do a clean
+// inline. Gcc 4.5 has the experimental options -flto, -fwhopr and -fwhole-program to
+// do it but it still experimental...
 #endif
 StereoOut32 clamp_mix( const StereoOut32& sample, u8 bitshift )
 {

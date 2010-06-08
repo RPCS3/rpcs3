@@ -64,9 +64,7 @@ if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 	set(SOUNDTOUCH_FOUND TRUE)
     # Set path
 	set(SOUNDTOUCH_LIBRARIES SoundTouch)
-    # XXX Need to be updated when repository will be updated
-    # For the moment include are done with the last fallback in bottom of the file
-    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/soundtouch_internal)
+    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SoundTouch)
 endif(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 
 if(NOT A52_FOUND OR FORCE_INTERNAL_A52)
@@ -170,4 +168,5 @@ endif(ZLIB_FOUND AND NOT projectZLIB)
 #----------------------------------------
 #		    In all others situation fallback to the 3rdparty
 #----------------------------------------
+# XXX Must be delete when all include will be fixed
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty)

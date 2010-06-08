@@ -10,7 +10,7 @@ if(SOUNDTOUCH_INCLUDE_DIR AND SOUNDTOUCH_LIBRARIES)
 endif(SOUNDTOUCH_INCLUDE_DIR AND SOUNDTOUCH_LIBRARIES)
 
 # include dir
-find_path(SOUNDTOUCH_INCLUDE_DIR soundtouch/SoundTouch.h)
+find_path(SOUNDTOUCH_INCLUDE_DIR SoundTouch.h)
 
 # finally the library itself
 find_library(libSoundTouch NAMES SoundTouch)

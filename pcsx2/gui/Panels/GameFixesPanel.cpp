@@ -83,20 +83,19 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	}
 
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
-		_("(Warning!  Game fixes can cause compatibility or performance issues!)"));
-	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled."));
-	m_check_Enable->SetValue( g_Conf->EnableGameFixes );
-
-	*this	+= Heading(_("Some games need special settings.\nEnable them here.")).Bold()	| StdExpand();
-	*this	+= groupSizer		| pxCenter;
-
-	*this	+= m_check_Enable	| StdExpand();
-	*this	+= Heading(
 		pxE( ".Panel:Gamefixes:Compat Warning",
-			L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
+			L"Gamefixes can fix wrong emulation in some games. However "
+            L"it can cause compatibility or performance issues in other games.  You "
 			L"will need to turn off fixes manually when changing games."
 		)
-	) | StdExpand();
+	);
+
+	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled.")).SetSubPadding( 1 );
+	m_check_Enable->SetValue( g_Conf->EnableGameFixes );
+
+	*this	+= m_check_Enable	| StdExpand();
+	*this	+= groupSizer		| pxCenter;
+
 
 	Connect( m_check_Enable->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
 
