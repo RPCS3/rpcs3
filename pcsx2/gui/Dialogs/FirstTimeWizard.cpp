@@ -69,7 +69,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 	m_panel_LangSel		= new LanguageSelectionPanel( &panel );
 	m_panel_UserSel		= new DocsFolderPickerPanel( &panel );
 
-	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured.")).Bold() | pxExpand;
+	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured.")).Bold();
 
 	panel += m_panel_LangSel		| StdCenter();
 	panel += m_panel_UserSel		| pxExpand.Border( wxALL, 8 );

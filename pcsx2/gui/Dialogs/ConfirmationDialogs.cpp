@@ -143,6 +143,8 @@ void MsgButtons::SetBestFocus( wxWindow* dialog ) const
 
 wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButtons& buttons )
 {
+	if( confirmDlg.GetMinWidth() <= 0 ) confirmDlg.SetMinWidth( 400 );
+
 	confirmDlg += new ModalButtonPanel( &confirmDlg, buttons ) | pxCenter.Border( wxTOP, 8 );
 	buttons.SetBestFocus( confirmDlg );
 	return confirmDlg.ShowModal();

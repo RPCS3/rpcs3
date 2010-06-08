@@ -86,12 +86,6 @@ bool pxCheckBox::GetValue() const
 	return m_checkbox->GetValue();
 }
 
-void operator+=( wxSizer& target, pxCheckBox* src )
-{
-	if( !pxAssert( src != NULL ) ) return;
-	target.Add( src, pxExpand );
-}
-
 // Forwards checkbox actions on the internal checkbox (called 'checkpart') to listeners
 // bound to the pxCheckBox "parent" panel. This helps the pxCheckBox behave more like a
 // traditional checkbox.
@@ -110,6 +104,11 @@ void pxCheckBox::OnSubtextClicked( wxCommandEvent& evt )
 	// TODO?
 	// We can enable the ability to allow clicks on the subtext desc/label to toggle
 	// the checkmark.  Not sure if that's desirable.
+}
+
+void operator+=( wxSizer& target, pxCheckBox* src )
+{
+	if( src ) target.Add( src, pxExpand );
 }
 
 void operator+=( wxSizer& target, pxCheckBox& src )

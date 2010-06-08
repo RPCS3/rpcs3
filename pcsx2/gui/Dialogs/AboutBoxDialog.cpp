@@ -91,9 +91,9 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	// Main (top-level) layout
 
 	*this	+= StdPadding;
-	*this	+= Text(_("PCSX2")).Bold()					| pxExpand;
-	*this	+= Text(_("A Playstation 2 Emulator"))		| pxExpand;
-	*this	+= AuthLogoSizer							| StdExpand();
+	*this	+= Text(_("PCSX2")).Bold();
+	*this	+= Text(_("A Playstation 2 Emulator"));
+	*this	+= AuthLogoSizer						| StdExpand();
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
 		_("PCSX2 Official Website and Forums"), L"http://www.pcsx2.net"

@@ -109,7 +109,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	if (isoDetect(&iso))
 	{
 		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
-		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], _("You have dropped the following ISO image into PCSX2:\n\n"));
+		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], _("You have dropped the following ISO image into PCSX2:"));
 	}
 
 	_closefile( iso.handle );

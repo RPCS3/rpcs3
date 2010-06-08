@@ -136,10 +136,11 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		core_control.DisallowResume();
 		wxDialogWithHelpers dialog( owner, _("Confirm ISO image change") );
 
-		dialog += dialog.Heading(descpart1 +
-			isoFilename + L"\n\n" +
-			_("Do you want to swap discs or boot the new image (via system reset)?")
-		);
+		dialog += dialog.Heading(descpart1);
+		dialog += dialog.GetCharHeight();
+		dialog += dialog.Text(isoFilename);
+		dialog += dialog.GetCharHeight();
+		dialog += dialog.Heading(_("Do you want to swap discs or boot the new image (via system reset)?"));
 
 		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootSwapIso" );
 		if( result == wxID_CANCEL )

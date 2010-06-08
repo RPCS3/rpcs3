@@ -32,9 +32,9 @@
 //     control within it's containing sizer.  If both alignment flags do not match the result
 //     is typically undesirable.
 //
-class pxStaticText : public wxWindow
+class pxStaticText : public wxControl
 {
-	typedef wxWindow _parent;
+	typedef wxControl _parent;
 
 protected:
 	wxString		m_label;
@@ -65,7 +65,6 @@ public:
 
 	wxFont GetFontOk() const;
 	bool Enable( bool enabled=true );
-
 
 	virtual void SetLabel(const wxString& label);
 	virtual wxString GetLabel() const { return m_label; }
@@ -115,3 +114,19 @@ public:
 protected:
 	void SetPaddingDefaults();
 };
+
+extern void operator+=( wxSizer& target, pxStaticText* src );
+extern void operator+=( wxSizer& target, pxStaticText& src );
+extern void operator+=( wxSizer* target, pxStaticText& src );
+
+template<>
+inline void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
+{
+	target.Add( src.window, src.flags );
+}
+
+template<>
+inline void operator+=( wxSizer* target, const pxWindowAndFlags<pxStaticText>& src )
+{
+	target->Add( src.window, src.flags );
+}

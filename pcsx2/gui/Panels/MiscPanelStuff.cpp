@@ -65,7 +65,7 @@ Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isF
 	
 	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
 
-	*this	+= Heading( isFirstTime ? usermodeExplained : usermodeWarning ) | pxExpand;
+	*this	+= Heading( isFirstTime ? usermodeExplained : usermodeWarning );
 	*this	+= m_radio_UserMode		| StdExpand();
 	*this	+= m_dirpicker_custom	| pxExpand.Border( wxLEFT, StdPadding + m_radio_UserMode->GetIndentation() );
 	*this	+= 4;

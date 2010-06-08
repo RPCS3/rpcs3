@@ -257,6 +257,7 @@ void pxStaticText::SetLabel(const wxString& label)
 
 	// Always update wrapping, in case window width or something else also changed.
 	UpdateWrapping( labelChanged );
+	InvalidateBestSize();
 }
 
 wxFont pxStaticText::GetFontOk() const
@@ -321,7 +322,7 @@ wxSize pxStaticText::DoGetBestSize() const
 	if( m_autowrap )
 	{
 		best = GetBestWrappedSize(dc);
-		best.x = wxDefaultCoord;
+		//best.x = wxDefaultCoord;
 	}
 	else
 	{
@@ -357,3 +358,17 @@ void pxStaticHeading::SetPaddingDefaults()
 	m_paddingPct_vert	= 0.0f;
 }
 
+void operator+=( wxSizer& target, pxStaticText* src )
+{
+	if( src ) target.Add( src, pxExpand );
+}
+
+void operator+=( wxSizer& target, pxStaticText& src )
+{
+	target.Add( &src, pxExpand );
+}
+
+void operator+=( wxSizer* target, pxStaticText& src )
+{
+	target->Add( &src, pxExpand );
+}

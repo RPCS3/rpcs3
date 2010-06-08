@@ -554,6 +554,8 @@ public:
 
 	wxDialogWithHelpers& SetMinWidth( int newWidth );
 	wxDialogWithHelpers& SetMinHeight( int newHeight );
+	
+	int GetCharHeight() const;
 
 protected:
 	void OnDialogCreated( wxCommandEvent& evt );

@@ -370,6 +370,11 @@ wxDialogWithHelpers& wxDialogWithHelpers::SetMinHeight( int newHeight )
 	return *this;
 }
 
+int wxDialogWithHelpers::GetCharHeight() const
+{
+	return wxClientDC( const_cast<wxDialogWithHelpers*>(this) ).GetCharHeight();
+}
+
 // --------------------------------------------------------------------------------------
 //  wxPanelWithHelpers Implementations
 // --------------------------------------------------------------------------------------

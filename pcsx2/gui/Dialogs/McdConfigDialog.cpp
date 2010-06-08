@@ -63,13 +63,13 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	// ------------------------------
 
 	for( uint i=0; i<2; ++i )
-		*this += m_check_Multitap[i]| pxExpand;	
+		*this += m_check_Multitap[i];	
 		
 	*this += 4;
 
-	*this += m_check_Ejection		| pxExpand;	
+	*this += m_check_Ejection;	
 	#ifdef __WXMSW__
- 	*this += m_check_CompressNTFS	| pxExpand;
+ 	*this += m_check_CompressNTFS;
 	#endif
 }
 
