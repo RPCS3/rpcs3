@@ -16,7 +16,12 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+// Commenting this will disable all the code in Decoder.cpp (which is the only code that uses liba52 in spu2-x.)
+#define ENABLE_DECODER
+
 #include "Global.h"
+
+#ifdef ENABLE_DECODER
 
 extern "C" {
 #include "liba52/inttypes.h"
@@ -381,3 +386,11 @@ void spdif_get_samples(s32*samples)
 		}
 	}
 }
+#else
+
+u32 spdif_init() { return 1; }
+void spdif_update() {}
+void spdif_shutdown() {}
+void spdif_set51(u32 is_5_1_out) {}
+
+#endif
