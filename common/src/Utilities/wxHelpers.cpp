@@ -372,7 +372,7 @@ wxDialogWithHelpers& wxDialogWithHelpers::SetMinHeight( int newHeight )
 
 int wxDialogWithHelpers::GetCharHeight() const
 {
-	return wxClientDC( const_cast<wxDialogWithHelpers*>(this) ).GetCharHeight();
+	return pxGetCharHeight( this, 1 );
 }
 
 // --------------------------------------------------------------------------------------
@@ -449,4 +449,17 @@ wxPanelWithHelpers& wxPanelWithHelpers::SetMinWidth( int newWidth )
 	if( wxSizer* sizer = GetSizer() )
 		sizer->SetMinSize( wxSize( newWidth, sizer->GetMinSize().GetHeight() ) );
 	return *this;
+}
+
+int pxGetCharHeight( const wxWindow* wind, int rows )
+{
+	if( !wind ) return 0;
+	wxClientDC dc(wx_const_cast(wxWindow*, wind));
+	dc.SetFont( wind->GetFont() );
+	return (dc.GetCharHeight() + 1 ) * rows;
+}
+
+int pxGetCharHeight( const wxWindow& wind, int rows )
+{
+	return pxGetCharHeight( &wind, rows );
 }

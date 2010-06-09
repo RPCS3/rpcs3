@@ -587,8 +587,8 @@ void __fastcall eeGameStarting()
 
 		if (GameDB && GameDB->gameLoaded()) {
 			int compat = GameDB->getInt("Compat");
-			gameName   = GameDB->getStringWX("Name");
-			gameName  += L" (" + GameDB->getStringWX("Region") + L")";
+			gameName   = GameDB->getString("Name");
+			gameName  += L" (" + GameDB->getString("Region") + L")";
 			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 		}
 		

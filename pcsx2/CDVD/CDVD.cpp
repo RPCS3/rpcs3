@@ -361,7 +361,7 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 		if (DiscID.IsEmpty()) { // Search for crc if no Serial Code
 			gameSerial = wxString(wxsFormat( L"%8.8x", ElfCRC ));
 		}
-		if (GameDB->setGame(gameSerial.ToUTF8().data())) { // Game Found
+		if (GameDB->setGame(gameSerial)) { // Game Found
 			Console.WriteLn ("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
 		}
 		else Console.Warning(L"Game not found in database [%s]", gameSerial.c_str());

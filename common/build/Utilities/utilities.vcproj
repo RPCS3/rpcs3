@@ -272,6 +272,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\pxTextStream.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\pxWindowTextWriter.cpp"
 				>
 			</File>

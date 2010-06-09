@@ -17,6 +17,14 @@
 
 // Dependencies.h : Contains classes required by all Utilities headers.
 
+// --------------------------------------------------------------------------------------
+//  Forward Declarations Section
+// --------------------------------------------------------------------------------------
+
+class wxOutputStream;
+class wxInputStream;
+
+
 // This should prove useful....
 #define wxsFormat wxString::Format
 

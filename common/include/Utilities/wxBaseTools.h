@@ -50,13 +50,23 @@ protected:
 	bool m_prev;
 
 public:
-	wxDoNotLogInThisScope() :
-		m_prev( wxLog::EnableLogging( false ) )
+	wxDoNotLogInThisScope()
 	{
+		m_prev = wxLog::EnableLogging( false );
 	}
 
-	~wxDoNotLogInThisScope()
+	virtual ~wxDoNotLogInThisScope() throw()
 	{
 		wxLog::EnableLogging( m_prev );
 	}
 };
+
+
+extern wxString pxReadLine( wxInputStream& input );
+extern void pxReadLine( wxInputStream& input, wxString& dest );
+extern void pxReadLine( wxInputStream& input, wxString& dest, std::string& intermed );
+extern bool pxReadLine( wxInputStream& input, std::string& dest );
+extern void pxWriteLine( wxOutputStream& output );
+extern void pxWriteLine( wxOutputStream& output, const wxString& text );
+extern void pxWriteMultiline( wxOutputStream& output, const wxString& src );
+

@@ -20,13 +20,6 @@
 
 using namespace pxSizerFlags;
 
-static int pxGetTextHeight( const wxWindow* wind, int rows )
-{
-	wxClientDC dc(wx_const_cast(wxWindow *, wind));
-	dc.SetFont( wind->GetFont() );
-	return (dc.GetCharHeight() + 1 ) * rows;
-}
-
 const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 {
 	switch( val )
@@ -132,7 +125,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	m_msg_eecycle = new pxStaticHeading( eeSliderPanel );
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
-	m_msg_eecycle->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 3) ) );
+	m_msg_eecycle->SetHeight(3);
 
 	const wxChar* ee_tooltip = pxE( ".Tooltip:Speedhacks:EECycleRate Slider",
 		L"Setting higher values on this slider effectively reduces the clock speed of the EmotionEngine's "
@@ -153,7 +146,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	m_msg_vustealer = new pxStaticHeading( vuSliderPanel );
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
-	m_msg_vustealer->SetMinSize( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 3) ) );
+	m_msg_vustealer->SetHeight(3);
 
 	const wxChar* vu_tooltip = pxE( ".Tooltip:Speedhacks:VUCycleStealing Slider",
 		L"This slider controls the amount of cycles the VU unit steals from the EmotionEngine.  Higher values increase the number of "

@@ -79,9 +79,7 @@ pxStaticText& pxStaticText::SetHeight( int lines )
 	if( !pxAssert(lines > 0) ) lines = 2;
 	m_heightInLines = lines;
 
-	int width, height;
-	GetTextExtent( _("MyjS 23"), &width, &height );
-	const int newHeight = ((height+1)*m_heightInLines) + (m_paddingPix_vert*2);
+	const int newHeight = (pxGetCharHeight(this)*m_heightInLines) + (m_paddingPix_vert*2);
 	SetMinSize( wxSize(GetMinWidth(), newHeight) );
 
 	return *this;

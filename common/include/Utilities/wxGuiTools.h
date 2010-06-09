@@ -807,6 +807,9 @@ extern bool pxDialogExists( const wxString& name );
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
 
+extern int pxGetCharHeight( const wxWindow* wind, int rows=1 );
+extern int pxGetCharHeight( const wxWindow& wind, int rows=1 );
+
 extern wxString pxFormatToolTipText( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow& wind, const wxString& src );

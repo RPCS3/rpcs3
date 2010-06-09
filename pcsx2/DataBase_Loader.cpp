@@ -6,92 +6,51 @@
 // DataBase_Loader - Private Methods
 //------------------------------------------------------------------
 
-//Fix me
-#ifndef __LINUX__
-template<class T> string DataBase_Loader::toString(const T& value) {
-	stringstream ss(ios_base::in | ios_base::out);
-	string tString;
-	ss <<  value;
-	ss >>  tString;
-	return tString;
-}
-#endif
-
-string DataBase_Loader::toLower(const string& s) {
-	string retval( s );
-	for (uint i = 0; i < s.length(); i++) {
-		char& c = retval[i];
-		if (c >= 'A' && c <= 'Z') {
-			c += 'a' - 'A';
-		}
-	}
-	return retval;
-}
-
-bool DataBase_Loader::strCompare(const string& s1, const string& s2) {
-	const string t1( toLower(s1) );
-	const string t2( toLower(s2) );
-	return !t1.compare(t2);
-}
-
-bool DataBase_Loader::isComment(const string& s) {
-	const string sub( s.substr(0, 2) );
-	return (sub.compare("--") == 0) || (sub.compare("//") == 0);
-}
-
-void DataBase_Loader::doError(const string& line, key_pair& keyPair, bool doMsg) {
+void DataBase_Loader::doError(const wxString& line, key_pair& keyPair, bool doMsg) {
 	if (doMsg) Console.Error("DataBase_Loader: Bad file data [%s]", line.c_str());
 	keyPair.key.clear();
 }
 
-void DataBase_Loader::extractMultiLine(const string& line, key_pair& keyPair, File_Reader& reader, const stringstream& ss) {
-	string t;
-	string endString;
-	endString = "[/" + keyPair.key.substr(1, keyPair.key.length()-1);
-	if (keyPair.key[keyPair.key.length()-1] != ']') {
-		endString += "]";
-		keyPair.key = line;
+// Multiline Sections are in the form of:
+//
+// [section=value]
+//   content
+//   content
+// [/section]
+//
+// ... where the =value part is OPTIONAL.
+void DataBase_Loader::extractMultiLine(key_pair& keyPair, wxInputStream& ffile) {
+
+	if (!keyPair.key.EndsWith(L"]")) {
+		doError(keyPair.key, keyPair, true);
+		return;
 	}
+
+	// Use Mid() to strip off the left and right side brackets.
+	ParsedAssignmentString set( keyPair.key.Mid(1, keyPair.key.Length()-2) );
+	
+	wxString endString;
+	endString.Printf( L"[/%s]", set.lvalue.c_str() );
+
 	for(;;) {
-		t = reader.getLine();
-		
-		if (!t.compare(endString)) break;
-		keyPair.value += t + "\n";
+		pxReadLine( ffile, m_dest, m_intermediate );
+		if (m_dest == endString) break;
+		keyPair.value += m_dest + L"\n";
 	}
 }
 
-void DataBase_Loader::extract(const string& line, key_pair& keyPair, File_Reader& reader) {
-	stringstream ss(line);
-	string t;
-	keyPair.key.clear();
+void DataBase_Loader::extract(const wxString& line, key_pair& keyPair, wxInputStream& reader) {
+	keyPair.key = line;
 	keyPair.value.clear();
-	ss >> keyPair.key;
-	if (!line.length() || isComment(keyPair.key)) {
-		doError(line, keyPair);
-		return; 
-	}
-	if (keyPair.key[0] == '[') {
-		extractMultiLine(line, keyPair, reader, ss);
+
+	if( line.IsEmpty() ) return;
+
+	if (keyPair.key[0] == L'[') {
+		extractMultiLine(keyPair, reader);
 		return;
 	}
-	ss >> t;
-	if (t.compare("=") != 0) {
+	
+	if( !pxParseAssignmentString( line, keyPair.key, keyPair.value ) ) return;
+	if( keyPair.value.IsEmpty() )
 		doError(line, keyPair, true);
-		return; 
-	}
-	ss >> t;
-	if (isComment(t)) {
-		doError(line, keyPair, true);
-		return;
-	}
-	keyPair.value = t;
-	while (!ss.eof() && !ss.fail()) {
-		ss >> t;
-		if (isComment(t)) break; 
-		keyPair.value += " " + t;
-	}
-	if (ss.fail()) {
-		doError(line, keyPair);
-		return;
-	}
 }

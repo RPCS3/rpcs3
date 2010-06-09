@@ -693,7 +693,7 @@ void AppLoadSettings()
 	g_Conf->LoadSave( loader );
 
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
-		g_Conf->CurrentIso.Clear();
+		g_Conf->CurrentIso.clear();
 
 	sApp.DispatchEvent( loader );
 }
@@ -703,7 +703,7 @@ void AppSaveSettings()
 	if( wxGetApp().PostMethodMyself(AppSaveSettings) ) return;
 
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
-		g_Conf->CurrentIso.Clear();
+		g_Conf->CurrentIso.clear();
 
 	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
 

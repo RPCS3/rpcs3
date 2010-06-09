@@ -27,6 +27,8 @@ using namespace Panels;
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), 580 )
 {
+	ScopedBusyCursor busy( Cursor_ReallyBusy );
+
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
@@ -45,6 +47,8 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 	: BaseConfigurationDialog( parent, _("Application Settings - PCSX2"),  600 )
 {
+	ScopedBusyCursor busy( Cursor_ReallyBusy );
+
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 

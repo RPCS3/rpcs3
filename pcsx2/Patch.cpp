@@ -76,13 +76,13 @@ void inifile_trim( wxString& buffer )
 
 	if( buffer.Length() <= 1 )	// this I'm not sure about... - air
 	{
-		buffer.Clear();
+		buffer.Empty();
 		return;
 	}
 
 	if( buffer.Left( 2 ) == L"//" )
 	{
-		buffer.Clear();
+		buffer.Empty();
 		return;
 	}
 
@@ -120,14 +120,12 @@ void inifile_command(bool isCheat, const wxString& cmd)
 
 // This routine receives a string containing patches, trims it,
 // Then sends the command to be parsed.
-void TrimPatches(string& s)
+void TrimPatches(wxString& s)
 {
-	String_Stream ss(s);
-	wxString buff;
-    while (!ss.finished()) {
-		buff = ss.getLineWX();
-		inifile_trim(buff);
-		if (!buff.IsEmpty()) inifile_command(0, buff);
+	wxStringTokenizer tkn( s, L"\n" );
+	
+    while(tkn.HasMoreTokens()) {
+		inifile_command(0, tkn.GetNextToken());
 	}
 }
 
@@ -136,17 +134,17 @@ void TrimPatches(string& s)
 int InitPatches(const wxString& name)
 {
 	bool   patchFound = false;
-	string patch;
-	string crc  = string(name.ToUTF8().data());
+	wxString patch;
+	const wxString crc( L"[patches = " + name + L"]" );
 	patchnumber = 0;
 	
 	if (GameDB && GameDB->gameLoaded()) {
-		if (GameDB->keyExists("[patches = " + crc + "]")) {
-			patch = GameDB->getString("[patches = " + crc + "]");
+		if (GameDB->sectionExists(L"patches", name)) {
+			patch = GameDB->getSection(L"patches", name);
 			patchFound = true;
 		}
-		else if (GameDB->keyExists("[patches]")) {
-			patch = GameDB->getString("[patches]");
+		else if (GameDB->keyExists(L"[patches]")) {
+			patch = GameDB->getString(L"[patches]");
 			patchFound = true;
 		}
 	}

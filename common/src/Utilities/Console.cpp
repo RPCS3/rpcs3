@@ -229,7 +229,7 @@ const wxString& ConsoleBuffer_Get()
 void ConsoleBuffer_Clear()
 {
 	ScopedLock lock( m_bufferlock );
-	m_buffer.Clear();
+	m_buffer.clear();
 }
 
 // Flushes the contents of the ConsoleBuffer to the specified destination file stream, and
@@ -239,7 +239,7 @@ void ConsoleBuffer_FlushToFile( FILE *fp )
 	ScopedLock lock( m_bufferlock );
 	if( fp == NULL || m_buffer.IsEmpty() ) return;
 	px_fputs( fp, m_buffer.ToUTF8() );
-	m_buffer.Clear();
+	m_buffer.clear();
 }
 
 static void __concall ConsoleBuffer_DoWrite( const wxString& fmt )
@@ -276,7 +276,7 @@ static void __concall Console_wxLogError_DoWriteLn( const wxString& fmt )
 	if( !m_buffer.IsEmpty() )
 	{
 		wxLogError( m_buffer );
-		m_buffer.Clear();
+		m_buffer.clear();
 	}
 	wxLogError( fmt );
 }
@@ -309,12 +309,9 @@ wxString IConsoleWriter::_addIndentation( const wxString& src, int glob_indent=0
 	const int indent = glob_indent + _imm_indentation;
 	if( indent == 0 ) return src;
 
-	wxArrayString pieces;
-	SplitString( pieces, src, L'\n' );
+	wxString result( src );
 	const wxString indentStr( L'\t', indent );
-	wxString result;
-	result.reserve( src.Length() + 24 );
-	JoinString( result, pieces, L'\n' + indentStr );
+	result.Replace( L"\n", L"\n" + indentStr );
 	return indentStr + result;
 }
 

@@ -25,7 +25,7 @@ using namespace pxSizerFlags;
 }
 
 #define placeTextBox(wxBox, txt) {	\
-	sizer1	+= Label(txt);			\
+	sizer1	+= Label(_(txt));		\
 	sizer1	+= 5;					\
 	sizer1	+= wxBox | pxCenter;	\
 	sizer1	+= 5;					\
@@ -39,8 +39,8 @@ wxTextCtrl* CreateMultiLineTextCtrl( wxWindow* parent, int digits, long flags = 
 	return ctrl;
 }
 
-Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
+Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
 	if (!GameDB) GameDB = new DataBase_Loader();
 	searchBtn  = new wxButton  (this, wxID_DEFAULT, L"Search");
@@ -65,7 +65,7 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent ) :
 	*this	+= Heading(_("Game Database Editor")).Bold() | StdExpand();
 	*this	+= Heading(_("This panel lets you add and edit game titles, game fixes, and game patches.")) | StdExpand();
 	
-	wxFlexGridSizer& sizer1(*new wxFlexGridSizer(5));
+	wxFlexGridSizer& sizer1(*new wxFlexGridSizer(5, StdPadding));
 	sizer1.AddGrowableCol(0);
 
 	blankLine();
@@ -75,11 +75,11 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent ) :
 	sizer1	+= 5;
 	sizer1	+= searchBtn;
 	
-	placeTextBox(nameBox,    L"Name: ");
-	placeTextBox(regionBox,  L"Region: ");
-	placeTextBox(compatBox,  L"Compatibility: ");
-	placeTextBox(commentBox, L"Comments: ");
-	placeTextBox(patchesBox, L"Patches: ");
+	placeTextBox(nameBox,    "Name: ");
+	placeTextBox(regionBox,  "Region: ");
+	placeTextBox(compatBox,  "Compatibility: ");
+	placeTextBox(commentBox, "Comments: ");
+	placeTextBox(patchesBox, "Patches: ");
 
 	blankLine();
 
@@ -102,12 +102,12 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent ) :
 
 void Panels::GameDatabasePanel::PopulateFields() {
 	if (GameDB->gameLoaded()) {
-		serialBox ->SetLabel(GameDB->getStringWX("Serial"));
-		nameBox   ->SetLabel(GameDB->getStringWX("Name"));
-		regionBox ->SetLabel(GameDB->getStringWX("Region"));
-		compatBox ->SetLabel(GameDB->getStringWX("Compat"));
-		commentBox->SetLabel(GameDB->getStringWX("[comments]"));
-		patchesBox->SetLabel(GameDB->getStringWX("[patches]"));
+		serialBox ->SetLabel(GameDB->getString("Serial"));
+		nameBox   ->SetLabel(GameDB->getString("Name"));
+		regionBox ->SetLabel(GameDB->getString("Region"));
+		compatBox ->SetLabel(GameDB->getString("Compat"));
+		commentBox->SetLabel(GameDB->getString("[comments]"));
+		patchesBox->SetLabel(GameDB->getString("[patches]"));
 		gameFixes[0]->SetValue(GameDB->getBool("VuAddSubHack"));
 		gameFixes[1]->SetValue(GameDB->getBool("VuClipFlagHack"));
 		gameFixes[2]->SetValue(GameDB->getBool("FpuCompareHack"));
@@ -131,23 +131,22 @@ void Panels::GameDatabasePanel::PopulateFields() {
 	}
 }
 
-#define writeTextBoxToDB(_key, _value) {							\
-	if (_value.IsEmpty()) 	GameDB->deleteKey(_key);				\
-	else					GameDB->writeStringWX(_key, _value);	\
+#define writeTextBoxToDB(_key, _value) {								\
+	if (_value.IsEmpty()) 	GameDB->deleteKey(wxT(_key));				\
+	else					GameDB->writeString(wxT(_key), _value);		\
 }
 
-#define writeGameFixToDB(_key, _value) {							\
-	if (!_value)	GameDB->deleteKey(_key);						\
-	else			GameDB->writeBool(_key, _value);				\
+#define writeGameFixToDB(_key, _value) {								\
+	if (!_value)	GameDB->deleteKey(wxT(_key));						\
+	else			GameDB->writeBool(wxT(_key), _value);				\
 }
 
 void Panels::GameDatabasePanel::WriteFieldsToDB() {
-	wxString wxStr = serialBox->GetValue();
-	string   str   = wxStr.ToUTF8().data();
+	wxString wxStr( serialBox->GetValue() );
 	
 	if (wxStr.IsEmpty()) return;
-	if (str.compare(GameDB->getString("Serial"))) {
-		GameDB->addGame(str);
+	if (wxStr == GameDB->getString("Serial")) {
+		GameDB->addGame(wxStr);
 	}
 
 	writeTextBoxToDB("Name",			nameBox->GetValue());
@@ -168,10 +167,11 @@ void Panels::GameDatabasePanel::WriteFieldsToDB() {
 
 void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
 	wxString wxStr = serialBox->GetValue();
-	string   str   = wxStr.IsEmpty() ? DiscID.ToUTF8().data() : wxStr.ToUTF8().data();
+	
+	if( wxStr.IsEmpty() ) wxStr = DiscID;
 	
 	bool bySerial  = 1;//searchType->GetSelection()==0;
-	if  (bySerial) GameDB->setGame(str);
+	if  (bySerial) GameDB->setGame(wxStr);
 	
 	PopulateFields();
 	evt.Skip();
