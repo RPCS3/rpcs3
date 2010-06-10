@@ -9,13 +9,16 @@
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 #-------------------------------------------------------------------------------
 
+
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default
+# Note without the CMAKE_BUILD_TYPE options the value is still defined to ""
+# Ensure that the value set by the User is correct to avoid some bad behavior later
 #-------------------------------------------------------------------------------
-if(NOT DEFINED CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 	set(CMAKE_BUILD_TYPE Devel)
 	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
-endif(NOT DEFINED CMAKE_BUILD_TYPE)
+endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
