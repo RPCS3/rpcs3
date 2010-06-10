@@ -32,6 +32,7 @@ typedef struct _keyEvent keyEvent;
 
 #define GSdefs
 #include "PS2Edefs.h"
+#include "PS2Eext.h"
 
 #include "Registers.h"
 #include "null/GSnull.h"

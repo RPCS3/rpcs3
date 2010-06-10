@@ -35,6 +35,8 @@ extern "C"
 using namespace std;
 
 GtkWidget *MsgDlg, *About, *Conf;
+extern string s_strIniPath;
+PluginConf Ini;
 
 void OnMsg_Ok()
 {
@@ -107,15 +109,9 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 
 EXPORT_C_(void) SPU2configure()
 {
-	//SysMessage("Nothing to Configure");
-
-	Conf = create_Config();
-
-	LoadConfig();
-
-	set_checked(Conf, "check_logging", conf.Log);
-	gtk_widget_show_all(Conf);
-	gtk_main();
+ 	LoadConfig();
+	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
+	SaveConfig();
 }
 
 EXPORT_C_(void) SPU2about()
@@ -129,36 +125,29 @@ EXPORT_C_(void) SPU2about()
 
 void LoadConfig()
 {
-	FILE *f;
-	char cfg[255];
+    const std::string iniFile(s_strIniPath + "/Spu2null.ini");
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
-	if (f == NULL)
+	if (!Ini.Open(iniFile, READ_FILE))
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		SaveConfig();//save and return
 		return;
 	}
-	fscanf(f, "logging = %hhx\n", &conf.Log);
-	//fscanf(f, "options = %hhx\n", &confOptions);
-	fclose(f);
+
+	conf.Log = Ini.ReadInt("logging", 0);
+	Ini.Close();
 }
 
 void SaveConfig()
 {
-	FILE *f;
-	char cfg[255];
+    const std::string iniFile(s_strIniPath + "/Spu2null.ini");
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg,"w");
-	if (f == NULL)
+	if (!Ini.Open(iniFile, WRITE_FILE))
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		return;
 	}
 
-	fprintf(f, "logging = %hhx\n", conf.Log);
-	//fprintf(f, "options = %hhx\n", confOptions);
-	fclose(f);
+	Ini.WriteInt("logging", conf.Log);
+	Ini.Close();
 }

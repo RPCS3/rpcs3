@@ -44,6 +44,7 @@ extern "C"
 
 GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;
+PluginConf Ini;
 
 void OnMsg_Ok()
 {
@@ -121,12 +122,9 @@ void OnConf_Cancel(GtkButton *button, gpointer user_data)
 
 void CFGconfigure()
 {
-	Conf = create_Config();
-
 	LoadConfig();
-
-	gtk_widget_show_all(Conf);
-	gtk_main();
+	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
+	SaveConfig();
 }
 
 long CFGmessage(char *msg) {
@@ -137,35 +135,29 @@ long CFGmessage(char *msg) {
 
 void LoadConfig()
 {
-	FILE *f;
-	char cfg[255];
+    const std::string iniFile(s_strIniPath + "/GSNull.ini");
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
-	if (f == NULL)
+	if (!Ini.Open(iniFile, READ_FILE))
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		SaveConfig();//save and return
 		return;
 	}
-	//fscanf(f, "options = %hhx\n", &confOptions);
-	fclose(f);
+
+	conf.Log = Ini.ReadInt("logging", 0);
+	Ini.Close();
 }
 
 void SaveConfig()
 {
-	FILE *f;
-	char cfg[255];
+    const std::string iniFile(s_strIniPath + "/GSNull.ini");
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg,"w");
-	if (f == NULL)
+	if (!Ini.Open(iniFile, WRITE_FILE))
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		return;
 	}
 
-	//fprintf(f, "options = %hhx\n", confOptions);
-	fclose(f);
+	Ini.WriteInt("logging", conf.Log);
+	Ini.Close();
 }
-

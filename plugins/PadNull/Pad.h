@@ -20,6 +20,7 @@
 
 #define PADdefs
 #include "PS2Edefs.h"
+#include "PS2Eext.h"
 
 #ifdef _WIN32
 #include "PadWin.h"

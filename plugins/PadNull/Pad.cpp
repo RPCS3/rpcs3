@@ -26,7 +26,7 @@ const u8 revision = 0;
 const u8 build    = 1;    // increase that with each version
 
 static char *libraryName = "Padnull Driver";
-string s_strIniPath="inis/Padnull.ini";
+string s_strIniPath="inis/";
 
 FILE *padLog;
 Config conf;
@@ -69,6 +69,11 @@ void __LogToConsole(const char *fmt, ...)
 	printf("PadNull: ");
 	vprintf(fmt, list);
 	va_end(list);
+}
+
+EXPORT_C_(void) PADsetSettingsDir(const char* dir)
+{
+	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
 EXPORT_C_(s32) PADinit(u32 flags)

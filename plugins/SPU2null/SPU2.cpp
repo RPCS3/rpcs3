@@ -40,7 +40,7 @@ char *libraryName      = "SPU2null (Debug)";
 #else
 char *libraryName      = "SPU2null ";
 #endif
-string s_strIniPath="inis/SPU2null.ini";
+string s_strIniPath="inis/";
 
 FILE *spu2Log;
 Config conf;
@@ -107,6 +107,11 @@ void __Log(char *fmt, ...)
 	va_start(list, fmt);
 	vfprintf(spu2Log, fmt, list);
 	va_end(list);
+}
+
+EXPORT_C_(void) SPU2setSettingsDir(const char* dir)
+{
+	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
 EXPORT_C_(s32) SPU2init()

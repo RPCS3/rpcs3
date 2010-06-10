@@ -100,6 +100,10 @@ void SysPrintf(const char *fmt, ...)
 }
 
 // basic funcs
+EXPORT_C_(void) GSsetSettingsDir(const char* dir)
+{
+	s_strIniPath = (dir == NULL) ? "inis/" : dir;
+}
 
 EXPORT_C_(s32) GSinit()
 {
