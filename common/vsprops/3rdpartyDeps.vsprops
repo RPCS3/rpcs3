@@ -6,7 +6,7 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;"
+		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;;&quot;$(SvnRootDir)\3rdparty\portaudio\include\&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;;&quot;$(SvnRootDir)\3rdparty\bzip2&quot;"
 	/>
 	<Tool
 		Name="VCLinkerTool"
