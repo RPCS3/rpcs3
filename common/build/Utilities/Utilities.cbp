@@ -200,6 +200,7 @@
 		<Unit filename="../../src/Utilities/pxCheckBox.cpp" />
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/pxStaticText.cpp" />
+		<Unit filename="../../src/Utilities/pxTextStream.cpp" />
 		<Unit filename="../../src/Utilities/pxWindowTextWriter.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
 		<Unit filename="../../src/Utilities/wxAppWithHelpers.cpp" />

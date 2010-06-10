@@ -18,7 +18,7 @@
 #include "Common.h"
 #include "File_Reader.h"
 #include "AppConfig.h"
-#include <wx\wfstream.h>
+#include <wx/wfstream.h>
 
 struct key_pair {
 	wxString key;
