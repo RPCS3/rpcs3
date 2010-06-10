@@ -359,14 +359,17 @@ namespace Panels
 		wxTextCtrl*	commentBox;
 		wxTextCtrl*	patchesBox;
 		pxCheckBox*	gameFixes[NUM_OF_GAME_FIXES];
+
 	public:
 		GameDatabasePanel( wxWindow* parent );
 		virtual ~GameDatabasePanel() throw() { }
-		void PopulateFields();
-		void WriteFieldsToDB();
-		void Search_Click( wxCommandEvent& evt );
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+
+	protected:
+		void PopulateFields();
+		bool WriteFieldsToDB();
+		void Search_Click( wxCommandEvent& evt );
 	};
 
 	class SettingsDirPickerPanel : public DirPickerPanel

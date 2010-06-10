@@ -141,11 +141,12 @@ void Panels::GameDatabasePanel::PopulateFields() {
 	else			GameDB->writeBool(wxT(_key), _value);				\
 }
 
-void Panels::GameDatabasePanel::WriteFieldsToDB() {
+// returns True if the database is modified, or FALSE if no changes to save.
+bool Panels::GameDatabasePanel::WriteFieldsToDB() {
 	wxString wxStr( serialBox->GetValue() );
 	
-	if (wxStr.IsEmpty()) return;
-	if (wxStr == GameDB->getString("Serial")) {
+	if (wxStr.IsEmpty()) return false;
+	if (wxStr != GameDB->getString("Serial")) {
 		GameDB->addGame(wxStr);
 	}
 
@@ -163,6 +164,7 @@ void Panels::GameDatabasePanel::WriteFieldsToDB() {
 	writeGameFixToDB("IPUWaitHack",		gameFixes[6]->GetValue());
 	writeGameFixToDB("EETimingHack",	gameFixes[7]->GetValue());
 	writeGameFixToDB("SkipMPEGHack",	gameFixes[8]->GetValue());
+	return true;
 }
 
 void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
@@ -178,9 +180,11 @@ void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
 }
 
 void Panels::GameDatabasePanel::Apply() {
-	Console.WriteLn("Saving changes to Game Database...");
-	WriteFieldsToDB();
-	GameDB->saveToFile();
+	if( WriteFieldsToDB() )
+	{
+		Console.WriteLn("Saving changes to Game Database...");
+		GameDB->saveToFile();
+	}
 }
 
 void Panels::GameDatabasePanel::AppStatusEvent_OnSettingsApplied()

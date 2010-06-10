@@ -1385,7 +1385,7 @@ void PluginManager::SendSettingsFolder()
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_SettingsFolder.IsEmpty() ) return;
 
-	wxCharBuffer utf8buffer( m_SettingsFolder.ToUTF8() );
+	pxToUTF8 utf8buffer( m_SettingsFolder );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetSettingsDir( utf8buffer );
@@ -1412,7 +1412,7 @@ void PluginManager::SendLogFolder()
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_LogFolder.IsEmpty() ) return;
 
-	wxCharBuffer utf8buffer( m_LogFolder.ToUTF8() );
+	pxToUTF8 utf8buffer( m_LogFolder );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogFolder( utf8buffer );

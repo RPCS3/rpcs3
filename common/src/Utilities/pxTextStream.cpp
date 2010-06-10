@@ -82,7 +82,10 @@ void pxWriteLine( wxOutputStream& output )
 void pxWriteLine( wxOutputStream& output, const wxString& text )
 {
 	if( !text.IsEmpty() )
-		output.Write(text.ToUTF8(), text.Length());
+	{
+		pxToUTF8 utf8(text);
+		output.Write(utf8, utf8.Length());
+	}
 	pxWriteLine( output );
 }
 
@@ -92,7 +95,8 @@ void pxWriteMultiline( wxOutputStream& output, const wxString& src )
 
 	wxString result( src );
 	result.Replace( L"\r\n", L"\n" );
-	result.Replace( L"\r", wxEmptyString );
+	result.Replace( L"\r", L"\n" );
 	
-	output.Write(result.ToUTF8(), result.Length());
+	pxToUTF8 utf8(result);
+	output.Write(utf8, utf8.Length());
 }

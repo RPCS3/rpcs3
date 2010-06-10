@@ -31,8 +31,15 @@ struct key_pair {
 	wxString toString() const {
 		if (key[0] == '[') {
 			pxAssumeDev( key.EndsWith(L"]"), "Malformed multiline key detected: missing end bracket!" );
-			return wxsFormat( L"%s\n%s\n[/%s\n",
-				key.c_str(), value.c_str(), key.Mid(1, key.length()-1).c_str()
+
+			// Terminating tag must be written without the "rvalue" -- in the form of:
+			//   [/patches]
+			// Use Mid() to strip off the left and right side brackets.
+			wxString midLine(key.Mid(1, key.Length()-2));
+			wxString keyLvalue(midLine.BeforeFirst(L'=').Trim(true).Trim(false));
+
+			return wxsFormat( L"%s\n%s[/%s]\n",
+				key.c_str(), value.c_str(), keyLvalue.c_str()
 			);
 		}
 		else {
@@ -70,7 +77,7 @@ class DataBase_Loader {
 protected:
 	bool isComment(const wxString& s);
 	void doError(const wxString& line, key_pair& keyPair, bool doMsg = false);
-	void extractMultiLine(key_pair& keyPair, wxInputStream& reader);
+	bool extractMultiLine(const wxString& line, key_pair& keyPair, wxInputStream& reader);
 	void extract(const wxString& line, key_pair& keyPair, wxInputStream& reader);
 	
 	const wxString	m_emptyString;	// empty string for returning stuff .. never modify!

@@ -111,8 +111,9 @@ void SaveStateBase::FreezeBios()
 	memzero( descin );
 	memzero( desccmp );
 
-	memcpy_fast( descin, descout.ToUTF8().data(), descout.Length() );
-	memcpy_fast( desccmp, descout.ToUTF8().data(), descout.Length() );
+	pxToUTF8 utf8(descout);
+	memcpy_fast( descin, utf8, utf8.Length() );
+	memcpy_fast( desccmp, utf8, utf8.Length() );
 
 	// ... and only freeze bios info once per state, since the user msg could
 	// become really annoying on a corrupted state or something.  (have to always
@@ -130,7 +131,7 @@ void SaveStateBase::FreezeBios()
 			Console.Indent(2).Error(
 				"Current Version:   %s\n"
 				"Savestate Version: %s\n",
-				descout.ToUTF8().data(), descin
+				utf8.data(), descin
 			);
 		}
 	}
