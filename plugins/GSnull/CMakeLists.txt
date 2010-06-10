@@ -46,21 +46,15 @@ set(GSnullHeaders
 
 # GSnull Linux sources
 set(GSnullLinuxSources
-#	Linux/callbacks.c
 	Linux/Config.cpp
 	Linux/GSLinux.cpp
-	Linux/interface.c
-	Linux/Linux.cpp
-	Linux/support.c)
+	Linux/Linux.cpp)
 
 # GSnull Linux headers
 set(GSnullLinuxHeaders
-	Linux/callbacks.h
 	Linux/Config.h
 	Linux/GSLinux.h
-	Linux/interface.h
-	Linux/Linux.h
-	Linux/support.h)
+	Linux/Linux.h)
 
 # GSnull null sources
 set(GSnullnullSources

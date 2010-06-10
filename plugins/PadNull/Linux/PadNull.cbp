@@ -50,16 +50,6 @@
 		<Unit filename="Config.h" />
 		<Unit filename="PadLinux.cpp" />
 		<Unit filename="PadLinux.h" />
-		<Unit filename="callbacks.h" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
-		<Unit filename="pad.glade" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
 		<Unit filename="../Pad.cpp" />
 		<Unit filename="../Pad.h" />
 		<Unit filename="../ReadMe.txt" />

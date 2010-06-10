@@ -42,17 +42,11 @@ set(SPU2nullHeaders
 
 # SPU2null Linux sources
 set(SPU2nullLinuxSources
-#	Linux/callbacks.c
-	Linux/Config.cpp
-	Linux/interface.c
-	Linux/support.c)
+	Linux/Config.cpp)
 
 # SPU2null Linux headers
 set(SPU2nullLinuxHeaders
-	Linux/callbacks.h
-	Linux/Config.h
-	Linux/interface.h
-	Linux/support.h)
+	Linux/Config.h)
 
 # SPU2null Windows sources
 set(SPU2nullWindowsSources

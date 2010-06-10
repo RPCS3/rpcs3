@@ -58,16 +58,6 @@
 		<Unit filename="GSLinux.h" />
 		<Unit filename="Linux.cpp" />
 		<Unit filename="Linux.h" />
-		<Unit filename="callbacks.h" />
-		<Unit filename="gsnull.glade" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Unit filename="../Registers.h" />
 		<Unit filename="../null/GSnull.cpp" />

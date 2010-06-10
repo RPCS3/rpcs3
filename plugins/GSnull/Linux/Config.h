@@ -21,5 +21,4 @@ void LoadConf();
 
 extern long CFGmessage(char *msg);
 extern void CFGconfigure();
-extern void cfgSysMessage(char *fmt, ...);
 extern void CFGabout();

@@ -42,19 +42,13 @@ set(PadNullHeaders
 
 # PadNull Linux sources
 set(PadNullLinuxSources
-#	Linllux/callbacks.c
 	Linux/Config.cpp
-	Linux/interface.c
-	Linux/PadLinux.cpp
-	Linux/support.c)
+	Linux/PadLinux.cpp)
 
 # PadNull Linux headers
 set(PadNullLinuxHeaders
-	Linux/callbacks.h
 	Linux/Config.h
-	Linux/interface.h
-	Linux/PadLinux.h
-	Linux/support.h)
+	Linux/PadLinux.h)
 
 # PadNull Windows sources
 set(PadNullWindowsSources

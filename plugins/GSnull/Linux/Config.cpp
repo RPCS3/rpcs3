@@ -16,108 +16,18 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <gtk/gtk.h>
-#include <signal.h>
 #include <string>
 using namespace std;
 
 #include "GS.h"
 #include "Config.h"
 
- #ifdef __cplusplus
-extern "C"
-{
-#endif
-
-#include "support.h"
-#include "callbacks.h"
-#include "interface.h"
-
-#ifdef __cplusplus
-}
-#endif
-
-GtkWidget *MsgDlg, *About, *Conf;
 extern string s_strIniPath;
 PluginConf Ini;
 
-void OnMsg_Ok()
-{
-	gtk_widget_destroy(MsgDlg);
-	gtk_main_quit();
-}
-
-void cfgSysMessage(char *fmt, ...)
-{
-	GtkWidget *Ok,*Txt;
-	GtkWidget *Box,*Box1;
-	va_list list;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	if (msg[strlen(msg) - 1] == '\n') msg[strlen(msg)-1] = 0;
-
-	MsgDlg = gtk_window_new (GTK_WINDOW_POPUP);
-	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "FireWire Msg");
-	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
-
-	Box = gtk_vbox_new(5, 0);
-	gtk_container_add(GTK_CONTAINER(MsgDlg), Box);
-	gtk_widget_show(Box);
-
-	Txt = gtk_label_new(msg);
-
-	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
-	gtk_widget_show(Txt);
-
-	Box1 = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), Box1, FALSE, FALSE, 0);
-	gtk_widget_show(Box1);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect (GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
-	gtk_container_add(GTK_CONTAINER(Box1), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(MsgDlg);
-
-	gtk_main();
-}
-
-void OnAbout_Ok(GtkButton *button, gpointer user_data)
-{
-	gtk_widget_destroy(About);
-	gtk_main_quit();
-}
-
 void CFGabout()
 {
-	About = create_About();
-	gtk_widget_show_all(About);
-	gtk_main();
-}
-
-void OnConf_Ok(GtkButton *button, gpointer user_data) {
-	SaveConfig();
-
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
-}
-
-void OnConf_Cancel(GtkButton *button, gpointer user_data)
-{
-	gtk_widget_destroy(Conf);
-	gtk_main_quit();
+	SysMessage("GSnull: A simple null plugin.");
 }
 
 void CFGconfigure()
@@ -125,12 +35,6 @@ void CFGconfigure()
 	LoadConfig();
 	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
 	SaveConfig();
-}
-
-long CFGmessage(char *msg) {
-	cfgSysMessage(msg);
-
-	return 0;
 }
 
 void LoadConfig()
