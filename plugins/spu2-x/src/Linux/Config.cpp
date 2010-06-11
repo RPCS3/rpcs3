@@ -258,7 +258,6 @@ void DisplayDialog()
     }
 
     gtk_widget_destroy (dialog);
-
 }
 
 void configure()

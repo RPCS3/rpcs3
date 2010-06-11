@@ -20,116 +20,32 @@
 
 #include <gtk/gtk.h>
 
-extern "C"
-{
-#include "interface.h"
-#include "support.h"
-#include "callbacks.h"
-}
-
 #include "Linux.h"
 #include "zerospu2.h"
 
 extern char *libraryName;
 
-GtkWidget *MsgDlg, *ConfDlg;
+GtkWidget *ConfDlg;
 
-void OnMsg_Ok()
+void __forceinline SysMessage(const char *fmt, ...)
 {
-	gtk_widget_destroy(MsgDlg);
-	gtk_main_quit();
-}
+    va_list list;
+    char msg[512];
 
-void SysMessage(char *fmt, ...)
-{
-	GtkWidget *Ok,*Txt;
-	GtkWidget *Box,*Box1;
-	va_list list;
-	char msg[512];
+    va_start(list, fmt);
+    vsprintf(msg, fmt, list);
+    va_end(list);
 
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
+    if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
 
-	if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
-
-	MsgDlg = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_position(GTK_WINDOW(MsgDlg), GTK_WIN_POS_CENTER);
-	gtk_window_set_title(GTK_WINDOW(MsgDlg), "SPU2null Msg");
-	gtk_container_set_border_width(GTK_CONTAINER(MsgDlg), 5);
-
-	Box = gtk_vbox_new(5, 0);
-	gtk_container_add(GTK_CONTAINER(MsgDlg), Box);
-	gtk_widget_show(Box);
-
-	Txt = gtk_label_new(msg);
-
-	gtk_box_pack_start(GTK_BOX(Box), Txt, FALSE, FALSE, 5);
-	gtk_widget_show(Txt);
-
-	Box1 = gtk_hbutton_box_new();
-	gtk_box_pack_start(GTK_BOX(Box), Box1, FALSE, FALSE, 0);
-	gtk_widget_show(Box1);
-
-	Ok = gtk_button_new_with_label("Ok");
-	gtk_signal_connect (GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnMsg_Ok), NULL);
-	gtk_container_add(GTK_CONTAINER(Box1), Ok);
-	GTK_WIDGET_SET_FLAGS(Ok, GTK_CAN_DEFAULT);
-	gtk_widget_show(Ok);
-
-	gtk_widget_show(MsgDlg);
-
-	gtk_main();
-}
-
-void CALLBACK SPU2configure()
-{
-	LOG_CALLBACK("SPU2configure()\n");
-	ConfDlg = create_Config();
-	LoadConfig();
-	set_checked(ConfDlg, "timescalingbutton", (conf.options & OPTION_TIMESTRETCH));
-	set_checked(ConfDlg, "realtimebutton", (conf.options & OPTION_REALTIME));
-	set_checked(ConfDlg, "recordingbutton", (conf.options & OPTION_RECORDING));
-	set_checked(ConfDlg, "mutebutton", (conf.options & OPTION_MUTE));
-	set_checked(ConfDlg, "loggingbutton", (conf.Log));
-
-	gtk_widget_show_all(ConfDlg);
-	gtk_main();
-}
-
-
-void on_Conf_Ok (GtkButton *button, gpointer user_data)
-{
-	conf.options = 0;
-
-	if (is_checked(ConfDlg, "realtimebutton"))
-		conf.options |= OPTION_REALTIME;
-	if (is_checked(ConfDlg, "timescalingbutton"))
-		conf.options |= OPTION_TIMESTRETCH;
-	if (is_checked(ConfDlg, "recordingbutton"))
-		conf.options |= OPTION_RECORDING;
-	if (is_checked(ConfDlg, "mutebutton"))
-		conf.options |= OPTION_MUTE;
-
-	conf.Log = is_checked(ConfDlg, "loggingbutton");
-
-	SaveConfig();
-	gtk_widget_destroy(ConfDlg);
-	gtk_main_quit();
-}
-
-
-void on_Conf_Cancel (GtkButton *button, gpointer user_data)
-{
-	gtk_widget_destroy(ConfDlg);
-	gtk_main_quit();
-
-}
-
-void CALLBACK SPU2about()
-{
-	LOG_CALLBACK("SPU2about()\n");
-	SysMessage("%s %d.%d\ndeveloper: zerofrog", libraryName, SPU2_VERSION, SPU2_BUILD);
+    GtkWidget *dialog;
+    dialog = gtk_message_dialog_new (NULL,
+                                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                                     GTK_MESSAGE_INFO,
+                                     GTK_BUTTONS_OK,
+                                     "%s", msg);
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    gtk_widget_destroy (dialog);
 }
 
 void SaveConfig()
@@ -146,10 +62,10 @@ void SaveConfig()
 	fprintf(f, "log = %d\n", conf.Log);
 	//fprintf(f, "options = %d\n", conf.options);
 
-	fprintf(f, "realtime = %d\n", is_checked(ConfDlg, "realtimebutton"));
-	fprintf(f, "timestretch = %d\n", is_checked(ConfDlg, "timescalingbutton"));
-	fprintf(f, "recording = %d\n", is_checked(ConfDlg, "recordingbutton"));
-	fprintf(f, "mute = %d\n", is_checked(ConfDlg, "mutebutton"));
+	fprintf(f, "realtime = %d\n", (conf.options & OPTION_REALTIME));
+	fprintf(f, "timestretch = %d\n", (conf.options & OPTION_TIMESTRETCH));
+	fprintf(f, "recording = %d\n", (conf.options & OPTION_RECORDING));
+	fprintf(f, "mute = %d\n", (conf.options & OPTION_MUTE));
 
 	fclose(f);
 }
@@ -190,3 +106,94 @@ void LoadConfig()
 
 	fclose(f);
 }
+
+void DisplayDialog()
+{
+    int return_value;
+
+    GtkWidget *dialog;
+    GtkWidget *main_box;
+    GtkWidget *time_scaling_check, *real_time_check, *recording_check, *mute_check, *logging_check;
+
+	LoadConfig();
+	
+    /* Create the widgets */
+    dialog = gtk_dialog_new_with_buttons (
+		"ZeroSPU2 Config",
+		NULL, /* parent window*/
+		(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+		GTK_STOCK_OK,
+			GTK_RESPONSE_ACCEPT,
+		GTK_STOCK_CANCEL,
+			GTK_RESPONSE_REJECT,
+		NULL);
+
+    time_scaling_check = gtk_check_button_new_with_label("Time Scaling (recommended)");
+    gtk_widget_set_tooltip_text(time_scaling_check, "Slows down or speeds up sound with respect to the game's real speed.\nEnabling this produces higher quality sound with less cracking, but can reduce speed.");
+    
+    real_time_check = gtk_check_button_new_with_label("Real Time Mode");
+    gtk_widget_set_tooltip_text(real_time_check, "Tries to reduce delays in music as much as possible.\nUse when a game is already fast, and needs sound tightly syncronized. (like in DDR, Guitar Hero, & Guitaroo Man)");
+    
+    recording_check = gtk_check_button_new_with_label("Recording");
+    gtk_widget_set_tooltip_text(recording_check, "Saves the raw 16 bit stereo wave data to zerospu2.wav. Timed to ps2 time.");
+    
+    mute_check = gtk_check_button_new_with_label("Mute");
+    gtk_widget_set_tooltip_text(mute_check, "ZeroSPU2 will not output sound (fast).");
+    
+    logging_check = gtk_check_button_new_with_label("Enable logging");
+    gtk_widget_set_tooltip_text(logging_check, "For development use only.");
+
+    main_box = gtk_vbox_new(false, 5);
+
+	gtk_container_add(GTK_CONTAINER(main_box), time_scaling_check);
+	gtk_container_add(GTK_CONTAINER(main_box), real_time_check);
+	gtk_container_add(GTK_CONTAINER(main_box), recording_check);
+	gtk_container_add(GTK_CONTAINER(main_box), mute_check);
+	gtk_container_add(GTK_CONTAINER(main_box), logging_check);
+
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_scaling_check), (conf.options & OPTION_TIMESTRETCH));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(real_time_check), (conf.options & OPTION_REALTIME));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(recording_check), (conf.options & OPTION_RECORDING));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mute_check), (conf.options & OPTION_MUTE));
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(logging_check), (conf.Log));
+
+    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_box);
+    gtk_widget_show_all (dialog);
+
+    return_value = gtk_dialog_run (GTK_DIALOG (dialog));
+
+    if (return_value == GTK_RESPONSE_ACCEPT)
+    {
+		conf.options = 0;
+
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(time_scaling_check)))
+			conf.options |= OPTION_TIMESTRETCH;
+			
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(real_time_check)))
+			conf.options |= OPTION_REALTIME;
+			
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(recording_check)))
+			conf.options |= OPTION_RECORDING;
+			
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(mute_check)))
+			conf.options |= OPTION_MUTE;
+			
+    	conf.Log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logging_check));
+    	SaveConfig();
+    }
+
+    gtk_widget_destroy (dialog);
+}
+
+void CALLBACK SPU2configure()
+{
+	LOG_CALLBACK("SPU2configure()\n");
+	DisplayDialog();
+}
+
+void CALLBACK SPU2about()
+{
+	LOG_CALLBACK("SPU2about()\n");
+	SysMessage("%s %d.%d\ndeveloper: zerofrog", libraryName, SPU2_VERSION, SPU2_BUILD);
+}
+

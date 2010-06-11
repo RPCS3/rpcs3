@@ -50,10 +50,7 @@ set(zerospu2Headers
 
 # zerospu2 Linux sources
 set(zerospu2LinuxSources
-#	Linux/callbacks.c
-	Linux/interface.c
 	Linux/Linux.cpp
-	Linux/support.c
 	Targets/Alsa.cpp
 	Targets/OSS.cpp
 #	Targets/PortAudio.cpp
@@ -61,10 +58,7 @@ set(zerospu2LinuxSources
 
 # zerospu2 Linux headers
 set(zerospu2LinuxHeaders
-	Linux/callbacks.h
-	Linux/interface.h
 	Linux/Linux.h
-	Linux/support.h
 	Targets/Alsa.h
 	Targets/OSS.h
 #	Targets/PortAudio.h

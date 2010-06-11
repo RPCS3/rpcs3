@@ -121,7 +121,7 @@ void __Log(char *fmt, ...);
 void __LogToConsole(const char *fmt, ...);
 void SaveConfig();
 void LoadConfig();
-void SysMessage(char *fmt, ...);
+void SysMessage(const char *fmt, ...);
 
 extern void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int numsamples);
 extern void LogPacketSound(void* packet, int memsize);
