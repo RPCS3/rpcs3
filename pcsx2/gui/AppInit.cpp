@@ -29,6 +29,9 @@
 using namespace pxSizerFlags;
 
 static bool m_ForceWizard = false;
+static bool m_UseGUI = false;
+static bool m_NoFastBoot = false;
+static bool m_DisableSpeedhacks = false;
 
 static void CpuCheckSSE2()
 {
@@ -126,10 +129,10 @@ void Pcsx2App::ReadUserModeSettings()
 			beta.SetMinWidth(480);
 
 			beta += beta.Heading(
-				L"a work-in-progress.  We are in the middle of major rewrites of the user interface, and some parts "
+				L"PCSX2 0.9.7 is a work-in-progress.  We are in the middle of major rewrites of the user interface, and some parts "
 				L"of the program have *NOT* been re-implemented yet.  Options will be missing or disabled.  Horrible crashes might be present.  Enjoy!"
-			) | StdExpand();
-			
+			);
+			beta += StdPadding*2;
 			beta += new wxButton( &beta, wxID_OK ) | StdCenter();
 			beta.ShowModal();
 		}
@@ -332,15 +335,16 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 	parser.AddSwitch( L"h",			L"help",	_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
 
 	parser.AddSwitch( wxEmptyString,L"nogui",	_("disables display of the gui while running games") );
-	parser.AddSwitch( wxEmptyString,L"skipbios",_("skips standard BIOS splash screens and software checks") );
 	parser.AddOption( wxEmptyString,L"elf",		_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
 	parser.AddSwitch( wxEmptyString,L"nodisc",	_("boots an empty dvd tray; use to enter the PS2 system menu") );
-	parser.AddSwitch( wxEmptyString,L"usecd",	_("boots from the configured CDVD plugin (ignores IsoFile parameter)") );
+	parser.AddSwitch( wxEmptyString,L"usecd",	_("boots from the CDVD plugin (overrides IsoFile parameter)") );
+
+	parser.AddSwitch( wxEmptyString,L"fullboot",_("disables fast booting") );
+	parser.AddSwitch( wxEmptyString,L"nohacks",	_("disables all speedhacks") );
 
 	parser.AddOption( wxEmptyString,L"cfgpath",	_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
-	parser.AddOption( wxEmptyString,L"cfg",		_("specifies the PCSX2 configuration file to use [not implemented]"), wxCMD_LINE_VAL_STRING );
-
-	parser.AddSwitch( wxEmptyString,L"forcewiz",_("Forces PCSX2 to start the First-time Wizard") );
+	parser.AddOption( wxEmptyString,L"cfg",		_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"forcewiz",_("forces PCSX2 to start the First-time Wizard") );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
@@ -368,8 +372,15 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 	// Suppress wxWidgets automatic options parsing since none of them pertain to PCSX2 needs.
 	//wxApp::OnCmdLineParsed( parser );
 
-	//bool yay = parser.Found(L"nogui");
-	m_ForceWizard = parser.Found( L"forcewiz" );
+	m_UseGUI			= !parser.Found(L"nogui");
+	m_DisableSpeedhacks	= parser.Found(L"nohacks");
+	m_NoFastBoot		= parser.Found(L"fullboot");
+	m_ForceWizard		= parser.Found( L"forcewiz" );
+	
+	wxString cfgPathOverride;
+	//if( parser.Found(L"cfgpath", cfgPathOverride ) )
+	{
+	}
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
