@@ -27,6 +27,7 @@ const u8 build    = 1;    // increase that with each version
 
 static char *libraryName = "Padnull Driver";
 string s_strIniPath="inis/";
+string s_strLogPath="logs/";
 
 FILE *padLog;
 Config conf;
@@ -76,18 +77,40 @@ EXPORT_C_(void) PADsetSettingsDir(const char* dir)
 	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
+bool OpenLog() {
+    bool result = true;
+#ifdef PAD_LOG
+    if(padLog) return result;
+
+    const std::string LogFile(s_strLogPath + "/padnull.log");
+
+    padLog = fopen(LogFile.c_str(), "w");
+    if (padLog != NULL)
+        setvbuf(padLog, NULL,  _IONBF, 0);
+    else {
+        SysMessage("Can't create log file %s\n", LogFile.c_str());
+        result = false;
+    }
+	PAD_LOG("PADinit\n");
+#endif
+    return result;
+}
+
+EXPORT_C_(void) PADsetLogDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	if (padLog) fclose(padLog);
+    OpenLog();
+}
+
 EXPORT_C_(s32) PADinit(u32 flags)
 {
 	LoadConfig();
 
-#ifdef PAD_LOG
-	if (padLog == NULL)
-	{
-		padLog = fopen("logs/padLog.txt", "w");
-		if (padLog) setvbuf(padLog, NULL,  _IONBF, 0);
-	}
-	PAD_LOG("PADinit\n");
-#endif
+    OpenLog();
 
 	return 0;
 }

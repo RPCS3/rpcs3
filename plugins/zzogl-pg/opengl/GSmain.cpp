@@ -58,6 +58,7 @@ void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
+std::string s_strLogPath("logs/");
 
 int g_GameSettings = 0;
 int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
@@ -122,6 +123,21 @@ bool IsLogging()
 	// gsLog can be null if the config dialog is used prior to Pcsx2 starting an emulation session.
 	// (GSinit won't have been called then)
 	return (gsLog != NULL && conf.log);
+}
+
+bool OpenLog() {
+    bool result = true;
+    const std::string LogFile(s_strLogPath + "GSzzogl.log");
+
+    gsLog = fopen(LogFile.c_str(), "w");
+    if (gsLog != NULL)
+        setvbuf(gsLog, NULL,  _IONBF, 0);
+    else {
+        SysMessage("Can't create log file %s\n", LogFile.c_str());
+        result = false;
+    }
+
+    return result;
 }
 
 void WriteToScreen(const char* pstr, u32 ms)
@@ -333,6 +349,16 @@ void CALLBACK GSsetSettingsDir(const char* dir)
 	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
+void CALLBACK GSsetLogDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	if (gsLog != NULL) fclose(gsLog);
+    ZZLog::OpenLog();
+}
+
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
 
@@ -465,20 +491,8 @@ s32 CALLBACK GSinit()
 
 	memcpy(g_GIFTempRegHandlers, g_GIFPackedRegHandlers, sizeof(g_GIFTempRegHandlers));
 
-	gsLog = fopen("logs/gsLog.txt", "w");
-
-	if (gsLog == NULL)
-	{
-		gsLog = fopen("gsLog.txt", "w");
-
-		if (gsLog == NULL)
-		{
-			SysMessage("Can't create gsLog.txt");
+    if (ZZLog::OpenLog() == false)
 			return -1;
-		}
-	}
-
-	setvbuf(gsLog, NULL,	_IONBF, 0);
 
 	ZZLog::GS_Log("Calling GSinit.");
 

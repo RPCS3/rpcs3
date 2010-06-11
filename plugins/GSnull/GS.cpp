@@ -38,6 +38,7 @@ u32 GSKeyEvent = 0;
 bool GSShift = false, GSAlt = false;
 
 string s_strIniPath="inis";
+std::string s_strLogPath("logs/");
 const char* s_iniFilename = "GSnull.ini";
 
 // Because I haven't bothered to get GSOpen2 working in Windows yet in GSNull.
@@ -60,6 +61,24 @@ EXPORT_C_(char*) PS2EgetLibName()
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (version<<16) | (revision<<8) | build;
+}
+
+bool OpenLog() {
+    bool result = true;
+#ifdef GS_LOG
+    const std::string LogFile(s_strLogPath + "GSnull.log");
+
+    gsLog = fopen(LogFile.c_str(), "w");
+    if (gsLog != NULL)
+        setvbuf(gsLog, NULL,  _IONBF, 0);
+    else {
+        SysMessage("Can't create log file %s\n", LogFile.c_str());
+        result = false;
+    }
+	GS_LOG("GSnull plugin version %d,%d\n",revision,build);
+	GS_LOG("GS init\n");
+#endif
+    return result;
 }
 
 void __Log(char *fmt, ...)
@@ -105,16 +124,21 @@ EXPORT_C_(void) GSsetSettingsDir(const char* dir)
 	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
+EXPORT_C_(void) GSsetLogDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	if (gsLog != NULL) fclose(gsLog);
+    OpenLog();
+}
+
 EXPORT_C_(s32) GSinit()
 {
 	LoadConfig();
 
-#ifdef GS_LOG
-	gsLog = fopen("logs/gsLog.txt", "w");
-	if (gsLog) setvbuf(gsLog, NULL,  _IONBF, 0);
-	GS_LOG("GSnull plugin version %d,%d\n",revision,build);
-	GS_LOG("GS init\n");
-#endif
+    OpenLog();
 
 	SysPrintf("Initializing GSnull\n");
 	return 0;

@@ -41,6 +41,7 @@ char *libraryName      = "SPU2null (Debug)";
 char *libraryName      = "SPU2null ";
 #endif
 string s_strIniPath="inis/";
+string s_strLogPath="logs/";
 
 FILE *spu2Log;
 Config conf;
@@ -114,14 +115,40 @@ EXPORT_C_(void) SPU2setSettingsDir(const char* dir)
 	s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
-EXPORT_C_(s32) SPU2init()
-{
+bool OpenLog() {
+    bool result = true;
 #ifdef SPU2_LOG
-	spu2Log = fopen("logs/spu2.txt", "w");
-	if (spu2Log) setvbuf(spu2Log, NULL,  _IONBF, 0);
+    if(spu2Log) return result;
+
+    const std::string LogFile(s_strLogPath + "/spu2null.log");
+
+    spu2Log = fopen(LogFile.c_str(), "w");
+    if (spu2Log != NULL)
+        setvbuf(spu2Log, NULL,  _IONBF, 0);
+    else {
+        SysMessage("Can't create log file %s\n", LogFile.c_str());
+        result = false;
+    }
 	SPU2_LOG("Spu2 null version %d,%d\n", revision, build);
 	SPU2_LOG("SPU2init\n");
 #endif
+    return result;
+}
+
+EXPORT_C_(void)  SPU2setLogDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	if (spu2Log) fclose(spu2Log);
+    OpenLog();
+}
+
+EXPORT_C_(s32) SPU2init()
+{
+    OpenLog();
+
 	spu2regs = (s8*)malloc(0x10000);
 	if (spu2regs == NULL)
 	{
