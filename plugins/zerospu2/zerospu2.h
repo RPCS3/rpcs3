@@ -117,11 +117,11 @@ typedef struct {
 
 extern Config conf;
 
-void __Log(char *fmt, ...);
-void __LogToConsole(const char *fmt, ...);
-void SaveConfig();
-void LoadConfig();
-void SysMessage(const char *fmt, ...);
+extern void __Log(char *fmt, ...);
+extern void __LogToConsole(const char *fmt, ...);
+extern void SaveConfig();
+extern void LoadConfig();
+extern void SysMessage(const char *fmt, ...);
 
 extern void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int numsamples);
 extern void LogPacketSound(void* packet, int memsize);

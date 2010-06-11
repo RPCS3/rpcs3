@@ -30,7 +30,7 @@ void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int channel)
 
 	SPU2_LOG("SPU2 readDMAMem(%d) size %x, addr: %x\n", channel,  size, pMem);
 
-	for (u32 i = 0; i < size; i++)
+	for (uint i = 0; i < (uint)size; i++)
 	{
 		*pMem++ = *(u16*)(spu2mem + spuaddr);
 		if (spu2attr(channel).irq && (C_IRQA(channel) == spuaddr))
