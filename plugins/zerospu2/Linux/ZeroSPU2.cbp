@@ -113,7 +113,7 @@
 			<Add directory="../Linux" />
 			<Add directory="../../zerospu2" />
 			<Add directory="../../../common/include" />
-			<Add directory="../../../3rdparty/SoundTouch" />
+			<Add directory="../../../3rdparty/soundtouch_linux_include" />
 			<Add directory="../../../3rdparty" />
 		</Compiler>
 		<Linker>
