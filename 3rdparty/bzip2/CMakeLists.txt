@@ -1,7 +1,7 @@
 # bzip2 library
 
 # library name
-set(bzip2Name bzip2)
+set(bzip2Name pcsx2_bzip2)
 
 set(CommonFlags
     -m32

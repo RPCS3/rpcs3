@@ -18,8 +18,8 @@
 
 #include "zerospu2.h"
 #include "zeroworker.h"
-#include "SoundTouch/SoundTouch.h"
-#include "SoundTouch/WavFile.h"
+#include "soundtouch/SoundTouch.h"
+#include "soundtouch/WavFile.h"
 
 s32 g_logsound = 0;
 WavOutFile* g_pWavRecord=NULL; // used for recording

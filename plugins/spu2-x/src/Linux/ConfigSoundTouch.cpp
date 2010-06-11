@@ -22,7 +22,7 @@
 #include "Global.h"
 #include "Dialogs.h"
 #include "Config.h"
-#include "SoundTouch/SoundTouch.h"
+#include "soundtouch/SoundTouch.h"
 
 namespace SoundtouchCfg
 {

@@ -20,10 +20,10 @@
 #define _WIN32_DCOM
 #include "Dialogs.h"
 
-#include "portaudio/include/portaudio.h"
+#include "portaudio.h"
 
 #ifdef __WIN32__
-#include "portaudio/include/pa_win_wasapi.h"
+#include "pa_win_wasapi.h"
 #endif
 
 #ifdef __LINUX__

@@ -1,7 +1,7 @@
 # SoundTouch library
 
 # library name
-set(SoundTouchName SoundTouch)
+set(SoundTouchName pcsx2_SoundTouch)
 
 set(CommonFlags
     -m32

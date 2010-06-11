@@ -27,8 +27,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "SoundTouch/SoundTouch.h"
-#include "SoundTouch/WavFile.h"
+#include "soundtouch/SoundTouch.h"
+#include "soundtouch/WavFile.h"
 
 char libraryName[256];
 

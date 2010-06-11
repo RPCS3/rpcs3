@@ -23,8 +23,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <zlib/zlib.h>
-#include <bzip2/bzlib.h>
+#include "zlib.h"
+#include "bzlib.h"
 
 #include "CDVDiso.h"
 #include "libiso.h"

@@ -16,8 +16,7 @@
 */
 
 #include "Global.h"
-#include "SoundTouch/SoundTouch.h"
-#include "SoundTouch/WavFile.h"
+#include "soundtouch/SoundTouch.h"
 
 
 static soundtouch::SoundTouch* pSoundTouch = NULL;

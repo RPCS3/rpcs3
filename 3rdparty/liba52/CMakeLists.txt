@@ -1,7 +1,7 @@
 # a52 library
 
 # library name
-set(a52Name a52)
+set(a52Name pcsx2_a52)
 
 set(CommonFlags
     -Wall

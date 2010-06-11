@@ -35,7 +35,6 @@ include(FindSoundTouch)
 # Current implementation: 
 # 1/ include 3rdparty sub-directory that we will used (either request or fallback)
 # 2/ include system one
-# 3/ include 3rdpary main (just in case we miss some include files)
 #----------------------------------------
 #         Fallback on 3rdparty libraries
 #----------------------------------------
@@ -64,19 +63,9 @@ if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 	set(SOUNDTOUCH_FOUND TRUE)
     # Set path
 	set(SOUNDTOUCH_LIBRARIES SoundTouch)
-    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SoundTouch)
+    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SoundTouch)
+    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/soundtouch_linux_include)
 endif(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
-
-if(NOT A52_FOUND OR FORCE_INTERNAL_A52)
-	# use project one
-	set(projectA52 TRUE)
-    set(A52_FOUND TRUE)
-    # Set path
-    set(A52_LIBRARIES A52)
-    # XXX Need to be updated when repository will be updated
-    # For the moment include are done with the last fallback in bottom of the file
-    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/a52_internal)
-endif(NOT A52_FOUND OR FORCE_INTERNAL_A52)
 
 #----------------------------------------
 #		    Use system include (if not 3rdparty one)
@@ -94,9 +83,9 @@ if(Linux)
 endif(Linux)
 
 # A52
-if(A52_FOUND AND NOT projectA52)
+if(A52_FOUND)
 	include_directories(${A52_INCLUDE_DIR})
-endif(A52_FOUND AND NOT projectA52)
+endif(A52_FOUND)
 
 # ALSA
 if(ALSA_FOUND)
@@ -164,9 +153,3 @@ endif(wxWidgets_FOUND)
 if(ZLIB_FOUND AND NOT projectZLIB)
 	include_directories(${ZLIB_INCLUDE_DIRS})
 endif(ZLIB_FOUND AND NOT projectZLIB)
-
-#----------------------------------------
-#		    In all others situation fallback to the 3rdparty
-#----------------------------------------
-# XXX Must be delete when all include will be fixed
-include_directories(${PROJECT_SOURCE_DIR}/3rdparty)

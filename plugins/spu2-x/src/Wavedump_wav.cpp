@@ -16,7 +16,7 @@
  */
 
 #include "Global.h"
-#include "SoundTouch/WavFile.h"
+#include "soundtouch/WavFile.h"
 
 static WavOutFile* _new_WavOutFile( const char* destfile )
 {

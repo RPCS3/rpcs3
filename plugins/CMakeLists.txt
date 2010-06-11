@@ -7,17 +7,17 @@
 
 # make CDVDiso
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDiso" AND CDVDiso)
-	add_subdirectory(CDVDiso)
+	add_subdirectory(CDVDiso/src)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDiso" AND CDVDiso)
 
 # make CDVDisoEFP
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
-	add_subdirectory(CDVDisoEFP)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
+# if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
+# 	add_subdirectory(CDVDisoEFP)
+# endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDisoEFP" AND CDVDisoEFP)
 
 # make CDVDlinuz
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDlinuz" AND CDVDlinuz)
-	add_subdirectory(CDVDlinuz)
+	add_subdirectory(CDVDlinuz/Src)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDlinuz" AND CDVDlinuz)
 
 # make CDVDnull
@@ -26,9 +26,9 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDnull" AND CDVDnull)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDnull" AND CDVDnull)
 
 # make CDVDolio
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
-	add_subdirectory(CDVDolio)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
+# if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
+# 	add_subdirectory(CDVDolio)
+# endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDolio" AND CDVDolio)
 
 # make CDVDpeops
 #if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/CDVDpeops" AND CDVDpeops)
@@ -71,9 +71,9 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PadNull" AND PadNull)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PadNull" AND PadNull)
 
 # make PeopsSPU2
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
-	add_subdirectory(PeopsSPU2)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
+# if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
+# 	add_subdirectory(PeopsSPU2)
+# endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/PeopsSPU2" AND PeopsSPU2)
 
 # make SPU2null
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SPU2null" AND SPU2null)
@@ -82,7 +82,7 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/SPU2null" AND SPU2null)
 
 # make spu2-x
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/spu2-x" AND spu2-x)
-	add_subdirectory(spu2-x)
+	add_subdirectory(spu2-x/src)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/spu2-x" AND spu2-x)
 
 # make SSSPSXPAD
@@ -107,7 +107,7 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/USBnull" AND USBnull)
 
 # make zzogl-pg
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
-	add_subdirectory(zzogl-pg)
+	add_subdirectory(zzogl-pg/opengl)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 
 # make zeropad

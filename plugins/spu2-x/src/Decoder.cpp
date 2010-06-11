@@ -16,17 +16,25 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
-// Commenting this will disable all the code in Decoder.cpp (which is the only code that uses liba52 in spu2-x.)
-#define ENABLE_DECODER
-
 #include "Global.h"
 
-#ifdef ENABLE_DECODER
+// Commenting this will disable all the code in Decoder.cpp (which is the only code that uses liba52 in spu2-x.)
+#ifndef ENABLE_DECODER
+#	define ENABLE_DECODER 1
+#endif
+
+#if ENABLE_DECODER
 
 extern "C" {
-#include "liba52/inttypes.h"
-#include "liba52/a52.h"
-#include "liba52/mm_accel.h"
+#ifdef _MSC_VER
+#	include "liba52/inttypes.h"
+#	include "liba52/a52.h"
+#	include "liba52/mm_accel.h"
+#else
+#	include <inttypes.h>
+#	include "a52dec/a52.h"
+#	include "a52dec/mm_accel.h"
+#endif
 }
 
 extern u32 spdif_read_data(u8 *buff, u32 max_data);

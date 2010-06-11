@@ -1,7 +1,7 @@
 # zlib library
 
 # library name
-set(zlibName zlib)
+set(zlibName pcsx2_zlib)
 
 set(CommonFlags
     -W
