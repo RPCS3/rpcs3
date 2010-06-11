@@ -59,7 +59,6 @@ u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 
-//static bool g_bHidden = 0;
 int g_GameSettings = 0;
 int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
@@ -86,14 +85,12 @@ static const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA
 static const char* s_naa[3] = { "native res |", "res /2 |", "res /4 |" };
 static const char* pbilinear[] = { "off", "normal", "forced" };
 
-extern GIFRegHandler g_GIFPackedRegHandlers[];
-extern GIFRegHandler g_GIFRegHandlers[];
+extern GIFRegHandler g_GIFPackedRegHandlers[], g_GIFRegHandlers[];
 GIFRegHandler g_GIFTempRegHandlers[16] = {0};
-extern int g_nPixelShaderVer;
-extern int g_nFrameRender;
-extern int g_nFramesSkipped;
+extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
 
 int s_frameskipping = 0;
+
 u32 CALLBACK PS2EgetLibType()
 {
 	return PS2E_LT_GS;
@@ -367,11 +364,9 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 			if (crc_game_list[i].crc == crc)
 			{
 				if (crc_game_list[i].v_thresh > 0) VALIDATE_THRESH = crc_game_list[i].v_thresh;
-
 				if (crc_game_list[i].t_thresh > 0) TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
 
 				conf.gamesettings |= crc_game_list[i].flags;
-
 				g_GameSettings = conf.gamesettings | options;
 
 				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
@@ -812,7 +807,6 @@ void ProcessMessages()
 							else
 							{
 								SendMessage(GShwnd, WM_DESTROY, 0, 0);
-								//g_bHidden = 1;
 								return;
 							}
 

@@ -34,6 +34,10 @@ using namespace std;
 
 #undef CreateWindow	// Undo Windows.h global namespace pollution
 
+#ifdef GL_X11_WINDOW
+#include <X11/extensions/xf86vmode.h>
+#endif
+
 class GLWindow
 {
 

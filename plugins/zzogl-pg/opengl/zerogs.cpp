@@ -19,24 +19,16 @@
 //-------------------------- Includes
 #if defined(_WIN32)
 #	include <windows.h>
-//#	include <aviUtil.h>
 #	include "resource.h"
 #endif
 
-#include <stdio.h>
-
-#include <malloc.h>
-#include <assert.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "GS.h"
 #include "Mem.h"
 #include "x86.h"
 #include "zerogs.h"
 #include "zpipe.h"
-
-#include "ZeroGSShaders/zerogsshaders.h"
 #include "targets.h"
 
 //----------------------- Defines
@@ -332,7 +324,6 @@ void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
 	{
 		conf.width = nNewWidth;
 		conf.height = nNewHeight;
-		//SaveConfig();
 	}
 }
 
@@ -346,7 +337,6 @@ void ZeroGS::SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 	{
 		conf.width = nNewWidth;
 		conf.height = nNewHeight;
-		//SaveConfig();
 	}
 }
 

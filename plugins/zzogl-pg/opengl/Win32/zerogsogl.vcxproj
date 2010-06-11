@@ -183,6 +183,7 @@
   <ItemGroup>
     <ClInclude Include="aviUtil.h" />
     <ClInclude Include="..\GifTransfer.h" />
+    <ClInclude Include="..\CRC.h" />
     <ClInclude Include="..\GS.h" />
     <ClInclude Include="..\Util.h" />
     <ClInclude Include="..\Mem.h" />

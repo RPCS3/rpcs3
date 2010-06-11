@@ -32,19 +32,9 @@ extern HWND GShwnd;
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/keysym.h>
-#include <X11/extensions/xf86vmode.h>
 #include <gtk/gtk.h>
-#include <sys/types.h>
 
 #endif
-
-#include <stdio.h>
-#include <malloc.h>
-#include <assert.h>
-
 
 #define GSdefs
 #include "PS2Edefs.h"
@@ -56,16 +46,13 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include "zerogsmath.h"
 
-#include <assert.h>
-
 #include <vector>
 #include <string>
 
-extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
-extern bool THR_bShift;
 extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
 #if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
+#include <malloc.h>
 
 // declare linux equivalents
 static __forceinline void* pcsx2_aligned_malloc(size_t size, size_t align)

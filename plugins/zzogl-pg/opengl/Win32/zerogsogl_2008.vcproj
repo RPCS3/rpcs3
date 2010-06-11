@@ -394,6 +394,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\CRC.h"
+				>
+			</File>
+			<File
 				RelativePath="..\GS.h"
 				>
 			</File>

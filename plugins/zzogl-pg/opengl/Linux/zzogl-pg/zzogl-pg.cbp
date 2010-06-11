@@ -92,6 +92,7 @@
 			<Add library="stdc++" />
 			<Add library="Cg" />
 		</Linker>
+		<Unit filename="../../CRC.h" />
 		<Unit filename="../../GLWin32.cpp" />
 		<Unit filename="../../GLWinX11.cpp" />
 		<Unit filename="../../GS.h" />

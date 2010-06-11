@@ -28,6 +28,9 @@
 
 #include <map>
 
+extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
+extern bool THR_bShift;
+
 static map<string, confOptsStruct> mapConfOpts;
 
 void CALLBACK GSkeyEvent(keyEvent *ev)

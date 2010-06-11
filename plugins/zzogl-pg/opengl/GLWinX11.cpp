@@ -19,7 +19,10 @@
 #include "GS.h"
 #include "zerogs.h"
 
+
 #ifdef GL_X11_WINDOW
+
+#include <X11/Xlib.h>
 
 bool GLWindow::CreateWindow(void *pDisplay)
 {

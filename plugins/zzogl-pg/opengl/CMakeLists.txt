@@ -82,6 +82,7 @@ set(zzoglSources
 # zzogl headers
 set(zzoglHeaders
     common.h
+    CRC.h
     GifTransfer.h
     glprocs.h
     GS.h

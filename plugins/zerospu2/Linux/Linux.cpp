@@ -25,8 +25,6 @@
 
 extern char *libraryName;
 
-GtkWidget *ConfDlg;
-
 void __forceinline SysMessage(const char *fmt, ...)
 {
     va_list list;
