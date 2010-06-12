@@ -458,7 +458,7 @@ static __forceinline s32 GetVoiceValues( V_Core& thiscore, uint voiceidx )
 
 	switch( InterpType )
 	{
-		case 0: return vc.PV1;
+		case 0: return vc.PV1<<1;
 		case 1: return (vc.PV1<<1) - (( (vc.PV2 - vc.PV1) * vc.SP)>>11);
 
 		case 2: return CubicInterpolate				(vc.PV4, vc.PV3, vc.PV2, vc.PV1, mu);
