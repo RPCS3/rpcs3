@@ -16,9 +16,17 @@
 #pragma once
 
 #include "Common.h"
-#include "File_Reader.h"
 #include "AppConfig.h"
 #include <wx/wfstream.h>
+
+struct	key_pair;
+class	Game_Data;
+
+// This was originally configured to use deque, but there appear to be no uses of deque's sole
+// advantage: adding and removing items from the head of the list.  So I changed it to vector
+// since it is a slightly lighter weight class.  --air
+typedef std::vector<Game_Data>	GameDataArray;
+typedef std::vector<key_pair>	KeyPairArray;
 
 struct key_pair {
 	wxString key;
@@ -67,7 +75,9 @@ struct key_pair {
 class Game_Data {
 public:
 	wxString		id;				// Serial Identification Code 
-	deque<key_pair>	kList;			// List of all (key, value) pairs for game data
+	KeyPairArray	kList;			// List of all (key, value) pairs for game data
+
+public:
 	Game_Data(const wxString& _id = wxEmptyString)
 		: id(_id) {}
 		
@@ -80,6 +90,7 @@ public:
 		return !id.IsEmpty();
 	}
 };
+
 
 // DataBase_Loader:
 // Give the starting Key and Value you're looking for,
@@ -103,13 +114,15 @@ protected:
 	bool extractMultiLine(const wxString& line, key_pair& keyPair, wxInputStream& reader);
 	void extract(const wxString& line, key_pair& keyPair, wxInputStream& reader);
 	
-	const wxString	m_emptyString;	// empty string for returning stuff .. never modify!
+	// temp areas used as buffers for accelerated loading of database content.  These strings are
+	// allocated and grown only once, and then reused for the duration of the database loading
+	// process; saving thousands of heapp allocation operations.
 	wxString		m_dest;
 	std::string		m_intermediate;
 
 public:
-	deque<Game_Data> gList;			// List of all game data
-	Game_Data*		curGame;		// Current game data
+	GameDataArray	gList;			// List of all game data
+	Game_Data*		curGame;		// Current game data (index into gList)
 	wxString		header;			// Header of the database
 	wxString		baseKey;		// Key to separate games by ("Serial")
 
@@ -125,30 +138,27 @@ public:
 		wxString      s0;
 		Game_Data	  game;
 
-		try {
-			while(!reader.Eof()) {
-				while(!reader.Eof()) { // Find first game
-					pxReadLine(reader, s0, m_intermediate);
-					extract(s0.Trim(true).Trim(false), keyPair, reader);
-					if (keyPair.CompareKey(key)) break;
-					header += s0 + L'\n';
+		while(!reader.Eof()) {
+			while(!reader.Eof()) { // Find first game
+				pxReadLine(reader, s0, m_intermediate);
+				extract(s0.Trim(true).Trim(false), keyPair, reader);
+				if (keyPair.CompareKey(key)) break;
+				header += s0 + L'\n';
+			}
+			game.NewSerial( keyPair.value );
+			game.kList.push_back(keyPair);
+			
+			while(!reader.Eof()) { // Fill game data, find new game, repeat...
+				pxReadLine(reader, s0, m_intermediate);
+				extract(s0.Trim(true).Trim(false), keyPair, reader);
+				if (!keyPair.IsOk()) continue;
+				if (keyPair.CompareKey(key)) {
+					gList.push_back(game);
+					game.NewSerial(keyPair.value);
 				}
-				game.NewSerial( keyPair.value );
 				game.kList.push_back(keyPair);
-				
-				while(!reader.Eof()) { // Fill game data, find new game, repeat...
-					pxReadLine(reader, s0, m_intermediate);
-					extract(s0.Trim(true).Trim(false), keyPair, reader);
-					if (!keyPair.IsOk()) continue;
-					if (keyPair.CompareKey(key)) {
-						gList.push_back(game);
-						game.NewSerial(keyPair.value);
-					}
-					game.kList.push_back(keyPair);
-				}
 			}
 		}
-		catch( Exception::EndOfStream& ) {}
 
 		if (game.IsOk()) gList.push_back(game);
 
@@ -165,7 +175,7 @@ public:
 	// Sets the current game to the one matching the serial id given
 	// Returns true if game found, false if not found...
 	bool setGame(const wxString& id) {
-		deque<Game_Data>::iterator it = gList.begin();
+		GameDataArray::iterator it( gList.begin() );
 		for ( ; it != gList.end(); ++it) {
 			if (it[0].id == id) {
 				curGame = &it[0];
@@ -175,7 +185,7 @@ public:
 		curGame = NULL;
 		return false;
 	}
-
+	
 	// Returns true if a game is currently loaded into the database
 	// Returns false if otherwise (this means you need to call setGame()
 	// or it could mean the game was not found in the database at all...)
@@ -187,9 +197,9 @@ public:
 	void saveToFile(const wxString& file = L"GameIndex.dbf") {
 		wxFFileOutputStream writer( file );
 		pxWriteMultiline(writer, header);
-		deque<Game_Data>::iterator it = gList.begin();
+		GameDataArray::iterator it( gList.begin() );
 		for ( ; it != gList.end(); ++it) {
-			deque<key_pair>::iterator i = it[0].kList.begin();
+			KeyPairArray::iterator i = it[0].kList.begin();
 			for ( ; i != it[0].kList.end(); ++i) {
 				pxWriteMultiline(writer, i[0].toString() );
 			}
@@ -211,7 +221,7 @@ public:
 	// Searches the current game's data to see if the given key exists
 	bool keyExists(const wxChar* key) {
 		if (curGame) {
-			deque<key_pair>::iterator it = curGame->kList.begin();
+			KeyPairArray::iterator it( curGame->kList.begin() );
 			for ( ; it != curGame->kList.end(); ++it) {
 				if (it[0].CompareKey(key)) {
 					return true;
@@ -225,7 +235,7 @@ public:
 	// Totally Deletes the specified key/pair value from the current game's data
 	void deleteKey(const wxChar* key) {
 		if (curGame) {
-			deque<key_pair>::iterator it = curGame->kList.begin();
+			KeyPairArray::iterator it( curGame->kList.begin() );
 			for ( ; it != curGame->kList.end(); ++it) {
 				if (it[0].CompareKey(key)) {
 					curGame->kList.erase(it);
@@ -239,7 +249,7 @@ public:
 	// Gets a string representation of the 'value' for the given key
 	wxString getString(const wxChar* key) {
 		if (curGame) {
-			deque<key_pair>::iterator it = curGame->kList.begin();
+			KeyPairArray::iterator it( curGame->kList.begin() );
 			for ( ; it != curGame->kList.end(); ++it) {
 				if (it[0].CompareKey(key)) {
 					return it[0].value;
@@ -296,7 +306,7 @@ public:
 	// Write a string value to the specified key
 	void writeString(const wxString& key, const wxString& value) {
 		if (curGame) {
-			deque<key_pair>::iterator it = curGame->kList.begin();
+			KeyPairArray::iterator it( curGame->kList.begin() );
 			for ( ; it != curGame->kList.end(); ++it) {
 				if (it[0].CompareKey(key)) {
 					it[0].value = value;

@@ -203,7 +203,7 @@ void Pcsx2App::OpenMainFrame()
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, L"PCSX2" );
 	m_id_MainFrame = mainFrame->GetId();
 
-	PostAppMethod( &Pcsx2App::OpenProgramLog );
+	PostIdleAppMethod( &Pcsx2App::OpenProgramLog );
 
 	SetTopWindow( mainFrame );		// not really needed...
 	SetExitOnFrameDelete( false );	// but being explicit doesn't hurt...
@@ -498,8 +498,6 @@ bool Pcsx2App::OnInit()
 		SysExecutorThread.Start();
 		DetectCpuAndUserMode();
 
-		if( Startup.ForceConsole ) g_Conf->ProgLogBox.Visible = true;
-
 		//   Set Manual Exit Handling
 		// ----------------------------
 		// PCSX2 has a lot of event handling logistics, so we *cannot* depend on wxWidgets automatic event
@@ -512,6 +510,9 @@ bool Pcsx2App::OnInit()
 
 		//   Start GUI and/or Direct Emulation
 		// -------------------------------------
+		if( Startup.ForceConsole ) g_Conf->ProgLogBox.Visible = true;
+		PostAppMethod( &Pcsx2App::OpenProgramLog );
+
 		if( m_UseGUI )
 			PostAppMethod( &Pcsx2App::OpenMainFrame );
 
@@ -763,6 +764,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 8564 );
+//CrtDebugBreak breakAt( 2014 );
 
 #endif

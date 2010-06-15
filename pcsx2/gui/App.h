@@ -530,7 +530,7 @@ public:
 	StartupOptions					Startup;
 	CommandlineOverrides			Overrides;
 
-	wxTimer*						m_timer_Termination;
+	ScopedPtr<wxTimer>				m_timer_Termination;
 
 protected:
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
