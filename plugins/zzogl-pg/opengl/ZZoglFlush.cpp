@@ -490,7 +490,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 		}
 	}
 
-#ifdef DEBUG
+#ifdef _DEBUG
 	if (tbp0 == 0x3600 && tbw == 0x100)
 	{
 		if (ptextarg == NULL)

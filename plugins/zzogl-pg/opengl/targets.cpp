@@ -1249,6 +1249,17 @@ inline bool CheckWidthIsSame(const frameInfo& frame, CRenderTarget* ptarg)
 		return (2 * frame.fbw == ptarg->fbw);
 }
 
+void ZeroGS::CRenderTargetMngr::PrintTargets()
+{
+#ifdef _DEBUG
+	for (MAPTARGETS::iterator it1 = mapDummyTargs.begin(); it1 != mapDummyTargs.end(); ++it1)
+		ZZLog::Debug_Log("\t Dummy Targets(0x%x) fbw:0x%x fbh:0x%x psm:0x%x fbp:0x%x", GetFrameKey(it1->second), it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
+
+	for (MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
+		ZZLog::Debug_Log("\t Targets(0x%x) fbw:0x%x fbh:0x%x psm:0x%x fbp:0x%x", GetFrameKey(it1->second), it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
+#endif
+}
+
 CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
 {
 	FUNCLOG
@@ -1503,18 +1514,9 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		if (it != mapDummyTargs.end())
 		{
-#ifdef DEBUG
-			printf("A %x %x %x %x\n", frame.fbw, frame.fbh, frame.psm, frame.fbp);
-
-			for (MAPTARGETS::iterator it1 = mapDummyTargs.begin(); it1 != mapDummyTargs.end(); ++it1)
-				printf("\t %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
-
-			for (MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
-				printf("\t ! %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
-
-			printf("\t\t %x %x %x %x\n", it->second->fbw, it->second->fbh, it->second->psm, it->second->fbp);
-
-#endif
+			ZZLog::Debug_Log("Dummy Frame fbw:0x%x fbh:0x%x psm:0x%x fbp:0x%x", frame.fbw, frame.fbh, frame.psm, frame.fbp);
+			PrintTargets();
+			ZZLog::Debug_Log("Dummy it->second fbw:0x%x fbh:0x%x psm:0x%x fbp:0x%x", it->second->fbw, it->second->fbh, it->second->psm, it->second->fbp);
 			ptarg = it->second;
 
 			mapDummyTargs.erase(it);
@@ -1530,16 +1532,8 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		}
 		else
 		{
-#ifdef DEBUG
-			printf("A %x %x %x %x\n", frame.fbw, frame.fbh, frame.psm, frame.fbp);
-
-			for (MAPTARGETS::iterator it1 = mapDummyTargs.begin(); it1 != mapDummyTargs.end(); ++it1)
-				printf("\t %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
-
-			for (MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
-				printf("\t ! %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
-
-#endif
+			ZZLog::Debug_Log("Frame fbw:0x%x fbh:0x%x psm:0x%x fbp:0x%x", frame.fbw, frame.fbh, frame.psm, frame.fbp);
+			PrintTargets();
 			// create anew
 			ptarg = (opts & TO_DepthBuffer) ? new CDepthTarget : new CRenderTarget;
 			CRenderTargetMngr* pmngrs[2] = { &s_DepthRTs, this == &s_RTs ? &s_RTs : NULL };

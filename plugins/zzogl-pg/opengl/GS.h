@@ -907,7 +907,8 @@ inline int ZZOgl_fbh_Calc(int fbp, int fbw, int psm)
 	if (PSMT_ISHALF(psm)) fbh *= 2;
 	if (fbh > 1024) fbh = 1024;
 
-	return fbh ;
+	//ZZLog::Debug_Log("ZZOgl_fbh_Calc: 0x%x", fbh);
+	return fbh;
 }
 
 inline int ZZOgl_fbh_Calc(frameInfo frame)

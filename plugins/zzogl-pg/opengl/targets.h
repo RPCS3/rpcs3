@@ -115,7 +115,7 @@ class CRenderTargetMngr
 		}
 
 		static void DestroyTarg(CRenderTarget* ptarg);
-
+		void PrintTargets();
 		MAPTARGETS mapTargets, mapDummyTargs;
 };
 
@@ -268,26 +268,34 @@ inline u16 ShiftHeight(int fbh, int fbp, int fbhCalc)
 	return fbh;
 }
 
+//#define FRAME_KEY_BY_FBH
+
 //FIXME: this code is for P4 and KH1. It should not be so strange!
 //Dummy targets was deleted from mapTargets, but not erased.
+inline u32 GetFrameKeyDummy(int fbp, int fbw, int fbh, int psm)
+{
+//	if (fbp > 0x2000 && ZZOgl_fbh_Calc(fbp, fbw, psm) < 0x400 && ZZOgl_fbh_Calc(fbp, fbw, psm) != fbh)
+//		ZZLog::Debug_Log("Z %x %x %x %x\n", fbh, fbhCalc, fbp, ZZOgl_fbh_Calc(fbp, fbw, psm));
+	// height over 1024 would shrink to 1024, so dummy targets with calculated size more than 0x400 should be
+	// distinct by real height. But in FFX there is 3e0 height target, so I put 0x300 as limit.
+
+#ifndef FRAME_KEY_BY_FBH	
+	int calc = ZZOgl_fbh_Calc(fbp, fbw, psm);
+	if (/*fbp > 0x2000 && */calc < 0x300)
+		return ((fbw << 16) | calc);
+	else
+#endif
+		return ((fbw << 16) | fbh);
+}
+
 inline u32 GetFrameKeyDummy(const frameInfo& frame)
 {
-//	if (frame.fbp > 0x2000 && ZZOgl_fbh_Calc(frame) < 0x400 && ZZOgl_fbh_Calc(frame) != frame.fbh)
-//		printf ("Z %x %x %x %x\n", frame.fbh, frame.fbhCalc, frame.fbp, ZZOgl_fbh_Calc(frame));
-	// height over 1024 would shrink to 1024, so dummy targets with calculated size more than 0x400 should be
-	// distinct by real height. But in FFX there is 3e0 height target, so I put 0x300 as limit
-	if (/*frame.fbp > 0x2000 && */ZZOgl_fbh_Calc(frame) < 0x300)
-		return (((frame.fbw) << 16) | ZZOgl_fbh_Calc(frame));
-	else
-		return (((frame.fbw) << 16) | frame.fbh);
+	return GetFrameKeyDummy(frame.fbp, frame.fbw, frame.fbh, frame.psm);
 }
 
 inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 {
-	if (/*frame->fbp > 0x2000 && */ZZOgl_fbh_Calc(frame->fbp, frame->fbw, frame->psm) < 0x300)
-		return (((frame->fbw) << 16) | ZZOgl_fbh_Calc(frame->fbp, frame->fbw, frame->psm));
-	else
-		return (((frame->fbw) << 16) | frame->fbh);
+	return GetFrameKeyDummy(frame->fbp, frame->fbw, frame->fbh, frame->psm);
 }
 
 } // End of namespace

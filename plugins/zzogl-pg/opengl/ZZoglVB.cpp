@@ -279,6 +279,7 @@ inline int ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 							  (zbuf.zmsk ? CRenderTargetMngr::TO_Virtual : 0), get_maxheight(zbuf.zbp, gsfb.fbw, 0));
 
 	assert(pnewdepth != NULL && prndr != NULL);
+	if (pnewdepth->fbh != prndr->fbh) ZZLog::Debug_Log("pnewdepth->fbh(0x%x) != prndr->fbh(0x%x)", pnewdepth->fbh, prndr->fbh);
 	assert(pnewdepth->fbh == prndr->fbh);
 
 	if ((pprevdepth != pnewdepth) || (pprevdepth != NULL && (pprevdepth->status & CRenderTarget::TS_NeedUpdate)))
