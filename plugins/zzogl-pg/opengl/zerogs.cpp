@@ -211,7 +211,8 @@ void ZeroGS::HandleGLError()
 
 	if (error != 0)
 	{
-		int w, h;
+		int w = 0;
+		int h = 0;
 		GLint fmt;
 		glGetRenderbufferParameterivEXT(GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_INTERNAL_FORMAT_EXT, &fmt);
 		glGetRenderbufferParameterivEXT(GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_WIDTH_EXT, &w);
@@ -255,7 +256,7 @@ void ZeroGS::HandleGLError()
 				break;
 
 			default:
-				ZZLog::Error_Log("*UNKNOWN ERROR* reported from glCheckFramebufferStatusEXT() for %s!");
+				ZZLog::Error_Log("*UNKNOWN ERROR* reported from glCheckFramebufferStatusEXT(0x%x)!", error);
 				break;
 		}
 	}
@@ -561,10 +562,6 @@ void ZeroGS::RenderCustom(float fAlpha)
 	vb[1].bSyncVars = 0;
 
 	GL_REPORT_ERROR();
-
-	GLint status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-
-	assert(status == GL_FRAMEBUFFER_COMPLETE_EXT || status == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT);
 }
 
 void ZeroGS::Restore()

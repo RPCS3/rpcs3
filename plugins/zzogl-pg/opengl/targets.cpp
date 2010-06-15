@@ -580,7 +580,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	// assume depth already set !?
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexConv, 0);
 	ZeroGS::ResetRenderTarget(1);
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 
 	BindToSample(&ptex) ;
 
@@ -688,7 +688,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	// assume depth already set !?
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexConv, 0);
 	ZeroGS::ResetRenderTarget(1);
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 
 	BindToSample(&ptex) ;
 
@@ -796,7 +796,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexFeedback, 0);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 
 	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptex);
 	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
@@ -827,7 +827,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 		vb[icurctx].bVarsTexSync = 0;
 	}
 
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 }
 
 void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
@@ -836,8 +836,9 @@ void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
 
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + targ, GL_TEXTURE_RECTANGLE_NV, ptex, 0);
 
-//	if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT)
-//		ERROR_LOG_SPAM("Too bad Framebuffer not compele, glitches could appear onscreen!\n");
+	//GL_REPORT_ERRORD();
+	//if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
+		//ERROR_LOG_SPAM("The Framebuffer is not complete. Glitches could appear onscreen.\n");
 }
 
 ZeroGS::CDepthTarget::CDepthTarget() : CRenderTarget(), pdepth(0), pstencil(0), icount(0) {}
@@ -1039,14 +1040,13 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptex, 0);
 	SetDepthStencilSurface();
+	
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_RECTANGLE_NV, 0, 0);
 	GLenum buffer = GL_COLOR_ATTACHMENT0_EXT;
-
+	
 	if (glDrawBuffers != NULL) glDrawBuffers(1, &buffer);
 
-	int stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 
 	SetViewport();
 
@@ -1092,9 +1092,9 @@ void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 
 		if (icount++ < 8)    // not going to fail if succeeded 4 times
 		{
-			GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-
-			if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+			GL_REPORT_ERRORD();
+			
+			if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
 				glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, 0);
 
@@ -3909,7 +3909,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode)
 {
 	FUNCLOG
-	//assert( glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT );
+	//GL_REPORT_ERRORD();
 	s_nResolved += 2;
 
 	// align the rect to the nearest page

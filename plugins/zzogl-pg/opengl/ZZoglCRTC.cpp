@@ -715,7 +715,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
 
-// Put FPS counter on scren (not in window title)
+// Put FPS counter on screen (not in window title)
 inline void AfterRenderDisplayFPS()
 {
 	char str[64];

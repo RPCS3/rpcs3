@@ -519,7 +519,7 @@ bool ZeroGS::Create(int _width, int _height)
 		ZZLog::Error_Log("Failed to create the renderbuffer.");
 	}
 
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
+	GL_REPORT_ERRORD();
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, s_uFramebuffer);
 

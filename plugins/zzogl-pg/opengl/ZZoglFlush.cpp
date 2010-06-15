@@ -643,11 +643,8 @@ inline void FlushSetStream(VB& curvb)
 //	memcpy_amd(pdata, curvb.pBufferData, curvb.nCount * sizeof(VertexGPU));
 //	glUnmapBuffer(GL_ARRAY_BUFFER);
 	SET_STREAM();
-#ifdef _DEBUG
-	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-	assert(glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT);
-#endif
-
+	
+	GL_REPORT_ERRORD();
 }
 
 int SetMaskR = 0x0;
@@ -1867,7 +1864,8 @@ void ZeroGS::SetContextTarget(int context)
 
 	assert(curvb.prndr != NULL && curvb.pdepth != NULL);
 
-	assert(curvb.pdepth->fbh == curvb.prndr->fbh);
+	if (curvb.pdepth->fbh != curvb.prndr->fbh) ZZLog::Debug_Log("(curvb.pdepth->fbh(0x%x) != curvb.prndr->fbh(0x%x))", curvb.pdepth->fbh, curvb.prndr->fbh);
+	//assert(curvb.pdepth->fbh == curvb.prndr->fbh);
 
 	if (curvb.pdepth->status & CRenderTarget::TS_Virtual)
 	{

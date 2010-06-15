@@ -280,7 +280,7 @@ inline int ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 
 	assert(pnewdepth != NULL && prndr != NULL);
 	if (pnewdepth->fbh != prndr->fbh) ZZLog::Debug_Log("pnewdepth->fbh(0x%x) != prndr->fbh(0x%x)", pnewdepth->fbh, prndr->fbh);
-	assert(pnewdepth->fbh == prndr->fbh);
+	//assert(pnewdepth->fbh == prndr->fbh);
 
 	if ((pprevdepth != pnewdepth) || (pprevdepth != NULL && (pprevdepth->status & CRenderTarget::TS_NeedUpdate)))
 		result = 2;
@@ -407,7 +407,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 	if (prndr != NULL) SetContextTarget(ictx);
 }
 
-// This is the case, most easy to perform, when nothinh was changed
+// This is the case, most easy to perform, when nothing was changed
 inline void ZeroGS::VB::FlushTexUnchangedClutDontUpdate()
 {
 	if (ZZOglGet_cld_TexBits(uNextTex0Data[1]))
