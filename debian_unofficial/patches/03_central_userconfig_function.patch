@@ -1,0 +1,64 @@
+Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/AppConfig.cpp	2010-06-15 13:12:59.894963081 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp	2010-06-15 13:13:00.230117552 +0200
+@@ -94,6 +94,12 @@
+ 		return retval;
+ 	}
+ 
++    // Specifies the main configuration folder.
++    wxDirName GetUserLocalDataDir()
++    {
++        return wxDirName(wxStandardPaths::Get().GetUserLocalDataDir());
++    }
++
+ 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
+ 	// share with other programs: screenshots, memory cards, and savestates.
+ 	wxDirName GetDocuments( DocsModeType mode )
+Index: pcsx2.snapshot-3208/pcsx2/gui/AppInit.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/AppInit.cpp	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/AppInit.cpp	2010-06-15 13:13:00.231095495 +0200
+@@ -60,7 +60,7 @@
+ 
+ void Pcsx2App::WipeUserModeSettings()
+ {
+-	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
++	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
+ 	if( !usrlocaldir.Exists() ) return;
+ 
+ 	wxString cwd( Path::Normalize( wxGetCwd() ) );
+@@ -89,7 +89,7 @@
+ //
+ void Pcsx2App::ReadUserModeSettings()
+ {
+-	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
++	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
+ 	if( !usrlocaldir.Exists() )
+ 	{
+ 		Console.WriteLn( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
+Index: pcsx2.snapshot-3208/pcsx2/gui/Panels/MiscPanelStuff.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/Panels/MiscPanelStuff.cpp	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/Panels/MiscPanelStuff.cpp	2010-06-15 13:13:00.231095495 +0200
+@@ -48,7 +48,7 @@
+ 	{
+ 		RadioPanelItem(
+ 			_("User Documents (recommended)"),
+-			_("Location: ") + wxStandardPaths::Get().GetDocumentsDir()
++			_("Location: ") + PathDefs::GetUserLocalDataDir().GetFilename().GetFullPath()
+ 		),
+ 
+ 		RadioPanelItem(
+Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.h
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/AppConfig.h	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/AppConfig.h	2010-06-15 13:13:00.232095570 +0200
+@@ -36,6 +36,7 @@
+ 	// complete pathnames are returned by these functions
+ 	// For 99% of all code, you should use these.
+ 
++    extern wxDirName GetUserLocalDataDir();
+ 	extern wxDirName GetDocuments();
+ 	extern wxDirName GetDocuments( DocsModeType mode );
+ 	extern wxDirName GetThemes();

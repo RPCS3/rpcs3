@@ -1,0 +1,6 @@
+?package(pcsx2.snapshot): \
+    needs="X11" \
+    section="Applications/Emulators" \
+    title="pcsx2" \
+    longtitle="A playstation 2 emulators" \
+    command="/usr/games/pcsx2"

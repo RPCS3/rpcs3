@@ -1,0 +1,223 @@
+Fix cmake to include an additional CDVD module. Mainly rename version.h, to avoid a conflict with alsa/version.h
+Upstream need to properly fix the "version.h"
+Index: pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/Linux/CDVDlinuz.c
+===================================================================
+--- pcsx2.snapshot-3185.orig/plugins/CDVDlinuz/Src/Linux/CDVDlinuz.c	2010-06-08 19:27:02.000000000 +0200
++++ pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/Linux/CDVDlinuz.c	2010-06-08 19:35:28.095953061 +0200
+@@ -47,7 +47,7 @@
+ #include "DVD.h" // InitDVDInfo()
+ #include "device.h"
+ 
+-#include "../version.h"
++#include "../version_local.h"
+ 
+ 
+ // Globals
+Index: pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/Linux/aboutbox.c
+===================================================================
+--- pcsx2.snapshot-3185.orig/plugins/CDVDlinuz/Src/Linux/aboutbox.c	2010-06-08 19:27:02.000000000 +0200
++++ pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/Linux/aboutbox.c	2010-06-08 19:35:28.095953061 +0200
+@@ -62,7 +62,7 @@
+ 
+ 
+ 
+-#include "version.h"
++#include "version_local.h"
+ 
+ #include "aboutbox.h"
+ 
+Index: pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/version.h
+===================================================================
+--- pcsx2.snapshot-3185.orig/plugins/CDVDlinuz/Src/version.h	2010-06-08 19:27:02.000000000 +0200
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,86 +0,0 @@
+-/*  version.h
+-
+- *  Copyright (C) 2002-2005  PCSX2 Team
+-
+- *
+-
+- *  This program is free software; you can redistribute it and/or modify
+-
+- *  it under the terms of the GNU General Public License as published by
+-
+- *  the Free Software Foundation; either version 2 of the License, or
+-
+- *  (at your option) any later version.
+-
+- *
+-
+- *  This program is distributed in the hope that it will be useful,
+-
+- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+-
+- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-
+- *  GNU General Public License for more details.
+-
+- *
+-
+- *  You should have received a copy of the GNU General Public License
+-
+- *  along with this program; if not, write to the Free Software
+-
+- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+-
+- *
+-
+- *  PCSX2 members can be contacted through their website at www.pcsx2.net.
+-
+- */
+-
+-
+-
+-
+-
+-#ifndef VERSION_H
+-
+-#define VERSION_H
+-
+-
+-
+-
+-
+-#ifndef __LINUX__
+-
+-#ifdef __linux__
+-
+-#define __LINUX__
+-
+-#endif /* __linux__ */
+-
+-#endif /* No __LINUX__ */
+-
+-
+-
+-#define CDVDdefs
+-
+-#include "PS2Edefs.h"
+-
+-
+-
+-
+-
+-extern char *libname;
+-
+-
+-
+-extern const unsigned char version;
+-
+-extern const unsigned char revision;
+-
+-extern const unsigned char build;
+-
+-
+-
+-
+-
+-#endif /* VERSION_H */
+-
+Index: pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/version_local.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/version_local.h	2010-06-08 19:35:28.095953061 +0200
+@@ -0,0 +1,86 @@
++/*  version.h
++
++ *  Copyright (C) 2002-2005  PCSX2 Team
++
++ *
++
++ *  This program is free software; you can redistribute it and/or modify
++
++ *  it under the terms of the GNU General Public License as published by
++
++ *  the Free Software Foundation; either version 2 of the License, or
++
++ *  (at your option) any later version.
++
++ *
++
++ *  This program is distributed in the hope that it will be useful,
++
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++
++ *  GNU General Public License for more details.
++
++ *
++
++ *  You should have received a copy of the GNU General Public License
++
++ *  along with this program; if not, write to the Free Software
++
++ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++
++ *
++
++ *  PCSX2 members can be contacted through their website at www.pcsx2.net.
++
++ */
++
++
++
++
++
++#ifndef VERSION_H
++
++#define VERSION_H
++
++
++
++
++
++#ifndef __LINUX__
++
++#ifdef __linux__
++
++#define __LINUX__
++
++#endif /* __linux__ */
++
++#endif /* No __LINUX__ */
++
++
++
++#define CDVDdefs
++
++#include "PS2Edefs.h"
++
++
++
++
++
++extern char *libname;
++
++
++
++extern const unsigned char version;
++
++extern const unsigned char revision;
++
++extern const unsigned char build;
++
++
++
++
++
++#endif /* VERSION_H */
++
+Index: pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/CMakeLists.txt
+===================================================================
+--- pcsx2.snapshot-3185.orig/plugins/CDVDlinuz/Src/CMakeLists.txt	2010-06-08 19:27:02.000000000 +0200
++++ pcsx2.snapshot-3185/plugins/CDVDlinuz/Src/CMakeLists.txt	2010-06-08 19:35:28.095953061 +0200
+@@ -50,7 +50,7 @@
+     PS2Etypes.h
+     # ERROR It takes /usr/include/alsa/version.h
+     # Either fix include dir. Or rename the file. Or mv stuff into in another include file.
+-    version.h
++    version_local.h
+ )
+ 
+ # CDVDlinuz Linux sources

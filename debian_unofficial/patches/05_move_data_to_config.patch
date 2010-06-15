@@ -1,0 +1,17 @@
+Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/AppConfig.cpp	2010-06-15 13:13:00.572085408 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp	2010-06-15 13:13:00.797339595 +0200
+@@ -123,7 +123,12 @@
+ 	{
+ 		switch( mode )
+ 		{
++#ifdef __LINUX__
++            // By default on linux move all user data file into central configuration directory
++			case DocsFolder_User:	return GetUserLocalDataDir();
++#else
+ 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
++#endif
+ 			//case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
+ 			case DocsFolder_Custom: return CustomDocumentsFolder;
+ 

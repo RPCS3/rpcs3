@@ -1,0 +1,65 @@
+Debian policy.
+This patch updates default plugin path and config path.
+It also updates the pcsx2 game db path and shaders data path.
+AppInit.cpp:93 could be probably updated
+Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/gui/AppConfig.cpp	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp	2010-06-15 13:12:59.894963081 +0200
+@@ -137,7 +137,8 @@
+ 
+ 	wxDirName GetPlugins()
+ 	{
+-		return AppRoot() + Base::Plugins();
++		// return AppRoot() + Base::Plugins();
++		return wxDirName( L"/usr/lib/games/pcsx2" ) + Base::Plugins();
+ 	}
+ 
+ 	wxDirName GetSettings()
+Index: pcsx2.snapshot-3208/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+===================================================================
+--- pcsx2.snapshot-3208.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-15 13:12:59.895962667 +0200
+@@ -347,17 +347,12 @@
+ 	assert(hShaderGlob != NULL);
+ 	s_lpShaderResources = (u8*)LockResource(hShaderGlob);
+ #	else // not _WIN32
+-	FILE* fres = fopen("ps2hw.dat", "rb");
++	FILE* fres = fopen("/usr/share/games/pcsx2/shaders/ps2hw.dat", "rb");
+ 
+ 	if (fres == NULL)
+ 	{
+-		fres = fopen("plugins/ps2hw.dat", "rb");
+-
+-		if (fres == NULL)
+-		{
+-			ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
+-			return false;
+-		}
++        ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
++        return false;
+ 	}
+ 
+ 	fseek(fres, 0, SEEK_END);
+Index: pcsx2.snapshot-3208/pcsx2/DataBase_Loader.h
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/DataBase_Loader.h	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/DataBase_Loader.h	2010-06-15 13:12:59.896962570 +0200
+@@ -89,7 +89,7 @@
+ 	wxString		header;			// Header of the database
+ 	wxString		baseKey;		// Key to separate games by ("Serial")
+ 
+-	DataBase_Loader(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial", const wxString& value = wxEmptyString )
++	DataBase_Loader(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf", const wxString& key = L"Serial", const wxString& value = wxEmptyString )
+ 		: baseKey( key )
+ 	{
+ 		curGame	= NULL;
+@@ -159,7 +159,7 @@
+ 	}
+ 
+ 	// Saves changes to the database
+-	void saveToFile(const wxString& file = L"GameIndex.dbf") {
++	void saveToFile(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf") {
+ 		wxFFileOutputStream writer( file );
+ 		pxWriteMultiline(writer, header);
+ 		deque<Game_Data*>::iterator it = gList.begin();

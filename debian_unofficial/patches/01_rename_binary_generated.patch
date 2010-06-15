@@ -1,0 +1,24 @@
+Debian specific
+Always uses the same executable name for the build. Easier for the install script
+Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
+===================================================================
+--- pcsx2.snapshot-3208.orig/pcsx2/CMakeLists.txt	2010-06-15 13:10:41.000000000 +0200
++++ pcsx2.snapshot-3208/pcsx2/CMakeLists.txt	2010-06-15 13:12:59.655335900 +0200
+@@ -77,7 +77,7 @@
+ if(CMAKE_BUILD_TYPE STREQUAL Debug)
+ 	
+ 	# executable name
+-	set(pcsx2Name pcsx2-dbg)
++	set(pcsx2Name pcsx2)
+ 	
+ 	# add defines
+ 	add_definitions(${CommonFlags} ${DebugFlags} -DPCSX2_DEVBUILD -DPCSX2_DEBUG -DWX_PRECOMP)
+@@ -87,7 +87,7 @@
+ if(CMAKE_BUILD_TYPE STREQUAL Devel)
+ 
+ 	# executable name
+-	set(pcsx2Name pcsx2-dev)
++	set(pcsx2Name pcsx2)
+ 	
+ 	# add defines
+ 	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DWX_PRECOMP -DNDEBUG)
