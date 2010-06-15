@@ -31,7 +31,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		wxString label, tooltip;
 	};
 
-	const CheckTextMess check_text[NUM_OF_GAME_FIXES] =
+	const CheckTextMess check_text[GamefixId_COUNT] =
 	{
 		{
 			_("VU Add Hack - Fixes Tri-Ace games boot crash."),
@@ -71,12 +71,12 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 			)
 		},
 		{
-			_("Skip MPEG hack - Skips videos/FMV's in games to avoid game hanging/freezes."),
+			_("Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."),
 			wxEmptyString
 		}
 	};
 
-	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
+	for( int i=0; i<GamefixId_COUNT; ++i )
 	{
 		groupSizer += (m_checkbox[i] = new pxCheckBox( this, check_text[i].label ));
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
@@ -102,31 +102,19 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	EnableStuff();
 }
 
-// I could still probably get rid of the for loop, but I think this is clearer.
 void Panels::GameFixesPanel::Apply()
 {
 	g_Conf->EnableGameFixes = m_check_Enable->GetValue();
 
 	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
-    for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
-    {
-        if (m_checkbox[i]->GetValue())
-        {
-            opts.bitset |= (1 << i);
-        }
-        else
-        {
-            opts.bitset &= ~(1 << i);
-        }
-    }
+    for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+		opts.Set((GamefixId)i, m_checkbox[i]->GetValue());
 }
 
 void Panels::GameFixesPanel::EnableStuff()
 {
-    for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
-    {
+    for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
     	m_checkbox[i]->Enable(m_check_Enable->GetValue());
-    }
 }
 
 void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
@@ -138,8 +126,6 @@ void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
 void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
-	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
-	{
-		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
-	}
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+		m_checkbox[i]->SetValue( opts.Get((GamefixId)i) );
 }

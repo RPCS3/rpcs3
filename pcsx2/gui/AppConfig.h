@@ -254,14 +254,6 @@ public:
 	void LoadSaveMemcards( IniInterface& ini );
 };
 
-struct ConfigOverrides
-{
-	AppConfig::FilenameOptions	Filenames;
-	wxString					SettingsFolder;
-};
-
-extern ConfigOverrides OverrideOptions;
-
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
 extern void RelocateLogfile();
 extern void AppConfig_OnChangedSettingsFolder( bool overwrite =  false );

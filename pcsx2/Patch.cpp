@@ -138,14 +138,17 @@ int InitPatches(const wxString& name)
 	const wxString crc( L"[patches = " + name + L"]" );
 	patchnumber = 0;
 	
-	if (GameDB && GameDB->gameLoaded()) {
-		if (GameDB->sectionExists(L"patches", name)) {
-			patch = GameDB->getSection(L"patches", name);
-			patchFound = true;
-		}
-		else if (GameDB->keyExists(L"[patches]")) {
-			patch = GameDB->getString(L"[patches]");
-			patchFound = true;
+	if (DataBase_Loader* GameDB = AppHost_GetGameDatabase() )
+	{
+		if(GameDB->gameLoaded()) {
+			if (GameDB->sectionExists(L"patches", name)) {
+				patch = GameDB->getSection(L"patches", name);
+				patchFound = true;
+			}
+			else if (GameDB->keyExists(L"[patches]")) {
+				patch = GameDB->getString(L"[patches]");
+				patchFound = true;
+			}
 		}
 	}
 

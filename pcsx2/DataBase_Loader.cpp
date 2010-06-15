@@ -8,7 +8,7 @@
 
 void DataBase_Loader::doError(const wxString& line, key_pair& keyPair, bool doMsg) {
 	if (doMsg) Console.Error("DataBase_Loader: Bad file data [%s]", line.c_str());
-	keyPair.key.clear();
+	keyPair.Clear();
 }
 
 // Multiline Sections are in the form of:
@@ -47,8 +47,7 @@ bool DataBase_Loader::extractMultiLine(const wxString& line, key_pair& keyPair, 
 }
 
 void DataBase_Loader::extract(const wxString& line, key_pair& keyPair, wxInputStream& reader) {
-	keyPair.key.clear();
-	keyPair.value.clear();
+	keyPair.Clear();
 
 	if( line.IsEmpty() ) return;
 

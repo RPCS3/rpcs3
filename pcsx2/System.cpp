@@ -328,7 +328,6 @@ void SysCoreAllocations::CleanupMess() throw()
 {
 	try
 	{
-		GameDB.Delete();
 		closeNewVif(0);
 		closeNewVif(1);
 

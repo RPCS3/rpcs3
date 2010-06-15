@@ -91,7 +91,7 @@ static void ConvertPluginFilenames( wxString (&passins)[PluginId_Count] )
 {
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		passins[pi->id] = OverrideOptions.Filenames[pi->id].GetFullPath();
+		passins[pi->id] = wxGetApp().Overrides.Filenames[pi->id].GetFullPath();
 
 		if( passins[pi->id].IsEmpty() || !wxFileExists( passins[pi->id] ) )
 			passins[pi->id] = g_Conf->FullpathTo( pi->id );
@@ -101,6 +101,9 @@ static void ConvertPluginFilenames( wxString (&passins)[PluginId_Count] )
 typedef void (AppPluginManager::*FnPtr_AppPluginManager)();
 typedef void (AppPluginManager::*FnPtr_AppPluginPid)( PluginsEnum_t pid );
 
+// --------------------------------------------------------------------------------------
+//  SysExecEvent_AppPluginManager
+// --------------------------------------------------------------------------------------
 class SysExecEvent_AppPluginManager : public SysExecEvent
 {
 protected:
@@ -122,6 +125,9 @@ protected:
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  LoadSinglePluginEvent
+// --------------------------------------------------------------------------------------
 class LoadSinglePluginEvent : public pxInvokeActionEvent
 {
 	typedef pxInvokeActionEvent _parent;

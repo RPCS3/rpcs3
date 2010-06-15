@@ -22,7 +22,11 @@
 
 BaseCompressThread::~BaseCompressThread() throw()
 {
-	if( m_PendingSaveFlag ) wxGetApp().ClearPendingSave();
+	if( m_PendingSaveFlag )
+	{
+		wxGetApp().ClearPendingSave();
+		m_PendingSaveFlag = false;
+	}
 }
 
 void BaseCompressThread::SetPendingSave()

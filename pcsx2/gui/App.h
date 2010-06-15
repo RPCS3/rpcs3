@@ -26,6 +26,7 @@
 #include "AppCommon.h"
 #include "AppCoreThread.h"
 #include "RecentIsoList.h"
+#include "DataBase_Loader.h"
 
 #include "System.h"
 #include "System/SysThreads.h"
@@ -317,6 +318,7 @@ struct pxAppResources
 	ScopedPtr<wxImageList>		ToolbarImages;
 	ScopedPtr<wxIconBundle>		IconBundle;
 	ScopedPtr<wxBitmap>			Bitmap_Logo;
+	ScopedPtr<DataBase_Loader>	GameDB;
 
 	pxAppResources();
 	virtual ~pxAppResources() throw() { }
@@ -357,6 +359,78 @@ public:
 	void Resume();
 	void DoFrame();
 	double GetFramerate() const;
+};
+
+class StartupOptions
+{
+public:
+	bool			ForceWizard;
+	bool			ForceConsole;
+
+	// Disables the fast boot option when auto-running games.  This option only applies
+	// if SysAutoRun is also true.
+	bool			NoFastBoot;
+
+	// Specifies the Iso file to boot; used only if SysAutoRun is enabled and CdvdSource
+	// is set to ISO.
+	wxString		IsoFile;
+
+	// Specifies the CDVD source type to use when AutoRunning
+	CDVD_SourceType CdvdSource;
+
+	// Indicates if PCSX2 should autorun the configured CDVD source and/or ISO file.
+	bool			SysAutoRun;
+
+	StartupOptions()
+	{
+		ForceWizard				= false;
+		NoFastBoot				= false;
+		ForceConsole			= false;
+		SysAutoRun				= false;
+		CdvdSource				= CDVDsrc_NoDisc;
+	}
+};
+
+
+class CommandlineOverrides
+{
+public:
+	AppConfig::FilenameOptions	Filenames;
+	wxDirName		SettingsFolder;
+	wxFileName		SettingsFile;
+
+	bool			DisableSpeedhacks;
+
+	// Note that gamefixes in this array should only be honored if the
+	// "HasCustomGamefixes" boolean is also enabled.
+	bool			UseGamefix[GamefixId_COUNT];
+	bool			ApplyCustomGamefixes;
+
+public:
+	CommandlineOverrides()
+	{
+		DisableSpeedhacks		= false;
+		ApplyCustomGamefixes	= false;
+	}
+	
+	// Returns TRUE if either speedhacks or gamefixes are being overridden.
+	bool HasCustomHacks() const
+	{
+		return DisableSpeedhacks || ApplyCustomGamefixes;
+	}
+
+	bool HasSettingsOverride() const
+	{
+		return SettingsFolder.IsOk() || SettingsFile.IsOk();
+	}
+
+	bool HasPluginsOverride() const
+	{
+		for( int i=0; i<PluginId_Count; ++i )
+			if( Filenames.Plugins[i].IsOk() ) return true;
+
+		return false;
+	}
 };
 
 // =====================================================================================================
@@ -446,11 +520,17 @@ public:
 protected:
 	int								m_PendingSaves;
 	bool							m_ScheduledTermination;
+	bool							m_UseGUI;
 	
 public:
 	FramerateManager				FpsManager;
 	CommandDictionary				GlobalCommands;
 	AcceleratorDictionary			GlobalAccels;
+
+	StartupOptions					Startup;
+	CommandlineOverrides			Overrides;
+
+	wxTimer*						m_timer_Termination;
 
 protected:
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
@@ -459,11 +539,13 @@ protected:
 	ScopedPtr<RecentIsoList>		m_RecentIsoList;
 	ScopedPtr<pxAppResources>		m_Resources;
 
+	Threading::Mutex				m_mtx_Resources;
+	Threading::Mutex				m_mtx_LoadingGameDB;
+
+public:
 	// Executor Thread for complex VM/System tasks.  This thread is used to execute such tasks
 	// in parallel to the main message pump, to allow the main pump to run without fear of
 	// blocked threads stalling the GUI.
-
-public:
 	ExecutorThread					SysExecutorThread;
 	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
 
@@ -535,6 +617,8 @@ public:
 	{
 		return m_Resources->ImageId;
 	}
+	
+	DataBase_Loader* GetGameDatabase();
 
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:
@@ -546,10 +630,14 @@ public:
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
 	bool OnCmdLineError( wxCmdLineParser& parser );
+	bool ParseOverrides( wxCmdLineParser& parser );
 
 #ifdef __WXDEBUG__
 	void OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
 #endif
+
+	Threading::MutexRecursive	m_mtx_ProgramLog;
+	ConsoleLogFrame*			m_ptr_ProgramLog;
 
 	// ----------------------------------------------------------------------------
 	//   Console / Program Logging Helpers
@@ -557,6 +645,8 @@ public:
 	ConsoleLogFrame* GetProgramLog();
 	const ConsoleLogFrame* GetProgramLog() const;
 	void ProgramLog_PostEvent( wxEvent& evt );
+	Threading::Mutex& GetProgramLogLock();
+
 	void EnableAllLogging();
 	void DisableWindowLogging() const;
 	void DisableDiskLogging() const;
@@ -577,6 +667,7 @@ protected:
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
+	void OnScheduledTermination( wxTimerEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
 	void OnSysExecutorTaskTimeout( wxTimerEvent& evt );
 	void OnDestroyWindow( wxWindowDestroyEvent& evt );

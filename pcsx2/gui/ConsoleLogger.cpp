@@ -141,12 +141,15 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 	return file.Create(filename);
 }
 
-// ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+//  ConsoleLogFrame::ColorArray  (implementations)
+// --------------------------------------------------------------------------------------
+
 // fontsize - size of the font specified in points.
 //   (actual font used is the system-selected fixed-width font)
 //
-ConsoleLogFrame::ColorArray::ColorArray( int fontsize ) :
-	m_table( ConsoleColors_Count )
+ConsoleLogFrame::ColorArray::ColorArray( int fontsize )
+	: m_table( ConsoleColors_Count )
 {
 	Create( fontsize );
 }
@@ -225,7 +228,37 @@ enum MenuIDs_t
 	MenuID_FontSize_Huge,
 };
 
-// ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+//  ScopedLogLock  (implementations)
+// --------------------------------------------------------------------------------------
+class ScopedLogLock : ScopedLock
+{
+public:
+	ConsoleLogFrame*	WindowPtr;
+
+public:
+	ScopedLogLock()
+		: ScopedLock( ((Pcsx2App&)*wxTheApp).GetProgramLogLock() )
+	{
+		WindowPtr = ((Pcsx2App&)*wxTheApp).m_ptr_ProgramLog;
+	}
+
+	virtual ~ScopedLogLock() throw() {}
+
+	bool HasWindow() const
+	{
+		return WindowPtr != NULL;
+	}
+
+	ConsoleLogFrame& GetWindow() const
+	{
+		return *WindowPtr;
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  ConsoleLogFrame  (implementations)
+// --------------------------------------------------------------------------------------
 ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options )
 	: wxFrame(parent, wxID_ANY, title)
 	, m_conf( options )
@@ -333,6 +366,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 ConsoleLogFrame::~ConsoleLogFrame()
 {
+	ScopedLogLock locker;
 	wxGetApp().OnProgramLogClosed( GetId() );
 }
 
@@ -776,6 +810,11 @@ const IConsoleWriter    ConsoleWriter_File =
 	ConsoleToFile_SetTitle,
 };
 
+Mutex& Pcsx2App::GetProgramLogLock()
+{
+	return m_mtx_ProgramLog;
+}
+
 // --------------------------------------------------------------------------------------
 //  ConsoleToWindow Implementations
 // --------------------------------------------------------------------------------------
@@ -798,7 +837,8 @@ template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_Newline()
 {
 	secondary.Newline();
-	((Pcsx2App&)*wxTheApp).GetProgramLog()->Newline();
+	ScopedLogLock locker;
+	if( locker.WindowPtr ) locker.WindowPtr->Newline();
 }
 
 template< const IConsoleWriter& secondary >
@@ -806,7 +846,9 @@ static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
 {
 	if( secondary.DoWrite != NULL )
 		secondary.DoWrite( fmt );
-	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt );
+
+	ScopedLogLock locker;
+	if( locker.WindowPtr ) locker.WindowPtr->Write( Console.GetColor(), fmt );
 }
 
 template< const IConsoleWriter& secondary >
@@ -814,7 +856,9 @@ static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
 {
 	if( secondary.DoWriteLn != NULL )
 		secondary.DoWriteLn( fmt );
-	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt + L"\n" );
+
+	ScopedLogLock locker;
+	if( locker.WindowPtr ) locker.WindowPtr->Write( Console.GetColor(), fmt + L'\n' );
 }
 
 typedef void __concall DoWriteFn(const wxString&);
@@ -843,7 +887,9 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 
 void Pcsx2App::EnableAllLogging()
 {
-	const bool logBoxOpen = (GetProgramLog() != NULL);
+	ScopedLock lock( m_mtx_ProgramLog );
+
+	const bool logBoxOpen = (m_ptr_ProgramLog != NULL);
 	const IConsoleWriter* newHandler = NULL;
 
 	if( emuLog )
@@ -888,6 +934,7 @@ void Pcsx2App::DisableDiskLogging() const
 
 void Pcsx2App::DisableWindowLogging() const
 {
+	ScopedLock lock( m_mtx_ProgramLog );
 	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Stdout );
-	Threading::Sleep( 5 );
+	//Threading::Sleep( 5 );
 }

@@ -330,7 +330,7 @@ namespace Panels
 	class GameFixesPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		pxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
+		pxCheckBox*			m_checkbox[GamefixId_COUNT];
 		pxCheckBox*			m_check_Enable;
 
 	public:
@@ -358,7 +358,7 @@ namespace Panels
 		wxTextCtrl*	compatBox;
 		wxTextCtrl*	commentBox;
 		wxTextCtrl*	patchesBox;
-		pxCheckBox*	gameFixes[NUM_OF_GAME_FIXES];
+		pxCheckBox*	gameFixes[GamefixId_COUNT];
 
 	public:
 		GameDatabasePanel( wxWindow* parent );

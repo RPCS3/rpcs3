@@ -19,6 +19,25 @@
 
 class IniInterface;
 
+class pxEnumEnd_t { };
+const pxEnumEnd_t pxEnumEnd = {};
+
+// [TODO] Add assertion checks to ++/-- operators!
+#define ImplementEnumOperators( enumName ) \
+	static __forceinline GamefixId& operator++( enumName& src ) { src = (enumName)((int)src+1); return src; } \
+	static __forceinline GamefixId& operator--( enumName& src ) { src = (enumName)((int)src-1); return src; } \
+	static __forceinline GamefixId operator++( enumName& src, int )	{ enumName orig = src; src = (enumName)((int)src+1); return orig; } \
+	static __forceinline GamefixId operator--( enumName& src, int )	{ enumName orig = src; src = (enumName)((int)src-1); return src; } \
+	\
+	static __forceinline bool operator<( const enumName& left, const pxEnumEnd_t& )	{ return (int)left < enumName##_COUNT; } \
+	static __forceinline bool operator!=( const enumName& left, const pxEnumEnd_t& )	{ return (int)left != enumName##_COUNT; } \
+	static __forceinline bool operator==( const enumName& left, const pxEnumEnd_t& )	{ return (int)left == enumName##_COUNT; } \
+ \
+	static __forceinline void EnumAssertOnBounds( enumName id ) { \
+		pxAssume( ((int)id >= enumName##_FIRST) && ((int)id < enumName##_COUNT ) ); } \
+ \
+	extern const wxChar* EnumToString( enumName id )
+
 enum PluginsEnum_t
 {
 	PluginId_GS = 0,
@@ -36,6 +55,25 @@ enum PluginsEnum_t
 
 	PluginId_Mcd
 };
+
+enum GamefixId
+{
+	GamefixId_FIRST = 0,
+
+	Fix_VuAddSub = GamefixId_FIRST,
+	Fix_VuClipFlag,
+	Fix_FpuCompare,
+	Fix_FpuMultiply,
+	Fix_FpuNegDiv,
+	Fix_XGKick,
+	Fix_IpuWait,
+	Fix_EETiming,
+	Fix_SkipMpeg,
+
+	GamefixId_COUNT
+};
+
+ImplementEnumOperators( GamefixId );
 
 //------------ DEFAULT sseMXCSR VALUES ---------------
 #define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
@@ -440,6 +478,13 @@ struct Pcsx2Config
 		GamefixOptions() : bitset( 0 ) {}
 		void LoadSave( IniInterface& conf );
 
+		void Set( const wxString& list, bool enabled=true );
+		bool Clear( const wxString& list ) { Set( list, false ); }
+
+		bool Get( GamefixId id ) const;
+		void Set( GamefixId id, bool enabled=true );
+		bool Clear( GamefixId id ) { Set( id, false ); }
+
 		bool operator ==( const GamefixOptions& right ) const
 		{
 			return OpEqu( bitset );
@@ -562,8 +607,6 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().IsRecAvailable_IOP())
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define NUM_OF_GAME_FIXES 9
-
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack)	 // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 #define CHECK_VUCLIPFLAGHACK		(EmuConfig.Gamefixes.VuClipFlagHack) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).

@@ -585,23 +585,26 @@ void __fastcall eeGameStarting()
 		wxString gameFixes  = L"";
 		wxString gameCheats = L"";
 
-		if (GameDB && GameDB->gameLoaded()) {
-			int compat = GameDB->getInt("Compat");
-			gameName   = GameDB->getString("Name");
-			gameName  += L" (" + GameDB->getString("Region") + L")";
-			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
-		}
-		
-		if (EmuConfig.EnablePatches) {
-			int patches = InitPatches(gameCRC);
-			if (patches) {
-				wxString pString( wxsFormat( L"%d", patches ) );
-				gamePatch = L" [Patches = " + pString + L"]";
+		if (DataBase_Loader* GameDB = AppHost_GetGameDatabase() )
+		{
+			if (GameDB->gameLoaded()) {
+				int compat = GameDB->getInt("Compat");
+				gameName   = GameDB->getString("Name");
+				gameName  += L" (" + GameDB->getString("Region") + L")";
+				gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 			}
-			int fixes = loadGameSettings(GameDB);
-			if (fixes) {
-				wxString pString( wxsFormat( L"%d", fixes ) );
-				gameFixes = L" [Fixes = " + pString + L"]";
+		
+			if (EmuConfig.EnablePatches) {
+				int patches = InitPatches(gameCRC);
+				if (patches) {
+					wxString pString( wxsFormat( L"%d", patches ) );
+					gamePatch = L" [Patches = " + pString + L"]";
+				}
+				int fixes = loadGameSettings(GameDB);
+				if (fixes) {
+					wxString pString( wxsFormat( L"%d", fixes ) );
+					gameFixes = L" [Fixes = " + pString + L"]";
+				}
 			}
 		}
 

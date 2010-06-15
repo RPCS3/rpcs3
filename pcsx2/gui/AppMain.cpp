@@ -47,7 +47,6 @@ wxDirName               Logs;
 bool					UseDefaultLogs = true;
 
 ScopedPtr<AppConfig>	g_Conf;
-ConfigOverrides			OverrideOptions;
 
 template<typename DialogType>
 int AppOpenModalDialog( wxWindow* parent=NULL )
@@ -488,12 +487,18 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	}
 }
 
+// A call to this method informs the app that there is a pending save operation that must be
+// finished prior to exiting the app, or else data loss will occur.  Any call to this method
+// should be matched by a call to ClearPendingSave().
 void Pcsx2App::StartPendingSave()
 {
 	if( PostAppMethodMyself(&Pcsx2App::StartPendingSave) ) return;
 	++m_PendingSaves;
 }
 
+// If this method is called inappropriately then the entire pending save system will become
+// unreliable and data loss can occur on app exit.  Devel and debug builds will assert if
+// such calls are detected (though the detection is far from fool-proof).
 void Pcsx2App::ClearPendingSave()
 {
 	if( PostAppMethodMyself(&Pcsx2App::ClearPendingSave) ) return;
@@ -506,38 +511,6 @@ void Pcsx2App::ClearPendingSave()
 		Console.WriteLn( "App: All pending saves completed; exiting!" );
 		Exit();
 	}
-}
-
-
-// Common exit handler which can be called from any event (though really it should
-// be called only from CloseWindow handlers since that's the more appropriate way
-// to handle cancelable window closures)
-//
-// returns true if the app can close, or false if the close event was canceled by
-// the glorious user, whomever (s)he-it might be.
-void Pcsx2App::PrepForExit()
-{
-	SysExecutorThread.ShutdownQueue();
-
-	//SysExecutorThread.Cancel();
-	DispatchEvent( AppStatus_Exiting );
-
-	if( m_PendingSaves != 0 )
-	{
-		// When the thread finishes, it will call ClearPendingSave, which in turn will
-		// exit the app once all pending saves have "logged out."  (if one does not track
-		// itself using our PendingSaves feature, it would be lost -- too bad!)
-
-		Console.WriteLn( "App: Saves are pending; exit postponed..." );
-		SetExitOnFrameDelete( false );
-		m_ScheduledTermination = true;
-		return;
-	}
-
-	// This should be called by OnExit(), but sometimes wxWidgets fails to call OnExit(), so
-	// do it here just in case (no harm anyway -- OnExit is the next logical step after
-	// CloseWindow returns true from the TopLevel window).
-	CleanupRestartable();
 }
 
 // This method generates debug assertions if the MainFrame handle is NULL (typically
@@ -1012,4 +985,18 @@ SysMtgsThread& GetMTGS()
 SysCoreAllocations& GetSysCoreAlloc()
 {
 	return *wxGetApp().m_CoreAllocs;
+}
+
+DataBase_Loader* Pcsx2App::GetGameDatabase()
+{
+	pxAppResources& res( GetResourceCache() );
+	
+	ScopedLock lock( m_mtx_LoadingGameDB );
+	if( !res.GameDB ) res.GameDB = new DataBase_Loader();
+	return res.GameDB;
+}
+
+DataBase_Loader* AppHost_GetGameDatabase()
+{
+	return wxGetApp().GetGameDatabase();
 }

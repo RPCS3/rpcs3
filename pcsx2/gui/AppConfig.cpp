@@ -331,12 +331,16 @@ wxDirName GetLogFolder()
 
 wxDirName GetSettingsFolder()
 {
+	if( wxGetApp().Overrides.SettingsFolder.IsOk() )
+		return wxGetApp().Overrides.SettingsFolder;
+
 	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;
 }
 
 wxString GetSettingsFilename()
 {
-	return GetSettingsFolder().Combine( FilenameDefs::GetConfig() ).GetFullPath();
+	wxFileName fname( wxGetApp().Overrides.SettingsFile.IsOk() ? wxGetApp().Overrides.SettingsFile : FilenameDefs::GetConfig() );
+	return GetSettingsFolder().Combine( fname ).GetFullPath();
 }
 
 

@@ -246,6 +246,85 @@ void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 	IniEntry( FramesToSkip );
 }
 
+const wxChar *const tbl_GamefixNames[] =
+{
+	L"VuAddSub",
+	L"VuClipFlag",
+	L"FpuCompare",
+	L"FpuMul",
+	L"FpuNegDiv",
+	L"XGKick",
+	L"IpuWait",
+	L"EETiming",
+	L"SkipMpeg"
+};
+
+const __forceinline wxChar* EnumToString( GamefixId id )
+{
+	return tbl_GamefixNames[id];
+}
+
+// Enables a full list of gamefixes.  The list can be either comma or pipe-delimited.
+//   Example:  "XGKick,IpuWait"  or  "EEtiming,FpuCompare"
+// If an unrecognized tag is encountered, a warning is printed to the console, but no error
+// is generated.  This allows the system to function in the event that future versions of
+// PCSX2 remove old hacks once they become obsolete.
+void Pcsx2Config::GamefixOptions::Set( const wxString& list, bool enabled )
+{
+	wxStringTokenizer izer( list, L",|", wxTOKEN_STRTOK );
+	
+	while( izer.HasMoreTokens() )
+	{
+		wxString token( izer.GetNextToken() );
+
+		GamefixId i;
+		for (i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+		{
+			if( token.CmpNoCase( EnumToString(i) ) == 0 ) break;
+		}
+		if( i < pxEnumEnd ) Set( i );
+	}
+}
+
+void Pcsx2Config::GamefixOptions::Set( GamefixId id, bool enabled )
+{
+	EnumAssertOnBounds( id );
+	switch(id)
+	{
+		case Fix_VuAddSub:		VuAddSubHack		= enabled;	break;
+		case Fix_VuClipFlag:	VuClipFlagHack		= enabled;	break;
+		case Fix_FpuCompare:	FpuCompareHack		= enabled;	break;
+		case Fix_FpuMultiply:	FpuMulHack			= enabled;	break;
+		case Fix_FpuNegDiv:		FpuNegDivHack		= enabled;	break;
+		case Fix_XGKick:		XgKickHack			= enabled;	break;
+		case Fix_IpuWait:		IPUWaitHack			= enabled;	break;
+		case Fix_EETiming:		EETimingHack		= enabled;	break;
+		case Fix_SkipMpeg:		SkipMPEGHack		= enabled;	break;
+
+		jNO_DEFAULT;
+	}
+}
+
+bool Pcsx2Config::GamefixOptions::Get( GamefixId id ) const
+{
+	EnumAssertOnBounds( id );
+	switch(id)
+	{
+		case Fix_VuAddSub:		return VuAddSubHack;
+		case Fix_VuClipFlag:	return VuClipFlagHack;
+		case Fix_FpuCompare:	return FpuCompareHack;
+		case Fix_FpuMultiply:	return FpuMulHack;
+		case Fix_FpuNegDiv:		return FpuNegDivHack;
+		case Fix_XGKick:		return XgKickHack;
+		case Fix_IpuWait:		return IPUWaitHack;
+		case Fix_EETiming:		return EETimingHack;
+		case Fix_SkipMpeg:		return SkipMPEGHack;
+		
+		jNO_DEFAULT
+	}
+	return false;		// unreachable, but we still need to suppress warnings >_<
+}
+
 void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 {
 	GamefixOptions defaults;

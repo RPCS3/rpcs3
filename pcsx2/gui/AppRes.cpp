@@ -89,6 +89,7 @@ RecentIsoManager& Pcsx2App::GetRecentIsoManager()
 
 pxAppResources& Pcsx2App::GetResourceCache()
 {
+	ScopedLock lock( m_mtx_Resources );
 	if( !m_Resources )
 		m_Resources = new pxAppResources();
 

@@ -29,8 +29,6 @@
 #include "ps2/BiosTools.h"
 #include "DataBase_Loader.h"
 
-ScopedPtr<DataBase_Loader> GameDB;
-
 wxString DiscID;
 
 static cdvdStruct cdvd;
@@ -356,7 +354,7 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	elfptr.Delete();
 
 	// Set the Game DataBase to the correct game based on Game Serial Code...
-	if (GameDB) {
+	if (DataBase_Loader* GameDB = AppHost_GetGameDatabase()) {
 		wxString gameSerial = DiscID;
 		if (DiscID.IsEmpty()) { // Search for crc if no Serial Code
 			gameSerial = wxString(wxsFormat( L"%8.8x", ElfCRC ));
@@ -555,8 +553,6 @@ void cdvdReset()
 	cdvd.RTC.day = (u8)curtime.GetDay(wxDateTime::GMT9);
  	cdvd.RTC.month = (u8)curtime.GetMonth(wxDateTime::GMT9) + 1; // WX returns Jan as "0"
  	cdvd.RTC.year = (u8)(curtime.GetYear(wxDateTime::GMT9) - 2000);
-
-	if( !GameDB ) GameDB = new DataBase_Loader();
 }
 
 struct Freeze_v10Compat

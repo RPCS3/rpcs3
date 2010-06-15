@@ -42,7 +42,10 @@ wxTextCtrl* CreateMultiLineTextCtrl( wxWindow* parent, int digits, long flags = 
 Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	if (!GameDB) GameDB = new DataBase_Loader();
+	//if (!GameDB) GameDB = new DataBase_Loader();
+	DataBase_Loader* GameDB = AppHost_GetGameDatabase();
+	pxAssume( GameDB != NULL );
+	
 	searchBtn  = new wxButton  (this, wxID_DEFAULT, L"Search");
 
 	serialBox  = CreateNumericalTextCtrl(this, 40, wxTE_LEFT);
@@ -52,15 +55,8 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	commentBox = CreateMultiLineTextCtrl(this, 40, wxTE_LEFT);
 	patchesBox = CreateMultiLineTextCtrl(this, 40, wxTE_LEFT);
 
-	gameFixes[0] = new pxCheckBox(this, L"VuAddSubHack");
-	gameFixes[1] = new pxCheckBox(this, L"VuClipFlagHack");
-	gameFixes[2] = new pxCheckBox(this, L"FpuCompareHack");
-	gameFixes[3] = new pxCheckBox(this, L"FpuMulHack");
-	gameFixes[4] = new pxCheckBox(this, L"FpuNegDivHack");
-	gameFixes[5] = new pxCheckBox(this, L"XgKickHack");
-	gameFixes[6] = new pxCheckBox(this, L"IPUWaitHack");
-	gameFixes[7] = new pxCheckBox(this, L"EETimingHack");
-	gameFixes[8] = new pxCheckBox(this, L"SkipMPEGHack");
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+		gameFixes[i] = new pxCheckBox(this, EnumToString(i));
 
 	*this	+= Heading(_("Game Database Editor")).Bold() | StdExpand();
 	*this	+= Heading(_("This panel lets you add and edit game titles, game fixes, and game patches.")) | StdExpand();
@@ -84,14 +80,13 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	blankLine();
 
 	wxStaticBoxSizer& sizer2 = *new wxStaticBoxSizer(wxVERTICAL, this, _("PCSX2 Gamefixes"));
-	wxFlexGridSizer&  sizer3(*new wxFlexGridSizer(3));
+	wxFlexGridSizer&  sizer3(*new wxFlexGridSizer(3, 0, StdPadding*4));
 	sizer3.AddGrowableCol(0);
 
-	for (int i = 0; i < NUM_OF_GAME_FIXES; i++) {
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
 		sizer3 += gameFixes[i];
-	}
 
-	sizer2 += sizer3 | pxCenter;
+	sizer2 += sizer3 | StdCenter();
 
 	*this	+= sizer1  | pxCenter;
 	*this	+= sizer2  | pxCenter;
@@ -101,6 +96,8 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 }
 
 void Panels::GameDatabasePanel::PopulateFields() {
+	DataBase_Loader* GameDB = AppHost_GetGameDatabase();
+
 	if (GameDB->gameLoaded()) {
 		serialBox ->SetLabel(GameDB->getString("Serial"));
 		nameBox   ->SetLabel(GameDB->getString("Name"));
@@ -108,15 +105,9 @@ void Panels::GameDatabasePanel::PopulateFields() {
 		compatBox ->SetLabel(GameDB->getString("Compat"));
 		commentBox->SetLabel(GameDB->getString("[comments]"));
 		patchesBox->SetLabel(GameDB->getString("[patches]"));
-		gameFixes[0]->SetValue(GameDB->getBool("VuAddSubHack"));
-		gameFixes[1]->SetValue(GameDB->getBool("VuClipFlagHack"));
-		gameFixes[2]->SetValue(GameDB->getBool("FpuCompareHack"));
-		gameFixes[3]->SetValue(GameDB->getBool("FpuMulHack"));
-		gameFixes[4]->SetValue(GameDB->getBool("FpuNegDivHack"));
-		gameFixes[5]->SetValue(GameDB->getBool("XgKickHack"));
-		gameFixes[6]->SetValue(GameDB->getBool("IPUWaitHack"));
-		gameFixes[7]->SetValue(GameDB->getBool("EETimingHack"));
-		gameFixes[8]->SetValue(GameDB->getBool("SkipMPEGHack"));
+
+		for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+			gameFixes[i]->SetValue(GameDB->getBool(EnumToString(i)+wxString(L"Hack")));
 	}
 	else {
 		serialBox ->SetLabel(L"");
@@ -125,7 +116,7 @@ void Panels::GameDatabasePanel::PopulateFields() {
 		compatBox ->SetLabel(L"");
 		commentBox->SetLabel(L"");
 		patchesBox->SetLabel(L"");
-		for (int i = 0; i < NUM_OF_GAME_FIXES; i++) {
+		for (int i = 0; i < GamefixId_COUNT; i++) {
 			gameFixes[i]->SetValue(0);
 		}
 	}
@@ -136,15 +127,11 @@ void Panels::GameDatabasePanel::PopulateFields() {
 	else					GameDB->writeString(wxT(_key), _value);		\
 }
 
-#define writeGameFixToDB(_key, _value) {								\
-	if (!_value)	GameDB->deleteKey(wxT(_key));						\
-	else			GameDB->writeBool(wxT(_key), _value);				\
-}
-
 // returns True if the database is modified, or FALSE if no changes to save.
 bool Panels::GameDatabasePanel::WriteFieldsToDB() {
+	DataBase_Loader* GameDB = AppHost_GetGameDatabase();
 	wxString wxStr( serialBox->GetValue() );
-	
+
 	if (wxStr.IsEmpty()) return false;
 	if (wxStr != GameDB->getString("Serial")) {
 		GameDB->addGame(wxStr);
@@ -155,19 +142,18 @@ bool Panels::GameDatabasePanel::WriteFieldsToDB() {
 	writeTextBoxToDB("Compat",			compatBox->GetValue());
 	writeTextBoxToDB("[comments]",		commentBox->GetValue());
 	writeTextBoxToDB("[patches]",		patchesBox->GetValue());
-	writeGameFixToDB("VuAddSubHack",	gameFixes[0]->GetValue());
-	writeGameFixToDB("VuClipFlagHack",	gameFixes[1]->GetValue());
-	writeGameFixToDB("FpuCompareHack",	gameFixes[2]->GetValue());
-	writeGameFixToDB("FpuMulHack",		gameFixes[3]->GetValue());
-	writeGameFixToDB("FpuNegDivHack",	gameFixes[4]->GetValue());
-	writeGameFixToDB("XgKickHack",		gameFixes[5]->GetValue());
-	writeGameFixToDB("IPUWaitHack",		gameFixes[6]->GetValue());
-	writeGameFixToDB("EETimingHack",	gameFixes[7]->GetValue());
-	writeGameFixToDB("SkipMPEGHack",	gameFixes[8]->GetValue());
+	
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i) {
+		const bool val = gameFixes[i]->GetValue();
+		wxString keyName( EnumToString(i) ); keyName += L"Hack";
+		if (!val)	GameDB->deleteKey(keyName);
+		else		GameDB->writeBool(keyName, val);
+	}
 	return true;
 }
 
 void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
+	DataBase_Loader* GameDB = AppHost_GetGameDatabase();
 	wxString wxStr = serialBox->GetValue();
 	
 	if( wxStr.IsEmpty() ) wxStr = DiscID;
@@ -180,6 +166,7 @@ void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
 }
 
 void Panels::GameDatabasePanel::Apply() {
+	DataBase_Loader* GameDB = AppHost_GetGameDatabase();
 	if( WriteFieldsToDB() )
 	{
 		Console.WriteLn("Saving changes to Game Database...");

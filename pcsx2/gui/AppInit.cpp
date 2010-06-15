@@ -28,11 +28,6 @@
 
 using namespace pxSizerFlags;
 
-static bool m_ForceWizard = false;
-static bool m_UseGUI = false;
-static bool m_NoFastBoot = false;
-static bool m_DisableSpeedhacks = false;
-
 static void CpuCheckSSE2()
 {
 	if( x86caps.hasStreamingSIMD2Extensions ) return;
@@ -110,7 +105,7 @@ void Pcsx2App::ReadUserModeSettings()
 	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
-	bool forceWiz = m_ForceWizard || !hasGroup;
+	bool forceWiz = Startup.ForceWizard || !hasGroup;
 	
 	if( !forceWiz )
 	{
@@ -208,26 +203,28 @@ void Pcsx2App::OpenMainFrame()
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, L"PCSX2" );
 	m_id_MainFrame = mainFrame->GetId();
 
-	if( wxWindow* deleteme = GetProgramLog() )
-	{
-		deleteme->Destroy();
-		g_Conf->ProgLogBox.Visible = true;
-		m_id_ProgramLogBox = wxID_ANY;
-		PostIdleAppMethod( &Pcsx2App::OpenProgramLog );
-	}
+	PostAppMethod( &Pcsx2App::OpenProgramLog );
 
 	SetTopWindow( mainFrame );		// not really needed...
-	SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
+	SetExitOnFrameDelete( false );	// but being explicit doesn't hurt...
 	mainFrame->Show();
 }
 
 void Pcsx2App::OpenProgramLog()
 {
-	if( GetProgramLog() != NULL ) return;
+	if( ConsoleLogFrame* frame = GetProgramLog() )
+	{
+		//pxAssume( );
+		return;
+	}
+
 	wxWindow* m_current_focus = wxGetActiveWindow();
-	m_id_ProgramLogBox	= (new ConsoleLogFrame( GetMainFramePtr(), L"PCSX2 Program Log", g_Conf->ProgLogBox ))->GetId();
+
+	ScopedLock lock( m_mtx_ProgramLog );
+	m_ptr_ProgramLog	= new ConsoleLogFrame( GetMainFramePtr(), L"PCSX2 Program Log", g_Conf->ProgLogBox );
+	m_id_ProgramLogBox	= m_ptr_ProgramLog->GetId();
 	EnableAllLogging();
-	
+
 	if( m_current_focus ) m_current_focus->SetFocus();
 }
 
@@ -330,21 +327,29 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 		_("All options are for the current session only and will not be saved.\n")
 	);
 
+	wxString fixlist( L" " );
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+	{
+		if( i != GamefixId_FIRST ) fixlist += L",";
+		fixlist += EnumToString(i);
+	}
+
 	parser.AddParam( _("IsoFile"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
+	parser.AddSwitch( L"h",			L"help",		_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
+	parser.AddSwitch( wxEmptyString,L"console",		_("forces the program log/console to be visible") );
 
-	parser.AddSwitch( L"h",			L"help",	_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
+	parser.AddSwitch( wxEmptyString,L"nogui",		_("disables display of the gui while running games") );
+	parser.AddOption( wxEmptyString,L"elf",			_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"nodisc",		_("boots an empty dvd tray; use to enter the PS2 system menu") );
+	parser.AddSwitch( wxEmptyString,L"usecd",		_("boots from the CDVD plugin (overrides IsoFile parameter)") );
 
-	parser.AddSwitch( wxEmptyString,L"nogui",	_("disables display of the gui while running games") );
-	parser.AddOption( wxEmptyString,L"elf",		_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
-	parser.AddSwitch( wxEmptyString,L"nodisc",	_("boots an empty dvd tray; use to enter the PS2 system menu") );
-	parser.AddSwitch( wxEmptyString,L"usecd",	_("boots from the CDVD plugin (overrides IsoFile parameter)") );
+	parser.AddSwitch( wxEmptyString,L"fullboot",	_("disables fast booting") );
+	parser.AddSwitch( wxEmptyString,L"nohacks",		_("disables all speedhacks") );
+	parser.AddSwitch( wxEmptyString,L"gamefixes",	_("use the specified comma or pipe-delimited list of gamefixes.") + fixlist );
 
-	parser.AddSwitch( wxEmptyString,L"fullboot",_("disables fast booting") );
-	parser.AddSwitch( wxEmptyString,L"nohacks",	_("disables all speedhacks") );
-
-	parser.AddOption( wxEmptyString,L"cfgpath",	_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
-	parser.AddOption( wxEmptyString,L"cfg",		_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
-	parser.AddSwitch( wxEmptyString,L"forcewiz",_("forces PCSX2 to start the First-time Wizard") );
+	parser.AddOption( wxEmptyString,L"cfgpath",		_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
+	parser.AddOption( wxEmptyString,L"cfg",			_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"forcewiz",	_("forces PCSX2 to start the First-time Wizard") );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
@@ -361,50 +366,85 @@ bool Pcsx2App::OnCmdLineError( wxCmdLineParser& parser )
 	return false;
 }
 
-bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
+bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 {
-	if( parser.GetParamCount() >= 1 )
+	wxString dest;
+
+	if( parser.Found( L"cfgpath", &dest ) && !dest.IsEmpty() )
 	{
-		// [TODO] : Unnamed parameter is taken as an "autorun" option for a cdvd/iso.
-		parser.GetParam( 0 );
+		Console.Warning( L"Config path override: " + dest );
+		Overrides.SettingsFolder = dest;
 	}
 
-	// Suppress wxWidgets automatic options parsing since none of them pertain to PCSX2 needs.
-	//wxApp::OnCmdLineParsed( parser );
-
-	m_UseGUI			= !parser.Found(L"nogui");
-	m_DisableSpeedhacks	= parser.Found(L"nohacks");
-	m_NoFastBoot		= parser.Found(L"fullboot");
-	m_ForceWizard		= parser.Found( L"forcewiz" );
-	
-	wxString cfgPathOverride;
-	//if( parser.Found(L"cfgpath", cfgPathOverride ) )
+	if( parser.Found( L"cfg", &dest ) && !dest.IsEmpty() )
 	{
+		Console.Warning( L"Config file override: " + dest );
+		Overrides.SettingsFile = dest;
 	}
+
+	Overrides.DisableSpeedhacks = parser.Found(L"nohacks");
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		wxString dest;
 		if( !parser.Found( pi->GetShortname().Lower(), &dest ) ) continue;
-
-		OverrideOptions.Filenames.Plugins[pi->id] = dest;
 
 		if( wxFileExists( dest ) )
 			Console.Warning( pi->GetShortname() + L" override: " + dest );
 		else
 		{
-			bool result = Msgbox::OkCancel(
-				wxsFormat( _("Plugin Override Error!  Specified %s plugin does not exist:\n\n"), pi->GetShortname().c_str() ) +
-				dest +
-				_("Press OK to use the default configured plugin, or Cancel to close."),
-				_("Plugin Override Error - PCSX2"), wxICON_ERROR
-			);
+			wxDialogWithHelpers okcan( NULL, _("Plugin Override Error - PCSX2") );
 
-			if( !result ) return false;
+			okcan += okcan.Heading( wxsFormat(
+				_("%s Plugin Override Error!  The following file does not exist or is not a valid %s plugin:\n\n"),
+				pi->GetShortname().c_str(), pi->GetShortname().c_str()
+			) );
+
+			okcan += okcan.GetCharHeight();
+			okcan += okcan.Text(dest);
+			okcan += okcan.GetCharHeight();
+			okcan += okcan.Heading(_("Press OK to use the default configured plugin, or Cancel to close PCSX2."));
+
+			if( wxID_CANCEL == pxIssueConfirmation( okcan, MsgButtons().OKCancel() ) ) return false;
 		}
-	} while( ++pi, pi->shortname != NULL );
+		
+		Overrides.Filenames.Plugins[pi->id] = dest;
 
-	parser.Found( L"cfgpath", &OverrideOptions.SettingsFolder );
+	} while( ++pi, pi->shortname != NULL );
+	
+	return true;
+}
+
+bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
+{
+	if( parser.Found(L"console") )
+	{
+		Startup.ForceConsole = true;
+		OpenProgramLog();
+	}
+
+	// Suppress wxWidgets automatic options parsing since none of them pertain to PCSX2 needs.
+	//wxApp::OnCmdLineParsed( parser );
+
+	m_UseGUI	= !parser.Found(L"nogui");
+
+	if( !ParseOverrides(parser) ) return false;
+
+	// --- Parse Startup/Autoboot options ---
+
+	Startup.NoFastBoot		= parser.Found(L"fullboot");
+	Startup.ForceWizard		= parser.Found(L"forcewiz");
+
+	if( parser.GetParamCount() >= 1 )
+	{
+		Startup.IsoFile		= parser.GetParam( 0 );
+		Startup.SysAutoRun	= true;
+	}
+	
+	if( parser.Found(L"usecd") )
+	{
+		Startup.CdvdSource	= CDVDsrc_Plugin;
+		Startup.SysAutoRun	= true;
+	}
 
 	return true;
 }
@@ -458,8 +498,23 @@ bool Pcsx2App::OnInit()
 		SysExecutorThread.Start();
 		DetectCpuAndUserMode();
 
-		PostAppMethod( &Pcsx2App::OpenMainFrame );
-		PostAppMethod( &Pcsx2App::OpenProgramLog );
+		if( Startup.ForceConsole ) g_Conf->ProgLogBox.Visible = true;
+
+		//   Set Manual Exit Handling
+		// ----------------------------
+		// PCSX2 has a lot of event handling logistics, so we *cannot* depend on wxWidgets automatic event
+		// loop termination code.  We have a much safer system in place that continues to process messages
+		// until all "important" threads are closed out -- not just until the main frame is closed(-ish).
+		m_timer_Termination = new wxTimer( this, wxID_ANY );
+		Connect( m_timer_Termination->GetId(), wxEVT_TIMER, wxTimerEventHandler(Pcsx2App::OnScheduledTermination) );
+		SetExitOnFrameDelete( false );
+
+
+		//   Start GUI and/or Direct Emulation
+		// -------------------------------------
+		if( m_UseGUI )
+			PostAppMethod( &Pcsx2App::OpenMainFrame );
+
 		PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
 	}
 	// ----------------------------------------------------------------------------
@@ -491,6 +546,54 @@ bool Pcsx2App::OnInit()
     return true;
 }
 
+static int m_term_threshold = 20;
+
+void Pcsx2App::OnScheduledTermination( wxTimerEvent& evt )
+{
+	if( !pxAssertDev( m_ScheduledTermination, "Scheduled Termination check is inconsistent with ScheduledTermination status." ) )
+	{
+		m_timer_Termination->Stop();
+		return;
+	}
+
+	if( m_PendingSaves != 0 )
+	{
+		if( --m_term_threshold > 0 )
+		{
+			Console.WriteLn( "(App) %d saves are still pending; exit postponed...", m_PendingSaves );
+			return;
+		}
+		
+		Console.Error( "(App) %s pending saves have exceeded OnExit threshold and are being prematurely terminated!", m_PendingSaves );
+	}
+
+	m_timer_Termination->Stop();
+	Exit();
+}
+
+
+// Common exit handler which can be called from any event (though really it should
+// be called only from CloseWindow handlers since that's the more appropriate way
+// to handle cancelable window closures)
+//
+// returns true if the app can close, or false if the close event was canceled by
+// the glorious user, whomever (s)he-it might be.
+void Pcsx2App::PrepForExit()
+{
+	if( m_ScheduledTermination ) return;
+	m_ScheduledTermination = true;
+
+	SysExecutorThread.ShutdownQueue();
+	DispatchEvent( AppStatus_Exiting );
+
+	m_timer_Termination->Start( 500 );
+
+	// This should be called by OnExit(), but sometimes wxWidgets fails to call OnExit(), so
+	// do it here just in case (no harm anyway -- OnExit is the next logical step after
+	// CloseWindow returns true from the TopLevel window).
+	//CleanupRestartable();
+}
+
 // This cleanup procedure can only be called when the App message pump is still active.
 // OnExit() must use CleanupOnExit instead.
 void Pcsx2App::CleanupRestartable()
@@ -499,13 +602,9 @@ void Pcsx2App::CleanupRestartable()
 
 	ShutdownPlugins();
 	SysExecutorThread.ShutdownQueue();
-
-	//PingDispatcher( "Cleanup" );
-	//DeletionDispatcher();
 	IdleEventDispatcher( L"Cleanup" );
 
-	if( g_Conf )
-		AppSaveSettings();
+	if( g_Conf ) AppSaveSettings();
 }
 
 // This cleanup handler can be called from OnExit (it doesn't need a running message pump),
@@ -561,7 +660,6 @@ void Pcsx2App::CleanupResources()
 int Pcsx2App::OnExit()
 {
 	CleanupOnExit();
-
 	return wxApp::OnExit();
 }
 
@@ -610,6 +708,7 @@ Pcsx2App::Pcsx2App()
 	m_id_MainFrame		= wxID_ANY;
 	m_id_GsFrame		= wxID_ANY;
 	m_id_ProgramLogBox	= wxID_ANY;
+	m_ptr_ProgramLog	= NULL;
 
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();

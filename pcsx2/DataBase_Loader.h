@@ -28,6 +28,20 @@ struct key_pair {
 	key_pair(const wxString& _key, const wxString& _value)
 		: key(_key) , value(_value) {}
 
+	void Clear() {
+		key.clear();
+		value.clear();
+	}
+
+	// Performs case-insensitive compare against the key value.
+	bool CompareKey( const wxString& cmpto ) const {
+		return key.CmpNoCase(cmpto) == 0;
+	}
+	
+	bool IsOk() const {
+		return !key.IsEmpty();
+	}
+
 	wxString toString() const {
 		if (key[0] == '[') {
 			pxAssumeDev( key.EndsWith(L"]"), "Malformed multiline key detected: missing end bracket!" );
@@ -54,8 +68,17 @@ class Game_Data {
 public:
 	wxString		id;				// Serial Identification Code 
 	deque<key_pair>	kList;			// List of all (key, value) pairs for game data
-	Game_Data(const wxString& _id)
+	Game_Data(const wxString& _id = wxEmptyString)
 		: id(_id) {}
+		
+	void NewSerial( const wxString& _id ) {
+		id = _id;
+		kList.clear();
+	}
+	
+	bool IsOk() const {
+		return !id.IsEmpty();
+	}
 };
 
 // DataBase_Loader:
@@ -83,8 +106,9 @@ protected:
 	const wxString	m_emptyString;	// empty string for returning stuff .. never modify!
 	wxString		m_dest;
 	std::string		m_intermediate;
+
 public:
-	deque<Game_Data*> gList;		// List of all game data
+	deque<Game_Data> gList;			// List of all game data
 	Game_Data*		curGame;		// Current game data
 	wxString		header;			// Header of the database
 	wxString		baseKey;		// Key to separate games by ("Serial")
@@ -99,34 +123,34 @@ public:
 		wxFFileInputStream reader( file );
 		key_pair      keyPair;
 		wxString      s0;
-		Game_Data*	  game = NULL;
+		Game_Data	  game;
 
 		try {
 			while(!reader.Eof()) {
 				while(!reader.Eof()) { // Find first game
 					pxReadLine(reader, s0, m_intermediate);
 					extract(s0.Trim(true).Trim(false), keyPair, reader);
-					if (keyPair.key == key) break;
+					if (keyPair.CompareKey(key)) break;
 					header += s0 + L'\n';
 				}
-				game = new Game_Data(keyPair.value);
-				game->kList.push_back(keyPair);
+				game.NewSerial( keyPair.value );
+				game.kList.push_back(keyPair);
 				
 				while(!reader.Eof()) { // Fill game data, find new game, repeat...
 					pxReadLine(reader, s0, m_intermediate);
 					extract(s0.Trim(true).Trim(false), keyPair, reader);
-					if (keyPair.key.IsEmpty()) continue;
-					if (keyPair.key == key) {
+					if (!keyPair.IsOk()) continue;
+					if (keyPair.CompareKey(key)) {
 						gList.push_back(game);
-						game = new Game_Data(keyPair.value);
+						game.NewSerial(keyPair.value);
 					}
-					game->kList.push_back(keyPair);
+					game.kList.push_back(keyPair);
 				}
 			}
 		}
 		catch( Exception::EndOfStream& ) {}
 
-		if (game) gList.push_back(game);
+		if (game.IsOk()) gList.push_back(game);
 
 		if (value.IsEmpty()) return;
 		if (setGame(value)) Console.WriteLn(L"DataBase_Loader: Found Game! [%s]",     value.c_str());
@@ -135,15 +159,16 @@ public:
 
 	virtual ~DataBase_Loader() throw() {
 		// deque deletes its contents automatically.
+		Console.WriteLn( "(GameDB) Destroying..." );
 	}
 
 	// Sets the current game to the one matching the serial id given
 	// Returns true if game found, false if not found...
 	bool setGame(const wxString& id) {
-		deque<Game_Data*>::iterator it = gList.begin();
+		deque<Game_Data>::iterator it = gList.begin();
 		for ( ; it != gList.end(); ++it) {
-			if (it[0]->id == id) {
-				curGame =  it[0];
+			if (it[0].id == id) {
+				curGame = &it[0];
 				return true;
 			}
 		}
@@ -162,10 +187,10 @@ public:
 	void saveToFile(const wxString& file = L"GameIndex.dbf") {
 		wxFFileOutputStream writer( file );
 		pxWriteMultiline(writer, header);
-		deque<Game_Data*>::iterator it = gList.begin();
+		deque<Game_Data>::iterator it = gList.begin();
 		for ( ; it != gList.end(); ++it) {
-			deque<key_pair>::iterator i = it[0]->kList.begin();
-			for ( ; i != it[0]->kList.end(); ++i) {
+			deque<key_pair>::iterator i = it[0].kList.begin();
+			for ( ; i != it[0].kList.end(); ++i) {
 				pxWriteMultiline(writer, i[0].toString() );
 			}
 			pxWriteLine(writer, L"---------------------------------------------");
@@ -176,11 +201,11 @@ public:
 	// If searchDB is true, it searches the database to see if game already exists.
 	void addGame(const wxString& id, bool searchDB = true) {
 		if (searchDB && setGame(id)) return;
-		Game_Data* game = new Game_Data(id);
-		key_pair   kp(baseKey, id);
-		game->kList.push_back(kp);
+		Game_Data	game(id);
+		key_pair	kp(baseKey, id);
+		game.kList.push_back(kp);
 		gList.push_back(game);
-		curGame = game;
+		curGame = &(gList.end()-1)[0];
 	}
 
 	// Searches the current game's data to see if the given key exists
@@ -188,7 +213,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (it[0].key == key) {
+				if (it[0].CompareKey(key)) {
 					return true;
 				}
 			}
@@ -202,7 +227,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (it[0].key == key) {
+				if (it[0].CompareKey(key)) {
 					curGame->kList.erase(it);
 					return;
 				}
@@ -216,7 +241,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (it[0].key == key) {
+				if (it[0].CompareKey(key)) {
 					return it[0].value;
 				}
 			}
@@ -273,7 +298,7 @@ public:
 		if (curGame) {
 			deque<key_pair>::iterator it = curGame->kList.begin();
 			for ( ; it != curGame->kList.end(); ++it) {
-				if (it[0].key == key) {
+				if (it[0].CompareKey(key)) {
 					it[0].value = value;
 					return;
 				}
@@ -357,4 +382,4 @@ static int loadGameSettings(DataBase_Loader* gameDB) {
 	return 0;
 }
 
-extern ScopedPtr<DataBase_Loader> GameDB;
+extern DataBase_Loader* AppHost_GetGameDatabase();

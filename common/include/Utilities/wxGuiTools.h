@@ -561,7 +561,9 @@ protected:
 	void OnDialogCreated( wxCommandEvent& evt );
 	void OnOkCancel(wxCommandEvent& evt);
 	void OnCloseWindow(wxCloseEvent& event);
-	
+
+	bool ShouldPreventAppExit() const { return false; }
+
 	void DoAutoCenter();
 };
 

@@ -94,13 +94,13 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 
 	}
 
-	wxGetApp().PrepForExit();
 	sApp.OnMainFrameClosed( GetId() );
 
 	if( m_menubar.FindItem(MenuId_IsoSelector) )
 		m_menuCDVD.Remove(MenuId_IsoSelector);
 
 	RemoveEventHandler( &wxGetApp().GetRecentIsoManager() );
+	wxGetApp().PostIdleAppMethod( &Pcsx2App::PrepForExit );
 
 	evt.Skip();
 }
