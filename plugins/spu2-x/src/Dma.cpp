@@ -596,7 +596,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				}
 
 				//memcpy((ADMATempBuffer+InputPosWrite+0x200),mptr,0x200);
-				memcpy(GetMemPtr(0x2000+(Index<<10)+InputPosWrite),mptr,0x200);
+				memcpy(GetMemPtr(0x2200+(Index<<10)+InputPosWrite),mptr,0x200);
 				mptr+=0x100;
 
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
