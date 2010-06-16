@@ -32,18 +32,23 @@
 StereoOut32 V_Core::ReadInput_HiFi()
 {
 	InputPosRead &= ~1;
+//
+//#ifdef PCM24_S1_INTERLEAVE
+//	StereoOut32 retval(
+//		*((s32*)(ADMATempBuffer+(InputPosRead<<1))),
+//		*((s32*)(ADMATempBuffer+(InputPosRead<<1)+2))
+//	);
+//#else
+//	StereoOut32 retval(
+//		(s32&)(ADMATempBuffer[InputPosRead]),
+//		(s32&)(ADMATempBuffer[InputPosRead+0x200])
+//	);
+//#endif
 
-#ifdef PCM24_S1_INTERLEAVE
 	StereoOut32 retval(
-		*((s32*)(ADMATempBuffer+(InputPosRead<<1))),
-		*((s32*)(ADMATempBuffer+(InputPosRead<<1)+2))
+		(s32&)(*GetMemPtr(0x2000 + (Index<<10) + InputPosRead)),
+		(s32&)(*GetMemPtr(0x2200 + (Index<<10) + InputPosRead))
 	);
-#else
-	StereoOut32 retval(
-		(s32&)(ADMATempBuffer[InputPosRead]),
-		(s32&)(ADMATempBuffer[InputPosRead+0x200])
-	);
-#endif
 
 	if( Index == 1 )
 	{
@@ -111,13 +116,13 @@ StereoOut32 V_Core::ReadInput()
 
 	if( (Index!=1) || ((PlayMode&2)==0) )
 	{
-		// Using the temporary buffer because this area gets overwritten by some other code.
-		//*PData.Left  = (s32)*(s16*)(spu2mem+0x2000+(core<<10)+InputPos);
-		//*PData.Right = (s32)*(s16*)(spu2mem+0x2200+(core<<10)+InputPos);
-
+		//retval = StereoOut32(
+		//	(s32)ADMATempBuffer[InputPosRead],
+		//	(s32)ADMATempBuffer[InputPosRead+0x200]
+		//);
 		retval = StereoOut32(
-			(s32)ADMATempBuffer[InputPosRead],
-			(s32)ADMATempBuffer[InputPosRead+0x200]
+			(s32)(*GetMemPtr(0x2000 + (Index<<10) + InputPosRead)),
+			(s32)(*GetMemPtr(0x2200 + (Index<<10) + InputPosRead))
 		);
 	}
 

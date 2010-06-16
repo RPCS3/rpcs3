@@ -435,7 +435,7 @@ struct V_Core
 	// HACK -- This is a temp buffer which is (or isn't?) used to circumvent some memory
 	// corruption that originates elsewhere in the plugin. >_<  The actual ADMA buffer
 	// is an area mapped to SPU2 main memory.
-	s16				ADMATempBuffer[0x1000];
+	//s16				ADMATempBuffer[0x1000];
 
 // ----------------------------------------------------------------------------------
 //  V_Core Methods

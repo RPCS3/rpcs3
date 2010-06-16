@@ -96,7 +96,8 @@ void V_Core::AutoDMAReadBuffer(int mode) //mode: 0= split stereo; 1 = do not spl
 	if(mode)
 	{
 		if( DMAPtr != NULL )
-			memcpy((ADMATempBuffer+(spos<<1)),DMAPtr+InputDataProgress,0x400);
+			//memcpy((ADMATempBuffer+(spos<<1)),DMAPtr+InputDataProgress,0x400);
+			memcpy(GetMemPtr(0x2000+(Index<<10)+spos),DMAPtr+InputDataProgress,0x400);
 		MADR+=0x400;
 		InputDataLeft-=0x200;
 		InputDataProgress+=0x200;
@@ -104,15 +105,15 @@ void V_Core::AutoDMAReadBuffer(int mode) //mode: 0= split stereo; 1 = do not spl
 	else
 	{
 		if( DMAPtr != NULL )
-			memcpy((ADMATempBuffer+spos),DMAPtr+InputDataProgress,0x200);
-			//memcpy((spu2mem+0x2000+(core<<10)+spos),DMAPtr+InputDataProgress,0x200);
+			//memcpy((ADMATempBuffer+spos),DMAPtr+InputDataProgress,0x200);
+			memcpy(GetMemPtr(0x2000+(Index<<10)+spos),DMAPtr+InputDataProgress,0x200);
 		MADR+=0x200;
 		InputDataLeft-=0x100;
 		InputDataProgress+=0x100;
 
 		if( DMAPtr != NULL )
-			memcpy((ADMATempBuffer+spos+0x200),DMAPtr+InputDataProgress,0x200);
-			//memcpy((spu2mem+0x2200+(core<<10)+spos),DMAPtr+InputDataProgress,0x200);
+			//memcpy((ADMATempBuffer+spos+0x200),DMAPtr+InputDataProgress,0x200);
+			memcpy(GetMemPtr(0x2200+(Index<<10)+spos),DMAPtr+InputDataProgress,0x200);
 		MADR+=0x200;
 		InputDataLeft-=0x100;
 		InputDataProgress+=0x100;
@@ -554,7 +555,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 			if(false)//(mode)
 			{
-				memcpy((ADMATempBuffer+(InputPosWrite<<1)),mptr,0x400);
+				//memcpy((ADMATempBuffer+(InputPosWrite<<1)),mptr,0x400);
+				memcpy(GetMemPtr(0x2000+(Index<<10)+InputPosWrite),mptr,0x400);
 				mptr+=0x200;
 
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
@@ -574,8 +576,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 			}
 			else
 			{
-				memcpy((ADMATempBuffer+InputPosWrite),mptr,0x200);
-				//memcpy((spu2mem+0x2000+(Index<<10)+InputPosWrite),mptr,0x200);
+				//memcpy((ADMATempBuffer+InputPosWrite),mptr,0x200);
+				memcpy(GetMemPtr(0x2000+(Index<<10)+InputPosWrite),mptr,0x200);
 				mptr+=0x100;
 
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
@@ -593,8 +595,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 					}
 				}
 
-				memcpy((ADMATempBuffer+InputPosWrite+0x200),mptr,0x200);
-				//memcpy((spu2mem+0x2200+(Index<<10)+InputPosWrite),mptr,0x200);
+				//memcpy((ADMATempBuffer+InputPosWrite+0x200),mptr,0x200);
+				memcpy(GetMemPtr(0x2000+(Index<<10)+InputPosWrite),mptr,0x200);
 				mptr+=0x100;
 
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
