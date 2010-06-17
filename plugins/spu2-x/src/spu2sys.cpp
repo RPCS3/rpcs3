@@ -150,9 +150,9 @@ void V_Core::Reset( int index )
 		Voices[v].ADSR.Value	= 0;
 		Voices[v].ADSR.Phase	= 0;
 		Voices[v].Pitch			= 0x3FFF;
-		Voices[v].NextA			= 2800;
-		Voices[v].StartA		= 2800;
-		Voices[v].LoopStartA	= 2800;
+		Voices[v].NextA			= 0x2800;
+		Voices[v].StartA		= 0x2800;
+		Voices[v].LoopStartA	= 0x2800;
 	}
 
 	DMAICounter		= 0;
