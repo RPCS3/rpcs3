@@ -130,7 +130,7 @@ void V_Core::Reset( int index )
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= 0xEFFF8 + (0x10000*c);
+	EffectsStartA	= 0xE0000 + (0x10000*c);
 	EffectsEndA		= 0xEFFFF + (0x10000*c);
 
 	FxEnable		= 0;
@@ -163,6 +163,8 @@ void V_Core::Reset( int index )
 
 s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 {
+	offset *= 4;
+
 	u32 pos = EffectsStartA + offset;
 
 	// Need to use modulus here, because games can and will drop the buffer size
@@ -1247,8 +1249,8 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	ReverbPair(0,R_ACC_SRC_C1), //     0x0318
 	ReverbPair(0,R_ACC_SRC_D0), //     0x031C
 	ReverbPair(0,R_ACC_SRC_D1), //     0x0320
-	ReverbPair(0,R_IIR_SRC_B1), //     0x0324
-	ReverbPair(0,R_IIR_SRC_B0), //     0x0328
+	ReverbPair(0,R_IIR_SRC_B0), //     0x0324
+	ReverbPair(0,R_IIR_SRC_B1), //     0x0328
 	ReverbPair(0,R_MIX_DEST_A0), //    0x032C
 	ReverbPair(0,R_MIX_DEST_A1), //    0x0330
 	ReverbPair(0,R_MIX_DEST_B0), //    0x0334
@@ -1337,8 +1339,8 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	ReverbPair(1,R_ACC_SRC_C1), //     0x0318
 	ReverbPair(1,R_ACC_SRC_D0), //     0x031C
 	ReverbPair(1,R_ACC_SRC_D1), //     0x0320
-	ReverbPair(1,R_IIR_SRC_B1), //     0x0324
-	ReverbPair(1,R_IIR_SRC_B0), //     0x0328
+	ReverbPair(1,R_IIR_SRC_B0), //     0x0324
+	ReverbPair(1,R_IIR_SRC_B1), //     0x0328
 	ReverbPair(1,R_MIX_DEST_A0), //    0x032C
 	ReverbPair(1,R_MIX_DEST_A1), //    0x0330
 	ReverbPair(1,R_MIX_DEST_B0), //    0x0334

@@ -26,7 +26,7 @@
 
 __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 {
-	u32 pos = ReverbX + offset; //*4);
+	u32 pos = ReverbX + offset;
 
 	// Fast and simple single step wrapping, made possible by the preparation of the
 	// effects buffer addresses.
@@ -95,10 +95,10 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const u32 dest_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 );
 		const u32 dest_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 );
 
-		const u32 dest2_a0 = RevbGetIndexer( RevBuffers.IIR_DEST_A0 + 2 );
-		const u32 dest2_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 + 2 );
-		const u32 dest2_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 + 2 );
-		const u32 dest2_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 + 2 );
+		const u32 dest2_a0 = RevbGetIndexer( RevBuffers.IIR_DEST_A0 + 1 );
+		const u32 dest2_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 + 1 );
+		const u32 dest2_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 + 1 );
+		const u32 dest2_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 + 1 );
 
 		const u32 acc_src_a0 = RevbGetIndexer( RevBuffers.ACC_SRC_A0 );
 		const u32 acc_src_b0 = RevbGetIndexer( RevBuffers.ACC_SRC_B0 );
@@ -175,10 +175,13 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		INPUT_SAMPLE.Left  >>= 16;
 		INPUT_SAMPLE.Right >>= 16;
 
-		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF) + (INPUT_SAMPLE.Left * Revb.IN_COEF_L))>>16;
-		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF) + (INPUT_SAMPLE.Right * Revb.IN_COEF_R))>>16;
-		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + (INPUT_SAMPLE.Left * Revb.IN_COEF_L))>>16;
-		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + (INPUT_SAMPLE.Right * Revb.IN_COEF_R))>>16;
+		s32 input_L = (INPUT_SAMPLE.Left * Revb.IN_COEF_L);
+		s32 input_R = (INPUT_SAMPLE.Right * Revb.IN_COEF_R);
+
+		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>16;
+		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>16;
+		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>16;
+		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>16;
 
 		// This section differs from Neill's doc as it uses single-mul interpolation instead
 		// of 0x8000-val inversion.  (same result, faster)
@@ -208,14 +211,23 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// The following code differs from Neill's doc as it uses the more natural single-mul
 		// interpolative, instead of the funky ^0x8000 stuff.  (better result, faster)
 
+#define A_HACK
+#ifndef A_HACK
 		const s32 FB_A0 = _spu2mem[fb_src_a0] * Revb.FB_ALPHA;
 		const s32 FB_A1 = _spu2mem[fb_src_a1] * Revb.FB_ALPHA;
 
 		_spu2mem[mix_dest_a0] = clamp_mix( (ACC0 - FB_A0) >> 16 );
 		_spu2mem[mix_dest_a1] = clamp_mix( (ACC1 - FB_A1) >> 16 );
+#endif
 
 		const s32 acc_fb_mix_a = ACC0 + ( (_spu2mem[fb_src_a0] - (ACC0>>16)) * Revb.FB_ALPHA );
 		const s32 acc_fb_mix_b = ACC1 + ( (_spu2mem[fb_src_a1] - (ACC1>>16)) * Revb.FB_ALPHA );
+
+#ifdef A_HACK
+		_spu2mem[mix_dest_a0] = clamp_mix( acc_fb_mix_a >> 16 );
+		_spu2mem[mix_dest_a1] = clamp_mix( acc_fb_mix_b >> 16 );
+#endif
+
 		_spu2mem[mix_dest_b0] = clamp_mix( ( acc_fb_mix_a - (_spu2mem[fb_src_b0] * Revb.FB_X) ) >> 16 );
 		_spu2mem[mix_dest_b1] = clamp_mix( ( acc_fb_mix_b - (_spu2mem[fb_src_b1] * Revb.FB_X) ) >> 16 );
 
@@ -227,10 +239,21 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 
 	StereoOut32 retval;
 
-	for( int x=0; x<8; ++x )
+	//for( int x=0; x<8; ++x )
+	//{
+	//	retval.Left  += (upbuf[(ubpos+x)&7].Left*downcoeffs[x]);
+	//	retval.Right += (upbuf[(ubpos+x)&7].Right*downcoeffs[x]);
+	//}
+
+	if( (Cycles&1) == 0 )
 	{
-		retval.Left  += (upbuf[(ubpos+x)&7].Left*downcoeffs[x]);
-		retval.Right += (upbuf[(ubpos+x)&7].Right*downcoeffs[x]);
+		retval.Left = (upbuf[(ubpos+5)&7].Left + upbuf[(ubpos+7)&7].Left)>>1;
+		retval.Right = (upbuf[(ubpos+5)&7].Right + upbuf[(ubpos+7)&7].Right)>>1;
+	}
+	else
+	{
+		retval.Left = upbuf[(ubpos+6)&7].Left;
+		retval.Right = upbuf[(ubpos+6)&7].Right;
 	}
 
 	// Notes:
@@ -243,8 +266,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	// In any case the problem always seems to be that the reverb isn't resonating enough
 	// (indicating short buffers or bad coefficient math?), not that it isn't loud enough.
 
-	retval.Left  >>= (16-1 + 1);
-	retval.Right >>= (16-1 + 1);
+	//retval.Left  >>= (16-1 + 1);
+	//retval.Right >>= (16-1 + 1);
 
 	ubpos = (ubpos+1) & 7;
 
