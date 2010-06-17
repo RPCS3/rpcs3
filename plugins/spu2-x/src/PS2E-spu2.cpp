@@ -366,6 +366,46 @@ EXPORT_C_(s32) SPU2init()
 	return 0;
 }
 
+// Bit ugly to have this here instead of in RealttimeDebugger.cpp, but meh :p
+extern bool debugDialogOpen;
+extern HWND hDebugDialog;
+
+static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
+{
+	int wmId,wmEvent;
+
+	switch(uMsg)
+	{
+		case WM_PAINT:
+			return FALSE;
+		case WM_INITDIALOG:
+			{
+				debugDialogOpen=true;
+			}
+		break;
+
+		case WM_COMMAND:
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
+			// Parse the menu selections:
+			switch (wmId)
+			{
+				case IDOK:
+				case IDCANCEL:
+					debugDialogOpen=false;
+					EndDialog(hWnd,0);
+					break;
+				default:
+					return FALSE;
+			}
+		break;
+
+		default:
+			return FALSE;
+	}
+	return TRUE;
+}
+
 uptr gsWindowHandle = 0;
 
 EXPORT_C_(s32) SPU2open(void *pDsp)
@@ -379,12 +419,12 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	else
 		gsWindowHandle = 0;
 
-	/*
-	if(debugDialogOpen==0)
+	// uncomment for a visual debug display showing all core's activity!
+	/*if(debugDialogOpen==0)
 	{
-	hDebugDialog = CreateDialogParam(hInstance,MAKEINTRESOURCE(IDD_DEBUG),0,DebugProc,0);
-	ShowWindow(hDebugDialog,SW_SHOWNORMAL);
-	debugDialogOpen=1;
+		hDebugDialog = CreateDialogParam(hInstance,MAKEINTRESOURCE(IDD_DEBUG),0,DebugProc,0);
+		ShowWindow(hDebugDialog,SW_SHOWNORMAL);
+		debugDialogOpen=1;
 	}*/
 
 	IsOpened = true;

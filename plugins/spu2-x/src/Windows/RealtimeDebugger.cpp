@@ -15,49 +15,11 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "Global.h"
 #include "Dialogs.h"
 
-
-static bool debugDialogOpen=false;
-static HWND hDebugDialog=NULL;
-
-static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
-{
-	int wmId,wmEvent;
-
-	switch(uMsg)
-	{
-		case WM_PAINT:
-			return FALSE;
-		case WM_INITDIALOG:
-			{
-				debugDialogOpen=true;
-			}
-		break;
-
-		case WM_COMMAND:
-			wmId    = LOWORD(wParam);
-			wmEvent = HIWORD(wParam);
-			// Parse the menu selections:
-			switch (wmId)
-			{
-				case IDOK:
-				case IDCANCEL:
-					debugDialogOpen=false;
-					EndDialog(hWnd,0);
-					break;
-				default:
-					return FALSE;
-			}
-		break;
-
-		default:
-			return FALSE;
-	}
-	return TRUE;
-}
+bool debugDialogOpen=false;
+HWND hDebugDialog=NULL;
 
 #ifdef PCSX2_DEVBUILD
 
@@ -91,7 +53,7 @@ void UpdateDebugDialog()
 	if(!debugDialogOpen) return;
 
 	lCount++;
-	if(lCount>=(SampleRate/10))
+	if(lCount>=(SampleRate/100))
 	{
 		HDC hdc = GetDC(hDebugDialog);
 

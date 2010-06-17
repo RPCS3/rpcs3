@@ -40,7 +40,7 @@ static __forceinline bool MsgToConsole()	{ return _MsgToConsole & DebugEnabled; 
 static __forceinline bool MsgKeyOnOff()		{ return _MsgKeyOnOff & MsgToConsole(); }
 static __forceinline bool MsgVoiceOff()		{ return _MsgVoiceOff & MsgToConsole(); }
 static __forceinline bool MsgDMA()			{ return _MsgDMA & MsgToConsole(); }
-static __forceinline bool MsgAutoDMA()		{ return _MsgAutoDMA & MsgDMA(); }
+static __forceinline bool MsgAutoDMA()		{ return _MsgAutoDMA & MsgToConsole(); }
 static __forceinline bool MsgOverruns()		{ return _MsgOverruns & MsgToConsole(); }
 static __forceinline bool MsgCache()		{ return _MsgCache & MsgToConsole(); }
 

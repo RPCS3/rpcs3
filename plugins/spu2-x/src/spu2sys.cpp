@@ -273,6 +273,7 @@ void V_Voice::Stop()
 
 uint TickInterval = 768;
 static const int SanityInterval = 4800;
+extern void UpdateDebugDialog();
 
 __forceinline void TimeUpdate(u32 cClocks)
 {
@@ -295,7 +296,10 @@ __forceinline void TimeUpdate(u32 cClocks)
 		lClocks = cClocks - dClocks;
 	}
 
+	// Uncomment for a visual debug display showing all core's activity!
+	// Also need to uncomment a few lines in SPU2open
 	//UpdateDebugDialog();
+
 	if( SynchMode == 1 ) // AsyncMix on
 		SndBuffer::UpdateTempoChangeAsyncMixing();
 	else TickInterval = 768; // Reset to default, in case the user hotswitched from async to something else.
