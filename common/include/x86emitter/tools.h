@@ -126,11 +126,15 @@ protected:
 
 enum SSE_RoundMode
 {
+	SSE_RoundMode_FIRST = 0,
 	SSEround_Nearest = 0,
 	SSEround_NegInf,
 	SSEround_PosInf,
 	SSEround_Chop,
+	SSE_RoundMode_COUNT
 };
+
+ImplementEnumOperators( SSE_RoundMode );
 
 // --------------------------------------------------------------------------------------
 //  SSE_MXCSR  -  Control/Status Register (bitfield)

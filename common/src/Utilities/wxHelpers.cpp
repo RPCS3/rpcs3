@@ -282,7 +282,7 @@ void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
 	//   ... not sure how to fix that yet.  I could register a list of open windows into wxAppWithHelpers
 	//   that systematically get closed.  Seems like work, maybe later.  --air
 	
-	if( wxConfigBase* cfg = wxConfigBase::Get( false ) )
+	if( wxConfigBase* cfg = IsIconized() ? NULL : wxConfigBase::Get( false ) )
 	{
 		const wxString dlgName( GetDialogName() );
 		const wxRect screenRect( GetScreenRect() );

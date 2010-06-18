@@ -28,9 +28,8 @@
  *		sudonim(1@gmail.com)
  */
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// New C++ Emitter!
-//
+//  PCSX2's New C++ Emitter
+// --------------------------------------------------------------------------------------
 // To use it just include the x86Emitter namespace into your file/class/function off choice.
 //
 // This header file is intended for use by public code.  It includes the appropriate

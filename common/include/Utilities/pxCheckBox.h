@@ -37,7 +37,8 @@ protected:
 
 	wxSizerItem*	m_sizerItem_subtext;
 public:
-	pxCheckBox( wxWindow* parent, const wxString& label, const wxString& subtext=wxEmptyString );
+	pxCheckBox( wxWindow* parent, const wxString& label, const wxString& subtext=wxEmptyString, int flags = wxCHK_2STATE );
+	pxCheckBox( wxWindow* parent, const wxString& label, int flags );
 	virtual ~pxCheckBox() throw() {}
 
 	bool HasSubText() const { return m_subtext != NULL; }
@@ -46,11 +47,15 @@ public:
 	pxCheckBox& SetSubPadding( int pad );
 	pxCheckBox& SetToolTip( const wxString& tip );
 	pxCheckBox& SetValue( bool val );
-	bool GetValue() const;
-	bool IsChecked() const { pxAssert( m_checkbox != NULL ); return m_checkbox->IsChecked(); }
+	pxCheckBox& SetIndeterminate();
+	pxCheckBox& SetState( wxCheckBoxState state );
 
-	operator wxCheckBox&() { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
-	operator const wxCheckBox&() const { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
+	wxCheckBoxState GetState() const	{ pxAssume( m_checkbox != NULL ); return m_checkbox->Get3StateValue(); }
+	bool GetValue() const				{ pxAssume( m_checkbox != NULL ); return m_checkbox->GetValue(); }
+	bool IsChecked() const				{ pxAssume( m_checkbox != NULL ); return m_checkbox->IsChecked(); }
+	bool IsIndeterminate() const		{ pxAssume( m_checkbox != NULL ); return m_checkbox->Get3StateValue() == wxCHK_UNDETERMINED; }
+	operator wxCheckBox&()				{ pxAssume( m_checkbox != NULL ); return *m_checkbox; }
+	operator const wxCheckBox&() const	{ pxAssume( m_checkbox != NULL ); return *m_checkbox; }
 
 	wxCheckBox* GetWxPtr() { return m_checkbox; }
 	const wxCheckBox* GetWxPtr() const { return m_checkbox; }
@@ -58,7 +63,7 @@ public:
 	//wxWindowID GetId() const { pxAssert( m_checkbox != NULL ); return m_checkbox->GetId(); }
 
 protected:
-	void Init( const wxString& label, const wxString& subtext );
+	void Init( const wxString& label, const wxString& subtext, int flags );
 	void OnCheckpartCommand( wxCommandEvent& evt );
 	void OnSubtextClicked( wxCommandEvent& evt );
 };

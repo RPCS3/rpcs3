@@ -288,7 +288,7 @@ void Pcsx2Config::GamefixOptions::Set( const wxString& list, bool enabled )
 
 void Pcsx2Config::GamefixOptions::Set( GamefixId id, bool enabled )
 {
-	EnumAssertOnBounds( id );
+	EnumAssume( id );
 	switch(id)
 	{
 		case Fix_VuAddSub:		VuAddSubHack		= enabled;	break;
@@ -307,7 +307,7 @@ void Pcsx2Config::GamefixOptions::Set( GamefixId id, bool enabled )
 
 bool Pcsx2Config::GamefixOptions::Get( GamefixId id ) const
 {
-	EnumAssertOnBounds( id );
+	EnumAssume( id );
 	switch(id)
 	{
 		case Fix_VuAddSub:		return VuAddSubHack;

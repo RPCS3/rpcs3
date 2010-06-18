@@ -107,6 +107,8 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
+	if( IsBeingDeleted() || IsIconized() ) return;
+
 	// Uncomment this when doing logger stress testing (and then move the window around
 	// while the logger spams itself)
 	// ... makes for a good test of the message pump's responsiveness.

@@ -29,12 +29,56 @@ class wxInputStream;
 #define wxsFormat wxString::Format
 
 // --------------------------------------------------------------------------------------
+//  ImplementEnumOperators  (macro)
+// --------------------------------------------------------------------------------------
+// This macro implements ++/-- operators for any conforming enumeration.  In order for an
+// enum to conform, it must have _FIRST and _COUNT members defined, and must have a full
+// compliment of sequential members (no custom assignments) --- looking like so:
+//
+// enum Dummy {
+//    Dummy_FIRST,
+//    Dummy_Item = Dummy_FIRST,
+//    Dummy_Crap,
+//    Dummy_COUNT
+// };
+//
+// The macro also defines utility functions for bounds checking enumerations:
+//   EnumIsValid(value);   // returns TRUE if the enum value is between FIRST and COUNT.
+//   EnumAssert(value);
+//
+// It also defines a *prototype* for converting the enumeration to a string.  Note that this
+// method is not implemented!  You must implement it yourself if you want to use it:
+//   EnumToString(value);
+//
+#define ImplementEnumOperators( enumName ) \
+	static __forceinline enumName& operator++	( enumName& src ) { src = (enumName)((int)src+1); return src; } \
+	static __forceinline enumName& operator--	( enumName& src ) { src = (enumName)((int)src-1); return src; } \
+	static __forceinline enumName operator++	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src+1); return orig; } \
+	static __forceinline enumName operator--	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src-1); return orig; } \
+ \
+	static __forceinline bool operator<	( const enumName& left, const pxEnumEnd_t& )	{ return (int)left < enumName##_COUNT; } \
+	static __forceinline bool operator!=( const enumName& left, const pxEnumEnd_t& )	{ return (int)left != enumName##_COUNT; } \
+	static __forceinline bool operator==( const enumName& left, const pxEnumEnd_t& )	{ return (int)left == enumName##_COUNT; } \
+ \
+	static __forceinline bool EnumIsValid( enumName id ) { \
+		return ((int)id >= enumName##_FIRST) && ((int)id < enumName##_COUNT); } \
+	static __forceinline bool EnumAssert( enumName id ) { \
+		return pxAssert( EnumIsValid(id) ); } \
+	static __forceinline void EnumAssume( enumName id ) { \
+		pxAssume( EnumIsValid(id) ); } \
+ \
+	extern const wxChar* EnumToString( enumName id )
+
+class pxEnumEnd_t { };
+static const pxEnumEnd_t pxEnumEnd = {};
+
+// --------------------------------------------------------------------------------------
 //  DeclareNoncopyableObject
 // --------------------------------------------------------------------------------------
 // This macro provides an easy and clean method for ensuring objects are not copyable.
 // Simply add the macro to the head or tail of your class declaration, and attempts to
 // copy the class will give you a moderately obtuse compiler error that will have you
-// scratching your head for 20 mintes.
+// scratching your head for 20 minutes.
 //
 // (... but that's probably better than having a weird invalid object copy having you
 //  scratch your head for a day).

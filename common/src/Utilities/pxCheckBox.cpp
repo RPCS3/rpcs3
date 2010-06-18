@@ -23,17 +23,23 @@ using namespace pxSizerFlags;
 //  pxCheckBox Implementations
 // --------------------------------------------------------------------------------------
 
-pxCheckBox::pxCheckBox(wxWindow* parent, const wxString& label, const wxString& subtext)
+pxCheckBox::pxCheckBox(wxWindow* parent, const wxString& label, const wxString& subtext, int flags)
 	: wxPanelWithHelpers( parent, wxVERTICAL )
 {
-	Init( label, subtext );
+	Init( label, subtext, flags );
 }
 
-void pxCheckBox::Init(const wxString& label, const wxString& subtext)
+pxCheckBox::pxCheckBox(wxWindow* parent, const wxString& label, int flags)
+	: wxPanelWithHelpers( parent, wxVERTICAL )
+{
+	Init( label, wxEmptyString, flags );
+}
+
+void pxCheckBox::Init(const wxString& label, const wxString& subtext, int flags)
 {
 	m_subtext	= NULL;
 	m_subPadding= StdPadding*2;
-	m_checkbox	= new wxCheckBox( this, wxID_ANY, label );
+	m_checkbox	= new wxCheckBox( this, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, flags );
 
 	*this += m_checkbox | pxSizerFlags::StdExpand();
 
@@ -77,13 +83,24 @@ pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
 
 pxCheckBox& pxCheckBox::SetValue( bool val )
 {
+	pxAssume( m_checkbox );
 	m_checkbox->SetValue( val );
 	return *this;
 }
 
-bool pxCheckBox::GetValue() const
+pxCheckBox& pxCheckBox::SetIndeterminate()
 {
-	return m_checkbox->GetValue();
+	pxAssume( m_checkbox );
+	m_checkbox->Set3StateValue( wxCHK_UNDETERMINED );
+	return *this;
+}
+
+
+pxCheckBox& pxCheckBox::SetState( wxCheckBoxState state )
+{
+	pxAssume( m_checkbox );
+	m_checkbox->Set3StateValue( state );
+	return *this;
 }
 
 // Forwards checkbox actions on the internal checkbox (called 'checkpart') to listeners
