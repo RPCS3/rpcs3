@@ -225,7 +225,6 @@
 		<Unit filename="../Elfheader.h" />
 		<Unit filename="../FPU.cpp" />
 		<Unit filename="../FiFo.cpp" />
-		<Unit filename="../File_Reader.h" />
 		<Unit filename="../GS.cpp" />
 		<Unit filename="../GS.h" />
 		<Unit filename="../GSState.cpp" />

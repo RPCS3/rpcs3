@@ -407,7 +407,7 @@ int loadGameSettings(IGameDatabase* gameDB) {
 	return gf;
 }
 
-#include "cdvd/CDVD.h"
+#include "CDVD/CDVD.h"
 #include "Elfheader.h"
 #include "Patch.h"
 
