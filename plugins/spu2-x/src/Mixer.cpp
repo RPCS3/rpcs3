@@ -575,6 +575,9 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 		Value	= MulShr32( Value, vc.ADSR.Value );
 		vc.OutX	= Value;		// Note: All values recorded into OutX (may be used for modulation later)
 
+		if(voiceidx<23 && Cores[coreidx].Voices[voiceidx+1].Modulated)
+			Value=0;
+
 		if( IsDevBuild )
 			DebugCores[coreidx].Voices[voiceidx].displayPeak = std::max(DebugCores[coreidx].Voices[voiceidx].displayPeak,abs(vc.OutX));
 
