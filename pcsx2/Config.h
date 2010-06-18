@@ -19,25 +19,6 @@
 
 class IniInterface;
 
-class pxEnumEnd_t { };
-const pxEnumEnd_t pxEnumEnd = {};
-
-// [TODO] Add assertion checks to ++/-- operators!
-#define ImplementEnumOperators( enumName ) \
-	static __forceinline GamefixId& operator++( enumName& src ) { src = (enumName)((int)src+1); return src; } \
-	static __forceinline GamefixId& operator--( enumName& src ) { src = (enumName)((int)src-1); return src; } \
-	static __forceinline GamefixId operator++( enumName& src, int )	{ enumName orig = src; src = (enumName)((int)src+1); return orig; } \
-	static __forceinline GamefixId operator--( enumName& src, int )	{ enumName orig = src; src = (enumName)((int)src-1); return src; } \
-	\
-	static __forceinline bool operator<( const enumName& left, const pxEnumEnd_t& )	{ return (int)left < enumName##_COUNT; } \
-	static __forceinline bool operator!=( const enumName& left, const pxEnumEnd_t& )	{ return (int)left != enumName##_COUNT; } \
-	static __forceinline bool operator==( const enumName& left, const pxEnumEnd_t& )	{ return (int)left == enumName##_COUNT; } \
- \
-	static __forceinline void EnumAssertOnBounds( enumName id ) { \
-		pxAssume( ((int)id >= enumName##_FIRST) && ((int)id < enumName##_COUNT ) ); } \
- \
-	extern const wxChar* EnumToString( enumName id )
-
 enum PluginsEnum_t
 {
 	PluginId_GS = 0,
