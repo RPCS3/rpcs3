@@ -26,7 +26,7 @@
 #include "AppCommon.h"
 #include "AppCoreThread.h"
 #include "RecentIsoList.h"
-#include "DataBase_Loader.h"
+#include "AppGameDatabase.h"
 
 #include "System.h"
 #include "System/SysThreads.h"
@@ -318,7 +318,7 @@ struct pxAppResources
 	ScopedPtr<wxImageList>		ToolbarImages;
 	ScopedPtr<wxIconBundle>		IconBundle;
 	ScopedPtr<wxBitmap>			Bitmap_Logo;
-	ScopedPtr<DataBase_Loader>	GameDB;
+	ScopedPtr<AppGameDatabase>	GameDB;
 
 	pxAppResources();
 	virtual ~pxAppResources() throw() { }
@@ -568,6 +568,7 @@ public:
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysShutdown();
 	void LogicalVsync();
+	void GameStarting();
 
 	GSFrame&		GetGsFrame() const;
 	MainEmuFrame&	GetMainFrame() const;
@@ -618,7 +619,7 @@ public:
 		return m_Resources->ImageId;
 	}
 	
-	DataBase_Loader* GetGameDatabase();
+	AppGameDatabase* GetGameDatabase();
 
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:

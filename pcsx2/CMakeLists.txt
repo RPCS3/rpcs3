@@ -121,7 +121,7 @@ set(pcsx2Sources
 	COP0.cpp
 	COP2.cpp
 	Counters.cpp
-	DataBase_Loader.cpp
+	GameDatabase.cpp
 	Dump.cpp
 	Elfheader.cpp
 	FiFo.cpp
@@ -194,7 +194,7 @@ set(pcsx2Headers
 	Counters.h
 	Dmac.h
 	Dump.h
-	DataBase_Loader.h
+	GameDatabase.h
 	Elfheader.h
 	Gif.h
 	GS.h
@@ -290,6 +290,7 @@ set(pcsx2GuiSources
 	gui/AppCorePlugins.cpp
 	gui/AppCoreThread.cpp
 	gui/AppEventSources.cpp
+	gui/AppGameDatabase.cpp
 	gui/AppInit.cpp
 	gui/AppMain.cpp
 	gui/AppRes.cpp
@@ -355,6 +356,7 @@ set(pcsx2GuiHeaders
 	gui/AppCorePlugins.h
 	gui/AppEventListeners.h
 	gui/AppForwardDefs.h
+	gui/AppGameDatabase.h
 	gui/ConsoleLogger.h
 	gui/CpuUsageProvider.h
 	gui/Dialogs/ConfigurationDialog.h

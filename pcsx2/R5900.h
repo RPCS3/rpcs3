@@ -257,17 +257,17 @@ void intSetBranch();
 void __fastcall intDoBranch(u32 target);
 
 // modules loaded at hardcoded addresses by the kernel
-const u32 EEKERNEL_START = 0;
-const u32 EENULL_START = 0x81FC0;
-const u32 EELOAD_START = 0x82000;
-const u32 EELOAD_SIZE = 0x20000; // overestimate for searching
+const u32 EEKERNEL_START	= 0;
+const u32 EENULL_START		= 0x81FC0;
+const u32 EELOAD_START		= 0x82000;
+const u32 EELOAD_SIZE		= 0x20000; // overestimate for searching
 
-void __fastcall eeGameStarting();
-void __fastcall eeloadReplaceOSDSYS();
+extern void __fastcall eeGameStarting();
+extern void __fastcall eeloadReplaceOSDSYS();
 
-////////////////////////////////////////////////////////////////////
-// R5900 Public Interface / API
-//
+// --------------------------------------------------------------------------------------
+//  R5900cpu
+// --------------------------------------------------------------------------------------
 // [TODO] : This is on the list to get converted to a proper C++ class.  I'm putting it
 // off until I get my new IOPint and IOPrec re-merged. --air
 //

@@ -144,7 +144,8 @@ protected:
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
-	virtual void PostVsyncToUI();
+	virtual void VsyncInThread();
+	virtual void GameStartingInThread();
 	virtual void ExecuteTaskInThread();
 	virtual void DoCpuReset();
 };

@@ -27,7 +27,7 @@
 #include "GS.h"			// for gsRegionMode
 #include "Elfheader.h"
 #include "ps2/BiosTools.h"
-#include "DataBase_Loader.h"
+#include "GameDatabase.h"
 
 wxString DiscID;
 
@@ -354,7 +354,7 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	elfptr.Delete();
 
 	// Set the Game DataBase to the correct game based on Game Serial Code...
-	if (DataBase_Loader* GameDB = AppHost_GetGameDatabase()) {
+	if (IGameDatabase* GameDB = AppHost_GetGameDatabase()) {
 		wxString gameSerial = DiscID;
 		if (DiscID.IsEmpty()) { // Search for crc if no Serial Code
 			gameSerial = wxString(wxsFormat( L"%8.8x", ElfCRC ));

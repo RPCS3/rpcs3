@@ -144,9 +144,12 @@ void AppCoreThread::ChangeCdvdSource()
 	// TODO: Add a listener for CDVDsource changes?  Or should we bother?
 }
 
+extern int loadGameSettings(IGameDatabase* gameDB=NULL);
+
 void AppCoreThread::OnResumeReady()
 {
 	ApplySettings( g_Conf->EmuOptions );
+	loadGameSettings();
 
 	CDVD_SourceType cdvdsrc( g_Conf->CdvdSource );
 	if( cdvdsrc != CDVDsys_GetSourceType() || (cdvdsrc==CDVDsrc_Iso && (CDVDsys_GetFile(cdvdsrc) != g_Conf->CurrentIso)) )
@@ -230,9 +233,16 @@ void AppCoreThread::OnCleanupInThread()
 	_parent::OnCleanupInThread();
 }
 
-void AppCoreThread::PostVsyncToUI()
+void AppCoreThread::VsyncInThread()
 {
 	wxGetApp().LogicalVsync();
+	_parent::VsyncInThread();
+}
+
+void AppCoreThread::GameStartingInThread()
+{
+	wxGetApp().GameStarting();
+	_parent::GameStartingInThread();
 }
 
 void AppCoreThread::StateCheckInThread()

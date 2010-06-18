@@ -19,7 +19,7 @@
 
 #include "IopCommon.h"
 #include "Patch.h"
-#include "DataBase_Loader.h"
+#include "GameDatabase.h"
 #include <wx/textfile.h>
 
 IniPatch Patch[ MAX_PATCH ];
@@ -133,12 +133,11 @@ void TrimPatches(wxString& s)
 // Returns number of patches loaded
 int InitPatches(const wxString& name)
 {
-	bool   patchFound = false;
+	bool patchFound = false;
 	wxString patch;
-	const wxString crc( L"[patches = " + name + L"]" );
 	patchnumber = 0;
-	
-	if (DataBase_Loader* GameDB = AppHost_GetGameDatabase() )
+
+	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
 	{
 		if(GameDB->gameLoaded()) {
 			if (GameDB->sectionExists(L"patches", name)) {

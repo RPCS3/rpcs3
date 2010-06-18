@@ -186,7 +186,7 @@ public:
 
 	virtual void StateCheckInThread();
 	virtual void VsyncInThread();
-	virtual void PostVsyncToUI()=0;
+	virtual void GameStartingInThread();
 
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void UploadStateCopy( const VmStateBuffer& copy );

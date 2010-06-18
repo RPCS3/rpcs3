@@ -261,6 +261,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\GameDatabase.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\GameDatabase.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\PrecompiledHeader.cpp"
 				>
 				<FileConfiguration
@@ -309,22 +317,6 @@
 				</File>
 				<File
 					RelativePath="..\..\StringUtils.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="Game DataBase"
-				>
-				<File
-					RelativePath="..\..\DataBase_Loader.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\DataBase_Loader.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\File_Reader.h"
 					>
 				</File>
 			</Filter>
@@ -465,10 +457,6 @@
 				</File>
 				<File
 					RelativePath="..\..\System\PageFaultSource.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Paths.h"
 					>
 				</File>
 				<File
@@ -1897,6 +1885,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppGameDatabase.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\AppInit.cpp"
 				>
 			</File>
@@ -2655,6 +2647,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\AppForwardDefs.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\AppGameDatabase.h"
 					>
 				</File>
 				<File

@@ -30,7 +30,7 @@
 #include "Elfheader.h"
 #include "CDVD/CDVD.h"
 #include "Patch.h"
-#include "DataBase_Loader.h"
+#include "GameDatabase.h"
 #include "SamplProf.h"
 
 using namespace R5900;	// for R5900 disasm tools
@@ -574,60 +574,22 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 	cpuSetNextBranchDelta( cpuRegs.eCycle[n] );
 }
 
+// Called from recompilers; __fastcall define is mandatory.
 void __fastcall eeGameStarting()
 {
-	if (!g_GameStarted && ElfCRC) {
-		wxString gameCRC( wxsFormat( L"%8.8x", ElfCRC ) );
-		wxString gameName   = L"Unknown Game (\?\?\?)";
-		wxString gameSerial = L" [" + DiscID  + L"]";
-		wxString gameCompat = L" [Status = Unknown]";
-		wxString gamePatch  = L"";
-		wxString gameFixes  = L"";
-		wxString gameCheats = L"";
-
-		if (DataBase_Loader* GameDB = AppHost_GetGameDatabase() )
-		{
-			if (GameDB->gameLoaded()) {
-				int compat = GameDB->getInt("Compat");
-				gameName   = GameDB->getString("Name");
-				gameName  += L" (" + GameDB->getString("Region") + L")";
-				gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
-			}
-		
-			if (EmuConfig.EnablePatches) {
-				int patches = InitPatches(gameCRC);
-				if (patches) {
-					wxString pString( wxsFormat( L"%d", patches ) );
-					gamePatch = L" [Patches = " + pString + L"]";
-				}
-				int fixes = loadGameSettings(GameDB);
-				if (fixes) {
-					wxString pString( wxsFormat( L"%d", fixes ) );
-					gameFixes = L" [Fixes = " + pString + L"]";
-				}
-			}
-		}
-
-		if (EmuConfig.EnableCheats) {
-			int cheats = InitCheats(gameCRC);
-			if (cheats) {
-				wxString cString( wxsFormat( L"%d", cheats ) );
-				gameCheats = L" [Cheats = " + cString + L"]";
-			}
-		}
-
-		Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
-		
-		GetMTGS().SendGameCRC(ElfCRC);
+	if (!g_GameStarted)
+	{
+		Console.WriteLn( Color_Green, "(R5900) ELF Entry point! [addr=0x%08X]", ElfEntry );
 		g_GameStarted = true;
-		
-		if (0) ProfilerSetEnabled(true);
+		GetCoreThread().GameStartingInThread();
 	}
-
-	if (EmuConfig.EnablePatches) ApplyPatch(0);
-	if (EmuConfig.EnableCheats)  ApplyCheat(0);
+	else
+	{
+		Console.WriteLn( Color_Green, "(R5900) Re-executed ELF Entry point (ignored) [addr=0x%08X]", ElfEntry );
+	}
 }
 
+// Called from recompilers; __fastcall define is mandatory.
 void __fastcall eeloadReplaceOSDSYS()
 {
 	g_SkipBiosHack = false;

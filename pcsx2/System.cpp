@@ -23,7 +23,7 @@
 // Includes needed for cleanup, since we don't have a good system (yet) for
 // cleaning up these things.
 #include "sVU_zerorec.h"
-#include "DataBase_Loader.h"
+#include "GameDatabase.h"
 
 extern void closeNewVif(int idx);
 extern void resetNewVif(int idx);

@@ -204,8 +204,8 @@
 		<Unit filename="../Config.h" />
 		<Unit filename="../Counters.cpp" />
 		<Unit filename="../Counters.h" />
-		<Unit filename="../DataBase_Loader.cpp" />
-		<Unit filename="../DataBase_Loader.h" />
+		<Unit filename="../GameDatabase.cpp" />
+		<Unit filename="../GameDatabase.h" />
 		<Unit filename="../DebugTools/Debug.h" />
 		<Unit filename="../DebugTools/DisASM.h" />
 		<Unit filename="../DebugTools/DisR3000A.cpp" />
@@ -359,6 +359,8 @@
 		<Unit filename="../gui/AppEventListeners.h" />
 		<Unit filename="../gui/AppEventSources.cpp" />
 		<Unit filename="../gui/AppForwardDefs.h" />
+		<Unit filename="../gui/AppGameDatabase.cpp" />
+		<Unit filename="../gui/AppGameDatabase.h" />
 		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />

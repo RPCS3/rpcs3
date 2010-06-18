@@ -182,10 +182,6 @@ void SysCoreThread::DoCpuReset()
 	cpuReset();
 }
 
-void SysCoreThread::PostVsyncToUI()
-{
-}
-
 // This is called from the PS2 VM at the start of every vsync (either 59.94 or 50 hz by PS2
 // clock scale, which does not correlate to the actual host machine vsync).
 //
@@ -197,9 +193,16 @@ void SysCoreThread::PostVsyncToUI()
 //
 void SysCoreThread::VsyncInThread()
 {
-	PostVsyncToUI();
 	if (EmuConfig.EnablePatches) ApplyPatch();
 	if (EmuConfig.EnableCheats)  ApplyCheat();
+}
+
+void SysCoreThread::GameStartingInThread()
+{
+	GetMTGS().SendGameCRC(ElfCRC);
+
+	if (EmuConfig.EnablePatches) ApplyPatch(0);
+	if (EmuConfig.EnableCheats)  ApplyCheat(0);
 }
 
 void SysCoreThread::StateCheckInThread()
