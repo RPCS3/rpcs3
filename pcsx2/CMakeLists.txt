@@ -196,7 +196,6 @@ set(pcsx2Headers
 	Dump.h
 	DataBase_Loader.h
 	Elfheader.h
-	File_Reader.h
 	Gif.h
 	GS.h
 	Hardware.h
