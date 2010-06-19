@@ -212,8 +212,9 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// interpolative, instead of the funky ^0x8000 stuff.  (better result, faster)
 
 		// A hack!  Why?  Because gigaherz decided the other version didn't make sense. --air
-#define A_HACK 1
-#if A_HACK
+		// Set to 1 to enable gigaherz hack mode, set to 0 to use Neill's version.
+#define A_HACK 0
+#if !A_HACK
 		const s32 FB_A0 = _spu2mem[fb_src_a0] * Revb.FB_ALPHA;
 		const s32 FB_A1 = _spu2mem[fb_src_a1] * Revb.FB_ALPHA;
 
