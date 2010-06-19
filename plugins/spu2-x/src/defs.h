@@ -143,7 +143,7 @@ struct V_Voice
 // Envelope
 	V_ADSR ADSR;
 // Pitch (also Reg_PITCH)
-	s16 Pitch;
+	u16 Pitch;
 // Loop Start address (also Reg_LSAH/L)
 	u32 LoopStartA;
 // Sound Start address (also Reg_SSAH/L)
@@ -180,7 +180,9 @@ struct V_Voice
 	s32 PV1;
 
 // Last outputted audio value, used for voice modulation.
-	s32 OutX;
+	u32 OutX;
+	u32 NextCrest; // temp value for Crest calculation
+	u32 PrevAmp;  // temp value for Crest calculation (abs of last value)
 
 // SBuffer now points directly to an ADPCM cache entry.
 	s16 *SBuffer;

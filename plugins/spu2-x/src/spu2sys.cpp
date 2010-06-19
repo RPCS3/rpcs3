@@ -144,7 +144,7 @@ void V_Core::Reset( int index )
 		VoiceGates[v].WetL = -1;
 		VoiceGates[v].WetR = -1;
 
-		Voices[v].Volume		= V_VolumeSlideLR::Max;
+		Voices[v].Volume		= V_VolumeSlideLR(0,0); // V_VolumeSlideLR::Max;
 		Voices[v].SCurrent		= 28;
 
 		Voices[v].ADSR.Value	= 0;
@@ -263,6 +263,8 @@ void V_Voice::Start()
 
 		PV1 = PV2		= 0;
 		PV3 = PV4		= 0;
+		PrevAmp = 0;
+		NextCrest = 0;
 	}
 	else
 	{
@@ -754,7 +756,7 @@ static void __fastcall RegWrite_VoiceParams( u16 value )
 		break;
 
 		case 2:
-			thisvoice.Pitch			= value;
+			thisvoice.Pitch			= value & 0x3fff;
 		break;
 
 		case 3: // ADSR1 (Envelope)

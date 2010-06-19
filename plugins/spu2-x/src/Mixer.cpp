@@ -331,7 +331,7 @@ static void __forceinline UpdatePitch( uint coreidx, uint voiceidx )
 	if( (vc.Modulated==0) || (voiceidx==0) )
 		pitch = vc.Pitch;
 	else
-		pitch = (vc.Pitch*(32768 + abs(Cores[coreidx].Voices[voiceidx-1].OutX)))>>15;
+		pitch = (vc.Pitch*(32768 + Cores[coreidx].Voices[voiceidx-1].OutX))>>15;
 
 	vc.SP+=pitch;
 }
@@ -573,18 +573,28 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 		CalculateADSR( thiscore, voiceidx );
 		Value	= MulShr32( Value, vc.ADSR.Value );
-		vc.OutX	= Value;		// Note: All values recorded into OutX (may be used for modulation later)
-
-		if(voiceidx<23 && Cores[coreidx].Voices[voiceidx+1].Modulated)
-			Value=0;
+		
+		// Store Value for eventual modulation later
+		// Pseudonym's Crest calculation idea. Actually calculates a crest, unlike the old code which was just peak.
+		u32 Amplitude = std::abs(Value);
+		if(Amplitude < vc.NextCrest)
+		{
+			vc.OutX = vc.NextCrest;
+			vc.NextCrest = 0;
+		}
+		if(Amplitude > vc.PrevAmp)
+		{
+			vc.NextCrest = Amplitude;
+		}
+		vc.PrevAmp = Amplitude;
 
 		if( IsDevBuild )
-			DebugCores[coreidx].Voices[voiceidx].displayPeak = std::max(DebugCores[coreidx].Voices[voiceidx].displayPeak,abs(vc.OutX));
+			DebugCores[coreidx].Voices[voiceidx].displayPeak = std::max(DebugCores[coreidx].Voices[voiceidx].displayPeak,(s32)vc.OutX);
 
 		// Write-back of raw voice data (post ADSR applied)
 
-		if (voiceidx==1)      spu2M_WriteFast( ( (0==coreidx) ? 0x400 : 0xc00 ) + OutPos, Value );
-		else if (voiceidx==3) spu2M_WriteFast( ( (0==coreidx) ? 0x600 : 0xe00 ) + OutPos, Value );
+		if (voiceidx==1)      spu2M_WriteFast( ( (0==coreidx) ? 0x400 : 0xc00 ) + OutPos, vc.OutX );
+		else if (voiceidx==3) spu2M_WriteFast( ( (0==coreidx) ? 0x600 : 0xe00 ) + OutPos, vc.OutX );
 
 		return ApplyVolume( StereoOut32( Value, Value ), vc.Volume );
 	}
