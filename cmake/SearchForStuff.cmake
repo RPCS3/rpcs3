@@ -84,9 +84,9 @@ if(ALSA_FOUND)
 endif(ALSA_FOUND)
 
 # bzip2
-if(BZIP2_FOUND AND NOT projectBZip2)
+if(BZIP2_FOUND)
 	include_directories(${BZIP2_INCLUDE_DIR})
-endif(BZIP2_FOUND AND NOT projectBZip2)
+endif(BZIP2_FOUND)
 
 # Cg
 if(CG_FOUND)
