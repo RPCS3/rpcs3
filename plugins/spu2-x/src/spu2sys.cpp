@@ -130,8 +130,8 @@ void V_Core::Reset( int index )
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= 0xE0000 + (0x10000*c);
-	EffectsEndA		= 0xEFFFF + (0x10000*c);
+	EffectsStartA	= 0xE7FF8 + (0x10000*c);
+	EffectsEndA		= 0xE7FFF + (0x10000*c);
 
 	FxEnable		= 0;
 	IRQA			= 0xFFFF0;
@@ -914,7 +914,9 @@ static void __fastcall RegWrite_Core( u16 value )
 			}
 			if(thiscore.IRQEnable!=irqe)
 			{
-				ConLog("* SPU2-X: IRQ %s at cycle %d\n",((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles);
+				ConLog("* SPU2-X: IRQ %s at cycle %d. Current IRQA = %x\n",
+					((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles, thiscore.IRQA);
+				
 				if(!thiscore.IRQEnable)
 					Spdif.Info &= ~(4 << thiscore.Index);
 			}
