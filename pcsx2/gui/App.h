@@ -564,12 +564,12 @@ public:
 	void PostAppMethod( FnPtr_Pcsx2App method );
 	void PostIdleAppMethod( FnPtr_Pcsx2App method );
 
+	void SysApplySettings();
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysShutdown();
 	void LogicalVsync();
-	void GameStarting();
-
+	
 	GSFrame&		GetGsFrame() const;
 	MainEmuFrame&	GetMainFrame() const;
 

@@ -22,6 +22,10 @@
 #include "ps2/BiosTools.h"
 #include "GS.h"
 
+#include "cdvd/CDVD.h"
+#include "Elfheader.h"
+#include "Patch.h"
+
 __aligned16 SysMtgsThread mtgsThread;
 __aligned16 AppCoreThread CoreThread;
 
@@ -144,32 +148,148 @@ void AppCoreThread::ChangeCdvdSource()
 	// TODO: Add a listener for CDVDsource changes?  Or should we bother?
 }
 
-extern int loadGameSettings(IGameDatabase* gameDB=NULL);
-
-void AppCoreThread::OnResumeReady()
+void Pcsx2App::SysApplySettings()
 {
-	ApplySettings( g_Conf->EmuOptions );
-	loadGameSettings();
+	if( InvokeOnMainThread(&Pcsx2App::SysApplySettings) ) return;
+	CoreThread.ApplySettings( g_Conf->EmuOptions );
 
 	CDVD_SourceType cdvdsrc( g_Conf->CdvdSource );
 	if( cdvdsrc != CDVDsys_GetSourceType() || (cdvdsrc==CDVDsrc_Iso && (CDVDsys_GetFile(cdvdsrc) != g_Conf->CurrentIso)) )
 	{
-		m_resetCdvd = true;
+		CoreThread.ResetCdvd();
 	}
 
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+}
 
-	AppSaveSettings();
-
+void AppCoreThread::OnResumeReady()
+{
+	wxGetApp().SysApplySettings();
+	wxGetApp().PostMethod( AppSaveSettings );
 	_parent::OnResumeReady();
+}
+
+// Load Game Settings found in database
+// (game fixes, round modes, clamp modes, etc...)
+// Returns number of gamefixes set
+static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
+	if (!gameDB) gameDB = wxGetApp().GetGameDatabase();
+
+	if (!gameDB->gameLoaded()) return 0;
+
+	int  gf  = 0;
+
+	if (gameDB->keyExists("eeRoundMode"))
+	{
+		SSE_RoundMode eeRM = (SSE_RoundMode)gameDB->getInt("eeRoundMode");
+		if (EnumIsValid(eeRM))
+		{
+			Console.WriteLn("(GameDB) Changing EE/FPU roundmode to %d [%s]", eeRM, EnumToString(eeRM));
+			dest.Cpu.sseMXCSR.SetRoundMode(eeRM);
+			++gf;
+		}
+	}
+	
+	if (gameDB->keyExists("vuRoundMode"))
+	{
+		SSE_RoundMode vuRM = (SSE_RoundMode)gameDB->getInt("vuRoundMode");
+		if (EnumIsValid(vuRM))
+		{
+			Console.WriteLn("(GameDB) Changing VU0/VU1 roundmode to %d [%s]", vuRM, EnumToString(vuRM));
+			dest.Cpu.sseVUMXCSR.SetRoundMode(vuRM);
+			++gf;
+		}
+	}
+
+	if (gameDB->keyExists("eeClampMode")) {
+		int clampMode = gameDB->getInt("eeClampMode");
+		Console.WriteLn("(GameDB) Changing EE/FPU clamp mode [mode=%d]", clampMode);
+		dest.Recompiler.fpuOverflow			= (clampMode >= 1);
+		dest.Recompiler.fpuExtraOverflow	= (clampMode >= 2);
+		dest.Recompiler.fpuFullMode			= (clampMode >= 3);
+		gf++;
+	}
+
+	if (gameDB->keyExists("vuClampMode")) {
+		int clampMode = gameDB->getInt("vuClampMode");
+		Console.WriteLn("(GameDB) Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
+		dest.Recompiler.vuOverflow			= (clampMode >= 1);
+		dest.Recompiler.vuExtraOverflow		= (clampMode >= 2);
+		dest.Recompiler.vuSignOverflow		= (clampMode >= 3);
+		gf++;
+	}
+
+	for( GamefixId id=GamefixId_FIRST; id<pxEnumEnd; ++id )
+	{
+		wxString key( EnumToString(id) );
+		key += L"Hack";
+
+		if (gameDB->keyExists(key))
+		{
+			bool enableIt = gameDB->getBool(key);
+			dest.Gamefixes.Set(id, enableIt );
+			Console.WriteLn(L"(GameDB) %s Gamefix: " + key, enableIt ? L"Enabled" : L"Disabled" );
+			gf++;
+		}
+	}
+
+	return gf;
 }
 
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	Pcsx2Config fixup( src );
-	if( !g_Conf->EnableSpeedHacks )
+
+	wxString gameCRC;
+	wxString gameSerial;
+	wxString gamePatch;
+	wxString gameFixes;
+	wxString gameCheats;
+
+	// [TODO] : Fix this so that it recognizes and reports BIOS-booting status!
+	wxString gameName	(L"Unknown");
+	wxString gameCompat;
+
+	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
+	if (!DiscID.IsEmpty()) gameSerial = L" [" + DiscID  + L"]";
+
+	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
+	{
+		if (GameDB->gameLoaded()) {
+			int compat = GameDB->getInt("Compat");
+			gameName   = GameDB->getString("Name");
+			gameName  += L" (" + GameDB->getString("Region") + L")";
+			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
+		}
+
+		if (EmuConfig.EnablePatches) {
+			if (int patches = InitPatches(gameCRC)) {
+				gamePatch.Printf(L" [%d Patches]", patches);
+			}
+			if (int fixes = loadGameSettings(fixup, GameDB)) {
+				gameFixes.Printf(L" [%d Fixes]", fixes);
+			}
+		}
+	}
+
+	if (EmuConfig.EnableCheats) {
+		if (int cheats = InitCheats(gameCRC)) {
+			gameCheats.Printf(L" [%d Cheats]", cheats);
+		}
+	}
+
+	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
+
+	const CommandlineOverrides& overrides( wxGetApp().Overrides );
+	if( overrides.DisableSpeedhacks || !g_Conf->EnableSpeedHacks )
 		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
-	if( !g_Conf->EnableGameFixes )
+
+	if( overrides.ApplyCustomGamefixes )
+	{
+		for (GamefixId id=GamefixId_FIRST; id < pxEnumEnd; ++id)
+			fixup.Gamefixes.Set( id, overrides.UseGamefix[id] );
+	}
+	else if( !g_Conf->EnableGameFixes )
 		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
@@ -241,13 +361,20 @@ void AppCoreThread::VsyncInThread()
 
 void AppCoreThread::GameStartingInThread()
 {
-	wxGetApp().GameStarting();
+	// Simulate a Close/Resume, so that settings get re-applied and the database
+	// lookups and other game-based detections are done.
+
+	m_ExecMode = ExecMode_Paused;
+	OnResumeReady();
+	_reset_stuff_as_needed();
+	m_ExecMode = ExecMode_Opened;
+	
 	_parent::GameStartingInThread();
 }
 
-void AppCoreThread::StateCheckInThread()
+bool AppCoreThread::StateCheckInThread()
 {
-	_parent::StateCheckInThread();
+	return _parent::StateCheckInThread();
 }
 
 void AppCoreThread::UploadStateCopy( const VmStateBuffer& copy )

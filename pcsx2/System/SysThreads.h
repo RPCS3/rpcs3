@@ -119,7 +119,7 @@ protected:
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
 
-	virtual void StateCheckInThread();
+	virtual bool StateCheckInThread();
 	virtual void OnCleanupInThread();
 	virtual void OnStartInThread();
 
@@ -184,7 +184,7 @@ public:
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool Cancel( const wxTimeSpan& timeout );
 
-	virtual void StateCheckInThread();
+	virtual bool StateCheckInThread();
 	virtual void VsyncInThread();
 	virtual void GameStartingInThread();
 

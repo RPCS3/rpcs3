@@ -128,12 +128,14 @@ protected:
 public:
 	AppCoreThread();
 	virtual ~AppCoreThread() throw();
+	
+	void ResetCdvd() { m_resetCdvd = true; }
 
 	virtual void Suspend( bool isBlocking=false );
 	virtual void Resume();
 	virtual void Shutdown();
 	virtual void Cancel( bool isBlocking=true );
-	virtual void StateCheckInThread();
+	virtual bool StateCheckInThread();
 	virtual void ChangeCdvdSource();
 
 	virtual void ApplySettings( const Pcsx2Config& src );

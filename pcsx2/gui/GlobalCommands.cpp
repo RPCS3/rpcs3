@@ -80,11 +80,8 @@ namespace Implementations
 			g_LimiterMode = Limit_Turbo;
 			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
 			Console.WriteLn("(FrameLimiter) Turbo + FrameLimit ENABLED." );
-			pauser.AllowResume();
-			return;
 		}
-
-		if( g_LimiterMode == Limit_Turbo )
+		else if( g_LimiterMode == Limit_Turbo )
 		{
 			GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
 			g_LimiterMode = Limit_Nominal;

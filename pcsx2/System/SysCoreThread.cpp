@@ -151,10 +151,16 @@ bool SysCoreThread::HasPendingStateChangeRequest() const
 
 void SysCoreThread::_reset_stuff_as_needed()
 {
+	// Note that resetting recompilers along with the virtual machine is only really needed
+	// because of changes to the TLB.  We don't actually support the TLB, however, so rec
+	// resets aren't in fact *needed* ... yet.  But might as well, no harm.  --air
+
 	if( m_resetVirtualMachine || m_resetRecompilers || m_resetProfilers )
 	{
 		SysClearExecutionCache();
 		memBindConditionalHandlers();
+		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
+
 		m_resetRecompilers		= false;
 		m_resetProfilers		= false;
 	}
@@ -162,18 +168,18 @@ void SysCoreThread::_reset_stuff_as_needed()
 	if( m_resetVirtualMachine )
 	{
 		DoCpuReset();
+
 		m_resetVirtualMachine	= false;
-		m_resetRecompilers		= true;
+		m_resetVsyncTimers		= false;
 	}
 
 	if( m_resetVsyncTimers )
 	{
 		UpdateVSyncRate();
 		frameLimitReset();
+
 		m_resetVsyncTimers		= false;
 	}
-
-	SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
 }
 
 void SysCoreThread::DoCpuReset()
@@ -205,12 +211,10 @@ void SysCoreThread::GameStartingInThread()
 	if (EmuConfig.EnableCheats)  ApplyCheat(0);
 }
 
-void SysCoreThread::StateCheckInThread()
+bool SysCoreThread::StateCheckInThread()
 {
 	GetMTGS().RethrowException();
-	_parent::StateCheckInThread();
-
-	_reset_stuff_as_needed();		// kinda redundant but could catch unexpected threaded state changes...
+	return _parent::StateCheckInThread() && (_reset_stuff_as_needed(), true);
 }
 
 // Runs CPU cycles indefinitely, until the user or another thread requests execution to break.
