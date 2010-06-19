@@ -35,8 +35,6 @@
 #define RHA
 //#define RW
 
-bool nullTex = false;
-
 using namespace ZeroGS;
 extern int g_TransferredToGPU;
 extern bool g_bIsLost;

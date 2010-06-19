@@ -283,7 +283,7 @@ inline u32 GetFrameKeyDummy(int fbp, int fbw, int fbh, int psm)
 
 #ifndef FRAME_KEY_BY_FBH	
 	int calc = ZZOgl_fbh_Calc(fbp, fbw, psm);
-	if (/*fbp > 0x2000 && */calc < 0x300)
+	if (/*fbp > 0x2000 && */calc < /*0x300*/0x2E0)
 		return ((fbw << 16) | calc);
 	else
 #endif
@@ -304,36 +304,17 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 
 #include "Mem.h"
 
-// Naive attempt at preventing texures from being drawn if their data is null. (which is undefined behavior.)
-// Gets rid of garbage at the beginning of Grandia III.
-// And messes up Kingdom Hearts opening. I need to read up more on OpenGL. :(
-//#define NO_NULL_TEXTURES
-
 static __forceinline void DrawTriangleArray()
 {
-#ifdef NO_NULL_TEXTURES
-	if (nullTex)  
-	{
-		ZZLog::Debug_Log("Drawing triangle arrays without a texture!"); 
-	}
-	else 
-#endif
-	{	
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		GL_REPORT_ERRORD();
-	}
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	GL_REPORT_ERRORD();
 }
 
 static __forceinline void DrawBuffers(GLenum *buffer)
 {
 	if (glDrawBuffers != NULL) 
 	{
-#ifdef NO_NULL_TEXTURES
-		if (nullTex)  
-			ZZLog::Debug_Log("Drawing buffers without a texture!"); 
-		else 
-#endif
-			glDrawBuffers(1, buffer);
+		glDrawBuffers(1, buffer);
 	}
 
 	GL_REPORT_ERRORD();
@@ -348,25 +329,21 @@ static __forceinline void FBTexture(int attach, int id = 0)
 static __forceinline void Texture2D(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, width, height, 0, format, type, pixels);
-	nullTex = (pixels == NULL);
 }
 
 static __forceinline void Texture2D(GLint iFormat, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, format, type, pixels);
-	nullTex = (pixels == NULL);
 }
 
 static __forceinline void Texture3D(GLint iFormat, GLint width, GLint height, GLint depth, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage3D(GL_TEXTURE_2D, 0, iFormat, width, height, depth, 0, format, type, pixels);
-	nullTex = (pixels == NULL);
 }
 	
 static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
-	nullTex = (pixels == NULL);
 }
 
 static __forceinline void TextureRect(GLenum attach, GLuint id = 0)
