@@ -44,7 +44,7 @@ if(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
 	set(projectZLIB TRUE)
     set(ZLIB_FOUND TRUE)
     # Set path
-    set(ZLIB_LIBRARIES zlib)
+    set(ZLIB_LIBRARIES pcsx2_zlib)
     include_directories(${PROJECT_SOURCE_DIR}/3rdparty/zlib)
 endif(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
 
@@ -53,7 +53,7 @@ if(NOT BZIP2_FOUND OR FORCE_INTERNAL_BZIP2)
 	set(projectBZip2 TRUE)
     set(BZIP2_FOUND TRUE)
     # Set path
-	set(BZIP2_LIBRARIES bzip2)
+	set(BZIP2_LIBRARIES pcsx2_bzip2)
     include_directories(${PROJECT_SOURCE_DIR}/3rdparty/bzip2)
 endif(NOT BZIP2_FOUND OR FORCE_INTERNAL_BZIP2)
 
@@ -62,7 +62,7 @@ if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 	set(projectSoundTouch TRUE)
 	set(SOUNDTOUCH_FOUND TRUE)
     # Set path
-	set(SOUNDTOUCH_LIBRARIES SoundTouch)
+	set(SOUNDTOUCH_LIBRARIES pcsx2_SoundTouch)
     # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SoundTouch)
     include_directories(${PROJECT_SOURCE_DIR}/3rdparty/soundtouch_linux_include)
 endif(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
