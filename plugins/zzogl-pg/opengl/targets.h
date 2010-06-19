@@ -22,8 +22,6 @@
 #define TARGET_VIRTUAL_KEY 0x80000000
 #include "PS2Edefs.h"
 
-extern bool nullTex;
-
 inline Vector DefaultOneColor(FRAGMENTSHADER ptr)
 {
 	Vector v = Vector(1, 1, 1, 1);

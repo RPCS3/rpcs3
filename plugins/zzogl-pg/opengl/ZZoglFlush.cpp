@@ -63,10 +63,7 @@ bool g_bSaveResolved = 0;
 
 void Draw(const VB& curvb)
 {
-	if (nullTex)  
-		ZZLog::Debug_Log("DRAW: Drawing arrays without a texture!"); 
-	else 
-		glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount);
+	glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount);
 }
 
 #define GL_BLEND_RGB(src, dst) { \
