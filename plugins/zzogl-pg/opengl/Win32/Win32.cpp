@@ -125,7 +125,7 @@ void OnInitDialog(HWND hW)
 
 	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		CheckDlgButton(hW, it->first, (conf.def_hacks&it->second) ? 1 : 0);
+		CheckDlgButton(hW, it->first, (conf.def_hacks._u32&it->second) ? 1 : 0);
 	}
 }
 
@@ -170,7 +170,7 @@ void OnOK(HWND hW)
 	}
 
 	conf.negaa = 0;
-	conf.zz_options = 0;
+	conf.zz_options._u32 = 0;
 
 	conf.zz_options.capture_avi = IsDlgButtonChecked(hW, IDC_CONFIG_CAPTUREAVI) ? 1 : 0;
 	conf.zz_options.wireframe = IsDlgButtonChecked(hW, IDC_CONFIG_WIREFRAME) ? 1 : 0;
@@ -178,14 +178,14 @@ void OnOK(HWND hW)
 	conf.zz_options.widescreen = IsDlgButtonChecked(hW, IDC_CONFIG_WIDESCREEN) ? 1 : 0;
 	conf.zz_options.tga_snap = IsDlgButtonChecked(hW, IDC_CONFIG_BMPSS) ? 1 : 0;
 
-	conf.hacks = 0;
+	conf.hacks._u32 = 0;
 
 	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		if (IsDlgButtonChecked(hW, it->first)) conf.hacks |= it->second;
+		if (IsDlgButtonChecked(hW, it->first)) conf.hacks._u32 |= it->second;
 	}
 
-	GSsetGameCRC(g_LastCRC, conf.hacks);
+	GSsetGameCRC(g_LastCRC, conf.hacks._u32);
 
 	if (SendDlgItemMessage(hW, IDC_CONF_WIN640, BM_GETCHECK, 0, 0)) 
 		conf.zz_options.dimensions = GSDim_640;

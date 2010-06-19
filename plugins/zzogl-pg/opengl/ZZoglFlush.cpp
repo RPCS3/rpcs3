@@ -1603,7 +1603,7 @@ void ZeroGS::Flush(int context)
 	GL_REPORT_ERRORD();
 }
 
-__forceinline void ZeroGS::FlushBoth()
+void ZeroGS::FlushBoth()
 {
 	Flush(0);
 	Flush(1);

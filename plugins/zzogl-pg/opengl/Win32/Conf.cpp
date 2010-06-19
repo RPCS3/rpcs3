@@ -17,8 +17,8 @@ void SaveConfig()
 	WritePrivateProfileString("Settings", "Antialiasing", szValue, iniFile.c_str());
 	sprintf(szValue, "%u", conf.bilinear);
 	WritePrivateProfileString("Settings", "Bilinear", szValue, iniFile.c_str());
-	//sprintf(szValue, "%u", conf.zz_options);
-	//WritePrivateProfileString("Settings", "Options", szValue, iniFile.c_str());
+	sprintf(szValue, "%u", conf.zz_options);
+	WritePrivateProfileString("Settings", "ZZOptions", szValue, iniFile.c_str());
 	sprintf(szValue, "%u", conf.hacks);
 	WritePrivateProfileString("Settings", "AdvancedOptions", szValue, iniFile.c_str());
 	sprintf(szValue, "%u", conf.width);
@@ -35,8 +35,8 @@ void LoadConfig()
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;
-	conf.hacks = 0;
-	conf.def_hacks = 0;
+	conf.zz_options._u32 = 0;
+	conf.hacks._u32 = 0;
 	conf.bilinear = 1;
 	conf.width = 640;
 	conf.height = 480;
@@ -56,10 +56,10 @@ void LoadConfig()
 	conf.interlace = (u8)strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Antialiasing", NULL, szValue, 20, iniFile.c_str());
 	conf.aa = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Options", NULL, szValue, 20, iniFile.c_str());
-	conf.hacks = strtoul(szValue, NULL, 10);
+	GetPrivateProfileString("Settings", "ZZOptions", NULL, szValue, 20, iniFile.c_str());
+	conf.zz_options._u32 = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "AdvancedOptions", NULL, szValue, 20, iniFile.c_str());
-	conf.gamesettings = strtoul(szValue, NULL, 10);
+	conf.hacks._u32 = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, iniFile.c_str());
 	conf.bilinear = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Width", NULL, szValue, 20, iniFile.c_str());
