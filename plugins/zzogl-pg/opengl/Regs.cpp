@@ -287,8 +287,7 @@ void tex2Write(int i, u32 *data)
 	FUNCLOG
 	tex0Info& tex0 = ZeroGS::vb[i].tex0;
 
-	if (ZeroGS::vb[i].bNeedTexCheck)
-		ZeroGS::vb[i].FlushTexData();
+	if (ZeroGS::vb[i].bNeedTexCheck) ZeroGS::vb[i].FlushTexData();
 
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
@@ -342,8 +341,7 @@ __forceinline void frameWrite(int i, u32 *data)
 		return;
 	}
 
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	ZeroGS::FlushBoth();
 
 	gsfb.fbp = ZZOglGet_fbp_FrameBitsMult(data[0]);
 	gsfb.fbw = ZZOglGet_fbw_FrameBitsMult(data[0]);
@@ -383,7 +381,6 @@ __forceinline void clampWrite(int i, u32 *data)
 
 	if ((s_uClampData[i] != data[0]) || (((clamp.minv >> 8) | (clamp.maxv << 2)) != (data[1]&0x0fff)))
 	{
-
 		ZeroGS::Flush(i);
 		s_uClampData[i] = data[0];
 
@@ -418,10 +415,10 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 {
 	FUNCLOG
 
-	if (data[0] & ~0x3ff)
-	{
+	//if (data[0] & ~0x3ff)
+	//{
 		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
-	}
+	//}
 
 	gs.nTriFanVert = gs.primIndex;
 
@@ -645,8 +642,7 @@ void __fastcall GIFRegHandlerPRMODE(u32* data)
 	FUNCLOG
 	gs._prim[0]._val = (data[0] >> 3) & 0xff;
 
-	if (gs.prac == 0)
-		ZeroGS::Prim();
+	if (gs.prac == 0) ZeroGS::Prim();
 }
 
 void __fastcall GIFRegHandlerTEXCLUT(u32* data)
@@ -664,8 +660,7 @@ void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 void __fastcall GIFRegHandlerSCANMSK(u32* data)
 {
 	FUNCLOG
-//  ZeroGS::Flush(0);
-//  ZeroGS::Flush(1);
+//  ZeroGS::FlushBoth();
 //  ZeroGS::ResolveC(&ZeroGS::vb[0]);
 //  ZeroGS::ResolveZ(&ZeroGS::vb[0]);
 
@@ -730,9 +725,10 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 
 	if (*(u32*)&newinfo != *(u32*)&gs.texa)
 	{
-		ZeroGS::Flush(0);
-		ZeroGS::Flush(1);
+		ZeroGS::FlushBoth();
+		
 		*(u32*)&gs.texa = *(u32*) & newinfo;
+		
 		gs.texa.fta[0] = newinfo.ta[0] / 255.0f;
 		gs.texa.fta[1] = newinfo.ta[1] / 255.0f;
 
@@ -768,10 +764,8 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
 	{
-
 		ZeroGS::Flush(0);
 		scissor = newscissor;
-
 		ZeroGS::vb[0].bNeedFrameCheck = 1;
 	}
 }
@@ -791,7 +785,6 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
 	{
-
 		ZeroGS::Flush(1);
 		scissor = newscissor;
 
@@ -874,8 +867,7 @@ void __fastcall GIFRegHandlerPABE(u32* data)
 	FUNCLOG
 	//ZeroGS::SetAlphaChanged(0, GPUREG_PABE);
 	//ZeroGS::SetAlphaChanged(1, GPUREG_PABE);
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	ZeroGS::FlushBoth();
 
 	gs.pabe = *data & 0x1;
 }
@@ -883,16 +875,17 @@ void __fastcall GIFRegHandlerPABE(u32* data)
 void __fastcall GIFRegHandlerFBA_1(u32* data)
 {
 	FUNCLOG
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	
+	ZeroGS::FlushBoth();
 	ZeroGS::vb[0].fba.fba = *data & 0x1;
 }
 
 void __fastcall GIFRegHandlerFBA_2(u32* data)
 {
 	FUNCLOG
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	
+	ZeroGS::FlushBoth();
+	
 	ZeroGS::vb[1].fba.fba = *data & 0x1;
 }
 
@@ -925,8 +918,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	// error detection
 	if (m_Blocks[psm].bpp == 0) return;
 
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	ZeroGS::FlushBoth();
 
 	zbuf.zbp = (data[0] & 0x1ff) * 32;
 	zbuf.psm = 0x30 | ((data[0] >> 24) & 0xf);
@@ -954,11 +946,9 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 	}
 
 	// error detection
-	if (m_Blocks[psm].bpp == 0)
-		return;
+	if (m_Blocks[psm].bpp == 0) return;
 
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	ZeroGS::FlushBoth();
 
 	zbuf.zbp = (data[0] & 0x1ff) * 32;
 

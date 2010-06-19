@@ -158,7 +158,7 @@ void ExtWrite();
 
 void ResetRenderTarget(int index)
 {
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + index, GL_TEXTURE_RECTANGLE_NV, 0, 0);
+	FBTexture(index, 0);
 }
 
 DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
@@ -545,9 +545,8 @@ void ZeroGS::RenderCustom(float fAlpha)
 
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBaseTexture.prog);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+	DrawTriangle();
+	
 	// restore
 	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -845,8 +844,7 @@ void ZeroGS::SetFogColor(u32 fog)
 //	{
 	gs.fogcol = fog;
 
-	ZeroGS::Flush(0);
-	ZeroGS::Flush(1);
+	ZeroGS::FlushBoth();
 
 	if (!g_bIsLost)
 	{

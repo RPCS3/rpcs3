@@ -17,7 +17,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// Realisation of Flush -- drawing function of GS
+// Realization of Flush -- drawing function of GS
 
 #include <stdlib.h>
 
@@ -61,7 +61,13 @@ bool g_bSaveResolved = 0;
 //#define STENCIL_PBE		   16
 #define STENCIL_CLEAR	   (2|4|8|16)
 
-#define DRAW() glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount)
+void Draw(const VB& curvb)
+{
+	if (nullTex)  
+		ZZLog::Debug_Log("DRAW: Drawing arrays without a texture!"); 
+	else 
+		glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount);
+}
 
 #define GL_BLEND_RGB(src, dst) { \
 	s_srcrgb = src; \
@@ -1241,7 +1247,7 @@ inline void AlphaTest(VB& curvb)
 
 	if (!curvb.test.ate || curvb.test.atst > 0)
 	{
-		DRAW();
+		Draw(curvb);
 	}
 
 	GL_REPORT_ERRORD();
@@ -1266,7 +1272,7 @@ inline void AlphaPabe(VB& curvb, FRAGMENTSHADER* pfragment, int exactcolor)
 
 		ZZcgSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
 
-		DRAW();
+		Draw(curvb);
 
 		// reset
 		if (!s_stencilmask) s_stencilfunc = GL_ALWAYS;
@@ -1341,7 +1347,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 		GL_STENCILFUNC(GL_EQUAL, s_stencilref | STENCIL_FBA, s_stencilmask | STENCIL_FBA);
 	}
 
-	DRAW();
+	Draw(curvb);
 
 	GL_REPORT_ERRORD();
 
@@ -1361,7 +1367,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 
 		ZZcgSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
 
-		DRAW();
+		Draw(curvb);
 
 		// reset
 		if (oldabe) glEnable(GL_BLEND);
@@ -1412,7 +1418,7 @@ inline void AlphaSpecialTesting(VB& curvb, FRAGMENTSHADER* pfragment, u32 dwUsin
 
 		Vector v = Vector(0, exactcolor ? 510.0f : 2.0f, 0, 0);
 		ZZcgSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
-		DRAW();
+		Draw(curvb);
 
 		// don't need to restore
 	}
@@ -1497,7 +1503,7 @@ inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 			f = 0;
 			ZZcgSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
 			GL_BLENDEQ_RGB(GL_MAX_EXT);
-			DRAW();
+			Draw(curvb);
 		}
 
 		// bios shows white screen
@@ -1506,7 +1512,7 @@ inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 			f = 1;
 			ZZcgSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
 			GL_BLENDEQ_RGB(GL_MIN_EXT);
-			DRAW();
+			Draw(curvb);
 		}
 
 		if (!curvb.zbuf.zmsk)
@@ -1597,6 +1603,12 @@ void ZeroGS::Flush(int context)
 	GL_REPORT_ERRORD();
 }
 
+__forceinline void ZeroGS::FlushBoth()
+{
+	Flush(0);
+	Flush(1);
+}
+
 inline void ZeroGS::RenderFBA(const VB& curvb, CGparameter sOneColor)
 {
 	// add fba to all pixels
@@ -1620,7 +1632,7 @@ inline void ZeroGS::RenderFBA(const VB& curvb, CGparameter sOneColor)
 
 	ZZcgSetParameter4fv(sOneColor, v, "g_fOneColor");
 
-	DRAW();
+	Draw(curvb);
 
 	SetAlphaTest(curvb.test);
 
@@ -1673,7 +1685,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 		glStencilMask(STENCIL_CLEAR);
 		glDisable(GL_ALPHA_TEST);
 		GL_STENCILFUNC_SET();
-		DRAW();
+		Draw(curvb);
 
 		if (curvb.test.ate && curvb.test.afail != 1 && USEALPHATESTING) glEnable(GL_ALPHA_TEST);
 	}
@@ -1691,7 +1703,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, CGparameter sOneColo
 	GL_STENCILFUNC_SET();
 	glDisable(GL_DEPTH_TEST);
 
-	DRAW();
+	Draw(curvb);
 
 	if (curvb.test.zte) glEnable(GL_DEPTH_TEST);
 
@@ -1746,17 +1758,17 @@ inline void ZeroGS::ProcessStencil(const VB& curvb)
 	SetShaderCaller("ProcessStencil");
 
 	SETPIXELSHADER(ppsOne.prog);
-	DRAW();
+	Draw(curvb);
 
 	// process when alpha >= 0xff
 	GL_STENCILFUNC(GL_EQUAL, STENCIL_PIXELWRITE | STENCIL_FBA | STENCIL_ALPHABIT, STENCIL_PIXELWRITE | STENCIL_FBA);
-	DRAW();
+	Draw(curvb);
 
 	// clear STENCIL_PIXELWRITE bit
 	glStencilMask(STENCIL_CLEAR);
 
 	GL_STENCILFUNC(GL_ALWAYS, 0, STENCIL_PIXELWRITE | STENCIL_FBA);
-	DRAW();
+	Draw(curvb);
 
 	// restore state
 	GL_COLORMASK(s_dwColorWrite);
@@ -1807,14 +1819,14 @@ __forceinline void ZeroGS::ProcessFBA(const VB& curvb, CGparameter sOneColor)
 	float f = 1;
 	ZZcgSetParameter4fv(sOneColor, &f, "g_fOneColor");
 	SETPIXELSHADER(ppsOne.prog);
-	DRAW();
+	Draw(curvb);
 	glDisable(GL_ALPHA_TEST);
 
 	// reset bits
 	glStencilMask(STENCIL_CLEAR);
 	GL_STENCILFUNC(GL_GREATER, 0, STENCIL_PIXELWRITE | STENCIL_FBA);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
-	DRAW();
+	Draw(curvb);
 
 	if (curvb.test.atst && USEALPHATESTING)
 	{

@@ -113,7 +113,7 @@ inline u32 CreateInterlaceTex(int width)
 
 	glGenTextures(1, &s_ptexInterlace);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, s_ptexInterlace);
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, width, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
+	TextureRect(4, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	GL_REPORT_ERRORD();
@@ -283,14 +283,11 @@ inline void RenderStartHelper(u32 bInterlace)
 		ZZLog::Debug_Log("Disabling MRT depth writing\n");
 	}
 
-	Flush(0);
-	Flush(1);
-	GL_REPORT_ERRORD();
+	FlushBoth();
 
 	FrameSavingHelper();
 
-	if (s_RangeMngr.ranges.size() > 0)
-		FlushTransferRanges(NULL);
+	if (s_RangeMngr.ranges.size() > 0) FlushTransferRanges(NULL);
 
 	SetShaderCaller("RenderStartHelper");
 
@@ -317,7 +314,7 @@ inline void RenderStartHelper(u32 bInterlace)
 
 	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	DisableAllgl() ;
+	DisableAllgl();
 
 	GL_REPORT_ERRORD();
 
@@ -444,11 +441,12 @@ inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm)
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
 	SETPIXELSHADER(ppsCRTC24[bInterlace].prog);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	
+	DrawTriangle();
 }
 
 // Maybe I do this function global-defined. Calculate bits per pixel for
-// each psm. It's obly place with PSMCT16 which have diffetent bpp.
+// each psm. It's the only place with PSMCT16 which have a different bpp.
 // FIXME: check PSMCT16S
 inline int RenderGetBpp(int psm)
 {
@@ -638,9 +636,7 @@ inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 
 				SETPIXELSHADER(ppsCRTCTarg[bInterlace].prog);
 
-				GL_REPORT_ERRORD();
-
-				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+				DrawTriangle();
 
 				if (abs(dh - (int)texframe.th) <= 1) return true;
 
@@ -711,8 +707,8 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
 
 	SETPIXELSHADER(ppsCRTC[bInterlace].prog);
-	GL_REPORT_ERRORD();
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	
+	DrawTriangle();
 }
 
 // Put FPS counter on screen (not in window title)

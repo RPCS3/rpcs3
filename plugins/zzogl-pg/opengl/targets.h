@@ -22,6 +22,8 @@
 #define TARGET_VIRTUAL_KEY 0x80000000
 #include "PS2Edefs.h"
 
+extern bool nullTex;
+
 inline Vector DefaultOneColor(FRAGMENTSHADER ptr)
 {
 	Vector v = Vector(1, 1, 1, 1);
@@ -299,5 +301,65 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 }
 
 } // End of namespace
+
+#include "Mem.h"
+
+// Naive attempt at preventing texures from being drawn if their data is null. (which is undefined behavior.)
+// Gets rid of garbage at the beginning of Grandia III.
+// And messes up Kingdom Hearts opening. I need to read up more on OpenGL. :(
+//#define NO_NULL_TEXTURES
+
+static __forceinline void DrawTriangle()
+{
+#ifdef NO_NULL_TEXTURES
+	if (nullTex)  
+	{
+		ZZLog::Debug_Log("Drawing arrays without a texture!"); 
+	}
+	else 
+#endif
+	{	
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		GL_REPORT_ERRORD();
+	}
+}
+
+static __forceinline void DrawBuffers(GLenum *buffer)
+{
+	if (glDrawBuffers != NULL) 
+	{
+#ifdef NO_NULL_TEXTURES
+		if (nullTex)  
+			ZZLog::Debug_Log("Update2: Drawing buffers without a texture!"); 
+		else 
+#endif
+			glDrawBuffers(1, buffer);
+	}
+
+	GL_REPORT_ERRORD();
+}
+
+static __forceinline void FBTexture(int attach, int id)
+{
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + attach, GL_TEXTURE_RECTANGLE_NV, id, 0);
+	GL_REPORT_ERRORD();
+}
+
+static void Texture2D(GLint iFormat, GLenum format, GLenum type, const GLvoid* pixels)
+{
+	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, format, type, pixels);
+	nullTex = (pixels == NULL);
+}
+
+static void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
+{
+	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
+	nullTex = (pixels == NULL);
+}
+
+static void TextureRect(GLenum attach, GLuint id = 0)
+{
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, attach, GL_RENDERBUFFER_EXT, id);
+}
 
 #endif

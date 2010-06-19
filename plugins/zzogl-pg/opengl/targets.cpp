@@ -35,6 +35,8 @@
 #define RHA
 //#define RW
 
+bool nullTex = false;
+
 extern int g_GameSettings;
 
 using namespace ZeroGS;
@@ -96,17 +98,21 @@ inline void DestroyAllTargetsHelper(void* ptr)
 	}
 }
 
-// Made an empty rexture and bind it to $ptr_p
-// return false if creating texture was uncuccessfull
-// fbh and fdb should be properly shifter before calling this!.
-// We should ignore framebuffer trouble here, we put textures of dufferent sized to it.
+// Made an empty texture and bind it to $ptr_p
+// return false if creating texture was unsuccessfull
+// fbh and fdb should be properly shifted before calling this!.
+// We should ignore framebuffer trouble here, we put textures of different sizes to it.
 inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw, int fbh)
 {
 	glGenTextures(1, ptr_p);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
+	
 	// initialize to default
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GetRenderTargetFormat(), fbw, fbh, 0, GL_RGBA, GetRenderFormat() == RFT_float16 ? GL_FLOAT : GL_UNSIGNED_BYTE, NULL);
-
+	if (GetRenderFormat() == RFT_float16)
+		TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, GL_FLOAT, NULL);
+	else
+		TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -116,7 +122,7 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 	return ((Error == GL_NO_ERROR) || (Error == GL_INVALID_FRAMEBUFFER_OPERATION_EXT));
 }
 
-// Draw 4 triangles from binded array using only stenclil buffer
+// Draw 4 triangles from binded array using only stencil buffer
 inline void FillOnlyStencilBuffer()
 {
 	if (ZeroGS::IsWriteDestAlphaTest() && !(g_GameSettings&GAME_NOSTENCIL))
@@ -127,8 +133,8 @@ inline void FillOnlyStencilBuffer()
 
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilFunc(GL_ALWAYS, 1, 0xff);
-
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		
+		DrawTriangle();
 		glColorMask(1, 1, 1, 1);
 	}
 }
@@ -514,8 +520,8 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+	DrawTriangle();
+	
 	// fill stencil buf only
 	FillOnlyStencilBuffer();
 	glEnable(GL_SCISSOR_TEST);
@@ -578,9 +584,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	SET_STREAM();
 
 	// assume depth already set !?
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexConv, 0);
+	FBTexture(0, ptexConv);
 	ZeroGS::ResetRenderTarget(1);
-	GL_REPORT_ERRORD();
 
 	BindToSample(&ptex) ;
 
@@ -596,9 +601,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
 	SETPIXELSHADER(ppsConvert16to32.prog);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+	DrawTriangle();
+	
 #ifdef _DEBUG
 	if (g_bSaveZUpdate)
 	{
@@ -685,8 +689,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	SET_STREAM();
 
 	// assume depth already set !?
-	// assume depth already set !?
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexConv, 0);
+	FBTexture(0, ptexConv);
 	ZeroGS::ResetRenderTarget(1);
 	GL_REPORT_ERRORD();
 
@@ -705,9 +708,8 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
 	SETPIXELSHADER(ppsConvert32to16.prog);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+	DrawTriangle();
+	
 #ifdef _DEBUG
 	//g_bSaveZUpdate = 1;
 	if (g_bSaveZUpdate)
@@ -794,7 +796,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
 
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptexFeedback, 0);
+	FBTexture(0, ptexFeedback);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 	GL_REPORT_ERRORD();
 
@@ -808,9 +810,8 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	// render with an AA shader if possible (bilinearly interpolates data)
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBaseTexture.prog);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
+	DrawTriangle();
+	
 	// restore
 	swap(ptex, ptexFeedback);
 
@@ -833,8 +834,8 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
 {
 	FUNCLOG
-
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + targ, GL_TEXTURE_RECTANGLE_NV, ptex, 0);
+	
+	FBTexture(targ, ptex);
 
 	//GL_REPORT_ERRORD();
 	//if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
@@ -854,8 +855,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 {
 	FUNCLOG
 
-	if (!CRenderTarget::Create(frame))
-		return false;
+	if (!CRenderTarget::Create(frame)) return false;
 
 	GL_REPORT_ERROR();
 
@@ -903,8 +903,8 @@ void ZeroGS::CDepthTarget::Destroy()
 	if (status)     // In this case Framebuffer extension is off-use and lead to segfault
 	{
 		ResetRenderTarget(1);
-		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, 0);
-		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, 0);
+		TextureRect(GL_DEPTH_ATTACHMENT_EXT);
+		TextureRect(GL_STENCIL_ATTACHMENT_EXT);
 		GL_REPORT_ERRORD();
 
 		if (pstencil != 0)
@@ -1011,9 +1011,9 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	cgGLSetTextureParameter(ppsBitBltDepth.sMemory, pmemtarg->ptex->tex);
 	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
 
-	Vector v = DefaultBitBltPos() ;
+	Vector v = DefaultBitBltPos();
 
-	v = DefaultBitBltTex() ;
+	v = DefaultBitBltTex();
 
 	v.x = 1;
 	v.y = 2;
@@ -1037,16 +1037,20 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	ZZcgSetParameter4fv(ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
 
 	assert(pdepth != 0);
+	//GLint w1 = 0;
+	//GLint h1 = 0;
 
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_NV, ptex, 0);
+	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_WIDTH_EXT, &w1);
+	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_HEIGHT_EXT, &h1);
 	SetDepthStencilSurface();
 	
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_RECTANGLE_NV, 0, 0);
+	FBTexture(1, 0);
+	
 	GLenum buffer = GL_COLOR_ATTACHMENT0_EXT;
 	
-	if (glDrawBuffers != NULL) glDrawBuffers(1, &buffer);
-
-	GL_REPORT_ERRORD();
+	//ZZLog::Error_Log("CDepthTarget::Update: w1 = 0x%x; h1 = 0x%x", w1, h1);
+	DrawBuffers(&buffer);
 
 	SetViewport();
 
@@ -1058,7 +1062,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBitBltDepth.prog);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	DrawTriangle();
 
 	status = TS_Resolved;
 
@@ -1083,12 +1087,12 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 {
 	FUNCLOG
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, pdepth);
+	TextureRect(GL_DEPTH_ATTACHMENT_EXT, pdepth);
 
 	if (pstencil)
 	{
 		// there's a bug with attaching stencil and depth buffers
-		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, pstencil);
+		TextureRect(GL_STENCIL_ATTACHMENT_EXT, pstencil);
 
 		if (icount++ < 8)    // not going to fail if succeeded 4 times
 		{
@@ -1096,20 +1100,18 @@ void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 			
 			if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
-				glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, 0);
+				TextureRect(GL_STENCIL_ATTACHMENT_EXT);
 
-				if (pstencil != pdepth)
-					glDeleteRenderbuffersEXT(1, &pstencil);
+				if (pstencil != pdepth) glDeleteRenderbuffersEXT(1, &pstencil);
 
 				pstencil = 0;
-
 				g_bUpdateStencil = 0;
 			}
 		}
 	}
 	else
 	{
-		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, 0);
+		TextureRect(GL_STENCIL_ATTACHMENT_EXT);
 	}
 }
 
@@ -1751,8 +1753,7 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 {
 	FUNCLOG
 
-	if (clearmaxy == 0)
-		return true;
+	if (clearmaxy == 0) return true;
 
 	int checkstarty = max(starttex, clearminy);
 	int checkendy = min(endtex, clearmaxy);
@@ -2167,11 +2168,9 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 
 	int widthmult = 1;
-
-	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
-
 	int channels = 1;
 
+	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
 	channels = NumberOfChannels(tex0.psm);
 
 	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
@@ -2251,9 +2250,11 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 #if defined(ZEROGS_DEVBUILD)
 	g_TransferredToGPU += GPU_TEXWIDTH * channels * 4 * targ->height;
-
 #endif
 
+	const int texH = (targ->realheight + widthmult - 1) / widthmult;
+	const int texW = GPU_TEXWIDTH * channels * widthmult;
+	
 	// fill with data
 	if (targ->ptex->memptr == NULL)
 	{
@@ -2268,7 +2269,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	if (PSMT_ISCLUT(tex0.psm))
 	{
-		texdata.resize((tex0.cpsm <= 1 ? 4 : 2) *GPU_TEXWIDTH*channels*widthmult*(targ->realheight + widthmult - 1) / widthmult);
+		texdata.resize(((tex0.cpsm <= 1) ? 4 : 2) * texW * texH);
 		ptexdata = &texdata[0];
 
 		u8* psrc = (u8*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
@@ -2292,7 +2293,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	{
 		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
 		{
-			texdata.resize(4*GPU_TEXWIDTH*channels*widthmult*(targ->realheight + widthmult - 1) / widthmult
+			texdata.resize(4 * texW * texH
 #if defined(ZEROGS_SSE2)
 			+ 15 						// reserve additional elements for alignment if SSE2 used.
 										// better do it now, so less resizing would be needed
@@ -2315,7 +2316,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 				// Later we would move eax by 16, so only we should verify is first element align
 				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
 				// Probably, usage of _aligned_maloc() would be preferable.
-				int disalignment = 16 - ((u32)(uptr)dst) % 16 ;		// This is value of shift. It could be 0 < disalignment <= 15
+				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
 				dst = (u16*)ptexdata;
 				ZZLog::GS_Log("Made alignment for texdata, 0x%x", dst);
@@ -2356,9 +2357,11 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	if (targ->ptex->tex == 0) glGenTextures(1, &targ->ptex->tex);
 
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, fmt == GL_UNSIGNED_BYTE ? 4 : GL_RGB5_A1, GPU_TEXWIDTH*channels*widthmult,
-				 (targ->realheight + widthmult - 1) / widthmult, 0, GL_RGBA, fmt, ptexdata);
+	
+	if (fmt == GL_UNSIGNED_BYTE)
+		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
+	else
+		TextureRect(GL_RGB5_A1, texW, texH, GL_RGBA, fmt, ptexdata);
 
 	int realheight = targ->realheight;
 
@@ -2380,8 +2383,8 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 			DestroyOldest();
 		}
-
-		glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, GPU_TEXWIDTH*channels*widthmult, (targ->realheight + widthmult - 1) / widthmult, 0, GL_RGBA, fmt, ptexdata);
+		
+		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
 	}
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -2576,7 +2579,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on binding bitmask texture.");
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, GL_LUMINANCE16, GPU_TEXMASKWIDTH + 1, 1, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data[0]);
+	TextureRect(GL_LUMINANCE16, GPU_TEXMASKWIDTH + 1, 1, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data[0]);
 	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on applying bitmask texture.");
 
 //	Removing clamping, as it seems lead to numerous troubles at some drivers
@@ -2785,8 +2788,7 @@ void ResolveInRange(int start, int end)
 
 	if (listTargs.size() > 0)
 	{
-		Flush(0);
-		Flush(1);
+		FlushBoth();
 
 		// We need another list, because old one could be brocken by Flush().
 		listTargs.clear();
@@ -2835,8 +2837,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 				s_RTs.GetTargs(start, end, listTransmissionUpdateTargs);*/
 
 //	  if( !bHasFlushed && listTransmissionUpdateTargs.size() > 0 ) {
-//		  Flush(0);
-//		  Flush(1);
+//		  FlushBoth();
 //
 //#ifdef _DEBUG
 //		  // make sure targets are still the same
@@ -2999,8 +3000,7 @@ void InitTransferHostLocal()
 	//ZZLog::Prim_Log("trans: bp:%x x:%x y:%x w:%x h:%x\n", gs.dstbuf.bp, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew);
 
 //  if( !bHasFlushed && (vb[0].bNeedFrameCheck || vb[0].bNeedZCheck || vb[1].bNeedFrameCheck || vb[1].bNeedZCheck)) {
-//	  Flush(0);
-//	  Flush(1);
+//	  FlushBoth();
 //	  bHasFlushed = 1;
 //  }
 //
@@ -3011,8 +3011,7 @@ void InitTransferHostLocal()
 //	  GetRectMemAddress(tstart, tend, vb[0].tex0.psm, 0, 0, vb[0].tex0.tw, vb[0].tex0.th, vb[0].tex0.tbp0, vb[0].tex0.tbw);
 //
 //	  if( start < tend && end > tstart ) {
-//		  Flush(0);
-//		  Flush(1);
+//		  FlushBoth();
 //		  bHasFlushed = 1;
 //	  }
 //  }
@@ -3022,8 +3021,7 @@ void InitTransferHostLocal()
 //	  GetRectMemAddress(tstart, tend, vb[1].tex0.psm, 0, 0, vb[1].tex0.tw, vb[1].tex0.th, vb[1].tex0.tbp0, vb[1].tex0.tbw);
 //
 //	  if( start < tend && end > tstart ) {
-//		  Flush(0);
-//		  Flush(1);
+//		  FlushBoth();
 //		  bHasFlushed = 1;
 //	  }
 //  }

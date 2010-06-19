@@ -113,7 +113,7 @@ using namespace std;
 	GLenum err = glGetError(); \
 	if( err != GL_NO_ERROR ) \
 	{ \
-		ZZLog::Error_Log("%s:%d: gl error %s", __FILE__, (int)__LINE__, error_name(err)); \
+		ZZLog::Error_Log("%s:%d: gl error %s(0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
 		ZeroGS::HandleGLError(); \
 	} \
 }
@@ -124,7 +124,7 @@ using namespace std;
 	GLenum err = glGetError(); \
 	if( err != GL_NO_ERROR ) \
 	{ \
-		ZZLog::Error_Log("%s:%d: gl error %s", __FILE__, (int)__LINE__, error_name(err)); \
+		ZZLog::Error_Log("%s:%d: gl error %s (0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
 		ZeroGS::HandleGLError(); \
 	} \
 }
@@ -210,12 +210,15 @@ inline const char *error_name(int err)
 		case GL_TABLE_TOO_LARGE:
 			return "GL_TABLE_TOO_LARGE";
 
+		case GL_INVALID_FRAMEBUFFER_OPERATION:
+			return "GL_INVALID_FRAMEBUFFER_OPERATION";
+			
 		default:
 			return "Unknown GL error";
 	}
 }
 
-// inline for an extemely often used sequence
+// inline for an extremely often used sequence
 // This is turning off all gl functions. Safe to do updates.
 inline void DisableAllgl()
 {
@@ -823,7 +826,7 @@ void Prim();
 void SetTexFlush();
 // flush current vertices, call before setting new registers (the main render method)
 void Flush(int context);
-
+void FlushBoth();
 void ExtWrite();
 
 void SetWriteDepth();

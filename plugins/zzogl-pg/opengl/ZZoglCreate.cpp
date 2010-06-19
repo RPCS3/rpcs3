@@ -456,6 +456,27 @@ inline bool CreateFillExtensionsMap()
 
 const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
 
+void LoadglFunctions()
+{
+	GL_LOADFN(glIsRenderbufferEXT);
+	GL_LOADFN(glBindRenderbufferEXT);
+	GL_LOADFN(glDeleteRenderbuffersEXT);
+	GL_LOADFN(glGenRenderbuffersEXT);
+	GL_LOADFN(glRenderbufferStorageEXT);
+	GL_LOADFN(glGetRenderbufferParameterivEXT);
+	GL_LOADFN(glIsFramebufferEXT);
+	GL_LOADFN(glBindFramebufferEXT);
+	GL_LOADFN(glDeleteFramebuffersEXT);
+	GL_LOADFN(glGenFramebuffersEXT);
+	GL_LOADFN(glCheckFramebufferStatusEXT);
+	GL_LOADFN(glFramebufferTexture1DEXT);
+	GL_LOADFN(glFramebufferTexture2DEXT);
+	GL_LOADFN(glFramebufferTexture3DEXT);
+	GL_LOADFN(glFramebufferRenderbufferEXT);
+	GL_LOADFN(glGetFramebufferAttachmentParameterivEXT);
+	GL_LOADFN(glGenerateMipmapEXT);
+}
+
 bool ZeroGS::Create(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;
@@ -489,23 +510,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	s_srcrgb = s_dstrgb = s_srcalpha = s_dstalpha = GL_ONE;
 
-	GL_LOADFN(glIsRenderbufferEXT);
-	GL_LOADFN(glBindRenderbufferEXT);
-	GL_LOADFN(glDeleteRenderbuffersEXT);
-	GL_LOADFN(glGenRenderbuffersEXT);
-	GL_LOADFN(glRenderbufferStorageEXT);
-	GL_LOADFN(glGetRenderbufferParameterivEXT);
-	GL_LOADFN(glIsFramebufferEXT);
-	GL_LOADFN(glBindFramebufferEXT);
-	GL_LOADFN(glDeleteFramebuffersEXT);
-	GL_LOADFN(glGenFramebuffersEXT);
-	GL_LOADFN(glCheckFramebufferStatusEXT);
-	GL_LOADFN(glFramebufferTexture1DEXT);
-	GL_LOADFN(glFramebufferTexture2DEXT);
-	GL_LOADFN(glFramebufferTexture3DEXT);
-	GL_LOADFN(glFramebufferRenderbufferEXT);
-	GL_LOADFN(glGetFramebufferAttachmentParameterivEXT);
-	GL_LOADFN(glGenerateMipmapEXT);
+	LoadglFunctions();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	GL_REPORT_ERROR();
@@ -523,7 +528,8 @@ bool ZeroGS::Create(int _width, int _height)
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, s_uFramebuffer);
 
-	if (glDrawBuffers != NULL) glDrawBuffers(1, s_drawbuffers);
+	DrawBuffers(s_drawbuffers);
+		
 	GL_REPORT_ERROR();
 
 	if (err != GL_NO_ERROR) bSuccess = false;
@@ -582,7 +588,10 @@ bool ZeroGS::Create(int _width, int _height)
 
 	PBITMAPINFO pinfo = (PBITMAPINFO)LockResource(hBitmapGlob);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, 4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, 0, pinfo->bmiHeader.biBitCount == 32 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
+	if (pinfo->bmiHeader.biBitCount == 32)
+		TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, GL_RGBA, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
+	else
+		TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, GL_RGB, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
 
 	nLogoWidth = pinfo->bmiHeader.biWidth;
 	nLogoHeight = pinfo->bmiHeader.biHeight;
@@ -622,14 +631,14 @@ bool ZeroGS::Create(int _width, int _height)
 	g_internalFloatFmt = GL_ALPHA_FLOAT32_ATI;
 	g_internalRGBAFloatFmt = GL_RGBA_FLOAT32_ATI;
 	g_internalRGBAFloat16Fmt = GL_RGBA_FLOAT16_ATI;
-
-	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
+	
+	Texture2D(g_internalFloatFmt, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
 
 	if (glGetError() != GL_NO_ERROR)
 	{
 		// try different internal format
 		g_internalFloatFmt = GL_FLOAT_R32_NV;
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RED, GL_FLOAT, &vBlockData[0]);
+		Texture2D(g_internalFloatFmt, GL_RED, GL_FLOAT, &vBlockData[0]);
 	}
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -643,7 +652,7 @@ bool ZeroGS::Create(int _width, int _height)
 		g_fBlockMult = 65535.0f * (float)g_fiGPU_TEXWIDTH / 32.0f;
 
 		BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
-		glTexImage2D(GL_TEXTURE_2D, 0, 2, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_R, GL_UNSIGNED_SHORT, &vBlockData[0]);
+		Texture2D(2, GL_R, GL_UNSIGNED_SHORT, &vBlockData[0]);
 
 		if (glGetError() != GL_NO_ERROR)
 		{
@@ -658,13 +667,13 @@ bool ZeroGS::Create(int _width, int _height)
 		// fill in the bilinear blocks
 		glGenTextures(1, &ptexBilinearBlocks);
 		glBindTexture(GL_TEXTURE_2D, ptexBilinearBlocks);
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
+		Texture2D(g_internalRGBAFloatFmt, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
 
 		if (glGetError() != GL_NO_ERROR)
 		{
 			g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
 			g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
-			glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
+			Texture2D(g_internalRGBAFloatFmt, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
 			ZZLog::Error_Log("ZZogl Fill bilinear blocks.");
 			B_G(glGetError() == GL_NO_ERROR, return false);
 		}
@@ -753,6 +762,7 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, &conv16to32data[0]);
+	nullTex = false;
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
