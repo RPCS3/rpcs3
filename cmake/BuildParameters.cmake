@@ -3,7 +3,6 @@
 # Enable/disable the stipping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
 ### Force the choice of 3rd party library in pcsx2 over system libraries
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
-# Use bzip        internal lib: -DFORCE_INTERNAL_BZIP2=TRUE
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 #-------------------------------------------------------------------------------
@@ -37,14 +36,9 @@ endif(NOT DEFINED CMAKE_BUILD_STRIP)
 # Select library system vs 3rdparty
 #-------------------------------------------------------------------------------
 if(FORCE_INTERNAL_ALL)
-    set(FORCE_INTERNAL_BZIP2 TRUE)
     set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
     set(FORCE_INTERNAL_ZLIB TRUE)
 endif(FORCE_INTERNAL_ALL)
-
-if(NOT DEFINED FORCE_INTERNAL_BZIP2)
-    set(FORCE_INTERNAL_BZIP2 FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_BZIP2)
 
 if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
     set(FORCE_INTERNAL_SOUNDTOUCH TRUE)

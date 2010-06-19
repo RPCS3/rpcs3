@@ -1,8 +1,3 @@
-# build project bzip2
-if(projectBZip2)
-	add_subdirectory(bzip2)
-endif(projectBZip2)
-
 # build project zlib
 if(projectZLIB)
 	add_subdirectory(zlib)
