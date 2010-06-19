@@ -163,7 +163,12 @@ void V_Core::Reset( int index )
 
 s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 {
-	offset *= 4;
+	// Should offsets be multipled by 4 or not?  Reverse-engineering of IOP code reveals
+	// that it *4's all addresses before upping them to the SPU2 -- so our buffers are
+	// already x4'd.  It doesn't really make sense that we should x4 them again, and this
+	// seems to work. (feedback-free in bios and DDS)  --air
+
+	//offset *= 4;
 
 	u32 pos = EffectsStartA + offset;
 
@@ -806,12 +811,19 @@ static void __fastcall RegWrite_VoiceAddr( u16 value )
 			thisvoice.LoopMode = 3;
 		break;
 
+		// Note that there's no proof that I know of that writing to NextA is
+		// even allowed or handled by the SPU2 (it might be disabled or ignored,
+		// for example).  Tests should be done to find games that write to this
+		// reg, and see if they're buggy or not. --air
+
 		case 4:
 			thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8);
+			thisvoice.SCurrent = 28;
 		break;
 
 		case 5:
 			thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8);
+			thisvoice.SCurrent = 28;
 		break;
 	}
 }

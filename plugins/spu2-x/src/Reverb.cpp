@@ -211,8 +211,9 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// The following code differs from Neill's doc as it uses the more natural single-mul
 		// interpolative, instead of the funky ^0x8000 stuff.  (better result, faster)
 
-#define A_HACK
-#ifndef A_HACK
+		// A hack!  Why?  Because gigaherz decided the other version didn't make sense. --air
+#define A_HACK 1
+#if A_HACK
 		const s32 FB_A0 = _spu2mem[fb_src_a0] * Revb.FB_ALPHA;
 		const s32 FB_A1 = _spu2mem[fb_src_a1] * Revb.FB_ALPHA;
 
@@ -223,7 +224,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const s32 acc_fb_mix_a = ACC0 + ( (_spu2mem[fb_src_a0] - (ACC0>>16)) * Revb.FB_ALPHA );
 		const s32 acc_fb_mix_b = ACC1 + ( (_spu2mem[fb_src_a1] - (ACC1>>16)) * Revb.FB_ALPHA );
 
-#ifdef A_HACK
+#if A_HACK
 		_spu2mem[mix_dest_a0] = clamp_mix( acc_fb_mix_a >> 16 );
 		_spu2mem[mix_dest_a1] = clamp_mix( acc_fb_mix_b >> 16 );
 #endif
