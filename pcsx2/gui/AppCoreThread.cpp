@@ -22,7 +22,7 @@
 #include "ps2/BiosTools.h"
 #include "GS.h"
 
-#include "cdvd/CDVD.h"
+#include "CDVD/CDVD.h"
 #include "Elfheader.h"
 #include "Patch.h"
 
