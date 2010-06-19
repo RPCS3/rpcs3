@@ -69,24 +69,27 @@ extern u32 ptexBilinearBlocks;
 extern u32 ptexConv32to16;
 bool g_bSaveZUpdate = 0;
 
-// ------------------------- Usefull inlines ------------------------------------
+int VALIDATE_THRESH = 8;
+u32 TEXDESTROY_THRESH = 16;
 
-// memory size for one row of texture. It's depends of windth of texture and number of bytes
+// ------------------------- Useful inlines ------------------------------------
+
+// memory size for one row of texture. It depends on width of texture and number of bytes
 // per pixel
 inline u32 Pitch(int fbw) { return (RW(fbw) * (GetRenderFormat() == RFT_float16 ? 8 : 4)) ; }
 
 // memory size of whole texture. It is number of rows multiplied by memory size of row
 inline u32 Tex_Memory_Size(int fbw, int fbh) { return (RH(fbh) * Pitch(fbw)); }
 
-// Oftenly called for several reasons
-// Call flush if renderer or depther target is equal to ptr
+// Often called for several reasons
+// Call flush if renderer or depth target is equal to ptr
 inline void FlushIfNecesary(void* ptr)
 {
 	if (vb[0].prndr == ptr || vb[0].pdepth == ptr) Flush(0);
 	if (vb[1].prndr == ptr || vb[1].pdepth == ptr) Flush(1);
 }
 
-// This block was repreaded several times, so I inlined it.
+// This block was repeated several times, so I inlined it.
 inline void DestroyAllTargetsHelper(void* ptr)
 {
 	for (int i = 0; i < 2; ++i)
@@ -97,24 +100,20 @@ inline void DestroyAllTargetsHelper(void* ptr)
 }
 
 // Made an empty texture and bind it to $ptr_p
-// return false if creating texture was unsuccessfull
-// fbh and fdb should be properly shifted before calling this!.
-// We should ignore framebuffer trouble here, we put textures of different sizes to it.
+// returns false if creating texture was unsuccessful
+// fbh and fdb should be properly shifted before calling this!
+// We should ignore framebuffer trouble here, as we put textures of different sizes to it.
 inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw, int fbh)
 {
 	glGenTextures(1, ptr_p);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
 	
 	// initialize to default
-	if (GetRenderFormat() == RFT_float16)
-		TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, GL_FLOAT, NULL);
-	else
-		TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	GLenum texType = (GetRenderFormat() == RFT_float16) ? GL_FLOAT : GL_UNSIGNED_BYTE;
+	TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, texType, NULL);
 		
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	setRectWrap(GL_CLAMP);
+	setRectFilters(GL_LINEAR);
 
 	GLenum Error = glGetError();
 	return ((Error == GL_NO_ERROR) || (Error == GL_INVALID_FRAMEBUFFER_OPERATION_EXT));
@@ -132,7 +131,7 @@ inline void FillOnlyStencilBuffer()
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilFunc(GL_ALWAYS, 1, 0xff);
 		
-		DrawTriangle();
+		DrawTriangleArray();
 		glColorMask(1, 1, 1, 1);
 	}
 }
@@ -161,8 +160,7 @@ inline Vector ZeroGS::CRenderTarget::DefaultBitBltTex()
 inline void BindToSample(u32 *p_ptr)
 {
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *p_ptr);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	setRectFilters(GL_NEAREST);
 }
 
 ////////////////////
@@ -518,7 +516,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
-	DrawTriangle();
+	DrawTriangleArray();
 	
 	// fill stencil buf only
 	FillOnlyStencilBuffer();
@@ -599,7 +597,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
 	SETPIXELSHADER(ppsConvert16to32.prog);
-	DrawTriangle();
+	DrawTriangleArray();
 	
 #ifdef _DEBUG
 	if (g_bSaveZUpdate)
@@ -706,7 +704,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	SETVERTEXSHADER(pvsBitBlt.prog);
 
 	SETPIXELSHADER(ppsConvert32to16.prog);
-	DrawTriangle();
+	DrawTriangleArray();
 	
 #ifdef _DEBUG
 	//g_bSaveZUpdate = 1;
@@ -808,7 +806,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	// render with an AA shader if possible (bilinearly interpolates data)
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBaseTexture.prog);
-	DrawTriangle();
+	DrawTriangleArray();
 	
 	// restore
 	swap(ptex, ptexFeedback);
@@ -1043,7 +1041,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_HEIGHT_EXT, &h1);
 	SetDepthStencilSurface();
 	
-	FBTexture(1, 0);
+	FBTexture(1);
 	
 	GLenum buffer = GL_COLOR_ATTACHMENT0_EXT;
 	
@@ -1060,7 +1058,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBitBltDepth.prog);
 
-	DrawTriangle();
+	DrawTriangleArray();
 
 	status = TS_Resolved;
 
@@ -1323,7 +1321,6 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 	if (bfound)
 	{
-
 		// can be both 16bit and 32bit
 		if (PSMT_ISHALF(frame.psm) != PSMT_ISHALF(it->second->psm))
 		{
@@ -1743,9 +1740,6 @@ bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
 
 	return true;
 }
-
-int VALIDATE_THRESH = 8;
-u32 TEXDESTROY_THRESH = 16;
 
 bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex)
 {
@@ -2385,8 +2379,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
 	}
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	setRectWrap(GL_CLAMP);
 
 	assert(tex0.psm != 0xd);
 
@@ -2582,8 +2575,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 
 //	Removing clamping, as it seems lead to numerous troubles at some drivers
 //	Need to observe, may be clamping is not really needed.
-	/*glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	/* setTexRectWrap(GL_REPEAT);
 
 	GLint Error = glGetError();
 	if( Error != GL_NO_ERROR ) {

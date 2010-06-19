@@ -767,16 +767,15 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut)
 			}
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, 4, 256, 1, 0, GL_RGBA, PSMT_ISHALF_STORAGE(curvb.tex0) ? GL_UNSIGNED_SHORT_5_5_5_1 : GL_UNSIGNED_BYTE, &data[0]);
-
+		GLenum tempType = PSMT_ISHALF_STORAGE(curvb.tex0) ? GL_UNSIGNED_SHORT_5_5_5_1 : GL_UNSIGNED_BYTE;
+		Texture2D(4, 256, 1, GL_RGBA, tempType, &data[0]);
+		
 		s_vecTempTextures.push_back(ptexclut);
 
 		if (g_bSaveTex) SaveTexture("clut.tga", GL_TEXTURE_2D, ptexclut, 256, 1);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		setTex2DWrap(GL_REPEAT);
+		setTex2DFilters(GL_LINEAR);
 	}
 }
 

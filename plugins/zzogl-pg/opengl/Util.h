@@ -304,6 +304,77 @@ static bool SPAM_PASS;
 //#define DEVBUILD
 #endif
 
+
+// sends a message to output window if assert fails
+#define BMSG(x, str)			{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); } }
+#define BMSG_RETURN(x, str)	{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); return; } }
+#define BMSG_RETURNX(x, str, rtype)	{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); return (##rtype); } }
+#define B(x)				{ if( !(x) ) { ZZLog::Log(_#x"\n"); ZZLog::Log(#x"\n"); } }
+#define B_RETURN(x)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); return; } }
+#define B_RETURNX(x, rtype)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); return (##rtype); } }
+#define B_G(x, action)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); action; } }
+
+#define GL_REPORT_ERROR() \
+{ \
+	GLenum err = glGetError(); \
+	if( err != GL_NO_ERROR ) \
+	{ \
+		ZZLog::Error_Log("%s:%d: gl error %s(0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
+		ZeroGS::HandleGLError(); \
+	} \
+}
+
+#ifdef _DEBUG
+#	define GL_REPORT_ERRORD() \
+{ \
+	GLenum err = glGetError(); \
+	if( err != GL_NO_ERROR ) \
+	{ \
+		ZZLog::Error_Log("%s:%d: gl error %s (0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
+		ZeroGS::HandleGLError(); \
+	} \
+}
+#else
+#	define GL_REPORT_ERRORD()
+#endif
+
+
+inline const char *error_name(int err)
+{
+	switch (err)
+	{
+		case GL_NO_ERROR:
+			return "GL_NO_ERROR";
+
+		case GL_INVALID_ENUM:
+			return "GL_INVALID_ENUM";
+
+		case GL_INVALID_VALUE:
+			return "GL_INVALID_VALUE";
+
+		case GL_INVALID_OPERATION:
+			return "GL_INVALID_OPERATION";
+
+		case GL_STACK_OVERFLOW:
+			return "GL_STACK_OVERFLOW";
+
+		case GL_STACK_UNDERFLOW:
+			return "GL_STACK_UNDERFLOW";
+
+		case GL_OUT_OF_MEMORY:
+			return "GL_OUT_OF_MEMORY";
+
+		case GL_TABLE_TOO_LARGE:
+			return "GL_TABLE_TOO_LARGE";
+
+		case GL_INVALID_FRAMEBUFFER_OPERATION:
+			return "GL_INVALID_FRAMEBUFFER_OPERATION";
+			
+		default:
+			return "Unknown GL error";
+	}
+}
+
 extern void __LogToConsole(const char *fmt, ...);
 
 namespace ZZLog

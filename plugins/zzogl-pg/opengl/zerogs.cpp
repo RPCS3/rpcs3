@@ -158,7 +158,7 @@ void ExtWrite();
 
 void ResetRenderTarget(int index)
 {
-	FBTexture(index, 0);
+	FBTexture(index);
 }
 
 DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
@@ -545,7 +545,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 
 	SETVERTEXSHADER(pvsBitBlt.prog);
 	SETPIXELSHADER(ppsBaseTexture.prog);
-	DrawTriangle();
+	DrawTriangleArray();
 	
 	// restore
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1210,22 +1210,37 @@ void ZeroGS::texClutWrite(int ctx)
 	}
 	else
 	{
-		switch (tex0.cpsm)
+		u32* src = (u32*)(g_pbyGSMemory + 256 * tex0.cbp);
+		
+		if (entries == 16)
 		{
-			case PSMCT24:
-			case PSMCT32:
-				if (entries == 16)
-					WriteCLUT_T32_I4_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut + 64*tex0.csa));
-				else
-					WriteCLUT_T32_I8_CSM1((u32*)(g_pbyGSMemory + tex0.cbp*256), (u32*)(g_pbyGSClut + 64*tex0.csa));
-				break;
+			switch (tex0.cpsm)
+			{
+				case PSMCT24:
+				case PSMCT32:
+					WriteCLUT_T32_I4_CSM1(src, (u32*)(g_pbyGSClut + 64 * tex0.csa));
+					break;
 
-			default:
-				if (entries == 16)
-					WriteCLUT_T16_I4_CSM1((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut + 32*(tex0.csa&15) + (tex0.csa >= 16 ? 2 : 0)));
-				else // sse2 for 256 is more complicated, so use regular
-					WriteCLUT_T16_I8_CSM1_c((u32*)(g_pbyGSMemory + 256 * tex0.cbp), (u32*)(g_pbyGSClut + 32*(tex0.csa&15) + (tex0.csa >= 16 ? 2 : 0)));
-				break;
+				default:
+					WriteCLUT_T16_I4_CSM1(src, (u32*)(g_pbyGSClut + 32*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
+					break;
+			}
+		}
+		else
+		{
+			switch (tex0.cpsm)
+			{
+				case PSMCT24:
+				case PSMCT32:
+					WriteCLUT_T32_I8_CSM1(src, (u32*)(g_pbyGSClut + 64 * tex0.csa));
+					break;
+
+				default:
+					// sse2 for 256 is more complicated, so use regular
+					WriteCLUT_T16_I8_CSM1_c(src, (u32*)(g_pbyGSClut + 32*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
+					break;
+			}
+
 		}
 	}
 }

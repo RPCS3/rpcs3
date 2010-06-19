@@ -114,8 +114,7 @@ inline u32 CreateInterlaceTex(int width)
 	glGenTextures(1, &s_ptexInterlace);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, s_ptexInterlace);
 	TextureRect(4, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	setRectFilters(GL_NEAREST);
 	GL_REPORT_ERRORD();
 
 	return s_ptexInterlace;
@@ -442,7 +441,7 @@ inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
 	SETPIXELSHADER(ppsCRTC24[bInterlace].prog);
 	
-	DrawTriangle();
+	DrawTriangleArray();
 }
 
 // Maybe I do this function global-defined. Calculate bits per pixel for
@@ -636,7 +635,7 @@ inline bool RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 
 				SETPIXELSHADER(ppsCRTCTarg[bInterlace].prog);
 
-				DrawTriangle();
+				DrawTriangleArray();
 
 				if (abs(dh - (int)texframe.th) <= 1) return true;
 
@@ -708,7 +707,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 
 	SETPIXELSHADER(ppsCRTC[bInterlace].prog);
 	
-	DrawTriangle();
+	DrawTriangleArray();
 }
 
 // Put FPS counter on screen (not in window title)

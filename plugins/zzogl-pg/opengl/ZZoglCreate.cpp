@@ -587,16 +587,13 @@ bool ZeroGS::Create(int _width, int _height)
 
 	PBITMAPINFO pinfo = (PBITMAPINFO)LockResource(hBitmapGlob);
 
-	if (pinfo->bmiHeader.biBitCount == 32)
-		TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, GL_RGBA, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
-	else
-		TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, GL_RGB, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
+	GLEnum tempFmt = (pinfo->bmiHeader.biBitCount == 32) ? GL_RGBA : GL_RGB;
+	TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, tempFmt, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
 
 	nLogoWidth = pinfo->bmiHeader.biWidth;
 	nLogoHeight = pinfo->bmiHeader.biHeight;
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	setRectFilters(GL_LINEAR);
 
 #else
 #endif
@@ -639,11 +636,8 @@ bool ZeroGS::Create(int _width, int _height)
 		g_internalFloatFmt = GL_FLOAT_R32_NV;
 		Texture2D(g_internalFloatFmt, GL_RED, GL_FLOAT, &vBlockData[0]);
 	}
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	setTex2DFilters(GL_NEAREST);
+	setTex2DWrap(GL_REPEAT);
 
 	if (glGetError() != GL_NO_ERROR)
 	{
@@ -682,10 +676,8 @@ bool ZeroGS::Create(int _width, int _height)
 			//ZZLog::Error_Log("Fill bilinear blocks failed!");
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		setTex2DFilters(GL_NEAREST);
+		setTex2DWrap(GL_REPEAT);
 	}
 
 	float fpri = 1;
@@ -760,13 +752,10 @@ bool ZeroGS::Create(int _width, int _height)
 		conv16to32data[i] = (tempcol & 0xff00ff00) | ((tempcol & 0xff) << 16) | ((tempcol & 0xff0000) >> 16);
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, 0, 4, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, &conv16to32data[0]);
-	nullTex = false;
+	Texture2D(4, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, &conv16to32data[0]);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	setTex2DFilters(GL_NEAREST);
+	setTex2DWrap(GL_CLAMP);
 
 	GL_REPORT_ERROR();
 
@@ -792,12 +781,9 @@ bool ZeroGS::Create(int _width, int _height)
 		}
 	}
 
-	glTexImage3D(GL_TEXTURE_3D, 0, 4, 32, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, &conv32to16data[0]);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP);
+	Texture3D(4, 32, 32, 32, GL_RGBA, GL_UNSIGNED_BYTE, &conv32to16data[0]);
+	setTex3DFilters(GL_NEAREST);
+	setTex3DWrap(GL_CLAMP);
 	GL_REPORT_ERROR();
 
 	if (err != GL_NO_ERROR) bSuccess = false;

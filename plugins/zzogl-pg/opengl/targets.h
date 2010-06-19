@@ -309,12 +309,12 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 // And messes up Kingdom Hearts opening. I need to read up more on OpenGL. :(
 //#define NO_NULL_TEXTURES
 
-static __forceinline void DrawTriangle()
+static __forceinline void DrawTriangleArray()
 {
 #ifdef NO_NULL_TEXTURES
 	if (nullTex)  
 	{
-		ZZLog::Debug_Log("Drawing arrays without a texture!"); 
+		ZZLog::Debug_Log("Drawing triangle arrays without a texture!"); 
 	}
 	else 
 #endif
@@ -330,7 +330,7 @@ static __forceinline void DrawBuffers(GLenum *buffer)
 	{
 #ifdef NO_NULL_TEXTURES
 		if (nullTex)  
-			ZZLog::Debug_Log("Update2: Drawing buffers without a texture!"); 
+			ZZLog::Debug_Log("Drawing buffers without a texture!"); 
 		else 
 #endif
 			glDrawBuffers(1, buffer);
@@ -339,27 +339,76 @@ static __forceinline void DrawBuffers(GLenum *buffer)
 	GL_REPORT_ERRORD();
 }
 
-static __forceinline void FBTexture(int attach, int id)
+static __forceinline void FBTexture(int attach, int id = 0)
 {
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + attach, GL_TEXTURE_RECTANGLE_NV, id, 0);
 	GL_REPORT_ERRORD();
 }
 
-static void Texture2D(GLint iFormat, GLenum format, GLenum type, const GLvoid* pixels)
+static __forceinline void Texture2D(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
+{
+	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, width, height, 0, format, type, pixels);
+	nullTex = (pixels == NULL);
+}
+
+static __forceinline void Texture2D(GLint iFormat, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, format, type, pixels);
 	nullTex = (pixels == NULL);
 }
 
-static void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
+static __forceinline void Texture3D(GLint iFormat, GLint width, GLint height, GLint depth, GLenum format, GLenum type, const GLvoid* pixels)
+{
+	glTexImage3D(GL_TEXTURE_2D, 0, iFormat, width, height, depth, 0, format, type, pixels);
+	nullTex = (pixels == NULL);
+}
+	
+static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
 	nullTex = (pixels == NULL);
 }
 
-static void TextureRect(GLenum attach, GLuint id = 0)
+static __forceinline void TextureRect(GLenum attach, GLuint id = 0)
 {
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, attach, GL_RENDERBUFFER_EXT, id);
 }
 
+static __forceinline void setTex2DFilters(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, type);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, type);
+}
+
+static __forceinline void setTex2DWrap(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, type);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, type);
+}
+
+static __forceinline void setTex3DFilters(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, type);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, type);
+}
+
+static __forceinline void setTex3DWrap(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, type);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, type);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, type);
+}
+
+static __forceinline void setRectFilters(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, type);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, type);
+}
+
+static __forceinline void setRectWrap(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, type);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, type);
+}
+	
 #endif
