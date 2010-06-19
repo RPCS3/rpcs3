@@ -799,6 +799,12 @@ void Pcsx2App::OnGsFrameClosed( wxWindowID id )
 
 	CoreThread.Suspend();
 	m_id_GsFrame = wxID_ANY;
+
+	if( !m_UseGUI )
+	{
+		// [TODO] : Prompt user before exiting, k thx. :)
+		PrepForExit();
+	}
 }
 
 void Pcsx2App::OnProgramLogClosed( wxWindowID id )

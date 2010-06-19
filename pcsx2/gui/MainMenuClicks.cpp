@@ -125,7 +125,7 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 {
 	wxWindowID result = wxID_CANCEL;
 
-	if( g_Conf->CdvdSource == CDVDsrc_Iso && isoFilename == g_Conf->CurrentIso )
+	if( (g_Conf->CdvdSource == CDVDsrc_Iso) && (isoFilename == g_Conf->CurrentIso) )
 	{
 		core_control.AllowResume();
 		return result;
