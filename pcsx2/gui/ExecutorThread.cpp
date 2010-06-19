@@ -357,10 +357,10 @@ private:
 	typedef wxDialogWithHelpers _parent;
 
 protected:
-	PersistentThread*	m_thread;
+	pxThread*	m_thread;
 	
 public:
-	WaitingForThreadedTaskDialog( PersistentThread* thr, wxWindow* parent, const wxString& title, const wxString& content );
+	WaitingForThreadedTaskDialog( pxThread* thr, wxWindow* parent, const wxString& title, const wxString& content );
 	virtual ~WaitingForThreadedTaskDialog() throw() {}
 
 protected:
@@ -371,7 +371,7 @@ protected:
 // --------------------------------------------------------------------------------------
 //  WaitingForThreadedTaskDialog Implementations
 // --------------------------------------------------------------------------------------
-WaitingForThreadedTaskDialog::WaitingForThreadedTaskDialog( PersistentThread* thr, wxWindow* parent, const wxString& title, const wxString& content )
+WaitingForThreadedTaskDialog::WaitingForThreadedTaskDialog( pxThread* thr, wxWindow* parent, const wxString& title, const wxString& content )
 	: wxDialogWithHelpers( parent, title )
 {
 	SetMinWidth( 500 );

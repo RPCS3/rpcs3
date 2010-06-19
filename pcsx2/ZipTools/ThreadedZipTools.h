@@ -57,10 +57,10 @@ typedef void FnType_ReadCompressedHeader( IStreamReader& thr );
 //  BaseCompressThread
 // --------------------------------------------------------------------------------------
 class BaseCompressThread
-	: public PersistentThread
+	: public pxThread
 	, public IStreamWriter
 {
-	typedef PersistentThread _parent;
+	typedef pxThread _parent;
 
 protected:
 	FnType_WriteCompressedHeader*	m_WriteHeaderInThread;

@@ -161,10 +161,10 @@ public:
 // --------------------------------------------------------------------------------------
 //  ApplyOverValidStateEvent
 // --------------------------------------------------------------------------------------
-class ApplyOverValidStateEvent : public pxInvokeActionEvent
+class ApplyOverValidStateEvent : public pxActionEvent
 {
 	//DeclareNoncopyableObject( ApplyOverValidStateEvent );
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 
 protected:
 	ApplyPluginsDialog*		m_owner;
@@ -744,7 +744,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 // --------------------------------------------------------------------------------------
 
 Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master )
-	: PersistentThread()
+	: pxThread()
 	, Results( master.FileCount(), L"PluginSelectorResults" )
 	, m_master( master )
 	, m_hourglass( Cursor_KindaBusy )

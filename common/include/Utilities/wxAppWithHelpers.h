@@ -74,8 +74,8 @@ public:
 		DeleteObject( *obj );
 	}
 
-	void DeleteThread( Threading::PersistentThread& obj );
-	void DeleteThread( Threading::PersistentThread* obj )
+	void DeleteThread( Threading::pxThread& obj );
+	void DeleteThread( Threading::pxThread* obj )
 	{
 		if( obj == NULL ) return;
 		DeleteThread( *obj );
@@ -85,15 +85,16 @@ public:
 	void PostCommand( int evtType, int intParam=0, long longParam=0, const wxString& stringParam=wxEmptyString );
 	void PostMethod( FnType_Void* method );
 	void PostIdleMethod( FnType_Void* method );
-	void ProcessMethod( void (*method)() );
+	void ProcessMethod( FnType_Void* method );
+
+	bool Rpc_TryInvoke( FnType_Void* method );
+	bool Rpc_TryInvokeAsync( FnType_Void* method );
 
 	sptr ProcessCommand( void* clientData, int evtType, int intParam=0, long longParam=0, const wxString& stringParam=wxEmptyString );
 	sptr ProcessCommand( int evtType, int intParam=0, long longParam=0, const wxString& stringParam=wxEmptyString );
 
-	void ProcessAction( pxInvokeActionEvent& evt );
-	void PostAction( const pxInvokeActionEvent& evt );
-
-	bool PostMethodMyself( void (*method)() );
+	void ProcessAction( pxActionEvent& evt );
+	void PostAction( const pxActionEvent& evt );
 
 	void Ping();
 	bool OnInit();
@@ -105,8 +106,8 @@ public:
 	bool ProcessEvent( wxEvent& evt );
 	bool ProcessEvent( wxEvent* evt );
 	
-	bool ProcessEvent( pxInvokeActionEvent& evt );
-	bool ProcessEvent( pxInvokeActionEvent* evt );
+	bool ProcessEvent( pxActionEvent& evt );
+	bool ProcessEvent( pxActionEvent* evt );
 
 protected:
 	void IdleEventDispatcher( const wxChar* action );
@@ -117,7 +118,7 @@ protected:
 	void OnDeleteObject( wxCommandEvent& evt );
 	void OnDeleteThread( wxCommandEvent& evt );
 	void OnSynchronousCommand( pxSynchronousCommandEvent& evt );
-	void OnInvokeAction( pxInvokeActionEvent& evt );
+	void OnInvokeAction( pxActionEvent& evt );
 
 };
 

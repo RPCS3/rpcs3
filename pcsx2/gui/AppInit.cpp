@@ -181,6 +181,8 @@ void Pcsx2App::ReadUserModeSettings()
 
 void Pcsx2App::DetectCpuAndUserMode()
 {
+	AffinityAssert_AllowFrom_MainUI();
+	
 	x86caps.Identify();
 	x86caps.CountCores();
 	x86caps.SIMD_EstablishMXCSRmask();
@@ -198,6 +200,8 @@ void Pcsx2App::DetectCpuAndUserMode()
 
 void Pcsx2App::OpenMainFrame()
 {
+	if( AppRpc_TryInvokeAsync( &Pcsx2App::OpenMainFrame ) ) return;
+
 	if( GetMainFramePtr() != NULL ) return;
 
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, L"PCSX2" );
@@ -212,6 +216,8 @@ void Pcsx2App::OpenMainFrame()
 
 void Pcsx2App::OpenProgramLog()
 {
+	if( AppRpc_TryInvokeAsync( &Pcsx2App::OpenProgramLog ) ) return;
+
 	if( ConsoleLogFrame* frame = GetProgramLog() )
 	{
 		//pxAssume( );
@@ -230,12 +236,17 @@ void Pcsx2App::OpenProgramLog()
 
 void Pcsx2App::AllocateCoreStuffs()
 {
+	if( AppRpc_TryInvokeAsync( &Pcsx2App::OpenMainFrame ) ) return;
+
 	CpuCheckSSE2();
 	SysLogMachineCaps();
 	AppApplySettings();
 
 	if( !m_CoreAllocs )
 	{
+		// FIXME : Some or all of SysCoreAllocations should be run from the SysExecutor thread,
+		// so that the thread is safely blocked from being able to start emulation.
+
 		m_CoreAllocs = new SysCoreAllocations();
 
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
@@ -511,12 +522,11 @@ bool Pcsx2App::OnInit()
 		//   Start GUI and/or Direct Emulation
 		// -------------------------------------
 		if( Startup.ForceConsole ) g_Conf->ProgLogBox.Visible = true;
-		PostAppMethod( &Pcsx2App::OpenProgramLog );
+		OpenProgramLog();
 
-		if( m_UseGUI )
-			PostAppMethod( &Pcsx2App::OpenMainFrame );
+		if( m_UseGUI ) OpenMainFrame();
 
-		PostAppMethod( &Pcsx2App::AllocateCoreStuffs );
+		AllocateCoreStuffs();
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::StartupAborted& ex )		// user-aborted, no popups needed.

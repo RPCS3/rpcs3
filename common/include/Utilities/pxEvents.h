@@ -75,7 +75,7 @@ class pxSimpleEvent : public wxEvent
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxSimpleEvent)
 
 public:
-	pxSimpleEvent( int evtid=0 )
+	explicit pxSimpleEvent( int evtid=0 )
 		: wxEvent(0, evtid)
 	{ }
 
@@ -87,22 +87,22 @@ public:
 };
 
 // --------------------------------------------------------------------------------------
-//  pxInvokeActionEvent
+//  pxActionEvent
 // --------------------------------------------------------------------------------------
-class pxInvokeActionEvent : public wxEvent
+class pxActionEvent : public wxEvent
 {
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeActionEvent)
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxActionEvent)
 
 protected:
 	SynchronousActionState* m_state;
 
 public:
-	virtual ~pxInvokeActionEvent() throw() { }
-	virtual pxInvokeActionEvent *Clone() const { return new pxInvokeActionEvent(*this); }
+	virtual ~pxActionEvent() throw() { }
+	virtual pxActionEvent *Clone() const { return new pxActionEvent(*this); }
 
-	explicit pxInvokeActionEvent( SynchronousActionState* sema=NULL, int msgtype=pxEvt_InvokeAction );
-	explicit pxInvokeActionEvent( SynchronousActionState& sema, int msgtype=pxEvt_InvokeAction );
-	pxInvokeActionEvent( const pxInvokeActionEvent& src );
+	explicit pxActionEvent( SynchronousActionState* sema=NULL, int msgtype=pxEvt_InvokeAction );
+	explicit pxActionEvent( SynchronousActionState& sema, int msgtype=pxEvt_InvokeAction );
+	pxActionEvent( const pxActionEvent& src );
 
 	Threading::Semaphore* GetSemaphore() const { return m_state ? &m_state->GetSemaphore() : NULL; }
 
@@ -118,6 +118,13 @@ public:
 	virtual void _DoInvokeEvent();
 	
 protected:
+	// Extending classes should implement this method to perfoem whatever action it is
+	// the event is supposed to do. :)  Thread affinity is garaunteed to be the Main/UI
+	// thread, and exceptions will be handled automatically.
+	//
+	// Exception note: exceptions are passed back to the thread that posted the event
+	// to the queue, when possible.  If the calling thread is not blocking for a result
+	// from this event, then the exception will be posted to the Main/UI thread instead.
 	virtual void InvokeEvent() {}
 };
 
@@ -125,9 +132,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  pxExceptionEvent
 // --------------------------------------------------------------------------------------
-class pxExceptionEvent : public pxInvokeActionEvent
+class pxExceptionEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 
 protected:
 	BaseException*	m_except;
@@ -184,9 +191,9 @@ public:
 // --------------------------------------------------------------------------------------
 //  BaseMessageBoxEvent
 // --------------------------------------------------------------------------------------
-class BaseMessageBoxEvent : public pxInvokeActionEvent
+class BaseMessageBoxEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(BaseMessageBoxEvent)
 
 protected:

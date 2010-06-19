@@ -103,35 +103,35 @@ void SynchronousActionState::PostResult()
 }
 
 // --------------------------------------------------------------------------------------
-//  pxInvokeActionEvent Implementations
+//  pxActionEvent Implementations
 // --------------------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS( pxInvokeActionEvent, wxEvent )
+IMPLEMENT_DYNAMIC_CLASS( pxActionEvent, wxEvent )
 
-pxInvokeActionEvent::pxInvokeActionEvent( SynchronousActionState* sema, int msgtype )
+pxActionEvent::pxActionEvent( SynchronousActionState* sema, int msgtype )
 	: wxEvent( 0, msgtype )
 {
 	m_state = sema;
 }
 
-pxInvokeActionEvent::pxInvokeActionEvent( SynchronousActionState& sema, int msgtype )
+pxActionEvent::pxActionEvent( SynchronousActionState& sema, int msgtype )
 	: wxEvent( 0, msgtype )
 {
 	m_state = &sema;
 }
 
-pxInvokeActionEvent::pxInvokeActionEvent( const pxInvokeActionEvent& src )
+pxActionEvent::pxActionEvent( const pxActionEvent& src )
 	: wxEvent( src )
 {
 	m_state = src.m_state;
 }
 
-void pxInvokeActionEvent::SetException( const BaseException& ex )
+void pxActionEvent::SetException( const BaseException& ex )
 {
 	SetException( ex.Clone() );
 }
 
-void pxInvokeActionEvent::SetException( BaseException* ex )
+void pxActionEvent::SetException( BaseException* ex )
 {
 	const wxString& prefix( wxsFormat(L"(%s) ", GetClassInfo()->GetClassName()) );
 	ex->DiagMsg() = prefix + ex->DiagMsg();
@@ -205,39 +205,39 @@ void pxSynchronousCommandEvent::SetException( BaseException* ex )
 }
 
 // --------------------------------------------------------------------------------------
-//  pxInvokeMethodEvent
+//  pxRpcEvent
 // --------------------------------------------------------------------------------------
 // Unlike pxPingEvent, the Semaphore belonging to this event is typically posted when the
 // invoked method is completed.  If the method can be executed in non-blocking fashion then
 // it should leave the semaphore postback NULL.
 //
-class pxInvokeMethodEvent : public pxInvokeActionEvent
+class pxRpcEvent : public pxActionEvent
 {
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeMethodEvent)
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxRpcEvent)
 
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 
 protected:
 	void (*m_Method)();
 
 public:
-	virtual ~pxInvokeMethodEvent() throw() { }
-	virtual pxInvokeMethodEvent *Clone() const { return new pxInvokeMethodEvent(*this); }
+	virtual ~pxRpcEvent() throw() { }
+	virtual pxRpcEvent *Clone() const { return new pxRpcEvent(*this); }
 
-	explicit pxInvokeMethodEvent( void (*method)()=NULL, SynchronousActionState* sema=NULL )
-		: pxInvokeActionEvent( sema )
+	explicit pxRpcEvent( void (*method)()=NULL, SynchronousActionState* sema=NULL )
+		: pxActionEvent( sema )
 	{
 		m_Method = method;
 	}
 
-	explicit pxInvokeMethodEvent( void (*method)(), SynchronousActionState& sema )
-		: pxInvokeActionEvent( sema )
+	explicit pxRpcEvent( void (*method)(), SynchronousActionState& sema )
+		: pxActionEvent( sema )
 	{
 		m_Method = method;
 	}
 	
-	pxInvokeMethodEvent( const pxInvokeMethodEvent& src )
-		: pxInvokeActionEvent( src )
+	pxRpcEvent( const pxRpcEvent& src )
+		: pxActionEvent( src )
 	{
 		m_Method = src.m_Method;
 	}
@@ -254,7 +254,7 @@ protected:
 	}
 };
 
-IMPLEMENT_DYNAMIC_CLASS( pxInvokeMethodEvent, pxInvokeActionEvent )
+IMPLEMENT_DYNAMIC_CLASS( pxRpcEvent, pxActionEvent )
 
 // --------------------------------------------------------------------------------------
 //  pxExceptionEvent implementations
@@ -285,25 +285,59 @@ IMPLEMENT_DYNAMIC_CLASS( wxAppWithHelpers, wxApp )
 // main thread.
 void wxAppWithHelpers::PostMethod( FnType_Void* method )
 {
-	PostEvent( pxInvokeMethodEvent( method ) );
+	PostEvent( pxRpcEvent( method ) );
 }
 
 // Posts a method to the main thread; non-blocking.  Post occurs even when called from the
 // main thread.
 void wxAppWithHelpers::PostIdleMethod( FnType_Void* method )
 {
-	pxInvokeMethodEvent evt( method );
+	pxRpcEvent evt( method );
 	AddIdleEvent( evt );
 }
 
-bool wxAppWithHelpers::PostMethodMyself( void (*method)() )
+// Invokes the specified void method, or posts the method to the main thread if the calling
+// thread is not Main.  Action is blocking.  For non-blocking method execution, use
+// AppRpc_TryInvokeAsync.
+//
+// This function works something like setjmp/longjmp, in that the return value indicates if the
+// function actually executed the specified method or not.
+//
+// Returns:
+//   FALSE if the method was not invoked (meaning this IS the main thread!)
+//   TRUE if the method was invoked.
+//
+
+bool wxAppWithHelpers::Rpc_TryInvoke( FnType_Void* method )
 {
 	if( wxThread::IsMain() ) return false;
-	PostEvent( pxInvokeMethodEvent( method ) );
+
+	SynchronousActionState sync;
+	PostEvent( pxRpcEvent( method, sync ) );
+	sync.WaitForResult();
+
 	return true;
 }
 
-void wxAppWithHelpers::ProcessMethod( void (*method)() )
+// Invokes the specified void method, or posts the method to the main thread if the calling
+// thread is not Main.  Action is non-blocking (asynchronous).  For blocking method execution,
+// use AppRpc_TryInvoke.
+//
+// This function works something like setjmp/longjmp, in that the return value indicates if the
+// function actually executed the specified method or not.
+//
+// Returns:
+//   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
+//   TRUE if the method was posted.
+//
+bool wxAppWithHelpers::Rpc_TryInvokeAsync( FnType_Void* method )
+{
+	if( wxThread::IsMain() ) return false;
+	PostEvent( pxRpcEvent( method ) );
+	return true;
+}
+
+void wxAppWithHelpers::ProcessMethod( FnType_Void* method )
 {
 	if( wxThread::IsMain() )
 	{
@@ -312,7 +346,7 @@ void wxAppWithHelpers::ProcessMethod( void (*method)() )
 	}
 
 	SynchronousActionState sync;
-	PostEvent( pxInvokeMethodEvent( method, sync ) );
+	PostEvent( pxRpcEvent( method, sync ) );
 	sync.WaitForResult();
 }
 
@@ -345,7 +379,7 @@ bool wxAppWithHelpers::ProcessEvent( wxEvent* evt )
 	return _parent::ProcessEvent( *deleteMe );
 }
 
-bool wxAppWithHelpers::ProcessEvent( pxInvokeActionEvent& evt )
+bool wxAppWithHelpers::ProcessEvent( pxActionEvent& evt )
 {
 	if( wxThread::IsMain() )
 		return _parent::ProcessEvent( evt );
@@ -359,7 +393,7 @@ bool wxAppWithHelpers::ProcessEvent( pxInvokeActionEvent& evt )
 	}
 }
 
-bool wxAppWithHelpers::ProcessEvent( pxInvokeActionEvent* evt )
+bool wxAppWithHelpers::ProcessEvent( pxActionEvent* evt )
 {
 	if( wxThread::IsMain() )
 	{
@@ -389,7 +423,11 @@ void wxAppWithHelpers::CleanUp()
 	_parent::CleanUp();
 }
 
-void pxInvokeActionEvent::_DoInvokeEvent()
+// Executes the event with exception handling.  If the event throws an exception, the exception
+// will be neatly packaged and transported back to the thread that posted the event.
+// This function is virtual, however overloading it is not recommended.  Derrived classes
+// should overload InvokeEvent() instead.
+void pxActionEvent::_DoInvokeEvent()
 {
 	AffinityAssert_AllowFrom_MainUI();
 
@@ -497,7 +535,7 @@ void wxAppWithHelpers::Ping()
 	DbgCon.WriteLn( Color_Gray, L"App Event Ping Requested from %s thread.", pxGetCurrentThreadName().c_str() );
 
 	SynchronousActionState sync;
-	pxInvokeActionEvent evt( sync );
+	pxActionEvent evt( sync );
 	AddIdleEvent( evt );
 	sync.WaitForResult();
 }
@@ -537,12 +575,12 @@ sptr wxAppWithHelpers::ProcessCommand( int evtType, int intParam, long longParam
 	return ProcessCommand( NULL, evtType, intParam, longParam, stringParam );
 }
 
-void wxAppWithHelpers::PostAction( const pxInvokeActionEvent& evt )
+void wxAppWithHelpers::PostAction( const pxActionEvent& evt )
 {
 	PostEvent( evt );
 }
 
-void wxAppWithHelpers::ProcessAction( pxInvokeActionEvent& evt )
+void wxAppWithHelpers::ProcessAction( pxActionEvent& evt )
 {
 	if( !wxThread::IsMain() )
 	{
@@ -564,7 +602,7 @@ void wxAppWithHelpers::DeleteObject( BaseDeletableObject& obj )
 	AddIdleEvent( evt );
 }
 
-void wxAppWithHelpers::DeleteThread( PersistentThread& obj )
+void wxAppWithHelpers::DeleteThread( pxThread& obj )
 {
 	//pxAssume( obj.IsBeingDeleted() );
 	wxCommandEvent evt( pxEvt_DeleteThread );
@@ -572,7 +610,7 @@ void wxAppWithHelpers::DeleteThread( PersistentThread& obj )
 	AddIdleEvent( evt );
 }
 
-typedef void (wxEvtHandler::*pxInvokeActionEventFunction)(pxInvokeActionEvent&);
+typedef void (wxEvtHandler::*pxInvokeActionEventFunction)(pxActionEvent&);
 
 bool wxAppWithHelpers::OnInit()
 {
@@ -594,7 +632,7 @@ bool wxAppWithHelpers::OnInit()
 	return _parent::OnInit();
 }
 
-void wxAppWithHelpers::OnInvokeAction( pxInvokeActionEvent& evt )
+void wxAppWithHelpers::OnInvokeAction( pxActionEvent& evt )
 {
 	evt._DoInvokeEvent();		// wow this is easy!
 }
@@ -609,7 +647,7 @@ void wxAppWithHelpers::OnDeleteObject( wxCommandEvent& evt )
 // (thus we have a fairly automatic threaded exception system!)
 void wxAppWithHelpers::OnDeleteThread( wxCommandEvent& evt )
 {
-	ScopedPtr<PersistentThread> thr( (PersistentThread*)evt.GetClientData() );
+	ScopedPtr<pxThread> thr( (pxThread*)evt.GetClientData() );
 	if( !thr ) return;
 
 	thr->RethrowException();

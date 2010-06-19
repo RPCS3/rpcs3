@@ -157,13 +157,13 @@ void Pcsx2App::DispatchEvent( IniInterface& ini )
 //  CoreThreadStatusEvent Implementations
 // --------------------------------------------------------------------------------------
 CoreThreadStatusEvent::CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState* sema )
-	: pxInvokeActionEvent( sema )
+	: pxActionEvent( sema )
 {
 	m_evt = evt;
 }
 
 CoreThreadStatusEvent::CoreThreadStatusEvent( CoreThreadStatus evt, SynchronousActionState& sema )
-	: pxInvokeActionEvent( sema )
+	: pxActionEvent( sema )
 {
 	m_evt = evt;
 }

@@ -90,19 +90,19 @@ void Threading::pxTestCancel()
 }
 
 // Returns a handle to the current persistent thread.  If the current thread does not belong
-// to the PersistentThread table, NULL is returned.  Since the main/ui thread is not created
-// through PersistentThread it will also return NULL.  Callers can use wxThread::IsMain() to
+// to the pxThread table, NULL is returned.  Since the main/ui thread is not created
+// through pxThread it will also return NULL.  Callers can use wxThread::IsMain() to
 // test if the NULL thread is the main thread.
-PersistentThread* Threading::pxGetCurrentThread()
+pxThread* Threading::pxGetCurrentThread()
 {
-	return (curthread_key==NULL) ? NULL : (PersistentThread*)pthread_getspecific( curthread_key );
+	return (curthread_key==NULL) ? NULL : (pxThread*)pthread_getspecific( curthread_key );
 }
 
-// returns the name of the current thread, or "Unknown" if the thread is neither a PersistentThread
+// returns the name of the current thread, or "Unknown" if the thread is neither a pxThread
 // nor the Main/UI thread.
 wxString Threading::pxGetCurrentThreadName()
 {
-	if( PersistentThread* thr = pxGetCurrentThread() )
+	if( pxThread* thr = pxGetCurrentThread() )
 	{
 		return thr->GetName();
 	}
@@ -116,7 +116,7 @@ wxString Threading::pxGetCurrentThreadName()
 
 void Threading::pxYield( int ms )
 {
-	if( PersistentThread* thr = pxGetCurrentThread() )
+	if( pxThread* thr = pxGetCurrentThread() )
 		thr->Yield( ms );
 	else
 		Sleep( ms );
@@ -148,14 +148,14 @@ __forceinline void Threading::Timeslice()
 	sched_yield();
 }
 
-void Threading::PersistentThread::_pt_callback_cleanup( void* handle )
+void Threading::pxThread::_pt_callback_cleanup( void* handle )
 {
-	((PersistentThread*)handle)->_ThreadCleanup();
+	((pxThread*)handle)->_ThreadCleanup();
 }
 
 
-Threading::PersistentThread::PersistentThread()
-	: m_name( L"PersistentThread" )
+Threading::pxThread::pxThread()
+	: m_name( L"pxThread" )
 {
 	m_detached	= true;		// start out with m_thread in detached/invalid state
 	m_running	= false;
@@ -166,12 +166,12 @@ Threading::PersistentThread::PersistentThread()
 
 // This destructor performs basic "last chance" cleanup, which is a blocking join
 // against the thread. Extending classes should almost always implement their own
-// thread closure process, since any PersistentThread will, by design, not terminate
+// thread closure process, since any pxThread will, by design, not terminate
 // unless it has been properly canceled (resulting in deadlock).
 //
 // Thread safety: This class must not be deleted from its own thread.  That would be
 // like marrying your sister, and then cheating on her with your daughter.
-Threading::PersistentThread::~PersistentThread() throw()
+Threading::pxThread::~pxThread() throw()
 {
 	try
 	{
@@ -188,7 +188,7 @@ Threading::PersistentThread::~PersistentThread() throw()
 	DESTRUCTOR_CATCHALL
 }
 
-bool Threading::PersistentThread::AffinityAssert_AllowFromSelf( const DiagnosticOrigin& origin ) const
+bool Threading::pxThread::AffinityAssert_AllowFromSelf( const DiagnosticOrigin& origin ) const
 {
 	if( IsSelf() ) return true;
 
@@ -198,7 +198,7 @@ bool Threading::PersistentThread::AffinityAssert_AllowFromSelf( const Diagnostic
 	return false;
 }
 
-bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf( const DiagnosticOrigin& origin ) const
+bool Threading::pxThread::AffinityAssert_DisallowFromSelf( const DiagnosticOrigin& origin ) const
 {
 	if( !IsSelf() ) return true;
 
@@ -208,7 +208,7 @@ bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf( const Diagnos
 	return false;
 }
 
-void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
+void Threading::pxThread::FrankenMutex( Mutex& mutex )
 {
 	if( mutex.RecreateIfLocked() )
 	{
@@ -227,7 +227,7 @@ void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
 // instead override DoPrepStart instead.
 //
 // This function should not be called from the owner thread.
-void Threading::PersistentThread::Start()
+void Threading::pxThread::Start()
 {
 	// Prevents sudden parallel startup, and or parallel startup + cancel:
 	ScopedLock startlock( m_lock_start );
@@ -267,7 +267,7 @@ void Threading::PersistentThread::Start()
 // Returns: TRUE if the detachment was performed, or FALSE if the thread was
 // already detached or isn't running at all.
 // This function should not be called from the owner thread.
-bool Threading::PersistentThread::Detach()
+bool Threading::pxThread::Detach()
 {
 	AffinityAssert_DisallowFromSelf(pxDiagSpot);
 
@@ -276,7 +276,7 @@ bool Threading::PersistentThread::Detach()
 	return true;
 }
 
-bool Threading::PersistentThread::_basecancel()
+bool Threading::pxThread::_basecancel()
 {
 	if( !m_running ) return false;
 
@@ -291,7 +291,7 @@ bool Threading::PersistentThread::_basecancel()
 }
 
 // Remarks:
-//   Provision of non-blocking Cancel() is probably academic, since destroying a PersistentThread
+//   Provision of non-blocking Cancel() is probably academic, since destroying a pxThread
 //   object performs a blocking Cancel regardless of if you explicitly do a non-blocking Cancel()
 //   prior, since the ExecuteTaskInThread() method requires a valid object state.  If you really need
 //   fire-and-forget behavior on threads, use pthreads directly for now.
@@ -304,7 +304,7 @@ bool Threading::PersistentThread::_basecancel()
 // Exceptions raised by the blocking thread will be re-thrown into the main thread.  If isBlocking
 // is false then no exceptions will occur.
 //
-void Threading::PersistentThread::Cancel( bool isBlocking )
+void Threading::pxThread::Cancel( bool isBlocking )
 {
 	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
@@ -320,7 +320,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 	}
 }
 
-bool Threading::PersistentThread::Cancel( const wxTimeSpan& timespan )
+bool Threading::pxThread::Cancel( const wxTimeSpan& timespan )
 {
 	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
@@ -337,7 +337,7 @@ bool Threading::PersistentThread::Cancel( const wxTimeSpan& timespan )
 
 // Blocks execution of the calling thread until this thread completes its task.  The
 // caller should make sure to signal the thread to exit, or else blocking may deadlock the
-// calling thread.  Classes which extend PersistentThread should override this method
+// calling thread.  Classes which extend pxThread should override this method
 // and signal any necessary thread exit variables prior to blocking.
 //
 // Returns the return code of the thread.
@@ -345,31 +345,31 @@ bool Threading::PersistentThread::Cancel( const wxTimeSpan& timespan )
 //
 // Exceptions raised by the blocking thread will be re-thrown into the main thread.
 //
-void Threading::PersistentThread::Block()
+void Threading::pxThread::Block()
 {
 	AffinityAssert_DisallowFromSelf(pxDiagSpot);
 	WaitOnSelf( m_lock_InThread );
 }
 
-bool Threading::PersistentThread::Block( const wxTimeSpan& timeout )
+bool Threading::pxThread::Block( const wxTimeSpan& timeout )
 {
 	AffinityAssert_DisallowFromSelf(pxDiagSpot);
 	return WaitOnSelf( m_lock_InThread, timeout );
 }
 
-bool Threading::PersistentThread::IsSelf() const
+bool Threading::pxThread::IsSelf() const
 {
 	// Detached threads may have their pthread handles recycled as newer threads, causing
 	// false IsSelf reports.
 	return !m_detached && (pthread_self() == m_thread);
 }
 
-bool Threading::PersistentThread::IsRunning() const
+bool Threading::pxThread::IsRunning() const
 {
     return !!m_running;
 }
 
-void Threading::PersistentThread::AddListener( EventListener_Thread& evt )
+void Threading::pxThread::AddListener( EventListener_Thread& evt )
 {
 	evt.SetThread( this );
 	m_evtsrc_OnDelete.Add( evt );
@@ -378,13 +378,13 @@ void Threading::PersistentThread::AddListener( EventListener_Thread& evt )
 // Throws an exception if the thread encountered one.  Uses the BaseException's Rethrow() method,
 // which ensures the exception type remains consistent.  Debuggable stacktraces will be lost, since
 // the thread will have allowed itself to terminate properly.
-void Threading::PersistentThread::RethrowException() const
+void Threading::pxThread::RethrowException() const
 {
 	// Thread safety note: always detach the m_except pointer.  If we checked it for NULL, the
 	// pointer might still be invalid after detachment, so might as well just detach and check
 	// after.
 
-	ScopedPtr<BaseException> ptr( const_cast<PersistentThread*>(this)->m_except.DetachPtr() );
+	ScopedPtr<BaseException> ptr( const_cast<pxThread*>(this)->m_except.DetachPtr() );
 	if( ptr ) ptr->Rethrow();
 
 	//m_except->Rethrow();
@@ -405,7 +405,7 @@ void Threading::YieldToMain()
 	m_BlockDeletions = false;
 }
 
-void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
+void Threading::pxThread::_selfRunningTest( const wxChar* name ) const
 {
 	if( HasPendingException() )
 	{
@@ -424,14 +424,14 @@ void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 	}
 
 	// Thread is still alive and kicking (for now) -- yield to other messages and hope
-	// that impending chaos does not ensue.  [it shouldn't since we block PersistentThread
+	// that impending chaos does not ensue.  [it shouldn't since we block pxThread
 	// objects from being deleted until outside the scope of a mutex/semaphore wait).
 
 	if( (wxTheApp != NULL) && wxThread::IsMain() && !_WaitGui_RecursionGuard( L"WaitForSelf" ) )
 		Threading::YieldToMain();
 }
 
-// This helper function is a deadlock-safe method of waiting on a semaphore in a PersistentThread.  If the
+// This helper function is a deadlock-safe method of waiting on a semaphore in a pxThread.  If the
 // thread is terminated or canceled by another thread or a nested action prior to the semaphore being
 // posted, this function will detect that and throw a CancelEvent exception is thrown.
 //
@@ -442,7 +442,7 @@ void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 //   This function will rethrow exceptions raised by the persistent thread, if it throws an error
 //   while the calling thread is blocking (which also means the persistent thread has terminated).
 //
-void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
+void Threading::pxThread::WaitOnSelf( Semaphore& sem ) const
 {
 	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return;
 
@@ -453,7 +453,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 	}
 }
 
-// This helper function is a deadlock-safe method of waiting on a mutex in a PersistentThread.
+// This helper function is a deadlock-safe method of waiting on a mutex in a pxThread.
 // If the thread is terminated or canceled by another thread or a nested action prior to the
 // mutex being unlocked, this function will detect that and a CancelEvent exception is thrown.
 //
@@ -466,7 +466,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 //   error while the calling thread is blocking (which also means the persistent thread has
 //   terminated).
 //
-void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
+void Threading::pxThread::WaitOnSelf( Mutex& mutex ) const
 {
 	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return;
 
@@ -479,7 +479,7 @@ void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
 
 static const wxTimeSpan SelfWaitInterval( 0,0,0,333 );
 
-bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& timeout ) const
+bool Threading::pxThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& timeout ) const
 {
 	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return true;
 
@@ -495,7 +495,7 @@ bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& 
 	return false;
 }
 
-bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const
+bool Threading::pxThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const
 {
 	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return true;
 
@@ -515,14 +515,14 @@ bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& ti
 // function will throw an SEH exception designed to exit the thread (so make sure to use C++
 // object encapsulation for anything that could leak resources, to ensure object unwinding
 // and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
-void Threading::PersistentThread::TestCancel() const
+void Threading::pxThread::TestCancel() const
 {
 	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	pthread_testcancel();
 }
 
 // Executes the virtual member method
-void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*method)() )
+void Threading::pxThread::_try_virtual_invoke( void (pxThread::*method)() )
 {
 	try {
 		(this->*method)();
@@ -574,10 +574,10 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 
 // invoked internally when canceling or exiting the thread.  Extending classes should implement
 // OnCleanupInThread() to extend cleanup functionality.
-void Threading::PersistentThread::_ThreadCleanup()
+void Threading::pxThread::_ThreadCleanup()
 {
 	AffinityAssert_AllowFromSelf(pxDiagSpot);
-	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
+	_try_virtual_invoke( &pxThread::OnCleanupInThread );
 	m_lock_InThread.Release();
 
 	// Must set m_running LAST, as thread destructors depend on this value (it is used
@@ -585,7 +585,7 @@ void Threading::PersistentThread::_ThreadCleanup()
 	m_running = false;
 }
 
-wxString Threading::PersistentThread::GetName() const
+wxString Threading::pxThread::GetName() const
 {
 	return m_name;
 }
@@ -597,7 +597,7 @@ wxString Threading::PersistentThread::GetName() const
 // worry that the calling thread might attempt to test the status of those variables
 // before initialization has completed.
 //
-void Threading::PersistentThread::OnStartInThread()
+void Threading::pxThread::OnStartInThread()
 {
 	m_detached	= false;
 	m_running	= true;
@@ -605,7 +605,7 @@ void Threading::PersistentThread::OnStartInThread()
 	_platform_specific_OnStartInThread();
 }
 
-void Threading::PersistentThread::_internal_execute()
+void Threading::pxThread::_internal_execute()
 {
 	m_lock_InThread.Acquire();
 
@@ -617,12 +617,12 @@ void Threading::PersistentThread::_internal_execute()
 	OnStartInThread();
 	m_sem_startup.Post();
 
-	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
+	_try_virtual_invoke( &pxThread::ExecuteTaskInThread );
 }
 
 // Called by Start, prior to actual starting of the thread, and after any previous
 // running thread has been canceled or detached.
-void Threading::PersistentThread::OnStart()
+void Threading::pxThread::OnStart()
 {
 	m_native_handle	= NULL;
 	m_native_id		= 0;
@@ -634,7 +634,7 @@ void Threading::PersistentThread::OnStart()
 
 // Extending classes that override this method should always call it last from their
 // personal implementations.
-void Threading::PersistentThread::OnCleanupInThread()
+void Threading::pxThread::OnCleanupInThread()
 {
 	if( curthread_key != NULL )
 		pthread_setspecific( curthread_key, NULL );
@@ -651,10 +651,10 @@ void Threading::PersistentThread::OnCleanupInThread()
 
 // passed into pthread_create, and is used to dispatch the thread's object oriented
 // callback function
-void* Threading::PersistentThread::_internal_callback( void* itsme )
+void* Threading::pxThread::_internal_callback( void* itsme )
 {
 	if( !pxAssertDev( itsme != NULL, wxNullChar ) ) return NULL;
-	PersistentThread& owner = *((PersistentThread*)itsme);
+	pxThread& owner = *((pxThread*)itsme);
 
 	pthread_cleanup_push( _pt_callback_cleanup, itsme );
 	owner._internal_execute();
@@ -662,7 +662,7 @@ void* Threading::PersistentThread::_internal_callback( void* itsme )
 	return NULL;
 }
 
-void Threading::PersistentThread::_DoSetThreadName( const wxString& name )
+void Threading::pxThread::_DoSetThreadName( const wxString& name )
 {
 	_DoSetThreadName( name.ToUTF8() );
 }
@@ -677,7 +677,7 @@ void Threading::BaseTaskThread::Block()
 	if( !IsRunning() ) return;
 	m_Done = true;
 	m_sem_event.Post();
-	PersistentThread::Block();
+	pxThread::Block();
 }
 
 // Initiates the new task.  This should be called after your own StartTask has
@@ -845,12 +845,12 @@ wxString Exception::BaseThreadError::FormatDisplayMessage() const
     return wxsFormat( m_message_user, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
-PersistentThread& Exception::BaseThreadError::Thread()
+pxThread& Exception::BaseThreadError::Thread()
 {
 	pxAssertDev( m_thread != NULL, "NULL thread object on ThreadError exception." );
 	return *m_thread;
 }
-const PersistentThread& Exception::BaseThreadError::Thread() const
+const pxThread& Exception::BaseThreadError::Thread() const
 {
 	pxAssertDev( m_thread != NULL, "NULL thread object on ThreadError exception." );
 	return *m_thread;

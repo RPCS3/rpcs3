@@ -44,7 +44,7 @@ static int pxMessageDialog( const wxString& caption, const wxString& content, co
 // --------------------------------------------------------------------------------------
 //  BaseMessageBoxEvent Implementation
 // --------------------------------------------------------------------------------------
-IMPLEMENT_DYNAMIC_CLASS( BaseMessageBoxEvent, pxInvokeActionEvent )
+IMPLEMENT_DYNAMIC_CLASS( BaseMessageBoxEvent, pxActionEvent )
 
 BaseMessageBoxEvent::BaseMessageBoxEvent( const wxString& content, SynchronousActionState& instdata )
 	: m_Content( content )

@@ -153,7 +153,7 @@ namespace Dialogs
 		public EventListener_Thread
 	{
 	public:
-		StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, Threading::PersistentThread& stuck_thread );
+		StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, Threading::pxThread& stuck_thread );
 		virtual ~StuckThreadDialog() throw() {}
 
 	protected:

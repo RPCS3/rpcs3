@@ -204,9 +204,9 @@ protected:
 // Threaded wrapper class for implementing pxEvtHandler.  Simply create the desired
 // EvtHandler, start the thread, and enjoy queued event execution in fully blocking fashion.
 //
-class ExecutorThread : public Threading::PersistentThread
+class ExecutorThread : public Threading::pxThread
 {
-	typedef Threading::PersistentThread _parent;
+	typedef Threading::pxThread _parent;
 
 protected:
 	ScopedPtr<wxTimer>		m_ExecutorTimer;

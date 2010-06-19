@@ -29,9 +29,9 @@ typedef SafeArray<u8> VmStateBuffer;
 //  SysThreadBase
 // --------------------------------------------------------------------------------------
 
-class SysThreadBase : public PersistentThread
+class SysThreadBase : public pxThread
 {
-	typedef PersistentThread _parent;
+	typedef pxThread _parent;
 
 public:
 	// Important: The order of these enumerations matters!  Optimized tests are used for both

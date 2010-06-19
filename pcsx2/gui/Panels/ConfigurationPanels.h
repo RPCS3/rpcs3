@@ -465,7 +465,7 @@ namespace Panels
 		};
 
 		// ----------------------------------------------------------------------------
-		class EnumThread : public Threading::PersistentThread
+		class EnumThread : public Threading::pxThread
 		{
 		public:
 			SafeList<EnumeratedPluginInfo> Results;		// array of plugin results.
@@ -476,7 +476,7 @@ namespace Panels
 		public:
 			virtual ~EnumThread() throw()
 			{
-				PersistentThread::Cancel();
+				pxThread::Cancel();
 			}
 
 			EnumThread( PluginSelectorPanel& master );

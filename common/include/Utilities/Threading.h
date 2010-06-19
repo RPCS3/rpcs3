@@ -47,17 +47,17 @@ class wxTimeSpan;
 
 namespace Threading
 {
-	class PersistentThread;
+	class pxThread;
 	class RwMutex;
 
 	extern void pxTestCancel();
-	extern PersistentThread* pxGetCurrentThread();
+	extern pxThread* pxGetCurrentThread();
 	extern wxString pxGetCurrentThreadName();
 	extern u64 GetThreadCpuTime();
 	extern u64 GetThreadTicksPerSecond();
 
 	// Yields the current thread and provides cancellation points if the thread is managed by
-	// PersistentThread.  Unmanaged threads use standard Sleep.
+	// pxThread.  Unmanaged threads use standard Sleep.
 	extern void pxYield( int ms );
 }
 
@@ -66,17 +66,17 @@ namespace Exception
 	class BaseThreadError : public virtual RuntimeError
 	{
 	public:
-		Threading::PersistentThread*	m_thread;
+		Threading::pxThread*	m_thread;
 
 		DEFINE_EXCEPTION_COPYTORS( BaseThreadError )
 
-		explicit BaseThreadError( Threading::PersistentThread* _thread=NULL )
+		explicit BaseThreadError( Threading::pxThread* _thread=NULL )
 		{
 			m_thread = _thread;
 			BaseException::InitBaseEx( "Unspecified thread error" );
 		}
 
-		BaseThreadError( Threading::PersistentThread& _thread )
+		BaseThreadError( Threading::pxThread& _thread )
 		{
 			m_thread = &_thread;
 			BaseException::InitBaseEx( "Unspecified thread error" );
@@ -85,8 +85,8 @@ namespace Exception
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
 
-		Threading::PersistentThread& Thread();
-		const Threading::PersistentThread& Thread() const;
+		Threading::pxThread& Thread();
+		const Threading::pxThread& Thread() const;
 	};
 
 	class ThreadCreationError : public virtual BaseThreadError
@@ -94,19 +94,19 @@ namespace Exception
 	public:
 		DEFINE_EXCEPTION_COPYTORS( ThreadCreationError )
 
-		explicit ThreadCreationError( Threading::PersistentThread* _thread=NULL, const char* msg="Creation of thread '%s' failed." )
+		explicit ThreadCreationError( Threading::pxThread* _thread=NULL, const char* msg="Creation of thread '%s' failed." )
 		{
 			m_thread = _thread;
 			BaseException::InitBaseEx( msg );
 		}
 
-		ThreadCreationError( Threading::PersistentThread& _thread, const char* msg="Creation of thread '%s' failed." )
+		ThreadCreationError( Threading::pxThread& _thread, const char* msg="Creation of thread '%s' failed." )
 		{
 			m_thread = &_thread;
 			BaseException::InitBaseEx( msg );
 		}
 
-		ThreadCreationError( Threading::PersistentThread& _thread, const wxString& msg_diag, const wxString& msg_user )
+		ThreadCreationError( Threading::pxThread& _thread, const wxString& msg_diag, const wxString& msg_user )
 		{
 			m_thread = &_thread;
 			BaseException::InitBaseEx( msg_diag, msg_user );

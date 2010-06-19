@@ -150,7 +150,7 @@ void AppCoreThread::ChangeCdvdSource()
 
 void Pcsx2App::SysApplySettings()
 {
-	if( InvokeOnMainThread(&Pcsx2App::SysApplySettings) ) return;
+	if( AppRpc_TryInvoke(&Pcsx2App::SysApplySettings) ) return;
 	CoreThread.ApplySettings( g_Conf->EmuOptions );
 
 	CDVD_SourceType cdvdsrc( g_Conf->CdvdSource );

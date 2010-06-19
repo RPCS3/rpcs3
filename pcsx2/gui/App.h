@@ -654,8 +654,8 @@ public:
 	void OnProgramLogClosed( wxWindowID id );
 
 protected:
-	bool InvokeOnMainThread( FnPtr_Pcsx2App method );
-	bool PostAppMethodMyself( FnPtr_Pcsx2App method );
+	bool AppRpc_TryInvoke( FnPtr_Pcsx2App method );
+	bool AppRpc_TryInvokeAsync( FnPtr_Pcsx2App method );
 
 	void AllocateCoreStuffs();
 	void InitDefaultGlobalAccelerators();

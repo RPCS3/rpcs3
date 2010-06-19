@@ -58,9 +58,9 @@ using namespace Threading;
 // --------------------------------------------------------------------------------------
 //  WinPipeThread
 // --------------------------------------------------------------------------------------
-class WinPipeThread : public PersistentThread
+class WinPipeThread : public pxThread
 {
-	typedef PersistentThread _parent;
+	typedef pxThread _parent;
 
 protected:
 	const HANDLE& m_outpipe;

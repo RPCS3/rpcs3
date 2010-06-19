@@ -171,9 +171,9 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 // invoked method is completed.  If the method can be executed in non-blocking fashion then
 // it should leave the semaphore postback NULL.
 //
-class Pcsx2AppMethodEvent : public pxInvokeActionEvent
+class Pcsx2AppMethodEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(Pcsx2AppMethodEvent)
 
 protected:
@@ -184,19 +184,19 @@ public:
 	virtual Pcsx2AppMethodEvent *Clone() const { return new Pcsx2AppMethodEvent(*this); }
 
 	explicit Pcsx2AppMethodEvent( FnPtr_Pcsx2App method=NULL, SynchronousActionState* sema=NULL )
-		: pxInvokeActionEvent( sema )
+		: pxActionEvent( sema )
 	{
 		m_Method = method;
 	}
 
 	explicit Pcsx2AppMethodEvent( FnPtr_Pcsx2App method, SynchronousActionState& sema )
-		: pxInvokeActionEvent( sema )
+		: pxActionEvent( sema )
 	{
 		m_Method = method;
 	}
 	
 	Pcsx2AppMethodEvent( const Pcsx2AppMethodEvent& src )
-		: pxInvokeActionEvent( src )
+		: pxActionEvent( src )
 	{
 		m_Method = src.m_Method;
 	}
@@ -214,7 +214,7 @@ protected:
 };
 
 
-IMPLEMENT_DYNAMIC_CLASS( Pcsx2AppMethodEvent, pxInvokeActionEvent )
+IMPLEMENT_DYNAMIC_CLASS( Pcsx2AppMethodEvent, pxActionEvent )
 
 #ifdef __WXGTK__
 extern int TranslateGDKtoWXK( u32 keysym );
@@ -307,7 +307,7 @@ double FramerateManager::GetFramerate() const
 // times a second if not (ok, not quite, but you get the idea... I hope.)
 void Pcsx2App::LogicalVsync()
 {
-	if( PostAppMethodMyself( &Pcsx2App::LogicalVsync ) ) return;
+	if( AppRpc_TryInvokeAsync( &Pcsx2App::LogicalVsync ) ) return;
 
 	if( !SysHasValidState() ) return;
 
@@ -491,7 +491,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 // should be matched by a call to ClearPendingSave().
 void Pcsx2App::StartPendingSave()
 {
-	if( PostAppMethodMyself(&Pcsx2App::StartPendingSave) ) return;
+	if( AppRpc_TryInvokeAsync(&Pcsx2App::StartPendingSave) ) return;
 	++m_PendingSaves;
 }
 
@@ -500,7 +500,7 @@ void Pcsx2App::StartPendingSave()
 // such calls are detected (though the detection is far from fool-proof).
 void Pcsx2App::ClearPendingSave()
 {
-	if( PostAppMethodMyself(&Pcsx2App::ClearPendingSave) ) return;
+	if( AppRpc_TryInvokeAsync(&Pcsx2App::ClearPendingSave) ) return;
 
 	--m_PendingSaves;
 	pxAssumeDev( m_PendingSaves >= 0, "Pending saves count mismatch (pending count is less than 0)" );
@@ -659,7 +659,7 @@ AppIniLoader::AppIniLoader()
 
 void AppLoadSettings()
 {
-	if( wxGetApp().PostMethodMyself(AppLoadSettings) ) return;
+	if( wxGetApp().Rpc_TryInvoke(AppLoadSettings) ) return;
 
 	AppIniLoader loader;
 	g_Conf->LoadSave( loader );
@@ -672,7 +672,7 @@ void AppLoadSettings()
 
 void AppSaveSettings()
 {
-	if( wxGetApp().PostMethodMyself(AppSaveSettings) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync(AppSaveSettings) ) return;
 
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
 		g_Conf->CurrentIso.clear();
@@ -686,7 +686,7 @@ void AppSaveSettings()
 
 // Invokes the specified Pcsx2App method, or posts the method to the main thread if the calling
 // thread is not Main.  Action is blocking.  For non-blocking method execution, use
-// PostAppMethodMyself.
+// AppRpc_TryInvokeAsync.
 //
 // This function works something like setjmp/longjmp, in that the return value indicates if the
 // function actually executed the specified method or not.
@@ -695,7 +695,7 @@ void AppSaveSettings()
 //   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
 //   TRUE if the method was posted.
 //
-bool Pcsx2App::InvokeOnMainThread( FnPtr_Pcsx2App method )
+bool Pcsx2App::AppRpc_TryInvoke( FnPtr_Pcsx2App method )
 {
 	if( wxThread::IsMain() ) return false;
 
@@ -708,7 +708,7 @@ bool Pcsx2App::InvokeOnMainThread( FnPtr_Pcsx2App method )
 
 // Invokes the specified Pcsx2App method, or posts the method to the main thread if the calling
 // thread is not Main.  Action is non-blocking.  For blocking method execution, use
-// InvokeOnMainThread.
+// AppRpc_TryInvoke.
 //
 // This function works something like setjmp/longjmp, in that the return value indicates if the
 // function actually executed the specified method or not.
@@ -717,7 +717,7 @@ bool Pcsx2App::InvokeOnMainThread( FnPtr_Pcsx2App method )
 //   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
 //   TRUE if the method was posted.
 //
-bool Pcsx2App::PostAppMethodMyself( FnPtr_Pcsx2App method )
+bool Pcsx2App::AppRpc_TryInvokeAsync( FnPtr_Pcsx2App method )
 {
 	if( wxThread::IsMain() ) return false;
 	PostEvent( Pcsx2AppMethodEvent( method ) );
@@ -741,7 +741,7 @@ void Pcsx2App::PostIdleAppMethod( FnPtr_Pcsx2App method )
 
 void Pcsx2App::OpenGsPanel()
 {
-	if( InvokeOnMainThread( &Pcsx2App::OpenGsPanel ) ) return;
+	if( AppRpc_TryInvoke( &Pcsx2App::OpenGsPanel ) ) return;
 
 	GSFrame* gsFrame = GetGsFramePtr();
 	if( gsFrame == NULL )
@@ -760,6 +760,9 @@ void Pcsx2App::OpenGsPanel()
 		//   Doing an immediate hide/show didn't work.  So now I'm trying a resize.  Because
 		//   wxWidgets is "clever" (grr!) it optimizes out just force-setting the same size
 		//   over again, so instead I resize it to size-1 and then back to the original size.
+		//
+		// FIXME: Gsdx memory leaks in DX10 have been fixed.  This code may not be needed
+		// anymore.
 		
 		const wxSize oldsize( gsFrame->GetSize() );
 		wxSize newsize( oldsize );
@@ -780,7 +783,7 @@ void Pcsx2App::OpenGsPanel()
 
 void Pcsx2App::CloseGsPanel()
 {
-	if( InvokeOnMainThread( &Pcsx2App::CloseGsPanel ) ) return;
+	if( AppRpc_TryInvoke( &Pcsx2App::CloseGsPanel ) ) return;
 
 	GSFrame* gsFrame = GetGsFramePtr();
 	if( (gsFrame != NULL) && CloseViewportWithPlugins )

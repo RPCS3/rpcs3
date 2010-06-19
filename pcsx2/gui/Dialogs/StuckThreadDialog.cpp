@@ -24,7 +24,7 @@ using namespace Threading;
 // though I would like to have something in place in the distant future. --air
 
 
-Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, PersistentThread& stuck_thread )
+Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, pxThread& stuck_thread )
 	: wxDialogWithHelpers( parent, _("PCSX2 Thread is not responding") )
 {
 	stuck_thread.AddListener( this );

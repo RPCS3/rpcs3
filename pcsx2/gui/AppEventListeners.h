@@ -248,9 +248,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  CoreThreadStatusEvent
 // --------------------------------------------------------------------------------------
-class CoreThreadStatusEvent : public pxInvokeActionEvent
+class CoreThreadStatusEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 
 protected:
 	CoreThreadStatus		m_evt;

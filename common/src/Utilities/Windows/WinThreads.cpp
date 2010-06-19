@@ -73,7 +73,7 @@ u64 Threading::GetThreadTicksPerSecond()
 	return 10000000;
 }
 
-u64 Threading::PersistentThread::GetCpuTime() const
+u64 Threading::pxThread::GetCpuTime() const
 {
 	if( m_native_handle == NULL ) return 0;
 
@@ -86,7 +86,7 @@ u64 Threading::PersistentThread::GetCpuTime() const
 	return 0;	// thread prolly doesn't exist anymore.
 }
 
-void Threading::PersistentThread::_platform_specific_OnStartInThread()
+void Threading::pxThread::_platform_specific_OnStartInThread()
 {
 	// OpenThread Note: Vista and Win7 need only THREAD_QUERY_LIMITED_INFORMATION (XP and 2k need more),
 	// however we own our process threads, so shouldn't matter in any case...
@@ -97,12 +97,12 @@ void Threading::PersistentThread::_platform_specific_OnStartInThread()
 	pxAssertDev( m_native_handle != NULL, wxNullChar );
 }
 
-void Threading::PersistentThread::_platform_specific_OnCleanupInThread()
+void Threading::pxThread::_platform_specific_OnCleanupInThread()
 {
 	CloseHandle( (HANDLE)m_native_handle );
 }
 
-void Threading::PersistentThread::_DoSetThreadName( const char* name )
+void Threading::pxThread::_DoSetThreadName( const char* name )
 {
 	// This feature needs Windows headers and MSVC's SEH support:
 

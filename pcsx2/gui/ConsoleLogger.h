@@ -66,9 +66,9 @@ protected:
 //  of the console logger.
 // --------------------------------------------------------------------------------------
 
-class ConsoleTestThread : public Threading::PersistentThread
+class ConsoleTestThread : public Threading::pxThread
 {
-	typedef PersistentThread _parent;
+	typedef pxThread _parent;
 
 protected:
 	volatile bool m_done;

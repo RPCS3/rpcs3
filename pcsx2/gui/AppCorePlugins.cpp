@@ -43,9 +43,9 @@ PluginManager& GetCorePlugins()
 // --------------------------------------------------------------------------------------
 //  CorePluginsEvent
 // --------------------------------------------------------------------------------------
-class CorePluginsEvent : public pxInvokeActionEvent
+class CorePluginsEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 
 protected:
 	PluginEventType		m_evt;
@@ -55,19 +55,19 @@ public:
 	CorePluginsEvent* Clone() const { return new CorePluginsEvent( *this ); }
 
 	explicit CorePluginsEvent( PluginEventType evt, SynchronousActionState* sema=NULL )
-		: pxInvokeActionEvent( sema )
+		: pxActionEvent( sema )
 	{
 		m_evt = evt;
 	}
 
 	explicit CorePluginsEvent( PluginEventType evt, SynchronousActionState& sema )
-		: pxInvokeActionEvent( sema )
+		: pxActionEvent( sema )
 	{
 		m_evt = evt;
 	}
 
 	CorePluginsEvent( const CorePluginsEvent& src )
-		: pxInvokeActionEvent( src )
+		: pxActionEvent( src )
 	{
 		m_evt = src.m_evt;
 	}
@@ -128,9 +128,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  LoadSinglePluginEvent
 // --------------------------------------------------------------------------------------
-class LoadSinglePluginEvent : public pxInvokeActionEvent
+class LoadSinglePluginEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(LoadSinglePluginEvent)
 
 protected:
@@ -154,9 +154,9 @@ protected:
 	}
 };
 
-class SinglePluginMethodEvent : public pxInvokeActionEvent
+class SinglePluginMethodEvent : public pxActionEvent
 {
-	typedef pxInvokeActionEvent _parent;
+	typedef pxActionEvent _parent;
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(SinglePluginMethodEvent)
 
 protected:
@@ -181,8 +181,8 @@ protected:
 	}
 };
 
-IMPLEMENT_DYNAMIC_CLASS( LoadSinglePluginEvent,	 pxInvokeActionEvent );
-IMPLEMENT_DYNAMIC_CLASS( SinglePluginMethodEvent, pxInvokeActionEvent );
+IMPLEMENT_DYNAMIC_CLASS( LoadSinglePluginEvent,	 pxActionEvent );
+IMPLEMENT_DYNAMIC_CLASS( SinglePluginMethodEvent, pxActionEvent );
 
 // --------------------------------------------------------------------------------------
 //  AppPluginManager

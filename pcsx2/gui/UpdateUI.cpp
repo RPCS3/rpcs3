@@ -42,7 +42,7 @@ static void _SaveLoadStuff( bool enabled )
 // etc.  Typically called by SysEvtHandler whenever the message pump becomes idle.
 void UI_UpdateSysControls()
 {
-	if( wxGetApp().PostMethodMyself( &UI_UpdateSysControls ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_UpdateSysControls ) ) return;
 
 	sApp.PostAction( CoreThreadStatusEvent( CoreThread_Indeterminate ) );
 
@@ -51,7 +51,7 @@ void UI_UpdateSysControls()
 
 void UI_DisableSysReset()
 {
-	if( wxGetApp().PostMethodMyself( UI_DisableSysReset ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( UI_DisableSysReset ) ) return;
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
 
 	_SaveLoadStuff( false );
@@ -59,7 +59,7 @@ void UI_DisableSysReset()
 
 void UI_DisableSysShutdown()
 {
-	if( wxGetApp().PostMethodMyself( &UI_DisableSysShutdown ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_DisableSysShutdown ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, false );
@@ -67,7 +67,7 @@ void UI_DisableSysShutdown()
 
 void UI_EnableSysShutdown()
 {
-	if( wxGetApp().PostMethodMyself( &UI_EnableSysShutdown ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_EnableSysShutdown ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, true );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, true );
@@ -76,7 +76,7 @@ void UI_EnableSysShutdown()
 
 void UI_DisableSysActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_DisableSysActions ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_DisableSysActions ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, false );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, false );
@@ -86,7 +86,7 @@ void UI_DisableSysActions()
 
 void UI_EnableSysActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_EnableSysActions ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_EnableSysActions ) ) return;
 
 	sMainFrame.EnableMenuItem( MenuId_Sys_Restart, true );
 	sMainFrame.EnableMenuItem( MenuId_Sys_Shutdown, true );
@@ -96,13 +96,13 @@ void UI_EnableSysActions()
 
 void UI_DisableStateActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_DisableStateActions ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_DisableStateActions ) ) return;
 	_SaveLoadStuff( false );
 }
 
 void UI_EnableStateActions()
 {
-	if( wxGetApp().PostMethodMyself( &UI_EnableStateActions ) ) return;
+	if( wxGetApp().Rpc_TryInvokeAsync( &UI_EnableStateActions ) ) return;
 	_SaveLoadStuff( true );
 }
 
