@@ -248,7 +248,7 @@ inline int ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 	frame = gsfb;
 	frame.fbh = maxpos;
 
-	if (!PSMT_ISHALF(frame.psm) || !(g_GameSettings&GAME_FULL16BITRES)) CheckFrame32bitRes(maxpos);
+	if (!PSMT_ISHALF(frame.psm) || !(conf.settings().full_16_bit_res)) CheckFrame32bitRes(maxpos);
 
 #ifdef DEVBUILD
 	if (frame.fbh == 0xe2)

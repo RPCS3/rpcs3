@@ -119,7 +119,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 			pMem += 4;
 			size--;
 
-			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
+			if ((conf.settings().path3) && (index == 2) && path->eop) nPath3Hack = 1;
 
 			// eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and
 			// values other than the EOP field are disregarded."
@@ -320,7 +320,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 			pMem += 4;
 			size--;
 
-			if ((g_GameSettings & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
+			if ((conf.settings() & GAME_PATH3HACK) && (index == 2) && path->eop) nPath3Hack = 1;
 
 			if (index == 0)
 			{

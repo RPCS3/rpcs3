@@ -455,7 +455,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	// This was incorrect code
 	CRenderTarget* ptextarg = NULL;
 
-	if (ptextarg == NULL && tpsm == PSMT8 && (g_GameSettings & GAME_REGETHACK))
+	if ((ptextarg == NULL) && (tpsm == PSMT8) && (conf.settings().reget))
 	{
 		// check for targets with half the width. Break Valkyrie Chronicles
 		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb);
@@ -487,7 +487,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw, curvb);
 	}
 
-	if ((ptextarg == NULL) && (g_GameSettings & GAME_TEXTURETARGS))
+	if ((ptextarg == NULL) && (conf.settings().texture_targs))
 	{
 		// check if any part of the texture intersects the current target
 		if (!PSMT_ISCLUT(tpsm) && (curvb.tex0.tbp0 >= curvb.frame.fbp) && ((curvb.tex0.tbp0) < curvb.prndr->end))
@@ -782,7 +782,7 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut)
 
 inline int FlushGetShaderType(VB& curvb, CRenderTarget* ptextarg, GLuint& ptexclut)
 {
-	if (PSMT_ISCLUT(curvb.tex0.psm) && !(g_GameSettings&GAME_NOTARGETCLUT))
+	if (PSMT_ISCLUT(curvb.tex0.psm) && !(conf.settings().no_target_clut))
 	{
 		FlushDecodeClut(curvb, ptexclut);
 
@@ -1076,7 +1076,7 @@ inline FRAGMENTSHADER* FlushRendererStage(VB& curvb, u32& dwFilterOpts, CRenderT
 inline bool AlphaCanRenderStencil(VB& curvb)
 {
 	return g_bUpdateStencil && (PSMT_BITMODE(curvb.prndr->psm) != 1) &&
-		   !ZZOglGet_fbmHighByte(curvb.frame.fbm) && !(g_GameSettings & GAME_NOSTENCIL);
+		   !ZZOglGet_fbmHighByte(curvb.frame.fbm) && !(conf.settings().no_stencil);
 }
 
 inline void AlphaSetStencil(bool DoIt)
@@ -1291,13 +1291,13 @@ inline bool AlphaFailureIgnore(const pixTest curtest)
 	if (curtest.atst == 1) return true;
 	if (curtest.afail == 0) return true;
 
-	if (g_GameSettings & GAME_NOALPHAFAIL && ((s_dwColorWrite < 8) || (s_dwColorWrite == 15 && curtest.atst == 5 && (curtest.aref == 64))))
+	if (conf.settings().no_alpha_fail && ((s_dwColorWrite < 8) || (s_dwColorWrite == 15 && curtest.atst == 5 && (curtest.aref == 64))))
 		return true;
 
 //	old and seemingly incorrect code.
 //	if ((s_dwColorWrite < 8 && s_dwColorWrite !=8) && curtest.afail == 1)
 //		return true;
-//	if ((s_dwColorWrite == 0xf) && curtest.atst == 5 && curtest.afail == 1 && !(g_GameSettings & GAME_REGETHACK))
+//	if ((s_dwColorWrite == 0xf) && curtest.atst == 5 && curtest.afail == 1 && !(conf.settings() & GAME_REGETHACK))
 //		return true;
 	return false;
 }
@@ -1477,7 +1477,7 @@ inline void AlphaSaveTarget(VB& curvb)
 inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 {
 	// clamp the final colors, when enabled ffx2 credits mess up
-	if (curvb.curprim.abe && bAlphaClamping && GetRenderFormat() != RFT_byte8 && !(g_GameSettings&GAME_NOCOLORCLAMP))   // if !colclamp, skip
+	if (curvb.curprim.abe && bAlphaClamping && GetRenderFormat() != RFT_byte8 && !(conf.settings().no_color_clamp))   // if !colclamp, skip
 	{
 		ResetAlphaVariables();
 

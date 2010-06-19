@@ -37,7 +37,7 @@ enum GAME_HACK_OPTIONS
 	GAME_NOLOGZ				=	0x20000000 // Intended for linux -- not logarithmic Z.
 };
 
-#define USEALPHATESTING (!(g_GameSettings&GAME_NOALPHATEST))
+#define USEALPHATESTING (!(conf.settings().no_alpha_test))
 
 // CRC Information
 enum Title_Info

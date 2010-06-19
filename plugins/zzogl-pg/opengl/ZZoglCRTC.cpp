@@ -254,7 +254,7 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 		// hack!!
 		// 2 * dispinfo[i].tw / dispinfo[i].th <= 1, metal slug 4
 
-		if (bInterlace && 2 * dispinfo[i].tw / dispinfo[i].th <= 1 && !(g_GameSettings&GAME_INTERLACE2X))
+		if (bInterlace && 2 * dispinfo[i].tw / dispinfo[i].th <= 1 && !(conf.settings().interlace_2x))
 		{
 			dispinfo[i].th >>= 1;
 		}
@@ -722,7 +722,7 @@ inline void AfterRenderDisplayFPS()
 	DrawText(str, left, top, 0xffc0ffff);
 }
 
-// Swapping buffers, so we could use another windows
+// Swapping buffers, so we could use another window
 inline void AfterRenderSwapBuffers()
 {
 	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
@@ -740,7 +740,7 @@ inline void AfterRenderMadeSnapshoot()
 	DrawText(str, left + 1, top + 1, 0xff000000);
 	DrawText(str, left, top, 0xffc0ffff);
 
-	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", nBackbufferWidth, -nBackbufferHeight, 0))  //(conf.options&GSOPTION_TGASNAP)?0:1) ) {
+	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", nBackbufferWidth, -nBackbufferHeight, 0))  //(conf.options.tga_snap)?0:1) ) {
 	{
 		char str[255];
 		sprintf(str, "saved %s\n", strSnapshot.c_str());
@@ -816,7 +816,7 @@ inline void AfterRendererUnimportantJob()
 	maxmin = 608;
 }
 
-// Swich Frabuffers
+// Swich Framebuffers
 inline void AfterRendererSwitchBackToTextures()
 {
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, s_uFramebuffer);
@@ -850,7 +850,7 @@ inline void AfterRendererSwitchBackToTextures()
 // Reset Targets Helper, for hack.
 inline void AfterRendererAutoresetTargets()
 {
-	if (g_GameSettings & GAME_AUTORESET)
+	if (conf.settings().auto_reset)
 	{
 		s_nResolveCounts[s_nCurResolveIndex] = s_nResolved;
 		s_nCurResolveIndex = (s_nCurResolveIndex + 1) % ARRAY_SIZE(s_nResolveCounts);

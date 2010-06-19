@@ -28,7 +28,7 @@ void SaveConfig()
 {
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	
-	u32 tempOptions = conf.options & ~conf.gamesettings;
+	u32 tempHacks = conf.hacks._u32 & ~conf.def_hacks._u32;
 	FILE* f = fopen(iniFile.c_str(), "w");
 
 	if (f == NULL)
@@ -40,10 +40,11 @@ void SaveConfig()
 	fprintf(f, "interlace = %hhx\n", conf.interlace);
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
-	fprintf(f, "options = %x\n", tempOptions); //u32
+	fprintf(f, "zzoptions = %x\n", conf.zz_options); //u32
+	fprintf(f, "options = %x\n", tempHacks); //u32
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
-	//fprintf(f, "gamesettings = %x\n", conf.gamesettings); //u32
+	//fprintf(f, "gamesettings = %x\n", conf.def_hacks); //u32
 	fprintf(f, "width = %x\n", conf.width); //u32
 	fprintf(f, "height = %x\n", conf.height); //u32
 	fprintf(f, "x = %x\n", conf.x); //u32
@@ -58,7 +59,8 @@ void LoadConfig()
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;
-	conf.options = 0;
+	conf.zz_options._u32 = 0;
+	conf.hacks._u32 = 0;
 	conf.bilinear = 1;
 	conf.width = 640;
 	conf.height = 480;
@@ -80,7 +82,8 @@ void LoadConfig()
 	err = fscanf(f, "interlace = %hhx\n", &conf.interlace);
 
 	err = fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
-	err = fscanf(f, "options = %x\n", &conf.options);//u32
+	err = fscanf(f, "zzoptions = %x\n", &conf.zz_options);//u32
+	err = fscanf(f, "options = %x\n", &conf.hacks);//u32
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
 	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
 	//err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
@@ -93,29 +96,29 @@ void LoadConfig()
 
 	// filter bad files
 
-	if ((conf.aa < 0) || (conf.aa > 4)) conf.aa = 0;
+	if (conf.aa > 4) conf.aa = 0;
 
 	conf.isWideScreen = conf.widescreen();
 
-	switch (conf.options & GSOPTION_WINDIMS)
+	switch (conf.zz_options.dimensions)
 	{
 
-		case GSOPTION_WIN640:
+		case GSDim_640:
 			conf.width = 640;
 			conf.height = conf.isWideScreen ? 360 : 480;
 			break;
 
-		case GSOPTION_WIN800:
+		case GSDim_800:
 			conf.width = 800;
 			conf.height = conf.isWideScreen ? 450 : 600;
 			break;
 
-		case GSOPTION_WIN1024:
+		case GSDim_1024:
 			conf.width = 1024;
 			conf.height = conf.isWideScreen ? 576 : 768;
 			break;
 
-		case GSOPTION_WIN1280:
+		case GSDim_1280:
 			conf.width = 1280;
 			conf.height = conf.isWideScreen ? 720 : 960;
 			break;

@@ -609,7 +609,6 @@ __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 	if (diffY < 0) { p->y = - p->y; }
 #endif
 
-
 	p->f = ((s16)gs.gsvertex[index].f << 7) | 0x7f;
 
 	MOVZ(p, gs.gsvertex[index].z, curvb);
@@ -620,7 +619,7 @@ __forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 //	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0))
 //		p->rgba = 0;
 
-	if (g_GameSettings & GAME_TEXAHACK)
+	if (conf.settings().texa)
 	{
 		u32 B = ((p->rgba & 0xfe000000) >> 1) +
 				(0x01000000 * curvb.fba.fba) ;

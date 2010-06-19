@@ -60,7 +60,6 @@ int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 std::string s_strLogPath("logs/");
 
-int g_GameSettings = 0;
 int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
@@ -368,14 +367,12 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 {
 	// TEXDESTROY_THRESH starts out at 16.
 	VALIDATE_THRESH = 8;
-	conf.mrtdepth = ((conf.gamesettings & GAME_DISABLEMRTDEPTH) != 0);
+	conf.mrtdepth = (conf.settings().disable_mrt_depth != 0);
 
 	if (!conf.mrtdepth)
 		ZZLog::Error_Log("Disabling MRT depth writing.");
 	else
 		ZZLog::Error_Log("Enabling MRT depth writing.");
-
-	g_GameSettings |= GAME_PATH3HACK;
 
 	bool CRCValueChanged = (g_LastCRC != crc);
 
@@ -392,8 +389,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 				if (crc_game_list[i].v_thresh > 0) VALIDATE_THRESH = crc_game_list[i].v_thresh;
 				if (crc_game_list[i].t_thresh > 0) TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
 
-				conf.gamesettings |= crc_game_list[i].flags;
-				g_GameSettings = conf.gamesettings | options;
+				conf.def_hacks._u32 |= crc_game_list[i].flags;
 
 				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
 
@@ -401,8 +397,6 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 			}
 		}
 	}
-
-	g_GameSettings = conf.gamesettings | options;
 }
 
 void CALLBACK GSsetFrameSkip(int frameskip)
@@ -553,15 +547,13 @@ void OnKeyboardF6(int shift)
 
 	if (shift)
 	{
-		conf.aa--; // -1
-		if (conf.aa > 4) conf.aa = 4;					// u8 in unsigned, so negative value is 255.
+		conf.decAA();
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
 		ZeroGS::SetAA(conf.aa);
 	}
 	else
 	{
-		conf.aa++;
-		if (conf.aa > 4) conf.aa = 0;
+		conf.incAA();
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
 		ZeroGS::SetAA(conf.aa);
 	}
@@ -584,7 +576,7 @@ void OnKeyboardF7(int shift)
 	}
 	else
 	{
-		conf.options ^= GSOPTION_WIREFRAME;
+		conf.zz_options.wireframe = !conf.zz_options.wireframe;
 		glPolygonMode(GL_FRONT_AND_BACK, (conf.wireframe()) ? GL_LINE : GL_FILL);
 		sprintf(strtitle, "wireframe rendering - %s", (conf.wireframe()) ? "on" : "off");
 	}
@@ -665,7 +657,7 @@ void OnKeyboardF9(int shift)
 	FUNCLOG
 
 //	printf ("A %d\n", HackinshTable[CurrentHackSetting].HackMask);
-	conf.gamesettings &= !(HackinshTable[CurrentHackSetting].HackMask);
+	conf.hacks._u32 &= !(HackinshTable[CurrentHackSetting].HackMask);
 
 	if (shift)
 	{
@@ -680,9 +672,8 @@ void OnKeyboardF9(int shift)
 		if (CurrentHackSetting == HACK_NUMBER) CurrentHackSetting = 0;
 	}
 
-	conf.gamesettings |= HackinshTable[CurrentHackSetting].HackMask;
+	conf.hacks._u32 |= HackinshTable[CurrentHackSetting].HackMask;
 
-	g_GameSettings = conf.gamesettings;
 	ZeroGS::AddMessage(HackinshTable[CurrentHackSetting].HackName);
 	SaveConfig();
 }
@@ -755,7 +746,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 			break;
 	}
 
-	if (conf.aa)
+	if (conf.aa != 0)
 	{
 		char strtitle[64];
 		sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
@@ -813,7 +804,7 @@ void ProcessMessages()
 							if (conf.fullscreen())
 							{
 								// destroy that msg
-								conf.setfullscreen(false);
+								conf.setFullscreen(false);
 								ZeroGS::ChangeDeviceSize(conf.width, conf.height);
 								UpdateWindow(GShwnd);
 								continue; // so that msg doesn't get sent
@@ -841,7 +832,7 @@ void ProcessMessages()
 
 	if ((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_RETURN) & 0x8000))
 	{
-		conf.options ^= GSOPTION_FULLSCREEN;
+		conf.zz_options.fullscreen = !conf.zz_options.fullscreen;
 
 		ZeroGS::SetChangeDeviceSize(
 			(conf.fullscreen()) ? 1280 : conf.width,
@@ -940,7 +931,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	{
 		snapshotnr++;
 
-		sprintf(filename, "%ssnap%03ld.%s", path, snapshotnr, (conf.options&GSOPTION_TGASNAP) ? "bmp" : "jpg");
+		sprintf(filename, "%ssnap%03ld.%s", path, snapshotnr, (conf.zz_options.tga_snap) ? "bmp" : "jpg");
 
 		bmpfile = fopen(filename, "rb");
 

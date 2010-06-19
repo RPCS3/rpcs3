@@ -122,7 +122,7 @@ inline bool NoHighlights(int i)
 //	if ((resultA == 0x300b) && (result == 0x300) && ZeroGS::vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
 
 //	Old code
-	return (!(g_GameSettings&GAME_XENOSPECHACK) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;
+	return (!(conf.settings().xenosaga_spec) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;
 }
 
 void __fastcall GIFPackedRegHandlerNull(u32* data)

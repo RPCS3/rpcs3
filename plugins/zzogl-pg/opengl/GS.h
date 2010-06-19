@@ -282,7 +282,6 @@ struct Vertex
 	u16 u, v;
 };
 
-extern int g_GameSettings;
 extern GSconf conf;
 extern int ppf;
 

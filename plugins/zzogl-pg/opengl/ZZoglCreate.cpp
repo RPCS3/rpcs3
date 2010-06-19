@@ -299,7 +299,7 @@ inline void ZeroGS::CreateOtherCheck()
 		ZZLog::Error_Log("Could not properly make bitmasks, so some textures will be missed.");
 
 	/* Zeydlitz: we don't support 128-bit targets yet. they are slow and weirdo
-	if( g_GameSettings & GAME_32BITTARGS ) {
+	if( conf.settings() & GAME_32BITTARGS ) {
 		g_RenderFormatType = RFT_byte8;
 		ZZLog::Error_Log("Setting 32 bit render target.");
 	}
@@ -551,11 +551,10 @@ bool ZeroGS::Create(int _width, int _height)
 
 	SetAA(conf.aa);
 
-	GSsetGameCRC(g_LastCRC, g_GameSettings);
+	GSsetGameCRC(g_LastCRC, conf.settings()._u32);
 
 	GL_STENCILFUNC(GL_ALWAYS, 0, 0);
 
-	//g_GameSettings |= 0;//GAME_VSSHACK|GAME_FULL16BITRES|GAME_NODEPTHRESOLVE|GAME_FASTUPDATE;
 	//s_bWriteDepth = true;
 
 	GL_BLEND_ALL(GL_ONE, GL_ONE, GL_ONE, GL_ONE);

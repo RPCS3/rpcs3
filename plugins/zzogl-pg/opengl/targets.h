@@ -108,7 +108,7 @@ class CRenderTargetMngr
 			else
 				mapTargets[key] = ptarg;
 
-			if (g_GameSettings & GAME_RESOLVEPROMOTED)
+			if (conf.settings().resolve_promoted)
 				ptarg->status = CRenderTarget::TS_Resolved;
 			else
 				ptarg->status = CRenderTarget::TS_NeedUpdate;

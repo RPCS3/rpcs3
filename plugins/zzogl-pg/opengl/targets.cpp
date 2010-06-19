@@ -37,8 +37,6 @@
 
 bool nullTex = false;
 
-extern int g_GameSettings;
-
 using namespace ZeroGS;
 extern int g_TransferredToGPU;
 extern bool g_bIsLost;
@@ -125,7 +123,7 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 // Draw 4 triangles from binded array using only stencil buffer
 inline void FillOnlyStencilBuffer()
 {
-	if (ZeroGS::IsWriteDestAlphaTest() && !(g_GameSettings&GAME_NOSTENCIL))
+	if (ZeroGS::IsWriteDestAlphaTest() && !(conf.settings().no_stencil))
 	{
 		glColorMask(0, 0, 0, 0);
 		glEnable(GL_ALPHA_TEST);
@@ -285,7 +283,7 @@ void ZeroGS::CRenderTarget::SetViewport()
 
 inline bool NotResolveHelper()
 {
-	return ((s_nResolved > 8 && (2 * s_nResolved > fFPS - 10)) || (g_GameSettings&GAME_NOTARGETRESOLVE));
+	return ((s_nResolved > 8 && (2 * s_nResolved > fFPS - 10)) || (conf.settings().no_target_resolve));
 }
 
 void ZeroGS::CRenderTarget::Resolve()
@@ -348,7 +346,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 			g_bSaveResolved = 0;
 		}
 #endif
-		if (g_GameSettings&GAME_NOTARGETRESOLVE)
+		if (conf.settings().no_target_resolve)
 		{
 			status = TS_Resolved;
 			return;
@@ -932,7 +930,7 @@ void ZeroGS::CDepthTarget::Resolve()
 {
 	FUNCLOG
 
-	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && ZeroGS::IsWriteDepth() && !(g_GameSettings&GAME_NODEPTHRESOLVE))
+	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && ZeroGS::IsWriteDepth() && !(conf.settings().no_depth_resolve))
 		CRenderTarget::Resolve();
 	else
 	{
@@ -1283,7 +1281,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		{
 			bfound = it->second->fbh == frame.fbh;
 
-			if ((g_GameSettings&GAME_PARTIALDEPTH) && !bfound)
+			if ((conf.settings().partial_depth) && !bfound)
 			{
 				MAPTARGETS::iterator itnew = mapTargets.find(key + 1);
 
@@ -1302,7 +1300,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		}
 		else
 		{
-			if (PSMT_ISHALF(frame.psm) == PSMT_ISHALF(it->second->psm) && !(g_GameSettings & GAME_FULL16BITRES))
+			if (PSMT_ISHALF(frame.psm) == PSMT_ISHALF(it->second->psm) && !(conf.settings().full_16_bit_res))
 				bfound = (frame.fbh > 0x1c0 || it->second->fbh >= frame.fbh) && it->second->fbh <= maxposheight;
 		}
 	}
@@ -1314,7 +1312,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		bfound = it != mapTargets.end() && ((opts & TO_StrictHeight) ? it->second->fbh == frame.fbh : it->second->fbh >= frame.fbh) && it->second->fbh <= maxposheight;
 	}
 
-	if (bfound && PSMT_ISHALF(frame.psm) && PSMT_ISHALF(it->second->psm) && (g_GameSettings&GAME_FULL16BITRES))
+	if (bfound && PSMT_ISHALF(frame.psm) && PSMT_ISHALF(it->second->psm) && (conf.settings().full_16_bit_res))
 	{
 		// mgs3
 		if (frame.fbh > it->second->fbh)
@@ -1336,7 +1334,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 			if (!(opts & TO_StrictHeight))
 			{
-				if ((g_GameSettings & GAME_VSSHACKOFF))
+				if ((conf.settings().vss_hack_off))
 				{
 					if (PSMT_ISHALF(it->second->psm))
 					{
@@ -1386,7 +1384,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		// check if there exists a more recent target that this target could update from
 		// only update if target isn't mirrored
-		bool bCheckHalfCovering = (g_GameSettings & GAME_FULL16BITRES) && PSMT_ISHALF(it->second->psm) && it->second->fbh + 32 < frame.fbh;
+		bool bCheckHalfCovering = (conf.settings().full_16_bit_res) && PSMT_ISHALF(it->second->psm) && it->second->fbh + 32 < frame.fbh;
 
 		for (MAPTARGETS::iterator itnew = mapTargets.begin(); itnew != mapTargets.end(); ++itnew)
 		{
@@ -1442,10 +1440,10 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			{
 				if (it->second->start < end && start < it->second->end)
 				{
-					if ((g_GameSettings&GAME_FASTUPDATE) ||
+					if ((conf.settings().fast_update) ||
 							((frame.fbw == it->second->fbw) &&
 							 // check depth targets only if partialdepth option
-							 ((it->second->fbp != frame.fbp) || ((g_GameSettings & GAME_PARTIALDEPTH) && (opts & CRenderTargetMngr::TO_DepthBuffer)))))
+							 ((it->second->fbp != frame.fbp) || ((conf.settings().partial_depth) && (opts & CRenderTargetMngr::TO_DepthBuffer)))))
 					{
 						if (besttarg != 0)
 						{
@@ -2873,7 +2871,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 			{
 				// check if target is currently being used
 
-				if (!(g_GameSettings & GAME_NOQUICKRESOLVE))
+				if (!(conf.settings().no_quick_resolve))
 				{
 					if (ptarg->fbp != vb[0].gsfb.fbp)   //&& (vb[0].prndr == NULL || ptarg->fbp != vb[0].prndr->fbp) ) {
 					{
@@ -2884,7 +2882,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 							// (ffx changing screens, shadowhearts)
 							// start == ptarg->start, used for kh to transfer text
 
-							if (ptarg->IsDepth() || end - start > 0x50000 || ((g_GameSettings&GAME_QUICKRESOLVE1) && start == ptarg->start))
+							if (ptarg->IsDepth() || end - start > 0x50000 || ((conf.settings().quick_resolve_1) && start == ptarg->start))
 								ptarg->status |= CRenderTarget::TS_NeedUpdate | CRenderTarget::TS_Resolved;
 
 							continue;
@@ -2926,7 +2924,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 					// suikoden5 is faster with check, but too big of a value and kh screens mess up
 					/* Zeydlitz remove this check, it does not do anything good
-					if ((end - start > 0x8000) && (!(g_GameSettings & GAME_GUSTHACK) || (end-start > 0x40000))) {
+					if ((end - start > 0x8000) && (!(conf.settings() & GAME_GUSTHACK) || (end-start > 0x40000))) {
 						// intersects, do only one sided resolves
 						if( end-start > 4*ptarg->fbw ) { // at least it be greater than one scanline (spiro is faster)
 							if( start > ptarg->start ) {
@@ -2941,7 +2939,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 					ptarg->status |= CRenderTarget::TS_Resolved;
 
-					if ((!ptarg->IsDepth() || (!(g_GameSettings & GAME_NODEPTHUPDATE) || end - start > 0x1000)) && ((end - start > 0x40000) || !(g_GameSettings & GAME_GUSTHACK)))
+					if ((!ptarg->IsDepth() || (!(conf.settings().no_depth_update) || end - start > 0x1000)) && ((end - start > 0x40000) || !(conf.settings().gust)))
 						ptarg->status |= CRenderTarget::TS_NeedUpdate;
 				}
 			}
@@ -3046,7 +3044,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 
 	// sometimes games can decompress to alpha channel of render target only, in this case
 	// do a resolve right away. wolverine x2
-	if ((gs.dstbuf.psm == PSMT8H || gs.dstbuf.psm == PSMT4HL || gs.dstbuf.psm == PSMT4HH) && !(g_GameSettings & GAME_GUSTHACK))
+	if (((gs.dstbuf.psm == PSMT8H) || (gs.dstbuf.psm == PSMT4HL) || (gs.dstbuf.psm == PSMT4HH)) && !(conf.settings().gust))
 	{
 		list<CRenderTarget*> listTransmissionUpdateTargs;
 		s_RTs.GetTargs(start, end, listTransmissionUpdateTargs);

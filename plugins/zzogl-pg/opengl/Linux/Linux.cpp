@@ -152,7 +152,7 @@ void CreateGameHackTable(GtkWidget *treeview)
 	for (map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
 		gtk_list_store_append(treestore, &treeiter);//new row
-		itval = (conf.gamesettings & it->second.value) ? true : false;
+		itval = (conf.settings()._u32 & it->second.value) ? true : false;
 		snprintf(descbuf, 254, "%s", it->second.desc);
 		gtk_list_store_set(treestore, &treeiter, 0, itval, 1, descbuf, -1);
 	}
@@ -176,19 +176,19 @@ void SaveGameHackTable(GtkWidget *treeview)
 	treemodel = gtk_tree_view_get_model(GTK_TREE_VIEW(treeview));
 	gtk_tree_model_get_iter_first(treemodel, &treeiter);
 
-	conf.gamesettings = 0;
+	conf.hacks._u32 = 0;
 
 	for (map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
 		treeoptval = false;
 		gtk_tree_model_get(treemodel, &treeiter, 0, &treeoptval, -1);
 
-		if (treeoptval) conf.gamesettings |= it->second.value;
+		if (treeoptval) conf.hacks._u32 |= it->second.value;
 
 		gtk_tree_model_iter_next(treemodel, &treeiter);
 	}
 
-	GSsetGameCRC(0, conf.gamesettings);
+	GSsetGameCRC(0, conf.hacks._u32);
 
 	//---------- done getting advanced options ---------//
 }
@@ -270,7 +270,7 @@ void DisplayDialog()
 	snap_box = gtk_combo_box_new_text();
 	gtk_combo_box_append_text(GTK_COMBO_BOX(snap_box), "JPEG");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(snap_box), "TIFF");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(snap_box), conf.options & GSOPTION_TGASNAP);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(snap_box), conf.zz_options.tga_snap);
 
 	fullscreen_check = gtk_check_button_new_with_label("Fullscreen (Alt + Enter)");
 	widescreen_check = gtk_check_button_new_with_label("Widescreen");
@@ -284,7 +284,7 @@ void DisplayDialog()
 	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1024x768");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1280x960");
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), (conf.options&GSOPTION_WINDIMS) >> 4);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), conf.zz_options.dimensions);
 
 	main_box = gtk_hbox_new(false, 5);
 	main_frame = gtk_frame_new("ZZOgl PG Config");
@@ -341,7 +341,7 @@ void DisplayDialog()
 
 	if (return_value == GTK_RESPONSE_ACCEPT)
 	{
-		int fake_options = 0;
+		ZZOptions fake_options;
 		SaveGameHackTable(tree);
 
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1)
@@ -352,45 +352,20 @@ void DisplayDialog()
 
 		conf.negaa = 0;
 
-		switch (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)))
-		{
-			case 0:
-				fake_options |= GSOPTION_WIN640;
-				break;
-
-			case 1:
-				fake_options |= GSOPTION_WIN800;
-				break;
-
-			case 2:
-				fake_options |= GSOPTION_WIN1024;
-				break;
-
-			case 3:
-				fake_options |= GSOPTION_WIN1280;
-				break;
-		}
+		if (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)) != -1)
+			fake_options.dimensions = gtk_combo_box_get_active(GTK_COMBO_BOX(size_box));
 
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
 
 		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
 
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check)))
-			fake_options |= GSOPTION_WIREFRAME;
+		fake_options.wireframe = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check));
+		fake_options.capture_avi = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(avi_check));
+		fake_options.fullscreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check));
+		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
+		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
 
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(avi_check)))
-			fake_options |= GSOPTION_CAPTUREAVI;
-
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check)))
-			fake_options |= GSOPTION_FULLSCREEN;
-
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check)))
-			fake_options |= GSOPTION_WIDESCREEN;
-
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box)) == 1)
-			fake_options |= GSOPTION_TGASNAP;
-
-		conf.options = fake_options;
+		conf.zz_options = fake_options;
 
 		SaveConfig();
 	}

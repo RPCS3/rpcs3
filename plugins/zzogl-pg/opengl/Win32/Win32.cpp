@@ -78,7 +78,7 @@ map<int, int> mapConfOpts;
 
 void OnInitDialog(HWND hW)
 {
-	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
+	if (!(conf.zz_options.loaded)) LoadConfig();
 
 	CheckDlgButton(hW, IDC_CONFIG_INTERLACE, conf.interlace);
 	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
@@ -86,12 +86,10 @@ void OnInitDialog(HWND hW)
 	CheckRadioButton(hW, IDC_CONFIG_AANONE, IDC_CONFIG_AA4, IDC_CONFIG_AANONE + conf.aa);
 	CheckDlgButton(hW, IDC_CONFIG_WIREFRAME, (conf.wireframe()) ? 1 : 0);
 	CheckDlgButton(hW, IDC_CONFIG_CAPTUREAVI, (conf.captureAvi()) ? 1 : 0);
-	//CheckDlgButton(hW, IDC_CONFIG_CACHEFBP, (conf.options&GSOPTION_ALPHACLAMP)?1:0);
 	CheckDlgButton(hW, IDC_CONFIG_FULLSCREEN, (conf.fullscreen()) ? 1 : 0);
 	CheckDlgButton(hW, IDC_CONFIG_WIDESCREEN, (conf.widescreen()) ? 1 : 0);
-	//CheckDlgButton(hW, IDC_CONFIG_FFX, (conf.options&GSOPTION_FFXHACK)?1:0);
-	CheckDlgButton(hW, IDC_CONFIG_BMPSS, (conf.options&GSOPTION_TGASNAP) ? 1 : 0);
-	CheckRadioButton(hW, IDC_CONF_WIN640, IDC_CONF_WIN1280, IDC_CONF_WIN640 + ((conf.options&GSOPTION_WINDIMS) >> 4));
+	CheckDlgButton(hW, IDC_CONFIG_BMPSS, (conf.zz_options.tga_snap) ? 1 : 0);
+	CheckRadioButton(hW, IDC_CONF_WIN640, IDC_CONF_WIN1280, IDC_CONF_WIN640 + conf.zz_options.dimensions);
 
 	prevbilinearfilter = conf.bilinear;
 
@@ -127,7 +125,7 @@ void OnInitDialog(HWND hW)
 
 	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		CheckDlgButton(hW, it->first, (conf.gamesettings&it->second) ? 1 : 0);
+		CheckDlgButton(hW, it->first, (conf.def_hacks&it->second) ? 1 : 0);
 	}
 }
 
@@ -172,32 +170,31 @@ void OnOK(HWND hW)
 	}
 
 	conf.negaa = 0;
-	conf.options = 0;
+	conf.zz_options = 0;
 
-	conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_CAPTUREAVI) ? GSOPTION_CAPTUREAVI : 0;
-	conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_WIREFRAME) ? GSOPTION_WIREFRAME : 0;
-	conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_FULLSCREEN) ? GSOPTION_FULLSCREEN : 0;
-	conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_WIDESCREEN) ? GSOPTION_WIDESCREEN : 0;
-	//conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_FFX) ? GSOPTION_FFXHACK : 0;
-	conf.options |= IsDlgButtonChecked(hW, IDC_CONFIG_BMPSS) ? GSOPTION_TGASNAP : 0;
+	conf.zz_options.capture_avi = IsDlgButtonChecked(hW, IDC_CONFIG_CAPTUREAVI) ? 1 : 0;
+	conf.zz_options.wireframe = IsDlgButtonChecked(hW, IDC_CONFIG_WIREFRAME) ? 1 : 0;
+	conf.zz_options.fullscreen = IsDlgButtonChecked(hW, IDC_CONFIG_FULLSCREEN) ? 1 : 0;
+	conf.zz_options.widescreen = IsDlgButtonChecked(hW, IDC_CONFIG_WIDESCREEN) ? 1 : 0;
+	conf.zz_options.tga_snap = IsDlgButtonChecked(hW, IDC_CONFIG_BMPSS) ? 1 : 0;
 
-	conf.gamesettings = 0;
+	conf.hacks = 0;
 
 	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		if (IsDlgButtonChecked(hW, it->first)) conf.gamesettings |= it->second;
+		if (IsDlgButtonChecked(hW, it->first)) conf.hacks |= it->second;
 	}
 
-	GSsetGameCRC(g_LastCRC, conf.gamesettings);
+	GSsetGameCRC(g_LastCRC, conf.hacks);
 
 	if (SendDlgItemMessage(hW, IDC_CONF_WIN640, BM_GETCHECK, 0, 0)) 
-		conf.options |= GSOPTION_WIN640;
+		conf.zz_options.dimensions = GSDim_640;
 	else if (SendDlgItemMessage(hW, IDC_CONF_WIN800, BM_GETCHECK, 0, 0)) 
-		conf.options |= GSOPTION_WIN800;
+		conf.zz_options.dimensions = GSDim_800;
 	else if (SendDlgItemMessage(hW, IDC_CONF_WIN1024, BM_GETCHECK, 0, 0)) 
-		conf.options |= GSOPTION_WIN1024;
+		conf.zz_options.dimensions = GSDim_1024;
 	else if (SendDlgItemMessage(hW, IDC_CONF_WIN1280, BM_GETCHECK, 0, 0)) 
-		conf.options |= GSOPTION_WIN1280;
+		conf.zz_options.dimensions = GSDim_1280;
 
 	SaveConfig();
 

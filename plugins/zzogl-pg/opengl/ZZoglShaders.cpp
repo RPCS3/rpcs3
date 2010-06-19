@@ -109,7 +109,7 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 	pf->set_texture(pf->sInterlace, "g_sInterlace");
 
 	// set global shader constants
-	pf->set_shader_const(Vector(0.5f, (g_GameSettings&GAME_EXACTCOLOR) ? 0.9f / 256.0f : 0.5f / 256.0f, 0, 1 / 255.0f), "g_fExactColor");
+	pf->set_shader_const(Vector(0.5f, (conf.settings().exact_color) ? 0.9f / 256.0f : 0.5f / 256.0f, 0, 1 / 255.0f), "g_fExactColor");
 	pf->set_shader_const(Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f), "g_fBilinear");
 	pf->set_shader_const(Vector(1.0f / 256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
 	pf->set_shader_const(Vector(0, 1, 0.001f, 0.5f), "g_fc0");
@@ -126,7 +126,7 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		cgConnectParameter(g_vparamPosXY[context], p);
 
 	// Set Z-test, log or no log;
-	if (g_GameSettings&GAME_NOLOGZ)
+	if (conf.settings().no_logz)
 	{
 		g_vdepth = Vector(255.0 / 256.0f,  255.0 / 65536.0f, 255.0f / (65535.0f * 256.0f), 1.0f / (65536.0f * 65536.0f));
 		vlogz = Vector(1.0f, 0.0f, 0.0f, 0.0f);
