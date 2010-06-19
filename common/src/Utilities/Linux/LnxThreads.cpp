@@ -69,7 +69,7 @@ u64 Threading::GetThreadCpuTime()
 	return 0;
 }
 
-u64 Threading::PersistentThread::GetCpuTime() const
+u64 Threading::pxThread::GetCpuTime() const
 {
 	// Get the cpu time for the thread belonging to this object.  Use m_native_id and/or
 	// m_native_handle to implement it. Return value should be a measure of total time the
@@ -79,18 +79,18 @@ u64 Threading::PersistentThread::GetCpuTime() const
 	return 0;
 }
 
-void Threading::PersistentThread::_platform_specific_OnStartInThread()
+void Threading::pxThread::_platform_specific_OnStartInThread()
 {
 	// Obtain linux-specific thread IDs or Handles here, which can be used to query
 	// kernel scheduler performance information.
 }
 
-void Threading::PersistentThread::_platform_specific_OnCleanupInThread()
+void Threading::pxThread::_platform_specific_OnCleanupInThread()
 {
 	// Cleanup handles here, which were opened above.
 }
 
-void Threading::PersistentThread::_DoSetThreadName( const char* name )
+void Threading::pxThread::_DoSetThreadName( const char* name )
 {
 	// dunno if linux has a feature for naming threads ...?
 }
