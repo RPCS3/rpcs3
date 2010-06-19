@@ -84,11 +84,11 @@ void OnInitDialog(HWND hW)
 	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
 	CheckDlgButton(hW, IDC_CONFIG_DEPTHWRITE, conf.mrtdepth);
 	CheckRadioButton(hW, IDC_CONFIG_AANONE, IDC_CONFIG_AA4, IDC_CONFIG_AANONE + conf.aa);
-	CheckDlgButton(hW, IDC_CONFIG_WIREFRAME, (conf.options&GSOPTION_WIREFRAME) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_CAPTUREAVI, (conf.options&GSOPTION_CAPTUREAVI) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_WIREFRAME, (conf.wireframe()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_CAPTUREAVI, (conf.captureAvi()) ? 1 : 0);
 	//CheckDlgButton(hW, IDC_CONFIG_CACHEFBP, (conf.options&GSOPTION_ALPHACLAMP)?1:0);
-	CheckDlgButton(hW, IDC_CONFIG_FULLSCREEN, (conf.options&GSOPTION_FULLSCREEN) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_WIDESCREEN, (conf.options&GSOPTION_WIDESCREEN) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_FULLSCREEN, (conf.fullscreen()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_WIDESCREEN, (conf.widescreen()) ? 1 : 0);
 	//CheckDlgButton(hW, IDC_CONFIG_FFX, (conf.options&GSOPTION_FFXHACK)?1:0);
 	CheckDlgButton(hW, IDC_CONFIG_BMPSS, (conf.options&GSOPTION_TGASNAP) ? 1 : 0);
 	CheckRadioButton(hW, IDC_CONF_WIN640, IDC_CONF_WIN1280, IDC_CONF_WIN640 + ((conf.options&GSOPTION_WINDIMS) >> 4));

@@ -503,7 +503,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 		assert(ptex != 0);
 
-		if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		if (ZeroGS::IsWriteDestAlphaTest())
 		{
@@ -526,7 +526,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	FillOnlyStencilBuffer();
 	glEnable(GL_SCISSOR_TEST);
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (conf.mrtdepth && pdepth != NULL && ZeroGS::IsWriteDepth()) pdepth->SetRenderTarget(1);
 
 	status = TS_Resolved;
@@ -595,7 +595,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	fbh /= 2; // have 16 bit surfaces are usually 2x higher
 	SetViewport();
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
 	SETVERTEXSHADER(pvsBitBlt.prog);
@@ -624,7 +624,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	ptex = ptexConv;
 
 	// no need to free psys since the render target is getting shrunk
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// reset textures
 	BindToSample(&ptex) ;
@@ -702,7 +702,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 
 	SetViewport();
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
 	SETVERTEXSHADER(pvsBitBlt.prog);
@@ -733,7 +733,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 
 	psys = _aligned_malloc(Tex_Memory_Size(fbw, fbh), 16);
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// reset textures
 	BindToSample(&ptex) ;
@@ -805,7 +805,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 
 	SetViewport();
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
 	SETVERTEXSHADER(pvsBitBlt.prog);
@@ -815,7 +815,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	// restore
 	swap(ptex, ptexFeedback);
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glEnable(GL_SCISSOR_TEST);
 
@@ -1054,7 +1054,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	SetViewport();
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
@@ -1071,7 +1071,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 		ResetRenderTarget(1);
 	}
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glEnable(GL_SCISSOR_TEST);
 

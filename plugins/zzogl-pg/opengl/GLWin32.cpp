@@ -97,7 +97,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 	RegisterClassEx(&wc);
 
-	if (conf.options & GSOPTION_FULLSCREEN)
+	if (conf.fullscreen())
 	{
 		dwExStyle = WS_EX_APPWINDOW;
 		dwStyle = WS_POPUP;
@@ -186,7 +186,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	RECT rcdesktop;
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
 
-	if (conf.options & GSOPTION_FULLSCREEN)
+	if (conf.fullscreen())
 	{
 		nBackbufferWidth = rcdesktop.right - rcdesktop.left;
 		nBackbufferHeight = rcdesktop.bottom - rcdesktop.top;
@@ -216,7 +216,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	SetWindowPos(GShwnd, HWND_TOP, X, Y, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
 
-	if (conf.options & GSOPTION_FULLSCREEN)
+	if (conf.fullscreen())
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -231,7 +231,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
 			if (MessageBox(NULL, "The Requested Fullscreen Mode Is Not Supported By\nYour Video Card. Use Windowed Mode Instead?", "NeHe GL", MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
-				conf.options &= ~GSOPTION_FULLSCREEN;
+				conf.setFullscreen(false);
 			else
 				return false;
 		}

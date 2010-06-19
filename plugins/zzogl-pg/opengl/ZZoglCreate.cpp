@@ -199,7 +199,7 @@ ZeroGS::Create_Window(int _width, int _height)
 
 	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
-	s_nFullscreen = (conf.options & GSOPTION_FULLSCREEN) ? 1 : 0;
+	s_nFullscreen = (conf.fullscreen()) ? 1 : 0;
 
 	conf.mrtdepth = 0; // for now
 

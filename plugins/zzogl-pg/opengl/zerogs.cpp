@@ -321,7 +321,7 @@ void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
 	nBackbufferWidth = max(nNewWidth, 16);
 	nBackbufferHeight = max(nNewHeight, 16);
 
-	if (!(conf.options & GSOPTION_FULLSCREEN))
+	if (!(conf.fullscreen()))
 	{
 		conf.width = nNewWidth;
 		conf.height = nNewHeight;
@@ -334,7 +334,7 @@ void ZeroGS::SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 	s_nNewWidth = nNewWidth;
 	s_nNewHeight = nNewHeight;
 
-	if (!(conf.options & GSOPTION_FULLSCREEN))
+	if (!(conf.fullscreen()))
 	{
 		conf.width = nNewWidth;
 		conf.height = nNewHeight;
@@ -534,7 +534,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 	v.x = v.y = v.z = v.w = fAlpha;
 	ZZcgSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// inside vhDCb[0]'s target area, so render that region only
 	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo);
@@ -548,7 +548,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 	DrawTriangle();
 	
 	// restore
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	ProcessMessages();
 

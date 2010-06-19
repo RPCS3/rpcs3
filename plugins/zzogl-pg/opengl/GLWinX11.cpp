@@ -110,7 +110,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 						  None
 						};
 
-	GLWin.fullScreen = !!(conf.options & GSOPTION_FULLSCREEN);
+	GLWin.fullScreen = (conf.fullscreen());
 
 	/* get an appropriate visual */
 	vi = glXChooseVisual(glDisplay, glScreen, attrListDbl);

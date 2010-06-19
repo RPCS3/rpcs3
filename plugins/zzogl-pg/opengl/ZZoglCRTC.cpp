@@ -312,7 +312,7 @@ inline void RenderStartHelper(u32 bInterlace)
 	SET_STREAM();
 	GL_REPORT_ERRORD();
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	DisableAllgl();
 
@@ -793,7 +793,7 @@ inline void AfterRendererUnimportantJob()
 
 	AfterRenderSwapBuffers();
 
-	if (conf.options & GSOPTION_WIREFRAME)
+	if (conf.wireframe())
 	{
 		// clear all targets
 		s_nWireframeCount = 1;
@@ -835,7 +835,7 @@ inline void AfterRendererSwitchBackToTextures()
 		EXTWRITE->WRITE = 0;
 	}
 
-	if (conf.options & GSOPTION_WIREFRAME) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glEnable(GL_SCISSOR_TEST);
 

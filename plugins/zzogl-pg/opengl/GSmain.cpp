@@ -585,8 +585,8 @@ void OnKeyboardF7(int shift)
 	else
 	{
 		conf.options ^= GSOPTION_WIREFRAME;
-		glPolygonMode(GL_FRONT_AND_BACK, (conf.options&GSOPTION_WIREFRAME) ? GL_LINE : GL_FILL);
-		sprintf(strtitle, "wireframe rendering - %s", (conf.options&GSOPTION_WIREFRAME) ? "on" : "off");
+		glPolygonMode(GL_FRONT_AND_BACK, (conf.wireframe()) ? GL_LINE : GL_FILL);
+		sprintf(strtitle, "wireframe rendering - %s", (conf.wireframe()) ? "on" : "off");
 	}
 }
 
@@ -810,10 +810,10 @@ void ProcessMessages()
 
 						case VK_ESCAPE:
 
-							if (conf.options & GSOPTION_FULLSCREEN)
+							if (conf.fullscreen())
 							{
 								// destroy that msg
-								conf.options &= ~GSOPTION_FULLSCREEN;
+								conf.setfullscreen(false);
 								ZeroGS::ChangeDeviceSize(conf.width, conf.height);
 								UpdateWindow(GShwnd);
 								continue; // so that msg doesn't get sent
@@ -844,8 +844,8 @@ void ProcessMessages()
 		conf.options ^= GSOPTION_FULLSCREEN;
 
 		ZeroGS::SetChangeDeviceSize(
-			(conf.options&GSOPTION_FULLSCREEN) ? 1280 : conf.width,
-			(conf.options&GSOPTION_FULLSCREEN) ? 960 : conf.height);
+			(conf.fullscreen()) ? 1280 : conf.width,
+			(conf.fullscreen()) ? 960 : conf.height);
 	}
 }
 
@@ -1034,11 +1034,14 @@ void CALLBACK GSvsync(int interlace)
 //			ZZLog::Debug_Log("Set profile.");
 //			g_bWriteProfile = 1;
 //		}
-		if (!(conf.options & GSOPTION_FULLSCREEN)) GLWin.SetTitle(strtitle);
+		if (!(conf.fullscreen())) GLWin.SetTitle(strtitle);
 
-		if (fFPS < 16) UPDATE_FRAMES = 4;
-		else if (fFPS < 32) UPDATE_FRAMES = 8;
-		else UPDATE_FRAMES = 16;
+		if (fFPS < 16) 
+			UPDATE_FRAMES = 4;
+		else if (fFPS < 32) 
+			UPDATE_FRAMES = 8;
+		else 
+			UPDATE_FRAMES = 16;
 
 		nToNextUpdate = UPDATE_FRAMES;
 
@@ -1089,19 +1092,19 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 
 	if (start)
 	{
-		if (conf.options & GSOPTION_CAPTUREAVI) return 1;
+		if (conf.captureAvi()) return 1;
 
 		ZeroGS::StartCapture();
 
-		conf.options |= GSOPTION_CAPTUREAVI;
+		conf.setCaptureAvi(true);
 
 		ZZLog::Warn_Log("Started recording zerogs.avi.");
 	}
 	else
 	{
-		if (!(conf.options & GSOPTION_CAPTUREAVI)) return 1;
+		if (!(conf.captureAvi())) return 1;
 
-		conf.options &= ~GSOPTION_CAPTUREAVI;
+		conf.setCaptureAvi(false);
 
 		ZeroGS::StopCapture();
 

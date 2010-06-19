@@ -154,6 +154,46 @@ typedef struct
 	int x, y; // Lets try for a persistant window position.
 	bool isWideScreen; // Widescreen support
 	u32 log;
+	
+	u32 settings() { return !!(options | gamesettings); }
+	bool fullscreen() { return !!(options & GSOPTION_FULLSCREEN); }
+	bool wireframe() { return !!(options & GSOPTION_WIREFRAME); }
+	bool widescreen() { return !!(options & GSOPTION_WIDESCREEN); }
+	bool captureAvi() { return !!(options & GSOPTION_CAPTUREAVI); }
+	bool loaded() {  return !!(options & GSOPTION_LOADED); }
+	
+	void setFullscreen(bool flag)
+	{
+		if (flag)
+			options |= GSOPTION_FULLSCREEN;
+		else
+			options &= GSOPTION_FULLSCREEN;
+	}
+	
+	void setWireframe(bool flag)
+	{
+		if (flag)
+			options |= GSOPTION_WIREFRAME;
+		else
+			options &= GSOPTION_WIREFRAME;
+	}
+	
+	void setCaptureAvi(bool flag)
+	{
+		if (flag)
+			options |= GSOPTION_CAPTUREAVI;
+		else
+			options &= GSOPTION_CAPTUREAVI;
+	}
+	
+	void setLoaded(bool flag)
+	{
+		if (flag)
+			options |= GSOPTION_LOADED;
+		else
+			options &= GSOPTION_LOADED;
+	}
+	
 } GSconf;
 
 //Logging for errors that are called often should have a time counter.

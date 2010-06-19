@@ -68,7 +68,7 @@ void LoadConfig()
 
 	if (conf.aa < 0 || conf.aa > 4) conf.aa = 0;
 
-	conf.isWideScreen = ((conf.options & GSOPTION_WIDESCREEN) != 0);
+	conf.isWideScreen = (conf.widescreen() != 0);
 
 	switch (conf.options & GSOPTION_WINDIMS)
 	{
@@ -93,10 +93,10 @@ void LoadConfig()
 			break;
 	}
 
-	// turn off all hacks by defaultof
-	conf.options &= ~(GSOPTION_WIREFRAME | GSOPTION_CAPTUREAVI);
-
-	conf.options |= GSOPTION_LOADED;
+	// turn off all hacks by default
+	conf.setWireframe(false);
+	conf.setCaptureAvi(false);
+	conf.setLoaded(true);
 
 	if (conf.width <= 0 || conf.height <= 0)
 	{

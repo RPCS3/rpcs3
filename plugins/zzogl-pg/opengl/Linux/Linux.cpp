@@ -51,7 +51,7 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 					break;
 
 				case XK_Escape:
-					if (conf.options & GSOPTION_FULLSCREEN) GSclose();
+					if (conf.fullscreen()) GSclose();
 					break;
 
 				case XK_Shift_L:
@@ -225,7 +225,7 @@ void DisplayDialog()
 	GtkWidget *advanced_scroll;
 	GtkWidget *tree;
 
-	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
+	if (!(conf.loaded())) LoadConfig();
 
 	/* Create the widgets */
 	dialog = gtk_dialog_new_with_buttons(
@@ -328,10 +328,10 @@ void DisplayDialog()
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), conf.log);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bilinear_check), conf.bilinear);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.options & GSOPTION_WIREFRAME));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.options & GSOPTION_CAPTUREAVI));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fullscreen_check), (conf.options & GSOPTION_FULLSCREEN));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.options & GSOPTION_WIDESCREEN));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.wireframe()));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.captureAvi()));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fullscreen_check), (conf.fullscreen()));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
 
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), main_frame);
 
@@ -403,7 +403,7 @@ void CALLBACK GSconfigure()
 	char strcurdir[256];
 	getcwd(strcurdir, 256);
 
-	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
+	if (!(conf.loaded())) LoadConfig();
 
 	DisplayDialog();
 }

@@ -27,6 +27,8 @@
 void SaveConfig()
 {
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
+	
+	u32 tempOptions = conf.options & ~conf.gamesettings;
 	FILE* f = fopen(iniFile.c_str(), "w");
 
 	if (f == NULL)
@@ -38,10 +40,10 @@ void SaveConfig()
 	fprintf(f, "interlace = %hhx\n", conf.interlace);
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
-	fprintf(f, "options = %x\n", conf.options); //u32
+	fprintf(f, "options = %x\n", tempOptions); //u32
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
-	fprintf(f, "gamesettings = %x\n", conf.gamesettings); //u32
+	//fprintf(f, "gamesettings = %x\n", conf.gamesettings); //u32
 	fprintf(f, "width = %x\n", conf.width); //u32
 	fprintf(f, "height = %x\n", conf.height); //u32
 	fprintf(f, "x = %x\n", conf.x); //u32
@@ -81,7 +83,7 @@ void LoadConfig()
 	err = fscanf(f, "options = %x\n", &conf.options);//u32
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
 	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
-	err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
+	//err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
 	err = fscanf(f, "width = %x\n", &conf.width);//u32
 	err = fscanf(f, "height = %x\n", &conf.height);//u32
 	err = fscanf(f, "x = %x\n", &conf.x);//u32
@@ -93,7 +95,7 @@ void LoadConfig()
 
 	if ((conf.aa < 0) || (conf.aa > 4)) conf.aa = 0;
 
-	conf.isWideScreen = conf.options & GSOPTION_WIDESCREEN;
+	conf.isWideScreen = conf.widescreen();
 
 	switch (conf.options & GSOPTION_WINDIMS)
 	{
@@ -120,9 +122,9 @@ void LoadConfig()
 	}
 
 	// turn off all hacks by default
-	conf.options &= ~(GSOPTION_WIREFRAME | GSOPTION_CAPTUREAVI);
-
-	conf.options |= GSOPTION_LOADED;
+	conf.setWireframe(false);
+	conf.setCaptureAvi(false);
+	conf.setLoaded(true);
 
 	if (conf.width <= 0 || conf.height <= 0)
 	{

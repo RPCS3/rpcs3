@@ -250,7 +250,7 @@ inline void SetAlphaTest(const pixTest& curtest)
 // Switch wireframe rendering off for first flush, so it's draw few solid primitives
 inline void SwitchWireframeOff()
 {
-	if (conf.options & GSOPTION_WIREFRAME)
+	if (conf.wireframe())
 	{
 		if (s_nWireframeCount > 0)
 		{
@@ -262,7 +262,7 @@ inline void SwitchWireframeOff()
 // Switch wireframe rendering on, look at previous function
 inline void SwitchWireframeOn()
 {
-	if (conf.options & GSOPTION_WIREFRAME)
+	if (conf.wireframe())
 	{
 		if (s_nWireframeCount > 0)
 		{
