@@ -366,6 +366,7 @@ EXPORT_C_(s32) SPU2init()
 	return 0;
 }
 
+#ifdef _MSC_VER
 // Bit ugly to have this here instead of in RealttimeDebugger.cpp, but meh :p
 extern bool debugDialogOpen;
 extern HWND hDebugDialog;
@@ -405,7 +406,7 @@ static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	}
 	return TRUE;
 }
-
+#endif
 uptr gsWindowHandle = 0;
 
 EXPORT_C_(s32) SPU2open(void *pDsp)
