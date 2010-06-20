@@ -24,17 +24,21 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include "glprocs.h"
 
 extern HWND GShwnd;
 
 #else // linux basic definitions
 
-#include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glext.h>
 #include <GL/glx.h>
 #include <gtk/gtk.h>
 
 #endif
+
 
 #define GSdefs
 #include "PS2Edefs.h"

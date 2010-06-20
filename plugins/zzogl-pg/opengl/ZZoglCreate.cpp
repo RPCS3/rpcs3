@@ -587,7 +587,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	PBITMAPINFO pinfo = (PBITMAPINFO)LockResource(hBitmapGlob);
 
-	GLEnum tempFmt = (pinfo->bmiHeader.biBitCount == 32) ? GL_RGBA : GL_RGB;
+	GLenum tempFmt = (pinfo->bmiHeader.biBitCount == 32) ? GL_RGBA : GL_RGB;
 	TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, tempFmt, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
 
 	nLogoWidth = pinfo->bmiHeader.biWidth;
