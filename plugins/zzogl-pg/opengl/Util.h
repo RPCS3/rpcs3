@@ -32,6 +32,7 @@ extern HWND GShwnd;
 
 #else // linux basic definitions
 
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
