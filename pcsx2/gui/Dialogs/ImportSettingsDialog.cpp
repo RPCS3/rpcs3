@@ -25,11 +25,13 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 {
 	SetMinWidth( 440 );
 
-	pxStaticText& heading = Text( pxE( ".Popup:ImportExistingSettings",
-		L"Existing PCSX2 settings have been found in the configured settings folder.  "
-		L"Would you like to import these settings or overwrite them with PCSX2 default values?"
-		L"\n\n(or press Cancel to select a different settings folder)" )
-	);
+	pxStaticText& heading( Text( wxsFormat(
+		pxE( ".Popup:ImportExistingSettings",
+			L"Existing %s settings have been found in the configured settings folder.  "
+			L"Would you like to import these settings or overwrite them with %s default values?"
+			L"\n\n(or press Cancel to select a different settings folder)"
+		), pxGetAppName(), pxGetAppName()
+	)));
 
 	wxBoxSizer& s_buttons = *new wxBoxSizer( wxHORIZONTAL );
 	wxButton* b_import	= new wxButton( this, wxID_ANY, _("Import") );

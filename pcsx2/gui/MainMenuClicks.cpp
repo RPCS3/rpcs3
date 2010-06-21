@@ -99,13 +99,13 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 
 	{
 		ScopedCoreThreadPopup suspender;
-		if( !Msgbox::OkCancel(
+		if( !Msgbox::OkCancel( wxsFormat(
 			pxE( ".Popup:DeleteSettings",
-				L"This command clears PCSX2 settings and allows you to re-run the First-Time Wizard.  You will need to "
-				L"manually restart PCSX2 after this operation.\n\n"
-				L"WARNING!!  Click OK to delete *ALL* settings for PCSX2 and force PCSX2 to shudown, losing any current emulation progress.  Are you absolutely sure?"
+				L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to "
+				L"manually restart %s after this operation.\n\n"
+				L"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?"
 				L"\n\n(note: settings for plugins are unaffected)"
-			),
+			), pxGetAppName(), pxGetAppName(), pxGetAppName() ),
 			_("Reset all settings?") ) )
 		{
 			suspender.AllowResume();

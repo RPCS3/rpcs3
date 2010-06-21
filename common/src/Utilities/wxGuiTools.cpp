@@ -486,3 +486,10 @@ wxFont pxGetFixedFont( int ptsize, int weight )
 #endif
 	);
 }
+
+
+wxString pxGetAppName()
+{
+	pxAssume( wxTheApp );
+	return wxTheApp->GetAppName();
+}

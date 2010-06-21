@@ -320,13 +320,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	if( PCSX2_VersionLo & 1 )
 	{
 		// Odd versions: beta / development editions, which feature revision number and compile date.
-		wintitle.Printf( _("PCSX2  %d.%d.%d.%d%s (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+		wintitle.Printf( _("%s  %d.%d.%d.%d%s (svn)  %s"), pxGetAppName(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, fromUTF8(__DATE__).c_str() );
 	}
 	else
 	{
 		// evens: stable releases, with a simpler title.
-		wintitle.Printf( _("PCSX2  %d.%d.%d %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+		wintitle.Printf( _("%s  %d.%d.%d %s"), pxGetAppName(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_MODS ? _("(modded)") : wxEmptyString
 		);
 	}
@@ -398,7 +398,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 		_("Wipes all internal VM states and shuts down plugins."));
 
 	m_menuSys.Append(MenuId_Exit,			_("Exit"),
-		_("Closing PCSX2 may be hazardous to your health"));
+		wxsFormat(_("Closing %s may be hazardous to your health"), pxGetAppName()));
 
 
 	// ------------------------------------------------------------------------
@@ -440,7 +440,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Clear all settings..."),
-		_("Clears all PCSX2 settings and re-runs the startup wizard."));
+		wxsFormat(_("Clears all %s settings and re-runs the startup wizard."), pxGetAppName()));
 
 	// ------------------------------------------------------------------------
 

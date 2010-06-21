@@ -25,7 +25,7 @@
 using namespace Panels;
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("PS2 Settings - PCSX2"), 580 )
+	: BaseConfigurationDialog( parent, wxsFormat(_("Emulation Settings - %s"), pxGetAppName()), 580 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
 
@@ -45,7 +45,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 }
 
 Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, _("Application Settings - PCSX2"),  600 )
+	: BaseConfigurationDialog( parent, wxsFormat(_("Components Selectors - %s"), pxGetAppName()),  600 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
 

@@ -21,7 +21,7 @@ using namespace pxSizerFlags;
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
+	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Gamefixes") );
 
 	// NOTE: Order of checkboxes must match the order of the bits in the GamefixOptions structure!
 	// NOTE2: Don't make this static, because translations can change at run-time :)

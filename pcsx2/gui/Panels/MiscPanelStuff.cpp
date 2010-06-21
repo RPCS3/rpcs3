@@ -63,7 +63,7 @@ Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isF
 	m_radio_UserMode->Realize();
 	if( pxStaticText* woot = m_radio_UserMode->GetSubText(0) ) woot->Unwrapped();		// wrapping sucks for path names!
 	
-	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
+	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, wxsFormat(_("Select a document root for %s"), pxGetAppName()) );
 
 	*this	+= Heading( isFirstTime ? usermodeExplained : usermodeWarning );
 	*this	+= m_radio_UserMode		| StdExpand();

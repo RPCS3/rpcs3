@@ -20,7 +20,7 @@
 using namespace pxSizerFlags;
 
 Dialogs::AssertionDialog::AssertionDialog( const wxString& text, const wxString& stacktrace )
-	: wxDialogWithHelpers( NULL, _("PCSX2 Assertion Failure"), pxDialogFlags().Resize(!stacktrace.IsEmpty()) )
+	: wxDialogWithHelpers( NULL, _("Assertion Failure - ") + pxGetAppName(), pxDialogFlags().Resize(!stacktrace.IsEmpty()) )
 {
 	SetMinWidth( 720 );
 

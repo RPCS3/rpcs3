@@ -813,6 +813,7 @@ extern wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits, long f
 extern bool pxDialogExists( const wxString& name );
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
+extern wxString pxGetAppName();
 
 extern int pxGetCharHeight( const wxWindow* wind, int rows=1 );
 extern int pxGetCharHeight( const wxWindow& wind, int rows=1 );

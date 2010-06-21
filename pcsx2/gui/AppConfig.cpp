@@ -100,7 +100,7 @@ namespace PathDefs
 	{
 		switch( mode )
 		{
-			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
+			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), pxGetAppName() );
 			//case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
 			case DocsFolder_Custom: return CustomDocumentsFolder;
 
@@ -275,7 +275,7 @@ namespace FilenameDefs
 		// TODO : ini extension on Win32 is normal.  Linux ini filename default might differ
 		// from this?  like pcsx2_conf or something ... ?
 
-		return wxGetApp().GetAppName() + L".ini";
+		return pxGetAppName() + L".ini";
 	}
 
 	wxFileName GetUsermodeConfig()

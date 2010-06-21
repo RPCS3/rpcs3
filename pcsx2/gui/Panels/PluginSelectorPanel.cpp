@@ -443,11 +443,11 @@ void Panels::PluginSelectorPanel::AppStatusEvent_OnSettingsApplied()
 
 static wxString GetApplyFailedMsg()
 {
-	return pxE( ".Error:PluginSelector:ApplyFailed",
-		L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
-		L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
+	return wxsFormat( pxE( ".Error:PluginSelector:ApplyFailed",
+		L"All plugins must have valid selections for %s to run.  If you are unable to make\n"
+		L"a valid selection due to missing plugins or an incomplete install of %s, then\n"
 		L"press cancel to close the Configuration panel."
-	);
+	), pxGetAppName(), pxGetAppName() );
 }
 
 void Panels::PluginSelectorPanel::Apply()

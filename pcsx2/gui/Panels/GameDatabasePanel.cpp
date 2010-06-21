@@ -79,7 +79,7 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 
 	blankLine();
 
-	wxStaticBoxSizer& sizer2 = *new wxStaticBoxSizer(wxVERTICAL, this, _("PCSX2 Gamefixes"));
+	wxStaticBoxSizer& sizer2 = *new wxStaticBoxSizer(wxVERTICAL, this, _("Gamefixes"));
 	wxFlexGridSizer&  sizer3(*new wxFlexGridSizer(3, 0, StdPadding*4));
 	sizer3.AddGrowableCol(0);
 

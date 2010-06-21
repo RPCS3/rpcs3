@@ -43,7 +43,7 @@ bool ApplicableWizardPage::PrepForApply()
 
 // ----------------------------------------------------------------------------
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent )
-	: DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
+	: DirPickerPanel( parent, FolderId_Settings, _("Settings"), wxsFormat(_("Select a folder for %s settings"), pxGetAppName()) )
 {
 	pxSetToolTip( this, pxE( ".Tooltip:Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
@@ -69,7 +69,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 	m_panel_LangSel		= new LanguageSelectionPanel( &panel );
 	m_panel_UserSel		= new DocsFolderPickerPanel( &panel );
 
-	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured.")).Bold();
+	panel += panel.Heading(wxsFormat(_("%s is starting from a new or unknown folder and needs to be configured."), pxGetAppName())).Bold();
 
 	panel += m_panel_LangSel		| StdCenter();
 	panel += m_panel_UserSel		| pxExpand.Border( wxALL, 8 );
@@ -117,7 +117,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 	if( !path.Exists() )
 	{
 		wxDialogWithHelpers dialog( NULL, _("Create folder?") );
-		dialog += dialog.Heading( _("PCSX2 will create the following folder for documents.  You can change this setting later, at any time.") );
+		dialog += dialog.Heading(wxsFormat(_("%s will create the following folder for documents.  You can change this setting later, at any time."), pxGetAppName()));
 		dialog += 12;
 		dialog += dialog.Heading( path.ToString() );
 
@@ -130,7 +130,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 
 // ----------------------------------------------------------------------------
 FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
-	: wxWizard( parent, wxID_ANY, _("PCSX2 First Time Configuration") )
+	: wxWizard( parent, wxID_ANY, wxsFormat(_("%s First Time Configuration"), pxGetAppName()) )
 	, m_page_usermode	( *new UsermodePage( this ) )
 	, m_page_plugins	( *new ApplicableWizardPage( this, &m_page_usermode ) )
 	, m_page_bios		( *new ApplicableWizardPage( this, &m_page_plugins ) )
