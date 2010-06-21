@@ -768,8 +768,9 @@ __forceinline void Mix()
 	}
 	else
 	{
-		Out.Left = MulShr32( Out.Left<<SndOutVolumeShift, Cores[1].MasterVol.Left.Value );
-		Out.Right = MulShr32( Out.Right<<SndOutVolumeShift, Cores[1].MasterVol.Right.Value );
+		// SndOutVolumeShift + 1 because sound output is notoriously too quiet (rama)
+		Out.Left = MulShr32( (Out.Left<<SndOutVolumeShift+1), Cores[1].MasterVol.Left.Value );
+		Out.Right = MulShr32( (Out.Right<<SndOutVolumeShift+1), Cores[1].MasterVol.Right.Value );
 
 		// Final Clamp!
 		// This could be circumvented by using 1/2th total output volume, although
