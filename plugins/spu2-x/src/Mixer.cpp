@@ -274,7 +274,7 @@ static s32 __forceinline GetNoiseValues()
 		MOV Seed,eax
 	}
 #else
-	__asm__ __volatile__ (
+	__asm__ (
 		".intel_syntax\n"
 		"MOV %%eax,%1\n"
 		"ROR %%eax,5\n"
@@ -286,6 +286,7 @@ static s32 __forceinline GetNoiseValues()
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
 		".att_syntax\n" : "=r"(Seed) :"r"(Seed)
+		: "%eax", "%esi"
 		);
 #endif
 	return retval;
