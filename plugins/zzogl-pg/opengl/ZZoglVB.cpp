@@ -252,7 +252,7 @@ inline int ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 
 #ifdef DEVBUILD
 	if (frame.fbh == 0xe2)
-		ZZLog::Error_Log("Const: %x %x %d| %x %d %x %x", frame.fbh, frame.fbw, ConstraintReason, noscissorpos, ConstrainR1, tbp, frame.fbp);
+		ZZLog::Debug_Log("Const: %x %x %d| %x %d %x %x", frame.fbh, frame.fbw, ConstraintReason, noscissorpos, ConstrainR1, tbp, frame.fbp);
 #endif
 
 // 	Fixme: Reserved psm for framebuffers

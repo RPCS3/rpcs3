@@ -506,7 +506,7 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	{
 		assert((addr&0xf) == 0);   //BUG
 		path->nloop = 0;
-		ZZLog::Error_Log("Transfer1 - 2.");
+		ZZLog::Debug_Log("Transfer1 - 2.");
 		return;
 	}
 }

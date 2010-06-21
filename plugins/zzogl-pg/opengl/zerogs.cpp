@@ -595,7 +595,11 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 
 
 int Values[100] = {0, };
-__forceinline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+
+#ifndef __LINUX__
+__forceinline 
+#endif
+void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 {
 	int index = Index;
 	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);
@@ -767,7 +771,10 @@ void ZeroGS::KickTriangleFan()
 	OUTPUT_VERT(p[2], 2);
 }
 
-__forceinline void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
+#ifndef __LINUX__
+__forceinline 
+#endif
+void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 {
 	SET_VERTEX(p, next, curvb);
 	MOVZ(p, v.z, curvb);

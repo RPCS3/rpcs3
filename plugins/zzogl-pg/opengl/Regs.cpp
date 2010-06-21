@@ -374,7 +374,10 @@ __forceinline void testWrite(int i, u32 *data)
 //  test.ztst  = (data[0] >> 17) & 0x3;
 }
 
-__forceinline void clampWrite(int i, u32 *data)
+#ifndef __LINUX__
+__forceinline 
+#endif
+void clampWrite(int i, u32 *data)
 {
 	FUNCLOG
 	clampInfo& clamp = ZeroGS::vb[i].clamp;

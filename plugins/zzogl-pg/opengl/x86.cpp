@@ -462,7 +462,7 @@ End:
 	"test edx, 15\n"
 	"jnz WriteUnaligned\n"
 
-	"movdqa xmm7, [%[s_clut16mask]]\n" // saves upper 16 bits
+	"movdqa xmm7, [s_clut16mask]\n" // saves upper 16 bits
 
 	// have to save interlaced with the old data
 	"movdqa xmm4, [edx]\n"
@@ -503,7 +503,7 @@ End:
 	// %edx is offset by 2
 	"sub edx, 2\n"
 
-	"movdqa xmm7, [%[s_clut16mask2]]\n" // saves lower 16 bits
+	"movdqa xmm7, [[s_clut16mask2]]\n" // saves lower 16 bits
 
 	// have to save interlaced with the old data
 	"movdqa xmm4, [edx]\n"
@@ -543,9 +543,8 @@ End:
 	"movdqa [edx+16], xmm2\n"
 	"movdqa [edx+48], xmm3\n"
 	"WriteCLUT_T16_I4_CSM1_End:\n"
-	".att_syntax\n"
-
-: [s_clut16mask]"=m"(s_clut16mask), [s_clut16mask2]"=m"(s_clut16mask2)
+	"\n"
+	".att_syntax\n" : [s_clut16mask] "=m" (s_clut16mask), [s_clut16mask2] "=m" (s_clut16mask2)
 		   );
 #endif // _MSC_VER
 }

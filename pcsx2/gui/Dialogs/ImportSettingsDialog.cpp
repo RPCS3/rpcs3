@@ -30,7 +30,7 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 			L"Existing %s settings have been found in the configured settings folder.  "
 			L"Would you like to import these settings or overwrite them with %s default values?"
 			L"\n\n(or press Cancel to select a different settings folder)"
-		), pxGetAppName(), pxGetAppName()
+		), pxGetAppName().c_str(), pxGetAppName().c_str()
 	)));
 
 	wxBoxSizer& s_buttons = *new wxBoxSizer( wxHORIZONTAL );

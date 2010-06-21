@@ -156,12 +156,12 @@ void _Log(const char *str)
 
 void _WriteToConsole(const char *str)
 {
-	printf("ZZogl-PG: %s", str);
+	fprintf(stderr,"ZZogl-PG: %s", str);
 }
 
 void _Print(const char *str)
 {
-	printf("ZZogl-PG: %s", str);
+	fprintf(stderr,"ZZogl-PG: %s", str);
 
 	if (IsLogging()) fprintf(gsLog, str);
 }
@@ -195,8 +195,8 @@ void WriteToConsole(const char *fmt, ...)
 
 	va_start(list, fmt);
 
-	printf("ZZogl-PG: ");
-	vprintf(fmt, list);
+	fprintf(stderr, "ZZogl-PG: ");
+	vfprintf(stderr, fmt, list);
 	va_end(list);
 }
 
@@ -207,12 +207,26 @@ void Print(const char *fmt, ...)
 	va_start(list, fmt);
 
 	if (IsLogging()) vfprintf(gsLog, fmt, list);
-
-	printf("ZZogl-PG: ");
-
-	vprintf(fmt, list);
+	
+	fprintf(stderr, "ZZogl-PG: ");
+	vfprintf(stderr, fmt, list);
 
 	va_end(list);
+}
+
+
+void WriteLn(const char *fmt, ...)
+{
+	va_list list;
+
+	va_start(list, fmt);
+
+	if (IsLogging()) vfprintf(gsLog, fmt, list);
+	
+	fprintf(stderr, "ZZogl-PG: ");
+	vfprintf(stderr, fmt, list);
+	va_end(list);
+	fprintf(stderr,"\n");
 }
 
 void Greg_Log(const char *fmt, ...)
@@ -243,12 +257,14 @@ void Prim_Log(const char *fmt, ...)
 	{
 		if (IsLogging()) vfprintf(gsLog, fmt, list);
 
-		printf("ZZogl-PG(PRIM): ");
+		fprintf(stderr, "ZZogl-PG(PRIM): ");
+		vfprintf(stderr, fmt, list);
 
 		vprintf(fmt, list);
 	}
 
 	va_end(list);
+	fprintf(stderr,"\n");
 
 #endif
 }
@@ -265,11 +281,11 @@ void GS_Log(const char *fmt, ...)
 		vfprintf(gsLog, fmt, list);
 		fprintf(gsLog, "\n");
 	}
-
-	printf("ZZogl-PG(GS): ");
-
-	vprintf(fmt, list);
-	printf("\n");
+	
+	fprintf(stderr, "ZZogl-PG: ");
+	vfprintf(stderr, fmt, list);
+	fprintf(stderr, "\n");
+	
 	va_end(list);
 #endif
 }
@@ -287,11 +303,11 @@ void Warn_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	printf("ZZogl-PG(Warning): ");
-
-	vprintf(fmt, list);
+	fprintf(stderr, "ZZogl-PG:  ");
+	vfprintf(stderr, fmt, list);
+	fprintf(stderr, "\n");
+	
 	va_end(list);
-	printf("\n");
 #endif
 }
 
@@ -308,13 +324,11 @@ void Debug_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	printf("ZZogl-PG(Debug): ");
-
-	vprintf(fmt, list);
-	printf("\n");
+	fprintf(stderr, "ZZogl-PG:  ");
+	vfprintf(stderr, fmt, list);
+	fprintf(stderr, "\n");
+	
 	va_end(list);
-
-
 #endif
 }
 
@@ -330,10 +344,10 @@ void Error_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	printf("ZZogl-PG(Error): ");
-
-	vprintf(fmt, list);
-	printf("\n");
+	fprintf(stderr, "ZZogl-PG:  ");
+	vfprintf(stderr, fmt, list);
+	fprintf(stderr, "\n");
+	
 	va_end(list);
 }
 };
@@ -488,10 +502,10 @@ s32 CALLBACK GSinit()
     if (ZZLog::OpenLog() == false)
 			return -1;
 
-	ZZLog::GS_Log("Calling GSinit.");
+	ZZLog::WriteLn("Calling GSinit.");
 
 	GSreset();
-	ZZLog::GS_Log("GSinit finished.");
+	ZZLog::WriteLn("GSinit finished.");
 	return 0;
 }
 
@@ -707,7 +721,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	g_GSMultiThreaded = multithread;
 
-	ZZLog::GS_Log("Calling GSopen.");
+	ZZLog::WriteLn("Calling GSopen.");
 
 #ifdef _WIN32
 #ifdef _DEBUG
@@ -721,16 +735,16 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	err = GLWin.CreateWindow(pDsp);
 	if (!err)
 	{
-		ZZLog::GS_Log("Failed to create window. Exiting...");
+		ZZLog::Error_Log("Failed to create window. Exiting...");
 		return -1;
 	}
 
-	ZZLog::Error_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ZZLog::Error_Log("Creating ZZOgl window.");
+	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+	ZZLog::WriteLn("Creating ZZOgl window.");
 
 	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
 
-	ZZLog::Error_Log("Initialization successful.");
+	ZZLog::WriteLn("Initialization successful.");
 
 	switch (conf.bilinear)
 	{

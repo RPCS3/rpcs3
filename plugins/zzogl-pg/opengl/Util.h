@@ -209,8 +209,8 @@ typedef struct
 	bool isWideScreen; // Widescreen support
 	u32 log;
 	
-	void incAA() { aa++; if (aa > 4) aa = 4; }
-	void decAA() { aa--; if (aa > 4) aa = 0; } // u8 is unsigned, so negative value is 255.
+	void incAA() { aa++; if (aa > 4) aa = 0; }
+	void decAA() { aa--; if (aa > 4) aa = 4; } // u8 is unsigned, so negative value is 255.
 	
 	gameHacks settings() 
 	{
@@ -388,6 +388,7 @@ extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);
 extern void WriteToConsole(const char *fmt, ...);
 extern void Print(const char *fmt, ...);
+extern void WriteLn(const char *fmt, ...);
 
 extern void Greg_Log(const char *fmt, ...);
 extern void Prim_Log(const char *fmt, ...);

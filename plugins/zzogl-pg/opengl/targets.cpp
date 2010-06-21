@@ -430,13 +430,13 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 				nUpdateTarg = 0;
 			else if (ittarg->second == this)
 			{
-				ZZLog::Error_Log("Updating self.");
+				ZZLog::Debug_Log("Updating self.");
 				nUpdateTarg = 0;
 			}
 		}
 		else if (ittarg->second == this)
 		{
-			ZZLog::Error_Log("Updating self.");
+			ZZLog::Debug_Log("Updating self.");
 			nUpdateTarg = 0;
 		}
 	}
@@ -2790,7 +2790,7 @@ void ResolveInRange(int start, int end)
 			if ((*it)->created == 123)
 				(*it)->Resolve();
 			else
-				ZZLog::Error_Log("Resolving non-existing object! Destroy code %d.", (*it)->created);
+				ZZLog::Debug_Log("Resolving non-existing object! Destroy code %d.", (*it)->created);
 		}
 	}
 }

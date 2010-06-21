@@ -435,7 +435,7 @@ inline void RenderUpdateStencil(int i, bool* bUsingStencil)
 // CRTC24 could not be rendered
 inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm)
 {
-	ZZLog::Error_Log("ZZogl: CRTC24!!! I'm trying to show something.");
+	ZZLog::Debug_Log("ZZogl: CRTC24!!! I'm trying to show something.");
 	SetShaderCaller("RenderCRTC24helper");
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);

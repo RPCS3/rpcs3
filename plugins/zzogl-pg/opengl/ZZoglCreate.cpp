@@ -653,7 +653,7 @@ bool ZeroGS::Create(int _width, int _height)
 			return false;
 		}
 
-		ZZLog::Error_Log("Using non-bilinear fill.");
+		ZZLog::GS_Log("Using non-bilinear fill.");
 	}
 	else
 	{
@@ -667,7 +667,7 @@ bool ZeroGS::Create(int _width, int _height)
 			g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
 			g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
 			Texture2D(g_internalRGBAFloatFmt, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-			ZZLog::Error_Log("ZZogl Fill bilinear blocks.");
+			ZZLog::Debug_Log("ZZogl Fill bilinear blocks. ");
 			B_G(glGetError() == GL_NO_ERROR, return false);
 		}
 		else
@@ -807,7 +807,7 @@ bool ZeroGS::Create(int _width, int _height)
 	g_vparamPosXY[0] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
 	g_vparamPosXY[1] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
 
-	ZZLog::Error_Log("Creating effects.");
+	ZZLog::GS_Log("Creating effects.");
 
 	B_G(LoadEffects(), return false);
 
@@ -849,11 +849,11 @@ bool ZeroGS::Create(int _width, int _height)
 
 	if (g_nPixelShaderVer & SHADER_REDUCED) conf.bilinear = 0;
 
-	ZZLog::Error_Log("Creating extra effects.");
+	ZZLog::GS_Log("Creating extra effects.");
 
 	B_G(LoadExtraEffects(), return false);
 
-	ZZLog::Error_Log("Using %s shaders.", g_pShaders[g_nPixelShaderVer]);
+	ZZLog::GS_Log("Using %s shaders.", g_pShaders[g_nPixelShaderVer]);
 
 	GL_REPORT_ERROR();
 
@@ -892,7 +892,7 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 	else
 	{
-		ZZLog::Error_Log("In final init!");
+		ZZLog::Debug_Log("In final init!");
 		return false;
 	}
 }
