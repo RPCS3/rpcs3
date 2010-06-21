@@ -79,28 +79,58 @@ void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 		case 6:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xc9);
 					SSE_MOVLPS_XMM_to_M64(offset+4, reg);
 					break; // YZ
-		case 7:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x93); //ZYXW
-					SSE_MOVHPS_XMM_to_M64(offset+4, reg);
-					SSE_MOVSS_XMM_to_M32(offset+12, reg);
+		case 7:		if (x86caps.hasStreamingSIMD4Extensions) {
+						SSE_MOVHPS_XMM_to_M64(offset+8, reg);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+4,  reg, 1);
+					}
+					else {
+						SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x93); //ZYXW
+						SSE_MOVHPS_XMM_to_M64(offset+4, reg);
+						SSE_MOVSS_XMM_to_M32(offset+12, reg);
+					}
 					break; // YZW
-		case 9:		SSE_MOVSS_XMM_to_M32(offset, reg);
-					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
-					SSE_MOVSS_XMM_to_M32(offset+12, reg);
+		case 9:		if (x86caps.hasStreamingSIMD4Extensions) {
+						SSE_MOVSS_XMM_to_M32(offset, reg);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+12, reg, 3);
+					}
+					else {
+						SSE_MOVSS_XMM_to_M32(offset, reg);
+						SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
+						SSE_MOVSS_XMM_to_M32(offset+12, reg);
+					}
 					break; // XW
-		case 10:	SSE_MOVSS_XMM_to_M32(offset, reg);
-					SSE_MOVHLPS_XMM_to_XMM(reg, reg);
-					SSE_MOVSS_XMM_to_M32(offset+8, reg);
+		case 10:	if (x86caps.hasStreamingSIMD4Extensions) {
+						SSE_MOVSS_XMM_to_M32(offset, reg);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+8, reg, 2);
+					}
+					else {
+						SSE_MOVSS_XMM_to_M32(offset, reg);
+						SSE_MOVHLPS_XMM_to_XMM(reg, reg);
+						SSE_MOVSS_XMM_to_M32(offset+8, reg);
+					}
 					break; //XZ
 		case 11:	SSE_MOVSS_XMM_to_M32(offset, reg);
 					SSE_MOVHPS_XMM_to_M64(offset+8, reg);
 					break; //XZW
-		case 13:	SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
-					SSE_MOVHPS_XMM_to_M64(offset, reg);
-					SSE_MOVSS_XMM_to_M32(offset+12, reg);
+		case 13:	if (x86caps.hasStreamingSIMD4Extensions) {
+						SSE_MOVLPS_XMM_to_M64(offset, reg);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+12, reg, 3);
+					}
+					else {
+						SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0x4b); //YXZW				
+						SSE_MOVHPS_XMM_to_M64(offset, reg);
+						SSE_MOVSS_XMM_to_M32(offset+12, reg);
+					}
 					break; // XYW
-		case 14:	SSE_MOVLPS_XMM_to_M64(offset, reg);
-					SSE_MOVHLPS_XMM_to_XMM(reg, reg);
-					SSE_MOVSS_XMM_to_M32(offset+8, reg);
+		case 14:	if (x86caps.hasStreamingSIMD4Extensions) {
+						SSE_MOVLPS_XMM_to_M64(offset, reg);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+8, reg, 2);
+					}
+					else {
+						SSE_MOVLPS_XMM_to_M64(offset, reg);
+						SSE_MOVHLPS_XMM_to_XMM(reg, reg);
+						SSE_MOVSS_XMM_to_M32(offset+8, reg);
+					}
 					break; // XYZ
 		case 4:		if (!modXYZW) mVUunpack_xyzw(reg, reg, 1);
 					SSE_MOVSS_XMM_to_M32(offset+4, reg);		 
