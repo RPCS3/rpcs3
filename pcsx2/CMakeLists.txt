@@ -104,16 +104,16 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # you must have both svn client executable and a source that contains svn metadata
-if((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
+if(Suvbersion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
     # execute subversion
     Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
 
     # write svnrev.h
     file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
-else((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
+else(Suvbersion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
     # write svnrev.h
     file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
-endif((SVN) AND (EXISTS "${CMAKE_SOURCE_DIR}/.svn"))
+endif(Suvbersion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
 
 # variable with sources of this executable
 set(pcsx2Sources

@@ -28,6 +28,7 @@ include(FindCg)
 include(FindGlew)
 include(FindPortAudio)
 include(FindSoundTouch)
+include(FindSparseHash)
 
 # Note for include_directory: The order is important to avoid a mess between include file from your system and the one of pcsx2
 # If you include first 3rdparty, all 3rdpary include will have a higer priority...
@@ -118,13 +119,10 @@ if(SOUNDTOUCH_FOUND AND NOT projectSoundTouch)
 	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
 endif(SOUNDTOUCH_FOUND AND NOT projectSoundTouch)
 
-# Note: subversion it only used to detect the current revision of your build
-# Subversion optional
-if(Subversion_FOUND)
-	set(SVN TRUE)
-else(Subversion_FOUND)
-	set(SVN FALSE)
-endif(Subversion_FOUND)
+# SPARSEHASH
+if(SPARSEHASH_FOUND)
+	include_directories(${SPARSEHASH_INCLUDE_DIR})
+endif(SPARSEHASH_FOUND)
 
 # Wx
 if(wxWidgets_FOUND)
