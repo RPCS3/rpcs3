@@ -398,7 +398,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 		_("Wipes all internal VM states and shuts down plugins."));
 
 	m_menuSys.Append(MenuId_Exit,			_("Exit"),
-		AddAppName(L"Closing %s may be hazardous to your health"));
+		AddAppName(_("Closing %s may be hazardous to your health")));
 
 
 	// ------------------------------------------------------------------------
@@ -440,7 +440,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Clear all settings..."),
-		AddAppName(L"Clears all %s settings and re-runs the startup wizard."));
+		AddAppName(_("Clears all %s settings and re-runs the startup wizard.")));
 
 	// ------------------------------------------------------------------------
 

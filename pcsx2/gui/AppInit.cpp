@@ -120,7 +120,7 @@ void Pcsx2App::ReadUserModeSettings()
 		#if 0
 		if( !hasGroup )
 		{
-			wxDialogWithHelpers beta( NULL, _fmt("Welcome to %s %u.%u.%u (r%u)", pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo, SVN_REV );
+			wxDialogWithHelpers beta( NULL, _fmt("Welcome to %s %u.%u.%u (r%u)", pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo, SVN_REV ));
 			beta.SetMinWidth(480);
 
 			beta += beta.Heading(
@@ -333,7 +333,7 @@ void Pcsx2App::AllocateCoreStuffs()
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 {
-	parser.SetLogo( AddAppName(L" >>  %s  --  A Playstation2 Emulator for the PC  <<") + L"\n\n" +
+	parser.SetLogo( AddAppName(" >>  %s  --  A Playstation2 Emulator for the PC  <<") + L"\n\n" +
 		_("All options are for the current session only and will not be saved.\n")
 	);
 
@@ -361,7 +361,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	parser.AddOption( wxEmptyString,L"cfgpath",		_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
 	parser.AddOption( wxEmptyString,L"cfg",			_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
-	parser.AddSwitch( wxEmptyString,L"forcewiz",	AddAppName(L"forces %s to start the First-time Wizard") );
+	parser.AddSwitch( wxEmptyString,L"forcewiz",	AddAppName(_("forces %s to start the First-time Wizard")) );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
@@ -407,7 +407,7 @@ bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 			Console.Warning( pi->GetShortname() + L" override: " + dest );
 		else
 		{
-			wxDialogWithHelpers okcan( NULL, AddAppName(L"Plugin Override Error - %s") );
+			wxDialogWithHelpers okcan( NULL, AddAppName(_("Plugin Override Error - %s")) );
 
 			okcan += okcan.Heading( wxsFormat(
 				_("%s Plugin Override Error!  The following file does not exist or is not a valid %s plugin:\n\n"),
@@ -417,7 +417,7 @@ bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 			okcan += okcan.GetCharHeight();
 			okcan += okcan.Text(dest);
 			okcan += okcan.GetCharHeight();
-			okcan += okcan.Heading(AddAppName(L"Press OK to use the default configured plugin, or Cancel to close %s."));
+			okcan += okcan.Heading(AddAppName(_("Press OK to use the default configured plugin, or Cancel to close %s.")));
 
 			if( wxID_CANCEL == pxIssueConfirmation( okcan, MsgButtons().OKCancel() ) ) return false;
 		}
@@ -550,7 +550,7 @@ bool Pcsx2App::OnInit()
 	}
 	catch( Exception::HardwareDeficiency& ex )
 	{
-		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(L"\n\nPress OK to close %s."), _("PCSX2 Error: Hardware Deficiency") );
+		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(_("\n\nPress OK to close %s.")), _("PCSX2 Error: Hardware Deficiency") );
 		CleanupOnExit();
 		return false;
 	}
@@ -562,8 +562,8 @@ bool Pcsx2App::OnInit()
 	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( ex.FormatDiagnosticMessage() );
-		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(L"\n\nPress OK to close %s."),
-			AddAppName(L"%s Critical Error"), wxICON_ERROR );
+		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(_("\n\nPress OK to close %s.")),
+			AddAppName(_("%s Critical Error")), wxICON_ERROR );
 		CleanupOnExit();
 		return false;
 	}

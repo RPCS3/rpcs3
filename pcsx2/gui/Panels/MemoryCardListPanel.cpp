@@ -557,11 +557,11 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 		if( m_Cards[slot].IsFormatted )
 		{
 			wxString content;
-			content.Printf(wxsFormat(
+			content.Printf(
 				pxE( ".Popup:Mcd:Delete",
 					L"You are about to delete the formatted memory card in slot %u. "
 					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
-				), slot )
+				), slot
 			);
 
 			result = Msgbox::YesNo( content, _("Delete memory card?") );

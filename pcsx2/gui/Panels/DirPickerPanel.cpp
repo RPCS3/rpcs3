@@ -221,7 +221,7 @@ void Panels::DirPickerPanel::Apply()
 	if( !wxDir::Exists( path ) )
 	{
 		wxDialogWithHelpers dialog( NULL, _("Create folder?") );
-		dialog += dialog.Heading(AddAppName(L"A configured folder does not exist.  Should %s try to create it?"));
+		dialog += dialog.Heading(AddAppName(_("A configured folder does not exist.  Should %s try to create it?")));
 		dialog += 12;
 		dialog += dialog.Heading( path );
 

@@ -26,7 +26,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent )
 	m_panel_usersel = new DocsFolderPickerPanel( this, false );
 	m_panel_langsel = new LanguageSelectionPanel( this );
 
-	*this	+= Heading(AddAppName(L"%s is starting from a new or unknown folder and needs to be configured."));
+	*this	+= Heading(AddAppName(_("%s is starting from a new or unknown folder and needs to be configured.")));
 	*this	+= m_panel_langsel	| pxSizerFlags::StdCenter();
 	*this	+= m_panel_usersel	| wxSizerFlags().Expand().Border( wxALL, 8 );
 

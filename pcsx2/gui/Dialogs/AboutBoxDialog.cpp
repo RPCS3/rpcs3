@@ -32,7 +32,7 @@ using namespace pxSizerFlags;
 // --------------------------------------------------------------------------------------
 
 Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, AddAppName(L"About %s"), pxDialogFlags().Resize().MinWidth( 460 ) )
+	: wxDialogWithHelpers( parent, AddAppName(_("About %s")), pxDialogFlags().Resize().MinWidth( 460 ) )
 	, m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
 	)
