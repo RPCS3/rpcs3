@@ -204,18 +204,19 @@ static void __forceinline GetNoiseValues(s32& VD)
 		MOV Seed,eax
 	}
 #else
-	__asm__ (
+	__asm__ __volatile__ (
 		".intel_syntax\n"
 		"MOV %%eax,%1\n"
 		"ROR %%eax,5\n"
 		"XOR %%eax,0x9a\n"
-		"MOV %%ebx,%%eax\n"
+		"MOV %%esi,%%eax\n"
 		"ROL %%eax,2\n"
-		"ADD %%eax,%%ebx\n"
-		"XOR %%eax,%%ebx\n"
+		"ADD %%eax,%%esi\n"
+		"XOR %%eax,%%esi\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : "=r"(Seed) :"r"(Seed));
+		".att_syntax\n" : "=r"(Seed) :"r"(Seed)
+		);
 #endif
 }
 

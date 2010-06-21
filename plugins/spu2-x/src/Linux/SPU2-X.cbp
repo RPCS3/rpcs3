@@ -14,6 +14,7 @@
 				<Compiler>
 					<Add option="-g" />
 					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DPCSX2_DEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />

@@ -251,16 +251,16 @@ static __forceinline void GetNextDataDummy(V_Core& thiscore, uint voiceidx)
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
+
 static s32 __forceinline GetNoiseValues()
 {
 	static s32 Seed = 0x41595321;
 	s32 retval = 0x8000;
-
+	
 	if( Seed&0x100 )
 		retval = (Seed&0xff) << 8;
 	else if( Seed&0xffff )
 		retval = 0x7fff;
-
 #ifdef _WIN32
 	__asm {
 		MOV eax,Seed
@@ -274,22 +274,22 @@ static s32 __forceinline GetNoiseValues()
 		MOV Seed,eax
 	}
 #else
-	__asm__ (
+	__asm__ __volatile__ (
 		".intel_syntax\n"
 		"MOV %%eax,%1\n"
 		"ROR %%eax,5\n"
 		"XOR %%eax,0x9a\n"
-		"MOV %%ebx,%%eax\n"
+		"MOV %%esi,%%eax\n"
 		"ROL %%eax,2\n"
-		"ADD %%eax,%%ebx\n"
-		"XOR %%eax,%%ebx\n"
+		"ADD %%eax,%%esi\n"
+		"XOR %%eax,%%esi\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : "=r"(Seed) :"r"(Seed));
+		".att_syntax\n" : "=r"(Seed) :"r"(Seed)
+		);
 #endif
 	return retval;
 }
-
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
@@ -501,7 +501,7 @@ static __forceinline s32 GetNoiseValues( V_Core& thiscore, uint voiceidx )
 // Performs no cache invalidation -- use only for dynamic memory ranges
 // of the SPU2 (between 0x0000 and SPU2_DYN_MEMLINE)
 static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
-{
+{ 
 	// Fixes some of the oldest hangs in pcsx2's history! :p
 	for( uint i=0; i<2; i++ )
 	{
@@ -595,7 +595,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 		if (voiceidx==1)      spu2M_WriteFast( ( (0==coreidx) ? 0x400 : 0xc00 ) + OutPos, vc.OutX );
 		else if (voiceidx==3) spu2M_WriteFast( ( (0==coreidx) ? 0x600 : 0xe00 ) + OutPos, vc.OutX );
-
+			
 		return ApplyVolume( StereoOut32( Value, Value ), vc.Volume );
 	}
 	else
