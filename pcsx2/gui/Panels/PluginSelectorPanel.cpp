@@ -447,7 +447,7 @@ static wxString GetApplyFailedMsg()
 		L"All plugins must have valid selections for %s to run.  If you are unable to make\n"
 		L"a valid selection due to missing plugins or an incomplete install of %s, then\n"
 		L"press cancel to close the Configuration panel."
-	), pxGetAppName(), pxGetAppName() );
+	), pxGetAppName().c_str(), pxGetAppName().c_str() );
 }
 
 void Panels::PluginSelectorPanel::Apply()

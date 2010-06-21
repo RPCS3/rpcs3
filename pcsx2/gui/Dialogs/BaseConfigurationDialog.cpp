@@ -220,7 +220,7 @@ void Dialogs::BaseConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 
 	wxString pagename( m_listbook ? (L"_" + m_listbook->GetPageText( m_listbook->GetSelection() )) : wxString() );
 	wxString filenameDefault;
-	filenameDefault.Printf( L"%s_%s%s.png", pxGetAppName().Lower(), GetDialogName().c_str(), pagename.c_str() );
+	filenameDefault.Printf( L"%s_%s%s.png", pxGetAppName().Lower().c_str(), GetDialogName().c_str(), pagename.c_str() );
 	filenameDefault.Replace( L"/", L"-" );
 
 	wxString filename( wxFileSelector( _("Save dialog screenshots to..."), g_Conf->Folders.Snapshots.ToString(),

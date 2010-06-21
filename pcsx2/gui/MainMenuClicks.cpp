@@ -105,7 +105,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 				L"manually restart %s after this operation.\n\n"
 				L"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?"
 				L"\n\n(note: settings for plugins are unaffected)"
-			), pxGetAppName(), pxGetAppName(), pxGetAppName() ),
+			), pxGetAppName().c_str(), pxGetAppName().c_str(), pxGetAppName().c_str() ),
 			_("Reset all settings?") ) )
 		{
 			suspender.AllowResume();

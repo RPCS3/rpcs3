@@ -296,7 +296,7 @@ void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 
 	pos += 9;		// strlen of [IsoFile]
 
-	wxDialogWithHelpers popup( NULL, wxsFormat(_("%s Commandline Options"), pxGetAppName()) );
+	wxDialogWithHelpers popup( NULL, AddAppName(L"%s Commandline Options") );
 	popup.SetMinWidth( 640 );
 	popup += popup.Heading(out.Mid(0, pos));
 	//popup += ;

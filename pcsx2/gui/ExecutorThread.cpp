@@ -381,7 +381,7 @@ WaitingForThreadedTaskDialog::WaitingForThreadedTaskDialog( pxThread* thr, wxWin
 	*this += Text( content )	| StdExpand();
 	*this += 15;
 	*this += Heading(_("Press Cancel to attempt to cancel the action."));
-	*this += Heading(wxsFormat(_("Press Terminate to kill %s immediately."), pxGetAppName()));
+	*this += Heading(AddAppName(L"Press Terminate to kill %s immediately."));
 	
 	*this += new wxButton( this, wxID_CANCEL );
 	*this += new wxButton( this, wxID_ANY, _("Terminate App") );

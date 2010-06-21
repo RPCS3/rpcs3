@@ -40,7 +40,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	if( filenames.GetCount() > 1 )
 	{
 		wxDialogWithHelpers dialog( m_WindowBound, _("Drag and Drop Error") );
-		dialog += dialog.Heading(wxsFormat(_("It is an error to drop multiple files onto a %s window.  One at a time please, thank you."), pxGetAppName()));
+		dialog += dialog.Heading(AddAppName(L"It is an error to drop multiple files onto a %s window.  One at a time please, thank you."));
 		pxIssueConfirmation( dialog, MsgButtons().Cancel() );
 		return false;
 	}
@@ -71,7 +71,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		{
 			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset") );
 
-			dialog += dialog.Heading(wxsFormat(_("You have dropped the following ELF binary into %s:\n\n"), pxGetAppName()));
+			dialog += dialog.Heading(AddAppName(L"You have dropped the following ELF binary into %s:\n\n"));
 			dialog += dialog.GetCharHeight();
 			dialog += dialog.Text( filenames[0] );
 			dialog += dialog.GetCharHeight();
@@ -110,7 +110,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	if (isoDetect(&iso))
 	{
 		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
-		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], wxsFormat(_("You have dropped the following ISO image into %s:"), pxGetAppName()));
+		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], AddAppName(L"You have dropped the following ISO image into %s:"));
 	}
 
 	_closefile( iso.handle );
