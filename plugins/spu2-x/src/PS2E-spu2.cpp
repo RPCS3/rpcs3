@@ -478,7 +478,6 @@ EXPORT_C_(void) SPU2shutdown()
 		s2r_close();
 #endif
 
-	FileLog("DoFullDump();\n");
 	DoFullDump();
 #ifdef STREAM_DUMP
 	fclose(il0);
@@ -488,21 +487,15 @@ EXPORT_C_(void) SPU2shutdown()
 	fclose(el0);
 	fclose(el1);
 #endif
-	FileLog("WaveDump::Close();\n");
 	WaveDump::Close();
 
-	FileLog("DMALogClose();\n");
 	DMALogClose();
 
-	FileLog("safe_free(spu2regs);\n");
 	safe_free(spu2regs);
-	FileLog("safe_free(_spu2mem);\n");
 	safe_free(_spu2mem);
-	FileLog("safe_free( pcm_cache_data );\n");
 	safe_free( pcm_cache_data );
 
 
-	FileLog("Closing log.\n");
 #ifdef SPU2_LOG
 	if(!AccessLog()) return;
 	FileLog("[%10d] SPU2shutdown\n",Cycles);
