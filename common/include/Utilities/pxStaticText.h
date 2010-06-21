@@ -72,6 +72,7 @@ public:
 	pxStaticText& SetMinHeight( int height );
 
 	pxStaticText& SetHeight( int lines );
+	pxStaticText& Align( wxAlignment align );
 	pxStaticText& Bold();
 	pxStaticText& WrapAt( int width );
 

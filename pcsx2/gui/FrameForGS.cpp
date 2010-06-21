@@ -245,7 +245,6 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	, m_timer_UpdateTitle( this )
 {
 	SetIcons( wxGetApp().GetIconBundle() );
-
 	SetClientSize( g_Conf->GSWindow.WindowSize );
 	SetBackgroundColour( *wxBLACK );
 
@@ -281,6 +280,22 @@ void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 	evt.Skip();		// and close it.
 }
 
+bool GSFrame::ShowFullScreen(bool show, long style)
+{
+	if( show != IsFullScreen() )
+		Console.WriteLn( Color_StrongMagenta, "(gsFrame) Switching to %s mode...", show ? "Fullscreen" : "Windowed" );
+
+	_parent::ShowFullScreen( show );
+
+	if( g_Conf->GSWindow.IsFullscreen != show )
+	{
+		g_Conf->GSWindow.IsFullscreen = show;
+		AppSaveSettings();
+		return true;
+	}
+	
+	return false;
+}
 
 wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 {
@@ -308,7 +323,7 @@ bool GSFrame::Show( bool shown )
 	{
 		GSPanel* gsPanel = GetViewport();
 
-		if( gsPanel == NULL || gsPanel->IsBeingDeleted() )
+		if( !gsPanel || gsPanel->IsBeingDeleted() )
 		{
 			gsPanel = new GSPanel( this );
 			m_id_gspanel = gsPanel->GetId();
@@ -321,6 +336,22 @@ bool GSFrame::Show( bool shown )
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
 			label->Show( EmuConfig.GS.DisableOutput );
 
+		switch( wxGetApp().Overrides.GsWindowMode )
+		{
+			case GsWinMode_Windowed:
+				g_Conf->GSWindow.IsFullscreen = false;
+			break;
+
+			case GsWinMode_Fullscreen:
+				g_Conf->GSWindow.IsFullscreen = true;
+			break;
+
+			case GsWinMode_Unspecified:
+				g_Conf->GSWindow.IsFullscreen = g_Conf->GSWindow.DefaultToFullscreen;
+			break;
+		}
+
+		ShowFullScreen( g_Conf->GSWindow.IsFullscreen );
 		m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 	}
 	else
@@ -404,9 +435,11 @@ void GSFrame::OnMove( wxMoveEvent& evt )
 
 	evt.Skip();
 
+	g_Conf->GSWindow.IsMaximized = IsMaximized();
+
 	// evt.GetPosition() returns the client area position, not the window frame position.
-	if( !IsFullScreen() && !IsMaximized() && IsVisible() )
-		g_Conf->GSWindow.WindowPos	= GetScreenPosition();
+	if( !g_Conf->GSWindow.IsMaximized && !IsFullScreen() && !IsIconized() && IsVisible() )
+		g_Conf->GSWindow.WindowPos = GetScreenPosition();
 
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
 	// like selecting or deselecting a window, which muck up docking logic.  We filter them

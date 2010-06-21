@@ -475,7 +475,7 @@ void ConsoleLogFrame::OnDockedMove( wxCommandEvent& event )
 
 void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 {
-	if( IsBeingDeleted() || IsIconized() ) return;
+	if( IsBeingDeleted() || !IsVisible() || IsIconized() ) return;
 
 	// Docking check!  If the window position is within some amount
 	// of the main window, enable docking.

@@ -85,6 +85,12 @@ pxStaticText& pxStaticText::SetHeight( int lines )
 	return *this;
 }
 
+pxStaticText& pxStaticText::Align( wxAlignment align )
+{
+	m_align = align;
+	return *this;
+}
+
 pxStaticText& pxStaticText::Bold()
 {
 	wxFont bold( GetFont() );

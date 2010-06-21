@@ -264,7 +264,7 @@ wxSizerFlags pxSizerFlags::Checkbox()
 }
 
 // --------------------------------------------------------------------------------------
-//  pxTextWrapper / pxTextWrapperBase Implementations
+//  pxTextWrapper / pxTextWrapperBase  (mplementations)
 // --------------------------------------------------------------------------------------
 
 pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString& text, int widthMax )
@@ -272,6 +272,8 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
 	if( text.IsEmpty() ) return *this;
 
     const wxChar *lastSpace = NULL;
+    bool wasWrapped = false;
+
     wxString line;
     line.Alloc( text.Length()+12 );
 
@@ -283,12 +285,17 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
             OnNewLine();
 
             lastSpace = NULL;
-            line.clear();
             lineStart = p;
+
+			if(wasWrapped)
+				line = m_indent;
+			else
+				line.clear();
         }
 
         if ( *p == L'\n' || *p == L'\0' )
         {
+			wasWrapped = false;
             DoOutputLine(line);
 
             if ( *p == L'\0' )
@@ -296,7 +303,7 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
         }
         else // not EOL
         {
-            if ( *p == L' ' )
+            if ( *p == L' ' || *p == L',' || *p == L'/' )
                 lastSpace = p;
 
             line += *p;
@@ -308,6 +315,8 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
 
                 if ( width > widthMax )
                 {
+					wasWrapped = true;
+
                     // remove the last word from this line
                     line.erase(lastSpace - lineStart, p + 1 - lineStart);
                     DoOutputLine(line);
@@ -366,7 +375,7 @@ void pxTextWrapper::OnNewLine()
 }
 
 // --------------------------------------------------------------------------------------
-//  ScopedBusyCursor Implementations
+//  ScopedBusyCursor  (implementations)
 // --------------------------------------------------------------------------------------
 
 std::stack<BusyCursorType>	ScopedBusyCursor::m_cursorStack;

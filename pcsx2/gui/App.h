@@ -391,6 +391,12 @@ public:
 	}
 };
 
+enum GsWindowMode_t
+{
+	GsWinMode_Unspecified = 0,
+	GsWinMode_Windowed,
+	GsWinMode_Fullscreen,
+};
 
 class CommandlineOverrides
 {
@@ -406,11 +412,14 @@ public:
 	bool			UseGamefix[GamefixId_COUNT];
 	bool			ApplyCustomGamefixes;
 
+	GsWindowMode_t	GsWindowMode;
+
 public:
 	CommandlineOverrides()
 	{
 		DisableSpeedhacks		= false;
 		ApplyCustomGamefixes	= false;
+		GsWindowMode			= GsWinMode_Unspecified;
 	}
 	
 	// Returns TRUE if either speedhacks or gamefixes are being overridden.
@@ -431,6 +440,23 @@ public:
 
 		return false;
 	}
+};
+
+// --------------------------------------------------------------------------------------
+//  Pcsx2AppTraits
+// --------------------------------------------------------------------------------------
+// Overrides and customizes some default wxWidgets behaviors.  This class is instanized by
+// calls to Pcsx2App::CreateTraits(), which is called from wxWidgets as-needed.  wxWidgets
+// does cache an instance of the traits, so the object construction need not be trivial
+// (translation: it can be complicated-ish -- it won't affect performance).
+//
+class Pcsx2AppTraits : public wxGUIAppTraits
+{
+	typedef wxGUIAppTraits _parent;
+
+public:
+	virtual ~Pcsx2AppTraits() {}
+	wxMessageOutput* CreateMessageOutput();
 };
 
 // =====================================================================================================
@@ -624,6 +650,7 @@ public:
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:
 	// --------------------------------------------------------------------------
+	wxAppTraits* CreateTraits();
 	bool OnInit();
 	int  OnExit();
 	void CleanUp();

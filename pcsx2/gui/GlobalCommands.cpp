@@ -216,8 +216,8 @@ namespace Implementations
 
 	void FullscreenToggle()
 	{
-		g_Conf->GSWindow.DefaultToFullscreen = !g_Conf->GSWindow.DefaultToFullscreen;
-		sGSFrame.ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
+		if( GSFrame* gsframe = wxGetApp().GetGsFramePtr() )
+			gsframe->ShowFullScreen( !gsframe->IsFullScreen() );
 	}
 }
 

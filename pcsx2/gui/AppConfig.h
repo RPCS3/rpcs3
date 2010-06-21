@@ -147,6 +147,7 @@ public:
 	{
 		// Closes the GS/Video port on escape (good for fullscreen activity)
 		bool		CloseOnEsc;
+		
 		bool		DefaultToFullscreen;
 		bool		AlwaysHideMouse;
 		bool		DisableResizeBorders;
@@ -157,6 +158,7 @@ public:
 		wxSize		WindowSize;
 		wxPoint		WindowPos;
 		bool		IsMaximized;
+		bool		IsFullscreen;
 
 		GSWindowOptions();
 

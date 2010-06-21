@@ -32,7 +32,8 @@ extern LimiterModeType g_LimiterMode;
 // --------------------------------------------------------------------------------------
 //  GSPanel
 // --------------------------------------------------------------------------------------
-class GSPanel : public wxWindow, public EventListener_AppStatus
+class GSPanel : public wxWindow
+	, public EventListener_AppStatus
 {
 	typedef wxWindow _parent;
 
@@ -71,9 +72,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  GSFrame
 // --------------------------------------------------------------------------------------
-class GSFrame : public wxFrame,
-	public EventListener_AppStatus,
-	public EventListener_CoreThread
+class GSFrame : public wxFrame
+	, public EventListener_AppStatus
+	, public EventListener_CoreThread
 {
 	typedef wxFrame _parent;
 
@@ -94,6 +95,8 @@ public:
 	void SetFocus();
 	bool Show( bool shown=true );
 	wxStaticText* GetLabel_OutputDisabled() const;
+
+	bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL);
 
 protected:
 	void OnCloseWindow( wxCloseEvent& evt );

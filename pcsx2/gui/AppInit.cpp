@@ -282,8 +282,7 @@ void Pcsx2App::AllocateCoreStuffs()
 				g_Conf->EmuOptions.Recompiler.EnableIOP = false;
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )
-			{
+			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )			{
 				scrollableTextArea->AppendText( L"* microVU0\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
 				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
@@ -347,7 +346,9 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	parser.AddParam( _("IsoFile"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
 	parser.AddSwitch( L"h",			L"help",		_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
-	parser.AddSwitch( wxEmptyString,L"console",		_("forces the program log/console to be visible") );
+	parser.AddSwitch( wxEmptyString,L"console",		_("forces the program log/console to be visible"), wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"fullscreen",	_("use fullscreen GS mode") );
+	parser.AddSwitch( wxEmptyString,L"windowed",	_("use windowed GS mode") );
 
 	parser.AddSwitch( wxEmptyString,L"nogui",		_("disables display of the gui while running games") );
 	parser.AddOption( wxEmptyString,L"elf",			_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
@@ -381,19 +382,22 @@ bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 {
 	wxString dest;
 
-	if( parser.Found( L"cfgpath", &dest ) && !dest.IsEmpty() )
+	if (parser.Found( L"cfgpath", &dest ) && !dest.IsEmpty())
 	{
 		Console.Warning( L"Config path override: " + dest );
 		Overrides.SettingsFolder = dest;
 	}
 
-	if( parser.Found( L"cfg", &dest ) && !dest.IsEmpty() )
+	if (parser.Found( L"cfg", &dest ) && !dest.IsEmpty())
 	{
 		Console.Warning( L"Config file override: " + dest );
 		Overrides.SettingsFile = dest;
 	}
 
 	Overrides.DisableSpeedhacks = parser.Found(L"nohacks");
+
+	if (parser.Found(L"fullscreen"))	Overrides.GsWindowMode = GsWinMode_Fullscreen;
+	if (parser.Found(L"windowed"))		Overrides.GsWindowMode = GsWinMode_Windowed;
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{

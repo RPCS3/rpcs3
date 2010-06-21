@@ -265,6 +265,75 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 	}
 }
 
+// --------------------------------------------------------------------------------------
+//  Pcsx2AppTraits (implementations)
+// --------------------------------------------------------------------------------------
+
+class pxMessageOutputMessageBox : public wxMessageOutput
+{
+public:
+	pxMessageOutputMessageBox() { }
+
+	virtual void Printf(const wxChar* format, ...);
+};
+
+void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
+{
+	using namespace pxSizerFlags;
+
+	va_list args;
+	va_start(args, format);
+	wxString out;
+	out.PrintfV(format, args);
+	va_end(args);
+
+	int pos = out.Find( L"[IsoFile]" );
+	
+	if(pos == wxNOT_FOUND)
+	{
+		Msgbox::Alert( out ); return;
+	}
+
+	pos += 9;		// strlen of [IsoFile]
+
+	wxDialogWithHelpers popup( NULL, _("PCSX2 Commandline Options") );
+	popup.SetMinWidth( 640 );
+	popup += popup.Heading(out.Mid(0, pos));
+	//popup += ;
+	//popup += popup.Text(out.Mid(pos, out.Length())).Align( wxALIGN_LEFT ) | pxExpand.Border(wxALL, StdPadding*3);
+
+	wxTextCtrl* traceArea = new wxTextCtrl(
+		&popup, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		wxTE_READONLY | wxTE_MULTILINE | wxTE_RICH2 | wxHSCROLL
+	);
+
+	traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont() ) );
+	traceArea->SetFont( pxGetFixedFont() );
+
+	int fonty = traceArea->GetCharHeight();
+
+	traceArea->SetMinSize( wxSize( traceArea->GetMinWidth(), (fonty+1)*18 ) );
+	traceArea->WriteText( pxTextWrapper(wxString(L' ', 18)).Wrap(traceArea, out.Mid(pos, out.Length()), 600).GetResult() );
+	traceArea->SetInsertionPoint( 0 );
+	traceArea->ShowPosition( 0 );
+
+	popup += traceArea	| pxExpand.Border(wxALL, StdPadding*3);
+
+	pxIssueConfirmation(popup, MsgButtons().Close() );
+}
+
+wxMessageOutput* Pcsx2AppTraits::CreateMessageOutput()
+{
+#ifdef __UNIX__
+	return _parent::CreateMessageOutput();
+#else
+	return new pxMessageOutputMessageBox;
+#endif
+}
+	
+// --------------------------------------------------------------------------------------
+//  FramerateManager  (implementations)
+// --------------------------------------------------------------------------------------
 void FramerateManager::Reset()
 {
 	//memzero( m_fpsqueue );
@@ -302,6 +371,10 @@ double FramerateManager::GetFramerate() const
 	return (double)GetTickFrequency() / (double)ticks_per_frame;
 }
 
+// ----------------------------------------------------------------------------
+//         Pcsx2App Event Handlers
+// ----------------------------------------------------------------------------
+
 // LogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
 // roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
 // times a second if not (ok, not quite, but you get the idea... I hope.)
@@ -331,10 +404,6 @@ void Pcsx2App::LogicalVsync()
 			PadKeyDispatch( *ev );
 	}
 }
-
-// ----------------------------------------------------------------------------
-//         Pcsx2App Event Handlers
-// ----------------------------------------------------------------------------
 
 HashTools::HashMap<int, const GlobalCommandDescriptor*> GlobalAccels( 0, 0xffffffff );
 
@@ -512,6 +581,11 @@ void Pcsx2App::ClearPendingSave()
 	}
 }
 
+wxAppTraits* Pcsx2App::CreateTraits()
+{
+	return new Pcsx2AppTraits;
+}
+
 // This method generates debug assertions if the MainFrame handle is NULL (typically
 // indicating that PCSX2 is running in NoGUI mode, or that the main frame has been
 // closed).  In most cases you'll want to use HasMainFrame() to test for thread
@@ -672,12 +746,25 @@ void AppLoadSettings()
 
 void AppSaveSettings()
 {
-	if( wxGetApp().Rpc_TryInvokeAsync(AppSaveSettings) ) return;
+	// If multiple SaveSettings messages are requested, we want to ignore most of them.
+	// Saving settings once when the GUI is idle should be fine. :)
+
+	static u32 isPosted = false;
+
+	if( !wxThread::IsMain() )
+	{
+		if( AtomicExchange(isPosted, true) )
+			wxGetApp().PostIdleMethod( AppSaveSettings );
+
+		return;
+	}
 
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
 		g_Conf->CurrentIso.clear();
 
 	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
+
+	AtomicExchange( isPosted, false );
 
 	AppIniSaver saver;
 	g_Conf->LoadSave( saver );

@@ -621,13 +621,15 @@ protected:
 class pxTextWrapperBase
 {
 protected:
-	bool	m_eol;
-	int		m_linecount;
+	bool		m_eol;
+	int			m_linecount;
+	wxString	m_indent;
 
 public:
 	virtual ~pxTextWrapperBase() throw() { }
 
-    pxTextWrapperBase()
+    pxTextWrapperBase( const wxString& indent=wxEmptyString )
+		: m_indent( indent )
 	{
 		m_eol = false;
 		m_linecount = 0;
@@ -664,10 +666,13 @@ class pxTextWrapper : public pxTextWrapperBase
 	typedef pxTextWrapperBase _parent;
 
 protected:
-	wxString m_text;
+	wxString	m_text;
 
 public:
-	pxTextWrapper() : pxTextWrapperBase() { }
+	pxTextWrapper( const wxString& wrapPrefix=wxEmptyString )
+		: pxTextWrapperBase( wrapPrefix )
+	{ }
+
 	virtual ~pxTextWrapper() throw() { }
 
     const wxString& GetResult() const
@@ -679,8 +684,8 @@ public:
 	pxTextWrapper& Wrap( const wxWindow* win, const wxString& text, int widthMax );
 
 protected:
-    virtual void OnOutputLine(const wxString& line);
-    virtual void OnNewLine();
+    void OnOutputLine(const wxString& line);
+    void OnNewLine();
 };
 
 // --------------------------------------------------------------------------------------

@@ -268,8 +268,8 @@ struct V_ReverbBuffers
 
 	s32 IIR_SRC_A0;
 	s32 IIR_SRC_A1;
-	s32 IIR_SRC_B1;
 	s32 IIR_SRC_B0;
+	s32 IIR_SRC_B1;
 	s32 IIR_DEST_A0;
 	s32 IIR_DEST_A1;
 	s32 IIR_DEST_B0;

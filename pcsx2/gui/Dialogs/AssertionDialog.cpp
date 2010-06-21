@@ -42,8 +42,7 @@ Dialogs::AssertionDialog::AssertionDialog( const wxString& text, const wxString&
 		traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont() ) );
 		traceArea->SetFont( pxGetFixedFont() );
 
-		int fonty;
-		traceArea->GetTextExtent( L"blaH yeah", NULL, &fonty );
+		int fonty = traceArea->GetCharHeight();
 
 		traceArea->WriteText( stacktrace );
 		traceArea->SetMinSize( wxSize( traceArea->GetMinWidth(), (fonty+1)*18 ) );
