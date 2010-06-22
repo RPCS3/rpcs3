@@ -5,6 +5,8 @@
 #include <google/dense_hash_map>
 #include <google/sparsehash/densehashtable.h>
 
+#include <wx/string.h>
+
 namespace HashTools {
 
 #define HashFriend(Key,T) friend class HashMap<Key,T>
@@ -658,7 +660,7 @@ public:
 	virtual ~pxDictionary() {}
 
 	pxDictionary( int initialCapacity=33, const wxString& emptyKey = L"@@-EMPTY-@@", const wxString& deletedKey = L"@@-DELETED-@@" )
-		: HashMap<wxString, T>( emptyKey, deletedKey, initialCapacity)
+		: HashTools::HashMap<wxString, T>( emptyKey, deletedKey, initialCapacity)
 	{
 	}
 };

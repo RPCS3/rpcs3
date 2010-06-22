@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "HostGui.h"
+#include "IopCommon.h"
 
 #include "System/PageFaultSource.h"
 #include "Utilities/EventSource.inl"

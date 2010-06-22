@@ -204,8 +204,6 @@
 		<Unit filename="../Config.h" />
 		<Unit filename="../Counters.cpp" />
 		<Unit filename="../Counters.h" />
-		<Unit filename="../GameDatabase.cpp" />
-		<Unit filename="../GameDatabase.h" />
 		<Unit filename="../DebugTools/Debug.h" />
 		<Unit filename="../DebugTools/DisASM.h" />
 		<Unit filename="../DebugTools/DisR3000A.cpp" />
@@ -228,6 +226,8 @@
 		<Unit filename="../GS.cpp" />
 		<Unit filename="../GS.h" />
 		<Unit filename="../GSState.cpp" />
+		<Unit filename="../GameDatabase.cpp" />
+		<Unit filename="../GameDatabase.h" />
 		<Unit filename="../Gif.cpp" />
 		<Unit filename="../Gif.h" />
 		<Unit filename="../Hardware.h" />
@@ -347,6 +347,7 @@
 		<Unit filename="../gui/AdvancedDialog.cpp" />
 		<Unit filename="../gui/AdvancedDialog.h" />
 		<Unit filename="../gui/App.h" />
+		<Unit filename="../gui/AppAccelerators.h" />
 		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />

@@ -19,6 +19,7 @@
 
 #include <wx/zipstrm.h>
 #include <wx/wfstream.h>
+#include <wx/imaglist.h>
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/BackgroundLogo.h"
