@@ -28,10 +28,10 @@ endif(NOT FORCE_INTERNAL_ZLIB)
 include(FindA52)
 include(FindCg)
 include(FindGlew)
+include(FindPortAudio)
 if(NOT FORCE_INTERNAL_SOUNDTOUCH)
-    include(FindPortAudio)
+    include(FindSoundTouch)
 endif(NOT FORCE_INTERNAL_SOUNDTOUCH)
-include(FindSoundTouch)
 include(FindSparseHash)
 
 # Note for include_directory: The order is important to avoid a mess between include file from your system and the one of pcsx2
