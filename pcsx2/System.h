@@ -67,10 +67,11 @@ extern SysCoreAllocations& GetSysCoreAlloc();
 extern void SysLogMachineCaps();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
 
-
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
 extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
+
+extern wxString SysGetDiscID();
 
 // --------------------------------------------------------------------------------------
 //  PCSX2_SEH - Defines existence of "built in" Structured Exception Handling support.

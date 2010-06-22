@@ -24,6 +24,7 @@
 // cleaning up these things.
 #include "sVU_zerorec.h"
 #include "GameDatabase.h"
+#include "Elfheader.h"
 
 extern void closeNewVif(int idx);
 extern void resetNewVif(int idx);
@@ -406,9 +407,9 @@ void SysClearExecutionCache()
 // allocation is below a certain memory address (specified in "bounds" parameter).
 // The allocated block has code execution privileges.
 // Returns NULL on allocation failure.
-u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
+u8* SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 {
-	u8 *Mem = (u8*)HostSys::Mmap( base, size );
+	u8* Mem = (u8*)HostSys::Mmap( base, size );
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
@@ -433,4 +434,21 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		}
 	}
 	return Mem;
+}
+
+// This function always returns a valid DiscID -- using the Sony serial when possible, and
+// falling back on the CRC checksum of the ELF binary if the PS2 software being run is
+// homebrew or some other serial-less item.
+wxString SysGetDiscID()
+{
+	if( !DiscSerial.IsEmpty() ) return DiscSerial;
+	
+	if( !ElfCRC )
+	{
+		// FIXME: If the system is currently running the BIOS, it should return a serial based on
+		// the BIOS being run (either a checksum of the BIOS roms, and/or a string based on BIOS
+		// region and revision).
+	}
+
+	return wxsFormat( L"%8.8x", ElfCRC );
 }

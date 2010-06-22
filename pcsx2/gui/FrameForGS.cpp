@@ -30,6 +30,8 @@ void GSPanel::InitDefaultAccelerators()
 
 	typedef KeyAcceleratorCode AAC;
 
+	if( !m_Accels ) m_Accels = new AcceleratorDictionary;
+
 	m_Accels->Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
 	m_Accels->Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
 	m_Accels->Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );

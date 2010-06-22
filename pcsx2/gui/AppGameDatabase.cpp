@@ -118,10 +118,14 @@ wxString DBLoaderHelper::ReadHeader()
 
 void DBLoaderHelper::ReadGames()
 {
-	Game_Data* game = m_gamedb.createNewGame();
+	Game_Data game;
 
 	if (m_keyPair.IsOk())
-		m_gamedb.writeString( m_keyPair.key, m_keyPair.value );
+	{
+		game.writeString(m_keyPair.key, m_keyPair.value);
+		if( m_keyPair.CompareKey(m_gamedb.getBaseKey()) )
+			game.id = m_keyPair.value;
+	}
 
 	while(!m_reader.Eof()) { // Fill game data, find new game, repeat...
 		pxReadLine(m_reader, m_dest, m_intermediate);
@@ -132,7 +136,13 @@ void DBLoaderHelper::ReadGames()
 		if (!extractMultiLine()) extract();
 
 		if (!m_keyPair.IsOk()) continue;
-		m_gamedb.writeString( m_keyPair.key, m_keyPair.value );
+		if( m_keyPair.CompareKey(m_gamedb.getBaseKey()) )
+		{
+			m_gamedb.addNewGame(game);
+			game.clear();
+			game.id = m_keyPair.value;
+		}
+		game.writeString( m_keyPair.key, m_keyPair.value );
 	}
 }
 
@@ -160,8 +170,6 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 
 	header = loader.ReadHeader();
 	loader.ReadGames();
-
-	curGame = NULL;
 
 	return *this;
 }

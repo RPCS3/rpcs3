@@ -18,7 +18,7 @@
 #include "AppGameDatabase.h"
 #include "ConfigurationPanels.h"
 
-extern wxString DiscID;
+extern wxString DiscSerial;
 using namespace pxSizerFlags;
 
 #define blankLine() {												\
@@ -43,7 +43,6 @@ wxTextCtrl* CreateMultiLineTextCtrl( wxWindow* parent, int digits, long flags = 
 Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	//if (!GameDB) GameDB = new GameDatabase();
 	IGameDatabase* GameDB = AppHost_GetGameDatabase();
 	pxAssume( GameDB != NULL );
 	
@@ -96,33 +95,36 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	PopulateFields();
 }
 
-void Panels::GameDatabasePanel::PopulateFields() {
+void Panels::GameDatabasePanel::PopulateFields( const wxString& id ) {
 	IGameDatabase* GameDB = AppHost_GetGameDatabase();
+	if (!pxAssert(GameDB)) return;
 
-	if (GameDB->gameLoaded()) {
-		serialBox ->SetLabel(GameDB->getString("Serial"));
-		nameBox   ->SetLabel(GameDB->getString("Name"));
-		regionBox ->SetLabel(GameDB->getString("Region"));
-		compatBox ->SetLabel(GameDB->getString("Compat"));
-		commentBox->SetLabel(GameDB->getString("[comments]"));
-		patchesBox->SetLabel(GameDB->getString("[patches]"));
+	Game_Data game;
+	if (GameDB->findGame(game, id.IsEmpty() ? SysGetDiscID() : id))
+	{
+		serialBox ->SetLabel(game.getString("Serial"));
+		nameBox   ->SetLabel(game.getString("Name"));
+		regionBox ->SetLabel(game.getString("Region"));
+		compatBox ->SetLabel(game.getString("Compat"));
+		commentBox->SetLabel(game.getString("[comments]"));
+		patchesBox->SetLabel(game.getString("[patches]"));
 
 		for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
 		{
 			wxString keyName (EnumToString(i)); keyName += L"Hack";
-			if( GameDB->keyExists(keyName) )
-				gameFixes[i]->SetValue(GameDB->getBool(keyName));
+			if( game.keyExists(keyName) )
+				gameFixes[i]->SetValue(game.getBool(keyName));
 			else
 				gameFixes[i]->SetIndeterminate();
 		}
 	}
 	else {
-		serialBox ->SetLabel(L"");
-		nameBox   ->SetLabel(L"");
-		regionBox ->SetLabel(L"");
-		compatBox ->SetLabel(L"");
-		commentBox->SetLabel(L"");
-		patchesBox->SetLabel(L"");
+		serialBox ->SetLabel(wxEmptyString);
+		nameBox   ->SetLabel(wxEmptyString);
+		regionBox ->SetLabel(wxEmptyString);
+		compatBox ->SetLabel(wxEmptyString);
+		commentBox->SetLabel(wxEmptyString);
+		patchesBox->SetLabel(wxEmptyString);
 		for (int i = 0; i < GamefixId_COUNT; i++) {
 			gameFixes[i]->SetValue(0);
 		}
@@ -137,40 +139,39 @@ void Panels::GameDatabasePanel::PopulateFields() {
 // returns True if the database is modified, or FALSE if no changes to save.
 bool Panels::GameDatabasePanel::WriteFieldsToDB() {
 	IGameDatabase* GameDB = AppHost_GetGameDatabase();
+	if (!GameDB) return false;
 
 	if (serialBox->GetValue().IsEmpty()) return false;
 
-	// Only write the serial if its been changed
-	if( !GameDB->setGame(serialBox->GetValue()) )
-		GameDB->writeString(L"Serial",		serialBox->GetValue());
+	Game_Data game;
+	GameDB->findGame(game, serialBox->GetValue());
 
-	GameDB->writeString(L"Name",		nameBox->GetValue());
-	GameDB->writeString(L"Region",		regionBox->GetValue());
-	GameDB->writeString(L"Compat",		compatBox->GetValue());
-	GameDB->writeString(L"[comments]",	commentBox->GetValue());
-	GameDB->writeString(L"[patches]",	patchesBox->GetValue());
+	game.id = serialBox->GetValue();
+
+	game.writeString(L"Serial",		serialBox->GetValue());
+	game.writeString(L"Name",		nameBox->GetValue());
+	game.writeString(L"Region",		regionBox->GetValue());
+	game.writeString(L"Compat",		compatBox->GetValue());
+	game.writeString(L"[comments]",	commentBox->GetValue());
+	game.writeString(L"[patches]",	patchesBox->GetValue());
 	
 	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i) {
 		wxString keyName (EnumToString(i)); keyName += L"Hack";
 
 		if (gameFixes[i]->IsIndeterminate())
-			GameDB->deleteKey(keyName);
+			game.deleteKey(keyName);
 		else
-			GameDB->writeBool(keyName, gameFixes[i]->GetValue());
+			game.writeBool(keyName, gameFixes[i]->GetValue());
 	}
+	GameDB->updateGame(game);
 	return true;
 }
 
 void Panels::GameDatabasePanel::Search_Click(wxCommandEvent& evt) {
 	IGameDatabase* GameDB = AppHost_GetGameDatabase();
-	wxString wxStr = serialBox->GetValue();
+	if( !GameDB ) return;
 
-	if( wxStr.IsEmpty() ) wxStr = DiscID;
-
-	bool bySerial  = 1;//searchType->GetSelection()==0;
-	if  (bySerial) GameDB->setGame(wxStr);
-	
-	PopulateFields();
+	PopulateFields( serialBox->GetValue() );
 	evt.Skip();
 }
 

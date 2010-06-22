@@ -15,14 +15,14 @@
 
 #pragma once
 
-#include "Common.h"
+//#include "Common.h"
 #include "AppConfig.h"
 #include "Utilities/HashMap.h"
 
 #include <wx/wfstream.h>
 
 struct	key_pair;
-class	Game_Data;
+struct	Game_Data;
 
 typedef std::vector<key_pair>	KeyPairArray;
 
@@ -70,47 +70,40 @@ struct key_pair {
 	}
 };
 
-class Game_Data {
-public:
-	wxString		id;				// Serial Identification Code 
+// --------------------------------------------------------------------------------------
+//  Game_Data
+// --------------------------------------------------------------------------------------
+// This container is more or less required to be a simple struct (POD classification) --
+// no virtuals and no inheritance.  This is because it is used in a std::vector, so POD
+// makes things... smoother.
+struct Game_Data
+{
+	wxString		id;				// Serial Identification Code
 	KeyPairArray	kList;			// List of all (key, value) pairs for game data
 
-public:
 	Game_Data(const wxString& _id = wxEmptyString)
 		: id(_id) {}
-		
-	void NewSerial( const wxString& _id ) {
-		id = _id;
-		kList.clear();
-	}
-	
-	bool IsOk() const {
-		return !id.IsEmpty();
-	}
 	
 	// Performs a case-insensitive compare of two IDs, returns TRUE if the IDs match
 	// or FALSE if the ids differ in a case-insensitive way.
-	bool CompareId( const wxString& _id ) const
-	{
+	bool CompareId( const wxString& _id ) const {
 		return id.CmpNoCase(_id) == 0;
 	}
-};
-
-// --------------------------------------------------------------------------------------
-//  IGameDatabase
-// --------------------------------------------------------------------------------------
-class IGameDatabase
-{
-public:
-	virtual ~IGameDatabase() throw() {}
 	
-	virtual wxString getBaseKey() const=0;
-	virtual bool gameLoaded()=0;
-	virtual bool setGame(const wxString& id)=0;
-	virtual Game_Data* createNewGame(const wxString& id=wxEmptyString)=0;
-	virtual bool keyExists(const wxChar* key)=0;
-	virtual void deleteKey(const wxChar* key)=0;
-	virtual wxString getString(const wxChar* key)=0;
+	void clear() {
+		id.clear();
+		kList.clear();
+	}
+
+	bool keyExists(const wxChar* key);
+	void deleteKey(const wxChar* key);
+	wxString getString(const wxChar* key);
+	void writeString(const wxString& key, const wxString& value);
+	void writeBool(const wxString& key, bool value);
+
+	bool IsOk() const {
+		return !id.IsEmpty();
+	}
 
 	bool sectionExists(const wxChar* key, const wxString& value) {
 		return keyExists(wxsFormat(L"[%s%s%s]", key, value.IsEmpty() ? L"" : L" = ", value.c_str()));
@@ -154,57 +147,62 @@ public:
 	bool getBool(const char* key) {
 		return getBool(fromUTF8(key));
 	}
-	
-	// Writes a string of data associated with the specified key to the current
-	// game database.  If the key being written is the baseKey, then a new slot is
-	// created to account for it, or the existing slot is set as the current game.
-	//
-	virtual void writeString(const wxString& key, const wxString& value)=0;
-	virtual void writeBool(const wxString& key, bool value)=0;
 };
 
-typedef std::vector<Game_Data>		GameDataArray;
-typedef pxDictionary<int>			GameDataHash;
+// --------------------------------------------------------------------------------------
+//  IGameDatabase
+// --------------------------------------------------------------------------------------
+class IGameDatabase
+{
+public:
+	virtual ~IGameDatabase() throw() {}
+
+	virtual wxString getBaseKey() const=0;
+	virtual bool findGame(Game_Data& dest, const wxString& id)=0;
+	virtual void addNewGame(const Game_Data& game)=0;
+	virtual void updateGame(const Game_Data& game)=0;
+};
+
+class StringHashNoCase
+{
+public:
+	StringHashNoCase() {}
+
+	HashTools::hash_key_t operator()( const wxString& src ) const
+	{
+		return HashTools::Hash( (const char *)src.Lower().data(), src.length() * sizeof( wxChar ) );
+	}
+};
+
+typedef std::vector<Game_Data>				GameDataArray;
+typedef pxDictionary<int,StringHashNoCase>	GameDataHash;
 
 // --------------------------------------------------------------------------------------
-//  BaseGameDatabaseVector 
+//  BaseGameDatabaseImpl 
 // --------------------------------------------------------------------------------------
 // [TODO] Create a version of this that uses google hashsets; should be several magnitudes
 // faster that way.
-class BaseGameDatabaseVector : public IGameDatabase
+class BaseGameDatabaseImpl : public IGameDatabase
 {
 public:
 	GameDataArray	gList;			// List of all game data
 	GameDataHash	gHash;			// hash table of game serials matched to their gList indexes!
-	Game_Data*		curGame;		// Current game data (index into gList)
 	wxString		m_baseKey;
 
 public:
-	BaseGameDatabaseVector()
+	BaseGameDatabaseImpl()
 	{
-		curGame = NULL;
 		m_baseKey = L"Serial";
 	}
 
-	virtual ~BaseGameDatabaseVector() throw() {}
+	virtual ~BaseGameDatabaseImpl() throw() {}
 
 	wxString getBaseKey() const { return m_baseKey; }
 	void setBaseKey( const wxString& key ) { m_baseKey = key; }
 
-	// Returns true if a game is currently loaded into the database
-	// Returns false if otherwise (this means you need to call setGame()
-	// or it could mean the game was not found in the database at all...)
-	bool gameLoaded() {
-		return curGame != NULL;
-	}
-
-	bool setGame(const wxString& id);
-	Game_Data* createNewGame(const wxString& id=wxEmptyString);
-	bool keyExists(const wxChar* key);
-	void deleteKey(const wxChar* key);
-	wxString getString(const wxChar* key);
-	void writeString(const wxString& key, const wxString& value);
-	void writeBool(const wxString& key, bool value);
+	bool findGame(Game_Data& dest, const wxString& id);
+	void addNewGame(const Game_Data& game);
+	void updateGame(const Game_Data& game);
 };
 
 extern IGameDatabase* AppHost_GetGameDatabase();

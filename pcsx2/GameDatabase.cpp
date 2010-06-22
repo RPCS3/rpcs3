@@ -18,89 +18,88 @@
 
 // Sets the current game to the one matching the serial id given
 // Returns true if game found, false if not found...
-bool BaseGameDatabaseVector::setGame(const wxString& id) {
+bool BaseGameDatabaseImpl::findGame(Game_Data& dest, const wxString& id) {
 
 	GameDataHash::const_iterator iter( gHash.find(id) );
 	if( iter == gHash.end() ) {
-		curGame = NULL;
+		dest.clear();
 		return false;
 	}
-	curGame = &gList[iter->second];
+	dest = gList[iter->second];
 	return true;
 }
 
-Game_Data* BaseGameDatabaseVector::createNewGame(const wxString& id) {
-	gList.push_back(Game_Data(id));
-	gHash[id] = gList.size()-1;
-	curGame = &(gList.end()-1)[0];
-	return curGame;
+void BaseGameDatabaseImpl::addNewGame(const Game_Data& game)
+{
+	gList.push_back(game);
+	gHash[game.id] = gList.size()-1;
+}
+
+void BaseGameDatabaseImpl::updateGame(const Game_Data& game)
+{
+	GameDataHash::const_iterator iter( gHash.find(game.id) );
+
+	if( iter == gHash.end() ) {
+		gList.push_back(game);
+		gHash[game.id] = gList.size()-1;
+	}
+	else
+	{
+		// Re-assign existing vector/array entry!
+		gList[gHash[game.id]] = game;
+	}
 }
 
 // Searches the current game's data to see if the given key exists
-bool BaseGameDatabaseVector::keyExists(const wxChar* key) {
-	if (curGame) {
-		KeyPairArray::iterator it( curGame->kList.begin() );
-		for ( ; it != curGame->kList.end(); ++it) {
-			if (it[0].CompareKey(key)) {
-				return true;
-			}
+bool Game_Data::keyExists(const wxChar* key) {
+	KeyPairArray::iterator it( kList.begin() );
+	for ( ; it != kList.end(); ++it) {
+		if (it[0].CompareKey(key)) {
+			return true;
 		}
 	}
-	else Console.Error("(GameDB) Game not set!");
 	return false;
 }
 
 // Totally Deletes the specified key/pair value from the current game's data
-void BaseGameDatabaseVector::deleteKey(const wxChar* key) {
-	if (curGame) {
-		KeyPairArray::iterator it( curGame->kList.begin() );
-		for ( ; it != curGame->kList.end(); ++it) {
-			if (it[0].CompareKey(key)) {
-				curGame->kList.erase(it);
-				return;
-			}
+void Game_Data::deleteKey(const wxChar* key) {
+	KeyPairArray::iterator it( kList.begin() );
+	for ( ; it != kList.end(); ++it) {
+		if (it[0].CompareKey(key)) {
+			kList.erase(it);
+			return;
 		}
 	}
-	else Console.Error("(GameDB) Game not set!");
 }
 
 // Gets a string representation of the 'value' for the given key
-wxString BaseGameDatabaseVector::getString(const wxChar* key) {
-	if (curGame) {
-		KeyPairArray::iterator it( curGame->kList.begin() );
-		for ( ; it != curGame->kList.end(); ++it) {
-			if (it[0].CompareKey(key)) {
-				return it[0].value;
-			}
+wxString Game_Data::getString(const wxChar* key) {
+	KeyPairArray::iterator it( kList.begin() );
+	for ( ; it != kList.end(); ++it) {
+		if (it[0].CompareKey(key)) {
+			return it[0].value;
 		}
 	}
-	else Console.Error("(GameDB) Game not set!");
 	return wxString();
 }
 
-void BaseGameDatabaseVector::writeString(const wxString& key, const wxString& value) {
-	if (key.CmpNoCase(m_baseKey) == 0)
-		curGame = createNewGame(value);
-
-	if (curGame) {
-		KeyPairArray::iterator it( curGame->kList.begin() );
-		for ( ; it != curGame->kList.end(); ++it) {
-			if (it[0].CompareKey(key)) {
-				if( value.IsEmpty() )
-					curGame->kList.erase(it);
-				else
-					it[0].value = value;
-				return;
-			}
-		}
-		if( !value.IsEmpty() ) {
-			curGame->kList.push_back(key_pair(key, value));
+void Game_Data::writeString(const wxString& key, const wxString& value) {
+	KeyPairArray::iterator it( kList.begin() );
+	for ( ; it != kList.end(); ++it) {
+		if (it[0].CompareKey(key)) {
+			if( value.IsEmpty() )
+				kList.erase(it);
+			else
+				it[0].value = value;
+			return;
 		}
 	}
-	else Console.Error("(GameDB) Game not set!");
+	if( !value.IsEmpty() ) {
+		kList.push_back(key_pair(key, value));
+	}
 }
 
 // Write a bool value to the specified key
-void BaseGameDatabaseVector::writeBool(const wxString& key, bool value) {
+void Game_Data::writeBool(const wxString& key, bool value) {
 	writeString(key, value ? L"1" : L"0");
 }

@@ -29,7 +29,11 @@
 #include "ps2/BiosTools.h"
 #include "GameDatabase.h"
 
-wxString DiscID;
+// This typically reflects the Sony-assigned serial code for the Disc, if one exists.
+//  (examples:  SLUS-2113, etc).
+// If the disc is homebrew then it probably won't have a valid serial; in which case
+// this string will be empty.
+wxString DiscSerial;
 
 static cdvdStruct cdvd;
 
@@ -340,9 +344,9 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	if (!fname)
 		fname = elfpath.AfterLast(':');
 	if (fname.Matches(L"????_???.??*"))
-		DiscID = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
+		DiscSerial = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
 
-	Console.WriteLn("Disc ID = %s", DiscID.ToUTF8().data());
+	Console.WriteLn("Disc ID = %s", DiscSerial.ToUTF8().data());
 	elfptr = loadElf(elfpath);
 
 	ElfCRC = elfptr->getCRC();
@@ -355,18 +359,13 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 
 	// Set the Game DataBase to the correct game based on Game Serial Code...
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase()) {
-		wxString gameSerial = DiscID;
-		if (gameSerial.IsEmpty()) { // Search for crc if no Serial Code
-			gameSerial = wxsFormat( L"%8.8x", ElfCRC );
-		}
-		
+		wxString gameSerial( SysGetDiscID() );
 		wxString serialMsg;
-		if(!DiscID.IsEmpty())
-			serialMsg = L"serial=" + DiscID + L"  ";
+		if(!DiscSerial.IsEmpty())
+			serialMsg = L"serial=" + DiscSerial + L"  ";
 
-		//Game_Data CurrentGame;
-		//if (GameDB->getGame(CurrentGame, gameSerial))
-		if (GameDB->setGame(gameSerial))
+		Game_Data game;
+		if (GameDB->findGame(game, gameSerial))
 		{
 			Console.WriteLn(L"(GameDB) Found Game! %s [CRC=%8.8x]", serialMsg.c_str(), ElfCRC );
 			// [TODO] Display lots of other info from the database here!
@@ -416,14 +415,14 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
     cdvdReloadElfInfo();
 
 	// convert the number characters to a real 32 bit number
-	numbers = StrToS32(DiscID(5,5));
+	numbers = StrToS32(DiscSerial(5,5));
 
 	// combine the lower 7 bits of each char
 	// to make the 4 letters fit into a single u32
-	letters =	(s32)((DiscID[3]&0x7F)<< 0) |
-				(s32)((DiscID[2]&0x7F)<< 7) |
-				(s32)((DiscID[1]&0x7F)<<14) |
-				(s32)((DiscID[0]&0x7F)<<21);
+	letters =	(s32)((DiscSerial[3]&0x7F)<< 0) |
+				(s32)((DiscSerial[2]&0x7F)<< 7) |
+				(s32)((DiscSerial[1]&0x7F)<<14) |
+				(s32)((DiscSerial[0]&0x7F)<<21);
 
 	// calculate magic numbers
 	key_0_3 = ((numbers & 0x1FC00) >> 10) | ((0x01FFFFFF & letters) <<  7);	// numbers = 7F  letters = FFFFFF80

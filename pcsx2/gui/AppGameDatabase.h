@@ -39,7 +39,7 @@
 // GameDatabase class's methods to get the other key's values.
 // Such as dbLoader.getString("Region") returns "NTSC-U"
 
-class AppGameDatabase : public BaseGameDatabaseVector
+class AppGameDatabase : public BaseGameDatabaseImpl
 {
 protected:
 	wxString		header;			// Header of the database

@@ -208,7 +208,7 @@ public:
 
 	hash_key_t operator()( const wxString& src ) const
 	{
-		return Hash( (const char *)src.data(), src.length() * sizeof( wchar_t ) );
+		return Hash( (const char *)src.data(), src.length() * sizeof( wxChar ) );
 	}
 
 	// Returns a hashcode for a character.
@@ -555,12 +555,12 @@ public:
 ///   matter, don't use this class at all! Use the string-specialized classes <see cref="Dictionary" /> and
 ///   <see cref="UnicodeDictionary" />.
 /// </remarks>
-template< class Key, class T >
-class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
+template< class Key, class T, class HashFunctor=CommonHashClass >
+class HashMap : public google::dense_hash_map<Key, T, HashFunctor>
 {
 	DeclareNoncopyableObject( HashMap );
 
-	typedef typename google::dense_hash_map<Key, T, CommonHashClass> _parent;
+	typedef typename google::dense_hash_map<Key, T, HashFunctor> _parent;
 
 public:
 	using _parent::operator[];
@@ -577,7 +577,7 @@ public:
 	///   are *not* used as actual values in the set.
 	/// </remarks>
 	HashMap( const Key& emptyKey, const Key& deletedKey, int initialCapacity=33 ) :
-		google::dense_hash_map<Key, T, CommonHashClass>( initialCapacity )
+		google::dense_hash_map<Key, T, HashFunctor>( initialCapacity )
 	{
 		set_empty_key( emptyKey );
 		set_deleted_key( deletedKey );
@@ -653,14 +653,14 @@ public:
 
 }
 
-template< class T >
-class pxDictionary : public HashTools::HashMap<wxString, T>
+template< class T, class HashFunctor=HashTools::CommonHashClass >
+class pxDictionary : public HashTools::HashMap<wxString, T, HashFunctor>
 {
 public:
 	virtual ~pxDictionary() {}
 
 	pxDictionary( int initialCapacity=33, const wxString& emptyKey = L"@@-EMPTY-@@", const wxString& deletedKey = L"@@-DELETED-@@" )
-		: HashTools::HashMap<wxString, T>( emptyKey, deletedKey, initialCapacity)
+		: HashTools::HashMap<wxString, T, HashFunctor>( emptyKey, deletedKey, initialCapacity)
 	{
 	}
 };

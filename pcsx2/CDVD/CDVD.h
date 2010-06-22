@@ -145,4 +145,4 @@ extern void cdvdWrite(u8 key, u8 rt);
 
 extern void cdvdReloadElfInfo(wxString elfoverride = wxEmptyString);
 
-extern wxString DiscID;
+extern wxString DiscSerial;

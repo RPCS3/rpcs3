@@ -88,7 +88,7 @@ void cpuReset()
 	g_SkipBiosHack = EmuConfig.UseBOOT2Injection;
 
 	ElfCRC = 0;
-	DiscID = L"";
+	DiscSerial = L"";
 	ElfEntry = -1;
 	LastELF = L"";
 }

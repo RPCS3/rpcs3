@@ -366,7 +366,7 @@ namespace Panels
 		void AppStatusEvent_OnSettingsApplied();
 
 	protected:
-		void PopulateFields();
+		void PopulateFields( const wxString& serial=wxEmptyString );
 		bool WriteFieldsToDB();
 		void Search_Click( wxCommandEvent& evt );
 	};

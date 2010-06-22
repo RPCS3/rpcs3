@@ -176,13 +176,14 @@ void AppCoreThread::OnResumeReady()
 static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 	if (!gameDB) gameDB = wxGetApp().GetGameDatabase();
 
-	if (!gameDB->gameLoaded()) return 0;
+	Game_Data game;
+	if (!gameDB->findGame(game, SysGetDiscID())) return 0;
 
 	int  gf  = 0;
 
-	if (gameDB->keyExists("eeRoundMode"))
+	if (game.keyExists("eeRoundMode"))
 	{
-		SSE_RoundMode eeRM = (SSE_RoundMode)gameDB->getInt("eeRoundMode");
+		SSE_RoundMode eeRM = (SSE_RoundMode)game.getInt("eeRoundMode");
 		if (EnumIsValid(eeRM))
 		{
 			Console.WriteLn("(GameDB) Changing EE/FPU roundmode to %d [%s]", eeRM, EnumToString(eeRM));
@@ -191,9 +192,9 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 		}
 	}
 	
-	if (gameDB->keyExists("vuRoundMode"))
+	if (game.keyExists("vuRoundMode"))
 	{
-		SSE_RoundMode vuRM = (SSE_RoundMode)gameDB->getInt("vuRoundMode");
+		SSE_RoundMode vuRM = (SSE_RoundMode)game.getInt("vuRoundMode");
 		if (EnumIsValid(vuRM))
 		{
 			Console.WriteLn("(GameDB) Changing VU0/VU1 roundmode to %d [%s]", vuRM, EnumToString(vuRM));
@@ -202,8 +203,8 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 		}
 	}
 
-	if (gameDB->keyExists("eeClampMode")) {
-		int clampMode = gameDB->getInt("eeClampMode");
+	if (game.keyExists("eeClampMode")) {
+		int clampMode = game.getInt("eeClampMode");
 		Console.WriteLn("(GameDB) Changing EE/FPU clamp mode [mode=%d]", clampMode);
 		dest.Recompiler.fpuOverflow			= (clampMode >= 1);
 		dest.Recompiler.fpuExtraOverflow	= (clampMode >= 2);
@@ -211,8 +212,8 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 		gf++;
 	}
 
-	if (gameDB->keyExists("vuClampMode")) {
-		int clampMode = gameDB->getInt("vuClampMode");
+	if (game.keyExists("vuClampMode")) {
+		int clampMode = game.getInt("vuClampMode");
 		Console.WriteLn("(GameDB) Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
 		dest.Recompiler.vuOverflow			= (clampMode >= 1);
 		dest.Recompiler.vuExtraOverflow		= (clampMode >= 2);
@@ -225,9 +226,9 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 		wxString key( EnumToString(id) );
 		key += L"Hack";
 
-		if (gameDB->keyExists(key))
+		if (game.keyExists(key))
 		{
-			bool enableIt = gameDB->getBool(key);
+			bool enableIt = game.getBool(key);
 			dest.Gamefixes.Set(id, enableIt );
 			Console.WriteLn(L"(GameDB) %s Gamefix: " + key, enableIt ? L"Enabled" : L"Disabled" );
 			gf++;
@@ -252,14 +253,15 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	wxString gameCompat;
 
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
-	if (!DiscID.IsEmpty()) gameSerial = L" [" + DiscID  + L"]";
+	if (!DiscSerial.IsEmpty()) gameSerial = L" [" + DiscSerial  + L"]";
 
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
 	{
-		if (GameDB->gameLoaded()) {
-			int compat = GameDB->getInt("Compat");
-			gameName   = GameDB->getString("Name");
-			gameName  += L" (" + GameDB->getString("Region") + L")";
+		Game_Data game;
+		if (GameDB->findGame(game, SysGetDiscID())) {
+			int compat = game.getInt("Compat");
+			gameName   = game.getString("Name");
+			gameName  += L" (" + game.getString("Region") + L")";
 			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
 		}
 

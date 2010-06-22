@@ -139,13 +139,14 @@ int InitPatches(const wxString& name)
 
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
 	{
-		if(GameDB->gameLoaded()) {
-			if (GameDB->sectionExists(L"patches", name)) {
-				patch = GameDB->getSection(L"patches", name);
+		Game_Data game;
+		if (GameDB->findGame(game,name)) {
+			if (game.sectionExists(L"patches", name)) {
+				patch = game.getSection(L"patches", name);
 				patchFound = true;
 			}
-			else if (GameDB->keyExists(L"[patches]")) {
-				patch = GameDB->getString(L"[patches]");
+			else if (game.keyExists(L"[patches]")) {
+				patch = game.getString(L"[patches]");
 				patchFound = true;
 			}
 		}
