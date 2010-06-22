@@ -4,6 +4,9 @@ project(Pcsx2)
 # need cmake version >=2.6
 cmake_minimum_required(VERSION 2.6)
 
+# Variable to check that people use the good file
+set(TOP_CMAKE_WAS_SOURCED TRUE)
+
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

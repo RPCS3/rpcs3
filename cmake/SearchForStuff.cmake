@@ -21,12 +21,16 @@ set(SDL_BUILDING_LIBRARY TRUE)
 find_package(SDL)
 find_package(Subversion)
 find_package(wxWidgets REQUIRED base core adv)
-find_package(ZLIB)
+if(NOT FORCE_INTERNAL_ZLIB)
+    find_package(ZLIB)
+endif(NOT FORCE_INTERNAL_ZLIB)
 # Use pcsx2 package to find module
 include(FindA52)
 include(FindCg)
 include(FindGlew)
-include(FindPortAudio)
+if(NOT FORCE_INTERNAL_SOUNDTOUCH)
+    include(FindPortAudio)
+endif(NOT FORCE_INTERNAL_SOUNDTOUCH)
 include(FindSoundTouch)
 include(FindSparseHash)
 
@@ -47,6 +51,7 @@ if(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
     # Set path
     set(ZLIB_LIBRARIES pcsx2_zlib)
     include_directories(${PROJECT_SOURCE_DIR}/3rdparty/zlib)
+    message(STATUS "Use internal pcsx2 zlib library")
 endif(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
 
 if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
@@ -55,8 +60,8 @@ if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 	set(SOUNDTOUCH_FOUND TRUE)
     # Set path
 	set(SOUNDTOUCH_LIBRARIES pcsx2_SoundTouch)
-    # include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SoundTouch)
     include_directories(${PROJECT_SOURCE_DIR}/3rdparty/soundtouch_linux_include)
+    message(STATUS "Use internal pcsx2 SoundTouch library")
 endif(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
 
 #----------------------------------------
