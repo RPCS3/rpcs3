@@ -119,7 +119,7 @@ typedef signed long long int64;
 
 // directx
 
-#include <ddraw.h>
+//#include <ddraw.h>
 #include <d3d11.h>
 #include <d3dx11.h>
 #include <d3d9.h>

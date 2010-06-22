@@ -40,7 +40,6 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <olectl.h>
-#include <ddraw.h>
 
 // Disable warning message for C4201 - use of nameless struct/union
 // Otherwise, strmif.h will generate warnings for Win32 debug builds
