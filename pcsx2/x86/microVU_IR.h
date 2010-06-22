@@ -126,6 +126,7 @@ struct microFlagCycles {
 
 struct microOp {
 	u8	 stall;			 // Info on how much current instruction stalled
+	bool isBadOp;		 // Cur Instruction is a bad opcode (not a legal instruction)
 	bool isEOB;			 // Cur Instruction is last instruction in block (End of Block)
 	bool isBdelay;		 // Cur Instruction in Branch Delay slot
 	bool swapOps;		 // Run Lower Instruction before Upper Instruction
