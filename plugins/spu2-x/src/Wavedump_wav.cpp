@@ -49,9 +49,13 @@ namespace WaveDump
 			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
 			{
 				safe_delete( m_CoreWav[cidx][srcidx] );
-
+#ifdef __LINUX__
+				sprintf( wavfilename, "logs/spu2x-Core%d-%s.wav",
+					cidx, m_tbl_CoreOutputTypeNames[ srcidx ] );
+#else
 				sprintf( wavfilename, "logs\\spu2x-Core%d-%s.wav",
 					cidx, m_tbl_CoreOutputTypeNames[ srcidx ] );
+#endif
 
 				try
 				{

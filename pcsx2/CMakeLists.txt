@@ -350,6 +350,7 @@ set(pcsx2GuiHeaders
 	gui/AdvancedDialog.h
 	gui/App.h
 	gui/ApplyState.h
+	gui/AppAccelerators.h
 	gui/AppCommon.h
 	gui/AppConfig.h
 	gui/AppCorePlugins.h

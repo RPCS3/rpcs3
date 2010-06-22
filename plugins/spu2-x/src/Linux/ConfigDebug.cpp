@@ -111,14 +111,14 @@ void ReadSettings()
 
 	set_default_filenames();
 
-	/*CfgReadStr(Section,L"Access_Log_Filename",AccessLogFileName,255,L"logs/SPU2Log.txt");
-	CfgReadStr(Section,L"WaveLog_Filename",   WaveLogFileName,  255,L"logs/SPU2log.wav");
-	CfgReadStr(Section,L"DMA4Log_Filename",   DMA4LogFileName,  255,L"logs/SPU2dma4.dat");
-	CfgReadStr(Section,L"DMA7Log_Filename",   DMA7LogFileName,  255,L"logs/SPU2dma7.dat");
+	CfgReadStr(Section,L"Access_Log_Filename",AccessLogFileName,	L"logs/SPU2Log.txt");
+	CfgReadStr(Section,L"WaveLog_Filename",   WaveLogFileName,		L"logs/SPU2log.wav");
+	CfgReadStr(Section,L"DMA4Log_Filename",   DMA4LogFileName,		L"logs/SPU2dma4.dat");
+	CfgReadStr(Section,L"DMA7Log_Filename",   DMA7LogFileName,		L"logs/SPU2dma7.dat");
 
-	CfgReadStr(Section,L"Info_Dump_Filename",CoresDumpFileName,255,L"logs/SPU2Cores.txt");
-	CfgReadStr(Section,L"Mem_Dump_Filename", MemDumpFileName,  255,L"logs/SPU2mem.dat");
-	CfgReadStr(Section,L"Reg_Dump_Filename", RegDumpFileName,  255,L"logs/SPU2regs.dat");*/
+	CfgReadStr(Section,L"Info_Dump_Filename",CoresDumpFileName,		L"logs/SPU2Cores.txt");
+	CfgReadStr(Section,L"Mem_Dump_Filename", MemDumpFileName,		L"logs/SPU2mem.dat");
+	CfgReadStr(Section,L"Reg_Dump_Filename", RegDumpFileName,		L"logs/SPU2regs.dat");
 }
 
 
@@ -143,14 +143,14 @@ void WriteSettings()
 	CfgWriteBool(Section,L"Dump_Regs",  _RegDump);
 
 	set_default_filenames();
-	/*CfgWriteStr(Section,L"Access_Log_Filename",AccessLogFileName);
+	CfgWriteStr(Section,L"Access_Log_Filename",AccessLogFileName);
 	CfgWriteStr(Section,L"WaveLog_Filename",   WaveLogFileName);
 	CfgWriteStr(Section,L"DMA4Log_Filename",   DMA4LogFileName);
 	CfgWriteStr(Section,L"DMA7Log_Filename",   DMA7LogFileName);
 
 	CfgWriteStr(Section,L"Info_Dump_Filename",CoresDumpFileName);
 	CfgWriteStr(Section,L"Mem_Dump_Filename", MemDumpFileName);
-	CfgWriteStr(Section,L"Reg_Dump_Filename", RegDumpFileName);*/
+	CfgWriteStr(Section,L"Reg_Dump_Filename", RegDumpFileName);
 
 }
 
