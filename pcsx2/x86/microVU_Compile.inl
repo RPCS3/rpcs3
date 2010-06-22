@@ -350,11 +350,11 @@ _f void mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 		memcpy_const((u8*)&mVU->prog.lpState, (u8*)pState, sizeof(microRegInfo));
 	}
 	mVUblock.x86ptrStart	= thisPtr;
-	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
+	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock);  // Add this block to block manager
+	mVUregs.needExactMatch	=(mVUregs.blockType || noFlagOpts) ? 7 : 0; // 1-Op blocks should just always set exactMatch (Sly Cooper)
 	mVUregs.blockType		= 0;
 	mVUregs.viBackUp		= 0;
 	mVUregs.flags			= 0;
-	mVUregs.needExactMatch	= 0;
 	mVUsFlagHack			= CHECK_VU_FLAGHACK;
 	mVUinitConstValues(mVU);
 }
