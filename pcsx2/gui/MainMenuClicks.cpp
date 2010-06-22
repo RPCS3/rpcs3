@@ -14,7 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "HostGui.h"
 
 #include "CDVD/CDVD.h"
 #include "GS.h"

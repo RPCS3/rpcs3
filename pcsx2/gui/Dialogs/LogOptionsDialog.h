@@ -20,9 +20,6 @@
 
 #include "Utilities/wxGuiTools.h"
 #include "Utilities/CheckedStaticBox.h"
-#include "Utilities/HashMap.h"
-
-using namespace HashTools;
 
 namespace Dialogs {
 

@@ -60,3 +60,12 @@ extern void StateCopy_SaveToFile( const wxString& file );
 extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );
 extern void StateCopy_LoadFromSlot( uint slot );
+
+extern bool States_isSlotUsed(int num);
+extern void States_DefrostCurrentSlot();
+extern void States_FreezeCurrentSlot();
+extern void States_CycleSlotForward();
+extern void States_CycleSlotBackward();
+
+extern void States_SetCurrentSlot( int slot );
+extern int  States_GetCurrentSlot( int slot );

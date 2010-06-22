@@ -2626,6 +2626,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\AppAccelerators.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\AppCommon.h"
 					>
 				</File>
@@ -2675,10 +2679,6 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\GSFrame.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\HostGui.h"
 					>
 				</File>
 				<File

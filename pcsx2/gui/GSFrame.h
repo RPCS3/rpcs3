@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "App.h"
+#include "AppCommon.h"
 #include "CpuUsageProvider.h"
 
 
@@ -38,10 +38,11 @@ class GSPanel : public wxWindow
 	typedef wxWindow _parent;
 
 protected:
-	AcceleratorDictionary		m_Accels;
-	wxTimer						m_HideMouseTimer;
-	bool						m_CursorShown;
-	bool						m_HasFocus;
+	ScopedPtr<AcceleratorDictionary>	m_Accels;
+
+	wxTimer					m_HideMouseTimer;
+	bool					m_CursorShown;
+	bool					m_HasFocus;
 
 public:
 	GSPanel( wxWindow* parent );

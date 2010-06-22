@@ -19,19 +19,19 @@
 // Sets the current game to the one matching the serial id given
 // Returns true if game found, false if not found...
 bool BaseGameDatabaseVector::setGame(const wxString& id) {
-	GameDataArray::iterator it( gList.begin() );
-	for ( ; it != gList.end(); ++it) {
-		if (it[0].CompareId(id)) {
-			curGame = &it[0];
-			return true;
-		}
+
+	GameDataHash::const_iterator iter( gHash.find(id) );
+	if( iter == gHash.end() ) {
+		curGame = NULL;
+		return false;
 	}
-	curGame = NULL;
-	return false;
+	curGame = &gList[iter->second];
+	return true;
 }
 
 Game_Data* BaseGameDatabaseVector::createNewGame(const wxString& id) {
 	gList.push_back(Game_Data(id));
+	gHash[id] = gList.size()-1;
 	curGame = &(gList.end()-1)[0];
 	return curGame;
 }
@@ -94,8 +94,7 @@ void BaseGameDatabaseVector::writeString(const wxString& key, const wxString& va
 			}
 		}
 		if( !value.IsEmpty() ) {
-			key_pair tKey(key, value);
-			curGame->kList.push_back(tKey);
+			curGame->kList.push_back(key_pair(key, value));
 		}
 	}
 	else Console.Error("(GameDB) Game not set!");

@@ -204,6 +204,11 @@ public:
 		return Hash( (const char *)src.data(), src.length() * sizeof( wchar_t ) );
 	}
 
+	hash_key_t operator()( const wxString& src ) const
+	{
+		return Hash( (const char *)src.data(), src.length() * sizeof( wchar_t ) );
+	}
+
 	// Returns a hashcode for a character.
 	// This has function has been optimized to return an even distribution
 	// across the range of an int value.  In theory that should be more rewarding
@@ -322,6 +327,8 @@ public:
 		hash_key_t key = (hash_key_t) addr;
 		return (hash_key_t)((key >> 3) * 2654435761ul);
 	}
+	
+	
 };
 
 /// <summary>
@@ -528,7 +535,7 @@ public:
 
 	const T& GetValue( Key key ) const
 	{
-		return (this->find( key ))->second;
+		return (find( key ))->second;
 	}
 };
 
@@ -549,6 +556,8 @@ public:
 template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
 {
+	DeclareNoncopyableObject( HashMap );
+
 	typedef typename google::dense_hash_map<Key, T, CommonHashClass> _parent;
 
 public:
@@ -589,7 +598,12 @@ public:
 
 	const T& GetValue( Key key ) const
 	{
-		return (this->find( key ))->second;
+		return (find( key ))->second;
+	}
+	
+	bool Find( Key key ) const
+	{
+		return find(key) != end();
 	}
 };
 
@@ -607,12 +621,10 @@ class Dictionary : public HashMap<std::string, T>
 public:
 	virtual ~Dictionary() {}
 
-	Dictionary( int initialCapacity=33, const std::string& emptyKey = "@@-EMPTY-@@", const std::string& deletedKey = "@@-DELETED-@@" ) :
-		HashMap<std::string, T>( emptyKey, deletedKey, initialCapacity)
+	Dictionary( int initialCapacity=33, const std::string& emptyKey = "@@-EMPTY-@@", const std::string& deletedKey = "@@-DELETED-@@" )
+		: HashMap<std::string, T>( emptyKey, deletedKey, initialCapacity)
 	{
 	}
-private:
-	Dictionary( const Dictionary& src ) {}
 };
 
 /// <summary>
@@ -631,13 +643,22 @@ class UnicodeDictionary : public HashMap<std::wstring, T>
 public:
 	virtual ~UnicodeDictionary() {}
 
-	UnicodeDictionary( int initialCapacity=33, const std::wstring& emptyKey = L"@@-EMPTY-@@", const std::wstring& deletedKey = L"@@-DELETED-@@" ) :
-		HashMap<std::wstring, T>( emptyKey, deletedKey, initialCapacity)
+	UnicodeDictionary( int initialCapacity=33, const std::wstring& emptyKey = L"@@-EMPTY-@@", const std::wstring& deletedKey = L"@@-DELETED-@@" )
+		: HashMap<std::wstring, T>( emptyKey, deletedKey, initialCapacity)
 	{
 	}
-
-private:
-	UnicodeDictionary( const UnicodeDictionary& src ) {}
 };
 
 }
+
+template< class T >
+class pxDictionary : public HashTools::HashMap<wxString, T>
+{
+public:
+	virtual ~pxDictionary() {}
+
+	pxDictionary( int initialCapacity=33, const wxString& emptyKey = L"@@-EMPTY-@@", const wxString& deletedKey = L"@@-DELETED-@@" )
+		: HashMap<wxString, T>( emptyKey, deletedKey, initialCapacity)
+	{
+	}
+};

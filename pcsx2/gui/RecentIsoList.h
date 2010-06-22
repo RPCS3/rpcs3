@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "AppCommon.h"
+
 // --------------------------------------------------------------------------------------
 //  RecentIsoManager
 // --------------------------------------------------------------------------------------
@@ -59,5 +61,18 @@ protected:
 
 	void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ini );
 	void AppStatusEvent_OnSettingsApplied();
+};
+
+
+// --------------------------------------------------------------------------------------
+//  RecentIsoList
+// --------------------------------------------------------------------------------------
+struct RecentIsoList
+{
+	ScopedPtr<RecentIsoManager>		Manager;
+	ScopedPtr<wxMenu>				Menu;
+
+	RecentIsoList();
+	virtual ~RecentIsoList() throw() { }
 };
 

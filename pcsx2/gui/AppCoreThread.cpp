@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "AppSaveStates.h"
+#include "AppGameDatabase.h"
 
 #include "Utilities/TlsVariable.inl"
 

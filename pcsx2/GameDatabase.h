@@ -17,6 +17,8 @@
 
 #include "Common.h"
 #include "AppConfig.h"
+#include "Utilities/HashMap.h"
+
 #include <wx/wfstream.h>
 
 struct	key_pair;
@@ -161,7 +163,8 @@ public:
 	virtual void writeBool(const wxString& key, bool value)=0;
 };
 
-typedef std::vector<Game_Data>	GameDataArray;
+typedef std::vector<Game_Data>		GameDataArray;
+typedef pxDictionary<int>			GameDataHash;
 
 // --------------------------------------------------------------------------------------
 //  BaseGameDatabaseVector 
@@ -172,6 +175,7 @@ class BaseGameDatabaseVector : public IGameDatabase
 {
 public:
 	GameDataArray	gList;			// List of all game data
+	GameDataHash	gHash;			// hash table of game serials matched to their gList indexes!
 	Game_Data*		curGame;		// Current game data (index into gList)
 	wxString		m_baseKey;
 

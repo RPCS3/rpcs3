@@ -16,9 +16,11 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "GSFrame.h"
+#include "AppSaveStates.h"
+#include "AppGameDatabase.h"
+#include "AppAccelerators.h"
 
 #include "Plugins.h"
-#include "AppSaveStates.h"
 #include "ps2/BiosTools.h"
 
 #include "Dialogs/ModalPopups.h"
@@ -26,7 +28,6 @@
 #include "Dialogs/LogOptionsDialog.h"
 
 #include "Utilities/IniInterface.h"
-#include "Utilities/HashMap.h"
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed to implement the app!
@@ -405,24 +406,19 @@ void Pcsx2App::LogicalVsync()
 	}
 }
 
-HashTools::HashMap<int, const GlobalCommandDescriptor*> GlobalAccels( 0, 0xffffffff );
-
 void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 {
 	const GlobalCommandDescriptor* cmd = NULL;
-	GlobalAccels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	if( GlobalAccels ) GlobalAccels->TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+
 	if( cmd == NULL )
 	{
 		evt.Skip();
 		return;
 	}
 
-	if( cmd != NULL )
-	{
-		DbgCon.WriteLn( "(app) Invoking command: %s", cmd->Id );
-		cmd->Invoke();
-	}
-
+	DbgCon.WriteLn( "(app) Invoking command: %s", cmd->Id );
+	cmd->Invoke();
 }
 
 // Returns a string message telling the user to consult guides for obtaining a legal BIOS.
@@ -833,8 +829,8 @@ void Pcsx2App::OpenGsPanel()
 	GSFrame* gsFrame = GetGsFramePtr();
 	if( gsFrame == NULL )
 	{
-		gsFrame = new GSFrame( GetMainFramePtr(), L"PCSX2" );
-		gsFrame->SetFocus();
+		gsFrame = new GSFrame( GetMainFramePtr(), GetAppName() );
+		//gsFrame->SetFocus();
 		m_id_GsFrame = gsFrame->GetId();
 	}
 	else
@@ -861,7 +857,22 @@ void Pcsx2App::OpenGsPanel()
 	
 	pxAssumeDev( !GetCorePlugins().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
 
-	gsFrame->Show();
+	switch( wxGetApp().Overrides.GsWindowMode )
+	{
+		case GsWinMode_Windowed:
+			g_Conf->GSWindow.IsFullscreen = false;
+		break;
+
+		case GsWinMode_Fullscreen:
+			g_Conf->GSWindow.IsFullscreen = true;
+		break;
+
+		case GsWinMode_Unspecified:
+			g_Conf->GSWindow.IsFullscreen = g_Conf->GSWindow.DefaultToFullscreen;
+		break;
+	}
+
+	gsFrame->ShowFullScreen( g_Conf->GSWindow.IsFullscreen );
 	pDsp = (uptr)gsFrame->GetViewport()->GetHandle();
 
 	// The "in the main window" quickie hack...

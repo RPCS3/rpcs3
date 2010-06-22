@@ -15,10 +15,12 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "AppAccelerators.h"
 #include "ConsoleLogger.h"
 #include "MSWstuff.h"
 
 #include "Utilities/IniInterface.h"
+#include "Utilities/HashMap.h"
 #include "DebugTools/Debug.h"
 #include "Dialogs/ModalPopups.h"
 
@@ -796,6 +798,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 2014 );
+//CrtDebugBreak breakAt( 737 );
 
 #endif

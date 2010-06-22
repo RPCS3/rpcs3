@@ -23,7 +23,6 @@
 
 #include "Plugins.h"
 #include "GS.h"
-#include "HostGui.h"
 #include "AppConfig.h"
 
 using namespace Threading;

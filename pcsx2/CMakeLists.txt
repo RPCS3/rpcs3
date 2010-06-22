@@ -199,7 +199,6 @@ set(pcsx2Headers
 	Gif.h
 	GS.h
 	Hardware.h
-	HostGui.h
 	Hw.h
 	IopBios.h
 	IopCommon.h

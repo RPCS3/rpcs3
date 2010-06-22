@@ -19,7 +19,6 @@
 #include "ConfigurationDialog.h"
 #include "Panels/ConfigurationPanels.h"
 
-#include <wx/image.h>
 #include <wx/wizard.h>
 
 static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;

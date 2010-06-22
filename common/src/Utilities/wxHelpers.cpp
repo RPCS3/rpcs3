@@ -14,7 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "HashMap.h"
 #include "wxGuiTools.h"
 #include "pxStaticText.h"
 #include "Threading.h"

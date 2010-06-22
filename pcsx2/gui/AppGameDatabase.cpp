@@ -144,7 +144,7 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 {
 	if (!wxFileExists(file))
 	{
-		Console.Error(L"GameDatabase: DataBase Not Found! [%s]", file.c_str());
+		Console.Error(L"(GameDB) Database Not Found! [%s]", file.c_str());
 		return *this;
 	}
 
@@ -153,7 +153,7 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 	if (!reader.IsOk())
 	{
 		//throw Exception::FileNotFound( file );
-		Console.Error(L"GameDatabase: Could not access file (permission denied?) [%s]", file.c_str());
+		Console.Error(L"(GameDB) Could not access file (permission denied?) [%s]", file.c_str());
 	}
 
 	DBLoaderHelper loader( reader, *this );
@@ -161,10 +161,6 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 	header = loader.ReadHeader();
 	loader.ReadGames();
 
-	//if (setGame(value)) Console.WriteLn(L"GameDatabase: Found Game! [%s]",     value.c_str());
-	//else				Console.Warning(L"GameDatabase: Game Not Found! [%s]", value.c_str());
-
-	// Clear the current key after loading.
 	curGame = NULL;
 
 	return *this;

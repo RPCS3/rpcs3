@@ -18,12 +18,9 @@
 #include "AppSaveStates.h"
 
 #include "Common.h"
-#include "HostGui.h"
 
 #include "GS.h"
 #include "Elfheader.h"
-
-StartupParams g_Startup;
 
 // --------------------------------------------------------------------------------------
 //  Saveslot Section

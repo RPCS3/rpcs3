@@ -14,8 +14,9 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "MainFrame.h"
+#include "App.h"
 #include "GSFrame.h"
+#include "AppAccelerators.h"
 
 #include "GS.h"
 #include "MSWstuff.h"
@@ -29,24 +30,24 @@ void GSPanel::InitDefaultAccelerators()
 
 	typedef KeyAcceleratorCode AAC;
 
-	m_Accels.Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
-	m_Accels.Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
-	m_Accels.Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
-	m_Accels.Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
+	m_Accels->Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
+	m_Accels->Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
+	m_Accels->Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
+	m_Accels->Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
 
-	m_Accels.Map( AAC( WXK_F4 ),				"Frameskip_Toggle" );
-	m_Accels.Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
-	m_Accels.Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_MasterToggle" );
+	m_Accels->Map( AAC( WXK_F4 ),				"Frameskip_Toggle" );
+	m_Accels->Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
+	m_Accels->Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_MasterToggle" );
 
-	m_Accels.Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
-	m_Accels.Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
-	m_Accels.Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle" );
+	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
+	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
+	m_Accels->Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle" );
 
-	//m_Accels.Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
-	m_Accels.Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
-	m_Accels.Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
+	//m_Accels->Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
+	m_Accels->Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
+	m_Accels->Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
 
-	m_Accels.Map( AAC( WXK_RETURN ).Alt(),		"FullscreenToggle" );
+	m_Accels->Map( AAC( WXK_RETURN ).Alt(),		"FullscreenToggle" );
 }
 
 GSPanel::GSPanel( wxWindow* parent )
@@ -184,7 +185,7 @@ void GSPanel::OnKeyDown( wxKeyEvent& evt )
 	if( (PADopen != NULL) && CoreThread.IsOpen() ) return;
 
 	const GlobalCommandDescriptor* cmd = NULL;
-	m_Accels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	m_Accels->TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
 	if( cmd == NULL )
 	{
 		evt.Skip();		// Let the global APP handle it if it wants
@@ -285,16 +286,21 @@ bool GSFrame::ShowFullScreen(bool show, long style)
 	if( show != IsFullScreen() )
 		Console.WriteLn( Color_StrongMagenta, "(gsFrame) Switching to %s mode...", show ? "Fullscreen" : "Windowed" );
 
-	_parent::ShowFullScreen( show );
-
 	if( g_Conf->GSWindow.IsFullscreen != show )
 	{
 		g_Conf->GSWindow.IsFullscreen = show;
-		AppSaveSettings();
-		return true;
+		wxGetApp().PostIdleMethod( AppSaveSettings );
 	}
+
+	// IMPORTANT!  On MSW platforms you must ALWAYS show the window prior to calling
+	// ShowFullscreen(), otherwise the window will be oddly unstable (lacking input and unable
+	// to properly flip back into fullscreen mode after alt-enter).  I don't know if that
+	// also happens on Linux.
+
+	if( !IsShown() ) Show();
+	bool retval = _parent::ShowFullScreen( show );
 	
-	return false;
+	return retval;
 }
 
 wxStaticText* GSFrame::GetLabel_OutputDisabled() const
@@ -336,23 +342,8 @@ bool GSFrame::Show( bool shown )
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
 			label->Show( EmuConfig.GS.DisableOutput );
 
-		switch( wxGetApp().Overrides.GsWindowMode )
-		{
-			case GsWinMode_Windowed:
-				g_Conf->GSWindow.IsFullscreen = false;
-			break;
-
-			case GsWinMode_Fullscreen:
-				g_Conf->GSWindow.IsFullscreen = true;
-			break;
-
-			case GsWinMode_Unspecified:
-				g_Conf->GSWindow.IsFullscreen = g_Conf->GSWindow.DefaultToFullscreen;
-			break;
-		}
-
-		ShowFullScreen( g_Conf->GSWindow.IsFullscreen );
-		m_timer_UpdateTitle.Start( TitleBarUpdateMs );
+		if( !m_timer_UpdateTitle.IsRunning() )
+			m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 	}
 	else
 	{

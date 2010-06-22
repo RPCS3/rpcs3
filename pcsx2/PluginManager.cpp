@@ -20,7 +20,6 @@
 #include <wx/file.h>
 
 #include "GS.h"
-#include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
 
 #include "Utilities/ScopedPtr.h"

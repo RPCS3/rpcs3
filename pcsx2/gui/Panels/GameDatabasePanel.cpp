@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "AppGameDatabase.h"
 #include "ConfigurationPanels.h"
 
 extern wxString DiscID;

@@ -356,13 +356,23 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	// Set the Game DataBase to the correct game based on Game Serial Code...
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase()) {
 		wxString gameSerial = DiscID;
-		if (DiscID.IsEmpty()) { // Search for crc if no Serial Code
-			gameSerial = wxString(wxsFormat( L"%8.8x", ElfCRC ));
+		if (gameSerial.IsEmpty()) { // Search for crc if no Serial Code
+			gameSerial = wxsFormat( L"%8.8x", ElfCRC );
 		}
-		if (GameDB->setGame(gameSerial)) { // Game Found
-			Console.WriteLn ("Game = %s (%s)", GameDB->getString("Name").c_str(), GameDB->getString("Region").c_str());
+		
+		wxString serialMsg;
+		if(!DiscID.IsEmpty())
+			serialMsg = L"serial=" + DiscID + L"  ";
+
+		//Game_Data CurrentGame;
+		//if (GameDB->getGame(CurrentGame, gameSerial))
+		if (GameDB->setGame(gameSerial))
+		{
+			Console.WriteLn(L"(GameDB) Found Game! %s [CRC=%8.8x]", serialMsg.c_str(), ElfCRC );
+			// [TODO] Display lots of other info from the database here!
 		}
-		else Console.Warning(L"Game not found in database [%s]", gameSerial.c_str());
+		else
+			Console.Warning(L"(GameDB) Game not found! %s [CRC=%8.8x]", serialMsg.c_str(), ElfCRC );
 	}
 }
 

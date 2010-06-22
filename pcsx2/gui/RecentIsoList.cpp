@@ -14,7 +14,8 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "MainFrame.h"
+#include "AppCoreThread.h"
+#include "RecentIsoList.h"
 #include "IsoDropTarget.h"
 #include "Utilities/IniInterface.h"
 

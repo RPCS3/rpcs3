@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <wx/image.h>
 #include <wx/statline.h>
 #include <wx/dnd.h>
 

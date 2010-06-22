@@ -14,8 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "App.h"
-#include "MainFrame.h"
 #include "IsoDropTarget.h"
 
 #include "Dialogs/ModalPopups.h"

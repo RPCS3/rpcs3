@@ -231,7 +231,6 @@
 		<Unit filename="../Gif.cpp" />
 		<Unit filename="../Gif.h" />
 		<Unit filename="../Hardware.h" />
-		<Unit filename="../HostGui.h" />
 		<Unit filename="../Hw.cpp" />
 		<Unit filename="../Hw.h" />
 		<Unit filename="../HwRead.cpp" />

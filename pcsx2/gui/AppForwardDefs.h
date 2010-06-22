@@ -25,12 +25,22 @@
 //   inter-dependence.
 //
 
+class Pcsx2App;
 class MainEmuFrame;
 class GSFrame;
 class ConsoleLogFrame;
 class PipeRedirectionBase;
 class AppCoreThread;
 class Pcsx2AppMethodEvent;
+class pxAppResources;
+class AppGameDatabase;
+class IScopedCoreThread;
+
+struct KeyAcceleratorCode;
+struct GlobalCommandDescriptor;
+class CommandDictionary;
+class AcceleratorDictionary;
+
 class IniInterface;
 
 // wxWidgets forward declarations
@@ -48,3 +58,5 @@ class wxSpinCtrl;
 class wxBookCtrlBase;
 
 class wxListEvent;
+class wxImageList;
+class wxBitmap;

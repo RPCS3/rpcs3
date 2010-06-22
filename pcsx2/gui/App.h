@@ -18,7 +18,6 @@
 #include "Utilities/wxAppWithHelpers.h"
 
 #include <wx/fileconf.h>
-#include <wx/imaglist.h>
 #include <wx/apptrait.h>
 
 #include "pxEventThread.h"
@@ -26,14 +25,9 @@
 #include "AppCommon.h"
 #include "AppCoreThread.h"
 #include "RecentIsoList.h"
-#include "AppGameDatabase.h"
 
 #include "System.h"
 #include "System/SysThreads.h"
-
-#include "Utilities/HashMap.h"
-
-class Pcsx2App;
 
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
 typedef void (Pcsx2App::*FnPtr_Pcsx2App)();
@@ -175,93 +169,6 @@ namespace Exception
 }
 
 // --------------------------------------------------------------------------------------
-//  KeyAcceleratorCode
-//  A custom keyboard accelerator that I like better than wx's wxAcceleratorEntry.
-// --------------------------------------------------------------------------------------
-struct KeyAcceleratorCode
-{
-	union
-	{
-		struct
-		{
-			u16		keycode;
-			u16		win:1,		// win32 only.
-					cmd:1,		// ctrl in win32, Command in Mac
-					alt:1,
-					shift:1;
-		};
-		u32  val32;
-	};
-
-	KeyAcceleratorCode() : val32( 0 ) {}
-	KeyAcceleratorCode( const wxKeyEvent& evt );
-
-	KeyAcceleratorCode( wxKeyCode code )
-	{
-		val32 = 0;
-		keycode = code;
-	}
-
-	KeyAcceleratorCode& Shift()
-	{
-		shift = true;
-		return *this;
-	}
-
-	KeyAcceleratorCode& Alt()
-	{
-		alt = true;
-		return *this;
-	}
-
-	KeyAcceleratorCode& Win()
-	{
-		win = true;
-		return *this;
-	}
-
-	KeyAcceleratorCode& Cmd()
-	{
-		cmd = true;
-		return *this;
-	}
-
-	wxString ToString() const;
-};
-
-
-// --------------------------------------------------------------------------------------
-//  GlobalCommandDescriptor
-//  Describes a global command which can be invoked from the main GUI or GUI plugins.
-// --------------------------------------------------------------------------------------
-
-struct GlobalCommandDescriptor
-{
-	const char* Id;					// Identifier string
-	void		(*Invoke)();		// Do it!!  Do it NOW!!!
-
-	const char*	Fullname;			// Name displayed in pulldown menus
-	const char*	Tooltip;			// text displayed in toolbar tooltips and menu status bars.
-
-	int			ToolbarIconId;		// not implemented yet, leave 0 for now.
-};
-
-typedef HashTools::Dictionary<const GlobalCommandDescriptor*>	CommandDictionary;
-
-class AcceleratorDictionary : public HashTools::HashMap<int, const GlobalCommandDescriptor*>
-{
-	typedef HashTools::HashMap<int, const GlobalCommandDescriptor*> _parent;
-
-protected:
-
-public:
-	using _parent::operator[];
-
-	AcceleratorDictionary();
-	void Map( const KeyAcceleratorCode& acode, const char *searchfor );
-};
-
-// --------------------------------------------------------------------------------------
 //  AppImageIds  - Config and Toolbar Images and Icons
 // --------------------------------------------------------------------------------------
 struct AppImageIds
@@ -310,8 +217,9 @@ struct AppImageIds
 // Container class for resources that should (or must) be unloaded prior to the ~wxApp() destructor.
 // (typically this object is deleted at OnExit() or just prior to OnExit()).
 //
-struct pxAppResources
+class pxAppResources
 {
+public:
 	AppImageIds					ImageId;
 
 	ScopedPtr<wxImageList>		ConfigImages;
@@ -321,19 +229,7 @@ struct pxAppResources
 	ScopedPtr<AppGameDatabase>	GameDB;
 
 	pxAppResources();
-	virtual ~pxAppResources() throw() { }
-};
-
-// --------------------------------------------------------------------------------------
-//  RecentIsoList
-// --------------------------------------------------------------------------------------
-struct RecentIsoList
-{
-	ScopedPtr<RecentIsoManager>		Manager;
-	ScopedPtr<wxMenu>				Menu;
-
-	RecentIsoList();
-	virtual ~RecentIsoList() throw() { }
+	virtual ~pxAppResources() throw();
 };
 
 // --------------------------------------------------------------------------------------
@@ -550,8 +446,8 @@ protected:
 	
 public:
 	FramerateManager				FpsManager;
-	CommandDictionary				GlobalCommands;
-	AcceleratorDictionary			GlobalAccels;
+	ScopedPtr<CommandDictionary>	GlobalCommands;
+	ScopedPtr<AcceleratorDictionary> GlobalAccels;
 
 	StartupOptions					Startup;
 	CommandlineOverrides			Overrides;
@@ -640,11 +536,7 @@ public:
 	wxImageList&		GetImgList_Config();
 	wxImageList&		GetImgList_Toolbars();
 
-	const AppImageIds& GetImgId() const
-	{
-		return m_Resources->ImageId;
-	}
-	
+	const AppImageIds& GetImgId() const;
 	AppGameDatabase* GetGameDatabase();
 
 	// --------------------------------------------------------------------------
