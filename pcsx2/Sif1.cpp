@@ -176,7 +176,7 @@ static __forceinline void EndEE()
 	}
 
 
-	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384));
+	CPU_INT(DMAC_SIF1, /*min((int)(*/sif1.ee.cycles*BIAS/*), 384)*/);
 }
 
 // Stop processing IOP, and signal an interrupt.
@@ -197,7 +197,7 @@ static __forceinline void EndIOP()
 		sif1.iop.cycles = 1;
 	}
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-	PSX_INT(IopEvt_SIF1, min((sif1.iop.cycles * 26), 1024));
+	PSX_INT(IopEvt_SIF1, /*min((*/sif1.iop.cycles/* * 26*//*), 1024)*/);
 }
 
 // Handle the EE transfer.
@@ -292,17 +292,23 @@ __forceinline void SIF1Dma()
 
 		if (sif1.ee.busy)
 		{
-			if(sif1.fifo.free() > 0) BusyCheck++;
-			HandleEETransfer();
+			if(sif1.fifo.free() > 0 || (sif1.ee.end == true && sif1dma->qwc == 0)) 
+			{
+				BusyCheck++;
+				HandleEETransfer();
+			}
 		}
 
 		if (sif1.iop.busy)
 		{
-			if(sif1.fifo.size >= 4) BusyCheck++;
-			HandleIOPTransfer();
+			if(sif1.fifo.size >= 4 || (sif1.iop.end == true && sif1.iop.counter == 0)) 
+			{
+				BusyCheck++;
+				HandleIOPTransfer();
+			}
 		}
 
-	} while (!done && BusyCheck > 0);
+	} while (/*!done &&*/ BusyCheck > 0);
 
 	Sif1End();
 }
@@ -330,18 +336,18 @@ __forceinline void dmaSIF1()
 		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
 
-	if(sif1dma->chcr.MOD == CHAIN_MODE && sif1dma->qwc > 0) DevCon.Warning(L"SIF1 QWC on Chain CHCR " + sif1dma->chcr.desc());
+	//if(sif1dma->chcr.MOD == CHAIN_MODE && sif1dma->qwc > 0) DevCon.Warning(L"SIF1 QWC on Chain CHCR " + sif1dma->chcr.desc());
 
 	psHu32(SBUS_F240) |= 0x4000;
 	sif1.ee.busy = true;
 
-	if (sif1.iop.busy)
-	{
+	/*if (sif1.iop.busy)
+	{*/
         XMMRegisters::Freeze();
 		SIF1Dma();
 		psHu32(SBUS_F240) &= ~0x40;
 		psHu32(SBUS_F240) &= ~0x100;
 		psHu32(SBUS_F240) &= ~0x4000;
         XMMRegisters::Thaw();
-	}
+	//}
 }

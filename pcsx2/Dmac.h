@@ -628,6 +628,13 @@ static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
+	
+	//For some reason Getaway references SPR Memory from itself using SPR0, oh well, let it i guess...
+	if((addr & 0x70000000) == 0x70000000)
+	{
+		return (tDMA_TAG*)&psS[addr & 0x3ff0];
+	}
+
 	// FIXME: Why??? DMA uses physical addresses
 	addr &= 0x1ffffff0;
 

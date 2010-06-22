@@ -294,8 +294,9 @@ static __forceinline void _cpuTestInterrupts()
 	/* These are 'pcsx2 interrupts', they handle asynchronous stuff
 	   that depends on the cycle timings */
 
-	TESTINT(1, vif1Interrupt);
-	TESTINT(2, gsInterrupt);
+	TESTINT(28, gsPath1Interrupt);
+	TESTINT(1, vif1Interrupt);	
+	TESTINT(2, gsInterrupt);	
 	TESTINT(5, EEsif0Interrupt);
 	TESTINT(6, EEsif1Interrupt);
 
@@ -351,10 +352,12 @@ static __forceinline void _cpuTestPERF()
 // them out.  Exceptions while the exception handler is active (EIE), or exceptions of any
 // level other than 0 are ignored here.
 
-static bool cpuIntsEnabled()
+static bool cpuIntsEnabled(int Interrupt)
 {
+	int IntType = cpuRegs.CP0.n.Status.val & Interrupt; //Choose either INTC or DMAC, depending on what called it
+
 	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
-		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0);
+		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0) && Interrupt;
 }
 
 // if cpuRegs.cycle is greater than this cycle, should check cpuBranchTest for updates
@@ -480,18 +483,15 @@ __forceinline void _cpuBranchTest_Shared()
 	// exceptions.
 
 	//if ((cpuRegs.CP0.n.Status.val & 0x10007) == 0x10001)
-	if( cpuIntsEnabled() )
-	{
-		TESTINT(30, intcInterrupt);
-		TESTINT(31, dmacInterrupt);
-	}
+	if( cpuIntsEnabled(0x400) ) TESTINT(30, intcInterrupt);
+	if( cpuIntsEnabled(0x800) ) TESTINT(31, dmacInterrupt);
 }
 
 __releaseinline void cpuTestINTCInts()
 {
 	if( cpuRegs.interrupt & (1 << 30) ) return;
 	//if( (cpuRegs.CP0.n.Status.val & 0x10407) != 0x10401 ) return;
-	if( !cpuIntsEnabled() ) return;
+	if( !cpuIntsEnabled(0x400) ) return;
 	if( (psHu32(INTC_STAT) & psHu32(INTC_MASK)) == 0 ) return;
 
 	cpuRegs.interrupt|= 1 << 30;
@@ -512,7 +512,8 @@ __releaseinline void cpuTestINTCInts()
 __forceinline void cpuTestDMACInts()
 {
 	if ( cpuRegs.interrupt & (1 << 31) ) return;
-	if ((cpuRegs.CP0.n.Status.val & 0x10807) != 0x10801) return;
+
+	if( !cpuIntsEnabled(0x800) ) return;
 
 	if ( ( (psHu16(0xe012) & psHu16(0xe010)) == 0) &&
 		 ( (psHu16(0xe010) & 0x8000) == 0) ) return;

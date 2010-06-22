@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "Gif.h"
 //------------------------------------------------------------------
 // Micro VU Micromode Lower instructions
 //------------------------------------------------------------------
@@ -1106,22 +1107,53 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
 	u32 diff  = 0x400 - addr;
-	u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
-	u8* pDest = GetMTGS().GetDataPacketPtr();
+	u32 size;
+	u8* pDest;
 	
-	if (size > diff) {
-		// fixme: one of these days the following *16's will get cleaned up when we introduce
-		// a special qwc/simd16 optimized version of memcpy_aligned. :)
-		//DevCon.Status("XGkick Wrap!");
-		memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
-		size  -= diff;
-		pDest += diff*16;
-		memcpy_aligned(pDest, microVU1.regs->Mem, size*16);
+	if(gifRegs->stat.APATH == GIF_APATH_IDLE)
+	{
+		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, false);
+		pDest = GetMTGS().GetDataPacketPtr();
+		if (size > diff) {
+			// fixme: one of these days the following *16's will get cleaned up when we introduce
+			// a special qwc/simd16 optimized version of memcpy_aligned. :)
+			//DevCon.Status("XGkick Wrap!");
+			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
+			size  -= diff;
+			pDest += diff*16;
+			memcpy_aligned(pDest, microVU1.regs->Mem, size*16);
+		}
+		else {
+			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
+		}
+		GetMTGS().SendDataPacket();
 	}
-	else {
-		memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
+	else
+	{
+		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
+		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, true);
+		pDest = &Path1Buffer[Path1WritePos*16];
+
+		
+		
+		//DevCon.Warning("Storing size %x PATH 1", size);
+		if (size > diff) {
+			// fixme: one of these days the following *16's will get cleaned up when we introduce
+			// a special qwc/simd16 optimized version of memcpy_aligned. :)
+			//DevCon.Status("XGkick Wrap!");
+			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
+			Path1WritePos += size;
+			size  -= diff;
+			pDest += diff*16;
+			memcpy_aligned(pDest, microVU1.regs->Mem, size*16);			
+		}
+		else {
+			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
+			Path1WritePos += size;
+		}
+		if(!gifRegs->stat.P1Q) CPU_INT(28, 16);
+		gifRegs->stat.P1Q = true;
 	}
-	GetMTGS().SendDataPacket();
 }
 
 _f void mVU_XGKICK_DELAY(mV, bool memVI) {

@@ -100,7 +100,7 @@ struct GIFPath
 	bool StepReg();
 	u8 GetReg();
 
-	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly);
 };
 
 typedef void (__fastcall *GIFRegHandler)(const u32* data);
@@ -280,9 +280,13 @@ static __forceinline void gsHandler(const u8* pMem)
 	const int reg = pMem[8];
 
 	if (reg == 0x50)
+	{
 		vif1.BITBLTBUF._u64 = *(u64*)pMem;
+	}
 	else if (reg == 0x52)
+	{
 		vif1.TRXREG._u64 = *(u64*)pMem;
+	}
 	else if (reg == 0x53)
 	{
 		// local -> host
@@ -316,7 +320,6 @@ static __forceinline void gsHandler(const u8* pMem)
 			// qwords, rounded down; any extra bits are lost
 			// games must take care to ensure transfer rectangles are exact multiples of a qword
 			vif1.GSLastDownloadSize = vif1.TRXREG.RRW * vif1.TRXREG.RRH * bpp >> 7;
-			VIF_LOG("GS Download size %x", vif1.GSLastDownloadSize);
 			gifRegs->stat.OPH = true;
 		}
 	}
@@ -341,10 +344,9 @@ static __forceinline void gsHandler(const u8* pMem)
 // Parameters:
 //   size (path1)   - difference between the end of VU memory and pMem.
 //   size (path2/3) - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly)
 {
 	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
-	if (pathidx==GIF_PATH_1) size = 0x400;		// VU1 mem size
 	u32	startSize =  size;						// Start Size
 
 	while (size > 0) {
@@ -352,27 +354,36 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 			SetTag(pMem);
 			incTag(16, 1);
-
-			//if (pathidx == GIF_PATH_3) {
-			switch(pathidx)
+			
+			
+			if(nloop > 0)
 			{
-				case GIF_PATH_1:
-					if (tag.FLG&2)	GSTransferStatus.PTH1 = IMAGE_MODE;
-					else			GSTransferStatus.PTH1 = TRANSFER_MODE;
-					break;
-				case GIF_PATH_2:
-					if (tag.FLG&2)	GSTransferStatus.PTH2 = IMAGE_MODE;
-					else			GSTransferStatus.PTH2 = TRANSFER_MODE;
-					break;
-				case GIF_PATH_3:
-					if (tag.FLG&2)	GSTransferStatus.PTH3 = IMAGE_MODE;
-					else			GSTransferStatus.PTH3 = TRANSFER_MODE;
-					break;
+					switch(pathidx)
+					{
+						case GIF_PATH_1:
+							if(tag.FLG & 2)GSTransferStatus.PTH1 = IMAGE_MODE;
+							else GSTransferStatus.PTH1 = TRANSFER_MODE;
+							break;
+						case GIF_PATH_2:
+							if(tag.FLG & 2)GSTransferStatus.PTH2 = IMAGE_MODE;
+							else GSTransferStatus.PTH2 = TRANSFER_MODE;
+							break;
+						case GIF_PATH_3:
+							if(tag.FLG & 2)	GSTransferStatus.PTH3 = IMAGE_MODE;
+							else GSTransferStatus.PTH3 = TRANSFER_MODE;
+				
+							break;
+					}
+					if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
+					gifRegs->stat.APATH = pathidx + 1;				
 			}
-			//}
+			if(pathidx == GIF_PATH_3) break;
 		}
 		else
 		{
+				
+			gifRegs->stat.APATH = pathidx + 1;
+			if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 					GIF_LOG("Packed Mode");
@@ -409,7 +420,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 		}
 		if(pathidx == GIF_PATH_1)
 		{
-			if(nloop > 0 && size == 0 && !tag.EOP) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
+			if(size == 0 && (!tag.EOP || nloop > 0)) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
 			{
 				switch(tag.FLG)
 				{
@@ -433,39 +444,45 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				}
 			}
 		}
-		if (tag.EOP && !nloop) {
-			if (pathidx != GIF_PATH_2) {
-				break;
-			}
-		}
+
+		if (tag.EOP && !nloop) break;
 	}
-	/*if(((GSTransferStatus.PTH1 & 0x2) + (GSTransferStatus.PTH2 & 0x2) + ((GSTransferStatus.PTH3 & 0x2) && !vif1Regs->mskpath3)) < 0x4 )
-		Console.Warning("CHK PTH1 %x, PTH2 %x, PTH3 %x", GSTransferStatus.PTH1, GSTransferStatus.PTH2, GSTransferStatus.PTH3);*/
 
 	size = (startSize - size);
 
 
-		if (tag.EOP && !nloop) {
-			//Console.Warning("Finishing path %x", pathidx);
+	if (tag.EOP && nloop <= 16) {
+		if(pathidx == 2 && nloop > 0)
+		{
+			if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
+		}
+		else if(nloop == 0)
+		{
+			if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+			gifRegs->stat.APATH = GIF_APATH_IDLE;
 			switch(pathidx)
 			{
 				case GIF_PATH_1:
 					GSTransferStatus.PTH1 = STOPPED_MODE;
 					break;
 				case GIF_PATH_2:
-					GSTransferStatus.PTH2 = STOPPED_MODE;
+					GSTransferStatus.PTH2 = PENDINGSTOP_MODE;
 					break;
 				case GIF_PATH_3:
-					GSTransferStatus.PTH3 = STOPPED_MODE;
+					if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
 					break;
 			}
 		}
+	}
+	else if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE && pathidx == 2)
+	{
+		GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
+	}
+	
 	if (pathidx == GIF_PATH_3 && gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
 		//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
 		gif->madr += size * 16;
 		gif->qwc  -= size;
-	} else if (pathidx == GIF_PATH_2 && !nloop) { //Path2 is odd, but always provides the correct size
-		GSTransferStatus.PTH2 = STOPPED_MODE;
 	}
 
 	return size;
@@ -476,7 +493,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 // runs potentially several frames behind.
 // Parameters:
 //   size  - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly)
 {
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	static uptr profStartPtr = 0;
@@ -492,7 +509,7 @@ __forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 	}
 #endif
 
-	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size);
+	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size, TestOnly);
 
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	__asm
@@ -515,6 +532,8 @@ void GIFPath_Reset()
 __forceinline void GIFPath_Clear( GIF_PATH pathidx )
 {
 	memzero(s_gifPath.path[pathidx]);
+	GSTransferStatus._u32 &= ~(0xf << (pathidx * 4));
+	GSTransferStatus._u32 |= (0x5 << (pathidx * 4));
 	if( GSgifSoftReset == NULL ) return;
 	GetMTGS().SendSimplePacket( GS_RINGTYPE_SOFTRESET, (1<<pathidx), 0, 0 );
 }

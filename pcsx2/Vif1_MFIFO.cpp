@@ -22,11 +22,19 @@
 VIFregisters *vifRegs;
 vifStruct	 *vif;
 u16 vifqwc = 0;
-int g_vifCycles = 0;
+u32 g_vifCycles = 0;
+u32 g_vu0Cycles = 0;
+u32 g_vu1Cycles = 0;
+u32 g_packetsizeonvu = 0;
 
 __aligned16 VifMaskTypes g_vifmask;
 
-extern int g_vifCycles;
+extern u32 g_vifCycles;
+
+static u32 qwctag(u32 mask)
+{
+	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
+}
 
 static __forceinline bool mfifoVIF1rbTransfer()
 {
@@ -48,10 +56,12 @@ static __forceinline bool mfifoVIF1rbTransfer()
 		if (src == NULL) return false;
 
 		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, false);
+			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset);
 		else
-			ret = VIF1transfer(src, s1, false);
+			ret = VIF1transfer(src, s1);
 
+		vif1ch->madr = qwctag(vif1ch->madr);
+		
 		if (ret)
 		{
             /* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
@@ -59,8 +69,10 @@ static __forceinline bool mfifoVIF1rbTransfer()
 
             src = (u32*)PSM(maddr);
             if (src == NULL) return false;
-            VIF1transfer(src, ((mfifoqwc << 2) - s1), false);
+            VIF1transfer(src, ((mfifoqwc << 2) - s1));
 		}
+		vif1ch->madr = qwctag(vif1ch->madr);
+		
 	}
 	else
 	{
@@ -71,9 +83,12 @@ static __forceinline bool mfifoVIF1rbTransfer()
 		if (src == NULL) return false;
 
 		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, false);
+			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset);
 		else
-			ret = VIF1transfer(src, mfifoqwc << 2, false);
+			ret = VIF1transfer(src, mfifoqwc << 2);
+
+		vif1ch->madr = qwctag(vif1ch->madr);
+		
 	}
 	return ret;
 }
@@ -83,7 +98,7 @@ static __forceinline bool mfifo_VIF1chain()
     bool ret;
 
 	/* Is QWC = 0? if so there is nothing to transfer */
-	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
+	if ((vif1ch->qwc == 0))
 	{
 		vif1.inprogress &= ~1;
 		return true;
@@ -95,6 +110,7 @@ static __forceinline bool mfifo_VIF1chain()
 		u16 startqwc = vif1ch->qwc;
 		ret = mfifoVIF1rbTransfer();
 		vifqwc -= startqwc - vif1ch->qwc;
+		
 	}
 	else
 	{
@@ -104,17 +120,14 @@ static __forceinline bool mfifo_VIF1chain()
 		if (pMem == NULL) return false;
 
 		if (vif1.vifstalled)
-			ret = VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
+			ret = VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset);
 		else
-			ret = VIF1transfer((u32*)pMem, vif1ch->qwc << 2, false);
+			ret = VIF1transfer((u32*)pMem, vif1ch->qwc << 2);
 	}
 	return ret;
 }
 
-static u32 qwctag(u32 mask)
-{
-	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
-}
+
 
 void mfifoVIF1transfer(int qwc)
 {
@@ -148,18 +161,19 @@ void mfifoVIF1transfer(int qwc)
 		{
             bool ret;
 
-			if (vif1.stallontag)
-				ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on Stall
+			if (vif1.vifstalled)
+				ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on Stall
 			else
-				ret = VIF1transfer((u32*)ptag + 2, 2, true);  //Transfer Tag
+				ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 
-			if (!(ret))
+			if ((ret == false) && vif1.irqoffset < 2)
 			{
-				VIF_LOG("MFIFO Stall on tag");
-				vif1.stallontag	= true;
 				return;        //IRQ set by VIFTransfer
-			}
+				
+			} //else vif1.vifstalled = false;
 		}
+
+		vif1.irqoffset = 0;
 
         vif1ch->unsafeTransfer(ptag);
 
@@ -224,29 +238,25 @@ void vifMFIFOInterrupt()
 
 	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
-	if(gifRegs->stat.APATH == GIF_APATH2 && (vif1.cmd & 0x70) != 0x50)
+	if(vif1ch->chcr.DIR && CheckPath2GIF(10) == false) return;
+	//We need to check the direction, if it is downloading from the GS, we handle that seperately (KH2 for testing)
+
+	//Simulated GS transfer time done, clear the flags
+	
+	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
 	{
-		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		GSTransferStatus.PTH2 = STOPPED_MODE;
+		/*gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;*/
 	}
 
-	if ((vif1Regs->stat.VGW))
+	if (vif1.cmd) 
 	{
-		if (GSTransferStatus.PTH3 < STOPPED_MODE || GSTransferStatus.PTH1 != STOPPED_MODE)
-		{
-			CPU_INT(10, 4);
-			return;
-		}
-		else
-		{
-			vif1Regs->stat.VGW = false;
-		}
-
+		if(vif1.done == true && vif1ch->qwc == 0)	vif1Regs->stat.VPS = VPS_WAITING;
 	}
-
-	if ((spr0->chcr.STR) && (spr0->qwc == 0))
+	else		 
 	{
-		spr0->chcr.STR = false;
-		hwDmacIrq(DMAC_FROM_SPR);
+		vif1Regs->stat.VPS = VPS_IDLE;
 	}
 
 	if (vif1.irq && vif1.tag.size == 0)
@@ -257,9 +267,9 @@ void vifMFIFOInterrupt()
 
 		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat.FQC = 0; // FQC=0
-			vif1ch->chcr.STR = false;
-			return;
+			/*vif1Regs->stat.FQC = 0; // FQC=0
+			vif1ch->chcr.STR = false;*/
+			if(vif1ch->qwc > 0 || !vif1.done) return;
 		}
 	}
 
@@ -302,6 +312,7 @@ void vifMFIFOInterrupt()
 		hwDmacIrq(DMAC_MFIFO_EMPTY);
 	}*/
 
+	vif1.vifstalled = false;
 	vif1.done = 1;
 	g_vifCycles = 0;
 	vif1ch->chcr.STR = false;

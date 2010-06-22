@@ -129,7 +129,18 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 	psHu64(VIF0_FIFO + 8) = value[1];
 
 	vif0ch->qwc += 1;
-	bool ret = VIF0transfer((u32*)value, 4, true);
+	if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 FIFO start!");
+	bool ret = VIF0transfer((u32*)value, 4);
+
+	if (vif0.cmd) 
+	{
+		if(vif0.done == true && vif0ch->qwc == 0)	vif0Regs->stat.VPS = VPS_WAITING;
+	}
+	else		 
+	{
+		vif0Regs->stat.VPS = VPS_IDLE;
+	}
+
 	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
@@ -148,12 +159,23 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 		DevCon.Warning("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;
-	bool ret = VIF1transfer((u32*)value, 4, false);
+	if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 FIFO start!");
+	bool ret = VIF1transfer((u32*)value, 4);
+
+	if (vif1.cmd) 
+	{
+		if(vif1.done == true && vif1ch->qwc == 0)	vif1Regs->stat.VPS = VPS_WAITING;
+	}
+	else		 
+	{
+		vif1Regs->stat.VPS = VPS_IDLE;
+	}
+
 	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
 // Dummy GIF-TAG Packet to Guarantee Count = 1
-__aligned16 u32 nloop0_packet[4] = {0x8000, 0, 0, 0};
+__aligned16 u32 nloop0_packet[4] = {0, 0, 0, 0};
 
 void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 {
@@ -163,12 +185,23 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	psHu64(GIF_FIFO) = value[0];
 	psHu64(GIF_FIFO + 8) = value[1];
 
+	nloop0_packet[0] = psHu32(GIF_FIFO);
+	nloop0_packet[1] = psHu32(GIF_FIFO + 4);
+	nloop0_packet[2] = psHu32(GIF_FIFO + 8);
+	nloop0_packet[3] = psHu32(GIF_FIFO + 12);
 	Registers::Freeze();
-	GetMTGS().PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
+	gifRegs->stat.APATH = GIF_APATH3;
+	GetMTGS().PrepDataPacket(GIF_PATH_3, nloop0_packet, 1, false);
 	u64* data = (u64*)GetMTGS().GetDataPacketPtr();
 	data[0] = value[0];
 	data[1] = value[1];
 	GetMTGS().SendDataPacket();
+	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE) 
+	{
+		GSTransferStatus.PTH3 = STOPPED_MODE;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+	}
 	Registers::Thaw();
 }
 

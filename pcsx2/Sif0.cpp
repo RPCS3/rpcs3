@@ -73,7 +73,7 @@ static __forceinline bool WriteIOPtoFifo()
 	hw_dma(9).madr += writeSize << 2;
 
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords).
-	sif0.iop.cycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
+	sif0.iop.cycles += (writeSize >> 2)/* * BIAS*/;		// fixme : should be >> 4
 	sif0.iop.counter -= writeSize;
 
 	return true;
@@ -298,15 +298,21 @@ __forceinline void SIF0Dma()
 
 		if (sif0.iop.busy)
 		{
-			if(sif0.fifo.free() > 0) BusyCheck++;
-			HandleIOPTransfer();
+			if(sif0.fifo.free() > 0 || (sif0.iop.end == true && sif0.iop.counter == 0)) 
+			{
+				BusyCheck++;
+				HandleIOPTransfer();
+			}
 		}
 		if (sif0.ee.busy)
 		{
-			if(sif0.fifo.size >= 4) BusyCheck++;
-			HandleEETransfer();
+			if(sif0.fifo.size >= 4 || (sif0.ee.end == true && sif0dma->qwc == 0)) 
+			{
+				BusyCheck++;
+				HandleEETransfer();
+			}
 		}
-	} while (!done && BusyCheck > 0); // Substituting (sif0.ee.busy || sif0.iop.busy) breaks things.
+	} while (/*!done && */BusyCheck > 0); // Substituting (sif0.ee.busy || sif0.iop.busy) breaks things.
 
 	Sif0End();
 }
@@ -332,17 +338,17 @@ __forceinline void dmaSIF0()
 		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
 	}
 
-	if(sif0dma->chcr.MOD == CHAIN_MODE && sif0dma->qwc > 0) DevCon.Warning(L"SIF0 QWC on Chain CHCR " + sif0dma->chcr.desc());
+	//if(sif0dma->chcr.MOD == CHAIN_MODE && sif0dma->qwc > 0) DevCon.Warning(L"SIF0 QWC on Chain CHCR " + sif0dma->chcr.desc());
 	psHu32(SBUS_F240) |= 0x2000;
 	sif0.ee.busy = true;
 
-	if (sif0.iop.busy)
-	{
+	/*if (sif0.iop.busy)
+	{*/
         XMMRegisters::Freeze();
 		hwIntcIrq(INTC_SBUS);
 		SIF0Dma();
 		psHu32(SBUS_F240) &= ~0x20;
 		psHu32(SBUS_F240) &= ~0x2000;
         XMMRegisters::Thaw();
-	}
+	//}
 }

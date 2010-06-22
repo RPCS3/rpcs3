@@ -75,13 +75,15 @@ void hwReset()
 
 __forceinline void intcInterrupt()
 {
-	if ((cpuRegs.CP0.n.Status.val & 0x400) != 0x400) return;
-
 	if ((psHu32(INTC_STAT)) == 0) {
-		DevCon.Warning("*PCSX2*: intcInterrupt already cleared");
+		//DevCon.Warning("*PCSX2*: intcInterrupt already cleared");
         return;
 	}
-	if ((psHu32(INTC_STAT) & psHu32(INTC_MASK)) == 0) return;
+	if ((psHu32(INTC_STAT) & psHu32(INTC_MASK)) == 0) 
+	{
+		//DevCon.Warning("*PCSX2*: No valid interrupt INTC_MASK: %x INTC_STAT: %x", psHu32(INTC_MASK), psHu32(INTC_STAT));
+		return;
+	}
 
 	HW_LOG("intcInterrupt %x", psHu32(INTC_STAT) & psHu32(INTC_MASK));
 	if(psHu32(INTC_STAT) & 0x2){
@@ -94,13 +96,18 @@ __forceinline void intcInterrupt()
 
 __forceinline void dmacInterrupt()
 {
-    if ((cpuRegs.CP0.n.Status.val & 0x10807) != 0x10801) return;
-
 	if( ((psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT)) == 0 ) &&
-		( psHu16(DMAC_STAT) & 0x8000) == 0 ) return;
+		( psHu16(DMAC_STAT) & 0x8000) == 0 ) 
+	{
+		//DevCon.Warning("No valid DMAC interrupt MASK %x STAT %x", psHu16(DMAC_STAT+2), psHu16(DMAC_STAT));
+		return;
+	}
 
-	if (!(dmacRegs->ctrl.DMAE)) return;
-
+	if (!(dmacRegs->ctrl.DMAE) || psHu8(DMAC_ENABLER+2) == 1) 
+	{
+		//DevCon.Warning("DMAC Suspended or Disabled on interrupt");
+		return;
+	}
 	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) |
 								  psHu16(DMAC_STAT) & 0x8000));
 
@@ -110,13 +117,13 @@ __forceinline void dmacInterrupt()
 void hwIntcIrq(int n)
 {
 	psHu32(INTC_STAT) |= 1<<n;
-	cpuTestINTCInts();
+	if(psHu32(INTC_MASK) & (1<<n))cpuTestINTCInts();
 }
 
 void hwDmacIrq(int n)
 {
 	psHu32(DMAC_STAT) |= 1<<n;
-	cpuTestDMACInts();
+	if(psHu16(DMAC_STAT+2) & (1<<n))cpuTestDMACInts();
 }
 
 // Write 'size' bytes to memory address 'addr' from 'data'.

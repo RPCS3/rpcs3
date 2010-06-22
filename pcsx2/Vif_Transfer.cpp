@@ -69,6 +69,7 @@ _vifT void vifTransferLoop(u32* &data) {
 	while (pSize > 0 && !vifX.vifstalled) {
 
 		if(!vifX.cmd) { // Get new VifCode
+			vifX.lastcmd = (vifXRegs->code >> 24) & 0x7f;
 			vifXRegs->code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
@@ -84,8 +85,7 @@ _vifT void vifTransferLoop(u32* &data) {
 		pSize  -= ret;
 		if (analyzeIbit<idx>(data, iBit)) break;
 	}
-	if (vifX.cmd) vifXRegs->stat.VPS = VPS_WAITING;
-	else		  vifXRegs->stat.VPS = VPS_IDLE;
+	
 	if (pSize)	  vifX.vifstalled	 = true;
 }
 
@@ -97,14 +97,30 @@ _vifT _f bool vifTransfer(u32 *data, int size) {
 	vifX.vifstalled = false;
 	vifX.stallontag = false;
 	vifX.vifpacketsize = size;
-
+	g_packetsizeonvu = size;
 	vifTransferLoop<idx>(data);
 
+	
 	transferred   += size - vifX.vifpacketsize;
-	g_vifCycles   +=(transferred >> 2) * BIAS; /* guessing */
+
+	g_vifCycles   +=((transferred * BIAS) >> 2) ; /* guessing */
+
+	if(!idx && g_vu0Cycles > 0)
+	{
+		if(g_vifCycles < g_vu0Cycles) g_vu0Cycles -= g_vifCycles;
+		else if(g_vifCycles >= g_vu0Cycles)g_vu0Cycles = 0;
+	}
+	else if(idx && g_vu1Cycles > 0)
+	{
+		if(g_vifCycles < g_vu1Cycles) g_vu1Cycles -= g_vifCycles;
+		else if(g_vifCycles >= g_vu1Cycles)g_vu1Cycles = 0;
+	}
+
+	
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
 	transferred   = transferred >> 2;
+
 	vifXch->madr +=(transferred << 4);
 	vifXch->qwc  -= transferred;
 
@@ -125,9 +141,9 @@ _vifT _f bool vifTransfer(u32 *data, int size) {
 	return !vifX.vifstalled;
 }
 
-bool VIF0transfer(u32 *data, int size, bool istag) {
+bool VIF0transfer(u32 *data, int size) {
 	return vifTransfer<0>(data, size);
 }
-bool VIF1transfer(u32 *data, int size, bool istag) {
+bool VIF1transfer(u32 *data, int size) {
 	return vifTransfer<1>(data, size);
 }

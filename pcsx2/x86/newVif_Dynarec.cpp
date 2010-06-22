@@ -173,7 +173,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 			if (++vCL == blockSize) vCL = 0;
 		}
 		else if (isFill) {
-			DevCon.WriteLn("filling mode!");
+			//DevCon.WriteLn("filling mode!");
 			VifUnpackSSE_Dynarec fill( VifUnpackSSE_Dynarec::FillingWrite( *this ) );
 			fill.xUnpack(upkNum);
 			fill.xMovDest();

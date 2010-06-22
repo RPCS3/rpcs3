@@ -306,7 +306,8 @@ _vifT void vifUnpackSetup(u32 *data) {
         return; // Skipping write and 0 write-cycles, so do nothing!
 	}
 
-	if (!idx) vif0FLUSH(); // Only VU0?
+	
+	//if (!idx) vif0FLUSH(); // Only VU0?
 
 	vifX.usn   = (vifXRegs->code >> 14) & 0x01;
 	int vifNum = (vifXRegs->code >> 16) & 0xff;
@@ -329,6 +330,8 @@ _vifT void vifUnpackSetup(u32 *data) {
 	u32 addr = vifXRegs->code;
 	if (idx && ((addr>>15)&1)) addr += vif1Regs->tops;
 	vifX.tag.addr = (addr<<4) & (idx ? 0x3ff0 : 0xff0);
+
+	VIF_LOG("Unpack VIF%x, QWC %x tagsize %x", idx, vifNum, vif0.tag.size);
 
 	vifX.cl			 = 0;
 	vifX.tag.cmd	 = vifX.cmd;

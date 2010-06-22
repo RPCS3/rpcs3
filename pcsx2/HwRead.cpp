@@ -381,7 +381,9 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 		// It'll all optimize to ziltch in public release builds.
 #ifdef PCSX2_DEVBUILD
 		case 0x03:
-			if((mem & 0xfff) < 0x800) break;
+			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read32 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
+			else HW_LOG("GIF Register Read32 at 0x%x, value=0x%x", mem, psHu32(mem) );
+			break;
 		case 0x04:
 		case 0x05:
 		case 0x06:

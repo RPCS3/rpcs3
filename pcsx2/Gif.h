@@ -26,17 +26,20 @@ enum gifstate_t
 
 enum GSTransferModes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
 {
-	IMAGE_MODE = 0,
-	TRANSFER_MODE = 1,
-	STOPPED_MODE = 2
+	PENDINGIMAGE_MODE = 0,
+	IMAGE_MODE = 1,
+	TRANSFER_MODE = 2,
+	PENDINGSTOP_MODE = 3,
+	IDLE_MODE = 4,
+	STOPPED_MODE = 5
 };
 
 union tGSTransferStatus {
 	struct {
-		u32 PTH1 : 2; // Resets Vif(0/1) when written.
-		u32 PTH2 : 2; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
-		u32 PTH3 : 2; // Stops after the end of the Vifcode in progress when true. (Stall)
-		u32 reserved : 26;
+		u32 PTH1 : 4; // Resets Vif(0/1) when written.
+		u32 PTH2 : 4; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
+		u32 PTH3 : 4; // Stops after the end of the Vifcode in progress when true. (Stall)
+		u32 reserved : 20;
 	};
 	u32 _u32;
 
@@ -285,4 +288,9 @@ extern void dmaGIF();
 extern void mfifoGIFtransfer(int qwc);
 extern void gifMFIFOInterrupt();
 
+//Just some temporary bits to store Path1 transfers if another is in progress.
+extern void gsPath1Interrupt();
+extern u8 Path1Buffer[0x1000000];
+extern u32 Path1WritePos;
+extern u32 Path1ReadPos;
 #endif

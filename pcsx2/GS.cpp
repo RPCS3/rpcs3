@@ -59,7 +59,7 @@ void gsReset()
 	GetMTGS().ResetGS();
 
 	UpdateVSyncRate();
-	GSTransferStatus = (STOPPED_MODE<<4) | (STOPPED_MODE<<2) | STOPPED_MODE;
+	GSTransferStatus = (STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE;
 	memzero(g_RealGSMem);
 
 	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
@@ -98,17 +98,15 @@ void gsCSRwrite(u32 value)
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
 	}
-	else if( value & 0x100 ) // FLUSH
+	if( value & 0x100 ) // FLUSH
 	{
 		// Our emulated GS has no FIFO, but if it did, it would flush it here...
 		//Console.WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}
-	else
-	{
+	
 		CSRw |= value & 0x1f;
 		GetMTGS().SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
 		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
-	}
 
 }
 
@@ -224,6 +222,17 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 
 	switch( mem )
 	{
+		case 0x12001040: //busdir
+			gsWrite64_generic( mem, value );
+
+			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer (Bleach Blade Battlers)
+			//Only problem is it kills killzone :( leaving it commented out for now.
+			//=========================================================================
+			//gifRegs->stat.OPH = true; 
+			//=========================================================================
+			gifRegs->stat.DIR = (u32)value;
+			
+		return;
 		case GS_CSR:
 			gsCSRwrite((u32)value[0]);
 		return;

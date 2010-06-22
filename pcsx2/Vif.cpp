@@ -23,7 +23,7 @@
 
 vifStruct  vif0;
 vifStruct  vif1;
-tGSTransferStatus GSTransferStatus((STOPPED_MODE<<4) | (STOPPED_MODE<<2) | STOPPED_MODE);
+tGSTransferStatus GSTransferStatus((STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE);
 
 void vif0Reset()
 {
@@ -140,8 +140,8 @@ _f void vif0FBRST(u32 value) {
 				g_vifCycles = 0;
 
 				// loop necessary for spiderman
-				vif0ch->chcr.STR = true;
-				CPU_INT(DMAC_VIF0, 0); // Gets the timing right - Flatout
+				//vif0ch->chcr.STR = true;
+				 if(vif0ch->chcr.STR == true) CPU_INT(DMAC_VIF0, 0); // Gets the timing right - Flatout
 			}
 		}
 	}
@@ -153,21 +153,28 @@ _f void vif1FBRST(u32 value) {
 	if (FBRST(value).RST) // Reset Vif.
 	{
 		memzero(vif1);
-		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1ch->qwc = 0; //?
+		//cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
+		vif1ch->qwc -= min((int)vif1ch->qwc, 16); //?
 		psHu64(VIF1_FIFO) = 0;
 		psHu64(VIF1_FIFO + 8) = 0;
-		vif1.done = false;
+		//vif1.done = false;
 
-		if(vif1Regs->mskpath3)
+		
+		//DevCon.Warning("VIF FBRST Reset MSK = %x", vif1Regs->mskpath3);
+		if(vif1Regs->mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE && gif->chcr.STR == true) 
 		{
-			vif1Regs->mskpath3 = 0;
-			gifRegs->stat.IMT = false;
-			if (gif->chcr.STR) CPU_INT(DMAC_GIF, 4);
+			//DevCon.Warning("VIF Path3 Resume on FBRST MSK = %x", vif1Regs->mskpath3);
+			gsInterrupt();
+			vif1Regs->mskpath3 = false;
+			gifRegs->stat.M3P = 0;
 		}
 
+		vif1Regs->mskpath3 = false;
+		gifRegs->stat.M3P = 0;
 		vif1Regs->err.reset();
 		vif1.inprogress = 0;
+		vif1.cmd = 0;
+		vif1.vifstalled = false;
 		vif1Regs->stat.FQC = 0;
 		vif1Regs->stat.clear_flags(VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS);
 	}
@@ -217,18 +224,18 @@ _f void vif1FBRST(u32 value) {
 				{
 				    case MFD_VIF1:
                         //Console.WriteLn("MFIFO Stall");
-                        CPU_INT(10, 0);
+                        if(vif1ch->chcr.STR == true) CPU_INT(10, 0);
                         break;
 
                     case NO_MFD:
                     case MFD_RESERVED:
                     case MFD_GIF: // Wonder if this should be with VIF?
                         // Gets the timing right - Flatout
-                        CPU_INT(DMAC_VIF1, 0);
+                        if(vif1ch->chcr.STR == true) CPU_INT(DMAC_VIF1, 0);
                         break;
 				}
 
-				vif1ch->chcr.STR = true;
+				//vif1ch->chcr.STR = true;
 			}
 		}
 	}

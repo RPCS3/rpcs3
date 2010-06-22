@@ -26,6 +26,7 @@
 #include "sVU_Micro.h"
 #include "sVU_Debug.h"
 #include "sVU_zerorec.h"
+#include "Gif.h"
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
@@ -1971,27 +1972,57 @@ void recVUMI_XTOP( VURegs *VU, int info )
 //------------------------------------------------------------------
 void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
+	addr &= 0x3fff;
+	u8* data  = VU1.Mem + (addr);
+	u32 diff  = 0x400 - (addr / 16);
 	u32 size;
-    u8* data = ((u8*)pMem + (addr&0x3fff));
+	u8* pDest;
 
-	size = GetMTGS().PrepDataPacket(GIF_PATH_1, data, (0x4000-(addr&0x3fff)) / 16);
-    jASSUME( size > 0 );
-
-	u8* pmem = GetMTGS().GetDataPacketPtr();
-
-	if((size << 4) > (0x4000-(addr&0x3fff)))
+	if(gifRegs->stat.APATH == GIF_APATH_IDLE)
 	{
-		//DevCon.Warning("addr + Size = 0x%x, transferring %x then doing %x", (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
-		memcpy_aligned(pmem, (u8*)pMem+addr, 0x4000-(addr&0x3fff));
-		size -= (0x4000-(addr&0x3fff)) >> 4;
-		//DevCon.Warning("Size left %x", size);
-		pmem += 0x4000-(addr&0x3fff);
-		memcpy_aligned(pmem, (u8*)pMem, size<<4);
+		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, false);
+		pDest = GetMTGS().GetDataPacketPtr();
+		if (size > diff) {
+			// fixme: one of these days the following *16's will get cleaned up when we introduce
+			// a special qwc/simd16 optimized version of memcpy_aligned. :)
+			
+			memcpy_aligned(pDest, VU1.Mem + addr, diff*16);
+			size  -= diff;
+			pDest += diff*16;
+			memcpy_aligned(pDest, VU1.Mem, size*16);
+		}
+		else {
+			memcpy_aligned(pDest, VU1.Mem + addr, size*16);
+		}
+		GetMTGS().SendDataPacket();
 	}
-	else {
-		memcpy_aligned(pmem, (u8*)pMem+addr, size<<4);
+	else
+	{
+		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
+		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, true);
+		pDest = &Path1Buffer[Path1WritePos*16];
+
+		
+		
+		//DevCon.Warning("Storing size %x PATH 1", size);
+		if (size > diff) {
+			// fixme: one of these days the following *16's will get cleaned up when we introduce
+			// a special qwc/simd16 optimized version of memcpy_aligned. :)
+			//DevCon.Status("XGkick Wrap!");
+			memcpy_aligned(pDest, VU1.Mem + addr, diff*16);
+			Path1WritePos += size;
+			size  -= diff;
+			pDest += diff*16;
+			memcpy_aligned(pDest, VU1.Mem, size*16);			
+		}
+		else {
+			memcpy_aligned(pDest, VU1.Mem + addr, size*16);
+			Path1WritePos += size;
+		}
+		if(!gifRegs->stat.P1Q) CPU_INT(28, 16);
+		gifRegs->stat.P1Q = true;
 	}
 
-	GetMTGS().SendDataPacket();
+
 }
 //------------------------------------------------------------------

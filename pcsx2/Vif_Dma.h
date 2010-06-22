@@ -75,7 +75,9 @@ struct vifStruct {
 	u32 savedtag; // need this for backwards compat with save states
 	u32 vifpacketsize;
 	u8 inprogress;
+	u32 lastcmd;
 	u8 dmamode;
+	u8 GifWaitState; // 0 = General PATH checking, 1 = Flush path 3, 2 == Wait for VU1
 };
 
 extern vifStruct* vif;
@@ -110,8 +112,10 @@ enum VifModes
 static const unsigned int VIF0intc = 4;
 static const unsigned int VIF1intc = 5;
 
-extern int g_vifCycles;
-
+extern u32 g_vifCycles;
+extern u32 g_vu0Cycles;
+extern u32 g_vu1Cycles;
+extern u32 g_packetsizeonvu;
 extern void vif0FLUSH();
 extern void vif1FLUSH();
 

@@ -75,8 +75,19 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 			if(value == 0)
 			{
 				//DevCon.Warning(L"8bit %s DMA Stopped on Suspend", ChcrName(mem & ~0xf));
+				if(ChannelNumber(mem & ~0xf) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem & ~0xf) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
 				cpuClearInt( ChannelNumber(mem & ~0xf) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf));
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf)); //Clear any queued DMA requests for this channel;
 			}
 			//Here we update the CHCR STR (Busy) bit, we don't touch anything else.
 			reg->chcr.STR = value;
@@ -93,8 +104,20 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 				//DevCon.Warning(L"8bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem & ~0xf), reg->chcr._u32, value);
 				reg->chcr.STR = value;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
-				cpuClearInt( ChannelNumber(mem&~0xf) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem&~0xf)); //Clear any queued DMA requests for this channel
+
+				if(ChannelNumber(mem & ~0xf) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem & ~0xf) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
+				cpuClearInt( ChannelNumber(mem & ~0xf) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf)); //Clear any queued DMA requests for this channel
 			}
 			//else DevCon.Warning(L"8bit Attempted to stop %s DMA without suspend, ignoring", ChcrName(mem & ~0xf));
 			return;
@@ -132,6 +155,17 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"16bit %s DMA Stopped on Suspend", ChcrName(mem));
+				if(ChannelNumber(mem) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
 				cpuClearInt( ChannelNumber(mem) );
 				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
@@ -150,6 +184,18 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 				//DevCon.Warning(L"16bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
 				reg->chcr.STR = 0;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
+
+				if(ChannelNumber(mem) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
 				cpuClearInt( ChannelNumber(mem) );
 				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
@@ -189,8 +235,19 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"32bit %s DMA Stopped on Suspend", ChcrName(mem));
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
+				if(ChannelNumber(mem) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
 				cpuClearInt( ChannelNumber(mem) );
+				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
 			//Sanity Check for possible future bug fix0rs ;p
 			//Spams on Persona 4 opening.
@@ -211,6 +268,18 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 				//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
 				reg->chcr.STR = 0;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
+
+				if(ChannelNumber(mem) == 1)
+				{
+					cpuClearInt( 10 );
+					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
+				}
+				else if(ChannelNumber(mem) == 2)
+				{
+					cpuClearInt( 11 );
+					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
+				}
+				
 				cpuClearInt( ChannelNumber(mem) );
 				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
 			}
@@ -282,6 +351,31 @@ void hwWrite8(u32 mem, u8 value)
 		case RCNT3_MODE + 1: rcntWmode(3, (counters[3].modeval & 0xff) | value << 8); break;
 		case RCNT3_TARGET: rcntWtarget(3, value); break;
 
+		case GIF_CTRL:
+			psHu32(mem) = value & 0x8;
+			DevCon.Warning("GIFCTRL 8 = %x", value);
+			if (value & 0x1)
+				gsGIFReset();
+			
+			if ( value & 8 )
+				gifRegs->stat.PSE = true;
+			else
+				gifRegs->stat.PSE = false;
+		break;
+
+		case GIF_MODE:
+		{
+			// need to set GIF_MODE (hamster ball)
+			gifRegs->mode.write(value);
+
+			// set/clear bits 0 and 2 as per the GIF_MODE value.
+            const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
+			psHu32(GIF_STAT) &= ~bitmask;
+			psHu32(GIF_STAT) |= (u32)value & bitmask;
+			if(value & GIF_MODE_M3R) DevCon.Warning("8bit GIFMODE M3R write %x", value);
+			//if(value & GIF_MODE_IMT) DevCon.Warning("8bit GIFMODE INT write %x", value);
+		}
+		break;
 		case SIO_TXFIFO:
 		{
 			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
@@ -394,6 +488,13 @@ void hwWrite8(u32 mem, u8 value)
 			psHu8(mem) = value;
 			break;
 
+		case DMAC_STAT:
+		case DMAC_STAT + 1:
+		case DMAC_STAT + 2:
+		case DMAC_STAT + 3:
+			DevCon.Warning("8bit dmac stat! %x", mem);
+			break;
+
 		case DMAC_ENABLEW + 2:
 			oldvalue = psHu8(DMAC_ENABLEW + 2);
 			psHu8(DMAC_ENABLEW + 2) = value;
@@ -402,6 +503,18 @@ void hwWrite8(u32 mem, u8 value)
 			{
 				if (!QueuedDMA.empty()) StartQueuedDMA();
 			}
+			break;
+		case DMAC_CTRL+2:
+			oldvalue = psHu8(mem);
+			if ((oldvalue & 0x3) != (value & 0x3))
+			{
+				DevCon.Warning("8 Stall Source Changed to %x", (value & 0x30) >> 4);
+			}
+			if ((oldvalue & 0xC) != (value & 0xC))
+			{
+				DevCon.Warning("8 Stall Destination Changed to %x", (value & 0xC0) >> 4);
+			}
+			psHu8(mem) = value;
 			break;
 
 		case SBUS_F200: // SIF(?)
@@ -474,6 +587,32 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 		case RCNT3_MODE: rcntWmode(3, value); break;
 		case RCNT3_TARGET: rcntWtarget(3, value); break;
 
+		case GIF_CTRL:
+			psHu32(mem) = value & 0x8;
+			DevCon.Warning("GIFCTRL 16 %x", value);
+			if (value & 0x1)
+				gsGIFReset();
+			
+			if ( value & 8 )
+				gifRegs->stat.PSE = true;
+			else
+				gifRegs->stat.PSE = false;
+		break;
+
+		case GIF_MODE:
+		{
+			// need to set GIF_MODE (hamster ball)
+			gifRegs->mode.write(value);
+
+			// set/clear bits 0 and 2 as per the GIF_MODE value.
+            const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
+			psHu32(GIF_STAT) &= ~bitmask;
+			psHu32(GIF_STAT) |= (u32)value & bitmask;
+			if(value & GIF_MODE_M3R) DevCon.Warning("16bit GIFMODE M3R write %x", value);
+			//if(value & GIF_MODE_IMT) DevCon.Warning("16bit GIFMODE INT write %x", value);
+
+		}
+		break;
 		case D0_CHCR: // dma0 - vif0
 			DMA_LOG("VIF0dma %lx", value);
 			DmaExec16(dmaVIF0, mem, value);
@@ -667,6 +806,10 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			//DevCon.Warning(L"16bit CHCR TAG changed to %x from %x on %s DMA", value, psHu32(mem), ChcrName(mem & ~0xf));
 			psHu16(mem) = value;
 			break;
+		case DMAC_STAT:
+		case DMAC_STAT + 2:
+			DevCon.Warning("16bit dmac stat! %x", mem);
+			break;
 
 		case DMAC_ENABLEW + 2:
 			oldvalue = psHu8(DMAC_ENABLEW + 2);
@@ -677,7 +820,18 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 				if (!QueuedDMA.empty()) StartQueuedDMA();
 			}
 			break;
-
+		case DMAC_CTRL:
+			oldvalue = psHu16(mem);
+			if ((oldvalue & 0x30) != (value & 0x30))
+			{
+				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+			}
+			if ((oldvalue & 0xC0) != (value & 0xC0))
+			{
+				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
+			}
+			psHu16(mem) = value;
+			break;
 		case SIO_ISR:
 		case SIO_ISR + 2:
 		case 0x1000f410:
@@ -786,7 +940,8 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 
 			if (value & 0x1)
 				gsGIFReset();
-			else if ( value & 8 )
+			
+			if ( value & 8 )
 				gifRegs->stat.PSE = true;
 			else
 				gifRegs->stat.PSE = false;
@@ -865,6 +1020,14 @@ void __fastcall hwWrite32_page_0E( u32 mem, u32 value )
 			if (((oldvalue & 0x1) == 0) && ((value & 0x1) == 1))
 			{
 				if (!QueuedDMA.empty()) StartQueuedDMA();
+			}
+			if ((oldvalue & 0x30) != (value & 0x30))
+			{
+				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+			}
+			if ((oldvalue & 0xC0) != (value & 0xC0))
+			{
+				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			break;
 		}
@@ -1126,6 +1289,14 @@ void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval )
 			if (((oldvalue & 0x1) == 0) && ((value & 0x1) == 1))
 			{
 				if (!QueuedDMA.empty()) StartQueuedDMA();
+			}
+			if ((oldvalue & 0x30) != (value & 0x30))
+			{
+				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+			}
+			if ((oldvalue & 0xC0) != (value & 0xC0))
+			{
+				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			break;
 		}

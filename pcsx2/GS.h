@@ -157,7 +157,7 @@ enum GIF_PATH
 	GIF_PATH_3,
 };
 
-extern int  GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+extern int  GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly);
 extern void GIFPath_Reset();
 extern void GIFPath_Clear( GIF_PATH pathidx );
 
@@ -252,8 +252,8 @@ public:
 	void WaitGS();
 	void ResetGS();
 
-	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
-	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size );
+	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size, bool TestOnly );
+	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size, bool TestOnly );
 	void SendDataPacket();
 	void SendGameCRC( u32 crc );
 	void WaitForOpen();

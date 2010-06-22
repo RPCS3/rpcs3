@@ -81,12 +81,12 @@ int  _SPR0chain()
 
 	spr0->sadr += spr0->qwc << 4;
 
-	return (spr0->qwc) * BIAS; // bus is 1/2 the ee speed
+	return (spr0->qwc); // bus is 1/2 the ee speed
 }
 
 __forceinline void SPR0chain()
 {
-	_SPR0chain();
+	CPU_INT(DMAC_FROM_SPR, _SPR0chain() / BIAS);
 	spr0->qwc = 0;
 }
 
@@ -101,6 +101,8 @@ void _SPR0interleave()
 	//Console.WriteLn("dmaSPR0 interleave");
 	SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr0->qwc, tqwc, sqwc, spr0->madr, spr0->sadr);
+
+	CPU_INT(DMAC_FROM_SPR, qwc / BIAS);
 
 	while (qwc > 0)
 	{
@@ -150,12 +152,11 @@ static __forceinline void _dmaSPR0()
 		case CHAIN_MODE:
 		{
 			tDMA_TAG *ptag;
-			bool done = FALSE;
+			bool done = false;
 
 			if (spr0->qwc > 0)
 			{
 				SPR0chain();
-				spr0finished = true;
 				return;
 			}
 			// Destination Chain Mode
@@ -198,13 +199,6 @@ static __forceinline void _dmaSPR0()
 			}
 
 			spr0finished = done;
-
-			if (!done)
-			{
-				ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
-				CPU_INT(DMAC_FROM_SPR, /*ptag[0].QWC / BIAS*/ 4 ); // the lower 16bits of the tag / BIAS);
-				return;
-			}
 			SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
 				ptag[1]._u32, ptag[0]._u32, spr0->qwc, ptag->ID, spr0->madr);
 			break;
@@ -220,37 +214,39 @@ static __forceinline void _dmaSPR0()
 
 void SPRFROMinterrupt()
 {
-	_dmaSPR0();
-
-	if(mfifotransferred != 0)
+	
+	if (!spr0finished || spr0->qwc > 0) 
 	{
-        switch (dmacRegs->ctrl.MFD)
+		_dmaSPR0();
+
+		if(mfifotransferred != 0)
 		{
-			case MFD_VIF1: // Most common case.
+			switch (dmacRegs->ctrl.MFD)
 			{
-				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("VIF MFIFO Write outside MFIFO area");
-				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
-				//Console.WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
-				mfifoVIF1transfer(mfifotransferred);
-				mfifotransferred = 0;
-				if (vif1ch->chcr.STR) return;
-				break;
+				case MFD_VIF1: // Most common case.
+				{
+					if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("VIF MFIFO Write outside MFIFO area");
+					spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
+					//Console.WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
+					mfifoVIF1transfer(mfifotransferred);
+					mfifotransferred = 0;
+					break;
+				}
+				case MFD_GIF:
+				{
+					if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("GIF MFIFO Write outside MFIFO area");
+					spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
+					//Console.WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
+					mfifoGIFtransfer(mfifotransferred);
+					mfifotransferred = 0;
+					break;
+				}
+				default:
+					break;
 			}
-			case MFD_GIF:
-			{
-				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("GIF MFIFO Write outside MFIFO area");
-				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
-				//Console.WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
-				mfifoGIFtransfer(mfifotransferred);
-				mfifotransferred = 0;
-				if (gif->chcr.STR) return;
-				break;
-			}
-			default:
-				break;
 		}
+		return;
 	}
-	if (!spr0finished) return;
 
 
 	spr0->chcr.STR = false;
@@ -262,18 +258,23 @@ void dmaSPR0()   // fromSPR
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx",
 	        spr0->chcr._u32, spr0->madr, spr0->qwc, spr0->sadr);
 
-	if ((spr0->chcr.MOD == CHAIN_MODE) && spr0->qwc == 0)
+	
+	spr0finished = false; //Init
+
+	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) 
 	{
-		tDMA_TAG *ptag;
-		ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
-		CPU_INT(DMAC_FROM_SPR, /*ptag[0].QWC / BIAS*/ 4 );
-		return;
+		//DevCon.Warning(L"SPR0 QWC on Chain " + spr0->chcr.desc());
+		if(((spr0->chcr.TAG >> 12) & 0x7) == 0x7)
+		{
+			spr0finished = true;
+		}
+		else
+		{
+			spr0finished = false;
+		}
 	}
-	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) DevCon.Warning(L"SPR0 QWC on Chain " + spr0->chcr.desc());
-	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
-	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
-	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(DMAC_FROM_SPR, /*spr0->qwc / BIAS*/ 4 );
+
+	SPRFROMinterrupt();
 }
 
 __forceinline static void SPR1transfer(u32 *data, int size)
@@ -295,12 +296,12 @@ int  _SPR1chain()
 	SPR1transfer((u32*)pMem, spr1->qwc << 2);
 	spr1->madr += spr1->qwc << 4;
 
-	return (spr1->qwc) * BIAS;
+	return (spr1->qwc);
 }
 
 __forceinline void SPR1chain()
 {
-	_SPR1chain();
+	CPU_INT(DMAC_TO_SPR, _SPR1chain() / BIAS);
 	spr1->qwc = 0;
 }
 
@@ -314,7 +315,7 @@ void _SPR1interleave()
 	if (tqwc == 0) tqwc = qwc;
 	SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr1->qwc, tqwc, sqwc, spr1->madr, spr1->sadr);
-
+	CPU_INT(DMAC_TO_SPR, qwc / BIAS);
 	while (qwc > 0)
 	{
 		spr1->qwc = std::min(tqwc, qwc);
@@ -348,9 +349,9 @@ void _dmaSPR1()   // toSPR work function
 
 			if (spr1->qwc > 0)
 			{
+				SPR_LOG("spr1 Normal or in Progress size=%d, addr=%lx taddr=%lx saddr=%lx", spr1->qwc, spr1->madr, spr1->tadr, spr1->sadr);
 				// Transfer Dn_QWC from Dn_MADR to SPR1
 				SPR1chain();
-				spr1finished = true;
 				return;
 			}
 			// Chain Mode
@@ -372,8 +373,8 @@ void _dmaSPR1()   // toSPR work function
 				SPR1transfer((u32*)ptag, 4);				//Transfer Tag
 			}
 
-			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx",
-				ptag[1]._u32, ptag[0]._u32, spr1->qwc, ptag->ID, spr1->madr);
+			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx taddr=%lx saddr=%lx",
+				ptag[1]._u32, ptag[0]._u32, spr1->qwc, ptag->ID, spr1->madr, spr1->tadr, spr1->sadr);
 
 			done = (hwDmacSrcChain(spr1, ptag->ID));
 			SPR1chain();										//Transfers the data set by the switch
@@ -387,11 +388,6 @@ void _dmaSPR1()   // toSPR work function
 			}
 
 			spr1finished = done;
-			if (!done)
-			{
-				ptag = SPRdmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
-				CPU_INT(DMAC_TO_SPR, /*(ptag[0].QWC / BIAS)*/ 4 );// the lower 16 bits of the tag / BIAS);
-			}
 			break;
 		}
 		//case INTERLEAVE_MODE:
@@ -409,26 +405,35 @@ void dmaSPR1()   // toSPR
 	        "        tadr = 0x%x, sadr = 0x%x",
 	        spr1->chcr._u32, spr1->madr, spr1->qwc,
 	        spr1->tadr, spr1->sadr);
-
-	if ((spr1->chcr.MOD == CHAIN_MODE) && (spr1->qwc == 0))
+	
+	spr1finished = false; //Init
+	
+	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) 
 	{
-		tDMA_TAG *ptag;
-		ptag = SPRdmaGetAddr(spr1->tadr, false);		//Set memory pointer to TADR
-		CPU_INT(DMAC_TO_SPR, /*ptag[0].QWC / BIAS*/ 4 );
-		return;
+		//DevCon.Warning(L"SPR1 QWC on Chain " + spr1->chcr.desc());
+		if(((spr1->chcr.TAG >> 12) & 0x7) == 0x7 || ((spr1->chcr.TAG >> 12) & 0x7) == 0x0)
+		{
+			spr1finished = true;
+		}
+		else
+		{
+			spr1finished = false;
+		}
 	}
-	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) DevCon.Warning(L"SPR1 QWC on Chain " + spr1->chcr.desc());
-	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
-	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
-	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(DMAC_TO_SPR, /*spr1->qwc / BIAS*/ 4 );
+
+	SPRTOinterrupt();
 }
 
 void SPRTOinterrupt()
 {
-	_dmaSPR1();
-	if (!spr1finished) return;
+	SPR_LOG("SPR1 Interrupt");
+	if (!spr1finished || spr1->qwc > 0)
+	{
+		_dmaSPR1();
+		return;
+	}
 
+	SPR_LOG("SPR1 End");
 	spr1->chcr.STR = false;
 	hwDmacIrq(DMAC_TO_SPR);
 }
