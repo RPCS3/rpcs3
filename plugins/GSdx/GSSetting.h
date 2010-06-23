@@ -24,6 +24,6 @@
 struct GSSetting
 {
 	uint32 id;
-	const char* name;
-	const char* note;
+	std::string name;
+	std::string note;
 };

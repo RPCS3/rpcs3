@@ -44,5 +44,6 @@ public:
 
 	static void* GetDX9Proc( const char* methodname );
 	static bool IsDirect3D11Available();
+	static bool HasD3D11Features();
 };
 

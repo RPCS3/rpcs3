@@ -25,7 +25,6 @@
 #include "GSTexture11.h"
 
 typedef HRESULT     (WINAPI * FnPtr_CreateDXGIFactory)(REFIID, void ** );
-typedef HRESULT     (WINAPI * FnPtr_D3D11CreateDevice)( IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, CONST D3D_FEATURE_LEVEL*, UINT, UINT, ID3D11Device**, D3D_FEATURE_LEVEL *, ID3D11DeviceContext**);
 
 typedef HRESULT  (WINAPI * FnPtr_D3D11CreateDeviceAndSwapChain) (
 	__in   IDXGIAdapter *pAdapter,

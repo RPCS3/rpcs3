@@ -27,19 +27,19 @@
 
 GSSetting GSSettingsDlg::g_renderers[] =
 {
-	{0, "Direct3D9 (Hardware)", NULL},
-	{1, "Direct3D9 (Software)", NULL},
-	{2, "Direct3D9 (Null)", NULL},
-	{3, "Direct3D10/11 (Hardware)", NULL},
-	{4, "Direct3D10/11 (Software)", NULL},
-	{5, "Direct3D10/11 (Null)", NULL},
-	{12, "Null (Software)", NULL},
-	{13, "Null (Null)", NULL},
+	{0, "Direct3D9 (Hardware)", ""},
+	{1, "Direct3D9 (Software)", ""},
+	{2, "Direct3D9 (Null)", ""},
+	{3, "Direct3D%d    ", "Hardware"},
+	{4, "Direct3D%d    ", "Software"},
+	{5, "Direct3D%d    ", "Null"},
+	{12, "Null (Software)", ""},
+	{13, "Null (Null)", ""},
 };
 
 GSSetting GSSettingsDlg::g_interlace[] =
 {
-	{0, "None", NULL},
+	{0, "None", ""},
 	{1, "Weave tff", "saw-tooth"},
 	{2, "Weave bff", "saw-tooth"},
 	{3, "Bob tff", "use blend if shaking"},
@@ -50,19 +50,19 @@ GSSetting GSSettingsDlg::g_interlace[] =
 
 GSSetting GSSettingsDlg::g_aspectratio[] =
 {
-	{0, "Stretch", NULL},
-	{1, "4:3", NULL},
-	{2, "16:9", NULL},
+	{0, "Stretch", ""},
+	{1, "4:3", ""},
+	{2, "16:9", ""},
 };
 
 GSSetting GSSettingsDlg::g_upscale_multiplier[] =
 {
-	{1, "1x (Use D3D internal Res)", NULL},
-	{2, "2x", NULL},
-	{3, "3x", NULL},
-	{4, "4x", NULL},
-	{5, "5x", NULL},
-	{6, "6x", NULL},
+	{1, "1x", "Use D3D internal Res"},
+	{2, "2x", ""},
+	{3, "3x", ""},
+	{4, "4x", ""},
+	{5, "5x", ""},
+	{6, "6x", ""},
 };
 
 GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
@@ -113,7 +113,11 @@ void GSSettingsDlg::OnInit()
 
 	for(size_t i = 0; i < countof(g_renderers); i++)
 	{
-		if(i >= 3 && i <= 5 && !isdx11avail) continue;
+		if(i >= 3 && i <= 5)
+		{
+			if(!isdx11avail) continue;
+			g_renderers[i].name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "10" : "11");
+		}
 
 		renderers.push_back(g_renderers[i]);
 	}

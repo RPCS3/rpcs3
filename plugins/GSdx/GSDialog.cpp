@@ -133,9 +133,9 @@ void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint3
 	{
 		if(settings[i].id <= maxid)
 		{
-			string str = settings[i].name;
+			string str(settings[i].name);
 
-			if(settings[i].note != NULL)
+			if(!settings[i].note.empty())
 			{
 				str = str + " (" + settings[i].note + ")";
 			}
