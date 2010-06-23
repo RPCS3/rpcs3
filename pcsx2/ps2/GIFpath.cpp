@@ -356,7 +356,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 			incTag(16, 1);
 			
 			
-			if(nloop > 0)
+			if(nloop > 0 && TestOnly == false)
 			{
 					switch(pathidx)
 					{
@@ -381,9 +381,12 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 		}
 		else
 		{
-				
+			
+			if(TestOnly == false)
+			{
 			gifRegs->stat.APATH = pathidx + 1;
 			if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
+			}
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 					GIF_LOG("Packed Mode");
@@ -451,32 +454,35 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 	size = (startSize - size);
 
 
-	if (tag.EOP && nloop <= 16) {
-		if(pathidx == 2 && nloop > 0)
-		{
-			if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
-		}
-		else if(nloop == 0)
-		{
-			if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
-			gifRegs->stat.APATH = GIF_APATH_IDLE;
-			switch(pathidx)
+	if(TestOnly == false)
+	{
+		if (tag.EOP && nloop <= 16) {
+			if(pathidx == 2 && nloop > 0)
 			{
-				case GIF_PATH_1:
-					GSTransferStatus.PTH1 = STOPPED_MODE;
-					break;
-				case GIF_PATH_2:
-					GSTransferStatus.PTH2 = PENDINGSTOP_MODE;
-					break;
-				case GIF_PATH_3:
-					if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
-					break;
+				if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
+			}
+			else if(nloop == 0)
+			{
+				if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+				gifRegs->stat.APATH = GIF_APATH_IDLE;
+				switch(pathidx)
+				{
+					case GIF_PATH_1:
+						GSTransferStatus.PTH1 = STOPPED_MODE;
+						break;
+					case GIF_PATH_2:
+						GSTransferStatus.PTH2 = PENDINGSTOP_MODE;
+						break;
+					case GIF_PATH_3:
+						if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
+						break;
+				}
 			}
 		}
-	}
-	else if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE && pathidx == 2)
-	{
-		GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
+		else if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE && pathidx == 2)
+		{
+			GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
+		}
 	}
 	
 	if (pathidx == GIF_PATH_3 && gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
