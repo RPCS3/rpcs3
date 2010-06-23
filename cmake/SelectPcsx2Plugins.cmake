@@ -5,7 +5,7 @@ set(msg_dep_common_libs "check these libraries -> wxWidgets (>=2.8.10), sparseha
 set(msg_dep_pcsx2       "check these libraries -> wxWidgets (>=2.8.10), gtk2 (>=2.16), zlib (>=1.2.4), pcsx2 common libs")
 set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5)")
 set(msg_dep_zerogs      "check these libraries -> glew (>=1.5), opengl, X11, nvidia-cg-toolkit (>=2.1)")
-set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
+set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
 set(msg_dep_onepad      "check these libraries -> sdl (>=1.2)")
 set(msg_dep_zeropad     "check these libraries -> sdl (>=1.2)")
 set(msg_dep_spu2x       "check these libraries -> soundtouch (>=1.5), alsa, portaudio (>=1.9), a52 (>= 0.7.4), pcsx2 common libs")
@@ -123,15 +123,16 @@ endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 #			-OpenGL
 #			-X11
 #			-CG
+#			-JPEG
 #           -common_libs
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
 	set(zzogl TRUE)
-else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
+else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
 	set(zzogl FALSE)
     message(STATUS "Skip build of zzogl: miss some dependencies")
     message(STATUS "${msg_dep_zzogl}")
-endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND common_libs)
+endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
 #---------------------------------------
 
 #---------------------------------------

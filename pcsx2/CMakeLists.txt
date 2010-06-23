@@ -235,6 +235,7 @@ set(pcsx2Headers
 	SPR.h
 	Stats.h
 	StringUtils.h
+    SysForwardDefs.h
 	System.h
 	Vif_Dma.h
 	Vif.h

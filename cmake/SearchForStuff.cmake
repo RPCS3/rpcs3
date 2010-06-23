@@ -15,6 +15,7 @@ endif(Linux)
 # Use cmake package to find module
 find_package(ALSA)
 find_package(BZip2)
+find_package(JPEG)
 find_package(OpenGL)
 # Tell cmake that we use SDL as a library and not as an application
 set(SDL_BUILDING_LIBRARY TRUE)
@@ -98,6 +99,11 @@ endif(BZIP2_FOUND)
 if(CG_FOUND)
 	include_directories(${CG_INCLUDE_DIR})
 endif(CG_FOUND)
+
+# Jpeg
+if(JPEG_FOUND)
+	include_directories(${JPEG_INCLUDE_DIR})
+endif(JPEG_FOUND)
 
 # GLEW
 if(GLEW_FOUND)
