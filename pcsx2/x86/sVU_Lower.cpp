@@ -1998,6 +1998,8 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	}
 	else
 	{
+		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
+
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
 		size = GIFPath_ParseTag(GIF_PATH_1, data, diff, true);
 		pDest = &Path1Buffer[Path1WritePos*16];

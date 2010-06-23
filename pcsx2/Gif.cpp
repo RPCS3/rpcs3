@@ -66,12 +66,13 @@ void gsPath1Interrupt()
 		gifRegs->stat.APATH = GIF_APATH1;
 		memcpy_aligned(pDest, Path1Buffer + (Path1ReadPos * 16), size*16);
 		GetMTGS().SendDataPacket();
+		Registers::Thaw();
+
 		Path1ReadPos += size;
 		if(Path1ReadPos == Path1WritePos)
 		{
 			Path1WritePos = Path1ReadPos = 0;
 		}
-		Registers::Thaw();
 		CPU_INT(28, 16); //Should be size * BIAS (probably) but Tony Hawk doesnt like this, probably to do with vif flush stalling
 	}
 	else
@@ -680,4 +681,22 @@ void SaveStateBase::gifFreeze()
 	Freeze( gscycles );
 	//Freeze(gifempty);
 	// Note: mfifocycles is not a persistent var, so no need to save it here.
+
+	int bufsize = Path1WritePos - Path1ReadPos;
+	Freeze(bufsize);
+
+	if (IsSaving())
+	{
+		// We can just load the queued Path1 data into the front of the buffer, and
+		// reset the ReadPos and WritePos accordingly.
+		FreezeMem(Path1Buffer, bufsize);
+		Path1ReadPos = 0;
+		Path1WritePos = bufsize;
+	}
+	else
+	{
+		// Only want to save the actual Path1 data between readpos and writepos.  The
+		// rest of the buffer is just unused-ness!
+		FreezeMem(&Path1Buffer[Path1ReadPos], bufsize);
+	}
 }

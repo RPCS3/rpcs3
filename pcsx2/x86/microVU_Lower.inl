@@ -1134,9 +1134,9 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 		size = GIFPath_ParseTag(GIF_PATH_1, data, diff, true);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
-		
-
+		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
 		//DevCon.Warning("Storing size %x PATH 1", size);
+
 		if (size > diff) {
 			// fixme: one of these days the following *16's will get cleaned up when we introduce
 			// a special qwc/simd16 optimized version of memcpy_aligned. :)
