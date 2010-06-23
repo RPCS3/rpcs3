@@ -594,9 +594,9 @@ void SysMtgsThread::SendDataPacket()
 	//m_PacketLocker.Release();
 }
 
-int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size, bool TestOnly )
+int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size )
 {
-	return PrepDataPacket( pathidx, (u8*)srcdata, size, TestOnly );
+	return PrepDataPacket( pathidx, (u8*)srcdata, size );
 }
 
 #ifdef PCSX2_GSRING_TX_STATS
@@ -614,7 +614,7 @@ static u32 ringtx_inf_s[32];
 // around VU memory instead of having buffer overflow...
 // Parameters:
 //  size - size of the packet data, in smd128's
-int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size, bool TestOnly )
+int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
 	//m_PacketLocker.Acquire();
 
@@ -674,8 +674,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	pxAssert( size < RingBufferSize );
 	pxAssert( writepos < RingBufferSize );
 
-	m_packet_size = GIFPath_ParseTag(pathidx, srcdata, size, TestOnly);
-	if( TestOnly == true) return m_packet_size;
+	m_packet_size = GIFPath_ParseTag(pathidx, srcdata, size, false);
 	size		  = m_packet_size + 1; // takes into account our command qword.
 	
 	if( writepos + size < RingBufferSize )

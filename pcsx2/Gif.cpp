@@ -59,7 +59,7 @@ void gsPath1Interrupt()
 	if((gifRegs->stat.APATH == GIF_APATH_IDLE || gifRegs->stat.APATH == GIF_APATH1) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
 		Registers::Freeze();
-		u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos*16), (Path1WritePos - Path1ReadPos), false);
+		u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos*16), (Path1WritePos - Path1ReadPos));
 		u8* pDest = GetMTGS().GetDataPacketPtr();
 		//DevCon.Warning("Flush Size = %x", size);
 		
@@ -128,7 +128,7 @@ __forceinline void gsInterrupt()
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 {
-	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, pMem, qwc, false);
+	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, pMem, qwc);
 	u8* pgsmem = GetMTGS().GetDataPacketPtr();
 
 	memcpy_aligned(pgsmem, pMem, size<<4);

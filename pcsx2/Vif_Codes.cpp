@@ -205,7 +205,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 						v.bSize = 0;
 						v.bPtr = 0;						
 					}
-					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, v.buffer, 1, false);
+					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, v.buffer, 1);
 					memcpy_fast(GetMTGS().GetDataPacketPtr(), v.buffer, count << 4);
 					GetMTGS().SendDataPacket();
 
@@ -219,7 +219,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 				}
 				else
 				{
-					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, size >> 4, false);
+					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, size >> 4);
 					memcpy_fast(GetMTGS().GetDataPacketPtr(), data, count << 4);
 					GetMTGS().SendDataPacket();
 					vif1.tag.size -= count << 2;

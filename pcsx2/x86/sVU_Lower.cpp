@@ -1980,7 +1980,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 
 	if(gifRegs->stat.APATH == GIF_APATH_IDLE)
 	{
-		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, false);
+		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
 		pDest = GetMTGS().GetDataPacketPtr();
 		if (size > diff) {
 			// fixme: one of these days the following *16's will get cleaned up when we introduce
@@ -1999,7 +1999,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	else
 	{
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
-		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff, true);
+		size = GIFPath_ParseTag(GIF_PATH_1, data, diff, true);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
 		
