@@ -1273,7 +1273,7 @@ static __forceinline bool WaitGSPaths()
 {
 	if(CHECK_IPUWAITHACK)
 	{
-		if(GSTransferStatus.PTH3 < STOPPED_MODE)
+		if(GSTransferStatus.PTH3 < STOPPED_MODE && GSTransferStatus.PTH3 != IDLE_MODE)
 		{
 			//GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
 			//DevCon.WriteLn("Waiting for GIF");
