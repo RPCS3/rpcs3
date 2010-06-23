@@ -830,8 +830,22 @@ void Pcsx2App::OpenGsPanel()
 	if( gsFrame == NULL )
 	{
 		gsFrame = new GSFrame( GetMainFramePtr(), GetAppName() );
-		//gsFrame->SetFocus();
 		m_id_GsFrame = gsFrame->GetId();
+
+		switch( wxGetApp().Overrides.GsWindowMode )
+		{
+			case GsWinMode_Windowed:
+				g_Conf->GSWindow.IsFullscreen = false;
+			break;
+
+			case GsWinMode_Fullscreen:
+				g_Conf->GSWindow.IsFullscreen = true;
+			break;
+
+			case GsWinMode_Unspecified:
+				g_Conf->GSWindow.IsFullscreen = g_Conf->GSWindow.DefaultToFullscreen;
+			break;
+		}
 	}
 	else
 	{
@@ -856,24 +870,9 @@ void Pcsx2App::OpenGsPanel()
 	}
 	
 	pxAssumeDev( !GetCorePlugins().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
-
-	switch( wxGetApp().Overrides.GsWindowMode )
-	{
-		case GsWinMode_Windowed:
-			g_Conf->GSWindow.IsFullscreen = false;
-		break;
-
-		case GsWinMode_Fullscreen:
-			g_Conf->GSWindow.IsFullscreen = true;
-		break;
-
-		case GsWinMode_Unspecified:
-			g_Conf->GSWindow.IsFullscreen = g_Conf->GSWindow.DefaultToFullscreen;
-		break;
-	}
+	pDsp = (uptr)gsFrame->GetViewport()->GetHandle();
 
 	gsFrame->ShowFullScreen( g_Conf->GSWindow.IsFullscreen );
-	pDsp = (uptr)gsFrame->GetViewport()->GetHandle();
 
 	// The "in the main window" quickie hack...
 	//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
