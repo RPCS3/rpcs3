@@ -51,8 +51,8 @@ void BaseGameDatabaseImpl::updateGame(const Game_Data& game)
 }
 
 // Searches the current game's data to see if the given key exists
-bool Game_Data::keyExists(const wxChar* key) {
-	KeyPairArray::iterator it( kList.begin() );
+bool Game_Data::keyExists(const wxChar* key) const {
+	KeyPairArray::const_iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
 		if (it[0].CompareKey(key)) {
 			return true;
@@ -73,8 +73,8 @@ void Game_Data::deleteKey(const wxChar* key) {
 }
 
 // Gets a string representation of the 'value' for the given key
-wxString Game_Data::getString(const wxChar* key) {
-	KeyPairArray::iterator it( kList.begin() );
+wxString Game_Data::getString(const wxChar* key) const {
+	KeyPairArray::const_iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
 		if (it[0].CompareKey(key)) {
 			return it[0].value;

@@ -266,7 +266,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		}
 
 		if (EmuConfig.EnablePatches) {
-			if (int patches = InitPatches(gameCRC)) {
+			if (int patches = InitPatches(gameCRC, game)) {
 				gamePatch.Printf(L" [%d Patches]", patches);
 			}
 			if (int fixes = loadGameSettings(fixup, GameDB)) {

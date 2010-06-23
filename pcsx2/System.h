@@ -15,16 +15,11 @@
 
 #pragma once
 
+#include "SysForwardDefs.h"
+
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "CDVD/CDVDaccess.h"
-
-static const int PCSX2_VersionHi	= 0;
-static const int PCSX2_VersionMid	= 9;
-static const int PCSX2_VersionLo	= 7;
-
-class SysCoreThread;
-class CpuInitializerSet;
 
 typedef SafeArray<u8> VmStateBuffer;
 

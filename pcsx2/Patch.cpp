@@ -131,27 +131,24 @@ void TrimPatches(wxString& s)
 
 // This routine loads patches from the game database
 // Returns number of patches loaded
-int InitPatches(const wxString& name)
+int InitPatches(const wxString& crc, const Game_Data& game)
 {
 	bool patchFound = false;
 	wxString patch;
 	patchnumber = 0;
 
-	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
+	if (game.IsOk())
 	{
-		Game_Data game;
-		if (GameDB->findGame(game,name)) {
-			if (game.sectionExists(L"patches", name)) {
-				patch = game.getSection(L"patches", name);
-				patchFound = true;
-			}
-			else if (game.keyExists(L"[patches]")) {
-				patch = game.getString(L"[patches]");
-				patchFound = true;
-			}
+		if (game.sectionExists(L"patches", crc)) {
+			patch = game.getSection(L"patches", crc);
+			patchFound = true;
+		}
+		else if (game.keyExists(L"[patches]")) {
+			patch = game.getString(L"[patches]");
+			patchFound = true;
 		}
 	}
-
+	
 	if (patchFound) {
 		Console.WriteLn(Color_Green, "Patch found in the Database!");
 		TrimPatches(patch);

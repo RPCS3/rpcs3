@@ -95,9 +95,9 @@ struct Game_Data
 		kList.clear();
 	}
 
-	bool keyExists(const wxChar* key);
+	bool keyExists(const wxChar* key) const;
 	void deleteKey(const wxChar* key);
-	wxString getString(const wxChar* key);
+	wxString getString(const wxChar* key) const;
 	void writeString(const wxString& key, const wxString& value);
 	void writeBool(const wxString& key, bool value);
 
@@ -105,46 +105,46 @@ struct Game_Data
 		return !id.IsEmpty();
 	}
 
-	bool sectionExists(const wxChar* key, const wxString& value) {
+	bool sectionExists(const wxChar* key, const wxString& value) const {
 		return keyExists(wxsFormat(L"[%s%s%s]", key, value.IsEmpty() ? L"" : L" = ", value.c_str()));
 	}
 
-	wxString getSection(const wxChar* key, const wxString& value) {
+	wxString getSection(const wxChar* key, const wxString& value) const {
 		return getString(wxsFormat(L"[%s%s%s]", key, value.IsEmpty() ? L"" : L" = ", value.c_str()));
 	}
 
 	// Gets an integer representation of the 'value' for the given key
-	int getInt(const wxChar* key) {
+	int getInt(const wxChar* key) const {
 		return wxStrtoul(getString(key), NULL, 0);
 	}
 
 	// Gets a u8 representation of the 'value' for the given key
-	u8 getU8(const wxChar* key) {
+	u8 getU8(const wxChar* key) const {
 		return (u8)wxAtoi(getString(key));
 	}
 
 	// Gets a bool representation of the 'value' for the given key
-	bool getBool(const wxChar* key) {
+	bool getBool(const wxChar* key) const {
 		return !!wxAtoi(getString(key));
 	}
 
-	bool keyExists(const char* key) {
+	bool keyExists(const char* key) const {
 		return keyExists(fromUTF8(key));
 	}
 
-	wxString getString(const char* key) {
+	wxString getString(const char* key) const {
 		return getString(fromUTF8(key));
 	}
 
-	int getInt(const char* key) {
+	int getInt(const char* key) const {
 		return getInt(fromUTF8(key));
 	}
 
-	u8 getU8(const char* key) {
+	u8 getU8(const char* key) const {
 		return getU8(fromUTF8(key));
 	}
 
-	bool getBool(const char* key) {
+	bool getBool(const char* key) const {
 		return getBool(fromUTF8(key));
 	}
 };

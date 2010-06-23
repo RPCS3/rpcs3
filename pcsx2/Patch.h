@@ -12,10 +12,11 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __PATCH_H__
-#define __PATCH_H__
+
+#pragma once
 
 #include "Pcsx2Defs.h"
+#include "SysForwardDefs.h"
 
 #define MAX_PATCH 512
 #define MAX_CHEAT 1024
@@ -56,16 +57,14 @@ namespace PatchFunc
 	PATCHTABLEFUNC cheat;
 }
 
-int  InitCheats(const wxString& name);
-void inifile_command(bool isCheat, const wxString& cmd);
-void inifile_trim(wxString& buffer);
+extern int  InitCheats(const wxString& name);
+extern void inifile_command(bool isCheat, const wxString& cmd);
+extern void inifile_trim(wxString& buffer);
 
-int  InitPatches(const wxString& name);
-int  AddPatch(int Mode, int Place, int Address, int Size, u64 data);
-void ResetPatch(void);
-void ApplyPatch(int place = 1);
-void ApplyCheat(int place = 1);
-void _ApplyPatch(IniPatch *p);
-
-#endif /* __PATCH_H__ */
+extern int  InitPatches(const wxString& name, const Game_Data& game);
+extern int  AddPatch(int Mode, int Place, int Address, int Size, u64 data);
+extern void ResetPatch(void);
+extern void ApplyPatch(int place = 1);
+extern void ApplyCheat(int place = 1);
+extern void _ApplyPatch(IniPatch *p);
 

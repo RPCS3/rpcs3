@@ -476,6 +476,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\SysForwardDefs.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\System.h"
 					>
 				</File>
