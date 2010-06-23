@@ -97,7 +97,7 @@ endif(BZIP2_FOUND)
 
 # Cg
 if(CG_FOUND)
-	include_directories(${CG_INCLUDE_DIR})
+	include_directories(${CG_INCLUDE_DIRS})
 endif(CG_FOUND)
 
 # Jpeg
