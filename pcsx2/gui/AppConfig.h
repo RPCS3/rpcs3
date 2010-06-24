@@ -189,6 +189,7 @@ public:
 	wxString	SysSettingsTabName;
 	wxString	McdSettingsTabName;
 	wxString	AppSettingsTabName;
+	wxString	GameDatabaseTabName;
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	wxLanguage	LanguageId;

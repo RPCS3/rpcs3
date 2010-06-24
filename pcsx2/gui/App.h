@@ -323,6 +323,12 @@ public:
 	{
 		return DisableSpeedhacks || ApplyCustomGamefixes;
 	}
+	
+	void RemoveCustomHacks()
+	{
+		DisableSpeedhacks = false;
+		ApplyCustomGamefixes = false;
+	}
 
 	bool HasSettingsOverride() const
 	{
@@ -689,9 +695,6 @@ extern MainEmuFrame*	GetMainFramePtr();
 extern __aligned16 AppCoreThread CoreThread;
 extern __aligned16 SysMtgsThread mtgsThread;
 extern __aligned16 AppPluginManager CorePlugins;
-
-extern wxString AddAppName( const wxChar* fmt );
-extern wxString AddAppName( const char* fmt );
 
 extern void UI_UpdateSysControls();
 

@@ -28,3 +28,6 @@
 #include "AppForwardDefs.h"
 #include "AppConfig.h"
 #include "AppEventListeners.h"
+
+extern wxString AddAppName( const wxChar* fmt );
+extern wxString AddAppName( const char* fmt );

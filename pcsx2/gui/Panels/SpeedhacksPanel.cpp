@@ -14,9 +14,8 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
 #include "ConfigurationPanels.h"
-
-#include "System.h"
 
 using namespace pxSizerFlags;
 
@@ -324,6 +323,10 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
 	opts.vuMinMax			= m_check_vuMinMax->GetValue();
+
+	// If the user has a command line override specified, we need to disable it
+	// so that their changes take effect
+	wxGetApp().Overrides.DisableSpeedhacks = false;
 }
 
 void Panels::SpeedHacksPanel::OnEnable_Toggled( wxCommandEvent& evt )

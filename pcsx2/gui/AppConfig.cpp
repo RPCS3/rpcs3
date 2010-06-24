@@ -353,8 +353,9 @@ wxString AppConfig::FullpathToMcd( uint slot ) const
 AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
 	, SysSettingsTabName( L"Cpu" )
-	, McdSettingsTabName( L"Standard" )
+	, McdSettingsTabName( L"none" )
 	, AppSettingsTabName( L"Plugins" )
+	, GameDatabaseTabName( L"none" )
 	, DeskTheme( L"default" )
 {
 	LanguageId			= wxLANGUAGE_DEFAULT;
@@ -459,6 +460,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( SysSettingsTabName );
 	IniEntry( McdSettingsTabName );
 	IniEntry( AppSettingsTabName );
+	IniEntry( GameDatabaseTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
 	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );

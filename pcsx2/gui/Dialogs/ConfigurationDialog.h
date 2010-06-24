@@ -114,6 +114,21 @@ namespace Dialogs
 	};
 
 	// --------------------------------------------------------------------------------------
+	//  GameDatabaseDialog
+	// --------------------------------------------------------------------------------------
+	class GameDatabaseDialog : public BaseConfigurationDialog
+	{
+	public:
+		virtual ~GameDatabaseDialog() throw() {}
+		GameDatabaseDialog(wxWindow* parent=NULL);
+		static wxString GetNameStatic() { return L"GameDatabase"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
+
+	protected:
+		virtual wxString& GetConfSettingsTabName() const { return g_Conf->GameDatabaseTabName; }
+	};
+
+	// --------------------------------------------------------------------------------------
 	//  ComponentsConfigDialog
 	// --------------------------------------------------------------------------------------
 	class ComponentsConfigDialog : public BaseConfigurationDialog

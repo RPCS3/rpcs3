@@ -14,6 +14,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
 #include "ConfigurationPanels.h"
 
 using namespace pxSizerFlags;
@@ -109,6 +110,9 @@ void Panels::GameFixesPanel::Apply()
 	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
     for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
 		opts.Set((GamefixId)i, m_checkbox[i]->GetValue());
+
+	// make sure the user's command line specifications are disabled (if present).
+	wxGetApp().Overrides.ApplyCustomGamefixes = false;
 }
 
 void Panels::GameFixesPanel::EnableStuff()
