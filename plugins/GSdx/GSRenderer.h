@@ -33,6 +33,7 @@ class GSRenderer : public GSState
 {
 	GSCapture m_capture;
 	string m_snapshot;
+	bool m_snapdump;
 	int m_shader;
 
 	bool Merge(int field);
@@ -85,7 +86,7 @@ public:
 	}
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
-	virtual void KeyEvent(GSKeyEventData* e, int param = 0);
+	virtual void KeyEvent(GSKeyEventData* e);
 	virtual bool CanUpscale()
 	{
 		return !m_nativeres && m_regs->PMODE.EN != 0; // upscale ratio depends on the display size, with no output it may not be set correctly (ps2 logo to game transition)
@@ -99,6 +100,9 @@ public:
 	void SetVsync(bool enabled);
 	void SetFrameLimit(bool limit);
 	virtual void SetExclusive(bool isExcl) {}
+
+	virtual void BeginCapture();
+	virtual void EndCapture();
 
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
 	uint8* GetTextureBufferLock() { return m_tex_buff; }

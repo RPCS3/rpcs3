@@ -446,12 +446,12 @@ EXPORT_C GSirqCallback(void (*irq)())
 
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
 {
-	GSKeyEventData e;
+	if(!s_gs) return 0;
 
-	e.type = KEYPRESS;
-	e.key = VK_F12;
-
-	s_gs->KeyEvent(&e, start & 1);
+	if(start & 1)
+		s_gs->BeginCapture();
+	else
+		s_gs->EndCapture();
 
 	return 1;
 }

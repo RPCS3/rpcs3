@@ -436,7 +436,17 @@ bool GSRenderer::MakeSnapshot(const string& path)
 	return true;
 }
 
-void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
+void GSRenderer::BeginCapture()
+{
+	m_capture.BeginCapture(GetFPS());
+}
+
+void GSRenderer::EndCapture()
+{
+	m_capture.EndCapture();
+}
+
+void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
 	if(e->type == KEYPRESS)
 	{
@@ -454,10 +464,6 @@ void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
 			return;
 		case VK_F7:
 			m_shader = (m_shader + 3 + step) % 3;
-			return;
-		case VK_F12:
-			if(param) m_capture.BeginCapture(GetFPS());
-			else m_capture.EndCapture();
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
