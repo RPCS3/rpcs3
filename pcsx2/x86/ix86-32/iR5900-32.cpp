@@ -450,16 +450,14 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	//   for the duration of our function, and is used to restore the original
 	//   esp before returning from the function
 
-	// Optimization: We "allocate" 0x10 bytes of stack ahead of time here, which we can
-	// use for supplying parameters to cdecl functions.
-
 	xPUSH( ebp );
 	xMOV( ebp, esp );
 	xAND( esp, -0x10 );
 
 	// First 0x10 is for esi, edi, etc. Second 0x10 is for the return address and ebp.  The
-	// third 0x10 is for C-style CDECL calls we might make from the recompiler
-	// (parameters for those calls can be stored there!)
+	// third 0x10 is an optimization for C-style CDECL calls we might make from the recompiler
+	// (parameters for those calls can be stored there!)  [currently no cdecl functions are
+	//  used -- we do everything through __fastcall)
 
 	xSUB( esp, 0x30 );
 
@@ -616,11 +614,12 @@ struct ManualPageTracking
 static __aligned16 u16 manual_page[Ps2MemSize::Base >> 12];
 static __aligned16 u8 manual_counter[Ps2MemSize::Base >> 12];
 
-static u32 eeRecIsReset = 0;
+static u32 eeRecIsReset = false;
 
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
+	//AtomicExchange( eeRecNeedsReset, false );
 	if( AtomicExchange( eeRecIsReset, true ) ) return;
 
 	Console.WriteLn( Color_StrongBlack, "Issuing EE/iR5900-32 Recompiler Reset" );
@@ -707,22 +706,25 @@ void recStep( void )
 
 static jmp_buf		m_SetJmp_StateCheck;
 
+static void recExitExecution()
+{
+#if PCSX2_SEH
+	throw Exception::ExitCpuExecute();
+#else
+	// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
+	// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
+	// creates.  However, the longjump is slow so we only want to do one when absolutely
+	// necessary:
+
+	longjmp( m_SetJmp_StateCheck, 1 );
+#endif
+}
+
 static void recCheckExecutionState()
 {
-	pxAssert( !eeRecIsReset );		// should only be changed during suspended thread states
-
-	if( GetCoreThread().HasPendingStateChangeRequest() )
+	if( eeRecIsReset || GetCoreThread().HasPendingStateChangeRequest() )
 	{
-#if PCSX2_SEH
-		throw Exception::ExitCpuExecute();
-#else
-		// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
-		// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
-		// creates.  However, the longjump is slow so we only want to do one when absolutely
-		// necessary:
-
-		longjmp( m_SetJmp_StateCheck, 1 );
-#endif
+		recExitExecution();
 	}
 }
 
@@ -866,15 +868,6 @@ void recClear(u32 addr, u32 size)
 		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 }
 
-
-static void recExitExecution()
-{
-#if PCSX2_SEH
-	throw Exception::ExitCpuExecute();
-#else
-	longjmp( m_SetJmp_StateCheck, 1 );
-#endif
-}
 
 static int *s_pCode;
 

@@ -173,11 +173,8 @@ void AppCoreThread::OnResumeReady()
 // Load Game Settings found in database
 // (game fixes, round modes, clamp modes, etc...)
 // Returns number of gamefixes set
-static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
-	if (!gameDB) gameDB = wxGetApp().GetGameDatabase();
-
-	Game_Data game;
-	if (!gameDB->findGame(game, SysGetDiscID())) return 0;
+static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
+	if( !game.IsOk() ) return 0;
 
 	int  gf  = 0;
 
@@ -229,7 +226,7 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 		if (game.keyExists(key))
 		{
 			bool enableIt = game.getBool(key);
-			dest.Gamefixes.Set(id, enableIt );
+			dest.Gamefixes.Set(id, enableIt);
 			Console.WriteLn(L"(GameDB) %s Gamefix: " + key, enableIt ? L"Enabled" : L"Disabled" );
 			gf++;
 		}
@@ -240,7 +237,27 @@ static int loadGameSettings(Pcsx2Config& dest, IGameDatabase* gameDB) {
 
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
+	// 'fixup' is the EmuConfig we're going to upload to the emulator, which very well may
+	// differ from the user-configured EmuConfig settings.  So we make a copy here and then
+	// we apply the commandline overrides and database gamefixes, and then upload 'fixup'
+	// to the global EmuConfig.
+	//
+	// Note: It's important that we apply the commandline overrides *before* database fixes.
+	// The database takes precedence (if enabled).
+
 	Pcsx2Config fixup( src );
+
+	const CommandlineOverrides& overrides( wxGetApp().Overrides );
+	if( overrides.DisableSpeedhacks || !g_Conf->EnableSpeedHacks )
+		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
+
+	if( overrides.ApplyCustomGamefixes )
+	{
+		for (GamefixId id=GamefixId_FIRST; id < pxEnumEnd; ++id)
+			fixup.Gamefixes.Set( id, overrides.Gamefixes.Get(id) );
+	}
+	else if( !g_Conf->EnableGameFixes )
+		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
 
 	wxString gameCRC;
 	wxString gameSerial;
@@ -269,7 +286,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 			if (int patches = InitPatches(gameCRC, game)) {
 				gamePatch.Printf(L" [%d Patches]", patches);
 			}
-			if (int fixes = loadGameSettings(fixup, GameDB)) {
+			if (int fixes = loadGameSettings(fixup, game)) {
 				gameFixes.Printf(L" [%d Fixes]", fixes);
 			}
 		}
@@ -282,18 +299,6 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	}
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
-
-	const CommandlineOverrides& overrides( wxGetApp().Overrides );
-	if( overrides.DisableSpeedhacks || !g_Conf->EnableSpeedHacks )
-		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
-
-	if( overrides.ApplyCustomGamefixes )
-	{
-		for (GamefixId id=GamefixId_FIRST; id < pxEnumEnd; ++id)
-			fixup.Gamefixes.Set( id, overrides.UseGamefix[id] );
-	}
-	else if( !g_Conf->EnableGameFixes )
-		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is

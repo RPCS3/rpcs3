@@ -305,7 +305,7 @@ public:
 
 	// Note that gamefixes in this array should only be honored if the
 	// "HasCustomGamefixes" boolean is also enabled.
-	bool			UseGamefix[GamefixId_COUNT];
+	Pcsx2Config::GamefixOptions	Gamefixes;
 	bool			ApplyCustomGamefixes;
 
 	GsWindowMode_t	GsWindowMode;

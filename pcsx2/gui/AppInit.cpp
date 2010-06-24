@@ -357,9 +357,9 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 	parser.AddSwitch( wxEmptyString,L"nodisc",		_("boots an empty dvd tray; use to enter the PS2 system menu") );
 	parser.AddSwitch( wxEmptyString,L"usecd",		_("boots from the CDVD plugin (overrides IsoFile parameter)") );
 
-	parser.AddSwitch( wxEmptyString,L"fullboot",	_("disables fast booting") );
 	parser.AddSwitch( wxEmptyString,L"nohacks",		_("disables all speedhacks") );
-	parser.AddSwitch( wxEmptyString,L"gamefixes",	_("use the specified comma or pipe-delimited list of gamefixes.") + fixlist );
+	parser.AddOption( wxEmptyString,L"gamefixes",	_("use the specified comma or pipe-delimited list of gamefixes.") + fixlist, wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"fullboot",	_("disables fast booting") );
 
 	parser.AddOption( wxEmptyString,L"cfgpath",		_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
 	parser.AddOption( wxEmptyString,L"cfg",			_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
@@ -397,6 +397,12 @@ bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 	}
 
 	Overrides.DisableSpeedhacks = parser.Found(L"nohacks");
+
+	if (parser.Found(L"gamefixes", &dest))
+	{
+		Overrides.ApplyCustomGamefixes = true;
+		Overrides.Gamefixes.Set( dest, true );
+	}
 
 	if (parser.Found(L"fullscreen"))	Overrides.GsWindowMode = GsWinMode_Fullscreen;
 	if (parser.Found(L"windowed"))		Overrides.GsWindowMode = GsWinMode_Windowed;

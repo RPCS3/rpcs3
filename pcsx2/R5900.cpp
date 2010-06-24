@@ -583,6 +583,10 @@ void __fastcall eeGameStarting()
 		Console.WriteLn( Color_Green, "(R5900) ELF Entry point! [addr=0x%08X]", ElfEntry );
 		g_GameStarted = true;
 		GetCoreThread().GameStartingInThread();
+		
+		// GameStartingInThread may issue a reset of the cpu and/or recompilers.  Check for and
+		// handle such things here:
+		Cpu->CheckExecutionState();
 	}
 	else
 	{
