@@ -50,6 +50,7 @@ public:
 
 	void DoResize();
 	void DoShowMouse();
+	void DirectKeyCommand( wxKeyEvent& evt );
 
 protected:
 	void AppStatusEvent_OnSettingsApplied();

@@ -591,11 +591,15 @@ public:
 	///   parameter.  This is a more favorable alternative to the indexer operator since the
 	///   indexer implementation can and will create new entries for every request that
 	/// </remarks>
-	void TryGetValue( const Key& key, T& outval ) const
+	bool TryGetValue( const Key& key, T& outval ) const
 	{
 		const_iterator iter( find(key) );
 		if( iter != end() )
+		{
 			outval = iter->second;
+			return true;
+		}
+		return false;
 	}
 
 	const T& GetValue( Key key ) const

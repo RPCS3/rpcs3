@@ -16,20 +16,22 @@
 #include "PrecompiledHeader.h"
 #include "CheckedStaticBox.h"
 
-CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title, int id )
+CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
-	, ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) )
+	, ThisToggle( *new wxCheckBox( this, wxID_ANY, title, wxPoint( 8, 0 ) ) )
 	, ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
 {
-	GetSizer()->Add( &ThisToggle );
-	GetSizer()->Add( &ThisSizer, wxSizerFlags().Expand() );
+	this += ThisToggle;
+	this += ThisSizer;
 
 	// Ensure that the right-side of the static group box isn't too cozy:
-	GetSizer()->SetMinSize( ThisToggle.GetSize() + wxSize( 32, 0 ) );
+	SetMinWidth( ThisToggle.GetSize().GetWidth() + 32 );
 
 	Connect( ThisToggle.GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
 }
 
+// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)
+// This function can be overridden to implement custom handling of check enable/disable behavior.
 void CheckedStaticBox::MainToggle_Click( wxCommandEvent& evt )
 {
 	SetValue( evt.IsChecked() );
@@ -53,4 +55,23 @@ void CheckedStaticBox::SetValue( bool val )
 bool CheckedStaticBox::GetValue() const
 {
 	return ThisToggle.GetValue();
+}
+
+// This override is here so to only enable the children if both the main toggle and
+// the enable request are true.  If not, disable them!
+bool CheckedStaticBox::Enable( bool enable )
+{
+	if (!_parent::Enable(enable)) return false;
+
+	bool val = enable && ThisToggle.GetValue();
+	wxWindowList& list = GetChildren();
+
+	for( wxWindowList::iterator iter = list.begin(); iter != list.end(); ++iter)
+	{
+		wxWindow *current = *iter;
+		if( current != &ThisToggle )
+			current->Enable( val );
+	}
+	
+	return true;
 }

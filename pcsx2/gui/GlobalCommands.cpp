@@ -203,10 +203,13 @@ namespace Implementations
 
 	void Sys_RecordingToggle()
 	{
+		ScopedCoreThreadPause paused_core;
+		paused_core.AllowResume();
+
 		g_Pcsx2Recording ^= 1;
 
 		GetMTGS().WaitGS();		// make sure GS is in sync with the audio stream when we start.
-		GetMTGS().SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
+		if( GSsetupRecording != NULL ) GSsetupRecording(g_Pcsx2Recording, NULL);
 		if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 	}
 
@@ -394,14 +397,8 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 
 	GlobalAccels->Map( AAC( WXK_F4 ),			"Framelimiter_MasterToggle");
 	GlobalAccels->Map( AAC( WXK_F4 ).Shift(),	"Frameskip_Toggle");
-	GlobalAccels->Map( AAC( WXK_TAB ),			"Framelimiter_TurboToggle" );
-	GlobalAccels->Map( AAC( WXK_TAB ).Shift(),	"Framelimiter_SlomoToggle" );
 
-	// Hack! The following bindings are temporary hacks which are needed because of issues
-	// with PAD plugin interfacing (the local window-based accelerators in GSPanel are
-	// currently ignored).
-
-	GlobalAccels->Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
+	/*GlobalAccels->Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
 	GlobalAccels->Map( AAC( WXK_F8 ),			"Sys_TakeSnapshot");
 	GlobalAccels->Map( AAC( WXK_F8 ).Shift(),	"Sys_TakeSnapshot");
 	GlobalAccels->Map( AAC( WXK_F8 ).Shift().Cmd(),"Sys_TakeSnapshot");
@@ -411,5 +408,5 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	GlobalAccels->Map( AAC( WXK_F11 ),			"Sys_FreezeGS");
 	GlobalAccels->Map( AAC( WXK_F12 ),			"Sys_RecordingToggle");
 
-	GlobalAccels->Map( AAC( WXK_RETURN ).Alt(),	"FullscreenToggle" );
+	GlobalAccels->Map( AAC( WXK_RETURN ).Alt(),	"FullscreenToggle" );*/
 }

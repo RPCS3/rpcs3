@@ -245,31 +245,28 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 
 	m_kevt.m_keyCode = vkey;
 
-	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the
-	// GS window while the PAD plugin is open, so send messages to the APP handler
-	// only if *either* the GS or PAD plugins are in legacy mode.
-
-	GSFrame* gsFrame = wxGetApp().GetGsFramePtr();
-
-	if( gsFrame == NULL || (PADopen != NULL) )
+	if( m_kevt.GetEventType() == wxEVT_KEY_DOWN )
 	{
-		if( m_kevt.GetEventType() == wxEVT_KEY_DOWN )
+		if( GSFrame* gsFrame = wxGetApp().GetGsFramePtr() )
+		{
+			gsFrame->GetViewport()->DirectKeyCommand( m_kevt );
+		}
+		else
 		{
 			m_kevt.SetId( pxID_PadHandler_Keydown );
 			wxGetApp().ProcessEvent( m_kevt );
 		}
 	}
-	else
-	{
-		m_kevt.SetId( gsFrame->GetViewport()->GetId() );
-		gsFrame->ProcessEvent( m_kevt );
-	}
 }
 
 // --------------------------------------------------------------------------------------
-//  Pcsx2AppTraits (implementations)
+//  Pcsx2AppTraits (implementations)  [includes pxMessageOutputMessageBox]
 // --------------------------------------------------------------------------------------
-
+// This is here to override pxMessageOutputMessageBox behavior, which itself is ONLY used
+// by wxWidgets' command line processor.  The default edition is totally inadequate for
+// displaying a readable --help command line list, so I replace it here with a custom one
+// that formats things nicer.
+//
 class pxMessageOutputMessageBox : public wxMessageOutput
 {
 public:

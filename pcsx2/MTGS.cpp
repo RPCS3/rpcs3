@@ -403,14 +403,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 						}
 						break;
 
-						case GS_RINGTYPE_RECORD:
-						{
-							int record = tag.data[0];
-							if( GSsetupRecording != NULL ) GSsetupRecording(record, NULL);
-							if( SPU2setupRecording != NULL ) SPU2setupRecording(record, NULL);
-						}
-						break;
-
 						case GS_RINGTYPE_RESET:
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Reset" );
 							if( GSreset != NULL ) GSreset();

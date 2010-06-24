@@ -37,12 +37,16 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
 	m_Accels->Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
 
-	m_Accels->Map( AAC( WXK_F4 ),				"Frameskip_Toggle" );
+	m_Accels->Map( AAC( WXK_F4 ),				"Framelimiter_MasterToggle");
+	m_Accels->Map( AAC( WXK_F4 ).Shift(),		"Frameskip_Toggle");
 	m_Accels->Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
 	m_Accels->Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_MasterToggle" );
 
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
+	m_Accels->Map( AAC( WXK_F8 ).Shift(),		"Sys_TakeSnapshot");
+	m_Accels->Map( AAC( WXK_F8 ).Shift().Cmd(),	"Sys_TakeSnapshot");
+	m_Accels->Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle");
 	m_Accels->Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle" );
 
 	//m_Accels->Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
@@ -185,20 +189,17 @@ void GSPanel::OnKeyDown( wxKeyEvent& evt )
 	// silly, but oh well).
 
 	if( (PADopen != NULL) && CoreThread.IsOpen() ) return;
+	DirectKeyCommand( evt );
+}
 
+void GSPanel::DirectKeyCommand( wxKeyEvent& evt )
+{
 	const GlobalCommandDescriptor* cmd = NULL;
 	m_Accels->TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
-	if( cmd == NULL )
-	{
-		evt.Skip();		// Let the global APP handle it if it wants
-		return;
-	}
+	if( cmd == NULL ) return;
 
-	if( cmd != NULL )
-	{
-		DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
-		cmd->Invoke();
-	}
+	DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
+	cmd->Invoke();
 }
 
 void GSPanel::OnFocus( wxFocusEvent& evt )

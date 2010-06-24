@@ -142,8 +142,8 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 	m_evtPanel->SetValue( conf.EE.m_EnableEvents );
 	m_hwPanel->SetValue( conf.EE.m_EnableHardware );
 
-	SetCheckValue( EE, Memory );
 	SetCheckValue( EE, Bios );
+	SetCheckValue( EE, Memory );
 	SetCheckValue( EE, Cache );
 	SetCheckValue( EE, SysCtrl );
 
@@ -151,7 +151,6 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 	SetCheckValue( EE, COP0 );
 	SetCheckValue( EE, COP1 );
 	SetCheckValue( EE, COP2 );
-
 	SetCheckValue(EE, VU0micro);
 	SetCheckValue(EE, VU1micro);
 
@@ -162,8 +161,8 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 	SetCheckValue(EE, Counters);
 	SetCheckValue(EE, VIF);
 	SetCheckValue(EE, GIF);
-	SetCheckValue(EE, SPR);
 	SetCheckValue(EE, IPU);
+	SetCheckValue(EE, SPR);
 }
 
 void Panels::iopLogOptionsPanel::OnSettingsChanged()
@@ -178,6 +177,7 @@ void Panels::iopLogOptionsPanel::OnSettingsChanged()
 
 	SetCheckValue(IOP, Bios);
 	SetCheckValue(IOP, Memory);
+	SetCheckValue(IOP, GPU);
 
 	SetCheckValue(IOP, R3000A);
 	SetCheckValue(IOP, COP2);
@@ -190,9 +190,9 @@ void Panels::iopLogOptionsPanel::OnSettingsChanged()
 	SetCheckValue(IOP, Memcards);
 	SetCheckValue(IOP, PAD);
 	SetCheckValue(IOP, SPU2);
+	SetCheckValue(IOP, CDVD);
 	SetCheckValue(IOP, USB);
 	SetCheckValue(IOP, FW);
-	SetCheckValue(IOP, CDVD);
 }
 
 // --------------------------------------------------------------------------------------
