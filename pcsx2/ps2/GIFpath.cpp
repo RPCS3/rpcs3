@@ -384,8 +384,8 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 			
 			if(TestOnly == false)
 			{
-			gifRegs->stat.APATH = pathidx + 1;
-			if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
+				gifRegs->stat.APATH = pathidx + 1;
+				if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
 			}
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
@@ -393,7 +393,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 					PrepPackedRegs();
 					do {
 						if (GetReg() == 0xe) {
-							gsHandler(pMem);
+							if(TestOnly == false)gsHandler(pMem);
 						}
 						incTag(16, 1);
 					} while(StepReg() && size > 0);
@@ -463,15 +463,15 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 			}
 			else if(nloop == 0)
 			{
-				if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
-				gifRegs->stat.APATH = GIF_APATH_IDLE;
+				/*if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+				gifRegs->stat.APATH = GIF_APATH_IDLE;*/
 				switch(pathidx)
 				{
 					case GIF_PATH_1:
 						GSTransferStatus.PTH1 = STOPPED_MODE;
 						break;
 					case GIF_PATH_2:
-						GSTransferStatus.PTH2 = PENDINGSTOP_MODE;
+						GSTransferStatus.PTH2 = STOPPED_MODE;
 						break;
 					case GIF_PATH_3:
 						if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;

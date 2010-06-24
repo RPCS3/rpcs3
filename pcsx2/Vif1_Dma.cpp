@@ -336,6 +336,13 @@ __forceinline void vif1Interrupt()
 
 	g_vifCycles = 0;
 
+	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
+	{
+		gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		
+	}
+
 	if (schedulepath3msk & 0x10) 
 	{
 		Vif1MskPath3();
@@ -358,12 +365,7 @@ __forceinline void vif1Interrupt()
 	if (vif1ch->chcr.DIR)vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
 	//Simulated GS transfer time done, clear the flags
 	
-	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
-	{
-		GSTransferStatus.PTH2 = STOPPED_MODE;
-		/*gifRegs->stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;*/
-	}
+	
 
 	
 

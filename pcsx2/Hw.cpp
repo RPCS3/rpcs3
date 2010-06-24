@@ -191,6 +191,12 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			u32 temp = dma->madr;
 			dma->madr = dma->tadr + 16;
 
+			if(temp == 0)
+			{
+				DevCon.Warning("DMA Chain CALL next tag error. Tag Addr = 0");
+				dma->tadr = dma->madr + (dma->qwc << 4);
+				return false;
+			}
 			// Stash an address on the address stack pointer.
 			switch(dma->chcr.ASP)
             {

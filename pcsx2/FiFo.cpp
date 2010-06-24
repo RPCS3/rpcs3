@@ -162,6 +162,11 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 FIFO start!");
 	bool ret = VIF1transfer((u32*)value, 4);
 
+	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
+	{
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+	}
 	if (vif1.cmd) 
 	{
 		if(vif1.done == true && vif1ch->qwc == 0)	vif1Regs->stat.VPS = VPS_WAITING;
@@ -190,17 +195,15 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	nloop0_packet[2] = psHu32(GIF_FIFO + 8);
 	nloop0_packet[3] = psHu32(GIF_FIFO + 12);
 	Registers::Freeze();
-	gifRegs->stat.APATH = GIF_APATH3;
 	GetMTGS().PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
 	u64* data = (u64*)GetMTGS().GetDataPacketPtr();
 	data[0] = value[0];
 	data[1] = value[1];
 	GetMTGS().SendDataPacket();
-	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE) 
+	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
-		GSTransferStatus.PTH3 = STOPPED_MODE;
-		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
 	}
 	Registers::Thaw();
 }

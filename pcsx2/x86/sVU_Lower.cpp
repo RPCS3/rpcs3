@@ -1978,8 +1978,14 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
 	u8* pDest;
 
-	if(gifRegs->stat.APATH == GIF_APATH_IDLE)
+	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true))
 	{
+
+		if(Path1WritePos != 0)	
+		{
+			//Flush any pending transfers so things dont go up in the wrong order
+			while(gifRegs->stat.P1Q == true) gsPath1Interrupt();
+		}
 		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
 		pDest = GetMTGS().GetDataPacketPtr();
 		if (size > diff) {

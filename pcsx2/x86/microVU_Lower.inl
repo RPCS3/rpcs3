@@ -1102,7 +1102,7 @@ mVUop(mVU_XITOP) {
 //------------------------------------------------------------------
 // XGkick
 //------------------------------------------------------------------
-
+extern void gsPath1Interrupt();
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
@@ -1110,8 +1110,14 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	u32 size;
 	u8* pDest;
 	
-	if(gifRegs->stat.APATH == GIF_APATH_IDLE)
+	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true))
 	{
+
+		if(Path1WritePos != 0)	
+		{
+			//Flush any pending transfers so things dont go up in the wrong order
+			while(gifRegs->stat.P1Q == true) gsPath1Interrupt();
+		}
 		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
 		pDest = GetMTGS().GetDataPacketPtr();
 		if (size > diff) {
@@ -1127,6 +1133,11 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
 		}
 		GetMTGS().SendDataPacket();
+		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+		{
+			gifRegs->stat.OPH = false;
+			gifRegs->stat.APATH = GIF_APATH_IDLE;
+		}
 	}
 	else
 	{

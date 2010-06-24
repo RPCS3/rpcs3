@@ -236,6 +236,15 @@ void vifMFIFOInterrupt()
 	g_vifCycles = 0;
 	VIF_LOG("vif mfifo interrupt");
 
+	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
+	{
+		GSTransferStatus.PTH2 = STOPPED_MODE;
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		/*gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;*/
+	}
+
 	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
 	if(vif1ch->chcr.DIR && CheckPath2GIF(10) == false) return;
@@ -243,13 +252,6 @@ void vifMFIFOInterrupt()
 
 	//Simulated GS transfer time done, clear the flags
 	
-	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
-	{
-		GSTransferStatus.PTH2 = STOPPED_MODE;
-		/*gifRegs->stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;*/
-	}
-
 	if (vif1.cmd) 
 	{
 		if(vif1.done == true && vif1ch->qwc == 0)	vif1Regs->stat.VPS = VPS_WAITING;

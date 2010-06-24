@@ -166,7 +166,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		const int	ret	 = aMin(vif1.vifpacketsize, vif1.tag.size);
 		u32			size = ret << 2;
 
-		gifRegs->stat.APATH = GIF_APATH2; //Flag is cleared in vif1interrupt to simulate it being in progress.
+		//gifRegs->stat.APATH = GIF_APATH2; //Flag is cleared in vif1interrupt to simulate it being in progress.
 		
 		//In the original code we were saving this data, it seems if it does happen, its just blank, so we ignore it.
 		

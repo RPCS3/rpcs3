@@ -56,7 +56,7 @@ void gsPath1Interrupt()
 
 	
 
-	if((gifRegs->stat.APATH == GIF_APATH_IDLE || gifRegs->stat.APATH == GIF_APATH1) && Path1WritePos > 0 && !gifRegs->stat.PSE)
+	if((gifRegs->stat.APATH == GIF_APATH_IDLE || gifRegs->stat.APATH == GIF_APATH1 || gifRegs->stat.IP3) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
 		Registers::Freeze();
 		u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos*16), (Path1WritePos - Path1ReadPos));
@@ -69,11 +69,17 @@ void gsPath1Interrupt()
 		Registers::Thaw();
 
 		Path1ReadPos += size;
+		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+		{
+			gifRegs->stat.OPH = false;
+			gifRegs->stat.APATH = GIF_APATH_IDLE;
+		}
+
 		if(Path1ReadPos == Path1WritePos)
 		{
 			Path1WritePos = Path1ReadPos = 0;
 		}
-		CPU_INT(28, 16); //Should be size * BIAS (probably) but Tony Hawk doesnt like this, probably to do with vif flush stalling
+		if(!(cpuRegs.interrupt & (1<<28))) CPU_INT(28, 16); //Should be size * BIAS (probably) but Tony Hawk doesnt like this, probably to do with vif flush stalling
 	}
 	else
 	{
@@ -85,7 +91,7 @@ void gsPath1Interrupt()
 		else
 		{
 			if(gifRegs->stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
-			CPU_INT(28, 16);
+			if(!(cpuRegs.interrupt & (1<<28)))CPU_INT(28, 16);
 		}
 	}
 	
@@ -94,7 +100,11 @@ __forceinline void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
-	
+	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
+	{
+		gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+	}
 
 	if (!(gif->chcr.STR))
 	{
@@ -120,8 +130,13 @@ __forceinline void gsInterrupt()
 	gspath3done = false;
 	gscycles = 0;
 	gif->chcr.STR = false;
-	//gifRegs->stat.OPH = false;
-	gifRegs->stat.clear_flags(GIF_STAT_FQC);
+
+	////
+	/*gifRegs->stat.OPH = false;
+	GSTransferStatus.PTH3 = STOPPED_MODE;
+	gifRegs->stat.APATH = GIF_APATH_IDLE;
+	////
+	gifRegs->stat.clear_flags(GIF_STAT_FQC);*/
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
 	//DevCon.Warning("GIF DMA end");
@@ -223,10 +238,6 @@ bool CheckPaths(int Channel)
 		{
 			if((vif1.cmd & 0x7f) != 0x51 || gifRegs->stat.P1Q == true)
 			{
-				if(gifRegs->stat.APATH == GIF_APATH3) 
-				{
-					gifRegs->stat.APATH = GIF_APATH_IDLE;
-				}
 					gifRegs->stat.IP3 = true;
 					CPU_INT(DMAC_GIF, 16);
 					return false;
@@ -238,10 +249,6 @@ bool CheckPaths(int Channel)
 		//This should cover both scenarios, as DIRECTHL doesn't gain priority when image mode is running (PENDINGIMAGE_MODE == fininshed).
 		if((gifRegs->stat.P1Q == true || gifRegs->stat.P2Q == true) || (gifRegs->stat.APATH > GIF_APATH_IDLE && gifRegs->stat.APATH < GIF_APATH3))
 		{
-			if(gifRegs->stat.APATH == GIF_APATH3) 
-			{
-				gifRegs->stat.APATH = GIF_APATH_IDLE;
-			}
 			gifRegs->stat.IP3 = true;
 			CPU_INT(DMAC_GIF, 16);
 			return false;
@@ -619,9 +626,10 @@ void gifMFIFOInterrupt()
     //Console.WriteLn("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
-	if (GSTransferStatus.PTH3 == STOPPED_MODE)
+	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
-	     gifRegs->stat.APATH = GIF_APATH_IDLE;
+		gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
 	}
 
 	if(CheckPaths(11) == false) return;

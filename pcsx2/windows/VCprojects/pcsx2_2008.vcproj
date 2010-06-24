@@ -20,6 +20,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
+			OutputDirectory="D:\Files\ps2\Pcsx2\$(PcsxSubsection)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\common\vsprops\wxWidgetsGui.vsprops"
 			UseOfMFC="0"
