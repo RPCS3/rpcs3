@@ -38533,6 +38533,12 @@ Serial = SLES-54641
 Name   = International Cricket Captain III
 Region = PAL-E
 ---------------------------------------------
+Serial = SLES-54644
+Name   = Valkyrie Profile 2 - Silmeria
+Region = PAL-E
+Compat = 5
+VuAddSubHack = 1
+---------------------------------------------
 Serial = SLES-54815
 Name   = Spyro - The Eternal Night
 Region = PAL-M6
