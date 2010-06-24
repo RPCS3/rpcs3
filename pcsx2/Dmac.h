@@ -670,7 +670,6 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 
 	if (addr < Ps2MemSize::Base)
 	{
-		if(addr == 0) return NULL;
 		return (tDMA_TAG*)&psM[addr];
 	}
 
