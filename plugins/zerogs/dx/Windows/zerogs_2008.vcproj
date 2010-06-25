@@ -5,6 +5,7 @@
 	Name="ZeroGS"
 	ProjectGUID="{5C6B7D28-E73D-4F71-8FC0-17ADA640EBD8}"
 	RootNamespace="ZeroGS"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -64,7 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\"
@@ -132,7 +133,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				AdditionalLibraryDirectories="..\"
 				IgnoreDefaultLibraryNames=""
@@ -211,7 +212,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
