@@ -288,9 +288,9 @@ struct DMACh {
         return tag;
 	}
 
-	tDMA_TAG dma_tag() const
+	tDMA_TAG dma_tag()
 	{
-		return DMA_TAG(chcr._u32);
+		return chcr.tag();
 	}
 
 	wxString cmq_to_str() const
@@ -634,7 +634,6 @@ static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
-	
 	//For some reason Getaway references SPR Memory from itself using SPR0, oh well, let it i guess...
 	if((addr & 0x70000000) == 0x70000000)
 	{
@@ -648,27 +647,26 @@ static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 	{
 		return (tDMA_TAG*)&psM[addr];
 	}
-
-	if (addr >= 0x11004000 && addr < 0x11010000)
+	else if (addr < 0x10000000)
+	{
+		return (tDMA_TAG*)(write ? psMHW : psMHR);
+	}
+	else if ((addr >= 0x11004000) && (addr < 0x11010000))
 	{
 		//Access for VU Memory
 		return (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
 	}
-
-	if (addr >= Ps2MemSize::Base && addr < 0x10000000)
+	else
 	{
-		return (tDMA_TAG*)(write ? psMHW : psMHR);
+		Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
+		return NULL;
 	}
-
-	Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
-	return NULL;
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
 static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
-
 	if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&psS[addr & 0x3ff0];
 
 	// FIXME: Why??? DMA uses physical addresses
@@ -678,21 +676,21 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 	{
 		return (tDMA_TAG*)&psM[addr];
 	}
-
-	// Secret scratchpad address for DMA = end of maximum main memory?
-	if (addr >= 0x10000000 && addr < 0x10004000)
-	{
-		//Console.Warning("Writing to the scratchpad without the SPR flag set!");
-		return (tDMA_TAG*)&psS[addr & 0x3ff0];
-	}
-
-	if (addr >= Ps2MemSize::Base && addr < 0x10000000)
+	else if (addr < 0x10000000)
 	{
 		return (tDMA_TAG*)(write ? psMHW : psMHR);
 	}
-
-	Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
-	return NULL;
+	else if (addr < 0x10004000)
+	{
+		// Secret scratchpad address for DMA = end of maximum main memory?
+		//Console.Warning("Writing to the scratchpad without the SPR flag set!");
+		return (tDMA_TAG*)&psS[addr & 0x3ff0];
+	}
+	else
+	{
+		Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
+		return NULL;
+	}
 }
 
 void hwIntcIrq(int n);
