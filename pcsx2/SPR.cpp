@@ -130,7 +130,6 @@ void _SPR0interleave()
 	}
 
 	spr0->qwc = 0;
-	spr0finished = true;
 }
 
 static __forceinline void _dmaSPR0()
@@ -207,6 +206,7 @@ static __forceinline void _dmaSPR0()
 		default:
 		{
 			_SPR0interleave();
+			spr0finished = true;
 			break;
 		}
 	}
@@ -264,13 +264,9 @@ void dmaSPR0()   // fromSPR
 	if(spr0->chcr.MOD == CHAIN_MODE && spr0->qwc > 0) 
 	{
 		//DevCon.Warning(L"SPR0 QWC on Chain " + spr0->chcr.desc());
-		if(((spr0->chcr.TAG >> 12) & 0x7) == 0x7)
+		if (spr0->chcr.tag().ID == TAG_END) // but not TAG_REFE?
 		{
 			spr0finished = true;
-		}
-		else
-		{
-			spr0finished = false;
 		}
 	}
 
@@ -327,7 +323,6 @@ void _SPR1interleave()
 	}
 
 	spr1->qwc = 0;
-	spr1finished = true;
 }
 
 void _dmaSPR1()   // toSPR work function
@@ -394,6 +389,7 @@ void _dmaSPR1()   // toSPR work function
 		default:
 		{
 			_SPR1interleave();
+			spr1finished = true;
 			break;
 		}
 	}
@@ -411,13 +407,9 @@ void dmaSPR1()   // toSPR
 	if(spr1->chcr.MOD == CHAIN_MODE && spr1->qwc > 0) 
 	{
 		//DevCon.Warning(L"SPR1 QWC on Chain " + spr1->chcr.desc());
-		if(((spr1->chcr.TAG >> 12) & 0x7) == 0x7 || ((spr1->chcr.TAG >> 12) & 0x7) == 0x0)
+		if ((spr1->chcr.tag().ID == TAG_END) || (spr1->chcr.tag().ID == TAG_REFE))
 		{
 			spr1finished = true;
-		}
-		else
-		{
-			spr1finished = false;
 		}
 	}
 

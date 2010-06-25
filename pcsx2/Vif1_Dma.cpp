@@ -282,7 +282,7 @@ bool CheckPath2GIF(int channel)
 		}
 		else if( vif1.GifWaitState == 1 ) // Else we're flushing path3 :), but of course waiting for the microprogram to finish
 		{
-			if(gifRegs->stat.P1Q == true)
+			if (gifRegs->stat.P1Q)
 			{
 				//DevCon.Warning("VIF1-1 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
 				CPU_INT(channel, 128);
@@ -316,7 +316,7 @@ bool CheckPath2GIF(int channel)
 		}
 		else //Normal Flush
 		{
-			if(gifRegs->stat.P1Q == true)
+			if (gifRegs->stat.P1Q)
 			{
 				//DevCon.Warning("VIF1-2 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
 				CPU_INT(channel, 128);
@@ -340,7 +340,6 @@ __forceinline void vif1Interrupt()
 	{
 		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
-		
 	}
 
 	if (schedulepath3msk & 0x10) 
@@ -350,7 +349,7 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 	//Some games (Fahrenheit being one) start vif first, let it loop through blankness while it sets MFIFO mode, so we need to check it here.
-	if (dmacRegs->ctrl.MFD == MFD_VIF1)   // VIF MFIFO
+	if (dmacRegs->ctrl.MFD == MFD_VIF1)
 	{
 		//Console.WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
@@ -360,20 +359,20 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 
-	if(vif1ch->chcr.DIR && CheckPath2GIF(DMAC_VIF1) == false) return;
 	//We need to check the direction, if it is downloading from the GS, we handle that seperately (KH2 for testing)
-	if (vif1ch->chcr.DIR)vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
-	//Simulated GS transfer time done, clear the flags
+	if (vif1ch->chcr.DIR)
+	{
+		if (!CheckPath2GIF(DMAC_VIF1)) return;
+		
+		vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+		//Simulated GS transfer time done, clear the flags
+	}
 	
-	
-
-	
-
 	if (!(vif1ch->chcr.STR)) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
 
 	if (vif1.cmd) 
 	{
-		if(vif1.done == true && vif1ch->qwc == 0)	vif1Regs->stat.VPS = VPS_WAITING;
+		if (vif1.done == true && vif1ch->qwc == 0) vif1Regs->stat.VPS = VPS_WAITING;
 	}
 	else		 
 	{
@@ -486,7 +485,8 @@ void dmaVIF1()
 			vif1.dmamode = VIF_CHAIN_MODE;
 			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch->chcr.desc());
 			vif1.inprogress |= 0x1;
-			if(((vif1ch->chcr.TAG >> 12) & 0x7) == 0x0 || ((vif1ch->chcr.TAG >> 12) & 0x7) == 0x7)
+			
+			if ((vif1ch->chcr.tag().ID == TAG_REFE) || (vif1ch->chcr.tag().ID == TAG_END))
 			{
 				vif1.done = true;
 			}

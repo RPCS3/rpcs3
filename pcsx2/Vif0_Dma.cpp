@@ -232,7 +232,8 @@ void dmaVIF0()
 				vif0.dmamode = VIF_CHAIN_MODE;
 				//DevCon.Warning(L"VIF0 QWC on Chain CHCR " + vif0ch->chcr.desc());
 				vif0.inprogress |= 0x1;
-				if(((vif0ch->chcr.TAG >> 12) & 0x7) == 0x0 || ((vif0ch->chcr.TAG >> 12) & 0x7) == 0x7)
+				
+				if ((vif0ch->chcr.tag().ID == TAG_REFE) || (vif0ch->chcr.tag().ID == TAG_END))
 				{
 					vif0.done = true;
 				}
