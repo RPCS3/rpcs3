@@ -528,7 +528,7 @@ extern s16*		spu2regs;
 extern s16*		_spu2mem;
 extern int		PlayMode;
 
-extern void SetIrqCall();
+extern void SetIrqCall(int core);
 extern void StartVoices(int core, u32 value);
 extern void StopVoices(int core, u32 value);
 extern void InitADSR();

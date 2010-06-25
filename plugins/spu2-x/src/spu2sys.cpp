@@ -42,8 +42,13 @@ int		PlayMode;
 
 bool has_to_call_irq=false;
 
-void SetIrqCall()
+void SetIrqCall(int core)
 {
+	// reset by an irq disable/enable cycle, behaviour found by
+	// test programs that bizarrely only fired one interrupt
+	if (Spdif.Info & 4 << core)
+		return;
+	Spdif.Info |= 4 << core;
 	has_to_call_irq=true;
 }
 
@@ -856,8 +861,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				if(Cores[i].IRQEnable && (Cores[i].IRQA == thiscore.TSA))
 				{
-					Spdif.Info |= 4 << i;
-					SetIrqCall();
+					SetIrqCall(i);
 				}
 			}
 			thiscore.DmaWrite( value );

@@ -154,8 +154,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 					(Cores[i].IRQA == mix_dest_b0)	||	(Cores[i].IRQA == mix_dest_b1) )
 				{
 					//printf("Core %d IRQ Called (Reverb). IRQA = %x\n",i,addr);
-					Spdif.Info |= 4 << i;
-					SetIrqCall();
+					SetIrqCall(i);
 				}
 			}
 		}

@@ -275,15 +275,13 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
 				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 #else
 		if ((IRQEnable && (IRQA >= TSA)) || (IRQA < TDA))
 		{
-			Spdif.Info |= 4 << Index;
-			SetIrqCall();
+			SetIrqCall(Index);
 		}
 #endif
 	}
@@ -305,15 +303,13 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
 				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 #else
 		if( IRQEnable && (IRQA >= TSA) && (IRQA < TDA) )
 		{
-			Spdif.Info |= 4 << Index;
-			SetIrqCall();
+			SetIrqCall(Index);
 		}
 #endif
 	}
@@ -360,8 +356,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		{
 			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 	}
@@ -379,8 +374,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 	}
@@ -475,8 +469,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 	}
@@ -494,8 +487,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info |= 4 << i;
-				SetIrqCall();
+				SetIrqCall(i);
 			}
 		}
 	}
@@ -569,8 +561,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				{
 					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
 					{
-						Spdif.Info |= 4 << i;
-						SetIrqCall();
+						SetIrqCall(i);
 					}
 				}
 			}
@@ -590,8 +581,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				{
 					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
 					{
-						Spdif.Info |= 4 << i;
-						SetIrqCall();
+						SetIrqCall(i);
 					}
 				}
 
@@ -609,8 +599,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				{
 					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
 					{
-						Spdif.Info |= 4 << i;
-						SetIrqCall();
+						SetIrqCall(i);
 					}
 				}
 

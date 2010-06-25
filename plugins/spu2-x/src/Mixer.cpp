@@ -116,8 +116,7 @@ static void __forceinline IncrementNextA(V_Core& thiscore, uint voiceidx)
 			if( IsDevBuild )
 				ConLog(" * SPU2 Core %d: IRQ Called (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
 
-			Spdif.Info |= 4 << i;
-			SetIrqCall();
+			SetIrqCall(i);
 		}
 	}
 
@@ -509,8 +508,7 @@ static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
 		if( Cores[i].IRQEnable && Cores[i].IRQA == addr )
 		{
 			//printf("Core %d special write IRQ Called (IRQ passed). IRQA = %x\n",i,addr);
-			Spdif.Info |= 4 << i;
-			SetIrqCall();
+			SetIrqCall(i);
 		}
 	}
 	// throw an assertion if the memory range is invalid:
