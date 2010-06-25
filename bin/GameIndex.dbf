@@ -38984,7 +38984,8 @@ Compat = 5
 Serial = SLUS-21847
 Name   = Guilty Gear XX - Accent Core Plus
 Region = NTSC-U
-Compat = 2
+Compat = 5
+SkipMpegHack = 1
 ---------------------------------------------
 Serial = SLES-54859
 Name   = Guitar Hero - Rocks The 80's
