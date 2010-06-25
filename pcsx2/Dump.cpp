@@ -25,6 +25,8 @@
 #include "Utilities/AsciiFile.h"
 
 using namespace R5900;
+using std::string;
+
 // fixme: currently should not be uncommented.
 //#define TEST_BROKEN_DUMP_ROUTINES
 

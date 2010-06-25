@@ -20,6 +20,8 @@ class AsciiFile;
 using namespace std;
 using namespace x86Emitter;
 
+#include <deque>
+
 #include "VU.h"
 #include "GS.h"
 #include "iR5900.h"

@@ -20,7 +20,7 @@ void AsciiFile::Printf( const char* fmt, ... )
 {
 	va_list list;
 	va_start( list, fmt );
-	string writeme; vssprintf( writeme, fmt, list );
+	std::string writeme; vssprintf( writeme, fmt, list );
 	va_end( list );
 	Write( writeme.c_str(), writeme.length() );
 }

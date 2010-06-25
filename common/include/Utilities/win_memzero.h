@@ -187,8 +187,8 @@ static __forceinline void memzero_ptr( void *dest )
 	}
 
 	// This function only works on 32-bit alignments.
-	jASSUME( (MZFbytes & 0x3) == 0 );
-	jASSUME( ((uptr)dest & 0x3) == 0 );
+	pxAssume( (MZFbytes & 0x3) == 0 );
+	pxAssume( ((uptr)dest & 0x3) == 0 );
 
 	enum
 	{
@@ -278,8 +278,8 @@ static __forceinline void memset_8( void *dest )
 	if( bytes128 > 32 )
 	{
 		// This function only works on 128-bit alignments.
-		jASSUME( (MZFbytes & 0xf) == 0 );
-		jASSUME( ((uptr)dest & 0xf) == 0 );
+		pxAssume( (MZFbytes & 0xf) == 0 );
+		pxAssume( ((uptr)dest & 0xf) == 0 );
 
 		__asm
 		{
@@ -323,7 +323,7 @@ static __forceinline void memset_8( void *dest )
 	}*/
 
 	// This function only works on 32-bit alignments of data copied.
-	jASSUME( (MZFbytes & 0x3) == 0 );
+	pxAssume( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{
@@ -396,8 +396,8 @@ static __forceinline void memset_16( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
-	if( (MZFbytes & 0x1) != 0 )
-		throw Exception::LogicError( "Invalid parameter passed to memset_16 - data length is not a multiple of 16 or 32 bits." );
+	// Assertion: data length must be a multiple of 16 or 32 bits
+	pxAssume( (MZFbytes & 0x1) == 0 );
 
 	if( (MZFbytes & 0x3) != 0 )
 	{
@@ -411,7 +411,7 @@ static __forceinline void memset_16( void *dest )
 	//u64 _xmm_backup[2];
 
 	// This function only works on 32-bit alignments of data copied.
-	jASSUME( (MZFbytes & 0x3) == 0 );
+	pxAssume( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{
@@ -484,9 +484,8 @@ static __forceinline void memset_32( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
-	if( (MZFbytes & 0x3) != 0 )
-		throw Exception::LogicError( "Invalid parameter passed to memset_32 - data length is not a multiple of 32 bits." );
-
+	// Assertion: data length must be a multiple of 32 bits
+	pxAssume( (MZFbytes & 0x3) == 0 );
 
 	//u64 _xmm_backup[2];
 
@@ -494,7 +493,7 @@ static __forceinline void memset_32( void *dest )
 	// If the data length is not a factor of 32 bits, the C++ optimizing compiler will
 	// probably just generate mysteriously broken code in Release builds. ;)
 
-	jASSUME( (MZFbytes & 0x3) == 0 );
+	pxAssume( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{

@@ -18,7 +18,6 @@
 #include "Dependencies.h"
 
 #include <wx/tokenzr.h>
-#include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 
 
 // --------------------------------------------------------------------------------------

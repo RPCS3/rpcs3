@@ -20,6 +20,8 @@
 #include "R5900.h"
 #include "VU.h"
 
+using std::string;
+
 const char * const disRNameCP2f[] = {
 	"VF00", "VF01", "VF02", "VF03", "VF04", "VF05", "VF06", "VF07",
 	"VF08", "VF09", "VF10", "VF11", "VF12", "VF13", "VF14", "VF15",

@@ -635,7 +635,7 @@ void __fastcall eeloadReplaceOSDSYS()
 	}
 	pxAssert(osdsys_p);
 
-	string elfname;
+	std::string elfname;
 
 	if (!elf_override.IsEmpty())
 	{

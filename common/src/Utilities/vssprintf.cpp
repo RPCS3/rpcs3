@@ -613,7 +613,7 @@ repeat:
 				// let's add support for std::string as a formatted parameter!  (air)
 				if( qualifier == 'h' )
 				{
-					static const string nullstring( "<NULL>" );
+					static const std::string nullstring( "<NULL>" );
 
 					const std::string* ss = va_arg(args, std::string*);
 					if( ss == NULL ) ss = &nullstring;

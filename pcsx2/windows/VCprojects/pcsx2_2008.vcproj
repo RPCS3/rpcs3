@@ -315,10 +315,6 @@
 					RelativePath="..\..\Utilities\FileUtils.cpp"
 					>
 				</File>
-				<File
-					RelativePath="..\..\StringUtils.h"
-					>
-				</File>
 			</Filter>
 			<Filter
 				Name="Patch"

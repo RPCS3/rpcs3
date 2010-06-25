@@ -23,6 +23,12 @@
 
 class wxOutputStream;
 class wxInputStream;
+class wxPoint;
+class wxRect;
+class wxSize;
+
+extern const wxSize wxDefaultSize;
+extern const wxPoint wxDefaultPosition;
 
 
 // This should prove useful....
@@ -107,18 +113,17 @@ static const pxEnumEnd_t pxEnumEnd = {};
 // translator (which the _() does automatically, and sometimes we don't want that).  This is
 // a shorthand replacement for wxTRANSLATE.
 //
-#define wxLt(a)		(a)
+#ifndef wxLt
+#	define wxLt(a)		a
+#endif
 
 #include <wx/string.h>
-#include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 #include <wx/intl.h>
 #include <wx/log.h>
 
 #include "Pcsx2Defs.h"
 
 #include <stdexcept>
-#include <algorithm>
-#include <string>
 #include <cstring>		// string.h under c++
 #include <cstdio>		// stdio.h under c++
 #include <cstdlib>

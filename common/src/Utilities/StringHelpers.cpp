@@ -14,9 +14,7 @@
  */
 
 #include "PrecompiledHeader.h"
-
-const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
-
+#include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 
 __forceinline wxString fromUTF8( const char* src )
 {

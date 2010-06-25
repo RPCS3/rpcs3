@@ -16,6 +16,10 @@
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 
+#include <wx/gdicmn.h>
+
+const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
+
 static int _calcEnumLength( const wxChar* const* enumArray )
 {
 	int cnt = 0;

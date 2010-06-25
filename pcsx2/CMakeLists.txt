@@ -234,8 +234,7 @@ set(pcsx2Headers
 	sio_internal.h
 	SPR.h
 	Stats.h
-	StringUtils.h
-    SysForwardDefs.h
+	SysForwardDefs.h
 	System.h
 	Vif_Dma.h
 	Vif.h
