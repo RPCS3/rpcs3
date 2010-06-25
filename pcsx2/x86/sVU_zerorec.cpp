@@ -41,6 +41,9 @@
 #include "NakedAsm.h"
 #include "AppConfig.h"
 
+// Needed in gcc for find.
+#include <algorithm>
+
 using namespace std;
 using namespace x86Emitter;
 

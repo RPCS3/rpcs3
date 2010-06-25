@@ -363,7 +363,7 @@ void GIFdma()
 			GIFchain();	//Transfers the data set by the switch
 			CPU_INT(DMAC_GIF, gscycles);
 			return;
-		} else DevCon.Warning("GIF Normalmode or QWC going to invalid case? CHCR %x", gif->chcr);
+		} else DevCon.Warning("GIF Normalmode or QWC going to invalid case? CHCR %x", gif->chcr._u32);
 
 		//else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
 	}

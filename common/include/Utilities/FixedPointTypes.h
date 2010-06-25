@@ -18,6 +18,9 @@
 #include "Dependencies.h"
 #include "Exceptions.h"
 
+// Needed for pow().
+#include <math.h>
+
 template< int Precision >
 struct FixedInt
 {

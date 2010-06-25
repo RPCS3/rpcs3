@@ -354,7 +354,7 @@ static __forceinline void _cpuTestPERF()
 
 static bool cpuIntsEnabled(int Interrupt)
 {
-	int IntType = cpuRegs.CP0.n.Status.val & Interrupt; //Choose either INTC or DMAC, depending on what called it
+	//int IntType = cpuRegs.CP0.n.Status.val & Interrupt; //Choose either INTC or DMAC, depending on what called it
 
 	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
 		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0) && Interrupt;

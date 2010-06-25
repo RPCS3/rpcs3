@@ -142,6 +142,7 @@ union tDMA_CHCR {
 	u16 upper() const { return (_u32 >> 16); }
 	u16 lower() const { return (u16)_u32; }
 	wxString desc() const { return wxsFormat(L"Chcr: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 
 #define CHCR(value) ((tDMA_CHCR)(value))
@@ -157,6 +158,7 @@ union tDMA_SADR {
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Sadr: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 
 union tDMA_MADR {
@@ -170,6 +172,7 @@ union tDMA_MADR {
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Madr: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 
 union tDMA_TADR {
@@ -183,6 +186,7 @@ union tDMA_TADR {
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Tadr: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 
 union tDMA_ASR { // The Address Stack Register
@@ -196,6 +200,7 @@ union tDMA_ASR { // The Address Stack Register
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Asr: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 
 union tDMA_QWC {
@@ -209,6 +214,7 @@ union tDMA_QWC {
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"QWC: 0x%x", _u32); }
+	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
 static __forceinline void setDmacStat(u32 num);
 static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write);

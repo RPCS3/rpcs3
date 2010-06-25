@@ -104,7 +104,7 @@ public:
 	}
 };
 
-static bool IsSavingOrLoading = false;
+//static bool IsSavingOrLoading = false;
 
 
 // --------------------------------------------------------------------------------------
