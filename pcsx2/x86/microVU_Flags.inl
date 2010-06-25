@@ -206,7 +206,7 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 			MOV32RtoR(gprF2,  gprT3);
 		}
 	}
-
+	
 	if (__Mac) {
 		int bMac[4];
 		sortFlag(mFC.xMac, bMac, mFC.cycles);
@@ -224,26 +224,32 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 	}
 }
 
-#define shortBranch()											\
-	if ((branch == 3) || (branch == 4)) {						\
-		mVUflagPass(mVU, aBranchAddr, (xCount - (mVUcount+1)));	\
-		if (branch == 3) { mVUcount = 4; break; }				\
-	}															\
-	else break
+#define shortBranch() {										\
+	if ((branch == 3) || (branch == 4)) { /*Branches*/		\
+		mVUflagPass(mVU, aBranchAddr, sCount+1, found);		\
+		if (branch == 3) break;	/*Non-conditional Branch*/	\
+	}														\
+	else if (branch == 5) { /*JR/JARL*/						\
+		if(!CHECK_VU_BLOCKHACK && (!found||(sCount+1<4))) {	\
+			mVUregs.needExactMatch |= 7;					\
+		}													\
+		break;												\
+	}														\
+	else break; /*E-Bit End*/								\
+}
 
 // Scan through instructions and check if flags are read (FSxxx, FMxxx, FCxxx opcodes)
-void mVUflagPass(mV, u32 startPC, u32 xCount) {
+void mVUflagPass(mV, u32 startPC, u32 sCount = 0, bool found = 0) {
 
-	int oldPC	  = iPC;
-	int oldCount  = mVUcount;
-	int oldBranch = mVUbranch;
-	int aBranchAddr;
+	int oldPC	    = iPC;
+	int oldBranch   = mVUbranch;
+	int aBranchAddr = 0;
 	iPC		  = startPC / 4;
-	mVUcount  = 0;
 	mVUbranch = 0;
-	for (int branch = 0; mVUcount < xCount; mVUcount=(mVUregs.needExactMatch&8)?(mVUcount+1):mVUcount) {
+	for (int branch = 0; (sCount < 4) || !found; sCount++) {
 		incPC(1);
 		mVUopU(mVU, 3);
+		if (mVUregs.needExactMatch&8) found = 1;
 		if (  curI & _Ebit_  )	{ branch = 1; }
 		if (  curI & _DTbit_ )	{ branch = 6; }
 		if (!(curI & _Ibit_) )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
@@ -251,10 +257,9 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 		else if (branch == 1)	{ branch = 2; }
 		if		(mVUbranch)		{ branch = ((mVUbranch>8)?(5):((mVUbranch<3)?3:4)); aBranchAddr = branchAddr; mVUbranch = 0; }
 		incPC(1);
+		if ((mVUregs.needExactMatch&7)==7) break;
 	}
-	if (mVUcount < 4) { mVUregs.needExactMatch |= 0x7; }
 	iPC		  = oldPC;
-	mVUcount  = oldCount;
 	mVUbranch = oldBranch;
 	setCode();
 }
@@ -265,22 +270,21 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 
 // Checks if the first 4 instructions of a block will read flags
 _f void mVUsetFlagInfo(mV) {
-	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
-	branchType2 { 
+	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr); incPC(1); }
+	branchType2 { // This case can possibly be turned off via a hack for a small speedup...
 		if (!mVUlow.constJump.isValid || !CHECK_VU_CONSTPROP) { mVUregs.needExactMatch |= 0x7; } 
-		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
+		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8)); }
 	}
 	branchType3 {
 		incPC(-1);
-		mVUflagPass(mVU, branchAddr, 4);
+		mVUflagPass(mVU, branchAddr);
 		int backupFlagInfo = mVUregs.needExactMatch;
 		mVUregs.needExactMatch = 0;
 		incPC(4); // Branch Not Taken
-		mVUflagPass(mVU, xPC, 4);
+		mVUflagPass(mVU, xPC);
 		incPC(-3);
 		mVUregs.needExactMatch |= backupFlagInfo;
 	}
 	mVUregs.needExactMatch &= 0x7;
 	if (noFlagOpts) mVUregs.needExactMatch |= 0x7;
 }
-

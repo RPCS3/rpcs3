@@ -272,7 +272,7 @@ void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0) {
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 _f void mVUaddrFix(mV, int gprReg) {
-	if (mVU == &microVU1) {
+	if (isVU1) {
 		AND32ItoR(gprReg, 0x3ff); // wrap around
 		SHL32ItoR(gprReg, 4);
 	}

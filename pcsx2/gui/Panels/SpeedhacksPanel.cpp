@@ -163,12 +163,20 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuFlagHack = new pxCheckBox( vuHacksPanel, _("mVU Flag Hack"),
 		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
 
+	m_check_vuBlockHack = new pxCheckBox( vuHacksPanel, _("mVU Block Hack"),
+		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
+
 	m_check_vuMinMax = new pxCheckBox( vuHacksPanel, _("mVU Min/Max Hack"),
 		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc... [Not Recommended]") );
 
 	m_check_vuFlagHack->SetToolTip( pxE( ".Tooltip:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
 		L"This is safe most of the time, and Super VU does something similar by default."
+	) );
+
+	m_check_vuBlockHack->SetToolTip( pxE( ".Tooltip:Speedhacks:vuBlockHack",
+		L"Assumes that very far into future blocks will not need old flag instance data. "
+		L"This should be pretty safe. It is unknown if this breaks any game..."
 	) );
 
 	m_check_vuMinMax->SetToolTip( pxE( ".Tooltip:Speedhacks:vuMinMax",
@@ -226,6 +234,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	*vuSliderPanel	+= m_msg_vustealer		| sliderFlags;
 
 	*vuHacksPanel	+= m_check_vuFlagHack;
+	*vuHacksPanel	+= m_check_vuBlockHack;
 	*vuHacksPanel	+= m_check_vuMinMax;
 
 	*miscHacksPanel	+= m_check_intc;
@@ -298,6 +307,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Confi
 	SetVUcycleSliderMsg();
 
 	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
+	m_check_vuBlockHack	->SetValue(opts.vuBlockHack);
 	m_check_vuMinMax	->SetValue(opts.vuMinMax);
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
@@ -322,6 +332,7 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.IopCycleRate_X2	= m_check_IOPx2->GetValue();
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
+	opts.vuBlockHack		= m_check_vuBlockHack->GetValue();
 	opts.vuMinMax			= m_check_vuMinMax->GetValue();
 
 	// If the user has a command line override specified, we need to disable it
