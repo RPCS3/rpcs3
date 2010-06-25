@@ -44,6 +44,7 @@ public:
 
 	virtual int lseek(s32 offset, s32 whence) { return -IOP_EIO; }
 	virtual int read(void *buf, u32 count) { return -IOP_EIO; }
+	virtual int write(void *buf, u32 count) { return -IOP_EIO; }
 };
 
 class IOManDir {

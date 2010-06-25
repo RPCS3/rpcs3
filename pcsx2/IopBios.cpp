@@ -75,10 +75,63 @@ public:
 	{
 		const char *path = strchr(name, ':') + 1;
 
-		if (flags != IOP_O_RDONLY)
-			return -IOP_EROFS;
+		// host: actually DOES let you write!
+		//if (flags != IOP_O_RDONLY)
+		//	return -IOP_EROFS;
 
-		int hostfd = ::open(path, O_BINARY | O_RDONLY);
+		// WIP code. Works well on win32, not so sure on unixes
+		// TODO: get rid of dependency on CWD/PWD
+#if USE_HOST_REWRITE
+		// we want filenames to be relative to pcs2dir / host
+
+		static char pathMod[1024];
+
+		// partial "rooting",
+		// it will NOT avoid a path like "../../x" from escaping the pcsx2 folder!
+
+#ifdef _WIN32
+		const char *_local_root = "/usr/local/";
+		if(strncmp(path,_local_root,strlen(_local_root))==0)
+		{
+			strcpy(pathMod,"host/");
+			strcat(pathMod,path+strlen(_local_root));
+		}
+		else
+#endif
+		if((path[0] == '/') || (path[0] == '\\') || (isalpha(path[0]) && (path[1] == ':'))) // absolute NATIVE path (X:\blah)
+		{
+			// TODO: allow some way to use native paths in non-windows platforms
+			// maybe hack it so linux prefixes the path with "X:"? ;P
+			// or have all platforms use a common prefix for native paths
+			strcpy(pathMod,path);
+		}
+		else // relative paths
+		{
+			// this assumes the PWD/CWD points to pcsx2's data folder,
+			// that is, eitehr the same folder as pcsx2.exe or somethign like
+			// c:\users\appdata\roaming\pcsx2, documents\pcsx2, $HOME\pcsx2, or similar
+
+			strcpy(pathMod,"host/");
+			strcat(pathMod,path);
+		}
+#else
+		const char* pathMod = path;
+#endif
+
+		int native_flags = O_BINARY; // necessary in Windows.
+
+		switch(flags&IOP_O_RDWR)
+		{
+		case IOP_O_RDONLY:	native_flags |= O_RDONLY;	break;
+		case IOP_O_WRONLY:	native_flags |= O_WRONLY; break;
+		case IOP_O_RDWR:	native_flags |= O_RDWR;	break;
+		}
+
+		if(flags&IOP_O_APPEND)	native_flags |= O_APPEND;
+		if(flags&IOP_O_CREAT)	native_flags |= O_CREAT;
+		if(flags&IOP_O_TRUNC)	native_flags |= O_TRUNC;
+
+		int hostfd = ::open(pathMod, native_flags);
 		if (hostfd < 0)
 			return translate_error(hostfd);
 
@@ -120,6 +173,11 @@ public:
 	virtual int read(void *buf, u32 count)
 	{
 		return translate_error(::read(fd, buf, count));
+	}
+
+	virtual int write(void *buf, u32 count)
+	{
+		return translate_error(::write(fd, buf, count));
 	}
 };
 
@@ -311,7 +369,9 @@ namespace ioman {
 
 	int write_HLE()
 	{
-		int fd = a0;
+		s32 fd = a0;
+		u32 buf = a1;
+		u32 count = a2;
 
 #ifdef PCSX2_DEVBUILD
 		if (fd == 1) // stdout
@@ -319,9 +379,18 @@ namespace ioman {
 			Console.Write(ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra1, a2).c_str());
 			pc = ra;
 			v0 = a2;
+		}
+		else
+#endif
+		if (IOManFile *file = getfd<IOManFile>(fd))
+		{
+			if (!iopVirtMemR<void>(buf))
+				return 0;
+
+			v0 = file->write(iopVirtMemW<void>(buf), count);
+			pc = ra;
 			return 1;
 		}
-#endif
 
 		return 0;
 	}
