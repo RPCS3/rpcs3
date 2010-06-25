@@ -100,7 +100,7 @@ __forceinline void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
-	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
+	if(GSTransferStatus.PTH3 >= IDLE_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
 		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
@@ -134,9 +134,9 @@ __forceinline void gsInterrupt()
 	////
 	/*gifRegs->stat.OPH = false;
 	GSTransferStatus.PTH3 = STOPPED_MODE;
-	gifRegs->stat.APATH = GIF_APATH_IDLE;
+	gifRegs->stat.APATH = GIF_APATH_IDLE;*/
 	////
-	gifRegs->stat.clear_flags(GIF_STAT_FQC);*/
+	gifRegs->stat.clear_flags(GIF_STAT_FQC);
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
 	//DevCon.Warning("GIF DMA end");
