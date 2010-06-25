@@ -105,6 +105,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # variable with all sources of this library
 set(UtilitiesSources
+	../../include/Utilities/FixedPointTypes.inl
 	../../include/Utilities/EventSource.inl
 	AlignedMalloc.cpp
 	CheckedStaticBox.cpp

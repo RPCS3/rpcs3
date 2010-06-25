@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "FixedPointTypes.h"
 #include "Path.h"
+#include "FixedPointTypes.h"
 #include <wx/config.h>
 
 // --------------------------------------------------------------------------------------

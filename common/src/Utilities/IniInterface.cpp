@@ -20,6 +20,12 @@
 
 const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
 
+// Implement FixedPointTypes (for lack of a better location, for now)
+
+#include "FixedPointTypes.inl"
+template FixedInt<100>;
+template FixedInt<256>;
+
 static int _calcEnumLength( const wxChar* const* enumArray )
 {
 	int cnt = 0;
