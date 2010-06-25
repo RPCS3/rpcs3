@@ -74,7 +74,3 @@ struct FixedInt
 
 typedef FixedInt<256>		Fixed256;
 typedef FixedInt<100>		Fixed100;
-
-#ifdef __LINUX__
-#include "FixedPointTypes.inl"
-#endif

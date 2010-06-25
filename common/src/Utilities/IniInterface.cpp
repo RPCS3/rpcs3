@@ -23,10 +23,8 @@ const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDe
 // Implement FixedPointTypes (for lack of a better location, for now)
 
 #include "FixedPointTypes.inl"
-#ifndef __LINUX__
-template FixedInt<100>;
-template FixedInt<256>;
-#endif
+template struct FixedInt<100>;
+template struct FixedInt<256>;
 
 static int _calcEnumLength( const wxChar* const* enumArray )
 {
