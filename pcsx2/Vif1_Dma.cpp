@@ -271,7 +271,7 @@ bool CheckPath2GIF(int channel)
 				else
 				{
 					//DevCon.Warning("VIF1-0 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-					CPU_INT(channel, 8);
+					CPU_INT(channel, 128);
 					return false;
 				}
 			}
@@ -285,7 +285,7 @@ bool CheckPath2GIF(int channel)
 			if(gifRegs->stat.P1Q == true)
 			{
 				//DevCon.Warning("VIF1-1 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-				CPU_INT(channel, 8);
+				CPU_INT(channel, 128);
 				return false;
 			}
 
@@ -306,7 +306,7 @@ bool CheckPath2GIF(int channel)
 			if (gifRegs->ctrl.PSE)
 			{
 				//DevCon.Warning("VIF1-1 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-				CPU_INT(channel, 8);
+				CPU_INT(channel, 128);
 				return false;
 			}
 			else
@@ -319,7 +319,7 @@ bool CheckPath2GIF(int channel)
 			if(gifRegs->stat.P1Q == true)
 			{
 				//DevCon.Warning("VIF1-2 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-				CPU_INT(channel, 8);
+				CPU_INT(channel, 128);
 				return false;
 			}
 			else

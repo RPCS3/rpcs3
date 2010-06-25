@@ -666,7 +666,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	pxAssert( size < RingBufferSize );
 	pxAssert( writepos < RingBufferSize );
 
-	m_packet_size = GIFPath_ParseTag(pathidx, srcdata, size, false);
+	m_packet_size = GIFPath_ParseTag(pathidx, srcdata, size);
 	size		  = m_packet_size + 1; // takes into account our command qword.
 	
 	if( writepos + size < RingBufferSize )

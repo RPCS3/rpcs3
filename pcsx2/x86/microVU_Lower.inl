@@ -1106,7 +1106,7 @@ extern void gsPath1Interrupt();
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
-	u32 diff  = 0x400 - addr;
+	u32 diff  = 0x400;
 	u32 size;
 	u8* pDest;
 	
@@ -1142,7 +1142,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	else
 	{
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
-		size = GIFPath_ParseTag(GIF_PATH_1, data, diff, true);
+		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
 		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
@@ -1162,7 +1162,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
 			Path1WritePos += size;
 		}
-		if(!gifRegs->stat.P1Q) CPU_INT(28, 16);
+		if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;
 	}
 }

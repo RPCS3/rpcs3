@@ -92,6 +92,7 @@ struct GIFPath
 	u32 nloop;			// local copy nloop counts toward zero, and leaves the tag copy unmodified.
 	u32 curreg;			// reg we left of on (for traversing through loops)
 	u32 numregs;		// number of regs (when NREG is 0, numregs is 16)
+	u32 DetectE;
 
 	GIFPath();
 
@@ -100,7 +101,8 @@ struct GIFPath
 	bool StepReg();
 	u8 GetReg();
 
-	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly);
+	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
 typedef void (__fastcall *GIFRegHandler)(const u32* data);
@@ -248,14 +250,16 @@ __forceinline void GIFPath::PrepPackedRegs()
 	// Only unpack registers if we're starting a new pack.  Otherwise the unpacked
 	// array should have already been initialized by a previous partial transfer.
 
+	
 	if (curreg != 0) return;
-
+	DetectE = 0;
 	u32 tempreg = tag.REGS[0];
 	numregs		= ((tag.NREG-1)&0xf) + 1;
 
 	for (u32 i = 0; i < numregs; i++) {
 		if (i == 8) tempreg = tag.REGS[1];
 		regs[i] = tempreg & 0xf;
+		if(regs[i] == 0xe) DetectE++;
 		tempreg >>= 4;
 	}
 }
@@ -344,7 +348,9 @@ static __forceinline void gsHandler(const u8* pMem)
 // Parameters:
 //   size (path1)   - difference between the end of VU memory and pMem.
 //   size (path2/3) - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly)
+
+
+__forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
 	u32	startSize =  size;						// Start Size
@@ -354,9 +360,66 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 
 			SetTag(pMem);
 			incTag(16, 1);
+		}
+		else
+		{
+			switch(tag.FLG) {
+				case GIF_FLG_PACKED:
+				{
+					GIF_LOG("Packed Mode");
+					numregs	= ((tag.NREG-1)&0xf) + 1;
+					u32 len = aMin(size, nloop * numregs);
+					if(len < (nloop * numregs)) nloop -= len / numregs;
+					else nloop = 0;
+					incTag(16 * len, len);
+				}
+				break;
+				case GIF_FLG_REGLIST:
+				{
+					GIF_LOG("Reglist Mode");					
+					numregs	= ((tag.NREG-1)&0xf) + 1;
+					size *= 2;
+					u32 len = aMin(size, nloop * numregs);
+					if(len < (nloop * numregs)) nloop -= len / numregs;
+					else nloop = 0;
+
+					incTag(8 * len, len);
+					if (size & 1) { incTag(8, 1); }
+					size /= 2;
+				}
+				break;
+				case GIF_FLG_IMAGE:
+				case GIF_FLG_IMAGE2:
+				{
+					GIF_LOG("IMAGE Mode");
+					int len = aMin(size, nloop);
+					incTag(( len * 16 ), len);
+					nloop -= len;
+				}
+				break;
+			}
+		}
+		if (tag.EOP && !nloop) break;
+	}
+
+	size = (startSize - size);
+
+
+	return size;
+}
+
+__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+{
+	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
+	u32	startSize =  size;						// Start Size
+
+	while (size > 0) {
+		if (!nloop) {
+
+			SetTag(pMem);
+			incTag(16, 1);		
 			
-			
-			if(nloop > 0 && TestOnly == false)
+			if(nloop > 0)
 			{
 					switch(pathidx)
 					{
@@ -374,38 +437,52 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 				
 							break;
 					}
-					if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
-					gifRegs->stat.APATH = pathidx + 1;				
-			}
-			if(pathidx == GIF_PATH_3) break;
+					gifRegs->stat.OPH = true;
+					gifRegs->stat.APATH = pathidx + 1;	
+					if(pathidx == GIF_PATH_3) break;
+			}			
 		}
 		else
 		{
 			
-			if(TestOnly == false)
-			{
-				gifRegs->stat.APATH = pathidx + 1;
-				if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = true;
-			}
+			gifRegs->stat.APATH = pathidx + 1;
+			gifRegs->stat.OPH = true;
+	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 					GIF_LOG("Packed Mode");
 					PrepPackedRegs();
-					do {
-						if (GetReg() == 0xe) {
-							if(TestOnly == false)gsHandler(pMem);
-						}
-						incTag(16, 1);
-					} while(StepReg() && size > 0);
+					if(DetectE > 0)
+					{
+						do {
+							if (GetReg() == 0xe) {
+								gsHandler(pMem);
+							}
+							incTag(16, 1);
+						} while(StepReg() && size > 0);
+					}
+					else //Save doing the while loop and repeat conditionals for nothing :P
+					{
+						//DevCon.Warning("No E detected Path%d nloop %x", pathidx + 1, nloop);
+						u32 len = aMin(size, nloop * numregs);
+						if(len < (nloop * numregs)) nloop -= len / numregs;
+						else nloop = 0;
+						incTag(16 * len, len);
+						if(nloop > 0) curreg = 1;
+						else curreg = 0;
+					}
 				break;
 				case GIF_FLG_REGLIST:
 				{
 					GIF_LOG("Reglist Mode");
+
+					numregs	= ((tag.NREG-1)&0xf) + 1;
 					size *= 2;
-
-					do { incTag(8, 1); }
-					while(StepReg() && size > 0);
-
+					u32 len = aMin(size, nloop * numregs);
+					if(len < (nloop * numregs)) nloop -= len / numregs;
+					else nloop = 0;				
+					
+					incTag(8 * len, len);
 					if (size & 1) { incTag(8, 1); }
 					size /= 2;
 				}
@@ -421,75 +498,57 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 				break;
 			}
 		}
-		if(pathidx == GIF_PATH_1)
-		{
-			if(size == 0 && (!tag.EOP || nloop > 0)) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
-			{
-				switch(tag.FLG)
-				{
-					case GIF_FLG_PACKED:
-						size = nloop * numregs;
-					break;
-
-					case GIF_FLG_REGLIST:
-						size = (nloop * numregs) / 2;
-					break;
-
-					default:
-						size = nloop;
-					break;
-				}
-				startSize += size;
-				if(startSize >= 0x3fff)
-				{
-					size = 0;
-					Console.Warning("GIFTAG error, size exceeded VU memory size");
-				}
-			}
-		}
-
 		if (tag.EOP && !nloop) break;
 	}
 
 	size = (startSize - size);
 
 
-	if(TestOnly == false)
-	{
-		if (tag.EOP && nloop <= 16) {
-			if(pathidx == 2 && nloop > 0)
-			{
-				if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
-			}
-			else if(nloop == 0)
-			{
-				/*if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
-				gifRegs->stat.APATH = GIF_APATH_IDLE;*/
-				switch(pathidx)
-				{
-					case GIF_PATH_1:
-						GSTransferStatus.PTH1 = STOPPED_MODE;
-						break;
-					case GIF_PATH_2:
-						GSTransferStatus.PTH2 = STOPPED_MODE;
-						break;
-					case GIF_PATH_3:
-						if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
-						break;
-				}
+	
+	if (tag.EOP && nloop <= 16) {
+		if(pathidx == 2 && nloop > 0)
+		{
+			if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
+			if (gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
+				//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
+				gif->madr += size * 16;
+				gif->qwc  -= size;
 			}
 		}
-		else if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE && pathidx == 2)
+		else if(nloop == 0)
 		{
-			GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
+			/*if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
+			gifRegs->stat.APATH = GIF_APATH_IDLE;*/
+			switch(pathidx)
+			{
+				case GIF_PATH_1:
+					GSTransferStatus.PTH1 = STOPPED_MODE;
+					break;
+				case GIF_PATH_2:
+					GSTransferStatus.PTH2 = STOPPED_MODE;
+					break;
+				case GIF_PATH_3:
+					if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
+					if (gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
+						//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
+						gif->madr += size * 16;
+						gif->qwc  -= size;
+					}
+					break;
+			}
+		}
+	}
+	else if(pathidx == 2)
+	{
+		if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE)GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
+		if (gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
+			//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
+			gif->madr += size * 16;
+			gif->qwc  -= size;
 		}
 	}
 	
-	if (pathidx == GIF_PATH_3 && gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
-		//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
-		gif->madr += size * 16;
-		gif->qwc  -= size;
-	}
+	
 
 	return size;
 }
@@ -499,7 +558,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, 
 // runs potentially several frames behind.
 // Parameters:
 //   size  - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, bool TestOnly)
+__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	static uptr profStartPtr = 0;
@@ -515,7 +574,7 @@ __forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, b
 	}
 #endif
 
-	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size, TestOnly);
+	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size);
 
 #ifdef PCSX2_GSRING_SAMPLING_STATS
 	__asm
@@ -524,6 +583,14 @@ __forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size, b
 			nop;
 	}
 #endif
+	return retSize;
+}
+
+//Quick version for queueing PATH1 data
+
+__forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
+{
+	int retSize = s_gifPath[pathidx].ParseTagQuick(pathidx, pMem, size);
 	return retSize;
 }
 

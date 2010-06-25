@@ -1974,7 +1974,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	addr &= 0x3fff;
 	u8* data  = VU1.Mem + (addr);
-	u32 diff  = 0x400 - (addr / 16);
+	u32 diff  = 0x400;
 	u32 size;
 	u8* pDest;
 
@@ -2005,7 +2005,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	else
 	{
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
-		size = GIFPath_ParseTag(GIF_PATH_1, data, diff, true);
+		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
 		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");

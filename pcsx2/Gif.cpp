@@ -87,11 +87,12 @@ void gsPath1Interrupt()
 		{
 			gifRegs->stat.P1Q = false;
 			gifRegs->stat.APATH = GIF_APATH_IDLE;
+			cpuRegs.interrupt &= ~(1<<28);
 		}
 		else
 		{
 			if(gifRegs->stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
-			if(!(cpuRegs.interrupt & (1<<28)))CPU_INT(28, 16);
+			if(!(cpuRegs.interrupt & (1<<28)))CPU_INT(28, 128);
 		}
 	}
 	
@@ -178,7 +179,7 @@ int  _GIFchain()
 
 	//in Intermittent Mode it enabled, IMAGE_MODE transfers are sliced.
 
-	if(gifRegs->stat.IMT && GSTransferStatus.PTH3 == IMAGE_MODE) qwc = min((int)gif->qwc, 8);
+	if(gifRegs->stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE) qwc = min((int)gif->qwc, 8);
 	else qwc = gif->qwc;
 
 	return WRITERING_DMA(pMem, qwc);
