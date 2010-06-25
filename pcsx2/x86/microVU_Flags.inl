@@ -224,13 +224,14 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 	}
 }
 
+#define _found ((mVUregs.needExactMatch&8)>>3)
 #define shortBranch() {										\
 	if ((branch == 3) || (branch == 4)) { /*Branches*/		\
-		mVUflagPass(mVU, aBranchAddr, sCount+1, found);		\
+		_mVUflagPass(mVU, aBranchAddr, sCount+_found, v);	\
 		if (branch == 3) break;	/*Non-conditional Branch*/	\
 	}														\
 	else if (branch == 5) { /*JR/JARL*/						\
-		if(!CHECK_VU_BLOCKHACK && (!found||(sCount+1<4))) {	\
+		if(!CHECK_VU_BLOCKHACK && (sCount+_found<4)) {		\
 			mVUregs.needExactMatch |= 7;					\
 		}													\
 		break;												\
@@ -239,17 +240,21 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 }
 
 // Scan through instructions and check if flags are read (FSxxx, FMxxx, FCxxx opcodes)
-void mVUflagPass(mV, u32 startPC, u32 sCount = 0, bool found = 0) {
+void _mVUflagPass(mV, u32 startPC, u32 sCount, vector<u32>& v) {
+
+	for (u32 i = 0; i < v.size(); i++) {
+		if (v[i] == startPC) return; // Prevent infinite recursion
+	}
+	v.push_back(startPC);
 
 	int oldPC	    = iPC;
 	int oldBranch   = mVUbranch;
 	int aBranchAddr = 0;
 	iPC		  = startPC / 4;
 	mVUbranch = 0;
-	for (int branch = 0; (sCount < 4) || !found; sCount++) {
+	for (int branch = 0; sCount < 4; sCount += _found) {
 		incPC(1);
 		mVUopU(mVU, 3);
-		if (mVUregs.needExactMatch&8) found = 1;
 		if (  curI & _Ebit_  )	{ branch = 1; }
 		if (  curI & _DTbit_ )	{ branch = 6; }
 		if (!(curI & _Ibit_) )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
@@ -262,6 +267,11 @@ void mVUflagPass(mV, u32 startPC, u32 sCount = 0, bool found = 0) {
 	iPC		  = oldPC;
 	mVUbranch = oldBranch;
 	setCode();
+}
+
+void mVUflagPass(mV, u32 startPC, u32 sCount = 0) {
+	vector<u32> v;
+	_mVUflagPass(mVU, startPC, sCount, v);
 }
 
 #define branchType1 if		(mVUbranch <= 2)	// B/BAL

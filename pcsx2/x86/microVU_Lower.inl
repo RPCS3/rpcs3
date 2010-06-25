@@ -1192,7 +1192,11 @@ mVUop(mVU_XGKICK) {
 
 void setBranchA(mP, int x, int _x_) {
 	pass1 { 
-		if (_Imm11_ == 1 && !_x_) { mVUlow.isNOP = 1; return; } 
+		if (_Imm11_ == 1 && !_x_) { 
+			DevCon.WriteLn(Color_Green, "microVU%d: Branch Optimization", mVU->index);
+			mVUlow.isNOP = 1; 
+			return; 
+		} 
 		mVUbranch	  = x; 
 		mVUlow.branch = x;
 	}
