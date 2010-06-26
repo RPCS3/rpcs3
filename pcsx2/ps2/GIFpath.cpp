@@ -138,7 +138,9 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 
 	GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
 
-	if (!(GSIMR&0x100) )
+	// This is not working yet for some reason.  Will have to troubleshoot it later.
+	// For now having the SIGNAL behave like other interrpts seems to be fine. --air
+	/*if (!(GSIMR&0x100) )
 	{
 		if (CSRreg.SIGNAL)
 		{
@@ -154,7 +156,18 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 			CSRreg.SIGNAL = true;
 			gsIrq();
 		}
+	}*/
+	
+	if (!CSRreg.SIGNAL)
+	{
+		CSRreg.SIGNAL = true;
+		if (!(GSIMR&0x100) )
+		{
+			CSRreg.SIGNAL = true;
+			gsIrq();
+		}
 	}
+
 }
 
 // FINISH : Enables end-of-draw signaling.  When FINISH is written it tells the GIF to
@@ -172,10 +185,10 @@ static void __fastcall RegHandlerFINISH(const u32* data)
 
 	if (!CSRreg.FINISH)
 	{
+		CSRreg.FINISH = true;
+
 		if (!(GSIMR&0x200))
 			gsIrq();
-
-		CSRreg.FINISH = true;
 	}
 }
 
