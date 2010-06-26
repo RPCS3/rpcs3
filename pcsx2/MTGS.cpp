@@ -326,100 +326,126 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 			switch( tag.command )
 			{
-				case GS_RINGTYPE_PATH:
+				case GS_RINGTYPE_P1:
+				{
+					const int qsize = tag.data[0];
+					const u128* data = &RingBuffer[m_RingPos+1];
+
+					MTGS_LOG( "(MTGS Packet Read) ringtype=P1, qwc=%u", qsize );
+
+					// make sure that tag>>16 is the MAX size readable
+					GSgifTransfer1((u32*)(data - 0x400 + qsize), 0x4000-qsize*16);
+					//GSgifTransfer1((u32*)data, qsize);
+					ringposinc += qsize;
+				}
+				break;
+
+				case GS_RINGTYPE_P2:
 				{
 					const int qsize = tag.data[0];
 					const u128* data = &RingBuffer[m_RingPos+1];
 
 					MTGS_LOG( "(MTGS Packet Read) ringtype=P2, qwc=%u", qsize );
 
-					// All GIFpath data is sent through Path2, which is the hack-free giftag
-					// parser on the GS plugin side of the world.  PCSX2 now handles *all* the
-					// hacks, wrap-arounds, and (soon!) partial transfers during its own internal
-					// GIFtag parse, so the hack-free path on the GS is the preferred one for
-					// all packets.  -air
-
 					GSgifTransfer2((u32*)data, qsize);
 					ringposinc += qsize;
 				}
 				break;
 
-				case GS_RINGTYPE_RESTART:
-					//MTGS_LOG( "(MTGS Packet Read) ringtype=Restart" );
-					m_RingPos = 0;
-				continue;
-
-				case GS_RINGTYPE_VSYNC:
+				case GS_RINGTYPE_P3:
 				{
 					const int qsize = tag.data[0];
+					const u128* data = &RingBuffer[m_RingPos+1];
+
+					MTGS_LOG( "(MTGS Packet Read) ringtype=P3, qwc=%u", qsize );
+
+					GSgifTransfer3((u32*)data, qsize);
 					ringposinc += qsize;
-
-					MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", tag.data[0], tag.data[1] ? "true" : "false" );
-					
-					// Mail in the important GS registers.
-					RingCmdPacket_Vsync& local((RingCmdPacket_Vsync&)RingBuffer[m_RingPos+1]);
-					
-					memcpy_fast( RingBuffer.Regs, local.regset1, sizeof(local.regset1));
-					((u32&)RingBuffer.Regs[0x1000]) = local.csr;
-					((u32&)RingBuffer.Regs[0x1010]) = local.imr;
-					((GSRegSIGBLID&)RingBuffer.Regs[0x1080]) = local.siglblid;
-					
-					GSvsync(!(local.csr & 0x2000));
-					gsFrameSkip();
-
-					// if we're not using GSOpen2, then the GS window is on this thread (MTGS thread),
-					// so we need to call PADupdate from here.
-					if( (GSopen2 == NULL) && (PADupdate != NULL) )
-						PADupdate(0);
-
-					StateCheckInThread();
 				}
 				break;
 
-				case GS_RINGTYPE_FRAMESKIP:
-					MTGS_LOG( "(MTGS Packet Read) ringtype=Frameskip" );
-					_gs_ResetFrameskip();
-				break;
-
-				case GS_RINGTYPE_FREEZE:
+				default:
 				{
-					MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
-					int mode = tag.data[0];
-					data->retval = GetCorePlugins().DoFreeze( PluginId_GS, mode, data->fdata );
-				}
-				break;
+					switch( tag.command )
+					{
+						case GS_RINGTYPE_RESTART:
+							//MTGS_LOG( "(MTGS Packet Read) ringtype=Restart" );
+							m_RingPos = 0;
+						continue;
 
-				case GS_RINGTYPE_RESET:
-					MTGS_LOG( "(MTGS Packet Read) ringtype=Reset" );
-					if( GSreset != NULL ) GSreset();
-				break;
+						case GS_RINGTYPE_VSYNC:
+						{
+							const int qsize = tag.data[0];
+							ringposinc += qsize;
 
-				case GS_RINGTYPE_SOFTRESET:
-				{
-					int mask = tag.data[0];
-					MTGS_LOG( "(MTGS Packet Read) ringtype=SoftReset" );
-					GSgifSoftReset( mask );
-				}
-				break;
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", tag.data[0], tag.data[1] ? "true" : "false" );
+							
+							// Mail in the important GS registers.
+							RingCmdPacket_Vsync& local((RingCmdPacket_Vsync&)RingBuffer[m_RingPos+1]);
+							
+							memcpy_fast( RingBuffer.Regs, local.regset1, sizeof(local.regset1));
+							((u32&)RingBuffer.Regs[0x1000]) = local.csr;
+							((u32&)RingBuffer.Regs[0x1010]) = local.imr;
+							((GSRegSIGBLID&)RingBuffer.Regs[0x1080]) = local.siglblid;
+							
+							GSvsync(!(local.csr & 0x2000));
+							gsFrameSkip();
 
-				case GS_RINGTYPE_MODECHANGE:
-					// [TODO] some frameskip sync logic might be needed here!
-				break;
+							// if we're not using GSOpen2, then the GS window is on this thread (MTGS thread),
+							// so we need to call PADupdate from here.
+							if( (GSopen2 == NULL) && (PADupdate != NULL) )
+								PADupdate(0);
 
-				case GS_RINGTYPE_CRC:
-					GSsetGameCRC( tag.data[0], 0 );
-				break;
+							StateCheckInThread();
+						}
+						break;
+
+						case GS_RINGTYPE_FRAMESKIP:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Frameskip" );
+							_gs_ResetFrameskip();
+						break;
+
+						case GS_RINGTYPE_FREEZE:
+						{
+							MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
+							int mode = tag.data[0];
+							data->retval = GetCorePlugins().DoFreeze( PluginId_GS, mode, data->fdata );
+						}
+						break;
+
+						case GS_RINGTYPE_RESET:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Reset" );
+							if( GSreset != NULL ) GSreset();
+						break;
+
+						case GS_RINGTYPE_SOFTRESET:
+						{
+							int mask = tag.data[0];
+							MTGS_LOG( "(MTGS Packet Read) ringtype=SoftReset" );
+							GSgifSoftReset( mask );
+						}
+						break;
+
+						case GS_RINGTYPE_MODECHANGE:
+							// [TODO] some frameskip sync logic might be needed here!
+						break;
+
+						case GS_RINGTYPE_CRC:
+							GSsetGameCRC( tag.data[0], 0 );
+						break;
 
 #ifdef PCSX2_DEVBUILD
-				default:
-					Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
-					pxFail( "Bad packet encountered in the MTGS Ringbuffer." );
-					m_RingPos = m_WritePos;
-				continue;
+						default:
+							Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
+							pxFail( "Bad packet encountered in the MTGS Ringbuffer." );
+							m_RingPos = m_WritePos;
+						continue;
 #else
-				// Optimized performance in non-Dev builds.
-				jNO_DEFAULT;
+						// Optimized performance in non-Dev builds.
+						jNO_DEFAULT;
 #endif
+					}
+				}
 			}
 
 			uint newringpos = m_RingPos + ringposinc;
@@ -725,7 +751,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 {
 	//m_PacketLocker.Acquire();
 
-	return PrepDataPacket( GS_RINGTYPE_PATH, GIFPath_ParseTag(pathidx, srcdata, size) );
+	return PrepDataPacket( (MTGS_RingCommand)pathidx, GIFPath_ParseTag(pathidx, srcdata, size) );
 }
 
 void SysMtgsThread::RestartRingbuffer( uint packsize )
