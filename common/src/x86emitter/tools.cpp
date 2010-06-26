@@ -235,20 +235,21 @@ namespace XMMRegisters
 
 namespace Registers
 {
+	// MMX registers should not be needing freezes anymore (speedup!)
     __forceinline bool Saved()
     {
-        return (XMMRegisters::Saved() || MMXRegisters::Saved());
+        return (XMMRegisters::Saved() /*|| MMXRegisters::Saved()*/ );
     }
 
     __forceinline void Freeze()
     {
         XMMRegisters::Freeze();
-        MMXRegisters::Freeze();
+        //MMXRegisters::Freeze();
     }
 
     __forceinline void Thaw()
     {
         XMMRegisters::Thaw();
-        MMXRegisters::Thaw();
+        //MMXRegisters::Thaw();
     }
 }
