@@ -29,6 +29,16 @@
 #define USE_HOST_REWRITE 1
 
 #if USE_HOST_REWRITE
+#	ifdef WIN32
+		// disable this if you DON'T want "host:/usr/local/" paths
+		// to get rewritten into host:/
+#		define HOST_REWRITE_USR_LOCAL 1
+#	else
+		// unix/linux users might want to set it to 1
+		// if they DO want to keep demos from accessing their systems' /usr/local
+#		define HOST_REWRITE_USR_LOCAL 0
+#	endif
+
 static char HostRoot[1024];
 #endif
 
@@ -134,11 +144,11 @@ public:
 		// partial "rooting",
 		// it will NOT avoid a path like "../../x" from escaping the pcsx2 folder!
 
-#ifdef _WIN32
+#if HOST_REWRITE_USR_LOCAL
 		const char *_local_root = "/usr/local/";
 		if(strncmp(path,_local_root,strlen(_local_root))==0)
 		{
-			strcpy(pathMod,"host/");
+			strcpy(pathMod,HostRoot);
 			strcat(pathMod,path+strlen(_local_root));
 		}
 		else
