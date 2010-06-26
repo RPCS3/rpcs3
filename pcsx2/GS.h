@@ -245,9 +245,7 @@ extern GS_RegionMode gsRegionMode;
 
 enum MTGS_RingCommand
 {
-	GS_RINGTYPE_P1
-,	GS_RINGTYPE_P2
-,	GS_RINGTYPE_P3
+	GS_RINGTYPE_PATH			// GIFpaths 1, 2, and 3
 ,	GS_RINGTYPE_RESTART
 ,	GS_RINGTYPE_VSYNC
 ,	GS_RINGTYPE_FRAMESKIP
@@ -319,7 +317,6 @@ public:
 
 	int PrepDataPacket( MTGS_RingCommand cmd, u32 size );
 	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
-	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size );
 	void SendDataPacket();
 	void SendGameCRC( u32 crc );
 	void WaitForOpen();

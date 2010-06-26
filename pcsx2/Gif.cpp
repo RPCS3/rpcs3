@@ -143,7 +143,7 @@ __forceinline void gsInterrupt()
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 {
-	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, pMem, qwc);
+	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, (u8*)pMem, qwc);
 	u8* pgsmem = GetMTGS().GetDataPacketPtr();
 
 	memcpy_aligned(pgsmem, pMem, size<<4);
