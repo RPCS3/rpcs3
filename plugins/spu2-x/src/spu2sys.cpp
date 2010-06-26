@@ -135,8 +135,8 @@ void V_Core::Reset( int index )
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= 0x3FFF0 + (0x10000*c);
-	EffectsEndA		= 0x3FFFF + (0x10000*c);
+	EffectsStartA	= 0xEFFF8 + (0x10000*c);
+	EffectsEndA		= 0xEFFFF + (0x10000*c);
 
 	FxEnable		= 0;
 	IRQA			= 0xFFFF0;
