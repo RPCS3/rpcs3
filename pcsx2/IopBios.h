@@ -72,4 +72,6 @@ namespace R3000A
 	}
 }
 
+extern void Hle_SetElfPath(const char* elfFileName);
+
 #endif /* __PSXBIOS_H__ */

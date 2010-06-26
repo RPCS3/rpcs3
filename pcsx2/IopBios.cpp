@@ -25,6 +25,51 @@
 #define O_BINARY 0
 #endif
 
+// set this to 0 to disable rewriting 'host:' paths!
+#define USE_HOST_REWRITE 1
+
+#if USE_HOST_REWRITE
+static char HostRoot[1024];
+#endif
+
+void Hle_SetElfPath(const char* elfFileName)
+{
+#if USE_HOST_REWRITE
+	DevCon.WriteLn("HLE Host: Will load ELF: %s\n", elfFileName);
+
+	const char* pos1 = strrchr(elfFileName,'/');
+	const char* pos2 = strrchr(elfFileName,'\\');
+
+	if(pos2 > pos1) // we want the LAST path separator
+		pos1=pos2;
+
+	if(!pos1) // if pos1 is NULL, then pos2 was not > pos1, so it must also be NULL
+	{
+		Console.Warning("HLE Warning: ELF does not have a path!!\n");
+
+		// use %CD%/host/
+		getcwd(HostRoot,1000); // save the other 23 chars to append /host/ :P
+		HostRoot[1000]=0; // Be Safe.
+
+		char* last = HostRoot + strlen(HostRoot) - 1;
+		
+		if((*last!='/') && (*last!='\\')) // PathAppend()-ish
+			last++;
+
+		strcpy(last,"/host/");
+
+		return;
+	}
+
+	int len = pos1-elfFileName+1;
+	memcpy(HostRoot,elfFileName,len); // include the / (or \\)
+	HostRoot[len] = 0;
+
+	Console.WriteLn("HLE Host: Set 'host:' root path to: %s\n", HostRoot);
+
+#endif
+}
+
 namespace R3000A {
 
 #define v0 (psxRegs.GPR.n.v0)
@@ -107,11 +152,7 @@ public:
 		}
 		else // relative paths
 		{
-			// this assumes the PWD/CWD points to pcsx2's data folder,
-			// that is, eitehr the same folder as pcsx2.exe or somethign like
-			// c:\users\appdata\roaming\pcsx2, documents\pcsx2, $HOME\pcsx2, or similar
-
-			strcpy(pathMod,"host/");
+			strcpy(pathMod,HostRoot);
 			strcat(pathMod,path);
 		}
 #else

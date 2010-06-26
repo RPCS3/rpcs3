@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
+#include "IopBios.h"
+
 #include "Counters.h"
 #include "GS.h"
 #include "Elfheader.h"
@@ -104,6 +106,9 @@ void SysCoreThread::SetElfOverride( const wxString& elf )
 {
 	//pxAssertDev( !m_hasValidMachine, "Thread synchronization error while assigning ELF override." );
 	m_elf_override = elf;
+
+
+	Hle_SetElfPath(elf.ToUTF8());
 }
 
 void SysCoreThread::Reset()
