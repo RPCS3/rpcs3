@@ -24,6 +24,7 @@ using namespace x86Emitter;
 
 #include "VU.h"
 #include "GS.h"
+#include "Gif.h"
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 #include "x86emitter/x86emitter.h"
@@ -155,7 +156,7 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize ((mVU->index) ? (_1mb * 20) : (_1mb * 5))
+#define mVUcacheSize ((mVU->index) ? (_1mb * 20) : (_1mb * 8))
 struct microVU {
 
 	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
