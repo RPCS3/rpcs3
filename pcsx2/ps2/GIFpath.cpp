@@ -24,12 +24,6 @@
 //  GIFpath -- the GIFtag Parser
 // --------------------------------------------------------------------------------------
 
-struct GSRegSIGBLID
-{
-	u32 SIGID;
-	u32 LBLID;
-};
-
 enum GIF_FLG
 {
 	GIF_FLG_PACKED	= 0,
@@ -115,12 +109,17 @@ struct GifPathStruct
 	__forceinline GIFPath& operator[]( int idx ) { return path[idx]; }
 };
 
+
 // --------------------------------------------------------------------------------------
 //  SIGNAL / FINISH / LABEL   (WIP!!)
 // --------------------------------------------------------------------------------------
 // The current implementation for these is very incomplete, especially SIGNAL, which needs
 // an extra VM-state status var to be handled correctly.
 //
+
+// [TODO] -- Apparently all gs writes should be ignored when this little flag is TRUE.
+//   (not that any game's emulation accuracy probably depends on such a 'feature') --air
+bool CSR_SIGNAL_Pending = false;
 
 // SIGNAL : This register is a double-throw.  If the SIGNAL bit in CSR is clear, set the CSR
 //   and raise a gsIrq.  If CSR is already *set*, then ignore all subsequent drawing operations
@@ -135,18 +134,26 @@ struct GifPathStruct
 //
 static void __fastcall RegHandlerSIGNAL(const u32* data)
 {
-	GIF_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
+	GIF_LOG("GS SIGNAL data=%x_%x IMR=%x CSRr=%x\n",data[0], data[1], GSIMR, GSCSRr);
 
 	GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
 
-	if ((CSRw & 0x1))
+	if (!(GSIMR&0x100) )
 	{
-		if (!(GSIMR&0x100) )
+		if (CSRreg.SIGNAL)
 		{
+			// Time to ignore all subsequent drawing operations.
+			if (!CSR_SIGNAL_Pending)
+			{
+				DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
+				CSR_SIGNAL_Pending = true;
+			}
+		}
+		else
+		{
+			CSRreg.SIGNAL = true;
 			gsIrq();
 		}
-
-		GSCSRr |= 1; // signal
 	}
 }
 
@@ -161,14 +168,14 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 //
 static void __fastcall RegHandlerFINISH(const u32* data)
 {
-	GIF_LOG("GIFpath FINISH data %x_%x CSRw %x\n", data[0], data[1], CSRw);
+	GIF_LOG("GIFpath FINISH data=%x_%x CSRr=%x\n", data[0], data[1], GSCSRr);
 
-	if ((CSRw & 0x2))
+	if (!CSRreg.FINISH)
 	{
 		if (!(GSIMR&0x200))
 			gsIrq();
 
-		GSCSRr |= 2; // finish
+		CSRreg.FINISH = true;
 	}
 }
 

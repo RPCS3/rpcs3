@@ -140,9 +140,28 @@ void SysMtgsThread::ResetGS()
 	GIFPath_Reset();
 }
 
+struct RingCmdPacket_Vsync
+{
+	u8		regset1[0x100];
+	u32		csr;
+	u32		imr;
+	GSRegSIGBLID	siglblid;
+};
+
 void SysMtgsThread::PostVsyncEnd()
 {
-	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), 0, 0 );
+	// Optimization note: Typically regset1 isn't needed.  The regs in that area are typically
+	// changed infrequently, usually during video mode changes.  However, on modern systems the
+	// 256-byte copy is only a few dozen cycles -- executed 60 times a second -- so probably
+	// not worth the effort or overhead of trying to selectively avoid it.
+
+	PrepDataPacket(GS_RINGTYPE_VSYNC, sizeof(RingCmdPacket_Vsync));
+	RingCmdPacket_Vsync& local( *(RingCmdPacket_Vsync*)GetDataPacketPtr() );
+	memcpy_fast( local.regset1, PS2MEM_GS, sizeof(local.regset1) );
+	local.csr = GSCSRr;
+	local.imr = GSIMR;
+	local.siglblid = GSSIGLBLID;
+	SendDataPacket();
 
 	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
 	// mandatory feature that prevents the MTGS from queuing more than 2 frames at any time.
@@ -235,7 +254,6 @@ void SysMtgsThread::OpenPlugin()
 	m_PluginOpened = true;
 	m_sem_OpenDone.Post();
 
-	GSCSRr = 0x551B4000; // 0x55190000
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
@@ -346,11 +364,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 				}
 				break;
 
-				case GS_RINGTYPE_MEMWRITE64:
-					MTGS_LOG( "(MTGS Packet Read) ringtype=Write64, data=%lu", *(u64*)&tag.data[1] );
-					*(u64*)(RingBuffer.Regs+tag.data[0]) = *(u64*)&tag.data[1];
-				break;
-
 				default:
 				{
 					switch( tag.command )
@@ -362,8 +375,20 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 						case GS_RINGTYPE_VSYNC:
 						{
+							const int qsize = tag.data[0];
+							ringposinc += qsize;
+
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", tag.data[0], tag.data[1] ? "true" : "false" );
-							GSvsync(tag.data[0]);
+							
+							// Mail in the important GS registers.
+							RingCmdPacket_Vsync& local((RingCmdPacket_Vsync&)RingBuffer[m_RingPos+1]);
+							
+							memcpy_fast( RingBuffer.Regs, local.regset1, sizeof(local.regset1));
+							((u32&)RingBuffer.Regs[0x1000]) = local.csr;
+							((u32&)RingBuffer.Regs[0x1010]) = local.imr;
+							((GSRegSIGBLID&)RingBuffer.Regs[0x1080]) = local.siglblid;
+							
+							GSvsync(!(local.csr & 0x2000));
 							gsFrameSkip();
 
 							// if we're not using GSOpen2, then the GS window is on this thread (MTGS thread),
@@ -378,21 +403,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 						case GS_RINGTYPE_FRAMESKIP:
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Frameskip" );
 							_gs_ResetFrameskip();
-						break;
-
-						case GS_RINGTYPE_MEMWRITE8:
-							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%02x", tag.data[0], (u8)tag.data[1] );
-							*(u8*)RingBuffer.Regs[tag.data[0]] = (u8)tag.data[1];
-						break;
-
-						case GS_RINGTYPE_MEMWRITE16:
-							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%04x", tag.data[0], (u16)tag.data[1] );
-							*(u16*)(RingBuffer.Regs+tag.data[0]) = (u16)tag.data[1];
-						break;
-
-						case GS_RINGTYPE_MEMWRITE32:
-							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%08x", tag.data[0], (u32)tag.data[1] );
-							*(u32*)(RingBuffer.Regs+tag.data[0]) = tag.data[1];
 						break;
 
 						case GS_RINGTYPE_FREEZE:
@@ -414,11 +424,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 							MTGS_LOG( "(MTGS Packet Read) ringtype=SoftReset" );
 							GSgifSoftReset( mask );
 						}
-						break;
-
-						case GS_RINGTYPE_WRITECSR:
-							MTGS_LOG( "(MTGS Packet Read) ringtype=WriteCSR, value=%08x", tag.data[0] );
-							GSwriteCSR( tag.data[0] );
 						break;
 
 						case GS_RINGTYPE_MODECHANGE:
@@ -522,6 +527,9 @@ void SysMtgsThread::WaitGS()
 			RethrowException();
 		} while( volatize(m_RingPos) != m_WritePos );
 	}
+	
+	// Completely synchronize GS and MTGS register states.
+	memcpy_fast( RingBuffer.Regs, PS2MEM_GS, sizeof(RingBuffer.Regs) );
 }
 
 // Sets the gsEvent flag and releases a timeslice.
@@ -591,69 +599,8 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 siz
 	return PrepDataPacket( pathidx, (u8*)srcdata, size );
 }
 
-#ifdef PCSX2_GSRING_TX_STATS
-static u32 ringtx_s=0;
-static u32 ringtx_s_ulg=0;
-static u32 ringtx_s_min=0xFFFFFFFF;
-static u32 ringtx_s_max=0;
-static u32 ringtx_c=0;
-static u32 ringtx_inf[32][32];
-static u32 ringtx_inf_s[32];
-#endif
-
-// Returns the amount of giftag data processed (in simd128 values).
-// Return value is used by VU1's XGKICK instruction to wrap the data
-// around VU memory instead of having buffer overflow...
-// Parameters:
-//  size - size of the packet data, in smd128's
-int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
+int SysMtgsThread::PrepDataPacket( MTGS_RingCommand cmd, u32 size )
 {
-	//m_PacketLocker.Acquire();
-
-#ifdef PCSX2_GSRING_TX_STATS
-	ringtx_s += size;
-	ringtx_s_ulg += size&0x7F;
-	ringtx_s_min = min(ringtx_s_min,size);
-	ringtx_s_max = max(ringtx_s_max,size);
-	ringtx_c++;
-	u32 tx_sz;
-
-	if (_BitScanReverse(&tx_sz,size))
-	{
-		u32 tx_algn;
-		_BitScanForward(&tx_algn,size);
-		ringtx_inf[tx_sz][tx_algn]++;
-		ringtx_inf_s[tx_sz]+=size;
-	}
-	if (ringtx_s>=128*1024*1024)
-	{
-		Console.Status("GSRingBufCopy:128MB in %d tx -> b/tx: AVG = %.2f , max = %d, min = %d",ringtx_c,ringtx_s/(float)ringtx_c,ringtx_s_max,ringtx_s_min);
-		for (int i=0;i<32;i++)
-		{
-			u32 total_bucket=0;
-			u32 bucket_subitems=0;
-			for (int j=0;j<32;j++)
-			{
-				if (ringtx_inf[i][j])
-				{
-					total_bucket+=ringtx_inf[i][j];
-					bucket_subitems++;
-					Console.Warning("GSRingBufCopy :tx [%d,%d] algn %d : count= %d [%.2f%%]",1<<i,(1<<(i+1))-16,1<<j,ringtx_inf[i][j],ringtx_inf[i][j]/(float)ringtx_c*100);
-					ringtx_inf[i][j]=0;
-				}
-			}
-			if (total_bucket)
-				Console.Warning("GSRingBufCopy :tx [%d,%d] total : count= %d [%.2f%%] [%.2f%%]",1<<i,(1<<(i+1))-16,total_bucket,total_bucket/(float)ringtx_c*100,ringtx_inf_s[i]/(float)ringtx_s*100);
-			ringtx_inf_s[i]=0;
-		}
-		Console.Warning("GSRingBufCopy :tx ulg count =%d [%.2f%%]",ringtx_s_ulg,ringtx_s_ulg/(float)ringtx_s*100);
-		ringtx_s_ulg=0;
-		ringtx_c=0;
-		ringtx_s=0;
-		ringtx_s_min=0xFFFFFFFF;
-		ringtx_s_max=0;
-	}
-#endif
 	// Note on volatiles: m_WritePos is not modified by the GS thread, so there's no need
 	// to use volatile reads here.  We do cache it though, since we know it never changes,
 	// except for calls to RingbufferRestert() -- handled below.
@@ -666,9 +613,9 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	pxAssert( size < RingBufferSize );
 	pxAssert( writepos < RingBufferSize );
 
-	m_packet_size = GIFPath_ParseTag(pathidx, srcdata, size);
-	size		  = m_packet_size + 1; // takes into account our command qword.
-	
+	m_packet_size = size;
+	++size;			// takes into account our RingCommand QWC.
+
 	if( writepos + size < RingBufferSize )
 	{
 		// generic gs wait/stall.
@@ -793,11 +740,23 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	// length in SIMDs (128 bits).
 
 	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
-	tag.command = pathidx;
+	tag.command = cmd;
 	tag.data[0] = m_packet_size;
 	m_packet_ringpos = m_WritePos + 1;
 
 	return m_packet_size;
+}
+
+// Returns the amount of giftag data processed (in simd128 values).
+// Return value is used by VU1's XGKICK instruction to wrap the data
+// around VU memory instead of having buffer overflow...
+// Parameters:
+//  size - size of the packet data, in smd128's
+int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
+{
+	//m_PacketLocker.Acquire();
+
+	return PrepDataPacket( (MTGS_RingCommand)pathidx, GIFPath_ParseTag(pathidx, srcdata, size) );
 }
 
 void SysMtgsThread::RestartRingbuffer( uint packsize )

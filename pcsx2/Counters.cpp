@@ -350,13 +350,13 @@ static __forceinline void VSyncStart(u32 sCycle)
 	CpuVU0->Vsync();
 	CpuVU1->Vsync();
 
-	if ((CSRw & 0x8))
+	if (!CSRreg.VSINT)
 	{
+		CSRreg.VSINT = true;
 		if (!(GSIMR&0x800))
 		{
 			gsIrq();
 		}
-		GSCSRr|= 0x8;
 	}
 
 	hwIntcIrq(INTC_VBLANK_S);
@@ -423,13 +423,13 @@ __forceinline void rcntUpdate_hScanline()
 		hsyncCounter.Mode = MODE_HRENDER;
 	}
 	else { //HBLANK END / HRENDER Begin
-		if (CSRw & 0x4)
+		if (!CSRreg.HSINT)
 		{
+			CSRreg.HSINT = true;
 			if (!(GSIMR&0x400))
 			{
 				gsIrq();
 			}
-			GSCSRr |= 4; // signal
 		}
 		if (gates) rcntEndGate(false, hsyncCounter.sCycle);
 		if (psxhblankgate) psxCheckEndGate16(0);

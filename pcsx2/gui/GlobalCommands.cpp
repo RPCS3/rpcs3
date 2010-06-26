@@ -354,7 +354,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 		Console.Warning(
 			L"Kbd Accelerator '%s' is mapped multiple times.\n"
 			L"\t'Command %s' is being replaced by '%s'",
-			acode.ToString().c_str(), fromUTF8( result->Id ).c_str(), searchfor
+			acode.ToString().c_str(), fromUTF8( result->Id ).c_str(), fromUTF8( searchfor ).c_str()
 		);
 	}
 

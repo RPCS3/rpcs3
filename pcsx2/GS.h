@@ -20,129 +20,201 @@
 
 extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
-enum CSRfifoState
+enum CSR_FifoState
 {
-    CSR_FIFO_NORMAL = 0, // Neither empty or almost full.
-    CSR_FIFO_EMPTY, // Empty
-    CSR_FIFO_FULL, // Almost Full
-    CSR_FIFO_RESERVED
+    CSR_FIFO_NORMAL = 0,	// Somwhere in between (Neither empty or almost full).
+    CSR_FIFO_EMPTY,			// Empty
+    CSR_FIFO_FULL,			// Almost Full
+    CSR_FIFO_RESERVED		// Reserved / Unused.
 };
 
-union tGS_CSRw
-{
-    struct
-    {
-        u32 SIGNAL : 1; // SIGNAL event
-        u32 FINISH : 1; // FINISH event
-        u32 HSINT : 1; // HSYNC Interrupt
-        u32 VSINT : 1; // VSYNC Interrupt
-        u32 EDWINT : 1; // Rect Area Write Termination Interrupt
-    };
-    u32 _u32;
-
-    void reset() { _u32 = 0; }
-    void fill()
-    {
-		SIGNAL = true;
-		FINISH = true;
-		HSINT = true;
-		VSINT = true;
-		EDWINT = true;
-    }
-};
-
-// I'm initializing this as 64 bit because GSCSRr is 64 bit. There only appeared to be 32 bits worth of fields,
-// and CSRw is 32 bit, though, so I'm not sure if that's correct.
+// --------------------------------------------------------------------------------------
+//  tGS_CSR
+// --------------------------------------------------------------------------------------
+// This is the Control Register for the GS.  It is a dual-instance register that returns
+// distinctly different values for most fields when read and written.  In PCSX2 we house
+// the written version in the gsRegs buffer, and generate the readback version on-demand
+// from various other PCSX2 system statuses.
 union tGS_CSR
 {
-    struct
-    {
-        // Start Interrupts.
-        // If reading, 1 means a signal has been generated.
-        u64 SIGNAL : 1; // SIGNAL event
-        u64 FINISH : 1; // FINISH event
-        u64 HSINT : 1; // HSYNC Interrupt
-        u64 VSINT : 1; // VSYNC Interrupt
-        u64 EDWINT : 1; // Rect Area Write Termination Interrupt
-        // End of Interrupts. Those 5 fields together are 0x1f.
+	struct
+	{
+		// Write:
+		//   0 - No action;
+		//   1 - Old event is cleared and event is enabled.
+		// Read:
+		//   0 - No SIGNAL pending.
+		//   1 - SIGNAL has been generated.
+		u64 SIGNAL	:1;
 
-        u64 undefined : 2; // Should both be 0.
-        u64 reserved1 : 1;
-        u64 FLUSH : 1; // Drawing Suspend And FIFO Clear
-        u64 RESET : 1; // GS System Reset
-        u64 reserved2 : 2;
-        u64 NFIELD : 1;
-        u64 FIELD : 1; // If the field currently displayed in Interlace mode is even or odd
-        u64 FIFO : 2;
-        u64 REV : 8; // The GS's Revision number
-        u64 ID : 8; // The GS's Id.
-        u64 reserved3 : 32;
-    };
+		// Write:
+		//   0 - No action;
+		//   1 - FINISH event is enabled.
+		// Read:
+		//   0 - No FINISH event pending.
+		//   1 - FINISH event has been generated.
+		u64 FINISH	:1;
+
+		// Hsync Interrupt Control
+		// Write:
+		//   0 - No action;
+		//   1 - Hsync interrupt is enabled.
+		// Read:
+		//   0 - No Hsync interrupt pending.
+		//   1 - Hsync interrupt has been generated.
+		u64 HSINT	:1;
+
+		// Vsync Interrupt Control
+		// Write:
+		//   0 - No action;
+		//   1 - Vsync interrupt is enabled.
+		// Read:
+		//   0 - No Vsync interrupt pending.
+		//   1 - Vsync interrupt has been generated.
+		u64 VSINT	:1;
+
+		// Rect Area Write Termination Control
+		//   0 - No action;
+		//   1 - Rect area write interrupt is enabled.
+		// Read:
+		//   0 - No RAWrite interrupt pending.
+		//   1 - RAWrite interrupt has been generated.
+		u64 EDWINT	:1;
+
+		u64 _zero1	:1;
+		u64 _zero2	:1;
+		u64 pad1	:1;
+
+		// FLUSH  (write-only!)
+		// Write:
+		//   0 - Resume drawing if suspended (?)
+		//   1 - Flush the GS FIFO and suspend drawing
+		// Read: Always returns 0. (?)
+		u64 FLUSH	:1;
+
+		// RESET (write-only!)
+		// Write:
+		//   0 - Do nothing.
+		//   1 - GS soft system reset.  Clears FIFOs and resets IMR to all 1's.
+		//       (PCSX2 implementation also clears GIFpaths, though that behavior may differ on real HW).
+		// Read: Always returns 0. (?)
+		u64 RESET	:1;
+
+		u64 _pad2	:2;
+
+		// (I have no idea what this reg is-- air)
+		// Output value is updated by sampling the VSync. (?)
+		u64 NFIELD	:1;
+
+		// Current Field of Display [page flipping] (read-only?)
+		//  0 - EVEN
+		//  1 - ODD
+		u64 FIELD	:1;
+
+		// GS FIFO Status (read-only)
+		//  00 - Somewhere in between
+		//  01 - Empty
+		//  10 - Almost Full
+		//  11 - Reserved (unused)
+		// Assign values using the CSR_FifoState enum.
+		u64 FIFO	:2;
+
+		// Revision number of the GS (fairly arbitrary)
+		u64 REV		:8;
+
+		// ID of the GS (also fairly arbitrary)
+		u64 ID		:8;
+	};
+
     u64 _u64;
-
-    void reset()
+    
+    struct  
     {
-        _u64 = 0;
-        FIFO = CSR_FIFO_EMPTY;
-        REV = 0x1D; // GS Revision
-        ID = 0x55; // GS ID
+		u32	_u32;			// lower 32 bits (all useful content!)
+		u32	_unused32;		// upper 32 bits (unused -- should probably be 0)
+    };
+
+	void SwapField()
+	{
+		_u32 ^= 0x2000;
+	}
+
+    void Reset()
+    {
+        _u64	= 0;
+        FIFO	= CSR_FIFO_EMPTY;
+        REV		= 0x1B; // GS Revision
+        ID		= 0x55; // GS ID
     }
 
-    void set(u64 value)
-    {
-        _u64 = value;
-    }
+    bool HasAnyInterrupts() const { return (SIGNAL || FINISH || HSINT || VSINT || EDWINT); }
 
-    bool interrupts() { return (SIGNAL || FINISH || HSINT || VSINT || EDWINT); }
+	u32 GetInterruptMask() const
+	{
+		return _u32 & 0x1f;
+	}
 
-    void setAllInterrupts(bool value)
+    void SetAllInterrupts(bool value=true)
     {
         SIGNAL = FINISH = HSINT = VSINT = EDWINT = value;
     }
 
 	tGS_CSR(u64 val) { _u64 = val; }
-	tGS_CSR(u32 val) { _u64 = (u64)val; }
-	tGS_CSR() { reset(); }
+	tGS_CSR(u32 val) { _u32 = val; }
+	tGS_CSR() { Reset(); }
 };
 
+// --------------------------------------------------------------------------------------
+//  tGS_IMR
+// --------------------------------------------------------------------------------------
 union tGS_IMR
 {
     struct
     {
-        u32 reserved1 : 8;
-        u32 SIGMSK : 1;
-        u32 FINISHMSK : 1;
-        u32 HSMSK : 1;
-        u32 VSMSK : 1;
-        u32 EDWMSK : 1;
-        u32 undefined : 2; // Should both be set to 1.
-        u32 reserved2 : 17;
+        u32 _reserved1	: 8;
+        u32 SIGMSK		: 1;
+        u32 FINISHMSK	: 1;
+        u32 HSMSK		: 1;
+        u32 VSMSK		: 1;
+        u32 EDWMSK		: 1;
+        u32 _undefined	: 2; // Should both be set to 1.
+        u32 _reserved2	: 17;
     };
     u32 _u32;
+
     void reset()
     {
         _u32 = 0;
         SIGMSK = FINISHMSK = HSMSK = VSMSK = EDWMSK = true;
-        undefined = 0x3;
+        _undefined = 0x3;
     }
     void set(u32 value)
     {
         _u32 = (value & 0x1f00); // Set only the interrupt mask fields.
-        undefined = 0x3; // These should always be set.
+        _undefined = 0x3; // These should always be set.
     }
 
-    bool masked() { return (SIGMSK || FINISHMSK || HSMSK || VSMSK || EDWMSK); }
+    bool masked() const { return (SIGMSK || FINISHMSK || HSMSK || VSMSK || EDWMSK); }
+};
+
+// --------------------------------------------------------------------------------------
+//  GSRegSIGBLID
+// --------------------------------------------------------------------------------------
+struct GSRegSIGBLID
+{
+	u32 SIGID;
+	u32 LBLID;
 };
 
 #define PS2MEM_GS		g_RealGSMem
-#define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
+#define PS2GS_BASE(mem) (PS2MEM_GS+(mem&0x13ff))
 
-#define GSCSRregs      ((tGS_CSR&)*(g_RealGSMem+0x1000))
-#define GSIMRregs      ((tGS_IMR&)*(g_RealGSMem+0x1010))
+#define CSRreg		((tGS_CSR&)*(PS2MEM_GS+0x1000))
+#define GSIMRregs	((tGS_IMR&)*(PS2MEM_GS+0x1010))
 
-#define GSCSRr		((u64&)*(g_RealGSMem+0x1000))
-#define GSIMR		((u32&)*(g_RealGSMem+0x1010))
-#define GSSIGLBLID	((GSRegSIGBLID&)*(g_RealGSMem+0x1080))
+#define GSCSRr		((u32&)*(PS2MEM_GS+0x1000))
+#define GSIMR		((u32&)*(PS2MEM_GS+0x1010))
+#define GSSIGLBLID	((GSRegSIGBLID&)*(PS2MEM_GS+0x1080))
 
 enum GS_RegionMode
 {
@@ -176,19 +248,12 @@ enum MTGS_RingCommand
 	GS_RINGTYPE_P1
 ,	GS_RINGTYPE_P2
 ,	GS_RINGTYPE_P3
-,	GS_RINGTYPE_MEMWRITE64
-
-,	GS_RINGTYPE_MEMWRITE8
-,	GS_RINGTYPE_MEMWRITE16
-,	GS_RINGTYPE_MEMWRITE32
-
 ,	GS_RINGTYPE_RESTART
 ,	GS_RINGTYPE_VSYNC
 ,	GS_RINGTYPE_FRAMESKIP
 ,	GS_RINGTYPE_FREEZE
 ,	GS_RINGTYPE_RESET			// issues a GSreset() command.
 ,	GS_RINGTYPE_SOFTRESET		// issues a soft reset for the GIF
-,	GS_RINGTYPE_WRITECSR
 ,	GS_RINGTYPE_MODECHANGE		// for issued mode changes.
 ,	GS_RINGTYPE_CRC
 };
@@ -252,6 +317,7 @@ public:
 	void WaitGS();
 	void ResetGS();
 
+	int PrepDataPacket( MTGS_RingCommand cmd, u32 size );
 	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
 	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size );
 	void SendDataPacket();
@@ -313,7 +379,6 @@ extern void _gs_ResetFrameskip();
 
 // used for resetting GIF fifo
 extern void gsGIFReset();
-extern void gsCSRwrite(u32 value);
 
 extern void gsWrite8(u32 mem, u8 value);
 extern void gsWrite16(u32 mem, u16 value);
@@ -334,7 +399,7 @@ extern u64  gsRead64(u32 mem);
 
 void gsIrq();
 
-extern u32 CSRw;
+extern tGS_CSR CSRr;
 
 // GS Playback
 enum gsrun

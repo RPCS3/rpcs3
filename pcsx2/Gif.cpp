@@ -42,12 +42,10 @@ u32 Path1ReadPos = 0;
 
 static __forceinline void clearFIFOstuff(bool full)
 {
-	GSCSRr &= ~0xC000;  //Clear FIFO stuff
-
 	if (full)
-		GSCSRr |= 0x8000;   //FIFO full
+		CSRreg.FIFO = CSR_FIFO_FULL;
 	else
-		GSCSRr |= 0x4000;  //FIFO empty
+		CSRreg.FIFO = CSR_FIFO_EMPTY;
 }
 
 void gsPath1Interrupt()
