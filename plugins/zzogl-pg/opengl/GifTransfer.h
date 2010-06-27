@@ -22,9 +22,6 @@
 #include "Regs.h"
 #include "Util.h"
 
-// If you notice bugs in the newest revisions, you might try disabling this,
-// to see if they are related.
-#define NEW_GIF_TRANSFER
 enum GIF_FLG
 {
 	GIF_FLG_PACKED	= 0,
@@ -73,7 +70,6 @@ union GIFTag
 
 typedef struct
 {
-#ifdef NEW_GIF_TRANSFER
 	u32 mode;
 	int reg;
 	u64 regs;
@@ -82,18 +78,7 @@ typedef struct
 	int nreg;
 	u32 adonly;
 	GIFTag tag;
-#else
-	int mode;
-	int regn;
-	u64 regs;
-	int nloop;
-	int eop;
-	int nreg;
-	u32 adonly;
-	GIFTag tag;
-#endif
 
-#ifdef NEW_GIF_TRANSFER
 	void setTag(u32 *data)
 	{
 		tag.set(data);
@@ -133,43 +118,6 @@ typedef struct
 		return true;
 	}
 
-#else
-	void setTag(u32 *data)
-	{
-		tag.set(data);
-
-		nloop   = tag.NLOOP;
-		eop     = tag.EOP;
-		u32 tagpre              = tag.PRE;
-		u32 tagprim             = tag.PRIM;
-		u32 tagflg              = tag.FLG;
-
-		// Hmm....
-		nreg    = tag.NREG << 2;
-		if (nreg == 0) nreg = 64;
-
-		//      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
-		//                      data[3], data[2], data[1], data[0],
-		//                      path->eop, path->nloop, tagflg, path->nreg, tagpre);
-
-		mode = tagflg;
-
-		switch (mode)
-		{
-			case GIF_FLG_PACKED:
-				regs = *(u64 *)(data + 2);
-				regn = 0;
-				if (tagpre) GIFRegHandlerPRIM((u32*)&tagprim);
-				break;
-
-			case GIF_FLG_REGLIST:
-				regs = *(u64 *)(data + 2);
-				regn = 0;
-				break;
-		}
-	}
-
-#endif
 } pathInfo;
 
 void _GSgifPacket(pathInfo *path, u32 *pMem);

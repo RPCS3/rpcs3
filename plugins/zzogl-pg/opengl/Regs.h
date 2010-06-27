@@ -178,6 +178,26 @@ void __fastcall GIFRegHandlerLABEL(u32* data);
 
 // GifReg & GifPackedReg structs from GSdx, slightly modified
 
+enum GS_ATST
+{
+	ATST_NEVER		= 0,
+	ATST_ALWAYS		= 1,
+	ATST_LESS		= 2,
+	ATST_LEQUAL		= 3,
+	ATST_EQUAL		= 4,
+	ATST_GEQUAL		= 5,
+	ATST_GREATER	= 6,
+	ATST_NOTEQUAL	= 7,
+};
+
+enum GS_AFAIL
+{
+	AFAIL_KEEP		= 0,
+	AFAIL_FB_ONLY	= 1,
+	AFAIL_ZB_ONLY	= 2,
+	AFAIL_RGB_ONLY	= 3,
+};
+
 // GIFReg
 
 REG64_(GIFReg, ALPHA)
@@ -439,9 +459,9 @@ REG64_(GIFReg, TEST)
 	u32 _PAD1:13;
 	u32 _PAD2:32;
 REG_END2
-	__forceinline bool DoFirstPass() {/*return !ATE || ATST != ATST_NEVER;*/} // not all pixels fail automatically
-	__forceinline bool DoSecondPass() {/*return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;*/} // pixels may fail, write fb/z
-	__forceinline bool NoSecondPass() {/*return ATE && ATST != ATST_ALWAYS && AFAIL == AFAIL_KEEP;*/} // pixels may fail, no output
+	__forceinline bool DoFirstPass() {return !ATE || ATST != ATST_NEVER;} // not all pixels fail automatically
+	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z
+	__forceinline bool NoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL == AFAIL_KEEP;} // pixels may fail, no output
 REG_END2
 
 REG64_(GIFReg, TEX0)
