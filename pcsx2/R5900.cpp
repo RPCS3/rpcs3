@@ -552,10 +552,10 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
 	}
 
-	// EE events happen 1 cycle in the future instead of whatever was requested.
+	// EE events happen 8 cycles in the future instead of whatever was requested.
 	// This can be used on games with PATH3 masking issues for example, or when
 	// some FMV look bad.
-	if(CHECK_EETIMINGHACK) ecycle = 1;
+	if(CHECK_EETIMINGHACK) ecycle = 8;
 
 	cpuRegs.interrupt|= 1 << n;
 	cpuRegs.sCycle[n] = cpuRegs.cycle;
