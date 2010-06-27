@@ -930,9 +930,11 @@ static void __fastcall RegWrite_Core( u16 value )
 
 		case REG_C_ATTR:
 		{
-			bool irqe = thiscore.IRQEnable;
-			int bit0 = thiscore.AttrBit0;
-			u8 oldDmaMode = thiscore.DmaMode;
+			bool fxenable	= thiscore.FxEnable;
+			bool irqe		= thiscore.IRQEnable;
+			int bit0		= thiscore.AttrBit0;
+			u8 oldDmaMode	= thiscore.DmaMode;
+			
 
 			if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
 			{
@@ -959,10 +961,13 @@ static void __fastcall RegWrite_Core( u16 value )
 			thiscore.IRQEnable  =(value>> 6) & 0x01; //1 bit
 			thiscore.FxEnable   =(value>> 7) & 0x01; //1 bit
 			thiscore.NoiseClk   =(value>> 8) & 0x3f; //6 bits
-			//thiscore.Mute	   =(value>>14) & 0x01; //1 bit
-			thiscore.Mute=0;
+			//thiscore.Mute		=(value>>14) & 0x01; //1 bit
+			thiscore.Mute		=0;
 			thiscore.CoreEnabled=(value>>15) & 0x01; //1 bit
 			thiscore.Regs.ATTR  =value&0x7fff;
+
+			if (!fxenable && thiscore.FxEnable)
+				thiscore.RevBuffers.NeedsUpdated = true;
 
 			if(oldDmaMode != thiscore.DmaMode)
 			{
@@ -1111,31 +1116,36 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		// Reverb Start and End Address Writes!
+		//  * These regs are only writable when Effects are *DISABLED* (FxEnable is false).
+		//    Writes while enabled should be ignored.
 		//  * Yes, these are backwards from all the volumes -- the hiword comes FIRST (wtf!)
 		//  * End position is a hiword only!  Loword is always ffff.
 		//  * The Reverb buffer position resets on writes to StartA.  It probably resets
 		//    on writes to End too.  Docs don't say, but they're for PSX, which couldn't
 		//    change the end address anyway.
-
+		//
 		case REG_A_ESA:
-			//if (thiscore.FxEnable){printf("!! ESA\n"); return;}
-			SetHiWord( thiscore.EffectsStartA, value );
-			thiscore.RevBuffers.NeedsUpdated = true;
-			thiscore.ReverbX = 0;
+			if (!thiscore.FxEnable)
+			{
+				SetHiWord( thiscore.EffectsStartA, value );
+				thiscore.ReverbX = 0;
+			}
 		break;
 
 		case (REG_A_ESA + 2):
-			//if (thiscore.FxEnable){printf("!! ESA\n"); return;}
-			SetLoWord( thiscore.EffectsStartA, value );
-			thiscore.RevBuffers.NeedsUpdated = true;
-			thiscore.ReverbX = 0;
+			if (!thiscore.FxEnable)
+			{
+				SetLoWord( thiscore.EffectsStartA, value );
+				thiscore.ReverbX = 0;
+			}
 		break;
 
 		case REG_A_EEA:
-			//if (thiscore.FxEnable){printf("!! EEA\n"); return;}  
-			thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
-			thiscore.RevBuffers.NeedsUpdated = true;
-			thiscore.ReverbX = 0;
+			if (!thiscore.FxEnable)
+			{
+				thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
+				thiscore.ReverbX = 0;
+			}
 		break;
 
 		case REG_S_ADMAS:

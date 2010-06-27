@@ -18,7 +18,6 @@
 #include "Global.h"
 #include "soundtouch/SoundTouch.h"
 
-
 static soundtouch::SoundTouch* pSoundTouch = NULL;
 static int ts_stats_stretchblocks = 0;
 static int ts_stats_normalblocks = 0;

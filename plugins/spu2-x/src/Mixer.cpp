@@ -627,10 +627,10 @@ static __forceinline void MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
 
 		// Note: Results from MixVoice are ranged at 16 bits.
 
-		dest.Dry.Left += VVal.Left & thiscore.VoiceGates[voiceidx].DryL;
-		dest.Dry.Right += VVal.Right & thiscore.VoiceGates[voiceidx].DryR;
-		dest.Wet.Left += VVal.Left & thiscore.VoiceGates[voiceidx].WetL;
-		dest.Wet.Right += VVal.Right & thiscore.VoiceGates[voiceidx].WetR;
+		dest.Dry.Left	+= VVal.Left	& thiscore.VoiceGates[voiceidx].DryL;
+		dest.Dry.Right	+= VVal.Right	& thiscore.VoiceGates[voiceidx].DryR;
+		dest.Wet.Left	+= VVal.Left	& thiscore.VoiceGates[voiceidx].WetL;
+		dest.Wet.Right	+= VVal.Right	& thiscore.VoiceGates[voiceidx].WetR;
 	}
 }
 
@@ -655,45 +655,54 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	// Mix in the Input data
 
 	StereoOut32 TD(
-		Input.Left & DryGate.InpL,
-		Input.Right & DryGate.InpR
+		Input.Left	& DryGate.InpL,
+		Input.Right	& DryGate.InpR
 	);
 
 	// Mix in the Voice data
-	TD.Left += Voices.Dry.Left & DryGate.SndL;
-	TD.Right += Voices.Dry.Right & DryGate.SndR;
+	TD.Left		+= Voices.Dry.Left	& DryGate.SndL;
+	TD.Right	+= Voices.Dry.Right	& DryGate.SndR;
 
 	// Mix in the External (nothing/core0) data
-	TD.Left += Ext.Left & DryGate.ExtL;
-	TD.Right += Ext.Right & DryGate.ExtR;
+	TD.Left		+= Ext.Left			& DryGate.ExtL;
+	TD.Right	+= Ext.Right		& DryGate.ExtR;
 
+	// User-level Effects disabling.  Nice speedup but breaks games that depend on
+	// reverb IRQs (very few -- if you find one name it here!).
 	if( EffectsDisabled ) return TD;
 
 	// ----------------------------------------------------------------------------
 	//    Reverberation Effects Processing
 	// ----------------------------------------------------------------------------
-	// The FxEnable bit is, like many other things in the SPU2, only a partial systems
-	// toogle.  It disables the *inputs* to the reverb, such that the reverb is fed silence,
-	// but it does not actually disable reverb effects processing.  In practical terms
-	// this means that when a game turns off reverb, an existing reverb effect should trail
-	// off naturally, instead of being chopped off dead silent.
+	// SPU2 has an FxEnable bit which seems to disable all reverb processing *and*
+	// output, but does *not* disable the advancing buffers.  IRQs are not triggered
+	// and reverb is rendered silent.
+	//
+	// Technically we should advance the buffers even when fx are disabled.  However
+	// there are two things that make this very unlikely to matter:
+	//
+	//  1. Any SPU2 app wanting to avoid noise or pops needs to clear the reverb buffers
+	//     when adjusting settings anyway; so the read/write positions in the reverb
+	//     buffer after FxEnabled is set back to 1 doesn't really matter.
+	//
+	//  2. Writes to ESA (and possibly EEA) reset the buffer pointers to 0.
+	//
+	// On the other hand, updating the buffer is cheap and easy, so might as well. ;) 
 
 	Reverb_AdvanceBuffer();
+	if (!FxEnable) return TD;
 
 	StereoOut32 TW;
 
-	if( FxEnable )
-	{
-		// Mix Input, Voice, and External data:
+	// Mix Input, Voice, and External data:
 
-		TW.Left = Input.Left & WetGate.InpL;
-		TW.Right = Input.Right & WetGate.InpR;
+	TW.Left		 = Input.Left		& WetGate.InpL;
+	TW.Right	 = Input.Right		& WetGate.InpR;
 
-		TW.Left += Voices.Wet.Left & WetGate.SndL;
-		TW.Right += Voices.Wet.Right & WetGate.SndR;
-		TW.Left += Ext.Left & WetGate.ExtL;
-		TW.Right += Ext.Right & WetGate.ExtR;
-	}
+	TW.Left		+= Voices.Wet.Left	& WetGate.SndL;
+	TW.Right	+= Voices.Wet.Right	& WetGate.SndR;
+	TW.Left		+= Ext.Left			& WetGate.ExtL;
+	TW.Right	+= Ext.Right		& WetGate.ExtR;
 
 	WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
 

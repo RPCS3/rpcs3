@@ -34,13 +34,10 @@ namespace soundtouch
 #include <assert.h>
 #include <cstdlib>
 #include <cstdio>
-#include <cstring>
 #include <cstdarg>
 #include <cmath>
 #include <ctime>
 #include <stdexcept>
-#include <string>
-#include <algorithm>
 
 // This will be brought in later anyways, but if we bring it in now, it'll avoid
 // warnings about redefining __LINUX__.
