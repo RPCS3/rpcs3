@@ -553,7 +553,6 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 				if (!s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
 				{
-					CSRreg.FINISH = false;
 					if (!(GSIMR&0x200))
 						gsIrq();
 				}
