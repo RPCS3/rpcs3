@@ -135,6 +135,7 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../ZZoglCRTC.cpp" />
+		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />
 		<Unit filename="../../ZZoglFlush.cpp" />
 		<Unit filename="../../ZZoglSave.cpp" />

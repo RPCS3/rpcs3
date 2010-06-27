@@ -445,7 +445,6 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	if (nUpdateTarg)
 	{
-
 		cgGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex);
 		cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
 
@@ -1207,7 +1206,7 @@ void ZeroGS::CRenderTargetMngr::DestroyIntersecting(CRenderTarget* prndr)
 
 	for (MAPTARGETS::iterator it = mapTargets.begin(); it != mapTargets.end();)
 	{
-		if (it->second != prndr && it->second->start < end && start < it->second->end)
+		if ((it->second != prndr) && (it->second->start < end) && (start < it->second->end))
 		{
 			it->second->Resolve();
 			DestroyAllTargetsHelper(it->second) ;
@@ -1297,7 +1296,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		else
 		{
 			if (PSMT_ISHALF(frame.psm) == PSMT_ISHALF(it->second->psm) && !(conf.settings().full_16_bit_res))
-				bfound = (frame.fbh > 0x1c0 || it->second->fbh >= frame.fbh) && it->second->fbh <= maxposheight;
+				bfound = ((frame.fbh > 0x1c0) || (it->second->fbh >= frame.fbh)) && (it->second->fbh <= maxposheight);
 		}
 	}
 
@@ -1426,7 +1425,6 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		GetRectMemAddress(start, end, frame.psm, 0, 0, frame.fbw, frame.fbh, frame.fbp, frame.fbw);
 		CRenderTarget* pbesttarg = NULL;
 
-
 		if (besttarg == 0)
 		{
 			// if there is only one intersecting target and it encompasses the current one, update the new render target with
@@ -1485,8 +1483,9 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		// if more than 5s passed since target used, destroy
 
-		if (it->second != vb[0].prndr && it->second != vb[1].prndr && it->second != vb[0].pdepth && it->second != vb[1].pdepth &&
-				timeGetTime() - it->second->lastused > 5000)
+		if ((it->second != vb[0].prndr) && (it->second != vb[1].prndr) && 
+			(it->second != vb[0].pdepth) && (it->second != vb[1].pdepth) &&
+				((timeGetTime() - it->second->lastused) > 5000))
 		{
 			delete it->second;
 			mapTargets.erase(it);
@@ -1536,7 +1535,6 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 			while (!ptarg->Create(frame))
 			{
-
 				// destroy unused targets
 				if (mapDummyTargs.size() > 0)
 				{
@@ -1621,13 +1619,11 @@ ZeroGS::CRenderTargetMngr::MAPTARGETS::iterator ZeroGS::CRenderTargetMngr::GetOl
 	}
 
 	// release some resources
-	u32 curtime = timeGetTime();
-
 	MAPTARGETS::iterator itmaxtarg = m.begin();
 
 	for (MAPTARGETS::iterator it = ++m.begin(); it != m.end(); ++it)
 	{
-		if (itmaxtarg->second->lastused - curtime < it->second->lastused - curtime) itmaxtarg = it;
+		if (itmaxtarg->second->lastused < it->second->lastused) itmaxtarg = it;
 	}
 
 	return itmaxtarg;
@@ -1639,7 +1635,7 @@ void ZeroGS::CRenderTargetMngr::GetTargs(int start, int end, list<ZeroGS::CRende
 
 	for (MAPTARGETS::const_iterator it = mapTargets.begin(); it != mapTargets.end(); ++it)
 	{
-		if (it->second->start < end && start < it->second->end) listTargets.push_back(it->second);
+		if ((it->second->start < end) && (start < it->second->end)) listTargets.push_back(it->second);
 	}
 }
 
@@ -1649,7 +1645,7 @@ void ZeroGS::CRenderTargetMngr::Resolve(int start, int end)
 
 	for (MAPTARGETS::const_iterator it = mapTargets.begin(); it != mapTargets.end(); ++it)
 	{
-		if (it->second->start < end && start < it->second->end)
+		if ((it->second->start < end) && (start < it->second->end))
 			it->second->Resolve();
 	}
 }
@@ -1667,9 +1663,12 @@ int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
 	assert((clutsize&31) == 0);
 
 	// left > 0 only when csa < 16
-	int left = ((u32)(uptr)pClutBuffer & 2) ? 0 : (((u32)(uptr)pClutBuffer & 0x3ff) / 2) + clutsize - 512;
-
-	if (left > 0) clutsize -= left;
+	int left = 0;
+	if ((u32)(uptr)pClutBuffer & 2 == 0)
+	{
+		left = (((u32)(uptr)pClutBuffer & 0x3ff) / 2) + clutsize - 512;
+		clutsize -= left;
+	}
 
 	while (clutsize > 0)
 	{
@@ -1679,7 +1678,6 @@ int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
 		}
 
 		clutsize -= 32;
-
 		pSavedBuffer += 16;
 		pClutBuffer += 32;
 	}
@@ -1710,8 +1708,7 @@ bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
 	FUNCLOG
 	assert(tex0.psm == psm && PSMT_ISCLUT(psm) && cpsm == tex0.cpsm);
 
-	int nClutOffset = 0;
-	int clutsize = 0;
+	int nClutOffset = 0, clutsize = 0;
 	int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
 
 	if (PSMT_IS32BIT(tex0.cpsm))   // 32 bit
@@ -1760,13 +1757,14 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	assert(ptex != NULL && ptex->memptr != NULL);
 
 	int result = memcmp_mmx(ptex->memptr + (checkstarty - realy) * 4 * GPU_TEXWIDTH, g_pbyGSMemory + checkstarty * 4 * GPU_TEXWIDTH, (checkendy - checkstarty) * 4 * GPU_TEXWIDTH);
-
-	if (result == 0 || !bDeleteBadTex)
+	
+	if (result == 0)
 	{
-		if (result == 0) clearmaxy = 0;
-
-		return result == 0;
+		clearmaxy = 0;
+		return true;
 	}
+	
+	if (!bDeleteBadTex) return false;
 
 	// delete clearminy, clearmaxy range (not the checkstarty, checkendy range)
 	//int newstarty = 0;
@@ -1793,7 +1791,7 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 
 	clearmaxy = 0;
 
-	assert(starty >= realy && starty + height <= realy + realheight);
+	assert((starty >= realy) && ((starty + height) <= (realy + realheight)));
 
 	return false;
 }
@@ -2157,8 +2155,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 
-	int widthmult = 1;
-	int channels = 1;
+	int widthmult = 1, channels = 1;
 
 	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
 	channels = NumberOfChannels(tex0.psm);
