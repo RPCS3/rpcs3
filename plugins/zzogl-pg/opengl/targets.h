@@ -336,7 +336,7 @@ static __forceinline void Texture2D(GLint iFormat, GLenum format, GLenum type, c
 
 static __forceinline void Texture3D(GLint iFormat, GLint width, GLint height, GLint depth, GLenum format, GLenum type, const GLvoid* pixels)
 {
-	glTexImage3D(GL_TEXTURE_2D, 0, iFormat, width, height, depth, 0, format, type, pixels);
+	glTexImage3D(GL_TEXTURE_3D, 0, iFormat, width, height, depth, 0, format, type, pixels);
 }
 	
 static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
