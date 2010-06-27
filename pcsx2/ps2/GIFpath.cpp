@@ -90,10 +90,12 @@ struct GIFPath
 
 	GIFPath();
 
+	void Reset();
 	void PrepPackedRegs();
 	void SetTag(const void* mem);
 	bool StepReg();
 	u8 GetReg();
+	bool IsActive() const;
 
 	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
 	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
@@ -121,6 +123,7 @@ struct GifPathStruct
 //   (not that any game's emulation accuracy probably depends on such a 'feature') --air
 bool CSR_SIGNAL_Pending = false;
 
+
 // SIGNAL : This register is a double-throw.  If the SIGNAL bit in CSR is clear, set the CSR
 //   and raise a gsIrq.  If CSR is already *set*, then ignore all subsequent drawing operations
 //   and writes to general purpose registers to the GS. (note: I'm pretty sure this includes
@@ -139,7 +142,9 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 	GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
 
 	// This is not working yet for some reason.  Will have to troubleshoot it later.
-	// For now having the SIGNAL behave like other interrpts seems to be fine. --air
+	// For now having the SIGNAL behave like other interrupts seems to be fine. --air
+	// (note: use Soul Calibur 3 for testing double-throw Signals!)
+
 	/*if (!(GSIMR&0x100) )
 	{
 		if (CSRreg.SIGNAL)
@@ -171,25 +176,22 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 }
 
 // FINISH : Enables end-of-draw signaling.  When FINISH is written it tells the GIF to
-//   raise a gsIrq and set the FINISH bit of CSR when the current operation is finished.
-//   As far as I can figure, this feature is meant for EE/GS synchronization when the EE
-//   wants to utilize GS post-processing effects.  We don't need to emulate that part of
-//   it since we flush/interlock the GS for those specific read operations.
+//   raise a gsIrq and set the FINISH bit of CSR when the *current drawing operation* is
+//   finished.  Translation: Only after all three logical GIFpaths are in EOP status.
 //
-//   However!  We should properly emulate handling partial-DMA transfers on PATH2 and
-//   PATH3 of the GIF, which means only signaling FINISH if nloop==0.
+//   This feature can be used for both reversing the GS transfer mode (downloading post-
+//   processing effects to the EE), and more importantly for *DMA synch* between the
+//   three logical GIFpaths.
 //
 static void __fastcall RegHandlerFINISH(const u32* data)
 {
 	GIF_LOG("GIFpath FINISH data=%x_%x CSRr=%x\n", data[0], data[1], GSCSRr);
 
-	if (!CSRreg.FINISH)
-	{
-		CSRreg.FINISH = true;
+	// The FINISH bit is set here, and then it will be cleared when all three
+	// logical GIFpaths finish their packets (EOPs) At that time (found below
+	// in the GIFpath_Parser), IMR is tested and a gsIrq() raised if needed.
 
-		if (!(GSIMR&0x200))
-			gsIrq();
-	}
+	CSRreg.FINISH = true;
 }
 
 static void __fastcall RegHandlerLABEL(const u32* data)
@@ -245,7 +247,13 @@ static __aligned16 GifPathStruct s_gifPath =
 
 GIFPath::GIFPath() : tag()
 {
-	memzero( *this );
+	Reset();
+}
+
+__forceinline void GIFPath::Reset()
+{
+	memzero(*this);
+	const_cast<GIFTAG&>(tag).EOP = 1;
 }
 
 __forceinline bool GIFPath::StepReg()
@@ -290,6 +298,11 @@ __forceinline void GIFPath::SetTag(const void* mem)
 
 	nloop	= tag.NLOOP;
 	curreg	= 0;
+}
+
+__forceinline bool GIFPath::IsActive() const
+{
+	return (nloop != 0) || !tag.EOP;
 }
 
 void SaveStateBase::gifPathFreeze()
@@ -441,25 +454,25 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			
 			if(nloop > 0)
 			{
-					switch(pathidx)
-					{
-						case GIF_PATH_1:
-							if(tag.FLG & 2)GSTransferStatus.PTH1 = IMAGE_MODE;
-							else GSTransferStatus.PTH1 = TRANSFER_MODE;
-							break;
-						case GIF_PATH_2:
-							if(tag.FLG & 2)GSTransferStatus.PTH2 = IMAGE_MODE;
-							else GSTransferStatus.PTH2 = TRANSFER_MODE;
-							break;
-						case GIF_PATH_3:
-							if(tag.FLG & 2)	GSTransferStatus.PTH3 = IMAGE_MODE;
-							else GSTransferStatus.PTH3 = TRANSFER_MODE;
-				
-							break;
-					}
-					gifRegs->stat.OPH = true;
-					gifRegs->stat.APATH = pathidx + 1;	
-					if(pathidx == GIF_PATH_3) break;
+				switch(pathidx)
+				{
+					case GIF_PATH_1:
+						if(tag.FLG & 2)GSTransferStatus.PTH1 = IMAGE_MODE;
+						else GSTransferStatus.PTH1 = TRANSFER_MODE;
+						break;
+					case GIF_PATH_2:
+						if(tag.FLG & 2)GSTransferStatus.PTH2 = IMAGE_MODE;
+						else GSTransferStatus.PTH2 = TRANSFER_MODE;
+						break;
+					case GIF_PATH_3:
+						if(tag.FLG & 2)	GSTransferStatus.PTH3 = IMAGE_MODE;
+						else GSTransferStatus.PTH3 = TRANSFER_MODE;
+
+						break;
+				}
+				gifRegs->stat.OPH = true;
+				gifRegs->stat.APATH = pathidx + 1;	
+				if(pathidx == GIF_PATH_3) break;
 			}			
 		}
 		else
@@ -518,13 +531,39 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 			}
 		}
-		if (tag.EOP && !nloop) break;
+
+		if (tag.EOP && !nloop)
+		{
+			if (CSRreg.FINISH)
+			{
+				// To resolve potential confusion or false assumptions on when to FINISH:
+				//
+				// Our choices are:
+				//   1. only signal FINISH if ALL THREE paths are stopped (nloop is zero and EOP is set)
+				//   2. signal FINISH when the current path is stopped.
+				//
+				// #1 makes a lot more sense.  FINISH is *not* a per-path register, and it seems to pretty
+				// clearly indicate that all active drawing *and* image transfer actions must be finished
+				// before the IRQ raises.  Furthermore, the Real PS2 has only a single physical GIFpath that
+				// has the ability to stall Path3 in favor of Path1 and Path2 transfers, so it wouldn't
+				// really make sense that it would maintain anything other than #1 behavior.
+				//
+				// But!  If things are working suspiciously, you can always test a hackfix by commenting out
+				// the conditional below; and see what happens.
+
+				if (!s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
+				{
+					CSRreg.FINISH = false;
+					if (!(GSIMR&0x200))
+						gsIrq();
+				}
+			}
+			break;
+		}
 	}
 
 	size = (startSize - size);
 
-
-	
 	if (tag.EOP && nloop <= 16) {
 		if(pathidx == 2 && nloop > 0)
 		{
@@ -617,7 +656,8 @@ __forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 si
 // Clears all GIFpath data to zero.
 void GIFPath_Reset()
 {
-	memzero( s_gifPath.path );
+	for(uint i=0; i<3; ++i )
+		s_gifPath.path[i].Reset();
 }
 
 // This is a hackfix tool provided for "canceling" the contents of the GIFpath when
@@ -625,6 +665,8 @@ void GIFPath_Reset()
 __forceinline void GIFPath_Clear( GIF_PATH pathidx )
 {
 	memzero(s_gifPath.path[pathidx]);
+	s_gifPath.path[pathidx].Reset();
+
 	GSTransferStatus._u32 &= ~(0xf << (pathidx * 4));
 	GSTransferStatus._u32 |= (0x5 << (pathidx * 4));
 	if( GSgifSoftReset == NULL ) return;
