@@ -689,7 +689,7 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	//
 	// On the other hand, updating the buffer is cheap and easy, so might as well. ;) 
 
-	Reverb_AdvanceBuffer();
+	Reverb_AdvanceBuffer(); // Updates the reverb work area as well, if needed.
 	if (!FxEnable) return TD;
 
 	StereoOut32 TW;

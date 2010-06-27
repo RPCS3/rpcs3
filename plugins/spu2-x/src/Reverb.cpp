@@ -41,6 +41,9 @@ __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 
 void V_Core::Reverb_AdvanceBuffer()
 {
+	if( RevBuffers.NeedsUpdated )
+			UpdateEffectsBufferSize();
+
 	if( (Cycles & 1) && (EffectsBufferSize > 0) )
 	{
 		ReverbX += 1;
@@ -73,9 +76,6 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	}
 	else
 	{
-		if( RevBuffers.NeedsUpdated )
-			UpdateEffectsBufferSize();
-
 		if( EffectsBufferSize <= 0 )
 		{
 			ubpos = (ubpos+1) & 7;
