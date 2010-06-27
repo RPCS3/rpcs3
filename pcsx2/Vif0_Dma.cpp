@@ -246,6 +246,9 @@ void dmaVIF0()
 
 	vif0Regs->stat.FQC = min((u16)0x8, vif0ch->qwc);
 
+	//Using a delay as Beyond Good and Evil does the DMA twice with 2 different TADR's (no checks in the middle, all one block of code),
+	//the first bit it sends isnt required for it to work.
+	//Also being an end chain it ignores the second lot, this causes infinite loops ;p
 	// Chain Mode
-	vif0Interrupt();
+	CPU_INT(DMAC_VIF0, 4);
 }

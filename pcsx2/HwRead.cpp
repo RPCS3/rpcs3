@@ -36,6 +36,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 {
 	u8 ret;
 
+	const u16 masked_mem = mem & 0xffff;
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
 	if( mem >= IPU_CMD && mem < D0_CHCR )
@@ -50,7 +51,8 @@ __forceinline mem8_t hwRead8(u32 mem)
 	switch((mem >> 12) & 0xf)
 	{
 		case 0x03:
-			if((mem & 0xfff) < 0x800) break;
+			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read8 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
+			else HW_LOG("GIF Register Read8 at 0x%x, value=0x%x", mem, psHu32(mem) );
 		case 0x04:
 		case 0x05:
 		case 0x06:
@@ -151,6 +153,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 __forceinline mem16_t hwRead16(u32 mem)
 {
 	u16 ret;
+	const u16 masked_mem = mem & 0xffff;
 
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after the iopHWRead/iopHwWrite files)
@@ -167,7 +170,8 @@ __forceinline mem16_t hwRead16(u32 mem)
 	switch((mem >> 12) & 0xf)
 	{
 		case 0x03:
-			if((mem & 0xfff) < 0x800) break;
+			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read8 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
+			else HW_LOG("GIF Register Read8 at 0x%x, value=0x%x", mem, psHu32(mem) );
 		case 0x04:
 		case 0x05:
 		case 0x06:
