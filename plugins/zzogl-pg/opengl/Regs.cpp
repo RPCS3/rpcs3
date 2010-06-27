@@ -36,44 +36,8 @@ const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
 #pragma warning(disable:4244)
 #endif
 
-GIFRegHandler g_GIFPackedRegHandlers[16] =
-{
-	GIFRegHandlerPRIM,		  GIFPackedRegHandlerRGBA,	GIFPackedRegHandlerSTQ, GIFPackedRegHandlerUV,
-	GIFPackedRegHandlerXYZF2,   GIFPackedRegHandlerXYZ2,	GIFRegHandlerTEX0_1,	GIFRegHandlerTEX0_2,
-	GIFRegHandlerCLAMP_1,	   GIFRegHandlerCLAMP_2,	   GIFPackedRegHandlerFOG, GIFPackedRegHandlerNull,
-	GIFRegHandlerXYZF3,		 GIFRegHandlerXYZ3,		  GIFPackedRegHandlerA_D, GIFPackedRegHandlerNOP
-};
-
-GIFRegHandler g_GIFRegHandlers[] =
-{
-	GIFRegHandlerPRIM,	  GIFRegHandlerRGBAQ,	 GIFRegHandlerST,		GIFRegHandlerUV,
-	GIFRegHandlerXYZF2,	 GIFRegHandlerXYZ2,	  GIFRegHandlerTEX0_1,	GIFRegHandlerTEX0_2,
-	GIFRegHandlerCLAMP_1,   GIFRegHandlerCLAMP_2,   GIFRegHandlerFOG,	   GIFRegHandlerNull,
-	GIFRegHandlerXYZF3,	 GIFRegHandlerXYZ3,	  GIFRegHandlerNOP,	   GIFRegHandlerNOP,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerTEX1_1,	GIFRegHandlerTEX1_2,	GIFRegHandlerTEX2_1,	GIFRegHandlerTEX2_2,
-	GIFRegHandlerXYOFFSET_1, GIFRegHandlerXYOFFSET_2, GIFRegHandlerPRMODECONT, GIFRegHandlerPRMODE,
-	GIFRegHandlerTEXCLUT,   GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerSCANMSK,   GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerMIPTBP1_1, GIFRegHandlerMIPTBP1_2, GIFRegHandlerMIPTBP2_1, GIFRegHandlerMIPTBP2_2,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerTEXA,
-	GIFRegHandlerNull,	  GIFRegHandlerFOGCOL,	GIFRegHandlerNull,	  GIFRegHandlerTEXFLUSH,
-	GIFRegHandlerSCISSOR_1, GIFRegHandlerSCISSOR_2, GIFRegHandlerALPHA_1,   GIFRegHandlerALPHA_2,
-	GIFRegHandlerDIMX,	  GIFRegHandlerDTHE,	  GIFRegHandlerCOLCLAMP,  GIFRegHandlerTEST_1,
-	GIFRegHandlerTEST_2,	GIFRegHandlerPABE,	  GIFRegHandlerFBA_1,	 GIFRegHandlerFBA_2,
-	GIFRegHandlerFRAME_1,   GIFRegHandlerFRAME_2,   GIFRegHandlerZBUF_1,	GIFRegHandlerZBUF_2,
-	GIFRegHandlerBITBLTBUF, GIFRegHandlerTRXPOS,	GIFRegHandlerTRXREG,	GIFRegHandlerTRXDIR,
-	GIFRegHandlerHWREG,	 GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,	  GIFRegHandlerNull,
-	GIFRegHandlerSIGNAL,	GIFRegHandlerFINISH,	GIFRegHandlerLABEL,	 GIFRegHandlerNull
-};
-
-C_ASSERT(sizeof(g_GIFRegHandlers) / sizeof(g_GIFRegHandlers[0]) == 100);
+GIFRegHandler g_GIFPackedRegHandlers[16];
+GIFRegHandler g_GIFRegHandlers[256];
 
 // values for keeping track of changes
 u32 s_uTex1Data[2][2] = {{0, }};
@@ -130,6 +94,15 @@ void __fastcall GIFPackedRegHandlerNull(u32* data)
 	FUNCLOG
 	ZZLog::Debug_Log("Unexpected packed reg handler %8.8lx_%8.8lx %x.", data[0], data[1], data[2]);
 }
+
+// All these just call their non-packed equivalent.
+void __fastcall GIFPackedRegHandlerPRIM(u32* data) { GIFRegHandlerPRIM(data); }
+void __fastcall GIFPackedRegHandlerTEX0_1(u32* data) { GIFRegHandlerTEX0_1(data); }
+void __fastcall GIFPackedRegHandlerTEX0_2(u32* data) { GIFRegHandlerTEX0_2(data); }
+void __fastcall GIFPackedRegHandlerCLAMP_1(u32* data) { GIFRegHandlerCLAMP_1(data); }
+void __fastcall GIFPackedRegHandlerCLAMP_2(u32* data) { GIFRegHandlerCLAMP_2(data); }
+void __fastcall GIFPackedRegHandlerXYZF3(u32* data) { GIFRegHandlerXYZF3(data); }
+void __fastcall GIFPackedRegHandlerXYZ3(u32* data) { GIFRegHandlerXYZ3(data); }
 
 void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 {
@@ -1126,3 +1099,109 @@ void __fastcall GIFRegHandlerLABEL(u32* data)
 		SIGLBLID->LBLID = (SIGLBLID->LBLID & ~data[1]) | (data[0] & data[1]);
 	}
 }
+
+
+void SetMultithreaded()
+{
+	// Some older versions of PCSX2 didn't properly set the irq callback to NULL
+	// in multithreaded mode (possibly because ZeroGS itself would assert in such
+	// cases), and didn't bind them to a dummy callback either.  PCSX2 handles all
+	// IRQs internally when multithreaded anyway -- so let's ignore them here:
+
+	if (g_GSMultiThreaded)
+	{
+		g_GIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GIFRegHandlerNull;
+		g_GIFRegHandlers[GIF_A_D_REG_FINISH] = &GIFRegHandlerNull;
+		g_GIFRegHandlers[GIF_A_D_REG_LABEL] = &GIFRegHandlerNull;
+	}
+	else
+	{
+		g_GIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GIFRegHandlerSIGNAL;
+		g_GIFRegHandlers[GIF_A_D_REG_FINISH] = &GIFRegHandlerFINISH;
+		g_GIFRegHandlers[GIF_A_D_REG_LABEL] = &GIFRegHandlerLABEL;
+	}
+}
+
+void ResetRegs()
+{
+	for (int i = 0; i < 16; i++)
+	{
+		g_GIFPackedRegHandlers[i] = &GIFPackedRegHandlerNull;
+	}
+
+	g_GIFPackedRegHandlers[GIF_REG_PRIM] = &GIFPackedRegHandlerPRIM;
+	g_GIFPackedRegHandlers[GIF_REG_RGBA] = &GIFPackedRegHandlerRGBA;
+	g_GIFPackedRegHandlers[GIF_REG_STQ] = &GIFPackedRegHandlerSTQ;
+	g_GIFPackedRegHandlers[GIF_REG_UV] = &GIFPackedRegHandlerUV;
+	g_GIFPackedRegHandlers[GIF_REG_XYZF2] = &GIFPackedRegHandlerXYZF2;
+	g_GIFPackedRegHandlers[GIF_REG_XYZ2] = &GIFPackedRegHandlerXYZ2;
+	g_GIFPackedRegHandlers[GIF_REG_TEX0_1] = &GIFPackedRegHandlerTEX0_1;
+	g_GIFPackedRegHandlers[GIF_REG_TEX0_2] = &GIFPackedRegHandlerTEX0_2;
+	g_GIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GIFPackedRegHandlerCLAMP_1;
+	g_GIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GIFPackedRegHandlerCLAMP_2;
+	g_GIFPackedRegHandlers[GIF_REG_FOG] = &GIFPackedRegHandlerFOG;
+	g_GIFPackedRegHandlers[GIF_REG_XYZF3] = &GIFPackedRegHandlerXYZF3;
+	g_GIFPackedRegHandlers[GIF_REG_XYZ3] = &GIFPackedRegHandlerXYZ3;
+	g_GIFPackedRegHandlers[GIF_REG_A_D] = &GIFPackedRegHandlerA_D;
+	g_GIFPackedRegHandlers[GIF_REG_NOP] = &GIFPackedRegHandlerNOP;
+	
+	for (int i = 0; i < 256; i++)
+	{
+		g_GIFRegHandlers[i] = &GIFPackedRegHandlerNull;
+	}
+	
+	g_GIFRegHandlers[GIF_A_D_REG_PRIM] = &GIFRegHandlerPRIM;
+	g_GIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GIFRegHandlerRGBAQ;
+	g_GIFRegHandlers[GIF_A_D_REG_ST] = &GIFRegHandlerST;
+	g_GIFRegHandlers[GIF_A_D_REG_UV] = &GIFRegHandlerUV;
+	g_GIFRegHandlers[GIF_A_D_REG_XYZF2] = &GIFRegHandlerXYZF2;
+	g_GIFRegHandlers[GIF_A_D_REG_XYZ2] = &GIFRegHandlerXYZ2;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX0_1] = &GIFRegHandlerTEX0_1;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX0_2] = &GIFRegHandlerTEX0_2;
+	g_GIFRegHandlers[GIF_A_D_REG_CLAMP_1] = &GIFRegHandlerCLAMP_1;
+	g_GIFRegHandlers[GIF_A_D_REG_CLAMP_2] = &GIFRegHandlerCLAMP_2;
+	g_GIFRegHandlers[GIF_A_D_REG_FOG] = &GIFRegHandlerFOG;
+	g_GIFRegHandlers[GIF_A_D_REG_XYZF3] = &GIFRegHandlerXYZF3;
+	g_GIFRegHandlers[GIF_A_D_REG_XYZ3] = &GIFRegHandlerXYZ3;
+	g_GIFRegHandlers[GIF_A_D_REG_NOP] = &GIFRegHandlerNOP;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX1_1] = &GIFRegHandlerTEX1_1;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX1_2] = &GIFRegHandlerTEX1_2;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX2_1] = &GIFRegHandlerTEX2_1;
+	g_GIFRegHandlers[GIF_A_D_REG_TEX2_2] = &GIFRegHandlerTEX2_2;
+	g_GIFRegHandlers[GIF_A_D_REG_XYOFFSET_1] = &GIFRegHandlerXYOFFSET_1;
+	g_GIFRegHandlers[GIF_A_D_REG_XYOFFSET_2] = &GIFRegHandlerXYOFFSET_2;
+	g_GIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GIFRegHandlerPRMODECONT;
+	g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerPRMODE;
+	g_GIFRegHandlers[GIF_A_D_REG_TEXCLUT] = &GIFRegHandlerTEXCLUT;
+	g_GIFRegHandlers[GIF_A_D_REG_SCANMSK] = &GIFRegHandlerSCANMSK;
+	g_GIFRegHandlers[GIF_A_D_REG_MIPTBP1_1] = &GIFRegHandlerMIPTBP1_1;
+	g_GIFRegHandlers[GIF_A_D_REG_MIPTBP1_2] = &GIFRegHandlerMIPTBP1_2;
+	g_GIFRegHandlers[GIF_A_D_REG_MIPTBP2_1] = &GIFRegHandlerMIPTBP2_1;
+	g_GIFRegHandlers[GIF_A_D_REG_MIPTBP2_2] = &GIFRegHandlerMIPTBP2_2;
+	g_GIFRegHandlers[GIF_A_D_REG_TEXA] = &GIFRegHandlerTEXA;
+	g_GIFRegHandlers[GIF_A_D_REG_FOGCOL] = &GIFRegHandlerFOGCOL;
+	g_GIFRegHandlers[GIF_A_D_REG_TEXFLUSH] = &GIFRegHandlerTEXFLUSH;
+	g_GIFRegHandlers[GIF_A_D_REG_SCISSOR_1] = &GIFRegHandlerSCISSOR_1;
+	g_GIFRegHandlers[GIF_A_D_REG_SCISSOR_2] = &GIFRegHandlerSCISSOR_2;
+	g_GIFRegHandlers[GIF_A_D_REG_ALPHA_1] = &GIFRegHandlerALPHA_1;
+	g_GIFRegHandlers[GIF_A_D_REG_ALPHA_2] = &GIFRegHandlerALPHA_2;
+	g_GIFRegHandlers[GIF_A_D_REG_DIMX] = &GIFRegHandlerDIMX;
+	g_GIFRegHandlers[GIF_A_D_REG_DTHE] = &GIFRegHandlerDTHE;
+	g_GIFRegHandlers[GIF_A_D_REG_COLCLAMP] = &GIFRegHandlerCOLCLAMP;
+	g_GIFRegHandlers[GIF_A_D_REG_TEST_1] = &GIFRegHandlerTEST_1;
+	g_GIFRegHandlers[GIF_A_D_REG_TEST_2] = &GIFRegHandlerTEST_2;
+	g_GIFRegHandlers[GIF_A_D_REG_PABE] = &GIFRegHandlerPABE;
+	g_GIFRegHandlers[GIF_A_D_REG_FBA_1] = &GIFRegHandlerFBA_1;
+	g_GIFRegHandlers[GIF_A_D_REG_FBA_2] = &GIFRegHandlerFBA_2;
+	g_GIFRegHandlers[GIF_A_D_REG_FRAME_1] = &GIFRegHandlerFRAME_1;
+	g_GIFRegHandlers[GIF_A_D_REG_FRAME_2] = &GIFRegHandlerFRAME_2;
+	g_GIFRegHandlers[GIF_A_D_REG_ZBUF_1] = &GIFRegHandlerZBUF_1;
+	g_GIFRegHandlers[GIF_A_D_REG_ZBUF_2] = &GIFRegHandlerZBUF_2;
+	g_GIFRegHandlers[GIF_A_D_REG_BITBLTBUF] = &GIFRegHandlerBITBLTBUF;
+	g_GIFRegHandlers[GIF_A_D_REG_TRXPOS] = &GIFRegHandlerTRXPOS;
+	g_GIFRegHandlers[GIF_A_D_REG_TRXREG] = &GIFRegHandlerTRXREG;
+	g_GIFRegHandlers[GIF_A_D_REG_TRXDIR] = &GIFRegHandlerTRXDIR;
+	g_GIFRegHandlers[GIF_A_D_REG_HWREG] = &GIFRegHandlerHWREG;
+	SetMultithreaded();
+}
+

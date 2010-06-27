@@ -413,6 +413,8 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	}
 }
 
+//#define OLD_GS_SET_FRAMESKIP
+#ifdef OLD_GS_SET_FRAMESKIP
 void CALLBACK GSsetFrameSkip(int frameskip)
 {
 	FUNCLOG
@@ -464,7 +466,64 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 		g_GIFRegHandlers[27] = GIFRegHandlerPRMODE;
 	}
 }
+#else
+void CALLBACK GSsetFrameSkip(int frameskip)
+{
+	FUNCLOG
+	s_frameskipping |= frameskip;
 
+	if (frameskip && g_nFrameRender > 1)
+	{
+		g_GIFPackedRegHandlers[GIF_REG_PRIM] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_RGBA] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_STQ] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_UV] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_XYZF2] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_XYZ2] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_FOG] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_XYZF3] = &GIFPackedRegHandlerNOP;
+		g_GIFPackedRegHandlers[GIF_REG_XYZ3] = &GIFPackedRegHandlerNOP;
+
+		g_GIFRegHandlers[GIF_A_D_REG_PRIM] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_ST] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_UV] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZF2] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZ2] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZF3] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZ3] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GIFRegHandlerNOP;
+		g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerNOP;
+	}
+	else if (!frameskip && g_nFrameRender <= 0)
+	{
+		g_GIFPackedRegHandlers[GIF_REG_PRIM] = &GIFPackedRegHandlerPRIM;
+		g_GIFPackedRegHandlers[GIF_REG_RGBA] = &GIFPackedRegHandlerRGBA;
+		g_GIFPackedRegHandlers[GIF_REG_STQ] = &GIFPackedRegHandlerSTQ;
+		g_GIFPackedRegHandlers[GIF_REG_UV] = &GIFPackedRegHandlerUV;
+		g_GIFPackedRegHandlers[GIF_REG_XYZF2] = &GIFPackedRegHandlerXYZF2;
+		g_GIFPackedRegHandlers[GIF_REG_XYZ2] = &GIFPackedRegHandlerXYZ2;
+		g_GIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GIFPackedRegHandlerCLAMP_1;
+		g_GIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GIFPackedRegHandlerCLAMP_2;
+		g_GIFPackedRegHandlers[GIF_REG_FOG] = &GIFPackedRegHandlerFOG;
+		g_GIFPackedRegHandlers[GIF_REG_XYZF3] = &GIFPackedRegHandlerXYZF3;
+		g_GIFPackedRegHandlers[GIF_REG_XYZ3] = &GIFPackedRegHandlerXYZ3;
+
+		g_GIFRegHandlers[GIF_A_D_REG_PRIM] = &GIFRegHandlerPRIM;
+		g_GIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GIFRegHandlerRGBAQ;
+		g_GIFRegHandlers[GIF_A_D_REG_ST] = &GIFRegHandlerST;
+		g_GIFRegHandlers[GIF_A_D_REG_UV] = &GIFRegHandlerUV;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZF2] = &GIFRegHandlerXYZF2;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZ2] = &GIFRegHandlerXYZ2;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZF3] = &GIFRegHandlerXYZF3;
+		g_GIFRegHandlers[GIF_A_D_REG_XYZ3] = &GIFRegHandlerXYZ3;
+		g_GIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GIFRegHandlerPRMODECONT;
+		g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerPRMODE;
+	}
+}
+#endif
 void CALLBACK GSreset()
 {
 	FUNCLOG
@@ -712,6 +771,7 @@ extern LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 extern HINSTANCE hInst;
 #endif
 
+extern void ResetRegs();
 
 s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
@@ -770,7 +830,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	luPerfFreq = GetCPUTicks();
 
 	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
-
+	ResetRegs();
 	ZZLog::GS_Log("GSopen finished.");
 
 	return 0;
