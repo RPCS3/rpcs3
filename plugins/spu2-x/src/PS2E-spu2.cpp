@@ -353,8 +353,8 @@ EXPORT_C_(s32) SPU2init()
 
 	memset(spu2regs, 0, 0x010000);
 	memset(_spu2mem, 0, 0x200000);
-	Cores[0].Reset(0);
-	Cores[1].Reset(1);
+	Cores[0].Init(0);
+	Cores[1].Init(1);
 
 	DMALogOpen();
 	InitADSR();

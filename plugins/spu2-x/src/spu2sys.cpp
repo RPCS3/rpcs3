@@ -112,9 +112,9 @@ V_Core::~V_Core() throw()
 	}*/
 }
 
-void V_Core::Reset( int index )
+void V_Core::Init( int index )
 {
-	ConLog( "* SPU2-X: RESET SPU2 core%d \n", index );
+	ConLog( "* SPU2-X: Init SPU2 core %d \n", index );
 	memset( this, 0, sizeof(V_Core) );
 
 	const int c = Index = index;
@@ -135,8 +135,62 @@ void V_Core::Reset( int index )
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= 0xEFFF8 + (0x10000*c);
-	EffectsEndA		= 0xEFFFF + (0x10000*c);
+	EffectsStartA	= c ? 0xEFFF8 : 0xFFFF8;
+	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF;
+
+	FxEnable		= 0;
+	IRQA			= 0xFFFFF;
+	IRQEnable		= 0;
+
+	for( uint v=0; v<NumVoices; ++v )
+	{
+		VoiceGates[v].DryL = -1;
+		VoiceGates[v].DryR = -1;
+		VoiceGates[v].WetL = -1;
+		VoiceGates[v].WetR = -1;
+
+		Voices[v].Volume		= V_VolumeSlideLR(0,0); // V_VolumeSlideLR::Max;
+		Voices[v].SCurrent		= 28;
+
+		Voices[v].ADSR.Value	= 0;
+		Voices[v].ADSR.Phase	= 0;
+		Voices[v].Pitch			= 0x3FFF;
+		Voices[v].NextA			= 0x2800;
+		Voices[v].StartA		= 0x2800;
+		Voices[v].LoopStartA	= 0x2800;
+	}
+
+	DMAICounter		= 0;
+	AdmaInProgress	= 0;
+
+	Regs.STATX		= 0x80;
+}
+
+void V_Core::Reset( int index )
+{
+	ConLog( "* SPU2-X: Init SPU2 core %d \n", index );
+	memset( this, 0, sizeof(V_Core) );
+
+	const int c = Index = index;
+
+	Regs.STATX		= 0;
+	Regs.ATTR		= 0;
+	ExtVol			= V_VolumeLR::Max;
+	InpVol			= V_VolumeLR::Max;
+	FxVol			= V_VolumeLR::Max;
+
+	MasterVol		= V_VolumeSlideLR::Max;
+
+	memset( &DryGate, -1, sizeof(DryGate) );
+	memset( &WetGate, -1, sizeof(WetGate) );
+
+	Regs.MMIX		= 0xFFCF;
+	Regs.VMIXL		= 0xFFFFFF;
+	Regs.VMIXR		= 0xFFFFFF;
+	Regs.VMIXEL		= 0xFFFFFF;
+	Regs.VMIXER		= 0xFFFFFF;
+	EffectsStartA	= c ? 0xEFFF8 : 0xFFFF8;
+	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF;
 
 	FxEnable		= 0;
 	IRQA			= 0xFFFF0;
@@ -206,8 +260,15 @@ void V_Core::UpdateFeedbackBuffersB()
 void V_Core::UpdateEffectsBufferSize()
 {
 	const s32 newbufsize = EffectsEndA - EffectsStartA + 1;
+	//printf("Rvb Area change: ESA = %x, EEA = %x, Size(dec) = %d, Size(hex) = %x FxEnable = %d\n", EffectsStartA, EffectsEndA, newbufsize * 2, newbufsize * 2, FxEnable);
+	
+	if( (newbufsize*2) > 0x20000 ) // max 128kb per core
+	{ 
+		//printf("too big, returning\n");
+		//return;
+	}
 	if( !RevBuffers.NeedsUpdated && (newbufsize == EffectsBufferSize) ) return;
-
+	
 	RevBuffers.NeedsUpdated = false;
 	EffectsBufferSize = newbufsize;
 
@@ -1057,18 +1118,21 @@ static void __fastcall RegWrite_Core( u16 value )
 		//    change the end address anyway.
 
 		case REG_A_ESA:
+			//if (thiscore.FxEnable){printf("!! ESA\n"); return;}
 			SetHiWord( thiscore.EffectsStartA, value );
 			thiscore.RevBuffers.NeedsUpdated = true;
 			thiscore.ReverbX = 0;
 		break;
 
 		case (REG_A_ESA + 2):
+			//if (thiscore.FxEnable){printf("!! ESA\n"); return;}
 			SetLoWord( thiscore.EffectsStartA, value );
 			thiscore.RevBuffers.NeedsUpdated = true;
 			thiscore.ReverbX = 0;
 		break;
 
 		case REG_A_EEA:
+			//if (thiscore.FxEnable){printf("!! EEA\n"); return;}  
 			thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
 			thiscore.RevBuffers.NeedsUpdated = true;
 			thiscore.ReverbX = 0;

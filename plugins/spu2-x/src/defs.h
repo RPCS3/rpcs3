@@ -449,6 +449,7 @@ struct V_Core
 	virtual ~V_Core() throw();
 
 	void	Reset( int index );
+	void	Init( int index );
 	void	UpdateEffectsBufferSize();
 
 	s32		EffectsBufferIndexer( s32 offset ) const;
