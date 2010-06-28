@@ -25,7 +25,7 @@
 
 static wxString GetTranslation( const char* msg )
 {
-	return msg ? wxGetTranslation( fromUTF8(msg) ) : wxString();
+	return msg ? wxGetTranslation( fromUTF8(msg) ) : wxEmptyString;
 }
 
 // ------------------------------------------------------------------------
