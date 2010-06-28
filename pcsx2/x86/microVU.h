@@ -156,7 +156,12 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize ((mVU->index) ? (_1mb * 20) : (_1mb * 10))
+#define mVUdispCacheSize (0x1000) // Dispatcher Cache Size
+#define mVUcacheSize     ((mVU->index) ? (_1mb *  17) : (_1mb *  7)) // Initial Size (Excluding Safe-Zone)
+#define mVUcacheMaxSize  ((mVU->index) ? (_1mb * 100) : (_1mb * 50)) // Max Size allowed to grow to
+#define mVUcacheGrowBy	 ((mVU->index) ? (_1mb *  15) : (_1mb * 10)) // Grows by this amount
+#define mVUcacheSafeZone ((mVU->index) ? (_1mb *   3) : (_1mb *  3)) // Safe-Zone for last program
+
 struct microVU {
 
 	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
@@ -177,6 +182,7 @@ struct microVU {
 	AsciiFile* logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
+	u8*		dispCache;	 // Dispatchers Cache (where startFunct and exitFunct are written to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
 	u8*		exitFunct;	 // Ptr Function to the Exit  code for recompiled programs
 	u32		code;		 // Contains the current Instruction
@@ -204,6 +210,7 @@ _f void  mVUinit(VURegs*, int);
 _f void  mVUreset(mV);
 _f void  mVUclose(mV);
 _f void  mVUclear(mV, u32, u32);
+   void  mVUresizeCache(mV, u32);
 _f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 

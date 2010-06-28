@@ -86,30 +86,27 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->vuMemSize		= (vuIndex ? 0x4000 : 0x1000);
 	mVU->microMemSize	= (vuIndex ? 0x4000 : 0x1000);
 	mVU->progSize		= (vuIndex ? 0x4000 : 0x1000) / 4;
+	mVU->dispCache		= NULL;
 	mVU->cache			= NULL;
 	mVU->cacheSize		= mVUcacheSize;
 	mVU->regAlloc		= new microRegAlloc(mVU->regs);
-
-	// Give SysMmapEx a NULL and let the OS pick the memory for us: mVU can work with any
-	// address the operating system gives us, and unlike the EE/IOP there's not much convenience
-	// to debugging if the address is known anyway due to mVU's complex memory layouts (caching).
-
-	mVU->cache = SysMmapEx(NULL, mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
-	if (!mVU->cache) throw Exception::OutOfMemory( "microVU Error: Failed to allocate recompiler memory!" );
-
-	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
-	ProfilerRegisterSource(isVU1?"mVU1 Rec":"mVU0 Rec", mVU->cache, mVU->cacheSize);
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		mVU->prog.prog[i].list = new deque<microProgram*>();
 	}
 
+	mVU->dispCache = SysMmapEx(NULL, mVUdispCacheSize, 0, (mVU->index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
+	if (!mVU->dispCache) throw Exception::OutOfMemory("microVU Error: Failed to allocate dispatcher memory!");
+	memset(mVU->dispCache, 0xcc, mVUdispCacheSize);
+
 	// Setup Entrance/Exit Points
-	x86SetPtr(mVU->cache);
+	x86SetPtr(mVU->dispCache);
 	mVUdispatcherA(mVU);
 	mVUdispatcherB(mVU);
 	mVUemitSearch();
-	mVUreset(mVU);
+
+	// Allocates rec-cache and calls mVUreset()
+	mVUresizeCache(mVU, mVU->cacheSize + mVUcacheSafeZone);
 }
 
 // Resets Rec Data
@@ -127,10 +124,10 @@ _f void mVUreset(mV) {
 	mVU->prog.curFrame	=  0;
 
 	// Setup Dynarec Cache Limits for Each Program
-	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
+	u8* z = mVU->cache;
 	mVU->prog.x86start	= z;
 	mVU->prog.x86ptr	= z;
-	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - (_1mb * 3))); // 3mb "Safe Zone"
+	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - mVUcacheSafeZone)); // "Safe Zone"
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		deque<microProgram*>::iterator it = mVU->prog.prog[i].list->begin();
@@ -147,7 +144,8 @@ _f void mVUreset(mV) {
 // Free Allocated Resources
 _f void mVUclose(mV) {
 
-	if (mVU->cache) { HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
+	if (mVU->dispCache) { HostSys::Munmap(mVU->dispCache, mVUdispCacheSize); mVU->dispCache = NULL; }
+	if (mVU->cache)		{ HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
 
 	// Delete Programs and Block Managers
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
@@ -160,6 +158,30 @@ _f void mVUclose(mV) {
 	}
 
 	safe_delete(mVU->regAlloc);
+}
+
+void mVUresizeCache(mV, u32 size) {
+
+	if (size > (u32)mVUcacheMaxSize) { if (mVU->cacheSize==mVUcacheMaxSize) return; size = mVUcacheMaxSize; }
+	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
+
+	// Give SysMmapEx a NULL and let the OS pick the memory for us: mVU can work with any
+	// address the operating system gives us, and unlike the EE/IOP there's not much convenience
+	// to debugging if the address is known anyway due to mVU's complex memory layouts (caching).
+
+	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1" : "Micro VU0"));
+	if(!cache && !mVU->cache) throw Exception::OutOfMemory("microVU Error: Failed to allocate recompiler memory!");
+	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); return; }
+	if (mVU->cache) {
+		HostSys::Munmap(mVU->cache, mVU->cacheSize);
+		ProfilerTerminateSource(isVU1?"mVU1 Rec":"mVU0 Rec");
+	}
+
+	mVU->cache	   = cache;
+	mVU->cacheSize = size;
+	memset(mVU->cache, 0xcc, mVU->cacheSize);
+	ProfilerRegisterSource(isVU1?"mVU1 Rec":"mVU0 Rec", mVU->cache, mVU->cacheSize);
+	mVUreset(mVU);
 }
 
 // Clears Block Data in specified range

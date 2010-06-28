@@ -289,7 +289,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 	uptr diff = ptr - start;																	  \
 	if (diff >= limit) {																		  \
 		Console.WriteLn("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
-		mVUreset(mVU);																			  \
+		mVUresizeCache(mVU, mVU->cacheSize + mVUcacheGrowBy);									  \
 	}																							  \
 }
 

@@ -92,7 +92,7 @@ void mVUdispatcherB(mV) {
 
 	xRET();
 
-	mVUcacheCheck(x86Ptr, mVU->cache, 0x1000);
+	mVUcacheCheck(x86Ptr, mVU->dispCache, mVUdispCacheSize);
 }
 
 //------------------------------------------------------------------
