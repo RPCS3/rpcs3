@@ -103,7 +103,8 @@ set(zzoglHeaders
     x86.h
     zerogs.h
     zerogsmath.h
-    zpipe.h)
+    zpipe.h
+    ZZoglCRTC.h)
 
 # zzogl S sources
 set(zzoglSSources

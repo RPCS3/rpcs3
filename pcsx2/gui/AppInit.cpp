@@ -57,7 +57,7 @@ static void CpuCheckSSE2()
 
 void Pcsx2App::WipeUserModeSettings()
 {
-	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
+	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
 	if( !usrlocaldir.Exists() ) return;
 
 	wxString cwd( Path::Normalize( wxGetCwd() ) );
@@ -86,7 +86,7 @@ void Pcsx2App::WipeUserModeSettings()
 //
 void Pcsx2App::ReadUserModeSettings()
 {
-	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
+	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
 	if( !usrlocaldir.Exists() )
 	{
 		Console.WriteLn( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );

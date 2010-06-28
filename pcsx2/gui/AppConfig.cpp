@@ -94,6 +94,31 @@ namespace PathDefs
 		return retval;
 	}
 
+    // Specifies the main configuration folder.
+    wxDirName GetUserLocalDataDir()
+    {
+#ifdef __LINUX__
+        // Note: GetUserLocalDataDir() on linux return $HOME/.pcsx2 unfortunately it does not follow the XDG standard
+        // So we re-implement it, to follow the standard.
+        wxDirName user_local_dir;
+        wxString xdg_home_value;
+        if( wxGetEnv(L"XDG_CONFIG_HOME", &xdg_home_value) ) {
+            if ( xdg_home_value.IsEmpty() ) {
+                // variable exist but it is empty. So use the default value
+                user_local_dir = (wxDirName)Path::Combine( wxStandardPaths::Get().GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
+            } else {
+                user_local_dir = (wxDirName)Path::Combine( xdg_home_value, pxGetAppName());
+            }
+        } else {
+            // variable do not exist
+            user_local_dir = (wxDirName)Path::Combine( wxStandardPaths::Get().GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
+        }
+        return user_local_dir;
+#else
+        return wxDirName(wxStandardPaths::Get().GetUserLocalDataDir());
+#endif
+    }
+
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments( DocsModeType mode )

@@ -36,6 +36,7 @@ namespace PathDefs
 	// complete pathnames are returned by these functions
 	// For 99% of all code, you should use these.
 
+    extern wxDirName GetUserLocalDataDir();
 	extern wxDirName GetDocuments();
 	extern wxDirName GetDocuments( DocsModeType mode );
 	extern wxDirName GetThemes();
