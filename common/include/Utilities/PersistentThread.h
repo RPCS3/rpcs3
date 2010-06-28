@@ -138,8 +138,7 @@ namespace Threading
 
 	public:
 		virtual ~pxThread() throw();
-		pxThread();
-		pxThread( const char* name );
+		pxThread( const wxString& name=L"pxThread" );
 
 		pthread_t GetId() const { return m_thread; }
 		u64 GetCpuTime() const;

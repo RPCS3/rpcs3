@@ -154,8 +154,8 @@ void Threading::pxThread::_pt_callback_cleanup( void* handle )
 }
 
 
-Threading::pxThread::pxThread()
-	: m_name( L"pxThread" )
+Threading::pxThread::pxThread( const wxString& name )
+	: m_name( name )
 {
 	m_detached	= true;		// start out with m_thread in detached/invalid state
 	m_running	= false;

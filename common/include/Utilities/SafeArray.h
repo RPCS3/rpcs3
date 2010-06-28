@@ -77,8 +77,8 @@ public:
 	int			ChunkSize;
 
 protected:
-	T*		m_ptr;
-	int		m_size;				// size of the allocation of memory
+	T*			m_ptr;
+	int			m_size;			// size of the allocation of memory
 
 protected:
 	// Internal constructor for use by derived classes.  This allows a derived class to
@@ -98,10 +98,22 @@ protected:
 
 	virtual T* _virtual_realloc( int newsize )
 	{
-		return (T*)((m_ptr == NULL) ?
+		T* retval = (T*)((m_ptr == NULL) ?
 			malloc( newsize * sizeof(T) ) :
 			realloc( m_ptr, newsize * sizeof(T) )
 		);
+		
+		if( IsDebugBuild )
+		{
+			// Zero everything out to 0xbaadf00d, so that its obviously uncleared
+			// to a debuggee
+
+			u32* fill = (u32*)&retval[m_size];
+			const u32* end = (u32*)((((uptr)&retval[newsize-1])-3) & ~0x3);
+			for( ; fill<end; ++fill ) *fill = 0xbaadf00d;
+		}
+		
+		return retval;
 	}
 
 public:
