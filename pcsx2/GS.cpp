@@ -159,6 +159,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 
 		default:
 			*PS2GS_BASE(mem) = value;
+		break;
 	}
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
@@ -437,5 +438,9 @@ void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(CSR_SIGNAL_Pending);
+
+	if( GetVersion() > 0 )
+		Freeze(gsRegionMode);
+
 	gifPathFreeze();
 }
