@@ -24,6 +24,7 @@
 #include "AppConfig.h"
 
 #include "Elfheader.h"
+#include "Counters.h"
 
 using namespace R5900;
 
@@ -38,6 +39,8 @@ static void PostLoadPrep()
 	memzero(pCache);
 //	WriteCP0Status(cpuRegs.CP0.n.Status.val);
 	for(int i=0; i<48; i++) MapTLB(i);
+
+	UpdateVSyncRate();
 }
 
 wxString SaveStateBase::GetFilename( int slot )

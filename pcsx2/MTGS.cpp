@@ -142,9 +142,9 @@ void SysMtgsThread::ResetGS()
 
 struct RingCmdPacket_Vsync
 {
-	u8		regset1[0x100];
-	u32		csr;
-	u32		imr;
+	u8				regset1[0x0f0];
+	u32				csr;
+	u32				imr;
 	GSRegSIGBLID	siglblid;
 };
 
@@ -157,10 +157,12 @@ void SysMtgsThread::PostVsyncEnd()
 
 	PrepDataPacket(GS_RINGTYPE_VSYNC, sizeof(RingCmdPacket_Vsync));
 	RingCmdPacket_Vsync& local( *(RingCmdPacket_Vsync*)GetDataPacketPtr() );
+
 	memcpy_fast( local.regset1, PS2MEM_GS, sizeof(local.regset1) );
 	local.csr = GSCSRr;
 	local.imr = GSIMR;
 	local.siglblid = GSSIGLBLID;
+
 	SendDataPacket();
 
 	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
@@ -382,13 +384,13 @@ void SysMtgsThread::ExecuteTaskInThread()
 							
 							// Mail in the important GS registers.
 							RingCmdPacket_Vsync& local((RingCmdPacket_Vsync&)RingBuffer[m_RingPos+1]);
-							
 							memcpy_fast( RingBuffer.Regs, local.regset1, sizeof(local.regset1));
 							((u32&)RingBuffer.Regs[0x1000]) = local.csr;
 							((u32&)RingBuffer.Regs[0x1010]) = local.imr;
 							((GSRegSIGBLID&)RingBuffer.Regs[0x1080]) = local.siglblid;
 							
-							GSvsync(!(local.csr & 0x2000));
+							// CSR & 0x2000; is the pageflip id.
+							GSvsync(((u32&)RingBuffer.Regs[0x1000]) & 0x2000);
 							gsFrameSkip();
 
 							// if we're not using GSOpen2, then the GS window is on this thread (MTGS thread),

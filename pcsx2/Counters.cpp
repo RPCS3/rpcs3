@@ -809,8 +809,6 @@ void SaveStateBase::rcntFreeze()
 
 	if( IsLoading() )
 	{
-		UpdateVSyncRate();
-
 		// make sure the gate flags are set based on the counter modes...
 		for( int i=0; i<4; i++ )
 			_rcntSetGate( i );
