@@ -1088,21 +1088,3 @@ SysCoreAllocations& GetSysCoreAlloc()
 {
 	return *wxGetApp().m_CoreAllocs;
 }
-
-AppGameDatabase* Pcsx2App::GetGameDatabase()
-{
-	pxAppResources& res( GetResourceCache() );
-
-	ScopedLock lock( m_mtx_LoadingGameDB );
-	if( !res.GameDB )
-	{
-		res.GameDB = new AppGameDatabase();
-		res.GameDB->LoadFromFile();
-	}
-	return res.GameDB;
-}
-
-IGameDatabase* AppHost_GetGameDatabase()
-{
-	return wxGetApp().GetGameDatabase();
-}

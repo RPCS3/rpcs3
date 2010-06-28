@@ -16,6 +16,35 @@
 #include "PrecompiledHeader.h"
 #include "GameDatabase.h"
 
+BaseGameDatabaseImpl::BaseGameDatabaseImpl()
+	: gHash( 9400 )
+	, m_baseKey( L"Serial" )
+{
+	m_BlockTable.reserve(48);
+
+	m_CurBlockWritePos		= 0;
+	m_BlockTableWritePos	= 0;
+
+	m_GamesPerBlock			= 256;
+
+	m_BlockTable.push_back(NULL);
+}
+
+BaseGameDatabaseImpl::~BaseGameDatabaseImpl() throw()
+{
+	for(uint blockidx=0; blockidx<=m_BlockTableWritePos; ++blockidx)
+	{
+		if( !m_BlockTable[blockidx] ) continue;
+
+		const uint endidx = (blockidx == m_BlockTableWritePos) ? m_CurBlockWritePos : m_GamesPerBlock;
+
+		for( uint gameidx=0; gameidx<endidx; ++gameidx )
+			m_BlockTable[blockidx][gameidx].~Game_Data();
+
+		safe_free( m_BlockTable[blockidx] );
+	}
+}
+
 // Sets the current game to the one matching the serial id given
 // Returns true if game found, false if not found...
 bool BaseGameDatabaseImpl::findGame(Game_Data& dest, const wxString& id) {
@@ -25,14 +54,30 @@ bool BaseGameDatabaseImpl::findGame(Game_Data& dest, const wxString& id) {
 		dest.clear();
 		return false;
 	}
-	dest = gList[iter->second];
+	dest = *iter->second;
 	return true;
 }
 
-void BaseGameDatabaseImpl::addNewGame(const Game_Data& game)
+Game_Data* BaseGameDatabaseImpl::createNewGame( const wxString& id )
 {
-	gList.push_back(game);
-	gHash[game.id] = gList.size()-1;
+	if(!m_BlockTable[m_BlockTableWritePos])
+		m_BlockTable[m_BlockTableWritePos] = (Game_Data*)malloc(m_GamesPerBlock * sizeof(Game_Data));
+
+	Game_Data* block = m_BlockTable[m_BlockTableWritePos];
+	Game_Data* retval = &block[m_CurBlockWritePos];
+
+	gHash[id] = retval;
+
+	new (retval) Game_Data(id);
+
+	if( ++m_CurBlockWritePos >= m_GamesPerBlock )
+	{
+		++m_BlockTableWritePos;
+		m_CurBlockWritePos = 0;
+		m_BlockTable.push_back(NULL);
+	}
+
+	return retval;
 }
 
 void BaseGameDatabaseImpl::updateGame(const Game_Data& game)
@@ -40,13 +85,12 @@ void BaseGameDatabaseImpl::updateGame(const Game_Data& game)
 	GameDataHash::const_iterator iter( gHash.find(game.id) );
 
 	if( iter == gHash.end() ) {
-		gList.push_back(game);
-		gHash[game.id] = gList.size()-1;
+		*(createNewGame( game.id )) = game;
 	}
 	else
 	{
 		// Re-assign existing vector/array entry!
-		gList[gHash[game.id]] = game;
+		*gHash[game.id] = game;
 	}
 }
 
@@ -54,7 +98,7 @@ void BaseGameDatabaseImpl::updateGame(const Game_Data& game)
 bool Game_Data::keyExists(const wxChar* key) const {
 	KeyPairArray::const_iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
-		if (it[0].CompareKey(key)) {
+		if (it->CompareKey(key)) {
 			return true;
 		}
 	}
@@ -65,7 +109,7 @@ bool Game_Data::keyExists(const wxChar* key) const {
 void Game_Data::deleteKey(const wxChar* key) {
 	KeyPairArray::iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
-		if (it[0].CompareKey(key)) {
+		if (it->CompareKey(key)) {
 			kList.erase(it);
 			return;
 		}
@@ -76,8 +120,8 @@ void Game_Data::deleteKey(const wxChar* key) {
 wxString Game_Data::getString(const wxChar* key) const {
 	KeyPairArray::const_iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
-		if (it[0].CompareKey(key)) {
-			return it[0].value;
+		if (it->CompareKey(key)) {
+			return it->value;
 		}
 	}
 	return wxString();
@@ -86,11 +130,11 @@ wxString Game_Data::getString(const wxChar* key) const {
 void Game_Data::writeString(const wxString& key, const wxString& value) {
 	KeyPairArray::iterator it( kList.begin() );
 	for ( ; it != kList.end(); ++it) {
-		if (it[0].CompareKey(key)) {
+		if (it->CompareKey(key)) {
 			if( value.IsEmpty() )
 				kList.erase(it);
 			else
-				it[0].value = value;
+				it->value = value;
 			return;
 		}
 	}

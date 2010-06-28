@@ -118,13 +118,14 @@ wxString DBLoaderHelper::ReadHeader()
 
 void DBLoaderHelper::ReadGames()
 {
-	Game_Data game;
+	Game_Data* game = NULL;
 
 	if (m_keyPair.IsOk())
 	{
-		game.writeString(m_keyPair.key, m_keyPair.value);
-		if( m_keyPair.CompareKey(m_gamedb.getBaseKey()) )
-			game.id = m_keyPair.value;
+		game = m_gamedb.createNewGame(m_keyPair.value);
+		game->writeString(m_keyPair.key, m_keyPair.value);
+		//if( m_keyPair.CompareKey(m_gamedb.getBaseKey()) )
+		//	game.id = m_keyPair.value;
 	}
 
 	while(!m_reader.Eof()) { // Fill game data, find new game, repeat...
@@ -136,13 +137,10 @@ void DBLoaderHelper::ReadGames()
 		if (!extractMultiLine()) extract();
 
 		if (!m_keyPair.IsOk()) continue;
-		if( m_keyPair.CompareKey(m_gamedb.getBaseKey()) )
-		{
-			m_gamedb.addNewGame(game);
-			game.clear();
-			game.id = m_keyPair.value;
-		}
-		game.writeString( m_keyPair.key, m_keyPair.value );
+		if (m_keyPair.CompareKey(m_gamedb.getBaseKey()))
+			game = m_gamedb.createNewGame(m_keyPair.value);
+
+		game->writeString( m_keyPair.key, m_keyPair.value );
 	}
 }
 
@@ -168,8 +166,13 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 
 	DBLoaderHelper loader( reader, *this );
 
+	u64 qpc_Start = GetCPUTicks();
 	header = loader.ReadHeader();
 	loader.ReadGames();
+	u64 qpc_end = GetCPUTicks();
+
+	Console.WriteLn( "(GameDB) %d games on record (loaded in %ums)",
+		gHash.size(), (u32)(((qpc_end-qpc_Start)*1000) / GetTickFrequency()) );
 
 	return *this;
 }
@@ -178,13 +181,40 @@ AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& file, const wxStr
 void AppGameDatabase::SaveToFile(const wxString& file) {
 	wxFFileOutputStream writer( file );
 	pxWriteMultiline(writer, header);
-	GameDataArray::iterator it( gList.begin() );
-	for ( ; it != gList.end(); ++it) {
-		KeyPairArray::iterator i = it[0].kList.begin();
-		for ( ; i != it[0].kList.end(); ++i) {
-			pxWriteMultiline(writer, i[0].toString() );
+
+	for(uint blockidx=0; blockidx<=m_BlockTableWritePos; ++blockidx)
+	{
+		if( !m_BlockTable[blockidx] ) continue;
+
+		const uint endidx = (blockidx == m_BlockTableWritePos) ? m_CurBlockWritePos : m_GamesPerBlock;
+
+		for( uint gameidx=0; gameidx<=endidx; ++gameidx )
+		{
+			const Game_Data& game( m_BlockTable[blockidx][gameidx] );
+			KeyPairArray::const_iterator i(game.kList.begin());
+			for ( ; i != game.kList.end(); ++i) {
+				pxWriteMultiline(writer, i->toString() );
+			}
+
+			pxWriteLine(writer, L"---------------------------------------------");
 		}
-		pxWriteLine(writer, L"---------------------------------------------");
 	}
 }
 
+AppGameDatabase* Pcsx2App::GetGameDatabase()
+{
+	pxAppResources& res( GetResourceCache() );
+
+	ScopedLock lock( m_mtx_LoadingGameDB );
+	if( !res.GameDB )
+	{
+		res.GameDB = new AppGameDatabase();
+		res.GameDB->LoadFromFile();
+	}
+	return res.GameDB;
+}
+
+IGameDatabase* AppHost_GetGameDatabase()
+{
+	return wxGetApp().GetGameDatabase();
+}

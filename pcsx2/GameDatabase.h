@@ -18,11 +18,24 @@
 //#include "Common.h"
 #include "AppConfig.h"
 #include "Utilities/HashMap.h"
+#include "Utilities/SafeArray.h"
 
 #include <wx/wfstream.h>
 
 struct	key_pair;
 struct	Game_Data;
+
+class StringHashNoCase
+{
+public:
+	StringHashNoCase() {}
+
+	HashTools::hash_key_t operator()( const wxString& src ) const
+	{
+		return HashTools::Hash( (const char *)src.Lower().data(), src.length() * sizeof( wxChar ) );
+	}
+};
+
 
 typedef std::vector<key_pair>	KeyPairArray;
 
@@ -159,23 +172,11 @@ public:
 
 	virtual wxString getBaseKey() const=0;
 	virtual bool findGame(Game_Data& dest, const wxString& id)=0;
-	virtual void addNewGame(const Game_Data& game)=0;
+	virtual Game_Data* createNewGame( const wxString& id )=0;
 	virtual void updateGame(const Game_Data& game)=0;
 };
 
-class StringHashNoCase
-{
-public:
-	StringHashNoCase() {}
-
-	HashTools::hash_key_t operator()( const wxString& src ) const
-	{
-		return HashTools::Hash( (const char *)src.Lower().data(), src.length() * sizeof( wxChar ) );
-	}
-};
-
-typedef std::vector<Game_Data>				GameDataArray;
-typedef pxDictionary<int,StringHashNoCase>	GameDataHash;
+typedef pxDictionary<Game_Data*,StringHashNoCase>	GameDataHash;
 
 // --------------------------------------------------------------------------------------
 //  BaseGameDatabaseImpl 
@@ -184,24 +185,24 @@ typedef pxDictionary<int,StringHashNoCase>	GameDataHash;
 // faster that way.
 class BaseGameDatabaseImpl : public IGameDatabase
 {
-public:
-	GameDataArray	gList;			// List of all game data
+protected:
 	GameDataHash	gHash;			// hash table of game serials matched to their gList indexes!
 	wxString		m_baseKey;
 
-public:
-	BaseGameDatabaseImpl()
-	{
-		m_baseKey = L"Serial";
-	}
+	std::vector<Game_Data*>	m_BlockTable;
+	uint					m_BlockTableWritePos;
+	int						m_CurBlockWritePos;
+	int						m_GamesPerBlock;
 
-	virtual ~BaseGameDatabaseImpl() throw() {}
+public:
+	BaseGameDatabaseImpl();
+	virtual ~BaseGameDatabaseImpl() throw();
 
 	wxString getBaseKey() const { return m_baseKey; }
 	void setBaseKey( const wxString& key ) { m_baseKey = key; }
 
 	bool findGame(Game_Data& dest, const wxString& id);
-	void addNewGame(const Game_Data& game);
+	Game_Data* createNewGame( const wxString& id );
 	void updateGame(const Game_Data& game);
 };
 

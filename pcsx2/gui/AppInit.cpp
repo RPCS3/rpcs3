@@ -475,6 +475,35 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 typedef void (wxEvtHandler::*pxInvokeAppMethodEventFunction)(Pcsx2AppMethodEvent&);
 typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
+// --------------------------------------------------------------------------------------
+//   CompressThread_gzip
+// --------------------------------------------------------------------------------------
+class GameDatabaseLoaderThread : public pxThread
+{
+	typedef pxThread _parent;
+
+protected:
+	gzFile		m_gzfp;
+
+public:
+	GameDatabaseLoaderThread() : pxThread( L"GameDatabaseLoader" ) {}
+	virtual ~GameDatabaseLoaderThread() throw()
+	{
+		_parent::Cancel();
+	}
+
+protected:
+	void ExecuteTaskInThread()
+	{
+		wxGetApp().GetGameDatabase();
+	}
+
+	void OnCleanupInThread()
+	{
+		wxGetApp().DeleteThread(this);
+	}
+};
+
 bool Pcsx2App::OnInit()
 {
 	EnableAllLogging();
@@ -535,9 +564,11 @@ bool Pcsx2App::OnInit()
 		// -------------------------------------
 		if( Startup.ForceConsole ) g_Conf->ProgLogBox.Visible = true;
 		OpenProgramLog();
-		if( m_UseGUI ) OpenMainFrame();
 		AllocateCoreStuffs();
+		if( m_UseGUI ) OpenMainFrame();
 		
+		(new GameDatabaseLoaderThread())->Start();
+
 		if( Startup.SysAutoRun )
 		{
 			// Notes: Saving/remembering the Iso file is probably fine and desired, so using
