@@ -270,10 +270,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\GSsoftdx.def"
-				>
-			</File>
-			<File
 				RelativePath="..\Mem.cpp"
 				>
 			</File>
@@ -290,15 +286,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Profile.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\rasterfont.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\Regs.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\Profile.cpp"
 				>
 			</File>
 			<File
@@ -390,19 +386,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\GifTransfer.h"
-				>
-			</File>
-			<File
 				RelativePath="..\CRC.h"
 				>
 			</File>
 			<File
-				RelativePath="..\GS.h"
+				RelativePath="..\GifTransfer.h"
 				>
 			</File>
 			<File
-				RelativePath="..\Util.h"
+				RelativePath="..\GS.h"
 				>
 			</File>
 			<File
@@ -415,6 +407,10 @@
 			</File>
 			<File
 				RelativePath="..\Mem_Transmit.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Profile.h"
 				>
 			</File>
 			<File
@@ -434,10 +430,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Profile.h"
-				>
-			</File>
-			<File
 				RelativePath="resource.h"
 				>
 			</File>
@@ -447,6 +439,10 @@
 			</File>
 			<File
 				RelativePath="..\targets.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Util.h"
 				>
 			</File>
 			<File

@@ -1664,7 +1664,7 @@ int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
 
 	// left > 0 only when csa < 16
 	int left = 0;
-	if ((u32)(uptr)pClutBuffer & 2 == 0)
+	if (((u32)(uptr)pClutBuffer & 2) == 0)
 	{
 		left = (((u32)(uptr)pClutBuffer & 0x3ff) / 2) + clutsize - 512;
 		clutsize -= left;
