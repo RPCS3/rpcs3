@@ -527,6 +527,12 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 
 				if (ptarg->fbh - dby < texframe.th - movy && !(*bUsingStencil))
 					RenderUpdateStencil(i, bUsingStencil);
+				else if (ptarg->fbh - dby > 2 * ( texframe.th - movy )) 
+				{
+					// Sometimes calculated position onscreen is misaligned, ie in FFX-2 intro. In such case some part of image are out of
+					// border's and we should move it manually.
+					dby -= ((ptarg->fbh - dby) >> 2) -  ((texframe.th + movy) >> 1) ;
+				}
 
 				SetShaderCaller("RenderCheckForTargets");
 
