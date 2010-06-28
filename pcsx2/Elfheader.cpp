@@ -242,7 +242,7 @@ bool ElfObject::hasHeaders() { return (hasProgramHeaders() && hasSectionHeaders(
 void ElfObject::readIso(IsoFile file)
 {
 	int rsize = file.read(data.GetPtr(), data.GetSizeInBytes());
-	if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream( filename );
+	if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream(filename);
 }
 
 void ElfObject::readFile()
@@ -257,19 +257,19 @@ void ElfObject::readFile()
 	rsize = fread(data.GetPtr(), 1, data.GetSizeInBytes(), f);
 	fclose( f );
 
-	if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream( filename );
+	if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream(filename);
 }
 
 void ElfObject::checkElfSize(s64 elfsize)
 {
 	if (elfsize > 0xfffffff)
-		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
+		throw Exception::BadStream(filename).SetBothMsgs(wxLt("Illegal ELF file size over 2GB!"));
 
 	if (elfsize == -1)
-		throw Exception::BadStream( filename, wxLt("Elf file does not exist! ") );
+		throw Exception::BadStream(filename).SetBothMsgs(wxLt("ELF file does not exist!"));
 
 	if (elfsize == 0)
-		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
+		throw Exception::BadStream(filename).SetBothMsgs(wxLt("Unexpected end of ELF file."));
 }
 
 u32 ElfObject::getCRC()
@@ -473,12 +473,14 @@ int GetPS2ElfName( wxString& name )
 			return 0;
 		}
 	}
-	catch (Exception::BadStream&)
+	catch (Exception::BadStream& ex)
 	{
+		Console.Error(ex.FormatDiagnosticMessage());
 		return 0;		// ISO error
 	}
-	catch( Exception::FileNotFound& )
+	catch( Exception::FileNotFound& ex )
 	{
+		Console.Warning(ex.FormatDiagnosticMessage());
 		return 0;		// no SYSTEM.CNF, not a PS1/PS2 disc.
 	}
 

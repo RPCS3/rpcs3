@@ -26,30 +26,28 @@ void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode
 	{
 		case EINVAL:
 			pxFailDev( L"Invalid argument" );
-			throw Exception::Stream( streamname, "Invalid argument" );
+			throw Exception::Stream( streamname ).SetDiagMsg(L"Invalid argument" );
 
 		case EACCES:	// Access denied!
 			throw Exception::AccessDenied( streamname );
 
 		case EMFILE:	// Too many open files!
-			throw Exception::CannotCreateStream( streamname, "Too many open files" );	// File handle allocation failure
+			throw Exception::CannotCreateStream( streamname ).SetDiagMsg(L"Too many open files");	// File handle allocation failure
 
 		case EEXIST:
-			throw Exception::CannotCreateStream( streamname, "File already exists" );
+			throw Exception::CannotCreateStream( streamname ).SetDiagMsg(L"File already exists");
 
 		case ENOENT:	// File not found!
 			throw Exception::FileNotFound( streamname );
 
 		case EPIPE:
-			throw Exception::BadStream( streamname, "Broken pipe" );
+			throw Exception::BadStream( streamname ).SetDiagMsg(L"Broken pipe");
 
 		case EBADF:
-			throw Exception::BadStream( streamname, "Bad file number" );
+			throw Exception::BadStream( streamname ).SetDiagMsg(L"Bad file number");
 
 		default:
-			throw Exception::Stream( streamname,
-				wxsFormat( L"General file/stream error [errno: %d]", errcode )
-			);
+			throw Exception::Stream( streamname ).SetDiagMsg(wxsFormat( L"General file/stream error [errno: %d]", errcode ));
 	}
 }
 
@@ -70,22 +68,20 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 			throw Exception::FileNotFound( streamname );
 
 		case ERROR_TOO_MANY_OPEN_FILES:
-			throw Exception::CannotCreateStream( streamname, "Too many open files" );
+			throw Exception::CannotCreateStream( streamname ).SetDiagMsg(L"Too many open files");
 
 		case ERROR_ACCESS_DENIED:
 			throw Exception::AccessDenied( streamname );
 
 		case ERROR_INVALID_HANDLE:
-			throw Exception::BadStream( streamname, "Stream object or handle is invalid" );
+			throw Exception::BadStream( streamname ).SetDiagMsg(L"Stream object or handle is invalid");
 
 		case ERROR_SHARING_VIOLATION:
-			throw Exception::AccessDenied( streamname, "Sharing violation" );
+			throw Exception::AccessDenied( streamname ).SetDiagMsg(L"Sharing violation");
 
 		default:
 		{
-			throw Exception::Stream( streamname,
-				wxsFormat( L"General Win32 File/stream error [GetLastError: %d]", error )
-			);
+			throw Exception::Stream( streamname ).SetDiagMsg(wxsFormat( L"General Win32 File/stream error [GetLastError: %d]", error ));
 		}
 	}
 }

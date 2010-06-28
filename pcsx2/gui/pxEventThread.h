@@ -191,7 +191,8 @@ public:
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
 
-	bool ProcessMethodSelf( FnType_Void* method );
+	bool Rpc_TryInvokeAsync( FnType_Void* method );
+	bool Rpc_TryInvoke( FnType_Void* method );
 	void SetActiveThread();
 
 protected:
@@ -227,9 +228,14 @@ public:
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
 
-	bool ProcessMethodSelf( void (*evt)() )
+	bool Rpc_TryInvokeAsync( void (*evt)() )
 	{
-		return m_EvtHandler ? m_EvtHandler->ProcessMethodSelf( evt ) : false;
+		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvokeAsync( evt ) : false;
+	}
+
+	bool Rpc_TryInvoke( void (*evt)() )
+	{
+		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvoke( evt ) : false;
 	}
 
 protected:

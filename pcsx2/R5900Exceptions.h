@@ -13,60 +13,65 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _R5900_EXCEPTIONS_H_
-#define _R5900_EXCEPTIONS_H_
+#pragma once
+
+// --------------------------------------------------------------------------------------
+//  BaseR5900Exception
+// --------------------------------------------------------------------------------------
+// Abstract base class for R5900 exceptions; contains the cpuRegs instance at the
+// time the exception is raised.
+//
+// Translation note: EE Emulation exceptions are untranslated only.  There's really no
+// point in providing translations for this hardcore mess. :)
+//
+class BaseR5900Exception : public Exception::Ps2Generic
+{
+	DEFINE_EXCEPTION_COPYTORS(BaseR5900Exception, Exception::Ps2Generic)
+
+public:
+	cpuRegisters cpuState;
+
+public:
+	u32 GetPc() const { return cpuState.pc; }
+	bool IsDelaySlot() const { return !!cpuState.IsDelaySlot; }
+
+	wxString& Message() { return m_message; }
+	wxString FormatMessage() const
+	{
+		return wxsFormat(L"(EE pc:%8.8X) ", cpuRegs.pc) + m_message;
+	}
+
+protected:
+	void Init( const wxString& msg )
+	{
+		m_message = msg;;
+		cpuState = cpuRegs;
+	}
+
+	void Init( const char* msg )
+	{
+		m_message = fromUTF8( msg );
+		cpuState = cpuRegs;
+	}
+};
 
 namespace R5900Exception
 {
-	using Exception::Ps2Generic;
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Abstract base class for R5900 exceptions; contains the cpuRegs instance at the
-	// time the exception is raised.
-	//
-	// Translation note: EE Emulation exceptions are untranslated only.  There's really no
-	// point in providing translations for this hardcore mess. :)
-	//
-	class BaseExcept : public virtual Ps2Generic
+	// --------------------------------------------------------------------------------------
+	//  BaseAddressError
+	// --------------------------------------------------------------------------------------
+	class BaseAddressError : public BaseR5900Exception
 	{
-	public:
-		cpuRegisters cpuState;
+		DEFINE_EXCEPTION_COPYTORS(BaseAddressError, BaseR5900Exception)
 
-	public:
-		virtual ~BaseExcept() throw()=0;
-
-		u32 GetPc() const { return cpuState.pc; }
-		bool IsDelaySlot() const { return !!cpuState.IsDelaySlot; }
-
-	protected:
-		void Init( const wxString& msg )
-		{
-			m_message = L"(EE) " + msg;
-			cpuState = cpuRegs;
-		}
-
-		void Init( const char*msg )
-		{
-			m_message = fromUTF8( msg );
-			cpuState = cpuRegs;
-		}
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////
-	//
-	class BaseAddressError : public BaseExcept
-	{
 	public:
 		bool OnWrite;
 		u32 Address;
 
-	public:
-		virtual ~BaseAddressError() throw() {}
-
 	protected:
 		void Init( u32 ps2addr, bool onWrite, const wxString& msg )
 		{
-			BaseExcept::Init( wxsFormat( msg+L", addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) );
+			_parent::Init( wxsFormat( msg+L", addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) );
 			OnWrite = onWrite;
 			Address = ps2addr;
 		}
@@ -76,54 +81,46 @@ namespace R5900Exception
 	class AddressError : public BaseAddressError
 	{
 	public:
-		virtual ~AddressError() throw() {}
-
 		AddressError( u32 ps2addr, bool onWrite )
 		{
 			BaseAddressError::Init( ps2addr, onWrite, L"Address error" );
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
 	class TLBMiss : public BaseAddressError
 	{
-	public:
-		virtual ~TLBMiss() throw() {}
+		DEFINE_EXCEPTION_COPYTORS(TLBMiss, BaseAddressError)
 
+	public:
 		TLBMiss( u32 ps2addr, bool onWrite )
 		{
 			BaseAddressError::Init( ps2addr, onWrite, L"TLB Miss" );
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
 	class BusError : public BaseAddressError
 	{
-	public:
-		virtual ~BusError() throw() {}
+		DEFINE_EXCEPTION_COPYTORS(BusError, BaseAddressError)
 
+	public:
 		BusError( u32 ps2addr, bool onWrite )
 		{
 			BaseAddressError::Init( ps2addr, onWrite, L"Bus Error" );
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
-	class Trap : public BaseExcept
+	class Trap : public BaseR5900Exception
 	{
+		DEFINE_EXCEPTION_COPYTORS(Trap, BaseR5900Exception)
+
 	public:
 		u16 TrapCode;
 
 	public:
-		virtual ~Trap() throw() {}
-
 		// Generates a trap for immediate-style Trap opcodes
 		Trap()
 		{
-			BaseExcept::Init( "Trap" );
+			_parent::Init( "Trap" );
 			TrapCode = 0;
 		}
 
@@ -131,24 +128,19 @@ namespace R5900Exception
 		// error code in the opcode
 		explicit Trap( u16 trapcode )
 		{
-			BaseExcept::Init( "Trap" ),
+			_parent::Init( "Trap" ),
 			TrapCode = trapcode;
 		}
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////
-	//
-	class DebugBreakpoint : public BaseExcept
+	class DebugBreakpoint : public BaseR5900Exception
 	{
+		DEFINE_EXCEPTION_COPYTORS(DebugBreakpoint, BaseR5900Exception)
+		
 	public:
-		virtual ~DebugBreakpoint() throw() {}
-
 		explicit DebugBreakpoint()
 		{
-			BaseExcept::Init( "Debug Breakpoint" );
+			_parent::Init( "Debug Breakpoint" );
 		}
 	};
 }
-
-
-#endif

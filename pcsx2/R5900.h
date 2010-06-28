@@ -15,11 +15,11 @@
 
 #pragma once
 
-//////////////////////////////////////////////////////////////////////////////////////////
-#ifndef __LINUX__
-#pragma region Recompiler Stuffs
-#endif
+class BaseR5900Exception;
 
+// --------------------------------------------------------------------------------------
+//  Recompiler Stuffs
+// --------------------------------------------------------------------------------------
 // This code section contains recompiler vars that are used in "shared" code. Placing
 // them in iR5900.h would mean having to include that into more files than I care to
 // right now, so we're sticking them here for now until a better solution comes along.
@@ -39,12 +39,10 @@ namespace Exception
 		explicit ExitCpuExecute() { }
 	};
 }
-#ifndef __LINUX__
-#pragma endregion
-#endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// EE Bios function name tables.
+// --------------------------------------------------------------------------------------
+//  EE Bios function name tables.
+// --------------------------------------------------------------------------------------
 namespace R5900 {
 extern const char* const bios[256];
 }
@@ -348,6 +346,11 @@ struct R5900cpu
 	//     exception).
 	//
 	void (*CheckExecutionState)();
+
+	// Safely throws host exceptions from executing code (either recompiled or interpreted).
+	// If this function is called outside the context of the CPU's code execution, then the
+	// given exception will be re-thrown automatically.
+	void (*ThrowException)( const BaseR5900Exception& ex );
 
 	// Manual recompiled code cache clear; typically useful to recompilers only.  Size is
 	// in MIPS words (32 bits).  Dev note: this callback is nearly obsolete, and might be

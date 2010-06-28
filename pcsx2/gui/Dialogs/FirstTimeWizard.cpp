@@ -104,14 +104,13 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 	if( path.FileExists() )
 	{
 		// FIXME: There's already a file by the same name.. not sure what we should do here.
-		throw Exception::BadStream( path.ToString(),
-			L"Targeted documents folder is already occupied by a file.",
-			pxE( ".Error:DocsFolderFileConflict",
+		throw Exception::BadStream( path.ToString() )
+			.SetDiagMsg(L"Targeted documents folder is already occupied by a file.")
+			.SetUserMsg(pxE( ".Error:DocsFolderFileConflict",
 				L"PCSX2 cannot create a documents folder in the requested location.  "
 				L"The path name matches an existing file.  Delete the file or change the documents location, "
 				L"and then try again."
-			)
-		);
+			));
 	}
 
 	if( !path.Exists() )

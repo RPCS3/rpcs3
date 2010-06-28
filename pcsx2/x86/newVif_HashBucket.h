@@ -83,8 +83,7 @@ public:
 
 		if( bucket.Chain = (T*)_aligned_realloc( bucket.Chain, sizeof(T)*(bucket.Size+1), 16), bucket.Chain==NULL ) {
 			throw Exception::OutOfMemory(
-				wxsFormat(L"Out of memory re-allocating hash bucket (bucket size=%d)", bucket.Size+1),
-				wxEmptyString
+				wxsFormat(L"HashBucket Chain (bucket size=%d)", bucket.Size+1)
 			);
 		}
 		memcpy_const(&bucket.Chain[bucket.Size++], &dataPtr, sizeof(T));

@@ -167,8 +167,9 @@ template< typename CpuType >
 class CpuInitializer
 {
 public:
-	ScopedPtr<CpuType>	MyCpu;
-
+	ScopedPtr<CpuType>			MyCpu;
+	ScopedPtr<BaseException>	ExThrown;
+	
 	CpuInitializer();
 	virtual ~CpuInitializer() throw();
 
@@ -199,14 +200,14 @@ CpuInitializer< CpuType >::CpuInitializer()
 	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( L"CPU provider error:\n\t" + ex.FormatDiagnosticMessage() );
-		if( MyCpu )
-			MyCpu = NULL;
+		MyCpu = NULL;
+		ExThrown = ex.Clone();
 	}
 	catch( std::runtime_error& ex )
 	{
 		Console.Error( L"CPU provider error (STL Exception)\n\tDetails:" + fromUTF8( ex.what() ) );
-		if( MyCpu )
-			MyCpu = NULL;
+		MyCpu = NULL;
+		ExThrown = new Exception::RuntimeError(ex);
 	}
 }
 
@@ -253,9 +254,6 @@ SysCoreAllocations::SysCoreAllocations()
 
 	Console.WriteLn( "Initializing PS2 virtual machine..." );
 
-	m_RecSuccessEE		= false;
-	m_RecSuccessIOP		= false;
-
 	try
 	{
 		vtlb_Core_Alloc();
@@ -266,8 +264,7 @@ SysCoreAllocations::SysCoreAllocations()
 	// ----------------------------------------------------------------------------
 	catch( Exception::OutOfMemory& ex )
 	{
-		wxString newmsg( ex.UserMsg() + L"\n\n" + GetMemoryErrorVM() );
-		ex.UserMsg() = newmsg;
+		ex.UserMsg() += L"\n\n" + GetMemoryErrorVM();
 		CleanupMess();
 		throw;
 	}
@@ -278,12 +275,12 @@ SysCoreAllocations::SysCoreAllocations()
 		// re-throw std::bad_alloc as something more friendly.  This is needed since
 		// much of the code uses new/delete internally, which throw std::bad_alloc on fail.
 
-		throw Exception::OutOfMemory(
-			L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
-			L"Error Details: " + fromUTF8( ex.what() ),
-
-			GetMemoryErrorVM()	// translated
-		);
+		throw Exception::OutOfMemory()
+			.SetDiagMsg(
+				L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
+				L"Error Details: " + fromUTF8( ex.what() )
+			)
+			.SetUserMsg(GetMemoryErrorVM()); 	// translated
 	}
 
 	Console.WriteLn( "Allocating memory for recompilers..." );
@@ -292,20 +289,20 @@ SysCoreAllocations::SysCoreAllocations()
 
 	try {
 		recCpu.Allocate();
-		m_RecSuccessEE = true;
 	}
 	catch( Exception::RuntimeError& ex )
 	{
+		m_RecExceptionEE = ex.Clone();
 		Console.Error( L"EE Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		recCpu.Shutdown();
 	}
 
 	try {
 		psxRec.Allocate();
-		m_RecSuccessIOP = true;
 	}
 	catch( Exception::RuntimeError& ex )
 	{
+		m_RecExceptionIOP = ex.Clone();
 		Console.Error( L"IOP Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		psxRec.Shutdown();
 	}
@@ -320,9 +317,13 @@ SysCoreAllocations::SysCoreAllocations()
 
 bool SysCoreAllocations::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
 bool SysCoreAllocations::IsRecAvailable_MicroVU1() const { return CpuProviders->microVU1.IsAvailable(); }
+BaseException* SysCoreAllocations::GetException_MicroVU0() const { return CpuProviders->microVU0.ExThrown; }
+BaseException* SysCoreAllocations::GetException_MicroVU1() const { return CpuProviders->microVU1.ExThrown; }
 
 bool SysCoreAllocations::IsRecAvailable_SuperVU0() const { return CpuProviders->superVU0.IsAvailable(); }
 bool SysCoreAllocations::IsRecAvailable_SuperVU1() const { return CpuProviders->superVU1.IsAvailable(); }
+BaseException* SysCoreAllocations::GetException_SuperVU0() const { return CpuProviders->superVU0.ExThrown; }
+BaseException* SysCoreAllocations::GetException_SuperVU1() const { return CpuProviders->superVU1.ExThrown; }
 
 
 void SysCoreAllocations::CleanupMess() throw()

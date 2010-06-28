@@ -17,6 +17,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
+#include <deque>
 #include "microVU.h"
 
 //------------------------------------------------------------------
@@ -64,10 +65,9 @@ const __aligned(32) mVU_Globals mVUglob = {
 //------------------------------------------------------------------
 
 _f void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
-	throw Exception::HardwareDeficiency(
-		wxsFormat( L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail),
-		wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail )
-	);
+	throw Exception::HardwareDeficiency()
+		.SetDiagMsg(wxsFormat(L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail))
+		.SetUserMsg(wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
 // Only run this once per VU! ;)
@@ -96,7 +96,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	}
 
 	mVU->dispCache = SysMmapEx(NULL, mVUdispCacheSize, 0, (mVU->index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
-	if (!mVU->dispCache) throw Exception::OutOfMemory("microVU Error: Failed to allocate dispatcher memory!");
+	if (!mVU->dispCache) throw Exception::OutOfMemory( mVU->index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );
 	memset(mVU->dispCache, 0xcc, mVUdispCacheSize);
 
 	// Setup Entrance/Exit Points
@@ -165,12 +165,8 @@ void mVUresizeCache(mV, u32 size) {
 	if (size > (u32)mVUcacheMaxSize) { if (mVU->cacheSize==mVUcacheMaxSize) return; size = mVUcacheMaxSize; }
 	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
 
-	// Give SysMmapEx a NULL and let the OS pick the memory for us: mVU can work with any
-	// address the operating system gives us, and unlike the EE/IOP there's not much convenience
-	// to debugging if the address is known anyway due to mVU's complex memory layouts (caching).
-
-	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1" : "Micro VU0"));
-	if(!cache && !mVU->cache) throw Exception::OutOfMemory("microVU Error: Failed to allocate recompiler memory!");
+	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
+	if(!cache && !mVU->cache) throw Exception::OutOfMemory( wxsFormat( L"Micro VU%d recompiled code cache", mVU->index) );
 	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); return; }
 	if (mVU->cache) {
 		HostSys::Munmap(mVU->cache, mVU->cacheSize);
@@ -272,7 +268,7 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
 	microProgramList&  list  = mVU->prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
-		deque<microProgram*>::iterator it = list.list->begin();
+		deque<microProgram*>::iterator it( list.list->begin() );
 		for ( ; it != list.list->end(); it++) {
 			if (mVUcmpProg<vuIndex>(*it[0], 0)) {
 				quick.block = it[0]->block[startPC/8];
@@ -282,15 +278,30 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 				return mVUentryGet(mVU, quick.block, startPC, pState);
 			}
 		}
+
 		// If cleared and program not found, make a new program instance
-		mVU->prog.cleared	= 0;
-		mVU->prog.isSame	= 1;
-		mVU->prog.cur		= mVUcreateProg<vuIndex>(startPC/8);
-		void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
-		quick.block			= mVU->prog.cur->block[startPC/8];
-		quick.prog			= mVU->prog.cur;
-		list.list->push_front(mVU->prog.cur);
-		return entryPoint;
+		// Exception note: It's bad news if the recompiler throws any exceptions, so we have a clause to
+		// assert if an exception occurs.  The rec should be pretty much exception safe, except for
+		// critical errors that would result in a crash regardless.
+
+		try {
+			mVU->prog.cleared	= 0;
+			mVU->prog.isSame	= 1;
+			mVU->prog.cur		= mVUcreateProg<vuIndex>(startPC/8);
+			void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
+			quick.block			= mVU->prog.cur->block[startPC/8];
+			quick.prog			= mVU->prog.cur;
+			list.list->push_front(mVU->prog.cur);
+
+			return entryPoint;
+
+		} catch( BaseException& ex ) {
+			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + ex.FormatDiagnosticMessage(), mVU->index) );
+		} catch( std::exception& ex ) {
+			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage(), mVU->index) );
+		}
+
+		return NULL;
 	}
 	// If list.quick, then we've already found and recompiled the program ;)
 	mVU->prog.isSame	 = -1;

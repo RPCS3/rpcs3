@@ -936,10 +936,11 @@ void SysMtgsThread::WaitForOpen()
 			RethrowException();
 
 			// Not opened yet, and no exceptions.  Weird?  You decide!
-			// TODO : implement a user confirmation to cancel the action and exit the
+			// [TODO] : implement a user confirmation to cancel the action and exit the
 			//   emulator forcefully, or to continue waiting on the GS.
 
-			throw Exception::PluginOpenError( PluginId_GS, "The MTGS thread has become unresponsive while waiting for the GS plugin to open." );
+			throw Exception::PluginOpenError( PluginId_GS )
+				.SetBothMsgs(wxLt("The MTGS thread has become unresponsive while waiting for the GS plugin to open."));
 		}
 	}
 

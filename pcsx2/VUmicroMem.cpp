@@ -31,9 +31,9 @@ void vuMicroMemAlloc()
 		m_vuAllMem = vtlb_malloc( m_vuMemSize, 16 );
 
 	if( m_vuAllMem == NULL )
-		throw Exception::OutOfMemory( "vuMicroMemInit > Failed to allocate VUmicro memory." );
+		throw Exception::OutOfMemory( L"VU0 and VU1 on-chip memory" );
 
-	jASSUME( sizeof( VURegs ) <= 0x800 );
+	pxAssume( sizeof( VURegs ) <= 0x800 );
 
 	u8* curpos = m_vuAllMem;
 	VU0.Micro	= curpos; curpos += 0x1000;
@@ -55,8 +55,8 @@ void vuMicroMemShutdown()
 
 void vuMicroMemReset()
 {
-	jASSUME( VU0.Mem != NULL );
-	jASSUME( VU1.Mem != NULL );
+	pxAssume( VU0.Mem != NULL );
+	pxAssume( VU1.Mem != NULL );
 
 	memMapVUmicro();
 
@@ -107,8 +107,8 @@ void SaveStateBase::vuMicroFreeze()
 {
 	FreezeTag( "vuMicro" );
 
-	jASSUME( VU0.Mem != NULL );
-	jASSUME( VU1.Mem != NULL );
+	pxAssume( VU0.Mem != NULL );
+	pxAssume( VU1.Mem != NULL );
 
 	Freeze(VU0.ACC);
 	Freeze(VU0.code);

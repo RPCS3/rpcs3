@@ -23,30 +23,6 @@ namespace Threading
 {
 
 // --------------------------------------------------------------------------------------
-// IThread - Interface for the public access to pxThread.
-// --------------------------------------------------------------------------------------
-// Class usage: Can be used for allowing safe nullification of a thread handle.  Rather
-// than being NULL'd, the handle can be mapped to an IThread implementation which acts
-// as a do-nothing placebo or an assertion generator.
-//
-	class IThread
-	{
-		DeclareNoncopyableObject(IThread);
-
-	public:
-		IThread() {}
-		virtual ~IThread() throw() {}
-
-		virtual bool IsSelf() const { return false; }
-		virtual bool IsRunning() { return false; }
-
-		virtual void Start() {}
-		virtual void Cancel( bool isBlocking = true ) {}
-		virtual void Block() {}
-		virtual bool Detach() { return false; }
-	};
-
-// --------------------------------------------------------------------------------------
 //  ThreadDeleteEvent
 // --------------------------------------------------------------------------------------
 	class EventListener_Thread : public IEventDispatcher<int>
@@ -109,7 +85,7 @@ namespace Threading
 //    no dependency options for ensuring correct static var initializations).  Use heap
 //    allocation to create thread objects instead.
 //
-	class pxThread : public virtual IThread
+	class pxThread
 	{
 		DeclareNoncopyableObject(pxThread);
 

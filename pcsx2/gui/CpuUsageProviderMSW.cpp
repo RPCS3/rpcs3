@@ -93,7 +93,7 @@ CpuUsageProviderMSW::CpuUsageProviderMSW()
 				throw Exception::RuntimeError( "(CpuUsageProviderMSW) CoInitializeSecurity failed: No good security packages! .. whatever tht means." );
 
 			case E_OUTOFMEMORY:
-				throw Exception::OutOfMemory( "(CpuUsageProviderMSW) Out of Memory error returned during call to CoInitializeSecurity." );
+				throw Exception::OutOfMemory( L"(CpuUsageProviderMSW) Out of Memory error returned during call to CoInitializeSecurity." );
 
 			default:
 				throw Exception::RuntimeError( wxsFormat( L"(CpuUsageProviderMSW) CoInitializeSecurity failed with an unknown error code: %d", hr ), wxEmptyString );
@@ -221,7 +221,7 @@ void CpuUsageProviderMSW::UpdateStats()
 			break;
 
 			case WBEM_E_OUT_OF_MEMORY:
-				throw Exception::OutOfMemory( "(CpuUsageProviderMSW) Out of Memory Enumerating WMI Object." );
+				throw Exception::OutOfMemory( L"(CpuUsageProviderMSW) Out of Memory Enumerating WMI Object." );
 
 			default:
 				throw Exception::RuntimeError( wxsFormat( L"(CpuUsageProviderMSW) WMI Object Enumeration failed with an unknown error code: %d", hRes ), wxEmptyString );

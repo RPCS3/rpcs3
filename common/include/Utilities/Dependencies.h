@@ -108,6 +108,30 @@ static const pxEnumEnd_t pxEnumEnd = {};
 	classname& operator=(const classname&)
 #endif
 
+
+// --------------------------------------------------------------------------------------
+//  ScopedBool  -  Makes sure a boolean is set back to FALSE when current scope is left
+// --------------------------------------------------------------------------------------
+// Exception-safe way of tracking entry and exit of various functions of execution zones.
+//
+class ScopedBool
+{
+protected:
+	bool*	m_boolme;
+
+public:
+	ScopedBool(bool& boolme)
+	{
+		boolme = true;
+		m_boolme = &boolme;
+	}
+
+	~ScopedBool() throw()
+	{
+		m_boolme = false;
+	}
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // macro provided for tagging translation strings, without actually running them through the
 // translator (which the _() does automatically, and sometimes we don't want that).  This is

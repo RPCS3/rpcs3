@@ -639,7 +639,7 @@ void memAlloc()
 		m_psAllMem = vtlb_malloc( m_allMemSize, 4096 );
 
 	if( m_psAllMem == NULL)
-		throw Exception::OutOfMemory( "memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );
+		throw Exception::OutOfMemory( L"memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );
 
 	u8* curpos = m_psAllMem;
 	psM = curpos; curpos += Ps2MemSize::Base;

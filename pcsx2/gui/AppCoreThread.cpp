@@ -26,6 +26,7 @@
 #include "CDVD/CDVD.h"
 #include "Elfheader.h"
 #include "Patch.h"
+#include "R5900Exceptions.h"
 
 __aligned16 SysMtgsThread mtgsThread;
 __aligned16 AppCoreThread CoreThread;
@@ -108,7 +109,13 @@ static void _Suspend()
 
 void AppCoreThread::Suspend( bool isBlocking )
 {
-	if( !GetSysExecutorThread().ProcessMethodSelf( _Suspend ) )
+	if (IsSelf())
+	{
+		// this should never fail...
+		bool result = GetSysExecutorThread().Rpc_TryInvokeAsync( _Suspend );
+		pxAssert(result);
+	}
+	else if (!GetSysExecutorThread().Rpc_TryInvoke( _Suspend ))
 		_parent::Suspend(true);
 }
 
@@ -392,10 +399,42 @@ void AppCoreThread::UploadStateCopy( const VmStateBuffer& copy )
 	paused_core.AllowResume();
 }
 
+static uint m_except_threshold = 0;
+
 void AppCoreThread::ExecuteTaskInThread()
 {
 	PostCoreStatus( CoreThread_Started );
+	m_except_threshold = 0;
 	_parent::ExecuteTaskInThread();
+}
+
+void AppCoreThread::DoCpuExecute()
+{
+	try {
+		_parent::DoCpuExecute();
+	}
+	catch (BaseR5900Exception& ex)
+	{
+		Console.Error( ex.FormatMessage() );
+
+		// [TODO] : Debugger Hook!
+		
+		if( ++m_except_threshold > 6 )
+		{
+			// If too many TLB Misses occur, we're probably going to crash and
+			// the game is probably running miserably.
+
+			m_except_threshold = 0;
+			//Suspend();
+
+			// [TODO] Issue error dialog to the user here...
+			Console.Error( "Too many execution errors.  VM execution has been suspended!" );
+
+			// Hack: this keeps the EE thread from running more code while the SysExecutor
+			// thread catches up and signals it for suspension.
+			m_ExecMode = ExecMode_Closing;
+		}
+	}
 }
 
 // --------------------------------------------------------------------------------------

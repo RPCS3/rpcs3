@@ -37,33 +37,28 @@ namespace Exception
 	//
 	class CannotApplySettings : public BaseException
 	{
+		DEFINE_EXCEPTION_COPYTORS( CannotApplySettings, BaseException )
+		DEFINE_EXCEPTION_MESSAGES( CannotApplySettings )
+
 	public:
-		bool		IsVerbose;
+		bool						IsVerbose;
 
 	protected:
-		BaseApplicableConfigPanel* m_Panel;
+		BaseApplicableConfigPanel*	m_Panel;
+		
+	protected:
+		CannotApplySettings() { IsVerbose = true; }
 
 	public:
-		DEFINE_EXCEPTION_COPYTORS( CannotApplySettings )
-
-		explicit CannotApplySettings( BaseApplicableConfigPanel* thispanel, const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid."), bool isVerbose = true )
+		explicit CannotApplySettings( BaseApplicableConfigPanel* thispanel )
 		{
-			BaseException::InitBaseEx( msg );
-			m_Panel = thispanel;
-			IsVerbose = isVerbose;
-		}
-
-		explicit CannotApplySettings( BaseApplicableConfigPanel* thispanel, const wxString& msg_eng, const wxString& msg_xlt )
-		{
-			BaseException::InitBaseEx( msg_eng, msg_xlt );
+			SetBothMsgs(wxLt("Cannot apply new settings, one of the settings is invalid."));
 			m_Panel = thispanel;
 			IsVerbose = true;
 		}
 
-		BaseApplicableConfigPanel* GetPanel()
-		{
-			return m_Panel;
-		}
+		virtual CannotApplySettings& Quiet() { IsVerbose = false; return *this; }
+		BaseApplicableConfigPanel* GetPanel() { return m_Panel; }
 	};
 }
 

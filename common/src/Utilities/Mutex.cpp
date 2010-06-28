@@ -72,7 +72,7 @@ Threading::MutexRecursive::MutexRecursive() : Mutex( false )
 	if( _InterlockedIncrement( &_attr_refcount ) == 1 )
 	{
 		if( 0 != pthread_mutexattr_init( &_attr_recursive ) )
-			throw Exception::OutOfMemory( "Out of memory error initializing the Mutex attributes for recursive mutexing." );
+			throw Exception::OutOfMemory(L"Recursive mutexing attributes");
 
 		pthread_mutexattr_settype( &_attr_recursive, PTHREAD_MUTEX_RECURSIVE );
 	}

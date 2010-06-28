@@ -19,12 +19,12 @@ namespace Exception
 {
 	class BiosLoadFailed : public FileNotFound
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( BiosLoadFailed )
+		DEFINE_EXCEPTION_COPYTORS( BiosLoadFailed, FileNotFound )
+		DEFINE_EXCEPTION_MESSAGES( BiosLoadFailed )
+		DEFINE_STREAM_EXCEPTION_ACCESSORS( BiosLoadFailed )
 
-		explicit BiosLoadFailed( const wxString& filename,
-			const wxString& msg_diag=wxEmptyString,
-			const wxString& msg_user=wxEmptyString );
+	public:
+		BiosLoadFailed( const wxString& streamName );
 	};
 }
 

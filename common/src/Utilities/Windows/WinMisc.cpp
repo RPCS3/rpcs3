@@ -201,3 +201,35 @@ wxString GetOSVersionString()
 
 	return retval;
 }
+
+// --------------------------------------------------------------------------------------
+//  Exception::WinApiError   (implementations)
+// --------------------------------------------------------------------------------------
+Exception::WinApiError::WinApiError()
+{
+	ErrorId = GetLastError();
+	m_message_diag = L"Unspecified Windows API error.";
+}
+
+wxString Exception::WinApiError::GetMsgFromWindows() const
+{
+	if (!ErrorId) return L"No valid error number was assigned to this exception!";
+
+	const DWORD BUF_LEN = 2048;
+	TCHAR t_Msg[BUF_LEN];
+	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ErrorId, 0, t_Msg, BUF_LEN, 0))
+		return wxsFormat( L"Win32 Error #%d: %s", ErrorId, t_Msg );
+
+	return wxsFormat( L"Win32 Error #%d (no text msg available)", ErrorId );
+}
+
+wxString Exception::WinApiError::FormatDisplayMessage() const
+{
+	return m_message_user + L"\n\n" + GetMsgFromWindows();
+}
+
+wxString Exception::WinApiError::FormatDiagnosticMessage() const
+{
+	return m_message_diag + L"\n\t" + GetMsgFromWindows();
+}
+

@@ -154,15 +154,14 @@ namespace Exception
 	// Exception used to perform an "errorless" termination of the app during OnInit
 	// procedures.  This happens when a user cancels out of startup prompts/wizards.
 	//
-	class StartupAborted : public BaseException
+	class StartupAborted : public CancelEvent
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( StartupAborted )
+		DEFINE_RUNTIME_EXCEPTION( StartupAborted, CancelEvent, "Startup initialization was aborted by the user." )
 
-		StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." )
+	public:
+		StartupAborted( const wxString& reason )
 		{
-			// english messages only for this exception.
-			BaseException::InitBaseEx( msg_eng, msg_eng );
+			m_message_diag = L"Startup aborted: " + reason;
 		}
 	};
 

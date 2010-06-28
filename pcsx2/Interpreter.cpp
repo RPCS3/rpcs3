@@ -18,6 +18,7 @@
 #include "Common.h"
 
 #include "R5900OpcodeTables.h"
+#include "R5900Exceptions.h"
 #include "System/SysThreads.h"
 
 #include "Elfheader.h"
@@ -419,6 +420,12 @@ static void intClear(u32 Addr, u32 Size)
 static void intShutdown() {
 }
 
+static void intThrowException( const BaseR5900Exception& ex )
+{
+	// No tricks needed; C++ stack unwnding shoud suffice for MSW and GCC alike.
+	ex.Rethrow();
+}
+
 R5900cpu intCpu =
 {
 	intAlloc,
@@ -429,5 +436,6 @@ R5900cpu intCpu =
 	intExecute,
 
 	intCheckExecutionState,
+	intThrowException,
 	intClear,
 };

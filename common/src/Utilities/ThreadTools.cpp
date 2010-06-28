@@ -246,7 +246,7 @@ void Threading::pxThread::Start()
 		RethrowException();
 
 		// And if the thread threw nothing of its own:
-		throw Exception::ThreadCreationError( this, "(%s thread) Start error: created thread never posted startup semaphore." );
+		throw Exception::ThreadCreationError( this ).SetDiagMsg( L"Thread creation error: %s thread never posted startup semaphore." );
 	}
 
 	// Event Rationale (above): Performing this semaphore wait on the created thread is "slow" in the

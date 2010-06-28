@@ -55,24 +55,21 @@ struct PluginInfo
 namespace Exception
 {
 	// Exception thrown when a corrupted or truncated savestate is encountered.
-	class SaveStateLoadError : public virtual BadStream
+	class SaveStateLoadError : public BadStream
 	{
-	public:
-		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, wxLt("Load failed: The savestate appears to be corrupt or incomplete.") )
+		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, BadStream, wxLt("The savestate appears to be corrupt or incomplete.") )
 	};
 
-	class PluginError : public virtual RuntimeError
+	class PluginError : public RuntimeError
 	{
+		DEFINE_RUNTIME_EXCEPTION( PluginError, RuntimeError, "Generic plugin error")
+
 	public:
 		PluginsEnum_t PluginId;
 
 	public:
-		DEFINE_EXCEPTION_COPYTORS( PluginError )
-
-		PluginError() {}
-		PluginError( PluginsEnum_t pid, const char* msg="Generic plugin error" )
+		explicit PluginError( PluginsEnum_t pid )
 		{
-			BaseException::InitBaseEx( msg );
 			PluginId = pid;
 		}
 
@@ -83,15 +80,22 @@ namespace Exception
 	// Plugin load errors occur when initially trying to load plugins during the
 	// creation of a PluginManager object.  The error may either be due to non-existence,
 	// corruption, or incompatible versioning.
-	class PluginLoadError : public virtual PluginError, public virtual BadStream
+	class PluginLoadError : public PluginError
 	{
+		DEFINE_EXCEPTION_COPYTORS( PluginLoadError, PluginError )
+		DEFINE_EXCEPTION_MESSAGES( PluginLoadError )
+
 	public:
-		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginLoadError )
+		wxString	StreamName;
 
-		PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng );
+	protected:
+		PluginLoadError() {}
 
-		PluginLoadError( PluginsEnum_t pid, const wxString& objname,
-			const wxString& eng_msg, const wxString& xlt_msg );
+	public:
+		PluginLoadError( PluginsEnum_t pid );
+
+		virtual PluginLoadError& SetStreamName( const wxString& name )	{ StreamName = name;			return *this; } \
+		virtual PluginLoadError& SetStreamName( const char* name )		{ StreamName = fromUTF8(name);	return *this; }
 
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
@@ -100,44 +104,46 @@ namespace Exception
 	// Thrown when a plugin fails it's init() callback.  The meaning of this error is entirely
 	// dependent on the plugin and, in most cases probably never happens (most plugins do little
 	// more than a couple basic memory reservations during init)
-	class PluginInitError : public virtual PluginError
+	class PluginInitError : public PluginError
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginInitError )
+		DEFINE_EXCEPTION_COPYTORS( PluginInitError, PluginError )
+		DEFINE_EXCEPTION_MESSAGES( PluginInitError )
 
-		explicit PluginInitError( PluginsEnum_t pid,
-			const char* msg=wxLt("%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.") )
-		{
-			BaseException::InitBaseEx( msg );
-			PluginId = pid;
-		}
+	protected:
+		PluginInitError() {}
+
+	public:
+		PluginInitError( PluginsEnum_t pid );
 	};
 
 	// Plugin failed to open.  Typically this is a non-critical error that means the plugin has
 	// not been configured properly by the user, but may also be indicative of a system
-	class PluginOpenError : public virtual PluginError
+	class PluginOpenError : public PluginError
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS_COVARIANT( PluginOpenError )
+		DEFINE_EXCEPTION_COPYTORS( PluginOpenError, PluginError )
+		DEFINE_EXCEPTION_MESSAGES( PluginOpenError )
 
-		explicit PluginOpenError( PluginsEnum_t pid,
-			const char* msg=wxLt("%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.") )
-		{
-			BaseException::InitBaseEx( msg );
-			PluginId = pid;
-		}
+	protected:
+		PluginOpenError() {}
+
+	public:
+		explicit PluginOpenError( PluginsEnum_t pid );
 	};
 	
 	// This exception is thrown when a plugin returns an error while trying to save itself.
 	// Typically this should be a very rare occurance since a plugin typically shoudn't
 	// be doing memory allocations or file access during state saving.
 	//
-	class FreezePluginFailure : public virtual PluginError
+	class FreezePluginFailure : public PluginError
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( FreezePluginFailure )
+		DEFINE_EXCEPTION_COPYTORS( FreezePluginFailure, PluginError )
+		DEFINE_EXCEPTION_MESSAGES( FreezePluginFailure )
 
-		explicit FreezePluginFailure( PluginsEnum_t pid)
+	protected:
+		FreezePluginFailure() {}
+
+	public:
+		explicit FreezePluginFailure( PluginsEnum_t pid )
 		{
 			PluginId = pid;
 		}
@@ -146,11 +152,18 @@ namespace Exception
 		virtual wxString FormatDisplayMessage() const;
 	};
 
-	class ThawPluginFailure : public virtual PluginError, public virtual SaveStateLoadError
+	class ThawPluginFailure : public SaveStateLoadError
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( ThawPluginFailure )
+		DEFINE_EXCEPTION_COPYTORS( ThawPluginFailure, SaveStateLoadError )
+		DEFINE_EXCEPTION_MESSAGES( ThawPluginFailure )
 
+	public:
+		PluginsEnum_t PluginId;
+
+	protected:
+		ThawPluginFailure() {}
+
+	public:
 		explicit ThawPluginFailure( PluginsEnum_t pid )
 		{
 			PluginId = pid;

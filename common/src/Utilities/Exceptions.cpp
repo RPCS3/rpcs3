@@ -23,14 +23,9 @@
 #include <signal.h>
 #endif
 
-wxString GetEnglish( const char* msg )
+static wxString GetTranslation( const char* msg )
 {
-	return fromUTF8(msg);
-}
-
-wxString GetTranslation( const char* msg )
-{
-	return wxGetTranslation( fromUTF8(msg) );
+	return msg ? wxGetTranslation( fromUTF8(msg) ) : wxString();
 }
 
 // ------------------------------------------------------------------------
@@ -132,71 +127,91 @@ __forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
 
 
 // --------------------------------------------------------------------------------------
-//  Exception Namespace Implementations  (Format message handlers for general exceptions)
+//  BaseException  (implementations)
 // --------------------------------------------------------------------------------------
 
 BaseException::~BaseException() throw() {}
 
-void BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
+BaseException& BaseException::SetBothMsgs( const char* msg_diag )
 {
-	m_message_diag = msg_eng;
-	m_message_user = msg_xlt.IsEmpty() ? msg_eng : msg_xlt;
-
-	// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
-	// than linux), and fails to propagate exceptions up the stack from EErec code.  This
-	// could likely be because of the EErec using EBP.  So to ensure the user at least
-	// gets a log of the error, we output to console here in the constructor.
-
-#ifdef __LINUX__
-    //wxLogError( msg_eng.c_str() );
-    Console.Error( msg_eng );
-#endif
+	m_message_user = GetTranslation( msg_diag );
+	return SetDiagMsg( fromUTF8(msg_diag) );
 }
 
-// given message is assumed to be a translation key, and will be stored in translated
-// and untranslated forms.
-void BaseException::InitBaseEx( const char* msg_eng )
+BaseException& BaseException::SetDiagMsg( const wxString& msg_diag )
 {
-	m_message_diag = GetEnglish( msg_eng );
-	m_message_user = GetTranslation( msg_eng );
+	m_message_diag = msg_diag;
+	return *this;
+}
 
-#ifdef __LINUX__
-    //wxLogError( m_message_diag.c_str() );
-    Console.Error( msg_eng );
-#endif
+BaseException& BaseException::SetUserMsg( const wxString& msg_user )
+{
+	m_message_user = msg_user;
+	return *this;
 }
 
 wxString BaseException::FormatDiagnosticMessage() const
 {
-	return m_message_diag + L"\n\n" + m_stacktrace;
+	return m_message_diag;
 }
 
-// ------------------------------------------------------------------------
+wxString BaseException::FormatDisplayMessage() const
+{
+	return m_message_user.IsEmpty() ? m_message_diag : m_message_user;
+}
+
+// --------------------------------------------------------------------------------------
+//  Exception::RuntimeError   (implementations)
+// --------------------------------------------------------------------------------------
 Exception::RuntimeError::RuntimeError( const std::runtime_error& ex, const wxString& prefix )
 {
+	IsSilent = false;
+
 	const wxString msg( wxsFormat( L"STL Runtime Error%s: %s",
 		(prefix.IsEmpty() ? prefix.c_str() : wxsFormat(L" (%s)", prefix.c_str()).c_str()),
 		fromUTF8( ex.what() ).c_str()
 	) );
 
-	BaseException::InitBaseEx( msg, msg );
+	SetDiagMsg( msg );
 }
 
-// ------------------------------------------------------------------------
 Exception::RuntimeError::RuntimeError( const std::exception& ex, const wxString& prefix )
 {
+	IsSilent = false;
+
 	const wxString msg( wxsFormat( L"STL Exception%s: %s",
 		(prefix.IsEmpty() ? prefix.c_str() : wxsFormat(L" (%s)", prefix.c_str()).c_str()),
 		fromUTF8( ex.what() ).c_str()
 	) );
 
-	BaseException::InitBaseEx( msg, msg );
+	SetDiagMsg( msg );
 }
+
+// --------------------------------------------------------------------------------------
+//  Exception::OutOfMemory   (implementations)
+// --------------------------------------------------------------------------------------
+Exception::OutOfMemory::OutOfMemory( const wxString& allocdesc )
+{
+	AllocDescription	= allocdesc;
+	m_message_diag		= L"Out of memory exception, while allocating the %s.";
+	m_message_user		= _("Memory allocation failure!  Your system has insufficient memory or resources to meet PCSX2's lofty needs.");
+}
+
+wxString Exception::OutOfMemory::FormatDiagnosticMessage() const
+{
+	return wxsFormat(m_message_diag, AllocDescription.c_str());
+}
+
+wxString Exception::OutOfMemory::FormatDisplayMessage() const
+{
+	if (m_message_user.IsEmpty()) return FormatDisplayMessage();
+	return m_message_user + wxsFormat( L"\n\nInternal allocation descriptor: %s", AllocDescription.c_str());
+}
+
 
 // ------------------------------------------------------------------------
 wxString Exception::CancelEvent::FormatDiagnosticMessage() const
 {
-	// FIXME: This should probably just log a single line from the stacktrace.. ?
 	return L"Action canceled: " + m_message_diag;
 }
 
@@ -205,35 +220,20 @@ wxString Exception::CancelEvent::FormatDisplayMessage() const
 	return L"Action canceled: " + m_message_diag;
 }
 
-// ------------------------------------------------------------------------
-wxString Exception::ObjectIsNull::FormatDiagnosticMessage() const
-{
-	return wxsFormat(
-		L"reference to '%s' failed : handle is null.",
-		m_message_diag.c_str()
-	) + m_stacktrace;
-}
-
-wxString Exception::ObjectIsNull::FormatDisplayMessage() const
-{
-	return wxsFormat(
-		L"reference to '%s' failed : handle is null.",
-		m_message_diag.c_str()
-	);
-}
-
-// ------------------------------------------------------------------------
 wxString Exception::Stream::FormatDiagnosticMessage() const
 {
 	return wxsFormat(
-		L"Stream exception: %s\n\tFile/Object: %s",
+		L"%s\n\tFile/Object: %s",
 		m_message_diag.c_str(), StreamName.c_str()
-	) + m_stacktrace;
+	);
 }
 
 wxString Exception::Stream::FormatDisplayMessage() const
 {
-	return m_message_user + L"\n\n" +
-		wxsFormat( _("Name: %s"), StreamName.c_str() );
+	wxString retval( m_message_user );
+	if (!StreamName.IsEmpty())
+		retval += L"\n\n" + wxsFormat( _("Path: %s"), StreamName.c_str() );
+
+	return retval;
 }
 

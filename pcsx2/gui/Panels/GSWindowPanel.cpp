@@ -142,10 +142,9 @@ void Panels::GSWindowSettingsPanel::Apply()
 	long xr, yr;
 
 	if( !m_text_WindowWidth->GetValue().ToLong( &xr ) || !m_text_WindowHeight->GetValue().ToLong( &yr ) )
-		throw Exception::CannotApplySettings( this,
-			L"User submitted non-numeric window size parameters!",
-			_("Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<")
-		);
+		throw Exception::CannotApplySettings( this )
+			.SetDiagMsg(L"User submitted non-numeric window size parameters!")
+			.SetUserMsg(_("Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<"));
 
 	appconf.WindowSize.x	= xr;
 	appconf.WindowSize.y	= yr;

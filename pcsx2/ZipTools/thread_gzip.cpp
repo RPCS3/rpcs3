@@ -58,7 +58,7 @@ CompressThread_gzip::~CompressThread_gzip() throw()
 void CompressThread_gzip::Write( const void* data, size_t size )
 {
 	if( gzwrite( m_gzfp, data, size ) == 0 )
-		throw Exception::BadStream( m_filename, "Write to zip file failed." );
+		throw Exception::BadStream( m_filename ).SetDiagMsg(L"Write to zip file failed.");
 }
 
 void CompressThread_gzip::ExecuteTaskInThread()
@@ -104,7 +104,9 @@ void CompressThread_gzip::ExecuteTaskInThread()
 	m_gzfp = NULL;
 
 	if( !wxRenameFile( tempfile, m_filename, true ) )
-		throw Exception::BadStream( m_filename, "Failed to move or copy the temporary archive to the destination filename." );
+		throw Exception::BadStream( m_filename )
+			.SetDiagMsg(L"Failed to move or copy the temporary archive to the destination filename.")
+			.SetUserMsg(_("The savestate was not properly saved. The temporary file was created successfully but could not be moved to its final resting place."));
 
 	Console.WriteLn( "(gzipThread) Data saved to disk without error." );
 }

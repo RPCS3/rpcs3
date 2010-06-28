@@ -81,7 +81,8 @@ void SysThreadBase::OnStart()
 //
 void SysThreadBase::Suspend( bool isBlocking )
 {
-	if( IsSelf() || !IsRunning() ) return;
+	if (!pxAssertDev(!IsSelf(),"Suspend/Resume are not allowed from this thread.")) return;
+	if (!IsRunning()) return;
 
 	// shortcut ExecMode check to avoid deadlocking on redundant calls to Suspend issued
 	// from Resume or OnResumeReady code.
@@ -98,7 +99,7 @@ void SysThreadBase::Suspend( bool isBlocking )
 			case ExecMode_Pausing:
 			case ExecMode_Paused:
 				if( !isBlocking )
-					throw Exception::CancelEvent( "Cannot suspend in non-blocking fashion: Another thread is pausing the VM state." );
+					throw Exception::CancelEvent( L"Cannot suspend in non-blocking fashion: Another thread is pausing the VM state." );
 	
 				m_ExecMode = ExecMode_Closing;
 				m_sem_Resume.Post();
@@ -182,7 +183,7 @@ void SysThreadBase::Resume()
 		{
 			Start();
 			if( !m_running || (m_ExecMode == ExecMode_NoThreadYet) )
-				throw Exception::ThreadCreationError();
+				throw Exception::ThreadCreationError(this);
 			if( m_ExecMode == ExecMode_Opened ) return;
 		}
 		// fall through...

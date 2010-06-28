@@ -94,7 +94,8 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 	}
 
 	if( !isValid )
-		throw Exception::FileNotFound( "IsoFS", "Root directory not found on ISO image." );
+		throw Exception::FileNotFound(L"IsoFS")	// FIXME: Should report the name of the ISO here...
+			.SetDiagMsg(L"IsoFS could not find the root directory on the ISO image.");
 
 	DevCon.WriteLn( L"(IsoFS) Filesystem is " + FStype_ToString() );
 	Init( rootDirEntry );
@@ -153,7 +154,7 @@ int IsoDirectory::GetIndexOf(const wxString& fileName) const
 		if(files[i].name == fileName) return i;
 	}
 
-	throw Exception::FileNotFound( fileName );
+	throw Exception::FileNotFound(fileName);
 }
 
 const IsoFileDescriptor& IsoDirectory::GetEntry(const wxString& fileName) const

@@ -50,9 +50,6 @@ static const uint eeWaitCycles = 3072;
 
 bool eeEventTestIsActive = false;
 
-R5900Exception::BaseExcept::~BaseExcept() throw (){}
-
-
 void cpuReset()
 {
 	if( GetMTGS().IsOpen() )
@@ -367,7 +364,7 @@ u32 g_nextBranchCycle = 0;
 // and the recompiler.  (moved here to help alleviate redundant code)
 __forceinline void _cpuBranchTest_Shared()
 {
-	eeEventTestIsActive = true;
+	ScopedBool etest(eeEventTestIsActive);
 	g_nextBranchCycle = cpuRegs.cycle + eeWaitCycles;
 
 	// ---- Counters -------------
@@ -474,8 +471,6 @@ __forceinline void _cpuBranchTest_Shared()
 
 	// Apply vsync and other counter nextCycles
 	cpuSetNextBranch( nextsCounter, nextCounter );
-
-	eeEventTestIsActive = false;
 
 	// ---- INTC / DMAC Exceptions -----------------
 	// Raise the INTC and DMAC interrupts here, which usually throw exceptions.

@@ -33,7 +33,7 @@ protected:
 
 	void alloc(int size) {
 		mData = SysMmapEx(NULL, size, 0, "nVif_BlockBuffer");
-		if (!mData) throw Exception::OutOfMemory("nVif Error: Failed to allocate recompiler memory!");
+		if (!mData) throw Exception::OutOfMemory(L"nVif recompiled code buffer (nVif_BlockBuffer)");
 		clear();
 	}
 	void dealloc(u8* &dPtr, int size) {

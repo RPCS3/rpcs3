@@ -48,8 +48,7 @@ protected:
 public:
 	AppGameDatabase() {}
 	virtual ~AppGameDatabase() throw() {
-		// deque deletes its contents automatically.
-		Console.WriteLn( "(GameDB) Destroying..." );
+		Console.WriteLn( "(GameDB) Unloading..." );
 	}
 
 	AppGameDatabase& LoadFromFile(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial" );

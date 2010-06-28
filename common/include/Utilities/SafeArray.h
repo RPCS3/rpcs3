@@ -93,7 +93,7 @@ protected:
 		m_size		= initSize;
 
 		if( m_ptr == NULL )
-			throw Exception::OutOfMemory();
+			throw Exception::OutOfMemory(name + wxsFormat(L" (SafeArray::constructor) [size=%d]", initSize));
 	}
 
 	virtual T* _virtual_realloc( int newsize )
@@ -138,7 +138,7 @@ public:
 		m_size		= initialSize;
 
 		if( (initialSize != 0) && (m_ptr == NULL) )
-			throw Exception::OutOfMemory();
+			throw Exception::OutOfMemory(name + wxsFormat(L" (SafeArray::constructor) [size=%d]", initialSize));
 	}
 
 	// Clears the contents of the array to zero, and frees all memory allocations.
@@ -163,17 +163,10 @@ public:
 
 		m_ptr = _virtual_realloc( newsize );
 		if( m_ptr == NULL )
-		{
-			throw Exception::OutOfMemory(
-				wxsFormat(	// english (for diagnostic)
-					L"Out-of-memory on SafeArray block re-allocation.\n"
-					L"Old size: %d bytes, New size: %d bytes.",
-					m_size, newsize
-				),
-				// internationalized!
-				wxsFormat( _("Out of memory, trying to allocate %d bytes."), newsize )
+			throw Exception::OutOfMemory(Name +
+				wxsFormat(L" (SafeArray::ExactAlloc) [oldsize=%d] [newsize=%d]", m_size, newsize)
 			);
-		}
+
 		m_size = newsize;
 	}
 
@@ -262,24 +255,27 @@ public:
 		safe_free( m_ptr );
 	}
 
-	explicit SafeList( const wxChar* name=L"Unnamed" ) :
-		Name( name )
-	,	ChunkSize( DefaultChunkSize )
-	,	m_ptr( NULL )
-	,	m_allocsize( 0 )
-	,	m_length( 0 )
+	explicit SafeList( const wxChar* name=L"Unnamed" )
+		: Name( name )
 	{
+		ChunkSize	= DefaultChunkSize;
+		m_ptr		= NULL;
+		m_allocsize	= 0;
+		m_length	= 0;
 	}
 
-	explicit SafeList( int initialSize, const wxChar* name=L"Unnamed" ) :
-		Name( name )
-	,	ChunkSize( DefaultChunkSize )
-	,	m_ptr( (T*)malloc( initialSize * sizeof(T) ) )
-	,	m_allocsize( initialSize )
-	,	m_length( 0 )
+	explicit SafeList( int initialSize, const wxChar* name=L"Unnamed" )
+		: Name( name )
 	{
+		ChunkSize	= DefaultChunkSize;
+		m_allocsize	= initialSize;
+		m_length	= 0;
+		m_ptr		= (T*)malloc( initialSize * sizeof(T) );
+
 		if( m_ptr == NULL )
-			throw Exception::OutOfMemory();
+			throw Exception::OutOfMemory(Name +
+				wxsFormat(L" (SafeList::Constructor) [length=%d]", m_length)
+			);
 
 		for( int i=0; i<m_allocsize; ++i )
 		{
@@ -310,18 +306,9 @@ public:
 			const int newalloc = blockSize + ChunkSize;
 			m_ptr = _virtual_realloc( newalloc );
 			if( m_ptr == NULL )
-			{
-				throw Exception::OutOfMemory(
-					// English Diagnostic message:
-					wxsFormat(
-						L"Out-of-memory on SafeList block re-allocation.\n"
-						L"Name: %s, Old size: %d bytes, New size: %d bytes",
-						Name.c_str(), m_allocsize, newalloc
-					),
-
-					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newalloc )
+				throw Exception::OutOfMemory(Name +
+					wxsFormat(L" (SafeList::MakeRoomFor) [oldlen=%d] [newlen=%d]", m_length, blockSize)
 				);
-			}
 
 			for( ; m_allocsize<newalloc; ++m_allocsize )
 			{

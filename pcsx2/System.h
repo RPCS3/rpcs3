@@ -31,8 +31,8 @@ class SysCoreAllocations
 protected:
 	ScopedPtr<CpuInitializerSet> CpuProviders;
 
-	bool m_RecSuccessEE:1;
-	bool m_RecSuccessIOP:1;
+	ScopedPtr<BaseException> m_RecExceptionEE;
+	ScopedPtr<BaseException> m_RecExceptionIOP;
 
 public:
 	SysCoreAllocations();
@@ -42,14 +42,21 @@ public:
 
 	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
 
-	bool IsRecAvailable_EE() const		{ return m_RecSuccessEE; }
-	bool IsRecAvailable_IOP() const		{ return m_RecSuccessIOP; }
+	bool IsRecAvailable_EE() const		{ return !m_RecExceptionEE; }
+	bool IsRecAvailable_IOP() const		{ return !m_RecExceptionIOP; }
+
+	BaseException* GetException_EE() const	{ return m_RecExceptionEE; }
+	BaseException* GetException_IOP() const	{ return m_RecExceptionIOP; }
 
 	bool IsRecAvailable_MicroVU0() const;
 	bool IsRecAvailable_MicroVU1() const;
+	BaseException* GetException_MicroVU0() const;
+	BaseException* GetException_MicroVU1() const;
 
 	bool IsRecAvailable_SuperVU0() const;
 	bool IsRecAvailable_SuperVU1() const;
+	BaseException* GetException_SuperVU0() const;
+	BaseException* GetException_SuperVU1() const;
 
 protected:
 	void CleanupMess() throw();

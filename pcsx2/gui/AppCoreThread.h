@@ -142,6 +142,8 @@ public:
 	virtual void UploadStateCopy( const VmStateBuffer& copy );
 
 protected:
+	virtual void DoCpuExecute();
+
 	virtual void OnResumeReady();
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();

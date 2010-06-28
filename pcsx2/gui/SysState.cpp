@@ -40,25 +40,41 @@ static void SaveStateFile_ReadHeader( IStreamReader& thr )
 	thr.Read( ident );
 
 	if( strcmp(SavestateIdentString, ident) )
-		throw Exception::SaveStateLoadError( thr.GetStreamName(),
-			wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
-			_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
-		);
+		throw Exception::SaveStateLoadError( thr.GetStreamName() )
+			.SetDiagMsg(wxsFormat( L"Unrecognized file signature while loading savestate. [sig = %s]", ident ))
+			.SetUserMsg(_("This is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2."));
 
 	u32 savever;
 	thr.Read( savever );
 	
-	if( (savever >> 16) != (g_SaveVersion >> 16) )
-		throw Exception::SaveStateLoadError( thr.GetStreamName(),
-			wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
-			_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
-		);
-	
+	// Major version mismatch.  Means we can't load this savestate at all.  Support for it
+	// was removed entirely.
 	if( savever > g_SaveVersion )
-		throw Exception::SaveStateLoadError( thr.GetStreamName(),
-			wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
-			_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
-		);
+		throw Exception::SaveStateLoadError( thr.GetStreamName() )
+		.SetDiagMsg(wxsFormat( L"Savestate uses an unsupported or unknown savestate version.\n(PCSX2 ver=%d, state ver=%d)", g_SaveVersion, savever ))
+		.SetUserMsg(_("Cannot load this savestate.  The state is from an incompatible edition of PCSX2 that is either newer than this version, or is no longer supported."));
+
+	// check for a "minor" version incompatibility; which happens if the savestate being loaded is a newer version
+	// than the emulator recognizes.  99% chance that trying to load it will just corrupt emulation or crash.
+	if( (savever >> 16) != (g_SaveVersion >> 16) )
+		throw Exception::SaveStateLoadError( thr.GetStreamName() )
+			.SetDiagMsg(wxsFormat( L"Savestate uses an unknown (future?!) savestate version.\n(PCSX2 ver=%d, state ver=%d)", g_SaveVersion, savever ))
+			.SetUserMsg(_("Cannot load this savestate. The state is an unsupported version, likely created by a newer edition of PCSX2."));
+};
+
+class gzError : public Exception::BadStream
+{
+	DEFINE_STREAM_EXCEPTION( gzError, BadStream, wxLt("Invalid or corrupted gzip archive") )
+};
+
+class gzReadError : public gzError
+{
+
+};
+
+class gzWriteError : public gzError
+{
+
 };
 
 // --------------------------------------------------------------------------------------
@@ -79,7 +95,7 @@ public:
 		: m_filename( filename )
 	{
 		if(	NULL == (m_gzfp = gzopen( m_filename.ToUTF8(), "rb" )) )
-			throw Exception::CannotCreateStream( m_filename, "Cannot open file for reading." );
+			throw Exception::CannotCreateStream( m_filename ).SetDiagMsg(L"Cannot open file for reading.");
 
 		#if defined(ZLIB_VERNUM) && (ZLIB_VERNUM >= 0x1240)
 			gzbuffer(m_gzfp, 0x100000); // 1mb buffer for zlib internal operations
@@ -97,7 +113,8 @@ public:
 	{
 		int result = gzread( m_gzfp, dest, size );
 		if( result == -1)
-			throw Exception::BadStream( m_filename, "Data read failed: Invalid or corrupted gzip archive." );
+			//throw Exception::gzError( m_filename );
+			throw Exception::BadStream( m_filename ).SetBothMsgs(wxLt("Data read failed: Invalid or corrupted gzip archive."));
 
 		if( (size_t)result < size )
 			throw Exception::EndOfStream( m_filename );
@@ -136,7 +153,9 @@ protected:
 		ScopedCoreThreadPause paused_core;
 
 		if( !SysHasValidState() )
-			throw Exception::RuntimeError( L"Cannot complete state freeze request; the virtual machine state is reset.", _("You'll need to start a new virtual machine before you can save its state.") );
+			throw Exception::RuntimeError()
+				.SetDiagMsg(L"SysExecEvent_DownloadState: Cannot freeze/download an invalid VM state!")
+				.SetUserMsg(L"There is no active virtual machine state to download or save." );
 
 		memSavingState(m_dest_buffer).FreezeAll();
 

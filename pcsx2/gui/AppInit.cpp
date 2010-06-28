@@ -138,7 +138,7 @@ void Pcsx2App::ReadUserModeSettings()
 		// first time startup, so give the user the choice of user mode:
 		FirstTimeWizard wiz( NULL );
 		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
-			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
+			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
 
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
@@ -166,7 +166,7 @@ void Pcsx2App::ReadUserModeSettings()
 			// If we skip this check, it's very likely that actions like creating Memory Cards will fail.
 			FirstTimeWizard wiz( NULL );
 			if( !wiz.RunWizard( /*wiz.GetPostUsermodePage()*/ wiz.GetUsermodePage() ) )
-				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
+				throw Exception::StartupAborted( L"User canceled Configuration Wizard." );
 
 			// Save user's new settings
 			IniSaver saver( *conf_usermode );
@@ -193,7 +193,9 @@ void Pcsx2App::DetectCpuAndUserMode()
 	{
 		// Note: due to memcpy_fast, we need minimum MMX even for interpreters.  This will
 		// hopefully change later once we have a dynamically recompiled memcpy.
-		throw Exception::HardwareDeficiency(L"MMX Extensions not available.", _("PCSX2 requires cpu with MMX instruction to run."));
+		throw Exception::HardwareDeficiency()
+			.SetDiagMsg(L"Critical Failure: MMX Extensions not available.")
+			.SetUserMsg(_("MMX extensions are not available.  PCSX2 requires cpu with MMX extension support to run."));
 	}
 
 	ReadUserModeSettings();
@@ -260,8 +262,8 @@ void Pcsx2App::AllocateCoreStuffs()
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)") );
 
 			exconf += 12;
-			exconf += exconf.Heading( pxE( ".Popup:RecompilerInit",
-				L"Warning: Some of the configured PS2 recompilers failed to initialize and will not be available for this session:\n" )
+			exconf += exconf.Heading( pxE( ".Popup:RecompilerInit:Header",
+				L"Warning: Some of the configured PS2 recompilers failed to initialize and have been disabled:" )
 			);
 
 			wxTextCtrl* scrollableTextArea = new wxTextCtrl(
@@ -269,63 +271,55 @@ void Pcsx2App::AllocateCoreStuffs()
 				wxTE_READONLY | wxTE_MULTILINE | wxTE_WORDWRAP
 			);
 
-			exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
+			exconf += 6;
+			exconf += scrollableTextArea	| pxExpand.Border(wxALL, 16);
 			
-			if( !m_CoreAllocs->IsRecAvailable_EE() )
+			if( BaseException* ex = m_CoreAllocs->GetException_EE() )
 			{
-				scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
-
-				g_Conf->EmuOptions.Recompiler.EnableEE = false;
+				scrollableTextArea->AppendText( L"* R5900 (EE)\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				g_Conf->EmuOptions.Recompiler.EnableEE		= false;
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_IOP() )
+			if( BaseException* ex = m_CoreAllocs->GetException_IOP() )
 			{
-				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\n" );
-				g_Conf->EmuOptions.Recompiler.EnableIOP = false;
+				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\t"  + ex->FormatDiagnosticMessage() + L"\n\n" );
+				g_Conf->EmuOptions.Recompiler.EnableIOP		= false;
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )			{
-				scrollableTextArea->AppendText( L"* microVU0\n\n" );
+			if( BaseException* ex = m_CoreAllocs->GetException_MicroVU0() )
+			{
+				scrollableTextArea->AppendText( L"* microVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
 				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_MicroVU1() )
+			if( BaseException* ex = m_CoreAllocs->GetException_MicroVU1() )
 			{
-				scrollableTextArea->AppendText( L"* microVU1\n\n" );
+				scrollableTextArea->AppendText( L"* microVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= false;
 				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CoreAllocs->IsRecAvailable_SuperVU1();
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_SuperVU0() )
+			if( BaseException* ex = m_CoreAllocs->GetException_SuperVU0() )
 			{
-				scrollableTextArea->AppendText( L"* SuperVU0\n\n" );
+				scrollableTextArea->AppendText( L"* SuperVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CoreAllocs->IsRecAvailable_MicroVU0();
 				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && g_Conf->EmuOptions.Recompiler.UseMicroVU0;
 			}
 
-			if( !m_CoreAllocs->IsRecAvailable_SuperVU1() )
+			if( BaseException* ex = m_CoreAllocs->GetException_SuperVU1() )
 			{
-				scrollableTextArea->AppendText( L"* SuperVU1\n\n" );
+				scrollableTextArea->AppendText( L"* SuperVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CoreAllocs->IsRecAvailable_MicroVU1();
 				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && g_Conf->EmuOptions.Recompiler.UseMicroVU1;
 			}
 
-			exconf += new ModalButtonPanel( &exconf, MsgButtons().OK() ) | pxSizerFlags::StdCenter();
+			exconf += exconf.Heading( pxE(".Popup:RecompilerInit:Footer",
+				L"Note: Recompilers are not necessary for PCSX2 to run, however they typically improve emulation speed substantially. "
+				L"You may have to manually re-enable the recompilers listed above, if you resolve the errors." )
+			);
 
-			exconf.ShowModal();
-
-			// Failures can be SSE-related OR memory related.  Should do per-cpu error reports instead...
-
-			/*message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
-				L"These errors are the result of memory allocation failures (see the program log for details). "
-				L"Closing out some memory hogging background tasks may resolve this error.\n\n"
-				L"These recompilers have been disabled and interpreters will be used in their place.  "
-				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
-			);*/
-
-			//if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
-			//	return false;
+			pxIssueConfirmation( exconf, MsgButtons().OK() );
 		}
 	}
 

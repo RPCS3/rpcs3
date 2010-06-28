@@ -308,7 +308,18 @@ void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
 	}
 }
 
-bool pxEvtHandler::ProcessMethodSelf( FnType_Void* method )
+bool pxEvtHandler::Rpc_TryInvokeAsync( FnType_Void* method )
+{
+	if( wxThread::GetCurrentId() != m_OwnerThreadId )
+	{
+		PostEvent( new SysExecEvent_MethodVoid(method) );
+		return true;
+	}
+
+	return false;
+}
+
+bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{

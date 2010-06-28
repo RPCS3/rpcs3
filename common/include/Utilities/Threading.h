@@ -63,23 +63,30 @@ namespace Threading
 
 namespace Exception
 {
-	class BaseThreadError : public virtual RuntimeError
+	class BaseThreadError : public RuntimeError
 	{
+		DEFINE_EXCEPTION_COPYTORS( BaseThreadError, RuntimeError )
+		DEFINE_EXCEPTION_MESSAGES( BaseThreadError )
+
 	public:
 		Threading::pxThread*	m_thread;
 
-		DEFINE_EXCEPTION_COPYTORS( BaseThreadError )
-
-		explicit BaseThreadError( Threading::pxThread* _thread=NULL )
-		{
-			m_thread = _thread;
-			BaseException::InitBaseEx( "Unspecified thread error" );
+	protected:
+		BaseThreadError() {
+			m_thread = NULL;
 		}
 
-		BaseThreadError( Threading::pxThread& _thread )
+	public:
+		explicit BaseThreadError( Threading::pxThread* _thread )
+		{
+			m_thread = _thread;
+			m_message_diag = L"An unspecified thread-related error occurred (thread=%s)";
+		}
+
+		explicit BaseThreadError( Threading::pxThread& _thread )
 		{
 			m_thread = &_thread;
-			BaseException::InitBaseEx( "Unspecified thread error" );
+			m_message_diag = L"An unspecified thread-related error occurred (thread=%s)";
 		}
 
 		virtual wxString FormatDiagnosticMessage() const;
@@ -89,27 +96,21 @@ namespace Exception
 		const Threading::pxThread& Thread() const;
 	};
 
-	class ThreadCreationError : public virtual BaseThreadError
+	class ThreadCreationError : public BaseThreadError
 	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( ThreadCreationError )
+		DEFINE_EXCEPTION_COPYTORS( ThreadCreationError, BaseThreadError )
 
-		explicit ThreadCreationError( Threading::pxThread* _thread=NULL, const char* msg="Creation of thread '%s' failed." )
+	public:
+		explicit ThreadCreationError( Threading::pxThread* _thread )
 		{
 			m_thread = _thread;
-			BaseException::InitBaseEx( msg );
+			SetBothMsgs( "Thread creation failure.  An unspecified error occurred while trying to create the %s thread." );
 		}
 
-		ThreadCreationError( Threading::pxThread& _thread, const char* msg="Creation of thread '%s' failed." )
+		explicit ThreadCreationError( Threading::pxThread& _thread )
 		{
 			m_thread = &_thread;
-			BaseException::InitBaseEx( msg );
-		}
-
-		ThreadCreationError( Threading::pxThread& _thread, const wxString& msg_diag, const wxString& msg_user )
-		{
-			m_thread = &_thread;
-			BaseException::InitBaseEx( msg_diag, msg_user );
+			SetBothMsgs( "Thread creation failure.  An unspecified error occurred while trying to create the %s thread." );
 		}
 	};
 }

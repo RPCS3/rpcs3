@@ -122,7 +122,7 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssertDev(cond, msg)	pxAssertRel(cond, msg)
 
 #	define pxAssumeMsg(cond, msg)	(__assume(cond))
-#	define pxAssumeDev(cond, msg)	pxAssumeMsg(cond, msg)
+#	define pxAssumeDev(cond, msg)	pxAssumeRel(cond, msg)
 
 #	define pxFail(msg)				(__assume(false))
 #	define pxFailDev(msg)			pxAssumeDev(false, msg)

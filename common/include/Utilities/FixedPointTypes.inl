@@ -233,8 +233,8 @@ template< int Precision >
 FixedInt<Precision> FixedInt<Precision>::FromString( const wxString parseFrom )
 {
 	FixedInt<Precision> dest;
-	if( !TryFromString( dest, parseFrom ) ) throw Exception::ParseError(
-		wxsFormat(L"Parse error on FixedInt<%d>::FromString", Precision), wxEmptyString
-	);
+	if( !TryFromString( dest, parseFrom ) ) throw Exception::ParseError()
+		.SetDiagMsg(wxsFormat(L"Parse error on FixedInt<%d>::FromString", Precision));
+
 	return dest;
 }

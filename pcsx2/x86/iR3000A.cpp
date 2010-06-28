@@ -772,7 +772,7 @@ static void recAlloc()
 		recMem = (u8*)SysMmapEx( 0x28000000, RECMEM_SIZE, 0, "recAlloc(R3000a)" );
 
 	if( recMem == NULL )
-		throw Exception::OutOfMemory( "R3000a Init > failed to allocate memory for the recompiler." );
+		throw Exception::OutOfMemory( L"R3000A recompiled code cache" );
 
 	// Goal: Allocate BASEBLOCKs for every possible branch target in IOP memory.
 	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
@@ -782,7 +782,7 @@ static void recAlloc()
 		m_recBlockAlloc = (u8*)_aligned_malloc( m_recBlockAllocSize, 4096 );
 
 	if( m_recBlockAlloc == NULL )
-		throw Exception::OutOfMemory( "R3000a Init > Failed to allocate memory for baseblock lookup tables." );
+		throw Exception::OutOfMemory( L"R3000A BASEBLOCK lookup tables" );
 
 	u8* curpos = m_recBlockAlloc;
 	recRAM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::IopRam / 4) * sizeof(BASEBLOCK);
@@ -796,7 +796,7 @@ static void recAlloc()
 	}
 
 	if( s_pInstCache == NULL )
-		throw Exception::OutOfMemory( "R3000a Init > Failed to allocate memory for pInstCache." );
+		throw Exception::OutOfMemory( L"R3000 InstCache." );
 
 	ProfilerRegisterSource( "IOP Rec", recMem, RECMEM_SIZE );
 	_DynGen_Dispatchers();

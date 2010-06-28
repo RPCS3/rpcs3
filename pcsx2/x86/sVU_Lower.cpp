@@ -2008,8 +2008,10 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
+
+
 		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
-		
+
 		//DevCon.Warning("Storing size %x PATH 1", size);
 		if (size > diff) {
 			// fixme: one of these days the following *16's will get cleaned up when we introduce

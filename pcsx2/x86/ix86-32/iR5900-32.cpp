@@ -17,6 +17,8 @@
 
 #include "Common.h"
 #include "Memory.h"
+
+#include "R5900Exceptions.h"
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
 
@@ -60,6 +62,8 @@ bool g_cpuFlushedPC, g_recompilingDelaySlot, g_maySignalException;
 
 #define X86
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
+
+static ScopedPtr<BaseR5900Exception> m_vmException;
 
 static u8 *recMem = NULL;			// the recompiled blocks will be here
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
@@ -534,10 +538,9 @@ static const uint m_recBlockAllocSize =
 
 static void recThrowHardwareDeficiency( const wxChar* extFail )
 {
-	throw Exception::HardwareDeficiency(
-		wxsFormat( L"R5900-32 recompiler init failed: %s is not available.", extFail),
-		wxsFormat(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail )
-	);
+	throw Exception::HardwareDeficiency()
+		.SetDiagMsg(wxsFormat( L"R5900-32 recompiler init failed: %s is not available.", extFail))
+		.SetUserMsg(wxsFormat(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
 static void recAlloc()
@@ -569,7 +572,7 @@ static void recAlloc()
 	}
 
 	if( recMem == NULL )
-		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating recompiled code buffer." );
+		throw Exception::OutOfMemory( L"R5900-32 recompiled code cache" );
 
 	// Goal: Allocate BASEBLOCKs for every possible branch target in PS2 memory.
 	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
@@ -579,7 +582,7 @@ static void recAlloc()
 		m_recBlockAlloc = (u8*) _aligned_malloc( m_recBlockAllocSize, 4096 );
 
 	if( m_recBlockAlloc == NULL )
-		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating BASEBLOCK tables." );
+		throw Exception::OutOfMemory( L"R5900-32 BASEBLOCK tables" );
 
 	u8* curpos = m_recBlockAlloc;
 	recRAM		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
@@ -595,7 +598,7 @@ static void recAlloc()
 	}
 
 	if( s_pInstCache == NULL )
-		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating InstCache." );
+		throw Exception::OutOfMemory( L"R5900-32 InstCache" );
 
 	// No errors.. Proceed with initialization:
 
@@ -722,11 +725,13 @@ static void recExitExecution()
 
 static void recCheckExecutionState()
 {
-	if( eeRecIsReset || GetCoreThread().HasPendingStateChangeRequest() )
+	if( eeRecIsReset || m_vmException || GetCoreThread().HasPendingStateChangeRequest() )
 	{
 		recExitExecution();
 	}
 }
+
+static bool m_recExecutingCode = false;
 
 static void recExecute()
 {
@@ -735,7 +740,9 @@ static void recExecute()
 
 #if PCSX2_SEH
 	eeRecIsReset = false;
+	m_vmException = NULL;
 	g_EEFreezeRegs = true;
+	ScopedBool executing(m_recExecutingCode);
 
 	try {
 		EnterRecompiledCode();
@@ -766,6 +773,8 @@ static void recExecute()
 		pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
 	}
 #endif
+
+	if(m_vmException) m_vmException->Rethrow();
 }
 
 ////////////////////////////////////////////////////
@@ -1813,6 +1822,18 @@ StartRecomp:
 	s_pCurBlockEx = NULL;
 }
 
+// The only *safe* way to throw exceptions from the context of recompiled code.
+// The exception is cached and the recompiler is exited safely using either an
+// SEH unwind (MSW) or setjmp/longjmp (GCC).
+void recThrowException( const BaseR5900Exception& ex )
+{
+	if (!m_recExecutingCode) ex.Rethrow();
+
+	m_vmException = ex.Clone();
+	recExitExecution();
+}
+
+
 R5900cpu recCpu =
 {
 	recAlloc,
@@ -1823,5 +1844,6 @@ R5900cpu recCpu =
 	recExecute,
 
 	recCheckExecutionState,
+	recThrowException,
 	recClear,
 };

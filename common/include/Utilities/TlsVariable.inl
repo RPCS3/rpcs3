@@ -109,7 +109,7 @@ T* Threading::TlsVariable<T>::GetPtr() const
 	{
 		pthread_setspecific( m_thread_key, result = (T*)_aligned_malloc( sizeof(T), 16 ) );
 		if( result == NULL )
-			throw Exception::OutOfMemory( "Out of memory allocating thread local storage variable." );
+			throw Exception::OutOfMemory( L"Out of memory allocating thread local storage variable." );
 		*result = m_initval;
 	}
 	return result;

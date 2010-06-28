@@ -96,12 +96,7 @@ FILE *_cdvdOpenMechaVer()
 		Console.Warning("MEC File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL)
-		{
-			Console.Error( "MEC File Creation failed!" );
-			throw Exception::CannotCreateStream( file );
-			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", file);
-			//exit(1);
-		}
+			throw Exception::CannotCreateStream(mecfile.GetFullPath());
 
 		fputc(0x03, fd);
 		fputc(0x06, fd);
@@ -136,10 +131,8 @@ FILE *_cdvdOpenNVM()
 		Console.Warning("NVM File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL)
-		{
-			Console.Error( "NVM File Creation failed!" );
-			throw Exception::CannotCreateStream( file );
-		}
+			throw Exception::CannotCreateStream(nvmfile.GetFullPath());
+
 		for (int i=0; i<1024; i++) fputc(0, fd);
 	}
 	return fd;
@@ -809,7 +802,7 @@ __forceinline void cdvdReadInterrupt()
 
 		// Any other value besides 0 should be considered invalid here (wtf is that wacky
 		// plugin trying to do?)
-		jASSUME( cdvd.RErr == 0 );
+		pxAssume( cdvd.RErr == 0 );
 	}
 
 	if (cdvdReadSector() == -1)

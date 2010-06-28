@@ -38,7 +38,7 @@ void psxMemAlloc()
 		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096 );
 
 	if( m_psxAllMem == NULL)
-		throw Exception::OutOfMemory( "psxMemAlloc > failed allocating memory for the IOP processor." );
+		throw Exception::OutOfMemory( L"IOP system ram (and roms)" );
 
 	u8* curpos = m_psxAllMem;
 	psxM = curpos; curpos += Ps2MemSize::IopRam;
@@ -54,8 +54,8 @@ void psxMemAlloc()
 // which is performed by MemInit and PsxMemInit()
 void psxMemReset()
 {
-	jASSUME( psxMemWLUT != NULL );
-	jASSUME( m_psxAllMem != NULL );
+	pxAssume( psxMemWLUT != NULL );
+	pxAssume( m_psxAllMem != NULL );
 
 	DbgCon.WriteLn( "IOP Resetting physical ram..." );
 

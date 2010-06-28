@@ -23,8 +23,9 @@
 
 #define DIRENTRY_SIZE 16
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
 // romdir structure (packing required!)
+// --------------------------------------------------------------------------------------
 //
 #if defined(_MSC_VER)
 #	pragma pack(1)
@@ -41,20 +42,16 @@ struct romdir
 #	pragma pack()
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-
 u32 BiosVersion;  //  Used in Memory, Misc, CDVD
 
-Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename, const wxString& msg_diag, const wxString& msg_user )
+// --------------------------------------------------------------------------------------
+//  Exception::BiosLoadFailed  (implementations)
+// --------------------------------------------------------------------------------------
+Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename )
 {
-	wxString diag( msg_user.IsEmpty() ?
-		L"BIOS has not been configured, or the configuration has been corrupted." : msg_user
-	);
-	wxString user( msg_user.IsEmpty() ?
-		_("The PS2 BIOS has not been configured, or the configuration has been corrupted.  Please re-configure.") : msg_user.c_str()
-	);
+	m_message_diag = L"BIOS has not been configured, or the configuration has been corrupted.";
+	m_message_user = _("The PS2 BIOS could not be loaded.  The BIOS has not been configured, or the configuration has been corrupted.  Please re-configure.");
 
-	BaseException::InitBaseEx( diag, user );
 	StreamName = filename;
 }
 
@@ -156,10 +153,9 @@ void LoadBIOS()
 	s64 filesize = Path::GetFileSize( Bios );
 	if( filesize <= 0 )
 	{
-		throw Exception::BiosLoadFailed( Bios,
-			L"Configured BIOS file does not exist.",
-			_("The configured BIOS file does not exist.  Please re-configure.")
-		);
+		throw Exception::BiosLoadFailed( Bios )
+			.SetDiagMsg(L"Configured BIOS file does not exist.")
+			.SetUserMsg(_("The configured BIOS file does not exist.  Please re-configure."));
 	}
 
 	wxFile fp( Bios );
@@ -168,10 +164,9 @@ void LoadBIOS()
 	BiosVersion = GetBiosVersion();
 	if( BiosVersion == -1 )
 	{
-		throw Exception::BiosLoadFailed( Bios,
-			L"Configured BIOS file is not a valid PS2 BIOS.",
-			_("The configured BIOS file is not a valid PS2 BIOS.  Please re-configure.")
-		);
+		throw Exception::BiosLoadFailed( Bios )
+			.SetDiagMsg(L"Configured BIOS file is not a valid PS2 BIOS.")
+			.SetUserMsg(_("The configured BIOS file is not a valid PS2 BIOS.  Please re-configure."));
 	}
 
 	Console.WriteLn("Bios Version %d.%d", BiosVersion >> 8, BiosVersion & 0xff);

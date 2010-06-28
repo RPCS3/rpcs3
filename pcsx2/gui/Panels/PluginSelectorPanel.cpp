@@ -58,7 +58,7 @@ namespace Exception
 	class NotEnumerablePlugin : public BadStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( NotEnumerablePlugin, wxLt("File is not a PCSX2 plugin") );
+		DEFINE_STREAM_EXCEPTION( NotEnumerablePlugin, BadStream, wxLt("File is not a PCSX2 plugin") );
 	};
 }
 
@@ -89,7 +89,7 @@ public:
 		: m_plugpath( plugpath )
 	{
 		if( !m_plugin.Load( m_plugpath ) )
-			throw Exception::BadStream( m_plugpath, "File is not a valid dynamic library." );
+			throw Exception::BadStream( m_plugpath ).SetBothMsgs("File is not a valid dynamic library.");
 
 		wxDoNotLogInThisScope please;
 		m_GetLibType		= (_PS2EgetLibType)m_plugin.GetSymbol( L"PS2EgetLibType" );
@@ -241,7 +241,8 @@ void ApplyOverValidStateEvent::InvokeEvent()
 	int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector:ConfirmShutdown" );
 
 	if( result == wxID_CANCEL )
-		throw Exception::CannotApplySettings( m_owner->GetApplicableConfigPanel(), "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
+		throw Exception::CannotApplySettings( m_owner->GetApplicableConfigPanel() ).Quiet()
+			.SetDiagMsg(L"Cannot apply settings: canceled by user because plugins changed while the emulation state was active.");
 }
 
 // --------------------------------------------------------------------------------------
@@ -465,13 +466,9 @@ void Panels::PluginSelectorPanel::Apply()
 		{
 			wxString plugname( pi->GetShortname() );
 
-			throw Exception::CannotApplySettings( this,
-				// English Log
-				wxsFormat( L"PluginSelectorPanel: Invalid or missing selection for the %s plugin.", plugname.c_str() ),
-
-				// Translated
-				wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg()
-			);
+			throw Exception::CannotApplySettings( this )
+				.SetDiagMsg(wxsFormat( L"PluginSelectorPanel: Invalid or missing selection for the %s plugin.", plugname.c_str()) )
+				.SetUserMsg(wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg() );
 		}
 
 		g_Conf->BaseFilenames.Plugins[pid] = GetFilename((int)m_ComponentBoxes->Get(pid).GetClientData(sel));
@@ -498,7 +495,7 @@ void Panels::PluginSelectorPanel::Apply()
 	try
 	{
 		if( wxID_CANCEL == ApplyPluginsDialog( this ).ShowModal() )
-			throw Exception::CannotApplySettings( this, "User canceled plugin load process.", false );
+			throw Exception::CannotApplySettings( this ).Quiet().SetDiagMsg(L"User canceled plugin load process.");
 	}
 	catch( Exception::PluginError& ex )
 	{
@@ -506,15 +503,12 @@ void Panels::PluginSelectorPanel::Apply()
 
 		wxString plugname( tbl_PluginInfo[ex.PluginId].GetShortname() );
 
-		throw Exception::CannotApplySettings( this,
-			// Diagnostic
-			ex.FormatDiagnosticMessage(),
-
-			// Translated
-			wxsFormat( _("The selected %s plugin failed to load.\n\nReason: %s\n\n"),
+		throw Exception::CannotApplySettings( this )
+			.SetDiagMsg(ex.FormatDiagnosticMessage())
+			.SetUserMsg(wxsFormat(
+				_("The selected %s plugin failed to load.\n\nReason: %s\n\n"),
 				plugname.c_str(), ex.FormatDisplayMessage().c_str()
-			) + GetApplyFailedMsg()
-		);
+			) + GetApplyFailedMsg());
 	}
 }
 

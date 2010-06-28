@@ -42,7 +42,7 @@ using namespace vtlb_private;
 #ifdef PCSX2_DEVBUILD
 #define verify(x) {if (!(x)) { (*(u8*)0)=3; }}
 #else
-#define verify jASSUME
+#define verify pxAssume
 #endif
 
 namespace vtlb_private
@@ -221,32 +221,35 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 	MemOp_w1<128,mem128_t>(mem,value);
 }
 
-/////////////////////////////////////////////////////////////////////////
-// Error / TLB Miss Handlers
+// ===========================================================================================
+//  Error / TLB Miss Handlers 
+// ===========================================================================================
+// Important: Throwing exceptions isn't reliable *yet* because memory ops don't flush
+// the PC prior to invoking the indirect handlers.  That feature will likely be added to
+// debug and dev builds soon, and later on to release builds as well.
 //
 
-static const char* _getModeStr( u32 mode )
-{
-	return (mode==0) ? "read" : "write";
-}
-
 // Generates a tlbMiss Exception
-// Note: Don't throw exceptions yet, they cause a crash when otherwise
-// there would be a (slight) chance the game continues (rama).
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
-	Console.Error( "vtlb miss : addr 0x%X, mode %d [%s]", addr, mode, _getModeStr(mode) );
-	//verify(false);
-	//throw R5900Exception::TLBMiss( addr, !!mode );
+	if( IsDevBuild )
+		Cpu->ThrowException( R5900Exception::TLBMiss( addr, !!mode ) );
+	else
+		Console.Error( R5900Exception::TLBMiss( addr, !!mode ).FormatMessage() );
 }
 
-// Just dies a horrible death for now.
-// Eventually should generate a BusError exception.
+// BusError exception: more serious than a TLB miss.  If properly emulated the PS2 kernel
+// itself would invoke a diagnostic/assertion screen that displays the cpu state at the
+// time of the exception.
 static __forceinline void vtlb_BusError(u32 addr,u32 mode)
 {
-	Console.Error( "vtlb bus error : addr 0x%X, mode %d\n", addr, _getModeStr(mode) );
-	//verify(false);
-	throw R5900Exception::BusError( addr, !!mode );
+	// Throwing exceptions isn't reliable *yet* because memory ops don't flush
+	// the PC prior to invoking the indirect handlers.
+
+	if( IsDevBuild )
+		Cpu->ThrowException( R5900Exception::BusError( addr, !!mode ) );
+	else
+		Console.Error( R5900Exception::TLBMiss( addr, !!mode ).FormatMessage() );
 }
 
 ///// Virtual Mapping Errors (TLB Miss)
@@ -307,8 +310,9 @@ void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console.Er
 void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console.Error("vtlbDefaultPhyWrite128: 0x%X",addr); verify(false); }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// VTLB Public API -- Init/Term/RegisterHandler stuff
+// ===========================================================================================
+//  VTLB Public API -- Init/Term/RegisterHandler stuff 
+// ===========================================================================================
 //
 
 // Assigns or re-assigns the callbacks for a VTLB memory handler.  The handler defines specific behavior
@@ -582,7 +586,7 @@ void vtlb_Core_Alloc()
 	// Win32 just needs this, since malloc always maps below 2GB.
 	vtlbdata.alloc_base = (u8*)_aligned_malloc( VTLB_ALLOC_SIZE, 4096 );
 	if( vtlbdata.alloc_base == NULL )
-		throw Exception::OutOfMemory( "Fatal Error: could not allocate 42Meg buffer for PS2's mappable system ram." );
+		throw Exception::OutOfMemory( L"PS2 mappable system ram (42 megs)" );
 #endif
 }
 

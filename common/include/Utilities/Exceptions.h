@@ -66,7 +66,6 @@ namespace Exception
 	protected:
 		wxString m_message_diag;		// (untranslated) a "detailed" message of what disastrous thing has occurred!
 		wxString m_message_user;		// (translated) a "detailed" message of what disastrous thing has occurred!
-		wxString m_stacktrace;			// contains the stack trace string dump (unimplemented)
 
 	public:
 		virtual ~BaseException() throw()=0;	// the =0; syntax forces this class into "abstract" mode.
@@ -77,23 +76,20 @@ namespace Exception
 		wxString& DiagMsg() { return m_message_diag; }
 		wxString& UserMsg() { return m_message_user; }
 
+		BaseException& SetBothMsgs( const char* msg_diag );
+		BaseException& SetDiagMsg( const wxString& msg_diag );
+		BaseException& SetUserMsg( const wxString& msg_user );
+
 		// Returns a message suitable for diagnostic / logging purposes.
 		// This message is always in English, and includes a full stack trace.
 		virtual wxString FormatDiagnosticMessage() const;
 
 		// Returns a message suitable for end-user display.
 		// This message is usually meant for display in a user popup or such.
-		virtual wxString FormatDisplayMessage() const { return m_message_user; }
+		virtual wxString FormatDisplayMessage() const;
 
 		virtual void Rethrow() const=0;
 		virtual BaseException* Clone() const=0;
-
-	protected:
-		// Construction using two pre-formatted pre-translated messages
-		void InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt );
-
-		// Construction using one translation key.
-		void InitBaseEx( const char* msg_eng );
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -118,6 +114,9 @@ namespace Exception
 		virtual u32 GetPc() const=0;
 		virtual bool IsDelaySlot() const=0;
 		virtual wxString Message() const { return m_message; }
+
+		virtual void Rethrow() const=0;
+		virtual Ps2Generic* Clone() const=0;
 	};
 
 // Some helper macros for defining the standard constructors of internationalized constructors
@@ -129,46 +128,44 @@ namespace Exception
 //     it will be optionally translated.
 //
 // BUGZ??  I'd rather use 'classname' on the Clone() prototype, but for some reason it generates
-// ambiguity errors on virtual inheritence (it really shouldn't!).  So I have to force it to the
+// ambiguity errors on virtual inheritance (it really shouldn't!).  So I have to force it to the
 // BaseException base class.  Not sure if this is Stupid Standard Tricks or Stupid MSVC Tricks. --air
 //
 // (update: web searches indicate it's MSVC specific -- happens in 2008, not sure about 2010).
 //
-#define DEFINE_EXCEPTION_COPYTORS( classname ) \
-	virtual ~classname() throw() {} \
-	virtual void Rethrow() const { throw *this; } \
-	virtual BaseException* Clone() const { return new classname( *this ); }
-
-// This is here because MSVC's support for covariant return types on Clone() is broken, and will
-// not work with virtual class inheritance (see DEFINE_EXCEPTION_COPYTORS for details)
-#define DEFINE_EXCEPTION_COPYTORS_COVARIANT( classname ) \
+#define DEFINE_EXCEPTION_COPYTORS( classname, parent ) \
+private: \
+	typedef parent _parent; \
+public: \
 	virtual ~classname() throw() {} \
 	virtual void Rethrow() const { throw *this; } \
 	virtual classname* Clone() const { return new classname( *this ); }
 
-#define DEFINE_RUNTIME_EXCEPTION( classname, defmsg ) \
-	DEFINE_EXCEPTION_COPYTORS( classname ) \
- \
-	explicit classname( const char* msg=defmsg )							{ BaseException::InitBaseEx( msg ); } \
-	explicit classname( const wxString& msg_eng, const wxString& msg_xlt )	{ BaseException::InitBaseEx( msg_eng, msg_xlt); }
+#define DEFINE_EXCEPTION_MESSAGES( classname ) \
+public: \
+	classname& SetBothMsgs( const char* msg_diag )		{ BaseException::SetBothMsgs(msg_diag);	return *this; } \
+	classname& SetDiagMsg( const wxString& msg_diag )	{ m_message_diag = msg_diag;			return *this; } \
+	classname& SetUserMsg( const wxString& msg_user )	{ m_message_user = msg_user;			return *this; }
 
-#define DEFINE_LOGIC_EXCEPTION( classname, defmsg ) \
-	DEFINE_EXCEPTION_COPYTORS( classname ) \
- \
-	explicit classname( const char* msg=defmsg )		{ BaseException::InitBaseEx( msg ); } \
-	explicit classname( const wxString& msg_eng )		{ BaseException::InitBaseEx( msg_eng, wxEmptyString ); }
-
+#define DEFINE_RUNTIME_EXCEPTION( classname, parent, message ) \
+	DEFINE_EXCEPTION_COPYTORS( classname, parent ) \
+	classname() { SetDiagMsg(wxT(message)); } \
+	DEFINE_EXCEPTION_MESSAGES( classname )
+	
+	
 	// ---------------------------------------------------------------------------------------
 	//  RuntimeError - Generalized Exceptions with Recoverable Traits!
 	// ---------------------------------------------------------------------------------------
 
-	class RuntimeError : public virtual BaseException
+	class RuntimeError : public BaseException
 	{
+		DEFINE_EXCEPTION_COPYTORS( RuntimeError, BaseException )
+		DEFINE_EXCEPTION_MESSAGES( RuntimeError )
+
 	public:
 		bool	IsSilent;
-	public:
-		DEFINE_RUNTIME_EXCEPTION( RuntimeError, wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") )
 
+		RuntimeError() { IsSilent = false; }
 		RuntimeError( const std::runtime_error& ex, const wxString& prefix=wxEmptyString );
 		RuntimeError( const std::exception& ex, const wxString& prefix=wxEmptyString );
 	};
@@ -182,18 +179,12 @@ namespace Exception
 	//
 	// I chose to have this exception derive from RuntimeError, since if one is thrown from outside
 	// an App message loop we'll still want it to be handled in a reasonably graceful manner.
-	class CancelEvent : public virtual RuntimeError
+	class CancelEvent : public RuntimeError
 	{
+		DEFINE_RUNTIME_EXCEPTION( CancelEvent, RuntimeError, "No reason given." )
+
 	public:
-		DEFINE_EXCEPTION_COPYTORS( CancelEvent )
-
-		explicit CancelEvent( const char* logmsg )
-		{
-			m_message_diag = fromUTF8( logmsg );
-			// overridden message formatters only use the diagnostic version...
-		}
-
-		explicit CancelEvent( const wxString& logmsg=L"No reason given." )
+		explicit CancelEvent( const wxString& logmsg )
 		{
 			m_message_diag = logmsg;
 			// overridden message formatters only use the diagnostic version...
@@ -203,38 +194,33 @@ namespace Exception
 		virtual wxString FormatDiagnosticMessage() const;
 	};
 
-	// --------------------------------------------------------------------------------------
-	class ObjectIsNull : public virtual CancelEvent
+	// ---------------------------------------------------------------------------------------
+	//  OutOfMemory
+	// ---------------------------------------------------------------------------------------
+	// This exception has a custom-formatted Diagnostic string.  The parameter give when constructing
+	// the exception is a block/alloc name, which is used as a formatting parameter in the diagnostic
+	// output.  The default diagnostic message is "Out of memory exception, while allocating the %s."
+	// where %s is filled in with the block name.
+	//
+	// The user string is not custom-formatted, and should contain *NO* %s tags.
+	//
+	class OutOfMemory : public RuntimeError
 	{
+		DEFINE_RUNTIME_EXCEPTION( OutOfMemory, RuntimeError, wxLt("Out of memory?!") )
+
 	public:
-		wxString ObjectName;
+		wxString	AllocDescription;
 
-		DEFINE_EXCEPTION_COPYTORS( ObjectIsNull )
-
-		explicit ObjectIsNull( const char* objname="unspecified" )
-		{
-			m_message_diag = fromUTF8( objname );
-			// overridden message formatters only use the diagnostic version...
-		}
+	public:
+		OutOfMemory( const wxString& allocdesc );
 
 		virtual wxString FormatDisplayMessage() const;
 		virtual wxString FormatDiagnosticMessage() const;
 	};
 
-	// ---------------------------------------------------------------------------------------
-	//  OutOfMemory / InvalidOperation / InvalidArgument / ParseError
-	// ---------------------------------------------------------------------------------------
-
-	class OutOfMemory : public virtual RuntimeError
-	{
-	public:
-		DEFINE_RUNTIME_EXCEPTION( OutOfMemory, wxLt("Out of Memory") )
-	};
-
 	class ParseError : public RuntimeError
 	{
-	public:
-		DEFINE_RUNTIME_EXCEPTION( ParseError, "Parse error" );
+		DEFINE_RUNTIME_EXCEPTION( ParseError, RuntimeError, "Parse error" );
 	};
 
 	// ---------------------------------------------------------------------------------------
@@ -245,16 +231,15 @@ namespace Exception
 	// This exception is a specific type of OutOfMemory error that isn't "really" an out of
 	// memory error.  More likely it's caused by a plugin or driver reserving a range of memory
 	// we'd really like to have access to.
-	class VirtualMemoryMapConflict : public virtual OutOfMemory
+	class VirtualMemoryMapConflict : public OutOfMemory
 	{
-	public:
-		DEFINE_RUNTIME_EXCEPTION( VirtualMemoryMapConflict, wxLt("Virtual memory map confict: Unable to claim specific required memory regions.") )
+		DEFINE_RUNTIME_EXCEPTION( VirtualMemoryMapConflict, OutOfMemory, wxLt("Virtual memory map confict: Unable to claim specific required memory regions.") )
 	};
 
-	class HardwareDeficiency : public virtual RuntimeError
+	class HardwareDeficiency : public RuntimeError
 	{
 	public:
-		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, wxLt("Your machine's hardware is incapable of running PCSX2.  Sorry dood.") );
+		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, RuntimeError, wxLt("Your machine's hardware is incapable of running PCSX2.  Sorry dood.") );
 	};
 
 	// ---------------------------------------------------------------------------------------
@@ -262,51 +247,28 @@ namespace Exception
 	//   Stream / BadStream / CannotCreateStream / FileNotFound / AccessDenied / EndOfStream
 	// ---------------------------------------------------------------------------------------
 
-#define DEFINE_STREAM_EXCEPTION( classname, defmsg ) \
-	DEFINE_EXCEPTION_COPYTORS( classname ) \
- \
-	explicit classname( const wxString& objname=wxString(), const char* msg=defmsg ) \
-	{ \
-		BaseException::InitBaseEx( msg ); \
-		StreamName = objname; \
-	} \
-	explicit classname( const wxString& objname, const wxString& msg_eng, const wxString& msg_xlt ) \
-	{ \
-		BaseException::InitBaseEx( msg_eng, msg_xlt ); \
-		StreamName = objname; \
-	} \
-	explicit classname( const char* objname, const char* msg=defmsg ) \
-	{ \
-		BaseException::InitBaseEx( msg ); \
-		StreamName = fromUTF8( objname ); \
-	} \
-	explicit classname( const char* objname, const wxString& msg_eng, const wxString& msg_xlt ) \
-	{ \
-		BaseException::InitBaseEx( msg_eng, msg_xlt ); \
-		StreamName = fromUTF8( objname ); \
-	} \
-	explicit classname( const char* objname, const wxString& msg_eng ) \
-	{ \
-		BaseException::InitBaseEx( msg_eng, msg_eng ); \
-		StreamName = fromUTF8( objname ); \
-	} \
-	explicit classname( const wxString& objname, const wxString& msg_eng ) \
-	{ \
-		BaseException::InitBaseEx( msg_eng, msg_eng ); \
-		StreamName = objname; \
-	}
+	#define DEFINE_STREAM_EXCEPTION_ACCESSORS( classname ) \
+		virtual classname& SetStreamName( const wxString& name )	{ StreamName = name;			return *this; } \
+		virtual classname& SetStreamName( const char* name )		{ StreamName = fromUTF8(name);	return *this; }
 
+	#define DEFINE_STREAM_EXCEPTION( classname, parent, message ) \
+		DEFINE_RUNTIME_EXCEPTION( classname, parent, message ) \
+		classname( const wxString& filename ) { \
+			StreamName = filename; \
+			SetBothMsgs(message); \
+		} \
+		DEFINE_STREAM_EXCEPTION_ACCESSORS( classname )
+	
 	// Generic stream error.  Contains the name of the stream and a message.
 	// This exception is usually thrown via derived classes, except in the (rare) case of a
 	// generic / unknown error.
 	//
-	class Stream : public virtual RuntimeError
+	class Stream : public RuntimeError
 	{
-	public:
-		wxString StreamName;		// name of the stream (if applicable)
+		DEFINE_STREAM_EXCEPTION( Stream, RuntimeError, wxLt("General file operation error.") )
 
 	public:
-		DEFINE_STREAM_EXCEPTION( Stream, "General file operation error." )
+		wxString StreamName;		// name of the stream (if applicable)
 
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
@@ -316,42 +278,40 @@ namespace Exception
 	// connection, or anything else that would indicate a failure to read the data after the
 	// stream was successfully opened.
 	//
-	class BadStream : public virtual Stream
+	class BadStream : public Stream
 	{
-	public:
-		DEFINE_STREAM_EXCEPTION( BadStream, wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly.") )
+		DEFINE_STREAM_EXCEPTION( BadStream, Stream, wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly.") )
 	};
 
 	// A generic exception for odd-ball stream creation errors.
 	//
-	class CannotCreateStream : public virtual Stream
+	class CannotCreateStream : public Stream
 	{
-	public:
-		DEFINE_STREAM_EXCEPTION( CannotCreateStream, wxLt("File could not be created or opened.") )
+		DEFINE_STREAM_EXCEPTION( CannotCreateStream, Stream, wxLt("File could not be created or opened.") )
 	};
 
 	// Exception thrown when an attempt to open a non-existent file is made.
 	// (this exception can also mean file permissions are invalid)
 	//
-	class FileNotFound : public virtual CannotCreateStream
+	class FileNotFound : public CannotCreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( FileNotFound, wxLt("File not found.") )
+		DEFINE_STREAM_EXCEPTION( FileNotFound, CannotCreateStream, wxLt("File not found.") )
 	};
 
-	class AccessDenied : public virtual CannotCreateStream
+	class AccessDenied : public CannotCreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( AccessDenied, wxLt("Permission denied to file.") )
+		DEFINE_STREAM_EXCEPTION( AccessDenied, CannotCreateStream, wxLt("Permission denied to file.") )
 	};
 
 	// EndOfStream can be used either as an error, or used just as a shortcut for manual
 	// feof checks.
 	//
-	class EndOfStream : public virtual Stream
+	class EndOfStream : public Stream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( EndOfStream, wxLt("Unexpected end of file or stream.") );
+		DEFINE_STREAM_EXCEPTION( EndOfStream, Stream, wxLt("Unexpected end of file or stream.") );
 	};
 
 #ifdef __WXMSW__
@@ -360,13 +320,14 @@ namespace Exception
 	// --------------------------------------------------------------------------------------
 	class WinApiError : public RuntimeError
 	{
+		DEFINE_EXCEPTION_COPYTORS( WinApiError, RuntimeError )
+		DEFINE_EXCEPTION_MESSAGES( WinApiError )
+
 	public:
 		int		ErrorId;
 
 	public:
-		DEFINE_EXCEPTION_COPYTORS( WinApiError )
-
-			WinApiError( const char* msg="" );
+		WinApiError();
 
 		wxString GetMsgFromWindows() const;
 		virtual wxString FormatDisplayMessage() const;

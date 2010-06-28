@@ -617,18 +617,22 @@ PluginManager *g_plugins = NULL;
 //       Plugin-related Exception Implementations
 // ---------------------------------------------------------------------------------
 
-Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng )
+Exception::PluginOpenError::PluginOpenError( PluginsEnum_t pid )
 {
-	BaseException::InitBaseEx( eng );
-	StreamName = objname;
 	PluginId = pid;
+	m_message_diag = L"%s plugin failed to open!";
+	m_message_user = L"%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.";
 }
 
-Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& objname,
-	const wxString& eng_msg, const wxString& xlt_msg )
+Exception::PluginInitError::PluginInitError( PluginsEnum_t pid )
 {
-	BaseException::InitBaseEx( eng_msg, xlt_msg );
-	StreamName = objname;
+	PluginId = pid;
+	m_message_diag = L"%s plugin initialization failed!";
+	m_message_user = L"%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.";
+}
+
+Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid )
+{
 	PluginId = pid;
 }
 
@@ -659,7 +663,7 @@ wxString Exception::FreezePluginFailure::FormatDiagnosticMessage() const
 	return wxsFormat(
 		L"%s plugin returned an error while saving the state.\n\n",
 		tbl_PluginInfo[PluginId].shortname
-	) + m_stacktrace;
+	);
 }
 
 wxString Exception::FreezePluginFailure::FormatDisplayMessage() const
@@ -673,7 +677,7 @@ wxString Exception::ThawPluginFailure::FormatDiagnosticMessage() const
 	return wxsFormat(
 		L"%s plugin returned an error while loading the state.\n\n",
 		tbl_PluginInfo[PluginId].shortname
-	) + m_stacktrace;
+	);
 }
 
 wxString Exception::ThawPluginFailure::FormatDisplayMessage() const
@@ -726,17 +730,15 @@ PluginManager::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxStrin
 	IsOpened		= false;
 
 	if( Filename.IsEmpty() )
-		throw Exception::PluginInitError( pid, "Empty plugin filename." );
+		throw Exception::PluginInitError( pid ).SetDiagMsg( L"Empty plugin filename" );
 
 	if( !wxFile::Exists( Filename ) )
-		throw Exception::PluginLoadError( pid, srcfile,
-		wxLt("The configured %s plugin file was not found")
-	);
+		throw Exception::PluginLoadError( pid ).SetStreamName(srcfile)
+			.SetBothMsgs(wxLt("The configured %s plugin file was not found"));
 
 	if( !Lib.Load( Filename ) )
-		throw Exception::PluginLoadError( pid, Filename,
-		wxLt("The configured %s plugin file is not a valid dynamic library")
-	);
+		throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
+			.SetBothMsgs(wxLt("The configured %s plugin file is not a valid dynamic library"));
 
 
 	// Try to enumerate the new v2.0 plugin interface first.
@@ -752,10 +754,9 @@ PluginManager::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxStrin
 	_PS2EsetEmuVersion	SetEmuVersion	= (_PS2EsetEmuVersion)	Lib.GetSymbol( L"PS2EsetEmuVersion" );
 
 	if( GetLibName == NULL || GetLibVersion2 == NULL )
-		throw Exception::PluginLoadError( pid, Filename,
-			L"\nMethod binding failure on GetLibName or GetLibVersion2.\n",
-			_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
-		);
+		throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
+			.SetDiagMsg(L"%s plugin init failed: Method binding failure on GetLibName or GetLibVersion2.")
+			.SetUserMsg(_( "The configured %s plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."));
 
 	if( SetEmuVersion != NULL )
 		SetEmuVersion( "PCSX2", (0ul << 24) | (9ul<<16) | (7ul<<8) | 0 );
@@ -778,10 +779,9 @@ PluginManager::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxStrin
 
 	int testres = CommonBindings.Test();
 	if( testres != 0 )
-		throw Exception::PluginLoadError( pid, Filename,
-			wxsFormat( L"Plugin Test failure, return code: %d", testres ),
-			_( "The plugin reports that your hardware or software/drivers are not supported." )
-		);
+		throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
+			.SetDiagMsg(wxsFormat( L"Plugin Test failure, return code: %d", testres ))
+			.SetUserMsg(_("The plugin reports that your hardware or software/drivers are not supported."));
 }
 
 void PluginManager::PluginStatus_t::BindCommon( PluginsEnum_t pid )
@@ -800,10 +800,9 @@ void PluginManager::PluginStatus_t::BindCommon( PluginsEnum_t pid )
 
 		if( *target == NULL )
 		{
-			throw Exception::PluginLoadError( pid, Filename,
-				wxsFormat( L"\nMethod binding failure on: %s\n", current->GetMethodName( pid ).c_str() ),
-				_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
-			);
+			throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
+				.SetDiagMsg(wxsFormat( L"\nMethod binding failure on: %s\n", current->GetMethodName( pid ).c_str() ))
+				.SetUserMsg(_("Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."));
 		}
 
 		target++;
@@ -827,10 +826,9 @@ void PluginManager::PluginStatus_t::BindRequired( PluginsEnum_t pid )
 
 		if( *(current->Dest) == NULL )
 		{
-			throw Exception::PluginLoadError( pid, Filename,
-				wxsFormat( L"\nMethod binding failure on: %s\n", current->GetMethodName().c_str() ),
-				_( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." )
-			);
+			throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
+				.SetDiagMsg(wxsFormat( L"\n%s plugin init error; Method binding failed: %s\n", current->GetMethodName().c_str() ))
+				.SetUserMsg(_( "Configured %s plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2."));
 		}
 
 		current++;
@@ -929,7 +927,7 @@ void PluginManager::Load( const wxString (&folders)[PluginId_Count] )
 	if( m_mcdPlugin == NULL )
 	{
 		// fixme: use plugin's GetLastError (not implemented yet!)
-		throw Exception::PluginLoadError( PluginId_Mcd, wxEmptyString, "Internal Memorycard Plugin failed to load." );
+		throw Exception::PluginLoadError( PluginId_Mcd ).SetDiagMsg(L"Internal Memorycard Plugin failed to load.");
 	}
 
 	SendLogFolder();
@@ -1246,7 +1244,8 @@ void PluginManager::Init()
 		if( SysPlugins.Mcd == NULL )
 		{
 			// fixme: use plugin's GetLastError (not implemented yet!)
-			throw Exception::PluginInitError( PluginId_Mcd, "Internal Memorycard Plugin failed to initialize." );
+			throw Exception::PluginInitError( PluginId_Mcd )
+				.SetBothMsgs(wxLt("Internal Memorycard Plugin failed to initialize."));
 		}
 	}
 

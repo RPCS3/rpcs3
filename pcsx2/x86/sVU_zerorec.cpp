@@ -360,13 +360,13 @@ static void SuperVUAlloc(int vuindex)
 
 		if (s_recVUMem == NULL)
 		{
-			throw Exception::VirtualMemoryMapConflict(
-				// untranslated diagnostic msg, use exception's default for translation
-				wxsFormat( L"SuperVU failed to allocate virtual memory below 256MB." ),
-
-				// Translated message
-				_("Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory ranges required.")
-			);
+			throw Exception::VirtualMemoryMapConflict()
+				.SetDiagMsg(wxsFormat( L"SuperVU failed to allocate virtual memory below 256MB." ))
+				.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
+					L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "
+					L"ranges required, and will not be available for use.  This is not a critical error, since "
+					L"the sVU rec is obsolete, and you should use microVU instead anyway. :)"
+				));
 		}
 
 		ProfilerRegisterSource("sVU Rec", s_recVUMem, VU_EXESIZE);
@@ -453,7 +453,7 @@ void SuperVUReset(int vuindex)
 	if (s_recVUMem == NULL)
 		return;
 
-	//jASSUME( s_recVUMem != NULL );
+	//pxAssume( s_recVUMem != NULL );
 
 	if (vuindex < 0)
 	{
@@ -470,7 +470,6 @@ void SuperVUReset(int vuindex)
 	else
 	{
 		DbgCon.WriteLn("SuperVU [VU%d]: Resetting the recs and junk", vuindex);
-		list<VuFunctionHeader*>::iterator it;
 		if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
 		if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
 

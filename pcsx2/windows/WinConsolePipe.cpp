@@ -19,35 +19,6 @@
 #include "App.h"
 #include "ConsoleLogger.h"
 
-Exception::WinApiError::WinApiError( const char* msg )
-{
-	ErrorId = GetLastError();
-	BaseException::InitBaseEx( msg );
-}
-
-wxString Exception::WinApiError::GetMsgFromWindows() const
-{
-	if (!ErrorId)
-		return wxString();
-
-	const DWORD BUF_LEN = 2048;
-	TCHAR t_Msg[BUF_LEN];
-	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ErrorId, 0, t_Msg, BUF_LEN, 0))
-		return wxsFormat( L"Win32 Error #%d: %s", ErrorId, t_Msg );
-
-	return wxsFormat( L"Win32 Error #%d (no text msg available)", ErrorId );
-}
-
-wxString Exception::WinApiError::FormatDisplayMessage() const
-{
-	return m_message_user + L"\n\n" + GetMsgFromWindows();
-}
-
-wxString Exception::WinApiError::FormatDiagnosticMessage() const
-{
-	return m_message_diag + L"\n\t" + GetMsgFromWindows();
-}
-
 // --------------------------------------------------------------------------------------
 //  Win32 Console Pipes
 //  As a courtesy and convenience, we redirect stdout/stderr to the console and logfile.
@@ -102,7 +73,7 @@ protected:
 						continue;
 					}
 
-					throw Exception::WinApiError( "ReadFile from pipe failed." );
+					throw Exception::WinApiError().SetDiagMsg(L"ReadFile from pipe failed.");
 				}
 
 				if( u32_Read <= 3 )
@@ -120,7 +91,7 @@ protected:
 					{
 						Yield();
 						if( !PeekNamedPipe(m_outpipe, 0, 0, 0, &u32_avail, 0) )
-							throw Exception::WinApiError( "Error peeking Pipe." );
+							throw Exception::WinApiError().SetDiagMsg(L"Error peeking Pipe.");
 
 						if( u32_avail == 0 ) break;
 
@@ -190,10 +161,10 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 	try
 	{
 		if( 0 == CreatePipe( &m_readpipe, &m_writepipe, NULL, 0 ) )
-			throw Exception::WinApiError( "CreatePipe failed." );
+			throw Exception::WinApiError().SetDiagMsg(L"CreatePipe failed.");
 
 		if( 0 == SetStdHandle( m_stdhandle, m_writepipe ) )
-			throw Exception::WinApiError( "SetStdHandle failed." );
+			throw Exception::WinApiError().SetDiagMsg(L"SetStdHandle failed.");
 
 		// Note: Don't use GetStdHandle to "confirm" the handle.
 		//
@@ -224,7 +195,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 		// the constructor, so re-pack a new exception:
 
 		Cleanup();
-		throw Exception::RuntimeError( ex.FormatDiagnosticMessage(), ex.FormatDisplayMessage() );
+		throw Exception::RuntimeError().SetDiagMsg( ex.FormatDiagnosticMessage() ).SetUserMsg( ex.FormatDisplayMessage() );
 	}
 	catch( BaseException& ex )
 	{
