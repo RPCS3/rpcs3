@@ -4367,6 +4367,12 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 	AND32ItoR(isreg, 0x3fff);
 	s_XGKICKReg = isreg;
 
+	if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+	{
+		gifRegs->stat.OPH = false;
+		gifRegs->stat.APATH = GIF_APATH_IDLE;
+	}
+
 	if (!SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc) {
 		recVUMI_XGKICK_(VU);
 	}
