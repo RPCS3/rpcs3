@@ -2001,6 +2001,11 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 			memcpy_aligned(pDest, VU1.Mem + addr, size*16);
 		}
 		GetMTGS().SendDataPacket();
+		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+		{
+			gifRegs->stat.OPH = false;
+			gifRegs->stat.APATH = GIF_APATH_IDLE;
+		}
 	}
 	else
 	{
