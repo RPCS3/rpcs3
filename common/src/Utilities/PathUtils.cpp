@@ -51,7 +51,7 @@ wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
 {
 	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::Normalize( flags, cwd ) )
-		throw Exception::RuntimeError( "wxDirName::Normalize operation failed." );
+		throw Exception::ParseError().SetDiagMsg( L"wxDirName::Normalize operation failed." );
 	return *this;
 }
 
@@ -59,7 +59,7 @@ wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
 {
 	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::MakeRelativeTo( pathBase ) )
-		throw Exception::RuntimeError( "wxDirName::MakeRelativeTo operation failed." );
+		throw Exception::ParseError().SetDiagMsg( L"wxDirName::MakeRelativeTo operation failed." );
 	return *this;
 }
 
@@ -67,7 +67,7 @@ wxDirName& wxDirName::MakeAbsolute( const wxString& cwd )
 {
 	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::MakeAbsolute( cwd ) )
-		throw Exception::RuntimeError( "wxDirName::MakeAbsolute operation failed." );
+		throw Exception::ParseError().SetDiagMsg( L"wxDirName::MakeAbsolute operation failed." );
 	return *this;
 }
 
