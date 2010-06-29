@@ -340,6 +340,7 @@ __forceinline void vif1Interrupt()
 	{
 		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
 
 	if (schedulepath3msk & 0x10) 

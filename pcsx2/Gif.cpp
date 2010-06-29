@@ -54,44 +54,39 @@ void gsPath1Interrupt()
 
 	
 
-	if((gifRegs->stat.APATH == GIF_APATH_IDLE || gifRegs->stat.APATH == GIF_APATH1 || gifRegs->stat.IP3) && Path1WritePos > 0 && !gifRegs->stat.PSE)
+	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
 		Registers::Freeze();
-		u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos*16), (Path1WritePos - Path1ReadPos));
-		u8* pDest = GetMTGS().GetDataPacketPtr();
-		//DevCon.Warning("Flush Size = %x", size);
-		
-		gifRegs->stat.APATH = GIF_APATH1;
-		memcpy_aligned(pDest, Path1Buffer + (Path1ReadPos * 16), size*16);
-		GetMTGS().SendDataPacket();
+		while(Path1WritePos > 0)
+		{
+			u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos  * 16), (Path1WritePos - Path1ReadPos));
+			u8* pDest = GetMTGS().GetDataPacketPtr();
+			//DevCon.Warning("Flush Size = %x", size);
+			
+			memcpy_aligned(pDest, Path1Buffer + (Path1ReadPos * 16), size  * 16);
+			GetMTGS().SendDataPacket();
+			
+
+			Path1ReadPos += size;
+			
+			if(GSTransferStatus.PTH1 == STOPPED_MODE)
+			{
+				gifRegs->stat.OPH = false;				
+				gifRegs->stat.APATH = GIF_APATH_IDLE;
+			}
+
+			if(Path1ReadPos == Path1WritePos)
+			{
+				Path1WritePos = Path1ReadPos = 0;
+				gifRegs->stat.P1Q = false;
+			}
+		}
 		Registers::Thaw();
-
-		Path1ReadPos += size;
-		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
-		{
-			gifRegs->stat.OPH = false;
-			gifRegs->stat.APATH = GIF_APATH_IDLE;
-		}
-
-		if(Path1ReadPos == Path1WritePos)
-		{
-			Path1WritePos = Path1ReadPos = 0;
-		}
-		if(!(cpuRegs.interrupt & (1<<28))) CPU_INT(28, 16); //Should be size * BIAS (probably) but Tony Hawk doesnt like this, probably to do with vif flush stalling
 	}
 	else
 	{
-		if(Path1WritePos == 0)
-		{
-			gifRegs->stat.P1Q = false;
-			gifRegs->stat.APATH = GIF_APATH_IDLE;
-			cpuRegs.interrupt &= ~(1<<28);
-		}
-		else
-		{
-			if(gifRegs->stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
-			if(!(cpuRegs.interrupt & (1<<28)))CPU_INT(28, 128);
-		}
+		if(gifRegs->stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
+		//if(!(cpuRegs.interrupt & (1<<28)) && Path1WritePos > 0)CPU_INT(28, 128);
 	}
 	
 }
@@ -103,6 +98,7 @@ __forceinline void gsInterrupt()
 	{
 		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
 
 	if (!(gif->chcr.STR))
@@ -177,10 +173,10 @@ int  _GIFchain()
 
 	//in Intermittent Mode it enabled, IMAGE_MODE transfers are sliced.
 
-	if(gifRegs->stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE) qwc = min((int)gif->qwc, 8);
-	else qwc = gif->qwc;
+	///(gifRegs->stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE) qwc = min((int)gif->qwc, 8);
+	/*else qwc = gif->qwc;*/
 
-	return WRITERING_DMA(pMem, qwc);
+	return WRITERING_DMA(pMem, gif->qwc);
 }
 
 static __forceinline void GIFchain()
@@ -238,6 +234,7 @@ bool CheckPaths(int Channel)
 			if((vif1.cmd & 0x7f) != 0x51 || gifRegs->stat.P1Q == true)
 			{
 					gifRegs->stat.IP3 = true;
+					if(gifRegs->stat.P1Q) gsPath1Interrupt();
 					CPU_INT(DMAC_GIF, 16);
 					return false;
 			}
@@ -629,6 +626,7 @@ void gifMFIFOInterrupt()
 	{
 		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
 
 	if(CheckPaths(11) == false) return;

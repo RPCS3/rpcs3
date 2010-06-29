@@ -1132,7 +1132,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
 		}
 		GetMTGS().SendDataPacket();
-		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+		if(GSTransferStatus.PTH1 == STOPPED_MODE)
 		{
 			gifRegs->stat.OPH = false;
 			gifRegs->stat.APATH = GIF_APATH_IDLE;
@@ -1161,7 +1161,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
 			Path1WritePos += size;
 		}
-		if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
+		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;
 	}
 }

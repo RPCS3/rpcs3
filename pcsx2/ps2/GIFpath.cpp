@@ -469,8 +469,11 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				}
 				gifRegs->stat.OPH = true;
 				gifRegs->stat.APATH = pathidx + 1;	
-				if(pathidx == GIF_PATH_3) break;
-			}			
+			}	
+			if(pathidx == GIF_PATH_3) 
+			{
+				if(vif1Regs->mskpath3 == 1) break;
+			}
 		}
 		else
 		{

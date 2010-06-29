@@ -2001,7 +2001,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 			memcpy_aligned(pDest, VU1.Mem + addr, size*16);
 		}
 		GetMTGS().SendDataPacket();
-		if(GSTransferStatus.PTH1 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH1 )
+		if(GSTransferStatus.PTH1 == STOPPED_MODE )
 		{
 			gifRegs->stat.OPH = false;
 			gifRegs->stat.APATH = GIF_APATH_IDLE;
@@ -2032,7 +2032,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 			memcpy_aligned(pDest, VU1.Mem + addr, size*16);
 			Path1WritePos += size;
 		}
-		if(!gifRegs->stat.P1Q) CPU_INT(28, 16);
+		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;
 	}
 

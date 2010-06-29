@@ -166,6 +166,7 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	{
 		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
 	if (vif1.cmd) 
 	{
@@ -204,6 +205,7 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	{
 		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
+		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
 	Registers::Thaw();
 }
