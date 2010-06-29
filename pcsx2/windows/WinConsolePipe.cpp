@@ -178,11 +178,11 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 
 		m_crtFile = _open_osfhandle( (intptr_t)m_writepipe, _O_TEXT );
 		if( m_crtFile == -1 )
-			throw Exception::RuntimeError().SetDiagMsg( "_open_osfhandle returned -1." );
+			throw Exception::RuntimeError().SetDiagMsg( L"_open_osfhandle returned -1." );
 
 		m_fp = _fdopen( m_crtFile, "w" );
 		if( m_fp == NULL )
-			throw Exception::RuntimeError().SetDiagMsg( "_fdopen returned NULL." );
+			throw Exception::RuntimeError().SetDiagMsg( L"_fdopen returned NULL." );
 
 		*m_stdfp = *m_fp;		// omg hack.  but it works >_<
 		setvbuf( stdstream, NULL, _IONBF, 0 );
