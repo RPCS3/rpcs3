@@ -1005,7 +1005,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	{
 		snapshotnr++;
 
-		sprintf(filename, "%ssnap%03ld.%s", path, snapshotnr, (conf.zz_options.tga_snap) ? "bmp" : "jpg");
+		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, (conf.zz_options.tga_snap) ? "bmp" : "jpg");
 
 		bmpfile = fopen(filename, "rb");
 
