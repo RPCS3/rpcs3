@@ -117,9 +117,9 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 		//  trigger the gsInt and clear the second pending SIGNAL -- if they fail to do so, the
 		//  GS will freeze again upon the very next SIGNAL).
 
-		CSRreg.SIGNAL = CSR_SIGNAL_Pending;
-		if( CSRreg.SIGNAL )
-			CSR_SIGNAL_Pending = false;
+		CSRreg.SIGNAL = false; //CSR_SIGNAL_Pending;
+		//if( CSRreg.SIGNAL )
+		//	CSR_SIGNAL_Pending = false;
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
@@ -134,6 +134,12 @@ static __forceinline void IMRwrite(u32 value)
 
 	if(CSRreg.GetInterruptMask() & (~(GSIMR >> 8) & 0x1f))
 		gsIrq();
+
+	if( CSR_SIGNAL_Pending && !(GSIMR & 0x100))
+	{
+		//CSRreg.SIGNAL = true;
+		gsIrq();
+	}
 }
 
 __forceinline void gsWrite8(u32 mem, u8 value)

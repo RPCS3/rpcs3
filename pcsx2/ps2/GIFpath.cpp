@@ -141,38 +141,35 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 
 	GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
 
-	// This is not working yet for some reason.  Will have to troubleshoot it later.
-	// For now having the SIGNAL behave like other interrupts seems to be fine. --air
-	// (note: use Soul Calibur 3 for testing double-throw Signals!)
+	// HACK:
+	// Soul Calibur 3 has missing geometry on the Vs select screen if we only setup
+	// SIGNAL when the CSR flag is cleared.  It seems to be doing SIGNALs on PATH2 and
+	// PATH3 simultaneously, and isn't too happy with the results.  It properly clears the
+	// SIGNAL interrupt but seems to get suck on a VBLANK OVERLAP loop.
+	// Investigating the game's internals more deeply may prove to be revealing. --air
 
-	/*if (!(GSIMR&0x100) )
+	if (false)
+	//if (CSRreg.SIGNAL)	// breaks SC3
 	{
-		if (CSRreg.SIGNAL)
+		// Time to ignore all subsequent drawing operations. (which is not yet supported)
+		if (!CSR_SIGNAL_Pending)
 		{
-			// Time to ignore all subsequent drawing operations.
-			if (!CSR_SIGNAL_Pending)
-			{
-				DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
-				CSR_SIGNAL_Pending = true;
-			}
-		}
-		else
-		{
-			CSRreg.SIGNAL = true;
-			gsIrq();
-		}
-	}*/
-	
-	if (!CSRreg.SIGNAL)
-	{
-		CSRreg.SIGNAL = true;
-		if (!(GSIMR&0x100) )
-		{
-			CSRreg.SIGNAL = true;
-			gsIrq();
+			DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
+			CSR_SIGNAL_Pending = true;
 		}
 	}
+	else
+	{
+		// notes:
+		//  * DDS SMT however crashes at the first FMV if SIGNAL raises IRQs constantly,
+		//    so that's why we only raise an IRQ if both signal and GSIMR are prepped.
+		//    (this might be correct behavior-- hard to tell yet) --air
 
+		if (!CSRreg.SIGNAL && !(GSIMR&0x100) )
+			gsIrq();
+
+		CSRreg.SIGNAL = true;
+	}
 }
 
 // FINISH : Enables end-of-draw signaling.  When FINISH is written it tells the GIF to

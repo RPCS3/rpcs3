@@ -41,7 +41,7 @@ static void SaveStateFile_ReadHeader( IStreamReader& thr )
 
 	if( strcmp(SavestateIdentString, ident) )
 		throw Exception::SaveStateLoadError( thr.GetStreamName() )
-			.SetDiagMsg(wxsFormat( L"Unrecognized file signature while loading savestate. [sig = %s]", ident ))
+			.SetDiagMsg(wxsFormat( L"Unrecognized file signature while loading savestate."))
 			.SetUserMsg(_("This is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2."));
 
 	u32 savever;
