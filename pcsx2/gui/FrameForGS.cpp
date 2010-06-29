@@ -63,7 +63,7 @@ GSPanel::GSPanel( wxWindow* parent )
 	m_HasFocus		= false;
 
 	if ( !wxWindow::Create(parent, wxID_ANY) )
-		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
+		throw Exception::RuntimeError().SetDiagMsg( L"GSPanel constructor esplode!!" );
 
 	SetName( L"GSPanel" );
 
