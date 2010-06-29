@@ -351,10 +351,10 @@ static __forceinline void _cpuTestPERF()
 
 static bool cpuIntsEnabled(int Interrupt)
 {
-	//int IntType = cpuRegs.CP0.n.Status.val & Interrupt; //Choose either INTC or DMAC, depending on what called it
+	bool IntType = !!(cpuRegs.CP0.n.Status.val & Interrupt); //Choose either INTC or DMAC, depending on what called it
 
 	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
-		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0) && Interrupt;
+		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0) && IntType;
 }
 
 // if cpuRegs.cycle is greater than this cycle, should check cpuBranchTest for updates
@@ -484,9 +484,13 @@ __forceinline void _cpuBranchTest_Shared()
 
 __releaseinline void cpuTestINTCInts()
 {
+	// Check the internal Event System -- if one's already scheduled then don't bother:
 	if( cpuRegs.interrupt & (1 << 30) ) return;
-	//if( (cpuRegs.CP0.n.Status.val & 0x10407) != 0x10401 ) return;
+
+	// Check the COP0's Status register for general interrupt disables, and the 0x400
+	// bit (which is INTC master toggle).
 	if( !cpuIntsEnabled(0x400) ) return;
+
 	if( (psHu32(INTC_STAT) & psHu32(INTC_MASK)) == 0 ) return;
 
 	cpuRegs.interrupt|= 1 << 30;
@@ -506,8 +510,11 @@ __releaseinline void cpuTestINTCInts()
 
 __forceinline void cpuTestDMACInts()
 {
+	// Check the internal Event System -- if one's already scheduled then don't bother:
 	if ( cpuRegs.interrupt & (1 << 31) ) return;
 
+	// Check the COP0's Status register for general interrupt disables, and the 0x800
+	// bit (which is the DMAC master toggle).
 	if( !cpuIntsEnabled(0x800) ) return;
 
 	if ( ( (psHu16(0xe012) & psHu16(0xe010)) == 0) &&
