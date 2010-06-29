@@ -291,7 +291,6 @@ static __forceinline void _cpuTestInterrupts()
 	/* These are 'pcsx2 interrupts', they handle asynchronous stuff
 	   that depends on the cycle timings */
 
-	TESTINT(28, gsPath1Interrupt);
 	TESTINT(1, vif1Interrupt);	
 	TESTINT(2, gsInterrupt);	
 	TESTINT(5, EEsif0Interrupt);
