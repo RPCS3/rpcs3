@@ -470,9 +470,10 @@ typedef void (wxEvtHandler::*pxInvokeAppMethodEventFunction)(Pcsx2AppMethodEvent
 typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
 // --------------------------------------------------------------------------------------
-//   CompressThread_gzip
+//   GameDatabaseLoaderThread
 // --------------------------------------------------------------------------------------
 class GameDatabaseLoaderThread : public pxThread
+	, EventListener_AppStatus
 {
 	typedef pxThread _parent;
 
@@ -480,7 +481,11 @@ protected:
 	gzFile		m_gzfp;
 
 public:
-	GameDatabaseLoaderThread() : pxThread( L"GameDatabaseLoader" ) {}
+	GameDatabaseLoaderThread()
+		: pxThread( L"GameDatabaseLoader" )
+	{
+	}
+
 	virtual ~GameDatabaseLoaderThread() throw()
 	{
 		_parent::Cancel();
@@ -489,12 +494,19 @@ public:
 protected:
 	void ExecuteTaskInThread()
 	{
+		Sleep(2);
 		wxGetApp().GetGameDatabase();
 	}
 
 	void OnCleanupInThread()
 	{
+		_parent::OnCleanupInThread();
 		wxGetApp().DeleteThread(this);
+	}
+	
+	void AppStatusEvent_OnExit()
+	{
+		Block();
 	}
 };
 
@@ -640,8 +652,8 @@ void Pcsx2App::PrepForExit()
 	if( m_ScheduledTermination ) return;
 	m_ScheduledTermination = true;
 
-	SysExecutorThread.ShutdownQueue();
 	DispatchEvent( AppStatus_Exiting );
+	SysExecutorThread.ShutdownQueue();
 
 	m_timer_Termination->Start( 500 );
 
@@ -711,6 +723,8 @@ void Pcsx2App::CleanupResources()
 	while( wxGetLocale() != NULL )
 		delete wxGetLocale();
 
+	m_mtx_LoadingGameDB.Wait();
+	ScopedLock lock(m_mtx_Resources);
 	m_Resources = NULL;
 }
 
@@ -829,6 +843,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 737 );
+//CrtDebugBreak breakAt( 909 );
 
 #endif

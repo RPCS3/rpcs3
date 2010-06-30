@@ -69,7 +69,8 @@ extern wxString fromAscii( const char* src );
 extern const wxRect wxDefaultRect;
 
 extern void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims, wxStringTokenizerMode mode = wxTOKEN_RET_EMPTY_ALL );
-extern void JoinString( wxString& dest, const wxArrayString& src, const wxString& separator );
+extern wxString JoinString( const wxArrayString& src, const wxString& separator );
+extern wxString JoinString( const wxChar** src, const wxString& separator );
 
 extern wxString ToString( const wxPoint& src, const wxString& separator=L"," );
 extern wxString ToString( const wxSize& src, const wxString& separator=L"," );

@@ -154,9 +154,11 @@ void SysLogMachineCaps()
 	if( x86caps.has3DNOWInstructionExtensionsExt )	features[1].Add( L"3DNOW2" );
 	if( x86caps.hasStreamingSIMD4ExtensionsA )		features[1].Add( L"SSE4a " );
 
-	wxString result[2];
-	JoinString( result[0], features[0], L".. " );
-	JoinString( result[1], features[1], L".. " );
+	const wxString result[2] =
+	{
+		JoinString( features[0], L".. " ),
+		JoinString( features[1], L".. " )
+	};
 
 	Console.WriteLn( Color_StrongBlack,	L"x86 Features Detected:" );
 	Console.Indent().WriteLn( result[0] + (result[1].IsEmpty() ? L"" : (L"\n" + result[1])) );

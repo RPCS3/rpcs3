@@ -129,6 +129,7 @@ void DBLoaderHelper::ReadGames()
 	}
 
 	while(!m_reader.Eof()) { // Fill game data, find new game, repeat...
+		pthread_testcancel();
 		pxReadLine(m_reader, m_dest, m_intermediate);
 		m_dest.Trim(true).Trim(false);
 		if( m_dest.IsEmpty() ) continue;

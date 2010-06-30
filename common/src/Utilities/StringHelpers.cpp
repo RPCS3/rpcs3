@@ -61,24 +61,46 @@ void SplitString( wxArrayString& dest, const wxString& src, const wxString& deli
 //
 // Note: wxWidgets 2.9 / 3.0 has a wxJoin function, but we're using 2.8 so I had to make
 // my own.
-void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& separator )
+wxString JoinString( const SafeList<wxString>& src, const wxString& separator )
 {
+	wxString dest;
 	for( int i=0, len=src.GetLength(); i<len; ++i )
 	{
-		if( i != 0 )
+		if( src[i].IsEmpty() ) continue;
+		if( !dest.IsEmpty() )
 			dest += separator;
 		dest += src[i];
 	}
+	
+	return dest;
 }
 
-void JoinString( wxString& dest, const wxArrayString& src, const wxString& separator )
+wxString JoinString( const wxArrayString& src, const wxString& separator )
 {
+	wxString dest;
 	for( int i=0, len=src.GetCount(); i<len; ++i )
 	{
-		if( i != 0 )
+		if( src[i].IsEmpty() ) continue;
+		if( !dest.IsEmpty() )
 			dest += separator;
 		dest += src[i];
 	}
+	return dest;
+}
+
+wxString JoinString( const wxChar** src, const wxString& separator )
+{
+	wxString dest;
+	while( *src != NULL )
+	{
+		if( *src[0] == 0 ) continue;
+
+		if( !dest.IsEmpty() )
+			dest += separator;
+		dest += *src;
+		++src;
+	}
+	return dest;
 }
 
 // Attempts to parse and return a value for the given template type, and throws a ParseError

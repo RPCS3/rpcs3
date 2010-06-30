@@ -448,7 +448,10 @@ protected:
 	int								m_PendingSaves;
 	bool							m_ScheduledTermination;
 	bool							m_UseGUI;
-	
+
+	Threading::Mutex				m_mtx_Resources;
+	Threading::Mutex				m_mtx_LoadingGameDB;
+
 public:
 	FramerateManager				FpsManager;
 	ScopedPtr<CommandDictionary>	GlobalCommands;
@@ -465,9 +468,6 @@ protected:
 
 	ScopedPtr<RecentIsoList>		m_RecentIsoList;
 	ScopedPtr<pxAppResources>		m_Resources;
-
-	Threading::Mutex				m_mtx_Resources;
-	Threading::Mutex				m_mtx_LoadingGameDB;
 
 public:
 	// Executor Thread for complex VM/System tasks.  This thread is used to execute such tasks

@@ -213,17 +213,55 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 	return result;
 }
 
+static wxString JoinFiletypes( const wxChar** src )
+{
+	wxString dest;
+	while( *src != NULL )
+	{
+		if( *src[0] == 0 ) continue;
+		if( !dest.IsEmpty() )
+			dest += L";";
+
+		dest += wxsFormat(L"*.%s", *src);
+
+		#ifdef __LINUX__
+		// omgosh!  linux is CaSE SeNSiTiVE!!
+		dest += wxsFormat(L";*.%s", *src).MakeUpper();
+		#endif
+
+		++src;
+	}
+	
+	return dest;
+}
+
 // Returns FALSE if the user canceled the action.
 bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 {
-	static const wxChar* isoFilterTypes =
-		L"All Supported (.iso .mdf .nrg .bin .img .dump)|*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump|"
-		L"Disc Images (.iso .mdf .nrg .bin .img)|*.iso;*.mdf;*.nrg;*.bin;*.img|"
-		L"Blockdumps (.dump)|*.dump|"
-		L"All Files (*.*)|*.*";
+	static const wxChar* isoSupportedTypes[] =
+	{
+		L"iso", L"mdf", L"nrg", L"bin", L"img", NULL
+	};
 
+	const wxString isoSupportedLabel( JoinString(isoSupportedTypes, L" ") );
+	const wxString isoSupportedList( JoinFiletypes(isoSupportedTypes) );
+	
+	wxArrayString isoFilterTypes;
+
+	isoFilterTypes.Add(wxsFormat(_("All Supported (%s)"), (isoSupportedLabel + L" .dump").c_str()));
+	isoFilterTypes.Add(isoSupportedList + L";*.dump");
+
+	isoFilterTypes.Add(wxsFormat(_("Disc Images (%s)"), isoSupportedLabel.c_str() ));
+	isoFilterTypes.Add(isoSupportedList);
+
+	isoFilterTypes.Add(wxsFormat(_("Blockdumps (%s)"), L".dump" ));
+	isoFilterTypes.Add(L"*.dump");
+
+	isoFilterTypes.Add(_("All Files (*.*)"));
+	isoFilterTypes.Add(L"*.*");
+	
 	wxFileDialog ctrl( this, _("Select CDVD source iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
-		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
+		JoinString(isoFilterTypes, L"|"), wxFD_OPEN | wxFD_FILE_MUST_EXIST );
 
 	if( ctrl.ShowModal() != wxID_CANCEL )
 	{
@@ -237,12 +275,10 @@ bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 
 bool MainEmuFrame::_DoSelectELFBrowser()
 {
-	static const wxChar* elfFilterTypes =
-		L"ELF Files (.elf)|*.elf|"
-		L"All Files (*.*)|*.*";
+	static const wxChar* elfFilterType = L"ELF Files (.elf)|*.elf;*.ELF|";
 
 	wxFileDialog ctrl( this, _("Select ELF file..."), g_Conf->Folders.RunELF.ToString(), wxEmptyString,
-		elfFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
+		(wxString)elfFilterType + L"|" + _("All Files (*.*)") + L"|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST );
 
 	if( ctrl.ShowModal() != wxID_CANCEL )
 	{

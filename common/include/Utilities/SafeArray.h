@@ -454,4 +454,4 @@ public:
 
 // For lack of a better place for now (they depend on SafeList so they can't go in StringUtil)
 extern void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString& delims );
-extern void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& separator );
+extern wxString JoinString( const SafeList<wxString>& src, const wxString& separator );
