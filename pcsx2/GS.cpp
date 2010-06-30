@@ -109,17 +109,7 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 	
 	if(csr.SIGNAL)
 	{
-		// SIGNAL has special behavior.  If a SIGNAL has occurred twice in a row, we need
-		// to raise the second one pending immediately.  CSR_SIGNAL_Pending is only set true
-		// if a second SIGNAL is pending (and thus drawing ops are disabled).
-
-		// (note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
-		//  trigger the gsInt and clear the second pending SIGNAL -- if they fail to do so, the
-		//  GS will freeze again upon the very next SIGNAL).
-
-		CSRreg.SIGNAL = false; //CSR_SIGNAL_Pending;
-		//if( CSRreg.SIGNAL )
-		//	CSR_SIGNAL_Pending = false;
+		CSRreg.SIGNAL = false;
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
@@ -137,6 +127,14 @@ static __forceinline void IMRwrite(u32 value)
 
 	if( CSR_SIGNAL_Pending && !(GSIMR & 0x100))
 	{
+		// (note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
+		//  trigger the gsInt and clear the second pending SIGNAL interrupt -- if they fail
+		//  to do so, the GS will freeze again upon the very next SIGNAL).
+
+		// It's yet unclear if the SIGNAL should be set back to TRUE or not when the IRQ is
+		// raised here.  Neither setting it nor leaving it be seemed to keep Soul Calibur 3 from
+		// dying.  This could be the fault of other emulation/timing errors in the DMA though --air
+
 		//CSRreg.SIGNAL = true;
 		gsIrq();
 	}
