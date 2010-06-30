@@ -511,7 +511,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_PACKED:
 					GIF_LOG("Packed Mode EOP %x", tag.EOP);
 					PrepPackedRegs();
-					if(DetectE > 0)
+
+					//if(DetectE > 0)
+					if(true)		// Optimization Disabled!  (see below)
 					{
 						do {
 							if (GetReg() == 0xe) {
@@ -520,8 +522,31 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							incTag(16, 1);
 						} while(StepReg() && size > 0);
 					}
-					else //Save doing the while loop and repeat conditionals for nothing :P
+					else
 					{
+						// Purpose: To save doing the while loop and repeat conditionals for nothing :P  (and whales)
+						// Problem(s):
+						//  * Doesn't wrap around VU1 memory properly.  It needs to have additional checks
+						//    against VU1 wrap-around and either split the copy into two parts, or just use
+						//    the above "Brute force" approach. (via added top-level path1 checks)
+						//
+						//  * Cannot assume curreg is 1 on partial transfers.  Games can transfer *anything*
+						//    -- and I mean *anything* -- right down to individual QWCs.  So this code must
+						//    also use some clever math to calculate the actual register the partial transfer
+						//    ends at.  Math that will almost certainly involve a modulus -- which is still the
+						//    slowest instruction known to computer-kind.
+
+						// By the time we're done handling both of those, I seriously doubt there will be much
+						// speedup left, and the code here would be a nightmare to comprehend or debug.  So this
+						// should probably be slated for removal, and we'll just need to resolve ourselves to finding
+						// other ways to reduce GIF/GS overhead.  --air
+						
+						// (history: this optimization existed in early 0.9.5 and earlier PCSX2's and was always
+						//  buggy for the same reasons.  cottonvibes later tried to implement the same optimization
+						//  into the new cleaned-up GIFtag parser here, but ran into the same problems noted above
+						//  and after he and I worked on it for a few hours we mutually decided it's just not
+						//  worth the effort. --air)
+
 						//DevCon.Warning("No E detected Path%d nloop %x", pathidx + 1, nloop);
 						u32 len = aMin(size, nloop * numregs);
 						if(len < (nloop * numregs)) nloop -= len / numregs;
