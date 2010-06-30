@@ -462,28 +462,54 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 						else GSTransferStatus.PTH2 = TRANSFER_MODE;
 						break;
 					case GIF_PATH_3:
+						if(vif1Regs->mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE) 
+						{
+							GSTransferStatus.PTH3 = IDLE_MODE;
+							
+						}
+						else
+						{
+							if(tag.FLG & 2)	GSTransferStatus.PTH3 = IMAGE_MODE;
+							else GSTransferStatus.PTH3 = TRANSFER_MODE;
+						}
+						break;
+				}
+				if(GSTransferStatus.PTH3 < PENDINGSTOP_MODE || pathidx != 2)
+				{
+					gifRegs->stat.OPH = true;
+					gifRegs->stat.APATH = pathidx + 1;	
+				}
+			}	
+
+			if(pathidx == GIF_PATH_3) 
+			{
+				break;
+			}
+		}
+		else
+		{
+			switch(pathidx)
+				{
+					case GIF_PATH_1:
+						if(tag.FLG & 2)GSTransferStatus.PTH1 = IMAGE_MODE;
+						else GSTransferStatus.PTH1 = TRANSFER_MODE;
+						break;
+					case GIF_PATH_2:
+						if(tag.FLG & 2)GSTransferStatus.PTH2 = IMAGE_MODE;
+						else GSTransferStatus.PTH2 = TRANSFER_MODE;
+						break;
+					case GIF_PATH_3:
 						if(tag.FLG & 2)	GSTransferStatus.PTH3 = IMAGE_MODE;
 						else GSTransferStatus.PTH3 = TRANSFER_MODE;
 
 						break;
 				}
-				gifRegs->stat.OPH = true;
-				gifRegs->stat.APATH = pathidx + 1;	
-			}	
-			if(pathidx == GIF_PATH_3) 
-			{
-				if(vif1Regs->mskpath3 == 1) break;
-			}
-		}
-		else
-		{
-			
 			gifRegs->stat.APATH = pathidx + 1;
 			gifRegs->stat.OPH = true;
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
-					GIF_LOG("Packed Mode");
+					GIF_LOG("Packed Mode EOP %x", tag.EOP);
 					PrepPackedRegs();
 					if(DetectE > 0)
 					{
@@ -507,7 +533,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode");
+					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
 
 					numregs	= ((tag.NREG-1)&0xf) + 1;
 					size *= 2;
@@ -523,7 +549,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
-					GIF_LOG("IMAGE Mode");
+					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
 					incTag(( len * 16 ), len);
 					nloop -= len;
@@ -566,7 +592,6 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 	if (tag.EOP && nloop <= 16) {
 		if(pathidx == 2 && nloop > 0)
 		{
-			if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
 			if (gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
 				//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
 				gif->madr += size * 16;
@@ -586,7 +611,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					GSTransferStatus.PTH2 = STOPPED_MODE;
 					break;
 				case GIF_PATH_3:
-					if(GSTransferStatus.PTH3 != IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;
+					//For huge chunks we may have delay problems, so we need to stall it till the interrupt, else we get desync (Lemmings)
+					if(size > 8) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
+					else  GSTransferStatus.PTH3 = STOPPED_MODE;
 					if (gif->chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
 						//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
 						gif->madr += size * 16;

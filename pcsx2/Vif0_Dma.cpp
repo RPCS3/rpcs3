@@ -103,7 +103,7 @@ __forceinline void vif0SetupTransfer()
 			VIF_LOG("vif0 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
 			        ptag[1]._u32, ptag[0]._u32, vif0ch->qwc, ptag->ID, vif0ch->madr, vif0ch->tadr);
 
-			vif0.inprogress = 1;
+			vif0.inprogress = 0;
 
 			if (vif0ch->chcr.TTE)
 			{
@@ -124,6 +124,7 @@ __forceinline void vif0SetupTransfer()
 			vif0.irqoffset = 0;
 			vif0.done |= hwDmacSrcChainWithStack(vif0ch, ptag->ID);
 
+			if(vif0ch->qwc > 0) vif0.inprogress = 1;
 			//Check TIE bit of CHCR and IRQ bit of tag
 			if (vif0ch->chcr.TIE && ptag->IRQ)
 			{
@@ -217,21 +218,22 @@ void dmaVIF0()
 
 	g_vifCycles = 0;
 	g_vu0Cycles = 0;
-	if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start!");
-	vif0.irqoffset = 0;
+	//if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start! offset %x, Progress %x", vif0.irqoffset, vif0.vifstalled);
+	/*vif0.irqoffset = 0;
 	vif0.vifstalled = false;
 	vif0.inprogress = 0;
-	vif0.done = false;
+	vif0.done = false;*/
 
 	if ((vif0ch->chcr.MOD == NORMAL_MODE) || vif0ch->qwc > 0)   // Normal Mode
 	{
 			vif0.dmamode = VIF_NORMAL_TO_MEM_MODE;
 
+			vif0.done = false;
+
 			if(vif0ch->chcr.MOD == CHAIN_MODE && vif0ch->qwc > 0) 
 			{
 				vif0.dmamode = VIF_CHAIN_MODE;
-				//DevCon.Warning(L"VIF0 QWC on Chain CHCR " + vif0ch->chcr.desc());
-				vif0.inprogress |= 0x1;
+				DevCon.Warning(L"VIF0 QWC on Chain CHCR " + vif0ch->chcr.desc());
 				
 				if ((vif0ch->chcr.tag().ID == TAG_REFE) || (vif0ch->chcr.tag().ID == TAG_END))
 				{
@@ -242,6 +244,7 @@ void dmaVIF0()
 	else
 	{
 		vif0.dmamode = VIF_CHAIN_MODE;
+		vif0.done = false;
 	}
 
 	vif0Regs->stat.FQC = min((u16)0x8, vif0ch->qwc);

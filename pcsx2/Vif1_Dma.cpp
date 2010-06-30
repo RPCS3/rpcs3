@@ -221,7 +221,8 @@ __forceinline void vif1SetupTransfer()
 				}
 			}
 
-			vif1.inprogress = 1;
+			
+			vif1.inprogress = 0;
 
 			if (vif1ch->chcr.TTE)
 			{
@@ -239,9 +240,11 @@ __forceinline void vif1SetupTransfer()
 					
 				} //else vif1.vifstalled = false;
 			}
-
 			vif1.irqoffset = 0;
+			
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
+
+			if(vif1ch->qwc > 0) vif1.inprogress = 1;
 
 			//Check TIE bit of CHCR and IRQ bit of tag
 			if (vif1ch->chcr.TIE && ptag->IRQ)
@@ -289,7 +292,7 @@ bool CheckPath2GIF(int channel)
 				return false;
 			}
 
-			if (GSTransferStatus.PTH3 < PENDINGSTOP_MODE)
+			if (GSTransferStatus.PTH3 < IDLE_MODE)
 			{
 				//DevCon.Warning("VIF1-11 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
 				//DevCon.Warning("PTH3 %x P1Q %x P3Q %x IP3 %x", GSTransferStatus.PTH3, gifRegs->stat.P1Q, gifRegs->stat.P3Q, gifRegs->stat.IP3 );
@@ -429,7 +432,7 @@ __forceinline void vif1Interrupt()
 		return; //Dont want to end if vif is stalled.
 	}
 #ifdef PCSX2_DEVBUILD
-	if (vif1ch->qwc > 0) Console.WriteLn("VIF1 Ending with %x QWC left");
+	if (vif1ch->qwc > 0) Console.WriteLn("VIF1 Ending with %x QWC left", vif1ch->qwc);
 	if (vif1.cmd != 0) Console.WriteLn("vif1.cmd still set %x tag size %x", vif1.cmd, vif1.tag.size);
 #endif
 
@@ -454,14 +457,14 @@ void dmaVIF1()
 	        vif1ch->chcr._u32, vif1ch->madr, vif1ch->qwc,
 	        vif1ch->tadr, vif1ch->asr0, vif1ch->asr1);
 
-	vif1.done = false;
+//	vif1.done = false;
 	
-	if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 start!");
-	vif1.irqoffset = 0;
-	vif1.vifstalled = false;
+	//if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 start! offset %x, Progress %x", vif1.irqoffset, vif1.vifstalled);
+	/*vif1.irqoffset = 0;
+	vif1.vifstalled = false;	
+	vif1.inprogress = 0;*/
 	g_vifCycles = 0;
 	g_vu1Cycles = 0;
-	vif1.inprogress = 0;
 
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_VIF1)
@@ -481,11 +484,12 @@ void dmaVIF1()
 		else
 			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 
+		vif1.done = false;
+
 		if(vif1ch->chcr.MOD == CHAIN_MODE && vif1ch->qwc > 0) 
 		{
 			vif1.dmamode = VIF_CHAIN_MODE;
-			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch->chcr.desc());
-			vif1.inprogress |= 0x1;
+			DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch->chcr.desc());
 			
 			if ((vif1ch->chcr.tag().ID == TAG_REFE) || (vif1ch->chcr.tag().ID == TAG_END))
 			{
@@ -496,10 +500,11 @@ void dmaVIF1()
 	else
 	{
 		vif1.dmamode = VIF_CHAIN_MODE;
+		vif1.done = false;
 	}
 
 	if (vif1ch->chcr.DIR) vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 
 	// Chain Mode
-	vif1Interrupt();
+	CPU_INT(DMAC_VIF1, 4);
 }

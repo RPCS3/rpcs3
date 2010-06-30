@@ -85,20 +85,20 @@ u8 schedulepath3msk = 0;
 void Vif1MskPath3() {
 
 	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
-	//Console.WriteLn("VIF MSKPATH3 %x gif str %x path3 status %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH3);
+	GIF_LOG("VIF MSKPATH3 %x gif str %x path3 status %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH3);
 	gifRegs->stat.M3P = vif1Regs->mskpath3;
 
 	if (!vif1Regs->mskpath3)
 	{
 		//if(GSTransferStatus.PTH3 > TRANSFER_MODE && gif->chcr.STR) GSTransferStatus.PTH3 = TRANSFER_MODE;
 		//DevCon.Warning("Mask off");
-		if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE) GSTransferStatus.PTH3 = IDLE_MODE;
+		//if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE) GSTransferStatus.PTH3 = IDLE_MODE;
 		if(gifRegs->stat.P3Q) 
 		{
 			gsInterrupt();//gsInterrupt();
 		}
 	
-	} else if(!gif->chcr.STR && GSTransferStatus.PTH3 == IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;//else DevCon.Warning("Mask on");
+	}// else if(!gif->chcr.STR && GSTransferStatus.PTH3 == IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;//else DevCon.Warning("Mask on");
 
 	schedulepath3msk = 0;
 }
@@ -261,7 +261,7 @@ vifOp(vifCode_FlushA) {
 	pass1 {
 		vifFlush(idx);
 		// Gif is already transferring so wait for it.
-		if (gifRegs->stat.P1Q == true || GSTransferStatus.PTH3 < PENDINGSTOP_MODE) {
+		if (gifRegs->stat.P1Q == true || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
 			//DevCon.Warning("VIF FlushA Wait MSK = %x", vif1Regs->mskpath3);
 			//
 			

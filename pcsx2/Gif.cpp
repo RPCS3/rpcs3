@@ -54,7 +54,7 @@ void gsPath1Interrupt()
 
 	
 
-	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
+	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 == true && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
 		Registers::Freeze();
 		while(Path1WritePos > 0)
@@ -86,6 +86,7 @@ void gsPath1Interrupt()
 	else
 	{
 		if(gifRegs->stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
+		DevCon.Warning("Looping??? IP3 %x APATH %x OPH %x", gifRegs->stat.IP3, gifRegs->stat.APATH, gifRegs->stat.OPH);
 		//if(!(cpuRegs.interrupt & (1<<28)) && Path1WritePos > 0)CPU_INT(28, 128);
 	}
 	
@@ -94,9 +95,10 @@ __forceinline void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
-	if(GSTransferStatus.PTH3 >= IDLE_MODE && gifRegs->stat.APATH == GIF_APATH3 )
+	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
 		gifRegs->stat.OPH = false;
+		GSTransferStatus.PTH3 = STOPPED_MODE;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
@@ -240,7 +242,7 @@ bool CheckPaths(int Channel)
 			}
 		}
 	}
-	else if((GSTransferStatus.PTH3 >= IDLE_MODE))
+	else if((GSTransferStatus.PTH3 == IDLE_MODE)|| (GSTransferStatus.PTH3 == STOPPED_MODE))
 	{
 		//This should cover both scenarios, as DIRECTHL doesn't gain priority when image mode is running (PENDINGIMAGE_MODE == fininshed).
 		if((gifRegs->stat.P1Q == true || gifRegs->stat.P2Q == true) || (gifRegs->stat.APATH > GIF_APATH_IDLE && gifRegs->stat.APATH < GIF_APATH3))
@@ -305,9 +307,9 @@ void GIFdma()
 		}
 		
 
-		if (GSTransferStatus.PTH3 == STOPPED_MODE)
+		if (GSTransferStatus.PTH3 == IDLE_MODE)
 		{
-			GIF_LOG("PTH3 MASK Paused by VIF");
+			GIF_LOG("PTH3 MASK Paused by VIF QWC %x", gif->qwc);
 			
 			//DevCon.Warning("GIF Paused by Mask MSK = %x", vif1Regs->mskpath3);
 			
