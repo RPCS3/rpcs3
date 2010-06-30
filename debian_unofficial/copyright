@@ -4,17 +4,14 @@ This work was packaged for Debian by:
 
 It was downloaded from:
 
-    <http://pcsx2.googlecode.com/svn/>
+    http://pcsx2.googlecode.com/svn/
 
 Upstream Author(s):
 
-    <put author's name and email here>
-    <likewise for another author>
+    PCSX2 Dev Team
 
 Copyright:
-
-    <Copyright (C) YYYY Firstname Lastname>
-    <likewise for another author>
+    Copyright (C) 2002-2010  PCSX2 Dev Team
 
 License:
 
@@ -39,6 +36,3 @@ The Debian packaging is:
     Copyright (C) 2010 Gregory Hainaut <gregory.hainaut@gmail.com>
 
 and is licensed under the GPL version 3, see above.
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.

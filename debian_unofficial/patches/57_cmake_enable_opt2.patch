@@ -1,0 +1,54 @@
+Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
+===================================================================
+--- pcsx2.snapshot-3337.orig/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.330002361 +0200
++++ pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.621848268 +0200
+@@ -46,13 +46,6 @@
+ 
+ 
+ set(BadFlags_O2
+-    -fno-expensive-optimizations
+-    -fno-forward-propagate
+-    -fno-inline-small-functions
+-    -fno-ipa-cp
+-    -fno-schedule-insns2
+-    -fno-strict-aliasing
+-    -fno-tree-builtin-call-dce
+     )
+ 
+ 
+Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
+===================================================================
+--- pcsx2.snapshot-3337.orig/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
++++ pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.621848268 +0200
+@@ -46,13 +46,6 @@
+ 
+ 
+ set(BadFlags_O2
+-    -fno-expensive-optimizations
+-    -fno-forward-propagate
+-    -fno-inline-small-functions
+-    -fno-ipa-cp
+-    -fno-schedule-insns2
+-    -fno-strict-aliasing
+-    -fno-tree-builtin-call-dce
+     )
+ 
+ # set optimization flags
+Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
+===================================================================
+--- pcsx2.snapshot-3337.orig/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
++++ pcsx2.snapshot-3337/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.622848331 +0200
+@@ -42,13 +42,6 @@
+     )
+ 
+ set(BadFlags_O2
+-    -fno-expensive-optimizations
+-    -fno-forward-propagate
+-    -fno-inline-small-functions
+-    -fno-ipa-cp
+-    -fno-schedule-insns2
+-    -fno-strict-aliasing
+-    -fno-tree-builtin-call-dce
+     )
+ 
+ # set optimization flags

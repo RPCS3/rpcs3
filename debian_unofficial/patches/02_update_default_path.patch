@@ -2,11 +2,11 @@ Debian policy.
 This patch updates default plugin path and config path.
 It also updates the pcsx2 game db path and shaders data path.
 AppInit.cpp:93 could be probably updated
-Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp
+Index: pcsx2.snapshot-3343/pcsx2/gui/AppConfig.cpp
 ===================================================================
---- pcsx2.snapshot-3208.orig/pcsx2/gui/AppConfig.cpp	2010-06-15 13:10:41.000000000 +0200
-+++ pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp	2010-06-15 13:12:59.894963081 +0200
-@@ -137,7 +137,8 @@
+--- pcsx2.snapshot-3343.orig/pcsx2/gui/AppConfig.cpp	2010-06-29 13:26:25.000000000 +0200
++++ pcsx2.snapshot-3343/pcsx2/gui/AppConfig.cpp	2010-06-29 13:28:38.859568437 +0200
+@@ -162,7 +162,8 @@
  
  	wxDirName GetPlugins()
  	{
@@ -16,10 +16,10 @@ Index: pcsx2.snapshot-3208/pcsx2/gui/AppConfig.cpp
  	}
  
  	wxDirName GetSettings()
-Index: pcsx2.snapshot-3208/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+Index: pcsx2.snapshot-3343/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
 ===================================================================
---- pcsx2.snapshot-3208.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-15 13:10:41.000000000 +0200
-+++ pcsx2.snapshot-3208/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-15 13:12:59.895962667 +0200
+--- pcsx2.snapshot-3343.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-29 13:26:25.000000000 +0200
++++ pcsx2.snapshot-3343/plugins/zzogl-pg/opengl/ZZoglCreate.cpp	2010-06-29 13:28:38.859568437 +0200
 @@ -347,17 +347,12 @@
  	assert(hShaderGlob != NULL);
  	s_lpShaderResources = (u8*)LockResource(hShaderGlob);
@@ -41,25 +41,18 @@ Index: pcsx2.snapshot-3208/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
  	}
  
  	fseek(fres, 0, SEEK_END);
-Index: pcsx2.snapshot-3208/pcsx2/DataBase_Loader.h
+Index: pcsx2.snapshot-3343/pcsx2/gui/AppGameDatabase.h
 ===================================================================
---- pcsx2.snapshot-3208.orig/pcsx2/DataBase_Loader.h	2010-06-15 13:10:41.000000000 +0200
-+++ pcsx2.snapshot-3208/pcsx2/DataBase_Loader.h	2010-06-15 13:12:59.896962570 +0200
-@@ -89,7 +89,7 @@
- 	wxString		header;			// Header of the database
- 	wxString		baseKey;		// Key to separate games by ("Serial")
- 
--	DataBase_Loader(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial", const wxString& value = wxEmptyString )
-+	DataBase_Loader(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf", const wxString& key = L"Serial", const wxString& value = wxEmptyString )
- 		: baseKey( key )
- 	{
- 		curGame	= NULL;
-@@ -159,7 +159,7 @@
+--- pcsx2.snapshot-3343.orig/pcsx2/gui/AppGameDatabase.h	2010-06-29 13:26:25.000000000 +0200
++++ pcsx2.snapshot-3343/pcsx2/gui/AppGameDatabase.h	2010-06-29 13:28:38.859568437 +0200
+@@ -51,8 +51,8 @@
+ 		Console.WriteLn( "(GameDB) Unloading..." );
  	}
  
- 	// Saves changes to the database
--	void saveToFile(const wxString& file = L"GameIndex.dbf") {
-+	void saveToFile(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf") {
- 		wxFFileOutputStream writer( file );
- 		pxWriteMultiline(writer, header);
- 		deque<Game_Data*>::iterator it = gList.begin();
+-	AppGameDatabase& LoadFromFile(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial" );
+-	void SaveToFile(const wxString& file = L"GameIndex.dbf");
++	AppGameDatabase& LoadFromFile(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf", const wxString& key = L"Serial" );
++	void SaveToFile(const wxString& file = L"/var/games/pcsx2/GameIndex.dbf");
+ };
+ 
+ static wxString compatToStringWX(int compat) {

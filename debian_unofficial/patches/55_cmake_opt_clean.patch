@@ -1,8 +1,8 @@
-Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
+Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/pcsx2/CMakeLists.txt	2010-06-15 13:12:59.655335900 +0200
-+++ pcsx2.snapshot-3208/pcsx2/CMakeLists.txt	2010-06-15 13:14:33.597334089 +0200
-@@ -11,12 +11,8 @@
+--- pcsx2.snapshot-3337.orig/pcsx2/CMakeLists.txt	2010-06-28 22:43:06.223607055 +0200
++++ pcsx2.snapshot-3337/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.082609942 +0200
+@@ -17,12 +17,8 @@
  set(CMAKE_CXX_FLAGS_RELEASE "")
  
  # set common flags
@@ -16,7 +16,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  	-m32
  	-march=i486
  	-msse
-@@ -32,55 +28,51 @@
+@@ -38,55 +34,51 @@
  	-W
  	-g)
  
@@ -106,7 +106,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  endif(CMAKE_BUILD_TYPE STREQUAL Debug)
  
  # Devel - Build
-@@ -88,9 +80,9 @@
+@@ -94,9 +86,9 @@
  
  	# executable name
  	set(pcsx2Name pcsx2)
@@ -118,7 +118,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  endif(CMAKE_BUILD_TYPE STREQUAL Devel)
  
  # Release - Build
-@@ -98,9 +90,9 @@
+@@ -104,9 +96,9 @@
  
  	# executable name
  	set(pcsx2Name pcsx2)
@@ -130,7 +130,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  endif(CMAKE_BUILD_TYPE STREQUAL Release)
  
  # you must have both svn client executable and a source that contains svn metadata
-@@ -598,7 +590,7 @@
+@@ -606,7 +598,7 @@
  	set(Platform
  		${pcsx2LinuxSources}
  		${pcsx2LinuxHeaders})
@@ -139,7 +139,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  
  # Windows
  if(Windows)
-@@ -611,7 +603,7 @@
+@@ -619,7 +611,7 @@
  if(MacOSX)
  	set(PlatformSources
  		)
@@ -148,7 +148,7 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  
  # additonal include directories
  include_directories(.
-@@ -632,7 +624,7 @@
+@@ -640,7 +632,7 @@
  
  # link target with project internal libraries
  target_link_libraries(${pcsx2Name} Utilities x86emitter)
@@ -157,11 +157,11 @@ Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
  # link target with wx
  target_link_libraries(${pcsx2Name} ${wxWidgets_LIBRARIES})
  
-Index: pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt
+Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/common/src/x86emitter/CMakeLists.txt	2010-06-15 13:10:41.000000000 +0200
-+++ pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt	2010-06-15 13:14:33.597334089 +0200
-@@ -16,10 +16,6 @@
+--- pcsx2.snapshot-3337.orig/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:39:30.000000000 +0200
++++ pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
+@@ -22,10 +22,6 @@
  # set common flags
  set(CommonFlags 
  	-pthread
@@ -172,7 +172,7 @@ Index: pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt
  	-m32
  	-march=i486
  	-msse
-@@ -35,66 +31,63 @@
+@@ -41,66 +37,63 @@
  	-W
  	-g)
  
@@ -274,32 +274,29 @@ Index: pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt
  endif(CMAKE_BUILD_TYPE STREQUAL Release)
  
  # variable with all sources of this library
-Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
+Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/common/src/Utilities/CMakeLists.txt	2010-06-15 13:10:41.000000000 +0200
-+++ pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt	2010-06-15 13:14:33.598334111 +0200
-@@ -19,82 +19,76 @@
+--- pcsx2.snapshot-3337.orig/common/src/Utilities/CMakeLists.txt	2010-06-28 22:39:30.000000000 +0200
++++ pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
+@@ -20,16 +20,12 @@
+ set(CMAKE_CXX_FLAGS_RELEASE "")
+ 
+ # set common flags
+-set(CommonFlags 
++set(CommonFlags
+ 	-pthread
  	-m32
  	-march=i486
  	-msse
--	-msse2
+ 	-msse2
 -	-fno-dse
 -	-fno-guess-branch-probability
 -	-fno-strict-aliasing
 -	-fno-tree-dse
-+	-msse2
  	-pipe
--	-Wno-format
--	-Wno-unused-parameter
--	-Wno-unused-value
--	-Wunused-variable)
-+	-Wno-format
-+	-Wno-unused-parameter
-+	-Wno-unused-value
-+	-Wunused-variable)
- 
- # set warning flags
- set(DebugFlags
+ 	-Wno-format
+ 	-Wno-unused-parameter
+@@ -41,66 +37,64 @@
  	-g
  	-W)
  
@@ -332,6 +329,7 @@ Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
 +    -fno-strict-aliasing
 +    -fno-tree-builtin-call-dce
 +    )
++
 +
  # set optimization flags
  set(OptimizationFlags
@@ -374,12 +372,12 @@ Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
 -	-ftree-vrp
 -	-funit-at-a-time)
 +    -O2
-+    )
-+
++	)
  
  # Debug - Build
  if(CMAKE_BUILD_TYPE STREQUAL Debug)
- 	
+-	
++
  	# add defines
 -	add_definitions(${CommonFlags} ${DebugFlags} -DPCSX2_DEBUG -DPCSX2_DEVBUILD)
 +	add_definitions(${CommonFlags} ${DebugFlags} ${BadFlags_O0} -DPCSX2_DEBUG -DPCSX2_DEVBUILD)
@@ -387,7 +385,8 @@ Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
  
  # Devel - Build
  if(CMAKE_BUILD_TYPE STREQUAL Devel)
- 	
+-	
++
  	# add defines
 -	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD)
 +	add_definitions(${CommonFlags} ${OptimizationFlags} ${BadFlags_O0} ${BadFlags_O1} ${BadFlags_O2} -DPCSX2_DEVBUILD)
@@ -395,10 +394,20 @@ Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
  
  # Release - Build
  if(CMAKE_BUILD_TYPE STREQUAL Release)
- 	
+-	
++
  	# add defines
 -	add_definitions(${CommonFlags} ${OptimizationFlags})
 +	add_definitions(${CommonFlags} ${OptimizationFlags} ${BadFlags_O0} ${BadFlags_O1} ${BadFlags_O2})
  endif(CMAKE_BUILD_TYPE STREQUAL Release)
  
  # variable with all sources of this library
+@@ -178,7 +172,7 @@
+ 
+ # link target with wx
+ target_link_libraries(${UtilitiesName} ${wxWidgets_LIBRARIES})
+- 
++
+ # Force the linker into 32 bits mode
+ target_link_libraries(${UtilitiesName} -m32)
+ 

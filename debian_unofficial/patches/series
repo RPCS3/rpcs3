@@ -1,15 +1,8 @@
 01_rename_binary_generated.patch
 02_update_default_path.patch
-03_central_userconfig_function.patch
-04_xdg_config_home.patch
 05_move_data_to_config.patch
 21_use_legacy_soundtouch_13.patch
-# Regression
-#33_clean_fpic.patch
 # Personnal patch that need advance testing
-#43_fix_snapshot_path.patch
-#44_cpu_count.patch
-#50_zzogl_play.patch
 #55_cmake_opt_clean.patch
 #56_cmake_enable_opt1.patch
-#facility_for_my_personal_system.patch
+#57_cmake_enable_opt2.patch

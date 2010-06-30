@@ -1,8 +1,14 @@
-Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
+Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/common/src/Utilities/CMakeLists.txt	2010-06-15 13:14:33.598334111 +0200
-+++ pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt	2010-06-15 13:14:33.901074350 +0200
-@@ -39,15 +39,6 @@
+--- pcsx2.snapshot-3337.orig/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
++++ pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.330002361 +0200
+@@ -39,21 +39,9 @@
+ 
+ # Remove optimization that can break the code. Must be retested
+ set(BadFlags_O0
+-    -fno-guess-branch-probability
+-    -fno-dse
+-    -fno-tree-dse
      )
  
  set(BadFlags_O1
@@ -18,11 +24,17 @@ Index: pcsx2.snapshot-3208/common/src/Utilities/CMakeLists.txt
      )
  
  
-Index: pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt
+Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/common/src/x86emitter/CMakeLists.txt	2010-06-15 13:14:33.597334089 +0200
-+++ pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt	2010-06-15 13:14:33.901074350 +0200
-@@ -39,15 +39,6 @@
+--- pcsx2.snapshot-3337.orig/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
++++ pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
+@@ -39,21 +39,9 @@
+ 
+ # Remove optimization that can break the code. Must be retested
+ set(BadFlags_O0
+-    -fno-guess-branch-probability
+-    -fno-dse
+-    -fno-tree-dse
      )
  
  set(BadFlags_O1
@@ -38,11 +50,17 @@ Index: pcsx2.snapshot-3208/common/src/x86emitter/CMakeLists.txt
      )
  
  
-Index: pcsx2.snapshot-3208/pcsx2/CMakeLists.txt
+Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3208.orig/pcsx2/CMakeLists.txt	2010-06-15 13:14:33.597334089 +0200
-+++ pcsx2.snapshot-3208/pcsx2/CMakeLists.txt	2010-06-15 13:14:33.902074456 +0200
-@@ -36,15 +36,6 @@
+--- pcsx2.snapshot-3337.orig/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.082609942 +0200
++++ pcsx2.snapshot-3337/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
+@@ -36,21 +36,9 @@
+ 
+ # Remove optimization that can break the code. Must be retested
+ set(BadFlags_O0
+-    -fno-guess-branch-probability
+-    -fno-dse
+-    -fno-tree-dse
      )
  
  set(BadFlags_O1
