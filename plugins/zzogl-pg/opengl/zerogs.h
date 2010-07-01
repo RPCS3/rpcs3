@@ -320,7 +320,7 @@ extern bool g_bDisplayMsg;
 extern bool g_bDisplayFPS;
 
 extern int g_nDepthBias;
-extern bool g_bSaveFlushedFrame;
+extern u32 g_bSaveFlushedFrame;	// this is currently *not* used as a bool, in spite of its moniker --air
 extern u8* s_lpShaderResources;
 extern u32 g_SaveFrameNum;
 extern int s_nWriteDepthCount;
