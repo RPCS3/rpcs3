@@ -1105,7 +1105,7 @@ extern void gsPath1Interrupt();
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
-	u32 diff  = 0x400;
+	u32 diff  = 0x400 - addr;
 	u32 size;
 	u8* pDest;
 	

@@ -370,7 +370,7 @@ static __forceinline void gsHandler(const u8* pMem)
 #define incTag(x, y) do {				\
 	pMem += (x);						\
 	size -= (y);						\
-	if (pMem>=vuMemEnd) pMem -= 0x4000;	\
+	/*if (pMem>=vuMemEnd) pMem -= 0x4000;*/	\
 } while(false)
 
 #define aMin(x, y) std::min(x, y)
@@ -398,9 +398,28 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 				{
 					GIF_LOG("Packed Mode");
 					numregs	= ((tag.NREG-1)&0xf) + 1;
-					u32 len = aMin(size, nloop * numregs);
-					if(len < (nloop * numregs)) nloop -= len / numregs;
-					else nloop = 0;
+					u32 len = aMin(size, (nloop * numregs) - curreg);
+					if(len < ((nloop * numregs) - curreg)) 
+					{
+						int curregtemp = 0;
+						int oldnloop = (nloop * numregs) - curreg;
+						curregtemp = len / numregs; //Divide the size by numregs, this should get rid of any remainder
+						nloop -= curregtemp;
+						curregtemp *= numregs; //multiply it again so we have a total size value							
+						curregtemp = len - curregtemp; //take the temp figure from the size, which should leave the remainder
+						//AKA current reg :)
+						if(curregtemp > 0) 
+						{
+							DevCon.Warning("Currtemp = %x size %x nloop * nregs %x", curregtemp, size, oldnloop);
+							curreg = curregtemp;
+						}
+						
+					}
+					else 
+					{
+						curreg = 0;
+						nloop = 0;
+					}
 					incTag(16 * len, len);
 				}
 				break;
@@ -429,6 +448,23 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 				break;
 			}
 		}
+		if(pathidx == GIF_PATH_1)
+		{
+			if(size == 0 && (!tag.EOP || nloop > 0)) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
+			{
+				if(startSize < 0x400)
+				{
+					size = 0x400 - startSize;
+					startSize = 0x400;
+					pMem -= 0x4000;
+				}
+				else
+				{
+					size = 0;
+					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
+				}
+			}
+		}
 		if (tag.EOP && !nloop) break;
 	}
 
@@ -440,7 +476,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 
 __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
-	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
+	//const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
 	u32	startSize =  size;						// Start Size
 
 	while (size > 0) {
@@ -561,7 +597,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							//AKA current reg :)
 							if(curregtemp > 0) 
 							{
-								DevCon.Warning("Currtemp = %x size %x nloop * nregs %x", curregtemp, size, oldnloop);
+								//DevCon.Warning("Currtemp = %x size %x nloop * nregs %x", curregtemp, size, oldnloop);
 								curreg = curregtemp;
 							}
 							
@@ -598,6 +634,26 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					nloop -= len;
 				}
 				break;
+			}
+			
+
+		}
+
+		if(pathidx == GIF_PATH_1)
+		{
+			if(size == 0 && (!tag.EOP || nloop > 0)) //Need to check all of this, some cases VU will send info (like the BIOS) but be incomplete
+			{
+				if(startSize < 0x3ff)
+				{
+					size = 0x3ff - startSize;
+					startSize = 0x3ff;
+					pMem -= 0x4000;
+				}
+				else
+				{
+					size = 0;
+					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
+				}
 			}
 		}
 

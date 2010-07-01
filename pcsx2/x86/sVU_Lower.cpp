@@ -1974,7 +1974,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	addr &= 0x3fff;
 	u8* data  = VU1.Mem + (addr);
-	u32 diff  = 0x400;
+	u32 diff  = 0x400 - (addr >> 4);
 	u32 size;
 	u8* pDest;
 
