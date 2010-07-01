@@ -155,7 +155,12 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 
 		CfgOpenFile();
 
-		LoadConf();
+		if (IsoFile[0] == 0)
+		{
+			// user pressed CANCEL
+			return 1;
+		}
+		
 		strcpy(temp, IsoFile);
 		*IsoFile = 0;
 		SaveConf();
@@ -226,6 +231,7 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 
 EXPORT_C_(void) CDVDclose()
 {
+	if (!iso) return;
 
 	strcpy(cdvdCurrentIso, IsoFile);
 
@@ -235,6 +241,8 @@ EXPORT_C_(void) CDVDclose()
 
 EXPORT_C_(s32) CDVDreadSubQ(u32 lsn, cdvdSubQ* subq)
 {
+	if (!iso) return -1;
+
 	// fake it
 	u8 min, sec, frm;
 	subq->ctrl		= 4;
@@ -266,6 +274,8 @@ EXPORT_C_(s32) CDVDgetTN(cdvdTN *Buffer)
 
 EXPORT_C_(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
 {
+	if (!iso) return -1;
+
 	if (Track == 0)
 	{
 		Buffer->lsn = iso->blocks;
@@ -297,6 +307,8 @@ static bool testForPartitionInfo( const u8 (&tempbuffer)[CD_FRAMESIZE_RAW] )
 
 EXPORT_C_(s32) CDVDgetTOC(void* toc)
 {
+	if (!iso) return -1;
+	
 	u8 type = CDVDgetDiskType();
 	u8* tocBuff = (u8*)toc;
 
@@ -471,6 +483,8 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 
 EXPORT_C_(s32) CDVDreadTrack(u32 lsn, int mode)
 {
+	if (!iso) return -1;
+
 	int _lsn = lsn;
 
 	//__Log("CDVDreadTrack: %x %x\n", lsn, mode);
