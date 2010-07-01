@@ -1,0 +1,15 @@
+need libsoundtouch v1.5
+
+* policy bin2cpp tool ??
+    May be we could pregenerate the file in the upstream tar ball!!
+
+* copyright and doc stuff
+    Lots of work to do here.
+
+## 64 bit
+nvidia-cg-toolkit: propably need a special package for 32 bits version
+ia32-libs: add libportaudio, libsoundtouch, libglew
+ia32-libs: add .so symlink for compilation
+ia32-libs-gtk: add libwxbase2.8 and libwxgtk2.8 (warning a architecture dependant include file (in -dev package) is also needed)
+ia32-libs-gtk: add .so symlink for compilation
+

@@ -1,0 +1,11 @@
+pcsx2.snapshot for Debian
+-------------------------
+
+* This version have some majors modification against default upstream
+    -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
+    -> some features was removed to compile against libsound 1.3. Pcsx2 
+       needs the version 1.5
+
+* This package is highly experimental.
+
+ -- Gregory Hainaut <gregory.hainaut@gmail.com>  Sat, 24 Apr 2010 23:11:10 +0200
