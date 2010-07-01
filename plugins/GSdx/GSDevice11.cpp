@@ -97,7 +97,16 @@ static void* GetDX11Proc( const char* methodname )
 
 bool GSUtil::IsDirect3D11Available()
 {
-	if( !DXUTDelayLoadDXGI() ) return false;
+	static bool m_CheckRun = false;
+
+	if (m_CheckRun) return m_D3D11Available;
+	m_CheckRun = true;
+
+	if( !DXUTDelayLoadDXGI() )
+	{
+		m_D3D11Available = false;
+		return false;
+	}
 
 	CComPtr<ID3D11Device> dev;
 	CComPtr<ID3D11DeviceContext> ctx;
@@ -107,14 +116,16 @@ bool GSUtil::IsDirect3D11Available()
 		D3D11_SDK_VERSION, &dev, &level, &ctx);
 
 	m_D3D11Available = !FAILED(hr);
-	m_HasD3D11Features = (level == D3D_FEATURE_LEVEL_11_0);
+	m_HasD3D11Features = (level >= D3D_FEATURE_LEVEL_11_0);
+
+	UnloadDynamicLibraries();
 
 	return m_D3D11Available;
 }
 
 bool GSUtil::HasD3D11Features()
 {
-	return m_D3D11Available && m_HasD3D11Features;
+	return IsDirect3D11Available() && m_HasD3D11Features;
 }
 
 void GSUtil::UnloadDynamicLibraries()
