@@ -1421,11 +1421,6 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 			mem += sizeof(GIFTag);
 			size--;
 
-			if(index == 2 && path.tag.EOP)
-			{
-				m_path3hack = 1;
-			}
-
 			if(path.nloop > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
 				m_q = 1.0f;
@@ -1554,13 +1549,13 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 			}
 		}
 
-		if(index == 0)
+		/*if(index == 0)
 		{
 			if(path.tag.EOP && path.nloop == 0)
 			{
 				break;
 			}
-		}
+		}*/
 	}
 
 	if(m_dump && mem > start)
@@ -1568,7 +1563,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 		m_dump.Transfer(index, start, mem - start);
 	}
 
-	if(index == 0)
+	/*if(index == 0)
 	{
 		if(size == 0 && path.nloop > 0)
 		{
@@ -1583,7 +1578,7 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 				Transfer<0>(mem - 0x4000, 0x4000 / 16);
 			}
 		}
-	}
+	}*/
 }
 
 template<class T> static void WriteState(uint8*& dst, T* src, size_t len = sizeof(T))
