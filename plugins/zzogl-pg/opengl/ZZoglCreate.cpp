@@ -180,7 +180,7 @@ u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
 bool g_bDisplayMsg = 1;
 int g_nDepthBias = 0;
-bool g_bSaveFlushedFrame = 0;
+u32 g_bSaveFlushedFrame = 0;
 
 //------------------ Code
 
