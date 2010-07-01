@@ -100,7 +100,7 @@ GSPanel::GSPanel( wxWindow* parent )
 
 GSPanel::~GSPanel() throw()
 {
-	CoreThread.Suspend( false );		// Just in case...!
+	//CoreThread.Suspend( false );		// Just in case...!
 }
 
 void GSPanel::DoShowMouse()
