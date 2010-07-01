@@ -121,6 +121,8 @@ static void _Suspend()
 
 void AppCoreThread::Suspend( bool isBlocking )
 {
+	if (IsClosed()) return;
+
 	if (IsSelf())
 	{
 		// this should never fail...

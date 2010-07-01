@@ -275,7 +275,7 @@ bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 
 bool MainEmuFrame::_DoSelectELFBrowser()
 {
-	static const wxChar* elfFilterType = L"ELF Files (.elf)|*.elf;*.ELF|";
+	static const wxChar* elfFilterType = L"ELF Files (.elf)|*.elf;*.ELF";
 
 	wxFileDialog ctrl( this, _("Select ELF file..."), g_Conf->Folders.RunELF.ToString(), wxEmptyString,
 		(wxString)elfFilterType + L"|" + _("All Files (*.*)") + L"|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST );
