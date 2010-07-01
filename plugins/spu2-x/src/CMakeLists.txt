@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CommonFlags
     -Wall
     -m32
-    -FPIC
+    -fPIC
     -msse2
     )
 

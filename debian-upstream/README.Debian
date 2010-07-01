@@ -1,5 +1,5 @@
-pcsx2.snapshot for Debian
--------------------------
+    pcsx2 for debian
+=========================
 
 * This version have some majors modification against default upstream
     -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
@@ -7,5 +7,7 @@ pcsx2.snapshot for Debian
        needs the version 1.5
 
 * This package is highly experimental.
+
+* Documentation needs some loves. Feel free to help.
 
  -- Gregory Hainaut <gregory.hainaut@gmail.com>  Sat, 24 Apr 2010 23:11:10 +0200

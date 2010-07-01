@@ -1,5 +1,3 @@
-# it would may be a good idea to use only 1 package for both pcsx2 and plugins. Both are required anyway.
-
 Source: pcsx2.snapshot
 Section: games
 Priority: optional
@@ -17,7 +15,7 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.7.1), cmake (>=2.8),
     libasound2-dev | lib32asound2 [amd64],
     portaudio19-dev,
 # version not yet in debian 
-# libsoundtouch1-dev (>= 1.4),
+# libsoundtouch1-dev (>= 1.5),
 # I patch the source (remove feature) to compile with version 1.3
     libsoundtouch1-dev (>= 1.3),
     libsparsehash-dev (>=1.6),
@@ -27,10 +25,9 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.7.1), cmake (>=2.8),
     libgl1-mesa-dev,
     libglu1-mesa-dev,
 # my nmu: add 32bits packages
-# TODO repackage with a local in the name (to avoid conflict with debian real nmu)
     nvidia-cg-toolkit (>= 2.1.0017.deb1) | nvidia-cg-toolkit (>= 2.1.0017.deb1+nmu2) [amd64],
     ia32-libs (>= 20090808+nmu7) [amd64], ia32-libs-gtk (= 20100503+local1) [amd64]
-Standards-Version: 3.8.4
+Standards-Version: 3.9.0
 Homepage: http://pcsx2.net/
 
 Package: pcsx2
@@ -48,12 +45,6 @@ Description: Playstation 2 emulator
  .
  This package includes the main binary file.
 
-Package: pcsx2-dbg
-Section: devel
-# Warning amd64 need additional ia32libs
-Architecture: i386 amd64
-Depends: ${misc:Depends}, pcsx2 (= ${binary:Version})
-Description: Debug symbols for pcsx2
 
 Package: pcsx2-data
 Architecture: all 
@@ -85,9 +76,28 @@ Description: Various plugins for pcsx2
  .
  This package includes the plugins of the emulator.
 
+Package: pcsx2-dbg
+Section: debug
+Priority: extra
+# Warning amd64 need additional ia32libs
+Architecture: i386 amd64
+Depends: ${misc:Depends}, pcsx2 (= ${binary:Version})
+Description: Debug symbols for pcsx2
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ This package contains the debug symbol of pcsx2.
+
 Package: pcsx2-plugins-dbg
-Section: devel
+Section: debug
+Priority: extra
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
 Depends: ${misc:Depends}, pcsx2-plugins (= ${binary:Version})
 Description: Debug symbols for pcsx2-plugins
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ This package contains the debug symbol of pcsx2 plugins.

@@ -1,10 +1,9 @@
 [Desktop Entry]
 Version=1.0
-Encoding=UTF-8
 Type=Application
 Name=PCSX2
 GenericName=Playstation 2 Emulator
 Comment=Sony Playstation 2 emulator
 Exec=pcsx2
 Icon=pcsx2
-Categories=Application;Game;Emulator;GTK
+Categories=Game;Emulator;GTK;

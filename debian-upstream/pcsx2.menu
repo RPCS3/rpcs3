@@ -1,4 +1,4 @@
-?package(pcsx2.snapshot): \
+?package(pcsx2): \
     needs="X11" \
     section="Applications/Emulators" \
     title="pcsx2" \
