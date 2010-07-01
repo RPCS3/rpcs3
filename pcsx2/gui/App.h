@@ -494,7 +494,6 @@ public:
 	void SysApplySettings();
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
-	void SysShutdown();
 	void LogicalVsync();
 	
 	GSFrame&		GetGsFrame() const;
@@ -693,7 +692,7 @@ extern MainEmuFrame*	GetMainFramePtr();
 
 extern __aligned16 AppCoreThread CoreThread;
 extern __aligned16 SysMtgsThread mtgsThread;
-extern __aligned16 AppPluginManager CorePlugins;
+extern __aligned16 AppCorePlugins CorePlugins;
 
 extern void UI_UpdateSysControls();
 

@@ -40,31 +40,34 @@ class SysExecEvent_InvokeCoreThreadMethod : public SysExecEvent
 {
 protected:
 	FnPtr_CoreThreadMethod	m_method;
+	bool	m_IsCritical;
 
 public:
 	wxString GetEventName() const { return L"CoreThreadMethod"; }
 	virtual ~SysExecEvent_InvokeCoreThreadMethod() throw() {}
 	SysExecEvent_InvokeCoreThreadMethod* Clone() const { return new SysExecEvent_InvokeCoreThreadMethod(*this); }
+
+	bool AllowCancelOnExit() const { return false; }
+	bool IsCriticalEvent() const { return m_IsCritical; }
 	
-	SysExecEvent_InvokeCoreThreadMethod( FnPtr_CoreThreadMethod method )
+	SysExecEvent_InvokeCoreThreadMethod( FnPtr_CoreThreadMethod method, bool critical=false )
 	{
 		m_method = method;
+		m_IsCritical = critical;
 	}
-	
+
+	SysExecEvent_InvokeCoreThreadMethod& Critical()
+	{
+		m_IsCritical = true;
+		return *this;
+	}
+
 protected:
 	void InvokeEvent()
 	{
 		if( m_method ) (CoreThread.*m_method)();
 	}
 };
-
-bool ProcessingMethodViaThread( FnPtr_CoreThreadMethod method )
-{
-	if( GetSysExecutorThread().IsSelf() ) return false;
-	SysExecEvent_InvokeCoreThreadMethod evt( method );
-	GetSysExecutorThread().ProcessEvent( evt );
-	return false;
-}
 
 static void PostCoreStatus( CoreThreadStatus pevt )
 {
@@ -84,17 +87,26 @@ AppCoreThread::~AppCoreThread() throw()
 	_parent::Cancel();		// use parent's, skips thread affinity check.
 }
 
-void AppCoreThread::Cancel( bool isBlocking )
+static void _Cancel()
 {
-	AffinityAssert_AllowFrom_SysExecutor();
-	_parent::Cancel( wxTimeSpan(0, 0, 2, 0) );
+	GetCoreThread().Cancel();
 }
 
-void AppCoreThread::Shutdown()
+void AppCoreThread::Cancel( bool isBlocking )
 {
-	AffinityAssert_AllowFrom_SysExecutor();
+	if (GetSysExecutorThread().IsRunning() && !GetSysExecutorThread().Rpc_TryInvoke( _Cancel ))
+		_parent::Cancel( wxTimeSpan(0, 0, 4, 0) );
+}
+
+void AppCoreThread::Reset()
+{
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		GetSysExecutorThread().PostEvent( SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::Reset) );
+		return;
+	}
+
 	_parent::Reset();
-	CorePlugins.Shutdown();
 }
 
 ExecutorThread& GetSysExecutorThread()
@@ -121,18 +133,14 @@ void AppCoreThread::Suspend( bool isBlocking )
 
 void AppCoreThread::Resume()
 {
-	//if( !AffinityAssert_AllowFrom_SysExecutor() ) return;
 	if( !GetSysExecutorThread().IsSelf() )
 	{
 		GetSysExecutorThread().PostEvent( SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::Resume) );
 		return;
 	}
 
-	//if( m_ExecMode == ExecMode_Opened ) return;
-	//if( !pxAssert( CorePlugins.AreLoaded() ) ) return;
-
+	GetCorePlugins().Init();
 	_parent::Resume();
-
 }
 
 void AppCoreThread::ChangeCdvdSource()
@@ -482,9 +490,28 @@ void SysExecEvent_CoreThreadClose::InvokeEvent()
 
 void SysExecEvent_CoreThreadPause::InvokeEvent()
 {
+#ifdef PCSX2_DEVBUILD
+	bool CorePluginsAreOpen = GetCorePlugins().AreOpen();
+	ScopedCoreThreadPause paused_core;
+	_post_and_wait(paused_core);
+
+	// All plugins should be initialized and opened upon resuming from 
+	// a paused state.  If the thread that puased us changed plugin status, it should
+	// have used Close instead.
+	if( CorePluginsAreOpen )
+	{
+		CorePluginsAreOpen = GetCorePlugins().AreOpen();
+		pxAssumeDev( CorePluginsAreOpen, "Invalid plugin close/shutdown detected during paused CoreThread; please Stop/Suspend the core instead." );
+	}
+	paused_core.AllowResume();
+
+#else
+
 	ScopedCoreThreadPause paused_core;
 	_post_and_wait(paused_core);
 	paused_core.AllowResume();
+
+#endif
 }	
 
 

@@ -324,7 +324,7 @@ bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method )
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
 		SynchronousActionState sync;
-		SysExecEvent_MethodVoid evt(method);
+		SysExecEvent_MethodVoid evt(method, true);
 		evt.SetSyncState( sync );
 		PostEvent( evt );
 		sync.WaitForResult();
@@ -419,6 +419,12 @@ void WaitingForThreadedTaskDialog::OnTerminateApp_Clicked( wxCommandEvent& evt )
 ExecutorThread::ExecutorThread( pxEvtHandler* evthandler )
 {
 	m_EvtHandler = evthandler;
+}
+
+bool ExecutorThread::IsRunning() const
+{
+	if( !m_EvtHandler ) return false;
+	return( !m_EvtHandler->IsShuttingDown() );
 }
 
 // Exposes the internal pxEvtHandler::ShutdownQueue API.  See pxEvtHandler for details.

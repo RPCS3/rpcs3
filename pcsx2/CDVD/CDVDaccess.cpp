@@ -332,7 +332,8 @@ bool DoCDVDopen()
 		m_SourceFilename[m_CurrentSourceType].ToUTF8() : (char*)NULL
 	);
 
-	if( ret == -1 ) return false;
+	if( ret == -1 ) return false;	// error! (handled by caller)
+	if( ret == 1 )	throw Exception::CancelEvent(L"User canceled the CDVD plugin's open dialog.");
 
 	int cdtype = DoCDVDdetectDiskType();
 

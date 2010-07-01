@@ -611,7 +611,7 @@ static const LegacyApi_OptMethod* const s_MethMessOpt[] =
 	s_MethMessOpt_DEV9
 };
 
-PluginManager *g_plugins = NULL;
+SysCorePlugins *g_plugins = NULL;
 
 // ---------------------------------------------------------------------------------
 //       Plugin-related Exception Implementations
@@ -721,7 +721,7 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 // ---------------------------------------------------------------------------------
 //  PluginStatus_t Implementations
 // ---------------------------------------------------------------------------------
-PluginManager::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxString& srcfile )
+SysCorePlugins::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxString& srcfile )
 	: Filename( srcfile )
 {
 	pid = _pid;
@@ -784,7 +784,7 @@ PluginManager::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxStrin
 			.SetUserMsg(_("The plugin reports that your hardware or software/drivers are not supported."));
 }
 
-void PluginManager::PluginStatus_t::BindCommon( PluginsEnum_t pid )
+void SysCorePlugins::PluginStatus_t::BindCommon( PluginsEnum_t pid )
 {
 	const LegacyApi_CommonMethod* current = s_MethMessCommon;
 	VoidMethod** target = (VoidMethod**)&CommonBindings;
@@ -810,7 +810,7 @@ void PluginManager::PluginStatus_t::BindCommon( PluginsEnum_t pid )
 	}
 }
 
-void PluginManager::PluginStatus_t::BindRequired( PluginsEnum_t pid )
+void SysCorePlugins::PluginStatus_t::BindRequired( PluginsEnum_t pid )
 {
 	const LegacyApi_ReqMethod* current = s_MethMessReq[pid];
 	const wxDynamicLibrary& lib = Lib;
@@ -835,7 +835,7 @@ void PluginManager::PluginStatus_t::BindRequired( PluginsEnum_t pid )
 	}
 }
 
-void PluginManager::PluginStatus_t::BindOptional( PluginsEnum_t pid )
+void SysCorePlugins::PluginStatus_t::BindOptional( PluginsEnum_t pid )
 {
 	const LegacyApi_OptMethod* current = s_MethMessOpt[pid];
 	const wxDynamicLibrary& lib = Lib;
@@ -850,14 +850,14 @@ void PluginManager::PluginStatus_t::BindOptional( PluginsEnum_t pid )
 }
 
 // =====================================================================================
-//  PluginManager Implementations
+//  SysCorePlugins Implementations
 // =====================================================================================
 
-PluginManager::PluginManager()
+SysCorePlugins::SysCorePlugins()
 {
 }
 
-PluginManager::~PluginManager() throw()
+SysCorePlugins::~SysCorePlugins() throw()
 {
 	try
 	{
@@ -868,7 +868,7 @@ PluginManager::~PluginManager() throw()
 	// All library unloading done automatically by wx.
 }
 
-void PluginManager::Load( PluginsEnum_t pid, const wxString& srcfile )
+void SysCorePlugins::Load( PluginsEnum_t pid, const wxString& srcfile )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
@@ -876,7 +876,7 @@ void PluginManager::Load( PluginsEnum_t pid, const wxString& srcfile )
 	m_info[pid] = new PluginStatus_t( pid, srcfile );
 }
 
-void PluginManager::Load( const wxString (&folders)[PluginId_Count] )
+void SysCorePlugins::Load( const wxString (&folders)[PluginId_Count] )
 {
 	if( !NeedsLoad() ) return;
 
@@ -934,14 +934,14 @@ void PluginManager::Load( const wxString (&folders)[PluginId_Count] )
 	SendSettingsFolder();
 }
 
-void PluginManager::Unload(PluginsEnum_t pid)
+void SysCorePlugins::Unload(PluginsEnum_t pid)
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
 	m_info[pid].Delete();
 }
 
-void PluginManager::Unload()
+void SysCorePlugins::Unload()
 {
 	if( NeedsShutdown() )
 		Console.Warning( "(SysCorePlugins) Warning: Unloading plugins prior to shutdown!" );
@@ -967,23 +967,23 @@ extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
 
-bool PluginManager::OpenPlugin_CDVD()
+bool SysCorePlugins::OpenPlugin_CDVD()
 {
 	return DoCDVDopen();
 }
 
-bool PluginManager::OpenPlugin_GS()
+bool SysCorePlugins::OpenPlugin_GS()
 {
 	GetMTGS().Resume();
 	return true;
 }
 
-bool PluginManager::OpenPlugin_PAD()
+bool SysCorePlugins::OpenPlugin_PAD()
 {
 	return !PADopen( (void*)&pDsp );
 }
 
-bool PluginManager::OpenPlugin_SPU2()
+bool SysCorePlugins::OpenPlugin_SPU2()
 {
 	if( SPU2open((void*)&pDsp) ) return false;
 
@@ -997,7 +997,7 @@ bool PluginManager::OpenPlugin_SPU2()
 	return true;
 }
 
-bool PluginManager::OpenPlugin_DEV9()
+bool SysCorePlugins::OpenPlugin_DEV9()
 {
 	dev9Handler = NULL;
 
@@ -1007,7 +1007,7 @@ bool PluginManager::OpenPlugin_DEV9()
 	return true;
 }
 
-bool PluginManager::OpenPlugin_USB()
+bool SysCorePlugins::OpenPlugin_USB()
 {
 	usbHandler = NULL;
 
@@ -1019,14 +1019,14 @@ bool PluginManager::OpenPlugin_USB()
 	return true;
 }
 
-bool PluginManager::OpenPlugin_FW()
+bool SysCorePlugins::OpenPlugin_FW()
 {
 	if( FWopen((void*)&pDsp) ) return false;
 	FWirqCallback( fwIrq );
 	return true;
 }
 
-bool PluginManager::OpenPlugin_Mcd()
+bool SysCorePlugins::OpenPlugin_Mcd()
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1037,7 +1037,7 @@ bool PluginManager::OpenPlugin_Mcd()
 	return true;
 }
 
-void PluginManager::Open( PluginsEnum_t pid )
+void SysCorePlugins::Open( PluginsEnum_t pid )
 {
 	pxAssume( (uint)pid < PluginId_Count );
 	if( IsOpen(pid) ) return;
@@ -1066,7 +1066,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 	if( m_info[pid] ) m_info[pid]->IsOpened = true;
 }
 
-void PluginManager::Open()
+void SysCorePlugins::Open()
 {
 	Init();
 
@@ -1095,13 +1095,13 @@ void PluginManager::Open()
 	Console.WriteLn( Color_StrongBlue, "Plugins opened successfully." );
 }
 
-void PluginManager::_generalclose( PluginsEnum_t pid )
+void SysCorePlugins::_generalclose( PluginsEnum_t pid )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_info[pid] ) m_info[pid]->CommonBindings.Close();
 }
 
-void PluginManager::ClosePlugin_GS()
+void SysCorePlugins::ClosePlugin_GS()
 {
 	// old-skool: force-close PAD before GS, because the PAD depends on the GS window.
 
@@ -1114,43 +1114,43 @@ void PluginManager::ClosePlugin_GS()
 	}
 }
 
-void PluginManager::ClosePlugin_CDVD()
+void SysCorePlugins::ClosePlugin_CDVD()
 {
 	DoCDVDclose();
 }
 
-void PluginManager::ClosePlugin_PAD()
+void SysCorePlugins::ClosePlugin_PAD()
 {
 	_generalclose( PluginId_PAD );
 }
 
-void PluginManager::ClosePlugin_SPU2()
+void SysCorePlugins::ClosePlugin_SPU2()
 {
 	_generalclose( PluginId_SPU2 );
 }
 
-void PluginManager::ClosePlugin_DEV9()
+void SysCorePlugins::ClosePlugin_DEV9()
 {
 	_generalclose( PluginId_DEV9 );
 }
 
-void PluginManager::ClosePlugin_USB()
+void SysCorePlugins::ClosePlugin_USB()
 {
 	_generalclose( PluginId_USB );
 }
 
-void PluginManager::ClosePlugin_FW()
+void SysCorePlugins::ClosePlugin_FW()
 {
 	_generalclose( PluginId_FW );
 }
 
-void PluginManager::ClosePlugin_Mcd()
+void SysCorePlugins::ClosePlugin_Mcd()
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( SysPlugins.Mcd ) SysPlugins.Mcd->Base.EmuClose( (PS2E_THISPTR) SysPlugins.Mcd );
 }
 
-void PluginManager::Close( PluginsEnum_t pid )
+void SysCorePlugins::Close( PluginsEnum_t pid )
 {
 	pxAssume( (uint)pid < PluginId_Count );
 
@@ -1177,7 +1177,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 	if( m_info[pid] ) m_info[pid]->IsOpened = false;
 }
 
-void PluginManager::Close()
+void SysCorePlugins::Close()
 {
 	if( !NeedsClose() ) return;	// Spam stopper; returns before writing any logs. >_<
 
@@ -1198,7 +1198,7 @@ void PluginManager::Close()
 	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }
 
-void PluginManager::Init( PluginsEnum_t pid )
+void SysCorePlugins::Init( PluginsEnum_t pid )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1211,7 +1211,7 @@ void PluginManager::Init( PluginsEnum_t pid )
 	m_info[pid]->IsInitialized = true;
 }
 
-void PluginManager::Shutdown( PluginsEnum_t pid )
+void SysCorePlugins::Shutdown( PluginsEnum_t pid )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1225,13 +1225,16 @@ void PluginManager::Shutdown( PluginsEnum_t pid )
 // session.  During a session emulation can be paused/resumed using Open/Close, and should be
 // terminated using Shutdown().
 //
+// Returns TRUE if an init was performed for any (or all) plugins.  Returns FALSE if all
+// plugins were already in an initialized state (no action taken).
+//
 // In a purist emulation sense, Init() and Shutdown() should only ever need be called for when
 // the PS2's hardware has received a *full* hard reset.  Soft resets typically should rely on
 // the PS2's bios/kernel to re-initialize hardware on the fly.
 //
-void PluginManager::Init()
+bool SysCorePlugins::Init()
 {
-	if( !NeedsInit() ) return;
+	if( !NeedsInit() ) return false;
 
 	Console.WriteLn( Color_StrongBlue, "\nInitializing plugins..." );
 	const PluginInfo* pi = tbl_PluginInfo; do {
@@ -1250,18 +1253,22 @@ void PluginManager::Init()
 	}
 
 	Console.WriteLn( Color_StrongBlue, "Plugins initialized successfully.\n" );
+
+	return true;
 }
 
 
 // Shuts down all plugins.  Plugins are closed first, if necessary.
+// Returns TRUE if a shutdown was performed for any (or all) plugins.  Returns FALSE if all
+// plugins were already in shutdown state (no action taken).
 //
 // In a purist emulation sense, Init() and Shutdown() should only ever need be called for when
 // the PS2's hardware has received a *full* hard reset.  Soft resets typically should rely on
 // the PS2's bios/kernel to re-initialize hardware on the fly.
 //
-void PluginManager::Shutdown()
+bool SysCorePlugins::Shutdown()
 {
-	if( !NeedsShutdown() ) return;
+	if( !NeedsShutdown() ) return false;
 
 	pxAssumeDev( !NeedsClose(), "Cannot shut down plugins prior to Close()" );
 	
@@ -1286,11 +1293,13 @@ void PluginManager::Shutdown()
 	}
 
 	DbgCon.WriteLn( Color_StrongGreen, "Plugins shutdown successfully." );
+	
+	return true;
 }
 
 // For internal use only, unless you're the MTGS.  Then it's for you too!
 // Returns false if the plugin returned an error.
-bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
+bool SysCorePlugins::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
 	if( (pid == PluginId_GS) && !GetMTGS().IsSelf() )
 	{
@@ -1312,7 +1321,7 @@ bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 //   as it has special handlers to ensure that GS freeze commands are executed appropriately on the
 //   GS thread.
 //
-void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
+void SysCorePlugins::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 {
 	// No locking leeded -- DoFreeze locks as needed, and this avoids MTGS deadlock.
 	//ScopedLock lock( m_mtx_PluginStatus );
@@ -1361,7 +1370,7 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 	state.CommitBlock( fP.size );
 }
 
-bool PluginManager::KeyEvent( const keyEvent& evt )
+bool SysCorePlugins::KeyEvent( const keyEvent& evt )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1378,7 +1387,7 @@ bool PluginManager::KeyEvent( const keyEvent& evt )
 	return false;
 }
 
-void PluginManager::SendSettingsFolder()
+void SysCorePlugins::SendSettingsFolder()
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_SettingsFolder.IsEmpty() ) return;
@@ -1390,7 +1399,7 @@ void PluginManager::SendSettingsFolder()
 	} while( ++pi, pi->shortname != NULL );
 }
 
-void PluginManager::SetSettingsFolder( const wxString& folder )
+void SysCorePlugins::SetSettingsFolder( const wxString& folder )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1402,10 +1411,9 @@ void PluginManager::SetSettingsFolder( const wxString& folder )
 	
 	if( m_SettingsFolder == fixedfolder ) return;
 	m_SettingsFolder = fixedfolder;
-	SendSettingsFolder();
 }
 
-void PluginManager::SendLogFolder()
+void SysCorePlugins::SendLogFolder()
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_LogFolder.IsEmpty() ) return;
@@ -1413,11 +1421,11 @@ void PluginManager::SendLogFolder()
 	pxToUTF8 utf8buffer( m_LogFolder );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
-		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogFolder( utf8buffer );
+		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogDir( utf8buffer );
 	} while( ++pi, pi->shortname != NULL );
 }
 
-void PluginManager::SetLogFolder( const wxString& folder )
+void SysCorePlugins::SetLogFolder( const wxString& folder )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1429,16 +1437,15 @@ void PluginManager::SetLogFolder( const wxString& folder )
 
 	if( m_LogFolder == fixedfolder ) return;
 	m_LogFolder = fixedfolder;
-	SendLogFolder();
 }
 
-void PluginManager::Configure( PluginsEnum_t pid )
+void SysCorePlugins::Configure( PluginsEnum_t pid )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_info[pid] ) m_info[pid]->CommonBindings.Configure();
 }
 
-bool PluginManager::AreLoaded() const
+bool SysCorePlugins::AreLoaded() const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	for( int i=0; i<PluginId_Count; ++i )
@@ -1449,7 +1456,17 @@ bool PluginManager::AreLoaded() const
 	return true;
 }
 
-bool PluginManager::AreAnyLoaded() const
+bool SysCorePlugins::AreOpen() const
+{
+	ScopedLock lock( m_mtx_PluginStatus );
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		if( !IsOpen(pi->id) ) return false;
+	} while( ++pi, pi->shortname != NULL );
+
+	return true;
+}
+
+bool SysCorePlugins::AreAnyLoaded() const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	for( int i=0; i<PluginId_Count; ++i )
@@ -1460,7 +1477,7 @@ bool PluginManager::AreAnyLoaded() const
 	return false;
 }
 
-bool PluginManager::AreAnyInitialized() const
+bool SysCorePlugins::AreAnyInitialized() const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	const PluginInfo* pi = tbl_PluginInfo; do {
@@ -1470,27 +1487,27 @@ bool PluginManager::AreAnyInitialized() const
 	return false;
 }
 
-bool PluginManager::IsOpen( PluginsEnum_t pid ) const
+bool SysCorePlugins::IsOpen( PluginsEnum_t pid ) const
 {
 	pxAssume( (uint)pid < PluginId_Count );
 	ScopedLock lock( m_mtx_PluginStatus );
-	return m_info[pid] && m_info[pid]->IsOpened;
+	return m_info[pid] && m_info[pid]->IsInitialized && m_info[pid]->IsOpened;
 }
 
-bool PluginManager::IsInitialized( PluginsEnum_t pid ) const
+bool SysCorePlugins::IsInitialized( PluginsEnum_t pid ) const
 {
 	pxAssume( (uint)pid < PluginId_Count );
 	ScopedLock lock( m_mtx_PluginStatus );
 	return m_info[pid] && m_info[pid]->IsInitialized;
 }
 
-bool PluginManager::IsLoaded( PluginsEnum_t pid ) const
+bool SysCorePlugins::IsLoaded( PluginsEnum_t pid ) const
 {
 	pxAssume( (uint)pid < PluginId_Count );
 	return !!m_info[pid];
 }
 
-bool PluginManager::NeedsLoad() const
+bool SysCorePlugins::NeedsLoad() const
 {
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( !IsLoaded(pi->id) ) return true;
@@ -1499,7 +1516,7 @@ bool PluginManager::NeedsLoad() const
 	return false;
 }		
 
-bool PluginManager::NeedsUnload() const
+bool SysCorePlugins::NeedsUnload() const
 {
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( IsLoaded(pi->id) ) return true;
@@ -1508,7 +1525,7 @@ bool PluginManager::NeedsUnload() const
 	return false;
 }		
 
-bool PluginManager::NeedsInit() const
+bool SysCorePlugins::NeedsInit() const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1519,7 +1536,7 @@ bool PluginManager::NeedsInit() const
 	return false;
 }
 
-bool PluginManager::NeedsShutdown() const
+bool SysCorePlugins::NeedsShutdown() const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 
@@ -1530,7 +1547,7 @@ bool PluginManager::NeedsShutdown() const
 	return false;
 }
 
-bool PluginManager::NeedsOpen() const
+bool SysCorePlugins::NeedsOpen() const
 {
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( !IsOpen(pi->id) ) return true;
@@ -1539,7 +1556,7 @@ bool PluginManager::NeedsOpen() const
 	return false;
 }
 
-bool PluginManager::NeedsClose() const
+bool SysCorePlugins::NeedsClose() const
 {
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( IsOpen(pi->id) ) return true;
@@ -1548,14 +1565,14 @@ bool PluginManager::NeedsClose() const
 	return false;
 }
 
-const wxString PluginManager::GetName( PluginsEnum_t pid ) const
+const wxString SysCorePlugins::GetName( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );
 	return m_info[pid] ? m_info[pid]->Name : (wxString)_("Unloaded Plugin");
 }
 
-const wxString PluginManager::GetVersion( PluginsEnum_t pid ) const
+const wxString SysCorePlugins::GetVersion( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssume( (uint)pid < PluginId_Count );

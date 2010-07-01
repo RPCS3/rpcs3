@@ -77,6 +77,7 @@ protected:
 class GSFrame : public wxFrame
 	, public EventListener_AppStatus
 	, public EventListener_CoreThread
+	, public EventListener_Plugins
 {
 	typedef wxFrame _parent;
 
@@ -110,6 +111,8 @@ protected:
 	void AppStatusEvent_OnSettingsApplied();
 	void CoreThread_OnResumed();
 	void CoreThread_OnSuspended();
+	void CoreThread_OnStopped();
+	void CorePlugins_OnShutdown();
 };
 
 // --------------------------------------------------------------------------------------

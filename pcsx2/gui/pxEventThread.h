@@ -107,6 +107,7 @@ class SysExecEvent_MethodVoid : public SysExecEvent
 {
 protected:
 	FnType_Void*	m_method;
+	bool			m_IsCritical;
 
 public:
 	wxString GetEventName() const { return L"MethodVoid"; }
@@ -114,9 +115,21 @@ public:
 	virtual ~SysExecEvent_MethodVoid() throw() {}
 	SysExecEvent_MethodVoid* Clone() const { return new SysExecEvent_MethodVoid( *this ); }
 
-	explicit SysExecEvent_MethodVoid( FnType_Void* method = NULL )	
+	bool AllowCancelOnExit() const { return !m_IsCritical; }
+	bool IsCriticalEvent() const { return m_IsCritical; }
+
+	// Hacky: I don't really like this Critical parameter mess, but I haven't thought
+	// of a better solution (yet).
+	explicit SysExecEvent_MethodVoid( FnType_Void* method = NULL, bool critical=false )	
 	{
 		m_method = method;
+		m_IsCritical = critical;
+	}
+	
+	SysExecEvent_MethodVoid& Critical()
+	{
+		m_IsCritical = true;
+		return *this;
 	}
 	
 protected:
@@ -218,7 +231,8 @@ public:
 	virtual ~ExecutorThread() throw() { }
 
 	virtual void ShutdownQueue();
-
+	bool IsRunning() const;
+	
 	void PostEvent( SysExecEvent* evt );
 	void PostEvent( const SysExecEvent& evt );
 

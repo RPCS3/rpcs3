@@ -879,10 +879,10 @@ void Pcsx2App::CloseGsPanel()
 {
 	if( AppRpc_TryInvoke( &Pcsx2App::CloseGsPanel ) ) return;
 
-	GSFrame* gsFrame = GetGsFramePtr();
-	if( (gsFrame != NULL) && CloseViewportWithPlugins )
+	if (CloseViewportWithPlugins)
 	{
-		if( GSPanel* woot = gsFrame->GetViewport() )
+		if (GSFrame* gsFrame = GetGsFramePtr())
+		if (GSPanel* woot = gsFrame->GetViewport())
 			woot->Destroy();
 	}
 }
@@ -966,7 +966,8 @@ protected:
 
 		DbgCon.WriteLn( Color_Gray, "(SysExecute) received." );
 
-		if( m_UseCDVDsrc ) CoreThread.Shutdown(); else CoreThread.Suspend();
+		CoreThread.Reset();
+
 		CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 		if( m_UseCDVDsrc )
 			CDVDsys_ChangeSource( m_cdvdsrc_type );
@@ -980,8 +981,8 @@ protected:
 	}
 };
 
-// Executes the emulator using a saved/existing virtual machine state and currently
-// configured CDVD source device.
+// This command performs a full closure of any existing VM state and starts a
+// fresh VM with the requested sources.
 void Pcsx2App::SysExecute()
 {
 	SysExecutorThread.PostEvent( new SysExecEvent_Execute() );
@@ -993,36 +994,6 @@ void Pcsx2App::SysExecute()
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override )
 {
 	SysExecutorThread.PostEvent( new SysExecEvent_Execute(cdvdsrc, elf_override) );
-}
-
-// --------------------------------------------------------------------------------------
-//  SysExecEvent_Shutdown
-// --------------------------------------------------------------------------------------
-class SysExecEvent_Shutdown : public SysExecEvent
-{
-public:
-	wxString GetEventName() const
-	{
-		return L"SysShutdown";
-	}
-	
-	wxString GetEventMessage() const
-	{
-		return _("Resetting PS2 virtual machine...");
-	}
-
-protected:
-	void InvokeEvent()
-	{
-		CoreThread.Shutdown();
-	}
-
-};
-
-// Full system reset stops the core thread and unloads all core plugins *completely*.
-void Pcsx2App::SysShutdown()
-{
-	SysExecutorThread.PostEvent( new SysExecEvent_Shutdown() );	
 }
 
 // Returns true if there is a "valid" virtual machine state from the user's perspective.  This

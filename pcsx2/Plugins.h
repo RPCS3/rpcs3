@@ -78,7 +78,7 @@ namespace Exception
 	};
 
 	// Plugin load errors occur when initially trying to load plugins during the
-	// creation of a PluginManager object.  The error may either be due to non-existence,
+	// creation of a SysCorePlugins object.  The error may either be due to non-existence,
 	// corruption, or incompatible versioning.
 	class PluginLoadError : public PluginError
 	{
@@ -178,6 +178,8 @@ namespace Exception
 #	pragma warning(pop)
 #endif
 
+typedef void CALLBACK FnType_SetDir( const char* dir );
+
 // --------------------------------------------------------------------------------------
 //  LegacyPluginAPI_Common
 // --------------------------------------------------------------------------------------
@@ -193,8 +195,9 @@ struct LegacyPluginAPI_Common
 	void (CALLBACK* Shutdown)();
 
 	void (CALLBACK* KeyEvent)( keyEvent* evt );
-	void (CALLBACK* SetSettingsDir)( const char* dir );
-	void (CALLBACK* SetLogFolder)( const char* dir );
+
+	FnType_SetDir* SetSettingsDir;
+	FnType_SetDir* SetLogDir;
 
 	s32  (CALLBACK* Freeze)(int mode, freezeData *data);
 	s32  (CALLBACK* Test)();
@@ -214,7 +217,7 @@ class SysMtgsThread;
 //  PluginBindings
 // --------------------------------------------------------------------------------------
 // This structure is intended to be the "future" of PCSX2's plugin interface, and will hopefully
-// make the current PluginManager largely obsolete (with the exception of the general Load/Unload
+// make the current SysCorePlugins largely obsolete (with the exception of the general Load/Unload
 // management facilities)
 //
 class SysPluginBindings
@@ -235,18 +238,18 @@ public:
 	void McdEraseBlock( uint port, uint slot, u32 adr );
 	u64  McdGetCRC( uint port, uint slot );
 
-	friend class PluginManager;
+	friend class SysCorePlugins;
 };
 
 extern SysPluginBindings SysPlugins;
 
 // --------------------------------------------------------------------------------------
-//  PluginManager Class
+//  SysCorePlugins Class
 // --------------------------------------------------------------------------------------
 //
-class PluginManager
+class SysCorePlugins
 {
-	DeclareNoncopyableObject( PluginManager );
+	DeclareNoncopyableObject( SysCorePlugins );
 
 protected:
 	class PluginStatus_t
@@ -292,8 +295,8 @@ public:		// hack until we unsuck plugins...
 	ScopedPtr<PluginStatus_t>	m_info[PluginId_Count];
 
 public:
-	PluginManager();
-	virtual ~PluginManager() throw();
+	SysCorePlugins();
+	virtual ~SysCorePlugins() throw();
 
 	virtual void Load( PluginsEnum_t pid, const wxString& srcfile );
 	virtual void Load( const wxString (&folders)[PluginId_Count] );
@@ -301,15 +304,16 @@ public:
 	virtual void Unload( PluginsEnum_t pid );
 
 	bool AreLoaded() const;
+	bool AreOpen() const;
 	bool AreAnyLoaded() const;
 	bool AreAnyInitialized() const;
 	
 	Threading::Mutex& GetMutex() { return m_mtx_PluginStatus; }
 
-	virtual void Init();
+	virtual bool Init();
 	virtual void Init( PluginsEnum_t pid );
 	virtual void Shutdown( PluginsEnum_t pid );
-	virtual void Shutdown();
+	virtual bool Shutdown();
 	virtual void Open();
 	virtual void Open( PluginsEnum_t pid );
 	virtual void Close( PluginsEnum_t pid );
@@ -325,8 +329,8 @@ public:
 	virtual bool KeyEvent( const keyEvent& evt );
 	virtual void Configure( PluginsEnum_t pid );
 	virtual void SetSettingsFolder( const wxString& folder );
+	virtual void SetLogFolder( const wxString& folder );
 	virtual void SendSettingsFolder();
-    virtual void SetLogFolder( const wxString& folder );
 	virtual void SendLogFolder();
 
 
@@ -370,10 +374,10 @@ extern const PluginInfo tbl_PluginInfo[];
 
 // GetPluginManager() is a required external implementation. This function is *NOT*
 // provided by the PCSX2 core library.  It provides an interface for the linking User
-// Interface apps or DLLs to reference their own instance of PluginManager (also allowing
+// Interface apps or DLLs to reference their own instance of SysCorePlugins (also allowing
 // them to extend the class and override virtual methods).
 
-extern PluginManager& GetCorePlugins();
+extern SysCorePlugins& GetCorePlugins();
 
 // Hack to expose internal MemoryCard plugin:
 

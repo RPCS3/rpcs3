@@ -317,11 +317,17 @@ void GSFrame::CoreThread_OnResumed()
 
 void GSFrame::CoreThread_OnSuspended()
 {
-	// Could stop the timer outright here, tho no harm in having an occasional
-	// update here or there, just in case some state info changes while emu is suspended.
-	m_timer_UpdateTitle.Start( TitleBarUpdateMs );
+	if( !IsBeingDeleted() && g_Conf->GSWindow.CloseOnEsc ) Hide();
+}
 
-	if( g_Conf->GSWindow.CloseOnEsc ) Hide();
+void GSFrame::CoreThread_OnStopped()
+{
+	//if( !IsBeingDeleted() ) Destroy();
+}
+
+void GSFrame::CorePlugins_OnShutdown()
+{
+	if( !IsBeingDeleted() ) Destroy();
 }
 
 // overrides base Show behavior.

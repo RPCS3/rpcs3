@@ -653,14 +653,11 @@ void Pcsx2App::PrepForExit()
 	m_ScheduledTermination = true;
 
 	DispatchEvent( AppStatus_Exiting );
+
+	CoreThread.Cancel();
 	SysExecutorThread.ShutdownQueue();
 
 	m_timer_Termination->Start( 500 );
-
-	// This should be called by OnExit(), but sometimes wxWidgets fails to call OnExit(), so
-	// do it here just in case (no harm anyway -- OnExit is the next logical step after
-	// CloseWindow returns true from the TopLevel window).
-	//CleanupRestartable();
 }
 
 // This cleanup procedure can only be called when the App message pump is still active.
@@ -669,7 +666,7 @@ void Pcsx2App::CleanupRestartable()
 {
 	AffinityAssert_AllowFrom_MainUI();
 
-	ShutdownPlugins();
+	CoreThread.Cancel();
 	SysExecutorThread.ShutdownQueue();
 	IdleEventDispatcher( L"Cleanup" );
 

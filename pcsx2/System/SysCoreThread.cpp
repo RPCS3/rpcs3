@@ -260,7 +260,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel.
 void SysCoreThread::OnCleanupInThread()
 {
-	m_hasActiveMachine = false;
+	m_hasActiveMachine		= false;
+	m_resetVirtualMachine	= true;
 
 	GetCorePlugins().Close();
 	GetCorePlugins().Shutdown();

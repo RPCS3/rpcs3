@@ -18,31 +18,31 @@
 #include "AppCommon.h"
 
 // --------------------------------------------------------------------------------------
-//  AppPluginManager
+//  AppCorePlugins
 // --------------------------------------------------------------------------------------
-// This extension of PluginManager provides event listener sources for plugins -- loading,
+// This extension of SysCorePlugins provides event listener sources for plugins -- loading,
 // unloading, open, close, shutdown, etc.
 //
-// FIXME : Should this be made part of the PCSX2 core emulation? (integrated into PluginManager)
+// FIXME : Should this be made part of the PCSX2 core emulation? (integrated into SysCorePlugins)
 //   I'm undecided on if it makes sense more in that context or in this one (interface).
 //
-class AppPluginManager : public PluginManager
+class AppCorePlugins : public SysCorePlugins
 {
-	typedef PluginManager _parent;
+	typedef SysCorePlugins _parent;
 
 public:
-	AppPluginManager();
-	virtual ~AppPluginManager() throw();
+	AppCorePlugins();
+	virtual ~AppCorePlugins() throw();
 
 	void Load( const wxString (&folders)[PluginId_Count] );
 	void Load( PluginsEnum_t pid, const wxString& srcfile );
 	void Unload( PluginsEnum_t pid );
 	void Unload();
-	
-	void Init();
+
+	bool Init();
 	void Init( PluginsEnum_t pid );
 	void Shutdown( PluginsEnum_t pid );
-	void Shutdown();
+	bool Shutdown();
 	void Close();	
 	void Open();
 

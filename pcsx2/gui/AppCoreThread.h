@@ -133,7 +133,7 @@ public:
 
 	virtual void Suspend( bool isBlocking=false );
 	virtual void Resume();
-	virtual void Shutdown();
+	virtual void Reset();
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool StateCheckInThread();
 	virtual void ChangeCdvdSource();

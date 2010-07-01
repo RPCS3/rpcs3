@@ -474,26 +474,6 @@ protected:
 	}
 };
 
-class SysExecEvent_Restart : public SysExecEvent
-{
-public:
-	virtual ~SysExecEvent_Restart() throw() {}
-
-	wxString GetEventName() const { return L"SysRestart"; }
-
-	wxString GetEventMessage() const
-	{
-		return _("Restarting PS2 Virtual Machine...");
-	}
-
-protected:
-	void InvokeEvent()
-	{
-		sApp.SysShutdown();
-		sApp.SysExecute();
-	}
-};
-
 void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
@@ -509,15 +489,15 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 {
 	UI_DisableSysReset();
-	GetSysExecutorThread().PostEvent( new SysExecEvent_Restart() );
+	sApp.SysExecute();
 }
 
 void MainEmuFrame::Menu_SysShutdown_Click(wxCommandEvent &event)
 {
-	if( !SysHasValidState() && !CorePlugins.AreAnyInitialized() ) return;
+	//if( !SysHasValidState() && !CorePlugins.AreAnyInitialized() ) return;
 
 	UI_DisableSysShutdown();
-	sApp.SysShutdown();
+	CoreThread.Reset();
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)

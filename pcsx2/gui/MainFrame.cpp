@@ -479,7 +479,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	PushEventHandler( &wxGetApp().GetRecentIsoManager() );
 	SetDropTarget( new IsoDropTarget( this ) );
+
 	ApplyCoreStatus();
+	ApplySettings();
 }
 
 MainEmuFrame::~MainEmuFrame() throw()
