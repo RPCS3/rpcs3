@@ -134,6 +134,9 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../ZZKeyboard.cpp" />
+		<Unit filename="../../ZZLog.cpp" />
+		<Unit filename="../../ZZLog.h" />
 		<Unit filename="../../ZZoglCRTC.cpp" />
 		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />

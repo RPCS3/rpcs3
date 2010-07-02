@@ -126,5 +126,5 @@ void _GSgifTransfer(pathInfo *path, u32 *pMem, u32 size);
 
 extern GIFRegHandler g_GIFPackedRegHandlers[];
 extern GIFRegHandler g_GIFRegHandlers[];
-
+extern void InitPath();
 #endif // GIFTRANSFER_H_INCLUDED

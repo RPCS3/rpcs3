@@ -51,11 +51,11 @@ HDC			hDC = NULL;	 // Private GDI Device Context
 HGLRC		hRC = NULL;	 // Permanent Rendering Context
 #endif
 
-bool g_bIsLost = 0;									// ZZ
+// This is always false? Fixme.
+bool g_bIsLost = false;
 
-bool g_bMakeSnapshot = 0;
 string strSnapshot;
-
+primInfo *prim;
 CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
 // AVI Capture
 int s_avicapturing = 0;
@@ -262,7 +262,6 @@ void ZeroGS::HandleGLError()
 	}
 }
 
-
 void ZeroGS::GSStateReset()
 {
 	FUNCLOG
@@ -290,6 +289,62 @@ void ZeroGS::GSStateReset()
 
 	vb[0].ictx = 0;
 	vb[1].ictx = 1;
+}
+
+void ZeroGS::Reset()
+{
+	FUNCLOG
+	s_RTs.ResolveAll();
+	s_DepthRTs.ResolveAll();
+
+	vb[0].nCount = 0;
+	vb[1].nCount = 0;
+
+	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
+	s_nLastResolveReset = 0;
+
+	icurctx = -1;
+	g_vsprog = g_psprog = 0;
+
+	GSStateReset();
+	Destroy(0);
+
+	drawfn[0] = KickDummy;
+	drawfn[1] = KickDummy;
+	drawfn[2] = KickDummy;
+	drawfn[3] = KickDummy;
+	drawfn[4] = KickDummy;
+	drawfn[5] = KickDummy;
+	drawfn[6] = KickDummy;
+	drawfn[7] = KickDummy;
+}
+
+void ZeroGS::GSReset()
+{
+	FUNCLOG
+
+	memset(&gs, 0, sizeof(gs));
+
+	ZeroGS::GSStateReset();
+
+	gs.prac = 1;
+	prim = &gs._prim[0];
+	gs.nTriFanVert = -1;
+	gs.imageTransfer = -1;
+	gs.q = 1;
+}
+
+void ZeroGS::GSSoftReset(u32 mask)
+{
+	FUNCLOG
+
+	if (mask & 1) memset(&gs.path[0], 0, sizeof(gs.path[0]));
+	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
+	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
+
+	gs.imageTransfer = -1;
+	gs.q = 1;
+	gs.nTriFanVert = -1;
 }
 
 void ZeroGS::AddMessage(const char* pstr, u32 ms)
@@ -339,34 +394,6 @@ void ZeroGS::SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 		conf.width = nNewWidth;
 		conf.height = nNewHeight;
 	}
-}
-
-void ZeroGS::Reset()
-{
-	FUNCLOG
-	s_RTs.ResolveAll();
-	s_DepthRTs.ResolveAll();
-
-	vb[0].nCount = 0;
-	vb[1].nCount = 0;
-
-	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-	s_nLastResolveReset = 0;
-
-	icurctx = -1;
-	g_vsprog = g_psprog = 0;
-
-	GSStateReset();
-	Destroy(0);
-
-	drawfn[0] = KickDummy;
-	drawfn[1] = KickDummy;
-	drawfn[2] = KickDummy;
-	drawfn[3] = KickDummy;
-	drawfn[4] = KickDummy;
-	drawfn[5] = KickDummy;
-	drawfn[6] = KickDummy;
-	drawfn[7] = KickDummy;
 }
 
 void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
@@ -570,7 +597,7 @@ void ZeroGS::Restore()
 	if (!g_bIsLost) return;
 
 	//if( SUCCEEDED(pd3dDevice->Reset(&d3dpp)) ) {
-	g_bIsLost = 0;
+	g_bIsLost = false;
 
 	// handle lost states
 	ZeroGS::ChangeDeviceSize(nBackbufferWidth, nBackbufferHeight);

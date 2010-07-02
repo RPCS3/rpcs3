@@ -262,3 +262,8 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	_GSgifTransfer<2>(pMem, size);
 }
 
+void InitPath()
+{
+	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
+}
+

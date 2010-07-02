@@ -143,4 +143,6 @@ class CInterfacePtr
 		T* ptr;
 };
 
+extern void InitProfile();
+
 #endif // PROFILE_H_INCLUDED

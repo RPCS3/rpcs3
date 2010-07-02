@@ -757,4 +757,7 @@ REG128_SET(GIFPackedReg)
 	GIFPackedNOP	NOP;
 REG_SET_END
 
+extern void WriteTempRegs();
+extern void SetFrameSkip(bool skip);
+extern void ResetRegs();
 #endif

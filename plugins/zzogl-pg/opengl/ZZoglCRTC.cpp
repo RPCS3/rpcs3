@@ -39,6 +39,7 @@ bool g_bCRTCBilinear = true, g_bDisplayFPS = false;
 int g_nFrameRender = 10, g_nFramesSkipped = 0, s_nResolved = 0; // s_nResolved == number of targets resolved this frame
 // Helper for skip frames.
 int TimeLastSkip = 0;
+extern bool g_bMakeSnapshot;
 
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
 void ZeroGS::AdjustTransToAspect(Vector& v)
@@ -724,7 +725,7 @@ inline void AfterRendererUnimportantJob()
 	if (g_bMakeSnapshot)
 	{
 		AfterRenderMadeSnapshoot();
-		g_bMakeSnapshot = 0;
+		g_bMakeSnapshot = false;
 	}
 
 	if (s_avicapturing)

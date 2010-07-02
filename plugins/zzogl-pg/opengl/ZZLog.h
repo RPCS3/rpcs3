@@ -166,12 +166,16 @@ extern void SetAA(int mode);
 extern void SetNegAA(int mode);
 extern bool Create(int width, int height);
 extern void Destroy(bool bD3D);
+extern void StartCapture();
+extern void StopCapture();
 }
 
 namespace ZZLog
 {
 extern bool IsLogging();
-extern bool OpenLog();
+void SetDir(const char* dir);
+extern bool Open();
+extern void Close();
 extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);
 void WriteToScreen(const char* pstr, u32 ms = 5000);

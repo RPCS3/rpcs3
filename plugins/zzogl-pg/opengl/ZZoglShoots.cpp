@@ -32,6 +32,7 @@
 #include "Mem.h"
 
 
+bool g_bMakeSnapshot = false;
 extern "C"
 {
 #ifdef _WIN32
@@ -62,7 +63,7 @@ int s_aviinit = 0;
 // Set variables need to made a snapshoot when it's possible
 void ZeroGS::SaveSnapshot(const char* filename)
 {
-	g_bMakeSnapshot = 1;
+	g_bMakeSnapshot = true;
 	strSnapshot = filename;
 }
 
@@ -311,6 +312,7 @@ bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 // AVI start -- set needed glabal variables
 void ZeroGS::StartCapture()
 {
+	if (conf.captureAvi()) return;
 	if (!s_aviinit)
 	{
 #ifdef _WIN32
@@ -326,16 +328,21 @@ void ZeroGS::StartCapture()
 	}
 
 	s_avicapturing = 1;
+	conf.setCaptureAvi(true);
+	ZZLog::Warn_Log("Started recording zerogs.avi.");
+	
 }
 
 // Stop.
 void ZeroGS::StopCapture()
 {
+	if (!conf.captureAvi()) return;
 	s_avicapturing = 0;
+	conf.setCaptureAvi(false);
+	ZZLog::Warn_Log("Stopped recording.");
 }
 
-// And capture frame
-// Does not work on linux
+// And capture frame does not work on linux.
 void ZeroGS::CaptureFrame()
 {
 	assert(s_avicapturing && s_aviinit);

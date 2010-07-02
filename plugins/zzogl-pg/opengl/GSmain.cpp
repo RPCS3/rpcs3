@@ -47,20 +47,21 @@ using namespace std;
 #pragma warning(disable:4244)
 #endif
 
+GLWindow GLWin;
 GSinternal gs;
 char GStitle[256];
-extern FILE *gsLog;
 GSconf conf;
-int ppf;
-primInfo *prim;
-int g_GSMultiThreaded = 0;
+
+int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
+int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
+
+int UPDATE_FRAMES = 16, g_nFrame = 0, g_nRealFrame = 0;
+float fFPS = 0;
+
 void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
-int g_TransferredToGPU = 0;
 std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
-std::string s_strLogPath("logs/");
 
-int CurrentSavestate = 0;		// Number of SaveSlot. Default is 0
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
 
@@ -84,15 +85,22 @@ char *libraryName	 = "ZZ Ogl PG (Dev)";
 char *libraryName	 = "ZZ Ogl PG ";
 #endif
 
-extern GIFRegHandler g_GIFPackedRegHandlers[], g_GIFRegHandlers[];
-GIFRegHandler g_GIFTempRegHandlers[16] = {0};
 extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
-
-int s_frameskipping = 0;
 
 extern void ProcessMessages();
 extern void WriteAA();
 extern void WriteBilinear();
+
+extern int VALIDATE_THRESH;
+extern u32 TEXDESTROY_THRESH;
+
+#ifdef _WIN32
+HWND GShwnd = NULL;
+#endif
+
+u32 THR_KeyEvent = 0; // Value for key event processing between threads
+bool THR_bShift = false;
+
 
 u32 CALLBACK PS2EgetLibType()
 {
@@ -109,15 +117,6 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type)
 	return (zgsversion << 16) | (zgsrevision << 8) | zgsbuild | (zgsminor << 24);
 }
 
-GLWindow GLWin;
-
-#ifdef _WIN32
-HWND GShwnd = NULL;
-#endif
-
-u32 THR_KeyEvent = 0; // Value for key event processing between threads
-bool THR_bShift = false;
-
 void CALLBACK GSsetBaseMem(void* pmem)
 {
 	g_pBasePS2Mem = (u8*)pmem;
@@ -130,18 +129,8 @@ void CALLBACK GSsetSettingsDir(const char* dir)
 
 void CALLBACK GSsetLogDir(const char* dir)
 {
-	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
-
-	// Reload the log file after updated the path
-	if (gsLog != NULL) fclose(gsLog);
-    ZZLog::OpenLog();
+	ZZLog::SetDir(dir);
 }
-
-extern int VALIDATE_THRESH;
-extern u32 TEXDESTROY_THRESH;
-
-int g_LastCRC = 0;
 
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
@@ -179,8 +168,6 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	}
 }
 
-//#define OLD_GS_SET_FRAMESKIP
-#ifdef OLD_GS_SET_FRAMESKIP
 void CALLBACK GSsetFrameSkip(int frameskip)
 {
 	FUNCLOG
@@ -188,148 +175,34 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 
 	if (frameskip && g_nFrameRender > 1)
 	{
-		for (int i = 0; i < 16; ++i)
-		{
-			g_GIFPackedRegHandlers[i] = GIFPackedRegHandlerNOP;
-		}
-
-		// still keep certain handlers
-		g_GIFPackedRegHandlers[6] = GIFRegHandlerTEX0_1;
-		g_GIFPackedRegHandlers[7] = GIFRegHandlerTEX0_2;
-		g_GIFPackedRegHandlers[14] = GIFPackedRegHandlerA_D;
-		
-		g_GIFRegHandlers[0] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[1] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[2] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[3] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[4] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[5] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[12] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[13] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[26] = GIFRegHandlerNOP;
-		g_GIFRegHandlers[27] = GIFRegHandlerNOP;
-
-		g_nFrameRender = 0;
+		SetFrameSkip(true);
 	}
 	else if (!frameskip && g_nFrameRender <= 0)
 	{
-		g_nFrameRender = 1;
-
-		if (g_GIFTempRegHandlers[0] == NULL) return;  // not init yet
-
-		// restore
-		memcpy(g_GIFPackedRegHandlers, g_GIFTempRegHandlers, sizeof(g_GIFTempRegHandlers));
-
-		g_GIFRegHandlers[0] = GIFRegHandlerPRIM;
-		g_GIFRegHandlers[1] = GIFRegHandlerRGBAQ;
-		g_GIFRegHandlers[2] = GIFRegHandlerST;
-		g_GIFRegHandlers[3] = GIFRegHandlerUV;
-		g_GIFRegHandlers[4] = GIFRegHandlerXYZF2;
-		g_GIFRegHandlers[5] = GIFRegHandlerXYZ2;
-		g_GIFRegHandlers[12] = GIFRegHandlerXYZF3;
-		g_GIFRegHandlers[13] = GIFRegHandlerXYZ2;
-		g_GIFRegHandlers[26] = GIFRegHandlerPRMODECONT;
-		g_GIFRegHandlers[27] = GIFRegHandlerPRMODE;
+		SetFrameSkip(false);
 	}
 }
-#else
-void CALLBACK GSsetFrameSkip(int frameskip)
-{
-	FUNCLOG
-	s_frameskipping |= frameskip;
 
-	if (frameskip && g_nFrameRender > 1)
-	{
-		g_GIFPackedRegHandlers[GIF_REG_PRIM] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_RGBA] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_STQ] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_UV] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_XYZF2] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_XYZ2] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_FOG] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_XYZF3] = &GIFPackedRegHandlerNOP;
-		g_GIFPackedRegHandlers[GIF_REG_XYZ3] = &GIFPackedRegHandlerNOP;
-
-		g_GIFRegHandlers[GIF_A_D_REG_PRIM] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_ST] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_UV] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZF2] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZ2] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZF3] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZ3] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GIFRegHandlerNOP;
-		g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerNOP;
-	}
-	else if (!frameskip && g_nFrameRender <= 0)
-	{
-		g_GIFPackedRegHandlers[GIF_REG_PRIM] = &GIFPackedRegHandlerPRIM;
-		g_GIFPackedRegHandlers[GIF_REG_RGBA] = &GIFPackedRegHandlerRGBA;
-		g_GIFPackedRegHandlers[GIF_REG_STQ] = &GIFPackedRegHandlerSTQ;
-		g_GIFPackedRegHandlers[GIF_REG_UV] = &GIFPackedRegHandlerUV;
-		g_GIFPackedRegHandlers[GIF_REG_XYZF2] = &GIFPackedRegHandlerXYZF2;
-		g_GIFPackedRegHandlers[GIF_REG_XYZ2] = &GIFPackedRegHandlerXYZ2;
-		g_GIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GIFPackedRegHandlerCLAMP_1;
-		g_GIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GIFPackedRegHandlerCLAMP_2;
-		g_GIFPackedRegHandlers[GIF_REG_FOG] = &GIFPackedRegHandlerFOG;
-		g_GIFPackedRegHandlers[GIF_REG_XYZF3] = &GIFPackedRegHandlerXYZF3;
-		g_GIFPackedRegHandlers[GIF_REG_XYZ3] = &GIFPackedRegHandlerXYZ3;
-
-		g_GIFRegHandlers[GIF_A_D_REG_PRIM] = &GIFRegHandlerPRIM;
-		g_GIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GIFRegHandlerRGBAQ;
-		g_GIFRegHandlers[GIF_A_D_REG_ST] = &GIFRegHandlerST;
-		g_GIFRegHandlers[GIF_A_D_REG_UV] = &GIFRegHandlerUV;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZF2] = &GIFRegHandlerXYZF2;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZ2] = &GIFRegHandlerXYZ2;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZF3] = &GIFRegHandlerXYZF3;
-		g_GIFRegHandlers[GIF_A_D_REG_XYZ3] = &GIFRegHandlerXYZ3;
-		g_GIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GIFRegHandlerPRMODECONT;
-		g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerPRMODE;
-	}
-}
-#endif
 void CALLBACK GSreset()
 {
-	FUNCLOG
-
-	memset(&gs, 0, sizeof(gs));
-
-	ZeroGS::GSStateReset();
-
-	gs.prac = 1;
-	prim = &gs._prim[0];
-	gs.nTriFanVert = -1;
-	gs.imageTransfer = -1;
-	gs.q = 1;
+	ZeroGS::GSReset();
 }
 
 void CALLBACK GSgifSoftReset(u32 mask)
 {
-	FUNCLOG
-
-	if (mask & 1) memset(&gs.path[0], 0, sizeof(gs.path[0]));
-	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
-	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
-
-	gs.imageTransfer = -1;
-	gs.q = 1;
-	gs.nTriFanVert = -1;
+	ZeroGS::GSSoftReset(mask);
 }
 
 s32 CALLBACK GSinit()
 {
 	FUNCLOG
 
-	memcpy(g_GIFTempRegHandlers, g_GIFPackedRegHandlers, sizeof(g_GIFTempRegHandlers));
-
-    if (ZZLog::OpenLog() == false)
-			return -1;
-
+    if (ZZLog::Open() == false) return -1;
 	ZZLog::WriteLn("Calling GSinit.");
 
+	WriteTempRegs();
 	GSreset();
+	
 	ZZLog::WriteLn("GSinit finished.");
 	return 0;
 }
@@ -345,7 +218,6 @@ extern LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 extern HINSTANCE hInst;
 #endif
 
-extern void ResetRegs();
 
 s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
@@ -382,13 +254,10 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 	WriteBilinear();
 	WriteAA();
-
-	luPerfFreq = GetCPUTicks();
-
-	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
+	InitProfile();
+	InitPath();
 	ResetRegs();
 	ZZLog::GS_Log("GSopen finished.");
-
 	return 0;
 }
 
@@ -396,7 +265,7 @@ void CALLBACK GSshutdown()
 {
 	FUNCLOG
 
-	if (gsLog != NULL) fclose(gsLog);
+	ZZLog::Close();
 }
 
 void CALLBACK GSclose()
@@ -483,11 +352,43 @@ void CALLBACK GSmakeSnapshot(char *path)
 	ZeroGS::SaveSnapshot(filename);
 }
 
-int UPDATE_FRAMES = 16;
-int g_nFrame = 0;
-int g_nRealFrame = 0;
+// I'll probably move this somewhere else later, but it's got a ton of dependencies.
+static __forceinline void SetGSTitle()
+{
+	char strtitle[256];
 
-float fFPS = 0;
+#if !defined(ZEROGS_DEVBUILD)
+	const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
+	const char* g_pInterlace[3] = { "interlace 0 |", "interlace 1 |", "" };
+	const char* g_pBilinear[3] = { "", "bilinear |", "forced bilinear |" };
+
+	if (SaveStateFile != NULL && !SaveStateExists)
+		SaveStateExists = (access(SaveStateFile, 0) == 0);
+	else
+		SaveStateExists = true;
+
+	sprintf(strtitle, "ZZ Open GL 0.%d.%d | %.1f fps | %s%s%s savestate %d%s | shaders %s | (%.1f)", zgsbuild, zgsminor, fFPS,
+			g_pInterlace[conf.interlace], g_pBilinear[conf.bilinear],
+			(conf.aa >= conf.negaa) ? (conf.aa ? s_aa[conf.aa - conf.negaa] : "") : (conf.negaa ? s_naa[conf.negaa - conf.aa] : ""),
+					CurrentSavestate, (SaveStateExists ? "" :  "*"),
+					g_pShaders[g_nPixelShaderVer], (ppf&0xfffff) / (float)UPDATE_FRAMES);
+
+#else
+	sprintf(strtitle, "%d | %.1f fps (sk:%d%%) | g: %.1f, t: %.1f, a: %.1f, r: %.1f | p: %.1f | tex: %d %d (%d kbpf)", g_nFrame, fFPS,
+			100*g_nFramesSkipped / g_nFrame,
+			g_nGenVars / (float)UPDATE_FRAMES, g_nTexVars / (float)UPDATE_FRAMES, g_nAlphaVars / (float)UPDATE_FRAMES,
+			g_nResolve / (float)UPDATE_FRAMES, (ppf&0xfffff) / (float)UPDATE_FRAMES,
+			ZeroGS::g_MemTargs.listTargets.size(), ZeroGS::g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
+
+	//_snprintf(strtitle, 512, "%x %x", *(int*)(g_pbyGSMemory + 256 * 0x3e0c + 4), *(int*)(g_pbyGSMemory + 256 * 0x3e04 + 4));
+#endif
+
+//	if( g_nFrame > 100 && fFPS > 60.0f ) {
+//		ZZLog::Debug_Log("Set profile.");
+//		g_bWriteProfile = 1;
+//	}
+	if (!(conf.fullscreen())) GLWin.SetTitle(strtitle);
+}
 
 void CALLBACK GSvsync(int interlace)
 {
@@ -497,56 +398,28 @@ void CALLBACK GSvsync(int interlace)
 
 	static u32 dwTime = timeGetTime();
 	static int nToNextUpdate = 1;
-	char strtitle[256];
 
 	GL_REPORT_ERRORD();
 
 	g_nRealFrame++;
 
+	// !interlace? Hmmm... Fixme.
 	ZeroGS::RenderCRTC(!interlace);
 
 	ProcessMessages();
 
 	if (--nToNextUpdate <= 0)
 	{
-
 		u32 d = timeGetTime();
 		fFPS = UPDATE_FRAMES * 1000.0f / (float)max(d - dwTime, 1);
 		dwTime = d;
 		g_nFrame += UPDATE_FRAMES;
-
-#if !defined(ZEROGS_DEVBUILD)
-		const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
-		const char* g_pInterlace[3] = { "interlace 0 |", "interlace 1 |", "" };
-		const char* g_pBilinear[3] = { "", "bilinear |", "forced bilinear |" };
-
-		if (SaveStateFile != NULL && !SaveStateExists)
-			SaveStateExists = (access(SaveStateFile, 0) == 0);
-		else
-			SaveStateExists = true;
-
-		sprintf(strtitle, "ZZ Open GL 0.%d.%d | %.1f fps | %s%s%s savestate %d%s | shaders %s | (%.1f)", zgsbuild, zgsminor, fFPS,
-				g_pInterlace[conf.interlace], g_pBilinear[conf.bilinear],
-				(conf.aa >= conf.negaa) ? (conf.aa ? s_aa[conf.aa - conf.negaa] : "") : (conf.negaa ? s_naa[conf.negaa - conf.aa] : ""),
-						CurrentSavestate, (SaveStateExists ? "" :  "*"),
-						g_pShaders[g_nPixelShaderVer], (ppf&0xfffff) / (float)UPDATE_FRAMES);
-
-#else
-		sprintf(strtitle, "%d | %.1f fps (sk:%d%%) | g: %.1f, t: %.1f, a: %.1f, r: %.1f | p: %.1f | tex: %d %d (%d kbpf)", g_nFrame, fFPS,
-				100*g_nFramesSkipped / g_nFrame,
-				g_nGenVars / (float)UPDATE_FRAMES, g_nTexVars / (float)UPDATE_FRAMES, g_nAlphaVars / (float)UPDATE_FRAMES,
-				g_nResolve / (float)UPDATE_FRAMES, (ppf&0xfffff) / (float)UPDATE_FRAMES,
-				ZeroGS::g_MemTargs.listTargets.size(), ZeroGS::g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
-
-		//_snprintf(strtitle, 512, "%x %x", *(int*)(g_pbyGSMemory + 256 * 0x3e0c + 4), *(int*)(g_pbyGSMemory + 256 * 0x3e04 + 4));
-
-#endif
+		SetGSTitle();
 
 //		if( g_nFrame > 100 && fFPS > 60.0f ) {
 //			ZZLog::Debug_Log("Set profile.");
 //			g_bWriteProfile = 1;
 //		}
-		if (!(conf.fullscreen())) GLWin.SetTitle(strtitle);
 
 		if (fFPS < 16) 
 			UPDATE_FRAMES = 4;
@@ -557,14 +430,12 @@ void CALLBACK GSvsync(int interlace)
 
 		nToNextUpdate = UPDATE_FRAMES;
 
+		ppf = 0;
 		g_TransferredToGPU = 0;
 		g_nGenVars = 0;
 		g_nTexVars = 0;
 		g_nAlphaVars = 0;
 		g_nResolve = 0;
-
-		ppf = 0;
-
 		g_nFramesSkipped = 0;
 	}
 
@@ -603,25 +474,9 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	FUNCLOG
 
 	if (start)
-	{
-		if (conf.captureAvi()) return 1;
-
 		ZeroGS::StartCapture();
-
-		conf.setCaptureAvi(true);
-
-		ZZLog::Warn_Log("Started recording zerogs.avi.");
-	}
 	else
-	{
-		if (!(conf.captureAvi())) return 1;
-
-		conf.setCaptureAvi(false);
-
 		ZeroGS::StopCapture();
-
-		ZZLog::Warn_Log("Stopped recording.");
-	}
 
 	return 1;
 }

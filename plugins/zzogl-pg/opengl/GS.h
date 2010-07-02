@@ -283,7 +283,6 @@ struct Vertex
 };
 
 extern GSconf conf;
-extern int ppf;
 
 // PSM values
 // PSM types == Texture Storage Format

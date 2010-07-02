@@ -20,13 +20,12 @@
 #include "ZZLog.h"
  
 extern GSconf conf;
-extern std::string s_strIniPath;
-extern std::string s_strLogPath;
-
-FILE *gsLog;
 
 namespace ZZLog
 {
+std::string s_strLogPath("logs/");
+FILE *gsLog;
+
 bool IsLogging()
 {
 	// gsLog can be null if the config dialog is used prior to Pcsx2 starting an emulation session.
@@ -34,7 +33,7 @@ bool IsLogging()
 	return (gsLog != NULL && conf.log);
 }
 
-bool OpenLog() 
+bool Open() 
 {
     bool result = true;
     const std::string LogFile(s_strLogPath + "GSzzogl.log");
@@ -49,6 +48,21 @@ bool OpenLog()
     }
 
     return result;
+}
+
+void Close()
+{
+	if (gsLog != NULL) fclose(gsLog);
+}
+
+void SetDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+	if (gsLog != NULL) fclose(gsLog);
+	Open();
 }
 
 void WriteToScreen(const char* pstr, u32 ms)

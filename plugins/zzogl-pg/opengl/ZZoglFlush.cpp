@@ -186,6 +186,7 @@ int g_PrevBitwiseTexX = -1, g_PrevBitwiseTexY = -1; // textures stored in SAMP_B
 static alphaInfo s_alphaInfo;												// ZZ
 
 extern u8* g_pbyGSClut;
+extern int ppf;
 
 //------------------ Namespace
 

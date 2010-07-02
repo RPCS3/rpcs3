@@ -246,7 +246,7 @@ typedef struct
 	}
 	
 } GSconf;
-
+extern GSconf conf;
 
 #define REG64(name) \
 union name			\
@@ -300,5 +300,7 @@ extern void SysMessage(const char *fmt, ...);
 extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
 #endif
+
+
 
 #endif // UTIL_H_INCLUDED

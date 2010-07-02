@@ -378,7 +378,6 @@ extern GLenum g_internalRGBAFloatFmt;
 extern GLenum g_internalRGBAFloat16Fmt;
 
 extern CGprogram g_vsprog, g_psprog;
-extern bool g_bMakeSnapshot;
 extern string strSnapshot;
 extern bool g_bCRTCBilinear;
 
@@ -747,8 +746,10 @@ void Destroy(bool bD3D);
 
 void Restore(); // call to restore device
 void Reset(); // call to destroy video resources
-
 void GSStateReset();
+void GSReset();
+void GSSoftReset(u32 mask);
+
 void HandleGLError();
 
 // called on a primitive switch

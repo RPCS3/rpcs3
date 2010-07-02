@@ -24,7 +24,6 @@
 #include "Profile.h"
 
 extern int CurrentSavestate, g_GSMultiThreaded, g_nPixelShaderVer;
-extern char GStitle[256];
 extern char *libraryName;
 extern const unsigned char zgsversion;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;

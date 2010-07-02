@@ -257,3 +257,8 @@ void DVProfClear()
 	g_listProfilers.clear();
 	g_listAllProfilers.clear();
 }
+
+void InitProfile()
+{
+	luPerfFreq = GetCPUTicks();
+}

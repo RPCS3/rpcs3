@@ -273,4 +273,5 @@ static const Game_Info crc_game_list[] =
 
 #define GAME_INFO_INDEX (sizeof(crc_game_list)/sizeof(Game_Info))
 
+
 #endif // CRC_H_INCLUDED
