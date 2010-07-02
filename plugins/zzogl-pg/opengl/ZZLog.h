@@ -157,9 +157,15 @@ inline const char *error_name(int err)
 }
 
 extern void __LogToConsole(const char *fmt, ...);
+
+// Subset of zerogs, to avoid that whole huge header.
 namespace ZeroGS
 {
 extern void AddMessage(const char* pstr, u32 ms);
+extern void SetAA(int mode);
+extern void SetNegAA(int mode);
+extern bool Create(int width, int height);
+extern void Destroy(bool bD3D);
 }
 
 namespace ZZLog
@@ -168,6 +174,7 @@ extern bool IsLogging();
 extern bool OpenLog();
 extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);
+void WriteToScreen(const char* pstr, u32 ms = 5000);
 extern void WriteToConsole(const char *fmt, ...);
 extern void Print(const char *fmt, ...);
 extern void WriteLn(const char *fmt, ...);

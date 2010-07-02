@@ -349,6 +349,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZKeyboard.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZLog.cpp"
 				>
 			</File>

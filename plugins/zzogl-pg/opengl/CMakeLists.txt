@@ -84,6 +84,7 @@ set(zzoglSources
     ZZoglShaders.cpp
     ZZoglShoots.cpp
     ZZoglVB.cpp
+    ZZKeyboard.cpp
     ZZLog.cpp)
 
 # zzogl headers
