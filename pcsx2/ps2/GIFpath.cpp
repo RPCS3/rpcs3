@@ -80,7 +80,7 @@ struct GIFTAG
 
 struct GIFPath
 {
-	const GIFTAG tag;	// The "original tag -- modification allowed only by SetTag(), so let's make it const.
+	const GIFTAG tag;	// A copy of the "original" tag -- modification allowed only by SetTag(), so let's make it const.
 	u8 regs[16];		// positioned after tag ensures 16-bit aligned (in case we SSE optimize later)
 
 	u32 nloop;			// local copy nloop counts toward zero, and leaves the tag copy unmodified.
@@ -113,59 +113,56 @@ struct GifPathStruct
 
 
 // --------------------------------------------------------------------------------------
-//  SIGNAL / FINISH / LABEL   (WIP!!)
+//  SIGNAL / FINISH / LABEL
 // --------------------------------------------------------------------------------------
-// The current implementation for these is very incomplete, especially SIGNAL, which needs
-// an extra VM-state status var to be handled correctly.
-//
 
-// [TODO] -- Apparently all gs writes should be ignored when this little flag is TRUE.
-//   (not that any game's emulation accuracy probably depends on such a 'feature') --air
-bool CSR_SIGNAL_Pending = false;
+bool SIGNAL_IMR_Pending = false;
+u32 SIGNAL_Data_Pending[2];
 
 
 // SIGNAL : This register is a double-throw.  If the SIGNAL bit in CSR is clear, set the CSR
-//   and raise a gsIrq.  If CSR is already *set*, then ignore all subsequent drawing operations
-//   and writes to general purpose registers to the GS. (note: I'm pretty sure this includes
-//   direct GS and GSreg accesses, as well as those coming through the GIFpath -- but that
-//   behavior isn't confirmed yet).  Privileged writes are still active.
+//   and raise a gsIrq.  If CSR is already *set*, then do not raise a gsIrq, and ignore all
+//   subsequent drawing operations and writes to general purpose registers to the GS. (note:
+//   I'm pretty sure this includes direct GS and GSreg accesses, as well as those coming
+//   through the GIFpath -- but that behavior isn't confirmed yet).  Privileged writes are
+//   still active.
 //
 //   Ignorance continues until the SIGNAL bit in CSR is manually cleared by the EE.  And here's
 //   the tricky part: the interrupt from the second SIGNAL is still pending, and should be
 //   raised once the EE has reset the *IMR* mask for SIGNAL -- meaning setting the bit to 1
-//   (disabled/masked) and then back to 0 (enabled/unmasked).
+//   (disabled/masked) and then back to 0 (enabled/unmasked).  Until the *IMR* is cleared, the
+//   SIGNAL is still in the second throw stage, and will freeze the GS upon being written.
 //
 static void __fastcall RegHandlerSIGNAL(const u32* data)
 {
-	GIF_LOG("GS SIGNAL data=%x_%x IMR=%x CSRr=%x\n",data[0], data[1], GSIMR, GSCSRr);
-
-	GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
-
 	// HACK:
-	// Soul Calibur 3 has missing geometry on the Vs select screen if we only setup
-	// SIGNAL when the CSR flag is cleared.  It seems to be doing SIGNALs on PATH2 and
-	// PATH3 simultaneously, and isn't too happy with the results.  It properly clears the
-	// SIGNAL interrupt but seems to get suck on a VBLANK OVERLAP loop.
-	// Investigating the game's internals more deeply may prove to be revealing. --air
+	// Soul Calibur 3 seems to be doing SIGNALs on PATH2 and PATH3 simultaneously, and isn't
+	// too happy with the results (dies on bootup).  It properly clears the SIGNAL interrupt
+	// but seems to get stuck on a VBLANK OVERLAP loop.  Fixing SIGNAL so that it properly
+	// stalls the GIF might fix it.  Investigating the game's internals more deeply may also
+	// be revealing. --air
 
-	if (false)
-	//if (CSRreg.SIGNAL)	// breaks SC3
+	if (CSRreg.SIGNAL)
 	{
 		// Time to ignore all subsequent drawing operations. (which is not yet supported)
-		if (!CSR_SIGNAL_Pending)
+		if (!SIGNAL_IMR_Pending)
 		{
 			DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
-			CSR_SIGNAL_Pending = true;
+			SIGNAL_IMR_Pending	= true;
+			SIGNAL_Data_Pending[0]	= data[0];
+			SIGNAL_Data_Pending[1]	= data[1];
+			
+			// [TODO] (SIGNAL) : Disable GIFpath DMAs here!
+			//   All PATHs and DMAs should be disabled until the CSR is written and the
+			//   SIGNAL bit cleared.
 		}
 	}
 	else
 	{
-		// notes:
-		//  * DDS SMT however crashes at the first FMV if SIGNAL raises IRQs constantly,
-		//    so that's why we only raise an IRQ if both signal and GSIMR are prepped.
-		//    (this might be correct behavior-- hard to tell yet) --air
+		GIF_LOG("GS SIGNAL data=%x_%x IMR=%x CSRr=%x\n",data[0], data[1], GSIMR, GSCSRr);
+		GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~data[1])|(data[0]&data[1]);
 
-		if (!CSRreg.SIGNAL && !(GSIMR&0x100) )
+		if (!(GSIMR&0x100))
 			gsIrq();
 
 		CSRreg.SIGNAL = true;
@@ -472,7 +469,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 				}
 				else
 				{
-					// Note: The BIOS does an XGKICK on the VU1 and lets yt DMA to the GS without an EOP
+					// Note: The BIOS does an XGKICK on the VU1 and lets it DMA to the GS without an EOP
 					// (seemingly to loop forever), only to write an EOP later on.  No other game is known to
 					// do anything of the sort.
 					// So lets just cap the DMA at 16k, and force it to "look" like it's terminated for now.
@@ -482,7 +479,6 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
-					const_cast<GIFTAG&>(tag).EOP = 0;
 				}
 			}
 		}
@@ -580,6 +576,8 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					}
 					else
 					{
+						//DevCon.WriteLn(Color_Orange, "No E detected on Path%d: nloop=%x, numregs=%x, curreg=%x, size=%x", pathidx + 1, nloop, numregs, curreg, size);
+
 						// Note: curreg is *usually* zero here, but can be non-zero if a previous fragment was
 						// handled via this optimized copy code below.
 
@@ -670,7 +668,6 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
-					const_cast<GIFTAG&>(tag).EOP = 0;
 				}
 			}
 		}
@@ -683,10 +680,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				// FINISH is *not* a per-path register, and it seems to pretty clearly indicate that all active
 				// drawing *and* image transfer actions must be finished before the IRQ raises.
 
-				if (!s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
+				if (!(GSIMR&0x200) && !s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
 				{
-					if (!(GSIMR&0x200))
-						gsIrq();
+					gsIrq();
 				}
 			}
 			break;

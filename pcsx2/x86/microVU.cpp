@@ -295,9 +295,9 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 
 			return entryPoint;
 
-		} catch( BaseException& ex ) {
+		} catch( BaseException& pxDevelCode(ex) ) {
 			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + ex.FormatDiagnosticMessage(), mVU->index) );
-		} catch( std::exception& ex ) {
+		} catch( std::exception& pxDevelCode(ex) ) {
 			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage(), mVU->index) );
 		}
 

@@ -134,6 +134,17 @@
 #	define pxDebugCode(code)
 #endif
 
+#ifdef PCSX2_DEVBUILD
+#	define pxDevelCode(code)		code
+#else
+#	define pxDevelCode(code)
+#endif
+
+#if !defined(PCSX2_DEBUG) && !defined(PCSX2_DEVEL)
+#	define pxReleaseCode(code)
+#else
+#	define pxReleaseCode(code)		code
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // __aligned / __aligned16 / __pagealigned

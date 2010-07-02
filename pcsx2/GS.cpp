@@ -51,7 +51,8 @@ void gsInit()
 	memzero(g_RealGSMem);
 }
 
-extern bool CSR_SIGNAL_Pending;
+extern bool SIGNAL_IMR_Pending;
+extern u32 SIGNAL_Data_Pending[2];
 
 void gsGIFReset()
 {
@@ -68,7 +69,7 @@ void gsReset()
 	GSTransferStatus = (STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE;
 	memzero(g_RealGSMem);
 
-	CSR_SIGNAL_Pending = false;
+	SIGNAL_IMR_Pending = false;
 
 	CSRreg.Reset();
 	GSIMR = 0x7f00;
@@ -96,7 +97,7 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 			GetMTGS().SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 		}
 
-		CSR_SIGNAL_Pending = false;
+		SIGNAL_IMR_Pending = false;
 		CSRreg.Reset();
 		GSIMR = 0x7F00;			//This is bits 14-8 thats all that should be 1
 	}
@@ -109,13 +110,21 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 	
 	if(csr.SIGNAL)
 	{
+		// SIGNAL : What's not known here is whether or not the SIGID register should be updated
+		//  here or when the IMR is cleared (below).
+
+		GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
+		GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
+
 		CSRreg.SIGNAL = false;
+		
+		// [TODO] (SIGNAL) : Re-enable GIFpath DMAs here!
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
 	if(csr.HSINT)	CSRreg.HSINT	= false;
 	if(csr.VSINT)	CSRreg.VSINT	= false;
-	if(csr.EDWINT)	CSRreg.EDWINT	= false;	
+	if(csr.EDWINT)	CSRreg.EDWINT	= false;
 }
 
 static __forceinline void IMRwrite(u32 value)
@@ -125,17 +134,19 @@ static __forceinline void IMRwrite(u32 value)
 	if(CSRreg.GetInterruptMask() & (~(GSIMR >> 8) & 0x1f))
 		gsIrq();
 
-	if( CSR_SIGNAL_Pending && !(GSIMR & 0x100))
+	if( SIGNAL_IMR_Pending && !(GSIMR & 0x100))
 	{
-		// (note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
+		// Note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
 		//  trigger the gsInt and clear the second pending SIGNAL interrupt -- if they fail
 		//  to do so, the GS will freeze again upon the very next SIGNAL).
+		//
+		// What's not known here is whether or not the SIGID register should be updated
+		//  here or when the GS is resumed during CSR write (above).
 
-		// It's yet unclear if the SIGNAL should be set back to TRUE or not when the IRQ is
-		// raised here.  Neither setting it nor leaving it be seemed to keep Soul Calibur 3 from
-		// dying.  This could be the fault of other emulation/timing errors in the DMA though --air
+		//GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",CSR_SIGNAL_Data[0], CSR_SIGNAL_Data[1], GSIMR, GSCSRr);
+		//GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~CSR_SIGNAL_Data[1])|(CSR_SIGNAL_Data[0]&CSR_SIGNAL_Data[1]);
 
-		//CSRreg.SIGNAL = true;
+		CSRreg.SIGNAL = true;
 		gsIrq();
 	}
 }
@@ -441,7 +452,7 @@ void gsResetFrameSkip()
 void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
-	Freeze(CSR_SIGNAL_Pending);
+	Freeze(SIGNAL_IMR_Pending);
 
 	if( GetVersion() > 0 )
 		Freeze(gsRegionMode);
