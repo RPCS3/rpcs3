@@ -55,7 +55,7 @@ int branch;		         // set for branch
 
 __aligned16 GPR_reg64 g_cpuConstRegs[32] = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
-bool g_cpuFlushedPC, g_recompilingDelaySlot, g_maySignalException;
+bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalException;
 
 ////////////////////////////////////////////////////////////////
 // Static Private Variables - R5900 Dynarec
@@ -976,13 +976,17 @@ void iFlushCall(int flushtype)
 	_freeX86reg(ECX);
 	_freeX86reg(EDX);
 
-	if (flushtype & FLUSH_PC && !g_cpuFlushedPC) {
+	if ((flushtype & FLUSH_PC) && !g_cpuFlushedPC) {
 		xMOV(ptr32[&cpuRegs.pc], pc);
 		g_cpuFlushedPC = true;
 	}
-	if (flushtype & FLUSH_CODE)
+
+	if ((flushtype & FLUSH_CODE) && !g_cpuFlushedCode) {
 		xMOV(ptr32[&cpuRegs.code], cpuRegs.code);
-	if (flushtype & FLUSH_CAUSE) {
+		g_cpuFlushedCode = true;
+	}
+
+	if ((flushtype & FLUSH_CAUSE) && !g_maySignalException) {
 		if (g_recompilingDelaySlot)
 			xOR(ptr32[&cpuRegs.CP0.n.Cause], 1 << 31); // BD
 		g_maySignalException = true;
@@ -1135,6 +1139,7 @@ void recompileNextInstruction(int delayslot)
 	if (!delayslot) {
 		pc += 4;
 		g_cpuFlushedPC = false;
+		g_cpuFlushedCode = false;
 	} else {
 		// increment after recompiling so that pc points to the branch during recompilation
 		g_recompilingDelaySlot = true;
@@ -1223,6 +1228,7 @@ void recompileNextInstruction(int delayslot)
 	if (delayslot) {
 		pc += 4;
 		g_cpuFlushedPC = false;
+		g_cpuFlushedCode = false;
 		if (g_maySignalException)
 			xAND(ptr32[&cpuRegs.CP0.n.Cause], ~(1 << 31)); // BD
 		g_recompilingDelaySlot = false;

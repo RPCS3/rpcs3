@@ -346,22 +346,22 @@ extern u16 x86FpuState;
 // the code being called is going to modify register allocations -- ie, be doing
 // some kind of recompiling of its own.
 
-#define FLUSH_CACHED_REGS 1
-#define FLUSH_FLUSH_XMM 2
-#define FLUSH_FREE_XMM 4 // both flushes and frees
-#define FLUSH_FLUSH_MMX 8
-#define FLUSH_FREE_MMX 16  // both flushes and frees
-#define FLUSH_FLUSH_ALLX86 32 // flush x86
-#define FLUSH_FREE_TEMPX86 64 // flush and free temporary x86 regs
-#define FLUSH_FREE_ALLX86 128 // free all x86 regs
-#define FLUSH_FREE_VU0 0x100  // free all vu0 related regs
-#define FLUSH_PC	0x200 // program counter
-#define FLUSH_CAUSE	0x400 // cause register, only the branch delay bit
-#define FLUSH_CODE	0x800 // opcode for interpreter
+#define FLUSH_CACHED_REGS	0x001
+#define FLUSH_FLUSH_XMM		0x002
+#define FLUSH_FREE_XMM		0x004	// both flushes and frees
+#define FLUSH_FLUSH_MMX		0x008
+#define FLUSH_FREE_MMX		0x010	// both flushes and frees
+#define FLUSH_FLUSH_ALLX86	0x020	// flush x86
+#define FLUSH_FREE_TEMPX86	0x040	// flush and free temporary x86 regs
+#define FLUSH_FREE_ALLX86	0x080	// free all x86 regs
+#define FLUSH_FREE_VU0		0x100	// free all vu0 related regs
+#define FLUSH_PC			0x200	// program counter
+#define FLUSH_CAUSE			0x400	// cause register, only the branch delay bit
+#define FLUSH_CODE			0x800	// opcode for interpreter
 
-#define FLUSH_EVERYTHING 0x1ff
-#define FLUSH_EXCEPTION 0x7ff
-#define FLUSH_INTERPRETER 0xfff
+#define FLUSH_EVERYTHING	0x1ff
+#define FLUSH_EXCEPTION		0x7ff
+#define FLUSH_INTERPRETER	0xfff
 
 // no freeing, used when callee won't destroy mmx/xmm regs
 #define FLUSH_NODESTROY (FLUSH_CACHED_REGS|FLUSH_FLUSH_XMM|FLUSH_FLUSH_MMX|FLUSH_FLUSH_ALLX86)

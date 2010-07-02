@@ -169,12 +169,12 @@ void recMFC0( void )
 			break;
 
 			case 1:
-				iFlushCall(FLUSH_NODESTROY);
+				iFlushCall(FLUSH_INTERPRETER);
 				xCALL( COP0_UpdatePCCR );
 				xMOV(eax, ptr[&cpuRegs.PERF.n.pcr0]);
 				break;
 			case 3:
-				iFlushCall(FLUSH_NODESTROY);
+				iFlushCall(FLUSH_INTERPRETER);
 				xCALL( COP0_UpdatePCCR );
 				xMOV(eax, ptr[&cpuRegs.PERF.n.pcr1]);
 			break;
@@ -206,7 +206,7 @@ void recMTC0()
 		switch (_Rd_)
 		{
 			case 12:
-				iFlushCall(FLUSH_NODESTROY);
+				iFlushCall(FLUSH_INTERPRETER);
 				xMOV( ecx, g_cpuConstRegs[_Rt_].UL[0] );
 				xCALL( WriteCP0Status );
 			break;
@@ -221,7 +221,7 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						iFlushCall(FLUSH_NODESTROY);
+						iFlushCall(FLUSH_INTERPRETER);
 						xCALL( COP0_UpdatePCCR );
 						xMOV( ptr32[&cpuRegs.PERF.n.pccr], g_cpuConstRegs[_Rt_].UL[0] );
 						xCALL( COP0_DiagnosticPCCR );
@@ -255,7 +255,7 @@ void recMTC0()
 		switch (_Rd_)
 		{
 			case 12:
-				iFlushCall(FLUSH_NODESTROY);
+				iFlushCall(FLUSH_INTERPRETER);
 				_eeMoveGPRtoR(ECX, _Rt_);
 				xCALL( WriteCP0Status );
 			break;
@@ -270,7 +270,7 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						iFlushCall(FLUSH_NODESTROY);
+						iFlushCall(FLUSH_INTERPRETER);
 						xCALL( COP0_UpdatePCCR );
 						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pccr, _Rt_);
 						xCALL( COP0_DiagnosticPCCR );

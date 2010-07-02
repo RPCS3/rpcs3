@@ -18,6 +18,8 @@
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
 
+typedef void FnType_Void();
+
 //------------------------------------------------------------------
 // Macro VU - Helper Macros / Functions
 //------------------------------------------------------------------
@@ -244,16 +246,16 @@ void recBC2TL() { _setupBranchTest(JZ32,  true);  }
 
 void COP2_Interlock(bool mBitSync) {
 	if (cpuRegs.code & 1) {
-		iFlushCall(FLUSH_NOCONST);
-		if (mBitSync) CALLFunc((uptr)_vu0WaitMicro);
-		else		  CALLFunc((uptr)_vu0FinishMicro);
+		iFlushCall(FLUSH_EVERYTHING | FLUSH_PC);
+		if (mBitSync) xCALL(_vu0WaitMicro);
+		else		  xCALL(_vu0FinishMicro);
 	}
 }
 
-void TEST_FBRST_RESET(uptr resetFunct, int vuIndex) {
+void TEST_FBRST_RESET(FnType_Void* resetFunct, int vuIndex) {
 	TEST32ItoR(EAX, (vuIndex) ? 0x200 : 0x002);
 	j8Ptr[0] = JZ8(0);
-		CALLFunc(resetFunct);
+		xCALL(resetFunct);
 		MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
 	x86SetJ8(j8Ptr[0]);
 }
@@ -261,6 +263,7 @@ void TEST_FBRST_RESET(uptr resetFunct, int vuIndex) {
 static void recCFC2() {
 
 	printCOP2("CFC2");
+
 	COP2_Interlock(0);
 	if (!_Rt_) return;
 	iFlushCall(FLUSH_EVERYTHING);
@@ -320,8 +323,8 @@ static void recCTC2() {
 			}
 			else MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
 
-			TEST_FBRST_RESET((uptr)vu0ResetRegs, 0);
-			TEST_FBRST_RESET((uptr)vu1ResetRegs, 1);
+			TEST_FBRST_RESET(vu0ResetRegs, 0);
+			TEST_FBRST_RESET(vu1ResetRegs, 1);
 
 			AND32ItoR(EAX, 0x0C0C);
 			MOV32RtoM((uptr)&microVU0.regs->VI[REG_FBRST].UL, EAX);

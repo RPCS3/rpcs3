@@ -35,11 +35,14 @@ namespace MMXRegisters
 
     __forceinline bool Saved()
     {
-        return ( stack_depth > 0);
+		return false;
+        //return (stack_depth > 0);
     }
 
     __forceinline void Freeze()
     {
+		return;
+
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("MMXRegisters::Freeze: depth[%d]\n", stack_depth);
@@ -83,6 +86,8 @@ namespace MMXRegisters
 
     __forceinline void Thaw()
     {
+		return;
+
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("MMXRegisters::Thaw: depth[%d]\n", stack_depth);
@@ -138,11 +143,14 @@ namespace XMMRegisters
 
     __forceinline bool Saved()
     {
-        return ( stack_depth > 0);
+		return false;
+        //return ( stack_depth > 0);
     }
 
     __forceinline void Freeze()
     {
+		return;
+
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("XMMRegisters::Freeze: depth[%d]\n", Depth());
@@ -185,6 +193,8 @@ namespace XMMRegisters
 
     __forceinline void Thaw()
     {
+		return;
+
         if (!g_EEFreezeRegs) return;
 
         //DevCon.Warning("XMMRegisters::Thaw: depth[%d]\n", Depth());
@@ -238,18 +248,18 @@ namespace Registers
 	// MMX registers should not be needing freezes anymore (speedup!)
     __forceinline bool Saved()
     {
-        return (XMMRegisters::Saved() /*|| MMXRegisters::Saved()*/ );
+        return false; //(XMMRegisters::Saved() /*|| MMXRegisters::Saved()*/ );
     }
 
     __forceinline void Freeze()
     {
-        XMMRegisters::Freeze();
+        //XMMRegisters::Freeze();
         //MMXRegisters::Freeze();
     }
 
     __forceinline void Thaw()
     {
-        XMMRegisters::Thaw();
+        //XMMRegisters::Thaw();
         //MMXRegisters::Thaw();
     }
 }
