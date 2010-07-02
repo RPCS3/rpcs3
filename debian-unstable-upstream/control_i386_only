@@ -1,0 +1,101 @@
+Source: pcsx2.snapshot
+Section: games
+Priority: optional
+Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
+Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.7.1), cmake (>=2.8),
+    zlib1g-dev (>=1:1.2.3.4),
+    libbz2-dev (>= 1.0.4),
+    libsdl1.2-dev,
+    libjpeg-dev,
+    libwxbase2.8-dev (>=2.8.0),
+    libwxgtk2.8-dev (>=2.8.0),
+    libgtk2.0-dev (>=2.10),
+    liba52-0.7.4-dev,
+    libasound2-dev,
+    portaudio19-dev,
+# version not yet in debian 
+# libsoundtouch1-dev (>= 1.5),
+# I patch the source (remove feature) to compile with version 1.3
+    libsoundtouch1-dev (>= 1.3),
+    libsparsehash-dev (>=1.6),
+    libx11-dev,
+    libxxf86vm-dev,
+    libglew1.5-dev (>=1.5.1),
+    libgl1-mesa-dev,
+    libglu1-mesa-dev,
+    nvidia-cg-toolkit (>= 2.1.0017.deb1)
+Standards-Version: 3.9.0
+Homepage: http://pcsx2.net/
+
+Package: pcsx2-unstable
+Architecture: i386
+Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-data-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
+Conflicts: pcsx2
+Description: Playstation 2 emulator
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ WARNING: it requieres a CPU with sse2 instructions. If your
+ CPU does not support this instruction set, it does not have
+ enough horse power to run this emulator anyway.
+ .
+ This package includes the main binary file.
+
+
+Package: pcsx2-data-unstable
+Architecture: all 
+Depends: ${misc:Depends}
+Recommends: pcsx2-unstable (>= ${binary:Version}), 
+Conflicts: pcsx2-data
+Description: data for pcsx2
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ WARNING: it requieres a CPU with sse2 instructions. If your
+ CPU does not support this instruction set, it does not have
+ enough horse power to run this emulator anyway.
+ .
+ This package includes data files.
+
+Package: pcsx2-plugins-unstable
+Architecture: i386
+Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version})
+Conflicts: pcsx2-plugins
+Description: Various plugins for pcsx2
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ WARNING: it requieres a CPU with sse2 instructions. If your
+ CPU does not support this instruction set, it does not have
+ enough horse power to run this emulator anyway.
+ .
+ This package includes the plugins of the emulator.
+
+Package: pcsx2-unstable-dbg
+Section: debug
+Priority: extra
+Architecture: i386
+Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
+Conflicts: pcsx2-dbg
+Description: Debug symbols for pcsx2
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ This package contains the debug symbol of pcsx2.
+
+Package: pcsx2-plugins-unstable-dbg
+Section: debug
+Priority: extra
+Architecture: i386
+Depends: ${misc:Depends}, pcsx2-plugins-unstable (= ${binary:Version})
+Conflicts: pcsx2-plugins-dbg
+Description: Debug symbols for pcsx2-plugins
+ PCSX2 is a PlayStation 2 emulator for Windows and
+ Linux, started by the same team that brought you PCSX
+ (a Sony PlayStation 1 emulator).
+ .
+ This package contains the debug symbol of pcsx2 plugins.
