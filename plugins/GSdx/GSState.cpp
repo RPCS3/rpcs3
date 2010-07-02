@@ -1563,22 +1563,26 @@ template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 		m_dump.Transfer(index, start, mem - start);
 	}
 
-	/*if(index == 0)
+	if(index == 0)
 	{
 		if(size == 0 && path.nloop > 0)
 		{
 			if(m_mt)
 			{
-				// TODO
+				// Hackfix for BIOS, which sends an incomplete packek when it does an XGKICK without
+				// having an EOP specified anywhere in VU1 memory.  Needed until PCSX2 is fixed t
+				// handle it more properly (ie, without looping infinitely).
 
 				path.nloop = 0;
 			}
 			else
 			{
+				// Unused in 0.9.7 and above, but  might as well keep this for now; allows GSdx
+				// to work with legacy editions of PCSX2.
 				Transfer<0>(mem - 0x4000, 0x4000 / 16);
 			}
 		}
-	}*/
+	}
 }
 
 template<class T> static void WriteState(uint8*& dst, T* src, size_t len = sizeof(T))

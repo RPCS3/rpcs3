@@ -89,12 +89,6 @@ static bool DXUTDelayLoadDXGI()
 	return ( m_DXGIFactory != NULL );
 }
 
-static void* GetDX11Proc( const char* methodname )
-{
-	if( !DXUT_EnsureD3D11APIs() ) return NULL;
-	return GetProcAddress( s_hModD3D11, methodname );
-}
-
 bool GSUtil::IsDirect3D11Available()
 {
 	static bool m_CheckRun = false;
@@ -105,21 +99,21 @@ bool GSUtil::IsDirect3D11Available()
 	if( !DXUTDelayLoadDXGI() )
 	{
 		m_D3D11Available = false;
-		return false;
+	}
+	else
+	{
+		CComPtr<ID3D11Device> dev;
+		CComPtr<ID3D11DeviceContext> ctx;
+		D3D_FEATURE_LEVEL level;
+		
+		HRESULT hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels),
+			D3D11_SDK_VERSION, &dev, &level, &ctx);
+
+		m_D3D11Available = !FAILED(hr);
+		m_HasD3D11Features = (level >= D3D_FEATURE_LEVEL_11_0);
 	}
 
-	CComPtr<ID3D11Device> dev;
-	CComPtr<ID3D11DeviceContext> ctx;
-	D3D_FEATURE_LEVEL level;
-	
-	HRESULT hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels),
-		D3D11_SDK_VERSION, &dev, &level, &ctx);
-
-	m_D3D11Available = !FAILED(hr);
-	m_HasD3D11Features = (level >= D3D_FEATURE_LEVEL_11_0);
-
-	UnloadDynamicLibraries();
-
+	if( !m_D3D11Available ) UnloadDynamicLibraries();
 	return m_D3D11Available;
 }
 
@@ -133,6 +127,8 @@ void GSUtil::UnloadDynamicLibraries()
 	if( s_hModD3D11 ) FreeLibrary(s_hModD3D11);
 	if( s_hModDXGI ) FreeLibrary(s_hModDXGI);
 
+	s_DynamicD3D11CreateDevice = NULL;
+	s_DynamicCreateDXGIFactory = NULL;
 	s_hModD3D11 = NULL;
 	s_hModDXGI = NULL;
 }
@@ -150,6 +146,7 @@ GSDevice11::GSDevice11()
 
 GSDevice11::~GSDevice11()
 {
+	GSUtil::UnloadDynamicLibraries();
 }
 
 bool GSDevice11::Create(GSWnd* wnd)
