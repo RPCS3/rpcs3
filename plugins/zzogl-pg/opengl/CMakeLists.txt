@@ -83,7 +83,8 @@ set(zzoglSources
     ZZoglSave.cpp
     ZZoglShaders.cpp
     ZZoglShoots.cpp
-    ZZoglVB.cpp)
+    ZZoglVB.cpp
+    ZZLog.cpp)
 
 # zzogl headers
 set(zzoglHeaders
@@ -104,7 +105,8 @@ set(zzoglHeaders
     zerogs.h
     zerogsmath.h
     zpipe.h
-    ZZoglCRTC.h)
+    ZZoglCRTC.h
+    ZZLog.h)
 
 # zzogl S sources
 set(zzoglSSources

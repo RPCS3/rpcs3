@@ -154,6 +154,7 @@
     <ClCompile Include="..\x86.cpp" />
     <ClCompile Include="..\zerogs.cpp" />
     <ClCompile Include="..\zpipe.cpp" />
+    <ClCompile Include="..\ZZLog.cpp" />
     <ClCompile Include="..\ZZoglCreate.cpp" />
     <ClCompile Include="..\ZZoglCRTC.cpp" />
     <ClCompile Include="..\ZZoglFlush.cpp" />
@@ -199,6 +200,7 @@
     <ClInclude Include="..\targets.h" />
     <ClInclude Include="Win32.h" />
     <ClInclude Include="..\x86.h" />
+    <ClInclude Include="..\ZZLog.h" />
     <ClInclude Include="..\zerogs.h" />
     <ClInclude Include="..\zerogsmath.h" />
   </ItemGroup>

@@ -349,6 +349,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZLog.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglCreate.cpp"
 				>
 			</File>
@@ -451,6 +455,10 @@
 			</File>
 			<File
 				RelativePath="..\x86.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZLog.h"
 				>
 			</File>
 			<File
