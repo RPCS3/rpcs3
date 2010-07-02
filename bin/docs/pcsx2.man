@@ -1,0 +1,128 @@
+.TH "pcsx2" "1"
+
+.SH NAME
+PCSX2 - Playstation 2 console emulator
+
+.SH DESCRIPTION
+PCSX2 is an emulator for the playstation 2 video game console. It is written mostly in C++, some part are in C and x86 assembly.
+There is still lot of on going work to improve compatibility & speed.
+
+Visit http://pcsx2.net & http://code.google.com/p/pcsx2 for the latest updates.
+
+.SH Options
+Note: all options can also be updated in the GUI.
+.TP
+
+
+.SH GENERAL OPTIONS
+.TP
+
+.B IsoFile
+Optional ISO image to load and run on startup. It uses the PCSX2 internal ISO loader.
+.TP
+
+.B --cfg=file
+Specify a custom configuration file to use instead of PCSX2.ini. It does not affect plugins.
+.TP
+
+.B --cfgpath=directory
+Specifies the config folder. It applies to pcsx2 + plugins.
+.TP
+
+.B --forcewiz
+forces running of the First-time Wizard.
+.TP
+
+
+.SH AUTO-RUN OPTIONS
+.TP
+
+.B --elf=[file]
+Executes an ELF image.
+.TP
+
+.B --nogui
+Disables display of the gui on exit (program auto-exits).
+.TP
+
+.B --nodisc
+Boots with an empty dvd tray. Use this to boot into the PS2 system menu.
+.TP
+
+.B --usecd
+Uses the configured CDVD plugin instead of IsoFile.
+.TP
+
+.SH COMPATIBILITY OPTIONS
+.TP
+
+.B --nohacks
+Disables all speedhacks.
+.TP
+
+.B --gamefixes=[fix1,fix2,...]
+Enable specific gamefixes for this session.
+Valid fixes in 0.9.7 are: VuAddSub, VuClipFlag, FpuCompare, FpuNegDiv, XGKick, IpuWait, EETiming, SkipMpeg.
+
+.TP
+.B --fullboot
+Disables the quick boot feature, forcing you to sit through the PS2 startup splash screens.
+.TP
+
+.SH PLUGINS OVERRIDES
+.TP
+
+.B --cdvd=[libpath]
+Override for the CDVD plugin.
+.TP
+
+.B --gs=[libpath] 
+Override for the GS plugin.
+
+.TP
+.B --spu=[libpath]
+Override for the SPU2 plugin.
+.TP
+
+.B --pad=[libpath]
+Override for the PAD plugin.
+.TP
+
+.B --dev9=[libpath]
+Override for the DEV9 plugin.
+.TP
+
+.B --usb=[libpath]
+Override for the USB plugin only.
+
+
+.SH FILES AND DIRECTORIES
+$XDG_HOME_DIR/pcsx2 or $HOME/.config/pcsx2
+All pcsx2 configurations and user datas.
+
+.SH "REPORTING BUGS"
+You can report bugs using the bug tracker at the pcsx2 google project, located at
+
+http://code.google.com/p/pcsx2
+
+
+.SH AUTHORS
+Please refer to the "About" section of the gui interface or the documentation.
+
+.SH PCSX2 RELATED WEBSITES
+.TP
+PCSX2 google project:
+http://code.google.com/p/pcsx2
+
+.TP
+PCSX2 web site:
+http://pcsx2.net
+
+.TP
+PCSX2 forum
+http://forums.pcsx2.net
+
+.SH "COPYRIGHT NOTICE"
+Copyright \(co 2002-2010 PCSX2 Dev Team
+
+Permission is granted to copy and distribute this manual under the terms of the GNU Free Documentation License.
