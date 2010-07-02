@@ -1,7 +1,7 @@
-Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
+Index: pcsx2.snapshot-3369/pcsx2/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/pcsx2/CMakeLists.txt	2010-06-28 22:43:06.223607055 +0200
-+++ pcsx2.snapshot-3337/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.082609942 +0200
+--- pcsx2.snapshot-3369.orig/pcsx2/CMakeLists.txt
++++ pcsx2.snapshot-3369/pcsx2/CMakeLists.txt
 @@ -17,12 +17,8 @@
  set(CMAKE_CXX_FLAGS_RELEASE "")
  
@@ -157,10 +157,10 @@ Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
  # link target with wx
  target_link_libraries(${pcsx2Name} ${wxWidgets_LIBRARIES})
  
-Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
+Index: pcsx2.snapshot-3369/common/src/x86emitter/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:39:30.000000000 +0200
-+++ pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
+--- pcsx2.snapshot-3369.orig/common/src/x86emitter/CMakeLists.txt
++++ pcsx2.snapshot-3369/common/src/x86emitter/CMakeLists.txt
 @@ -22,10 +22,6 @@
  # set common flags
  set(CommonFlags 
@@ -274,10 +274,10 @@ Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
  endif(CMAKE_BUILD_TYPE STREQUAL Release)
  
  # variable with all sources of this library
-Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
+Index: pcsx2.snapshot-3369/common/src/Utilities/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/common/src/Utilities/CMakeLists.txt	2010-06-28 22:39:30.000000000 +0200
-+++ pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.084613185 +0200
+--- pcsx2.snapshot-3369.orig/common/src/Utilities/CMakeLists.txt
++++ pcsx2.snapshot-3369/common/src/Utilities/CMakeLists.txt
 @@ -20,16 +20,12 @@
  set(CMAKE_CXX_FLAGS_RELEASE "")
  

@@ -30,10 +30,11 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.7.1), cmake (>=2.8),
 Standards-Version: 3.9.0
 Homepage: http://pcsx2.net/
 
-Package: pcsx2
+Package: pcsx2-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-data (>= ${binary:Version}), pcsx2-plugins (>= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-data-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
+Conflicts: pcsx2
 Description: Playstation 2 emulator
  PCSX2 is a PlayStation 2 emulator for Windows and
  Linux, started by the same team that brought you PCSX
@@ -46,10 +47,11 @@ Description: Playstation 2 emulator
  This package includes the main binary file.
 
 
-Package: pcsx2-data
+Package: pcsx2-data-unstable
 Architecture: all 
 Depends: ${misc:Depends}
-Recommends: pcsx2 (>= ${binary:Version}), 
+Recommends: pcsx2-unstable (>= ${binary:Version}), 
+Conflicts: pcsx2-data
 Description: data for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and
  Linux, started by the same team that brought you PCSX
@@ -61,10 +63,11 @@ Description: data for pcsx2
  .
  This package includes data files.
 
-Package: pcsx2-plugins
+Package: pcsx2-plugins-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2 (>= ${binary:Version}), pcsx2-data (>= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version})
+Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and
  Linux, started by the same team that brought you PCSX
@@ -76,12 +79,13 @@ Description: Various plugins for pcsx2
  .
  This package includes the plugins of the emulator.
 
-Package: pcsx2-dbg
+Package: pcsx2-unstable-dbg
 Section: debug
 Priority: extra
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-Depends: ${misc:Depends}, pcsx2 (= ${binary:Version})
+Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
+Conflicts: pcsx2-dbg
 Description: Debug symbols for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and
  Linux, started by the same team that brought you PCSX
@@ -89,12 +93,13 @@ Description: Debug symbols for pcsx2
  .
  This package contains the debug symbol of pcsx2.
 
-Package: pcsx2-plugins-dbg
+Package: pcsx2-plugins-unstable-dbg
 Section: debug
 Priority: extra
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-Depends: ${misc:Depends}, pcsx2-plugins (= ${binary:Version})
+Depends: ${misc:Depends}, pcsx2-plugins-unstable (= ${binary:Version})
+Conflicts: pcsx2-plugins-dbg
 Description: Debug symbols for pcsx2-plugins
  PCSX2 is a PlayStation 2 emulator for Windows and
  Linux, started by the same team that brought you PCSX

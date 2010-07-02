@@ -60,7 +60,7 @@ mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
     get_svn_dir bin common cmake pcsx2 tools;
-    get_svn_dir debian_unofficial;
+    get_svn_dir debian-unstable-upstream;
 echo "Done")
 
 echo "Donwload Linux compatible plugins ${SVN_CO_VERSION}"

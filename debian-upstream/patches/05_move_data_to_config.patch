@@ -1,7 +1,7 @@
-Index: pcsx2.snapshot-3343/pcsx2/gui/AppConfig.cpp
+Index: pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
 ===================================================================
---- pcsx2.snapshot-3343.orig/pcsx2/gui/AppConfig.cpp	2010-06-29 13:28:38.859568437 +0200
-+++ pcsx2.snapshot-3343/pcsx2/gui/AppConfig.cpp	2010-06-29 13:28:39.100612322 +0200
+--- pcsx2.snapshot-3369.orig/pcsx2/gui/AppConfig.cpp
++++ pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
 @@ -125,7 +125,12 @@
  	{
  		switch( mode )

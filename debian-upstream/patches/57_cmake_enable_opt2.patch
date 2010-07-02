@@ -1,7 +1,7 @@
-Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
+Index: pcsx2.snapshot-3369/common/src/Utilities/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.330002361 +0200
-+++ pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt	2010-06-28 22:43:08.621848268 +0200
+--- pcsx2.snapshot-3369.orig/common/src/Utilities/CMakeLists.txt
++++ pcsx2.snapshot-3369/common/src/Utilities/CMakeLists.txt
 @@ -46,13 +46,6 @@
  
  
@@ -16,10 +16,10 @@ Index: pcsx2.snapshot-3337/common/src/Utilities/CMakeLists.txt
      )
  
  
-Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
+Index: pcsx2.snapshot-3369/common/src/x86emitter/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
-+++ pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt	2010-06-28 22:43:08.621848268 +0200
+--- pcsx2.snapshot-3369.orig/common/src/x86emitter/CMakeLists.txt
++++ pcsx2.snapshot-3369/common/src/x86emitter/CMakeLists.txt
 @@ -46,13 +46,6 @@
  
  
@@ -34,10 +34,10 @@ Index: pcsx2.snapshot-3337/common/src/x86emitter/CMakeLists.txt
      )
  
  # set optimization flags
-Index: pcsx2.snapshot-3337/pcsx2/CMakeLists.txt
+Index: pcsx2.snapshot-3369/pcsx2/CMakeLists.txt
 ===================================================================
---- pcsx2.snapshot-3337.orig/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.330726425 +0200
-+++ pcsx2.snapshot-3337/pcsx2/CMakeLists.txt	2010-06-28 22:43:08.622848331 +0200
+--- pcsx2.snapshot-3369.orig/pcsx2/CMakeLists.txt
++++ pcsx2.snapshot-3369/pcsx2/CMakeLists.txt
 @@ -42,13 +42,6 @@
      )
  

@@ -2,10 +2,10 @@ This patch removes recording feature beacause it needs libsoundtouch > 1.4.
 Howerever only the version 1.3 is in debian. Unfortunately the package seems 
 to be not actively maintained.
 Note it also correct the inlude path.
-Index: pcsx2.snapshot-3337/plugins/spu2-x/src/Wavedump_wav.cpp
+Index: pcsx2.snapshot-3369/plugins/spu2-x/src/Wavedump_wav.cpp
 ===================================================================
---- pcsx2.snapshot-3337.orig/plugins/spu2-x/src/Wavedump_wav.cpp	2010-06-28 22:39:30.000000000 +0200
-+++ pcsx2.snapshot-3337/plugins/spu2-x/src/Wavedump_wav.cpp	2010-06-28 22:43:07.313797414 +0200
+--- pcsx2.snapshot-3369.orig/plugins/spu2-x/src/Wavedump_wav.cpp
++++ pcsx2.snapshot-3369/plugins/spu2-x/src/Wavedump_wav.cpp
 @@ -16,16 +16,22 @@
   */
  
@@ -107,10 +107,10 @@ Index: pcsx2.snapshot-3337/plugins/spu2-x/src/Wavedump_wav.cpp
  	m_wavrecord->write( (s16*)&sample, 2 );
 +#endif
  }
-Index: pcsx2.snapshot-3337/plugins/zerospu2/zerospu2.cpp
+Index: pcsx2.snapshot-3369/plugins/zerospu2/zerospu2.cpp
 ===================================================================
---- pcsx2.snapshot-3337.orig/plugins/zerospu2/zerospu2.cpp	2010-06-28 22:39:30.000000000 +0200
-+++ pcsx2.snapshot-3337/plugins/zerospu2/zerospu2.cpp	2010-06-28 22:43:07.313797414 +0200
+--- pcsx2.snapshot-3369.orig/plugins/zerospu2/zerospu2.cpp
++++ pcsx2.snapshot-3369/plugins/zerospu2/zerospu2.cpp
 @@ -28,7 +28,9 @@
  #include <stdlib.h>
  
@@ -141,10 +141,10 @@ Index: pcsx2.snapshot-3337/plugins/zerospu2/zerospu2.cpp
  	delete pSoundTouch; pSoundTouch = NULL;
  
  	for (u32 i = 0; i < ArraySize(s_pAudioBuffers); ++i)
-Index: pcsx2.snapshot-3337/plugins/zerospu2/zeroworker.cpp
+Index: pcsx2.snapshot-3369/plugins/zerospu2/zeroworker.cpp
 ===================================================================
---- pcsx2.snapshot-3337.orig/plugins/zerospu2/zeroworker.cpp	2010-06-28 22:39:30.000000000 +0200
-+++ pcsx2.snapshot-3337/plugins/zerospu2/zeroworker.cpp	2010-06-28 22:43:07.313797414 +0200
+--- pcsx2.snapshot-3369.orig/plugins/zerospu2/zeroworker.cpp
++++ pcsx2.snapshot-3369/plugins/zerospu2/zeroworker.cpp
 @@ -19,10 +19,14 @@
  #include "zerospu2.h"
  #include "zeroworker.h"

@@ -73,8 +73,8 @@ install: build
 	dh_install
 
 	# install menu and icon
-	cp debian/pcsx2.desktop debian/pcsx2/usr/share/applications
-	cp debian/pcsx2.xpm debian/pcsx2/usr/share/pixmaps
+	cp debian/pcsx2.desktop debian/pcsx2-unstable/usr/share/applications
+	cp debian/pcsx2.xpm debian/pcsx2-unstable/usr/share/pixmaps
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -99,8 +99,8 @@ binary-arch: build install
 	dh_installdocs -a
 	dh_installmenu -a
 	dh_installman -a
-	dh_strip --package=pcsx2 --dbg-package=pcsx2-dbg
-	dh_strip --package=pcsx2-plugins --dbg-package=pcsx2-plugins-dbg
+	dh_strip --package=pcsx2-unstable --dbg-package=pcsx2-unstable-dbg
+	dh_strip --package=pcsx2-plugins-unstable --dbg-package=pcsx2-plugins-unstable-dbg
 	dh_link -a
 	dh_compress -a
 	dh_fixperms -a
