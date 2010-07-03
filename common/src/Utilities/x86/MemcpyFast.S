@@ -368,14 +368,8 @@ $memcpy_align_done:			// destination is dword aligned
 	shr		eax, 6			// get 64-byte block count
 	jz		$memcpy_ic_2	// finish the last few bytes
 
-	mov     edx, offset _mmx_backup // will probably need this to save/restore mmx
 	cmp		eax, IN_CACHE_COPY/64	// too big 4 cache? use uncached copy
 	jae		$memcpy_uc_test
-
-	movq	[edx+0x00],mm0
-	movq	[edx+0x08],mm1
-	movq	[edx+0x10],mm2
-	movq	[edx+0x18],mm3
 
 // This is small block copy that uses the MMX registers to copy 8 bytes
 // at a time.  It uses the "unrolled loop" optimization, and also uses
@@ -407,11 +401,6 @@ $memcpy_ic_1:			// 64-byte block copies, in-cache copy
 	dec		eax				// count down
 	jnz		$memcpy_ic_1	// last 64-byte block?
 
-	movq	mm0,[edx+0x00]
-	movq	mm1,[edx+0x08]
-	movq	mm2,[edx+0x10]
-	movq	mm3,[edx+0x18]
-
 $memcpy_ic_2:
 	mov		eax, ecx		// has valid low 6 bits of the byte count
 $memcpy_ic_3:
@@ -429,10 +418,6 @@ $memcpy_uc_test:
 // use the Streaming Store instruction MOVNTQ.   This write instruction
 // bypasses the cache and writes straight to main memory.  This code also
 // uses the software prefetch instruction to pre-read the data.
-
-	movq	[edx+0x00],mm0
-	movq	[edx+0x08],mm1
-	movq	[edx+0x10],mm2
 
 .align 16
 $memcpy_uc_1:				// 64-byte blocks, uncached copy
@@ -459,10 +444,6 @@ $memcpy_uc_1:				// 64-byte blocks, uncached copy
 	dec		eax
 	movntq	[edi-8], mm1
 	jnz		$memcpy_uc_1	// last 64-byte block?
-
-	movq	mm0,[edx+0x00]
-	movq	mm1,[edx+0x08]
-	movq	mm2,[edx+0x10]
 
 	jmp		$memcpy_ic_2		// almost done  (not needed because large copy below was removed)
 

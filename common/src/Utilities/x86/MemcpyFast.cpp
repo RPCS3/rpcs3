@@ -64,296 +64,14 @@ MEMCPY_AMD.CPP
 // uses the software prefetch instruction to pre-read the data.
 // USE 64 * 1024 FOR THIS VALUE IF YOU'RE ALWAYS FILLING A "CLEAN CACHE"
 
-#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch
-#define CACHEBLOCK 80h // number of 64-byte blocks (cache lines) for block prefetch
-// For the largest size blocks, a special technique called Block Prefetch
-// can be used to accelerate the read operations.   Block Prefetch reads
-// one address per cache line, for a series of cache lines, in a short loop.
-// This is faster than using software prefetch.  The technique is great for
-// getting maximum read bandwidth, especially in DDR memory systems.
-
 // Inline assembly syntax for use with Visual C++
 
 #if defined(_MSC_VER)
 
-#ifdef PCSX2_DEBUG
-extern u8 g_globalMMXSaved;
+// --------------------------------------------------------------------------------------
+//  Fast memcpy as coded by AMD, and then improved by air. 
+// --------------------------------------------------------------------------------------
 
-#endif
-
-
-static __aligned16 u8 _xmm_backup[16*2];
-static __aligned16 u8 _mmx_backup[8*4];
-
-static __declspec(naked) void __fastcall _memcpy_raz_usrc(void *dest, const void *src, size_t bytes)
-{
-	// MOVSRC = opcode used to read. I use the same code for the aligned version, with a different define :)
-	#define MOVSRC movdqu
-	#define MOVDST movdqa
-
-	__asm
-	{
-		//Reads before reads, to avoid stalls
-		mov eax,[esp+4];
-		//Make sure to save xmm0, it must be preserved ...
-		movaps [_xmm_backup],xmm0;
-
-		//if >=128 bytes use 128 byte unrolled loop
-		//i use cmp ..,127 + jna because 127 is encodable using the simm8 form
-		cmp eax,127;
-		jna _loop_1;
-
-		//since this is a common branch target it could be good to align it -- no idea if it has any effect :p
-		align 16
-
-		//128 byte unrolled loop
-_loop_8:
-
-		MOVSRC xmm0,[edx+0x00];	//read first to avoid read-after-write stalls
-		MOVDST [ecx+0x00],xmm0; //then write :p
-		MOVSRC xmm0,[edx+0x10];
-		MOVDST [ecx+0x10],xmm0;
-		sub edx,-128;			//edx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-		sub ecx,-128;			//ecx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x20-128];
-		MOVDST [ecx+0x20-128],xmm0;
-		MOVSRC xmm0,[edx+0x30-128];
-		MOVDST [ecx+0x30-128],xmm0;
-		add eax,-128;			//eax won't be used for a while, so update it here. add/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x40-128];
-		MOVDST [ecx+0x40-128],xmm0;
-		MOVSRC xmm0,[edx+0x50-128];
-		MOVDST [ecx+0x50-128],xmm0;
-
-		MOVSRC xmm0,[edx+0x60-128];
-		MOVDST [ecx+0x60-128],xmm0;
-		MOVSRC xmm0,[edx+0x70-128];
-		MOVDST [ecx+0x70-128],xmm0;
-
-		//127~ja, 127 is encodable as simm8 :)
-		cmp eax,127;
-		ja _loop_8;
-
-		//direct copy for 0~7 qwords
-		//in order to avoid the inc/dec of all 3 registers
-		//i use negative relative addressing from the top of the buffers
-		//[top-current index]
-
-_loop_1:
-		//prepare the regs for 'negative relative addressing'
-		add edx,eax;
-		add ecx,eax;
-		neg eax;
-		jz cleanup;	//exit if nothing to do
-
-_loop_1_inner:
-		MOVSRC xmm0,[edx+eax];
-		MOVDST [ecx+eax],xmm0;
-
-		add eax,16;		//while the offset is still negative we have data to copy
-		js _loop_1_inner;
-
-		//done !
-cleanup:
-		//restore xmm and exit ~)
-		movaps xmm0,[_xmm_backup];
-		ret 4;
-	}
-	#undef MOVSRC
-	#undef MOVDST
-}
-
-
-static __declspec(naked) void __fastcall _memcpy_raz_udst(void *dest, const void *src, size_t bytes)
-{
-	// MOVDST = opcode used to read. I use the same code for the aligned version, with a different define :)
-	#define MOVSRC movaps
-	#define MOVDST movups
-	__asm
-	{
-		//Reads before reads, to avoid stalls
-		mov eax,[esp+4];
-		//Make sure to save xmm0, it must be preserved ...
-		movaps [_xmm_backup],xmm0;
-
-		//if >=128 bytes use 128 byte unrolled loop
-		//i use cmp ..,127 + jna because 127 is encodable using the simm8 form
-		cmp eax,127;
-		jna _loop_1;
-
-		//since this is a common branch target it could be good to align it -- no idea if it has any effect :p
-		align 16
-
-		//128 byte unrolled loop
-_loop_8:
-
-		MOVSRC xmm0,[edx+0x00];	//read first to avoid read-after-write stalls
-		MOVDST [ecx+0x00],xmm0; //then write :p
-		MOVSRC xmm0,[edx+0x10];
-		MOVDST [ecx+0x10],xmm0;
-		sub edx,-128;			//edx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-		sub ecx,-128;			//ecx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x20-128];
-		MOVDST [ecx+0x20-128],xmm0;
-		MOVSRC xmm0,[edx+0x30-128];
-		MOVDST [ecx+0x30-128],xmm0;
-		add eax,-128;			//eax won't be used for a while, so update it here. add/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x40-128];
-		MOVDST [ecx+0x40-128],xmm0;
-		MOVSRC xmm0,[edx+0x50-128];
-		MOVDST [ecx+0x50-128],xmm0;
-
-		MOVSRC xmm0,[edx+0x60-128];
-		MOVDST [ecx+0x60-128],xmm0;
-		MOVSRC xmm0,[edx+0x70-128];
-		MOVDST [ecx+0x70-128],xmm0;
-
-		//127~ja, 127 is encodable as simm8 :)
-		cmp eax,127;
-		ja _loop_8;
-
-		//direct copy for 0~7 qwords
-		//in order to avoid the inc/dec of all 3 registers
-		//i use negative relative addressing from the top of the buffers
-		//[top-current index]
-
-_loop_1:
-		//prepare the regs for 'negative relative addressing'
-		add edx,eax;
-		add ecx,eax;
-		neg eax;
-		jz cleanup;	//exit if nothing to do
-
-_loop_1_inner:
-		MOVSRC xmm0,[edx+eax];
-		movaps [ecx+eax],xmm0;
-
-		add eax,16;		//while the offset is still negative we have data to copy
-		js _loop_1_inner;
-
-		//done !
-cleanup:
-		//restore xmm and exit ~)
-		movaps xmm0,[_xmm_backup];
-		ret 4;
-	}
-	#undef MOVSRC
-	#undef MOVDST
-}
-
-// Custom memcpy, only for 16 byte aligned stuff (used for mtgs)
-// This function is optimized for medium-small transfer sizes (<2048, >=128). No prefetching is
-// used since the reads are linear and the cache logic can predict em :)
-// *OBSOLETE* -- memcpy_amd_ has been optimized and is now faster.
-__declspec(naked) void __fastcall memcpy_raz_(void *dest, const void *src, size_t bytes)
-{
-	// Code Implementation Notes:
-	// Uses a forward copy, in 128 byte blocks, and then does the remaining in 16 byte blocks :)
-
-	// MOVSRC = opcode used to read. I use the same code for the unaligned version, with a different define :)
-	#define MOVSRC movaps
-	#define MOVDST movaps
-	__asm
-	{
-		//Reads before reads, to avoid stalls
-		mov eax,[esp+4];
-		//Make sure to save xmm0, it must be preserved ...
-		movaps [_xmm_backup],xmm0;
-
-		//if >=128 bytes use 128 byte unrolled loop
-		//i use cmp ..,127 + jna because 127 is encodable using the simm8 form
-		cmp eax,127;
-		jna _loop_1;
-
-		//since this is a common branch target it could be good to align it -- no idea if it has any effect :p
-		align 16
-
-		//128 byte unrolled loop
-_loop_8:
-
-		MOVSRC xmm0,[edx+0x00];	//read first to avoid read-after-write stalls
-		MOVDST [ecx+0x00],xmm0; //then write :p
-		MOVSRC xmm0,[edx+0x10];
-		MOVDST [ecx+0x10],xmm0;
-		sub edx,-128;			//edx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-		sub ecx,-128;			//ecx won't be used for a while, so update it here. sub/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x20-128];
-		MOVDST [ecx+0x20-128],xmm0;
-		MOVSRC xmm0,[edx+0x30-128];
-		MOVDST [ecx+0x30-128],xmm0;
-		add eax,-128;			//eax won't be used for a while, so update it here. add/-128 for simm8 encoding
-
-		MOVSRC xmm0,[edx+0x40-128];
-		MOVDST [ecx+0x40-128],xmm0;
-		MOVSRC xmm0,[edx+0x50-128];
-		MOVDST [ecx+0x50-128],xmm0;
-
-		MOVSRC xmm0,[edx+0x60-128];
-		MOVDST [ecx+0x60-128],xmm0;
-		MOVSRC xmm0,[edx+0x70-128];
-		MOVDST [ecx+0x70-128],xmm0;
-
-		//127~ja, 127 is encodable as simm8 :)
-		cmp eax,127;
-		ja _loop_8;
-
-		//direct copy for 0~7 qwords
-		//in order to avoid the inc/dec of all 3 registers
-		//i use negative relative addressing from the top of the buffers
-		//[top-current index]
-
-_loop_1:
-		//prepare the regs for 'negative relative addressing'
-		add edx,eax;
-		add ecx,eax;
-		neg eax;
-		jz cleanup;	//exit if nothing to do
-
-_loop_1_inner:
-		MOVSRC xmm0,[edx+eax];
-		MOVDST [ecx+eax],xmm0;
-
-		add eax,16;		//while the offset is still negative we have data to copy
-		js _loop_1_inner;
-
-		//done !
-cleanup:
-		//restore xmm and exit ~)
-		movaps xmm0,[_xmm_backup];
-		ret 4;
-	}
-	#undef MOVSRC
-	#undef MOVDST
-}
-
-// This memcpy routine is for use in situations where the source buffer's alignment is indeterminate.
-__forceinline void __fastcall memcpy_raz_usrc(void *dest, const void *src, size_t bytes)
-{
-	if( ((uptr)src & 0xf) == 0 )
-		memcpy_raz_( dest, src, bytes );
-	else
-		_memcpy_raz_usrc( dest, src, bytes );
-}
-
-// This memcpy routine is for use in situations where the destination buffer's alignment is indeterminate.
-__forceinline void __fastcall memcpy_raz_udst(void *dest, const void *src, size_t bytes)
-{
-	if( ((uptr)dest & 0xf) == 0 )
-		memcpy_raz_( dest, src, bytes );
-	else
-		_memcpy_raz_udst( dest, src, bytes );
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-// Fast memcpy as coded by AMD, and thn improved by air.
-//
-// This routine preserves mmx registers!  It's the complete real deal!
 __declspec(naked) void __fastcall memcpy_amd_(void *dest, const void *src, size_t n)
 {
     __asm
@@ -398,14 +116,8 @@ $memcpy_align_done:			; destination is dword aligned
 	shr		eax, 6			; get 64-byte block count
 	jz		$memcpy_ic_2	; finish the last few bytes
 
-	mov     edx, offset _mmx_backup ; will probably need this to save/restore mmx
 	cmp		eax, IN_CACHE_COPY/64	; too big 4 cache? use uncached copy
 	jae		$memcpy_uc_test
-
-	movq	[edx+0x00],mm0
-	movq	[edx+0x08],mm1
-	movq	[edx+0x10],mm2
-	movq	[edx+0x18],mm3
 
 // This is small block copy that uses the MMX registers to copy 8 bytes
 // at a time.  It uses the "unrolled loop" optimization, and also uses
@@ -437,11 +149,6 @@ $memcpy_ic_1:			; 64-byte block copies, in-cache copy
 	dec		eax				; count down
 	jnz		$memcpy_ic_1	; last 64-byte block?
 
-	movq	mm0,[edx+0x00]
-	movq	mm1,[edx+0x08]
-	movq	mm2,[edx+0x10]
-	movq	mm3,[edx+0x18]
-
 $memcpy_ic_2:
 	mov		eax, ecx		; has valid low 6 bits of the byte count
 $memcpy_ic_3:
@@ -459,10 +166,6 @@ $memcpy_uc_test:
 // use the Streaming Store instruction MOVNTQ.   This write instruction
 // bypasses the cache and writes straight to main memory.  This code also
 // uses the software prefetch instruction to pre-read the data.
-
-	movq	[edx+0x00],mm0
-	movq	[edx+0x08],mm1
-	movq	[edx+0x10],mm2
 
 align 16
 $memcpy_uc_1:				; 64-byte blocks, uncached copy
@@ -489,10 +192,6 @@ $memcpy_uc_1:				; 64-byte blocks, uncached copy
 	dec		eax
 	movntq	[edi-8], mm1
 	jnz		$memcpy_uc_1	; last 64-byte block?
-
-	movq	mm0,[edx+0x00]
-	movq	mm1,[edx+0x08]
-	movq	mm2,[edx+0x10]
 
 	jmp		$memcpy_ic_2		; almost done  (not needed because large copy below was removed)
 
