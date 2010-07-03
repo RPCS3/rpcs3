@@ -107,6 +107,7 @@ set(zzoglHeaders
     zerogsmath.h
     zpipe.h
     ZZoglCRTC.h
+    ZZGl.h
     ZZLog.h)
 
 # zzogl S sources

@@ -462,6 +462,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZGl.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZLog.h"
 				>
 			</File>

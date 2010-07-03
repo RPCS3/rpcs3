@@ -201,6 +201,7 @@
     <ClInclude Include="..\targets.h" />
     <ClInclude Include="Win32.h" />
     <ClInclude Include="..\x86.h" />
+    <ClInclude Include="..\ZZGl.h" />
     <ClInclude Include="..\ZZLog.h" />
     <ClInclude Include="..\zerogs.h" />
     <ClInclude Include="..\zerogsmath.h" />

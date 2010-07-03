@@ -21,15 +21,7 @@
 #include <io.h>
 #endif
 
-#include <stdarg.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-
-#include <list>
-#include <vector>
-#include <map>
 #include <string>
 
 using namespace std;

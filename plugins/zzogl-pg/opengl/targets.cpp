@@ -20,12 +20,7 @@
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
 
-#include <stdio.h>
-
-#include <malloc.h>
-#include <assert.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "Mem.h"
 #include "x86.h"
