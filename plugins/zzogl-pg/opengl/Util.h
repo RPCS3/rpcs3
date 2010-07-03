@@ -248,6 +248,8 @@ typedef struct
 } GSconf;
 extern GSconf conf;
 
+// ----------------------- Defines
+
 #define REG64(name) \
 union name			\
 {					\
@@ -281,6 +283,22 @@ union name			\
 	u32 ai32[4];	\
  
 #define REG_SET_END };
+
+#ifndef SAFE_DELETE
+#	define SAFE_DELETE(x)		if( (x) != NULL ) { delete (x); (x) = NULL; }
+#endif
+#ifndef SAFE_DELETE_ARRAY
+#	define SAFE_DELETE_ARRAY(x)	if( (x) != NULL ) { delete[] (x); (x) = NULL; }
+#endif
+#ifndef SAFE_RELEASE
+#	define SAFE_RELEASE(x)		if( (x) != NULL ) { (x)->Release(); (x) = NULL; }
+#endif
+
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
+ 
+#ifndef ARRAY_SIZE
+#	define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 extern void LoadConfig();
 extern void SaveConfig();
