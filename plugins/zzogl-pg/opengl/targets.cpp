@@ -34,7 +34,6 @@ using namespace ZeroGS;
 extern int g_TransferredToGPU;
 extern bool g_bIsLost;
 extern bool g_bUpdateStencil;
-extern u32 s_uFramebuffer;
 
 #if !defined(ZEROGS_DEVBUILD)
 #	define INC_RESOLVE()
@@ -58,8 +57,6 @@ CMemoryTargetMngr g_MemTargs;
 }
 
 extern u32 s_ptexCurSet[2];
-extern u32 ptexBilinearBlocks;
-extern u32 ptexConv32to16;
 bool g_bSaveZUpdate = 0;
 
 int VALIDATE_THRESH = 8;
@@ -958,8 +955,6 @@ void ZeroGS::CDepthTarget::Resolve(int startrange, int endrange)
 		ZeroGS::SetWriteDepth();
 	}
 }
-
-extern int g_nDepthUpdateCount;
 
 void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 {

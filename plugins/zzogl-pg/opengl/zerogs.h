@@ -85,92 +85,34 @@ extern float g_fiGPU_TEXWIDTH;
 #define MASKDIVISOR		0
 #define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR) // bitwise mask width for region repeat mode
 
-#ifdef _WIN32
-extern HDC		hDC;	   // Private GDI Device Context
-extern HGLRC	hRC;	   // Permanent Rendering Context
-#endif
-
-extern bool g_bIsLost;     // Context is lost -- could not draw
-
-extern u32 ptexBlocks;		// holds information on block tiling
-extern u32 ptexConv16to32;
 extern u32 ptexBilinearBlocks;
-extern u32 ptexConv32to16;
-extern int g_MaxTexWidth, g_MaxTexHeight;
-extern float g_fBlockMult;
-extern bool g_bDisplayMsg;
-extern bool g_bDisplayFPS;
 
-extern int g_nDepthBias;
-extern u32 g_bSaveFlushedFrame;	// this is currently *not* used as a bool, in spite of its moniker --air
-extern u8* s_lpShaderResources;
-extern u32 g_SaveFrameNum;
-extern int s_nWriteDepthCount;
-extern int s_nWireframeCount;
-extern int s_nWriteDestAlphaTest;
+// this is currently *not* used as a bool, in spite of its moniker --air
+// Actually, the only thing written to it is 1 or 0, which makes the (g_bSaveFlushedFrame & 0x80000000) check rather bizzare.
+extern u32 g_bSaveFlushedFrame;	
 
 //////////////////////////
 // State parameters
-extern float fiRendWidth, fiRendHeight;
-extern int g_PrevBitwiseTexX, g_PrevBitwiseTexY; // textures stored in SAMP_BITWISEANDX and SAMP_BITWISEANDY
-extern bool s_bDestAlphaTest;
-extern int s_ClutResolve;
-extern int s_nLastResolveReset;
-extern int g_nDepthUpdateCount;
-extern int s_nResolveCounts[30]; // resolve counts for last 30 frames
-extern int g_nDepthUsed; // ffx2 pal movies
 
-/////////////////////
-// graphics resources
-extern map<string, GLbyte> mapGLExtensions;
-extern map<int, SHADERHEADER*> mapShaderResources;
 
 #ifdef DEVBUILD
 extern char* EFFECT_NAME;
 extern char* EFFECT_DIR;
 extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
 extern bool g_bSaveTrans, g_bUpdateEffect, g_bSaveTex, g_bSaveResolved;
-
 #endif
 
-extern RasterFont* font_p;
 extern u32 s_uFramebuffer;
-extern CGprofile cgvProf, cgfProf;
 extern int g_nPixelShaderVer;
-extern CGprogram pvs[16];
-extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-extern GLenum s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha; // set by zgsBlendFuncSeparateEXT
-extern u32 s_stencilfunc, s_stencilref, s_stencilmask;
-extern GLenum s_drawbuffers[];
-extern bool s_bTexFlush;
+
 extern bool s_bWriteDepth;
 
-extern int maxmin;
-extern const GLenum primtype[8];
 extern u32 ptexLogo;
 extern int nLogoWidth, nLogoHeight;
-extern u32 s_ptexInterlace;		 // holds interlace fields
-extern int s_nFullscreen;
-
-extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
-// global alpha blending settings
-extern GLenum g_internalFloatFmt;
-extern GLenum g_internalRGBAFloatFmt;
-extern GLenum g_internalRGBAFloat16Fmt;
-
-extern CGprogram g_vsprog, g_psprog;
-extern string strSnapshot;
-extern bool g_bCRTCBilinear;
-
-// AVI Capture
-extern int s_aviinit;
-extern int s_avicapturing;
-
 extern int nBackbufferWidth, nBackbufferHeight;
+
 extern u8* g_pbyGSMemory;
 extern u8* g_pbyGSClut; // the temporary clut buffer
-extern CGparameter g_vparamPosXY[2], g_fparamFogColor;
 
 namespace ZeroGS
 {
@@ -584,6 +526,7 @@ bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int he
 bool SaveJPEG(const char* filename, int width, int height, const void* pdata, int quality);
 bool SaveTGA(const char* filename, int width, int height, void* pdata);
 void Stop_Avi();
+void Delete_Avi_Capture();
 
 // private methods
 void FlushSysMem(const RECT* prc);

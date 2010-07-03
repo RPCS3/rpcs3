@@ -35,10 +35,9 @@ extern int s_nResolveCounts[30]; // resolve counts for last 30 frames
 static int s_nCurResolveIndex = 0;
 extern int g_nDepthUsed; // ffx2 pal movies
 
-extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
-
-
 //------------------ Namespace
+
+extern u32 s_ptexInterlace;		 // holds interlace fields
 
 namespace ZeroGS
 {

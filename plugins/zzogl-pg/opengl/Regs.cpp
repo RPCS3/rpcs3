@@ -215,8 +215,6 @@ void __fastcall GIFPackedRegHandlerNOP(u32* data)
 	FUNCLOG
 }
 
-extern int g_PrevBitwiseTexX, g_PrevBitwiseTexY;
-
 void tex0Write(int i, u32 *data)
 {
 	FUNCLOG

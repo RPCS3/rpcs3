@@ -140,7 +140,7 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 // State parameters
 float fiRendWidth, fiRendHeight;
 
-u8* s_lpShaderResources = NULL;
+extern u8* s_lpShaderResources;
 CGprogram pvs[16] = {NULL};
 
 // String's for shader file in developer mode
@@ -173,7 +173,7 @@ int g_nPixelShaderVer = 0; // default
 
 RasterFont* font_p = NULL;
 float g_fBlockMult = 1;
-int s_nFullscreen = 0;
+//int s_nFullscreen = 0;
 
 u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
@@ -199,7 +199,7 @@ ZeroGS::Create_Window(int _width, int _height)
 
 	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
-	s_nFullscreen = (conf.fullscreen()) ? 1 : 0;
+	//s_nFullscreen = (conf.fullscreen()) ? 1 : 0;
 
 	conf.mrtdepth = 0; // for now
 
@@ -899,13 +899,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 void ZeroGS::Destroy(bool bD3D)
 {
-	if (s_aviinit)
-	{
-		StopCapture();
-		Stop_Avi();
-		ZZLog::Error_Log("zerogs.avi stopped.");
-		s_aviinit = 0;
-	}
+	Delete_Avi_Capture();
 
 	g_MemTargs.Destroy();
 

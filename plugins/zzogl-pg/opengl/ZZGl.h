@@ -31,7 +31,9 @@ inline void* wglGetProcAddress(const char* x)
 #include <Cg/cgGL.h>
 #include <cstring>
 #include "zerogsmath.h"
+#include "ZeroGSShaders/zerogsshaders.h"
 
+extern u32 s_stencilfunc, s_stencilref, s_stencilmask;
 // Defines
 
 #ifndef GL_DEPTH24_STENCIL8_EXT // allows FBOs to support stencils
@@ -59,8 +61,19 @@ inline void* wglGetProcAddress(const char* x)
 	glVertexPointer(4, GL_SHORT, sizeof(VertexGPU), (void*)0); \
 }
 
+
+// global alpha blending settings
+extern GLenum g_internalFloatFmt;
+extern GLenum g_internalRGBAFloatFmt;
+extern GLenum g_internalRGBAFloat16Fmt;
+
+extern CGprogram g_vsprog, g_psprog;
+extern CGparameter g_vparamPosXY[2], g_fparamFogColor;
+
 extern const char* ShaderCallerName;
 extern const char* ShaderHandleName;
+
+extern const GLenum primtype[8];
 
 inline void SetShaderCaller(const char* Name)
 {
@@ -202,6 +215,11 @@ struct FRAGMENTSHADER
 	}
 };
 
+/////////////////////
+// graphics resources
+extern map<string, GLbyte> mapGLExtensions;
+//extern map<int, SHADERHEADER*> mapShaderResources;
+
 struct VERTEXSHADER
 {
 	VERTEXSHADER() : prog(0), sBitBltPos(0), sBitBltTex(0) {}
@@ -209,6 +227,12 @@ struct VERTEXSHADER
 	CGprogram prog;
 	CGparameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
 };
+
+extern CGprofile cgvProf, cgfProf;
+extern CGprogram pvs[16];
+extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
+extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
+extern GLenum s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha; // set by zgsBlendFuncSeparateEXT
 
 // GL prototypes
 extern PFNGLISRENDERBUFFEREXTPROC glIsRenderbufferEXT;

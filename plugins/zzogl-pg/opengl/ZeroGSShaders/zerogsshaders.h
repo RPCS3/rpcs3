@@ -5,6 +5,11 @@
 #include <Cg/cgGL.h>
 #include "PS2Edefs.h"
 
+#include <cstdio>
+#include <vector>
+
+using namespace std;
+
 #define NUM_FILTERS 2 // texture filtering
 #define NUM_TYPES 5 // types of texture read modes
 #define NUM_TEXWRAPS 4 // texture wrapping

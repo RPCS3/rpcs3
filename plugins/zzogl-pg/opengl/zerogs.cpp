@@ -44,21 +44,15 @@ extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
 extern char *libraryName;
 extern int g_nFrame, g_nRealFrame;
 
+//extern int s_nFullscreen;
 //-------------------------- Variables
 
-#ifdef _WIN32
-HDC			hDC = NULL;	 // Private GDI Device Context
-HGLRC		hRC = NULL;	 // Permanent Rendering Context
-#endif
+// Context is lost -- could not draw.
+// Setting this variable to true is also lost. Fixme.
+bool g_bIsLost = false; 
 
-// This is always false? Fixme.
-bool g_bIsLost = false;
-
-string strSnapshot;
 primInfo *prim;
 CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
-// AVI Capture
-int s_avicapturing = 0;
 
 inline u32 FtoDW(float f) { return (*((u32*)&f)); }
 
@@ -91,11 +85,8 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 // graphics resources
 CGparameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
-map<int, SHADERHEADER*> mapShaderResources;
-
 bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
-int s_nWireframeCount = 0;
 int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 
 ////////////////////
@@ -354,6 +345,7 @@ void ZeroGS::AddMessage(const char* pstr, u32 ms)
 	ZZLog::Log("%s\n", pstr);
 }
 
+extern RasterFont* font_p;
 void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 {
 	FUNCLOG
@@ -1132,7 +1124,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 void ZeroGS::texClutWrite(int ctx)
 {
 	FUNCLOG
-	s_bTexFlush = 0;
+	s_bTexFlush = false;
 
 	if (g_bIsLost) return;
 

@@ -146,6 +146,7 @@
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShoots.cpp" />
 		<Unit filename="../../ZZoglVB.cpp" />
+		<Unit filename="../../ZeroGSShaders/zerogsshaders.h" />
 		<Unit filename="../../common.h" />
 		<Unit filename="../../glprocs.c">
 			<Option compilerVar="CC" />

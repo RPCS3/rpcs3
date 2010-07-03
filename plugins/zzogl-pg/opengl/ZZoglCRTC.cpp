@@ -34,12 +34,18 @@ bool g_bSaveFrame = 0;  // saves the current psurfTarget
 bool g_bSaveFinalFrame = 0; // saves the input to the CRTC
 #endif // !defined(ZEROGS_DEVBUILD)
 
-
-bool g_bCRTCBilinear = true, g_bDisplayFPS = false;
+extern int maxmin;
+extern bool g_bCRTCBilinear;
+bool g_bDisplayFPS = false;
 int g_nFrameRender = 10, g_nFramesSkipped = 0, s_nResolved = 0; // s_nResolved == number of targets resolved this frame
 // Helper for skip frames.
 int TimeLastSkip = 0;
+
+vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
+
+// Snapshot variables.
 extern bool g_bMakeSnapshot;
+extern string strSnapshot;
 
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
 void ZeroGS::AdjustTransToAspect(Vector& v)
@@ -656,6 +662,9 @@ inline void AfterRenderSwapBuffers()
 // SnapeShoot helper
 inline void AfterRenderMadeSnapshoot()
 {
+	
+	if (!g_bMakeSnapshot) return;
+	
 	char str[64];
 	int left = 200, top = 15;
 	sprintf(str, "ZeroGS %d.%d.%d - %.1f fps %s", zgsrevision, zgsbuild, zgsminor, fFPS, s_frameskipping ? " - frameskipping" : "");
@@ -669,6 +678,8 @@ inline void AfterRenderMadeSnapshoot()
 		sprintf(str, "saved %s\n", strSnapshot.c_str());
 		AddMessage(str, 500);
 	}
+	
+		g_bMakeSnapshot = false;
 }
 
 // If needed reset
@@ -728,8 +739,7 @@ inline void AfterRendererUnimportantJob()
 		g_bMakeSnapshot = false;
 	}
 
-	if (s_avicapturing)
-		CaptureFrame();
+	CaptureFrame();
 
 	AfterRenderCountStatistics();
 

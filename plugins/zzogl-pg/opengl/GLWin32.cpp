@@ -21,6 +21,9 @@
 
 #ifdef GL_WIN32_WINDOW
 
+HDC			hDC = NULL;	 // Private GDI Device Context
+HGLRC		hRC = NULL;	 // Permanent Rendering Context
+
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static int nWindowWidth = 0, nWindowHeight = 0;

@@ -41,6 +41,13 @@ FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
+extern u32 ptexBlocks;		// holds information on block tiling
+extern u32 ptexConv16to32;
+extern u32 ptexConv32to16;
+bool g_bCRTCBilinear = true;
+u8* s_lpShaderResources = NULL;
+map<int, SHADERHEADER*> mapShaderResources;
+
 //------------------ Code
 
 // Error handler. Setup in ZZogl_Create once.

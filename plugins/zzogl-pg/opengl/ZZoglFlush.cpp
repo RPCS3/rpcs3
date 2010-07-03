@@ -118,6 +118,8 @@ void Draw(const VB& curvb)
 //------------------ variables
 
 extern bool g_bIsLost;
+extern int g_nDepthBias;
+extern float g_fBlockMult;
 bool g_bUpdateStencil = 1;
 u32 g_SaveFrameNum = 0;									// ZZ
 
@@ -144,8 +146,8 @@ static const u32 g_dwZCmp[] = { GL_NEVER, GL_ALWAYS, GL_GEQUAL, GL_GREATER };
 u32 s_ptexCurSet[2] = {0};
 static u32 s_ptexNextSet[2] = {0};				// ZZ
 
-vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
 
+extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
 extern bool s_bTexFlush;
 bool s_bWriteDepth = false;
 bool s_bDestAlphaTest = false;
@@ -187,6 +189,8 @@ static alphaInfo s_alphaInfo;												// ZZ
 
 extern u8* g_pbyGSClut;
 extern int ppf;
+
+int s_nWireframeCount = 0;
 
 //------------------ Namespace
 

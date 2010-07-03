@@ -31,8 +31,10 @@
 #include "targets.h"
 #include "Mem.h"
 
-
+// AVI Capture
+int s_avicapturing = 0;
 bool g_bMakeSnapshot = false;
+
 extern "C"
 {
 #ifdef _WIN32
@@ -57,6 +59,8 @@ extern "C"
 //------------------ Global Variables
 int TexNumber = 0;
 int s_aviinit = 0;
+
+string strSnapshot;
 
 //------------------ Code
 
@@ -345,7 +349,7 @@ void ZeroGS::StopCapture()
 // And capture frame does not work on linux.
 void ZeroGS::CaptureFrame()
 {
-	assert(s_avicapturing && s_aviinit);
+	if ((!s_avicapturing) || (!s_aviinit)) return;
 
 	vector<u32> data(nBackbufferWidth*nBackbufferHeight);
 	glReadPixels(0, 0, nBackbufferWidth, nBackbufferHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
@@ -634,4 +638,15 @@ void ZeroGS::Stop_Avi()
 #else
 // Does not support yet
 #endif
+}
+
+void ZeroGS::Delete_Avi_Capture()
+{
+	if (s_aviinit)
+	{
+		StopCapture();
+		Stop_Avi();
+		ZZLog::Error_Log("zerogs.avi stopped.");
+		s_aviinit = 0;
+	}
 }
