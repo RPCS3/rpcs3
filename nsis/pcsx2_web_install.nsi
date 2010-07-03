@@ -157,9 +157,13 @@ Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
   ; Downloaded from:
   ;   http://download.microsoft.com/download/5/B/C/5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E/vcredist_x86.exe
 
+  ClearErrors
   ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\x86" "Installed"
-  IfErrors done
-  StrCmp $R0 "1" done
+  IfErrors 0 +2
+  DetailPrint "Visual C++ 2010 Redistributable registry key was not found; assumed to be uninstalled."
+  StrCmp $R0 "1" 0 +3
+    DetailPrint "Visual C++ 2010 Redistributable is already installed; skipping!"
+    Goto done
 
   SetOutPath "$TEMP"
 
