@@ -17,7 +17,6 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include <deque>
 #include "microVU.h"
 
 //------------------------------------------------------------------
@@ -280,28 +279,14 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 		}
 
 		// If cleared and program not found, make a new program instance
-		// Exception note: It's bad news if the recompiler throws any exceptions, so we have a clause to
-		// assert if an exception occurs.  The rec should be pretty much exception safe, except for
-		// critical errors that would result in a crash regardless.
-
-		try {
-			mVU->prog.cleared	= 0;
-			mVU->prog.isSame	= 1;
-			mVU->prog.cur		= mVUcreateProg<vuIndex>(startPC/8);
-			void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
-			quick.block			= mVU->prog.cur->block[startPC/8];
-			quick.prog			= mVU->prog.cur;
-			list.list->push_front(mVU->prog.cur);
-
-			return entryPoint;
-
-		} catch( BaseException& pxDevelCode(ex) ) {
-			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + ex.FormatDiagnosticMessage(), mVU->index) );
-		} catch( std::exception& pxDevelCode(ex) ) {
-			pxFailDev( wxsFormat(L"microVU%d recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage(), mVU->index) );
-		}
-
-		return NULL;
+		mVU->prog.cleared	= 0;
+		mVU->prog.isSame	= 1;
+		mVU->prog.cur		= mVUcreateProg<vuIndex>(startPC/8);
+		void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
+		quick.block			= mVU->prog.cur->block[startPC/8];
+		quick.prog			= mVU->prog.cur;
+		list.list->push_front(mVU->prog.cur);
+		return entryPoint;
 	}
 	// If list.quick, then we've already found and recompiled the program ;)
 	mVU->prog.isSame	 = -1;
@@ -366,10 +351,16 @@ void recMicroVU0::Execute(u32 cycles) {
 	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
 	XMMRegisters::Freeze();
-	// sometimes games spin on vu0, so be careful with this value
+	// Sometimes games spin on vu0, so be careful with this value
 	// woody hangs if too high on sVU (untested on mVU)
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
-	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
+	try {
+		((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
+	} catch (BaseException& pxDevelCode(ex))  {
+		pxFailDev( wxsFormat(L"microVU0 recompiler exception: " + ex.FormatDiagnosticMessage()));
+	} catch (std::exception& pxDevelCode(ex)) {
+		pxFailDev( wxsFormat(L"microVU0 recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage()));
+	}
 	XMMRegisters::Thaw();
 }
 void recMicroVU1::Execute(u32 cycles) {
@@ -378,7 +369,16 @@ void recMicroVU1::Execute(u32 cycles) {
 	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 
 	XMMRegisters::Freeze();
-	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
+	// Exception note: It's bad news if the recompiler throws any exceptions, so we have a clause to
+	// assert if an exception occurs.  The rec should be pretty much exception safe, except for
+	// critical errors that would result in a crash regardless.
+	try {
+		((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
+	} catch (BaseException& pxDevelCode(ex))  {
+		pxFailDev( wxsFormat(L"microVU1 recompiler exception: " + ex.FormatDiagnosticMessage()));
+	} catch (std::exception& pxDevelCode(ex)) {
+		pxFailDev( wxsFormat(L"microVU1 recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage()));
+	}
 	XMMRegisters::Thaw();
 }
 
