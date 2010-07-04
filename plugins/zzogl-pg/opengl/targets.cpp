@@ -3808,7 +3808,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 		{
 
 			case PSMCT32:
-
 			case PSMCT24:
 				RESOLVE_32_BIT(32, u32, u32, (u32));
 				break;
@@ -3822,7 +3821,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 				break;
 
 			case PSMT32Z:
-
 			case PSMT24Z:
 				RESOLVE_32_BIT(32Z, u32, u32, (u32));
 				break;
@@ -3842,7 +3840,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 		{
 
 			case PSMCT32:
-
 			case PSMCT24:
 				RESOLVE_32_BIT(32, u32, Vector_16F, Float16ToARGB);
 				break;
@@ -3856,7 +3853,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 				break;
 
 			case PSMT32Z:
-
 			case PSMT24Z:
 				RESOLVE_32_BIT(32Z, u32, Vector_16F,  Float16ToARGB_Z);
 				break;

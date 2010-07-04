@@ -120,16 +120,18 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 						{
 							GIFPackedRegHandlerA_D(pMem);
 
-							pMem += sizeof(GIFPackedReg);
+							pMem += 4; //sizeof(GIFPackedReg)/4;
 						}
 						while(--path->nloop > 0);
+						break;
 					}
 
 					do
 					{
-						g_GIFPackedRegHandlers[path->GetReg()](pMem);
-
-						pMem += 4;
+						u32 reg = path->GetReg();
+						g_GIFPackedRegHandlers[reg](pMem);
+						
+						pMem += 4; //sizeof(GIFPackedReg)/4;
 						size--;
 					}
 					while (path->StepReg() && (size > 0));
