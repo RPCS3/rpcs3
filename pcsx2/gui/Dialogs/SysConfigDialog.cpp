@@ -41,7 +41,7 @@ static void CheckHacksOverrides()
 
 	// [TODO] : List command line option overrides in action?
 
-	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog:SysConfig:Overrides" );
+	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog.SysConfig.Overrides" );
 }
 
 static void CheckPluginsOverrides()
@@ -61,7 +61,7 @@ static void CheckPluginsOverrides()
 
 	// [TODO] : List command line option overrides in action?
 
-	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog:ComponentsConfig:Overrides" );
+	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog.ComponentsConfig.Overrides" );
 }
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)

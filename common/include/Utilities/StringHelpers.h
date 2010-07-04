@@ -108,6 +108,7 @@ struct ParsedAssignmentString
 
 extern bool pxParseAssignmentString( const wxString& src, wxString& ldest, wxString& rdest );
 
+extern int FastFormatString_AsciiRaw(wxCharBuffer& dest, const char* fmt, va_list argptr);
 extern wxString FastFormatString_Ascii(const char* fmt, va_list argptr);
 extern wxString FastFormatString_Unicode(const wxChar* fmt, va_list argptr);
 

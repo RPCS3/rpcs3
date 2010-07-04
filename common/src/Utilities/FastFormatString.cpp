@@ -120,6 +120,34 @@ static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* f
 	// though it'd be kinda nice if we did.
 }
 
+// returns the length of the string (not including the 0)
+int FastFormatString_AsciiRaw(wxCharBuffer& dest, const char* fmt, va_list argptr)
+{
+	if( ascii_buffer_is_deleted )
+	{
+		// This means that the program is shutting down and the C++ destructors are
+		// running, randomly deallocating static variables from existence.  We handle it
+		// as gracefully as possible by allocating local vars to do our bidding (slow, but
+		// ultimately necessary!)
+
+		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
+		format_that_ascii_mess( localbuf, fmt, argptr );
+		dest = localbuf.GetPtr();
+		return strlen(dest);
+	}
+	else
+	{
+		// This is normal operation.  The static buffers are available for use, and we use
+		// them for sake of efficiency (fewer heap allocs, for sure!)
+
+		ScopedLock locker( ascii_buffer );
+		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
+		dest = ascii_buffer.buffer.GetPtr();
+		return strlen(dest);
+	}
+	
+}
+
 wxString FastFormatString_Ascii(const char* fmt, va_list argptr)
 {
 	if( ascii_buffer_is_deleted )

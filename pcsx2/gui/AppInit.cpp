@@ -46,7 +46,7 @@ static void CpuCheckSSE2()
 		L"Your options will be limited and emulation will be *very* slow." )
 	);
 
-	pxIssueConfirmation( exconf, MsgButtons().OK(), L"Error:Startup:NoSSE2" );
+	pxIssueConfirmation( exconf, MsgButtons().OK(), L"Error.Startup.NoSSE2" );
 
 	// Auto-disable anything that needs SSE2:
 

@@ -238,7 +238,7 @@ void ApplyOverValidStateEvent::InvokeEvent()
 		L"Are you sure you want to apply settings now?"
 	) );
 
-	int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector:ConfirmShutdown" );
+	int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector.ConfirmShutdown" );
 
 	if( result == wxID_CANCEL )
 		throw Exception::CannotApplySettings( m_owner->GetApplicableConfigPanel() ).Quiet()

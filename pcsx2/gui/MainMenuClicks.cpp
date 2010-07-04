@@ -141,7 +141,7 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		dialog += dialog.GetCharHeight();
 		dialog += dialog.Heading(_("Do you want to swap discs or boot the new image (via system reset)?"));
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
 		if( result == wxID_CANCEL )
 		{
 			core_control.AllowResume();
@@ -184,7 +184,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 			_("Do you want to swap discs or boot the new image (system reset)?")
 		);
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
 
 		if( result == wxID_CANCEL )
 		{
@@ -331,7 +331,7 @@ void MainEmuFrame::_DoBootCdvd()
 	{
 		wxDialogWithHelpers dialog( this, _("Confirm PS2 Reset") );
 		dialog += dialog.Heading( GetMsg_ConfirmSysReset() );
-		bool confirmed = (pxIssueConfirmation( dialog, MsgButtons().Yes().Cancel(), L"BootCdvd:ConfirmReset" ) != wxID_CANCEL);
+		bool confirmed = (pxIssueConfirmation( dialog, MsgButtons().Yes().Cancel(), L"BootCdvd.ConfirmReset" ) != wxID_CANCEL);
 
 		if( !confirmed )
 		{

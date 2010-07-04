@@ -75,7 +75,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 			dialog += dialog.GetCharHeight();
 			dialog += dialog.Heading(GetMsg_ConfirmSysReset());
 
-			confirmed = (pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel(), L"DragDrop:BootELF" ) != wxID_CANCEL);
+			confirmed = (pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel(), L"DragDrop.BootELF" ) != wxID_CANCEL);
 		}
 
 		if( confirmed )
