@@ -7,6 +7,22 @@
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 #-------------------------------------------------------------------------------
 
+### Cmake set default value for various compilation variable
+### Here the list of default value for documentation purpose
+# ${CMAKE_SHARED_LIBRARY_CXX_FLAGS} = "-fPIC"
+# ${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} = "-rdynamic"
+# 
+# Use in debug mode
+# ${CMAKE_CXX_FLAGS_DEBUG} = "-g"
+# Use in release mode
+# ${CMAKE_CXX_FLAGS_RELEASE} = "-O3 -DNDEBUG"
+
+#-------------------------------------------------------------------------------
+# Remove bad default option
+#-------------------------------------------------------------------------------
+# Remove -rdynamic option that can some segmentation fault when openining pcsx2 plugins
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
+SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default

@@ -16,11 +16,6 @@ include(Pcsx2Utils)
 # Detect current OS
 detectOperatingSystem()
 
-# These lines remove some defaults options that can cause some failure later.
-# In particular, it remove the build option -rdynamic on pcsx2
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
-SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
-
 #-------------------------------------------------------------------------------
 # Include specific module
 # BuildParameters Must be done before SearchForStuff
