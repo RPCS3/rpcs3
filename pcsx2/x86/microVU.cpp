@@ -219,10 +219,10 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	prog->ranges  = new deque<microRange>();
 	prog->startPC = startPC;
 	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
-	float cacheSize = (float)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
-	float cacheUsed =((float)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
+	double cacheSize = (double)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
+	double cacheUsed =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
-	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)",
+	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %3.3f%%)",
 					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
 	return prog;
 }
