@@ -435,6 +435,7 @@ _f int mVUbranchCheck(mV) {
 		incPC(2);
 		mVUlow.evilBranch = 1;
 		mVUregs.blockType = 2;
+		mVUregs.needExactMatch |= 7; // This might not be necessary, but w/e...
 		Console.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
 		return 1;
 	}
