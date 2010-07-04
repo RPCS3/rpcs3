@@ -343,7 +343,9 @@ struct Pcsx2Config
 				fpuFullMode		:1;
 
 			bool
-				StackFrameChecks:1;
+				StackFrameChecks:1,
+				PreBlockCheckEE	:1,
+				PreBlockCheckIOP:1;
 		BITFIELD_END
 
 		RecompilerOptions();

@@ -336,7 +336,6 @@ void recCall( void (*func)() )
 
 static void __fastcall recRecompile( const u32 startpc );
 
-static u32 g_lastpc = 0;
 static u32 s_store_ebp, s_store_esp;
 
 // Recompiled code buffer for EE recompiler dispatchers!
@@ -382,7 +381,7 @@ static void _DynGen_StackFrameCheck()
 	xCMP( ebp, ptr[&s_store_ebp] );
 	xForwardJE8 skipassert_ebp;
 
-	xMOV( ecx, 1 );					// 1 specifies EBP
+	xMOV( ecx, 1 );						// 1 specifies EBP
 	xMOV( edx, ebp );
 	xCALL( StackFrameCheckFailed );
 	xMOV( ebp, ptr[&s_store_ebp] );		// half-hearted frame recovery attempt!
@@ -394,7 +393,7 @@ static void _DynGen_StackFrameCheck()
 	xCMP( esp, ptr[&s_store_esp] );
 	xForwardJE8 skipassert_esp;
 
-	xXOR( ecx, ecx );				// 0 specifies ESP
+	xXOR( ecx, ecx );					// 0 specifies ESP
 	xMOV( edx, esp );
 	xCALL( StackFrameCheckFailed );
 	xMOV( esp, ptr[&s_store_esp] );		// half-hearted frame recovery attempt!
@@ -447,6 +446,8 @@ static DynGenFunc* _DynGen_DispatcherReg()
 
 static DynGenFunc* _DynGen_EnterRecompiledCode()
 {
+	pxAssumeDev( DispatcherReg != NULL, "Dynamically generated dispatchers are required prior to generating EnterRecompiledCode!" );
+	
 	u8* retval = xGetAlignedCallTarget();
 
 	// "standard" frame pointer setup for aligned stack: Record the original
@@ -463,26 +464,34 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	// (parameters for those calls can be stored there!)  [currently no cdecl functions are
 	//  used -- we do everything through __fastcall)
 
-	xSUB( esp, 0x30 );
+	static const int cdecl_reserve = 0x00;
+	xSUB( esp, 0x20 + cdecl_reserve );
 
 	xMOV( ptr[ebp-12], edi );
 	xMOV( ptr[ebp-8], esi );
 	xMOV( ptr[ebp-4], ebx );
 
 	// Simulate a CALL function by pushing the call address and EBP onto the stack.
-	xMOV( ptr32[esp+0x1c], 0xffeeff );
+	// (the dummy address here is filled in later right before we generate the LEAVE code)
+	xMOV( ptr32[esp+0x0c+cdecl_reserve], 0xdeadbeef );
 	uptr& imm = *(uptr*)(xGetPtr()-4);
 
 	// This part simulates the "normal" stackframe prep of "push ebp, mov ebp, esp"
-	xMOV( ptr32[esp+0x18], ebp );
-	xLEA( ebp, ptr32[esp+0x18] );
+	// It is done here because we can't really generate that stuff from the Dispatchers themselves.
+	xMOV( ptr32[esp+0x08+cdecl_reserve], ebp );
+	xLEA( ebp, ptr32[esp+0x08+cdecl_reserve] );
 
 	xMOV( ptr[&s_store_esp], esp );
 	xMOV( ptr[&s_store_ebp], ebp );
 
-	xJMP( ptr32[&DispatcherReg] );
+	xJMP( DispatcherReg );
 
 	xAlignCallTarget();
+
+	// This dummy CALL is unreachable code that some debuggers (MSVC2008) need in order to
+	// unwind the stack properly.  This is effectively the call that we simulate above.
+	if( IsDevBuild ) xCALL( DispatcherReg );
+
 	imm = (uptr)xGetPtr();
 	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
 
@@ -1240,7 +1249,10 @@ void recompileNextInstruction(int delayslot)
 		s_nEndBlock = pc;
 }
 
-static void printfn()
+// (Called from recompiled code)]
+// This function is called from the recompiler prior to starting execution of *every* recompiled block.
+// Calling of this function can be enabled or disabled through the use of EmuConfig.Recompiler.PreBlockChecks
+static void __fastcall PreBlockCheck( u32 blockpc )
 {
 	static int lastrec = 0;
 	static int curcount = 0;
@@ -1248,21 +1260,21 @@ static void printfn()
 
     pxAssert(!Registers::Saved());
 
-	//pxAssert( cpuRegs.pc != 0x80001300 );
-
-    if( (dumplog&2) && g_lastpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
+    /*if( blockpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
 		curcount++;
 
 		if( curcount > skip ) {
-			iDumpRegisters(g_lastpc, 1);
+			iDumpRegisters(blockpc, 1);
 			curcount = 0;
 		}
 
-		lastrec = g_lastpc;
-	}
+		lastrec = blockpc;
+	}*/
 }
 
 #ifdef PCSX2_DEBUG
+// Array of cpuRegs.pc block addresses to dump.  USeful for selectively dumping potential
+// problem blocks, and seeing what the MIPS code equates to.
 static u32 s_recblocks[] = {0};
 #endif
 
@@ -1381,16 +1393,15 @@ static void __fastcall recRecompile( const u32 startpc )
 	_initXMMregs();
 	_initMMXregs();
 
-#ifdef PCSX2_DEBUG
-	// for debugging purposes
-	MOV32ItoM((uptr)&g_lastpc, pc);
-	CALLFunc((uptr)printfn);
+	if( EmuConfig.Recompiler.PreBlockCheckEE )
+	{
+		// per-block dump checks, for debugging purposes.
+		// [TODO] : These must be enabled from the GUI or INI to be used, otherwise the
+		// code that calls PreBlockCheck will not be generated.
 
-//	CMP32MtoR(EBP, (uptr)&s_uSaveEBP);
-//	j8Ptr[0] = JE8(0);
-//	CALLFunc((uptr)badespfn);
-//	x86SetJ8(j8Ptr[0]);
-#endif
+		xMOV(ecx, pc);
+		xCALL(PreBlockCheck);
+	}
 
 	// go until the next branch
 	i = startpc;
@@ -1831,7 +1842,7 @@ StartRecomp:
 // The only *safe* way to throw exceptions from the context of recompiled code.
 // The exception is cached and the recompiler is exited safely using either an
 // SEH unwind (MSW) or setjmp/longjmp (GCC).
-void recThrowException( const BaseR5900Exception& ex )
+static void recThrowException( const BaseR5900Exception& ex )
 {
 	if (!m_recExecutingCode) ex.Rethrow();
 

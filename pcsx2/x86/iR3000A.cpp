@@ -865,8 +865,6 @@ static void recShutdown()
 	s_nInstCacheSize = 0;
 }
 
-u32 g_psxlastpc = 0;
-
 static void iopClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
@@ -1167,7 +1165,7 @@ void psxRecompileNextInstruction(int delayslot)
 	_clearNeededX86regs();
 }
 
-static void printfn()
+static void __fastcall  PreBlockCheck( u32 blockpc )
 {
 #ifdef PCSX2_DEBUG
 	extern void iDumpPsxRegisters(u32 startpc, u32 temp);
@@ -1178,16 +1176,16 @@ static void printfn()
 
     //*(int*)PSXM(0x27990) = 1; // enables cdvd bios output for scph10000
 
-    if( (psxdump&2) && lastrec != g_psxlastpc )
+    if( (psxdump&2) && lastrec != blockpc )
     {
 		curcount++;
 
 		if( curcount > skip ) {
-			iDumpPsxRegisters(g_psxlastpc, 1);
+			iDumpPsxRegisters(blockpc, 1);
 			curcount = 0;
 		}
 
-		lastrec = g_psxlastpc;
+		lastrec = blockpc;
 	}
 #endif
 }
@@ -1235,8 +1233,8 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 
 	if( IsDebugBuild )
 	{
-		MOV32ItoM((uptr)&g_psxlastpc, psxpc);
-		CALLFunc((uptr)printfn);
+		xMOV(ecx, psxpc);
+		xCALL(PreBlockCheck);
 	}
 
 	// go until the next branch

@@ -94,7 +94,8 @@ Pcsx2Config::RecompilerOptions::RecompilerOptions()
 {
 	bitset		= 0;
 
-	StackFrameChecks = false;
+	//StackFrameChecks	= false;
+	//PreBlockCheckEE		= false;
 
 	// All recs are enabled by default.
 
@@ -173,6 +174,8 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuFullMode );
 
 	IniBitBool( StackFrameChecks );
+	IniBitBool( PreBlockCheckEE );
+	IniBitBool( PreBlockCheckIOP );
 }
 
 Pcsx2Config::CpuOptions::CpuOptions()
