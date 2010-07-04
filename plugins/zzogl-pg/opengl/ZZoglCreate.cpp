@@ -180,7 +180,7 @@ u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
 bool g_bDisplayMsg = 1;
 int g_nDepthBias = 0;
-u32 g_bSaveFlushedFrame = 0;
+//u32 g_bSaveFlushedFrame = 0;
 
 //------------------ Code
 
@@ -882,7 +882,7 @@ bool ZeroGS::Create(int _width, int _height)
 	vb[0].Init(VB_BUFFERSIZE);
 	vb[1].Init(VB_BUFFERSIZE);
 
-	g_bSaveFlushedFrame = 1;
+//	g_bSaveFlushedFrame = 1;
 
 	g_vsprog = g_psprog = 0;
 

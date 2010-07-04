@@ -32,7 +32,7 @@
 
 using namespace ZeroGS;
 extern int g_TransferredToGPU;
-extern bool g_bIsLost;
+//extern bool g_bIsLost;
 extern bool g_bUpdateStencil;
 
 #if !defined(ZEROGS_DEVBUILD)
@@ -56,7 +56,7 @@ CBitwiseTextureMngr s_BitwiseTextures;
 CMemoryTargetMngr g_MemTargs;
 }
 
-extern u32 s_ptexCurSet[2];
+//extern u32 s_ptexCurSet[2];
 bool g_bSaveZUpdate = 0;
 
 int VALIDATE_THRESH = 8;
@@ -2934,8 +2934,7 @@ void InitTransferHostLocal()
 {
 	FUNCLOG
 
-	if (g_bIsLost)
-		return;
+	//if (g_bIsLost) return;
 
 #if defined(ZEROGS_DEVBUILD)
 	if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
@@ -3009,7 +3008,7 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 {
 	FUNCLOG
 
-	if (g_bIsLost) return;
+//	if (g_bIsLost) return;
 
 	int start, end;
 

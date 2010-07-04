@@ -137,8 +137,8 @@ inline void FrameSavingHelper()
 #endif
 	}
 
-	g_SaveFrameNum = 0;
-	g_bSaveFlushedFrame = 1;
+//	g_SaveFrameNum = 0;
+//	g_bSaveFlushedFrame = 1;
 }
 
 // Function populated tex0Info[2] array
@@ -743,7 +743,7 @@ inline void AfterRendererUnimportantJob()
 
 	AfterRenderCountStatistics();
 
-	if (s_nNewWidth >= 0 && s_nNewHeight >= 0 && !g_bIsLost)
+	if (s_nNewWidth >= 0 && s_nNewHeight >= 0/* && !g_bIsLost*/)
 		AfterRendererResizeWindow();
 
 	maxmin = 608;
@@ -831,7 +831,7 @@ int count = 0;
 // The main renderer function
 void ZeroGS::RenderCRTC(int interlace)
 {
-	if (g_bIsLost || FrameSkippingHelper()) return;
+	if (/*g_bIsLost || */FrameSkippingHelper()) return;
 
 	u32 bInterlace = SMODE2->INT && SMODE2->FFMD && (conf.interlace < 2);
 

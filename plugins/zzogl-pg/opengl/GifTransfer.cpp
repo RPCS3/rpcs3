@@ -112,17 +112,18 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 
 					// first try a shortcut for a very common case
 
-					/*if(path.adonly && size >= path.nloop)
+					if (path->adonly && size >= path->nloop)
 					{
-						size -= path.nloop;
+						size -= path->nloop;
 
 						do
 						{
 							GIFPackedRegHandlerA_D(pMem);
 
-							mem += sizeof(GIFPackedReg);
+							pMem += sizeof(GIFPackedReg);
 						}
-						while(--path.nloop > 0);*/
+						while(--path->nloop > 0);
+					}
 
 					do
 					{

@@ -89,7 +89,7 @@ extern u32 ptexBilinearBlocks;
 
 // this is currently *not* used as a bool, in spite of its moniker --air
 // Actually, the only thing written to it is 1 or 0, which makes the (g_bSaveFlushedFrame & 0x80000000) check rather bizzare.
-extern u32 g_bSaveFlushedFrame;	
+//extern u32 g_bSaveFlushedFrame;	
 
 //////////////////////////
 // State parameters

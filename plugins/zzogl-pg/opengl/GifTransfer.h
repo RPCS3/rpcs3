@@ -86,12 +86,14 @@ typedef struct
 		nloop	= tag.NLOOP;
 		eop		= tag.EOP;
 		mode	= tag.FLG;
+		adonly = false;
 
 		// Hmm....
 		nreg	= tag.NREG << 2;
 		if (nreg == 0) nreg = 64;
 		regs = tag.REGS;
 		reg = 0;
+		if ((nreg == 4) && (regs == GIF_REG_A_D)) adonly == true;
 
 		//      ZZLog::GS_Log("GIFtag: %8.8lx_%8.8lx_%8.8lx_%8.8lx: EOP=%d, NLOOP=%x, FLG=%x, NREG=%d, PRE=%d",
 		//                      data[3], data[2], data[1], data[0],

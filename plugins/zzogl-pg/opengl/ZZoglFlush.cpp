@@ -117,11 +117,11 @@ void Draw(const VB& curvb)
 
 //------------------ variables
 
-extern bool g_bIsLost;
+//extern bool g_bIsLost;
 extern int g_nDepthBias;
 extern float g_fBlockMult;
 bool g_bUpdateStencil = 1;
-u32 g_SaveFrameNum = 0;									// ZZ
+//u32 g_SaveFrameNum = 0;									// ZZ
 
 int GPU_TEXWIDTH = 512;
 float g_fiGPU_TEXWIDTH = 1 / 512.0f;
@@ -143,7 +143,7 @@ static const u32 g_dwZCmp[] = { GL_NEVER, GL_ALWAYS, GL_GEQUAL, GL_GREATER };
 /////////////////////
 // graphics resources
 #define s_bForceTexFlush 1					// ZZ
-u32 s_ptexCurSet[2] = {0};
+static u32 s_ptexCurSet[2] = {0};
 static u32 s_ptexNextSet[2] = {0};				// ZZ
 
 
@@ -160,7 +160,7 @@ int s_nWriteDestAlphaTest = 0;					// ZZ
 // State parameters
 static Vector vAlphaBlendColor;	 // used for GPU_COLOR
 
-static u8 bNeedBlendFactorInAlpha;	  // set if the output source alpha is different from the real source alpha (only when blend factor > 0x80)
+static bool bNeedBlendFactorInAlpha;	  // set if the output source alpha is different from the real source alpha (only when blend factor > 0x80)
 static u32 s_dwColorWrite = 0xf;			// the color write mask of the current target
 
 union
@@ -185,7 +185,7 @@ union
 
 int g_PrevBitwiseTexX = -1, g_PrevBitwiseTexY = -1; // textures stored in SAMP_BITWISEANDX and SAMP_BITWISEANDY		// ZZ
 
-static alphaInfo s_alphaInfo;												// ZZ
+//static alphaInfo s_alphaInfo;												// ZZ
 
 extern u8* g_pbyGSClut;
 extern int ppf;
@@ -339,7 +339,8 @@ inline void VisualBufferMessage(int context)
 	ZZLog::Error_Log("TGA name '%s'.", Name);
 	free(Name);
 //	}
-	ZZLog::Debug_Log("frame: %d, buffer %ld.\n", g_SaveFrameNum, BufferNumber);
+//	ZZLog::Debug_Log("frame: %d, buffer %ld.\n", g_SaveFrameNum, BufferNumber);
+	ZZLog::Debug_Log("buffer %ld.\n", BufferNumber);
 #endif
 }
 
@@ -347,12 +348,12 @@ inline void SaveRendererTarget(VB& curvb)
 {
 #ifdef _DEBUG
 
-	if (g_bSaveFlushedFrame & 0x80000000)
-	{
-		char str[255];
-		sprintf(str, "rndr%d.tga", g_SaveFrameNum);
-		SaveRenderTarget(str, curvb.prndr->fbw, curvb.prndr->fbh, 0);
-	}
+//	if (g_bSaveFlushedFrame & 0x80000000)
+//	{
+//		char str[255];
+//		sprintf(str, "rndr%d.tga", g_SaveFrameNum);
+//		SaveRenderTarget(str, curvb.prndr->fbw, curvb.prndr->fbh, 0);
+//	}
 
 #endif
 }
@@ -374,7 +375,7 @@ inline void FlushUpdateEffect()
 // Check, maybe we cold skip flush
 inline bool IsFlushNoNeed(VB& curvb, const pixTest& curtest)
 {
-	if (curvb.nCount == 0 || (curtest.zte && curtest.ztst == 0) || g_bIsLost)
+	if (curvb.nCount == 0 || (curtest.zte && curtest.ztst == 0) /*|| g_bIsLost*/)
 	{
 		curvb.nCount = 0;
 		return true;
@@ -818,7 +819,7 @@ inline int FlushGetShaderType(VB& curvb, CRenderTarget* ptextarg, GLuint& ptexcl
 }
 
 
-//Set page offsets depends omn shader type.
+//Set page offsets depends on shader type.
 inline Vector FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRenderTarget* ptextarg)
 {
 	SetShaderCaller("FlushSetPageOffset");
@@ -936,8 +937,8 @@ inline void FlushApplyResizeFilter(VB& curvb, u32& dwFilterOpts, CRenderTarget* 
 }
 
 
-// Usage existing targets depends on several tricks, 32-16 conversion and CLUTing, so we need handle it.
-inline FRAGMENTSHADER* FlushUseExistRenderTaget(VB& curvb, CRenderTarget* ptextarg, u32& dwFilterOpts, int exactcolor, int context)
+// Usage existing targets depends on several tricks, 32-16 conversion and CLUTing, so we need to handle it.
+inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptextarg, u32& dwFilterOpts, int exactcolor, int context)
 {
 	if (ptextarg->IsDepth())
 		SetWriteDepth();
@@ -990,7 +991,6 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 	}
 
 	FRAGMENTSHADER* pfragment = LoadShadeEffect(0, GetTexFilter(curvb.tex1), curvb.curprim.fge,
-
 								IsAlphaTestExpansion(curvb), exactcolor, curvb.clamp, context, NULL);
 
 	if (pfragment == NULL)
@@ -1046,7 +1046,7 @@ inline FRAGMENTSHADER* FlushRendererStage(VB& curvb, u32& dwFilterOpts, CRenderT
 	if (curvb.curprim.tme)
 	{
 		if (ptextarg != NULL)
-			pfragment = FlushUseExistRenderTaget(curvb, ptextarg, dwFilterOpts, exactcolor, context);
+			pfragment = FlushUseExistRenderTarget(curvb, ptextarg, dwFilterOpts, exactcolor, context);
 		else
 			pfragment = FlushMadeNewTarget(curvb, exactcolor, context);
 
@@ -1288,9 +1288,7 @@ inline void AlphaPabe(VB& curvb, FRAGMENTSHADER* pfragment, int exactcolor)
 // First three cases are trivial manual.
 inline bool AlphaFailureIgnore(const pixTest curtest)
 {
-	if (!curtest.ate) return true;
-	if (curtest.atst == 1) return true;
-	if (curtest.afail == 0) return true;
+	if ((!curtest.ate) || (curtest.atst == 1) || (curtest.afail == 0)) return true;
 
 	if (conf.settings().no_alpha_fail && ((s_dwColorWrite < 8) || (s_dwColorWrite == 15 && curtest.atst == 5 && (curtest.aref == 64))))
 		return true;
@@ -1561,8 +1559,7 @@ void ZeroGS::Flush(int context)
 	SwitchWireframeOff();
 	FlushDoContextJob(curvb, context);
 
-	u32 dwUsingSpecialTesting = 0;
-	u32 dwFilterOpts = 0;
+	u32 dwUsingSpecialTesting = 0, dwFilterOpts = 0;
 	int exactcolor = FlushGetExactcolor(curtest);
 
 	FRAGMENTSHADER* pfragment = FlushRendererStage(curvb, dwFilterOpts, ptextarg, exactcolor, context);
@@ -2407,7 +2404,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 		break; \
 		\
 		case 2: \
-			bNeedBlendFactorInAlpha = 1; /* should disable alpha channel writing */ \
+			bNeedBlendFactorInAlpha = true; /* should disable alpha channel writing */ \
 			vAlphaBlendColor.y = 0; \
 			vAlphaBlendColor.w = (sign) ? (float)a.fix * (2.0f/255.0f) : (float)a.fix * (-2.0f/255.0f); \
 			usec = 0; /* change so that alpha comes from source*/ \
@@ -2431,7 +2428,7 @@ inline void ZeroGS::NeedFactor(int w)
 {
 	if (bDestAlphaColor == 2)
 	{
-		bNeedBlendFactorInAlpha = (w + 1) ? 1 : 0;
+		bNeedBlendFactorInAlpha = (w + 1) ? true : false;
 		vAlphaBlendColor.y = 0;
 		vAlphaBlendColor.w = (float)w;
 	}
@@ -2446,7 +2443,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 
 	// TODO: negative color when not clamping turns to positive???
 	g_vars._bAlphaState = 0; // set all to zero
-	bNeedBlendFactorInAlpha = 0;
+	bNeedBlendFactorInAlpha = false;
 	b2XAlphaTest = 1;
 	//u32 dwTemp = 0xffffffff;
 	bDestAlphaColor = 0;
@@ -2457,7 +2454,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	s_alphaeq = GL_FUNC_ADD;
 	s_rgbeq = 1;
 
-	s_alphaInfo = a;
+//	s_alphaInfo = a;
 	vAlphaBlendColor = Vector(1, 2 * 255.0f / 256.0f, 0, 0);
 	u32 usec = a.c;
 

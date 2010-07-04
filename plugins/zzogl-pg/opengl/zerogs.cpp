@@ -49,7 +49,7 @@ extern int g_nFrame, g_nRealFrame;
 
 // Context is lost -- could not draw.
 // Setting this variable to true is also lost. Fixme.
-bool g_bIsLost = false; 
+//bool g_bIsLost = false; 
 
 primInfo *prim;
 CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
@@ -91,7 +91,6 @@ int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 
 ////////////////////
 // State parameters
-CGcontext g_cgcontext;
 int nBackbufferWidth, nBackbufferHeight;
 
 u8* g_pbyGSMemory = NULL;   // 4Mb GS system mem
@@ -487,7 +486,7 @@ void ZeroGS::Prim()
 {
 	FUNCLOG
 
-	if (g_bIsLost) return;
+//	if (g_bIsLost) return;
 
 	VB& curvb = vb[prim->ctxt];
 
@@ -585,14 +584,14 @@ void ZeroGS::RenderCustom(float fAlpha)
 void ZeroGS::Restore()
 {
 	FUNCLOG
-
-	if (!g_bIsLost) return;
+	return;
+	/*if (!g_bIsLost) return;
 
 	//if( SUCCEEDED(pd3dDevice->Reset(&d3dpp)) ) {
 	g_bIsLost = false;
 
 	// handle lost states
-	ZeroGS::ChangeDeviceSize(nBackbufferWidth, nBackbufferHeight);
+	ZeroGS::ChangeDeviceSize(nBackbufferWidth, nBackbufferHeight);*/
 
 	//}
 }
@@ -871,8 +870,8 @@ void ZeroGS::SetFogColor(u32 fog)
 
 	ZeroGS::FlushBoth();
 
-	if (!g_bIsLost)
-	{
+	//if (!g_bIsLost)
+	//{
 		SetShaderCaller("SetFogColor");
 		Vector v;
 
@@ -882,7 +881,7 @@ void ZeroGS::SetFogColor(u32 fog)
 //			v.z = ((gs.fogcol >> 16) & 0xff) / 255.0f;
 		v.SetColor(gs.fogcol);
 		ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
-	}
+	//}
 
 //	}
 }
@@ -1126,7 +1125,7 @@ void ZeroGS::texClutWrite(int ctx)
 	FUNCLOG
 	s_bTexFlush = false;
 
-	if (g_bIsLost) return;
+	//if (g_bIsLost) return;
 
 	tex0Info& tex0 = vb[ctx].tex0;
 

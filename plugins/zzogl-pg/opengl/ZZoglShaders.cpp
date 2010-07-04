@@ -47,6 +47,7 @@ extern u32 ptexConv32to16;
 bool g_bCRTCBilinear = true;
 u8* s_lpShaderResources = NULL;
 map<int, SHADERHEADER*> mapShaderResources;
+CGcontext g_cgcontext;
 
 //------------------ Code
 
