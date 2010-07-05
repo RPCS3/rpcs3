@@ -27,11 +27,11 @@ struct xImplSimd_MovHL
 {
 	u16	Opcode;
 
-	void PS( const xRegisterSSE& to, const ModSibBase& from ) const;
-	void PS( const ModSibBase& to, const xRegisterSSE& from ) const;
+	void PS( const xRegisterSSE& to, const xIndirectVoid& from ) const;
+	void PS( const xIndirectVoid& to, const xRegisterSSE& from ) const;
 
-	void PD( const xRegisterSSE& to, const ModSibBase& from ) const;
-	void PD( const ModSibBase& to, const xRegisterSSE& from ) const;
+	void PD( const xRegisterSSE& to, const xIndirectVoid& from ) const;
+	void PD( const xIndirectVoid& to, const xRegisterSSE& from ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -63,8 +63,8 @@ struct xImplSimd_MoveSSE
 	bool	isAligned;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from ) const;
-	void operator()( const ModSibBase& to, const xRegisterSSE& from ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const;
+	void operator()( const xIndirectVoid& to, const xRegisterSSE& from ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -82,8 +82,8 @@ struct xImplSimd_MoveDQ
 	bool	isAligned;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from ) const;
-	void operator()( const ModSibBase& to, const xRegisterSSE& from ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const;
+	void operator()( const xIndirectVoid& to, const xRegisterSSE& from ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -142,32 +142,32 @@ struct xImplSimd_PMove
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into word integers
 	// and store them in dest.
 	void BW( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BW( const xRegisterSSE& to, const ModSib64& from ) const;
+	void BW( const xRegisterSSE& to, const xIndirect64& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into dword integers
 	// and store them in dest.
 	void BD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BD( const xRegisterSSE& to, const ModSib32& from ) const;
+	void BD( const xRegisterSSE& to, const xIndirect32& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into qword integers
 	// and store them in dest.
 	void BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BQ( const xRegisterSSE& to, const ModSib16& from ) const;
+	void BQ( const xRegisterSSE& to, const xIndirect16& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into dword integers
 	// and store them in dest.
 	void WD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void WD( const xRegisterSSE& to, const ModSib64& from ) const;
+	void WD( const xRegisterSSE& to, const xIndirect64& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into qword integers
 	// and store them in dest.
 	void WQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void WQ( const xRegisterSSE& to, const ModSib32& from ) const;
+	void WQ( const xRegisterSSE& to, const xIndirect32& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low dword values in src into qword integers
 	// and store them in dest.
 	void DQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void DQ( const xRegisterSSE& to, const ModSib64& from ) const;
+	void DQ( const xRegisterSSE& to, const xIndirect64& from ) const;
 };
 
 }

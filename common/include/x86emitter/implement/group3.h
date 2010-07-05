@@ -35,7 +35,7 @@ struct xImpl_Group3
 	G3Type	InstType;
 
 	void operator()( const xRegisterInt& from ) const;
-	void operator()( const ModSib32orLess& from ) const;
+	void operator()( const xIndirect32orLess& from ) const;
 
 #if 0
 	template< typename T >
@@ -57,7 +57,7 @@ struct xImpl_MulDivBase
 	u16		OpcodeSSE;
 
 	void operator()( const xRegisterInt& from ) const;
-	void operator()( const ModSib32orLess& from ) const;
+	void operator()( const xIndirect32orLess& from ) const;
 
 	const xImplSimd_DestRegSSE	PS;
 	const xImplSimd_DestRegSSE	PD;
@@ -71,7 +71,7 @@ struct xImpl_MulDivBase
 struct xImpl_iDiv
 {
 	void operator()( const xRegisterInt& from ) const;
-	void operator()( const ModSib32orLess& from ) const;
+	void operator()( const xIndirect32orLess& from ) const;
 
 	const xImplSimd_DestRegSSE	PS;
 	const xImplSimd_DestRegSSE	PD;
@@ -86,19 +86,19 @@ struct xImpl_iDiv
 struct xImpl_iMul
 {
 	void operator()( const xRegisterInt& from ) const;
-	void operator()( const ModSib32orLess& from ) const;
+	void operator()( const xIndirect32orLess& from ) const;
 
 	// The following iMul-specific forms are valid for 16 and 32 bit register operands only!
 
 	void operator()( const xRegister32& to,	const xRegister32& from ) const;
-	void operator()( const xRegister32& to,	const ModSibBase& src ) const;
+	void operator()( const xRegister32& to,	const xIndirectVoid& src ) const;
 	void operator()( const xRegister16& to,	const xRegister16& from ) const;
-	void operator()( const xRegister16& to,	const ModSibBase& src ) const;
+	void operator()( const xRegister16& to,	const xIndirectVoid& src ) const;
 
 	void operator()( const xRegister32& to,	const xRegister32& from, s32 imm ) const;
-	void operator()( const xRegister32& to,	const ModSibBase& from, s32 imm ) const;
+	void operator()( const xRegister32& to,	const xIndirectVoid& from, s32 imm ) const;
 	void operator()( const xRegister16& to,	const xRegister16& from, s16 imm ) const;
-	void operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const;
+	void operator()( const xRegister16& to,	const xIndirectVoid& from, s16 imm ) const;
 
 	const xImplSimd_DestRegSSE	PS;
 	const xImplSimd_DestRegSSE	PD;

@@ -41,9 +41,9 @@ struct xImpl_Group2
 	G2Type InstType;
 
 	void operator()( const xRegisterInt& to, const xRegisterCL& from ) const;
-	void operator()( const ModSib32orLess& to, const xRegisterCL& from ) const;
+	void operator()( const xIndirect32orLess& to, const xRegisterCL& from ) const;
 	void operator()( const xRegisterInt& to, u8 imm ) const;
-	void operator()( const ModSib32orLess& to, u8 imm ) const;
+	void operator()( const xIndirect32orLess& to, u8 imm ) const;
 
 #if 0
 	// ------------------------------------------------------------------------

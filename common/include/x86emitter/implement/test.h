@@ -28,7 +28,7 @@ struct xImpl_Test
 	void operator()( const xRegister8& to, const xRegister8& from ) const;
 	void operator()( const xRegister16& to, const xRegister16& from ) const;
 	void operator()( const xRegister32& to, const xRegister32& from ) const;
-	void operator()( const ModSib32orLess& dest, int imm ) const;
+	void operator()( const xIndirect32orLess& dest, int imm ) const;
 	void operator()( const xRegisterInt& to, int imm ) const;
 };
 
@@ -52,7 +52,7 @@ struct xImpl_BitScan
 
 	void operator()( const xRegister32& to, const xRegister32& from ) const;
 	void operator()( const xRegister16& to, const xRegister16& from ) const;
-	void operator()( const xRegister16or32& to, const ModSibBase& sibsrc ) const;
+	void operator()( const xRegister16or32& to, const xIndirectVoid& sibsrc ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -68,9 +68,9 @@ struct xImpl_Group8
 	void operator()( const xRegister16& bitbase, const xRegister16& bitoffset ) const;
 	void operator()( const xRegister16or32& bitbase, u8 bitoffset ) const;
 
-	void operator()( const ModSibBase& bitbase, const xRegister16or32& bitoffset ) const;
-	void operator()( const ModSib32& bitbase, u8 bitoffset ) const;
-	void operator()( const ModSib16& bitbase, u8 bitoffset ) const;
+	void operator()( const xIndirectVoid& bitbase, const xRegister16or32& bitoffset ) const;
+	void operator()( const xIndirect32& bitbase, u8 bitoffset ) const;
+	void operator()( const xIndirect16& bitbase, u8 bitoffset ) const;
 };
 
 }	// End namespace x86Emitter

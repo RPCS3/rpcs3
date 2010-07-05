@@ -43,6 +43,7 @@ void loadRowCol(nVifStruct& v) {
 	xMOVAPS(xmm1, ptr32[&v.vifRegs->r1]);
 	xMOVAPS(xmm2, ptr32[&v.vifRegs->r2]);
 	xMOVAPS(xmm6, ptr32[&v.vifRegs->r3]);
+
 	xPSHUF.D(xmm0, xmm0, _v0);
 	xPSHUF.D(xmm1, xmm1, _v0);
 	xPSHUF.D(xmm2, xmm2, _v0);

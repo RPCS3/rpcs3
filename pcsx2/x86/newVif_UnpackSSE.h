@@ -37,8 +37,8 @@ public:
 	bool			doMask;			// masking write enable flag
 
 protected:
-	xAddressInfo	dstIndirect;
-	xAddressInfo	srcIndirect;
+	xAddressVoid	dstIndirect;
+	xAddressVoid	srcIndirect;
 	xRegisterSSE	workReg;
 	xRegisterSSE	destReg;
 

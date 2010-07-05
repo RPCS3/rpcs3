@@ -28,8 +28,6 @@
 #include "PrecompiledHeader.h"
 #include "legacy_internal.h"
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
 emitterT void ModRM( uint mod, uint reg, uint rm )
 {
 	// Note: Following assertions are for legacy support only.
@@ -54,32 +52,32 @@ emitterT void SibSB( uint ss, uint index, uint base )
 
 using namespace x86Emitter;
 
-static ModSib32 _mhlp32( x86IntRegType to )
+static xIndirect32 _mhlp32( x86IntRegType to )
 {
 	return ptr32[xAddressReg( to )];
 }
 
-static ModSib32 _mhlp32( x86IntRegType to1, x86IntRegType to2 )
+static xIndirect32 _mhlp32( x86IntRegType to1, x86IntRegType to2 )
 {
 	return ptr32[xAddressReg( to1 ) + xAddressReg( to2 )];
 }
 
-static ModSib16 _mhlp16( x86IntRegType to )
+static xIndirect16 _mhlp16( x86IntRegType to )
 {
 	return ptr16[xAddressReg( to )];
 }
 
-static ModSib16 _mhlp16( x86IntRegType to1, x86IntRegType to2 )
+static xIndirect16 _mhlp16( x86IntRegType to1, x86IntRegType to2 )
 {
 	return ptr16[xAddressReg( to1 ) + xAddressReg( to2 )];
 }
 
-static ModSib8 _mhlp8( x86IntRegType to )
+static xIndirect8 _mhlp8( x86IntRegType to )
 {
 	return ptr8[xAddressReg( to )];
 }
 
-static ModSib8 _mhlp8( x86IntRegType to1, x86IntRegType to2 )
+static xIndirect8 _mhlp8( x86IntRegType to1, x86IntRegType to2 )
 {
 	return ptr8[xAddressReg( to1 ) + xAddressReg( to2 )];
 }

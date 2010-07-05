@@ -28,10 +28,10 @@ struct _SimdShiftHelper
 	u8		Modcode;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 
 	void operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const;
-	void operator()( const xRegisterMMX& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterMMX& to, const xIndirectVoid& from ) const;
 
 	void operator()( const xRegisterSSE& to, u8 imm8 ) const;
 	void operator()( const xRegisterMMX& to, u8 imm8 ) const;

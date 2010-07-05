@@ -193,7 +193,7 @@ union SSE_MXCSR
 		return bitmask != right.bitmask;
 	}
 
-	operator x86Emitter::ModSib32() const;
+	operator x86Emitter::xIndirect32() const;
 };
 
 extern SSE_MXCSR	MXCSR_Mask;

@@ -123,7 +123,7 @@ void VifUnpackSSE_Dynarec::writeBackRow() const {
 	// ToDo: Do we need to write back to vifregs.rX too!? :/
 }
 
-static void ShiftDisplacementWindow( xAddressInfo& addr, const xRegister32& modReg )
+static void ShiftDisplacementWindow( xAddressVoid& addr, const xRegister32& modReg )
 {
 	// Shifts the displacement factor of a given indirect address, so that the address
 	// remains in the optimal 0xf0 range (which allows for byte-form displacements when

@@ -37,8 +37,8 @@ struct xImpl_DwordShift
 	void operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const;
 	void operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const;
 
-	void operator()( const ModSibBase& dest,const xRegister16or32& from, const xRegisterCL& clreg ) const;
-	void operator()( const ModSibBase& dest,const xRegister16or32& from, u8 shiftcnt ) const;
+	void operator()( const xIndirectVoid& dest,const xRegister16or32& from, const xRegisterCL& clreg ) const;
+	void operator()( const xIndirectVoid& dest,const xRegister16or32& from, u8 shiftcnt ) const;
 };
 
 }	// End namespace x86Emitter

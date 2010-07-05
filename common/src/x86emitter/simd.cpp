@@ -73,7 +73,7 @@ SSE_MXCSR& SSE_MXCSR::ApplyReserveMask()
 	return *this;
 }
 
-SSE_MXCSR::operator x86Emitter::ModSib32() const
+SSE_MXCSR::operator x86Emitter::xIndirect32() const
 {
 	return x86Emitter::ptr32[&bitmask];
 }
@@ -135,87 +135,87 @@ const xImplSimd_DestRegSSE		xPTEST = { 0x66,0x1738 };
 //
 
 __forceinline void xCVTDQ2PD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0xe6 ); }
-__forceinline void xCVTDQ2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0xf3, 0xe6 ); }
+__forceinline void xCVTDQ2PD( const xRegisterSSE& to, const xIndirect64& from )		{ OpWriteSSE( 0xf3, 0xe6 ); }
 __forceinline void xCVTDQ2PS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x5b ); }
-__forceinline void xCVTDQ2PS( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x00, 0x5b ); }
+__forceinline void xCVTDQ2PS( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0x00, 0x5b ); }
 
 __forceinline void xCVTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0xe6 ); }
-__forceinline void xCVTPD2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0xf2, 0xe6 ); }
+__forceinline void xCVTPD2DQ( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0xf2, 0xe6 ); }
 __forceinline void xCVTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x2d ); }
-__forceinline void xCVTPD2PI( const xRegisterMMX& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x2d ); }
+__forceinline void xCVTPD2PI( const xRegisterMMX& to, const xIndirect128& from )		{ OpWriteSSE( 0x66, 0x2d ); }
 __forceinline void xCVTPD2PS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x5a ); }
-__forceinline void xCVTPD2PS( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x5a ); }
+__forceinline void xCVTPD2PS( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0x66, 0x5a ); }
 
 __forceinline void xCVTPI2PD( const xRegisterSSE& to, const xRegisterMMX& from )	{ OpWriteSSE( 0x66, 0x2a ); }
-__forceinline void xCVTPI2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x66, 0x2a ); }
+__forceinline void xCVTPI2PD( const xRegisterSSE& to, const xIndirect64& from )		{ OpWriteSSE( 0x66, 0x2a ); }
 __forceinline void xCVTPI2PS( const xRegisterSSE& to, const xRegisterMMX& from )	{ OpWriteSSE( 0x00, 0x2a ); }
-__forceinline void xCVTPI2PS( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2a ); }
+__forceinline void xCVTPI2PS( const xRegisterSSE& to, const xIndirect64& from )		{ OpWriteSSE( 0x00, 0x2a ); }
 
 __forceinline void xCVTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x5b ); }
-__forceinline void xCVTPS2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x5b ); }
+__forceinline void xCVTPS2DQ( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0x66, 0x5b ); }
 __forceinline void xCVTPS2PD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x5a ); }
-__forceinline void xCVTPS2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x5a ); }
+__forceinline void xCVTPS2PD( const xRegisterSSE& to, const xIndirect64& from )		{ OpWriteSSE( 0x00, 0x5a ); }
 __forceinline void xCVTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x2d ); }
-__forceinline void xCVTPS2PI( const xRegisterMMX& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2d ); }
+__forceinline void xCVTPS2PI( const xRegisterMMX& to, const xIndirect64& from )		{ OpWriteSSE( 0x00, 0x2d ); }
 
 __forceinline void xCVTSD2SI( const xRegister32& to, const xRegisterSSE& from )		{ OpWriteSSE( 0xf2, 0x2d ); }
-__forceinline void xCVTSD2SI( const xRegister32& to, const ModSib64& from )			{ OpWriteSSE( 0xf2, 0x2d ); }
+__forceinline void xCVTSD2SI( const xRegister32& to, const xIndirect64& from )			{ OpWriteSSE( 0xf2, 0x2d ); }
 __forceinline void xCVTSD2SS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0x5a ); }
-__forceinline void xCVTSD2SS( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0xf2, 0x5a ); }
+__forceinline void xCVTSD2SS( const xRegisterSSE& to, const xIndirect64& from )		{ OpWriteSSE( 0xf2, 0x5a ); }
 __forceinline void xCVTSI2SD( const xRegisterMMX& to, const xRegister32& from )		{ OpWriteSSE( 0xf2, 0x2a ); }
-__forceinline void xCVTSI2SD( const xRegisterMMX& to, const ModSib32& from )		{ OpWriteSSE( 0xf2, 0x2a ); }
+__forceinline void xCVTSI2SD( const xRegisterMMX& to, const xIndirect32& from )		{ OpWriteSSE( 0xf2, 0x2a ); }
 __forceinline void xCVTSI2SS( const xRegisterSSE& to, const xRegister32& from )		{ OpWriteSSE( 0xf3, 0x2a ); }
-__forceinline void xCVTSI2SS( const xRegisterSSE& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x2a ); }
+__forceinline void xCVTSI2SS( const xRegisterSSE& to, const xIndirect32& from )		{ OpWriteSSE( 0xf3, 0x2a ); }
 
 __forceinline void xCVTSS2SD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x5a ); }
-__forceinline void xCVTSS2SD( const xRegisterSSE& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x5a ); }
+__forceinline void xCVTSS2SD( const xRegisterSSE& to, const xIndirect32& from )		{ OpWriteSSE( 0xf3, 0x5a ); }
 __forceinline void xCVTSS2SI( const xRegister32& to, const xRegisterSSE& from )		{ OpWriteSSE( 0xf3, 0x2d ); }
-__forceinline void xCVTSS2SI( const xRegister32& to, const ModSib32& from )			{ OpWriteSSE( 0xf3, 0x2d ); }
+__forceinline void xCVTSS2SI( const xRegister32& to, const xIndirect32& from )			{ OpWriteSSE( 0xf3, 0x2d ); }
 
 __forceinline void xCVTTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0xe6 ); }
-__forceinline void xCVTTPD2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0xe6 ); }
+__forceinline void xCVTTPD2DQ( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0x66, 0xe6 ); }
 __forceinline void xCVTTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x2c ); }
-__forceinline void xCVTTPD2PI( const xRegisterMMX& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x2c ); }
+__forceinline void xCVTTPD2PI( const xRegisterMMX& to, const xIndirect128& from )		{ OpWriteSSE( 0x66, 0x2c ); }
 __forceinline void xCVTTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x5b ); }
-__forceinline void xCVTTPS2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0xf3, 0x5b ); }
+__forceinline void xCVTTPS2DQ( const xRegisterSSE& to, const xIndirect128& from )		{ OpWriteSSE( 0xf3, 0x5b ); }
 __forceinline void xCVTTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x2c ); }
-__forceinline void xCVTTPS2PI( const xRegisterMMX& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2c ); }
+__forceinline void xCVTTPS2PI( const xRegisterMMX& to, const xIndirect64& from )		{ OpWriteSSE( 0x00, 0x2c ); }
 
 __forceinline void xCVTTSD2SI( const xRegister32& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0x2c ); }
-__forceinline void xCVTTSD2SI( const xRegister32& to, const ModSib64& from )		{ OpWriteSSE( 0xf2, 0x2c ); }
+__forceinline void xCVTTSD2SI( const xRegister32& to, const xIndirect64& from )		{ OpWriteSSE( 0xf2, 0x2c ); }
 __forceinline void xCVTTSS2SI( const xRegister32& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x2c ); }
-__forceinline void xCVTTSS2SI( const xRegister32& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x2c ); }
+__forceinline void xCVTTSS2SI( const xRegister32& to, const xIndirect32& from )		{ OpWriteSSE( 0xf3, 0x2c ); }
 
 
 // ------------------------------------------------------------------------
 
 void xImplSimd_DestRegSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const				{ OpWriteSSE( Prefix, Opcode ); }
-void xImplSimd_DestRegSSE::operator()( const xRegisterSSE& to, const ModSibBase& from ) const				{ OpWriteSSE( Prefix, Opcode ); }
+void xImplSimd_DestRegSSE::operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const				{ OpWriteSSE( Prefix, Opcode ); }
 
 void xImplSimd_DestRegImmSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
-void xImplSimd_DestRegImmSSE::operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
+void xImplSimd_DestRegImmSSE::operator()( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
 
 void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm ) const	{ xOpWrite0F( Opcode, to, from, imm ); }
-void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const ModSibBase& from, u8 imm ) const	{ xOpWrite0F( Opcode, to, from, imm ); }
+void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const xIndirectVoid& from, u8 imm ) const	{ xOpWrite0F( Opcode, to, from, imm ); }
 
 void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
-void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 
 void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
-void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xIndirectVoid& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
 
 void xImplSimd_DestSSE_CmpImm::operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
-void xImplSimd_DestSSE_CmpImm::operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType imm ) const		{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
+void xImplSimd_DestSSE_CmpImm::operator()( const xRegisterSSE& to, const xIndirectVoid& from, SSE2_ComparisonType imm ) const		{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
 
 // =====================================================================================================
 //  SIMD Arithmetic Instructions
 // =====================================================================================================
 
 void _SimdShiftHelper::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
-void _SimdShiftHelper::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 
 void _SimdShiftHelper::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
-void _SimdShiftHelper::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, const xIndirectVoid& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
 
 void _SimdShiftHelper::operator()( const xRegisterSSE& to, u8 imm8 ) const
 {
@@ -365,16 +365,16 @@ const xImplSimd_Round xROUND =
 // =====================================================================================================
 
 void xImplSimd_Compare::PS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::PS( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PS( const xRegisterSSE& to, const xIndirectVoid& from ) const		{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::PD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::PD( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PD( const xRegisterSSE& to, const xIndirectVoid& from ) const		{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::SS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::SS( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SS( const xRegisterSSE& to, const xIndirectVoid& from ) const		{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::SD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::SD( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SD( const xRegisterSSE& to, const xIndirectVoid& from ) const		{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
 
 const xImplSimd_MinMax xMIN =
 {
@@ -464,7 +464,7 @@ void xImplSimd_Shuffle::PS( const xRegisterSSE& to, const xRegisterSSE& from, u8
 	xOpWrite0F( 0xc6, to, from, selector );
 }
 
-void xImplSimd_Shuffle::PS( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const
+void xImplSimd_Shuffle::PS( const xRegisterSSE& to, const xIndirectVoid& from, u8 selector ) const
 {
 	xOpWrite0F( 0xc6, to, from, selector );
 }
@@ -475,7 +475,7 @@ void xImplSimd_Shuffle::PD( const xRegisterSSE& to, const xRegisterSSE& from, u8
 	xOpWrite0F( 0x66, 0xc6, to, from, selector & 0x3 );
 }
 
-void xImplSimd_Shuffle::PD( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const
+void xImplSimd_Shuffle::PD( const xRegisterSSE& to, const xIndirectVoid& from, u8 selector ) const
 {
 	_selector_assertion_check( selector );
 	xOpWrite0F( 0x66, 0xc6, to, from, selector & 0x3 );
@@ -486,19 +486,19 @@ void xImplSimd_InsertExtractHelper::operator()( const xRegisterSSE& to, const xR
 	xOpWrite0F( 0x66, Opcode, to, from, imm8 );
 }
 
-void xImplSimd_InsertExtractHelper::operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
+void xImplSimd_InsertExtractHelper::operator()( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm8 ) const
 {
 	xOpWrite0F( 0x66, Opcode, to, from, imm8 );
 }
 
 void xImplSimd_PInsert::W( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
-void xImplSimd_PInsert::W( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
+void xImplSimd_PInsert::W( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
 void xImplSimd_PInsert::W( const xRegisterMMX& to, const xRegister32& from, u8 imm8 ) const		{ xOpWrite0F( 0xc4, to, from, imm8 ); }
-void xImplSimd_PInsert::W( const xRegisterMMX& to, const ModSibBase& from, u8 imm8 ) const		{ xOpWrite0F( 0xc4, to, from, imm8 ); }
+void xImplSimd_PInsert::W( const xRegisterMMX& to, const xIndirectVoid& from, u8 imm8 ) const		{ xOpWrite0F( 0xc4, to, from, imm8 ); }
 
 void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc5, to, from, imm8 ); }
 void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const		{ xOpWrite0F( 0xc5, to, from, imm8 ); }
-void SimdImpl_PExtract::W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
+void SimdImpl_PExtract::W( const xIndirectVoid& dest, const xRegisterSSE& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
 
 const xImplSimd_Shuffle xSHUF = { };
 
@@ -557,11 +557,11 @@ const SimdImpl_PExtract xPEXTR =
 //  SIMD Move And Blend Instructions
 // =====================================================================================================
 
-void xImplSimd_MovHL::PS( const xRegisterSSE& to, const ModSibBase& from ) const			{ xOpWrite0F( Opcode, to, from ); }
-void xImplSimd_MovHL::PS( const ModSibBase& to, const xRegisterSSE& from ) const			{ xOpWrite0F( Opcode+1, from, to ); }
+void xImplSimd_MovHL::PS( const xRegisterSSE& to, const xIndirectVoid& from ) const			{ xOpWrite0F( Opcode, to, from ); }
+void xImplSimd_MovHL::PS( const xIndirectVoid& to, const xRegisterSSE& from ) const			{ xOpWrite0F( Opcode+1, from, to ); }
 
-void xImplSimd_MovHL::PD( const xRegisterSSE& to, const ModSibBase& from ) const			{ xOpWrite0F( 0x66, Opcode, to, from ); }
-void xImplSimd_MovHL::PD( const ModSibBase& to, const xRegisterSSE& from ) const			{ xOpWrite0F( 0x66, Opcode+1, from, to ); }
+void xImplSimd_MovHL::PD( const xRegisterSSE& to, const xIndirectVoid& from ) const			{ xOpWrite0F( 0x66, Opcode, to, from ); }
+void xImplSimd_MovHL::PD( const xIndirectVoid& to, const xRegisterSSE& from ) const			{ xOpWrite0F( 0x66, Opcode+1, from, to ); }
 
 void xImplSimd_MovHL_RtoR::PS( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ xOpWrite0F( Opcode, to, from ); }
 void xImplSimd_MovHL_RtoR::PD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ xOpWrite0F( 0x66, Opcode, to, from ); }
@@ -574,7 +574,7 @@ void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& 
 	if( to != from ) xOpWrite0F( Prefix, MovPS_OpAligned, to, from );
 }
 
-void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const ModSibBase& from ) const
+void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const
 {
 	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 	bool isReallyAligned = isAligned || ( ((from.Displacement & 0x0f) == 0) && from.Index.IsEmpty() && from.Base.IsEmpty() );
@@ -582,7 +582,7 @@ void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const ModSibBase& fr
 	xOpWrite0F( Prefix, isReallyAligned ? MovPS_OpAligned : MovPS_OpUnaligned, to, from );
 }
 
-void xImplSimd_MoveSSE::operator()( const ModSibBase& to, const xRegisterSSE& from ) const
+void xImplSimd_MoveSSE::operator()( const xIndirectVoid& to, const xRegisterSSE& from ) const
 {
 	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 	bool isReallyAligned = isAligned || ( (to.Displacement & 0x0f) == 0 && to.Index.IsEmpty() && to.Base.IsEmpty() );
@@ -597,14 +597,14 @@ void xImplSimd_MoveDQ::operator()( const xRegisterSSE& to, const xRegisterSSE& f
 	if( to != from ) xOpWrite0F( MovDQ_PrefixAligned, 0x6f, to, from );
 }
 
-void xImplSimd_MoveDQ::operator()( const xRegisterSSE& to, const ModSibBase& from ) const
+void xImplSimd_MoveDQ::operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const
 {
 	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 	bool isReallyAligned = isAligned || ( (from.Displacement & 0x0f) == 0 && from.Index.IsEmpty() && from.Base.IsEmpty() );
 	xOpWrite0F( isReallyAligned ? MovDQ_PrefixAligned : MovDQ_PrefixUnaligned, 0x6f, to, from );
 }
 
-void xImplSimd_MoveDQ::operator()( const ModSibBase& to, const xRegisterSSE& from ) const
+void xImplSimd_MoveDQ::operator()( const xIndirectVoid& to, const xRegisterSSE& from ) const
 {
 	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
 	bool isReallyAligned = isAligned || ( (to.Displacement & 0x0f) == 0 && to.Index.IsEmpty() && to.Base.IsEmpty() );
@@ -614,22 +614,22 @@ void xImplSimd_MoveDQ::operator()( const ModSibBase& to, const xRegisterSSE& fro
 }
 
 void xImplSimd_PMove::BW( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase ); }
-void xImplSimd_PMove::BW( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase ); }
+void xImplSimd_PMove::BW( const xRegisterSSE& to, const xIndirect64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase ); }
 
 void xImplSimd_PMove::BD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
-void xImplSimd_PMove::BD( const xRegisterSSE& to, const ModSib32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
+void xImplSimd_PMove::BD( const xRegisterSSE& to, const xIndirect32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
 
 void xImplSimd_PMove::BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
-void xImplSimd_PMove::BQ( const xRegisterSSE& to, const ModSib16& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
+void xImplSimd_PMove::BQ( const xRegisterSSE& to, const xIndirect16& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
 
 void xImplSimd_PMove::WD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
-void xImplSimd_PMove::WD( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
+void xImplSimd_PMove::WD( const xRegisterSSE& to, const xIndirect64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
 
 void xImplSimd_PMove::WQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
-void xImplSimd_PMove::WQ( const xRegisterSSE& to, const ModSib32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
+void xImplSimd_PMove::WQ( const xRegisterSSE& to, const xIndirect32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
 
 void xImplSimd_PMove::DQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
-void xImplSimd_PMove::DQ( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
+void xImplSimd_PMove::DQ( const xRegisterSSE& to, const xIndirect64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
 
 
 const xImplSimd_MoveSSE xMOVAPS = { 0x00, true };
@@ -685,16 +685,16 @@ const xImplSimd_DestRegSSE xMOVSHDUP = { 0xf3,0x16 };
 //
 
 __forceinline void xMOVDZX( const xRegisterSSE& to, const xRegister32& from )	{ xOpWrite0F( 0x66, 0x6e, to, from ); }
-__forceinline void xMOVDZX( const xRegisterSSE& to, const ModSibBase& src )		{ xOpWrite0F( 0x66, 0x6e, to, src ); }
+__forceinline void xMOVDZX( const xRegisterSSE& to, const xIndirectVoid& src )		{ xOpWrite0F( 0x66, 0x6e, to, src ); }
 
 __forceinline void xMOVDZX( const xRegisterMMX& to, const xRegister32& from )	{ xOpWrite0F( 0x6e, to, from ); }
-__forceinline void xMOVDZX( const xRegisterMMX& to, const ModSibBase& src )		{ xOpWrite0F( 0x6e, to, src ); }
+__forceinline void xMOVDZX( const xRegisterMMX& to, const xIndirectVoid& src )		{ xOpWrite0F( 0x6e, to, src ); }
 
 __forceinline void xMOVD( const xRegister32& to, const xRegisterSSE& from )		{ xOpWrite0F( 0x66, 0x7e, from, to ); }
-__forceinline void xMOVD( const ModSibBase& dest, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0x7e, from, dest ); }
+__forceinline void xMOVD( const xIndirectVoid& dest, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0x7e, from, dest ); }
 
 __forceinline void xMOVD( const xRegister32& to, const xRegisterMMX& from )		{ xOpWrite0F( 0x7e, from, to ); }
-__forceinline void xMOVD( const ModSibBase& dest, const xRegisterMMX& from )	{ xOpWrite0F( 0x7e, from, dest ); }
+__forceinline void xMOVD( const xIndirectVoid& dest, const xRegisterMMX& from )	{ xOpWrite0F( 0x7e, from, dest ); }
 
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
@@ -703,18 +703,18 @@ __forceinline void xMOVQZX( const xRegisterSSE& to, const xRegisterSSE& from )	{
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
-__forceinline void xMOVQZX( const xRegisterSSE& to, const ModSibBase& src )		{ xOpWrite0F( 0xf3, 0x7e, to, src ); }
+__forceinline void xMOVQZX( const xRegisterSSE& to, const xIndirectVoid& src )		{ xOpWrite0F( 0xf3, 0x7e, to, src ); }
 
 // Moves from XMM to XMM, with the *upper 64 bits* of the destination register
 // being cleared to zero.
 __forceinline void xMOVQZX( const xRegisterSSE& to, const void* src )			{ xOpWrite0F( 0xf3, 0x7e, to, src ); }
 
 // Moves lower quad of XMM to ptr64 (no bits are cleared)
-__forceinline void xMOVQ( const ModSibBase& dest, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0xd6, from, dest ); }
+__forceinline void xMOVQ( const xIndirectVoid& dest, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0xd6, from, dest ); }
 
 __forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from )	{ if( to != from ) xOpWrite0F( 0x6f, to, from ); }
-__forceinline void xMOVQ( const xRegisterMMX& to, const ModSibBase& src )		{ xOpWrite0F( 0x6f, to, src ); }
-__forceinline void xMOVQ( const ModSibBase& dest, const xRegisterMMX& from )	{ xOpWrite0F( 0x7f, from, dest ); }
+__forceinline void xMOVQ( const xRegisterMMX& to, const xIndirectVoid& src )		{ xOpWrite0F( 0x6f, to, src ); }
+__forceinline void xMOVQ( const xIndirectVoid& dest, const xRegisterMMX& from )	{ xOpWrite0F( 0x7f, from, dest ); }
 
 // This form of xMOVQ is Intel's adeptly named 'MOVQ2DQ'
 __forceinline void xMOVQ( const xRegisterSSE& to, const xRegisterMMX& from )	{ xOpWrite0F( 0xf3, 0xd6, to, from ); }
@@ -734,8 +734,8 @@ __forceinline void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from )
 
 #define IMPLEMENT_xMOVS( ssd, prefix ) \
 	__forceinline void xMOV##ssd( const xRegisterSSE& to, const xRegisterSSE& from )	{ if( to != from ) xOpWrite0F( prefix, 0x10, to, from ); } \
-	__forceinline void xMOV##ssd##ZX( const xRegisterSSE& to, const ModSibBase& from )	{ xOpWrite0F( prefix, 0x10, to, from ); } \
-	__forceinline void xMOV##ssd( const ModSibBase& to, const xRegisterSSE& from )		{ xOpWrite0F( prefix, 0x11, from, to ); }
+	__forceinline void xMOV##ssd##ZX( const xRegisterSSE& to, const xIndirectVoid& from )	{ xOpWrite0F( prefix, 0x10, to, from ); } \
+	__forceinline void xMOV##ssd( const xIndirectVoid& to, const xRegisterSSE& from )		{ xOpWrite0F( prefix, 0x11, from, to ); }
 
 IMPLEMENT_xMOVS( SS, 0xf3 )
 IMPLEMENT_xMOVS( SD, 0xf2 )
@@ -744,18 +744,18 @@ IMPLEMENT_xMOVS( SD, 0xf2 )
 // Non-temporal movs only support a register as a target (ie, load form only, no stores)
 //
 
-__forceinline void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from )
+__forceinline void xMOVNTDQA( const xRegisterSSE& to, const xIndirectVoid& from )
 {
 	xWrite32( 0x2A380f66 );
 	EmitSibMagic( to.Id, from );
 }
 
-__forceinline void xMOVNTDQA( const ModSibBase& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0xe7, from, to ); }
+__forceinline void xMOVNTDQA( const xIndirectVoid& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0xe7, from, to ); }
 
-__forceinline void xMOVNTPD( const ModSibBase& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0x2b, from, to ); }
-__forceinline void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x2b, from, to ); }
+__forceinline void xMOVNTPD( const xIndirectVoid& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x66, 0x2b, from, to ); }
+__forceinline void xMOVNTPS( const xIndirectVoid& to, const xRegisterSSE& from )	{ xOpWrite0F( 0x2b, from, to ); }
 
-__forceinline void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from )	{ xOpWrite0F( 0xe7, from, to ); }
+__forceinline void xMOVNTQ( const xIndirectVoid& to, const xRegisterMMX& from )	{ xOpWrite0F( 0xe7, from, to ); }
 
 // ------------------------------------------------------------------------
 
@@ -809,14 +809,14 @@ __forceinline void xPALIGNR( const xRegisterMMX& to, const xRegisterMMX& from, u
 //    with 0.0 if set to 1.
 //
 __emitinline void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 )	{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
-__emitinline void xINSERTPS( const xRegisterSSE& to, const ModSib32& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
+__emitinline void xINSERTPS( const xRegisterSSE& to, const xIndirect32& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
 
 // [SSE-4.1] Extract a single-precision floating-point value from src at an offset
 // determined by imm8[1-0]*32. The extracted single precision floating-point value
 // is stored into the low 32-bits of dest (or at a 32-bit memory pointer).
 //
 __emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )	{ xOpWrite0F( 0x66, 0x173a, to, from, imm8 ); }
-__emitinline void xEXTRACTPS( const ModSib32& dest, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x173a, from, dest, imm8 ); }
+__emitinline void xEXTRACTPS( const xIndirect32& dest, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x173a, from, dest, imm8 ); }
 
 
 // =====================================================================================================
@@ -837,14 +837,14 @@ __forceinline void xFEMMS()	{ xWrite16( 0x0E0F ); }
 
 
 // Store Streaming SIMD Extension Control/Status to Mem32.
-__emitinline void xSTMXCSR( const ModSib32& dest )
+__emitinline void xSTMXCSR( const xIndirect32& dest )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 3, dest );
 }
 
 // Load Streaming SIMD Extension Control/Status from Mem32.
-__emitinline void xLDMXCSR( const ModSib32& src )
+__emitinline void xLDMXCSR( const xIndirect32& src )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 2, src );
@@ -852,7 +852,7 @@ __emitinline void xLDMXCSR( const ModSib32& src )
 
 // Save x87 FPU, MMX Technology, and SSE State to buffer
 // Target buffer must be at least 512 bytes in length to hold the result.
-__emitinline void xFXSAVE( const ModSibBase& dest )
+__emitinline void xFXSAVE( const xIndirectVoid& dest )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 0, dest );
@@ -860,7 +860,7 @@ __emitinline void xFXSAVE( const ModSibBase& dest )
 
 // Restore x87 FPU, MMX , XMM, and MXCSR State.
 // Source buffer should be 512 bytes in length.
-__emitinline void xFXRSTOR( const ModSibBase& src )
+__emitinline void xFXRSTOR( const xIndirectVoid& src )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 1, src );

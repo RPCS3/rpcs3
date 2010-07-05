@@ -129,15 +129,15 @@ namespace x86Emitter
 	// forms are functionally equivalent to Mov reg,imm, and thus better written as MOVs
 	// instead.
 
-	extern void xLEA( xRegister32 to, const ModSibBase& src, bool preserve_flags=false );
-	extern void xLEA( xRegister16 to, const ModSibBase& src, bool preserve_flags=false );
+	extern void xLEA( xRegister32 to, const xIndirectVoid& src, bool preserve_flags=false );
+	extern void xLEA( xRegister16 to, const xIndirectVoid& src, bool preserve_flags=false );
 
 	// ----- Push / Pop Instructions  -----
 	// Note: pushad/popad implementations are intentionally left out.  The instructions are
 	// invalid in x64, and are super slow on x32.  Use multiple Push/Pop instructions instead.
 
-	extern void xPOP( const ModSibBase& from );
-	extern void xPUSH( const ModSibBase& from );
+	extern void xPOP( const xIndirectVoid& from );
+	extern void xPUSH( const xIndirectVoid& from );
 
 	extern void xPOP( xRegister32 from );
 
@@ -305,48 +305,48 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 
 	extern void xEMMS();
-	extern void xSTMXCSR( const ModSib32& dest );
-	extern void xLDMXCSR( const ModSib32& src );
-	extern void xFXSAVE( const ModSibBase& dest );
-	extern void xFXRSTOR( const ModSibBase& src );
+	extern void xSTMXCSR( const xIndirect32& dest );
+	extern void xLDMXCSR( const xIndirect32& src );
+	extern void xFXSAVE( const xIndirectVoid& dest );
+	extern void xFXRSTOR( const xIndirectVoid& src );
 
 	extern void xMOVDZX( const xRegisterSSE& to, const xRegister32& from );
-	extern void xMOVDZX( const xRegisterSSE& to, const ModSibBase& src );
+	extern void xMOVDZX( const xRegisterSSE& to, const xIndirectVoid& src );
 
 	extern void xMOVDZX( const xRegisterMMX& to, const xRegister32& from );
-	extern void xMOVDZX( const xRegisterMMX& to, const ModSibBase& src );
+	extern void xMOVDZX( const xRegisterMMX& to, const xIndirectVoid& src );
 
 	extern void xMOVD( const xRegister32& to, const xRegisterSSE& from );
-	extern void xMOVD( const ModSibBase& dest, const xRegisterSSE& from );
+	extern void xMOVD( const xIndirectVoid& dest, const xRegisterSSE& from );
 
 	extern void xMOVD( const xRegister32& to, const xRegisterMMX& from );
-	extern void xMOVD( const ModSibBase& dest, const xRegisterMMX& from );
+	extern void xMOVD( const xIndirectVoid& dest, const xRegisterMMX& from );
 
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterMMX& from );
 	extern void xMOVQ( const xRegisterMMX& to, const xRegisterSSE& from );
 	extern void xMOVQ( const xRegisterSSE& to, const xRegisterMMX& from );
 
-	extern void xMOVQ( const ModSibBase& dest, const xRegisterSSE& from );
-	extern void xMOVQ( const ModSibBase& dest, const xRegisterMMX& from );
-	extern void xMOVQ( const xRegisterMMX& to, const ModSibBase& src );
+	extern void xMOVQ( const xIndirectVoid& dest, const xRegisterSSE& from );
+	extern void xMOVQ( const xIndirectVoid& dest, const xRegisterMMX& from );
+	extern void xMOVQ( const xRegisterMMX& to, const xIndirectVoid& src );
 
-	extern void xMOVQZX( const xRegisterSSE& to, const ModSibBase& src );
+	extern void xMOVQZX( const xRegisterSSE& to, const xIndirectVoid& src );
 	extern void xMOVQZX( const xRegisterSSE& to, const xRegisterSSE& from );
 
 	extern void xMOVSS( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xMOVSS( const ModSibBase& to, const xRegisterSSE& from );
+	extern void xMOVSS( const xIndirectVoid& to, const xRegisterSSE& from );
 	extern void xMOVSD( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xMOVSD( const ModSibBase& to, const xRegisterSSE& from );
+	extern void xMOVSD( const xIndirectVoid& to, const xRegisterSSE& from );
 
-	extern void xMOVSSZX( const xRegisterSSE& to, const ModSibBase& from );
-	extern void xMOVSDZX( const xRegisterSSE& to, const ModSibBase& from );
+	extern void xMOVSSZX( const xRegisterSSE& to, const xIndirectVoid& from );
+	extern void xMOVSDZX( const xRegisterSSE& to, const xIndirectVoid& from );
 
-	extern void xMOVNTDQA( const xRegisterSSE& to, const ModSibBase& from );
-	extern void xMOVNTDQA( const ModSibBase& to, const xRegisterSSE& from );
+	extern void xMOVNTDQA( const xRegisterSSE& to, const xIndirectVoid& from );
+	extern void xMOVNTDQA( const xIndirectVoid& to, const xRegisterSSE& from );
 
-	extern void xMOVNTPD( const ModSibBase& to, const xRegisterSSE& from );
-	extern void xMOVNTPS( const ModSibBase& to, const xRegisterSSE& from );
-	extern void xMOVNTQ( const ModSibBase& to, const xRegisterMMX& from );
+	extern void xMOVNTPD( const xIndirectVoid& to, const xRegisterSSE& from );
+	extern void xMOVNTPS( const xIndirectVoid& to, const xRegisterSSE& from );
+	extern void xMOVNTQ( const xIndirectVoid& to, const xRegisterMMX& from );
 
 	extern void xMOVMSKPS( const xRegister32& to, const xRegisterSSE& from );
 	extern void xMOVMSKPD( const xRegister32& to, const xRegisterSSE& from );
@@ -386,10 +386,10 @@ namespace x86Emitter
 	extern const xImplSimd_DestRegSSE xMOVSHDUP;
 
 	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
-	extern void xINSERTPS( const xRegisterSSE& to, const ModSib32& from, u8 imm8 );
+	extern void xINSERTPS( const xRegisterSSE& to, const xIndirect32& from, u8 imm8 );
 
 	extern void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 );
-	extern void xEXTRACTPS( const ModSib32& dest, const xRegisterSSE& from, u8 imm8 );
+	extern void xEXTRACTPS( const xIndirect32& dest, const xRegisterSSE& from, u8 imm8 );
 
 	// ------------------------------------------------------------------------
 
@@ -423,56 +423,56 @@ namespace x86Emitter
 	//
 	//
 	extern void xCVTDQ2PD( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTDQ2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTDQ2PD( const xRegisterSSE& to, const xIndirect64& from );
 	extern void xCVTDQ2PS( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTDQ2PS( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTDQ2PS( const xRegisterSSE& to, const xIndirect128& from );
 
 	extern void xCVTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTPD2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTPD2DQ( const xRegisterSSE& to, const xIndirect128& from );
 	extern void xCVTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from );
-	extern void xCVTPD2PI( const xRegisterMMX& to, const ModSib128& from );
+	extern void xCVTPD2PI( const xRegisterMMX& to, const xIndirect128& from );
 	extern void xCVTPD2PS( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTPD2PS( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTPD2PS( const xRegisterSSE& to, const xIndirect128& from );
 
 	extern void xCVTPI2PD( const xRegisterSSE& to, const xRegisterMMX& from );
-	extern void xCVTPI2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTPI2PD( const xRegisterSSE& to, const xIndirect64& from );
 	extern void xCVTPI2PS( const xRegisterSSE& to, const xRegisterMMX& from );
-	extern void xCVTPI2PS( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTPI2PS( const xRegisterSSE& to, const xIndirect64& from );
 
 	extern void xCVTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTPS2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTPS2DQ( const xRegisterSSE& to, const xIndirect128& from );
 	extern void xCVTPS2PD( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTPS2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTPS2PD( const xRegisterSSE& to, const xIndirect64& from );
 	extern void xCVTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from );
-	extern void xCVTPS2PI( const xRegisterMMX& to, const ModSib64& from );
+	extern void xCVTPS2PI( const xRegisterMMX& to, const xIndirect64& from );
 
 	extern void xCVTSD2SI( const xRegister32& to, const xRegisterSSE& from );
-	extern void xCVTSD2SI( const xRegister32& to, const ModSib64& from );
+	extern void xCVTSD2SI( const xRegister32& to, const xIndirect64& from );
 	extern void xCVTSD2SS( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTSD2SS( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTSD2SS( const xRegisterSSE& to, const xIndirect64& from );
 	extern void xCVTSI2SD( const xRegisterMMX& to, const xRegister32& from );
-	extern void xCVTSI2SD( const xRegisterMMX& to, const ModSib32& from );
+	extern void xCVTSI2SD( const xRegisterMMX& to, const xIndirect32& from );
 	extern void xCVTSI2SS( const xRegisterSSE& to, const xRegister32& from );
-	extern void xCVTSI2SS( const xRegisterSSE& to, const ModSib32& from );
+	extern void xCVTSI2SS( const xRegisterSSE& to, const xIndirect32& from );
 
 	extern void xCVTSS2SD( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTSS2SD( const xRegisterSSE& to, const ModSib32& from );
+	extern void xCVTSS2SD( const xRegisterSSE& to, const xIndirect32& from );
 	extern void xCVTSS2SI( const xRegister32& to, const xRegisterSSE& from );
-	extern void xCVTSS2SI( const xRegister32& to, const ModSib32& from );
+	extern void xCVTSS2SI( const xRegister32& to, const xIndirect32& from );
 
 	extern void xCVTTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTTPD2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTTPD2DQ( const xRegisterSSE& to, const xIndirect128& from );
 	extern void xCVTTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from );
-	extern void xCVTTPD2PI( const xRegisterMMX& to, const ModSib128& from );
+	extern void xCVTTPD2PI( const xRegisterMMX& to, const xIndirect128& from );
 	extern void xCVTTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
-	extern void xCVTTPS2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTTPS2DQ( const xRegisterSSE& to, const xIndirect128& from );
 	extern void xCVTTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from );
-	extern void xCVTTPS2PI( const xRegisterMMX& to, const ModSib64& from );
+	extern void xCVTTPS2PI( const xRegisterMMX& to, const xIndirect64& from );
 
 	extern void xCVTTSD2SI( const xRegister32& to, const xRegisterSSE& from );
-	extern void xCVTTSD2SI( const xRegister32& to, const ModSib64& from );
+	extern void xCVTTSD2SI( const xRegister32& to, const xIndirect64& from );
 	extern void xCVTTSS2SI( const xRegister32& to, const xRegisterSSE& from );
-	extern void xCVTTSS2SI( const xRegister32& to, const ModSib32& from );
+	extern void xCVTTSS2SI( const xRegister32& to, const xIndirect32& from );
 
 	// ------------------------------------------------------------------------
 

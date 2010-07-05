@@ -41,7 +41,7 @@ namespace x86Emitter {
 // Note on "[Indirect],Imm" forms : use int as the source operand since it's "reasonably inert" from a
 // compiler perspective.  (using uint tends to make the compiler try and fail to match signed immediates
 // with one of the other overloads).
-static void _g1_IndirectImm( G1Type InstType, const ModSib32orLess& sibdest, int imm )
+static void _g1_IndirectImm( G1Type InstType, const xIndirect32orLess& sibdest, int imm )
 {
 	if( sibdest.Is8BitOp() )
 	{
@@ -69,14 +69,14 @@ void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const xRegisterInt& fr
 	EmitSibMagic( from, to );
 }
 
-static void _g1_EmitOp( G1Type InstType, const ModSibBase& sibdest, const xRegisterInt& from )
+static void _g1_EmitOp( G1Type InstType, const xIndirectVoid& sibdest, const xRegisterInt& from )
 {
 	from.prefix16();
 	xWrite8( (from.Is8BitOp() ? 0 : 1) | (InstType<<3) );
 	EmitSibMagic( from, sibdest );
 }
 
-static void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const ModSibBase& sibsrc )
+static void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const xIndirectVoid& sibsrc )
 {
 	to.prefix16();
 	xWrite8( (to.Is8BitOp() ? 2 : 3) | (InstType<<3) );
@@ -109,10 +109,10 @@ static void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, int imm )
  	void g1type::operator()( const xRegister8& to, const xRegister8& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
 	void g1type::operator()( const xRegister16& to, const xRegister16& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
 	void g1type::operator()( const xRegister32& to, const xRegister32& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
-	void g1type::operator()( const ModSibBase& to, const xRegisterInt& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
-	void g1type::operator()( const xRegisterInt& to, const ModSibBase& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
+	void g1type::operator()( const xIndirectVoid& to, const xRegisterInt& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
+	void g1type::operator()( const xRegisterInt& to, const xIndirectVoid& from ) const		{ _g1_EmitOp( insttype, to, from ); } \
 	void g1type::operator()( const xRegisterInt& to, int imm ) const					{ _g1_EmitOp( insttype, to, imm ); } \
-	void g1type::operator()( const ModSib32orLess& sibdest, int imm ) const				{ _g1_IndirectImm( insttype, sibdest, imm ); }
+	void g1type::operator()( const xIndirect32orLess& sibdest, int imm ) const				{ _g1_IndirectImm( insttype, sibdest, imm ); }
 
 ImplementGroup1( xImpl_Group1,		InstType )
 ImplementGroup1( xImpl_G1Logic,		InstType )
@@ -160,14 +160,14 @@ void xImpl_Group2::operator()(const xRegisterInt& to, u8 imm ) const
 	}
 }
 
-void xImpl_Group2::operator()( const ModSib32orLess& sibdest, const xRegisterCL& /* from */ ) const
+void xImpl_Group2::operator()( const xIndirect32orLess& sibdest, const xRegisterCL& /* from */ ) const
 {
 	sibdest.prefix16();
 	xWrite8( sibdest.Is8BitOp() ? 0xd2 : 0xd3 );
 	EmitSibMagic( InstType, sibdest );
 }
 
-void xImpl_Group2::operator()( const ModSib32orLess& sibdest, u8 imm ) const
+void xImpl_Group2::operator()( const xIndirect32orLess& sibdest, u8 imm ) const
 {
 	if( imm == 0 ) return;
 
@@ -206,7 +206,7 @@ static void _g3_EmitOp( G3Type InstType, const xRegisterInt& from )
 	EmitSibMagic( InstType, from );
 }
 
-static void _g3_EmitOp( G3Type InstType, const ModSib32orLess& from )
+static void _g3_EmitOp( G3Type InstType, const xIndirect32orLess& from )
 {
 	from.prefix16();
 	xWrite8( from.Is8BitOp() ? 0xf6 : 0xf7 );
@@ -214,10 +214,10 @@ static void _g3_EmitOp( G3Type InstType, const ModSib32orLess& from )
 }
 
 void xImpl_Group3::operator()( const xRegisterInt& from ) const			{ _g3_EmitOp( InstType, from ); }
-void xImpl_Group3::operator()( const ModSib32orLess& from ) const		{ _g3_EmitOp( InstType, from ); }
+void xImpl_Group3::operator()( const xIndirect32orLess& from ) const		{ _g3_EmitOp( InstType, from ); }
 
 void xImpl_iDiv::operator()( const xRegisterInt& from ) const			{ _g3_EmitOp( G3Type_iDIV, from ); }
-void xImpl_iDiv::operator()( const ModSib32orLess& from ) const			{ _g3_EmitOp( G3Type_iDIV, from ); }
+void xImpl_iDiv::operator()( const xIndirect32orLess& from ) const			{ _g3_EmitOp( G3Type_iDIV, from ); }
 
 template< typename SrcType >
 static void _imul_ImmStyle( const xRegisterInt& param1, const SrcType& param2, int imm )
@@ -237,17 +237,17 @@ static void _imul_ImmStyle( const xRegisterInt& param1, const SrcType& param2, i
 }
 
 void xImpl_iMul::operator()( const xRegisterInt& from ) const			{ _g3_EmitOp( G3Type_iMUL, from ); }
-void xImpl_iMul::operator()( const ModSib32orLess& from ) const			{ _g3_EmitOp( G3Type_iMUL, from ); }
+void xImpl_iMul::operator()( const xIndirect32orLess& from ) const			{ _g3_EmitOp( G3Type_iMUL, from ); }
 
 void xImpl_iMul::operator()( const xRegister32& to,	const xRegister32& from ) const			{ xOpWrite0F( 0xaf, to, from ); }
-void xImpl_iMul::operator()( const xRegister32& to,	const ModSibBase& src ) const			{ xOpWrite0F( 0xaf, to, src ); }
+void xImpl_iMul::operator()( const xRegister32& to,	const xIndirectVoid& src ) const			{ xOpWrite0F( 0xaf, to, src ); }
 void xImpl_iMul::operator()( const xRegister16& to,	const xRegister16& from ) const			{ xOpWrite0F( 0x66, 0xaf, to, from ); }
-void xImpl_iMul::operator()( const xRegister16& to,	const ModSibBase& src ) const			{ xOpWrite0F( 0x66, 0xaf, to, src ); }
+void xImpl_iMul::operator()( const xRegister16& to,	const xIndirectVoid& src ) const			{ xOpWrite0F( 0x66, 0xaf, to, src ); }
 
 void xImpl_iMul::operator()( const xRegister32& to,	const xRegister32& from, s32 imm ) const{ _imul_ImmStyle( to, from, imm ); }
-void xImpl_iMul::operator()( const xRegister32& to,	const ModSibBase& from, s32 imm ) const	{ _imul_ImmStyle( to, from, imm ); }
+void xImpl_iMul::operator()( const xRegister32& to,	const xIndirectVoid& from, s32 imm ) const	{ _imul_ImmStyle( to, from, imm ); }
 void xImpl_iMul::operator()( const xRegister16& to,	const xRegister16& from, s16 imm ) const{ _imul_ImmStyle( to, from, imm ); }
-void xImpl_iMul::operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const	{ _imul_ImmStyle( to, from, imm ); }
+void xImpl_iMul::operator()( const xRegister16& to,	const xIndirectVoid& from, s16 imm ) const	{ _imul_ImmStyle( to, from, imm ); }
 
 const xImpl_Group3 xNOT		= { G3Type_NOT };
 const xImpl_Group3 xNEG		= { G3Type_NEG };
@@ -263,15 +263,15 @@ const xImpl_iMul xMUL = { { 0x00, 0x59 }, { 0x66, 0x59 }, { 0xf3, 0x59 }, { 0xf2
 
 void xImpl_Group8::operator()( const xRegister32& bitbase, const xRegister32& bitoffset ) const	{ xOpWrite0F( 0xa3 | (InstType << 3), bitbase, bitoffset ); }
 void xImpl_Group8::operator()( const xRegister16& bitbase, const xRegister16& bitoffset ) const	{ xOpWrite0F( 0x66, 0xa3 | (InstType << 3), bitbase, bitoffset ); }
-void xImpl_Group8::operator()( const ModSib32& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
-void xImpl_Group8::operator()( const ModSib16& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
+void xImpl_Group8::operator()( const xIndirect32& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0xba, InstType, bitbase, bitoffset ); }
+void xImpl_Group8::operator()( const xIndirect16& bitbase, u8 bitoffset ) const					{ xOpWrite0F( 0x66, 0xba, InstType, bitbase, bitoffset ); }
 
 void xImpl_Group8::operator()( const xRegister16or32& bitbase, u8 bitoffset ) const
 {
 	xOpWrite0F( (bitbase->GetOperandSize() == 2) ? 0x66 : 0x00, 0xba, InstType, bitbase, bitoffset );
 }
 
-void xImpl_Group8::operator()( const ModSibBase& bitbase, const xRegister16or32& bitoffset ) const
+void xImpl_Group8::operator()( const xIndirectVoid& bitbase, const xRegister16or32& bitoffset ) const
 {
 	xOpWrite0F( (bitoffset->GetOperandSize() == 2) ? 0x66 : 0x00, 0xa3 | (InstType << 3), bitoffset, bitbase );
 }

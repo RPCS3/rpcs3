@@ -95,12 +95,12 @@ __forceinline void xWrite64( u64 val )
 // Empty initializers are due to frivolously pointless GCC errors (it demands the
 // objects be initialized even though they have no actual variable members).
 
-const xAddressIndexer<ModSibBase>	ptr		= { };
-const xAddressIndexer<ModSib128>	ptr128	= { };
-const xAddressIndexer<ModSib64>		ptr64	= { };
-const xAddressIndexer<ModSib32>		ptr32	= { };
-const xAddressIndexer<ModSib16>		ptr16	= { };
-const xAddressIndexer<ModSib8>		ptr8	= { };
+const xAddressIndexer<xIndirectVoid>		ptr		= { };
+const xAddressIndexer<xIndirect128>		ptr128	= { };
+const xAddressIndexer<xIndirect64>		ptr64	= { };
+const xAddressIndexer<xIndirect32>		ptr32	= { };
+const xAddressIndexer<xIndirect16>		ptr16	= { };
+const xAddressIndexer<xIndirect8>		ptr8	= { };
 
 // ------------------------------------------------------------------------
 
@@ -239,7 +239,7 @@ void EmitSibMagic( uint regfield, const void* address )
 // Prefixes are typically 0x66, 0xf2, or 0xf3.  OpcodePrefixes are either 0x38 or
 // 0x3a [and other value will result in assertion failue].
 //
-__emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const ModSibBase& sib )
+__emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const xIndirectVoid& sib )
 {
 	SimdPrefix( prefix, opcode );
 	EmitSibMagic( instId, sib );
@@ -251,7 +251,7 @@ __emitinline void xOpWrite0F( u8 prefix, u16 opcode, int instId, const void* dat
 	EmitSibMagic( instId, data );
 }
 
-__emitinline void xOpWrite0F( u16 opcode, int instId, const ModSibBase& sib )
+__emitinline void xOpWrite0F( u16 opcode, int instId, const xIndirectVoid& sib )
 {
 	xOpWrite0F( 0, opcode, instId, sib );
 }
@@ -260,10 +260,10 @@ __emitinline void xOpWrite0F( u16 opcode, int instId, const ModSibBase& sib )
 //////////////////////////////////////////////////////////////////////////////////////////
 // returns TRUE if this instruction requires SIB to be encoded, or FALSE if the
 // instruction ca be encoded as ModRm alone.
-static __forceinline bool NeedsSibMagic( const ModSibBase& info )
+static __forceinline bool NeedsSibMagic( const xIndirectVoid& info )
 {
 	// no registers? no sibs!
-	// (ModSibBase::Reduce always places a register in Index, and optionally leaves
+	// (xIndirectVoid::Reduce always places a register in Index, and optionally leaves
 	// Base empty if only register is specified)
 	if( info.Index.IsEmpty() ) return false;
 
@@ -282,7 +282,7 @@ static __forceinline bool NeedsSibMagic( const ModSibBase& info )
 // regfield - register field to be written to the ModRm.  This is either a register specifier
 //   or an opcode extension.  In either case, the instruction determines the value for us.
 //
-void EmitSibMagic( uint regfield, const ModSibBase& info )
+void EmitSibMagic( uint regfield, const xIndirectVoid& info )
 {
 	pxAssertDev( regfield < 8, "Invalid x86 register identifier." );
 
@@ -360,7 +360,7 @@ void EmitSibMagic( const xRegisterBase& reg1, const void* src )
 	EmitSibMagic( reg1.Id, src );
 }
 
-void EmitSibMagic( const xRegisterBase& reg1, const ModSibBase& sib )
+void EmitSibMagic( const xRegisterBase& reg1, const xIndirectVoid& sib )
 {
 	EmitSibMagic( reg1.Id, sib );
 }
@@ -430,10 +430,93 @@ __emitinline void xAdvancePtr( uint bytes )
 }
 
 // --------------------------------------------------------------------------------------
-//  xAddressInfo Method Implementations
+//  xAddressReg  (operator overloads)
+// --------------------------------------------------------------------------------------
+xAddressVoid xAddressReg::operator+( const xAddressReg& right ) const
+{
+	pxAssertMsg( right.Id != -1 || Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( *this, right );
+}
+
+xAddressVoid xAddressReg::operator+( s32 right ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( *this, right );
+}
+
+xAddressVoid xAddressReg::operator+( const void* right ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( *this, (sptr)right );
+}
+
+xAddressVoid xAddressReg::operator-( s32 right ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( *this, -right );
+}
+
+xAddressVoid xAddressReg::operator-( const void* right ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( *this, -(s32)right );
+}
+
+xAddressVoid xAddressReg::operator*( u32 factor ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( xEmptyReg, *this, factor );
+}
+
+xAddressVoid xAddressReg::operator<<( u32 shift ) const
+{
+	pxAssertMsg( Id != -1, "Uninitialized x86 register." );
+	return xAddressVoid( xEmptyReg, *this, 1<<shift );
+}
+
+
+// --------------------------------------------------------------------------------------
+//  xAddressVoid  (method implementations)
 // --------------------------------------------------------------------------------------
 
-xAddressInfo& xAddressInfo::Add( const xAddressReg& src )
+xAddressVoid::xAddressVoid( const xAddressReg& base, const xAddressReg& index, int factor, s32 displacement )
+{
+	Base		= base;
+	Index		= index;
+	Factor		= factor;
+	Displacement= displacement;
+
+	pxAssertMsg( base.Id != xRegId_Invalid, "Uninitialized x86 register." );
+	pxAssertMsg( index.Id != xRegId_Invalid, "Uninitialized x86 register." );
+}
+
+xAddressVoid::xAddressVoid( const xAddressReg& index, int displacement )
+{
+	Base		= xEmptyReg;
+	Index		= index;
+	Factor		= 0;
+	Displacement= displacement;
+
+	pxAssertMsg( index.Id != xRegId_Invalid, "Uninitialized x86 register." );
+}
+
+xAddressVoid::xAddressVoid( s32 displacement )
+{
+	Base		= xEmptyReg;
+	Index		= xEmptyReg;
+	Factor		= 0;
+	Displacement= displacement;
+}
+
+xAddressVoid::xAddressVoid( const void* displacement )
+{
+	Base		= xEmptyReg;
+	Index		= xEmptyReg;
+	Factor		= 0;
+	Displacement= (s32)displacement;
+}
+
+xAddressVoid& xAddressVoid::Add( const xAddressReg& src )
 {
 	if( src == Index )
 	{
@@ -463,7 +546,7 @@ xAddressInfo& xAddressInfo::Add( const xAddressReg& src )
 	return *this;
 }
 
-xAddressInfo& xAddressInfo::Add( const xAddressInfo& src )
+xAddressVoid& xAddressVoid::Add( const xAddressVoid& src )
 {
 	Add( src.Base );
 	Add( src.Displacement );
@@ -488,7 +571,7 @@ xAddressInfo& xAddressInfo::Add( const xAddressInfo& src )
 	return *this;
 }
 
-ModSibBase::ModSibBase( const xAddressInfo& src )
+xIndirectVoid::xIndirectVoid( const xAddressVoid& src )
 {
 	Base		= src.Base;
 	Index		= src.Index;
@@ -498,7 +581,7 @@ ModSibBase::ModSibBase( const xAddressInfo& src )
 	Reduce();
 }
 
-ModSibBase::ModSibBase( s32 disp )
+xIndirectVoid::xIndirectVoid( s32 disp )
 {
 	Base		= xEmptyReg;
 	Index		= xEmptyReg;
@@ -508,7 +591,7 @@ ModSibBase::ModSibBase( s32 disp )
 	// no reduction necessary :D
 }
 
-ModSibBase::ModSibBase( xAddressReg base, xAddressReg index, int scale, s32 displacement )
+xIndirectVoid::xIndirectVoid( xAddressReg base, xAddressReg index, int scale, s32 displacement )
 {
 	Base		= base;
 	Index		= index;
@@ -531,7 +614,7 @@ ModSibBase::ModSibBase( xAddressReg base, xAddressReg index, int scale, s32 disp
 // but it's too much trouble for code that isn't performance critical anyway.
 // And, with luck, maybe VC10 will optimize it better and make it a non-issue. :D
 //
-void ModSibBase::Reduce()
+void xIndirectVoid::Reduce()
 {
 	if( Index.IsStackPointer() )
 	{
@@ -595,13 +678,13 @@ void ModSibBase::Reduce()
 	}
 }
 
-uint ModSibBase::GetOperandSize() const
+uint xIndirectVoid::GetOperandSize() const
 {
-	pxFail( "Invalid operation on ModSibBase" );
+	pxFail( "Invalid operation on xIndirectVoid" );
 	return 0;
 }
 
-ModSibBase& ModSibBase::Add( s32 imm )
+xIndirectVoid& xIndirectVoid::Add( s32 imm )
 {
 	Displacement += imm;
 	return *this;
@@ -615,7 +698,7 @@ ModSibBase& ModSibBase::Add( s32 imm )
 // preserve_flags - set to ture to disable use of SHL on [Index*Base] forms
 // of LEA, which alters flags states.
 //
-static void EmitLeaMagic( const xRegisterInt& to, const ModSibBase& src, bool preserve_flags )
+static void EmitLeaMagic( const xRegisterInt& to, const xIndirectVoid& src, bool preserve_flags )
 {
 	int displacement_size = (src.Displacement == 0) ? 0 :
 		( ( src.IsByteSizeDisp() ) ? 1 : 2 );
@@ -730,13 +813,13 @@ static void EmitLeaMagic( const xRegisterInt& to, const ModSibBase& src, bool pr
 	}
 }
 
-__emitinline void xLEA( xRegister32 to, const ModSibBase& src, bool preserve_flags )
+__emitinline void xLEA( xRegister32 to, const xIndirectVoid& src, bool preserve_flags )
 {
 	EmitLeaMagic( to, src, preserve_flags );
 }
 
 
-__emitinline void xLEA( xRegister16 to, const ModSibBase& src, bool preserve_flags )
+__emitinline void xLEA( xRegister16 to, const xIndirectVoid& src, bool preserve_flags )
 {
 	xWrite8( 0x66 );
 	EmitLeaMagic( to, src, preserve_flags );
@@ -764,7 +847,7 @@ void xImpl_Test::operator()( const xRegister32& to, const xRegister32& from ) co
 	EmitSibMagic( from, to );
 }
 
-void xImpl_Test::operator()( const ModSib32orLess& dest, int imm ) const
+void xImpl_Test::operator()( const xIndirect32orLess& dest, int imm ) const
 {
 	dest.prefix16();
 	xWrite8( dest.Is8BitOp() ? 0xf6 : 0xf7 );
@@ -788,7 +871,7 @@ void xImpl_Test::operator()( const xRegisterInt& to, int imm ) const
 
 void xImpl_BitScan::operator()( const xRegister32& to, const xRegister32& from ) const		{ xOpWrite0F( Opcode, to, from ); }
 void xImpl_BitScan::operator()( const xRegister16& to, const xRegister16& from ) const		{ xOpWrite0F( 0x66, Opcode, to, from ); }
-void xImpl_BitScan::operator()( const xRegister16or32& to, const ModSibBase& sibsrc ) const
+void xImpl_BitScan::operator()( const xRegister16or32& to, const xIndirectVoid& sibsrc ) const
 {
 	xOpWrite0F( (to->GetOperandSize() == 2) ? 0x66 : 0x00, Opcode, to, sibsrc );
 }
@@ -807,7 +890,7 @@ void xImpl_IncDec::operator()( const xRegisterInt& to ) const
 	}
 }
 
-void xImpl_IncDec::operator()( const ModSib32orLess& to ) const
+void xImpl_IncDec::operator()( const xIndirect32orLess& to ) const
 {
 	to.prefix16();
 	xWrite8( to.Is8BitOp() ? 0xfe : 0xff );
@@ -827,12 +910,12 @@ void xImpl_DwordShift::operator()( const xRegister16& to,	const xRegister16& fro
 		xOpWrite0F( 0x66, OpcodeBase, to, from );
 }
 
-void xImpl_DwordShift::operator()( const ModSibBase& dest, const xRegister16or32& from, const xRegisterCL& /* clreg */ ) const
+void xImpl_DwordShift::operator()( const xIndirectVoid& dest, const xRegister16or32& from, const xRegisterCL& /* clreg */ ) const
 {
 	xOpWrite0F( (from->GetOperandSize() == 2) ? 0x66 : 0x00, OpcodeBase, from, dest );
 }
 
-void xImpl_DwordShift::operator()( const ModSibBase& dest, const xRegister16or32& from, u8 shiftcnt ) const
+void xImpl_DwordShift::operator()( const xIndirectVoid& dest, const xRegister16or32& from, u8 shiftcnt ) const
 {
 	if( shiftcnt != 0 )
 		xOpWrite0F( (from->GetOperandSize() == 2) ? 0x66 : 0x00, OpcodeBase, from, dest, shiftcnt );
@@ -855,13 +938,13 @@ const xImpl_DwordShift	xSHRD	= { 0xac };
 // Note: pushad/popad implementations are intentionally left out.  The instructions are
 // invalid in x64, and are super slow on x32.  Use multiple Push/Pop instructions instead.
 
-__emitinline void xPOP( const ModSibBase& from )
+__emitinline void xPOP( const xIndirectVoid& from )
 {
 	xWrite8( 0x8f );
 	EmitSibMagic( 0, from );
 }
 
-__emitinline void xPUSH( const ModSibBase& from )
+__emitinline void xPUSH( const xIndirectVoid& from )
 {
 	xWrite8( 0xff );
 	EmitSibMagic( 6, from );

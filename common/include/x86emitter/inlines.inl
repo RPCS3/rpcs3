@@ -45,6 +45,7 @@
 
 namespace x86Emitter
 {
+#if 0
 	// --------------------------------------------------------------------------------------
 	//  x86Register Method Implementations (inlined!)
 	// --------------------------------------------------------------------------------------
@@ -98,4 +99,5 @@ namespace x86Emitter
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( xEmptyReg, *this, 1<<shift );
 	}
+	#endif
 }

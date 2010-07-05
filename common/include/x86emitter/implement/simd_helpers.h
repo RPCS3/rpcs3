@@ -31,7 +31,7 @@ struct xImplSimd_DestRegSSE
 	u16		Opcode;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 };
 
 // ------------------------------------------------------------------------
@@ -44,7 +44,7 @@ struct xImplSimd_DestRegImmSSE
 	u16		Opcode;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm ) const;
 };
 
 struct xImplSimd_DestSSE_CmpImm
@@ -53,7 +53,7 @@ struct xImplSimd_DestSSE_CmpImm
 	u16		Opcode;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType imm ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType imm ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from, SSE2_ComparisonType imm ) const;
 };
 
 struct xImplSimd_DestRegImmMMX
@@ -62,7 +62,7 @@ struct xImplSimd_DestRegImmMMX
 	u16		Opcode;
 
 	void operator()( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm ) const;
-	void operator()( const xRegisterMMX& to, const ModSibBase& from, u8 imm ) const;
+	void operator()( const xRegisterMMX& to, const xIndirectVoid& from, u8 imm ) const;
 };
 
 // ------------------------------------------------------------------------
@@ -75,10 +75,10 @@ struct xImplSimd_DestRegEither
 	u16		Opcode;
 
 	void operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void operator()( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 
 	void operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const;
-	void operator()( const xRegisterMMX& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterMMX& to, const xIndirectVoid& from ) const;
 };
 
 }	// end namespace x86Emitter

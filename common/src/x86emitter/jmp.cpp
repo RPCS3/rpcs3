@@ -34,10 +34,10 @@
 namespace x86Emitter {
 
 void xImpl_JmpCall::operator()( const xRegister32& absreg ) const	{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, absreg ); }
-void xImpl_JmpCall::operator()( const ModSib32& src ) const			{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, src ); }
+void xImpl_JmpCall::operator()( const xIndirect32& src ) const			{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, src ); }
 
 void xImpl_JmpCall::operator()( const xRegister16& absreg ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, absreg ); }
-void xImpl_JmpCall::operator()( const ModSib16& src ) const			{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, src ); }
+void xImpl_JmpCall::operator()( const xIndirect16& src ) const			{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, src ); }
 
 const xImpl_JmpCall xJMP	= { true };
 const xImpl_JmpCall xCALL	= { false };

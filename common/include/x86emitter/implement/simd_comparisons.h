@@ -32,16 +32,16 @@ struct xImplSimd_Compare
 	SSE2_ComparisonType		CType;
 
 	void PS( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void PS( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void PS( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 
 	void PD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void PD( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void PD( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 
 	void SS( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void SS( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void SS( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 
 	void SD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void SD( const xRegisterSSE& to, const ModSibBase& from ) const;
+	void SD( const xRegisterSSE& to, const xIndirectVoid& from ) const;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////

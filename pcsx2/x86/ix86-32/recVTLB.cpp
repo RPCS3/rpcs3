@@ -57,26 +57,24 @@ public:
 	operator xRegisterSSE() const { return m_reg; }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
 // Moves 128 bits from point B to point A, using SSE's MOVAPS (or MOVDQA).
 // This instruction always uses an SSE register, even if all registers are allocated!  It
 // saves an SSE register to memory first, performs the copy, and restores the register.
 //
-void iMOV128_SSE( const ModSibBase& destRm, const ModSibBase& srcRm )
+static void iMOV128_SSE( const xIndirectVoid& destRm, const xIndirectVoid& srcRm )
 {
 	iAllocRegSSE reg;
 	xMOVDQA( reg, srcRm );
 	xMOVDQA( destRm, reg );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
 // Moves 64 bits of data from point B to point A, using either MMX, SSE, or x86 registers
 // if neither MMX nor SSE is available to the task.
 //
 // Optimizations: This method uses MMX is the cpu is in MMX mode, or SSE if it's in FPU
 // mode (saving on potential EMMS uses).
 //
-void iMOV64_Smart( const ModSibBase& destRm, const ModSibBase& srcRm )
+static void iMOV64_Smart( const xIndirectVoid& destRm, const xIndirectVoid& srcRm )
 {
 	if( (x86FpuState == FPU_STATE) && _hasFreeXMMreg() )
 	{

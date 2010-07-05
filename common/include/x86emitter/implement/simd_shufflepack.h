@@ -25,10 +25,10 @@ struct xImplSimd_Shuffle
 	inline void _selector_assertion_check( u8 selector ) const;
 
 	void PS( const xRegisterSSE& to, const xRegisterSSE& from, u8 selector ) const;
-	void PS( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const;
+	void PS( const xRegisterSSE& to, const xIndirectVoid& from, u8 selector ) const;
 
 	void PD( const xRegisterSSE& to, const xRegisterSSE& from, u8 selector ) const;
-	void PD( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const;
+	void PD( const xRegisterSSE& to, const xIndirectVoid& from, u8 selector ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -63,6 +63,46 @@ struct xImplSimd_PShuffle
 	//
 	// Operands can be MMX or XMM registers.
 	const xImplSimd_DestRegEither	B;
+
+	// below is my test bed for a new system, free of subclasses.  Was supposed to improve intellisense
+	// but it doesn't (makes it worse).  Will try again in MSVC 2010. --air
+
+	#if 0
+	// Copies words from src and inserts them into dest at word locations selected with
+	// the order operand (8 bit immediate).
+	void W( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm ) const	{ xOpWrite0F( 0x70, to, from, imm ); }
+	void W( const xRegisterMMX& to, const xIndirectVoid& from, u8 imm ) const		{ xOpWrite0F( 0x70, to, from, imm ); }
+
+	// Copies doublewords from src and inserts them into dest at dword locations selected
+	// with the order operand (8 bit immediate).
+	void D( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const	{ xOpWrite0F( 0x66, 0x70, to, from, imm ); }
+	void D( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm ) const		{ xOpWrite0F( 0x66, 0x70, to, from, imm ); }
+
+	// Copies words from the low quadword of src and inserts them into the low quadword
+	// of dest at word locations selected with the order operand (8 bit immediate).
+	// The high quadword of src is copied to the high quadword of dest.
+	void LW( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const	{ xOpWrite0F( 0xf2, 0x70, to, from, imm ); }
+	void LW( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm ) const		{ xOpWrite0F( 0xf2, 0x70, to, from, imm ); }
+
+	// Copies words from the high quadword of src and inserts them into the high quadword
+	// of dest at word locations selected with the order operand (8 bit immediate).
+	// The low quadword of src is copied to the low quadword of dest.
+	void HW( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const	{ xOpWrite0F( 0xf3, 0x70, to, from, imm ); }
+	void HW( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm ) const		{ xOpWrite0F( 0xf3, 0x70, to, from, imm ); }
+
+	// [sSSE-3] Performs in-place shuffles of bytes in dest according to the shuffle
+	// control mask in src.  If the most significant bit (bit[7]) of each byte of the
+	// shuffle control mask is set, then constant zero is written in the result byte.
+	// Each byte in the shuffle control mask forms an index to permute the corresponding
+	// byte in dest. The value of each index is the least significant 4 bits (128-bit
+	// operation) or 3 bits (64-bit operation) of the shuffle control byte.
+	//
+	// Operands can be MMX or XMM registers.
+	void B( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ OpWriteSSE( 0x66, 0x0038 ); }
+	void B( const xRegisterSSE& to, const xIndirectVoid& from ) const		{ OpWriteSSE( 0x66, 0x0038 ); }
+	void B( const xRegisterMMX& to, const xRegisterMMX& from ) const	{ OpWriteSSE( 0x00, 0x0038 ); }
+	void B( const xRegisterMMX& to, const xIndirectVoid& from ) const		{ OpWriteSSE( 0x00, 0x0038 ); }
+	#endif
 };
 
 // --------------------------------------------------------------------------------------
@@ -161,7 +201,7 @@ struct xImplSimd_InsertExtractHelper
 	void operator()( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const;
 
 	// [SSE-4.1] Allowed with SSE registers only (MMX regs are invalid)
-	void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const;
+	void operator()( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm8 ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -172,10 +212,10 @@ struct xImplSimd_InsertExtractHelper
 struct xImplSimd_PInsert
 {
 	void W( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const;
-	void W( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const;
+	void W( const xRegisterSSE& to, const xIndirectVoid& from, u8 imm8 ) const;
 
 	void W( const xRegisterMMX& to, const xRegister32& from, u8 imm8 ) const;
-	void W( const xRegisterMMX& to, const ModSibBase& from, u8 imm8 ) const;
+	void W( const xRegisterMMX& to, const xIndirectVoid& from, u8 imm8 ) const;
 
 	// [SSE-4.1] Allowed with SSE registers only (MMX regs are invalid)
 	xImplSimd_InsertExtractHelper	B;
@@ -200,7 +240,7 @@ struct SimdImpl_PExtract
 	//
 	void W( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const;
 	void W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const;
-	void W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const;
+	void W( const xIndirectVoid& dest, const xRegisterSSE& from, u8 imm8 ) const;
 
 	// [SSE-4.1] Copies the byte element specified by imm8 from src to dest.  The upper bits
 	// of dest are zero-extended (cleared).  This can be used to extract any single packed
