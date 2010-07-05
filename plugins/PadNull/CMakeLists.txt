@@ -9,7 +9,6 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     )
 
 set(OptimizationFlags

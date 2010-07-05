@@ -12,7 +12,6 @@ set(dev9nullName dev9null)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     )
 
 set(OptimizationFlags

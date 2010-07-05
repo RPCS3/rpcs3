@@ -23,6 +23,10 @@
 # Remove -rdynamic option that can some segmentation fault when openining pcsx2 plugins
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
+# Remove -fPIC option. No good reason to use it for plugins. Moreover we
+# only support x86 architecture. And last but not least it impact the performance.
+set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default

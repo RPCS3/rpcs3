@@ -12,7 +12,6 @@ set(SPU2nullName SPU2null)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     )
 
 set(OptimizationFlags

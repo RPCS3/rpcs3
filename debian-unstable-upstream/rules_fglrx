@@ -76,6 +76,9 @@ install: build
 	cp debian/pcsx2.desktop debian/pcsx2-unstable/usr/share/applications
 	cp debian/pcsx2.xpm debian/pcsx2-unstable/usr/share/pixmaps
 
+	# lintian override
+	dh_lintian
+
 # Build architecture-independent files here.
 binary-indep: build install
 	dh_testdir -i

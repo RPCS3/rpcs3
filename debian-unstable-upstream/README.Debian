@@ -10,4 +10,10 @@
 
 * Documentation needs some loves. Feel free to help.
 
+* -fPIC option was removed for multiple reason.
+    - Code only support x86 architecture.
+    - Upstream code use ebx register so it is not compliant with PIC.
+    - Impact too much performance.
+    - only plugins so no others package link against us.
+
  -- Gregory Hainaut <gregory.hainaut@gmail.com>  Sat, 24 Apr 2010 23:11:10 +0200

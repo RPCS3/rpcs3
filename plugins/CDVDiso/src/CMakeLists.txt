@@ -12,7 +12,6 @@ set(CDVDisoName CDVDiso)
 set(CommonFlags
     -Wall
     -m32
-    -fpic
     -fpermissive
     )
 

@@ -12,7 +12,6 @@ set(GSnullName GSnull)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     -msse2
     )
 

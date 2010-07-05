@@ -12,7 +12,6 @@ set(zerospu2Name zerospu2)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     -msse2
     )
 

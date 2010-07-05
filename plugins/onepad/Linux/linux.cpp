@@ -33,7 +33,7 @@ Display *GSdsp;
 
 extern string KeyName(int pad, int key);
 
-void __forceinline SysMessage(const char *fmt, ...)
+void SysMessage(const char *fmt, ...)
 {
     va_list list;
     char msg[512];

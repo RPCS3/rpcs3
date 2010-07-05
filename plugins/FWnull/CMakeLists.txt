@@ -12,7 +12,6 @@ set(FWnullName FWnull)
 set(CommonFlags
     -Wall
     -m32
-    -fPIC
     )
 
 set(OptimizationFlags

@@ -1,0 +1,3 @@
+# PIC code cause regression in the library and issue with the ebx register.
+# Morever library are plugins and the code is only compatible with x86.
+pcsx2-plugins-unstable: shlib-with-non-pic-code

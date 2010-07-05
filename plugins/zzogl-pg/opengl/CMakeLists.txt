@@ -16,12 +16,6 @@ set(CMAKE_CXX_FLAGS_DEVEL "")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 
-# Also clear shared library flag to remove fpic option
-# that broke some asm code. The better solution will be to remove
-# the asm or fix it.
-set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
-set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
-
 # plugin name
 set(zzoglName zzogl)
 
