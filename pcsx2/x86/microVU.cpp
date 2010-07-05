@@ -350,36 +350,16 @@ void recMicroVU0::Execute(u32 cycles) {
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
-	XMMRegisters::Freeze();
 	// Sometimes games spin on vu0, so be careful with this value
 	// woody hangs if too high on sVU (untested on mVU)
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
-	try {
-		((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
-	} catch (BaseException& pxDevelCode(ex))  {
-		pxFailDev( wxsFormat(L"microVU0 recompiler exception: " + ex.FormatDiagnosticMessage()));
-	} catch (std::exception& pxDevelCode(ex)) {
-		pxFailDev( wxsFormat(L"microVU0 recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage()));
-	}
-	XMMRegisters::Thaw();
+	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
 }
 void recMicroVU1::Execute(u32 cycles) {
 	pxAssert(mvu1_allocated); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
-
-	XMMRegisters::Freeze();
-	// Exception note: It's bad news if the recompiler throws any exceptions, so we have a clause to
-	// assert if an exception occurs.  The rec should be pretty much exception safe, except for
-	// critical errors that would result in a crash regardless.
-	try {
-		((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
-	} catch (BaseException& pxDevelCode(ex))  {
-		pxFailDev( wxsFormat(L"microVU1 recompiler exception: " + ex.FormatDiagnosticMessage()));
-	} catch (std::exception& pxDevelCode(ex)) {
-		pxFailDev( wxsFormat(L"microVU1 recompiler exception: " + Exception::RuntimeError(ex).FormatDiagnosticMessage()));
-	}
-	XMMRegisters::Thaw();
+	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
 }
 
 void recMicroVU0::Clear(u32 addr, u32 size) {

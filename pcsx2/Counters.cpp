@@ -222,8 +222,6 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 
 u32 UpdateVSyncRate()
 {
-	Registers::Freeze();
-
 	// Notice:  (and I probably repeat this elsewhere, but it's worth repeating)
 	//  The PS2's vsync timer is an *independent* crystal that is fixed to either 59.94 (NTSC)
 	//  or 50.0 (PAL) Hz.  It has *nothing* to do with real TV timings or the real vsync of
@@ -276,8 +274,6 @@ u32 UpdateVSyncRate()
 	}
 
 	m_iStart = GetCPUTicks();
-
-	Registers::Thaw();
 
 	return (u32)m_iTicks;
 }

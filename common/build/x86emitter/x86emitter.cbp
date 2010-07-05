@@ -171,7 +171,6 @@
 		<Unit filename="../../src/x86emitter/legacy_sse.cpp" />
 		<Unit filename="../../src/x86emitter/movs.cpp" />
 		<Unit filename="../../src/x86emitter/simd.cpp" />
-		<Unit filename="../../src/x86emitter/tools.cpp" />
 		<Unit filename="../../src/x86emitter/x86emitter.cpp" />
 		<Extensions>
 			<envvars />

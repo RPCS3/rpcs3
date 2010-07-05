@@ -161,7 +161,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 
 		gifRegs->stat.clear_flags(GIF_STAT_P2Q);
 
-		Registers::Freeze();
 		nVifStruct&	v	 = nVif[1];
 		const int	ret	 = aMin(vif1.vifpacketsize, vif1.tag.size);
 		u32			size = ret << 2;
@@ -181,7 +180,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 				v.bSize += vif1.vifpacketsize << 2;
 				v.bPtr += vif1.vifpacketsize << 2;
 				vif1.tag.size -= vif1.vifpacketsize;
-				Registers::Thaw();
 				if(vif1.tag.size == 0) 
 				{
 					DevCon.Warning("Missaligned packet on DIRECT end!");
@@ -214,7 +212,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 						vif1.cmd = 0;
 					}
 					vif1.vifstalled    = true;
-					Registers::Thaw();
 					return ret;
 				}
 				else
@@ -228,7 +225,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 						vif1.cmd = 0;
 					}
 					vif1.vifstalled    = true;
-					Registers::Thaw();
 					return count << 2;
 				}
 			}

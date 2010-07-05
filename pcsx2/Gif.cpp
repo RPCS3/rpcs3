@@ -56,7 +56,6 @@ void gsPath1Interrupt()
 
 	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 == true && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
-		Registers::Freeze();
 		while(Path1WritePos > 0)
 		{
 			u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos  * 16), (Path1WritePos - Path1ReadPos));
@@ -81,7 +80,6 @@ void gsPath1Interrupt()
 				gifRegs->stat.P1Q = false;
 			}
 		}
-		Registers::Thaw();
 	}
 	else
 	{
@@ -183,12 +181,10 @@ int  _GIFchain()
 
 static __forceinline void GIFchain()
 {
-	Registers::Freeze();
 	// qwc check now done outside this function
 	// Voodoocycles
 	// >> 2 so Drakan and Tekken 5 don't mess up in some PATH3 transfer. Cycles to interrupt were getting huge..
 	/*if (gif->qwc)*/ gscycles+= ( _GIFchain() * BIAS); /* guessing */
-	Registers::Thaw();
 }
 
 static __forceinline bool checkTieBit(tDMA_TAG* &ptag)
@@ -605,13 +601,11 @@ void mfifoGIFtransfer(int qwc)
 		}
 	 }
 
-	Registers::Freeze();
 	if (!mfifoGIFchain())
 	{
 		Console.WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
 		gifstate = GIF_STATE_STALL;
 	}
-	Registers::Thaw();
 
 	if ((gif->qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);

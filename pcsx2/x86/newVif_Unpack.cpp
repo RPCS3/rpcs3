@@ -114,7 +114,6 @@ static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 }
 
 int nVifUnpack(int idx, u8* data) {
-	XMMRegisters::Freeze();
 	nVifStruct& v = nVif[idx];
 	vif		= v.vif;
 	vifRegs = v.vifRegs;
@@ -144,7 +143,6 @@ int nVifUnpack(int idx, u8* data) {
 		vif->tag.size -= ret;
 	}
 
-	XMMRegisters::Thaw();
 	return ret;
 }
 

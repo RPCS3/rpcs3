@@ -195,7 +195,6 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	nloop0_packet[1] = psHu32(GIF_FIFO + 4);
 	nloop0_packet[2] = psHu32(GIF_FIFO + 8);
 	nloop0_packet[3] = psHu32(GIF_FIFO + 12);
-	Registers::Freeze();
 	GetMTGS().PrepDataPacket(GIF_PATH_3, (u8*)nloop0_packet, 1);
 	u64* data = (u64*)GetMTGS().GetDataPacketPtr();
 	data[0] = value[0];
@@ -207,7 +206,6 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
-	Registers::Thaw();
 }
 
 void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)

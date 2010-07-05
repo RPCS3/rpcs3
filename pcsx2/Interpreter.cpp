@@ -380,8 +380,6 @@ static void intEventTest()
 
 static void intExecute()
 {
-	g_EEFreezeRegs = false;
-
 	try {
 		if (g_SkipBiosHack) {
 			do
@@ -409,7 +407,6 @@ static void intCheckExecutionState()
 
 static void intStep()
 {
-	g_EEFreezeRegs = false;
 	execI();
 }
 

@@ -344,11 +344,9 @@ __forceinline void dmaSIF0()
 
 	/*if (sif0.iop.busy)
 	{*/
-        XMMRegisters::Freeze();
-		hwIntcIrq(INTC_SBUS);
+        hwIntcIrq(INTC_SBUS);
 		SIF0Dma();
 		psHu32(SBUS_F240) &= ~0x20;
 		psHu32(SBUS_F240) &= ~0x2000;
-        XMMRegisters::Thaw();
 	//}
 }

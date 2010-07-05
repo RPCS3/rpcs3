@@ -30,9 +30,6 @@
 
 #include "PrecompiledHeader.h"
 #include "internal.h"
-
-// defined in tools.cpp
-//extern __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 #include "tools.h"
 
 // ------------------------------------------------------------------------
@@ -919,14 +916,16 @@ __emitinline void xBSWAP( const xRegister32& to )
 	xWrite8( 0xC8 | to.Id );
 }
 
+static __aligned16 u64 xmm_data[iREGCNT_XMM*2];
+
 __emitinline void xStoreReg( const xRegisterSSE& src )
 {
-	xMOVDQA( ptr[&XMMRegisters::data[src.Id*2]], src );
+	xMOVDQA( ptr[&xmm_data[src.Id*2]], src );
 }
 
 __emitinline void xRestoreReg( const xRegisterSSE& dest )
 {
-	xMOVDQA( dest, ptr[&XMMRegisters::data[dest.Id*2]] );
+	xMOVDQA( dest, ptr[&xmm_data[dest.Id*2]] );
 }
 
 }

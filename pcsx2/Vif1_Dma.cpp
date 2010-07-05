@@ -77,8 +77,6 @@ void vif1TransferToMemory()
 	// stuff from the GS.  The *only* way to handle this case safely is to flush the GS
 	// completely and execute the transfer there-after.
 	//Console.Warning("Real QWC %x", vif1ch->qwc);
-    XMMRegisters::Freeze();
-
 	size = min((u32)vif1ch->qwc, vif1.GSLastDownloadSize);
 
 	if (GSreadFIFO2 == NULL)
@@ -128,8 +126,6 @@ void vif1TransferToMemory()
 		}
 	}
 
-
-    XMMRegisters::Thaw();
 
 	g_vifCycles += vif1ch->qwc * 2;
 	vif1ch->madr += vif1ch->qwc * 16; // mgs3 scene changes

@@ -267,10 +267,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\x86emitter\tools.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\x86emitter\x86emitter.cpp"
 				>
 			</File>

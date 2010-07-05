@@ -352,9 +352,7 @@ static DynGenFunc* ExitRecompiledCode	= NULL;
 
 static void recEventTest()
 {
-    pxAssert(!Registers::Saved());
 	_cpuBranchTest_Shared();
-    pxAssert(!Registers::Saved());
 }
 
 // parameters:
@@ -750,7 +748,6 @@ static void recExecute()
 #if PCSX2_SEH
 	eeRecIsReset = false;
 	m_vmException = NULL;
-	g_EEFreezeRegs = true;
 	ScopedBool executing(m_recExecutingCode);
 
 	try {
@@ -765,7 +762,6 @@ static void recExecute()
 	if( !setjmp( m_SetJmp_StateCheck ) )
 	{
 		eeRecIsReset = false;
-		g_EEFreezeRegs = true;
 
 		// Important! Most of the console logging and such has cancel points in it.  This is great
 		// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
@@ -1257,8 +1253,6 @@ static void __fastcall PreBlockCheck( u32 blockpc )
 	static int lastrec = 0;
 	static int curcount = 0;
 	const int skip = 0;
-
-    pxAssert(!Registers::Saved());
 
     /*if( blockpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
 		curcount++;

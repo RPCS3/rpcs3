@@ -199,11 +199,9 @@ void psxDma9(u32 madr, u32 bcr, u32 chcr)
 
 	/*if (sif0.ee.busy)
 	{*/
-		XMMRegisters::Freeze();
 		SIF0Dma();
 		psHu32(SBUS_F240) &= ~0x20;
 		psHu32(SBUS_F240) &= ~0x2000;
-		XMMRegisters::Thaw();
 	//}
 }
 
@@ -216,12 +214,10 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 
 	/*if (sif1.ee.busy)
 	{*/
-        XMMRegisters::Freeze();
 		SIF1Dma();
 		psHu32(SBUS_F240) &= ~0x40;
 		psHu32(SBUS_F240) &= ~0x100;
 		psHu32(SBUS_F240) &= ~0x4000;
-        XMMRegisters::Thaw();
 	//}
 }
 

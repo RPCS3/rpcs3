@@ -122,9 +122,7 @@ static DynGenFunc* iopExitRecompiledCode	= NULL;
 
 static void recEventTest()
 {
-    pxAssert(!Registers::Saved());
 	_cpuBranchTest_Shared();
-    pxAssert(!Registers::Saved());
 }
 
 // parameters:
@@ -881,10 +879,6 @@ static __noinline s32 recExecuteBlock( s32 eeCycles )
 {
 	psxBreak = 0;
 	psxCycleEE = eeCycles;
-
-	// Register freezing note:
-	//  The IOP does not use mmx/xmm registers, so we don't modify the status
-	//  of the g_EEFreezeRegs here.
 
 	// [TODO] recExecuteBlock could be replaced by a direct call to the iopEnterRecompiledCode()
 	//   (by assigning its address to the psxRec structure).  But for that to happen, we need

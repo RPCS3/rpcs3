@@ -117,7 +117,6 @@ set(x86emitterSources
 	movs.cpp
 	PrecompiledHeader.cpp
 	simd.cpp
-	tools.cpp
 	x86emitter.cpp)
 
 # variable with all headers of this library

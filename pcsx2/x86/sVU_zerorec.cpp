@@ -4636,10 +4636,8 @@ void recSuperVU0::Execute(u32 cycles)
 {
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
-	XMMRegisters::Freeze();
 	runCycles = cycles;
 	SuperVUExecuteProgram(VU0.VI[REG_TPC].UL & 0xfff, 0);
-	XMMRegisters::Thaw();
 }
 
 void recSuperVU0::Clear(u32 Addr, u32 Size)
@@ -4679,8 +4677,6 @@ void recSuperVU1::Execute(u32 cycles)
 
 	// [TODO] Debugging pre- and post- hooks?
 
-	XMMRegisters::Freeze();
-
 	if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
 		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL);
 	}
@@ -4688,8 +4684,6 @@ void recSuperVU1::Execute(u32 cycles)
 	do { // while loop needed since not always will return finished
 		SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
 	} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
-
-	XMMRegisters::Thaw();
 }
 
 void recSuperVU1::Clear(u32 Addr, u32 Size)

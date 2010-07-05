@@ -24,7 +24,6 @@ class BaseR5900Exception;
 // them in iR5900.h would mean having to include that into more files than I care to
 // right now, so we're sticking them here for now until a better solution comes along.
 
-extern bool g_EEFreezeRegs;
 extern bool g_SkipBiosHack;
 extern bool g_GameStarted;
 

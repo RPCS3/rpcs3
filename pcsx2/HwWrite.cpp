@@ -31,9 +31,7 @@ static bool QuickDmaExec( void (*func)(), u32 mem)
 
 	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
-		Registers::Freeze();
 		func();
-		Registers::Thaw();
 		ret = true;
 	}
 
@@ -129,9 +127,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 
 	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
-		Registers::Freeze();
 		func();
-		Registers::Thaw();
 	}
 	else if(reg->chcr.STR)
 	{
@@ -209,9 +205,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 
 	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
-		Registers::Freeze();
 		func();
-		Registers::Thaw();
 	}
 	else if(reg->chcr.STR)
 	{
@@ -295,9 +289,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 
 	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
-		Registers::Freeze();
 		func();
-		Registers::Thaw();
 	}
 	else if(reg->chcr.STR)
 	{
