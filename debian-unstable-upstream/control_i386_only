@@ -2,8 +2,8 @@ Source: pcsx2.snapshot
 Section: games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
-Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.7.1), cmake (>=2.8),
-    zlib1g-dev (>=1:1.2.3.4),
+Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
+    zlib1g-dev (>=1:1.2.3.3),
     libbz2-dev (>= 1.0.4),
     libsdl1.2-dev,
     libjpeg-dev,

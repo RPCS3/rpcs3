@@ -100,6 +100,10 @@ echo "Remove 3rd party directory"
 find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
 # echo "Remove plugins/zzogl-pg/opengl/ZeroGSShaders (some zlib source in the middle)"
 # rm -fr $NEW_DIR/plugins/zzogl-pg/opengl/ZeroGSShaders
+echo "Remove windows file (useless & copyright issue)"
+find $NEW_DIR -iname "windows" -exec rm -fr {} \; 2> /dev/null
+rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
+
 
 ## BUILD
 echo "Build the tar gz file"
