@@ -19,6 +19,9 @@
 #ifndef __GS_H__
 #define __GS_H__
 
+
+#define USE_OLD_REGS
+
 #include "Util.h"
 #include "GifTransfer.h"
 
@@ -253,6 +256,7 @@ extern u8* g_pBasePS2Mem;
 	(((tag).ai32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
 
 // PS2 vertex
+
 
 struct VertexGPU
 {
@@ -626,6 +630,13 @@ typedef struct
 	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
 
 	pathInfo path[3];
+	void setRGBA(u32 r, u32 g, u32 b, u32 a)
+	{
+		rgba = (r & 0xff) |
+			  ((g & 0xff) <<  8) |
+			  ((b & 0xff) << 16) |
+			  ((a & 0xff) << 24);
+	}
 
 } GSinternal;
 

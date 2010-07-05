@@ -109,6 +109,8 @@
 		<Unit filename="../../Mem_Swizzle.h" />
 		<Unit filename="../../Mem_Tables.cpp" />
 		<Unit filename="../../Mem_Transmit.h" />
+		<Unit filename="../../NewRegs.cpp" />
+		<Unit filename="../../NewRegs.h" />
 		<Unit filename="../../Profile.cpp" />
 		<Unit filename="../../Profile.h" />
 		<Unit filename="../../Regs.cpp" />

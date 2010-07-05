@@ -18,13 +18,15 @@
 
 #include "GS.h"
 #include "Mem.h"
-#include "Regs.h"
+#include "NewRegs.h"
 #include "PS2Etypes.h"
 
 #include "zerogs.h"
 #include "targets.h"
 
 #ifdef USE_OLD_REGS
+#include "Regs.h"
+#else
 
 const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
 const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
@@ -44,44 +46,20 @@ u32 s_uClampData[2] = {0, };
 u32 results[65535] = {0, };
 
 // return true if triangle SHOULD be painted.
+// My brain hurts. --arcum42
 inline bool NoHighlights(int i)
 {
 //	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
 
-	// I'd have thought we could just test prim->_val and ZeroGS::vb[i].zbuf.psm directly...
 	int resultA = prim->iip + ((prim->tme) << 1) + ((prim->fge) << 2) + ((prim->abe) << 3) + ((prim->aa1) << 4) + ((prim->fst) << 5) + ((prim->ctxt) << 6) + ((prim->fix) << 7) +
 				  ((ZeroGS::vb[i].zbuf.psm) << 8);
-//	if ( results[resultA] == 0 ) {
-//		results[resultA] = 1;
-//		ZZLog::Error_Log("%x = %d %d %d %d %d %d %d %d psm: %x", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix), ZeroGS::vb[i].zbuf.psm) ;
-//	}
-//	if (resultA == 0xb && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
 	const pixTest curtest = ZeroGS::vb[i].test;
-	// Again, couldn't we just test curtest._val?
 	int result = curtest.ate + ((curtest.atst) << 1) + ((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst) << 9);
-//	if (resultA == 0xb)
-//		if ( results[result] == 0) {
-//			results[result] = 1;
-//			ZZLog::Error_Log("0x%x = %d %d %d %d %d %d %d %d ", result, curtest.ate, curtest.atst, curtest.aref, curtest.afail, curtest.date, curtest.datm, curtest.zte, curtest.ztst);
-//		}
-//	0, -50b, -500, !-300, -30a, -50a, -5cb, +100 (zte==1), -50d
-//	if (result == 0x50b && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
-
-	// if psm is 16S or 24, tme, abe, & fst are true, the rest are false, result is 0x302 or 0x700, and there is a mask.
-
 	if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
-
-	// if psm is 24, abe is true, tme doesn't matter, the rest are false, result is 0x54c or 0x50c and there is a mask.
 	if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Okage
-
-	// if psm is 24, abe & tme are true, the rest are false, and no result.
 	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
-
-	// if psm is 16S, tme, abe, fst, and ctxt are true, the rest are false, result is 0x330 or 0x500, and there is a mask.
 	if (resultA == 0x3a6a && (result == 0x300 || result == 0x500) && ZeroGS::vb[i].zbuf.zmsk) return false; // Okami, result != 0x30d
-
-//	if ((resultA == 0x300b) && (result == 0x300) && ZeroGS::vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
 
 //	Old code
 	return (!(conf.settings().xenosaga_spec) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;
@@ -105,10 +83,9 @@ void __fastcall GIFPackedRegHandlerXYZ3(u32* data) { GIFRegHandlerXYZ3(data); }
 void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 {
 	FUNCLOG
-	gs.rgba = (data[0] & 0xff) |
-			  ((data[1] & 0xff) <<  8) |
-			  ((data[2] & 0xff) << 16) |
-			  ((data[3] & 0xff) << 24);
+	
+	GIFPackedRGBA* r = (GIFPackedRGBA*)(data);
+	gs.rgba = (r->R | (r->G <<  8) | (r->B << 16) | (r->A << 24));
 	gs.vertexregs.rgba = gs.rgba;
 	gs.vertexregs.q = gs.q;
 }
@@ -116,16 +93,18 @@ void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 void __fastcall GIFPackedRegHandlerSTQ(u32* data)
 {
 	FUNCLOG
-	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
-	*(u32*)&gs.vertexregs.t = data[1] & 0xffffff00;
-	*(u32*)&gs.q = data[2];
+	GIFPackedSTQ* r = (GIFPackedSTQ*)(data);
+	gs.vertexregs.s = r->S;
+	gs.vertexregs.t = r->T;
+	gs.q = r->Q;
 }
 
 void __fastcall GIFPackedRegHandlerUV(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.u = data[0] & 0x3fff;
-	gs.vertexregs.v = data[1] & 0x3fff;
+	GIFPackedUV* r = (GIFPackedUV*)(data);
+	gs.vertexregs.u = r->U;
+	gs.vertexregs.v = r->V;
 }
 
 void __forceinline KICK_VERTEX2()
@@ -160,13 +139,16 @@ void __forceinline KICK_VERTEX3()
 void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
-	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
-	gs.vertexregs.z = (data[2] >> 4) & 0xffffff;
-	gs.vertexregs.f = (data[3] >> 4) & 0xff;
+	GIFPackedXYZF2* r = (GIFPackedXYZF2*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
+	gs.vertexregs.f = r->F;
+	
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
 
+	// Fix Vertexes up later.
 	if (data[3] & 0x8000)
 	{
 		KICK_VERTEX3();
@@ -180,12 +162,14 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
-	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
-	gs.vertexregs.z = data[2];
+	GIFPackedXYZ2* r = (GIFPackedXYZ2*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
 
+	// Fix Vertexes up later.
 	if (data[3] & 0x8000)
 	{
 		KICK_VERTEX3();
@@ -199,17 +183,16 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 void __fastcall GIFPackedRegHandlerFOG(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.f = (data[3] & 0xff0) >> 4;
+	GIFPackedFOG* r = (GIFPackedFOG*)(data);
+	gs.vertexregs.f = r->F;
 }
 
 void __fastcall GIFPackedRegHandlerA_D(u32* data)
 {
 	FUNCLOG
-
-	if ((data[2] & 0xff) < 100)
-		g_GIFRegHandlers[data[2] & 0xff](data);
-	else
-		GIFRegHandlerNull(data);
+	GIFPackedA_D* r = (GIFPackedA_D*)(data);
+	
+	g_GIFRegHandlers[r->ADDR](data);
 }
 
 void __fastcall GIFPackedRegHandlerNOP(u32* data)
@@ -343,9 +326,6 @@ __forceinline void testWrite(int i, u32 *data)
 //  test.ztst  = (data[0] >> 17) & 0x3;
 }
 
-#ifndef __LINUX__
-__forceinline 
-#endif
 void clampWrite(int i, u32 *data)
 {
 	FUNCLOG
@@ -392,6 +372,7 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
 	//}
 
+	// Come back to this one...
 	gs.nTriFanVert = gs.primIndex;
 
 	gs.primC = 0;
@@ -406,33 +387,36 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 void __fastcall GIFRegHandlerRGBAQ(u32* data)
 {
 	FUNCLOG
-	gs.rgba = data[0];
-	gs.vertexregs.rgba = data[0];
-	*(u32*)&gs.vertexregs.q = data[1];
+	GIFRegRGBAQ* r = (GIFRegRGBAQ*)(data);
+	gs.rgba = (r->R | (r->G <<  8) | (r->B << 16) | (r->A << 24));
+	gs.vertexregs.rgba = gs.rgba;
+	gs.vertexregs.q = r->Q;
 }
 
 void __fastcall GIFRegHandlerST(u32* data)
 {
 	FUNCLOG
-	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
-	*(u32*)&gs.vertexregs.t = data[1] & 0xffffff00;
-	//*(u32*)&gs.q = data[2];
+	GIFRegST* r = (GIFRegST*)(data);
+	gs.vertexregs.s = r->S;
+	gs.vertexregs.t = r->T;
 }
 
 void __fastcall GIFRegHandlerUV(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.u = (data[0]) & 0x3fff;
-	gs.vertexregs.v = (data[0] >> 16) & 0x3fff;
+	GIFRegUV* r = (GIFRegUV*)(data);
+	gs.vertexregs.u = r->U;
+	gs.vertexregs.v = r->V;
 }
 
 void __fastcall GIFRegHandlerXYZF2(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1] & 0xffffff;
-	gs.vertexregs.f = data[1] >> 24;
+	GIFRegXYZF* r = (GIFRegXYZF*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
+	gs.vertexregs.f = r->F;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
 
@@ -442,9 +426,10 @@ void __fastcall GIFRegHandlerXYZF2(u32* data)
 void __fastcall GIFRegHandlerXYZ2(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1];
+	GIFRegXYZ* r = (GIFRegXYZ*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
 
@@ -455,6 +440,7 @@ void __fastcall GIFRegHandlerTEX0_1(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(0)) return;
 
 	tex0Write(0, data);
@@ -464,6 +450,7 @@ void __fastcall GIFRegHandlerTEX0_2(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(1)) return;
 
 	tex0Write(1, data);
@@ -473,6 +460,7 @@ void __fastcall GIFRegHandlerCLAMP_1(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(0)) return;
 
 	clampWrite(0, data);
@@ -482,6 +470,7 @@ void __fastcall GIFRegHandlerCLAMP_2(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(1)) return;
 
 	clampWrite(1, data);
@@ -490,17 +479,18 @@ void __fastcall GIFRegHandlerCLAMP_2(u32* data)
 void __fastcall GIFRegHandlerFOG(u32* data)
 {
 	FUNCLOG
-	//gs.gsvertex[gs.primIndex].f = (data[1] >> 24);	// shift to upper bits
-	gs.vertexregs.f = data[1] >> 24;
+	GIFRegFOG* r = (GIFRegFOG*)(data);
+	gs.vertexregs.f = r->F;
 }
 
 void __fastcall GIFRegHandlerXYZF3(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1] & 0xffffff;
-	gs.vertexregs.f = data[1] >> 24;
+	GIFRegXYZF* r = (GIFRegXYZF*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
+	gs.vertexregs.f = r->F;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
 
@@ -510,9 +500,10 @@ void __fastcall GIFRegHandlerXYZF3(u32* data)
 void __fastcall GIFRegHandlerXYZ3(u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1];
+	GIFRegXYZ* r = (GIFRegXYZ*)(data);
+	gs.vertexregs.x = r->X;
+	gs.vertexregs.y = r->Y;
+	gs.vertexregs.z = r->Z;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
 
@@ -549,6 +540,7 @@ void __fastcall GIFRegHandlerTEX1_1(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(0)) return;
 
 	tex1Write(0, data);
@@ -558,6 +550,7 @@ void __fastcall GIFRegHandlerTEX1_2(u32* data)
 {
 	FUNCLOG
 
+	// Worry about this later.
 	if (!NoHighlights(1)) return;
 
 	tex1Write(1, data);
@@ -578,32 +571,24 @@ void __fastcall GIFRegHandlerTEX2_2(u32* data)
 void __fastcall GIFRegHandlerXYOFFSET_1(u32* data)
 {
 	FUNCLOG
-	// eliminator low 4 bits for now
-	ZeroGS::vb[0].offset.x = (data[0]) & 0xffff;
-	ZeroGS::vb[0].offset.y = (data[1]) & 0xffff;
-
-//  if( !conf.interlace ) {
-//	  ZeroGS::vb[0].offset.x &= ~15;
-//	  ZeroGS::vb[0].offset.y &= ~15;
-//  }
+	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
+	ZeroGS::vb[0].offset.x = r->OFX;
+	ZeroGS::vb[0].offset.y = r->OFY;
 }
 
 void __fastcall GIFRegHandlerXYOFFSET_2(u32* data)
 {
 	FUNCLOG
-	ZeroGS::vb[1].offset.x = (data[0]) & 0xffff;
-	ZeroGS::vb[1].offset.y = (data[1]) & 0xffff;
-
-//  if( !conf.interlace ) {
-//	  ZeroGS::vb[1].offset.x &= ~15;
-//	  ZeroGS::vb[1].offset.y &= ~15;
-//  }
+	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
+	ZeroGS::vb[1].offset.x = r->OFX;
+	ZeroGS::vb[1].offset.y = r->OFY;
 }
 
 void __fastcall GIFRegHandlerPRMODECONT(u32* data)
 {
 	FUNCLOG
-	gs.prac = data[0] & 0x1;
+	GIFRegPRMODECONT* r = (GIFRegPRMODECONT*)(data);
+	gs.prac = r->AC;
 	prim = &gs._prim[gs.prac];
 
 	ZeroGS::Prim();
@@ -612,6 +597,8 @@ void __fastcall GIFRegHandlerPRMODECONT(u32* data)
 void __fastcall GIFRegHandlerPRMODE(u32* data)
 {
 	FUNCLOG
+	//GIFRegPRMODE* r = (GIFRegPRMODE*)(data);
+	// Re-examine all code dealing with PRIMs in a bit.
 	gs._prim[0]._val = (data[0] >> 3) & 0xff;
 
 	if (gs.prac == 0) ZeroGS::Prim();
@@ -620,80 +607,110 @@ void __fastcall GIFRegHandlerPRMODE(u32* data)
 void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 {
 	FUNCLOG
+	GIFRegTEXCLUT* r = (GIFRegTEXCLUT*)(data);
 
 	if (ZeroGS::vb[0].bNeedTexCheck) ZeroGS::vb[0].FlushTexData();
 	if (ZeroGS::vb[1].bNeedTexCheck) ZeroGS::vb[1].FlushTexData();
-
-	gs.clut.cbw = ((data[0]) & 0x3f) * 64;
-	gs.clut.cou = ((data[0] >>  6) & 0x3f) * 16;
-	gs.clut.cov = (data[0] >> 12) & 0x3ff;
+	
+	// Multipliers? Fixme.
+	gs.clut.cbw = r->CBW  * 64;
+	gs.clut.cou = r->COU  * 16;
+	gs.clut.cov = r->COV;
 }
 
 void __fastcall GIFRegHandlerSCANMSK(u32* data)
 {
 	FUNCLOG
+	GIFRegSCANMSK* r = (GIFRegSCANMSK*)(data);
 //  ZeroGS::FlushBoth();
 //  ZeroGS::ResolveC(&ZeroGS::vb[0]);
 //  ZeroGS::ResolveZ(&ZeroGS::vb[0]);
-
-	gs.smask = data[0] & 0x3;
+	// GSdx flushes here, like this:
+	/*if(r->SCANMSK != gs.smask)
+	{
+		//Flush
+	}*/
+	
+	gs.smask = r->MSK;
 }
 
 void __fastcall GIFRegHandlerMIPTBP1_1(u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP1* r = (GIFRegMIPTBP1*)(data);
+	// Similar here.
+	/*if(PRIM->CTXT == i && r->MIPTBP1 != m_env.CTXT[i].MIPTBP1)
+	{
+		Flush();
+	}*/
+	
 	miptbpInfo& miptbp0 = ZeroGS::vb[0].miptbp0;
-	miptbp0.tbp[0] = (data[0]) & 0x3fff;
-	miptbp0.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp0.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp0.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp0.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp0.tbp[0] = r->TBP1;
+	miptbp0.tbw[0] = r->TBW1;
+	miptbp0.tbp[1] = r->TBP2;
+	miptbp0.tbw[1] = r->TBW2;
+	miptbp0.tbp[2] = r->TBP3;
+	miptbp0.tbw[2] = r->TBW3;
 }
 
 void __fastcall GIFRegHandlerMIPTBP1_2(u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP1* r = (GIFRegMIPTBP1*)(data);
+	// And here.
+	
 	miptbpInfo& miptbp0 = ZeroGS::vb[1].miptbp0;
-	miptbp0.tbp[0] = (data[0]) & 0x3fff;
-	miptbp0.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp0.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp0.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp0.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp0.tbp[0] = r->TBP1;
+	miptbp0.tbw[0] = r->TBW1;
+	miptbp0.tbp[1] = r->TBP2;
+	miptbp0.tbw[1] = r->TBW2;
+	miptbp0.tbp[2] = r->TBP3;
+	miptbp0.tbw[2] = r->TBW3;
 }
 
 void __fastcall GIFRegHandlerMIPTBP2_1(u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP2* r = (GIFRegMIPTBP2*)(data);
+	// Yep.
+	
 	miptbpInfo& miptbp1 = ZeroGS::vb[0].miptbp1;
-	miptbp1.tbp[0] = (data[0]) & 0x3fff;
-	miptbp1.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp1.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp1.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp1.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp1.tbp[0] = r->TBP4;
+	miptbp1.tbw[0] = r->TBW4;
+	miptbp1.tbp[1] = r->TBP5;
+	miptbp1.tbw[1] = r->TBW5;
+	miptbp1.tbp[2] = r->TBP6;
+	miptbp1.tbw[2] = r->TBW6;
 }
 
 void __fastcall GIFRegHandlerMIPTBP2_2(u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP2* r = (GIFRegMIPTBP2*)(data);
+	// ...
+	
 	miptbpInfo& miptbp1 = ZeroGS::vb[1].miptbp1;
-	miptbp1.tbp[0] = (data[0]) & 0x3fff;
-	miptbp1.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp1.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp1.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp1.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp1.tbp[0] = r->TBP4;
+	miptbp1.tbw[0] = r->TBW4;
+	miptbp1.tbp[1] = r->TBP5;
+	miptbp1.tbw[1] = r->TBW5;
+	miptbp1.tbp[2] = r->TBP6;
+	miptbp1.tbw[2] = r->TBW6;
 }
 
 void __fastcall GIFRegHandlerTEXA(u32* data)
 {
 	FUNCLOG
+	GIFRegTEXA* r = (GIFRegTEXA*)(data);
 	texaInfo newinfo;
-	newinfo.aem = (data[0] >> 15) & 0x1;
-	newinfo.ta[0] = data[0] & 0xff;
-	newinfo.ta[1] = data[1] & 0xff;
+	/*if(r->TEXA != m_env.TEXA)
+	{
+		Flush();
+	}*/
+	
+	newinfo.aem = r->AEM;
+	newinfo.ta[0] = r->TA0;
+	newinfo.ta[1] = r->TA1;
 
 	if (*(u32*)&newinfo != *(u32*)&gs.texa)
 	{
@@ -712,26 +729,33 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 void __fastcall GIFRegHandlerFOGCOL(u32* data)
 {
 	FUNCLOG
+	//GIFRegFOGCOL* r = (GIFRegFOGCOL*)(data);
+	
+	// Yeah, it even flushes here.
+	// I'll worry about changing this later.
 	ZeroGS::SetFogColor(data[0]&0xffffff);
 }
 
 void __fastcall GIFRegHandlerTEXFLUSH(u32* data)
 {
 	FUNCLOG
+	// GSdx doesn't even do anything here.
 	ZeroGS::SetTexFlush();
 }
 
 void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 {
 	FUNCLOG
+	GIFRegSCISSOR* r = (GIFRegSCISSOR*)(data);
 	Rect2& scissor = ZeroGS::vb[0].scissor;
 
 	Rect2 newscissor;
 
-	newscissor.x0 = ((data[0]) & 0x7ff) << 3;
-	newscissor.x1 = ((data[0] >> 16) & 0x7ff) << 3;
-	newscissor.y0 = ((data[1]) & 0x7ff) << 3;
-	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
+	// << 3?
+	newscissor.x0 = r->SCAX0 << 3;
+	newscissor.x1 = r->SCAX1 << 3;
+	newscissor.y0 = r->SCAY0 << 3;
+	newscissor.y1 = r->SCAY1 << 3;
 
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
@@ -740,19 +764,32 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 		scissor = newscissor;
 		ZeroGS::vb[0].bNeedFrameCheck = 1;
 	}
+	
+	//Hmm...
+	/*
+	if(PRIM->CTXT == i && r->SCISSOR != m_env.CTXT[i].SCISSOR)
+	{
+		Flush();
+	}
+
+	m_env.CTXT[i].SCISSOR = (GSVector4i)r->SCISSOR;
+
+	m_env.CTXT[i].UpdateScissor();*/
 }
 
 void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 {
 	FUNCLOG
+	GIFRegSCISSOR* r = (GIFRegSCISSOR*)(data);
 	Rect2& scissor = ZeroGS::vb[1].scissor;
 
 	Rect2 newscissor;
-
-	newscissor.x0 = ((data[0]) & 0x7ff) << 3;
-	newscissor.x1 = ((data[0] >> 16) & 0x7ff) << 3;
-	newscissor.y0 = ((data[1]) & 0x7ff) << 3;
-	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
+	
+	// << 3?
+	newscissor.x0 = r->SCAX0 << 3;
+	newscissor.x1 = r->SCAX1 << 3;
+	newscissor.y0 = r->SCAY0 << 3;
+	newscissor.y1 = r->SCAY1 << 3;
 
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
@@ -768,6 +805,7 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 void __fastcall GIFRegHandlerALPHA_1(u32* data)
 {
 	FUNCLOG
+	// Another tangled one. Mess with this later.
 	alphaInfo newalpha;
 	newalpha.abcd = *(u8*)data;
 	newalpha.fix = *(u8*)(data + 1);
@@ -788,6 +826,7 @@ void __fastcall GIFRegHandlerALPHA_1(u32* data)
 void __fastcall GIFRegHandlerALPHA_2(u32* data)
 {
 	FUNCLOG
+	// ...
 	alphaInfo newalpha;
 	newalpha.abcd = *(u8*)data;
 	newalpha.fix = *(u8*)(data + 1);
@@ -808,18 +847,41 @@ void __fastcall GIFRegHandlerALPHA_2(u32* data)
 void __fastcall GIFRegHandlerDIMX(u32* data)
 {
 	FUNCLOG
+	// Not even handled? Fixme.
+	/*
+	bool update = false;
+
+	if(r->DIMX != m_env.DIMX)
+	{
+		Flush();
+
+		update = true;
+	}
+
+	m_env.DIMX = (GSVector4i)r->DIMX;
+
+	if(update)
+	{
+		m_env.UpdateDIMX();
+	}*/
 }
 
 void __fastcall GIFRegHandlerDTHE(u32* data)
 {
 	FUNCLOG
-	gs.dthe = data[0] & 0x1;
+	GIFRegDTHE* r = (GIFRegDTHE*)(data);
+	// Flush me.
+	gs.dthe = r->DTHE;
 }
 
 void __fastcall GIFRegHandlerCOLCLAMP(u32* data)
 {
 	FUNCLOG
-	gs.colclamp = data[0] & 0x1;
+	GIFRegCOLCLAMP* r = (GIFRegCOLCLAMP*)(data);
+	gs.colclamp = r->CLAMP;
+#ifdef DISABLE_COLCLAMP
+	gs.colclamp = 1;
+#endif
 }
 
 void __fastcall GIFRegHandlerTEST_1(u32* data)
@@ -837,28 +899,31 @@ void __fastcall GIFRegHandlerTEST_2(u32* data)
 void __fastcall GIFRegHandlerPABE(u32* data)
 {
 	FUNCLOG
+	GIFRegPABE* r = (GIFRegPABE*)(data);
 	//ZeroGS::SetAlphaChanged(0, GPUREG_PABE);
 	//ZeroGS::SetAlphaChanged(1, GPUREG_PABE);
 	ZeroGS::FlushBoth();
 
-	gs.pabe = *data & 0x1;
+	gs.pabe = r->PABE;
 }
 
 void __fastcall GIFRegHandlerFBA_1(u32* data)
 {
 	FUNCLOG
+	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
 	ZeroGS::FlushBoth();
-	ZeroGS::vb[0].fba.fba = *data & 0x1;
+	ZeroGS::vb[0].fba.fba = r->FBA;
 }
 
 void __fastcall GIFRegHandlerFBA_2(u32* data)
 {
 	FUNCLOG
+	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
 	ZeroGS::FlushBoth();
 	
-	ZeroGS::vb[1].fba.fba = *data & 0x1;
+	ZeroGS::vb[1].fba.fba = r->FBA;
 }
 
 void __fastcall GIFRegHandlerFRAME_1(u32* data)
@@ -876,8 +941,10 @@ void __fastcall GIFRegHandlerFRAME_2(u32* data)
 void __fastcall GIFRegHandlerZBUF_1(u32* data)
 {
 	FUNCLOG
+	// I'll wait a bit on this one.
+	//GIFRegZBUF* r = (GIFRegZBUF*)(data);
+	
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
-
 	int psm = (0x30 | ((data[0] >> 24) & 0xf));
 
 	if (zbuf.zbp == (data[0] & 0x1ff) * 32 &&
@@ -906,6 +973,8 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 void __fastcall GIFRegHandlerZBUF_2(u32* data)
 {
 	FUNCLOG
+	// And this.
+	//GIFRegZBUF* r = (GIFRegZBUF*)(data);
 	zbufInfo& zbuf = ZeroGS::vb[1].zbuf;
 
 	int psm = (0x30 | ((data[0] >> 24) & 0xf));
@@ -937,41 +1006,60 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 {
 	FUNCLOG
-	gs.srcbufnew.bp  = ((data[0]) & 0x3fff);   // * 64;
-	gs.srcbufnew.bw  = ((data[0] >> 16) & 0x3f) * 64;
-	gs.srcbufnew.psm = (data[0] >> 24) & 0x3f;
-	gs.dstbufnew.bp  = ((data[1]) & 0x3fff);   // * 64;
-	gs.dstbufnew.bw  = ((data[1] >> 16) & 0x3f) * 64;
-	gs.dstbufnew.psm = (data[1] >> 24) & 0x3f;
+	GIFRegBITBLTBUF* r = (GIFRegBITBLTBUF*)(data);
+	// Wonder why the multiplier?
+	gs.srcbufnew.bp  = r->SBP;   // * 64;
+	gs.srcbufnew.bw  = r->SBW * 64;
+	gs.srcbufnew.psm = r->SPSM;
+	gs.dstbufnew.bp  = r->DBP;   // * 64;
+	gs.dstbufnew.bw  = r->DBW * 64;
+	gs.dstbufnew.psm = r->DPSM;
 
 	if (gs.dstbufnew.bw == 0) gs.dstbufnew.bw = 64;
+	// GSdx does this:
+	
+	/*if((gs.srcbufnew.bw & 1) && (gs.srcbufnew.psm == PSM_PSMT8 || gs.srcbufnew.psm == PSM_PSMT4))
+	{
+		gs.srcbufnew.bw &= ~1;
+	}
+
+	if((gs.dstbufnew.bw & 1) && (gs.dstbufnew.psm == PSM_PSMT8 || gs.dstbufnew.psm == PSM_PSMT4))
+	{
+		gs.dstbufnew.bw &= ~1; // namcoXcapcom: 5, 11, refered to as 4, 10 in TEX0.TBW later
+	}*/
 }
 
 void __fastcall GIFRegHandlerTRXPOS(u32* data)
 {
 	FUNCLOG
-	gs.trxposnew.sx  = (data[0]) & 0x7ff;
-	gs.trxposnew.sy  = (data[0] >> 16) & 0x7ff;
-	gs.trxposnew.dx  = (data[1]) & 0x7ff;
-	gs.trxposnew.dy  = (data[1] >> 16) & 0x7ff;
+	GIFRegTRXPOS* r = (GIFRegTRXPOS*)(data);
+	
+	gs.trxposnew.sx  = r->SSAX;
+	gs.trxposnew.sy  = r->SSAY;
+	gs.trxposnew.dx  = r->DSAX;
+	gs.trxposnew.dy  = r->DSAY;
+	
+	//Fixme. DIRY & DIRX together?
 	gs.trxposnew.dir = (data[1] >> 27) & 0x3;
 }
 
 void __fastcall GIFRegHandlerTRXREG(u32* data)
 {
 	FUNCLOG
-	gs.imageWtemp = data[0] & 0xfff;
-	gs.imageHtemp = data[1] & 0xfff;
+	GIFRegTRXREG* r = (GIFRegTRXREG*)(data);
+	gs.imageWtemp = r->RRW;
+	gs.imageHtemp = r->RRH;
 }
 
 void __fastcall GIFRegHandlerTRXDIR(u32* data)
 {
 	FUNCLOG
+	// Oh dear...
+	
 	// terminate any previous transfers
 
 	switch (gs.imageTransfer)
 	{
-
 		case 0: // host->loc
 			gs.imageTransfer = -1;
 			break;
@@ -1259,5 +1347,4 @@ void SetFrameSkip(bool skip)
 		g_GIFRegHandlers[GIF_A_D_REG_PRMODE] = &GIFRegHandlerPRMODE;
 	}
 }
-
 #endif
