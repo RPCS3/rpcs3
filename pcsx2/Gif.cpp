@@ -629,6 +629,13 @@ void gifMFIFOInterrupt()
     //Console.WriteLn("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
+	if(SIGNAL_IMR_Pending == true)
+	{
+		//DevCon.Warning("Path 3 Paused");
+		CPU_INT(11, 128);
+		return;
+	}
+
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
 		gifRegs->stat.OPH = false;
