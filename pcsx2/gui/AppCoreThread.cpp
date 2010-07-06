@@ -190,7 +190,7 @@ void AppCoreThread::OnResumeReady()
 // Load Game Settings found in database
 // (game fixes, round modes, clamp modes, etc...)
 // Returns number of gamefixes set
-static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
+static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game, bool verbose = true) {
 	if( !game.IsOk() ) return 0;
 
 	int  gf  = 0;
@@ -200,7 +200,7 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 		SSE_RoundMode eeRM = (SSE_RoundMode)game.getInt("eeRoundMode");
 		if (EnumIsValid(eeRM))
 		{
-			Console.WriteLn("(GameDB) Changing EE/FPU roundmode to %d [%s]", eeRM, EnumToString(eeRM));
+			if(verbose) Console.WriteLn("(GameDB) Changing EE/FPU roundmode to %d [%s]", eeRM, EnumToString(eeRM));
 			dest.Cpu.sseMXCSR.SetRoundMode(eeRM);
 			++gf;
 		}
@@ -211,7 +211,7 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 		SSE_RoundMode vuRM = (SSE_RoundMode)game.getInt("vuRoundMode");
 		if (EnumIsValid(vuRM))
 		{
-			Console.WriteLn("(GameDB) Changing VU0/VU1 roundmode to %d [%s]", vuRM, EnumToString(vuRM));
+			if(verbose) Console.WriteLn("(GameDB) Changing VU0/VU1 roundmode to %d [%s]", vuRM, EnumToString(vuRM));
 			dest.Cpu.sseVUMXCSR.SetRoundMode(vuRM);
 			++gf;
 		}
@@ -219,7 +219,7 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 
 	if (game.keyExists("eeClampMode")) {
 		int clampMode = game.getInt("eeClampMode");
-		Console.WriteLn("(GameDB) Changing EE/FPU clamp mode [mode=%d]", clampMode);
+		if(verbose) Console.WriteLn("(GameDB) Changing EE/FPU clamp mode [mode=%d]", clampMode);
 		dest.Recompiler.fpuOverflow			= (clampMode >= 1);
 		dest.Recompiler.fpuExtraOverflow	= (clampMode >= 2);
 		dest.Recompiler.fpuFullMode			= (clampMode >= 3);
@@ -228,7 +228,7 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 
 	if (game.keyExists("vuClampMode")) {
 		int clampMode = game.getInt("vuClampMode");
-		Console.WriteLn("(GameDB) Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
+		if(verbose) Console.WriteLn("(GameDB) Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
 		dest.Recompiler.vuOverflow			= (clampMode >= 1);
 		dest.Recompiler.vuExtraOverflow		= (clampMode >= 2);
 		dest.Recompiler.vuSignOverflow		= (clampMode >= 3);
@@ -244,7 +244,7 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 		{
 			bool enableIt = game.getBool(key);
 			dest.Gamefixes.Set(id, enableIt);
-			Console.WriteLn(L"(GameDB) %s Gamefix: " + key, enableIt ? L"Enabled" : L"Disabled" );
+			if(verbose) Console.WriteLn(L"(GameDB) %s Gamefix: " + key, enableIt ? L"Enabled" : L"Disabled" );
 			gf++;
 		}
 	}
@@ -254,6 +254,11 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game) {
 
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
+	// Used to track the current game serial/id, and used to disable verbose logging of
+	// applied patches if the game info hasn't changed.  (avoids spam when suspending/resuming
+	// or using TAB or other things).
+	static wxString curGameKey;
+
 	// 'fixup' is the EmuConfig we're going to upload to the emulator, which very well may
 	// differ from the user-configured EmuConfig settings.  So we make a copy here and then
 	// we apply the commandline overrides and database gamefixes, and then upload 'fixup'
@@ -289,10 +294,13 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
 	if (!DiscSerial.IsEmpty()) gameSerial = L" [" + DiscSerial  + L"]";
 
+	const wxString newGameKey( SysGetDiscID() );
+	const bool verbose( newGameKey != curGameKey );
+
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
 	{
 		Game_Data game;
-		if (GameDB->findGame(game, SysGetDiscID())) {
+		if (GameDB->findGame(game, curGameKey)) {
 			int compat = game.getInt("Compat");
 			gameName   = game.getString("Name");
 			gameName  += L" (" + game.getString("Region") + L")";
@@ -302,8 +310,9 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		if (EmuConfig.EnablePatches) {
 			if (int patches = InitPatches(gameCRC, game)) {
 				gamePatch.Printf(L" [%d Patches]", patches);
+				if (verbose) Console.WriteLn(Color_Green, "(GameDB) Patches Loaded: %d", patches);
 			}
-			if (int fixes = loadGameSettings(fixup, game)) {
+			if (int fixes = loadGameSettings(fixup, game, verbose)) {
 				gameFixes.Printf(L" [%d Fixes]", fixes);
 			}
 		}
@@ -314,6 +323,8 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 			gameCheats.Printf(L" [%d Cheats]", cheats);
 		}
 	}
+
+	curGameKey = newGameKey;
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
 

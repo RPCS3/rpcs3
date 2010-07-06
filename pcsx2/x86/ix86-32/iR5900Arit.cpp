@@ -587,19 +587,19 @@ void recSLTs_const(int info, int sign, int st)
 	GPR_reg64 cval = g_cpuConstRegs[st ? _Rt_ : _Rs_];
 
 	xMOV(eax, 1);
-	{
-		xCMP(ptr32[&cpuRegs.GPR.r[st ? _Rs_ : _Rt_].UL[1]], cval.UL[1]);
-		xSmartJump pass1(st ? (sign ? Jcc_Less : Jcc_Below) : (sign ? Jcc_Greater : Jcc_Above));
-		xForwardJump<u8> fail(st ? (sign ? Jcc_Greater : Jcc_Above) : (sign ? Jcc_Less : Jcc_Below));
-		{
-			xCMP(ptr32[&cpuRegs.GPR.r[st ? _Rs_ : _Rt_].UL[0]], cval.UL[0]);
-			xForwardJump<u8> pass2(st ? Jcc_Below : Jcc_Above);
 
-			fail.SetTarget();
-			xMOV(eax, 0);
-			pass2.SetTarget();
-		}
+	xCMP(ptr32[&cpuRegs.GPR.r[st ? _Rs_ : _Rt_].UL[1]], cval.UL[1]);
+	xForwardJump8 pass1(st ? (sign ? Jcc_Less : Jcc_Below) : (sign ? Jcc_Greater : Jcc_Above));
+	xForwardJump8 fail(st ? (sign ? Jcc_Greater : Jcc_Above) : (sign ? Jcc_Less : Jcc_Below));
+	{
+		xCMP(ptr32[&cpuRegs.GPR.r[st ? _Rs_ : _Rt_].UL[0]], cval.UL[0]);
+		xForwardJump8 pass2(st ? Jcc_Below : Jcc_Above);
+
+		fail.SetTarget();
+		xMOV(eax, 0);
+		pass2.SetTarget();
 	}
+	pass1.SetTarget();
 
 	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[0]], eax);
 	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[1]], 0);
@@ -610,21 +610,21 @@ void recSLTs_(int info, int sign)
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	xMOV(eax, 1);
-	{
-		xMOV(edx, ptr32[&cpuRegs.GPR.r[_Rs_].UL[1]]);
-		xCMP(edx, ptr32[&cpuRegs.GPR.r[_Rt_].UL[1]]);
-		xSmartJump pass1(sign ? Jcc_Less : Jcc_Below);
-		xForwardJump<u8> fail(sign ? Jcc_Greater : Jcc_Above);
-		{
-			xMOV(edx, ptr32[&cpuRegs.GPR.r[_Rs_].UL[0]]);
-			xCMP(edx, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
-			xForwardJump<u8> pass2(Jcc_Below);
 
-			fail.SetTarget();
-			xMOV(eax, 0);
-			pass2.SetTarget();
-		}
+	xMOV(edx, ptr32[&cpuRegs.GPR.r[_Rs_].UL[1]]);
+	xCMP(edx, ptr32[&cpuRegs.GPR.r[_Rt_].UL[1]]);
+	xForwardJump8 pass1(sign ? Jcc_Less : Jcc_Below);
+	xForwardJump8 fail(sign ? Jcc_Greater : Jcc_Above);
+	{
+		xMOV(edx, ptr32[&cpuRegs.GPR.r[_Rs_].UL[0]]);
+		xCMP(edx, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
+		xForwardJump8 pass2(Jcc_Below);
+
+		fail.SetTarget();
+		xMOV(eax, 0);
+		pass2.SetTarget();
 	}
+	pass1.SetTarget();
 
 	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[0]], eax);
 	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[1]], 0);

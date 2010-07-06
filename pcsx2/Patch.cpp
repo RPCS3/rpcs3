@@ -149,12 +149,7 @@ int InitPatches(const wxString& crc, const Game_Data& game)
 		}
 	}
 	
-	if (patchFound) {
-		Console.WriteLn(Color_Green, "Patch found in the Database!");
-		TrimPatches(patch);
-		Console.WriteLn(Color_Green, "Patches Loaded: %d", patchnumber);
-	}
-	else Console.WriteLn(Color_Gray, "No patch for this game in the Database.");
+	if (patchFound) TrimPatches(patch);
 	
 	return patchnumber;
 }
