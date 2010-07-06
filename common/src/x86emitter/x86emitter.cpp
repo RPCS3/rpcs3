@@ -289,6 +289,8 @@ void EmitSibMagic( uint regfield, const xIndirectVoid& info )
 	int displacement_size = (info.Displacement == 0) ? 0 :
 		( ( info.IsByteSizeDisp() ) ? 1 : 2 );
 
+	assert(!info.Base.IsEmpty() || !info.Index.IsEmpty() || displacement_size == 2);
+
 	if( !NeedsSibMagic( info ) )
 	{
 		// Use ModRm-only encoding, with the rm field holding an index/base register, if

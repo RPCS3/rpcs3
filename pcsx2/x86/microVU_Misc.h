@@ -15,6 +15,8 @@
 
 #pragma once
 
+using namespace x86Emitter;
+
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
@@ -31,6 +33,9 @@ struct mVU_Globals {
 };
 
 extern const __aligned(32) mVU_Globals mVUglob;
+
+typedef xRegisterSSE xmm;
+typedef xRegister32 x32;
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -87,23 +92,21 @@ extern const __aligned(32) mVU_Globals mVUglob;
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
 #define offsetReg	((_X) ? (0) : ((_Y) ? (1) : ((_Z) ? 2:  3)))
 
-#define xmmT1	0 // Used for regAlloc
-#define xmmT2	1 // Used for regAlloc
-#define xmmT3	2 // Used for regAlloc
-#define xmmT4	3 // Used for regAlloc
-#define xmmT5	4 // Used for regAlloc
-#define xmmT6	5 // Used for regAlloc
-#define xmmT7	6 // Used for regAlloc
-#define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
+const xmm
+	xmmT1 = xmm(0), // Used for regAlloc
+	xmmT2 = xmm(1), // Used for regAlloc
+	xmmT3 = xmm(2), // Used for regAlloc
+	xmmT4 = xmm(3), // Used for regAlloc
+	xmmT5 = xmm(4), // Used for regAlloc
+	xmmT6 = xmm(5), // Used for regAlloc
+	xmmT7 = xmm(6), // Used for regAlloc
+	xmmPQ = xmm(7); // Holds the Value and Backup Values of P and Q regs
 
-#define gprT1	0 // Temp Reg
-#define gprT2	1 // Temp Reg
-#define gprT3	2 // Temp Reg
-#define gprF0	3 // Status Flag 0
-#define gprESP	4 // Don't use?
-#define gprF1	5 // Status Flag 1
-#define gprF2	6 // Status Flag 2
-#define gprF3	7 // Status Flag 3
+const x32
+	gprT1 = x32(0), // eax - Temp Reg
+	gprT2 = x32(1), // ecx - Temp Reg
+	gprT3 = x32(2), // edx - Temp Reg
+	gprF[4] = {x32(3), x32(5), x32(6), x32(7)}; // ebx, ebp, esi, edi - Status Flags
 
 // Function Params
 #define mP microVU* mVU, int recPass
@@ -192,7 +195,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
-#define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
+#define Rmem		 &mVU->regs->VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define _1mb		 (0x100000)
@@ -295,8 +298,13 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 #define mVUdebugNOW(isEndPC) {							\
 	if (mVUdebugNow) {									\
-		MOV32ItoR(gprT2, xPC);							\
-		if (isEndPC) { CALLFunc((uptr)mVUprintPC2); }	\
-		else		 { CALLFunc((uptr)mVUprintPC1); }	\
+		xMOV(gprT2, xPC);							\
+		if (isEndPC) { xCALL(mVUprintPC2); }	\
+		else		 { xCALL(mVUprintPC1); }	\
 	}													\
 }
+
+void mVUmergeRegs(xmm dest, xmm src,  int xyzw, bool modXYZW=false);
+void mVUsaveReg(xmm reg, xAddressVoid ptr, int xyzw, bool modXYZW);
+void mVUloadReg(xmm reg, xAddressVoid ptr, int xyzw);
+void mVUloadIreg(xmm reg, int xyzw, VURegs* vuRegs);

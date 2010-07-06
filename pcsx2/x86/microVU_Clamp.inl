@@ -34,16 +34,16 @@ const __aligned16 u32 sse4_maxvals[2][4] = {
 // gotten a NaN value, then something went wrong; and the NaN's sign
 // is not to be trusted. Games like positive values better usually, 
 // and its faster... so just always make NaNs into positive infinity.
-void mVUclamp1(int reg, int regT1, int xyzw, bool bClampE = 0) {
+void mVUclamp1(xmm reg, xmm regT1, int xyzw, bool bClampE = 0) {
 	if ((!clampE && CHECK_VU_OVERFLOW) || (clampE && bClampE)) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MINSS_M32_to_XMM(reg, (uptr)mVUglob.maxvals);
-				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVUglob.minvals);
+				xMIN.SS(reg, ptr32[mVUglob.maxvals]);
+				xMAX.SS(reg, ptr32[mVUglob.minvals]);
 				break;
 			default:
-				SSE_MINPS_M128_to_XMM(reg, (uptr)mVUglob.maxvals);
-				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVUglob.minvals);
+				xMIN.PS(reg, ptr32[mVUglob.maxvals]);
+				xMAX.PS(reg, ptr32[mVUglob.minvals]);
 				break;
 		}
 	}
@@ -54,44 +54,41 @@ void mVUclamp1(int reg, int regT1, int xyzw, bool bClampE = 0) {
 // Note 2: Using regalloc here seems to contaminate some regs in certain games.
 // Must be some specific case I've overlooked (or I used regalloc improperly on an opcode)
 // so we just use a temporary mem location for our backup for now... (non-sse4 version only)
-void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw, bool bClampE = 0) {
+void mVUclamp2(microVU* mVU, xmm reg, xmm regT1in, int xyzw, bool bClampE = 0) {
 	if ((!clampE && CHECK_VU_SIGN_OVERFLOW) || (clampE && bClampE && CHECK_VU_SIGN_OVERFLOW)) {
 		if (x86caps.hasStreamingSIMD4Extensions) {
 			int i = (xyzw==1||xyzw==2||xyzw==4||xyzw==8) ? 0: 1;
-			SSE4_PMINSD_M128_to_XMM(reg, (uptr)&sse4_maxvals[i][0]);
-			SSE4_PMINUD_M128_to_XMM(reg, (uptr)&sse4_minvals[i][0]);
+			xPMIN.SD(reg, ptr128[&sse4_maxvals[i][0]]);
+			xPMIN.UD(reg, ptr128[&sse4_minvals[i][0]]);
 			return;
 		}
-		int regT1b = 0;
-		if (regT1 < 0) { 
-			regT1b = 1; regT1=(reg+1)%8;
-			SSE_MOVAPS_XMM_to_M128((uptr)mVU->xmmCTemp, regT1); 
-			//regT1 = mVU->regAlloc->allocReg();
-		}
+		//xmm regT1 = regT1b ? mVU->regAlloc->allocReg() : regT1in;
+		xmm regT1 = regT1in.IsEmpty() ? xmm((reg.Id + 1) % 8) : regT1in;
+		if (regT1 != regT1in) xMOVAPS(ptr128[mVU->xmmCTemp], regT1);
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
-				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVUglob.signbit);
-				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVUglob.maxvals);
-				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVUglob.minvals);
-				SSE_ORPS_XMM_to_XMM  (reg, regT1);
+				xMOVAPS(regT1, reg);
+				xAND.PS(regT1, ptr128[mVUglob.signbit]);
+				xMIN.SS(reg,   ptr128[mVUglob.maxvals]);
+				xMAX.SS(reg,   ptr128[mVUglob.minvals]);
+				xOR.PS (reg,   regT1);
 				break;
 			default:
-				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
-				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVUglob.signbit);
-				SSE_MINPS_M128_to_XMM(reg,   (uptr)mVUglob.maxvals);
-				SSE_MAXPS_M128_to_XMM(reg,   (uptr)mVUglob.minvals);
-				SSE_ORPS_XMM_to_XMM  (reg, regT1);
+				xMOVAPS(regT1, reg);
+				xAND.PS(regT1, ptr128[mVUglob.signbit]);
+				xMIN.PS(reg,   ptr128[mVUglob.maxvals]);
+				xMAX.PS(reg,   ptr128[mVUglob.minvals]);
+				xOR.PS (reg,   regT1);
 				break;
 		}
-		//if (regT1b) mVU->regAlloc->clearNeeded(regT1);
-		if (regT1b) SSE_MOVAPS_M128_to_XMM(regT1, (uptr)mVU->xmmCTemp);
+		//if (regT1 != regT1in) mVU->regAlloc->clearNeeded(regT1);
+		if (regT1 != regT1in) xMOVAPS(regT1, ptr128[mVU->xmmCTemp]);
 	}
-	else mVUclamp1(reg, regT1, xyzw, bClampE);
+	else mVUclamp1(reg, regT1in, xyzw, bClampE);
 }
 
 // Used for operand clamping on every SSE instruction (add/sub/mul/div)
-void mVUclamp3(microVU* mVU, int reg, int regT1, int xyzw) {
+void mVUclamp3(microVU* mVU, xmm reg, xmm regT1, int xyzw) {
 	if (clampE) mVUclamp2(mVU, reg, regT1, xyzw, 1);
 }
 
@@ -101,6 +98,6 @@ void mVUclamp3(microVU* mVU, int reg, int regT1, int xyzw) {
 // emulated opcodes (causing crashes). Since we're clamping the operands 
 // with mVUclamp3, we should almost never be getting a NaN result, 
 // but this clamp is just a precaution just-in-case.
-void mVUclamp4(int reg, int regT1, int xyzw) {
+void mVUclamp4(xmm reg, xmm regT1, int xyzw) {
 	if (clampE && !CHECK_VU_SIGN_OVERFLOW) mVUclamp1(reg, regT1, xyzw, 1);
 }

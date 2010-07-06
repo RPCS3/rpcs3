@@ -20,12 +20,10 @@
 
 // Sets FDIV Flags at the proper time
 _f void mVUdivSet(mV) {
-	int flagReg1, flagReg2;
 	if (mVUinfo.doDivFlag) {
-		getFlagReg(flagReg1, sFLAG.write);
-		if (!sFLAG.doFlag) { getFlagReg(flagReg2, sFLAG.lastWrite); MOV32RtoR(flagReg1, flagReg2); }
-		AND32ItoR(flagReg1, 0xfff3ffff);
-		OR32MtoR (flagReg1, (uptr)&mVU->divFlag);
+		if (!sFLAG.doFlag) { xMOV(getFlagReg(sFLAG.write), getFlagReg(sFLAG.lastWrite)); }
+		xAND(getFlagReg(sFLAG.write), 0xfff3ffff);
+		xOR (getFlagReg(sFLAG.write), ptr32[&mVU->divFlag]);
 	}
 }
 
@@ -159,9 +157,8 @@ _f void mVUsetFlags(mV, microFlagCycles& mFC) {
 	iPC = endPC;
 }
 
-#define getFlagReg1(x)	((x == 3) ? gprF3 : ((x == 2) ? gprF2 : ((x == 1) ? gprF1 : gprF0)))
-#define getFlagReg2(x)	((bStatus[0] == x) ? getFlagReg1(x) : gprT1)
-#define getFlagReg3(x)	((gFlag == x) ? gprT1 : getFlagReg1(x))
+#define getFlagReg2(x)	((bStatus[0] == x) ? getFlagReg(x) : gprT1)
+#define getFlagReg3(x)	((gFlag == x) ? gprT1 : getFlagReg(x))
 #define getFlagReg4(x)	((gFlag == x) ? gprT1 : gprT2)
 #define shuffleMac		((bMac [3]<<6)|(bMac [2]<<4)|(bMac [1]<<2)|bMac [0])
 #define shuffleClip		((bClip[3]<<6)|(bClip[2]<<4)|(bClip[1]<<2)|bClip[0])
@@ -175,52 +172,52 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 		// DevCon::Status("sortRegs = %d", params sortRegs);
 		// Note: Emitter will optimize out mov(reg1, reg1) cases...
 		if (sortRegs == 1) {
-			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
-			MOV32RtoR(gprF1,  getFlagReg1(bStatus[1]));
-			MOV32RtoR(gprF2,  getFlagReg1(bStatus[2]));
-			MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
+			xMOV(gprF[0],  getFlagReg(bStatus[0]));
+			xMOV(gprF[1],  getFlagReg(bStatus[1]));
+			xMOV(gprF[2],  getFlagReg(bStatus[2]));
+			xMOV(gprF[3],  getFlagReg(bStatus[3]));
 		}
 		else if (sortRegs == 2) {
-			MOV32RtoR(gprT1,  getFlagReg1(bStatus[3])); 
-			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
-			MOV32RtoR(gprF1,  getFlagReg2(bStatus[1]));
-			MOV32RtoR(gprF2,  getFlagReg2(bStatus[2]));
-			MOV32RtoR(gprF3,  gprT1);
+			xMOV(gprT1,  getFlagReg(bStatus[3])); 
+			xMOV(gprF[0],  getFlagReg(bStatus[0]));
+			xMOV(gprF[1],  getFlagReg2(bStatus[1]));
+			xMOV(gprF[2],  getFlagReg2(bStatus[2]));
+			xMOV(gprF[3],  gprT1);
 		}
 		else if (sortRegs == 3) {
 			int gFlag = (bStatus[0] == bStatus[1]) ? bStatus[2] : bStatus[1];
-			MOV32RtoR(gprT1,  getFlagReg1(gFlag)); 
-			MOV32RtoR(gprT2,  getFlagReg1(bStatus[3]));
-			MOV32RtoR(gprF0,  getFlagReg1(bStatus[0]));
-			MOV32RtoR(gprF1,  getFlagReg3(bStatus[1]));
-			MOV32RtoR(gprF2,  getFlagReg4(bStatus[2]));
-			MOV32RtoR(gprF3,  gprT2);
+			xMOV(gprT1,  getFlagReg(gFlag)); 
+			xMOV(gprT2,  getFlagReg(bStatus[3]));
+			xMOV(gprF[0],  getFlagReg(bStatus[0]));
+			xMOV(gprF[1],  getFlagReg3(bStatus[1]));
+			xMOV(gprF[2],  getFlagReg4(bStatus[2]));
+			xMOV(gprF[3],  gprT2);
 		}
 		else {
-			MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
-			MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
-			MOV32RtoR(gprT3,  getFlagReg1(bStatus[2]));
-			MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
-			MOV32RtoR(gprF0,  gprT1);
-			MOV32RtoR(gprF1,  gprT2); 
-			MOV32RtoR(gprF2,  gprT3);
+			xMOV(gprT1,  getFlagReg(bStatus[0])); 
+			xMOV(gprT2,  getFlagReg(bStatus[1]));
+			xMOV(gprT3,  getFlagReg(bStatus[2]));
+			xMOV(gprF[3],  getFlagReg(bStatus[3]));
+			xMOV(gprF[0],  gprT1);
+			xMOV(gprF[1],  gprT2); 
+			xMOV(gprF[2],  gprT3);
 		}
 	}
 	
 	if (__Mac) {
 		int bMac[4];
 		sortFlag(mFC.xMac, bMac, mFC.cycles);
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->macFlag);
-		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleMac);
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
+		xMOVAPS(xmmT1, ptr128[mVU->macFlag]);
+		xSHUF.PS(xmmT1, xmmT1, shuffleMac);
+		xMOVAPS(ptr128[mVU->macFlag], xmmT1);
 	}
 
 	if (__Clip) {
 		int bClip[4];
 		sortFlag(mFC.xClip, bClip, mFC.cycles);
-		SSE_MOVAPS_M128_to_XMM(xmmT2, (uptr)mVU->clipFlag);
-		SSE_SHUFPS_XMM_to_XMM (xmmT2, xmmT2, shuffleClip);
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT2);
+		xMOVAPS(xmmT2, ptr128[mVU->clipFlag]);
+		xSHUF.PS(xmmT2, xmmT2, shuffleClip);
+		xMOVAPS(ptr128[mVU->clipFlag], xmmT2);
 	}
 }
 

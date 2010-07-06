@@ -24,7 +24,7 @@
 
 using namespace x86Emitter;
 
-extern void mergeVectors(int dest, int src, int temp, int xyzw);
+extern void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw);
 extern void loadRowCol(nVifStruct& v);
 
 // --------------------------------------------------------------------------------------

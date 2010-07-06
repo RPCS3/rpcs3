@@ -43,25 +43,25 @@ void mVUdispatcherA(mV) {
 
 	// Load Regs
 #if 1 // CHECK_MACROVU0 - Always on now
-	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
-	MOV32RtoR(gprF1, gprF0);
-	MOV32RtoR(gprF2, gprF0);
-	MOV32RtoR(gprF3, gprF0);
+	xMOV(gprF[0], ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL]);
+	xMOV(gprF[1], gprF[0]);
+	xMOV(gprF[2], gprF[0]);
+	xMOV(gprF[3], gprF[0]);
 #else
 	mVUallocSFLAGd((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL, 1);
 #endif
 	
-	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_MAC_FLAG].UL);
-	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
-	SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);
+	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_MAC_FLAG].UL]);
+	xSHUF.PS(xmmT1, xmmT1, 0);
+	xMOVAPS(ptr128[&mVU->macFlag[0]], xmmT1);
 
-	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL);
-	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
-	SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
+	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_CLIP_FLAG].UL]);
+	xSHUF.PS(xmmT1, xmmT1, 0);
+	xMOVAPS(ptr128[&mVU->clipFlag[0]], xmmT1);
 
-	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P].UL);
-	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q].UL);
-	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ
+	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_P].UL]);
+	xMOVAPS(xmmPQ, ptr128[&mVU->regs->VI[REG_Q].UL]);
+	xSHUF.PS(xmmPQ, xmmT1, 0); // wzyx = PPQQ
 
 	// Jump to Recompiled Code Block
 	xJMP(eax);
