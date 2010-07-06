@@ -1970,6 +1970,8 @@ void recVUMI_XTOP( VURegs *VU, int info )
 //------------------------------------------------------------------
 // VU1XGKICK_MTGSTransfer() - Called by ivuZerorec.cpp
 //------------------------------------------------------------------
+extern bool SIGNAL_IMR_Pending;
+
 void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	addr &= 0x3fff;
@@ -1978,7 +1980,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
 	u8* pDest;
 
-	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true))
+	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
 
 		if(Path1WritePos != 0)	

@@ -1101,7 +1101,10 @@ mVUop(mVU_XITOP) {
 //------------------------------------------------------------------
 // XGkick
 //------------------------------------------------------------------
+
 extern void gsPath1Interrupt();
+extern bool SIGNAL_IMR_Pending;
+
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
@@ -1109,7 +1112,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	u32 size;
 	u8* pDest;
 	
-	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true))
+	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
 
 		if(Path1WritePos != 0)	

@@ -114,6 +114,8 @@ vifOp(vifCode_Base) {
 	return 0;
 }
 
+extern bool SIGNAL_IMR_Pending;
+
 template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 	pass1 {
 		vif1Only();
@@ -150,13 +152,21 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 				return 0;
 			}
 		}
+		if(SIGNAL_IMR_Pending == true)
+		{
+			DevCon.Warning("Path 2 Paused (At start)");
+			vif1.vifstalled    = true;
+			return 0;
+		}
 		if (gifRegs->stat.PSE)  // temporarily stop
 		{
 			Console.WriteLn("Gif dma temp paused? VIF DIRECT");
 			vif1.GifWaitState = 3;
+			vif1.vifstalled    = true;
 			vif1Regs->stat.VGW = true;
 			return 0;
 		}
+
 		
 
 		gifRegs->stat.clear_flags(GIF_STAT_P2Q);

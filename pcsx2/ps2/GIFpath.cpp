@@ -147,7 +147,7 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 		// Time to ignore all subsequent drawing operations. (which is not yet supported)
 		if (!SIGNAL_IMR_Pending)
 		{
-			DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
+			//DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
 			SIGNAL_IMR_Pending	= true;
 			SIGNAL_Data_Pending[0]	= data[0];
 			SIGNAL_Data_Pending[1]	= data[1];
@@ -572,7 +572,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 								gsHandler(pMem);
 							}
 							incTag(16, 1);
-						} while(StepReg() && size > 0);
+						} while(StepReg() && size > 0 && SIGNAL_IMR_Pending == false);
 					}
 					else
 					{
@@ -680,11 +680,17 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				// FINISH is *not* a per-path register, and it seems to pretty clearly indicate that all active
 				// drawing *and* image transfer actions must be finished before the IRQ raises.
 
+				if(gifRegs->stat.P1Q || gifRegs->stat.P2Q || gifRegs->stat.P3Q) DevCon.Warning("Early FINISH signal! P1 %x P2 %x P3 %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.P3Q);
 				if (!(GSIMR&0x200) && !s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
 				{
 					gsIrq();
 				}
 			}
+			break;
+		}
+		if(SIGNAL_IMR_Pending == true)
+		{
+			//DevCon.Warning("Path %x", pathidx + 1);
 			break;
 		}
 	}

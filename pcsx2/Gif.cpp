@@ -89,9 +89,19 @@ void gsPath1Interrupt()
 	}
 	
 }
+
+extern bool SIGNAL_IMR_Pending;
+
 __forceinline void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
+
+	if(SIGNAL_IMR_Pending == true)
+	{
+		//DevCon.Warning("Path 3 Paused");
+		CPU_INT(DMAC_GIF, 128);
+		return;
+	}
 
 	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
@@ -100,6 +110,7 @@ __forceinline void gsInterrupt()
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
+	
 
 	if (!(gif->chcr.STR))
 	{

@@ -113,12 +113,22 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 		// SIGNAL : What's not known here is whether or not the SIGID register should be updated
 		//  here or when the IMR is cleared (below).
 
-		GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
-		GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
+		if(SIGNAL_IMR_Pending == true)
+		{
+			//DevCon.Warning("Firing pending signal");
+			GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
+			GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
 
-		CSRreg.SIGNAL = false;
+			if (!(GSIMR&0x100))
+			gsIrq();
+
+			CSRreg.SIGNAL = true; //Just to be sure :P
+		}
+		else CSRreg.SIGNAL = false;
 		
-		// [TODO] (SIGNAL) : Re-enable GIFpath DMAs here!
+		SIGNAL_IMR_Pending = false;
+
+		if(gifRegs->stat.P1Q && gifRegs->stat.APATH <= GIF_APATH1) gsPath1Interrupt();
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;

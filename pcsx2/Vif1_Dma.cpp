@@ -255,6 +255,8 @@ __forceinline void vif1SetupTransfer()
 	}
 }
 
+extern bool SIGNAL_IMR_Pending;
+
 bool CheckPath2GIF(int channel)
 {
 	if ((vif1Regs->stat.VGW))
@@ -326,6 +328,12 @@ bool CheckPath2GIF(int channel)
 				vif1Regs->stat.VGW = false;
 			}
 		}
+	}
+	if(SIGNAL_IMR_Pending == true && (vif1.cmd & 0x7e) == 0x50)
+	{
+		//DevCon.Warning("Path 2 Paused");
+		CPU_INT(channel, 128);
+		return false;
 	}
 	return true;
 }
