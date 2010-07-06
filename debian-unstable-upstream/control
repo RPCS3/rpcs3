@@ -25,7 +25,8 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     libgl1-mesa-dev,
     libglu1-mesa-dev,
 # my nmu: add 32bits packages
-    nvidia-cg-toolkit (>= 2.1.0017.deb1) | nvidia-cg-toolkit (>= 2.1.0017.deb1+nmu2) [amd64],
+#     nvidia-cg-toolkit (>= 2.1.0017.deb1) | nvidia-cg-toolkit (>= 2.1.0017.deb1+nmu2) [amd64],
+    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1), ia32-nvidia-cg-toolkit-pcsx2 [amd64],
     ia32-libs (>= 20090808+nmu7) [amd64], ia32-libs-gtk (= 20100503+local1) [amd64]
 Standards-Version: 3.9.0
 Homepage: http://pcsx2.net/

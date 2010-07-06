@@ -70,7 +70,11 @@ install: build
 
 	### the project build usefull thing in ./bin so directly install
 	### from this directory to the debian pkg directory (skip debian/tmp)
-	dh_install
+	# Ubuntu use debian/tmp as default sourcedir...
+	# copy bin into debian tmp
+	mkdir -p debian/tmp
+	cp -fr bin debian/tmp
+	dh_install --sourcedir=debian/tmp
 
 	# install menu and icon
 	cp debian/pcsx2.desktop debian/pcsx2-unstable/usr/share/applications

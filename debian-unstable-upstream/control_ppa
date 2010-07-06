@@ -23,7 +23,7 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     libglew1.5-dev (>=1.5.1),
     libgl1-mesa-dev,
     libglu1-mesa-dev,
-    nvidia-cg-toolkit (>= 2.1.0017.deb1)
+    nvidia-cg-toolkit-pcsx2
 Standards-Version: 3.9.0
 Homepage: http://pcsx2.net/
 
