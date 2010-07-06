@@ -683,7 +683,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				if(gifRegs->stat.P1Q || gifRegs->stat.P2Q || gifRegs->stat.P3Q) 					
 				{
 					//GH3 and possibly others have path data queued waiting for another path to finish! we need to check they are done too
-					DevCon.Warning("Early FINISH signal! P1 %x P2 %x P3 %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.P3Q);
+					//DevCon.Warning("Early FINISH signal! P1 %x P2 %x P3 %x", gifRegs->stat.P1Q, gifRegs->stat.P2Q, gifRegs->stat.P3Q);
 				}
 				else if (!(GSIMR&0x200) && !s_gifPath.path[0].IsActive() && !s_gifPath.path[1].IsActive() && !s_gifPath.path[2].IsActive())
 				{
