@@ -56,6 +56,7 @@ void gsPath1Interrupt()
 
 	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 == true && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
+		gifRegs->stat.P1Q = false;
 		while(Path1WritePos > 0)
 		{
 			u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos  * 16), (Path1WritePos - Path1ReadPos));
@@ -77,7 +78,6 @@ void gsPath1Interrupt()
 			if(Path1ReadPos == Path1WritePos)
 			{
 				Path1WritePos = Path1ReadPos = 0;
-				gifRegs->stat.P1Q = false;
 			}
 		}
 	}
