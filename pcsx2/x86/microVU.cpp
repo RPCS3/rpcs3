@@ -161,7 +161,20 @@ _f void mVUclose(mV) {
 
 void mVUresizeCache(mV, u32 size) {
 
-	if (size > (u32)mVUcacheMaxSize) { if (mVU->cacheSize==mVUcacheMaxSize) return; size = mVUcacheMaxSize; }
+	if (size >= (u32)mVUcacheMaxSize) {
+		if (mVU->cacheSize==mVUcacheMaxSize) {
+
+			// Crap! We can't grow the rec any larger, so just reset it and start over.
+			// (if we don't reset, the rec will eventually crash)
+
+			Console.WriteLn(Color_Magenta, "microVU%d: Cannot grow cache, size limit reached! [%dmb].  Resetting rec.", mVU->index, mVU->cacheSize/_1mb);
+			memset(mVU->cache, 0xcc, mVU->cacheSize);
+			mVUreset(mVU);
+			return;
+		}
+		size = mVUcacheMaxSize;
+	}
+
 	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
 
 	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
