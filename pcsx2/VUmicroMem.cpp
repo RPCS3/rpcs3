@@ -111,13 +111,14 @@ void SaveStateBase::vuMicroFreeze()
 	pxAssume( VU1.Mem != NULL );
 
 	Freeze(VU0.ACC);
-#ifdef __LINUX__
-	// GCC is unable to bind packed fields.
-	u32 temp_vu0_code = VU0.code;
+
+	// Seemingly silly and pointless use of temp var:  GCC is unable to bind packed fields
+	// (appears to be a bug, tracked here: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=36566 ).
+	// Dereferencing outside the context of the function (via a temp var) seems to circumvent it. --air
+	
+	u32& temp_vu0_code = VU0.code;
 	Freeze(temp_vu0_code);
-#else
-	Freeze(VU0.code);
-#endif
+
 	FreezeMem(VU0.Mem,   4*1024);
 	FreezeMem(VU0.Micro, 4*1024);
 
@@ -125,13 +126,10 @@ void SaveStateBase::vuMicroFreeze()
 	Freeze(VU0.VI);
 
 	Freeze(VU1.ACC);
-#ifdef __LINUX__
-	// GCC is unable to bind packed fields.
-	u32 temp_vu1_code = VU1.code;
+
+	u32& temp_vu1_code = VU1.code;
 	Freeze(temp_vu1_code);
-#else
-	Freeze(VU1.code);
-#endif
+
 	FreezeMem(VU1.Mem,   16*1024);
 	FreezeMem(VU1.Micro, 16*1024);
 
