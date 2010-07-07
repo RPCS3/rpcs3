@@ -5,6 +5,9 @@
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
+### Add some flags to the build process
+# control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
+# control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
 #-------------------------------------------------------------------------------
 
 ### Cmake set default value for various compilation variable
@@ -22,10 +25,10 @@
 #-------------------------------------------------------------------------------
 # Do not use default cmake flags
 #-------------------------------------------------------------------------------
-set(CMAKE_C_FLAGS "")
-set(CMAKE_CXX_FLAGS "")
 set(CMAKE_C_FLAGS_DEBUG "")
 set(CMAKE_CXX_FLAGS_DEBUG "")
+set(CMAKE_C_FLAGS_DEVEL "")
+set(CMAKE_CXX_FLAGS_DEVEL "")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 
@@ -33,13 +36,31 @@ set(CMAKE_CXX_FLAGS_RELEASE "")
 # Remove bad default option
 #-------------------------------------------------------------------------------
 # Remove -rdynamic option that can some segmentation fault when openining pcsx2 plugins
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
-SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 # Remove -fPIC option. No good reason to use it for plugins. Moreover we
 # only support x86 architecture. And last but not least it impact the performance.
 # Long term future note :), amd64 build will need the -fPIC flags
 set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
+
+#-------------------------------------------------------------------------------
+# Allow user to set some default flags
+# By default do not use any flags
+#-------------------------------------------------------------------------------
+if(DEFINED USER_CMAKE_C_FLAGS)
+    message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_C_FLAGS at your own risk !!!")
+    set(CMAKE_C_FLAGS "${USER_CMAKE_C_FLAGS}")
+else(DEFINED USER_CMAKE_C_FLAGS)
+    set(CMAKE_C_FLAGS "")
+endif(DEFINED USER_CMAKE_C_FLAGS)
+
+if(DEFINED USER_CMAKE_CXX_FLAGS)
+    message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_CXX_FLAGS at your own risk !!!")
+    set(CMAKE_CXX_FLAGS "${USER_CMAKE_CXX_FLAGS}")
+else(DEFINED USER_CMAKE_CXX_FLAGS)
+    set(CMAKE_CXX_FLAGS "")
+endif(DEFINED USER_CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------
 # if no build type is set, use Devel as default
