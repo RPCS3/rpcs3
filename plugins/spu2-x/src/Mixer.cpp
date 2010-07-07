@@ -775,12 +775,12 @@ __forceinline void Mix()
 	}
 	else
 	{
-		Out.Left = MulShr32( Out.Left<<(SndOutVolumeShift+2), Cores[1].MasterVol.Left.Value );
-		Out.Right = MulShr32( Out.Right<<(SndOutVolumeShift+2), Cores[1].MasterVol.Right.Value );
+		Out.Left = MulShr32( Out.Left<<(SndOutVolumeShift+1), Cores[1].MasterVol.Left.Value );
+		Out.Right = MulShr32( Out.Right<<(SndOutVolumeShift+1), Cores[1].MasterVol.Right.Value );
 
 		// Final Clamp!
 		// Like any good audio system, the PS2 pumps the volume and incurs some distortion in its
-		// output, giving us a nice thumpy sound at times.  So we add 2 above (4x volume pump) and
+		// output, giving us a nice thumpy sound at times.  So we add 1 above (2x volume pump) and
 		// then clamp it all here.
 
 		Out = clamp_mix( Out, SndOutVolumeShift );
