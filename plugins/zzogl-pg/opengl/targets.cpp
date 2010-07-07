@@ -3364,7 +3364,7 @@ void TransferLocalHost(void* pbyMem, u32 nQWordSize)
 	}
 }
 
-// dir depends on trxpos.dir
+// dir depends on trxpos.dirx & trxpos.diry
 void TransferLocalLocal()
 {
 	FUNCLOG

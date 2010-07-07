@@ -212,7 +212,6 @@ void tex0Write(int i, u32 *data)
 	}
 
 	ZeroGS::vb[i].uNextTex0Data[0] = data[0];
-
 	ZeroGS::vb[i].uNextTex0Data[1] = data[1];
 	ZeroGS::vb[i].bNeedTexCheck = 1;
 
@@ -283,6 +282,7 @@ void tex2Write(int i, u32 *data)
 __forceinline void frameWrite(int i, u32 *data)
 {
 	FUNCLOG
+	GIFRegFRAME* r = (GIFRegFRAME*)(data);
 	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
 
 	if ((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) &&
@@ -300,7 +300,6 @@ __forceinline void frameWrite(int i, u32 *data)
 	gsfb.psm = ZZOglGet_psm_FrameBits(data[0]);
 	gsfb.fbm = ZZOglGet_fbm_FrameBitsFix(data[0], data[1]);
 	gsfb.fbh = ZZOglGet_fbh_FrameBitsCalc(data[0]);
-//	gsfb.fbhCalc = gsfb.fbh;
 
 	ZeroGS::vb[i].bNeedFrameCheck = 1;
 }
@@ -309,39 +308,43 @@ __forceinline void testWrite(int i, u32 *data)
 {
 	FUNCLOG
 	pixTest* test = &ZeroGS::vb[i].test;
+	GIFRegTEST* r = (GIFRegTEST*)(data);
 
 	if ((*(u32*)test & 0x0007ffff) == (data[0] & 0x0007ffff)) return;
+	
+	if (test->_val != r->ai32[0])
+	{
+		ZeroGS::Flush(i);
+	}
 
-	ZeroGS::Flush(i);
-
-	*(u32*)test = data[0];
-
-//  test.ate   = (data[0]	  ) & 0x1;
-//  test.atst  = (data[0] >>  1) & 0x7;
-//  test.aref  = (data[0] >>  4) & 0xff;
-//  test.afail = (data[0] >> 12) & 0x3;
-//  test.date  = (data[0] >> 14) & 0x1;
-//  test.datm  = (data[0] >> 15) & 0x1;
-//  test.zte   = (data[0] >> 16) & 0x1;
-//  test.ztst  = (data[0] >> 17) & 0x3;
+	//test = (pixTest*)data;
+	test->_val = r->ai32[0];
+//	test->ate   = r->ATE;
+//	test->atst  = r->ATST;
+//	test->aref  = r->AREF;
+//	test->afail = r->AFAIL;
+//	test->date  = r->DATE;
+//	test->datm  = r->DATM;
+//	test->zte   = r->ZTE;
 }
 
 void clampWrite(int i, u32 *data)
 {
 	FUNCLOG
 	clampInfo& clamp = ZeroGS::vb[i].clamp;
+	GIFRegCLAMP* r = (GIFRegCLAMP*)(data);
 
 	if ((s_uClampData[i] != data[0]) || (((clamp.minv >> 8) | (clamp.maxv << 2)) != (data[1]&0x0fff)))
 	{
 		ZeroGS::Flush(i);
 		s_uClampData[i] = data[0];
 
-		clamp.wms  = (data[0]) & 0x3;
-		clamp.wmt  = (data[0] >>  2) & 0x3;
-		clamp.minu = (data[0] >>  4) & 0x3ff;
-		clamp.maxu = (data[0] >> 14) & 0x3ff;
-		clamp.minv = ((data[0] >> 24) & 0xff) | ((data[1] & 0x3) << 8);
-		clamp.maxv = (data[1] >> 2) & 0x3ff;
+		clamp.wms  = r->WMS;
+		clamp.wmt  = r->WMT;
+		clamp.minu = r->MINU;
+		clamp.maxu = r->MAXU;
+		clamp.minv = r->MINV;
+		clamp.maxv = r->MAXV;
 
 		ZeroGS::vb[i].bTexConstsSync = false;
 	}
@@ -518,22 +521,23 @@ void __fastcall GIFRegHandlerNOP(u32* data)
 void tex1Write(int i, u32* data)
 {
 	FUNCLOG
+	GIFRegTEX1* r = (GIFRegTEX1*)(data);
 	tex1Info& tex1 = ZeroGS::vb[i].tex1;
 
-	if (conf.bilinear == 1 && (tex1.mmag != ((data[0] >>  5) & 0x1) || tex1.mmin != ((data[0] >>  6) & 0x7)))
+	if (conf.bilinear == 1 && (tex1.mmag != r->MMAG || tex1.mmin != r->MMIN))
 	{
 		ZeroGS::Flush(i);
 		ZeroGS::vb[i].bVarsTexSync = false;
 	}
 
-	tex1.lcm  = (data[0]) & 0x1;
+	tex1.lcm  = r->LCM;
 
-	tex1.mxl  = (data[0] >>  2) & 0x7;
-	tex1.mmag = (data[0] >>  5) & 0x1;
-	tex1.mmin = (data[0] >>  6) & 0x7;
-	tex1.mtba = (data[0] >>  9) & 0x1;
-	tex1.l	= (data[0] >> 19) & 0x3;
-	tex1.k	= (data[1] >> 4) & 0xff;
+	tex1.mxl  = r->MXL;
+	tex1.mmag = r->MMAG;
+	tex1.mmin = r->MMIN;
+	tex1.mtba = r->MTBA;
+	tex1.l	= r->L;
+	tex1.k	= r->K;
 }
 
 void __fastcall GIFRegHandlerTEX1_1(u32* data)
@@ -612,9 +616,9 @@ void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 	if (ZeroGS::vb[0].bNeedTexCheck) ZeroGS::vb[0].FlushTexData();
 	if (ZeroGS::vb[1].bNeedTexCheck) ZeroGS::vb[1].FlushTexData();
 	
-	// Multipliers? Fixme.
-	gs.clut.cbw = r->CBW  * 64;
-	gs.clut.cou = r->COU  * 16;
+	// Fixme.
+	gs.clut.cbw = r->CBW  << 6;
+	gs.clut.cou = r->COU  << 4;
 	gs.clut.cov = r->COV;
 }
 
@@ -630,6 +634,10 @@ void __fastcall GIFRegHandlerSCANMSK(u32* data)
 	{
 		//Flush
 	}*/
+	if(r->MSK != gs.smask)
+	{
+		ZeroGS::FlushBoth();
+	}
 	
 	gs.smask = r->MSK;
 }
@@ -871,6 +879,10 @@ void __fastcall GIFRegHandlerDTHE(u32* data)
 	FUNCLOG
 	GIFRegDTHE* r = (GIFRegDTHE*)(data);
 	// Flush me.
+	if (r->DTHE != gs.dthe)
+	{
+		ZeroGS::FlushBoth();
+	}
 	gs.dthe = r->DTHE;
 }
 
@@ -878,10 +890,12 @@ void __fastcall GIFRegHandlerCOLCLAMP(u32* data)
 {
 	FUNCLOG
 	GIFRegCOLCLAMP* r = (GIFRegCOLCLAMP*)(data);
+	
+	if (r->CLAMP != gs.colclamp)
+	{
+		ZeroGS::FlushBoth();
+	}
 	gs.colclamp = r->CLAMP;
-#ifdef DISABLE_COLCLAMP
-	gs.colclamp = 1;
-#endif
 }
 
 void __fastcall GIFRegHandlerTEST_1(u32* data)
@@ -902,7 +916,10 @@ void __fastcall GIFRegHandlerPABE(u32* data)
 	GIFRegPABE* r = (GIFRegPABE*)(data);
 	//ZeroGS::SetAlphaChanged(0, GPUREG_PABE);
 	//ZeroGS::SetAlphaChanged(1, GPUREG_PABE);
-	ZeroGS::FlushBoth();
+	if (gs.pabe != r->PABE)
+	{
+		ZeroGS::FlushBoth();
+	}
 
 	gs.pabe = r->PABE;
 }
@@ -912,7 +929,10 @@ void __fastcall GIFRegHandlerFBA_1(u32* data)
 	FUNCLOG
 	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
-	ZeroGS::FlushBoth();
+	if (r->FBA != ZeroGS::vb[0].fba.fba)
+	{
+		ZeroGS::FlushBoth();
+	}
 	ZeroGS::vb[0].fba.fba = r->FBA;
 }
 
@@ -921,7 +941,10 @@ void __fastcall GIFRegHandlerFBA_2(u32* data)
 	FUNCLOG
 	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
-	ZeroGS::FlushBoth();
+	if (r->FBA != ZeroGS::vb[1].fba.fba)
+	{
+		ZeroGS::FlushBoth();
+	}
 	
 	ZeroGS::vb[1].fba.fba = r->FBA;
 }
@@ -947,7 +970,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
 	int psm = (0x30 | ((data[0] >> 24) & 0xf));
 
-	if (zbuf.zbp == (data[0] & 0x1ff) * 32 &&
+	if (zbuf.zbp == (data[0] & 0x1ff) << 5 &&
 			zbuf.psm == psm &&
 			zbuf.zmsk == (data[1] & 0x1))
 	{
@@ -959,7 +982,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 
 	ZeroGS::FlushBoth();
 
-	zbuf.zbp = (data[0] & 0x1ff) * 32;
+	zbuf.zbp = (data[0] & 0x1ff) << 5;
 	zbuf.psm = 0x30 | ((data[0] >> 24) & 0xf);
 	zbuf.zmsk = data[1] & 0x1;
 
@@ -979,7 +1002,7 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 
 	int psm = (0x30 | ((data[0] >> 24) & 0xf));
 
-	if (zbuf.zbp == (data[0] & 0x1ff) * 32 &&
+	if (zbuf.zbp == (data[0] & 0x1ff) << 5 &&
 			zbuf.psm == psm &&
 			zbuf.zmsk == (data[1] & 0x1))
 	{
@@ -991,7 +1014,7 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 
 	ZeroGS::FlushBoth();
 
-	zbuf.zbp = (data[0] & 0x1ff) * 32;
+	zbuf.zbp = (data[0] & 0x1ff) << 5;
 
 	zbuf.psm = 0x30 | ((data[0] >> 24) & 0xf);
 
@@ -1007,12 +1030,12 @@ void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 {
 	FUNCLOG
 	GIFRegBITBLTBUF* r = (GIFRegBITBLTBUF*)(data);
-	// Wonder why the multiplier?
+	// Wonder why the shift?
 	gs.srcbufnew.bp  = r->SBP;   // * 64;
-	gs.srcbufnew.bw  = r->SBW * 64;
+	gs.srcbufnew.bw  = r->SBW << 6;
 	gs.srcbufnew.psm = r->SPSM;
 	gs.dstbufnew.bp  = r->DBP;   // * 64;
-	gs.dstbufnew.bw  = r->DBW * 64;
+	gs.dstbufnew.bw  = r->DBW << 6;
 	gs.dstbufnew.psm = r->DPSM;
 
 	if (gs.dstbufnew.bw == 0) gs.dstbufnew.bw = 64;
@@ -1040,7 +1063,9 @@ void __fastcall GIFRegHandlerTRXPOS(u32* data)
 	gs.trxposnew.dy  = r->DSAY;
 	
 	//Fixme. DIRY & DIRX together?
-	gs.trxposnew.dir = (data[1] >> 27) & 0x3;
+	//gs.trxposnew.dir = (data[1] >> 27) & 0x3;
+	gs.trxposnew.dirx = r->DIRX;
+	gs.trxposnew.diry = r->DIRY;
 }
 
 void __fastcall GIFRegHandlerTRXREG(u32* data)
