@@ -23,17 +23,11 @@
 // Flag Allocators
 //------------------------------------------------------------------
 
-_f static x32 getFlagReg(int fInst)
+_f static const x32& getFlagReg(uint fInst)
 {
-	if (fInst >= 0 && fInst < 4)
-	{
-		return gprF[fInst];
-	}
-	else
-	{
-		Console.Error("microVU Error: fInst = %d", fInst);
-		return gprF[0];
-	}
+	static const x32* const gprF_crap[4] = { &gprF0, &gprF1, &gprF2, &gprF3 };
+	pxAssume(fInst < 4);
+	return *gprF_crap[fInst];
 }
 
 _f void setBitSFLAG(const x32& reg, const x32& regT, int bitTest, int bitSet)
@@ -79,31 +73,31 @@ _f void mVUallocSFLAGc(const x32& reg, const x32& regT, int fInstance)
 // Denormalizes Status Flag
 _f void mVUallocSFLAGd(u32* memAddr, bool setAllflags) {
 
-	// Cannot use EBP (gprF[1]) here; as this function is used by mVU0 macro and
+	// Cannot use EBP (gprF1) here; as this function is used by mVU0 macro and
 	// the EErec needs EBP preserved.
 
-	xMOV(gprF[0], ptr32[memAddr]);
-	xMOV(gprF[3], gprF[0]);
-	xSHR(gprF[3], 3);
-	xAND(gprF[3], 0x18);
+	xMOV(gprF0, ptr32[memAddr]);
+	xMOV(gprF3, gprF0);
+	xSHR(gprF3, 3);
+	xAND(gprF3, 0x18);
 
-	xMOV(gprF[2], gprF[0]);
-	xSHL(gprF[2], 11);
-	xAND(gprF[2], 0x1800);
-	xOR (gprF[3], gprF[2]);
+	xMOV(gprF2, gprF0);
+	xSHL(gprF2, 11);
+	xAND(gprF2, 0x1800);
+	xOR (gprF3, gprF2);
 
-	xSHL(gprF[0], 14);
-	xAND(gprF[0], 0x3cf0000);
-	xOR (gprF[3], gprF[0]);
+	xSHL(gprF0, 14);
+	xAND(gprF0, 0x3cf0000);
+	xOR (gprF3, gprF0);
 
 	if (setAllflags) {
 
 		// this code should be run in mVU micro mode only, so writing to
-		// EBP (gprF[1]) is ok (and needed for vuMicro optimizations).
+		// EBP (gprF1) is ok (and needed for vuMicro optimizations).
 
-		xMOV(gprF[0], gprF[3]);
-		xMOV(gprF[1], gprF[3]);
-		xMOV(gprF[2], gprF[3]);
+		xMOV(gprF0, gprF3);
+		xMOV(gprF1, gprF3);
+		xMOV(gprF2, gprF3);
 	}
 }
 

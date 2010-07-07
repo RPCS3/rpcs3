@@ -43,10 +43,10 @@ void mVUdispatcherA(mV) {
 
 	// Load Regs
 #if 1 // CHECK_MACROVU0 - Always on now
-	xMOV(gprF[0], ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL]);
-	xMOV(gprF[1], gprF[0]);
-	xMOV(gprF[2], gprF[0]);
-	xMOV(gprF[3], gprF[0]);
+	xMOV(gprF0, ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL]);
+	xMOV(gprF1, gprF0);
+	xMOV(gprF2, gprF0);
+	xMOV(gprF3, gprF0);
 #else
 	mVUallocSFLAGd((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL, 1);
 #endif

@@ -232,7 +232,7 @@ _f void mVUoptimizePipeState(mV) {
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
-void mVUincCycles(mV, int x) {
+_f void mVUincCycles(mV, int x) {
 	mVUcycles += x;
 	for (int z = 31; z > 0; z--) {
 		calcCycles(mVUregs.VF[z].x, x);
@@ -390,7 +390,7 @@ _f void mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 // Recompiler
 //------------------------------------------------------------------
 
-_r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
+void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	microFlagCycles mFC;
 	u8*				thisPtr  = x86Ptr;

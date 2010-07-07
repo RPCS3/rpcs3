@@ -51,7 +51,7 @@ void setupMacroOp(int mode, const char* opName) {
 		microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
 		microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
 		microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
-		xMOV(gprF[0], ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
+		xMOV(gprF0, ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
 	}
 }
 
@@ -60,7 +60,7 @@ void endMacroOp(int mode) {
 		xMOVSS(ptr32[&microVU0.regs->VI[REG_Q].UL], xmmPQ);
 	}
 	if (mode & 0x10) { // Status/Mac Flags were Updated
-		xMOV(ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL], gprF[0]);
+		xMOV(ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL], gprF0);
 	}
 	microVU0.regAlloc->flushAll();
 	microVU0.cop2 = 0;
@@ -269,8 +269,8 @@ static void recCFC2() {
 	iFlushCall(FLUSH_EVERYTHING);
 
 	if (_Rd_ == REG_STATUS_FLAG) { // Normalize Status Flag
-		xMOV(gprF[0], ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
-		mVUallocSFLAGc(eax, gprF[0], 0);
+		xMOV(gprF0, ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
+		mVUallocSFLAGc(eax, gprF0, 0);
 	}
 	else xMOV(eax, ptr32[&microVU0.regs->VI[_Rd_].UL]);
 
@@ -305,7 +305,7 @@ static void recCTC2() {
 		case REG_STATUS_FLAG:
 			if (_Rt_) { // Denormalizes flag into gprF1
 				mVUallocSFLAGd(&cpuRegs.GPR.r[_Rt_].UL[0], 0);
-				xMOV(ptr32[&microVU0.regs->VI[_Rd_].UL], gprF[1]);
+				xMOV(ptr32[&microVU0.regs->VI[_Rd_].UL], gprF1);
 			}
 			else xMOV(ptr32[&microVU0.regs->VI[_Rd_].UL], 0);
 			break;

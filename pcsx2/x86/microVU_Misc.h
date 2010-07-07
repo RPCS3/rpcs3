@@ -106,7 +106,12 @@ typedef xRegister32 x32;
 #define gprT2  ecx // ecx - Temp Reg
 #define gprT3  edx // edx - Temp Reg
 
-const x32 gprF[4] = {x32(3), x32(5), x32(6), x32(7)}; // ebx, ebp, esi, edi - Status Flags
+//const x32 gprF[4] = {x32(3), x32(5), x32(6), x32(7)}; // ebx, ebp, esi, edi - Status Flags
+
+#define gprF0  ebx
+#define gprF1  ebp
+#define gprF2  esi
+#define gprF3  edi
 
 // Function Params
 #define mP microVU* mVU, int recPass

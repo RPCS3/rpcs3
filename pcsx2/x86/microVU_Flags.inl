@@ -172,35 +172,35 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 		// DevCon::Status("sortRegs = %d", params sortRegs);
 		// Note: Emitter will optimize out mov(reg1, reg1) cases...
 		if (sortRegs == 1) {
-			xMOV(gprF[0],  getFlagReg(bStatus[0]));
-			xMOV(gprF[1],  getFlagReg(bStatus[1]));
-			xMOV(gprF[2],  getFlagReg(bStatus[2]));
-			xMOV(gprF[3],  getFlagReg(bStatus[3]));
+			xMOV(gprF0,  getFlagReg(bStatus[0]));
+			xMOV(gprF1,  getFlagReg(bStatus[1]));
+			xMOV(gprF2,  getFlagReg(bStatus[2]));
+			xMOV(gprF3,  getFlagReg(bStatus[3]));
 		}
 		else if (sortRegs == 2) {
-			xMOV(gprT1,	   getFlagReg (bStatus[3])); 
-			xMOV(gprF[0],  getFlagReg (bStatus[0]));
-			xMOV(gprF[1],  getFlagReg2(bStatus[1]));
-			xMOV(gprF[2],  getFlagReg2(bStatus[2]));
-			xMOV(gprF[3],  gprT1);
+			xMOV(gprT1,	 getFlagReg (bStatus[3])); 
+			xMOV(gprF0,  getFlagReg (bStatus[0]));
+			xMOV(gprF1,  getFlagReg2(bStatus[1]));
+			xMOV(gprF2,  getFlagReg2(bStatus[2]));
+			xMOV(gprF3,  gprT1);
 		}
 		else if (sortRegs == 3) {
 			int gFlag = (bStatus[0] == bStatus[1]) ? bStatus[2] : bStatus[1];
-			xMOV(gprT1,	   getFlagReg (gFlag)); 
-			xMOV(gprT2,	   getFlagReg (bStatus[3]));
-			xMOV(gprF[0],  getFlagReg (bStatus[0]));
-			xMOV(gprF[1],  getFlagReg3(bStatus[1]));
-			xMOV(gprF[2],  getFlagReg4(bStatus[2]));
-			xMOV(gprF[3],  gprT2);
+			xMOV(gprT1,	 getFlagReg (gFlag)); 
+			xMOV(gprT2,	 getFlagReg (bStatus[3]));
+			xMOV(gprF0,  getFlagReg (bStatus[0]));
+			xMOV(gprF1,  getFlagReg3(bStatus[1]));
+			xMOV(gprF2,  getFlagReg4(bStatus[2]));
+			xMOV(gprF3,  gprT2);
 		}
 		else {
 			xMOV(gprT1,  getFlagReg(bStatus[0])); 
 			xMOV(gprT2,  getFlagReg(bStatus[1]));
 			xMOV(gprT3,  getFlagReg(bStatus[2]));
-			xMOV(gprF[3],  getFlagReg(bStatus[3]));
-			xMOV(gprF[0],  gprT1);
-			xMOV(gprF[1],  gprT2); 
-			xMOV(gprF[2],  gprT3);
+			xMOV(gprF3,  getFlagReg(bStatus[3]));
+			xMOV(gprF0,  gprT1);
+			xMOV(gprF1,  gprT2); 
+			xMOV(gprF2,  gprT3);
 		}
 	}
 	

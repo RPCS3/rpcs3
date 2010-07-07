@@ -15,9 +15,9 @@
 
 #pragma once
 
-_f bool  doEarlyExit (microVU* mVU);
-_f void  mVUincCycles(microVU* mVU, int x);
-_r void* mVUcompile  (microVU* mVU, u32 startPC, uptr pState);
+extern bool  doEarlyExit (microVU* mVU);
+extern void  mVUincCycles(microVU* mVU, int x);
+extern void* mVUcompile  (microVU* mVU, u32 startPC, uptr pState);
 
 #define blockCreate(addr) { if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 #define sI ((mVUpBlock->pState.needExactMatch & 1) ? 3 : ((mVUpBlock->pState.flags >> 0) & 3))
@@ -26,7 +26,7 @@ _r void* mVUcompile  (microVU* mVU, u32 startPC, uptr pState);
 void mVU0clearlpStateJIT() { if (!microVU0.prog.cleared) memzero(microVU0.prog.lpState); }
 void mVU1clearlpStateJIT() { if (!microVU1.prog.cleared) memzero(microVU1.prog.lpState); }
 
-_f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
+void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
 	int fStatus = (isEbit) ? findFlagInst(mFC->xStatus, 0x7fffffff) : sI;
 	int fMac	= (isEbit) ? findFlagInst(mFC->xMac,	0x7fffffff) : 0;
@@ -86,7 +86,7 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 }
 
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
-_f void mVUsetupBranch(mV, microFlagCycles& mFC) {
+void mVUsetupBranch(mV, microFlagCycles& mFC) {
 	
 	mVU->regAlloc->flushAll();	// Flush Allocated Regs
 	mVUsetupFlags(mVU, mFC);	// Shuffle Flag Instances
