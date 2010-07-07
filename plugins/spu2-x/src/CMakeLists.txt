@@ -9,16 +9,6 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 # plugin name
 set(spu2xName spu2x)
 
-# Clear default flags
-set(CMAKE_C_FLAGS "")
-set(CMAKE_CXX_FLAGS "")
-set(CMAKE_C_FLAGS_DEBUG "")
-set(CMAKE_CXX_FLAGS_DEBUG "")
-set(CMAKE_C_FLAGS_DEVEL "")
-set(CMAKE_CXX_FLAGS_DEVEL "")
-set(CMAKE_C_FLAGS_RELEASE "")
-set(CMAKE_CXX_FLAGS_RELEASE "")
-
 set(CommonFlags
     -Wall
     -m32

@@ -12,10 +12,22 @@
 # ${CMAKE_SHARED_LIBRARY_CXX_FLAGS} = "-fPIC"
 # ${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} = "-rdynamic"
 # 
+# ${CMAKE_C_FLAGS} = "-g -O2"
+# ${CMAKE_CXX_FLAGS} = "-g -O2"
 # Use in debug mode
 # ${CMAKE_CXX_FLAGS_DEBUG} = "-g"
 # Use in release mode
 # ${CMAKE_CXX_FLAGS_RELEASE} = "-O3 -DNDEBUG"
+
+#-------------------------------------------------------------------------------
+# Do not use default cmake flags
+#-------------------------------------------------------------------------------
+set(CMAKE_C_FLAGS "")
+set(CMAKE_CXX_FLAGS "")
+set(CMAKE_C_FLAGS_DEBUG "")
+set(CMAKE_CXX_FLAGS_DEBUG "")
+set(CMAKE_C_FLAGS_RELEASE "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
 
 #-------------------------------------------------------------------------------
 # Remove bad default option
@@ -25,6 +37,7 @@ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 # Remove -fPIC option. No good reason to use it for plugins. Moreover we
 # only support x86 architecture. And last but not least it impact the performance.
+# Long term future note :), amd64 build will need the -fPIC flags
 set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 
