@@ -24,27 +24,31 @@
 #define SHIFT_XYZW(gprReg)	{ if (_XYZW_SS && modXYZW && !_W) { xSHL(gprReg, ADD_XYZW); } }
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
-static void mVUupdateFlags(mV, xmm reg, xmm regT1 = xEmptyReg, xmm regT2 = xEmptyReg, bool modXYZW = 1) {
-	x32  mReg   = gprT1, sReg   = getFlagReg(sFLAG.write);
-	bool regT1b = false, regT2b = false;
+static void mVUupdateFlags(mV, const xmm& reg, const xmm& regT1in = xEmptyReg, const xmm& regT2in = xEmptyReg, bool modXYZW = 1) {
+	const x32&  mReg   = gprT1;
+	const x32&  sReg   = getFlagReg(sFLAG.write);
+	bool regT1b = regT1in.IsEmpty(), regT2b = false;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
 
-	if (regT1.IsEmpty()) { 
-		regT1  = mVU->regAlloc->allocReg();
-		regT1b = true;
-	}
+	const xmm& regT1 = regT1b ? mVU->regAlloc->allocReg() : regT1in;
 
-	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) {
-		if (regT2.IsEmpty()) {
-			regT2  = mVU->regAlloc->allocReg();
+	xmm regT2 = reg;
+	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW)))
+	{
+		regT2 = regT2in;
+		if (regT2.IsEmpty())
+		{
+			regT2 = mVU->regAlloc->allocReg();
 			regT2b = true;
 		}
+			
 		xPSHUF.D(regT2, reg, 0x1B); // Flip wzyx to xyzw
 	}
 	else regT2 = reg;
+
 
 	if (sFLAG.doFlag) {
 		mVUallocSFLAGa(sReg,   sFLAG.lastWrite);		// Get Prev Status Flag
@@ -58,12 +62,12 @@ static void mVUupdateFlags(mV, xmm reg, xmm regT1 = xEmptyReg, xmm regT2 = xEmpt
 	xCMPEQ.PS(regT1, regT2); // Set all F's if each vector is zero
 	xMOVMSKPS(gprT2, regT1); // Used for Zero Flag Calculation
 
-	xAND(mReg, AND_XYZW);	 // Grab "Is Signed" bits from the previous calculation
+	xAND(mReg, AND_XYZW);	// Grab "Is Signed" bits from the previous calculation
 	xSHL(mReg, 4 + ADD_XYZW);
 
 	//-------------------------Check for Zero flags------------------------------
 
-	xAND(gprT2, AND_XYZW);	 // Grab "Is Zero" bits from the previous calculation
+	xAND(gprT2, AND_XYZW);	// Grab "Is Zero" bits from the previous calculation
 	if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); }
 	xOR(mReg, gprT2);
 
@@ -85,7 +89,7 @@ static void mVUupdateFlags(mV, xmm reg, xmm regT1 = xEmptyReg, xmm regT2 = xEmpt
 // Helper Macros and Functions
 //------------------------------------------------------------------
 
-static void (*SSE_PS[]) (microVU*, xmm, xmm, xmm, xmm) = {
+static void (*const SSE_PS[]) (microVU*, const xmm&, const xmm&, const xmm&, const xmm&) = {
 	SSE_ADDPS, // 0
 	SSE_SUBPS, // 1
 	SSE_MULPS, // 2
@@ -94,7 +98,7 @@ static void (*SSE_PS[]) (microVU*, xmm, xmm, xmm, xmm) = {
 	SSE_ADD2PS // 5
 };
 
-static void (*SSE_SS[]) (microVU*, xmm, xmm, xmm, xmm) = {
+static void (*const SSE_SS[]) (microVU*, const xmm&, const xmm&, const xmm&, const xmm&) = {
 	SSE_ADDSS, // 0
 	SSE_SUBSS, // 1
 	SSE_MULSS, // 2
@@ -131,7 +135,7 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
 	opCase1 {
 		if ((opType == 1) && (_Ft_ == _Fs_)) {
-			xmm Fs = mVU->regAlloc->allocReg(-1, isACC ? 32 : _Fd_, _X_Y_Z_W);
+			const xmm& Fs = mVU->regAlloc->allocReg(-1, isACC ? 32 : _Fd_, _X_Y_Z_W);
 			xPXOR(Fs, Fs); // Set to Positive 0
 			mVUupdateFlags(mVU, Fs);
 			mVU->regAlloc->clearNeeded(Fs);
@@ -225,7 +229,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 			if (_XYZW_SS && _X_Y_Z_W != 8) xPSHUF.D(ACC, ACC, shuffleSS(_X_Y_Z_W));
 		}
 		else {
-			xmm tempACC = mVU->regAlloc->allocReg();
+			const xmm& tempACC = mVU->regAlloc->allocReg();
 			xMOVAPS(tempACC, ACC);
 			SSE_PS[opType](mVU, tempACC, Fs, tempFt, xEmptyReg);
 			mVUmergeRegs(ACC, tempACC, _X_Y_Z_W);
@@ -304,7 +308,7 @@ mVUop(mVU_ABS) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
-		xmm Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
+		const xmm& Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
 		xAND.PS(Fs, ptr128[mVUglob.absclip]);
 		mVU->regAlloc->clearNeeded(Fs);
 	}
@@ -315,8 +319,8 @@ mVUop(mVU_ABS) {
 mVUop(mVU_OPMULA) {
 	pass1 { mVUanalyzeFMAC1(mVU, 0, _Fs_, _Ft_); }
 	pass2 {
-		xmm Ft = mVU->regAlloc->allocReg(_Ft_,  0, _X_Y_Z_W);
-		xmm Fs = mVU->regAlloc->allocReg(_Fs_, 32, _X_Y_Z_W);
+		const xmm& Ft = mVU->regAlloc->allocReg(_Ft_,  0, _X_Y_Z_W);
+		const xmm& Fs = mVU->regAlloc->allocReg(_Fs_, 32, _X_Y_Z_W);
 
 		xPSHUF.D(Fs, Fs, 0xC9); // WXZY
 		xPSHUF.D(Ft, Ft, 0xD2); // WYXZ
@@ -333,9 +337,9 @@ mVUop(mVU_OPMULA) {
 mVUop(mVU_OPMSUB) {
 	pass1 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, _Ft_); }
 	pass2 {
-		xmm Ft  = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);
-		xmm Fs  = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
-		xmm ACC = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
+		const xmm& Ft  = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);
+		const xmm& Fs  = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		const xmm& ACC = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
 
 		xPSHUF.D(Fs, Fs, 0xC9); // WXZY
 		xPSHUF.D(Ft, Ft, 0xD2); // WYXZ
@@ -356,9 +360,9 @@ static void mVU_FTOIx(mP, const float* addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
-		xmm Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
-		xmm t1 = mVU->regAlloc->allocReg();
-		xmm t2 = mVU->regAlloc->allocReg();
+		const xmm& Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
+		const xmm& t1 = mVU->regAlloc->allocReg();
+		const xmm& t2 = mVU->regAlloc->allocReg();
 
 		// Note: For help understanding this algorithm see recVUMI_FTOI_Saturate()
 		xMOVAPS(t1, Fs);
@@ -383,7 +387,7 @@ static void mVU_ITOFx(mP, const float* addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
-		xmm Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
+		const xmm& Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
 
 		xCVTDQ2PS(Fs, Fs);
 		if (addr) { xMUL.PS(Fs, ptr128[addr]); }
@@ -398,9 +402,9 @@ static void mVU_ITOFx(mP, const float* addr, const char* opName) {
 mVUop(mVU_CLIP) {
 	pass1 { mVUanalyzeFMAC4(mVU, _Fs_, _Ft_); }
 	pass2 {
-		xmm Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
-		xmm Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0x1);
-		xmm t1 = mVU->regAlloc->allocReg();
+		const xmm& Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		const xmm& Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0x1);
+		const xmm& t1 = mVU->regAlloc->allocReg();
 
 		mVUunpack_xyzw(Ft, Ft, 0);
 		mVUallocCFLAGa(mVU, gprT1, cFLAG.lastWrite);

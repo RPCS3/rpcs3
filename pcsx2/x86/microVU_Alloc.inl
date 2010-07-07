@@ -36,7 +36,7 @@ _f static x32 getFlagReg(int fInst)
 	}
 }
 
-_f void setBitSFLAG(x32 reg, x32 regT, int bitTest, int bitSet)
+_f void setBitSFLAG(const x32& reg, const x32& regT, int bitTest, int bitSet)
 {
 	xTEST(regT, bitTest);
 	xForwardJZ8 skip;
@@ -44,7 +44,7 @@ _f void setBitSFLAG(x32 reg, x32 regT, int bitTest, int bitSet)
 	skip.SetTarget();
 }
 
-_f void setBitFSEQ(x32 reg, int bitX)
+_f void setBitFSEQ(const x32& reg, int bitX)
 {
 	xTEST(reg, bitX);
 	xForwardJump8 skip(Jcc_Zero);
@@ -52,18 +52,18 @@ _f void setBitFSEQ(x32 reg, int bitX)
 	skip.SetTarget();
 }
 
-_f void mVUallocSFLAGa(x32 reg, int fInstance)
+_f void mVUallocSFLAGa(const x32& reg, int fInstance)
 {
 	xMOV(reg, getFlagReg(fInstance));
 }
 
-_f void mVUallocSFLAGb(x32 reg, int fInstance)
+_f void mVUallocSFLAGb(const x32& reg, int fInstance)
 {
 	xMOV(getFlagReg(fInstance), reg);
 }
 
 // Normalize Status Flag
-_f void mVUallocSFLAGc(x32 reg, x32 regT, int fInstance)
+_f void mVUallocSFLAGc(const x32& reg, const x32& regT, int fInstance)
 {
 	xXOR(reg, reg);
 	mVUallocSFLAGa(regT, fInstance);
@@ -107,25 +107,25 @@ _f void mVUallocSFLAGd(u32* memAddr, bool setAllflags) {
 	}
 }
 
-_f void mVUallocMFLAGa(mV, x32 reg, int fInstance)
+_f void mVUallocMFLAGa(mV, const x32& reg, int fInstance)
 {
 	xMOVZX(reg, ptr16[&mVU->macFlag[fInstance]]);
 }
 
-_f void mVUallocMFLAGb(mV, x32 reg, int fInstance)
+_f void mVUallocMFLAGb(mV, const x32& reg, int fInstance)
 {
 	//xAND(reg, 0xffff);
 	if (fInstance < 4) xMOV(ptr32[&mVU->macFlag[fInstance]], reg);			// microVU
 	else			   xMOV(ptr32[&mVU->regs->VI[REG_MAC_FLAG].UL], reg);	// macroVU
 }
 
-_f void mVUallocCFLAGa(mV, x32 reg, int fInstance)
+_f void mVUallocCFLAGa(mV, const x32& reg, int fInstance)
 {
 	if (fInstance < 4) xMOV(reg, ptr32[&mVU->clipFlag[fInstance]]);			// microVU
 	else			   xMOV(reg, ptr32[&mVU->regs->VI[REG_CLIP_FLAG].UL]);	// macroVU
 }
 
-_f void mVUallocCFLAGb(mV, x32 reg, int fInstance)
+_f void mVUallocCFLAGb(mV, const x32& reg, int fInstance)
 {
 	if (fInstance < 4) xMOV(ptr32[&mVU->clipFlag[fInstance]], reg);			// microVU
 	else			   xMOV(ptr32[&mVU->regs->VI[REG_CLIP_FLAG].UL], reg);	// macroVU
@@ -135,7 +135,7 @@ _f void mVUallocCFLAGb(mV, x32 reg, int fInstance)
 // VI Reg Allocators
 //------------------------------------------------------------------
 
-_f void mVUallocVIa(mV, x32 GPRreg, int _reg_, bool signext = false)
+_f void mVUallocVIa(mV, const x32& GPRreg, int _reg_, bool signext = false)
 {
 	if (!_reg_)
 		xXOR(GPRreg, GPRreg);
@@ -146,7 +146,7 @@ _f void mVUallocVIa(mV, x32 GPRreg, int _reg_, bool signext = false)
 			xMOVZX(GPRreg, ptr16[&mVU->regs->VI[_reg_].UL]);
 }
 
-_f void mVUallocVIb(mV, x32 GPRreg, int _reg_)
+_f void mVUallocVIb(mV, const x32& GPRreg, int _reg_)
 {
 	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
 		xMOVZX(gprT3, ptr16[&mVU->regs->VI[_reg_].UL]);
@@ -160,19 +160,19 @@ _f void mVUallocVIb(mV, x32 GPRreg, int _reg_)
 // P/Q Reg Allocators
 //------------------------------------------------------------------
 
-_f void getPreg(mV, xmm reg)
+_f void getPreg(mV, const xmm& reg)
 {
 	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/
 }
 
-_f void getQreg(xmm reg, int qInstance)
+_f void getQreg(const xmm& reg, int qInstance)
 {
 	mVUunpack_xyzw(reg, xmmPQ, qInstance);
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/
 }
 
-_f void writeQreg(xmm reg, int qInstance)
+_f void writeQreg(const xmm& reg, int qInstance)
 {
 	if (qInstance) {
 		if (!x86caps.hasStreamingSIMD4Extensions) {

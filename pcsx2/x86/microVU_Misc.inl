@@ -19,7 +19,7 @@
 // Micro VU - Reg Loading/Saving/Shuffling/Unpacking/Merging...
 //------------------------------------------------------------------
 
-void mVUunpack_xyzw(xmm dstreg, xmm srcreg, int xyzw)
+void mVUunpack_xyzw(const xmm& dstreg, const xmm& srcreg, int xyzw)
 {
 	switch ( xyzw ) {
 		case 0: xPSHUF.D(dstreg, srcreg, 0x00); break; // XXXX
@@ -29,7 +29,7 @@ void mVUunpack_xyzw(xmm dstreg, xmm srcreg, int xyzw)
 	}
 }
 
-void mVUloadReg(xmm reg, xAddressVoid ptr, int xyzw)
+void mVUloadReg(const xmm& reg, xAddressVoid ptr, int xyzw)
 {
 	switch( xyzw ) {
 		case 8:		xMOVSSZX(reg, ptr32[ptr]);		break; // X
@@ -40,14 +40,14 @@ void mVUloadReg(xmm reg, xAddressVoid ptr, int xyzw)
 	}
 }
 
-void mVUloadIreg(xmm reg, int xyzw, VURegs* vuRegs)
+void mVUloadIreg(const xmm& reg, int xyzw, VURegs* vuRegs)
 {
 	xMOVSSZX(reg, ptr32[&vuRegs->VI[REG_I].UL]);
 	if (!_XYZWss(xyzw)) xSHUF.PS(reg, reg, 0);
 }
 
 // Modifies the Source Reg!
-void mVUsaveReg(xmm reg, xAddressVoid ptr, int xyzw, bool modXYZW)
+void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW)
 {
 	/*xMOVAPS(xmmT2, ptr128[ptr]);
 	if (modXYZW && (xyzw == 8 || xyzw == 4 || xyzw == 2 || xyzw == 1)) {
@@ -143,7 +143,7 @@ void mVUsaveReg(xmm reg, xAddressVoid ptr, int xyzw, bool modXYZW)
 }
 
 // Modifies the Source Reg! (ToDo: Optimize modXYZW = 1 cases)
-void mVUmergeRegs(xmm dest, xmm src, int xyzw, bool modXYZW)
+void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
@@ -214,7 +214,7 @@ void mVUmergeRegs(xmm dest, xmm src, int xyzw, bool modXYZW)
 //------------------------------------------------------------------
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
-_f void mVUaddrFix(mV, x32 gprReg)
+_f void mVUaddrFix(mV, const x32& gprReg)
 {
 	if (isVU1) {
 		xAND(gprReg, 0x3ff); // wrap around
@@ -259,10 +259,10 @@ static const __aligned16 SSEMaskPair MIN_MAX =
 
 
 // Warning: Modifies t1 and t2
-void MIN_MAX_PS(microVU* mVU, xmm to, xmm from, xmm t1in, xmm t2in, bool min)
+void MIN_MAX_PS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in, bool min)
 {
-	xmm t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
-	xmm t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
+	const xmm& t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
 	// ZW
 	xPSHUF.D(t1, to, 0xfa);
 	xPAND   (t1, ptr128[MIN_MAX.mask1]);
@@ -289,9 +289,9 @@ void MIN_MAX_PS(microVU* mVU, xmm to, xmm from, xmm t1in, xmm t2in, bool min)
 }
 
 // Warning: Modifies to's upper 3 vectors, and t1
-void MIN_MAX_SS(mV, xmm to, xmm from, xmm t1in, bool min)
+void MIN_MAX_SS(mV, const xmm& to, const xmm& from, const xmm& t1in, bool min)
 {
-	xmm t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
 	xSHUF.PS(to, from, 0);
 	xPAND	(to, ptr128[MIN_MAX.mask1]);
 	xPOR	(to, ptr128[MIN_MAX.mask2]);
@@ -302,10 +302,10 @@ void MIN_MAX_SS(mV, xmm to, xmm from, xmm t1in, bool min)
 }
 
 // Warning: Modifies all vectors in 'to' and 'from', and Modifies xmmT1 and xmmT2
-void ADD_SS(microVU* mVU, xmm to, xmm from, xmm t1in, xmm t2in)
+void ADD_SS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in)
 {
-	xmm t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
-	xmm t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
+	const xmm& t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
 
 	xMOVAPS(t1, to);
 	xMOVAPS(t2, from);
@@ -379,66 +379,66 @@ void ADD_SS(microVU* mVU, xmm to, xmm from, xmm t1in, xmm t2in)
 	mVUclamp4(to, t1, (isPS)?0xf:0x8);			\
 }
 
-void SSE_MAXPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MAXPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	if (CHECK_VU_MINMAXHACK) { xMAX.PS(to, from); }
 	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 0); }
 }
-void SSE_MINPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MINPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	if (CHECK_VU_MINMAXHACK) { xMIN.PS(to, from); }
 	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 1); }
 }
-void SSE_MAXSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MAXSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	if (CHECK_VU_MINMAXHACK) { xMAX.SS(to, from); }
 	else					 { MIN_MAX_SS(mVU, to, from, t1, 0); }
 }
-void SSE_MINSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MINSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	if (CHECK_VU_MINMAXHACK) { xMIN.SS(to, from); }
 	else					 { MIN_MAX_SS(mVU, to, from, t1, 1); }
 }
-void SSE_ADD2SS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_ADD2SS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	if (!CHECK_VUADDSUBHACK) { clampOp(xADD.SS, 0); }
 	else					 { ADD_SS(mVU, to, from, t1, t2); }
 }
 
 // FIXME: why do we need two identical definitions with different names?
-void SSE_ADD2PS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_ADD2PS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xADD.PS, 1);
 }
-void SSE_ADDPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_ADDPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xADD.PS, 1);
 }
-void SSE_ADDSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_ADDSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xADD.SS, 0);
 }
-void SSE_SUBPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_SUBPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xSUB.PS, 1);
 }
-void SSE_SUBSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_SUBSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xSUB.SS, 0);
 }
-void SSE_MULPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MULPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xMUL.PS, 1);
 }
-void SSE_MULSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_MULSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xMUL.SS, 0);
 }
-void SSE_DIVPS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_DIVPS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xDIV.PS, 1);
 }
-void SSE_DIVSS(mV, xmm to, xmm from, xmm t1 = xEmptyReg, xmm t2 = xEmptyReg)
+void SSE_DIVSS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xDIV.SS, 0);
 }

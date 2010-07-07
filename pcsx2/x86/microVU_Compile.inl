@@ -134,25 +134,32 @@ void doIbit(mV) {
 void doSwapOp(mV) { 
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
 		DevCon.WriteLn(Color_Green, "microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
-		xmm t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
-		xmm t2 = mVU->regAlloc->allocReg();
-		xMOVAPS(t2, t1);
-		mVU->regAlloc->clearNeeded(t1);
+
+		const xmm& t2 = mVU->regAlloc->allocReg();
+		
+		{
+			const xmm& t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
+			xMOVAPS(t2, t1);
+			mVU->regAlloc->clearNeeded(t1);
+		}
 
 		mVUopL(mVU, 1);
 
-		t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
-		xXOR.PS(t2, t1);
-		xXOR.PS(t1, t2);
-		xXOR.PS(t2, t1);
-		mVU->regAlloc->clearNeeded(t1);
+		{
+			const xmm& t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
+			xXOR.PS(t2, t1);
+			xXOR.PS(t1, t2);
+			xXOR.PS(t2, t1);
+			mVU->regAlloc->clearNeeded(t1);
+		}
 
 		incPC(1); 
 		doUpperOp();
-
-		t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
-		xMOVAPS(t1, t2);
-		mVU->regAlloc->clearNeeded(t1);
+		{
+			const xmm& t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
+			xMOVAPS(t1, t2);
+			mVU->regAlloc->clearNeeded(t1);
+		}
 		mVU->regAlloc->clearNeeded(t2);
 	}
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
@@ -330,8 +337,8 @@ void mVUtestCycles(microVU* mVU) {
 			// xFowardJZ32 vu0jmp;
 			// xMOV(gprT2, (uptr)mVU);
 			// xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
-			mVUsavePipelineState(mVU);
-			mVUendProgram(mVU, NULL, 0);
+		mVUsavePipelineState(mVU);
+		mVUendProgram(mVU, NULL, 0);
 			// vu0jmp.SetTarget();
 		}
 		else {

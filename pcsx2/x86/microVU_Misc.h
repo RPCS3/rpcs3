@@ -93,21 +93,20 @@ typedef xRegister32 x32;
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
 #define offsetReg	((_X) ? (0) : ((_Y) ? (1) : ((_Z) ? 2:  3)))
 
-const xmm
-	xmmT1 = xmm(0), // Used for regAlloc
-	xmmT2 = xmm(1), // Used for regAlloc
-	xmmT3 = xmm(2), // Used for regAlloc
-	xmmT4 = xmm(3), // Used for regAlloc
-	xmmT5 = xmm(4), // Used for regAlloc
-	xmmT6 = xmm(5), // Used for regAlloc
-	xmmT7 = xmm(6), // Used for regAlloc
-	xmmPQ = xmm(7); // Holds the Value and Backup Values of P and Q regs
+#define xmmT1  xmm0 // Used for regAlloc
+#define xmmT2  xmm1 // Used for regAlloc
+#define xmmT3  xmm2 // Used for regAlloc
+#define xmmT4  xmm3 // Used for regAlloc
+#define xmmT5  xmm4 // Used for regAlloc
+#define xmmT6  xmm5 // Used for regAlloc
+#define xmmT7  xmm6 // Used for regAlloc
+#define xmmPQ  xmm7 // Holds the Value and Backup Values of P and Q regs
 
-const x32
-	gprT1 = x32(0), // eax - Temp Reg
-	gprT2 = x32(1), // ecx - Temp Reg
-	gprT3 = x32(2), // edx - Temp Reg
-	gprF[4] = {x32(3), x32(5), x32(6), x32(7)}; // ebx, ebp, esi, edi - Status Flags
+#define gprT1  eax // eax - Temp Reg
+#define gprT2  ecx // ecx - Temp Reg
+#define gprT3  edx // edx - Temp Reg
+
+const x32 gprF[4] = {x32(3), x32(5), x32(6), x32(7)}; // ebx, ebp, esi, edi - Status Flags
 
 // Function Params
 #define mP microVU* mVU, int recPass
@@ -297,7 +296,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 	}																							  \
 }
 
-void mVUmergeRegs(xmm dest, xmm src,  int xyzw, bool modXYZW=false);
-void mVUsaveReg(xmm reg, xAddressVoid ptr, int xyzw, bool modXYZW);
-void mVUloadReg(xmm reg, xAddressVoid ptr, int xyzw);
-void mVUloadIreg(xmm reg, int xyzw, VURegs* vuRegs);
+extern void mVUmergeRegs(const xmm& dest, const xmm& src,  int xyzw, bool modXYZW=false);
+extern void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW);
+extern void mVUloadReg(const xmm& reg, xAddressVoid ptr, int xyzw);
+extern void mVUloadIreg(const xmm& reg, int xyzw, VURegs* vuRegs);

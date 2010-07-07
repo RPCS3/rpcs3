@@ -138,6 +138,14 @@ const xRegister8
 
 const xRegisterCL cl;
 
+const xRegisterSSE *const xRegisterSSE::m_tbl_xmmRegs[iREGCNT_XMM] = 
+{
+	&xmm0, &xmm1, 
+	&xmm2, &xmm3, 
+	&xmm4, &xmm5,
+	&xmm6, &xmm7
+};
+
 const char *const x86_regnames_gpr8[8] =
 {
 	"al", "cl", "dl", "bl",

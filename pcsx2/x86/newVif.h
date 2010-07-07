@@ -33,7 +33,7 @@ typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 #include "newVif_BlockBuffer.h"
 #include "newVif_HashBucket.h"
 
-extern void  mVUmergeRegs(xRegisterSSE dest, xRegisterSSE src,  int xyzw, bool modXYZW = 0);
+extern void  mVUmergeRegs(const xRegisterSSE& dest, const xRegisterSSE& src,  int xyzw, bool modXYZW = 0);
 extern void _nVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifReset   (int idx);
