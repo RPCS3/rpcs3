@@ -434,16 +434,26 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode");					
+					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
+
 					numregs	= ((tag.NREG-1)&0xf) + 1;
 					size *= 2;
-					u32 len = aMin(size, nloop * numregs);
-					if(len < (nloop * numregs)) nloop -= len / numregs;
-					else nloop = 0;
-
+					u32 len = aMin(size, (nloop * numregs)-curreg);
+					
+					if(len < (nloop * numregs)-curreg) 
+					{
+						const int regs_not_copied	= len % numregs;
+						curreg += regs_not_copied;
+						nloop -= len / numregs;
+					}
+					else nloop = 0;				
+					
+					
 					incTag(8 * len, len);
 					if (size & 1) { incTag(8, 1); }
 					size /= 2;
+					if(curreg != 0) DevCon.Warning("Oops Q %x", curreg);
+					if(nloop = 0) curreg = 0;
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -623,13 +633,21 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 					numregs	= ((tag.NREG-1)&0xf) + 1;
 					size *= 2;
-					u32 len = aMin(size, nloop * numregs);
-					if(len < (nloop * numregs)) nloop -= len / numregs;
-					else nloop = 0;				
+					u32 len = aMin(size, (nloop * numregs)-curreg);
+					
+					if(len < (nloop * numregs)-curreg) 
+					{
+						const int regs_not_copied	= len % numregs;
+						curreg += regs_not_copied;
+						nloop -= len / numregs;
+					}
+					else nloop = 0;									
 					
 					incTag(8 * len, len);
 					if (size & 1) { incTag(8, 1); }
 					size /= 2;
+					if(curreg != 0) DevCon.Warning("Oops Q %x", curreg);
+					if(nloop = 0) curreg = 0;
 				}
 				break;
 				case GIF_FLG_IMAGE:
