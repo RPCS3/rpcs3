@@ -16,6 +16,10 @@
 #pragma once
 #include "Vif.h"
 
+#ifdef _MSC_VER // Most of the structs here should be packed
+#	pragma pack(1)
+#endif
+
 enum VURegFlags
 {
     REG_STATUS_FLAG	= 16,
@@ -62,7 +66,7 @@ union VECTOR {
 	s16 SS[8];
 	u8  UC[16];
 	s8  SC[16];
-};
+} __packed;
 
 struct REG_VI {
 	union {
@@ -76,7 +80,7 @@ struct REG_VI {
 	};
 	u32 padding[3]; // needs padding to make them 128bit; VU0 maps VU1's VI regs as 128bits to addr 0x4xx0 in
 					// VU0 mem, with only lower 16 bits valid, and the upper 112bits are hardwired to 0 (cottonvibes)
-};
+} __packed;
 
 //#define VUFLAG_BREAKONMFLAG		0x00000001
 #define VUFLAG_MFLAGSET			0x00000002
@@ -152,7 +156,8 @@ struct VURegs {
 	,	Micro( NULL )
 	{
 	}
-};
+} __packed;
+
 enum VUPipeState
 {
     VUPIPE_NONE = 0,
@@ -176,6 +181,10 @@ struct _VURegsNum {
 	u32 VIread;
 	int cycles;
 };
+
+#ifdef _MSC_VER // Restore to default pack alignment
+#	pragma pack()
+#endif
 
 extern VURegs* g_pVU1;
 extern __aligned16 VURegs VU0;

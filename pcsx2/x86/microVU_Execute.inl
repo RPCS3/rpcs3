@@ -53,11 +53,11 @@ void mVUdispatcherA(mV) {
 	
 	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_MAC_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
-	xMOVAPS(ptr128[&mVU->macFlag[0]], xmmT1);
+	xMOVAPS(ptr128[mVU->macFlag],  xmmT1);
 
 	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_CLIP_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
-	xMOVAPS(ptr128[&mVU->clipFlag[0]], xmmT1);
+	xMOVAPS(ptr128[mVU->clipFlag], xmmT1);
 
 	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_P].UL]);
 	xMOVAPS(xmmPQ, ptr128[&mVU->regs->VI[REG_Q].UL]);

@@ -255,8 +255,8 @@ void COP2_Interlock(bool mBitSync) {
 void TEST_FBRST_RESET(FnType_Void* resetFunct, int vuIndex) {
 	xTEST(eax, (vuIndex) ? 0x200 : 0x002);
 	xForwardJZ8 skip;
-	xCALL(resetFunct);
-	xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
+		xCALL(resetFunct);
+		xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
 	skip.SetTarget();
 }
 

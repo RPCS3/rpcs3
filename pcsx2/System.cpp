@@ -383,6 +383,15 @@ void SysCoreAllocations::SelectCpuProviders() const
 		CpuVU1 = EmuConfig.Cpu.Recompiler.UseMicroVU1 ? (BaseVUmicroCPU*)CpuProviders->microVU1 : (BaseVUmicroCPU*)CpuProviders->superVU1;
 }
 
+// This is a semi-hacky function for convenience
+BaseVUmicroCPU* SysCoreAllocations::getVUprovider(int whichProvider, int vuIndex) const {
+	switch (whichProvider) {
+		case 0: return vuIndex ? (BaseVUmicroCPU*)CpuProviders->interpVU1 : (BaseVUmicroCPU*)CpuProviders->interpVU0;
+		case 1: return vuIndex ? (BaseVUmicroCPU*)CpuProviders->superVU1  : (BaseVUmicroCPU*)CpuProviders->superVU0;
+		case 2: return vuIndex ? (BaseVUmicroCPU*)CpuProviders->microVU1  : (BaseVUmicroCPU*)CpuProviders->microVU0;
+	}
+	return NULL;
+}
 
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without

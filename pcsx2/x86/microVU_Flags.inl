@@ -178,17 +178,17 @@ _f void mVUsetupFlags(mV, microFlagCycles& mFC) {
 			xMOV(gprF[3],  getFlagReg(bStatus[3]));
 		}
 		else if (sortRegs == 2) {
-			xMOV(gprT1,  getFlagReg(bStatus[3])); 
-			xMOV(gprF[0],  getFlagReg(bStatus[0]));
+			xMOV(gprT1,	   getFlagReg (bStatus[3])); 
+			xMOV(gprF[0],  getFlagReg (bStatus[0]));
 			xMOV(gprF[1],  getFlagReg2(bStatus[1]));
 			xMOV(gprF[2],  getFlagReg2(bStatus[2]));
 			xMOV(gprF[3],  gprT1);
 		}
 		else if (sortRegs == 3) {
 			int gFlag = (bStatus[0] == bStatus[1]) ? bStatus[2] : bStatus[1];
-			xMOV(gprT1,  getFlagReg(gFlag)); 
-			xMOV(gprT2,  getFlagReg(bStatus[3]));
-			xMOV(gprF[0],  getFlagReg(bStatus[0]));
+			xMOV(gprT1,	   getFlagReg (gFlag)); 
+			xMOV(gprT2,	   getFlagReg (bStatus[3]));
+			xMOV(gprF[0],  getFlagReg (bStatus[0]));
 			xMOV(gprF[1],  getFlagReg3(bStatus[1]));
 			xMOV(gprF[2],  getFlagReg4(bStatus[2]));
 			xMOV(gprF[3],  gprT2);

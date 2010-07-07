@@ -73,7 +73,7 @@ _f void mVUallocSFLAGc(x32 reg, x32 regT, int fInstance)
 	setBitSFLAG(reg, regT, 0x00f0, 0x0080); // SS Bit
 	xAND(regT, 0xffff0000); // DS/DI/OS/US/D/I/O/U Bits
 	xSHR(regT, 14);
-	xOR(reg, regT);
+	xOR (reg, regT);
 }
 
 // Denormalizes Status Flag
@@ -149,8 +149,8 @@ _f void mVUallocVIa(mV, x32 GPRreg, int _reg_, bool signext = false)
 _f void mVUallocVIb(mV, x32 GPRreg, int _reg_)
 {
 	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
-		xMOVZX(edx, ptr16[&mVU->regs->VI[_reg_].UL]);
-		xMOV(ptr32[&mVU->VIbackup], edx);
+		xMOVZX(gprT3, ptr16[&mVU->regs->VI[_reg_].UL]);
+		xMOV  (ptr32[&mVU->VIbackup], gprT3);
 	}
 	if		(_reg_ == 0) { return; }
 	else if (_reg_ < 16) { xMOV(ptr16[&mVU->regs->VI[_reg_].UL], xRegister16(GPRreg.Id)); }

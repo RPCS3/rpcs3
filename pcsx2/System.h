@@ -22,6 +22,7 @@
 #include "CDVD/CDVDaccess.h"
 
 typedef SafeArray<u8> VmStateBuffer;
+class BaseVUmicroCPU;
 
 // --------------------------------------------------------------------------------------
 //  SysCoreAllocations class
@@ -39,6 +40,7 @@ public:
 	virtual ~SysCoreAllocations() throw();
 
 	void SelectCpuProviders() const;
+	BaseVUmicroCPU* getVUprovider(int whichProvider, int vuIndex) const;
 
 	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
 

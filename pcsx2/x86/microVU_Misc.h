@@ -87,6 +87,7 @@ typedef xRegister32 x32;
 
 #define isCOP2		(mVU->cop2  != 0)
 #define isVU1		(mVU->index != 0)
+#define isVU0		(mVU->index == 0)
 #define getIndex	(isVU1 ? 1 : 0)
 #define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
@@ -294,14 +295,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 		Console.WriteLn("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
 		mVUresizeCache(mVU, mVU->cacheSize + mVUcacheGrowBy);									  \
 	}																							  \
-}
-
-#define mVUdebugNOW(isEndPC) {							\
-	if (mVUdebugNow) {									\
-		xMOV(gprT2, xPC);							\
-		if (isEndPC) { xCALL(mVUprintPC2); }	\
-		else		 { xCALL(mVUprintPC1); }	\
-	}													\
 }
 
 void mVUmergeRegs(xmm dest, xmm src,  int xyzw, bool modXYZW=false);

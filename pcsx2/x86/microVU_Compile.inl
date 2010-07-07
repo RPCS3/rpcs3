@@ -134,27 +134,25 @@ void doIbit(mV) {
 void doSwapOp(mV) { 
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
 		DevCon.WriteLn(Color_Green, "microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
+		xmm t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
 		xmm t2 = mVU->regAlloc->allocReg();
-		{
-			xmm t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
-			xMOVAPS(t2, t1);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+		xMOVAPS(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+
 		mVUopL(mVU, 1);
-		{
-			xmm t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
-			xXOR.PS(t2, t1);
-			xXOR.PS(t1, t2);
-			xXOR.PS(t2, t1);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+
+		t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
+		xXOR.PS(t2, t1);
+		xXOR.PS(t1, t2);
+		xXOR.PS(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+
 		incPC(1); 
 		doUpperOp();
-		{
-			xmm t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
-			xMOVAPS(t1, t2);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+
+		t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
+		xMOVAPS(t1, t2);
+		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
 	}
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
@@ -171,7 +169,7 @@ _f void mVUcheckBadOp(mV) {
 // Prints msg when exiting block early if 1st op was a bad opcode (Dawn of Mana Level 2)
 _f void handleBadOp(mV, int count) {
 	if (mVUinfo.isBadOp && count == 0) {
-		xMOV(ecx, (uptr)mVU);
+		xMOV(gprT2, (uptr)mVU);
 		if (!isVU1) xCALL(mVUbadOp0);
 		else		xCALL(mVUbadOp1);
 	}
@@ -312,21 +310,36 @@ _f void mVUsavePipelineState(microVU* mVU) {
 	}
 }
 
+// Prints Start/End PC of blocks executed, for debugging...
+void mVUdebugPrintBlocks(microVU* mVU, bool isEndPC) {
+	if (mVUdebugNow) {
+		xMOV(gprT2, xPC);
+		if (isEndPC) xCALL(mVUprintPC2);
+		else		 xCALL(mVUprintPC1);
+	}
+}
+
+// Test cycles to see if we need to exit-early...
 void mVUtestCycles(microVU* mVU) {
-	//u32* vu0jmp;
 	iPC = mVUstartPC;
-	mVUdebugNOW(0);
 	if (doEarlyExit(mVU)) {
 		xCMP(ptr32[&mVU->cycles], 0);
 		xForwardJG32 skip;
-		// FIXME: uh... actually kind of a pain with xForwardJump
-		//if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
-		xMOV(ecx, (uptr)mVU);
-		if (isVU1)  xCALL(mVUwarning1);
-		//else		xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
-		mVUsavePipelineState(mVU);
-		mVUendProgram(mVU, NULL, 0);
-		//if (!isVU1) vu0jmp.SetTarget();
+		if (isVU0) {
+			// TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET);
+			// xFowardJZ32 vu0jmp;
+			// xMOV(gprT2, (uptr)mVU);
+			// xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
+			mVUsavePipelineState(mVU);
+			mVUendProgram(mVU, NULL, 0);
+			// vu0jmp.SetTarget();
+		}
+		else {
+			xMOV(gprT2, (uptr)mVU);
+			xCALL(mVUwarning1);
+			mVUsavePipelineState(mVU);
+			mVUendProgram(mVU, NULL, 0);
+		}
 		skip.SetTarget();
 	}
 	xSUB(ptr32[&mVU->cycles], mVUcycles);
@@ -408,6 +421,7 @@ _r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
 	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
+	mVUdebugPrintBlocks(mVU,0);// Prints Start/End PC of blocks executed, for debugging...
 	mVUtestCycles(mVU);		   // Update VU Cycles and Exit Early if Necessary
 
 	// Second Pass
@@ -427,7 +441,7 @@ _r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		else if (!mVUinfo.isBdelay)	{ incPC(1); }
 		else {
 			mVUsetupRange(mVU, xPC, 0);
-			mVUdebugNOW(1);
+			mVUdebugPrintBlocks(mVU,1);
 			incPC(-3); // Go back to branch opcode
 			switch (mVUlow.branch) {
 				case 1: case 2:  normBranch(mVU, mFC);			  return thisPtr; // B/BAL

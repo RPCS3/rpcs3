@@ -22,10 +22,10 @@
 void mVUunpack_xyzw(xmm dstreg, xmm srcreg, int xyzw)
 {
 	switch ( xyzw ) {
-		case 0: xPSHUF.D(dstreg, srcreg, 0x00); break;
-		case 1: xPSHUF.D(dstreg, srcreg, 0x55); break;
-		case 2: xPSHUF.D(dstreg, srcreg, 0xaa); break;
-		case 3: xPSHUF.D(dstreg, srcreg, 0xff); break;
+		case 0: xPSHUF.D(dstreg, srcreg, 0x00); break; // XXXX
+		case 1: xPSHUF.D(dstreg, srcreg, 0x55); break; // YYYY
+		case 2: xPSHUF.D(dstreg, srcreg, 0xaa); break; // ZZZZ
+		case 3: xPSHUF.D(dstreg, srcreg, 0xff); break; // WWWW
 	}
 }
 
@@ -36,7 +36,7 @@ void mVUloadReg(xmm reg, xAddressVoid ptr, int xyzw)
 		case 4:		xMOVSSZX(reg, ptr32[ptr+4]);	break; // Y
 		case 2:		xMOVSSZX(reg, ptr32[ptr+8]);	break; // Z
 		case 1:		xMOVSSZX(reg, ptr32[ptr+12]);	break; // W
-		default:	xMOVAPS(reg, ptr128[ptr]);	break;
+		default:	xMOVAPS (reg, ptr128[ptr]);		break;
 	}
 }
 
@@ -135,10 +135,10 @@ void mVUsaveReg(xmm reg, xAddressVoid ptr, int xyzw, bool modXYZW)
 		case 1:		if (!modXYZW) mVUunpack_xyzw(reg, reg, 3);
 					xMOVSS(ptr32[ptr+12], reg);	
 					break; // W
-		case 8:		xMOVSS(ptr32[ptr], reg);		break; // X
-		case 12:	xMOVL.PS(ptr64[ptr], reg);		break; // XY
-		case 3:		xMOVH.PS(ptr64[ptr+8], reg);	break; // ZW
-		default:	xMOVAPS(ptr128[ptr], reg);	break; // XYZW
+		case 8:		xMOVSS(ptr32[ptr], reg);	 break; // X
+		case 12:	xMOVL.PS(ptr64[ptr], reg);	 break; // XY
+		case 3:		xMOVH.PS(ptr64[ptr+8], reg); break; // ZW
+		default:	xMOVAPS(ptr128[ptr], reg);	 break; // XYZW
 	}
 }
 
@@ -236,13 +236,13 @@ _f void mVUaddrFix(mV, x32 gprReg)
 _f void mVUbackupRegs(microVU* mVU)
 {
 	mVU->regAlloc->flushAll();
-	xMOVAPS(ptr128[&mVU->xmmPQb[0]], xmmPQ);
+	xMOVAPS(ptr128[mVU->xmmPQb], xmmPQ);
 }
 
 // Restore Volatile Regs
 _f void mVUrestoreRegs(microVU* mVU)
 {
-	xMOVAPS(xmmPQ, ptr128[&mVU->xmmPQb[0]]);
+	xMOVAPS(xmmPQ, ptr128[mVU->xmmPQb]);
 }
 
 //------------------------------------------------------------------

@@ -203,7 +203,7 @@ extern __aligned16 microVU microVU0;
 extern __aligned16 microVU microVU1;
 
 // Debug Helper
-extern int mVUdebugNow;
+int mVUdebugNow = 0;
 
 // Main Functions
 _f void  mVUinit(VURegs*, int);

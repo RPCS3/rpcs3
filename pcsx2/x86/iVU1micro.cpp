@@ -15,7 +15,7 @@
 
 
 #include "PrecompiledHeader.h"
-
+#if 0
 #include "Common.h"
 #include "iR5900.h"
 #include "VUmicro.h"
@@ -23,8 +23,6 @@
 
 
 #define useMVU1 CHECK_MICROVU1
-
-int mVUdebugNow = 0;
 
 //#define DEBUG_COMPARE  // Run sVU or mVU and print results
 //#define DEBUG_COMPARE2 // Runs both VU recs and breaks when results differ
@@ -284,4 +282,6 @@ namespace VU1micro
 		VUtestPause();
 	}
 }*/
+#endif
+
 #endif

@@ -114,6 +114,10 @@ _f void mVUreset(mV) {
 	// Clear All Program Data
 	//memset(&mVU->prog, 0, sizeof(mVU->prog));
 	memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
+	
+	if (IsDevBuild) { // Release builds shouldn't need this
+		memset(mVU->cache, 0xcc, mVU->cacheSize);
+	}
 
 	// Program Variables
 	mVU->prog.cleared	=  1;
@@ -163,12 +167,9 @@ void mVUresizeCache(mV, u32 size) {
 
 	if (size >= (u32)mVUcacheMaxSize) {
 		if (mVU->cacheSize==mVUcacheMaxSize) {
-
-			// Crap! We can't grow the rec any larger, so just reset it and start over.
-			// (if we don't reset, the rec will eventually crash)
-
+			// We can't grow the rec any larger, so just reset it and start over.
+			//(if we don't reset, the rec will eventually crash)
 			Console.WriteLn(Color_Magenta, "microVU%d: Cannot grow cache, size limit reached! [%dmb].  Resetting rec.", mVU->index, mVU->cacheSize/_1mb);
-			memset(mVU->cache, 0xcc, mVU->cacheSize);
 			mVUreset(mVU);
 			return;
 		}
@@ -179,7 +180,7 @@ void mVUresizeCache(mV, u32 size) {
 
 	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
 	if(!cache && !mVU->cache) throw Exception::OutOfMemory( wxsFormat( L"Micro VU%d recompiled code cache", mVU->index) );
-	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); return; }
+	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); mVUreset(mVU); return; }
 	if (mVU->cache) {
 		HostSys::Munmap(mVU->cache, mVU->cacheSize);
 		ProfilerTerminateSource(isVU1?"mVU1 Rec":"mVU0 Rec");
@@ -187,7 +188,6 @@ void mVUresizeCache(mV, u32 size) {
 
 	mVU->cache	   = cache;
 	mVU->cacheSize = size;
-	memset(mVU->cache, 0xcc, mVU->cacheSize);
 	ProfilerRegisterSource(isVU1?"mVU1 Rec":"mVU0 Rec", mVU->cache, mVU->cacheSize);
 	mVUreset(mVU);
 }

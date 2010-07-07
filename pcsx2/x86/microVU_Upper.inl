@@ -24,29 +24,31 @@
 #define SHIFT_XYZW(gprReg)	{ if (_XYZW_SS && modXYZW && !_W) { xSHL(gprReg, ADD_XYZW); } }
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
-static void mVUupdateFlags(mV, xmm reg, xmm regT1in = xEmptyReg, xmm regT2 = xEmptyReg, bool modXYZW = 1) {
-	x32 mReg = gprT1;
-	bool regT2b = false;
+static void mVUupdateFlags(mV, xmm reg, xmm regT1 = xEmptyReg, xmm regT2 = xEmptyReg, bool modXYZW = 1) {
+	x32  mReg   = gprT1, sReg   = getFlagReg(sFLAG.write);
+	bool regT1b = false, regT2b = false;
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
 
-	xmm regT1 = regT1in.IsEmpty() ? mVU->regAlloc->allocReg() : regT1in;
-	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW)))
-	{
-		if (regT2.IsEmpty())
-		{
-			regT2 = mVU->regAlloc->allocReg();
+	if (regT1.IsEmpty()) { 
+		regT1  = mVU->regAlloc->allocReg();
+		regT1b = true;
+	}
+
+	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) {
+		if (regT2.IsEmpty()) {
+			regT2  = mVU->regAlloc->allocReg();
 			regT2b = true;
 		}
 		xPSHUF.D(regT2, reg, 0x1B); // Flip wzyx to xyzw
 	}
-	else
-		regT2 = reg;
+	else regT2 = reg;
+
 	if (sFLAG.doFlag) {
-		mVUallocSFLAGa(getFlagReg(sFLAG.write), sFLAG.lastWrite); // Get Prev Status Flag
-		if (sFLAG.doNonSticky) xAND(getFlagReg(sFLAG.write), 0xfffc00ff); // Clear O,U,S,Z flags
+		mVUallocSFLAGa(sReg,   sFLAG.lastWrite);		// Get Prev Status Flag
+		if (sFLAG.doNonSticky) xAND(sReg, 0xfffc00ff);	// Clear O,U,S,Z flags
 	}
 
 	//-------------------------Check for Signed flags------------------------------
@@ -56,12 +58,12 @@ static void mVUupdateFlags(mV, xmm reg, xmm regT1in = xEmptyReg, xmm regT2 = xEm
 	xCMPEQ.PS(regT1, regT2); // Set all F's if each vector is zero
 	xMOVMSKPS(gprT2, regT1); // Used for Zero Flag Calculation
 
-	xAND(mReg, AND_XYZW);	// Grab "Is Signed" bits from the previous calculation
+	xAND(mReg, AND_XYZW);	 // Grab "Is Signed" bits from the previous calculation
 	xSHL(mReg, 4 + ADD_XYZW);
 
 	//-------------------------Check for Zero flags------------------------------
 
-	xAND(gprT2, AND_XYZW);	// Grab "Is Zero" bits from the previous calculation
+	xAND(gprT2, AND_XYZW);	 // Grab "Is Zero" bits from the previous calculation
 	if (mFLAG.doFlag) { SHIFT_XYZW(gprT2); }
 	xOR(mReg, gprT2);
 
@@ -69,13 +71,13 @@ static void mVUupdateFlags(mV, xmm reg, xmm regT1in = xEmptyReg, xmm regT2 = xEm
 
 	if (mFLAG.doFlag) mVUallocMFLAGb(mVU, mReg, mFLAG.write); // Set Mac Flag
 	if (sFLAG.doFlag) {
-		xOR(getFlagReg(sFLAG.write), mReg);
+		xOR(sReg, mReg);
 		if (sFLAG.doNonSticky) {
 			xSHL(mReg, 8);
-			xOR(getFlagReg(sFLAG.write), mReg);
+			xOR (sReg, mReg);
 		}
 	}
-	if (regT1 != regT1in) mVU->regAlloc->clearNeeded(regT1);
+	if (regT1b) mVU->regAlloc->clearNeeded(regT1);
 	if (regT2b) mVU->regAlloc->clearNeeded(regT2);
 }
 
@@ -350,7 +352,7 @@ mVUop(mVU_OPMSUB) {
 }
 
 // FTOI0/FTIO4/FTIO12/FTIO15 Opcodes
-static void mVU_FTOIx(mP, const float (*addr)[4], const char* opName) {
+static void mVU_FTOIx(mP, const float* addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
@@ -377,7 +379,7 @@ static void mVU_FTOIx(mP, const float (*addr)[4], const char* opName) {
 }
 
 // ITOF0/ITOF4/ITOF12/ITOF15 Opcodes
-static void mVU_ITOFx(mP, const float (*addr)[4], const char* opName) {
+static void mVU_ITOFx(mP, const float* addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
@@ -404,9 +406,9 @@ mVUop(mVU_CLIP) {
 		mVUallocCFLAGa(mVU, gprT1, cFLAG.lastWrite);
 		xSHL(gprT1, 6);
 
-		xAND.PS(Ft, ptr128[&mVUglob.absclip[0]]);
+		xAND.PS(Ft, ptr128[mVUglob.absclip]);
 		xMOVAPS(t1, Ft);
-		xPOR(t1, ptr128[&mVUglob.signbit[0]]);
+		xPOR(t1, ptr128[mVUglob.signbit]);
 
 		xCMPNLE.PS(t1, Fs); // -w, -z, -y, -x
 		xCMPLT.PS(Ft, Fs);  // +w, +z, +y, +x
@@ -520,11 +522,11 @@ mVUop(mVU_MINIy)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,		"MINIy",  0);  }
 mVUop(mVU_MINIz)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,		"MINIz",  0);  }
 mVUop(mVU_MINIw)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,		"MINIw",  0);  }
 mVUop(mVU_FTOI0)	{ mVU_FTOIx(mX, NULL,					"FTOI0");      }
-mVUop(mVU_FTOI4)	{ mVU_FTOIx(mX, &mVUglob.FTOI_4,		"FTOI4");      }
-mVUop(mVU_FTOI12)	{ mVU_FTOIx(mX, &mVUglob.FTOI_12,		"FTOI12");     }
-mVUop(mVU_FTOI15)	{ mVU_FTOIx(mX, &mVUglob.FTOI_15,		"FTOI15");     }
+mVUop(mVU_FTOI4)	{ mVU_FTOIx(mX, mVUglob.FTOI_4,			"FTOI4");      }
+mVUop(mVU_FTOI12)	{ mVU_FTOIx(mX, mVUglob.FTOI_12,		"FTOI12");     }
+mVUop(mVU_FTOI15)	{ mVU_FTOIx(mX, mVUglob.FTOI_15,		"FTOI15");     }
 mVUop(mVU_ITOF0)	{ mVU_ITOFx(mX, NULL,					"ITOF0");      }
-mVUop(mVU_ITOF4)	{ mVU_ITOFx(mX, &mVUglob.ITOF_4,		"ITOF4");      }
-mVUop(mVU_ITOF12)	{ mVU_ITOFx(mX, &mVUglob.ITOF_12,		"ITOF12");     }
-mVUop(mVU_ITOF15)	{ mVU_ITOFx(mX, &mVUglob.ITOF_15,		"ITOF15");     }
+mVUop(mVU_ITOF4)	{ mVU_ITOFx(mX, mVUglob.ITOF_4,			"ITOF4");      }
+mVUop(mVU_ITOF12)	{ mVU_ITOFx(mX, mVUglob.ITOF_12,		"ITOF12");     }
+mVUop(mVU_ITOF15)	{ mVU_ITOFx(mX, mVUglob.ITOF_15,		"ITOF15");     }
 mVUop(mVU_NOP)		{ pass3 { mVUlog("NOP"); } }

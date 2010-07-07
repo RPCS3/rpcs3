@@ -672,6 +672,10 @@
 								Name="Super VU"
 								>
 								<File
+									RelativePath="..\..\x86\sVU_Compare.h"
+									>
+								</File>
+								<File
 									RelativePath="..\..\x86\sVU_Debug.h"
 									>
 								</File>

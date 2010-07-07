@@ -66,7 +66,7 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 #if 1 // CHECK_MACROVU0 - Always on now
 	xMOV(ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL],	getFlagReg(fStatus));
 #else
-	mVUallocSFLAGc(gprT1, fStatus);
+	mVUallocSFLAGc(gprT1, gprT2, fStatus);
 	xMOV(ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL],	gprT1);
 #endif
 	mVUallocMFLAGa(mVU, gprT1, fMac);
