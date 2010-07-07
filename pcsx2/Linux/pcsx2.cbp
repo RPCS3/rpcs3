@@ -593,6 +593,7 @@
 		<Unit filename="../x86/newVif_Unpack.cpp" />
 		<Unit filename="../x86/newVif_UnpackSSE.cpp" />
 		<Unit filename="../x86/newVif_UnpackSSE.h" />
+		<Unit filename="../x86/sVU_Compare.h" />
 		<Unit filename="../x86/sVU_Debug.h" />
 		<Unit filename="../x86/sVU_Lower.cpp" />
 		<Unit filename="../x86/sVU_Micro.cpp" />
