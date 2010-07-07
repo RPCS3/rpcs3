@@ -31,8 +31,8 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
-					<Add option="-W" />
 					<Add option="-g" />
+					<Add option="-W" />
 					<Add option="-DZEROGS_DEVBUILD" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
@@ -70,6 +70,7 @@
 			<Add option="-L/opt/cg/lib" />
 			<Add option="-msse2" />
 			<Add option="-fno-regmove" />
+			<Add option="-fno-strict-aliasing" />
 			<Add option="-DZEROGS_SSE2" />
 			<Add directory="../../Linux" />
 			<Add directory="../../../opengl" />

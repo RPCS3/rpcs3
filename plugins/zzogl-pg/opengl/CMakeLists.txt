@@ -28,6 +28,7 @@ set(CommonFlags
     -Wunused-variable
     -msse2
     -fno-regmove
+    -fno-strict-aliasing
     -DZEROGS_SSE2
     )
 

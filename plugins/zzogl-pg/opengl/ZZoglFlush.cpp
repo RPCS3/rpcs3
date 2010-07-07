@@ -637,7 +637,7 @@ inline void FlushSetContextTarget(VB& curvb, int context)
 		// Reduce an assert to a warning.
 		if (curvb.pdepth->status & CRenderTarget::TS_NeedUpdate)
 		{
-			ZZLog::Debug_Log("In FlushSetContextTarget, pdepth is has TS_NeedUpdate set.");
+			ZZLog::Debug_Log("In FlushSetContextTarget, pdepth has TS_NeedUpdate set.");
 		}
 #endif
 		if (!curvb.zbuf.zmsk)
