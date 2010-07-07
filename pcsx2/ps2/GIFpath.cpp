@@ -440,11 +440,20 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 					size *= 2;
 					u32 len = aMin(size, (nloop * numregs)-curreg);
 					
-					if(len < (nloop * numregs)-curreg) 
+					if(len < ((nloop * numregs)-curreg)) 
 					{
+						const int nloops_copied		= len / numregs;
 						const int regs_not_copied	= len % numregs;
+
+						DevCon.Warning("Quick Hit it path %d Please report if you experience problems", pathidx + 1);
 						curreg += regs_not_copied;
-						nloop -= len / numregs;
+						nloop -= nloops_copied;
+
+						if(curreg >= numregs)
+						{
+							--nloop;
+							curreg -= numregs;
+						}
 					}
 					else nloop = 0;				
 					
@@ -452,8 +461,10 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 					incTag(8 * len, len);
 					if (size & 1) { incTag(8, 1); }
 					size /= 2;
-					if(curreg != 0) DevCon.Warning("Oops Q %x", curreg);
-					if(nloop = 0) curreg = 0;
+					//if(curreg != 0 || (len % numregs) > 0) DevCon.Warning("Oops Q c %x n %x m %x r %x", curreg, nloop, (len % numregs), numregs);
+
+					
+					if(nloop == 0) curreg = 0;
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -635,19 +646,29 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					size *= 2;
 					u32 len = aMin(size, (nloop * numregs)-curreg);
 					
-					if(len < (nloop * numregs)-curreg) 
+					if(len < ((nloop * numregs)-curreg))
 					{
+						const int nloops_copied		= len / numregs;
 						const int regs_not_copied	= len % numregs;
+
+						//DevCon.Warning("Hit it path %d", pathidx + 1);
 						curreg += regs_not_copied;
-						nloop -= len / numregs;
+						nloop -= nloops_copied;
+
+						if(curreg >= numregs)
+						{
+							--nloop;
+							curreg -= numregs;
+						}
 					}
 					else nloop = 0;									
 					
 					incTag(8 * len, len);
 					if (size & 1) { incTag(8, 1); }
 					size /= 2;
-					if(curreg != 0) DevCon.Warning("Oops Q %x", curreg);
-					if(nloop = 0) curreg = 0;
+					//if(curreg != 0 || (len % numregs) > 0) DevCon.Warning("Oops c %x n %x m %x r %x", curreg, nloop, (len % numregs), numregs);
+				
+					if(nloop == 0) curreg = 0;
 				}
 				break;
 				case GIF_FLG_IMAGE:
