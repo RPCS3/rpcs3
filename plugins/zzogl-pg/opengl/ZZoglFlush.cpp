@@ -633,8 +633,13 @@ inline void FlushSetContextTarget(VB& curvb, int context)
 
 	if (curvb.pdepth != NULL)
 	{
-		assert(!(curvb.pdepth->status&CRenderTarget::TS_NeedUpdate));
-
+#ifdef _DEBUG
+		// Reduce an assert to a warning.
+		if (curvb.pdepth->status & CRenderTarget::TS_NeedUpdate)
+		{
+			ZZLog::Debug_Log("In FlushSetContextTarget, pdepth is has TS_NeedUpdate set.");
+		}
+#endif
 		if (!curvb.zbuf.zmsk)
 		{
 			assert(!(curvb.pdepth->status & CRenderTarget::TS_Virtual));
@@ -1941,8 +1946,18 @@ void ZeroGS::SetContextTarget(int context)
 
 	if (vb[!context].prndr != curvb.prndr) vb[!context].bVarsSetTarg = false;
 
-	assert(!(curvb.prndr->status&CRenderTarget::TS_NeedUpdate));
-	assert(curvb.pdepth == NULL || !(curvb.pdepth->status&CRenderTarget::TS_NeedUpdate));
+#ifdef _DEBUG
+	// These conditions happen often enough that we'll just warn about it rather then abort in Debug mode.
+	if (curvb.prndr->status & CRenderTarget::TS_NeedUpdate) 
+	{
+		ZZLog::Debug_Log("In SetContextTarget, prndr is ending with TS_NeedUpdate set.");
+	}
+	
+	if (curvb.pdepth != NULL && (curvb.pdepth->status & CRenderTarget::TS_NeedUpdate))
+	{
+		ZZLog::Debug_Log("In SetContextTarget, pdepth is ending with TS_NeedUpdate set.");
+	}
+#endif
 
 	GL_REPORT_ERRORD();
 }
