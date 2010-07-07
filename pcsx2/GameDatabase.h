@@ -63,7 +63,7 @@ struct key_pair {
 
 	wxString toString() const {
 		if (key[0] == '[') {
-			pxAssumeDev( key.EndsWith(L"]"), "Malformed multiline key detected: missing end bracket!" );
+			pxAssertDev( key.EndsWith(L"]"), "Malformed multiline key detected: missing end bracket!" );
 
 			// Terminating tag must be written without the "rvalue" -- in the form of:
 			//   [/patches]

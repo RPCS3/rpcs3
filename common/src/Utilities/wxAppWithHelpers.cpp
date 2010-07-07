@@ -596,7 +596,7 @@ void wxAppWithHelpers::ProcessAction( pxActionEvent& evt )
 
 void wxAppWithHelpers::DeleteObject( BaseDeletableObject& obj )
 {
-	pxAssume( !obj.IsBeingDeleted() );
+	pxAssert( !obj.IsBeingDeleted() );
 	wxCommandEvent evt( pxEvt_DeleteObject );
 	evt.SetClientData( (void*)&obj );
 	AddIdleEvent( evt );

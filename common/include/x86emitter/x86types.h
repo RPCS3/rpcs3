@@ -355,7 +355,6 @@ template< typename T > void xWrite( T val );
 
 	public:
 		xRegisterSSE(): _parent() {}
-		//xRegisterSSE( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegisterSSE( int regId ) : _parent( regId ) {}
 
 		virtual uint GetOperandSize() const { return 16; }
@@ -374,14 +373,8 @@ template< typename T > void xWrite( T val );
 			--Id &= (iREGCNT_XMM-1);
 			return *this;
 		}
-		
-		static const xRegisterSSE* const m_tbl_xmmRegs[iREGCNT_XMM];
 
-		static const xRegisterSSE& GetInstance(uint id)
-		{
-			pxAssume(id < iREGCNT_XMM);
-			return *m_tbl_xmmRegs[id];
-		}
+		static const inline xRegisterSSE& GetInstance(uint id);
 	};
 
 	class xRegisterCL : public xRegister8
@@ -498,6 +491,19 @@ template< typename T > void xWrite( T val );
 
 	extern const xRegisterCL cl;		// I'm special!
 
+	const xRegisterSSE& xRegisterSSE::GetInstance(uint id)
+	{
+		static const xRegisterSSE *const m_tbl_xmmRegs[iREGCNT_XMM] = 
+		{
+			&xmm0, &xmm1, 
+			&xmm2, &xmm3, 
+			&xmm4, &xmm5,
+			&xmm6, &xmm7
+		};
+
+		pxAssume(id < iREGCNT_XMM);
+		return *m_tbl_xmmRegs[id];
+	}
 
 	// --------------------------------------------------------------------------------------
 	//  xAddressVoid

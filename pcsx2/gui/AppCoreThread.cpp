@@ -296,6 +296,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	const wxString newGameKey( SysGetDiscID() );
 	const bool verbose( newGameKey != curGameKey );
+	curGameKey = newGameKey;
 
 	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
 	{
@@ -323,8 +324,6 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 			gameCheats.Printf(L" [%d Cheats]", cheats);
 		}
 	}
-
-	curGameKey = newGameKey;
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
 

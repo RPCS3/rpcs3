@@ -1270,7 +1270,7 @@ bool SysCorePlugins::Shutdown()
 {
 	if( !NeedsShutdown() ) return false;
 
-	pxAssumeDev( !NeedsClose(), "Cannot shut down plugins prior to Close()" );
+	pxAssertDev( !NeedsClose(), "Cannot shut down plugins prior to Close()" );
 	
 	GetMTGS().Cancel();	// cancel it for speedier shutdown!
 	

@@ -589,7 +589,7 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 	MainEmuFrame* mainFrame = GetMainFramePtr();
 
 	pxAssume( mainFrame != NULL );
-	pxAssume( ((uptr)GetTopWindow()) == ((uptr)mainFrame) );
+	pxAssert( ((uptr)GetTopWindow()) == ((uptr)mainFrame) );
 	return *mainFrame;
 }
 
@@ -866,7 +866,7 @@ void Pcsx2App::OpenGsPanel()
 		gsFrame->SetSize( oldsize );
 	}
 	
-	pxAssumeDev( !GetCorePlugins().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
+	pxAssertDev( !GetCorePlugins().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
 	pDsp = (uptr)gsFrame->GetViewport()->GetHandle();
 
 	gsFrame->ShowFullScreen( g_Conf->GSWindow.IsFullscreen );

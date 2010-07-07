@@ -86,8 +86,6 @@ extern const wxPoint wxDefaultPosition;
 		return ((int)id >= enumName##_FIRST) && ((int)id < enumName##_COUNT); } \
 	static __forceinline bool EnumAssert( enumName id ) { \
 		return pxAssert( EnumIsValid(id) ); } \
-	static __forceinline void EnumAssume( enumName id ) { \
-		pxAssume( EnumIsValid(id) ); } \
  \
 	extern const wxChar* EnumToString( enumName id )
 
