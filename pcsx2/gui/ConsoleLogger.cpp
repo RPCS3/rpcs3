@@ -228,6 +228,8 @@ enum MenuIDs_t
 	MenuID_FontSize_Huge,
 };
 
+#define pxTheApp ((Pcsx2App&)*wxTheApp)
+
 // --------------------------------------------------------------------------------------
 //  ScopedLogLock  (implementations)
 // --------------------------------------------------------------------------------------
@@ -238,9 +240,9 @@ public:
 
 public:
 	ScopedLogLock()
-		: ScopedLock( ((Pcsx2App&)*wxTheApp).GetProgramLogLock() )
+		: ScopedLock( wxThread::IsMain() ? NULL : &pxTheApp.GetProgramLogLock() )
 	{
-		WindowPtr = ((Pcsx2App&)*wxTheApp).m_ptr_ProgramLog;
+		WindowPtr = pxTheApp.m_ptr_ProgramLog;
 	}
 
 	virtual ~ScopedLogLock() throw() {}
@@ -903,7 +905,7 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 
 void Pcsx2App::EnableAllLogging()
 {
-	ScopedLock lock( m_mtx_ProgramLog );
+	AffinityAssert_AllowFrom_MainUI();
 
 	const bool logBoxOpen = (m_ptr_ProgramLog != NULL);
 	const IConsoleWriter* newHandler = NULL;
@@ -932,6 +934,8 @@ void Pcsx2App::EnableAllLogging()
 // emuLog file handle.  Call SetConsoleLogging to re-enable the disk logger when finished.
 void Pcsx2App::DisableDiskLogging() const
 {
+	AffinityAssert_AllowFrom_MainUI();
+
 	const bool logBoxOpen = (GetProgramLog() != NULL);
 	Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
 
@@ -950,7 +954,6 @@ void Pcsx2App::DisableDiskLogging() const
 
 void Pcsx2App::DisableWindowLogging() const
 {
-	ScopedLock lock( m_mtx_ProgramLog );
+	AffinityAssert_AllowFrom_MainUI();
 	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Stdout );
-	//Threading::Sleep( 5 );
 }

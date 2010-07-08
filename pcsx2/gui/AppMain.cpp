@@ -904,6 +904,8 @@ void Pcsx2App::OnGsFrameClosed( wxWindowID id )
 void Pcsx2App::OnProgramLogClosed( wxWindowID id )
 {
 	if( (m_id_ProgramLogBox == wxID_ANY) || (m_id_ProgramLogBox != id) ) return;
+
+	ScopedLock lock( m_mtx_ProgramLog );
 	m_id_ProgramLogBox = wxID_ANY;
 	DisableWindowLogging();
 }
