@@ -15,6 +15,9 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 	MAKEFLAGS += -j$(NUMJOBS)
 endif
 
+USER_CFLAGS=$(shell dpkg-buildflags --get CFLAGS)
+USER_CXXFLAGS=$(shell dpkg-buildflags --get CXXFLAGS)
+
 build: build-stamp
 build-stamp:
 	dh_testdir
@@ -23,7 +26,12 @@ build-stamp:
 	for makefile in `find ./ -name "Makefile"` ; do [ -f $${makefile}.orig ] || mv $${makefile} $${makefile}.orig ; done
 
 	# Cmake based makefile
-	cmake CMakeLists.txt -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) -DCMAKE_BUILD_STRIP=FALSE -DFORCE_INTERNAL_SOUNDTOUCH=FALSE
+	cmake CMakeLists.txt \
+		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
+		-DCMAKE_BUILD_STRIP=FALSE \
+		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
+		-DUSER_CMAKE_C_FLAGS="$(USER_CFLAGS)" \
+		-DUSER_CMAKE_CXX_FLAGS="$(USER_CXXFLAGS)"
 	$(MAKE) $(MAKEFLAGS)
 
 	touch build-stamp

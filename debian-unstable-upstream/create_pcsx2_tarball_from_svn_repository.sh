@@ -68,7 +68,9 @@ mkdir -p $ROOT_DIR/plugins
 (cd $ROOT_DIR/plugins; 
     get_svn_file plugins/CMakeLists.txt;
     # DVD
-    get_svn_dir plugins/CDVDnull plugins/CDVDiso;
+    get_svn_dir plugins/CDVDnull;
+    # Copyright issue
+    # get_svn_dir plugins/CDVDnull plugins/CDVDiso;
     # PAD
     get_svn_dir plugins/PadNull plugins/onepad;
     # AUDIO
@@ -103,6 +105,11 @@ find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
 echo "Remove windows file (useless & copyright issue)"
 find $NEW_DIR -iname "windows" -exec rm -fr {} \; 2> /dev/null
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
+rm -fr "${NEW_DIR}/tools/GSDumpGUI"
+rm -fr "${NEW_DIR}/common/vsprops"
+echo "Remove useless file (copyright issue)"
+rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders/zlib"
+rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
 
 
 ## BUILD
