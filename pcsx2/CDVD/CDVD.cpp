@@ -712,26 +712,34 @@ __forceinline void cdvdActionInterrupt()
 	switch( cdvd.Action )
 	{
 		case cdvdAction_Seek:
-		case cdvdAction_Standby:
 			cdvd.Spinning = true;
-			cdvd.Ready  = CDVD_READY1;
+			cdvd.Ready  = CDVD_READY1; //check (rama)
 			cdvd.Sector = cdvd.SeekToSector;
-			cdvd.Status = CDVD_STATUS_SEEK_COMPLETE;
+			cdvd.Status = CDVD_STATUS_PAUSE;
+		break;
+
+		case cdvdAction_Standby:
+			DevCon.Warning("CDVD Standby Call");
+			cdvd.Spinning = true; //check (rama)
+			cdvd.Ready  = CDVD_READY1; //check (rama)
+			cdvd.Sector = cdvd.SeekToSector;
+			cdvd.Status = CDVD_STATUS_PAUSE;
 		break;
 
 		case cdvdAction_Stop:
 			cdvd.Spinning = false;
 			cdvd.Ready = CDVD_READY1;
 			cdvd.Sector = 0;
-			cdvd.Status = CDVD_STATUS_NONE;
+			cdvd.Status = CDVD_STATUS_STOP;
 		break;
 
 		case cdvdAction_Break:
 			// Make sure the cdvd action state is pretty well cleared:
+			DevCon.Warning("CDVD Break Call");
 			cdvd.Reading = 0;
 			cdvd.Readed = 0;
 			cdvd.Ready  = CDVD_READY2;		// should be CDVD_READY1 or something else?
-			cdvd.Status = CDVD_STATUS_NONE;
+			cdvd.Status = CDVD_STATUS_STOP;
 			cdvd.RErr = 0;
 			cdvd.nCommand = 0;
 		break;
@@ -761,7 +769,7 @@ __forceinline void cdvdReadInterrupt()
 		cdvd.RetryCntP = 0;
 		cdvd.Reading = 1;
 		cdvd.Readed = 1;
-		cdvd.Status = CDVD_STATUS_SEEK_COMPLETE;
+		cdvd.Status = CDVD_STATUS_PAUSE; // check (rama)
 		cdvd.Sector = cdvd.SeekToSector;
 
 		CDVD_LOG( "Cdvd Seek Complete > Scheduling block read interrupt at iopcycle=%8.8x.",
@@ -853,7 +861,7 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 	cdvd.Ready = CDVD_NOTREADY;
 	cdvd.Reading = 0;
 	cdvd.Readed = 0;
-	cdvd.Status = CDVD_STATUS_NONE;
+	cdvd.Status = CDVD_STATUS_STOP;
 
 	if( !cdvd.Spinning )
 	{
@@ -886,7 +894,7 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 
 		if( delta == 0 )
 		{
-			cdvd.Status = CDVD_STATUS_SEEK_COMPLETE;
+			cdvd.Status = CDVD_STATUS_PAUSE;
 			cdvd.Readed = 1; // Note: 1, not 0, as implied by the next comment. Need to look into this. --arcum42
 			cdvd.RetryCntP = 0;
 
@@ -1104,7 +1112,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 	CDVD_LOG("cdvdWrite04: NCMD %s (%x) (ParamP = %x)", nCmdName[rt], rt, cdvd.ParamP);
 
 	cdvd.nCommand = rt;
-	cdvd.Status = CDVD_STATUS_NONE;
+	cdvd.Status = CDVD_STATUS_STOP; // check (rama)
 	cdvd.PwOff = Irq_None;		// good or bad?
 
 	switch (rt) {
@@ -1333,7 +1341,7 @@ static __forceinline void cdvdWrite07(u8 rt)		// BREAK
 	// Clear the cdvd status:
 	cdvd.Readed = 0;
 	cdvd.Reading = 0;
-	cdvd.Status = CDVD_STATUS_NONE;
+	cdvd.Status = CDVD_STATUS_STOP;
 	//cdvd.nCommand = 0;
 }
 
