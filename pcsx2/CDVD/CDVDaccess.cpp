@@ -400,6 +400,9 @@ void DoCDVDclose()
 		CDVD->close();
 
 	DoCDVDresetDiskTypeCache();
+	
+	Console.Warning("Closing CDVD plugin > open virtual disk tray");
+	openVirtualTray();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)

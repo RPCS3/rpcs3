@@ -476,6 +476,13 @@ s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 	return ret;
 }
 
+void openVirtualTray()
+{
+	DiscSwapTimerSeconds = cdvd.RTC.second;
+	cdvd.Status = CDVD_STATUS_TRAY_OPEN;
+	cdvd.Ready = CDVD_NOTREADY;
+}
+
 s32 cdvdCtrlTrayOpen()
 {
 	s32 ret = CDVD->ctrlTrayOpen();
@@ -915,6 +922,16 @@ void cdvdVsync() {
 	cdvd.RTCcount++;
 	if (cdvd.RTCcount < ((gsRegionMode == Region_NTSC) ? 60 : 50)) return;
 	cdvd.RTCcount = 0;
+
+	if ( cdvd.Status == CDVD_STATUS_TRAY_OPEN )
+	{	
+		if ( cdvd.RTC.second != DiscSwapTimerSeconds)
+		{
+			Console.Warning("Close virtual disk tray");
+			cdvd.Status = CDVD_STATUS_PAUSE;
+			cdvd.Ready = CDVD_READY1;
+		}
+	}
 
 	cdvd.RTC.second++;
 	if (cdvd.RTC.second < 60) return;
