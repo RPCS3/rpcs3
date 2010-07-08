@@ -132,9 +132,7 @@ struct microProgram {
 	int idx;	 // Program index
 };
 
-struct microProgramList {
-	deque<microProgram*>* list;  // List of microPrograms who start with the same startPC value
-};
+typedef deque<microProgram*> microProgramList;
 
 struct microProgramQuick {
 	microBlockManager*    block; // Quick reference to valid microBlockManager for current startPC
@@ -143,7 +141,7 @@ struct microProgramQuick {
 
 struct microProgManager {
 	microIR<mProgSize>	IRinfo;				// IR information
-	microProgramList	prog [mProgSize/2];	// List of microPrograms indexed by startPC values
+	microProgramList*	prog [mProgSize/2];	// List of microPrograms indexed by startPC values
 	microProgramQuick	quick[mProgSize/2];	// Quick reference to valid microPrograms for current execution
 	microProgram*		cur;				// Pointer to currently running MicroProgram
 	int					total;				// Total Number of valid MicroPrograms

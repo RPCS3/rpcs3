@@ -91,7 +91,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->regAlloc		= new microRegAlloc(mVU->regs);
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		mVU->prog.prog[i].list = new deque<microProgram*>();
+		mVU->prog.prog[i] = new deque<microProgram*>();
 	}
 
 	mVU->dispCache = SysMmapEx(NULL, mVUdispCacheSize, 0, (mVU->index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
@@ -133,12 +133,12 @@ _f void mVUreset(mV) {
 	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - mVUcacheSafeZone)); // "Safe Zone"
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		deque<microProgram*>::iterator it = mVU->prog.prog[i].list->begin();
-		for ( ; it != mVU->prog.prog[i].list->end(); it++) {
+		deque<microProgram*>::iterator it = mVU->prog.prog[i]->begin();
+		for ( ; it != mVU->prog.prog[i]->end(); it++) {
 			if (!isVU1) mVUdeleteProg<0>(it[0]);
 			else	    mVUdeleteProg<1>(it[0]);
 		}
-		mVU->prog.prog[i].list->clear();
+		mVU->prog.prog[i]->clear();
 		mVU->prog.quick[i].block = NULL;
 		mVU->prog.quick[i].prog  = NULL;
 	}
@@ -152,12 +152,12 @@ _f void mVUclose(mV) {
 
 	// Delete Programs and Block Managers
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		deque<microProgram*>::iterator it = mVU->prog.prog[i].list->begin();
-		for ( ; it != mVU->prog.prog[i].list->end(); it++) {
+		deque<microProgram*>::iterator it = mVU->prog.prog[i]->begin();
+		for ( ; it != mVU->prog.prog[i]->end(); it++) {
 			if (!isVU1) mVUdeleteProg<0>(it[0]);
 			else	    mVUdeleteProg<1>(it[0]);
 		}
-		safe_delete(mVU->prog.prog[i].list);
+		safe_delete(mVU->prog.prog[i]);
 	}
 
 	safe_delete(mVU->regAlloc);
@@ -236,7 +236,7 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	double cacheUsed =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
 	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %3.3f%%)",
-					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
+					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC]->size()+1, cacheUsed);
 	return prog;
 }
 
@@ -278,15 +278,15 @@ _mVUt _f bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
 _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	microVU* mVU = mVUx;
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
-	microProgramList&  list  = mVU->prog.prog [startPC/8];
+	microProgramList*  list  = mVU->prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
-		deque<microProgram*>::iterator it( list.list->begin() );
-		for ( ; it != list.list->end(); it++) {
+		deque<microProgram*>::iterator it( list->begin() );
+		for ( ; it != list->end(); it++) {
 			if (mVUcmpProg<vuIndex>(*it[0], 0)) {
 				quick.block = it[0]->block[startPC/8];
 				quick.prog  = it[0];
-				list.list->erase(it);
-				list.list->push_front(quick.prog);
+				list->erase(it);
+				list->push_front(quick.prog);
 				return mVUentryGet(mVU, quick.block, startPC, pState);
 			}
 		}
@@ -298,7 +298,7 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 		void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
 		quick.block			= mVU->prog.cur->block[startPC/8];
 		quick.prog			= mVU->prog.cur;
-		list.list->push_front(mVU->prog.cur);
+		list->push_front(mVU->prog.cur);
 		return entryPoint;
 	}
 	// If list.quick, then we've already found and recompiled the program ;)
