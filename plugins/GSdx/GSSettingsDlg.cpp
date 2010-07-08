@@ -116,7 +116,7 @@ void GSSettingsDlg::OnInit()
 		if(i >= 3 && i <= 5)
 		{
 			if(!isdx11avail) continue;
-			g_renderers[i].name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "10" : "11");
+			g_renderers[i].name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "11" : "10");
 		}
 
 		renderers.push_back(g_renderers[i]);
