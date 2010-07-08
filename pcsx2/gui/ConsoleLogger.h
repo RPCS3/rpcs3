@@ -236,8 +236,8 @@ public:
 	// (settings change if the user moves the window or changes the font size)
 	const ConLogConfig& GetConfig() const { return m_conf; }
 
-	void Write( ConsoleColors color, const wxString& text );
-	void Newline();
+	bool Write( ConsoleColors color, const wxString& text );
+	bool Newline();
 
 protected:
 	// menu callbacks
