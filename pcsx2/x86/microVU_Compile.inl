@@ -135,31 +135,26 @@ void doSwapOp(mV) {
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
 		DevCon.WriteLn(Color_Green, "microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
 
+		// Allocate t1 first for better chance of reg-alloc
+		const xmm& t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
 		const xmm& t2 = mVU->regAlloc->allocReg();
-		
-		{
-			const xmm& t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
-			xMOVAPS(t2, t1);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+		xMOVAPS(t2, t1); // Backup VF reg
+		mVU->regAlloc->clearNeeded(t1);
 
 		mVUopL(mVU, 1);
 
-		{
-			const xmm& t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
-			xXOR.PS(t2, t1);
-			xXOR.PS(t1, t2);
-			xXOR.PS(t2, t1);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+		const xmm& t3 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
+		xXOR.PS(t2, t3); // Swap new and old values of the register
+		xXOR.PS(t3, t2); // Uses xor swap trick...
+		xXOR.PS(t2, t3);
+		mVU->regAlloc->clearNeeded(t3);
 
 		incPC(1); 
 		doUpperOp();
-		{
-			const xmm& t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
-			xMOVAPS(t1, t2);
-			mVU->regAlloc->clearNeeded(t1);
-		}
+
+		const xmm& t4 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
+		xMOVAPS(t4, t2);
+		mVU->regAlloc->clearNeeded(t4);
 		mVU->regAlloc->clearNeeded(t2);
 	}
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
