@@ -614,9 +614,6 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 
 int Values[100] = {0, };
 
-#ifndef __LINUX__
-__forceinline 
-#endif
 void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 {
 	int index = Index;
@@ -789,9 +786,6 @@ void ZeroGS::KickTriangleFan()
 	OUTPUT_VERT(p[2], 2);
 }
 
-#ifndef __LINUX__
-__forceinline 
-#endif
 void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 {
 	SET_VERTEX(p, next, curvb);
@@ -884,6 +878,19 @@ void ZeroGS::SetFogColor(u32 fog)
 	//}
 
 //	}
+}
+
+void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
+{
+	FUNCLOG
+	
+	SetShaderCaller("SetFogColor");
+	Vector v;
+	
+	v.x = fog->FCR / 255.0f;
+	v.y = fog->FCG / 255.0f;
+	v.z = fog->FCB / 255.0f;
+	ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 }
 
 void ZeroGS::ExtWrite()

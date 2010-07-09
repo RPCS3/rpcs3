@@ -626,17 +626,12 @@ void __fastcall GIFRegHandlerSCANMSK(u32* data)
 {
 	FUNCLOG
 	GIFRegSCANMSK* r = (GIFRegSCANMSK*)(data);
-//  ZeroGS::FlushBoth();
-//  ZeroGS::ResolveC(&ZeroGS::vb[0]);
-//  ZeroGS::ResolveZ(&ZeroGS::vb[0]);
-	// GSdx flushes here, like this:
-	/*if(r->SCANMSK != gs.smask)
-	{
-		//Flush
-	}*/
+	
 	if(r->MSK != gs.smask)
 	{
 		ZeroGS::FlushBoth();
+//		ZeroGS::ResolveC(&ZeroGS::vb[0]);
+//		ZeroGS::ResolveZ(&ZeroGS::vb[0]);
 	}
 	
 	gs.smask = r->MSK;
@@ -710,38 +705,34 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 {
 	FUNCLOG
 	GIFRegTEXA* r = (GIFRegTEXA*)(data);
-	texaInfo newinfo;
-	/*if(r->TEXA != m_env.TEXA)
-	{
-		Flush();
-	}*/
 	
-	newinfo.aem = r->AEM;
-	newinfo.ta[0] = r->TA0;
-	newinfo.ta[1] = r->TA1;
-
-	if (*(u32*)&newinfo != *(u32*)&gs.texa)
+	if ((r->AEM != gs.texa.aem) || (r->TA0 != gs.texa.ta[0]) || (r->TA1 != gs.texa.ta[1]))
 	{
 		ZeroGS::FlushBoth();
-		
-		*(u32*)&gs.texa = *(u32*) & newinfo;
-		
-		gs.texa.fta[0] = newinfo.ta[0] / 255.0f;
-		gs.texa.fta[1] = newinfo.ta[1] / 255.0f;
 
 		ZeroGS::vb[0].bTexConstsSync = false;
 		ZeroGS::vb[1].bTexConstsSync = false;
 	}
+		
+	gs.texa.aem = r->AEM;
+	gs.texa.ta[0] = r->TA0;
+	gs.texa.ta[1] = r->TA1;
+	gs.texa.fta[0] = r->TA0 / 255.0f;
+	gs.texa.fta[1] = r->TA1 / 255.0f;
 }
 
 void __fastcall GIFRegHandlerFOGCOL(u32* data)
 {
 	FUNCLOG
-	//GIFRegFOGCOL* r = (GIFRegFOGCOL*)(data);
+	GIFRegFOGCOL* r = (GIFRegFOGCOL*)(data);
 	
-	// Yeah, it even flushes here.
-	// I'll worry about changing this later.
-	ZeroGS::SetFogColor(data[0]&0xffffff);
+	if (gs.fogcol != r->ai32[0])
+	{
+		ZeroGS::FlushBoth();
+	}
+	
+	ZeroGS::SetFogColor(r);
+	gs.fogcol = r->ai32[0];
 }
 
 void __fastcall GIFRegHandlerTEXFLUSH(u32* data)

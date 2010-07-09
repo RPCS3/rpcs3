@@ -492,6 +492,7 @@ void SetDestAlphaTest();
 bool IsWriteDestAlphaTest();
 
 void SetFogColor(u32 fog);
+void SetFogColor(GIFRegFOGCOL* fog);
 void SaveTex(tex0Info* ptex, int usevid);
 char* NamedSaveTex(tex0Info* ptex, int usevid);
 
