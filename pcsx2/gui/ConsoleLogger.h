@@ -97,10 +97,6 @@ protected:
 	//EventListenerHelper_CoreThread<pxLogTextCtrl>	m_listener_CoreThread;
 	//EventListenerHelper_Plugins<pxLogTextCtrl>		m_listener_Plugins;
 
-#ifdef __WXMSW__
-	int		m_win32_LinesPerPage;
-	int		m_win32_LinesPerScroll;
-#endif
 	ScopedPtr<ScopedCoreThreadPause>	m_IsPaused;
 	bool	m_FreezeWrites;
 

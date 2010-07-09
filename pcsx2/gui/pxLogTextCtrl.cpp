@@ -23,19 +23,15 @@
 
 void pxLogTextCtrl::DispatchEvent( const CoreThreadStatus& status )
 {
-#ifdef __WXMSW__
 	// See ConcludeIssue for details on WM_VSCROLL
 	if( HasWriteLock() ) return;
-	::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-#endif
+	ConcludeIssue();
 }
 
 void pxLogTextCtrl::DispatchEvent( const PluginEventType& evt )
 {
-#ifdef __WXMSW__
 	if( HasWriteLock() ) return;
-	::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-#endif
+	ConcludeIssue();
 }
 
 pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
@@ -43,10 +39,6 @@ pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 		wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2
 	)
 {
-#ifdef __WXMSW__
-	m_win32_LinesPerScroll	= 10;
-	m_win32_LinesPerPage	= 0;
-#endif
 	m_IsPaused				= false;
 	m_FreezeWrites			= false;
 
@@ -66,15 +58,6 @@ void pxLogTextCtrl::WriteText(const wxString& text)
 
 void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
 {
-#ifdef __WXMSW__
-	// Windows has retarded console window update patterns.  This helps smarten them up.
-	int ctrly = GetSize().y;
-	int fonty;
-	GetTextExtent( L"blH yh", NULL, &fonty );
-	m_win32_LinesPerPage	= (ctrly / fonty) + 1;
-	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.40;
-#endif
-
 	evt.Skip();
 }
 
@@ -107,25 +90,14 @@ pxLogTextCtrl::~pxLogTextCtrl() throw()
 void pxLogTextCtrl::ConcludeIssue()
 {
 	if( HasWriteLock() ) return;
-	SetInsertionPointEnd();
+
+	ScrollLines(1);
+	ShowPosition( GetLastPosition() );
 
 #ifdef __WXMSW__
-
-	// EM_LINESCROLL avoids weird errors when the buffer reaches "max" and starts
-	// clearing old history:
-	::SendMessage((HWND)GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
-
-	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
-	// are always displayed as the last line of the log window).  Unfortunately this also
-	// makes logging very slow, so we only send the message for status changes, so that the
-	// log aligns itself nicely when we pause emulation or when errors occur.
-
-	wxTextPos showpos = XYToPosition( 1, GetNumberOfLines()-m_win32_LinesPerScroll );
-	if( showpos > 0 )
-		ShowPosition( showpos );
-
-	//::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	// This is needed to keep the scrolling "nice" when the textbox doesn't
+	// have the focus.
+	::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 #endif
-
 }
 
