@@ -306,17 +306,34 @@ s32 cdvdWriteConfig(const u8* config)
 static MutexRecursive Mutex_NewDiskCB;
 
 // Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
-static __forceinline ElfObject *loadElf( const wxString filename )
+static __forceinline ElfObject* loadElf( const wxString filename )
 {
 	if (filename.StartsWith(L"host"))
 		return new ElfObject(filename.After(':'), Path::GetFileSize(filename.After(':')));
 
+	// Mimic PS2 behavior!
+	// Much trial-and-error with changing the ISOFS and BOOT2 contents of an image have shown that
+	// the PS2 BIOS performs the peculiar task of *ignoring* the version info from the parsed BOOT2
+	// filename *and* the ISOFS, when loading the game's ELF image.  What this means is:
+	//
+	//   1. a valid PS2 ELF can have any version (ISOFS), and the version need not match the one in SYSTEM.CNF.
+	//   2. the version info on the file in the BOOT2 parameter of SYSTEM.CNF can be missing, 10 chars long,
+	//      or anything else.  Its all ignored.
+	//   3. Games loading their own files do *not* exhibit this behavior; likely due to using newer IOP modules
+	//      or lower level filesystem APIs (fortunately that doesn't affect us).
+	//
+	// FIXME: Properly mimicing this behavior is troublesome since we need to add support for "ignoring"
+	// version information when doing file searches.  I'll add this later.  For now, assuming a ;1 should
+	// be sufficient (no known games have their ELF binary as anything but version ;1)
+
+	const wxString fixedname( wxStringTokenizer(filename, L';').GetNextToken() + L";1" );
+
+	if( fixedname != filename )
+		Console.WriteLn( Color_Blue, "(LoadELF) Non-conforming version suffix detected and replaced." );
+
 	IsoFSCDVD isofs;
 	IsoFile file(isofs, filename);
-	ElfObject *elfptr;
-
-	elfptr = new ElfObject(filename, file);
-	return elfptr;
+	return new ElfObject(filename, file);
 }
 
 static __forceinline void _reloadElfInfo(wxString elfpath)
@@ -339,7 +356,6 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	if (fname.Matches(L"????_???.??*"))
 		DiscSerial = fname(0,4) + L"-" + fname(5,3) + fname(9,2);
 
-	Console.WriteLn("Disc ID = %s", DiscSerial.ToUTF8().data());
 	elfptr = loadElf(elfpath);
 
 	ElfCRC = elfptr->getCRC();
@@ -348,47 +364,54 @@ static __forceinline void _reloadElfInfo(wxString elfpath)
 	ElfEntry = elfptr->header.e_entry;
 	Console.WriteLn("Entry point = 0x%08x", ElfEntry);
 
-	elfptr.Delete();
-
-	// Set the Game DataBase to the correct game based on Game Serial Code...
-	if (IGameDatabase* GameDB = AppHost_GetGameDatabase()) {
-		wxString gameSerial( SysGetDiscID() );
-		wxString serialMsg;
-		if(!DiscSerial.IsEmpty())
-			serialMsg = L"serial=" + DiscSerial + L"  ";
-
-		Game_Data game;
-		if (GameDB->findGame(game, gameSerial))
-		{
-			Console.WriteLn(L"(GameDB) Found Game! %s [CRC=%8.8x]", serialMsg.c_str(), ElfCRC );
-			// [TODO] Display lots of other info from the database here!
-		}
-		else
-			Console.Warning(L"(GameDB) Game not found! %s [CRC=%8.8x]", serialMsg.c_str(), ElfCRC );
-	}
+	// Note: Do not load game database info here.  This code is generic and called from
+	// BIOS key encryption as well as eeloadReplaceOSDSYS.  The first is actually still executing
+	// BIOS code, and patches and cheats should not be applied yet.  (they are applied when
+	// eeGameStarting is invoked, which is when the VM starts executing the actual game ELF
+	// binary).
 }
 
 void cdvdReloadElfInfo(wxString elfoverride)
 {
-	if (!elfoverride.IsEmpty())
+	// called from context of executing VM code (recompilers), so we need to trap exceptions
+	// and route them through the VM's exception handler.  (needed for non-SEH platforms, such
+	// as Linux/GCC)
+
+	try
 	{
-		_reloadElfInfo(elfoverride);
-		return;
+		if (!elfoverride.IsEmpty())
+		{
+			_reloadElfInfo(elfoverride);
+			return;
+		}
+
+		wxString elfpath;
+		u32 discType = GetPS2ElfName(elfpath);
+
+		if(discType==1)
+		{
+			// Is a PS1 disc.
+			if (!ENABLE_LOADING_PS1_GAMES)
+				Cpu->ThrowException( Exception::RuntimeError()
+					.SetDiagMsg(L"PSX game discs are not supported by PCSX2.")
+					.SetUserMsg(pxE( "Error:PsxDisc",
+						L"Playstation game discs are not supported by PCSX2.  If you want to emulate PSX games "
+						L"then you'll have to download a PSX-specific emulator, such as ePSXe or PCSX.")
+					)
+				);
+				//Console.Error( "Playstation1 game discs are not supported by PCSX2." );
+		}
+		
+		// Isn't a disc we recognize?
+		if(discType == 0)  return;
+
+		// Recognized and PS2 (BOOT2).  Good job, user.
+		_reloadElfInfo(elfpath);
 	}
-
-	wxString elfpath;
-	u32 discType = GetPS2ElfName(elfpath);
-
-	switch (discType)
-    {
-		case 2: // Is a PS2 disc.
-			_reloadElfInfo(elfpath);
-			break;
-		case 1: // Is a PS1 disc.
-			if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(elfpath);
-			break;
-		default: // Isn't a disc we recognise.
-			break;
+	catch (Exception::FileNotFound& e)
+	{
+		pxFail( "Not in my back yard!" );
+		Cpu->ThrowException(e);
 	}
 }
 

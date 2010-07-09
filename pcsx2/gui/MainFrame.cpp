@@ -541,7 +541,7 @@ void MainEmuFrame::ApplyCoreStatus()
 
 	if( susres )
 	{
-		if( CoreThread.IsOpen() )
+		if( !CoreThread.IsClosing() )
 		{
 			susres->Enable();
 			susres->SetText(_("Suspend"));

@@ -384,6 +384,7 @@ void AppCoreThread::OnSuspendInThread()
 // the new (lack of) thread status, so this posts a message to the App to do so.
 void AppCoreThread::OnCleanupInThread()
 {
+	m_ExecMode = ExecMode_Closing;
 	PostCoreStatus( CoreThread_Stopped );
 	_parent::OnCleanupInThread();
 }

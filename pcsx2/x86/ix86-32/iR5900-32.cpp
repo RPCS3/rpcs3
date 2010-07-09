@@ -63,8 +63,6 @@ bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalExcept
 #define X86
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
-static ScopedPtr<BaseR5900Exception> m_vmException;
-
 static u8 *recMem = NULL;			// the recompiled blocks will be here
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
@@ -714,7 +712,15 @@ void recStep( void )
 {
 }
 
-static jmp_buf		m_SetJmp_StateCheck;
+#if !PCSX2_SEH
+#	define SETJMP_CODE(x)  x
+	static jmp_buf		m_SetJmp_StateCheck;
+	static ScopedPtr<BaseR5900Exception>	m_cpuException;
+	static ScopedPtr<BaseException>			m_Exception;
+#else
+#	define SETJMP_CODE(x)
+#endif
+
 
 static void recExitExecution()
 {
@@ -732,7 +738,7 @@ static void recExitExecution()
 
 static void recCheckExecutionState()
 {
-	if( eeRecIsReset || m_vmException || GetCoreThread().HasPendingStateChangeRequest() )
+	if( SETJMP_CODE(m_cpuException || m_Exception ||) eeRecIsReset || GetCoreThread().HasPendingStateChangeRequest() )
 	{
 		recExitExecution();
 	}
@@ -747,7 +753,6 @@ static void recExecute()
 
 #if PCSX2_SEH
 	eeRecIsReset = false;
-	m_vmException = NULL;
 	ScopedBool executing(m_recExecutingCode);
 
 	try {
@@ -758,6 +763,8 @@ static void recExecute()
 #else
 
 	int oldstate;
+	m_cpuException	= NULL;
+	m_Exception		= NULL;
 
 	if( !setjmp( m_SetJmp_StateCheck ) )
 	{
@@ -777,9 +784,10 @@ static void recExecute()
 	{
 		pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
 	}
-#endif
 
-	if(m_vmException) m_vmException->Rethrow();
+	if(m_cpuException)	m_cpuException->Rethrow();
+	if(m_Exception)		m_Exception->Rethrow();
+#endif
 }
 
 ////////////////////////////////////////////////////
@@ -1838,12 +1846,25 @@ StartRecomp:
 // SEH unwind (MSW) or setjmp/longjmp (GCC).
 static void recThrowException( const BaseR5900Exception& ex )
 {
+#if PCSX2_SEH
+	ex.Rethrow();
+#else
 	if (!m_recExecutingCode) ex.Rethrow();
-
-	m_vmException = ex.Clone();
+	m_cpuException = ex.Clone();
 	recExitExecution();
+#endif
 }
 
+static void recThrowException( const BaseException& ex )
+{
+#if PCSX2_SEH
+	ex.Rethrow();
+#else
+	if (!m_recExecutingCode) ex.Rethrow();
+	m_Exception = ex.Clone();
+	recExitExecution();
+#endif
+}
 
 R5900cpu recCpu =
 {
@@ -1855,6 +1876,7 @@ R5900cpu recCpu =
 	recExecute,
 
 	recCheckExecutionState,
+	recThrowException,
 	recThrowException,
 	recClear,
 };

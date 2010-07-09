@@ -434,13 +434,13 @@ int GetPS2ElfName( wxString& name )
 
 		while( !file.eof() )
 		{
-			wxString original( fromUTF8(file.readLine().c_str()) );
-			ParsedAssignmentString parts( original );
+			const wxString original( fromUTF8(file.readLine().c_str()) );
+			const ParsedAssignmentString parts( original );
 
 			if( parts.lvalue.IsEmpty() && parts.rvalue.IsEmpty() ) continue;
 			if( parts.rvalue.IsEmpty() )
 			{
-				Console.Error( "(GetElfName) Unusual or malformed entry in SYSTEM.CNF ignored:" );
+				Console.Warning( "(SYSTEM.CNF) Unusual or malformed entry in SYSTEM.CNF ignored:" );
 				Console.Indent().WriteLn( original );
 				continue;
 			}
@@ -448,22 +448,22 @@ int GetPS2ElfName( wxString& name )
 			if( parts.lvalue == L"BOOT2" )
 			{
 				name = parts.rvalue;
-				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PS2 Disc = " + name );
+				Console.WriteLn( Color_StrongBlue, L"(SYSTEM.CNF) Detected PS2 Disc = " + name );
 				retype = 2;
 			}
 			else if( parts.lvalue == L"BOOT" )
 			{
 				name = parts.rvalue;
-				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PSX/PSone Disc = " + name );
+				Console.WriteLn( Color_StrongBlue, L"(SYSTEM.CNF) Detected PSX/PSone Disc = " + name );
 				retype = 1;
 			}
 			else if( parts.lvalue == L"VMODE" )
 			{
-				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Disc region type = " + parts.rvalue );
+				Console.WriteLn( Color_Blue, L"(SYSTEM.CNF) Disc region type = " + parts.rvalue );
 			}
 			else if( parts.lvalue == L"VER" )
 			{
-				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Software version = " + parts.rvalue );
+				Console.WriteLn( Color_Blue, L"(SYSTEM.CNF) Software version = " + parts.rvalue );
 			}
 		}
 
@@ -478,9 +478,9 @@ int GetPS2ElfName( wxString& name )
 		Console.Error(ex.FormatDiagnosticMessage());
 		return 0;		// ISO error
 	}
-	catch( Exception::FileNotFound& ex )
+	catch( Exception::FileNotFound& )
 	{
-		Console.Warning(ex.FormatDiagnosticMessage());
+		//Console.Warning(ex.FormatDiagnosticMessage());
 		return 0;		// no SYSTEM.CNF, not a PS1/PS2 disc.
 	}
 

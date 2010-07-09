@@ -260,6 +260,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel.
 void SysCoreThread::OnCleanupInThread()
 {
+	m_ExecMode				= ExecMode_Closing;
+
 	m_hasActiveMachine		= false;
 	m_resetVirtualMachine	= true;
 
@@ -269,5 +271,7 @@ void SysCoreThread::OnCleanupInThread()
 	_mm_setcsr( m_mxcsr_saved.bitmask );
 	Threading::DisableHiresScheduler();
 	_parent::OnCleanupInThread();
+
+	m_ExecMode				= ExecMode_NoThreadYet;
 }
 

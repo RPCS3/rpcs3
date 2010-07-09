@@ -423,6 +423,12 @@ static void intThrowException( const BaseR5900Exception& ex )
 	ex.Rethrow();
 }
 
+static void intThrowException( const BaseException& ex )
+{
+	// No tricks needed; C++ stack unwnding shoud suffice for MSW and GCC alike.
+	ex.Rethrow();
+}
+
 R5900cpu intCpu =
 {
 	intAlloc,
@@ -433,6 +439,7 @@ R5900cpu intCpu =
 	intExecute,
 
 	intCheckExecutionState,
+	intThrowException,
 	intThrowException,
 	intClear,
 };

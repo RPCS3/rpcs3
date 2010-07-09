@@ -279,7 +279,7 @@ struct R5900cpu
 	//   Can be called from any thread.  Execute status must be suspended or stopped
 	//   to prevent multi-thread race conditions.
 	//
-	// Notable Exception Throws:
+	// Exception Throws:
 	//   OutOfMemory - Not enough memory, or the memory areas required were already
 	//                 reserved.
 	//
@@ -303,7 +303,7 @@ struct R5900cpu
 	//   Can be called from any thread.  Execute status must be suspended or stopped
 	//   to prevent multi-thread race conditions.
 	//
-	// Exception Throws:  Emulator-defined.  Common exception types to look for:
+	// Exception Throws:  Emulator-defined.  Common exception types to expect are
 	//   OutOfMemory, Stream Exceptions
 	//
 	void (*Reset)();
@@ -322,7 +322,9 @@ struct R5900cpu
 	// call to return at the nearest state check (typically handled internally using
 	// either C++ exceptions or setjmp/longjmp).
 	//
-	// Exception Throws:  [TODO]  (possible execution-related throws to be added)
+	// Exception Throws: 
+	//   Throws BaseR5900Exception and all derivatives.
+	//   Throws FileNotFound or other Streaming errors (typically related to BIOS MEC/NVM)
 	//
 	void (*Execute)();
 
@@ -333,23 +335,28 @@ struct R5900cpu
 	//
 	// Implementation note: Because of the nuances of recompiled code execution, setjmp
 	// may be used in place of thread cancellation or C++ exceptions (non-SEH exceptions
-	// cannot unwind through the recompiled code stackframes).
+	// cannot unwind through the recompiled code stackframes, thus longjmp must be used).
 	//
 	// Thread Affinity:
-	//   Must be called on the same thread as Execute only.
+	//   Must be called on the same thread as Execute.
 	//
 	// Exception Throws:
-	//   May throw threading/Pthreads cancellations if the compiler supports SEH.
-	//   ThreadTimedOut - For canceling VM execution in response to MTGS deadlock. (if the
-	//     core emulator does not support multithreaded GS then this will not be a throw
-	//     exception).
+	//   May throw Execution/Pthreads cancellations if the compiler supports SEH.
 	//
 	void (*CheckExecutionState)();
 
 	// Safely throws host exceptions from executing code (either recompiled or interpreted).
 	// If this function is called outside the context of the CPU's code execution, then the
 	// given exception will be re-thrown automatically.
-	void (*ThrowException)( const BaseR5900Exception& ex );
+	// 
+	// Exception Throws:
+	//   (SEH) Rethrows the given exception immediately.
+	//   (setjmp) Re-throws immediately if called from outside the context of dynamically
+	//      generated code (either non-executing contexts or interpreters).  Does not throw
+	//      otherwise.
+	//
+	void (*ThrowException)( const BaseException& ex );
+	void (*ThrowCpuException)( const BaseR5900Exception& ex );
 
 	// Manual recompiled code cache clear; typically useful to recompilers only.  Size is
 	// in MIPS words (32 bits).  Dev note: this callback is nearly obsolete, and might be

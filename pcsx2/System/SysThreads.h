@@ -95,13 +95,16 @@ public:
 	}
 
 	bool IsClosed() const { return !IsOpen(); }
-	
 	bool IsPaused() const { return !IsRunning() || (m_ExecMode <= ExecMode_Paused); }
+
+	bool IsClosing() const
+	{
+		return !IsRunning() || (m_ExecMode <= ExecMode_Closed) || (m_ExecMode == ExecMode_Closing); 
+	}
 
 	bool HasPendingStateChangeRequest() const
 	{
-		ExecutionMode mode = m_ExecMode;
-		return (mode == ExecMode_Closing) || (mode == ExecMode_Pausing);
+		return m_ExecMode >= ExecMode_Closing;
 	}
 
 	ExecutionMode GetExecutionMode() const { return m_ExecMode; }

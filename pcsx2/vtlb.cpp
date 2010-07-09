@@ -233,7 +233,7 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
 	if( IsDevBuild )
-		Cpu->ThrowException( R5900Exception::TLBMiss( addr, !!mode ) );
+		Cpu->ThrowCpuException( R5900Exception::TLBMiss( addr, !!mode ) );
 	else
 		Console.Error( R5900Exception::TLBMiss( addr, !!mode ).FormatMessage() );
 }
@@ -247,7 +247,7 @@ static __forceinline void vtlb_BusError(u32 addr,u32 mode)
 	// the PC prior to invoking the indirect handlers.
 
 	if( IsDevBuild )
-		Cpu->ThrowException( R5900Exception::BusError( addr, !!mode ) );
+		Cpu->ThrowCpuException( R5900Exception::BusError( addr, !!mode ) );
 	else
 		Console.Error( R5900Exception::TLBMiss( addr, !!mode ).FormatMessage() );
 }
