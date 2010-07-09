@@ -476,45 +476,42 @@ s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 	return ret;
 }
 
-void openVirtualTray()
-{
-	trayState = 1;
-	DiscSwapTimerSeconds = cdvd.RTC.second;
-	cdvd.Status = CDVD_STATUS_TRAY_OPEN;
-	cdvd.Ready = CDVD_NOTREADY;
-}
-// Only trayState is needed right now.
 s32 cdvdCtrlTrayOpen()
 {
+	Console.Warning("Open virtual disk tray");
+	DiscSwapTimerSeconds = cdvd.RTC.second; // remember the PS2 time when this happened
+	cdvd.Status = CDVD_STATUS_TRAY_OPEN;
+	cdvd.Ready = CDVD_NOTREADY;
 	trayState = 1;
-	s32 ret = CDVD->ctrlTrayOpen();
-	if (ret == -1) ret = 0x80;
-	return ret;
+
+	return 0; // needs to be 0 for success according to homebrew test "CDVD"
 }
-// Only trayState is needed right now.
+
 s32 cdvdCtrlTrayClose()
 {
+	Console.Warning("Close virtual disk tray");
+	cdvd.Status = CDVD_STATUS_PAUSE;
+	cdvd.Ready = CDVD_READY1;
 	trayState = 0;
-	s32 ret = CDVD->ctrlTrayClose();
-	if (ret == -1) ret = 0x80;
-	return ret;
+
+	return 0; // needs to be 0 for success according to homebrew test "CDVD"
 }
 
-// Modified by (efp) - 16/01/2006
-// checks if tray was opened since last call to this func
-
-// Outdated and not doing anything.. much.. I hope (rama)
+// Some legacy function, not used anymore
 s32 cdvdGetTrayStatus()
 {
-	s32 ret = CDVD->getTrayStatus();
+	/*s32 ret = CDVD->getTrayStatus();
 
 	if (ret == -1)
 		return(CDVD_TRAY_CLOSE);
 	else
-		return(ret);
+		return(ret);*/
+	return -1;
 }
 
 // Note: Is tray status being kept as a var here somewhere?
+// Yep, and sceCdTrayReq needs it to detect tray state changes (rama)
+
 //   cdvdNewDiskCB() can update it's status as well...
 
 // Modified by (efp) - 16/01/2006
@@ -932,10 +929,7 @@ void cdvdVsync() {
 	{	
 		if ( cdvd.RTC.second != DiscSwapTimerSeconds)
 		{
-			Console.Warning("Close virtual disk tray");
-			trayState = 0;
-			cdvd.Status = CDVD_STATUS_PAUSE;
-			cdvd.Ready = CDVD_READY1;
+			cdvdCtrlTrayClose();
 		}
 	}
 
@@ -1015,8 +1009,7 @@ u8 cdvdRead(u8 key)
 
 		case 0x0B: // TRAY-STATE (if tray has been opened)
 		{
-			u8 tray = cdvdGetTrayStatus();
-			CDVD_LOG("cdvdRead0B(Tray) %x HLE flag = %x ", tray, trayState);
+			CDVD_LOG("cdvdRead0B(Tray) %x", trayState);
 			return /*tray*/ trayState;
 			break;
 		}
@@ -1407,6 +1400,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 //	cdvdTN	diskInfo;
 //	cdvdTD	trackInfo;
 //	int i, lbn, type, min, sec, frm, address;
+	static bool oldTrayState = 0;
 	int address;
 	u8 tmp;
 
@@ -1461,9 +1455,15 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			break;
 
 		case 0x05: // CdTrayReqState  (0:1) - resets the tray open detection
-			trayState = 0;
+			
+			//Console.Warning("CdTrayReqState. trayState = %d oldTrayState = %d",trayState, oldTrayState);
 			SetResultSize(1);
-			cdvd.Result[0] = 0;
+			if (trayState != oldTrayState)
+				cdvd.Result[0] = 1;
+			else
+				cdvd.Result[0] = 0; // old behaviour was always this
+
+			oldTrayState = trayState;
 			break;
 
 		case 0x06: // CdTrayCtrl  (1:1)

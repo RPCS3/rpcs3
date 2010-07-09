@@ -294,7 +294,11 @@ CDVD_SourceType CDVDsys_GetSourceType()
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
 	GetCorePlugins().Close( PluginId_CDVD );
-
+	
+	static bool firstRun = true;
+	if (!firstRun) cdvdCtrlTrayOpen();
+	firstRun = false;
+	
 	switch( m_CurrentSourceType = type )
 	{
 		case CDVDsrc_Iso:
@@ -400,9 +404,6 @@ void DoCDVDclose()
 		CDVD->close();
 
 	DoCDVDresetDiskTypeCache();
-	
-	Console.Warning("Closing CDVD plugin > open virtual disk tray");
-	openVirtualTray();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
