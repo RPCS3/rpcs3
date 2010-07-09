@@ -59,7 +59,7 @@ set(spu2xSources
     Spu2replay.cpp
     spu2sys.cpp
     Timestretcher.cpp
-    utf8.cpp
+    #utf8.cpp
     Wavedump_wav.cpp)
 
 # spu2x headers
@@ -77,7 +77,8 @@ set(spu2xHeaders
     SndOut.h
     spdif.h
     Spu2replay.h
-    utf8.h)
+    #utf8.h
+)
 
 
 # spu2x Linux sources
