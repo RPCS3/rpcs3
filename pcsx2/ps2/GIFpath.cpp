@@ -363,8 +363,8 @@ static __forceinline void gsHandler(const u8* pMem)
 	}
 }
 
-#define incTag(x, y) do {				\
-	pMem += (x);						\
+#define incTag(y) do {				\
+	pMem += (y*16);						\
 	size -= (y);						\
 } while(false)
 
@@ -383,7 +383,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 		if (!nloop) {
 
 			SetTag(pMem);
-			incTag(16, 1);
+			incTag(1);
 		}
 		else
 		{
@@ -429,23 +429,33 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 						curreg = 0;
 						nloop = 0;
 					}
-					incTag(16 * len, len);
+					incTag(len);
 				}
 				break;
 				case GIF_FLG_REGLIST:
 				{
 					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
 
-					numregs	= ((tag.NREG-1)&0xf) + 1;
-					size *= 2;
-					u32 len = aMin(size, (nloop * numregs)-curreg);
-					
-					if(len < ((nloop * numregs)-curreg)) 
-					{
-						const int nloops_copied		= len / numregs;
-						const int regs_not_copied	= len % numregs;
+					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
+					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
 
-						DevCon.Warning("Quick Hit it path %d Please report if you experience problems", pathidx + 1);
+					numregs	= ((tag.NREG-1)&0xf) + 1;
+					const u32 total_reglen = (nloop * numregs) - curreg;	// total 'expected length' of this packed register list (in registers)
+					const u32 total_listlen = (total_reglen+1) / 2;			// total 'expected length' of the register list, in QWC!  (+1 so to round it up)
+
+					u32 len;
+
+					if(size < total_listlen)
+					{
+						//Console.Warning("GIF path %d Fragmented REGLIST!  Please report if you experience problems", pathidx + 1);
+
+						len = size;
+						const u32 reglen = len * 2;
+
+						const int nloops_copied		= reglen / numregs;
+						const int regs_not_copied	= reglen % numregs;
+
+						//DevCon.Warning("Hit it path %d", pathidx + 1);
 						curreg += regs_not_copied;
 						nloop -= nloops_copied;
 
@@ -455,16 +465,15 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 							curreg -= numregs;
 						}
 					}
-					else nloop = 0;				
-					
-					
-					incTag(8 * len, len);
-					if (size & 1) { incTag(8, 1); }
-					size /= 2;
-					//if(curreg != 0 || (len % numregs) > 0) DevCon.Warning("Oops Q c %x n %x m %x r %x", curreg, nloop, (len % numregs), numregs);
+					else 
+					{
+						len = total_listlen;
+						curreg = 0;
+						nloop = 0;
+					}
 
-					
-					if(nloop == 0) curreg = 0;
+					incTag(len);
+					//if(curreg != 0 || (len % numregs) > 0) DevCon.Warning("Oops c %x n %x m %x r %x", curreg, nloop, (len % numregs), numregs);
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -472,7 +481,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 				{
 					GIF_LOG("IMAGE Mode");
 					int len = aMin(size, nloop);
-					incTag(( len * 16 ), len);
+					incTag(len);
 					nloop -= len;
 				}
 				break;
@@ -520,7 +529,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 		if (!nloop) {
 
 			SetTag(pMem);
-			incTag(16, 1);		
+			incTag(1);		
 			
 			if(nloop > 0)
 			{
@@ -592,7 +601,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							if (GetReg() == 0xe) {
 								gsHandler(pMem);
 							}
-							incTag(16, 1);
+							incTag(1);
 						} while(StepReg() && size > 0 && SIGNAL_IMR_Pending == false);
 					}
 					else
@@ -635,21 +644,31 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							curreg = 0;
 							nloop = 0;
 						}
-						incTag(16 * len, len);
+						incTag(len);
 					}
 				break;
 				case GIF_FLG_REGLIST:
-				{
+				{				
 					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
 
+					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
+					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
+
 					numregs	= ((tag.NREG-1)&0xf) + 1;
-					size *= 2;
-					u32 len = aMin(size, (nloop * numregs)-curreg);
-					
-					if(len < ((nloop * numregs)-curreg))
+					const u32 total_reglen = (nloop * numregs) - curreg;	// total 'expected length' of this packed register list (in registers)
+					const u32 total_listlen = (total_reglen+1) / 2;			// total 'expected length' of the register list, in QWC!  (+1 so to round it up)
+
+					u32 len;
+
+					if(size < total_listlen)
 					{
-						const int nloops_copied		= len / numregs;
-						const int regs_not_copied	= len % numregs;
+						//Console.Warning("GIF path %d Fragmented REGLIST!  Please report if you experience problems", pathidx + 1);
+
+						len = size;
+						const u32 reglen = len * 2;
+
+						const int nloops_copied		= reglen / numregs;
+						const int regs_not_copied	= reglen % numregs;
 
 						//DevCon.Warning("Hit it path %d", pathidx + 1);
 						curreg += regs_not_copied;
@@ -661,14 +680,15 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							curreg -= numregs;
 						}
 					}
-					else nloop = 0;									
-					
-					incTag(8 * len, len);
-					if (size & 1) { incTag(8, 1); }
-					size /= 2;
-					//if(curreg != 0 || (len % numregs) > 0) DevCon.Warning("Oops c %x n %x m %x r %x", curreg, nloop, (len % numregs), numregs);
-				
-					if(nloop == 0) curreg = 0;
+					else 
+					{
+						len = total_listlen;
+						curreg = 0;
+						nloop = 0;
+					}
+
+					incTag(len);
+
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -676,7 +696,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				{
 					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
-					incTag(( len * 16 ), len);
+					incTag(len);
 					nloop -= len;
 				}
 				break;
