@@ -256,7 +256,7 @@ void tex2Write(int i, u32 *data)
 	FUNCLOG
 	tex0Info& tex0 = ZeroGS::vb[i].tex0;
 
-	if (ZeroGS::vb[i].bNeedTexCheck) ZeroGS::vb[i].FlushTexData();
+	ZeroGS::vb[i].FlushTexData();
 
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
@@ -621,8 +621,8 @@ void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 {
 	FUNCLOG
 
-	if (ZeroGS::vb[0].bNeedTexCheck) ZeroGS::vb[0].FlushTexData();
-	if (ZeroGS::vb[1].bNeedTexCheck) ZeroGS::vb[1].FlushTexData();
+	ZeroGS::vb[0].FlushTexData();
+	ZeroGS::vb[1].FlushTexData();
 
 	gs.clut.cbw = ((data[0]) & 0x3f) * 64;
 	gs.clut.cou = ((data[0] >>  6) & 0x3f) * 16;

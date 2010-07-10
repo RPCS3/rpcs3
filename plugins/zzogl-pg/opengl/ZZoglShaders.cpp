@@ -124,6 +124,8 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 	pf->set_shader_const(Vector(1 / 1024.0f, 0.2f / 1024.0f, 1 / 128.0f, 1 / 512.0f), "g_fMult");
 }
 
+static bool outdated_shaders = false;
+
 void SetupVertexProgramParameters(CGprogram prog, int context)
 {
 	CGparameter p;
@@ -160,7 +162,11 @@ void SetupVertexProgramParameters(CGprogram prog, int context)
 		}
 		else
 		{
-			ZZLog::Error_Log("Shader file version is outdated! Only log-Z is possible.");
+			if (!outdated_shaders)
+			{
+				outdated_shaders = true;
+				ZZLog::Error_Log("Shader file version is outdated! Only log-Z is possible.");
+			}
 		}
 	}
 

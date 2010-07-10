@@ -163,9 +163,8 @@ static Vector vAlphaBlendColor;	 // used for GPU_COLOR
 static bool bNeedBlendFactorInAlpha;	  // set if the output source alpha is different from the real source alpha (only when blend factor > 0x80)
 static u32 s_dwColorWrite = 0xf;			// the color write mask of the current target
 
-union
+typedef union
 {
-
 	struct
 	{
 		u8 _bNeedAlphaColor;		// set if vAlphaBlendColor needs to be set
@@ -176,7 +175,9 @@ union
 	};
 
 	u32 _bAlphaState;
-} g_vars;
+} g_flag_vars;
+
+g_flag_vars g_vars;
 
 //#define bNeedAlphaColor g_vars._bNeedAlphaColor
 #define b2XAlphaTest g_vars._b2XAlphaTest
@@ -399,7 +400,7 @@ inline void FlushTransferRangesHelper(VB& curvb)
 	}
 }
 
-// If set bit for texture cheking, do it. Maybe it's all.
+// If set bit for texture checking, do it. Maybe it's all.
 inline bool FushTexDataHelper(VB& curvb)
 {
 	if (curvb.bNeedFrameCheck || curvb.bNeedZCheck)

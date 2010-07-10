@@ -635,6 +635,7 @@ typedef struct
 	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
 
 	pathInfo path[3];
+	GIFRegDIMX dimx;
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{
 		rgba = (r & 0xff) |
@@ -642,7 +643,25 @@ typedef struct
 			  ((b & 0xff) << 16) |
 			  ((a & 0xff) << 24);
 	}
-
+	
+	void add_vertex(u16 x, u16 y, u32 z, float f)
+	{
+		vertexregs.x = x;
+		vertexregs.y = y;
+		vertexregs.z = z;
+		vertexregs.f = f;
+		gsvertex[primIndex] = vertexregs;
+		primIndex = (primIndex + 1) % ARRAY_SIZE(gsvertex);
+	}
+	
+	void add_vertex(u16 x, u16 y, u32 z)
+	{
+		vertexregs.x = x;
+		vertexregs.y = y;
+		vertexregs.z = z;
+		gsvertex[primIndex] = vertexregs;
+		primIndex = (primIndex + 1) % ARRAY_SIZE(gsvertex);
+	}
 } GSinternal;
 
 extern GSinternal gs;

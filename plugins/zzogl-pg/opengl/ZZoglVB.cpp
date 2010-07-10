@@ -457,44 +457,47 @@ void ZeroGS::VB::FlushTexData()
 {
 	GL_REPORT_ERRORD();
 	
-	assert(bNeedTexCheck);
-	bNeedTexCheck = 0;
-
-	u32 psm = ZZOglGet_psm_TexBitsFix(uNextTex0Data[0]);
-
-	// don't update unless necessary
-
-	if (ZZOglAllExceptClutIsSame(uCurTex0Data, uNextTex0Data))
+	//assert(bNeedTexCheck);
+	//if (bNeedTexCheck)
 	{
-		// Don't need to do anything if there is no clutting and VB tex data was not changed
-		if (!PSMT_ISCLUT(psm)) return;
+		bNeedTexCheck = 0;
 
-		// have to write the CLUT again if only CLD was changed
-		if (ZZOglClutMinusCLDunchanged(uCurTex0Data, uNextTex0Data))
+		u32 psm = ZZOglGet_psm_TexBitsFix(uNextTex0Data[0]);
+
+		// don't update unless necessary
+
+		if (ZZOglAllExceptClutIsSame(uCurTex0Data, uNextTex0Data))
 		{
-			FlushTexUnchangedClutDontUpdate();
-			return;
+			// Don't need to do anything if there is no clutting and VB tex data was not changed
+			if (!PSMT_ISCLUT(psm)) return;
+
+			// have to write the CLUT again if only CLD was changed
+			if (ZZOglClutMinusCLDunchanged(uCurTex0Data, uNextTex0Data))
+			{
+				FlushTexUnchangedClutDontUpdate();
+				return;
+			}
+
+			// Cld bit is 0 means that clut buffer stay unchanged
+			if (ZZOglGet_cld_TexBits(uNextTex0Data[1]) == 0)
+			{
+				FlushTexClutDontUpdate();
+				return;
+			}
 		}
 
-		// Cld bit is 0 means that clut buffer stay unchanged
-		if (ZZOglGet_cld_TexBits(uNextTex0Data[1]) == 0)
-		{
-			FlushTexClutDontUpdate();
-			return;
-		}
+		// Made the full update
+		ZeroGS::Flush(ictx);
+
+		bVarsTexSync = false;
+		bTexConstsSync = false;
+
+		uCurTex0Data[0] = uNextTex0Data[0];
+		uCurTex0Data[1] = uNextTex0Data[1];
+
+		FlushTexSetNewVars(psm);
+
+		if (PSMT_ISCLUT(psm)) ZeroGS::CluttingForFlushedTex(&tex0, uNextTex0Data[1], ictx) ;
+		GL_REPORT_ERRORD();
 	}
-
-	// Made the full update
-	ZeroGS::Flush(ictx);
-
-	bVarsTexSync = false;
-	bTexConstsSync = false;
-
-	uCurTex0Data[0] = uNextTex0Data[0];
-	uCurTex0Data[1] = uNextTex0Data[1];
-
-	FlushTexSetNewVars(psm);
-
-	if (PSMT_ISCLUT(psm)) ZeroGS::CluttingForFlushedTex(&tex0, uNextTex0Data[1], ictx) ;
-	GL_REPORT_ERRORD();
 }

@@ -619,15 +619,6 @@ void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 	int index = Index;
 	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);
 	p->y = ((((int)gs.gsvertex[index].y - curvb.offset.y) >> 1) & 0xffff);
-
-#ifdef LSD_MODE
-	int diffX = (int)gs.gsvertex[index].x - curvb.offset.x;
-	int diffY = (int)gs.gsvertex[index].y - curvb.offset.y;
-
-	if (diffX < 0) { p->x = - p->x; }
-	if (diffY < 0) { p->y = - p->y; }
-#endif
-
 	p->f = ((s16)gs.gsvertex[index].f << 7) | 0x7f;
 
 	MOVZ(p, gs.gsvertex[index].z, curvb);
@@ -678,7 +669,7 @@ void ZeroGS::KickPoint()
 
 	VB& curvb = vb[prim->ctxt];
 
-	if (curvb.bNeedTexCheck) curvb.FlushTexData();
+	curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
 	{
@@ -703,7 +694,7 @@ void ZeroGS::KickLine()
 	assert(gs.primC >= 2);
 	VB& curvb = vb[prim->ctxt];
 
-	if (curvb.bNeedTexCheck) curvb.FlushTexData();
+	curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
 	{
@@ -732,7 +723,7 @@ void ZeroGS::KickTriangle()
 	assert(gs.primC >= 3);
 	VB& curvb = vb[prim->ctxt];
 
-	if (curvb.bNeedTexCheck) curvb.FlushTexData();
+	curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
 	{
@@ -760,7 +751,7 @@ void ZeroGS::KickTriangleFan()
 	assert(gs.primC >= 3);
 	VB& curvb = vb[prim->ctxt];
 
-	if (curvb.bNeedTexCheck) curvb.FlushTexData();
+	curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
 	{
@@ -799,7 +790,7 @@ void ZeroGS::KickSprite()
 	assert(gs.primC >= 2);
 	VB& curvb = vb[prim->ctxt];
 
-	if (curvb.bNeedTexCheck) curvb.FlushTexData();
+	curvb.FlushTexData();
 
 	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
 	{

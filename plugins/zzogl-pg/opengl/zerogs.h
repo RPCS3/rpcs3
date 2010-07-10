@@ -409,7 +409,11 @@ public:
 	frameInfo frame;
 	int zprimmask; // zmask for incoming points
 
+union
+{
 	u32 uCurTex0Data[2]; // current tex0 data
+	GIFRegTEX0 uCurTex0;	
+};
 	u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
 
 	//int nFrameHeights[8];	// frame heights for the past frame changes

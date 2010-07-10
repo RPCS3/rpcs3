@@ -575,21 +575,19 @@ REG64_(GIFReg, TRXREG)
 	u32 _PAD2:20;
 REG_END
 
-// GSState::GIFPackedRegHandlerUV and GSState::GIFRegHandlerUV will make sure that the _PAD1/2 bits are set to zero
-
 REG64_(GIFReg, UV)
-	u32 U:16;
-//	u32 _PAD1:2;
-	u32 V:16;
-//	u32 _PAD2:2;
+	u32 U:14;
+	u32 _PAD1:2;
+	u32 V:14;
+	u32 _PAD2:2;
 	u32 _PAD3:32;
 REG_END
 
-// GSState::GIFRegHandlerXYOFFSET will make sure that the _PAD1/2 bits are set to zero
-
 REG64_(GIFReg, XYOFFSET)
-	u32 OFX; // :16; u32 _PAD1:16;
-	u32 OFY; // :16; u32 _PAD2:16;
+	u32 OFX:16; 
+	u32 _PAD1:16;
+	u32 OFY:16; 
+	u32 _PAD2:16;
 REG_END
 
 REG64_(GIFReg, XYZ)
