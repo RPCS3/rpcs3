@@ -158,17 +158,21 @@ void WriteLn(const char *fmt, ...)
 
 void Greg_Log(const char *fmt, ...)
 {
-	// Not currently used
-#if 0
+#if defined(WRITE_GREG_LOGS)
 	va_list list;
 	char tmp[512];
 
 	va_start(list, fmt);
 
+	fprintf(gsLog, "GRegs: ");
+	//fprintf(stderr,"GRegs: ");
 	if (IsLogging()) vfprintf(gsLog, fmt, list);
+	//vfprintf(stderr, fmt, list);
 
 	va_end(list);
 
+	if (IsLogging()) fprintf(gsLog, "\n");
+	//fprintf(stderr,"\n");
 #endif
 }
 

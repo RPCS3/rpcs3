@@ -230,7 +230,6 @@ void tex0Write(int i, u32 *data)
 	}
 
 	ZeroGS::vb[i].uNextTex0Data[0] = data[0];
-
 	ZeroGS::vb[i].uNextTex0Data[1] = data[1];
 	ZeroGS::vb[i].bNeedTexCheck = 1;
 
@@ -951,6 +950,7 @@ void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 void __fastcall GIFRegHandlerTRXPOS(u32* data)
 {
 	FUNCLOG
+	
 	gs.trxposnew.sx  = (data[0]) & 0x7ff;
 	gs.trxposnew.sy  = (data[0] >> 16) & 0x7ff;
 	gs.trxposnew.dx  = (data[1]) & 0x7ff;

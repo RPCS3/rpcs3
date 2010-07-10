@@ -77,6 +77,7 @@ static bool SPAM_PASS;
 #define FUNCLOG
 #endif
 
+//#define WRITE_GREG_LOGS
 //#define WRITE_PRIM_LOGS
 #if defined(_DEBUG) && !defined(ZEROGS_DEVBUILD)
 #define ZEROGS_DEVBUILD

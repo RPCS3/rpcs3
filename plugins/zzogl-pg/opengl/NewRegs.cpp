@@ -89,6 +89,8 @@ void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 	gs.rgba = (r->R | (r->G <<  8) | (r->B << 16) | (r->A << 24));
 	gs.vertexregs.rgba = gs.rgba;
 	gs.vertexregs.q = gs.q;
+	
+	ZZLog::Greg_Log("Packed RGBA: 0x%x", gs.rgba);
 }
 
 void __fastcall GIFPackedRegHandlerSTQ(u32* data)
@@ -98,6 +100,7 @@ void __fastcall GIFPackedRegHandlerSTQ(u32* data)
 	gs.vertexregs.s = r->S;
 	gs.vertexregs.t = r->T;
 	gs.q = r->Q;
+	ZZLog::Greg_Log("Packed STQ: 0x%x, 0x%x, %f", r->S, r->T, r->Q);
 }
 
 void __fastcall GIFPackedRegHandlerUV(u32* data)
@@ -106,6 +109,7 @@ void __fastcall GIFPackedRegHandlerUV(u32* data)
 	GIFPackedUV* r = (GIFPackedUV*)(data);
 	gs.vertexregs.u = r->U;
 	gs.vertexregs.v = r->V;
+	ZZLog::Greg_Log("Packed UV: 0x%x, 0x%x", r->U, r->V);
 }
 
 void __forceinline KICK_VERTEX2()
@@ -152,6 +156,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 	{
 		KICK_VERTEX2();
 	}
+	ZZLog::Greg_Log("Packed XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
 void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
@@ -169,6 +174,7 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 	{
 		KICK_VERTEX2();
 	}
+	ZZLog::Greg_Log("Packed XYZ2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
 void __fastcall GIFPackedRegHandlerFOG(u32* data)
@@ -176,6 +182,7 @@ void __fastcall GIFPackedRegHandlerFOG(u32* data)
 	FUNCLOG
 	GIFPackedFOG* r = (GIFPackedFOG*)(data);
 	gs.vertexregs.f = r->F;
+	ZZLog::Greg_Log("Packed FOG: 0x%x", r->F);
 }
 
 void __fastcall GIFPackedRegHandlerA_D(u32* data)
@@ -184,6 +191,7 @@ void __fastcall GIFPackedRegHandlerA_D(u32* data)
 	GIFPackedA_D* r = (GIFPackedA_D*)(data);
 	
 	g_GIFRegHandlers[r->ADDR](data);
+	ZZLog::Greg_Log("Packed A_D: 0x%x", r->ADDR);
 }
 
 void __fastcall GIFPackedRegHandlerNOP(u32* data)
@@ -194,6 +202,7 @@ void __fastcall GIFPackedRegHandlerNOP(u32* data)
 void tex0Write(int i, u32 *data)
 {
 	FUNCLOG
+	// Used on Mana Khemias opening dialog.
 	GIFRegTEX0* r = (GIFRegTEX0*)(data);
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
@@ -211,7 +220,6 @@ void tex0Write(int i, u32 *data)
 			// loading clut, so flush whole texture
 			ZeroGS::vb[i].FlushTexData();
 		}
-//		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000))
 		else if (r->CSA != (ZeroGS::vb[i].uCurTex0.CSA))
 		{
 			// check if csa is the same!! (ffx bisaid island, grass)
@@ -219,7 +227,8 @@ void tex0Write(int i, u32 *data)
 		}
 	}
 	
-	ZeroGS::vb[i].uCurTex0.i64 = r->i64;
+	ZeroGS::vb[i].uNextTex0Data[0] = r->ai32[0];
+	ZeroGS::vb[i].uNextTex0Data[1] = r->ai32[1];
 	ZeroGS::vb[i].bNeedTexCheck = 1;
 
 }
@@ -367,6 +376,7 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 	gs._prim[1]._val = (data[0] >> 3) & 0xff;
 
 	ZeroGS::Prim();
+	ZZLog::Greg_Log("PRIM");
 }
 
 void __fastcall GIFRegHandlerRGBAQ(u32* data)
@@ -376,6 +386,7 @@ void __fastcall GIFRegHandlerRGBAQ(u32* data)
 	gs.rgba = (r->R | (r->G <<  8) | (r->B << 16) | (r->A << 24));
 	gs.vertexregs.rgba = gs.rgba;
 	gs.vertexregs.q = r->Q;
+	ZZLog::Greg_Log("RGBAQ: 0x%x, 0x%x, 0x%x, %f", r->R, r->G, r->B, r->A, r->Q);
 }
 
 void __fastcall GIFRegHandlerST(u32* data)
@@ -384,6 +395,7 @@ void __fastcall GIFRegHandlerST(u32* data)
 	GIFRegST* r = (GIFRegST*)(data);
 	gs.vertexregs.s = r->S;
 	gs.vertexregs.t = r->T;
+	ZZLog::Greg_Log("ST: 0x%x, 0x%x", r->S, r->T);
 }
 
 void __fastcall GIFRegHandlerUV(u32* data)
@@ -393,6 +405,7 @@ void __fastcall GIFRegHandlerUV(u32* data)
 	GIFRegUV* r = (GIFRegUV*)(data);
 	gs.vertexregs.u = r->U;
 	gs.vertexregs.v = r->V;
+	ZZLog::Greg_Log("UV: 0x%x, 0x%x", r->U, r->V);
 }
 
 void __fastcall GIFRegHandlerXYZF2(u32* data)
@@ -402,6 +415,7 @@ void __fastcall GIFRegHandlerXYZF2(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
 	KICK_VERTEX2();
+	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
 void __fastcall GIFRegHandlerXYZ2(u32* data)
@@ -411,6 +425,7 @@ void __fastcall GIFRegHandlerXYZ2(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z);
 
 	KICK_VERTEX2();
+	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
 void __fastcall GIFRegHandlerTEX0_1(u32* data)
@@ -421,6 +436,7 @@ void __fastcall GIFRegHandlerTEX0_1(u32* data)
 	if (!NoHighlights(0)) return;
 
 	tex0Write(0, data);
+	ZZLog::Greg_Log("TEX0_1: 0x%x", data);
 }
 
 void __fastcall GIFRegHandlerTEX0_2(u32* data)
@@ -431,6 +447,7 @@ void __fastcall GIFRegHandlerTEX0_2(u32* data)
 	if (!NoHighlights(1)) return;
 
 	tex0Write(1, data);
+	ZZLog::Greg_Log("TEX0_2: 0x%x", data);
 }
 
 void __fastcall GIFRegHandlerCLAMP_1(u32* data)
@@ -441,6 +458,7 @@ void __fastcall GIFRegHandlerCLAMP_1(u32* data)
 	if (!NoHighlights(0)) return;
 
 	clampWrite(0, data);
+	ZZLog::Greg_Log("CLAMP_1: 0x%x", data);
 }
 
 void __fastcall GIFRegHandlerCLAMP_2(u32* data)
@@ -451,6 +469,7 @@ void __fastcall GIFRegHandlerCLAMP_2(u32* data)
 	if (!NoHighlights(1)) return;
 
 	clampWrite(1, data);
+	ZZLog::Greg_Log("CLAMP_2: 0x%x", data);
 }
 
 void __fastcall GIFRegHandlerFOG(u32* data)
@@ -458,6 +477,7 @@ void __fastcall GIFRegHandlerFOG(u32* data)
 	FUNCLOG
 	GIFRegFOG* r = (GIFRegFOG*)(data);
 	gs.vertexregs.f = r->F;
+	ZZLog::Greg_Log("FOG: 0x%x", r->F);
 }
 
 void __fastcall GIFRegHandlerXYZF3(u32* data)
@@ -467,6 +487,7 @@ void __fastcall GIFRegHandlerXYZF3(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
 	KICK_VERTEX3();
+	ZZLog::Greg_Log("XYZF3: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
 void __fastcall GIFRegHandlerXYZ3(u32* data)
@@ -476,6 +497,7 @@ void __fastcall GIFRegHandlerXYZ3(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z);
 
 	KICK_VERTEX3();
+	ZZLog::Greg_Log("XYZ3: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
 void __fastcall GIFRegHandlerNOP(u32* data)
@@ -513,6 +535,7 @@ void __fastcall GIFRegHandlerTEX1_1(u32* data)
 	if (!NoHighlights(0)) return;
 
 	tex1Write(0, data);
+	ZZLog::Greg_Log("TEX1_1: 0x%x",data);
 }
 
 void __fastcall GIFRegHandlerTEX1_2(u32* data)
@@ -523,26 +546,31 @@ void __fastcall GIFRegHandlerTEX1_2(u32* data)
 	if (!NoHighlights(1)) return;
 
 	tex1Write(1, data);
+	ZZLog::Greg_Log("TEX1_2: 0x%x",data);
 }
 
 void __fastcall GIFRegHandlerTEX2_1(u32* data)
 {
 	FUNCLOG
 	tex2Write(0, data);
+	ZZLog::Greg_Log("TEX2_1: 0x%x",data);
 }
 
 void __fastcall GIFRegHandlerTEX2_2(u32* data)
 {
 	FUNCLOG
 	tex2Write(1, data);
+	ZZLog::Greg_Log("TEX2_2: 0x%x",data);
 }
 
 void __fastcall GIFRegHandlerXYOFFSET_1(u32* data)
 {
 	FUNCLOG
+	// Affects that Mana Khemia opening dialog.
 	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
 	ZeroGS::vb[0].offset.x = r->OFX;
 	ZeroGS::vb[0].offset.y = r->OFY;
+	ZZLog::Greg_Log("XYOFFSET_1: 0x%x, 0x%x", r->OFX, r->OFY);
 }
 
 void __fastcall GIFRegHandlerXYOFFSET_2(u32* data)
@@ -551,16 +579,19 @@ void __fastcall GIFRegHandlerXYOFFSET_2(u32* data)
 	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
 	ZeroGS::vb[1].offset.x = r->OFX;
 	ZeroGS::vb[1].offset.y = r->OFY;
+	ZZLog::Greg_Log("XYOFFSET_2: 0x%x, 0x%x", r->OFX, r->OFY);
 }
 
 void __fastcall GIFRegHandlerPRMODECONT(u32* data)
 {
 	FUNCLOG
+	// Turns all the text into colored blocks on the initial Mana Khemia dialog if not run.
 	GIFRegPRMODECONT* r = (GIFRegPRMODECONT*)(data);
 	gs.prac = r->AC;
 	prim = &gs._prim[gs.prac];
 
 	ZeroGS::Prim();
+	ZZLog::Greg_Log("PRMODECONT");
 }
 
 void __fastcall GIFRegHandlerPRMODE(u32* data)
@@ -571,11 +602,13 @@ void __fastcall GIFRegHandlerPRMODE(u32* data)
 	gs._prim[0]._val = (data[0] >> 3) & 0xff;
 
 	if (gs.prac == 0) ZeroGS::Prim();
+	ZZLog::Greg_Log("PRMODE");
 }
 
 void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 {
 	FUNCLOG
+	// Affects background coloration of initial Mana Khemia dialog.
 	GIFRegTEXCLUT* r = (GIFRegTEXCLUT*)(data);
 
 	ZeroGS::vb[0].FlushTexData();
@@ -585,6 +618,7 @@ void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 	gs.clut.cbw = r->CBW  << 6;
 	gs.clut.cou = r->COU  << 4;
 	gs.clut.cov = r->COV;
+	ZZLog::Greg_Log("TEXCLUT: CBW:0x%x, COU:0x%x, COV:0x%x",r->CBW, r->COU, r->COV);
 }
 
 void __fastcall GIFRegHandlerSCANMSK(u32* data)
@@ -600,6 +634,7 @@ void __fastcall GIFRegHandlerSCANMSK(u32* data)
 	}
 	
 	gs.smask = r->MSK;
+	ZZLog::Greg_Log("SCANMSK: 0x%x",r->MSK);
 }
 
 void __fastcall GIFRegHandlerMIPTBP1_1(u32* data)
@@ -619,6 +654,7 @@ void __fastcall GIFRegHandlerMIPTBP1_1(u32* data)
 	miptbp0.tbw[1] = r->TBW2;
 	miptbp0.tbp[2] = r->TBP3;
 	miptbp0.tbw[2] = r->TBW3;
+	ZZLog::Greg_Log("MIPTBP1_1: TBP/TBW: (0x%x, 0x%x), (0x%x, 0x%x), (0x%x, 0x%x)", r->TBP1, r->TBW1, r->TBP2, r->TBW2, r->TBP3, r->TBW3);
 }
 
 void __fastcall GIFRegHandlerMIPTBP1_2(u32* data)
@@ -634,6 +670,7 @@ void __fastcall GIFRegHandlerMIPTBP1_2(u32* data)
 	miptbp0.tbw[1] = r->TBW2;
 	miptbp0.tbp[2] = r->TBP3;
 	miptbp0.tbw[2] = r->TBW3;
+	ZZLog::Greg_Log("MIPTBP1_2: TBP/TBW: (0x%x, 0x%x), (0x%x, 0x%x), (0x%x, 0x%x)", r->TBP1, r->TBW1, r->TBP2, r->TBW2, r->TBP3, r->TBW3);
 }
 
 void __fastcall GIFRegHandlerMIPTBP2_1(u32* data)
@@ -649,6 +686,7 @@ void __fastcall GIFRegHandlerMIPTBP2_1(u32* data)
 	miptbp1.tbw[1] = r->TBW5;
 	miptbp1.tbp[2] = r->TBP6;
 	miptbp1.tbw[2] = r->TBW6;
+	ZZLog::Greg_Log("MIPTBP2_1: TBP/TBW: (0x%x, 0x%x), (0x%x, 0x%x), (0x%x, 0x%x)", r->TBP4, r->TBW4, r->TBP5, r->TBW5, r->TBP6, r->TBW6);
 }
 
 void __fastcall GIFRegHandlerMIPTBP2_2(u32* data)
@@ -664,11 +702,13 @@ void __fastcall GIFRegHandlerMIPTBP2_2(u32* data)
 	miptbp1.tbw[1] = r->TBW5;
 	miptbp1.tbp[2] = r->TBP6;
 	miptbp1.tbw[2] = r->TBW6;
+	ZZLog::Greg_Log("MIPTBP2_2: TBP/TBW: (0x%x, 0x%x), (0x%x, 0x%x), (0x%x, 0x%x)", r->TBP4, r->TBW4, r->TBP5, r->TBW5, r->TBP6, r->TBW6);
 }
 
 void __fastcall GIFRegHandlerTEXA(u32* data)
 {
 	FUNCLOG
+	// Background of initial Mana Khemia dialog.
 	GIFRegTEXA* r = (GIFRegTEXA*)(data);
 	
 	if ((r->AEM != gs.texa.aem) || (r->TA0 != gs.texa.ta[0]) || (r->TA1 != gs.texa.ta[1]))
@@ -684,6 +724,7 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 	gs.texa.ta[1] = r->TA1;
 	gs.texa.fta[0] = r->TA0 / 255.0f;
 	gs.texa.fta[1] = r->TA1 / 255.0f;
+	ZZLog::Greg_Log("TEXA: AEM:0x%x, TA0:0x%x, TA1:0x%x", r->AEM, r->TA0, r->TA1);
 }
 
 void __fastcall GIFRegHandlerFOGCOL(u32* data)
@@ -698,6 +739,7 @@ void __fastcall GIFRegHandlerFOGCOL(u32* data)
 	
 	ZeroGS::SetFogColor(r);
 	gs.fogcol = r->ai32[0];
+	ZZLog::Greg_Log("FOGCOL: 0x%x", r->ai32[0]);
 }
 
 void __fastcall GIFRegHandlerTEXFLUSH(u32* data)
@@ -705,6 +747,7 @@ void __fastcall GIFRegHandlerTEXFLUSH(u32* data)
 	FUNCLOG
 	// GSdx doesn't even do anything here.
 	ZeroGS::SetTexFlush();
+	ZZLog::Greg_Log("TEXFLUSH");
 }
 
 void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
@@ -740,6 +783,7 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 	m_env.CTXT[i].SCISSOR = (GSVector4i)r->SCISSOR;
 
 	m_env.CTXT[i].UpdateScissor();*/
+	ZZLog::Greg_Log("SCISSOR1");
 }
 
 void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
@@ -765,12 +809,13 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 		ZeroGS::vb[1].bNeedFrameCheck = 1;
 	}
 	scissor = newscissor;
+	ZZLog::Greg_Log("SCISSOR2");
 }
 
 void __fastcall GIFRegHandlerALPHA_1(u32* data)
 {
 	FUNCLOG
-	
+	// Mana Khemia Opening Dialog.
 	GIFRegALPHA* r = (GIFRegALPHA*)(data);
 	alphaInfo newalpha;
 	
@@ -791,6 +836,7 @@ void __fastcall GIFRegHandlerALPHA_1(u32* data)
 	}
 	
 	ZeroGS::vb[0].alpha = newalpha;
+	ZZLog::Greg_Log("ALPHA1: A:0x%x B:0x%x C:0x%x D:0x%x FIX:0x%x ", r->A, r->B, r->C, r->D, r->FIX);
 }
 
 void __fastcall GIFRegHandlerALPHA_2(u32* data)
@@ -815,6 +861,7 @@ void __fastcall GIFRegHandlerALPHA_2(u32* data)
 		ZeroGS::Flush(1);
 	}
 	ZeroGS::vb[1].alpha = newalpha;
+	ZZLog::Greg_Log("ALPHA2: A:0x%x B:0x%x C:0x%x D:0x%x FIX:0x%x ", r->A, r->B, r->C, r->D, r->FIX);
 }
 
 void __fastcall GIFRegHandlerDIMX(u32* data)
@@ -838,6 +885,7 @@ void __fastcall GIFRegHandlerDIMX(u32* data)
 	{
 		//gs.UpdateDIMX();
 	}
+	ZZLog::Greg_Log("DIMX");
 }
 
 void __fastcall GIFRegHandlerDTHE(u32* data)
@@ -851,6 +899,7 @@ void __fastcall GIFRegHandlerDTHE(u32* data)
 	}
 	
 	gs.dthe = r->DTHE;
+	ZZLog::Greg_Log("DTHE: 0x%x ", r->DTHE);
 }
 
 void __fastcall GIFRegHandlerCOLCLAMP(u32* data)
@@ -864,18 +913,21 @@ void __fastcall GIFRegHandlerCOLCLAMP(u32* data)
 	}
 	
 	gs.colclamp = r->CLAMP;
+	ZZLog::Greg_Log("COLCLAMP: 0x%x ", r->CLAMP);
 }
 
 void __fastcall GIFRegHandlerTEST_1(u32* data)
 {
 	FUNCLOG
 	testWrite(0, data);
+	ZZLog::Greg_Log("TEST1");
 }
 
 void __fastcall GIFRegHandlerTEST_2(u32* data)
 {
 	FUNCLOG
 	testWrite(1, data);
+	ZZLog::Greg_Log("TEST2");
 }
 
 void __fastcall GIFRegHandlerPABE(u32* data)
@@ -891,6 +943,7 @@ void __fastcall GIFRegHandlerPABE(u32* data)
 	}
 
 	gs.pabe = r->PABE;
+	ZZLog::Greg_Log("PABE: 0x%x ", r->PABE);
 }
 
 void __fastcall GIFRegHandlerFBA_1(u32* data)
@@ -904,6 +957,7 @@ void __fastcall GIFRegHandlerFBA_1(u32* data)
 	}
 	
 	ZeroGS::vb[0].fba.fba = r->FBA;
+	ZZLog::Greg_Log("FBA1: 0x%x ", r->FBA);
 }
 
 void __fastcall GIFRegHandlerFBA_2(u32* data)
@@ -917,18 +971,22 @@ void __fastcall GIFRegHandlerFBA_2(u32* data)
 	}
 	
 	ZeroGS::vb[1].fba.fba = r->FBA;
+	ZZLog::Greg_Log("FBA2: 0x%x ", r->FBA);
 }
 
 void __fastcall GIFRegHandlerFRAME_1(u32* data)
 {
 	FUNCLOG
+	// Affects opening dialogs, movie, and menu on Mana Khemia.
 	frameWrite(0, data);
+	ZZLog::Greg_Log("FRAME_1");
 }
 
 void __fastcall GIFRegHandlerFRAME_2(u32* data)
 {
 	FUNCLOG
 	frameWrite(1, data);
+	ZZLog::Greg_Log("FRAME_2");
 }
 
 void __fastcall GIFRegHandlerZBUF_1(u32* data)
@@ -936,6 +994,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	FUNCLOG
 	// I'll wait a bit on this one.
 	//GIFRegZBUF* r = (GIFRegZBUF*)(data);
+	ZZLog::Greg_Log("ZBUF_1");
 	
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
 	int psm = (0x30 | ((data[0] >> 24) & 0xf));
@@ -966,6 +1025,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 void __fastcall GIFRegHandlerZBUF_2(u32* data)
 {
 	FUNCLOG
+	ZZLog::Greg_Log("ZBUF_2");
 	// And this.
 	//GIFRegZBUF* r = (GIFRegZBUF*)(data);
 	zbufInfo& zbuf = ZeroGS::vb[1].zbuf;
@@ -999,6 +1059,8 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 {
 	FUNCLOG
+	// Required for *all* graphics. (Checked on Mana Khemia)
+	
 	GIFRegBITBLTBUF* r = (GIFRegBITBLTBUF*)(data);
 	// Wonder why the shift?
 	gs.srcbufnew.bp  = r->SBP;   // * 64;
@@ -1020,10 +1082,12 @@ void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 	{
 		gs.dstbufnew.bw &= ~1; // namcoXcapcom: 5, 11, refered to as 4, 10 in TEX0.TBW later
 	}*/
+	ZZLog::Greg_Log("BITBLTBUF");
 }
 
 void __fastcall GIFRegHandlerTRXPOS(u32* data)
 {
+	// Affects Mana Khemia opening background.
 	FUNCLOG
 	GIFRegTRXPOS* r = (GIFRegTRXPOS*)(data);
 	
@@ -1033,6 +1097,7 @@ void __fastcall GIFRegHandlerTRXPOS(u32* data)
 	gs.trxposnew.dy  = r->DSAY;
 	gs.trxposnew.dirx = r->DIRX;
 	gs.trxposnew.diry = r->DIRY;
+	ZZLog::Greg_Log("TRXPOS: SSA:(0x%x/0x%x) DSA:(0x%x/0x%x) DIR:(0x%x/0x%x)", r->SSAX, r->SSAY, r->DSAX, r->DSAY, r->DIRX, r->DIRY);
 }
 
 void __fastcall GIFRegHandlerTRXREG(u32* data)
@@ -1041,6 +1106,7 @@ void __fastcall GIFRegHandlerTRXREG(u32* data)
 	GIFRegTRXREG* r = (GIFRegTRXREG*)(data);
 	gs.imageWtemp = r->RRW;
 	gs.imageHtemp = r->RRH;
+	ZZLog::Greg_Log("TRXREG: RRW: 0x%x, RRH: 0x%x", r->RRW, r->RRH);
 }
 
 void __fastcall GIFRegHandlerTRXDIR(u32* data)
@@ -1100,6 +1166,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 #endif
 		gs.imageTransfer = -1;
 	}
+	ZZLog::Greg_Log("TRXDIR");
 }
 
 void __fastcall GIFRegHandlerHWREG(u32* data)
@@ -1117,6 +1184,7 @@ void __fastcall GIFRegHandlerHWREG(u32* data)
 		//assert(0);
 #endif
 	}
+	ZZLog::Greg_Log("HWREG");
 }
 
 extern int g_GSMultiThreaded;
