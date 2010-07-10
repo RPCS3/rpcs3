@@ -51,6 +51,7 @@ set(zzoglSources
     GLWin32.cpp
     GLWinX11.cpp
     GSmain.cpp
+    HostMemory.cpp
     Mem.cpp
     memcpy_amd.cpp
     Mem_Swizzle.cpp

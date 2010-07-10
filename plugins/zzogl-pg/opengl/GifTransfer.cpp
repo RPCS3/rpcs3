@@ -177,8 +177,7 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 							break;
 
 						case 2:
-							//Move();
-							//ZZLog::Error_Log("GIF_FLG_IMAGE MOVE");
+							//ZeroGS::TransferLocalLocal();
 							break;
 
 						case 3:

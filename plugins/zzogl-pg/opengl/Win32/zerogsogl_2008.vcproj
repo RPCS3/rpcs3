@@ -270,6 +270,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\HostMemory.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Mem.cpp"
 				>
 			</File>

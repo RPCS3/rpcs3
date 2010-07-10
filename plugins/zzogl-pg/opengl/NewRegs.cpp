@@ -1,5 +1,5 @@
 /*  ZeroGS KOSMOS
- *  Copyright (C) 2005-2006 zerorog@gmail.com
+ *  Copyright (C) 2005-2006 zerofrog@gmail.com
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -201,16 +201,8 @@ void tex0Write(int i, u32 *data)
 		// kh and others
 		return;
 	}
-
-	//ZeroGS::vb[i].uCurTex0.i64 = r->i64;
-//	ZeroGS::vb[i].uNextTex0Data[0] = r->ai32[0];
-//	ZeroGS::vb[i].uNextTex0Data[1] = r->ai32[1];	
-	ZeroGS::vb[i].uNextTex0Data[0] = data[0];	
-	ZeroGS::vb[i].uNextTex0Data[1] = data[1];
-	ZeroGS::vb[i].bNeedTexCheck = 1;
-
+	
 	// don't update unless necessary
-
 	if (PSMT_ISCLUT(psm))
 	{
 		if (ZeroGS::CheckChangeInClut(data[1], psm))
@@ -218,13 +210,17 @@ void tex0Write(int i, u32 *data)
 			// loading clut, so flush whole texture
 			ZeroGS::vb[i].FlushTexData();
 		}
-//		else if (r->CSA != (ZeroGS::vb[i].uCurTex0.CSA))
-		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000))
+//		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000))
+		else if (r->CSA != (ZeroGS::vb[i].uCurTex0.CSA))
 		{
 			// check if csa is the same!! (ffx bisaid island, grass)
 			ZeroGS::Flush(i); // flush any previous entries
 		}
 	}
+	
+	ZeroGS::vb[i].uCurTex0.i64 = r->i64;
+	ZeroGS::vb[i].bNeedTexCheck = 1;
+
 }
 
 void tex2Write(int i, u32 *data)

@@ -142,6 +142,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\GSmain.cpp" />
+    <ClCompile Include="..\HostMemory.cpp" />
     <ClCompile Include="..\Mem.cpp" />
     <ClCompile Include="..\Mem_Swizzle.cpp" />
     <ClCompile Include="..\Mem_Tables.cpp" />
