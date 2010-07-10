@@ -51,7 +51,7 @@ Description: Playstation 2 emulator
 Package: pcsx2-data-unstable
 Architecture: all 
 Depends: ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${binary:Version}), 
+Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
 Conflicts: pcsx2-data
 Description: data for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and
@@ -67,7 +67,8 @@ Description: data for pcsx2
 Package: pcsx2-plugins-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version})
 Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and
