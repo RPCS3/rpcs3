@@ -61,7 +61,7 @@ void LoadConfig()
 	GetPrivateProfileString("Settings", "AdvancedOptions", NULL, szValue, 20, iniFile.c_str());
 	conf.hacks._u32 = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, iniFile.c_str());
-	conf.bilinear = strtoul(szValue, NULL, 10);
+	conf.bilinear = (u8)strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Width", NULL, szValue, 20, iniFile.c_str());
 	conf.width = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Height", NULL, szValue, 20, iniFile.c_str());

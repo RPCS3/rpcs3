@@ -20,6 +20,7 @@
 #ifndef GIFTRANSFER_H_INCLUDED
 #define GIFTRANSFER_H_INCLUDED
 
+#include "GS.h"
 #include "Regs.h"
 #include "Util.h"
 

@@ -290,6 +290,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\NewRegs.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Profile.cpp"
 				>
 			</File>
@@ -422,6 +426,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\NewRegs.h"
+				>
+			</File>
+			<File
 				RelativePath="..\Profile.h"
 				>
 			</File>
@@ -466,19 +474,19 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZGl.h"
-				>
-			</File>
-			<File
-				RelativePath="..\ZZLog.h"
-				>
-			</File>
-			<File
 				RelativePath="..\zerogs.h"
 				>
 			</File>
 			<File
 				RelativePath="..\zerogsmath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZGl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZLog.h"
 				>
 			</File>
 		</Filter>

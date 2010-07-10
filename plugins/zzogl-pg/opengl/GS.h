@@ -645,7 +645,7 @@ typedef struct
 			  ((a & 0xff) << 24);
 	}
 	
-	void add_vertex(u16 x, u16 y, u32 z, float f)
+	void add_vertex(u16 x, u16 y, u32 z, u16 f)
 	{
 		vertexregs.x = x;
 		vertexregs.y = y;

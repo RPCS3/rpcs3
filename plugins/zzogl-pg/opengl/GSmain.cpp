@@ -288,6 +288,10 @@ void CALLBACK GSwriteCSR(u32 write)
 	gs.CSRw = write;
 }
 
+#ifdef _WIN32
+#define access _access
+#endif
+
 void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 {
 	FUNCLOG

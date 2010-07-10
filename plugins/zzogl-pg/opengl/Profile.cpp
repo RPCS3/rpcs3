@@ -171,7 +171,7 @@ u64 DVProfWriteStruct(FILE* f, DVPROFSTRUCT* p, int ident)
 
 	list<DVPROFSTRUCT::DATA>::iterator ittime = p->listTimes.begin();
 
-	u32 utime = 0;
+	u64 utime = 0;
 
 	while (ittime != p->listTimes.end())
 	{
@@ -196,7 +196,7 @@ u64 DVProfWriteStruct(FILE* f, DVPROFSTRUCT* p, int ident)
 	while (itprof != p->listpChild.end())
 	{
 
-		uex -= DVProfWriteStruct(f, *itprof, ident + 4);
+		uex -= (u32)DVProfWriteStruct(f, *itprof, ident + 4);
 		++itprof;
 	}
 
