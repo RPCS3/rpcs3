@@ -458,7 +458,7 @@ void ZeroGS::VB::FlushTexData()
 	GL_REPORT_ERRORD();
 	
 	//assert(bNeedTexCheck);
-	//if (bNeedTexCheck)
+	if (bNeedTexCheck)
 	{
 		bNeedTexCheck = 0;
 
