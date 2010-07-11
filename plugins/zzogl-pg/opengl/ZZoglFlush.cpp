@@ -1482,8 +1482,10 @@ inline void AlphaSaveTarget(VB& curvb)
 inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 {
 	// clamp the final colors, when enabled ffx2 credits mess up
-	if (curvb.curprim.abe && bAlphaClamping && GetRenderFormat() != RFT_byte8 && !(conf.settings().no_color_clamp))   // if !colclamp, skip
+	//if (gs.colclamp) ZZLog::Error_Log("ColClamp!");
+	if ((curvb.curprim.abe && bAlphaClamping) && (GetRenderFormat() != RFT_byte8) && !(conf.settings().no_color_clamp))   // if !colclamp, skip
 	{
+		//ZZLog::Error_Log("Clamped.");
 		ResetAlphaVariables();
 
 		// if processing the clamping case, make sure can write to the front buffer

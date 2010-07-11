@@ -47,7 +47,7 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 				case XK_F6:
 				case XK_F7:
 				case XK_F9:
-					THR_KeyEvent = ev->key ;
+					THR_KeyEvent = ev->key;
 					break;
 
 				case XK_Escape:

@@ -115,10 +115,13 @@ void __fastcall GIFPackedRegHandlerNOP(u32* data);
 
 // These are unimplemented, and fall back on the non-packed versions.
 void __fastcall GIFPackedRegHandlerPRIM(u32* data);
-void __fastcall GIFPackedRegHandlerTEX0_1(u32* data);
-void __fastcall GIFPackedRegHandlerTEX0_2(u32* data);
-void __fastcall GIFPackedRegHandlerCLAMP_1(u32* data);
-void __fastcall GIFPackedRegHandlerCLAMP_2(u32* data);
+
+template<u32 i>
+void __fastcall GIFPackedRegHandlerTEX0(u32* data);
+
+template<u32 i>
+void __fastcall GIFPackedRegHandlerCLAMP(u32* data);
+
 void __fastcall GIFPackedRegHandlerXYZF3(u32* data);
 void __fastcall GIFPackedRegHandlerXYZ3(u32* data);
 
@@ -129,47 +132,56 @@ void __fastcall GIFRegHandlerST(u32* data);
 void __fastcall GIFRegHandlerUV(u32* data);
 void __fastcall GIFRegHandlerXYZF2(u32* data);
 void __fastcall GIFRegHandlerXYZ2(u32* data);
-void __fastcall GIFRegHandlerTEX0_1(u32* data);
-void __fastcall GIFRegHandlerTEX0_2(u32* data);
-void __fastcall GIFRegHandlerCLAMP_1(u32* data);
-void __fastcall GIFRegHandlerCLAMP_2(u32* data);
+
+template<u32 i>
+void __fastcall GIFRegHandlerTEX0(u32* data);
+
+template<u32 i>
+void __fastcall GIFRegHandlerCLAMP(u32* data);
+
 void __fastcall GIFRegHandlerFOG(u32* data);
 void __fastcall GIFRegHandlerXYZF3(u32* data);
 void __fastcall GIFRegHandlerXYZ3(u32* data);
 void __fastcall GIFRegHandlerNOP(u32* data);
-void __fastcall GIFRegHandlerTEX1_1(u32* data);
-void __fastcall GIFRegHandlerTEX1_2(u32* data);
-void __fastcall GIFRegHandlerTEX2_1(u32* data);
-void __fastcall GIFRegHandlerTEX2_2(u32* data);
-void __fastcall GIFRegHandlerXYOFFSET_1(u32* data);
-void __fastcall GIFRegHandlerXYOFFSET_2(u32* data);
+
+template <u32 i>
+void __fastcall GIFRegHandlerTEX1(u32* data);
+
+template <u32 i>
+void __fastcall GIFRegHandlerTEX2(u32* data);
+
+template <u32 i>
+void __fastcall GIFRegHandlerXYOFFSET(u32* data);
+
 void __fastcall GIFRegHandlerPRMODECONT(u32* data);
 void __fastcall GIFRegHandlerPRMODE(u32* data);
 void __fastcall GIFRegHandlerTEXCLUT(u32* data);
 void __fastcall GIFRegHandlerSCANMSK(u32* data);
-void __fastcall GIFRegHandlerMIPTBP1_1(u32* data);
-void __fastcall GIFRegHandlerMIPTBP1_2(u32* data);
-void __fastcall GIFRegHandlerMIPTBP2_1(u32* data);
-void __fastcall GIFRegHandlerMIPTBP2_2(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerMIPTBP1(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerMIPTBP2(u32* data);
 void __fastcall GIFRegHandlerTEXA(u32* data);
 void __fastcall GIFRegHandlerFOGCOL(u32* data);
 void __fastcall GIFRegHandlerTEXFLUSH(u32* data);
-void __fastcall GIFRegHandlerSCISSOR_1(u32* data);
-void __fastcall GIFRegHandlerSCISSOR_2(u32* data);
-void __fastcall GIFRegHandlerALPHA_1(u32* data);
-void __fastcall GIFRegHandlerALPHA_2(u32* data);
+
+template <u32 i>
+void __fastcall GIFRegHandlerSCISSOR(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerALPHA(u32* data);
+
 void __fastcall GIFRegHandlerDIMX(u32* data);
 void __fastcall GIFRegHandlerDTHE(u32* data);
 void __fastcall GIFRegHandlerCOLCLAMP(u32* data);
-void __fastcall GIFRegHandlerTEST_1(u32* data);
-void __fastcall GIFRegHandlerTEST_2(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerTEST(u32* data);
 void __fastcall GIFRegHandlerPABE(u32* data);
-void __fastcall GIFRegHandlerFBA_1(u32* data);
-void __fastcall GIFRegHandlerFBA_2(u32* data);
-void __fastcall GIFRegHandlerFRAME_1(u32* data);
-void __fastcall GIFRegHandlerFRAME_2(u32* data);
-void __fastcall GIFRegHandlerZBUF_1(u32* data);
-void __fastcall GIFRegHandlerZBUF_2(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerFBA(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerFRAME(u32* data);
+template <u32 i>
+void __fastcall GIFRegHandlerZBUF(u32* data);
 void __fastcall GIFRegHandlerBITBLTBUF(u32* data);
 void __fastcall GIFRegHandlerTRXPOS(u32* data);
 void __fastcall GIFRegHandlerTRXREG(u32* data);
