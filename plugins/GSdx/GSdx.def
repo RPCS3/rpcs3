@@ -17,7 +17,8 @@ EXPORTS
 	GSclose				
 	GSreset				
 	GSwriteCSR			
-	GSgifSoftReset		
+	GSgifSoftReset
+	GSgifTransfer		
 	GSgifTransfer1		
 	GSgifTransfer2		
 	GSgifTransfer3		

@@ -319,6 +319,11 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 	s_gs->ReadFIFO(mem, size);
 }
 
+EXPORT_C GSgifTransfer(uint8* mem, uint32 size)
+{
+	s_gs->Transfer<3>(mem , size);
+}
+
 EXPORT_C GSgifTransfer1(uint8* mem, uint32 addr)
 {
 	s_gs->Transfer<0>(mem + addr, (0x4000 - addr) / 16);

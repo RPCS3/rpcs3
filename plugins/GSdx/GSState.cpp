@@ -35,7 +35,7 @@ GSState::GSState()
 	, m_path3hack(0)
 	, m_q(1.0f)
 	, m_vprim(1)
-	, m_version(5)
+	, m_version(6)
 	, m_frameskip(0)
 	, m_vkf(NULL)
 {
@@ -85,7 +85,7 @@ GSState::GSState()
 	m_sssize += sizeof(m_tr.x);
 	m_sssize += sizeof(m_tr.y);
 	m_sssize += m_mem.m_vmsize;
-	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * 3;
+	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * ArraySize(m_path);
 	m_sssize += sizeof(m_q);
 
 	PRIM = &m_env.PRIM;
@@ -136,7 +136,7 @@ void GSState::SetMultithreaded( bool isMT )
 
 void GSState::Reset()
 {
-	memset(&m_path[0], 0, sizeof(m_path[0]) * 3);
+	memset(&m_path[0], 0, sizeof(m_path[0]) * ArraySize(m_path));
 	memset(&m_v, 0, sizeof(m_v));
 
 //	PRIM = &m_env.PRIM;
@@ -1375,7 +1375,12 @@ void GSState::Move()
 #endif
 void GSState::SoftReset(uint32 mask)
 {
-	if(mask & 1) memset(&m_path[0], 0, sizeof(GIFPath));
+	if(mask & 1)
+	{
+		memset(&m_path[0], 0, sizeof(GIFPath));
+		memset(&m_path[3], 0, sizeof(GIFPath));
+	}
+	
 	if(mask & 2) memset(&m_path[1], 0, sizeof(GIFPath));
 	if(mask & 4) memset(&m_path[2], 0, sizeof(GIFPath));
 
@@ -1403,6 +1408,7 @@ void GSState::ReadFIFO(uint8* mem, int size)
 template void GSState::Transfer<0>(uint8* mem, uint32 size);
 template void GSState::Transfer<1>(uint8* mem, uint32 size);
 template void GSState::Transfer<2>(uint8* mem, uint32 size);
+template void GSState::Transfer<3>(uint8* mem, uint32 size);
 
 template<int index> void GSState::Transfer(uint8* mem, uint32 size)
 {
@@ -1658,7 +1664,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	WriteState(data, &m_tr.y);
 	WriteState(data, m_mem.m_vm8, m_mem.m_vmsize);
 
-	for(int i = 0; i < 3; i++)
+	for(int i = 0; i < ArraySize(m_path); i++)
 	{
 		m_path[i].tag.NREG = m_path[i].nreg;
 		m_path[i].tag.NLOOP = m_path[i].nloop;
@@ -1753,7 +1759,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	m_tr.total = 0; // TODO: restore transfer state
 
-	for(int i = 0; i < 3; i++)
+	for(int i = 0; i < ArraySize(m_path); i++)
 	{
 		ReadState(&m_path[i].tag, data);
 		ReadState(&m_path[i].reg, data);

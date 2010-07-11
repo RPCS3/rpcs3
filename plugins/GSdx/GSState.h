@@ -196,7 +196,7 @@ protected:
 	}
 
 public:
-	GIFPath m_path[3];
+	GIFPath m_path[4];
 	GIFRegPRIM* PRIM;
 	GSPrivRegSet* m_regs;
 	GSLocalMemory m_mem;
