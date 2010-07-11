@@ -48,20 +48,6 @@
 		</Linker>
 		<Unit filename="../CDVD.cpp" />
 		<Unit filename="../CDVD.h" />
-		<Unit filename="Config.cpp" />
-		<Unit filename="Config.h" />
-		<Unit filename="callbacks.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="callbacks.h" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Extensions>
 			<code_completion />
