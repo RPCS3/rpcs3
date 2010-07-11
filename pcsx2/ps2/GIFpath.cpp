@@ -528,16 +528,34 @@ void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint
 	uint endpos = destStart + len;
 	if( endpos >= destSize )
 	{
-		uint firstcopylen = RingBufferSize - destStart;
+		uint firstcopylen = destSize - destStart;
 		memcpy_aligned(&destBase[destStart], src, firstcopylen );
 
-		destStart = endpos & RingBufferMask;
+		destStart = endpos % destSize;
 		memcpy_aligned(destBase, src+firstcopylen, destStart );
 	}
 	else
 	{
 		memcpy_aligned(&destBase[destStart], src, len );
 		destStart += len;
+	}
+}
+
+void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
+{
+	uint endpos = srcStart + len;
+	if( endpos >= srcSize )
+	{
+		uint firstcopylen = srcSize - srcStart;
+		memcpy_aligned(dest, &srcBase[srcStart], firstcopylen );
+
+		srcStart = endpos & srcSize;
+		memcpy_aligned(dest+firstcopylen, srcBase, srcStart );
+	}
+	else
+	{
+		memcpy_aligned(dest, &srcBase[srcStart], len );
+		srcStart += len;
 	}
 }
 

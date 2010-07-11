@@ -132,14 +132,14 @@ void SysMtgsThread::PostVsyncEnd()
 
 	uint packsize = sizeof(RingCmdPacket_Vsync) / 16;
 	PrepDataPacket(GS_RINGTYPE_VSYNC, packsize);
-	RingCmdPacket_Vsync& local( *(RingCmdPacket_Vsync*)GetDataPacketPtr() );
+	MemCopy_WrappedDest( (u128*)PS2MEM_GS, RingBuffer.m_Ring, m_packet_ringpos, RingBufferSize, 0xf );
 
-	memcpy_fast( local.regset1, PS2MEM_GS, sizeof(local.regset1) );
-	local.csr = GSCSRr;
-	local.imr = GSIMR;
-	local.siglblid = GSSIGLBLID;
-
-	m_packet_ringpos += packsize;
+	u32* remainder = (u32*)GetDataPacketPtr();
+	remainder[0] = GSCSRr;
+	remainder[1] = GSIMR;
+	(GSRegSIGBLID&)remainder[2] = GSSIGLBLID;
+	m_packet_ringpos = (m_packet_ringpos + 1) & RingBufferMask;
+	
 	SendDataPacket();
 
 	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
