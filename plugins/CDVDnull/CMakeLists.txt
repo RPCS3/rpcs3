@@ -45,19 +45,19 @@ set(CDVDnullSources
 set(CDVDnullHeaders
 	CDVD.h)
 
-# CDVDnull Linux sources
-set(CDVDnullLinuxSources
-	Linux/callbacks.c
-	Linux/Config.cpp
-	Linux/interface.c
-	Linux/support.c)
+# # CDVDnull Linux sources
+# set(CDVDnullLinuxSources
+# 	Linux/callbacks.c
+# 	Linux/Config.cpp
+# 	Linux/interface.c
+# 	Linux/support.c)
 
-# CDVDnull Linux headers
-set(CDVDnullLinuxHeaders
-	Linux/callbacks.h
-	Linux/Config.h
-	Linux/interface.h
-	Linux/support.h)
+# # CDVDnull Linux headers
+# set(CDVDnullLinuxHeaders
+# 	Linux/callbacks.h
+# 	Linux/Config.h
+# 	Linux/interface.h
+# 	Linux/support.h)
 
 # CDVDnull Windows sources
 set(CDVDnullWindowsSources
@@ -75,8 +75,9 @@ include_directories(.)
 add_library(${CDVDnullName} SHARED
 			${CDVDnullSources}
 			${CDVDnullHeaders}
-			${CDVDnullLinuxSources}
-			${CDVDnullLinuxHeaders})
+            #${CDVDnullLinuxSources}
+            #${CDVDnullLinuxHeaders}
+            )
 
 # Force the linker into 32 bits mode
 target_link_libraries(${CDVDnullName} -m32)
