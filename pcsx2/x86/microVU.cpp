@@ -106,6 +106,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
 	// Allocates rec-cache and calls mVUreset()
 	mVUresizeCache(mVU, mVU->cacheSize + mVUcacheSafeZone);
+	//if (vuIndex) gen_memcpy_vibes();
 }
 
 // Resets Rec Data

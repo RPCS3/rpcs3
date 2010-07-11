@@ -1109,17 +1109,16 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 		}
 		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
 		pDest = GetMTGS().GetDataPacketPtr();
+
 		if (size > diff) {
-			// fixme: one of these days the following *16's will get cleaned up when we introduce
-			// a special qwc/simd16 optimized version of memcpy_aligned. :)
-			//DevCon.Status("XGkick Wrap!");
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
+			//DevCon.WriteLn("XGkick Wrap!");
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
 			size  -= diff;
 			pDest += diff*16;
-			memcpy_aligned(pDest, microVU1.regs->Mem, size*16);
+			memcpy_qwc(pDest, microVU1.regs->Mem, size);
 		}
 		else {
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
 		}
 		GetMTGS().SendDataPacket();
 		if(GSTransferStatus.PTH1 == STOPPED_MODE)
@@ -1141,14 +1140,14 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			// fixme: one of these days the following *16's will get cleaned up when we introduce
 			// a special qwc/simd16 optimized version of memcpy_aligned. :)
 			//DevCon.Status("XGkick Wrap!");
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
 			Path1WritePos += size;
 			size  -= diff;
 			pDest += diff*16;
-			memcpy_aligned(pDest, microVU1.regs->Mem, size*16);			
+			memcpy_qwc(pDest, microVU1.regs->Mem, size);
 		}
 		else {
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
 			Path1WritePos += size;
 		}
 		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
