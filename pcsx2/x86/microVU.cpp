@@ -133,8 +133,8 @@ _f void mVUreset(mV) {
 	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - mVUcacheSafeZone)); // "Safe Zone"
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		deque<microProgram*>::iterator it = mVU->prog.prog[i]->begin();
-		for ( ; it != mVU->prog.prog[i]->end(); it++) {
+		deque<microProgram*>::iterator it(mVU->prog.prog[i]->begin());
+		for ( ; it != mVU->prog.prog[i]->end(); ++it) {
 			if (!isVU1) mVUdeleteProg<0>(it[0]);
 			else	    mVUdeleteProg<1>(it[0]);
 		}
@@ -152,8 +152,8 @@ _f void mVUclose(mV) {
 
 	// Delete Programs and Block Managers
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		deque<microProgram*>::iterator it = mVU->prog.prog[i]->begin();
-		for ( ; it != mVU->prog.prog[i]->end(); it++) {
+		deque<microProgram*>::iterator it(mVU->prog.prog[i]->begin());
+		for ( ; it != mVU->prog.prog[i]->end(); ++it) {
 			if (!isVU1) mVUdeleteProg<0>(it[0]);
 			else	    mVUdeleteProg<1>(it[0]);
 		}
@@ -251,8 +251,8 @@ _mVUt _f void mVUcacheProg(microProgram& prog) {
 // Compare partial program by only checking compiled ranges...
 _mVUt _f bool mVUcmpPartial(microProgram& prog) {
 	microVU* mVU = mVUx;
-	deque<microRange>::const_iterator it = prog.ranges->begin();
-	for ( ; it != prog.ranges->end(); it++) {
+	deque<microRange>::const_iterator it(prog.ranges->begin());
+	for ( ; it != prog.ranges->end(); ++it) {
 		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, it[0].start, it[0].end); }
 		if (memcmp_mmx(cmpOffset(prog.data), cmpOffset(mVU->regs->Micro), ((it[0].end + 8)  -  it[0].start))) {
 			return 0;
@@ -280,8 +280,8 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
 	microProgramList*  list  = mVU->prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
-		deque<microProgram*>::iterator it( list->begin() );
-		for ( ; it != list->end(); it++) {
+		deque<microProgram*>::iterator it(list->begin());
+		for ( ; it != list->end(); ++it) {
 			if (mVUcmpProg<vuIndex>(*it[0], 0)) {
 				quick.block = it[0]->block[startPC/8];
 				quick.prog  = it[0];

@@ -60,8 +60,8 @@ void mVUsetupRange(microVU* mVU, s32 pc, bool isStartPC) {
 	pc &= mVU->microMemSize - 8;
 
 	if (isStartPC) { // Check if startPC is already within a block we've recompiled
-		deque<microRange>::const_iterator it = ranges->begin();
-		for ( ; it != ranges->end(); it++) {
+		deque<microRange>::const_iterator it(ranges->begin());
+		for ( ; it != ranges->end(); ++it) {
 			if ((pc >= it[0].start) && (pc <= it[0].end)) {
 				if (it[0].start != it[0].end)
 					return; // Last case makes sure its not a 1-opcode EvilBlock
@@ -82,8 +82,8 @@ void mVUsetupRange(microVU* mVU, s32 pc, bool isStartPC) {
 		bool mergedRange = 0;
 		s32  rStart = mVUrange.start;
 		s32  rEnd   = mVUrange.end;
-		deque<microRange>::iterator it = ranges->begin();
-		for (it++; it != ranges->end(); it++) {
+		deque<microRange>::iterator it(ranges->begin());
+		for (++it; it != ranges->end(); ++it) {
 			if((it[0].start >= rStart) && (it[0].start <= rEnd)) {
 				it[0].end   = aMax(it[0].end, rEnd);
 				mergedRange = 1;
