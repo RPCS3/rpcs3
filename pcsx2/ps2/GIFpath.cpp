@@ -97,7 +97,7 @@ struct GIFPath
 	u8 GetReg();
 	bool IsActive() const;
 
-	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+	int CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
 	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
@@ -287,7 +287,8 @@ __forceinline void GIFPath::PrepPackedRegs()
 
 __forceinline void GIFPath::SetTag(const void* mem)
 {
-	const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
+	_mm_store_ps( (float*)&tag, _mm_loadu_ps((float*)mem) );
+	//const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
 
 	nloop	= tag.NLOOP;
 	curreg	= 0;
@@ -521,15 +522,50 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	return size;
 }
 
-__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
+	uint endpos = destStart + len;
+	if( endpos >= destSize )
+	{
+		uint firstcopylen = RingBufferSize - destStart;
+		memcpy_aligned(&destBase[destStart], src, firstcopylen );
+
+		destStart = endpos & RingBufferMask;
+		memcpy_aligned(destBase, src+firstcopylen, destStart );
+	}
+	else
+	{
+		memcpy_aligned(&destBase[destStart], src, len );
+		destStart += len;
+	}
+}
+
+// [TODO] optimization: If later templated, we can have Paths 1 and 3 use aligned SSE movs,
+// since only PATH2 can feed us unaligned source data.
+#define copyTag() do {						\
+	/*RingBuffer.m_Ring[ringpos] = *pMem128;*/	\
+	_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], _mm_loadu_ps((float*)pMem128)); \
+	++pMem128; --size;						\
+	ringpos = (ringpos+1)&RingBufferMask;	\
+} while(false)
+
+__forceinline int GIFPath::CopyTag(GIF_PATH pathidx, const u128* pMem128, u32 size)
+{
+	uint& ringpos = GetMTGS().m_packet_ringpos;
+	const uint original_ringpos = ringpos;
+
 	u32	startSize =  size;						// Start Size
 
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag(pMem);
-			incTag(1);		
+			// [TODO] Optimization: Use MMX intrinsics for SetTag and CopyTag, which both currently
+			//   produce a series of mov eax,[src]; mov [dest],eax instructions to copy these
+			//   individual qwcs.  Warning: Path2 transfers are not always QWC-aligned, but they are
+			//   always aligned on an 8 byte boundary; so its probably best to use MMX here.
+
+			SetTag((u8*)pMem128);
+			copyTag();
 			
 			if(nloop > 0)
 			{
@@ -599,9 +635,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					{
 						do {
 							if (GetReg() == 0xe) {
-								gsHandler(pMem);
+								gsHandler((u8*)pMem128);
 							}
-							incTag(1);
+							copyTag();
 						} while(StepReg() && size > 0 && SIGNAL_IMR_Pending == false);
 					}
 					else
@@ -644,11 +680,14 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							curreg = 0;
 							nloop = 0;
 						}
-						incTag(len);
+
+						MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+						pMem128 += len;
+						size -= len;
 					}
 				break;
 				case GIF_FLG_REGLIST:
-				{				
+				{
 					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
@@ -687,8 +726,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 						nloop = 0;
 					}
 
-					incTag(len);
-
+					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+					pMem128 += len;
+					size -= len;
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -696,13 +736,15 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				{
 					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
-					incTag(len);
+
+					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+
+					pMem128 += len;
+					size -= len;
 					nloop -= len;
 				}
 				break;
 			}
-			
-
 		}
 
 		if(pathidx == GIF_PATH_1)
@@ -713,11 +755,11 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				{
 					size = 0x3ff - startSize;
 					startSize = 0x3ff;
-					pMem -= 0x4000;
+					pMem128 -= 0x400;
 				}
 				else
 				{
-					// Note: The BIOS does an XGKICK on the VU1 and lets yt DMA to the GS without an EOP
+					// Note: The BIOS does an XGKICK on the VU1 and lets it DMA to the GS without an EOP
 					// (seemingly to loop forever), only to write an EOP later on.  No other game is known to
 					// do anything of the sort.
 					// So lets just cap the DMA at 16k, and force it to "look" like it's terminated for now.
@@ -727,6 +769,11 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
+					
+					// Don't send the packet to the GS -- its incomplete and might cause the GS plugin
+					// to get confused and die. >_<
+					
+					ringpos = original_ringpos;
 				}
 			}
 		}
@@ -793,47 +840,18 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			gif->qwc  -= size;
 		}
 	}
-	
-	
 
 	return size;
 }
 
-// Processes a GIFtag & packet, and throws out some gsIRQs as needed.
-// Used to keep interrupts in sync with the EE, while the GS itself
-// runs potentially several frames behind.
-// Parameters:
-//   size  - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+__forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
-#ifdef PCSX2_GSRING_SAMPLING_STATS
-	static uptr profStartPtr = 0;
-	static uptr profEndPtr = 0;
-	if (profStartPtr == 0) {
-		__asm
-		{
-		__beginfunc:
-			mov profStartPtr, offset __beginfunc;
-			mov profEndPtr, offset __endfunc;
-		}
-		ProfilerRegisterSource( "GSRingBufCopy", (void*)profStartPtr, profEndPtr - profStartPtr );
-	}
-#endif
-
-	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size);
-
-#ifdef PCSX2_GSRING_SAMPLING_STATS
-	__asm
-	{
-		__endfunc:
-			nop;
-	}
-#endif
-	return retSize;
+	return s_gifPath[pathidx].CopyTag(pathidx, pMem, size);
 }
 
-//Quick version for queueing PATH1 data
-
+// Quick version for queueing PATH1 data.
+// This version calculates the real length of the packet data only.  It does not process
+// IRQs or DMA status updates.
 __forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	int retSize = s_gifPath[pathidx].ParseTagQuick(pathidx, pMem, size);

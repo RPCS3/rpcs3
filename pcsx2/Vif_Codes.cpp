@@ -213,8 +213,8 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 						v.bSize = 0;
 						v.bPtr = 0;						
 					}
-					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, v.buffer, 1);
-					memcpy_fast(GetMTGS().GetDataPacketPtr(), v.buffer, count << 4);
+					GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
+					GIFPath_CopyTag(GIF_PATH_2, (u128*)v.buffer, 1);
 					GetMTGS().SendDataPacket();
 
 					if(vif1.tag.size == 0) 
@@ -226,16 +226,17 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 				}
 				else
 				{
-					const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, size >> 4);
-					memcpy_fast(GetMTGS().GetDataPacketPtr(), data, count << 4);
+					GetMTGS().PrepDataPacket(GIF_PATH_2, size/16);
+					uint count = GIFPath_CopyTag(GIF_PATH_2, (u128*)data, size/16) * 4;
 					GetMTGS().SendDataPacket();
-					vif1.tag.size -= count << 2;
+
+					vif1.tag.size -= count;
 					if(vif1.tag.size == 0) 
 					{
 						vif1.cmd = 0;
 					}
 					vif1.vifstalled    = true;
-					return count << 2;
+					return count;
 				}
 			}
 			

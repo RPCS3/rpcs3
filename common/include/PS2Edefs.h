@@ -564,6 +564,7 @@ typedef void (CALLBACK* _PS2EsetEmuVersion)(const char* emuId, u32 version);		//
 typedef s32  (CALLBACK* _GSopen)(void *pDsp, char *Title, int multithread);
 typedef s32  (CALLBACK* _GSopen2)( void *pDsp, u32 flags );
 typedef void (CALLBACK* _GSvsync)(int field);
+typedef void (CALLBACK* _GSgifTransfer)(u32 *pMem, u32 size);
 typedef void (CALLBACK* _GSgifTransfer1)(u32 *pMem, u32 addr);
 typedef void (CALLBACK* _GSgifTransfer2)(u32 *pMem, u32 size);
 typedef void (CALLBACK* _GSgifTransfer3)(u32 *pMem, u32 size);
@@ -723,6 +724,7 @@ typedef void (CALLBACK* _FWirqCallback)(void (*callback)());
 extern _GSopen            GSopen;
 extern _GSopen2           GSopen2;
 extern _GSvsync           GSvsync;
+extern _GSgifTransfer     GSgifTransfer;
 extern _GSgifTransfer1    GSgifTransfer1;
 extern _GSgifTransfer2    GSgifTransfer2;
 extern _GSgifTransfer3    GSgifTransfer3;

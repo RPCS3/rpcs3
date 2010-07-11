@@ -36,7 +36,7 @@
 // Only used in the Windows version of memzero.h. But it's in Misc.cpp for some reason.
 void _memset16_unaligned( void* dest, u16 data, size_t size );
 
-#define memcpy_fast		memcpy_amd_ // Fast memcpy
-#define memcpy_aligned	memcpy_amd_	// Memcpy with 16-byte Aligned addresses
-#define memcpy_const	memcpy_amd_	// Memcpy with constant size
-#define memcpy_constA	memcpy_amd_ // Memcpy with constant size and 16-byte aligned
+#define memcpy_fast				memcpy_amd_ // Fast memcpy
+#define memcpy_aligned(d,s,c)	memcpy_amd_(d,s,c*16)	// Memcpy with 16-byte Aligned addresses
+#define memcpy_const			memcpy_amd_	// Memcpy with constant size
+#define memcpy_constA			memcpy_amd_ // Memcpy with constant size and 16-byte aligned

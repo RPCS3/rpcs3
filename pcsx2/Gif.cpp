@@ -59,16 +59,15 @@ void gsPath1Interrupt()
 		gifRegs->stat.P1Q = false;
 		while(Path1WritePos > 0)
 		{
-			u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, Path1Buffer + (Path1ReadPos  * 16), (Path1WritePos - Path1ReadPos));
-			u8* pDest = GetMTGS().GetDataPacketPtr();
+			uint size = (Path1WritePos - Path1ReadPos);
+			GetMTGS().PrepDataPacket(GIF_PATH_1, size);
 			//DevCon.Warning("Flush Size = %x", size);
-			
-			memcpy_aligned(pDest, Path1Buffer + (Path1ReadPos * 16), size  * 16);
-			GetMTGS().SendDataPacket();
-			
 
-			Path1ReadPos += size;
-			
+			uint count = GIFPath_CopyTag(GIF_PATH_1, ((u128*)Path1Buffer) + Path1ReadPos, size);
+			GetMTGS().SendDataPacket();
+			pxAssume( count == size );
+			Path1ReadPos += count;
+
 			if(GSTransferStatus.PTH1 == STOPPED_MODE)
 			{
 				gifRegs->stat.OPH = false;				
@@ -150,11 +149,9 @@ __forceinline void gsInterrupt()
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 {
-	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, (u8*)pMem, qwc);
-	u8* pgsmem = GetMTGS().GetDataPacketPtr();
-
-	memcpy_aligned(pgsmem, pMem, size<<4);
-
+	GetMTGS().PrepDataPacket(GIF_PATH_3, qwc);
+	//uint len1 = GIFPath_ParseTag(GIF_PATH_3, (u8*)pMem, qwc );
+	uint size = GIFPath_CopyTag(GIF_PATH_3, (u128*)pMem, qwc );
 	GetMTGS().SendDataPacket();
 	return size;
 }

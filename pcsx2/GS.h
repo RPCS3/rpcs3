@@ -229,7 +229,7 @@ enum GIF_PATH
 	GIF_PATH_3,
 };
 
-extern int  GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+extern int  GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
 extern int  GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 extern void GIFPath_Reset();
 extern void GIFPath_Clear( GIF_PATH pathidx );
@@ -282,7 +282,6 @@ public:
 	volatile s32	m_SignalRingPosition;
 
 	int				m_QueuedFrameCount;
-	u32				m_RingWrapSpot;
 
 	Mutex			m_lock_RingBufferBusy;
 	Semaphore		m_sem_OnRingReset;
@@ -301,6 +300,7 @@ public:
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
 
+	uint			m_packet_startpos;	// size of the packet (data only, ie. not including the 16 byte command!)
 	uint			m_packet_size;		// size of the packet (data only, ie. not including the 16 byte command!)
 	uint			m_packet_ringpos;	// index of the data location in the ringbuffer.
 
@@ -317,14 +317,13 @@ public:
 	void WaitGS();
 	void ResetGS();
 
-	int PrepDataPacket( MTGS_RingCommand cmd, u32 size );
-	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
+	void PrepDataPacket( MTGS_RingCommand cmd, u32 size );
+	void PrepDataPacket( GIF_PATH pathidx, u32 size );
 	void SendDataPacket();
 	void SendGameCRC( u32 crc );
 	void WaitForOpen();
 	void Freeze( int mode, MTGS_FreezeData& data );
 
-	void RestartRingbuffer( uint packsize=0 );
 	void SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 );
 	void SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 );
 
@@ -416,3 +415,31 @@ extern int g_nLeftGSFrames;
 
 #endif
 
+// Size of the ringbuffer as a power of 2 -- size is a multiple of simd128s.
+// (actual size is 1<<m_RingBufferSizeFactor simd vectors [128-bit values])
+// A value of 19 is a 8meg ring buffer.  18 would be 4 megs, and 20 would be 16 megs.
+// Default was 2mb, but some games with lots of MTGS activity want 8mb to run fast (rama)
+static const uint RingBufferSizeFactor = 19;
+
+// size of the ringbuffer in simd128's.
+static const uint RingBufferSize = 1<<RingBufferSizeFactor;
+
+// Mask to apply to ring buffer indices to wrap the pointer from end to
+// start (the wrapping is what makes it a ringbuffer, yo!)
+static const uint RingBufferMask = RingBufferSize - 1;
+
+struct MTGS_BufferedData
+{
+	u128		m_Ring[RingBufferSize];
+	u8			Regs[Ps2MemSize::GSregs];
+
+	MTGS_BufferedData() {}
+
+	u128& operator[]( uint idx )
+	{
+		pxAssert( idx < RingBufferSize );
+		return m_Ring[idx];
+	}
+};
+
+extern __aligned(32) MTGS_BufferedData RingBuffer;
