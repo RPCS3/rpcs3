@@ -319,6 +319,11 @@ void __fastcall GIFRegHandlerTEX0(u32* data)
 		return;
 	}
 	
+	// Order is important.
+	ZeroGS::vb[i].uNextTex0Data[0] = r->ai32[0];
+	ZeroGS::vb[i].uNextTex0Data[1] = r->ai32[1];
+	ZeroGS::vb[i].bNeedTexCheck = 1;
+	
 	// don't update unless necessary
 	if (PSMT_ISCLUT(psm))
 	{
@@ -333,10 +338,6 @@ void __fastcall GIFRegHandlerTEX0(u32* data)
 			ZeroGS::Flush(i); // flush any previous entries
 		}
 	}
-	
-	ZeroGS::vb[i].uNextTex0Data[0] = r->ai32[0];
-	ZeroGS::vb[i].uNextTex0Data[1] = r->ai32[1];
-	ZeroGS::vb[i].bNeedTexCheck = 1;
 }
 
 template <u32 i>
