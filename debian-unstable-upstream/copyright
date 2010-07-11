@@ -34,7 +34,7 @@ On Debian systems, the complete text of the GNU Lesser General
 Public License version 3 can be found in "/usr/share/common-licenses/LGPL-3".
 
 
-Files: pcsx2/Mdec.cpp, pcsx2/Mdec.h, pcsx2/RDebug/deci2_drfp.cpp, pcsx2/IPU/mpeg2lib/*, pcsx2/cheatscpp.h, common/include/api/*, plugins/onepad/*, plugins/PadNull/Linux/*, plugins/SPU2null/*, plugins/FWnull/FW.cpp, plugins/zerospu2/*, plugins/CDVDnull/Linux/*, plugins/zzogl-pg/*, plugins/GSnull/Registers.h, plugins/GSnull/Linux/Linux*, plugins/GSnull/Linux/Config*, plugins/dev9null/DEV9.h, plugins/dev9null/Config.*
+Files: pcsx2/Mdec.cpp, pcsx2/Mdec.h, pcsx2/RDebug/deci2_drfp.cpp, pcsx2/IPU/mpeg2lib/*, pcsx2/cheatscpp.h, common/include/api/*, plugins/onepad/*, plugins/PadNull/Linux/*, plugins/SPU2null/*, plugins/FWnull/FW.cpp, plugins/zerospu2/*, plugins/zzogl-pg/*, plugins/GSnull/Registers.h, plugins/GSnull/Linux/Linux*, plugins/GSnull/Linux/Config*, plugins/dev9null/DEV9.h, plugins/dev9null/Config.*
 License: GPL-2+
 
     This program is free software: you can redistribute it and/or modify
