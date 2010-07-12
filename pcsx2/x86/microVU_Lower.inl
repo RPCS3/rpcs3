@@ -1111,13 +1111,13 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 
 		if (size > diff) {
 			//DevCon.WriteLn("XGkick Wrap!");
-			memcpy_qwc_(pDest, microVU1.regs->Mem + (addr*16), diff);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
 			size  -= diff;
 			pDest += diff*16;
-			memcpy_qwc_(pDest, microVU1.regs->Mem, size);
+			memcpy_qwc(pDest, microVU1.regs->Mem, size);
 		}
 		else {
-			memcpy_qwc_(pDest, microVU1.regs->Mem + (addr*16), size);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
 		}
 		GetMTGS().SendDataPacket();
 		if(GSTransferStatus.PTH1 == STOPPED_MODE)

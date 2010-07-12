@@ -34,7 +34,7 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 	float (*destxmm)[4] = (float(*)[4])dest, (*srcxmm)[4] = (float(*)[4])src;
 	size_t count = size & ~15, extra = size & 15;
 
-	destxmm += 8 - extra, srcxmm += 8 - extra;
+	destxmm -= 8 - extra, srcxmm -= 8 - extra;
 	switch (extra) {
 		do {
 			destxmm += 16, srcxmm += 16, count -= 16;
