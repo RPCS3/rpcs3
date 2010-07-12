@@ -124,6 +124,7 @@ set(UtilitiesSources
 	wxAppWithHelpers.cpp
 	wxGuiTools.cpp
 	wxHelpers.cpp
+	x86/MemcpyVibes.cpp
 #	x86/MemcpyFast.cpp
 	)
 
@@ -159,6 +160,8 @@ set(UtilitiesHeaders
 	../../include/Utilities/wxBaseTools.h
 	../../include/Utilities/wxGuiTools.h
 	PrecompiledHeader.h)
+
+include_directories(.)
 
 # change language of .S-files to c++
 set_source_files_properties(${UtilitiesSSources} PROPERTIES LANGUAGE CXX)
