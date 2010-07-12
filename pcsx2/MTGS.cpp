@@ -149,7 +149,7 @@ void SysMtgsThread::PostVsyncEnd()
 	// and they also allow us to reuse the front of the ringbuffer more often, which should improve
 	// L2 cache performance.
 
-	if( AtomicIncrement(m_QueuedFrameCount) == 0 ) return;
+	if( AtomicIncrement(m_QueuedFrameCount) < 2 ) return;
 
 	uint readpos = volatize(m_RingPos);
 	uint freeroom;
@@ -164,7 +164,7 @@ void SysMtgsThread::PostVsyncEnd()
 
 	m_SignalRingPosition = totalAccum;
 
-	//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Vsync Sleep!\t\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, writepos, m_SignalRingPosition );
+	//Console.WriteLn( Color_Blue, "(EEcore Sleep) Vsync\tringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", readpos, m_WritePos, m_SignalRingPosition );
 
 	AtomicExchange( m_SignalRingEnable, 1 );
 	SetEvent();
@@ -694,7 +694,7 @@ void SysMtgsThread::PrepDataPacket( MTGS_RingCommand cmd, u32 size )
 			pxAssertDev( m_SignalRingEnable == 0, "MTGS Thread Synchronization Error" );
 			m_SignalRingPosition = somedone;
 
-			//Console.WriteLn( Color_Blue, "(EEcore Sleep) GenStall \tringpos=0x%06x, writepos=0x%06x, wrapspot=0x%06x, signalpos=0x%06x", readpos, writepos, m_RingWrapSpot, m_SignalRingPosition );
+			//Console.WriteLn( Color_Blue, "(EEcore Sleep) PrepDataPacker \tringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", readpos, writepos, m_SignalRingPosition );
 
 			do {
 				AtomicExchange( m_SignalRingEnable, 1 );
@@ -708,6 +708,7 @@ void SysMtgsThread::PrepDataPacket( MTGS_RingCommand cmd, u32 size )
 		}
 		else
 		{
+			//Console.WriteLn( Color_StrongGray, "(EEcore Spin) PrepDataPacket!" );
 			SetEvent();
 			do {
 				SpinWait();
@@ -743,69 +744,6 @@ void SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, u32 size )
 
 	PrepDataPacket( (MTGS_RingCommand)pathidx, size );
 }
-
-#if 0
-void SysMtgsThread::RestartRingbuffer( uint packsize )
-{
-	if( m_WritePos == 0 ) return;
-	const uint thefuture = packsize;
-
-	//Console.WriteLn( Color_Magenta, "**** Ringbuffer Restart!!" );
-	// Always kick the MTGS into action for a ringbuffer restart.
-	SetEvent();
-
-	uint readpos = volatize(m_RingPos);
-
-	if( (readpos > m_WritePos) || (readpos <= thefuture) )
-	{
-		// We have to be careful not to leapfrog our read-position, which would happen if
-		// it's greater than the current write position (since wrapping writepos to 0 would
-		// be the act of skipping PAST readpos).  Stall until it loops around to the
-		// beginning of the buffer, and past the size of our packet allocation.
-
-		uint somedone;
-
-		if( readpos > m_WritePos )
-			somedone = (m_RingWrapSpot - readpos) + packsize + 1;
-		else
-			somedone = (packsize + 1) - readpos;
-
-		if( somedone > 0x80 )
-		{
-			m_SignalRingPosition = somedone;
-			//Console.WriteLn( Color_Blue, "(EEcore Sleep) Restart!\tringpos=0x%06x, writepos=0x%06x, wrapspot=0x%06x, signalpos=0x%06x",
-			//	readpos, m_WritePos, m_RingWrapSpot, m_SignalRingPosition );
-
-			do {
-				AtomicExchange( m_SignalRingEnable, 1 );
-				SetEvent();
-				m_sem_OnRingReset.WaitWithoutYield();
-				readpos = volatize(m_RingPos);
-				//Console.WriteLn( Color_Blue, "(EEcore Awake) Report!\tringpos=0x%06x", readpos );
-			} while( (readpos > m_WritePos) || (readpos <= thefuture) );
-		}
-		else
-		{
-			SetEvent();
-			do {
-				SpinWait();
-				readpos = volatize(m_RingPos);
-			} while( (readpos > m_WritePos) || (readpos <= thefuture) );
-		}
-	}
-
-	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
-
-	tag.command = GS_RINGTYPE_RESTART;
-
-	m_RingWrapSpot = m_WritePos;
-	m_WritePos = 0;
-	m_QueuedFrameCount = 0;
-
-	if( EmuConfig.GS.SynchronousMTGS )
-		WaitGS();
-}
-#endif
 
 __forceinline uint SysMtgsThread::_PrepForSimplePacket()
 {
@@ -843,7 +781,7 @@ __forceinline uint SysMtgsThread::_PrepForSimplePacket()
 		{
 			m_SignalRingPosition = somedone;
 
-			//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Simple Sleep!\t\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, writepos, m_SignalRingPosition );
+			//Console.WriteLn( Color_Blue, "(EEcore Sleep) PrepSimplePacket\tringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", readpos, m_WritePos, m_SignalRingPosition );
 
 			do {
 				AtomicExchange( m_SignalRingEnable, 1 );
@@ -857,6 +795,8 @@ __forceinline uint SysMtgsThread::_PrepForSimplePacket()
 		}
 		else
 		{
+			//Console.WriteLn( Color_StrongGray, "(EEcore Spin) PrepSimplePacket!" );
+
 			SetEvent();
 			do {
 				SpinWait();
