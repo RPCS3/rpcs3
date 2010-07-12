@@ -1101,7 +1101,6 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	
 	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
-
 		if(Path1WritePos != 0)	
 		{
 			//Flush any pending transfers so things dont go up in the wrong order
@@ -1112,13 +1111,13 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 
 		if (size > diff) {
 			//DevCon.WriteLn("XGkick Wrap!");
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
+			memcpy_qwc_(pDest, microVU1.regs->Mem + (addr*16), diff);
 			size  -= diff;
 			pDest += diff*16;
-			memcpy_qwc(pDest, microVU1.regs->Mem, size);
+			memcpy_qwc_(pDest, microVU1.regs->Mem, size);
 		}
 		else {
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
+			memcpy_qwc_(pDest, microVU1.regs->Mem + (addr*16), size);
 		}
 		GetMTGS().SendDataPacket();
 		if(GSTransferStatus.PTH1 == STOPPED_MODE)

@@ -15,6 +15,8 @@
 
 #include "PrecompiledHeader.h"
 #include "x86emitter/x86emitter.h"
+#include <xmmintrin.h>
+
 using namespace x86Emitter;
 
 // Max Number of qwc supported
@@ -23,6 +25,56 @@ using namespace x86Emitter;
 typedef void (__fastcall *_memCpyCall)(void*, void*);
 __aligned16 _memCpyCall _memcpy_vibes[_maxSize+1];
 
+#if 1
+
+// this version uses SSE intrinsics to perform an inline copy.  MSVC disasm shows pretty
+// decent code generation on whole, but it hasn't been benchmarked at all yet --air
+__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
+
+	float (*destxmm)[4] = (float(*)[4])dest, (*srcxmm)[4] = (float(*)[4])src;
+	size_t count = size & ~15, extra = size & 15;
+
+	destxmm += 8 - extra, srcxmm += 8 - extra;
+	switch (extra) {
+		do {
+			destxmm += 16, srcxmm += 16, count -= 16;
+			_mm_store_ps(&destxmm[-8][0], _mm_load_ps(&srcxmm[-8][0]));
+			case 15:
+				_mm_store_ps(&destxmm[-7][0], _mm_load_ps(&srcxmm[-7][0]));
+			case 14:
+				_mm_store_ps(&destxmm[-6][0], _mm_load_ps(&srcxmm[-6][0]));
+			case 13:
+				_mm_store_ps(&destxmm[-5][0], _mm_load_ps(&srcxmm[-5][0]));
+			case 12:
+				_mm_store_ps(&destxmm[-4][0], _mm_load_ps(&srcxmm[-4][0]));
+			case 11:
+				_mm_store_ps(&destxmm[-3][0], _mm_load_ps(&srcxmm[-3][0]));
+			case 10:
+				_mm_store_ps(&destxmm[-2][0], _mm_load_ps(&srcxmm[-2][0]));
+			case  9:
+				_mm_store_ps(&destxmm[-1][0], _mm_load_ps(&srcxmm[-1][0]));
+			case  8:
+				_mm_store_ps(&destxmm[ 0][0], _mm_load_ps(&srcxmm[ 0][0]));
+			case  7:
+				_mm_store_ps(&destxmm[ 1][0], _mm_load_ps(&srcxmm[ 1][0]));
+			case  6:
+				_mm_store_ps(&destxmm[ 2][0], _mm_load_ps(&srcxmm[ 2][0]));
+			case  5:
+				_mm_store_ps(&destxmm[ 3][0], _mm_load_ps(&srcxmm[ 3][0]));
+			case  4:
+				_mm_store_ps(&destxmm[ 4][0], _mm_load_ps(&srcxmm[ 4][0]));
+			case  3:
+				_mm_store_ps(&destxmm[ 5][0], _mm_load_ps(&srcxmm[ 5][0]));
+			case  2:
+				_mm_store_ps(&destxmm[ 6][0], _mm_load_ps(&srcxmm[ 6][0]));
+			case  1:
+				_mm_store_ps(&destxmm[ 7][0], _mm_load_ps(&srcxmm[ 7][0]));
+			case  0: NULL;
+		} while (count);
+	}
+}
+
+#else
 #if 1
 // This version creates one function with a lot of movaps
 // It jumps to the correct movaps entry-point while adding
@@ -58,12 +110,13 @@ void gen_memcpy_vibes() {
 	HostSys::MemProtectStatic(_memCpyExec, Protect_ReadOnly, true);
 }
 
-void __fastcall memcpy_vibes(void * dest, void * src, int size) {
+__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 	int offset = ((size & 0xf) - 7) << 4;
 	_memcpy_vibes[size]((void*)((uptr)dest + offset), (void*)((uptr)src + offset));
 }
 
 #else
+
 // This version creates '_maxSize' number of different functions,
 // and calls the appropriate one...
 
@@ -97,8 +150,9 @@ void gen_memcpy_vibes() {
 	HostSys::MemProtectStatic(_memCpyExec, Protect_ReadOnly, true);
 }
 
-void __fastcall memcpy_vibes(void * dest, void * src, int size) {
+__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 	_memcpy_vibes[size](dest, src);
 }
 
+#endif
 #endif

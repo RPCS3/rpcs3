@@ -37,7 +37,7 @@
 void _memset16_unaligned( void* dest, u16 data, size_t size );
 
 // MemcpyVibes.cpp functions
-extern void __fastcall memcpy_vibes(void * dest, void * src, int size);
+extern void memcpy_vibes(void * dest, const void * src, int size);
 extern void gen_memcpy_vibes();
 
 #define memcpy_fast			memcpy_amd_  // Fast memcpy
