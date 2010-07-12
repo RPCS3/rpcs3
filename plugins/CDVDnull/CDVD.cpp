@@ -38,20 +38,6 @@ EXPORT_C_(u32) CALLBACK PS2EgetLibVersion2(u32 type)
 	return (version << 16) | (revision << 8) | build;
 }
 
-#ifdef _WIN32
-void SysMessage(const char *fmt, ...)
-{
-	va_list list;
-	char tmp[512];
-
-	va_start(list, fmt);
-	vsprintf(tmp, fmt, list);
-	va_end(list);
-
-	MessageBox(GetActiveWindow(), tmp, "CDVDnull Msg", MB_SETFOREGROUND | MB_OK);
-}
-#endif
-
 EXPORT_C_(s32) CDVDinit()
 {
 	return 0;
