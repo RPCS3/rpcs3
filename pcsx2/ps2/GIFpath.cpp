@@ -526,36 +526,36 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
 	uint endpos = destStart + len;
-	if( endpos >= destSize )
+	if( endpos < destSize )
 	{
-		uint firstcopylen = destSize - destStart;
-		memcpy_aligned(&destBase[destStart], src, firstcopylen );
-
-		destStart = endpos % destSize;
-		memcpy_aligned(destBase, src+firstcopylen, destStart );
+		memcpy_qwc(&destBase[destStart], src, len );
+		destStart += len;
 	}
 	else
 	{
-		memcpy_aligned(&destBase[destStart], src, len );
-		destStart += len;
+		uint firstcopylen = destSize - destStart;
+		memcpy_qwc(&destBase[destStart], src, firstcopylen );
+
+		destStart = endpos % destSize;
+		memcpy_qwc(destBase, src+firstcopylen, destStart );
 	}
 }
 
 void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
 {
 	uint endpos = srcStart + len;
-	if( endpos >= srcSize )
+	if( endpos < srcSize )
 	{
-		uint firstcopylen = srcSize - srcStart;
-		memcpy_aligned(dest, &srcBase[srcStart], firstcopylen );
-
-		srcStart = endpos & srcSize;
-		memcpy_aligned(dest+firstcopylen, srcBase, srcStart );
+		memcpy_qwc(dest, &srcBase[srcStart], len );
+		srcStart += len;
 	}
 	else
 	{
-		memcpy_aligned(dest, &srcBase[srcStart], len );
-		srcStart += len;
+		uint firstcopylen = srcSize - srcStart;
+		memcpy_qwc(dest, &srcBase[srcStart], firstcopylen );
+
+		srcStart = endpos & srcSize;
+		memcpy_qwc(dest+firstcopylen, srcBase, srcStart );
 	}
 }
 

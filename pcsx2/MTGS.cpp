@@ -142,14 +142,11 @@ void SysMtgsThread::PostVsyncEnd()
 	
 	SendDataPacket();
 
-	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
-	// mandatory feature that prevents the MTGS from queuing more than 2 frames at any time.
-	// (queued frames cause input lag and desynced audio -- bad!).  Ring restarts work for this
-	// because they act as sync points where the EE must stall to wait for the GS to catch-up,
-	// and they also allow us to reuse the front of the ringbuffer more often, which should improve
-	// L2 cache performance.
+	// If the MTGS is allowed to queue a lot of frames in advance, it creates input lag.
+	// Use the Queued FrameCount to stall the EE if another vsync is already queued in
+	// the ringbuffer.
 
-	if( AtomicIncrement(m_QueuedFrameCount) < 2 ) return;
+	if( AtomicIncrement(m_QueuedFrameCount) < EmuConfig.GS.VsyncQueueSize ) return;
 
 	uint readpos = volatize(m_RingPos);
 	uint freeroom;
@@ -190,7 +187,7 @@ void SysMtgsThread::OpenPlugin()
 {
 	if( m_PluginOpened ) return;
 
-	memcpy_aligned( RingBuffer.Regs, PS2MEM_GS, sizeof(PS2MEM_GS)/16 );
+	memcpy_aligned( RingBuffer.Regs, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( RingBuffer.Regs );
 	GSirqCallback( dummyIrqCallback );
 
@@ -624,6 +621,7 @@ void SysMtgsThread::SendDataPacket()
 	PacketTagType& tag = (PacketTagType&)RingBuffer[m_packet_startpos];
 	tag.data[0] = actualSize;
 
+	//Threading::StoreFence();
 	m_WritePos = m_packet_ringpos;
 
 	if( EmuConfig.GS.SynchronousMTGS )

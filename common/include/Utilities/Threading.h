@@ -129,6 +129,10 @@ namespace Threading
 
 	// For use in spin/wait loops.
 	extern void SpinWait();
+	
+	// Use prior to committing data to another thread (internal memcpy_qwc does not use fencing,
+	// so that many memcpys can be issued in a row more efficiently)
+	extern void StoreFence();
 
 	// Optional implementation to enable hires thread/process scheduler for the operating system.
 	// Needed by Windows, but might not be relevant to other platforms.

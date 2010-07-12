@@ -217,6 +217,7 @@ Pcsx2Config::GSOptions::GSOptions()
 
 	SynchronousMTGS			= false;
 	DisableOutput			= false;
+	VsyncQueueSize			= 2;
 
 	DefaultRegionMode		= Region_NTSC;
 	FramesToDraw			= 2;
@@ -234,6 +235,7 @@ void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 
 	IniEntry( SynchronousMTGS );
 	IniEntry( DisableOutput );
+	IniEntry( VsyncQueueSize );
 
 	IniEntry( FrameLimitEnable );
 	IniEntry( FrameSkipEnable );

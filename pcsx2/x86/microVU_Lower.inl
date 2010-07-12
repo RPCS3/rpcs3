@@ -1129,14 +1129,14 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			// fixme: one of these days the following *16's will get cleaned up when we introduce
 			// a special qwc/simd16 optimized version of memcpy_aligned. :)
 			//DevCon.Status("XGkick Wrap!");
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
 			Path1WritePos += size;
 			size  -= diff;
 			pDest += diff*16;
-			memcpy_aligned(pDest, microVU1.regs->Mem, size);			
+			memcpy_qwc(pDest, microVU1.regs->Mem, size);			
 		}
 		else {
-			memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size);
+			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
 			Path1WritePos += size;
 		}
 		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);

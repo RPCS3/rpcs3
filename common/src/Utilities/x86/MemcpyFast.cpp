@@ -146,7 +146,7 @@ $memcpy_ic_1:			; 64-byte block copies, in-cache copy
 
 	add		esi, 64			; update source pointer
 	add		edi, 64			; update destination pointer
-	dec		eax				; count down
+	sub		eax, 1
 	jnz		$memcpy_ic_1	; last 64-byte block?
 
 $memcpy_ic_2:
@@ -189,64 +189,15 @@ $memcpy_uc_1:				; 64-byte blocks, uncached copy
 	movq	mm1,[esi-8]
 	movntq	[edi-24], mm2
 	movntq	[edi-16], mm0
-	dec		eax
 	movntq	[edi-8], mm1
+
+	sub		eax, 1
 	jnz		$memcpy_uc_1	; last 64-byte block?
 
 	jmp		$memcpy_ic_2		; almost done  (not needed because large copy below was removed)
 
-// For the largest size blocks, a special technique called Block Prefetch
-// can be used to accelerate the read operations.   Block Prefetch reads
-// one address per cache line, for a series of cache lines, in a short loop.
-// This is faster than using software prefetch.  The technique is great for
-// getting maximum read bandwidth, especially in DDR memory systems.
-
-// Note: Pcsx2 rarely invokes large copies, so this mode has been disabled to
-// help keep the code cache footprint of memcpy_fast to a minimum.
-/*
-$memcpy_bp_1:			; large blocks, block prefetch copy
-
-	cmp		ecx, CACHEBLOCK			; big enough to run another prefetch loop?
-	jl		$memcpy_64_test			; no, back to regular uncached copy
-
-	mov		eax, CACHEBLOCK / 2		; block prefetch loop, unrolled 2X
-	add		esi, CACHEBLOCK * 64	; move to the top of the block
-align 16
-$memcpy_bp_2:
-	mov		edx, [esi-64]		; grab one address per cache line
-	mov		edx, [esi-128]		; grab one address per cache line
-	sub		esi, 128			; go reverse order to suppress HW prefetcher
-	dec		eax					; count down the cache lines
-	jnz		$memcpy_bp_2		; keep grabbing more lines into cache
-
-	mov		eax, CACHEBLOCK		; now that it's in cache, do the copy
-align 16
-$memcpy_bp_3:
-	movq	mm0, [esi   ]		; read 64 bits
-	movq	mm1, [esi+ 8]
-	movq	mm2, [esi+16]
-	movq	mm3, [esi+24]
-	movq	mm4, [esi+32]
-	movq	mm5, [esi+40]
-	movq	mm6, [esi+48]
-	movq	mm7, [esi+56]
-	add		esi, 64				; update source pointer
-	movntq	[edi   ], mm0		; write 64 bits, bypassing cache
-	movntq	[edi+ 8], mm1		;    note: movntq also prevents the CPU
-	movntq	[edi+16], mm2		;    from READING the destination address
-	movntq	[edi+24], mm3		;    into the cache, only to be over-written,
-	movntq	[edi+32], mm4		;    so that also helps performance
-	movntq	[edi+40], mm5
-	movntq	[edi+48], mm6
-	movntq	[edi+56], mm7
-	add		edi, 64				; update dest pointer
-
-	dec		eax					; count down
-
-	jnz		$memcpy_bp_3		; keep copying
-	sub		ecx, CACHEBLOCK		; update the 64-byte block count
-	jmp		$memcpy_bp_1		; keep processing chunks
-*/
+// Note: Pcsx2 rarely invokes large copies, so the large copy "block prefetch" mode has been
+// disabled to help keep the code cache footprint of memcpy_fast to a minimum.
 
 // The smallest copy uses the X86 "movsd" instruction, in an optimized
 // form which is an "unrolled loop".   Then it handles the last few bytes.
@@ -274,14 +225,96 @@ $memcpy_last_few:		; dword aligned from before movsd's
 	rep		movsb		; the last 1, 2, or 3 bytes
 
 $memcpy_final:
+	pop    esi
+	pop    edi
+
 	emms				; clean up the MMX state
 	sfence				; flush the write buffer
 	//mov		eax, [dest]	; ret value = destination pointer
 
-	pop    esi
-	pop    edi
-
 	ret 4
+    }
+}
+
+// Quadword Copy! Count is in QWCs (128 bits).  Neither source nor dest need to be aligned.
+__forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
+{
+	// Optimization Analysis: This code is *nearly* optimal.  Do not think that using XMM
+	// registers will improve copy performance, because they won't.  Use of XMMs is only
+	// warranted in situations where both source and dest are guaranteed aligned to 16 bytes,
+	// and even then the benefits are typically minimal (sometimes slower depending on the
+	// amount of data being copied).
+	//
+	// Thus: MMX are alignment safe, fast, and widely available.  Lets just stick with them.
+	//   --air
+
+	// Linux Conversion note:
+	//  This code would benefit nicely from having inline-able GAS syntax, since it should
+	//  allow GCC to optimize the first 3 instructions out of existence in many scenarios.
+	//  And its called enough times to probably merit the extra effort to ensure proper
+	//  optimization. --air
+
+    __asm
+	{
+	mov		ecx, [dest]
+	mov		edx, [src]
+	mov		eax, [qwc]			; keep a copy of count
+	shr		eax, 1
+	jz		$memcpy_qwc_1		; only one 16 byte block to copy?
+
+	cmp		eax, IN_CACHE_COPY/32
+	jb		$memcpy_qwc_loop1	; small copies should be cached (definite speedup --air)
+	
+$memcpy_qwc_loop2:				; 32-byte blocks, uncached copy
+	prefetchnta [edx + 568]		; start reading ahead (tested: it helps! --air)
+
+	movq	mm0,[edx+0]			; read 64 bits
+	movq	mm1,[edx+8]
+	movq	mm2,[edx+16]
+	movntq	[ecx+0], mm0		; write 64 bits, bypassing the cache
+	movntq	[ecx+8], mm1
+	movq	mm3,[edx+24]
+	movntq	[ecx+16], mm2
+	movntq	[ecx+24], mm3
+
+	add		edx,32				; update source pointer
+	add		ecx,32				; update destination pointer
+	sub		eax,1
+	jnz		$memcpy_qwc_loop2	; last 64-byte block?
+	sfence						; flush the write buffer
+	jmp		$memcpy_qwc_1
+
+; 32-byte blocks, cached!
+; This *is* important.  Removing this and using exclusively non-temporal stores
+; results in noticable speed loss!
+
+$memcpy_qwc_loop1:				
+	prefetchnta [edx + 568]		; start reading ahead (tested: it helps! --air)
+
+	movq	mm0,[edx+0]			; read 64 bits
+	movq	mm1,[edx+8]
+	movq	mm2,[edx+16]
+	movq	[ecx+0], mm0		; write 64 bits, bypassing the cache
+	movq	[ecx+8], mm1
+	movq	mm3,[edx+24]
+	movq	[ecx+16], mm2
+	movq	[ecx+24], mm3
+
+	add		edx,32				; update source pointer
+	add		ecx,32				; update destination pointer
+	sub		eax,1
+	jnz		$memcpy_qwc_loop1	; last 64-byte block?
+
+$memcpy_qwc_1:
+	test	[qwc],1
+	jz		$memcpy_qwc_final
+	movq	mm0,[edx]
+	movq	mm1,[edx+8]
+	movq	[ecx], mm0
+	movq	[ecx+8], mm1
+
+$memcpy_qwc_final:
+	emms				; clean up the MMX state
     }
 }
 
