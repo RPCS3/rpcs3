@@ -349,7 +349,7 @@ extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 		test ecx, 15
 		jnz WriteUnaligned
 
-		movdqa xmm7, s_clut16mask // saves upper 16 bits
+		movdqa xmm7, s_clut16mask // saves upper 16 bytes
 
 		// have to save interlaced with the old data
 		movdqa xmm4, [ecx]
@@ -390,7 +390,7 @@ WriteUnaligned:
 		// ecx is offset by 2
 		sub ecx, 2
 
-		movdqa xmm7, s_clut16mask2 // saves lower 16 bits
+		movdqa xmm7, s_clut16mask2 // saves lower 16 bytes
 
 		// have to save interlaced with the old data
 		movdqa xmm4, [ecx]
@@ -542,8 +542,11 @@ End:
 	"movdqa [edx+48], xmm3\n"
 	"WriteCLUT_T16_I4_CSM1_End:\n"
 	"\n"
-	".att_syntax\n" : [s_clut16mask] "=m" (s_clut16mask), [s_clut16mask2] "=m" (s_clut16mask2)
-		   );
+	".att_syntax\n" 
+    : [s_clut16mask] "=m" (s_clut16mask), [s_clut16mask2] "=m" (s_clut16mask2)
+    : "c" (vm), "d" (clut)
+    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"
+       );
 #endif // _MSC_VER
 }
 
@@ -760,8 +763,11 @@ Z16Loop:
 	"sub %2, 1\n"
 	"jne Z16Loop\n"
 
-".att_syntax\n" : "=r"(src), "=r"(dst), "=r"(iters) : "0"(src), "1"(dst), "2"(iters)
-				   );
+".att_syntax\n" 
+    : "=r"(src), "=r"(dst), "=r"(iters) 
+    : "0"(src), "1"(dst), "2"(iters)
+    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"
+       );
 #endif // _MSC_VER
 }
 
