@@ -18,6 +18,15 @@
 #include "Common.h"
 #include "System/SysThreads.h"
 
+enum CpuExtType
+{
+	CpuExt_Base,
+	CpuExt_MMX,
+	CpuExt_SSE,
+	CpuExt_SSE2,
+	CpuExt_SSE41,
+};
+
 extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
 enum CSR_FifoState
@@ -229,6 +238,7 @@ enum GIF_PATH
 	GIF_PATH_3,
 };
 
+extern void GIFPath_Initialize();
 extern int  GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
 extern int  GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 extern void GIFPath_Reset();

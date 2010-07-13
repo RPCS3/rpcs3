@@ -93,12 +93,16 @@ struct GIFPath
 
 	void Reset();
 	void PrepPackedRegs();
-	void SetTag(const void* mem);
 	bool StepReg();
 	u8 GetReg();
 	bool IsActive() const;
 
-	int CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
+	template< CpuExtType CpuExt, bool Aligned >
+	void SetTag(const void* mem);
+
+	template< CpuExtType CpuExt, int pathidx >
+	int CopyTag(const u128* pMem, u32 size);
+
 	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
@@ -286,10 +290,14 @@ __forceinline void GIFPath::PrepPackedRegs()
 	}
 }
 
+
+template< CpuExtType CpuExt, bool Aligned >
 __forceinline void GIFPath::SetTag(const void* mem)
 {
-	_mm_store_ps( (float*)&tag, _mm_loadu_ps((float*)mem) );
-	//const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
+	if( CpuExt >= CpuExt_SSE )
+		_mm_store_ps( (float*)&tag, Aligned ? _mm_load_ps((const float*)mem) : _mm_loadu_ps((const float*)mem) );
+	else
+		const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
 
 	nloop	= tag.NLOOP;
 	curreg	= 0;
@@ -373,10 +381,9 @@ static __forceinline void gsHandler(const u8* pMem)
 #define aMin(x, y) std::min(x, y)
 
 // Parameters:
-//   size (path1)   - difference between the end of VU memory and pMem.
-//   size (path2/3) - max size of incoming data stream, in qwc (simd128)
-
-
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
 __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	u32	startSize =  size;						// Start Size
@@ -384,7 +391,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag(pMem);
+			SetTag<CpuExt_Base,false>(pMem);
 			incTag(1);
 		}
 		else
@@ -523,7 +530,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	return size;
 }
 
-void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
+__forceinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
 	uint endpos = destStart + len;
 	if( endpos < destSize )
@@ -541,7 +548,7 @@ void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint
 	}
 }
 
-void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
+__forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
 {
 	uint endpos = srcStart + len;
 	if( endpos < srcSize )
@@ -559,16 +566,21 @@ void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128
 	}
 }
 
-// [TODO] optimization: If later templated, we can have Paths 1 and 3 use aligned SSE movs,
-// since only PATH2 can feed us unaligned source data.
 #define copyTag() do {						\
-	/*RingBuffer.m_Ring[ringpos] = *pMem128;*/	\
-	_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], _mm_loadu_ps((float*)pMem128)); \
+	if( CpuExt >= CpuExt_SSE )				\
+		_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], (pathidx!=GIF_PATH_2) ? _mm_load_ps((float*)pMem128) : _mm_loadu_ps((float*)pMem128)); \
+	else \
+		RingBuffer.m_Ring[ringpos] = *pMem128;	\
 	++pMem128; --size;						\
 	ringpos = (ringpos+1)&RingBufferMask;	\
 } while(false)
 
-__forceinline int GIFPath::CopyTag(GIF_PATH pathidx, const u128* pMem128, u32 size)
+// Parameters:
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
+template< CpuExtType CpuExt, int pathidx > 
+__forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 {
 	uint& ringpos = GetMTGS().m_packet_ringpos;
 	const uint original_ringpos = ringpos;
@@ -578,12 +590,7 @@ __forceinline int GIFPath::CopyTag(GIF_PATH pathidx, const u128* pMem128, u32 si
 	while (size > 0) {
 		if (!nloop) {
 
-			// [TODO] Optimization: Use MMX intrinsics for SetTag and CopyTag, which both currently
-			//   produce a series of mov eax,[src]; mov [dest],eax instructions to copy these
-			//   individual qwcs.  Warning: Path2 transfers are not always QWC-aligned, but they are
-			//   always aligned on an 8 byte boundary; so its probably best to use MMX here.
-
-			SetTag((u8*)pMem128);
+			SetTag<CpuExt, (pathidx!=GIF_PATH_2)>((u8*)pMem128);
 			copyTag();
 			
 			if(nloop > 0)
@@ -863,9 +870,30 @@ __forceinline int GIFPath::CopyTag(GIF_PATH pathidx, const u128* pMem128, u32 si
 	return size;
 }
 
+typedef int __fastcall FnType_CopyTag(const u128* pMem, u32 size);
+
+static __aligned16 FnType_CopyTag* tbl_CopyTag[3];
+
+// Parameters:
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
+template< CpuExtType CpuExt, int pathidx >
+static int __fastcall _CopyTag_tmpl(const u128* pMem, u32 size)
+{
+	return s_gifPath[pathidx].CopyTag<CpuExt,pathidx>(pMem, size);
+}
+
+void GIFPath_Initialize()
+{
+	tbl_CopyTag[0] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 0> : _CopyTag_tmpl<CpuExt_Base, 0>;
+	tbl_CopyTag[1] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 1> : _CopyTag_tmpl<CpuExt_Base, 1>;
+	tbl_CopyTag[2] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 2> : _CopyTag_tmpl<CpuExt_Base, 2>;
+}
+
 __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
-	return s_gifPath[pathidx].CopyTag(pathidx, pMem, size);
+	return tbl_CopyTag[pathidx](pMem, size);
 }
 
 // Quick version for queueing PATH1 data.
