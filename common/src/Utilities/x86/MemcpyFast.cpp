@@ -256,9 +256,9 @@ __forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
 
     __asm
 	{
-	mov		ecx, [dest]
-	mov		edx, [src]
-	mov		eax, [qwc]			; keep a copy of count
+	mov		ecx, dest
+	mov		edx, src
+	mov		eax, qwc			; keep a copy of count
 	shr		eax, 1
 	jz		$memcpy_qwc_1		; only one 16 byte block to copy?
 
@@ -306,7 +306,7 @@ $memcpy_qwc_loop1:
 	jnz		$memcpy_qwc_loop1	; last 64-byte block?
 
 $memcpy_qwc_1:
-	test	[qwc],1
+	test	qwc,1
 	jz		$memcpy_qwc_final
 	movq	mm0,[edx]
 	movq	mm1,[edx+8]

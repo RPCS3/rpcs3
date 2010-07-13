@@ -258,7 +258,6 @@ enum MTGS_RingCommand
 	GS_RINGTYPE_P1
 ,	GS_RINGTYPE_P2
 ,	GS_RINGTYPE_P3
-,	GS_RINGTYPE_RESTART
 ,	GS_RINGTYPE_VSYNC
 ,	GS_RINGTYPE_FRAMESKIP
 ,	GS_RINGTYPE_FREEZE
@@ -291,10 +290,12 @@ public:
 	volatile u32	m_SignalRingEnable;
 	volatile s32	m_SignalRingPosition;
 
-	int				m_QueuedFrameCount;
+	volatile s32	m_QueuedFrameCount;
+	volatile u32	m_VsyncSignalListener;
 
-	Mutex			m_lock_RingBufferBusy;
+	Mutex			m_mtx_RingBufferBusy;
 	Semaphore		m_sem_OnRingReset;
+	Semaphore		m_sem_Vsync;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
 	// (currently not used or implemented -- is a planned feature for a future threaded VU1)
