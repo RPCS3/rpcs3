@@ -149,10 +149,10 @@ void SysMtgsThread::PostVsyncEnd()
 
 	// If the MTGS is allowed to queue a lot of frames in advance, it creates input lag.
 	// Use the Queued FrameCount to stall the EE if another vsync (or two) are already queued
-	// in the ringbuffer.  The queue limit is disabled when FrameLimiting is disabled, since
-	// the queue can have perverse effects on framerate benchmarking.
+	// in the ringbuffer.  The queue limit is disabled when both FrameLimiting and Vsync are
+	// disabled, since the queue can have perverse effects on framerate benchmarking.
 
-	if ((AtomicIncrement(m_QueuedFrameCount) < EmuConfig.GS.VsyncQueueSize) || !EmuConfig.GS.FrameLimitEnable) return;
+	if ((AtomicIncrement(m_QueuedFrameCount) < EmuConfig.GS.VsyncQueueSize) || (!EmuConfig.GS.VsyncEnable && !EmuConfig.GS.FrameLimitEnable)) return;
 
 	m_VsyncSignalListener = true;
 	//Console.WriteLn( Color_Blue, "(EEcore Sleep) Vsync\t\tringpos=0x%06x, writepos=0x%06x", volatize(m_RingPos), m_WritePos );
