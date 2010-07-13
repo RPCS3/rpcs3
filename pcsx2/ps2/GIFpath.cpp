@@ -252,7 +252,7 @@ __forceinline void GIFPath::Reset()
 
 __forceinline bool GIFPath::StepReg()
 {
-	if ((++curreg & 0xf) == tag.NREG) {
+	if (++curreg >= numregs) {
 		curreg = 0;
 		if (--nloop == 0) {
 			return false;
