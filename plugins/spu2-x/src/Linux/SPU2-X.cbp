@@ -195,8 +195,6 @@
 		<Unit filename="../spdif.h" />
 		<Unit filename="../spu2freeze.cpp" />
 		<Unit filename="../spu2sys.cpp" />
-		<Unit filename="../utf8.cpp" />
-		<Unit filename="../utf8.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

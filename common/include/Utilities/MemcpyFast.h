@@ -41,5 +41,8 @@ void _memset16_unaligned( void* dest, u16 data, size_t size );
 #define memcpy_aligned(d,s,c)	memcpy_amd_(d,s,c)	// Memcpy with 16-byte Aligned addresses
 #define memcpy_const			memcpy_amd_	// Memcpy with constant size
 #define memcpy_constA			memcpy_amd_ // Memcpy with constant size and 16-byte aligned
+#ifndef __LINUX__
 #define memcpy_qwc(d,s,c)		memcpy_amd_qwc(d,s,c)
-//#define memcpy_qwc(d,s,c)		memcpy_amd_(d,s,c*16)
+#else
+#define memcpy_qwc(d,s,c)		memcpy_amd_(d,s,c*16)
+#endif

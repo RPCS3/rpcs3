@@ -886,9 +886,17 @@ static int __fastcall _CopyTag_tmpl(const u128* pMem, u32 size)
 
 void GIFPath_Initialize()
 {
+#ifdef __LINUX__
+	// It's already thrown an exception if it isn't SSE, and the check was giving me a compilation error.
+	// I could fix it, but why bother?
+	tbl_CopyTag[0] = _CopyTag_tmpl<CpuExt_SSE, 0>;
+	tbl_CopyTag[1] = _CopyTag_tmpl<CpuExt_SSE, 1>;
+	tbl_CopyTag[2] = _CopyTag_tmpl<CpuExt_SSE, 2>;
+#else
 	tbl_CopyTag[0] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 0> : _CopyTag_tmpl<CpuExt_Base, 0>;
 	tbl_CopyTag[1] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 1> : _CopyTag_tmpl<CpuExt_Base, 1>;
 	tbl_CopyTag[2] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 2> : _CopyTag_tmpl<CpuExt_Base, 2>;
+#endif
 }
 
 __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
