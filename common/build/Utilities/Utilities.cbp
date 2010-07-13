@@ -208,6 +208,10 @@
 		<Unit filename="../../src/Utilities/wxGuiTools.cpp" />
 		<Unit filename="../../src/Utilities/wxHelpers.cpp" />
 		<Unit filename="../../src/Utilities/x86/MemcpyFast.S" />
+		<Unit filename="../../src/Utilities/x86/MemcpyFast.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion>
