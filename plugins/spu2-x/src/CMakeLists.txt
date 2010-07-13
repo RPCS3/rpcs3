@@ -11,7 +11,6 @@ set(spu2xName spu2x)
 
 set(CommonFlags
     -Wall
-    -m32
     -msse2
     )
 
@@ -127,11 +126,3 @@ target_link_libraries(${spu2xName} ${SOUNDTOUCH_LIBRARIES})
 
 # link target with A52
 target_link_libraries(${spu2xName} ${A52_LIBRARIES})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${spu2xName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${spu2xName} -s)
-endif (CMAKE_BUILD_STRIP)

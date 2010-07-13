@@ -11,7 +11,6 @@ set(zzoglName zzogl)
 
 set(CommonFlags
     -pthread
-    -m32
     -Wno-format
     -Wno-unused-parameter
     -Wno-unused-value
@@ -158,11 +157,3 @@ target_link_libraries(${zzoglName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zzoglName} ${X11_Xxf86vm_LIB})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${zzoglName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${zzoglName} -s)
-endif (CMAKE_BUILD_STRIP)

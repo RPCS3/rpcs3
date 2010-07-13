@@ -11,7 +11,6 @@ set(FWnullName FWnull)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -75,15 +74,6 @@ add_library(${FWnullName} SHARED
 			${FWnullLinuxSources}
 			${FWnullLinuxHeaders})
 
-# Force the linker into 32 bits mode
-target_link_libraries(${FWnullName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${FWnullName} -s)
-endif (CMAKE_BUILD_STRIP)
-
 # set output directory
 set_target_properties(${FWnullName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-

@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     libwxgtk2.8-dev (>= 2.8.10), libwxgtk2.8-dev (<< 2.8.11),
     libgtk2.0-dev (>= 2.16),
     liba52-0.7.4-dev,
-    libasound2-dev | lib32asound2 [amd64],
+    libasound2-dev | lib32asound2-dev [amd64],
     portaudio19-dev,
 # version not yet in debian 
 # libsoundtouch1-dev (>= 1.5),

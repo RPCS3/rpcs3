@@ -5,7 +5,6 @@ set(zlibName pcsx2_zlib)
 
 set(CommonFlags
     -W
-    -m32
     )
 
 set(OptimizationFlags
@@ -64,7 +63,3 @@ inftrees.h )
 
 # add library
 add_library(${zlibName} STATIC ${zlibSources} ${zlibHeaders})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${zlibName} -m32)
-

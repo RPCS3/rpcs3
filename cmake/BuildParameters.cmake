@@ -8,8 +8,36 @@
 ### Add some flags to the build process
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
+# control link flags          : -DUSER_CMAKE_LD_FLAGS="ldflags"
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+# if no build type is set, use Devel as default
+# Note without the CMAKE_BUILD_TYPE options the value is still defined to ""
+# Ensure that the value set by the User is correct to avoid some bad behavior later
+#-------------------------------------------------------------------------------
+if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
+	set(CMAKE_BUILD_TYPE Devel)
+	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
+endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Set default strip option. Can be set with -DCMAKE_BUILD_STRIP=TRUE/FALSE
+#-------------------------------------------------------------------------------
+if(NOT DEFINED CMAKE_BUILD_STRIP)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_STRIP TRUE)
+        message(STATUS "Enable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
+    else(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_STRIP FALSE)
+        message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
+    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
+endif(NOT DEFINED CMAKE_BUILD_STRIP)
+
+#-------------------------------------------------------------------------------
+# Control GCC flags
+#-------------------------------------------------------------------------------
 ### Cmake set default value for various compilation variable
 ### Here the list of default value for documentation purpose
 # ${CMAKE_SHARED_LIBRARY_CXX_FLAGS} = "-fPIC"
@@ -46,45 +74,45 @@ set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 
 #-------------------------------------------------------------------------------
 # Allow user to set some default flags
-# By default do not use any flags
+# Note: string STRIP must be used to remove trailing and leading spaces.
+#       See policy CMP0004
 #-------------------------------------------------------------------------------
+### linker flags
+if(DEFINED USER_CMAKE_LD_FLAGS)
+    message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_LD_FLAGS at your own risk !!!")
+    string(STRIP "${USER_CMAKE_LD_FLAGS}" USER_CMAKE_LD_FLAGS)
+else(DEFINED USER_CMAKE_LD_FLAGS)
+    set(USER_CMAKE_LD_FLAGS "")
+endif(DEFINED USER_CMAKE_LD_FLAGS)
+
+# ask the linker to strip the binary
+if(CMAKE_BUILD_STRIP) 
+    string(STRIP "${USER_CMAKE_LD_FLAGS} -s" USER_CMAKE_LD_FLAGS)
+endif(CMAKE_BUILD_STRIP) 
+
+
+### c flags
+# Note CMAKE_C_FLAGS is also send to the linker.
+# By default allow build on amd64 machine
 if(DEFINED USER_CMAKE_C_FLAGS)
     message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_C_FLAGS at your own risk !!!")
-    set(CMAKE_C_FLAGS "${USER_CMAKE_C_FLAGS}")
+    string(STRIP "${USER_CMAKE_C_FLAGS} ${USER_CMAKE_LD_FLAGS} -m32" CMAKE_C_FLAGS)
 else(DEFINED USER_CMAKE_C_FLAGS)
-    set(CMAKE_C_FLAGS "")
+    string(STRIP "${USER_CMAKE_LD_FLAGS} -m32" CMAKE_C_FLAGS)
 endif(DEFINED USER_CMAKE_C_FLAGS)
 
+
+### C++ flags
+# Note CMAKE_CXX_FLAGS is also send to the linker.
+# By default allow build on amd64 machine
 if(DEFINED USER_CMAKE_CXX_FLAGS)
     message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_CXX_FLAGS at your own risk !!!")
-    set(CMAKE_CXX_FLAGS "${USER_CMAKE_CXX_FLAGS}")
+    string(STRIP "${USER_CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
+    string(STRIP "${USER_CMAKE_CXX_FLAGS} ${USER_CMAKE_LD_FLAGS} -m32" CMAKE_CXX_FLAGS)
 else(DEFINED USER_CMAKE_CXX_FLAGS)
     set(CMAKE_CXX_FLAGS "")
+    string(STRIP "${USER_CMAKE_LD_FLAGS} -m32" CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
-
-#-------------------------------------------------------------------------------
-# if no build type is set, use Devel as default
-# Note without the CMAKE_BUILD_TYPE options the value is still defined to ""
-# Ensure that the value set by the User is correct to avoid some bad behavior later
-#-------------------------------------------------------------------------------
-if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
-	set(CMAKE_BUILD_TYPE Devel)
-	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
-endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Set default strip option. Can be set with -DCMAKE_BUILD_STRIP=TRUE/FALSE
-#-------------------------------------------------------------------------------
-if(NOT DEFINED CMAKE_BUILD_STRIP)
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_BUILD_STRIP TRUE)
-        message(STATUS "Enable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
-    else(CMAKE_BUILD_TYPE STREQUAL "Release")
-        set(CMAKE_BUILD_STRIP FALSE)
-        message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
-    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
-endif(NOT DEFINED CMAKE_BUILD_STRIP)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty

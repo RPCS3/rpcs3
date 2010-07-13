@@ -36,7 +36,8 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/3rdparty")
 
 # make common
 if(common_libs)
-    add_subdirectory(common)
+    add_subdirectory(common/src/Utilities)
+    add_subdirectory(common/src/x86emitter)
 endif(common_libs)
 
 # make tools

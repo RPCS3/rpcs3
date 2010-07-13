@@ -11,7 +11,6 @@ set(onepadName onepad)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -82,18 +81,9 @@ add_library(${onepadName} SHARED
 			${onepadLinuxSources}
 			${onepadLinuxHeaders})
 
-# Force the linker into 32 bits mode
-target_link_libraries(${onepadName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${onepadName} -s)
-endif (CMAKE_BUILD_STRIP)
-
 # set output directory
 set_target_properties(${onepadName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with SDL
 target_link_libraries(${onepadName} ${SDL_LIBRARY})
-

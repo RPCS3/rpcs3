@@ -5,7 +5,6 @@ set(zerogsName zerogs)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -138,11 +137,3 @@ target_link_libraries(${zerogsName} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${zerogsName} ${X11_Xxf86vm_LIB})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${zerogsName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${zerogsName} -s)
-endif (CMAKE_BUILD_STRIP)

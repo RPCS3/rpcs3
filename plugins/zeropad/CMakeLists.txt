@@ -11,7 +11,6 @@ set(zeropadName zeropad)
 
 set(CommonFlags
     -Wall
-    -m32
     -fpic
     )
 
@@ -97,11 +96,3 @@ set_target_properties(${zeropadName} PROPERTIES
 
 # link target with SDL
 target_link_libraries(${zeropadName} ${SDL_LIBRARY})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${zeropadName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${zeropadName} -s)
-endif (CMAKE_BUILD_STRIP)
