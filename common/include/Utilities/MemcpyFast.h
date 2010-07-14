@@ -48,62 +48,62 @@
 				//"mov		ecx, [%[dest]]\n"
 				//"mov		edx, [%[src]]\n"
 				//"mov		eax, [%[qwc]]\n"			// keep a copy of count
-				"shr		%[qwc], 1\n"
-				"jz		memcpy_qwc_1\n"		// only one 16 byte block to copy?
+				"cmp		%[qwc], 1\n"
+				"jbe		memcpy_qwc_1\n"				// only one 16 byte block to copy?
 
-				"cmp		%[qwc], 64\n" // "IN_CACHE_COPY/32"
-				"jb		memcpy_qwc_loop1\n"	// small copies should be cached (definite speedup --air)
+				"cmp		%[qwc], 128\n" // "IN_CACHE_COPY/16"
+				"jb			memcpy_qwc_loop1\n"			// small copies should be cached (definite speedup --air)
 		
-			"memcpy_qwc_loop2:\n"				// 32-byte blocks, uncached copy
-				"prefetchnta [%[src] + 568]\n"		// start reading ahead (tested: it helps! --air)
+			"memcpy_qwc_loop2:\n"						// 32-byte blocks, uncached copy
+				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
 
-				"movq	mm0,[%[src]+0]\n"			// read 64 bits
-				"movq	mm1,[%[src]+8]\n"
-				"movq	mm2,[%[src]+16]\n"
-				"movntq	[%[dest]+0], mm0\n"		// write 64 bits, bypassing the cache
-				"movntq	[%[dest]+8], mm1\n"
-				"movq	mm3,[%[src]+24]\n"
-				"movntq	[%[dest]+16], mm2\n"
-				"movntq	[%[dest]+24], mm3\n"
+				"movq		mm0,[%[src]+0]\n"			// read 64 bits
+				"movq		mm1,[%[src]+8]\n"
+				"movq		mm2,[%[src]+16]\n"
+				"movntq		[%[dest]+0], mm0\n"			// write 64 bits, bypassing the cache
+				"movntq		[%[dest]+8], mm1\n"
+				"movq		mm3,[%[src]+24]\n"
+				"movntq		[%[dest]+16], mm2\n"
+				"movntq		[%[dest]+24], mm3\n"
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		%[qwc],1\n"
-				"jnz		memcpy_qwc_loop2\n"	// last 64-byte block?
-				"sfence\n"						// flush the write buffer
+				"sub		%[qwc],2\n"
+				"jnz		memcpy_qwc_loop2\n"			// last 64-byte block?
+				"sfence\n"								// flush the write buffer
 				"jmp		memcpy_qwc_1\n"
 
 			// 32-byte blocks, cached!
 			// This *is* important.  Removing this and using exclusively non-temporal stores
-			// results in noticable speed loss!
+			// results in noticeable speed loss!
 
 			"memcpy_qwc_loop1:\n"				
-				"prefetchnta [%[src] + 568]\n"		// start reading ahead (tested: it helps! --air)
+				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
 
-				"movq	mm0,[%[src]+0]\n"			// read 64 bits
-				"movq	mm1,[%[src]+8]\n"
-				"movq	mm2,[%[src]+16]\n"
-				"movq	[%[dest]+0], mm0\n"		// write 64 bits, bypassing the cache
-				"movq	[%[dest]+8], mm1\n"
-				"movq	mm3,[%[src]+24]\n"
-				"movq	[%[dest]+16], mm2\n"
-				"movq	[%[dest]+24], mm3\n"
+				"movq		mm0,[%[src]+0]\n"			// read 64 bits
+				"movq		mm1,[%[src]+8]\n"
+				"movq		mm2,[%[src]+16]\n"
+				"movq		[%[dest]+0], mm0\n"			// write 64 bits, bypassing the cache
+				"movq		[%[dest]+8], mm1\n"
+				"movq		mm3,[%[src]+24]\n"
+				"movq		[%[dest]+16], mm2\n"
+				"movq		[%[dest]+24], mm3\n"
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		%[qwc],1\n"
-				"jnz		memcpy_qwc_loop1\n"	// last 64-byte block?
+				"sub		%[qwc],2\n"
+				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
 
 			"memcpy_qwc_1:\n"
-				"test	[%[qwc]],dword ptr 1\n"
-				"jz		memcpy_qwc_final\n"
-				"movq	mm0,[%[src]]\n"
-				"movq	mm1,[%[src]+8]\n"
-				"movq	[%[dest]], mm0\n"
-				"movq	[%[dest]+8], mm1\n"
+				"test		[%qwc],1\n"
+				"jz			memcpy_qwc_final\n"
+				"movq		mm0,[%[src]]\n"
+				"movq		mm1,[%[src]+8]\n"
+				"movq		[%[dest]], mm0\n"
+				"movq		[%[dest]+8], mm1\n"
 
 			"memcpy_qwc_final:\n"
-				"emms\n"				// clean up the MMX state
+				"emms\n"								// clean up the MMX state
 			".att_syntax\n"
 					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
 					: [dest]"0"(dest), [src]"1"(src), [qwc]"2"(qwc)
