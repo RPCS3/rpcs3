@@ -48,10 +48,11 @@
 				//"mov		ecx, [%[dest]]\n"
 				//"mov		edx, [%[src]]\n"
 				//"mov		eax, [%[qwc]]\n"			// keep a copy of count
-				"cmp		%[qwc], 1\n"
-				"jbe		memcpy_qwc_1\n"				// only one 16 byte block to copy?
+				"mov		eax, %[qwc]\n"
+				"shr		eax, 1\n"
+				"jz			memcpy_qwc_1\n"				// only one 16 byte block to copy?
 
-				"cmp		%[qwc], 128\n" // "IN_CACHE_COPY/16"
+				"cmp		%[qwc], 64\n"				// "IN_CACHE_COPY/32"
 				"jb			memcpy_qwc_loop1\n"			// small copies should be cached (definite speedup --air)
 		
 			"memcpy_qwc_loop2:\n"						// 32-byte blocks, uncached copy
@@ -68,7 +69,7 @@
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		%[qwc],2\n"
+				"sub		eax,1\n"
 				"jnz		memcpy_qwc_loop2\n"			// last 64-byte block?
 				"sfence\n"								// flush the write buffer
 				"jmp		memcpy_qwc_1\n"
@@ -91,7 +92,7 @@
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		%[qwc],2\n"
+				"sub		eax,1\n"
 				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
 
 			"memcpy_qwc_1:\n"
@@ -107,7 +108,7 @@
 			".att_syntax\n"
 					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
 					: [dest]"0"(dest), [src]"1"(src), [qwc]"2"(qwc)
-					: "memory", "mm0", "mm1", "mm2", "mm3"
+					: "memory", "eax", "mm0", "mm1", "mm2", "mm3"
 		);
 	}
 #else
