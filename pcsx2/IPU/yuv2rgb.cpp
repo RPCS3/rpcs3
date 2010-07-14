@@ -54,7 +54,7 @@ void yuv2rgb_reference(void)
 // Know the specification before you touch it.
 #define SSE_BYTES(x) {x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x}
 #define SSE_WORDS(x) {x, x, x, x, x, x, x, x}
-#define SSE_COEFFICIENTS(x) SSE_WORDS(((x)<<2) && 0xFFFF)
+#define SSE_COEFFICIENTS(x) SSE_WORDS((x)<<2)
 
 struct SSE2_Tables
 {
