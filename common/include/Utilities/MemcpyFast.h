@@ -23,7 +23,6 @@
 	extern "C" u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize);
 	extern "C" void memxor_mmx(void* dst, const void* src1, int cmpsize);
 
-#if 0
 	// This can be moved later, but Linux doesn't even compile memcpyFast.cpp, so I figured I'd stick it here for now.
 	// Quadword Copy! Count is in QWCs (128 bits).  Neither source nor dest need to be aligned.
 	static __forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
@@ -46,30 +45,30 @@
 		__asm__
 		(
 			".intel_syntax noprefix\n"
-				"mov		ecx, [%[dest]]\n"
-				"mov		edx, [%[src]]\n"
-				"mov		eax, [%[qwc]]\n"			// keep a copy of count
-				"shr		eax, 1\n"
+				//"mov		ecx, [%[dest]]\n"
+				//"mov		edx, [%[src]]\n"
+				//"mov		eax, [%[qwc]]\n"			// keep a copy of count
+				"shr		%[qwc], 1\n"
 				"jz		memcpy_qwc_1\n"		// only one 16 byte block to copy?
 
-				"cmp		eax, 64\n" // "IN_CACHE_COPY/32"
+				"cmp		%[qwc], 64\n" // "IN_CACHE_COPY/32"
 				"jb		memcpy_qwc_loop1\n"	// small copies should be cached (definite speedup --air)
 		
 			"memcpy_qwc_loop2:\n"				// 32-byte blocks, uncached copy
-				"prefetchnta [edx + 568]\n"		// start reading ahead (tested: it helps! --air)
+				"prefetchnta [%[src] + 568]\n"		// start reading ahead (tested: it helps! --air)
 
-				"movq	mm0,[edx+0]\n"			// read 64 bits
-				"movq	mm1,[edx+8]\n"
-				"movq	mm2,[edx+16]\n"
-				"movntq	[ecx+0], mm0\n"		// write 64 bits, bypassing the cache
-				"movntq	[ecx+8], mm1\n"
-				"movq	mm3,[edx+24]\n"
-				"movntq	[ecx+16], mm2\n"
-				"movntq	[ecx+24], mm3\n"
+				"movq	mm0,[%[src]+0]\n"			// read 64 bits
+				"movq	mm1,[%[src]+8]\n"
+				"movq	mm2,[%[src]+16]\n"
+				"movntq	[%[dest]+0], mm0\n"		// write 64 bits, bypassing the cache
+				"movntq	[%[dest]+8], mm1\n"
+				"movq	mm3,[%[src]+24]\n"
+				"movntq	[%[dest]+16], mm2\n"
+				"movntq	[%[dest]+24], mm3\n"
 
-				"add		edx,32\n"				// update source pointer
-				"add		ecx,32\n"				// update destination pointer
-				"sub		eax,1\n"
+				"add		%[src],32\n"				// update source pointer
+				"add		%[dest],32\n"				// update destination pointer
+				"sub		%[qwc],1\n"
 				"jnz		memcpy_qwc_loop2\n"	// last 64-byte block?
 				"sfence\n"						// flush the write buffer
 				"jmp		memcpy_qwc_1\n"
@@ -79,39 +78,38 @@
 			// results in noticable speed loss!
 
 			"memcpy_qwc_loop1:\n"				
-				"prefetchnta [edx + 568]\n"		// start reading ahead (tested: it helps! --air)
+				"prefetchnta [%[src] + 568]\n"		// start reading ahead (tested: it helps! --air)
 
-				"movq	mm0,[edx+0]\n"			// read 64 bits
-				"movq	mm1,[edx+8]\n"
-				"movq	mm2,[edx+16]\n"
-				"movq	[ecx+0], mm0\n"		// write 64 bits, bypassing the cache
-				"movq	[ecx+8], mm1\n"
-				"movq	mm3,[edx+24]\n"
-				"movq	[ecx+16], mm2\n"
-				"movq	[ecx+24], mm3\n"
+				"movq	mm0,[%[src]+0]\n"			// read 64 bits
+				"movq	mm1,[%[src]+8]\n"
+				"movq	mm2,[%[src]+16]\n"
+				"movq	[%[dest]+0], mm0\n"		// write 64 bits, bypassing the cache
+				"movq	[%[dest]+8], mm1\n"
+				"movq	mm3,[%[src]+24]\n"
+				"movq	[%[dest]+16], mm2\n"
+				"movq	[%[dest]+24], mm3\n"
 
-				"add		edx,32\n"				// update source pointer
-				"add		ecx,32\n"				// update destination pointer
-				"sub		eax,1\n"
+				"add		%[src],32\n"				// update source pointer
+				"add		%[dest],32\n"				// update destination pointer
+				"sub		%[qwc],1\n"
 				"jnz		memcpy_qwc_loop1\n"	// last 64-byte block?
 
 			"memcpy_qwc_1:\n"
 				"test	[%[qwc]],dword ptr 1\n"
 				"jz		memcpy_qwc_final\n"
-				"movq	mm0,[edx]\n"
-				"movq	mm1,[edx+8]\n"
-				"movq	[ecx], mm0\n"
-				"movq	[ecx+8], mm1\n"
+				"movq	mm0,[%[src]]\n"
+				"movq	mm1,[%[src]+8]\n"
+				"movq	[%[dest]], mm0\n"
+				"movq	[%[dest]+8], mm1\n"
 
 			"memcpy_qwc_final:\n"
 				"emms\n"				// clean up the MMX state
 			".att_syntax\n"
-					: "=r"(dest), "=r"(src), "=r"(qwc)
-					: [dest]"r"(dest), [src]"r"(src), [qwc]"r"(qwc)
-					//: Needs a clobber list here
+					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
+					: [dest]"0"(dest), [src]"1"(src), [qwc]"2"(qwc)
+					: "memory", "mm0", "mm1", "mm2", "mm3"
 		);
 	}
-#endif
 #else
 
 #	include "win_memzero.h"
@@ -131,10 +129,5 @@ void _memset16_unaligned( void* dest, u16 data, size_t size );
 #define memcpy_const			memcpy_amd_	// Memcpy with constant size
 #define memcpy_constA			memcpy_amd_ // Memcpy with constant size and 16-byte aligned
 
-//#define memcpy_qwc(d,s,c)		memcpy_amd_qwc(d,s,c)
-#ifndef __LINUX__
 #define memcpy_qwc(d,s,c)		memcpy_amd_qwc(d,s,c)
-#else
-#define memcpy_qwc(d,s,c)		memcpy_amd_(d,s,c*16)
-//#define memcpy_qwc(d,s,c)		memcpy_amd_qwc(d,s,c)
-#endif
+//#define memcpy_qwc(d,s,c)		memcpy_amd_(d,s,c*16)
