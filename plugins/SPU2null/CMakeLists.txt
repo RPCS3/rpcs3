@@ -11,7 +11,6 @@ set(SPU2nullName SPU2null)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -74,16 +73,6 @@ add_library(${SPU2nullName} SHARED
 			${SPU2nullLinuxSources}
 			${SPU2nullLinuxHeaders})
 
-
-# Force the linker into 32 bits mode
-target_link_libraries(${SPU2nullName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${SPU2nullName} -s)
-endif (CMAKE_BUILD_STRIP)
-
 # set output directory
 set_target_properties(${SPU2nullName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-

@@ -11,7 +11,6 @@ set(CDVDisoName CDVDiso)
 
 set(CommonFlags
     -Wall
-    -m32
     -fpermissive
     )
 
@@ -80,11 +79,3 @@ set_target_properties(${CDVDisoName} PROPERTIES
 
 # Link with bz2
 target_link_libraries(${CDVDisoName} ${BZIP2_LIBRARIES})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${CDVDisoName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${CDVDisoName} -s)
-endif (CMAKE_BUILD_STRIP)

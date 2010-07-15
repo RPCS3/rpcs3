@@ -4,7 +4,6 @@
 set(bzip2Name pcsx2_bzip2)
 
 set(CommonFlags
-    -m32
     -march=athlon-xp
     -march=prescott
     )
@@ -49,6 +48,3 @@ set(bzip2Headers
 
 # add library
 add_library(${bzip2Name} STATIC ${bzip2Sources} ${bzip2Headers})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${bzip2Name} -m32)

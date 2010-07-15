@@ -228,6 +228,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\x86\MemcpyVibes.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\PathUtils.cpp"
 				>
 			</File>

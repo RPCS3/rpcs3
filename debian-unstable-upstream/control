@@ -4,24 +4,24 @@ Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     gcc-multilib [amd64], g++-multilib [amd64],
-    zlib1g-dev (>=1:1.2.3.3) | lib32z1-dev (>=1.2.3.3) [amd64],
+    zlib1g-dev (>= 1:1.2.3.3) | lib32z1-dev (>= 1.2.3.3) [amd64],
     libbz2-dev (>= 1.0.4),
     libsdl1.2-dev,
     libjpeg-dev,
-    libwxbase2.8-dev (>=2.8.0),
-    libwxgtk2.8-dev (>=2.8.0),
-    libgtk2.0-dev (>=2.10),
+    libwxbase2.8-dev (>= 2.8.10), libwxbase2.8-dev (<< 2.8.11), 
+    libwxgtk2.8-dev (>= 2.8.10), libwxgtk2.8-dev (<< 2.8.11),
+    libgtk2.0-dev (>= 2.16),
     liba52-0.7.4-dev,
-    libasound2-dev | lib32asound2 [amd64],
+    libasound2-dev | lib32asound2-dev [amd64],
     portaudio19-dev,
 # version not yet in debian 
 # libsoundtouch1-dev (>= 1.5),
 # I patch the source (remove feature) to compile with version 1.3
     libsoundtouch1-dev (>= 1.3),
-    libsparsehash-dev (>=1.6),
+    libsparsehash-dev (>= 1.6),
     libx11-dev,
     libxxf86vm-dev,
-    libglew1.5-dev (>=1.5.1),
+    libglew1.5-dev (>= 1.5.1),
     libgl1-mesa-dev,
     libglu1-mesa-dev,
 # my nmu: add 32bits packages
@@ -68,7 +68,9 @@ Package: pcsx2-plugins-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version})
+Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version}),
+# manually add nvidia-cg-toolkit for zzogl. Do not why is not found by shlibs !!!
+    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1), ia32-nvidia-cg-toolkit-pcsx2 [amd64]
 Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and

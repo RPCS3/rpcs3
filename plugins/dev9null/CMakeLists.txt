@@ -11,7 +11,6 @@ set(dev9nullName dev9null)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -73,15 +72,6 @@ add_library(${dev9nullName} SHARED
 			${dev9nullLinuxSources}
 			${dev9nullLinuxHeaders})
 
-# Force the linker into 32 bits mode
-target_link_libraries(${dev9nullName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${dev9nullName} -s)
-endif (CMAKE_BUILD_STRIP)
-
 # set output directory
 set_target_properties(${dev9nullName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-

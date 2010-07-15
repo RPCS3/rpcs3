@@ -5,7 +5,6 @@ set(a52Name pcsx2_a52)
 
 set(CommonFlags
     -Wall
-    -m32
     -g
     )
 
@@ -54,6 +53,3 @@ set(a52Headers
 
 # add library
 add_library(${a52Name} STATIC ${a52Sources} ${a52Headers}) 
-
-# Force the linker into 32 bits mode
-target_link_libraries(${a52Name} -m32)

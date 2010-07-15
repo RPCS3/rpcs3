@@ -13,7 +13,6 @@ set(CommonFlags
 	-fno-dse
 	-fno-tree-dse
 	-fno-strict-aliasing
-	-m32
 	-march=i486
 	-msse
 	-msse2
@@ -642,11 +641,3 @@ endif(Linux)
 
 # link target with zlib
 target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${pcsx2Name} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${pcsx2Name} -s)
-endif (CMAKE_BUILD_STRIP)

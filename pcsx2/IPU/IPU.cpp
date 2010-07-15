@@ -1158,7 +1158,7 @@ void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn)
 	int i;
 	u8* p = (u8*)rgb32;
 
-	yuv2rgb_sse2();
+	yuv2rgb();
 
 	if (s_thresh[0] > 0)
 	{

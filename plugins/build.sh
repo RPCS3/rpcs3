@@ -15,20 +15,12 @@ fi
 fi
 }
 
-buildplugin CDVDnull $@
-buildplugin dev9null $@
-buildplugin FWnull $@
-buildplugin USBnull $@
-buildplugin SPU2null $@
-
 buildplugin zerogs $@
 buildplugin zzogl $@
 buildplugin zzogl-pg $@
 buildplugin zeropad $@
-buildplugin zerospu2 $@
 
 buildplugin PeopsSPU2 $@
 
-buildplugin CDVDiso $@
 buildplugin CDVDisoEFP $@
 buildplugin CDVDlinuz $@

@@ -16,9 +16,9 @@
 #pragma once
 
 // Register counts for x86/32 mode:
-static const int iREGCNT_XMM = 8;
-static const int iREGCNT_GPR = 8;
-static const int iREGCNT_MMX = 8;
+static const uint iREGCNT_XMM = 8;
+static const uint iREGCNT_GPR = 8;
+static const uint iREGCNT_MMX = 8;
 
 enum XMMSSEType
 {

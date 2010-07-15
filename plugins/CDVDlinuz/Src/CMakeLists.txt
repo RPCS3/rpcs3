@@ -5,7 +5,6 @@ set(CDVDlinuzName CDVDlinuz)
 
 set(CommonFlags
     -Wall
-    -m32
     -fPIC
     -D_LARGEFILE64_SOURCE
     )
@@ -92,11 +91,3 @@ add_library(${CDVDlinuzName} SHARED
 # set output directory
 set_target_properties(${CDVDlinuzName} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-
-# Set link flags
-target_link_libraries(${CDVDlinuzName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${CDVDlinuzName} -s)
-endif (CMAKE_BUILD_STRIP)

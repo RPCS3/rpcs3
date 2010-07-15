@@ -73,6 +73,10 @@ static __forceinline void memzero_ptr( void *dest )
 		return;
 	}
 
+#if 0
+	// SSE-based memory clear.  Currently disabled so to avoid unnecessary dependence on
+	// SSE cpu instruction sets.  (memzero typically isn't used in any performance critical
+	// situations anyway)
 	enum
 	{
 		remainder = MZFbytes & 127,
@@ -86,8 +90,6 @@ static __forceinline void memzero_ptr( void *dest )
 
 	if( (MZFbytes & 0xf) == 0 )
 	{
-		u64 _xmm_backup[2];
-
 		if( ((uptr)dest & 0xf) != 0 )
 		{
 			// UNALIGNED COPY MODE.
@@ -97,24 +99,21 @@ static __forceinline void memzero_ptr( void *dest )
 			{
 				__asm
 				{
-					movups _xmm_backup,xmm0;
 					mov ecx,dest
 					pxor xmm0,xmm0
 					mov eax,bytes128
 
-					align 16
-
 				_loop_6:
-					movups [ecx],xmm0;
-					movups [ecx+0x10],xmm0;
-					movups [ecx+0x20],xmm0;
-					movups [ecx+0x30],xmm0;
-					movups [ecx+0x40],xmm0;
-					movups [ecx+0x50],xmm0;
-					movups [ecx+0x60],xmm0;
-					movups [ecx+0x70],xmm0;
+					movups [ecx],xmm0
+					movups [ecx+0x10],xmm0
+					movups [ecx+0x20],xmm0
+					movups [ecx+0x30],xmm0
+					movups [ecx+0x40],xmm0
+					movups [ecx+0x50],xmm0
+					movups [ecx+0x60],xmm0
+					movups [ecx+0x70],xmm0
 					sub ecx,-128
-					dec eax;
+					sub eax,1
 					jnz _loop_6;
 				}
 				if( remainder != 0 )
@@ -130,10 +129,6 @@ static __forceinline void memzero_ptr( void *dest )
 						jnz _loop_5;
 					}
 				}
-				__asm
-				{
-					movups xmm0,[_xmm_backup];
-				}
 				return;
 			}
 		}
@@ -145,24 +140,21 @@ static __forceinline void memzero_ptr( void *dest )
 
 			__asm
 			{
-				movups _xmm_backup,xmm0;
 				mov ecx,dest
 				pxor xmm0,xmm0
 				mov eax,bytes128
 
-				align 16
-
 			_loop_8:
-				movaps [ecx],xmm0;
-				movaps [ecx+0x10],xmm0;
-				movaps [ecx+0x20],xmm0;
-				movaps [ecx+0x30],xmm0;
-				movaps [ecx+0x40],xmm0;
-				movaps [ecx+0x50],xmm0;
-				movaps [ecx+0x60],xmm0;
-				movaps [ecx+0x70],xmm0;
+				movaps [ecx],xmm0
+				movaps [ecx+0x10],xmm0
+				movaps [ecx+0x20],xmm0
+				movaps [ecx+0x30],xmm0
+				movaps [ecx+0x40],xmm0
+				movaps [ecx+0x50],xmm0
+				movaps [ecx+0x60],xmm0
+				movaps [ecx+0x70],xmm0
 				sub ecx,-128
-				dec eax;
+				sub eax,1
 				jnz _loop_8;
 			}
 			if( remainder != 0 )
@@ -173,18 +165,15 @@ static __forceinline void memzero_ptr( void *dest )
 					mov eax, remainder
 
 				_loop_10:
-					movaps [ecx+eax],xmm0;
+					movaps [ecx+eax],xmm0
 					sub eax,16;
 					jnz _loop_10;
 				}
 			}
-			__asm
-			{
-				movups xmm0,[_xmm_backup];
-			}
 			return;
 		}
 	}
+	#endif
 
 	// This function only works on 32-bit alignments.
 	pxAssume( (MZFbytes & 0x3) == 0 );
@@ -271,8 +260,6 @@ static __forceinline void memset_8( void *dest )
 		return;
 	}
 
-	//u64 _xmm_backup[2];
-
 	/*static const size_t remainder = MZFbytes & 127;
 	static const size_t bytes128 = MZFbytes / 128;
 	if( bytes128 > 32 )
@@ -283,7 +270,6 @@ static __forceinline void memset_8( void *dest )
 
 		__asm
 		{
-			movups _xmm_backup,xmm0;
 			mov eax,bytes128
 			mov ecx,dest
 			movss xmm0,data
@@ -315,10 +301,6 @@ static __forceinline void memset_8( void *dest )
 				sub eax,16;
 				jnz _loop_10;
 			}
-		}
-		__asm
-		{
-			movups xmm0,[_xmm_backup];
 		}
 	}*/
 

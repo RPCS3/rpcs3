@@ -23,6 +23,7 @@
 
 #define CDVDdefs
 #include "PS2Edefs.h"
+#include "PS2Eext.h"
 
 #ifdef __LINUX__
 #include <gtk/gtk.h>

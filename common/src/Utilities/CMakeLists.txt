@@ -12,7 +12,6 @@ set(UtilitiesName Utilities)
 # set common flags
 set(CommonFlags 
 	-pthread
-	-m32
 	-march=i486
 	-msse
 	-msse2
@@ -124,6 +123,7 @@ set(UtilitiesSources
 	wxAppWithHelpers.cpp
 	wxGuiTools.cpp
 	wxHelpers.cpp
+	x86/MemcpyVibes.cpp
 #	x86/MemcpyFast.cpp
 	)
 
@@ -160,6 +160,8 @@ set(UtilitiesHeaders
 	../../include/Utilities/wxGuiTools.h
 	PrecompiledHeader.h)
 
+include_directories(.)
+
 # change language of .S-files to c++
 set_source_files_properties(${UtilitiesSSources} PROPERTIES LANGUAGE CXX)
 
@@ -168,11 +170,3 @@ add_library(${UtilitiesName} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${Ut
 
 # link target with wx
 target_link_libraries(${UtilitiesName} ${wxWidgets_LIBRARIES})
- 
-# Force the linker into 32 bits mode
-target_link_libraries(${UtilitiesName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${UtilitiesName} -s)
-endif (CMAKE_BUILD_STRIP)

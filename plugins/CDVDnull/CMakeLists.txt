@@ -11,7 +11,6 @@ set(CDVDnullName CDVDnull)
 
 set(CommonFlags
     -Wall
-    -m32
     )
 
 set(OptimizationFlags
@@ -45,20 +44,6 @@ set(CDVDnullSources
 set(CDVDnullHeaders
 	CDVD.h)
 
-# CDVDnull Linux sources
-set(CDVDnullLinuxSources
-	Linux/callbacks.c
-	Linux/Config.cpp
-	Linux/interface.c
-	Linux/support.c)
-
-# CDVDnull Linux headers
-set(CDVDnullLinuxHeaders
-	Linux/callbacks.h
-	Linux/Config.h
-	Linux/interface.h
-	Linux/support.h)
-
 # CDVDnull Windows sources
 set(CDVDnullWindowsSources
 	Windows/CDVDnull.def
@@ -75,18 +60,8 @@ include_directories(.)
 add_library(${CDVDnullName} SHARED
 			${CDVDnullSources}
 			${CDVDnullHeaders}
-			${CDVDnullLinuxSources}
-			${CDVDnullLinuxHeaders})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${CDVDnullName} -m32)
-
-# Linker strip option
-if (CMAKE_BUILD_STRIP)
-    target_link_libraries(${CDVDnullName} -s)
-endif (CMAKE_BUILD_STRIP)
+            )
 
 # set output directory
 set_target_properties(${CDVDnullName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-

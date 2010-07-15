@@ -4,7 +4,6 @@
 set(SoundTouchName pcsx2_SoundTouch)
 
 set(CommonFlags
-    -m32
     -march=athlon-xp
     -march=prescott
     )
@@ -61,6 +60,3 @@ set(SoundTouchHeaders
 
 # add library
 add_library(${SoundTouchName} STATIC ${SoundTouchSources} ${SoundTouchHeaders})
-
-# Force the linker into 32 bits mode
-target_link_libraries(${SoundTouchName} -m32)
