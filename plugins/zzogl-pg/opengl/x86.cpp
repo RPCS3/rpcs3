@@ -460,7 +460,7 @@ End:
 	"test %[clut], 15\n"
 	"jnz WriteUnaligned\n"
 
-	"movdqa xmm7, s_clut16mask\n" // saves upper 16 bits
+	"movdqa xmm7, %[s_clut16mask]\n" // saves upper 16 bits
 
 	// have to save interlaced with the old data
 	"movdqa xmm4, [%[clut]]\n"
@@ -501,7 +501,7 @@ End:
 	// %[clut] is offset by 2
 	"sub %[clut], 2\n"
 
-	"movdqa xmm7, s_clut16mask2\n" // saves lower 16 bits
+	"movdqa xmm7, %[s_clut16mask2]\n" // saves lower 16 bits
 
 	// have to save interlaced with the old data
 	"movdqa xmm4, [%[clut]]\n"
