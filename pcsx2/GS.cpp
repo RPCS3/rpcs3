@@ -49,7 +49,6 @@ void gsSetRegionMode( GS_RegionMode region )
 void gsInit()
 {
 	memzero(g_RealGSMem);
-	GIFPath_Initialize();
 }
 
 extern bool SIGNAL_IMR_Pending;

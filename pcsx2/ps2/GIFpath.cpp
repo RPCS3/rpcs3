@@ -97,10 +97,10 @@ struct GIFPath
 	u8 GetReg();
 	bool IsActive() const;
 
-	template< CpuExtType CpuExt, bool Aligned >
+	template< bool Aligned >
 	void SetTag(const void* mem);
 
-	template< CpuExtType CpuExt, int pathidx >
+	template< GIF_PATH pathidx, bool Aligned >
 	int CopyTag(const u128* pMem, u32 size);
 
 	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
@@ -291,13 +291,10 @@ __forceinline void GIFPath::PrepPackedRegs()
 }
 
 
-template< CpuExtType CpuExt, bool Aligned >
+template< bool Aligned >
 __forceinline void GIFPath::SetTag(const void* mem)
 {
-	if( CpuExt >= CpuExt_SSE )
-		_mm_store_ps( (float*)&tag, Aligned ? _mm_load_ps((const float*)mem) : _mm_loadu_ps((const float*)mem) );
-	else
-		const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
+	_mm_store_ps( (float*)&tag, Aligned ? _mm_load_ps((const float*)mem) : _mm_loadu_ps((const float*)mem) );
 
 	nloop	= tag.NLOOP;
 	curreg	= 0;
@@ -391,7 +388,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag<CpuExt_Base,false>(pMem);
+			SetTag<false>(pMem);
 			incTag(1);
 		}
 		else
@@ -567,10 +564,7 @@ __forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint
 }
 
 #define copyTag() do {						\
-	if( CpuExt >= CpuExt_SSE )				\
-		_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], (pathidx!=GIF_PATH_2) ? _mm_load_ps((float*)pMem128) : _mm_loadu_ps((float*)pMem128)); \
-	else \
-		RingBuffer.m_Ring[ringpos] = *pMem128;	\
+	_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], Aligned ? _mm_load_ps((float*)pMem128) : _mm_loadu_ps((float*)pMem128)); \
 	++pMem128; --size;						\
 	ringpos = (ringpos+1)&RingBufferMask;	\
 } while(false)
@@ -579,10 +573,10 @@ __forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint
 //   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
 //     path does not terminate (EOP) within the specified size, it is assumed that the path must
 //     loop around to the start of VU memory and continue processing.
-template< CpuExtType CpuExt, int pathidx > 
+template< GIF_PATH pathidx, bool Aligned > 
 __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 {
-	uint& ringpos = GetMTGS().m_packet_ringpos;
+	uint& ringpos = GetMTGS().m_packet_writepos;
 	const uint original_ringpos = ringpos;
 
 	u32	startSize =  size;						// Start Size
@@ -590,7 +584,7 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag<CpuExt, (pathidx!=GIF_PATH_2)>((u8*)pMem128);
+			SetTag<Aligned>((u8*)pMem128);
 			copyTag();
 			
 			if(nloop > 0)
@@ -795,7 +789,8 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
-					
+					const_cast<GIFTAG&>(tag).EOP = 1;
+
 					// Don't send the packet to the GS -- its incomplete and might cause the GS plugin
 					// to get confused and die. >_<
 					
@@ -870,41 +865,25 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 	return size;
 }
 
-typedef int __fastcall FnType_CopyTag(const u128* pMem, u32 size);
-
-static __aligned16 FnType_CopyTag* tbl_CopyTag[3];
-
 // Parameters:
 //   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
 //     path does not terminate (EOP) within the specified size, it is assumed that the path must
 //     loop around to the start of VU memory and continue processing.
-template< CpuExtType CpuExt, int pathidx >
-static int __fastcall _CopyTag_tmpl(const u128* pMem, u32 size)
-{
-	return s_gifPath[pathidx].CopyTag<CpuExt,pathidx>(pMem, size);
-}
-
-void GIFPath_Initialize()
-{
-#ifdef __LINUX__
-	// It's already thrown an exception if it isn't SSE, and the check was giving me a compilation error.
-	// I could fix it, but why bother?
-	tbl_CopyTag[0] = _CopyTag_tmpl<CpuExt_SSE, 0>;
-	tbl_CopyTag[1] = _CopyTag_tmpl<CpuExt_SSE, 1>;
-	tbl_CopyTag[2] = _CopyTag_tmpl<CpuExt_SSE, 2>;
-#else
-	tbl_CopyTag[0] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 0> : _CopyTag_tmpl<CpuExt_Base, 0>;
-	tbl_CopyTag[1] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 1> : _CopyTag_tmpl<CpuExt_Base, 1>;
-	tbl_CopyTag[2] = x86caps.hasStreamingSIMDExtensions ? _CopyTag_tmpl<CpuExt_SSE, 2> : _CopyTag_tmpl<CpuExt_Base, 2>;
-#endif
-}
-
 __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
-	return tbl_CopyTag[pathidx](pMem, size);
+	switch( pathidx )
+	{
+		case GIF_PATH_1: return s_gifPath[GIF_PATH_1].CopyTag<GIF_PATH_1,true>(pMem, size);
+		case GIF_PATH_2: return s_gifPath[GIF_PATH_2].CopyTag<GIF_PATH_2,false>(pMem, size);
+		case GIF_PATH_3: return s_gifPath[GIF_PATH_3].CopyTag<GIF_PATH_3,true>(pMem, size);
+
+		jNO_DEFAULT;
+	}
+	
+	return 0;		// unreachable
 }
 
-// Quick version for queueing PATH1 data.
+// Quick version for queuing PATH1 data.
 // This version calculates the real length of the packet data only.  It does not process
 // IRQs or DMA status updates.
 __forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)

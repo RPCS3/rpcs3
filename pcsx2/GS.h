@@ -18,15 +18,6 @@
 #include "Common.h"
 #include "System/SysThreads.h"
 
-enum CpuExtType
-{
-	CpuExt_Base,
-	CpuExt_MMX,
-	CpuExt_SSE,
-	CpuExt_SSE2,
-	CpuExt_SSE41,
-};
-
 extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
 enum CSR_FifoState
@@ -282,8 +273,8 @@ class SysMtgsThread : public SysThreadBase
 	typedef SysThreadBase _parent;
 
 public:
-	// note: when m_RingPos == m_WritePos, the fifo is empty
-	uint			m_RingPos;			// cur pos gs is reading from
+	// note: when m_ReadPos == m_WritePos, the fifo is empty
+	uint			m_ReadPos;			// cur pos gs is reading from
 	uint			m_WritePos;			// cur pos ee thread is writing to
 
 	volatile bool	m_RingBufferIsBusy;
@@ -313,7 +304,7 @@ public:
 
 	uint			m_packet_startpos;	// size of the packet (data only, ie. not including the 16 byte command!)
 	uint			m_packet_size;		// size of the packet (data only, ie. not including the 16 byte command!)
-	uint			m_packet_ringpos;	// index of the data location in the ringbuffer.
+	uint			m_packet_writepos;	// index of the data location in the ringbuffer.
 
 #ifdef RINGBUF_DEBUG_STACK
 	Threading::Mutex m_lock_Stack;
@@ -356,9 +347,10 @@ protected:
 	void OnResumeInThread( bool IsSuspended );
 	void OnCleanupInThread();
 
+	void GenericStall( uint size );
+
 	// Used internally by SendSimplePacket type functions
-	uint _PrepForSimplePacket();
-	void _FinishSimplePacket( uint future_writepos );
+	void _FinishSimplePacket();
 	void ExecuteTaskInThread();
 };
 
