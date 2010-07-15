@@ -433,11 +433,11 @@ WriteUnaligned:
 End:
 	}
 #else
-	__asm__(".intel_syntax noprefix\n"
-	"movdqa xmm0, xmmword ptr [ecx]\n"
-	"movdqa xmm1, xmmword ptr [ecx+16]\n"
-	"movdqa xmm2, xmmword ptr [ecx+32]\n"
-	"movdqa xmm3, xmmword ptr [ecx+48]\n"
+	__asm__ __volatile__(".intel_syntax noprefix\n"
+	"movdqa xmm0, xmmword ptr [%[vm]]\n"
+	"movdqa xmm1, xmmword ptr [%[vm]+16]\n"
+	"movdqa xmm2, xmmword ptr [%[vm]+32]\n"
+	"movdqa xmm3, xmmword ptr [%[vm]+48]\n"
 
 	// rearrange
 	"pshuflw xmm0, xmm0, 0x88\n"
@@ -457,14 +457,14 @@ End:
 
 	"pxor xmm6, xmm6\n"
 
-	"test edx, 15\n"
+	"test %[clut], 15\n"
 	"jnz WriteUnaligned\n"
 
-	"movdqa xmm7, [s_clut16mask]\n" // saves upper 16 bits
+	"movdqa xmm7, s_clut16mask\n" // saves upper 16 bits
 
 	// have to save interlaced with the old data
-	"movdqa xmm4, [edx]\n"
-	"movdqa xmm5, [edx+32]\n"
+	"movdqa xmm4, [%[clut]]\n"
+	"movdqa xmm5, [%[clut]+32]\n"
 	"movhlps xmm1, xmm0\n"
 	"movlhps xmm0, xmm2\n"// lower 8 colors
 
@@ -483,29 +483,29 @@ End:
 	"punpckhwd xmm2, xmm6\n"
 	"punpckhwd xmm3, xmm6\n"
 
-	"movdqa [edx], xmm0\n"
-	"movdqa [edx+32], xmm1\n"
+	"movdqa [%[clut]], xmm0\n"
+	"movdqa [%[clut]+32], xmm1\n"
 
 	"movdqa xmm5, xmm7\n"
-	"pand xmm7, [edx+16]\n"
-	"pand xmm5, [edx+48]\n"
+	"pand xmm7, [%[clut]+16]\n"
+	"pand xmm5, [%[clut]+48]\n"
 
 	"por xmm2, xmm7\n"
 	"por xmm3, xmm5\n"
 
-	"movdqa [edx+16], xmm2\n"
-	"movdqa [edx+48], xmm3\n"
+	"movdqa [%[clut]+16], xmm2\n"
+	"movdqa [%[clut]+48], xmm3\n"
 	"jmp WriteCLUT_T16_I4_CSM1_End\n"
 
 	"WriteUnaligned:\n"
-	// %edx is offset by 2
-	"sub edx, 2\n"
+	// %[clut] is offset by 2
+	"sub %[clut], 2\n"
 
-	"movdqa xmm7, [[s_clut16mask2]]\n" // saves lower 16 bits
+	"movdqa xmm7, s_clut16mask2\n" // saves lower 16 bits
 
 	// have to save interlaced with the old data
-	"movdqa xmm4, [edx]\n"
-	"movdqa xmm5, [edx+32]\n"
+	"movdqa xmm4, [%[clut]]\n"
+	"movdqa xmm5, [%[clut]+32]\n"
 	"movhlps xmm1, xmm0\n"
 	"movlhps xmm0, xmm2\n" // lower 8 colors
 
@@ -528,24 +528,24 @@ End:
 	"pslld xmm2, 16\n"
 	"pslld xmm3, 16\n"
 
-	"movdqa [edx], xmm0\n"
-	"movdqa [edx+32], xmm1\n"
+	"movdqa [%[clut]], xmm0\n"
+	"movdqa [%[clut]+32], xmm1\n"
 
 	"movdqa xmm5, xmm7\n"
-	"pand xmm7, [edx+16]\n"
-	"pand xmm5, [edx+48]\n"
+	"pand xmm7, [%[clut]+16]\n"
+	"pand xmm5, [%[clut]+48]\n"
 
 	"por xmm2, xmm7\n"
 	"por xmm3, xmm5\n"
 
-	"movdqa [edx+16], xmm2\n"
-	"movdqa [edx+48], xmm3\n"
+	"movdqa [%[clut]+16], xmm2\n"
+	"movdqa [%[clut]+48], xmm3\n"
 	"WriteCLUT_T16_I4_CSM1_End:\n"
 	"\n"
 	".att_syntax\n" 
-    : [s_clut16mask] "=m" (s_clut16mask), [s_clut16mask2] "=m" (s_clut16mask2)
-    : "c" (vm), "d" (clut)
-    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"
+    :
+    : [vm] "r" (vm), [clut] "r" (clut), [s_clut16mask] "m" (*s_clut16mask), [s_clut16mask2] "m" (*s_clut16mask2)
+    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
        );
 #endif // _MSC_VER
 }
@@ -718,15 +718,15 @@ Z16Loop:
 	}
 #else // _MSC_VER
 
-	__asm__(".intel_syntax\n"
+	__asm__ __volatile__(".intel_syntax\n"
 	"pxor %%xmm7, %%xmm7\n"
 
 	"Z16Loop:\n"
 	// unpack 64 bytes at a time
-	"movdqa %%xmm0, [%0]\n"
-	"movdqa %%xmm2, [%0+16]\n"
-	"movdqa %%xmm4, [%0+32]\n"
-	"movdqa %%xmm6, [%0+48]\n"
+	"movdqa %%xmm0, [%[src]]\n"
+	"movdqa %%xmm2, [%[src]+16]\n"
+	"movdqa %%xmm4, [%[src]+32]\n"
+	"movdqa %%xmm6, [%[src]+48]\n"
 
 	"movdqa %%xmm1, %%xmm0\n"
 	"movdqa %%xmm3, %%xmm2\n"
@@ -738,35 +738,35 @@ Z16Loop:
 	"punpckhwd %%xmm3, %%xmm7\n"
 
 	// start saving
-	"movdqa [%1], %%xmm0\n"
-	"movdqa [%1+16], %%xmm1\n"
+	"movdqa [%[dst]], %%xmm0\n"
+	"movdqa [%[dst]+16], %%xmm1\n"
 
 	"punpcklwd %%xmm4, %%xmm7\n"
 	"punpckhwd %%xmm5, %%xmm7\n"
 
-	"movdqa [%1+32], %%xmm2\n"
-	"movdqa [%1+48], %%xmm3\n"
+	"movdqa [%[dst]+32], %%xmm2\n"
+	"movdqa [%[dst]+48], %%xmm3\n"
 
 	"movdqa %%xmm0, %%xmm6\n"
 	"punpcklwd %%xmm6, %%xmm7\n"
 
-	"movdqa [%1+64], %%xmm4\n"
-	"movdqa [%1+80], %%xmm5\n"
+	"movdqa [%[dst]+64], %%xmm4\n"
+	"movdqa [%[dst]+80], %%xmm5\n"
 
 	"punpckhwd %%xmm0, %%xmm7\n"
 
-	"movdqa [%1+96], %%xmm6\n"
-	"movdqa [%1+112], %%xmm0\n"
+	"movdqa [%[dst]+96], %%xmm6\n"
+	"movdqa [%[dst]+112], %%xmm0\n"
 
-	"add %0, 64\n"
-	"add %1, 128\n"
-	"sub %2, 1\n"
+	"add %[src], 64\n"
+	"add %[dst], 128\n"
+	"sub %[iters], 1\n"
 	"jne Z16Loop\n"
 
 ".att_syntax\n" 
-    : "=r"(src), "=r"(dst), "=r"(iters) 
-    : "0"(src), "1"(dst), "2"(iters)
-    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"
+    : "=&r"(src), "=&r"(dst), "=&r"(iters)
+    : [src] "0"(src), [dst] "1"(dst), [iters] "2"(iters)
+    : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
        );
 #endif // _MSC_VER
 }
