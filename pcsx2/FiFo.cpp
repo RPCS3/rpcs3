@@ -196,7 +196,7 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	nloop0_packet[2] = psHu32(GIF_FIFO + 8);
 	nloop0_packet[3] = psHu32(GIF_FIFO + 12);
 	GetMTGS().PrepDataPacket(GIF_PATH_3, 1);
-	u64* data = (u64*)GetMTGS().GetDataPacketPtr();
+	//u64* data = (u64*)GetMTGS().GetDataPacketPtr();
 	GIFPath_CopyTag( GIF_PATH_3, (u128*)nloop0_packet, 1 );
 	GetMTGS().SendDataPacket();
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )

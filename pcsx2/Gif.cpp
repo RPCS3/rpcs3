@@ -163,7 +163,6 @@ static u32 WRITERING_DMA(tDMA_TAG *pMem, u32 qwc)
 int  _GIFchain()
 {
 	tDMA_TAG *pMem;
-	int qwc = 0;
 
 	pMem = dmaGetAddr(gif->madr, false);
 	if (pMem == NULL)

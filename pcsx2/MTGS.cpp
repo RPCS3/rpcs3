@@ -639,7 +639,7 @@ void SysMtgsThread::GenericStall( uint size )
 	// the block about to be written (writepos + size)
 
 	uint readpos = volatize(m_ReadPos);
-	uint endpos = writepos+size;
+	//uint endpos = writepos+size;
 	uint freeroom;
 
 	if (writepos < readpos)

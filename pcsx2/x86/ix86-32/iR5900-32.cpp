@@ -1258,11 +1258,11 @@ void recompileNextInstruction(int delayslot)
 // Calling of this function can be enabled or disabled through the use of EmuConfig.Recompiler.PreBlockChecks
 static void __fastcall PreBlockCheck( u32 blockpc )
 {
-	static int lastrec = 0;
+	/*static int lastrec = 0;
 	static int curcount = 0;
 	const int skip = 0;
 
-    /*if( blockpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
+    if( blockpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
 		curcount++;
 
 		if( curcount > skip ) {
