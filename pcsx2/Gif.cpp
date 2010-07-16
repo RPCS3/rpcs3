@@ -36,7 +36,7 @@ static u32 gifqwc = 0;
 static bool gifmfifoirq = false;
 
 //Just some temporary bits to store Path1 transfers if another is in progress.
-u8 Path1Buffer[0x1000000];
+__aligned16 u8 Path1Buffer[0x1000000];
 u32 Path1WritePos = 0;
 u32 Path1ReadPos = 0;
 
@@ -65,7 +65,6 @@ void gsPath1Interrupt()
 
 			uint count = GIFPath_CopyTag(GIF_PATH_1, ((u128*)Path1Buffer) + Path1ReadPos, size);
 			GetMTGS().SendDataPacket();
-			pxAssume( count == size );
 			Path1ReadPos += count;
 
 			if(GSTransferStatus.PTH1 == STOPPED_MODE)

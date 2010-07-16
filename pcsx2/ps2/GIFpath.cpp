@@ -817,6 +817,9 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 					gsIrq();
 				}
 			}
+			
+			// [TODO] : DMAC Arbitration rights should select the next queued GIF transfer here.
+			
 			break;
 		}
 		if(SIGNAL_IMR_Pending == true)
@@ -873,9 +876,18 @@ __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
 	switch( pathidx )
 	{
-		case GIF_PATH_1: return s_gifPath[GIF_PATH_1].CopyTag<GIF_PATH_1,true>(pMem, size);
-		case GIF_PATH_2: return s_gifPath[GIF_PATH_2].CopyTag<GIF_PATH_2,false>(pMem, size);
-		case GIF_PATH_3: return s_gifPath[GIF_PATH_3].CopyTag<GIF_PATH_3,true>(pMem, size);
+		case GIF_PATH_1:
+			pxAssertMsg(!s_gifPath[GIF_PATH_2].IsActive(), "GIFpath conflict: Attempted to start PATH1 while PATH2 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive(), "GIFpath conflict: Attempted to start PATH1 while PATH3 is already active.");
+			return s_gifPath[GIF_PATH_1].CopyTag<GIF_PATH_1,true>(pMem, size);
+		case GIF_PATH_2:
+			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH2 while PATH1 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive(), "GIFpath conflict: Attempted to start PATH2 while PATH3 is already active.");
+			return s_gifPath[GIF_PATH_2].CopyTag<GIF_PATH_2,false>(pMem, size);
+		case GIF_PATH_3:
+			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH3 while PATH1 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_2].IsActive(), "GIFpath conflict: Attempted to start PATH3 while PATH2 is already active.");
+			return s_gifPath[GIF_PATH_3].CopyTag<GIF_PATH_3,true>(pMem, size);
 
 		jNO_DEFAULT;
 	}
