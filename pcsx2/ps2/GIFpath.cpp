@@ -878,11 +878,11 @@ __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 	{
 		case GIF_PATH_1:
 			pxAssertMsg(!s_gifPath[GIF_PATH_2].IsActive(), "GIFpath conflict: Attempted to start PATH1 while PATH2 is already active.");
-			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive(), "GIFpath conflict: Attempted to start PATH1 while PATH3 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive() || (GSTransferStatus.PTH3 == IMAGE_MODE), "GIFpath conflict: Attempted to start PATH1 while PATH3 is already active.");
 			return s_gifPath[GIF_PATH_1].CopyTag<GIF_PATH_1,true>(pMem, size);
 		case GIF_PATH_2:
 			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH2 while PATH1 is already active.");
-			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive(), "GIFpath conflict: Attempted to start PATH2 while PATH3 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive() || (GSTransferStatus.PTH3 == IMAGE_MODE), "GIFpath conflict: Attempted to start PATH2 while PATH3 is already active.");
 			return s_gifPath[GIF_PATH_2].CopyTag<GIF_PATH_2,false>(pMem, size);
 		case GIF_PATH_3:
 			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH3 while PATH1 is already active.");

@@ -134,7 +134,6 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 	}
 	pass2 {
 		vif1Only();
-		nVifStruct&	v	 = nVif[1];
 
 		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q == true)
 		{
@@ -175,7 +174,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 
 		// the tag size should ALWAYS be 128 bits (qwc).  If it isn't, it means there's a serious bug
 		// somewhere in the VIF (likely relating to +/-'ing the tag.size during processing).
-		pxAssumeMsg( (vif1.tag.size & 1) == 0, "Invalid Vif1 DIRECT packet size detected!" );
+		pxAssumeMsg( (vif1.tag.size & 3) == 0, "Invalid Vif1 DIRECT packet size detected!" );
 
 		const int	minSize	 = aMin(vif1.vifpacketsize, vif1.tag.size)/4;
 		uint ret;
