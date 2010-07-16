@@ -42,10 +42,6 @@ extern bool g_bUpdateStencil;
 #	define INC_RESOLVE() ++g_nResolve
 #endif
 
-#ifdef DEVBUILD
-//static int g_bSaveResolved = 0;
-#endif
-
 extern int s_nResolved;
 extern u32 g_nResolve;
 extern bool g_bSaveTrans;
@@ -302,7 +298,7 @@ void ZeroGS::CRenderTarget::Resolve()
 
 		GL_REPORT_ERRORD();
 
-#if defined(DEVBUILD)
+#if defined(ZEROGS_DEVBUILD)
 
 		if (g_bSaveResolved)
 		{
@@ -328,7 +324,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 		// flush if necessary
 		FlushIfNecesary(this) ;
 
-#if defined(DEVBUILD)
+#if defined(ZEROGS_DEVBUILD)
 		if (g_bSaveResolved)
 		{
 			SaveTexture("resolved.tga", GL_TEXTURE_RECTANGLE_NV, ptex, RW(fbw), RH(fbh));

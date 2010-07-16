@@ -96,7 +96,7 @@ extern u32 ptexBilinearBlocks;
 // State parameters
 
 
-#ifdef DEVBUILD
+#ifdef ZEROGS_DEVBUILD
 extern char* EFFECT_NAME;
 extern char* EFFECT_DIR;
 extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;

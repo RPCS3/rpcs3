@@ -686,7 +686,7 @@
 
 		g_MemTargs.ClearRange(dststart, dstend);
 
-	#ifdef DEVBUILD
+	#ifdef ZEROGS_DEVBUILD
 
 		if (g_bSaveTrans)
 		{

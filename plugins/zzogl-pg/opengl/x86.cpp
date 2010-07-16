@@ -308,13 +308,10 @@ extern "C" void __fastcall WriteCLUT_T32_I4_CSM1_sse2(u32* vm, u32* clut)
 }
 
 
-extern "C"
-{
-	PCSX2_ALIGNED16(int s_clut16mask2[4]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
-	PCSX2_ALIGNED16(int s_clut16mask[8]) = { 0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000,
+static const __aligned16 int s_clut16mask2[4] = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
+static const __aligned16 int s_clut16mask[8] = { 0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000,
 										   0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff
 										   };
-}
 
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {

@@ -83,10 +83,6 @@ static bool SPAM_PASS;
 #define ZEROGS_DEVBUILD
 #endif
 
-#ifdef ZEROGS_DEVBUILD
-//#define DEVBUILD
-#endif
-
 
 // sends a message to output window if assert fails
 #define BMSG(x, str)			{ if( !(x) ) { ZZLog::Log(str); ZZLog::Log(str); } }
