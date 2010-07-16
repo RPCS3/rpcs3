@@ -156,3 +156,98 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 
 #endif
 #endif
+
+// Since MemcpyVibes is already in the project, I'll just tuck the Linux version of memcpy_amd_qwc here for the moment,
+// to get around compilation issues with having it in the headers.
+#ifdef __LINUX__
+
+	// This can be moved later, but Linux doesn't even compile memcpyFast.cpp, so I figured I'd stick it here for now.
+	// Quadword Copy! Count is in QWCs (128 bits).  Neither source nor dest need to be aligned.
+	__forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
+	{	
+		// Optimization Analysis: This code is *nearly* optimal.  Do not think that using XMM
+		// registers will improve copy performance, because they won't.  Use of XMMs is only
+		// warranted in situations where both source and dest are guaranteed aligned to 16 bytes,
+		// and even then the benefits are typically minimal (sometimes slower depending on the
+		// amount of data being copied).
+		//
+		// Thus: MMX are alignment safe, fast, and widely available.  Lets just stick with them.
+		//   --air
+
+		// Linux Conversion note:
+		//  This code would benefit nicely from having inline-able GAS syntax, since it should
+		//  allow GCC to optimize the first 3 instructions out of existence in many scenarios.
+		//  And its called enough times to probably merit the extra effort to ensure proper
+		//  optimization. --air
+
+		__asm__
+		(
+			".intel_syntax noprefix\n"
+				//"mov		ecx, [%[dest]]\n"
+				//"mov		edx, [%[src]]\n"
+				//"mov		eax, [%[qwc]]\n"			// keep a copy of count
+				"mov		eax, %[qwc]\n"
+				"shr		eax, 1\n"
+				"jz			memcpy_qwc_1\n"				// only one 16 byte block to copy?
+
+				"cmp		%[qwc], 64\n"				// "IN_CACHE_COPY/32"
+				"jb			memcpy_qwc_loop1\n"			// small copies should be cached (definite speedup --air)
+		
+			"memcpy_qwc_loop2:\n"						// 32-byte blocks, uncached copy
+				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
+
+				"movq		mm0,[%[src]+0]\n"			// read 64 bits
+				"movq		mm1,[%[src]+8]\n"
+				"movq		mm2,[%[src]+16]\n"
+				"movntq		[%[dest]+0], mm0\n"			// write 64 bits, bypassing the cache
+				"movntq		[%[dest]+8], mm1\n"
+				"movq		mm3,[%[src]+24]\n"
+				"movntq		[%[dest]+16], mm2\n"
+				"movntq		[%[dest]+24], mm3\n"
+
+				"add		%[src],32\n"				// update source pointer
+				"add		%[dest],32\n"				// update destination pointer
+				"sub		eax,1\n"
+				"jnz		memcpy_qwc_loop2\n"			// last 64-byte block?
+				"sfence\n"								// flush the write buffer
+				"jmp		memcpy_qwc_1\n"
+
+			// 32-byte blocks, cached!
+			// This *is* important.  Removing this and using exclusively non-temporal stores
+			// results in noticeable speed loss!
+
+			"memcpy_qwc_loop1:\n"				
+				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
+
+				"movq		mm0,[%[src]+0]\n"			// read 64 bits
+				"movq		mm1,[%[src]+8]\n"
+				"movq		mm2,[%[src]+16]\n"
+				"movq		[%[dest]+0], mm0\n"			// write 64 bits, bypassing the cache
+				"movq		[%[dest]+8], mm1\n"
+				"movq		mm3,[%[src]+24]\n"
+				"movq		[%[dest]+16], mm2\n"
+				"movq		[%[dest]+24], mm3\n"
+
+				"add		%[src],32\n"				// update source pointer
+				"add		%[dest],32\n"				// update destination pointer
+				"sub		eax,1\n"
+				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
+
+			"memcpy_qwc_1:\n"
+				"test		%[qwc],1\n"
+				"jz			memcpy_qwc_final\n"
+				"movq		mm0,[%[src]]\n"
+				"movq		mm1,[%[src]+8]\n"
+				"movq		[%[dest]], mm0\n"
+				"movq		[%[dest]+8], mm1\n"
+
+			"memcpy_qwc_final:\n"
+				"emms\n"								// clean up the MMX state
+			".att_syntax\n"
+					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
+					: [dest]"0"(dest), [src]"1"(src), [qwc]"2"(qwc)
+					: "memory", "eax", "mm0", "mm1", "mm2", "mm3"
+		);
+	}
+#endif
+
