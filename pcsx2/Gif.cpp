@@ -152,7 +152,6 @@ __forceinline void gsInterrupt()
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 {
 	GetMTGS().PrepDataPacket(GIF_PATH_3, qwc);
-	//uint len1 = GIFPath_ParseTag(GIF_PATH_3, (u8*)pMem, qwc );
 	uint size = GIFPath_CopyTag(GIF_PATH_3, (u128*)pMem, qwc );
 	GetMTGS().SendDataPacket();
 	return size;
@@ -179,11 +178,6 @@ int  _GIFchain()
 		Console.Warning( "Hackfix - NULL GIFchain" );
 		return -1;
 	}
-
-	//in Intermittent Mode it enabled, IMAGE_MODE transfers are sliced.
-
-	///(gifRegs->stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE) qwc = min((int)gif->qwc, 8);
-	/*else qwc = gif->qwc;*/
 
 	return WRITERING_DMA(pMem, gif->qwc);
 }
@@ -448,42 +442,44 @@ static __forceinline bool mfifoGIFrbTransfer()
 	u32 mfifoqwc = min(gifqwc, (u32)gif->qwc);
 	u32 *src;
 
+	GetMTGS().PrepDataPacket(GIF_PATH_3, mfifoqwc);
+
+	// TODO (minor optimization): The new GIFpath parser can do rather efficient wrapping of
+	// its own internally now. We just need to groom a version of it that can wrap around MFIFO
+	// memory similarly to how it wraps VU1 memory on PATH1.
+
 	/* Check if the transfer should wrap around the ring buffer */
 	if ((gif->madr + mfifoqwc * 16) > (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16))
 	{
 		uint s1 = ((dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16) - gif->madr) >> 4;
 		uint s2 = (mfifoqwc - s1);
-		// fixme - I don't think these should use WRITERING_DMA, since our source
-		// isn't the DmaGetAddr(gif->madr) address that WRITERING_DMA expects.
 
 		/* it does (wrap around), so first copy 's1' bytes from 'addr' to 'data' */
+		/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
+
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return false;
-		s1 = WRITERING_DMA(src, s1);
+		uint copied = GIFPath_CopyTag(GIF_PATH_3, (u128*)src, s1);
 
-		if (s1 == (mfifoqwc - s2))
+		if (copied == s1)	// but only copy second if first didn't abort prematurely for some reason.
 		{
-			/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
 			src = (u32*)PSM(dmacRegs->rbor.ADDR);
 			if (src == NULL) return false;
-			s2 = WRITERING_DMA(src, s2);
-		}
-		else
-		{
-			s2 = 0;
+			copied += GIFPath_CopyTag(GIF_PATH_3, (u128*)src, s2);
 		}
 
-		mfifoqwc = s1 + s2;
+		mfifoqwc = copied;
 	}
 	else
 	{
 		/* it doesn't, so just transfer 'qwc*16' words from 'gif->madr' to GS */
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return false;
-		mfifoqwc = WRITERING_DMA(src, mfifoqwc);
+		mfifoqwc = GIFPath_CopyTag(GIF_PATH_3, (u128*)src, mfifoqwc);
 		gif->madr = dmacRegs->rbor.ADDR + (gif->madr & dmacRegs->rbsr.RMSK);
 	}
 
+	GetMTGS().SendDataPacket();
 	gifqwc -= mfifoqwc;
 
 	return true;
@@ -569,36 +565,36 @@ void mfifoGIFtransfer(int qwc)
 
 		switch (ptag->ID)
 		{
-			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
+			case TAG_REFE:		// Refe - Transfer Packet According to ADDR field
 				gif->tadr = qwctag(gif->tadr + 16);
 				gifstate = GIF_STATE_DONE;										//End Transfer
 				break;
 
-			case TAG_CNT: // CNT - Transfer QWC following the tag.
+			case TAG_CNT:		// CNT - Transfer QWC following the tag.
 				gif->madr = qwctag(gif->tadr + 16);						//Set MADR to QW after Tag
-				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));			//Set TADR to QW following the data
+				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));		//Set TADR to QW following the data
 				gifstate = GIF_STATE_READY;
 				break;
 
-			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
+			case TAG_NEXT:		// Next - Transfer QWC following tag. TADR = ADDR
 			{
-				u32 temp = gif->madr;								//Temporarily Store ADDR
-				gif->madr = qwctag(gif->tadr + 16); 					  //Set MADR to QW following the tag
-				gif->tadr = temp;								//Copy temporarily stored ADDR to Tag
+				u32 temp = gif->madr;									//Temporarily Store ADDR
+				gif->madr = qwctag(gif->tadr + 16);						//Set MADR to QW following the tag
+				gif->tadr = temp;										//Copy temporarily stored ADDR to Tag
 				gifstate = GIF_STATE_READY;
 				break;
 			}
 
-			case TAG_REF: // Ref - Transfer QWC from ADDR field
-			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
+			case TAG_REF:		// Ref - Transfer QWC from ADDR field
+			case TAG_REFS:		// Refs - Transfer QWC from ADDR field (Stall Control)
 				gif->tadr = qwctag(gif->tadr + 16);							//Set TADR to next tag
 				gifstate = GIF_STATE_READY;
 				break;
 
-			case TAG_END: // End - Transfer QWC following the tag
-				gif->madr = qwctag(gif->tadr + 16);		//Set MADR to data following the tag
-				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));			//Set TADR to QW following the data
-				gifstate = GIF_STATE_DONE;						//End Transfer
+			case TAG_END:		// End - Transfer QWC following the tag
+				gif->madr = qwctag(gif->tadr + 16);					//Set MADR to data following the tag
+				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));	//Set TADR to QW following the data
+				gifstate = GIF_STATE_DONE;							//End Transfer
 				break;
 			}
 
