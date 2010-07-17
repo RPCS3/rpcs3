@@ -246,6 +246,7 @@ void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int co
 	}
 
 	// set render states
+	// Bleh. I *really* need to fix this. << 3 when setting the scissors, then >> 3 when using them... --Arcum42
 	scissorrect.x = scissor.x0 >> 3;
 	scissorrect.y = (scissor.y0 >> 3) + dy;
 	scissorrect.w = (scissor.x1 >> 3) + 1;

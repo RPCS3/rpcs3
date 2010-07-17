@@ -141,7 +141,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 
 	g_LastCRC = crc;
 
-	ZZLog::Error_Log("CRC = %x", crc);
+	if (crc != 0) ZZLog::Error_Log("Current game CRC is %x.", crc);
 
 	if (CRCValueChanged && (crc != 0))
 	{
@@ -149,13 +149,24 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		{
 			if (crc_game_list[i].crc == crc)
 			{
-				if (crc_game_list[i].v_thresh > 0) VALIDATE_THRESH = crc_game_list[i].v_thresh;
-				if (crc_game_list[i].t_thresh > 0) TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
+				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
+				
+				if (crc_game_list[i].v_thresh > 0) 
+				{
+					VALIDATE_THRESH = crc_game_list[i].v_thresh;
+					ZZLog::Error_Log("Setting VALIDATE_THRESH to %d", VALIDATE_THRESH);
+				}
+				if (crc_game_list[i].t_thresh > 0) 
+				{
+					TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
+					ZZLog::Error_Log("Setting TEXDESTROY_THRESH to %d", VALIDATE_THRESH);
+				}
 
 				conf.def_hacks._u32 |= crc_game_list[i].flags;
-
-				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
-
+				if (crc_game_list[i].flags != 0)
+				{
+					ZZLog::Error_Log("Enabling flags (0x%x).", crc_game_list[i].flags);
+				}
 				return;
 			}
 		}
