@@ -41,12 +41,10 @@
 MEMCPY_AMD.CPP
 ******************************************************************************/
 
-// Very optimized memcpy() routine for AMD Athlon and Duron family.
-// This code uses any of FOUR different basic copy methods, depending
-// on the transfer size.
 // NOTE:  Since this code uses MOVNTQ (also known as "Non-Temporal MOV" or
 // "Streaming Store"), and also uses the software prefetch instructions,
-// be sure you're running on Athlon/Duron or other recent CPU before calling!
+// be sure you're running on P4/Core2/i7, Athlon/Phenom or newer CPUs before
+// calling!
 
 #define TINY_BLOCK_COPY 64       // upper limit for movsd type copy
 // The smallest copy uses the X86 "movsd" instruction, in an optimized
@@ -68,10 +66,8 @@ MEMCPY_AMD.CPP
 
 #if defined(_MSC_VER)
 
-// --------------------------------------------------------------------------------------
-//  Fast memcpy as coded by AMD, and then improved by air. 
-// --------------------------------------------------------------------------------------
 
+//  Fast memcpy as coded by AMD, and then improved by air for PCSX2 needs.
 __declspec(naked) void __fastcall memcpy_amd_(void *dest, const void *src, size_t n)
 {
     __asm
@@ -92,6 +88,7 @@ __declspec(naked) void __fastcall memcpy_amd_(void *dest, const void *src, size_
 	jbe		$memcpy_do_align	;  it appears to be slower
 	cmp		eax, 64*1024
 	jbe		$memcpy_align_done
+
 $memcpy_do_align:
 	mov		eax, 8			; a trick that's faster than rep movsb...
 	sub		eax, edi		; align destination to qword

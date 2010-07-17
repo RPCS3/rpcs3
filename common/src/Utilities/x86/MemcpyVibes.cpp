@@ -183,14 +183,11 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 		__asm__
 		(
 			".intel_syntax noprefix\n"
-				//"mov		ecx, [%[dest]]\n"
-				//"mov		edx, [%[src]]\n"
-				//"mov		eax, [%[qwc]]\n"			// keep a copy of count
-				"mov		eax, %[qwc]\n"
+				"mov		eax, %[qwc]\n"				// keep a copy of count for looping
 				"shr		eax, 1\n"
 				"jz			memcpy_qwc_1\n"				// only one 16 byte block to copy?
 
-				"cmp		%[qwc], 64\n"				// "IN_CACHE_COPY/32"
+				"cmp		eax, 64\n"					// "IN_CACHE_COPY/32"
 				"jb			memcpy_qwc_loop1\n"			// small copies should be cached (definite speedup --air)
 		
 			"memcpy_qwc_loop2:\n"						// 32-byte blocks, uncached copy
@@ -234,7 +231,7 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
 
 			"memcpy_qwc_1:\n"
-				"test		%[qwc],1\n"
+				"testl		%[qwc],1\n"
 				"jz			memcpy_qwc_final\n"
 				"movq		mm0,[%[src]]\n"
 				"movq		mm1,[%[src]+8]\n"
