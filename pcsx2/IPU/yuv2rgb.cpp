@@ -63,11 +63,11 @@ struct SSE2_Tables
 	u16 Y_mask[8];			// offset -32
 	u16 round_1bit[8];		// offset -16
 
-	u16 Y_coefficients[8];	// offset 0
-	u16 GCr_coefficients[8];// offset 16
-	u16 GCb_coefficients[8];// offset 32
-	u16 RCr_coefficients[8];// offset 48
-	u16 BCb_coefficients[8];// offset 64
+	s16 Y_coefficients[8];	// offset 0
+	s16 GCr_coefficients[8];// offset 16
+	s16 GCb_coefficients[8];// offset 32
+	s16 RCr_coefficients[8];// offset 48
+	s16 BCb_coefficients[8];// offset 64
 };
 
 enum

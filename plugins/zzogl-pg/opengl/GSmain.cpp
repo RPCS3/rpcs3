@@ -126,6 +126,53 @@ void CALLBACK GSsetLogDir(const char* dir)
 	ZZLog::SetDir(dir);
 }
 
+void ReportHacks(gameHacks hacks)
+{
+	if (hacks.texture_targs) ZZLog::WriteLn("'Texture targs' hack enabled.");
+	if (hacks.auto_reset) ZZLog::WriteLn("'Auto reset' hack enabled.");
+	if (hacks.interlace_2x) ZZLog::WriteLn("'Interlace 2x' hack enabled.");
+	if (hacks.texa) ZZLog::WriteLn("'Texa' hack enabled.");
+	if (hacks.no_target_resolve) ZZLog::WriteLn("'No target resolve' hack enabled.");
+	if (hacks.exact_color) ZZLog::WriteLn("Exact color hack enabled.");
+	if (hacks.no_color_clamp) ZZLog::WriteLn("'No color clamp' hack enabled.");
+	if (hacks.no_alpha_fail) ZZLog::WriteLn("'No alpha fail' hack enabled.");
+	if (hacks.no_depth_update) ZZLog::WriteLn("'No depth update' hack enabled.");
+	if (hacks.quick_resolve_1) ZZLog::WriteLn("'Quick resolve 1' enabled.");
+	if (hacks.no_quick_resolve) ZZLog::WriteLn("'No Quick resolve' hack enabled.");
+	if (hacks.no_target_clut) ZZLog::WriteLn("'No target clut' hack enabled.");
+	if (hacks.vss_hack_off) ZZLog::WriteLn("VSS hack enabled.");
+	if (hacks.no_depth_resolve) ZZLog::WriteLn("'No depth resolve' hack enabled.");
+	if (hacks.full_16_bit_res) ZZLog::WriteLn("'Full 16 bit resolution' hack enabled.");
+	if (hacks.resolve_promoted) ZZLog::WriteLn("'Resolve promoted' hack enabled.");
+	if (hacks.fast_update) ZZLog::WriteLn("'Fast update' hack enabled.");
+	if (hacks.no_alpha_test) ZZLog::WriteLn("'No alpha test' hack enabled.");
+	if (hacks.disable_mrt_depth) ZZLog::WriteLn("'Disable mrt depth' hack enabled.");
+	if (hacks.args_32_bit) ZZLog::WriteLn("'Args 32 bit' hack enabled.");
+	if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
+	if (hacks.parallel_context) ZZLog::WriteLn("'Parallel context' hack enabled.");
+	if (hacks.xenosaga_spec) ZZLog::WriteLn("'Xenosaga spec' hack enabled.");
+	if (hacks.partial_pointers) ZZLog::WriteLn("'Partial pointers' hack enabled.");
+	if (hacks.partial_depth) ZZLog::WriteLn("'Partial depth' hack enabled.");
+	if (hacks.reget) ZZLog::WriteLn("Reget hack enabled.");
+	if (hacks.gust) ZZLog::WriteLn("Gust hack enabled.");
+	if (hacks.no_logz) ZZLog::WriteLn("'No logz' hack enabled.");
+}
+
+void ListHacks()
+{
+	if (conf.def_hacks._u32 != 0)
+	{
+		ZZLog::WriteLn("AutoEnabling these hacks:");
+		ReportHacks(conf.def_hacks);
+	}
+	
+	if (conf.hacks._u32 != 0)
+	{
+		ZZLog::WriteLn("You've manually enabled these hacks:");
+		ReportHacks(conf.hacks);
+	}
+}
+
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
 	// TEXDESTROY_THRESH starts out at 16.
@@ -133,15 +180,15 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	conf.mrtdepth = (conf.settings().disable_mrt_depth != 0);
 
 	if (!conf.mrtdepth)
-		ZZLog::Error_Log("Disabling MRT depth writing.");
+		ZZLog::WriteLn("Disabling MRT depth writing.");
 	else
-		ZZLog::Error_Log("Enabling MRT depth writing.");
+		ZZLog::WriteLn("Enabling MRT depth writing.");
 
 	bool CRCValueChanged = (g_LastCRC != crc);
 
 	g_LastCRC = crc;
 
-	ZZLog::Error_Log("CRC = %x", crc);
+	if (crc != 0) ZZLog::WriteLn("Current game CRC is %x.", crc);
 
 	if (CRCValueChanged && (crc != 0))
 	{
@@ -149,17 +196,27 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		{
 			if (crc_game_list[i].crc == crc)
 			{
-				if (crc_game_list[i].v_thresh > 0) VALIDATE_THRESH = crc_game_list[i].v_thresh;
-				if (crc_game_list[i].t_thresh > 0) TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
+				ZZLog::WriteLn("Found CRC[%x] in crc game list.", crc);
+				
+				if (crc_game_list[i].v_thresh > 0) 
+				{
+					VALIDATE_THRESH = crc_game_list[i].v_thresh;
+					ZZLog::WriteLn("Setting VALIDATE_THRESH to %d", VALIDATE_THRESH);
+				}
+				
+				if (crc_game_list[i].t_thresh > 0) 
+				{
+					TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
+					ZZLog::WriteLn("Setting TEXDESTROY_THRESH to %d", TEXDESTROY_THRESH);
+				}
 
 				conf.def_hacks._u32 |= crc_game_list[i].flags;
-
-				ZZLog::Error_Log("Found CRC[%x] in crc game list.", crc);
-
+				ListHacks();
 				return;
 			}
 		}
 	}
+	ListHacks();
 }
 
 void CALLBACK GSsetFrameSkip(int frameskip)

@@ -44,6 +44,10 @@ typedef int (*_TransferHostLocal)(const void* pbyMem, u32 nQWordSize);
 typedef void (*_TransferLocalHost)(void* pbyMem, u32 nQWordSize);
 typedef void (*_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteMask);
 
+extern _getPixelAddress_0 getPixelFun_0[64];
+extern _writePixel_0 writePixelFun_0[64];
+extern _readPixel_0 readPixelFun_0[64];
+
 enum Psm_Size
 {
 	PSM_ = 0,
@@ -268,8 +272,6 @@ static __forceinline u32 getPixelAddress16SZ_0(int x, int y, u32 bw)
 
 #define getPixelAddress_0(psm,x,y,bw) getPixelAddress##psm##_0(x,y,bw)
 #define getPixelAddress(psm,x,y,bp,bw) getPixelAddress##psm##(x,y,bp,bw)
-
-
 
 static __forceinline void writePixel32(void* pmem, int x, int y, u32 pixel, u32 bp, u32 bw)
 {
@@ -510,7 +512,6 @@ static __forceinline void writePixel16SZ_0(void* pmem, int x, int y, u32 pixel, 
 {
 	((u16*)pmem)[getPixelAddress16SZ_0(x, y, bw)] = pixel;
 }
-
 
 ///////////////
 

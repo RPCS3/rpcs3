@@ -803,15 +803,10 @@ void ZeroGS::KickSprite()
 
 	int next = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
 	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
-
-	// sprite is too small and AA shows lines (tek4)
-
-	if (s_AAx)
-	{
-		gs.gsvertex[last].x += 4;
-
-		if (s_AAy) gs.gsvertex[last].y += 4;
-	}
+	
+	// sprite is too small and AA shows lines (tek4, Mana Khemia)
+	gs.gsvertex[last].x += (4*s_AAx);
+	gs.gsvertex[last].y += (4*s_AAy);
 
 	// might be bad sprite (KH dialog text)
 	//if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )

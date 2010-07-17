@@ -98,8 +98,8 @@ void gen_memcpy_vibes() {
 			xADD(ecx, 256);
 		}
 		const xRegisterSSE xmm_t(x);
-		xMOVAPS(xmm_t, ptr32[edx+off]);
-		xMOVAPS(ptr32[ecx+off], xmm_t);
+		xMOVAPS (xmm_t, ptr32[edx+off]);
+		xMOVNTPS(ptr32[ecx+off], xmm_t);
 	}
 
 	_memcpy_vibes[0] = (_memCpyCall)xGetPtr();

@@ -42,10 +42,6 @@ extern bool g_bUpdateStencil;
 #	define INC_RESOLVE() ++g_nResolve
 #endif
 
-#ifdef DEVBUILD
-//static int g_bSaveResolved = 0;
-#endif
-
 extern int s_nResolved;
 extern u32 g_nResolve;
 extern bool g_bSaveTrans;
@@ -250,6 +246,7 @@ void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int co
 	}
 
 	// set render states
+	// Bleh. I *really* need to fix this. << 3 when setting the scissors, then >> 3 when using them... --Arcum42
 	scissorrect.x = scissor.x0 >> 3;
 	scissorrect.y = (scissor.y0 >> 3) + dy;
 	scissorrect.w = (scissor.x1 >> 3) + 1;
@@ -302,7 +299,7 @@ void ZeroGS::CRenderTarget::Resolve()
 
 		GL_REPORT_ERRORD();
 
-#if defined(DEVBUILD)
+#if defined(ZEROGS_DEVBUILD)
 
 		if (g_bSaveResolved)
 		{
@@ -328,7 +325,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 		// flush if necessary
 		FlushIfNecesary(this) ;
 
-#if defined(DEVBUILD)
+#if defined(ZEROGS_DEVBUILD)
 		if (g_bSaveResolved)
 		{
 			SaveTexture("resolved.tga", GL_TEXTURE_RECTANGLE_NV, ptex, RW(fbw), RH(fbh));
@@ -2290,10 +2287,12 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 			{
 				// This is not unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2
 				// instruction movdqa [%eax], xmm0
-				// The idea would be resise vector to 15 elements, that set ptxedata to aligned position.
+				// The idea would be resize vector to 15 elements, that set ptxedata to aligned position.
 				// Later we would move eax by 16, so only we should verify is first element align
 				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
 				// Probably, usage of _aligned_maloc() would be preferable.
+				
+				// Note: this often happens when changing AA.
 				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
 				dst = (u16*)ptexdata;

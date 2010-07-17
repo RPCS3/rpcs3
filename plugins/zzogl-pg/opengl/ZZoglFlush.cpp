@@ -29,7 +29,7 @@
 using namespace ZeroGS;
 
 //------------------ Defines
-#ifndef DEVBUILD
+#ifndef ZEROGS_DEVBUILD
 
 #define INC_GENVARS()
 #define INC_TEXVARS()
