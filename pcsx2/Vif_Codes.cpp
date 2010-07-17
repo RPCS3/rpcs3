@@ -134,7 +134,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 	}
 	pass2 {
 		vif1Only();
-
+		
 		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q == true)
 		{
 			if(gifRegs->stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs->stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs->stat.P1Q == false)
@@ -174,27 +174,75 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 
 		// the tag size should ALWAYS be 128 bits (qwc).  If it isn't, it means there's a serious bug
 		// somewhere in the VIF (likely relating to +/-'ing the tag.size during processing).
-		pxAssumeMsg( (vif1.tag.size & 3) == 0, "Invalid Vif1 DIRECT packet size detected!" );
+		// NOTE: ICO [PAL] exploits this during bootup.  Needs investigation. --air
+		//pxAssumeMsg( (vif1.tag.size & 3) == 0, "Invalid Vif1 DIRECT packet size detected!" );
 
-		const int	minSize	 = aMin(vif1.vifpacketsize, vif1.tag.size)/4;
-		uint ret;
+		nVifStruct&	v	 = nVif[1];
+		const int	ret	 = aMin(vif1.vifpacketsize, vif1.tag.size);
+		u32			size = ret << 2;
 
-		if (!minSize)
-			DevCon.Warning("VIF DIRECT (PATH2): No Data Transfer?");
+		//gifRegs->stat.APATH = GIF_APATH2; //Flag is cleared in vif1interrupt to simulate it being in progress.
+		
+		//In the original code we were saving this data, it seems if it does happen, its just blank, so we ignore it.
+		
+			if (!size) { DevCon.WriteLn("Path2: No Data Transfer?"); }
+			
 
-		GetMTGS().PrepDataPacket(GIF_PATH_2, minSize);
-		ret = GIFPath_CopyTag(GIF_PATH_2, (u128*)data, minSize)*4;
-		GetMTGS().SendDataPacket();
+			if(vif1.vifpacketsize < 4 && v.bSize < 16) 
+			{
+				memcpy(&v.buffer[v.bPtr], data, vif1.vifpacketsize << 2);
+				v.bSize += vif1.vifpacketsize << 2;
+				v.bPtr += vif1.vifpacketsize << 2;
+				vif1.tag.size -= vif1.vifpacketsize;
+				if(vif1.tag.size == 0) 
+				{
+					DevCon.Warning("Missaligned packet on DIRECT end!");
+					vif1.cmd = 0;
+				}
+				return vif1.vifpacketsize;
+			}
+			else
+			{
+				if(v.bSize)
+				{
+					int ret = 0;
 
-		vif1.tag.size -= ret;
+					if(v.bSize < 16)
+					{
+						if(((16 - v.bSize) >> 2) > vif1.vifpacketsize) DevCon.Warning("Not Enough Data!");
+						ret = (16 - v.bSize) >> 2;
+						memcpy(&v.buffer[v.bPtr], data, ret << 2);
+						vif1.tag.size -=  ret;						
+						v.bSize = 0;
+						v.bPtr = 0;						
+					}
+					GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
+					GIFPath_CopyTag(GIF_PATH_2, (u128*)v.buffer, 1);
+					GetMTGS().SendDataPacket();
 
-		if(vif1.tag.size == 0) 
-		{
-			vif1.cmd = 0;
-			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
-		}
-		vif1.vifstalled    = true;
-		return ret;
+					if(vif1.tag.size == 0) 
+					{
+						vif1.cmd = 0;
+					}
+					vif1.vifstalled    = true;
+					return ret;
+				}
+				else
+				{
+					GetMTGS().PrepDataPacket(GIF_PATH_2, size/16);
+					uint count = GIFPath_CopyTag(GIF_PATH_2, (u128*)data, size/16) * 4;
+					GetMTGS().SendDataPacket();
+
+					vif1.tag.size -= count;
+					if(vif1.tag.size == 0) 
+					{
+						vif1.cmd = 0;
+					}
+					vif1.vifstalled    = true;
+					return count;
+				}
+			}
+			
 	}
 	return 0;
 }
