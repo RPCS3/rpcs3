@@ -125,27 +125,16 @@ void __fastcall GIFPackedRegHandlerUV(u32* data)
 	ZZLog::Greg_Log("Packed UV: 0x%x, 0x%x", r->U, r->V);
 }
 
-void __forceinline KICK_VERTEX2()
+void __forceinline KickVertex(bool adc)
 {
 	FUNCLOG
-
 	if (++gs.primC >= (int)g_primmult[prim->prim])
 	{
-		if (NoHighlights(prim->ctxt)) (*ZeroGS::drawfn[prim->prim])();
-
-		gs.primC -= g_primsub[prim->prim];
-	}
-}
-
-void __forceinline KICK_VERTEX3()
-{
-	FUNCLOG
-
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
+		if (!adc && NoHighlights(prim->ctxt)) (*ZeroGS::drawfn[prim->prim])();
+		
 		gs.primC -= g_primsub[prim->prim];
 
-		if (prim->prim == 5)
+		if (adc && prim->prim == 5)
 		{
 			/* tri fans need special processing */
 			if (gs.nTriFanVert == gs.primIndex)
@@ -161,14 +150,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
 	// Fix Vertexes up later.
-	if (data[3] & 0x8000)
-	{
-		KICK_VERTEX3();
-	}
-	else
-	{
-		KICK_VERTEX2();
-	}
+	KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -179,14 +161,7 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z);
 
 	// Fix Vertexes up later.
-	if (data[3] & 0x8000)
-	{
-		KICK_VERTEX3();
-	}
-	else
-	{
-		KICK_VERTEX2();
-	}
+	KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZ2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -285,7 +260,7 @@ void __fastcall GIFRegHandlerXYZF2(u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KICK_VERTEX2();
+	KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -295,7 +270,7 @@ void __fastcall GIFRegHandlerXYZ2(u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KICK_VERTEX2();
+	KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -382,7 +357,7 @@ void __fastcall GIFRegHandlerXYZF3(u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KICK_VERTEX3();
+	KickVertex(true);
 	ZZLog::Greg_Log("XYZF3: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -392,7 +367,7 @@ void __fastcall GIFRegHandlerXYZ3(u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KICK_VERTEX3();
+	KickVertex(true);
 	ZZLog::Greg_Log("XYZ3: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
