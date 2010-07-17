@@ -27,7 +27,6 @@
 #include "zerogs.h"
 #include "targets.h"
 
-
  namespace ZeroGS
  {
 	extern CRangeManager s_RangeMngr; // manages overwritten memory
@@ -249,8 +248,10 @@
 	}
 
 	template <class T>
-	void TransferLocalHost(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart, _readPixel_0 rp)
+	void TransferLocalHost(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart)
 	{
+		_readPixel_0 rp = readPixelFun_0[gs.srcbuf.psm];
+		
 		int i = x, j = y;
 		T* pbuf = (T*)pbyMem;
 		u32 nSize = nQWordSize * 16 / sizeof(T);
@@ -275,8 +276,10 @@
 		}
 	}
 
-	void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart, _readPixel_0 rp)
+	void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart)
 	{
+		_readPixel_0 rp = readPixelFun_0[gs.srcbuf.psm];
+		
 		int i = x, j = y;
 		u8* pbuf = (u8*)pbyMem;
 		u32 nSize = nQWordSize * 16 / 3;
@@ -312,57 +315,15 @@
 		assert(gs.imageTransfer == 1);
 
 		u8* pstart = g_pbyGSMemory + 256 * gs.srcbuf.bp;
-		int i = gs.imageY, j = gs.imageX;
-
-		switch (gs.srcbuf.psm)
+		
+		switch(PSMT_BITMODE(gs.srcbuf.psm))
 		{
-
-			case PSMCT32:
-				TransferLocalHost<u32>(pbyMem, nQWordSize, i, j, pstart, readPixel32_0);
-				break;
-
-			case PSMCT24:
-				TransferLocalHost_24(pbyMem, nQWordSize, i, j, pstart, readPixel24_0);
-				break;
-
-			case PSMCT16:
-				TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16_0);
-				break;
-
-			case PSMCT16S:
-				TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16S_0);
-				break;
-
-			case PSMT8:
-				TransferLocalHost<u8>(pbyMem, nQWordSize, i, j, pstart, readPixel8_0);
-				break;
-
-			case PSMT8H:
-				TransferLocalHost<u8>(pbyMem, nQWordSize, i, j, pstart, readPixel8H_0);
-				break;
-
-			case PSMT32Z:
-				TransferLocalHost<u32>(pbyMem, nQWordSize, i, j, pstart, readPixel32Z_0);
-				break;
-
-			case PSMT24Z:
-				TransferLocalHost_24(pbyMem, nQWordSize, i, j, pstart, readPixel24Z_0);
-				break;
-
-			case PSMT16Z:
-				TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16Z_0);
-				break;
-
-			case PSMT16SZ:
-				TransferLocalHost<u16>(pbyMem, nQWordSize, i, j, pstart, readPixel16SZ_0);
-				break;
-
-			default:
-				assert(0);
+			case 0: TransferLocalHost<u32>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart); break;
+			case 1: TransferLocalHost_24(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart); break;
+			case 2: TransferLocalHost<u16>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart); break;
+			case 3: TransferLocalHost<u8>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart); break;
+			default: assert(0); break;
 		}
-
-		gs.imageY = i;
-		gs.imageX = j;
 
 		if (gs.imageY >= gs.imageEndY)
 		{
@@ -370,95 +331,12 @@
 			gs.imageTransfer = -1;
 		}
 	}
-
-/*__forceinline void _TransferLocalLocal(_writePixel_0 wp, _readPixel_0 rp, u32 widthlimit)
-{
-	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
-	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
-
-	if ((gs.imageWnew & widthlimit) != 0) return;
-	assert(widthlimit <= 4);
-	
-	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < gs.trxpos.sy+gs.imageHnew; i++, i2++) 
-	{
-		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < gs.trxpos.sx+gs.imageWnew; j+=widthlimit, j2+=widthlimit)
-		{
-			wp(pDstBuf, j2%2048, i2%2048,
-					rp(pSrcBuf, j%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-				
-			if (widthlimit > 1) 
-			{
-				wp(pDstBuf, (j2+1)%2048, i2%2048,
-					rp(pSrcBuf, (j+1)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-				
-				if (widthlimit > 2) 
-				{
-					wp(pDstBuf, (j2+2)%2048, i2%2048,
-						rp(pSrcBuf, (j+2)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-				
-					if (widthlimit > 3) 
-					{
-						wp(pDstBuf, (j2+3)%2048, i2%2048,
-							rp(pSrcBuf, (j+3)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-					}
-				}
-			}
-		}
-	}
-}
-
-__forceinline void _TransferLocalLocal_4(_getPixelAddress_0 gsp, _getPixelAddress_0 gdp)
-{
-	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
-	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
-
-	assert((gs.imageWnew % 8) == 0);
-		
-	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < gs.trxpos.sy + gs.imageHnew; ++i, ++i2) 
-	{
-		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < gs.trxpos.sx + gs.imageWnew; j += 8, j2 += 8) 
-		{
-			// NOTE: the 2 conseq 4bit values are in NOT in the same byte 
-			u32 read = gsp(j%2048, i%2048, gs.srcbuf.bw);
-			u32 write = gdp(j2%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
-	
-			read = gsp((j+1)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+1)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
-	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
-	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
-	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
-	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
-	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
-	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
-			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
-		}
-	}
-}*/
 	
 __forceinline void _TransferLocalLocal()
 {
 	//ZZLog::Error_Log("TransferLocalLocal(0x%x, 0x%x)", gs.srcbuf.psm, gs.dstbuf.psm);
-	_writePixel_0 wp = writePixelFunction_0(gs.srcbuf.psm);
-	_readPixel_0 rp = readPixelFunction_0(gs.dstbuf.psm);
+	_writePixel_0 wp = writePixelFun_0[gs.srcbuf.psm]; //writePixelFunction_0(gs.srcbuf.psm);
+	_readPixel_0 rp = readPixelFun_0[gs.dstbuf.psm]; //readPixelFunction_0(gs.dstbuf.psm);
 	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
 	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
 	u32 widthlimit = 4;
@@ -497,8 +375,8 @@ __forceinline void _TransferLocalLocal()
 __forceinline void _TransferLocalLocal_4()
 {
 	//ZZLog::Error_Log("TransferLocalLocal_4(0x%x, 0x%x)", gs.srcbuf.psm, gs.dstbuf.psm);
-	_getPixelAddress_0 gsp = getPixelFunction_0(gs.srcbuf.psm);
-	_getPixelAddress_0 gdp = getPixelFunction_0(gs.dstbuf.psm);
+	_getPixelAddress_0 gsp = getPixelFun_0[gs.srcbuf.psm]; //getPixelFunction_0(gs.srcbuf.psm);
+	_getPixelAddress_0 gdp = getPixelFun_0[gs.dstbuf.psm]; //getPixelFunction_0(gs.dstbuf.psm);
 	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
 	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
 
@@ -590,210 +468,6 @@ __forceinline void _TransferLocalLocal_4()
 		{
 			_TransferLocalLocal_4();
 		}
-		/*switch (gs.srcbuf.psm) 
-		{
-			case PSMCT32:
-				if (gs.dstbuf.psm == PSMCT32)
-				{
-					_TransferLocalLocal(writePixel32_0, readPixel32_0, 2);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel32_0, readPixel32Z_0, 2);
-				}
-				break;
-
-			case PSMCT24:
-				if (gs.dstbuf.psm == PSMCT24)
-				{
-					_TransferLocalLocal(writePixel24_0, readPixel24_0, 4);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel24_0, readPixel24Z_0, 4);
-				}
-				break;
-
-			case PSMCT16:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMCT16:
-						_TransferLocalLocal(writePixel16_0, readPixel16_0, 4);
-						break;
-
-					case PSMCT16S:
-						_TransferLocalLocal(writePixel16_0, readPixel16S_0, 4);
-						break;
-
-					case PSMT16Z:
-						_TransferLocalLocal(writePixel16_0, readPixel16Z_0, 4);
-						break;
-
-					case PSMT16SZ:
-						_TransferLocalLocal(writePixel16_0, readPixel16SZ_0, 4);
-						break;
-				}
-				break;
-
-			case PSMCT16S:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMCT16:
-						_TransferLocalLocal(writePixel16S_0, readPixel16_0, 4);
-						break;
-
-					case PSMCT16S:
-						_TransferLocalLocal(writePixel16S_0, readPixel16S_0, 4);
-						break;
-
-					case PSMT16Z:
-						_TransferLocalLocal(writePixel16S_0, readPixel16Z_0, 4);
-						break;
-
-					case PSMT16SZ:
-						_TransferLocalLocal(writePixel16S_0, readPixel16SZ_0, 4);
-						break;
-				}
-				break;
-
-			case PSMT8:
-				if (gs.dstbuf.psm == PSMT8)
-				{
-					_TransferLocalLocal(writePixel8_0, readPixel8_0, 4);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel8_0, readPixel8H_0, 4);
-				}
-				break;
-
-			case PSMT4:
-				switch (gs.dstbuf.psm)
-				{
-
-					case PSMT4:
-						_TransferLocalLocal_4(getPixelAddress4_0, getPixelAddress4_0);
-						break;
-
-					case PSMT4HL:
-						_TransferLocalLocal_4(getPixelAddress4_0, getPixelAddress4HL_0);
-						break;
-
-					case PSMT4HH:
-						_TransferLocalLocal_4(getPixelAddress4_0, getPixelAddress4HH_0);
-						break;
-				}
-				break;
-
-			case PSMT8H:
-				if (gs.dstbuf.psm == PSMT8)
-				{
-					_TransferLocalLocal(writePixel8H_0, readPixel8_0, 4);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel8H_0, readPixel8H_0, 4);
-				}
-				break;
-
-			case PSMT4HL:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMT4:
-						_TransferLocalLocal_4(getPixelAddress4HL_0, getPixelAddress4_0);
-						break;
-
-					case PSMT4HL:
-						_TransferLocalLocal_4(getPixelAddress4HL_0, getPixelAddress4HL_0);
-						break;
-
-					case PSMT4HH:
-						_TransferLocalLocal_4(getPixelAddress4HL_0, getPixelAddress4HH_0);
-						break;
-				}
-				break;
-
-			case PSMT4HH:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMT4:
-						_TransferLocalLocal_4(getPixelAddress4HH_0, getPixelAddress4_0);
-						break;
-
-					case PSMT4HL:
-						_TransferLocalLocal_4(getPixelAddress4HH_0, getPixelAddress4HL_0);
-						break;
-
-					case PSMT4HH:
-						_TransferLocalLocal_4(getPixelAddress4HH_0, getPixelAddress4HH_0);
-						break;
-				}
-				break;
-
-			case PSMT32Z:
-				if (gs.dstbuf.psm == PSMCT32)
-				{
-					_TransferLocalLocal(writePixel32Z_0, readPixel32_0, 2);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel32Z_0, readPixel32Z_0, 2);
-				}
-				break;
-
-			case PSMT24Z:
-				if (gs.dstbuf.psm == PSMCT24)
-				{
-					_TransferLocalLocal(writePixel24Z_0, readPixel24_0, 4);
-				}
-				else
-				{
-					_TransferLocalLocal(writePixel24Z_0, readPixel24Z_0, 4);
-				}
-				break;
-
-			case PSMT16Z:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMCT16:
-						_TransferLocalLocal(writePixel16Z_0, readPixel16_0, 4);
-						break;
-
-					case PSMCT16S:
-						_TransferLocalLocal(writePixel16Z_0, readPixel16S_0, 4);
-						break;
-
-					case PSMT16Z:
-						_TransferLocalLocal(writePixel16Z_0, readPixel16Z_0, 4);
-						break;
-
-					case PSMT16SZ:
-						_TransferLocalLocal(writePixel16Z_0, readPixel16SZ_0, 4);
-						break;
-				}
-				break;
-
-			case PSMT16SZ:
-				switch (gs.dstbuf.psm)
-				{
-					case PSMCT16:
-						_TransferLocalLocal(writePixel16SZ_0, readPixel16_0, 4);
-						break;
-
-					case PSMCT16S:
-						_TransferLocalLocal(writePixel16SZ_0, readPixel16S_0, 4);
-						break;
-
-					case PSMT16Z:
-						_TransferLocalLocal(writePixel16SZ_0, readPixel16Z_0, 4);
-						break;
-
-					case PSMT16SZ:
-						_TransferLocalLocal(writePixel16SZ_0, readPixel16SZ_0, 4);
-						break;
-				}
-				break;
-		}*/
 
 		g_MemTargs.ClearRange(dststart, dstend);
 

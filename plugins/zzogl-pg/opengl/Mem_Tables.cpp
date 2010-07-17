@@ -18,6 +18,7 @@
  */
 
 #include "GS.h"
+#include "Mem.h"
 
 u32 g_blockTable32[4][8] =
 {
@@ -247,3 +248,52 @@ u32 g_pageTable16Z[64][64];
 u32 g_pageTable16SZ[64][64];
 u32 g_pageTable8[64][128];
 u32 g_pageTable4[128][128];
+
+/* PSM reference array
+{ 	32, 24, 16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, 16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, 8, 4, NULL, NULL, NULL,
+	NULL, NULL, NULL, 8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, 4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, 4HH, NULL, NULL, NULL,
+	32Z, 24Z, 16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, 16SZ, NULL, NULL, NULL, NULL, NULL };
+*/
+
+_getPixelAddress_0 getPixelFun_0[64] = 
+{ 	
+	getPixelAddress32_0, getPixelAddress24_0, getPixelAddress16_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, getPixelAddress16S_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, getPixelAddress8_0, getPixelAddress4_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, getPixelAddress8H_0, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, getPixelAddress4HL_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, getPixelAddress4HH_0, NULL, NULL, NULL,
+	getPixelAddress32Z_0, getPixelAddress24Z_0, getPixelAddress16Z_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, getPixelAddress16SZ_0, NULL, NULL, NULL, NULL, NULL 
+};
+
+_writePixel_0 writePixelFun_0[64] = 
+{ 	
+	writePixel32_0, writePixel24_0, writePixel16_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, writePixel16S_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, writePixel8_0, writePixel4_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, writePixel8H_0, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, writePixel4HL_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, writePixel4HH_0, NULL, NULL, NULL,
+	writePixel32Z_0, writePixel24Z_0, writePixel16Z_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, writePixel16SZ_0, NULL, NULL, NULL, NULL, NULL 
+};
+
+_readPixel_0 readPixelFun_0[64] = 
+{ 	
+	readPixel32_0, readPixel24_0, readPixel16_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, readPixel16S_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, readPixel8_0, readPixel4_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, readPixel8H_0, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, readPixel4HL_0, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, readPixel4HH_0, NULL, NULL, NULL,
+	readPixel32Z_0, readPixel24Z_0, readPixel16Z_0, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, readPixel16SZ_0, NULL, NULL, NULL, NULL, NULL 
+};
+
+
