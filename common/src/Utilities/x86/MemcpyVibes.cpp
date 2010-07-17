@@ -231,7 +231,7 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
 
 			"memcpy_qwc_1:\n"
-				"testl		%[qwc],1\n"
+				"test %[qwc],1\n"
 				"jz			memcpy_qwc_final\n"
 				"movq		mm0,[%[src]]\n"
 				"movq		mm1,[%[src]+8]\n"
