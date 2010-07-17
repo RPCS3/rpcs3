@@ -327,6 +327,7 @@
 
 		if (gs.imageY >= gs.imageEndY)
 		{
+			ZZLog::Error_Log("gs.imageY >= gs.imageEndY!");
 			assert(gs.imageY == gs.imageEndY);
 			gs.imageTransfer = -1;
 		}
@@ -335,38 +336,35 @@
 __forceinline void _TransferLocalLocal()
 {
 	//ZZLog::Error_Log("TransferLocalLocal(0x%x, 0x%x)", gs.srcbuf.psm, gs.dstbuf.psm);
-	_writePixel_0 wp = writePixelFun_0[gs.srcbuf.psm]; //writePixelFunction_0(gs.srcbuf.psm);
-	_readPixel_0 rp = readPixelFun_0[gs.dstbuf.psm]; //readPixelFunction_0(gs.dstbuf.psm);
+	_writePixel_0 wp = writePixelFun_0[gs.srcbuf.psm];
+	_readPixel_0 rp = readPixelFun_0[gs.dstbuf.psm];
 	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
 	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
 	u32 widthlimit = 4;
+	u32 maxX = gs.trxpos.sx + gs.imageWnew;
+	u32 maxY = gs.trxpos.sy + gs.imageHnew;
 	
 	if (PSMT_BITMODE(gs.srcbuf.psm) == 0) widthlimit = 2;
 	if ((gs.imageWnew & widthlimit) != 0) return;
 	
-	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < gs.trxpos.sy+gs.imageHnew; i++, i2++) 
+	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < maxY; i++, i2++) 
 	{
-		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < gs.trxpos.sx+gs.imageWnew; j+=widthlimit, j2+=widthlimit)
+		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < maxX; j += widthlimit, j2 += widthlimit)
 		{
 			wp(pDstBuf, j2%2048, i2%2048,
-					rp(pSrcBuf, j%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
+				rp(pSrcBuf, j%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
+			
+			wp(pDstBuf, (j2+1)%2048, i2%2048,
+				rp(pSrcBuf, (j+1)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
 				
-			//if (widthlimit > 1) 
+			if (widthlimit > 2) 
 			{
-				wp(pDstBuf, (j2+1)%2048, i2%2048,
-					rp(pSrcBuf, (j+1)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-				
-				if (widthlimit > 2) 
-				{
-					wp(pDstBuf, (j2+2)%2048, i2%2048,
-						rp(pSrcBuf, (j+2)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-				
-					//if (widthlimit > 3) 
-					{
-						wp(pDstBuf, (j2+3)%2048, i2%2048,
-							rp(pSrcBuf, (j+3)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
-					}
-				}
+				// Then widthlimit == 4.
+				wp(pDstBuf, (j2+2)%2048, i2%2048,
+					rp(pSrcBuf, (j+2)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
+						
+				wp(pDstBuf, (j2+3)%2048, i2%2048,
+					rp(pSrcBuf, (j+3)%2048, i%2048, gs.srcbuf.bw), gs.dstbuf.bw);
 			}
 		}
 	}
@@ -375,16 +373,18 @@ __forceinline void _TransferLocalLocal()
 __forceinline void _TransferLocalLocal_4()
 {
 	//ZZLog::Error_Log("TransferLocalLocal_4(0x%x, 0x%x)", gs.srcbuf.psm, gs.dstbuf.psm);
-	_getPixelAddress_0 gsp = getPixelFun_0[gs.srcbuf.psm]; //getPixelFunction_0(gs.srcbuf.psm);
-	_getPixelAddress_0 gdp = getPixelFun_0[gs.dstbuf.psm]; //getPixelFunction_0(gs.dstbuf.psm);
+	_getPixelAddress_0 gsp = getPixelFun_0[gs.srcbuf.psm];
+	_getPixelAddress_0 gdp = getPixelFun_0[gs.dstbuf.psm];
 	u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
 	u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
+	u32 maxX = gs.trxpos.sx + gs.imageWnew;
+	u32 maxY = gs.trxpos.sy + gs.imageHnew;
 
 	assert((gs.imageWnew % 8) == 0);
 		
-	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < gs.trxpos.sy + gs.imageHnew; ++i, ++i2) 
+	for(int i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < maxY; ++i, ++i2) 
 	{
-		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < gs.trxpos.sx + gs.imageWnew; j += 8, j2 += 8) 
+		for(int j = gs.trxpos.sx, j2 = gs.trxpos.dx; j < maxX; j += 8, j2 += 8) 
 		{
 			/* NOTE: the 2 conseq 4bit values are in NOT in the same byte */
 			u32 read = gsp(j%2048, i%2048, gs.srcbuf.bw);

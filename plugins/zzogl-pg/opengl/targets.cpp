@@ -2286,10 +2286,12 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 			{
 				// This is not unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2
 				// instruction movdqa [%eax], xmm0
-				// The idea would be resise vector to 15 elements, that set ptxedata to aligned position.
+				// The idea would be resize vector to 15 elements, that set ptxedata to aligned position.
 				// Later we would move eax by 16, so only we should verify is first element align
 				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
 				// Probably, usage of _aligned_maloc() would be preferable.
+				
+				// Note: this often happens when changing AA.
 				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
 				dst = (u16*)ptexdata;
