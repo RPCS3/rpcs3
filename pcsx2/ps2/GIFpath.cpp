@@ -515,6 +515,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
+					const_cast<GIFTAG&>(tag).EOP = 1;
 				}
 			}
 		}

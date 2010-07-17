@@ -57,21 +57,24 @@ void gsPath1Interrupt()
 	if((gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.IP3 == true && gifRegs->stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs->stat.PSE)
 	{
 		gifRegs->stat.P1Q = false;
-		while(Path1WritePos > 0)
+
+		if (uint size = (Path1WritePos - Path1ReadPos))
 		{
-			uint size = (Path1WritePos - Path1ReadPos);
 			GetMTGS().PrepDataPacket(GIF_PATH_1, size);
 			//DevCon.Warning("Flush Size = %x", size);
-
-			uint count = GIFPath_CopyTag(GIF_PATH_1, ((u128*)Path1Buffer) + Path1ReadPos, size);
-			GetMTGS().SendDataPacket();
-			Path1ReadPos += count;
-
-			if(GSTransferStatus.PTH1 == STOPPED_MODE)
+			while(size > 0)
 			{
-				gifRegs->stat.OPH = false;				
-				gifRegs->stat.APATH = GIF_APATH_IDLE;
+				uint count = GIFPath_CopyTag(GIF_PATH_1, ((u128*)Path1Buffer) + Path1ReadPos, size);
+				Path1ReadPos += count;
+				size -= count;
+
+				if(GSTransferStatus.PTH1 == STOPPED_MODE)
+				{
+					gifRegs->stat.OPH = false;				
+					gifRegs->stat.APATH = GIF_APATH_IDLE;
+				}
 			}
+			GetMTGS().SendDataPacket();
 
 			if(Path1ReadPos == Path1WritePos)
 			{

@@ -409,13 +409,16 @@ void SysMtgsThread::ExecuteTaskInThread()
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", !!(((u32&)RingBuffer.Regs[0x1000]) & 0x2000) ? 0 : 1, tag.data[1] ? "true" : "false" );
 
 							// Mail in the important GS registers.
+							// This seemingly obtuse system is needed in order to handle cases where the vsync data wraps
+							// around the edge of the ringbuffer.  If not for that I'd just use a struct. >_<
+
 							uint datapos = (m_ReadPos+1) & RingBufferMask;
 							MemCopy_WrappedSrc( RingBuffer.m_Ring, datapos, RingBufferSize, (u128*)RingBuffer.Regs, 0xf );
 
 							u32* remainder = (u32*)&RingBuffer[datapos];
-							GSCSRr		= remainder[0];
-							GSIMR		= remainder[1];
-							GSSIGLBLID	= (GSRegSIGBLID&)remainder[2];
+							((u32&)RingBuffer.Regs[0x1000])				= remainder[0];
+							((u32&)RingBuffer.Regs[0x1010])				= remainder[1];
+							((GSRegSIGBLID&)RingBuffer.Regs[0x1080])	= (GSRegSIGBLID&)remainder[2];
 
 							// CSR & 0x2000; is the pageflip id.
 							GSvsync(((u32&)RingBuffer.Regs[0x1000]) & 0x2000);
