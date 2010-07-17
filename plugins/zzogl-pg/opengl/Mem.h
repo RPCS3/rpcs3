@@ -266,6 +266,27 @@ static __forceinline u32 getPixelAddress16SZ_0(int x, int y, u32 bw)
 	return word;
 }
 
+static __forceinline _getPixelAddress_0 getPixelFunction_0(u32 psm)
+{
+	switch(psm)
+	{
+		case PSMCT32: return getPixelAddress32_0;
+		case PSMCT24: return getPixelAddress24_0;
+		case PSMCT16: return getPixelAddress16_0;
+		case PSMCT16S: return getPixelAddress16S_0;
+		case PSMT8: return getPixelAddress8_0;
+		case PSMT4: return getPixelAddress4_0;
+		case PSMT8H: return getPixelAddress8H_0;
+		case PSMT4HL: return getPixelAddress4HL_0;
+		case PSMT4HH: return getPixelAddress4HH_0;
+		case PSMT32Z: return getPixelAddress32Z_0;
+		case PSMT24Z: return getPixelAddress24Z_0;
+		case PSMT16Z: return getPixelAddress16Z_0;
+		case PSMT16SZ: return getPixelAddress16SZ_0;
+		default:  return getPixelAddress32_0;
+	}
+}
+
 #define getPixelAddress_0(psm,x,y,bw) getPixelAddress##psm##_0(x,y,bw)
 #define getPixelAddress(psm,x,y,bp,bw) getPixelAddress##psm##(x,y,bp,bw)
 
@@ -511,6 +532,26 @@ static __forceinline void writePixel16SZ_0(void* pmem, int x, int y, u32 pixel, 
 	((u16*)pmem)[getPixelAddress16SZ_0(x, y, bw)] = pixel;
 }
 
+static __forceinline _writePixel_0 writePixelFunction_0(u32 psm)
+{
+	switch(psm)
+	{
+		case PSMCT32: return writePixel32_0;
+		case PSMCT24: return writePixel24_0;
+		case PSMCT16: return writePixel16_0;
+		case PSMCT16S: return writePixel16S_0;
+		case PSMT8: return writePixel8_0;
+		case PSMT4: return writePixel4_0;
+		case PSMT8H: return writePixel8H_0;
+		case PSMT4HL: return writePixel4HL_0;
+		case PSMT4HH: return writePixel4HH_0;
+		case PSMT32Z: return writePixel32Z_0;
+		case PSMT24Z: return writePixel24Z_0;
+		case PSMT16Z: return writePixel16Z_0;
+		case PSMT16SZ: return writePixel16SZ_0;
+		default:  return writePixel32_0;
+	}
+}
 
 ///////////////
 
@@ -589,4 +630,24 @@ static __forceinline u32 readPixel16SZ_0(const void* pmem, int x, int y, u32 bw)
 	return ((const u16*)pmem)[getPixelAddress16SZ_0(x, y, bw)];
 }
 
+static __forceinline _readPixel_0 readPixelFunction_0(u32 psm)
+{
+	switch(psm)
+	{
+		case PSMCT32: return readPixel32_0;
+		case PSMCT24: return readPixel24_0;
+		case PSMCT16: return readPixel16_0;
+		case PSMCT16S: return readPixel16S_0;
+		case PSMT8: return readPixel8_0;
+		case PSMT4: return readPixel4_0;
+		case PSMT8H: return readPixel8H_0;
+		case PSMT4HL: return readPixel4HL_0;
+		case PSMT4HH: return readPixel4HH_0;
+		case PSMT32Z: return readPixel32Z_0;
+		case PSMT24Z: return readPixel24Z_0;
+		case PSMT16Z: return readPixel16Z_0;
+		case PSMT16SZ: return readPixel16SZ_0;
+		default:  return readPixel32_0;
+	}
+}
 #endif /* __MEM_H__ */
