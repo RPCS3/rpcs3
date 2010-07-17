@@ -164,7 +164,6 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 
 	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
 	{
-		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
@@ -201,7 +200,6 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	GetMTGS().SendDataPacket();
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
-		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}

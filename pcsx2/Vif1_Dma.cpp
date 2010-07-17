@@ -345,7 +345,6 @@ __forceinline void vif1Interrupt()
 
 	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
 	{
-		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}
@@ -440,11 +439,6 @@ __forceinline void vif1Interrupt()
 	if (vif1.cmd != 0) Console.WriteLn("vif1.cmd still set %x tag size %x", vif1.cmd, vif1.tag.size);
 #endif
 
-	
-	if((vif1ch->chcr.DIR == VIF_NORMAL_TO_MEM_MODE) && vif1.GSLastDownloadSize <= 16) 
-	{   //Reverse fifo has finished and nothing is left, so lets clear the outputting flag
-		gifRegs->stat.OPH = false;
-	}
 	vif1ch->chcr.STR = false;
 	vif1.vifstalled = false;
 	g_vifCycles = 0;
