@@ -639,7 +639,6 @@ void SysMtgsThread::GenericStall( uint size )
 	// the block about to be written (writepos + size)
 
 	uint readpos = volatize(m_ReadPos);
-	//uint endpos = writepos+size;
 	uint freeroom;
 
 	if (writepos < readpos)
@@ -647,7 +646,7 @@ void SysMtgsThread::GenericStall( uint size )
 	else
 		freeroom = RingBufferSize - (writepos - readpos);
 
-	if (freeroom < size)
+	if (freeroom <= size)
 	{
 		// writepos will overlap readpos if we commit the data, so we need to wait until
 		// readpos is out past the end of the future write pos, or until it wraps around
@@ -671,13 +670,20 @@ void SysMtgsThread::GenericStall( uint size )
 
 			//Console.WriteLn( Color_Blue, "(EEcore Sleep) PrepDataPacker \tringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", readpos, writepos, m_SignalRingPosition );
 
-			do {
+			while(true) {
 				AtomicExchange( m_SignalRingEnable, 1 );
 				SetEvent();
 				m_sem_OnRingReset.WaitWithoutYield();
 				readpos = volatize(m_ReadPos);
 				//Console.WriteLn( Color_Blue, "(EEcore Awake) Report!\tringpos=0x%06x", readpos );
-			} while( (writepos < readpos) && (writepos+size >= readpos) );
+
+				if (writepos < readpos)
+					freeroom = readpos - writepos;
+				else
+					freeroom = RingBufferSize - (writepos - readpos);
+					
+				if (freeroom > size) break;
+			}
 
 			pxAssertDev( m_SignalRingPosition <= 0, "MTGS Thread Synchronization Error" );
 		}
@@ -685,10 +691,17 @@ void SysMtgsThread::GenericStall( uint size )
 		{
 			//Console.WriteLn( Color_StrongGray, "(EEcore Spin) PrepDataPacket!" );
 			SetEvent();
-			do {
+			while(true) {
 				SpinWait();
 				readpos = volatize(m_ReadPos);
-			} while( (writepos < readpos) && (writepos+size >= readpos) );
+
+				if (writepos < readpos)
+					freeroom = readpos - writepos;
+				else
+					freeroom = RingBufferSize - (writepos - readpos);
+
+				if (freeroom > size) break;
+			}
 		}
 	}
 }

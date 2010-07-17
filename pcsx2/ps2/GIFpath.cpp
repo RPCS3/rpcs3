@@ -558,7 +558,7 @@ __forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint
 		uint firstcopylen = srcSize - srcStart;
 		memcpy_qwc(dest, &srcBase[srcStart], firstcopylen );
 
-		srcStart = endpos & srcSize;
+		srcStart = endpos % srcSize;
 		memcpy_qwc(dest+firstcopylen, srcBase, srcStart );
 	}
 }
