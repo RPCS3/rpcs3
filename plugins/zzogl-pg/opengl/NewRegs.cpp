@@ -890,6 +890,7 @@ void __fastcall GIFRegHandlerTRXREG(u32* data)
 void __fastcall GIFRegHandlerTRXDIR(u32* data)
 {
 	FUNCLOG
+	GIFRegTRXDIR* r = (GIFRegTRXDIR*)(data);
 	// Oh dear...
 	
 	// terminate any previous transfers
@@ -909,7 +910,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 	gs.dstbuf = gs.dstbufnew;
 	gs.trxpos = gs.trxposnew;
 	
-	gs.imageTransfer = data[0] & 0x3;
+	gs.imageTransfer = r->XDIR;
 	gs.imageWnew = gs.imageWtemp;
 	gs.imageHnew = gs.imageHtemp;
 
