@@ -159,7 +159,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 				if (crc_game_list[i].t_thresh > 0) 
 				{
 					TEXDESTROY_THRESH = crc_game_list[i].t_thresh;
-					ZZLog::Error_Log("Setting TEXDESTROY_THRESH to %d", VALIDATE_THRESH);
+					ZZLog::Error_Log("Setting TEXDESTROY_THRESH to %d", TEXDESTROY_THRESH);
 				}
 
 				conf.def_hacks._u32 |= crc_game_list[i].flags;
