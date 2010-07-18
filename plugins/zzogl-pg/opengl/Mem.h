@@ -47,6 +47,8 @@ typedef void (*_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteMask);
 extern _getPixelAddress_0 getPixelFun_0[64];
 extern _writePixel_0 writePixelFun_0[64];
 extern _readPixel_0 readPixelFun_0[64];
+extern _SwizzleBlock swizzleBlockFun[64];
+extern _SwizzleBlock swizzleBlockUnFun[64];
 
 // Both of the following structs should probably be local class variables or in a namespace,
 // but this works for the moment.
@@ -82,6 +84,13 @@ struct TransferFuncts
 		gp = readPix;
 		Swizzle = s;
 		Swizzle_u = su;
+	}
+	__forceinline TransferFuncts(u32 psm)
+	{
+		wp = writePixelFun_0[psm];
+		gp = getPixelFun_0[psm];
+		Swizzle = swizzleBlockFun[psm];
+		Swizzle_u = swizzleBlockUnFun[psm];
 	}
 };
 

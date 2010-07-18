@@ -19,6 +19,7 @@
 
 #include "GS.h"
 #include "Mem.h"
+#include "Mem_Swizzle.h"
 
 u32 g_blockTable32[4][8] =
 {
@@ -268,6 +269,26 @@ char* psm_name[64] =
 	NULL, NULL, NULL, NULL, "PSMT4HH", NULL, NULL, NULL,
 	"PSMT32Z", "PSMT24Z", "PSMT16Z", NULL, NULL, NULL, NULL, NULL,
 	NULL, NULL, "PSMT16SZ", NULL, NULL, NULL, NULL, NULL };
+	
+_SwizzleBlock swizzleBlockFun[64] =
+{ 	SwizzleBlock32, SwizzleBlock24, SwizzleBlock16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, SwizzleBlock16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, SwizzleBlock8, SwizzleBlock4, NULL, NULL, NULL,
+	NULL, NULL, NULL, SwizzleBlock8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, SwizzleBlock4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, SwizzleBlock4HH, NULL, NULL, NULL,
+	SwizzleBlock32Z, SwizzleBlock24Z, SwizzleBlock16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, SwizzleBlock16SZ, NULL, NULL, NULL, NULL, NULL };
+	
+_SwizzleBlock swizzleBlockUnFun[64] =
+{ 	SwizzleBlock32u, SwizzleBlock24u, SwizzleBlock16u, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, SwizzleBlock16Su, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, SwizzleBlock8u, SwizzleBlock4u, NULL, NULL, NULL,
+	NULL, NULL, NULL, SwizzleBlock8Hu, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, SwizzleBlock4HLu, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, SwizzleBlock4HHu, NULL, NULL, NULL,
+	SwizzleBlock32Zu, SwizzleBlock24Zu, SwizzleBlock16Zu, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, SwizzleBlock16SZu, NULL, NULL, NULL, NULL, NULL };
 	
 _getPixelAddress_0 getPixelFun_0[64] = 
 { 	

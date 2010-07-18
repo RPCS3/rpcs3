@@ -49,4 +49,16 @@ extern __forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 Write
 #define SwizzleBlock4HHu SwizzleBlock4HH
 #define SwizzleBlock4HLu SwizzleBlock4HL
 
+#define SwizzleBlock16S SwizzleBlock16
+#define SwizzleBlock32Z SwizzleBlock32
+#define SwizzleBlock24Z SwizzleBlock24
+#define SwizzleBlock16Z SwizzleBlock16
+#define SwizzleBlock16SZ SwizzleBlock16
+
+#define SwizzleBlock16Su SwizzleBlock16u
+#define SwizzleBlock32Zu SwizzleBlock32u
+#define SwizzleBlock24Zu SwizzleBlock24u
+#define SwizzleBlock16Zu SwizzleBlock16u
+#define SwizzleBlock16SZu SwizzleBlock16u
+
 #endif // MEM_SWIZZLE_H_INCLUDED

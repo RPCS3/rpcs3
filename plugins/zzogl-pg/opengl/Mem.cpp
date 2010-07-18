@@ -172,7 +172,7 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 }
 
 template <class T>
-static __forceinline int RealTransfer(TransferData data, TransferFuncts fun, const void* pbyMem, u32 nQWordSize)
+static __forceinline int RealTransfer(TransferData data, /*TransferFuncts fun,*/ const void* pbyMem, u32 nQWordSize)
 {
 	assert(gs.imageTransfer == 0);
 
@@ -183,6 +183,7 @@ static __forceinline int RealTransfer(TransferData data, TransferFuncts fun, con
 	tempY = gs.imageY;
 	tempX = gs.imageX;
 	Point alignedPt;
+	TransferFuncts fun(data.psm);
 
 	nSize = (nQWordSize * 4 * 2) / tp2;
 	nSize = min(nSize, gs.imageWnew * gs.imageHnew);
@@ -212,121 +213,82 @@ static __forceinline int RealTransfer(TransferData data, TransferFuncts fun, con
 	return FinishTransfer(data, nLeftOver);
 }
 
-//DEFINE_TRANSFERLOCAL(32, u32, 2, 32, 8, 8, _, SwizzleBlock32);
 int TransferHostLocal32(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(2, 32, 8, 8, 32, PSMCT32);
-	TransferFuncts fun(writePixel32_0, getPixelAddress32_0, SwizzleBlock32, SwizzleBlock32u);
-
-	return RealTransfer<u32>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u32>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(32Z, u32, 2, 32, 8, 8, _, SwizzleBlock32);
 int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(2, 32, 8, 8, 32, PSMT32Z);
-	TransferFuncts fun(writePixel32Z_0, getPixelAddress32Z_0, SwizzleBlock32, SwizzleBlock32u);
-
-	return RealTransfer<u32>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u32>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(24, u8, 8, 32, 8, 8, _24, SwizzleBlock24);
 int TransferHostLocal24(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(8, 32, 8, 8, 24, PSMCT24);
-	TransferFuncts fun(writePixel24_0, getPixelAddress24_0, SwizzleBlock24, SwizzleBlock24u);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(24Z, u8, 8, 32, 8, 8, _24, SwizzleBlock24);
 int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(8, 32, 8, 8, 24, PSMT24Z);
-	TransferFuncts fun(writePixel24Z_0, getPixelAddress24Z_0, SwizzleBlock24, SwizzleBlock24u);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(16, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 16, 16, 8, 16, PSMCT16);
-	TransferFuncts fun(writePixel16_0, getPixelAddress16_0, SwizzleBlock16, SwizzleBlock16u);
-
-	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(16S, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16S(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 16, 16, 8, 16, PSMCT16S);
-	TransferFuncts fun(writePixel16S_0, getPixelAddress16S_0, SwizzleBlock16, SwizzleBlock16u);
-
-	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(16Z, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16Z(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 16, 16, 8, 16, PSMT16Z);
-	TransferFuncts fun(writePixel16Z_0, getPixelAddress16Z_0, SwizzleBlock16, SwizzleBlock16u);
-
-	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(16SZ, u16, 4, 16, 16, 8, _, SwizzleBlock16);
 int TransferHostLocal16SZ(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 16, 16, 8, 16, PSMT16SZ);
-	TransferFuncts fun(writePixel16SZ_0, getPixelAddress16SZ_0, SwizzleBlock16, SwizzleBlock16u);
-
-	return RealTransfer<u16>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u16>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(8, u8, 4, 8, 16, 16, _, SwizzleBlock8);
 int TransferHostLocal8(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 8, 16, 16, 8, PSMT8);
-	TransferFuncts fun(writePixel8_0, getPixelAddress8_0, SwizzleBlock8, SwizzleBlock8u);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(4, u8, 8, 4, 32, 16, _4, SwizzleBlock4);
 int TransferHostLocal4(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(8, 4, 32, 16, 4, PSMT4);
-	TransferFuncts fun(writePixel4_0, getPixelAddress4_0, SwizzleBlock4, SwizzleBlock4u);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(8H, u8, 4, 32, 8, 8, _, SwizzleBlock8H);
 int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(4, 32, 8, 8, 8, PSMT8H);
-	TransferFuncts fun(writePixel8H_0, getPixelAddress8H_0, SwizzleBlock8H, SwizzleBlock8Hu);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(4HL, u8, 8, 32, 8, 8, _4, SwizzleBlock4HL);
 int TransferHostLocal4HL(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(8, 32, 8, 8, 4, PSMT4HL);
-	TransferFuncts fun(writePixel4HL_0, getPixelAddress4HL_0, SwizzleBlock4HL, SwizzleBlock4HLu);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
-//DEFINE_TRANSFERLOCAL(4HH, u8, 8, 32, 8, 8, _4, SwizzleBlock4HH);
 int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize)
 {
 	TransferData data(8, 32, 8, 8, 4, PSMT4HH);
-	TransferFuncts fun(writePixel4HH_0, getPixelAddress4HH_0, SwizzleBlock4HH, SwizzleBlock4HHu);
-
-	return RealTransfer<u8>(data, fun, pbyMem, nQWordSize);
+	return RealTransfer<u8>(data, pbyMem, nQWordSize);
 }
 
 void TransferLocalHost32(void* pbyMem, u32 nQWordSize) 		{ FUNCLOG }
