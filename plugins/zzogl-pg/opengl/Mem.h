@@ -48,13 +48,6 @@ extern _getPixelAddress_0 getPixelFun_0[64];
 extern _writePixel_0 writePixelFun_0[64];
 extern _readPixel_0 readPixelFun_0[64];
 
-enum Psm_Size
-{
-	PSM_ = 0,
-	PSM_4_,
-	PSM_24_
-};
-
 // Both of the following structs should probably be local class variables or in a namespace,
 // but this works for the moment.
 
@@ -66,8 +59,8 @@ struct TransferData
 	u32 blockwidth;
 	u32 blockheight;
 	u32 transfersize;
-	Psm_Size psm;
-	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, Psm_Size ps)
+	u32 psm;
+	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, u32 ps)
 	{
 		widthlimit = limit;
 		blockbits = bits;
