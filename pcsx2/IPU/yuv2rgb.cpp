@@ -23,6 +23,10 @@
 #include "IPU.h"
 #include "yuv2rgb.h"
 
+// The IPU's colour space conversion conforms to ITU-R Recommendation BT.601 if anyone wants to make a
+// faster or "more accurate" implementation, but this is the precise documented integer method used by
+// the hardware and is fast enough with SSE2.
+
 #define IPU_Y_BIAS 16
 #define IPU_C_BIAS 128
 #define IPU_Y_COEFF 0x95	//  1.1640625
