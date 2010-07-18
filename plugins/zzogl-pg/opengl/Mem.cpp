@@ -172,10 +172,11 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 }
 
 template <class T>
-static __forceinline int RealTransfer(TransferData data, /*TransferFuncts fun,*/ const void* pbyMem, u32 nQWordSize)
+static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSize)
 {
 	assert(gs.imageTransfer == 0);
-
+	TransferData data = tData[psm];
+	TransferFuncts fun(data.psm);
 	pstart = g_pbyGSMemory + gs.dstbuf.bp * 256;
 	const T* pbuf = (const T*)pbyMem;
 	const int tp2 = TransPitch(2, data.transfersize);
@@ -183,8 +184,7 @@ static __forceinline int RealTransfer(TransferData data, /*TransferFuncts fun,*/
 	tempY = gs.imageY;
 	tempX = gs.imageX;
 	Point alignedPt;
-	TransferFuncts fun(data.psm);
-
+	
 	nSize = (nQWordSize * 4 * 2) / tp2;
 	nSize = min(nSize, gs.imageWnew * gs.imageHnew);
 
@@ -213,83 +213,19 @@ static __forceinline int RealTransfer(TransferData data, /*TransferFuncts fun,*/
 	return FinishTransfer(data, nLeftOver);
 }
 
-int TransferHostLocal32(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(2, 32, 8, 8, 32, PSMCT32);
-	return RealTransfer<u32>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(2, 32, 8, 8, 32, PSMT32Z);
-	return RealTransfer<u32>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal24(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(8, 32, 8, 8, 24, PSMCT24);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(8, 32, 8, 8, 24, PSMT24Z);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal16(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 16, 16, 8, 16, PSMCT16);
-	return RealTransfer<u16>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal16S(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 16, 16, 8, 16, PSMCT16S);
-	return RealTransfer<u16>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal16Z(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 16, 16, 8, 16, PSMT16Z);
-	return RealTransfer<u16>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal16SZ(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 16, 16, 8, 16, PSMT16SZ);
-	return RealTransfer<u16>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal8(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 8, 16, 16, 8, PSMT8);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal4(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(8, 4, 32, 16, 4, PSMT4);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(4, 32, 8, 8, 8, PSMT8H);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal4HL(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(8, 32, 8, 8, 4, PSMT4HL);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
-
-int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize)
-{
-	TransferData data(8, 32, 8, 8, 4, PSMT4HH);
-	return RealTransfer<u8>(data, pbyMem, nQWordSize);
-}
+int TransferHostLocal32(const void* pbyMem, u32 nQWordSize)  { return RealTransfer<u32>(PSMCT32, pbyMem, nQWordSize);  }
+int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u32>(PSMT32Z, pbyMem, nQWordSize);  }
+int TransferHostLocal24(const void* pbyMem, u32 nQWordSize)  { return RealTransfer<u8>(PSMCT24, pbyMem, nQWordSize);   }
+int TransferHostLocal24Z(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u8>(PSMT24Z, pbyMem, nQWordSize);   }
+int TransferHostLocal16(const void* pbyMem, u32 nQWordSize)  { return RealTransfer<u16>(PSMCT16, pbyMem, nQWordSize);  }
+int TransferHostLocal16S(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u16>(PSMCT16S, pbyMem, nQWordSize); }
+int TransferHostLocal16Z(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u16>(PSMT16Z, pbyMem, nQWordSize);  }
+int TransferHostLocal16SZ(const void* pbyMem, u32 nQWordSize){ return RealTransfer<u16>(PSMT16SZ, pbyMem, nQWordSize); }
+int TransferHostLocal8(const void* pbyMem, u32 nQWordSize)   { return RealTransfer<u8>(PSMT8, pbyMem, nQWordSize);     }
+int TransferHostLocal4(const void* pbyMem, u32 nQWordSize)   { return RealTransfer<u8>(PSMT4, pbyMem, nQWordSize);     }
+int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize)  { return RealTransfer<u8>(PSMT8H, pbyMem, nQWordSize);    }
+int TransferHostLocal4HL(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u8>(PSMT4HL, pbyMem, nQWordSize);   }
+int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u8>(PSMT4HH, pbyMem, nQWordSize);   }
 
 void TransferLocalHost32(void* pbyMem, u32 nQWordSize) 		{ FUNCLOG }
 void TransferLocalHost24(void* pbyMem, u32 nQWordSize) 		{FUNCLOG}

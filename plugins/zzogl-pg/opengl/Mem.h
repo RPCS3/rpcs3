@@ -62,7 +62,7 @@ struct TransferData
 	u32 blockheight;
 	u32 transfersize;
 	u32 psm;
-	__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, u32 ps)
+	/*__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, u32 ps)
 	{
 		widthlimit = limit;
 		blockbits = bits;
@@ -70,7 +70,7 @@ struct TransferData
 		blockheight = height;
 		transfersize = size;
 		psm = ps;
-	}
+	}*/
 };
 
 struct TransferFuncts
@@ -94,6 +94,7 @@ struct TransferFuncts
 	}
 };
 
+extern TransferData tData[64];
 // rest not visible externally
 
 struct BLOCK
