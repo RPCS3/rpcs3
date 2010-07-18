@@ -253,26 +253,27 @@ void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 	b.pageTable = &g_pageTable##psm[0][0]; \
 	b.blockTable = &g_blockTable##psm[0][0]; \
 	b.columnTable = &g_columnTable##psmcol[0][0]; \
+	\
 	assert( sizeof(g_pageTable##psm) == bw*bh*sizeof(g_pageTable##psm[0][0]) ); \
+	\
 	psrcf = (float*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; \
 	psrcw = (u16*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; \
-	for(i = 0; i < bh; ++i) { \
-		for(j = 0; j < bw; ++j) { \
-			/* fill the table */ \
-			u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
-			b.pageTable[i*bw+j] = u; \
-			if( floatfmt ) { \
+	\
+	if (floatfmt) \
+	{ \
+		for(i = 0; i < bh; ++i) \
+		{ \
+			for(j = 0; j < bw; ++j) \
+			{ \
+				/* fill the table */ \
+				u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
+				b.pageTable[i*bw+j] = u; \
 				psrcf[i*BLOCK_TEXWIDTH+j] = (float)(u) / (float)(GPU_TEXWIDTH*mult); \
 			} \
-			else { \
-				psrcw[i*BLOCK_TEXWIDTH+j] = u; \
-			} \
 		} \
-	} \
-	\
-	if( floatfmt ) { \
 		assert( floatfmt ); \
 		psrcv = (Vector*)&vBilinearData[0] + ox + oy * BLOCK_TEXWIDTH; \
+		\
 		for(i = 0; i < bh; ++i) { \
 			for(j = 0; j < bw; ++j) { \
 				Vector* pv = &psrcv[i*BLOCK_TEXWIDTH+j]; \
@@ -283,109 +284,91 @@ void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 			} \
 		} \
 	} \
-	b.getPixelAddress = getPixelAddress##psm; \
-	b.getPixelAddress_0 = getPixelAddress##psm##_0; \
-	b.writePixel = writePixel##psm; \
-	b.writePixel_0 = writePixel##psm##_0; \
-	b.readPixel = readPixel##psm; \
-	b.readPixel_0 = readPixel##psm##_0; \
-	b.TransferHostLocal = TransferHostLocal##psm; \
-	b.TransferLocalHost = TransferLocalHost##psm; \
+	else \
+	{ \
+		for(i = 0; i < bh; ++i) \
+		{ \
+			for(j = 0; j < bw; ++j) \
+			{ \
+				/* fill the table */ \
+				u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
+				b.pageTable[i*bw+j] = u; \
+				psrcw[i*BLOCK_TEXWIDTH+j] = u; \
+			} \
+		} \
+	} \
 } \
- 
+
 void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
 {
 	FUNCLOG
 	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * (floatfmt ? 4 : 2));
 
-	if (floatfmt)
-		vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(Vector));
+	if (floatfmt) vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(Vector));
 
 	int i, j;
-
 	BLOCK b;
-
 	float* psrcf = NULL;
-
 	u16* psrcw = NULL;
-
 	Vector* psrcv = NULL;
 
 	memset(m_Blocks, 0, sizeof(m_Blocks));
 
 	// 32
 	FILL_BLOCK(64, 32, 0, 0, 1, 32, 32);
-
 	m_Blocks[PSMCT32] = b;
+	m_Blocks[PSMCT32].SetFun(PSMCT32);
 
 	// 24 (same as 32 except write/readPixel are different)
 	m_Blocks[PSMCT24] = b;
-	m_Blocks[PSMCT24].writePixel = writePixel24;
-	m_Blocks[PSMCT24].writePixel_0 = writePixel24_0;
-	m_Blocks[PSMCT24].readPixel = readPixel24;
-	m_Blocks[PSMCT24].readPixel_0 = readPixel24_0;
-	m_Blocks[PSMCT24].TransferHostLocal = TransferHostLocal24;
-	m_Blocks[PSMCT24].TransferLocalHost = TransferLocalHost24;
+	m_Blocks[PSMCT24].SetFun(PSMCT24);
 
 	// 8H (same as 32 except write/readPixel are different)
 	m_Blocks[PSMT8H] = b;
-	m_Blocks[PSMT8H].writePixel = writePixel8H;
-	m_Blocks[PSMT8H].writePixel_0 = writePixel8H_0;
-	m_Blocks[PSMT8H].readPixel = readPixel8H;
-	m_Blocks[PSMT8H].readPixel_0 = readPixel8H_0;
-	m_Blocks[PSMT8H].TransferHostLocal = TransferHostLocal8H;
-	m_Blocks[PSMT8H].TransferLocalHost = TransferLocalHost8H;
+	m_Blocks[PSMT8H].SetFun(PSMT8H);
 
 	m_Blocks[PSMT4HL] = b;
-	m_Blocks[PSMT4HL].writePixel = writePixel4HL;
-	m_Blocks[PSMT4HL].writePixel_0 = writePixel4HL_0;
-	m_Blocks[PSMT4HL].readPixel = readPixel4HL;
-	m_Blocks[PSMT4HL].readPixel_0 = readPixel4HL_0;
-	m_Blocks[PSMT4HL].TransferHostLocal = TransferHostLocal4HL;
-	m_Blocks[PSMT4HL].TransferLocalHost = TransferLocalHost4HL;
+	m_Blocks[PSMT4HL].SetFun(PSMT4HL);
+	
 	m_Blocks[PSMT4HH] = b;
-
-	m_Blocks[PSMT4HH].writePixel = writePixel4HH;
-	m_Blocks[PSMT4HH].writePixel_0 = writePixel4HH_0;
-	m_Blocks[PSMT4HH].readPixel = readPixel4HH;
-	m_Blocks[PSMT4HH].readPixel_0 = readPixel4HH_0;
-	m_Blocks[PSMT4HH].TransferHostLocal = TransferHostLocal4HH;
-	m_Blocks[PSMT4HH].TransferLocalHost = TransferLocalHost4HH;
+	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
 
 	// 32z
 	FILL_BLOCK(64, 32, 64, 0, 1, 32Z, 32);
 	m_Blocks[PSMT32Z] = b;
+	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
 
 	// 24Z (same as 32Z except write/readPixel are different)
 	m_Blocks[PSMT24Z] = b;
-	m_Blocks[PSMT24Z].writePixel = writePixel24Z;
-	m_Blocks[PSMT24Z].writePixel_0 = writePixel24Z_0;
-	m_Blocks[PSMT24Z].readPixel = readPixel24Z;
-	m_Blocks[PSMT24Z].readPixel_0 = readPixel24Z_0;
-	m_Blocks[PSMT24Z].TransferHostLocal = TransferHostLocal24Z;
-	m_Blocks[PSMT24Z].TransferLocalHost = TransferLocalHost24Z;
+	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
 
 	// 16
 	FILL_BLOCK(64, 64, 0, 32, 2, 16, 16);
 	m_Blocks[PSMCT16] = b;
+	m_Blocks[PSMCT16].SetFun(PSMCT16);
 
 	// 16s
 	FILL_BLOCK(64, 64, 64, 32, 2, 16S, 16);
 	m_Blocks[PSMCT16S] = b;
+	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
 
 	// 16z
 	FILL_BLOCK(64, 64, 0, 96, 2, 16Z, 16);
 	m_Blocks[PSMT16Z] = b;
+	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
 
 	// 16sz
 	FILL_BLOCK(64, 64, 64, 96, 2, 16SZ, 16);
 	m_Blocks[PSMT16SZ] = b;
+	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
 
 	// 8
 	FILL_BLOCK(128, 64, 0, 160, 4, 8, 8);
 	m_Blocks[PSMT8] = b;
+	m_Blocks[PSMT8].SetFun(PSMT8);
 
 	// 4
 	FILL_BLOCK(128, 128, 0, 224, 8, 4, 4);
 	m_Blocks[PSMT4] = b;
+	m_Blocks[PSMT4].SetFun(PSMT4);
 }

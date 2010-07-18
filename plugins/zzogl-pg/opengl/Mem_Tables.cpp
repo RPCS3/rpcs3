@@ -326,6 +326,54 @@ _readPixel_0 readPixelFun_0[64] =
 	NULL, NULL, readPixel16SZ_0, NULL, NULL, NULL, NULL, NULL 
 };
 
+_writePixel writePixelFun[64] = 
+{ 	
+	writePixel32, writePixel24, writePixel16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, writePixel16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, writePixel8, writePixel4, NULL, NULL, NULL,
+	NULL, NULL, NULL, writePixel8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, writePixel4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, writePixel4HH, NULL, NULL, NULL,
+	writePixel32Z, writePixel24Z, writePixel16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, writePixel16SZ, NULL, NULL, NULL, NULL, NULL 
+};
+
+_readPixel readPixelFun[64] = 
+{ 	
+	readPixel32, readPixel24, readPixel16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, readPixel16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, readPixel8, readPixel4, NULL, NULL, NULL,
+	NULL, NULL, NULL, readPixel8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, readPixel4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, readPixel4HH, NULL, NULL, NULL,
+	readPixel32Z, readPixel24Z, readPixel16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, readPixel16SZ, NULL, NULL, NULL, NULL, NULL 
+};
+
+_TransferHostLocal TransferHostLocalFun[64] = 
+{ 	
+	TransferHostLocal32, TransferHostLocal24, TransferHostLocal16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, TransferHostLocal16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, TransferHostLocal8, TransferHostLocal4, NULL, NULL, NULL,
+	NULL, NULL, NULL, TransferHostLocal8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, TransferHostLocal4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, TransferHostLocal4HH, NULL, NULL, NULL,
+	TransferHostLocal32Z, TransferHostLocal24Z, TransferHostLocal16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, TransferHostLocal16SZ, NULL, NULL, NULL, NULL, NULL 
+};
+
+_TransferLocalHost TransferLocalHostFun[64] = 
+{ 	
+	TransferLocalHost32, TransferLocalHost24, TransferLocalHost16, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, TransferLocalHost16S, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, TransferLocalHost8, TransferLocalHost4, NULL, NULL, NULL,
+	NULL, NULL, NULL, TransferLocalHost8H, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, TransferLocalHost4HL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, TransferLocalHost4HH, NULL, NULL, NULL,
+	TransferLocalHost32Z, TransferLocalHost24Z, TransferLocalHost16Z, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, TransferLocalHost16SZ, NULL, NULL, NULL, NULL, NULL 
+};
+
 #define TD_NULL {0,0,0,0,0,0}
 TransferData tData[64] =
 { 	
