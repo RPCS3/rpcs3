@@ -248,7 +248,7 @@ void CALLBACK GSsetSettingsDir( const char* dir );
 void CALLBACK GSsetLogDir( const char* dir );
 
 void CALLBACK GSvsync(int field);
-void CALLBACK GSgifTransfer(u32 *pMem, u32 addr);
+void CALLBACK GSgifTransfer(const u32 *pMem, u32 addr);
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr);
 void CALLBACK GSgifTransfer2(u32 *pMem, u32 size);
 void CALLBACK GSgifTransfer3(u32 *pMem, u32 size);
@@ -565,7 +565,7 @@ typedef void (CALLBACK* _PS2EsetEmuVersion)(const char* emuId, u32 version);		//
 typedef s32  (CALLBACK* _GSopen)(void *pDsp, char *Title, int multithread);
 typedef s32  (CALLBACK* _GSopen2)( void *pDsp, u32 flags );
 typedef void (CALLBACK* _GSvsync)(int field);
-typedef void (CALLBACK* _GSgifTransfer)(u32 *pMem, u32 size);
+typedef void (CALLBACK* _GSgifTransfer)(const u32 *pMem, u32 size);
 typedef void (CALLBACK* _GSgifTransfer1)(u32 *pMem, u32 addr);
 typedef void (CALLBACK* _GSgifTransfer2)(u32 *pMem, u32 size);
 typedef void (CALLBACK* _GSgifTransfer3)(u32 *pMem, u32 size);

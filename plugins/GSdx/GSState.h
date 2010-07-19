@@ -38,72 +38,74 @@
 
 class GSState : public GSAlignedClass<16>
 {
-	typedef void (GSState::*GIFPackedRegHandler)(GIFPackedReg* r);
+	typedef void (GSState::*GIFPackedRegHandler)(const GIFPackedReg* r);
 
 	GIFPackedRegHandler m_fpGIFPackedRegHandlers[16];
 
-	void GIFPackedRegHandlerNull(GIFPackedReg* r);
-	void GIFPackedRegHandlerPRIM(GIFPackedReg* r);
-	void GIFPackedRegHandlerRGBA(GIFPackedReg* r);
-	void GIFPackedRegHandlerSTQ(GIFPackedReg* r);
-	void GIFPackedRegHandlerUV(GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZF2(GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZ2(GIFPackedReg* r);
-	template<int i> void GIFPackedRegHandlerTEX0(GIFPackedReg* r);
-	template<int i> void GIFPackedRegHandlerCLAMP(GIFPackedReg* r);
-	void GIFPackedRegHandlerFOG(GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZF3(GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZ3(GIFPackedReg* r);
-	void GIFPackedRegHandlerA_D(GIFPackedReg* r);
-	void GIFPackedRegHandlerNOP(GIFPackedReg* r);
+	void GIFPackedRegHandlerNull(const GIFPackedReg* r);
+	void GIFPackedRegHandlerPRIM(const GIFPackedReg* r);
+	void GIFPackedRegHandlerRGBA(const GIFPackedReg* r);
+	void GIFPackedRegHandlerSTQ(const GIFPackedReg* r);
+	void GIFPackedRegHandlerUV(const GIFPackedReg* r);
+	void GIFPackedRegHandlerXYZF2(const GIFPackedReg* r);
+	void GIFPackedRegHandlerXYZ2(const GIFPackedReg* r);
+	template<int i> void GIFPackedRegHandlerTEX0(const GIFPackedReg* r);
+	template<int i> void GIFPackedRegHandlerCLAMP(const GIFPackedReg* r);
+	void GIFPackedRegHandlerFOG(const GIFPackedReg* r);
+	void GIFPackedRegHandlerXYZF3(const GIFPackedReg* r);
+	void GIFPackedRegHandlerXYZ3(const GIFPackedReg* r);
+	void GIFPackedRegHandlerA_D(const GIFPackedReg* r);
+	void GIFPackedRegHandlerNOP(const GIFPackedReg* r);
 
-	typedef void (GSState::*GIFRegHandler)(GIFReg* r);
+	typedef void (GSState::*GIFRegHandler)(const GIFReg* r);
 
 	GIFRegHandler m_fpGIFRegHandlers[256];
 
-	void GIFRegHandlerNull(GIFReg* r);
-	void GIFRegHandlerPRIM(GIFReg* r);
-	void GIFRegHandlerRGBAQ(GIFReg* r);
-	void GIFRegHandlerST(GIFReg* r);
-	void GIFRegHandlerUV(GIFReg* r);
-	void GIFRegHandlerXYZF2(GIFReg* r);
-	void GIFRegHandlerXYZ2(GIFReg* r);
-	template<int i> void GIFRegHandlerTEX0(GIFReg* r);
-	template<int i> void GIFRegHandlerCLAMP(GIFReg* r);
-	void GIFRegHandlerFOG(GIFReg* r);
-	void GIFRegHandlerXYZF3(GIFReg* r);
-	void GIFRegHandlerXYZ3(GIFReg* r);
-	void GIFRegHandlerNOP(GIFReg* r);
-	template<int i> void GIFRegHandlerTEX1(GIFReg* r);
-	template<int i> void GIFRegHandlerTEX2(GIFReg* r);
-	template<int i> void GIFRegHandlerXYOFFSET(GIFReg* r);
-	void GIFRegHandlerPRMODECONT(GIFReg* r);
-	void GIFRegHandlerPRMODE(GIFReg* r);
-	void GIFRegHandlerTEXCLUT(GIFReg* r);
-	void GIFRegHandlerSCANMSK(GIFReg* r);
-	template<int i> void GIFRegHandlerMIPTBP1(GIFReg* r);
-	template<int i> void GIFRegHandlerMIPTBP2(GIFReg* r);
-	void GIFRegHandlerTEXA(GIFReg* r);
-	void GIFRegHandlerFOGCOL(GIFReg* r);
-	void GIFRegHandlerTEXFLUSH(GIFReg* r);
-	template<int i> void GIFRegHandlerSCISSOR(GIFReg* r);
-	template<int i> void GIFRegHandlerALPHA(GIFReg* r);
-	void GIFRegHandlerDIMX(GIFReg* r);
-	void GIFRegHandlerDTHE(GIFReg* r);
-	void GIFRegHandlerCOLCLAMP(GIFReg* r);
-	template<int i> void GIFRegHandlerTEST(GIFReg* r);
-	void GIFRegHandlerPABE(GIFReg* r);
-	template<int i> void GIFRegHandlerFBA(GIFReg* r);
-	template<int i> void GIFRegHandlerFRAME(GIFReg* r);
-	template<int i> void GIFRegHandlerZBUF(GIFReg* r);
-	void GIFRegHandlerBITBLTBUF(GIFReg* r);
-	void GIFRegHandlerTRXPOS(GIFReg* r);
-	void GIFRegHandlerTRXREG(GIFReg* r);
-	void GIFRegHandlerTRXDIR(GIFReg* r);
-	void GIFRegHandlerHWREG(GIFReg* r);
-	void GIFRegHandlerSIGNAL(GIFReg* r);
-	void GIFRegHandlerFINISH(GIFReg* r);
-	void GIFRegHandlerLABEL(GIFReg* r);
+	void ApplyTEX0( uint i, GIFRegTEX0& TEX0 );
+
+	void GIFRegHandlerNull(const GIFReg* r);
+	void GIFRegHandlerPRIM(const GIFReg* r);
+	void GIFRegHandlerRGBAQ(const GIFReg* r);
+	void GIFRegHandlerST(const GIFReg* r);
+	void GIFRegHandlerUV(const GIFReg* r);
+	void GIFRegHandlerXYZF2(const GIFReg* r);
+	void GIFRegHandlerXYZ2(const GIFReg* r);
+	template<int i> void GIFRegHandlerTEX0(const GIFReg* r);
+	template<int i> void GIFRegHandlerCLAMP(const GIFReg* r);
+	void GIFRegHandlerFOG(const GIFReg* r);
+	void GIFRegHandlerXYZF3(const GIFReg* r);
+	void GIFRegHandlerXYZ3(const GIFReg* r);
+	void GIFRegHandlerNOP(const GIFReg* r);
+	template<int i> void GIFRegHandlerTEX1(const GIFReg* r);
+	template<int i> void GIFRegHandlerTEX2(const GIFReg* r);
+	template<int i> void GIFRegHandlerXYOFFSET(const GIFReg* r);
+	void GIFRegHandlerPRMODECONT(const GIFReg* r);
+	void GIFRegHandlerPRMODE(const GIFReg* r);
+	void GIFRegHandlerTEXCLUT(const GIFReg* r);
+	void GIFRegHandlerSCANMSK(const GIFReg* r);
+	template<int i> void GIFRegHandlerMIPTBP1(const GIFReg* r);
+	template<int i> void GIFRegHandlerMIPTBP2(const GIFReg* r);
+	void GIFRegHandlerTEXA(const GIFReg* r);
+	void GIFRegHandlerFOGCOL(const GIFReg* r);
+	void GIFRegHandlerTEXFLUSH(const GIFReg* r);
+	template<int i> void GIFRegHandlerSCISSOR(const GIFReg* r);
+	template<int i> void GIFRegHandlerALPHA(const GIFReg* r);
+	void GIFRegHandlerDIMX(const GIFReg* r);
+	void GIFRegHandlerDTHE(const GIFReg* r);
+	void GIFRegHandlerCOLCLAMP(const GIFReg* r);
+	template<int i> void GIFRegHandlerTEST(const GIFReg* r);
+	void GIFRegHandlerPABE(const GIFReg* r);
+	template<int i> void GIFRegHandlerFBA(const GIFReg* r);
+	template<int i> void GIFRegHandlerFRAME(const GIFReg* r);
+	template<int i> void GIFRegHandlerZBUF(const GIFReg* r);
+	void GIFRegHandlerBITBLTBUF(const GIFReg* r);
+	void GIFRegHandlerTRXPOS(const GIFReg* r);
+	void GIFRegHandlerTRXREG(const GIFReg* r);
+	void GIFRegHandlerTRXDIR(const GIFReg* r);
+	void GIFRegHandlerHWREG(const GIFReg* r);
+	void GIFRegHandlerSIGNAL(const GIFReg* r);
+	void GIFRegHandlerFINISH(const GIFReg* r);
+	void GIFRegHandlerLABEL(const GIFReg* r);
 
 	int m_version;
 	int m_sssize;
@@ -237,13 +239,13 @@ public:
 	virtual void InvalidateTextureCache() {}
 
 	void Move();
-	void Write(uint8* mem, int len);
+	void Write(const uint8* mem, int len);
 	void Read(uint8* mem, int len);
 
 	void SoftReset(uint32 mask);
 	void WriteCSR(uint32 csr) {m_regs->CSR.u32[1] = csr;}
 	void ReadFIFO(uint8* mem, int size);
-	template<int index> void Transfer(uint8* mem, uint32 size);
+	template<int index> void Transfer(const uint8* mem, uint32 size);
 	int Freeze(GSFreezeData* fd, bool sizeonly);
 	int Defrost(const GSFreezeData* fd);
 	void GetLastTag(uint32* tag) {*tag = m_path3hack; m_path3hack = 0;}

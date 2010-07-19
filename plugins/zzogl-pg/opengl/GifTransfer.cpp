@@ -41,7 +41,7 @@ void CALLBACK GSgetLastTag(u64* ptag)
 extern HANDLE g_hCurrentThread;
 #endif
 
-__forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
+__forceinline void gifTransferLog(int index, const u32 *pMem, u32 size)
 {
 #ifdef DEBUG_TRANSFER
 
@@ -65,7 +65,7 @@ __forceinline void gifTransferLog(int index, u32 *pMem, u32 size)
 
 extern int g_GSMultiThreaded;
 
-template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
+template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 {
 	FUNCLOG
 
@@ -174,7 +174,11 @@ template<int index> void _GSgifTransfer(u32 *pMem, u32 size)
 							break;
 
 						case 1:
-							ZeroGS::TransferLocalHost(pMem, len);
+							// This can't happen; downloads can not be started or performed as part of
+							// a GIFtag operation.  They're an entirely separate process that can only be
+							// done through the ReverseFIFO transfer (aka ReadFIFO). --air
+							assert(0);
+							//ZeroGS::TransferLocalHost(pMem, len);
 							break;
 
 						case 2:
@@ -253,7 +257,7 @@ void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
 
 	//ZZLog::GS_Log("GSgifTransfer2 size = %lx (mode %d, gs.path2.tag.nloop = %d).", size, gs.path[1].mode, gs.path[1].tag.nloop);
 
-	_GSgifTransfer<1>(pMem, size);
+	_GSgifTransfer<1>(const_cast<u32*>(pMem), size);
 }
 
 void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
@@ -262,10 +266,10 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 
 	//ZZLog::GS_Log("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d).", size, gs.path[2].mode, gs.path[2].tag.nloop);
 
-	_GSgifTransfer<2>(pMem, size);
+	_GSgifTransfer<2>(const_cast<u32*>(pMem), size);
 }
 
-void CALLBACK GSgifTransfer(u32 *pMem, u32 size)
+void CALLBACK GSgifTransfer(const u32 *pMem, u32 size)
 {
 	FUNCLOG
 

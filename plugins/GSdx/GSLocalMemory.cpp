@@ -543,7 +543,7 @@ GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const G
 ////////////////////
 
 template<int psm, int bsx, int bsy, bool aligned>
-void GSLocalMemory::WriteImageColumn(int l, int r, int y, int h, uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
+void GSLocalMemory::WriteImageColumn(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
 {
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
@@ -572,7 +572,7 @@ void GSLocalMemory::WriteImageColumn(int l, int r, int y, int h, uint8* src, int
 }
 
 template<int psm, int bsx, int bsy, bool aligned>
-void GSLocalMemory::WriteImageBlock(int l, int r, int y, int h, uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
+void GSLocalMemory::WriteImageBlock(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
 {
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
@@ -599,7 +599,7 @@ void GSLocalMemory::WriteImageBlock(int l, int r, int y, int h, uint8* src, int 
 }
 
 template<int psm, int bsx, int bsy>
-void GSLocalMemory::WriteImageLeftRight(int l, int r, int y, int h, uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
+void GSLocalMemory::WriteImageLeftRight(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
 {
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
@@ -626,7 +626,7 @@ void GSLocalMemory::WriteImageLeftRight(int l, int r, int y, int h, uint8* src, 
 }
 
 template<int psm, int bsx, int bsy, int trbpp>
-void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
+void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
 {
 	__aligned16 uint8 buff[64]; // merge buffer for one column
 
@@ -777,7 +777,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, uint8* src, 
 }
 
 template<int psm, int bsx, int bsy, int trbpp>
-void GSLocalMemory::WriteImage(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -801,7 +801,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, uint8* src, int len, GIFRegBITB
 
 	if(ra - la >= bsx && h > 0) // "transfer width" >= "block width" && there is at least one full row
 	{
-		uint8* s = &src[-l * trbpp >> 3];
+		const uint8* s = &src[-l * trbpp >> 3];
 
 		src += srcpitch * h;
 		len -= srcpitch * h;
@@ -886,7 +886,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, uint8* src, int len, GIFRegBITB
 #define IsTopLeftAligned(dsax, tx, ty, bw, bh) \
 	((((int)dsax) & ((bw)-1)) == 0 && ((tx) & ((bw)-1)) == 0 && ((int)dsax) == (tx) && ((ty) & ((bh)-1)) == 0)
 
-void GSLocalMemory::WriteImage24(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage24(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -920,7 +920,7 @@ void GSLocalMemory::WriteImage24(int& tx, int& ty, uint8* src, int len, GIFRegBI
 	}
 }
 
-void GSLocalMemory::WriteImage8H(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage8H(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -954,7 +954,7 @@ void GSLocalMemory::WriteImage8H(int& tx, int& ty, uint8* src, int len, GIFRegBI
 	}
 }
 
-void GSLocalMemory::WriteImage4HL(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage4HL(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -988,7 +988,7 @@ void GSLocalMemory::WriteImage4HL(int& tx, int& ty, uint8* src, int len, GIFRegB
 	}
 }
 
-void GSLocalMemory::WriteImage4HH(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage4HH(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -1021,7 +1021,7 @@ void GSLocalMemory::WriteImage4HH(int& tx, int& ty, uint8* src, int len, GIFRegB
 		ty = th;
 	}
 }
-void GSLocalMemory::WriteImage24Z(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImage24Z(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
 
@@ -1054,13 +1054,13 @@ void GSLocalMemory::WriteImage24Z(int& tx, int& ty, uint8* src, int len, GIFRegB
 		ty = th;
 	}
 }
-void GSLocalMemory::WriteImageX(int& tx, int& ty, uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
+void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(len <= 0) return;
 
-	uint8* pb = (uint8*)src;
-	uint16* pw = (uint16*)src;
-	uint32* pd = (uint32*)src;
+	const uint8* pb = (uint8*)src;
+	const uint16* pw = (uint16*)src;
+	const uint32* pd = (uint32*)src;
 
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;

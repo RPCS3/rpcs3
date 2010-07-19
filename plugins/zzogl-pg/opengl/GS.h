@@ -1010,19 +1010,19 @@ inline u32 ZZOglGet_fbmHighByte(u32 data)
 
 //-------------------------- tex0 comparison
 // Check if old and new tex0 registers have only clut difference
-inline bool ZZOglAllExceptClutIsSame(u32* oldtex, u32* newtex)
+inline bool ZZOglAllExceptClutIsSame(const u32* oldtex, const u32* newtex)
 {
 	return ((oldtex[0] == newtex[0]) && ((oldtex[1] & 0x1f) == (newtex[1] & 0x1f)));
 }
 
 // Check if the CLUT registers are same, except CLD
-inline bool ZZOglClutMinusCLDunchanged(u32* oldtex, u32* newtex)
+inline bool ZZOglClutMinusCLDunchanged(const u32* oldtex, const u32* newtex)
 {
 	return ((oldtex[1] & 0x1fffffe0) == (newtex[1] & 0x1fffffe0));
 }
 
 // Check if CLUT storage mode is not changed (CSA, CSM and CSPM)
-inline bool ZZOglClutStorageUnchanged(u32* oldtex, u32* newtex)
+inline bool ZZOglClutStorageUnchanged(const u32* oldtex, const u32* newtex)
 {
 	return ((oldtex[1] & 0x1ff10000) == (newtex[1] & 0x1ff10000));
 }

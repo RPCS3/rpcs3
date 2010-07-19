@@ -319,24 +319,24 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 	s_gs->ReadFIFO(mem, size);
 }
 
-EXPORT_C GSgifTransfer(uint8* mem, uint32 size)
+EXPORT_C GSgifTransfer(const uint8* mem, uint32 size)
 {
-	s_gs->Transfer<3>(mem , size);
+	s_gs->Transfer<3>(mem, size);
 }
 
 EXPORT_C GSgifTransfer1(uint8* mem, uint32 addr)
 {
-	s_gs->Transfer<0>(mem + addr, (0x4000 - addr) / 16);
+	s_gs->Transfer<0>(const_cast<uint8*>(mem) + addr, (0x4000 - addr) / 16);
 }
 
 EXPORT_C GSgifTransfer2(uint8* mem, uint32 size)
 {
-	s_gs->Transfer<1>(mem, size);
+	s_gs->Transfer<1>(const_cast<uint8*>(mem), size);
 }
 
 EXPORT_C GSgifTransfer3(uint8* mem, uint32 size)
 {
-	s_gs->Transfer<2>(mem, size);
+	s_gs->Transfer<2>(const_cast<uint8*>(mem), size);
 }
 
 EXPORT_C GSvsync(int field)

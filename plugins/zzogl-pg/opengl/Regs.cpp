@@ -88,22 +88,22 @@ inline bool NoHighlights(int i)
 	return (!(conf.settings().xenosaga_spec) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;
 }
 
-void __fastcall GIFPackedRegHandlerNull(u32* data)
+void __gifCall GIFPackedRegHandlerNull(const u32* data)
 {
 	FUNCLOG
 	ZZLog::Debug_Log("Unexpected packed reg handler %8.8lx_%8.8lx %x.", data[0], data[1], data[2]);
 }
 
 // All these just call their non-packed equivalent.
-void __fastcall GIFPackedRegHandlerPRIM(u32* data) { GIFRegHandlerPRIM(data); }
-void __fastcall GIFPackedRegHandlerTEX0_1(u32* data) { GIFRegHandlerTEX0_1(data); }
-void __fastcall GIFPackedRegHandlerTEX0_2(u32* data) { GIFRegHandlerTEX0_2(data); }
-void __fastcall GIFPackedRegHandlerCLAMP_1(u32* data) { GIFRegHandlerCLAMP_1(data); }
-void __fastcall GIFPackedRegHandlerCLAMP_2(u32* data) { GIFRegHandlerCLAMP_2(data); }
-void __fastcall GIFPackedRegHandlerXYZF3(u32* data) { GIFRegHandlerXYZF3(data); }
-void __fastcall GIFPackedRegHandlerXYZ3(u32* data) { GIFRegHandlerXYZ3(data); }
+void __gifCall GIFPackedRegHandlerPRIM(const u32* data) { GIFRegHandlerPRIM(data); }
+void __gifCall GIFPackedRegHandlerTEX0_1(const u32* data) { GIFRegHandlerTEX0_1(data); }
+void __gifCall GIFPackedRegHandlerTEX0_2(const u32* data) { GIFRegHandlerTEX0_2(data); }
+void __gifCall GIFPackedRegHandlerCLAMP_1(const u32* data) { GIFRegHandlerCLAMP_1(data); }
+void __gifCall GIFPackedRegHandlerCLAMP_2(const u32* data) { GIFRegHandlerCLAMP_2(data); }
+void __gifCall GIFPackedRegHandlerXYZF3(const u32* data) { GIFRegHandlerXYZF3(data); }
+void __gifCall GIFPackedRegHandlerXYZ3(const u32* data) { GIFRegHandlerXYZ3(data); }
 
-void __fastcall GIFPackedRegHandlerRGBA(u32* data)
+void __gifCall GIFPackedRegHandlerRGBA(const u32* data)
 {
 	FUNCLOG
 	gs.rgba = (data[0] & 0xff) |
@@ -114,7 +114,7 @@ void __fastcall GIFPackedRegHandlerRGBA(u32* data)
 	gs.vertexregs.q = gs.q;
 }
 
-void __fastcall GIFPackedRegHandlerSTQ(u32* data)
+void __gifCall GIFPackedRegHandlerSTQ(const u32* data)
 {
 	FUNCLOG
 	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
@@ -122,7 +122,7 @@ void __fastcall GIFPackedRegHandlerSTQ(u32* data)
 	*(u32*)&gs.q = data[2];
 }
 
-void __fastcall GIFPackedRegHandlerUV(u32* data)
+void __gifCall GIFPackedRegHandlerUV(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.u = data[0] & 0x3fff;
@@ -158,7 +158,7 @@ void __forceinline KICK_VERTEX3()
 	}
 }
 
-void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
+void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
@@ -178,7 +178,7 @@ void __fastcall GIFPackedRegHandlerXYZF2(u32* data)
 	}
 }
 
-void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
+void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
@@ -197,13 +197,13 @@ void __fastcall GIFPackedRegHandlerXYZ2(u32* data)
 	}
 }
 
-void __fastcall GIFPackedRegHandlerFOG(u32* data)
+void __gifCall GIFPackedRegHandlerFOG(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.f = (data[3] & 0xff0) >> 4;
 }
 
-void __fastcall GIFPackedRegHandlerA_D(u32* data)
+void __gifCall GIFPackedRegHandlerA_D(const u32* data)
 {
 	FUNCLOG
 
@@ -213,12 +213,12 @@ void __fastcall GIFPackedRegHandlerA_D(u32* data)
 		GIFRegHandlerNull(data);
 }
 
-void __fastcall GIFPackedRegHandlerNOP(u32* data)
+void __gifCall GIFPackedRegHandlerNOP(const u32* data)
 {
 	FUNCLOG
 }
 
-void tex0Write(int i, u32 *data)
+void tex0Write(int i, const u32 *data)
 {
 	FUNCLOG
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
@@ -251,7 +251,7 @@ void tex0Write(int i, u32 *data)
 	}
 }
 
-void tex2Write(int i, u32 *data)
+void tex2Write(int i, const u32 *data)
 {
 	FUNCLOG
 	tex0Info& tex0 = ZeroGS::vb[i].tex0;
@@ -297,7 +297,7 @@ void tex2Write(int i, u32 *data)
 	if (PSMT_ISCLUT(tex0.psm)) ZeroGS::CluttingForFlushedTex(&tex0, data[1], i);
 }
 
-__forceinline void frameWrite(int i, u32 *data)
+__forceinline void frameWrite(int i, const u32 *data)
 {
 	FUNCLOG
 	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
@@ -322,7 +322,7 @@ __forceinline void frameWrite(int i, u32 *data)
 	ZeroGS::vb[i].bNeedFrameCheck = 1;
 }
 
-__forceinline void testWrite(int i, u32 *data)
+__forceinline void testWrite(int i, const u32 *data)
 {
 	FUNCLOG
 	pixTest* test = &ZeroGS::vb[i].test;
@@ -346,7 +346,7 @@ __forceinline void testWrite(int i, u32 *data)
 #ifndef __LINUX__
 __forceinline 
 #endif
-void clampWrite(int i, u32 *data)
+void clampWrite(int i, const u32 *data)
 {
 	FUNCLOG
 	clampInfo& clamp = ZeroGS::vb[i].clamp;
@@ -367,7 +367,7 @@ void clampWrite(int i, u32 *data)
 	}
 }
 
-void __fastcall GIFRegHandlerNull(u32* data)
+void __gifCall GIFRegHandlerNull(const u32* data)
 {
 	FUNCLOG
 #ifdef _DEBUG
@@ -383,7 +383,7 @@ void __fastcall GIFRegHandlerNull(u32* data)
 #endif
 }
 
-void __fastcall GIFRegHandlerPRIM(u32 *data)
+void __gifCall GIFRegHandlerPRIM(const u32 *data)
 {
 	FUNCLOG
 
@@ -403,7 +403,7 @@ void __fastcall GIFRegHandlerPRIM(u32 *data)
 	ZeroGS::Prim();
 }
 
-void __fastcall GIFRegHandlerRGBAQ(u32* data)
+void __gifCall GIFRegHandlerRGBAQ(const u32* data)
 {
 	FUNCLOG
 	gs.rgba = data[0];
@@ -411,7 +411,7 @@ void __fastcall GIFRegHandlerRGBAQ(u32* data)
 	*(u32*)&gs.vertexregs.q = data[1];
 }
 
-void __fastcall GIFRegHandlerST(u32* data)
+void __gifCall GIFRegHandlerST(const u32* data)
 {
 	FUNCLOG
 	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
@@ -419,14 +419,14 @@ void __fastcall GIFRegHandlerST(u32* data)
 	//*(u32*)&gs.q = data[2];
 }
 
-void __fastcall GIFRegHandlerUV(u32* data)
+void __gifCall GIFRegHandlerUV(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.u = (data[0]) & 0x3fff;
 	gs.vertexregs.v = (data[0] >> 16) & 0x3fff;
 }
 
-void __fastcall GIFRegHandlerXYZF2(u32* data)
+void __gifCall GIFRegHandlerXYZF2(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0]) & 0xffff;
@@ -439,7 +439,7 @@ void __fastcall GIFRegHandlerXYZF2(u32* data)
 	KICK_VERTEX2();
 }
 
-void __fastcall GIFRegHandlerXYZ2(u32* data)
+void __gifCall GIFRegHandlerXYZ2(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0]) & 0xffff;
@@ -451,7 +451,7 @@ void __fastcall GIFRegHandlerXYZ2(u32* data)
 	KICK_VERTEX2();
 }
 
-void __fastcall GIFRegHandlerTEX0_1(u32* data)
+void __gifCall GIFRegHandlerTEX0_1(const u32* data)
 {
 	FUNCLOG
 
@@ -460,7 +460,7 @@ void __fastcall GIFRegHandlerTEX0_1(u32* data)
 	tex0Write(0, data);
 }
 
-void __fastcall GIFRegHandlerTEX0_2(u32* data)
+void __gifCall GIFRegHandlerTEX0_2(const u32* data)
 {
 	FUNCLOG
 
@@ -469,7 +469,7 @@ void __fastcall GIFRegHandlerTEX0_2(u32* data)
 	tex0Write(1, data);
 }
 
-void __fastcall GIFRegHandlerCLAMP_1(u32* data)
+void __gifCall GIFRegHandlerCLAMP_1(const u32* data)
 {
 	FUNCLOG
 
@@ -478,7 +478,7 @@ void __fastcall GIFRegHandlerCLAMP_1(u32* data)
 	clampWrite(0, data);
 }
 
-void __fastcall GIFRegHandlerCLAMP_2(u32* data)
+void __gifCall GIFRegHandlerCLAMP_2(const u32* data)
 {
 	FUNCLOG
 
@@ -487,14 +487,14 @@ void __fastcall GIFRegHandlerCLAMP_2(u32* data)
 	clampWrite(1, data);
 }
 
-void __fastcall GIFRegHandlerFOG(u32* data)
+void __gifCall GIFRegHandlerFOG(const u32* data)
 {
 	FUNCLOG
 	//gs.gsvertex[gs.primIndex].f = (data[1] >> 24);	// shift to upper bits
 	gs.vertexregs.f = data[1] >> 24;
 }
 
-void __fastcall GIFRegHandlerXYZF3(u32* data)
+void __gifCall GIFRegHandlerXYZF3(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0]) & 0xffff;
@@ -507,7 +507,7 @@ void __fastcall GIFRegHandlerXYZF3(u32* data)
 	KICK_VERTEX3();
 }
 
-void __fastcall GIFRegHandlerXYZ3(u32* data)
+void __gifCall GIFRegHandlerXYZ3(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.x = (data[0]) & 0xffff;
@@ -519,12 +519,12 @@ void __fastcall GIFRegHandlerXYZ3(u32* data)
 	KICK_VERTEX3();
 }
 
-void __fastcall GIFRegHandlerNOP(u32* data)
+void __gifCall GIFRegHandlerNOP(const u32* data)
 {
 	FUNCLOG
 }
 
-void tex1Write(int i, u32* data)
+void tex1Write(int i, const u32* data)
 {
 	FUNCLOG
 	tex1Info& tex1 = ZeroGS::vb[i].tex1;
@@ -545,7 +545,7 @@ void tex1Write(int i, u32* data)
 	tex1.k	= (data[1] >> 4) & 0xff;
 }
 
-void __fastcall GIFRegHandlerTEX1_1(u32* data)
+void __gifCall GIFRegHandlerTEX1_1(const u32* data)
 {
 	FUNCLOG
 
@@ -554,7 +554,7 @@ void __fastcall GIFRegHandlerTEX1_1(u32* data)
 	tex1Write(0, data);
 }
 
-void __fastcall GIFRegHandlerTEX1_2(u32* data)
+void __gifCall GIFRegHandlerTEX1_2(const u32* data)
 {
 	FUNCLOG
 
@@ -563,19 +563,19 @@ void __fastcall GIFRegHandlerTEX1_2(u32* data)
 	tex1Write(1, data);
 }
 
-void __fastcall GIFRegHandlerTEX2_1(u32* data)
+void __gifCall GIFRegHandlerTEX2_1(const u32* data)
 {
 	FUNCLOG
 	tex2Write(0, data);
 }
 
-void __fastcall GIFRegHandlerTEX2_2(u32* data)
+void __gifCall GIFRegHandlerTEX2_2(const u32* data)
 {
 	FUNCLOG
 	tex2Write(1, data);
 }
 
-void __fastcall GIFRegHandlerXYOFFSET_1(u32* data)
+void __gifCall GIFRegHandlerXYOFFSET_1(const u32* data)
 {
 	FUNCLOG
 	// eliminator low 4 bits for now
@@ -588,7 +588,7 @@ void __fastcall GIFRegHandlerXYOFFSET_1(u32* data)
 //  }
 }
 
-void __fastcall GIFRegHandlerXYOFFSET_2(u32* data)
+void __gifCall GIFRegHandlerXYOFFSET_2(const u32* data)
 {
 	FUNCLOG
 	ZeroGS::vb[1].offset.x = (data[0]) & 0xffff;
@@ -600,7 +600,7 @@ void __fastcall GIFRegHandlerXYOFFSET_2(u32* data)
 //  }
 }
 
-void __fastcall GIFRegHandlerPRMODECONT(u32* data)
+void __gifCall GIFRegHandlerPRMODECONT(const u32* data)
 {
 	FUNCLOG
 	gs.prac = data[0] & 0x1;
@@ -609,7 +609,7 @@ void __fastcall GIFRegHandlerPRMODECONT(u32* data)
 	ZeroGS::Prim();
 }
 
-void __fastcall GIFRegHandlerPRMODE(u32* data)
+void __gifCall GIFRegHandlerPRMODE(const u32* data)
 {
 	FUNCLOG
 	gs._prim[0]._val = (data[0] >> 3) & 0xff;
@@ -617,7 +617,7 @@ void __fastcall GIFRegHandlerPRMODE(u32* data)
 	if (gs.prac == 0) ZeroGS::Prim();
 }
 
-void __fastcall GIFRegHandlerTEXCLUT(u32* data)
+void __gifCall GIFRegHandlerTEXCLUT(const u32* data)
 {
 	FUNCLOG
 
@@ -629,7 +629,7 @@ void __fastcall GIFRegHandlerTEXCLUT(u32* data)
 	gs.clut.cov = (data[0] >> 12) & 0x3ff;
 }
 
-void __fastcall GIFRegHandlerSCANMSK(u32* data)
+void __gifCall GIFRegHandlerSCANMSK(const u32* data)
 {
 	FUNCLOG
 //  ZeroGS::FlushBoth();
@@ -639,7 +639,7 @@ void __fastcall GIFRegHandlerSCANMSK(u32* data)
 	gs.smask = data[0] & 0x3;
 }
 
-void __fastcall GIFRegHandlerMIPTBP1_1(u32* data)
+void __gifCall GIFRegHandlerMIPTBP1_1(const u32* data)
 {
 	FUNCLOG
 	miptbpInfo& miptbp0 = ZeroGS::vb[0].miptbp0;
@@ -651,7 +651,7 @@ void __fastcall GIFRegHandlerMIPTBP1_1(u32* data)
 	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
 }
 
-void __fastcall GIFRegHandlerMIPTBP1_2(u32* data)
+void __gifCall GIFRegHandlerMIPTBP1_2(const u32* data)
 {
 	FUNCLOG
 	miptbpInfo& miptbp0 = ZeroGS::vb[1].miptbp0;
@@ -663,7 +663,7 @@ void __fastcall GIFRegHandlerMIPTBP1_2(u32* data)
 	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
 }
 
-void __fastcall GIFRegHandlerMIPTBP2_1(u32* data)
+void __gifCall GIFRegHandlerMIPTBP2_1(const u32* data)
 {
 	FUNCLOG
 	miptbpInfo& miptbp1 = ZeroGS::vb[0].miptbp1;
@@ -675,7 +675,7 @@ void __fastcall GIFRegHandlerMIPTBP2_1(u32* data)
 	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
 }
 
-void __fastcall GIFRegHandlerMIPTBP2_2(u32* data)
+void __gifCall GIFRegHandlerMIPTBP2_2(const u32* data)
 {
 	FUNCLOG
 	miptbpInfo& miptbp1 = ZeroGS::vb[1].miptbp1;
@@ -687,7 +687,7 @@ void __fastcall GIFRegHandlerMIPTBP2_2(u32* data)
 	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
 }
 
-void __fastcall GIFRegHandlerTEXA(u32* data)
+void __gifCall GIFRegHandlerTEXA(const u32* data)
 {
 	FUNCLOG
 	texaInfo newinfo;
@@ -709,19 +709,19 @@ void __fastcall GIFRegHandlerTEXA(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerFOGCOL(u32* data)
+void __gifCall GIFRegHandlerFOGCOL(const u32* data)
 {
 	FUNCLOG
 	ZeroGS::SetFogColor(data[0]&0xffffff);
 }
 
-void __fastcall GIFRegHandlerTEXFLUSH(u32* data)
+void __gifCall GIFRegHandlerTEXFLUSH(const u32* data)
 {
 	FUNCLOG
 	ZeroGS::SetTexFlush();
 }
 
-void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
+void __gifCall GIFRegHandlerSCISSOR_1(const u32* data)
 {
 	FUNCLOG
 	Rect2& scissor = ZeroGS::vb[0].scissor;
@@ -742,7 +742,7 @@ void __fastcall GIFRegHandlerSCISSOR_1(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
+void __gifCall GIFRegHandlerSCISSOR_2(const u32* data)
 {
 	FUNCLOG
 	Rect2& scissor = ZeroGS::vb[1].scissor;
@@ -765,7 +765,7 @@ void __fastcall GIFRegHandlerSCISSOR_2(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerALPHA_1(u32* data)
+void __gifCall GIFRegHandlerALPHA_1(const u32* data)
 {
 	FUNCLOG
 	alphaInfo newalpha;
@@ -785,7 +785,7 @@ void __fastcall GIFRegHandlerALPHA_1(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerALPHA_2(u32* data)
+void __gifCall GIFRegHandlerALPHA_2(const u32* data)
 {
 	FUNCLOG
 	alphaInfo newalpha;
@@ -805,36 +805,36 @@ void __fastcall GIFRegHandlerALPHA_2(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerDIMX(u32* data)
+void __gifCall GIFRegHandlerDIMX(const u32* data)
 {
 	FUNCLOG
 }
 
-void __fastcall GIFRegHandlerDTHE(u32* data)
+void __gifCall GIFRegHandlerDTHE(const u32* data)
 {
 	FUNCLOG
 	gs.dthe = data[0] & 0x1;
 }
 
-void __fastcall GIFRegHandlerCOLCLAMP(u32* data)
+void __gifCall GIFRegHandlerCOLCLAMP(const u32* data)
 {
 	FUNCLOG
 	gs.colclamp = data[0] & 0x1;
 }
 
-void __fastcall GIFRegHandlerTEST_1(u32* data)
+void __gifCall GIFRegHandlerTEST_1(const u32* data)
 {
 	FUNCLOG
 	testWrite(0, data);
 }
 
-void __fastcall GIFRegHandlerTEST_2(u32* data)
+void __gifCall GIFRegHandlerTEST_2(const u32* data)
 {
 	FUNCLOG
 	testWrite(1, data);
 }
 
-void __fastcall GIFRegHandlerPABE(u32* data)
+void __gifCall GIFRegHandlerPABE(const u32* data)
 {
 	FUNCLOG
 	//ZeroGS::SetAlphaChanged(0, GPUREG_PABE);
@@ -844,7 +844,7 @@ void __fastcall GIFRegHandlerPABE(u32* data)
 	gs.pabe = *data & 0x1;
 }
 
-void __fastcall GIFRegHandlerFBA_1(u32* data)
+void __gifCall GIFRegHandlerFBA_1(const u32* data)
 {
 	FUNCLOG
 	
@@ -852,7 +852,7 @@ void __fastcall GIFRegHandlerFBA_1(u32* data)
 	ZeroGS::vb[0].fba.fba = *data & 0x1;
 }
 
-void __fastcall GIFRegHandlerFBA_2(u32* data)
+void __gifCall GIFRegHandlerFBA_2(const u32* data)
 {
 	FUNCLOG
 	
@@ -861,19 +861,19 @@ void __fastcall GIFRegHandlerFBA_2(u32* data)
 	ZeroGS::vb[1].fba.fba = *data & 0x1;
 }
 
-void __fastcall GIFRegHandlerFRAME_1(u32* data)
+void __gifCall GIFRegHandlerFRAME_1(const u32* data)
 {
 	FUNCLOG
 	frameWrite(0, data);
 }
 
-void __fastcall GIFRegHandlerFRAME_2(u32* data)
+void __gifCall GIFRegHandlerFRAME_2(const u32* data)
 {
 	FUNCLOG
 	frameWrite(1, data);
 }
 
-void __fastcall GIFRegHandlerZBUF_1(u32* data)
+void __gifCall GIFRegHandlerZBUF_1(const u32* data)
 {
 	FUNCLOG
 	zbufInfo& zbuf = ZeroGS::vb[0].zbuf;
@@ -903,7 +903,7 @@ void __fastcall GIFRegHandlerZBUF_1(u32* data)
 	ZeroGS::vb[0].bNeedZCheck = 1;
 }
 
-void __fastcall GIFRegHandlerZBUF_2(u32* data)
+void __gifCall GIFRegHandlerZBUF_2(const u32* data)
 {
 	FUNCLOG
 	zbufInfo& zbuf = ZeroGS::vb[1].zbuf;
@@ -934,7 +934,7 @@ void __fastcall GIFRegHandlerZBUF_2(u32* data)
 	if (zbuf.psm > 0x31) ZeroGS::vb[1].zprimmask = 0xffff;
 }
 
-void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
+void __gifCall GIFRegHandlerBITBLTBUF(const u32* data)
 {
 	FUNCLOG
 	gs.srcbufnew.bp  = ((data[0]) & 0x3fff);   // * 64;
@@ -947,7 +947,7 @@ void __fastcall GIFRegHandlerBITBLTBUF(u32* data)
 	if (gs.dstbufnew.bw == 0) gs.dstbufnew.bw = 64;
 }
 
-void __fastcall GIFRegHandlerTRXPOS(u32* data)
+void __gifCall GIFRegHandlerTRXPOS(const u32* data)
 {
 	FUNCLOG
 	
@@ -958,14 +958,14 @@ void __fastcall GIFRegHandlerTRXPOS(u32* data)
 	gs.trxposnew.dir = (data[1] >> 27) & 0x3;
 }
 
-void __fastcall GIFRegHandlerTRXREG(u32* data)
+void __gifCall GIFRegHandlerTRXREG(const u32* data)
 {
 	FUNCLOG
 	gs.imageWtemp = data[0] & 0xfff;
 	gs.imageHtemp = data[1] & 0xfff;
 }
 
-void __fastcall GIFRegHandlerTRXDIR(u32* data)
+void __gifCall GIFRegHandlerTRXDIR(const u32* data)
 {
 	FUNCLOG
 	// terminate any previous transfers
@@ -1023,7 +1023,7 @@ void __fastcall GIFRegHandlerTRXDIR(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerHWREG(u32* data)
+void __gifCall GIFRegHandlerHWREG(const u32* data)
 {
 	FUNCLOG
 
@@ -1042,7 +1042,7 @@ void __fastcall GIFRegHandlerHWREG(u32* data)
 
 extern int g_GSMultiThreaded;
 
-void __fastcall GIFRegHandlerSIGNAL(u32* data)
+void __gifCall GIFRegHandlerSIGNAL(const u32* data)
 {
 	FUNCLOG
 
@@ -1064,7 +1064,7 @@ void __fastcall GIFRegHandlerSIGNAL(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerFINISH(u32* data)
+void __gifCall GIFRegHandlerFINISH(const u32* data)
 {
 	FUNCLOG
 
@@ -1087,7 +1087,7 @@ void __fastcall GIFRegHandlerFINISH(u32* data)
 	}
 }
 
-void __fastcall GIFRegHandlerLABEL(u32* data)
+void __gifCall GIFRegHandlerLABEL(const u32* data)
 {
 	FUNCLOG
 

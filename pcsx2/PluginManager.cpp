@@ -192,6 +192,51 @@ void CALLBACK GS_getTitleInfo( char dest[128] )
 	dest[2] = 0;
 }
 
+// This legacy passthrough function is needed because the old GS plugins tended to assume that
+// a PATH1 transfer that didn't EOP needed an automatic EOP (which was needed to avoid a crash
+// in the BIOS when it starts an XGKICK prior to having an EOP written to VU1 memory).  The new
+// MTGS wraps data around the end of the MTGS buffer, so it often splits PATH1 data into two
+// transfers now.
+static void CALLBACK GS_gifTransferLegacy( const u32* src, u32 data )
+{
+	static __aligned16 u128 path1queue[0x400];
+	static uint path1size = 0;
+
+	const u128* src128 = (u128*)src;
+
+	if( (src128 + data) >= &RingBuffer.m_Ring[RingBufferSize] )
+	{
+		// the transfer is most likely wrapped/partial.  We need to queue it into a linear buffer
+		// and then send it on its way on the next copy.
+
+		memcpy_qwc( path1queue, src128, data );
+		path1size = data;
+	}
+	else
+	{
+		if (path1size != 0)
+		{
+			// Previous transfer check.  *Most* likely this one should be added to it, but to know for
+			// sure we need to check to see if src points to the head of RingBuffer.  If its pointing
+			// to like Ringbuffer[1] instead it means the last transfer finished and this transfer is
+			// a new one.
+
+			if (src128 == RingBuffer.m_Ring)
+			{
+				pxAssume( (data+path1size) <= 0x400 );
+				memcpy_qwc( &path1queue[path1size], src128, data );
+				path1size += data;
+			}
+			GSgifTransfer1( (u32*)path1queue, 0 );
+			path1size = 0;
+		}
+		else
+		{
+			GSgifTransfer1( (u32*)src128, 0 );
+		}
+	}
+}
+
 
 // PAD
 _PADinit           PADinit;
@@ -310,8 +355,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 {
 	{	"GSopen",			(vMeth**)&GSopen,			NULL	},
 	{	"GSvsync",			(vMeth**)&GSvsync,			NULL	},
-	{	"GSgifTransfer",	(vMeth**)&GSgifTransfer,	NULL	},
-	//{	"GSgifTransfer1",	(vMeth**)&GSgifTransfer1,	NULL	},
+	{	"GSgifTransfer",	(vMeth**)&GSgifTransfer,	(vMeth*)GS_gifTransferLegacy },
 	{	"GSgifTransfer2",	(vMeth**)&GSgifTransfer2,	NULL	},
 	{	"GSgifTransfer3",	(vMeth**)&GSgifTransfer3,	NULL	},
 	{	"GSreadFIFO2",		(vMeth**)&GSreadFIFO2,		NULL	},
@@ -339,6 +383,7 @@ static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 	{	"GSmakeSnapshot2",	(vMeth**)&GSmakeSnapshot2	},
 	{	"GSgifSoftReset",	(vMeth**)&GSgifSoftReset	},
 	{	"GSreadFIFO",		(vMeth**)&GSreadFIFO		},
+	{	"GSgifTransfer1",	(vMeth**)&GSgifTransfer1	},
 	{ NULL }
 };
 

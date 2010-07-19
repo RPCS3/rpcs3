@@ -60,7 +60,7 @@ void GSDump::Close()
 	if(m_obj) {fclose(m_obj); m_obj = NULL;}
 }
 
-void GSDump::Transfer(int index, uint8* mem, size_t size)
+void GSDump::Transfer(int index, const uint8* mem, size_t size)
 {
 	if(m_gs && size > 0)
 	{
