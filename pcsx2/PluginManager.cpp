@@ -144,6 +144,7 @@ static s32  CALLBACK fallback_test() { return 0; }
 _GSvsync           GSvsync;
 _GSopen            GSopen;
 _GSopen2           GSopen2;
+_GSgifTransfer     GSgifTransfer;
 _GSgifTransfer1    GSgifTransfer1;
 _GSgifTransfer2    GSgifTransfer2;
 _GSgifTransfer3    GSgifTransfer3;
@@ -309,7 +310,8 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 {
 	{	"GSopen",			(vMeth**)&GSopen,			NULL	},
 	{	"GSvsync",			(vMeth**)&GSvsync,			NULL	},
-	{	"GSgifTransfer1",	(vMeth**)&GSgifTransfer1,	NULL	},
+	{	"GSgifTransfer",	(vMeth**)&GSgifTransfer,	NULL	},
+	//{	"GSgifTransfer1",	(vMeth**)&GSgifTransfer1,	NULL	},
 	{	"GSgifTransfer2",	(vMeth**)&GSgifTransfer2,	NULL	},
 	{	"GSgifTransfer3",	(vMeth**)&GSgifTransfer3,	NULL	},
 	{	"GSreadFIFO2",		(vMeth**)&GSreadFIFO2,		NULL	},

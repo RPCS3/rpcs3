@@ -1097,7 +1097,6 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	u8* data  = microVU1.regs->Mem + (addr*16);
 	u32 diff  = 0x400 - addr;
 	u32 size;
-	u8* pDest;
 	
 	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
@@ -1106,23 +1105,12 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 			//Flush any pending transfers so things dont go up in the wrong order
 			while(gifRegs->stat.P1Q == true) gsPath1Interrupt();
 		}
-		size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
-		pDest = GetMTGS().GetDataPacketPtr();
-
-		if (size > diff) {
-			//DevCon.WriteLn("XGkick Wrap!");
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
-			size  -= diff;
-			pDest += diff*16;
-			memcpy_qwc(pDest, microVU1.regs->Mem, size);
-		}
-		else {
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
-		}
+		GetMTGS().PrepDataPacket(GIF_PATH_1, 0x400);
+		size = GIFPath_CopyTag(GIF_PATH_1, (u128*)data, diff);
 		GetMTGS().SendDataPacket();
+
 		if(GSTransferStatus.PTH1 == STOPPED_MODE)
 		{
-			gifRegs->stat.OPH = false;
 			gifRegs->stat.APATH = GIF_APATH_IDLE;
 		}
 	}
@@ -1130,17 +1118,16 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	{
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
-		pDest = &Path1Buffer[Path1WritePos*16];
+		u8* pDest = &Path1Buffer[Path1WritePos*16];
 
-		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
+		Path1WritePos += size;
+
+		pxAssumeMsg((Path1WritePos < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
 		//DevCon.Warning("Storing size %x PATH 1", size);
 
 		if (size > diff) {
-			// fixme: one of these days the following *16's will get cleaned up when we introduce
-			// a special qwc/simd16 optimized version of memcpy_aligned. :)
 			//DevCon.Status("XGkick Wrap!");
 			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
-			Path1WritePos += size;
 			size  -= diff;
 			pDest += diff*16;
 			memcpy_qwc(pDest, microVU1.regs->Mem, size);

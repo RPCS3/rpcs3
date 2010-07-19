@@ -19,6 +19,7 @@
 #include "Gif.h"
 #include "Vif_Dma.h"
 #include "Vif.h"
+#include <xmmintrin.h>
 
 // --------------------------------------------------------------------------------------
 //  GIFpath -- the GIFtag Parser
@@ -92,12 +93,16 @@ struct GIFPath
 
 	void Reset();
 	void PrepPackedRegs();
-	void SetTag(const void* mem);
 	bool StepReg();
 	u8 GetReg();
 	bool IsActive() const;
 
-	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+	template< bool Aligned >
+	void SetTag(const void* mem);
+
+	template< GIF_PATH pathidx, bool Aligned >
+	int CopyTag(const u128* pMem, u32 size);
+
 	int ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
@@ -285,9 +290,11 @@ __forceinline void GIFPath::PrepPackedRegs()
 	}
 }
 
+
+template< bool Aligned >
 __forceinline void GIFPath::SetTag(const void* mem)
 {
-	const_cast<GIFTAG&>(tag) = *((GIFTAG*)mem);
+	_mm_store_ps( (float*)&tag, Aligned ? _mm_load_ps((const float*)mem) : _mm_loadu_ps((const float*)mem) );
 
 	nloop	= tag.NLOOP;
 	curreg	= 0;
@@ -350,7 +357,8 @@ static __forceinline void gsHandler(const u8* pMem)
 			// qwords, rounded down; any extra bits are lost
 			// games must take care to ensure transfer rectangles are exact multiples of a qword
 			vif1.GSLastDownloadSize = vif1.TRXREG.RRW * vif1.TRXREG.RRH * bpp >> 7;
-			gifRegs->stat.OPH = true;
+			//DevCon.Warning("GS download in progress. OPH = %x", gifRegs->stat.OPH);
+			//gifRegs->stat.OPH = true; // Too early to set it here. It should be done on a BUSDIR call (rama)
 		}
 	}
 	if (reg >= 0x60)
@@ -371,10 +379,9 @@ static __forceinline void gsHandler(const u8* pMem)
 #define aMin(x, y) std::min(x, y)
 
 // Parameters:
-//   size (path1)   - difference between the end of VU memory and pMem.
-//   size (path2/3) - max size of incoming data stream, in qwc (simd128)
-
-
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
 __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	u32	startSize =  size;						// Start Size
@@ -382,7 +389,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag(pMem);
+			SetTag<false>(pMem);
 			incTag(1);
 		}
 		else
@@ -509,6 +516,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
+					const_cast<GIFTAG&>(tag).EOP = 1;
 				}
 			}
 		}
@@ -521,15 +529,65 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	return size;
 }
 
-__forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+__forceinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
+	uint endpos = destStart + len;
+	if( endpos < destSize )
+	{
+		memcpy_qwc(&destBase[destStart], src, len );
+		destStart += len;
+	}
+	else
+	{
+		uint firstcopylen = destSize - destStart;
+		memcpy_qwc(&destBase[destStart], src, firstcopylen );
+
+		destStart = endpos % destSize;
+		memcpy_qwc(destBase, src+firstcopylen, destStart );
+	}
+}
+
+__forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
+{
+	uint endpos = srcStart + len;
+	if( endpos < srcSize )
+	{
+		memcpy_qwc(dest, &srcBase[srcStart], len );
+		srcStart += len;
+	}
+	else
+	{
+		uint firstcopylen = srcSize - srcStart;
+		memcpy_qwc(dest, &srcBase[srcStart], firstcopylen );
+
+		srcStart = endpos % srcSize;
+		memcpy_qwc(dest+firstcopylen, srcBase, srcStart );
+	}
+}
+
+#define copyTag() do {						\
+	_mm_store_ps( (float*)&RingBuffer.m_Ring[ringpos], Aligned ? _mm_load_ps((float*)pMem128) : _mm_loadu_ps((float*)pMem128)); \
+	++pMem128; --size;						\
+	ringpos = (ringpos+1)&RingBufferMask;	\
+} while(false)
+
+// Parameters:
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
+template< GIF_PATH pathidx, bool Aligned > 
+__forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
+{
+	uint& ringpos = GetMTGS().m_packet_writepos;
+	const uint original_ringpos = ringpos;
+
 	u32	startSize =  size;						// Start Size
 
 	while (size > 0) {
 		if (!nloop) {
 
-			SetTag(pMem);
-			incTag(1);		
+			SetTag<Aligned>((u8*)pMem128);
+			copyTag();
 			
 			if(nloop > 0)
 			{
@@ -560,7 +618,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			}	
 			if(GSTransferStatus.PTH3 < PENDINGSTOP_MODE || pathidx != 2)
 			{
-				gifRegs->stat.OPH = true;
+				//gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
 				gifRegs->stat.APATH = pathidx + 1;	
 			}
 
@@ -588,7 +646,7 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					break;
 			}
 			gifRegs->stat.APATH = pathidx + 1;
-			gifRegs->stat.OPH = true;
+			//gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
@@ -599,9 +657,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					{
 						do {
 							if (GetReg() == 0xe) {
-								gsHandler(pMem);
+								gsHandler((u8*)pMem128);
 							}
-							incTag(1);
+							copyTag();
 						} while(StepReg() && size > 0 && SIGNAL_IMR_Pending == false);
 					}
 					else
@@ -644,11 +702,14 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 							curreg = 0;
 							nloop = 0;
 						}
-						incTag(len);
+
+						MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+						pMem128 += len;
+						size -= len;
 					}
 				break;
 				case GIF_FLG_REGLIST:
-				{				
+				{
 					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
@@ -687,8 +748,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 						nloop = 0;
 					}
 
-					incTag(len);
-
+					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+					pMem128 += len;
+					size -= len;
 				}
 				break;
 				case GIF_FLG_IMAGE:
@@ -696,13 +758,15 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				{
 					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
-					incTag(len);
+
+					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
+
+					pMem128 += len;
+					size -= len;
 					nloop -= len;
 				}
 				break;
 			}
-			
-
 		}
 
 		if(pathidx == GIF_PATH_1)
@@ -713,11 +777,11 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				{
 					size = 0x3ff - startSize;
 					startSize = 0x3ff;
-					pMem -= 0x4000;
+					pMem128 -= 0x400;
 				}
 				else
 				{
-					// Note: The BIOS does an XGKICK on the VU1 and lets yt DMA to the GS without an EOP
+					// Note: The BIOS does an XGKICK on the VU1 and lets it DMA to the GS without an EOP
 					// (seemingly to loop forever), only to write an EOP later on.  No other game is known to
 					// do anything of the sort.
 					// So lets just cap the DMA at 16k, and force it to "look" like it's terminated for now.
@@ -727,6 +791,12 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
+					const_cast<GIFTAG&>(tag).EOP = 1;
+
+					// Don't send the packet to the GS -- its incomplete and might cause the GS plugin
+					// to get confused and die. >_<
+					
+					ringpos = original_ringpos;
 				}
 			}
 		}
@@ -749,6 +819,9 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 					gsIrq();
 				}
 			}
+			
+			// [TODO] : DMAC Arbitration rights should select the next queued GIF transfer here.
+			
 			break;
 		}
 		if(SIGNAL_IMR_Pending == true)
@@ -793,47 +866,40 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 			gif->qwc  -= size;
 		}
 	}
-	
-	
 
 	return size;
 }
 
-// Processes a GIFtag & packet, and throws out some gsIRQs as needed.
-// Used to keep interrupts in sync with the EE, while the GS itself
-// runs potentially several frames behind.
 // Parameters:
-//   size  - max size of incoming data stream, in qwc (simd128)
-__forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
+//   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
+//     path does not terminate (EOP) within the specified size, it is assumed that the path must
+//     loop around to the start of VU memory and continue processing.
+__forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
-#ifdef PCSX2_GSRING_SAMPLING_STATS
-	static uptr profStartPtr = 0;
-	static uptr profEndPtr = 0;
-	if (profStartPtr == 0) {
-		__asm
-		{
-		__beginfunc:
-			mov profStartPtr, offset __beginfunc;
-			mov profEndPtr, offset __endfunc;
-		}
-		ProfilerRegisterSource( "GSRingBufCopy", (void*)profStartPtr, profEndPtr - profStartPtr );
-	}
-#endif
-
-	int retSize = s_gifPath[pathidx].ParseTag(pathidx, pMem, size);
-
-#ifdef PCSX2_GSRING_SAMPLING_STATS
-	__asm
+	switch( pathidx )
 	{
-		__endfunc:
-			nop;
+		case GIF_PATH_1:
+			pxAssertMsg(!s_gifPath[GIF_PATH_2].IsActive(), "GIFpath conflict: Attempted to start PATH1 while PATH2 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive() || (GSTransferStatus.PTH3 == IMAGE_MODE), "GIFpath conflict: Attempted to start PATH1 while PATH3 is already active.");
+			return s_gifPath[GIF_PATH_1].CopyTag<GIF_PATH_1,true>(pMem, size);
+		case GIF_PATH_2:
+			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH2 while PATH1 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_3].IsActive() || (GSTransferStatus.PTH3 == IMAGE_MODE), "GIFpath conflict: Attempted to start PATH2 while PATH3 is already active.");
+			return s_gifPath[GIF_PATH_2].CopyTag<GIF_PATH_2,false>(pMem, size);
+		case GIF_PATH_3:
+			pxAssertMsg(!s_gifPath[GIF_PATH_1].IsActive(), "GIFpath conflict: Attempted to start PATH3 while PATH1 is already active.");
+			pxAssertMsg(!s_gifPath[GIF_PATH_2].IsActive(), "GIFpath conflict: Attempted to start PATH3 while PATH2 is already active.");
+			return s_gifPath[GIF_PATH_3].CopyTag<GIF_PATH_3,true>(pMem, size);
+
+		jNO_DEFAULT;
 	}
-#endif
-	return retSize;
+	
+	return 0;		// unreachable
 }
 
-//Quick version for queueing PATH1 data
-
+// Quick version for queuing PATH1 data.
+// This version calculates the real length of the packet data only.  It does not process
+// IRQs or DMA status updates.
 __forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	int retSize = s_gifPath[pathidx].ParseTagQuick(pathidx, pMem, size);

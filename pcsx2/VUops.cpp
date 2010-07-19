@@ -2057,21 +2057,8 @@ void _vuXGKICK(VURegs * VU)
 
 	u8* data = ((u8*)VU->Mem + ((VU->VI[_Is_].US[0]*16) & 0x3fff));
 	u32 size;
-	size = GetMTGS().PrepDataPacket( GIF_PATH_1, data, (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4);
-	u8* pmem = GetMTGS().GetDataPacketPtr();
-
-	if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
-	{
-		//DevCon.Warning("addr + Size = 0x%x, transferring %x then doing %x", ((VU->VI[_Is_].US[0]*16) & 0x3fff) + (size << 4), (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4, size - (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff) >> 4));
-		memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff));
-		size -= (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4;
-		//DevCon.Warning("Size left %x", size);
-		pmem += 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff);
-		memcpy_aligned(pmem, (u8*)VU->Mem, size<<4);
-	}
-	else {
-		memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), size<<4);
-	}
+	GetMTGS().PrepDataPacket( GIF_PATH_1, 0x400 );
+	size = GIFPath_CopyTag( GIF_PATH_1, (u128*)data, (0x400-(VU->VI[_Is_].US[0] & 0x3ff)) );
 	GetMTGS().SendDataPacket();
 }
 

@@ -265,8 +265,17 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	_GSgifTransfer<2>(pMem, size);
 }
 
+void CALLBACK GSgifTransfer(u32 *pMem, u32 size)
+{
+	FUNCLOG
+
+	//ZZLog::GS_Log("GSgifTransfer3 size = %lx (mode %d, gs.path3.tag.nloop = %d).", size, gs.path[2].mode, gs.path[2].tag.nloop);
+
+	_GSgifTransfer<3>(pMem, size);
+}
+
 void InitPath()
 {
-	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = 0;
+	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = gs.path[3].mode = 0;
 }
 

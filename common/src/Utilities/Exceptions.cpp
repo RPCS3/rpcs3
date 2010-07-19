@@ -71,7 +71,7 @@ wxString DiagnosticOrigin::ToString( const wxChar* msg ) const
 
 bool pxAssertImpl_LogIt( const DiagnosticOrigin& origin, const wxChar *msg )
 {
-	wxLogError( origin.ToString( msg ) );
+	wxLogError( L"%s", origin.ToString( msg ) );
 	return false;
 }
 

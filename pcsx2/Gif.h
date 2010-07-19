@@ -290,7 +290,7 @@ extern void gifMFIFOInterrupt();
 
 //Just some temporary bits to store Path1 transfers if another is in progress.
 extern void gsPath1Interrupt();
-extern u8 Path1Buffer[0x1000000];
+extern __aligned16 u8 Path1Buffer[0x1000000];
 extern u32 Path1WritePos;
 extern u32 Path1ReadPos;
 #endif

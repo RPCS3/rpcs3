@@ -282,14 +282,19 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 	{
 		case 0x12001040: //busdir
 
-			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer (Bleach Blade Battlers)
-			//Only problem is it kills killzone :( leaving it commented out for now.
+			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer 
+			//(Bleach Blade Battlers, Growlanser 2 and 3, Wizardry)
+			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
 			//=========================================================================
-			//gifRegs->stat.OPH = true; 
+			//Console.Warning("BUSDIR write! Setting OPH and DIR to = %x",(u32)value[0]);
+			if ((u32)value[0] == 1)
+				gifRegs->stat.OPH = true;
+			else
+				gifRegs->stat.OPH = false;
+			
+			gifRegs->stat.DIR = (u32)value[0];
 			//=========================================================================
-			gifRegs->stat.DIR = (u32)value;
-
 			// BUSDIR INSANITY !! MTGS FLUSH NEEDED
 			//
 			// Yup folks.  BUSDIR is evil.  The only safe way to handle it is to flush the whole MTGS

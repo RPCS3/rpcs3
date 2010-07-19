@@ -635,7 +635,7 @@ typedef struct
 	int imageTransfer;
 	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
 
-	pathInfo path[3];
+	pathInfo path[4];
 	GIFRegDIMX dimx;
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{

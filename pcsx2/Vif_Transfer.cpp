@@ -36,16 +36,8 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
-		// On i-bit, the command is run, vif stalls etc,
-		// however if the vifcode is MARK, you do NOT stall, just send IRQ. - Max Payne shows this up.
-		//if(((vifXRegs->code >> 24) & 0x7f) == 0x7) return 0;
 
-		// If we have a vifcode with i-bit, the following instruction
-		// should stall unless its MARK?.. we test that case here...
-		// Not 100% sure if this is the correct behavior, so printing
-		// a console message to see games that use this. (cottonvibes)
-
-		// Okay did some testing with Max Payne, it does this
+		// Okay did some testing with Max Payne, it does this:
 		// VifMark  value = 0x666   (i know, evil!)
 		// NOP with I Bit
 		// VifMark  value = 0
@@ -53,6 +45,23 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 		// If you break after the 2nd Mark has run, the game reports invalid mark 0 and the game dies.
 		// So it has to occur here, testing a theory that it only doesn't stall if the command with
 		// the iBit IS mark, but still sends the IRQ to let the cpu know the mark is there. (Refraction)
+		//
+		// --------------------------
+		//
+		// This is how it probably works: i-bit sets the IRQ flag, and VIF keeps running until it encounters
+		// a non-MARK instruction.  This includes the *current* instruction.  ie, execution only continues
+		// unimpeded if MARK[i] is specified, and keeps executing unimpeded until any non-MARK command.
+		// Any other command with an I bit should stall immediately.
+		// Example:
+		//
+		// VifMark[i] value = 0x321   (with I bit)
+		// VifMark    value = 0
+		// VifMark    value = 0x333
+		// NOP
+		//
+		// ... the VIF should not stall and raise the interrupt until after the NOP is processed.
+		// So the final value for MARK as the game sees it will be 0x333. --air
+		
 		return runMark<idx>(data);
 	}
 	return 0;

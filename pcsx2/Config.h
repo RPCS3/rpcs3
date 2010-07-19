@@ -395,6 +395,7 @@ struct Pcsx2Config
 		// style.  Useful for debugging potential bugs in the MTGS pipeline.
 		bool	SynchronousMTGS;
 		bool	DisableOutput;
+		int		VsyncQueueSize;
 
 		bool	FrameLimitEnable;
 		bool	FrameSkipEnable;
@@ -420,6 +421,8 @@ struct Pcsx2Config
 			return
 				OpEqu( SynchronousMTGS )		&&
 				OpEqu( DisableOutput )			&&
+				OpEqu( VsyncQueueSize )			&&
+				
 				OpEqu( FrameSkipEnable )		&&
 				OpEqu( FrameLimitEnable )		&&
 				OpEqu( VsyncEnable )			&&

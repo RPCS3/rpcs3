@@ -189,13 +189,13 @@ void Pcsx2App::DetectCpuAndUserMode()
 	x86caps.CountCores();
 	x86caps.SIMD_EstablishMXCSRmask();
 
-	if( !x86caps.hasMultimediaExtensions )
+	if( !x86caps.hasMultimediaExtensions || !x86caps.hasStreamingSIMDExtensions )
 	{
-		// Note: due to memcpy_fast, we need minimum MMX even for interpreters.  This will
-		// hopefully change later once we have a dynamically recompiled memcpy.
+		// Note: Due to optimizations to GIFpath parsers, memcpy, and possibly other things, we need
+		// a bare minimum of SSE supported by the CPU.
 		throw Exception::HardwareDeficiency()
-			.SetDiagMsg(L"Critical Failure: MMX Extensions not available.")
-			.SetUserMsg(_("MMX extensions are not available.  PCSX2 requires cpu with MMX extension support to run."));
+			.SetDiagMsg(L"Critical Failure: SSE Extensions not available.")
+			.SetUserMsg(_("SSE extensions are not available.  PCSX2 requires a cpu that supports the SSE instruction set."));
 	}
 
 	ReadUserModeSettings();

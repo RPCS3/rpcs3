@@ -248,6 +248,7 @@ void CALLBACK GSsetSettingsDir( const char* dir );
 void CALLBACK GSsetLogDir( const char* dir );
 
 void CALLBACK GSvsync(int field);
+void CALLBACK GSgifTransfer(u32 *pMem, u32 addr);
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr);
 void CALLBACK GSgifTransfer2(u32 *pMem, u32 size);
 void CALLBACK GSgifTransfer3(u32 *pMem, u32 size);
