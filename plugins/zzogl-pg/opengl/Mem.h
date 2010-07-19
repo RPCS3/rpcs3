@@ -66,15 +66,6 @@ struct TransferData
 	u32 blockheight;
 	u32 transfersize;
 	u32 psm;
-	/*__forceinline TransferData(u32 limit, u32 bits, u32 width, u32 height, u32 size, u32 ps)
-	{
-		widthlimit = limit;
-		blockbits = bits;
-		blockwidth = width;
-		blockheight = height;
-		transfersize = size;
-		psm = ps;
-	}*/
 };
 
 struct TransferFuncts
@@ -109,6 +100,7 @@ struct BLOCK
 	Vector vTexBlock;
 	Vector vTexDims;
 	int width, height;	// dims of one page in pixels
+	int ox, oy, mult;
 	int bpp;
 	int colwidth, colheight;
 	u32* pageTable;	// offset inside each page
@@ -126,6 +118,21 @@ struct BLOCK
 
 	// texture must be of dims BLOCK_TEXWIDTH and BLOCK_TEXHEIGHT
 	static void FillBlocks(std::vector<char>& vBlockData, std::vector<char>& vBilinearData, int floatfmt);
+	
+	void SetDim(u32 bw, u32 bh, u32 ox2, u32 oy2, u32 mult2)
+	{
+		ox = ox2;
+		oy = oy2;
+		mult = mult2;
+		vTexDims = Vector(BLOCK_TEXWIDTH/(float)(bw), BLOCK_TEXHEIGHT/(float)bh, 0, 0); 
+		vTexBlock = Vector((float)bw/BLOCK_TEXWIDTH, (float)bh/BLOCK_TEXHEIGHT, ((float)ox+0.2f)/BLOCK_TEXWIDTH, ((float)oy+0.05f)/BLOCK_TEXHEIGHT);
+		width = bw;
+		height = bh;
+		colwidth = bh / 4;
+		colheight = bw / 8;
+		bpp = 32/mult;
+	}
+	
 	void SetFun(u32 psm)
 	{
 		writePixel = writePixelFun[psm];
@@ -286,8 +293,8 @@ static __forceinline u32 getPixelAddress16SZ_0(int x, int y, u32 bw)
 	return word;
 }
 
-#define getPixelAddress_0(psm,x,y,bw) getPixelAddress##psm##_0(x,y,bw)
-#define getPixelAddress(psm,x,y,bp,bw) getPixelAddress##psm##(x,y,bp,bw)
+//#define getPixelAddress_0(psm,x,y,bw) getPixelAddress##psm##_0(x,y,bw)
+//#define getPixelAddress(psm,x,y,bp,bw) getPixelAddress##psm##(x,y,bp,bw)
 
 static __forceinline void writePixel32(void* pmem, int x, int y, u32 pixel, u32 bp, u32 bw)
 {

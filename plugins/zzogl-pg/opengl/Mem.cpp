@@ -176,7 +176,7 @@ static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSiz
 {
 	assert(gs.imageTransfer == 0);
 	TransferData data = tData[psm];
-	TransferFuncts fun(data.psm);
+	TransferFuncts fun(psm);
 	pstart = g_pbyGSMemory + gs.dstbuf.bp * 256;
 	const T* pbuf = (const T*)pbyMem;
 	const int tp2 = TransPitch(2, data.transfersize);
@@ -202,7 +202,7 @@ static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSiz
 
 	if (TransPitch(nSize, data.transfersize) / 4 > 0)
 	{
-		pbuf = TransmitHostLocalY<T>(data.psm, fun.wp, data.widthlimit, gs.imageEndY, pbuf);
+		pbuf = TransmitHostLocalY<T>(psm, fun.wp, data.widthlimit, gs.imageEndY, pbuf);
 
 		if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
@@ -227,95 +227,100 @@ int TransferHostLocal8H(const void* pbyMem, u32 nQWordSize)  { return RealTransf
 int TransferHostLocal4HL(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u8>(PSMT4HL, pbyMem, nQWordSize);   }
 int TransferHostLocal4HH(const void* pbyMem, u32 nQWordSize) { return RealTransfer<u8>(PSMT4HH, pbyMem, nQWordSize);   }
 
-void TransferLocalHost32(void* pbyMem, u32 nQWordSize) 		{ FUNCLOG }
+void TransferLocalHost32(void* pbyMem, u32 nQWordSize) 		{FUNCLOG}
 void TransferLocalHost24(void* pbyMem, u32 nQWordSize) 		{FUNCLOG}
 void TransferLocalHost16(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16S(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
-void TransferLocalHost8(void* pbyMem, u32 nQWordSize)		{}
+void TransferLocalHost8(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost4(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost8H(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost4HL(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
-void TransferLocalHost4HH(void* pbyMem, u32 nQWordSize)		{}
+void TransferLocalHost4HH(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost32Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 
-#define FILL_BLOCK(bw, bh, ox, oy, mult, psm, psmcol) { \
-	b.vTexDims = Vector(BLOCK_TEXWIDTH/(float)(bw), BLOCK_TEXHEIGHT/(float)bh, 0, 0); \
-	b.vTexBlock = Vector((float)bw/BLOCK_TEXWIDTH, (float)bh/BLOCK_TEXHEIGHT, ((float)ox+0.2f)/BLOCK_TEXWIDTH, ((float)oy+0.05f)/BLOCK_TEXHEIGHT); \
-	b.width = bw; \
-	b.height = bh; \
-	b.colwidth = bh / 4; \
-	b.colheight = bw / 8; \
-	b.bpp = 32/mult; \
-	\
+#define FILL_BLOCK(psm, psmcol) \
+{ \
 	b.pageTable = &g_pageTable##psm[0][0]; \
 	b.blockTable = &g_blockTable##psm[0][0]; \
 	b.columnTable = &g_columnTable##psmcol[0][0]; \
 	\
-	assert( sizeof(g_pageTable##psm) == bw*bh*sizeof(g_pageTable##psm[0][0]) ); \
+	assert( sizeof(g_pageTable##psm) == b.width * b.height * sizeof(g_pageTable##psm[0][0]) ); \
 	\
-	psrcf = (float*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; \
-	psrcw = (u16*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; \
+	psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
+	psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
 	\
-	if (floatfmt) \
+	for(i = 0; i < b.height; ++i) \
 	{ \
-		for(i = 0; i < bh; ++i) \
+		u32 i_width = i*BLOCK_TEXWIDTH; \
+		for(j = 0; j < b.width; ++j) \
 		{ \
-			for(j = 0; j < bw; ++j) \
-			{ \
-				/* fill the table */ \
-				u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
-				b.pageTable[i*bw+j] = u; \
-				psrcf[i*BLOCK_TEXWIDTH+j] = (float)(u) / (float)(GPU_TEXWIDTH*mult); \
-			} \
-		} \
-		assert( floatfmt ); \
-		psrcv = (Vector*)&vBilinearData[0] + ox + oy * BLOCK_TEXWIDTH; \
-		\
-		for(i = 0; i < bh; ++i) { \
-			for(j = 0; j < bw; ++j) { \
-				Vector* pv = &psrcv[i*BLOCK_TEXWIDTH+j]; \
-				pv->x = psrcf[i*BLOCK_TEXWIDTH+j]; \
-				pv->y = psrcf[i*BLOCK_TEXWIDTH+((j+1)%bw)]; \
-				pv->z = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+j]; \
-				pv->w = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+((j+1)%bw)]; \
-			} \
+			/* fill the table */ \
+			u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * b.mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
+			b.pageTable[i * b.width + j] = u; \
+			psrcf[i_width + j] = (float)(u) / (float)(GPU_TEXWIDTH * b.mult); \
 		} \
 	} \
-	else \
+	\
+	psrcv = (Vector*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
+	\
+	for(i = 0; i < b.height; ++i) \
 	{ \
-		for(i = 0; i < bh; ++i) \
+		u32 i_width = i*BLOCK_TEXWIDTH; \
+		u32 i_width2 = ((i+1)%b.height)*BLOCK_TEXWIDTH; \
+		for(j = 0; j < b.width; ++j) \
 		{ \
-			for(j = 0; j < bw; ++j) \
-			{ \
-				/* fill the table */ \
-				u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
-				b.pageTable[i*bw+j] = u; \
-				psrcw[i*BLOCK_TEXWIDTH+j] = u; \
-			} \
+			u32 temp = ((j + 1) % b.width); \
+			Vector* pv = &psrcv[i_width + j]; \
+			pv->x = psrcf[i_width + j]; \
+			pv->y = psrcf[i_width + temp]; \
+			pv->z = psrcf[i_width2 + j]; \
+			pv->w = psrcf[i_width2 + temp]; \
 		} \
 	} \
-} \
+} 
 
-void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
+#define FILL_BLOCK_NF(psm, psmcol) \
+{ \
+	b.pageTable = &g_pageTable##psm[0][0]; \
+	b.blockTable = &g_blockTable##psm[0][0]; \
+	b.columnTable = &g_columnTable##psmcol[0][0]; \
+	\
+	assert( sizeof(g_pageTable##psm) == b.width * b.height * sizeof(g_pageTable##psm[0][0]) ); \
+	\
+	psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
+	psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
+	\
+	for(i = 0; i < b.height; ++i) \
+	{ \
+		u32 i_width = i*BLOCK_TEXWIDTH; \
+		for(j = 0; j < b.width; ++j) \
+		{ \
+			/* fill the table */ \
+			u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * b.mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
+			b.pageTable[i * b.width + j] = u; \
+			psrcw[i_width + j] = u; \
+		} \
+	} \
+} 
+
+void FillBlocksNF(vector<char>& vBlockData, vector<char>& vBilinearData)
 {
 	FUNCLOG
-	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * (floatfmt ? 4 : 2));
-
-	if (floatfmt) vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(Vector));
+	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 2);
 
 	int i, j;
 	BLOCK b;
 	float* psrcf = NULL;
 	u16* psrcw = NULL;
-	Vector* psrcv = NULL;
 
 	memset(m_Blocks, 0, sizeof(m_Blocks));
 
 	// 32
-	FILL_BLOCK(64, 32, 0, 0, 1, 32, 32);
+	b.SetDim(64, 32, 0, 0, 1);
+	FILL_BLOCK_NF(32, 32);
 	m_Blocks[PSMCT32] = b;
 	m_Blocks[PSMCT32].SetFun(PSMCT32);
 
@@ -334,7 +339,8 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
 
 	// 32z
-	FILL_BLOCK(64, 32, 64, 0, 1, 32Z, 32);
+	b.SetDim(64, 32, 64, 0, 1);
+	FILL_BLOCK_NF(32Z, 32);
 	m_Blocks[PSMT32Z] = b;
 	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
 
@@ -343,32 +349,129 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
 
 	// 16
-	FILL_BLOCK(64, 64, 0, 32, 2, 16, 16);
+	b.SetDim(64, 64, 0, 32, 2);
+	FILL_BLOCK_NF(16, 16);
 	m_Blocks[PSMCT16] = b;
 	m_Blocks[PSMCT16].SetFun(PSMCT16);
 
 	// 16s
-	FILL_BLOCK(64, 64, 64, 32, 2, 16S, 16);
+	b.SetDim(64, 64, 64, 32, 2);
+	FILL_BLOCK_NF(16S, 16);
 	m_Blocks[PSMCT16S] = b;
 	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
 
 	// 16z
-	FILL_BLOCK(64, 64, 0, 96, 2, 16Z, 16);
+	b.SetDim(64, 64, 0, 96, 2);
+	FILL_BLOCK_NF(16Z, 16);
 	m_Blocks[PSMT16Z] = b;
 	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
 
 	// 16sz
-	FILL_BLOCK(64, 64, 64, 96, 2, 16SZ, 16);
+	b.SetDim(64, 64, 64, 96, 2);
+	FILL_BLOCK_NF(16SZ, 16);
 	m_Blocks[PSMT16SZ] = b;
 	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
 
 	// 8
-	FILL_BLOCK(128, 64, 0, 160, 4, 8, 8);
+	b.SetDim(128, 64, 0, 160, 4);
+	FILL_BLOCK_NF(8, 8);
 	m_Blocks[PSMT8] = b;
 	m_Blocks[PSMT8].SetFun(PSMT8);
 
 	// 4
-	FILL_BLOCK(128, 128, 0, 224, 8, 4, 4);
+	b.SetDim(128, 128, 0, 224, 8);
+	FILL_BLOCK_NF(4, 4);
 	m_Blocks[PSMT4] = b;
 	m_Blocks[PSMT4].SetFun(PSMT4);
+}
+
+
+void FillBlocksF(vector<char>& vBlockData, vector<char>& vBilinearData)
+{
+	FUNCLOG
+	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
+	vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(Vector));
+
+	int i, j;
+	BLOCK b;
+	float* psrcf = NULL;
+	u16* psrcw = NULL;
+	Vector* psrcv = NULL;
+
+	memset(m_Blocks, 0, sizeof(m_Blocks));
+
+	// 32
+	b.SetDim(64, 32, 0, 0, 1);
+	FILL_BLOCK(32, 32);
+	m_Blocks[PSMCT32] = b;
+	m_Blocks[PSMCT32].SetFun(PSMCT32);
+
+	// 24 (same as 32 except write/readPixel are different)
+	m_Blocks[PSMCT24] = b;
+	m_Blocks[PSMCT24].SetFun(PSMCT24);
+
+	// 8H (same as 32 except write/readPixel are different)
+	m_Blocks[PSMT8H] = b;
+	m_Blocks[PSMT8H].SetFun(PSMT8H);
+
+	m_Blocks[PSMT4HL] = b;
+	m_Blocks[PSMT4HL].SetFun(PSMT4HL);
+	
+	m_Blocks[PSMT4HH] = b;
+	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
+
+	// 32z
+	b.SetDim(64, 32, 64, 0, 1);
+	FILL_BLOCK(32Z, 32);
+	m_Blocks[PSMT32Z] = b;
+	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
+
+	// 24Z (same as 32Z except write/readPixel are different)
+	m_Blocks[PSMT24Z] = b;
+	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
+
+	// 16
+	b.SetDim(64, 64, 0, 32, 2);
+	FILL_BLOCK(16, 16);
+	m_Blocks[PSMCT16] = b;
+	m_Blocks[PSMCT16].SetFun(PSMCT16);
+
+	// 16s
+	b.SetDim(64, 64, 64, 32, 2);
+	FILL_BLOCK(16S, 16);
+	m_Blocks[PSMCT16S] = b;
+	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
+
+	// 16z
+	b.SetDim(64, 64, 0, 96, 2);
+	FILL_BLOCK(16Z, 16);
+	m_Blocks[PSMT16Z] = b;
+	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
+
+	// 16sz
+	b.SetDim(64, 64, 64, 96, 2);
+	FILL_BLOCK(16SZ, 16);
+	m_Blocks[PSMT16SZ] = b;
+	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
+
+	// 8
+	b.SetDim(128, 64, 0, 160, 4);
+	FILL_BLOCK(8, 8);
+	m_Blocks[PSMT8] = b;
+	m_Blocks[PSMT8].SetFun(PSMT8);
+
+	// 4
+	b.SetDim(128, 128, 0, 224, 8);
+	FILL_BLOCK(4, 4);
+	m_Blocks[PSMT4] = b;
+	m_Blocks[PSMT4].SetFun(PSMT4);
+}
+
+void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
+{
+	FUNCLOG
+	if (floatfmt) 
+		FillBlocksF(vBlockData, vBilinearData);
+	else
+		FillBlocksNF(vBlockData, vBilinearData);
 }
