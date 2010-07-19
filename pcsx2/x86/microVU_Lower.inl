@@ -1128,9 +1128,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 		if (size > diff) {
 			//DevCon.Status("XGkick Wrap!");
 			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
-			size  -= diff;
-			pDest += diff*16;
-			memcpy_qwc(pDest, microVU1.regs->Mem, size);
+			memcpy_qwc(pDest+(diff*16), microVU1.regs->Mem, size-diff);
 		}
 		else {
 			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);

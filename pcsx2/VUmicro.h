@@ -240,20 +240,6 @@ extern BaseVUmicroCPU* CpuVU0;
 extern BaseVUmicroCPU* CpuVU1;
 
 
-/////////////////////////////////////////////////////////////////
-// These functions initialize memory for both VUs.
-//
-void vuMicroMemAlloc();
-void vuMicroMemShutdown();
-void vuMicroMemReset();
-
-/////////////////////////////////////////////////////////////////
-// Everything else does stuff on a per-VU basis.
-//
-void iDumpVU0Registers();
-void iDumpVU1Registers();
-
-
 extern void (*VU0_LOWER_OPCODE[128])();
 extern void (*VU0_UPPER_OPCODE[64])();
 
@@ -286,18 +272,24 @@ extern void (*VU1regs_UPPER_FD_01_TABLE[32])(_VURegsNum *VUregsn);
 extern void (*VU1regs_UPPER_FD_10_TABLE[32])(_VURegsNum *VUregsn);
 extern void (*VU1regs_UPPER_FD_11_TABLE[32])(_VURegsNum *VUregsn);
 
+extern void vuMicroMemAlloc();
+extern void vuMicroMemShutdown();
+extern void vuMicroMemReset();
+
 // VU0
 extern void vu0ResetRegs();
 extern void __fastcall vu0ExecMicro(u32 addr);
 extern void vu0Exec(VURegs* VU);
 extern void vu0Finish();
 extern void recResetVU0( void );
+extern void iDumpVU0Registers();
 
 // VU1
 extern void vu1Finish();
 extern void vu1ResetRegs();
 extern void __fastcall vu1ExecMicro(u32 addr);
 extern void vu1Exec(VURegs* VU);
+extern void iDumpVU1Registers();
 
 void VU0_UPPER_FD_00();
 void VU0_UPPER_FD_01();

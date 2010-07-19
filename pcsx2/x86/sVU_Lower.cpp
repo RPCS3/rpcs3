@@ -1976,13 +1976,12 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	addr &= 0x3fff;
 	u8* data  = VU1.Mem + (addr);
-	u32 diff  = 0x400 - (addr >> 4);
+	u32 diff  = 0x400 - (addr / 16);
 	u32 size;
 	u8* pDest;
 
 	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
-
 		if(Path1WritePos != 0)	
 		{
 			//Flush any pending transfers so things dont go up in the wrong order
@@ -2003,22 +2002,17 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
+		Path1WritePos += size;
+
 		pxAssumeMsg((Path1WritePos+size < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
 
-		//DevCon.Warning("Storing size %x PATH 1", size);
 		if (size > diff) {
-			// fixme: one of these days the following *16's will get cleaned up when we introduce
-			// a special qwc/simd16 optimized version of memcpy_aligned. :)
 			//DevCon.Status("XGkick Wrap!");
-			memcpy_aligned(pDest, VU1.Mem + addr, diff);
-			Path1WritePos += size;
-			size  -= diff;
-			pDest += diff*16;
-			memcpy_aligned(pDest, VU1.Mem, size);			
+			memcpy_qwc(pDest, VU1.Mem + addr, diff);
+			memcpy_qwc(pDest+(diff*16), VU1.Mem, size-diff);
 		}
 		else {
-			memcpy_aligned(pDest, VU1.Mem + addr, size);
-			Path1WritePos += size;
+			memcpy_qwc(pDest, VU1.Mem + addr, size);
 		}
 		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;
