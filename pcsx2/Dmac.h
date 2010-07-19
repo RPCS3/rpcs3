@@ -693,11 +693,12 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 	}
 }
 
-void hwIntcIrq(int n);
-void hwDmacIrq(int n);
+extern void hwIntcIrq(int n);
+extern void hwDmacIrq(int n);
 
-bool hwDmacSrcChainWithStack(DMACh *dma, int id);
-bool hwDmacSrcChain(DMACh *dma, int id);
+extern bool hwMFIFOWrite(u32 addr, const u128* data, uint size_qwc);
+extern bool hwDmacSrcChainWithStack(DMACh *dma, int id);
+extern bool hwDmacSrcChain(DMACh *dma, int id);
 
 extern void intcInterrupt();
 extern void dmacInterrupt();

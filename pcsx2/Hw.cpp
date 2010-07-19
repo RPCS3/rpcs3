@@ -127,39 +127,35 @@ void hwDmacIrq(int n)
 }
 
 // Write 'size' bytes to memory address 'addr' from 'data'.
-bool hwMFIFOWrite(u32 addr, u8 *data, u32 size)
+__releaseinline bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {
-	u32 msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
-	u8 *dst;
+	// all FIFO addresses should always be QWC-aligned.
+	pxAssume((dmacRegs->rbor.ADDR & 15) == 0);
+	pxAssume((addr & 15) == 0);
 
-	addr = dmacRegs->rbor.ADDR + (addr & dmacRegs->rbsr.RMSK);
+	// DMAC Address resolution:  FIFO can be placed anywhere in the *physical* memory map
+	// for the PS2.  Its probably a serious error for a PS2 app to have the buffer cross
+	// valid/invalid page areas of ram, so realistically we only need to test the base address
+	// of the FIFO for address validity.
 
-	// Check if the transfer should wrap around the ring buffer
-	if ((addr+size) >= msize) {
-		int s1 = msize - addr;
-		int s2 = size - s1;
-
-		// it does, so first copy 's1' bytes from 'data' to 'addr'
-		dst = (u8*)PSM(addr);
-		if (dst == NULL) return false;
-		memcpy_fast(dst, data, s1);
-
-		// and second copy 's2' bytes from '&data[s1]' to 'maddr'
-		dst = (u8*)PSM(dmacRegs->rbor.ADDR);
-		if (dst == NULL) return false;
-		memcpy_fast(dst, &data[s1], s2);
+	if (u128* dst = (u128*)PSM(dmacRegs->rbor.ADDR))
+	{
+		const u32 ringsize = (dmacRegs->rbsr.RMSK / 16) + 1;
+		pxAssertMsg( PSM(dmacRegs->rbor.ADDR+ringsize-1) != NULL, "Scratchpad/MFIFO ringbuffer spans into invalid (unmapped) physical memory!" );
+		uint startpos = (addr & dmacRegs->rbsr.RMSK)/16;
+		MemCopy_WrappedDest( data, dst, startpos, ringsize, qwc );
 	}
-	else {
-		// it doesn't, so just copy 'size' bytes from 'data' to 'addr'
-		dst = (u8*)PSM(addr);
-		if (dst == NULL) return false;
-		memcpy_fast(dst, data, size);
+	else
+	{
+		SPR_LOG( "Scratchpad/MFIFO: invalid base physical address: 0x%08x", dmacRegs->rbor.ADDR );
+		pxFailDev( wxsFormat( L"Scratchpad/MFIFO: Invalid base physical address: 0x%08x", dmacRegs->rbor.ADDR) );
+		return false;
 	}
 
 	return true;
 }
 
-bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
+__releaseinline bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 	switch (id) {
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
             //End Transfer

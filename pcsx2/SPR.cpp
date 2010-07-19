@@ -64,14 +64,14 @@ int  _SPR0chain()
 			else
 				mfifotransferred += spr0->qwc;
 
-			hwMFIFOWrite(spr0->madr, &psSu8(spr0->sadr), spr0->qwc << 4);
+			hwMFIFOWrite(spr0->madr, &psSu128(spr0->sadr), spr0->qwc);
 			spr0->madr += spr0->qwc << 4;
 			spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
 			break;
 
 		case NO_MFD:
 		case MFD_RESERVED:
-			memcpy_fast((u8*)pMem, &psSu8(spr0->sadr), spr0->qwc << 4);
+			memcpy_qwc(pMem, &psSu128(spr0->sadr), spr0->qwc);
 
 			// clear VU mem also!
 			TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
@@ -114,7 +114,7 @@ void _SPR0interleave()
  		{
 			case MFD_VIF1:
 			case MFD_GIF:
-				hwMFIFOWrite(spr0->madr, &psSu8(spr0->sadr), spr0->qwc << 4);
+				hwMFIFOWrite(spr0->madr, &psSu128(spr0->sadr), spr0->qwc);
 				mfifotransferred += spr0->qwc;
 				break;
 
@@ -122,7 +122,7 @@ void _SPR0interleave()
 			case MFD_RESERVED:
 				// clear VU mem also!
 				TestClearVUs(spr0->madr, spr0->qwc << 2);
-				memcpy_fast((u8*)pMem, &psSu8(spr0->sadr), spr0->qwc << 4);
+				memcpy_qwc(pMem, &psSu128(spr0->sadr), spr0->qwc);
 				break;
  		}
 		spr0->sadr += spr0->qwc * 16;
@@ -273,11 +273,10 @@ void dmaSPR0()   // fromSPR
 	SPRFROMinterrupt();
 }
 
-__forceinline static void SPR1transfer(u32 *data, int size)
+__forceinline static void SPR1transfer(const void* data, int qwc)
 {
-	memcpy_fast(&psSu8(spr1->sadr), (u8*)data, size << 2);
-
-	spr1->sadr += size << 2;
+	memcpy_qwc(&psSu128(spr1->sadr), data, qwc);
+	spr1->sadr += qwc * 16;
 }
 
 int  _SPR1chain()
@@ -289,8 +288,8 @@ int  _SPR1chain()
 	pMem = SPRdmaGetAddr(spr1->madr, false);
 	if (pMem == NULL) return -1;
 
-	SPR1transfer((u32*)pMem, spr1->qwc << 2);
-	spr1->madr += spr1->qwc << 4;
+	SPR1transfer(pMem, spr1->qwc);
+	spr1->madr += spr1->qwc * 16;
 
 	return (spr1->qwc);
 }
@@ -317,7 +316,7 @@ void _SPR1interleave()
 		spr1->qwc = std::min(tqwc, qwc);
 		qwc -= spr1->qwc;
 		pMem = SPRdmaGetAddr(spr1->madr, false);
-		memcpy_fast(&psSu8(spr1->sadr), (u8*)pMem, spr1->qwc << 4);
+		memcpy_qwc(&psSu128(spr1->sadr), pMem, spr1->qwc);
 		spr1->sadr += spr1->qwc * 16;
 		spr1->madr += (sqwc + spr1->qwc) * 16;
 	}
@@ -365,7 +364,7 @@ void _dmaSPR1()   // toSPR work function
 			if (spr1->chcr.TTE)
 			{
 				SPR_LOG("SPR TTE: %x_%x\n", ptag[3]._u32, ptag[2]._u32);
-				SPR1transfer((u32*)ptag, 4);				//Transfer Tag
+				SPR1transfer(ptag, 1);				//Transfer Tag
 			}
 
 			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx taddr=%lx saddr=%lx",

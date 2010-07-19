@@ -114,14 +114,12 @@ extern u8  *psMHW;
 #define psERu32(mem)	(*(u32*)&PS2MEM_EROM[(mem) & 0x3ffff])
 #define psERu64(mem)	(*(u64*)&PS2MEM_EROM[(mem) & 0x3ffff])
 
-#define psSs8(mem)	(*(s8 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSs16(mem)	(*(s16*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSs32(mem)	(*(s32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSs64(mem)	(*(s64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSu8(mem)	(*(u8 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSu16(mem)	(*(u16*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSu32(mem)	(*(u32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
-#define psSu64(mem)	(*(u64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSs32(mem)		(*(s32 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSs64(mem)		(*(s64 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSs128(mem)	(*(s128*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSu32(mem)		(*(u32 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSu64(mem)		(*(u64 *)&PS2MEM_SCRATCH[(mem) & 0x3fff])
+#define psSu128(mem)	(*(u128*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 
 #define psH_DMACh(mem)	(*(DMACh*)&PS2MEM_HW[(mem) & 0xffff])
 extern void memAlloc();

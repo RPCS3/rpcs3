@@ -1134,7 +1134,6 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 		}
 		else {
 			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
-			Path1WritePos += size;
 		}
 		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;

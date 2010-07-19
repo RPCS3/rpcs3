@@ -529,7 +529,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	return size;
 }
 
-__forceinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
+__releaseinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
 	uint endpos = destStart + len;
 	if( endpos < destSize )
@@ -547,7 +547,7 @@ __forceinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& d
 	}
 }
 
-__forceinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
+__releaseinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
 {
 	uint endpos = srcStart + len;
 	if( endpos < srcSize )

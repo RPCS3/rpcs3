@@ -312,8 +312,6 @@ extern void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval );
 
 extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
 
-bool hwMFIFOWrite(u32 addr, u8 *data, u32 size);
-
 extern const int rdram_devices;
 extern int rdram_sdevid;
 
