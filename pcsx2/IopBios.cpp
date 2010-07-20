@@ -430,6 +430,7 @@ namespace ioman {
 			Console.Write(ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra1, a2).c_str());
 			pc = ra;
 			v0 = a2;
+			return 1;
 		}
 		else
 #endif
