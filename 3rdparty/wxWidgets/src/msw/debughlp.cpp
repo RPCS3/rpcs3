@@ -42,6 +42,10 @@ static const unsigned MAX_DUMP_DEPTH = 20;
 // error message from Init()
 static wxString gs_errMsg;
 
+#if wxUSE_THREADS
+wxMutex s_mtx_DbgHelp;
+#endif
+
 // ============================================================================
 // wxDbgHelpDLL implementation
 // ============================================================================
@@ -53,6 +57,7 @@ static wxString gs_errMsg;
 #define DEFINE_SYM_FUNCTION(func) wxDbgHelpDLL::func ## _t wxDbgHelpDLL::func = 0
 
 wxDO_FOR_ALL_SYM_FUNCS(DEFINE_SYM_FUNCTION);
+DEFINE_SYM_FUNCTION(SymRefreshModuleList);
 
 #undef DEFINE_SYM_FUNCTION
 
@@ -62,12 +67,11 @@ wxDO_FOR_ALL_SYM_FUNCS(DEFINE_SYM_FUNCTION);
 
 // load all function we need from the DLL
 
-static bool BindDbgHelpFunctions(const wxDynamicLibrary& dllDbgHelp)
+bool wxDbgHelpDLL::BindFunctions(const wxDynamicLibrary& dllDbgHelp)
 {
     #define LOAD_SYM_FUNCTION(name)                                           \
-        wxDbgHelpDLL::name = (wxDbgHelpDLL::name ## _t)                       \
-                                dllDbgHelp.GetSymbol(_T(#name));              \
-        if ( !wxDbgHelpDLL::name )                                            \
+        name = (name ## _t)dllDbgHelp.GetSymbol(_T(#name));                   \
+        if ( !name )                                                          \
         {                                                                     \
             gs_errMsg += _T("Function ") _T(#name) _T("() not found.\n");     \
             return false;                                                     \
@@ -75,25 +79,31 @@ static bool BindDbgHelpFunctions(const wxDynamicLibrary& dllDbgHelp)
 
     wxDO_FOR_ALL_SYM_FUNCS(LOAD_SYM_FUNCTION);
 
-    #undef LOAD_SYM_FUNCTION
+	#undef LOAD_SYM_FUNCTION
+
+	// SymRefreshModuleList is bound separately since it requires an especially new version
+	// of WinDbgHlp (v6.5 or later).  If it binds as NULL, that's ok.  Its only needed in
+	// order to reload symbols for apps that dynamically unload/reload plugins.
+
+	SymRefreshModuleList = (SymRefreshModuleList_t)dllDbgHelp.GetSymbol(_T("SymRefreshModuleList"));
 
     return true;
 }
 
 // called by Init() if we hadn't done this before
-static bool DoInit()
+bool wxDbgHelpDLL::DoInit()
 {
     wxDynamicLibrary dllDbgHelp(_T("dbghelp.dll"), wxDL_VERBATIM);
     if ( dllDbgHelp.IsLoaded() )
     {
-        if ( BindDbgHelpFunctions(dllDbgHelp) )
+        if ( BindFunctions(dllDbgHelp) )
         {
             // turn on default options
-            DWORD options = wxDbgHelpDLL::SymGetOptions();
+            DWORD options = SymGetOptions();
 
             options |= SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME | SYMOPT_DEBUG;
 
-            wxDbgHelpDLL::SymSetOptions(options);
+            SymSetOptions(options);
 
             dllDbgHelp.Detach();
             return true;
@@ -119,9 +129,13 @@ static bool DoInit()
 /* static */
 bool wxDbgHelpDLL::Init()
 {
-    // this flag is -1 until Init() is called for the first time, then it's set
-    // to either false or true depending on whether we could load the functions
-    static int s_loaded = -1;
+	// this flag is -1 until Init() is called for the first time, then it's set
+	// to either false or true depending on whether we could load the functions
+	static int s_loaded = -1;
+
+#if wxUSE_THREADS
+	wxMutexLocker lock(s_mtx_DbgHelp);
+#endif
 
     if ( s_loaded == -1 )
     {
@@ -129,6 +143,42 @@ bool wxDbgHelpDLL::Init()
     }
 
     return s_loaded != 0;
+}
+
+bool wxDbgHelpDLL::RefreshModuleList( HANDLE hProcess )
+{
+	static bool s_syms_initialized = false;
+
+#if wxUSE_THREADS
+	wxMutexLocker lock(s_mtx_DbgHelp);
+#endif
+
+	if ( !s_syms_initialized )
+	{
+		if ( !SymInitialize(
+				hProcess,
+				NULL,   // use default symbol search path
+				TRUE    // load symbols for all loaded modules
+			) )
+		{
+			wxDbgHelpDLL::LogError(_T("SymInitialize"));
+			return false;
+		}
+		
+		s_syms_initialized = true;
+	}
+	else if ( SymRefreshModuleList && !SymRefreshModuleList( hProcess ) )
+	{
+		// If winDbgHlp v6.5 or newer, we can use this to reload symbols on-the-fly.
+		// If not, then the app could have outdated or unloaded symbols if it dynamically
+		// loads and unloads modules *and* performs multiple stack traces during the course
+		// of program execution.
+
+		wxDbgHelpDLL::LogError(_T("SymRefreshModuleList"));
+		return false;
+	}
+
+    return true;
 }
 
 // ----------------------------------------------------------------------------

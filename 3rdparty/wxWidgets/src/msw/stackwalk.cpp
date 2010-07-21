@@ -209,6 +209,9 @@ void wxStackFrame::OnGetParam()
     }
 }
 
+#if wxUSE_THREADS
+static wxMutex s_mtx_StackWalker;
+#endif
 
 // ----------------------------------------------------------------------------
 // wxStackWalker
@@ -216,6 +219,14 @@ void wxStackFrame::OnGetParam()
 
 void wxStackWalker::WalkFrom(const CONTEXT *pCtx, size_t skip)
 {
+#if wxUSE_THREADS
+	// wxDbgHelpDLL has its own mutex locks for some critical functions, but really it
+	// should have locks on ALL its functions.  So until it gets fixed, we'll use a
+	// mutex here for stackframe walking.  --air
+	
+	wxMutexLocker lock(s_mtx_StackWalker);
+#endif
+
     if ( !wxDbgHelpDLL::Init() )
     {
         // don't log a user-visible error message here because the stack trace
@@ -233,17 +244,7 @@ void wxStackWalker::WalkFrom(const CONTEXT *pCtx, size_t skip)
     // below which should be a real handle... so this is what we use
     const HANDLE hProcess = ::GetCurrentProcess();
 
-    if ( !wxDbgHelpDLL::SymInitialize
-                        (
-                            hProcess,
-                            NULL,   // use default symbol search path
-                            TRUE    // load symbols for all loaded modules
-                        ) )
-    {
-        wxDbgHelpDLL::LogError(_T("SymInitialize"));
-
-        return;
-    }
+    if ( !wxDbgHelpDLL::RefreshModuleList(hProcess) ) return;
 
     CONTEXT ctx = *pCtx; // will be modified by StackWalk()
 

@@ -140,6 +140,7 @@ public:
     typedef DWORD (WINAPI *SymGetOptions_t)();
     typedef DWORD (WINAPI *SymSetOptions_t)(DWORD);
     typedef BOOL (WINAPI *SymInitialize_t)(HANDLE, LPSTR, BOOL);
+	typedef BOOL (WINAPI *SymRefreshModuleList_t)(HANDLE);
     typedef BOOL (WINAPI *StackWalk_t)(DWORD, HANDLE, HANDLE, LPSTACKFRAME,
                                        LPVOID, PREAD_PROCESS_MEMORY_ROUTINE,
                                        PFUNCTION_TABLE_ACCESS_ROUTINE,
@@ -184,10 +185,12 @@ public:
 
     wxDO_FOR_ALL_SYM_FUNCS(wxDECLARE_SYM_FUNCTION);
 
-    #undef wxDECLARE_SYM_FUNCTION
-
     // load all functions from DLL, return true if ok
     static bool Init();
+
+	// *PCSX2* Should be called before performing a stack trace, as apps may load/unload plugins during
+	// program execution.
+    static bool RefreshModuleList(HANDLE hProcess);
 
     // return the string with the error message explaining why Init() failed
     static const wxString& GetErrorMessage();
@@ -202,6 +205,14 @@ public:
     static wxString GetSymbolName(PSYMBOL_INFO pSymInfo);
 
 private:
+	// Declared separately since it requires an especially new version of WinDbgHlp
+	// (v6.5 or later).
+	wxDECLARE_SYM_FUNCTION(SymRefreshModuleList);
+	
+	static bool DoInit();
+	
+	static bool BindFunctions(const wxDynamicLibrary& dllDbgHelp);
+
     // dereference the given symbol, i.e. return symbol which is not a
     // pointer/reference any more
     //
@@ -221,6 +232,8 @@ private:
                             void *pVariable,
                             unsigned level = 0);
 };
+
+#undef wxDECLARE_SYM_FUNCTION
 
 #endif // wxUSE_DBGHELP
 
