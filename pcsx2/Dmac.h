@@ -438,20 +438,18 @@ union tDMAC_CTRL {
 
 union tDMAC_STAT {
 	struct {
-		struct {
-			u32 CIS : 10;
-			u32 _reserved1 : 3;
-			u32 SIS : 1;
-			u32 MEIS : 1;
-			u32 BEIS : 1;
-			u32 CIM : 10;
-			u32 _reserved2 : 3;
-			u32 SIM : 1;
-			u32 MEIM : 1;
-			u32 _reserved3 : 1;
-		};
-		u32 _u32;
+		u32 CIS : 10;
+		u32 _reserved1 : 3;
+		u32 SIS : 1;
+		u32 MEIS : 1;
+		u32 BEIS : 1;
+		u32 CIM : 10;
+		u32 _reserved2 : 3;
+		u32 SIM : 1;
+		u32 MEIM : 1;
+		u32 _reserved3 : 1;
 	};
+	u32 _u32;
 	struct {
 		u16 _u16lo;
 		u16 _u16hi;
