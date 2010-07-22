@@ -60,8 +60,8 @@ struct GIFTAG
 {
 	u32 NLOOP	: 15;
 	u32 EOP		: 1;
-	u32 dummy0	: 16;
-	u32 dummy1	: 14;
+	u32 _dummy0	: 16;
+	u32 _dummy1	: 14;
 	u32 PRE		: 1;
 	u32 PRIM	: 11;
 	u32 FLG		: 2;

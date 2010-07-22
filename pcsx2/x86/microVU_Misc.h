@@ -17,6 +17,11 @@
 
 using namespace x86Emitter;
 
+typedef xRegisterSSE xmm;
+typedef xRegister32 x32;
+
+struct microVU;
+
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
@@ -33,9 +38,6 @@ struct mVU_Globals {
 };
 
 extern const __aligned(32) mVU_Globals mVUglob;
-
-typedef xRegisterSSE xmm;
-typedef xRegister32 x32;
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -120,6 +122,9 @@ typedef xRegister32 x32;
 #define mF int recPass
 #define mX mVU, recPass
 
+typedef void __fastcall Fntype_mVUrecInst( microVU* mVU, int recPass );
+typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
+
 // Recursive Inline
 #ifndef __LINUX__
 #define __recInline __releaseinline
@@ -129,7 +134,7 @@ typedef xRegister32 x32;
 
 // Function/Template Stuff
 #define  mVUx (vuIndex ? &microVU1 : &microVU0)
-#define  mVUop(opName)	static void opName (mP)
+#define  mVUop(opName)	static void __fastcall opName (mP)
 #define _mVUt template<int vuIndex>
 #define _r	  static __recInline
 

@@ -33,7 +33,7 @@ mVUop(mVUunknown);
 //------------------------------------------------------------------
 // Opcode Tables
 //------------------------------------------------------------------
-void (*mVULOWER_OPCODE [128])(mP) = {
+static const Fnptr_mVUrecInst mVULOWER_OPCODE[128] = {
 	mVU_LQ		, mVU_SQ		, mVUunknown	, mVUunknown,
 	mVU_ILW		, mVU_ISW		, mVUunknown	, mVUunknown,
 	mVU_IADDIU	, mVU_ISUBIU	, mVUunknown	, mVUunknown,
@@ -68,7 +68,7 @@ void (*mVULOWER_OPCODE [128])(mP) = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 };
 
-void (*mVULowerOP_T3_00_OPCODE [32])(mP) = {
+static const Fnptr_mVUrecInst mVULowerOP_T3_00_OPCODE[32] = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
@@ -79,7 +79,7 @@ void (*mVULowerOP_T3_00_OPCODE [32])(mP) = {
 	mVU_ESADD	, mVU_EATANxy	, mVU_ESQRT		, mVU_ESIN,	
 };
 
-void (*mVULowerOP_T3_01_OPCODE [32])(mP) = {
+static const Fnptr_mVUrecInst mVULowerOP_T3_01_OPCODE[32] = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
@@ -90,7 +90,7 @@ void (*mVULowerOP_T3_01_OPCODE [32])(mP) = {
 	mVU_ERSADD	, mVU_EATANxz	, mVU_ERSQRT	, mVU_EATAN,
 };
 
-void (*mVULowerOP_T3_10_OPCODE [32])(mP) = {
+static const Fnptr_mVUrecInst mVULowerOP_T3_10_OPCODE[32] = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
@@ -101,7 +101,7 @@ void (*mVULowerOP_T3_10_OPCODE [32])(mP) = {
 	mVU_ELENG	, mVU_ESUM		, mVU_ERCPR		, mVU_EEXP,	
 };
 
-void (*mVULowerOP_T3_11_OPCODE [32])(mP) = {
+const Fnptr_mVUrecInst mVULowerOP_T3_11_OPCODE [32] = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
@@ -112,7 +112,7 @@ void (*mVULowerOP_T3_11_OPCODE [32])(mP) = {
 	mVU_ERLENG	, mVUunknown	, mVU_WAITP		, mVUunknown,
 };
 
-void (*mVULowerOP_OPCODE [64])(mP) = {
+static const Fnptr_mVUrecInst mVULowerOP_OPCODE[64] = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
@@ -131,7 +131,7 @@ void (*mVULowerOP_OPCODE [64])(mP) = {
 	mVULowerOP_T3_00, mVULowerOP_T3_01, mVULowerOP_T3_10, mVULowerOP_T3_11,
 };
 
-void (*mVU_UPPER_OPCODE [64])(mP) = {
+static const Fnptr_mVUrecInst mVU_UPPER_OPCODE[64] = {
 	mVU_ADDx	, mVU_ADDy		, mVU_ADDz		, mVU_ADDw,	
 	mVU_SUBx	, mVU_SUBy		, mVU_SUBz		, mVU_SUBw,	
 	mVU_MADDx	, mVU_MADDy		, mVU_MADDz		, mVU_MADDw,
@@ -150,7 +150,7 @@ void (*mVU_UPPER_OPCODE [64])(mP) = {
 	mVU_UPPER_FD_00, mVU_UPPER_FD_01, mVU_UPPER_FD_10, mVU_UPPER_FD_11,
 };
 
-void (*mVU_UPPER_FD_00_TABLE [32])(mP) = {
+static const Fnptr_mVUrecInst mVU_UPPER_FD_00_TABLE [32] = {
 	mVU_ADDAx	, mVU_SUBAx		, mVU_MADDAx	, mVU_MSUBAx,
 	mVU_ITOF0	, mVU_FTOI0		, mVU_MULAx		, mVU_MULAq,
 	mVU_ADDAq	, mVU_SUBAq		, mVU_ADDA		, mVU_SUBA,	
@@ -161,7 +161,7 @@ void (*mVU_UPPER_FD_00_TABLE [32])(mP) = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 };
 
-void (* mVU_UPPER_FD_01_TABLE [32])(mP) = {
+static const Fnptr_mVUrecInst mVU_UPPER_FD_01_TABLE [32] = {
 	mVU_ADDAy	, mVU_SUBAy		, mVU_MADDAy	, mVU_MSUBAy,
 	mVU_ITOF4	, mVU_FTOI4		, mVU_MULAy		, mVU_ABS,	
 	mVU_MADDAq	, mVU_MSUBAq	, mVU_MADDA		, mVU_MSUBA,
@@ -172,7 +172,7 @@ void (* mVU_UPPER_FD_01_TABLE [32])(mP) = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 };
 
-void (* mVU_UPPER_FD_10_TABLE [32])(mP) = {
+static const Fnptr_mVUrecInst mVU_UPPER_FD_10_TABLE [32] = {
 	mVU_ADDAz	, mVU_SUBAz		, mVU_MADDAz	, mVU_MSUBAz,
 	mVU_ITOF12	, mVU_FTOI12	, mVU_MULAz		, mVU_MULAi,
 	mVU_ADDAi	, mVU_SUBAi		, mVU_MULA		, mVU_OPMULA,
@@ -183,7 +183,7 @@ void (* mVU_UPPER_FD_10_TABLE [32])(mP) = {
 	mVUunknown	, mVUunknown	, mVUunknown	, mVUunknown,
 };
 
-void (* mVU_UPPER_FD_11_TABLE [32])(mP) = {
+static const Fnptr_mVUrecInst mVU_UPPER_FD_11_TABLE [32] = {
 	mVU_ADDAw	, mVU_SUBAw		, mVU_MADDAw	, mVU_MSUBAw,
 	mVU_ITOF15	, mVU_FTOI15	, mVU_MULAw		, mVU_CLIP,
 	mVU_MADDAi	, mVU_MSUBAi	, mVUunknown	, mVU_NOP,
