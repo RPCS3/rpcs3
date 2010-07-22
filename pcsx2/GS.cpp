@@ -286,7 +286,7 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
 			//=========================================================================
-			gifRegs->stat.OPH = true;
+			//gifRegs->stat.OPH = true; // Bleach wants it, Killzone hates it.
 			
 			gifRegs->stat.DIR = (u32)value[0];
 			//=========================================================================
