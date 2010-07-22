@@ -24,6 +24,8 @@ using namespace R5900;
 /////////////////////////////////////////////////////////////////////////
 // DMA Execution Interfaces
 
+// Returns true if the DMA is enabled and executed successfully.  Returns false if execution
+// was blocked (DMAE or master DMA enabler).
 static bool QuickDmaExec( void (*func)(), u32 mem)
 {
 	bool ret = false;
@@ -35,7 +37,6 @@ static bool QuickDmaExec( void (*func)(), u32 mem)
 		ret = true;
 	}
 
-
 	return ret;
 }
 
@@ -43,205 +44,49 @@ static bool QuickDmaExec( void (*func)(), u32 mem)
 tDMAC_QUEUE QueuedDMA(0);
 u32 oldvalue = 0;
 
-void __fastcall StartQueuedDMA()
+static void StartQueuedDMA()
 {
-	if (QueuedDMA.VIF0) { DMA_LOG("Resuming DMA for VIF0"); if(QuickDmaExec(dmaVIF0, D0_CHCR) == true) QueuedDMA.VIF0 = false; }
-	if (QueuedDMA.VIF1) { DMA_LOG("Resuming DMA for VIF1"); if(QuickDmaExec(dmaVIF1, D1_CHCR) == true) QueuedDMA.VIF1 = false; }
-	if (QueuedDMA.GIF ) { DMA_LOG("Resuming DMA for GIF" ); if(QuickDmaExec(dmaGIF , D2_CHCR) == true) QueuedDMA.GIF = false; }
-	if (QueuedDMA.IPU0) { DMA_LOG("Resuming DMA for IPU0"); if(QuickDmaExec(dmaIPU0, D3_CHCR) == true) QueuedDMA.IPU0 = false; }
-	if (QueuedDMA.IPU1) { DMA_LOG("Resuming DMA for IPU1"); if(QuickDmaExec(dmaIPU1, D4_CHCR) == true) QueuedDMA.IPU1 = false; }
-	if (QueuedDMA.SIF0) { DMA_LOG("Resuming DMA for SIF0"); if(QuickDmaExec(dmaSIF0, D5_CHCR) == true) QueuedDMA.SIF0 = false; }
-	if (QueuedDMA.SIF1) { DMA_LOG("Resuming DMA for SIF1"); if(QuickDmaExec(dmaSIF1, D6_CHCR) == true) QueuedDMA.SIF1 = false; }
-	if (QueuedDMA.SIF2) { DMA_LOG("Resuming DMA for SIF2"); if(QuickDmaExec(dmaSIF2, D7_CHCR) == true) QueuedDMA.SIF2 = false; }
-	if (QueuedDMA.SPR0) { DMA_LOG("Resuming DMA for SPR0"); if(QuickDmaExec(dmaSPR0, D8_CHCR) == true) QueuedDMA.SPR0 = false; }
-	if (QueuedDMA.SPR1) { DMA_LOG("Resuming DMA for SPR1"); if(QuickDmaExec(dmaSPR1, D9_CHCR) == true) QueuedDMA.SPR1 = false; }
+	if (QueuedDMA.VIF0) { DMA_LOG("Resuming DMA for VIF0"); QueuedDMA.VIF0 = !QuickDmaExec(dmaVIF0, D0_CHCR); }
+	if (QueuedDMA.VIF1) { DMA_LOG("Resuming DMA for VIF1"); QueuedDMA.VIF1 = !QuickDmaExec(dmaVIF1, D1_CHCR); }
+	if (QueuedDMA.GIF ) { DMA_LOG("Resuming DMA for GIF" ); QueuedDMA.GIF  = !QuickDmaExec(dmaGIF , D2_CHCR); }
+	if (QueuedDMA.IPU0) { DMA_LOG("Resuming DMA for IPU0"); QueuedDMA.IPU0 = !QuickDmaExec(dmaIPU0, D3_CHCR); }
+	if (QueuedDMA.IPU1) { DMA_LOG("Resuming DMA for IPU1"); QueuedDMA.IPU1 = !QuickDmaExec(dmaIPU1, D4_CHCR); }
+	if (QueuedDMA.SIF0) { DMA_LOG("Resuming DMA for SIF0"); QueuedDMA.SIF0 = !QuickDmaExec(dmaSIF0, D5_CHCR); }
+	if (QueuedDMA.SIF1) { DMA_LOG("Resuming DMA for SIF1"); QueuedDMA.SIF1 = !QuickDmaExec(dmaSIF1, D6_CHCR); }
+	if (QueuedDMA.SIF2) { DMA_LOG("Resuming DMA for SIF2"); QueuedDMA.SIF2 = !QuickDmaExec(dmaSIF2, D7_CHCR); }
+	if (QueuedDMA.SPR0) { DMA_LOG("Resuming DMA for SPR0"); QueuedDMA.SPR0 = !QuickDmaExec(dmaSPR0, D8_CHCR); }
+	if (QueuedDMA.SPR1) { DMA_LOG("Resuming DMA for SPR1"); QueuedDMA.SPR1 = !QuickDmaExec(dmaSPR1, D9_CHCR); }
 }
 
-// dark cloud2 uses 8 bit DMAs register writes
-static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
+static _f void DmaExec( void (*func)(), u32 mem, u32 value )
 {
-	DMACh *reg = &psH_DMACh(mem & ~0xf);
-
-	//The only thing we can do in an 8bit write is set the CHCR, so lets just do checks for that
-
-	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)
-	{
-		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
-		{
-			//If it stops the DMA, we need to clear any pending interrupts so the DMA doesnt continue.
-			if(value == 0)
-			{
-				//DevCon.Warning(L"8bit %s DMA Stopped on Suspend", ChcrName(mem & ~0xf));
-				if(ChannelNumber(mem & ~0xf) == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(ChannelNumber(mem & ~0xf) == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( ChannelNumber(mem & ~0xf) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf)); //Clear any queued DMA requests for this channel;
-			}
-			//Here we update the CHCR STR (Busy) bit, we don't touch anything else.
-			reg->chcr.STR = value;
-			return;
-		}
-		else //Else the DMA is running (Not Suspended), so we cant touch it!
-		{
-			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
-			//Also "The DMA may not stop properly just by writing 0 to STR"
-			//So the presumption is that STR can be written to (ala force stop the DMA) but nothing else
-
-			if(value == 0)
-			{
-				//DevCon.Warning(L"8bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem & ~0xf), reg->chcr._u32, value);
-				reg->chcr.STR = value;
-				//We need to clear any existing DMA loops that are in progress else they will continue!
-
-				if(ChannelNumber(mem & ~0xf) == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(ChannelNumber(mem & ~0xf) == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( ChannelNumber(mem & ~0xf) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem & ~0xf)); //Clear any queued DMA requests for this channel
-			}
-			//else DevCon.Warning(L"8bit Attempted to stop %s DMA without suspend, ignoring", ChcrName(mem & ~0xf));
-			return;
-		}
-
-	}
-
-	reg->chcr.STR = value;
-
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
-	{
-		func();
-	}
-	else if(reg->chcr.STR)
-	{
-		//DevCon.Warning(L"8bit %s DMA Start while DMAC Disabled\n",ChcrName(mem));
-		QueuedDMA._u16 |= (1 << ChannelNumber(mem & ~0xf)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
-	}
-}
-
-static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
-{
-
-    DMACh *reg = &psH_DMACh(mem);
-    tDMA_CHCR chcr(value);
-
-	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)
-	{
-		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
-		{
-			//If it stops the DMA, we need to clear any pending interrupts so the DMA doesnt continue.
-			if(chcr.STR == 0)
-			{
-				//DevCon.Warning(L"16bit %s DMA Stopped on Suspend", ChcrName(mem));
-				if(ChannelNumber(mem) == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(ChannelNumber(mem) == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( ChannelNumber(mem) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
-			}
-			//Here we update the lower part of the CHCR, we dont touch the tag as it is only a 16bit value
-			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
-			return;
-		}
-		else //Else the DMA is running (Not Suspended), so we cant touch it!
-		{
-			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
-			//Also "The DMA may not stop properly just by writing 0 to STR"
-			//So the presumption is that STR can be written to (ala force stop the DMA) but nothing else
-
-			if(chcr.STR == 0)
-			{
-				//DevCon.Warning(L"16bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
-				reg->chcr.STR = 0;
-				//We need to clear any existing DMA loops that are in progress else they will continue!
-
-				if(ChannelNumber(mem) == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(ChannelNumber(mem) == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( ChannelNumber(mem) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
-			}
-			//else DevCon.Warning(L"16bit Attempted to change %s modes while DMA active, ignoring", ChcrName(mem));
-			return;
-		}
-
-	}
-
-	reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
-
-	if (reg->chcr.STR && dmacRegs->ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
-	{
-		func();
-	}
-	else if(reg->chcr.STR)
-	{
-		//DevCon.Warning(L"16bit %s DMA Start while DMAC Disabled\n",ChcrName(mem));
-		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
-	}
-}
-
-static void DmaExec( void (*func)(), u32 mem, u32 value )
-{
-
 	DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
 
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if (reg->chcr.STR)
 	{
+		const uint channel = ChannelNumber(mem);
+
 		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
 		{
 			//If it stops the DMA, we need to clear any pending interrupts so the DMA doesnt continue.
 			if(chcr.STR == 0)
 			{
 				//DevCon.Warning(L"32bit %s DMA Stopped on Suspend", ChcrName(mem));
-				if(ChannelNumber(mem) == 1)
+				if(channel == 1)
 				{
 					cpuClearInt( 10 );
 					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
 				}
-				else if(ChannelNumber(mem) == 2)
+				else if(channel == 2)
 				{
 					cpuClearInt( 11 );
 					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
 				}
 				
-				cpuClearInt( ChannelNumber(mem) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
+				cpuClearInt( channel );
+				QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
 			}
 			//Sanity Check for possible future bug fix0rs ;p
 			//Spams on Persona 4 opening.
@@ -263,19 +108,19 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 				reg->chcr.STR = 0;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
 
-				if(ChannelNumber(mem) == 1)
+				if(channel == 1)
 				{
 					cpuClearInt( 10 );
 					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
 				}
-				else if(ChannelNumber(mem) == 2)
+				else if(channel == 2)
 				{
 					cpuClearInt( 11 );
 					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
 				}
 				
-				cpuClearInt( ChannelNumber(mem) );
-				QueuedDMA._u16 &= ~(1 << ChannelNumber(mem)); //Clear any queued DMA requests for this channel
+				cpuClearInt( channel );
+				QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
 			}
 			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg->chcr._u32, chcr._u32, reg->qwc);
 			return;
@@ -297,6 +142,23 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted
 	} //else QueuedDMA._u16 &~= (1 << ChannelNumber(mem)); //
 }
+
+// DmaExec8 should only be called for the second byte of CHCR.
+// Testing Note: dark cloud 2 uses 8 bit DMAs register writes.
+static _f void DmaExec8( void (*func)(), u32 mem, u8 value )
+{
+	pxAssumeMsg( (mem & 0xf) == 1, "DmaExec8 should only be called for the second byte of CHCR" );
+
+	// The calling function calls this when the second byte (bits 8->15) is written.  Only bit 8
+	// is effective, and it is the STR (start) bit. :)	
+	DmaExec( func, mem & ~0xf, (u32)value<<8 );
+}
+
+static _f void DmaExec16( void (*func)(), u32 mem, u16 value )
+{
+	DmaExec( func, mem, (u32)value );
+}
+
 
 /////////////////////////////////////////////////////////////////////////
 // Hardware WRITE 8 bit

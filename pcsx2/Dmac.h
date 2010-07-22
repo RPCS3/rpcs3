@@ -438,18 +438,24 @@ union tDMAC_CTRL {
 
 union tDMAC_STAT {
 	struct {
-		u32 CIS : 10;
-		u32 _reserved1 : 3;
-		u32 SIS : 1;
-		u32 MEIS : 1;
-		u32 BEIS : 1;
-		u32 CIM : 10;
-		u32 _reserved2 : 3;
-		u32 SIM : 1;
-		u32 MEIM : 1;
-		u32 _reserved3 : 1;
+		struct {
+			u32 CIS : 10;
+			u32 _reserved1 : 3;
+			u32 SIS : 1;
+			u32 MEIS : 1;
+			u32 BEIS : 1;
+			u32 CIM : 10;
+			u32 _reserved2 : 3;
+			u32 SIM : 1;
+			u32 MEIM : 1;
+			u32 _reserved3 : 1;
+		};
+		u32 _u32;
 	};
-	u32 _u32;
+	struct {
+		u16 _u16lo;
+		u16 _u16hi;
+	};
 
 	tDMAC_STAT(u32 val) { _u32 = val; }
 
@@ -458,6 +464,11 @@ union tDMAC_STAT {
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Stat: 0x%x", _u32); }
+
+	bool TestForInterrupt() const
+	{
+		return ((_u16lo & _u16hi) != 0) || BEIS;
+	}
 };
 
 union tDMAC_PCR {
