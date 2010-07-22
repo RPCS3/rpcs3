@@ -33,6 +33,7 @@ _vifT bool runMark(u32* &data) {
 
 // Returns 1 if i-bit && finished vifcode && i-bit not masked
 _vifT bool analyzeIbit(u32* &data, int iBit) {
+	vifStruct& vifX = GetVifX;
 	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
@@ -69,6 +70,8 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 
 // Interprets packet
 _vifT void vifTransferLoop(u32* &data) {
+	vifStruct& vifX = GetVifX;
+
 	u32& pSize = vifX.vifpacketsize;
 	int  iBit  = vifX.cmd >> 7;
 
@@ -83,13 +86,13 @@ _vifT void vifTransferLoop(u32* &data) {
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
 			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
-			vifXCode[vifX.cmd & 0x7f](0, data);
+			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
 		}
 
-		int ret = vifXCode[vifX.cmd & 0x7f](1, data);
+		int ret = vifCmdHandler[idx][vifX.cmd & 0x7f](1, data);
 		data   += ret;
 		pSize  -= ret;
 		if (analyzeIbit<idx>(data, iBit)) break;
@@ -99,6 +102,8 @@ _vifT void vifTransferLoop(u32* &data) {
 }
 
 _vifT _f bool vifTransfer(u32 *data, int size) {
+	vifStruct& vifX = GetVifX;
+
 	// irqoffset necessary to add up the right qws, or else will spin (spiderman)
 	int transferred = vifX.vifstalled ? vifX.irqoffset : 0;
 
@@ -109,7 +114,7 @@ _vifT _f bool vifTransfer(u32 *data, int size) {
 	g_packetsizeonvu = size;
 	vifTransferLoop<idx>(data);
 
-	
+
 	transferred   += size - vifX.vifpacketsize;
 
 	g_vifCycles   +=((transferred * BIAS) >> 2) ; /* guessing */
@@ -125,7 +130,6 @@ _vifT _f bool vifTransfer(u32 *data, int size) {
 		else if(g_vifCycles >= g_vu1Cycles)g_vu1Cycles = 0;
 	}
 
-	
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
 	transferred   = transferred >> 2;

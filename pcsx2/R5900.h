@@ -378,6 +378,33 @@ extern R5900cpu *Cpu;
 extern R5900cpu intCpu;
 extern R5900cpu recCpu;
 
+enum EE_EventType
+{
+	DMAC_VIF0	= 0,
+	DMAC_VIF1,
+	DMAC_GIF,
+	DMAC_FROM_IPU,
+	DMAC_TO_IPU,
+	DMAC_SIF0,
+	DMAC_SIF1,
+	DMAC_SIF2,
+	DMAC_FROM_SPR,
+	DMAC_TO_SPR,
+
+	DMAC_MFIFO_VIF,
+	DMAC_MFIFO_GIF,
+
+	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
+	DMAC_STALL_SIS		= 13, // SIS
+	DMAC_MFIFO_EMPTY	= 14, // MEIS
+	DMAC_BUS_ERROR	= 15      // BEIS
+};
+
+extern void CPU_INT( EE_EventType n, s32 ecycle );
+extern void intcInterrupt();
+extern void dmacInterrupt();
+
+
 extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
 extern void cpuException(u32 code, u32 bd);

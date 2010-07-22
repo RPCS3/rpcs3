@@ -324,7 +324,6 @@ u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize)
 	pxAssert( (cmpsize&7) == 0 );
 
 	__asm {
-		push esi
 		mov ecx, cmpsize
 		mov edx, src1
 		mov esi, src2
@@ -486,7 +485,6 @@ Done:
 		xor eax, eax
 
 End:
-		pop esi
 		emms
 	}
 }

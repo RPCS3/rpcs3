@@ -291,10 +291,10 @@ static __forceinline void _cpuTestInterrupts()
 	/* These are 'pcsx2 interrupts', they handle asynchronous stuff
 	   that depends on the cycle timings */
 
-	TESTINT(1, vif1Interrupt);	
-	TESTINT(2, gsInterrupt);	
-	TESTINT(5, EEsif0Interrupt);
-	TESTINT(6, EEsif1Interrupt);
+	TESTINT(DMAC_VIF1,		vif1Interrupt);	
+	TESTINT(DMAC_GIF,		gsInterrupt);	
+	TESTINT(DMAC_SIF0,		EEsif0Interrupt);
+	TESTINT(DMAC_SIF1,		EEsif1Interrupt);
 
 	// Profile-guided Optimization (sorta)
 	// The following ints are rarely called.  Encasing them in a conditional
@@ -302,16 +302,16 @@ static __forceinline void _cpuTestInterrupts()
 
 	if( cpuRegs.interrupt & 0xF19 ) // Bits 0 3 4 8 9 10 11 ( 111100011001 )
 	{
-		TESTINT(0, vif0Interrupt);
+		TESTINT(DMAC_VIF0,		vif0Interrupt);
 
-		TESTINT(3, ipu0Interrupt);
-		TESTINT(4, ipu1Interrupt);
+		TESTINT(DMAC_FROM_IPU,	ipu0Interrupt);
+		TESTINT(DMAC_TO_IPU,	ipu1Interrupt);
 
-		TESTINT(8, SPRFROMinterrupt);
-		TESTINT(9, SPRTOinterrupt);
+		TESTINT(DMAC_FROM_SPR,	SPRFROMinterrupt);
+		TESTINT(DMAC_TO_SPR,	SPRTOinterrupt);
 
-		TESTINT(10, vifMFIFOInterrupt);
-		TESTINT(11, gifMFIFOInterrupt);
+		TESTINT(DMAC_MFIFO_VIF, vifMFIFOInterrupt);
+		TESTINT(DMAC_MFIFO_GIF, gifMFIFOInterrupt);
 	}
 }
 
@@ -547,7 +547,7 @@ __forceinline void cpuTestHwInts() {
 	cpuTestTIMRInts();
 }
 
-__forceinline void CPU_INT( u32 n, s32 ecycle)
+__forceinline void CPU_INT( EE_EventType n, s32 ecycle)
 {
 	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ //2 is Gif, and every path 3 masking game triggers this :/
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );

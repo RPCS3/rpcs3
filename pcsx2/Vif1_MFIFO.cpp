@@ -142,9 +142,9 @@ void mfifoVIF1transfer(int qwc)
 		if (vif1.inprogress & 0x10)
 		{
 			if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
-				CPU_INT(10, 0);
+				CPU_INT(DMAC_MFIFO_VIF, 0);
 			else
-				CPU_INT(10, vif1ch->qwc * BIAS);
+				CPU_INT(DMAC_MFIFO_VIF, vif1ch->qwc * BIAS);
 
 			vif1Regs->stat.FQC = 0x10; // FQC=16
 		}
@@ -247,7 +247,7 @@ void vifMFIFOInterrupt()
 
 	if (schedulepath3msk & 0x10) Vif1MskPath3();
 
-	if(vif1ch->chcr.DIR && CheckPath2GIF(10) == false) return;
+	if(vif1ch->chcr.DIR && CheckPath2GIF(DMAC_MFIFO_VIF) == false) return;
 	//We need to check the direction, if it is downloading from the GS, we handle that seperately (KH2 for testing)
 
 	//Simulated GS transfer time done, clear the flags
@@ -292,15 +292,15 @@ void vifMFIFOInterrupt()
 
                 mfifoVIF1transfer(0);
                 if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
-                    CPU_INT(10, 0);
+                    CPU_INT(DMAC_MFIFO_VIF, 0);
                 else
-					CPU_INT(10, vif1ch->qwc * BIAS);
+					CPU_INT(DMAC_MFIFO_VIF, vif1ch->qwc * BIAS);
 
 				return;
 
 			case 1: //Transfer data
 				mfifo_VIF1chain();
-				CPU_INT(10, 0);
+				CPU_INT(DMAC_MFIFO_VIF, 0);
 				return;
 		}
 		return;

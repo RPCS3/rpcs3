@@ -15,14 +15,14 @@
 
 #pragma once
 
-typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data);
-typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, u32 *data, int size);
-typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, u32 *data, int size);
+typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, const u32 *data);
+typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, const u32 *data, int size);
+typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, const u32 *data, int size);
 
-#define create_unpack_u_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, u##bits *data);
-#define create_unpack_odd_u_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_U##bits)(u32 *dest, u##bits *data, int size);
-#define create_unpack_s_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_S##bits)(u32 *dest, s##bits *data);
-#define create_unpack_odd_s_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_S##bits)(u32 *dest, s##bits *data, int size);
+#define create_unpack_u_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, const u##bits *data);
+#define create_unpack_odd_u_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_U##bits)(u32 *dest, const u##bits *data, int size);
+#define create_unpack_s_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_S##bits)(u32 *dest, const s##bits *data);
+#define create_unpack_odd_s_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_S##bits)(u32 *dest, const s##bits *data, int size);
 
 #define create_some_unpacks(bits)		\
 		create_unpack_u_type(bits);		\
@@ -51,8 +51,8 @@ struct VIFUnpackFuncTable
 
 extern const __aligned16 VIFUnpackFuncTable VIFfuncTable[32];
 
-extern int  nVifUnpack (int idx, u8 *data);
+extern int  nVifUnpack (int idx, const u8 *data);
 extern void resetNewVif(int idx);
 
-extern __forceinline void vif0UnpackSetup(u32 *data);
-extern __forceinline void vif1UnpackSetup(u32 *data);
+template< int idx >
+extern void vifUnpackSetup(const u32 *data);

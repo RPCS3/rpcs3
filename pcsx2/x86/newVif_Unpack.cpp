@@ -48,9 +48,10 @@ __aligned16 const u8 nVifT[16] = {
 
 // ----------------------------------------------------------------------------
 template< int idx, bool doMode, bool isFill, bool singleUnpack >
-__releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size);
+__releaseinline void __fastcall _nVifUnpackLoop(const u8 *data, u32 size);
 
-typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
+typedef void __fastcall FnType_VifUnpackLoop(const u8 *data, u32 size);
+typedef FnType_VifUnpackLoop* Fnptr_VifUnpackLoop;
 
 // Unpacks Until 'Num' is 0
 static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = {
@@ -113,7 +114,7 @@ static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 	}
 }
 
-int nVifUnpack(int idx, u8* data) {
+int nVifUnpack(int idx, const u8* data) {
 	nVifStruct& v = nVif[idx];
 	vif		= v.vif;
 	vifRegs = v.vifRegs;
@@ -196,7 +197,7 @@ static void setMasks(int idx, const VIFregisters& v) {
 // "slow" games that need it most). --air
 
 template< int idx, bool doMode, bool isFill, bool singleUnpack >
-__releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
+__releaseinline void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
 	const int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
@@ -249,7 +250,7 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	}
 }
 
-_f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
+_f void _nVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
 
 	if (useOldUnpack) {
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);

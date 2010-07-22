@@ -30,7 +30,6 @@
 #endif
 
 #include "IopCommon.h"
-#include "VU.h"
 #include "iCore.h"
 
 #include "SamplProf.h"

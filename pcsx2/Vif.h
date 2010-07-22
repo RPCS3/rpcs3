@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "R5900.h"
+
 enum vif0_stat_flags
 {
 	VIF0_STAT_VPS_W 	= (1),
@@ -88,7 +90,7 @@ union tVIF_STAT {
 		u32 VPS : 2; // Vif(0/1) status; 00 - idle, 01 - waiting for data following vifcode, 10 - decoding vifcode, 11 - decompressing/trasferring data follwing vifcode.
 		u32 VEW : 1; // E-bit wait (1 - wait, 0 - don't wait)
 		u32 VGW : 1; // Status waiting for the end of gif transfer (Vif1 only)
-		u32 reserved : 2;
+		u32 _reserved : 2;
 		u32 MRK : 1; // Mark Detect
 		u32 DBF : 1; // Double Buffer Flag
 		u32 VSS : 1; // Stopped by STOP
@@ -97,7 +99,7 @@ union tVIF_STAT {
 		u32 INT : 1; // Intereupt by the i bit.
 		u32 ER0 : 1; // DmaTag Mismatch error.
 		u32 ER1 : 1; // VifCode error
-		u32 reserved2 : 9;
+		u32 _reserved2 : 9;
 		u32 FDR : 1; // VIF/FIFO transfer direction. (false - memory -> Vif, true - Vif -> memory)
 		u32 FQC : 5; // Amount of data. Up to 8 qwords on Vif0, 16 on Vif1.
 	};
@@ -119,7 +121,7 @@ union tVIF_FBRST {
 		u32 FBK : 1; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
 		u32 STP : 1; // Stops after the end of the Vifcode in progress when true. (Stall)
 		u32 STC : 1; // Cancels the Vif(0/1) stall and clears Vif Stats VSS, VFS, VIS, INT, ER0 & ER1.
-		u32 reserved : 28;
+		u32 _reserved : 28;
 	};
 	u32 _u32;
 
@@ -138,7 +140,7 @@ union tVIF_ERR {
 		u32 MII : 1; // Masks Stat INT.
 		u32 ME0 : 1; // Masks Stat Err0.
 		u32 ME1 : 1; // Masks Stat Err1.
-		u32 reserved : 29;
+		u32 _reserved : 29;
 	};
 	u32 _u32;
 
@@ -159,53 +161,53 @@ struct vifCycle
 
 struct VIFregisters {
 	tVIF_STAT stat;
-	u32 pad0[3];
+	u32 _pad0[3];
 	u32 fbrst;
-	u32 pad1[3];
+	u32 _pad1[3];
 	tVIF_ERR err;
-	u32 pad2[3];
+	u32 _pad2[3];
 	u32 mark;
-	u32 pad3[3];
+	u32 _pad3[3];
 	vifCycle cycle; //data write cycle
-	u32 pad4[3];
+	u32 _pad4[3];
 	u32 mode;
-	u32 pad5[3];
+	u32 _pad5[3];
 	u32 num;
-	u32 pad6[3];
+	u32 _pad6[3];
 	u32 mask;
-	u32 pad7[3];
+	u32 _pad7[3];
 	u32 code;
-	u32 pad8[3];
+	u32 _pad8[3];
 	u32 itops;
-	u32 pad9[3];
+	u32 _pad9[3];
 	u32 base;      // Not used in VIF0
-	u32 pad10[3];
+	u32 _pad10[3];
 	u32 ofst;      // Not used in VIF0
-	u32 pad11[3];
+	u32 _pad11[3];
 	u32 tops;      // Not used in VIF0
-	u32 pad12[3];
+	u32 _pad12[3];
 	u32 itop;
-	u32 pad13[3];
+	u32 _pad13[3];
 	u32 top;       // Not used in VIF0
-	u32 pad14[3];
+	u32 _pad14[3];
 	u32 mskpath3;
-	u32 pad15[3];
+	u32 _pad15[3];
 	u32 r0;        // row0 register
-	u32 pad16[3];
+	u32 _pad16[3];
 	u32 r1;        // row1 register
-	u32 pad17[3];
+	u32 _pad17[3];
 	u32 r2;        // row2 register
-	u32 pad18[3];
+	u32 _pad18[3];
 	u32 r3;        // row3 register
-	u32 pad19[3];
+	u32 _pad19[3];
 	u32 c0;        // col0 register
-	u32 pad20[3];
+	u32 _pad20[3];
 	u32 c1;        // col1 register
-	u32 pad21[3];
+	u32 _pad21[3];
 	u32 c2;        // col2 register
-	u32 pad22[3];
+	u32 _pad22[3];
 	u32 c3;        // col3 register
-	u32 pad23[3];
+	u32 _pad23[3];
 	u32 offset;    // internal UNPACK offset
 	u32 addr;
 };
@@ -218,10 +220,9 @@ extern VIFregisters *vifRegs;
 #define vif1Regs (&vif1RegsRef)
 
 #define _vifT		template <int idx>
-#define  vifX		(idx ? (vif1)     : (vif0))
+#define  GetVifX	(idx ? (vif1)     : (vif0))
 #define  vifXch		(idx ? (vif1ch)   : (vif0ch))
 #define  vifXRegs	(idx ? (vif1Regs) : (vif0Regs))
-#define  vifXCode	(idx ? (vif1Code) : (vif0Code))
 #define _f			__forceinline
 #define _ri			__releaseinline
 
@@ -231,4 +232,4 @@ extern void mfifoVIF1transfer(int qwc);
 extern bool VIF0transfer(u32 *data, int size);
 extern bool VIF1transfer(u32 *data, int size);
 extern void vifMFIFOInterrupt();
-extern bool CheckPath2GIF(int channel);
+extern bool CheckPath2GIF(EE_EventType channel);

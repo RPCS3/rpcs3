@@ -46,7 +46,7 @@ __forceinline void vif1FLUSH()
 		//DevCon.Warning("VIF1 adding %x cycles", (VU1.cycle - _cycles) * BIAS);
 		g_vifCycles += (VU1.cycle - _cycles) * BIAS;
 	}
-	if(gifRegs->stat.P1Q == true && (vif1.cmd & 0x7f) != 0x14 && (vif1.cmd & 0x7f) != 0x17)
+	if(gifRegs->stat.P1Q && ((vif1.cmd & 0x7f) != 0x14) && ((vif1.cmd & 0x7f) != 0x17))
 	{
 		vif1.vifstalled = true;
 		vif1Regs->stat.VGW = true;
@@ -183,7 +183,8 @@ bool _VIF1chain()
 __forceinline void vif1SetupTransfer()
 {
     tDMA_TAG *ptag;
-
+	DMACh& vif1c = (DMACh&)PS2MEM_HW[0x9000];
+	
 	switch (vif1.dmamode)
 	{
 		case VIF_NORMAL_TO_MEM_MODE:
@@ -191,25 +192,23 @@ __forceinline void vif1SetupTransfer()
 			vif1.inprogress = 1;
 			vif1.done = true;
 			g_vifCycles = 2;
-			break;
+		break;
 
 		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif1ch->tadr, false); //Set memory pointer to TADR
+			ptag = dmaGetAddr(vif1c.tadr, false); //Set memory pointer to TADR
 
-			if (!(vif1ch->transfer("Vif1 Tag", ptag))) return;
+			if (!(vif1c.transfer("Vif1 Tag", ptag))) return;
 
-			vif1ch->madr = ptag[1]._u32;            //MADR = ADDR field + SPR
+			vif1c.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
 
-			// Transfer dma tag if tte is set
-
 			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
-			        ptag[1]._u32, ptag[0]._u32, vif1ch->qwc, ptag->ID, vif1ch->madr, vif1ch->tadr);
+			        ptag[1]._u32, ptag[0]._u32, vif1c.qwc, ptag->ID, vif1c.madr, vif1c.tadr);
 
 			if (!vif1.done && ((dmacRegs->ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1
 			{
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
-				if ((vif1ch->madr + vif1ch->qwc * 16) >= dmacRegs->stadr.ADDR)
+				if ((vif1c.madr + vif1c.qwc * 16) >= dmacRegs->stadr.ADDR)
 				{
 					// stalled
 					hwDmacIrq(DMAC_STALL_SIS);
@@ -220,16 +219,20 @@ __forceinline void vif1SetupTransfer()
 			
 			vif1.inprogress = 0;
 
-			if (vif1ch->chcr.TTE)
+			if (vif1c.chcr.TTE)
 			{
+				// Transfer dma tag if tte is set
+
 			    bool ret;
 
 				if (vif1.vifstalled)
+				{
 					ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
+				}
 				else
 					ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 				
-				if ((ret == false) && vif1.irqoffset < 2)
+				if (!ret && vif1.irqoffset < 2)
 				{
 					vif1.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
 					return;        //IRQ set by VIFTransfer
@@ -237,13 +240,13 @@ __forceinline void vif1SetupTransfer()
 				} //else vif1.vifstalled = false;
 			}
 			vif1.irqoffset = 0;
-			
+
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
-			if(vif1ch->qwc > 0) vif1.inprogress = 1;
+			if(vif1c.qwc > 0) vif1.inprogress = 1;
 
 			//Check TIE bit of CHCR and IRQ bit of tag
-			if (vif1ch->chcr.TIE && ptag->IRQ)
+			if (vif1c.chcr.TIE && ptag->IRQ)
 			{
 				VIF_LOG("dmaIrq Set");
 
@@ -251,19 +254,19 @@ __forceinline void vif1SetupTransfer()
 				vif1.done = true;
 				return;
 			}
-			break;
+		break;
 	}
 }
 
 extern bool SIGNAL_IMR_Pending;
 
-bool CheckPath2GIF(int channel)
+bool CheckPath2GIF(EE_EventType channel)
 {
 	if ((vif1Regs->stat.VGW))
 	{
 		if( vif1.GifWaitState == 0 ) //DIRECT/HL Check
 		{
-			if(GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q == true)
+			if(GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q)
 			{
 				if(gifRegs->stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE && (vif1.cmd & 0x7f) == 0x50 && gifRegs->stat.P1Q == false)
 				{
@@ -366,7 +369,7 @@ __forceinline void vif1Interrupt()
 		return;
 	}
 
-	//We need to check the direction, if it is downloading from the GS, we handle that seperately (KH2 for testing)
+	//We need to check the direction, if it is downloading from the GS, we handle that separately (KH2 for testing)
 	if (vif1ch->chcr.DIR)
 	{
 		if (!CheckPath2GIF(DMAC_VIF1)) return;
@@ -375,11 +378,11 @@ __forceinline void vif1Interrupt()
 		//Simulated GS transfer time done, clear the flags
 	}
 	
-	if (!(vif1ch->chcr.STR)) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
+	if (!vif1ch->chcr.STR) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
 
 	if (vif1.cmd) 
 	{
-		if (vif1.done == true && vif1ch->qwc == 0) vif1Regs->stat.VPS = VPS_WAITING;
+		if (vif1.done && (vif1ch->qwc == 0)) vif1Regs->stat.VPS = VPS_WAITING;
 	}
 	else		 
 	{
@@ -395,7 +398,7 @@ __forceinline void vif1Interrupt()
 		{
 			//vif1Regs->stat.FQC = 0;
 
-			//NFSHPS stalls when the whole packet has gone across (it stalls int he last 32bit cmd)
+			//NFSHPS stalls when the whole packet has gone across (it stalls in the last 32bit cmd)
 			//In this case VIF will end
 			if(vif1ch->qwc > 0 || !vif1.done)	return;
 		}

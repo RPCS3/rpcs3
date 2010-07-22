@@ -27,15 +27,15 @@ static const s64 _1mb = 0x100000;
 #define _f __forceinline
 
 // newVif_HashBucket.h uses this typedef, so it has to be declared first.
-typedef u32  (__fastcall *nVifCall)(void*, void*);
+typedef u32  (__fastcall *nVifCall)(void*, const void*);
 typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 
 #include "newVif_BlockBuffer.h"
 #include "newVif_HashBucket.h"
 
 extern void  mVUmergeRegs(const xRegisterSSE& dest, const xRegisterSSE& src,  int xyzw, bool modXYZW = 0);
-extern void _nVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
-extern void  dVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
+extern void _nVifUnpack  (int idx,  const u8 *data, u32 size, bool isFill);
+extern void  dVifUnpack  (int idx,  const u8 *data, u32 size, bool isFill);
 extern void  dVifReset   (int idx);
 extern void  dVifClose   (int idx);
 extern void  VifUnpackSSE_Init();

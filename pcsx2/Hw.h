@@ -17,8 +17,6 @@
 #ifndef __HW_H__
 #define __HW_H__
 
-extern void CPU_INT( u32 n, s32 ecycle );
-
 //////////////////////////////////////////////////////////////////////////
 // Hardware FIFOs (128 bit access only!)
 //

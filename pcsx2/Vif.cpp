@@ -141,7 +141,7 @@ _f void vif0FBRST(u32 value) {
 
 				// loop necessary for spiderman
 				//vif0ch->chcr.STR = true;
-				 if(vif0ch->chcr.STR == true) CPU_INT(DMAC_VIF0, 0); // Gets the timing right - Flatout
+				 if(vif0ch->chcr.STR) CPU_INT(DMAC_VIF0, 0); // Gets the timing right - Flatout
 			}
 		}
 	}
@@ -224,7 +224,7 @@ _f void vif1FBRST(u32 value) {
 				{
 				    case MFD_VIF1:
                         //Console.WriteLn("MFIFO Stall");
-                        if(vif1ch->chcr.STR == true) CPU_INT(10, 0);
+                        if(vif1ch->chcr.STR == true) CPU_INT(DMAC_MFIFO_VIF, 0);
                         break;
 
                     case NO_MFD:

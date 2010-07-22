@@ -533,7 +533,7 @@ void mfifoGIFtransfer(int qwc)
 	if (gifRegs->ctrl.PSE)  // temporarily stop
 	{
 		Console.WriteLn("Gif dma temp paused?");
-		CPU_INT(11, 16);
+		CPU_INT(DMAC_MFIFO_GIF, 16);
 		return;
 	}
 
@@ -611,7 +611,7 @@ void mfifoGIFtransfer(int qwc)
 	}
 
 	if ((gif->qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
-	CPU_INT(11,mfifocycles);
+	CPU_INT(DMAC_MFIFO_GIF,mfifocycles);
 
 	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
 }
@@ -624,7 +624,7 @@ void gifMFIFOInterrupt()
 	if(SIGNAL_IMR_Pending == true)
 	{
 		//DevCon.Warning("Path 3 Paused");
-		CPU_INT(11, 128);
+		CPU_INT(DMAC_MFIFO_GIF, 128);
 		return;
 	}
 

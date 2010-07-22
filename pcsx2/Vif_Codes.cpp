@@ -21,7 +21,7 @@
 #include "newVif.h"
 #include "VUmicro.h"
 
-#define vifOp(vifCodeName) _vifT int __fastcall vifCodeName(int pass, u32 *data)
+#define vifOp(vifCodeName) _vifT int __fastcall vifCodeName(int pass, const u32 *data)
 #define pass1 if (pass == 0)
 #define pass2 if (pass == 1)
 #define pass3 if (pass == 2)
@@ -77,7 +77,7 @@ static _f void vuExecMicro(int idx, u32 addr) {
 	if(!idx) { g_vu0Cycles += (VU0.cycle-startcycles) * BIAS; g_packetsizeonvu = vif0.vifpacketsize; }
 	else     { g_vu1Cycles += (VU1.cycle-startcycles) * BIAS; g_packetsizeonvu = vif1.vifpacketsize; }
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x", idx, g_vu0Cycles, g_vu1Cycles);
-	vifX.vifstalled = true;
+	GetVifX.vifstalled = true;
 }
 
 u8 schedulepath3msk = 0;
@@ -116,7 +116,7 @@ vifOp(vifCode_Base) {
 
 extern bool SIGNAL_IMR_Pending;
 
-template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
+template<int idx> _f int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
 	pass1 {
 		vif1Only();
 		int vifImm    = (u16)vif1Regs->code;
@@ -134,7 +134,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 	}
 	pass2 {
 		vif1Only();
-		
+
 		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q == true)
 		{
 			if(gifRegs->stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs->stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs->stat.P1Q == false)
@@ -172,77 +172,64 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 		// should be checked, handled, and cleared from the EOP check in GIFPath only. --air
 		gifRegs->stat.clear_flags(GIF_STAT_P2Q);
 
-		// the tag size should ALWAYS be 128 bits (qwc).  If it isn't, it means there's a serious bug
-		// somewhere in the VIF (likely relating to +/-'ing the tag.size during processing).
-		// NOTE: ICO [PAL] exploits this during bootup.  Needs investigation. --air
-		//pxAssumeMsg( (vif1.tag.size & 3) == 0, "Invalid Vif1 DIRECT packet size detected!" );
+		uint minSize	 = aMin(vif1.vifpacketsize, vif1.tag.size);
+		uint ret;
 
-		nVifStruct&	v	 = nVif[1];
-		const int	ret	 = aMin(vif1.vifpacketsize, vif1.tag.size);
-		u32			size = ret << 2;
+		if(minSize < 4)
+		{
+			// When TTE==1, the VIF might end up sending us 8-byte packets instead of the usual 16-byte
+			// variety, if DIRECT tags cross chain dma boundaries.  The actual behavior of real hardware
+			// is unknown at this time, but it seems that games *only* ever try to upload zero'd data
+			// in this situation.
+			//
+			// Games that use TTE==1 and DIRECT in this fashion:  ICO
+			//
+			// Because DIRECT normally has a strict QWC alignment requirement, and this funky behavior
+			// only seems to happen on TTE mode transfers with their split-64-bit packets, there shouldn't
+			// be any need to worry about queuing more than 16 bytes of data,
+			//
 
-		//gifRegs->stat.APATH = GIF_APATH2; //Flag is cleared in vif1interrupt to simulate it being in progress.
-		
-		//In the original code we were saving this data, it seems if it does happen, its just blank, so we ignore it.
-		
-			if (!size) { DevCon.WriteLn("Path2: No Data Transfer?"); }
-			
+			static __aligned16 u32 partial_write[4];
+			static uint partial_count = 0;
 
-			if(vif1.vifpacketsize < 4 && v.bSize < 16) 
+			for( uint i=0; i<(minSize & 3); ++i)
+				partial_write[partial_count++] = ((u32*)data)[i];
+
+			pxAssume( partial_count <= 4 );
+			ret = 0;
+			if (partial_count == 4)
 			{
-				memcpy(&v.buffer[v.bPtr], data, vif1.vifpacketsize << 2);
-				v.bSize += vif1.vifpacketsize << 2;
-				v.bPtr += vif1.vifpacketsize << 2;
-				vif1.tag.size -= vif1.vifpacketsize;
-				if(vif1.tag.size == 0) 
-				{
-					DevCon.Warning("Missaligned packet on DIRECT end!");
-					vif1.cmd = 0;
-				}
-				return vif1.vifpacketsize;
+				GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
+				GIFPath_CopyTag(GIF_PATH_2, (u128*)partial_write, 1);
+				GetMTGS().SendDataPacket();
+				partial_count = 0;
+				ret = 4;
 			}
-			else
-			{
-				if(v.bSize)
-				{
-					int ret = 0;
+		}
+		else
+		{
+			if (!minSize)
+				DevCon.Warning("VIF DIRECT (PATH2): No Data Transfer?");
 
-					if(v.bSize < 16)
-					{
-						if(((16 - v.bSize) >> 2) > vif1.vifpacketsize) DevCon.Warning("Not Enough Data!");
-						ret = (16 - v.bSize) >> 2;
-						memcpy(&v.buffer[v.bPtr], data, ret << 2);
-						vif1.tag.size -=  ret;						
-						v.bSize = 0;
-						v.bPtr = 0;						
-					}
-					GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
-					GIFPath_CopyTag(GIF_PATH_2, (u128*)v.buffer, 1);
-					GetMTGS().SendDataPacket();
+			// TTE=1 mode is the only time we should be getting DIRECT packet sizes that are
+			// not a multiple of QWC, and those are assured to be under 128 bits in size.
+			// So if this assert is triggered then it probably means something else is amiss.
+			pxAssertMsg((minSize & 3) == 0, "DIRECT packet size is not a multiple of QWC." );
 
-					if(vif1.tag.size == 0) 
-					{
-						vif1.cmd = 0;
-					}
-					vif1.vifstalled    = true;
-					return ret;
-				}
-				else
-				{
-					GetMTGS().PrepDataPacket(GIF_PATH_2, size/16);
-					uint count = GIFPath_CopyTag(GIF_PATH_2, (u128*)data, size/16) * 4;
-					GetMTGS().SendDataPacket();
+			GetMTGS().PrepDataPacket(GIF_PATH_2, minSize/4);
+			ret = GIFPath_CopyTag(GIF_PATH_2, (u128*)data, minSize/4)*4;
+			GetMTGS().SendDataPacket();
+		}
 
-					vif1.tag.size -= count;
-					if(vif1.tag.size == 0) 
-					{
-						vif1.cmd = 0;
-					}
-					vif1.vifstalled    = true;
-					return count;
-				}
-			}
-			
+		vif1.tag.size -= ret;
+
+		if(vif1.tag.size == 0) 
+		{
+			vif1.cmd = 0;
+			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
+		}
+		vif1.vifstalled    = true;
+		return ret;
 	}
 	return 0;
 }
@@ -260,6 +247,7 @@ vifOp(vifCode_DirectHL) {
 // ToDo: FixMe
 vifOp(vifCode_Flush) {
 	vif1Only();
+	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx);  vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_Flush"); }
 	return 0;
@@ -268,40 +256,42 @@ vifOp(vifCode_Flush) {
 // ToDo: FixMe
 vifOp(vifCode_FlushA) {
 	vif1Only();
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		vifFlush(idx);
 		// Gif is already transferring so wait for it.
-		if (gifRegs->stat.P1Q == true || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
+		if (gifRegs->stat.P1Q || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
 			//DevCon.Warning("VIF FlushA Wait MSK = %x", vif1Regs->mskpath3);
 			//
 			
 			//DevCon.WriteLn("FlushA path3 Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);
 			vif1Regs->stat.VGW = true;
-			vif1.GifWaitState = 1;
+			vifX.GifWaitState  = 1;
 			vifX.vifstalled    = true;
 		}	// else DevCon.WriteLn("FlushA path3 no Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);	
 		
-		
+		vifX.cmd = 0;
 	}
 	pass3 { DevCon.WriteLn("vifCode_FlushA"); }
-	vifX.cmd = 0;
 	return 0;
 }
 
 // ToDo: FixMe
 vifOp(vifCode_FlushE) {
+	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx); vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_FlushE"); }
 	return 0;
 }
 
 vifOp(vifCode_ITop) {
-	pass1 { vifXRegs->itops = vifXRegs->code & 0x3ff; vifX.cmd = 0; }
+	pass1 { vifXRegs->itops = vifXRegs->code & 0x3ff; GetVifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_ITop"); }
 	return 0;
 }
 
 vifOp(vifCode_Mark) {
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		vifXRegs->mark     = (u16)vifXRegs->code;
 		vifXRegs->stat.MRK = true;
@@ -311,18 +301,21 @@ vifOp(vifCode_Mark) {
 	return 0;
 }
 
-_f void _vifCode_MPG(int idx, u32 addr, u32 *data, int size) {
+static _f void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 	VURegs& VUx = idx ? VU1 : VU0;
 	pxAssume(VUx.Micro > 0);
 
-	if (memcmp(VUx.Micro + addr, data, size << 2)) {
-		if (!idx)  CpuVU0->Clear(addr, size << 2); // Clear before writing!
-		else	   CpuVU1->Clear(addr, size << 2); // Clear before writing!
-		memcpy_fast(VUx.Micro + addr, data, size << 2);
+	if (memcmp_mmx(VUx.Micro + addr, data, size*4)) {
+		// Clear VU memory before writing!
+		// (VUs expect size to be 32-bit scale, same as VIF's internal working sizes)
+		if (!idx)  CpuVU0->Clear(addr, size);
+		else	   CpuVU1->Clear(addr, size);
+		memcpy_fast(VUx.Micro + addr, data, size*4);
 	}
 }
 
 vifOp(vifCode_MPG) {
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		int    vifNum =  (u8)(vifXRegs->code >> 16);
 		vifX.tag.addr = (u16)(vifXRegs->code <<  3) & (idx ? 0x3fff : 0xfff);
@@ -332,16 +325,16 @@ vifOp(vifCode_MPG) {
 	}
 	pass2 {
 		if (vifX.vifpacketsize < vifX.tag.size) { // Partial Transfer
-			if((vifX.tag.addr +  vifX.vifpacketsize) > (idx ? 0x4000 : 0x1000)) {
+			if((vifX.tag.addr + vifX.vifpacketsize*4) > (idx ? 0x4000 : 0x1000)) {
 				DevCon.Warning("Vif%d MPG Split Overflow", idx);
 			}
 			_vifCode_MPG(idx,    vifX.tag.addr, data, vifX.vifpacketsize);
-			vifX.tag.addr   +=   vifX.vifpacketsize << 2;
+			vifX.tag.addr   +=   vifX.vifpacketsize * 4;
 			vifX.tag.size   -=   vifX.vifpacketsize;
 			return vifX.vifpacketsize;
 		}
 		else { // Full Transfer
-			if((vifX.tag.addr + vifX.tag.size) > (idx ? 0x4000 : 0x1000)) {
+			if((vifX.tag.addr + vifX.tag.size*4) > (idx ? 0x4000 : 0x1000)) {
 				DevCon.Warning("Vif%d MPG Split Overflow", idx);
 			}
 			_vifCode_MPG(idx,  vifX.tag.addr, data, vifX.tag.size);
@@ -356,19 +349,22 @@ vifOp(vifCode_MPG) {
 }
 
 vifOp(vifCode_MSCAL) {
-	pass1 {  vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0;}
+	vifStruct& vifX = GetVifX;
+	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0;}
 	pass3 { DevCon.WriteLn("vifCode_MSCAL"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCALF) {
-	pass1 {  vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0; }
+	vifStruct& vifX = GetVifX;
+	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_MSCALF"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCNT) {
-	pass1 {  vifFlush(idx); vuExecMicro(idx, -1); vifX.cmd = 0; }
+	vifStruct& vifX = GetVifX;
+	pass1 { vifFlush(idx); vuExecMicro(idx, -1); vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_MSCNT"); }
 	return 0;
 }
@@ -377,7 +373,7 @@ vifOp(vifCode_MSCNT) {
 vifOp(vifCode_MskPath3) {
 	vif1Only();
 	pass1 {
-		if (vif1ch->chcr.STR && vifX.lastcmd != 0x13) {
+		if (vif1ch->chcr.STR && vif1.lastcmd != 0x13) {
 			schedulepath3msk = 0x10 | ((vif1Regs->code >> 15) & 0x1);
 			vif1.vifstalled = true;
 		}
@@ -385,26 +381,27 @@ vifOp(vifCode_MskPath3) {
 			schedulepath3msk = (vif1Regs->code >> 15) & 0x1;
 			Vif1MskPath3();
 		}
-		vifX.cmd = 0;
+		vif1.cmd = 0;
 	}
 	pass3 { DevCon.WriteLn("vifCode_MskPath3"); }
 	return 0;
 }
 
 vifOp(vifCode_Nop) {
-	pass1 { vifX.cmd = 0; }
+	pass1 { GetVifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_Nop"); }
 	return 0;
 }
 
 // ToDo: Review Flags
 vifOp(vifCode_Null) {
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		// if ME1, then force the vif to interrupt
 		if (!(vifXRegs->err.ME1)) { // Ignore vifcode and tag mismatch error
 			Console.WriteLn("Vif%d: Unknown VifCmd! [%x]", idx, vifX.cmd);
 			vifXRegs->stat.ER1 = true;
-			vifX.vifstalled    = true;
+			vifX.vifstalled = true;
 			//vifX.irq++;
 		}
 		vifX.cmd = 0;
@@ -420,15 +417,16 @@ vifOp(vifCode_Offset) {
 		vif1Regs->stat.DBF	= false;
 		vif1Regs->ofst		= vif1Regs->code & 0x3ff;
 		vif1Regs->tops		= vif1Regs->base;
-		vifX.cmd			= 0;
+		vif1.cmd			= 0;
 	}
 	pass3 { DevCon.WriteLn("vifCode_Offset"); }
 	return 0;
 }
 
-template<int idx> _f int _vifCode_STColRow(u32* data, u32* pmem1, u32* pmem2) {
-	int ret;
-	ret = min(4 - vifX.tag.addr, vifX.vifpacketsize);
+template<int idx> static _f int _vifCode_STColRow(const u32* data, u32* pmem1, u32* pmem2) {
+	vifStruct& vifX = GetVifX;
+
+	int ret = min(4 - vifX.tag.addr, vifX.vifpacketsize);
 	pxAssume(vifX.tag.addr < 4);
 	pxAssume(ret > 0);
 
@@ -457,6 +455,7 @@ template<int idx> _f int _vifCode_STColRow(u32* data, u32* pmem1, u32* pmem2) {
 }
 
 vifOp(vifCode_STCol) {
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		vifX.tag.addr = 0;
 		vifX.tag.size = 4;
@@ -473,6 +472,8 @@ vifOp(vifCode_STCol) {
 }
 
 vifOp(vifCode_STRow) {
+	vifStruct& vifX = GetVifX;
+
 	pass1 {
 		vifX.tag.addr = 0;
 		vifX.tag.size = 4;
@@ -489,6 +490,7 @@ vifOp(vifCode_STRow) {
 }
 
 vifOp(vifCode_STCycl) {
+	vifStruct& vifX = GetVifX;
 	pass1 {
 		vifXRegs->cycle.cl = (u8)(vifXRegs->code);
 		vifXRegs->cycle.wl = (u8)(vifXRegs->code >> 8);
@@ -499,6 +501,7 @@ vifOp(vifCode_STCycl) {
 }
 
 vifOp(vifCode_STMask) {
+	vifStruct& vifX = GetVifX;
 	pass1 { vifX.tag.size = 1; }
 	pass2 { vifXRegs->mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_STMask"); }
@@ -506,15 +509,15 @@ vifOp(vifCode_STMask) {
 }
 
 vifOp(vifCode_STMod) {
-	pass1 { vifXRegs->mode = vifXRegs->code & 0x3; vifX.cmd = 0; }
+	pass1 { vifXRegs->mode = vifXRegs->code & 0x3; GetVifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_STMod"); }
 	return 0;
 }
 
 vifOp(vifCode_Unpack) {
 	pass1 {
-		if (!idx) vif0UnpackSetup(data);
-		else	  vif1UnpackSetup(data);
+		if (!idx) vifUnpackSetup<0>(data);
+		else	  vifUnpackSetup<1>(data);
 		return 1;
 	}
 	pass2 { return nVifUnpack(idx, (u8*)data); }
@@ -526,40 +529,42 @@ vifOp(vifCode_Unpack) {
 // Vif0/Vif1 Code Tables
 //------------------------------------------------------------------
 
-int (__fastcall *vif0Code[128])(int pass, u32 *data) = {
-	vifCode_Nop<0>     , vifCode_STCycl<0>  , vifCode_Offset<0>	, vifCode_Base<0>   , vifCode_ITop<0>   , vifCode_STMod<0>  , vifCode_MskPath3<0>, vifCode_Mark<0>,   /*0x00*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x08*/
-	vifCode_FlushE<0>  , vifCode_Flush<0>   , vifCode_Null<0>	, vifCode_FlushA<0> , vifCode_MSCAL<0>  , vifCode_MSCALF<0> , vifCode_Null<0>	 , vifCode_MSCNT<0>,  /*0x10*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x18*/
-	vifCode_STMask<0>  , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x20*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x28*/
-	vifCode_STRow<0>   , vifCode_STCol<0>	, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x30*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x38*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x40*/
-	vifCode_Null<0>    , vifCode_Null<0>    , vifCode_MPG<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x48*/
-	vifCode_Direct<0>  , vifCode_DirectHL<0>, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x50*/
-	vifCode_Null<0>	   , vifCode_Null<0>	, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x58*/
-	vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Null<0>,   /*0x60*/
-	vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Unpack<0>, /*0x68*/
-	vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Null<0>,   /*0x70*/
-	vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Null<0>   , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Unpack<0>  /*0x78*/
-};
-
-int (__fastcall *vif1Code[128])(int pass, u32 *data) = {
-	vifCode_Nop<1>     , vifCode_STCycl<1>  , vifCode_Offset<1>	, vifCode_Base<1>   , vifCode_ITop<1>   , vifCode_STMod<1>  , vifCode_MskPath3<1>, vifCode_Mark<1>,   /*0x00*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x08*/
-	vifCode_FlushE<1>  , vifCode_Flush<1>   , vifCode_Null<1>	, vifCode_FlushA<1> , vifCode_MSCAL<1>  , vifCode_MSCALF<1> , vifCode_Null<1>	 , vifCode_MSCNT<1>,  /*0x10*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x18*/
-	vifCode_STMask<1>  , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x20*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x28*/
-	vifCode_STRow<1>   , vifCode_STCol<1>	, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x30*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x38*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x40*/
-	vifCode_Null<1>    , vifCode_Null<1>    , vifCode_MPG<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x48*/
-	vifCode_Direct<1>  , vifCode_DirectHL<1>, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x50*/
-	vifCode_Null<1>	   , vifCode_Null<1>	, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x58*/
-	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Null<1>,   /*0x60*/
-	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Unpack<1>, /*0x68*/
-	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Null<1>,   /*0x70*/
-	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Null<1>   , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Unpack<1>  /*0x78*/
+__aligned16 FnType_VifCmdHandler* const vifCmdHandler[2][128] =
+{
+	{
+		vifCode_Nop<0>     , vifCode_STCycl<0>  , vifCode_Offset<0>	, vifCode_Base<0>   , vifCode_ITop<0>   , vifCode_STMod<0>  , vifCode_MskPath3<0>, vifCode_Mark<0>,   /*0x00*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x08*/
+		vifCode_FlushE<0>  , vifCode_Flush<0>   , vifCode_Null<0>	, vifCode_FlushA<0> , vifCode_MSCAL<0>  , vifCode_MSCALF<0> , vifCode_Null<0>	 , vifCode_MSCNT<0>,  /*0x10*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x18*/
+		vifCode_STMask<0>  , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x20*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x28*/
+		vifCode_STRow<0>   , vifCode_STCol<0>	, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>	 , vifCode_Null<0>,   /*0x30*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x38*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x40*/
+		vifCode_Null<0>    , vifCode_Null<0>    , vifCode_MPG<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x48*/
+		vifCode_Direct<0>  , vifCode_DirectHL<0>, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x50*/
+		vifCode_Null<0>	   , vifCode_Null<0>	, vifCode_Null<0>	, vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>   , vifCode_Null<0>    , vifCode_Null<0>,   /*0x58*/
+		vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Null<0>,   /*0x60*/
+		vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Unpack<0>, /*0x68*/
+		vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Null<0>,   /*0x70*/
+		vifCode_Unpack<0>  , vifCode_Unpack<0>  , vifCode_Unpack<0>	, vifCode_Null<0>   , vifCode_Unpack<0> , vifCode_Unpack<0> , vifCode_Unpack<0>  , vifCode_Unpack<0>  /*0x78*/
+	},
+	{
+		vifCode_Nop<1>     , vifCode_STCycl<1>  , vifCode_Offset<1>	, vifCode_Base<1>   , vifCode_ITop<1>   , vifCode_STMod<1>  , vifCode_MskPath3<1>, vifCode_Mark<1>,   /*0x00*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x08*/
+		vifCode_FlushE<1>  , vifCode_Flush<1>   , vifCode_Null<1>	, vifCode_FlushA<1> , vifCode_MSCAL<1>  , vifCode_MSCALF<1> , vifCode_Null<1>	 , vifCode_MSCNT<1>,  /*0x10*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x18*/
+		vifCode_STMask<1>  , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x20*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x28*/
+		vifCode_STRow<1>   , vifCode_STCol<1>	, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>	 , vifCode_Null<1>,   /*0x30*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x38*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x40*/
+		vifCode_Null<1>    , vifCode_Null<1>    , vifCode_MPG<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x48*/
+		vifCode_Direct<1>  , vifCode_DirectHL<1>, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x50*/
+		vifCode_Null<1>	   , vifCode_Null<1>	, vifCode_Null<1>	, vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>   , vifCode_Null<1>    , vifCode_Null<1>,   /*0x58*/
+		vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Null<1>,   /*0x60*/
+		vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Unpack<1>, /*0x68*/
+		vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Null<1>,   /*0x70*/
+		vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Null<1>   , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Unpack<1>  /*0x78*/
+	}
 };

@@ -28,17 +28,17 @@ union tBITBLTBUF {
 	u64 _u64;
 	struct {
 		u32 SBP : 14;
-		u32 pad14 : 2;
+		u32 _pad14 : 2;
 		u32 SBW : 6;
-		u32 pad22 : 2;
+		u32 _pad22 : 2;
 		u32 SPSM : 6;
-		u32 pad30 : 2;
+		u32 _pad30 : 2;
 		u32 DBP : 14;
-		u32 pad46 : 2;
+		u32 _pad46 : 2;
 		u32 DBW : 6;
-		u32 pad54 : 2;
+		u32 _pad54 : 2;
 		u32 DPSM : 6;
-		u32 pad62 : 2;
+		u32 _pad62 : 2;
 	};
 };
 
@@ -46,9 +46,9 @@ union tTRXREG {
 	u64 _u64;
 	struct {
 		u32 RRW : 12;
-		u32 pad12 : 20;
+		u32 _pad12 : 20;
 		u32 RRH : 12;
-		u32 pad44 : 20;
+		u32 _pad44 : 20;
 	};
 };
 
@@ -93,8 +93,10 @@ extern void Vif1MskPath3();
 extern void vif1Write32(u32 mem, u32 value);
 extern void vif1Reset();
 
-extern int (__fastcall *vif0Code[128])(int pass, u32 *data);
-extern int (__fastcall *vif1Code[128])(int pass, u32 *data);
+typedef int __fastcall FnType_VifCmdHandler(int pass, const u32 *data);
+typedef FnType_VifCmdHandler* Fnptr_VifCmdHandler;
+
+extern const __aligned16 Fnptr_VifCmdHandler vifCmdHandler[2][128];
 
 __forceinline static int _limit(int a, int max)
 {

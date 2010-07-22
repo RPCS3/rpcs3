@@ -1607,6 +1607,10 @@ StartRecomp:
 		g_pCurInstInfo = s_pInstCache;
 
 		for(i = startpc; i < s_nEndBlock; i += 4) {
+
+			// superVU hack: it needs vucycles, for some reason. >_<
+			extern int vucycle;
+
 			g_pCurInstInfo++;
 			cpuRegs.code = *(u32*)PSM(i);
 
