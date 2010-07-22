@@ -1111,6 +1111,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 
 		if(GSTransferStatus.PTH1 == STOPPED_MODE)
 		{
+			gifRegs->stat.OPH = false;
 			gifRegs->stat.APATH = GIF_APATH_IDLE;
 		}
 	}

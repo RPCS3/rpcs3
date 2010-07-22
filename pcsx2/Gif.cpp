@@ -69,7 +69,8 @@ void gsPath1Interrupt()
 				size -= count;
 
 				if(GSTransferStatus.PTH1 == STOPPED_MODE)
-				{		
+				{	
+					gifRegs->stat.OPH = false;
 					gifRegs->stat.APATH = GIF_APATH_IDLE;
 				}
 			}
@@ -105,6 +106,7 @@ __forceinline void gsInterrupt()
 
 	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
+		gifRegs->stat.OPH = false;
 		GSTransferStatus.PTH3 = STOPPED_MODE;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
@@ -317,7 +319,7 @@ void GIFdma()
 		
 
 	 	
-	    //gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
+	    gifRegs->stat.OPH = true;
 		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
@@ -336,7 +338,7 @@ void GIFdma()
 		
 	}
 	
-	//gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
+	gifRegs->stat.OPH = true;
 	// Transfer Dn_QWC from Dn_MADR to GIF
 	if ((gif->chcr.MOD == NORMAL_MODE) || (gif->qwc > 0)) // Normal Mode
 	{
@@ -630,6 +632,7 @@ void gifMFIFOInterrupt()
 
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )
 	{
+		gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 	}

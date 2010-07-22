@@ -357,8 +357,8 @@ static __forceinline void gsHandler(const u8* pMem)
 			// qwords, rounded down; any extra bits are lost
 			// games must take care to ensure transfer rectangles are exact multiples of a qword
 			vif1.GSLastDownloadSize = vif1.TRXREG.RRW * vif1.TRXREG.RRH * bpp >> 7;
-			//DevCon.Warning("GS download in progress. OPH = %x", gifRegs->stat.OPH);
-			//gifRegs->stat.OPH = true; // Too early to set it here. It should be done on a BUSDIR call (rama)
+			//DevCon.Warning("GS download in progress");
+			gifRegs->stat.OPH = true;
 		}
 	}
 	if (reg >= 0x60)
@@ -618,7 +618,7 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 			}	
 			if(GSTransferStatus.PTH3 < PENDINGSTOP_MODE || pathidx != 2)
 			{
-				//gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
+				gifRegs->stat.OPH = true;
 				gifRegs->stat.APATH = pathidx + 1;	
 			}
 
@@ -646,7 +646,7 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 					break;
 			}
 			gifRegs->stat.APATH = pathidx + 1;
-			//gifRegs->stat.OPH = true; // why set the GS output path flag here? (rama)
+			gifRegs->stat.OPH = true;
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:

@@ -239,6 +239,7 @@ void vifMFIFOInterrupt()
 	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH2)
 	{
 		GSTransferStatus.PTH2 = STOPPED_MODE;
+		if(gifRegs->stat.DIR == 0)gifRegs->stat.OPH = false;
 		gifRegs->stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs->stat.P1Q) gsPath1Interrupt();
 		/*gifRegs->stat.APATH = GIF_APATH_IDLE;

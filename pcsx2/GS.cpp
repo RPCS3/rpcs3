@@ -283,15 +283,10 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 		case 0x12001040: //busdir
 
 			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer 
-			//(Bleach Blade Battlers, Growlanser 2 and 3, Wizardry)
 			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
 			//=========================================================================
-			//Console.Warning("BUSDIR write! Setting OPH and DIR to = %x",(u32)value[0]);
-			if ((u32)value[0] == 1)
-				gifRegs->stat.OPH = true;
-			else
-				gifRegs->stat.OPH = false;
+			gifRegs->stat.OPH = true;
 			
 			gifRegs->stat.DIR = (u32)value[0];
 			//=========================================================================
