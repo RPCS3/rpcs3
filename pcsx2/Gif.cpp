@@ -382,6 +382,12 @@ void GIFdma()
 				Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				//gif->tadr -= 16;
+				// Quake III revolution wants to see tadr move.
+				// Simple Media System (homebrew) as well.
+				// -16 also seems right (it shifts the bg image right if anything else).
+				gif->tadr -= 16;
+				// Next line also needs to be here, according to ref
+				gif->qwc = 0;
 				hwDmacIrq(DMAC_STALL_SIS);
 				CPU_INT(DMAC_GIF, gscycles);
 				gscycles = 0;
