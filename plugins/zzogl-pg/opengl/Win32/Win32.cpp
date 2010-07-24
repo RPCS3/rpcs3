@@ -78,7 +78,7 @@ map<int, int> mapConfOpts;
 
 void OnInitDialog(HWND hW)
 {
-	/*if (!(conf.zz_options.loaded))*/ LoadConfig();
+	if (!(conf.zz_options.loaded)) LoadConfig();
 
 	CheckDlgButton(hW, IDC_CONFIG_INTERLACE, conf.interlace);
 	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
