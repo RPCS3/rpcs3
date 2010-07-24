@@ -180,7 +180,7 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 		//  And its called enough times to probably merit the extra effort to ensure proper
 		//  optimization. --air
 
-		__asm__
+		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
 				"mov		eax, %[qwc]\n"				// keep a copy of count for looping
