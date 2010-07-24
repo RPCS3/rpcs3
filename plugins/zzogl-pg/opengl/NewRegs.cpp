@@ -203,28 +203,6 @@ void __gifCall GIFRegHandlerNull(const u32* data)
 #endif
 }
 
-void __gifCall GIFRegHandlerPRIM(const u32 *data)
-{
-	FUNCLOG
-
-	//if (data[0] & ~0x3ff)
-	//{
-		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
-	//}
-
-	// Come back to this one...
-	gs.nTriFanVert = gs.primIndex;
-
-	gs.primC = 0;
-	prim->prim = (data[0]) & 0x7;
-	gs._prim[0].prim = (data[0]) & 0x7;
-	gs._prim[1].prim = (data[0]) & 0x7;
-	gs._prim[1]._val = (data[0] >> 3) & 0xff;
-
-	ZeroGS::Prim();
-	ZZLog::Greg_Log("PRIM");
-}
-
 void __gifCall GIFRegHandlerRGBAQ(const u32* data)
 {
 	FUNCLOG
@@ -462,6 +440,43 @@ void __gifCall GIFRegHandlerXYOFFSET(const u32* data)
 	ZZLog::Greg_Log("XYOFFSET_%d: 0x%x, 0x%x", i, r->OFX, r->OFY);
 }
 
+// Fill out the vertex queue(prim) and the attributes.
+void __gifCall GIFRegHandlerPRIM(const u32 *data)
+{
+	FUNCLOG
+	GIFRegPRIM* r = (GIFRegPRIM*)(data);
+
+	//if (data[0] & ~0x3ff)
+	//{
+		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
+	//}
+
+	// Come back to this one...
+	gs.nTriFanVert = gs.primIndex;
+
+	gs.primC = 0;
+	prim->prim = r->PRIM;
+	gs._prim[0].prim = r->PRIM;
+	gs._prim[1].prim = r->PRIM;
+	gs._prim[1]._val = (data[0] >> 3) & 0xff; // Setting the next 8 flags after prim at once.
+
+	ZeroGS::Prim();
+	ZZLog::Greg_Log("PRIM");
+}
+
+// Fill out an alternate set of attributes.
+void __gifCall GIFRegHandlerPRMODE(const u32* data)
+{
+	FUNCLOG
+	//GIFRegPRMODE* r = (GIFRegPRMODE*)(data);
+	// Re-examine all code dealing with PRIMs in a bit.
+	gs._prim[0]._val = (data[0] >> 3) & 0xff;
+
+	if (gs.prac == 0) ZeroGS::Prim();
+	ZZLog::Greg_Log("PRMODE");
+}
+
+// Switch between the primary set of attributes (gs._prim[1]) and the secondary (gs._prim[0]).
 void __gifCall GIFRegHandlerPRMODECONT(const u32* data)
 {
 	FUNCLOG
@@ -472,17 +487,6 @@ void __gifCall GIFRegHandlerPRMODECONT(const u32* data)
 
 	ZeroGS::Prim();
 	ZZLog::Greg_Log("PRMODECONT");
-}
-
-void __gifCall GIFRegHandlerPRMODE(const u32* data)
-{
-	FUNCLOG
-	//GIFRegPRMODE* r = (GIFRegPRMODE*)(data);
-	// Re-examine all code dealing with PRIMs in a bit.
-	gs._prim[0]._val = (data[0] >> 3) & 0xff;
-
-	if (gs.prac == 0) ZeroGS::Prim();
-	ZZLog::Greg_Log("PRMODE");
 }
 
 void __gifCall GIFRegHandlerTEXCLUT(const u32* data)
@@ -774,27 +778,33 @@ void __gifCall GIFRegHandlerFRAME(const u32* data)
 	GIFRegFRAME* r = (GIFRegFRAME*)(data);
 	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
 	
+	int fbw = r->FBW * 64;
+	int fbp = r->FBP * 32;
+	int fbh = 0;
+	
 	if (gs.dthe != 0)
 	{
 		// Dither here.
 		//ZZLog::Error_Log("frameWrite: Dither!");
 	}
 	
-	if ((gsfb.fbp == ZZOglGet_fbp_FrameBitsMult(data[0])) &&
-			(gsfb.fbw == ZZOglGet_fbw_FrameBitsMult(data[0])) &&
-			(gsfb.psm == ZZOglGet_psm_FrameBits(data[0])) &&
-			(gsfb.fbm == ZZOglGet_fbm_FrameBits(data[0])))
+	if ((gsfb.fbp == fbp) &&
+			(gsfb.fbw == fbw) &&
+			(gsfb.psm == r->PSM) &&
+			(gsfb.fbm == ZZOglGet_fbm_FrameBitsFix(data[0], data[1])))
 	{
 		return;
 	}
 
 	ZeroGS::FlushBoth();
+	if (r->FBW > 0) fbh = ZZOgl_fbh_Calc(r->FBP, r->FBW, r->PSM);
 
-	gsfb.fbp = ZZOglGet_fbp_FrameBitsMult(data[0]);
-	gsfb.fbw = ZZOglGet_fbw_FrameBitsMult(data[0]);
-	gsfb.psm = ZZOglGet_psm_FrameBits(data[0]);
+	gsfb.fbp = fbp;
+	gsfb.fbw = fbw;
+	gsfb.psm = r->PSM;
+	gsfb.fbh = fbh;
 	gsfb.fbm = ZZOglGet_fbm_FrameBitsFix(data[0], data[1]);
-	gsfb.fbh = ZZOglGet_fbh_FrameBitsCalc(data[0]);
+	
 
 	ZeroGS::vb[i].bNeedFrameCheck = 1;
 	ZZLog::Greg_Log("FRAME_%d", i);
@@ -805,15 +815,16 @@ void __gifCall GIFRegHandlerZBUF(const u32* data)
 {
 	FUNCLOG
 	// I'll wait a bit on this one.
-	//GIFRegZBUF* r = (GIFRegZBUF*)(data);
+	GIFRegZBUF* r = (GIFRegZBUF*)(data);
 	ZZLog::Greg_Log("ZBUF_1");
 	
 	zbufInfo& zbuf = ZeroGS::vb[i].zbuf;
-	int psm = (0x30 | ((data[0] >> 24) & 0xf));
+	int psm = (0x30 | r->PSM);
+	int zbp = r->ZBP * 32;
 
-	if (zbuf.zbp == (data[0] & 0x1ff) << 5 &&
+	if (zbuf.zbp == zbp &&
 			zbuf.psm == psm &&
-			zbuf.zmsk == (data[1] & 0x1))
+			zbuf.zmsk == r->ZMSK)
 	{
 		return;
 	}
@@ -823,9 +834,9 @@ void __gifCall GIFRegHandlerZBUF(const u32* data)
 
 	ZeroGS::FlushBoth();
 
-	zbuf.zbp = (data[0] & 0x1ff) << 5;
-	zbuf.psm = 0x30 | ((data[0] >> 24) & 0xf);
-	zbuf.zmsk = data[1] & 0x1;
+	zbuf.zbp = zbp;
+	zbuf.psm = psm;
+	zbuf.zmsk = r->ZMSK;
 
 	ZeroGS::vb[i].zprimmask = 0xffffffff;
 
