@@ -78,7 +78,7 @@ map<int, int> mapConfOpts;
 
 void OnInitDialog(HWND hW)
 {
-	if (!(conf.zz_options.loaded)) LoadConfig();
+	/*if (!(conf.zz_options.loaded))*/ LoadConfig();
 
 	CheckDlgButton(hW, IDC_CONFIG_INTERLACE, conf.interlace);
 	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
@@ -125,7 +125,7 @@ void OnInitDialog(HWND hW)
 
 	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
-		CheckDlgButton(hW, it->first, (conf.def_hacks._u32&it->second) ? 1 : 0);
+		CheckDlgButton(hW, it->first, (conf.settings()._u32 & it->second) ? 1 : 0);
 	}
 }
 

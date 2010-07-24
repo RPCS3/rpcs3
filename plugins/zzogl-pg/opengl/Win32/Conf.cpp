@@ -45,6 +45,7 @@ void LoadConfig()
 
 	if (!fp)
 	{
+		SysMessage("Unable to open file!");
 		CreateDirectory(s_strIniPath.c_str(), NULL);
 		SaveConfig();//save and return
 		return ;
