@@ -52,6 +52,7 @@ public:
 		ICO,
 		GT4,
 		WildArms5,
+		WildArms4,
 		Manhunt2,
 		CrashBandicootWoC,
 		ResidentEvil4,
