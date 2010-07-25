@@ -143,3 +143,8 @@ add_library(${Output} STATIC ${x86emitterSources} ${x86emitterHeaders})
 
 # link target with wx
 target_link_libraries(${Output} ${wxWidgets_LIBRARIES})
+
+# User flags options
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

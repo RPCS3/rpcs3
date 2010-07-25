@@ -106,3 +106,8 @@ endif(PORTAUDIO_FOUND)
 
 # link target with SoundTouch
 target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})
+
+# User flags options
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

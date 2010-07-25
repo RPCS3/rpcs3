@@ -48,3 +48,8 @@ set(bzip2Headers
 
 # add library
 add_library(${Output} STATIC ${bzip2Sources} ${bzip2Headers})
+
+# User flags options
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

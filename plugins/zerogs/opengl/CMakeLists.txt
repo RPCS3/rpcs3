@@ -137,3 +137,8 @@ target_link_libraries(${Output} ${X11_LIBRARIES})
 
 # link target with X11 videomod
 target_link_libraries(${Output} ${X11_Xxf86vm_LIB})
+
+# User flags options
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

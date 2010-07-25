@@ -96,9 +96,9 @@ endif(CMAKE_BUILD_STRIP)
 # By default allow build on amd64 machine
 if(DEFINED USER_CMAKE_C_FLAGS)
     message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_C_FLAGS at your own risk !!!")
-    string(STRIP "${USER_CMAKE_C_FLAGS} ${USER_CMAKE_LD_FLAGS} -m32" CMAKE_C_FLAGS)
+    string(STRIP "${USER_CMAKE_C_FLAGS} -m32" CMAKE_C_FLAGS)
 else(DEFINED USER_CMAKE_C_FLAGS)
-    string(STRIP "${USER_CMAKE_LD_FLAGS} -m32" CMAKE_C_FLAGS)
+    string(STRIP "-m32" CMAKE_C_FLAGS)
 endif(DEFINED USER_CMAKE_C_FLAGS)
 
 
@@ -108,10 +108,10 @@ endif(DEFINED USER_CMAKE_C_FLAGS)
 if(DEFINED USER_CMAKE_CXX_FLAGS)
     message(STATUS "Pcsx2 is very sensible with gcc flags, so use USER_CMAKE_CXX_FLAGS at your own risk !!!")
     string(STRIP "${USER_CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
-    string(STRIP "${USER_CMAKE_CXX_FLAGS} ${USER_CMAKE_LD_FLAGS} -m32" CMAKE_CXX_FLAGS)
+    string(STRIP "${USER_CMAKE_CXX_FLAGS} -m32" CMAKE_CXX_FLAGS)
 else(DEFINED USER_CMAKE_CXX_FLAGS)
     set(CMAKE_CXX_FLAGS "")
-    string(STRIP "${USER_CMAKE_LD_FLAGS} -m32" CMAKE_CXX_FLAGS)
+    string(STRIP "-m32" CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------

@@ -60,3 +60,8 @@ set(SoundTouchHeaders
 
 # add library
 add_library(${Output} STATIC ${SoundTouchSources} ${SoundTouchHeaders})
+
+# User flags options
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
