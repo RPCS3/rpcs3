@@ -185,12 +185,12 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 			".intel_syntax noprefix\n"
 				"mov		eax, %[qwc]\n"				// keep a copy of count for looping
 				"shr		eax, 1\n"
-				"jz			memcpy_qwc_1\n"				// only one 16 byte block to copy?
+				"jz			memcpy_qwc_1_%=\n"				// only one 16 byte block to copy?
 
 				"cmp		eax, 64\n"					// "IN_CACHE_COPY/32"
-				"jb			memcpy_qwc_loop1\n"			// small copies should be cached (definite speedup --air)
+				"jb			memcpy_qwc_loop1_%=\n"			// small copies should be cached (definite speedup --air)
 		
-			"memcpy_qwc_loop2:\n"						// 32-byte blocks, uncached copy
+			"memcpy_qwc_loop2_%=:\n"						// 32-byte blocks, uncached copy
 				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
 
 				"movq		mm0,[%[src]+0]\n"			// read 64 bits
@@ -205,15 +205,15 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
 				"sub		eax,1\n"
-				"jnz		memcpy_qwc_loop2\n"			// last 64-byte block?
+				"jnz		memcpy_qwc_loop2_%=\n"			// last 64-byte block?
 				"sfence\n"								// flush the write buffer
-				"jmp		memcpy_qwc_1\n"
+				"jmp		memcpy_qwc_1_%=\n"
 
 			// 32-byte blocks, cached!
 			// This *is* important.  Removing this and using exclusively non-temporal stores
 			// results in noticeable speed loss!
 
-			"memcpy_qwc_loop1:\n"				
+			"memcpy_qwc_loop1_%=:\n"				
 				"prefetchnta [%[src] + 568]\n"			// start reading ahead (tested: it helps! --air)
 
 				"movq		mm0,[%[src]+0]\n"			// read 64 bits
@@ -228,17 +228,17 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
 				"sub		eax,1\n"
-				"jnz		memcpy_qwc_loop1\n"			// last 64-byte block?
+				"jnz		memcpy_qwc_loop1_%=\n"			// last 64-byte block?
 
-			"memcpy_qwc_1:\n"
+			"memcpy_qwc_1_%=:\n"
 				"test %[qwc],1\n"
-				"jz			memcpy_qwc_final\n"
+				"jz			memcpy_qwc_final_%=\n"
 				"movq		mm0,[%[src]]\n"
 				"movq		mm1,[%[src]+8]\n"
 				"movq		[%[dest]], mm0\n"
 				"movq		[%[dest]+8], mm1\n"
 
-			"memcpy_qwc_final:\n"
+			"memcpy_qwc_final_%=:\n"
 				"emms\n"								// clean up the MMX state
 			".att_syntax\n"
 					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
