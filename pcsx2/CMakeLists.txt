@@ -72,7 +72,7 @@ set(OptimizationFlags
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
 	
 	# executable name
-	set(pcsx2Name pcsx2-dbg)
+	set(Output pcsx2-dbg)
 	
 	# add defines
 	add_definitions(${CommonFlags} ${DebugFlags} -DPCSX2_DEVBUILD -DPCSX2_DEBUG -DWX_PRECOMP)
@@ -82,7 +82,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 	# executable name
-	set(pcsx2Name pcsx2-dev)
+	set(Output pcsx2-dev)
 	
 	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DWX_PRECOMP -DNDEBUG)
@@ -92,7 +92,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 if(CMAKE_BUILD_TYPE STREQUAL Release)
 
 	# executable name
-	set(pcsx2Name pcsx2)
+	set(Output pcsx2)
 	
 	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DWX_PRECOMP -DNDEBUG)
@@ -621,23 +621,23 @@ include_directories(.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 # add executable
-add_executable(${pcsx2Name}
+add_executable(${Output}
 			   ${Common}
 			   ${Platform})
 
 # add dependencies
-add_dependencies(${pcsx2Name} Resources)
+add_dependencies(${Output} Resources)
 
 # link target with project internal libraries
-target_link_libraries(${pcsx2Name} Utilities x86emitter)
+target_link_libraries(${Output} Utilities x86emitter)
 					
 # link target with wx
-target_link_libraries(${pcsx2Name} ${wxWidgets_LIBRARIES})
+target_link_libraries(${Output} ${wxWidgets_LIBRARIES})
 
 if(Linux)
 	# link target with gtk2
-	target_link_libraries(${pcsx2Name} ${GTK2_LIBRARIES})
+	target_link_libraries(${Output} ${GTK2_LIBRARIES})
 endif(Linux)
 
 # link target with zlib
-target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
+target_link_libraries(${Output} ${ZLIB_LIBRARIES})

@@ -1,7 +1,7 @@
 # zlib library
 
 # library name
-set(zlibName pcsx2_zlib)
+set(Output pcsx2_zlib)
 
 set(CommonFlags
     -W
@@ -62,4 +62,4 @@ crc32.h
 inftrees.h )
 
 # add library
-add_library(${zlibName} STATIC ${zlibSources} ${zlibHeaders})
+add_library(${Output} STATIC ${zlibSources} ${zlibHeaders})

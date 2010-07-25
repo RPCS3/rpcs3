@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # library name
-set(x86emitterName x86emitter)
+set(Output x86emitter)
 
 # set common flags
 set(CommonFlags 
@@ -139,7 +139,7 @@ set(x86emitterHeaders
 	PrecompiledHeader.h)
 
 # add library
-add_library(${x86emitterName} STATIC ${x86emitterSources} ${x86emitterHeaders})
+add_library(${Output} STATIC ${x86emitterSources} ${x86emitterHeaders})
 
 # link target with wx
-target_link_libraries(${x86emitterName} ${wxWidgets_LIBRARIES})
+target_link_libraries(${Output} ${wxWidgets_LIBRARIES})

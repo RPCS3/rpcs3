@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # library name
-set(UtilitiesName Utilities)
+set(Output Utilities)
 
 # set common flags
 set(CommonFlags 
@@ -166,7 +166,7 @@ include_directories(.)
 set_source_files_properties(${UtilitiesSSources} PROPERTIES LANGUAGE CXX)
 
 # add library
-add_library(${UtilitiesName} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${UtilitiesSSources})
+add_library(${Output} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${UtilitiesSSources})
 
 # link target with wx
-target_link_libraries(${UtilitiesName} ${wxWidgets_LIBRARIES})
+target_link_libraries(${Output} ${wxWidgets_LIBRARIES})

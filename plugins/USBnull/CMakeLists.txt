@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(USBnullName USBnull)
+set(Output USBnull)
 
 set(CommonFlags
     -Wall
@@ -69,12 +69,12 @@ set(USBnullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${USBnullName} SHARED
+add_library(${Output} SHARED
 			${USBnullSources}
 			${USBnullHeaders}
 			${USBnullLinuxSources}
 			${USBnullLinuxHeaders})
 
 # set output directory
-set_target_properties(${USBnullName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)

@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(GSnullName GSnull)
+set(Output GSnull)
 
 set(CommonFlags
     -Wall
@@ -84,7 +84,7 @@ set(GSnullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${GSnullName} SHARED
+add_library(${Output} SHARED
 			${GSnullSources}
 			${GSnullHeaders}
 			${GSnullnullSources}
@@ -93,5 +93,5 @@ add_library(${GSnullName} SHARED
 			${GSnullLinuxHeaders})
 
 # set output directory
-set_target_properties(${GSnullName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)

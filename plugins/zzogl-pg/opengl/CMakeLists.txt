@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(zzoglName zzogl)
+set(Output zzogl)
 
 set(CommonFlags
     -pthread
@@ -123,7 +123,7 @@ include_directories(.
     Linux)
 
 # add library
-add_library(${zzoglName} SHARED
+add_library(${Output} SHARED
     ${zzoglSources}
     ${zzoglHeaders}
     ${zzoglSSources}
@@ -132,28 +132,28 @@ add_library(${zzoglName} SHARED
     ${zzoglLinuxHeaders})
 
 # set output directory
-set_target_properties(${zzoglName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # WARNING can conflict with zerogs plugin
 # copy ps2hw.dat to plugins folder
-add_custom_command(TARGET ${zzoglName} POST_BUILD
+add_custom_command(TARGET ${Output} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with project internal libraries
-target_link_libraries(${zzoglName} Utilities)
+target_link_libraries(${Output} Utilities)
 
 # link target with Cg
-target_link_libraries(${zzoglName} ${CG_LIBRARIES})
+target_link_libraries(${Output} ${CG_LIBRARIES})
 
 # link target with glew
-target_link_libraries(${zzoglName} ${GLEW_LIBRARY})
+target_link_libraries(${Output} ${GLEW_LIBRARY})
 
 # link target with opengl
-target_link_libraries(${zzoglName} ${OPENGL_LIBRARIES})
+target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 
 # link target with X11
-target_link_libraries(${zzoglName} ${X11_LIBRARIES})
+target_link_libraries(${Output} ${X11_LIBRARIES})
 
 # link target with X11 videomod
-target_link_libraries(${zzoglName} ${X11_Xxf86vm_LIB})
+target_link_libraries(${Output} ${X11_Xxf86vm_LIB})

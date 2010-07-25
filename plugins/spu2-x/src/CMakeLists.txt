@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(spu2xName spu2x)
+set(Output spu2x)
 
 set(CommonFlags
     -Wall
@@ -101,7 +101,7 @@ include_directories(.
 					Linux)
 
 # add library
-add_library(${spu2xName} SHARED
+add_library(${Output} SHARED
 			${spu2xSources}
 			${spu2xHeaders}
 			${spu2xLinuxSources}
@@ -109,20 +109,20 @@ add_library(${spu2xName} SHARED
 
 
 # set output directory
-set_target_properties(${spu2xName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with project internal libraries
-target_link_libraries(${spu2xName} Utilities x86emitter Utilities)
+target_link_libraries(${Output} Utilities x86emitter Utilities)
 
 # link target with ALSA
-target_link_libraries(${spu2xName} ${ALSA_LIBRARIES})
+target_link_libraries(${Output} ${ALSA_LIBRARIES})
 
 # link target with PortAudio
-target_link_libraries(${spu2xName} ${PORTAUDIO_LIBRARIES})
+target_link_libraries(${Output} ${PORTAUDIO_LIBRARIES})
 
 # link target with SoundTouch
-target_link_libraries(${spu2xName} ${SOUNDTOUCH_LIBRARIES})
+target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})
 
 # link target with A52
-target_link_libraries(${spu2xName} ${A52_LIBRARIES})
+target_link_libraries(${Output} ${A52_LIBRARIES})

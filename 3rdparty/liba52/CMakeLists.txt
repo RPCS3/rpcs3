@@ -1,7 +1,7 @@
 # a52 library
 
 # library name
-set(a52Name pcsx2_a52)
+set(Output pcsx2_a52)
 
 set(CommonFlags
     -Wall
@@ -52,4 +52,4 @@ set(a52Headers
     tendra.h)
 
 # add library
-add_library(${a52Name} STATIC ${a52Sources} ${a52Headers}) 
+add_library(${Output} STATIC ${a52Sources} ${a52Headers}) 

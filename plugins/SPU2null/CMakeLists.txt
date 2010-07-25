@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(SPU2nullName SPU2null)
+set(Output SPU2null)
 
 set(CommonFlags
     -Wall
@@ -67,12 +67,12 @@ set(SPU2nullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${SPU2nullName} SHARED
+add_library(${Output} SHARED
 			${SPU2nullSources}
 			${SPU2nullHeaders}
 			${SPU2nullLinuxSources}
 			${SPU2nullLinuxHeaders})
 
 # set output directory
-set_target_properties(${SPU2nullName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)

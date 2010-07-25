@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(zeropadName zeropad)
+set(Output zeropad)
 
 set(CommonFlags
     -Wall
@@ -84,15 +84,15 @@ include_directories(.
     Linux)
 
 # add library
-add_library(${zeropadName} SHARED
+add_library(${Output} SHARED
 			${zeropadSources}
 			${zeropadHeaders}
 			${zeropadLinuxSources}
 			${zeropadLinuxHeaders})
 
 # set output directory
-set_target_properties(${zeropadName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with SDL
-target_link_libraries(${zeropadName} ${SDL_LIBRARY})
+target_link_libraries(${Output} ${SDL_LIBRARY})

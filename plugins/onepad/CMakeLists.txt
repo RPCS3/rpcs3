@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(onepadName onepad)
+set(Output onepad)
 
 set(CommonFlags
     -Wall
@@ -75,15 +75,15 @@ set(onepadWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${onepadName} SHARED
+add_library(${Output} SHARED
 			${onepadSources}
 			${onepadHeaders}
 			${onepadLinuxSources}
 			${onepadLinuxHeaders})
 
 # set output directory
-set_target_properties(${onepadName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with SDL
-target_link_libraries(${onepadName} ${SDL_LIBRARY})
+target_link_libraries(${Output} ${SDL_LIBRARY})

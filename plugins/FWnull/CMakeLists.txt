@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(FWnullName FWnull)
+set(Output FWnull)
 
 set(CommonFlags
     -Wall
@@ -68,12 +68,12 @@ set(FWnullWindowsHeaders
 include_directories(.)
 
 # add library
-add_library(${FWnullName} SHARED
+add_library(${Output} SHARED
 			${FWnullSources}
 			${FWnullHeaders}
 			${FWnullLinuxSources}
 			${FWnullLinuxHeaders})
 
 # set output directory
-set_target_properties(${FWnullName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)

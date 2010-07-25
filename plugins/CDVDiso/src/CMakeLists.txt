@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(CDVDisoName CDVDiso)
+set(Output CDVDiso)
 
 set(CommonFlags
     -Wall
@@ -67,15 +67,15 @@ include_directories(.
     Linux)
 
 # add library
-add_library(${CDVDisoName} SHARED
+add_library(${Output} SHARED
 			${CDVDisoSources}
 			${CDVDisoHeaders}
 			${CDVDisoLinuxSources}
 			${CDVDisoLinuxHeaders})
 
 # set output directory
-set_target_properties(${CDVDisoName} PROPERTIES
+set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # Link with bz2
-target_link_libraries(${CDVDisoName} ${BZIP2_LIBRARIES})
+target_link_libraries(${Output} ${BZIP2_LIBRARIES})
