@@ -16,7 +16,6 @@
 #ifndef __IPU_H__
 #define __IPU_H__
 
-#include "mpeg2lib/Mpeg.h"
 #include "IPU_Fifo.h"
 
 #ifdef _MSC_VER
@@ -342,16 +341,11 @@ struct tIPU_cmd
 };
 
 extern tIPU_cmd ipu_cmd;
-extern tIPU_BP g_BP;
 extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring
 extern u8* g_pIPU0Pointer;
 extern IPUStatus IPU1Status;
 extern tIPU_DMA g_nDMATransfer;
-// The IPU can only do one task at once and never uses other buffers so these
-// should be made available to functions in other modules to save registers.
-extern __aligned16 macroblock_rgb32	rgb32;
-extern __aligned16 macroblock_8		mb8;
 
 extern int ipuInit();
 extern void ipuReset();

@@ -15,8 +15,9 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "IPU_Fifo.h"
 #include "IPU.h"
+#include "mpeg2lib/Mpeg.h"
+
 
 IPU_Fifo ipu_fifo;
 

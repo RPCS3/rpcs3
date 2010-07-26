@@ -22,8 +22,50 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __MPEG_H__
-#define __MPEG_H__
+#pragma once
+
+#include <xmmintrin.h>
+
+template< typename T >
+__noinline void memzero_sse_a( T& dest )
+{
+#define MZFqwc (sizeof(dest)/16)
+
+	C_ASSERT( (sizeof(dest) & 0xf) == 0 );
+
+	__m128 zeroreg = _mm_setzero_ps();
+
+	float (*destxmm)[4] = (float(*)[4])&dest;
+
+#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx][0], zeroreg)
+
+	switch( MZFqwc & 0x07 )
+	{
+		StoreDestIdx(0x07);
+		StoreDestIdx(0x06);
+		StoreDestIdx(0x05);
+		StoreDestIdx(0x04);
+		StoreDestIdx(0x03);
+		StoreDestIdx(0x02);
+		StoreDestIdx(0x01);
+	}
+
+	destxmm += (MZFqwc & 0x07);
+	for( uint i=0; i<MZFqwc / 8; ++i, destxmm+=8 )
+	{
+		_mm_store_ps(&destxmm[0][0], zeroreg);
+		_mm_store_ps(&destxmm[1][0], zeroreg);
+		_mm_store_ps(&destxmm[2][0], zeroreg);
+		_mm_store_ps(&destxmm[3][0], zeroreg);
+		_mm_store_ps(&destxmm[4][0], zeroreg);
+		_mm_store_ps(&destxmm[5][0], zeroreg);
+		_mm_store_ps(&destxmm[6][0], zeroreg);
+		_mm_store_ps(&destxmm[7][0], zeroreg);
+	}
+
+#undef MZFqwc
+};
+
 
 enum macroblock_modes
 {
@@ -81,12 +123,12 @@ struct macroblock_rgb32{
 	} c[16][16];
 };
 
-struct rgb16{
+struct rgb16_t{
 	unsigned short r:5, g:5, b:5, a:1;
 };
 
 struct macroblock_rgb16{
-	struct rgb16	c[16][16];
+	rgb16_t	c[16][16];
 };
 
 struct decoder_t {
@@ -99,11 +141,6 @@ struct decoder_t {
 	/* bit parsing stuff */
 	u32 bitstream_buf;		/* current 32 bit working set */
 	int bitstream_bits;			/* used bits in working set */
-
-	struct macroblock_8		*mb8;
-	struct macroblock_16	*mb16;
-	struct macroblock_rgb32	*rgb32;
-	struct macroblock_rgb16	*rgb16;
 
 	int stride;
 
@@ -172,25 +209,24 @@ extern void (__fastcall *mpeg2_idct_add) (int last, s16 * block, s16* dest, int 
 #define IDEC	0
 #define BDEC	1
 
-bool mpeg2sliceIDEC();
-bool mpeg2_slice();
-int get_macroblock_address_increment();
-int get_macroblock_modes();
+extern bool mpeg2sliceIDEC();
+extern bool mpeg2_slice();
+extern int get_macroblock_address_increment();
+extern int get_macroblock_modes();
 
 extern int get_motion_delta(const int f_code);
 extern int get_dmv();
 
 extern int non_linear_quantizer_scale[];
-extern decoder_t g_decoder;
 
-void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn);
-void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte);
-void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4);
-void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16);
+extern void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn);
+extern void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& rgb16, int dte);
+extern void ipu_vq(macroblock_rgb16& rgb16, u8* indx4);
+extern void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16);
 
-int slice (u8 * buffer);
+extern int slice (u8 * buffer);
 /* idct.c */
-void mpeg2_idct_init ();
+extern void mpeg2_idct_init ();
 
 #ifdef _MSC_VER
 #define BigEndian(out, in) out = _byteswap_ulong(in)
@@ -204,4 +240,13 @@ void mpeg2_idct_init ();
 #define BigEndian64(out, in) out = __builtin_bswap64(in) // or we could use the asm function bswap...
 #endif
 
-#endif//__MPEG_H__
+// The IPU can only do one task at once and never uses other buffers so all mpeg state variables
+// are made available to mpeg/vlc modules as globals here:
+
+extern __aligned16 tIPU_BP g_BP;
+extern __aligned16 decoder_t decoder;
+extern __aligned16 macroblock_8 mb8;
+extern __aligned16 macroblock_16 mb16;
+extern __aligned16 macroblock_rgb32 rgb32;
+extern __aligned16 macroblock_rgb16 rgb16;
+

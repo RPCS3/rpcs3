@@ -243,9 +243,9 @@ int get_macroblock_address_increment()
 	u16 code = UBITS(16);
 
 	if (code >= 4096)
-		mba = MBA_5 + (UBITS(5) - 2);
+		mba = MBA.mba5 + (UBITS(5) - 2);
 	else if (code >= 768)
-		mba = MBA_11 + (UBITS(11) - 24);
+		mba = MBA.mba11 + (UBITS(11) - 24);
 	else switch (UBITS(11))
 		{
 
@@ -277,16 +277,16 @@ static __forceinline int get_luma_dc_dct_diff()
 
 	if (code < 31)
 	{
-		size = DClumtab0[code].size;
-		DUMPBITS(DClumtab0[code].len);
+		size = DCtable.lum0[code].size;
+		DUMPBITS(DCtable.lum0[code].len);
 
 		// 5 bits max
 	}
 	else
 	{
 		code = UBITS(9) - 0x1f0;
-		size = DClumtab1[code].size;
-		DUMPBITS(DClumtab1[code].len);
+		size = DCtable.lum1[code].size;
+		DUMPBITS(DCtable.lum1[code].len);
 
 		// 9 bits max
 	}
@@ -313,14 +313,14 @@ static __forceinline int get_chroma_dc_dct_diff()
 
     if (code<31)
 	{
-		size = DCchromtab0[code].size;
-		DUMPBITS(DCchromtab0[code].len);
+		size = DCtable.chrom0[code].size;
+		DUMPBITS(DCtable.chrom0[code].len);
 	}
 	else
 	{
 	    code = UBITS(10) - 0x3e0;
-	    size = DCchromtab1[code].size;
-		DUMPBITS(DCchromtab1[code].len);
+	    size = DCtable.chrom1[code].size;
+		DUMPBITS(DCtable.chrom1[code].len);
 	}
 	
 	if (size==0)
@@ -371,49 +371,55 @@ static __forceinline bool get_intra_block()
 
 		if (code >= 16384 && (!decoder.intra_vlc_format || decoder.mpeg1))
 		{
-		  tab = &DCTtabnext[(code >> 12) - 4];
+		  tab = &DCT.next[(code >> 12) - 4];
 		}
 		else if (code >= 1024)
 		{
-		  if (decoder.intra_vlc_format && !decoder.mpeg1)
-		  {
-			  tab = &DCTtab0a[(code >> 8) - 4];
-		  }
-		  else
-		  {
-			  tab = &DCTtab0[(code >> 8) - 4];
-		  }
+			if (decoder.intra_vlc_format && !decoder.mpeg1)
+			{
+				tab = &DCT.tab0a[(code >> 8) - 4];
+			}
+			else
+			{
+				tab = &DCT.tab0[(code >> 8) - 4];
+			}
 		}
 		else if (code >= 512)
 		{
-		  if (decoder.intra_vlc_format && !decoder.mpeg1)
-		  {
-			tab = &DCTtab1a[(code >> 6) - 8];
-		  }
-		  else
-		  {
-			tab = &DCTtab1[(code >> 6) - 8];
-		  }
+			if (decoder.intra_vlc_format && !decoder.mpeg1)
+			{
+				tab = &DCT.tab1a[(code >> 6) - 8];
+			}
+			else
+			{
+				tab = &DCT.tab1[(code >> 6) - 8];
+			}
 		}
+
+		// [TODO] Optimization: Following codes can all be done by a single "expedited" lookup
+		// that should use a single unrolled DCT table instead of five separate tables used
+		// here.  Multiple conditional statements are very slow, while modern CPU data caches
+		// have lots of room to spare.
+
 		else if (code >= 256)
 		{
-		  tab = &DCTtab2[(code >> 4) - 16];
+			tab = &DCT.tab2[(code >> 4) - 16];
 		}
 		else if (code >= 128)
 		{    
-			tab = &DCTtab3[(code >> 3) - 16];
+			tab = &DCT.tab3[(code >> 3) - 16];
 		}
 		else if (code >= 64)
 		{    
-			tab = &DCTtab4[(code >> 2) - 16];
+			tab = &DCT.tab4[(code >> 2) - 16];
 		}
 		else if (code >= 32)
 		{    
-			tab = &DCTtab5[(code >> 1) - 16];
+			tab = &DCT.tab5[(code >> 1) - 16];
 		}
 		else if (code >= 16)
 		{    
-			tab = &DCTtab6[code - 16];
+			tab = &DCT.tab6[code - 16];
 		}
 		else
 		{
@@ -519,40 +525,46 @@ static __forceinline bool get_non_intra_block(int * last)
 			{
 				if (i==0)
 				{
-					tab = &DCTtabfirst[(code >> 12) - 4];
+					tab = &DCT.first[(code >> 12) - 4];
 				}
 				else
 				{			
-					tab = &DCTtabnext[(code >> 12)- 4];
+					tab = &DCT.next[(code >> 12)- 4];
 				}
 			}
 			else if (code >= 1024)
 			{
-				tab = &DCTtab0[(code >> 8) - 4];
+				tab = &DCT.tab0[(code >> 8) - 4];
 			}
 			else if (code >= 512)
 			{		
-				tab = &DCTtab1[(code >> 6) - 8];
+				tab = &DCT.tab1[(code >> 6) - 8];
 			}
+
+			// [TODO] Optimization: Following codes can all be done by a single "expedited" lookup
+			// that should use a single unrolled DCT table instead of five separate tables used
+			// here.  Multiple conditional statements are very slow, while modern CPU data caches
+			// have lots of room to spare.
+
 			else if (code >= 256)
 			{		
-				tab = &DCTtab2[(code >> 4) - 16];
+				tab = &DCT.tab2[(code >> 4) - 16];
 			}
 			else if (code >= 128)
 			{		
-				tab = &DCTtab3[(code >> 3) - 16];
+				tab = &DCT.tab3[(code >> 3) - 16];
 			}
 			else if (code >= 64)
 			{		
-				tab = &DCTtab4[(code >> 2) - 16];
+				tab = &DCT.tab4[(code >> 2) - 16];
 			}
 			else if (code >= 32)
 			{		
-				tab = &DCTtab5[(code >> 1) - 16];
+				tab = &DCT.tab5[(code >> 1) - 16];
 			}
 			else if (code >= 16)
 			{		
-				tab = &DCTtab6[code - 16];
+				tab = &DCT.tab6[code - 16];
 			}
 			else
 			{
@@ -625,7 +637,7 @@ static __forceinline bool get_non_intra_block(int * last)
 	return true;
 }
 
-static bool __fastcall slice_intra_DCT(const int cc, u8 * const dest, const int stride, const bool skip)
+static __forceinline bool slice_intra_DCT(const int cc, u8 * const dest, const int stride, const bool skip)
 {
 	if (!skip || ipu_cmd.pos[3])
 	{
@@ -655,13 +667,13 @@ static bool __fastcall slice_intra_DCT(const int cc, u8 * const dest, const int 
 	return true;
 }
 
-static bool __fastcall slice_non_intra_DCT(s16 * const dest, const int stride, const bool skip)
+static __forceinline bool slice_non_intra_DCT(s16 * const dest, const int stride, const bool skip)
 {
 	int last;
 
 	if (!skip)
 	{
-		memzero(decoder.DCTblock);
+		memzero_sse_a(decoder.DCTblock);
 	}
 
 	if (!get_non_intra_block(&last))
@@ -735,8 +747,8 @@ bool mpeg2sliceIDEC()
 				}
 
 				decoder.coded_block_pattern = 0x3F;//all 6 blocks
-				memzero(*decoder.mb8);
-				memzero(*decoder.rgb32);
+				memzero_sse_a(mb8);
+				memzero_sse_a(rgb32);
 
 			case 1:
 				ipu_cmd.pos[1] = 1;
@@ -756,37 +768,37 @@ bool mpeg2sliceIDEC()
 				{
 				case 0:
 				case 1:
-					if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y, DCT_stride, ipu_cmd.pos[2] == 1))
+					if (!slice_intra_DCT(0, (u8*)mb8.Y, DCT_stride, ipu_cmd.pos[2] == 1))
 					{
 						ipu_cmd.pos[2] = 1;
 						return false;
 					}
 				case 2:
-					if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + 8, DCT_stride, ipu_cmd.pos[2] == 2))
+					if (!slice_intra_DCT(0, (u8*)mb8.Y + 8, DCT_stride, ipu_cmd.pos[2] == 2))
 					{
 						ipu_cmd.pos[2] = 2;
 						return false;
 					}
 				case 3:
-					if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + DCT_offset, DCT_stride, ipu_cmd.pos[2] == 3))
+					if (!slice_intra_DCT(0, (u8*)mb8.Y + DCT_offset, DCT_stride, ipu_cmd.pos[2] == 3))
 					{
 						ipu_cmd.pos[2] = 3;
 						return false;
 					}
 				case 4:
-					if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[2] == 4))
+					if (!slice_intra_DCT(0, (u8*)mb8.Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[2] == 4))
 					{
 						ipu_cmd.pos[2] = 4;
 						return false;
 					}
 				case 5:
-					if (!slice_intra_DCT(1, (u8*)decoder.mb8->Cb, decoder.stride >> 1, ipu_cmd.pos[2] == 5))
+					if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder.stride >> 1, ipu_cmd.pos[2] == 5))
 					{
 						ipu_cmd.pos[2] = 5;
 						return false;
 					}
 				case 6:
-					if (!slice_intra_DCT(2, (u8*)decoder.mb8->Cr, decoder.stride >> 1, ipu_cmd.pos[2] == 6))
+					if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder.stride >> 1, ipu_cmd.pos[2] == 6))
 					{
 						ipu_cmd.pos[2] = 6;
 						return false;
@@ -794,19 +806,19 @@ bool mpeg2sliceIDEC()
 				}
 
 				// Send The MacroBlock via DmaIpuFrom
-				ipu_csc(decoder.mb8, decoder.rgb32, decoder.sgn);
+				ipu_csc(mb8, rgb32, decoder.sgn);
 
 				if (decoder.ofm == 0)
 				{
 					g_nIPU0Data = 64;
-					g_pIPU0Pointer = (u8*)decoder.rgb32;
+					g_pIPU0Pointer = (u8*)&rgb32;
 				}
 				else
 				{
-					ipu_dither(decoder.rgb32, decoder.rgb16, decoder.dte);
+					ipu_dither(rgb32, rgb16, decoder.dte);
 
 					g_nIPU0Data = 32;
-					g_pIPU0Pointer = (u8*)decoder.rgb16;
+					g_pIPU0Pointer = (u8*)&rgb16;
 				}
 
 			case 2:
@@ -841,12 +853,12 @@ bool mpeg2sliceIDEC()
 					code = UBITS(16);
 					if (code >= 0x1000)
 					{
-						mba = MBA_5 + (UBITS(5) - 2);
+						mba = MBA.mba5 + (UBITS(5) - 2);
 						break;
 					}
 					else if (code >= 0x0300)
 					{
-						mba = MBA_11 + (UBITS(11) - 24);
+						mba = MBA.mba11 + (UBITS(11) - 24);
 						break;
 					}
 					else switch (UBITS(11))
@@ -942,8 +954,8 @@ bool mpeg2_slice()
 			
 		ipuRegs->ctrl.ECD = 0;
 		ipuRegs->top = 0;
-		memzero(*decoder.mb8);
-		memzero(*decoder.mb16);
+		memzero_sse_a(mb8);
+		memzero_sse_a(mb16);
 	case 1:
 		if (!bitstream_init())
 		{
@@ -972,37 +984,37 @@ bool mpeg2_slice()
 			case 0:
 				decoder.coded_block_pattern = 0x3F;
 			case 1:
-				if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y, DCT_stride, ipu_cmd.pos[1] == 1))
+				if (!slice_intra_DCT(0, (u8*)mb8.Y, DCT_stride, ipu_cmd.pos[1] == 1))
 				{
 					ipu_cmd.pos[1] = 1;
 					return false;
 				}
 			case 2:
-				if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + 8, DCT_stride, ipu_cmd.pos[1] == 2))
+				if (!slice_intra_DCT(0, (u8*)mb8.Y + 8, DCT_stride, ipu_cmd.pos[1] == 2))
 				{
 					ipu_cmd.pos[1] = 2;
 					return false;
 				}
 			case 3:
-				if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + DCT_offset, DCT_stride, ipu_cmd.pos[1] == 3))
+				if (!slice_intra_DCT(0, (u8*)mb8.Y + DCT_offset, DCT_stride, ipu_cmd.pos[1] == 3))
 				{
 					ipu_cmd.pos[1] = 3;
 					return false;
 				}
 			case 4:
-				if (!slice_intra_DCT(0, (u8*)decoder.mb8->Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[1] == 4))
+				if (!slice_intra_DCT(0, (u8*)mb8.Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[1] == 4))
 				{
 					ipu_cmd.pos[1] = 4;
 					return false;
 				}
 			case 5:
-				if (!slice_intra_DCT(1, (u8*)decoder.mb8->Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
+				if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
 				{
 					ipu_cmd.pos[1] = 5;
 					return false;
 				}
 			case 6:
-				if (!slice_intra_DCT(2, (u8*)decoder.mb8->Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
+				if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
 				{
 					ipu_cmd.pos[1] = 6;
 					return false;
@@ -1010,7 +1022,7 @@ bool mpeg2_slice()
 				break;
 			}
 
-			ipu_copy(decoder.mb8, decoder.mb16);
+			ipu_copy(mb8, mb16);
 		}
 		else
 		{
@@ -1023,7 +1035,7 @@ bool mpeg2_slice()
 				case 1:
 					if (decoder.coded_block_pattern & 0x20)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Y, DCT_stride, ipu_cmd.pos[1] == 1))
+						if (!slice_non_intra_DCT((s16*)mb16.Y, DCT_stride, ipu_cmd.pos[1] == 1))
 						{
 							ipu_cmd.pos[1] = 1;
 							return false;
@@ -1032,7 +1044,7 @@ bool mpeg2_slice()
 				case 2:
 					if (decoder.coded_block_pattern & 0x10)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Y + 8, DCT_stride, ipu_cmd.pos[1] == 2))
+						if (!slice_non_intra_DCT((s16*)mb16.Y + 8, DCT_stride, ipu_cmd.pos[1] == 2))
 						{
 							ipu_cmd.pos[1] = 2;
 							return false;
@@ -1041,7 +1053,7 @@ bool mpeg2_slice()
 				case 3:
 					if (decoder.coded_block_pattern & 0x08)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Y + DCT_offset, DCT_stride, ipu_cmd.pos[1] == 3))
+						if (!slice_non_intra_DCT((s16*)mb16.Y + DCT_offset, DCT_stride, ipu_cmd.pos[1] == 3))
 						{
 							ipu_cmd.pos[1] = 3;
 							return false;
@@ -1050,7 +1062,7 @@ bool mpeg2_slice()
 				case 4:
 					if (decoder.coded_block_pattern & 0x04)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[1] == 4))
+						if (!slice_non_intra_DCT((s16*)mb16.Y + DCT_offset + 8, DCT_stride, ipu_cmd.pos[1] == 4))
 						{
 							ipu_cmd.pos[1] = 4;
 							return false;
@@ -1059,7 +1071,7 @@ bool mpeg2_slice()
 				case 5:
 					if (decoder.coded_block_pattern & 0x2)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
+						if (!slice_non_intra_DCT((s16*)mb16.Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
 						{
 							ipu_cmd.pos[1] = 5;
 							return false;
@@ -1068,7 +1080,7 @@ bool mpeg2_slice()
 				case 6:
 					if (decoder.coded_block_pattern & 0x1)
 					{
-						if (!slice_non_intra_DCT((s16*)decoder.mb16->Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
+						if (!slice_non_intra_DCT((s16*)mb16.Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
 						{
 							ipu_cmd.pos[1] = 6;
 							return false;
@@ -1098,7 +1110,7 @@ bool mpeg2_slice()
 
 		decoder.mbc = 1;
 		g_nIPU0Data = 48;
-		g_pIPU0Pointer = (u8*)decoder.mb16;
+		g_pIPU0Pointer = (u8*)&mb16;
 
 	case 3:
 		while (g_nIPU0Data > 0)

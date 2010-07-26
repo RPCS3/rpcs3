@@ -24,6 +24,8 @@
 
 #include "IPU.h"
 #include "yuv2rgb.h"
+#include "mpeg2lib/Mpeg.h"
+
 #include "Vif.h"
 #include "Gif.h"
 #include "Vif_Dma.h"
@@ -50,7 +52,7 @@ u8* g_pIPU0Pointer = NULL;
 void ReorderBitstream();
 
 // the BP doesn't advance and returns -1 if there is no data to be read
-tIPU_BP g_BP;
+__aligned16 tIPU_BP g_BP;
 
 void IPUWorker();
 
@@ -65,6 +67,7 @@ static u8 iq[64];			//intraquant matrix
 u16 vqclut[16];				//clut conversion table
 static u8 s_thresh[2];		//thresholds for color conversions
 int coded_block_pattern = 0;
+
 __aligned16 macroblock_8 mb8;
 __aligned16 macroblock_16 mb16;
 __aligned16 macroblock_rgb32 rgb32;
@@ -73,8 +76,7 @@ __aligned16 macroblock_rgb16 rgb16;
 u8 indx4[16*16/2];
 bool mpeg2_inited = false;		//mpeg2_idct_init() must be called only once
 u8 PCT[] = {'r', 'I', 'P', 'B', 'D', '-', '-', '-'};
-decoder_t decoder;						//static, only to place it in bss
-decoder_t tempdec;
+__aligned16 decoder_t decoder;						//static, only to place it in bss
 
 extern "C"
 {
@@ -96,10 +98,6 @@ void init_g_decoder()
 	decoder.intra_quantizer_matrix = (u8*)iq;
 	decoder.non_intra_quantizer_matrix = (u8*)niq;
 	decoder.picture_structure = FRAME_PICTURE;	//default: progressive...my guess:P
-	decoder.mb8 = &mb8;
-	decoder.mb16 = &mb16;
-	decoder.rgb32 = &rgb32;
-	decoder.rgb16 = &rgb16;
 	decoder.stride = 16;
 }
 
@@ -428,8 +426,8 @@ static __forceinline BOOL ipuBDEC(u32 val, bool resume)
 		decoder.dcr = bdec.DCR;
 		decoder.macroblock_modes |= bdec.MBI ? MACROBLOCK_INTRA : MACROBLOCK_PATTERN;
 
-		memzero(mb8);
-		memzero(mb16);
+		memzero_sse_a(mb8);
+		memzero_sse_a(mb16);
 	}
 
 	return mpeg2_slice();
@@ -595,8 +593,8 @@ static BOOL __fastcall ipuCSC(u32 val)
 			if (!getBits64((u8*)&mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
 		}
 
-		ipu_csc(&mb8, &rgb32, 0);
-		if (csc.OFM) ipu_dither(&rgb32, &rgb16, csc.DTE);
+		ipu_csc(mb8, rgb32, 0);
+		if (csc.OFM) ipu_dither(rgb32, rgb16, csc.DTE);
 		
 		if (csc.OFM)
 		{
@@ -637,10 +635,10 @@ static BOOL ipuPACK(u32 val)
 			if (!getBits64((u8*)&mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
 		}
 
-		ipu_csc(&mb8, &rgb32, 0);
-		ipu_dither(&rgb32, &rgb16, csc.DTE);
+		ipu_csc(mb8, rgb32, 0);
+		ipu_dither(rgb32, rgb16, csc.DTE);
 
-		if (csc.OFM) ipu_vq(&rgb16, indx4);
+		if (csc.OFM) ipu_vq(rgb16, indx4);
 		
 		if (csc.OFM)
 		{
@@ -1117,10 +1115,10 @@ u8 __fastcall getBits8(u8 *address, u32 advance)
 void Skl_YUV_To_RGB32_MMX(u8 *RGB, const int Dst_BpS, const u8 *Y, const u8 *U, const u8 *V,
                           const int Src_BpS, const int Width, const int Height);
 
-void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn)
+__forceinline void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn)
 {
 	int i;
-	u8* p = (u8*)rgb32;
+	u8* p = (u8*)&rgb32;
 
 	yuv2rgb();
 
@@ -1151,30 +1149,30 @@ void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn)
 	}
 }
 
-void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte)
+__forceinline void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& rgb16, int dte)
 {
 	int i, j;
 	for (i = 0; i < 16; ++i)
 	{
 		for (j = 0; j < 16; ++j)
 		{
-			rgb16->c[i][j].r = rgb32->c[i][j].r >> 3;
-			rgb16->c[i][j].g = rgb32->c[i][j].g >> 3;
-			rgb16->c[i][j].b = rgb32->c[i][j].b >> 3;
-			rgb16->c[i][j].a = rgb32->c[i][j].a == 0x40;
+			rgb16.c[i][j].r = rgb32.c[i][j].r >> 3;
+			rgb16.c[i][j].g = rgb32.c[i][j].g >> 3;
+			rgb16.c[i][j].b = rgb32.c[i][j].b >> 3;
+			rgb16.c[i][j].a = rgb32.c[i][j].a == 0x40;
 		}
 	}
 }
 
-void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4)
+__forceinline void ipu_vq(macroblock_rgb16& rgb16, u8* indx4)
 {
 	Console.Error("IPU: VQ not implemented");
 }
 
-void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16)
+__forceinline void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16)
 {
-	const u8	*s = (const u8*)mb8;
-	s16	*d = (s16*)mb16;
+	const u8	*s = (const u8*)&mb8;
+	s16	*d = (s16*)&mb16;
 	int i;
 	for (i = 0; i < 256; i++) *d++ = *s++;		//Y  bias	- 16
 	for (i = 0; i < 64; i++) *d++ = *s++;		//Cr bias	- 128
