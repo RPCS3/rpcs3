@@ -99,7 +99,6 @@ struct decoder_t {
 	/* bit parsing stuff */
 	u32 bitstream_buf;		/* current 32 bit working set */
 	int bitstream_bits;			/* used bits in working set */
-	u8 * bitstream_ptr;			/* buffer with stream data; 128 bits buffer */
 
 	struct macroblock_8		*mb8;
 	struct macroblock_16	*mb16;
@@ -173,13 +172,13 @@ extern void (__fastcall *mpeg2_idct_add) (int last, s16 * block, s16* dest, int 
 #define IDEC	0
 #define BDEC	1
 
-void mpeg2sliceIDEC(void* pdone);
-void mpeg2_slice(void* pdone);
-int get_macroblock_address_increment(decoder_t * const decoder);
-int get_macroblock_modes (decoder_t * const decoder);
+bool mpeg2sliceIDEC();
+bool mpeg2_slice();
+int get_macroblock_address_increment();
+int get_macroblock_modes();
 
-extern int get_motion_delta (decoder_t * const decoder, const int f_code);
-extern int get_dmv (decoder_t * const decoder);
+extern int get_motion_delta(const int f_code);
+extern int get_dmv();
 
 extern int non_linear_quantizer_scale[];
 extern decoder_t g_decoder;
@@ -189,7 +188,7 @@ void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb1
 void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4);
 void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16);
 
-int slice (decoder_t * const decoder, u8 * buffer);
+int slice (u8 * buffer);
 /* idct.c */
 void mpeg2_idct_init ();
 
@@ -197,6 +196,12 @@ void mpeg2_idct_init ();
 #define BigEndian(out, in) out = _byteswap_ulong(in)
 #else
 #define BigEndian(out, in) out = __builtin_bswap32(in) // or we could use the asm function bswap...
+#endif
+
+#ifdef _MSC_VER
+#define BigEndian64(out, in) out = _byteswap_uint64(in)
+#else
+#define BigEndian64(out, in) out = __builtin_bswap64(in) // or we could use the asm function bswap...
 #endif
 
 #endif//__MPEG_H__

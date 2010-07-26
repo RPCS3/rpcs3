@@ -1255,14 +1255,6 @@
 					Name="IPU"
 					>
 					<File
-						RelativePath="..\..\IPU\coroutine.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\IPU\coroutine.h"
-						>
-					</File>
-					<File
 						RelativePath="..\..\Ipu\IPU.cpp"
 						>
 						<FileConfiguration
@@ -1270,7 +1262,7 @@
 							>
 							<Tool
 								Name="VCCLCompilerTool"
-								UsePrecompiledHeader="0"
+								UsePrecompiledHeader="2"
 							/>
 						</FileConfiguration>
 						<FileConfiguration
@@ -1302,7 +1294,7 @@
 							>
 							<Tool
 								Name="VCCLCompilerTool"
-								UsePrecompiledHeader="0"
+								UsePrecompiledHeader="2"
 							/>
 						</FileConfiguration>
 						<FileConfiguration

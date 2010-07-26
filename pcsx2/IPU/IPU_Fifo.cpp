@@ -13,7 +13,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "IPU_Fifo.h"
@@ -106,20 +105,18 @@ int IPU_Fifo_Output::write(const u32 *value, int size)
 
 	ipuRegs->ctrl.OFC += firsttrans;
 	IPU0dma();
-	//Console.WriteLn("Written %d qwords, %d", firsttrans,ipuRegs->ctrl.OFC);
 
 	return firsttrans;
 }
 
 int IPU_Fifo_Input::read(void *value)
 {
-	// wait until enough data
-	if (g_BP.IFC < 8)
+	// wait until enough data to ensure proper streaming.
+	if (g_BP.IFC < 4)
 	{
 		// IPU FIFO is empty and DMA is waiting so lets tell the DMA we are ready to put data in the FIFO
 		if(cpuRegs.eCycle[4] == 0x9999)
 		{
-			//DevCon.Warning("Setting ECycle");
 			CPU_INT( DMAC_TO_IPU, 4 );
 		}
 		

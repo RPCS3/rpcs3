@@ -17,7 +17,6 @@
 #define __IPU_H__
 
 #include "mpeg2lib/Mpeg.h"
-#include "coroutine.h"
 #include "IPU_Fifo.h"
 
 #ifdef _MSC_VER
@@ -327,7 +326,7 @@ struct IPUregisters {
 struct tIPU_cmd
 {
 	int index;
-	int pos[2];
+	int pos[6];
 	int current;
 	void clear()
 	{
@@ -342,12 +341,13 @@ struct tIPU_cmd
 	}
 };
 
-//extern tIPU_cmd ipu_cmd;
+extern tIPU_cmd ipu_cmd;
 extern tIPU_BP g_BP;
 extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring
 extern u8* g_pIPU0Pointer;
-
+extern IPUStatus IPU1Status;
+extern tIPU_DMA g_nDMATransfer;
 // The IPU can only do one task at once and never uses other buffers so these
 // should be made available to functions in other modules to save registers.
 extern __aligned16 macroblock_rgb32	rgb32;
@@ -376,10 +376,11 @@ extern int IPU0dma();
 extern int IPU1dma();
 
 extern u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size);
+extern u8 __fastcall getBits128(u8 *address, u32 advance);
+extern u8 __fastcall getBits64(u8 *address, u32 advance);
 extern u8 __fastcall getBits32(u8 *address, u32 advance);
 extern u8 __fastcall getBits16(u8 *address, u32 advance);
 extern u8 __fastcall getBits8(u8 *address, u32 advance);
-extern int __fastcall getBits(u8 *address, u32 size, u32 advance);
 
 
 #endif

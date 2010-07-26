@@ -17,17 +17,6 @@
 #ifndef NAKED_ASM_H
 #define NAKED_ASM_H
 
-#include "IPU/coroutine.h"
-
-// Common to Windows and Linux
-extern "C"
-{
-	// acoroutine.S
-	void so_call(coroutine_t coro);
-	void so_resume(void);
-	void so_exit(void);
-}
-
 #ifdef __LINUX__
 
 extern "C"
