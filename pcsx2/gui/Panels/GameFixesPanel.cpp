@@ -74,6 +74,15 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		{
 			_("Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."),
 			wxEmptyString
+		},
+		{
+			_("OPH Flag hack - Try if your game freezes showing the same frame."),
+			pxE( ".Tooltip:Gamefixes:OPH Flag hack",
+				L"Known to affect following games:\n"
+				L" * Bleach Blade Battler\n"
+				L" * Growlanser II and III\n"
+				L" * Wizardry"
+			)
 		}
 	};
 

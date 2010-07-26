@@ -50,6 +50,7 @@ enum GamefixId
 	Fix_IpuWait,
 	Fix_EETiming,
 	Fix_SkipMpeg,
+	Fix_OPHFlag,
 
 	GamefixId_COUNT
 };
@@ -457,7 +458,8 @@ struct Pcsx2Config
 				XgKickHack		:1,		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
 				IPUWaitHack     :1,		// FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
 				EETimingHack	:1,		// General purpose timing hack.
-				SkipMPEGHack	:1;		// Skips MPEG videos (Katamari and other games need this)
+				SkipMPEGHack	:1,		// Skips MPEG videos (Katamari and other games need this)
+				OPHFlagHack		:1;		// Skips MPEG videos (Katamari and other games need this)
 		BITFIELD_END
 
 		// all gamefixes are disabled by default.
@@ -603,6 +605,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_IPUWAITHACK			(EmuConfig.Gamefixes.IPUWaitHack)	 // Special Fix For FFX
 #define CHECK_EETIMINGHACK			(EmuConfig.Gamefixes.EETimingHack)	 // Fix all scheduled events to happen in 1 cycle.
 #define CHECK_SKIPMPEGHACK			(EmuConfig.Gamefixes.SkipMPEGHack)	 // Finds sceMpegIsEnd pattern to tell the game the mpeg is finished (Katamari and a lot of games need this)
+#define CHECK_OPHFLAGHACK			(EmuConfig.Gamefixes.OPHFlagHack)
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)

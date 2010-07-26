@@ -380,14 +380,21 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 
 	switch( masked_mem>>12 )		// switch out as according to the 4k page of the access.
 	{
+		case 0x03:
+			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read32 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
+			else HW_LOG("GIF Register Read32 at 0x%x, value=0x%x", mem, psHu32(mem) );
+			
+			// Fixme: OPH hack. Toggle the flag on each GIF_STAT access. (rama)
+			if (CHECK_OPHFLAGHACK)
+			{
+				if (masked_mem == 0x3020)
+					gifRegs->stat.OPH = !gifRegs->stat.OPH;
+			}
+			break;
 		///////////////////////////////////////////////////////
 		// Most of the following case handlers are for developer builds only (logging).
 		// It'll all optimize to ziltch in public release builds.
 #ifdef PCSX2_DEVBUILD
-		case 0x03:
-			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read32 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
-			else HW_LOG("GIF Register Read32 at 0x%x, value=0x%x", mem, psHu32(mem) );
-			break;
 		case 0x04:
 		case 0x05:
 		case 0x06:
