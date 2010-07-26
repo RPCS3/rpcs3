@@ -975,7 +975,7 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 		notMask.lo = ~mask.lo & data.lo;
 		notMask.hi = ~mask.hi & data.hi;
 		notMask.lo >>= 8 - shift;
-		notMask.lo |= (notMask.hi & (0xFFFFFFFFFFFFFFFF >> (64 - shift))) << (64 - shift);
+		notMask.lo |= (notMask.hi & (0xFFFFFFFFFFFFFFFFLLU >> (64 - shift))) << (64 - shift);
 		notMask.hi >>= 8 - shift;
 
 		mask.hi = (((*(u128*)readpos).hi & mask.hi) << shift) | (((*(u128*)readpos).lo & mask.lo) >> (64 - shift));

@@ -155,7 +155,6 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 		}
 
 		GSRegDISPFB* pfb = i ? DISPFB2 : DISPFB1;
-
 		GSRegDISPLAY* pd = i ? DISPLAY2 : DISPLAY1;
 		int magh = pd->MAGH + 1;
 		int magv = pd->MAGV + 1;
@@ -177,7 +176,7 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 }
 
 
-// Something should be done before Renderer the picture.
+// Something should be done before Renderering the picture.
 inline void RenderStartHelper(u32 bInterlace)
 {
 	// Crashes Final Fantasy X at startup if uncommented. --arcum42
@@ -236,11 +235,11 @@ inline void RenderStartHelper(u32 bInterlace)
 	if (bInterlace) g_PrevBitwiseTexX = -1;  // reset since will be using
 }
 
-// It is setting for intrelace texture multiplied vector;
-// Idea is: (x, y) -- position on screen, than interlaced texture get F = 1 ot 0 depends
-// on image y coord. So it we write valpha.z * F + valpha.w + 0.5 it would be swicthig odd
-// and even strings at each frame
-// valpha.x and y used for image blending.
+// Settings for interlace texture multiplied vector;
+// The idea is: (x, y) -- position on screen, then interlaced texture get F = 1 or 0 depending
+// on image y coords. So if we write valpha.z * F + valpha.w + 0.5, it would be switching odd
+// and even strings at each frame.
+// valpha.x and y are used for image blending.
 inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTSHADER* prog)
 {
 	SetShaderCaller("RenderGetForClip");
@@ -261,7 +260,7 @@ inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 
 	if (bInterlace)
 	{
-		if (interlace == (conf.interlace&1))
+		if (interlace == (conf.interlace & 1))
 		{
 			// pass if odd
 			valpha.z = 1.0f;
@@ -445,8 +444,8 @@ inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 	return v;
 }
 
-// Translator for POSITION coordinats (-1.0:+1.0f at x axis, +1.0f:-1.0y at y) into target frame ones
-// We don't need x coordinate, bvecause interlacing is y-axis only.
+// Translator for POSITION coordinates (-1.0:+1.0f at x axis, +1.0f:-1.0y at y) into target frame ones.
+// We don't need x coordinate, because interlacing is y-axis only.
 inline Vector RenderSetTargetBitTrans(int th)
 {
 	SetShaderCaller("RenderSetTargetBitTrans");
@@ -873,5 +872,3 @@ void ZeroGS::RenderCRTC(int interlace)
 	AfterRendererSwitchBackToTextures();
 	AfterRendererAutoresetTargets();
 }
-
-

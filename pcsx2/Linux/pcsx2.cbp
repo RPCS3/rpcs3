@@ -239,9 +239,6 @@
 		<Unit filename="../IPU/IPU.h" />
 		<Unit filename="../IPU/IPU_Fifo.cpp" />
 		<Unit filename="../IPU/IPU_Fifo.h" />
-		<Unit filename="../IPU/acoroutine.S" />
-		<Unit filename="../IPU/coroutine.cpp" />
-		<Unit filename="../IPU/coroutine.h" />
 		<Unit filename="../IPU/mpeg2lib/Idct.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.h" />

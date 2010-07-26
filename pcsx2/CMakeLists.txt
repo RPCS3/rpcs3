@@ -371,7 +371,6 @@ set(pcsx2GuiHeaders
 
 # IPU sources
 set(pcsx2IPUSources
-	IPU/coroutine.cpp
 	IPU/IPU.cpp
 	IPU/IPU_Fifo.cpp
 	IPU/mpeg2lib/Idct.cpp
@@ -380,7 +379,6 @@ set(pcsx2IPUSources
 
 # IPU headers
 set(pcsx2IPUHeaders
-	IPU/coroutine.h
 	IPU/IPU.h
 	IPU/IPU_Fifo.h
 	IPU/yuv2rgb.h)
@@ -554,13 +552,11 @@ set(pcsx2x86Headers
 
 # colect .asm files
 set(pcsx2AsmFiles
-	IPU/acoroutine.asm
 	IPU/yuv2rgb.asm
 	x86/ix86-32/aVif_proc-32.asm)
 
 # collect .S files
 set(pcsx2SSources
-	IPU/acoroutine.S
 	x86/aVUzerorec.S)
 
 # change language of .S-files to c++
