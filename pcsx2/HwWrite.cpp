@@ -362,11 +362,11 @@ void hwWrite8(u32 mem, u8 value)
 			oldvalue = psHu8(mem);
 			if ((oldvalue & 0x3) != (value & 0x3))
 			{
-				DevCon.Warning("8 Stall Source Changed to %x", (value & 0x30) >> 4);
+				DevCon.Warning("8bit Stall Source Changed to %x", (value & 0x30) >> 4);
 			}
 			if ((oldvalue & 0xC) != (value & 0xC))
 			{
-				DevCon.Warning("8 Stall Destination Changed to %x", (value & 0xC0) >> 4);
+				DevCon.Warning("8bit Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			psHu8(mem) = value;
 			break;
@@ -678,11 +678,11 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			oldvalue = psHu16(mem);
 			if ((oldvalue & 0x30) != (value & 0x30))
 			{
-				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+				DevCon.Warning("16bit Stall Source Changed to %x", (value & 0x30) >> 4);
 			}
 			if ((oldvalue & 0xC0) != (value & 0xC0))
 			{
-				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
+				DevCon.Warning("16bit Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			psHu16(mem) = value;
 			break;
@@ -877,11 +877,11 @@ void __fastcall hwWrite32_page_0E( u32 mem, u32 value )
 			}
 			if ((oldvalue & 0x30) != (value & 0x30))
 			{
-				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+				DevCon.Warning("32bit Stall Source Changed to %x", (value & 0x30) >> 4);
 			}
 			if ((oldvalue & 0xC0) != (value & 0xC0))
 			{
-				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
+				DevCon.Warning("32bit Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			break;
 		}
@@ -1146,11 +1146,11 @@ void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval )
 			}
 			if ((oldvalue & 0x30) != (value & 0x30))
 			{
-				DevCon.Warning("Stall Source Changed to %x", (value & 0x30) >> 4);
+				DevCon.Warning("64bit Stall Source Changed to %x", (value & 0x30) >> 4);
 			}
 			if ((oldvalue & 0xC0) != (value & 0xC0))
 			{
-				DevCon.Warning("Stall Destination Changed to %x", (value & 0xC0) >> 4);
+				DevCon.Warning("64bit Stall Destination Changed to %x", (value & 0xC0) >> 4);
 			}
 			break;
 		}

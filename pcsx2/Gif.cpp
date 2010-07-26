@@ -271,7 +271,7 @@ void GIFdma()
 
 	if ((dmacRegs->ctrl.STD == STD_GIF) && (prevcycles != 0))
 	{
-		Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
+		//Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
 		if ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR)
 		{
@@ -345,7 +345,7 @@ void GIFdma()
 
 		if ((dmacRegs->ctrl.STD == STD_GIF) && (gif->chcr.MOD == NORMAL_MODE))
 		{
-			Console.WriteLn("DMA Stall Control on GIF normal");
+			//Console.WriteLn("DMA Stall Control on GIF normal");
 		}
 		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
 		//Check with Path3 masking games
@@ -379,7 +379,7 @@ void GIFdma()
 			{
 				// stalled.
 				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
-				Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
+				//Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				//gif->tadr -= 16;
 				// Quake III revolution wants to see tadr move.
