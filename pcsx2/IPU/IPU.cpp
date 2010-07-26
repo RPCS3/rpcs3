@@ -949,6 +949,14 @@ u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
 	return (g_BP.FP >= 1) ? g_BP.FP * 128 - (*(int*)pointer) : 0;
 }
 
+
+#ifdef __LINUX__
+// Tell the compiler that a constant too large to be 32 bits, is, in fact, 64 bits.
+#define U64_MASK 0xFFFFFFFFFFFFFFFFLLU
+#else
+#define U64_MASK 0xFFFFFFFFFFFFFFFF
+#endif
+
 // whenever reading fractions of bytes. The low bits always come from the next byte
 // while the high bits come from the current byte
 u8 __fastcall getBits128(u8 *address, u32 advance)
@@ -975,7 +983,7 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 		notMask.lo = ~mask.lo & data.lo;
 		notMask.hi = ~mask.hi & data.hi;
 		notMask.lo >>= 8 - shift;
-		notMask.lo |= (notMask.hi & (0xFFFFFFFFFFFFFFFFLLU >> (64 - shift))) << (64 - shift);
+		notMask.lo |= (notMask.hi & (U64_MASK >> (64 - shift))) << (64 - shift);
 		notMask.hi >>= 8 - shift;
 
 		mask.hi = (((*(u128*)readpos).hi & mask.hi) << shift) | (((*(u128*)readpos).lo & mask.lo) >> (64 - shift));
