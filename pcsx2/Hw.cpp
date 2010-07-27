@@ -60,9 +60,12 @@ void hwReset()
 	//memset(PS2MEM_HW+0x2000, 0, 0x0000e000);
 
 	psHu32(SBUS_F260) = 0x1D000060;
+
 	// i guess this is kinda a version, it's used by some bioses
 	psHu32(DMAC_ENABLEW) = 0x1201;
 	psHu32(DMAC_ENABLER) = 0x1201;
+
+	SPU2reset();
 
 	sifInit();
 	sprInit();

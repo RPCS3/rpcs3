@@ -344,6 +344,7 @@ void CALLBACK SPU2shutdown();
 void CALLBACK SPU2setSettingsDir( const char* dir );
 void CALLBACK SPU2setLogDir( const char* dir );
 
+void CALLBACK SPU2reset();
 void CALLBACK SPU2write(u32 mem, u16 value);
 u16  CALLBACK SPU2read(u32 mem);
 
@@ -589,11 +590,6 @@ typedef void (CALLBACK* _GSwriteCSR)(u32 value);
 typedef void (CALLBACK* _GSmakeSnapshot)(const char *path);
 typedef void (CALLBACK* _GSmakeSnapshot2)(const char *path, int*, int);
 
-// Worthless crap function that returns GS plugin specific data via some
-// undocumented void* to a struct.   If any pad plugin actually relies on
-// this info, it deserves to fail new newer pcsx2s.  -- air
-//typedef void (CALLBACK* _GSgetDriverInfo)(GSdriverInfo *info);
-
 // PAD
 typedef s32  (CALLBACK* _PADinit)(u32 flags);
 typedef s32  (CALLBACK* _PADopen)(void *pDsp);
@@ -607,9 +603,8 @@ typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
 typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
 
 // SPU2
-// NOTE: The read/write functions CANNOT use XMM/MMX regs
-// If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _SPU2open)(void *pDsp);
+typedef void (CALLBACK* _SPU2reset)();
 typedef void (CALLBACK* _SPU2write)(u32 mem, u16 value);
 typedef u16  (CALLBACK* _SPU2read)(u32 mem);
 
@@ -761,6 +756,7 @@ extern _PADqueryMtap      PADqueryMtap;
 
 // SPU2
 extern _SPU2open          SPU2open;
+extern _SPU2reset         SPU2reset;
 extern _SPU2write         SPU2write;
 extern _SPU2read          SPU2read;
 

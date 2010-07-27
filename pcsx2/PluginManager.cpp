@@ -254,6 +254,7 @@ static void PAD_update( u32 padslot ) { }
 // SPU2
 _SPU2open          SPU2open;
 _SPU2write         SPU2write;
+_SPU2reset         SPU2reset;
 _SPU2read          SPU2read;
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 _SPU2dmaRead	   SPU2dmaRead;
@@ -529,9 +530,18 @@ static const LegacyApi_OptMethod s_MethMessOpt_CDVD[] =
 // ----------------------------------------------------------------------------
 //  SPU2 Mess!
 // ----------------------------------------------------------------------------
+
+// manualized reset that writes core reset registers of the SPU2 plugin:
+static void CALLBACK SPU2_Reset()
+{
+	SPU2write( 0x1f90019A, 1<<15 );		// core 0
+	SPU2write( 0x1f90059A, 1<<15 );		// core 1
+}
+
 static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
 {
 	{	"SPU2open",				(vMeth**)&SPU2open,			NULL },
+	{	"SPU2reset",			(vMeth**)&SPU2reset,		SPU2_Reset },
 	{	"SPU2write",			(vMeth**)&SPU2write,		NULL },
 	{	"SPU2read",				(vMeth**)&SPU2read,			NULL },
 #ifdef ENABLE_NEW_IOPDMA_SPU2
