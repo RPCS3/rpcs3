@@ -1,8 +1,8 @@
 # Project Name
 project(Pcsx2)
 
-# need cmake version >=2.6
-cmake_minimum_required(VERSION 2.6)
+# There is some incompatible change with version 2.6 and below !
+cmake_minimum_required(VERSION 2.8)
 
 # Variable to check that people use the good file
 set(TOP_CMAKE_WAS_SOURCED TRUE)
