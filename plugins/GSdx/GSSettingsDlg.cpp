@@ -107,7 +107,7 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
-	bool isdx11avail = GSUtil::IsDirect3D11Available();
+	bool isdx11avail_config = GSUtil::IsDirect3D11Available();
 
 	vector<GSSetting> renderers;
 
@@ -115,7 +115,7 @@ void GSSettingsDlg::OnInit()
 	{
 		if(i >= 3 && i <= 5)
 		{
-			if(!isdx11avail) continue;
+			if(!isdx11avail_config) continue;
 			g_renderers[i].name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "11" : "10");
 		}
 

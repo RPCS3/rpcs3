@@ -42,6 +42,7 @@ static bool s_vsync = false;
 static bool s_exclusive = true;
 
 static bool s_IsGsOpen2 = false;		// boolean to remove some stuff from the config panel in new PCSX2's/
+static bool isdx11avail = false;		// set on GSinit
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -106,6 +107,8 @@ EXPORT_C_(INT32) GSinit()
 	{
 		return -1;
 	}
+
+	isdx11avail = GSUtil::IsDirect3D11Available();
 
 #endif
 
@@ -250,7 +253,6 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
 	{
-		static bool isdx11avail = GSUtil::IsDirect3D11Available();
 		if (isdx11avail)	renderer = 4; //dx11 sw
 		else				renderer = 1; //dx9 sw
 	}
@@ -271,7 +273,6 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	if(mt == 2)
 	{
 		// pcsx2 sent a switch renderer request
-		static bool isdx11avail = GSUtil::IsDirect3D11Available();
 		if (isdx11avail)	renderer = 4; //dx11 sw
 		else				renderer = 1; //dx9 sw
 		mt = 1;
