@@ -313,7 +313,7 @@ bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 }
 
 // AVI capture stuff
-// AVI start -- set needed glabal variables
+// AVI start -- set needed global variables
 void ZeroGS::StartCapture()
 {
 	if (conf.captureAvi()) return;

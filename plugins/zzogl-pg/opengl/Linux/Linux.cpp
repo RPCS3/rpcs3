@@ -353,7 +353,9 @@ void DisplayDialog()
 		conf.negaa = 0;
 
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)) != -1)
+		{
 			fake_options.dimensions = gtk_combo_box_get_active(GTK_COMBO_BOX(size_box));
+		}
 
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
 
@@ -364,8 +366,9 @@ void DisplayDialog()
 		fake_options.fullscreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check));
 		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
 		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
-
+		
 		conf.zz_options = fake_options;
+		conf.set_dimensions(fake_options.dimensions);
 
 		SaveConfig();
 	}

@@ -245,6 +245,37 @@ typedef struct
 	{
 		zz_options.loaded = (flag) ? 1 : 0;
 	}
+	void set_dimensions(u32 dim)
+	{
+		switch (dim)
+		{
+
+			case GSDim_640:
+				width = 640;
+				height = isWideScreen ? 360 : 480;
+				break;
+
+			case GSDim_800:
+				width = 800;
+				height = isWideScreen ? 450 : 600;
+				break;
+
+			case GSDim_1024:
+				width = 1024;
+				height = isWideScreen ? 576 : 768;
+				break;
+
+			case GSDim_1280:
+				width = 1280;
+				height = isWideScreen ? 720 : 960;
+				break;
+				
+			default:
+				width = 640;
+				height = 480;
+				break;
+		}
+	}
 	
 } GSconf;
 extern GSconf conf;

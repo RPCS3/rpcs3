@@ -33,23 +33,22 @@ void SaveConfig()
 
 	if (f == NULL)
 	{
-		printf("failed to open %s\n", iniFile.c_str());
+		ZZLog::Error_Log("Failed to open '%s'", iniFile.c_str());
 		return;
 	}
 
 	fprintf(f, "interlace = %hhx\n", conf.interlace);
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
-	fprintf(f, "zzoptions = %x\n", conf.zz_options._u32); //u32
-	fprintf(f, "options = %x\n", tempHacks); //u32
+	fprintf(f, "zzoptions = %x\n", conf.zz_options._u32);
+	fprintf(f, "options = %x\n", tempHacks);
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
-	//fprintf(f, "gamesettings = %x\n", conf.def_hacks); //u32
-	fprintf(f, "width = %x\n", conf.width); //u32
-	fprintf(f, "height = %x\n", conf.height); //u32
-	fprintf(f, "x = %x\n", conf.x); //u32
-	fprintf(f, "y = %x\n", conf.y); //u32
-	fprintf(f, "log = %x\n", conf.log); //u32
+	fprintf(f, "width = %x\n", conf.width);
+	fprintf(f, "height = %x\n", conf.height);
+	fprintf(f, "x = %x\n", conf.x);
+	fprintf(f, "y = %x\n", conf.y);
+	fprintf(f, "log = %x\n", conf.log);
 	fclose(f);
 }
 
@@ -59,14 +58,7 @@ void LoadConfig()
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
 	conf.mrtdepth = 1;
-	conf.zz_options._u32 = 0;
-	conf.hacks._u32 = 0;
 	conf.bilinear = 1;
-	conf.width = 640;
-	conf.height = 480;
-	conf.x = 0;
-	conf.y = 0;
-	conf.aa = 0;
 	conf.log = 1;
 
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
@@ -74,7 +66,7 @@ void LoadConfig()
 
 	if (f == NULL)
 	{
-		printf("failed to open %s\n", iniFile.c_str());
+		ZZLog::Error_Log("Failed to open '%s'", iniFile.c_str());
 		SaveConfig();//save and return
 		return;
 	}
@@ -82,60 +74,33 @@ void LoadConfig()
 	err = fscanf(f, "interlace = %hhx\n", &conf.interlace);
 
 	err = fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
-	err = fscanf(f, "zzoptions = %x\n", &conf.zz_options._u32);//u32
-	err = fscanf(f, "options = %x\n", &conf.hacks._u32);//u32
+	err = fscanf(f, "zzoptions = %x\n", &conf.zz_options._u32);
+	err = fscanf(f, "options = %x\n", &conf.hacks._u32);
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
 	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
-	//err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
-	err = fscanf(f, "width = %x\n", &conf.width);//u32
-	err = fscanf(f, "height = %x\n", &conf.height);//u32
-	err = fscanf(f, "x = %x\n", &conf.x);//u32
-	err = fscanf(f, "y = %x\n", &conf.y);//u32
-	err = fscanf(f, "log = %x\n", &conf.log);//u32
+	err = fscanf(f, "width = %x\n", &conf.width);
+	err = fscanf(f, "height = %x\n", &conf.height);
+	err = fscanf(f, "x = %x\n", &conf.x);
+	err = fscanf(f, "y = %x\n", &conf.y);
+	err = fscanf(f, "log = %x\n", &conf.log);
 	fclose(f);
-
-	// filter bad files
-
-	if (conf.aa > 4) conf.aa = 0;
-
-	conf.isWideScreen = conf.widescreen();
-
-	switch (conf.zz_options.dimensions)
-	{
-
-		case GSDim_640:
-			conf.width = 640;
-			conf.height = conf.isWideScreen ? 360 : 480;
-			break;
-
-		case GSDim_800:
-			conf.width = 800;
-			conf.height = conf.isWideScreen ? 450 : 600;
-			break;
-
-		case GSDim_1024:
-			conf.width = 1024;
-			conf.height = conf.isWideScreen ? 576 : 768;
-			break;
-
-		case GSDim_1280:
-			conf.width = 1280;
-			conf.height = conf.isWideScreen ? 720 : 960;
-			break;
-	}
 
 	// turn off all hacks by default
 	conf.setWireframe(false);
 	conf.setCaptureAvi(false);
 	conf.setLoaded(true);
-
+	
+	conf.isWideScreen = conf.widescreen();
+	
+	// filter bad files
+	if (conf.interlace > 2) conf.interlace = 0;
+	if (conf.aa > 4) conf.aa = 0;
 	if (conf.width <= 0 || conf.height <= 0)
 	{
-		conf.width = 640;
-		conf.height = 480;
+		conf.set_dimensions(conf.zz_options.dimensions);
 	}
 
-	if (conf.x <= 0 || conf.y <= 0)
+	if (conf.x < 0 || conf.y < 0)
 	{
 		conf.x = 0;
 		conf.y = 0;
