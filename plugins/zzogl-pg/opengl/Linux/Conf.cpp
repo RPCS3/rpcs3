@@ -40,7 +40,7 @@ void SaveConfig()
 	fprintf(f, "interlace = %hhx\n", conf.interlace);
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
-	fprintf(f, "zzoptions = %x\n", conf.zz_options); //u32
+	fprintf(f, "zzoptions = %x\n", conf.zz_options._u32); //u32
 	fprintf(f, "options = %x\n", tempHacks); //u32
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
@@ -82,8 +82,8 @@ void LoadConfig()
 	err = fscanf(f, "interlace = %hhx\n", &conf.interlace);
 
 	err = fscanf(f, "mrtdepth = %hhx\n", &conf.mrtdepth);
-	err = fscanf(f, "zzoptions = %x\n", &conf.zz_options);//u32
-	err = fscanf(f, "options = %x\n", &conf.hacks);//u32
+	err = fscanf(f, "zzoptions = %x\n", &conf.zz_options._u32);//u32
+	err = fscanf(f, "options = %x\n", &conf.hacks._u32);//u32
 	err = fscanf(f, "bilinear = %hhx\n", &conf.bilinear);
 	err = fscanf(f, "aliasing = %hhx\n", &conf.aa);
 	//err = fscanf(f, "gamesettings = %x\n", &conf.gamesettings);//u32
