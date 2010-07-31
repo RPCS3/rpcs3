@@ -963,7 +963,6 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 
 	if (uint shift = (g_BP.BP & 7))
 	{
-		shift = g_BP.BP & 7;
 		mask2 = 0xff >> shift;
 		mask.lo = mask2 | (mask2 << 8) | (mask2 << 16) | (mask2 << 24) | (mask2 << 32) | (mask2 << 40) | (mask2 << 48) | (mask2 << 56);
 		mask.hi = mask2 | (mask2 << 8) | (mask2 << 16) | (mask2 << 24) | (mask2 << 32) | (mask2 << 40) | (mask2 << 48) | (mask2 << 56);		
@@ -1063,7 +1062,6 @@ __forceinline u8 __fastcall getBits16(u8 *address, u32 advance)
 
 	if (uint shift = (g_BP.BP & 7))
 	{
-		shift = g_BP.BP & 7;
 		mask = (0xff >> shift);
 		mask = mask | (mask << 8);
 
@@ -1081,7 +1079,7 @@ __forceinline u8 __fastcall getBits16(u8 *address, u32 advance)
 
 u8 __fastcall getBits8(u8 *address, u32 advance)
 {
-	register u32 mask, shift = 0;
+	u32 mask;
 	u8* readpos;
 
 	// Check if the current BP has exceeded or reached the limit of 128
@@ -1090,11 +1088,9 @@ u8 __fastcall getBits8(u8 *address, u32 advance)
 
 	readpos = readbits + (int)g_BP.BP / 8;
 
-	if (g_BP.BP & 7)
+	if (uint shift = (g_BP.BP & 7))
 	{
-		shift = g_BP.BP & 7;
 		mask = (0xff >> shift);
-
 		*(u8*)address = (((~mask) & readpos[1]) >> (8 - shift)) | (((mask) & *readpos) << shift);
 	}
 	else

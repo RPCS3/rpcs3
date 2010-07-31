@@ -105,41 +105,49 @@ void MyMemCheck(u32 mem)
 /////////////////////////////
 // REGULAR MEM START
 /////////////////////////////
-vtlbHandler null_handler;
+static vtlbHandler
+	null_handler,
 
-vtlbHandler tlb_fallback_0;
-vtlbHandler tlb_fallback_1;
-vtlbHandler tlb_fallback_2;
-vtlbHandler tlb_fallback_3;
-vtlbHandler tlb_fallback_4;
-vtlbHandler tlb_fallback_5;
-vtlbHandler tlb_fallback_6;
-vtlbHandler tlb_fallback_7;
-vtlbHandler tlb_fallback_8;
+	tlb_fallback_0,
+	tlb_fallback_1,
+	tlb_fallback_2,
+	tlb_fallback_3,
+	tlb_fallback_4,
+	tlb_fallback_5,
+	tlb_fallback_6,
+	tlb_fallback_7,
+	tlb_fallback_8,
 
-vtlbHandler vu0_micro_mem[2];		// 0 - dynarec, 1 - interpreter
-vtlbHandler vu1_micro_mem[2];		// 0 - dynarec, 1 - interpreter
+	vu0_micro_mem,
+	vu1_micro_mem,
 
-vtlbHandler hw_by_page[0x10] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
-vtlbHandler gs_page_0;
-vtlbHandler gs_page_1;
+	hw_by_page[0x10] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
 
-vtlbHandler iopHw_by_page_01;
-vtlbHandler iopHw_by_page_03;
-vtlbHandler iopHw_by_page_08;
+	gs_page_0,
+	gs_page_1,
+
+	iopHw_by_page_01,
+	iopHw_by_page_03,
+	iopHw_by_page_08;
 
 
-// Used to remap the VUmicro memory according to the VU0/VU1 dynarec setting.
-// (the VU memory operations are different for recs vs. interpreters)
 void memMapVUmicro()
 {
-	vtlb_MapHandler(vu0_micro_mem[CpuVU0->IsInterpreter],0x11000000,0x00004000);
-	vtlb_MapHandler(vu1_micro_mem[CpuVU1->IsInterpreter],0x11008000,0x00004000);
-
-	// VU0/VU1 memory
+	// VU0/VU1 micro mem (instructions)
 	// (Like IOP memory, these are generally only used by the EE Bios kernel during
-	//  boot-up.  Applications/games are "supposed" to use the thread-safe VIF
-	//  instead.)
+	//  boot-up.  Applications/games are "supposed" to use the thread-safe VIF instead;
+	//  or must ensure all VIF/GIF transfers are finished and all VUmicro execution stopped
+	//  prior to accessing VU memory directly).
+
+	// The VU0 mapping actually repeats 4 times across the mapped range, but we don't bother
+	// to manually mirror it here because the indirect memory handler for it (see vuMicroRead*
+	// functions below) automatically mask and wrap the address for us.
+
+	vtlb_MapHandler(vu0_micro_mem,0x11000000,0x00004000);
+	vtlb_MapHandler(vu1_micro_mem,0x11008000,0x00004000);
+
+	// VU0/VU1 memory (data)
+	// VU0 is 4k, mirrored 4 times across a 16k area.
 	vtlb_MapBlock(VU0.Mem,0x11004000,0x00004000,0x1000);
 	vtlb_MapBlock(VU1.Mem,0x1100c000,0x00004000);
 }
@@ -261,7 +269,7 @@ static void __fastcall nullWrite128(u32 mem, const mem128_t *value)
 }
 
 template<int p>
-mem8_t __fastcall _ext_memRead8 (u32 mem)
+static mem8_t __fastcall _ext_memRead8 (u32 mem)
 {
 	switch (p)
 	{
@@ -285,7 +293,7 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 }
 
 template<int p>
-mem16_t __fastcall _ext_memRead16(u32 mem)
+static mem16_t __fastcall _ext_memRead16(u32 mem)
 {
 	switch (p)
 	{
@@ -315,7 +323,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 }
 
 template<int p>
-mem32_t __fastcall _ext_memRead32(u32 mem)
+static mem32_t __fastcall _ext_memRead32(u32 mem)
 {
 	switch (p)
 	{
@@ -335,7 +343,7 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 }
 
 template<int p>
-void __fastcall _ext_memRead64(u32 mem, mem64_t *out)
+static void __fastcall _ext_memRead64(u32 mem, mem64_t *out)
 {
 	switch (p)
 	{
@@ -348,7 +356,7 @@ void __fastcall _ext_memRead64(u32 mem, mem64_t *out)
 }
 
 template<int p>
-void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
+static void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 {
 	switch (p)
 	{
@@ -364,7 +372,7 @@ void __fastcall _ext_memRead128(u32 mem, mem128_t *out)
 }
 
 template<int p>
-void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
+static void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 {
 	switch (p) {
 		case 1: // hwm
@@ -383,8 +391,9 @@ void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 	MEM_LOG("Unknown Memory write8   to  address %x with data %2.2x", mem, value);
 	cpuTlbMissW(mem, cpuRegs.branch);
 }
+
 template<int p>
-void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
+static void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 {
 	switch (p) {
 		case 1: // hwm
@@ -407,7 +416,7 @@ void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
+static void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
 {
 	switch (p) {
 		case 6: // gsm
@@ -422,7 +431,7 @@ void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite64(u32 mem, const mem64_t* value)
+static void __fastcall _ext_memWrite64(u32 mem, const mem64_t* value)
 {
 
 	/*switch (p) {
@@ -438,7 +447,7 @@ void __fastcall _ext_memWrite64(u32 mem, const mem64_t* value)
 }
 
 template<int p>
-void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
+static void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
 {
 	/*switch (p) {
 		//case 1: // hwm
@@ -457,32 +466,19 @@ void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
 #define vtlb_RegisterHandlerTempl1(nam,t) vtlb_RegisterHandler(nam##Read8<t>,nam##Read16<t>,nam##Read32<t>,nam##Read64<t>,nam##Read128<t>, \
 															   nam##Write8<t>,nam##Write16<t>,nam##Write32<t>,nam##Write64<t>,nam##Write128<t>)
 
-#define vtlb_RegisterHandlerTempl2(nam,t,rec) vtlb_RegisterHandler(nam##Read8<t>,nam##Read16<t>,nam##Read32<t>,nam##Read64<t>,nam##Read128<t>, \
-																   nam##Write8<t,rec>,nam##Write16<t,rec>,nam##Write32<t,rec>,nam##Write64<t,rec>,nam##Write128<t,rec>)
-
 typedef void __fastcall ClearFunc_t( u32 addr, u32 qwc );
 
-template<int vunum, bool dynarec>
+template<int vunum>
 static __forceinline void ClearVuFunc( u32 addr, u32 size )
 {
-	if( dynarec )
-	{
-		if( vunum==0 )
-			CpuVU0->Clear(addr,size);
-		else
-			CpuVU1->Clear(addr,size);
-	}
+	if( vunum==0 )
+		CpuVU0->Clear(addr,size);
 	else
-	{
-		if( vunum==0 )
-			CpuVU0->Clear(addr,size);
-		else
-			CpuVU1->Clear(addr,size);
-	}
+		CpuVU1->Clear(addr,size);
 }
 
 template<int vunum>
-mem8_t __fastcall vuMicroRead8(u32 addr)
+static mem8_t __fastcall vuMicroRead8(u32 addr)
 {
 	addr&=(vunum==0)?0xfff:0x3fff;
 	VURegs* vu=(vunum==0)?&VU0:&VU1;
@@ -491,7 +487,7 @@ mem8_t __fastcall vuMicroRead8(u32 addr)
 }
 
 template<int vunum>
-mem16_t __fastcall vuMicroRead16(u32 addr)
+static mem16_t __fastcall vuMicroRead16(u32 addr)
 {
 	addr&=(vunum==0)?0xfff:0x3fff;
 	VURegs* vu=(vunum==0)?&VU0:&VU1;
@@ -500,7 +496,7 @@ mem16_t __fastcall vuMicroRead16(u32 addr)
 }
 
 template<int vunum>
-mem32_t __fastcall vuMicroRead32(u32 addr)
+static mem32_t __fastcall vuMicroRead32(u32 addr)
 {
 	addr&=(vunum==0)?0xfff:0x3fff;
 	VURegs* vu=(vunum==0)?&VU0:&VU1;
@@ -509,7 +505,7 @@ mem32_t __fastcall vuMicroRead32(u32 addr)
 }
 
 template<int vunum>
-void __fastcall vuMicroRead64(u32 addr,mem64_t* data)
+static void __fastcall vuMicroRead64(u32 addr,mem64_t* data)
 {
 	addr&=(vunum==0)?0xfff:0x3fff;
 	VURegs* vu=(vunum==0)?&VU0:&VU1;
@@ -518,7 +514,7 @@ void __fastcall vuMicroRead64(u32 addr,mem64_t* data)
 }
 
 template<int vunum>
-void __fastcall vuMicroRead128(u32 addr,mem128_t* data)
+static void __fastcall vuMicroRead128(u32 addr,mem128_t* data)
 {
 	addr&=(vunum==0)?0xfff:0x3fff;
 	VURegs* vu=(vunum==0)?&VU0:&VU1;
@@ -530,67 +526,67 @@ void __fastcall vuMicroRead128(u32 addr,mem128_t* data)
 // Profiled VU writes: Happen very infrequently, with exception of BIOS initialization (at most twice per
 //   frame in-game, and usually none at all after BIOS), so cpu clears aren't much of a big deal.
 
-template<int vunum, bool dynrec>
-void __fastcall vuMicroWrite8(u32 addr,mem8_t data)
+template<int vunum>
+static void __fastcall vuMicroWrite8(u32 addr,mem8_t data)
 {
 	addr &= (vunum==0) ? 0xfff : 0x3fff;
 	VURegs& vu = (vunum==0) ? VU0 : VU1;
 
 	if (vu.Micro[addr]!=data)
 	{
-		ClearVuFunc<vunum, dynrec>(addr&(~7), 8); // Clear before writing new data (clearing 8 bytes because an instruction is 8 bytes) (cottonvibes)
+		ClearVuFunc<vunum>(addr&(~7), 8); // Clear before writing new data (clearing 8 bytes because an instruction is 8 bytes) (cottonvibes)
 		vu.Micro[addr]=data;
 	}
 }
 
-template<int vunum, bool dynrec>
-void __fastcall vuMicroWrite16(u32 addr,mem16_t data)
+template<int vunum>
+static void __fastcall vuMicroWrite16(u32 addr,mem16_t data)
 {
 	addr &= (vunum==0) ? 0xfff : 0x3fff;
 	VURegs& vu = (vunum==0) ? VU0 : VU1;
 
 	if (*(u16*)&vu.Micro[addr]!=data)
 	{
-		ClearVuFunc<vunum, dynrec>(addr&(~7), 8);
+		ClearVuFunc<vunum>(addr&(~7), 8);
 		*(u16*)&vu.Micro[addr]=data;
 	}
 }
 
-template<int vunum, bool dynrec>
-void __fastcall vuMicroWrite32(u32 addr,mem32_t data)
+template<int vunum>
+static void __fastcall vuMicroWrite32(u32 addr,mem32_t data)
 {
 	addr &= (vunum==0) ? 0xfff : 0x3fff;
 	VURegs& vu = (vunum==0) ? VU0 : VU1;
 
 	if (*(u32*)&vu.Micro[addr]!=data)
 	{
-		ClearVuFunc<vunum, dynrec>(addr&(~7), 8);
+		ClearVuFunc<vunum>(addr&(~7), 8);
 		*(u32*)&vu.Micro[addr]=data;
 	}
 }
 
-template<int vunum, bool dynrec>
-void __fastcall vuMicroWrite64(u32 addr,const mem64_t* data)
+template<int vunum>
+static void __fastcall vuMicroWrite64(u32 addr,const mem64_t* data)
 {
 	addr &= (vunum==0) ? 0xfff : 0x3fff;
 	VURegs& vu = (vunum==0) ? VU0 : VU1;
 
 	if (*(u64*)&vu.Micro[addr]!=data[0])
 	{
-		ClearVuFunc<vunum, dynrec>(addr&(~7), 8);
+		ClearVuFunc<vunum>(addr&(~7), 8);
 		*(u64*)&vu.Micro[addr]=data[0];
 	}
 }
 
-template<int vunum, bool dynrec>
-void __fastcall vuMicroWrite128(u32 addr,const mem128_t* data)
+template<int vunum>
+static void __fastcall vuMicroWrite128(u32 addr,const mem128_t* data)
 {
 	addr &= (vunum==0) ? 0xfff : 0x3fff;
 	VURegs& vu = (vunum==0) ? VU0 : VU1;
 
 	if (*(u64*)&vu.Micro[addr]!=data[0] || *(u64*)&vu.Micro[addr+8]!=data[1])
 	{
-		ClearVuFunc<vunum, dynrec>(addr&(~7), 16);
+		ClearVuFunc<vunum>(addr&(~7), 16);
 		*(u64*)&vu.Micro[addr]=data[0];
 		*(u64*)&vu.Micro[addr+8]=data[1];
 	}
@@ -706,12 +702,8 @@ void memReset()
 	tlb_fallback_8 = vtlb_RegisterHandlerTempl1(_ext_mem,8);
 
 	// Dynarec versions of VUs
-	vu0_micro_mem[0] = vtlb_RegisterHandlerTempl2(vuMicro,0,true);
-	vu1_micro_mem[0] = vtlb_RegisterHandlerTempl2(vuMicro,1,true);
-
-	// Interpreter versions of VUs
-	vu0_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,0,false);
-	vu1_micro_mem[1] = vtlb_RegisterHandlerTempl2(vuMicro,1,false);
+	vu0_micro_mem = vtlb_RegisterHandlerTempl1(vuMicro,0);
+	vu1_micro_mem = vtlb_RegisterHandlerTempl1(vuMicro,1);
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// IOP's "secret" Hardware Register mapping, accessible from the EE (and meant for use
