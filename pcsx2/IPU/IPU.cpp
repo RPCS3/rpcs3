@@ -926,7 +926,7 @@ u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
 		inc_readbits();
 		g_BP.FP = 1;
 	}
-	
+
 	if ((g_BP.FP < 2) && ((*(int*)pointer + size) >= 128))
 	{
 		if (ipu_fifo.in.read(next_readbits())) g_BP.FP += 1;
@@ -954,7 +954,6 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 {
 	u64 mask2;
 	u128 mask;
-	u32 shift;
 	u8* readpos;
 
 	// Check if the current BP has exceeded or reached the limit of 128
@@ -962,7 +961,7 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 
 	readpos = readbits + (int)g_BP.BP / 8;
 
-	if (g_BP.BP & 7)
+	if (uint shift = (g_BP.BP & 7))
 	{
 		shift = g_BP.BP & 7;
 		mask2 = 0xff >> shift;
@@ -999,17 +998,15 @@ u8 __fastcall getBits128(u8 *address, u32 advance)
 u8 __fastcall getBits64(u8 *address, u32 advance)
 {
 	register u64 mask = 0;
-	int shift = 0;
 	u8* readpos;
 
 	// Check if the current BP has exceeded or reached the limit of 128
 	if (FillInternalBuffer(&g_BP.BP, 1, 64) < 64) return 0;
 
 	readpos = readbits + (int)g_BP.BP / 8;
-
-	if (g_BP.BP & 7)
+	
+	if (uint shift = (g_BP.BP & 7))
 	{
-		shift = g_BP.BP & 7;
 		mask = (0xff >> shift);
 		mask = mask | (mask << 8) | (mask << 16) | (mask << 24) | (mask << 32) | (mask << 40) | (mask << 48) | (mask << 56);
 
@@ -1029,7 +1026,7 @@ u8 __fastcall getBits64(u8 *address, u32 advance)
 // while the high bits come from the current byte
 u8 __fastcall getBits32(u8 *address, u32 advance)
 {
-	register u32 mask, shift = 0;
+	u32 mask;
 	u8* readpos;
 
 	// Check if the current BP has exceeded or reached the limit of 128
@@ -1037,9 +1034,8 @@ u8 __fastcall getBits32(u8 *address, u32 advance)
 
 	readpos = readbits + (int)g_BP.BP / 8;
 
-	if (g_BP.BP & 7)
+	if (uint shift = (g_BP.BP & 7))
 	{
-		shift = g_BP.BP & 7;
 		mask = (0xff >> shift);
 		mask = mask | (mask << 8) | (mask << 16) | (mask << 24);
 
@@ -1057,7 +1053,7 @@ u8 __fastcall getBits32(u8 *address, u32 advance)
 
 __forceinline u8 __fastcall getBits16(u8 *address, u32 advance)
 {
-	register u32 mask, shift = 0;
+	u32 mask;
 	u8* readpos;
 
 	// Check if the current BP has exceeded or reached the limit of 128
@@ -1065,7 +1061,7 @@ __forceinline u8 __fastcall getBits16(u8 *address, u32 advance)
 
 	readpos = readbits + (int)g_BP.BP / 8;
 
-	if (g_BP.BP & 7)
+	if (uint shift = (g_BP.BP & 7))
 	{
 		shift = g_BP.BP & 7;
 		mask = (0xff >> shift);

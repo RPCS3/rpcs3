@@ -192,10 +192,6 @@ static __forceinline int get_coded_block_pattern()
 
 int __forceinline get_motion_delta(const int f_code)
 {
-#define bit_buf (decoder.bitstream_buf)
-#define bits (decoder.bitstream_bits)
-#define bit_ptr (decoder.bitstream_ptr)
-
 	int delta;
 	int sign;
 	const MVtab * tab;
@@ -221,10 +217,6 @@ int __forceinline get_motion_delta(const int f_code)
 	sign = SBITS(1);
 	DUMPBITS(1);
 	return (delta ^ sign) - sign;
-
-#undef bit_buf
-#undef bits
-#undef bit_ptr
 }
 
 int __forceinline get_dmv()

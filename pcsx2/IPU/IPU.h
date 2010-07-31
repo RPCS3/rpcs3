@@ -19,7 +19,7 @@
 #include "IPU_Fifo.h"
 
 #ifdef _MSC_VER
-#pragma pack(1)
+//#pragma pack(1)
 #endif
 
 #define ipumsk( src ) ( (src) & 0xff )
@@ -112,7 +112,7 @@ struct tIPU_BP {
 };
 
 #ifdef _WIN32
-#pragma pack()
+//#pragma pack()
 #endif
 
 union tIPU_CMD_IDEC

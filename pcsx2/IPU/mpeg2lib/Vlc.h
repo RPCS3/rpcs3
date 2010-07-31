@@ -30,13 +30,14 @@
 #ifndef __VLC_H__
 #define __VLC_H__
 
-static u8 data[2];
 //static u8 word[4];
 //static u8 dword[8];
 //static u8 qword[16];
 
 static __forceinline int GETWORD()
 {
+	static u8 data[2];
+
 	if (decoder.bitstream_bits > 0)
 	{
 		if(!getBits16(data,1))
@@ -48,7 +49,7 @@ static __forceinline int GETWORD()
 		BigEndian(data, *(u32*)word);
 		decoder.bitstream_buf |=  (u64)data << decoder.bitstream_bits;
 		decoder.bitstream_bits -= 32;*/
-		decoder.bitstream_buf |= ((u32)(((u16)data[0] << 8) | data[1])) << decoder.bitstream_bits;
+		decoder.bitstream_buf |= (((u32)data[0] << 8) | data[1]) << decoder.bitstream_bits;
 		decoder.bitstream_bits -= 16;
 	}
 
