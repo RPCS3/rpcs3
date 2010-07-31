@@ -1,5 +1,5 @@
 /*  SPU2null
- *  Copyright (C) 2002-2005  SPU2null Team
+ *  Copyright (C) 2002-2010  SPU2null Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,15 +18,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <gtk/gtk.h>
 #include <string>
 using namespace std;
 
 extern void SaveConf();
 extern void LoadConf();
 extern string s_strIniPath;
-extern GtkWidget *MsgDlg;
-extern void OnMsg_Ok();
-
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)

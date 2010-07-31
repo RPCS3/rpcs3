@@ -31,9 +31,7 @@ extern "C"
 }
 #include "PS2Eext.h"
 
-#ifdef __LINUX__
-#include <gtk/gtk.h>
-#else
+#ifdef _MSC_VER
 #include <windows.h>
 #include <windowsx.h>
 #endif
