@@ -62,8 +62,9 @@ void IPUWorker();
 char convert_data_buffer[0x1C];
 
 // Quantization matrix
-static u8 niq[64];			//non-intraquant matrix
-static u8 iq[64];			//intraquant matrix
+// Pointers outside of IPU.cpp point to niq & iq. As such, all hell breaks loose under gcc if you make them static. 
+u8 niq[64];			//non-intraquant matrix
+u8 iq[64];			//intraquant matrix
 u16 vqclut[16];				//clut conversion table
 static u8 s_thresh[2];		//thresholds for color conversions
 int coded_block_pattern = 0;
