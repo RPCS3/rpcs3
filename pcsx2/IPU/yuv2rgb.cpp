@@ -258,8 +258,8 @@ ihatemsvc:
 	// offset to the middle of the sse2 table, so that we can use 1-byte address displacement
 	// to access all fields:
 	static const u8* sse2_tableoffset = ((u8*)&sse2_tables) + 64;
-	static const macroblock_8* mb8 = (u8*)decoder.mb8;
-	static macroblock_rgb32* rgb32 = (u8*)decoder.rgb32;
+	static const u8* mb8 = (u8*)decoder.mb8;
+	static u8* rgb32 = (u8*)decoder.rgb32;
 
 	__asm__ __volatile__ (
 		".intel_syntax noprefix\n"
