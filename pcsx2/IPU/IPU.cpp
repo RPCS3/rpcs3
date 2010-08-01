@@ -43,12 +43,6 @@ tIPU_DMA g_nDMATransfer(0);
 tIPU_cmd ipu_cmd;
 IPUStatus IPU1Status;
 
-// FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
-// FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
-// since coroutine is such a pita.  (air)
-int g_nIPU0Data = 0; // data left to transfer
-u8* g_pIPU0Pointer = NULL;
-
 void ReorderBitstream();
 
 // the BP doesn't advance and returns -1 if there is no data to be read
@@ -59,63 +53,24 @@ void IPUWorker();
 // Color conversion stuff, the memory layout is a total hack
 // convert_data_buffer is a pointer to the internal rgb struct (the first param in convert_init_t)
 //char convert_data_buffer[sizeof(convert_rgb_t)];
-char convert_data_buffer[0x1C];
+//char convert_data_buffer[0x1C];							// unused?
+//u8 PCT[] = {'r', 'I', 'P', 'B', 'D', '-', '-', '-'};		// unused?
 
 // Quantization matrix
-// Pointers outside of IPU.cpp point to niq & iq. As such, all hell breaks loose under gcc if you make them static. 
-u8 niq[64];			//non-intraquant matrix
-u8 iq[64];			//intraquant matrix
-u16 vqclut[16];				//clut conversion table
-static u8 s_thresh[2];		//thresholds for color conversions
+static u16 vqclut[16];				//clut conversion table
+static u8 s_thresh[2];				//thresholds for color conversions
 int coded_block_pattern = 0;
 
-__aligned16 macroblock_8 mb8;
-__aligned16 macroblock_16 mb16;
-__aligned16 macroblock_rgb32 rgb32;
-__aligned16 macroblock_rgb16 rgb16;
 
 u8 indx4[16*16/2];
-bool mpeg2_inited = false;		//mpeg2_idct_init() must be called only once
-u8 PCT[] = {'r', 'I', 'P', 'B', 'D', '-', '-', '-'};
-__aligned16 decoder_t decoder;						//static, only to place it in bss
-
-extern "C"
-{
-	extern u8 mpeg2_scan_norm[64];
-	extern u8 mpeg2_scan_alt[64];
-}
+__aligned16 decoder_t decoder;
 
 __aligned16 u8 _readbits[80];	//local buffer (ring buffer)
-u8* readbits = _readbits; // always can decrement by one 1qw
+u8* readbits = _readbits;		// always can decrement by one 1qw
 
 __forceinline void IPUProcessInterrupt()
 {
 	if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
-}
-
-void init_g_decoder()
-{
-	//other stuff
-	decoder.intra_quantizer_matrix = (u8*)iq;
-	decoder.non_intra_quantizer_matrix = (u8*)niq;
-	decoder.picture_structure = FRAME_PICTURE;	//default: progressive...my guess:P
-	decoder.stride = 16;
-}
-
-void mpeg2_init()
-{
-	if (!mpeg2_inited)
-	{
-		mpeg2_idct_init();
-		yuv2rgb_init();
-		memzero(mb8.Y);
-		memzero(mb8.Cb);
-		memzero(mb8.Cr);
-		memzero(mb16.Y);
-		memzero(mb16.Cb);
-		memzero(mb16.Cr);
-		mpeg2_inited = true;
-	}
 }
 
 /////////////////////////////////////////////////////////
@@ -124,7 +79,10 @@ int ipuInit()
 {
 	memzero(*ipuRegs);
 	memzero(g_BP);
-	init_g_decoder();
+	memzero(decoder);
+
+	decoder.picture_structure = FRAME_PICTURE;	//default: progressive...my guess:P
+
 	g_nDMATransfer.reset();
 	IPU1Status.InProgress = false;
 	IPU1Status.DMAMode = DMA_MODE_NORMAL;
@@ -149,18 +107,16 @@ void ReportIPU()
 	Console.WriteLn(ipu_fifo.in.desc());
 	Console.WriteLn(ipu_fifo.out.desc());
 	Console.WriteLn(g_BP.desc());
-	Console.WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
 	Console.WriteLn("vqclut = 0x%x.", vqclut);
 	Console.WriteLn("s_thresh = 0x%x.", s_thresh);
 	Console.WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
-	Console.WriteLn("g_decoder = 0x%x.", decoder);
-	Console.WriteLn("mpeg2: scan_norm = 0x%x, alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
+	Console.WriteLn("g_decoder = 0x%x.", &decoder);
+	Console.WriteLn("mpeg2_scan = 0x%x.", &mpeg2_scan);
 	Console.WriteLn(ipu_cmd.desc());
 	Console.WriteLn("_readbits = 0x%x. readbits - _readbits, which is also frozen, is 0x%x.",
 		_readbits, readbits - _readbits);
 	Console.Newline();
 }
-// fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
 void SaveStateBase::ipuFreeze()
 {
@@ -168,24 +124,15 @@ void SaveStateBase::ipuFreeze()
 	//ReportIPU();
 	FreezeTag("IPU");
 
-	// old versions saved the IPU regs, but they're already saved as part of HW!
-	//FreezeMem(ipuRegs, sizeof(IPUregisters));
-
 	Freeze(g_nDMATransfer);
 	Freeze(ipu_fifo);
 
 	Freeze(g_BP);
-	Freeze(niq);
-	Freeze(iq);
 	Freeze(vqclut);
 	Freeze(s_thresh);
 	Freeze(coded_block_pattern);
 	Freeze(decoder);
-	Freeze(mpeg2_scan_norm);
-	Freeze(mpeg2_scan_alt);
-
 	Freeze(ipu_cmd);
-
 	Freeze(_readbits);
 
 	int temp = readbits - _readbits;
@@ -194,14 +141,7 @@ void SaveStateBase::ipuFreeze()
 	if (IsLoading())
 	{
 		readbits = _readbits;
-		init_g_decoder();
-		mpeg2_init();
 	}
-}
-
-bool ipuCanFreeze()
-{
-	return (ipu_cmd.current == -1);
 }
 
 __forceinline u32 ipuRead32(u32 mem)
@@ -223,7 +163,7 @@ __forceinline u32 ipuRead32(u32 mem)
 			if (!ipuRegs->ctrl.BUSY)
 				IPU_LOG("Ipu read32: IPU_CTRL=0x%08X %x", ipuRegs->ctrl._u32, cpuRegs.pc);
 
-			return ipuRegs->ctrl._u32;
+		return ipuRegs->ctrl._u32;
 
 		ipucase(IPU_BP): // IPU_BP
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
@@ -231,7 +171,8 @@ __forceinline u32 ipuRead32(u32 mem)
 			ipuRegs->ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
 
 			IPU_LOG("Ipu read32: IPU_BP=0x%08X", ipuRegs->ipubp);
-			return ipuRegs->ipubp;
+		return ipuRegs->ipubp;
+
 		default:
 			IPU_LOG("Ipu read32: Addr=0x%x Value = 0x%08X", mem, *(u32*)(((u8*)ipuRegs) + mem));
 	}
@@ -277,7 +218,6 @@ __forceinline u64 ipuRead64(u32 mem)
 
 void ipuSoftReset()
 {
-	mpeg2_init();
 	ipu_fifo.clear();
 
 	coded_block_pattern = 0;
@@ -381,16 +321,16 @@ static BOOL ipuIDEC(u32 val, bool resume)
 		g_BP.BP += idec.FB;//skip FB bits
 		//from IPU_CTRL
 		ipuRegs->ctrl.PCT = I_TYPE; //Intra DECoding;)
-		decoder.coding_type = ipuRegs->ctrl.PCT;
-		decoder.mpeg1 = ipuRegs->ctrl.MP1;
-		decoder.q_scale_type	= ipuRegs->ctrl.QST;
-		decoder.intra_vlc_format = ipuRegs->ctrl.IVF;
-		decoder.scan = ipuRegs->ctrl.AS ? mpeg2_scan_alt : mpeg2_scan_norm;
-		decoder.intra_dc_precision = ipuRegs->ctrl.IDP;
+		decoder.coding_type			= ipuRegs->ctrl.PCT;
+		decoder.mpeg1				= ipuRegs->ctrl.MP1;
+		decoder.q_scale_type		= ipuRegs->ctrl.QST;
+		decoder.intra_vlc_format	= ipuRegs->ctrl.IVF;
+		decoder.scantype			= ipuRegs->ctrl.AS;
+		decoder.intra_dc_precision	= ipuRegs->ctrl.IDP;
 
 		//from IDEC value
-		decoder.quantizer_scale = idec.QSC;
-		decoder.frame_pred_frame_dct = !idec.DTD;
+		decoder.quantizer_scale		= idec.QSC;
+		decoder.frame_pred_frame_dct= !idec.DTD;
 		decoder.sgn = idec.SGN;
 		decoder.dte = idec.DTE;
 		decoder.ofm = idec.OFM;
@@ -414,21 +354,21 @@ static __forceinline BOOL ipuBDEC(u32 val, bool resume)
 		if (IsDebugBuild) s_bdec++;
 
 		g_BP.BP += bdec.FB;//skip FB bits
-		decoder.coding_type = I_TYPE;
-		decoder.mpeg1 = ipuRegs->ctrl.MP1;
-		decoder.q_scale_type	= ipuRegs->ctrl.QST;
-		decoder.intra_vlc_format = ipuRegs->ctrl.IVF;
-		decoder.scan = ipuRegs->ctrl.AS ? mpeg2_scan_alt : mpeg2_scan_norm;
-		decoder.intra_dc_precision = ipuRegs->ctrl.IDP;
+		decoder.coding_type			= I_TYPE;
+		decoder.mpeg1				= ipuRegs->ctrl.MP1;
+		decoder.q_scale_type		= ipuRegs->ctrl.QST;
+		decoder.intra_vlc_format	= ipuRegs->ctrl.IVF;
+		decoder.scantype			= ipuRegs->ctrl.AS;
+		decoder.intra_dc_precision	= ipuRegs->ctrl.IDP;
 
 		//from BDEC value
-		decoder.quantizer_scale = decoder.q_scale_type ? non_linear_quantizer_scale [bdec.QSC] : bdec.QSC << 1;
-		decoder.macroblock_modes = bdec.DT ? DCT_TYPE_INTERLACED : 0;
-		decoder.dcr = bdec.DCR;
-		decoder.macroblock_modes |= bdec.MBI ? MACROBLOCK_INTRA : MACROBLOCK_PATTERN;
+		decoder.quantizer_scale		= decoder.q_scale_type ? non_linear_quantizer_scale [bdec.QSC] : bdec.QSC << 1;
+		decoder.macroblock_modes	= bdec.DT ? DCT_TYPE_INTERLACED : 0;
+		decoder.dcr					= bdec.DCR;
+		decoder.macroblock_modes	|= bdec.MBI ? MACROBLOCK_INTRA : MACROBLOCK_PATTERN;
 
-		memzero_sse_a(mb8);
-		memzero_sse_a(mb16);
+		memzero_sse_a(decoder.mb8);
+		memzero_sse_a(decoder.mb16);
 	}
 
 	return mpeg2_slice();
@@ -516,6 +456,8 @@ static BOOL ipuSETIQ(u32 val)
 
 	if ((val >> 27) & 1)
 	{
+		u8 (&niq)[64] = decoder.niq;
+
 		for(;ipu_cmd.pos[0] < 8; ipu_cmd.pos[0]++)
 		{
 			if (!getBits64((u8*)niq + 8 * ipu_cmd.pos[0], 1)) return FALSE;
@@ -531,6 +473,8 @@ static BOOL ipuSETIQ(u32 val)
 	}
 	else
 	{
+		u8 (&iq)[64] = decoder.iq;
+
 		for(;ipu_cmd.pos[0] < 8; ipu_cmd.pos[0]++)
 		{
 			if (!getBits64((u8*)iq + 8 * ipu_cmd.pos[0], 1)) return FALSE;
@@ -552,7 +496,7 @@ static BOOL ipuSETVQ(u32 val)
 {
 	for(;ipu_cmd.pos[0] < 4; ipu_cmd.pos[0]++)
 	{
-		if (!getBits64((u8*)vqclut + 8 * ipu_cmd.pos[0], 1)) return FALSE;
+		if (!getBits64(((u8*)vqclut) + 8 * ipu_cmd.pos[0], 1)) return FALSE;
 	}
 
 	IPU_LOG("IPU SETVQ command.\nRead VQCLUT table from IPU FIFO.");
@@ -591,17 +535,17 @@ static BOOL __fastcall ipuCSC(u32 val)
 	{
 		for(;ipu_cmd.pos[0] < 48; ipu_cmd.pos[0]++)
 		{
-			if (!getBits64((u8*)&mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
+			if (!getBits64((u8*)&decoder.mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
 		}
 
-		ipu_csc(mb8, rgb32, 0);
-		if (csc.OFM) ipu_dither(rgb32, rgb16, csc.DTE);
+		ipu_csc(decoder.mb8, decoder.rgb32, 0);
+		if (csc.OFM) ipu_dither(decoder.rgb32, decoder.rgb16, csc.DTE);
 		
 		if (csc.OFM)
 		{
 			while (ipu_cmd.pos[1] < 32)
 			{
-				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
+				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
 
 				if (ipu_cmd.pos[1] <= 0) return FALSE;
 			}
@@ -610,7 +554,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 		{
 			while (ipu_cmd.pos[1] < 64)
 			{
-				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb32) + 4 * ipu_cmd.pos[1], 64 - ipu_cmd.pos[1]);
+				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb32) + 4 * ipu_cmd.pos[1], 64 - ipu_cmd.pos[1]);
 
 				if (ipu_cmd.pos[1] <= 0) return FALSE;
 			}
@@ -633,17 +577,17 @@ static BOOL ipuPACK(u32 val)
 	{
 		for(;ipu_cmd.pos[0] < 8; ipu_cmd.pos[0]++)
 		{
-			if (!getBits64((u8*)&mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
+			if (!getBits64((u8*)&decoder.mb8 + 8 * ipu_cmd.pos[0], 1)) return FALSE;
 		}
 
-		ipu_csc(mb8, rgb32, 0);
-		ipu_dither(rgb32, rgb16, csc.DTE);
+		ipu_csc(decoder.mb8, decoder.rgb32, 0);
+		ipu_dither(decoder.rgb32, decoder.rgb16, csc.DTE);
 
-		if (csc.OFM) ipu_vq(rgb16, indx4);
+		if (csc.OFM) ipu_vq(decoder.rgb16, indx4);
 		
 		if (csc.OFM)
 		{
-			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
+			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
 
 			if (ipu_cmd.pos[1] < 32) return FALSE;
 		}

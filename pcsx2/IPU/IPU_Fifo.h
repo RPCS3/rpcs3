@@ -16,12 +16,14 @@
 #ifndef IPU_FIFO_H_INCLUDED
 #define IPU_FIFO_H_INCLUDED
 
-class IPU_Fifo_Input
-{
-	public:
+// Important!  All FIFO containers in this header should be 'struct' type, not class type.
+// They are saved into the savestate as-is, and keeping them as struct ensures that the
+// layout of their contents is reliable.
 
-	int readpos, writepos;
+struct IPU_Fifo_Input
+{
 	__aligned16 u32 data[32];
+	int readpos, writepos;
 
 	int write(u32* pMem, int size);
 	int read(void *value);
@@ -29,12 +31,10 @@ class IPU_Fifo_Input
 	wxString desc() const;
 };
 
-class IPU_Fifo_Output
+struct IPU_Fifo_Output
 {
-	public:
-
-	int readpos, writepos;
 	__aligned16 u32 data[32];
+	int readpos, writepos;
 
 	// returns number of qw read
 	int write(const u32 * value, int size);
@@ -42,20 +42,19 @@ class IPU_Fifo_Output
 	void readsingle(void *value);
 	void clear();
 	wxString desc() const;
-	private:
+
 	void _readsingle(void *value);
 };
 
-class IPU_Fifo
+struct IPU_Fifo
 {
-	public:
-	IPU_Fifo_Input in;
-	IPU_Fifo_Output out;
+	__aligned16 IPU_Fifo_Input in;
+	__aligned16 IPU_Fifo_Output out;
 
 	void init();
 	void clear();
 };
 
-extern IPU_Fifo ipu_fifo;
+extern __aligned16 IPU_Fifo ipu_fifo;
 
 #endif // IPU_FIFO_H_INCLUDED

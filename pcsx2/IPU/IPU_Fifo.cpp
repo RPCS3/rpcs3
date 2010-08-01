@@ -19,7 +19,7 @@
 #include "mpeg2lib/Mpeg.h"
 
 
-IPU_Fifo ipu_fifo;
+__aligned16 IPU_Fifo ipu_fifo;
 
 void IPU_Fifo::init()
 {
@@ -166,4 +166,33 @@ void IPU_Fifo_Output::readsingle(void *value)
 		ipuRegs->ctrl.OFC--;
 		_readsingle(value);
 	}
+}
+
+__forceinline bool decoder_t::ReadIpuData(u128* out)
+{
+	if(decoder.ipu0_data == 0) return false;
+	_mm_store_ps((float*)out, _mm_load_ps((float*)GetIpuDataPtr()));
+
+	--ipu0_data;
+	++ipu0_idx;
+
+	return true;
+}
+
+void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
+{
+	pxAssert( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
+
+	// All addresses in this page map to 0x7000 and 0x7010:
+	mem &= 0x10;
+
+	if (mem == 0) // IPUout_FIFO
+	{
+		if (decoder.ReadIpuData((u128*)out))
+		{
+			ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
+		}
+	}
+	else // IPUin_FIFO
+		ipu_fifo.out.readsingle((void*)out);
 }

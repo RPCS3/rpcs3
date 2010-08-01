@@ -39,6 +39,9 @@
 // conforming implementation for reference, do not optimise
 void yuv2rgb_reference(void)
 {
+	const macroblock_8& mb8 = decoder.mb8;
+	macroblock_rgb32& rgb32 = decoder.rgb32;
+
 	for (int y = 0; y < 16; y++)
 		for (int x = 0; x < 16; x++)
 		{
@@ -124,8 +127,8 @@ __releaseinline void yuv2rgb_sse2(void)
 
 		align 16
 tworows:
-		movq xmm3, qword ptr [mb8+256+esi]
-		movq xmm1, qword ptr [mb8+320+esi]
+		movq xmm3, qword ptr [decoder.mb8+256+esi]
+		movq xmm1, qword ptr [decoder.mb8+320+esi]
 		pxor xmm2, xmm2
 		pxor xmm0, xmm0
 		// could skip the movq but punpck requires 128-bit alignment
@@ -170,7 +173,7 @@ ihatemsvc:
 		movaps xmm4, xmm1
 		movaps xmm5, xmm2
 
-		movaps xmm6, xmmword ptr [mb8+edi]
+		movaps xmm6, xmmword ptr [decoder.mb8+edi]
 		psubusb xmm6, xmmword ptr [edx+Y_BIAS]
 		movaps xmm7, xmm6
 		psllw xmm6, 8                    // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
@@ -235,10 +238,10 @@ ihatemsvc:
 		punpckhwd xmm4, xmm5
 
 		// at last
-		movaps xmmword ptr [rgb32+edi*4+0], xmm0
-		movaps xmmword ptr [rgb32+edi*4+16], xmm1
-		movaps xmmword ptr [rgb32+edi*4+32], xmm3
-		movaps xmmword ptr [rgb32+edi*4+48], xmm4
+		movaps xmmword ptr [decoder.rgb32+edi*4+0], xmm0
+		movaps xmmword ptr [decoder.rgb32+edi*4+16], xmm1
+		movaps xmmword ptr [decoder.rgb32+edi*4+32], xmm3
+		movaps xmmword ptr [decoder.rgb32+edi*4+48], xmm4
 
 		add edi, 16
 
@@ -255,6 +258,8 @@ ihatemsvc:
 	// offset to the middle of the sse2 table, so that we can use 1-byte address displacement
 	// to access all fields:
 	static const u8* sse2_tableoffset = ((u8*)&sse2_tables) + 64;
+	static const macroblock_8* mb8 = (u8*)decoder.mb8;
+	static macroblock_rgb32* rgb32 = (u8*)decoder.rgb32;
 
 	__asm__ __volatile__ (
 		".intel_syntax noprefix\n"
@@ -262,15 +267,10 @@ ihatemsvc:
 		"xor esi, esi\n"
 		"xor edi, edi\n"
 
-		// Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
-		// This saves 2-3 bytes per instruction where these are used. :)
-		//"mov ecx, offset %c[yuv2rgb_temp]\n"
-		//"mov edx, offset %c[sse2_tables]+64\n"
-
 		".align 16\n"
 "tworows:\n"
-		"movq xmm3, qword ptr [mb8+256+esi]\n"
-		"movq xmm1, qword ptr [mb8+320+esi]\n"
+		"movq xmm3, qword ptr [%[mb8]+256+esi]\n"
+		"movq xmm1, qword ptr [%[mb8]+320+esi]\n"
 		"pxor xmm2, xmm2\n"
 		"pxor xmm0, xmm0\n"
 		// could skip the movq but punpck requires 128-bit alignment
@@ -310,7 +310,7 @@ ihatemsvc:
 		"movaps xmm4, xmm1\n"
 		"movaps xmm5, xmm2\n"
 
-		"movaps xmm6, xmmword ptr [mb8+edi]\n"
+		"movaps xmm6, xmmword ptr [%[mb8]+edi]\n"
 		"psubusb xmm6, xmmword ptr [%[sse2_tables]+%c[Y_BIAS]]\n"
 		"movaps xmm7, xmm6\n"
 		"psllw xmm6, 8\n"                   // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
@@ -375,10 +375,10 @@ ihatemsvc:
 		"punpckhwd xmm4, xmm5\n"
 
 		// at last
-		"movaps xmmword ptr [rgb32+edi*4+0], xmm0\n"
-		"movaps xmmword ptr [rgb32+edi*4+16], xmm1\n"
-		"movaps xmmword ptr [rgb32+edi*4+32], xmm3\n"
-		"movaps xmmword ptr [rgb32+edi*4+48], xmm4\n"
+		"movaps xmmword ptr [%[rgb32]+edi*4+0], xmm0\n"
+		"movaps xmmword ptr [%[rgb32]+edi*4+16], xmm1\n"
+		"movaps xmmword ptr [%[rgb32]+edi*4+32], xmm3\n"
+		"movaps xmmword ptr [%[rgb32]+edi*4+48], xmm4\n"
 
 		"add edi, 16\n"
 
@@ -393,15 +393,11 @@ ihatemsvc:
 		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK),
 			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF),
 			[GCb_COEFF]"i"(GCb_COEFF), [RCr_COEFF]"i"(RCr_COEFF), [BCb_COEFF]"i"(BCb_COEFF),
-			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(sse2_tableoffset)
-		: "eax", "ebx", "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
+			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(sse2_tableoffset),
+			[mb8]"r"(mb8), [rgb32]"r"(rgb32)
+		: "eax", "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
 	);
 #else
 #	error Unsupported compiler
 #endif
-}
-
-void yuv2rgb_init(void)
-{
-	/* For later reimplementation of C version */
 }

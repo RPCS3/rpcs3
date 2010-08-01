@@ -342,8 +342,6 @@ struct tIPU_cmd
 
 extern tIPU_cmd ipu_cmd;
 extern int coded_block_pattern;
-extern int g_nIPU0Data; // or 0x80000000 whenever transferring
-extern u8* g_pIPU0Pointer;
 extern IPUStatus IPU1Status;
 extern tIPU_DMA g_nDMATransfer;
 

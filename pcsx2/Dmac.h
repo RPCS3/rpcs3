@@ -161,8 +161,8 @@ union tDMA_SADR {
 
 union tDMA_MADR {
 	struct {
-		u32 ADDR : 31; // Transfer memory address
-		u32 SPR : 1; // Memory/SPR Address
+		u32 ADDR : 31;	// Transfer memory address
+		u32 SPR : 1;	// Memory/SPR Address
 	};
 	u32 _u32;
 
@@ -175,8 +175,8 @@ union tDMA_MADR {
 
 union tDMA_TADR {
 	struct {
-		u32 ADDR : 31; // Next Tag address
-		u32 SPR : 1; // Memory/SPR Address
+		u32 ADDR : 31;	// Next Tag address
+		u32 SPR : 1;	// Memory/SPR Address
 	};
 	u32 _u32;
 
@@ -190,8 +190,8 @@ union tDMA_TADR {
 // The Address Stack Register
 union tDMA_ASR {
 	struct {
-		u32 ADDR : 31; // Tag memory address
-		u32 SPR : 1; // Memory/SPR Address
+		u32 ADDR : 31;	// Tag memory address
+		u32 SPR : 1;	// Memory/SPR Address
 	};
 	u32 _u32;
 

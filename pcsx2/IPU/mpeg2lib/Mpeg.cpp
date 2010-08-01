@@ -33,7 +33,7 @@
 #include "Mpeg.h"
 #include "Vlc.h"
 
-int non_linear_quantizer_scale [] =
+const int non_linear_quantizer_scale [] =
 {
 	0,  1,  2,  3,  4,  5,	6,	7,
 	8, 10, 12, 14, 16, 18,  20,  22,
@@ -341,8 +341,8 @@ static __forceinline bool get_intra_block()
 	int i;
 	int j;
 	int val;
-	const u8 * scan = decoder.scan;
-	const u8 * quant_matrix = decoder.intra_quantizer_matrix;
+	const u8 * scan = decoder.scantype ? mpeg2_scan.alt : mpeg2_scan.norm;
+	const u8 (&quant_matrix)[64] = decoder.iq;
 	int quantizer_scale = decoder.quantizer_scale;
 	s16 * dest = decoder.DCTblock;
 	u16 code; 
@@ -493,8 +493,8 @@ static __forceinline bool get_non_intra_block(int * last)
 	int i;
 	int j;
 	int val;
-	const u8 * scan = decoder.scan;
-	const u8 * quant_matrix = decoder.non_intra_quantizer_matrix;
+	const u8 * scan = decoder.scantype ? mpeg2_scan.alt : mpeg2_scan.norm;
+	const u8 (&quant_matrix)[64] = decoder.niq;
 	int quantizer_scale = decoder.quantizer_scale;
 	s16 * dest = decoder.DCTblock;
 	u16 code;
@@ -699,7 +699,6 @@ void __forceinline finishmpeg2sliceIDEC()
 
 bool mpeg2sliceIDEC()
 {
-	u32 read;
 	u16 code;
 	u8 bit8;
 
@@ -725,6 +724,10 @@ bool mpeg2sliceIDEC()
 		ipu_cmd.pos[0] = 2;
 		while (1)
 		{
+			macroblock_8& mb8 = decoder.mb8;
+			macroblock_rgb16& rgb16 = decoder.rgb16;
+			macroblock_rgb32& rgb32 = decoder.rgb32;
+
 			int DCT_offset, DCT_stride;
 			const MBAtab * mba;
 
@@ -747,13 +750,13 @@ bool mpeg2sliceIDEC()
 
 				if (decoder.macroblock_modes & DCT_TYPE_INTERLACED)
 				{
-					DCT_offset = decoder.stride;
-					DCT_stride = decoder.stride * 2;
+					DCT_offset = decoder_stride;
+					DCT_stride = decoder_stride * 2;
 				}
 				else
 				{
-					DCT_offset = decoder.stride * 8;
-					DCT_stride = decoder.stride;
+					DCT_offset = decoder_stride * 8;
+					DCT_stride = decoder_stride;
 				}
 
 				switch (ipu_cmd.pos[2])
@@ -784,13 +787,13 @@ bool mpeg2sliceIDEC()
 						return false;
 					}
 				case 5:
-					if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder.stride >> 1, ipu_cmd.pos[2] == 5))
+					if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder_stride >> 1, ipu_cmd.pos[2] == 5))
 					{
 						ipu_cmd.pos[2] = 5;
 						return false;
 					}
 				case 6:
-					if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder.stride >> 1, ipu_cmd.pos[2] == 6))
+					if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder_stride >> 1, ipu_cmd.pos[2] == 6))
 					{
 						ipu_cmd.pos[2] = 6;
 						return false;
@@ -801,22 +804,17 @@ bool mpeg2sliceIDEC()
 				ipu_csc(mb8, rgb32, decoder.sgn);
 
 				if (decoder.ofm == 0)
-				{
-					g_nIPU0Data = 64;
-					g_pIPU0Pointer = (u8*)&rgb32;
-				}
+					decoder.SetOutputTo(rgb32);
 				else
 				{
 					ipu_dither(rgb32, rgb16, decoder.dte);
-
-					g_nIPU0Data = 32;
-					g_pIPU0Pointer = (u8*)&rgb16;
+					decoder.SetOutputTo(rgb16);
 				}
 
 			case 2:
-				while (g_nIPU0Data > 0)
+				while (decoder.ipu0_data > 0)
 				{
-					read = ipu_fifo.out.write((u32*)g_pIPU0Pointer, g_nIPU0Data);
+					uint read = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
 
 					if (read == 0)
 					{
@@ -825,9 +823,7 @@ bool mpeg2sliceIDEC()
 					}
 					else
 					{
-						g_pIPU0Pointer += read * 16;
-						g_nIPU0Data -= read;
-
+						decoder.AdvanceIpuDataBy(read);
 					}
 				}
 
@@ -932,7 +928,9 @@ bool mpeg2_slice()
 {
 	int DCT_offset, DCT_stride;
 	u8 bit8;
-	u32 size;
+
+	macroblock_8& mb8 = decoder.mb8;
+	macroblock_16& mb16 = decoder.mb16;
 
 	switch (ipu_cmd.pos[0])
 	{
@@ -960,13 +958,13 @@ bool mpeg2_slice()
 
 		if (decoder.macroblock_modes & DCT_TYPE_INTERLACED)
 		{
-			DCT_offset = decoder.stride;
-			DCT_stride = decoder.stride * 2;
+			DCT_offset = decoder_stride;
+			DCT_stride = decoder_stride * 2;
 		}
 		else
 		{
-			DCT_offset = decoder.stride * 8;
-			DCT_stride = decoder.stride;
+			DCT_offset = decoder_stride * 8;
+			DCT_stride = decoder_stride;
 		}
 
 		if (decoder.macroblock_modes & MACROBLOCK_INTRA)
@@ -1000,13 +998,13 @@ bool mpeg2_slice()
 					return false;
 				}
 			case 5:
-				if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
+				if (!slice_intra_DCT(1, (u8*)mb8.Cb, decoder_stride >> 1, ipu_cmd.pos[1] == 5))
 				{
 					ipu_cmd.pos[1] = 5;
 					return false;
 				}
 			case 6:
-				if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
+				if (!slice_intra_DCT(2, (u8*)mb8.Cr, decoder_stride >> 1, ipu_cmd.pos[1] == 6))
 				{
 					ipu_cmd.pos[1] = 6;
 					return false;
@@ -1063,7 +1061,7 @@ bool mpeg2_slice()
 				case 5:
 					if (decoder.coded_block_pattern & 0x2)
 					{
-						if (!slice_non_intra_DCT((s16*)mb16.Cb, decoder.stride >> 1, ipu_cmd.pos[1] == 5))
+						if (!slice_non_intra_DCT((s16*)mb16.Cb, decoder_stride >> 1, ipu_cmd.pos[1] == 5))
 						{
 							ipu_cmd.pos[1] = 5;
 							return false;
@@ -1072,7 +1070,7 @@ bool mpeg2_slice()
 				case 6:
 					if (decoder.coded_block_pattern & 0x1)
 					{
-						if (!slice_non_intra_DCT((s16*)mb16.Cr, decoder.stride >> 1, ipu_cmd.pos[1] == 6))
+						if (!slice_non_intra_DCT((s16*)mb16.Cr, decoder_stride >> 1, ipu_cmd.pos[1] == 6))
 						{
 							ipu_cmd.pos[1] = 6;
 							return false;
@@ -1083,8 +1081,7 @@ bool mpeg2_slice()
 			}
 		}
 
-		//Send The MacroBlock via DmaIpuFrom
-		size = 0;	// Reset
+		// Send The MacroBlock via DmaIpuFrom
 		ipuRegs->ctrl.SCD = 0;
 		coded_block_pattern = decoder.coded_block_pattern;
 		g_BP.BP += (int)decoder.bitstream_bits - 16;
@@ -1101,13 +1098,12 @@ bool mpeg2_slice()
 		}
 
 		decoder.mbc = 1;
-		g_nIPU0Data = 48;
-		g_pIPU0Pointer = (u8*)&mb16;
+		decoder.SetOutputTo(mb16);
 
 	case 3:
-		while (g_nIPU0Data > 0)
+		while (decoder.ipu0_data > 0)
 		{
-			size = ipu_fifo.out.write((u32*)g_pIPU0Pointer, g_nIPU0Data);
+			uint size = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
 
 			if (size == 0)
 			{
@@ -1116,8 +1112,7 @@ bool mpeg2_slice()
 			}
 			else
 			{
-				g_pIPU0Pointer += size * 16;
-				g_nIPU0Data -= size;
+				decoder.AdvanceIpuDataBy(size);
 			}
 		}
 

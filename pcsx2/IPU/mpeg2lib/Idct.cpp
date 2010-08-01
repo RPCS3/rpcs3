@@ -22,10 +22,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+// [TODO] : There are modern SSE versions of idct (idct_mmx.c) in the mpeg2 libs that we
+// should probably upgrade to.  They use their own raw-style intrinsics and not the intel
+// compiler-integrated ones.
+
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
 #include "IPU/IPU.h"
+#include "Mpeg.h"
 
 #define W1 2841 /* 2048*sqrt (2)*cos (1*pi/16) */
 #define W2 2676 /* 2048*sqrt (2)*cos (2*pi/16) */
@@ -36,19 +41,14 @@
 #define clp(val,res)	res = (val < 0) ? 0 : ((val > 255) ? 255 : val);
 #define clp2(val,res)	res = (val < -255) ? -255 : ((val > 255) ? 255 : val);
 
-/* idct main entry point  */
-void (__fastcall *mpeg2_idct_copy) (s16 * block, u8 * dest, int stride);
-/* JayteeMaster: changed dest to 16 bit signed */
-void (__fastcall *mpeg2_idct_add) (int last, s16 * block,
-			 /*u8*/s16 * dest, int stride);
-
 /*
  * In legal streams, the IDCT output should be between -384 and +384.
  * In corrupted streams, it is possible to force the IDCT output to go
  * to +-3826 - this is the worst case for a column IDCT where the
  * column inputs are 16-bit values.
  */
-static u8 clip_lut[1024];
+static __aligned16 u8 clip_lut[1024];
+
 #define CLIP(i) ((clip_lut+384)[(i)])
 
 #if 0
@@ -75,13 +75,13 @@ static __forceinline void idct_row (s16 * const block)
     /* shortcut */
     if (!(block[1] | ((s32 *)block)[1] | ((s32 *)block)[2] |
 		  ((s32 *)block)[3])) {
-	u32 tmp = (u16) (block[0] << 3);
-	tmp |= tmp << 16;
-	((s32 *)block)[0] = tmp;
-	((s32 *)block)[1] = tmp;
-	((s32 *)block)[2] = tmp;
-	((s32 *)block)[3] = tmp;
-	return;
+		u32 tmp = (u16) (block[0] << 3);
+		tmp |= tmp << 16;
+		((s32 *)block)[0] = tmp;
+		((s32 *)block)[1] = tmp;
+		((s32 *)block)[2] = tmp;
+		((s32 *)block)[3] = tmp;
+		return;
     }
 
     d0 = (block[0] << 11) + 128;
@@ -160,122 +160,97 @@ static __forceinline void idct_col (s16 * const block)
     block[8*7] = (a0 - b0) >> 17;
 }
 
-static void __fastcall mpeg2_idct_copy_c (s16 * block, u8 * dest,
-			       const int stride)
+__releaseinline void mpeg2_idct_copy(s16 * block, u8 * dest, const int stride)
 {
     int i;
 
     for (i = 0; i < 8; i++)
-	idct_row (block + 8 * i);
+		idct_row (block + 8 * i);
     for (i = 0; i < 8; i++)
-	idct_col (block + i);
+		idct_col (block + i);
+
+	__m128 zero = _mm_setzero_ps();
     do {
-	dest[0] = CLIP (block[0]);
-	dest[1] = CLIP (block[1]);
-	dest[2] = CLIP (block[2]);
-	dest[3] = CLIP (block[3]);
-	dest[4] = CLIP (block[4]);
-	dest[5] = CLIP (block[5]);
-	dest[6] = CLIP (block[6]);
-	dest[7] = CLIP (block[7]);
+		dest[0] = CLIP (block[0]);
+		dest[1] = CLIP (block[1]);
+		dest[2] = CLIP (block[2]);
+		dest[3] = CLIP (block[3]);
+		dest[4] = CLIP (block[4]);
+		dest[5] = CLIP (block[5]);
+		dest[6] = CLIP (block[6]);
+		dest[7] = CLIP (block[7]);
 
-	block[0] = 0;	block[1] = 0;	block[2] = 0;	block[3] = 0;
-	block[4] = 0;	block[5] = 0;	block[6] = 0;	block[7] = 0;
+		_mm_store_ps((float*)block, zero);
 
-	dest += stride;
-	block += 8;
+		dest += stride;
+		block += 8;
     } while (--i);
 }
 
-/* JayteeMaster: changed dest to 16 bit signed */
-static void __fastcall mpeg2_idct_add_c (const int last, s16 * block,
-			      /*u8*/s16 * dest, const int stride)
+
+// stride = increment for dest in 16-bit units (typically either 8 [128 bits] or 16 [256 bits]).
+__releaseinline void mpeg2_idct_add (const int last, s16 * block, s16 * dest, const int stride)
 {
-    int i;
+	// on the IPU, stride is always assured to be multiples of QWC (bottom 3 bits are 0).
 
-    if (last != 129 || (block[0] & 7) == 4) {
-	for (i = 0; i < 8; i++)
-	    idct_row (block + 8 * i);
-	for (i = 0; i < 8; i++)
-	    idct_col (block + i);
-	do {
-	    dest[0] = block[0];
-	    dest[1] = block[1];
-	    dest[2] = block[2];
-	    dest[3] = block[3];
-	    dest[4] = block[4];
-	    dest[5] = block[5];
-	    dest[6] = block[6];
-	    dest[7] = block[7];
+    if (last != 129 || (block[0] & 7) == 4)
+    {
+		int i;
+		for (i = 0; i < 8; i++)
+			idct_row (block + 8 * i);
+		for (i = 0; i < 8; i++)
+			idct_col (block + i);
 
-	    block[0] = 0;	block[1] = 0;	block[2] = 0;	block[3] = 0;
-	    block[4] = 0;	block[5] = 0;	block[6] = 0;	block[7] = 0;
+		__m128 zero = _mm_setzero_ps();
+		do {
+			_mm_store_ps((float*)dest, _mm_load_ps((float*)block));
+			_mm_store_ps((float*)block, zero);
 
-	    dest += stride;
-	    block += 8;
-	} while (--i);
-    } else {
-	int DC;
+			dest += stride;
+			block += 8;
+		} while (--i);
 
-	DC = (block[0] + 4) >> 3;
-	block[0] = block[63] = 0;
-	i = 8;
-	do {
-	    dest[0] = DC;
-	    dest[1] = DC;
-	    dest[2] = DC;
-	    dest[3] = DC;
-	    dest[4] = DC;
-	    dest[5] = DC;
-	    dest[6] = DC;
-	    dest[7] = DC;
-	    dest += stride;
-	} while (--i);
+    }
+    else
+    {
+		int DC = (block[0] + 4) >> 3;
+		s16 dcf[2] = { DC, DC };
+		block[0] = block[63] = 0;
+
+		__m128 dc128 = _mm_set_ps1(*(float*)dcf);
+
+		for(int i=0; i<8; ++i)
+			_mm_store_ps((float*)(dest+(stride*i)), dc128);
     }
 }
 
-extern "C"
+mpeg2_scan_pack::mpeg2_scan_pack()
 {
-u8 mpeg2_scan_norm[64] = {
-    /* Zig-Zag scan pattern */
-     0,  1,  8, 16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4,  5,
-    12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13,  6,  7, 14, 21, 28,
-    35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
-    58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
-};
+	static const u8 mpeg2_scan_norm[64] = {
+		/* Zig-Zag scan pattern */
+		0,  1,  8,  16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4,  5,
+		12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13,  6,  7, 14, 21, 28,
+		35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
+		58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
+	};
 
-u8 mpeg2_scan_alt[64] = {
-    /* Alternate scan pattern */
-     0, 8,  16, 24,  1,  9,  2, 10, 17, 25, 32, 40, 48, 56, 57, 49,
-    41, 33, 26, 18,  3, 11,  4, 12, 19, 27, 34, 42, 50, 58, 35, 43,
-    51, 59, 20, 28,  5, 13,  6, 14, 21, 29, 36, 44, 52, 60, 37, 45,
-    53, 61, 22, 30,  7, 15, 23, 31, 38, 46, 54, 62, 39, 47, 55, 63
-};
-};
+	static const u8 mpeg2_scan_alt[64] = {
+		/* Alternate scan pattern */
+		0,  8,  16, 24,  1,  9,  2, 10, 17, 25, 32, 40, 48, 56, 57, 49,
+		41, 33, 26, 18,  3, 11,  4, 12, 19, 27, 34, 42, 50, 58, 35, 43,
+		51, 59, 20, 28,  5, 13,  6, 14, 21, 29, 36, 44, 52, 60, 37, 45,
+		53, 61, 22, 30,  7, 15, 23, 31, 38, 46, 54, 62, 39, 47, 55, 63
+	};
 
-// The MMX verson wasn't being used and it was only available as a .obj,
-// so I removed it (gigaherz).
-///* idct_mmx.c */
-//void mpeg2_idct_copy_mmxext (s16 * block, u8 * dest, int stride);
-//void mpeg2_idct_add_mmxext (int last, s16 * block,
-//			   s16 * dest, int stride);
-//void mpeg2_idct_copy_mmx (s16 * block, u8 * dest, int stride);
-//void mpeg2_idct_add_mmx (int last, s16 * block,
-//			   s16 * dest, int stride);
-//void mpeg2_idct_mmx_init (void);
-
-void mpeg2_idct_init()
-{
-	   int i, j;
-
-	mpeg2_idct_copy = mpeg2_idct_copy_c;
-	mpeg2_idct_add = mpeg2_idct_add_c;
-	for (i = -384; i < 640; i++)
+	for (int i = -384; i < 640; i++)
 		clip_lut[i+384] = (i < 0) ? 0 : ((i > 255) ? 255 : i);
-	for (i = 0; i < 64; i++) {
-		j = mpeg2_scan_norm[i];
-		mpeg2_scan_norm[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
+
+	for (int i = 0; i < 64; i++) {
+		int j = mpeg2_scan_norm[i];
+		norm[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
 		j = mpeg2_scan_alt[i];
-		mpeg2_scan_alt[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
+		alt[i] = ((j & 0x36) >> 1) | ((j & 0x09) << 2);
 	}
 }
+
+const __aligned16 mpeg2_scan_pack mpeg2_scan;

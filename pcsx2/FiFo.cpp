@@ -94,27 +94,7 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 	out[1] = psHu64(GIF_FIFO + 8);
 }
 
-void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
-{
-	pxAssert( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
-
-	// All addresses in this page map to 0x7000 and 0x7010:
-	mem &= 0x10;
-
-	if( mem == 0 ) // IPUout_FIFO
-	{
-		if( g_nIPU0Data > 0 )
-		{
-			out[0] = *(u64*)(g_pIPU0Pointer);
-			out[1] = *(u64*)(g_pIPU0Pointer+8);
-			ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
-			g_nIPU0Data--;
-			g_pIPU0Pointer += 16;
-		}
-	}
-	else // IPUin_FIFO
-		ipu_fifo.out.readsingle((void*)out);
-}
+// ReadFIFO_page_7 is contained in IPU_Fifo.cpp
 
 //////////////////////////////////////////////////////////////////////////
 // WriteFIFO Pages
