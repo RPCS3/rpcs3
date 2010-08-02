@@ -267,7 +267,7 @@ ihatemsvc:
 		"xor edi, edi\n"
 
 		".align 16\n"
-"tworows:\n"
+"tworows_%=:\n"
 		"movq xmm3, qword ptr [%[mb8]+256+esi]\n"
 		"movq xmm1, qword ptr [%[mb8]+320+esi]\n"
 		"pxor xmm2, xmm2\n"
@@ -296,15 +296,15 @@ ihatemsvc:
 		"movaps xmmword ptr [%[yuv2rgb_temp]], xmm0\n"
 		"movaps xmmword ptr [%[yuv2rgb_temp]+16], xmm1\n"
 		"movaps xmmword ptr [%[yuv2rgb_temp]+32], xmm2\n"
-		"jmp ihategcctoo\n"
+		"jmp ihategcctoo_%=\n"
 
 		".align 16\n"
-"onerow:\n"
+"onerow_%=:\n"
 		"movaps xmm0, xmmword ptr [%[yuv2rgb_temp]]\n"
 		"movaps xmm1, xmmword ptr [%[yuv2rgb_temp]+16]\n"
 		"movaps xmm2, xmmword ptr [%[yuv2rgb_temp]+32]\n"
 
-"ihategcctoo:\n"
+"ihategcctoo_%=:\n"
 		"movaps xmm3, xmm0\n"
 		"movaps xmm4, xmm1\n"
 		"movaps xmm5, xmm2\n"
@@ -383,11 +383,11 @@ ihatemsvc:
 
         // run twice the onerow <=> edi = 16 or 48 or 80 etc... <=> check bit 5
 		"test edi, 16\n"
-		"jnz onerow\n"
+		"jnz onerow_%=\n"
 
 		"add esi, 8\n"
 		"cmp esi, 64\n"
-		"jne tworows\n"
+		"jne tworows_%=\n"
 		".att_syntax\n"
 		:
 		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK),
