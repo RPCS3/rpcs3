@@ -4,15 +4,31 @@
 # Do not search Lib in /usr/lib64. Hope it is not overwritten in find_package or others macro
 SET(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
 
-# Linux libraries
+## Linux only libraries
 if(Linux)
+    # Most plugins (if not all) and PCSX2 core need gtk2, so 
+    # set the required flags
     find_package(GTK2 REQUIRED gtk)
+    if(GTK2_FOUND)
+        # From version 2.21.3 gtk moved gdk-pixbuf into a separate module
+        # Cmake need to be fixed. For the moment uses a manual detection.
+        find_path(GDK_PIXBUF_INCLUDE_DIRS NAMES gdk-pixbuf/gdk-pixbuf.h PATHS
+            /usr/include/gdk-pixbuf-2.0
+            /usr/include)
+        if (GDK_PIXBUF_INCLUDE_DIRS)
+            set(GTK2_INCLUDE_DIRS "${GDK_PIXBUF_INCLUDE_DIRS}" "${GTK2_INCLUDE_DIRS}")
+            # Remove duplicates when cmake will be fixed
+            list(REMOVE_DUPLICATES GTK2_INCLUDE_DIRS)
+        endif (GDK_PIXBUF_INCLUDE_DIRS)
+    endif(GTK2_FOUND)
+
     find_package(X11)
     # Manually find Xxf86vm because it is not done in the module...
     FIND_LIBRARY(X11_Xxf86vm_LIB Xxf86vm       ${X11_LIB_SEARCH_PATH})
     MARK_AS_ADVANCED(X11_Xxf86vm_LIB)
 endif(Linux)
-# Use cmake package to find module
+
+## Use cmake package to find module
 find_package(ALSA)
 find_package(BZip2)
 find_package(JPEG)
@@ -21,11 +37,14 @@ find_package(OpenGL)
 set(SDL_BUILDING_LIBRARY TRUE)
 find_package(SDL)
 find_package(Subversion)
-find_package(wxWidgets REQUIRED base core adv)
+# The requierement of wxWidgets is checked in SelectPcsx2Plugins module
+# Does not requier the module (allow to compile non-wx plugins)
+find_package(wxWidgets COMPONENTS base core adv)
 if(NOT FORCE_INTERNAL_ZLIB)
     find_package(ZLIB)
 endif(NOT FORCE_INTERNAL_ZLIB)
-# Use pcsx2 package to find module
+
+## Use pcsx2 package to find module
 include(FindA52)
 include(FindCg)
 include(FindGlew)
