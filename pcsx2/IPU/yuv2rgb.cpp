@@ -263,7 +263,6 @@ ihatemsvc:
 
 	__asm__ __volatile__ (
 		".intel_syntax noprefix\n"
-		"mov eax, 1\n"
 		"xor esi, esi\n"
 		"xor edi, edi\n"
 
@@ -382,8 +381,9 @@ ihatemsvc:
 
 		"add edi, 16\n"
 
-		"neg eax\n"
-		"jl onerow\n" // run twice
+        // run twice the onerow <=> edi = 16 or 48 or 80 etc... <=> check bit 5
+		"test edi, 16\n"
+		"jnz onerow\n"
 
 		"add esi, 8\n"
 		"cmp esi, 64\n"
@@ -393,9 +393,11 @@ ihatemsvc:
 		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK),
 			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF),
 			[GCb_COEFF]"i"(GCb_COEFF), [RCr_COEFF]"i"(RCr_COEFF), [BCb_COEFF]"i"(BCb_COEFF),
-			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(sse2_tableoffset),
+            // Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
+            // This saves 2-3 bytes per instruction where these are used. :)
+			[yuv2rgb_temp]"c"(yuv2rgb_temp), [sse2_tables]"d"(sse2_tableoffset),
 			[mb8]"r"(mb8), [rgb32]"r"(rgb32)
-		: "eax", "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
+		: "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
 	);
 #else
 #	error Unsupported compiler
