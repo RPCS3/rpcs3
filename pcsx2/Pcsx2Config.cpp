@@ -70,7 +70,7 @@ void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 
 	IniBitfield( EECycleRate );
 	IniBitfield( VUCycleSteal );
-	IniBitBool( IopCycleRate_X2 );
+	IniBitBool( fastCDVD );
 	IniBitBool( IntcStat );
 	IniBitBool( WaitLoop );
 	IniBitBool( vuFlagHack );

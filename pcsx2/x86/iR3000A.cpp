@@ -1010,7 +1010,7 @@ void psxSetBranchImm( u32 imm )
 
 static __forceinline u32 psxScaleBlockCycles()
 {
-	return s_psxBlockCycles * (EmuConfig.Speedhacks.IopCycleRate_X2 ? 2 : 1);
+	return s_psxBlockCycles;
 }
 
 static void iPsxBranchTest(u32 newpc, u32 cpuBranch)

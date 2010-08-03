@@ -46,6 +46,8 @@ static __forceinline void SetResultSize(u8 size)
 
 static void CDVDREAD_INT(int eCycle)
 {
+	// Give it an arbitary FAST value. Good for ~5000kb/s in ULE when copying a file from CDVD to HDD
+	if (EmuConfig.Speedhacks.fastCDVD) eCycle = 3000;
 	PSX_INT(IopEvt_CdvdRead, eCycle);
 }
 

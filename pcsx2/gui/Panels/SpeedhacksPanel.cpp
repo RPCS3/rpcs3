@@ -195,8 +195,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_waitloop = new pxCheckBox( miscHacksPanel, _("Enable Wait Loop Detection"),
 		_("Moderate speedup for some games, with no known side effects. [Recommended]" ) );
 
-	m_check_IOPx2 = new pxCheckBox( miscHacksPanel, _("IOP x2 cycle rate hack"),
-		_("Small Speedup. Works well with some games but may cause issues in others. [Not Recommended]") );
+	m_check_fastCDVD = new pxCheckBox( miscHacksPanel, _("Enable fast CDVD"),
+		_("Fast disc access, less loading times. [Not Recommended]") );
 
 
 	m_check_intc->SetToolTip( pxE( ".Tooltip:Speedhacks:INTC",
@@ -211,9 +211,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		L"we advance to the time of the next event or the end of the processor's timeslice, whichever comes first."
 	) );
 
-	m_check_IOPx2->SetToolTip( pxE( ".Tooltip:Speedhacks:IOPx2",
-		L"Halves the cycle rate of the IOP, giving it an effective emulated speed of roughly 18 MHz. "
-		L"The speedup is very minor, so this hack is generally not recommended."
+	m_check_fastCDVD->SetToolTip( pxE( ".Tooltip:Speedhacks:IOPx2",
+		L"Check HDLoader compatibility lists for known games that have issues with this. (Often marked as needing 'mode 1' or 'slow DVD'"
 	) );
 
 	// ------------------------------------------------------------------------
@@ -239,7 +238,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	*miscHacksPanel	+= m_check_intc;
 	*miscHacksPanel	+= m_check_waitloop;
-	*miscHacksPanel	+= m_check_IOPx2;
+	*miscHacksPanel	+= m_check_fastCDVD;
 
 	*left	+= eeSliderPanel	| StdExpand();
 	*left	+= miscHacksPanel	| StdExpand();
@@ -311,7 +310,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Confi
 	m_check_vuMinMax	->SetValue(opts.vuMinMax);
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
-	m_check_IOPx2		->SetValue(opts.IopCycleRate_X2);
+	m_check_fastCDVD	->SetValue(opts.fastCDVD);
 
 	EnableStuff();
 
@@ -329,7 +328,7 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 
 	opts.WaitLoop			= m_check_waitloop->GetValue();
-	opts.IopCycleRate_X2	= m_check_IOPx2->GetValue();
+	opts.fastCDVD			= m_check_fastCDVD->GetValue();
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
 	opts.vuBlockHack		= m_check_vuBlockHack->GetValue();
