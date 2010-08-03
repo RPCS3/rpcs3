@@ -26,6 +26,61 @@
 namespace Threading
 {
 // --------------------------------------------------------------------------------------
+//  BaseTlsVariable
+// --------------------------------------------------------------------------------------
+// This container is for complex non-copyable objects that require explicit cleanup and
+// stuff (most classes).  For simple types and such, use TlsVariable.
+//
+template< typename T >
+class BaseTlsVariable
+{
+	DeclareNoncopyableObject(BaseTlsVariable);
+
+protected:
+	pthread_key_t	m_thread_key;
+	bool			m_IsDisposed;
+
+public:
+	BaseTlsVariable();
+
+	virtual ~BaseTlsVariable() throw()
+	{
+		Dispose();
+	}
+
+	T* GetPtr() const;
+	T& GetRef() const { return *GetPtr(); }
+
+	operator T&() const		{ return GetRef(); }
+	T* operator->() const	{ return GetPtr(); }
+
+	void Dispose()
+	{
+		if (!m_IsDisposed)
+		{
+			m_IsDisposed = true;
+			KillKey();
+		}
+	}
+
+protected:
+	void CreateKey();
+	void KillKey();
+
+	virtual void CreateInstance( T* result ) const
+	{
+		new (result) T();
+	}
+
+	static void _aligned_delete_and_free( void* ptr )
+	{
+		if (!ptr) return;
+		((T*)ptr)->~T();
+		_aligned_free(ptr);
+	}
+};
+
+// --------------------------------------------------------------------------------------
 //  TlsVariable - Thread local storage
 // --------------------------------------------------------------------------------------
 // Wrapper class for pthread_getspecific, which is pthreads language for "thread local
@@ -38,88 +93,96 @@ namespace Threading
 // result in repeated calls to pthread_getspecific.  (if the function inlines then it
 // should actually optimize well enough, but I doubt it does).
 //
-	template< typename T >
-	class TlsVariable
+template< typename T >
+class TlsVariable : public BaseTlsVariable<T>
+{
+	DeclareNoncopyableObject(TlsVariable);
+
+protected:
+	T				m_initval;
+
+public:
+	TlsVariable() {}
+	TlsVariable( const T& initval )
+		: m_initval(initval) { }
+
+	virtual ~TlsVariable() throw()
 	{
-		DeclareNoncopyableObject(TlsVariable);
+		// disable the parent cleanup.  This leaks memory blocks, but its necessary because
+		// TLS is expected to be persistent until the very end of execution on the main thread.
+		// Killing the pthread_key at all will lead to the console logger death, etc.
+		m_IsDisposed = true;
+	}
 
-	protected:
-		pthread_key_t	m_thread_key;
-		T				m_initval;
+	TlsVariable& operator=( const T& src )
+	{
+		GetRef() = src;
+		return *this;
+	}
 
-	public:
-		TlsVariable();
-		TlsVariable( T initval );
+	bool operator==( const T& src ) const	{ return GetRef() == src; }
+	bool operator!=( const T& src ) const	{ return GetRef() != src; }
+	bool operator>( const T& src ) const	{ return GetRef() > src; }
+	bool operator<( const T& src ) const	{ return GetRef() < src; }
+	bool operator>=( const T& src ) const	{ return GetRef() >= src; }
+	bool operator<=( const T& src ) const	{ return GetRef() <= src; }
 
-		virtual ~TlsVariable() throw();
-		T* GetPtr() const;
-		T& GetRef() const { return *GetPtr(); }
+	T operator+( const T& src ) const		{ return GetRef() + src; }
+	T operator-( const T& src ) const		{ return GetRef() - src; }
 
-		TlsVariable& operator=( const T& src )
-		{
-			GetRef() = src;
-			return *this;
-		}
-
-		bool operator==( const T& src ) const	{ return GetRef() == src; }
-		bool operator!=( const T& src ) const	{ return GetRef() != src; }
-		bool operator>( const T& src ) const	{ return GetRef() > src; }
-		bool operator<( const T& src ) const	{ return GetRef() < src; }
-		bool operator>=( const T& src ) const	{ return GetRef() >= src; }
-		bool operator<=( const T& src ) const	{ return GetRef() <= src; }
-
-		T operator+( const T& src ) const		{ return GetRef() + src; }
-		T operator-( const T& src ) const		{ return GetRef() - src; }
-
-		void operator+=( const T& src )			{ GetRef() += src; }
-		void operator-=( const T& src )			{ GetRef() -= src; }
-
-		operator T&() const { return GetRef(); }
-
-	protected:
-		void CreateKey();
-	};
+	void operator+=( const T& src )			{ GetRef() += src; }
+	void operator-=( const T& src )			{ GetRef() -= src; }
+	
+protected:
+	virtual void CreateInstance( T* result ) const
+	{
+		new (result) T(m_initval);
+	}
+};
 };
 
 template< typename T >
-Threading::TlsVariable<T>::TlsVariable()
+Threading::BaseTlsVariable<T>::BaseTlsVariable()
 {
+	m_IsDisposed = false;
 	CreateKey();
 }
 
 template< typename T >
-Threading::TlsVariable<T>::TlsVariable( T initval )
+void Threading::BaseTlsVariable<T>::KillKey()
 {
-	CreateKey();
-	m_initval = initval;
+	if (!m_thread_key) return;
+
+	// Delete the handle for the current thread (which should always be the main/UI thread!)
+	// This is needed because pthreads does *not* clean up the dangling objects when you delete
+	// the key.  The TLS for the process main thread will only be deleted when the process
+	// ends; which is too damn late (it shows up int he leaked memory blocks).
+
+	BaseTlsVariable<T>::_aligned_delete_and_free( pthread_getspecific(m_thread_key) );
+
+	pthread_key_delete( m_thread_key );
+	m_thread_key = NULL;
 }
 
 template< typename T >
-Threading::TlsVariable<T>::~TlsVariable() throw()
-{
-	if( m_thread_key != NULL )
-		pthread_key_delete( m_thread_key );
-}
-
-template< typename T >
-T* Threading::TlsVariable<T>::GetPtr() const
+T* Threading::BaseTlsVariable<T>::GetPtr() const
 {
 	T* result = (T*)pthread_getspecific( m_thread_key );
 	if( result == NULL )
 	{
-		pthread_setspecific( m_thread_key, result = (T*)_aligned_malloc( sizeof(T), 16 ) );
+		pthread_setspecific( m_thread_key, result = (T*)_aligned_malloc(sizeof(T), 16) );
+		CreateInstance(result);
 		if( result == NULL )
-			throw Exception::OutOfMemory( L"Out of memory allocating thread local storage variable." );
-		*result = m_initval;
+			throw Exception::OutOfMemory( L"thread local storage variable instance" );
 	}
 	return result;
 }
 
 template< typename T >
-void Threading::TlsVariable<T>::CreateKey()
+void Threading::BaseTlsVariable<T>::CreateKey()
 {
-	if( 0 != pthread_key_create(&m_thread_key, _aligned_free) )
+	if( 0 != pthread_key_create(&m_thread_key, BaseTlsVariable<T>::_aligned_delete_and_free) )
 	{
-		pxFailRel( "Thread Local Storage Error: key creation failed." );
+		pxFailRel( "Thread Local Storage Error: key creation failed.  This will most likely lead to a rapid application crash." );
 	}
 }
