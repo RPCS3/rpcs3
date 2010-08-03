@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Dependencies.h"
+#include "SafeArray.h"
 
 #include <wx/tokenzr.h>
 
@@ -106,12 +107,66 @@ struct ParsedAssignmentString
 	ParsedAssignmentString( const wxString& src );
 };
 
+// --------------------------------------------------------------------------------------
+//  FastFormatAscii
+// --------------------------------------------------------------------------------------
+// Fast formatting of ASCII text.  This class uses a process-wide format buffer that is
+// allocated only once and grown to accommodate string formatting needs.  The buffer is
+// thread-safe.  This technique reduces the overhead of formatting strings by eliminating
+// most or all heap allocation actions.
+//
+class FastFormatAscii
+{
+protected:
+	SafeArray<char>*	m_dest;
+	bool				m_deleteDest;
+	
+public:
+	FastFormatAscii();
+	~FastFormatAscii() throw();
+	FastFormatAscii& Write( const char* fmt, ... );
+	FastFormatAscii& WriteV( const char* fmt, va_list argptr );
+
+	const char* GetResult() const;
+	operator const char*() const;
+
+	const wxString GetString() const;
+	operator wxString() const;
+};
+
+class FastFormatUnicode
+{
+protected:
+	SafeArray<char>*	m_dest;
+	bool				m_deleteDest;
+
+public:
+	FastFormatUnicode();
+	~FastFormatUnicode() throw();
+
+	FastFormatUnicode& Write( const char* fmt, ... );
+	FastFormatUnicode& Write( const wxChar* fmt, ... );
+	FastFormatUnicode& WriteV( const char* fmt, va_list argptr );
+	FastFormatUnicode& WriteV( const wxChar* fmt, va_list argptr );
+
+	const wxChar* GetResult() const;
+	const wxString GetString() const;
+
+	operator const wxChar*() const
+	{
+		return (const wxChar*)m_dest->GetPtr();
+	}
+
+	operator wxString() const
+	{
+		return (const wxChar*)m_dest->GetPtr();
+	}
+};
+
 extern bool pxParseAssignmentString( const wxString& src, wxString& ldest, wxString& rdest );
 
-extern int FastFormatString_AsciiRaw(wxCharBuffer& dest, const char* fmt, va_list argptr);
-extern wxString FastFormatString_Ascii(const char* fmt, va_list argptr);
-extern wxString FastFormatString_Unicode(const wxChar* fmt, va_list argptr);
-
+#define pxsFmt FastFormatUnicode().Write
+#define pxsFmtV FastFormatUnicode().WriteV
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Custom internal sprintf functions, which are ASCII only (even in UNICODE builds)

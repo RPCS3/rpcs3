@@ -20,8 +20,8 @@ void AsciiFile::Printf( const char* fmt, ... )
 {
 	va_list list;
 	va_start( list, fmt );
-	//std::string writeme; vssprintf( writeme, fmt, list );
-	wxCharBuffer result; int reslen = FastFormatString_AsciiRaw(result, fmt, list);
+	FastFormatAscii ascii;
+	ascii.WriteV(fmt,list);
 	va_end( list );
-	Write( result.data(), reslen );
+	Write( ascii, strlen(ascii) );
 }

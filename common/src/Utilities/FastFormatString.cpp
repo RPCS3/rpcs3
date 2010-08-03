@@ -23,51 +23,120 @@ using namespace Threading;
 // system deadlock.
 static const int MaxFormattedStringLength = 0x80000;
 
-// --------------------------------------------------------------------------------------
-//  FormatBuffer
-// --------------------------------------------------------------------------------------
-// This helper class provides a "safe" way for us to check if the global handles for the
-// string format buffer have been initialized or destructed by the C++ global heap manager.
-// (C++ has no way to enforce init/destruct order on complex globals, thus the convoluted
-// use of booleans to check the status of the type initializers).
-//
-template< typename CharType >
-class FormatBuffer : public Mutex
-{
-public:
-	bool&				clearbit;
-	SafeArray<CharType>	buffer;
-	wxMBConvUTF8		ConvUTF8;
+#include "TlsVariable.inl"
 
-	FormatBuffer( bool& bit_to_clear_on_destruction )
-		: clearbit( bit_to_clear_on_destruction )
-		, buffer( 4096, wxsFormat( L"%s Format Buffer", (sizeof(CharType)==1) ? "Ascii" : "Unicode" ) )
+// --------------------------------------------------------------------------------------
+//  FastFormatBuffers
+// --------------------------------------------------------------------------------------
+template< typename CharType >
+class FastFormatBuffers
+{
+	DeclareNoncopyableObject(FastFormatBuffers);
+
+protected:
+	typedef SafeAlignedArray<CharType,16> BufferType;
+
+	static const uint BufferCount = 3;
+
+	BufferType		m_buffers[BufferCount];
+	uint			m_curslot;
+
+public:
+	FastFormatBuffers()
 	{
-		bit_to_clear_on_destruction = false;
+		// This protects against potential recursive calls to our formatter, by forcing those
+		// calls to use a dynamic buffer for formatting.
+		m_curslot = BufferCount;
+
+		for (uint i=0; i<BufferCount; ++i)
+		{
+			//m_buffers[i].Name = wxsFormat(L"Ascii Formatting Buffer (slot%d)", i);
+			m_buffers[i].Name = wxsFormat(L"%s Formatting Buffer (slot%d)",
+				(sizeof(CharType)==1) ? L"Ascii" : L"Unicode", i);
+			m_buffers[i].MakeRoomFor(1024);
+			m_buffers[i].ChunkSize = 4096;
+		}
+
+		m_curslot = 0;
 	}
 
-	virtual ~FormatBuffer() throw()
+	virtual ~FastFormatBuffers() throw()
 	{
-		clearbit = true;
-		Wait();		// lock the mutex, just in case.
+		pxAssumeDev(m_curslot==0, "Dangling Ascii formatting buffer detected!");
+	}
+
+	bool HasFreeBuffer() const
+	{
+		return m_curslot < BufferCount;
+	}
+
+	BufferType& GrabBuffer()
+	{
+		++m_curslot;
+		pxAssume(m_curslot<BufferCount);
+		return m_buffers[m_curslot];
+	}
+
+	void ReleaseBuffer()
+	{
+		--m_curslot;
+		pxAssume(m_curslot<BufferCount);
+	}
+
+	BufferType& operator[](uint i)
+	{
+		pxAssume(i<BufferCount);
+		return m_buffers[i];
 	}
 };
 
-// Assume the buffer is 'deleted' -- technically it's never existed on startup,
-// but "deleted" is well enough.
+// --------------------------------------------------------------------------------------
+//  GlobalBufferManager
+// --------------------------------------------------------------------------------------
+// This local-scope class is needed in order to safely deal with C++ initializing and destroying
+// global objects in arbitrary order.  The initbit is updated by the object when constructed and
+// destroyed; code using this class provides its own statically-initialized boolean (which MUST
+// default to false!) and then sets the boolean to true to indicate the object is ready for use.
+//
+template< typename T >
+class GlobalBufferManager
+{
+public:
+	bool&		initbit;
+	T			instance;
 
-static bool ascii_buffer_is_deleted = true;
-static bool unicode_buffer_is_deleted = true;
+	GlobalBufferManager( bool& globalBoolean )
+		: initbit( globalBoolean )
+	{
+		initbit = true;
+	}
+	
+	~GlobalBufferManager() throw()
+	{
+		initbit = false;
+		instance.Dispose();
+	}
 
-static FormatBuffer<char>	ascii_buffer( ascii_buffer_is_deleted );
-static FormatBuffer<wxChar>	unicode_buffer( unicode_buffer_is_deleted );
+	T& Get()
+	{
+		return instance;
+	}
 
-static void format_that_ascii_mess( SafeArray<char>& buffer, const char* fmt, va_list argptr )
+	operator T&()
+	{
+		return instance;
+	}
+};
+
+static bool buffer_is_avail = false;
+static GlobalBufferManager< BaseTlsVariable< FastFormatBuffers< char > > > m_buffer_tls(buffer_is_avail);
+
+static __releaseinline void format_that_ascii_mess( SafeArray<char>& buffer, uint writepos, const char* fmt, va_list argptr )
 {
 	while( true )
 	{
 		int size = buffer.GetLength();
-		int len = vsnprintf(buffer.GetPtr(), size, fmt, argptr);
+		int len = vsnprintf(buffer.GetPtr(writepos), size-writepos, fmt, argptr);
 
 		// some implementations of vsnprintf() don't NUL terminate
 		// the string if there is not enough space for it so
@@ -80,28 +149,29 @@ static void format_that_ascii_mess( SafeArray<char>& buffer, const char* fmt, va
 		// total number of characters which would have been written if the
 		// buffer were large enough (newer standards such as Unix98)
 
-		if ( len < 0 )
+		if (len < 0)
 			len = size + (size/4);
 
-		if ( len < size ) break;
-		buffer.ExactAlloc( len + 1 );
+		len += writepos;
+		if (len < size) break;
+		buffer.ExactAlloc( len + 31 );
 	};
 
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even
 	// though it'd be kinda nice if we did.
 }
 
-static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* fmt, va_list argptr)
+static __releaseinline void format_that_unicode_mess( SafeArray<char>& buffer, uint writepos, const wxChar* fmt, va_list argptr)
 {
 	while( true )
 	{
-		int size = buffer.GetLength();
-		int len = wxVsnprintf(buffer.GetPtr(), size, fmt, argptr);
+		int size = buffer.GetLength()/2;
+		int len = wxVsnprintf((wxChar*)buffer.GetPtr(writepos), size-writepos, fmt, argptr);
 
 		// some implementations of vsnprintf() don't NUL terminate
 		// the string if there is not enough space for it so
 		// always do it manually
-		buffer[size-1] = L'\0';
+		((wxChar*)buffer.GetPtr())[size-1] = L'\0';
 
 		if( size >= MaxFormattedStringLength ) break;
 
@@ -112,80 +182,134 @@ static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* f
 		if ( len < 0 )
 			len = size + (size/4);
 
+		len += writepos;
 		if ( len < size ) break;
-		buffer.ExactAlloc( len + 1 );
+		buffer.ExactAlloc( (len + 31) * 2 );
 	};
 
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even
 	// though it'd be kinda nice if we did.
 }
 
-// returns the length of the string (not including the 0)
-int FastFormatString_AsciiRaw(wxCharBuffer& dest, const char* fmt, va_list argptr)
+SafeArray<char>* GetFormatBuffer( bool& deleteDest )
 {
-	if( ascii_buffer_is_deleted )
+	deleteDest = false;
+	if (buffer_is_avail)
 	{
-		// This means that the program is shutting down and the C++ destructors are
-		// running, randomly deallocating static variables from existence.  We handle it
-		// as gracefully as possible by allocating local vars to do our bidding (slow, but
-		// ultimately necessary!)
-
-		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
-		format_that_ascii_mess( localbuf, fmt, argptr );
-		dest = localbuf.GetPtr();
-		return strlen(dest);
+		if (m_buffer_tls.Get()->HasFreeBuffer())
+			return &m_buffer_tls.Get()->GrabBuffer();
 	}
-	else
-	{
-		// This is normal operation.  The static buffers are available for use, and we use
-		// them for sake of efficiency (fewer heap allocs, for sure!)
 
-		ScopedLock locker( ascii_buffer );
-		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
-		dest = ascii_buffer.buffer.GetPtr();
-		return strlen(dest);
-	}
-	
+	deleteDest = true;
+	return new SafeArray<char>(2048, L"Temporary string formatting buffer");
 }
 
-wxString FastFormatString_Ascii(const char* fmt, va_list argptr)
+// --------------------------------------------------------------------------------------
+//  FastFormatUnicode  (implementations)
+// --------------------------------------------------------------------------------------
+FastFormatUnicode::FastFormatUnicode()
 {
-	if( ascii_buffer_is_deleted )
-	{
-		// This means that the program is shutting down and the C++ destructors are
-		// running, randomly deallocating static variables from existence.  We handle it
-		// as gracefully as possible by allocating local vars to do our bidding (slow, but
-		// ultimately necessary!)
-	
-		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
-		format_that_ascii_mess( localbuf, fmt, argptr );
-		return fromUTF8( localbuf.GetPtr() );
-	}
-	else
-	{
-		// This is normal operation.  The static buffers are available for use, and we use
-		// them for sake of efficiency (fewer heap allocs, for sure!)
-
-		ScopedLock locker( ascii_buffer );
-		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
-		return fromUTF8( ascii_buffer.buffer.GetPtr() );
-	}
+	m_dest = GetFormatBuffer(m_deleteDest);
+	((wxChar*)m_dest->GetPtr())[0] = 0;
 }
 
-wxString FastFormatString_Unicode(const wxChar* fmt, va_list argptr)
+FastFormatUnicode::~FastFormatUnicode() throw()
 {
-	// See above for the explanation on the _is_deleted flags.
-	
-	if( unicode_buffer_is_deleted )
-	{
-		SafeArray<wxChar> localbuf( 4096, L"Temporary Unicode Formatting Buffer" );
-		format_that_unicode_mess( localbuf, fmt, argptr );
-		return localbuf.GetPtr();
-	}
+	if (m_deleteDest)
+		delete m_dest;
 	else
-	{
-		ScopedLock locker( unicode_buffer );
-		format_that_unicode_mess( unicode_buffer.buffer, fmt, argptr );
-		return unicode_buffer.buffer.GetPtr();
-	}
+		m_buffer_tls.Get()->ReleaseBuffer();
+}
+
+FastFormatUnicode& FastFormatUnicode::WriteV( const char* fmt, va_list argptr )
+{
+	wxString converted( fromUTF8(FastFormatAscii().WriteV( fmt, argptr )) );
+
+	uint inspos = wxStrlen((wxChar*)m_dest->GetPtr());
+	m_dest->MakeRoomFor((inspos + converted.Length() + 31)*2);
+	wxStrcpy( &((wxChar*)m_dest->GetPtr())[inspos], converted );
+	
+	return *this;
+}
+
+FastFormatUnicode& FastFormatUnicode::WriteV( const wxChar* fmt, va_list argptr )
+{
+	format_that_unicode_mess( *m_dest, wxStrlen((wxChar*)m_dest->GetPtr()), fmt, argptr );
+	return *this;
+}
+
+FastFormatUnicode& FastFormatUnicode::Write( const char* fmt, ... )
+{
+	va_list list;
+	va_start(list, fmt);
+	WriteV(fmt,list);
+	va_end(list);
+	return *this;
+}
+
+FastFormatUnicode& FastFormatUnicode::Write( const wxChar* fmt, ... )
+{
+	va_list list;
+	va_start(list, fmt);
+	WriteV(fmt,list);
+	va_end(list);
+	return *this;
+}
+
+const wxChar* FastFormatUnicode::GetResult() const
+{
+	return (wxChar*)m_dest->GetPtr();
+}
+
+
+// --------------------------------------------------------------------------------------
+//  FastFormatAscii  (implementations)
+// --------------------------------------------------------------------------------------
+FastFormatAscii::FastFormatAscii()
+{
+	m_dest = GetFormatBuffer(m_deleteDest);
+	m_dest->GetPtr()[0] = 0;
+}
+
+FastFormatAscii::~FastFormatAscii() throw()
+{
+	if (m_deleteDest)
+		delete m_dest;
+	else
+		m_buffer_tls.Get()->ReleaseBuffer();
+}
+
+const wxString FastFormatAscii::GetString() const
+{
+	return fromAscii(m_dest->GetPtr());
+}
+
+FastFormatAscii::operator wxString() const
+{
+	return fromAscii(m_dest->GetPtr());
+}
+
+FastFormatAscii& FastFormatAscii::WriteV( const char* fmt, va_list argptr )
+{
+	format_that_ascii_mess( *m_dest, strlen(m_dest->GetPtr()), fmt, argptr );
+	return *this;
+}
+
+FastFormatAscii& FastFormatAscii::Write( const char* fmt, ... )
+{
+	va_list list;
+	va_start(list, fmt);
+	WriteV(fmt,list);
+	va_end(list);
+	return *this;
+}
+
+const char* FastFormatAscii::GetResult() const
+{
+	return m_dest->GetPtr();
+}
+
+FastFormatAscii::operator const char*() const
+{
+	return m_dest->GetPtr();
 }

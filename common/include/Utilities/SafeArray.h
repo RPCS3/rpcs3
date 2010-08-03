@@ -140,7 +140,7 @@ public:
 		if( (initialSize != 0) && (m_ptr == NULL) )
 			throw Exception::OutOfMemory(name + wxsFormat(L" (SafeArray::constructor) [size=%d]", initialSize));
 	}
-
+	
 	// Clears the contents of the array to zero, and frees all memory allocations.
 	void Dispose()
 	{
@@ -410,6 +410,8 @@ protected:
 template< typename T, uint Alignment >
 class SafeAlignedArray : public SafeArray<T>
 {
+	typedef SafeArray<T> _parent;
+
 protected:
 	T* _virtual_realloc( int newsize )
 	{
@@ -423,6 +425,8 @@ protected:
 	// Maybe useful,maybe not... no harm in attaching it. :D
 
 public:
+	using _parent::operator[];
+
 	virtual ~SafeAlignedArray()
 	{
 		safe_aligned_free( this->m_ptr );

@@ -148,7 +148,7 @@ pxWindowTextWriter& pxWindowTextWriter::FormatLn( const wxChar* fmt, ... )
 {
 	va_list args;
 	va_start(args,fmt);
-	_DoWrite( FastFormatString_Unicode(fmt, args) );
+	_DoWrite( pxsFmtV(fmt, args) );
 	va_end(args);
 	return *this;
 }

@@ -155,17 +155,10 @@ public:
 		m_valid_range	= 0xffffffff;
     }
 
-	wxEXPLICIT ScopedArray( int size ) :
-		m_array( pxAssertDev( size >= 0, "Invalid negative size specified." ) ? new T[size] : NULL )
-	,	m_valid_range( (uint)size )
+	wxEXPLICIT ScopedArray( size_t size )
 	{
-	}
-
-	// For breaking the 2gb barrier, lets provision this:
-	wxEXPLICIT ScopedArray( s64 size ) :
-		m_array( pxAssertDev( size >= 0 && (size < UINT_MAX), "Invalid negative size specified to ScopedArray." ) ? new T[size] : NULL )
-	,	m_valid_range( (uint)size )
-	{
+		m_array = new T[size];
+		m_valid_range = size;
 	}
 
     ~ScopedArray() throw()

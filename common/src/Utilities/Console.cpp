@@ -369,7 +369,7 @@ bool IConsoleWriter::Write( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( FastFormatString_Ascii(fmt, args) );
+	DoWrite( pxsFmtV(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -382,7 +382,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( FastFormatString_Ascii(fmt, args) );
+	DoWrite( pxsFmtV(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -394,7 +394,7 @@ bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args), conlog_Indent ) );
+	DoWriteLn( _addIndentation( pxsFmtV(fmt, args), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -406,7 +406,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args), conlog_Indent ) );
+	DoWriteLn( _addIndentation( pxsFmtV(fmt, args), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -419,7 +419,7 @@ bool IConsoleWriter::Error( const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args) ) );
+	DoWriteLn( _addIndentation( pxsFmtV(fmt, args) ) );
 	va_end(args);
 
 	return false;
@@ -432,7 +432,7 @@ bool IConsoleWriter::Warning( const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( FastFormatString_Ascii(fmt, args) ) );
+	DoWriteLn( _addIndentation( pxsFmtV(fmt, args) ) );
 	va_end(args);
 
 	return false;
@@ -448,7 +448,7 @@ bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( FastFormatString_Unicode( fmt, args ) );
+	DoWrite( pxsFmtV( fmt, args ) );
 	va_end(args);
 
 	return false;
@@ -461,7 +461,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWrite( FastFormatString_Unicode( fmt, args ) );
+	DoWrite( pxsFmtV( fmt, args ) );
 	va_end(args);
 
 	return false;
@@ -473,7 +473,7 @@ bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ), conlog_Indent ) );
+	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -486,7 +486,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) cons
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ), conlog_Indent ) );
+	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ), conlog_Indent ) );
 	va_end(args);
 
 	return false;
@@ -499,7 +499,7 @@ bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ) ) );
+	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ) ) );
 	va_end(args);
 
 	return false;
@@ -512,7 +512,7 @@ bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( FastFormatString_Unicode( fmt, args ) ) );
+	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ) ) );
 	va_end(args);
 
 	return false;
@@ -528,7 +528,7 @@ bool IConsoleWriter::WriteFromStdout( const char* fmt, ... ) const
 
 	va_list args;
 	va_start(args,fmt);
-	DoWrite( FastFormatString_Ascii(fmt, args) );
+	DoWrite( pxsFmtV(fmt, args) );
 	va_end(args);
 
 	return false;
@@ -541,7 +541,7 @@ bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... 
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteFromStdout( FastFormatString_Ascii(fmt, args) );
+	DoWriteFromStdout( pxsFmtV(fmt, args) );
 	va_end(args);
 
 	return false;
