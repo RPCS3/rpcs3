@@ -850,7 +850,7 @@
 #define wxUSE_TOOLTIPS      1
 
 // wxValidator class and related methods
-#define wxUSE_VALIDATORS 1
+#define wxUSE_VALIDATORS 0
 
 // ----------------------------------------------------------------------------
 // common dialogs
