@@ -174,7 +174,7 @@ void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEvent
 		// and that could leave some residual entries in the config.
 
 		ini.GetConfig().DeleteGroup( L"RecentIso" );
-		IniScopedGroup groupie( ini, L"RecentIso" );
+		ScopedIniGroup groupie( ini, L"RecentIso" );
 
 		int cnt = m_Items.size();
 		for( int i=0; i<cnt; ++i )
@@ -187,7 +187,7 @@ void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEvent
 		RemoveAllFromMenu();
 		
 		m_MaxLength = g_Conf->RecentIsoCount;
-		IniScopedGroup groupie( ini, L"RecentIso" );
+		ScopedIniGroup groupie( ini, L"RecentIso" );
 		for( uint i=0; i<m_MaxLength; ++i )
 		{
 			wxString loadtmp;

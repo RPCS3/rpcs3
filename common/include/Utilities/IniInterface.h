@@ -81,16 +81,16 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  IniScopedGroup
+//  ScopedIniGroup
 // --------------------------------------------------------------------------------------
-class IniScopedGroup
+class ScopedIniGroup
 {
 protected:
 	IniInterface& m_mom;
 
 public:
-	IniScopedGroup( IniInterface& mommy, const wxString& group );
-	virtual ~IniScopedGroup();
+	ScopedIniGroup( IniInterface& mommy, const wxString& group );
+	virtual ~ScopedIniGroup();
 };
 
 // --------------------------------------------------------------------------------------

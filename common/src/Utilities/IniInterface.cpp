@@ -38,14 +38,14 @@ static int _calcEnumLength( const wxChar* const* enumArray )
 	return cnt;
 }
 
-IniScopedGroup::IniScopedGroup( IniInterface& mommy, const wxString& group )
+ScopedIniGroup::ScopedIniGroup( IniInterface& mommy, const wxString& group )
 	: m_mom( mommy )
 {
-	pxAssertDev( wxStringTokenize( group, L"/" ).Count() <= 1, L"Cannot nest more than one group deep per instance of IniScopedGroup." );
+	pxAssertDev( wxStringTokenize( group, L"/" ).Count() <= 1, L"Cannot nest more than one group deep per instance of ScopedIniGroup." );
 	m_mom.SetPath( group );
 }
 
-IniScopedGroup::~IniScopedGroup()
+ScopedIniGroup::~ScopedIniGroup()
 {
 	m_mom.SetPath( L".." );
 }

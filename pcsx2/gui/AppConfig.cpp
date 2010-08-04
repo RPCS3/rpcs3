@@ -408,7 +408,7 @@ AppConfig::AppConfig()
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 {
-	IniScopedGroup path( ini, cwdhash );
+	ScopedIniGroup path( ini, cwdhash );
 
 	// timestamping would be useful if we want to auto-purge unused entries after
 	// a period of time.  Dunno if it's needed.
@@ -455,7 +455,7 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 void AppConfig::LoadSaveMemcards( IniInterface& ini )
 {
 	AppConfig defaults;
-	IniScopedGroup path( ini, L"MemoryCards" );
+	ScopedIniGroup path( ini, L"MemoryCards" );
 
 	for( uint slot=0; slot<2; ++slot )
 	{
@@ -543,7 +543,7 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions()
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
 	ConsoleLogOptions defaults;
-	IniScopedGroup path( ini, logger );
+	ScopedIniGroup path( ini, logger );
 
 	IniEntry( Visible );
 	IniEntry( AutoDock );
@@ -580,7 +580,7 @@ AppConfig::FolderOptions::FolderOptions()
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
 	FolderOptions defaults;
-	IniScopedGroup path( ini, L"Folders" );
+	ScopedIniGroup path( ini, L"Folders" );
 
 	if( ini.IsSaving() )
 	{
@@ -626,7 +626,7 @@ const wxFileName& AppConfig::FilenameOptions::operator[]( PluginsEnum_t pluginid
 
 void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 {
-	IniScopedGroup path( ini, L"Filenames" );
+	ScopedIniGroup path( ini, L"Filenames" );
 
 	static const wxFileName pc( L"Please Configure" );
 
@@ -674,7 +674,7 @@ void AppConfig::GSWindowOptions::SanityCheck()
 
 void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 {
-	IniScopedGroup path( ini, L"GSWindow" );
+	ScopedIniGroup path( ini, L"GSWindow" );
 	GSWindowOptions defaults;
 
 	IniEntry( CloseOnEsc );
@@ -723,7 +723,7 @@ void AppConfig::FramerateOptions::SanityCheck()
 
 void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
 {
-	IniScopedGroup path( ini, L"Framerate" );
+	ScopedIniGroup path( ini, L"Framerate" );
 	FramerateOptions defaults;
 
 	IniEntry( NominalScalar );

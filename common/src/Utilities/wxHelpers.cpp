@@ -214,7 +214,7 @@ void wxDialogWithHelpers::SmartCenterFit()
 		wxRect screenRect( GetScreenRect() );
 
 		IniLoader loader( cfg );
-		IniScopedGroup group( loader, L"DialogPositions" );
+		ScopedIniGroup group( loader, L"DialogPositions" );
 		cfg->SetRecordDefaults( false );
 
 		if( GetWindowStyle() & wxRESIZE_BORDER )
@@ -289,7 +289,7 @@ void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
 		{
 			wxPoint pos( screenRect.GetPosition() );
 			IniSaver saver( cfg );
-			IniScopedGroup group( saver, L"DialogPositions" );
+			ScopedIniGroup group( saver, L"DialogPositions" );
 
 			if( GetWindowStyle() & wxRESIZE_BORDER )
 			{

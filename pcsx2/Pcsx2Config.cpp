@@ -24,7 +24,7 @@
 void TraceLogFilters::LoadSave( IniInterface& ini )
 {
 	TraceLogFilters defaults;
-	IniScopedGroup path( ini, L"TraceLog" );
+	ScopedIniGroup path( ini, L"TraceLog" );
 
 	IniEntry( Enabled );
 	IniEntry( SIF );
@@ -55,7 +55,7 @@ ConsoleLogFilters::ConsoleLogFilters()
 void ConsoleLogFilters::LoadSave( IniInterface& ini )
 {
 	ConsoleLogFilters defaults;
-	IniScopedGroup path( ini, L"ConsoleLog" );
+	ScopedIniGroup path( ini, L"ConsoleLog" );
 
 	IniBitBool( ELF );
 	IniBitBool( StdoutEE );
@@ -66,7 +66,7 @@ void ConsoleLogFilters::LoadSave( IniInterface& ini )
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
 	SpeedhackOptions defaults;
-	IniScopedGroup path( ini, L"Speedhacks" );
+	ScopedIniGroup path( ini, L"Speedhacks" );
 
 	IniBitfield( EECycleRate );
 	IniBitfield( VUCycleSteal );
@@ -81,7 +81,7 @@ void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 {
 	ProfilerOptions defaults;
-	IniScopedGroup path( ini, L"Profiler" );
+	ScopedIniGroup path( ini, L"Profiler" );
 
 	IniBitBool( Enabled );
 	IniBitBool( RecBlocks_EE );
@@ -154,7 +154,7 @@ void Pcsx2Config::RecompilerOptions::ApplySanityCheck()
 void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	RecompilerOptions defaults;
-	IniScopedGroup path( ini, L"Recompiler" );
+	ScopedIniGroup path( ini, L"Recompiler" );
 
 	IniBitBool( EnableEE );
 	IniBitBool( EnableIOP );
@@ -195,7 +195,7 @@ void Pcsx2Config::CpuOptions::ApplySanityCheck()
 void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 {
 	CpuOptions defaults;
-	IniScopedGroup path( ini, L"CPU" );
+	ScopedIniGroup path( ini, L"CPU" );
 
 	IniBitBoolEx( sseMXCSR.DenormalsAreZero,	"FPU.DenormalsAreZero" );
 	IniBitBoolEx( sseMXCSR.FlushToZero,			"FPU.FlushToZero" );
@@ -231,7 +231,7 @@ Pcsx2Config::GSOptions::GSOptions()
 void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 {
 	GSOptions defaults;
-	IniScopedGroup path( ini, L"GS" );
+	ScopedIniGroup path( ini, L"GS" );
 
 	IniEntry( SynchronousMTGS );
 	IniEntry( DisableOutput );
@@ -337,7 +337,7 @@ bool Pcsx2Config::GamefixOptions::Get( GamefixId id ) const
 void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 {
 	GamefixOptions defaults;
-	IniScopedGroup path( ini, L"Gamefixes" );
+	ScopedIniGroup path( ini, L"Gamefixes" );
 
 	IniBitBool( VuAddSubHack );
 	IniBitBool( VuClipFlagHack );
@@ -360,7 +360,7 @@ Pcsx2Config::Pcsx2Config()
 void Pcsx2Config::LoadSave( IniInterface& ini )
 {
 	Pcsx2Config defaults;
-	IniScopedGroup path( ini, L"EmuCore" );
+	ScopedIniGroup path( ini, L"EmuCore" );
 
 	IniBitBool( CdvdVerboseReads );
 	IniBitBool( CdvdDumpBlocks );
