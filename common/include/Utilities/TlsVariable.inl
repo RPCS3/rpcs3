@@ -26,10 +26,17 @@
 namespace Threading
 {
 // --------------------------------------------------------------------------------------
-//  BaseTlsVariable
+//  TlsVariable - Thread local storage
 // --------------------------------------------------------------------------------------
-// This container is for complex non-copyable objects that require explicit cleanup and
-// stuff (most classes).  For simple types and such, use TlsVariable.
+// Wrapper class for pthread_getspecific, which is pthreads language for "thread local
+// storage."  This class enables code to act as a drop-in replacement for compiler-native
+// thread local storage (typically specified via __threadlocal).  Mac OS/X (Darwin) does
+// not have TLS, which is the main reason for this class existing.
+//
+// Performance considerations: While certainly convenient, performance of this class can
+// be sub-optimal when the operator overloads are used, since each one will most likely
+// result in repeated calls to pthread_getspecific.  (if the function inlines then it
+// should actually optimize well enough, but I doubt it does).
 //
 template< typename T >
 class BaseTlsVariable
@@ -80,19 +87,7 @@ protected:
 	}
 };
 
-// --------------------------------------------------------------------------------------
-//  TlsVariable - Thread local storage
-// --------------------------------------------------------------------------------------
-// Wrapper class for pthread_getspecific, which is pthreads language for "thread local
-// storage."  This class enables code to act as a drop-in replacement for compiler-native
-// thread local storage (typically specified via __threadlocal).  Mac OS/X (Darwin) does
-// not have TLS, which is the main reason for this class existing.
-//
-// Performance considerations: While certainly convenient, performance of this class can
-// be sub-optimal when the operator overloads are used, since each one will most likely
-// result in repeated calls to pthread_getspecific.  (if the function inlines then it
-// should actually optimize well enough, but I doubt it does).
-//
+
 template< typename T >
 class TlsVariable : public BaseTlsVariable<T>
 {
@@ -113,6 +108,9 @@ public:
 		// Killing the pthread_key at all will lead to the console logger death, etc.
 		m_IsDisposed = true;
 	}
+
+	// This is needed the C++ standard likes making life suck for programmers.
+	using BaseTlsVariable<T>::GetRef;
 
 	TlsVariable& operator=( const T& src )
 	{
