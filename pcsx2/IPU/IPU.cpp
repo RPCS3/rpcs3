@@ -225,6 +225,7 @@ void ipuSoftReset()
 	ipuRegs->ctrl.reset();
 	ipuRegs->top = 0;
 	ipu_cmd.clear();
+	ipuRegs->cmd.BUSY = 0;
 
 	g_BP.BP = 0;
 	g_BP.FP = 0;
@@ -584,7 +585,7 @@ static BOOL ipuPACK(u32 val)
 		ipu_dither(decoder.rgb32, decoder.rgb16, csc.DTE);
 
 		if (csc.OFM) ipu_vq(decoder.rgb16, indx4);
-		
+
 		if (csc.OFM)
 		{
 			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
@@ -627,10 +628,10 @@ void IPUCMD_WRITE(u32 val)
 
 	ipuRegs->ctrl.ECD = 0;
 	ipuRegs->ctrl.SCD = 0; //clear ECD/SCD
-	ipuRegs->cmd.DATA = val;
 	ipu_cmd.clear();
+	ipu_cmd.current = val;
 
-	switch (ipuRegs->cmd.CMD)
+	switch (val >> 28)
 	{
 		case SCE_IPU_BCLR:
 			ipuBCLR(val);
@@ -666,18 +667,18 @@ void IPUCMD_WRITE(u32 val)
 			IPU_LOG("IPU SETIQ command.");
 			if (val & 0x3f) IPU_LOG("Skip %d bits.", val & 0x3f);
 			g_BP.BP += val & 0x3F;
-			if (ipuSETIQ(ipuRegs->cmd.DATA)) return;
+			if (ipuSETIQ(val)) return;
 			break;
 
 		case SCE_IPU_SETVQ:
-			if (ipuSETVQ(ipuRegs->cmd.DATA)) return;
+			if (ipuSETVQ(val)) return;
 			break;
 
 		case SCE_IPU_CSC:
 			ipu_cmd.pos[1] = 0;
 			ipu_cmd.index = 0;
 
-			if (ipuCSC(ipuRegs->cmd.DATA))
+			if (ipuCSC(val))
 			{
 				if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR)  IPU_INT0_FROM();
 				return;
@@ -687,7 +688,7 @@ void IPUCMD_WRITE(u32 val)
 		case SCE_IPU_PACK:
 			ipu_cmd.pos[1] = 0;
 			ipu_cmd.index = 0;
-			if (ipuPACK(ipuRegs->cmd.DATA)) return;
+			if (ipuPACK(val)) return;
 			break;
 
 		case SCE_IPU_IDEC:
@@ -715,7 +716,6 @@ void IPUCMD_WRITE(u32 val)
 	}
 
 	// have to resort to the thread
-	ipu_cmd.current = val >> 28;
 	ipuRegs->ctrl.BUSY = 1;
 	if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 }
@@ -724,10 +724,10 @@ void IPUWorker()
 {
 	pxAssert(ipuRegs->ctrl.BUSY);
 
-	switch (ipu_cmd.current)
+	switch (ipu_cmd.CMD)
 	{
 		case SCE_IPU_VDEC:
-			if (!ipuVDEC(ipuRegs->cmd.DATA))
+			if (!ipuVDEC(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -737,7 +737,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_FDEC:
-			if (!ipuFDEC(ipuRegs->cmd.DATA))
+			if (!ipuFDEC(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -747,7 +747,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_SETIQ:
-			if (!ipuSETIQ(ipuRegs->cmd.DATA))
+			if (!ipuSETIQ(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -755,7 +755,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_SETVQ:
-			if (!ipuSETVQ(ipuRegs->cmd.DATA))
+			if (!ipuSETVQ(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -763,7 +763,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_CSC:
-			if (!ipuCSC(ipuRegs->cmd.DATA))
+			if (!ipuCSC(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -772,7 +772,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_PACK:
-			if (!ipuPACK(ipuRegs->cmd.DATA))
+			if (!ipuPACK(ipu_cmd.current))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -780,7 +780,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_IDEC:
-			if (!ipuIDEC(ipuRegs->cmd.DATA, true))
+			if (!ipuIDEC(ipu_cmd.current, true))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -797,7 +797,7 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_BDEC:
-			if (!ipuBDEC(ipuRegs->cmd.DATA, true))
+			if (!ipuBDEC(ipu_cmd.current, true))
 			{
 				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
@@ -813,7 +813,7 @@ void IPUWorker()
 			return;
 
 		default:
-			Console.WriteLn("Unknown IPU command: %x", ipuRegs->cmd.CMD);
+			Console.WriteLn("Unknown IPU command: %08x", ipu_cmd.current);
 			break;
 	}
 
@@ -948,7 +948,7 @@ u8 __fastcall getBits64(u8 *address, u32 advance)
 	if (FillInternalBuffer(&g_BP.BP, 1, 64) < 64) return 0;
 
 	readpos = readbits + (int)g_BP.BP / 8;
-	
+
 	if (uint shift = (g_BP.BP & 7))
 	{
 		mask = (0xff >> shift);

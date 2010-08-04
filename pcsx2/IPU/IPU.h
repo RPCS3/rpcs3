@@ -56,15 +56,7 @@ struct IPUStatus {
 
 struct tIPU_CMD
 {
-	union
-	{
-		struct
-		{
-			u32 OPTION : 28;	// VDEC decoded value
-			u32 CMD : 4;	// last command
-		};
-		u32 DATA;
-	};
+	u32 DATA;
 	u32 BUSY;
 };
 
@@ -326,7 +318,13 @@ struct tIPU_cmd
 {
 	int index;
 	int pos[6];
-	int current;
+	union {
+		struct {
+			u32 OPTION : 28;
+			u32 CMD : 4;
+		};
+		u32 current;
+	};
 	void clear()
 	{
 		memzero(pos);
