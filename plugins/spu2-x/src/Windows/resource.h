@@ -52,7 +52,7 @@
 #define IDC_OPEN_CONFIG_DEBUG           1059
 #define IDC_GLOBALFOCUS_DISABLE         1060
 #define IDC_GLOBALFOCUS_DISABLE2        1061
-#define IDC_USE_HARDWARE                1062
+#define IDC_USE_HARDWARE                1062 // not used anymore
 #define IDC_COMBO1                      1063
 #define IDC_SYNCHMODE                   1064
 

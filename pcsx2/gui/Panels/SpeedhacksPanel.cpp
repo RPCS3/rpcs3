@@ -211,7 +211,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		L"we advance to the time of the next event or the end of the processor's timeslice, whichever comes first."
 	) );
 
-	m_check_fastCDVD->SetToolTip( pxE( ".Tooltip:Speedhacks:IOPx2",
+	m_check_fastCDVD->SetToolTip( pxE( ".Tooltip:Speedhacks:fastCDVD",
 		L"Check HDLoader compatibility lists for known games that have issues with this. (Often marked as needing 'mode 1' or 'slow DVD'"
 	) );
 
