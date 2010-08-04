@@ -36,6 +36,7 @@ private:
 	wxString m_Device;
 	u8 m_NumBuffers;
 	bool m_DisableGlobalFocus;
+	bool m_UseHardware;
 
 	ds_device_data m_devices[32];
 	int ndevs;
@@ -166,23 +167,20 @@ public:
 
 		// Try a hardware buffer first, and then fall back on a software buffer if
 		// that one fails.
-		// Edit: 
-		// Due to too many reports of issues with hardware support we drop it totally.
-		// It never made a good difference on anything anyway (rama)
 
-		desc.dwFlags |= /*m_UseHardware ? DSBCAPS_LOCHARDWARE :*/ DSBCAPS_LOCSOFTWARE;
+		desc.dwFlags |= m_UseHardware ? DSBCAPS_LOCHARDWARE : DSBCAPS_LOCSOFTWARE;
 		desc.dwFlags |= m_DisableGlobalFocus ? DSBCAPS_STICKYFOCUS : DSBCAPS_GLOBALFOCUS;
 
 		if( FAILED(dsound->CreateSoundBuffer(&desc, &buffer_, 0) ) )
 		{
-			/*if( m_UseHardware )
+			if( m_UseHardware )
 			{
 				desc.dwFlags = DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_LOCSOFTWARE;
 				desc.dwFlags |= m_DisableGlobalFocus ? DSBCAPS_STICKYFOCUS : DSBCAPS_GLOBALFOCUS;
 
 				if( FAILED(dsound->CreateSoundBuffer(&desc, &buffer_, 0) ) )
 					throw std::runtime_error( "DirectSound Error: Buffer could not be created." );
-			}*/
+			}
 
 			throw std::runtime_error( "DirectSound Error: Buffer could not be created." );
 		}
@@ -313,6 +311,7 @@ private:
 				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 
 				SET_CHECK( IDC_GLOBALFOCUS_DISABLE, m_DisableGlobalFocus );
+				SET_CHECK( IDC_USE_HARDWARE, m_UseHardware );
 			}
 			break;
 
@@ -365,6 +364,7 @@ private:
 					break;
 
 					HANDLE_CHECK( IDC_GLOBALFOCUS_DISABLE, m_DisableGlobalFocus );
+					HANDLE_CHECK( IDC_USE_HARDWARE, m_UseHardware );
 
 					default:
 						return FALSE;
@@ -458,6 +458,7 @@ public:
 		CfgReadStr( L"DSOUNDOUT", L"Device", m_Device, L"default" );
 		m_NumBuffers = CfgReadInt( L"DSOUNDOUT", L"Buffer_Count", 5 );
 		m_DisableGlobalFocus = CfgReadBool( L"DSOUNDOUT", L"Disable_Global_Focus", false );
+		m_UseHardware = CfgReadBool( L"DSOUNDOUT", L"Use_Hardware", false );
 
 		Clampify( m_NumBuffers, (u8)3, (u8)8 );
 	}
@@ -467,6 +468,7 @@ public:
 		CfgWriteStr( L"DSOUNDOUT", L"Device", m_Device.empty() ? L"default" : m_Device );
 		CfgWriteInt( L"DSOUNDOUT", L"Buffer_Count", m_NumBuffers );
 		CfgWriteBool( L"DSOUNDOUT", L"Disable_Global_Focus", m_DisableGlobalFocus );
+		CfgWriteBool( L"DSOUNDOUT", L"Use_Hardware", m_UseHardware );
 	}
 
 } static DS;

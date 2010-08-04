@@ -100,8 +100,9 @@ BEGIN
     CONTROL         "",IDC_BUFFERS_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,38,137,108,10
     LTEXT           "Increase the buffer count if you are experiencing loopy or studdery audio even when games run at high FPS.",IDC_STATIC,11,157,169,27
     CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,44,123,95,11
+    LTEXT           "The options above are useful for compatibility with older and/or buggy sound drivers ONLY, and should not be checked unless you experience sound problems (such as crackly audio or silence).",IDC_STATIC,16,68,175,38
     CONTROL         "Disable Global Focus",IDC_GLOBALFOCUS_DISABLE,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,4,38,140,10
-    LTEXT           "If you have audio problems, try checking the option above. It doesn't really affect sound processing, but some drivers are picky and work nicer with different seetings.",IDC_STATIC,16,68,175,38
+    CONTROL         "Use a crappy alternate buffering mode",IDC_USE_HARDWARE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,53,140,10
     GROUPBOX        "Output Buffers",IDC_STATIC,4,111,185,79
 END
 
