@@ -41,7 +41,7 @@ namespace Threading
 template< typename T >
 class BaseTlsVariable
 {
-	DeclareNoncopyableObject(BaseTlsVariable);
+	DeclareNoncopyableObject(BaseTlsVariable<T>);
 
 protected:
 	pthread_key_t	m_thread_key;
@@ -91,7 +91,7 @@ protected:
 template< typename T >
 class TlsVariable : public BaseTlsVariable<T>
 {
-	DeclareNoncopyableObject(TlsVariable);
+	DeclareNoncopyableObject(TlsVariable<T>);
 
 protected:
 	T				m_initval;
