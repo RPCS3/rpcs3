@@ -308,7 +308,7 @@ static void ipuBCLR(u32 val)
 	//g_BP.bufferhasnew = 0;
 	ipuRegs->ctrl.BUSY = 0;
 	ipuRegs->cmd.BUSY = 0;
-	memzero_ptr<80>(readbits);
+	memzero(_readbits);
 	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X", g_BP.BP);
 }
 
