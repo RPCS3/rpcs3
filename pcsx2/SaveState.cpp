@@ -26,6 +26,8 @@
 #include "Elfheader.h"
 #include "Counters.h"
 
+#include "Utilities/SafeArray.inl"
+
 using namespace R5900;
 
 

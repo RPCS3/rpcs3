@@ -109,10 +109,7 @@ public:
 		m_IsDisposed = true;
 	}
 
-	// This is needed the C++ standard likes making life suck for programmers.
-	using BaseTlsVariable<T>::GetRef;
-
-	TlsVariable& operator=( const T& src )
+	TlsVariable<T>& operator=( const T& src )
 	{
 		GetRef() = src;
 		return *this;

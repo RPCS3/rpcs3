@@ -15,6 +15,8 @@
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
+#include "TlsVariable.inl"
+#include "SafeArray.inl"
 
 using namespace Threading;
 
@@ -22,8 +24,6 @@ using namespace Threading;
 // is either a bug or really horrible code that needs to be stopped before it causes
 // system deadlock.
 static const int MaxFormattedStringLength = 0x80000;
-
-#include "TlsVariable.inl"
 
 // --------------------------------------------------------------------------------------
 //  FastFormatBuffers

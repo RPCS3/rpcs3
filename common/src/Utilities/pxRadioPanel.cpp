@@ -17,6 +17,10 @@
 #include "pxRadioPanel.h"
 #include "pxStaticText.h"
 
+#include "SafeArray.inl"
+
+template class SafeArray<RadioPanelObjects>;
+
 // ===========================================================================================
 //  pxRadioPanel Implementations
 // ===========================================================================================

@@ -41,13 +41,6 @@ __forceinline wxString fromAscii( const char* src )
 //
 // Note: wxWidgets 2.9 / 3.0 has a wxSplit function, but we're using 2.8 so I had to make
 // my own.
-void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString& delims )
-{
-	wxStringTokenizer parts( src, delims );
-	while( parts.HasMoreTokens() )
-		dest.Add( parts.GetNextToken() );
-}
-
 void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims, wxStringTokenizerMode mode )
 {
 	wxStringTokenizer parts( src, delims, mode );
@@ -61,20 +54,6 @@ void SplitString( wxArrayString& dest, const wxString& src, const wxString& deli
 //
 // Note: wxWidgets 2.9 / 3.0 has a wxJoin function, but we're using 2.8 so I had to make
 // my own.
-wxString JoinString( const SafeList<wxString>& src, const wxString& separator )
-{
-	wxString dest;
-	for( int i=0, len=src.GetLength(); i<len; ++i )
-	{
-		if( src[i].IsEmpty() ) continue;
-		if( !dest.IsEmpty() )
-			dest += separator;
-		dest += src[i];
-	}
-	
-	return dest;
-}
-
 wxString JoinString( const wxArrayString& src, const wxString& separator )
 {
 	wxString dest;

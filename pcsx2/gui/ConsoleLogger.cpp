@@ -20,6 +20,7 @@
 #include "MSWstuff.h"
 
 #include "Utilities/Console.h"
+#include "Utilities/SafeArray.inl"
 #include "DebugTools/Debug.h"
 
 #include <wx/textfile.h>

@@ -26,6 +26,7 @@
 #include "Dialogs/ModalPopups.h"
 
 #include "Utilities/ThreadingDialogs.h"
+#include "Utilities/SafeArray.inl"
 
 // Allows us to force-disable threading for debugging/troubleshooting
 static const bool DisableThreading =

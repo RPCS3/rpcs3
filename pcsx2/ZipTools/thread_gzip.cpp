@@ -18,6 +18,7 @@
 #include "App.h"
 #include "SaveState.h"
 #include "ThreadedZipTools.h"
+#include "Utilities/SafeArray.inl"
 
 
 BaseCompressThread::~BaseCompressThread() throw()

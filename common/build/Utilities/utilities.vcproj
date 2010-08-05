@@ -446,6 +446,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\SafeArray.inl"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\ScopedPtr.h"
 				>
 			</File>
