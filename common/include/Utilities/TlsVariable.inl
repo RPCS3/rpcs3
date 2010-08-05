@@ -94,23 +94,26 @@ class TlsVariable : public BaseTlsVariable<T>
 
 protected:
 	T				m_initval;
-	bool			m_IsDisposed;
 
 public:
 	TlsVariable() {}
 	TlsVariable( const T& initval )
 		: m_initval(initval) { }
 
+	// This is needed; The C++ standard likes making life suck for programmers.
+	using BaseTlsVariable<T>::GetRef;
+
 	virtual ~TlsVariable() throw()
 	{
 		// disable the parent cleanup.  This leaks memory blocks, but its necessary because
 		// TLS is expected to be persistent until the very end of execution on the main thread.
 		// Killing the pthread_key at all will lead to the console logger death, etc.
-		m_IsDisposed = true;
+		
+		// DON'T REMOVE this->, the "official"[ly stupid] C++ standard requires it because of its
+		// insistence that variables be looked up during initial template parsing and not during
+		// instantiation.
+		this->m_IsDisposed = true;
 	}
-
-	// This is needed; The C++ standard likes making life suck for programmers.
-	using BaseTlsVariable<T>::GetRef;
 
 	TlsVariable<T>& operator=( const T& src )
 	{
