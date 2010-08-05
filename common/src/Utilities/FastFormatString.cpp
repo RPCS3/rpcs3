@@ -20,6 +20,17 @@
 
 using namespace Threading;
 
+// Implement some very commonly used SafeArray types here
+// (done here for lack of a better place)
+
+template class SafeArray<char>;
+template class SafeArray<wchar_t>;
+template class SafeArray<u8>;
+
+template class SafeAlignedArray<char,16>;
+template class SafeAlignedArray<wchar_t,16>;
+template class SafeAlignedArray<u8,16>;
+
 // Sanity check: truncate strings if they exceed 512k in length.  Anything like that
 // is either a bug or really horrible code that needs to be stopped before it causes
 // system deadlock.
@@ -50,7 +61,6 @@ public:
 
 		for (uint i=0; i<BufferCount; ++i)
 		{
-			//m_buffers[i].Name = wxsFormat(L"Ascii Formatting Buffer (slot%d)", i);
 			m_buffers[i].Name = wxsFormat(L"%s Formatting Buffer (slot%d)",
 				(sizeof(CharType)==1) ? L"Ascii" : L"Unicode", i);
 			m_buffers[i].MakeRoomFor(1024);
@@ -85,7 +95,7 @@ public:
 
 	BufferType& operator[](uint i)
 	{
-		pxAssume(i<BufferCount);
+		IndexBoundsAssume( ((sizeof(CharType)==1) ? L"Ascii Formatting Buffer" : L"Unicode Formatting Buffer"), i, BufferCount );
 		return m_buffers[i];
 	}
 };
@@ -313,3 +323,4 @@ FastFormatAscii::operator const char*() const
 {
 	return m_dest->GetPtr();
 }
+

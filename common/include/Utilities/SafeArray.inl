@@ -255,7 +255,7 @@ T& SafeList<T>::AddNew( const T& src )
 template< typename T >
 void SafeList<T>::Remove( int index )
 {
-	IndexBoundsCheckDev( Name.c_str(), index, m_length );
+	IndexBoundsAssumeDev( Name.c_str(), index, m_length );
 
 	int copylen = m_length - index;
 	if( copylen > 0 )

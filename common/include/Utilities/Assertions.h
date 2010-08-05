@@ -158,6 +158,12 @@ extern pxDoAssertFnType* pxDoAssert;
 #define IndexBoundsCheckDev( objname, idx, sze )	pxAssertDev( (uint)(idx) < (uint)(sze), \
 	wxsFormat( L"Array index out of bounds accessing object '%s' (index=%d, size=%d)", objname, (idx), (sze) ) )
 
+#define IndexBoundsAssume( objname, idx, sze )		pxAssumeMsg( (uint)(idx) < (uint)(sze), \
+	wxsFormat( L"Array index out of bounds accessing object '%s' (index=%d, size=%d)", objname, (idx), (sze) ) )
+
+#define IndexBoundsAssumeDev( objname, idx, sze )	pxAssumeDev( (uint)(idx) < (uint)(sze), \
+	wxsFormat( L"Array index out of bounds accessing object '%s' (index=%d, size=%d)", objname, (idx), (sze) ) )
+
 
 extern void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg=NULL );
 extern void pxOnAssert( const DiagnosticOrigin& origin, const char* msg );

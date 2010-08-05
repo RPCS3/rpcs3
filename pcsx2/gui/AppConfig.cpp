@@ -326,8 +326,8 @@ namespace FilenameDefs
 			}
 		};
 
-		IndexBoundsCheckDev( L"FilenameDefs::Memcard", port, 2 );
-		IndexBoundsCheckDev( L"FilenameDefs::Memcard", slot, 4 );
+		IndexBoundsAssumeDev( L"FilenameDefs::Memcard", port, 2 );
+		IndexBoundsAssumeDev( L"FilenameDefs::Memcard", slot, 4 );
 
 		return retval[port][slot];
 	}
@@ -620,7 +620,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 // ------------------------------------------------------------------------
 const wxFileName& AppConfig::FilenameOptions::operator[]( PluginsEnum_t pluginidx ) const
 {
-	IndexBoundsCheckDev( L"Filename[Plugin]", pluginidx, PluginId_Count );
+	IndexBoundsAssumeDev( L"Filename[Plugin]", pluginidx, PluginId_Count );
 	return Plugins[pluginidx];
 }
 

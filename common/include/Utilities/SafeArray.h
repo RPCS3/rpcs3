@@ -78,7 +78,7 @@ protected:
 	// builds only -- no bounds checking is done in release builds).
 	T* _getPtr( uint i ) const
 	{
-		IndexBoundsCheckDev( Name.c_str(), i, m_size );
+		IndexBoundsAssumeDev( Name.c_str(), i, m_size );
 		return &m_ptr[i];
 	}
 
@@ -156,7 +156,7 @@ protected:
 
 	T* _getPtr( uint i ) const
 	{
-		IndexBoundsCheckDev( Name.c_str(), i, m_length );
+		IndexBoundsAssumeDev( Name.c_str(), i, m_length );
 		return &m_ptr[i];
 	}
 
