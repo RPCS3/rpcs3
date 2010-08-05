@@ -62,7 +62,7 @@ SafeArray<T>::~SafeArray() throw()
 }
 
 template< typename T >
-SafeArray<T>::SafeArray( const wxChar* name=L"Unnamed" )
+SafeArray<T>::SafeArray( const wxChar* name )
 	: Name( name )
 {
 	ChunkSize	= DefaultChunkSize;
@@ -71,7 +71,7 @@ SafeArray<T>::SafeArray( const wxChar* name=L"Unnamed" )
 }
 
 template< typename T >
-SafeArray<T>::SafeArray( int initialSize, const wxChar* name=L"Unnamed" )
+SafeArray<T>::SafeArray( int initialSize, const wxChar* name )
 	: Name( name )
 {
 	ChunkSize	= DefaultChunkSize;
@@ -132,14 +132,14 @@ T* SafeAlignedArray<T,Alignment>::_virtual_realloc( int newsize )
 // Maybe useful,maybe not... no harm in attaching it. :D
 
 template< typename T, uint Alignment >
-SafeAlignedArray<T,Alignment>::~SafeAlignedArray()
+SafeAlignedArray<T,Alignment>::~SafeAlignedArray() throw()
 {
 	safe_aligned_free( this->m_ptr );
 	// mptr is set to null, so the parent class's destructor won't re-free it.
 }
 
 template< typename T, uint Alignment >
-SafeAlignedArray<T,Alignment>::SafeAlignedArray( int initialSize, const wxChar* name=L"Unnamed" ) :
+SafeAlignedArray<T,Alignment>::SafeAlignedArray( int initialSize, const wxChar* name ) :
 	SafeArray<T>::SafeArray(
 		name,
 		(T*)_aligned_malloc( initialSize * sizeof(T), Alignment ),
@@ -173,7 +173,7 @@ SafeList<T>::~SafeList() throw()
 }
 
 template< typename T >
-SafeList<T>::SafeList( const wxChar* name=L"Unnamed" )
+SafeList<T>::SafeList( const wxChar* name )
 	: Name( name )
 {
 	ChunkSize	= DefaultChunkSize;
@@ -183,7 +183,7 @@ SafeList<T>::SafeList( const wxChar* name=L"Unnamed" )
 }
 
 template< typename T >
-SafeList<T>::SafeList( int initialSize, const wxChar* name=L"Unnamed" )
+SafeList<T>::SafeList( int initialSize, const wxChar* name )
 	: Name( name )
 {
 	ChunkSize	= DefaultChunkSize;

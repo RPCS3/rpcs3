@@ -87,7 +87,6 @@ protected:
 	}
 };
 
-
 template< typename T >
 class TlsVariable : public BaseTlsVariable<T>
 {
@@ -95,6 +94,7 @@ class TlsVariable : public BaseTlsVariable<T>
 
 protected:
 	T				m_initval;
+	bool			m_IsDisposed;
 
 public:
 	TlsVariable() {}
@@ -108,6 +108,9 @@ public:
 		// Killing the pthread_key at all will lead to the console logger death, etc.
 		m_IsDisposed = true;
 	}
+
+	// This is needed; The C++ standard likes making life suck for programmers.
+	using BaseTlsVariable<T>::GetRef;
 
 	TlsVariable<T>& operator=( const T& src )
 	{

@@ -227,7 +227,7 @@ protected:
 public:
 	using _parent::operator[];
 
-	virtual ~SafeAlignedArray();
+	virtual ~SafeAlignedArray() throw();
 
 	explicit SafeAlignedArray( const wxChar* name=L"Unnamed" ) :
 		SafeArray<T>::SafeArray( name )
