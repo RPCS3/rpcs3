@@ -224,3 +224,9 @@ EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
 	_GSgifTransfer<3>(const_cast<u32*>(pMem), size);
 #endif
 }
+
+void InitPath()
+{
+	gs.path[0].mode = gs.path[1].mode = gs.path[2].mode = gs.path[3].mode = 0;
+}
+

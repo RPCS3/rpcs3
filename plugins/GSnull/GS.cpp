@@ -49,6 +49,10 @@ GSVars gs;
 #endif
 
 void (*GSirq)();
+extern void ResetRegs();
+extern void SetMultithreaded();
+extern void SetFrameSkip(bool skip);
+extern void InitPath();
 
 EXPORT_C_(u32) PS2EgetLibType()
 {
@@ -163,7 +167,11 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 	//assert( GSirq != NULL );
 
 	err = GSOpenWindow(pDsp, Title);
+	gs.MultiThreaded = multithread;
 
+	ResetRegs();
+	SetMultithreaded();
+	InitPath();
 	SysPrintf("Opening GSnull\n");
 	return err;
 }
@@ -175,6 +183,11 @@ EXPORT_C_(s32) GSopen2( void *pDsp, u32 flags )
 
     GSOpenWindow2(pDsp, flags);
 
+	gs.MultiThreaded = true;
+
+	ResetRegs();
+	SetMultithreaded();
+	InitPath();
 	SysPrintf("Opening GSnull (2)\n");
 	return 0;
 }
@@ -265,6 +278,7 @@ EXPORT_C_(void) GSsetGameCRC(int crc, int gameoptions)
 // controls frame skipping in the GS, if this routine isn't present, frame skipping won't be done
 EXPORT_C_(void) GSsetFrameSkip(int frameskip)
 {
+	SetFrameSkip(frameskip != 0);
 	SysPrintf("Frameskip set to %d.\n", frameskip);
 }
 

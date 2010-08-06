@@ -59,6 +59,7 @@
 		<Unit filename="Linux.cpp" />
 		<Unit filename="Linux.h" />
 		<Unit filename="../ReadMe.txt" />
+		<Unit filename="../Registers.cpp" />
 		<Unit filename="../Registers.h" />
 		<Unit filename="../null/GSnull.cpp" />
 		<Unit filename="../null/GSnull.h" />

@@ -74,6 +74,7 @@
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="..\GifTransfer.cpp" />
     <ClCompile Include="..\GS.cpp" />
+    <ClCompile Include="..\Registers.cpp" />
     <ClCompile Include="..\Linux\GSLinux.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

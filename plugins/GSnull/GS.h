@@ -37,12 +37,6 @@ typedef struct _keyEvent keyEvent;
 #include "GifTransfer.h"
 #include "null/GSnull.h"
 
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
-
 #ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" type CALLBACK
 #else
@@ -66,6 +60,9 @@ typedef struct
 	u32 imageTransfer;
 	int MultiThreaded;
 	int nPath3Hack;
+	
+	GIFReg regs;
+	GIFCTXTReg ctxt_regs[2];
 } GSVars;
 
 extern GSVars gs;
