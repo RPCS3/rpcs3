@@ -28,21 +28,16 @@ extern GSVars gs;
 
 PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
 
-
 template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 {
 //	FUNCLOG
 
 	pathInfo *path = &gs.path[index];
 
-#ifdef _WIN32
-	assert(g_hCurrentThread == GetCurrentThread());
-#endif
-
 #ifdef _DEBUG
-	gifTransferLog(index, pMem, size);
+	// [TODO] : Implement looging facilities?
+	//gifTransferLog(index, pMem, size);
 #endif
-
 	while (size > 0)
 	{
 		//LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
