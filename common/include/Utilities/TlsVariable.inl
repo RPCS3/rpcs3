@@ -162,7 +162,7 @@ void Threading::BaseTlsVariable<T>::KillKey()
 	BaseTlsVariable<T>::_aligned_delete_and_free( pthread_getspecific(m_thread_key) );
 
 	pthread_key_delete( m_thread_key );
-	m_thread_key = NULL;
+	m_thread_key = 0;
 }
 
 template< typename T >

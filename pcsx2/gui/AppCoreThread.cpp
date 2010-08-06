@@ -94,7 +94,7 @@ static void _Cancel()
 
 void AppCoreThread::Cancel( bool isBlocking )
 {
-	if (GetSysExecutorThread().IsRunning() && !GetSysExecutorThread().Rpc_TryInvoke( _Cancel ))
+	if (GetSysExecutorThread().IsRunning() && !GetSysExecutorThread().Rpc_TryInvoke( _Cancel, L"AppCoreThread::Cancel" ))
 		_parent::Cancel( wxTimeSpan(0, 0, 4, 0) );
 }
 
@@ -126,10 +126,10 @@ void AppCoreThread::Suspend( bool isBlocking )
 	if (IsSelf())
 	{
 		// this should never fail...
-		bool result = GetSysExecutorThread().Rpc_TryInvokeAsync( _Suspend );
+		bool result = GetSysExecutorThread().Rpc_TryInvokeAsync( _Suspend, L"AppCoreThread::Suspend" );
 		pxAssert(result);
 	}
-	else if (!GetSysExecutorThread().Rpc_TryInvoke( _Suspend ))
+	else if (!GetSysExecutorThread().Rpc_TryInvoke( _Suspend, L"AppCoreThread::Suspend" ))
 		_parent::Suspend(true);
 }
 

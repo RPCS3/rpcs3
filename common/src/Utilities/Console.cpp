@@ -15,9 +15,10 @@
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
+#include "TraceLog.h"
 #include "TlsVariable.inl"
 
-#include "RedtapeWindows.h"
+#include "RedtapeWindows.h"		// nneded for OutputDebugString
 
 using namespace Threading;
 
@@ -41,7 +42,7 @@ static Mutex	m_bufferlock;	// used by ConsoleBuffer
 void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 {
 	pxAssertDev(
-		(writer.DoWrite != NULL)	&& (writer.DoWriteLn != NULL) &&
+		(writer.WriteRaw != NULL)	&& (writer.DoWriteLn != NULL) &&
 		(writer.Newline != NULL)	&& (writer.SetTitle != NULL) &&
 		(writer.DoSetColor != NULL),
 		"Invalid IConsoleWriter object!  All function pointer interfaces must be implemented."
@@ -54,14 +55,28 @@ void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 			writer.DoWriteLn( ConsoleBuffer_Get() );
 	}
 
-	Console	= writer;
+	const_cast<IConsoleWriter&>(Console)= writer;
 
 #ifdef PCSX2_DEVBUILD
-	DevCon	= writer;
+	const_cast<IConsoleWriter&>(DevCon)	= writer;
 #endif
 
 #ifdef PCSX2_DEBUG
-	DbgCon	= writer;
+	const_cast<IConsoleWriter&>(DbgCon)	= writer;
+#endif
+}
+
+// Writes text to the Visual Studio Output window (Microsoft Windows only).
+// On all other platforms this pipes to Stdout instead.
+void MSW_OutputDebugString( const wxString& text )
+{
+#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
+	static bool hasDebugger = wxIsDebuggerRunning();
+	if( hasDebugger ) OutputDebugString( text );
+#else
+	// send them to stderr
+	wxPrintf(L"%s\n", text.c_str());
+	fflush(stderr);
 #endif
 }
 
@@ -137,30 +152,18 @@ static __forceinline const wxChar* GetLinuxConsoleColor(ConsoleColors color)
 // One possible default write action at startup and shutdown is to use the stdout.
 static void __concall ConsoleStdout_DoWrite( const wxString& fmt )
 {
-#ifdef __WXMSW__
-	OutputDebugString( fmt );	
-#else
-	wxPrintf( fmt );
-#endif
+	MSW_OutputDebugString( fmt );	
 }
 
 // Default write action at startup and shutdown is to use the stdout.
 static void __concall ConsoleStdout_DoWriteLn( const wxString& fmt )
 {
-#ifdef __WXMSW__
-	OutputDebugString( fmt + L"\n" );
-#else
-	wxPrintf( fmt + L"\n" );
-#endif
+	MSW_OutputDebugString( fmt + L"\n" );
 }
 
 static void __concall ConsoleStdout_Newline()
 {
-#ifdef __WXMSW__
-	OutputDebugString( L"\n" );
-#else
-	wxPrintf( L"\n" );
-#endif
+	MSW_OutputDebugString( L"\n" );
 }
 
 static void __concall ConsoleStdout_DoSetColor( ConsoleColors color )
@@ -174,7 +177,7 @@ static void __concall ConsoleStdout_DoSetColor( ConsoleColors color )
 static void __concall ConsoleStdout_SetTitle( const wxString& title )
 {
 #ifdef __LINUX__
-	wxPrintf(L"\033]0;" + title + L"\007");
+	wxPrintf(L"\033]0;%s\007", title.c_str());
 #endif
 }
 
@@ -295,14 +298,14 @@ const IConsoleWriter ConsoleWriter_wxError =
 };
 
 // =====================================================================================================
-//  IConsole Interfaces
+//  IConsoleWriter Implementations
 // =====================================================================================================
 // (all non-virtual members that do common work and then pass the result through DoWrite
 //  or DoWriteLn)
 
 // Parameters:
 //   glob_indent - this parameter is used to specify a global indentation setting.  It is used by
-//      WriteLn function, but defaults to 0 for Notice and Error calls.  Local indentation always
+//      WriteLn function, but defaults to 0 for Warning and Error calls.  Local indentation always
 //      applies to all writes.
 wxString IConsoleWriter::_addIndentation( const wxString& src, int glob_indent=0 ) const
 {
@@ -337,7 +340,10 @@ IConsoleWriter IConsoleWriter::Indent( int tabcount ) const
 // such as ErrorMsg and Notice.
 const IConsoleWriter& IConsoleWriter::SetColor( ConsoleColors color ) const
 {
-	pxAssertMsg( color >= Color_Current && color < ConsoleColors_Count, "Invalid ConsoleColor specified." );
+	// Ignore current color requests since, well, the current color is already set. ;)
+	if( color == Color_Current ) return *this;
+
+	pxAssertMsg( (color > Color_Current) && (color < ConsoleColors_Count), "Invalid ConsoleColor specified." );
 
 	if( conlog_Color != color )
 		DoSetColor( conlog_Color = color );
@@ -363,38 +369,17 @@ const IConsoleWriter& IConsoleWriter::ClearColor() const
 //  ASCII/UTF8 (char*)
 // --------------------------------------------------------------------------------------
 
-bool IConsoleWriter::Write( const char* fmt, ... ) const
+bool IConsoleWriter::FormatV( const char* fmt, va_list args ) const
 {
-	if( DoWrite == ConsoleNull_DoWrite ) return false;
-
-	va_list args;
-	va_start(args,fmt);
-	DoWrite( pxsFmtV(fmt, args) );
-	va_end(args);
-
-	return false;
-}
-
-bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
-{
-	if( DoWrite == ConsoleNull_DoWrite ) return false;
-
-	va_list args;
-	va_start(args,fmt);
-	ConsoleColorScope cs( color );
-	DoWrite( pxsFmtV(fmt, args) );
-	va_end(args);
-
+	DoWriteLn( _addIndentation( pxsFmtV(fmt,args), conlog_Indent ) );
 	return false;
 }
 
 bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( pxsFmtV(fmt, args), conlog_Indent ) );
+	FormatV(fmt, args);
 	va_end(args);
 
 	return false;
@@ -402,11 +387,10 @@ bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( pxsFmtV(fmt, args), conlog_Indent ) );
+	FormatV(fmt, args);
 	va_end(args);
 
 	return false;
@@ -414,12 +398,10 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 
 bool IConsoleWriter::Error( const char* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( pxsFmtV(fmt, args) ) );
+	FormatV(fmt, args);
 	va_end(args);
 
 	return false;
@@ -427,53 +409,30 @@ bool IConsoleWriter::Error( const char* fmt, ... ) const
 
 bool IConsoleWriter::Warning( const char* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( pxsFmtV(fmt, args) ) );
+	FormatV(fmt, args);
 	va_end(args);
 
 	return false;
 }
 
 // --------------------------------------------------------------------------------------
-//  FmtWrite Variants - Unicode/UTF16 style
+//  Write Variants - Unicode/UTF16 style
 // --------------------------------------------------------------------------------------
 
-bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
+bool IConsoleWriter::FormatV( const wxChar* fmt, va_list args ) const
 {
-	if( DoWrite == ConsoleNull_DoWrite ) return false;
-
-	va_list args;
-	va_start(args,fmt);
-	DoWrite( pxsFmtV( fmt, args ) );
-	va_end(args);
-
-	return false;
-}
-
-bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
-{
-	if( DoWrite == ConsoleNull_DoWrite ) return false;
-
-	va_list args;
-	va_start(args,fmt);
-	ConsoleColorScope cs( color );
-	DoWrite( pxsFmtV( fmt, args ) );
-	va_end(args);
-
+	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ), conlog_Indent ) );
 	return false;
 }
 
 bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
-	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ), conlog_Indent ) );
+	FormatV(fmt,args);
 	va_end(args);
 
 	return false;
@@ -481,12 +440,10 @@ bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
-	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ), conlog_Indent ) );
+	FormatV(fmt,args);
 	va_end(args);
 
 	return false;
@@ -494,12 +451,10 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) cons
 
 bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongRed );
-	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ) ) );
+	FormatV(fmt,args);
 	va_end(args);
 
 	return false;
@@ -507,64 +462,156 @@ bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
-
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( Color_StrongOrange );
-	DoWriteLn( _addIndentation( pxsFmtV( fmt, args ) ) );
+	FormatV(fmt,args);
 	va_end(args);
 
 	return false;
 }
 
 // --------------------------------------------------------------------------------------
-//
+//  ConsoleColorScope / ConsoleIndentScope
 // --------------------------------------------------------------------------------------
 
-bool IConsoleWriter::WriteFromStdout( const char* fmt, ... ) const
+ConsoleColorScope::ConsoleColorScope( ConsoleColors newcolor )
 {
-	if( DoWriteFromStdout == ConsoleNull_DoWrite ) return false;
-
-	va_list args;
-	va_start(args,fmt);
-	DoWrite( pxsFmtV(fmt, args) );
-	va_end(args);
-
-	return false;
+	m_IsScoped = false;
+	m_newcolor = newcolor;
+	EnterScope();
 }
 
-bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... ) const
+ConsoleColorScope::~ConsoleColorScope() throw()
 {
-	if( DoWriteFromStdout == ConsoleNull_DoWrite ) return false;
+	LeaveScope();
+}
 
-	va_list args;
-	va_start(args,fmt);
-	ConsoleColorScope cs( color );
-	DoWriteFromStdout( pxsFmtV(fmt, args) );
-	va_end(args);
+void ConsoleColorScope::EnterScope()
+{
+	if (!m_IsScoped)
+	{
+		m_old_color = Console.GetColor();
+		Console.SetColor( m_newcolor );
+		m_IsScoped = true;
+	}
+}
 
-	return false;
+void ConsoleColorScope::LeaveScope()
+{
+	m_IsScoped = m_IsScoped && (Console.SetColor( m_old_color ), false);
+}
+
+ConsoleIndentScope::ConsoleIndentScope( int tabs )
+{
+	m_IsScoped = false;
+	m_amount = tabs;
+	EnterScope();
+}
+
+ConsoleIndentScope::~ConsoleIndentScope() throw()
+{
+	LeaveScope();
+}
+
+void ConsoleIndentScope::EnterScope()
+{
+	m_IsScoped = m_IsScoped || (Console.SetIndent( m_amount ),true);
+}
+
+void ConsoleIndentScope::LeaveScope()
+{
+	m_IsScoped = m_IsScoped && (Console.SetIndent( -m_amount ),false);
+}
+
+
+ConsoleAttrScope::ConsoleAttrScope( ConsoleColors newcolor, int indent )
+{
+	m_old_color = Console.GetColor();
+	Console.SetIndent( m_tabsize = indent );
+	Console.SetColor( newcolor );
+}
+
+ConsoleAttrScope::~ConsoleAttrScope() throw()
+{
+	Console.SetColor( m_old_color );
+	Console.SetIndent( -m_tabsize );
 }
 
 
 // --------------------------------------------------------------------------------------
 //  Default Writer for C++ init / startup:
 // --------------------------------------------------------------------------------------
-
+// Currently all build types default to Stdout, which is very functional on Linux but not
+// always so useful on Windows (which itself lacks a proper stdout console without using
+// platform specific code).  Under windows Stdout will attempt to write to the IDE Debug
+// console, if one is available (such as running pcsx2 via MSVC).  If not available, then
+// the log message will pretty much be lost into the ether.
+// 
 #define _DefaultWriter_	ConsoleWriter_Stdout
 
-// Important!  Only Assert and Null console loggers are allowed for initial console targeting.
-// Other log targets rely on the static buffer and a threaded mutex lock, which are only valid
-// after C++ initialization has finished.
-
-IConsoleWriter	Console	= _DefaultWriter_;
-
-#ifdef PCSX2_DEVBUILD
-	IConsoleWriter	DevConWriter= _DefaultWriter_;
-#endif
+const IConsoleWriter	Console				= _DefaultWriter_;
+const IConsoleWriter	DevConWriter		= _DefaultWriter_;
+bool					DevConWriterEnabled	= false;
 
 #ifdef PCSX2_DEBUG
-	IConsoleWriter	DbgConWriter= _DefaultWriter_;
+const IConsoleWriter	DbgConWriter		= _DefaultWriter_;
 #endif
 
+const NullConsoleWriter	NullCon = {};
+
+
+// --------------------------------------------------------------------------------------
+//  BaseTraceLogAttr
+// --------------------------------------------------------------------------------------
+
+// Returns the translated description of this trace log!
+const wxChar* BaseTraceLogAttr::GetDescription() const
+{
+	return (Description!=NULL) ? pxGetTranslation(Description) : wxEmptyString;
+}
+
+// --------------------------------------------------------------------------------------
+//  ConsoleLogSource
+// --------------------------------------------------------------------------------------
+
+// Writes to the console using the specified color.  This overrides the default color setting
+// for this log.
+bool ConsoleLogSource::WriteV( ConsoleColors color, const char *fmt, va_list list ) const
+{
+	ConsoleColorScope cs(color);
+	DoWrite( pxsFmtV(fmt,list).GetResult() );
+	return false;
+}
+
+bool ConsoleLogSource::WriteV( ConsoleColors color, const wxChar *fmt, va_list list ) const
+{
+	ConsoleColorScope cs(color);
+	DoWrite( pxsFmtV(fmt,list) );
+	return false;
+}
+
+// Writes to the console using the source's default color.  Note that the source's default
+// color will always be used, thus ConsoleColorScope() will not be effectual unless the
+// console's default color is Color_Default.
+bool ConsoleLogSource::WriteV( const char *fmt, va_list list ) const
+{
+	WriteV( DefaultColor, fmt, list );
+	return false;
+}
+
+bool ConsoleLogSource::WriteV( const wxChar *fmt, va_list list ) const
+{
+	WriteV( DefaultColor, fmt, list );
+	return false;
+}
+
+ConsoleLogSource::ConsoleLogSource()
+{
+	// SourceLogs are usually pretty heavy spam, so default to something
+	// reasonably non-intrusive:
+	DefaultColor	= Color_Gray;
+	//pxConLogSources_AllKnown.Add(this);
+}
+
+ConsoleLogSource_Threading pxConLog_Thread;

@@ -35,8 +35,8 @@ void __fastcall mVUbadOp0(mV)		{ Console.Error("microVU0 Warning: Exiting... Blo
 void __fastcall mVUbadOp1(mV)		{ Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", xPC, mVU->prog.cur); }
 void __fastcall mVUwarning0(mV)		{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
 void __fastcall mVUwarning1(mV)		{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
-void __fastcall mVUprintPC1(u32 PC) { Console.Write("Block PC [%04x] ", PC); }
-void __fastcall mVUprintPC2(u32 PC) { Console.Write("[%04x]\n", PC); }
+void __fastcall mVUprintPC1(u32 PC) { Console.WriteLn("Block Start PC = 0x%04x", PC); }
+void __fastcall mVUprintPC2(u32 PC) { Console.WriteLn("Block End PC   = 0x%04x", PC); }
 
 //------------------------------------------------------------------
 // Helper Functions

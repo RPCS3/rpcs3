@@ -104,7 +104,9 @@ protected:
 
 				// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
 				s8_Buf[u32_Read] = 0;
-				Console.WriteFromStdout( m_color, s8_Buf );
+
+				ConsoleColorScope cs(m_color);
+				Console.DoWriteFromStdout( fromUTF8(s8_Buf) );
 
 				TestCancel();
 			}

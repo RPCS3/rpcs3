@@ -100,7 +100,7 @@ __forceinline void vif0SetupTransfer()
 
 			// Transfer dma tag if tte is set
 
-			VIF_LOG("vif0 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
+			VIF_LOG("vif0 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
 			        ptag[1]._u32, ptag[0]._u32, vif0ch->qwc, ptag->ID, vif0ch->madr, vif0ch->tadr);
 
 			vif0.inprogress = 0;

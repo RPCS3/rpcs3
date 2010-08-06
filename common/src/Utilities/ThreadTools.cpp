@@ -50,13 +50,13 @@ public:
 	}
 };
 
-static pthread_key_t	curthread_key = NULL;
+static pthread_key_t	curthread_key = 0;
 static s32				total_key_count = 0;
 
 static bool				tkl_destructed = false;
 static StaticMutex		total_key_lock( tkl_destructed );
 
-static void make_curthread_key()
+static void make_curthread_key( const pxThread* thr )
 {
 	pxAssumeDev( !tkl_destructed, "total_key_lock is destroyed; program is shutting down; cannot create new thread key." );
 
@@ -65,8 +65,8 @@ static void make_curthread_key()
 
 	if( 0 != pthread_key_create(&curthread_key, NULL) )
 	{
-		Console.Error( "Thread key creation failed (probably out of memory >_<)" );
-		curthread_key = NULL;
+		pxThreadLog.Error( thr->GetName(), L"Thread key creation failed (probably out of memory >_<)" );
+		curthread_key = 0;
 	}
 }
 
@@ -78,10 +78,10 @@ static void unmake_curthread_key()
 
 	if( --total_key_count > 0 ) return;
 
-	if( curthread_key != NULL )
+	if( curthread_key )
 		pthread_key_delete( curthread_key );
 
-	curthread_key = NULL;
+	curthread_key = 0;
 }
 
 void Threading::pxTestCancel()
@@ -95,7 +95,7 @@ void Threading::pxTestCancel()
 // test if the NULL thread is the main thread.
 pxThread* Threading::pxGetCurrentThread()
 {
-	return (curthread_key==NULL) ? NULL : (pxThread*)pthread_getspecific( curthread_key );
+	return !curthread_key ? NULL : (pxThread*)pthread_getspecific( curthread_key );
 }
 
 // returns the name of the current thread, or "Unknown" if the thread is neither a pxThread
@@ -139,7 +139,9 @@ bool Threading::_WaitGui_RecursionGuard( const wxChar* name )
 	//if( pxAssertDev( !guard.IsReentrant(), "Recursion during UI-bound threading wait object." ) ) return false;
 
 	if( !guard.IsReentrant() ) return false;
-	Console.WriteLn( "(Thread:%s) Yield recursion in %s; opening modal dialog.", pxGetCurrentThreadName().c_str(), name );
+	pxThreadLog.Write( pxGetCurrentThreadName(),
+		wxsFormat(L"Yield recursion in %s; opening modal dialog.", name)
+	);
 	return true;
 }
 
@@ -161,7 +163,7 @@ Threading::pxThread::pxThread( const wxString& name )
 	m_running	= false;
 
 	m_native_id		= 0;
-	m_native_handle	= NULL;
+	m_native_handle	= 0;
 }
 
 // This destructor performs basic "last chance" cleanup, which is a blocking join
@@ -175,12 +177,13 @@ Threading::pxThread::~pxThread() throw()
 {
 	try
 	{
-		DbgCon.WriteLn( L"(Thread Log) Executing destructor for " + m_name );
+		pxThreadLog.Write( GetName(), L"Executing default destructor!" );
 
 		if( m_running )
 		{
-			DevCon.WriteLn( L"(Thread Log) Waiting for running thread to end...");
-			m_lock_InThread.Wait();
+			pxThreadLog.Write( GetName(), L"Waiting for running thread to end...");
+			m_mtx_InThread.Wait();
+			pxThreadLog.Write( GetName(), L"Thread ended gracefully.");
 		}
 		Threading::Sleep( 1 );
 		Detach();
@@ -193,7 +196,7 @@ bool Threading::pxThread::AffinityAssert_AllowFromSelf( const DiagnosticOrigin& 
 	if( IsSelf() ) return true;
 
 	if( IsDevBuild )
-		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name.c_str() ) );
+		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", GetName().c_str() ) );
 
 	return false;
 }
@@ -203,7 +206,7 @@ bool Threading::pxThread::AffinityAssert_DisallowFromSelf( const DiagnosticOrigi
 	if( !IsSelf() ) return true;
 
 	if( IsDevBuild )
-		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name.c_str() ) );
+		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", GetName().c_str() ) );
 
 	return false;
 }
@@ -215,9 +218,7 @@ void Threading::pxThread::FrankenMutex( Mutex& mutex )
 		// Our lock is bupkis, which means  the previous thread probably deadlocked.
 		// Let's create a new mutex lock to replace it.
 
-		Console.Error(
-			L"(Thread Log) Possible deadlock detected on restarted mutex belonging to '%s'.", m_name.c_str()
-		);
+		pxThreadLog.Error( GetName(), L"Possible deadlock detected on restarted mutex!" );
 	}
 }
 
@@ -230,14 +231,19 @@ void Threading::pxThread::FrankenMutex( Mutex& mutex )
 void Threading::pxThread::Start()
 {
 	// Prevents sudden parallel startup, and or parallel startup + cancel:
-	ScopedLock startlock( m_lock_start );
-	if( m_running ) return;
+	ScopedLock startlock( m_mtx_start );
+	if( m_running )
+	{
+		pxThreadLog.Write(GetName(), L"Start() called on running thread; ignorning...");
+		return;
+	}
 
 	Detach();		// clean up previous thread handle, if one exists.
 	OnStart();
 
 	m_except = NULL;
 
+	pxThreadLog.Write(GetName(), L"Calling pthread_create...");
 	if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 		throw Exception::ThreadCreationError( this );
 
@@ -259,7 +265,7 @@ void Threading::pxThread::Start()
 
 	// (this could also be done using operating system specific calls, since any threaded OS has
 	// functions that allow us to see if a thread is running or not, and to block against it even if
-	// it's been detached -- removing the need for m_lock_InThread and the semaphore wait above.  But
+	// it's been detached -- removing the need for m_mtx_InThread and the semaphore wait above.  But
 	// pthreads kinda lacks that stuff, since pthread_join() has no timeout option making it im-
 	// possible to safely block against a running thread)
 }
@@ -282,7 +288,7 @@ bool Threading::pxThread::_basecancel()
 
 	if( m_detached )
 	{
-		Console.Warning( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
+		pxThreadLog.Warn(GetName(), L"Ignoring attempted cancellation of detached thread.");
 		return false;
 	}
 
@@ -309,13 +315,13 @@ void Threading::pxThread::Cancel( bool isBlocking )
 	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
 	// Prevent simultaneous startup and cancel, necessary to avoid
-	ScopedLock startlock( m_lock_start );
+	ScopedLock startlock( m_mtx_start );
 
 	if( !_basecancel() ) return;
 
 	if( isBlocking )
 	{
-		WaitOnSelf( m_lock_InThread );
+		WaitOnSelf( m_mtx_InThread );
 		Detach();
 	}
 }
@@ -325,11 +331,11 @@ bool Threading::pxThread::Cancel( const wxTimeSpan& timespan )
 	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
 	// Prevent simultaneous startup and cancel:
-	ScopedLock startlock( m_lock_start );
+	ScopedLock startlock( m_mtx_start );
 
 	if( !_basecancel() ) return true;
 
-	if( !WaitOnSelf( m_lock_InThread, timespan ) ) return false;
+	if( !WaitOnSelf( m_mtx_InThread, timespan ) ) return false;
 	Detach();
 	return true;
 }
@@ -348,13 +354,13 @@ bool Threading::pxThread::Cancel( const wxTimeSpan& timespan )
 void Threading::pxThread::Block()
 {
 	AffinityAssert_DisallowFromSelf(pxDiagSpot);
-	WaitOnSelf( m_lock_InThread );
+	WaitOnSelf( m_mtx_InThread );
 }
 
 bool Threading::pxThread::Block( const wxTimeSpan& timeout )
 {
 	AffinityAssert_DisallowFromSelf(pxDiagSpot);
-	return WaitOnSelf( m_lock_InThread, timeout );
+	return WaitOnSelf( m_mtx_InThread, timeout );
 }
 
 bool Threading::pxThread::IsSelf() const
@@ -409,9 +415,7 @@ void Threading::pxThread::_selfRunningTest( const wxChar* name ) const
 {
 	if( HasPendingException() )
 	{
-		Console.Error( L"(Thread:%s) An exception was thrown while waiting on a %s.",
-			GetName().c_str(), name
-		);
+		pxThreadLog.Error( GetName(), wxsFormat(L"An exception was thrown while waiting on a %s.", name) );
 		RethrowException();
 	}
 
@@ -578,7 +582,7 @@ void Threading::pxThread::_ThreadCleanup()
 {
 	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	_try_virtual_invoke( &pxThread::OnCleanupInThread );
-	m_lock_InThread.Release();
+	m_mtx_InThread.Release();
 
 	// Must set m_running LAST, as thread destructors depend on this value (it is used
 	// to avoid destruction of the thread until all internal data use has stopped.
@@ -587,7 +591,14 @@ void Threading::pxThread::_ThreadCleanup()
 
 wxString Threading::pxThread::GetName() const
 {
+	ScopedLock lock(m_mtx_ThreadName);
 	return m_name;
+}
+
+void Threading::pxThread::SetName( const wxString& newname )
+{
+	ScopedLock lock(m_mtx_ThreadName);
+	m_name = newname;
 }
 
 // This override is called by PeristentThread when the thread is first created, prior to
@@ -607,11 +618,11 @@ void Threading::pxThread::OnStartInThread()
 
 void Threading::pxThread::_internal_execute()
 {
-	m_lock_InThread.Acquire();
+	m_mtx_InThread.Acquire();
 
-	_DoSetThreadName( m_name );
-	make_curthread_key();
-	if( curthread_key != NULL )
+	_DoSetThreadName( GetName() );
+	make_curthread_key(this);
+	if( curthread_key )
 		pthread_setspecific( curthread_key, this );
 
 	OnStartInThread();
@@ -624,10 +635,10 @@ void Threading::pxThread::_internal_execute()
 // running thread has been canceled or detached.
 void Threading::pxThread::OnStart()
 {
-	m_native_handle	= NULL;
+	m_native_handle	= 0;
 	m_native_id		= 0;
 
-	FrankenMutex( m_lock_InThread );
+	FrankenMutex( m_mtx_InThread );
 	m_sem_event.Reset();
 	m_sem_startup.Reset();
 }
@@ -636,14 +647,14 @@ void Threading::pxThread::OnStart()
 // personal implementations.
 void Threading::pxThread::OnCleanupInThread()
 {
-	if( curthread_key != NULL )
+	if( curthread_key )
 		pthread_setspecific( curthread_key, NULL );
 
 	unmake_curthread_key();
 
 	_platform_specific_OnCleanupInThread();
 
-	m_native_handle = NULL;
+	m_native_handle = 0;
 	m_native_id		= 0;
 	
 	m_evtsrc_OnDelete.Dispatch( 0 );

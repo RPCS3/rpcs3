@@ -27,8 +27,7 @@ void TraceLogFilters::LoadSave( IniInterface& ini )
 	ScopedIniGroup path( ini, L"TraceLog" );
 
 	IniEntry( Enabled );
-	IniEntry( SIF );
-
+	
 	// Retaining backwards compat of the trace log enablers isn't really important, and
 	// doing each one by hand would be murder.  So let's cheat and just save it as an int:
 
@@ -42,25 +41,6 @@ Pcsx2Config::SpeedhackOptions::SpeedhackOptions()
 	bitset			= 0;
 	EECycleRate		= 0;
 	VUCycleSteal	= 0;
-}
-
-ConsoleLogFilters::ConsoleLogFilters()
-{
-	ELF			= false;
-	StdoutEE	= true;
-	StdoutIOP	= true;
-	Deci2		= true;
-}
-
-void ConsoleLogFilters::LoadSave( IniInterface& ini )
-{
-	ConsoleLogFilters defaults;
-	ScopedIniGroup path( ini, L"ConsoleLog" );
-
-	IniBitBool( ELF );
-	IniBitBool( StdoutEE );
-	IniBitBool( StdoutIOP );
-	IniBitBool( Deci2 );
 }
 
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
@@ -382,7 +362,6 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	Profiler		.LoadSave( ini );
 
 	Trace			.LoadSave( ini );
-	Log				.LoadSave( ini );
 
 	ini.Flush();
 }

@@ -163,10 +163,6 @@ static _f void DmaExec16( void (*func)(), u32 mem, u16 value )
 /////////////////////////////////////////////////////////////////////////
 // Hardware WRITE 8 bit
 
-char sio_buffer[1024];
-int sio_count;
-
-
 void hwWrite8(u32 mem, u8 value)
 {
 	if ((mem >= VIF0_STAT) && (mem < VIF0_FIFO)) {
@@ -230,23 +226,29 @@ void hwWrite8(u32 mem, u8 value)
 			//if(value & GIF_MODE_IMT) DevCon.Warning("8bit GIFMODE INT write %x", value);
 		}
 		break;
+
 		case SIO_TXFIFO:
 		{
-			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
-			// are empty (otherwise terminate on \n too!)
-			if (( value == '\r' ) || ( sio_count == 1023 ) ||
-			     ( value == '\n' && sio_count != 0 ))
-			{
-				// Use "%s" below even though it feels indirect -- it's necessary to avoid
-				// errors if/when games use printf formatting control chars.
+			static bool iggy_newline = false;
+			static char sio_buffer[1024];
+			static int sio_count;
 
-				sio_buffer[sio_count] = 0;
-				Console.WriteLn( ConColor_EE, L"%s", ShiftJIS_ConvertString(sio_buffer).c_str() );
-				sio_count = 0;
-			}
-			else if( value != '\n' )
+			if (value == '\r')
 			{
+				iggy_newline = true;
+				sio_buffer[sio_count++] = '\n';
+			}
+			else if (!iggy_newline || (value != '\n'))
+			{
+				iggy_newline = false;
 				sio_buffer[sio_count++] = value;
+			}
+
+			if ((sio_count == ArraySize(sio_buffer)-1) || (sio_buffer[sio_count-1] == '\n'))
+			{
+				sio_buffer[sio_count] = 0;
+				eeConLog( ShiftJIS_ConvertString(sio_buffer) );
+				sio_count = 0;
 			}
 		}
 		break;

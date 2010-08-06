@@ -19,15 +19,10 @@
 
 #include "Utilities/SafeArray.h"
 
-static bool IsEnglish( int id )
-{
-	return ( id == wxLANGUAGE_ENGLISH || id == wxLANGUAGE_ENGLISH_US );
-}
-
 LangPackEnumeration::LangPackEnumeration( wxLanguage langId )
 	: wxLangId( langId )
 	, englishName( wxLocale::GetLanguageName( wxLangId ) )
-	, xlatedName( IsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
+	, xlatedName( pxIsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
 {
 }
 
@@ -42,8 +37,6 @@ LangPackEnumeration::LangPackEnumeration()
 }
 
 
-// ------------------------------------------------------------------------
-//
 static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 {
 	// Plain english is a special case that's built in, and we only want it added to the list
@@ -51,7 +44,7 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 	if( wxLangId == wxLANGUAGE_ENGLISH )
 		langs.push_back( LangPackEnumeration( wxLangId ) );
 
-	if( IsEnglish( wxLangId ) ) return;
+	if( pxIsEnglish( wxLangId ) ) return;
 
 	// Note: wx auto-preserves the current locale for us
 	if( !wxLocale::IsAvailable( wxLangId ) ) return;
@@ -67,7 +60,6 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 	delete locale;
 }
 
-// ------------------------------------------------------------------------
 // Finds all valid PCSX2 language packs, and enumerates them for configuration selection.
 // Note: On linux there's no easy way to reliably enumerate language packs, since every distro
 // could use its own location for installing pcsx2.mo files (wtcrap?).  Furthermore wxWidgets
@@ -104,73 +96,6 @@ void i18n_EnumeratePackages( LangPackList& langs )
 	//i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
 }
 
-// ------------------------------------------------------------------------
-// PCSX2's Iconized Text Translator.
-// This i18n version provides two layers of translated lookups.  It puts the key through the
-// current language first and, if the key is not resolved (meaning the language pack doesn't
-// have a translation for it), it's put through our own built-in english translation.  This
-// second step is needed to resolve some of our lengthy UI tooltips and descriptors, which
-// use iconized GetText identifiers.
-//
-// (without this second pass many tooltips would just show up as "Savestate Tooltip" instead
-//  of something meaningful).
-//
-const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
-{
-#ifdef PCSX2_DEVBUILD
-	static const wxChar* tbl_pxE_Prefixes[] =
-	{
-		L".Panel:",
-		L".Popup:",
-		L".Error:",
-		L".Wizard:",
-		L".Tooltip:",
-		NULL
-	};
-
-	// test the prefix of the key for consistency to valid/known prefix types.
-	const wxChar** prefix = tbl_pxE_Prefixes;
-	while( *prefix != NULL )
-	{
-		if( wxString(key).StartsWith(*prefix) ) break;
-		++prefix;
-	}
-	pxAssertDev( *prefix != NULL,
-		wxsFormat( L"Invalid pxE key prefix in key '%s'.  Prefix must be one of the valid prefixes listed in pxExpandMsg.", key )
-	);
-#endif
-
-	const wxLanguageInfo* info = wxLocale::GetLanguageInfo( g_Conf->LanguageId );
-
-	if( ( info == NULL ) || IsEnglish( info->Language ) )
-		return englishContent;
-
-	const wxChar* retval = wxGetTranslation( key );
-
-	// Check if the translation failed, and fall back on an english lookup.
-	return ( wxStrcmp( retval, key ) == 0 ) ? englishContent : retval;
-}
-
-// ------------------------------------------------------------------------
-// Alternative implementation for wxGetTranslation.
-// This version performs a string length check in devel builds, which issues a warning
-// if the string seems too long for gettext lookups.  Longer complicated strings should
-// usually be implemented used the pxMsgExpand system instead.
-//
-const wxChar* __fastcall pxGetTranslation( const wxChar* message )
-{
-	if( IsDevBuild )
-	{
-		if( wxStrlen( message ) > 96 )
-		{
-			Console.Warning( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
-			Console.WriteLn( Color_Green, L"Message: %s", message );
-		}
-	}
-	return wxGetTranslation( message );
-}
-
-// ------------------------------------------------------------------------
 bool i18n_SetLanguage( int wxLangId )
 {
 	if( !wxLocale::IsAvailable( wxLangId ) )
@@ -189,7 +114,7 @@ bool i18n_SetLanguage( int wxLangId )
 		return false;
 	}
 
-	if( !IsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
+	if( !pxIsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
 	{
 		/*Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
 			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()

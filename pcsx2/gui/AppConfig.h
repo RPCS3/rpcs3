@@ -81,6 +81,9 @@ public:
 		// Size of the font in points.
 		int			FontSize;
 
+		// Color theme by name!
+		wxString	Theme;
+
 		ConsoleLogOptions();
 		void LoadSave( IniInterface& conf, const wxChar* title );
 	};
@@ -257,6 +260,14 @@ public:
 	void LoadSaveRootItems( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
 };
+
+extern void AppLoadSettings();
+extern void AppSaveSettings();
+extern void AppApplySettings( const AppConfig* oldconf=NULL );
+
+extern void ConLog_LoadSaveSettings( IniInterface& ini );
+extern void SysTraceLog_LoadSaveSettings( IniInterface& ini );
+
 
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
 extern void RelocateLogfile();

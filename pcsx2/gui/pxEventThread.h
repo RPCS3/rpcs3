@@ -18,7 +18,39 @@
 #include "Utilities/PersistentThread.h"
 #include "Utilities/pxEvents.h"
 
-// TODO!!  Make this system a bit more generic, and then move it to the Utilities library.
+
+// TODO!!  Make the system defined in this header system a bit more generic, and then move
+// it to the Utilities library.
+
+class pxEvtHandler;
+class SysExecEvent;
+
+// --------------------------------------------------------------------------------------
+//  pxEvtLog / ConsoleLogSource_Event
+// --------------------------------------------------------------------------------------
+
+class ConsoleLogSource_Event : ConsoleLogSource
+{
+	typedef ConsoleLogSource _parent;
+
+public:
+	using _parent::IsEnabled;
+
+	ConsoleLogSource_Event()
+	{
+		Name		= L"PS2vm Events";
+		Description = wxLt("Logs events as they are passed to the PS2 virtual machine.");
+	}
+
+	bool Write( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+	bool Warn( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+	bool Error( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+};
+
+extern ConsoleLogSource_Event pxConLog_Event;
+
+#define pxEvtLog pxConLog_Event.IsEnabled() && pxConLog_Event
+
 
 // --------------------------------------------------------------------------------------
 //  SysExecEvent
@@ -108,9 +140,10 @@ class SysExecEvent_MethodVoid : public SysExecEvent
 protected:
 	FnType_Void*	m_method;
 	bool			m_IsCritical;
+	wxString		m_TraceName;
 
 public:
-	wxString GetEventName() const { return L"MethodVoid"; }
+	wxString GetEventName() const { return m_TraceName; }
 
 	virtual ~SysExecEvent_MethodVoid() throw() {}
 	SysExecEvent_MethodVoid* Clone() const { return new SysExecEvent_MethodVoid( *this ); }
@@ -118,12 +151,11 @@ public:
 	bool AllowCancelOnExit() const { return !m_IsCritical; }
 	bool IsCriticalEvent() const { return m_IsCritical; }
 
-	// Hacky: I don't really like this Critical parameter mess, but I haven't thought
-	// of a better solution (yet).
-	explicit SysExecEvent_MethodVoid( FnType_Void* method = NULL, bool critical=false )	
+	explicit SysExecEvent_MethodVoid( FnType_Void* method = NULL, const wxChar* traceName=NULL )	
+		: m_TraceName( traceName ? traceName : L"VoidMethod" )
 	{
 		m_method = method;
-		m_IsCritical = critical;
+		m_IsCritical = false;
 	}
 	
 	SysExecEvent_MethodVoid& Critical()
@@ -190,7 +222,7 @@ public:
 	virtual void ShutdownQueue();
 	bool IsShuttingDown() const { return !!m_Quitting; }
 
-	void ProcessEvents( pxEvtList& list );
+	void ProcessEvents( pxEvtList& list, bool isIdle=false );
 	void ProcessPendingEvents();
 	void ProcessIdleEvents();
 	void Idle();
@@ -204,8 +236,8 @@ public:
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
 
-	bool Rpc_TryInvokeAsync( FnType_Void* method );
-	bool Rpc_TryInvoke( FnType_Void* method );
+	bool Rpc_TryInvokeAsync( FnType_Void* method, const wxChar* traceName=NULL );
+	bool Rpc_TryInvoke( FnType_Void* method, const wxChar* traceName=NULL );
 	void SetActiveThread();
 
 protected:
@@ -242,14 +274,14 @@ public:
 	void ProcessEvent( SysExecEvent* evt );
 	void ProcessEvent( SysExecEvent& evt );
 
-	bool Rpc_TryInvokeAsync( void (*evt)() )
+	bool Rpc_TryInvokeAsync( void (*evt)(), const wxChar* traceName=NULL )
 	{
-		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvokeAsync( evt ) : false;
+		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvokeAsync( evt, traceName ) : false;
 	}
 
-	bool Rpc_TryInvoke( void (*evt)() )
+	bool Rpc_TryInvoke( void (*evt)(), const wxChar* traceName=NULL )
 	{
-		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvoke( evt ) : false;
+		return m_EvtHandler ? m_EvtHandler->Rpc_TryInvoke( evt, traceName ) : false;
 	}
 
 protected:

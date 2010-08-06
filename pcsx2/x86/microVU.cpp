@@ -94,7 +94,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 		mVU->prog.prog[i] = new deque<microProgram*>();
 	}
 
-	mVU->dispCache = SysMmapEx(NULL, mVUdispCacheSize, 0, (mVU->index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
+	mVU->dispCache = SysMmapEx(0, mVUdispCacheSize, 0, (mVU->index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
 	if (!mVU->dispCache) throw Exception::OutOfMemory( mVU->index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );
 	memset(mVU->dispCache, 0xcc, mVUdispCacheSize);
 
@@ -179,7 +179,7 @@ void mVUresizeCache(mV, u32 size) {
 
 	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
 
-	u8* cache = SysMmapEx(NULL, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
+	u8* cache = SysMmapEx(0, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
 	if(!cache && !mVU->cache) throw Exception::OutOfMemory( wxsFormat( L"Micro VU%d recompiled code cache", mVU->index) );
 	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); mVUreset(mVU); return; }
 	if (mVU->cache) {

@@ -36,7 +36,7 @@
 // translator (which the _() does automatically, and sometimes we don't want that).  This is
 // a shorthand replacement for wxTRANSLATE.
 #ifndef wxLt
-#	define wxLt(a)		a
+#	define wxLt(a)	wxT(a)
 #endif
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)

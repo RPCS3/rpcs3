@@ -17,7 +17,6 @@
 
 #include "StringHelpers.h"
 
-
 enum ConsoleColors
 {
 	Color_Current = -1,
@@ -72,10 +71,12 @@ static const ConsoleColors DefaultConsoleColor = Color_Default;
 //
 struct IConsoleWriter
 {
-	// Write implementation for internal use only.
-	void (__concall *DoWrite)( const wxString& fmt );
+	// A direct console write, without tabbing or newlines.  Useful to devs who want to do quick
+	// logging of various junk; but should *not* be used in production code due.
+	void (__concall *WriteRaw)( const wxString& fmt );
 
-	// WriteLn implementation for internal use only.
+	// WriteLn implementation for internal use only.  Bypasses tabbing, prefixing, and other
+	// formatting.
 	void (__concall *DoWriteLn)( const wxString& fmt );
 
 	// SetColor implementation for internal use only.
@@ -83,10 +84,17 @@ struct IConsoleWriter
 
 	// Special implementation of DoWrite that's pretty much for MSVC use only.
 	// All implementations should map to DoWrite, except Stdio which should map to Null.
+	// (This avoids circular/recursive stdio output)
 	void (__concall *DoWriteFromStdout)( const wxString& fmt );
 
 	void (__concall *Newline)();
 	void (__concall *SetTitle)( const wxString& title );
+
+	// internal value for indentation of individual lines.  Use the Indent() member to invoke.
+	int _imm_indentation;
+
+	// For internal use only.
+	wxString _addIndentation( const wxString& src, int glob_indent ) const;
 
 	// ----------------------------------------------------------------------------
 	// Public members; call these to print stuff to console!
@@ -101,31 +109,53 @@ struct IConsoleWriter
 
 	IConsoleWriter Indent( int tabcount=1 ) const;
 
-	bool Write( ConsoleColors color, const char* fmt, ... ) const;
+	bool FormatV( const char* fmt, va_list args ) const;
 	bool WriteLn( ConsoleColors color, const char* fmt, ... ) const;
-	bool Write( const char* fmt, ... ) const;
 	bool WriteLn( const char* fmt, ... ) const;
 	bool Error( const char* fmt, ... ) const;
 	bool Warning( const char* fmt, ... ) const;
 
-	bool Write( ConsoleColors color, const wxChar* fmt, ... ) const;
+	bool FormatV( const wxChar* fmt, va_list args ) const;
 	bool WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const;
-	bool Write( const wxChar* fmt, ... ) const;
 	bool WriteLn( const wxChar* fmt, ... ) const;
 	bool Error( const wxChar* fmt, ... ) const;
 	bool Warning( const wxChar* fmt, ... ) const;
-
-	bool WriteFromStdout( const char* fmt, ... ) const;
-	bool WriteFromStdout( ConsoleColors color, const char* fmt, ... ) const;
-
-	// internal value for indentation of individual lines.  Use the Indent() member to invoke.
-	int _imm_indentation;
-
-	// For internal use only.
-	wxString _addIndentation( const wxString& src, int glob_indent ) const;
 };
 
-extern IConsoleWriter	Console;
+// --------------------------------------------------------------------------------------
+//  NullConsoleWriter
+// --------------------------------------------------------------------------------------
+// Used by Release builds for Debug and Devel writes (DbgCon / DevCon).  Inlines to NOPs. :)
+//
+struct NullConsoleWriter
+{
+	void WriteRaw( const wxString& fmt ) {}
+	void DoWriteLn( const wxString& fmt ) {}
+	void DoSetColor( ConsoleColors color ) {}
+	void DoWriteFromStdout( const wxString& fmt ) {}
+	void Newline() {}
+	void SetTitle( const wxString& title ) {}
+
+
+	ConsoleColors GetColor() const { return Color_Current; }
+	const NullConsoleWriter& SetColor( ConsoleColors color ) const { return *this; }
+	const NullConsoleWriter& ClearColor() const { return *this; }
+	const NullConsoleWriter& SetIndent( int tabcount=1 ) const { return *this; }
+
+	NullConsoleWriter Indent( int tabcount=1 ) const { return NullConsoleWriter(); }
+
+	bool FormatV( const char* fmt, va_list args ) const				{ return false; }
+	bool WriteLn( ConsoleColors color, const char* fmt, ... ) const	{ return false; }
+	bool WriteLn( const char* fmt, ... ) const						{ return false; }
+	bool Error( const char* fmt, ... ) const						{ return false; }
+	bool Warning( const char* fmt, ... ) const						{ return false; }
+
+	bool FormatV( const wxChar* fmt, va_list args ) const			{ return false; }
+	bool WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const { return false; }
+	bool WriteLn( const wxChar* fmt, ... ) const					{ return false; }
+	bool Error( const wxChar* fmt, ... ) const						{ return false; }
+	bool Warning( const wxChar* fmt, ... ) const					{ return false; }
+};
 
 // --------------------------------------------------------------------------------------
 //  ConsoleIndentScope
@@ -143,26 +173,16 @@ class ConsoleIndentScope
 	DeclareNoncopyableObject( ConsoleIndentScope );
 
 protected:
-	int m_amount;
+	int			m_amount;
+	bool		m_IsScoped;
 
 public:
 	// Constructor: The specified number of tabs will be appended to the current indentation
 	// setting.  The tabs will be unrolled when the object leaves scope or is destroyed.
-	ConsoleIndentScope( int tabs=1 )
-	{
-		Console.SetIndent( m_amount = tabs );
-	}
-
-	virtual ~ConsoleIndentScope() throw()
-	{
-		if( m_amount != 0 ) Console.SetIndent( -m_amount );
-	}
-	
-	void EndScope()
-	{
-		Console.SetIndent( -m_amount );
-		m_amount = 0;
-	}
+	ConsoleIndentScope( int tabs=1 );
+	virtual ~ConsoleIndentScope() throw();	
+	void EnterScope();
+	void LeaveScope();
 };
 
 // --------------------------------------------------------------------------------------
@@ -173,19 +193,15 @@ class ConsoleColorScope
 	DeclareNoncopyableObject( ConsoleColorScope );
 
 protected:
-	ConsoleColors m_old_color;
+	ConsoleColors	m_newcolor;
+	ConsoleColors	m_old_color;
+	bool			m_IsScoped;
 
 public:
-	ConsoleColorScope( ConsoleColors newcolor )
-	{
-		m_old_color = Console.GetColor();
-		Console.SetColor( newcolor );
-	}
-
-	virtual ~ConsoleColorScope() throw()
-	{
-		Console.SetColor( m_old_color );
-	}
+	ConsoleColorScope( ConsoleColors newcolor );
+	virtual ~ConsoleColorScope() throw();
+	void EnterScope();
+	void LeaveScope();
 };
 
 // --------------------------------------------------------------------------------------
@@ -202,19 +218,11 @@ protected:
 	int				m_tabsize;
 
 public:
-	ConsoleAttrScope( ConsoleColors newcolor, int indent=0 )
-	{
-		m_old_color = Console.GetColor();
-		Console.SetIndent( m_tabsize = indent );
-		Console.SetColor( newcolor );
-	}
-
-	virtual ~ConsoleAttrScope() throw()
-	{
-		Console.SetColor( m_old_color );
-		Console.SetIndent( -m_tabsize );
-	}
+	ConsoleAttrScope( ConsoleColors newcolor, int indent=0 );
+	virtual ~ConsoleAttrScope() throw();
 };
+
+extern const IConsoleWriter	Console;
 
 extern void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp=NULL );
 extern const wxString& ConsoleBuffer_Get();
@@ -227,17 +235,20 @@ extern const IConsoleWriter		ConsoleWriter_Assert;
 extern const IConsoleWriter		ConsoleWriter_Buffered;
 extern const IConsoleWriter		ConsoleWriter_wxError;
 
+extern const NullConsoleWriter	NullCon;
+
+extern const IConsoleWriter		DevConWriter;
+extern bool						DevConWriterEnabled;
+
 #ifdef PCSX2_DEVBUILD
-	extern IConsoleWriter	DevConWriter;
-#	define DevCon			DevConWriter
+#	define DevCon DevConWriter
 #else
-#	define DevCon			0&&ConsoleWriter_Null
+#	define DevCon DevConWriterEnabled && DevConWriter
 #endif
 
 #ifdef PCSX2_DEBUG
-	extern IConsoleWriter	DbgConWriter;
-#	define DbgCon			DbgConWriter
+extern const IConsoleWriter		DbgConWriter;
+#	define DbgCon				DbgConWriter
 #else
-#	define DbgCon			0&&ConsoleWriter_Null
+#	define DbgCon				0&&NullCon
 #endif
-

@@ -69,65 +69,10 @@ struct TraceFiltersEE
 	BITFIELD32()
 	bool
 		m_EnableAll		:1,		// Master Enable switch (if false, no logs at all)
-
-		m_Bios			:1,		// SYSCALL, RPCs, etc.
-		m_Memory		:1,		// memory accesses (*all* loads and stores)
-		m_Cache			:1,		// Data Cache (Unimplemented)
-		m_SysCtrl		:1,		// TLB logs, PERF logs, Debug register logs
-
-		m_VIFunpack		:1,
-		m_GIFtag		:1,
-
 		m_EnableDisasm	:1,
-		m_R5900			:1,		// instructions, branches, and exception vectors (includes COP0)
-		m_COP0			:1,		// System Control instructions
-		m_COP1			:1,		// EE FPU instructions
-		m_COP2			:1,		// VU0 macro mode instructions and pipeline states
-		m_VU0micro		:1,
-		m_VU1micro		:1,
-
-		m_EnableHardware:1,
-		m_KnownHw		:1,		// Known and handled HW Registers
-		m_UnknownHw		:1,		// Unknown/Unhandled Hardware Registers
-		m_DMA			:1,		// DMA Log filter, to allow for filtering HW separate of the verbose Known Registers.
-
-		m_EnableEvents	:1,		// Enables logging of event-driven activity -- counters, DMAs, etc.
-		m_Counters		:1,		// EE's counters!
-		m_VIF			:1,
-		m_GIF			:1,
-		m_IPU			:1,
-		m_SPR			:1;		// Scratchpad Ram DMA
+		m_EnableRegisters:1,
+		m_EnableEvents	:1;		// Enables logging of event-driven activity -- counters, DMAs, etc.
 	BITFIELD_END
-
-	bool Enabled() const		{ return m_EnableAll; }
-	bool DisasmEnabled() const	{ return m_EnableAll && m_EnableDisasm; }
-	bool HwEnabled() const		{ return m_EnableAll && m_EnableHardware; }
-	bool EventsEnabled() const	{ return m_EnableAll && m_EnableEvents; }
-
-	bool Bios() const			{ return m_EnableAll && m_Bios; }
-	bool Memory() const			{ return m_EnableAll && m_Memory; }
-	bool Cache() const			{ return m_EnableAll && m_Cache; }
-	bool SysCtrl() const		{ return m_EnableAll && m_SysCtrl; }
-
-	bool GIFtag() const			{ return m_EnableAll && m_GIFtag; }
-	bool VIFunpack() const		{ return m_EnableAll && m_VIFunpack; }
-
-	bool Counters() const		{ return EventsEnabled() && m_Counters; }
-	bool VIF() const			{ return EventsEnabled() && m_VIF; }
-	bool GIF() const			{ return EventsEnabled() && m_GIF; }
-	bool IPU() const			{ return EventsEnabled() && m_IPU; }
-	bool SPR() const			{ return EventsEnabled() && m_SPR; }
-
-	bool R5900() const			{ return DisasmEnabled() && m_R5900; }
-	bool COP0() const			{ return DisasmEnabled() && m_COP0; }
-	bool COP1() const			{ return DisasmEnabled() && m_COP1; }
-	bool COP2() const			{ return DisasmEnabled() && m_COP2; }
-	bool VU0micro() const		{ return DisasmEnabled() && m_VU0micro; }
-	bool VU1micro() const		{ return DisasmEnabled() && m_VU1micro; }
-
-	bool KnownHw() const		{ return HwEnabled() && m_KnownHw; }
-	bool UnknownHw() const		{ return HwEnabled() && m_UnknownHw; }
-	bool DMA() const			{ return HwEnabled() && m_DMA; }
 
 	TraceFiltersEE()
 	{
@@ -153,52 +98,10 @@ struct TraceFiltersIOP
 	BITFIELD32()
 	bool
 		m_EnableAll		:1,		// Master Enable switch (if false, no logs at all)
-		m_Bios			:1,		// SYSCALL, RPCs, etc.
-		m_Memory		:1,		// memory accesses (*all* loads and stores)
-
 		m_EnableDisasm	:1,
-		m_R3000A		:1,		// instructions. branches, and exception vectors
-		m_COP2			:1,		// PS1 Triangle helper (disabled in PS2 mode)
-
-		m_EnableHardware:1,
-		m_KnownHw		:1,		// Known and handled HW Registers
-		m_UnknownHw		:1,		// Unknown/Unhandled Hardware Registers
-		m_DMA			:1,		// DMA Log filter, to allow for filtering HW separate of the verbose Known Registers.
-
-		m_EnableEvents	:1,		// Enables logging of event-driven activity -- counters, DMAs, etc.
-		m_Counters		:1,		// IOP's counters!
-		m_Memcards		:1,
-		m_PAD			:1,
-		m_SPU2			:1,
-		m_USB			:1,
-		m_FW			:1,
-		m_CDVD			:1,		// CDROM or CDVD activity (depends on game media type)
-
-		m_GPU			:1;		// PS1's GPU (currently unimplemented and uncategorized)
+		m_EnableRegisters:1,
+		m_EnableEvents	:1;		// Enables logging of event-driven activity -- counters, DMAs, etc.
 	BITFIELD_END
-
-	bool Enabled() const		{ return m_EnableAll; }
-	bool DisasmEnabled() const	{ return m_EnableAll && m_EnableDisasm; }
-	bool HwEnabled() const		{ return m_EnableAll && m_EnableHardware; }
-	bool EventsEnabled() const	{ return m_EnableAll && m_EnableEvents; }
-
-	bool Bios() const			{ return m_EnableAll && m_Bios; }
-	bool Memory() const			{ return m_EnableAll && m_Memory; }
-
-	bool Counters() const		{ return EventsEnabled() && m_Counters; }
-	bool Memcards() const		{ return EventsEnabled() && m_Memcards; }
-	bool PAD() const			{ return EventsEnabled() && m_PAD; }
-	bool SPU2() const			{ return EventsEnabled() && m_SPU2; }
-	bool USB() const			{ return EventsEnabled() && m_USB; }
-	bool FW() const				{ return EventsEnabled() && m_FW; }
-	bool CDVD() const			{ return EventsEnabled() && m_CDVD; }
-
-	bool R3000A() const			{ return DisasmEnabled() && m_R3000A; }
-	bool COP2() const			{ return DisasmEnabled() && m_COP2; }
-
-	bool KnownHw() const		{ return HwEnabled() && m_KnownHw; }
-	bool UnknownHw() const		{ return HwEnabled() && m_UnknownHw; }
-	bool DMA() const			{ return HwEnabled() && m_DMA; }
 
 	TraceFiltersIOP()
 	{
@@ -229,49 +132,22 @@ struct TraceLogFilters
 	// so I prefer this to help keep them usable.
 	bool	Enabled;
 
-	bool	SIF;			// SIF DMA Activity (both EE and IOP sides)
-
 	TraceFiltersEE	EE;
 	TraceFiltersIOP	IOP;
 
 	TraceLogFilters()
 	{
 		Enabled	= false;
-		SIF		= false;
 	}
 
 	void LoadSave( IniInterface& ini );
 
 	bool operator ==( const TraceLogFilters& right ) const
 	{
-		return OpEqu( Enabled ) && OpEqu( SIF ) && OpEqu( EE ) && OpEqu( IOP );
+		return OpEqu( Enabled ) && OpEqu( EE ) && OpEqu( IOP );
 	}
 
 	bool operator !=( const TraceLogFilters& right ) const
-	{
-		return !this->operator ==( right );
-	}
-};
-
-struct ConsoleLogFilters
-{
-	BITFIELD32()
-		bool
-			ELF			:1,
-			Deci2		:1,
-			StdoutEE	:1,
-			StdoutIOP	:1;
-	BITFIELD_END;
-
-	ConsoleLogFilters();
-	void LoadSave( IniInterface& ini );
-
-	bool operator ==( const ConsoleLogFilters& right ) const
-	{
-		return OpEqu( bitset );
-	}
-
-	bool operator !=( const ConsoleLogFilters& right ) const
 	{
 		return !this->operator ==( right );
 	}
@@ -540,7 +416,6 @@ struct Pcsx2Config
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
 
-	ConsoleLogFilters	Log;
 	TraceLogFilters		Trace;
 
 	wxFileName			BiosFilename;
@@ -560,11 +435,10 @@ struct Pcsx2Config
 		return
 			OpEqu( bitset )		&&
 			OpEqu( Cpu )		&&
-			OpEqu( GS )		&&
+			OpEqu( GS )			&&
 			OpEqu( Speedhacks )	&&
 			OpEqu( Gamefixes )	&&
 			OpEqu( Profiler )	&&
-			OpEqu( Log )		&&
 			OpEqu( Trace )		&&
 			OpEqu( BiosFilename );
 	}
@@ -580,7 +454,6 @@ extern const Pcsx2Config EmuConfig;
 Pcsx2Config::GSOptions&			SetGSConfig();
 Pcsx2Config::RecompilerOptions& SetRecompilerConfig();
 Pcsx2Config::GamefixOptions&	SetGameFixConfig();
-ConsoleLogFilters&				SetConsoleConfig();
 TraceLogFilters&				SetTraceConfig();
 
 
@@ -653,6 +526,3 @@ TraceLogFilters&				SetTraceConfig();
 // games. Note: currently PS1 games will error out even without this
 // commented, so this is for development purposes only.
 #define ENABLE_LOADING_PS1_GAMES 0
-
-// Change to 1 to cause all logs to be written to the console. (Very slow)
-#define LOG_TO_CONSOLE 0

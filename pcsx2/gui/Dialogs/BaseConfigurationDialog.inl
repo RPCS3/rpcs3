@@ -18,11 +18,10 @@
 #include <wx/listbook.h>
 
 template< typename T >
-void Dialogs::BaseConfigurationDialog::AddPage( const char* label, int iconid )
+void Dialogs::BaseConfigurationDialog::AddPage( const wxChar* label, int iconid )
 {
-	const wxString labelstr( fromUTF8( label ) );
-	const int curidx = m_labels.Add( labelstr );
+	const int curidx = m_labels.Add( label );
 	m_ApplyState.SetCurrentPage( curidx );
-	m_listbook->AddPage( new T( m_listbook ), wxGetTranslation( labelstr ),
-		( labelstr == GetConfSettingsTabName() ), iconid );
+	m_listbook->AddPage( new T( m_listbook ), wxGetTranslation( label ),
+		( 0 == GetConfSettingsTabName().CmpNoCase(label) ), iconid );
 }

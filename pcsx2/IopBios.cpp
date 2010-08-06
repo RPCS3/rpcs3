@@ -427,7 +427,7 @@ namespace ioman {
 #ifdef PCSX2_DEVBUILD
 		if (fd == 1) // stdout
 		{
-			Console.Write(ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra1, a2).c_str());
+			iopConLog(ShiftJIS_ConvertString(Ra1, a2));
 			pc = ra;
 			v0 = a2;
 			return 1;
@@ -536,9 +536,7 @@ _start:
 		}
 		*ptmp = 0;
 
-		// Use "%s" even though it seems indirect: this avoids chaos if/when the IOP decides
-		// to feed us strings that contain percentages or other printf formatting control chars.
-		Console.Write( ConColor_IOP, L"%s", ShiftJIS_ConvertString(tmp).c_str(), 1023 );
+		iopConLog( ShiftJIS_ConvertString(tmp, 1023) );
 		
 		pc = ra;
 		return 1;

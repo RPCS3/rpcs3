@@ -916,8 +916,8 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	if( m_PageProtectInfo[rampage].Mode == ProtMode_Write )
 		return;		// skip town if we're already protected.
 
-	DbgCon.WriteLn( Color_Gray, (m_PageProtectInfo[rampage].Mode == ProtMode_Manual) ?
-		"dyna_page_reset @ 0x%05x" : "Write-protected page @ 0x%05x",
+	eeRecPerfLog.Write( (m_PageProtectInfo[rampage].Mode == ProtMode_Manual) ?
+		"Re-protecting page @ 0x%05x" : "Protected page @ 0x%05x",
 		paddr>>12
 	);
 
@@ -926,6 +926,8 @@ void mmap_MarkCountedRamPage( u32 paddr )
 }
 
 // offset - offset of address relative to psM.
+// All recompiled blocks belonging to the page are cleared, and any new blocks recompiled
+// from code residing in this page will use manual protection.
 static __forceinline void mmap_ClearCpuBlock( uint offset )
 {
 	int rampage = offset >> 12;
@@ -953,9 +955,10 @@ void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& h
 // Clears all block tracking statuses, manual protection flags, and write protection.
 // This does not clear any recompiler blocks.  It is assumed (and necessary) for the caller
 // to ensure the EErec is also reset in conjunction with calling this function.
+//  (this function is called by default from the eerecReset).
 void mmap_ResetBlockTracking()
 {
-	DevCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
+	//DbgCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
 	memzero( m_PageProtectInfo );
 	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }

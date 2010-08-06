@@ -57,7 +57,7 @@ namespace Dialogs
 		virtual void SomethingChanged();
 
 		template< typename T >
-		void AddPage( const char* label, int iconid );
+		void AddPage( const wxChar* label, int iconid );
 
 	protected:
 		void OnSettingsApplied( wxCommandEvent& evt );

@@ -22,7 +22,7 @@
 
 #include "Assertions.h"
 #include "MemcpyFast.h"
-#include "Console.h"
+#include "TraceLog.h"
 #include "Exceptions.h"
 #include "SafeArray.h"
 #include "General.h"

@@ -22,7 +22,7 @@ CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxS
 	, ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
 {
 	this += ThisToggle;
-	this += ThisSizer;
+	this += ThisSizer | pxExpand;
 
 	// Ensure that the right-side of the static group box isn't too cozy:
 	SetMinWidth( ThisToggle.GetSize().GetWidth() + 32 );

@@ -181,31 +181,34 @@ isoFile *isoOpen(const char *filename)
 		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) / (iso->blocksize));
 	}
 
+	const char* isotypename = NULL;
     switch(iso->type)
     {
-        case ISOTYPE_CD: Console.Write("isoOpen(CD): "); break;
-        case ISOTYPE_DVD: Console.Write("isoOpen(DVD): "); break;
-        case ISOTYPE_AUDIO: Console.Write("isoOpen(Audio CD): "); break;
-        case ISOTYPE_DVDDL: Console.Write("isoOpen(DVDDL): "); break;
+        case ISOTYPE_CD:	isotypename = "CD";			break;
+        case ISOTYPE_DVD:	isotypename = "DVD";		break;
+        case ISOTYPE_AUDIO:	isotypename = "Audio CD";	break;
+        case ISOTYPE_DVDDL:	isotypename = "DVDDL";		break;
+
         case ISOTYPE_ILLEGAL:
-        default: Console.Write("isoOpen(illegal media): "); break;
+        default:
+			isotypename = "illegal media";
+		break;
     }
-	Console.WriteLn("%s ok.", iso->filename);
+	Console.WriteLn("isoOpen(%s): %s ok.", isotypename, iso->filename);
 	Console.WriteLn("The iso has %u blocks (size %u).", iso->blocks, iso->blocksize);
-    Console.WriteLn("The isos offset is %d, and the block offset is %d.", iso->offset, iso->blockofs);
+    Console.WriteLn("The iso offset is %d, and the block offset is %d.", iso->offset, iso->blockofs);
 
 	return iso;
 }
 
 isoFile *isoCreate(const char *filename, int flags)
 {
-	isoFile *iso;
 	char Zfile[256];
 
-	iso = (isoFile*)malloc(sizeof(isoFile));
+	isoFile* iso = (isoFile*)malloc(sizeof(isoFile));
 	if (iso == NULL) return NULL;
 
-	memset(iso, 0, sizeof(isoFile));
+	memzero(*iso);
 	strcpy(iso->filename, filename);
 
 	iso->flags = flags;

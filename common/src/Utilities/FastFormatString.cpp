@@ -153,7 +153,7 @@ static __releaseinline void format_that_ascii_mess( SafeArray<char>& buffer, uin
 		// always do it manually
 		buffer[size-1] = '\0';
 
-		if( size >= MaxFormattedStringLength ) break;
+		if (size >= MaxFormattedStringLength) break;
 
 		// vsnprintf() may return either -1 (traditional Unix behavior) or the
 		// total number of characters which would have been written if the
@@ -189,11 +189,11 @@ static __releaseinline void format_that_unicode_mess( SafeArray<char>& buffer, u
 		// total number of characters which would have been written if the
 		// buffer were large enough (newer standards such as Unix98)
 
-		if ( len < 0 )
+		if (len < 0)
 			len = size + (size/4);
 
 		len += writepos;
-		if ( len < size ) break;
+		if (len < size) break;
 		buffer.ExactAlloc( (len + 31) * 2 );
 	};
 

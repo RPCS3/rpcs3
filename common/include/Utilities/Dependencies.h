@@ -16,6 +16,7 @@
 #pragma once
 
 // Dependencies.h : Contains classes required by all Utilities headers.
+//   This file is included by most .h files provided by the Utilities class.
 
 // --------------------------------------------------------------------------------------
 //  Forward Declarations Section
@@ -30,6 +31,12 @@ class wxSize;
 extern const wxSize wxDefaultSize;
 extern const wxPoint wxDefaultPosition;
 
+namespace Threading
+{
+	class Mutex;
+	class Semaphore;
+	class pxThread;
+}
 
 // This should prove useful....
 #define wxsFormat wxString::Format
@@ -146,20 +153,9 @@ public:
 	}
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// macro provided for tagging translation strings, without actually running them through the
-// translator (which the _() does automatically, and sometimes we don't want that).  This is
-// a shorthand replacement for wxTRANSLATE.
-//
-#ifndef wxLt
-#	define wxLt(a)		a
-#endif
-
 #include <wx/string.h>
 #include <wx/intl.h>
 #include <wx/log.h>
-
-#include "Pcsx2Defs.h"
 
 #include <stdexcept>
 #include <cstring>		// string.h under c++
@@ -167,5 +163,60 @@ public:
 #include <cstdlib>
 #include <vector>
 #include <list>
+
+#include "Pcsx2Defs.h"
+
+// ===========================================================================================
+//  i18n/Translation Feature Set!
+// ===========================================================================================
+
+extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
+extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
+extern bool pxIsEnglish( int id );
+
+// --------------------------------------------------------------------------------------
+//  wxLt(x)   [macro]
+// --------------------------------------------------------------------------------------
+// macro provided for tagging translation strings, without actually running them through the
+// translator (which the _() does automatically, and sometimes we don't want that).  This is
+// a shorthand replacement for wxTRANSLATE.
+//
+#ifndef wxLt
+#	define wxLt(a)		wxT(a)
+#endif
+
+// --------------------------------------------------------------------------------------
+//  pxE(x)   [macro]
+// --------------------------------------------------------------------------------------
+// Translation Feature: pxE is used as a method of dereferencing very long english text
+// descriptions via a "key" identifier.  In this way, the english text can be revised without
+// it breaking existing translation bindings.  Make sure to add pxE to your PO catalog's
+// source code identifiers, and then reference the source code to see what the current
+// english version is.
+//
+// Valid prefix types:
+//
+// .Panel:   Key-based translation of a panel or dialog text; usually either a header or
+//           checkbox description, by may also include some controls with long labels.
+//           These have the highest translation priority.
+//
+// .Popup:   Key-based translation of a popup dialog box; either a notice, confirmation,
+//           or error.  These typically have very high translation priority (roughly equal
+//           or slightly less than pxE_Panel).
+//
+// .Error    Key-based translation of error messages, typically used when throwing exceptions
+//           that have end-user errors.  These are normally (but not always) displayed as popups
+//           to the user.  Translation priority is medium.
+//
+// .Wizard   Key-based translation of a heading, checkbox item, description, or other text
+//           associated with the First-time wizard.  Translation of these items is considered
+//           lower-priority to most other messages; but equal or higher priority to tooltips.
+//
+// .Tooltip: Key-based translation of a tooltip for a control on a dialog/panel.  Translation
+//           of these items is typically considered "lowest priority" as they usually provide
+//           the most tertiary of info to the user.
+//
+
+#define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
 #include "Utilities/Assertions.h"

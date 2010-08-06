@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "Utilities/TraceLog.h"
+
 extern FILE *emuLog;
 extern wxString emuLogName;
 
@@ -65,105 +67,299 @@ namespace R3000A
 	extern char* disR3000AF(u32 code, u32 pc);
 }
 
-#ifdef PCSX2_DEVBUILD
+// Default trace log for high volume VM/System logging.
+// This log dumps to emuLog.txt directly and has no ability to pipe output
+// to the console (due to the console's inability to handle extremely high
+// logging volume).
+class SysTraceLog : public TextFileTraceLog
+{
+public:
+	const char*		PrePrefix;
 
-extern void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...);
-extern void __Log( const char* fmt, ... );
+public:
+	TraceLog_ImplementBaseAPI(SysTraceLog)
 
-extern bool SrcLog_CPU( const char* fmt, ... );
-extern bool SrcLog_COP0( const char* fmt, ... );
+	void DoWrite( const char *fmt ) const;
 
-extern bool SrcLog_MEM( const char* fmt, ... );
-extern bool SrcLog_HW( const char* fmt, ... );
-extern bool SrcLog_DMA( const char* fmt, ... );
-extern bool SrcLog_BIOS( const char* fmt, ... );
-extern bool SrcLog_VU0( const char* fmt, ... );
+	SysTraceLog& SetPrefix( const char* name )
+	{
+		PrePrefix = name;
+		return *this;
+	}
 
-extern bool SrcLog_VIF( const char* fmt, ... );
-extern bool SrcLog_VIFUNPACK( const char* fmt, ... );
-extern bool SrcLog_SPR( const char* fmt, ... );
-extern bool SrcLog_GIF( const char* fmt, ... );
-extern bool SrcLog_SIF( const char* fmt, ... );
-extern bool SrcLog_IPU( const char* fmt, ... );
-extern bool SrcLog_VUM( const char* fmt, ... );
-extern bool SrcLog_RPC( const char* fmt, ... );
-extern bool SrcLog_EECNT( const char* fmt, ... );
-extern bool SrcLog_ISOFS( const char* fmt, ... );
+};
 
-extern bool SrcLog_PSXCPU( const char* fmt, ... );
-extern bool SrcLog_PSXMEM( const char* fmt, ... );
-extern bool SrcLog_PSXHW( const char* fmt, ... );
-extern bool SrcLog_PSXBIOS( const char* fmt, ... );
-extern bool SrcLog_PSXDMA( const char* fmt, ... );
-extern bool SrcLog_PSXCNT( const char* fmt, ... );
+class SysTraceLog_EE : public SysTraceLog
+{
+public:
+	void ApplyPrefix( FastFormatAscii& ascii ) const;
+	bool IsEnabled() const
+	{
+		return EmuConfig.Trace.Enabled && Enabled && EmuConfig.Trace.EE.m_EnableAll;
+	}
+	
+	wxString GetCategory() const { return L"EE"; }
+};
 
-extern bool SrcLog_MEMCARDS( const char* fmt, ... );
-extern bool SrcLog_PAD( const char* fmt, ... );
-extern bool SrcLog_CDR( const char* fmt, ... );
-extern bool SrcLog_CDVD( const char* fmt, ... );
-extern bool SrcLog_GPU( const char* fmt, ... );
-extern bool SrcLog_CACHE( const char* fmt, ... );
+class SysTraceLog_VIFcode : public SysTraceLog_EE
+{
+	typedef SysTraceLog_EE _parent;
+
+public:
+	void ApplyPrefix( FastFormatAscii& ascii ) const;
+};
+
+class SysTraceLog_EE_Disasm : public SysTraceLog_EE
+{
+	typedef SysTraceLog_EE _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableDisasm;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Disasm"; }
+};
+
+class SysTraceLog_EE_Registers : public SysTraceLog_EE
+{
+	typedef SysTraceLog_EE _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableRegisters;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Registers"; }
+};
+
+class SysTraceLog_EE_Events : public SysTraceLog_EE
+{
+	typedef SysTraceLog_EE _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableEvents;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Events"; }
+};
+
+
+class SysTraceLog_IOP : public SysTraceLog
+{
+public:
+	void ApplyPrefix( FastFormatAscii& ascii ) const;
+	bool IsEnabled() const
+	{
+		return EmuConfig.Trace.Enabled && Enabled && EmuConfig.Trace.IOP.m_EnableAll;
+	}
+
+	wxString GetCategory() const { return L"IOP"; }
+};
+
+class SysTraceLog_IOP_Disasm : public SysTraceLog_IOP
+{
+	typedef SysTraceLog_IOP _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableDisasm;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Disasm"; }
+};
+
+class SysTraceLog_IOP_Registers : public SysTraceLog_IOP
+{
+	typedef SysTraceLog_IOP _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableRegisters;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Registers"; }
+};
+
+class SysTraceLog_IOP_Events : public SysTraceLog_IOP
+{
+	typedef SysTraceLog_IOP _parent;
+
+public:
+	bool IsEnabled() const
+	{
+		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableEvents;
+	}
+
+	wxString GetCategory() const { return _parent::GetCategory() + L".Events"; }
+};
+
+// --------------------------------------------------------------------------------------
+//  ConsoleLogFromVM
+// --------------------------------------------------------------------------------------
+// Special console logger for Virtual Machine log sources, such as the EE and IOP console
+// writes (actual game developer messages and such).  These logs do *not* automatically
+// append newlines, since the VM generates them manually.
+//
+class ConsoleLogFromVM : public ConsoleLogSource
+{
+	typedef ConsoleLogSource _parent;
+
+public:
+	ConsoleLog_ImplementBaseAPI(ConsoleLogFromVM)
+	using _parent::IsEnabled;
+
+	virtual void DoWrite( const wxChar* msg ) const
+	{
+		Console.WriteRaw( msg );
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  SysTraceLogPack
+// --------------------------------------------------------------------------------------
+struct SysTraceLogPack
+{
+	// TODO : Sif has special logging needs.. ?
+	SysTraceLog	SIF;
+
+	struct
+	{
+		SysTraceLog_EE				Bios;
+		SysTraceLog_EE				Memory;
+		SysTraceLog_EE				GIFtag;
+		SysTraceLog_VIFcode			VIFcode;
+
+		SysTraceLog_EE_Disasm		R5900;
+		SysTraceLog_EE_Disasm		COP0;
+		SysTraceLog_EE_Disasm		COP1;
+		SysTraceLog_EE_Disasm		COP2;
+		SysTraceLog_EE_Disasm		Cache;
+		
+		SysTraceLog_EE_Registers	KnownHw;
+		SysTraceLog_EE_Registers	UnknownHw;
+		SysTraceLog_EE_Registers	DMAhw;
+		SysTraceLog_EE_Registers	IPU;
+
+		SysTraceLog_EE_Events		DMAC;
+		SysTraceLog_EE_Events		Counters;
+		SysTraceLog_EE_Events		SPR;
+
+		SysTraceLog_EE_Events		VIF;
+		SysTraceLog_EE_Events		GIF;
+
+	} EE;
+	
+	struct
+	{
+		SysTraceLog_IOP				Bios;
+		SysTraceLog_IOP				Memcards;
+		SysTraceLog_IOP				PAD;
+
+		SysTraceLog_IOP_Disasm		R3000A;
+		SysTraceLog_IOP_Disasm		COP2;
+		SysTraceLog_IOP_Disasm		Memory;
+
+		SysTraceLog_IOP_Registers	KnownHw;
+		SysTraceLog_IOP_Registers	UnknownHw;
+		SysTraceLog_IOP_Registers	DMAhw;
+
+		// TODO items to be added, or removed?  I can't remember which! --air
+		//SysTraceLog_IOP_Registers	SPU2;
+		//SysTraceLog_IOP_Registers	USB;
+		//SysTraceLog_IOP_Registers	FW;
+
+		SysTraceLog_IOP_Events		DMAC;
+		SysTraceLog_IOP_Events		Counters;
+		SysTraceLog_IOP_Events		CDVD;
+
+	} IOP;
+
+	SysTraceLogPack();
+};
+
+struct SysConsoleLogPack
+{
+	ConsoleLogSource		ELF;
+	ConsoleLogSource		eeRecPerf;
+
+	ConsoleLogFromVM		eeConsole;
+	ConsoleLogFromVM		iopConsole;
+	ConsoleLogFromVM		deci2;
+
+	SysConsoleLogPack();
+};
+
+
+extern SysTraceLogPack SysTracePack;
+extern SysConsoleLogPack SysConsolePack;
+
 
 // Helper macro for cut&paste.  Note that we intentionally use a top-level *inline* bitcheck
 // against Trace.Enabled, to avoid extra overhead in Debug builds when logging is disabled.
-#define macTrace EmuConfig.Trace.Enabled && EmuConfig.Trace
-
-#define CPU_LOG			(macTrace.EE.R5900())		&& SrcLog_CPU
-#define MEM_LOG			(macTrace.EE.Memory())		&& SrcLog_MEM
-#define CACHE_LOG		(macTrace.EE.Cache)			&& SrcLog_CACHE
-#define HW_LOG			(macTrace.EE.KnownHw())		&& SrcLog_HW
-#define UnknownHW_LOG	(macTrace.EE.KnownHw())		&& SrcLog_HW
-#define DMA_LOG			(macTrace.EE.DMA())			&& SrcLog_DMA
-
-#define BIOS_LOG		(macTrace.EE.Bios())		&& SrcLog_BIOS
-#define VU0_LOG			(macTrace.EE.VU0())			&& SrcLog_VU0
-#define SysCtrl_LOG		(macTrace.EE.SysCtrl())		&& SrcLog_COP0
-#define COP0_LOG		(macTrace.EE.COP0())		&& SrcLog_COP0
-#define VIF_LOG			(macTrace.EE.VIF())			&& SrcLog_VIF
-#define SPR_LOG			(macTrace.EE.SPR())			&& SrcLog_SPR
-#define GIF_LOG			(macTrace.EE.GIF())			&& SrcLog_GIF
-#define SIF_LOG			(macTrace.SIF)				&& SrcLog_SIF
-#define IPU_LOG			(macTrace.EE.IPU())			&& SrcLog_IPU
-#define VUM_LOG			(macTrace.EE.COP2())		&& SrcLog_VUM
-
-#define EECNT_LOG		(macTrace.EE.Counters())	&& SrcLog_EECNT
-#define VIFUNPACK_LOG	(macTrace.EE.VIFunpack())	&& SrcLog_VIFUNPACK
+// (specifically this allows debug builds to skip havingto resolve all the parameters being
+//  passed into the function)
+#define macTrace(trace)	SysTracePack.trace.IsEnabled() && SysTracePack.trace.Write
 
 
-#define PSXCPU_LOG		(macTrace.IOP.R3000A())		&& SrcLog_PSXCPU
-#define PSXMEM_LOG		(macTrace.IOP.Memory())		&& SrcLog_PSXMEM
-#define PSXHW_LOG		(macTrace.IOP.KnownHw())	&& SrcLog_PSXHW
-#define PSXUnkHW_LOG	(macTrace.IOP.UnknownHw())	&& SrcLog_PSXHW
-#define PSXBIOS_LOG		(macTrace.IOP.Bios())		&& SrcLog_PSXBIOS
-#define PSXDMA_LOG		(macTrace.IOP.DMA())		&& SrcLog_PSXDMA
-#define PSXCNT_LOG		(macTrace.IOP.Counters())	&& SrcLog_PSXCNT
+#ifdef PCSX2_DEVBUILD
 
-#define MEMCARDS_LOG	(macTrace.IOP.Memcards())	&& SrcLog_MEMCARDS
-#define PAD_LOG			(macTrace.IOP.PAD())		&& SrcLog_PAD
-#define GPU_LOG			(macTrace.IOP.GPU())		&& SrcLog_GPU
-#define CDVD_LOG		(macTrace.IOP.CDVD())		&& SrcLog_CDVD
+extern void __Log( const char* fmt, ... );
+
+#define SIF_LOG			macTrace(SIF)
+
+#define BIOS_LOG		macTrace(EE.Bios)
+#define CPU_LOG			macTrace(EE.R5900)
+#define COP0_LOG		macTrace(EE.COP0)
+#define VUM_LOG			macTrace(EE.COP2)
+#define MEM_LOG			macTrace(EE.Memory)
+#define CACHE_LOG		macTrace(EE.Cache)
+#define HW_LOG			macTrace(EE.KnownHw)
+#define UnknownHW_LOG	macTrace(EE.UnknownHw)
+#define DMA_LOG			macTrace(EE.DMAhw)
+#define IPU_LOG			macTrace(EE.IPU)
+#define VIF_LOG			macTrace(EE.VIF)
+#define SPR_LOG			macTrace(EE.SPR)
+#define GIF_LOG			macTrace(EE.GIF)
+#define EECNT_LOG		macTrace(EE.Counters)
+#define VifCodeLog		macTrace(EE.VIFcode)
+
+
+#define PSXBIOS_LOG		macTrace(IOP.Bios)
+#define PSXCPU_LOG		macTrace(IOP.R3000A)
+#define PSXMEM_LOG		macTrace(IOP.Memory)
+#define PSXHW_LOG		macTrace(IOP.KnownHw)
+#define PSXUnkHW_LOG	macTrace(IOP.UnknownHw)
+#define PSXDMA_LOG		macTrace(IOP.DMAhw)
+#define PSXCNT_LOG		macTrace(IOP.Counters)
+#define MEMCARDS_LOG	macTrace(IOP.Memcards)
+#define PAD_LOG			macTrace(IOP.PAD)
+#define GPU_LOG			macTrace(IOP.GPU)
+#define CDVD_LOG		macTrace(IOP.CDVD)
 
 #else // PCSX2_DEVBUILD
 
-#define CPU_LOG  0&&
-#define MEM_LOG  0&&
-#define HW_LOG   0&&
-#define DMA_LOG  0&&
-#define BIOS_LOG 0&&
-#define FPU_LOG  0&&
-#define MMI_LOG  0&&
-#define VU0_LOG  0&&
-#define COP0_LOG 0&&
-#define SysCtrl_LOG 0&&
+#define CPU_LOG		0&&
+#define MEM_LOG		0&&
+#define HW_LOG		0&&
+#define DMA_LOG		0&&
+#define BIOS_LOG	0&&
+#define VU0_LOG		0&&
+#define COP0_LOG	0&&
 #define UnknownHW_LOG 0&&
-#define VIF_LOG  0&&
-#define VIFUNPACK_LOG  0&&
-#define SPR_LOG  0&&
-#define GIF_LOG  0&&
-#define SIF_LOG  0&&
-#define IPU_LOG  0&&
-#define VUM_LOG  0&&
-#define ISOFS_LOG  0&&
+#define VIF_LOG		0&&
+#define SPR_LOG		0&&
+#define GIF_LOG		0&&
+#define SIF_LOG		0&&
+#define IPU_LOG		0&&
+#define VUM_LOG		0&&
+#define VifCodeLog	0&&
 
 #define PSXCPU_LOG  0&&
 #define PSXMEM_LOG  0&&
@@ -184,4 +380,8 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define MEMCARDS_LOG 0&&
 #endif
 
-#define ELF_LOG  (EmuConfig.Log.ELF) && DevCon.WriteLn
+#define ELF_LOG			SysConsolePack.ELF.IsEnabled() && SysConsolePack.ELF.Write
+#define eeRecPerfLog	SysConsolePack.eeRecPerf.IsEnabled() && SysConsolePack.eeRecPerf
+#define eeConLog		SysConsolePack.eeConsole.IsEnabled() && SysConsolePack.eeConsole.Write
+#define eeDeci2Log		SysConsolePack.deci2.IsEnabled() && SysConsolePack.deci2.Write
+#define iopConLog		SysConsolePack.iopConsole.IsEnabled() && SysConsolePack.iopConsole.Write

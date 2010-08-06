@@ -80,7 +80,7 @@ u64 Threading::GetThreadTicksPerSecond()
 
 u64 Threading::pxThread::GetCpuTime() const
 {
-	if( m_native_handle == NULL ) return 0;
+	if (!m_native_handle) return 0;
 
 	FileTimeSucks user, kernel;
 	FILETIME dummy;
@@ -99,7 +99,7 @@ void Threading::pxThread::_platform_specific_OnStartInThread()
 	m_native_id		= (uptr)GetCurrentThreadId();
 	m_native_handle	= (uptr)OpenThread( THREAD_QUERY_INFORMATION, false, (DWORD)m_native_id );
 
-	pxAssertDev( m_native_handle != NULL, wxNullChar );
+	pxAssertDev( m_native_handle, wxNullChar );
 }
 
 void Threading::pxThread::_platform_specific_OnCleanupInThread()

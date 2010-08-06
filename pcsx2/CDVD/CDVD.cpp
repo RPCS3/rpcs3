@@ -1897,14 +1897,17 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 					break;
 				}
 
-				Console.Write("[MG] ELF_size=0x%X Hdr_size=0x%X unk=0x%X flags=0x%X count=%d zones=",
-					*(u32*)&cdvd.mg_buffer[0x10], *(u16*)&cdvd.mg_buffer[0x14], *(u16*)&cdvd.mg_buffer[0x16],
-					*(u16*)&cdvd.mg_buffer[0x18], *(u16*)&cdvd.mg_buffer[0x1A]);
+				std::string zoneStr;
 				for (i=0; i<8; i++)
 				{
-					if (cdvd.mg_buffer[0x1C] & (1<<i)) Console.Write("%s ", mg_zones[i]);
+					if (cdvd.mg_buffer[0x1C] & (1<<i)) zoneStr += mg_zones[i];
 				}
-				Console.Newline();
+
+				Console.WriteLn("[MG] ELF_size=0x%X Hdr_size=0x%X unk=0x%X flags=0x%X count=%d zones=%s",
+					*(u32*)&cdvd.mg_buffer[0x10], *(u16*)&cdvd.mg_buffer[0x14], *(u16*)&cdvd.mg_buffer[0x16],
+					*(u16*)&cdvd.mg_buffer[0x18], *(u16*)&cdvd.mg_buffer[0x1A],
+					zoneStr.c_str()
+				);
 
 				bit_ofs = mg_BIToffset(cdvd.mg_buffer);
 
@@ -1921,7 +1924,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 				//memcpy(cdvd.mg_kcon, &cdvd.mg_buffer[bit_ofs-0x10], 0x10);
 
 				if ((cdvd.mg_buffer[bit_ofs+5] || cdvd.mg_buffer[bit_ofs+6] || cdvd.mg_buffer[bit_ofs+7]) ||
-				     (cdvd.mg_buffer[bit_ofs+4] * 16 + bit_ofs + 8 + 16 != *(u16*)&cdvd.mg_buffer[0x14]))
+					(cdvd.mg_buffer[bit_ofs+4] * 16 + bit_ofs + 8 + 16 != *(u16*)&cdvd.mg_buffer[0x14]))
 				{
 					fail_pol_cal();
 					break;

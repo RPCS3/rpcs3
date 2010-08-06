@@ -32,7 +32,7 @@ protected:
 	u8* mData;		// Data Ptr (allocated via SysMmap)
 
 	void alloc(int size) {
-		mData = SysMmapEx(NULL, size, 0, "nVif_BlockBuffer");
+		mData = SysMmapEx(0, size, 0, "nVif_BlockBuffer");
 		if (!mData) throw Exception::OutOfMemory(L"nVif recompiled code buffer (nVif_BlockBuffer)");
 		clear();
 	}

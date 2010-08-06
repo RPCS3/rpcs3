@@ -32,21 +32,6 @@ void MSW_SetWindowAfter( WXWidget hwnd, WXWidget hwndAfter )
 #endif
 }
 
-// Writes text to the Visual Studio Output window (Microsoft Windows only).
-// On all other platforms this pipes to StdErr instead.
-void MSW_OutputDebugString( const wxString& text )
-{
-#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
-	// don't prepend debug/trace here: it goes to the
-	// debug window anyhow
-	OutputDebugString( text + L"\r\n" );
-#else
-	// send them to stderr
-	wxFprintf(stderr, L"%s\n", text.c_str());
-	fflush(stderr);
-#endif
-}
-
 void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width )
 {
 #ifdef __WXMSW__

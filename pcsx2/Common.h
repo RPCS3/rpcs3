@@ -29,9 +29,6 @@
 static const u32 BIAS = 2;   // Bus is half of the actual ps2 speed
 static const u32 PS2CLK = 294912000; //hz	/* 294.912 mhz */
 
-static const ConsoleColors ConColor_IOP = Color_Yellow;
-static const ConsoleColors ConColor_EE = Color_Cyan;
-
 extern wxString ShiftJIS_ConvertString( const char* src );
 extern wxString ShiftJIS_ConvertString( const char* src, int maxlen );
 

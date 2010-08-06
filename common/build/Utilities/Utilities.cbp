@@ -164,6 +164,7 @@
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
 		<Unit filename="../../include/Utilities/ThreadingDialogs.h" />
+		<Unit filename="../../include/Utilities/TraceLog.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
 		<Unit filename="../../include/Utilities/pxCheckBox.h" />
 		<Unit filename="../../include/Utilities/pxEvents.h" />
@@ -199,6 +200,7 @@
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/pxStaticText.cpp" />
 		<Unit filename="../../src/Utilities/pxTextStream.cpp" />
+		<Unit filename="../../src/Utilities/pxTranslate.cpp" />
 		<Unit filename="../../src/Utilities/pxWindowTextWriter.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
 		<Unit filename="../../src/Utilities/wxAppWithHelpers.cpp" />

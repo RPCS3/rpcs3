@@ -90,7 +90,7 @@ public:
 		: m_plugpath( plugpath )
 	{
 		if( !m_plugin.Load( m_plugpath ) )
-			throw Exception::BadStream( m_plugpath ).SetBothMsgs("File is not a valid dynamic library.");
+			throw Exception::BadStream( m_plugpath ).SetBothMsgs(L"File is not a valid dynamic library.");
 
 		wxDoNotLogInThisScope please;
 		m_GetLibType		= (_PS2EgetLibType)m_plugin.GetSymbol( L"PS2EgetLibType" );
@@ -446,8 +446,8 @@ void Panels::PluginSelectorPanel::AppStatusEvent_OnSettingsApplied()
 static wxString GetApplyFailedMsg()
 {
 	return wxsFormat( pxE( ".Error:PluginSelector:ApplyFailed",
-		L"All plugins must have valid selections for %s to run.  If you are unable to make\n"
-		L"a valid selection due to missing plugins or an incomplete install of %s, then\n"
+		L"All plugins must have valid selections for %s to run.  If you are unable to make "
+		L"a valid selection due to missing plugins or an incomplete install of %s, then "
 		L"press cancel to close the Configuration panel."
 	), pxGetAppName().c_str(), pxGetAppName().c_str() );
 }

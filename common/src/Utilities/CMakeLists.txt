@@ -114,6 +114,7 @@ set(UtilitiesSources
 	pxRadioPanel.cpp
 	pxStaticText.cpp
 	pxTextStream.cpp
+	pxTranslate.cpp
 	pxWindowTextWriter.cpp
 	Semaphore.cpp
 	StringHelpers.cpp

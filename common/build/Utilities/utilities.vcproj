@@ -280,6 +280,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\pxTranslate.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\pxWindowTextWriter.cpp"
 				>
 			</File>
@@ -459,6 +463,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\StringHelpers.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\TraceLog.h"
 				>
 			</File>
 			<File

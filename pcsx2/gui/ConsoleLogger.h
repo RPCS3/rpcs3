@@ -94,11 +94,8 @@ class pxLogTextCtrl : public wxTextCtrl,
 	public EventListener_Plugins
 {
 protected:
-	//EventListenerHelper_CoreThread<pxLogTextCtrl>	m_listener_CoreThread;
-	//EventListenerHelper_Plugins<pxLogTextCtrl>		m_listener_Plugins;
-
-	ScopedPtr<ScopedCoreThreadPause>	m_IsPaused;
-	bool	m_FreezeWrites;
+	ScopedPtr<ScopedCoreThreadPause> m_IsPaused;
+	bool m_FreezeWrites;
 
 public:
 	pxLogTextCtrl(wxWindow* parent);
@@ -153,6 +150,9 @@ protected:
 		{
 			return m_table[(int)coloridx];
 		}
+		
+		void SetColorScheme_Dark();
+		void SetColorScheme_Light();
 	};
 
 	class ColorSection
@@ -217,9 +217,7 @@ protected:
 	//  Window and Menu Object Handles
 	// ----------------------------------------------------------------------------
 
-	wxMenuItem*		m_item_Deci2;
-	wxMenuItem*		m_item_StdoutEE;
-	wxMenuItem*		m_item_StdoutIOP;
+	ScopedArray<wxMenuItem*>	m_sourceChecks;
 
 public:
 	// ctor & dtor
@@ -237,13 +235,17 @@ public:
 
 protected:
 	// menu callbacks
-	virtual void OnOpen (wxCommandEvent& event);
-	virtual void OnClose(wxCommandEvent& event);
-	virtual void OnSave (wxCommandEvent& event);
-	virtual void OnClear(wxCommandEvent& event);
+	void OnOpen (wxCommandEvent& event);
+	void OnClose(wxCommandEvent& event);
+	void OnSave (wxCommandEvent& event);
+	void OnClear(wxCommandEvent& event);
 
+	void OnEnableAllLogging(wxCommandEvent& event);
+	void OnDisableAllLogging(wxCommandEvent& event);
+
+	void OnToggleTheme(wxCommandEvent& event);
 	void OnFontSize(wxCommandEvent& event);
-	void OnLogSourceChanged(wxCommandEvent& event);
+	void OnToggleSource(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
 
@@ -254,9 +256,10 @@ protected:
 
 	void DoFlushQueue();
 	void DoFlushEvent( bool isPending );
-	
+
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
+	
+	void OnLoggingChanged();
 };
-

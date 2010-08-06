@@ -23,9 +23,9 @@
 #include <signal.h>
 #endif
 
-static wxString GetTranslation( const char* msg )
+static wxString GetTranslation( const wxChar* msg )
 {
-	return msg ? wxGetTranslation( fromUTF8(msg) ) : wxEmptyString;
+	return msg ? wxGetTranslation( msg ) : wxEmptyString;
 }
 
 // ------------------------------------------------------------------------
@@ -97,8 +97,11 @@ void pxTrap()
 
 DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg )
 {
+	// Recursion guard: Allow at least one recursive call.  This is useful because sometimes
+	// we get meaningless assertions while unwinding stack traces after exceptions have occurred.
+
 	RecursionGuard guard( s_assert_guard );
-	if( guard.IsReentrant() ) { return wxTrap(); }
+	if (guard.Counter > 2) { return wxTrap(); }
 
 	// wxWidgets doesn't come with debug builds on some Linux distros, and other distros make
 	// it difficult to use the debug build (compilation failures).  To handle these I've had to
@@ -132,10 +135,10 @@ __forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
 
 BaseException::~BaseException() throw() {}
 
-BaseException& BaseException::SetBothMsgs( const char* msg_diag )
+BaseException& BaseException::SetBothMsgs( const wxChar* msg_diag )
 {
 	m_message_user = GetTranslation( msg_diag );
-	return SetDiagMsg( fromUTF8(msg_diag) );
+	return SetDiagMsg( msg_diag );
 }
 
 BaseException& BaseException::SetDiagMsg( const wxString& msg_diag )

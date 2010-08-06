@@ -76,22 +76,22 @@ struct KeyAcceleratorCode
 
 // --------------------------------------------------------------------------------------
 //  GlobalCommandDescriptor
-//  Describes a global command which can be invoked from the main GUI or GUI plugins.
 // --------------------------------------------------------------------------------------
+//  Describes a global command which can be invoked from the main GUI or GUI plugins.
 
 struct GlobalCommandDescriptor
 {
-	const char* Id;					// Identifier string
-	void		(*Invoke)();		// Do it!!  Do it NOW!!!
+	const char*		Id;					// Identifier string
+	void			(*Invoke)();		// Do it!!  Do it NOW!!!
 
-	const char*	Fullname;			// Name displayed in pulldown menus
-	const char*	Tooltip;			// text displayed in toolbar tooltips and menu status bars.
+	const wxChar*	Fullname;			// Name displayed in pulldown menus
+	const wxChar*	Tooltip;			// text displayed in toolbar tooltips and menu status bars.
 
-	int			ToolbarIconId;		// not implemented yet, leave 0 for now.
+	int				ToolbarIconId;		// not implemented yet, leave 0 for now.
 };
 
 // --------------------------------------------------------------------------------------
-//  
+//  CommandDictionary
 // --------------------------------------------------------------------------------------
 class CommandDictionary : public HashTools::Dictionary<const GlobalCommandDescriptor*>
 {

@@ -79,17 +79,9 @@ extern void SysMessage(const wchar_t *fmt, ...);
 //   Abbreviated macros for dev/debug only consoles and msgboxes.
 
 #ifdef PCSX2_DEVBUILD
-#	define DevCon Console
 #	define DevMsg MsgBox
 #else
-#	define DevCon 0&&Console
 #	define DevMsg
-#endif
-
-#ifdef PCSX2_DEBUG
-#	define DbgCon Console
-#else
-#	define DbgCon 0&&Console
 #endif
 
 #ifdef PCSX2_DEVBUILD

@@ -110,7 +110,7 @@ void Vif1MskPath3() {
 vifOp(vifCode_Base) {
 	vif1Only();
 	pass1 { vif1Regs->base = vif1Regs->code & 0x3ff; vif1.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_Base"); }
+	pass3 { VifCodeLog("Base"); }
 	return 0;
 }
 
@@ -235,12 +235,12 @@ template<int idx> _f int _vifCode_Direct(int pass, const u8* data, bool isDirect
 }
 
 vifOp(vifCode_Direct) {
-	pass3 { DevCon.WriteLn("vifCode_Direct"); }
+	pass3 { VifCodeLog("Direct"); }
 	return _vifCode_Direct<idx>(pass, (u8*)data, 0);
 }
 
 vifOp(vifCode_DirectHL) {
-	pass3 { DevCon.WriteLn("vifCode_DirectHL"); }
+	pass3 { VifCodeLog("DirectHL"); }
 	return _vifCode_Direct<idx>(pass, (u8*)data, 1);
 }
 
@@ -249,7 +249,7 @@ vifOp(vifCode_Flush) {
 	vif1Only();
 	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx);  vifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_Flush"); }
+	pass3 { VifCodeLog("Flush"); }
 	return 0;
 }
 
@@ -272,7 +272,7 @@ vifOp(vifCode_FlushA) {
 		
 		vifX.cmd = 0;
 	}
-	pass3 { DevCon.WriteLn("vifCode_FlushA"); }
+	pass3 { VifCodeLog("FlushA"); }
 	return 0;
 }
 
@@ -280,13 +280,13 @@ vifOp(vifCode_FlushA) {
 vifOp(vifCode_FlushE) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx); vifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_FlushE"); }
+	pass3 { VifCodeLog("FlushE"); }
 	return 0;
 }
 
 vifOp(vifCode_ITop) {
 	pass1 { vifXRegs->itops = vifXRegs->code & 0x3ff; GetVifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_ITop"); }
+	pass3 { VifCodeLog("ITop"); }
 	return 0;
 }
 
@@ -297,7 +297,7 @@ vifOp(vifCode_Mark) {
 		vifXRegs->stat.MRK = true;
 		vifX.cmd           = 0;
 	}
-	pass3 { DevCon.WriteLn("vifCode_Mark"); }
+	pass3 { VifCodeLog("Mark"); }
 	return 0;
 }
 
@@ -344,28 +344,28 @@ vifOp(vifCode_MPG) {
 			return ret;
 		}
 	}
-	pass3 { DevCon.WriteLn("vifCode_MPG"); }
+	pass3 { VifCodeLog("MPG"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCAL) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0;}
-	pass3 { DevCon.WriteLn("vifCode_MSCAL"); }
+	pass3 { VifCodeLog("MSCAL"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCALF) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_MSCALF"); }
+	pass3 { VifCodeLog("MSCALF"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCNT) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifFlush(idx); vuExecMicro(idx, -1); vifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_MSCNT"); }
+	pass3 { VifCodeLog("MSCNT"); }
 	return 0;
 }
 
@@ -383,13 +383,13 @@ vifOp(vifCode_MskPath3) {
 		}
 		vif1.cmd = 0;
 	}
-	pass3 { DevCon.WriteLn("vifCode_MskPath3"); }
+	pass3 { VifCodeLog("MskPath3"); }
 	return 0;
 }
 
 vifOp(vifCode_Nop) {
 	pass1 { GetVifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_Nop"); }
+	pass3 { VifCodeLog("Nop"); }
 	return 0;
 }
 
@@ -407,7 +407,7 @@ vifOp(vifCode_Null) {
 		vifX.cmd = 0;
 	}
 	pass2 { Console.Error("Vif%d bad vifcode! [CMD = %x]", idx, vifX.cmd); }
-	pass3 { DevCon.WriteLn("vifCode_Null"); }
+	pass3 { VifCodeLog("Null"); }
 	return 0;
 }
 
@@ -419,7 +419,7 @@ vifOp(vifCode_Offset) {
 		vif1Regs->tops		= vif1Regs->base;
 		vif1.cmd			= 0;
 	}
-	pass3 { DevCon.WriteLn("vifCode_Offset"); }
+	pass3 { VifCodeLog("Offset"); }
 	return 0;
 }
 
@@ -467,7 +467,7 @@ vifOp(vifCode_STCol) {
 		u32* pmem2 = cols		   +  vifX.tag.addr;
 		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
 	}
-	pass3 { DevCon.WriteLn("vifCode_STCol"); }
+	pass3 { VifCodeLog("STCol"); }
 	return 0;
 }
 
@@ -485,7 +485,7 @@ vifOp(vifCode_STRow) {
 		u32* pmem2 = rows		   +  vifX.tag.addr;
 		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
 	}
-	pass3 { DevCon.WriteLn("vifCode_STRow"); }
+	pass3 { VifCodeLog("STRow"); }
 	return 0;
 }
 
@@ -496,7 +496,7 @@ vifOp(vifCode_STCycl) {
 		vifXRegs->cycle.wl = (u8)(vifXRegs->code >> 8);
 		vifX.cmd		   = 0;
 	}
-	pass3 { DevCon.WriteLn("vifCode_STCycl"); }
+	pass3 { VifCodeLog("STCycl"); }
 	return 0;
 }
 
@@ -504,13 +504,13 @@ vifOp(vifCode_STMask) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifX.tag.size = 1; }
 	pass2 { vifXRegs->mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_STMask"); }
+	pass3 { VifCodeLog("STMask"); }
 	return 1;
 }
 
 vifOp(vifCode_STMod) {
 	pass1 { vifXRegs->mode = vifXRegs->code & 0x3; GetVifX.cmd = 0; }
-	pass3 { DevCon.WriteLn("vifCode_STMod"); }
+	pass3 { VifCodeLog("STMod"); }
 	return 0;
 }
 
@@ -521,7 +521,7 @@ vifOp(vifCode_Unpack) {
 		return 1;
 	}
 	pass2 { return nVifUnpack(idx, (u8*)data); }
-	pass3 { DevCon.WriteLn("vifCode_Unpack");  }
+	pass3 { VifCodeLog("Unpack");  }
 	return 0;
 }
 

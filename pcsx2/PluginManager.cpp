@@ -948,7 +948,7 @@ void SysCorePlugins::Load( const wxString (&folders)[PluginId_Count] )
 		pxYield( 2 );
 
 	} while( ++pi, pi->shortname != NULL );
-	indent.EndScope();
+	indent.LeaveScope();
 
 	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );
 

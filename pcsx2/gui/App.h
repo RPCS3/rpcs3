@@ -156,7 +156,7 @@ namespace Exception
 	//
 	class StartupAborted : public CancelEvent
 	{
-		DEFINE_RUNTIME_EXCEPTION( StartupAborted, CancelEvent, "Startup initialization was aborted by the user." )
+		DEFINE_RUNTIME_EXCEPTION( StartupAborted, CancelEvent, L"Startup initialization was aborted by the user." )
 
 	public:
 		StartupAborted( const wxString& reason )
@@ -677,10 +677,6 @@ extern void LoadPluginsPassive();
 extern void LoadPluginsImmediate();
 extern void UnloadPlugins();
 extern void ShutdownPlugins();
-
-extern void AppLoadSettings();
-extern void AppSaveSettings();
-extern void AppApplySettings( const AppConfig* oldconf=NULL );
 
 extern bool SysHasValidState();
 extern void SysUpdateIsoSrcFile( const wxString& newIsoFile );

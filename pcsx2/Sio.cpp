@@ -168,13 +168,17 @@ void SIO_CommandWrite(u8 value,int way) {
 	// MEMORY CARD COMMANDS
 	switch (sio.mcdst) {
 		case 1:
+		{
 			sio.packetsize++;
 			SIO_INT();
 			if (sio.rdwr) { sio.parp++; return; }
 			sio.parp = 1;
+
+			const char* log_cmdname = "";
+
 			switch (value) {
 			case 0x11: // RESET
-				PAD_LOG("RESET MEMORY CARD");
+				log_cmdname = "Reset1";
 
 				sio.bufcount =  8;
 				memset8<0xff>(sio.buf);
@@ -183,17 +187,22 @@ void SIO_CommandWrite(u8 value,int way) {
 				sio.mcdst = 99;
 				sio2.packet.recvVal3 = 0x8c;
 				break;
+
+			// FIXME : Why are there two identical cases for resetting the
+			// memorycard(s)?  there doesn't appear to be anything dealing with
+			// card slots here.  --air
 			case 0x12: // RESET
+				log_cmdname = "Reset2";
 				sio.bufcount =  8;
 				memset8<0xff>(sio.buf);
 				sio.buf[3] = sio.terminator;
 				sio.buf[2] = '+';
 				sio.mcdst = 99;
-
 				sio2.packet.recvVal3 = 0x8c;
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
+
 			case 0x81: // COMMIT
+				log_cmdname = "Commit";
 				sio.bufcount =  8;
 				memset8<0xff>(sio.buf);
 				sio.mcdst = 99;
@@ -205,27 +214,25 @@ void SIO_CommandWrite(u8 value,int way) {
 						sio2.packet.recvVal1 = 0x1600; // Writing
 					else if(sio.mc_command==0x43) sio2.packet.recvVal1 = 0x1700; // Reading
 				}
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x21:
 			case 0x22:
 			case 0x23: // SECTOR SET
+				log_cmdname = "SetSector";
                 sio.bufcount =  8; sio.mcdst = 99; sio.sector=0; sio.k=0;
 				memset8<0xff>(sio.buf);
 				sio2.packet.recvVal3 = 0x8c;
 				sio.buf[8]=sio.terminator;
 				sio.buf[7]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
-			case 0x24:
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
-				break;
-			case 0x25:
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
-				break;
+
+			case 0x24: break;
+			case 0x25: break;
 
 			case 0x26:
 			{
+				log_cmdname = "GetInfo";
+
 				const uint port = sio.GetMemcardIndex();
 				const uint slot = sio.activeMemcardSlot[port];
 
@@ -260,66 +267,84 @@ void SIO_CommandWrite(u8 value,int way) {
 				memset8<0xff>(sio.buf);
 				memcpy_fast(&sio.buf[2], &cmd, sizeof(cmd));
 				sio.buf[12]=sio.terminator;
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 			}
 			break;
 
 			case 0x27:
 			case 0x28:
 			case 0xBF:
+				log_cmdname = "NotSure";	// FIXME !!
 				sio.bufcount =  4; sio.mcdst = 99; sio2.packet.recvVal3 = 0x8b;
 				memset8<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
-			case 0x42: // WRITE
-			case 0x43: // READ
-			case 0x82:
-				if(value==0x82 && sio.lastsector==sio.sector) sio.mode = 2;
-				if(value==0x42) sio.mode = 0;
-				if(value==0x43) sio.lastsector = sio.sector; // Reading
 
+			// FIXME ?
+			// sio.lastsector and sio.mode are unused.
+
+			case 0x42: // WRITE
+				log_cmdname = "Write";
+				//sio.mode = 0;
+			goto __doReadWrite;
+
+			case 0x43: // READ
+				log_cmdname = "Read";
+				//sio.lastsector = sio.sector; // Reading
+			goto __doReadWrite;
+
+			case 0x82:
+				log_cmdname = "Read(?)"; // FIXME !!
+				//if(sio.lastsector==sio.sector) sio.mode = 2;
+
+			__doReadWrite:
 				sio.bufcount =133; sio.mcdst = 99;
 				memset8<0xff>(sio.buf);
 				sio.buf[133]=sio.terminator;
 				sio.buf[132]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
-				break;
+			break;
+			
+
 			case 0xf0:
 			case 0xf1:
 			case 0xf2:
+				log_cmdname = "NoClue"; // FIXME !!
 				sio.mcdst = 99;
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
+
 			case 0xf3:
 			case 0xf7:
+				log_cmdname = "NoClueHereEither"; // FIXME !!
 				sio.bufcount = 4; sio.mcdst = 99;
 				memset8<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
+
 			case 0x52:
+				log_cmdname = "FixMe"; // FIXME !!
 				sio.rdwr = 1; memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x57:
+				log_cmdname = "FixMe"; // FIXME !!
 				sio.rdwr = 2; memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			default:
+				log_cmdname = "Unknown";
 				sio.mcdst = 0;
 				memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 			}
-			sio.mc_command=value;
-			return;
+			MEMCARDS_LOG("MC(%d) command 0x%02X [%s]", sio.GetMemcardIndex()+1, value, log_cmdname);
+			sio.mc_command = value;
+		}
+		return;		// END CASE 1.
+
 		// FURTHER PROCESSING OF THE MEMORY CARD COMMANDS
 		case 99:
+		{
 			sio.packetsize++;
 			sio.parp++;
 			switch(sio.mc_command)
@@ -470,7 +495,8 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			}
 			if (sio.bufcount<=sio.parp)	sio.mcdst = 0;
-			return;
+		}
+		return;		// END CASE 99.
 	}
 
 	switch (sio.mtapst)

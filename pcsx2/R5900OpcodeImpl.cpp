@@ -199,11 +199,10 @@ static int __Deci2Call(int call, u32 *addr)
 					pdeciaddr += (d2ptr[4]+0xc) % 16;
 
 				const int copylen = std::min<uint>(255, d2ptr[1]-0xc);
-				memcpy(deci2buffer, pdeciaddr, copylen );
+				memcpy_fast(deci2buffer, pdeciaddr, copylen );
 				deci2buffer[copylen] = '\0';
 
-				if( EmuConfig.Log.Deci2 )
-					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
+				eeConLog( ShiftJIS_ConvertString(deci2buffer) );
 			}
 			((u32*)PSM(deci2addr))[3] = 0;
 			return 1;
@@ -221,8 +220,10 @@ static int __Deci2Call(int call, u32 *addr)
 			return 1;
 
 		case 0x10://kputs
-			if( addr != NULL && EmuConfig.Log.Deci2 )
-				Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString((char*)PSM(*addr)).c_str() );
+			if( addr != NULL )
+			{
+				eeDeci2Log( ShiftJIS_ConvertString((char*)PSM(*addr)) );
+			}
 			return 1;
 	}
 
@@ -859,14 +860,16 @@ void SYSCALL()
 	if (call == 0x7c)
 	{
 		if(cpuRegs.GPR.n.a0.UL[0] == 0x10)
-			Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString((char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0]))).c_str() );
+		{
+			eeConLog( ShiftJIS_ConvertString((char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0]))) );
+		}
 		else
 			__Deci2Call( cpuRegs.GPR.n.a0.UL[0], (u32*)PSM(cpuRegs.GPR.n.a1.UL[0]) );
 	}
 
 	// The only thing this code is used for is the one log message, so don't execute it if we aren't logging bios messages.
 #ifdef PCSX2_DEVBUILD
-	if (macTrace.EE.Bios() && (call == 0x77))
+	if (SysTracePack.EE.Bios.IsEnabled() && (call == 0x77))
 	{
 		t_sif_dma_transfer *dmat;
 		//struct t_sif_cmd_header	*hdr;

@@ -219,7 +219,7 @@ void ElfObject::initElfHeaders()
 	if (machine != NULL) ELF_LOG( "machine:  %s", machine );
 
 	ELF_LOG("version:   %d",header.e_version);
-	ELF_LOG("entry:	 %08x",header.e_entry);
+	ELF_LOG("entry:	    %08x",header.e_entry);
 	ELF_LOG("flags:     %08x",header.e_flags);
 	ELF_LOG("eh size:   %08x",header.e_ehsize);
 	ELF_LOG("ph off:    %08x",header.e_phoff);

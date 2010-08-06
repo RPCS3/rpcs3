@@ -39,7 +39,6 @@ pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 		wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2
 	)
 {
-	m_IsPaused				= false;
 	m_FreezeWrites			= false;
 
 	Connect( wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbTrack) );

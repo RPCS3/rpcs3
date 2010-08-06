@@ -116,7 +116,7 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 		if(SIGNAL_IMR_Pending == true)
 		{
 			//DevCon.Warning("Firing pending signal");
-			GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
+			GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
 			GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
 
 			if (!(GSIMR&0x100))

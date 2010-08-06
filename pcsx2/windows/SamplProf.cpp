@@ -275,7 +275,7 @@ void ProfilerInit()
 	if (ProfRunning)
 		return;
 
-	Console.Write( "Profiler Thread Initializing..." );
+	Console.WriteLn( "Profiler Thread Initializing..." );
 	ProfRunning=true;
 	DuplicateHandle(GetCurrentProcess(),
 		GetCurrentThread(),
@@ -289,12 +289,12 @@ void ProfilerInit()
 
 	hProfThread=CreateThread(0,0,(LPTHREAD_START_ROUTINE)ProfilerThread,0,0,0);
 	SetThreadPriority(hProfThread,THREAD_PRIORITY_HIGHEST);
-	Console.WriteLn( " Done!" );
+	Console.WriteLn( "Profiler Thread Started!" );
 }
 
 void ProfilerTerm()
 {
-	Console.Write( "Profiler Terminating..." );
+	Console.WriteLn( "Profiler Terminating..." );
 	if (!ProfRunning)
 		return;
 
@@ -314,7 +314,7 @@ void ProfilerTerm()
 		CloseHandle( hMtgsThread );
 
 	DeleteCriticalSection( &ProfModulesLock );
-	Console.WriteLn( " Done!" );
+	Console.WriteLn( "Profiler Termination Done!" );
 }
 
 void ProfilerSetEnabled(bool Enabled)

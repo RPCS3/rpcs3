@@ -106,28 +106,33 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 	IopHwTraceLog<mem8_t>( addr, val, "Write" );
 }
 
-static char g_pbuf[1024];
-static int g_pbufi;
-
 void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	pxAssert( (addr >> 12) == 0x1f803 );
 
-	if( addr == 0x1f80380c )	// STDOUT
+	if( SysConsolePack.iopConsole.IsEnabled() && (addr == 0x1f80380c) )	// STDOUT
 	{
-		// Terminate lines on CR or full buffers, and ignore \n's if the string contents
-		// are empty (otherwise terminate on \n too!)
-		if(	( val == '\r' ) || ( g_pbufi == 1023 ) ||
-			( val == '\n' && g_pbufi != 0 ) )
+		static char pbuf[1024];
+		static int pidx;
+		static bool iggy_newline = false;
+
+		if (val == '\r')
 		{
-			g_pbuf[g_pbufi] = 0;
-			Console.WriteLn( ConColor_IOP, L"%s", L"%s", ShiftJIS_ConvertString(g_pbuf).c_str() );
-			g_pbufi = 0;
+			iggy_newline = true;
+			pbuf[pidx++] = '\n';
 		}
-		else if( val != '\n' )
+		else if (!iggy_newline || (val != '\n'))
 		{
-			g_pbuf[g_pbufi++] = val;
+			iggy_newline = false;
+			pbuf[pidx++] = val;
+		}
+
+		if ((pidx == ArraySize(pbuf)-1) || (pbuf[pidx-1] == '\n'))
+		{
+			pbuf[pidx] = 0;
+			iopConLog( ShiftJIS_ConvertString(pbuf) );
+			pidx = 0;
 		}
 	}
 

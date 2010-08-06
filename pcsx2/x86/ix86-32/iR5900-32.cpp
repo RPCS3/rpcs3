@@ -630,7 +630,7 @@ void recResetEE( void )
 	//AtomicExchange( eeRecNeedsReset, false );
 	if( AtomicExchange( eeRecIsReset, true ) ) return;
 
-	Console.WriteLn( Color_StrongBlack, "Issuing EE/iR5900-32 Recompiler Reset" );
+	Console.WriteLn( Color_StrongBlack, "EE/iR5900-32 Recompiler Reset" );
 
 	maxrecmem = 0;
 
@@ -881,8 +881,10 @@ void recClear(u32 addr, u32 size)
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			DevCon.Error( "Impossible block clearing failure" );
-			pxFailDev( "Impossible block clearing failure" );
+			if( !IsDevBuild )
+				Console.Error( "Impossible block clearing failure" );
+			else
+				pxAssertDev( false, "Impossible block clearing failure" );
 		}
 	}
 
@@ -1281,9 +1283,11 @@ static u32 s_recblocks[] = {0};
 #endif
 
 // Called when a block under manual protection fails it's pre-execution integrity check.
+// (meaning the actual code area has been modified -- ie dynamic modules being loaded or,
+//  less likely, self-modifying code)
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon.WriteLn("Discarding Manual Block @ 0x%08X  [size=%d]", start, sz*4);
+	eeRecPerfLog.Write( Color_StrongGray, "Clearing Manual Block @ 0x%08X  [size=%d]", start, sz*4);
 	recClear(start, sz);
 
 	// Stack trick: This function was invoked via a direct jmp, so manually pop the
@@ -1296,8 +1300,9 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 #endif
 }
 
-// called when a block under manual protection has been run enough times to be a
-// candidate for being reset under the faster vtlb write protection.
+// called when a page under manual protection has been run enough times to be a candidate
+// for being reset under the faster vtlb write protection.  All blocks in the page are cleared
+// and the block is re-assigned for write protection.
 void __fastcall dyna_page_reset(u32 start,u32 sz)
 {
 	recClear(start & ~0xfffUL, 0x400);
@@ -1353,7 +1358,7 @@ static void __fastcall recRecompile( const u32 startpc )
 		recResetEE();
 	}
 	if ( (recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64 ) {
-		DevCon.WriteLn("EE recompiler stack reset");
+		Console.WriteLn("EE recompiler stack reset");
 		recResetEE();
 	}
 
@@ -1420,7 +1425,7 @@ static void __fastcall recRecompile( const u32 startpc )
 				willbranch3 = 1;
 				s_nEndBlock = i;
 
-				//DevCon.Warning( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
+				eeRecPerfLog.Write( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
 				break;
 			}
 
@@ -1729,12 +1734,13 @@ StartRecomp:
 				xJC( dyna_page_reset );
 
 				// note: clearcnt is measured per-page, not per-block!
-				//DbgCon.WriteLn( "Manual block @ %08X : size =%3d  page/offs = %05X/%03X  inpgsz = %d  clearcnt = %d",
-				//	startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
+				ConsoleColorScope cs( Color_Gray );
+				eeRecPerfLog.Write( "Manual block @ %08X : size =%3d  page/offs = 0x%05X/0x%03X  inpgsz = %d  clearcnt = %d",
+					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
-				DbgCon.WriteLn( Color_Gray, "Uncounted Manual block @ 0x%08X : size =%3d page/offs = %05X/%03X  inpgsz = %d",
+				eeRecPerfLog.Write( "Uncounted Manual block @ 0x%08X : size =%3d page/offs = 0x%05X/0x%03X  inpgsz = %d",
 					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
             break;
@@ -1779,7 +1785,7 @@ StartRecomp:
 			}
 		}
 
-		memcpy(&recRAMCopy[HWADDR(startpc) / 4], PSM(startpc), pc - startpc);
+		memcpy_fast(&recRAMCopy[HWADDR(startpc) / 4], PSM(startpc), pc - startpc);
 	}
 
 	s_pCurBlock->SetFnptr((uptr)recPtr);

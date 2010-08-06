@@ -20,6 +20,7 @@
 #include "MSWstuff.h"
 
 #include "Utilities/Console.h"
+#include "Utilities/IniInterface.h"
 #include "Utilities/SafeArray.inl"
 #include "DebugTools/Debug.h"
 
@@ -47,12 +48,11 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 	{
 		case wxLOG_Trace:
 		case wxLOG_Debug:
-			if( IsDebugBuild )
-			{
-				wxString str;
-				TimeStamp( &str );
-				MSW_OutputDebugString( str + szString );
-			}
+		{
+			wxString str;
+			TimeStamp( &str );
+			MSW_OutputDebugString( str + szString + L"\n" );
+		}
 		break;
 
 		case wxLOG_FatalError:
@@ -117,21 +117,21 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
         strMsg.Printf(L"Append log to file '%s' (choosing [No] will overwrite it)?",
                       filename.c_str());
 
-        switch ( wxMessageBox(strMsg, L"Question", wxICON_QUESTION | wxYES_NO | wxCANCEL) )
+        switch ( Msgbox::ShowModal( _("Save log question"), strMsg, MsgButtons().YesNo().Cancel() ) )
 		{
-			case wxYES:
+			case wxID_YES:
 				bAppend = true;
 			break;
 
-			case wxNO:
+			case wxID_NO:
 				bAppend = false;
 			break;
 
-			case wxCANCEL:
+			case wxID_CANCEL:
 				return false;
 
 			default:
-				wxFAIL_MSG( L"invalid message box return value" );
+				pxFailDev( "invalid message box return value" );
         }
 
 		return ( bAppend ) ?
@@ -162,10 +162,6 @@ ConsoleLogFrame::ColorArray::~ColorArray() throw()
 
 void ConsoleLogFrame::ColorArray::Create( int fontsize )
 {
-	// pxGetFixedFont selects Andale Mono on Win32, which is nice visually but
-	// unfortunately has inconsistently spaced bold versions, so it's not good
-	// for our console.
-
 	const wxFont fixed( pxGetFixedFont( fontsize ) );
 	const wxFont fixedB( pxGetFixedFont( fontsize+1, wxBOLD ) );
 
@@ -173,30 +169,88 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	//const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
 
 	// Standard R, G, B format:
-	new (&m_table[Color_Default])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Black])			wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Red])			wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Green])			wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Blue])			wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_Magenta])		wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
-	new (&m_table[Color_Orange])		wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Gray])			wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixed );
+	new (&m_table[Color_Default])		wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Black])			wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Red])			wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Green])			wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Blue])			wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Magenta])		wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Orange])		wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Gray])			wxTextAttr( wxNullColour, wxNullColour, fixed );
 
-	new (&m_table[Color_Cyan])			wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixed );
-	new (&m_table[Color_Yellow])		wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_White])			wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixed );
+	new (&m_table[Color_Cyan])			wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_Yellow])		wxTextAttr( wxNullColour, wxNullColour, fixed );
+	new (&m_table[Color_White])			wxTextAttr( wxNullColour, wxNullColour, fixed );
 
-	new (&m_table[Color_StrongBlack])	wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongRed])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongGreen])	wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongBlue])	wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongMagenta])	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongOrange])	wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixedB );
-    new (&m_table[Color_StrongGray])	wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongBlack])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongRed])		wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongGreen])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongBlue])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongMagenta])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongOrange])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+    new (&m_table[Color_StrongGray])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 
-	new (&m_table[Color_StrongCyan])	wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongYellow])	wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixedB );
-	new (&m_table[Color_StrongWhite])	wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongCyan])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongYellow])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongWhite])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	
+	SetColorScheme_Light();
+}
+
+void ConsoleLogFrame::ColorArray::SetColorScheme_Dark()
+{
+	m_table[Color_Default]		.SetTextColour(wxColor( 208, 208, 208 ));
+	m_table[Color_Black]		.SetTextColour(wxColor( 255, 255, 255 ));
+	m_table[Color_Red]			.SetTextColour(wxColor( 180,   0,   0 ));
+	m_table[Color_Green]		.SetTextColour(wxColor(   0, 160,   0 ));
+	m_table[Color_Blue]			.SetTextColour(wxColor(  32,  32, 204 ));
+	m_table[Color_Magenta]		.SetTextColour(wxColor( 160,   0, 160 ));
+	m_table[Color_Orange]		.SetTextColour(wxColor( 160, 120,   0 ));
+	m_table[Color_Gray]			.SetTextColour(wxColor( 128, 128, 128 ));
+
+	m_table[Color_Cyan]			.SetTextColour(wxColor( 128, 180, 180 ));
+	m_table[Color_Yellow]		.SetTextColour(wxColor( 180, 180, 128 ));
+	m_table[Color_White]		.SetTextColour(wxColor( 160, 160, 160 ));
+
+	m_table[Color_StrongBlack]	.SetTextColour(wxColor( 255, 255, 255 ));
+	m_table[Color_StrongRed]	.SetTextColour(wxColor( 180,   0,   0 ));
+	m_table[Color_StrongGreen]	.SetTextColour(wxColor(   0, 160,   0 ));
+	m_table[Color_StrongBlue]	.SetTextColour(wxColor(  32,  32, 204 ));
+	m_table[Color_StrongMagenta].SetTextColour(wxColor( 160,   0, 160 ));
+	m_table[Color_StrongOrange]	.SetTextColour(wxColor( 160, 120,   0 ));
+	m_table[Color_StrongGray]	.SetTextColour(wxColor( 128, 128, 128 ));
+
+	m_table[Color_StrongCyan]	.SetTextColour(wxColor( 128, 180, 180 ));
+	m_table[Color_StrongYellow]	.SetTextColour(wxColor( 180, 180, 128 ));
+	m_table[Color_StrongWhite]	.SetTextColour(wxColor( 160, 160, 160 ));
+}
+
+void ConsoleLogFrame::ColorArray::SetColorScheme_Light()
+{
+	m_table[Color_Default]		.SetTextColour(wxColor(   0,   0,   0 ));
+	m_table[Color_Black]		.SetTextColour(wxColor(   0,   0,   0 ));
+	m_table[Color_Red]			.SetTextColour(wxColor( 128,   0,   0 ));
+	m_table[Color_Green]		.SetTextColour(wxColor(   0, 128,   0 ));
+	m_table[Color_Blue]			.SetTextColour(wxColor(   0,   0, 128 ));
+	m_table[Color_Magenta]		.SetTextColour(wxColor( 160,   0, 160 ));
+	m_table[Color_Orange]		.SetTextColour(wxColor( 160, 120,   0 ));
+	m_table[Color_Gray]			.SetTextColour(wxColor( 108, 108, 108 ));
+
+	m_table[Color_Cyan]			.SetTextColour(wxColor( 128, 180, 180 ));
+	m_table[Color_Yellow]		.SetTextColour(wxColor( 180, 180, 128 ));
+	m_table[Color_White]		.SetTextColour(wxColor( 160, 160, 160 ));
+
+	m_table[Color_StrongBlack]	.SetTextColour(wxColor(   0,   0,   0 ));
+	m_table[Color_StrongRed]	.SetTextColour(wxColor( 128,   0,   0 ));
+	m_table[Color_StrongGreen]	.SetTextColour(wxColor(   0, 128,   0 ));
+	m_table[Color_StrongBlue]	.SetTextColour(wxColor(   0,   0, 128 ));
+	m_table[Color_StrongMagenta].SetTextColour(wxColor( 160,   0, 160 ));
+	m_table[Color_StrongOrange]	.SetTextColour(wxColor( 160, 120,   0 ));
+	m_table[Color_StrongGray]	.SetTextColour(wxColor( 108, 108, 108 ));
+
+	m_table[Color_StrongCyan]	.SetTextColour(wxColor( 128, 180, 180 ));
+	m_table[Color_StrongYellow]	.SetTextColour(wxColor( 180, 180, 128 ));
+	m_table[Color_StrongWhite]	.SetTextColour(wxColor( 160, 160, 160 ));
 }
 
 void ConsoleLogFrame::ColorArray::Cleanup()
@@ -223,10 +277,19 @@ void ConsoleLogFrame::ColorArray::SetFont( int fontsize )
 
 enum MenuIDs_t
 {
-	MenuID_FontSize_Small = 0x10,
-	MenuID_FontSize_Normal,
-	MenuID_FontSize_Large,
-	MenuID_FontSize_Huge,
+	MenuId_FontSize_Small = 0x10,
+	MenuId_FontSize_Normal,
+	MenuId_FontSize_Large,
+	MenuId_FontSize_Huge,
+	
+	MenuId_ColorScheme_Light = 0x20,
+	MenuId_ColorScheme_Dark,
+	
+	MenuId_LogSource_EnableAll = 0x30,
+	MenuId_LogSource_DisableAll,
+	MenuId_LogSource_Devel,
+
+	MenuId_LogSource_Start = 0x100
 };
 
 #define pxTheApp ((Pcsx2App&)*wxTheApp)
@@ -234,7 +297,7 @@ enum MenuIDs_t
 // --------------------------------------------------------------------------------------
 //  ScopedLogLock  (implementations)
 // --------------------------------------------------------------------------------------
-class ScopedLogLock : ScopedLock
+class ScopedLogLock : public ScopedLock
 {
 public:
 	ConsoleLogFrame*	WindowPtr;
@@ -259,6 +322,45 @@ public:
 	}
 };
 
+static ConsoleLogSource* const ConLogSources[] = 
+{
+	(ConsoleLogSource*)&SysConsolePack.eeConsole,
+	(ConsoleLogSource*)&SysConsolePack.iopConsole,
+	(ConsoleLogSource*)&SysConsolePack.eeRecPerf,
+	NULL,
+	(ConsoleLogSource*)&SysConsolePack.ELF,
+	NULL,
+	(ConsoleLogSource*)&pxConLog_Event,
+	(ConsoleLogSource*)&pxConLog_Thread,
+};
+
+static const bool ConLogDefaults[] = 
+{
+	true,
+	true,
+	false,
+	true,
+	false,
+	false,
+};
+
+void ConLog_LoadSaveSettings( IniInterface& ini )
+{
+	ScopedIniGroup path(ini, L"ConsoleLogSources");
+
+	ini.Entry( L"Devel", DevConWriterEnabled, false );
+
+	uint srcnt = ArraySize(ConLogSources);
+	for (uint i=0; i<srcnt; ++i)
+	{
+		if (ConsoleLogSource* log = ConLogSources[i])
+		{
+			ini.Entry( log->GetCategory() + L"." + log->GetShortName(), log->Enabled, ConLogDefaults[i] );
+		}
+	}
+}
+
+
 // --------------------------------------------------------------------------------------
 //  ConsoleLogFrame  (implementations)
 // --------------------------------------------------------------------------------------
@@ -278,9 +380,22 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	m_pendingFlushMsg			= false;
 	m_FlushRefreshLocked		= false;
 
+	// create Log menu (contains most options)
+	wxMenuBar *pMenuBar = new wxMenuBar();
+	SetMenuBar( pMenuBar );
 	SetIcons( wxGetApp().GetIconBundle() );
 
-	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
+	if (0==m_conf.Theme.CmpNoCase(L"Dark"))
+	{
+		m_ColorTable.SetColorScheme_Dark();
+		m_TextCtrl.SetBackgroundColour( wxColor( 0, 0, 0 ) );
+	}
+	else //if ((0==m_conf.Theme.CmpNoCase("Default")) || (0==m_conf.Theme.CmpNoCase("Light")))
+	{
+		m_ColorTable.SetColorScheme_Light();
+		m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
+	}
+
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
 
 	// SetDefaultStyle only sets the style of text in the control.  We need to
@@ -292,39 +407,52 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	wxMenu& menuSources	(*new wxMenu());
 	wxMenu& menuFontSizes( menuAppear );
 
-    // create Log menu (contains most options)
-	wxMenuBar *pMenuBar = new wxMenuBar();
-	SetMenuBar( pMenuBar );
-
 	// create Appearance menu and submenus
 
-	menuFontSizes.Append( MenuID_FontSize_Small,	_("Small"),	_("Fits a lot of log in a microcosmically small area."),
+	menuFontSizes.Append( MenuId_FontSize_Small,	_("Small"),	_("Fits a lot of log in a microcosmically small area."),
 		wxITEM_RADIO )->Check( options.FontSize == 7 );
-	menuFontSizes.Append( MenuID_FontSize_Normal,	_("Normal"),_("It's what I use (the programmer guy)."),
+	menuFontSizes.Append( MenuId_FontSize_Normal,	_("Normal"),_("It's what I use (the programmer guy)."),
 		wxITEM_RADIO )->Check( options.FontSize == 8 );
-	menuFontSizes.Append( MenuID_FontSize_Large,	_("Large"),	_("Its nice and readable."),
+	menuFontSizes.Append( MenuId_FontSize_Large,	_("Large"),	_("Its nice and readable."),
 		wxITEM_RADIO )->Check( options.FontSize == 10 );
-	menuFontSizes.Append( MenuID_FontSize_Huge,		_("Huge"),	_("In case you have a really high res display."),
+	menuFontSizes.Append( MenuId_FontSize_Huge,		_("Huge"),	_("In case you have a really high res display."),
 		wxITEM_RADIO )->Check( options.FontSize == 12 );
+
+	menuFontSizes.AppendSeparator();
+	menuFontSizes.Append( MenuId_ColorScheme_Light,	_("Light theme"), _("Default soft-tone color scheme."), wxITEM_RADIO );
+	menuFontSizes.Append( MenuId_ColorScheme_Dark,	_("Dark theme"), _("Classic black color scheme for people who enjoy having text seared into their optic nerves."), wxITEM_RADIO );
 
 	menuAppear.AppendSeparator();
 	menuAppear.Append( wxID_ANY, _("Always on Top"),
 		_("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
-	//menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes );
 
 	menuLog.Append(wxID_SAVE,	_("&Save..."),		_("Save log contents to file"));
 	menuLog.Append(wxID_CLEAR,	_("C&lear"),		_("Clear the log window contents"));
 	menuLog.AppendSeparator();
 	menuLog.AppendSubMenu( &menuAppear, _("Appearance") );
-	menuLog.Append(wxID_ANY,	_("Show Legend (unimplemented)"),	_("Displays the console color legend.") );
 	menuLog.AppendSeparator();
 	menuLog.Append(wxID_CLOSE,	_("&Close"),		_("Close this log window; contents are preserved"));
 
 	// Source Selection/Toggle menu
 
-	m_item_Deci2	= menuSources.AppendCheckItem( wxID_ANY, _("EE Deci2"),		_("Enables debug output from the EEcore.") );
-	m_item_StdoutEE	= menuSources.AppendCheckItem( wxID_ANY, _("EE StdOut"),	_("Enables STDOUT from the EEcore.") );
-	m_item_StdoutIOP= menuSources.AppendCheckItem( wxID_ANY, _("IOP StdOut"),	_("Enables STDOUT from the IOP.") );
+	menuSources.Append( MenuId_LogSource_Devel, _("Dev/Verbose"), _("Shows PCSX2 developer logs"), wxITEM_CHECK );
+	menuSources.AppendSeparator();
+	
+	uint srcnt = ArraySize(ConLogSources);
+	for (uint i=0; i<srcnt; ++i)
+	{
+		if (const ConsoleLogSource* log = ConLogSources[i])
+		{
+			menuSources.Append( MenuId_LogSource_Start+i, log->Name, log->GetDescription(), wxITEM_CHECK );
+			Connect( MenuId_LogSource_Start+i, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnToggleSource));
+		}
+		else
+			menuSources.AppendSeparator();
+	}
+
+	menuSources.AppendSeparator();
+	menuSources.Append( MenuId_LogSource_EnableAll,		_("Enable all"),	_("Enables all log source filters.") );
+	menuSources.Append( MenuId_LogSource_DisableAll,	_("Disable all"),	_("Disables all log source filters.") );
 
 	pMenuBar->Append(&menuLog,		_("&Log"));
 	pMenuBar->Append(&menuSources,	_("&Sources"));
@@ -342,11 +470,12 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxID_SAVE,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnSave)  );
 	Connect( wxID_CLEAR, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnClear) );
 
-	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
+	Connect( MenuId_FontSize_Small,		MenuId_FontSize_Huge,		wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
+	Connect( MenuId_ColorScheme_Light,	MenuId_ColorScheme_Dark,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnToggleTheme ) );
 
-	Connect( m_item_Deci2->GetId(),		wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
-	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
-	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( MenuId_LogSource_Devel,		wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnToggleSource ) );
+	Connect( MenuId_LogSource_EnableAll,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnEnableAllLogging ) );
+	Connect( MenuId_LogSource_DisableAll,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnDisableAllLogging ) );
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler			(ConsoleLogFrame::OnMoveAround) );
@@ -359,18 +488,68 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	Connect( m_timer_FlushUnlocker.GetId(),	wxEVT_TIMER,	wxTimerEventHandler	(ConsoleLogFrame::OnFlushUnlockerTimer) );
 
-	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
-	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
-	m_item_StdoutIOP	->Check( g_Conf->EmuOptions.Log.StdoutIOP );
-
 	if( m_threadlogger != NULL )
 		m_threadlogger->Start();
+
+	OnLoggingChanged();
+
+	if (0==m_conf.Theme.CmpNoCase(L"Dark"))
+	{
+		pMenuBar->Check(MenuId_ColorScheme_Dark, true);
+	}
+	else //if ((0==m_conf.Theme.CmpNoCase("Default")) || (0==m_conf.Theme.CmpNoCase("Light")))
+	{
+		pMenuBar->Check(MenuId_ColorScheme_Light, true);
+	}
 }
 
 ConsoleLogFrame::~ConsoleLogFrame()
 {
 	ScopedLogLock locker;
 	wxGetApp().OnProgramLogClosed( GetId() );
+}
+
+void ConsoleLogFrame::OnEnableAllLogging(wxCommandEvent& evt)
+{
+	uint srcnt = ArraySize(ConLogSources);
+	for (uint i=0; i<srcnt; ++i)
+	{
+		if (ConsoleLogSource* log = ConLogSources[i])
+			log->Enabled = true;
+	}
+
+	OnLoggingChanged();
+	evt.Skip();
+}
+
+void ConsoleLogFrame::OnDisableAllLogging(wxCommandEvent& evt)
+{
+	uint srcnt = ArraySize(ConLogSources);
+	for (uint i=0; i<srcnt; ++i)
+	{
+		if (ConsoleLogSource* log = ConLogSources[i])
+			log->Enabled = false;
+	}
+
+	OnLoggingChanged();
+	evt.Skip();
+}
+
+void ConsoleLogFrame::OnLoggingChanged()
+{
+	if (!GetMenuBar()) return;
+
+	if( wxMenuItem* item = GetMenuBar()->FindItem(MenuId_LogSource_Devel) )
+		item->Check( DevConWriterEnabled );
+
+	uint srcnt = ArraySize(ConLogSources);
+	for (uint i=0; i<srcnt; ++i)
+	{
+		if (const ConsoleLogSource* log = ConLogSources[i])
+		{
+			GetMenuBar()->Check( MenuId_LogSource_Start+i, log->IsEnabled() );
+		}
+	}
 }
 
 // Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
@@ -593,24 +772,71 @@ void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
     m_TextCtrl.Clear();
 }
 
-void ConsoleLogFrame::OnLogSourceChanged( wxCommandEvent& evt )
+void ConsoleLogFrame::OnToggleSource( wxCommandEvent& evt )
 {
-	g_Conf->EmuOptions.Log.Deci2	= m_item_Deci2		->IsChecked();
-	g_Conf->EmuOptions.Log.StdoutEE	= m_item_StdoutEE	->IsChecked();
-	g_Conf->EmuOptions.Log.StdoutIOP= m_item_StdoutIOP	->IsChecked();
+	evt.Skip();
 
-	CoreThread.ApplySettings( g_Conf->EmuOptions );
+	if (!GetMenuBar()) return;
+
+	if (evt.GetId() == MenuId_LogSource_Devel)
+	{
+		if( wxMenuItem* item = GetMenuBar()->FindItem(evt.GetId()) )
+			DevConWriterEnabled = item->IsChecked();
+
+		return;
+	}
+
+	uint srcid = evt.GetId() - MenuId_LogSource_Start;
+
+	if (!pxAssertDev( ArraySize(ConLogSources) > srcid, "Invalid source log index (out of bounds)" )) return;
+	if (!pxAssertDev( ConLogSources[srcid] != NULL, "Invalid source log index (NULL pointer [separator])" )) return;
+	
+	if( wxMenuItem* item = GetMenuBar()->FindItem(evt.GetId()) )
+	{
+		pxAssertDev( item->IsCheckable(), "Uncheckable log source menu item?  Seems fishy!" );
+		ConLogSources[srcid]->Enabled = item->IsChecked();
+	}
+}
+
+void ConsoleLogFrame::OnToggleTheme( wxCommandEvent& evt )
+{
+	evt.Skip();
+
+	const wxChar* newTheme = L"Default";
+
+	switch( evt.GetId() )
+	{
+		case MenuId_ColorScheme_Light:
+			newTheme = L"Default";
+			m_ColorTable.SetColorScheme_Light();
+			m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
+		break;
+
+		case MenuId_ColorScheme_Dark:
+			newTheme = L"Dark";
+			m_ColorTable.SetColorScheme_Dark();
+			m_TextCtrl.SetBackgroundColour( wxColor( 24, 24, 24 ) );
+		break;
+	}
+
+	if (0 == m_conf.Theme.CmpNoCase(newTheme)) return;
+	m_conf.Theme = newTheme;
+
+	m_ColorTable.SetFont( m_conf.FontSize );
+	m_TextCtrl.SetDefaultStyle( m_ColorTable[Color_White] );
 }
 
 void ConsoleLogFrame::OnFontSize( wxCommandEvent& evt )
 {
+	evt.Skip();
+
 	int ptsize = 8;
 	switch( evt.GetId() )
 	{
-		case MenuID_FontSize_Small:		ptsize = 7; break;
-		case MenuID_FontSize_Normal:	ptsize = 8; break;
-		case MenuID_FontSize_Large:		ptsize = 10; break;
-		case MenuID_FontSize_Huge:		ptsize = 12; break;
+		case MenuId_FontSize_Small:		ptsize = 7; break;
+		case MenuId_FontSize_Normal:	ptsize = 8; break;
+		case MenuId_FontSize_Large:		ptsize = 10; break;
+		case MenuId_FontSize_Huge:		ptsize = 12; break;
 	}
 
 	if( ptsize == m_conf.FontSize ) return;
@@ -780,7 +1006,7 @@ static void __concall ConsoleToFile_Newline()
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
 #ifdef __LINUX__
-	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.DoWrite(fmt);
+	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.WriteRaw(fmt);
 #endif
 
 	px_fputs( emuLog, fmt.ToUTF8() );
@@ -844,25 +1070,21 @@ static void __concall ConsoleToWindow_Newline()
 {
 	secondary.Newline();
 
-	bool needsSleep = false;
-	{
-		ScopedLogLock locker;
-		if( locker.WindowPtr ) needsSleep = locker.WindowPtr->Newline();
-	}
+	ScopedLogLock locker;
+	bool needsSleep = locker.WindowPtr && locker.WindowPtr->Newline();
+	locker.Release();
 	if( needsSleep ) wxGetApp().Ping();
 }
 
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
 {
-	if( secondary.DoWrite != NULL )
-		secondary.DoWrite( fmt );
+	if( secondary.WriteRaw != NULL )
+		secondary.WriteRaw( fmt );
 
-	bool needsSleep = false;
-	{
-		ScopedLogLock locker;
-		if( locker.WindowPtr ) needsSleep = locker.WindowPtr->Write( Console.GetColor(), fmt );
-	}
+	ScopedLogLock locker;
+	bool needsSleep = locker.WindowPtr && locker.WindowPtr->Write( Console.GetColor(), fmt );
+	locker.Release();
 	if( needsSleep ) wxGetApp().Ping();
 }
 
@@ -872,11 +1094,9 @@ static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
 	if( secondary.DoWriteLn != NULL )
 		secondary.DoWriteLn( fmt );
 
-	bool needsSleep = false;
-	{
-		ScopedLogLock locker;
-		if( locker.WindowPtr ) needsSleep = locker.WindowPtr->Write( Console.GetColor(), fmt + L'\n' );
-	}
+	ScopedLogLock locker;
+	bool needsSleep = locker.WindowPtr && locker.WindowPtr->Write( Console.GetColor(), fmt + L'\n' );
+	locker.Release();
 	if( needsSleep ) wxGetApp().Ping();
 }
 

@@ -99,8 +99,9 @@ namespace Threading
 
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads
 		Semaphore	m_sem_startup;		// startup sync tool
-		Mutex		m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
-		MutexRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
+		Mutex		m_mtx_InThread;		// used for canceling and closing threads in a deadlock-safe manner
+		MutexRecursive	m_mtx_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
+		Mutex		m_mtx_ThreadName;
 
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
@@ -141,8 +142,10 @@ namespace Threading
 
 		bool IsRunning() const;
 		bool IsSelf() const;
-		wxString GetName() const;
 		bool HasPendingException() const { return !!m_except; }
+
+		wxString GetName() const;
+		void SetName( const wxString& newname );
 
 	protected:
 		// Extending classes should always implement your own OnStart(), which is called by

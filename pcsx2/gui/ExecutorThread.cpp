@@ -18,6 +18,25 @@
 
 using namespace pxSizerFlags;
 
+// --------------------------------------------------------------------------------------
+//  ConsoleLogSource_Event  (implementations)
+// --------------------------------------------------------------------------------------
+
+bool ConsoleLogSource_Event::Write( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
+	return _parent::Write( wxsFormat(L"(%s%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
+}
+bool ConsoleLogSource_Event::Warn( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg )	{
+	return _parent::Write( wxsFormat(L"(%s%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
+}
+bool ConsoleLogSource_Event::Error( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
+	return _parent::Write( wxsFormat(L"(%s%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
+}
+
+ConsoleLogSource_Event pxConLog_Event;
+
+// --------------------------------------------------------------------------------------
+//  SysExecEvent  (implementations)
+// --------------------------------------------------------------------------------------
 wxString SysExecEvent::GetEventName() const
 {
 	pxFail( "Warning: Unnamed SysExecutor Event!  Please overload GetEventName() in all SysExecEvent derived classes." );
@@ -159,7 +178,8 @@ struct ScopedThreadCancelDisable
 	}
 };
 
-void pxEvtHandler::ProcessEvents( pxEvtList& list )
+// isIdle  - parameter is useful for logging only (currently)
+void pxEvtHandler::ProcessEvents( pxEvtList& list, bool isIdle )
 {
 	ScopedLock synclock( m_mtx_pending );
     
@@ -179,7 +199,9 @@ void pxEvtHandler::ProcessEvents( pxEvtList& list )
 
 			synclock.Release();
 
-			DevCon.WriteLn( L"(pxEvtHandler) Executing Event: %s [%s]", deleteMe->GetEventName().c_str(), deleteMe->AllowCancelOnExit() ? L"Cancelable" : L"Noncancelable" );
+			pxEvtLog.Write( this, deleteMe, wxsFormat(L"Executing... [%s]%s",
+				deleteMe->AllowCancelOnExit() ? L"Cancelable" : L"Noncancelable", isIdle ? L"(Idle)" : wxEmptyString)
+			);
 
 			if( deleteMe->AllowCancelOnExit() )
 				deleteMe->_DoInvokeEvent();
@@ -190,14 +212,16 @@ void pxEvtHandler::ProcessEvents( pxEvtList& list )
 			}
 
 			u64 qpc_end = GetCPUTicks();
-			DevCon.WriteLn( L"(pxEvtHandler) Event '%s' completed in %ums", deleteMe->GetEventName().c_str(), (u32)(((qpc_end-m_qpc_Start)*1000) / GetTickFrequency()) );
+			pxEvtLog.Write( this, deleteMe, wxsFormat(L"Event completed in %ums",
+				(u32)(((qpc_end-m_qpc_Start)*1000) / GetTickFrequency()))
+			);
 
 			synclock.Acquire();
 			m_qpc_Start = 0;		// lets the main thread know the message completed.
 		}
 		else
 		{
-			Console.WriteLn( L"(pxEvtHandler) Skipping Event: %s", deleteMe->GetEventName().c_str() );
+			pxEvtLog.Write( this, deleteMe, L"Skipping Event: %s" );
 			deleteMe->PostResult();
 		}
 	}
@@ -205,7 +229,7 @@ void pxEvtHandler::ProcessEvents( pxEvtList& list )
 
 void pxEvtHandler::ProcessIdleEvents()
 {
-	ProcessEvents( m_idleEvents );
+	ProcessEvents( m_idleEvents, true );
 }
 
 void pxEvtHandler::ProcessPendingEvents()
@@ -214,7 +238,7 @@ void pxEvtHandler::ProcessPendingEvents()
 }
 
 // This method is provided for wxWidgets API conformance.  I like to use PostEvent instead
-// since it's remenicient of PostMessage in Windows (and behaves rather similarly).
+// since it's reminiscent of PostMessage in Windows (and behaves rather similarly).
 void pxEvtHandler::AddPendingEvent( SysExecEvent& evt )
 {
 	PostEvent( evt );
@@ -239,8 +263,8 @@ void pxEvtHandler::PostEvent( SysExecEvent* evt )
 
 	ScopedLock synclock( m_mtx_pending );
 	
-	//DbgCon.WriteLn( L"(%s) Posting event: %s  (queue count=%d)", GetEventHandlerName().c_str(), evt->GetEventName().c_str(), m_pendingEvents.size() );
-	
+	pxEvtLog.Write( this, evt, wxsFormat(L"Posting event! (pending=%d, idle=%d)", m_pendingEvents.size(), m_idleEvents.size()) );
+
 	m_pendingEvents.push_back( sevt.DetachPtr() );
 	if( m_pendingEvents.size() == 1)
 		m_wakeup.Post();
@@ -263,7 +287,9 @@ void pxEvtHandler::PostIdleEvent( SysExecEvent* evt )
 
 	ScopedLock synclock( m_mtx_pending );
 
-	if( m_idleEvents.size() == 0)
+	pxEvtLog.Write( this, evt, wxsFormat(L"Posting event! (pending=%d, idle=%d) [idle]", m_pendingEvents.size(), m_idleEvents.size()) );
+
+	if( m_pendingEvents.size() == 0)
 	{
 		m_pendingEvents.push_back( evt );
 		m_wakeup.Post();
@@ -308,23 +334,24 @@ void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
 	}
 }
 
-bool pxEvtHandler::Rpc_TryInvokeAsync( FnType_Void* method )
+bool pxEvtHandler::Rpc_TryInvokeAsync( FnType_Void* method, const wxChar* traceName )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
-		PostEvent( new SysExecEvent_MethodVoid(method) );
+		PostEvent( new SysExecEvent_MethodVoid(method, traceName) );
 		return true;
 	}
 
 	return false;
 }
 
-bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method )
+bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method, const wxChar* traceName )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
 		SynchronousActionState sync;
-		SysExecEvent_MethodVoid evt(method, true);
+		SysExecEvent_MethodVoid evt(method);
+		evt.Critical();
 		evt.SetSyncState( sync );
 		PostEvent( evt );
 		sync.WaitForResult();

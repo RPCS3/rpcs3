@@ -202,7 +202,7 @@ __forceinline void vif1SetupTransfer()
 			vif1c.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
 
-			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
+			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
 			        ptag[1]._u32, ptag[0]._u32, vif1c.qwc, ptag->ID, vif1c.madr, vif1c.tadr);
 
 			if (!vif1.done && ((dmacRegs->ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1

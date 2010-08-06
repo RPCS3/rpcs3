@@ -163,7 +163,7 @@ namespace Msgbox
 		}
 	}
 
-	static int ShowModal( const wxString& title, const wxString& content, const MsgButtons& buttons )
+	int ShowModal( const wxString& title, const wxString& content, const MsgButtons& buttons )
 	{
 		pxMessageBoxEvent tevt( title, content, buttons );
 		return ShowModal( tevt );

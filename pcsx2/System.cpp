@@ -90,13 +90,6 @@ Pcsx2Config::GamefixOptions& SetGameFixConfig()
 	return const_cast<Pcsx2Config::GamefixOptions&>(EmuConfig.Gamefixes);
 }
 
-ConsoleLogFilters& SetConsoleConfig()
-{
-	//DbgCon.WriteLn( "Direct modification of EmuConfig.Log detected" );
-	AffinityAssert_AllowFrom_MainUI();
-	return const_cast<ConsoleLogFilters&>(EmuConfig.Log);
-}
-
 TraceLogFilters& SetTraceConfig()
 {
 	//DbgCon.WriteLn( "Direct modification of EmuConfig.TraceLog detected" );

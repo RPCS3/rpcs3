@@ -670,7 +670,7 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
 			const char *funcname = irxImportFuncname(libname, index);
 			irxDEBUG debug = irxImportDebug(libname, index);
 
-			if (macTrace.IOP.Bios()) {
+			if (SysTracePack.IOP.Bios.IsEnabled()) {
 				xMOV(ecx, (uptr)libname);
 				xMOV(edx, index);
 				xPUSH((uptr)funcname);

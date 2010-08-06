@@ -80,7 +80,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 			int addrstart = v->addr;
 			//if((tempsize >> 2) != v->size) DevCon.Warning("split when size != tagsize");
 
-			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, v->addr);
+			//DbgCon.WriteLn("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, v->addr);
 
 			while ((tempsize >= ft.gsize) && (vifRegs->num > 0)) {
 				if(v->addr >= memlimit) {
@@ -115,13 +115,13 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 		}
 		
 		if (size >= ft.dsize && vifRegs->num > 0) { //Else write what we do have
-			DevCon.Warning("huh!!!!!!!!!!!!!!!!!!!!!!");
 			VIF_LOG("warning, end with size = %d", size);
 			// unpack one qword
 			//v->addr += (size / ft.dsize) * 4;
 			(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, size / ft.dsize);
 			size = 0;
-			VIFUNPACK_LOG("leftover done, size %d, vifnum %d, addr %x", size, vifRegs->num, v->addr);
+			
+			//DbgCon.WriteLn("leftover done, size %d, vifnum %d, addr %x", size, vifRegs->num, v->addr);
 		}
 	}
 	else { // filling write

@@ -62,7 +62,7 @@ namespace Exception
 
 	class PluginError : public RuntimeError
 	{
-		DEFINE_RUNTIME_EXCEPTION( PluginError, RuntimeError, "Generic plugin error")
+		DEFINE_RUNTIME_EXCEPTION( PluginError, RuntimeError, L"Generic plugin error")
 
 	public:
 		PluginsEnum_t PluginId;
