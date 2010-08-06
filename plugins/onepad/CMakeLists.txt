@@ -14,6 +14,7 @@ set(CommonFlags
     )
 
 set(OptimizationFlags
+    -fvisibility=hidden
     -O2
     -DNDEBUG
     )

@@ -96,6 +96,8 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(UtilitiesSources
 	../../include/Utilities/FixedPointTypes.inl
 	../../include/Utilities/EventSource.inl
+    ../../include/Utilities/SafeArray.inl
+    ../../include/Utilities/TlsVariable.inl
 	AlignedMalloc.cpp
 	CheckedStaticBox.cpp
 	Console.cpp
@@ -156,6 +158,7 @@ set(UtilitiesHeaders
 	../../include/Utilities/StringHelpers.h
 	../../include/Utilities/Threading.h
 	../../include/Utilities/ThreadingDialogs.h
+	../../include/Utilities/TraceLog.h
 	../../include/Utilities/wxAppWithHelpers.h
 	../../include/Utilities/wxBaseTools.h
 	../../include/Utilities/wxGuiTools.h

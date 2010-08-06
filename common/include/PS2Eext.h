@@ -30,7 +30,7 @@
 #include <gtk/gtk.h>
 #include <cstring>
 
-#define EXPORT_C_(type) extern "C" type
+#define EXPORT_C_(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
 #endif
 
 //#include "PS2Edefs.h"

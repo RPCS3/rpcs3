@@ -28,7 +28,7 @@
 #ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
 #else
-#define EXPORT_C_(type) extern "C" type
+#define EXPORT_C_(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
 #endif
 
 // We have our own versions that have the DLLExport attribute configured:

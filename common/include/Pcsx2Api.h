@@ -35,7 +35,7 @@
 #ifdef _MSC_VER
 #define EXPORT_C(type) extern "C" __declspec(dllexport) type CALLBACK
 #else
-#define EXPORT_C(type) extern "C" type
+#define EXPORT_C(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
 #endif
 
 EXPORT_C(u32) PS2EgetLibType(void);

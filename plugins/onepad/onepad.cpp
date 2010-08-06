@@ -279,7 +279,7 @@ EXPORT_C_(s32) PADopen(void *pDsp)
 	return _PADopen(pDsp);
 }
 
-void CALLBACK PADsetSettingsDir(const char* dir)
+EXPORT_C_(void) PADsetSettingsDir(const char* dir)
 {
 	// Get the path to the ini directory.
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
@@ -602,7 +602,7 @@ EXPORT_C_(u8) PADpoll(u8 value)
 }
 
 // PADkeyEvent is called every vsync (return NULL if no event)
-keyEvent* CALLBACK PADkeyEvent()
+EXPORT_C_(keyEvent*) PADkeyEvent()
 {
 	s_event = event;
 	event.evt = 0;

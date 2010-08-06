@@ -53,6 +53,12 @@ using namespace std;
 #include "bitwise.h"
 #include "controller.h"
 
+#ifdef _MSC_VER
+#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
+#else
+#define EXPORT_C_(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
+#endif
+
 extern char libraryName[256];
 
 enum PadOptions
@@ -148,24 +154,5 @@ void SaveConfig();
 void SysMessage(char *fmt, ...);
 void UpdateKeys(int pad, int keyPress, int keyRelease);
 
-#ifdef __cplusplus
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
-
-#else
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) __declspec(dllexport) type __stdcall
-#else
-#define EXPORT_C_(type) type
-#endif
 
 #endif
-
-#endif
-
-
