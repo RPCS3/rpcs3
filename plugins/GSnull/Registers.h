@@ -42,9 +42,170 @@ extern "C"
 #endif
 
 #include "emmintrin.h"
-#include "GifTransfer.h"
+//#include "GifTransfer.h"
 
 #pragma pack(push, 1)
+
+
+enum GIF_REG
+{
+	GIF_REG_PRIM	= 0x00,
+	GIF_REG_RGBA	= 0x01,
+	GIF_REG_STQ		= 0x02,
+	GIF_REG_UV		= 0x03,
+	GIF_REG_XYZF2	= 0x04,
+	GIF_REG_XYZ2	= 0x05,
+	GIF_REG_TEX0_1	= 0x06,
+	GIF_REG_TEX0_2	= 0x07,
+	GIF_REG_CLAMP_1	= 0x08,
+	GIF_REG_CLAMP_2	= 0x09,
+	GIF_REG_FOG		= 0x0a,
+	GIF_REG_XYZF3	= 0x0c,
+	GIF_REG_XYZ3	= 0x0d,
+	GIF_REG_A_D		= 0x0e,
+	GIF_REG_NOP		= 0x0f,
+};
+
+enum GIF_A_D_REG
+{
+	GIF_A_D_REG_PRIM		= 0x00,
+	GIF_A_D_REG_RGBAQ		= 0x01,
+	GIF_A_D_REG_ST			= 0x02,
+	GIF_A_D_REG_UV			= 0x03,
+	GIF_A_D_REG_XYZF2		= 0x04,
+	GIF_A_D_REG_XYZ2		= 0x05,
+	GIF_A_D_REG_TEX0_1		= 0x06,
+	GIF_A_D_REG_TEX0_2		= 0x07,
+	GIF_A_D_REG_CLAMP_1		= 0x08,
+	GIF_A_D_REG_CLAMP_2		= 0x09,
+	GIF_A_D_REG_FOG			= 0x0a,
+	GIF_A_D_REG_XYZF3		= 0x0c,
+	GIF_A_D_REG_XYZ3		= 0x0d,
+	GIF_A_D_REG_NOP			= 0x0f,
+	GIF_A_D_REG_TEX1_1		= 0x14,
+	GIF_A_D_REG_TEX1_2		= 0x15,
+	GIF_A_D_REG_TEX2_1		= 0x16,
+	GIF_A_D_REG_TEX2_2		= 0x17,
+	GIF_A_D_REG_XYOFFSET_1	= 0x18,
+	GIF_A_D_REG_XYOFFSET_2	= 0x19,
+	GIF_A_D_REG_PRMODECONT	= 0x1a,
+	GIF_A_D_REG_PRMODE		= 0x1b,
+	GIF_A_D_REG_TEXCLUT		= 0x1c,
+	GIF_A_D_REG_SCANMSK		= 0x22,
+	GIF_A_D_REG_MIPTBP1_1	= 0x34,
+	GIF_A_D_REG_MIPTBP1_2	= 0x35,
+	GIF_A_D_REG_MIPTBP2_1	= 0x36,
+	GIF_A_D_REG_MIPTBP2_2	= 0x37,
+	GIF_A_D_REG_TEXA		= 0x3b,
+	GIF_A_D_REG_FOGCOL		= 0x3d,
+	GIF_A_D_REG_TEXFLUSH	= 0x3f,
+	GIF_A_D_REG_SCISSOR_1	= 0x40,
+	GIF_A_D_REG_SCISSOR_2	= 0x41,
+	GIF_A_D_REG_ALPHA_1		= 0x42,
+	GIF_A_D_REG_ALPHA_2		= 0x43,
+	GIF_A_D_REG_DIMX		= 0x44,
+	GIF_A_D_REG_DTHE		= 0x45,
+	GIF_A_D_REG_COLCLAMP	= 0x46,
+	GIF_A_D_REG_TEST_1		= 0x47,
+	GIF_A_D_REG_TEST_2		= 0x48,
+	GIF_A_D_REG_PABE		= 0x49,
+	GIF_A_D_REG_FBA_1		= 0x4a,
+	GIF_A_D_REG_FBA_2		= 0x4b,
+	GIF_A_D_REG_FRAME_1		= 0x4c,
+	GIF_A_D_REG_FRAME_2		= 0x4d,
+	GIF_A_D_REG_ZBUF_1		= 0x4e,
+	GIF_A_D_REG_ZBUF_2		= 0x4f,
+	GIF_A_D_REG_BITBLTBUF	= 0x50,
+	GIF_A_D_REG_TRXPOS		= 0x51,
+	GIF_A_D_REG_TRXREG		= 0x52,
+	GIF_A_D_REG_TRXDIR		= 0x53,
+	GIF_A_D_REG_HWREG		= 0x54,
+	GIF_A_D_REG_SIGNAL		= 0x60,
+	GIF_A_D_REG_FINISH		= 0x61,
+	GIF_A_D_REG_LABEL		= 0x62,
+};
+
+// In case we want to change to/from __fastcall for GIF register handlers:
+#define __gifCall __fastcall
+
+/*typedef void __gifCall FnType_GIFRegHandler(const u32* data);
+typedef FnType_GIFRegHandler* GIFRegHandler;
+
+extern FnType_GIFRegHandler GIFPackedRegHandlerNull;
+extern FnType_GIFRegHandler GIFPackedRegHandlerRGBA;
+extern FnType_GIFRegHandler GIFPackedRegHandlerSTQ;
+extern FnType_GIFRegHandler GIFPackedRegHandlerUV;
+extern FnType_GIFRegHandler GIFPackedRegHandlerXYZF2;
+extern FnType_GIFRegHandler GIFPackedRegHandlerXYZ2;
+extern FnType_GIFRegHandler GIFPackedRegHandlerFOG;
+extern FnType_GIFRegHandler GIFPackedRegHandlerA_D;
+extern FnType_GIFRegHandler GIFPackedRegHandlerNOP;
+
+// These are unimplemented, and fall back on the non-packed versions.
+extern FnType_GIFRegHandler GIFPackedRegHandlerPRIM;
+extern FnType_GIFRegHandler GIFPackedRegHandlerTEX0_1;
+extern FnType_GIFRegHandler GIFPackedRegHandlerTEX0_2;
+extern FnType_GIFRegHandler GIFPackedRegHandlerCLAMP_1;
+extern FnType_GIFRegHandler GIFPackedRegHandlerCLAMP_2;
+extern FnType_GIFRegHandler GIFPackedRegHandlerXYZF3;
+extern FnType_GIFRegHandler GIFPackedRegHandlerXYZ3;
+
+extern FnType_GIFRegHandler GIFRegHandlerNull;
+extern FnType_GIFRegHandler GIFRegHandlerPRIM;
+extern FnType_GIFRegHandler GIFRegHandlerRGBAQ;
+extern FnType_GIFRegHandler GIFRegHandlerST;
+extern FnType_GIFRegHandler GIFRegHandlerUV;
+extern FnType_GIFRegHandler GIFRegHandlerXYZF2;
+extern FnType_GIFRegHandler GIFRegHandlerXYZ2;
+extern FnType_GIFRegHandler GIFRegHandlerTEX0_1;
+extern FnType_GIFRegHandler GIFRegHandlerTEX0_2;
+extern FnType_GIFRegHandler GIFRegHandlerCLAMP_1;
+extern FnType_GIFRegHandler GIFRegHandlerCLAMP_2;
+extern FnType_GIFRegHandler GIFRegHandlerFOG;
+extern FnType_GIFRegHandler GIFRegHandlerXYZF3;
+extern FnType_GIFRegHandler GIFRegHandlerXYZ3;
+extern FnType_GIFRegHandler GIFRegHandlerNOP;
+extern FnType_GIFRegHandler GIFRegHandlerTEX1_1;
+extern FnType_GIFRegHandler GIFRegHandlerTEX1_2;
+extern FnType_GIFRegHandler GIFRegHandlerTEX2_1;
+extern FnType_GIFRegHandler GIFRegHandlerTEX2_2;
+extern FnType_GIFRegHandler GIFRegHandlerXYOFFSET_1;
+extern FnType_GIFRegHandler GIFRegHandlerXYOFFSET_2;
+extern FnType_GIFRegHandler GIFRegHandlerPRMODECONT;
+extern FnType_GIFRegHandler GIFRegHandlerPRMODE;
+extern FnType_GIFRegHandler GIFRegHandlerTEXCLUT;
+extern FnType_GIFRegHandler GIFRegHandlerSCANMSK;
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP1_1;
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP1_2;
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP2_1;
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP2_2;
+extern FnType_GIFRegHandler GIFRegHandlerTEXA;
+extern FnType_GIFRegHandler GIFRegHandlerFOGCOL;
+extern FnType_GIFRegHandler GIFRegHandlerTEXFLUSH;
+extern FnType_GIFRegHandler GIFRegHandlerSCISSOR_1;
+extern FnType_GIFRegHandler GIFRegHandlerSCISSOR_2;
+extern FnType_GIFRegHandler GIFRegHandlerALPHA_1;
+extern FnType_GIFRegHandler GIFRegHandlerALPHA_2;
+extern FnType_GIFRegHandler GIFRegHandlerDIMX;
+extern FnType_GIFRegHandler GIFRegHandlerDTHE;
+extern FnType_GIFRegHandler GIFRegHandlerCOLCLAMP;
+extern FnType_GIFRegHandler GIFRegHandlerTEST_1;
+extern FnType_GIFRegHandler GIFRegHandlerTEST_2;
+extern FnType_GIFRegHandler GIFRegHandlerPABE;
+extern FnType_GIFRegHandler GIFRegHandlerFBA_1;
+extern FnType_GIFRegHandler GIFRegHandlerFBA_2;
+extern FnType_GIFRegHandler GIFRegHandlerFRAME_1;
+extern FnType_GIFRegHandler GIFRegHandlerFRAME_2;
+extern FnType_GIFRegHandler GIFRegHandlerZBUF_1;
+extern FnType_GIFRegHandler GIFRegHandlerZBUF_2;
+extern FnType_GIFRegHandler GIFRegHandlerBITBLTBUF;
+extern FnType_GIFRegHandler GIFRegHandlerTRXPOS;
+extern FnType_GIFRegHandler GIFRegHandlerTRXREG;
+extern FnType_GIFRegHandler GIFRegHandlerTRXDIR;
+extern FnType_GIFRegHandler GIFRegHandlerHWREG;
+extern FnType_GIFRegHandler GIFRegHandlerSIGNAL;
+extern FnType_GIFRegHandler GIFRegHandlerFINISH;
+extern FnType_GIFRegHandler GIFRegHandlerLABEL;*/
 
 enum GS_PRIM
 {
@@ -420,7 +581,7 @@ REG_SET_END
 //
 // GIFTag
 
-REG128(GIFTag)
+/*REG128(GIFTag)
 	u32 NLOOP:15;
 	u32 EOP:1;
 	u32 _PAD1:16;
@@ -430,7 +591,7 @@ REG128(GIFTag)
 	u32 FLG:2; // enum GIF_FLG
 	u32 NREG:4;
 	u64 REGS:64;
-REG_END
+REG_END*/
 
 // GIFReg
 
@@ -1051,3 +1212,4 @@ struct GSPrivRegSet
 };
 
 #pragma pack(pop)
+

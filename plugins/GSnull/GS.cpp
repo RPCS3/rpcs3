@@ -25,6 +25,7 @@
 using namespace std;
 
 #include "GS.h"
+#include "GifTransfer.h"
 #include "null/GSnull.h"
 
 const unsigned char version  = PS2E_GS_VERSION;
@@ -40,6 +41,7 @@ bool GSShift = false, GSAlt = false;
 string s_strIniPath="inis";
 std::string s_strLogPath("logs/");
 const char* s_iniFilename = "GSnull.ini";
+GSVars gs;
 
 // Because I haven't bothered to get GSOpen2 working in Windows yet in GSNull.
 #ifdef __LINUX__
@@ -208,24 +210,11 @@ EXPORT_C_(void) GSvsync(int field)
 	GSProcessMessages();
 }
 
-EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
-{
-	_GSgifTransfer1(pMem, addr);
-}
-
-EXPORT_C_(void) GSgifTransfer2(u32 *pMem, u32 size)
-{
-	_GSgifTransfer2(pMem, size);
-}
-
-EXPORT_C_(void) GSgifTransfer3(u32 *pMem, u32 size)
-{
-	_GSgifTransfer3(pMem, size);
-}
-
  // returns the last tag processed (64 bits)
 EXPORT_C_(void) GSgetLastTag(u64* ptag)
 {
+	*(u32*)ptag = gs.nPath3Hack;
+	gs.nPath3Hack = 0;
 }
 
 EXPORT_C_(void) GSgifSoftReset(u32 mask)

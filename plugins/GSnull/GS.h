@@ -34,7 +34,7 @@ typedef struct _keyEvent keyEvent;
 #include "PS2Edefs.h"
 #include "PS2Eext.h"
 
-#include "Registers.h"
+#include "GifTransfer.h"
 #include "null/GSnull.h"
 
 /*#ifdef _MSC_VER
@@ -54,7 +54,21 @@ typedef struct _keyEvent keyEvent;
 typedef struct
 {
 	int Log;
+	bool path3;
 } Config;
+
+typedef struct
+{
+	u32 CSRw;
+	pathInfo path[4];
+	bool Path3transfer;
+	float q;
+	u32 imageTransfer;
+	int MultiThreaded;
+	int nPath3Hack;
+} GSVars;
+
+extern GSVars gs;
 
 extern Config conf;
 extern FILE *gsLog;

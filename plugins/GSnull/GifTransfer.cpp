@@ -24,235 +24,208 @@
 
 using namespace std;
 
-u32 CSRw;
-GIFPath m_path[3];
-bool Path3transfer;
+extern GSVars gs;
 
 PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
-#define GSCSRr *((u64*)(g_RealGSMem+0x1000))
-#define GSIMR *((u32*)(g_RealGSMem+0x1010))
-#define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
 
-static void RegHandlerSIGNAL(const u32* data)
+
+template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 {
-	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
+//	FUNCLOG
 
-	if ((CSRw & 0x1))  GSCSRr |= 1; // signal
+	pathInfo *path = &gs.path[index];
 
-	if (!(GSIMR & 0x100) ) GSirq();
-}
+#ifdef _WIN32
+	assert(g_hCurrentThread == GetCurrentThread());
+#endif
 
-static void RegHandlerFINISH(const u32* data)
-{
-	if ((CSRw & 0x2))  GSCSRr |= 2; // finish
+#ifdef _DEBUG
+	gifTransferLog(index, pMem, size);
+#endif
 
-	if (!(GSIMR & 0x200) ) GSirq();
-
-}
-
-static void RegHandlerLABEL(const u32* data)
-{
-	GSSIGLBLID->LBLID = (GSSIGLBLID->LBLID&~data[1])|(data[0]&data[1]);
-}
-
-typedef void (*GIFRegHandler)(const u32* data);
-static GIFRegHandler s_GSHandlers[3] =
-{
-	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL
-};
-
-__forceinline void GIFPath::PrepRegs()
-{
-	if( tag.nreg == 0 )
+	while (size > 0)
 	{
-		u32 tempreg = tag.regs[0];
-		for(u32 i=0; i<16; ++i, tempreg >>= 4)
+		//LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
+		if (path->nloop == 0)
 		{
-			if( i == 8 ) tempreg = tag.regs[1];
-			assert( (tempreg&0xf) < 0x64 );
-			regs[i] = tempreg & 0xf;
-		}
-	}
-	else
-	{
-		u32 tempreg = tag.regs[0];
-		for(u32 i=0; i<tag.nreg; ++i, tempreg >>= 4)
-		{
-			assert( (tempreg&0xf) < 0x64 );
-			regs[i] = tempreg & 0xf;
-		}
-	}
-}
+			path->setTag(pMem);
+			pMem += 4;
+			size--;
 
-void GIFPath::SetTag(const void* mem)
-{
-	tag = *((GIFTAG*)mem);
-	curreg = 0;
+			if ((conf.path3) && (index == 2) && path->eop) gs.nPath3Hack = 1;
 
-	PrepRegs();
-}
-
-u32 GIFPath::GetReg()
-{
-	return regs[curreg];
-}
-
-bool GIFPath::StepReg()
-{
-	if ((++curreg & 0xf) == tag.nreg) {
-		curreg = 0;
-		if (--tag.nloop == 0) {
-			return false;
-		}
-	}
-	return true;
-}
-
-__forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
-{
-	GIFPath& path = m_path[pathidx];
-
-	while(size > 0)
-	{
-		if(path.tag.nloop == 0)
-		{
-			path.SetTag( pMem );
-
-			pMem += sizeof(GIFTAG);
-			--size;
-
-			if(pathidx == 2 && path.tag.eop)
+			// eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and
+			// values other than the EOP field are disregarded."
+			if (path->nloop > 0)
 			{
-				Path3transfer = FALSE;
-			}
+				gs.q = 1.0f;
 
-			if( pathidx == 0 )
-			{
-				// hack: if too much data for VU1, just ignore.
-
-				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
-				const int numregs = ((path.tag.nreg-1)&15)+1;
-
-				if((path.tag.nloop * numregs) > (size * ((path.tag.flg == 1) ? 2 : 1)))
+				if (path->tag.PRE && (path->tag.FLG == GIF_FLG_PACKED))
 				{
-					path.tag.nloop = 0;
-					return ++size;
+					u32 tagprim = path->tag.PRIM;
+					//GIFRegHandlerPRIM((u32*)&tagprim);
 				}
 			}
 		}
 		else
 		{
-			// NOTE: size > 0 => do {} while(size > 0); should be faster than while(size > 0) {}
-
-			switch(path.tag.flg)
+			switch (path->mode)
 			{
-			case GIF_FLG_PACKED:
-
-				do
+				case GIF_FLG_PACKED:
 				{
-					if( path.GetReg() == 0xe )
+					// Needs to be looked at.
+
+					// first try a shortcut for a very common case
+
+					if (path->adonly && size >= path->nloop)
 					{
-						const int handler = pMem[8];
-						if(handler >= 0x60 && handler < 0x63)
-							s_GSHandlers[handler&0x3]((const u32*)pMem);
+						size -= path->nloop;
+
+						do
+						{
+							//GIFPackedRegHandlerA_D(pMem);
+
+							pMem += 4; //sizeof(GIFPackedReg)/4;
+						}
+						while(--path->nloop > 0);
+						break;
 					}
 
-					size--;
-					pMem += 16; // 128 bits! //sizeof(GIFPackedReg);
+					do
+					{
+						u32 reg = path->GetReg();
+						//g_GIFPackedRegHandlers[reg](pMem);
+						
+						pMem += 4; //sizeof(GIFPackedReg)/4;
+						size--;
+					}
+					while (path->StepReg() && (size > 0));
+
+					break;
 				}
-				while(path.StepReg() && size > 0);
 
-			break;
-
-			case GIF_FLG_REGLIST:
-
-				size *= 2;
-
-				do
+				case GIF_FLG_REGLIST:
 				{
-					const int handler = path.GetReg();
-					if(handler >= 0x60 && handler < 0x63)
-						s_GSHandlers[handler&0x3]((const u32*)pMem);
+					// Needs to be looked at.
+					//ZZLog::GS_Log("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
 
-					size--;
-					pMem += 8; //sizeof(GIFReg); -- 64 bits!
+					size *= 2;
+
+					do
+					{
+						//g_GIFRegHandlers[path->GetReg()](pMem);
+
+						pMem += 2;
+						size--;
+					}
+					while (path->StepReg() && (size > 0));
+
+					if (size & 1) pMem += 2;
+					size /= 2;
+					break;
 				}
-				while(path.StepReg() && size > 0);
 
-				if(size & 1) pMem += 8; //sizeof(GIFReg);
+				case GIF_FLG_IMAGE: // FROM_VFRAM
+				case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
+				{
+					int len = min(size, path->nloop);
+					//GS_LOG("GIF_FLG_IMAGE(%d)=%d", gs.imageTransfer, len);
 
-				size /= 2;
+					switch (gs.imageTransfer)
+					{
+						case 0:
+							//TransferHostLocal(pMem, len * 4);
+							break;
 
-			break;
+						case 1:
+							// This can't happen; downloads can not be started or performed as part of
+							// a GIFtag operation.  They're an entirely separate process that can only be
+							// done through the ReverseFIFO transfer (aka ReadFIFO). --air
+							assert(0);
+							break;
 
-			case GIF_FLG_IMAGE2: // hmmm
-				assert(0);
-				path.tag.nloop = 0;
+						case 2:
+							// //TransferLocalLocal();
+							break;
 
-			break;
+						case 3:
+							//assert(0);
+							break;
 
-			case GIF_FLG_IMAGE:
-			{
-				int len = (int)min(size, path.tag.nloop);
+						default:
+							//assert(0);
+							break;
+					}
 
-				pMem += len * 16;
-				path.tag.nloop -= len;
-				size -= len;
-			}
-			break;
+					pMem += len * 4;
 
-			default: __assume(false);
+					path->nloop -= len;
+					size -= len;
 
+					break;
+				}
+
+				default: // GIF_IMAGE
+					GS_LOG("*** WARNING **** Unexpected GIFTag flag.");
+					assert(0);
+					path->nloop = 0;
+					break;
 			}
 		}
 
-		if(pathidx == 0)
+		if (index == 0)
 		{
-			if(path.tag.eop && path.tag.nloop == 0)
+			if (path->tag.EOP && path->nloop == 0)
 			{
 				break;
 			}
 		}
 	}
 
-	if(pathidx == 0)
+	// This is the case when not all data was readed from one try: VU1 has too much data.
+	// So we should redo reading from the start.
+	if (index == 0)
 	{
-		if(size == 0 && path.tag.nloop > 0)
+		if (size == 0 && path->nloop > 0)
 		{
-			path.tag.nloop = 0;
-			SysPrintf( "path1 hack! \n" );
-
-			// This means that the giftag data got screwly somewhere
-			// along the way (often means curreg was in a bad state or something)
+			if (gs.MultiThreaded)
+			{
+				path->nloop = 0;
+			}
+			else
+			{
+				_GSgifTransfer<0>(pMem - 0x4000, 0x4000 / 16);
+			}
 		}
 	}
-
-	return size;
 }
 
-// This currently segfaults in the beginning of KH1 if defined.
-//#define DO_GIF_TRANSFERS
+#define DO_GIF_TRANSFERS
 
-void _GSgifTransfer1(u32 *pMem, u32 addr)
+EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
 {
 #ifdef DO_GIF_TRANSFERS
-	/* This needs looking at, since I quickly grabbed it from ZeroGS. */
-	addr &= 0x3fff;
-	_gifTransfer( GIF_PATH_1, ((u8*)pMem+(u8)addr), (0x4000-addr)/16);
+	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr) / 16);
 #endif
 }
 
-void _GSgifTransfer2(u32 *pMem, u32 size)
+EXPORT_C_(void) GSgifTransfer2(u32 *pMem, u32 size)
 {
 #ifdef DO_GIF_TRANSFERS
-	_gifTransfer( GIF_PATH_2, (u8*)pMem, size);
+	_GSgifTransfer<1>(const_cast<u32*>(pMem), size);
 #endif
 }
 
-void _GSgifTransfer3(u32 *pMem, u32 size)
+EXPORT_C_(void) GSgifTransfer3(u32 *pMem, u32 size)
 {
 #ifdef DO_GIF_TRANSFERS
-	_gifTransfer( GIF_PATH_3, (u8*)pMem, size);
+	_GSgifTransfer<2>(const_cast<u32*>(pMem), size);
 #endif
 }
 
+EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
+{
+#ifdef DO_GIF_TRANSFERS
+	_GSgifTransfer<3>(const_cast<u32*>(pMem), size);
+#endif
+}

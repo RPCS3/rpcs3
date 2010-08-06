@@ -45,7 +45,7 @@ __forceinline void gifTransferLog(int index, const u32 *pMem, u32 size)
 {
 #ifdef DEBUG_TRANSFER
 
-	if (conf.log /*& 0x20*/)
+	if (conf.log)
 	{
 		static int nSaveIndex = 0;
 		ZZLog::Debug_Log("%d: p:%d %x", nSaveIndex++, index + 1, size);
