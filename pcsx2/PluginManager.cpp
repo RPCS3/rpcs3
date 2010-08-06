@@ -1241,7 +1241,7 @@ void SysCorePlugins::Close()
 	// Close plugins in reverse order of the initialization procedure, which
 	// ensures the GS gets closed last.
 
-	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
+	Console.WriteLn( Color_StrongBlue, "Closing plugins..." );
 
 	if( AtomicExchange( m_mcdOpen, false ) )
 	{
@@ -1252,7 +1252,7 @@ void SysCorePlugins::Close()
 	for( int i=PluginId_Count-1; i>=0; --i )
 		Close( tbl_PluginInfo[i].id );
 	
-	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
+	Console.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }
 
 void SysCorePlugins::Init( PluginsEnum_t pid )
@@ -1331,7 +1331,7 @@ bool SysCorePlugins::Shutdown()
 	
 	GetMTGS().Cancel();	// cancel it for speedier shutdown!
 	
-	DbgCon.WriteLn( Color_StrongGreen, "Shutting down plugins..." );
+	Console.WriteLn( Color_StrongGreen, "Shutting down plugins..." );
 
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
@@ -1349,7 +1349,7 @@ bool SysCorePlugins::Shutdown()
 		SysPlugins.Mcd = NULL;
 	}
 
-	DbgCon.WriteLn( Color_StrongGreen, "Plugins shutdown successfully." );
+	Console.WriteLn( Color_StrongGreen, "Plugins shutdown successfully." );
 	
 	return true;
 }
