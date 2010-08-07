@@ -163,6 +163,14 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 #define DO_GIF_TRANSFERS
 
+// Obsolete. Included because it's still in GSdef.
+EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
+{
+#ifdef DO_GIF_TRANSFERS
+	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr) / 16);
+#endif
+}
+
 EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
 {
 #ifdef DO_GIF_TRANSFERS
