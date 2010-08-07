@@ -970,28 +970,22 @@ void rpsxJALR()
 }
 
 //// BEQ
-static void* s_pbranchjmp;
-static u32 s_do32 = 0;
-
-#define JUMPVALID(pjmp) (( x86Ptr - (u8*)pjmp ) <= 0x80)
+static u32* s_pbranchjmp;
 
 void rpsxSetBranchEQ(int info, int process)
 {
 	if( process & PROCESS_CONSTS ) {
 		CMP32ItoM( (uptr)&psxRegs.GPR.r[ _Rt_ ], g_psxConstRegs[_Rs_] );
-		if( s_do32 ) s_pbranchjmp = JNE32( 0 );
-		else s_pbranchjmp = JNE8( 0 );
+		s_pbranchjmp = JNE32( 0 );
 	}
 	else if( process & PROCESS_CONSTT ) {
 		CMP32ItoM( (uptr)&psxRegs.GPR.r[ _Rs_ ], g_psxConstRegs[_Rt_] );
-		if( s_do32 ) s_pbranchjmp = JNE32( 0 );
-		else s_pbranchjmp = JNE8( 0 );
+		s_pbranchjmp = JNE32( 0 );
 	}
 	else {
 		MOV32MtoR( EAX, (uptr)&psxRegs.GPR.r[ _Rs_ ] );
 		CMP32MtoR( EAX, (uptr)&psxRegs.GPR.r[ _Rt_ ] );
-		if( s_do32 ) s_pbranchjmp = JNE32( 0 );
-		else s_pbranchjmp = JNE8( 0 );
+		s_pbranchjmp = JNE32( 0 );
 	}
 }
 
@@ -1020,8 +1014,6 @@ void rpsxBEQ_process(int info, int process)
 	else
 	{
 		_psxFlushAllUnused();
-		u8* prevx86 = x86Ptr;
-		s_do32 = 0;
 		psxSaveBranchState();
 
 		rpsxSetBranchEQ(info, process);
@@ -1029,20 +1021,7 @@ void rpsxBEQ_process(int info, int process)
 		psxRecompileNextInstruction(1);
 		psxSetBranchImm(branchTo);
 
-		if( JUMPVALID(s_pbranchjmp) ) {
-			x86SetJ8A( (u8*)s_pbranchjmp );
-		}
-		else {
-			x86SetPtr( prevx86 );
-			s_do32 = 1;
-			psxpc -= 4;
-			psxRegs.code = iopMemRead32( psxpc - 4 );
-			psxLoadBranchState();
-			rpsxSetBranchEQ(info, process);
-			psxRecompileNextInstruction(1);
-			psxSetBranchImm(branchTo);
-			x86SetJ32A( (u32*)s_pbranchjmp );
-		}
+		x86SetJ32A( s_pbranchjmp );
 
 		// recopy the next inst
 		psxpc -= 4;
@@ -1084,28 +1063,13 @@ void rpsxBNE_process(int info, int process)
 	}
 
 	_psxFlushAllUnused();
-	u8* prevx86 = x86Ptr;
-	s_do32 = 0;
 	rpsxSetBranchEQ(info, process);
 
 	psxSaveBranchState();
 	psxRecompileNextInstruction(1);
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(s_pbranchjmp) ) {
-		x86SetJ8A( (u8*)s_pbranchjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		s_do32 = 1;
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		rpsxSetBranchEQ(info, process);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( (u32*)s_pbranchjmp );
-	}
+	x86SetJ32A( s_pbranchjmp );
 
 	// recopy the next inst
 	psxpc -= 4;
@@ -1138,27 +1102,14 @@ void rpsxBLTZ()
 	}
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JL8(0);
+	u32* pjmp = JL32(0);
 
 	psxSaveBranchState();
 	psxRecompileNextInstruction(1);
 
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JL32(0);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	// recopy the next inst
 	psxpc -= 4;
@@ -1185,27 +1136,14 @@ void rpsxBGEZ()
 	}
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JGE8(0);
+	u32* pjmp = JGE32(0);
 
 	psxSaveBranchState();
 	psxRecompileNextInstruction(1);
 
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JGE32(0);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	// recopy the next inst
 	psxpc -= 4;
@@ -1239,8 +1177,7 @@ void rpsxBLTZAL()
 	}
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JL8(0);
+	u32* pjmp = JL32(0);
 
 	psxSaveBranchState();
 
@@ -1249,20 +1186,7 @@ void rpsxBLTZAL()
 
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JL32(0);
-		MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	// recopy the next inst
 	psxpc -= 4;
@@ -1293,8 +1217,7 @@ void rpsxBGEZAL()
 	}
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JGE8(0);
+	u32* pjmp = JGE32(0);
 
 	MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
 
@@ -1303,20 +1226,7 @@ void rpsxBGEZAL()
 
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JGE32(0);
-		MOV32ItoM((uptr)&psxRegs.GPR.r[31], psxpc+4);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	// recopy the next inst
 	psxpc -= 4;
@@ -1347,26 +1257,13 @@ void rpsxBLEZ()
 	_clearNeededX86regs();
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JLE8(0);
+	u32* pjmp = JLE32(0);
 
 	psxSaveBranchState();
 	psxRecompileNextInstruction(1);
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JLE32(0);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	psxpc -= 4;
 	psxLoadBranchState();
@@ -1395,26 +1292,13 @@ void rpsxBGTZ()
 	_clearNeededX86regs();
 
 	CMP32ItoM((uptr)&psxRegs.GPR.r[_Rs_], 0);
-	u8* prevx86 = x86Ptr;
-	u8* pjmp = JG8(0);
+	u32* pjmp = JG32(0);
 
 	psxSaveBranchState();
 	psxRecompileNextInstruction(1);
 	psxSetBranchImm(psxpc);
 
-	if( JUMPVALID(pjmp) ) {
-		x86SetJ8A( pjmp );
-	}
-	else {
-		x86SetPtr( prevx86 );
-		psxpc -= 4;
-		psxRegs.code = iopMemRead32( psxpc - 4 );
-		psxLoadBranchState();
-		u32* pjmp32 = JG32(0);
-		psxRecompileNextInstruction(1);
-		psxSetBranchImm(psxpc);
-		x86SetJ32A( pjmp32 );
-	}
+	x86SetJ32A( pjmp );
 
 	psxpc -= 4;
 	psxLoadBranchState();
