@@ -38,6 +38,7 @@
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
+			<Add option="-fvisibility=hidden" />
 			<Add directory="../Linux" />
 			<Add directory="../../PadNull" />
 			<Add directory="../../../common/include" />

@@ -156,6 +156,7 @@
 			<Add option="-fno-strict-aliasing" />
 			<Add option="-pipe -msse -msse2" />
 			<Add option="-m32" />
+			<Add option="-fvisibility=hidden" />
 			<Add option="-DWX_PRECOMP" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />

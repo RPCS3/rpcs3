@@ -39,6 +39,7 @@
 			<Add option="`pkg-config sdl --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
+			<Add option="-fvisibility=hidden" />
 			<Add directory="../Linux" />
 			<Add directory="../../onepad" />
 			<Add directory="../../../common/include" />

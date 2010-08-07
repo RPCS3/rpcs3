@@ -124,7 +124,6 @@ extern void _GSgifPacket(pathInfo *path, const u32 *pMem);
 extern void _GSgifRegList(pathInfo *path, const u32 *pMem);
 template<int index> 
 extern void _GSgifTransfer(const u32 *pMem, u32 size);
-extern GIFRegHandler g_GIFPackedRegHandlers[];
-extern GIFRegHandler g_GIFRegHandlers[];
-/*extern void InitPath();*/
+extern GIFRegHandler GIFPackedRegHandlers[];
+extern GIFRegHandler GIFRegHandlers[];
 #endif // GIFTRANSFER_H_INCLUDED

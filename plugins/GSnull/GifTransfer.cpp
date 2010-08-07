@@ -33,21 +33,15 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 //	FUNCLOG
 
 	pathInfo *path = &gs.path[index];
-
-#ifdef _DEBUG
-	// [TODO] : Implement looging facilities?
-	//gifTransferLog(index, pMem, size);
-#endif
+	
 	while (size > 0)
 	{
-		//LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
+		//GS_LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
 		if (path->nloop == 0)
 		{
 			path->setTag(pMem);
 			pMem += 4;
 			size--;
-
-			if ((conf.path3) && (index == 2) && path->eop) gs.nPath3Hack = 1;
 
 			// eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and
 			// values other than the EOP field are disregarded."
@@ -58,7 +52,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 				if (path->tag.PRE && (path->tag.FLG == GIF_FLG_PACKED))
 				{
 					u32 tagprim = path->tag.PRIM;
-					//GIFRegHandlerPRIM((u32*)&tagprim);
+					GIFRegHandlerPRIM((u32*)&tagprim);
 				}
 			}
 		}
@@ -68,8 +62,6 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 			{
 				case GIF_FLG_PACKED:
 				{
-					// Needs to be looked at.
-
 					// first try a shortcut for a very common case
 
 					if (path->adonly && size >= path->nloop)
@@ -78,7 +70,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 						do
 						{
-							//GIFPackedRegHandlerA_D(pMem);
+							GIFPackedRegHandlerA_D(pMem);
 
 							pMem += 4; //sizeof(GIFPackedReg)/4;
 						}
@@ -89,7 +81,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 					do
 					{
 						u32 reg = path->GetReg();
-						//g_GIFPackedRegHandlers[reg](pMem);
+						GIFPackedRegHandlers[reg](pMem);
 						
 						pMem += 4; //sizeof(GIFPackedReg)/4;
 						size--;
@@ -101,14 +93,13 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 				case GIF_FLG_REGLIST:
 				{
-					// Needs to be looked at.
-					//ZZLog::GS_Log("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
+					//GS_Log("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
 
 					size *= 2;
 
 					do
 					{
-						//g_GIFRegHandlers[path->GetReg()](pMem);
+						GIFRegHandlers[path->GetReg()](pMem);
 
 						pMem += 2;
 						size--;
@@ -167,40 +158,15 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 					break;
 			}
 		}
-
-		if (index == 0)
-		{
-			if (path->tag.EOP && path->nloop == 0)
-			{
-				break;
-			}
-		}
-	}
-
-	// This is the case when not all data was readed from one try: VU1 has too much data.
-	// So we should redo reading from the start.
-	if (index == 0)
-	{
-		if (size == 0 && path->nloop > 0)
-		{
-			if (gs.MultiThreaded)
-			{
-				path->nloop = 0;
-			}
-			else
-			{
-				_GSgifTransfer<0>(pMem - 0x4000, 0x4000 / 16);
-			}
-		}
 	}
 }
 
 #define DO_GIF_TRANSFERS
 
-EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
+EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
 {
 #ifdef DO_GIF_TRANSFERS
-	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr) / 16);
+	_GSgifTransfer<3>(const_cast<u32*>(pMem), size);
 #endif
 }
 
@@ -215,13 +181,6 @@ EXPORT_C_(void) GSgifTransfer3(u32 *pMem, u32 size)
 {
 #ifdef DO_GIF_TRANSFERS
 	_GSgifTransfer<2>(const_cast<u32*>(pMem), size);
-#endif
-}
-
-EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
-{
-#ifdef DO_GIF_TRANSFERS
-	_GSgifTransfer<3>(const_cast<u32*>(pMem), size);
 #endif
 }
 

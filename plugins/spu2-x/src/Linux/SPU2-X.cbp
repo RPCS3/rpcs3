@@ -48,6 +48,7 @@
 			<Add option="-m32" />
 			<Add option="-liconv" />
 			<Add option="-msse2" />
+			<Add option="-fvisibility=hidden" />
 			<Add directory="../Linux" />
 			<Add directory="../../src" />
 			<Add directory="../../../../common/include" />
