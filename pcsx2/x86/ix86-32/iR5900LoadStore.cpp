@@ -115,6 +115,7 @@ void recLoad64( u32 bits, bool sign )
 
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		_eeOnLoadWrite(_Rt_);
 		_deleteEEreg(_Rt_, 0);
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
@@ -151,6 +152,7 @@ void recLoad32( u32 bits, bool sign )
 
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		_eeOnLoadWrite(_Rt_);
 		_deleteEEreg(_Rt_, 0);
 
@@ -215,6 +217,7 @@ void recStore(u32 sz, bool edxAlreadyAssigned=false)
 
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		u32 dstadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		if( sz == 128 ) dstadr &= ~0x0f;
 		vtlb_DynGenWrite_Const( sz, dstadr );
@@ -291,6 +294,7 @@ void recSWL( void )
 	// NOTE: Code incomplete. I'll fix/finish it soon. --air
 	if( 0 ) //GPR_IS_CONST1( _Rs_ ) )
 	{
+		iFlushCall(FLUSH_EXCEPTION);
 		_eeOnLoadWrite(_Rt_);
 		//_deleteEEreg(_Rt_, 0);
 
