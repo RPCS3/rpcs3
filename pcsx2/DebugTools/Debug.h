@@ -205,15 +205,24 @@ public:
 // --------------------------------------------------------------------------------------
 // Special console logger for Virtual Machine log sources, such as the EE and IOP console
 // writes (actual game developer messages and such).  These logs do *not* automatically
-// append newlines, since the VM generates them manually.
+// append newlines, since the VM generates them manually; and they do *not* support printf
+// formatting, since anything coming over the EE/IOP consoles should be considered raw
+// string data.  (otherwise %'s would get mis-interpreted).
 //
-class ConsoleLogFromVM : public ConsoleLogSource
+class ConsoleLogFromVM : ConsoleLogSource
 {
 	typedef ConsoleLogSource _parent;
 
 public:
 	ConsoleLog_ImplementBaseAPI(ConsoleLogFromVM)
 	using _parent::IsEnabled;
+
+	bool Write( const wxChar* msg ) const
+	{
+		ConsoleColorScope cs(DefaultColor);
+		DoWrite(msg);
+		return false;
+	}
 
 	virtual void DoWrite( const wxChar* msg ) const
 	{
