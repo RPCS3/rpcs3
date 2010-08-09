@@ -346,11 +346,7 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 	GIF_LOG("GS Write128 at %8.8lx with data %8.8x_%8.8x_%8.8x_%8.8x", mem,
 		srcval32[3], srcval32[2], srcval32[1], srcval32[0]);
 
-	const uint masked_mem = mem & 0x13ff;
-	u64* writeTo = (u64*)(&PS2MEM_GS[masked_mem]);
-
-	writeTo[0] = value[0];
-	writeTo[1] = value[1];
+	CopyQWC(PS2GS_BASE(mem), value);
 }
 
 __fi u8 gsRead8(u32 mem)

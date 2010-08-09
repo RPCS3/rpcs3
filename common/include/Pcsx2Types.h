@@ -102,9 +102,9 @@ typedef s32 sptr;
 #endif
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
-//
+// --------------------------------------------------------------------------------------
+//  u128 / s128 - A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
+// --------------------------------------------------------------------------------------
 // Note: These structs don't provide any additional constructors because C++ doesn't allow
 // the use of datatypes with constructors in unions (and since unions aren't the primary
 // uses of these types, that means we can't have constructors). Embedded functions for
@@ -129,6 +129,20 @@ struct u128
 		u128 retval = { src, 0 };
 		return retval;
 	}
+
+	operator u32() const { return (u32)lo; }
+	operator u16() const { return (u16)lo; }
+	operator u8() const { return (u8)lo; }
+	
+	bool operator==( const u128& right ) const
+	{
+		return (lo == right.lo) && (hi == right.hi);
+	}
+
+	bool operator!=( const u128& right ) const
+	{
+		return (lo != right.lo) && (hi != right.hi);
+	}
 };
 
 struct s128
@@ -148,6 +162,20 @@ struct s128
 	{
 		s128 retval = { src, (src < 0) ? -1 : 0 };
 		return retval;
+	}
+
+	operator u32() const { return (s32)lo; }
+	operator u16() const { return (s16)lo; }
+	operator u8() const { return (s8)lo; }
+
+	bool operator==( const s128& right ) const
+	{
+		return (lo == right.lo) && (hi == right.hi);
+	}
+
+	bool operator!=( const s128& right ) const
+	{
+		return (lo != right.lo) && (hi != right.hi);
 	}
 };
 

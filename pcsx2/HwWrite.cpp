@@ -1227,25 +1227,27 @@ void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
 {
 	//hwWrite128( mem, srcval ); return;
 
+	const uint srcval32 = *srcval;
+
 	switch (mem)
 	{
 		case INTC_STAT:
-			HW_LOG("INTC_STAT Write 64bit %x", (u32)srcval[0]);
-			psHu32(INTC_STAT) &= ~srcval[0];
+			HW_LOG("INTC_STAT Write 128bit %x (lower 32bits effective)", srcval32);
+			psHu32(INTC_STAT) &= ~srcval32;
 			//cpuTestINTCInts();
 		break;
 
 		case INTC_MASK:
-			HW_LOG("INTC_MASK Write 64bit %x", (u32)srcval[0]);
-			psHu32(INTC_MASK) ^= (u16)srcval[0];
+			HW_LOG("INTC_MASK Write 128bit %x (lower 32bits effective)", srcval32);
+			psHu32(INTC_MASK) ^= (u16)srcval32;
 			cpuTestINTCInts();
 		break;
 
 		case DMAC_ENABLEW: // DMAC_ENABLEW
 			oldvalue = psHu8(DMAC_ENABLEW + 2);
-			psHu32(DMAC_ENABLEW) = srcval[0];
-			psHu32(DMAC_ENABLER) = srcval[0];
-			if (((oldvalue & 0x1) == 1) && (((srcval[0] >> 16) & 0x1) == 0))
+			psHu32(DMAC_ENABLEW) = srcval32;
+			psHu32(DMAC_ENABLER) = srcval32;
+			if (((oldvalue & 0x1) == 1) && (((srcval32 >> 16) & 0x1) == 0))
 			{
 				if (!QueuedDMA.empty()) StartQueuedDMA();
 			}
@@ -1257,9 +1259,7 @@ void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
 			break;
 
 		default:
-			psHu64(mem  ) = srcval[0];
-			psHu64(mem+8) = srcval[1];
-
+			CopyQWC(&psHu128(mem), srcval);
 			UnknownHW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)", mem, srcval[1], srcval[0], cpuRegs.CP0.n.Status.val);
 		break;
 	}

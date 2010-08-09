@@ -92,38 +92,6 @@ __fi DataType __fastcall MemOp_r0(u32 addr)
 }
 
 // ------------------------------------------------------------------------
-// Interpreterd VTLB lookup for 64 and 128 bit accesses.
-template<int DataSize,typename DataType>
-__fi void MemOp_r1(u32 addr, DataType* data)
-{
-	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
-	s32 ppf=addr+vmv;
-
-	if (!(ppf<0))
-	{
-		data[0]=*reinterpret_cast<DataType*>(ppf);
-		if (DataSize==128)
-			data[1]=*reinterpret_cast<DataType*>(ppf+8);
-	}
-	else
-	{
-		//has to: translate, find function, call function
-		u32 hand=(u8)vmv;
-		u32 paddr=ppf-hand+0x80000000;
-		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
-		//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
-
-		switch( DataSize )
-		{
-			case 64: ((vtlbMemR64FP*)vtlbdata.RWFT[3][0][hand])(paddr, data); break;
-			case 128: ((vtlbMemR128FP*)vtlbdata.RWFT[4][0][hand])(paddr, data); break;
-
-			jNO_DEFAULT;
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
 template<int DataSize,typename DataType>
 __fi void MemOp_w0(u32 addr, DataType data)
 {
@@ -151,35 +119,6 @@ __fi void MemOp_w0(u32 addr, DataType data)
 	}
 }
 
-// ------------------------------------------------------------------------
-template<int DataSize,typename DataType>
-__fi void MemOp_w1(u32 addr,const DataType* data)
-{
-	verify(DataSize==128 || DataSize==64);
-	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
-	s32 ppf=addr+vmv;
-	if (!(ppf<0))
-	{
-		*reinterpret_cast<DataType*>(ppf)=*data;
-		if (DataSize==128)
-			*reinterpret_cast<DataType*>(ppf+8)=data[1];
-	}
-	else
-	{
-		//has to: translate, find function, call function
-		u32 hand=(u8)vmv;
-		u32 paddr=ppf-hand+0x80000000;
-		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
-		switch( DataSize )
-		{
-			case 64: return ((vtlbMemW64FP*)vtlbdata.RWFT[3][1][hand])(paddr, data);
-			case 128: return ((vtlbMemW128FP*)vtlbdata.RWFT[4][1][hand])(paddr, data);
-
-			jNO_DEFAULT;
-		}
-	}
-}
-
 mem8_t __fastcall vtlb_memRead8(u32 mem)
 {
 	return MemOp_r0<8,mem8_t>(mem);
@@ -192,14 +131,49 @@ mem32_t __fastcall vtlb_memRead32(u32 mem)
 {
 	return MemOp_r0<32,mem32_t>(mem);
 }
-void __fastcall vtlb_memRead64(u32 mem, u64 *out)
+void __fastcall vtlb_memRead64(u32 mem, mem64_t *out)
 {
-	return MemOp_r1<64,mem64_t>(mem,out);
+	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	s32 ppf=mem+vmv;
+
+	if (!(ppf<0))
+	{
+		*out = *(mem64_t*)ppf;
+	}
+	else
+	{
+		//has to: translate, find function, call function
+		u32 hand=(u8)vmv;
+		u32 paddr=ppf-hand+0x80000000;
+		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
+
+		((vtlbMemR64FP*)vtlbdata.RWFT[3][0][hand])(paddr, out);
+	}
 }
-void __fastcall vtlb_memRead128(u32 mem, u64 *out)
+void __fastcall vtlb_memRead128(u32 mem, mem128_t *out)
 {
-	return MemOp_r1<128,mem128_t>(mem,out);
+	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	s32 ppf=mem+vmv;
+
+	if (!(ppf<0))
+	{
+		CopyQWC(out,(void*)ppf);
+	}
+	else
+	{
+		//has to: translate, find function, call function
+		u32 hand=(u8)vmv;
+		u32 paddr=ppf-hand+0x80000000;
+		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
+
+		((vtlbMemR128FP*)vtlbdata.RWFT[4][0][hand])(paddr, out);
+	}
 }
+void __fastcall vtlb_memRead128(u32 mem, u64 (&out)[2])
+{
+	vtlb_memRead128(mem, (mem128_t*)out);
+}
+
 void __fastcall vtlb_memWrite8 (u32 mem, mem8_t value)
 {
 	MemOp_w0<8,mem8_t>(mem,value);
@@ -214,11 +188,45 @@ void __fastcall vtlb_memWrite32(u32 mem, mem32_t value)
 }
 void __fastcall vtlb_memWrite64(u32 mem, const mem64_t* value)
 {
-	MemOp_w1<64,mem64_t>(mem,value);
+	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	s32 ppf=mem+vmv;
+	if (!(ppf<0))
+	{
+		*(mem64_t*)ppf = *value;
+	}
+	else
+	{
+		//has to: translate, find function, call function
+		u32 hand=(u8)vmv;
+		u32 paddr=ppf-hand+0x80000000;
+		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
+
+		((vtlbMemW64FP*)vtlbdata.RWFT[3][1][hand])(paddr, value);
+	}
 }
+
 void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 {
-	MemOp_w1<128,mem128_t>(mem,value);
+	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	s32 ppf=mem+vmv;
+	if (!(ppf<0))
+	{
+		CopyQWC((void*)ppf, value);
+	}
+	else
+	{
+		//has to: translate, find function, call function
+		u32 hand=(u8)vmv;
+		u32 paddr=ppf-hand+0x80000000;
+		//Console.WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
+
+		((vtlbMemW128FP*)vtlbdata.RWFT[4][1][hand])(paddr, value);
+	}
+}
+
+void __fastcall vtlb_memWrite128(u32 mem, const u64 (&out)[2])
+{
+	vtlb_memWrite128(mem, (const mem128_t*)out);
 }
 
 // ===========================================================================================

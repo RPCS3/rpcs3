@@ -627,9 +627,9 @@ static __aligned16 GPR_reg m_dummy_gpr_zero;
 // Returns the x86 address of the requested GPR, which is safe for writing. (includes
 // special handling for returning a dummy var for GPR0(zero), so that it's value is
 // always preserved)
-static u64* gpr_GetWritePtr( uint gpr )
+static GPR_reg* gpr_GetWritePtr( uint gpr )
 {
-	return (u64*)(( gpr == 0 ) ? &m_dummy_gpr_zero : &cpuRegs.GPR.r[gpr]);
+	return (( gpr == 0 ) ? &m_dummy_gpr_zero : &cpuRegs.GPR.r[gpr]);
 }
 
 void LD()
@@ -639,7 +639,7 @@ void LD()
 	if( addr & 7 )
 		throw R5900Exception::AddressError( addr, false );
 
-	memRead64(addr, gpr_GetWritePtr(_Rt_));
+	memRead64(addr, (u64*)gpr_GetWritePtr(_Rt_));
 }
 
 static const u64 LDL_MASK[8] =
@@ -687,7 +687,7 @@ void LQ()
 	// an address error due to unaligned access isn't possible like it is on other loads/stores.
 
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	memRead128(addr & ~0xf, gpr_GetWritePtr(_Rt_));
+	memRead128(addr & ~0xf, (u128*)gpr_GetWritePtr(_Rt_));
 }
 
 void SB()
@@ -816,7 +816,7 @@ void SQ()
 	// an address error due to unaligned access isn't possible like it is on other loads/stores.
 
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	memWrite128(addr & ~0xf, &cpuRegs.GPR.r[_Rt_].UD[0]);
+	memWrite128(addr & ~0xf, cpuRegs.GPR.r[_Rt_].UD);
 }
 
 /*********************************************************

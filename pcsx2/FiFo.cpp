@@ -43,17 +43,16 @@
 //////////////////////////////////////////////////////////////////////////
 // ReadFIFO Pages
 
-void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
+void __fastcall ReadFIFO_page_4(u32 mem, mem128_t* out)
 {
 	pxAssert( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
 
-	out[0] = psHu64(VIF0_FIFO);
-	out[1] = psHu64(VIF0_FIFO + 8);
+	CopyQWC( out, &psHu128(VIF0_FIFO) );
 }
 
-void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
+void __fastcall ReadFIFO_page_5(u32 mem, mem128_t* out)
 {
 	pxAssert( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
 
@@ -80,18 +79,16 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 		}
 	}
 
-	out[0] = psHu64(VIF1_FIFO);
-	out[1] = psHu64(VIF1_FIFO + 8);
+	CopyQWC( out, &psHu128(VIF1_FIFO) );
 }
 
-void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
+void __fastcall ReadFIFO_page_6(u32 mem, mem128_t* out)
 {
 	pxAssert( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 
 	DevCon.Warning( "ReadFIFO/GIF, addr=0x%x", mem );
 
-	out[0] = psHu64(GIF_FIFO);
-	out[1] = psHu64(GIF_FIFO + 8);
+	CopyQWC( out, &psHu128(GIF_FIFO) );
 }
 
 // ReadFIFO_page_7 is contained in IPU_Fifo.cpp
@@ -105,8 +102,7 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 
 	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X", mem);
 
-	psHu64(VIF0_FIFO) = value[0];
-	psHu64(VIF0_FIFO + 8) = value[1];
+	CopyQWC(&psHu128(VIF0_FIFO), value);
 
 	vif0ch->qwc += 1;
 	if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 FIFO start!");
@@ -130,8 +126,7 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 
 	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X", mem);
 
-	psHu64(VIF1_FIFO) = value[0];
-	psHu64(VIF1_FIFO + 8) = value[1];
+	CopyQWC(&psHu128(VIF1_FIFO), value);
 
 	if (vif1Regs->stat.FDR)
 		DevCon.Warning("writing to fifo when fdr is set!");
@@ -168,15 +163,10 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	pxAssert( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 	GIF_LOG("WriteFIFO/GIF, addr=0x%08X", mem);
 
-	psHu64(GIF_FIFO) = value[0];
-	psHu64(GIF_FIFO + 8) = value[1];
+	CopyQWC(&psHu128(GIF_FIFO), value);
+	CopyQWC(nloop0_packet, value);
 
-	nloop0_packet[0] = psHu32(GIF_FIFO);
-	nloop0_packet[1] = psHu32(GIF_FIFO + 4);
-	nloop0_packet[2] = psHu32(GIF_FIFO + 8);
-	nloop0_packet[3] = psHu32(GIF_FIFO + 12);
 	GetMTGS().PrepDataPacket(GIF_PATH_3, 1);
-	//u64* data = (u64*)GetMTGS().GetDataPacketPtr();
 	GIFPath_CopyTag( GIF_PATH_3, (u128*)nloop0_packet, 1 );
 	GetMTGS().SendDataPacket();
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs->stat.APATH == GIF_APATH3 )

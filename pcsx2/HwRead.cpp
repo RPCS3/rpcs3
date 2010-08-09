@@ -475,14 +475,14 @@ void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
 
 void __fastcall hwRead128_page_00(u32 mem, mem128_t* result )
 {
-	result[0] = hwRead32_page_00( mem );
-	result[1] = 0;
+	result->lo = hwRead32_page_00( mem );
+	result->hi = 0;
 }
 
 void __fastcall hwRead128_page_01(u32 mem, mem128_t* result )
 {
-	result[0] = hwRead32_page_01( mem );
-	result[1] = 0;
+	result->lo = hwRead32_page_01( mem );
+	result->hi = 0;
 }
 
 void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
@@ -493,8 +493,6 @@ void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
 
 void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
 {
-	out[0] = psHu64(mem);
-	out[1] = psHu64(mem+8);
-
+	CopyQWC(out, &psHu128(mem));
 	UnknownHW_LOG("Hardware Read 128 at %x",mem);
 }

@@ -23,6 +23,18 @@
 #include "MemoryTypes.h"
 #include "vtlb.h"
 
+#include <xmmintrin.h>
+
+static __fi void CopyQWC( void* dest, const void* src )
+{
+	_mm_store_ps( (float*)dest, _mm_load_ps((const float*)src) );
+}
+
+static __fi void ZeroQWC( void* dest )
+{
+	_mm_store_ps( (float*)dest, _mm_setzero_ps() );
+}
+
 extern u8  *psM; //32mb Main Ram
 extern u8  *psR; //4mb rom area
 extern u8  *psR1; //256kb rom1 area (actually 196kb, but can't mask this)
@@ -68,6 +80,7 @@ extern u8  *psMHW;
 #define psHu16(mem)	(*(u16*)&PS2MEM_HW[(mem) & 0xffff])
 #define psHu32(mem)	(*(u32*)&PS2MEM_HW[(mem) & 0xffff])
 #define psHu64(mem)	(*(u64*)&PS2MEM_HW[(mem) & 0xffff])
+#define psHu128(mem)(*(u128*)&PS2MEM_HW[(mem) & 0xffff])
 
 #define psMs8(mem)	(*(s8 *)&PS2MEM_BASE[(mem) & 0x1ffffff])
 #define psMs16(mem)	(*(s16*)&PS2MEM_BASE[(mem) & 0x1ffffff])
