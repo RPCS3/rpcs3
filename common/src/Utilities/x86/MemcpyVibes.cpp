@@ -29,7 +29,7 @@ __aligned16 _memCpyCall _memcpy_vibes[_maxSize+1];
 
 // this version uses SSE intrinsics to perform an inline copy.  MSVC disasm shows pretty
 // decent code generation on whole, but it hasn't been benchmarked at all yet --air
-__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
+__fi void memcpy_vibes(void * dest, const void * src, int size) {
 
 	float (*destxmm)[4] = (float(*)[4])dest, (*srcxmm)[4] = (float(*)[4])src;
 	size_t count = size & ~15, extra = size & 15;
@@ -110,7 +110,7 @@ void gen_memcpy_vibes() {
 	HostSys::MemProtectStatic(_memCpyExec, Protect_ReadOnly, true);
 }
 
-__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
+__fi void memcpy_vibes(void * dest, const void * src, int size) {
 	int offset = ((size & 0xf) - 7) << 4;
 	_memcpy_vibes[size]((void*)((uptr)dest + offset), (void*)((uptr)src + offset));
 }
@@ -150,7 +150,7 @@ void gen_memcpy_vibes() {
 	HostSys::MemProtectStatic(_memCpyExec, Protect_ReadOnly, true);
 }
 
-__forceinline void memcpy_vibes(void * dest, const void * src, int size) {
+__fi void memcpy_vibes(void * dest, const void * src, int size) {
 	_memcpy_vibes[size](dest, src);
 }
 
@@ -163,7 +163,7 @@ __forceinline void memcpy_vibes(void * dest, const void * src, int size) {
 
 	// This can be moved later, but Linux doesn't even compile memcpyFast.cpp, so I figured I'd stick it here for now.
 	// Quadword Copy! Count is in QWCs (128 bits).  Neither source nor dest need to be aligned.
-	__forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
+	__fi void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
 	{	
 		// Optimization Analysis: This code is *nearly* optimal.  Do not think that using XMM
 		// registers will improve copy performance, because they won't.  Use of XMMs is only

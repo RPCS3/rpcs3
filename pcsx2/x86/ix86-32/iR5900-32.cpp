@@ -817,7 +817,7 @@ void R5900::Dynarec::OpcodeImpl::recBREAK( void )
 }
 
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
-static __releaseinline void ClearRecLUT(BASEBLOCK* base, int count)
+static __ri void ClearRecLUT(BASEBLOCK* base, int count)
 {
 	for (int i = 0; i < count; i++)
 		base[i].SetFnptr((uptr)JITCompile);

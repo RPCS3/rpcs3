@@ -234,7 +234,7 @@ $memcpy_final:
 }
 
 // Quadword Copy! Count is in QWCs (128 bits).  Neither source nor dest need to be aligned.
-__forceinline void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
+__fi void memcpy_amd_qwc(void *dest, const void *src, size_t qwc)
 {
 	// Optimization Analysis: This code is *nearly* optimal.  Do not think that using XMM
 	// registers will improve copy performance, because they won't.  Use of XMMs is only

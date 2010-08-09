@@ -108,7 +108,7 @@ void __fastcall psxException(u32 code, u32 bd)
 	}*/
 }
 
-__forceinline void psxSetNextBranch( u32 startCycle, s32 delta )
+__fi void psxSetNextBranch( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't blow up
 	// if startCycle is greater than our next branch cycle.
@@ -117,12 +117,12 @@ __forceinline void psxSetNextBranch( u32 startCycle, s32 delta )
 		g_psxNextBranchCycle = startCycle + delta;
 }
 
-__forceinline void psxSetNextBranchDelta( s32 delta )
+__fi void psxSetNextBranchDelta( s32 delta )
 {
 	psxSetNextBranch( psxRegs.cycle, delta );
 }
 
-__forceinline int psxTestCycle( u32 startCycle, s32 delta )
+__fi int psxTestCycle( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't explode
 	// if the startCycle is ahead of our current cpu cycle.
@@ -130,7 +130,7 @@ __forceinline int psxTestCycle( u32 startCycle, s32 delta )
 	return (int)(psxRegs.cycle - startCycle) >= delta;
 }
 
-__forceinline void PSX_INT( IopEventId n, s32 ecycle )
+__fi void PSX_INT( IopEventId n, s32 ecycle )
 {
 	// Generally speaking games shouldn't throw ints that haven't been cleared yet.
 	// It's usually indicative of something amiss in our emulation, so uncomment this
@@ -161,7 +161,7 @@ __forceinline void PSX_INT( IopEventId n, s32 ecycle )
 	}
 }
 
-static __forceinline void IopTestEvent( IopEventId n, void (*callback)() )
+static __fi void IopTestEvent( IopEventId n, void (*callback)() )
 {
 	if( !(psxRegs.interrupt & (1 << n)) ) return;
 
@@ -174,7 +174,7 @@ static __forceinline void IopTestEvent( IopEventId n, void (*callback)() )
 		psxSetNextBranch( psxRegs.sCycle[n], psxRegs.eCycle[n] );
 }
 
-static __forceinline void sifHackInterrupt()
+static __fi void sifHackInterrupt()
 {
 	// No reason -- just that sometimes the SIF fell asleep, and this wakes it up.
 
@@ -186,7 +186,7 @@ static __forceinline void sifHackInterrupt()
 	//PSX_INT( IopEvt_SIFhack, 128 );
 }
 
-static __forceinline void _psxTestInterrupts()
+static __fi void _psxTestInterrupts()
 {
 	IopTestEvent(IopEvt_SIF0,		sif0Interrupt);	// SIF0
 	IopTestEvent(IopEvt_SIF1,		sif1Interrupt);	// SIF1
@@ -211,7 +211,7 @@ static __forceinline void _psxTestInterrupts()
 	}
 }
 
-__releaseinline void psxBranchTest()
+__ri void psxBranchTest()
 {
 	if( psxTestCycle( psxNextsCounter, psxNextCounter ) )
 	{

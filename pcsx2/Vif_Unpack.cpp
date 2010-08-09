@@ -25,7 +25,7 @@ enum UnpackOffset {
 	OFFSET_W = 3
 };
 
-static __forceinline u32 setVifRowRegs(u32 reg, u32 data) {
+static __fi u32 setVifRowRegs(u32 reg, u32 data) {
 	switch (reg) {
 		case 0: vifRegs->r0 = data; break;
 		case 1: vifRegs->r1 = data; break;
@@ -36,7 +36,7 @@ static __forceinline u32 setVifRowRegs(u32 reg, u32 data) {
 	return data;
 }
 
-static __forceinline u32 getVifRowRegs(u32 reg) {
+static __fi u32 getVifRowRegs(u32 reg) {
 	switch (reg) {
 		case 0: return vifRegs->r0; break;
 		case 1: return vifRegs->r1; break;
@@ -47,7 +47,7 @@ static __forceinline u32 getVifRowRegs(u32 reg) {
 	return 0; // unreachable...
 }
 
-static __forceinline u32 getVifColRegs(u32 reg) {
+static __fi u32 getVifColRegs(u32 reg) {
 	switch (reg) {
 		case 0:  return vifRegs->c0; break;
 		case 1:  return vifRegs->c1; break;
@@ -58,7 +58,7 @@ static __forceinline u32 getVifColRegs(u32 reg) {
 }
 
 template< bool doMask >
-static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data) {
+static __ri void writeXYZW(u32 offnum, u32 &dest, u32 data) {
 	u32 vifRowReg = getVifRowRegs(offnum);
 	int n = 0;
 
@@ -89,7 +89,7 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data) {
 }
 
 template < bool doMask, class T >
-static __forceinline void __fastcall UNPACK_S(u32 *dest, const T *data, int size)
+static __fi void __fastcall UNPACK_S(u32 *dest, const T *data, int size)
 {
 	//S-# will always be a complete packet, no matter what. So we can skip the offset bits
 	writeXYZW<doMask>(OFFSET_X, *dest++, *data);
@@ -99,7 +99,7 @@ static __forceinline void __fastcall UNPACK_S(u32 *dest, const T *data, int size
 }
 
 template <bool doMask, class T>
-static __forceinline void __fastcall UNPACK_V2(u32 *dest, const T *data, int size)
+static __ri void __fastcall UNPACK_V2(u32 *dest, const T *data, int size)
 {
 	if (vifRegs->offset == OFFSET_X)
 	{
@@ -135,7 +135,7 @@ static __forceinline void __fastcall UNPACK_V2(u32 *dest, const T *data, int siz
 }
 
 template <bool doMask, class T>
-static __forceinline void __fastcall UNPACK_V3(u32 *dest, const T *data, int size)
+static __ri void __fastcall UNPACK_V3(u32 *dest, const T *data, int size)
 {
 	if(vifRegs->offset == OFFSET_X)
 	{
@@ -177,7 +177,7 @@ static __forceinline void __fastcall UNPACK_V3(u32 *dest, const T *data, int siz
 }
 
 template <bool doMask, class T>
-static __forceinline void __fastcall UNPACK_V4(u32 *dest, const T *data , int size)
+static __fi void __fastcall UNPACK_V4(u32 *dest, const T *data , int size)
 {
 	while (size > 0)
 	{
@@ -190,7 +190,7 @@ static __forceinline void __fastcall UNPACK_V4(u32 *dest, const T *data , int si
 }
 
 template< bool doMask >
-static __releaseinline void __fastcall UNPACK_V4_5(u32 *dest, const u32 *data, int size)
+static __ri void __fastcall UNPACK_V4_5(u32 *dest, const u32 *data, int size)
 {
 	//As with S-#, this will always be a complete packet
 	writeXYZW<doMask>(OFFSET_X, *dest++,	((*data & 0x001f) << 3));

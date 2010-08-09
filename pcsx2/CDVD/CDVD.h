@@ -23,7 +23,7 @@
 #define btoi(b)		((b)/16*10 + (b)%16)		/* BCD to u_char */
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
 
-static __forceinline s32 msf_to_lsn(u8 *Time)
+static __fi s32 msf_to_lsn(u8 *Time)
 {
 	u32 lsn;
 
@@ -33,7 +33,7 @@ static __forceinline s32 msf_to_lsn(u8 *Time)
 	return lsn;
 }
 
-static __forceinline s32 msf_to_lba(u8 m, u8 s, u8 f)
+static __fi s32 msf_to_lba(u8 m, u8 s, u8 f)
 {
 	u32 lsn;
 	lsn = f;
@@ -42,7 +42,7 @@ static __forceinline s32 msf_to_lba(u8 m, u8 s, u8 f)
 	return lsn;
 }
 
-static __forceinline void lsn_to_msf(u8 *Time, s32 lsn)
+static __fi void lsn_to_msf(u8 *Time, s32 lsn)
 {
 	u8 m, s, f;
 
@@ -56,7 +56,7 @@ static __forceinline void lsn_to_msf(u8 *Time, s32 lsn)
 	Time[2] = itob(f);
 }
 
-static __forceinline void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
+static __fi void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
 {
 	lba += 150;
 	*m = lba / (60 * 75);

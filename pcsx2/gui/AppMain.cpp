@@ -886,7 +886,7 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override
 // Thread Safety: The state of the system can change in parallel to execution of the
 // main thread.  If you need to perform an extended length activity on the execution
 // state (such as saving it), you *must* suspend the Corethread first!
-__forceinline bool SysHasValidState()
+__fi bool SysHasValidState()
 {
 	return CoreThread.HasActiveMachine();
 }

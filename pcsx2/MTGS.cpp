@@ -737,7 +737,7 @@ void SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, u32 size )
 	PrepDataPacket( (MTGS_RingCommand)pathidx, size );
 }
 
-__forceinline void SysMtgsThread::_FinishSimplePacket()
+__fi void SysMtgsThread::_FinishSimplePacket()
 {
 	uint future_writepos = (m_WritePos+1) & RingBufferMask;
 	pxAssert( future_writepos != volatize(m_ReadPos) );

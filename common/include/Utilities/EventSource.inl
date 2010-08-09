@@ -63,7 +63,7 @@ typename EventSource<ListenerType>::ListenerIterator EventSource<ListenerType>::
 
 
 template< typename ListenerType >
-__forceinline void EventSource<ListenerType>::_DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const EvtParams& evtparams )
+__fi void EventSource<ListenerType>::_DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const EvtParams& evtparams )
 {
 	while( iter != iend )
 	{

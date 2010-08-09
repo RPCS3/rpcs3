@@ -65,7 +65,7 @@ vtlbHandler UnmappedPhyHandler1;
 
 // Interpreted VTLB lookup for 8, 16, and 32 bit accesses
 template<int DataSize,typename DataType>
-__forceinline DataType __fastcall MemOp_r0(u32 addr)
+__fi DataType __fastcall MemOp_r0(u32 addr)
 {
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
@@ -94,7 +94,7 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 // ------------------------------------------------------------------------
 // Interpreterd VTLB lookup for 64 and 128 bit accesses.
 template<int DataSize,typename DataType>
-__forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
+__fi void MemOp_r1(u32 addr, DataType* data)
 {
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
@@ -125,7 +125,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 
 // ------------------------------------------------------------------------
 template<int DataSize,typename DataType>
-__forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
+__fi void MemOp_w0(u32 addr, DataType data)
 {
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
@@ -153,7 +153,7 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 
 // ------------------------------------------------------------------------
 template<int DataSize,typename DataType>
-__forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
+__fi void MemOp_w1(u32 addr,const DataType* data)
 {
 	verify(DataSize==128 || DataSize==64);
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
@@ -230,7 +230,7 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 //
 
 // Generates a tlbMiss Exception
-static __forceinline void vtlb_Miss(u32 addr,u32 mode)
+static __ri void vtlb_Miss(u32 addr,u32 mode)
 {
 	if( IsDevBuild )
 		Cpu->ThrowCpuException( R5900Exception::TLBMiss( addr, !!mode ) );
@@ -241,7 +241,7 @@ static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 // BusError exception: more serious than a TLB miss.  If properly emulated the PS2 kernel
 // itself would invoke a diagnostic/assertion screen that displays the cpu state at the
 // time of the exception.
-static __forceinline void vtlb_BusError(u32 addr,u32 mode)
+static __ri void vtlb_BusError(u32 addr,u32 mode)
 {
 	// Throwing exceptions isn't reliable *yet* because memory ops don't flush
 	// the PC prior to invoking the indirect handlers.
@@ -297,17 +297,17 @@ template<u32 saddr>
 void __fastcall vtlbUnmappedPWrite128(u32 addr,const mem128_t* data) { vtlb_BusError(addr|saddr,1); }
 
 ///// VTLB mapping errors (unmapped address spaces)
-mem8_t __fastcall vtlbDefaultPhyRead8(u32 addr) { Console.Error("vtlbDefaultPhyRead8: 0x%X",addr); verify(false); return -1; }
-mem16_t __fastcall vtlbDefaultPhyRead16(u32 addr)  { Console.Error("vtlbDefaultPhyRead16: 0x%X",addr); verify(false); return -1; }
-mem32_t __fastcall vtlbDefaultPhyRead32(u32 addr) { Console.Error("vtlbDefaultPhyRead32: 0x%X",addr); verify(false); return -1; }
-void __fastcall vtlbDefaultPhyRead64(u32 addr,mem64_t* data) { Console.Error("vtlbDefaultPhyRead64: 0x%X",addr); verify(false); }
-void __fastcall vtlbDefaultPhyRead128(u32 addr,mem128_t* data) { Console.Error("vtlbDefaultPhyRead128: 0x%X",addr); verify(false); }
+static mem8_t __fastcall vtlbDefaultPhyRead8(u32 addr) { Console.Error("vtlbDefaultPhyRead8: 0x%X",addr); verify(false); return -1; }
+static mem16_t __fastcall vtlbDefaultPhyRead16(u32 addr)  { Console.Error("vtlbDefaultPhyRead16: 0x%X",addr); verify(false); return -1; }
+static mem32_t __fastcall vtlbDefaultPhyRead32(u32 addr) { Console.Error("vtlbDefaultPhyRead32: 0x%X",addr); verify(false); return -1; }
+static void __fastcall vtlbDefaultPhyRead64(u32 addr,mem64_t* data) { Console.Error("vtlbDefaultPhyRead64: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyRead128(u32 addr,mem128_t* data) { Console.Error("vtlbDefaultPhyRead128: 0x%X",addr); verify(false); }
 
-void __fastcall vtlbDefaultPhyWrite8(u32 addr,mem8_t data) { Console.Error("vtlbDefaultPhyWrite8: 0x%X",addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite16(u32 addr,mem16_t data) { Console.Error("vtlbDefaultPhyWrite16: 0x%X",addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite32(u32 addr,mem32_t data) { Console.Error("vtlbDefaultPhyWrite32: 0x%X",addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console.Error("vtlbDefaultPhyWrite64: 0x%X",addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console.Error("vtlbDefaultPhyWrite128: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyWrite8(u32 addr,mem8_t data) { Console.Error("vtlbDefaultPhyWrite8: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyWrite16(u32 addr,mem16_t data) { Console.Error("vtlbDefaultPhyWrite16: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyWrite32(u32 addr,mem32_t data) { Console.Error("vtlbDefaultPhyWrite32: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console.Error("vtlbDefaultPhyWrite64: 0x%X",addr); verify(false); }
+static void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console.Error("vtlbDefaultPhyWrite128: 0x%X",addr); verify(false); }
 
 
 // ===========================================================================================
@@ -436,7 +436,7 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 	}
 }
 
-__forceinline void* vtlb_GetPhyPtr(u32 paddr)
+__fi void* vtlb_GetPhyPtr(u32 paddr)
 {
 	if (paddr>=VTLB_PMAP_SZ || vtlbdata.pmap[paddr>>VTLB_PAGE_BITS]<0)
 		return NULL;

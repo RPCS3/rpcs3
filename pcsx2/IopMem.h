@@ -30,7 +30,7 @@ extern const uptr *psxMemRLUT;
 // Hacky!  This should really never be used, ever, since it bypasses the iop's Hardware
 // Register handler and SPU/DEV/USB maps.
 template<typename T>
-static __forceinline T* iopVirtMemW( u32 mem )
+static __fi T* iopVirtMemW( u32 mem )
 {
 	return (psxMemWLUT[(mem) >> 16] == 0) ? NULL : (T*)(psxMemWLUT[(mem) >> 16] + ((mem) & 0xffff));
 }
@@ -42,14 +42,14 @@ static __forceinline T* iopVirtMemW( u32 mem )
 // TLB should be using iopMemRead/Write instead for each individual access.  That ensures
 // correct handling of page boundary crossings.
 template<typename T>
-static __forceinline const T* iopVirtMemR( u32 mem )
+static __fi const T* iopVirtMemR( u32 mem )
 {
 	mem &= 0x1fffffff;
 	return (psxMemRLUT[mem >> 16] == 0) ? NULL : (const T*)(psxMemRLUT[mem >> 16] + (mem & 0xffff));
 }
 
 // Obtains a pointer to the IOP's physical mapping (bypasses the TLB)
-static __forceinline u8* iopPhysMem( u32 addr )
+static __fi u8* iopPhysMem( u32 addr )
 {
 	return &psxM[addr & 0x1fffff];
 }

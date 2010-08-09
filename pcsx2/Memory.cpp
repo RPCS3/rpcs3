@@ -469,7 +469,7 @@ static void __fastcall _ext_memWrite128(u32 mem, const mem128_t *value)
 typedef void __fastcall ClearFunc_t( u32 addr, u32 qwc );
 
 template<int vunum>
-static __forceinline void ClearVuFunc( u32 addr, u32 size )
+static __fi void ClearVuFunc( u32 addr, u32 size )
 {
 	if( vunum==0 )
 		CpuVU0->Clear(addr,size);
@@ -928,7 +928,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 // offset - offset of address relative to psM.
 // All recompiled blocks belonging to the page are cleared, and any new blocks recompiled
 // from code residing in this page will use manual protection.
-static __forceinline void mmap_ClearCpuBlock( uint offset )
+static __fi void mmap_ClearCpuBlock( uint offset )
 {
 	int rampage = offset >> 12;
 

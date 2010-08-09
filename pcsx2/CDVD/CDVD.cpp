@@ -37,7 +37,7 @@ wxString DiscSerial;
 
 static cdvdStruct cdvd;
 
-static __forceinline void SetResultSize(u8 size)
+static __fi void SetResultSize(u8 size)
 {
 	cdvd.ResultC = size;
 	cdvd.ResultP = 0;
@@ -308,7 +308,7 @@ s32 cdvdWriteConfig(const u8* config)
 static MutexRecursive Mutex_NewDiskCB;
 
 // Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
-static __forceinline ElfObject* loadElf( const wxString filename )
+static __fi ElfObject* loadElf( const wxString filename )
 {
 	if (filename.StartsWith(L"host"))
 		return new ElfObject(filename.After(':'), Path::GetFileSize(filename.After(':')));
@@ -338,7 +338,7 @@ static __forceinline ElfObject* loadElf( const wxString filename )
 	return new ElfObject(filename, file);
 }
 
-static __forceinline void _reloadElfInfo(wxString elfpath)
+static __fi void _reloadElfInfo(wxString elfpath)
 {
 	ScopedPtr<ElfObject> elfptr;
 
@@ -417,7 +417,7 @@ void cdvdReloadElfInfo(wxString elfoverride)
 	}
 }
 
-static __forceinline s32 StrToS32(const wxString& str, int base = 10)
+static __fi s32 StrToS32(const wxString& str, int base = 10)
 {
     long l;
     str.ToLong(&l, base);
@@ -540,7 +540,7 @@ s32 cdvdGetTrayStatus()
 //   cdvdNewDiskCB() can update it's status as well...
 
 // Modified by (efp) - 16/01/2006
-static __forceinline void cdvdGetDiskType()
+static __fi void cdvdGetDiskType()
 {
 	cdvd.Type = DoCDVDdetectDiskType();
 }
@@ -741,7 +741,7 @@ int cdvdReadSector() {
 }
 
 // inlined due to being referenced in only one place.
-__forceinline void cdvdActionInterrupt()
+__fi void cdvdActionInterrupt()
 {
 	switch( cdvd.Action )
 	{
@@ -786,7 +786,7 @@ __forceinline void cdvdActionInterrupt()
 }
 
 // inlined due to being referenced in only one place.
-__forceinline void cdvdReadInterrupt()
+__fi void cdvdReadInterrupt()
 {
 	//Console.WriteLn("cdvdReadInterrupt %x %x %x %x %x", cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
 
@@ -983,7 +983,7 @@ void cdvdVsync() {
 	cdvd.RTC.year = 0;
 }
 
-static __forceinline u8 cdvdRead18(void)  // SDATAOUT
+static __fi u8 cdvdRead18(void)  // SDATAOUT
 {
 	u8 ret = 0;
 
@@ -1348,7 +1348,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 	cdvd.ParamC = 0;
 }
 
-static __forceinline void cdvdWrite05(u8 rt) { // NDATAIN
+static __fi void cdvdWrite05(u8 rt) { // NDATAIN
 	CDVD_LOG("cdvdWrite05(NDataIn) %x", rt);
 
 	if (cdvd.ParamP < 32) {
@@ -1357,12 +1357,12 @@ static __forceinline void cdvdWrite05(u8 rt) { // NDATAIN
 	}
 }
 
-static __forceinline void cdvdWrite06(u8 rt) { // HOWTO
+static __fi void cdvdWrite06(u8 rt) { // HOWTO
 	CDVD_LOG("cdvdWrite06(HowTo) %x", rt);
 	cdvd.HowTo = rt;
 }
 
-static __forceinline void cdvdWrite07(u8 rt)		// BREAK
+static __fi void cdvdWrite07(u8 rt)		// BREAK
 {
 	CDVD_LOG("cdvdWrite07(Break) %x", rt);
 
@@ -1386,21 +1386,21 @@ static __forceinline void cdvdWrite07(u8 rt)		// BREAK
 	//cdvd.nCommand = 0;
 }
 
-static __forceinline void cdvdWrite08(u8 rt) { // INTR_STAT
+static __fi void cdvdWrite08(u8 rt) { // INTR_STAT
 	CDVD_LOG("cdvdWrite08(IntrReason) = ACK(%x)", rt);
 	cdvd.PwOff &= ~rt;
 }
 
-static __forceinline void cdvdWrite0A(u8 rt) { // STATUS
+static __fi void cdvdWrite0A(u8 rt) { // STATUS
 	CDVD_LOG("cdvdWrite0A(Status) %x", rt);
 }
 
-static __forceinline void cdvdWrite0F(u8 rt) { // TYPE
+static __fi void cdvdWrite0F(u8 rt) { // TYPE
 	CDVD_LOG("cdvdWrite0F(Type) %x", rt);
 	DevCon.WriteLn("*PCSX2*: CDVD TYPE %x", rt);
 }
 
-static __forceinline void cdvdWrite14(u8 rt) { // PS1 MODE??
+static __fi void cdvdWrite14(u8 rt) { // PS1 MODE??
 	u32 cycle = psxRegs.cycle;
 
 	if (rt == 0xFE)
@@ -1414,7 +1414,7 @@ static __forceinline void cdvdWrite14(u8 rt) { // PS1 MODE??
 	psxRegs.cycle = cycle;
 }
 
-static __forceinline void fail_pol_cal()
+static __fi void fail_pol_cal()
 {
 	Console.Error("[MG] ERROR - Make sure the file is already decrypted!!!");
 	cdvd.Result[0] = 0x80;
@@ -2025,7 +2025,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 	cdvd.ParamC = 0;
 }
 
-static __forceinline void cdvdWrite17(u8 rt) { // SDATAIN
+static __fi void cdvdWrite17(u8 rt) { // SDATAIN
 	CDVD_LOG("cdvdWrite17(SDataIn) %x", rt);
 
 	if (cdvd.ParamP < 32) {
@@ -2034,12 +2034,12 @@ static __forceinline void cdvdWrite17(u8 rt) { // SDATAIN
 	}
 }
 
-static __forceinline void cdvdWrite18(u8 rt) { // SDATAOUT
+static __fi void cdvdWrite18(u8 rt) { // SDATAOUT
 	CDVD_LOG("cdvdWrite18(SDataOut) %x", rt);
 	Console.WriteLn("*PCSX2* SDATAOUT");
 }
 
-static __forceinline void cdvdWrite3A(u8 rt) { // DEC-SET
+static __fi void cdvdWrite3A(u8 rt) { // DEC-SET
 	CDVD_LOG("cdvdWrite3A(DecSet) %x", rt);
 	cdvd.decSet = rt;
 	Console.WriteLn("DecSet Write: %02X", cdvd.decSet);

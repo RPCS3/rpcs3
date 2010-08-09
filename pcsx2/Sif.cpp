@@ -26,7 +26,7 @@ void sifInit()
 	memzero(sif1);
 }
 
-__forceinline void dmaSIF2()
+__fi void dmaSIF2()
 {
 	SIF_LOG(wxString(L"dmaSIF2" + sif2dma->cmq_to_str()).To8BitData());
 

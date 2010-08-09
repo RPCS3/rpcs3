@@ -901,7 +901,7 @@ static __noinline s32 recExecuteBlock( s32 eeCycles )
 }
 
 // Returns the offset to the next instruction after any cleared memory
-static __forceinline u32 psxRecClearMem(u32 pc)
+static __fi u32 psxRecClearMem(u32 pc)
 {
 	BASEBLOCK* pblock;
 
@@ -948,7 +948,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	return upperextent - pc;
 }
 
-static __forceinline void recClearIOP(u32 Addr, u32 Size)
+static __fi void recClearIOP(u32 Addr, u32 Size)
 {
 	u32 pc = Addr;
 	while (pc < Addr + Size*4)
@@ -1008,7 +1008,7 @@ void psxSetBranchImm( u32 imm )
 	recBlocks.Link(HWADDR(imm), xJcc32());
 }
 
-static __forceinline u32 psxScaleBlockCycles()
+static __fi u32 psxScaleBlockCycles()
 {
 	return s_psxBlockCycles;
 }

@@ -21,10 +21,8 @@
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 
-static const s64 _1mb = 0x100000;
 #define aMax(x, y) std::max(x,y)
 #define aMin(x, y) std::min(x,y)
-#define _f __forceinline
 
 // newVif_HashBucket.h uses this typedef, so it has to be declared first.
 typedef u32  (__fastcall *nVifCall)(void*, const void*);

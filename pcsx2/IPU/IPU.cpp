@@ -68,7 +68,7 @@ __aligned16 decoder_t decoder;
 __aligned16 u8 _readbits[80];	//local buffer (ring buffer)
 u8* readbits = _readbits;		// always can decrement by one 1qw
 
-__forceinline void IPUProcessInterrupt()
+__fi void IPUProcessInterrupt()
 {
 	if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
 }
@@ -219,7 +219,7 @@ void tIPU_CMD_CSC::log_from_RGB32() const
 }
 
 
-__forceinline u32 ipuRead32(u32 mem)
+__fi u32 ipuRead32(u32 mem)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -255,7 +255,7 @@ __forceinline u32 ipuRead32(u32 mem)
 	return *(u32*)(((u8*)ipuRegs) + mem);
 }
 
-__forceinline u64 ipuRead64(u32 mem)
+__fi u64 ipuRead64(u32 mem)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -307,7 +307,7 @@ void ipuSoftReset()
 	//g_BP.bufferhasnew = 0;
 }
 
-__forceinline void ipuWrite32(u32 mem, u32 value)
+__fi void ipuWrite32(u32 mem, u32 value)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -346,7 +346,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 	}
 }
 
-__forceinline void ipuWrite64(u32 mem, u64 value)
+__fi void ipuWrite64(u32 mem, u64 value)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -420,7 +420,7 @@ static BOOL ipuIDEC(u32 val, bool resume)
 
 static int s_bdec = 0;
 
-static __forceinline BOOL ipuBDEC(u32 val, bool resume)
+static __fi BOOL ipuBDEC(u32 val, bool resume)
 {
 	tIPU_CMD_BDEC bdec(val);
 
@@ -514,7 +514,7 @@ static BOOL __fastcall ipuVDEC(u32 val)
 	return FALSE;
 }
 
-static __forceinline BOOL ipuFDEC(u32 val)
+static __fi BOOL ipuFDEC(u32 val)
 {
 	if (!getBits32((u8*)&ipuRegs->cmd.DATA, 0)) return FALSE;
 
@@ -691,7 +691,7 @@ static void ipuSETTH(u32 val)
 ///////////////////////
 // IPU Worker Thread //
 ///////////////////////
-__forceinline void IPU_INTERRUPT() //dma
+__fi void IPU_INTERRUPT() //dma
 {
 	hwIntcIrq(INTC_IPU);
 }
@@ -901,7 +901,7 @@ void IPUWorker()
 // Buffer reader
 
 // move the readbits queue
-__forceinline void inc_readbits()
+__fi void inc_readbits()
 {
 	readbits += 16;
 	if (readbits >= _readbits + 64)
@@ -914,7 +914,7 @@ __forceinline void inc_readbits()
 }
 
 // returns the pointer of readbits moved by 1 qword
-__forceinline u8* next_readbits()
+__fi u8* next_readbits()
 {
 	return readbits + 16;
 }
@@ -1070,7 +1070,7 @@ u8 __fastcall getBits32(u8 *address, u32 advance)
 	return 1;
 }
 
-__forceinline u8 __fastcall getBits16(u8 *address, u32 advance)
+__fi u8 __fastcall getBits16(u8 *address, u32 advance)
 {
 	u32 mask;
 	u8* readpos;
@@ -1127,7 +1127,7 @@ u8 __fastcall getBits8(u8 *address, u32 advance)
 void Skl_YUV_To_RGB32_MMX(u8 *RGB, const int Dst_BpS, const u8 *Y, const u8 *U, const u8 *V,
                           const int Src_BpS, const int Width, const int Height);
 
-__forceinline void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn)
+__fi void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn)
 {
 	int i;
 	u8* p = (u8*)&rgb32;
@@ -1161,7 +1161,7 @@ __forceinline void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn)
 	}
 }
 
-__forceinline void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& rgb16, int dte)
+__fi void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& rgb16, int dte)
 {
 	int i, j;
 	for (i = 0; i < 16; ++i)
@@ -1176,12 +1176,12 @@ __forceinline void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& r
 	}
 }
 
-__forceinline void ipu_vq(macroblock_rgb16& rgb16, u8* indx4)
+__fi void ipu_vq(macroblock_rgb16& rgb16, u8* indx4)
 {
 	Console.Error("IPU: VQ not implemented");
 }
 
-__forceinline void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16)
+__fi void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16)
 {
 	const u8	*s = (const u8*)&mb8;
 	s16	*d = (s16*)&mb16;
@@ -1193,7 +1193,7 @@ __forceinline void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16)
 
 
 
-static __forceinline bool ipuDmacPartialChain(tDMA_TAG tag)
+static __fi bool ipuDmacPartialChain(tDMA_TAG tag)
 {
 	switch (tag.ID)
 	{
@@ -1211,7 +1211,7 @@ static __forceinline bool ipuDmacPartialChain(tDMA_TAG tag)
 extern void gsInterrupt();
 extern void vif1Interrupt();
 
-static __forceinline void ipuDmacSrcChain()
+static __fi void ipuDmacSrcChain()
 {
 
 		switch (IPU1Status.ChainMode)
@@ -1243,7 +1243,7 @@ static __forceinline void ipuDmacSrcChain()
 		}
 }
 
-static __forceinline bool WaitGSPaths()
+static __fi bool WaitGSPaths()
 {
 	if(CHECK_IPUWAITHACK)
 	{
@@ -1268,7 +1268,7 @@ static __forceinline bool WaitGSPaths()
 	return true;
 }
 
-static __forceinline int IPU1chain() {
+static __fi int IPU1chain() {
 
 	int totalqwc = 0;
 
@@ -1304,7 +1304,7 @@ static __forceinline int IPU1chain() {
 	return totalqwc;
 }
 
-//static __forceinline bool WaitGSPaths()
+//static __fi bool WaitGSPaths()
 //{
 //	//Wait for all GS paths to be clear
 //	if (GSTransferStatus._u32 != 0x2a)
@@ -1524,7 +1524,7 @@ int IPU0dma()
 	return readsize;
 }
 
-__forceinline void dmaIPU0() // fromIPU
+__fi void dmaIPU0() // fromIPU
 {
 	if (ipu0dma->pad != 0)
 	{
@@ -1539,7 +1539,7 @@ __forceinline void dmaIPU0() // fromIPU
 	if (ipuRegs->ctrl.BUSY) IPUWorker();
 }
 
-__forceinline void dmaIPU1() // toIPU
+__fi void dmaIPU1() // toIPU
 {
 	IPU_LOG("IPU1DMAStart QWC %x, MADR %x, CHCR %x, TADR %x", ipu1dma->qwc, ipu1dma->madr, ipu1dma->chcr._u32, ipu1dma->tadr);
 

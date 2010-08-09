@@ -38,7 +38,7 @@ namespace Internal {
 //
 
 template< typename T>
-static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
+static __ri const char* _log_GetIopHwName( u32 addr, T val )
 {
 	switch( addr )
 	{
@@ -200,7 +200,7 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 }
 
 template< typename T>
-static __releaseinline void IopHwTraceLog( u32 addr, T val, const char* modestr )
+static __ri void IopHwTraceLog( u32 addr, T val, const char* modestr )
 {
 	if( !EmuConfig.Trace.IOP.m_EnableRegisters ) return;
 

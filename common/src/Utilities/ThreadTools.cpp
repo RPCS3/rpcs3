@@ -145,7 +145,7 @@ bool Threading::_WaitGui_RecursionGuard( const wxChar* name )
 	return true;
 }
 
-__forceinline void Threading::Timeslice()
+__fi void Threading::Timeslice()
 {
 	sched_yield();
 }
@@ -774,57 +774,57 @@ void Threading::WaitEvent::Wait()
 // --------------------------------------------------------------------------------------
 // define some overloads for InterlockedExchanges for commonly used types, like u32 and s32.
 
-__forceinline bool Threading::AtomicBitTestAndReset( volatile u32& bitset, u8 bit )
+__fi bool Threading::AtomicBitTestAndReset( volatile u32& bitset, u8 bit )
 {
 	return _interlockedbittestandreset( (volatile long*)& bitset, bit ) != 0;
 }
 
-__forceinline u32 Threading::AtomicExchange( volatile u32& Target, u32 value )
+__fi u32 Threading::AtomicExchange( volatile u32& Target, u32 value )
 {
 	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__forceinline u32 Threading::AtomicExchangeAdd( volatile u32& Target, u32 value )
+__fi u32 Threading::AtomicExchangeAdd( volatile u32& Target, u32 value )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
 }
 
-__forceinline u32 Threading::AtomicIncrement( volatile u32& Target )
+__fi u32 Threading::AtomicIncrement( volatile u32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 }
 
-__forceinline u32 Threading::AtomicDecrement( volatile u32& Target )
+__fi u32 Threading::AtomicDecrement( volatile u32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 }
 
-__forceinline s32 Threading::AtomicExchange( volatile s32& Target, s32 value )
+__fi s32 Threading::AtomicExchange( volatile s32& Target, s32 value )
 {
 	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__forceinline s32 Threading::AtomicExchangeAdd( volatile s32& Target, s32 value )
+__fi s32 Threading::AtomicExchangeAdd( volatile s32& Target, s32 value )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
 }
 
-__forceinline s32 Threading::AtomicExchangeSub( volatile s32& Target, s32 value )
+__fi s32 Threading::AtomicExchangeSub( volatile s32& Target, s32 value )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -value );
 }
 
-__forceinline s32 Threading::AtomicIncrement( volatile s32& Target )
+__fi s32 Threading::AtomicIncrement( volatile s32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 }
 
-__forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
+__fi s32 Threading::AtomicDecrement( volatile s32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 }
 
-__forceinline void* Threading::_AtomicExchangePointer( volatile uptr& target, uptr value )
+__fi void* Threading::_AtomicExchangePointer( volatile uptr& target, uptr value )
 {
 #ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
 	return (void*)_InterlockedExchange64( &(volatile s64&)target, value );
@@ -833,7 +833,7 @@ __forceinline void* Threading::_AtomicExchangePointer( volatile uptr& target, up
 #endif
 }
 
-__forceinline void* Threading::_AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand )
+__fi void* Threading::_AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand )
 {
 #ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
 	return (void*)_InterlockedCompareExchange64( &(volatile s64&)target, value );

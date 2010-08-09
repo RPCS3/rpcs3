@@ -61,7 +61,7 @@ void GSGIFTRANSFER3(u32 *pMem, u32 size) {
 	GSgifTransfer3(pMem, size);
 }
 
-__forceinline void GSVSYNC(void) {
+__fi void GSVSYNC(void) {
 	if( g_SaveGSStream == 2 ) {
 		u32 type = GSRUN_VSYNC;
 		g_fGSSave->Freeze( type );

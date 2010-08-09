@@ -76,7 +76,7 @@ void hwReset()
 	vif1Reset();
 }
 
-__forceinline void intcInterrupt()
+__fi void intcInterrupt()
 {
 	if ((psHu32(INTC_STAT)) == 0) {
 		//DevCon.Warning("*PCSX2*: intcInterrupt already cleared");
@@ -97,7 +97,7 @@ __forceinline void intcInterrupt()
 	cpuException(0x400, cpuRegs.branch);
 }
 
-__forceinline void dmacInterrupt()
+__fi void dmacInterrupt()
 {
 	if( ((psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT)) == 0 ) &&
 		( psHu16(DMAC_STAT) & 0x8000) == 0 ) 
@@ -130,7 +130,7 @@ void hwDmacIrq(int n)
 }
 
 // Write 'size' bytes to memory address 'addr' from 'data'.
-__releaseinline bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
+__ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {
 	// all FIFO addresses should always be QWC-aligned.
 	pxAssume((dmacRegs->rbor.ADDR & 15) == 0);
@@ -158,7 +158,7 @@ __releaseinline bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 	return true;
 }
 
-__releaseinline bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
+__ri bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 	switch (id) {
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
             //End Transfer

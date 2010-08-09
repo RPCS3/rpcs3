@@ -64,7 +64,7 @@ VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlo
 	x = ((x&0x40)>>6) | ((x&0x10)>>3) | (x&4) | ((x&1)<<3);	\
 }
 
-_f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
+__fi void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 	u32 m0 = vB.mask;
 	u32 m1 =  m0 & 0xaaaaaaaa;
 	u32 m2 =(~m1>>1) &  m0;
@@ -194,7 +194,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	xRET();
 }
 
-static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
+static __fi u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 	u8* endPtr; // Check if we need to wrap around VU memory
 	u8* ptr = (u8*)(v.VU->Mem + (v.vif->tag.addr & v.vuMemLimit));
 	if (!isFill) { // Account for skip-cycles
@@ -217,7 +217,7 @@ static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 
 // [TODO] :  Finish implementing support for VIF's growable recBlocks buffer.  Currently
 //    it clears the buffer only.
-static _f void dVifRecLimit(int idx) {
+static __fi void dVifRecLimit(int idx) {
 	if (nVif[idx].recPtr > nVif[idx].recEnd) {
 		DevCon.WriteLn("nVif Rec - Out of Rec Cache! [%x > %x]", nVif[idx].recPtr, nVif[idx].recEnd);
 		nVif[idx].vifBlocks->clear();

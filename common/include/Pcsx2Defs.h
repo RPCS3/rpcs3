@@ -41,24 +41,9 @@
 #	define ArraySize(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// __releaseinline -- a forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.
-// This is useful because forceinline can make certain types of debugging problematic since
-// functions that look like they should be called won't breakpoint since their code is
-// inlined, and it can make stack traces confusing or near useless.
-//
-// Use __releaseinline for things which are generally large functions where trace debugging
-// from Devel builds is likely useful; but which should be inlined in an optimized Release
-// environment.
-//
-#ifdef PCSX2_DEVBUILD
-#	define __releaseinline
-#else
-#	define __releaseinline __forceinline
-#endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// jASSUME - give hints to the optimizer
+// --------------------------------------------------------------------------------------
+// jASSUME - give hints to the optimizer  [obsolete, use pxAssume() instead]
+// --------------------------------------------------------------------------------------
 //  This is primarily useful for the default case switch optimizer, which enables VC to
 //  generate more compact switches.
 //
@@ -83,7 +68,9 @@
 #	endif
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  C_ASSERT
+// --------------------------------------------------------------------------------------
 // compile-time assertion; usable at static variable define level.
 // (typically used to confirm the correct sizeof() for struct types where size
 //  restaints must be enforced).
@@ -92,9 +79,9 @@
 #	define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
 // Dev / Debug conditionals - Consts for using if() statements instead of uglier #ifdef.
-//
+// --------------------------------------------------------------------------------------
 // Note: Using if() optimizes nicely in Devel and Release builds, but will generate extra
 // code overhead in debug builds (since debug neither inlines, nor optimizes out const-
 // level conditionals).  Normally not a concern, but if you stick if( IsDevbuild ) in
@@ -146,9 +133,9 @@
 #	define pxReleaseCode(code)		code
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
 // __aligned / __aligned16 / __pagealigned
-//
+// --------------------------------------------------------------------------------------
 // GCC Warning!  The GCC linker (LD) typically fails to assure alignment of class members.
 // If you want alignment to be assured, the variable must either be a member of a struct
 // or a static global.
@@ -167,9 +154,9 @@
 #define PCSX2_PAGESIZE		0x1000
 static const int __pagesize	= PCSX2_PAGESIZE;
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
 // Structure Packing (__packed)
-//
+// --------------------------------------------------------------------------------------
 // Current Method:
 // Use a combination of embedded compiler-specific #pragma mess in conjunction with a
 // __packed macro.  The former appeases the MSVC gods, the latter appeases the GCC gods.
@@ -296,8 +283,28 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 #endif		// end GCC-specific section.
 
 #ifndef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
-#	define __nooptimization
+#	define __nooptimization		// Pretty sure this is obsolete now, since we fixed __asm contraints and stuff. --air
 #endif
+
+// --------------------------------------------------------------------------------------
+// __releaseinline / __ri -- a forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.
+// --------------------------------------------------------------------------------------
+// This is useful because forceinline can make certain types of debugging problematic since
+// functions that look like they should be called won't breakpoint since their code is
+// inlined, and it can make stack traces confusing or near useless.
+//
+// Use __releaseinline for things which are generally large functions where trace debugging
+// from Devel builds is likely useful; but which should be inlined in an optimized Release
+// environment.
+//
+#ifdef PCSX2_DEVBUILD
+#	define __releaseinline
+#else
+#	define __releaseinline __forceinline
+#endif
+
+#define __ri	__releaseinline
+#define __fi	__forceinline
 
 
 #endif

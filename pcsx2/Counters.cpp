@@ -54,7 +54,7 @@ void rcntReset(int index) {
 // Updates the state of the nextCounter value (if needed) to serve
 // any pending events for the given counter.
 // Call this method after any modifications to the state of a counter.
-static __forceinline void _rcntSet( int cntidx )
+static __fi void _rcntSet( int cntidx )
 {
 	s32 c;
 	jASSUME( cntidx <= 4 );		// rcntSet isn't valid for h/vsync counters.
@@ -106,7 +106,7 @@ static __forceinline void _rcntSet( int cntidx )
 }
 
 
-static __forceinline void cpuRcntSet()
+static __fi void cpuRcntSet()
 {
 	int i;
 
@@ -286,7 +286,7 @@ void frameLimitReset()
 // Framelimiter - Measures the delta time between calls and stalls until a
 // certain amount of time passes if such time hasn't passed yet.
 // See the GS FrameSkip function for details on why this is here and not in the GS.
-static __forceinline void frameLimit()
+static __fi void frameLimit()
 {
 	// 999 means the user would rather just have framelimiting turned off...
 	if( !EmuConfig.GS.FrameLimitEnable ) return;
@@ -331,7 +331,7 @@ static __forceinline void frameLimit()
 	// starting this frame, it'll just sleep longer the next to make up for it. :)
 }
 
-static __forceinline void VSyncStart(u32 sCycle)
+static __fi void VSyncStart(u32 sCycle)
 {
 	GetCoreThread().VsyncInThread();
 	Cpu->CheckExecutionState();
@@ -380,7 +380,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	// Should no longer be required (Refraction)
 }
 
-static __forceinline void VSyncEnd(u32 sCycle)
+static __fi void VSyncEnd(u32 sCycle)
 {
 	EECNT_LOG( "/////////  EE COUNTER VSYNC END (frame: %d)  \\\\\\\\\\\\\\\\\\\\", g_FrameCount );
 
@@ -404,7 +404,7 @@ static u32 hsc=0;
 static int vblankinc = 0;
 #endif
 
-__forceinline void rcntUpdate_hScanline()
+__fi void rcntUpdate_hScanline()
 {
 	if( !cpuTestCycle( hsyncCounter.sCycle, hsyncCounter.CycleT ) ) return;
 
@@ -441,7 +441,7 @@ __forceinline void rcntUpdate_hScanline()
 	}
 }
 
-__forceinline void rcntUpdate_vSync()
+__fi void rcntUpdate_vSync()
 {
 	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
 	if( diff < vsyncCounter.CycleT ) return;
@@ -478,7 +478,7 @@ __forceinline void rcntUpdate_vSync()
 	}
 }
 
-static __forceinline void _cpuTestTarget( int i )
+static __fi void _cpuTestTarget( int i )
 {
 	if (counters[i].count < counters[i].target) return;
 
@@ -497,7 +497,7 @@ static __forceinline void _cpuTestTarget( int i )
 	else counters[i].target |= EECNT_FUTURE_TARGET;
 }
 
-static __forceinline void _cpuTestOverflow( int i )
+static __fi void _cpuTestOverflow( int i )
 {
 	if (counters[i].count <= 0xffff) return;
 
@@ -516,7 +516,7 @@ static __forceinline void _cpuTestOverflow( int i )
 // forceinline note: this method is called from two locations, but one
 // of them is the interpreter, which doesn't count. ;)  So might as
 // well forceinline it!
-__forceinline void rcntUpdate()
+__fi void rcntUpdate()
 {
 	rcntUpdate_vSync();
 
@@ -550,7 +550,7 @@ __forceinline void rcntUpdate()
 	cpuRcntSet();
 }
 
-static __forceinline void _rcntSetGate( int index )
+static __fi void _rcntSetGate( int index )
 {
 	if (counters[index].mode.EnableGate)
 	{
@@ -575,7 +575,7 @@ static __forceinline void _rcntSetGate( int index )
 }
 
 // mode - 0 means hblank source, 8 means vblank source.
-__forceinline void rcntStartGate(bool isVblank, u32 sCycle)
+__fi void rcntStartGate(bool isVblank, u32 sCycle)
 {
 	int i;
 
@@ -636,7 +636,7 @@ __forceinline void rcntStartGate(bool isVblank, u32 sCycle)
 }
 
 // mode - 0 means hblank signal, 8 means vblank signal.
-__forceinline void rcntEndGate(bool isVblank , u32 sCycle)
+__fi void rcntEndGate(bool isVblank , u32 sCycle)
 {
 	int i;
 
@@ -677,7 +677,7 @@ __forceinline void rcntEndGate(bool isVblank , u32 sCycle)
 	// rcntUpdate, since we're being called from there anyway.
 }
 
-__forceinline void rcntWmode(int index, u32 value)
+__fi void rcntWmode(int index, u32 value)
 {
 	if(counters[index].mode.IsCounting) {
 		if(counters[index].mode.ClockSource != 0x3) {
@@ -711,7 +711,7 @@ __forceinline void rcntWmode(int index, u32 value)
 	_rcntSet( index );
 }
 
-__forceinline void rcntWcount(int index, u32 value)
+__fi void rcntWcount(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeCount = %x,   oldcount=%x, target=%x", index, value, counters[index].count, counters[index].target );
 
@@ -737,7 +737,7 @@ __forceinline void rcntWcount(int index, u32 value)
 	_rcntSet( index );
 }
 
-__forceinline void rcntWtarget(int index, u32 value)
+__fi void rcntWtarget(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeTarget = %x", index, value);
 
@@ -766,13 +766,13 @@ __forceinline void rcntWtarget(int index, u32 value)
 	_rcntSet( index );
 }
 
-__forceinline void rcntWhold(int index, u32 value)
+__fi void rcntWhold(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] Hold Write = %x", index, value);
 	counters[index].hold = value;
 }
 
-__forceinline u32 rcntRcount(int index)
+__fi u32 rcntRcount(int index)
 {
 	u32 ret;
 
@@ -787,7 +787,7 @@ __forceinline u32 rcntRcount(int index)
 	return ret;
 }
 
-__forceinline u32 rcntCycle(int index)
+__fi u32 rcntCycle(int index)
 {
 	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3))
 		return counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);

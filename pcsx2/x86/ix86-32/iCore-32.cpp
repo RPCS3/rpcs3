@@ -466,7 +466,7 @@ void _initMMXregs()
 	s_mmxchecknext = 0;
 }
 
-__forceinline void* _MMXGetAddr(int reg)
+__fi void* _MMXGetAddr(int reg)
 {
 	pxAssert( reg != MMX_TEMP );
 

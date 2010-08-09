@@ -215,9 +215,9 @@ union tDMA_QWC {
 	wxString desc() const { return wxsFormat(L"QWC: 0x%x", _u32); }
 	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
 };
-static __forceinline void setDmacStat(u32 num);
-static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write);
-static __forceinline void throwBusError(const char *s);
+static void setDmacStat(u32 num);
+static tDMA_TAG *dmaGetAddr(u32 addr, bool write);
+static void throwBusError(const char *s);
 
 struct DMACh {
 	tDMA_CHCR chcr;
@@ -374,7 +374,7 @@ union tDMAC_QUEUE
 	bool empty() const { return (_u16 == 0); }
 };
 
-static __forceinline const wxChar* ChcrName(u32 addr)
+static __fi const wxChar* ChcrName(u32 addr)
 {
     switch (addr)
     {
@@ -393,7 +393,7 @@ static __forceinline const wxChar* ChcrName(u32 addr)
 }
 
 // Believe it or not, making this const can generate compiler warnings in gcc.
-static __forceinline int ChannelNumber(u32 addr)
+static __fi int ChannelNumber(u32 addr)
 {
     switch (addr)
     {
@@ -607,19 +607,19 @@ struct INTCregisters
 #define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
 #define intcRegs ((INTCregisters*)(PS2MEM_HW+0xF000))
 
-static __forceinline void throwBusError(const char *s)
+static __fi void throwBusError(const char *s)
 {
     Console.Error("%s BUSERR", s);
     dmacRegs->stat.BEIS = true;
 }
 
-static __forceinline void setDmacStat(u32 num)
+static __fi void setDmacStat(u32 num)
 {
 	dmacRegs->stat.set_flags(1 << num);
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
-static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
+static __fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
@@ -653,7 +653,7 @@ static __forceinline tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
-static __forceinline tDMA_TAG *dmaGetAddr(u32 addr, bool write)
+static __ri tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 	if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&psS[addr & 0x3ff0];

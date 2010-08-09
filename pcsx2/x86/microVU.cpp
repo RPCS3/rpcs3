@@ -63,14 +63,14 @@ const __aligned(32) mVU_Globals mVUglob = {
 // Micro VU - Main Functions
 //------------------------------------------------------------------
 
-_f void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
+__fi void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
 	throw Exception::HardwareDeficiency()
 		.SetDiagMsg(wxsFormat(L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail))
 		.SetUserMsg(wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
 // Only run this once per VU! ;)
-_f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
+__fi void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
 	if(!x86caps.hasMultimediaExtensions)		mVUthrowHardwareDeficiency( L"MMX", vuIndex );
 	if(!x86caps.hasStreamingSIMDExtensions)		mVUthrowHardwareDeficiency( L"SSE", vuIndex );
@@ -110,7 +110,7 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 }
 
 // Resets Rec Data
-_f void mVUreset(mV) {
+__fi void mVUreset(mV) {
 
 	// Clear All Program Data
 	//memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -146,7 +146,7 @@ _f void mVUreset(mV) {
 }
 
 // Free Allocated Resources
-_f void mVUclose(mV) {
+__fi void mVUclose(mV) {
 
 	if (mVU->dispCache) { HostSys::Munmap(mVU->dispCache, mVUdispCacheSize); mVU->dispCache = NULL; }
 	if (mVU->cache)		{ HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
@@ -194,7 +194,7 @@ void mVUresizeCache(mV, u32 size) {
 }
 
 // Clears Block Data in specified range
-_f void mVUclear(mV, u32 addr, u32 size) {
+__fi void mVUclear(mV, u32 addr, u32 size) {
 	if (!mVU->prog.cleared) {
 		memzero(mVU->prog.lpState); // Clear pipeline state
 		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
@@ -210,12 +210,12 @@ _f void mVUclear(mV, u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
-_f void mVUvsyncUpdate(mV) {
+__fi void mVUvsyncUpdate(mV) {
 	//mVU->prog.curFrame++;
 }
 
 // Deletes a program
-_mVUt _f void mVUdeleteProg(microProgram*& prog) {
+_mVUt __fi void mVUdeleteProg(microProgram*& prog) {
 	microVU* mVU = mVUx;
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		safe_delete(prog->block[i]);
@@ -225,7 +225,7 @@ _mVUt _f void mVUdeleteProg(microProgram*& prog) {
 }
 
 // Creates a new Micro Program
-_mVUt _f microProgram* mVUcreateProg(int startPC) {
+_mVUt __fi microProgram* mVUcreateProg(int startPC) {
 	microVU* mVU = mVUx;
 	microProgram* prog = (microProgram*)_aligned_malloc(sizeof(microProgram), 64);
 	memzero_ptr<sizeof(microProgram)>(prog);
@@ -242,7 +242,7 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 }
 
 // Caches Micro Program
-_mVUt _f void mVUcacheProg(microProgram& prog) {
+_mVUt __fi void mVUcacheProg(microProgram& prog) {
 	microVU* mVU = mVUx;
 	if (!vuIndex) memcpy_const(prog.data, mVU->regs->Micro, 0x1000);
 	else		  memcpy_const(prog.data, mVU->regs->Micro, 0x4000);
@@ -250,7 +250,7 @@ _mVUt _f void mVUcacheProg(microProgram& prog) {
 }
 
 // Compare partial program by only checking compiled ranges...
-_mVUt _f bool mVUcmpPartial(microProgram& prog) {
+_mVUt __fi bool mVUcmpPartial(microProgram& prog) {
 	microVU* mVU = mVUx;
 	deque<microRange>::const_iterator it(prog.ranges->begin());
 	for ( ; it != prog.ranges->end(); ++it) {
@@ -263,7 +263,7 @@ _mVUt _f bool mVUcmpPartial(microProgram& prog) {
 }
 
 // Compare Cached microProgram to mVU->regs->Micro
-_mVUt _f bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
+_mVUt __fi bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
 	microVU* mVU = mVUx;
 	if ((cmpWholeProg && !memcmp_mmx((u8*)prog.data, mVU->regs->Micro, mVU->microMemSize))
 	|| (!cmpWholeProg && mVUcmpPartial<vuIndex>(prog))) {
@@ -276,7 +276,7 @@ _mVUt _f bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
 }
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns entry-point to program)
-_mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
+_mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 	microVU* mVU = mVUx;
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
 	microProgramList*  list  = mVU->prog.prog [startPC/8];

@@ -61,7 +61,7 @@ public:
 	int quickFind(u32 data) {
 		return mBucket[data % hSize].Size;
 	}
-	__forceinline T* find(T* dataPtr) {
+	__fi T* find(T* dataPtr) {
 		u32 d = *((u32*)dataPtr);
 		const SizeChain<T>& bucket( mBucket[d % hSize] );
 
@@ -77,7 +77,7 @@ public:
 		if( bucket.Size > 3 ) DevCon.Warning( "recVifUnpk: Bucket 0x%04x has %d micro-programs", d % hSize, bucket.Size );
 		return NULL;
 	}
-	__forceinline void add(const T& dataPtr) {
+	__fi void add(const T& dataPtr) {
 		u32 d = (u32&)dataPtr;
 		SizeChain<T>& bucket( mBucket[d % hSize] );
 

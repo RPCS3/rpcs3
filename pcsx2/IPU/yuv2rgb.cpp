@@ -112,7 +112,7 @@ static const __aligned16 SSE2_Tables sse2_tables =
 static __aligned16 u16 yuv2rgb_temp[3][8];
 
 // This could potentially be improved for SSE4
-__releaseinline void yuv2rgb_sse2(void)
+__ri void yuv2rgb_sse2(void)
 {
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 	__asm {

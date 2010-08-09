@@ -194,7 +194,7 @@ static void __fastcall _rcntTestTarget( int i )
 }
 
 
-static __forceinline void _rcntTestOverflow( int i )
+static __fi void _rcntTestOverflow( int i )
 {
 	u64 maxTarget = ( i < 3 ) ? 0xffff : 0xfffffffful;
 	if( psxCounters[i].count <= maxTarget ) return;
@@ -538,7 +538,7 @@ void psxRcntWcount32(int index, u32 value)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-__forceinline void psxRcntWmode16( int index, u32 value )
+__fi void psxRcntWmode16( int index, u32 value )
 {
 	PSXCNT_LOG( "IOP Counter[%d] writeMode = 0x%04X", index, value );
 
@@ -599,7 +599,7 @@ __forceinline void psxRcntWmode16( int index, u32 value )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-__forceinline void psxRcntWmode32( int index, u32 value )
+__fi void psxRcntWmode32( int index, u32 value )
 {
 	PSXCNT_LOG( "IOP Counter[%d] writeMode = 0x%04x", index, value );
 

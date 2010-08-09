@@ -40,7 +40,7 @@ __aligned16 u8 Path1Buffer[0x1000000];
 u32 Path1WritePos = 0;
 u32 Path1ReadPos = 0;
 
-static __forceinline void clearFIFOstuff(bool full)
+static __fi void clearFIFOstuff(bool full)
 {
 	if (full)
 		CSRreg.FIFO = CSR_FIFO_FULL;
@@ -93,7 +93,7 @@ void gsPath1Interrupt()
 
 extern bool SIGNAL_IMR_Pending;
 
-__forceinline void gsInterrupt()
+__fi void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
@@ -182,7 +182,7 @@ int  _GIFchain()
 	return WRITERING_DMA(pMem, gif->qwc);
 }
 
-static __forceinline void GIFchain()
+static __fi void GIFchain()
 {
 	// qwc check now done outside this function
 	// Voodoocycles
@@ -190,7 +190,7 @@ static __forceinline void GIFchain()
 	/*if (gif->qwc)*/ gscycles+= ( _GIFchain() * BIAS); /* guessing */
 }
 
-static __forceinline bool checkTieBit(tDMA_TAG* &ptag)
+static __fi bool checkTieBit(tDMA_TAG* &ptag)
 {
 	if (gif->chcr.TIE && ptag->IRQ)
 	{
@@ -202,7 +202,7 @@ static __forceinline bool checkTieBit(tDMA_TAG* &ptag)
 	return false;
 }
 
-static __forceinline tDMA_TAG* ReadTag()
+static __fi tDMA_TAG* ReadTag()
 {
 	tDMA_TAG* ptag = dmaGetAddr(gif->tadr, false);  //Set memory pointer to TADR
 
@@ -215,7 +215,7 @@ static __forceinline tDMA_TAG* ReadTag()
 	return ptag;
 }
 
-static __forceinline tDMA_TAG* ReadTag2()
+static __fi tDMA_TAG* ReadTag2()
 {
 	tDMA_TAG* ptag = dmaGetAddr(gif->tadr, false);  //Set memory pointer to TADR
 
@@ -443,7 +443,7 @@ void dmaGIF()
 }
 
 // called from only one location, so forceinline it:
-static __forceinline bool mfifoGIFrbTransfer()
+static __fi bool mfifoGIFrbTransfer()
 {
 	u32 mfifoqwc = min(gifqwc, (u32)gif->qwc);
 	u32 *src;
@@ -492,7 +492,7 @@ static __forceinline bool mfifoGIFrbTransfer()
 }
 
 // called from only one location, so forceinline it:
-static __forceinline bool mfifoGIFchain()
+static __fi bool mfifoGIFchain()
 {
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if (gif->qwc == 0) return true;

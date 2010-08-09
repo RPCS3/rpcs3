@@ -37,7 +37,7 @@
 // definitions in the .h file because of inter-dependencies with other classes.
 //   (score one for C++!!)
 //
-// In order for MSVC to work correctly with __forceinline on class members,
+// In order for MSVC to work correctly with __fi on class members,
 // however, we need to include these methods into all source files which might
 // reference them.  Without this MSVC generates linker errors.  Or, in other words,
 // global optimization fails to resolve the externals and junk.
@@ -50,51 +50,51 @@ namespace x86Emitter
 	//  x86Register Method Implementations (inlined!)
 	// --------------------------------------------------------------------------------------
 
-	__forceinline xAddressInfo xAddressReg::operator+( const xAddressReg& right ) const
+	__fi xAddressInfo xAddressReg::operator+( const xAddressReg& right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, right );
 	}
 
-	__forceinline xAddressInfo xAddressReg::operator+( const xAddressInfo& right ) const
+	__fi xAddressInfo xAddressReg::operator+( const xAddressInfo& right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return right + *this;
 	}
 
-	__forceinline xAddressInfo xAddressReg::operator+( s32 right ) const
+	__fi xAddressInfo xAddressReg::operator+( s32 right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, right );
 	}
 
-	__forceinline xAddressInfo xAddressReg::operator+( const void* right ) const
+	__fi xAddressInfo xAddressReg::operator+( const void* right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, (s32)right );
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline xAddressInfo xAddressReg::operator-( s32 right ) const
+	__fi xAddressInfo xAddressReg::operator-( s32 right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, -right );
 	}
 
-	__forceinline xAddressInfo xAddressReg::operator-( const void* right ) const
+	__fi xAddressInfo xAddressReg::operator-( const void* right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, -(s32)right );
 	}
 
 	// ------------------------------------------------------------------------
-	__forceinline xAddressInfo xAddressReg::operator*( u32 right ) const
+	__fi xAddressInfo xAddressReg::operator*( u32 right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( xEmptyReg, *this, right );
 	}
 
-	__forceinline xAddressInfo xAddressReg::operator<<( u32 shift ) const
+	__fi xAddressInfo xAddressReg::operator<<( u32 shift ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( xEmptyReg, *this, 1<<shift );

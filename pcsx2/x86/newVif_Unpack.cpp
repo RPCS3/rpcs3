@@ -48,7 +48,7 @@ __aligned16 const u8 nVifT[16] = {
 
 // ----------------------------------------------------------------------------
 template< int idx, bool doMode, bool isFill, bool singleUnpack >
-__releaseinline void __fastcall _nVifUnpackLoop(const u8 *data, u32 size);
+__ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size);
 
 typedef void __fastcall FnType_VifUnpackLoop(const u8 *data, u32 size);
 typedef FnType_VifUnpackLoop* Fnptr_VifUnpackLoop;
@@ -91,11 +91,11 @@ void closeNewVif(int idx) {
 	if (newVifDynaRec) dVifClose(idx);
 }
 
-static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
+static __fi u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));
 }
 
-static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
+static __fi void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	pxAssume( ((uptr)ptr & 0xf) == 0 );		// alignment check
 	ptr			  += amount;
 	vif->tag.addr += amount;
@@ -105,7 +105,7 @@ static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	}
 }
 
-static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
+static __fi void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 	pxAssume( ((uptr)ptr & 0xf) == 0 );	// alignment check
 	ptr			  += 16;
 	vif->tag.addr += 16;
@@ -197,7 +197,7 @@ static void setMasks(int idx, const VIFregisters& v) {
 // "slow" games that need it most). --air
 
 template< int idx, bool doMode, bool isFill, bool singleUnpack >
-__releaseinline void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
+__ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
 	const int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
@@ -250,7 +250,7 @@ __releaseinline void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 	}
 }
 
-_f void _nVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
+__fi void _nVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
 
 	if (useOldUnpack) {
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);

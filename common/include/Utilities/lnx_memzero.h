@@ -20,7 +20,7 @@
 // memset16, etc.
 
 template< u32 data, typename T >
-static __forceinline void memset32( T& obj )
+static __fi void memset32( T& obj )
 {
 	// this function works on 32-bit aligned lengths of data only.
 	// If the data length is not a factor of 32 bits, the C++ optimizing compiler will
@@ -34,19 +34,19 @@ static __forceinline void memset32( T& obj )
 }
 
 template< uint size >
-static __forceinline void memzero_ptr( void* dest )
+static __fi void memzero_ptr( void* dest )
 {
 	memset( dest, 0, size );
 }
 
 template< typename T >
-static __forceinline void memzero( T& obj )
+static __fi void memzero( T& obj )
 {
 	memset( &obj, 0, sizeof( T ) );
 }
 
 template< u8 data, typename T >
-static __forceinline void memset8( T& obj )
+static __fi void memset8( T& obj )
 {
 	// Aligned sizes use the optimized 32 bit inline memset.  Unaligned sizes use memset.
 	if( (sizeof(T) & 0x3) != 0 )
@@ -56,7 +56,7 @@ static __forceinline void memset8( T& obj )
 }
 
 template< u16 data, typename T >
-static __forceinline void memset16( T& obj )
+static __fi void memset16( T& obj )
 {
 	if( (sizeof(T) & 0x3) != 0 )
 		_memset16_unaligned( &obj, data, sizeof( T ) );
@@ -67,7 +67,7 @@ static __forceinline void memset16( T& obj )
 
 // An optimized memset for 8 bit destination data.
 template< u8 data, size_t bytes >
-static __forceinline void memset_8( void *dest )
+static __fi void memset_8( void *dest )
 {
 	if( bytes == 0 ) return;
 

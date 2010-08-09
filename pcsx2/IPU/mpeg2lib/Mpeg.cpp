@@ -164,7 +164,7 @@ intra:
 	}
 }
 
-static __forceinline int get_quantizer_scale()
+static __fi int get_quantizer_scale()
 {
 	int quantizer_scale_code;
 
@@ -176,7 +176,7 @@ static __forceinline int get_quantizer_scale()
 		return quantizer_scale_code << 1;
 }
 
-static __forceinline int get_coded_block_pattern()
+static __fi int get_coded_block_pattern()
 {
 	const CBPtab * tab;
 	u16 code = UBITS(16);
@@ -190,7 +190,7 @@ static __forceinline int get_coded_block_pattern()
 	return tab->cbp;
 }
 
-int __forceinline get_motion_delta(const int f_code)
+int __fi get_motion_delta(const int f_code)
 {
 	int delta;
 	int sign;
@@ -219,7 +219,7 @@ int __forceinline get_motion_delta(const int f_code)
 	return (delta ^ sign) - sign;
 }
 
-int __forceinline get_dmv()
+int __fi get_dmv()
 {
 	const DMVtab * tab;
 
@@ -261,7 +261,7 @@ int get_macroblock_address_increment()
 	return mba->mba + 1;
 }
 
-static __forceinline int get_luma_dc_dct_diff()
+static __fi int get_luma_dc_dct_diff()
 {
 	int size;
 	int dc_diff;
@@ -297,7 +297,7 @@ static __forceinline int get_luma_dc_dct_diff()
 	return dc_diff;
 }
 
-static __forceinline int get_chroma_dc_dct_diff()
+static __fi int get_chroma_dc_dct_diff()
 {
 	int size;
 	int dc_diff;
@@ -336,7 +336,7 @@ do {							\
 	val = (((s32)val) >> 31) ^ 2047;			\
 } while (0)
 
-static __forceinline bool get_intra_block()
+static __fi bool get_intra_block()
 {
 	int i;
 	int j;
@@ -488,7 +488,7 @@ static __forceinline bool get_intra_block()
   return true;
 }
 
-static __forceinline bool get_non_intra_block(int * last)
+static __fi bool get_non_intra_block(int * last)
 {
 	int i;
 	int j;
@@ -629,7 +629,7 @@ static __forceinline bool get_non_intra_block(int * last)
 	return true;
 }
 
-static __forceinline bool slice_intra_DCT(const int cc, u8 * const dest, const int stride, const bool skip)
+static __fi bool slice_intra_DCT(const int cc, u8 * const dest, const int stride, const bool skip)
 {
 	if (!skip || ipu_cmd.pos[3])
 	{
@@ -659,7 +659,7 @@ static __forceinline bool slice_intra_DCT(const int cc, u8 * const dest, const i
 	return true;
 }
 
-static __forceinline bool slice_non_intra_DCT(s16 * const dest, const int stride, const bool skip)
+static __fi bool slice_non_intra_DCT(s16 * const dest, const int stride, const bool skip)
 {
 	int last;
 
@@ -678,7 +678,7 @@ static __forceinline bool slice_non_intra_DCT(s16 * const dest, const int stride
 	return true;
 }
 
-void __forceinline finishmpeg2sliceIDEC()
+void __fi finishmpeg2sliceIDEC()
 {
 	ipuRegs->ctrl.SCD = 0;
 	coded_block_pattern = decoder.coded_block_pattern;

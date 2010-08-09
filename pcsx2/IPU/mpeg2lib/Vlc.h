@@ -34,7 +34,7 @@
 //static u8 dword[8];
 //static u8 qword[16];
 
-static __forceinline int GETWORD()
+static __fi int GETWORD()
 {
 	static u8 data[2];
 
@@ -56,7 +56,7 @@ static __forceinline int GETWORD()
 	return 1;
 }
 
-static __forceinline int bitstream_init ()
+static __fi int bitstream_init ()
 {
 	if (!getBits32((u8*)&decoder.bitstream_buf, 1))
 	{
@@ -72,7 +72,7 @@ static __forceinline int bitstream_init ()
 }
 
 /* remove num valid bits from bit_buf */
-static __forceinline void DUMPBITS(int num)
+static __fi void DUMPBITS(int num)
 {
 	decoder.bitstream_buf <<= num;
     decoder.bitstream_bits += num;
@@ -85,7 +85,7 @@ static __forceinline void DUMPBITS(int num)
 #define SBITS(num) (((s32)decoder.bitstream_buf) >> (32 - (num)))
 
 /* Get bits from bitstream */
-static __forceinline u32 GETBITS(int num)
+static __fi u32 GETBITS(int num)
 {
 	u16 retVal = UBITS(num);
 	DUMPBITS(num);

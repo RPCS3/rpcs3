@@ -60,7 +60,7 @@ void COP2_Unknown()
 
 //****************************************************************************
 
-__forceinline void _vu0run(bool breakOnMbit, bool addCycles) {
+__fi void _vu0run(bool breakOnMbit, bool addCycles) {
 
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
@@ -179,13 +179,13 @@ void CTC2() {
 //---------------------------------------------------------------------------------------
 
 
-__forceinline void SYNCMSFLAGS()
+__fi void SYNCMSFLAGS()
 {
 	VU0.VI[REG_STATUS_FLAG].UL = VU0.statusflag;
 	VU0.VI[REG_MAC_FLAG].UL = VU0.macflag;
 }
 
-__forceinline void SYNCFDIV()
+__fi void SYNCFDIV()
 {
 	VU0.VI[REG_Q].UL = VU0.q.UL;
 	VU0.VI[REG_STATUS_FLAG].UL = VU0.statusflag;

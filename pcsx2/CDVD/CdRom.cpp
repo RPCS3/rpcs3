@@ -94,28 +94,28 @@ u32 cdReadTime;// = ((PSXCLK / 75) / BIAS);
 
 static void AddIrqQueue(u8 irq, u32 ecycle);
 
-static __forceinline void StartReading(u32 type) {
+static __fi void StartReading(u32 type) {
    	cdr.Reading = type;
   	cdr.FirstSector = 1;
   	cdr.Readed = 0xff;
 	AddIrqQueue(READ_ACK, 0x800);
 }
 
-static __forceinline void StopReading() {
+static __fi void StopReading() {
 	if (cdr.Reading) {
 		cdr.Reading = 0;
 		psxRegs.interrupt &= ~(1<<IopEvt_CdromRead);
 	}
 }
 
-static __forceinline void StopCdda() {
+static __fi void StopCdda() {
 	if (cdr.Play) {
 		cdr.StatP&=~0x80;
 		cdr.Play = 0;
 	}
 }
 
-static __forceinline void SetResultSize(u8 size) {
+static __fi void SetResultSize(u8 size) {
     cdr.ResultP = 0;
 	cdr.ResultC = size;
 	cdr.ResultReady = 1;

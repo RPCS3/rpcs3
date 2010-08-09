@@ -20,7 +20,7 @@
 u32 s_iLastCOP0Cycle = 0;
 u32 s_iLastPERFCycle[2] = { 0, 0 };
 
-__releaseinline void UpdateCP0Status() {
+__ri void UpdateCP0Status() {
 	//currently the 2 memory modes are not implemented. Given this function is called so much,
 	//it's commented out for now. Only the interrupt test is needed. (rama)
 
@@ -162,7 +162,7 @@ void WriteTLB(int i)
 // count.  But only mode 1 (instruction counter) has been found to be used by games thus far.
 //
 
-static __forceinline bool PERF_ShouldCountEvent( uint evt )
+static __fi bool PERF_ShouldCountEvent( uint evt )
 {
 	switch( evt )
 	{
@@ -213,7 +213,7 @@ void COP0_DiagnosticPCCR()
 		Console.Warning( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event1 );
 }
 extern int branch;
-__forceinline void COP0_UpdatePCCR()
+__fi void COP0_UpdatePCCR()
 {
 	//if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
 

@@ -60,7 +60,7 @@
 
 // This is an implementation of the memzero_ptr fast memset routine (for zero-clears only).
 template< size_t _bytes >
-static __forceinline void memzero_ptr( void *dest )
+static __fi void memzero_ptr( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
@@ -247,7 +247,7 @@ static __forceinline void memzero_ptr( void *dest )
 
 // An optimized memset for 8 bit destination data.
 template< u8 data, size_t _bytes >
-static __forceinline void memset_8( void *dest )
+static __fi void memset_8( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
@@ -374,7 +374,7 @@ static __forceinline void memset_8( void *dest )
 }
 
 template< u16 data, size_t _bytes >
-static __forceinline void memset_16( void *dest )
+static __fi void memset_16( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
@@ -462,7 +462,7 @@ static __forceinline void memset_16( void *dest )
 }
 
 template< u32 data, size_t MZFbytes >
-static __forceinline void memset_32( void *dest )
+static __fi void memset_32( void *dest )
 {
 	if( MZFbytes == 0 ) return;
 
@@ -547,28 +547,28 @@ static __forceinline void memset_32( void *dest )
 // Structures, static arrays, etc.  No need to include sizeof() crap, this does it automatically
 // for you!
 template< typename T >
-static __forceinline void memzero( T& object )
+static __fi void memzero( T& object )
 {
 	memzero_ptr<sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 8 bit value.
 template< u8 data, typename T >
-static __forceinline void memset8( T& object )
+static __fi void memset8( T& object )
 {
 	memset_8<data, sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 16 bit value.
 template< u16 data, typename T >
-static __forceinline void memset16( T& object )
+static __fi void memset16( T& object )
 {
 	memset_16<data, sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 32 bit value.
 template< u32 data, typename T >
-static __forceinline void memset32( T& object )
+static __fi void memset32( T& object )
 {
 	memset_32<data, sizeof(T)>( &object );
 }

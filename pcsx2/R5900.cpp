@@ -90,7 +90,7 @@ void cpuReset()
 	LastELF = L"";
 }
 
-__releaseinline void cpuException(u32 code, u32 bd)
+__ri void cpuException(u32 code, u32 bd)
 {
 	bool errLevel2, checkStatus;
 	u32 offset;
@@ -201,7 +201,7 @@ void cpuTlbMissW(u32 addr, u32 bd) {
 	cpuTlbMiss(addr, bd, EXC_CODE_TLBS);
 }
 
-__forceinline void _cpuTestMissingINTC() {
+__fi void _cpuTestMissingINTC() {
 	if (cpuRegs.CP0.n.Status.val & 0x400 &&
 		psHu32(INTC_STAT) & psHu32(INTC_MASK)) {
 		if ((cpuRegs.interrupt & (1 << 30)) == 0) {
@@ -210,7 +210,7 @@ __forceinline void _cpuTestMissingINTC() {
 	}
 }
 
-__forceinline void _cpuTestMissingDMAC() {
+__fi void _cpuTestMissingDMAC() {
 	if (cpuRegs.CP0.n.Status.val & 0x800 &&
 		(psHu16(0xe012) & psHu16(0xe010) ||
 		 psHu16(0xe010) & 0x8000)) {
@@ -229,7 +229,7 @@ void cpuTestMissingHwInts() {
 }
 
 // sets a branch test to occur some time from an arbitrary starting point.
-__forceinline void cpuSetNextBranch( u32 startCycle, s32 delta )
+__fi void cpuSetNextBranch( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't blow up
 	// if startCycle is greater than our next branch cycle.
@@ -241,14 +241,14 @@ __forceinline void cpuSetNextBranch( u32 startCycle, s32 delta )
 }
 
 // sets a branch to occur some time from the current cycle
-__forceinline void cpuSetNextBranchDelta( s32 delta )
+__fi void cpuSetNextBranchDelta( s32 delta )
 {
 	cpuSetNextBranch( cpuRegs.cycle, delta );
 }
 
 // tests the cpu cycle agaisnt the given start and delta values.
 // Returns true if the delta time has passed.
-__forceinline int cpuTestCycle( u32 startCycle, s32 delta )
+__fi int cpuTestCycle( u32 startCycle, s32 delta )
 {
 	// typecast the conditional to signed so that things don't explode
 	// if the startCycle is ahead of our current cpu cycle.
@@ -257,18 +257,18 @@ __forceinline int cpuTestCycle( u32 startCycle, s32 delta )
 }
 
 // tells the EE to run the branch test the next time it gets a chance.
-__forceinline void cpuSetBranch()
+__fi void cpuSetBranch()
 {
 	g_nextBranchCycle = cpuRegs.cycle;
 }
 
-__forceinline void cpuClearInt( uint i )
+__fi void cpuClearInt( uint i )
 {
 	jASSUME( i < 32 );
 	cpuRegs.interrupt &= ~(1 << i);
 }
 
-static __forceinline void TESTINT( u8 n, void (*callback)() )
+static __fi void TESTINT( u8 n, void (*callback)() )
 {
 	if( !(cpuRegs.interrupt & (1 << n)) ) return;
 
@@ -281,7 +281,7 @@ static __forceinline void TESTINT( u8 n, void (*callback)() )
 		cpuSetNextBranch( cpuRegs.sCycle[n], cpuRegs.eCycle[n] );
 }
 
-static __forceinline void _cpuTestInterrupts()
+static __fi void _cpuTestInterrupts()
 {
 	if (!dmacRegs->ctrl.DMAE || psHu8(DMAC_ENABLER+2) == 1)
 	{
@@ -315,7 +315,7 @@ static __forceinline void _cpuTestInterrupts()
 	}
 }
 
-static __forceinline void _cpuTestTIMR()
+static __fi void _cpuTestTIMR()
 {
 	cpuRegs.CP0.n.Count += cpuRegs.cycle-s_iLastCOP0Cycle;
 	s_iLastCOP0Cycle = cpuRegs.cycle;
@@ -333,7 +333,7 @@ static __forceinline void _cpuTestTIMR()
 	}
 }
 
-static __forceinline void _cpuTestPERF()
+static __fi void _cpuTestPERF()
 {
 	// Perfs are updated when read by games (COP0's MFC0/MTC0 instructions), so we need
 	// only update them at semi-regular intervals to keep cpuRegs.cycle from wrapping
@@ -361,7 +361,7 @@ u32 g_nextBranchCycle = 0;
 
 // Shared portion of the branch test, called from both the Interpreter
 // and the recompiler.  (moved here to help alleviate redundant code)
-__forceinline void _cpuBranchTest_Shared()
+__fi void _cpuBranchTest_Shared()
 {
 	ScopedBool etest(eeEventTestIsActive);
 	g_nextBranchCycle = cpuRegs.cycle + eeWaitCycles;
@@ -481,7 +481,7 @@ __forceinline void _cpuBranchTest_Shared()
 	if( cpuIntsEnabled(0x800) ) TESTINT(31, dmacInterrupt);
 }
 
-__releaseinline void cpuTestINTCInts()
+__ri void cpuTestINTCInts()
 {
 	// Check the internal Event System -- if one's already scheduled then don't bother:
 	if( cpuRegs.interrupt & (1 << 30) ) return;
@@ -507,7 +507,7 @@ __releaseinline void cpuTestINTCInts()
 	}
 }
 
-__forceinline void cpuTestDMACInts()
+__fi void cpuTestDMACInts()
 {
 	// Check the internal Event System -- if one's already scheduled then don't bother:
 	if ( cpuRegs.interrupt & (1 << 31) ) return;
@@ -534,20 +534,20 @@ __forceinline void cpuTestDMACInts()
 	}
 }
 
-__forceinline void cpuTestTIMRInts() {
+__fi void cpuTestTIMRInts() {
 	if ((cpuRegs.CP0.n.Status.val & 0x10007) == 0x10001) {
 		_cpuTestPERF();
 		_cpuTestTIMR();
 	}
 }
 
-__forceinline void cpuTestHwInts() {
+__fi void cpuTestHwInts() {
 	cpuTestINTCInts();
 	cpuTestDMACInts();
 	cpuTestTIMRInts();
 }
 
-__forceinline void CPU_INT( EE_EventType n, s32 ecycle)
+__fi void CPU_INT( EE_EventType n, s32 ecycle)
 {
 	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ //2 is Gif, and every path 3 masking game triggers this :/
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );

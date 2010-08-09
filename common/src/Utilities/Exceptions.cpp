@@ -36,7 +36,7 @@ static wxString GetTranslation( const wxChar* msg )
 #ifdef PCSX2_DEVBUILD
 #	define DEVASSERT_INLINE __noinline
 #else
-#	define DEVASSERT_INLINE __forceinline
+#	define DEVASSERT_INLINE __fi
 #endif
 
 // Using a threadlocal assertion guard.  Separate threads can assert at the same time.
@@ -123,7 +123,7 @@ DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* 
 	if( trapit ) { pxTrap(); }
 }
 
-__forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
+__fi void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
 {
 	pxOnAssert( origin, fromUTF8(msg) );
 }

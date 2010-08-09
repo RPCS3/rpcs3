@@ -80,18 +80,18 @@ namespace Threading
 //   EnumToString(value);
 //
 #define ImplementEnumOperators( enumName ) \
-	static __forceinline enumName& operator++	( enumName& src ) { src = (enumName)((int)src+1); return src; } \
-	static __forceinline enumName& operator--	( enumName& src ) { src = (enumName)((int)src-1); return src; } \
-	static __forceinline enumName operator++	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src+1); return orig; } \
-	static __forceinline enumName operator--	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src-1); return orig; } \
+	static __fi enumName& operator++	( enumName& src ) { src = (enumName)((int)src+1); return src; } \
+	static __fi enumName& operator--	( enumName& src ) { src = (enumName)((int)src-1); return src; } \
+	static __fi enumName operator++	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src+1); return orig; } \
+	static __fi enumName operator--	( enumName& src, int ) { enumName orig = src; src = (enumName)((int)src-1); return orig; } \
  \
-	static __forceinline bool operator<	( const enumName& left, const pxEnumEnd_t& )	{ return (int)left < enumName##_COUNT; } \
-	static __forceinline bool operator!=( const enumName& left, const pxEnumEnd_t& )	{ return (int)left != enumName##_COUNT; } \
-	static __forceinline bool operator==( const enumName& left, const pxEnumEnd_t& )	{ return (int)left == enumName##_COUNT; } \
+	static __fi bool operator<	( const enumName& left, const pxEnumEnd_t& )	{ return (int)left < enumName##_COUNT; } \
+	static __fi bool operator!=( const enumName& left, const pxEnumEnd_t& )	{ return (int)left != enumName##_COUNT; } \
+	static __fi bool operator==( const enumName& left, const pxEnumEnd_t& )	{ return (int)left == enumName##_COUNT; } \
  \
-	static __forceinline bool EnumIsValid( enumName id ) { \
+	static __fi bool EnumIsValid( enumName id ) { \
 		return ((int)id >= enumName##_FIRST) && ((int)id < enumName##_COUNT); } \
-	static __forceinline bool EnumAssert( enumName id ) { \
+	static __fi bool EnumAssert( enumName id ) { \
 		return pxAssert( EnumIsValid(id) ); } \
  \
 	extern const wxChar* EnumToString( enumName id )

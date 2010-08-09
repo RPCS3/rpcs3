@@ -21,7 +21,7 @@
 
 // Run VU0 until finish, don't add cycles to EE
 // because its vif stalling not the EE core...
-__forceinline void vif0FLUSH()
+__fi void vif0FLUSH()
 {
 	if(g_packetsizeonvu > vif0.vifpacketsize && g_vu0Cycles > 0) 
 	{
@@ -78,7 +78,7 @@ bool _VIF0chain()
 		return VIF0transfer(pMem, vif0ch->qwc * 4);
 }
 
-__forceinline void vif0SetupTransfer()
+__fi void vif0SetupTransfer()
 {
     tDMA_TAG *ptag;
 
@@ -138,7 +138,7 @@ __forceinline void vif0SetupTransfer()
 	}
 }
 
-__forceinline void vif0Interrupt()
+__fi void vif0Interrupt()
 {
 	VIF_LOG("vif0Interrupt: %8.8x", cpuRegs.cycle);
 

@@ -78,7 +78,7 @@ public:
 	int LastIndex (u32 startpc) const;
 	BASEBLOCKEX* GetByX86(uptr ip);
 
-	__forceinline int Index (u32 startpc) const
+	__fi int Index (u32 startpc) const
 	{
 		int idx = LastIndex(startpc);
 		// fixme: I changed the parenthesis to be unambiguous, but this needs to be checked to see if ((x or y or z) and w)
@@ -91,19 +91,19 @@ public:
 			return idx;
 	}
 
-	__forceinline BASEBLOCKEX* operator[](int idx)
+	__fi BASEBLOCKEX* operator[](int idx)
 	{
 		if (idx < 0 || idx >= (int)blocks.size())
 			return 0;
 		return &blocks[idx];
 	}
 
-	__forceinline BASEBLOCKEX* Get(u32 startpc)
+	__fi BASEBLOCKEX* Get(u32 startpc)
 	{
 		return (*this)[Index(startpc)];
 	}
 
-	__forceinline void Remove(int idx)
+	__fi void Remove(int idx)
 	{
 		//u32 startpc = blocks[idx].startpc;
 		std::pair<linkiter_t, linkiter_t> range = links.equal_range(blocks[idx].startpc);
@@ -127,7 +127,7 @@ public:
 
 	void Link(u32 pc, s32* jumpptr);
 
-	__forceinline void Reset()
+	__fi void Reset()
 	{
 		blocks.clear();
 		links.clear();

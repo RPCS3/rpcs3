@@ -214,7 +214,7 @@ void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 //------------------------------------------------------------------
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
-_f void mVUaddrFix(mV, const x32& gprReg)
+__fi void mVUaddrFix(mV, const x32& gprReg)
 {
 	if (isVU1) {
 		xAND(gprReg, 0x3ff); // wrap around
@@ -233,14 +233,14 @@ _f void mVUaddrFix(mV, const x32& gprReg)
 }
 
 // Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-_f void mVUbackupRegs(microVU* mVU)
+__fi void mVUbackupRegs(microVU* mVU)
 {
 	mVU->regAlloc->flushAll();
 	xMOVAPS(ptr128[mVU->xmmPQb], xmmPQ);
 }
 
 // Restore Volatile Regs
-_f void mVUrestoreRegs(microVU* mVU)
+__fi void mVUrestoreRegs(microVU* mVU)
 {
 	xMOVAPS(xmmPQ, ptr128[mVU->xmmPQb]);
 }

@@ -141,7 +141,7 @@ public:
 static bool buffer_is_avail = false;
 static GlobalBufferManager< BaseTlsVariable< FastFormatBuffers< char > > > m_buffer_tls(buffer_is_avail);
 
-static __releaseinline void format_that_ascii_mess( SafeArray<char>& buffer, uint writepos, const char* fmt, va_list argptr )
+static __ri void format_that_ascii_mess( SafeArray<char>& buffer, uint writepos, const char* fmt, va_list argptr )
 {
 	while( true )
 	{
@@ -171,7 +171,7 @@ static __releaseinline void format_that_ascii_mess( SafeArray<char>& buffer, uin
 	// though it'd be kinda nice if we did.
 }
 
-static __releaseinline void format_that_unicode_mess( SafeArray<char>& buffer, uint writepos, const wxChar* fmt, va_list argptr)
+static __ri void format_that_unicode_mess( SafeArray<char>& buffer, uint writepos, const wxChar* fmt, va_list argptr)
 {
 	while( true )
 	{

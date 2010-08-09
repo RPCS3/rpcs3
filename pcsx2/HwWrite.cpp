@@ -58,7 +58,7 @@ static void StartQueuedDMA()
 	if (QueuedDMA.SPR1) { DMA_LOG("Resuming DMA for SPR1"); QueuedDMA.SPR1 = !QuickDmaExec(dmaSPR1, D9_CHCR); }
 }
 
-static _f void DmaExec( void (*func)(), u32 mem, u32 value )
+static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 {
 	DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
@@ -145,7 +145,7 @@ static _f void DmaExec( void (*func)(), u32 mem, u32 value )
 
 // DmaExec8 should only be called for the second byte of CHCR.
 // Testing Note: dark cloud 2 uses 8 bit DMAs register writes.
-static _f void DmaExec8( void (*func)(), u32 mem, u8 value )
+static __fi void DmaExec8( void (*func)(), u32 mem, u8 value )
 {
 	pxAssumeMsg( (mem & 0xf) == 1, "DmaExec8 should only be called for the second byte of CHCR" );
 
@@ -154,7 +154,7 @@ static _f void DmaExec8( void (*func)(), u32 mem, u8 value )
 	DmaExec( func, mem & ~0xf, (u32)value<<8 );
 }
 
-static _f void DmaExec16( void (*func)(), u32 mem, u16 value )
+static __fi void DmaExec16( void (*func)(), u32 mem, u16 value )
 {
 	DmaExec( func, mem, (u32)value );
 }
@@ -418,7 +418,7 @@ void hwWrite8(u32 mem, u8 value)
 	}
 }
 
-__forceinline void hwWrite16(u32 mem, u16 value)
+__ri void hwWrite16(u32 mem, u16 value)
 {
 	if( mem >= IPU_CMD && mem < D0_CHCR )
 		Console.Warning( "hwWrite16 to %x", mem );

@@ -27,7 +27,7 @@
 #define IPU_INT_TO( cycles )  if(!(cpuRegs.interrupt & (1<<4))) CPU_INT( DMAC_TO_IPU, cycles )
 #define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
 
-#define IPU_FORCEINLINE __forceinline
+#define IPU_FORCEINLINE __fi
 
 struct IPUStatus {
 	bool InProgress;

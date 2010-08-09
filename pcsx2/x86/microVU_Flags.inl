@@ -19,7 +19,7 @@
 #pragma once
 
 // Sets FDIV Flags at the proper time
-_f void mVUdivSet(mV) {
+__fi void mVUdivSet(mV) {
 	if (mVUinfo.doDivFlag) {
 		if (!sFLAG.doFlag) { xMOV(getFlagReg(sFLAG.write), getFlagReg(sFLAG.lastWrite)); }
 		xAND(getFlagReg(sFLAG.write), 0xfff3ffff);
@@ -29,7 +29,7 @@ _f void mVUdivSet(mV) {
 
 // Optimizes out unneeded status flag updates
 // This can safely be done when there is an FSSET opcode
-_f void mVUstatusFlagOp(mV) {
+__fi void mVUstatusFlagOp(mV) {
 	int curPC = iPC;
 	int i = mVUcount;
 	bool runLoop = 1;
@@ -77,7 +77,7 @@ int sortFlag(int* fFlag, int* bFlag, int cycles) {
 #define sHackCond (mVUsFlagHack && !sFLAG.doNonSticky)
 
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
-_f void mVUsetFlags(mV, microFlagCycles& mFC) {
+__fi void mVUsetFlags(mV, microFlagCycles& mFC) {
 
 	int endPC  = iPC;
 	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
@@ -164,7 +164,7 @@ _f void mVUsetFlags(mV, microFlagCycles& mFC) {
 #define shuffleClip		((bClip[3]<<6)|(bClip[2]<<4)|(bClip[1]<<2)|bClip[0])
 
 // Recompiles Code for Proper Flags on Block Linkings
-_f void mVUsetupFlags(mV, microFlagCycles& mFC) {
+__fi void mVUsetupFlags(mV, microFlagCycles& mFC) {
 
 	if (__Status) {
 		int bStatus[4];
@@ -283,7 +283,7 @@ void mVUflagPass(mV, u32 startPC, u32 sCount = 0, u32 found = 0) {
 #define branchType3 else						// Conditional Branch
 
 // Checks if the first ~4 instructions of a block will read flags
-_f void mVUsetFlagInfo(mV) {
+__fi void mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr); incPC(1); }
 	branchType2 { // This case can possibly be turned off via a hack for a small speedup...
 		if (!mVUlow.constJump.isValid || !CHECK_VU_CONSTPROP) { mVUregs.needExactMatch |= 0x7; } 

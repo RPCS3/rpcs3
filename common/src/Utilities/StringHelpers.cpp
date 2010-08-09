@@ -16,7 +16,7 @@
 #include "PrecompiledHeader.h"
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 
-__forceinline wxString fromUTF8( const char* src )
+__fi wxString fromUTF8( const char* src )
 {
 	// IMPORTANT:  We cannot use wxString::FromUTF8 because it *stupidly* relies on a C++ global instance of
 	// wxMBConvUTF8().  C++ initializes and destroys these globals at random, so any object constructor or
@@ -30,7 +30,7 @@ __forceinline wxString fromUTF8( const char* src )
 	return wxString( src, wxMBConvUTF8() );
 }
 
-__forceinline wxString fromAscii( const char* src )
+__fi wxString fromAscii( const char* src )
 {
 	return wxString::FromAscii( src );
 }

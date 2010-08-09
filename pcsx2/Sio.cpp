@@ -36,14 +36,14 @@ static int m_ForceEjectionTimeout[2];
 
 #ifdef SIO_INLINE_IRQS
 #define SIO_INT() sioInterrupt()
-#define SIO_FORCEINLINE __forceinline
+#define SIO_FORCEINLINE __fi
 #else
-__forceinline void SIO_INT()
+__fi void SIO_INT()
 {
 	if( !(psxRegs.interrupt & (1<<IopEvt_SIO)) )
 		PSX_INT(IopEvt_SIO, 64 ); // PSXCLK/250000);
 }
-#define SIO_FORCEINLINE __forceinline
+#define SIO_FORCEINLINE __fi
 #endif
 
 // Currently only check if pad wants mtap to be active.

@@ -78,7 +78,7 @@ public:
 		}
 		return thisBlock;
 	}
-	__releaseinline microBlock* search(microRegInfo* pState) {
+	__ri microBlock* search(microRegInfo* pState) {
 		microBlockLink* linkI = &blockList;
 		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for (int i = 0; i <= listI; i++) {
@@ -204,27 +204,27 @@ extern __aligned16 microVU microVU1;
 int mVUdebugNow = 0;
 
 // Main Functions
-_f void  mVUinit(VURegs*, int);
-_f void  mVUreset(mV);
-_f void  mVUclose(mV);
-_f void  mVUclear(mV, u32, u32);
-   void  mVUresizeCache(mV, u32);
-_f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
-_mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
+extern void  mVUinit(VURegs*, int);
+extern void  mVUreset(mV);
+extern void  mVUclose(mV);
+extern void  mVUclear(mV, u32, u32);
+extern void  mVUresizeCache(mV, u32);
+extern void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+_mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 
 // Prototypes for Linux
-void  __fastcall mVUcleanUpVU0();
-void  __fastcall mVUcleanUpVU1();
+extern void  __fastcall mVUcleanUpVU0();
+extern void  __fastcall mVUcleanUpVU1();
 mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-_mVUt _f void  mVUcacheProg (microProgram&  prog);
-_mVUt _f void  mVUdeleteProg(microProgram*& prog);
-_mVUt _f void* mVUsearchProg(u32 startPC, uptr pState);
-_mVUt _f microProgram* mVUfindLeastUsedProg();
-void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
-void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
+_mVUt extern void  mVUcacheProg (microProgram&  prog);
+_mVUt extern void  mVUdeleteProg(microProgram*& prog);
+_mVUt extern void* mVUsearchProg(u32 startPC, uptr pState);
+_mVUt extern microProgram* mVUfindLeastUsedProg();
+extern void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
+extern void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 
 // recCall Function Pointer
 typedef void (__fastcall *mVUrecCall)(u32, u32);

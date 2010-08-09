@@ -24,7 +24,7 @@
 #include "R5900Exceptions.h"
 
 
-static __forceinline s64 _add64_Overflow( s64 x, s64 y )
+static __fi s64 _add64_Overflow( s64 x, s64 y )
 {
 	const s64 result = x + y;
 
@@ -43,7 +43,7 @@ static __forceinline s64 _add64_Overflow( s64 x, s64 y )
 	return result;
 }
 
-static __forceinline s64 _add32_Overflow( s32 x, s32 y )
+static __fi s64 _add32_Overflow( s32 x, s32 y )
 {
 	GPR_reg64 result;  result.SD[0] = (s64)x + y;
 

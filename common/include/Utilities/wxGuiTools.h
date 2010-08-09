@@ -138,12 +138,12 @@ struct pxStretchType
 	}
 };
 
-static __forceinline wxSizerFlags pxProportion( int prop )
+static __fi wxSizerFlags pxProportion( int prop )
 {
 	return wxSizerFlags( prop );
 }
 
-static __forceinline wxSizerFlags pxBorder( int dir=wxALL, int pad=pxSizerFlags::StdPadding )
+static __fi wxSizerFlags pxBorder( int dir=wxALL, int pad=pxSizerFlags::StdPadding )
 {
 	return wxSizerFlags().Border( dir, pad );
 }

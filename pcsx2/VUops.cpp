@@ -45,7 +45,7 @@
 
 static __aligned16 VECTOR RDzero;
 
-static __releaseinline void __fastcall _vuFMACflush(VURegs * VU) {
+static __ri void _vuFMACflush(VURegs * VU) {
 	int i;
 
 	for (i=0; i<8; i++) {
@@ -62,7 +62,7 @@ static __releaseinline void __fastcall _vuFMACflush(VURegs * VU) {
 	}
 }
 
-static __releaseinline void __fastcall _vuFDIVflush(VURegs * VU) {
+static __ri void _vuFDIVflush(VURegs * VU) {
 	if (VU->fdiv.enable == 0) return;
 
 	if ((VU->cycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
@@ -74,7 +74,7 @@ static __releaseinline void __fastcall _vuFDIVflush(VURegs * VU) {
 	}
 }
 
-static __releaseinline void __fastcall _vuEFUflush(VURegs * VU) {
+static __ri void _vuEFUflush(VURegs * VU) {
 	if (VU->efu.enable == 0) return;
 
 	if ((VU->cycle - VU->efu.sCycle) >= VU->efu.Cycle) {
@@ -140,7 +140,7 @@ void _vuFlushAll(VURegs* VU)
 	} while(nRepeat);
 }
 
-__forceinline void _vuTestPipes(VURegs * VU) {
+__fi void _vuTestPipes(VURegs * VU) {
 	_vuFMACflush(VU);
 	_vuFDIVflush(VU);
 	_vuEFUflush(VU);
@@ -169,7 +169,7 @@ static void __fastcall _vuFMACTestStall(VURegs * VU, int reg, int xyzw) {
 	_vuTestPipes(VU);
 }
 
-static __releaseinline void __fastcall _vuFMACAdd(VURegs * VU, int reg, int xyzw) {
+static __ri void __fastcall _vuFMACAdd(VURegs * VU, int reg, int xyzw) {
 	int i;
 
 	/* find a free fmac pipe */
@@ -192,7 +192,7 @@ static __releaseinline void __fastcall _vuFMACAdd(VURegs * VU, int reg, int xyzw
 	VU->fmac[i].clipflag = VU->clipflag;
 }
 
-static __releaseinline void __fastcall _vuFDIVAdd(VURegs * VU, int cycles) {
+static __ri void __fastcall _vuFDIVAdd(VURegs * VU, int cycles) {
 	VUM_LOG("adding FDIV pipe");
 
 	VU->fdiv.enable = 1;
@@ -202,7 +202,7 @@ static __releaseinline void __fastcall _vuFDIVAdd(VURegs * VU, int cycles) {
 	VU->fdiv.statusflag = VU->statusflag;
 }
 
-static __releaseinline void __fastcall _vuEFUAdd(VURegs * VU, int cycles) {
+static __ri void __fastcall _vuEFUAdd(VURegs * VU, int cycles) {
 //	VUM_LOG("adding EFU pipe\n");
 
 	VU->efu.enable = 1;
@@ -211,7 +211,7 @@ static __releaseinline void __fastcall _vuEFUAdd(VURegs * VU, int cycles) {
 	VU->efu.reg.F  = VU->p.F;
 }
 
-static __releaseinline void __fastcall _vuFlushFDIV(VURegs * VU) {
+static __ri void __fastcall _vuFlushFDIV(VURegs * VU) {
 	int cycle;
 
 	if (VU->fdiv.enable == 0) return;
@@ -225,7 +225,7 @@ static __releaseinline void __fastcall _vuFlushFDIV(VURegs * VU) {
 	VU->VI[REG_STATUS_FLAG].UL = VU->fdiv.statusflag;
 }
 
-static __releaseinline void __fastcall _vuFlushEFU(VURegs * VU) {
+static __ri void __fastcall _vuFlushEFU(VURegs * VU) {
 	int cycle;
 
 	if (VU->efu.enable == 0) return;
@@ -238,7 +238,7 @@ static __releaseinline void __fastcall _vuFlushEFU(VURegs * VU) {
 	VU->VI[REG_P].UL = VU->efu.reg.UL;
 }
 
-__forceinline void _vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	if (VUregsn->VFread0) {
 		_vuFMACTestStall(VU, VUregsn->VFread0, VUregsn->VFr0xyzw);
 	}
@@ -247,7 +247,7 @@ __forceinline void _vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	}
 }
 
-__forceinline void _vuAddFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuAddFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	if (VUregsn->VFwrite) {
 		_vuFMACAdd(VU, VUregsn->VFwrite, VUregsn->VFwxyzw);
 	} else
@@ -258,36 +258,36 @@ __forceinline void _vuAddFMACStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	}
 }
 
-__forceinline void _vuTestFDIVStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuTestFDIVStalls(VURegs * VU, _VURegsNum *VUregsn) {
 //	_vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn);
 	_vuFlushFDIV(VU);
 }
 
-__forceinline void _vuAddFDIVStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuAddFDIVStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	if (VUregsn->VIwrite & (1 << REG_Q)) {
 		_vuFDIVAdd(VU, VUregsn->cycles);
 	}
 }
 
 
-__forceinline void _vuTestEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuTestEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
 //	_vuTestFMACStalls(VURegs * VU, _VURegsNum *VUregsn);
 	_vuFlushEFU(VU);
 }
 
-__forceinline void _vuAddEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
+static __fi void _vuAddEFUStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	if (VUregsn->VIwrite & (1 << REG_P)) {
 		_vuEFUAdd(VU, VUregsn->cycles);
 	}
 }
 
-__forceinline void _vuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn) {
+__fi void _vuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
 		case VUPIPE_FMAC: _vuTestFMACStalls(VU, VUregsn); break;
 	}
 }
 
-__forceinline void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
+__fi void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
 		case VUPIPE_FMAC: _vuTestFMACStalls(VU, VUregsn); break;
 		case VUPIPE_FDIV: _vuTestFDIVStalls(VU, VUregsn); break;
@@ -295,13 +295,13 @@ __forceinline void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	}
 }
 
-__forceinline void _vuAddUpperStalls(VURegs * VU, _VURegsNum *VUregsn) {
+__fi void _vuAddUpperStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
 		case VUPIPE_FMAC: _vuAddFMACStalls(VU, VUregsn); break;
 	}
 }
 
-__forceinline void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
+__fi void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 	switch (VUregsn->pipe) {
 		case VUPIPE_FMAC: _vuAddFMACStalls(VU, VUregsn); break;
 		case VUPIPE_FDIV: _vuAddFDIVStalls(VU, VUregsn); break;
@@ -332,7 +332,7 @@ static float __fastcall vuDouble(u32 f)
 	return *(float*)&f;
 }
 #else
-static __forceinline float vuDouble(u32 f)
+static __fi float vuDouble(u32 f)
 {
 	return *(float*)&f;
 }
@@ -1577,7 +1577,7 @@ void _vuMR32(VURegs * VU) {
 //  Load / Store Instructions (VU Interpreter)
 // --------------------------------------------------------------------------------------
 
-__forceinline u32* GET_VU_MEM(VURegs* VU, u32 addr)		// non-static, also used by sVU for now.
+__fi u32* GET_VU_MEM(VURegs* VU, u32 addr)		// non-static, also used by sVU for now.
 {
 	if( VU == g_pVU1 ) return (u32*)(VU1.Mem+(addr&0x3fff));
 	if( addr >= 0x4000 ) return (u32*)(VU0.Mem+(addr&0x43f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)

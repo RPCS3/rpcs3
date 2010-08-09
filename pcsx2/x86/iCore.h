@@ -100,7 +100,7 @@
 #define X86TYPE_VU1 0x80
 
 //#define X86_ISVI(type) ((type&~X86TYPE_VU1) == X86TYPE_VI)
-static __forceinline int X86_ISVI(int type)
+static __fi int X86_ISVI(int type)
 {
 	return ((type&~X86TYPE_VU1) == X86TYPE_VI);
 }
@@ -233,12 +233,12 @@ extern u32 _recIsRegWritten(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern u32 _recIsRegUsed(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern void _recFillRegister(EEINST& pinst, int type, int reg, int write);
 
-static __forceinline bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0)); }
-static __forceinline bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE2)); }
-static __forceinline bool EEINST_ISLIVE2(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
+static __fi bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0)); }
+static __fi bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE2)); }
+static __fi bool EEINST_ISLIVE2(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
 
-static __forceinline bool FPUINST_ISLIVE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
-static __forceinline bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
+static __fi bool FPUINST_ISLIVE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
+static __fi bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
 
 extern u32 g_recWriteback; // used for jumps (VUrec mess!)
 
@@ -277,17 +277,17 @@ void SetFPUstate();
 #define MMX_COP0 96
 #define MMX_TEMP 0x7f
 
-static __forceinline bool MMX_IS32BITS(s32 x)
+static __fi bool MMX_IS32BITS(s32 x)
 {
 	return (((x >= MMX_FPU) && (x < MMX_COP0 + 32)) || (x == MMX_FPUACC));
 }
 
-static __forceinline bool MMX_ISGPR(s32 x)
+static __fi bool MMX_ISGPR(s32 x)
 {
 	return ((x >= MMX_GPR) && (x < MMX_GPR + 34));
 }
 
-static __forceinline bool MMX_ISGPR(u32 x)
+static __fi bool MMX_ISGPR(u32 x)
 {
 	return (x < MMX_GPR + 34);
 }

@@ -127,7 +127,7 @@ typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
 
 // Recursive Inline
 #ifndef __LINUX__
-#define __recInline __releaseinline
+#define __recInline __ri
 #else
 #define __recInline inline
 #endif
@@ -209,7 +209,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define Rmem		 &mVU->regs->VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
-#define _1mb		 (0x100000)
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
 #define elif		 else if
 

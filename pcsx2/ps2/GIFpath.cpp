@@ -113,7 +113,7 @@ struct GifPathStruct
 	const GIFRegHandler	Handlers[0x100-0x60];		// handlers for 0x60->0x100
 	GIFPath				path[3];
 
-	__forceinline GIFPath& operator[]( int idx ) { return path[idx]; }
+	__fi GIFPath& operator[]( int idx ) { return path[idx]; }
 };
 
 
@@ -249,13 +249,13 @@ GIFPath::GIFPath() : tag()
 	Reset();
 }
 
-__forceinline void GIFPath::Reset()
+__fi void GIFPath::Reset()
 {
 	memzero(*this);
 	const_cast<GIFTAG&>(tag).EOP = 1;
 }
 
-__forceinline bool GIFPath::StepReg()
+__fi bool GIFPath::StepReg()
 {
 	if (++curreg >= numregs) {
 		curreg = 0;
@@ -266,13 +266,13 @@ __forceinline bool GIFPath::StepReg()
 	return true;
 }
 
-__forceinline u8 GIFPath::GetReg() { return regs[curreg]; }
+__fi u8 GIFPath::GetReg() { return regs[curreg]; }
 
 // Unpack the registers - registers are stored as a sequence of 4 bit values in the
 // upper 64 bits of the GIFTAG.  That sucks for us when handling partialized GIF packets
 // coming in from paths 2 and 3, so we unpack them into an 8 bit array here.
 //
-__forceinline void GIFPath::PrepPackedRegs()
+__fi void GIFPath::PrepPackedRegs()
 {
 	// Only unpack registers if we're starting a new pack.  Otherwise the unpacked
 	// array should have already been initialized by a previous partial transfer.
@@ -292,7 +292,7 @@ __forceinline void GIFPath::PrepPackedRegs()
 
 
 template< bool Aligned >
-__forceinline void GIFPath::SetTag(const void* mem)
+__fi void GIFPath::SetTag(const void* mem)
 {
 	_mm_store_ps( (float*)&tag, Aligned ? _mm_load_ps((const float*)mem) : _mm_loadu_ps((const float*)mem) );
 
@@ -300,7 +300,7 @@ __forceinline void GIFPath::SetTag(const void* mem)
 	curreg	= 0;
 }
 
-__forceinline bool GIFPath::IsActive() const
+__fi bool GIFPath::IsActive() const
 {
 	return (nloop != 0) || !tag.EOP;
 }
@@ -312,7 +312,7 @@ void SaveStateBase::gifPathFreeze()
 }
 
 
-static __forceinline void gsHandler(const u8* pMem)
+static __fi void gsHandler(const u8* pMem)
 {
 	const int reg = pMem[8];
 
@@ -382,7 +382,7 @@ static __forceinline void gsHandler(const u8* pMem)
 //   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
 //     path does not terminate (EOP) within the specified size, it is assumed that the path must
 //     loop around to the start of VU memory and continue processing.
-__forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
+__fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	u32	startSize =  size;						// Start Size
 
@@ -529,7 +529,7 @@ __forceinline int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 s
 	return size;
 }
 
-__releaseinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
+__ri void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
 {
 	uint endpos = destStart + len;
 	if( endpos < destSize )
@@ -547,7 +547,7 @@ __releaseinline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint&
 	}
 }
 
-__releaseinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
+__ri void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
 {
 	uint endpos = srcStart + len;
 	if( endpos < srcSize )
@@ -576,7 +576,7 @@ __releaseinline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, ui
 //     path does not terminate (EOP) within the specified size, it is assumed that the path must
 //     loop around to the start of VU memory and continue processing.
 template< GIF_PATH pathidx, bool Aligned > 
-__forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
+__fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 {
 	uint& ringpos = GetMTGS().m_packet_writepos;
 	const uint original_ringpos = ringpos;
@@ -874,7 +874,7 @@ __forceinline int GIFPath::CopyTag(const u128* pMem128, u32 size)
 //   size - max size of incoming data stream, in qwc (simd128).  If the path is PATH1, and the
 //     path does not terminate (EOP) within the specified size, it is assumed that the path must
 //     loop around to the start of VU memory and continue processing.
-__forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
+__fi int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 {
 	switch( pathidx )
 	{
@@ -900,7 +900,7 @@ __forceinline int GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size)
 // Quick version for queuing PATH1 data.
 // This version calculates the real length of the packet data only.  It does not process
 // IRQs or DMA status updates.
-__forceinline int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
+__fi int GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	int retSize = s_gifPath[pathidx].ParseTagQuick(pathidx, pMem, size);
 	return retSize;
@@ -915,7 +915,7 @@ void GIFPath_Reset()
 
 // This is a hackfix tool provided for "canceling" the contents of the GIFpath when
 // invalid GIFdma states are encountered (typically needed for PATH3 only).
-__forceinline void GIFPath_Clear( GIF_PATH pathidx )
+__fi void GIFPath_Clear( GIF_PATH pathidx )
 {
 	memzero(s_gifPath.path[pathidx]);
 	s_gifPath.path[pathidx].Reset();

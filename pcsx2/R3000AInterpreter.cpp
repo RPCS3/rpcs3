@@ -125,7 +125,7 @@ void psxJALR()
 ///////////////////////////////////////////
 // These macros are used to assemble the repassembler functions
 
-static __forceinline void execI()
+static __fi void execI()
 {
 	psxRegs.code = iopMemRead32(psxRegs.pc);
 

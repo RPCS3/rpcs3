@@ -108,7 +108,7 @@ const IConsoleWriter ConsoleWriter_Null =
 // --------------------------------------------------------------------------------------
 
 #ifdef __LINUX__
-static __forceinline const wxChar* GetLinuxConsoleColor(ConsoleColors color)
+static __fi const wxChar* GetLinuxConsoleColor(ConsoleColors color)
 {
     switch(color)
     {

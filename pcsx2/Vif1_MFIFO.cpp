@@ -36,7 +36,7 @@ static u32 qwctag(u32 mask)
 	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
 }
 
-static __forceinline bool mfifoVIF1rbTransfer()
+static __fi bool mfifoVIF1rbTransfer()
 {
 	u32 maddr = dmacRegs->rbor.ADDR;
 	u32 msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
@@ -93,7 +93,7 @@ static __forceinline bool mfifoVIF1rbTransfer()
 	return ret;
 }
 
-static __forceinline bool mfifo_VIF1chain()
+static __fi bool mfifo_VIF1chain()
 {
     bool ret;
 

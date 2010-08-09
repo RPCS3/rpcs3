@@ -24,7 +24,7 @@ _sif sif1;
 
 static bool done = false;
 
-static __forceinline void Sif1Init()
+static __fi void Sif1Init()
 {
 	SIF_LOG("SIF1 DMA start...");
 	done = false;
@@ -33,7 +33,7 @@ static __forceinline void Sif1Init()
 }
 
 // Write from the EE to Fifo.
-static __forceinline bool WriteEEtoFifo()
+static __fi bool WriteEEtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
 
@@ -59,7 +59,7 @@ static __forceinline bool WriteEEtoFifo()
 }
 
 // Read from the fifo and write to IOP
-static __forceinline bool WriteFifoToIOP()
+static __fi bool WriteFifoToIOP()
 {
 	// If we're reading something, continue to do so.
 
@@ -78,7 +78,7 @@ static __forceinline bool WriteFifoToIOP()
 }
 
 // Get a tag and process it.
-static __forceinline bool ProcessEETag()
+static __fi bool ProcessEETag()
 {
 	// Chain mode
 	tDMA_TAG *ptag;
@@ -142,7 +142,7 @@ static __forceinline bool ProcessEETag()
 }
 
 // Write fifo to data, and put it in IOP.
-static __forceinline bool SIFIOPReadTag()
+static __fi bool SIFIOPReadTag()
 {
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.iop.data, 4);
@@ -160,7 +160,7 @@ static __forceinline bool SIFIOPReadTag()
 }
 
 // Stop processing EE, and signal an interrupt.
-static __forceinline void EndEE()
+static __fi void EndEE()
 {
 	sif1.ee.end = false;
 	sif1.ee.busy = false;
@@ -180,7 +180,7 @@ static __forceinline void EndEE()
 }
 
 // Stop processing IOP, and signal an interrupt.
-static __forceinline void EndIOP()
+static __fi void EndIOP()
 {
 	sif1data = 0;
 	sif1.iop.end = false;
@@ -201,7 +201,7 @@ static __forceinline void EndIOP()
 }
 
 // Handle the EE transfer.
-static __forceinline void HandleEETransfer()
+static __fi void HandleEETransfer()
 {
 	if(sif1dma->chcr.STR == false)
 	{
@@ -248,7 +248,7 @@ static __forceinline void HandleEETransfer()
 }
 
 // Handle the IOP transfer.
-static __forceinline void HandleIOPTransfer()
+static __fi void HandleIOPTransfer()
 {
 	if (sif1.iop.counter > 0)
 	{
@@ -274,13 +274,13 @@ static __forceinline void HandleIOPTransfer()
 	}
 }
 
-static __forceinline void Sif1End()
+static __fi void Sif1End()
 {
 	SIF_LOG("SIF1 DMA end...");
 }
 
 // Transfer EE to IOP, putting data in the fifo as an intermediate step.
-__forceinline void SIF1Dma()
+__fi void SIF1Dma()
 {
 	int BusyCheck = 0;
 	Sif1Init();
@@ -313,13 +313,13 @@ __forceinline void SIF1Dma()
 	Sif1End();
 }
 
-__forceinline void  sif1Interrupt()
+__fi void  sif1Interrupt()
 {
 	HW_DMA10_CHCR &= ~0x01000000; //reset TR flag
 	psxDmaInterrupt2(3);
 }
 
-__forceinline void  EEsif1Interrupt()
+__fi void  EEsif1Interrupt()
 {
 	hwDmacIrq(DMAC_SIF1);
 	sif1dma->chcr.STR = false;
@@ -327,7 +327,7 @@ __forceinline void  EEsif1Interrupt()
 
 // Do almost exactly the same thing as psxDma10 in IopDma.cpp.
 // Main difference is this checks for iop, where psxDma10 checks for ee.
-__forceinline void dmaSIF1()
+__fi void dmaSIF1()
 {
 	SIF_LOG(wxString(L"dmaSIF1" + sif1dma->cmqt_to_str()).To8BitData());
 

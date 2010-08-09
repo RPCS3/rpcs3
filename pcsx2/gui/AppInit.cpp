@@ -805,12 +805,12 @@ void Pcsx2App::CleanUp()
 	_parent::CleanUp();
 }
 
-__forceinline wxString AddAppName( const wxChar* fmt )
+__fi wxString AddAppName( const wxChar* fmt )
 {
 	return wxsFormat( fmt, pxGetAppName().c_str() );
 }
 
-__forceinline wxString AddAppName( const char* fmt )
+__fi wxString AddAppName( const char* fmt )
 {
 	return wxsFormat( fromUTF8(fmt), pxGetAppName().c_str() );
 }

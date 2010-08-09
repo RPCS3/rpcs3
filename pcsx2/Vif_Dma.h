@@ -98,7 +98,7 @@ typedef FnType_VifCmdHandler* Fnptr_VifCmdHandler;
 
 extern const __aligned16 Fnptr_VifCmdHandler vifCmdHandler[2][128];
 
-__forceinline static int _limit(int a, int max)
+__fi static int _limit(int a, int max)
 {
 	return ((a > max) ? max : a);
 }

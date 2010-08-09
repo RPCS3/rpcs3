@@ -168,7 +168,7 @@ void IPU_Fifo_Output::readsingle(void *value)
 	}
 }
 
-__forceinline bool decoder_t::ReadIpuData(u128* out)
+__fi bool decoder_t::ReadIpuData(u128* out)
 {
 	if(decoder.ipu0_data == 0) return false;
 	_mm_store_ps((float*)out, _mm_load_ps((float*)GetIpuDataPtr()));

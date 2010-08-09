@@ -60,7 +60,7 @@ void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align)
 	return newbuf;
 }
 
-__forceinline void pcsx2_aligned_free(void* pmem)
+__fi void pcsx2_aligned_free(void* pmem)
 {
 	if( pmem == NULL ) return;
 	AlignedMallocHeader* header = (AlignedMallocHeader*)((uptr)pmem - headsize);
@@ -73,7 +73,7 @@ __forceinline void pcsx2_aligned_free(void* pmem)
 
 // Special unaligned memset used when all other optimized memsets fail (it's called from
 // memzero_obj and stuff).
-__forceinline void _memset16_unaligned( void* dest, u16 data, size_t size )
+__fi void _memset16_unaligned( void* dest, u16 data, size_t size )
 {
 	pxAssume( (size & 0x1) == 0 );
 
@@ -82,7 +82,7 @@ __forceinline void _memset16_unaligned( void* dest, u16 data, size_t size )
 		*dst = data;
 }
 
-__forceinline void HostSys::Munmap( void* base, u32 size )
+__fi void HostSys::Munmap( void* base, u32 size )
 {
 	Munmap( (uptr)base, size );
 }

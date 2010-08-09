@@ -66,7 +66,7 @@ do {					\
 } while (0)
 #endif
 
-static __forceinline void idct_row (s16 * const block)
+static __fi void idct_row (s16 * const block)
 {
     int d0, d1, d2, d3;
     int a0, a1, a2, a3, b0, b1, b2, b3;
@@ -119,7 +119,7 @@ static __forceinline void idct_row (s16 * const block)
     block[7] = (a0 - b0) >> 8;
 }
 
-static __forceinline void idct_col (s16 * const block)
+static __fi void idct_col (s16 * const block)
 {
     int d0, d1, d2, d3;
     int a0, a1, a2, a3, b0, b1, b2, b3;
@@ -160,7 +160,7 @@ static __forceinline void idct_col (s16 * const block)
     block[8*7] = (a0 - b0) >> 17;
 }
 
-__releaseinline void mpeg2_idct_copy(s16 * block, u8 * dest, const int stride)
+__ri void mpeg2_idct_copy(s16 * block, u8 * dest, const int stride)
 {
     int i;
 
@@ -189,7 +189,7 @@ __releaseinline void mpeg2_idct_copy(s16 * block, u8 * dest, const int stride)
 
 
 // stride = increment for dest in 16-bit units (typically either 8 [128 bits] or 16 [256 bits]).
-__releaseinline void mpeg2_idct_add (const int last, s16 * block, s16 * dest, const int stride)
+__ri void mpeg2_idct_add (const int last, s16 * block, s16 * dest, const int stride)
 {
 	// on the IPU, stride is always assured to be multiples of QWC (bottom 3 bits are 0).
 

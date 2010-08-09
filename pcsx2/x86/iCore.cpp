@@ -51,7 +51,7 @@ void _initXMMregs() {
 	s_xmmchecknext = 0;
 }
 
-__forceinline void* _XMMGetAddr(int type, int reg, VURegs *VU)
+__fi void* _XMMGetAddr(int type, int reg, VURegs *VU)
 {
 	switch (type) {
 		case XMMTYPE_VFREG:

@@ -340,7 +340,7 @@ REC_FPUFUNC(RSQRT_S);
 //------------------------------------------------------------------
 
 static __aligned16 u64 FPU_FLOAT_TEMP[2];
-__forceinline void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
+__fi void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	if (t1reg >= 0) {
 		SSE_MOVSS_XMM_to_XMM(t1reg, regd);
@@ -363,20 +363,20 @@ __forceinline void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -
 	}
 }
 
-__forceinline void fpuFloat(int regd) {  // +/-NaN -> +fMax, +Inf -> +fMax, -Inf -> -fMax
+__fi void fpuFloat(int regd) {  // +/-NaN -> +fMax, +Inf -> +fMax, -Inf -> -fMax
 	if (CHECK_FPU_OVERFLOW) {
 		SSE_MINSS_M32_to_XMM(regd, (uptr)&g_maxvals[0]); // MIN() must be before MAX()! So that NaN's become +Maximum
 		SSE_MAXSS_M32_to_XMM(regd, (uptr)&g_minvals[0]);
 	}
 }
 
-__forceinline void fpuFloat2(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
+__fi void fpuFloat2(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
 	if (CHECK_FPU_OVERFLOW) {
 		fpuFloat4(regd);
 	}
 }
 
-__forceinline void fpuFloat3(int regd) {
+__fi void fpuFloat3(int regd) {
 	// This clamp function is used in the recC_xx opcodes
 	// Rule of Rose needs clamping or else it crashes (minss or maxss both fix the crash)
 	// Tekken 5 has disappearing characters unless preserving NaN sign (fpuFloat4() preserves NaN sign).

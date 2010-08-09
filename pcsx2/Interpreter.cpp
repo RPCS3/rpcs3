@@ -77,7 +77,7 @@ static void execI()
 	opcode.interpret();
 }
 
-static __forceinline void _doBranch_shared(u32 tar)
+static __fi void _doBranch_shared(u32 tar)
 {
 	branch2 = cpuRegs.branch = 1;
 	execI();

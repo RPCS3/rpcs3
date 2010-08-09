@@ -80,7 +80,7 @@ extern const char* xGetRegName( int regid, int operandSize );
 //------------------------------------------------------------------
 // templated version of is_s8 is required, so that u16's get correct sign extension treatment.
 template< typename T >
-static __forceinline bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
+static __fi bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
 
 template< typename T > void xWrite( T val );
 
@@ -114,14 +114,14 @@ template< typename T > void xWrite( T val );
 //
 // In the case of (Reg, Imm) forms, the inlining is up to the discreation of the compiler.
 //
-// Note: I *intentionally* use __forceinline directly for most single-line class members,
+// Note: I *intentionally* use __fi directly for most single-line class members,
 // when needed.  There's no point in using __emitline in these cases since the debugger
 // can't trace into single-line functions anyway.
 //
 #ifdef PCSX2_DEVBUILD
 #	define __emitinline
 #else
-#	define __emitinline __forceinline
+#	define __emitinline __fi
 #endif
 
 	// ModRM 'mod' field enumeration.   Provided mostly for reference:
@@ -535,15 +535,15 @@ template< typename T > void xWrite( T val );
 		xAddressVoid& Add( const xAddressReg& src );
 		xAddressVoid& Add( const xAddressVoid& src );
 
-		__forceinline xAddressVoid operator+( const xAddressReg& right ) const	{ return xAddressVoid( *this ).Add( right ); }
-		__forceinline xAddressVoid operator+( const xAddressVoid& right ) const	{ return xAddressVoid( *this ).Add( right ); }
-		__forceinline xAddressVoid operator+( s32 imm ) const					{ return xAddressVoid( *this ).Add( imm ); }
-		__forceinline xAddressVoid operator-( s32 imm ) const					{ return xAddressVoid( *this ).Add( -imm ); }
-		__forceinline xAddressVoid operator+( const void* addr ) const			{ return xAddressVoid( *this ).Add( (uptr)addr ); }
+		__fi xAddressVoid operator+( const xAddressReg& right ) const	{ return xAddressVoid( *this ).Add( right ); }
+		__fi xAddressVoid operator+( const xAddressVoid& right ) const	{ return xAddressVoid( *this ).Add( right ); }
+		__fi xAddressVoid operator+( s32 imm ) const					{ return xAddressVoid( *this ).Add( imm ); }
+		__fi xAddressVoid operator-( s32 imm ) const					{ return xAddressVoid( *this ).Add( -imm ); }
+		__fi xAddressVoid operator+( const void* addr ) const			{ return xAddressVoid( *this ).Add( (uptr)addr ); }
 
-		__forceinline void operator+=( const xAddressReg& right ) { Add( right ); }
-		__forceinline void operator+=( s32 imm ) { Add( imm ); }
-		__forceinline void operator-=( s32 imm ) { Add( -imm ); }
+		__fi void operator+=( const xAddressReg& right ) { Add( right ); }
+		__fi void operator+=( s32 imm ) { Add( imm ); }
+		__fi void operator-=( s32 imm ) { Add( -imm ); }
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -584,13 +584,13 @@ template< typename T > void xWrite( T val );
 		xAddressInfo<BaseType>& Add( const xAddressReg& src )				{ _parent::Add(src); return *this; }
 		xAddressInfo<BaseType>& Add( const xAddressInfo<BaseType>& src )	{ _parent::Add(src); return *this; }
 
-		__forceinline xAddressInfo<BaseType> operator+( const xAddressReg& right ) const	{ return xAddressInfo( *this ).Add( right ); }
-		__forceinline xAddressInfo<BaseType> operator+( const xAddressInfo<BaseType>& right ) const	{ return xAddressInfo( *this ).Add( right ); }
-		__forceinline xAddressInfo<BaseType> operator+( s32 imm ) const					{ return xAddressInfo( *this ).Add( imm ); }
-		__forceinline xAddressInfo<BaseType> operator-( s32 imm ) const					{ return xAddressInfo( *this ).Add( -imm ); }
-		__forceinline xAddressInfo<BaseType> operator+( const void* addr ) const			{ return xAddressInfo( *this ).Add( (uptr)addr ); }
+		__fi xAddressInfo<BaseType> operator+( const xAddressReg& right ) const	{ return xAddressInfo( *this ).Add( right ); }
+		__fi xAddressInfo<BaseType> operator+( const xAddressInfo<BaseType>& right ) const	{ return xAddressInfo( *this ).Add( right ); }
+		__fi xAddressInfo<BaseType> operator+( s32 imm ) const					{ return xAddressInfo( *this ).Add( imm ); }
+		__fi xAddressInfo<BaseType> operator-( s32 imm ) const					{ return xAddressInfo( *this ).Add( -imm ); }
+		__fi xAddressInfo<BaseType> operator+( const void* addr ) const			{ return xAddressInfo( *this ).Add( (uptr)addr ); }
 
-		__forceinline void operator+=( const xAddressInfo<BaseType>& right )	{ Add( right ); }
+		__fi void operator+=( const xAddressInfo<BaseType>& right )	{ Add( right ); }
 	};
 
 	typedef xAddressInfo<u128>	xAddress128;
@@ -599,25 +599,25 @@ template< typename T > void xWrite( T val );
 	typedef xAddressInfo<u16>	xAddress16;
 	typedef xAddressInfo<u8>	xAddress8;
 
-	static __forceinline xAddressVoid operator+( const void* addr, const xAddressVoid& right )
+	static __fi xAddressVoid operator+( const void* addr, const xAddressVoid& right )
 	{
 		return right + addr;
 	}
 
-	static __forceinline xAddressVoid operator+( s32 addr, const xAddressVoid& right )
+	static __fi xAddressVoid operator+( s32 addr, const xAddressVoid& right )
 	{
 		return right + addr;
 	}
 
 	template< typename OperandType >
-	static __forceinline xAddressInfo<OperandType> operator+( const void* addr, const xAddressInfo<OperandType>& right )
+	static __fi xAddressInfo<OperandType> operator+( const void* addr, const xAddressInfo<OperandType>& right )
 	{
 		//return xAddressInfo<OperandType>( (sptr)addr ).Add( reg );
 		return right + addr;
 	}
 
 	template< typename OperandType >
-	static __forceinline xAddressInfo<OperandType> operator+( s32 addr, const xAddressInfo<OperandType>& right )
+	static __fi xAddressInfo<OperandType> operator+( s32 addr, const xAddressInfo<OperandType>& right )
 	{
 		return right + addr;
 	}
@@ -691,8 +691,8 @@ template< typename T > void xWrite( T val );
 			return xAddressVoid( Base, Index, Scale, Displacement );
 		}
 
-		__forceinline xIndirectVoid operator+( const s32 imm ) const { return xIndirectVoid( *this ).Add( imm ); }
-		__forceinline xIndirectVoid operator-( const s32 imm ) const { return xIndirectVoid( *this ).Add( -imm ); }
+		__fi xIndirectVoid operator+( const s32 imm ) const { return xIndirectVoid( *this ).Add( imm ); }
+		__fi xIndirectVoid operator-( const s32 imm ) const { return xIndirectVoid( *this ).Add( -imm ); }
 
 	protected:
 		void Reduce();
@@ -717,8 +717,8 @@ template< typename T > void xWrite( T val );
 			return *this;
 		}
 
-		__forceinline xIndirect<OperandType> operator+( const s32 imm ) const { return xIndirect( *this ).Add( imm ); }
-		__forceinline xIndirect<OperandType> operator-( const s32 imm ) const { return xIndirect( *this ).Add( -imm ); }
+		__fi xIndirect<OperandType> operator+( const s32 imm ) const { return xIndirect( *this ).Add( imm ); }
+		__fi xIndirect<OperandType> operator-( const s32 imm ) const { return xIndirect( *this ).Add( -imm ); }
 
 		bool operator==( const xIndirect<OperandType>& src ) const
 		{
@@ -963,12 +963,12 @@ template< typename T > void xWrite( T val );
 		}
 	};
 
-	static __forceinline xAddressVoid operator+( const void* addr, const xAddressReg& reg )
+	static __fi xAddressVoid operator+( const void* addr, const xAddressReg& reg )
 	{
 		return reg + (sptr)addr;
 	}
 
-	static __forceinline xAddressVoid operator+( s32 addr, const xAddressReg& reg )
+	static __fi xAddressVoid operator+( s32 addr, const xAddressReg& reg )
 	{
 		return reg + (sptr)addr;
 	}

@@ -79,7 +79,7 @@ void gsReset()
 	gsGIFReset();
 }
 
-static __forceinline void gsCSRwrite( const tGS_CSR& csr )
+static __fi void gsCSRwrite( const tGS_CSR& csr )
 {
 	if (csr.RESET) {
 
@@ -137,7 +137,7 @@ static __forceinline void gsCSRwrite( const tGS_CSR& csr )
 	if(csr.EDWINT)	CSRreg.EDWINT	= false;
 }
 
-static __forceinline void IMRwrite(u32 value)
+static __fi void IMRwrite(u32 value)
 {
 	GSIMR = (value & 0x1f00)|0x6000;
 
@@ -161,7 +161,7 @@ static __forceinline void IMRwrite(u32 value)
 	}
 }
 
-__forceinline void gsWrite8(u32 mem, u8 value)
+__fi void gsWrite8(u32 mem, u8 value)
 {
 	switch (mem)
 	{
@@ -189,7 +189,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
 
-static __forceinline void _gsSMODEwrite( u32 mem, u32 value )
+static __fi void _gsSMODEwrite( u32 mem, u32 value )
 {
 	switch (mem)
 	{
@@ -206,7 +206,7 @@ static __forceinline void _gsSMODEwrite( u32 mem, u32 value )
 //////////////////////////////////////////////////////////////////////////
 // GS Write 16 bit
 
-__forceinline void gsWrite16(u32 mem, u16 value)
+__fi void gsWrite16(u32 mem, u16 value)
 {
 	GIF_LOG("GS write 16 at %8.8lx with data %8.8lx", mem, value);
 
@@ -236,7 +236,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 //////////////////////////////////////////////////////////////////////////
 // GS Write 32 bit
 
-__forceinline void gsWrite32(u32 mem, u32 value)
+__fi void gsWrite32(u32 mem, u32 value)
 {
 	pxAssume( (mem & 3) == 0 );
 	GIF_LOG("GS write 32 at %8.8lx with data %8.8lx", mem, value);
@@ -353,25 +353,25 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 	writeTo[1] = value[1];
 }
 
-__forceinline u8 gsRead8(u32 mem)
+__fi u8 gsRead8(u32 mem)
 {
 	GIF_LOG("GS read 8 from %8.8lx  value: %8.8lx", mem, *(u8*)PS2GS_BASE(mem));
 	return *(u8*)PS2GS_BASE(mem);
 }
 
-__forceinline u16 gsRead16(u32 mem)
+__fi u16 gsRead16(u32 mem)
 {
 	GIF_LOG("GS read 16 from %8.8lx  value: %8.8lx", mem, *(u16*)PS2GS_BASE(mem));
 	return *(u16*)PS2GS_BASE(mem);
 }
 
-__forceinline u32 gsRead32(u32 mem)
+__fi u32 gsRead32(u32 mem)
 {
 	GIF_LOG("GS read 32 from %8.8lx  value: %8.8lx", mem, *(u32*)PS2GS_BASE(mem));
 	return *(u32*)PS2GS_BASE(mem);
 }
 
-__forceinline u64 gsRead64(u32 mem)
+__fi u64 gsRead64(u32 mem)
 {
 	// fixme - PS2GS_BASE(mem+4) = (g_RealGSMem+(mem + 4 & 0x13ff))
 	GIF_LOG("GS read 64 from %8.8lx  value: %8.8lx_%8.8lx", mem, *(u32*)PS2GS_BASE(mem+4), *(u32*)PS2GS_BASE(mem) );
@@ -402,7 +402,7 @@ void gsIrq() {
 //   functions are performed by the EE, which itself uses thread sleep logic to avoid spin
 //   waiting as much as possible (maximizes CPU resource availability for the GS).
 
-__forceinline void gsFrameSkip()
+__fi void gsFrameSkip()
 {
 	static int consec_skipped = 0;
 	static int consec_drawn = 0;

@@ -17,6 +17,15 @@
 
 #include "Pcsx2Defs.h"
 
+static const s64 _1mb	= 0x100000;
+static const s64 _8mb	= _1mb * 8;
+static const s64 _16mb	= _1mb * 16;
+static const s64 _256mb	= _1mb * 256;
+static const s64 _1gb	= _256mb * 4;
+
+static const u32 BIAS = 2;				// Bus is half of the actual ps2 speed
+static const u32 PS2CLK = 294912000;	//hz	/* 294.912 mhz */
+
 #include "System.h"
 #include "Memory.h"
 #include "R5900.h"
@@ -25,9 +34,6 @@
 
 #include "SaveState.h"
 #include "DebugTools/Debug.h"
-
-static const u32 BIAS = 2;   // Bus is half of the actual ps2 speed
-static const u32 PS2CLK = 294912000; //hz	/* 294.912 mhz */
 
 extern wxString ShiftJIS_ConvertString( const char* src );
 extern wxString ShiftJIS_ConvertString( const char* src, int maxlen );

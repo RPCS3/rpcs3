@@ -180,7 +180,7 @@ void xForwardJumpBase::_setTarget( uint opsize ) const
 }
 
 // returns the inverted conditional type for this Jcc condition.  Ie, JNS will become JS.
-__forceinline JccComparisonType xInvertCond( JccComparisonType src )
+__fi JccComparisonType xInvertCond( JccComparisonType src )
 {
 	pxAssert( src != Jcc_Unknown );
 	if( Jcc_Unconditional == src ) return Jcc_Unconditional;

@@ -32,12 +32,12 @@ vifOp(vifCode_Null);
 // Vif0/Vif1 Misc Functions
 //------------------------------------------------------------------
 
-static _f void vifFlush(int idx) {
+static __fi void vifFlush(int idx) {
 	if (!idx) vif0FLUSH();
 	else	  vif1FLUSH();
 }
 
-static _f void vuExecMicro(int idx, u32 addr) {
+static __fi void vuExecMicro(int idx, u32 addr) {
 	VURegs* VU = nVif[idx].VU;
 	int startcycles = 0;
 	//vifFlush(idx);
@@ -116,7 +116,7 @@ vifOp(vifCode_Base) {
 
 extern bool SIGNAL_IMR_Pending;
 
-template<int idx> _f int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
+template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
 	pass1 {
 		vif1Only();
 		int vifImm    = (u16)vif1Regs->code;
@@ -301,7 +301,7 @@ vifOp(vifCode_Mark) {
 	return 0;
 }
 
-static _f void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
+static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 	VURegs& VUx = idx ? VU1 : VU0;
 	pxAssume(VUx.Micro > 0);
 
@@ -423,7 +423,7 @@ vifOp(vifCode_Offset) {
 	return 0;
 }
 
-template<int idx> static _f int _vifCode_STColRow(const u32* data, u32* pmem1, u32* pmem2) {
+template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem1, u32* pmem2) {
 	vifStruct& vifX = GetVifX;
 
 	int ret = min(4 - vifX.tag.addr, vifX.vifpacketsize);

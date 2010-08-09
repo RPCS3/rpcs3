@@ -114,7 +114,7 @@ enum clampModes {
 };
 
 // Prints Opcode to MicroProgram Logs
-void mVU_printOP(microVU* mVU, int opCase, const char* opName, bool isACC) {
+static void mVU_printOP(microVU* mVU, int opCase, const char* opName, bool isACC) {
 	mVUlog(opName);
 	opCase1 { if (isACC) { mVUlogACC(); } else { mVUlogFd(); } mVUlogFt(); }
 	opCase2 { if (isACC) { mVUlogACC(); } else { mVUlogFd(); } mVUlogBC(); }
@@ -123,7 +123,7 @@ void mVU_printOP(microVU* mVU, int opCase, const char* opName, bool isACC) {
 }
 
 // Sets Up Pass1 Info for Normal, BC, I, and Q Cases
-void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
+static void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 	opCase1 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
 	opCase2 { mVUanalyzeFMAC3(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
 	opCase3 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, 0); }
@@ -132,7 +132,7 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 }
 
 // Safer to force 0 as the result for X minus X than to do actual subtraction
-bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
+static bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
 	opCase1 {
 		if ((opType == 1) && (_Ft_ == _Fs_)) {
 			const xmm& Fs = mVU->regAlloc->allocReg(-1, isACC ? 32 : _Fd_, _X_Y_Z_W);
@@ -146,7 +146,7 @@ bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
 }
 
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
-void setupFtReg(microVU* mVU, xmm& Ft, xmm& tempFt, int opCase) {
+static void setupFtReg(microVU* mVU, xmm& Ft, xmm& tempFt, int opCase) {
 	opCase1 {
 		if (_XYZW_SS2)   { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W);	tempFt = Ft; }
 		else if (clampE) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);		tempFt = Ft; }
@@ -167,7 +167,7 @@ void setupFtReg(microVU* mVU, xmm& Ft, xmm& tempFt, int opCase) {
 }
 
 // Normal FMAC Opcodes
-void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, const char* opName, int clampType) {
+static void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, const char* opName, int clampType) {
 	pass1 { setupPass1(mVU, opCase, isACC, ((opType == 3) || (opType == 4))); }
 	pass2 {
 		if (doSafeSub(mVU, opCase, opType, isACC)) return;
@@ -205,7 +205,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 }
 
 // MADDA/MSUBA Opcodes
-void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* opName, int clampType) {
+static void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* opName, int clampType) {
 	pass1 { setupPass1(mVU, opCase, 1, 0); }
 	pass2 {
 		xmm Fs, Ft, ACC, tempFt;
@@ -246,7 +246,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 }
 
 // MADD Opcodes
-void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName, int clampType) {
+static void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName, int clampType) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		xmm Fs, Ft, ACC, tempFt;
@@ -277,7 +277,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName, int cl
 }
 
 // MSUB Opcodes
-void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName, int clampType) {
+static void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName, int clampType) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		xmm Fs, Ft, Fd, tempFt;

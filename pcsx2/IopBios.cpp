@@ -107,7 +107,7 @@ public:
 		fd = hostfd;
 	}
 
-	static __forceinline int translate_error(int err)
+	static __fi int translate_error(int err)
 	{
 		if (err >= 0)
 			return err;

@@ -246,7 +246,7 @@ const wxChar *const tbl_GamefixNames[] =
 	L"OPHFlag"
 };
 
-const __forceinline wxChar* EnumToString( GamefixId id )
+const __fi wxChar* EnumToString( GamefixId id )
 {
 	return tbl_GamefixNames[id];
 }

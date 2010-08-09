@@ -261,10 +261,10 @@ struct DmaHandlerInfo
 	DmaIHandler Interrupt;
 	DmaSHandler Start;
 
-	__forceinline u32& REG_MADR(void) const { return psxHu32(DmacRegisterBase + 0x0); }
-	__forceinline u32& REG_BCR(void)  const { return psxHu32(DmacRegisterBase + 0x4); }
-	__forceinline u32& REG_CHCR(void) const { return psxHu32(DmacRegisterBase + 0x8); }
-	__forceinline u32& REG_TADR(void) const { return psxHu32(DmacRegisterBase + 0xC); }
+	__fi u32& REG_MADR(void) const { return psxHu32(DmacRegisterBase + 0x0); }
+	__fi u32& REG_BCR(void)  const { return psxHu32(DmacRegisterBase + 0x4); }
+	__fi u32& REG_CHCR(void) const { return psxHu32(DmacRegisterBase + 0x8); }
+	__fi u32& REG_TADR(void) const { return psxHu32(DmacRegisterBase + 0xC); }
 };
 
 #define MEM_BASE1 0x1f801080
@@ -452,7 +452,7 @@ void IopDmaStart(int channel)
 // IopDmaProcessChannel: Called from IopDmaUpdate (below) to process a dma channel
 
 template<int channel>
-static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
+static void __ri IopDmaProcessChannel(int elapsed, int& MinDelay)
 {
 	// Hopefully the compiler would be able to optimize the whole function away if this doesn't pass.
 	if(!(IopDmaHandlers[channel].DirectionFlags&_E__))

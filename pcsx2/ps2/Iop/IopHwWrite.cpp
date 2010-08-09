@@ -30,7 +30,7 @@ using namespace Internal;
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 template< typename T >
-static __forceinline void _generic_write( u32 addr, T val )
+static __fi void _generic_write( u32 addr, T val )
 {
 	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 	IopHwTraceLog<T>( addr, val, "Write" );
@@ -44,7 +44,7 @@ void __fastcall iopHwWrite32_generic( u32 addr, mem32_t val )	{ _generic_write<m
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 template< typename T >
-static __forceinline T _generic_read( u32 addr )
+static __fi T _generic_read( u32 addr )
 {
 	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 
@@ -157,7 +157,7 @@ void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 // Templated handler for both 32 and 16 bit write operations, to Page 1 registers.
 //
 template< typename T >
-static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
+static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 {
 	// all addresses are assumed to be prefixed with 0x1f801xxx:
 	pxAssert( (addr >> 12) == 0x1f801 );

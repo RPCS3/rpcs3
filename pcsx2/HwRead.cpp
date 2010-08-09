@@ -21,7 +21,7 @@
 
 using namespace R5900;
 
-static __forceinline void IntCHackCheck()
+static __fi void IntCHackCheck()
 {
 	// Sanity check: To protect from accidentally "rewinding" the cyclecount
 	// on the few times nextBranchCycle can be behind our current cycle.
@@ -32,7 +32,7 @@ static __forceinline void IntCHackCheck()
 /////////////////////////////////////////////////////////////////////////
 // Hardware READ 8 bit
 
-__forceinline mem8_t hwRead8(u32 mem)
+__fi mem8_t hwRead8(u32 mem)
 {
 	u8 ret;
 
@@ -150,7 +150,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 /////////////////////////////////////////////////////////////////////////
 // Hardware READ 16 bit
 
-__forceinline mem16_t hwRead16(u32 mem)
+__fi mem16_t hwRead16(u32 mem)
 {
 	u16 ret;
 	const u16 masked_mem = mem & 0xffff;
@@ -293,7 +293,7 @@ mem32_t __fastcall hwRead32_page_01(u32 mem)
 
 // Reads hardware registers for page 15 (0x0F).
 // This is used internally to produce two inline versions, one with INTC_HACK, and one without.
-static __forceinline mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
+static __fi mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 {
 	// *Performance Warning*  This function is called -A-LOT.  Be wary when making changes.  It
 	// could impact FPS significantly.

@@ -114,7 +114,7 @@ mem8_t __fastcall iopHwRead8_Page8( u32 addr )
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 template< typename T >
-static __forceinline T _HwRead_16or32_Page1( u32 addr )
+static __fi T _HwRead_16or32_Page1( u32 addr )
 {
 	// all addresses are assumed to be prefixed with 0x1f801xxx:
 	jASSUME( (addr >> 12) == 0x1f801 );

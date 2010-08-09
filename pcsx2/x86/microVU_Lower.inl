@@ -24,7 +24,7 @@
 //------------------------------------------------------------------
 
 // Test if Vector is +/- Zero
-_f static void testZero(const xmm& xmmReg, const xmm& xmmTemp, const x32& gprTemp)
+static __fi void testZero(const xmm& xmmReg, const xmm& xmmTemp, const x32& gprTemp)
 {
 	xXOR.PS(xmmTemp, xmmTemp);
 	xCMPEQ.SS(xmmTemp, xmmReg);
@@ -36,7 +36,7 @@ _f static void testZero(const xmm& xmmReg, const xmm& xmmTemp, const x32& gprTem
 }
 
 // Test if Vector is Negative (Set Flags and Makes Positive)
-_f static void testNeg(mV, const xmm& xmmReg, const x32& gprTemp)
+static __fi void testNeg(mV, const xmm& xmmReg, const x32& gprTemp)
 {
 	xMOVMSKPS(gprTemp, xmmReg);
 	xTEST(gprTemp, 1);
@@ -156,7 +156,7 @@ mVUop(mVU_RSQRT) {
 }
 
 // ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
-_f static void mVU_EATAN_(mV, const xmm& PQ, const xmm& Fs, const xmm& t1, const xmm& t2) {
+static __fi void mVU_EATAN_(mV, const xmm& PQ, const xmm& Fs, const xmm& t1, const xmm& t2) {
 	xMOVSS(PQ, Fs);
 	xMUL.SS(PQ, ptr32[mVUglob.T1]);
 	xMOVAPS(t2, Fs);
@@ -272,7 +272,7 @@ mVUop(mVU_EEXP) {
 }
 
 // sumXYZ(): PQ.x = x ^ 2 + y ^ 2 + z ^ 2
-_f void mVU_sumXYZ(mV, const xmm& PQ, const xmm& Fs) {
+static __fi void mVU_sumXYZ(mV, const xmm& PQ, const xmm& Fs) {
 	if( x86caps.hasStreamingSIMD4Extensions ) {
 		xDP.PS(Fs, Fs, 0x71);
 		xMOVSS(PQ, Fs);
@@ -995,7 +995,7 @@ mVUop(mVU_RINIT) {
 	pass3 { mVUlog("RINIT R, vf%02d%s", _Fs_, _Fsf_String); }
 }
 
-_f void mVU_RGET_(mV, const x32& Rreg) {
+static __fi void mVU_RGET_(mV, const x32& Rreg) {
 	if (!mVUlow.noWriteVF) {
 		const xmm& Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		xMOVDZX(Ft, Rreg);
@@ -1139,7 +1139,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	}
 }
 
-_f void mVU_XGKICK_DELAY(mV, bool memVI) {
+static __fi void mVU_XGKICK_DELAY(mV, bool memVI) {
 	mVUbackupRegs(mVU);
 	if (memVI)	xMOV(gprT2, ptr32[&mVU->VIxgkick]);
 	else		mVUallocVIa(mVU, gprT2, _Is_);

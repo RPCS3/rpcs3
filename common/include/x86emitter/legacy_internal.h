@@ -21,7 +21,7 @@
 // Legacy Helper Macros and Functions (depreciated)
 //------------------------------------------------------------------
 
-#define emitterT __forceinline
+#define emitterT __fi
 
 using x86Emitter::xWrite8;
 using x86Emitter::xWrite16;
