@@ -12,9 +12,7 @@ set(Output Utilities)
 # set common flags
 set(CommonFlags 
 	-pthread
-	-march=i486
-	-msse
-	-msse2
+    -fvisibility=hidden
 	-fno-dse
 	-fno-guess-branch-probability
 	-fno-strict-aliasing

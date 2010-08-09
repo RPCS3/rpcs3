@@ -12,13 +12,11 @@ set(Output x86emitter)
 # set common flags
 set(CommonFlags 
 	-pthread
+    -fvisibility=hidden
 	-fno-guess-branch-probability
 	-fno-dse
 	-fno-tree-dse
 	-fno-strict-aliasing
-	-march=i486
-	-msse
-	-msse2
 	-pipe
 	-Wno-format
 	-Wno-unused-parameter

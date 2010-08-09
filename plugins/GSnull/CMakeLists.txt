@@ -10,12 +10,11 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 set(Output GSnull)
 
 set(CommonFlags
+    -fvisibility=hidden
     -Wall
-    -msse2
     )
 
 set(OptimizationFlags
-    -fvisibility=hidden
     -O2
     -DNDEBUG
     )

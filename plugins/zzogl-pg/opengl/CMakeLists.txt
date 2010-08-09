@@ -11,14 +11,13 @@ set(Output zzogl)
 
 set(CommonFlags
     -pthread
+    -DZEROGS_SSE2
+    -fno-regmove
+    -fno-strict-aliasing
     -Wno-format
     -Wno-unused-parameter
     -Wno-unused-value
     -Wunused-variable
-    -msse2
-    -fno-regmove
-    -fno-strict-aliasing
-    -DZEROGS_SSE2
     )
 
 set(OptimizationFlags
