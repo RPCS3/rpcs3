@@ -1,3 +1,11 @@
+ /* ZeroGS KOSMOS
+  *
+  * Zerofrog's ZeroGS KOSMOS (c)2005-2008
+  *
+  * Zerofrog forgot to write any copyright notice after release the plugin into GPLv2
+  * If someone can contact him successfully to clarify this matter that would be great.
+  */
+
 #ifndef ZEROGS_MATH_H
 #define ZEROGS_MATH_H
 
