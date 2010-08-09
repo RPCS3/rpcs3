@@ -227,7 +227,7 @@ static __fi void mVUoptimizePipeState(mV) {
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
-static __fi void mVUincCycles(mV, int x) {
+__fi void mVUincCycles(mV, int x) {
 	mVUcycles += x;
 	for (int z = 31; z > 0; z--) {
 		calcCycles(mVUregs.VF[z].x, x);
@@ -300,7 +300,7 @@ void mVUsetCycles(mV) {
 }
 
 // vu0 is allowed to exit early, so are dev builds (for inf loops)
-static __fi bool doEarlyExit(microVU* mVU) {
+__fi bool doEarlyExit(microVU* mVU) {
 	return IsDevBuild || !isVU1;
 }
 
