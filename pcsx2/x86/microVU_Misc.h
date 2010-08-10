@@ -301,7 +301,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUcacheCheck(ptr, start, limit) {														  \
 	uptr diff = ptr - start;																	  \
 	if (diff >= limit) {																		  \
-		Console.WriteLn("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
+		DevCon.WriteLn("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
 		mVUresizeCache(mVU, mVU->cacheSize + mVUcacheGrowBy);									  \
 	}																							  \
 }

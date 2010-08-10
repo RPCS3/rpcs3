@@ -29985,16 +29985,7 @@ Region = PAL-Unk
 Serial = SLES-50358
 Name   = Devil May Cry
 Region = PAL-E
-Compat = 3
-[patches = 7D8F539A]
-	
-	//Skip Videos
-	patch=0,EE,0015BC78,word,00000000
-	patch=0,EE,001CE340,word,03E00008
-	patch=0,EE,001CE344,word,00000000
-	patch=0,EE,001CE8EC,word,70001428
-	
-[/patches]
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50362
 Name   = Jonny Moseley Mad Trix

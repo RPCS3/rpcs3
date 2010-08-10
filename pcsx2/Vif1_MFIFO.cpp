@@ -142,9 +142,12 @@ void mfifoVIF1transfer(int qwc)
 		if (vif1.inprogress & 0x10)
 		{
 			if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
-				CPU_INT(DMAC_MFIFO_VIF, 0);
+				CPU_INT(DMAC_MFIFO_VIF, 1);
 			else
-				CPU_INT(DMAC_MFIFO_VIF, vif1ch->qwc * BIAS);
+			{
+				// Minor hack. Please ask before removal (rama) (FF7 Dirge of Cerberus)
+				CPU_INT(DMAC_MFIFO_VIF, min( 386, (int)(vif1ch->qwc * BIAS) ) );
+			}
 
 			vif1Regs->stat.FQC = 0x10; // FQC=16
 		}
@@ -293,15 +296,18 @@ void vifMFIFOInterrupt()
 
                 mfifoVIF1transfer(0);
                 if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
-                    CPU_INT(DMAC_MFIFO_VIF, 0);
+                    CPU_INT(DMAC_MFIFO_VIF, 1);
                 else
-					CPU_INT(DMAC_MFIFO_VIF, vif1ch->qwc * BIAS);
+				{
+					// Minor hack. Please ask before removal (rama) (FF7 Dirge of Cerberus)
+					CPU_INT(DMAC_MFIFO_VIF, min( 386, (int)(vif1ch->qwc * BIAS) ) );
+				}
 
 				return;
 
 			case 1: //Transfer data
 				mfifo_VIF1chain();
-				CPU_INT(DMAC_MFIFO_VIF, 0);
+				CPU_INT(DMAC_MFIFO_VIF, 1);
 				return;
 		}
 		return;
