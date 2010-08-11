@@ -319,7 +319,6 @@ void GIFdma()
 		
 
 	 	
-	    gifRegs->stat.OPH = true;
 		gifRegs->stat.FQC = min((u16)0x10, gif->qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
@@ -338,7 +337,6 @@ void GIFdma()
 		
 	}
 	
-	gifRegs->stat.OPH = true;
 	// Transfer Dn_QWC from Dn_MADR to GIF
 	if ((gif->chcr.MOD == NORMAL_MODE) || (gif->qwc > 0)) // Normal Mode
 	{
