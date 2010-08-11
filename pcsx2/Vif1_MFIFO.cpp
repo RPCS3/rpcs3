@@ -93,22 +93,22 @@ static __fi bool mfifoVIF1rbTransfer()
 	return ret;
 }
 
-static __fi bool mfifo_VIF1chain()
+static __fi void mfifo_VIF1chain()
 {
-    bool ret;
-
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if ((vif1ch->qwc == 0))
 	{
 		vif1.inprogress &= ~1;
-		return true;
+		return;
 	}
 
 	if (vif1ch->madr >= dmacRegs->rbor.ADDR &&
 	        vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
 	{
+		//Need to exit on mfifo locations, if the madr is matching the madr of spr, we dont have any data left :(
+
 		u16 startqwc = vif1ch->qwc;
-		ret = mfifoVIF1rbTransfer();
+		mfifoVIF1rbTransfer();
 		vifqwc -= startqwc - vif1ch->qwc;
 		
 	}
@@ -117,14 +117,15 @@ static __fi bool mfifo_VIF1chain()
 		tDMA_TAG *pMem = dmaGetAddr(vif1ch->madr, !vif1ch->chcr.DIR);
 		SPR_LOG("Non-MFIFO Location");
 
-		if (pMem == NULL) return false;
+		//No need to exit on non-mfifo as it is indirect anyway, so it can be transferring this while spr refills the mfifo
+
+		if (pMem == NULL) return;
 
 		if (vif1.vifstalled)
-			ret = VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset);
+			VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset);
 		else
-			ret = VIF1transfer((u32*)pMem, vif1ch->qwc << 2);
+			VIF1transfer((u32*)pMem, vif1ch->qwc << 2);
 	}
-	return ret;
 }
 
 
@@ -141,13 +142,7 @@ void mfifoVIF1transfer(int qwc)
 		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr._u32, vif1.vifstalled, vif1.done);
 		if (vif1.inprogress & 0x10)
 		{
-			if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
-				CPU_INT(DMAC_MFIFO_VIF, 1);
-			else
-			{
-				// Minor hack. Please ask before removal (rama) (FF7 Dirge of Cerberus)
-				CPU_INT(DMAC_MFIFO_VIF, min( 386, (int)(vif1ch->qwc * BIAS) ) );
-			}
+			if(vif1ch->chcr.STR == true)CPU_INT(DMAC_MFIFO_VIF, 4);
 
 			vif1Regs->stat.FQC = 0x10; // FQC=16
 		}
@@ -227,9 +222,11 @@ void mfifoVIF1transfer(int qwc)
 			VIF_LOG("dmaIrq Set");
 			vif1.done = true;
 		}
+
+		vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
+		vif1.inprogress |= 1;
 	}
-	vif1Regs->stat.FQC = min(vif1ch->qwc, (u16)16);
-	vif1.inprogress |= 1;
+	
 
 	SPR_LOG("mfifoVIF1transfer end %x madr %x, tadr %x vifqwc %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr, vifqwc);
 }
@@ -288,39 +285,40 @@ void vifMFIFOInterrupt()
 				{
 				//	Console.WriteLn("Empty 1");
 					vifqwc = 0;
-					vif1.inprogress |= 0x10;
-					vif1Regs->stat.FQC = 0;
-					hwDmacIrq(DMAC_MFIFO_EMPTY);
+					if((vif1.inprogress & 0x10) == 0) 
+					{
+						hwDmacIrq(DMAC_MFIFO_EMPTY);
+						vif1.inprogress |= 0x10;
+					}
+					vif1Regs->stat.FQC = 0;					
 					return;
 				}
 
                 mfifoVIF1transfer(0);
-                if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
-                    CPU_INT(DMAC_MFIFO_VIF, 1);
-                else
-				{
-					// Minor hack. Please ask before removal (rama) (FF7 Dirge of Cerberus)
-					CPU_INT(DMAC_MFIFO_VIF, min( 386, (int)(vif1ch->qwc * BIAS) ) );
-				}
-
+                CPU_INT(DMAC_MFIFO_VIF, 4);
 				return;
 
 			case 1: //Transfer data
 				mfifo_VIF1chain();
-				CPU_INT(DMAC_MFIFO_VIF, 1);
+				//Sanity check! making sure we always have non-zero values
+				CPU_INT(DMAC_MFIFO_VIF, (g_vifCycles == 0 ? 4 : g_vifCycles) );				
 				return;
 		}
 		return;
 	}
 
-	/*if (vifqwc <= 0)
-	{
-		//Console.WriteLn("Empty 2");
-		//vif1.inprogress |= 0x10;
-		vif1Regs->stat.FQC = 0; // FQC=0
-		hwDmacIrq(DMAC_MFIFO_EMPTY);
-	}*/
 
+	//FF7 Dirge of Cerberus seems to like the mfifo to tell it when it's empty, even if it's ending.
+	//Doesn't seem to care about the vif1 dma interrupting (possibly disabled the interrupt?)
+	if (vif1ch->tadr == spr0->madr)
+	{
+		vifqwc = 0;
+		if((vif1.inprogress & 0x10) == 0) 
+		{
+			hwDmacIrq(DMAC_MFIFO_EMPTY);
+			vif1.inprogress |= 0x10;
+		}
+	}
 	vif1.vifstalled = false;
 	vif1.done = 1;
 	g_vifCycles = 0;
