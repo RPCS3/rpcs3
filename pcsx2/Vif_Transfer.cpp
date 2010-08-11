@@ -85,8 +85,9 @@ _vifT void vifTransferLoop(u32* &data) {
 			vifXRegs->code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
-			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
+			
 			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
+			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
@@ -147,7 +148,7 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 			vifXRegs->stat.VIS = true; // Note: commenting this out fixes WALL-E?
 		}
 
-		if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress = 0;
+		if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress &= ~1;
 		return false;
 	}
 

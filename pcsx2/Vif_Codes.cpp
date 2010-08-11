@@ -226,7 +226,6 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		if(vif1.tag.size == 0) 
 		{
 			vif1.cmd = 0;
-			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		}
 		vif1.vifstalled    = true;
 		return ret;
