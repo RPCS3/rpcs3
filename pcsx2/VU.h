@@ -58,6 +58,8 @@ union VECTOR {
 
 	float F[4];
 
+	u128 UQ;
+	s128 SQ;
 	u64 UD[2];      //128 bits
 	s64 SD[2];
 	u32 UL[4];

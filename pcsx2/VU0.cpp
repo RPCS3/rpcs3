@@ -88,7 +88,12 @@ namespace OpcodeImpl
 	void LQC2() {
 		u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)cpuRegs.code;
 		if (_Ft_) {
+#ifdef __LINUX__
+			// Ifdeffing mainly because I haven't gotten around to checking it in Windows yet.
+			memRead128(addr, &VU0.VF[_Ft_].UQ);
+#else
 			memRead128(addr,   VU0.VF[_Ft_].UD);
+#endif
 		} else {
 			u64 val[2];
  			memRead128(addr,   val);
