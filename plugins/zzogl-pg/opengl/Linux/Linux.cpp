@@ -214,7 +214,7 @@ void DisplayAdvancedDialog()
 				 
 	dialog = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(dialog), "ZZOgl PG Advanced Config");
-	gtk_window_set_default_size(GTK_WINDOW(dialog), 200, 410);
+	gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 600);
 	gtk_window_set_modal(GTK_WINDOW(dialog), true);
 	
 	advanced_box = gtk_vbox_new(false, 5);
