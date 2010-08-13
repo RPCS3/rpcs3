@@ -75,7 +75,7 @@ void MSW_OutputDebugString( const wxString& text )
 	if( hasDebugger ) OutputDebugString( text );
 #else
 	// send them to stderr
-	wxPrintf(L"%s\n", text.c_str());
+	wxPrintf(L"%s", text.c_str());
 	fflush(stderr);
 #endif
 }
