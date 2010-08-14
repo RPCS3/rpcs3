@@ -1527,7 +1527,7 @@ StartRecomp:
 			if (cpuRegs.code == 0)
 				continue;
 			// cache, sync
-			else if (_Opcode_ == 057 || _Opcode_ == 0 && _Funct_ == 013)
+			else if (_Opcode_ == 057 || _Opcode_ == 0 && _Funct_ == 017)
 				continue;
 			// imm arithmetic
 			else if ((_Opcode_ & 070) == 010 || (_Opcode_ & 076) == 030)
