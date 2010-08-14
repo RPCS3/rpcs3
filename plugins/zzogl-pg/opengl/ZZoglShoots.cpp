@@ -417,7 +417,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 			{
 				case PSMCT32:
 					addr = getPixelAddress32(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 4 < 0x00400000)
+					if (addr * 4 < MEMORY_END)
 						u = readPixel32(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else
 						u = 0;
@@ -425,7 +425,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMCT24:
 					addr = getPixelAddress24(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 4 < 0x00400000)
+					if (addr * 4 < MEMORY_END)
 						u = readPixel24(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else
 						u = 0;
@@ -433,7 +433,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMCT16:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 2 < 0x00400000)
+					if (addr * 2 < MEMORY_END)
 					{
 						u = readPixel16(psrc, j, i, ptex->tbp0, ptex->tbw);
 						u = RGBA16to32(u);
@@ -446,7 +446,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMCT16S:
 					addr = getPixelAddress16(j, i, ptex->tbp0, ptex->tbw);
-					if (addr * 2 < 0x00400000)
+					if (addr * 2 < MEMORY_END)
 					{
 						u = readPixel16S(psrc, j, i, ptex->tbp0, ptex->tbw);
 						u = RGBA16to32(u);
@@ -459,7 +459,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT8:
 					addr = getPixelAddress8(j, i, ptex->tbp0, ptex->tbw);
-					if (addr < 0x00400000)
+					if (addr < MEMORY_END)
 					{
 						if (usevid)
 						{
@@ -481,7 +481,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT4:
 					addr = getPixelAddress4(j, i, ptex->tbp0, ptex->tbw);
-					if (addr < 2*0x00400000)
+					if (addr < 2*MEMORY_END)
 					{
 						if (usevid)
 						{
@@ -504,7 +504,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT8H:
 					addr = getPixelAddress8H(j, i, ptex->tbp0, ptex->tbw);
-					if (4*addr < 0x00400000)
+					if (4*addr < MEMORY_END)
 					{
 						if (usevid)
 						{
@@ -526,7 +526,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT4HL:
 					addr = getPixelAddress4HL(j, i, ptex->tbp0, ptex->tbw);
-					if (4*addr < 0x00400000)
+					if (4*addr < MEMORY_END)
 					{
 						if (usevid)
 						{
@@ -548,7 +548,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT4HH:
 					addr = getPixelAddress4HH(j, i, ptex->tbp0, ptex->tbw);
-					if (4*addr < 0x00400000)
+					if (4*addr < MEMORY_END)
 					{
 						if (usevid)
 						{
@@ -570,7 +570,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT32Z:
 					addr = getPixelAddress32Z(j, i, ptex->tbp0, ptex->tbw);
-					if (4*addr < 0x00400000)
+					if (4*addr < MEMORY_END)
 						u = readPixel32Z(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else 
 						u = 0;
@@ -578,7 +578,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT24Z:
 					addr = getPixelAddress24Z(j, i, ptex->tbp0, ptex->tbw);
-					if (4*addr < 0x00400000)
+					if (4*addr < MEMORY_END)
 						u = readPixel24Z(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else 
 						u = 0;
@@ -586,7 +586,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT16Z:
 					addr = getPixelAddress16Z(j, i, ptex->tbp0, ptex->tbw);
-					if (2*addr < 0x00400000)
+					if (2*addr < MEMORY_END)
 						u = readPixel16Z(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else 
 						u = 0;
@@ -594,7 +594,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 				case PSMT16SZ:
 					addr = getPixelAddress16SZ(j, i, ptex->tbp0, ptex->tbw);
-					if (2*addr < 0x00400000)
+					if (2*addr < MEMORY_END)
 						u = readPixel16SZ(psrc, j, i, ptex->tbp0, ptex->tbw);
 					else 
 						u = 0;

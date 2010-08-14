@@ -47,7 +47,7 @@ extern u32 s_uTex1Data[2][2], s_uClampData[2];
 int ZeroGS::Save(s8* pbydata)
 {
 	if (pbydata == NULL)
-		return 40 + 0x00400000 + sizeof(gs) + 2*VBSAVELIMIT + 2*sizeof(frameInfo) + 4 + 256*4;
+		return 40 + MEMORY_END + sizeof(gs) + 2*VBSAVELIMIT + 2*sizeof(frameInfo) + 4 + 256*4;
 
 	s_RTs.ResolveAll();
 	s_DepthRTs.ResolveAll();
@@ -64,8 +64,8 @@ int ZeroGS::Save(s8* pbydata)
 
 	pbydata += 4;
 
-	memcpy(pbydata, g_pbyGSMemory, 0x00400000);
-	pbydata += 0x00400000;
+	memcpy(pbydata, g_pbyGSMemory, MEMORY_END);
+	pbydata += MEMORY_END;
 
 	memcpy(pbydata, g_pbyGSClut, 256*4);
 	pbydata += 256 * 4;
@@ -109,8 +109,8 @@ bool ZeroGS::Load(s8* pbydata)
 		savelimit = *(u32*)pbydata;
 		pbydata += 4;
 
-		memcpy(g_pbyGSMemory, pbydata, 0x00400000);
-		pbydata += 0x00400000;
+		memcpy(g_pbyGSMemory, pbydata, MEMORY_END);
+		pbydata += MEMORY_END;
 
 		memcpy(g_pbyGSClut, pbydata, 256*4);
 		pbydata += 256 * 4;

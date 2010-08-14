@@ -42,6 +42,8 @@ using namespace std;
 #include <X11/extensions/xf86vmode.h>
 #endif
 
+#define MEMORY_END 0x00400000
+
 class GLWindow
 {
 
@@ -311,6 +313,24 @@ enum PSM_value
 // Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
 // 16, 16S, 16Z, 16SZ -- 2, PSMT8 and 8H - 3, PSMT4, 4HL, 4HH -- 4.
 inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
+
+inline int PSMT_BITS_NUM(int psm)
+{
+	switch (PSMT_BITMODE(psm))
+	{
+		case 4: 
+			return 0;
+			
+		case 3:
+			return 1;
+			
+		case 2:
+			return 2;
+			
+		default:
+			return 4;
+	}
+}
 
 // CLUT = Color look up table. Set proper color to table according CLUT table.
 // Used for PSMT8, PSMT8H, PSMT4, PSMT4HH, PSMT4HL textures

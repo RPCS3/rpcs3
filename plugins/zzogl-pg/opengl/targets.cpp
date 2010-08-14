@@ -1979,7 +1979,7 @@ void MemoryTarget_GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 	int nbStart, nbEnd;
 	GetRectMemAddress(nbStart, nbEnd, tex0.psm, 0, 0, tex0.tw, tex0.th, tex0.tbp0, tex0.tbw);
 	assert(nbStart < nbEnd);
-	nbEnd = min(nbEnd, 0x00400000);
+	nbEnd = min(nbEnd, MEMORY_END);
 
 	start = nbStart / (4 * GPU_TEXWIDTH);
 	end = (nbEnd + GPU_TEXWIDTH * 4 - 1) / (4 * GPU_TEXWIDTH);
@@ -2947,7 +2947,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 		\
 		Tsrc* src = (Tsrc*)(psrc); \
 		T* pPageOffset = (T*)g_pbyGSMemory + fbp*(256/sizeof(T)), *dst; \
-		int maxfbh = (0x00400000-fbp*256) / (sizeof(T) * fbw); \
+		int maxfbh = (MEMORY_END-fbp*256) / (sizeof(T) * fbw); \
 		if( maxfbh > fbh ) maxfbh = fbh; \
 		\
 		for(int i = 0; i < maxfbh; ++i) { \
@@ -3092,7 +3092,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 		Tsrc* src = (Tsrc*)(psrc); \
 		T* pPageOffset = (T*)g_pbyGSMemory + fbp*(256/sizeof(T)), *dst; \
 		int srcpitch = Pitch(fbw) * blockheight/sizeof(Tsrc); \
-		int maxfbh = (0x00400000-fbp*256) / (sizeof(T) * fbw); \
+		int maxfbh = (MEMORY_END-fbp*256) / (sizeof(T) * fbw); \
 		if( maxfbh > fbh ) maxfbh = fbh; \
 		for(i = 0; i < (maxfbh&~(blockheight-1))*X; i += blockheight) { \
 			/*if( smask2 && (i&1) == smask1 ) continue; */ \
