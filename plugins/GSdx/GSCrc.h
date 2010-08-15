@@ -38,6 +38,7 @@ public:
 		FFX,
 		FFX2,
 		FFXII,
+		HauntingGround,
 		ShadowHearts,
 		Okami,
 		MetalGearSolid3,

@@ -2525,6 +2525,28 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x03FFF)
+		{
+			skip = 1;
+		}
+		else if(fi.TME && fi.FBP == 0x3000 && fi.TBP0 == 0x3380)
+		{
+			skip = 1; // bloom
+		}
+		else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == 0xFFFFFF &&
+			GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+		{
+			skip = 1; 
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2578,6 +2600,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::StarOcean3] = GSC_StarOcean3;
 		map[CRC::ValkyrieProfile2] = GSC_ValkyrieProfile2;
 		map[CRC::RadiataStories] = GSC_RadiataStories;
+		map[CRC::HauntingGround] = GSC_HauntingGround;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
