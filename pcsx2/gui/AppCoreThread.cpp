@@ -183,6 +183,7 @@ void Pcsx2App::SysApplySettings()
 void AppCoreThread::OnResumeReady()
 {
 	wxGetApp().SysApplySettings();
+	wxGetApp().AllocateVM();
 	wxGetApp().PostMethod( AppSaveSettings );
 	_parent::OnResumeReady();
 }

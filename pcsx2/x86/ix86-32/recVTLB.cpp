@@ -277,12 +277,15 @@ static void DynGen_IndirectDispatch( int mode, int bits )
 	xJS( GetIndirectDispatcherPtr( mode, szidx ) );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// One-time initialization procedure.  Calling it multiple times shouldn't
-// hurt anything tho.
+// One-time initialization procedure.  Multiple subsequent calls during the lifespan of the
+// process will be ignored.
 //
 void vtlb_dynarec_init()
 {
+	static bool hasBeenCalled = false;
+	if (hasBeenCalled) return;
+	hasBeenCalled = true;
+
 	// In case init gets called multiple times:
 	HostSys::MemProtectStatic( m_IndirectDispatchers, Protect_ReadWrite, false );
 

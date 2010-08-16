@@ -940,7 +940,7 @@ SysMtgsThread& GetMTGS()
 	return mtgsThread;
 }
 
-SysCoreAllocations& GetSysCoreAlloc()
+SysCpuProviderPack& GetCpuProviders()
 {
-	return *wxGetApp().m_CoreAllocs;
+	return *wxGetApp().m_CpuProviders;
 }

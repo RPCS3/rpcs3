@@ -431,7 +431,7 @@ BOOL CALLBACK FinderProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			return FALSE;
 
 		case WM_INITDIALOG:
-			mptr[0]=psM;
+			mptr[0]=eeMem->Main;
 			mptr[1]=psxM;
 
 			hWndFinder=hWnd;

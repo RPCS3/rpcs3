@@ -183,7 +183,7 @@ bool _VIF1chain()
 __fi void vif1SetupTransfer()
 {
     tDMA_TAG *ptag;
-	DMACh& vif1c = (DMACh&)PS2MEM_HW[0x9000];
+	DMACh& vif1c = (DMACh&)eeMem->HW[0x9000];
 	
 	switch (vif1.dmamode)
 	{

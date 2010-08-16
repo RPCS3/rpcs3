@@ -63,32 +63,32 @@ const __aligned(32) mVU_Globals mVUglob = {
 // Micro VU - Main Functions
 //------------------------------------------------------------------
 
-__fi void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
+static __fi void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
 	throw Exception::HardwareDeficiency()
 		.SetDiagMsg(wxsFormat(L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail))
 		.SetUserMsg(wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
 // Only run this once per VU! ;)
-__fi void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
+static __ri void mVUinit(int vuIndex) {
 
 	if(!x86caps.hasMultimediaExtensions)		mVUthrowHardwareDeficiency( L"MMX", vuIndex );
 	if(!x86caps.hasStreamingSIMDExtensions)		mVUthrowHardwareDeficiency( L"SSE", vuIndex );
 	if(!x86caps.hasStreamingSIMD2Extensions)	mVUthrowHardwareDeficiency( L"SSE2", vuIndex );
 
 	microVU* mVU = mVUx;
-	memset(&mVU->prog, 0, sizeof(mVU->prog));
+	memzero(mVU->prog);
 
-	mVU->regs			= vuRegsPtr;
 	mVU->index			= vuIndex;
 	mVU->cop2			= 0;
 	mVU->vuMemSize		= (vuIndex ? 0x4000 : 0x1000);
 	mVU->microMemSize	= (vuIndex ? 0x4000 : 0x1000);
 	mVU->progSize		= (vuIndex ? 0x4000 : 0x1000) / 4;
+	mVU->progMemMask	= mVU->progSize-1;
 	mVU->dispCache		= NULL;
 	mVU->cache			= NULL;
 	mVU->cacheSize		= mVUcacheSize;
-	mVU->regAlloc		= new microRegAlloc(mVU->regs);
+	mVU->regAlloc		= new microRegAlloc();
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		mVU->prog.prog[i] = new deque<microProgram*>();
@@ -98,19 +98,31 @@ __fi void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	if (!mVU->dispCache) throw Exception::OutOfMemory( mVU->index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );
 	memset(mVU->dispCache, 0xcc, mVUdispCacheSize);
 
-	// Setup Entrance/Exit Points
-	x86SetPtr(mVU->dispCache);
-	mVUdispatcherA(mVU);
-	mVUdispatcherB(mVU);
-	mVUemitSearch();
-
 	// Allocates rec-cache and calls mVUreset()
 	mVUresizeCache(mVU, mVU->cacheSize + mVUcacheSafeZone);
 	//if (vuIndex) gen_memcpy_vibes();
 }
 
 // Resets Rec Data
-__fi void mVUreset(mV) {
+// If vuRegsPtr is NUL, the current regs pointer assigned to the VU compiler is assumed.
+static __fi void mVUreset(mV, VURegs* vuRegsPtr) {
+
+	static bool dispatchersGenerated = false;
+
+	if (!vuRegsPtr) vuRegsPtr = mVU->regs;
+	if (!dispatchersGenerated || (mVU->regs != vuRegsPtr))
+	{
+		// Setup Entrance/Exit Points
+		// These must be rebuilt whenever the vuRegsPtr has changed.
+
+		dispatchersGenerated = true;
+		mVU->regs = vuRegsPtr;
+
+		x86SetPtr(mVU->dispCache);
+		mVUdispatcherA(mVU);
+		mVUdispatcherB(mVU);
+		mVUemitSearch();
+	}
 
 	// Clear All Program Data
 	//memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -146,7 +158,7 @@ __fi void mVUreset(mV) {
 }
 
 // Free Allocated Resources
-__fi void mVUclose(mV) {
+static __fi void mVUclose(mV) {
 
 	if (mVU->dispCache) { HostSys::Munmap(mVU->dispCache, mVUdispCacheSize); mVU->dispCache = NULL; }
 	if (mVU->cache)		{ HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
@@ -160,11 +172,9 @@ __fi void mVUclose(mV) {
 		}
 		safe_delete(mVU->prog.prog[i]);
 	}
-
-	safe_delete(mVU->regAlloc);
 }
 
-void mVUresizeCache(mV, u32 size) {
+static void mVUresizeCache(mV, u32 size) {
 
 	if (size >= (u32)mVUcacheMaxSize) {
 		if (mVU->cacheSize==mVUcacheMaxSize) {
@@ -194,7 +204,7 @@ void mVUresizeCache(mV, u32 size) {
 }
 
 // Clears Block Data in specified range
-__fi void mVUclear(mV, u32 addr, u32 size) {
+static __fi void mVUclear(mV, u32 addr, u32 size) {
 	if (!mVU->prog.cleared) {
 		memzero(mVU->prog.lpState); // Clear pipeline state
 		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
@@ -210,7 +220,7 @@ __fi void mVUclear(mV, u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
-__fi void mVUvsyncUpdate(mV) {
+static __fi void mVUvsyncUpdate(mV) {
 	//mVU->prog.curFrame++;
 }
 
@@ -324,14 +334,14 @@ void recMicroVU0::Allocate() {
 	if(!m_AllocCount) {
 		m_AllocCount++;
 		if (AtomicExchange(mvu0_allocated, 1) == 0)
-			mVUinit(&VU0, 0);
+			mVUinit(0);
 	}
 }
 void recMicroVU1::Allocate() {
 	if(!m_AllocCount) {
 		m_AllocCount++;
 		if (AtomicExchange(mvu1_allocated, 1) == 0)
-			mVUinit(&VU1, 1);
+			mVUinit(1);
 	}
 }
 
@@ -352,11 +362,11 @@ void recMicroVU1::Shutdown() throw() {
 
 void recMicroVU0::Reset() {
 	if(!pxAssertDev(m_AllocCount, "MicroVU0 CPU Provider has not been allocated prior to reset!")) return;
-	mVUreset(&microVU0);
+	mVUreset(&microVU0, &VU0);
 }
 void recMicroVU1::Reset() {
 	if(!pxAssertDev(m_AllocCount, "MicroVU1 CPU Provider has not been allocated prior to reset!")) return;
-	mVUreset(&microVU1);
+	mVUreset(&microVU1, &VU1);
 }
 
 void recMicroVU0::Execute(u32 cycles) {

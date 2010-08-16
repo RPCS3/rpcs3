@@ -36,7 +36,7 @@ void setupMacroOp(int mode, const char* opName) {
 	microVU0.code = cpuRegs.code;
 	memset(&microVU0.prog.IRinfo.info[0], 0, sizeof(microVU0.prog.IRinfo.info[0]));
 	iFlushCall(FLUSH_EVERYTHING);
-	microVU0.regAlloc->reset();
+	microVU0.regAlloc->reset(microVU0.regs);
 	if (mode & 0x01) { // Q-Reg will be Read
 		xMOVSSZX(xmmPQ, ptr32[&microVU0.regs->VI[REG_Q].UL]);
 	}

@@ -172,6 +172,7 @@ struct microVU {
 	u32 vuMemSize;		// VU Main  Memory Size (in bytes)
 	u32 microMemSize;	// VU Micro Memory Size (in bytes)
 	u32 progSize;		// VU Micro Memory Size (in u32's)
+	u32 progMemMask;	// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
 	microProgManager prog;		// Micro Program Data
@@ -204,12 +205,12 @@ extern __aligned16 microVU microVU1;
 int mVUdebugNow = 0;
 
 // Main Functions
-extern void  mVUinit(VURegs*, int);
-extern void  mVUreset(mV);
-extern void  mVUclose(mV);
-extern void  mVUclear(mV, u32, u32);
-extern void  mVUresizeCache(mV, u32);
-extern void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+static void  mVUinit(int);
+static void  mVUreset(mV, VURegs* vuRegsPtr = NULL);
+static void  mVUclose(mV);
+static void  mVUclear(mV, u32, u32);
+static void  mVUresizeCache(mV, u32);
+static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 _mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 
 // Prototypes for Linux

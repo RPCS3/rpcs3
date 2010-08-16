@@ -15,8 +15,7 @@
 
 #pragma once
 
-extern BaseVUmicroCPU* getVUprovider(int whichProvider, int vuIndex);
-SysCoreAllocations& GetSysCoreAlloc();
+SysCpuProviderPack& GetCpuProviders();
 
 void runSVU1(u32 cycles) {
 	do { // while loop needed since not always will return finished
@@ -24,23 +23,23 @@ void runSVU1(u32 cycles) {
 	} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
 }
 void runMVU1(u32 cycles) {
-	GetSysCoreAlloc().getVUprovider(2, 1)->Execute(cycles);
+	GetCpuProviders().getVUprovider(2, 1)->Execute(cycles);
 }
 void clearSVU1(u32 Addr, u32 Size) {
 	SuperVUClear(Addr, Size, 1);
 }
 void clearMVU1(u32 Addr, u32 Size) {
-	GetSysCoreAlloc().getVUprovider(2, 1)->Clear(Addr, Size);
+	GetCpuProviders().getVUprovider(2, 1)->Clear(Addr, Size);
 }
 void recSuperVU1::Clear(u32 Addr, u32 Size) {
 	clearSVU1(Addr, Size);
 	clearMVU1(Addr, Size);
 }
 void resetSVU1() {
-	GetSysCoreAlloc().getVUprovider(1, 1)->Reset();
+	GetCpuProviders().getVUprovider(1, 1)->Reset();
 }
 void resetMVU1() {
-	GetSysCoreAlloc().getVUprovider(2, 1)->Reset();
+	GetCpuProviders().getVUprovider(2, 1)->Reset();
 }
 
 

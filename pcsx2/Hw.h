@@ -20,11 +20,11 @@
 //////////////////////////////////////////////////////////////////////////
 // Hardware FIFOs (128 bit access only!)
 //
-// VIF0   -- 0x10004000 -- PS2MEM_HW[0x4000]
-// VIF1   -- 0x10005000 -- PS2MEM_HW[0x5000]
-// GIF    -- 0x10006000 -- PS2MEM_HW[0x6000]
-// IPUout -- 0x10007000 -- PS2MEM_HW[0x7000]
-// IPUin  -- 0x10007010 -- PS2MEM_HW[0x7010]
+// VIF0   -- 0x10004000 -- eeMem->HW[0x4000]
+// VIF1   -- 0x10005000 -- eeMem->HW[0x5000]
+// GIF    -- 0x10006000 -- eeMem->HW[0x6000]
+// IPUout -- 0x10007000 -- eeMem->HW[0x7000]
+// IPUin  -- 0x10007010 -- eeMem->HW[0x7010]
 
 void __fastcall ReadFIFO_page_4(u32 mem, mem128_t *out);
 void __fastcall ReadFIFO_page_5(u32 mem, mem128_t *out);

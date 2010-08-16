@@ -144,7 +144,7 @@ static void loadBiosRom( const wxChar *ext, u8 *dest, s64 maxSize )
 //
 void LoadBIOS()
 {
-	pxAssertDev( PS2MEM_ROM != NULL, "PS2 system memory has not been initialized yet." );
+	pxAssertDev( eeMem->ROM != NULL, "PS2 system memory has not been initialized yet." );
 
 	wxString Bios( g_Conf->FullpathToBios() );
 	if( !g_Conf->BaseFilenames.Bios.IsOk() || g_Conf->BaseFilenames.Bios.IsDir() )
@@ -159,7 +159,7 @@ void LoadBIOS()
 	}
 
 	wxFile fp( Bios );
-	fp.Read( PS2MEM_ROM, min( (s64)Ps2MemSize::Rom, filesize ) );
+	fp.Read( eeMem->ROM, min( (s64)Ps2MemSize::Rom, filesize ) );
 
 	BiosVersion = GetBiosVersion();
 	if( BiosVersion == -1 )
@@ -173,9 +173,9 @@ void LoadBIOS()
 
 	//injectIRX("host.irx");	//not fully tested; still buggy
 
-	loadBiosRom( L"rom1", PS2MEM_ROM1, Ps2MemSize::Rom1 );
-	loadBiosRom( L"rom2", PS2MEM_ROM2, Ps2MemSize::Rom2 );
-	loadBiosRom( L"erom", PS2MEM_EROM, Ps2MemSize::ERom );
+	loadBiosRom( L"rom1", eeMem->ROM1, Ps2MemSize::Rom1 );
+	loadBiosRom( L"rom2", eeMem->ROM2, Ps2MemSize::Rom2 );
+	loadBiosRom( L"erom", eeMem->EROM, Ps2MemSize::ERom );
 }
 
 bool IsBIOS(const wxString& filename, wxString& description)

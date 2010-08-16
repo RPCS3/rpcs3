@@ -36,3 +36,24 @@ typedef u16 mem16_t;
 typedef u32 mem32_t;
 typedef u64 mem64_t;
 typedef u128 mem128_t;
+
+struct EEVM_MemoryAllocMess
+{
+	u8 Scratch[Ps2MemSize::Scratch];		// Scratchpad!
+	u8 Main[Ps2MemSize::Base];				// Main memory (hard-wired to 32MB)
+	u8 HW[Ps2MemSize::Hardware];			// Hardware registers
+	u8 ROM[Ps2MemSize::Rom];				// Boot rom (4MB)
+	u8 ROM1[Ps2MemSize::Rom1];				// DVD player
+	u8 ROM2[Ps2MemSize::Rom2];				// Chinese extensions (?)
+	u8 EROM[Ps2MemSize::ERom];				// DVD player extensions (?)
+
+	// Two 1 megabyte (max DMA) buffers for reading and writing to high memory (>32MB).
+	// Such accesses are not documented as causing bus errors but as the memory does
+	// not exist, reads should continue to return 0 and writes should be discarded.
+	// Probably.
+
+	u8 ZeroRead[_1mb];
+	u8 ZeroWrite[_1mb];
+};
+
+extern EEVM_MemoryAllocMess* eeMem;

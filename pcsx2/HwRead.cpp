@@ -270,7 +270,7 @@ mem32_t __fastcall hwRead32_page_00(u32 mem)
 		case 0x830: return (u16)counters[1].hold;
 	}
 
-	return *((u32*)&PS2MEM_HW[mem]);
+	return *((u32*)&eeMem->HW[mem]);
 }
 
 // Reads hardware registers for page 1 (counters 2 and 3)
@@ -288,7 +288,7 @@ mem32_t __fastcall hwRead32_page_01(u32 mem)
 		case 0x1820: return (u16)counters[3].target;
 	}
 
-	return *((u32*)&PS2MEM_HW[mem]);
+	return *((u32*)&eeMem->HW[mem]);
 }
 
 // Reads hardware registers for page 15 (0x0F).
@@ -309,7 +309,7 @@ static __fi mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 	if( mem == ics )		// INTC_STAT
 	{
 		if( intchack ) IntCHackCheck();
-		return *((u32*)&PS2MEM_HW[ics]);
+		return *((u32*)&eeMem->HW[ics]);
 	}
 
 	switch( mem )
@@ -355,7 +355,7 @@ static __fi mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
 			}
 			return 0;
 	}
-	return *((u32*)&PS2MEM_HW[mem]);
+	return *((u32*)&eeMem->HW[mem]);
 }
 
 mem32_t __fastcall hwRead32_page_0F(u32 mem)
@@ -435,7 +435,7 @@ mem32_t __fastcall hwRead32_generic(u32 mem)
 		jNO_DEFAULT;
 	}
 
-	return *((u32*)&PS2MEM_HW[masked_mem]);
+	return *((u32*)&eeMem->HW[masked_mem]);
 }
 
 /////////////////////////////////////////////////////////////////////////

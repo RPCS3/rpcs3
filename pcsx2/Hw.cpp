@@ -21,8 +21,6 @@
 
 using namespace R5900;
 
-u8  *psH; // hw mem
-
 const int rdram_devices = 2;	// put 8 for TOOL and 2 for PS2 and PSX
 int rdram_sdevid = 0;
 
@@ -56,8 +54,8 @@ void hwReset()
 {
 	hwInit();
 
-	memzero_ptr<Ps2MemSize::Hardware>( PS2MEM_HW );
-	//memset(PS2MEM_HW+0x2000, 0, 0x0000e000);
+	memzero_ptr<Ps2MemSize::Hardware>( eeMem->HW );
+	//memset(eeMem->HW+0x2000, 0, 0x0000e000);
 
 	psHu32(SBUS_F260) = 0x1D000060;
 

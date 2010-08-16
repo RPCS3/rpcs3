@@ -87,6 +87,12 @@ void cpuReset()
 	ElfCRC = 0;
 	DiscSerial = L"";
 	ElfEntry = -1;
+
+	// FIXME: LastELF should be reset on media changes as well as on CPU resets, in
+	// the very unlikely case that a user swaps to another media source that "looks"
+	// the same (identical ELF names) but is actually different (devs actually could
+	// run into this while testing minor binary hacked changes to ISO images, which
+	// is why I found out about this) --air
 	LastELF = L"";
 }
 

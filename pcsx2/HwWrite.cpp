@@ -750,7 +750,7 @@ void __fastcall hwWrite32_page_00( u32 mem, u32 value )
 		case 0x830: rcntWhold(1, value); return;
 	}
 
-	*((u32*)&PS2MEM_HW[mem]) = value;
+	*((u32*)&eeMem->HW[mem]) = value;
 }
 
 // Page 1 of HW memory houses registers for Counters 2 and 3
@@ -768,7 +768,7 @@ void __fastcall hwWrite32_page_01( u32 mem, u32 value )
 		case 0x1820: rcntWtarget(3, value); return;
 	}
 
-	*((u32*)&PS2MEM_HW[mem]) = value;
+	*((u32*)&eeMem->HW[mem]) = value;
 }
 
 // page 2 is the IPU register space!

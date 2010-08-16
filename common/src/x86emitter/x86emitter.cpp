@@ -289,7 +289,7 @@ void EmitSibMagic( uint regfield, const xIndirectVoid& info )
 	int displacement_size = (info.Displacement == 0) ? 0 :
 		( ( info.IsByteSizeDisp() ) ? 1 : 2 );
 
-	assert(!info.Base.IsEmpty() || !info.Index.IsEmpty() || displacement_size == 2);
+	pxAssert(!info.Base.IsEmpty() || !info.Index.IsEmpty() || displacement_size == 2);
 
 	if( !NeedsSibMagic( info ) )
 	{

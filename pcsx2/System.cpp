@@ -243,11 +243,14 @@ static wxString GetMemoryErrorVM()
 	);
 }
 
-SysCoreAllocations::SysCoreAllocations()
+// --------------------------------------------------------------------------------------
+//  SysAllocVM  (implementations)
+// --------------------------------------------------------------------------------------
+SysAllocVM::SysAllocVM()
 {
 	InstallSignalHandler();
 
-	Console.WriteLn( "Initializing PS2 virtual machine..." );
+	Console.WriteLn( "Allocating memory for the PS2 virtual machine..." );
 
 	try
 	{
@@ -277,7 +280,30 @@ SysCoreAllocations::SysCoreAllocations()
 			)
 			.SetUserMsg(GetMemoryErrorVM()); 	// translated
 	}
+}
 
+void SysAllocVM::CleanupMess() throw()
+{
+	try
+	{
+		vuMicroMemShutdown();
+		psxMemShutdown();
+		memShutdown();
+		vtlb_Core_Shutdown();
+	}
+	DESTRUCTOR_CATCHALL
+}
+
+SysAllocVM::~SysAllocVM() throw()
+{
+	CleanupMess();
+}
+
+// --------------------------------------------------------------------------------------
+//  SysCpuProviderPack  (implementations)
+// --------------------------------------------------------------------------------------
+SysCpuProviderPack::SysCpuProviderPack()
+{
 	Console.WriteLn( "Allocating memory for recompilers..." );
 
 	CpuProviders = new CpuInitializerSet();
@@ -310,18 +336,18 @@ SysCoreAllocations::SysCoreAllocations()
 		SuperVUDestroy( -1 );
 }
 
-bool SysCoreAllocations::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
-bool SysCoreAllocations::IsRecAvailable_MicroVU1() const { return CpuProviders->microVU1.IsAvailable(); }
-BaseException* SysCoreAllocations::GetException_MicroVU0() const { return CpuProviders->microVU0.ExThrown; }
-BaseException* SysCoreAllocations::GetException_MicroVU1() const { return CpuProviders->microVU1.ExThrown; }
+bool SysCpuProviderPack::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
+bool SysCpuProviderPack::IsRecAvailable_MicroVU1() const { return CpuProviders->microVU1.IsAvailable(); }
+BaseException* SysCpuProviderPack::GetException_MicroVU0() const { return CpuProviders->microVU0.ExThrown; }
+BaseException* SysCpuProviderPack::GetException_MicroVU1() const { return CpuProviders->microVU1.ExThrown; }
 
-bool SysCoreAllocations::IsRecAvailable_SuperVU0() const { return CpuProviders->superVU0.IsAvailable(); }
-bool SysCoreAllocations::IsRecAvailable_SuperVU1() const { return CpuProviders->superVU1.IsAvailable(); }
-BaseException* SysCoreAllocations::GetException_SuperVU0() const { return CpuProviders->superVU0.ExThrown; }
-BaseException* SysCoreAllocations::GetException_SuperVU1() const { return CpuProviders->superVU1.ExThrown; }
+bool SysCpuProviderPack::IsRecAvailable_SuperVU0() const { return CpuProviders->superVU0.IsAvailable(); }
+bool SysCpuProviderPack::IsRecAvailable_SuperVU1() const { return CpuProviders->superVU1.IsAvailable(); }
+BaseException* SysCpuProviderPack::GetException_SuperVU0() const { return CpuProviders->superVU0.ExThrown; }
+BaseException* SysCpuProviderPack::GetException_SuperVU1() const { return CpuProviders->superVU1.ExThrown; }
 
 
-void SysCoreAllocations::CleanupMess() throw()
+void SysCpuProviderPack::CleanupMess() throw()
 {
 	try
 	{
@@ -333,21 +359,16 @@ void SysCoreAllocations::CleanupMess() throw()
 
 		psxRec.Shutdown();
 		recCpu.Shutdown();
-
-		vuMicroMemShutdown();
-		psxMemShutdown();
-		memShutdown();
-		vtlb_Core_Shutdown();
 	}
 	DESTRUCTOR_CATCHALL
 }
 
-SysCoreAllocations::~SysCoreAllocations() throw()
+SysCpuProviderPack::~SysCpuProviderPack() throw()
 {
 	CleanupMess();
 }
 
-bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
+bool SysCpuProviderPack::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
 {
 	return	(recOpts.EnableEE && !IsRecAvailable_EE()) ||
 			(recOpts.EnableIOP && !IsRecAvailable_IOP()) ||
@@ -361,7 +382,7 @@ bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& 
 BaseVUmicroCPU* CpuVU0 = NULL;
 BaseVUmicroCPU* CpuVU1 = NULL;
 
-void SysCoreAllocations::SelectCpuProviders() const
+void SysCpuProviderPack::ApplyConfig() const
 {
 	Cpu		= CHECK_EEREC	? &recCpu : &intCpu;
 	psxCpu	= CHECK_IOPREC	? &psxRec : &psxInt;
@@ -377,7 +398,7 @@ void SysCoreAllocations::SelectCpuProviders() const
 }
 
 // This is a semi-hacky function for convenience
-BaseVUmicroCPU* SysCoreAllocations::getVUprovider(int whichProvider, int vuIndex) const {
+BaseVUmicroCPU* SysCpuProviderPack::getVUprovider(int whichProvider, int vuIndex) const {
 	switch (whichProvider) {
 		case 0: return vuIndex ? (BaseVUmicroCPU*)CpuProviders->interpVU1 : (BaseVUmicroCPU*)CpuProviders->interpVU0;
 		case 1: return vuIndex ? (BaseVUmicroCPU*)CpuProviders->superVU1  : (BaseVUmicroCPU*)CpuProviders->superVU0;
@@ -393,7 +414,7 @@ BaseVUmicroCPU* SysCoreAllocations::getVUprovider(int whichProvider, int vuIndex
 // Use this method to reset the recs when important global pointers like the MTGS are re-assigned.
 void SysClearExecutionCache()
 {
-	GetSysCoreAlloc().SelectCpuProviders();
+	GetCpuProviders().ApplyConfig();
 
 	// SuperVUreset will do nothing is none of the recs are initialized.
 	// But it's needed if one or the other is initialized.

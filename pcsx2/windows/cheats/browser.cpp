@@ -1082,7 +1082,7 @@ BOOL CALLBACK BrowserProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 				case IDC_SKIPMPEG:
 				{
-					u8 *p = PS2MEM_BASE;
+					u8 *p = eeMem->Main;
 					u8 *d = p + Ps2MemSize::Base;
 					d -= 16;
 					u32 *u;
@@ -1093,7 +1093,7 @@ BOOL CALLBACK BrowserProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 						//if( (u[0] == 0x4000838c) && (u[1] == 0x0800e003) && (u[2] == 0x0000628c) )
 						if( (u[0] == 0x8c830040) && (u[1] == 0x03e00008) && (u[2] == 0x8c620000) )
 						{
-							AddPatch(1,1, (int)(p+8-PS2MEM_BASE), 3, 0x24020001);
+							AddPatch(1,1, (int)(p+8-eeMem->Main), 3, 0x24020001);
 							MessageBox(hWnd, "Patch Found.", "Patch", 0);
 							RefreshListBox(hWnd);
 							return FALSE;

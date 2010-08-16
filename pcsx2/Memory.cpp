@@ -77,23 +77,6 @@ u16 ba0R16(u32 mem)
 	return 0;
 }
 
-
-u8  *psM = NULL; //32mb Main Ram
-u8  *psR = NULL; //4mb rom area
-u8  *psR1 = NULL; //256kb rom1 area (actually 196kb, but can't mask this)
-u8  *psR2 = NULL; // 0x00080000
-u8  *psER = NULL; // 0x001C0000
-u8  *psS = NULL; //0.015 mb, scratch pad
-
-// Two 1 megabyte (max DMA) buffers for reading and writing to high memory (>32MB).
-// Such accesses are not documented as causing bus errors but as the memory does
-// not exist, reads should continue to return 0 and writes should be discarded.
-// Probably.
-static __aligned16 u8 highmem[0x200000];
-
-u8  *psMHR = &highmem[0];
-u8  *psMHW = &highmem[0x100000];
-
 #define CHECK_MEM(mem) //MyMemCheck(mem)
 
 void MyMemCheck(u32 mem)
@@ -155,15 +138,15 @@ void memMapVUmicro()
 void memMapPhy()
 {
 	// Main memory
-	vtlb_MapBlock(psM,	0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
+	vtlb_MapBlock(eeMem->Main,	0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
 	// High memory, uninstalled on the configuration we emulate
 	vtlb_MapHandler(null_handler, Ps2MemSize::Base, 0x10000000 - Ps2MemSize::Base);
 
 	// Various ROMs (all read-only)
-	vtlb_MapBlock(psR,	0x1fc00000,Ps2MemSize::Rom);
-	vtlb_MapBlock(psR1,	0x1e000000,Ps2MemSize::Rom1);
-	vtlb_MapBlock(psR2,	0x1e400000,Ps2MemSize::Rom2);
-	vtlb_MapBlock(psER,	0x1e040000,Ps2MemSize::ERom);
+	vtlb_MapBlock(eeMem->ROM,	0x1fc00000,Ps2MemSize::Rom);
+	vtlb_MapBlock(eeMem->ROM1,	0x1e000000,Ps2MemSize::Rom1);
+	vtlb_MapBlock(eeMem->ROM2,	0x1e400000,Ps2MemSize::Rom2);
+	vtlb_MapBlock(eeMem->EROM,	0x1e040000,Ps2MemSize::ERom);
 
 	// IOP memory
 	// (used by the EE Bios Kernel during initial hardware initialization, Apps/Games
@@ -621,28 +604,15 @@ protected:
 
 mmap_PageFaultHandler mmap_faultHandler;
 
-static const uint m_allMemSize =
-		Ps2MemSize::Rom + Ps2MemSize::Rom1 + Ps2MemSize::Rom2 + Ps2MemSize::ERom +
-		Ps2MemSize::Base + Ps2MemSize::Hardware + Ps2MemSize::Scratch;
-
-static u8* m_psAllMem = NULL;
+EEVM_MemoryAllocMess* eeMem = NULL;
 
 void memAlloc()
 {
-	if( m_psAllMem == NULL )
-		m_psAllMem = vtlb_malloc( m_allMemSize, 4096 );
+	if( eeMem == NULL )
+		eeMem = (EEVM_MemoryAllocMess*)vtlb_malloc( sizeof(*eeMem), 4096 );
 
-	if( m_psAllMem == NULL)
+	if( eeMem == NULL)
 		throw Exception::OutOfMemory( L"memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );
-
-	u8* curpos = m_psAllMem;
-	psM = curpos; curpos += Ps2MemSize::Base;
-	psR = curpos; curpos += Ps2MemSize::Rom;
-	psR1 = curpos; curpos += Ps2MemSize::Rom1;
-	psR2 = curpos; curpos += Ps2MemSize::Rom2;
-	psER = curpos; curpos += Ps2MemSize::ERom;
-	psH = curpos; curpos += Ps2MemSize::Hardware;
-	psS = curpos; //curpos += Ps2MemSize::Scratch;
 
 	Source_PageFault.Add( mmap_faultHandler );
 }
@@ -651,9 +621,8 @@ void memShutdown()
 {
 	Source_PageFault.Remove( mmap_faultHandler );
 
-	vtlb_free( m_psAllMem, m_allMemSize );
-	m_psAllMem = NULL;
-	psM = psR = psR1 = psR2 = psER = psS = psH = NULL;
+	vtlb_free( eeMem, sizeof(*eeMem) );
+	eeMem = NULL;
 	vtlb_Term();
 }
 
@@ -681,7 +650,7 @@ void memReset()
 	// rest of the emu is not really set up to support a "soft" reset of that sort
 	// we opt for the hard/safe version.
 
-	memzero_ptr<m_allMemSize>( m_psAllMem );
+	memzero( *eeMem );
 #ifdef ENABLECACHE
 	memset(pCache,0,sizeof(_cacheS)*64);
 #endif
@@ -890,7 +859,7 @@ int mmap_GetRamPageInfo( u32 paddr )
 	paddr &= ~0xfff;
 
 	uptr ptr = (uptr)PSM( paddr );
-	uptr rampage = ptr - (uptr)psM;
+	uptr rampage = ptr - (uptr)eeMem->Main;
 
 	if (rampage >= Ps2MemSize::Base)
 		return -1; //not in ram, no tracking done ...
@@ -905,7 +874,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	paddr &= ~0xfff;
 
 	uptr ptr = (uptr)PSM( paddr );
-	int rampage = (ptr - (uptr)psM) >> 12;
+	int rampage = (ptr - (uptr)eeMem->Main) >> 12;
 
 	// Important: reassign paddr here, since TLB changes could alter the paddr->psM mapping
 	// (and clear blocks accordingly), but don't necessarily clear the protection status.
@@ -920,7 +889,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	);
 
 	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
-	HostSys::MemProtect( &psM[rampage<<12], __pagesize, Protect_ReadOnly );
+	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, Protect_ReadOnly );
 }
 
 // offset - offset of address relative to psM.
@@ -935,7 +904,7 @@ static __fi void mmap_ClearCpuBlock( uint offset )
 	pxAssertMsg( m_PageProtectInfo[rampage].Mode != ProtMode_Manual,
 		"Attempted to clear a block that is already under manual protection." );
 
-	HostSys::MemProtect( &psM[rampage<<12], __pagesize, Protect_ReadWrite );
+	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, Protect_ReadWrite );
 	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }
@@ -943,7 +912,7 @@ static __fi void mmap_ClearCpuBlock( uint offset )
 void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& handled )
 {
 	// get bad virtual address
-	uptr offset = info.addr - (uptr)psM;
+	uptr offset = info.addr - (uptr)eeMem->Main;
 	if( offset >= Ps2MemSize::Base ) return;
 
 	mmap_ClearCpuBlock( offset );
@@ -958,5 +927,5 @@ void mmap_ResetBlockTracking()
 {
 	//DbgCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
 	memzero( m_PageProtectInfo );
-	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
+	HostSys::MemProtect( eeMem->Main, Ps2MemSize::Base, Protect_ReadWrite );
 }

@@ -345,9 +345,7 @@ static __fi void _reloadElfInfo(wxString elfpath)
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
 
-	if (elfpath == LastELF)
-		return;
-
+	if (elfpath == LastELF) return;
 	LastELF = elfpath;
 
 	wxString fname = elfpath.AfterLast('\\');
@@ -361,10 +359,8 @@ static __fi void _reloadElfInfo(wxString elfpath)
 	elfptr = loadElf(elfpath);
 
 	ElfCRC = elfptr->getCRC();
-	Console.WriteLn("ELF (%s) CRC = %8.8X", elfpath.ToUTF8().data(), ElfCRC);
-
 	ElfEntry = elfptr->header.e_entry;
-	Console.WriteLn("Entry point = 0x%08x", ElfEntry);
+	Console.WriteLn(L"ELF (%s) CRC=0x%08X, EntryPoint=0x%08X", elfpath.c_str(), ElfCRC, ElfEntry);
 
 	// Note: Do not load game database info here.  This code is generic and called from
 	// BIOS key encryption as well as eeloadReplaceOSDSYS.  The first is actually still executing
@@ -424,31 +420,34 @@ static __fi s32 StrToS32(const wxString& str, int base = 10)
     return l;
 }
 
-void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
+void cdvdReadKey(u8, u16, u32 arg2, u8* key)
 {
-	s32 numbers, letters;
+	s32 numbers=0, letters=0;
 	u32 key_0_3;
 	u8 key_4, key_14;
 
     cdvdReloadElfInfo();
 
-	// convert the number characters to a real 32 bit number
-	numbers = StrToS32(DiscSerial(5,5));
+	// clear key values
+	memzero_ptr<16>(key);
 
-	// combine the lower 7 bits of each char
-	// to make the 4 letters fit into a single u32
-	letters =	(s32)((DiscSerial[3]&0x7F)<< 0) |
-				(s32)((DiscSerial[2]&0x7F)<< 7) |
-				(s32)((DiscSerial[1]&0x7F)<<14) |
-				(s32)((DiscSerial[0]&0x7F)<<21);
+	if (!DiscSerial.IsEmpty())
+	{
+		// convert the number characters to a real 32 bit number
+		numbers = StrToS32(DiscSerial(5,5));
+
+		// combine the lower 7 bits of each char
+		// to make the 4 letters fit into a single u32
+		letters =	(s32)((DiscSerial[3]&0x7F)<< 0) |
+					(s32)((DiscSerial[2]&0x7F)<< 7) |
+					(s32)((DiscSerial[1]&0x7F)<<14) |
+					(s32)((DiscSerial[0]&0x7F)<<21);
+	}
 
 	// calculate magic numbers
 	key_0_3 = ((numbers & 0x1FC00) >> 10) | ((0x01FFFFFF & letters) <<  7);	// numbers = 7F  letters = FFFFFF80
 	key_4   = ((numbers & 0x0001F) <<  3) | ((0x0E000000 & letters) >> 25);	// numbers = F8  letters = 07
 	key_14  = ((numbers & 0x003E0) >>  2) | 0x04;							// numbers = F8  extra   = 04  unused = 03
-
-	// clear key values
-	memzero_ptr<16>(key);
 
 	// store key values
 	key[ 0] = (key_0_3&0x000000FF)>> 0;
@@ -456,7 +455,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
 	key[ 2] = (key_0_3&0x00FF0000)>>16;
 	key[ 3] = (key_0_3&0xFF000000)>>24;
 	key[ 4] = key_4;
-
+	
     switch (arg2)
     {
         case 75:
@@ -483,7 +482,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key)
             break;
     }
 
-	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X",
+	DevCon.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X",
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 }
 

@@ -198,11 +198,10 @@ private:
 	}
 
 public:
-	microRegAlloc(VURegs* vuRegsPtr) {
+	microRegAlloc() { }
+
+	void reset(VURegs* vuRegsPtr) {
 		vuRegs = vuRegsPtr;
-		reset();
-	}
-	void reset() {
 		for (int i = 0; i < xmmTotal; i++) {
 			clearReg(i);
 		}

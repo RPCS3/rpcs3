@@ -474,7 +474,8 @@ public:
 	// in parallel to the main message pump, to allow the main pump to run without fear of
 	// blocked threads stalling the GUI.
 	ExecutorThread					SysExecutorThread;
-	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
+	ScopedPtr<SysCpuProviderPack>	m_CpuProviders;
+	ScopedPtr<SysAllocVM>			m_VmAllocs;
 
 protected:
 	wxWindowID			m_id_MainFrame;
@@ -524,6 +525,8 @@ public:
 
 	void StartPendingSave();
 	void ClearPendingSave();
+	
+	void AllocateVM();
 
 	// --------------------------------------------------------------------------
 	//  App-wide Resources

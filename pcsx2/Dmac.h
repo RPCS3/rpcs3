@@ -15,8 +15,6 @@
 
 #pragma once
 
-extern u8  *psH; // hw mem
-
 // Useful enums for some of the fields.
 enum pce_values
 {
@@ -156,65 +154,23 @@ union tDMA_SADR {
 
 	void reset() { _u32 = 0; }
 	wxString desc() const { return wxsFormat(L"Sadr: 0x%x", _u32); }
-	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
-};
-
-union tDMA_MADR {
-	struct {
-		u32 ADDR : 31;	// Transfer memory address
-		u32 SPR : 1;	// Memory/SPR Address
-	};
-	u32 _u32;
-
-	tDMA_MADR(u32 val) { _u32 = val; }
-
-	void reset() { _u32 = 0; }
-	wxString desc() const { return wxsFormat(L"Madr: 0x%x", _u32); }
-	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
-};
-
-union tDMA_TADR {
-	struct {
-		u32 ADDR : 31;	// Next Tag address
-		u32 SPR : 1;	// Memory/SPR Address
-	};
-	u32 _u32;
-
-	tDMA_TADR(u32 val) { _u32 = val; }
-
-	void reset() { _u32 = 0; }
-	wxString desc() const { return wxsFormat(L"Tadr: 0x%x", _u32); }
-	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
-};
-
-// The Address Stack Register
-union tDMA_ASR {
-	struct {
-		u32 ADDR : 31;	// Tag memory address
-		u32 SPR : 1;	// Memory/SPR Address
-	};
-	u32 _u32;
-
-	tDMA_ASR(u32 val) { _u32 = val; }
-
-	void reset() { _u32 = 0; }
-	wxString desc() const { return wxsFormat(L"Asr: 0x%x", _u32); }
-	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
+	tDMA_TAG tag() const { return (tDMA_TAG)_u32; }
 };
 
 union tDMA_QWC {
 	struct {
-		u32 QWC : 16;
-		u32 _reserved2 : 16;
+		u16 QWC;
+		u16 _unused;
 	};
 	u32 _u32;
 
 	tDMA_QWC(u32 val) { _u32 = val; }
 
 	void reset() { _u32 = 0; }
-	wxString desc() const { return wxsFormat(L"QWC: 0x%x", _u32); }
-	tDMA_TAG tag() { return (tDMA_TAG)_u32; }
+	wxString desc() const { return wxsFormat(L"QWC: 0x%04x", QWC); }
+	tDMA_TAG tag() const { return (tDMA_TAG)_u32; }
 };
+
 static void setDmacStat(u32 num);
 static tDMA_TAG *dmaGetAddr(u32 addr, bool write);
 static void throwBusError(const char *s);
@@ -450,10 +406,7 @@ union tDMAC_STAT {
 		u32 _reserved3 : 1;
 	};
 	u32 _u32;
-	struct {
-		u16 _u16lo;
-		u16 _u16hi;
-	};
+	u16 _u16[2];
 
 	tDMAC_STAT(u32 val) { _u32 = val; }
 
@@ -465,7 +418,7 @@ union tDMAC_STAT {
 
 	bool TestForInterrupt() const
 	{
-		return ((_u16lo & _u16hi) != 0) || BEIS;
+		return ((_u16[0] & _u16[1]) != 0) || BEIS;
 	}
 };
 
@@ -532,19 +485,48 @@ union tDMAC_RBOR {
 	wxString desc() const { return wxsFormat(L"Rbor: 0x%x", _u32); }
 };
 
-union tDMAC_STADR {
+// --------------------------------------------------------------------------------------
+//  tDMAC_ADDR
+// --------------------------------------------------------------------------------------
+// This struct is used for several DMA address types, including some that do not have
+// effective SPR bit (the bit is ignored for all addresses that are not "allowed" to access
+// the scratchpad, including STADR, toSPR.MADR, fromSPR.MADR, etc.).
+//
+union tDMAC_ADDR
+{
 	struct {
-		u32 ADDR : 31;
-		u32 reserved1 : 1;
+		u32 ADDR : 31;	// Transfer memory address
+		u32 SPR : 1;	// Memory/SPR Address (only effective for MADR and TADR of non-SPR DMAs)
 	};
 	u32 _u32;
 
-	tDMAC_STADR(u32 val) { _u32 = val; }
+	tDMAC_ADDR() {}
+	tDMAC_ADDR(u32 val) { _u32 = val; }
 
-	void reset() { _u32 = 0; }
-	wxString desc() const { return wxsFormat(L"Stadr: 0x%x", _u32); }
+	void clear() { _u32 = 0; }
+
+	void AssignADDR(uint addr)
+	{
+		ADDR = addr;
+		if (SPR) ADDR &= (Ps2MemSize::Scratch-1);
+	}
+
+	void IncrementQWC(uint incval = 1)
+	{
+		ADDR += incval;
+		if (SPR) ADDR &= (Ps2MemSize::Scratch-1);
+	}
+
+	wxString ToString(bool sprIsValid=true) const
+	{
+		return pxsFmt((sprIsValid && SPR) ? L"0x%04X(SPR)" : L"0x%08X", ADDR);
+	}
+
+	wxCharBuffer ToUTF8(bool sprIsValid=true) const
+	{
+		return FastFormatAscii().Write((sprIsValid && SPR) ? "0x%04X(SPR)" : "0x%08X", ADDR).GetResult();
+	}
 };
-
 
 struct DMACregisters
 {
@@ -561,7 +543,8 @@ struct DMACregisters
 	u32 _padding4[3];
 	tDMAC_RBOR	rbor;
 	u32 _padding5[3];
-	tDMAC_STADR	stadr;
+	tDMAC_ADDR	stadr;
+	u32 _padding6[3];
 };
 
 // Currently guesswork.
@@ -600,12 +583,13 @@ union tINTC_MASK {
 struct INTCregisters
 {
 	tINTC_STAT  stat;
-	u32 _padding[3];
+	u32 _padding1[3];
 	tINTC_MASK  mask;
+	u32 _padding2[3];
 };
 
-#define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
-#define intcRegs ((INTCregisters*)(PS2MEM_HW+0xF000))
+#define dmacRegs ((DMACregisters*)(eeMem->HW+0xE000))
+#define intcRegs ((INTCregisters*)(eeMem->HW+0xF000))
 
 static __fi void throwBusError(const char *s)
 {
@@ -626,7 +610,7 @@ static __fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 	//For some reason Getaway references SPR Memory from itself using SPR0, oh well, let it i guess...
 	if((addr & 0x70000000) == 0x70000000)
 	{
-		return (tDMA_TAG*)&psS[addr & 0x3ff0];
+		return (tDMA_TAG*)&eeMem->Scratch[addr & 0x3ff0];
 	}
 
 	// FIXME: Why??? DMA uses physical addresses
@@ -634,11 +618,11 @@ static __fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 
 	if (addr < Ps2MemSize::Base)
 	{
-		return (tDMA_TAG*)&psM[addr];
+		return (tDMA_TAG*)&eeMem->Main[addr];
 	}
 	else if (addr < 0x10000000)
 	{
-		return (tDMA_TAG*)(write ? psMHW : psMHR);
+		return (tDMA_TAG*)(write ? eeMem->ZeroWrite : eeMem->ZeroRead);
 	}
 	else if ((addr >= 0x11004000) && (addr < 0x11010000))
 	{
@@ -656,24 +640,24 @@ static __fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 static __ri tDMA_TAG *dmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
-	if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&psS[addr & 0x3ff0];
+	if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&eeMem->Scratch[addr & 0x3ff0];
 
 	// FIXME: Why??? DMA uses physical addresses
 	addr &= 0x1ffffff0;
 
 	if (addr < Ps2MemSize::Base)
 	{
-		return (tDMA_TAG*)&psM[addr];
+		return (tDMA_TAG*)&eeMem->Main[addr];
 	}
 	else if (addr < 0x10000000)
 	{
-		return (tDMA_TAG*)(write ? psMHW : psMHR);
+		return (tDMA_TAG*)(write ? eeMem->ZeroWrite : eeMem->ZeroRead);
 	}
 	else if (addr < 0x10004000)
 	{
 		// Secret scratchpad address for DMA = end of maximum main memory?
 		//Console.Warning("Writing to the scratchpad without the SPR flag set!");
-		return (tDMA_TAG*)&psS[addr & 0x3ff0];
+		return (tDMA_TAG*)&eeMem->Scratch[addr & 0x3ff0];
 	}
 	else
 	{

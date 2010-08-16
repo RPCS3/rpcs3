@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "MemoryTypes.h"
+
 // Specialized function pointers for each read type
 typedef  mem8_t __fastcall vtlbMemR8FP(u32 addr);
 typedef  mem16_t __fastcall vtlbMemR16FP(u32 addr);
@@ -65,16 +67,14 @@ extern void vtlb_VMapUnmap(u32 vaddr,u32 sz);
 
 //Memory functions
 
-extern mem8_t __fastcall vtlb_memRead8(u32 mem);
-extern mem16_t __fastcall vtlb_memRead16(u32 mem);
-extern u32 __fastcall vtlb_memRead32(u32 mem);
+template< typename DataType >
+extern DataType __fastcall vtlb_memRead(u32 mem);
 extern void __fastcall vtlb_memRead64(u32 mem, mem64_t *out);
 extern void __fastcall vtlb_memRead128(u32 mem, mem128_t *out);
 extern void __fastcall vtlb_memRead128(u32 mem, u64 (&out)[2]);
 
-extern void __fastcall vtlb_memWrite8 (u32 mem, mem8_t  value);
-extern void __fastcall vtlb_memWrite16(u32 mem, mem16_t value);
-extern void __fastcall vtlb_memWrite32(u32 mem, u32 value);
+template< typename DataType >
+extern void __fastcall vtlb_memWrite(u32 mem, DataType value);
 extern void __fastcall vtlb_memWrite64(u32 mem, const mem64_t* value);
 extern void __fastcall vtlb_memWrite128(u32 mem, const mem128_t* value);
 extern void __fastcall vtlb_memWrite128(u32 mem, const u64 (&value)[2]);
@@ -89,7 +89,9 @@ extern void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const );
 
 namespace vtlb_private
 {
-	static const uint VTLB_ALLOC_SIZE = 0x2900000;	//this is a bit more than required
+	// Allocate enough memory for both EE and IOP memory space (IOP is roughly 2.5mb,
+	// so we alloc 4mb for now -- a little more than is needed).
+	static const uint VTLB_ALLOC_SIZE = sizeof(*eeMem) + (_1mb*4);
 
 	static const uint VTLB_PAGE_BITS = 12;
 	static const uint VTLB_PAGE_MASK = 4095;

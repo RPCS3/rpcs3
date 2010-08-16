@@ -393,8 +393,8 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 
 	// First Pass
 	iPC = startPC / 4;
-	mVUsetupRange(mVU, startPC, 1);	// Setup Program Bounds/Range
-	mVU->regAlloc->reset();			// Reset regAlloc
+	mVUsetupRange(mVU, startPC, 1);		// Setup Program Bounds/Range
+	mVU->regAlloc->reset(mVU->regs);	// Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
@@ -466,14 +466,14 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 }
 
 // Returns the entry point of the block (compiles it if not found)
-__fi void* mVUentryGet(microVU* mVU, microBlockManager* block, u32 startPC, uptr pState) {
+static __fi void* mVUentryGet(microVU* mVU, microBlockManager* block, u32 startPC, uptr pState) {
 	microBlock* pBlock = block->search((microRegInfo*)pState);
 	if (pBlock) return pBlock->x86ptrStart;
 	else	    return mVUcompile(mVU, startPC, pState);
 }
 
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
-__fi void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
+static __fi void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	if (startPC > mVU->microMemSize-8) { DevCon.Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
 	startPC    &= mVU->microMemSize-8;

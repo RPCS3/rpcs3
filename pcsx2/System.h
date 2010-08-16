@@ -25,9 +25,22 @@ typedef SafeArray<u8> VmStateBuffer;
 class BaseVUmicroCPU;
 
 // --------------------------------------------------------------------------------------
-//  SysCoreAllocations class
+//  SysAllocVM
 // --------------------------------------------------------------------------------------
-class SysCoreAllocations
+class SysAllocVM
+{
+public:
+	SysAllocVM();
+	virtual ~SysAllocVM() throw();
+
+protected:
+	void CleanupMess() throw();
+};
+
+// --------------------------------------------------------------------------------------
+//  SysCpuProviderPack
+// --------------------------------------------------------------------------------------
+class SysCpuProviderPack
 {
 protected:
 	ScopedPtr<CpuInitializerSet> CpuProviders;
@@ -36,10 +49,10 @@ protected:
 	ScopedPtr<BaseException> m_RecExceptionIOP;
 
 public:
-	SysCoreAllocations();
-	virtual ~SysCoreAllocations() throw();
+	SysCpuProviderPack();
+	virtual ~SysCpuProviderPack() throw();
 
-	void SelectCpuProviders() const;
+	void ApplyConfig() const;
 	BaseVUmicroCPU* getVUprovider(int whichProvider, int vuIndex) const;
 
 	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
@@ -64,9 +77,9 @@ protected:
 	void CleanupMess() throw();
 };
 
-// GetSysCoreAlloc - this function is not implemented by PCSX2 core -- it must be
+// GetCpuProviders - this function is not implemented by PCSX2 core -- it must be
 // implemented by the provisioning interface.
-extern SysCoreAllocations& GetSysCoreAlloc();
+extern SysCpuProviderPack& GetCpuProviders();
 
 extern void SysLogMachineCaps();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!

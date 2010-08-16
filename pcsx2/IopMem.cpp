@@ -87,12 +87,12 @@ void psxMemReset()
 	// Read-only memory areas, so don't map WLUT for these...
 	for (int i=0; i<0x0040; i++)
 	{
-		psxMemWLUT[i + 0x2000 + 0x1fc0] = (uptr)&PS2MEM_ROM[i << 16];
+		psxMemWLUT[i + 0x2000 + 0x1fc0] = (uptr)&eeMem->ROM[i << 16];
 	}
 
 	for (int i=0; i<0x0004; i++)
 	{
-		psxMemWLUT[i + 0x2000 + 0x1e00] = (uptr)&PS2MEM_ROM1[i << 16];
+		psxMemWLUT[i + 0x2000 + 0x1e00] = (uptr)&eeMem->ROM1[i << 16];
 	}
 
 	// sif!! (which is read only? (air))
@@ -468,7 +468,7 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 
 				// wtf?  why were we writing to the EE's sif space?  Commenting this out doesn't
 				// break any of my games, and should be more correct, but I guess we'll see.  --air
-				//*(u32*)(PS2MEM_HW+0xf200+(mem&0xf0)) = value;
+				//*(u32*)(eeMem->HW+0xf200+(mem&0xf0)) = value;
 				return;
 			}
 			else if (t == 0x1000)

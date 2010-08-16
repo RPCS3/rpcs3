@@ -37,7 +37,7 @@ uptr args_ptr;		//a big value; in fact, it is an address
 
 static bool isEmpty(int addr)
 {
-	return ((PS2MEM_BASE[addr] == 0) || (PS2MEM_BASE[addr] == 32));
+	return ((eeMem->Main[addr] == 0) || (eeMem->Main[addr] == 32));
 }
 
 //in a0 is passed the address of the command line args,
@@ -70,8 +70,8 @@ static uint parseCommandLine( const wxString& filename )
 
 		// Copy the parameters into the section of memory at args_ptr,
 		// then zero out anything past the end of args till 256 chars is reached.
-		memcpy( &PS2MEM_BASE[ args_ptr ], args, 256 );
-		memset( &PS2MEM_BASE[ args_ptr + strlen( args ) ], 0, 256 - strlen( args ) );
+		memcpy( &eeMem->Main[ args_ptr ], args, 256 );
+		memset( &eeMem->Main[ args_ptr + strlen( args ) ], 0, 256 - strlen( args ) );
 		args_end = args_ptr + strlen( args );
 
 		// Set p to just the filename, no path.
@@ -90,7 +90,7 @@ static uint parseCommandLine( const wxString& filename )
 		args_ptr -= strlen( p ) + 1;
 
 		//fill param 0; i.e. name of the program
-		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
+		strcpy( (char*)&eeMem->Main[ args_ptr ], p );
 
 		// Start from the end of where we wrote to, not including all the zero'd out area.
 		for ( i = args_end - args_ptr + 1, argc = 0; i > 0; i-- )
@@ -98,7 +98,7 @@ static uint parseCommandLine( const wxString& filename )
 			while (i && isEmpty(args_ptr + i ))  { i--; }
 
 			// If the last char is a space, set it to 0.
-			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
+			if ( eeMem->Main[ args_ptr + i + 1 ] == ' ') eeMem->Main[ args_ptr + i + 1 ] = 0;
 
 			while (i && !isEmpty(args_ptr + i )) { i--; }
 
@@ -111,7 +111,7 @@ static uint parseCommandLine( const wxString& filename )
 				ret = args_ptr - 4 - 4 - argc * 4;
 
 				if (ret < 0 ) return 0;
-				((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i;
+				((u32*)eeMem->Main)[ args_ptr / 4 - argc ] = args_ptr + i;
 			}
 			else
 			{
@@ -122,14 +122,14 @@ static uint parseCommandLine( const wxString& filename )
 					ret = args_ptr - 4 - 4 - argc * 4;
 
 					if (ret < 0 ) return 0;
-					((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
+					((u32*)eeMem->Main)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
 				}
 			}
 		}
 
 		// Pass the number of arguments, and if we have arguments.
-		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
-		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
+		((u32*)eeMem->Main)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
+		((u32*)eeMem->Main)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
 
 		return ret;
 	}
@@ -318,7 +318,7 @@ void ElfObject::loadProgramHeaders()
 
 					// used to be paddr
 					memcpy_fast(
-						&PS2MEM_BASE[proghead[ i ].p_vaddr & 0x1ffffff],
+						&eeMem->Main[proghead[ i ].p_vaddr & 0x1ffffff],
 						data.GetPtr(proghead[ i ].p_offset), size
 					);
 
@@ -430,7 +430,6 @@ int GetPS2ElfName( wxString& name )
 
 		int size = file.getLength();
 		if( size == 0 ) return 0;
-
 
 		while( !file.eof() )
 		{

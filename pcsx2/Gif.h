@@ -277,7 +277,7 @@ struct GIFregisters
 	u32 padding9[3];
 };
 
-#define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))
+#define gifRegs ((GIFregisters*)(eeMem->HW+0x3000))
 
 extern tGSTransferStatus GSTransferStatus;
 

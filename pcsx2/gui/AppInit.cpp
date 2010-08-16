@@ -238,6 +238,12 @@ void Pcsx2App::OpenProgramLog()
 	if( m_current_focus ) m_current_focus->SetFocus();
 }
 
+void Pcsx2App::AllocateVM()
+{
+	if (m_VmAllocs) return;
+	m_VmAllocs = new SysAllocVM();
+}
+
 void Pcsx2App::AllocateCoreStuffs()
 {
 	if( AppRpc_TryInvokeAsync( &Pcsx2App::AllocateCoreStuffs ) ) return;
@@ -246,14 +252,14 @@ void Pcsx2App::AllocateCoreStuffs()
 	SysLogMachineCaps();
 	AppApplySettings();
 
-	if( !m_CoreAllocs )
+	if( !m_CpuProviders )
 	{
-		// FIXME : Some or all of SysCoreAllocations should be run from the SysExecutor thread,
+		// FIXME : Some or all of SysCpuProviderPack should be run from the SysExecutor thread,
 		// so that the thread is safely blocked from being able to start emulation.
 
-		m_CoreAllocs = new SysCoreAllocations();
+		m_CpuProviders = new SysCpuProviderPack();
 
-		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
+		if( m_CpuProviders->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
 			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
 			// the user already has all interps configured, for example, then no point in
@@ -274,43 +280,43 @@ void Pcsx2App::AllocateCoreStuffs()
 			exconf += 6;
 			exconf += scrollableTextArea	| pxExpand.Border(wxALL, 16);
 			
-			if( BaseException* ex = m_CoreAllocs->GetException_EE() )
+			if( BaseException* ex = m_CpuProviders->GetException_EE() )
 			{
 				scrollableTextArea->AppendText( L"* R5900 (EE)\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.EnableEE		= false;
 			}
 
-			if( BaseException* ex = m_CoreAllocs->GetException_IOP() )
+			if( BaseException* ex = m_CpuProviders->GetException_IOP() )
 			{
 				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\t"  + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.EnableIOP		= false;
 			}
 
-			if( BaseException* ex = m_CoreAllocs->GetException_MicroVU0() )
+			if( BaseException* ex = m_CpuProviders->GetException_MicroVU0() )
 			{
 				scrollableTextArea->AppendText( L"* microVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
-				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
+				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CpuProviders->IsRecAvailable_SuperVU0();
 			}
 
-			if( BaseException* ex = m_CoreAllocs->GetException_MicroVU1() )
+			if( BaseException* ex = m_CpuProviders->GetException_MicroVU1() )
 			{
 				scrollableTextArea->AppendText( L"* microVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
 				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= false;
-				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CoreAllocs->IsRecAvailable_SuperVU1();
+				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CpuProviders->IsRecAvailable_SuperVU1();
 			}
 
-			if( BaseException* ex = m_CoreAllocs->GetException_SuperVU0() )
+			if( BaseException* ex = m_CpuProviders->GetException_SuperVU0() )
 			{
 				scrollableTextArea->AppendText( L"* SuperVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
-				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CoreAllocs->IsRecAvailable_MicroVU0();
+				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CpuProviders->IsRecAvailable_MicroVU0();
 				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && g_Conf->EmuOptions.Recompiler.UseMicroVU0;
 			}
 
-			if( BaseException* ex = m_CoreAllocs->GetException_SuperVU1() )
+			if( BaseException* ex = m_CpuProviders->GetException_SuperVU1() )
 			{
 				scrollableTextArea->AppendText( L"* SuperVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
-				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CoreAllocs->IsRecAvailable_MicroVU1();
+				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CpuProviders->IsRecAvailable_MicroVU1();
 				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && g_Conf->EmuOptions.Recompiler.UseMicroVU1;
 			}
 
