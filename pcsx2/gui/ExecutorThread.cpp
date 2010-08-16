@@ -32,6 +32,17 @@ bool ConsoleLogSource_Event::Error( const pxEvtHandler* evtHandler, const SysExe
 	return _parent::Write( wxsFormat(L"(%s%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
 }
 
+ConsoleLogSource_Event::ConsoleLogSource_Event()
+{
+	static const TraceLogDescriptor myDesc =
+	{
+		L"SysEvents",	L"SysVM Control Events",
+		wxLt("Logs events as they are passed to the PS2 virtual machine."),
+	};
+	
+	m_Descriptor = &myDesc;
+}
+
 ConsoleLogSource_Event pxConLog_Event;
 
 // --------------------------------------------------------------------------------------

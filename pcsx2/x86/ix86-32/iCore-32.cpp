@@ -478,7 +478,7 @@ __fi void* _MMXGetAddr(int reg)
 	if( reg >= MMX_FPU && reg < MMX_FPU+32 ) return &fpuRegs.fpr[reg&31];
 	if( reg >= MMX_COP0 && reg < MMX_COP0+32 ) return &cpuRegs.CP0.r[reg&31];
 
-	pxAssert( false );
+	pxAssume( false );
 	return NULL;
 }
 

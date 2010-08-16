@@ -33,6 +33,20 @@ template class EventSource< EventListener_Thread >;
 // to avoid gui deadlock).
 const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
 
+ConsoleLogSource_Threading::ConsoleLogSource_Threading()
+{
+	static const TraceLogDescriptor myDesc =
+	{
+		L"pxThread",	L"pxThread",
+		wxLt("Threading activity: start, detach, sync, deletion, etc.")
+	};
+
+	m_Descriptor = &myDesc;
+}
+
+ConsoleLogSource_Threading pxConLog_Thread;
+
+
 class StaticMutex : public Mutex
 {
 protected:

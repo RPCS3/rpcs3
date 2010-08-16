@@ -89,6 +89,10 @@ extern pxDoAssertFnType* pxDoAssert;
 //
 // Performance: All assumption/fail  types optimize into __assume()/likely() directives in
 // Release builds (non-dev varieties optimize as such in Devel builds as well).  If using
+//
+// Having pxFail and pxFailDev translate into __assume statements is very dangerous, since
+// it can lead to the compiler optimizing out code and leading to crashes in dev/release
+// builds.  To have code optimized, explicitly use pxAssume(false) or pxAssumeDev(false,msg);
 
 #define pxDiagSpot			DiagnosticOrigin( __TFILE__, __LINE__, __pxFUNCTION__ )
 #define pxAssertSpot(cond)	DiagnosticOrigin( __TFILE__, __LINE__, __pxFUNCTION__, _T(#cond) )
@@ -100,7 +104,7 @@ extern pxDoAssertFnType* pxDoAssert;
 
 #define pxAssertRel(cond, msg)		( (likely(cond)) || (pxOnAssert(pxAssertSpot(cond), msg), false) )
 #define pxAssumeRel(cond, msg)		((void) ( (!likely(cond)) && (pxOnAssert(pxAssertSpot(cond), msg), false) ))
-#define pxFailRel(msg)				pxAssumeRel(false, msg)
+#define pxFailRel(msg)				pxAssertRel(false, msg)
 
 #if defined(PCSX2_DEBUG)
 
@@ -110,8 +114,8 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssumeMsg(cond, msg)	pxAssumeRel(cond, msg)
 #	define pxAssumeDev(cond, msg)	pxAssumeRel(cond, msg)
 
-#	define pxFail(msg)				pxAssumeMsg(false, msg)
-#	define pxFailDev(msg)			pxAssumeDev(false, msg)
+#	define pxFail(msg)				pxAssertMsg(false, msg)
+#	define pxFailDev(msg)			pxAssertDev(false, msg)
 
 #elif defined(PCSX2_DEVBUILD)
 
@@ -124,8 +128,8 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssumeMsg(cond, msg)	(__assume(cond))
 #	define pxAssumeDev(cond, msg)	pxAssumeRel(cond, msg)
 
-#	define pxFail(msg)				(__assume(false))
-#	define pxFailDev(msg)			pxAssumeDev(false, msg)
+#	define pxFail(msg)
+#	define pxFailDev(msg)			pxAssertDev(false, msg)
 
 #else
 
@@ -138,8 +142,8 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssumeMsg(cond, msg)	(__assume(cond))
 #	define pxAssumeDev(cond, msg)	(__assume(cond))
 
-#	define pxFail(msg)				(__assume(false))
-#	define pxFailDev(msg)			(__assume(false))
+#	define pxFail(msg)
+#	define pxFailDev(msg)
 
 #endif
 
@@ -168,31 +172,21 @@ extern pxDoAssertFnType* pxDoAssert;
 extern void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg=NULL );
 extern void pxOnAssert( const DiagnosticOrigin& origin, const char* msg );
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
 // jNO_DEFAULT -- disables the default case in a switch, which improves switch optimization
 // under MSVC.
-//
-// How it Works: jASSUME turns into an __assume(0) under msvc compilers, which when specified
+// --------------------------------------------------------------------------------------
+// How it Works: pxAssumeDev turns into an __assume(0) under msvc compilers, which when specified
 // in the 'default:' case of a switch tells the compiler that the case is unreachable, so
 // that it will not generate any code, LUTs, or conditionals to handle it.
 //
 // * In debug/devel builds the default case will cause an assertion.
 //
 #ifndef jNO_DEFAULT
-
-#if defined(__cplusplus) && defined(PCSX2_DEVBUILD)
 #	define jNO_DEFAULT \
 		default: \
 		{ \
-			pxFailDev( "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
+			pxAssumeDev( false, "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
 			break; \
 		}
-#else
-#	define jNO_DEFAULT \
-		default: \
-		{ \
-			jASSUME(0); \
-			break; \
-		}
-#endif
 #endif

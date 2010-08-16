@@ -28,6 +28,17 @@ DEFINE_EVENT_TYPE( pxEvt_SynchronousCommand );
 
 IMPLEMENT_DYNAMIC_CLASS( pxSimpleEvent, wxEvent )
 
+ConsoleLogSource_App::ConsoleLogSource_App()
+{
+	static const TraceLogDescriptor myDesc =
+	{
+		L"AppEvents",		L"App Events",
+		wxLt("Includes idle event processing and some other uncommon event usages.")
+	};
+	
+	m_Descriptor = &myDesc;
+}
+
 ConsoleLogSource_App pxConLog_App;
 
 void BaseDeletableObject::DoDeletion()

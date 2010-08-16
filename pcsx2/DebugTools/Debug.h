@@ -67,6 +67,17 @@ namespace R3000A
 	extern char* disR3000AF(u32 code, u32 pc);
 }
 
+// this structure uses old fashioned C-style "polymorphism".  The base struct TraceLogDescriptor
+// must always be the first member in the struct.
+struct SysTraceLogDescriptor
+{
+	TraceLogDescriptor	base;
+	const char*			Prefix;
+};
+
+// --------------------------------------------------------------------------------------
+//  SysTraceLog
+// --------------------------------------------------------------------------------------
 // Default trace log for high volume VM/System logging.
 // This log dumps to emuLog.txt directly and has no ability to pipe output
 // to the console (due to the console's inability to handle extremely high
@@ -78,6 +89,10 @@ public:
 
 public:
 	TraceLog_ImplementBaseAPI(SysTraceLog)
+
+	// Pass me a NULL and you *will* suffer!  Muahahaha.
+	SysTraceLog( const SysTraceLogDescriptor* desc )
+		: TextFileTraceLog( &desc->base ) {}
 
 	void DoWrite( const char *fmt ) const;
 
@@ -91,9 +106,13 @@ public:
 
 class SysTraceLog_EE : public SysTraceLog
 {
+	typedef SysTraceLog _parent;
+
 public:
+	SysTraceLog_EE( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
 	void ApplyPrefix( FastFormatAscii& ascii ) const;
-	bool IsEnabled() const
+	bool IsActive() const
 	{
 		return EmuConfig.Trace.Enabled && Enabled && EmuConfig.Trace.EE.m_EnableAll;
 	}
@@ -106,6 +125,8 @@ class SysTraceLog_VIFcode : public SysTraceLog_EE
 	typedef SysTraceLog_EE _parent;
 
 public:
+	SysTraceLog_VIFcode( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
 	void ApplyPrefix( FastFormatAscii& ascii ) const;
 };
 
@@ -114,9 +135,11 @@ class SysTraceLog_EE_Disasm : public SysTraceLog_EE
 	typedef SysTraceLog_EE _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_EE_Disasm( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableDisasm;
+		return _parent::IsActive() && EmuConfig.Trace.EE.m_EnableDisasm;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Disasm"; }
@@ -127,9 +150,11 @@ class SysTraceLog_EE_Registers : public SysTraceLog_EE
 	typedef SysTraceLog_EE _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_EE_Registers( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableRegisters;
+		return _parent::IsActive() && EmuConfig.Trace.EE.m_EnableRegisters;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Registers"; }
@@ -140,9 +165,11 @@ class SysTraceLog_EE_Events : public SysTraceLog_EE
 	typedef SysTraceLog_EE _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_EE_Events( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.EE.m_EnableEvents;
+		return _parent::IsActive() && EmuConfig.Trace.EE.m_EnableEvents;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Events"; }
@@ -151,9 +178,13 @@ public:
 
 class SysTraceLog_IOP : public SysTraceLog
 {
+	typedef SysTraceLog _parent;
+
 public:
+	SysTraceLog_IOP( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+
 	void ApplyPrefix( FastFormatAscii& ascii ) const;
-	bool IsEnabled() const
+	bool IsActive() const
 	{
 		return EmuConfig.Trace.Enabled && Enabled && EmuConfig.Trace.IOP.m_EnableAll;
 	}
@@ -166,9 +197,10 @@ class SysTraceLog_IOP_Disasm : public SysTraceLog_IOP
 	typedef SysTraceLog_IOP _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_IOP_Disasm( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableDisasm;
+		return _parent::IsActive() && EmuConfig.Trace.IOP.m_EnableDisasm;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Disasm"; }
@@ -179,9 +211,10 @@ class SysTraceLog_IOP_Registers : public SysTraceLog_IOP
 	typedef SysTraceLog_IOP _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_IOP_Registers( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableRegisters;
+		return _parent::IsActive() && EmuConfig.Trace.IOP.m_EnableRegisters;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Registers"; }
@@ -192,9 +225,10 @@ class SysTraceLog_IOP_Events : public SysTraceLog_IOP
 	typedef SysTraceLog_IOP _parent;
 
 public:
-	bool IsEnabled() const
+	SysTraceLog_IOP_Events( const SysTraceLogDescriptor* desc ) : _parent( desc ) {}
+	bool IsActive() const
 	{
-		return _parent::IsEnabled() && EmuConfig.Trace.IOP.m_EnableEvents;
+		return _parent::IsActive() && EmuConfig.Trace.IOP.m_EnableEvents;
 	}
 
 	wxString GetCategory() const { return _parent::GetCategory() + L".Events"; }
@@ -209,24 +243,21 @@ public:
 // formatting, since anything coming over the EE/IOP consoles should be considered raw
 // string data.  (otherwise %'s would get mis-interpreted).
 //
-class ConsoleLogFromVM : ConsoleLogSource
+template< ConsoleColors conColor >
+class ConsoleLogFromVM : public BaseTraceLogSource
 {
-	typedef ConsoleLogSource _parent;
+	typedef BaseTraceLogSource _parent;
 
 public:
 	ConsoleLog_ImplementBaseAPI(ConsoleLogFromVM)
-	using _parent::IsEnabled;
+
+	ConsoleLogFromVM( const TraceLogDescriptor* desc ) : _parent( desc ) {}
 
 	bool Write( const wxChar* msg ) const
 	{
-		ConsoleColorScope cs(DefaultColor);
-		DoWrite(msg);
-		return false;
-	}
-
-	virtual void DoWrite( const wxChar* msg ) const
-	{
+		ConsoleColorScope cs(conColor);
 		Console.WriteRaw( msg );
+		return false;
 	}
 };
 
@@ -238,7 +269,7 @@ struct SysTraceLogPack
 	// TODO : Sif has special logging needs.. ?
 	SysTraceLog	SIF;
 
-	struct
+	struct EE_PACK
 	{
 		SysTraceLog_EE				Bios;
 		SysTraceLog_EE				Memory;
@@ -263,9 +294,10 @@ struct SysTraceLogPack
 		SysTraceLog_EE_Events		VIF;
 		SysTraceLog_EE_Events		GIF;
 
+		EE_PACK();
 	} EE;
 	
-	struct
+	struct IOP_PACK
 	{
 		SysTraceLog_IOP				Bios;
 		SysTraceLog_IOP				Memcards;
@@ -288,6 +320,7 @@ struct SysTraceLogPack
 		SysTraceLog_IOP_Events		Counters;
 		SysTraceLog_IOP_Events		CDVD;
 
+		IOP_PACK();
 	} IOP;
 
 	SysTraceLogPack();
@@ -298,23 +331,23 @@ struct SysConsoleLogPack
 	ConsoleLogSource		ELF;
 	ConsoleLogSource		eeRecPerf;
 
-	ConsoleLogFromVM		eeConsole;
-	ConsoleLogFromVM		iopConsole;
-	ConsoleLogFromVM		deci2;
+	ConsoleLogFromVM<Color_Cyan>		eeConsole;
+	ConsoleLogFromVM<Color_Yellow>		iopConsole;
+	ConsoleLogFromVM<Color_Cyan>		deci2;
 
 	SysConsoleLogPack();
 };
 
 
-extern SysTraceLogPack SysTracePack;
-extern SysConsoleLogPack SysConsolePack;
+extern SysTraceLogPack SysTrace;
+extern SysConsoleLogPack SysConsole;
 
 
 // Helper macro for cut&paste.  Note that we intentionally use a top-level *inline* bitcheck
 // against Trace.Enabled, to avoid extra overhead in Debug builds when logging is disabled.
 // (specifically this allows debug builds to skip havingto resolve all the parameters being
 //  passed into the function)
-#define macTrace(trace)	SysTracePack.trace.IsEnabled() && SysTracePack.trace.Write
+#define macTrace(trace)	SysTrace.trace.IsActive() && SysTrace.trace.Write
 
 
 #ifdef PCSX2_DEVBUILD
@@ -389,8 +422,8 @@ extern void __Log( const char* fmt, ... );
 #define MEMCARDS_LOG 0&&
 #endif
 
-#define ELF_LOG			SysConsolePack.ELF.IsEnabled() && SysConsolePack.ELF.Write
-#define eeRecPerfLog	SysConsolePack.eeRecPerf.IsEnabled() && SysConsolePack.eeRecPerf
-#define eeConLog		SysConsolePack.eeConsole.IsEnabled() && SysConsolePack.eeConsole.Write
-#define eeDeci2Log		SysConsolePack.deci2.IsEnabled() && SysConsolePack.deci2.Write
-#define iopConLog		SysConsolePack.iopConsole.IsEnabled() && SysConsolePack.iopConsole.Write
+#define ELF_LOG			SysConsole.ELF.IsActive() && SysConsole.ELF.Write
+#define eeRecPerfLog	SysConsole.eeRecPerf.IsActive() && SysConsole.eeRecPerf
+#define eeConLog		SysConsole.eeConsole.IsActive() && SysConsole.eeConsole.Write
+#define eeDeci2Log		SysConsole.deci2.IsActive() && SysConsole.deci2.Write
+#define iopConLog		SysConsole.iopConsole.IsActive() && SysConsole.iopConsole.Write

@@ -884,7 +884,7 @@ void recClear(u32 addr, u32 size)
 			if( !IsDevBuild )
 				Console.Error( "Impossible block clearing failure" );
 			else
-				pxAssertDev( false, "Impossible block clearing failure" );
+				pxFailDev( "Impossible block clearing failure" );
 		}
 	}
 

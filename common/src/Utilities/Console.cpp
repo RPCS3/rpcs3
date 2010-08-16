@@ -560,19 +560,8 @@ const IConsoleWriter	DbgConWriter		= _DefaultWriter_;
 
 const NullConsoleWriter	NullCon = {};
 
-
 // --------------------------------------------------------------------------------------
-//  BaseTraceLogAttr
-// --------------------------------------------------------------------------------------
-
-// Returns the translated description of this trace log!
-const wxChar* BaseTraceLogAttr::GetDescription() const
-{
-	return (Description!=NULL) ? pxGetTranslation(Description) : wxEmptyString;
-}
-
-// --------------------------------------------------------------------------------------
-//  ConsoleLogSource
+//  ConsoleLogSource  (implementations)
 // --------------------------------------------------------------------------------------
 
 // Writes to the console using the specified color.  This overrides the default color setting
@@ -605,13 +594,3 @@ bool ConsoleLogSource::WriteV( const wxChar *fmt, va_list list ) const
 	WriteV( DefaultColor, fmt, list );
 	return false;
 }
-
-ConsoleLogSource::ConsoleLogSource()
-{
-	// SourceLogs are usually pretty heavy spam, so default to something
-	// reasonably non-intrusive:
-	DefaultColor	= Color_Gray;
-	//pxConLogSources_AllKnown.Add(this);
-}
-
-ConsoleLogSource_Threading pxConLog_Thread;

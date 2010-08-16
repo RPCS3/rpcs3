@@ -460,7 +460,7 @@ namespace sysmem {
 		// printf-style formatting processing.  This part can be skipped if the user has the
 		// console disabled.
 
-		if (!SysConsolePack.iopConsole.IsEnabled()) return 1;
+		if (!SysConsole.iopConsole.IsActive()) return 1;
 
 		char tmp[1024], tmp2[1024];
 		char *ptmp = tmp;

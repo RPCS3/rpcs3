@@ -34,13 +34,9 @@ class ConsoleLogSource_Event : ConsoleLogSource
 	typedef ConsoleLogSource _parent;
 
 public:
-	using _parent::IsEnabled;
+	using _parent::IsActive;
 
-	ConsoleLogSource_Event()
-	{
-		Name		= L"PS2vm Events";
-		Description = wxLt("Logs events as they are passed to the PS2 virtual machine.");
-	}
+	ConsoleLogSource_Event();
 
 	bool Write( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
 	bool Warn( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
@@ -49,7 +45,7 @@ public:
 
 extern ConsoleLogSource_Event pxConLog_Event;
 
-#define pxEvtLog pxConLog_Event.IsEnabled() && pxConLog_Event
+#define pxEvtLog pxConLog_Event.IsActive() && pxConLog_Event
 
 
 // --------------------------------------------------------------------------------------

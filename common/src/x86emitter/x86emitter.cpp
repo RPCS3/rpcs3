@@ -543,7 +543,7 @@ xAddressVoid& xAddressVoid::Add( const xAddressReg& src )
 	else if( Index.IsEmpty() )
 		Index = src;
 	else
-		pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
+		pxAssumeDev( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 	return *this;
 }
@@ -568,7 +568,7 @@ xAddressVoid& xAddressVoid::Add( const xAddressVoid& src )
 		Factor += src.Factor;
 	}
 	else
-		pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
+		pxAssumeDev( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 	return *this;
 }
@@ -664,11 +664,11 @@ void xIndirectVoid::Reduce()
 		break;
 
 		case 6:				// invalid!
-			pxFail( "x86 asm cannot scale a register by 6." );
+			pxAssumeDev( false, "x86 asm cannot scale a register by 6." );
 		break;
 
 		case 7:				// so invalid!
-			pxFail( "x86 asm cannot scale a register by 7." );
+			pxAssumeDev( false, "x86 asm cannot scale a register by 7." );
 		break;
 
 		case 8: Scale = 3; break;
@@ -677,12 +677,14 @@ void xIndirectVoid::Reduce()
 			Base = Index;
 			Scale = 3;
 		break;
+		
+		jNO_DEFAULT
 	}
 }
 
 uint xIndirectVoid::GetOperandSize() const
 {
-	pxFail( "Invalid operation on xIndirectVoid" );
+	pxFailDev( "Invalid operation on xIndirectVoid" );
 	return 0;
 }
 

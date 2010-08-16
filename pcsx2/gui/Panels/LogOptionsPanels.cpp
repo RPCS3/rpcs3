@@ -121,47 +121,47 @@ void Panels::iopLogOptionsPanel::OnSettingsChanged()
 
 static SysTraceLog * const traceLogList[] =
 {
-	&SysTracePack.SIF,
+	&SysTrace.SIF,
 
-	&SysTracePack.EE.Bios,
-	&SysTracePack.EE.Memory,
+	&SysTrace.EE.Bios,
+	&SysTrace.EE.Memory,
 
-	&SysTracePack.EE.R5900,
-	&SysTracePack.EE.COP0,
-	&SysTracePack.EE.COP1,
-	&SysTracePack.EE.COP2,
-	&SysTracePack.EE.Cache,
+	&SysTrace.EE.R5900,
+	&SysTrace.EE.COP0,
+	&SysTrace.EE.COP1,
+	&SysTrace.EE.COP2,
+	&SysTrace.EE.Cache,
 
-	&SysTracePack.EE.KnownHw,
-	&SysTracePack.EE.UnknownHw,
-	&SysTracePack.EE.DMAhw,
-	&SysTracePack.EE.IPU,
-	&SysTracePack.EE.GIFtag,
-	&SysTracePack.EE.VIFcode,
+	&SysTrace.EE.KnownHw,
+	&SysTrace.EE.UnknownHw,
+	&SysTrace.EE.DMAhw,
+	&SysTrace.EE.IPU,
+	&SysTrace.EE.GIFtag,
+	&SysTrace.EE.VIFcode,
 
-	&SysTracePack.EE.DMAC,
-	&SysTracePack.EE.Counters,
-	&SysTracePack.EE.SPR,
-	&SysTracePack.EE.VIF,
-	&SysTracePack.EE.GIF,
+	&SysTrace.EE.DMAC,
+	&SysTrace.EE.Counters,
+	&SysTrace.EE.SPR,
+	&SysTrace.EE.VIF,
+	&SysTrace.EE.GIF,
 	
 	
 	// IOP Section
 	
-	&SysTracePack.IOP.Bios,
-	&SysTracePack.IOP.Memcards,
-	&SysTracePack.IOP.PAD,
+	&SysTrace.IOP.Bios,
+	&SysTrace.IOP.Memcards,
+	&SysTrace.IOP.PAD,
 
-	&SysTracePack.IOP.R3000A,
-	&SysTracePack.IOP.COP2,
-	&SysTracePack.IOP.Memory,
+	&SysTrace.IOP.R3000A,
+	&SysTrace.IOP.COP2,
+	&SysTrace.IOP.Memory,
 
-	&SysTracePack.IOP.KnownHw,
-	&SysTracePack.IOP.UnknownHw,
-	&SysTracePack.IOP.DMAhw,
-	&SysTracePack.IOP.DMAC,
-	&SysTracePack.IOP.Counters,
-	&SysTracePack.IOP.CDVD,
+	&SysTrace.IOP.KnownHw,
+	&SysTrace.IOP.UnknownHw,
+	&SysTrace.IOP.DMAhw,
+	&SysTrace.IOP.DMAC,
+	&SysTrace.IOP.Counters,
+	&SysTrace.IOP.CDVD,
 };
 
 static const int traceLogCount = ArraySize(traceLogList);
@@ -174,7 +174,7 @@ void SysTraceLog_LoadSaveSettings( IniInterface& ini )
 	{
 		if (SysTraceLog* log = traceLogList[i])
 		{
-			pxAssertMsg(log->Name, "Trace log without a name!" );
+			pxAssertMsg(log->GetName(), "Trace log without a name!" );
 			ini.Entry( log->GetCategory() + L"." + log->GetShortName(), log->Enabled, false );
 		}
 	}
@@ -193,7 +193,7 @@ static bool traceLogEnabled( const wxString& ident )
 			return traceLogList[i]->Enabled;
 	}
 
-	pxAssertDev( false, wxsFormat(L"Invalid or unknown TraceLog identifier: %s", ident.c_str()) );
+	pxFailDev( wxsFormat(L"Invalid or unknown TraceLog identifier: %s", ident.c_str()) );
 	return false;
 }
 
@@ -213,7 +213,7 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	{
 		const SysTraceLog& item = *traceLogList[i];
 
-		pxAssertMsg(item.Name, "Trace log without a name!" );
+		pxAssertMsg(item.GetName(), "Trace log without a name!" );
 
 		wxStringTokenizer token( item.GetCategory(), L"." );
 		wxSizer* addsizer = NULL;
@@ -240,8 +240,8 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 			addparent = this;
 		}
 
-		*addsizer += m_checks[i] = new pxCheckBox( addparent, item.Name );
- 		if( m_checks[i] && item.Description )
+		*addsizer += m_checks[i] = new pxCheckBox( addparent, item.GetName() );
+ 		if( m_checks[i] && item.HasDescription() )
 			m_checks[i]->SetToolTip(item.GetDescription());
 	}
 
@@ -324,7 +324,7 @@ void Panels::LogOptionsPanel::Apply()
 	}
 }
 
-#define GetSet( cpu, name )		SysTracePack.cpu.name.Enabled	= m_##name->GetValue()
+#define GetSet( cpu, name )		SysTrace.cpu.name.Enabled	= m_##name->GetValue()
 
 void Panels::eeLogOptionsPanel::Apply()
 {

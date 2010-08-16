@@ -324,11 +324,11 @@ public:
 
 static ConsoleLogSource* const ConLogSources[] = 
 {
-	(ConsoleLogSource*)&SysConsolePack.eeConsole,
-	(ConsoleLogSource*)&SysConsolePack.iopConsole,
-	(ConsoleLogSource*)&SysConsolePack.eeRecPerf,
+	(ConsoleLogSource*)&SysConsole.eeConsole,
+	(ConsoleLogSource*)&SysConsole.iopConsole,
+	(ConsoleLogSource*)&SysConsole.eeRecPerf,
 	NULL,
-	(ConsoleLogSource*)&SysConsolePack.ELF,
+	(ConsoleLogSource*)&SysConsole.ELF,
 	NULL,
 	(ConsoleLogSource*)&pxConLog_Event,
 	(ConsoleLogSource*)&pxConLog_Thread,
@@ -441,9 +441,9 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	uint srcnt = ArraySize(ConLogSources);
 	for (uint i=0; i<srcnt; ++i)
 	{
-		if (const ConsoleLogSource* log = ConLogSources[i])
+		if (const BaseTraceLogSource* log = ConLogSources[i])
 		{
-			menuSources.Append( MenuId_LogSource_Start+i, log->Name, log->GetDescription(), wxITEM_CHECK );
+			menuSources.Append( MenuId_LogSource_Start+i, log->GetName(), log->GetDescription(), wxITEM_CHECK );
 			Connect( MenuId_LogSource_Start+i, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnToggleSource));
 		}
 		else
@@ -547,7 +547,7 @@ void ConsoleLogFrame::OnLoggingChanged()
 	{
 		if (const ConsoleLogSource* log = ConLogSources[i])
 		{
-			GetMenuBar()->Check( MenuId_LogSource_Start+i, log->IsEnabled() );
+			GetMenuBar()->Check( MenuId_LogSource_Start+i, log->IsActive() );
 		}
 	}
 }

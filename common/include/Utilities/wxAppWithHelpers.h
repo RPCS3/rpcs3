@@ -34,16 +34,12 @@ class ConsoleLogSource_App : public ConsoleLogSource
 	typedef ConsoleLogSource _parent;
 
 public:
-	ConsoleLogSource_App()
-	{
-		Name		= L"App Events";
-		Description = wxLt("Includes idle event processing and some other uncommon event usages.");
-	}
+	ConsoleLogSource_App();
 };
 
 extern ConsoleLogSource_App pxConLog_App;
 
-#define pxAppLog pxConLog_App.IsEnabled() && pxConLog_App
+#define pxAppLog pxConLog_App.IsActive() && pxConLog_App
 
 
 // --------------------------------------------------------------------------------------

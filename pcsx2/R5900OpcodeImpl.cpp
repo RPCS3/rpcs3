@@ -869,7 +869,7 @@ void SYSCALL()
 
 	// The only thing this code is used for is the one log message, so don't execute it if we aren't logging bios messages.
 #ifdef PCSX2_DEVBUILD
-	if (SysTracePack.EE.Bios.IsEnabled() && (call == 0x77))
+	if (SysTrace.EE.Bios.IsActive() && (call == 0x77))
 	{
 		t_sif_dma_transfer *dmat;
 		//struct t_sif_cmd_header	*hdr;

@@ -17,56 +17,97 @@
 
 #include "Console.h"
 
-#define TraceLog_ImplementBaseAPI(thistype) \
-	thistype& SetDescription( const wxChar* desc ) { \
-		Description = desc; \
-		return *this; \
-	} \
- 	thistype& SetName( const wxChar* name ) { \
-		Name = name; \
-		return *this; \
-	} \
- 	thistype& SetShortName( const wxChar* name ) { \
-		ShortName = name; \
-		return *this; \
-	}
-
-#define ConsoleLog_ImplementBaseAPI(thistype) \
-	TraceLog_ImplementBaseAPI(thistype) \
- 	thistype& SetColor( ConsoleColors color ) { \
-		DefaultColor = color; \
-		return *this; \
-	}
+// These macros are currently not needed (anymore), but might be needed aain in the future --air
+#define TraceLog_ImplementBaseAPI(thistype)
+#define ConsoleLog_ImplementBaseAPI(thistype)
 
 // --------------------------------------------------------------------------------------
-//  BaseTraceLog
+//  TraceLogDescriptor
 // --------------------------------------------------------------------------------------
-class BaseTraceLogAttr
+// Provides textual information for use by UIs; to give the end user a selection screen for
+// enabling/disabling logs, and also for saving the log settings to INI.
+//
+struct TraceLogDescriptor
 {
-public:
-	bool			Enabled;
-
 	// short name, alphanumerics only: used for saving/loading options.
 	const wxChar*	ShortName;
 
 	// Standard UI name for this log source.  Used in menus, options dialogs.
 	const wxChar*	Name;
+
+	// Length description for use as a tooltip or menu item description.
 	const wxChar*	Description;
 
-public:
-	TraceLog_ImplementBaseAPI(BaseTraceLogAttr)
-
-	BaseTraceLogAttr()
+	wxString GetShortName() const
 	{
+		pxAssumeDev(Name, "Tracelog descriptors require a valid name!");
+		return ShortName ? ShortName : Name;
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  BaseTraceLogSource
+// --------------------------------------------------------------------------------------
+// This class houses the base attributes for any trace log (to file or to console), which
+// only includes the logfile's name, description, and enabled bit (for UIs and ini files),
+// and an IsActive() method for determining if the log should be written or not.
+//
+// Derived classes then provide their own Write/DoWrite functions that format and write
+// the log to the intended target(s).
+//
+// All individual calls to log write functions should be responsible for checking the
+// status of the log via the IsActive() method manually (typically done via macro).  This
+// is done in favor of internal checks because most logs include detailed/formatted
+// information, which itself can take a lot of cpu power to prepare.  If the IsActive()
+// check is done top-level, the parameters' calculations can be skipped.  If the IsActive()
+// check is done internally as part of the Write/Format calls, all parameters have to be
+// resolved regardless of if the log is actually active.
+// 
+class BaseTraceLogSource
+{
+protected:
+	const TraceLogDescriptor* m_Descriptor;
+
+public:
+	// Indicates if the user has enabled this specific log.  This boolean only represents
+	// the configured status of this log, and does *NOT* actually mean the log is active
+	// even when TRUE.  Because many tracelogs have master enablers that act on a group
+	// of logs, logging checks should always use IsActive() instead to determine if a log
+	// should be processed or not.
+	bool			Enabled;
+
+protected:
+	BaseTraceLogSource() {}
+
+public:
+	TraceLog_ImplementBaseAPI(BaseTraceLogSource)
+
+	BaseTraceLogSource( const TraceLogDescriptor* desc )
+	{
+		pxAssumeDev( desc, "Trace logs must have a valid (non-NULL) descriptor." );
 		Enabled = false;
-		ShortName = NULL;
+		m_Descriptor = desc;
 	}
 
-	virtual wxString GetShortName() const	{ return ShortName ? ShortName : Name; }
+	// Provides a categorical identifier, typically in "group.subgroup.subgroup" form.
+	// (use periods in favor of colons, since they do not require escape characters when
+	// written to ini/config files).
 	virtual wxString GetCategory() const	{ return wxEmptyString; }
-	virtual bool IsEnabled() const			{ return Enabled; }
 
-	const wxChar* GetDescription() const;
+	// This method should be used to determine if a log should be generated or not.
+	// See the class overview comments for details on how and why this method should
+	// be used.
+	virtual bool IsActive() const			{ return Enabled; }
+
+	virtual wxString GetShortName() const	{ return m_Descriptor->GetShortName(); }
+	virtual const wxChar* GetName() const	{ return m_Descriptor->Name; }
+	virtual const wxChar* GetDescription() const
+	{
+		return (m_Descriptor->Description!=NULL) ? pxGetTranslation(m_Descriptor->Description) : wxEmptyString;
+	}
+
+	virtual bool HasDescription() const		{ return m_Descriptor->Description != NULL;}
+
 };
 
 // --------------------------------------------------------------------------------------
@@ -75,11 +116,14 @@ public:
 // This class is tailored for performance logging to file.  It does not support console
 // colors or wide/unicode text conversion.
 //
-class TextFileTraceLog : public BaseTraceLogAttr
+class TextFileTraceLog : public BaseTraceLogSource
 {
-protected:
-
 public:
+	TextFileTraceLog( const TraceLogDescriptor* desc )
+		: BaseTraceLogSource( desc )
+	{	
+	}
+
 	bool Write( const char* fmt, ... ) const
 	{
 		va_list list;
@@ -103,22 +147,28 @@ public:
 	virtual void DoWrite( const char* fmt ) const=0;
 };
 
-
 // --------------------------------------------------------------------------------------
 //  ConsoleLogSource
 // --------------------------------------------------------------------------------------
 // This class is tailored for logging to console.  It applies default console color attributes
 // to all writes, and supports both char and wxChar (Ascii and UF8/16) formatting.
 //
-class ConsoleLogSource : public BaseTraceLogAttr
+class ConsoleLogSource : public BaseTraceLogSource
 {
 public:
 	ConsoleColors	DefaultColor;
 
+protected:
+	ConsoleLogSource() {}
+
 public:
 	ConsoleLog_ImplementBaseAPI(ConsoleLogSource)
 
-	ConsoleLogSource();
+	ConsoleLogSource( const TraceLogDescriptor* desc, ConsoleColors defaultColor = Color_Gray )
+		: BaseTraceLogSource(desc)
+	{
+		DefaultColor	= defaultColor;
+	}
 
 	// Writes to the console using the source's default color.  Note that the source's default
 	// color will always be used, thus ConsoleColorScope() will not be effectual unless the
@@ -201,46 +251,3 @@ public:
 	}
 };
 
-#if 0
-// --------------------------------------------------------------------------------------
-//  pxConsoleLogList
-// --------------------------------------------------------------------------------------
-struct pxConsoleLogList
-{
-	uint				count;
-	ConsoleLogSource*	source[128];
-
-	void Add( ConsoleLogSource* trace )
-	{
-		if( !pxAssertDev( count < ArraySize(source),
-			wxsFormat( L"Trace log initialization list is already maxed out.  The tracelog for'%s' will not be enumerable.", trace->Name ) )
-			) return;
-
-		source[count++] = trace;
-	}
-
-	uint GetCount() const
-	{
-		return count;
-	}
-	
-	ConsoleLogSource& operator[]( uint idx )
-	{
-		pxAssumeDev( idx < count, "SysTraceLog index is out of bounds." );
-		pxAssume( source[idx] != NULL );
-
-		return *source[idx];
-	}
-
-	const ConsoleLogSource& operator[]( uint idx ) const
-	{
-		pxAssumeDev( idx < count, "SysTraceLog index is out of bounds." );
-		pxAssume( source[idx] != NULL );
-
-		return *source[idx];
-	}
-};
-
-extern pxConsoleLogList pxConLogSources_AllKnown;
-
-#endif

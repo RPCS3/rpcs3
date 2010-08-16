@@ -997,7 +997,7 @@ int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy)
 		return 0;
 	}
 
-	pxAssert( false );
+	pxAssume( false );
 }
 
 int _allocCheckGPRtoXMM(EEINST* pinst, int gprreg, int mode)
@@ -1076,7 +1076,7 @@ void _recFillRegister(EEINST& pinst, int type, int reg, int write)
 				return;
 			}
 		}
-		pxAssert( false );
+		pxAssume( false );
 	}
 	else {
 		for(i = 0; i < ArraySize(pinst.readType); ++i) {
@@ -1086,7 +1086,7 @@ void _recFillRegister(EEINST& pinst, int type, int reg, int write)
 				return;
 			}
 		}
-		pxAssert( false );
+		pxAssume( false );
 	}
 }
 

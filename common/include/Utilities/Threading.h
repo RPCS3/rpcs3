@@ -37,13 +37,9 @@ class ConsoleLogSource_Threading : ConsoleLogSource
 	typedef ConsoleLogSource _parent;
 
 public:
-	using _parent::IsEnabled;
+	using _parent::IsActive;
 
-	ConsoleLogSource_Threading()
-	{
-		Name		= L"pxThread";
-		Description = wxLt("Threading activity: start, detach, sync, deletion, etc.");
-	}
+	ConsoleLogSource_Threading();
 
 	bool Write( const wxString& thrname, const wxChar* msg ) {
 		return _parent::Write( wxsFormat(L"(thread:%s) ", thrname.c_str()) + msg );
@@ -58,7 +54,7 @@ public:
 
 extern ConsoleLogSource_Threading pxConLog_Thread;
 
-#define pxThreadLog pxConLog_Thread.IsEnabled() && pxConLog_Thread
+#define pxThreadLog pxConLog_Thread.IsActive() && pxConLog_Thread
 
 
 // --------------------------------------------------------------------------------------
