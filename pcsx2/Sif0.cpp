@@ -342,11 +342,17 @@ __fi void dmaSIF0()
 	psHu32(SBUS_F240) |= 0x2000;
 	sif0.ee.busy = true;
 
-	/*if (sif0.iop.busy)
-	{*/
-        hwIntcIrq(INTC_SBUS);
+	// Okay, this here is needed currently (r3644). 
+	// FFX battles in the thunder plains map die otherwise, Phantasy Star 4 as well
+	// These 2 games could be made playable again by increasing the time the EE or the IOP run,
+	// showing that this is very timing sensible.
+	// Doing this DMA unfortunately brings back an old warning in Legend of Legaia though, but it still works.
+	if (sif0.iop.busy)
+	{
+        //hwIntcIrq(INTC_SBUS); // not sure, so let's not
 		SIF0Dma();
-		psHu32(SBUS_F240) &= ~0x20;
-		psHu32(SBUS_F240) &= ~0x2000;
-	//}
+		// Do we really want to mess with the SIF flags like that? Nah.
+		//psHu32(SBUS_F240) &= ~0x20;
+		//psHu32(SBUS_F240) &= ~0x2000;
+	}
 }
