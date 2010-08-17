@@ -118,10 +118,11 @@ _mVUt void __mVUdumpProgram(microProgram& prog) {
 	mVUlog("</body>\n");
 	mVUlog("</html>\n");
 
-	safe_delete( mVU->logFile );
-
 	mVUbranch = bBranch;
 	mVU->code = bCode;
 	iPC		  = bPC;
 	setCode();
+
+	mVU->logFile.Delete();
 }
+

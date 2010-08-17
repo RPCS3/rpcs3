@@ -475,7 +475,8 @@ static __fi void* mVUentryGet(microVU* mVU, microBlockManager* block, u32 startP
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
 static __fi void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
-	if (startPC > mVU->microMemSize-8) { DevCon.Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
+	pxAssumeDev( (startPC & 7) == 0,			pxsFmt("microVU%d: unaligned startPC=0x%04x", mVU->index, startPC) );
+	pxAssumeDev( startPC < mVU->microMemSize-8,	pxsFmt("microVU%d: invalid startPC=0x%04x", mVU->index, startPC) );
 	startPC    &= mVU->microMemSize-8;
 
 	blockCreate(startPC/8);

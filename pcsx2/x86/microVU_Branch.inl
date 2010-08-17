@@ -177,7 +177,7 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 void normJump(mV, microFlagCycles& mFC) {
 	if (mVUlow.constJump.isValid) { // Jump Address is Constant
 		if (mVUup.eBit) { // E-bit Jump
-			iPC = (mVUlow.constJump.regValue*2)&(mVU->progSize-1);
+			iPC = (mVUlow.constJump.regValue*2) & (mVU->progMemMask);
 			mVUendProgram(mVU, &mFC, 1);
 			return;
 		}

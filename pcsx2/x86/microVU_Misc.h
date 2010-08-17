@@ -71,11 +71,19 @@ extern const __aligned(32) mVU_Globals mVUglob;
 #define _Fsf_	((mVU->code >> 21) & 0x03)
 #define _Ftf_	((mVU->code >> 23) & 0x03)
 
+#if 0
 #define _Imm5_	(s16)(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
 #define _Imm11_	(s32)((mVU->code & 0x400) ? (0xfffffc00 | (mVU->code & 0x3ff)) : (mVU->code & 0x3ff))
 #define _Imm12_	(((mVU->code >> 21) & 0x1) << 11) | (mVU->code & 0x7ff)
 #define _Imm15_	(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
 #define _Imm24_	(u32)(mVU->code & 0xffffff)
+#else
+#define _Imm5_	(mVU->Imm5())
+#define _Imm11_	(mVU->Imm11())
+#define _Imm12_	(mVU->Imm12())
+#define _Imm15_	(mVU->Imm15())
+#define _Imm24_	(mVU->Imm24())
+#endif
 
 #define _Ibit_ (1<<31)
 #define _Ebit_ (1<<30)
@@ -199,11 +207,19 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
+
+#if 0
 #define incPC(x)	 { iPC = ((iPC + (x)) & (mVU->progSize-1)); setCode(); }
-#define incPC2(x)	 { iPC = ((iPC + (x)) & (mVU->progSize-1)); }
-#define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
 #define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
+#else
+#define incPC(x)	 (mVU->advancePC(x))
+#define branchAddr	 mVU->getBranchAddr()
+#define branchAddrN	 mVU->getBranchAddrN()
+#endif
+
+#define incPC2(x)	 { iPC = ((iPC + (x)) & mVU->progMemMask); }
+#define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
 #define Rmem		 &mVU->regs->VI[REG_R].UL
