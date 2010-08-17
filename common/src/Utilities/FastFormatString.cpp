@@ -173,10 +173,12 @@ static __ri void format_that_ascii_mess( SafeArray<char>& buffer, uint writepos,
 
 static __ri void format_that_unicode_mess( SafeArray<char>& buffer, uint writepos, const wxChar* fmt, va_list argptr)
 {
+    const int WX_CHAR_SIZE = sizeof(wxChar);
 	while( true )
 	{
-		int size = buffer.GetLength()/2;
+		int size = buffer.GetLength()/WX_CHAR_SIZE;
 		int len = wxVsnprintf((wxChar*)buffer.GetPtr(writepos), size-writepos, fmt, argptr);
+
 
 		// some implementations of vsnprintf() don't NUL terminate
 		// the string if there is not enough space for it so
@@ -194,7 +196,7 @@ static __ri void format_that_unicode_mess( SafeArray<char>& buffer, uint writepo
 
 		len += writepos;
 		if (len < size) break;
-		buffer.ExactAlloc( (len + 31) * 2 );
+		buffer.ExactAlloc( (len + 31) * WX_CHAR_SIZE );
 	};
 
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even
@@ -233,10 +235,11 @@ FastFormatUnicode::~FastFormatUnicode() throw()
 
 FastFormatUnicode& FastFormatUnicode::WriteV( const char* fmt, va_list argptr )
 {
+    const int WX_CHAR_SIZE = sizeof(wxChar);
 	wxString converted( fromUTF8(FastFormatAscii().WriteV( fmt, argptr )) );
 
 	uint inspos = wxStrlen((wxChar*)m_dest->GetPtr());
-	m_dest->MakeRoomFor((inspos + converted.Length() + 31)*2);
+	m_dest->MakeRoomFor((inspos + converted.Length() + 31)*WX_CHAR_SIZE);
 	wxStrcpy( &((wxChar*)m_dest->GetPtr())[inspos], converted );
 	
 	return *this;
