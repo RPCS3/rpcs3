@@ -288,6 +288,22 @@ _tmpl(void) vtlbDefaultPhyWriteLg(u32 addr,const OperandType* data)
 }
 #undef _tmpl
 
+// These explicit template instatisations applease GCC 4.5, which itself fixes the GCC4.4 ?: operator
+// bug (below), but still fails due to not creating instances of the functions when we take their address
+// below.  (guess I shouldn't have templated that code >_<)
+
+template vtlbMemR8FP vtlbDefaultPhyReadSm<mem8_t>;
+template vtlbMemR16FP vtlbDefaultPhyReadSm<mem16_t>;
+template vtlbMemR32FP vtlbDefaultPhyReadSm<mem32_t>;
+template vtlbMemR64FP vtlbDefaultPhyReadLg<mem64_t>;
+template vtlbMemR128FP vtlbDefaultPhyReadLg<mem128_t>;
+
+template vtlbMemW8FP vtlbDefaultPhyWriteSm<mem8_t>;
+template vtlbMemW16FP vtlbDefaultPhyWriteSm<mem16_t>;
+template vtlbMemW32FP vtlbDefaultPhyWriteSm<mem32_t>;
+template vtlbMemW64FP vtlbDefaultPhyWriteLg<mem64_t>;
+template vtlbMemW128FP vtlbDefaultPhyWriteLg<mem128_t>;
+
 // ===========================================================================================
 //  VTLB Public API -- Init/Term/RegisterHandler stuff 
 // ===========================================================================================
@@ -304,17 +320,22 @@ __ri void vtlb_ReassignHandler( vtlbHandler rv,
 							   vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
 							   vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128 )
 {
-	vtlbdata.RWFT[0][0][rv] = (void*)((r8!=0)   ? r8	: vtlbDefaultPhyReadSm<mem8_t>);
-	vtlbdata.RWFT[1][0][rv] = (void*)((r16!=0)  ? r16	: vtlbDefaultPhyReadSm<mem16_t>);
-	vtlbdata.RWFT[2][0][rv] = (void*)((r32!=0)  ? r32	: vtlbDefaultPhyReadSm<mem32_t>);
-	vtlbdata.RWFT[3][0][rv] = (void*)((r64!=0)  ? r64	: vtlbDefaultPhyReadLg<mem64_t>);
-	vtlbdata.RWFT[4][0][rv] = (void*)((r128!=0) ? r128	: vtlbDefaultPhyReadLg<mem128_t>);
+// This macro appleases GCC 4.4 and prior, which apparently cannot handle templated functions as
+// part of ? : operators -- so we have to use expanded if()/else form instead.  (ok, so I *really*
+// shouldn't have templated that code >_<) --air
+#define _gccHackFix(a,Type,Size) \
+	if (r8) vtlbdata.RWFT[a][0][rv] = (void*)r##Size; \
+	else vtlbdata.RWFT[a][0][rv] = (void*)vtlbDefaultPhyRead##Type<mem##Size##_t>; \
+	if (w8) vtlbdata.RWFT[a][1][rv] = (void*)w##Size; \
+	else vtlbdata.RWFT[a][1][rv] = (void*)vtlbDefaultPhyWrite##Type<mem##Size##_t>;
 
-	vtlbdata.RWFT[0][1][rv] = (void*)((w8!=0)   ? w8	: vtlbDefaultPhyWriteSm<mem8_t>);
-	vtlbdata.RWFT[1][1][rv] = (void*)((w16!=0)  ? w16	: vtlbDefaultPhyWriteSm<mem16_t>);
-	vtlbdata.RWFT[2][1][rv] = (void*)((w32!=0)  ? w32	: vtlbDefaultPhyWriteSm<mem32_t>);
-	vtlbdata.RWFT[3][1][rv] = (void*)((w64!=0)  ? w64	: vtlbDefaultPhyWriteLg<mem64_t>);
-	vtlbdata.RWFT[4][1][rv] = (void*)((w128!=0) ? w128	: vtlbDefaultPhyWriteLg<mem128_t>);
+	_gccHackFix(0,Sm,8);
+	_gccHackFix(1,Sm,16);
+	_gccHackFix(2,Sm,32);
+	_gccHackFix(3,Lg,64);
+	_gccHackFix(4,Lg,128);
+	
+#undef _gccHackFix
 }
 
 vtlbHandler vtlb_NewHandler()
