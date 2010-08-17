@@ -310,23 +310,6 @@ enum PSM_value
 	PSMT16SZ	= 58,		// 111010
 };
 
-enum GS_PSM
-{
-	PSM_PSMCT32		= 0,  // 0000-0000
-	PSM_PSMCT24		= 1,  // 0000-0001
-	PSM_PSMCT16		= 2,  // 0000-0010
-	PSM_PSMCT16S	= 10, // 0000-1010
-	PSM_PSMT8		= 19, // 0001-0011
-	PSM_PSMT4		= 20, // 0001-0100
-	PSM_PSMT8H		= 27, // 0001-1011
-	PSM_PSMT4HL		= 36, // 0010-0100
-	PSM_PSMT4HH		= 44, // 0010-1100
-	PSM_PSMZ32		= 48, // 0011-0000
-	PSM_PSMZ24		= 49, // 0011-0001
-	PSM_PSMZ16		= 50, // 0011-0010
-	PSM_PSMZ16S		= 58, // 0011-1010
-};
-
 // Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
 // 16, 16S, 16Z, 16SZ -- 2, PSMT8 and 8H - 3, PSMT4, 4HL, 4HH -- 4.
 inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
