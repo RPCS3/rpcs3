@@ -45,17 +45,15 @@ void MapTLB(int i)
 	u32 mask, addr;
 	u32 saddr, eaddr;
 
-	DevCon.WriteLn("MAP TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X",
-		i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
+	DevCon.WriteLn("MAP TLB %d: 0x%08X-> [0x%08X 0x%08X] S=0x%08X G=%d ASID=%d Mask=0x%03X",
+		i, tlb[i].VPN2, tlb[i].PFN0, tlb[i].PFN1, tlb[i].S, tlb[i].G, tlb[i].ASID, tlb[i].Mask);
 
 	if (tlb[i].S)
 	{
-		DevCon.WriteLn("OMG SPRAM MAPPING %08X %08X\n", tlb[i].VPN2,tlb[i].Mask);
-		vtlb_VMapBuffer(tlb[i].VPN2, eeMem->Scratch, 0x4000);
+		vtlb_VMapBuffer(tlb[i].VPN2, eeMem->Scratch, Ps2MemSize::Scratch);
 	}
 
 	if (tlb[i].VPN2 == 0x70000000) return; //uh uhh right ...
-
 	if (tlb[i].EntryLo0 & 0x2) {
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = tlb[i].VPN2 >> 12;
