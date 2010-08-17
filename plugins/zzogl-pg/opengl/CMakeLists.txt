@@ -65,6 +65,7 @@ set(zzoglSources
     ZZoglCreate.cpp
     ZZoglCRTC.cpp
     ZZoglFlush.cpp
+    ZZoglFlushHack.cpp
     ZZoglSave.cpp
     ZZoglShaders.cpp
     ZZoglShoots.cpp

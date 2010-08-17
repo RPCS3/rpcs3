@@ -423,6 +423,7 @@ union
 	CMemoryTarget* pmemtarg; // the current mem target set
 	CRenderTarget* prndr;
 	CDepthTarget* pdepth;
+
 };
 
 // Return, if tcc, aem or psm mode told us, than Alpha test should be used

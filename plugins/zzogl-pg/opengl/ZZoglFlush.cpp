@@ -25,6 +25,7 @@
 #include "Mem.h"
 #include "zerogs.h"
 #include "targets.h"
+#include "ZZoglFlushHack.h"
 
 using namespace ZeroGS;
 
@@ -376,7 +377,7 @@ inline void FlushUpdateEffect()
 // Check, maybe we cold skip flush
 inline bool IsFlushNoNeed(VB& curvb, const pixTest& curtest)
 {
-	if (curvb.nCount == 0 || (curtest.zte && curtest.ztst == 0) /*|| g_bIsLost*/)
+	if (curvb.nCount == 0 || (curtest.zte && curtest.ztst == 0) /*|| g_bIsLost*/ || IsBadFrame(curvb) == 1)
 	{
 		curvb.nCount = 0;
 		return true;
