@@ -427,22 +427,24 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 	}
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererSW::VertexKick(bool skip)
+void GSRendererSW::DoVertexKick()
 {
-	const GSDrawingContext* context = m_context;
+	const bool tme = PRIM->TME;
+	const bool fst = PRIM->FST;
+
+	const GSDrawingContext& context = *m_context;
 
 	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]);
 
 	xy = xy.insert16<3>(m_v.FOG.F);
 	xy = xy.upl16();
-	xy -= context->XYOFFSET;
+	xy -= context.XYOFFSET;
 
-	GSVertexSW v;
+	GSVertexSW& dst = m_vl.AddTail();
 
-	v.p = GSVector4(xy) * g_pos_scale;
+	dst.p = GSVector4(xy) * g_pos_scale;
 
-	v.c = GSVector4(GSVector4i::load((int)m_v.RGBAQ.u32[0]).u8to32() << 7);
+	dst.c = GSVector4(GSVector4i::load((int)m_v.RGBAQ.u32[0]).u8to32() << 7);
 
 	if(tme)
 	{
@@ -450,31 +452,37 @@ void GSRendererSW::VertexKick(bool skip)
 
 		if(fst)
 		{
-			v.t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
+			dst.t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
 			q = 1.0f;
 		}
 		else
 		{
-			v.t = GSVector4(m_v.ST.S, m_v.ST.T);
-			v.t *= GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH);
+			dst.t = GSVector4(m_v.ST.S, m_v.ST.T);
+			dst.t *= GSVector4(0x10000 << context.TEX0.TW, 0x10000 << context.TEX0.TH);
 			q = m_v.RGBAQ.Q;
 		}
 
-		v.t = v.t.xyxy(GSVector4::load(q));
+		dst.t = dst.t.xyxy(GSVector4::load(q));
 	}
 
-	GSVertexSW& dst = m_vl.AddTail();
-
-	dst = v;
-
 	dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the uint32 => float => uint32 conversion
+}
 
-	int count = 0;
 
-	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
-	{
-if(!m_dump)
+template< uint32 prim >
+void GSRendererSW::DrawingKick( bool skip )
 {
+	int count;
+
+	// BaseDrawingKick can never return NULL here because the DrawingKick function
+	// tables route to DrawingKickNull for GS_INVLALID prim types (and that's the only
+	// condition where this function would return NULL).
+
+	GSVertexSW* v = BaseDrawingKick<prim>(count);
+	if (skip || !v) return;
+
+	if(!m_dump)
+	{
 		GSVector4 pmin, pmax;
 
 		switch(prim)
@@ -497,7 +505,7 @@ if(!m_dump)
 			break;
 		}
 
-		GSVector4 scissor = context->scissor.ex;
+		GSVector4 scissor = m_context->scissor.ex;
 
 		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
 
@@ -526,72 +534,72 @@ if(!m_dump)
 		{
 			return;
 		}
-}
+	}
+
+	switch(prim)
+	{
+	case GS_POINTLIST:
+		break;
+	case GS_LINELIST:
+	case GS_LINESTRIP:
+		if(PRIM->IIP == 0) {v[0].c = v[1].c;}
+		break;
+	case GS_TRIANGLELIST:
+	case GS_TRIANGLESTRIP:
+	case GS_TRIANGLEFAN:
+		if(PRIM->IIP == 0) {v[0].c = v[2].c; v[1].c = v[2].c;}
+		break;
+	case GS_SPRITE:
+		break;
+	}
+
+	if(m_count < 30 && m_count >= 3)
+	{
+		GSVertexSW* v = &m_vertices[m_count - 3];
+
+		int tl = 0;
+		int br = 0;
+
+		bool isquad = false;
+
 		switch(prim)
 		{
-		case GS_POINTLIST:
-			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-			if(PRIM->IIP == 0) {v[0].c = v[1].c;}
-			break;
-		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
-			if(PRIM->IIP == 0) {v[0].c = v[2].c; v[1].c = v[2].c;}
-			break;
-		case GS_SPRITE:
+		case GS_TRIANGLELIST:
+			isquad = GSVertexSW::IsQuad(v, tl, br);
 			break;
 		}
 
-		if(m_count < 30 && m_count >= 3)
+		if(isquad)
 		{
-			GSVertexSW* v = &m_vertices[m_count - 3];
+			m_count -= 3;
 
-			int tl = 0;
-			int br = 0;
-
-			bool isquad = false;
-
-			switch(prim)
+			if(m_count > 0)
 			{
-			case GS_TRIANGLESTRIP:
-			case GS_TRIANGLEFAN:
-			case GS_TRIANGLELIST:
-				isquad = GSVertexSW::IsQuad(v, tl, br);
-				break;
-			}
-
-			if(isquad)
-			{
-				m_count -= 3;
-
-				if(m_count > 0)
-				{
-					tl += m_count;
-					br += m_count;
-
-					Flush();
-				}
-
-				if(tl != 0) m_vertices[0] = m_vertices[tl];
-				if(br != 1) m_vertices[1] = m_vertices[br];
-
-				m_count = 2;
-
-				uint32 tmp = PRIM->PRIM;
-				PRIM->PRIM = GS_SPRITE;
+				tl += m_count;
+				br += m_count;
 
 				Flush();
-
-				PRIM->PRIM = tmp;
-
-				m_perfmon.Put(GSPerfMon::Quad, 1);
-
-				return;
 			}
-		}
 
-		m_count += count;
+			if(tl != 0) m_vertices[0] = m_vertices[tl];
+			if(br != 1) m_vertices[1] = m_vertices[br];
+
+			m_count = 2;
+
+			uint32 tmp = PRIM->PRIM;
+			PRIM->PRIM = GS_SPRITE;
+
+			Flush();
+
+			PRIM->PRIM = tmp;
+
+			m_perfmon.Put(GSPerfMon::Quad, 1);
+
+			return;
+		}
 	}
+
+	m_count += count;
 }

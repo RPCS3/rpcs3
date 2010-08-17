@@ -37,7 +37,6 @@ GSState::GSState()
 	, m_vprim(1)
 	, m_version(6)
 	, m_frameskip(0)
-	, m_vkf(NULL)
 {
 	m_sssize = 0;
 
@@ -122,15 +121,68 @@ void GSState::SetMultithreaded( bool isMT )
 	m_mt = isMT;
 	if( isMT )
 	{
-		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GSState::GIFRegHandlerNull;
-		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH] = &GSState::GIFRegHandlerNull;
-		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL] = &GSState::GIFRegHandlerNull;
+		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL]	= &GSState::GIFRegHandlerNull;
+		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH]	= &GSState::GIFRegHandlerNull;
+		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL]	= &GSState::GIFRegHandlerNull;
 	}
 	else
 	{
-		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GSState::GIFRegHandlerSIGNAL;
-		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH] = &GSState::GIFRegHandlerFINISH;
-		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL] = &GSState::GIFRegHandlerLABEL;
+		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL]	= &GSState::GIFRegHandlerSIGNAL;
+		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH]	= &GSState::GIFRegHandlerFINISH;
+		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL]	= &GSState::GIFRegHandlerLABEL;
+	}
+}
+
+void GSState::SetFrameSkip(int skip)
+{
+	if(m_frameskip == skip) return;
+	m_frameskip = skip;
+
+	if(skip)
+	{
+		#if !UsePackedRegSwitch
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2]		= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2]		= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1]	= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2]	= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_FOG]		= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3]		= &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3]		= &GSState::GIFPackedRegHandlerNOP;
+		#endif
+
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_ST]			= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_UV]			= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3]		= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT]	= &GSState::GIFRegHandlerNOP;
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE]		= &GSState::GIFRegHandlerNOP;
+	}
+	else
+	{
+		#if !UsePackedRegSwitch
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2]		= &GSState::GIFPackedRegHandlerXYZF2;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2]		= &GSState::GIFPackedRegHandlerXYZ2;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
+		m_fpGIFPackedRegHandlers[GIF_REG_FOG]		= &GSState::GIFPackedRegHandlerFOG;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3]		= (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZF3;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3]		= (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZ3;
+		#endif
+		
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM]		= &GSState::GIFRegHandlerPRIM;
+		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ]		= &GSState::GIFRegHandlerRGBAQ;
+		m_fpGIFRegHandlers[GIF_A_D_REG_ST]			= &GSState::GIFRegHandlerST;
+		m_fpGIFRegHandlers[GIF_A_D_REG_UV]			= &GSState::GIFRegHandlerUV;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2]		= &GSState::GIFRegHandlerXYZF2;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2]		= &GSState::GIFRegHandlerXYZ2;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3]		= &GSState::GIFRegHandlerXYZF3;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3]		= &GSState::GIFRegHandlerXYZ3;
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT]	= &GSState::GIFRegHandlerPRMODECONT;
+		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE]		= &GSState::GIFRegHandlerPRMODE;
 	}
 }
 
@@ -151,84 +203,86 @@ void GSState::Reset()
 
 void GSState::ResetHandlers()
 {
+	#if !UsePackedRegSwitch
 	for(int i = 0; i < countof(m_fpGIFPackedRegHandlers); i++)
 	{
 		m_fpGIFPackedRegHandlers[i] = &GSState::GIFPackedRegHandlerNull;
 	}
 
-	m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = &GSState::GIFPackedRegHandlerPRIM;
-	m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerRGBA;
-	m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerSTQ;
-	m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerUV;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
-	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1] = &GSState::GIFPackedRegHandlerTEX0<0>;
-	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2] = &GSState::GIFPackedRegHandlerTEX0<1>;
-	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GSState::GIFPackedRegHandlerCLAMP<0>;
-	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GSState::GIFPackedRegHandlerCLAMP<1>;
-	m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerXYZF3;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerXYZ3;
-	m_fpGIFPackedRegHandlers[GIF_REG_A_D] = &GSState::GIFPackedRegHandlerA_D;
-	m_fpGIFPackedRegHandlers[GIF_REG_NOP] = &GSState::GIFPackedRegHandlerNOP;
+	m_fpGIFPackedRegHandlers[GIF_REG_PRIM]		= (GIFPackedRegHandler)&GSState::GIFRegHandlerPRIM;
+	m_fpGIFPackedRegHandlers[GIF_REG_RGBA]		= &GSState::GIFPackedRegHandlerRGBA;
+	m_fpGIFPackedRegHandlers[GIF_REG_STQ]		= &GSState::GIFPackedRegHandlerSTQ;
+	m_fpGIFPackedRegHandlers[GIF_REG_UV]		= &GSState::GIFPackedRegHandlerUV;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2]		= &GSState::GIFPackedRegHandlerXYZF2;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZ2]		= &GSState::GIFPackedRegHandlerXYZ2;
+	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerTEX0<0>;
+	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerTEX0<1>;
+	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
+	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2]	= (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
+	m_fpGIFPackedRegHandlers[GIF_REG_FOG]		= &GSState::GIFPackedRegHandlerFOG;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3]		= (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZF3;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3]		= (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZ3;
+	m_fpGIFPackedRegHandlers[GIF_REG_A_D]		= &GSState::GIFPackedRegHandlerA_D;
+	m_fpGIFPackedRegHandlers[GIF_REG_NOP]		= &GSState::GIFPackedRegHandlerNOP;
+	#endif
 
 	for(int i = 0; i < countof(m_fpGIFRegHandlers); i++)
 	{
 		m_fpGIFRegHandlers[i] = &GSState::GIFRegHandlerNull;
 	}
 
-	m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
-	m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
-	m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
-	m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_1] = &GSState::GIFRegHandlerTEX0<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_2] = &GSState::GIFRegHandlerTEX0<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_1] = &GSState::GIFRegHandlerCLAMP<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_2] = &GSState::GIFRegHandlerCLAMP<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FOG] = &GSState::GIFRegHandlerFOG;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF3;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ3;
-	m_fpGIFRegHandlers[GIF_A_D_REG_NOP] = &GSState::GIFRegHandlerNOP;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_1] = &GSState::GIFRegHandlerTEX1<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_2] = &GSState::GIFRegHandlerTEX1<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX2_1] = &GSState::GIFRegHandlerTEX2<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEX2_2] = &GSState::GIFRegHandlerTEX2<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYOFFSET_1] = &GSState::GIFRegHandlerXYOFFSET<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYOFFSET_2] = &GSState::GIFRegHandlerXYOFFSET<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerPRMODECONT;
-	m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEXCLUT] = &GSState::GIFRegHandlerTEXCLUT;
-	m_fpGIFRegHandlers[GIF_A_D_REG_SCANMSK] = &GSState::GIFRegHandlerSCANMSK;
-	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP1_1] = &GSState::GIFRegHandlerMIPTBP1<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP1_2] = &GSState::GIFRegHandlerMIPTBP1<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP2_1] = &GSState::GIFRegHandlerMIPTBP2<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP2_2] = &GSState::GIFRegHandlerMIPTBP2<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEXA] = &GSState::GIFRegHandlerTEXA;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FOGCOL] = &GSState::GIFRegHandlerFOGCOL;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEXFLUSH] = &GSState::GIFRegHandlerTEXFLUSH;
-	m_fpGIFRegHandlers[GIF_A_D_REG_SCISSOR_1] = &GSState::GIFRegHandlerSCISSOR<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_SCISSOR_2] = &GSState::GIFRegHandlerSCISSOR<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_ALPHA_1] = &GSState::GIFRegHandlerALPHA<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_ALPHA_2] = &GSState::GIFRegHandlerALPHA<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_DIMX] = &GSState::GIFRegHandlerDIMX;
-	m_fpGIFRegHandlers[GIF_A_D_REG_DTHE] = &GSState::GIFRegHandlerDTHE;
-	m_fpGIFRegHandlers[GIF_A_D_REG_COLCLAMP] = &GSState::GIFRegHandlerCOLCLAMP;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEST_1] = &GSState::GIFRegHandlerTEST<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TEST_2] = &GSState::GIFRegHandlerTEST<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_PABE] = &GSState::GIFRegHandlerPABE;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FBA_1] = &GSState::GIFRegHandlerFBA<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FBA_2] = &GSState::GIFRegHandlerFBA<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FRAME_1] = &GSState::GIFRegHandlerFRAME<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_FRAME_2] = &GSState::GIFRegHandlerFRAME<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_ZBUF_1] = &GSState::GIFRegHandlerZBUF<0>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_ZBUF_2] = &GSState::GIFRegHandlerZBUF<1>;
-	m_fpGIFRegHandlers[GIF_A_D_REG_BITBLTBUF] = &GSState::GIFRegHandlerBITBLTBUF;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TRXPOS] = &GSState::GIFRegHandlerTRXPOS;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TRXREG] = &GSState::GIFRegHandlerTRXREG;
-	m_fpGIFRegHandlers[GIF_A_D_REG_TRXDIR] = &GSState::GIFRegHandlerTRXDIR;
-	m_fpGIFRegHandlers[GIF_A_D_REG_HWREG] = &GSState::GIFRegHandlerHWREG;
+	m_fpGIFRegHandlers[GIF_A_D_REG_PRIM]		= &GSState::GIFRegHandlerPRIM;
+	m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ]		= &GSState::GIFRegHandlerRGBAQ;
+	m_fpGIFRegHandlers[GIF_A_D_REG_ST]			= &GSState::GIFRegHandlerST;
+	m_fpGIFRegHandlers[GIF_A_D_REG_UV]			= &GSState::GIFRegHandlerUV;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2]		= &GSState::GIFRegHandlerXYZF2;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2]		= &GSState::GIFRegHandlerXYZ2;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_1]		= &GSState::GIFRegHandlerTEX0<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_2]		= &GSState::GIFRegHandlerTEX0<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_1]		= &GSState::GIFRegHandlerCLAMP<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_2]		= &GSState::GIFRegHandlerCLAMP<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FOG]			= &GSState::GIFRegHandlerFOG;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3]		= &GSState::GIFRegHandlerXYZF3;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3]		= &GSState::GIFRegHandlerXYZ3;
+	m_fpGIFRegHandlers[GIF_A_D_REG_NOP]			= &GSState::GIFRegHandlerNOP;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_1]		= &GSState::GIFRegHandlerTEX1<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_2]		= &GSState::GIFRegHandlerTEX1<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX2_1]		= &GSState::GIFRegHandlerTEX2<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEX2_2]		= &GSState::GIFRegHandlerTEX2<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYOFFSET_1]	= &GSState::GIFRegHandlerXYOFFSET<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYOFFSET_2]	= &GSState::GIFRegHandlerXYOFFSET<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT]	= &GSState::GIFRegHandlerPRMODECONT;
+	m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE]		= &GSState::GIFRegHandlerPRMODE;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEXCLUT]		= &GSState::GIFRegHandlerTEXCLUT;
+	m_fpGIFRegHandlers[GIF_A_D_REG_SCANMSK]		= &GSState::GIFRegHandlerSCANMSK;
+	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP1_1]	= &GSState::GIFRegHandlerMIPTBP1<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP1_2]	= &GSState::GIFRegHandlerMIPTBP1<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP2_1]	= &GSState::GIFRegHandlerMIPTBP2<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_MIPTBP2_2]	= &GSState::GIFRegHandlerMIPTBP2<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEXA]		= &GSState::GIFRegHandlerTEXA;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FOGCOL]		= &GSState::GIFRegHandlerFOGCOL;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEXFLUSH]	= &GSState::GIFRegHandlerTEXFLUSH;
+	m_fpGIFRegHandlers[GIF_A_D_REG_SCISSOR_1]	= &GSState::GIFRegHandlerSCISSOR<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_SCISSOR_2]	= &GSState::GIFRegHandlerSCISSOR<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_ALPHA_1]		= &GSState::GIFRegHandlerALPHA<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_ALPHA_2]		= &GSState::GIFRegHandlerALPHA<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_DIMX]		= &GSState::GIFRegHandlerDIMX;
+	m_fpGIFRegHandlers[GIF_A_D_REG_DTHE]		= &GSState::GIFRegHandlerDTHE;
+	m_fpGIFRegHandlers[GIF_A_D_REG_COLCLAMP]	= &GSState::GIFRegHandlerCOLCLAMP;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEST_1]		= &GSState::GIFRegHandlerTEST<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TEST_2]		= &GSState::GIFRegHandlerTEST<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_PABE]		= &GSState::GIFRegHandlerPABE;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FBA_1]		= &GSState::GIFRegHandlerFBA<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FBA_2]		= &GSState::GIFRegHandlerFBA<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FRAME_1]		= &GSState::GIFRegHandlerFRAME<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_FRAME_2]		= &GSState::GIFRegHandlerFRAME<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_ZBUF_1]		= &GSState::GIFRegHandlerZBUF<0>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_ZBUF_2]		= &GSState::GIFRegHandlerZBUF<1>;
+	m_fpGIFRegHandlers[GIF_A_D_REG_BITBLTBUF]	= &GSState::GIFRegHandlerBITBLTBUF;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TRXPOS]		= &GSState::GIFRegHandlerTRXPOS;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TRXREG]		= &GSState::GIFRegHandlerTRXREG;
+	m_fpGIFRegHandlers[GIF_A_D_REG_TRXDIR]		= &GSState::GIFRegHandlerTRXDIR;
+	m_fpGIFRegHandlers[GIF_A_D_REG_HWREG]		= &GSState::GIFRegHandlerHWREG;
 
 	SetMultithreaded( m_mt );
 }
@@ -326,14 +380,7 @@ void GSState::GIFPackedRegHandlerNull(const GIFPackedReg* r)
 	// ASSERT(0);
 }
 
-void GSState::GIFPackedRegHandlerPRIM(const GIFPackedReg* r)
-{
-	// ASSERT(r->r.PRIM.PRIM < 7);
-
-	GIFRegHandlerPRIM(&r->r);
-}
-
-void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* r)
 {
 	#if _M_SSE >= 0x301
 
@@ -358,7 +405,7 @@ void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* r)
 	m_v.RGBAQ.Q = m_q;
 }
 
-void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
 {
 	#if defined(_M_AMD64)
 
@@ -379,7 +426,7 @@ void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
 	m_q = r->STQ.Q;
 }
 
-void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
 {
 	#if _M_SSE >= 0x200
 
@@ -394,7 +441,7 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
 	#endif
 }
 
-void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
 {
 	m_v.XYZ.X = r->XYZF2.X;
 	m_v.XYZ.Y = r->XYZF2.Y;
@@ -404,7 +451,7 @@ void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
 	VertexKick(r->XYZF2.ADC);
 }
 
-void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* r)
 {
 	m_v.XYZ.X = r->XYZ2.X;
 	m_v.XYZ.Y = r->XYZ2.Y;
@@ -413,32 +460,12 @@ void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* r)
 	VertexKick(r->XYZ2.ADC);
 }
 
-template<int i> void GSState::GIFPackedRegHandlerTEX0(const GIFPackedReg* r)
-{
-	GIFRegHandlerTEX0<i>((GIFReg*)&r->u64[0]);
-}
-
-template<int i> void GSState::GIFPackedRegHandlerCLAMP(const GIFPackedReg* r)
-{
-	GIFRegHandlerCLAMP<i>((GIFReg*)&r->u64[0]);
-}
-
-void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* r)
 {
 	m_v.FOG.F = r->FOG.F;
 }
 
-void GSState::GIFPackedRegHandlerXYZF3(const GIFPackedReg* r)
-{
-	GIFRegHandlerXYZF3((GIFReg*)&r->u64[0]);
-}
-
-void GSState::GIFPackedRegHandlerXYZ3(const GIFPackedReg* r)
-{
-	GIFRegHandlerXYZ3((GIFReg*)&r->u64[0]);
-}
-
-void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* r)
+void __fi GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* r)
 {
 	(this->*m_fpGIFRegHandlers[r->A_D.ADDR])(&r->r);
 }
@@ -454,13 +481,13 @@ void GSState::GIFRegHandlerNull(const GIFReg* r)
 	// ASSERT(0);
 }
 
-void GSState::GIFRegHandlerPRIM(const GIFReg* r)
+__forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 {
 	// ASSERT(r->PRIM.PRIM < 7);
 
-	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(r->PRIM.PRIM))
+	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM))
 	{
-		if((m_env.PRIM.u32[0] ^ r->PRIM.u32[0]) & 0x7f8) // all fields except PRIM
+		if((m_env.PRIM.u32[0] ^ prim.u32[0]) & 0x7f8) // all fields except PRIM
 		{
 			Flush();
 		}
@@ -470,14 +497,17 @@ void GSState::GIFRegHandlerPRIM(const GIFReg* r)
 		Flush();
 	}
 
-	m_env.PRIM = (GSVector4i)r->PRIM;
-	m_env.PRMODE._PRIM = r->PRIM.PRIM;
+	m_env.PRIM = (GSVector4i)prim;
+	m_env.PRMODE._PRIM = prim.PRIM;
 
 	m_context = &m_env.CTXT[PRIM->CTXT];
 
-	UpdateVertexKick();
-
 	ResetPrim();
+}
+
+void GSState::GIFRegHandlerPRIM(const GIFReg* r)
+{
+	ApplyPRIM(r->PRIM);
 }
 
 void GSState::GIFRegHandlerRGBAQ(const GIFReg* r)
@@ -495,7 +525,7 @@ void GSState::GIFRegHandlerUV(const GIFReg* r)
 	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
 }
 
-void GSState::GIFRegHandlerXYZF2(const GIFReg* r)
+__fi void GSState::GIFRegHandlerXYZF2(const GIFReg* r)
 {
 /*
 	m_v.XYZ.X = r->XYZF.X;
@@ -510,14 +540,14 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* r)
 	VertexKick(false);
 }
 
-void GSState::GIFRegHandlerXYZ2(const GIFReg* r)
+__fi void GSState::GIFRegHandlerXYZ2(const GIFReg* r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
 	VertexKick(false);
 }
 
-__forceinline void GSState::ApplyTEX0( uint i, GIFRegTEX0& TEX0 )
+__fi void GSState::ApplyTEX0( uint i, GIFRegTEX0& TEX0 )
 {
 	// even if TEX0 did not change, a new palette may have been uploaded and will overwrite the currently queued for drawing
 
@@ -540,7 +570,7 @@ __forceinline void GSState::ApplyTEX0( uint i, GIFRegTEX0& TEX0 )
 		m_env.CTXT[i].offset.tex = m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 	}
 
-	m_env.CTXT[i].TEX0 = TEX0;
+	m_env.CTXT[i].TEX0 = (GSVector4i)TEX0;
 
 	if(wt)
 	{
@@ -548,7 +578,7 @@ __forceinline void GSState::ApplyTEX0( uint i, GIFRegTEX0& TEX0 )
 	}
 }
 
-template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 {
 	GIFRegTEX0 TEX0 = r->TEX0;
 
@@ -558,7 +588,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 	ApplyTEX0( i, TEX0 );
 }
 
-template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerCLAMP(const GIFReg* r)
 {
 	if(PRIM->CTXT == i && r->CLAMP != m_env.CTXT[i].CLAMP)
 	{
@@ -573,7 +603,7 @@ void GSState::GIFRegHandlerFOG(const GIFReg* r)
 	m_v.FOG = (GSVector4i)r->FOG;
 }
 
-void GSState::GIFRegHandlerXYZF3(const GIFReg* r)
+__fi void GSState::GIFRegHandlerXYZF3(const GIFReg* r)
 {
 /*
 	m_v.XYZ.X = r->XYZF.X;
@@ -588,7 +618,7 @@ void GSState::GIFRegHandlerXYZF3(const GIFReg* r)
 	VertexKick(true);
 }
 
-void GSState::GIFRegHandlerXYZ3(const GIFReg* r)
+__fi void GSState::GIFRegHandlerXYZ3(const GIFReg* r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
@@ -599,7 +629,7 @@ void GSState::GIFRegHandlerNOP(const GIFReg* r)
 {
 }
 
-template<int i> void GSState::GIFRegHandlerTEX1(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerTEX1(const GIFReg* r)
 {
 	if(PRIM->CTXT == i && r->TEX1 != m_env.CTXT[i].TEX1)
 	{
@@ -609,7 +639,7 @@ template<int i> void GSState::GIFRegHandlerTEX1(const GIFReg* r)
 	m_env.CTXT[i].TEX1 = (GSVector4i)r->TEX1;
 }
 
-template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerTEX2(const GIFReg* r)
 {
 	// m_env.CTXT[i].TEX2 = r->TEX2; // not used
 
@@ -626,7 +656,7 @@ template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* r)
 	ApplyTEX0(i, TEX0);
 }
 
-template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerXYOFFSET(const GIFReg* r)
 {
 	GSVector4i o = (GSVector4i)r->XYOFFSET & GSVector4i::x0000ffff();
 
@@ -640,7 +670,7 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* r)
 	m_env.CTXT[i].UpdateScissor();
 }
 
-void GSState::GIFRegHandlerPRMODECONT(const GIFReg* r)
+__fi void GSState::GIFRegHandlerPRMODECONT(const GIFReg* r)
 {
 	if(r->PRMODECONT != m_env.PRMODECONT)
 	{
@@ -654,11 +684,9 @@ void GSState::GIFRegHandlerPRMODECONT(const GIFReg* r)
 	// if(PRIM->PRIM == 7) printf("Invalid PRMODECONT/PRIM\n");
 
 	m_context = &m_env.CTXT[PRIM->CTXT];
-
-	UpdateVertexKick();
 }
 
-void GSState::GIFRegHandlerPRMODE(const GIFReg* r)
+__fi void GSState::GIFRegHandlerPRMODE(const GIFReg* r)
 {
 	if(!m_env.PRMODECONT.AC)
 	{
@@ -670,11 +698,9 @@ void GSState::GIFRegHandlerPRMODE(const GIFReg* r)
 	m_env.PRMODE._PRIM = _PRIM;
 
 	m_context = &m_env.CTXT[PRIM->CTXT];
-
-	UpdateVertexKick();
 }
 
-void GSState::GIFRegHandlerTEXCLUT(const GIFReg* r)
+__fi void GSState::GIFRegHandlerTEXCLUT(const GIFReg* r)
 {
 	if(r->TEXCLUT != m_env.TEXCLUT)
 	{
@@ -704,7 +730,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP1(const GIFReg* r)
 	m_env.CTXT[i].MIPTBP1 = (GSVector4i)r->MIPTBP1;
 }
 
-template<int i> void GSState::GIFRegHandlerMIPTBP2(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerMIPTBP2(const GIFReg* r)
 {
 	if(PRIM->CTXT == i && r->MIPTBP2 != m_env.CTXT[i].MIPTBP2)
 	{
@@ -741,7 +767,7 @@ void GSState::GIFRegHandlerTEXFLUSH(const GIFReg* r)
 	// InvalidateTextureCache();
 }
 
-template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
 {
 	if(PRIM->CTXT == i && r->SCISSOR != m_env.CTXT[i].SCISSOR)
 	{
@@ -753,7 +779,7 @@ template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
 	m_env.CTXT[i].UpdateScissor();
 }
 
-template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* r)
+template<int i> __fi void GSState::GIFRegHandlerALPHA(const GIFReg* r)
 {
 	ASSERT(r->ALPHA.A != 3);
 	ASSERT(r->ALPHA.B != 3);
@@ -1426,6 +1452,9 @@ template void GSState::Transfer<3>(const uint8* mem, uint32 size);
 
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
+	// [TODO] make me into a template parameter... I think.  --air
+	static const bool FrameSkipIt = false;
+
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
 	const uint8* start = mem;
@@ -1447,11 +1476,11 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
 
-				if(path.tag.PRE && path.tag.FLG == GIF_FLG_PACKED)
+				if(path.tag.PRE && (path.tag.FLG == GIF_FLG_PACKED) && !FrameSkipIt)
 				{
-					GIFReg r;
+					GIFRegPRIM r;
 					r.u64 = path.tag.PRIM;
-					GIFRegHandlerPRIM(&r);
+					ApplyPRIM(r);
 				}
 			}
 		}
@@ -1481,6 +1510,11 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 					{
 						uint32 reg = path.GetReg();
 
+						#if 0
+						// I assume this was some sort of debugging code?  Why intercept and perform
+						// special handling for the first three entries in the table, and then do
+						// a LUT for the rest?  Either do a switch for the whole table (best idea)
+						// or do a LUT for the whole table.
 						switch(reg)
 						{
 						case GIF_REG_RGBA:
@@ -1496,6 +1530,69 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 							(this->*m_fpGIFPackedRegHandlers[reg])((GIFPackedReg*)mem);
 							break;
 						}
+						#endif
+						
+						#if UsePackedRegSwitch
+						// This is a switch statement version of the LUT above.  Since there are only
+						// 16 entries, this is almost certainly ideal, since the compiler can inline
+						// all the handlers, and PGO will further optimize the switch dispatcher.
+						
+						if (FrameSkipIt)
+						{
+							// When skipping frames it looks like we only need to bother with the A_D handler
+							// and the TEX handlers.  (and I'm thinking the TEX handlers might not be necessary
+							// if the PCSX2 side of the frameskipper is smart enough anyway).
+							switch(reg)
+							{
+								case GIF_REG_A_D:		GIFPackedRegHandlerA_D	((GIFPackedReg*)mem);	break;
+								case GIF_REG_TEX0_1:	GIFRegHandlerTEX0<0>	((GIFReg*)mem);			break;
+								case GIF_REG_TEX0_2:	GIFRegHandlerTEX0<1>	((GIFReg*)mem);			break;
+
+								// Should RGBA/STQ/UV be NOPs when skipping frames?  I think so, but maybe the original
+								// switch() (above) was some hack to enable them in frameskipping mode. --air
+
+								case GIF_REG_RGBA:		//GIFPackedRegHandlerRGBA	((GIFPackedReg*)mem);	break;
+								case GIF_REG_STQ:		//GIFPackedRegHandlerSTQ	((GIFPackedReg*)mem);	break;
+								case GIF_REG_UV:		//GIFPackedRegHandlerUV	((GIFPackedReg*)mem);	break;
+
+								case GIF_REG_XYZF2:		//GIFPackedRegHandlerXYZF2((GIFPackedReg*)mem);	break;
+								case GIF_REG_XYZ2:		//GIFPackedRegHandlerXYZ2	((GIFPackedReg*)mem);	break;
+								case GIF_REG_CLAMP_1:	//GIFRegHandlerCLAMP<0>	((GIFReg*)mem);			break;
+								case GIF_REG_CLAMP_2:	//GIFRegHandlerCLAMP<1>	((GIFReg*)mem);			break;
+								case GIF_REG_FOG:		//GIFPackedRegHandlerFOG	((GIFPackedReg*)mem);	break;
+								case GIF_REG_XYZF3:		//GIFRegHandlerXYZF3		((GIFReg*)mem);			break;
+								case GIF_REG_XYZ3:		//GIFRegHandlerXYZ3		((GIFReg*)mem);			break;
+								case GIF_REG_NOP:		break;
+							}
+						}
+						else
+						{
+							switch(reg)
+							{
+								case GIF_REG_RGBA:		GIFPackedRegHandlerRGBA	((GIFPackedReg*)mem);	break;
+								case GIF_REG_STQ:		GIFPackedRegHandlerSTQ	((GIFPackedReg*)mem);	break;
+								case GIF_REG_UV:		GIFPackedRegHandlerUV	((GIFPackedReg*)mem);	break;
+								case GIF_REG_XYZF2:		GIFPackedRegHandlerXYZF2((GIFPackedReg*)mem);	break;
+								case GIF_REG_XYZ2:		GIFPackedRegHandlerXYZ2	((GIFPackedReg*)mem);	break;
+								case GIF_REG_TEX0_1:	GIFRegHandlerTEX0<0>	((GIFReg*)mem);			break;
+								case GIF_REG_TEX0_2:	GIFRegHandlerTEX0<1>	((GIFReg*)mem);			break;
+								case GIF_REG_CLAMP_1:	GIFRegHandlerCLAMP<0>	((GIFReg*)mem);			break;
+								case GIF_REG_CLAMP_2:	GIFRegHandlerCLAMP<1>	((GIFReg*)mem);			break;
+								case GIF_REG_FOG:		GIFPackedRegHandlerFOG	((GIFPackedReg*)mem);	break;
+								case GIF_REG_XYZF3:		GIFRegHandlerXYZF3		((GIFReg*)mem);			break;
+								case GIF_REG_XYZ3:		GIFRegHandlerXYZ3		((GIFReg*)mem);			break;
+								case GIF_REG_A_D:		GIFPackedRegHandlerA_D	((GIFPackedReg*)mem);	break;
+								case GIF_REG_NOP:		break;
+							}
+						}
+						#else
+
+						// This is the original LUT implementation of the packed reg dispatcher.
+						// Simple and clean, but the switch system below is probably more efficient.
+
+						(this->*m_fpGIFPackedRegHandlers[reg])((GIFPackedReg*)mem);
+
+						#endif
 
 						mem += sizeof(GIFPackedReg);
 						size--;
@@ -1791,8 +1888,6 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	m_context = &m_env.CTXT[PRIM->CTXT];
 
-	UpdateVertexKick();
-
 	m_env.UpdateDIMX();
 
 	for(int i = 0; i < 2; i++)
@@ -1815,65 +1910,6 @@ void GSState::SetGameCRC(uint32 crc, int options)
 	m_crc = crc;
 	m_options = options;
 	m_game = CRC::Lookup(crc);
-}
-
-void GSState::SetFrameSkip(int skip)
-{
-	if(m_frameskip != skip)
-	{
-		m_frameskip = skip;
-
-		if(skip)
-		{
-			m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerNOP;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerNOP;
-
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerNOP;
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerNOP;
- 		}
- 		else
- 		{
-			m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = &GSState::GIFPackedRegHandlerPRIM;
-			m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerRGBA;
-			m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerSTQ;
-			m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerUV;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
-			m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GSState::GIFPackedRegHandlerCLAMP<0>;
-			m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GSState::GIFPackedRegHandlerCLAMP<1>;
-			m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerXYZF3;
-			m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerXYZ3;
-
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
-			m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
-			m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
-			m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF3;
-			m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ3;
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerPRMODECONT;
-			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
- 		}
-	}
 }
 
 // GSTransferBuffer

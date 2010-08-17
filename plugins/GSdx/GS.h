@@ -264,11 +264,10 @@ union name			\
 #define REG_SET_END };
 
 REG64_(GSReg, BGCOLOR)
-	uint32 R:8;
-	uint32 G:8;
-	uint32 B:8;
-	uint32 _PAD1:8;
-	uint32 _PAD2:32;
+	uint8 R;
+	uint8 G;
+	uint8 B;
+	uint8 _PAD1[5];
 REG_END
 
 REG64_(GSReg, BUSDIR)
@@ -402,8 +401,8 @@ union
 REG_END
 
 REG64_(GSReg, SIGLBLID)
-	uint32 SIGID:32;
-	uint32 LBLID:32;
+	uint32 SIGID;
+	uint32 LBLID;
 REG_END
 
 REG64_(GSReg, SMODE1)
@@ -518,7 +517,7 @@ REG128(GIFTag)
 	uint32 PRIM:11;
 	uint32 FLG:2; // enum GIF_FLG
 	uint32 NREG:4;
-	uint64 REGS:64;
+	uint64 REGS;
 REG_END
 
 // GIFReg
@@ -529,8 +528,8 @@ REG64_(GIFReg, ALPHA)
 	uint32 C:2;
 	uint32 D:2;
 	uint32 _PAD1:24;
-	uint32 FIX:8;
-	uint32 _PAD2:24;
+	uint8 FIX;
+	uint8 _PAD2[3];
 REG_END2
 	// opaque => output will be Cs/As
 	__forceinline bool IsOpaque() const {return (A == B || C == 2 && FIX == 0) && D == 0 || (A == 0 && B == D && C == 2 && FIX == 0x80);}
@@ -630,22 +629,19 @@ REG64_(GIFReg, FBA)
 REG_END
 
 REG64_(GIFReg, FINISH)
-	uint32 _PAD1:32;
-	uint32 _PAD2:32;
+	uint32 _PAD1[2];
 REG_END
 
 REG64_(GIFReg, FOG)
-	uint32 _PAD1:32;
-	uint32 _PAD2:24;
-	uint32 F:8;
+	uint8 _PAD1[4+3];
+	uint8 F:8;
 REG_END
 
 REG64_(GIFReg, FOGCOL)
-	uint32 FCR:8;
-	uint32 FCG:8;
-	uint32 FCB:8;
-	uint32 _PAD1:8;
-	uint32 _PAD2:32;
+	uint8 FCR;
+	uint8 FCG;
+	uint8 FCB;
+	uint8 _PAD1[5];
 REG_END
 
 REG64_(GIFReg, FRAME)
@@ -655,19 +651,19 @@ REG64_(GIFReg, FRAME)
 	uint32 _PAD2:2;
 	uint32 PSM:6;
 	uint32 _PAD3:2;
-	uint32 FBMSK:32;
+	uint32 FBMSK;
 REG_END2
 	uint32 Block() const {return FBP << 5;}
 REG_END2
 
 REG64_(GIFReg, HWREG)
-	uint32 DATA_LOWER:32;
-	uint32 DATA_UPPER:32;
+	uint32 DATA_LOWER;
+	uint32 DATA_UPPER;
 REG_END
 
 REG64_(GIFReg, LABEL)
-	uint32 ID:32;
-	uint32 IDMSK:32;
+	uint32 ID;
+	uint32 IDMSK;
 REG_END
 
 REG64_(GIFReg, MIPTBP1)
@@ -691,8 +687,7 @@ REG64_(GIFReg, MIPTBP2)
 REG_END
 
 REG64_(GIFReg, NOP)
-	uint32 _PAD1:32;
-	uint32 _PAD2:32;
+	uint32 _PAD[2];
 REG_END
 
 REG64_(GIFReg, PABE)
@@ -736,10 +731,10 @@ REG64_(GIFReg, PRMODECONT)
 REG_END
 
 REG64_(GIFReg, RGBAQ)
-	uint32 R:8;
-	uint32 G:8;
-	uint32 B:8;
-	uint32 A:8;
+	uint8 R;
+	uint8 G;
+	uint8 B;
+	uint8 A;
 	float Q;
 REG_END
 
@@ -761,8 +756,8 @@ REG64_(GIFReg, SCISSOR)
 REG_END
 
 REG64_(GIFReg, SIGNAL)
-	uint32 ID:32;
-	uint32 IDMSK:32;
+	uint32 ID;
+	uint32 IDMSK;
 REG_END
 
 REG64_(GIFReg, ST)
@@ -848,12 +843,12 @@ REG64_(GIFReg, TEX2)
 REG_END
 
 REG64_(GIFReg, TEXA)
-	uint32 TA0:8;
-	uint32 _PAD1:7;
-	uint32 AEM:1;
-	uint32 _PAD2:16;
-	uint32 TA1:8;
-	uint32 _PAD3:24;
+	uint8 TA0;
+	uint8 _PAD1:7;
+	uint8 AEM:1;
+	uint16 _PAD2;
+	uint8 TA1:8;
+	uint8 _PAD3[3];
 REG_END
 
 REG64_(GIFReg, TEXCLUT)
@@ -898,11 +893,11 @@ REG_END
 // GSState::GIFPackedRegHandlerUV and GSState::GIFRegHandlerUV will make sure that the _PAD1/2 bits are set to zero
 
 REG64_(GIFReg, UV)
-	uint32 U:16;
+	uint16 U;
 //	uint32 _PAD1:2;
-	uint32 V:16;
+	uint16 V;
 //	uint32 _PAD2:2;
-	uint32 _PAD3:32;
+	uint32 _PAD3;
 REG_END
 
 // GSState::GIFRegHandlerXYOFFSET will make sure that the _PAD1/2 bits are set to zero
@@ -913,14 +908,14 @@ REG64_(GIFReg, XYOFFSET)
 REG_END
 
 REG64_(GIFReg, XYZ)
-	uint32 X:16;
-	uint32 Y:16;
-	uint32 Z:32;
+	uint16 X;
+	uint16 Y;
+	uint32 Z;
 REG_END
 
 REG64_(GIFReg, XYZF)
-	uint32 X:16;
-	uint32 Y:16;
+	uint16 X;
+	uint16 Y;
 	uint32 Z:24;
 	uint32 F:8;
 REG_END
@@ -986,20 +981,18 @@ REG_SET_END
 REG128_(GIFPacked, PRIM)
 	uint32 PRIM:11;
 	uint32 _PAD1:21;
-	uint32 _PAD2:32;
-	uint32 _PAD3:32;
-	uint32 _PAD4:32;
+	uint32 _PAD2[3];
 REG_END
 
 REG128_(GIFPacked, RGBA)
-	uint32 R:8;
-	uint32 _PAD1:24;
-	uint32 G:8;
-	uint32 _PAD2:24;
-	uint32 B:8;
-	uint32 _PAD3:24;
-	uint32 A:8;
-	uint32 _PAD4:24;
+	uint8 R;
+	uint8 _PAD1[3];
+	uint8 G;
+	uint8 _PAD2[3];
+	uint8 B;
+	uint8 _PAD3[3];
+	uint8 A;
+	uint8 _PAD4[3];
 REG_END
 
 REG128_(GIFPacked, STQ)
@@ -1019,10 +1012,11 @@ REG128_(GIFPacked, UV)
 REG_END
 
 REG128_(GIFPacked, XYZF2)
-	uint32 X:16;
-	uint32 _PAD1:16;
-	uint32 Y:16;
-	uint32 _PAD2:16;
+	uint16 X;
+	uint16 _PAD1;
+	uint16 Y;
+	uint16 _PAD2;
+
 	uint32 _PAD3:4;
 	uint32 Z:24;
 	uint32 _PAD4:4;
@@ -1034,37 +1028,36 @@ REG128_(GIFPacked, XYZF2)
 REG_END
 
 REG128_(GIFPacked, XYZ2)
-	uint32 X:16;
-	uint32 _PAD1:16;
-	uint32 Y:16;
-	uint32 _PAD2:16;
-	uint32 Z:32;
+	uint16 X;
+	uint16 _PAD1;
+	uint16 Y;
+	uint16 _PAD2;
+	uint32 Z;
 	uint32 _PAD3:15;
 	uint32 ADC:1;
 	uint32 _PAD4:16;
 REG_END
 
 REG128_(GIFPacked, FOG)
-	uint32 _PAD1:32;
-	uint32 _PAD2:32;
-	uint32 _PAD3:32;
+	uint32 _PAD1;
+	uint32 _PAD2;
+	uint32 _PAD3;
 	uint32 _PAD4:4;
 	uint32 F:8;
 	uint32 _PAD5:20;
 REG_END
 
 REG128_(GIFPacked, A_D)
-	uint64 DATA:64;
-	uint32 ADDR:8; // enum GIF_A_D_REG
-	uint32 _PAD1:24;
-	uint32 _PAD2:32;
+	uint64 DATA;
+	uint8 ADDR:8; // enum GIF_A_D_REG
+	uint8 _PAD1[3+4];
 REG_END
 
 REG128_(GIFPacked, NOP)
-	uint32 _PAD1:32;
-	uint32 _PAD2:32;
-	uint32 _PAD3:32;
-	uint32 _PAD4:32;
+	uint32 _PAD1;
+	uint32 _PAD2;
+	uint32 _PAD3;
+	uint32 _PAD4;
 REG_END
 
 REG128_SET(GIFPackedReg)

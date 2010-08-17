@@ -158,7 +158,8 @@ protected:
 		m_maxcount -= 100;
 	}
 
-	template<uint32 prim> __forceinline Vertex* DrawingKick(bool skip, int& count)
+	// Returns a pointer to the drawing vertex. Can return NULL!
+	template<uint32 prim> __fi Vertex* BaseDrawingKick(int& count)
 	{
 		switch(prim)
 		{
@@ -232,7 +233,7 @@ protected:
 			__assume(0);
 		}
 
-		return !skip ? v : NULL;
+		return v;
 	}
 
 	virtual void Draw() = 0;

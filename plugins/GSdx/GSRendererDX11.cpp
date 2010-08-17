@@ -38,9 +38,11 @@ bool GSRendererDX11::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererDX11::VertexKick(bool skip)
+void GSRendererDX11::DoVertexKick()
 {
+	const bool tme = PRIM->TME;
+	const bool fst = PRIM->FST;
+
 	GSVertexHW11& dst = m_vl.AddTail();
 
 	dst.vi[0] = m_v.vi[0];
@@ -108,94 +110,98 @@ void GSRendererDX11::VertexKick(bool skip)
 		GSVector4::storel(&dst.ST, m_v.GetUV());
 	}
 #endif
+}
 
-	int count = 0;
+template< uint32 prim >
+void GSRendererDX11::DrawingKick( bool skip )
+{
+	int count;
 
-	if(GSVertexHW11* v = DrawingKick<prim>(skip, count))
+	GSVertexHW11* v = BaseDrawingKick<prim>(count);
+	if (skip || !v) return;
+
+	GSVector4i scissor = m_context->scissor.dx10;
+
+	GSVector4i pmin, pmax;
+
+	#if _M_SSE >= 0x401
+
+	GSVector4i v0, v1, v2;
+
+	switch(prim)
 	{
-		GSVector4i scissor = m_context->scissor.dx10;
-
-		GSVector4i pmin, pmax;
-
-		#if _M_SSE >= 0x401
-
-		GSVector4i v0, v1, v2;
-
-		switch(prim)
-		{
-		case GS_POINTLIST:
-			v0 = GSVector4i::load((int)v[0].p.xy).upl16();
-			pmin = v0;
-			pmax = v0;
-			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-		case GS_SPRITE:
-			v0 = GSVector4i::load((int)v[0].p.xy);
-			v1 = GSVector4i::load((int)v[1].p.xy);
-			pmin = v0.min_u16(v1).upl16();
-			pmax = v0.max_u16(v1).upl16();
-			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-			v0 = GSVector4i::load((int)v[0].p.xy);
-			v1 = GSVector4i::load((int)v[1].p.xy);
-			v2 = GSVector4i::load((int)v[2].p.xy);
-			pmin = v0.min_u16(v1).min_u16(v2).upl16();
-			pmax = v0.max_u16(v1).max_u16(v2).upl16();
-			break;
-		}
-
-		#else
-
-		switch(prim)
-		{
-		case GS_POINTLIST:
-			pmin.x = v[0].p.x;
-			pmin.y = v[0].p.y;
-			pmax.x = v[0].p.x;
-			pmax.y = v[0].p.y;
-			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-		case GS_SPRITE:
-			pmin.x = std::min<uint16>(v[0].p.x, v[1].p.x);
-			pmin.y = std::min<uint16>(v[0].p.y, v[1].p.y);
-			pmax.x = std::max<uint16>(v[0].p.x, v[1].p.x);
-			pmax.y = std::max<uint16>(v[0].p.y, v[1].p.y);
-			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-			pmin.x = std::min<uint16>(std::min<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
-			pmin.y = std::min<uint16>(std::min<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
-			pmax.x = std::max<uint16>(std::max<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
-			pmax.y = std::max<uint16>(std::max<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
-			break;
-		}
-
-		#endif
-
-		GSVector4i test = (pmax < scissor) | (pmin > scissor.zwxy());
-
-		switch(prim)
-		{
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-		case GS_SPRITE:
-			test |= pmin == pmax;
-			break;
-		}
-
-		if(test.mask() & 0xff)
-		{
-			return;
-		}
-
-		m_count += count;
+	case GS_POINTLIST:
+		v0 = GSVector4i::load((int)v[0].p.xy).upl16();
+		pmin = v0;
+		pmax = v0;
+		break;
+	case GS_LINELIST:
+	case GS_LINESTRIP:
+	case GS_SPRITE:
+		v0 = GSVector4i::load((int)v[0].p.xy);
+		v1 = GSVector4i::load((int)v[1].p.xy);
+		pmin = v0.min_u16(v1).upl16();
+		pmax = v0.max_u16(v1).upl16();
+		break;
+	case GS_TRIANGLELIST:
+	case GS_TRIANGLESTRIP:
+	case GS_TRIANGLEFAN:
+		v0 = GSVector4i::load((int)v[0].p.xy);
+		v1 = GSVector4i::load((int)v[1].p.xy);
+		v2 = GSVector4i::load((int)v[2].p.xy);
+		pmin = v0.min_u16(v1).min_u16(v2).upl16();
+		pmax = v0.max_u16(v1).max_u16(v2).upl16();
+		break;
 	}
+
+	#else
+
+	switch(prim)
+	{
+	case GS_POINTLIST:
+		pmin.x = v[0].p.x;
+		pmin.y = v[0].p.y;
+		pmax.x = v[0].p.x;
+		pmax.y = v[0].p.y;
+		break;
+	case GS_LINELIST:
+	case GS_LINESTRIP:
+	case GS_SPRITE:
+		pmin.x = std::min<uint16>(v[0].p.x, v[1].p.x);
+		pmin.y = std::min<uint16>(v[0].p.y, v[1].p.y);
+		pmax.x = std::max<uint16>(v[0].p.x, v[1].p.x);
+		pmax.y = std::max<uint16>(v[0].p.y, v[1].p.y);
+		break;
+	case GS_TRIANGLELIST:
+	case GS_TRIANGLESTRIP:
+	case GS_TRIANGLEFAN:
+		pmin.x = std::min<uint16>(std::min<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
+		pmin.y = std::min<uint16>(std::min<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
+		pmax.x = std::max<uint16>(std::max<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
+		pmax.y = std::max<uint16>(std::max<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
+		break;
+	}
+
+	#endif
+
+	GSVector4i test = (pmax < scissor) | (pmin > scissor.zwxy());
+
+	switch(prim)
+	{
+	case GS_TRIANGLELIST:
+	case GS_TRIANGLESTRIP:
+	case GS_TRIANGLEFAN:
+	case GS_SPRITE:
+		test |= pmin == pmax;
+		break;
+	}
+
+	if(test.mask() & 0xff)
+	{
+		return;
+	}
+
+	m_count += count;
 }
 
 void GSRendererDX11::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)

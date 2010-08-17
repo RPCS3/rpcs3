@@ -36,24 +36,25 @@
 #include "GSAlignedClass.h"
 #include "GSDump.h"
 
+// Set this to 1 to enable a switch statement instead of a LUT for the packed register handler
+// in the GifTransfer code.  Switch statement is probably faster, but it isn't fully implemented
+// yet (not properly supporting frameskipping).
+#define UsePackedRegSwitch 0
+
 class GSState : public GSAlignedClass<16>
 {
+#if !UsePackedRegSwitch
 	typedef void (GSState::*GIFPackedRegHandler)(const GIFPackedReg* r);
-
 	GIFPackedRegHandler m_fpGIFPackedRegHandlers[16];
+#endif
 
 	void GIFPackedRegHandlerNull(const GIFPackedReg* r);
-	void GIFPackedRegHandlerPRIM(const GIFPackedReg* r);
 	void GIFPackedRegHandlerRGBA(const GIFPackedReg* r);
 	void GIFPackedRegHandlerSTQ(const GIFPackedReg* r);
 	void GIFPackedRegHandlerUV(const GIFPackedReg* r);
 	void GIFPackedRegHandlerXYZF2(const GIFPackedReg* r);
 	void GIFPackedRegHandlerXYZ2(const GIFPackedReg* r);
-	template<int i> void GIFPackedRegHandlerTEX0(const GIFPackedReg* r);
-	template<int i> void GIFPackedRegHandlerCLAMP(const GIFPackedReg* r);
 	void GIFPackedRegHandlerFOG(const GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZF3(const GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZ3(const GIFPackedReg* r);
 	void GIFPackedRegHandlerA_D(const GIFPackedReg* r);
 	void GIFPackedRegHandlerNOP(const GIFPackedReg* r);
 
@@ -62,6 +63,7 @@ class GSState : public GSAlignedClass<16>
 	GIFRegHandler m_fpGIFRegHandlers[256];
 
 	void ApplyTEX0( uint i, GIFRegTEX0& TEX0 );
+	void ApplyPRIM(const GIFRegPRIM& PRIM);
 
 	void GIFRegHandlerNull(const GIFReg* r);
 	void GIFRegHandlerPRIM(const GIFReg* r);
@@ -134,67 +136,33 @@ class GSState : public GSAlignedClass<16>
 protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 
-	typedef void (GSState::*VertexKickPtr)(bool skip);
+	typedef void (GSState::*DrawingKickPtr)(bool skip);
 
-	VertexKickPtr m_vk[8][2][2];
-	VertexKickPtr m_vkf;
+	DrawingKickPtr m_dk[8];
 
 	template<class T> void InitVertexKick()
 	{
-		m_vk[GS_POINTLIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 0, 0>;
-		m_vk[GS_POINTLIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 0, 0>;
-		m_vk[GS_POINTLIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 1, 0>;
-		m_vk[GS_POINTLIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 1, 1>;
-
-		m_vk[GS_LINELIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 0, 0>;
-		m_vk[GS_LINELIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 0, 0>;
-		m_vk[GS_LINELIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 1, 0>;
-		m_vk[GS_LINELIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 1, 1>;
-
-		m_vk[GS_LINESTRIP][0][0] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 0, 0>;
-		m_vk[GS_LINESTRIP][0][1] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 0, 0>;
-		m_vk[GS_LINESTRIP][1][0] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 1, 0>;
-		m_vk[GS_LINESTRIP][1][1] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 1, 1>;
-
-		m_vk[GS_TRIANGLELIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 0, 0>;
-		m_vk[GS_TRIANGLELIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 0, 0>;
-		m_vk[GS_TRIANGLELIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 1, 0>;
-		m_vk[GS_TRIANGLELIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 1, 1>;
-
-		m_vk[GS_TRIANGLESTRIP][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 0, 0>;
-		m_vk[GS_TRIANGLESTRIP][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 0, 0>;
-		m_vk[GS_TRIANGLESTRIP][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 1, 0>;
-		m_vk[GS_TRIANGLESTRIP][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 1, 1>;
-
-		m_vk[GS_TRIANGLEFAN][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 0, 0>;
-		m_vk[GS_TRIANGLEFAN][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 0, 0>;
-		m_vk[GS_TRIANGLEFAN][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 1, 0>;
-		m_vk[GS_TRIANGLEFAN][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 1, 1>;
-
-		m_vk[GS_SPRITE][0][0] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 0, 0>;
-		m_vk[GS_SPRITE][0][1] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 0, 0>;
-		m_vk[GS_SPRITE][1][0] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 1, 0>;
-		m_vk[GS_SPRITE][1][1] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 1, 1>;
-
-		m_vk[GS_INVALID][0][0] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][0][1] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][1][0] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][1][1] = &GSState::VertexKickNull;
+		m_dk[GS_POINTLIST]			= (DrawingKickPtr)&T::DrawingKick<GS_POINTLIST>;
+		m_dk[GS_LINELIST]			= (DrawingKickPtr)&T::DrawingKick<GS_LINELIST>;
+		m_dk[GS_LINESTRIP]			= (DrawingKickPtr)&T::DrawingKick<GS_LINESTRIP>;
+		m_dk[GS_TRIANGLELIST]		= (DrawingKickPtr)&T::DrawingKick<GS_TRIANGLELIST>;
+		m_dk[GS_TRIANGLESTRIP]		= (DrawingKickPtr)&T::DrawingKick<GS_TRIANGLESTRIP>;
+		m_dk[GS_TRIANGLEFAN]		= (DrawingKickPtr)&T::DrawingKick<GS_TRIANGLEFAN>;
+		m_dk[GS_SPRITE]				= (DrawingKickPtr)&T::DrawingKick<GS_SPRITE>;
+		m_dk[GS_INVALID]			= &GSState::DrawingKickNull;
 	}
 
-	void UpdateVertexKick()
-	{
-		m_vkf = m_vk[PRIM->PRIM][PRIM->TME][PRIM->FST];
-	}
-
-	void VertexKickNull(bool skip)
+	void DrawingKickNull(bool skip)
 	{
 		ASSERT(0);
 	}
 
-	void VertexKick(bool skip)
+	virtual void DoVertexKick()=0;
+
+	__fi void VertexKick(bool skip)
 	{
-		(this->*m_vkf)(skip);
+		DoVertexKick();
+		(this->*m_dk[PRIM->PRIM])(skip);
 	}
 
 public:
