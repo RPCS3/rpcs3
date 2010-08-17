@@ -613,83 +613,39 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-static struct GSUtilMaps
-{
-	u8 PrimClassField[8];
-	u32 CompatibleBitsField[64][2];
-	u32 SharedBitsField[64][2];
-
-	GSUtilMaps()
-	{
-		PrimClassField[GS_POINTLIST] = GS_POINT_CLASS;
-		PrimClassField[GS_LINELIST] = GS_LINE_CLASS;
-		PrimClassField[GS_LINESTRIP] = GS_LINE_CLASS;
-		PrimClassField[GS_TRIANGLELIST] = GS_TRIANGLE_CLASS;
-		PrimClassField[GS_TRIANGLESTRIP] = GS_TRIANGLE_CLASS;
-		PrimClassField[GS_TRIANGLEFAN] = GS_TRIANGLE_CLASS;
-		PrimClassField[GS_SPRITE] = GS_SPRITE_CLASS;
-		PrimClassField[GS_INVALID] = GS_INVALID_CLASS;
-
-		memset(CompatibleBitsField, 0, sizeof(CompatibleBitsField));
-
-		for(int i = 0; i < 64; i++)
-		{
-			CompatibleBitsField[i][i >> 5] |= 1 << (i & 0x1f);
-		}
-
-		CompatibleBitsField[PSM_PSMCT32][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
-		CompatibleBitsField[PSM_PSMCT24][PSM_PSMCT32 >> 5] |= 1 << (PSM_PSMCT32 & 0x1f);
-		CompatibleBitsField[PSM_PSMCT16][PSM_PSMCT16S >> 5] |= 1 << (PSM_PSMCT16S & 0x1f);
-		CompatibleBitsField[PSM_PSMCT16S][PSM_PSMCT16 >> 5] |= 1 << (PSM_PSMCT16 & 0x1f);
-		CompatibleBitsField[PSM_PSMZ32][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
-		CompatibleBitsField[PSM_PSMZ24][PSM_PSMZ32 >> 5] |= 1 << (PSM_PSMZ32 & 0x1f);
-		CompatibleBitsField[PSM_PSMZ16][PSM_PSMZ16S >> 5] |= 1 << (PSM_PSMZ16S & 0x1f);
-		CompatibleBitsField[PSM_PSMZ16S][PSM_PSMZ16 >> 5] |= 1 << (PSM_PSMZ16 & 0x1f);
-
-		memset(SharedBitsField, 0, sizeof(SharedBitsField));
-
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT8H >> 5] |= 1 << (PSM_PSMT8H & 0x1f);
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
-		SharedBitsField[PSM_PSMCT24][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT8H >> 5] |= 1 << (PSM_PSMT8H & 0x1f);
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
-		SharedBitsField[PSM_PSMZ24][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
-		SharedBitsField[PSM_PSMT8H][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
-		SharedBitsField[PSM_PSMT8H][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
-		SharedBitsField[PSM_PSMT4HL][PSM_PSMT4HH >> 5] |= 1 << (PSM_PSMT4HH & 0x1f);
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMCT24 >> 5] |= 1 << (PSM_PSMCT24 & 0x1f);
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMZ24 >> 5] |= 1 << (PSM_PSMZ24 & 0x1f);
-		SharedBitsField[PSM_PSMT4HH][PSM_PSMT4HL >> 5] |= 1 << (PSM_PSMT4HL & 0x1f);
-	}
-
-} s_maps;
-
-bool HasSharedBits(u32 sbp, u32 spsm, u32 dbp, u32 dpsm)
-{
-	return ((sbp ^ dbp) | (s_maps.SharedBitsField[dpsm][spsm >> 5] & (1 << (spsm & 0x1f)))) == 0;
+// This function work with 6 and 5th byte of psm and switch 00 and 11 to 0, 01 to 10, 10 to 01.
+inline int Switch_Top_Bytes (int X) {
+	if ( ( X & 48 ) == 0 )
+		return X;
+	else
+		return (X ^ 48);
 }
 
+// Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
+// PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
+// We use sligthly different version of this funtion on comparison with GSDX, Storage format XOR 48 made Z-textures
+// similar to normal ones and change highter bits on short (8 and 4 bits) textures.
+inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
+	int SUM = Switch_Top_Bytes(fpsm)  + Switch_Top_Bytes(tpsm) ;
+	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
+}
+
+inline bool GABEST_HAS_SHARED_BITS (int spb, int fpsm, int dpb, int tpsm) {
+	if ( !PSMT_HAS_SHARED_BITS (fpsm, tpsm) ) {
+		return (((spb ^ dpb)) == 0);
+	}
+	else
+		return false;
+}
 
 bool IsBadFrame(ZeroGS::VB& curvb)
 {
 	GSFrameInfo fi;
 
-    /* GSdx implementation
-	fi.FBP = m_context->FRAME.Block();
-	fi.FPSM = m_context->FRAME.PSM;
-	fi.FBMSK = m_context->FRAME.FBMSK;
-	fi.TME = PRIM->TME;
-	fi.TBP0 = m_context->TEX0.TBP0;
-	fi.TPSM = m_context->TEX0.PSM;
-	fi.TZTST = m_context->TEST.ZTST;
-    */
-
-    // FIXME what is the difference between gsfb & frame ? I use the first one maybe the others one is best ...
-	fi.FBP = curvb.gsfb.fbp << 5;
-	fi.FPSM = curvb.gsfb.psm;
-	fi.FBMSK = curvb.gsfb.fbm;
+    // Keep GSdx naming convention to ease sharing code
+	fi.FBP = curvb.frame.fbp;
+	fi.FPSM = curvb.frame.psm;
+	fi.FBMSK = ~curvb.frame.fbm;
 	fi.TME = curvb.curprim.tme;
 	fi.TBP0 = curvb.tex0.tbp0;
 	fi.TPSM = curvb.tex0.psm;
@@ -711,7 +667,7 @@ bool IsBadFrame(ZeroGS::VB& curvb)
 			// depth textures (bully, mgs3s1 intro, Front Mission 5)
 			if( (fi.TPSM == PSMT32Z || fi.TPSM == PSMT24Z || fi.TPSM == PSMT16Z || fi.TPSM == PSMT16SZ)
 				// General, often problematic post processing
-                    || (HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+                    || (GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
                 )
 			{
                 //ZZLog::Error_Log("Run the draw hack");
