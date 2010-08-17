@@ -38,7 +38,14 @@
 
 #define __CDVDLINUZ_H__
 
+#define CDVDdefs
+#include "PS2Edefs.h"
 
+extern char *libname;
+
+extern const unsigned char version;
+extern const unsigned char revision;
+extern const unsigned char build;
 
 
 
@@ -50,13 +57,7 @@
 
 #define VERBOSE_DISC_TYPE
 
-
-
 #define READ_AHEAD_BUFFERS 32
-
-
-
-
 
 #endif /* __CDVDLINUZ_H__ */
 

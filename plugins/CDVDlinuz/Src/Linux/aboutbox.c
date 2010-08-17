@@ -62,7 +62,7 @@
 
 
 
-#include "version.h"
+#include "CDVDlinuz.h"
 
 #include "aboutbox.h"
 

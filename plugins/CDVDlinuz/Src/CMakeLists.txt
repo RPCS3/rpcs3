@@ -5,7 +5,6 @@ set(Output CDVDlinuz)
 
 set(CommonFlags
     -Wall
-    -fPIC
     -D_LARGEFILE64_SOURCE
     )
 
@@ -48,8 +47,8 @@ set(CDVDlinuzHeaders
     PS2Edefs.h
     PS2Etypes.h
     # ERROR It takes /usr/include/alsa/version.h
-    # Either fix include dir. Or rename the file. Or mv stuff into in another include file.
-    version.h
+    # The content was move to Linux/CDVDlinuz.h
+    # version.h
 )
 
 # CDVDlinuz Linux sources
