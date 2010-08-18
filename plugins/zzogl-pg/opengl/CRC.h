@@ -260,6 +260,7 @@ static const Game_Info crc_game_list[] =
 	{0x6F8545DB, ICO, US, 0, -1, -1},
 	{0xB01A4C95, ICO, JP, 0, -1, -1},
 	{0x5C991F4E, ICO, Unknown_Region, 0, -1, -1},
+    // FIXME multiple CRC
 	{0x7ACF7E03, ICO, Unknown_Region, 0, -1, -1},
 	{0xAEAD1CA3, GT4, JP, 0, -1, -1},
 	{0x44A61C8F, GT4, Unknown_Region, 0, -1, -1},

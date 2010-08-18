@@ -25,6 +25,7 @@
 
 #include "ZZoglFlushHack.h"
 
+// GSC_... function has imported from GSdx
 bool GSC_Null(const GSFrameInfo& fi, int& skip)
 {
 	//ZZLog::Error_Log("GSC_Null");
@@ -619,29 +620,12 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-// This function work with 6 and 5th byte of psm and switch 00 and 11 to 0, 01 to 10, 10 to 01.
-inline int Switch_Top_Bytes (int X) {
-	if ( ( X & 48 ) == 0 )
-		return X;
-	else
-		return (X ^ 48);
-}
-
-// Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
-// PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
-// We use slightly different versions of this function on comparison with GSDX, Storage format XOR 48 made Z-textures
-// similar to normal ones and change higher bits on short (8 and 4 bits) textures.
-inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
-	int SUM = Switch_Top_Bytes(fpsm)  + Switch_Top_Bytes(tpsm) ;
-	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
-}
-
-inline bool GABEST_HAS_SHARED_BITS (int spb, int fpsm, int dpb, int tpsm) {
-	if ( !PSMT_HAS_SHARED_BITS (fpsm, tpsm) ) {
-		return (((spb ^ dpb)) == 0);
-	}
-	else
-		return false;
+inline bool GABEST_HAS_SHARED_BITS (int fbp, int fpsm, int tbp, int tpsm)
+{
+    if ( !PSMT_HAS_SHARED_BITS (fpsm, tpsm) )
+        return ((fbp ^ tbp) == 0);
+    else
+        return false;
 }
 
 bool IsBadFrame(ZeroGS::VB& curvb)
@@ -656,34 +640,27 @@ bool IsBadFrame(ZeroGS::VB& curvb)
 	fi.TBP0 = curvb.tex0.tbp0;
 	fi.TPSM = curvb.tex0.psm;
 	fi.TZTST = curvb.test.ztst;
-	
-	if (GetSkipCount_Handler && !GetSkipCount_Handler(fi, g_SkipFlushFrame))
-	{
-		return 0;
-	}
 
-	if(g_SkipFlushFrame == 0 && (conf.SkipDraw > 0))
-	{
-		if(fi.TME)
-		{
-			// depth textures (bully, mgs3s1 intro, Front Mission 5)
-			if (PSMT_ISZTEX(fi.TPSM)
-				// General, often problematic post processing
-                    || (GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
-                )
-			{
-                //ZZLog::Error_Log("Run the draw hack");
-				g_SkipFlushFrame = conf.SkipDraw;
-			}
-		}
+	if (GetSkipCount_Handler && !GetSkipCount_Handler(fi, g_SkipFlushFrame))
+		return false;
+
+    if(g_SkipFlushFrame == 0 && (conf.SkipDraw > 0))
+    {
+        if(fi.TME)
+        {
+            // depth textures (bully, mgs3s1 intro, Front Mission 5)
+            // Or General, often problematic post processing
+            if (PSMT_ISZTEX(fi.TPSM) || (GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)))
+                g_SkipFlushFrame = conf.SkipDraw;
+        }
 	}
 
 	if(g_SkipFlushFrame > 0)
 	{
 		g_SkipFlushFrame--;
 
-		return 1;
+		return true;
 	}
 
-	return 0;
+	return false;
 }
