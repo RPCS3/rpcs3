@@ -2032,7 +2032,7 @@ void ZeroGS::SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 
 		case 3: // region rep x
 			v.x = 0.9999f;
-			v.z = fw;
+			v.z = (float)fw;
 			v2.x = (float)GPU_TEXMASKWIDTH / fw;
 			v2.z = pclamp->maxu / fw;
 			int correctMinu = pclamp->minu & (~pclamp->maxu);		// (A && B) || C == (A && (B && !C)) + C
@@ -2067,7 +2067,7 @@ void ZeroGS::SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 
 		case 3: // region rep y
 			v.y = 0.9999f;
-			v.w = fh;
+			v.w = (float)fh;
 			v2.y = (float)GPU_TEXMASKWIDTH / fh;
 			v2.w = pclamp->maxv / fh;
 			int correctMinv = pclamp->minv & (~pclamp->maxv);		// (A && B) || C == (A && (B && !C)) + C

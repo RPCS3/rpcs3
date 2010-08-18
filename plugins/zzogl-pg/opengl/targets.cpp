@@ -2543,24 +2543,25 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 
 	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on generation of bitmask texture.");
 
-	vector<u16> data(GPU_TEXMASKWIDTH + 1);
+	vector<u16> data(GPU_TEXMASKWIDTH);
 
 	for (u32 i = 0; i < GPU_TEXMASKWIDTH; ++i)
 	{
 		data[i] = (((i << MASKDIVISOR) & bitvalue) << 6); // add the 1/2 offset so that
 	}
+	
+	//	data[GPU_TEXMASKWIDTH] = 0;	// I remove GPU_TEXMASKWIDTH+1 element of this texture, because it was a reason of FFC crush
+									// Probably, some sort of PoT incompability in drivers.
 
-	data[GPU_TEXMASKWIDTH] = 0;
-
-	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
+	glBindTexture(GL_TEXTURE_RECTANGLE, ptex);
 	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on binding bitmask texture.");
 
-	TextureRect(GL_LUMINANCE16, GPU_TEXMASKWIDTH + 1, 1, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data[0]);
+	TextureRect2(GL_LUMINANCE16, GPU_TEXMASKWIDTH, 1, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data[0]);
 	if (glGetError() != GL_NO_ERROR) ZZLog::Error_Log("Error on applying bitmask texture.");
 
 //	Removing clamping, as it seems lead to numerous troubles at some drivers
 //	Need to observe, may be clamping is not really needed.
-	/* setTexRectWrap(GL_REPEAT);
+	/* setRectWrap2(GL_REPEAT);
 
 	GLint Error = glGetError();
 	if( Error != GL_NO_ERROR ) {

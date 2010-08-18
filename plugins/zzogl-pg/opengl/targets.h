@@ -345,6 +345,11 @@ static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, 
 	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
 }
 
+static __forceinline void TextureRect2(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
+{
+	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
+}
+
 static __forceinline void TextureRect(GLenum attach, GLuint id = 0)
 {
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, attach, GL_RENDERBUFFER_EXT, id);
@@ -385,6 +390,12 @@ static __forceinline void setRectWrap(GLint type)
 {
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, type);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, type);
+}
+
+static __forceinline void setRectWrap2(GLint type)
+{
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, type);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, type);
 }
 	
 #endif

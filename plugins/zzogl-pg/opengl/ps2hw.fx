@@ -1,19 +1,4 @@
-//  Cg Shaders for PS2 GS emulation
-//
-//	This program is free software; you can redistribute it and/or modify
-//	it under the terms of the GNU General Public License as published by
-//	the Free Software Foundation; either version 2 of the License, or
-//	(at your option) any later version.
-//
-//	This program is distributed in the hope that it will be useful,
-//	but WITHOUT ANY WARRANTY; without even the implied warranty of
-//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
-//	GNU General Public License for more details.
-//
-//	You should have received a copy of the GNU General Public License
-//	along with this program; if not, write to the Free Software
-//	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA	02111-1307	USA
-//
+// Cg Shaders for PS2 GS emulation
 
 // divides by z for every pixel, instead of in vertex shader
 // fixes kh textures
@@ -92,7 +77,6 @@ float2 ps2memcoord(float2 realtex)
 	float2 fblock = frac(realtex.xy);
 	off.xy = realtex.xy-fblock.xy;
 
-//#if 0 
 #ifdef ACCURATE_DECOMPRESSION
 	off.zw = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).ar;
 	off.x = dot(off.xy, g_fTexOffset.xy); 
@@ -216,9 +200,9 @@ float2 ps2addr(float2 coord)
 	float2 final = frac(clamp(coord.xy, g_fClampExts.xy, g_fClampExts.zw));
 
 	if( TexWrapMode.x > g_fBilinear.z ) // region repeat mode for x (umsk&x)|ufix
-		final.x = texRECT(g_sBitwiseANDX, abs(coord.x)*TexWrapMode.zz).x * g_fClampExts.x + g_fClampExts.z;
+		final.x = texRECT(g_sBitwiseANDX, abs(coord.x)*TexWrapMode.zx).x * g_fClampExts.x + g_fClampExts.z;
 	if( TexWrapMode.y > g_fBilinear.z ) // region repeat mode for x (vmsk&x)|vfix
-		final.y = texRECT(g_sBitwiseANDY, abs(coord.y)*TexWrapMode.ww).x * g_fClampExts.y + g_fClampExts.w;
+		final.y = texRECT(g_sBitwiseANDY, abs(coord.y)*TexWrapMode.wy).x * g_fClampExts.y + g_fClampExts.w;
 
 	return final;
 }
@@ -337,7 +321,7 @@ decl_ps2shade_##num(_tex16to32h) \
 
 // nearest
 #define decl_ps2shade_0(bit) \
-half4 ps2shade0##bit( TEX_DECL tex) \
+float4 ps2shade0##bit( TEX_DECL tex) \
 { \
     return tex2DPS##bit( ps2addr(TEX_XY)); \
 } \
@@ -745,7 +729,7 @@ half4 BilinearFloat16(float2 tex0)
 half4 CRTCTargInterPS(in float2 tex0 : TEXCOORD0, in float2 ointerpos : TEXCOORD1) : COLOR
 {
 	float finter = texRECT(g_sInterlace, ointerpos.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	half4 c = BilinearFloat16(tex0);
+	float4 c = BilinearFloat16(tex0);
 	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;
 	return c;
 }
