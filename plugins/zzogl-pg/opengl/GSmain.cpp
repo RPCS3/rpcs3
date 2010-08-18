@@ -50,7 +50,7 @@ GSconf conf;
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
 int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
 int g_SkipFlushFrame = 0;
-GetSkipCount GetSkipCount_Handler = 0;
+GetSkipCount GetSkipCount_Handler = GSC_Null;
 
 int UPDATE_FRAMES = 16, g_nFrame = 0, g_nRealFrame = 0;
 float fFPS = 0;
@@ -179,14 +179,19 @@ void ListHacks()
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
     // build a list of function pointer for GetSkipCount (UserHacks_SkipDraw)
-	static GetSkipCount GSC_list[GAME_INFO_INDEX];
+	static GetSkipCount GSC_list[NUMBER_OF_TITLES];
 	static bool inited = false;
-	if(!inited)
+	
+	if (!inited)
 	{
 		inited = true;
 
-		memset(&GSC_list, 0, sizeof(GSC_list));
-
+		//memset(&GSC_list, 0, sizeof(GSC_list));
+		for(int i = 0; i < NUMBER_OF_TITLES; i++)
+		{
+			GSC_list[i] = GSC_Null;
+		}
+		
 		GSC_list[Okami] = GSC_Okami;
 		GSC_list[MetalGearSolid3] = GSC_MetalGearSolid3;
 		GSC_list[DBZBT2] = GSC_DBZBT2;

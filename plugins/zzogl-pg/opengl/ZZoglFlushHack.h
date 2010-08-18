@@ -23,6 +23,9 @@
  * To avoid severals combo-box, the hack detects the game based on crc
  */
 
+#ifndef ZZOGL_FLUSH_HACK_H_INCLUDED
+#define ZZOGL_FLUSH_HACK_H_INCLUDED
+
 #include "GS.h"
 #include "zerogs.h"
 
@@ -43,6 +46,7 @@ typedef bool (*GetSkipCount)(const GSFrameInfo& fi, int& skip);
 
 extern GetSkipCount GetSkipCount_Handler;
 
+bool GSC_Null(const GSFrameInfo& fi, int& skip);
 bool GSC_Okami(const GSFrameInfo& fi, int& skip);
 bool GSC_MetalGearSolid3(const GSFrameInfo& fi, int& skip);
 bool GSC_DBZBT2(const GSFrameInfo& fi, int& skip);
@@ -77,3 +81,4 @@ bool GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip);
 bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip);
 
 bool IsBadFrame(ZeroGS::VB& curvb);
+#endif

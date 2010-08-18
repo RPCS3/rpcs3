@@ -25,6 +25,12 @@
 
 #include "ZZoglFlushHack.h"
 
+bool GSC_Null(const GSFrameInfo& fi, int& skip)
+{
+	//ZZLog::Error_Log("GSC_Null");
+	return false;
+}
+
 bool GSC_Okami(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -623,8 +629,8 @@ inline int Switch_Top_Bytes (int X) {
 
 // Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
 // PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
-// We use sligthly different version of this funtion on comparison with GSDX, Storage format XOR 48 made Z-textures
-// similar to normal ones and change highter bits on short (8 and 4 bits) textures.
+// We use slightly different versions of this funtion on comparison with GSDX, Storage format XOR 48 made Z-textures
+// similar to normal ones and change higher bits on short (8 and 4 bits) textures.
 inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
 	int SUM = Switch_Top_Bytes(fpsm)  + Switch_Top_Bytes(tpsm) ;
 	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
@@ -650,8 +656,8 @@ bool IsBadFrame(ZeroGS::VB& curvb)
 	fi.TBP0 = curvb.tex0.tbp0;
 	fi.TPSM = curvb.tex0.psm;
 	fi.TZTST = curvb.test.ztst;
-
-	if(GetSkipCount_Handler && !GetSkipCount_Handler(fi, g_SkipFlushFrame))
+	
+	if (GetSkipCount_Handler && !GetSkipCount_Handler(fi, g_SkipFlushFrame))
 	{
 		return 0;
 	}
@@ -660,12 +666,12 @@ bool IsBadFrame(ZeroGS::VB& curvb)
     int UserHacks_SkipDraw = 1; // test FFX
     UserHacks_SkipDraw = 0;
 
-	if(g_SkipFlushFrame == 0 && (UserHacks_SkipDraw > 0) )
+	if(g_SkipFlushFrame == 0 && (UserHacks_SkipDraw > 0))
 	{
 		if(fi.TME)
 		{
 			// depth textures (bully, mgs3s1 intro, Front Mission 5)
-			if( (fi.TPSM == PSMT32Z || fi.TPSM == PSMT24Z || fi.TPSM == PSMT16Z || fi.TPSM == PSMT16SZ)
+			if (PSMT_ISZTEX(fi.TPSM)
 				// General, often problematic post processing
                     || (GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
                 )
