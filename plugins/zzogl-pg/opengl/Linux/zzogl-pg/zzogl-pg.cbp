@@ -149,6 +149,8 @@
 		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />
 		<Unit filename="../../ZZoglFlush.cpp" />
+		<Unit filename="../../ZZoglFlushHack.cpp" />
+		<Unit filename="../../ZZoglFlushHack.h" />
 		<Unit filename="../../ZZoglSave.cpp" />
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShoots.cpp" />
