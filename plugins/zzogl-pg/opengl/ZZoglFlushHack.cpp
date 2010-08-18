@@ -29,7 +29,7 @@
 bool GSC_Null(const GSFrameInfo& fi, int& skip)
 {
 	//ZZLog::Error_Log("GSC_Null");
-	return false;
+	return true;
 }
 
 bool GSC_Okami(const GSFrameInfo& fi, int& skip)
@@ -437,7 +437,8 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 	{
 		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSMCT16 && fi.TBP0 == 0x00000 && fi.TPSM == PSMCT16)
 		{
-			skip = 30;
+			// skip = 30; //GSdx
+			skip = 23; // 23 or 4 need more testing
 		}
 		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSMCT32 && fi.FBMSK == 0xff000000)
 		{
