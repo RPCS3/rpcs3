@@ -92,10 +92,7 @@ int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 
 ////////////////////
 // State parameters
-int nBackbufferWidth, nBackbufferHeight;
-
-u8* g_pbyGSMemory = NULL;   // 4Mb GS system mem
-u8* g_pbyGSClut = NULL;													// ZZ
+int nBackbufferWidth, nBackbufferHeight;									// ZZ
 
 namespace ZeroGS
 {

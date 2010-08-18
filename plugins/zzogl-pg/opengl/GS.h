@@ -72,6 +72,29 @@ class GLWindow
 
 extern GLWindow GLWin;
 
+extern u8* g_pbyGSMemory;
+
+class GSMemory
+{
+	public:
+		void init();
+		void destroy();
+		u8* get();
+		u8* get(u32 addr);
+		u8* get_raw(u32 addr);
+};
+
+extern u8* g_pbyGSClut;		// the temporary clut buffer
+
+class GSClut
+{
+	public:
+		void init();
+		void destroy();
+		u8* get();
+		u8* get(u32 addr);
+		u8* get_raw(u32 addr);
+};
 struct Vector_16F
 {
 	u16 x, y, z, w;
@@ -316,6 +339,12 @@ inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
 
 inline int PSMT_BITS_NUM(int psm)
 {
+	// Treat these as 32 bit.
+	if ((psm == PSMT8H) || (psm == PSMT4HL) || (psm == PSMT4HH)) 
+	{
+		return 4;
+	}
+	
 	switch (PSMT_BITMODE(psm))
 	{
 		case 4: 
@@ -657,6 +686,9 @@ typedef struct
 
 	pathInfo path[4];
 	GIFRegDIMX dimx;
+	GSMemory mem;
+	GSClut clut_buffer;
+	
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{
 		rgba = (r & 0xff) |

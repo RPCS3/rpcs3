@@ -27,7 +27,49 @@
 #include "zerogs.h"
 #include "targets.h"
 
-extern _getPixelAddress getPixelFun[64];
+
+ u8* g_pbyGSMemory = NULL;   // 4Mb GS system mem
+
+ void GSMemory::init()
+ {
+	const u32 mem_size = MEMORY_END + 0x10000; // leave some room for out of range accesses (saves on the checks)
+			
+	// clear
+	g_pbyGSMemory = (u8*)_aligned_malloc(mem_size, 1024);
+	memset(g_pbyGSMemory, 0, mem_size);
+ }
+
+ void GSMemory::destroy()
+ {
+	_aligned_free(g_pbyGSMemory);
+	g_pbyGSMemory = NULL;
+ }
+	
+ u8* GSMemory::get() { return g_pbyGSMemory; }
+	
+ u8* GSMemory::get(u32 addr) { return &g_pbyGSMemory[addr*8]; }
+ u8* GSMemory::get_raw(u32 addr) { return &g_pbyGSMemory[addr]; }
+
+ u8* g_pbyGSClut = NULL;		// ZZ
+
+ void GSClut::init()
+ {
+	g_pbyGSClut = (u8*)_aligned_malloc(256 * 8, 1024); // need 512 alignment!
+	memset(g_pbyGSClut, 0, 256*8);
+ }
+
+ void GSClut::destroy()
+ {
+ 	_aligned_free(g_pbyGSClut);
+ 	g_pbyGSClut = NULL;
+ }
+
+ u8* GSClut::get() { return g_pbyGSClut; }
+	
+ u8* GSClut::get(u32 addr) { return &g_pbyGSClut[addr*8]; }
+ u8* GSClut::get_raw(u32 addr) { return &g_pbyGSClut[addr]; }
+	
+ extern _getPixelAddress getPixelFun[64];
 
  namespace ZeroGS
  {
@@ -63,16 +105,7 @@ extern _getPixelAddress getPixelFun[64];
 			return;
 		}
 		
-		// For some reason, we have to treat these as 32 bit.
-		if ((psm == PSMT8H) || (psm == PSMT4HL) || (psm == PSMT4HH)) 
-		{
-			bits = 4;
-		}
-		else 
-		{
-			bits = PSMT_BITS_NUM(psm);
-		}
-		
+		bits = PSMT_BITS_NUM(psm);
 		start = getPixelFun[psm](x, y, bp, bw);
 		end = getPixelFun[psm](x + w - 1, y + h - 1, bp, bw) + 1;
 		
@@ -473,7 +506,7 @@ __forceinline void _TransferLocalLocal_4()
 		{
 			_TransferLocalLocal_4();
 		}
-
+		
 		g_MemTargs.ClearRange(dststart, dstend);
 
 	#ifdef ZEROGS_DEVBUILD

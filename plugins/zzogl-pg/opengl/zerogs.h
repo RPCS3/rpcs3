@@ -112,9 +112,6 @@ extern u32 ptexLogo;
 extern int nLogoWidth, nLogoHeight;
 extern int nBackbufferWidth, nBackbufferHeight;
 
-extern u8* g_pbyGSMemory;
-extern u8* g_pbyGSClut; // the temporary clut buffer
-
 namespace ZeroGS
 {
 
