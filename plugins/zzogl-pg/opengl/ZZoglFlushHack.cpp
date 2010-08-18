@@ -629,7 +629,7 @@ inline int Switch_Top_Bytes (int X) {
 
 // Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
 // PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
-// We use slightly different versions of this funtion on comparison with GSDX, Storage format XOR 48 made Z-textures
+// We use slightly different versions of this function on comparison with GSDX, Storage format XOR 48 made Z-textures
 // similar to normal ones and change higher bits on short (8 and 4 bits) textures.
 inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
 	int SUM = Switch_Top_Bytes(fpsm)  + Switch_Top_Bytes(tpsm) ;
@@ -662,11 +662,7 @@ bool IsBadFrame(ZeroGS::VB& curvb)
 		return 0;
 	}
 
-    // FIXME Need to add a UserHacks_SkipDraw options, with a "number" value...
-    int UserHacks_SkipDraw = 1; // test FFX
-    UserHacks_SkipDraw = 0;
-
-	if(g_SkipFlushFrame == 0 && (UserHacks_SkipDraw > 0))
+	if(g_SkipFlushFrame == 0 && (conf.SkipDraw > 0))
 	{
 		if(fi.TME)
 		{
@@ -677,7 +673,7 @@ bool IsBadFrame(ZeroGS::VB& curvb)
                 )
 			{
                 //ZZLog::Error_Log("Run the draw hack");
-				g_SkipFlushFrame = UserHacks_SkipDraw;
+				g_SkipFlushFrame = conf.SkipDraw;
 			}
 		}
 	}

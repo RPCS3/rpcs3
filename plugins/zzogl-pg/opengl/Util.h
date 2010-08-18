@@ -209,6 +209,7 @@ typedef struct
 	int width, height; // View target size, has no impact towards speed
 	int x, y; // Lets try for a persistant window position.
 	bool isWideScreen; // Widescreen support
+	u32 SkipDraw;
 	u32 log;
 	
 	void incAA() { aa++; if (aa > 4) aa = 0; }

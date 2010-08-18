@@ -178,7 +178,7 @@ void ListHacks()
 
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
-    // build a list of function pointer for GetSkipCount (UserHacks_SkipDraw)
+    // build a list of function pointer for GetSkipCount (SkipDraw)
 	static GetSkipCount GSC_list[NUMBER_OF_TITLES];
 	static bool inited = false;
 	
@@ -261,7 +261,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 					ZZLog::WriteLn("Setting TEXDESTROY_THRESH to %d", TEXDESTROY_THRESH);
 				}
 
-                // FIXME need to check UserHacks_SkipDraw  is positive (enabled by users)
+                // FIXME need to check SkipDraw is positive (enabled by users)
                 GetSkipCount_Handler = GSC_list[crc_game_list[i].title];
 
 				conf.def_hacks._u32 |= crc_game_list[i].flags;

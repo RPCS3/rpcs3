@@ -49,6 +49,7 @@ void SaveConfig()
 	fprintf(f, "x = %x\n", conf.x);
 	fprintf(f, "y = %x\n", conf.y);
 	fprintf(f, "log = %x\n", conf.log);
+	fprintf(f, "skipdraw = %x\n", conf.SkipDraw);
 	fclose(f);
 }
 
@@ -60,6 +61,7 @@ void LoadConfig()
 	conf.mrtdepth = 1;
 	conf.bilinear = 1;
 	conf.log = 1;
+	conf.SkipDraw = 0;
 
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	FILE* f = fopen(iniFile.c_str(), "r");
@@ -83,6 +85,7 @@ void LoadConfig()
 	err = fscanf(f, "x = %x\n", &conf.x);
 	err = fscanf(f, "y = %x\n", &conf.y);
 	err = fscanf(f, "log = %x\n", &conf.log);
+	err = fscanf(f, "skipdraw = %x\n", &conf.SkipDraw);
 	fclose(f);
 
 	// turn off all hacks by default

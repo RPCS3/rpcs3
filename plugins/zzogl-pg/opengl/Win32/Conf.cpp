@@ -25,6 +25,8 @@ void SaveConfig()
 	WritePrivateProfileString("Settings", "Width", szValue, iniFile.c_str());
 	sprintf(szValue, "%u", conf.height);
 	WritePrivateProfileString("Settings", "Height", szValue, iniFile.c_str());
+	sprintf(szValue, "%u", conf.SkipDraw);
+	WritePrivateProfileString("Settings", "SkipDraw", szValue, iniFile.c_str());
 }
 
 void LoadConfig()
@@ -40,6 +42,7 @@ void LoadConfig()
 	conf.bilinear = 1;
 	conf.width = 640;
 	conf.height = 480;
+	conf.SkipDraw = 0;
 
 	FILE *fp = fopen(iniFile.c_str(), "rt");
 
@@ -67,6 +70,8 @@ void LoadConfig()
 	conf.width = strtoul(szValue, NULL, 10);
 	GetPrivateProfileString("Settings", "Height", NULL, szValue, 20, iniFile.c_str());
 	conf.height = strtoul(szValue, NULL, 10);
+	GetPrivateProfileString("Settings", "SkipDraw", NULL, szValue, 20, iniFile.c_str());
+	conf.SkipDraw = strtoul(szValue, NULL, 10);
 
 	if (conf.aa < 0 || conf.aa > 4) conf.aa = 0;
 

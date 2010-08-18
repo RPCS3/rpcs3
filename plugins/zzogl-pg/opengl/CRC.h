@@ -184,7 +184,7 @@ static const Game_Info crc_game_list[] =
 {
 	// This section is straight from GSdx. Ones that also have ZZOgl hacks are commented out.
 	
-	{0x00000000, Unknown_Title, Unknown_Region, 0},
+	{0x00000000, Unknown_Title, Unknown_Region, 0, -1, -1},
 	{0x2113EA2E, MetalSlug6, Unknown_Region, 0, -1, -1},
 	{0x42E05BAF, TomoyoAfter, JP, 0, -1, -1},
 	{0x7800DC84, Clannad, JP, 0, -1, -1},
