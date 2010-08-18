@@ -23,6 +23,10 @@
 #define TARGET_VIRTUAL_KEY 0x80000000
 #include "PS2Edefs.h"
 
+#ifndef GL_TEXTURE_RECTANGLE
+#define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
+#endif
+
 inline Vector DefaultOneColor(FRAGMENTSHADER ptr)
 {
 	Vector v = Vector(1, 1, 1, 1);
@@ -347,7 +351,7 @@ static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, 
 
 static __forceinline void TextureRect2(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
 {
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, iFormat, width, height, 0, format, type, pixels);
 }
 
 static __forceinline void TextureRect(GLenum attach, GLuint id = 0)
