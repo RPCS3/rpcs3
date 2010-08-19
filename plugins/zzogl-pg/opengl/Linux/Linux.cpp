@@ -258,7 +258,9 @@ void DisplayDialog()
 	GtkWidget *fullscreen_check, *widescreen_check;
 	
 	GtkWidget *advanced_button;
-
+	GtkWidget *separator;
+	GtkWidget *skipdraw_label, *skipdraw_text, *skipdraw_holder, *warning_label;
+	
 	if (!(conf.loaded())) LoadConfig();
 
 	/* Create the widgets */
@@ -276,7 +278,6 @@ void DisplayDialog()
 	gtk_widget_set_tooltip_text(log_check, "Used for Debugging.");
 
 	int_label = gtk_label_new("Interlacing:");
-
 	int_box = gtk_combo_box_new_text();
 
 	gtk_combo_box_append_text(GTK_COMBO_BOX(int_box), "No Interlacing");
@@ -343,6 +344,18 @@ void DisplayDialog()
 	
 	advanced_button = gtk_button_new_with_label("Advanced...");
 
+	separator = gtk_hseparator_new();
+	skipdraw_label = gtk_label_new("Skipdraw:");
+	skipdraw_text = gtk_entry_new();
+	warning_label = gtk_label_new("Experimental!!");
+	char buf[5];
+	sprintf(buf, "%d", conf.SkipDraw);
+	gtk_entry_set_text(GTK_ENTRY(skipdraw_text), buf);
+	skipdraw_holder = gtk_hbox_new(false, 5);
+	
+	gtk_box_pack_start(GTK_BOX(skipdraw_holder), skipdraw_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(skipdraw_holder), skipdraw_text, false, false, 2);
+	
 	main_box = gtk_hbox_new(false, 5);
 	main_frame = gtk_frame_new("ZZOgl PG Config");
 
@@ -365,6 +378,9 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(option_box), fullscreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), advanced_button, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), separator, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), warning_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), skipdraw_holder, false, false, 2);
 	
 	gtk_box_pack_start(GTK_BOX(main_box), option_frame, false, false, 2);
 
@@ -409,6 +425,11 @@ void DisplayDialog()
 		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
 		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
 		
+		conf.SkipDraw = atoi((char*)gtk_entry_get_text(GTK_ENTRY(skipdraw_text)));
+		//sprintf(buf, "%d", conf.SkipDraw);
+		//gtk_entry_get_text(GTK_ENTRY(skipdraw_text), buf);
+		//skipdraw_holder = gtk_hbox_new(false, 5);
+	
 		conf.zz_options = fake_options;
 		conf.set_dimensions(fake_options.dimensions);
 		conf.hacks = tempHacks;
