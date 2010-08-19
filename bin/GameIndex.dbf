@@ -3686,7 +3686,7 @@ Compat = 5
 Serial = SLUS-20482
 Name   = Sphinx and the Cursed Mummy
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20483
 Name   = WWE Smackdown - Shut Your Mouth
@@ -15611,17 +15611,6 @@ Serial = SLPM-65038
 Name   = Devil May Cry
 Region = NTSC-J
 Compat = 3
-[patches = 96B2F56D]
-	
-	comment=Skips Movies
-	
-	//skip Movie_Set
-	patch=0,EE,001cdea0,word,03e00008
-	patch=0,EE,001cdea4,word,03e00008
-	//skip MovieEndCheck
-	patch=0,EE,001ce44c,word,70001428
-	
-[/patches]
 ---------------------------------------------
 Serial = SLPM-65039
 Name   = Densha de Go! Shinkansen
@@ -34046,23 +34035,6 @@ Serial = SLES-52336
 Name   = Max Payne 2 - The Fall of Max Payne
 Region = PAL-Unk
 Compat = 4
-[patches = D03BEF2A]
-	
-	comment=patches by Nachbrenner
-	
-	//Skip Videos 
-	patch=0,EE,002c8650,word,03e00008
-	patch=0,EE,002c8654,word,00000000
-	//fix obscure inf. loop
-	patch=0,EE,001aa610,word,03e00008
-	patch=0,EE,001aa614,word,24020000
-	//Language Modifier (sceScfGetLanguage)
-	patch=0,EE,00445ce4,word,24020001 // english
-	//patch=0,EE,00445ce4,word,24020004 // deutsch
-	//fix "SleepThread vs. RTFSSIOP.IRX"
-	patch=0,EE,001b3208,word,00000000
-	
-[/patches]
 ---------------------------------------------
 Serial = SLES-52337
 Name   = Max Payne 2 - The Fall of Max Payne
