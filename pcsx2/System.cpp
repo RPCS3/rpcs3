@@ -422,6 +422,7 @@ void SysClearExecutionCache()
 
 	Cpu->Reset();
 	psxCpu->Reset();
+	// mVU's VU0 needs to be properly initialised for macro mode even if it's not used for micro mode!
 	if (CHECK_EEREC)
 		((BaseVUmicroCPU*)GetCpuProviders().CpuProviders->microVU0)->Reset();
 	CpuVU0->Reset();
