@@ -43,12 +43,12 @@ protected:
 class SysCpuProviderPack
 {
 protected:
-	ScopedPtr<CpuInitializerSet> CpuProviders;
-
 	ScopedPtr<BaseException> m_RecExceptionEE;
 	ScopedPtr<BaseException> m_RecExceptionIOP;
 
 public:
+	ScopedPtr<CpuInitializerSet> CpuProviders;
+
 	SysCpuProviderPack();
 	virtual ~SysCpuProviderPack() throw();
 

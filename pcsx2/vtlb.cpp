@@ -63,7 +63,7 @@ static vtlbHandler UnmappedPhyHandler1;
 template< typename DataType >
 DataType __fastcall vtlb_memRead(u32 addr)
 {
-	static const uint DataSize = sizeof(DataType);
+	static const uint DataSize = sizeof(DataType) * 8;
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 
@@ -134,7 +134,7 @@ void __fastcall vtlb_memRead128(u32 mem, u64 (&out)[2])
 template< typename DataType >
 void __fastcall vtlb_memWrite(u32 addr, DataType data)
 {
-	static const uint DataSize = sizeof(DataType);
+	static const uint DataSize = sizeof(DataType) * 8;
 
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;

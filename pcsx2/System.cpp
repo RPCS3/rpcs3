@@ -422,6 +422,8 @@ void SysClearExecutionCache()
 
 	Cpu->Reset();
 	psxCpu->Reset();
+	if (CHECK_EEREC)
+		((BaseVUmicroCPU*)GetCpuProviders().CpuProviders->microVU0)->Reset();
 	CpuVU0->Reset();
 	CpuVU1->Reset();
 
