@@ -53,7 +53,8 @@ enum GAME_HACK_OPTIONS
 	GAME_PARTIALDEPTH		=	0x04000000, // tries to save depth targets as much as possible across height changes
 	GAME_REGETHACK			=	0x08000000, // some sort of weirdness in ReGet() code
 	GAME_GUSTHACK			=	0x10000000, // Needed for Gustgames fast update.
-	GAME_NOLOGZ				=	0x20000000 // Intended for linux -- not logarithmic Z.
+	GAME_NOLOGZ				=	0x20000000, // Intended for linux -- not logarithmic Z.
+	GAME_AUTOSKIPDRAW		=	0x40000000 // Remove blur effect on some games
 };
 
 #define USEALPHATESTING (!(conf.settings().no_alpha_test))

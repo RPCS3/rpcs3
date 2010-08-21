@@ -159,6 +159,7 @@ void ReportHacks(gameHacks hacks)
 	if (hacks.reget) ZZLog::WriteLn("Reget hack enabled.");
 	if (hacks.gust) ZZLog::WriteLn("Gust hack enabled.");
 	if (hacks.no_logz) ZZLog::WriteLn("'No logz' hack enabled.");
+	if (hacks.automatic_skip_draw) ZZLog::WriteLn("'Automatic skip draw' hack enabled.");
 }
 
 void ListHacks()

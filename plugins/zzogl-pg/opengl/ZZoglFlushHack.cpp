@@ -25,6 +25,15 @@
 
 #include "ZZoglFlushHack.h"
 
+inline bool GABEST_HAS_SHARED_BITS (int fbp, int fpsm, int tbp, int tpsm)
+{
+    if ( !PSMT_HAS_SHARED_BITS (fpsm, tpsm) )
+        return ((fbp ^ tbp) == 0);
+    else
+        return false;
+}
+
+
 // GSC_... function has been imported from GSdx
 void GSC_Okami(const GSFrameInfo& fi, int& skip)
 {
@@ -429,12 +438,26 @@ void GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	}
 }
 
-inline bool GABEST_HAS_SHARED_BITS (int fbp, int fpsm, int tbp, int tpsm)
+bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 {
-    if ( !PSMT_HAS_SHARED_BITS (fpsm, tpsm) )
-        return ((fbp ^ tbp) == 0);
-    else
-        return false;
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x03FFF)
+		{
+			skip = 1;
+		}
+		else if(fi.TME && fi.FBP == 0x3000 && fi.TBP0 == 0x3380)
+		{
+			skip = 1; // bloom
+		}
+		else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == 0xFFFFFF &&
+			GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+		{
+			skip = 1; 
+		}
+	}
+
+	return true;
 }
 
 __forceinline bool IsBadFrame(ZeroGS::VB& curvb)
@@ -450,7 +473,7 @@ __forceinline bool IsBadFrame(ZeroGS::VB& curvb)
 	fi.TPSM = curvb.tex0.psm;
 	fi.TZTST = curvb.test.ztst;
 
-	if (GetSkipCount_Handler)
+	if (GetSkipCount_Handler && conf.settings().automatic_skip_draw)
         GetSkipCount_Handler(fi, g_SkipFlushFrame);
 
     if(g_SkipFlushFrame == 0 && (conf.SkipDraw > 0))

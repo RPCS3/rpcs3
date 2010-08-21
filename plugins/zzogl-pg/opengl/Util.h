@@ -173,7 +173,7 @@ typedef union
 		u32 reget : 1; // some sort of weirdness in ReGet() code
 		u32 gust : 1; // Needed for Gustgames fast update.
 		u32 no_logz : 1; // Intended for linux -- not logarithmic Z.
-		u32 reserved1 :1;
+		u32 automatic_skip_draw :1; // allow debug of the automatic skip draw option
 		u32 reserved2 :1;
 	};
 	u32 _u32;

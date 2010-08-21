@@ -149,6 +149,7 @@ void CreateGameHackTable(GtkWidget *treeview, gameHacks hacks)
 	add_map_entry(GAME_GUSTHACK, "10000000", "Gust fix, made gustgame more clean and fast - 10000000");
 	add_map_entry(GAME_NOLOGZ, "20000000", "No logarithmic Z, could decrease number of Z-artefacts - 20000000");
 	add_map_entry(GAME_INTERLACE2X, "00000004", "Interlace 2X - 00000004\nFixes 2x bigger screen (Gradius 3).");
+	add_map_entry(GAME_AUTOSKIPDRAW, "40000000", "Remove blur effect on some games\nSlow games.");
 
 	for (map<string, confOptsStruct>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
 	{
