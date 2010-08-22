@@ -497,6 +497,10 @@ bool ZeroGS::Create(int _width, int _height)
 
 	// check the max texture width and height
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
+    // Limit the texture size supported to 8192. We do not need bigger texture.
+    // Besides the following assertion is false when texture are too big.
+    // ZZoglFlush.cpp:2349:	assert(fblockstride >= 1.0f)
+    g_MaxTexWidth = min(8192, g_MaxTexWidth);
 
 	g_MaxTexHeight = g_MaxTexWidth / 4;
 	GPU_TEXWIDTH = g_MaxTexWidth / 8;
