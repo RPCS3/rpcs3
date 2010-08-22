@@ -133,8 +133,6 @@
 	{
 		FUNCLOG
 
-		//if (g_bIsLost) return;
-
 	#if defined(ZEROGS_DEVBUILD)
 		if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
 			ZZLog::Warn_Log("Transfer error, width exceeded.");
@@ -177,8 +175,6 @@
 	void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 	{
 		FUNCLOG
-
-	//	if (g_bIsLost) return;
 
 		int start, end;
 

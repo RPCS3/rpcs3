@@ -470,7 +470,6 @@ inline bool Create_Window(int _width, int _height);
 bool Create(int width, int height);
 void Destroy(bool bD3D);
 
-void Restore(); // call to restore device
 void Reset(); // call to destroy video resources
 void GSStateReset();
 void GSReset();

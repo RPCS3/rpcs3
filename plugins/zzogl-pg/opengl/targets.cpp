@@ -33,7 +33,6 @@
 
 using namespace ZeroGS;
 extern int g_TransferredToGPU;
-//extern bool g_bIsLost;
 extern bool g_bUpdateStencil;
 
 #if !defined(ZEROGS_DEVBUILD)

@@ -42,47 +42,41 @@ GIFRegHandler g_GIFTempRegHandlers[16] = {0};
 u32 s_uTex1Data[2][2] = {{0, }};
 u32 s_uClampData[2] = {0, };
 
-u32 results[65535] = {0, };
+//u32 results[65535] = {0, };
 
 // return true if triangle SHOULD be painted.
 inline bool NoHighlights(int i)
 {
 //	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
 
-	// I'd have thought we could just test prim->_val and ZeroGS::vb[i].zbuf.psm directly...
-	int resultA = prim->iip + ((prim->tme) << 1) + ((prim->fge) << 2) + ((prim->abe) << 3) + ((prim->aa1) << 4) + ((prim->fst) << 5) + ((prim->ctxt) << 6) + ((prim->fix) << 7) +
-				  ((ZeroGS::vb[i].zbuf.psm) << 8);
+	int dummy = 0;
+	
+	u32 resultA = prim->iip + (2 * (prim->tme)) + (4 * (prim->fge)) + (8 * (prim->abe)) + (16 * (prim->aa1)) + (32 * (prim->fst)) + (64 * (prim->ctxt)) + (128 * (prim->fix));
+	
 //	if ( results[resultA] == 0 ) {
 //		results[resultA] = 1;
-//		ZZLog::Error_Log("%x = %d %d %d %d %d %d %d %d psm: %x", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix), ZeroGS::vb[i].zbuf.psm) ;
+//		ZZLog::ERROR_LOG("%x = %d %d %d %d %d %d %d %d \n", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix)) ;
 //	}
 //	if (resultA == 0xb && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
 	const pixTest curtest = ZeroGS::vb[i].test;
-	// Again, couldn't we just test curtest._val?
-	int result = curtest.ate + ((curtest.atst) << 1) + ((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst) << 9);
+	
+	u32 result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
 //	if (resultA == 0xb)
 //		if ( results[result] == 0) {
 //			results[result] = 1;
 //			ZZLog::Error_Log("0x%x = %d %d %d %d %d %d %d %d ", result, curtest.ate, curtest.atst, curtest.aref, curtest.afail, curtest.date, curtest.datm, curtest.zte, curtest.ztst);
 //		}
-//	0, -50b, -500, !-300, -30a, -50a, -5cb, +100 (zte==1), -50d
-//	if (result == 0x50b && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 
-	// if psm is 16S or 24, tme, abe, & fst are true, the rest are false, result is 0x302 or 0x700, and there is a mask.
+	//if (result == 0x50b && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
+	//if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
+	//if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Okage
 
-	if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
-
-	// if psm is 24, abe is true, tme doesn't matter, the rest are false, result is 0x54c or 0x50c and there is a mask.
-	if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (ZeroGS::vb[i].zbuf.zmsk)) return false; // Okage
-
-	// if psm is 24, abe & tme are true, the rest are false, and no result.
 	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
 
-	// if psm is 16S, tme, abe, fst, and ctxt are true, the rest are false, result is 0x330 or 0x500, and there is a mask.
-	if (resultA == 0x3a6a && (result == 0x300 || result == 0x500) && ZeroGS::vb[i].zbuf.zmsk) return false; // Okami, result != 0x30d
+	//if (resultA == 0x3a6a && (result == 0x300 || result == 0x500) && ZeroGS::vb[i].zbuf.zmsk) return false; // Okami, result != 0x30d
 
-//	if ((resultA == 0x300b) && (result == 0x300) && ZeroGS::vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
+	//if ((resultA == 0x300b) && (result == 0x300) && ZeroGS::vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
 
 //	Old code
 	return (!(conf.settings().xenosaga_spec) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;

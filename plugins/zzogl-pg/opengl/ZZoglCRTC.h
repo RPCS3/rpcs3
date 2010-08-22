@@ -32,8 +32,6 @@ extern HDC		hDC;	   // Private GDI Device Context
 extern HGLRC	hRC;	   // Permanent Rendering Context
 #endif
 
-//extern bool g_bIsLost;
-
 extern int s_frameskipping;
 extern float fFPS;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
