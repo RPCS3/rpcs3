@@ -44,14 +44,6 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 //			}
 			break;
 
-		case WM_ACTIVATE:
-			if (wParam != WA_INACTIVE)
-			{
-				//ZZLog::Debug_Log("Restoring device.");
-				ZeroGS::Restore();
-			}
-			break;
-
 		case WM_SIZE:
 			nWindowWidth = lParam & 0xffff;
 			nWindowHeight = lParam >> 16;

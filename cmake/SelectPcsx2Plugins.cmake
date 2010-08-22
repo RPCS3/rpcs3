@@ -82,6 +82,11 @@ else(BZIP2_FOUND)
 endif(BZIP2_FOUND)
 
 #---------------------------------------
+#			CDVDlinuz
+#---------------------------------------
+set(CDVDlinuz TRUE)
+
+#---------------------------------------
 #			dev9null
 #---------------------------------------
 set(dev9null TRUE)
@@ -219,7 +224,6 @@ set(USBnull TRUE)
 #			[TODO] Write CMakeLists.txt for these plugins.
 set(cdvdGigaherz FALSE)
 set(CDVDisoEFP FALSE)
-set(CDVDlinuz FALSE)
 set(CDVDolio FALSE)
 set(CDVDpeops FALSE)
 set(GSdx FALSE)

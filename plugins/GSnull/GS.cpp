@@ -136,7 +136,10 @@ EXPORT_C_(void) GSsetLogDir(const char* dir)
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;
 
 	// Reload the log file after updated the path
-	if (gsLog != NULL) fclose(gsLog);
+	if (gsLog) {
+        fclose(gsLog);
+        gsLog = NULL;
+    }
     OpenLog();
 }
 
@@ -156,7 +159,10 @@ EXPORT_C_(void) GSshutdown()
 	GSCloseWindow();
 
 #ifdef GS_LOG
-	if (gsLog) fclose(gsLog);
+	if (gsLog) {
+        fclose(gsLog);
+        gsLog = NULL;
+    }
 #endif
 }
 

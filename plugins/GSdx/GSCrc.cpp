@@ -112,6 +112,7 @@ CRC::Game CRC::m_games[] =
 	{0x565B6170, WildArms5, JP, 0},
 	{0xBBC3EFFA, WildArms4, US, 0},
 	{0xBBC396EC, WildArms4, US, 0}, //hmm such a small diff in the CRC..
+	{0x7B2DE9CC, WildArms4, EU, 0},
 	{0x8B029334, Manhunt2, Unknown, 0},
 	{0x09F49E37, CrashBandicootWoC, Unknown, 0},
 	{0x013E349D, ResidentEvil4, US, 0},

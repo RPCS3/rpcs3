@@ -742,7 +742,7 @@ inline void AfterRendererUnimportantJob()
 
 	AfterRenderCountStatistics();
 
-	if (s_nNewWidth >= 0 && s_nNewHeight >= 0/* && !g_bIsLost*/)
+	if (s_nNewWidth >= 0 && s_nNewHeight >= 0)
 		AfterRendererResizeWindow();
 
 	maxmin = 608;
@@ -830,7 +830,7 @@ int count = 0;
 // The main renderer function
 void ZeroGS::RenderCRTC(int interlace)
 {
-	if (/*g_bIsLost || */FrameSkippingHelper()) return;
+	if (FrameSkippingHelper()) return;
 
 	u32 bInterlace = SMODE2->INT && SMODE2->FFMD && (conf.interlace < 2);
 
@@ -847,7 +847,15 @@ void ZeroGS::RenderCRTC(int interlace)
 		tex0Info& texframe = dispinfo[i];
 
 		if (texframe.th <= 1) continue;
-		if (SMODE2->INT && SMODE2->FFMD) texframe.th >>= 1;
+		if (SMODE2->INT && SMODE2->FFMD) 
+		{
+			texframe.th >>= 1;
+
+			// Final Fantasy X-2 issue here.
+			if (conf.interlace == 2 && texframe.th >= 512) 
+				texframe.th >>= 1;
+		}
+		
 		if (i == 0) RenderSetupBlending();
 		if (bUsingStencil) RenderSetupStencil(i);
 

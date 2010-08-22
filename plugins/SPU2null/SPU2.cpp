@@ -141,7 +141,10 @@ EXPORT_C_(void)  SPU2setLogDir(const char* dir)
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;
 
 	// Reload the log file after updated the path
-	if (spu2Log) fclose(spu2Log);
+    if(spu2Log) {
+        fclose(spu2Log);
+        spu2Log = NULL;
+    }
     OpenLog();
 }
 
@@ -209,7 +212,10 @@ EXPORT_C_(void) SPU2shutdown()
 	free(spu2mem);
 	spu2mem = NULL;
 #ifdef SPU2_LOG
-	if (spu2Log) fclose(spu2Log);
+    if(spu2Log) {
+        fclose(spu2Log);
+        spu2Log = NULL;
+    }
 #endif
 }
 

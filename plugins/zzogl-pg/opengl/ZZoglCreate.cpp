@@ -497,6 +497,10 @@ bool ZeroGS::Create(int _width, int _height)
 
 	// check the max texture width and height
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
+    // Limit the texture size supported to 8192. We do not need bigger texture.
+    // Besides the following assertion is false when texture are too big.
+    // ZZoglFlush.cpp:2349:	assert(fblockstride >= 1.0f)
+    g_MaxTexWidth = min(8192, g_MaxTexWidth);
 
 	g_MaxTexHeight = g_MaxTexWidth / 4;
 	GPU_TEXWIDTH = g_MaxTexWidth / 8;
@@ -616,65 +620,86 @@ bool ZeroGS::Create(int _width, int _height)
 
 	// create the blocks texture
 	g_fBlockMult = 1;
+	bool do_not_use_billinear = false;
 
 	vector<char> vBlockData, vBilinearData;
-
 	BLOCK::FillBlocks(vBlockData, vBilinearData, 1);
 
 	glGenTextures(1, &ptexBlocks);
 	glBindTexture(GL_TEXTURE_2D, ptexBlocks);
 
-	g_internalFloatFmt = GL_ALPHA_FLOAT32_ATI;
-	g_internalRGBAFloatFmt = GL_RGBA_FLOAT32_ATI;
-	g_internalRGBAFloat16Fmt = GL_RGBA_FLOAT16_ATI;
-	
-	Texture2D(g_internalFloatFmt, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
+	g_internalFloatFmt = GL_RGBA32F; // This is OpenGL 3.0 standard format, so it should be implemented in new cards. 
+	g_internalRGBAFloatFmt = GL_RGBA32F; 
+	g_internalRGBAFloat16Fmt = GL_RGBA16F;
 
-	if (glGetError() != GL_NO_ERROR)
+	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
+
+	if (glGetError() != GL_NO_ERROR) 
 	{
 		// try different internal format
-		g_internalFloatFmt = GL_FLOAT_R32_NV;
-		Texture2D(g_internalFloatFmt, GL_RED, GL_FLOAT, &vBlockData[0]);
+		g_internalFloatFmt = GL_ALPHA_FLOAT32_ATI; 
+		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
+		
+		if (glGetError() != GL_NO_ERROR)  
+		{	
+			// This case is bad. But for really old cards it could be nice. 
+			
+			g_fBlockMult = 65535.0f*(float)g_fiGPU_TEXWIDTH ;
+			BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
+			g_internalFloatFmt = GL_ALPHA16 ;
+			// We store block data on u16 rather float numbers. It's not as precise, but ALPHA16 is OpenGL 2.0 standard
+			// and uses only 16 bit. Old zerogs use red channel, but it does not work.
+
+			glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_UNSIGNED_SHORT, &vBlockData[0]);
+			if (glGetError() != GL_NO_ERROR) 
+			{
+				ZZLog::Error_Log("Could not fill blocks.");
+				return false;
+			}
+			do_not_use_billinear = true;
+			ZZLog::Debug_Log("Using non-bilinear fill, quallity is outdated!");			
+		}
+		else
+			ZZLog::Debug_Log("Use ATI_texture_float for blockdata.");
 	}
+	else
+		ZZLog::Debug_Log("Use GL_RGBA32F for blockdata.");
+
 	setTex2DFilters(GL_NEAREST);
 	setTex2DWrap(GL_REPEAT);
 
-	if (glGetError() != GL_NO_ERROR)
+	if (!do_not_use_billinear) 
 	{
-		// error, resort to 16bit
-		g_fBlockMult = 65535.0f * (float)g_fiGPU_TEXWIDTH / 32.0f;
-
-		BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
-		Texture2D(2, GL_R, GL_UNSIGNED_SHORT, &vBlockData[0]);
-
-		if (glGetError() != GL_NO_ERROR)
-		{
-			ZZLog::Error_Log("Could not fill blocks.");
-			return false;
-		}
-
-		ZZLog::GS_Log("Using non-bilinear fill.");
-	}
-	else
-	{
-		// fill in the bilinear blocks
+		// fill in the bilinear blocks (main variant).
 		glGenTextures(1, &ptexBilinearBlocks);
 		glBindTexture(GL_TEXTURE_2D, ptexBilinearBlocks);
-		Texture2D(g_internalRGBAFloatFmt, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
+		glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
 
-		if (glGetError() != GL_NO_ERROR)
+		if (glGetError() != GL_NO_ERROR) 
 		{
-			g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
-			g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
-			Texture2D(g_internalRGBAFloatFmt, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-			ZZLog::Debug_Log("ZZogl Fill bilinear blocks. ");
-			B_G(glGetError() == GL_NO_ERROR, return false);
+			g_internalRGBAFloatFmt = GL_RGBA_FLOAT32_ATI;
+			g_internalRGBAFloat16Fmt = GL_RGBA_FLOAT16_ATI;
+			glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
+			
+			if (glGetError() != GL_NO_ERROR) 
+			{
+				g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
+				g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
+				glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
+				
+				if (glGetError() != GL_NO_ERROR) 
+				{
+					ZZLog::Error_Log("Fill bilinear blocks failed!");
+					return false;
+				}
+				else
+					ZZLog::Debug_Log("Fill bilinear blocks with NVidia_float.");
+			}				
+			else				
+			ZZLog::Debug_Log("Fill bilinear blocks with ATI_texture_float.");
 		}
 		else
-		{
-			// No, they failed on the first clause of the if statement, not the second.
-			//ZZLog::Error_Log("Fill bilinear blocks failed!");
-		}
+			ZZLog::Debug_Log("Fill bilinear blocks OK.!");
 
 		setTex2DFilters(GL_NEAREST);
 		setTex2DWrap(GL_REPEAT);

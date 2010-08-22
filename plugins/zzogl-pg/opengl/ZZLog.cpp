@@ -53,7 +53,10 @@ bool Open()
 
 void Close()
 {
-	if (gsLog != NULL) fclose(gsLog);
+	if (gsLog != NULL) {
+        fclose(gsLog);
+        gsLog = NULL;
+    }
 }
 
 void SetDir(const char* dir)
@@ -62,7 +65,7 @@ void SetDir(const char* dir)
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;
 
 	// Reload the log file after updated the path
-	if (gsLog != NULL) fclose(gsLog);
+    Close();
 	Open();
 }
 

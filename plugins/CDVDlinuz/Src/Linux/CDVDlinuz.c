@@ -47,8 +47,6 @@
 #include "DVD.h" // InitDVDInfo()
 #include "device.h"
 
-#include "../version.h"
-
 
 // Globals
 
