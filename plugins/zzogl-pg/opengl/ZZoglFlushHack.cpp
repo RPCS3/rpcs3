@@ -315,7 +315,7 @@ void GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSMCT16 && fi.TBP0 == 0x00000 && fi.TPSM == PSMCT16)
 		{
 			// skip = 30; //GSdx
-			skip = 23; // 23 or 4 need more testing
+			skip = 4; // 23 or 4 need more testing
 		}
 		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSMCT32 && fi.FBMSK == 0xff000000)
 			skip = 1; // blur
@@ -429,7 +429,9 @@ void GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	if(skip == 0)
 	{
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSMCT32 && fi.TPSM == PSMT4HH)
-			skip = 1000; //
+			skip = 1000; // Shadows
+		else if (fi.TME && fi.FBP == fi.TBP0 && (fi.TBP0 == 0x3700 || fi.TBP0 == 0x3400) && fi.TZTST == 1) 
+			skip = 1; // Start manu issue;
 	}
 	else
 	{
@@ -440,22 +442,17 @@ void GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 
 bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 {
+    // Note GSdx seems to use invert somewhere FBMSK. So values were inverted
 	if(skip == 0)
-	{
-		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x03FFF)
-		{
-			skip = 1;
-		}
-		else if(fi.TME && fi.FBP == 0x3000 && fi.TBP0 == 0x3380)
-		{
-			skip = 1; // bloom
-		}
-		else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == 0xFFFFFF &&
-			GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
-		{
-			skip = 1; 
-		}
-	}
+    {
+        if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSMCT16S && fi.FBMSK == ~(0x03FFF))
+            skip = 1;
+        else if(fi.TME && fi.FBP == 0x3000 && fi.TBP0 == 0x3380)
+            skip = 1; // bloom
+        else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == ~(0xFFFFFF) &&
+                GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+            skip = 1; 
+    }
 
 	return true;
 }
