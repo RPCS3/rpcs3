@@ -137,7 +137,8 @@ isoFile *isoOpen(const char *filename)
 	iso->handle = _openfile( iso->filename, O_RDONLY);
 	if (iso->handle == NULL)
 	{
-		Console.Error("error loading %s", iso->filename);
+		Console.Error("ISO loader: Cannot access %s", iso->filename);
+		Console.Error(">> Make sure the iso file is not mounted in any disk emulation software! <<");
 		return NULL;
 	}
 

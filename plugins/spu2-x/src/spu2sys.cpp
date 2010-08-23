@@ -168,7 +168,7 @@ void V_Core::Init( int index )
 
 void V_Core::Reset( int index )
 {
-	ConLog( "* SPU2-X: Init SPU2 core %d \n", index );
+	ConLog( "* SPU2-X: Reset SPU2 core %d \n", index );
 	memset( this, 0, sizeof(V_Core) );
 
 	const int c = Index = index;
