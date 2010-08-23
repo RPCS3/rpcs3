@@ -45,7 +45,7 @@ void OnStop(GtkButton *button,  gpointer user_data)
 
 void UpdZmode()
 {
-	char *tmp;
+	const char *tmp;
 
 	tmp = gtk_entry_get_text(GTK_ENTRY(GTK_COMBO(Method)->entry));
 	if (!strcmp(tmp, methods[0])) Zmode = 1;
@@ -60,7 +60,7 @@ void OnCompress(GtkButton *button,  gpointer user_data)
 	u32 lsn;
 	u8 cdbuff[10*2352];
 	char Zfile[256];
-	char *tmp;
+	const char *tmp;
 	int ret;
 	isoFile *src;
 	isoFile *dst;
@@ -334,7 +334,7 @@ long CDR_getTD(unsigned char track, unsigned char *buffer)
 //  byte 0 - minute
 //  byte 1 - second
 //  byte 2 - frame
-char *CDR_readTrack(unsigned char *time)
+unsigned char *CDR_readTrack(unsigned char *time)
 {
 	cr.msf.cdmsf_min0 = time[0];
 	cr.msf.cdmsf_sec0 = time[1];
@@ -356,7 +356,7 @@ void OnCreate(GtkButton *button,  gpointer user_data)
 	unsigned char *buffer;
 	unsigned char bufferz[2352];
 	unsigned char start[4], end[4];
-	char *tmp;
+	const char *tmp;
 #ifdef VERBOSE
 	unsigned long count = 0;
 	int i = 0;
@@ -495,7 +495,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 	unsigned char bufferz[2352];
 	unsigned char start[4], end[4];
 	char table[256];
-	char *tmp;
+	const char *tmp;
 	int b, blocks;
 #ifdef VERBOSE
 	unsigned long count = 0;
@@ -618,7 +618,7 @@ void OnCreateZ(GtkButton *button,  gpointer user_data)
 		if (Zmode == 1)
 			compress(Zbuf, &size, cdbuffer, CD_FRAMESIZE_RAW);
 		else
-			BZ2_bzBuffToBuffCompress(Zbuf, (unsigned int*)&size, cdbuffer, CD_FRAMESIZE_RAW * 10, 1, 0, 30);
+			BZ2_bzBuffToBuffCompress((char*)Zbuf, (unsigned int*)&size, (char*)cdbuffer, CD_FRAMESIZE_RAW * 10, 1, 0, 30);
 
 		fwrite(&c, 1, 4, t);
 		if (Zmode == 1) fwrite(&size, 1, 2, t);

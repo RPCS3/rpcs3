@@ -91,7 +91,7 @@ void SysMessage(char *fmt, ...)
 
 void OnFile_Ok()
 {
-	gchar *File;
+	const gchar *File;
 
 	gtk_widget_hide(FileSel);
 	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
@@ -183,7 +183,7 @@ void SysMessageLoc(char *fmt, ...)
 
 void OnOk (GtkButton *button,  gpointer user_data)
 {
-	char *tmp;
+	const char *tmp;
 
 	stop = true;
 	tmp = gtk_entry_get_text(GTK_ENTRY(Edit));
@@ -210,7 +210,7 @@ void OnCancel(GtkButton *button,  gpointer user_data)
 
 void OnFileSel_Ok()
 {
-	gchar *File;
+	const gchar *File;
 
 	File = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	gtk_entry_set_text(GTK_ENTRY(Edit), File);
@@ -278,7 +278,6 @@ EXPORT_C_(void) CDVDconfigure()
 	gtk_widget_show_all(ConfDlg);
 	gtk_main();
 
-	return 0;
 }
 
 void OnAboutOk(GtkMenuItem * menuitem, gpointer userdata)
