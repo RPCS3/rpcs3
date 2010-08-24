@@ -3788,7 +3788,7 @@ __aligned16 const FNTYPE PREFIX##_LOWER_OPCODE[128] = { \
 	PREFIX##unknown  , PREFIX##unknown  , PREFIX##unknown  , PREFIX##unknown  , \
 }; \
  \
-  static __aligned16 const FNTYPE PREFIX##_UPPER_OPCODE[64] = { \
+  __aligned16 const FNTYPE PREFIX##_UPPER_OPCODE[64] = { \
 	PREFIX##MI_ADDx  , PREFIX##MI_ADDy  , PREFIX##MI_ADDz  , PREFIX##MI_ADDw, \
 	PREFIX##MI_SUBx  , PREFIX##MI_SUBy  , PREFIX##MI_SUBz  , PREFIX##MI_SUBw, \
 	PREFIX##MI_MADDx , PREFIX##MI_MADDy , PREFIX##MI_MADDz , PREFIX##MI_MADDw, \
@@ -3814,7 +3814,7 @@ __aligned16 const FNTYPE PREFIX##_LOWER_OPCODE[128] = { \
  static void PREFIX##_UPPER_FD_01(); \
  static void PREFIX##_UPPER_FD_10(); \
  static void PREFIX##_UPPER_FD_11(); \
- void PREFIX##LowerOP(); \
+ static void PREFIX##LowerOP(); \
  static void PREFIX##LowerOP_T3_00(); \
  static void PREFIX##LowerOP_T3_01(); \
  static void PREFIX##LowerOP_T3_10(); \
@@ -3838,7 +3838,7 @@ __aligned16 const FNTYPE PREFIX##_LOWER_OPCODE[128] = { \
  PREFIX##_UPPER_FD_11_TABLE[(VU.code >> 6) & 0x1f](); \
 } \
  \
- void PREFIX##LowerOP() { \
+ static void PREFIX##LowerOP() { \
  PREFIX##LowerOP_OPCODE[VU.code & 0x3f](); \
 } \
  \
