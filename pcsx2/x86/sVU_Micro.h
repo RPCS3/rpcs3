@@ -22,17 +22,6 @@ extern u32 vudump;
 #define VU0_MEMSIZE 0x1000
 #define VU1_MEMSIZE 0x4000
 
-void recResetVU0();
-void recExecuteVU0Block();
-void recClearVU0( u32 Addr, u32 Size );
-
-void recVU1Init();
-void recVU1Shutdown();
-void recResetVU1();
-void recExecuteVU1Block();
-void recClearVU1( u32 Addr, u32 Size );
-
-
 u32 GetVIAddr(VURegs * VU, int reg, int read, int info); // returns the correct VI addr
 void recUpdateFlags(VURegs * VU, int reg, int info);
 

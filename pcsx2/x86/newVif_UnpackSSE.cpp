@@ -166,7 +166,7 @@ void VifUnpackSSE_Base::xUPK_V2_8() const {
 }
 
 void VifUnpackSSE_Base::xUPK_V3_32() const {
-	xMOV128    (destReg, ptr32[srcIndirect]);
+	xMOV128    (destReg, ptr128[srcIndirect]);
 }
 
 void VifUnpackSSE_Base::xUPK_V3_16() const {

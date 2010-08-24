@@ -27,6 +27,20 @@
 
 #define	MAC_Reset( VU ) VU->VI[REG_MAC_FLAG].UL = VU->VI[REG_MAC_FLAG].UL & (~0xFFFF)
 
+#define __vuRegsCall __fastcall
+typedef void __vuRegsCall FnType_VuRegsN(_VURegsNum *VUregsn);
+typedef FnType_VuRegsN* Fnptr_VuRegsN;
+
+extern __aligned16 const Fnptr_Void VU0_LOWER_OPCODE[128];
+extern __aligned16 const Fnptr_Void VU0_UPPER_OPCODE[64];
+extern __aligned16 const Fnptr_VuRegsN VU0regs_LOWER_OPCODE[128];
+extern __aligned16 const Fnptr_VuRegsN VU0regs_UPPER_OPCODE[64];
+
+extern __aligned16 const Fnptr_Void VU1_LOWER_OPCODE[128];
+extern __aligned16 const Fnptr_Void VU1_UPPER_OPCODE[64];
+extern __aligned16 const Fnptr_VuRegsN VU1regs_LOWER_OPCODE[128];
+extern __aligned16 const Fnptr_VuRegsN VU1regs_UPPER_OPCODE[64];
+
 extern void _vuTestPipes(VURegs * VU);
 extern void _vuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn);
 extern void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn);

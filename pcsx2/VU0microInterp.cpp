@@ -21,15 +21,13 @@
 
 extern void _vuFlushAll(VURegs* VU);
 
-_vuTables(VU0, VU0);
-
-void _vu0ExecUpper(VURegs* VU, u32 *ptr) {
+static void _vu0ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
 	IdebugUPPER(VU0);
 	VU0_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
-void _vu0ExecLower(VURegs* VU, u32 *ptr) {
+static void _vu0ExecLower(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[0];
 	IdebugLOWER(VU0);
 	VU0_LOWER_OPCODE[VU->code >> 25]();

@@ -21,8 +21,6 @@
 
 extern void _vuFlushAll(VURegs* VU);
 
-_vuTables(VU1, VU1);
-
 void _vu1ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
 	IdebugUPPER(VU1);

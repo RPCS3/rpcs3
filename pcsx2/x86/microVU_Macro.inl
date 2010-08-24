@@ -18,8 +18,6 @@
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
 
-typedef void FnType_Void();
-
 //------------------------------------------------------------------
 // Macro VU - Helper Macros / Functions
 //------------------------------------------------------------------
