@@ -20,10 +20,9 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
+#include "VUmicro.h"
 
 #include <cmath>
-
-#include "VUmicro.h"
 
 using namespace R5900;
 

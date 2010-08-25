@@ -88,15 +88,10 @@ namespace OpcodeImpl
 	void LQC2() {
 		u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)cpuRegs.code;
 		if (_Ft_) {
-#ifdef __LINUX__
-			// Ifdeffing mainly because I haven't gotten around to checking it in Windows yet.
-			memRead128(addr, &VU0.VF[_Ft_].UQ);
-#else
-			memRead128(addr,   VU0.VF[_Ft_].UD);
-#endif
+			memRead128(addr, VU0.VF[_Ft_].UQ);
 		} else {
-			u64 val[2];
- 			memRead128(addr,   val);
+			u128 val;
+ 			memRead128(addr, val);
 		}
 	}
 
@@ -105,9 +100,7 @@ namespace OpcodeImpl
 	// HUH why ? doesn't make any sense ...
 	void SQC2() {
 		u32 addr = _Imm_ + cpuRegs.GPR.r[_Rs_].UL[0];
-		//memWrite64(addr,  VU0.VF[_Ft_].UD[0]);
-		//memWrite64(addr+8,VU0.VF[_Ft_].UD[1]);
-		memWrite128(addr,  VU0.VF[_Ft_].UD);
+		memWrite128(addr, VU0.VF[_Ft_].UQ);
 	}
 }}}
 

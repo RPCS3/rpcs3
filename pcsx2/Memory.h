@@ -135,13 +135,21 @@ extern void mmap_ResetBlockTracking();
 #define memRead8 vtlb_memRead<mem8_t>
 #define memRead16 vtlb_memRead<mem16_t>
 #define memRead32 vtlb_memRead<mem32_t>
-#define memRead64 vtlb_memRead64
-#define memRead128 vtlb_memRead128
 
 #define memWrite8 vtlb_memWrite<mem8_t>
 #define memWrite16 vtlb_memWrite<mem16_t>
 #define memWrite32 vtlb_memWrite<mem32_t>
-#define memWrite64 vtlb_memWrite64
-#define memWrite128 vtlb_memWrite128
+
+static __fi void memRead64(u32 mem, mem64_t* out)	{ vtlb_memRead64(mem, out); }
+static __fi void memRead64(u32 mem, mem64_t& out)	{ vtlb_memRead64(mem, &out); }
+
+static __fi void memRead128(u32 mem, mem128_t* out) { vtlb_memRead128(mem, out); }
+static __fi void memRead128(u32 mem, mem128_t& out) { vtlb_memRead128(mem, &out); }
+
+static __fi void memWrite64(u32 mem, const mem64_t* val)	{ vtlb_memWrite64(mem, val); }
+static __fi void memWrite64(u32 mem, const mem64_t& val)	{ vtlb_memWrite64(mem, &val); }
+static __fi void memWrite128(u32 mem, const mem128_t* val)	{ vtlb_memWrite128(mem, val); }
+static __fi void memWrite128(u32 mem, const mem128_t& val)	{ vtlb_memWrite128(mem, &val); }
+
 
 extern u16 ba0R16(u32 mem);

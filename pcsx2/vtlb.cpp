@@ -126,10 +126,6 @@ void __fastcall vtlb_memRead128(u32 mem, mem128_t *out)
 		((vtlbMemR128FP*)vtlbdata.RWFT[4][0][hand])(paddr, out);
 	}
 }
-void __fastcall vtlb_memRead128(u32 mem, u64 (&out)[2])
-{
-	vtlb_memRead128(mem, (mem128_t*)out);
-}
 
 template< typename DataType >
 void __fastcall vtlb_memWrite(u32 addr, DataType data)
@@ -159,6 +155,7 @@ void __fastcall vtlb_memWrite(u32 addr, DataType data)
 		}
 	}
 }
+
 void __fastcall vtlb_memWrite64(u32 mem, const mem64_t* value)
 {
 	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
@@ -195,11 +192,6 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 
 		((vtlbMemW128FP*)vtlbdata.RWFT[4][1][hand])(paddr, value);
 	}
-}
-
-void __fastcall vtlb_memWrite128(u32 mem, const u64 (&out)[2])
-{
-	vtlb_memWrite128(mem, (const mem128_t*)out);
 }
 
 template mem8_t vtlb_memRead<mem8_t>(u32 mem);

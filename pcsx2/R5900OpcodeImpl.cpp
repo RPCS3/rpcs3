@@ -816,7 +816,7 @@ void SQ()
 	// an address error due to unaligned access isn't possible like it is on other loads/stores.
 
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	memWrite128(addr & ~0xf, cpuRegs.GPR.r[_Rt_].UD);
+	memWrite128(addr & ~0xf, cpuRegs.GPR.r[_Rt_].UQ);
 }
 
 /*********************************************************
