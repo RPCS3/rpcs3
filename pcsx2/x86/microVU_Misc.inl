@@ -213,6 +213,9 @@ void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 // Micro VU - Misc Functions
 //------------------------------------------------------------------
 
+// Gets called by mVUaddrFix at execution-time
+static void __fastcall mVUwarningRegAccess(mV) { Console.Error("microVU0 Warning: Accessing VU1 Regs! [%04x] [%x]", xPC, mVU->prog.cur); }
+
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 __fi void mVUaddrFix(mV, const x32& gprReg)
 {
@@ -223,6 +226,16 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 	else {
 		xCMP(gprReg, 0x400);
 		xForwardJL8 jmpA; // if addr >= 0x4000, reads VU1's VF regs and VI regs
+			if (IsDevBuild && !isCOP2) { // Lets see which games do this!
+				xPUSH(gprT1);			 // Note: Kernel does it via COP2 to initialize VU1!
+				xPUSH(gprT2);			 // So we don't spam console, we'll only check micro-mode...
+				xPUSH(gprT3);
+				xMOV(gprT2, (uptr)mVU);
+				xCALL(mVUwarningRegAccess);
+				xPOP(gprT3);
+				xPOP(gprT2);
+				xPOP(gprT1);
+			}
 			xAND(gprReg, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
 			xForwardJump8 jmpB;
 		jmpA.SetTarget();

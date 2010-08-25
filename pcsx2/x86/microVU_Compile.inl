@@ -99,7 +99,7 @@ static void mVUsetupRange(microVU* mVU, s32 pc, bool isStartPC) {
 		}
 	}
 	else {
-		//DevCon.WriteLn(Color_Green, "microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange.start, mVUrange.end);
+		DevCon.WriteLn(Color_Green, "microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange.start, mVUrange.end);
 		mVUrange.end = mVU->microMemSize;
 		microRange mRange = {0, pc};
 		ranges->push_front(mRange);
