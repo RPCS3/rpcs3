@@ -1579,7 +1579,7 @@ static __fi void _vuMR32(VURegs * VU) {
 __fi u32* GET_VU_MEM(VURegs* VU, u32 addr)		// non-static, also used by sVU for now.
 {
 	if( VU == &vuRegs[1] ) return (u32*)(vuRegs[1].Mem+(addr&0x3fff));
-	if( addr >= 0x4000 ) return (u32*)(vuRegs[0].Mem+(addr&0x43f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)
+	if( addr & 0x4000 ) return (u32*)(vuRegs[1].VF+(addr&0x3f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)
 	return (u32*)(vuRegs[0].Mem+(addr&0x0fff)); // for addr 0x0000 to 0x4000 just wrap around
 }
 

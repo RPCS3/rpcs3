@@ -224,8 +224,11 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 		xSHL(gprReg, 4);
 	}
 	else {
-		xCMP(gprReg, 0x400);
-		xForwardJL8 jmpA; // if addr >= 0x4000, reads VU1's VF regs and VI regs
+		xTEST(gprReg, 0x400);
+		xForwardJNZ8 jmpA; // if addr & 0x4000, reads VU1's VF regs and VI regs
+			xAND(gprReg, 0xff); // if !(addr & 0x4000), wrap around
+			xForwardJump8 jmpB;
+		jmpA.SetTarget();
 			if (IsDevBuild && !isCOP2) { // Lets see which games do this!
 				xPUSH(gprT1);			 // Note: Kernel does it via COP2 to initialize VU1!
 				xPUSH(gprT2);			 // So we don't spam console, we'll only check micro-mode...
@@ -236,10 +239,8 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 				xPOP(gprT2);
 				xPOP(gprT1);
 			}
-			xAND(gprReg, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
-			xForwardJump8 jmpB;
-		jmpA.SetTarget();
-			xAND(gprReg, 0xff); // if addr < 0x4000, wrap around
+			xAND(gprReg, 0x3f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
+			xADD(gprReg, (u128*)VU1.VF - (u128*)VU0.Mem);
 		jmpB.SetTarget();
 		xSHL(gprReg, 4); // multiply by 16 (shift left by 4)
 	}
