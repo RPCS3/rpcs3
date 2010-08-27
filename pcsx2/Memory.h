@@ -35,32 +35,32 @@ static __fi void ZeroQWC( void* dest )
 }
 
 // Various useful locations
-#define spr0 ((DMACh*)&eeMem->HW[0xD000])
-#define spr1 ((DMACh*)&eeMem->HW[0xD400])
+#define spr0 ((DMACh*)&eeHw[0xD000])
+#define spr1 ((DMACh*)&eeHw[0xD400])
 
-#define gif ((DMACh*)&eeMem->HW[0xA000])
+#define gif ((DMACh*)&eeHw[0xA000])
 
-#define vif0ch ((DMACh*)&eeMem->HW[0x8000])
-#define vif1ch ((DMACh*)&eeMem->HW[0x9000])
+#define vif0ch ((DMACh*)&eeHw[0x8000])
+#define vif1ch ((DMACh*)&eeHw[0x9000])
 
-#define sif0dma ((DMACh*)&eeMem->HW[0xc000])
-#define sif1dma ((DMACh*)&eeMem->HW[0xc400])
-#define sif2dma ((DMACh*)&eeMem->HW[0xc800])
+#define sif0dma ((DMACh*)&eeHw[0xc000])
+#define sif1dma ((DMACh*)&eeHw[0xc400])
+#define sif2dma ((DMACh*)&eeHw[0xc800])
 
-#define ipu0dma ((DMACh *)&eeMem->HW[0xb000])
-#define ipu1dma ((DMACh *)&eeMem->HW[0xb400])
+#define ipu0dma ((DMACh *)&eeHw[0xb000])
+#define ipu1dma ((DMACh *)&eeHw[0xb400])
 
 #define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 
-#define psHs8(mem)	(*(s8 *)&eeMem->HW[(mem) & 0xffff])
-#define psHs16(mem)	(*(s16*)&eeMem->HW[(mem) & 0xffff])
-#define psHs32(mem)	(*(s32*)&eeMem->HW[(mem) & 0xffff])
-#define psHs64(mem)	(*(s64*)&eeMem->HW[(mem) & 0xffff])
-#define psHu8(mem)	(*(u8 *)&eeMem->HW[(mem) & 0xffff])
-#define psHu16(mem)	(*(u16*)&eeMem->HW[(mem) & 0xffff])
-#define psHu32(mem)	(*(u32*)&eeMem->HW[(mem) & 0xffff])
-#define psHu64(mem)	(*(u64*)&eeMem->HW[(mem) & 0xffff])
-#define psHu128(mem)(*(u128*)&eeMem->HW[(mem) & 0xffff])
+#define psHs8(mem)	(*(s8 *)&eeHw[(mem) & 0xffff])
+#define psHs16(mem)	(*(s16*)&eeHw[(mem) & 0xffff])
+#define psHs32(mem)	(*(s32*)&eeHw[(mem) & 0xffff])
+#define psHs64(mem)	(*(s64*)&eeHw[(mem) & 0xffff])
+#define psHu8(mem)	(*(u8 *)&eeHw[(mem) & 0xffff])
+#define psHu16(mem)	(*(u16*)&eeHw[(mem) & 0xffff])
+#define psHu32(mem)	(*(u32*)&eeHw[(mem) & 0xffff])
+#define psHu64(mem)	(*(u64*)&eeHw[(mem) & 0xffff])
+#define psHu128(mem)(*(u128*)&eeHw[(mem) & 0xffff])
 
 #define psMs8(mem)	(*(s8 *)&eeMem->Main[(mem) & 0x1ffffff])
 #define psMs16(mem)	(*(s16*)&eeMem->Main[(mem) & 0x1ffffff])
@@ -114,7 +114,7 @@ static __fi void ZeroQWC( void* dest )
 #define psSu64(mem)		(*(u64 *)&eeMem->Scratch[(mem) & 0x3fff])
 #define psSu128(mem)	(*(u128*)&eeMem->Scratch[(mem) & 0x3fff])
 
-#define psH_DMACh(mem)	(*(DMACh*)&eeMem->HW[(mem) & 0xffff])
+#define psH_DMACh(mem)	(*(DMACh*)&eeHw[(mem) & 0xffff])
 
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.

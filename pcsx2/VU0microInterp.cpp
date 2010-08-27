@@ -47,15 +47,6 @@ static void _vu0Exec(VURegs* VU)
 	int vireg;
 	int discard=0;
 
-	if(VU0.VI[REG_TPC].UL >= VU0.maxmicro){
-#ifdef CPU_LOG
-		Console.WriteLn("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
-#endif
-		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
-		VU->cycle++;
-		return;
-	}
-
 	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL];
 	VU->VI[REG_TPC].UL+=8;
 
@@ -171,14 +162,8 @@ static void _vu0Exec(VURegs* VU)
 
 void vu0Exec(VURegs* VU)
 {
-	if (VU->VI[REG_TPC].UL >= VU->maxmicro) {
-#ifdef CPU_LOG
-		Console.Warning("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
-#endif
-		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
-	} else {
-		_vu0Exec(VU);
-	}
+	VU0.VI[REG_TPC].UL &= VU0_PROGMASK;
+	_vu0Exec(VU);
 	VU->cycle++;
 
 	if (VU->VI[0].UL != 0) DbgCon.Error("VI[0] != 0!!!!\n");

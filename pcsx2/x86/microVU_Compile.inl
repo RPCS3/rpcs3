@@ -45,7 +45,7 @@ static void __fastcall mVUprintPC2(u32 PC)	{ Console.WriteLn("Block End PC   = 0
 // Used by mVUsetupRange
 static __fi void mVUcheckIsSame(mV) {
 	if (mVU->prog.isSame == -1) {
-		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs->Micro, mVU->microMemSize);
+		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs().Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
 		if (!isVU1)	mVUcacheProg<0>(*mVU->prog.cur);
@@ -126,7 +126,7 @@ static void doIbit(mV) {
 		}
 		else tempI = curI;
 		
-		xMOV(ptr32[&mVU->regs->VI[REG_I].UL], tempI);
+		xMOV(ptr32[&mVU->regs().VI[REG_I].UL], tempI);
 		incPC(1);
 	} 
 }
@@ -328,7 +328,7 @@ static void mVUtestCycles(microVU* mVU) {
 		xCMP(ptr32[&mVU->cycles], 0);
 		xForwardJG32 skip;
 		if (isVU0) {
-			// TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET);
+			// TEST32ItoM((uptr)&mVU->regs().flags, VUFLAG_MFLAGSET);
 			// xFowardJZ32 vu0jmp;
 			// xMOV(gprT2, (uptr)mVU);
 			// xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
@@ -394,7 +394,7 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	// First Pass
 	iPC = startPC / 4;
 	mVUsetupRange(mVU, startPC, 1);		// Setup Program Bounds/Range
-	mVU->regAlloc->reset(mVU->regs);	// Reset regAlloc
+	mVU->regAlloc->reset();	// Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
@@ -433,7 +433,7 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	u32 x = 0;
 	for (; x < endCount; x++) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
-		if (mVUup.mBit)				{ xOR(ptr32[&mVU->regs->flags], VUFLAG_MFLAGSET); }
+		if (mVUup.mBit)				{ xOR(ptr32[&mVU->regs().flags], VUFLAG_MFLAGSET); }
 		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(mVU); }
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else						{ doSwapOp(mVU); }

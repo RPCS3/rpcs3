@@ -778,7 +778,7 @@ mVUop(mVU_MTIR) {
 mVUop(mVU_ILW) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 4);  }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem + offsetSS);
+		xAddressVoid ptr(mVU->regs().Mem + offsetSS);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			xADD(gprT2, _Imm11_);
@@ -796,7 +796,7 @@ mVUop(mVU_ILW) {
 mVUop(mVU_ILWR) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 4); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem + offsetSS);
+		xAddressVoid ptr(mVU->regs().Mem + offsetSS);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			mVUaddrFix (mVU, gprT2);
@@ -815,7 +815,7 @@ mVUop(mVU_ILWR) {
 mVUop(mVU_ISW) {
 	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg1(_It_, mVUlow.VI_read[1]); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			xADD(gprT2, _Imm11_);
@@ -836,7 +836,7 @@ mVUop(mVU_ISW) {
 mVUop(mVU_ISWR) {
 	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg1(_It_, mVUlow.VI_read[1]); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			mVUaddrFix (mVU, gprT2);
@@ -858,7 +858,7 @@ mVUop(mVU_ISWR) {
 mVUop(mVU_LQ) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 0); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			xADD(gprT2, _Imm11_);
@@ -877,7 +877,7 @@ mVUop(mVU_LQ) {
 mVUop(mVU_LQD) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT2, _Is_);
 			xSUB(gprT2b, 1);
@@ -897,7 +897,7 @@ mVUop(mVU_LQD) {
 mVUop(mVU_LQI) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT1, _Is_);
 			xMOV(gprT2, gprT1);
@@ -922,7 +922,7 @@ mVUop(mVU_LQI) {
 mVUop(mVU_SQ) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 0); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT2, _It_);
 			xADD(gprT2, _Imm11_);
@@ -941,7 +941,7 @@ mVUop(mVU_SQ) {
 mVUop(mVU_SQD) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT2, _It_);
 			xSUB(gprT2b, 1);
@@ -959,7 +959,7 @@ mVUop(mVU_SQD) {
 mVUop(mVU_SQI) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 {
-		xAddressVoid ptr(mVU->regs->Mem);
+		xAddressVoid ptr(mVU->regs().Mem);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
 			xMOV(gprT2, gprT1);
@@ -1069,7 +1069,7 @@ mVUop(mVU_WAITQ) {
 mVUop(mVU_XTOP) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
 	pass2 {
-		xMOVZX(gprT1, ptr16[&mVU->regs->vifRegs->top]);
+		xMOVZX(gprT1, ptr16[&mVU->getVifRegs().top]);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("XTOP vi%02d", _Ft_); }
@@ -1078,7 +1078,7 @@ mVUop(mVU_XTOP) {
 mVUop(mVU_XITOP) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
 	pass2 {
-		xMOVZX(gprT1, ptr16[&mVU->regs->vifRegs->itop]);
+		xMOVZX(gprT1, ptr16[&mVU->getVifRegs().itop]);
 		xAND(gprT1, isVU1 ? 0x3ff : 0xff);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
@@ -1094,7 +1094,7 @@ extern bool SIGNAL_IMR_Pending;
 
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
-	u8* data  = microVU1.regs->Mem + (addr*16);
+	u8* data  = vuRegs[1].Mem + (addr*16);
 	u32 diff  = 0x400 - addr;
 	u32 size;
 	
@@ -1128,11 +1128,11 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 
 		if (size > diff) {
 			//DevCon.Status("XGkick Wrap!");
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), diff);
-			memcpy_qwc(pDest+(diff*16), microVU1.regs->Mem, size-diff);
+			memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), diff);
+			memcpy_qwc(pDest+(diff*16), vuRegs[1].Mem, size-diff);
 		}
 		else {
-			memcpy_qwc(pDest, microVU1.regs->Mem + (addr*16), size);
+			memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), size);
 		}
 		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
 		gifRegs->stat.P1Q = true;

@@ -245,7 +245,7 @@ struct IPUregisters {
   u32 dummy3[2];
 };
 
-#define ipuRegs ((IPUregisters*)(&eeMem->HW[0x2000]))
+#define ipuRegs ((IPUregisters*)(&eeHw[0x2000]))
 
 struct tIPU_cmd
 {

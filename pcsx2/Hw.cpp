@@ -54,8 +54,8 @@ void hwReset()
 {
 	hwInit();
 
-	memzero_ptr<Ps2MemSize::Hardware>( eeMem->HW );
-	//memset(eeMem->HW+0x2000, 0, 0x0000e000);
+	memzero_ptr<Ps2MemSize::Hardware>( eeHw );
+	//memset(eeHw+0x2000, 0, 0x0000e000);
 
 	psHu32(SBUS_F260) = 0x1D000060;
 

@@ -15,11 +15,10 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
-#include <cmath>
-
 #include "VUops.h"
 #include "GS.h"
+
+#include <cmath>
 
 //Lower/Upper instructions can use that..
 #define _Ft_ ((VU->code >> 16) & 0x1F)  // The rt part of the instruction register
@@ -1579,9 +1578,9 @@ static __fi void _vuMR32(VURegs * VU) {
 
 __fi u32* GET_VU_MEM(VURegs* VU, u32 addr)		// non-static, also used by sVU for now.
 {
-	if( VU == g_pVU1 ) return (u32*)(VU1.Mem+(addr&0x3fff));
-	if( addr >= 0x4000 ) return (u32*)(VU0.Mem+(addr&0x43f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)
-	return (u32*)(VU0.Mem+(addr&0x0fff)); // for addr 0x0000 to 0x4000 just wrap around
+	if( VU == &vuRegs[1] ) return (u32*)(vuRegs[1].Mem+(addr&0x3fff));
+	if( addr >= 0x4000 ) return (u32*)(vuRegs[0].Mem+(addr&0x43f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)
+	return (u32*)(vuRegs[0].Mem+(addr&0x0fff)); // for addr 0x0000 to 0x4000 just wrap around
 }
 
 static __ri void _vuLQ(VURegs * VU) {
@@ -2015,7 +2014,7 @@ static __ri void _vuEEXP(VURegs * VU) {
 
 static __ri void _vuXITOP(VURegs * VU) {
 	if (_It_ == 0) return;
-	VU->VI[_It_].US[0] = VU->vifRegs->itop;
+	VU->VI[_It_].US[0] = VU->GetVifRegs().itop;
 }
 
 static __ri void _vuXGKICK(VURegs * VU)
@@ -2032,7 +2031,7 @@ static __ri void _vuXGKICK(VURegs * VU)
 
 static __ri void _vuXTOP(VURegs * VU) {
 	if(_It_ == 0) return;
-	VU->VI[_It_].US[0] = (u16)VU->vifRegs->top;
+	VU->VI[_It_].US[0] = (u16)VU->GetVifRegs().top;
 }
 
 #define GET_VF0_FLAG(reg) (((reg)==0)?(1<<REG_VF0_FLAG):0)

@@ -39,32 +39,33 @@ static __fi void vifFlush(int idx) {
 
 static __fi void vuExecMicro(int idx, u32 addr) {
 	VURegs* VU = nVif[idx].VU;
+	VIFregisters& vifRegs = VU->GetVifRegs();
 	int startcycles = 0;
 	//vifFlush(idx);
 
 	//if(vifX.vifstalled == true) return;
 
-	if (VU->vifRegs->itops  > (idx ? 0x3ffu : 0xffu)) {
-		Console.WriteLn("VIF%d ITOP overrun! %x", idx, VU->vifRegs->itops);
-		VU->vifRegs->itops &= (idx ? 0x3ffu : 0xffu);
+	if (vifRegs.itops  > (idx ? 0x3ffu : 0xffu)) {
+		Console.WriteLn("VIF%d ITOP overrun! %x", idx, vifRegs.itops);
+		vifRegs.itops &= (idx ? 0x3ffu : 0xffu);
 	}
 
-	VU->vifRegs->itop = VU->vifRegs->itops;
+	vifRegs.itop = vifRegs.itops;
 
 	if (idx) {
 		// in case we're handling a VIF1 execMicro, set the top with the tops value
-		VU->vifRegs->top = VU->vifRegs->tops & 0x3ff;
+		vifRegs.top = vifRegs.tops & 0x3ff;
 
 		// is DBF flag set in VIF_STAT?
-		if (VU->vifRegs->stat.DBF) {
+		if (vifRegs.stat.DBF) {
 			// it is, so set tops with base, and clear the stat DBF flag
-			VU->vifRegs->tops = VU->vifRegs->base;
-			VU->vifRegs->stat.DBF = false;
+			vifRegs.tops = vifRegs.base;
+			vifRegs.stat.DBF = false;
 		}
 		else {
 			// it is not, so set tops with base + offset, and set stat DBF flag
-			VU->vifRegs->tops = VU->vifRegs->base + VU->vifRegs->ofst;
-			VU->vifRegs->stat.DBF = true;
+			vifRegs.tops = vifRegs.base + vifRegs.ofst;
+			vifRegs.stat.DBF = true;
 		}
 	}
 

@@ -18,6 +18,17 @@
 #include "VU.h"
 #include "VUops.h"
 #include "R5900.h"
+
+static const uint VU0_MEMSIZE = 0x1000;
+static const uint VU0_PROGSIZE = 0x1000;
+static const uint VU1_MEMSIZE = 0x4000;
+static const uint VU1_PROGSIZE = 0x4000;
+
+static const uint VU0_MEMMASK = VU0_MEMSIZE-1;
+static const uint VU0_PROGMASK = VU0_PROGSIZE-1;
+static const uint VU1_MEMMASK = VU1_MEMSIZE-1;
+static const uint VU1_PROGMASK = VU1_PROGSIZE-1;
+
 #define vuRunCycles  (512*12)  // Cycles to run ExecuteBlockJIT() for (called from within recs)
 #define vu0RunCycles (512*12)  // Cycles to run vu0 for whenever ExecuteBlock() is called
 #define vu1RunCycles (3000000) // mVU1 uses this for inf loop detection on dev builds

@@ -640,6 +640,10 @@
 									>
 								</File>
 								<File
+									RelativePath="..\..\x86\microVU_IR.inl"
+									>
+								</File>
+								<File
 									RelativePath="..\..\x86\microVU_Log.inl"
 									>
 								</File>

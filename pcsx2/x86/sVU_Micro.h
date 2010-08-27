@@ -19,9 +19,6 @@
 
 extern u32 vudump;
 
-#define VU0_MEMSIZE 0x1000
-#define VU1_MEMSIZE 0x4000
-
 u32 GetVIAddr(VURegs * VU, int reg, int read, int info); // returns the correct VI addr
 void recUpdateFlags(VURegs * VU, int reg, int info);
 

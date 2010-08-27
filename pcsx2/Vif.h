@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "MemoryTypes.h"
 #include "R5900.h"
 
 enum vif0_stat_flags
@@ -214,8 +215,8 @@ struct VIFregisters {
 
 extern VIFregisters *vifRegs;
 
-#define vif0RegsRef ((VIFregisters&)eeMem->HW[0x3800])
-#define vif1RegsRef ((VIFregisters&)eeMem->HW[0x3c00])
+static VIFregisters& vif0RegsRef = (VIFregisters&)eeHw[0x3800];
+static VIFregisters& vif1RegsRef = (VIFregisters&)eeHw[0x3C00];
 #define vif0Regs (&vif0RegsRef)
 #define vif1Regs (&vif1RegsRef)
 

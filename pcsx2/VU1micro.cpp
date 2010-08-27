@@ -24,8 +24,6 @@
 
 #include "VUmicro.h"
 
-VURegs* g_pVU1;
-
 #ifdef PCSX2_DEBUG
 u32 vudump = 0;
 #endif

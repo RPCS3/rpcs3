@@ -205,7 +205,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
 #define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
-#define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
+#define curI		 ((u32*)mVU->regs().Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
 
 #if 0
@@ -222,7 +222,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
-#define Rmem		 &mVU->regs->VI[REG_R].UL
+#define Rmem		 &mVU->regs().VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
@@ -325,4 +325,3 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 extern void mVUmergeRegs(const xmm& dest, const xmm& src,  int xyzw, bool modXYZW=false);
 extern void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW);
 extern void mVUloadReg(const xmm& reg, xAddressVoid ptr, int xyzw);
-extern void mVUloadIreg(const xmm& reg, int xyzw, VURegs* vuRegs);

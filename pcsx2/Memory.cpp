@@ -602,9 +602,11 @@ protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 };
 
-mmap_PageFaultHandler mmap_faultHandler;
+static mmap_PageFaultHandler mmap_faultHandler;
 
 EEVM_MemoryAllocMess* eeMem = NULL;
+
+__pagealigned u8 eeHw[Ps2MemSize::Hardware];
 
 void memAlloc()
 {

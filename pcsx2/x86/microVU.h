@@ -145,7 +145,7 @@ struct microProgManager {
 	microProgramQuick	quick[mProgSize/2];	// Quick reference to valid microPrograms for current execution
 	microProgram*		cur;				// Pointer to currently running MicroProgram
 	int					total;				// Total Number of valid MicroPrograms
-	int					isSame;				// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
+	int					isSame;				// Current cached microProgram is Exact Same program as mVU->regs().Micro (-1 = unknown, 0 = No, 1 = Yes)
 	int					cleared;			// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
 	u32					curFrame;			// Frame Counter
 	u8*					x86ptr;				// Pointer to program's recompilation code
@@ -155,10 +155,10 @@ struct microProgManager {
 };
 
 #define mVUdispCacheSize (0x1000) // Dispatcher Cache Size
-#define mVUcacheSize     ((mVU->index) ? (_1mb *  17) : (_1mb *  7)) // Initial Size (Excluding Safe-Zone)
+#define mVUcacheSize     ((index) ? (_1mb *  17) : (_1mb *  7)) // Initial Size (Excluding Safe-Zone)
 #define mVUcacheMaxSize  ((mVU->index) ? (_1mb * 100) : (_1mb * 50)) // Max Size allowed to grow to
 #define mVUcacheGrowBy	 ((mVU->index) ? (_1mb *  15) : (_1mb * 10)) // Grows by this amount
-#define mVUcacheSafeZone ((mVU->index) ? (_1mb *   3) : (_1mb *  3)) // Safe-Zone for last program
+#define mVUcacheSafeZone ((index) ? (_1mb *   3) : (_1mb *  3)) // Safe-Zone for last program
 
 struct microVU {
 
@@ -179,7 +179,6 @@ struct microVU {
 	ScopedPtr<microRegAlloc>	regAlloc;	// Reg Alloc Class
 	ScopedPtr<AsciiFile>		logFile;	// Log File Pointer
 
-	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		dispCache;	 // Dispatchers Cache (where startFunct and exitFunct are written to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
@@ -196,6 +195,13 @@ struct microVU {
 	u32		totalCycles; // Total Cycles that mVU is expected to run for
 	u32		cycles;		 // Cycles Counter
 
+	VURegs& regs() const { return ::vuRegs[index]; }
+
+	VIFregisters& getVifRegs() const	{ return regs().GetVifRegs(); }
+	__fi REG_VI& getVI(uint reg) const	{ return regs().VI[reg]; }
+	__fi VECTOR& getVF(uint reg) const	{ return regs().VF[reg]; }
+
+
 	__fi s16 Imm5() const	{ return ((code & 0x400) ? 0xfff0 : 0) | ((code >> 6) & 0xf); }
 	__fi s32 Imm11() const	{ return (code & 0x400) ? (0xfffffc00 | (code & 0x3ff)) : (code & 0x3ff); }
 	__fi u32 Imm12() const	{ return (((code >> 21) & 0x1) << 11) | (code & 0x7ff); }
@@ -208,7 +214,7 @@ struct microVU {
 	{
 		prog.IRinfo.curPC += x;
 		prog.IRinfo.curPC &= progMemMask;
-		code = ((u32*)regs->Micro)[prog.IRinfo.curPC];
+		code = ((u32*)regs().Micro)[prog.IRinfo.curPC];
 	}
 	
 	__ri uint getBranchAddr() const
@@ -222,6 +228,16 @@ struct microVU {
 		pxAssumeDev((prog.IRinfo.curPC & 1) == 0, "microVU recompiler: Upper instructions cannot have valid branch addresses.");
 		return (((prog.IRinfo.curPC + 4)  + (Imm11() * 2)) & progMemMask) * 4;
 	}
+
+	__ri void loadIreg(const xmm& reg, int xyzw)
+	{
+		xMOVSSZX(reg, ptr32[&getVI(REG_I)]);
+		if (!_XYZWss(xyzw)) xSHUF.PS(reg, reg, 0);
+	}
+
+	void init(uint vuIndex);
+	void reset();
+	void close();
 };
 
 // microVU rec structs
@@ -232,9 +248,6 @@ extern __aligned16 microVU microVU1;
 int mVUdebugNow = 0;
 
 // Main Functions
-static void  mVUinit(int);
-static void  mVUreset(mV, VURegs* vuRegsPtr = NULL);
-static void  mVUclose(mV);
 static void  mVUclear(mV, u32, u32);
 static void  mVUresizeCache(mV, u32);
 static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
@@ -257,18 +270,3 @@ extern void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 // recCall Function Pointer
 typedef void (__fastcall *mVUrecCall)(u32, u32);
 
-
-// Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
-#include "microVU_Clamp.inl"
-#include "microVU_Misc.inl"
-#include "microVU_Log.inl"
-#include "microVU_Analyze.inl"
-#include "microVU_Alloc.inl"
-#include "microVU_Upper.inl"
-#include "microVU_Lower.inl"
-#include "microVU_Tables.inl"
-#include "microVU_Flags.inl"
-#include "microVU_Branch.inl"
-#include "microVU_Compile.inl"
-#include "microVU_Execute.inl"
-#include "microVU_Macro.inl"
