@@ -46,11 +46,13 @@
 #define IDC_WIDTH                       2040
 #define IDC_HEIGHT                      2041
 #define IDC_CONFIGURE                   2042
-#define IDC_ALPHAHACK2                  2043
-#define IDC_WINDOWED                    2044
-#define IDC_USERHACKS                   2045
-#define IDC_SKIPDRAWHACKEDIT            2046
-#define IDC_STATIC10                    2047
+#define IDC_STATIC_TEXT_HWAA            2043
+#define IDC_ALPHAHACK2                  2044
+#define IDC_STATIC_TEXT_SKIPDRAW        2045
+#define IDC_WINDOWED                    2046
+#define IDC_USERHACKS                   2047
+#define IDC_SKIPDRAWHACKEDIT            2048
+#define IDC_STATIC10                    2049
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
 #define IDR_MERGE_FX                    10002
@@ -59,12 +61,12 @@
 #define IDD_CONFIG2                     10004
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10005
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2042
+#define _APS_NEXT_CONTROL_VALUE         2050
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

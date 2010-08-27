@@ -219,6 +219,9 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("UserHacks_AlphaHack", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHAHACK));
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)IsDlgButtonChecked(m_hWnd, IDC_OFFSETHACK));
 		theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
+
+		bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
+		theApp.SetConfig("allowHacks", allowHacks);
 	}
 
 	return __super::OnCommand(hWnd, id, code);
@@ -228,7 +231,6 @@ void GSSettingsDlg::UpdateControls()
 {
 	INT_PTR i;
 
-	// Simple check only
 	bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
 
 	if(ComboBoxGetSelData(IDC_RENDERER, i))
@@ -263,12 +265,16 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
-		ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		//ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw)?SW_SHOW:SW_HIDE;  //Don't disable the "Hacks" frame
+		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAA), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_HWAA), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		
 		ShowWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		
 		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC10), allowHacks && hw)?SW_SHOW:SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
-
+		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_SKIPDRAW), allowHacks && hw)?SW_SHOW:SW_HIDE;
 	}
 }
