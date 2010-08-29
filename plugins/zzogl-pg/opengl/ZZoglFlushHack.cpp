@@ -1,5 +1,5 @@
 /*  ZZ Open GL graphics plugin
- *  Copyright (c)2010 gregory.hainaut@gmail.com
+ *  Copyright (c)2010 gregory.hainaut@gmail.com, zeydlitz@gmail.com
  *  Based on GSdx Copyright (C) 2007-2009 Gabest
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -457,6 +457,40 @@ bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+// Record skipped frame to allow better analysis
+// #define FRAME_RECORDING_ON 1
+#ifdef FRAME_RECORDING_ON
+static const u32 MAX_FRAMES = 500;
+static GSFrameInfo FrameAppear[MAX_FRAMES];
+static u32 Rec_Numbers = 0;
+
+void RecordNewFrames(ZeroGS::VB& curvb, GSFrameInfo fi) {
+    if (Rec_Numbers >= MAX_FRAMES)
+        return;
+
+    u32 i;
+    bool was_recorded = false;
+    for (i = 0; i < Rec_Numbers; i++ ) {
+        if (FrameAppear[i].FBP == fi.FBP && FrameAppear[i].FPSM == fi.FPSM
+                && FrameAppear[i].TBP0 == fi.TBP0 && FrameAppear[i].TPSM == fi.TPSM) {
+            was_recorded = true;
+            break;
+        }
+    }
+    if (!was_recorded) {
+        FrameAppear[Rec_Numbers] = fi;
+        Rec_Numbers++;
+        ZZLog::Print( "New frame %d, skip %d | fpb: %x fpsm: %d fpmsk: %x tme: %x tbp0: %x tpsm: %d tztst: %x | bits %d\n", \
+                Rec_Numbers, g_SkipFlushFrame, fi.FBP, fi.FPSM, fi.FBMSK, fi.TME, fi.TBP0, fi.TPSM, fi.TZTST, GABEST_HAS_SHARED_BITS(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM) );
+
+        // Dump a nice picture of the frame
+        char filename[255];
+        sprintf(filename, "SkipFlushFrame_%d__%d.tga", g_SkipFlushFrame, Rec_Numbers);
+        ZeroGS::SaveRenderTarget(filename, curvb.prndr->fbw, curvb.prndr->fbh, 0);
+    }
+}
+#endif
+
 __forceinline bool IsBadFrame(ZeroGS::VB& curvb)
 {
 	GSFrameInfo fi;
@@ -486,8 +520,10 @@ __forceinline bool IsBadFrame(ZeroGS::VB& curvb)
 
 	if(g_SkipFlushFrame > 0)
 	{
+#ifdef FRAME_RECORDING_ON
+        RecordNewFrames(curvb, fi);
+#endif
 		g_SkipFlushFrame--;
-
 		return true;
 	}
 
