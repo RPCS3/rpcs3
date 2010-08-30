@@ -22,10 +22,16 @@
 if [ -n "$1" ] ; then
     SVN_CO_VERSION=$1;
 else
-    echo "Please provide the subversion version as fisrt parameter"
+    echo "Please provide the subversion version for first parameter"
     exit 1;
 fi
-SVN_TRUNK="http://pcsx2.googlecode.com/svn/trunk"
+if [ -n "$2" ] ; then
+    # Use branch argument
+    SVN_TRUNK="http://pcsx2.googlecode.com/svn/branches/$2"
+else
+    # by default take the trunk
+    SVN_TRUNK="http://pcsx2.googlecode.com/svn/trunk"
+fi
 
 # Debian name of package and tarball
 PKG_NAME="pcsx2.snapshot-${SVN_CO_VERSION}"
@@ -78,7 +84,8 @@ mkdir -p $ROOT_DIR;
     get_svn_dir debian-unstable-upstream;
 echo "Done")
 
-echo "Donwload Linux compatible plugins ${SVN_CO_VERSION}"
+echo "Download Linux compatible plugins ${SVN_CO_VERSION}"
+# Note others plugins exists but they are not 100% copyrigh free
 mkdir -p $ROOT_DIR/plugins
 (cd $ROOT_DIR/plugins; 
     get_svn_file plugins/CMakeLists.txt;
@@ -116,19 +123,19 @@ find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
 echo "Remove 3rd party directory"
 find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
 echo "Remove windows file (useless & copyright issue)"
-find $NEW_DIR -iname "windows" -exec rm -fr {} \; 2> /dev/null
+find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
+find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
 rm -fr "${NEW_DIR}/tools/GSDumpGUI"
 rm -fr "${NEW_DIR}/common/vsprops"
 echo "Remove useless file (copyright issue)"
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders/zlib"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
-rm -fr "${NEW_DIR}/plugins/CDVDnull/Linux"
-
 
 ## BUILD
 echo "Build the tar gz file"
-tar -C ${TMP_DIR} -czf ${TAR_NAME}.gz $PKG_NAME 
+tar -C $TMP_DIR -czf ${TAR_NAME}.gz $PKG_NAME 
 
 ## Clean
 rm -fr $NEW_DIR
+rm -fr $ROOT_DIR
