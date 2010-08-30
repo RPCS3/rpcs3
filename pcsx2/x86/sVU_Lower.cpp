@@ -27,6 +27,8 @@
 #include "sVU_Debug.h"
 #include "sVU_zerorec.h"
 #include "Gif.h"
+
+using namespace x86Emitter;
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
@@ -678,7 +680,6 @@ void _loadEAX(VURegs *VU, int x86reg, uptr offset, int info)
 //------------------------------------------------------------------
 int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 {
-	u8* pjmp[2];
 	if( x86reg == EAX ) {
 		if (imm) ADD32ItoR(x86reg, imm);
 	}
@@ -694,16 +695,17 @@ int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 	else {
 
 		// VU0 has a somewhat interesting memory mapping:
-		// if addr >= 0x4000, reads VU1's VF regs and VI regs
-		// if addr < 0x4000, wrap around at 0x1000
+		// if addr & 0x4000, reads VU1's VF regs and VI regs
+		// otherwise, wrap around at 0x1000
 
-		CMP32ItoR(EAX, 0x400);
-		pjmp[0] = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
-			AND32ItoR(EAX, 0x43f);
-			pjmp[1] = JMP8(0);
-		x86SetJ8(pjmp[0]);
-			AND32ItoR(EAX, 0xff); // if addr < 0x4000, wrap around
-		x86SetJ8(pjmp[1]);
+		xTEST(eax, 0x400);
+		xForwardJNZ8 vu1regs; // if addr & 0x4000, reads VU1's VF regs and VI regs
+			xAND(eax, 0xff); // if !(addr & 0x4000), wrap around
+			xForwardJump8 done;
+		vu1regs.SetTarget();
+			xAND(eax, 0x3f);
+			xADD(eax, (u128*)VU1.VF - (u128*)VU0.Mem);
+		done.SetTarget();
 
 		SHL32ItoR(EAX, 4); // multiply by 16 (shift left by 4)
 	}
