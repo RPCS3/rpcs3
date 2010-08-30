@@ -116,7 +116,7 @@ struct ialuPipe {
 	u32 Cycle;
 };
 
-struct VURegs {
+struct __aligned16 VURegs {
 	VECTOR	VF[32]; // VF and VI need to be first in this struct for proper mapping
 	REG_VI	VI[32]; // needs to be 128bit x 32 (cottonvibes)
 
@@ -190,8 +190,9 @@ extern __aligned16 VURegs vuRegs[2];
 static VURegs& VU0 = vuRegs[0];
 static VURegs& VU1 = vuRegs[1];
 
-__fi bool VURegs::IsVU1() const  { return this == &vuRegs[1]; }
-__fi bool VURegs::IsVU0() const  { return this == &vuRegs[0]; }
+// Do not use __fi here because it fires 'multiple definition' error in GCC
+inline bool VURegs::IsVU1() const  { return this == &vuRegs[1]; }
+inline bool VURegs::IsVU0() const  { return this == &vuRegs[0]; }
 
 extern u32* GET_VU_MEM(VURegs* VU, u32 addr);
 
