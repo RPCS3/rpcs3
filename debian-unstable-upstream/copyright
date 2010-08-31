@@ -156,7 +156,7 @@ License: BSD (3 clause)
     SUCH DAMAGE.
 
 Files: plugins/zzogl-pg/opengl/ZeroGSShaders/* plugins/zzogl-pg/opengl/zpipe* plugins/zzogl-pg/opengl/zerogsmath.h plugins/zzogl-pg/opengl/memcpy_amd.cpp
-Copyright: Unknow
+Copyright: Unknown
 
 
 The Debian packaging is:

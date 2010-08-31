@@ -6,5 +6,6 @@
 # Compulsory line, this is a version 3 file
 version=3
 
-# Note upstream do not release source files. It advices to pick them from subversion
+# Note: Upstream does not release prepackaged source files. 
+# It's adviced to get them from their subversion repository.
 # http://pcsx2.googlecode.com/files/Pcsx2-linux-beta-(.*).tar.gz

@@ -4,25 +4,25 @@
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This package is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
 ######################################################################
-# Global Parameter
+# Global Parameters
 ######################################################################
 # Svn parameter
 if [ -n "$1" ] ; then
     SVN_CO_VERSION=$1;
 else
-    echo "Please provide the subversion version for first parameter"
+    echo "Please provide the subversion revision number as the first parameter"
     exit 1;
 fi
 if [ -n "$2" ] ; then
@@ -44,7 +44,7 @@ NEW_DIR=${TMP_DIR}/$PKG_NAME
 
 
 ######################################################################
-# Basic function
+# Basic functions
 ######################################################################
 get_svn_dir()
 {
@@ -64,8 +64,8 @@ get_svn_file()
 {
     for file in $* ; do
         if [ ! -e `basename ${file}` ] ; then
-            # Versionning information are not support for a single file 
-            # so you can not use svn co
+            # Versioning information is not supported for a single file
+            # therefore you can't use svn co
             svn export --quiet ${SVN_TRUNK}/${file} -r $SVN_CO_VERSION;
         fi
     done
@@ -75,8 +75,8 @@ get_svn_file()
 # Main script
 ######################################################################
 
-## Download the svn repository (only the usefull things)
-echo "Download pcsx2 source rev ${SVN_CO_VERSION}"
+## Download the svn repository (only the useful things)
+echo "Downloading pcsx2 source revision ${SVN_CO_VERSION}"
 mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
@@ -84,8 +84,8 @@ mkdir -p $ROOT_DIR;
     get_svn_dir debian-unstable-upstream;
 echo "Done")
 
-echo "Download Linux compatible plugins ${SVN_CO_VERSION}"
-# Note others plugins exists but they are not 100% copyrigh free
+echo "Downloading Linux compatible plugins for revision ${SVN_CO_VERSION}"
+# Note: Other plugins exist but they are not 100% copyright free.
 mkdir -p $ROOT_DIR/plugins
 (cd $ROOT_DIR/plugins; 
     get_svn_file plugins/CMakeLists.txt;
@@ -105,14 +105,14 @@ echo "Note: some plugins are more or less deprecated CDVDisoEFP, CDVDlinuz, Zero
 echo "Done")
 
 ## Installation
-echo "Copy the subversion repository in a tmp directory"
+echo "Copy the subversion repository to a temporary directory"
 # Copy the dir
 rm -fr $NEW_DIR
 cp -r $ROOT_DIR $NEW_DIR
 
-echo "Remove .svn file"
+echo "Remove .svn directories"
 find $NEW_DIR -name ".svn" -type d -exec rm -fr {} \; 2> /dev/null
-echo "Remove old build system (script and autotools)"
+echo "Remove old build system (scripts and autotools)"
 find $NEW_DIR -name "build.sh" -exec rm -f {} \;
 find $NEW_DIR -name "install-sh" -exec rm -f {} \;
 find $NEW_DIR -name "depcomp" -exec rm -f {} \;
@@ -120,20 +120,23 @@ find $NEW_DIR -name "missing" -exec rm -f {} \;
 find $NEW_DIR -name "aclocal.m4" -exec rm -f {} \;
 find $NEW_DIR -name "configure.ac" -exec rm -f {} \;
 find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
-echo "Remove 3rd party directory"
+echo "Remove 3rd party directories"
 find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
+# I really need to clean this mess one day
+# echo "Remove plugins/zzogl-pg/opengl/ZeroGSShaders (some zlib source in the middle)"
+# rm -fr $NEW_DIR/plugins/zzogl-pg/opengl/ZeroGSShaders
 echo "Remove windows file (useless & copyright issue)"
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
 rm -fr "${NEW_DIR}/tools/GSDumpGUI"
 rm -fr "${NEW_DIR}/common/vsprops"
-echo "Remove useless file (copyright issue)"
+echo "Remove useless files (copyright issues)"
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders/zlib"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
 
 ## BUILD
-echo "Build the tar gz file"
+echo "Build the tar.gz file"
 tar -C $TMP_DIR -czf ${TAR_NAME}.gz $PKG_NAME 
 
 ## Clean
