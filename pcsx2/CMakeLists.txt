@@ -402,7 +402,7 @@ set(pcsx2ps2Sources
 set(pcsx2ps2Headers
 	ps2/BiosTools.h
 	ps2/eeHwTraceLog.inl
-	ps2/HwInternal.inl
+	ps2/HwInternal.h
 	ps2/Iop/IopHw_Internal.h)
 
 # RDebug sources

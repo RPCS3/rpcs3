@@ -29,8 +29,9 @@ using namespace R5900;
 #define HELPSWITCH(m) (((m)>>4) & 0xff)
 #define mcase(src) case HELPSWITCH(src)
 
-template< uint page > void __fastcall hwWrite8(u32 mem, u8 value);
-template< uint page > void __fastcall hwWrite16(u32 mem, u8 value);
+template< uint page > void __fastcall _hwWrite8(u32 mem, u8 value);
+template< uint page > void __fastcall _hwWrite16(u32 mem, u8 value);
+template< uint page > void __fastcall _hwWrite128(u32 mem, u8 value);
 
 
 template<uint page>

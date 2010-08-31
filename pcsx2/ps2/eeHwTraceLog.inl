@@ -249,7 +249,7 @@ static __ri void eeHwTraceLog( u32 addr, T val, bool mode )
 	FastFormatAscii labelStr;
 	labelStr.Write("Hw%s%u", mode ? "Read" : "Write", sizeof (T) * 8);
 
-	switch( sizeof T )
+	switch( sizeof(T) )
 	{
 		case 1: valStr.Write("0x%02x", val); break;
 		case 2: valStr.Write("0x%04x", val); break;

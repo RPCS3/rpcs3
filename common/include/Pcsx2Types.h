@@ -134,20 +134,25 @@ union u128
 	// Explicit conversion from u64. Zero-extends the source through 128 bits.
 	static u128 From64( u64 src )
 	{
-		u128 retval = { src, 0 };
+		u128 retval;
+		retval.lo = src;
+		retval.hi = 0;
 		return retval;
 	}
 
 	// Explicit conversion from u32. Zero-extends the source through 128 bits.
 	static u128 From32( u32 src )
 	{
-		u128 retval = { src, 0 };
+		u128 retval;
+		retval._u32[0] = src;
+		retval._u32[1] = 0;
+		retval.hi = 0;
 		return retval;
 	}
 
-	operator u32() const { return (u32)lo; }
-	operator u16() const { return (u16)lo; }
-	operator u8() const { return (u8)lo; }
+	operator u32() const { return _u32[0]; }
+	operator u16() const { return _u16[0]; }
+	operator u8() const { return _u8[0]; }
 	
 	bool operator==( const u128& right ) const
 	{

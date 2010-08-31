@@ -34,6 +34,8 @@ static __fi void IntCHackCheck()
 static const uint HwF_VerboseConLog	= 1<<0;
 static const uint HwF_IntcStatHack	= 1<<1;	// used for Reads only.
 
+template< uint page > void __fastcall _hwRead128(u32 mem, mem128_t* result );
+
 template< uint page, bool intcstathack >
 mem32_t __fastcall _hwRead32(u32 mem)
 {
@@ -68,7 +70,7 @@ mem32_t __fastcall _hwRead32(u32 mem)
 			DevCon.WriteLn( Color_Cyan, "Reading 32-bit FIFO data" );
 
 			u128 out128;
-			hwRead128<page>(mem, &out128);
+			_hwRead128<page>(mem, &out128);
 			return out128._u32[(mem >> 2) & 0x3];
 		}
 		break;
