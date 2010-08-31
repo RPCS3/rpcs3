@@ -25,9 +25,9 @@
 static bool QuickDmaExec( void (*func)(), u32 mem)
 {
 	bool ret = false;
-    DMACh *reg = &psH_DMACh(mem);
+    DMACh& reg = (DMACh&)psHu32(mem);
 
-	if (reg->chcr.STR && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
+	if (reg.chcr.STR && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		func();
 		ret = true;
@@ -56,11 +56,11 @@ static void StartQueuedDMA()
 
 static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 {
-	DMACh *reg = &psH_DMACh(mem);
+	DMACh& reg = (DMACh&)psHu32(mem);
     tDMA_CHCR chcr(value);
 
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
-	if (reg->chcr.STR)
+	if (reg.chcr.STR)
 	{
 		const uint channel = ChannelNumber(mem);
 
@@ -86,10 +86,10 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 			}
 			//Sanity Check for possible future bug fix0rs ;p
 			//Spams on Persona 4 opening.
-			//if(reg->chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
+			//if(reg.chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg.chcr.TAG, reg.qwc);
 			//Here we update the LOWER CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
 			//But we need to preserve the existing tag for now
-			reg->chcr.set((reg->chcr.TAG << 16) | chcr.lower());
+			reg.chcr.set((reg.chcr.TAG << 16) | chcr.lower());
 			return;
 		}
 		else //Else the DMA is running (Not Suspended), so we cant touch it!
@@ -100,8 +100,8 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 
 			if(chcr.STR == 0)
 			{
-				//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg->chcr._u32, chcr._u32);
-				reg->chcr.STR = 0;
+				//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg.chcr._u32, chcr._u32);
+				reg.chcr.STR = 0;
 				//We need to clear any existing DMA loops that are in progress else they will continue!
 
 				if(channel == 1)
@@ -118,21 +118,21 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 				cpuClearInt( channel );
 				QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
 			}
-			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg->chcr._u32, chcr._u32, reg->qwc);
+			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg.chcr._u32, chcr._u32, reg.qwc);
 			return;
 		}
 
 	}
 
-	//if(reg->chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg->chcr.TAG, reg->qwc);
+	//if(reg.chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg.chcr.TAG, reg.qwc);
 
-	reg->chcr.set(value);
+	reg.chcr.set(value);
 
-	if (reg->chcr.STR && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
+	if (reg.chcr.STR && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2))
 	{
 		func();
 	}
-	else if(reg->chcr.STR)
+	else if(reg.chcr.STR)
 	{
 		//DevCon.Warning(L"32bit %s DMA Start while DMAC Disabled\n", ChcrName(mem));
 		QueuedDMA._u16 |= (1 << ChannelNumber(mem)); //Queue the DMA up to be started then the DMA's are Enabled and or the Suspend is lifted

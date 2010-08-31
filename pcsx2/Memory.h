@@ -111,8 +111,6 @@ static __fi void ZeroQWC( u128& dest )
 #define psSu64(mem)		(*(u64 *)&eeMem->Scratch[(mem) & 0x3fff])
 #define psSu128(mem)	(*(u128*)&eeMem->Scratch[(mem) & 0x3fff])
 
-#define psH_DMACh(mem)	(*(DMACh*)&eeHw[(mem) & 0xffff])
-
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();
