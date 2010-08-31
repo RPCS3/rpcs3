@@ -48,12 +48,7 @@ mem32_t __fastcall _hwRead32(u32 mem)
 		
 		case 0x02:	return ipuRead32( mem );
 
-		case 0x03:
-			if ((mem == GIF_STAT) && CHECK_OPHFLAGHACK)
-			{
-				gifRegs.stat.OPH = !gifRegs.stat.OPH;
-			}
-		break;
+		case 0x03:	return dmacRead32<0x03>( mem );
 		
 		case 0x04:
 		case 0x05:
