@@ -13,12 +13,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// ----------------------------------------------------------------------------
-// PCH Warning!  This file, when compiled with PCH + Optimizations, fails in very curious
-// and unexpected ways (most obvious is a freeze in the middle of the New Game video of
-// Final Fantasy XII).  So make sure to force-disable PCH for this file at ALL times.
-// ----------------------------------------------------------------------------
-
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
@@ -307,7 +301,7 @@ void ipuSoftReset()
 	//g_BP.bufferhasnew = 0;
 }
 
-__fi void ipuWrite32(u32 mem, u32 value)
+__fi bool ipuWrite32(u32 mem, u32 value)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -322,7 +316,7 @@ __fi void ipuWrite32(u32 mem, u32 value)
 		ipucase(IPU_CMD): // IPU_CMD
 			IPU_LOG("write32: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE(value);
-			break;
+		return false;
 
 		ipucase(IPU_CTRL): // IPU_CTRL
             // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
@@ -337,16 +331,14 @@ __fi void ipuWrite32(u32 mem, u32 value)
 			if (ipuRegs->ctrl.RST) ipuSoftReset(); // RESET
 
 			IPU_LOG("write32: IPU_CTRL=0x%08X", value);
-			break;
-
-		default:
-			IPU_LOG("write32: Unknown=%x", mem);
-			*(u32*)((u8*)ipuRegs + mem) = value;
-			break;
+		return false;
 	}
+	return true;
 }
 
-__fi void ipuWrite64(u32 mem, u64 value)
+// returns FALSE when the writeback is handled, TRUE if the caller should do the
+// writeback itself.
+__fi bool ipuWrite64(u32 mem, u64 value)
 {
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
@@ -361,13 +353,10 @@ __fi void ipuWrite64(u32 mem, u64 value)
 		ipucase(IPU_CMD):
 			IPU_LOG("write64: IPU_CMD=0x%08X", value);
 			IPUCMD_WRITE((u32)value);
-			break;
-
-		default:
-			IPU_LOG("write64: Unknown=%x", mem);
-			*(u64*)((u8*)ipuRegs + mem) = value;
-			break;
+		return false;
 	}
+
+	return true;
 }
 
 
@@ -1309,7 +1298,7 @@ static __fi int IPU1chain() {
 //	//Wait for all GS paths to be clear
 //	if (GSTransferStatus._u32 != 0x2a)
 //	{
-//		if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs->mskpath3) return true;
+//		if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs.mskpath3) return true;
 //		IPU_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
 //		IPU_INT_TO(4);
 //		return false;
@@ -1492,10 +1481,10 @@ int IPU0dma()
 
 	if (ipu0dma->qwc == 0)
 	{
-		if (dmacRegs->ctrl.STS == STS_fromIPU)   // STS == fromIPU
+		if (dmacRegs.ctrl.STS == STS_fromIPU)   // STS == fromIPU
 		{
-			dmacRegs->stadr.ADDR = ipu0dma->madr;
-			switch (dmacRegs->ctrl.STD)
+			dmacRegs.stadr.ADDR = ipu0dma->madr;
+			switch (dmacRegs.ctrl.STD)
 			{
 				case NO_STD:
 					break;
@@ -1624,7 +1613,7 @@ void ipu0Interrupt()
 		// vif
 		Console.Warning("IPU VIF Stall");
 		g_nDMATransfer.VIFSTALL = false;
-		//if (vif1ch->chcr.STR) dmaVIF1();
+		//if (vif1ch.chcr.STR) dmaVIF1();
 	}
 
 	if (g_nDMATransfer.SIFSTALL)

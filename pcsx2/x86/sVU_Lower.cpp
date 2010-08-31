@@ -1982,12 +1982,12 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
 	u8* pDest;
 
-	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
+	if(gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.APATH == GIF_APATH3 && gifRegs.stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
 		if(Path1WritePos != 0)	
 		{
 			//Flush any pending transfers so things dont go up in the wrong order
-			while(gifRegs->stat.P1Q == true) gsPath1Interrupt();
+			while(gifRegs.stat.P1Q == true) gsPath1Interrupt();
 		}
 		GetMTGS().PrepDataPacket(GIF_PATH_1, 0x400);
 		size = GIFPath_CopyTag(GIF_PATH_1, (u128*)data, diff);
@@ -1995,13 +1995,13 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 
 		if(GSTransferStatus.PTH1 == STOPPED_MODE )
 		{
-			gifRegs->stat.OPH = false;
-			gifRegs->stat.APATH = GIF_APATH_IDLE;
+			gifRegs.stat.OPH = false;
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
 		}
 	}
 	else
 	{
-		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
+		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs.stat.APATH, Path1WritePos, Path1ReadPos);
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
@@ -2017,8 +2017,8 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		else {
 			memcpy_qwc(pDest, VU1.Mem + addr, size);
 		}
-		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
-		gifRegs->stat.P1Q = true;
+		//if(!gifRegs.stat.P1Q) CPU_INT(28, 128);
+		gifRegs.stat.P1Q = true;
 	}
 
 

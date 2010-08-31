@@ -284,8 +284,8 @@ extern bool ipuCanFreeze();
 
 extern u32 ipuRead32(u32 mem);
 extern u64 ipuRead64(u32 mem);
-extern void ipuWrite32(u32 mem,u32 value);
-extern void ipuWrite64(u32 mem,u64 value);
+extern bool ipuWrite32(u32 mem,u32 value);
+extern bool ipuWrite64(u32 mem,u64 value);
 
 extern void IPUCMD_WRITE(u32 val);
 extern void ipuSoftReset();

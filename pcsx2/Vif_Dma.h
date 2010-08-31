@@ -14,6 +14,8 @@
  */
 
 #pragma once
+
+#include "Vif.h"
 #include "Vif_Unpack.h"
 
 struct vifCode {
@@ -84,13 +86,13 @@ extern vifStruct* vif;
 extern vifStruct  vif0, vif1;
 extern u8		  schedulepath3msk;
 
+_vifT extern bool vifWrite32(u32 mem, u32 value);
+
 extern void vif0Interrupt();
-extern void vif0Write32(u32 mem, u32 value);
 extern void vif0Reset();
 
 extern void vif1Interrupt();
 extern void Vif1MskPath3();
-extern void vif1Write32(u32 mem, u32 value);
 extern void vif1Reset();
 
 typedef int __fastcall FnType_VifCmdHandler(int pass, const u32 *data);

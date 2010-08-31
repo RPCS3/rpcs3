@@ -77,9 +77,9 @@ void resetNewVif(int idx)
 
 	nVif[idx].idx			= idx;
 	nVif[idx].VU			= idx ? &VU1     : &VU0;
-	nVif[idx].vif			= idx ? &vif1    : &vif0;
-	nVif[idx].vifRegs		= idx ? vif1Regs : vif0Regs;
 	nVif[idx].vuMemLimit	= idx ? 0x3ff0 : 0xff0;
+	nVif[idx].vif			= &GetVifX;
+	nVif[idx].vifRegs		= vifXRegs;
 	nVif[idx].bSize			= 0;
 	memzero(nVif[idx].buffer);
 

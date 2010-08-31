@@ -522,9 +522,11 @@
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
+		<Unit filename="../ps2/LegacyDmac.cpp" />
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
 		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
 		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
+		<Unit filename="../ps2/LegacyDmac.cpp" />
 		<Unit filename="../vtlb.cpp" />
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />

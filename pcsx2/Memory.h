@@ -34,15 +34,12 @@ static __fi void ZeroQWC( void* dest )
 	_mm_store_ps( (float*)dest, _mm_setzero_ps() );
 }
 
+static __fi void ZeroQWC( u128& dest )
+{
+	_mm_store_ps( (float*)&dest, _mm_setzero_ps() );
+}
+
 // Various useful locations
-#define spr0 ((DMACh*)&eeHw[0xD000])
-#define spr1 ((DMACh*)&eeHw[0xD400])
-
-#define gif ((DMACh*)&eeHw[0xA000])
-
-#define vif0ch ((DMACh*)&eeHw[0x8000])
-#define vif1ch ((DMACh*)&eeHw[0x9000])
-
 #define sif0dma ((DMACh*)&eeHw[0xc000])
 #define sif1dma ((DMACh*)&eeHw[0xc400])
 #define sif2dma ((DMACh*)&eeHw[0xc800])

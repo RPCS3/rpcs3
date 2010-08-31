@@ -330,7 +330,7 @@ _vifT void vifUnpackSetup(const u32 *data) {
 	}
 
 	u32 addr = vifXRegs->code;
-	if (idx && ((addr>>15)&1)) addr += vif1Regs->tops;
+	if (idx && ((addr>>15)&1)) addr += vif1Regs.tops;
 	vifX.tag.addr = (addr<<4) & (idx ? 0x3ff0 : 0xff0);
 
 	VIF_LOG("Unpack VIF%x, QWC %x tagsize %x", idx, vifNum, vif0.tag.size);

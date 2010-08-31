@@ -135,10 +135,10 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 
 	transferred   = transferred >> 2;
 
-	vifXch->madr +=(transferred << 4);
-	vifXch->qwc  -= transferred;
+	vifXch.madr +=(transferred << 4);
+	vifXch.qwc  -= transferred;
 
-	if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress &= ~0x1;
+	if (!vifXch.qwc && !vifX.irqoffset) vifX.inprogress &= ~0x1;
 
 	if (vifX.irq && vifX.cmd == 0) {
 		//DevCon.WriteLn("Vif IRQ!");
@@ -148,7 +148,7 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 			vifXRegs->stat.VIS = true; // Note: commenting this out fixes WALL-E?
 		}
 
-		if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress &= ~1;
+		if (!vifXch.qwc && !vifX.irqoffset) vifX.inprogress &= ~1;
 		return false;
 	}
 

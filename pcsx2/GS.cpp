@@ -56,9 +56,9 @@ extern u32 SIGNAL_Data_Pending[2];
 
 void gsGIFReset()
 {
-	gifRegs->stat.reset();
-	gifRegs->ctrl.reset();
-	gifRegs->mode.reset();
+	gifRegs.stat.reset();
+	gifRegs.ctrl.reset();
+	gifRegs.mode.reset();
 }
 
 void gsReset()
@@ -128,7 +128,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		
 		SIGNAL_IMR_Pending = false;
 
-		if(gifRegs->stat.P1Q && gifRegs->stat.APATH <= GIF_APATH1) gsPath1Interrupt();
+		if(gifRegs.stat.P1Q && gifRegs.stat.APATH <= GIF_APATH1) gsPath1Interrupt();
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
@@ -286,9 +286,9 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
 			//=========================================================================
-			//gifRegs->stat.OPH = true; // Bleach wants it, Killzone hates it.
+			//gifRegs.stat.OPH = true; // Bleach wants it, Killzone hates it.
 			
-			gifRegs->stat.DIR = (u32)value[0];
+			gifRegs.stat.DIR = (u32)value[0];
 			//=========================================================================
 			// BUSDIR INSANITY !! MTGS FLUSH NEEDED
 			//

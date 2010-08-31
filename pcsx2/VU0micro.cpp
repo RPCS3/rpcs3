@@ -33,7 +33,7 @@ void vu0ResetRegs()
 {
 	VU0.VI[REG_VPU_STAT].UL &= ~0xff; // stop vu0
 	VU0.VI[REG_FBRST].UL &= ~0xff; // stop vu0
-	vif0Regs->stat.VEW = false;
+	vif0Regs.stat.VEW = false;
 }
 
 void __fastcall vu0ExecMicro(u32 addr) {

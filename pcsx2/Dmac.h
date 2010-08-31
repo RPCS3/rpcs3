@@ -588,18 +588,26 @@ struct INTCregisters
 	u32 _padding2[3];
 };
 
-#define dmacRegs ((DMACregisters*)(eeHw+0xE000))
 #define intcRegs ((INTCregisters*)(eeHw+0xF000))
+
+static DMACregisters& dmacRegs	= (DMACregisters&)eeHw[0xE000];
+
+// Various useful locations
+static DMACh& vif0ch	= (DMACh&)eeHw[0x8000];
+static DMACh& vif1ch	= (DMACh&)eeHw[0x9000];
+static DMACh& gifch		= (DMACh&)eeHw[0xA000];
+static DMACh& spr0ch	= (DMACh&)eeHw[0xD000];
+static DMACh& spr1ch	= (DMACh&)eeHw[0xD400];
 
 static __fi void throwBusError(const char *s)
 {
     Console.Error("%s BUSERR", s);
-    dmacRegs->stat.BEIS = true;
+    dmacRegs.stat.BEIS = true;
 }
 
 static __fi void setDmacStat(u32 num)
 {
-	dmacRegs->stat.set_flags(1 << num);
+	dmacRegs.stat.set_flags(1 << num);
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
@@ -670,6 +678,8 @@ extern void hwIntcIrq(int n);
 extern void hwDmacIrq(int n);
 
 extern bool hwMFIFOWrite(u32 addr, const u128* data, uint size_qwc);
-extern bool hwDmacSrcChainWithStack(DMACh *dma, int id);
-extern bool hwDmacSrcChain(DMACh *dma, int id);
+extern bool hwDmacSrcChainWithStack(DMACh& dma, int id);
+extern bool hwDmacSrcChain(DMACh& dma, int id);
 
+template< uint page >
+extern bool dmacWrite32( u32 mem, mem32_t& value );

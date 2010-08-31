@@ -35,7 +35,7 @@ void vu1ResetRegs()
 {
 	VU0.VI[REG_VPU_STAT].UL &= ~0xff00; // stop vu1
 	VU0.VI[REG_FBRST].UL &= ~0xff00; // stop vu1
-	vif1Regs->stat.VEW = false;
+	vif1Regs.stat.VEW = false;
 }
 
 void vu1Finish() {
@@ -56,7 +56,7 @@ void __fastcall vu1ExecMicro(u32 addr)
 	VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;
 	VU0.VI[REG_VPU_STAT].UL |=  0x0100;
 
-	vif1Regs->stat.VEW = true;
+	vif1Regs.stat.VEW = true;
 	if ((s32)addr != -1) VU1.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU1);
 

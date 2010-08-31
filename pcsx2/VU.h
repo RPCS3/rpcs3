@@ -168,7 +168,7 @@ struct __aligned16 VURegs {
 
 	VIFregisters& GetVifRegs() const
 	{
-		return IsVU1() ? vif1RegsRef : vif0RegsRef;
+		return IsVU1() ? vif1Regs : vif0Regs;
 	}
 };
 

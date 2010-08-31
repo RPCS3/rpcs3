@@ -277,7 +277,7 @@ struct GIFregisters
 	u32 padding9[3];
 };
 
-#define gifRegs ((GIFregisters*)(eeHw+0x3000))
+static GIFregisters& gifRegs = (GIFregisters&)eeHw[0x3000];
 
 extern tGSTransferStatus GSTransferStatus;
 

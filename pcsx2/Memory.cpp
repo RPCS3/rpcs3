@@ -35,15 +35,14 @@ BIOS
 */
 
 #include "PrecompiledHeader.h"
-#include "IopCommon.h"
-
-#pragma warning(disable:4799) // No EMMS at end of function
-
 #include <wx/file.h>
 
+#include "IopCommon.h"
 #include "VUmicro.h"
 #include "GS.h"
 #include "System/PageFaultSource.h"
+
+#include "ps2/HwInternal.h"
 #include "ps2/BiosTools.h"
 
 #ifdef ENABLECACHE
@@ -154,7 +153,6 @@ void memMapPhy()
 	vtlb_MapBlock(psxM,0x1c000000,0x00800000);
 
 	// Generic Handlers; These fallback to mem* stuff...
-	vtlb_MapHandler(tlb_fallback_1,0x10000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_7,0x14000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_4,0x18000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_5,0x1a000000,0x10000);
@@ -166,17 +164,9 @@ void memMapPhy()
 
 	// Hardware Register Handlers : specialized/optimized per-page handling of HW register accesses
 	// (note that hw_by_page handles are assigned in memReset prior to calling this function)
-	vtlb_MapHandler(hw_by_page[0x0], 0x10000000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x1], 0x10001000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x2], 0x10002000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x3], 0x10003000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x4], 0x10004000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x5], 0x10005000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x6], 0x10006000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x7], 0x10007000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0xb], 0x1000b000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0xe], 0x1000e000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0xf], 0x1000f000, 0x01000);
+
+	for( uint i=0; i<16; ++i)
+		vtlb_MapHandler(hw_by_page[i], 0x10000000 + (0x01000 * i), 0x01000);
 
 	vtlb_MapHandler(gs_page_0, 0x12000000, 0x01000);
 	vtlb_MapHandler(gs_page_1, 0x12001000, 0x01000);
@@ -256,8 +246,6 @@ static mem8_t __fastcall _ext_memRead8 (u32 mem)
 {
 	switch (p)
 	{
-		case 1: // hwm
-			return hwRead8(mem);
 		case 3: // psh4
 			return psxHw4Read8(mem);
 		case 6: // gsm
@@ -280,8 +268,6 @@ static mem16_t __fastcall _ext_memRead16(u32 mem)
 {
 	switch (p)
 	{
-		case 1: // hwm
-			return hwRead16(mem);
 		case 4: // b80
 			MEM_LOG("b800000 Memory read16 address %x", mem);
 			return 0;
@@ -358,9 +344,6 @@ template<int p>
 static void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 {
 	switch (p) {
-		case 1: // hwm
-			hwWrite8(mem, value);
-			return;
 		case 3: // psh4
 			psxHw4Write8(mem, value); return;
 		case 6: // gsm
@@ -379,9 +362,6 @@ template<int p>
 static void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 {
 	switch (p) {
-		case 1: // hwm
-			hwWrite16(mem, value);
-			return;
 		case 5: // ba0
 			MEM_LOG("ba00000 Memory write16 to  address %x with data %x", mem, value);
 			return;
@@ -632,12 +612,13 @@ void memBindConditionalHandlers()
 {
 	if( hw_by_page[0xf] == -1 ) return;
 
-	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
-	vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64_generic );
+	vtlbMemR16FP* page0F16( EmuConfig.Speedhacks.IntcStat ? hwRead16_page_0F_INTC_HACK : hwRead16<0x0f> );
+	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32<0x0f> );
+	//vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64<0x0f> );
 
 	vtlb_ReassignHandler( hw_by_page[0xf],
-		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, hwWrite64_generic, hwWrite128_generic
+		hwRead8<0x0f>,	page0F16,			page0F32,			hwRead64<0x0f>,		hwRead128<0x0f>,
+		hwWrite8<0x0f>,	hwWrite16<0x0f>,	hwWrite32<0x0f>,	hwWrite64<0x0f>,	hwWrite128<0x0f>
 	);
 }
 
@@ -666,7 +647,6 @@ void memReset()
 	tlb_fallback_3 = vtlb_RegisterHandlerTempl1(_ext_mem,3);
 	tlb_fallback_4 = vtlb_RegisterHandlerTempl1(_ext_mem,4);
 	tlb_fallback_5 = vtlb_RegisterHandlerTempl1(_ext_mem,5);
-	//tlb_fallback_6 = vtlb_RegisterHandlerTempl1(_ext_mem,6);
 	tlb_fallback_7 = vtlb_RegisterHandlerTempl1(_ext_mem,7);
 	tlb_fallback_8 = vtlb_RegisterHandlerTempl1(_ext_mem,8);
 
@@ -703,68 +683,29 @@ void memReset()
 	);
 
 
-	//////////////////////////////////////////////////////////////////////////////////////////
 	// psHw Optimized Mappings
 	// The HW Registers have been split into pages to improve optimization.
-	// Anything not explicitly mapped into one of the hw_by_page handlers will be handled
-	// by the default/generic tlb_fallback_1 handler.
+	
+#define hwHandlerTmpl(page) \
+	hwRead8<page>,	hwRead16<page>,	hwRead32<page>,	hwRead64<page>,	hwRead128<page>, \
+	hwWrite8<page>,	hwWrite16<page>,hwWrite32<page>,hwWrite64<page>,hwWrite128<page>
 
-	tlb_fallback_1 = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, hwWrite128_generic
-	);
-
-	hw_by_page[0x0] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_00, hwRead64_page_00, hwRead128_page_00,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_00, hwWrite64_page_00, hwWrite128_generic
-	);
-
-	hw_by_page[0x1] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_01, hwRead64_page_01, hwRead128_page_01,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_01, hwWrite64_page_01, hwWrite128_generic
-	);
-
-	hw_by_page[0x2] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_02, hwRead64_page_02, hwRead128_page_02,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_02, hwWrite64_page_02, hwWrite128_generic
-	);
-
-	hw_by_page[0x3] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_03, hwWrite64_page_03, hwWrite128_generic
-	);
-
-	hw_by_page[0x4] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_4,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_4
-	);
-
-	hw_by_page[0x5] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_5,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_5
-	);
-
-	hw_by_page[0x6] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_6,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_6
-	);
-
-	hw_by_page[0x7] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, ReadFIFO_page_7,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_generic, hwWrite64_generic, WriteFIFO_page_7
-	);
-
-	hw_by_page[0xb] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0B, hwWrite64_generic, hwWrite128_generic
-	);
-
-	hw_by_page[0xe] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_generic, hwRead64_generic, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
-	);
-
-	hw_by_page[0xf] = vtlb_NewHandler();
+	hw_by_page[0x0] = vtlb_RegisterHandler( hwHandlerTmpl(0x00) );
+	hw_by_page[0x1] = vtlb_RegisterHandler( hwHandlerTmpl(0x01) );
+	hw_by_page[0x2] = vtlb_RegisterHandler( hwHandlerTmpl(0x02) );
+	hw_by_page[0x3] = vtlb_RegisterHandler( hwHandlerTmpl(0x03) );
+	hw_by_page[0x4] = vtlb_RegisterHandler( hwHandlerTmpl(0x04) );
+	hw_by_page[0x5] = vtlb_RegisterHandler( hwHandlerTmpl(0x05) );
+	hw_by_page[0x6] = vtlb_RegisterHandler( hwHandlerTmpl(0x06) );
+	hw_by_page[0x7] = vtlb_RegisterHandler( hwHandlerTmpl(0x07) );
+	hw_by_page[0x8] = vtlb_RegisterHandler( hwHandlerTmpl(0x08) );
+	hw_by_page[0x9] = vtlb_RegisterHandler( hwHandlerTmpl(0x09) );
+	hw_by_page[0xa] = vtlb_RegisterHandler( hwHandlerTmpl(0x0a) );
+	hw_by_page[0xb] = vtlb_RegisterHandler( hwHandlerTmpl(0x0b) );
+	hw_by_page[0xc] = vtlb_RegisterHandler( hwHandlerTmpl(0x0c) );
+	hw_by_page[0xd] = vtlb_RegisterHandler( hwHandlerTmpl(0x0d) );
+	hw_by_page[0xe] = vtlb_RegisterHandler( hwHandlerTmpl(0x0e) );
+	hw_by_page[0xf] = vtlb_NewHandler();		// redefined later based on speedhacking prefs
 	memBindConditionalHandlers();
 
 	//////////////////////////////////////////////////////////////////////

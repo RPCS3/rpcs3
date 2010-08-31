@@ -210,7 +210,7 @@ static __fi void HandleEETransfer()
 		sif1.ee.busy = false;
 		return;
 	}
-	if (dmacRegs->ctrl.STD == STD_SIF1)
+	if (dmacRegs.ctrl.STD == STD_SIF1)
 	{
 		DevCon.Warning("SIF1 stall control"); // STD == fromSIF1
 	}

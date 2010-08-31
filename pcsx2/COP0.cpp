@@ -428,7 +428,7 @@ void MTC0()
 }
 
 int CPCOND0() {
-	return ((dmacRegs->stat.CIS | ~dmacRegs->pcr.CPC) == 0x3ff);
+	return ((dmacRegs.stat.CIS | ~dmacRegs.pcr.CPC) == 0x3ff);
 }
 
 //#define CPCOND0	1

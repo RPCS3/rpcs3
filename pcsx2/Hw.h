@@ -13,28 +13,84 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
 
-#ifndef __HW_H__
-#define __HW_H__
+namespace EEMemoryMap
+{
+	static const uint RCNT0_Start		= 0x10000000;
+	static const uint RCNT0_End			= 0x10000800;
+	static const uint RCNT1_Start		= 0x10000800;
+	static const uint RCNT1_End			= 0x10001000;
+	static const uint RCNT2_Start		= 0x10001000;
+	static const uint RCNT2_End			= 0x10001800;
+	static const uint RCNT3_Start		= 0x10001800;
+	static const uint RCNT3_End			= 0x10002000;
 
-//////////////////////////////////////////////////////////////////////////
-// Hardware FIFOs (128 bit access only!)
-//
-// VIF0   -- 0x10004000 -- eeHw[0x4000]
-// VIF1   -- 0x10005000 -- eeHw[0x5000]
-// GIF    -- 0x10006000 -- eeHw[0x6000]
-// IPUout -- 0x10007000 -- eeHw[0x7000]
-// IPUin  -- 0x10007010 -- eeHw[0x7010]
+	static const uint IPU_Start			= 0x10002000;
+	static const uint IPU_End			= 0x10003000;
 
-void __fastcall ReadFIFO_page_4(u32 mem, mem128_t *out);
-void __fastcall ReadFIFO_page_5(u32 mem, mem128_t *out);
-void __fastcall ReadFIFO_page_6(u32 mem, mem128_t *out);
-void __fastcall ReadFIFO_page_7(u32 mem, mem128_t *out);
+	static const uint GIF_Start			= 0x10003000;
+	static const uint GIF_End			= 0x10003800;
 
-void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value);
-void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value);
-void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value);
-void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value);
+	static const uint VIF0_Start		= 0x10003800;
+	static const uint VIF0_End			= 0x10003C00;
+	static const uint VIF1_Start		= 0x10003C00;
+	static const uint VIF1_End			= 0x10004000;
+
+	static const uint VIF0_FIFO_Start	= 0x10004000;
+	static const uint VIF0_FIFO_End		= 0x10005000;
+	static const uint VIF1_FIFO_Start	= 0x10005000;
+	static const uint VIF1_FIFO_End		= 0x10006000;
+	static const uint GIF_FIFO_Start	= 0x10006000;
+	static const uint GIF_FIFO_End		= 0x10007000;
+	static const uint IPU_FIFO_Start	= 0x10007000;
+	static const uint IPU_FIFO_End		= 0x10008000;
+
+	static const uint VIF0dma_Start		= 0x10008000;
+	static const uint VIF0dma_End		= 0x10009000;
+	static const uint VIF1dma_Start		= 0x10009000;
+	static const uint VIF1dma_End		= 0x1000A000;
+
+	static const uint GIFdma_Start		= 0x1000A000;
+	static const uint GIFdma_End		= 0x1000B000;
+
+	static const uint fromIPU_Start		= 0x1000B000;
+	static const uint fromIPU_End		= 0x1000B400;
+	static const uint toIPU_Start		= 0x1000B400;
+	static const uint toIPU_End			= 0x1000C000;
+
+	static const uint SIF0dma_Start		= 0x1000C000;
+	static const uint SIF0dma_End		= 0x1000C400;
+	static const uint SIF1dma_Start		= 0x1000C400;
+	static const uint SIF1dma_End		= 0x1000C800;
+	static const uint SIF2dma_Start		= 0x1000C800;
+	static const uint SIF2dma_End		= 0x1000D000;
+
+	static const uint fromSPR_Start		= 0x1000D000;
+	static const uint fromSPR_End		= 0x1000D400;
+	static const uint toSPR_Start		= 0x1000D400;
+	static const uint toSPR_End			= 0x1000E000;
+
+	static const uint DMAC_Start		= 0x1000E000;
+	static const uint DMAC_End			= 0x1000F000;
+
+	static const uint INTC_Start		= 0x1000F000;
+	static const uint INTC_End			= 0x1000F100;
+
+	static const uint SIO_Start			= 0x1000F100;
+	static const uint SIO_End			= 0x1000F200;
+	static const uint SBUS_Start		= 0x1000F200;
+	static const uint SBUS_End			= 0x1000F400;
+
+	// MCH area --  Really not sure what this area is.  Information is lacking.
+	static const uint MCH_Start			= 0x1000F400;
+	static const uint MCH_End			= 0x1000F500;
+
+	// Extended master control register area for DMAC.
+	static const uint DMACext_Start		= 0x1000F500;
+	static const uint DMACext_End		= 0x1000F600;
+
+};
 
 // HW defines
 enum EERegisterAddresses
@@ -86,14 +142,14 @@ enum EERegisterAddresses
 	VIF0_ITOPS		=	0x10003890,
 	VIF0_ITOP		= 	0x100038d0,
 	VIF0_TOP		=	0x100038e0,
-	VIF0_R0			= 	0x10003900,
-	VIF0_R1			= 	0x10003910,
-	VIF0_R2			= 	0x10003920,
-	VIF0_R3			=	0x10003930,
-	VIF0_C0			= 	0x10003940,
-	VIF0_C1			= 	0x10003950,
-	VIF0_C2			=	0x10003960,
-	VIF0_C3			= 	0x10003970,
+	VIF0_ROW0		= 	0x10003900,
+	VIF0_ROW1		= 	0x10003910,
+	VIF0_ROW2		= 	0x10003920,
+	VIF0_ROW3		=	0x10003930,
+	VIF0_COL0		= 	0x10003940,
+	VIF0_COL1		= 	0x10003950,
+	VIF0_COL2		=	0x10003960,
+	VIF0_COL3		= 	0x10003970,
 
 	VIF1_STAT		=	0x10003c00,
 	VIF1_FBRST		=	0x10003c10,
@@ -110,14 +166,14 @@ enum EERegisterAddresses
 	VIF1_TOPS		= 	0x10003cc0,
 	VIF1_ITOP		= 	0x10003cd0,
 	VIF1_TOP		= 	0x10003ce0,
-	VIF1_R0			= 	0x10003d00,
-	VIF1_R1			= 	0x10003d10,
-	VIF1_R2			=	0x10003d20,
-	VIF1_R3			=	0x10003d30,
-	VIF1_C0			=	0x10003d40,
-	VIF1_C1			=	0x10003d50,
-	VIF1_C2			= 	0x10003d60,
-	VIF1_C3			= 	0x10003d70,
+	VIF1_ROW0		= 	0x10003d00,
+	VIF1_ROW1		= 	0x10003d10,
+	VIF1_ROW2		=	0x10003d20,
+	VIF1_ROW3		=	0x10003d30,
+	VIF1_COL0		=	0x10003d40,
+	VIF1_COL1		=	0x10003d50,
+	VIF1_COL2		= 	0x10003d60,
+	VIF1_COL3		= 	0x10003d70,
 
 	VIF0_FIFO		=	0x10004000,
 	VIF1_FIFO		=	0x10005000,
@@ -134,6 +190,13 @@ enum EERegisterAddresses
 	D0_ASR0			=	0x10008040,
 	D0_ASR1			=	0x10008050,
 
+	VIF0_CHCR		=	0x10008000,
+	VIF0_MADR		=	0x10008010,
+	VIF0_QWC		=	0x10008020,
+	VIF0_TADR		=	0x10008030,
+	VIF0_ASR0		=	0x10008040,
+	VIF0_ASR1		=	0x10008050,
+
 //VIF1
 	D1_CHCR			=	0x10009000,
 	D1_MADR			=	0x10009010,
@@ -141,7 +204,13 @@ enum EERegisterAddresses
 	D1_TADR			=	0x10009030,
 	D1_ASR0			=	0x10009040,
 	D1_ASR1			=	0x10009050,
-	D1_SADR			=	0x10009080,
+
+	VIF1_CHCR		=	0x10009000,
+	VIF1_MADR		=	0x10009010,
+	VIF1_QWC		=	0x10009020,
+	VIF1_TADR		=	0x10009030,
+	VIF1_ASR0		=	0x10009040,
+	VIF1_ASR1		=	0x10009050,
 
 //GS
 	D2_CHCR			=	0x1000A000,
@@ -150,26 +219,44 @@ enum EERegisterAddresses
 	D2_TADR			=	0x1000A030,
 	D2_ASR0			=	0x1000A040,
 	D2_ASR1			=	0x1000A050,
-	D2_SADR			=	0x1000A080,
+
+	GIF_CHCR		=	0x1000A000,
+	GIF_MADR		=	0x1000A010,
+	GIF_QWC			=	0x1000A020,
+	GIF_TADR		=	0x1000A030,
+	GIF_ASR0		=	0x1000A040,
+	GIF_ASR1		=	0x1000A050,
 
 //fromIPU
 	D3_CHCR			=	0x1000B000,
 	D3_MADR			=	0x1000B010,
 	D3_QWC			=	0x1000B020,
 	D3_TADR			=	0x1000B030,
-	D3_SADR			=	0x1000B080,
+
+	fromIPU_CHCR	=	0x1000B000,
+	fromIPU_MADR	=	0x1000B010,
+	fromIPU_QWC		=	0x1000B020,
+	fromIPU_TADR	=	0x1000B030,
 
 //toIPU
 	D4_CHCR			=	0x1000B400,
 	D4_MADR			=	0x1000B410,
 	D4_QWC			=	0x1000B420,
 	D4_TADR			=	0x1000B430,
-	D4_SADR			=	0x1000B480,
+
+	toIPU_CHCR		=	0x1000B400,
+	toIPU_MADR		=	0x1000B410,
+	toIPU_QWC		=	0x1000B420,
+	toIPU_TADR		=	0x1000B430,
 
 //SIF0
 	D5_CHCR			=	0x1000C000,
 	D5_MADR			=	0x1000C010,
 	D5_QWC			=	0x1000C020,
+
+	SIF0_CHCR		=	0x1000C000,
+	SIF0_MADR		=	0x1000C010,
+	SIF0_QWC		=	0x1000C020,
 
 //SIF1
 	D6_CHCR			=	0x1000C400,
@@ -177,17 +264,37 @@ enum EERegisterAddresses
 	D6_QWC			=	0x1000C420,
 	D6_TADR			=	0x1000C430,
 
+	SIF1_CHCR		=	0x1000C400,
+	SIF1_MADR		=	0x1000C410,
+	SIF1_QWC		=	0x1000C420,
+	SIF1_TADR		=	0x1000C430,
+
 //SIF2
 	D7_CHCR			=	0x1000C800,
 	D7_MADR			=	0x1000C810,
 	D7_QWC			=	0x1000C820,
 
+	SIF2_CHCR		=	0x1000C800,
+	SIF2_MADR		=	0x1000C810,
+	SIF2_QWC		=	0x1000C820,
+
 //fromSPR
 	D8_CHCR			=	0x1000D000,
 	D8_MADR			=	0x1000D010,
 	D8_QWC			=	0x1000D020,
-	D8_SADR			=	0x1000D080,
-	D9_CHCR		=	0x1000D400,
+
+	fromSPR_CHCR	=	0x1000D000,
+	fromSPR_MADR	=	0x1000D010,
+	fromSPR_QWC		=	0x1000D020,
+
+//toSPR
+	D9_CHCR			=	0x1000D400,
+	D9_MADR			=	0x1000D010,
+	D9_QWC			=	0x1000D020,
+
+	toSPR_CHCR		=	0x1000D400,
+	toSPR_MADR		=	0x1000D410,
+	toSPR_QWC		=	0x1000D420,
 
 	DMAC_CTRL		=	0x1000E000,
 	DMAC_STAT		=	0x1000E010,
@@ -264,53 +371,7 @@ union tGS_SMODE2
 	bool IsInterlaced() const { return INT; }
 };
 
-void hwReset();
-
-// hw read functions
-extern mem8_t  hwRead8 (u32 mem);
-extern mem16_t hwRead16(u32 mem);
-
-extern mem32_t __fastcall hwRead32_page_00(u32 mem);
-extern mem32_t __fastcall hwRead32_page_01(u32 mem);
-extern mem32_t __fastcall hwRead32_page_02(u32 mem);
-extern mem32_t __fastcall hwRead32_page_0F(u32 mem);
-extern mem32_t __fastcall hwRead32_page_0F_INTC_HACK(u32 mem);
-extern mem32_t __fastcall hwRead32_generic(u32 mem);
-
-extern void __fastcall hwRead64_page_00(u32 mem, mem64_t* result );
-extern void __fastcall hwRead64_page_01(u32 mem, mem64_t* result );
-extern void __fastcall hwRead64_page_02(u32 mem, mem64_t* result );
-extern void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t *out);
-extern void __fastcall hwRead64_generic(u32 mem, mem64_t* result );
-
-extern void __fastcall hwRead128_page_00(u32 mem, mem128_t* result );
-extern void __fastcall hwRead128_page_01(u32 mem, mem128_t* result );
-extern void __fastcall hwRead128_page_02(u32 mem, mem128_t* result );
-extern void __fastcall hwRead128_generic(u32 mem, mem128_t *out);
-
-// hw write functions
-extern void hwWrite8 (u32 mem, u8  value);
-extern void hwWrite16(u32 mem, u16 value);
-
-extern void __fastcall hwWrite32_page_00( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_01( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_02( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_03( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_0B( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_0E( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_page_0F( u32 mem, mem32_t value );
-extern void __fastcall hwWrite32_generic( u32 mem, mem32_t value );
-
-extern void __fastcall hwWrite64_page_00( u32 mem, const mem64_t* srcval );
-extern void __fastcall hwWrite64_page_01( u32 mem, const mem64_t* srcval );
-extern void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval );
-extern void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval );
-extern void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval );
-extern void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval );
-
-extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
+extern void hwReset();
 
 extern const int rdram_devices;
 extern int rdram_sdevid;
-
-#endif /* __HW_H__ */

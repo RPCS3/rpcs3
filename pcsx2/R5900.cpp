@@ -289,7 +289,7 @@ static __fi void TESTINT( u8 n, void (*callback)() )
 
 static __fi void _cpuTestInterrupts()
 {
-	if (!dmacRegs->ctrl.DMAE || psHu8(DMAC_ENABLER+2) == 1)
+	if (!dmacRegs.ctrl.DMAE || psHu8(DMAC_ENABLER+2) == 1)
 	{
 		//Console.Write("DMAC Disabled or suspended");
 		return;

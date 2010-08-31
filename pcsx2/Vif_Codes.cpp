@@ -85,16 +85,16 @@ u8 schedulepath3msk = 0;
 
 void Vif1MskPath3() {
 
-	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
-	GIF_LOG("VIF MSKPATH3 %x gif str %x path3 status %x", vif1Regs->mskpath3, gif->chcr.STR, GSTransferStatus.PTH3);
-	gifRegs->stat.M3P = vif1Regs->mskpath3;
+	vif1Regs.mskpath3 = schedulepath3msk & 0x1;
+	GIF_LOG("VIF MSKPATH3 %x gif str %x path3 status %x", vif1Regs.mskpath3, gifch.chcr.STR, GSTransferStatus.PTH3);
+	gifRegs.stat.M3P = vif1Regs.mskpath3;
 
-	if (!vif1Regs->mskpath3)
+	if (!vif1Regs.mskpath3)
 	{
 		//if(GSTransferStatus.PTH3 > TRANSFER_MODE && gif->chcr.STR) GSTransferStatus.PTH3 = TRANSFER_MODE;
 		//DevCon.Warning("Mask off");
 		//if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE) GSTransferStatus.PTH3 = IDLE_MODE;
-		if(gifRegs->stat.P3Q) 
+		if(gifRegs.stat.P3Q) 
 		{
 			gsInterrupt();//gsInterrupt();
 		}
@@ -110,7 +110,7 @@ void Vif1MskPath3() {
 
 vifOp(vifCode_Base) {
 	vif1Only();
-	pass1 { vif1Regs->base = vif1Regs->code & 0x3ff; vif1.cmd = 0; }
+	pass1 { vif1Regs.base = vif1Regs.code & 0x3ff; vif1.cmd = 0; }
 	pass3 { VifCodeLog("Base"); }
 	return 0;
 }
@@ -120,15 +120,15 @@ extern bool SIGNAL_IMR_Pending;
 template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
 	pass1 {
 		vif1Only();
-		int vifImm    = (u16)vif1Regs->code;
+		int vifImm    = (u16)vif1Regs.code;
 		vif1.tag.size = vifImm ? (vifImm*4) : (65536*4);
 		vif1.vifstalled    = true;
-		gifRegs->stat.P2Q = true;
-		if (gifRegs->stat.PSE)  // temporarily stop
+		gifRegs.stat.P2Q = true;
+		if (gifRegs.stat.PSE)  // temporarily stop
 		{
 			Console.WriteLn("Gif dma temp paused? VIF DIRECT");
 			vif1.GifWaitState = 3;
-			vif1Regs->stat.VGW = true;
+			vif1Regs.stat.VGW = true;
 		}
 		//Should cause this to split here to try and time PATH3 right.		
 		return 0;
@@ -136,18 +136,18 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 	pass2 {
 		vif1Only();
 
-		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs->stat.P1Q == true)
+		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs.stat.P1Q == true)
 		{
-			if(gifRegs->stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs->stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs->stat.P1Q == false)
+			if(gifRegs.stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs.stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs.stat.P1Q == false)
 			{
 				//Do nothing, allow it
-				vif1Regs->stat.VGW = false;
-				//if(gifRegs->stat.APATH != GIF_APATH2)DevCon.Warning("Continue DIRECT/HL %x P3 %x APATH %x P1Q %x", vif1.cmd, GSTransferStatus.PTH3, gifRegs->stat.APATH, gifRegs->stat.P1Q);
+				vif1Regs.stat.VGW = false;
+				//if(gifRegs.stat.APATH != GIF_APATH2)DevCon.Warning("Continue DIRECT/HL %x P3 %x APATH %x P1Q %x", vif1.cmd, GSTransferStatus.PTH3, gifRegs.stat.APATH, gifRegs.stat.P1Q);
 			}
 			else
 			{
-				//DevCon.Warning("Stall DIRECT/HL %x P3 %x APATH %x P1Q %x", vif1.cmd, GSTransferStatus.PTH3, gifRegs->stat.APATH, gifRegs->stat.P1Q);
-				vif1Regs->stat.VGW = true; // PATH3 is in image mode (DIRECTHL), or busy (BOTH no IMT)
+				//DevCon.Warning("Stall DIRECT/HL %x P3 %x APATH %x P1Q %x", vif1.cmd, GSTransferStatus.PTH3, gifRegs.stat.APATH, gifRegs.stat.P1Q);
+				vif1Regs.stat.VGW = true; // PATH3 is in image mode (DIRECTHL), or busy (BOTH no IMT)
 				vif1.GifWaitState = 0;
 				vif1.vifstalled    = true;
 				return 0;
@@ -159,19 +159,19 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			vif1.vifstalled    = true;
 			return 0;
 		}
-		if (gifRegs->stat.PSE)  // temporarily stop
+		if (gifRegs.stat.PSE)  // temporarily stop
 		{
 			Console.WriteLn("Gif dma temp paused? VIF DIRECT");
 			vif1.GifWaitState = 3;
 			vif1.vifstalled    = true;
-			vif1Regs->stat.VGW = true;
+			vif1Regs.stat.VGW = true;
 			return 0;
 		}
 
 		// HACK ATTACK!
 		// we shouldn't be clearing the queue flag here at all.  Ideally, the queue statuses
 		// should be checked, handled, and cleared from the EOP check in GIFPath only. --air
-		gifRegs->stat.clear_flags(GIF_STAT_P2Q);
+		gifRegs.stat.clear_flags(GIF_STAT_P2Q);
 
 		uint minSize	 = aMin(vif1.vifpacketsize, vif1.tag.size);
 		uint ret;
@@ -260,12 +260,12 @@ vifOp(vifCode_FlushA) {
 	pass1 {
 		vifFlush(idx);
 		// Gif is already transferring so wait for it.
-		if (gifRegs->stat.P1Q || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
-			//DevCon.Warning("VIF FlushA Wait MSK = %x", vif1Regs->mskpath3);
+		if (gifRegs.stat.P1Q || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
+			//DevCon.Warning("VIF FlushA Wait MSK = %x", vif1Regs.mskpath3);
 			//
 			
 			//DevCon.WriteLn("FlushA path3 Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);
-			vif1Regs->stat.VGW = true;
+			vif1Regs.stat.VGW = true;
 			vifX.GifWaitState  = 1;
 			vifX.vifstalled    = true;
 		}	// else DevCon.WriteLn("FlushA path3 no Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);	
@@ -373,12 +373,12 @@ vifOp(vifCode_MSCNT) {
 vifOp(vifCode_MskPath3) {
 	vif1Only();
 	pass1 {
-		if (vif1ch->chcr.STR && vif1.lastcmd != 0x13) {
-			schedulepath3msk = 0x10 | ((vif1Regs->code >> 15) & 0x1);
+		if (vif1ch.chcr.STR && vif1.lastcmd != 0x13) {
+			schedulepath3msk = 0x10 | ((vif1Regs.code >> 15) & 0x1);
 			vif1.vifstalled = true;
 		}
 		else {
-			schedulepath3msk = (vif1Regs->code >> 15) & 0x1;
+			schedulepath3msk = (vif1Regs.code >> 15) & 0x1;
 			Vif1MskPath3();
 		}
 		vif1.cmd = 0;
@@ -414,9 +414,9 @@ vifOp(vifCode_Null) {
 vifOp(vifCode_Offset) {
 	vif1Only();
 	pass1 {
-		vif1Regs->stat.DBF	= false;
-		vif1Regs->ofst		= vif1Regs->code & 0x3ff;
-		vif1Regs->tops		= vif1Regs->base;
+		vif1Regs.stat.DBF	= false;
+		vif1Regs.ofst		= vif1Regs.code & 0x3ff;
+		vif1Regs.tops		= vif1Regs.base;
 		vif1.cmd			= 0;
 	}
 	pass3 { VifCodeLog("Offset"); }
