@@ -993,7 +993,7 @@ void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 static void __concall ConsoleToFile_Newline()
 {
 #ifdef __LINUX__
-	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.Newline();
+	if ((g_Conf) && (g_Conf->EmuOptions.ConsoleToStdio)) ConsoleWriter_Stdout.Newline();
 #endif
 
 #ifdef __LINUX__
@@ -1006,7 +1006,7 @@ static void __concall ConsoleToFile_Newline()
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
 #ifdef __LINUX__
-	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.WriteRaw(fmt);
+	if ((g_Conf) && (g_Conf->EmuOptions.ConsoleToStdio)) ConsoleWriter_Stdout.WriteRaw(fmt);
 #endif
 
 	px_fputs( emuLog, fmt.ToUTF8() );

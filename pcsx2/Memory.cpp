@@ -612,14 +612,28 @@ void memBindConditionalHandlers()
 {
 	if( hw_by_page[0xf] == -1 ) return;
 
-	vtlbMemR16FP* page0F16( EmuConfig.Speedhacks.IntcStat ? hwRead16_page_0F_INTC_HACK : hwRead16<0x0f> );
-	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32<0x0f> );
-	//vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64<0x0f> );
+	if (EmuConfig.Speedhacks.IntcStat)
+	{
+		vtlbMemR16FP* page0F16(hwRead16_page_0F_INTC_HACK);
+		vtlbMemR32FP* page0F32(hwRead32_page_0F_INTC_HACK);
+		//vtlbMemR64FP* page0F64(hwRead64_generic_INTC_HACK);
 
-	vtlb_ReassignHandler( hw_by_page[0xf],
-		hwRead8<0x0f>,	page0F16,			page0F32,			hwRead64<0x0f>,		hwRead128<0x0f>,
-		hwWrite8<0x0f>,	hwWrite16<0x0f>,	hwWrite32<0x0f>,	hwWrite64<0x0f>,	hwWrite128<0x0f>
-	);
+		vtlb_ReassignHandler( hw_by_page[0xf],
+			hwRead8<0x0f>,	page0F16,			page0F32,			hwRead64<0x0f>,		hwRead128<0x0f>,
+			hwWrite8<0x0f>,	hwWrite16<0x0f>,	hwWrite32<0x0f>,	hwWrite64<0x0f>,	hwWrite128<0x0f>
+		);
+	}
+	else
+	{
+		vtlbMemR16FP* page0F16(hwRead16<0x0f>);
+		vtlbMemR32FP* page0F32(hwRead32<0x0f>);
+		//vtlbMemR64FP* page0F64(hwRead64<0x0f>);
+
+		vtlb_ReassignHandler( hw_by_page[0xf],
+			hwRead8<0x0f>,	page0F16,			page0F32,			hwRead64<0x0f>,		hwRead128<0x0f>,
+			hwWrite8<0x0f>,	hwWrite16<0x0f>,	hwWrite32<0x0f>,	hwWrite64<0x0f>,	hwWrite128<0x0f>
+		);
+	}
 }
 
 // Resets memory mappings, unmaps TLBs, reloads bios roms, etc.
