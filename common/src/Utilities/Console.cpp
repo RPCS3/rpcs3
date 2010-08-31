@@ -298,7 +298,7 @@ const IConsoleWriter ConsoleWriter_wxError =
 };
 
 // =====================================================================================================
-//  IConsoleWriter Implementations
+//  IConsoleWriter  (implementations)
 // =====================================================================================================
 // (all non-virtual members that do common work and then pass the result through DoWrite
 //  or DoWriteLn)
@@ -569,14 +569,14 @@ const NullConsoleWriter	NullCon = {};
 bool ConsoleLogSource::WriteV( ConsoleColors color, const char *fmt, va_list list ) const
 {
 	ConsoleColorScope cs(color);
-	DoWrite( pxsFmtV(fmt,list).GetResult() );
+	DoWrite( pxsFmtV(fmt,list).c_str() );
 	return false;
 }
 
 bool ConsoleLogSource::WriteV( ConsoleColors color, const wxChar *fmt, va_list list ) const
 {
 	ConsoleColorScope cs(color);
-	DoWrite( pxsFmtV(fmt,list) );
+	DoWrite( pxsFmtV(fmt,list).c_str() );
 	return false;
 }
 

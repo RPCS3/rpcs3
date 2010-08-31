@@ -47,7 +47,7 @@ class FastFormatBuffers
 protected:
 	typedef SafeAlignedArray<CharType,16> BufferType;
 
-	static const uint BufferCount = 3;
+	static const uint BufferCount = 4;
 
 	BufferType		m_buffers[BufferCount];
 	uint			m_curslot;
@@ -63,8 +63,8 @@ public:
 		{
 			m_buffers[i].Name = wxsFormat(L"%s Formatting Buffer (slot%d)",
 				(sizeof(CharType)==1) ? L"Ascii" : L"Unicode", i);
-			m_buffers[i].MakeRoomFor(1024);
-			m_buffers[i].ChunkSize = 4096;
+			m_buffers[i].MakeRoomFor(512);
+			m_buffers[i].ChunkSize = 2048;
 		}
 
 		m_curslot = 0;
@@ -77,7 +77,7 @@ public:
 
 	bool HasFreeBuffer() const
 	{
-		return m_curslot < BufferCount;
+		return m_curslot < BufferCount-1;
 	}
 
 	BufferType& GrabBuffer()
@@ -176,7 +176,7 @@ static __ri void format_that_unicode_mess( SafeArray<char>& buffer, uint writepo
 	while( true )
 	{
 		int size = buffer.GetLength() / sizeof(wxChar);
-		int len = wxVsnprintf((wxChar*)buffer.GetPtr(writepos), size-writepos, fmt, argptr);
+		int len = wxVsnprintf((wxChar*)buffer.GetPtr(writepos*2), size-writepos, fmt, argptr);
 
 		// some implementations of vsnprintf() don't NUL terminate
 		// the string if there is not enough space for it so
@@ -266,11 +266,6 @@ FastFormatUnicode& FastFormatUnicode::Write( const wxChar* fmt, ... )
 	return *this;
 }
 
-const wxChar* FastFormatUnicode::GetResult() const
-{
-	return (wxChar*)m_dest->GetPtr();
-}
-
 
 // --------------------------------------------------------------------------------------
 //  FastFormatAscii  (implementations)
@@ -294,10 +289,10 @@ const wxString FastFormatAscii::GetString() const
 	return fromAscii(m_dest->GetPtr());
 }
 
-FastFormatAscii::operator wxString() const
+/*FastFormatAscii::operator wxString() const
 {
 	return fromAscii(m_dest->GetPtr());
-}
+}*/
 
 FastFormatAscii& FastFormatAscii::WriteV( const char* fmt, va_list argptr )
 {
@@ -312,15 +307,5 @@ FastFormatAscii& FastFormatAscii::Write( const char* fmt, ... )
 	WriteV(fmt,list);
 	va_end(list);
 	return *this;
-}
-
-const char* FastFormatAscii::GetResult() const
-{
-	return m_dest->GetPtr();
-}
-
-FastFormatAscii::operator const char*() const
-{
-	return m_dest->GetPtr();
 }
 

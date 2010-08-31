@@ -524,7 +524,7 @@ union tDMAC_ADDR
 
 	wxCharBuffer ToUTF8(bool sprIsValid=true) const
 	{
-		return FastFormatAscii().Write((sprIsValid && SPR) ? "0x%04X(SPR)" : "0x%08X", ADDR).GetResult();
+		return FastFormatAscii().Write((sprIsValid && SPR) ? "0x%04X(SPR)" : "0x%08X", ADDR).c_str();
 	}
 };
 
