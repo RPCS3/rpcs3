@@ -183,7 +183,6 @@ bool _VIF1chain()
 __fi void vif1SetupTransfer()
 {
     tDMA_TAG *ptag;
-	DMACh& vif1c = (DMACh&)eeHw[0x9000];
 	
 	switch (vif1.dmamode)
 	{
@@ -195,20 +194,20 @@ __fi void vif1SetupTransfer()
 		break;
 
 		case VIF_CHAIN_MODE:
-			ptag = dmaGetAddr(vif1c.tadr, false); //Set memory pointer to TADR
+			ptag = dmaGetAddr(vif1ch.tadr, false); //Set memory pointer to TADR
 
-			if (!(vif1c.transfer("Vif1 Tag", ptag))) return;
+			if (!(vif1ch.transfer("Vif1 Tag", ptag))) return;
 
-			vif1c.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
+			vif1ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
 
 			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
-			        ptag[1]._u32, ptag[0]._u32, vif1c.qwc, ptag->ID, vif1c.madr, vif1c.tadr);
+			        ptag[1]._u32, ptag[0]._u32, vif1ch.qwc, ptag->ID, vif1ch.madr, vif1ch.tadr);
 
 			if (!vif1.done && ((dmacRegs.ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1
 			{
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
-				if ((vif1c.madr + vif1c.qwc * 16) >= dmacRegs.stadr.ADDR)
+				if ((vif1ch.madr + vif1ch.qwc * 16) >= dmacRegs.stadr.ADDR)
 				{
 					// stalled
 					hwDmacIrq(DMAC_STALL_SIS);
@@ -219,7 +218,7 @@ __fi void vif1SetupTransfer()
 			
 			vif1.inprogress &= ~1;
 
-			if (vif1c.chcr.TTE)
+			if (vif1ch.chcr.TTE)
 			{
 				// Transfer dma tag if tte is set
 
@@ -243,10 +242,10 @@ __fi void vif1SetupTransfer()
 
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
-			if(vif1c.qwc > 0) vif1.inprogress |= 1;
+			if(vif1ch.qwc > 0) vif1.inprogress |= 1;
 
 			//Check TIE bit of CHCR and IRQ bit of tag
-			if (vif1c.chcr.TIE && ptag->IRQ)
+			if (vif1ch.chcr.TIE && ptag->IRQ)
 			{
 				VIF_LOG("dmaIrq Set");
 

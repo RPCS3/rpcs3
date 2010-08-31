@@ -24,7 +24,7 @@
 
 // Doesn't stall if the next vifCode is the Mark command
 _vifT bool runMark(u32* &data) {
-	if (((vifXRegs->code >> 24) & 0x7f) == 0x7) {
+	if (((vifXRegs.code >> 24) & 0x7f) == 0x7) {
 		Console.WriteLn("Vif%d: Running Mark with I-bit", idx);
 		return 1; // No Stall?
 	}
@@ -34,7 +34,7 @@ _vifT bool runMark(u32* &data) {
 // Returns 1 if i-bit && finished vifcode && i-bit not masked
 _vifT bool analyzeIbit(u32* &data, int iBit) {
 	vifStruct& vifX = GetVifX;
-	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
+	if (iBit && !vifX.cmd && !vifXRegs.err.MII) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
 
@@ -75,14 +75,14 @@ _vifT void vifTransferLoop(u32* &data) {
 	u32& pSize = vifX.vifpacketsize;
 	int  iBit  = vifX.cmd >> 7;
 
-	vifXRegs->stat.VPS |= VPS_TRANSFERRING;
-	vifXRegs->stat.ER1  = false;
+	vifXRegs.stat.VPS |= VPS_TRANSFERRING;
+	vifXRegs.stat.ER1  = false;
 
 	while (pSize > 0 && !vifX.vifstalled) {
 
 		if(!vifX.cmd) { // Get new VifCode
-			vifX.lastcmd = (vifXRegs->code >> 24) & 0x7f;
-			vifXRegs->code = data[0];
+			vifX.lastcmd = (vifXRegs.code >> 24) & 0x7f;
+			vifXRegs.code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
 			
@@ -142,10 +142,10 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 
 	if (vifX.irq && vifX.cmd == 0) {
 		//DevCon.WriteLn("Vif IRQ!");
-		if(((vifXRegs->code >> 24) & 0x7f) != 0x7)
+		if(((vifXRegs.code >> 24) & 0x7f) != 0x7)
 		{
 			vifX.vifstalled    = true;
-			vifXRegs->stat.VIS = true; // Note: commenting this out fixes WALL-E?
+			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?
 		}
 
 		if (!vifXch.qwc && !vifX.irqoffset) vifX.inprogress &= ~1;

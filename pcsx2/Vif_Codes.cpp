@@ -285,7 +285,7 @@ vifOp(vifCode_FlushE) {
 }
 
 vifOp(vifCode_ITop) {
-	pass1 { vifXRegs->itops = vifXRegs->code & 0x3ff; GetVifX.cmd = 0; }
+	pass1 { vifXRegs.itops = vifXRegs.code & 0x3ff; GetVifX.cmd = 0; }
 	pass3 { VifCodeLog("ITop"); }
 	return 0;
 }
@@ -293,8 +293,8 @@ vifOp(vifCode_ITop) {
 vifOp(vifCode_Mark) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
-		vifXRegs->mark     = (u16)vifXRegs->code;
-		vifXRegs->stat.MRK = true;
+		vifXRegs.mark     = (u16)vifXRegs.code;
+		vifXRegs.stat.MRK = true;
 		vifX.cmd           = 0;
 	}
 	pass3 { VifCodeLog("Mark"); }
@@ -317,8 +317,8 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 vifOp(vifCode_MPG) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
-		int    vifNum =  (u8)(vifXRegs->code >> 16);
-		vifX.tag.addr = (u16)(vifXRegs->code <<  3) & (idx ? 0x3fff : 0xfff);
+		int    vifNum =  (u8)(vifXRegs.code >> 16);
+		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		//vifFlush(idx);
 		return 1;
@@ -350,14 +350,14 @@ vifOp(vifCode_MPG) {
 
 vifOp(vifCode_MSCAL) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0;}
+	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs.code) << 3); vifX.cmd = 0;}
 	pass3 { VifCodeLog("MSCAL"); }
 	return 0;
 }
 
 vifOp(vifCode_MSCALF) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs->code) << 3); vifX.cmd = 0; }
+	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs.code) << 3); vifX.cmd = 0; }
 	pass3 { VifCodeLog("MSCALF"); }
 	return 0;
 }
@@ -398,9 +398,9 @@ vifOp(vifCode_Null) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
 		// if ME1, then force the vif to interrupt
-		if (!(vifXRegs->err.ME1)) { // Ignore vifcode and tag mismatch error
+		if (!(vifXRegs.err.ME1)) { // Ignore vifcode and tag mismatch error
 			Console.WriteLn("Vif%d: Unknown VifCmd! [%x]", idx, vifX.cmd);
-			vifXRegs->stat.ER1 = true;
+			vifXRegs.stat.ER1 = true;
 			vifX.vifstalled = true;
 			//vifX.irq++;
 		}
@@ -463,7 +463,7 @@ vifOp(vifCode_STCol) {
 	}
 	pass2 {
 		u32* cols  = idx ? g_vifmask.Col1 : g_vifmask.Col0;
-		u32* pmem1 = &vifXRegs->c0 + (vifX.tag.addr << 2);
+		u32* pmem1 = &vifXRegs.c0 + (vifX.tag.addr << 2);
 		u32* pmem2 = cols		   +  vifX.tag.addr;
 		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
 	}
@@ -481,7 +481,7 @@ vifOp(vifCode_STRow) {
 	}
 	pass2 {
 		u32* rows  = idx ? g_vifmask.Row1 : g_vifmask.Row0;
-		u32* pmem1 = &vifXRegs->r0 + (vifX.tag.addr << 2);
+		u32* pmem1 = &vifXRegs.r0 + (vifX.tag.addr << 2);
 		u32* pmem2 = rows		   +  vifX.tag.addr;
 		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
 	}
@@ -492,8 +492,8 @@ vifOp(vifCode_STRow) {
 vifOp(vifCode_STCycl) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
-		vifXRegs->cycle.cl = (u8)(vifXRegs->code);
-		vifXRegs->cycle.wl = (u8)(vifXRegs->code >> 8);
+		vifXRegs.cycle.cl = (u8)(vifXRegs.code);
+		vifXRegs.cycle.wl = (u8)(vifXRegs.code >> 8);
 		vifX.cmd		   = 0;
 	}
 	pass3 { VifCodeLog("STCycl"); }
@@ -503,13 +503,13 @@ vifOp(vifCode_STCycl) {
 vifOp(vifCode_STMask) {
 	vifStruct& vifX = GetVifX;
 	pass1 { vifX.tag.size = 1; }
-	pass2 { vifXRegs->mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
+	pass2 { vifXRegs.mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
 	pass3 { VifCodeLog("STMask"); }
 	return 1;
 }
 
 vifOp(vifCode_STMod) {
-	pass1 { vifXRegs->mode = vifXRegs->code & 0x3; GetVifX.cmd = 0; }
+	pass1 { vifXRegs.mode = vifXRegs.code & 0x3; GetVifX.cmd = 0; }
 	pass3 { VifCodeLog("STMod"); }
 	return 0;
 }

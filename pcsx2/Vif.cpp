@@ -283,8 +283,8 @@ _vifT __fi bool vifWrite32(u32 mem, u32 value) {
 	switch (mem) {
 		case caseVif(MARK):
 			VIF_LOG("VIF%d_MARK write32 0x%8.8x", idx, value);
-			vifXRegs->stat.MRK = false;
-			//vifXRegs->mark	   = value;
+			vifXRegs.stat.MRK = false;
+			//vifXRegs.mark	   = value;
 		break;
 
 		case caseVif(FBRST):
@@ -311,7 +311,7 @@ _vifT __fi bool vifWrite32(u32 mem, u32 value) {
 			// of a standard psHu32(mem) = value; writeback.  Handled by caller for us, thanks! --air
 			//if (!idx) g_vifmask.Row0[ (mem>>4)&3 ]   = value;
 			//else	  g_vifmask.Row1[ (mem>>4)&3 ]   = value;
-			//((u32*)&vifXRegs->r0)   [((mem>>4)&3)*4] = value;
+			//((u32*)&vifXRegs.r0)   [((mem>>4)&3)*4] = value;
 		break;
 
 		case caseVif(COL0):
@@ -322,7 +322,7 @@ _vifT __fi bool vifWrite32(u32 mem, u32 value) {
 			// of a standard psHu32(mem) = value; writeback.  Handled by caller for us, thanks! --air
 			//if (!idx) g_vifmask.Col0[ (mem>>4)&3 ]   = value;
 			//else	  g_vifmask.Col1[ (mem>>4)&3 ]   = value;
-			//((u32*)&vifXRegs->c0)   [((mem>>4)&3)*4] = value;
+			//((u32*)&vifXRegs.c0)   [((mem>>4)&3)*4] = value;
 		break;
 	}
 

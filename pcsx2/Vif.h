@@ -221,7 +221,7 @@ static VIFregisters& vif1Regs = (VIFregisters&)eeHw[0x3C00];
 #define _vifT		template <int idx>
 #define  GetVifX	(idx ? (vif1)     : (vif0))
 #define  vifXch		(idx ? (vif1ch)   : (vif0ch))
-#define  vifXRegs	(idx ? (&vif1Regs): (&vif0Regs))
+#define  vifXRegs	(idx ? (vif1Regs) : (vif0Regs))
 
 extern void dmaVIF0();
 extern void dmaVIF1();
