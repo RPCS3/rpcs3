@@ -17,9 +17,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "GS.h"
+#include "Util.h"
+#include "GLWin.h"
 #include "zerogs.h"
-
 
 #ifdef GL_X11_WINDOW
 
@@ -37,19 +37,28 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	return true;
 }
 
-bool GLWindow::ReleaseWindow()
+bool GLWindow::ReleaseContext()
 {
-	if (context)
+	if (context && (glDisplay != NULL))
 	{
 		if (!glXMakeCurrent(glDisplay, None, NULL))
 		{
 			ZZLog::Error_Log("Could not release drawing context.");
 		}
-
+			
 		glXDestroyContext(glDisplay, context);
 
 		context = NULL;
 	}
+	
+	return true;
+}
+
+void GLWindow::CloseWindow()
+{
+	conf.x = x;
+	conf.y = y;
+	SaveConfig();
 
 	/* switch back to original desktop resolution if we were in fullscreen */
 	if (glDisplay != NULL)
@@ -60,16 +69,7 @@ bool GLWindow::ReleaseWindow()
 			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
 		}
 	}
-
-	return true;
-}
-
-void GLWindow::CloseWindow()
-{
-	conf.x = x;
-	conf.y = y;
-	SaveConfig();
-
+	
 	if (glDisplay != NULL)
 	{
 		XCloseDisplay(glDisplay);
@@ -77,21 +77,8 @@ void GLWindow::CloseWindow()
 	}
 }
 
-bool GLWindow::DisplayWindow(int _width, int _height)
+bool GLWindow::CreateVisual()
 {
-	int i;
-	XVisualInfo *vi;
-	Colormap cmap;
-	int dpyWidth, dpyHeight;
-	int glxMajorVersion, glxMinorVersion;
-	int vidModeMajorVersion, vidModeMinorVersion;
-	Atom wmDelete;
-	Window winDummy;
-	unsigned int borderDummy;
-
-	x = conf.x;
-	y = conf.y;
-
 	// attributes for a single buffered visual in RGBA format with at least
 	// 8 bits per color and a 24 bit depth buffer
 	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8,
@@ -110,8 +97,6 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 						  GLX_DEPTH_SIZE, 24,
 						  None
 						};
-
-	GLWin.fullScreen = (conf.fullscreen());
 
 	/* get an appropriate visual */
 	vi = glXChooseVisual(glDisplay, glScreen, attrListDbl);
@@ -133,32 +118,67 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		ZZLog::Error_Log("Failed to get buffered Visual!");
 		return false;
 	}
+	return true;
+}
 
+void GLWindow::GetWindowSize()
+{
+	unsigned int borderDummy;
+	Window winDummy;
+	
+	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
+	ZZLog::Error_Log("Depth %d", depth);
+}
+
+void GLWindow::GetGLXVersion()
+{
+	int glxMajorVersion, glxMinorVersion;
+	
 	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
 
 	ZZLog::Error_Log("glX-Version %d.%d", glxMajorVersion, glxMinorVersion);
+}
 
+void GLWindow::GetGLXVidModeVersion()
+{
+	int vidModeMajorVersion, vidModeMinorVersion;
+	
+	XF86VidModeQueryVersion(glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
+	
+	ZZLog::Error_Log("XF86VidModeExtension-Version %d.%d.", vidModeMajorVersion, vidModeMinorVersion);
+}	
+
+bool GLWindow::DisplayWindow(int _width, int _height)
+{
+	Colormap cmap;
+	
+	x = conf.x;
+	y = conf.y;
+	fullScreen = (conf.fullscreen());
+
+	if (!CreateVisual()) return false;
+	
 	/* create a GLX context */
 	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
-
+	
 	/* create a color map */
 	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
 						   vi->visual, AllocNone);
+	
 	attr.colormap = cmap;
 	attr.border_pixel = 0;
+	attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 
-	// get a connection
-	XF86VidModeQueryVersion(glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
-
+	GetGLXVersion();
+	
 	if (fullScreen)
 	{
+		int dpyWidth, dpyHeight;
+		int modeNum = 0, bestMode = 0;
 		XF86VidModeModeInfo **modes = NULL;
-		int modeNum = 0;
-		int bestMode = 0;
-
-		// set best mode to current
-		bestMode = 0;
-		ZZLog::Error_Log("XF86VidModeExtension-Version %d.%d.", vidModeMajorVersion, vidModeMinorVersion);
+		
+		GetGLXVidModeVersion();
+		
 		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
 
 		if (modeNum > 0 && modes != NULL)
@@ -168,7 +188,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 			/* look for mode with requested resolution */
 
-			for (i = 0; i < modeNum; i++)
+			for (int i = 0; i < modeNum; i++)
 			{
 				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height))
 				{
@@ -186,7 +206,6 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 			/* create a fullscreen window */
 			attr.override_redirect = True;
-			attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 			glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
 									 0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
 									 CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,
@@ -209,15 +228,15 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	if (!fullScreen)
 	{
 		// create a window in window mode
-		attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
 		glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
 								 0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
 								 CWBorderPixel | CWColormap | CWEventMask, &attr);
 
 		// only set window title and handle wm_delete_events if in windowed mode
+		Atom wmDelete;
 		wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
-
 		XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
+		
 		XSetStandardProperties(glDisplay, glWindow, "ZZOgl-PG", "ZZOgl-PG", None, NULL, 0, NULL);
 		XMapRaised(glDisplay, glWindow);
 		XMoveWindow(glDisplay, glWindow, x, y);
@@ -225,10 +244,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
-
-	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
-
-	ZZLog::Error_Log("Depth %d", depth);
+	
+	GetWindowSize();
 
 	if (glXIsDirect(glDisplay, context))
 		ZZLog::Error_Log("You have Direct Rendering!");
@@ -250,14 +267,17 @@ void GLWindow::SwapGLBuffers()
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	XTextProperty prop;
-	memset(&prop, 0, sizeof(prop));
-	char* ptitle = strtitle;
+	if (!conf.fullscreen())
+	{
+		XTextProperty prop;
+		memset(&prop, 0, sizeof(prop));
+		char* ptitle = strtitle;
 
-	if (XStringListToTextProperty(&ptitle, 1, &prop))
-		XSetWMName(glDisplay, glWindow, &prop);
+		if (XStringListToTextProperty(&ptitle, 1, &prop))
+			XSetWMName(glDisplay, glWindow, &prop);
 
-	XFree(prop.value);
+		XFree(prop.value);
+	}
 }
 
 void GLWindow::ResizeCheck()
@@ -275,6 +295,8 @@ void GLWindow::ResizeCheck()
 
 		if ((event.xconfigure.x != x) || (event.xconfigure.y != y))
 		{
+			// Fixme; x&y occassionally gives values near the top left corner rather then the real values,
+			// causing the window to change positions when adjusting ZZOgl's settings.
 			x = event.xconfigure.x;
 			y = event.xconfigure.y;
 		}

@@ -238,7 +238,7 @@ void tex0Write(int i, const u32 *data)
 		}
 
 		// check if csa is the same!! (ffx bisaid island, grass)
-		else if ((data[1] & 0x1f780000) != (ZeroGS::vb[i].uCurTex0Data[1] & 0x1f780000))
+		else if ((data[1] & CPSM_CSA_BITMASK) != (ZeroGS::vb[i].uCurTex0Data[1] & CPSM_CSA_BITMASK))
 		{
 			ZeroGS::Flush(i); // flush any previous entries
 		}

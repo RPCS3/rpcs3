@@ -23,6 +23,7 @@
 #include "GS.h"
 #include "ZeroGSShaders/zerogsshaders.h"
 #include "Profile.h"
+#include "GLWin.h"
 
 extern int CurrentSavestate, g_GSMultiThreaded, g_nPixelShaderVer;
 extern char *libraryName;
@@ -355,7 +356,7 @@ void ProcessMessages()
 	// check resizing
 	GLWin.ResizeCheck();
 
-	if (THR_KeyEvent)     // This values was passed from GSKeyEvents which could be in another thread
+	if (THR_KeyEvent)     // This value was passed from GSKeyEvents which could be in another thread
 	{
 		int my_KeyEvent = THR_KeyEvent;
 		bool my_bShift = THR_bShift;

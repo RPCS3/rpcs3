@@ -98,6 +98,7 @@
 			<Mode after="always" />
 		</ExtraCommands>
 		<Unit filename="../../CRC.h" />
+		<Unit filename="../../GLWin.h" />
 		<Unit filename="../../GLWin32.cpp" />
 		<Unit filename="../../GLWinX11.cpp" />
 		<Unit filename="../../GS.h" />

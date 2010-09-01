@@ -764,6 +764,185 @@ REG128_SET(GIFPackedReg)
 	GIFPackedNOP	NOP;
 REG_SET_END
 
+
+REG64_(GSReg, BGCOLOR)
+	u32 R:8;
+	u32 G:8;
+	u32 B:8;
+	u32 _PAD1:8;
+	u32 _PAD2:32;
+REG_END
+
+REG64_(GSReg, BUSDIR)
+	u32 DIR:1;
+	u32 _PAD1:31;
+	u32 _PAD2:32;
+REG_END
+
+REG64_(GSReg, CSR)
+	u32 SIGNAL:1;
+	u32 FINISH:1;
+	u32 HSINT:1;
+	u32 VSINT:1;
+	u32 EDWINT:1;
+	u32 ZERO1:1;
+	u32 ZERO2:1;
+	u32 _PAD1:1;
+	u32 FLUSH:1;
+	u32 RESET:1;
+	u32 _PAD2:2;
+	u32 NFIELD:1;
+	u32 FIELD:1;
+	u32 FIFO:2;
+	u32 REV:8;
+	u32 ID:8;
+	u32 _PAD3:32;
+REG_END
+
+REG64_(GSReg, DISPFB) // (-1/2)
+	u32 FBP:9;
+	u32 FBW:6;
+	u32 PSM:5;
+	u32 _PAD:12;
+	u32 DBX:11;
+	u32 DBY:11;
+	u32 _PAD2:10;
+REG_END
+
+REG64_(GSReg, DISPLAY) // (-1/2)
+	u32 DX:12;
+	u32 DY:11;
+	u32 MAGH:4;
+	u32 MAGV:2;
+	u32 _PAD:3;
+	u32 DW:12;
+	u32 DH:11;
+	u32 _PAD2:9;
+REG_END
+
+REG64_(GSReg, EXTBUF)
+	u32 EXBP:14;
+	u32 EXBW:6;
+	u32 FBIN:2;
+	u32 WFFMD:1;
+	u32 EMODA:2;
+	u32 EMODC:2;
+	u32 _PAD1:5;
+	u32 WDX:11;
+	u32 WDY:11;
+	u32 _PAD2:10;
+REG_END
+
+REG64_(GSReg, EXTDATA)
+	u32 SX:12;
+	u32 SY:11;
+	u32 SMPH:4;
+	u32 SMPV:2;
+	u32 _PAD1:3;
+	u32 WW:12;
+	u32 WH:11;
+	u32 _PAD2:9;
+REG_END
+
+REG64_(GSReg, EXTWRITE)
+	u32 WRITE;
+	u32 _PAD2:32;
+REG_END
+
+REG64_(GSReg, IMR)
+	u32 _PAD1:8;
+	u32 SIGMSK:1;
+	u32 FINISHMSK:1;
+	u32 HSMSK:1;
+	u32 VSMSK:1;
+	u32 EDWMSK:1;
+	u32 _PAD2:19;
+	u32 _PAD3:32;
+REG_END
+
+REG64_(GSReg, PMODE)
+	u32 EN1:1;
+	u32 EN2:1;
+	u32 CRTMD:3;
+	u32 MMOD:1;
+	u32 AMOD:1;
+	u32 SLBG:1;
+	u32 ALP:8;
+	u32 _PAD:16;
+	u32 _PAD1:32;
+REG_END
+
+REG64_(GSReg, SIGLBLID)
+	u32 SIGID:32;
+	u32 LBLID:32;
+REG_END
+
+REG64_(GSReg, SMODE1)
+	u32 RC:3;
+	u32 LC:7;
+	u32 T1248:2;
+	u32 SLCK:1;
+	u32 CMOD:2;
+	u32 EX:1;
+	u32 PRST:1;
+	u32 SINT:1;
+	u32 XPCK:1;
+	u32 PCK2:2;
+	u32 SPML:4;
+	u32 GCONT:1;
+	u32 PHS:1;
+	u32 PVS:1;
+	u32 PEHS:1;
+	u32 PEVS:1;
+	u32 CLKSEL:2;
+	u32 NVCK:1;
+	u32 SLCK2:1;
+	u32 VCKSEL:2;
+	u32 VHP:1;
+	u32 _PAD1:27;
+REG_END
+
+REG64_(GSReg, SMODE2)
+	u32 INT:1;
+	u32 FFMD:1;
+	u32 DPMS:2;
+	u32 _PAD2:28;
+	u32 _PAD3:32;
+REG_END
+
+REG64_(GSReg, SIGBLID)
+	u32 SIGID;
+	u32 LBLID;
+REG_END
+
+#define PMODE ((GSRegPMODE*)(g_pBasePS2Mem+0x0000))
+#define SMODE1 ((GSRegSMODE1*)(g_pBasePS2Mem+0x0010))
+#define SMODE2 ((GSRegSMODE2*)(g_pBasePS2Mem+0x0020))
+// SRFSH
+#define SYNCH1 ((GSRegSYNCH1*)(g_pBasePS2Mem+0x0040))
+#define SYNCH2 ((GSRegSYNCH2*)(g_pBasePS2Mem+0x0050))
+#define SYNCV ((GSRegSYNCV*)(g_pBasePS2Mem+0x0060))
+#define DISPFB1 ((GSRegDISPFB*)(g_pBasePS2Mem+0x0070))
+#define DISPLAY1 ((GSRegDISPLAY*)(g_pBasePS2Mem+0x0080))
+#define DISPFB2 ((GSRegDISPFB*)(g_pBasePS2Mem+0x0090))
+#define DISPLAY2 ((GSRegDISPLAY*)(g_pBasePS2Mem+0x00a0))
+#define EXTBUF ((GSRegEXTBUF*)(g_pBasePS2Mem+0x00b0))
+#define EXTDATA ((GSRegEXTDATA*)(g_pBasePS2Mem+0x00c0))
+#define EXTWRITE ((GSRegEXTWRITE*)(g_pBasePS2Mem+0x00d0))
+#define BGCOLOR ((GSRegBGCOLOR*)(g_pBasePS2Mem+0x00e0))
+#define CSR ((GSRegCSR*)(g_pBasePS2Mem+0x1000))
+#define IMR ((GSRegIMR*)(g_pBasePS2Mem+0x1010))
+#define BUSDIR ((GSRegBUSDIR*)(g_pBasePS2Mem+0x1040))
+#define SIGLBLID ((GSRegSIGBLID*)(g_pBasePS2Mem+0x1080))
+
+//
+// sps2tags.h
+//
+#define GET_GIF_REG(tag, reg) \
+	(((tag).ai32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
+
+#define GET_GSFPS (((SMODE1->CMOD&1) ? 50 : 60) / (SMODE2->INT ? 1 : 2))
+
 extern void WriteTempRegs();
 extern void SetFrameSkip(bool skip);
 extern void ResetRegs();
