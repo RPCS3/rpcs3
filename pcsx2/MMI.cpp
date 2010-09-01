@@ -173,9 +173,9 @@ void PLZCW() {
 
 __fi void PMFHL_CLAMP(u16& dst, s32 src)
 {
-    if      (src > 0x00007fff)	dst = 0x7fff;
-    else if (src < 0xffff8000)	dst = 0x8000;
-    else						dst = (u16)src;
+    if      (src >  0x7fff)	dst = 0x7fff;
+    else if (src < -0x8000)	dst = 0x8000;
+    else					dst = (u16)src;
 }
 
 void PMFHL() {
