@@ -153,9 +153,6 @@ typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
 //------------------------------------------------------------------
 // Define mVUquickSearch
 //------------------------------------------------------------------
-// FIXME: I changed the below saerchXMM extern from __aligned16 to __pagealigned.
-// This *probably* fixes the crashing bugs in linux when using the optimized memcmp.
-// Needs testing... --air
 #ifndef __LINUX__
 extern __pagealigned u8 mVUsearchXMM[__pagesize];
 typedef u32 (__fastcall *mVUCall)(void*, void*);

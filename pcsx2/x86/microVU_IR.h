@@ -25,34 +25,46 @@ union regInfo {
 	};
 };
 
-#ifdef _MSC_VER
-#	pragma pack(1)
-#endif
+union __aligned16 microRegInfo { // Ordered for Faster Compares
+	struct  
+	{
+		u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
 
-struct __aligned16 microRegInfo { // Ordered for Faster Compares
-	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
-	u8 needExactMatch;	// If set, block needs an exact match of pipeline state
-	u8 q;
-	u8 p;
-	u8 r;
-	u8 xgkick;
-	u8 viBackUp;		// VI reg number that was written to on branch-delay slot
-	u8 VI[16];
-	regInfo VF[32];
-	u8 flags;			// clip x2 :: status x2
-	u8 blockType;		// 0 = Normal; 1,2 = Compile one instruction (E-bit/Branch Ending)
-	u8 padding[5];		// 160 bytes
-} __packed;
+		union
+		{
+			struct
+			{
+				u8 needExactMatch;	// If set, block needs an exact match of pipeline state
+				u8 q;
+				u8 p;
+				u8 r;
+				u8 xgkick;
+				u8 viBackUp;		// VI reg number that was written to on branch-delay slot
+				u8 blockType;		// 0 = Normal; 1,2 = Compile one instruction (E-bit/Branch Ending)
+			};
+			u32 simple32[2];
+		};
+	
+		struct
+		{
+			u8 VI[16];
+			regInfo VF[32];
+			u8 flags;			// clip x2 :: status x2
+		};
+	};
+	
+	u128 full128[160/sizeof(u128)];
+	u64 full64[160/sizeof(u64)];
+	u32 full32[160/sizeof(u32)];
+};
+
+C_ASSERT( sizeof(microRegInfo) == 160 );
 
 struct __aligned16 microBlock {
 	microRegInfo pState;	// Detailed State of Pipeline
 	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
 	u8* x86ptrStart;		// Start of code
-} __packed;
-
-#ifdef _MSC_VER
-#	pragma pack()
-#endif
+};
 
 struct microTempRegInfo {
 	regInfo VF[2];	// Holds cycle info for Fd, VF[0] = Upper Instruction, VF[1] = Lower Instruction
