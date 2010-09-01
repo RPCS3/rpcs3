@@ -214,10 +214,18 @@ static __ri void eBitWarning(mV) {
 //------------------------------------------------------------------
 // Cycles / Pipeline State / Early Exit from Execution
 //------------------------------------------------------------------
-
+#ifndef __LINUX__
 __fi void optimizeReg(u8& rState)	 { rState = (rState==1) ? 0 : rState; }
 __fi void calcCycles(u8& reg, u8 x)	 { reg = ((reg > x) ? (reg - x) : 0); }
 __fi void tCycles(u8& dest, u8& src) { dest = aMax(dest, src); }
+#else
+// Fixme: I don't really feel like dealing with 'cannot bind packed field' errors right now,
+// so Linux will use the old defines for the moment.
+#define optimizeReg(rState) { rState = (rState==1) ? 0 : rState; }
+#define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
+#define tCycles(dest, src)	{ dest = aMax(dest, src); }
+#endif
+
 __fi void incP(mV)					 { mVU->p ^= 1; }
 __fi void incQ(mV)					 { mVU->q ^= 1; }
 
@@ -240,7 +248,7 @@ static void mVUoptimizePipeState(mV) {
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
-static void mVUincCycles(mV, int x) {
+void mVUincCycles(mV, int x) {
 	mVUcycles += x;
 	for (int z = 31; z > 0; z--) {
 		calcCycles(mVUregs.VF[z].x, x);
