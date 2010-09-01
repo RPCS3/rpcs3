@@ -24,7 +24,6 @@
 #include "microVU_Misc.inl"
 #include "microVU_Log.inl"
 #include "microVU_Analyze.inl"
-#include "microVU_IR.inl"
 #include "microVU_Alloc.inl"
 #include "microVU_Upper.inl"
 #include "microVU_Lower.inl"
@@ -103,7 +102,7 @@ void microVU::init(uint vuIndex) {
 	dispCache		= NULL;
 	cache			= NULL;
 	cacheSize		= mVUcacheSize;
-	regAlloc		= new microRegAlloc(this);
+	regAlloc		= new microRegAlloc(index);
 
 	for (u32 i = 0; i < (progSize / 2); i++) {
 		prog.prog[i] = new deque<microProgram*>();

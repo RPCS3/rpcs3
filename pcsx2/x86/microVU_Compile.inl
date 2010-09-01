@@ -16,30 +16,18 @@
 #pragma once
 
 //------------------------------------------------------------------
-// Helper Macros
-//------------------------------------------------------------------
-
-#define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
-#define optimizeReg(rState) { rState = (rState==1) ? 0 : rState; }
-#define tCycles(dest, src)	{ dest = aMax(dest, src); }
-#define incP()				{ mVU->p = (mVU->p+1) & 1; }
-#define incQ()				{ mVU->q = (mVU->q+1) & 1; }
-#define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
-#define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
-
-//------------------------------------------------------------------
 // Messages Called at Execution Time...
 //------------------------------------------------------------------
 
-static void __fastcall mVUbadOp0(mV)		{ Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", xPC, mVU->prog.cur); }
-static void __fastcall mVUbadOp1(mV)		{ Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", xPC, mVU->prog.cur); }
-static void __fastcall mVUwarning0(mV)		{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
-static void __fastcall mVUwarning1(mV)		{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
-static void __fastcall mVUprintPC1(u32 PC)	{ Console.WriteLn("Block Start PC = 0x%04x", PC); }
-static void __fastcall mVUprintPC2(u32 PC)	{ Console.WriteLn("Block End PC   = 0x%04x", PC); }
+static void __fastcall mVUbadOp0(mV, u32 PC) { Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", PC, mVU->prog.cur->idx); }
+static void __fastcall mVUbadOp1(mV, u32 PC) { Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", PC, mVU->prog.cur->idx); }
+static void __fastcall mVUwarning0(mV)		 { Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", mVU->prog.cur->idx); }
+static void __fastcall mVUwarning1(mV)		 { Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", mVU->prog.cur->idx); }
+static void __fastcall mVUprintPC1(u32 PC)	 { Console.WriteLn("Block Start PC = 0x%04x", PC); }
+static void __fastcall mVUprintPC2(u32 PC)	 { Console.WriteLn("Block End PC   = 0x%04x", PC); }
 
 //------------------------------------------------------------------
-// Helper Functions
+// Program Range Checking and Setting up Ranges
 //------------------------------------------------------------------
 
 // Used by mVUsetupRange
@@ -106,13 +94,13 @@ static void mVUsetupRange(microVU* mVU, s32 pc, bool isStartPC) {
 	}
 }
 
-static __fi void startLoop(mV) {
-	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
-	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
-	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
-	memzero(mVUinfo);
-	memzero(mVUregsTemp);
-}
+//------------------------------------------------------------------
+// Execute VU Opcode/Instruction (Upper and Lower)
+//------------------------------------------------------------------
+
+__ri void doUpperOp(mV) { mVUopU(mVU, 1); mVUdivSet(mVU); }
+__ri void doLowerOp(mV) { incPC(-1); mVUopL(mVU, 1); incPC(1); }
+__ri void flushRegs(mV) { if (!doRegAlloc) mVU->regAlloc->flushAll(); }
 
 static void doIbit(mV) { 
 	if (mVUup.iBit) { 
@@ -126,7 +114,7 @@ static void doIbit(mV) {
 		}
 		else tempI = curI;
 		
-		xMOV(ptr32[&mVU->regs().VI[REG_I].UL], tempI);
+		xMOV(ptr32[&mVU->getVI(REG_I)], tempI);
 		incPC(1);
 	} 
 }
@@ -150,15 +138,26 @@ static void doSwapOp(mV) {
 		mVU->regAlloc->clearNeeded(t3);
 
 		incPC(1); 
-		doUpperOp();
+		doUpperOp(mVU);
 
 		const xmm& t4 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
 		xMOVAPS(t4, t2);
 		mVU->regAlloc->clearNeeded(t4);
 		mVU->regAlloc->clearNeeded(t2);
 	}
-	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+	else { mVUopL(mVU, 1); incPC(1); flushRegs(mVU); doUpperOp(mVU); }
 }
+
+static void mVUexecuteInstruction(mV) {
+	if   (mVUlow.isNOP)	   { incPC(1); doUpperOp(mVU); flushRegs(mVU); doIbit(mVU);    }
+	elif(!mVUinfo.swapOps) { incPC(1); doUpperOp(mVU); flushRegs(mVU); doLowerOp(mVU); }
+	else doSwapOp(mVU);
+	flushRegs(mVU);
+}
+
+//------------------------------------------------------------------
+// Warnings / Errors / Illegal Instructions
+//------------------------------------------------------------------
 
 // If 1st op in block is a bad opcode, then don't compile rest of block (Dawn of Mana Level 2)
 static __fi void mVUcheckBadOp(mV) {
@@ -172,6 +171,7 @@ static __fi void mVUcheckBadOp(mV) {
 static __fi void handleBadOp(mV, int count) {
 	if (mVUinfo.isBadOp && count == 0) {
 		xMOV(gprT2, (uptr)mVU);
+		xMOV(gprT3, xPC);
 		if (!isVU1) xCALL(mVUbadOp0);
 		else		xCALL(mVUbadOp1);
 	}
@@ -211,8 +211,21 @@ static __ri void eBitWarning(mV) {
 	incPC(-2);
 }
 
+//------------------------------------------------------------------
+// Cycles / Pipeline State / Early Exit from Execution
+//------------------------------------------------------------------
+
+__fi void optimizeReg(u8& rState)	 { rState = (rState==1) ? 0 : rState; }
+__fi void calcCycles(u8& reg, u8 x)	 { reg = ((reg > x) ? (reg - x) : 0); }
+__fi void tCycles(u8& dest, u8& src) { dest = aMax(dest, src); }
+__fi void incP(mV)					 { mVU->p ^= 1; }
+__fi void incQ(mV)					 { mVU->q ^= 1; }
+
 // Optimizes the End Pipeline State Removing Unnecessary Info
-static __fi void mVUoptimizePipeState(mV) {
+// If the cycles remaining is just '1', we don't have to transfer it to the next block
+// because mVU automatically decrements this number at the start of its loop,
+// so essentially '1' will be the same as '0'...
+static void mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 32; i++) {
 		optimizeReg(mVUregs.VF[i].x);
 		optimizeReg(mVUregs.VF[i].y);
@@ -222,12 +235,12 @@ static __fi void mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 16; i++) {
 		optimizeReg(mVUregs.VI[i]);
 	}
-	if (mVUregs.q) { optimizeReg(mVUregs.q); if (!mVUregs.q) { incQ(); } }
-	if (mVUregs.p) { optimizeReg(mVUregs.p); if (!mVUregs.p) { incP(); } }
+	if (mVUregs.q) { optimizeReg(mVUregs.q); if (!mVUregs.q) { incQ(mVU); } }
+	if (mVUregs.p) { optimizeReg(mVUregs.p); if (!mVUregs.p) { incP(mVU); } }
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
-__fi void mVUincCycles(mV, int x) {
+static void mVUincCycles(mV, int x) {
 	mVUcycles += x;
 	for (int z = 31; z > 0; z--) {
 		calcCycles(mVUregs.VF[z].x, x);
@@ -241,11 +254,11 @@ __fi void mVUincCycles(mV, int x) {
 	if (mVUregs.q) {
 		if (mVUregs.q > 4) { calcCycles(mVUregs.q, x); if (mVUregs.q <= 4) { mVUinfo.doDivFlag = 1; } }
 		else			   { calcCycles(mVUregs.q, x); }
-		if (!mVUregs.q) { incQ(); }
+		if (!mVUregs.q)    { incQ(mVU); }
 	}
 	if (mVUregs.p) {
 		calcCycles(mVUregs.p, x);
-		if (!mVUregs.p || mVUregsTemp.p) { incP(); }
+		if (!mVUregs.p || mVUregsTemp.p) { incP(mVU); }
 	}
 	if (mVUregs.xgkick) {
 		calcCycles(mVUregs.xgkick, x);
@@ -254,14 +267,13 @@ __fi void mVUincCycles(mV, int x) {
 	calcCycles(mVUregs.r, x);
 }
 
-#define cmpVFregs(VFreg1, VFreg2, xVar) {	\
-	if (VFreg1.reg == VFreg2.reg) {			\
-		if ((VFreg1.x && VFreg2.x)			\
-		||	(VFreg1.y && VFreg2.y)			\
-		||	(VFreg1.z && VFreg2.z)			\
-		||	(VFreg1.w && VFreg2.w))			\
-		{ xVar = 1; }						\
-	}										\
+// Helps check if upper/lower ops read/write to same regs...
+void cmpVFregs(microVFreg& VFreg1, microVFreg& VFreg2, bool& xVar) {
+	if (VFreg1.reg == VFreg2.reg) {
+		if ((VFreg1.x && VFreg2.x) || (VFreg1.y && VFreg2.y)
+		||	(VFreg1.z && VFreg2.z) || (VFreg1.w && VFreg2.w))
+		{ xVar = 1; }
+	}
 }
 
 void mVUsetCycles(mV) {
@@ -299,6 +311,15 @@ void mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
+// Prints Start/End PC of blocks executed, for debugging...
+static void mVUdebugPrintBlocks(microVU* mVU, bool isEndPC) {
+	if (mVUdebugNow) {
+		xMOV(gprT2, xPC);
+		if (isEndPC) xCALL(mVUprintPC2);
+		else		 xCALL(mVUprintPC1);
+	}
+}
+
 // vu0 is allowed to exit early, so are dev builds (for inf loops)
 __fi bool doEarlyExit(microVU* mVU) {
 	return IsDevBuild || !isVU1;
@@ -309,15 +330,6 @@ static __fi void mVUsavePipelineState(microVU* mVU) {
 	u32* lpS = (u32*)&mVU->prog.lpState.vi15;
 	for (int i = 0; i < (sizeof(microRegInfo)-4)/4; i++, lpS++) {
 		xMOV(ptr32[lpS], lpS[0]);
-	}
-}
-
-// Prints Start/End PC of blocks executed, for debugging...
-static void mVUdebugPrintBlocks(microVU* mVU, bool isEndPC) {
-	if (mVUdebugNow) {
-		xMOV(gprT2, xPC);
-		if (isEndPC) xCALL(mVUprintPC2);
-		else		 xCALL(mVUprintPC1);
 	}
 }
 
@@ -332,8 +344,8 @@ static void mVUtestCycles(microVU* mVU) {
 			// xFowardJZ32 vu0jmp;
 			// xMOV(gprT2, (uptr)mVU);
 			// xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
-		mVUsavePipelineState(mVU);
-		mVUendProgram(mVU, NULL, 0);
+			mVUsavePipelineState(mVU);
+			mVUendProgram(mVU, NULL, 0);
 			// vu0jmp.SetTarget();
 		}
 		else {
@@ -345,6 +357,19 @@ static void mVUtestCycles(microVU* mVU) {
 		skip.SetTarget();
 	}
 	xSUB(ptr32[&mVU->cycles], mVUcycles);
+}
+
+//------------------------------------------------------------------
+// Initializing
+//------------------------------------------------------------------
+
+// This gets run at the start of every loop of mVU's first pass
+static __fi void startLoop(mV) {
+	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
+	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
+	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
+	memzero(mVUinfo);
+	memzero(mVUregsTemp);
 }
 
 // Initialize VI Constants (vi15 propagates through blocks)
@@ -393,7 +418,7 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 
 	// First Pass
 	iPC = startPC / 4;
-	mVUsetupRange(mVU, startPC, 1);		// Setup Program Bounds/Range
+	mVUsetupRange(mVU, startPC, 1); // Setup Program Bounds/Range
 	mVU->regAlloc->reset();	// Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
@@ -419,7 +444,7 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	}
 
 	// Fix up vi15 const info for propagation through blocks
-	mVUregs.vi15 = (mVUconstReg[15].isValid && CHECK_VU_CONSTPROP) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
+	mVUregs.vi15 = (mVUconstReg[15].isValid && doConstProp) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
 	
 	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
 	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
@@ -434,11 +459,8 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	for (; x < endCount; x++) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU->regs().flags], VUFLAG_MFLAGSET); }
-		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(mVU); }
-		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else						{ doSwapOp(mVU); }
+		mVUexecuteInstruction(mVU);
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
-		if (!doRegAlloc)			{ mVU->regAlloc->flushAll(); }
 		if (isEvilBlock)			{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }
 		else if (!mVUinfo.isBdelay)	{ incPC(1); }
 		else {

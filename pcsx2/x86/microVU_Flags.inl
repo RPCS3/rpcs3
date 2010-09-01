@@ -286,7 +286,7 @@ void mVUflagPass(mV, u32 startPC, u32 sCount = 0, u32 found = 0) {
 __fi void mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr); incPC(1); }
 	branchType2 { // This case can possibly be turned off via a hack for a small speedup...
-		if (!mVUlow.constJump.isValid || !CHECK_VU_CONSTPROP) { mVUregs.needExactMatch |= 0x7; } 
+		if (!mVUlow.constJump.isValid || !doConstProp) { mVUregs.needExactMatch |= 0x7; } 
 		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8)); }
 	}
 	branchType3 {

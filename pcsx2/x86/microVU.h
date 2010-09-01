@@ -90,7 +90,7 @@ public:
 			for (int i = 0; i <= listI; i++) {
 				if ((linkI->block->pState.q			== pState->q)
 				&&  (linkI->block->pState.p			== pState->p)
-				&& ((linkI->block->pState.vi15		== pState->vi15) || !CHECK_VU_CONSTPROP)
+				&& ((linkI->block->pState.vi15		== pState->vi15) || !doConstProp)
 				&&  (linkI->block->pState.flags		== pState->flags)
 				&&  (linkI->block->pState.xgkick	== pState->xgkick)
 				&&  (linkI->block->pState.viBackUp	== pState->viBackUp)
@@ -227,12 +227,6 @@ struct microVU {
 	{
 		pxAssumeDev((prog.IRinfo.curPC & 1) == 0, "microVU recompiler: Upper instructions cannot have valid branch addresses.");
 		return (((prog.IRinfo.curPC + 4)  + (Imm11() * 2)) & progMemMask) * 4;
-	}
-
-	__ri void loadIreg(const xmm& reg, int xyzw)
-	{
-		xMOVSSZX(reg, ptr32[&getVI(REG_I)]);
-		if (!_XYZWss(xyzw)) xSHUF.PS(reg, reg, 0);
 	}
 
 	void init(uint vuIndex);
