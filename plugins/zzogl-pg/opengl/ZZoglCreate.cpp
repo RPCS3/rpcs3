@@ -923,7 +923,6 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 }
 
-extern bool GSclosing;
 void ZeroGS::Destroy(bool bD3D)
 {
 	Delete_Avi_Capture();
@@ -992,7 +991,6 @@ void ZeroGS::Destroy(bool bD3D)
 
 	GLWin.ReleaseContext();
 
-	//if (GSclosing) assert(0);
 	mapGLExtensions.clear();
 }
 

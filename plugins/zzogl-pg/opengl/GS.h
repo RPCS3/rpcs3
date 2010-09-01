@@ -25,7 +25,6 @@
 
 #include "Util.h"
 #include "GifTransfer.h"
-//#include "GLWin.h"
 
 using namespace std;
 
