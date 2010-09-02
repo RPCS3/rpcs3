@@ -65,7 +65,7 @@ public:
 		if (!thisBlock) {
 			listI++;
 			microBlockLink* newBlock = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
-			newBlock->next = NULL;
+			memzero(*newBlock);
 
 			if (blockEnd) {
 				blockEnd->next	= newBlock;
