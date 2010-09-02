@@ -69,28 +69,6 @@ clean:
 
 	dh_clean
 
-install:
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
-
-	### the project build usefull thing in ./bin so directly install
-	### from this directory to the debian pkg directory (skip debian/tmp)
-	# Ubuntu use debian/tmp as default sourcedir...
-	# copy bin into debian tmp
-	mkdir -p debian/tmp
-	cp -fr bin debian/tmp
-	dh_install --sourcedir=debian/tmp
-
-	# install menu and icon
-	cp debian/pcsx2.desktop debian/pcsx2-unstable/usr/share/applications
-	cp debian/pcsx2.xpm debian/pcsx2-unstable/usr/share/pixmaps
-
-	# lintian override
-	dh_lintian
-
 ## Uncomment this, if fglrx driver is installed
 #override_dh_shlibdeps:
 #	dh_shlibdeps -- --ignore-missing-info
