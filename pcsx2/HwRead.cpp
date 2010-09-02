@@ -287,7 +287,8 @@ void __fastcall hwRead128(u32 mem, mem128_t* result )
 	template mem16_t __fastcall hwRead16<pageidx>(u32 mem); \
 	template mem32_t __fastcall hwRead32<pageidx>(u32 mem); \
 	template void __fastcall hwRead64<pageidx>(u32 mem, mem64_t* result ); \
-	template void __fastcall hwRead128<pageidx>(u32 mem, mem128_t* result );
+	template void __fastcall hwRead128<pageidx>(u32 mem, mem128_t* result ); \
+	template mem32_t __fastcall _hwRead32<pageidx, false>(u32 mem);
 
 InstantizeHwRead(0x00);	InstantizeHwRead(0x08);
 InstantizeHwRead(0x01);	InstantizeHwRead(0x09);
