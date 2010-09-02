@@ -90,9 +90,8 @@ public:
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (microBlockLink* linkI = blockList; linkI != NULL; linkI = linkI->next) {
 				if (doConstProp && (linkI->block.pState.vi15 != pState->vi15)) continue;
-				if (linkI->block.pState.simple32[0] != pState->simple32[0]) continue;
-				if (linkI->block.pState.simple32[1] != pState->simple32[1]) continue;
-				if (linkI->block.pState.needExactMatch & 7) continue;
+				if (linkI->block.pState.quick32[0] != pState->quick32[0]) continue;
+				if (linkI->block.pState.quick32[1] != pState->quick32[1]) continue;
 				return &linkI->block;
 			}
 		}

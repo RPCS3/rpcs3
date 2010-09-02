@@ -25,31 +25,33 @@ union regInfo {
 	};
 };
 
-union __aligned16 microRegInfo { // Ordered for Faster Compares
-	struct  
-	{
+// microRegInfo is carefully ordered for faster compares.  The "important" information is
+// housed in a union that is accessed via 'quick32' so that several u8 fields can be compared
+// using a pair of 32-bit equalities.
+// vi15 is only used if microVU constprop is enabled (it is *not* by default).  When constprop
+// is disabled the vi15 field acts as additional padding that is required for 16 byte alignment
+// needed by the xmm compare.
+union __aligned16 microRegInfo {
+	struct {
 		u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
 
-		union
-		{
-			struct
-			{
+		union {
+			struct {
 				u8 needExactMatch;	// If set, block needs an exact match of pipeline state
 				u8 q;
 				u8 p;
-				u8 r;
+				u8 flags;			// clip x2 :: status x2
 				u8 xgkick;
 				u8 viBackUp;		// VI reg number that was written to on branch-delay slot
 				u8 blockType;		// 0 = Normal; 1,2 = Compile one instruction (E-bit/Branch Ending)
 			};
-			u32 simple32[2];
+			u32 quick32[2];
 		};
 	
-		struct
-		{
+		struct {
 			u8 VI[16];
 			regInfo VF[32];
-			u8 flags;			// clip x2 :: status x2
+			u8 r;
 		};
 	};
 	
