@@ -65,7 +65,7 @@ public:
 		if (!thisBlock) {
 			listI++;
 			microBlockLink* newBlock = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
-			memzero(*newBlock);
+			newBlock->next = NULL;
 
 			if (blockEnd) {
 				blockEnd->next	= newBlock;
@@ -158,10 +158,10 @@ struct microProgManager {
 
 struct microVU {
 
-	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
-	__aligned16 u32 clipFlag[4]; // 4 instances of clip flag (used in execution)
-	__aligned16 u32 xmmPQb[4];   // Backup for xmmPQ
-	__aligned16 u32 xmmCTemp[4]; // Backup used in mVUclamp2()
+	__aligned16 u32 macFlag[4];		 // 4 instances of mac  flag (used in execution)
+	__aligned16 u32 clipFlag[4];	 // 4 instances of clip flag (used in execution)
+	__aligned16 u32 xmmCTemp[4];	 // Backup used in mVUclamp2()
+	__aligned16 u32 xmmBackup[8][4]; // Backup for xmm0~xmm7
 
 	u32 index;			// VU Index (VU0 or VU1)
 	u32 cop2;			// VU is in COP2 mode?  (No/Yes)

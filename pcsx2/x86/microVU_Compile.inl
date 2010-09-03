@@ -19,12 +19,12 @@
 // Messages Called at Execution Time...
 //------------------------------------------------------------------
 
-static void __fastcall mVUbadOp0(mV, u32 PC) { Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", PC, mVU->prog.cur->idx); }
-static void __fastcall mVUbadOp1(mV, u32 PC) { Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", PC, mVU->prog.cur->idx); }
-static void __fastcall mVUwarning0(mV)		 { Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", mVU->prog.cur->idx); }
-static void __fastcall mVUwarning1(mV)		 { Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", mVU->prog.cur->idx); }
-static void __fastcall mVUprintPC1(u32 PC)	 { Console.WriteLn("Block Start PC = 0x%04x", PC); }
-static void __fastcall mVUprintPC2(u32 PC)	 { Console.WriteLn("Block End PC   = 0x%04x", PC); }
+static void __fastcall mVUbadOp0(u32 prog, u32 pc)	{ Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", pc, prog); }
+static void __fastcall mVUbadOp1(u32 prog, u32 pc)	{ Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", pc, prog); }
+static void __fastcall mVUwarning0(u32 prog)		{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", prog); }
+static void __fastcall mVUwarning1(u32 prog)		{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", prog); }
+static void __fastcall mVUprintPC1(u32 pc)			{ Console.WriteLn("Block Start PC = 0x%04x", pc); }
+static void __fastcall mVUprintPC2(u32 pc)			{ Console.WriteLn("Block End PC   = 0x%04x", pc); }
 
 //------------------------------------------------------------------
 // Program Range Checking and Setting up Ranges
@@ -170,10 +170,12 @@ static __fi void mVUcheckBadOp(mV) {
 // Prints msg when exiting block early if 1st op was a bad opcode (Dawn of Mana Level 2)
 static __fi void handleBadOp(mV, int count) {
 	if (mVUinfo.isBadOp && count == 0) {
-		xMOV(gprT2, (uptr)mVU);
+		mVUbackupRegs(mVU, true);
+		xMOV(gprT2, mVU->prog.cur->idx);
 		xMOV(gprT3, xPC);
 		if (!isVU1) xCALL(mVUbadOp0);
 		else		xCALL(mVUbadOp1);
+		mVUrestoreRegs(mVU, true);
 	}
 }
 
@@ -313,9 +315,11 @@ void mVUsetCycles(mV) {
 // Prints Start/End PC of blocks executed, for debugging...
 static void mVUdebugPrintBlocks(microVU* mVU, bool isEndPC) {
 	if (mVUdebugNow) {
+		mVUbackupRegs(mVU, true);
 		xMOV(gprT2, xPC);
 		if (isEndPC) xCALL(mVUprintPC2);
 		else		 xCALL(mVUprintPC1);
+		mVUrestoreRegs(mVU, true);
 	}
 }
 
@@ -341,15 +345,19 @@ static void mVUtestCycles(microVU* mVU) {
 		if (isVU0) {
 			// TEST32ItoM((uptr)&mVU->regs().flags, VUFLAG_MFLAGSET);
 			// xFowardJZ32 vu0jmp;
-			// xMOV(gprT2, (uptr)mVU);
+			// mVUbackupRegs(mVU, true);
+			// xMOV(gprT2, mVU->prog.cur->idx);
 			// xCALL(mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
+			// mVUbackupRegs(mVU, true);
 			mVUsavePipelineState(mVU);
 			mVUendProgram(mVU, NULL, 0);
 			// vu0jmp.SetTarget();
 		}
 		else {
-			xMOV(gprT2, (uptr)mVU);
+			mVUbackupRegs(mVU, true);
+			xMOV(gprT2, mVU->prog.cur->idx);
 			xCALL(mVUwarning1);
+			mVUbackupRegs(mVU, true);
 			mVUsavePipelineState(mVU);
 			mVUendProgram(mVU, NULL, 0);
 		}
