@@ -63,7 +63,7 @@ public:
 		{
 			m_buffers[i].Name = wxsFormat(L"%s Formatting Buffer (slot%d)",
 				(sizeof(CharType)==1) ? L"Ascii" : L"Unicode", i);
-			m_buffers[i].MakeRoomFor(512);
+			m_buffers[i].MakeRoomFor(1024);
 			m_buffers[i].ChunkSize = 2048;
 		}
 
@@ -266,6 +266,10 @@ FastFormatUnicode& FastFormatUnicode::Write( const wxChar* fmt, ... )
 	return *this;
 }
 
+bool FastFormatUnicode::IsEmpty() const
+{
+	return ((wxChar&)(*m_dest)[0]) == 0;
+}
 
 // --------------------------------------------------------------------------------------
 //  FastFormatAscii  (implementations)
@@ -309,3 +313,8 @@ FastFormatAscii& FastFormatAscii::Write( const char* fmt, ... )
 	return *this;
 }
 
+
+bool FastFormatAscii::IsEmpty() const
+{
+	return (*m_dest)[0] == 0;
+}

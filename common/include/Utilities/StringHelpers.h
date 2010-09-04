@@ -127,6 +127,8 @@ public:
 	FastFormatAscii& Write( const char* fmt, ... );
 	FastFormatAscii& WriteV( const char* fmt, va_list argptr );
 
+	bool IsEmpty() const;
+
 	const char* c_str() const		{ return m_dest->GetPtr(); }
 	operator const char*() const	{ return m_dest->GetPtr(); }
 
@@ -148,6 +150,8 @@ public:
 	FastFormatUnicode& Write( const wxChar* fmt, ... );
 	FastFormatUnicode& WriteV( const char* fmt, va_list argptr );
 	FastFormatUnicode& WriteV( const wxChar* fmt, va_list argptr );
+
+	bool IsEmpty() const;
 
 	const wxChar* c_str() const		{ return (const wxChar*)m_dest->GetPtr(); }
 	operator const wxChar*() const	{ return (const wxChar*)m_dest->GetPtr(); }

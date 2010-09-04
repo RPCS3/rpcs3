@@ -211,12 +211,12 @@ static __ri void IopHwTraceLog( u32 addr, T val, bool mode )
 
 	switch( sizeof (T) )
 	{
-	case 1: valStr.Write("0x%02x", val); break;
-	case 2: valStr.Write("0x%04x", val); break;
-	case 4: valStr.Write("0x%08x", val); break;
+		case 1: valStr.Write("0x%02x", val); break;
+		case 2: valStr.Write("0x%04x", val); break;
+		case 4: valStr.Write("0x%08x", val); break;
 
-	case 8: valStr.Write("0x%08x.%08x", ((u32*)&val)[1], ((u32*)&val)[0]); break;
-	case 16: ((u128&)val).WriteTo(valStr);
+		case 8: valStr.Write("0x%08x.%08x", ((u32*)&val)[1], ((u32*)&val)[0]); break;
+		case 16: ((u128&)val).WriteTo(valStr);
 	}
 
 	static const char* temp = "%-12s @ 0x%08X/%-16s %s %s";

@@ -289,7 +289,7 @@ static __fi void TESTINT( u8 n, void (*callback)() )
 
 static __fi void _cpuTestInterrupts()
 {
-	if (!dmacRegs.ctrl.DMAE || psHu8(DMAC_ENABLER+2) == 1)
+	if (!dmacRegs.ctrl.DMAE || (psHu8(DMAC_ENABLER+2) & 1))
 	{
 		//Console.Write("DMAC Disabled or suspended");
 		return;
@@ -415,7 +415,7 @@ __fi void _cpuBranchTest_Shared()
 		//if( EEsCycle < -450 )
 		//	Console.WriteLn( " IOP ahead by: %d cycles", -EEsCycle );
 
-		// Experimental and Probably Unnecessry Logic -->
+		// Experimental and Probably Unnecessary Logic -->
 		// Check if the EE already has an exception pending, and if so we shouldn't
 		// waste too much time updating the IOP.  Theory being that the EE and IOP should
 		// run closely in sync during raised exception events.  But in practice it didn't
@@ -502,11 +502,8 @@ __ri void cpuTestINTCInts()
 	cpuRegs.sCycle[30] = cpuRegs.cycle;
 	cpuRegs.eCycle[30] = 4;  //Needs to be 4 to account for bus delays/pipelines etc
 
-	// only set the next branch delta if the exception won't be handled for
-	// the current branch...
-	if( !eeEventTestIsActive )
-		cpuSetNextBranchDelta( 4 );
-	else if(psxCycleEE > 0)
+	cpuSetNextBranchDelta( 4 );
+	if(eeEventTestIsActive && (psxCycleEE > 0))
 	{
 		psxBreak += psxCycleEE;		// record the number of cycles the IOP didn't run.
 		psxCycleEE = 0;
@@ -529,11 +526,8 @@ __fi void cpuTestDMACInts()
 	cpuRegs.sCycle[31] = cpuRegs.cycle;
 	cpuRegs.eCycle[31] = 4;  //Needs to be 4 to account for bus delays/pipelines etc
 
-	// only set the next branch delta if the exception won't be handled for
-	// the current branch...
-	if( !eeEventTestIsActive )
-		cpuSetNextBranchDelta( 4 );
-	else if(psxCycleEE > 0)
+	cpuSetNextBranchDelta( 4 );
+	if(eeEventTestIsActive && (psxCycleEE > 0))
 	{
 		psxBreak += psxCycleEE;		// record the number of cycles the IOP didn't run.
 		psxCycleEE = 0;

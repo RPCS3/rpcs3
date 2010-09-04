@@ -670,7 +670,7 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
 			const char *funcname = irxImportFuncname(libname, index);
 			irxDEBUG debug = irxImportDebug(libname, index);
 
-			if (SysTrace.IOP.Bios.IsActive()) {
+			if (SysTraceActive(IOP.Bios)) {
 				xMOV(ecx, (uptr)libname);
 				xMOV(edx, index);
 				xPUSH((uptr)funcname);

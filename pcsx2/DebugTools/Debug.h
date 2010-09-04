@@ -342,17 +342,19 @@ struct SysConsoleLogPack
 extern SysTraceLogPack SysTrace;
 extern SysConsoleLogPack SysConsole;
 
+extern void __Log( const char* fmt, ... );
 
 // Helper macro for cut&paste.  Note that we intentionally use a top-level *inline* bitcheck
 // against Trace.Enabled, to avoid extra overhead in Debug builds when logging is disabled.
 // (specifically this allows debug builds to skip havingto resolve all the parameters being
 //  passed into the function)
-#define macTrace(trace)	SysTrace.trace.IsActive() && SysTrace.trace.Write
-
-
 #ifdef PCSX2_DEVBUILD
-
-extern void __Log( const char* fmt, ... );
+#	define SysTraceActive(trace)	SysTrace.trace.IsActive()
+#	define macTrace(trace)			SysTraceActive(trace) && SysTrace.trace.Write
+#else
+#	define SysTraceActive(trace)	(false)
+#	define macTrace(trace)
+#endif
 
 #define SIF_LOG			macTrace(SIF)
 
@@ -385,45 +387,9 @@ extern void __Log( const char* fmt, ... );
 #define GPU_LOG			macTrace(IOP.GPU)
 #define CDVD_LOG		macTrace(IOP.CDVD)
 
-#else // PCSX2_DEVBUILD
 
-#define CPU_LOG		0&&
-#define MEM_LOG		0&&
-#define HW_LOG		0&&
-#define DMA_LOG		0&&
-#define BIOS_LOG	0&&
-#define VU0_LOG		0&&
-#define COP0_LOG	0&&
-#define UnknownHW_LOG 0&&
-#define VIF_LOG		0&&
-#define SPR_LOG		0&&
-#define GIF_LOG		0&&
-#define SIF_LOG		0&&
-#define IPU_LOG		0&&
-#define VUM_LOG		0&&
-#define VifCodeLog	0&&
-
-#define PSXCPU_LOG  0&&
-#define PSXMEM_LOG  0&&
-#define PSXHW_LOG   0&&
-#define PSXUnkHW_LOG   0&&
-#define PSXBIOS_LOG 0&&
-#define PSXDMA_LOG  0&&
-
-#define PAD_LOG  0&&
-#define CDR_LOG  0&&
-#define CDVD_LOG  0&&
-#define GPU_LOG  0&&
-#define PSXCNT_LOG 0&&
-#define EECNT_LOG 0&&
-
-#define EMU_LOG 0&&
-#define CACHE_LOG 0&&
-#define MEMCARDS_LOG 0&&
-#endif
-
-#define ELF_LOG			SysConsole.ELF.IsActive() && SysConsole.ELF.Write
-#define eeRecPerfLog	SysConsole.eeRecPerf.IsActive() && SysConsole.eeRecPerf
-#define eeConLog		SysConsole.eeConsole.IsActive() && SysConsole.eeConsole.Write
-#define eeDeci2Log		SysConsole.deci2.IsActive() && SysConsole.deci2.Write
-#define iopConLog		SysConsole.iopConsole.IsActive() && SysConsole.iopConsole.Write
+#define ELF_LOG			SysConsole.ELF.IsActive()		&& SysConsole.ELF.Write
+#define eeRecPerfLog	SysConsole.eeRecPerf.IsActive()	&& SysConsole.eeRecPerf
+#define eeConLog		SysConsole.eeConsole.IsActive()	&& SysConsole.eeConsole.Write
+#define eeDeci2Log		SysConsole.deci2.IsActive()		&& SysConsole.deci2.Write
+#define iopConLog		SysConsole.iopConsole.IsActive()&& SysConsole.iopConsole.Write

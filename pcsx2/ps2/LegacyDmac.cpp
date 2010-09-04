@@ -290,42 +290,7 @@ __fi u32 dmacRead32( u32 mem )
 template< uint page >
 __fi bool dmacWrite32( u32 mem, mem32_t& value )
 {
-	if (IsPageFor(EEMemoryMap::VIF0_Start) && (mem >= EEMemoryMap::VIF0_Start))
-	{
-		return (mem >= EEMemoryMap::VIF1_Start)
-			? vifWrite32<1>(mem, value)
-			: vifWrite32<0>(mem, value);
-	}
-
 	iswitch(mem) {
-	icase(GIF_CTRL)
-	{
-		psHu32(mem) = value & 0x8;
-
-		if (value & 0x1)
-			gsGIFReset();
-		
-		if (value & 8)
-			gifRegs.stat.PSE = true;
-		else
-			gifRegs.stat.PSE = false;
-
-		return false;
-	}
-
-	icase(GIF_MODE)
-	{
-		// need to set GIF_MODE (hamster ball)
-		gifRegs.mode.write(value);
-
-		// set/clear bits 0 and 2 as per the GIF_MODE value.
-		const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
-		psHu32(GIF_STAT) &= ~bitmask;
-		psHu32(GIF_STAT) |= (u32)value & bitmask;
-
-		return false;
-	}
-
 	icase(D0_CHCR) // dma0 - vif0
 	{
 		DMA_LOG("VIF0dma EXECUTE, value=0x%x", value);
