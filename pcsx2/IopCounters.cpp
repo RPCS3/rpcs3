@@ -391,7 +391,7 @@ void psxRcntUpdate()
 	int i;
 	//u32 change = 0;
 
-	g_psxNextBranchCycle = psxRegs.cycle + 32;
+	g_iopNextEventCycle = psxRegs.cycle + 32;
 
 	psxNextCounter = 0x7fffffff;
 	psxNextsCounter = psxRegs.cycle;

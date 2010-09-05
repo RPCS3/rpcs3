@@ -375,7 +375,7 @@ static void intReset()
 static void intEventTest()
 {
 	// Perform counters, ints, and IOP updates:
-	_cpuBranchTest_Shared();
+	_cpuEventTest_Shared();
 }
 
 static void intExecute()

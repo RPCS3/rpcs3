@@ -55,7 +55,7 @@ void iDumpPsxRegisters(u32 startpc, u32 temp)
 
 	for(i = 0; i < 34; i+=2) __Log("%spsx%s: %x %x", pstr, disRNameGPR[i], psxRegs.GPR.r[i], psxRegs.GPR.r[i+1]);
 
-	DbgCon.WriteLn("%scycle: %x %x %x; counters %x %x", pstr, psxRegs.cycle, g_psxNextBranchCycle, EEsCycle,
+	DbgCon.WriteLn("%scycle: %x %x %x; counters %x %x", pstr, psxRegs.cycle, g_iopNextEventCycle, EEsCycle,
 		psxNextsCounter, psxNextCounter);
 
 	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 2) + hw_dma(2).desc());
@@ -109,7 +109,7 @@ void iDumpRegisters(u32 startpc, u32 temp)
 	__Log("%svfACC: %x %x %x %x", pstr, VU0.ACC.UL[3], VU0.ACC.UL[2], VU0.ACC.UL[1], VU0.ACC.UL[0]);
 	__Log("%sLO: %x_%x_%x_%x, HI: %x_%x_%x_%x", pstr, cpuRegs.LO.UL[3], cpuRegs.LO.UL[2], cpuRegs.LO.UL[1], cpuRegs.LO.UL[0],
 	cpuRegs.HI.UL[3], cpuRegs.HI.UL[2], cpuRegs.HI.UL[1], cpuRegs.HI.UL[0]);
-	__Log("%sCycle: %x %x, Count: %x", pstr, cpuRegs.cycle, g_nextBranchCycle, cpuRegs.CP0.n.Count);
+	__Log("%sCycle: %x %x, Count: %x", pstr, cpuRegs.cycle, g_nextEventCycle, cpuRegs.CP0.n.Count);
 
 	iDumpPsxRegisters(psxRegs.pc, temp);
 

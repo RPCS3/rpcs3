@@ -316,7 +316,7 @@ void recBranchCall( void (*func)() )
 	// to the current cpu cycle.
 
 	MOV32MtoR( EAX, (uptr)&cpuRegs.cycle );
-	MOV32RtoM( (uptr)&g_nextBranchCycle, EAX );
+	MOV32RtoM( (uptr)&g_nextEventCycle, EAX );
 
 	recCall(func);
 	branch = 2;
@@ -350,7 +350,7 @@ static DynGenFunc* ExitRecompiledCode	= NULL;
 
 static void recEventTest()
 {
-	_cpuBranchTest_Shared();
+	_cpuEventTest_Shared();
 }
 
 // parameters:
@@ -1111,11 +1111,11 @@ static void iBranchTest(u32 newpc)
 	// Check the Event scheduler if our "cycle target" has been reached.
 	// Equiv code to:
 	//    cpuRegs.cycle += blockcycles;
-	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
+	//    if( cpuRegs.cycle > g_nextEventCycle ) { DoEvents(); }
 
 	if (EmuConfig.Speedhacks.WaitLoop && s_nBlockFF && newpc == s_branchTo)
 	{
-		xMOV(eax, ptr32[&g_nextBranchCycle]);
+		xMOV(eax, ptr32[&g_nextEventCycle]);
 		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
 		xCMOVS(eax, ptr32[&cpuRegs.cycle]);
@@ -1128,7 +1128,7 @@ static void iBranchTest(u32 newpc)
 		xMOV(eax, ptr[&cpuRegs.cycle]);
 		xADD(eax, eeScaleBlockCycles());
 		xMOV(ptr[&cpuRegs.cycle], eax); // update cycles
-		xSUB(eax, ptr[&g_nextBranchCycle]);
+		xSUB(eax, ptr[&g_nextEventCycle]);
 
 		if (newpc == 0xffffffff)
 			xJS( DispatcherReg );

@@ -51,10 +51,10 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 		if (psxCounters[6].CycleT < psxNextCounter)
 			psxNextCounter = psxCounters[6].CycleT;
 
-		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter)
+		if((g_iopNextEventCycle - psxNextsCounter) > (u32)psxNextCounter)
 		{
-			//DevCon.Warning("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", g_psxNextBranchCycle, psxNextsCounter + psxNextCounter, g_psxNextBranchCycle, psxNextsCounter, (g_psxNextBranchCycle - psxNextsCounter), psxNextCounter);
-			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
+			//DevCon.Warning("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", g_iopNextEventCycle, psxNextsCounter + psxNextCounter, g_iopNextEventCycle, psxNextsCounter, (g_iopNextEventCycle - psxNextsCounter), psxNextCounter);
+			g_iopNextEventCycle = psxNextsCounter + psxNextCounter;
 		}
 	}
 

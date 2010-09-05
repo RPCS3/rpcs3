@@ -93,7 +93,7 @@ static __fi void _rcntSet( int cntidx )
 	if (c < nextCounter)
 	{
 		nextCounter = c;
-		cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
+		cpuSetNextEvent( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
 	}
 
 	// Ignore target diff if target is currently disabled.
@@ -111,7 +111,7 @@ static __fi void _rcntSet( int cntidx )
 		if (c < nextCounter)
 		{
 			nextCounter = c;
-			cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
+			cpuSetNextEvent( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
 		}
 	}
 }
@@ -419,7 +419,7 @@ __fi void rcntUpdate_hScanline()
 {
 	if( !cpuTestCycle( hsyncCounter.sCycle, hsyncCounter.CycleT ) ) return;
 
-	//iopBranchAction = 1;
+	//iopEventAction = 1;
 	if (hsyncCounter.Mode & MODE_HBLANK) { //HBLANK Start
 		rcntStartGate(false, hsyncCounter.sCycle);
 		psxCheckStartGate16(0);
@@ -890,6 +890,6 @@ void SaveStateBase::rcntFreeze()
 		for( int i=0; i<4; i++ )
 			_rcntSetGate( i );
 
-		iopBranchAction = 1;	// probably not needed but won't hurt anything either.
+		iopEventAction = 1;	// probably not needed but won't hurt anything either.
 	}
 }

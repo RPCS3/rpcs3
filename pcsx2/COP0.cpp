@@ -38,7 +38,7 @@ __ri void cpuUpdateOperationMode() {
 void __fastcall WriteCP0Status(u32 value) {
 	cpuRegs.CP0.n.Status.val = value;
     cpuUpdateOperationMode();
-    cpuSetNextBranchDelta(4);
+    cpuSetNextEventDelta(4);
 }
 
 void MapTLB(int i)
@@ -534,7 +534,7 @@ void ERET() {
 		cpuRegs.CP0.n.Status.b.EXL = 0;
 	}
 	cpuUpdateOperationMode();
-	cpuSetNextBranchDelta(4);
+	cpuSetNextEventDelta(4);
 	intSetBranch();
 }
 
@@ -543,7 +543,7 @@ void DI() {
 		cpuRegs.CP0.n.Status.b.ERL || (cpuRegs.CP0.n.Status.b.KSU == 0)) {
 		cpuRegs.CP0.n.Status.b.EIE = 0;
 		// IRQs are disabled so no need to do a cpu exception/event test...
-		//cpuSetNextBranchDelta();
+		//cpuSetNextEventDelta();
 	}
 }
 
@@ -552,7 +552,7 @@ void EI() {
 		cpuRegs.CP0.n.Status.b.ERL || (cpuRegs.CP0.n.Status.b.KSU == 0)) {
 		cpuRegs.CP0.n.Status.b.EIE = 1;
 		// schedule an event test, which will check for and raise pending IRQs.
-		cpuSetNextBranchDelta(4);
+		cpuSetNextEventDelta(4);
 	}
 }
 

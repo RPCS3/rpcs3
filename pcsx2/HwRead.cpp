@@ -27,8 +27,8 @@ static __fi void IntCHackCheck()
 {
 	// Sanity check: To protect from accidentally "rewinding" the cyclecount
 	// on the few times nextBranchCycle can be behind our current cycle.
-	s32 diff = g_nextBranchCycle - cpuRegs.cycle;
-	if( diff > 0 ) cpuRegs.cycle = g_nextBranchCycle;
+	s32 diff = g_nextEventCycle - cpuRegs.cycle;
+	if( diff > 0 ) cpuRegs.cycle = g_nextEventCycle;
 }
 
 static const uint HwF_VerboseConLog	= 1<<0;
@@ -65,7 +65,7 @@ mem32_t __fastcall _hwRead32(u32 mem)
 			DevCon.WriteLn( Color_Cyan, "Reading 32-bit FIFO data" );
 
 			u128 out128;
-			_hwRead128<page>(mem, &out128);
+			_hwRead128<page>(mem & ~0x0f, &out128);
 			return out128._u32[(mem >> 2) & 0x3];
 		}
 		break;
@@ -221,7 +221,7 @@ static void _hwRead64(u32 mem, mem64_t* result )
 			DevCon.WriteLn( Color_Cyan, "Reading 64-bit FIFO data (%s 64 bits discarded)", wordpart ? "upper" : "lower" );
 
 			u128 out128;
-			_hwRead128<page>(mem, &out128);
+			_hwRead128<page>(mem & ~0x0f, &out128);
 			*result = out128._u64[wordpart];
 		}
 		return;

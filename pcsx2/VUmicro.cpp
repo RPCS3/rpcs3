@@ -33,7 +33,7 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 
 		// Let VUs run behind EE instead of ahead
 		if (stat & test) {
-			cpuSetNextBranchDelta((s+c)*2);
+			cpuSetNextEventDelta((s+c)*2);
 			m_lastEEcycles = cpuRegs.cycle + (s*2);
 		}
 	}
@@ -43,11 +43,11 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 			delta >>= 1;	// Divide by 2 (unsigned)
 			Execute(delta);	// Execute the time since the last call
 			if (stat & test) {
-				cpuSetNextBranchDelta(c*2);
+				cpuSetNextEventDelta(c*2);
 				m_lastEEcycles = cpuRegs.cycle;
 			}
 		}
-		else cpuSetNextBranchDelta(-delta); // Haven't caught-up from kick start
+		else cpuSetNextEventDelta(-delta); // Haven't caught-up from kick start
 	}
 }
 
@@ -63,7 +63,7 @@ void __fastcall BaseVUmicroCPU::ExecuteBlockJIT(BaseVUmicroCPU* cpu) {
 		cpu->Execute(c);	// Execute VU
 		if (stat & test) {
 			cpu->m_lastEEcycles+=(c*2);
-			cpuSetNextBranchDelta(c*2);
+			cpuSetNextEventDelta(c*2);
 		}
 	}
 }
@@ -80,7 +80,7 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 		// If the VU0 program didn't finish then we'll want to finish it up
 		// pretty soon.  This fixes vmhacks in some games (Naruto Ultimate Ninja 2)
 		if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
-			cpuSetNextBranchDelta( 192 ); // fixme : ideally this should be higher, like 512 or so.
+			cpuSetNextEventDelta( 192 ); // fixme : ideally this should be higher, like 512 or so.
 	}
 	else {
 		Execute(vu0RunCycles);
@@ -89,7 +89,7 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 		// This helps keep the EE and VU0 in sync.
 		// Check Silver Surfer. Currently has SPS varying with different branch deltas set below.
 		if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
-			cpuSetNextBranchDelta( 768 );
+			cpuSetNextEventDelta( 768 );
 	}
 }
 
