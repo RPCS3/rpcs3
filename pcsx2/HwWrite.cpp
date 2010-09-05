@@ -218,8 +218,6 @@ void __fastcall hwWrite32( u32 mem, u32 value )
 template< uint page >
 void __fastcall _hwWrite8(u32 mem, u8 value)
 {
-	pxAssert( (mem & 0x03) == 0 );
-
 	iswitch (mem)
 	icase(SIO_TXFIFO)
 	{
@@ -247,7 +245,7 @@ void __fastcall _hwWrite8(u32 mem, u8 value)
 		return;
 	}
 
-	u32 merged = _hwRead32<page,false>(mem);
+	u32 merged = _hwRead32<page,false>(mem & ~0x03);
 	((u8*)&merged)[mem & 0x3] = value;
 
 	_hwWrite32<page>(mem & ~0x03, merged);
@@ -265,7 +263,7 @@ void __fastcall _hwWrite16(u32 mem, u16 value)
 {
 	pxAssume( (mem & 0x01) == 0 );
 
-	u32 merged = _hwRead32<page,false>(mem);
+	u32 merged = _hwRead32<page,false>(mem & ~0x03);
 	((u16*)&merged)[(mem>>1) & 0x1] = value;
 
 	hwWrite32<page>(mem & ~0x03, merged);

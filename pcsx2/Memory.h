@@ -39,14 +39,6 @@ static __fi void ZeroQWC( u128& dest )
 	_mm_store_ps( (float*)&dest, _mm_setzero_ps() );
 }
 
-// Various useful locations
-#define sif0dma ((DMACh*)&eeHw[0xc000])
-#define sif1dma ((DMACh*)&eeHw[0xc400])
-#define sif2dma ((DMACh*)&eeHw[0xc800])
-
-#define ipu0dma ((DMACh *)&eeHw[0xb000])
-#define ipu1dma ((DMACh *)&eeHw[0xb400])
-
 #define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 
 #define psHs8(mem)	(*(s8 *)&eeHw[(mem) & 0xffff])

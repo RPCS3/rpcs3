@@ -17,6 +17,7 @@
 #include "Common.h"
 
 #include "IPU.h"
+#include "IPUdma.h"
 #include "yuv2rgb.h"
 #include "mpeg2lib/Mpeg.h"
 
@@ -27,8 +28,7 @@
 
 static __fi void IPU_INT0_FROM()
 {
-	extern void ipu0Interrupt();	// defined in IPUdma.cpp
-	if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR) ipu0Interrupt();
+	if (ipu0dma.qwc > 0 && ipu0dma.chcr.STR) ipu0Interrupt();
 }
 
 tIPU_cmd ipu_cmd;
@@ -60,14 +60,14 @@ u8* readbits = _readbits;		// always can decrement by one 1qw
 
 __fi void IPUProcessInterrupt()
 {
-	if (ipuRegs->ctrl.BUSY && g_BP.IFC) IPUWorker();
+	if (ipuRegs.ctrl.BUSY && g_BP.IFC) IPUWorker();
 }
 
 /////////////////////////////////////////////////////////
 // Register accesses (run on EE thread)
 int ipuInit()
 {
-	memzero(*ipuRegs);
+	memzero(ipuRegs);
 	memzero(g_BP);
 	memzero(decoder);
 
@@ -213,27 +213,27 @@ __fi u32 ipuRead32(u32 mem)
 	switch (mem)
 	{
 		ipucase(IPU_CTRL): // IPU_CTRL
-			ipuRegs->ctrl.IFC = g_BP.IFC;
-			ipuRegs->ctrl.CBP = coded_block_pattern;
+			ipuRegs.ctrl.IFC = g_BP.IFC;
+			ipuRegs.ctrl.CBP = coded_block_pattern;
 
-			if (!ipuRegs->ctrl.BUSY)
-				IPU_LOG("read32: IPU_CTRL=0x%08X %x", ipuRegs->ctrl._u32, cpuRegs.pc);
+			if (!ipuRegs.ctrl.BUSY)
+				IPU_LOG("read32: IPU_CTRL=0x%08X", ipuRegs.ctrl._u32);
 
-		return ipuRegs->ctrl._u32;
+		return ipuRegs.ctrl._u32;
 
 		ipucase(IPU_BP): // IPU_BP
-			ipuRegs->ipubp = g_BP.BP & 0x7f;
-			ipuRegs->ipubp |= g_BP.IFC << 8;
-			ipuRegs->ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
+			ipuRegs.ipubp = g_BP.BP & 0x7f;
+			ipuRegs.ipubp |= g_BP.IFC << 8;
+			ipuRegs.ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
 
-			IPU_LOG("read32: IPU_BP=0x%08X", ipuRegs->ipubp);
-		return ipuRegs->ipubp;
+			IPU_LOG("read32: IPU_BP=0x%08X", ipuRegs.ipubp);
+		return ipuRegs.ipubp;
 
 		default:
-			IPU_LOG("read32: Addr=0x%x Value = 0x%08X", mem, *(u32*)(((u8*)ipuRegs) + mem));
+			IPU_LOG("read32: Addr=0x%08X Value = 0x%08X", mem, psHu32(IPU_CMD + mem));
 	}
 
-	return *(u32*)(((u8*)ipuRegs) + mem);
+	return psHu32(IPU_CMD + mem);
 }
 
 __fi u64 ipuRead64(u32 mem)
@@ -249,8 +249,8 @@ __fi u64 ipuRead64(u32 mem)
 	switch (mem)
 	{
 		ipucase(IPU_CMD): // IPU_CMD
-			if (ipuRegs->cmd.DATA & 0xffffff)
-				IPU_LOG("read64: IPU_CMD=BUSY=%x, DATA=%08X", ipuRegs->cmd.BUSY ? 1 : 0, ipuRegs->cmd.DATA);
+			if (ipuRegs.cmd.DATA & 0xffffff)
+				IPU_LOG("read64: IPU_CMD=BUSY=%x, DATA=%08X", ipuRegs.cmd.BUSY ? 1 : 0, ipuRegs.cmd.DATA);
 			break;
 
 		ipucase(IPU_CTRL):
@@ -262,14 +262,14 @@ __fi u64 ipuRead64(u32 mem)
 			break;
 
 		ipucase(IPU_TOP): // IPU_TOP
-			IPU_LOG("read64: IPU_TOP=%x,  bp = %d", ipuRegs->top, g_BP.BP);
+			IPU_LOG("read64: IPU_TOP=%x,  bp = %d", ipuRegs.top, g_BP.BP);
 			break;
 
 		default:
 			IPU_LOG("read64: Unknown=%x", mem);
 			break;
 	}
-	return *(u64*)(((u8*)ipuRegs) + mem);
+	return psHu64(IPU_CMD + mem);
 }
 
 void ipuSoftReset()
@@ -278,10 +278,10 @@ void ipuSoftReset()
 
 	coded_block_pattern = 0;
 
-	ipuRegs->ctrl.reset();
-	ipuRegs->top = 0;
+	ipuRegs.ctrl.reset();
+	ipuRegs.top = 0;
 	ipu_cmd.clear();
-	ipuRegs->cmd.BUSY = 0;
+	ipuRegs.cmd.BUSY = 0;
 
 	g_BP.BP = 0;
 	g_BP.FP = 0;
@@ -308,14 +308,14 @@ __fi bool ipuWrite32(u32 mem, u32 value)
 		ipucase(IPU_CTRL): // IPU_CTRL
             // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
             // minus the reserved bits. (18-19; 27-29) [0x47f30000]
-			ipuRegs->ctrl.write(value);
-			if (ipuRegs->ctrl.IDP == 3)
+			ipuRegs.ctrl.write(value);
+			if (ipuRegs.ctrl.IDP == 3)
 			{
 				Console.WriteLn("IPU Invalid Intra DC Precision, switching to 9 bits");
-				ipuRegs->ctrl.IDP = 1;
+				ipuRegs.ctrl.IDP = 1;
 			}
 
-			if (ipuRegs->ctrl.RST) ipuSoftReset(); // RESET
+			if (ipuRegs.ctrl.RST) ipuSoftReset(); // RESET
 
 			IPU_LOG("write32: IPU_CTRL=0x%08X", value);
 		return false;
@@ -357,8 +357,8 @@ static void ipuBCLR(u32 val)
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
 	//g_BP.bufferhasnew = 0;
-	ipuRegs->ctrl.BUSY = 0;
-	ipuRegs->cmd.BUSY = 0;
+	ipuRegs.ctrl.BUSY = 0;
+	ipuRegs.cmd.BUSY = 0;
 	memzero(_readbits);
 	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X", g_BP.BP);
 }
@@ -373,14 +373,14 @@ static bool ipuIDEC(u32 val, bool resume)
 		g_BP.BP += idec.FB;//skip FB bits
 
 	//from IPU_CTRL
-		ipuRegs->ctrl.PCT = I_TYPE; //Intra DECoding;)
+		ipuRegs.ctrl.PCT = I_TYPE; //Intra DECoding;)
 
-		decoder.coding_type			= ipuRegs->ctrl.PCT;
-		decoder.mpeg1				= ipuRegs->ctrl.MP1;
-		decoder.q_scale_type		= ipuRegs->ctrl.QST;
-		decoder.intra_vlc_format	= ipuRegs->ctrl.IVF;
-		decoder.scantype			= ipuRegs->ctrl.AS;
-		decoder.intra_dc_precision	= ipuRegs->ctrl.IDP;
+		decoder.coding_type			= ipuRegs.ctrl.PCT;
+		decoder.mpeg1				= ipuRegs.ctrl.MP1;
+		decoder.q_scale_type		= ipuRegs.ctrl.QST;
+		decoder.intra_vlc_format	= ipuRegs.ctrl.IVF;
+		decoder.scantype			= ipuRegs.ctrl.AS;
+		decoder.intra_dc_precision	= ipuRegs.ctrl.IDP;
 
 	//from IDEC value
 		decoder.quantizer_scale		= idec.QSC;
@@ -409,11 +409,11 @@ static __fi bool ipuBDEC(u32 val, bool resume)
 
 	g_BP.BP += bdec.FB;//skip FB bits
 		decoder.coding_type			= I_TYPE;
-		decoder.mpeg1				= ipuRegs->ctrl.MP1;
-		decoder.q_scale_type		= ipuRegs->ctrl.QST;
-		decoder.intra_vlc_format	= ipuRegs->ctrl.IVF;
-		decoder.scantype			= ipuRegs->ctrl.AS;
-		decoder.intra_dc_precision	= ipuRegs->ctrl.IDP;
+		decoder.mpeg1				= ipuRegs.ctrl.MP1;
+		decoder.q_scale_type		= ipuRegs.ctrl.QST;
+		decoder.intra_vlc_format	= ipuRegs.ctrl.IVF;
+		decoder.scantype			= ipuRegs.ctrl.AS;
+		decoder.intra_dc_precision	= ipuRegs.ctrl.IDP;
 
 	//from BDEC value
 		decoder.quantizer_scale		= decoder.q_scale_type ? non_linear_quantizer_scale [bdec.QSC] : bdec.QSC << 1;
@@ -433,7 +433,7 @@ static bool __fastcall ipuVDEC(u32 val)
 	switch (ipu_cmd.pos[0])
 	{
 		case 0:
-			ipuRegs->cmd.DATA = 0;
+			ipuRegs.cmd.DATA = 0;
 			if (!getBits32((u8*)&decoder.bitstream_buf, 0)) return false;
 
 			decoder.bitstream_bits = -16;
@@ -442,22 +442,22 @@ static bool __fastcall ipuVDEC(u32 val)
 			switch ((val >> 26) & 3)
 			{
 				case 0://Macroblock Address Increment
-					decoder.mpeg1 = ipuRegs->ctrl.MP1;
-					ipuRegs->cmd.DATA = get_macroblock_address_increment();
+					decoder.mpeg1 = ipuRegs.ctrl.MP1;
+					ipuRegs.cmd.DATA = get_macroblock_address_increment();
 					break;
 
 				case 1://Macroblock Type
 					decoder.frame_pred_frame_dct = 1;
-					decoder.coding_type = ipuRegs->ctrl.PCT;
-					ipuRegs->cmd.DATA = get_macroblock_modes();
+					decoder.coding_type = ipuRegs.ctrl.PCT;
+					ipuRegs.cmd.DATA = get_macroblock_modes();
 					break;
 
 				case 2://Motion Code
-					ipuRegs->cmd.DATA = get_motion_delta(0);
+					ipuRegs.cmd.DATA = get_motion_delta(0);
 					break;
 
 				case 3://DMVector
-					ipuRegs->cmd.DATA = get_dmv();
+					ipuRegs.cmd.DATA = get_dmv();
 					break;
 			}
 
@@ -469,21 +469,21 @@ static bool __fastcall ipuVDEC(u32 val)
 				ReorderBitstream();
 			}
 
-			ipuRegs->cmd.DATA = (ipuRegs->cmd.DATA & 0xFFFF) | ((decoder.bitstream_bits + 16) << 16);
-			ipuRegs->ctrl.ECD = (ipuRegs->cmd.DATA == 0);
+			ipuRegs.cmd.DATA = (ipuRegs.cmd.DATA & 0xFFFF) | ((decoder.bitstream_bits + 16) << 16);
+			ipuRegs.ctrl.ECD = (ipuRegs.cmd.DATA == 0);
 
 		case 1:
-			if (!getBits32((u8*)&ipuRegs->top, 0))
+			if (!getBits32((u8*)&ipuRegs.top, 0))
 			{
 				ipu_cmd.pos[0] = 1;
 				return false;
 			}
 
-			BigEndian(ipuRegs->top, ipuRegs->top);
+			BigEndian(ipuRegs.top, ipuRegs.top);
 
 			IPU_LOG("VDEC command data 0x%x(0x%x). Skip 0x%X bits/Table=%d (%s), pct %d",
-			        ipuRegs->cmd.DATA, ipuRegs->cmd.DATA >> 16, val & 0x3f, (val >> 26) & 3, (val >> 26) & 1 ?
-			        ((val >> 26) & 2 ? "DMV" : "MBT") : (((val >> 26) & 2 ? "MC" : "MBAI")), ipuRegs->ctrl.PCT);
+			        ipuRegs.cmd.DATA, ipuRegs.cmd.DATA >> 16, val & 0x3f, (val >> 26) & 3, (val >> 26) & 1 ?
+			        ((val >> 26) & 2 ? "DMV" : "MBT") : (((val >> 26) & 2 ? "MC" : "MBAI")), ipuRegs.ctrl.PCT);
 			return true;
 
 			jNO_DEFAULT
@@ -494,12 +494,12 @@ static bool __fastcall ipuVDEC(u32 val)
 
 static __fi bool ipuFDEC(u32 val)
 {
-	if (!getBits32((u8*)&ipuRegs->cmd.DATA, 0)) return false;
+	if (!getBits32((u8*)&ipuRegs.cmd.DATA, 0)) return false;
 
-	BigEndian(ipuRegs->cmd.DATA, ipuRegs->cmd.DATA);
-	ipuRegs->top = ipuRegs->cmd.DATA;
+	BigEndian(ipuRegs.cmd.DATA, ipuRegs.cmd.DATA);
+	ipuRegs.top = ipuRegs.cmd.DATA;
 
-	IPU_LOG("FDEC read: 0x%08x", ipuRegs->top);
+	IPU_LOG("FDEC read: 0x%08x", ipuRegs.top);
 
 	return true;
 }
@@ -967,10 +967,10 @@ u8 __fastcall getBits8(u8 *address, u32 advance)
 void IPUCMD_WRITE(u32 val)
 {
 	// don't process anything if currently busy
-	if (ipuRegs->ctrl.BUSY) Console.WriteLn("IPU BUSY!"); // wait for thread
+	if (ipuRegs.ctrl.BUSY) Console.WriteLn("IPU BUSY!"); // wait for thread
 
-	ipuRegs->ctrl.ECD = 0;
-	ipuRegs->ctrl.SCD = 0; //clear ECD/SCD
+	ipuRegs.ctrl.ECD = 0;
+	ipuRegs.ctrl.SCD = 0; //clear ECD/SCD
 	ipu_cmd.clear();
 	ipu_cmd.current = val;
 
@@ -988,17 +988,17 @@ void IPUCMD_WRITE(u32 val)
 			// check if enough data in queue
 			if (ipuVDEC(val)) return;
 
-			ipuRegs->cmd.BUSY = 0x80000000;
-			ipuRegs->topbusy = 0x80000000;
+			ipuRegs.cmd.BUSY = 0x80000000;
+			ipuRegs.topbusy = 0x80000000;
 			break;
 
 		case SCE_IPU_FDEC:
-			IPU_LOG("FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x, %x",
-			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, g_BP.FP, ipu1dma->chcr._u32, cpuRegs.pc);
+			IPU_LOG("FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x",
+			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, g_BP.FP, ipu1dma.chcr._u32);
 			g_BP.BP += val & 0x3F;
 			if (ipuFDEC(val)) return;
-			ipuRegs->cmd.BUSY = 0x80000000;
-			ipuRegs->topbusy = 0x80000000;
+			ipuRegs.cmd.BUSY = 0x80000000;
+			ipuRegs.topbusy = 0x80000000;
 			break;
 
 		case SCE_IPU_SETTH:
@@ -1042,58 +1042,58 @@ void IPUCMD_WRITE(u32 val)
 				return;
 			}
 
-			ipuRegs->topbusy = 0x80000000;
+			ipuRegs.topbusy = 0x80000000;
 			break;
 
 		case SCE_IPU_BDEC:
 			if (ipuBDEC(val, false))
 			{
 				IPU_INT0_FROM();
-				if (ipuRegs->ctrl.SCD || ipuRegs->ctrl.ECD) hwIntcIrq(INTC_IPU);
+				if (ipuRegs.ctrl.SCD || ipuRegs.ctrl.ECD) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			else
 			{
-				ipuRegs->topbusy = 0x80000000;
+				ipuRegs.topbusy = 0x80000000;
 			}
 			break;
 	}
 
 	// have to resort to the thread
-	ipuRegs->ctrl.BUSY = 1;
-	if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+	ipuRegs.ctrl.BUSY = 1;
+	if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 }
 
 void IPUWorker()
 {
-	pxAssert(ipuRegs->ctrl.BUSY);
+	pxAssert(ipuRegs.ctrl.BUSY);
 
 	switch (ipu_cmd.CMD)
 	{
 		case SCE_IPU_VDEC:
 			if (!ipuVDEC(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
-			ipuRegs->cmd.BUSY = 0;
-			ipuRegs->topbusy = 0;
+			ipuRegs.cmd.BUSY = 0;
+			ipuRegs.topbusy = 0;
 			break;
 
 		case SCE_IPU_FDEC:
 			if (!ipuFDEC(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
-			ipuRegs->cmd.BUSY = 0;
-			ipuRegs->topbusy = 0;
+			ipuRegs.cmd.BUSY = 0;
+			ipuRegs.topbusy = 0;
 			break;
 
 		case SCE_IPU_SETIQ:
 			if (!ipuSETIQ(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -1101,7 +1101,7 @@ void IPUWorker()
 		case SCE_IPU_SETVQ:
 			if (!ipuSETVQ(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -1109,7 +1109,7 @@ void IPUWorker()
 		case SCE_IPU_CSC:
 			if (!ipuCSC(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			IPU_INT0_FROM();
@@ -1118,7 +1118,7 @@ void IPUWorker()
 		case SCE_IPU_PACK:
 			if (!ipuPACK(ipu_cmd.current))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 			break;
@@ -1126,14 +1126,14 @@ void IPUWorker()
 		case SCE_IPU_IDEC:
 			if (!ipuIDEC(ipu_cmd.current, true))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
-			ipuRegs->ctrl.OFC = 0;
-			ipuRegs->ctrl.BUSY = 0;
-			ipuRegs->topbusy = 0;
-			ipuRegs->cmd.BUSY = 0;
+			ipuRegs.ctrl.OFC = 0;
+			ipuRegs.ctrl.BUSY = 0;
+			ipuRegs.topbusy = 0;
+			ipuRegs.cmd.BUSY = 0;
 			ipu_cmd.current = 0xffffffff;
 
 			// CHECK!: IPU0dma remains when IDEC is done, so we need to clear it
@@ -1143,17 +1143,17 @@ void IPUWorker()
 		case SCE_IPU_BDEC:
 			if (!ipuBDEC(ipu_cmd.current, true))
 			{
-				if(ipu1dma->chcr.STR == false) hwIntcIrq(INTC_IPU);
+				if(ipu1dma.chcr.STR == false) hwIntcIrq(INTC_IPU);
 				return;
 			}
 
-			ipuRegs->ctrl.BUSY = 0;
-			ipuRegs->topbusy = 0;
-			ipuRegs->cmd.BUSY = 0;
+			ipuRegs.ctrl.BUSY = 0;
+			ipuRegs.topbusy = 0;
+			ipuRegs.cmd.BUSY = 0;
 			ipu_cmd.current = 0xffffffff;
 
 			IPU_INT0_FROM();
-			if (ipuRegs->ctrl.SCD || ipuRegs->ctrl.ECD) hwIntcIrq(INTC_IPU);
+			if (ipuRegs.ctrl.SCD || ipuRegs.ctrl.ECD) hwIntcIrq(INTC_IPU);
 			return;
 
 		default:
@@ -1162,6 +1162,6 @@ void IPUWorker()
 	}
 
 	// success
-	ipuRegs->ctrl.BUSY = 0;
+	ipuRegs.ctrl.BUSY = 0;
 	ipu_cmd.current = 0xffffffff;
 }
