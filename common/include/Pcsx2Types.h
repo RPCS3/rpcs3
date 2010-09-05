@@ -16,16 +16,23 @@
 #ifndef __PCSX2TYPES_H__
 #define __PCSX2TYPES_H__
 
-/*
- *  Based on PS2E Definitions by
-	   linuzappz@hotmail.com,
- *          shadowpcsx2@yahoo.gr,
- *          and florinsasu@hotmail.com
- */
+// --------------------------------------------------------------------------------------
+//  Forward declarations
+// --------------------------------------------------------------------------------------
+// Forward declarations for wxWidgets-supporting features.
+// If you aren't linking against wxWidgets libraries, then functions that
+// depend on these types will not be usable (they will yield linker errors).
+
+#ifdef __cplusplus
+	class wxString;
+	class FastFormatAscii;
+	class FastFormatUnicode;
+#endif
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//                                 Basic Atomic Types
+// --------------------------------------------------------------------------------------
+//  Basic Atomic Types
+// --------------------------------------------------------------------------------------
 
 #if defined(_MSC_VER)
 
@@ -111,28 +118,41 @@ typedef s32 sptr;
 // performing explicit conversion from 64 and 32 bit values are provided instead.
 //
 #ifdef __cplusplus
-struct u128
+union u128
 {
-	u64 lo;
-	u64 hi;
+	struct  
+	{
+		u64 lo;
+		u64 hi;
+	};
 
-	// Explicit conversion from u64
+	u64 _u64[2];
+	u32 _u32[4];
+	u16 _u16[8];
+	u8  _u8[16];
+
+	// Explicit conversion from u64. Zero-extends the source through 128 bits.
 	static u128 From64( u64 src )
 	{
-		u128 retval = { src, 0 };
+		u128 retval;
+		retval.lo = src;
+		retval.hi = 0;
 		return retval;
 	}
 
-	// Explicit conversion from u32
+	// Explicit conversion from u32. Zero-extends the source through 128 bits.
 	static u128 From32( u32 src )
 	{
-		u128 retval = { src, 0 };
+		u128 retval;
+		retval._u32[0] = src;
+		retval._u32[1] = 0;
+		retval.hi = 0;
 		return retval;
 	}
 
-	operator u32() const { return (u32)lo; }
-	operator u16() const { return (u16)lo; }
-	operator u8() const { return (u8)lo; }
+	operator u32() const { return _u32[0]; }
+	operator u16() const { return _u16[0]; }
+	operator u8() const { return _u8[0]; }
 	
 	bool operator==( const u128& right ) const
 	{
@@ -143,6 +163,17 @@ struct u128
 	{
 		return (lo != right.lo) && (hi != right.hi);
 	}
+
+	// In order for the following ToString() and WriteTo methods to be available, you must
+	// be linking to both wxWidgets and the pxWidgets extension library.  If you are not
+	// using them, then you will need to provide your own implementations of these methods.
+	wxString ToString() const;
+	wxString ToString64() const;
+	wxString ToString8() const;
+	
+	void WriteTo( FastFormatAscii& dest ) const;
+	void WriteTo8( FastFormatAscii& dest ) const;
+	void WriteTo64( FastFormatAscii& dest ) const;
 };
 
 struct s128
@@ -183,13 +214,21 @@ struct s128
 
 typedef union _u128_t
 {
-	u64 lo;
-	u64 hi;
+	struct  
+	{
+		u64 lo;
+		u64 hi;
+	};
+
+	u64 _u64[2];
+	u32 _u32[4];
+	u16 _u16[8];
+	u8  _u8[16];
 } u128;
 
 typedef union _s128_t
 {
-	s64 lo;
+	u64 lo;
 	s64 hi;
 } s128;
 

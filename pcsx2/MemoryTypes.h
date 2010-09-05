@@ -37,15 +37,55 @@ typedef u32 mem32_t;
 typedef u64 mem64_t;
 typedef u128 mem128_t;
 
+
+// --------------------------------------------------------------------------------------
+//  Future-Planned VTLB pagefault scheme!
+// --------------------------------------------------------------------------------------
+// When enabled, the VTLB will use a large-area reserved memory range of 512megs for EE
+// physical ram/rom access.  The base ram will be committed at 0x00000000, and ROMs will be
+// at 0x1fc00000, etc.  All memory ranges in between will be uncommitted memory -- which
+// means that the memory will *not* count against the operating system's physical memory
+// pool.
+//
+// When the VTLB generates memory operations (loads/stores), it will assume that the op
+// is addressing either RAM or ROM, and by assuming that it can generate a completely efficient
+// direct memory access (one AND and one MOV instruction).  If the access is to another area of
+// memory, such as hardware registers or scratchpad, the access will generate a page fault, the
+// compiled block will be cleared and re-compiled using "full" VTLB translation logic.
+//
+#define VTLB_UsePageFaulting 0
+
+#if VTLB_UsePageFaulting
+
+// The order of the components in this struct *matter* -- it has been laid out so that the
+// full breadth of PS2 RAM and ROM mappings are directly supported.
+struct EEVM_MemoryAllocMess
+{
+	u8 (&Main)[Ps2MemSize::Base];				// Main memory (hard-wired to 32MB)
+
+	u8 _padding1[0x1e000000-Ps2MemSize::Base]
+	u8 (&ROM1)[Ps2MemSize::Rom1];				// DVD player
+
+	u8 _padding2[0x1e040000-(0x1e000000+Ps2MemSize::Rom1)]
+	u8 (&EROM)[Ps2MemSize::ERom];				// DVD player extensions
+
+	u8 _padding3[0x1e400000-(0x1e040000+Ps2MemSize::EROM)]
+	u8 (&ROM2)[Ps2MemSize::Rom2];				// Chinese extensions
+
+	u8 _padding4[0x1fc00000-(0x1e040000+Ps2MemSize::Rom2)];
+	u8 (&ROM)[Ps2MemSize::Rom];				// Boot rom (4MB)
+};
+
+#else
+
 struct EEVM_MemoryAllocMess
 {
 	u8 Scratch[Ps2MemSize::Scratch];		// Scratchpad!
 	u8 Main[Ps2MemSize::Base];				// Main memory (hard-wired to 32MB)
-	u8 HW[Ps2MemSize::Hardware];			// Hardware registers
 	u8 ROM[Ps2MemSize::Rom];				// Boot rom (4MB)
 	u8 ROM1[Ps2MemSize::Rom1];				// DVD player
-	u8 ROM2[Ps2MemSize::Rom2];				// Chinese extensions (?)
-	u8 EROM[Ps2MemSize::ERom];				// DVD player extensions (?)
+	u8 ROM2[Ps2MemSize::Rom2];				// Chinese extensions
+	u8 EROM[Ps2MemSize::ERom];				// DVD player extensions
 
 	// Two 1 megabyte (max DMA) buffers for reading and writing to high memory (>32MB).
 	// Such accesses are not documented as causing bus errors but as the memory does
@@ -55,5 +95,14 @@ struct EEVM_MemoryAllocMess
 	u8 ZeroRead[_1mb];
 	u8 ZeroWrite[_1mb];
 };
+
+#endif
+
+// EE Hardware registers.
+// DevNote: These are done as a static array instead of a pointer in order to allow for simpler
+// macros and reference handles to be defined  (we can safely use compile-time references to
+// registers instead of having to use instance variables).
+extern __pagealigned u8 eeHw[Ps2MemSize::Hardware];
+
 
 extern EEVM_MemoryAllocMess* eeMem;

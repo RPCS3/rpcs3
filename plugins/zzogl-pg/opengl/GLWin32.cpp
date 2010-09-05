@@ -19,6 +19,7 @@
 
 #include "GS.h"
 #include "zerogs.h"
+#include "GLWin.h"
 
 #ifdef GL_WIN32_WINDOW
 
@@ -138,7 +139,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	return (pDisplay != NULL);
 }
 
-bool GLWindow::ReleaseWindow()
+bool GLWindow::ReleaseContext()
 {
 	if (hRC)											// Do We Have A Rendering Context?
 	{
@@ -305,7 +306,7 @@ void GLWindow::SwapGLBuffers()
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	SetWindowText(GShwnd, strtitle);
+	if (!conf.fullscreen()) SetWindowText(GShwnd, strtitle);
 }
 
 void GLWindow::ResizeCheck()

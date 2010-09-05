@@ -27,6 +27,8 @@
 #include "sVU_Debug.h"
 #include "sVU_zerorec.h"
 #include "Gif.h"
+
+using namespace x86Emitter;
 //------------------------------------------------------------------
 
 //------------------------------------------------------------------
@@ -678,7 +680,6 @@ void _loadEAX(VURegs *VU, int x86reg, uptr offset, int info)
 //------------------------------------------------------------------
 int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 {
-	u8* pjmp[2];
 	if( x86reg == EAX ) {
 		if (imm) ADD32ItoR(x86reg, imm);
 	}
@@ -694,16 +695,17 @@ int recVUTransformAddr(int x86reg, VURegs* VU, int vireg, int imm)
 	else {
 
 		// VU0 has a somewhat interesting memory mapping:
-		// if addr >= 0x4000, reads VU1's VF regs and VI regs
-		// if addr < 0x4000, wrap around at 0x1000
+		// if addr & 0x4000, reads VU1's VF regs and VI regs
+		// otherwise, wrap around at 0x1000
 
-		CMP32ItoR(EAX, 0x400);
-		pjmp[0] = JL8(0); // if addr >= 0x4000, reads VU1's VF regs and VI regs
-			AND32ItoR(EAX, 0x43f);
-			pjmp[1] = JMP8(0);
-		x86SetJ8(pjmp[0]);
-			AND32ItoR(EAX, 0xff); // if addr < 0x4000, wrap around
-		x86SetJ8(pjmp[1]);
+		xTEST(eax, 0x400);
+		xForwardJNZ8 vu1regs; // if addr & 0x4000, reads VU1's VF regs and VI regs
+			xAND(eax, 0xff); // if !(addr & 0x4000), wrap around
+			xForwardJump8 done;
+		vu1regs.SetTarget();
+			xAND(eax, 0x3f);
+			xADD(eax, (u128*)VU1.VF - (u128*)VU0.Mem);
+		done.SetTarget();
 
 		SHL32ItoR(EAX, 4); // multiply by 16 (shift left by 4)
 	}
@@ -1948,7 +1950,7 @@ void recVUMI_XITOP( VURegs *VU, int info )
 	if (_It_ == 0) return;
 	//Console.WriteLn("recVUMI_XITOP");
 	itreg = ALLOCVI(_It_, MODE_WRITE);
-	MOVZX32M16toR( itreg, (uptr)&VU->vifRegs->itop );
+	MOVZX32M16toR( itreg, (uptr)&VU->GetVifRegs().itop );
 }
 //------------------------------------------------------------------
 
@@ -1962,7 +1964,7 @@ void recVUMI_XTOP( VURegs *VU, int info )
 	if ( _It_ == 0 ) return;
 	//Console.WriteLn("recVUMI_XTOP");
 	itreg = ALLOCVI(_It_, MODE_WRITE);
-	MOVZX32M16toR( itreg, (uptr)&VU->vifRegs->top );
+	MOVZX32M16toR( itreg, (uptr)&VU->GetVifRegs().top );
 }
 //------------------------------------------------------------------
 
@@ -1980,12 +1982,12 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
 	u8* pDest;
 
-	if(gifRegs->stat.APATH <= GIF_APATH1 || (gifRegs->stat.APATH == GIF_APATH3 && gifRegs->stat.IP3 == true) && SIGNAL_IMR_Pending == false)
+	if(gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.APATH == GIF_APATH3 && gifRegs.stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
 		if(Path1WritePos != 0)	
 		{
 			//Flush any pending transfers so things dont go up in the wrong order
-			while(gifRegs->stat.P1Q == true) gsPath1Interrupt();
+			while(gifRegs.stat.P1Q == true) gsPath1Interrupt();
 		}
 		GetMTGS().PrepDataPacket(GIF_PATH_1, 0x400);
 		size = GIFPath_CopyTag(GIF_PATH_1, (u128*)data, diff);
@@ -1993,13 +1995,13 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 
 		if(GSTransferStatus.PTH1 == STOPPED_MODE )
 		{
-			gifRegs->stat.OPH = false;
-			gifRegs->stat.APATH = GIF_APATH_IDLE;
+			gifRegs.stat.OPH = false;
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
 		}
 	}
 	else
 	{
-		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs->stat.APATH, Path1WritePos, Path1ReadPos);
+		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs.stat.APATH, Path1WritePos, Path1ReadPos);
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
 
@@ -2015,8 +2017,8 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		else {
 			memcpy_qwc(pDest, VU1.Mem + addr, size);
 		}
-		//if(!gifRegs->stat.P1Q) CPU_INT(28, 128);
-		gifRegs->stat.P1Q = true;
+		//if(!gifRegs.stat.P1Q) CPU_INT(28, 128);
+		gifRegs.stat.P1Q = true;
 	}
 
 

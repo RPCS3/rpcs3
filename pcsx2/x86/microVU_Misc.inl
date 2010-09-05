@@ -213,6 +213,34 @@ void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 // Micro VU - Misc Functions
 //------------------------------------------------------------------
 
+// Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
+__fi void mVUbackupRegs(microVU* mVU, bool toMemory = false)
+{
+	if (toMemory) {
+		for(int i = 0; i < 8; i++) {
+			xMOVAPS(ptr128[&mVU->xmmBackup[i][0]], xmm(i));
+		}
+	}
+	else {
+		mVU->regAlloc->flushAll(); // Flush Regalloc
+		xMOVAPS(ptr128[&mVU->xmmBackup[xmmPQ.Id][0]], xmmPQ);
+	}
+}
+
+// Restore Volatile Regs
+__fi void mVUrestoreRegs(microVU* mVU, bool fromMemory = false)
+{
+	if (fromMemory) {
+		for(int i = 0; i < 8; i++) {
+			xMOVAPS(xmm(i), ptr128[&mVU->xmmBackup[i][0]]);
+		}
+	}
+	else xMOVAPS(xmmPQ, ptr128[&mVU->xmmBackup[xmmPQ.Id][0]]);
+}
+
+// Gets called by mVUaddrFix at execution-time
+static void __fastcall mVUwarningRegAccess(u32 prog, u32 pc) { Console.Error("microVU0 Warning: Accessing VU1 Regs! [%04x] [%x]", pc, prog); }
+
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 __fi void mVUaddrFix(mV, const x32& gprReg)
 {
@@ -221,28 +249,29 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 		xSHL(gprReg, 4);
 	}
 	else {
-		xCMP(gprReg, 0x400);
-		xForwardJL8 jmpA; // if addr >= 0x4000, reads VU1's VF regs and VI regs
-			xAND(gprReg, 0x43f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
+		if (IsDevBuild && !isCOP2) mVUbackupRegs(mVU, true);
+		xTEST(gprReg, 0x400);
+		xForwardJNZ8 jmpA; // if addr & 0x4000, reads VU1's VF regs and VI regs
+			xAND(gprReg, 0xff); // if !(addr & 0x4000), wrap around
 			xForwardJump8 jmpB;
 		jmpA.SetTarget();
-			xAND(gprReg, 0xff); // if addr < 0x4000, wrap around
+			if (IsDevBuild && !isCOP2) { // Lets see which games do this!
+				xPUSH(gprT1);			 // Note: Kernel does it via COP2 to initialize VU1!
+				xPUSH(gprT2);			 // So we don't spam console, we'll only check micro-mode...
+				xPUSH(gprT3);
+				xMOV (gprT2, mVU->prog.cur->idx);
+				xMOV (gprT3, xPC);
+				xCALL(mVUwarningRegAccess);
+				xPOP (gprT3);
+				xPOP (gprT2);
+				xPOP (gprT1);
+			}
+			xAND(gprReg, 0x3f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
+			xADD(gprReg, (u128*)VU1.VF - (u128*)VU0.Mem);
 		jmpB.SetTarget();
 		xSHL(gprReg, 4); // multiply by 16 (shift left by 4)
+		if (IsDevBuild && !isCOP2) mVUrestoreRegs(mVU, true);
 	}
-}
-
-// Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-__fi void mVUbackupRegs(microVU* mVU)
-{
-	mVU->regAlloc->flushAll();
-	xMOVAPS(ptr128[mVU->xmmPQb], xmmPQ);
-}
-
-// Restore Volatile Regs
-__fi void mVUrestoreRegs(microVU* mVU)
-{
-	xMOVAPS(xmmPQ, ptr128[mVU->xmmPQb]);
 }
 
 //------------------------------------------------------------------

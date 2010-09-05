@@ -51,28 +51,28 @@ mem8_t __fastcall iopHwRead8_Page1( u32 addr )
 		default:
 			if( masked_addr >= 0x100 && masked_addr < 0x130 )
 			{
-				DevCon.Warning( "HwRead8 from Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwRead8 from Counter16 [ignored] @ 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( masked_addr >= 0x480 && masked_addr < 0x4a0 )
 			{
-				DevCon.Warning( "HwRead8 from Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwRead8 from Counter32 [ignored] @ 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
 			{
 				ret = USBread8( addr );
-				PSXHW_LOG( "HwRead8 from USB, addr 0x%08x = 0x%02x", addr, ret );
+				PSXHW_LOG( "HwRead8 from USB @ 0x%08x = 0x%02x", addr, ret );
 			}
 			else
 			{
 				ret = psxHu8(addr);
-				PSXUnkHW_LOG( "HwRead8 from Unknown, addr 0x%08x = 0x%02x", addr, ret );
+				PSXUnkHW_LOG( "HwRead8 from Unknown @ 0x%08x = 0x%02x", addr, ret );
 			}
 		return ret;
 	}
 
-	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem8_t>( addr, ret, true );
 	return ret;
 }
 
@@ -89,7 +89,7 @@ mem8_t __fastcall iopHwRead8_Page3( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem8_t>( addr, ret, true );
 	return ret;
 }
 
@@ -107,7 +107,7 @@ mem8_t __fastcall iopHwRead8_Page8( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem8_t>( addr, ret, true );
 	return ret;
 }
 
@@ -216,7 +216,7 @@ static __fi T _HwRead_16or32_Page1( u32 addr )
 			ret = SPU2read( addr );
 		else
 		{
-			DevCon.Warning( "HwRead32 from SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
+			DbgCon.Warning( "HwRead32 from SPU2? @ 0x%08X .. What manner of trickery is this?!", addr );
 			ret = psxHu32(addr);
 		}
 	}
@@ -320,7 +320,7 @@ static __fi T _HwRead_16or32_Page1( u32 addr )
 		}
 	}
 
-	IopHwTraceLog<T>( addr, ret, "Read" );
+	IopHwTraceLog<T>( addr, ret, true );
 	return ret;
 }
 
@@ -343,7 +343,7 @@ mem16_t __fastcall iopHwRead16_Page3( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f803 );
 
 	mem16_t ret = psxHu16(addr);
-	IopHwTraceLog<mem16_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem16_t>( addr, ret, true );
 	return ret;
 }
 
@@ -355,7 +355,7 @@ mem16_t __fastcall iopHwRead16_Page8( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f808 );
 
 	mem16_t ret = psxHu16(addr);
-	IopHwTraceLog<mem16_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem16_t>( addr, ret, true );
 	return ret;
 }
 
@@ -373,7 +373,7 @@ mem32_t __fastcall iopHwRead32_Page3( u32 addr )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
 	const mem32_t ret = psxHu32(addr);
-	IopHwTraceLog<mem32_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem32_t>( addr, ret, true );
 	return ret;
 }
 
@@ -437,7 +437,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 	}
 	else ret = psxHu32(addr);
 
-	IopHwTraceLog<mem32_t>( addr, ret, "Read" );
+	IopHwTraceLog<mem32_t>( addr, ret, true );
 	return ret;
 }
 

@@ -18,10 +18,12 @@
 #include "Common.h"
 #include "VUmicro.h"
 
+__aligned16 VURegs vuRegs[2];
+
 static u8* m_vuAllMem = NULL;
 static const uint m_vuMemSize =
 	0x1000 +					// VU0micro memory
-	0x4000+0x800 +				// VU0 memory and VU1 registers
+	0x4000 +					// VU0 memory
 	0x4000 +					// VU1 memory
 	0x4000;
 
@@ -33,12 +35,9 @@ void vuMicroMemAlloc()
 	if( m_vuAllMem == NULL )
 		throw Exception::OutOfMemory( L"VU0 and VU1 on-chip memory" );
 
-	pxAssume( sizeof( VURegs ) <= 0x800 );
-
 	u8* curpos = m_vuAllMem;
 	VU0.Micro	= curpos; curpos += 0x1000;
 	VU0.Mem		= curpos; curpos += 0x4000;
-	g_pVU1		= (VURegs*)curpos; curpos += 0x800;
 	VU1.Micro	= curpos; curpos += 0x4000;
 	VU1.Mem		= curpos;
 	 //curpos += 0x4000;
@@ -50,7 +49,6 @@ void vuMicroMemShutdown()
 
 	vtlb_free( m_vuAllMem, m_vuMemSize );
 	m_vuAllMem = NULL;
-	g_pVU1 = NULL;
 }
 
 void vuMicroMemReset()
@@ -72,17 +70,6 @@ void vuMicroMemReset()
 	memzero_ptr<4*1024>(VU0.Mem);
 	memzero_ptr<4*1024>(VU0.Micro);
 
-	/* this is kinda tricky, maxmem is set to 0x4400 here,
-	   tho it's not 100% accurate, since the mem goes from
-	   0x0000 - 0x1000 (Mem) and 0x4000 - 0x4400 (VU1 Regs),
-	   i guess it shouldn't be a problem,
-	   at least hope so :) (linuz)
-	*/
-	VU0.maxmem = 0x4800-4; //We are allocating 0x800 for vu1 reg's
-	VU0.maxmicro = 0x1000-4;
-	VU0.vuExec = vu0Exec;
-	VU0.vifRegs = vif0Regs;
-
 	// === VU1 Initialization ===
 	memzero(VU1.ACC);
 	memzero(VU1.VF);
@@ -94,13 +81,6 @@ void vuMicroMemReset()
 	VU1.VI[0].UL = 0;
 	memzero_ptr<16*1024>(VU1.Mem);
 	memzero_ptr<16*1024>(VU1.Micro);
-
-	VU1.maxmem   = 0x4000-4;//16*1024-4;
-	VU1.maxmicro = 0x4000-4;
-//	VU1.VF       = (VECTOR*)(VU0.Mem + 0x4000);
-//	VU1.VI       = (REG_VI*)(VU0.Mem + 0x4200);
-	VU1.vuExec   = vu1Exec;
-	VU1.vifRegs  = vif1Regs;
 }
 
 void SaveStateBase::vuMicroFreeze()

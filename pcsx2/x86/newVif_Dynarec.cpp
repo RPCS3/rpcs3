@@ -194,25 +194,26 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	xRET();
 }
 
-static __fi u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
-	u8* endPtr; // Check if we need to wrap around VU memory
-	u8* ptr = (u8*)(v.VU->Mem + (v.vif->tag.addr & v.vuMemLimit));
-	if (!isFill) { // Account for skip-cycles
-		int skipSize  = cl - wl;
-		int blocks    = _vBlock.num / wl;
-		int skips	  = (blocks * skipSize + _vBlock.num) * 16;
+static __noinline u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
+	u8* startmem = v.VU->Mem + (v.vif->tag.addr & v.vuMemLimit);
+	u8* endmem = v.VU->Mem + (v.vuMemLimit+0x10);
+	uint length = _vBlock.num * 16;
 
-		//We must do skips - 1 here else skip calculation adds an extra skip which can overflow
-		//causing the emu to drop back to the interpreter (do not need to skip on last block write) - Refraction
-		if(skipSize > 0) skips -= skipSize * 16;
-		endPtr = ptr + skips;
+	if (!isFill) {
+		// Accounting for skipping mode: Subtract the last skip cycle, since the skipped part of the run
+		// shouldn't count as wrapped data.  Otherwise, a trailing skip can cause the emu to drop back
+		// to the interpreter. -- Refraction (test with MGS3)
+
+		int skipSize  = (cl - wl) * 16;
+		int blocks    = _vBlock.num / wl;
+		length += (blocks-1) * skipSize;
 	}
-	else endPtr = ptr + (_vBlock.num * 16);
-	if ( endPtr > v.vuMemEnd ) {
-		//DevCon.WriteLn("nVif%x - VU Mem Ptr Overflow; falling back to interpreter. Start = %x End = %x num = %x, wl = %x, cl = %x", v.idx, v.vif->tag.addr, v.vif->tag.addr + (_vBlock.num * 16), _vBlock.num, wl, cl);
-		ptr = NULL; // Fall Back to Interpreters which have wrap-around logic
+
+	if ( (startmem+length) <= endmem ) {
+		return startmem;
 	}
-	return ptr;
+	//Console.WriteLn("nVif%x - VU Mem Ptr Overflow; falling back to interpreter. Start = %x End = %x num = %x, wl = %x, cl = %x", v.idx, v.vif->tag.addr, v.vif->tag.addr + (_vBlock.num * 16), _vBlock.num, wl, cl);
+	return NULL; // Fall Back to Interpreters which have wrap-around logic
 }
 
 // [TODO] :  Finish implementing support for VIF's growable recBlocks buffer.  Currently

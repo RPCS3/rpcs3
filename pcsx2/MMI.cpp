@@ -171,14 +171,11 @@ void PLZCW() {
 	_PLZCW (1);
 }
 
-__fi void PMFHL_CLAMP(u16 dst, u16 src)
+__fi void PMFHL_CLAMP(u16& dst, s32 src)
 {
-    if ((int)src > (int)0x00007fff)
-	    dst = 0x7fff;
-    else if ((int)src < (int)0xffff8000)  // Ints only go up to 0x7FFFFFFF. Something's not right here. --arcum42
-	    dst = 0x8000;
-    else
-	    dst = (u16)src;
+    if      (src >  0x7fff)	dst = 0x7fff;
+    else if (src < -0x8000)	dst = 0x8000;
+    else					dst = (u16)src;
 }
 
 void PMFHL() {

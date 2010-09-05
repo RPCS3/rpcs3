@@ -29,10 +29,6 @@
 
 #define _FILE_OFFSET_BITS 64
 
-#ifdef _MSC_VER
-#	pragma warning(disable:4018)	// disable signed/unsigned mismatch error
-#endif
-
 #include "IopCommon.h"
 
 #include <stdio.h>

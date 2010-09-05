@@ -16,10 +16,6 @@
 #pragma once
 #include "Vif.h"
 
-#ifdef _MSC_VER // Most of the structs here should be packed
-#	pragma pack(1)
-#endif
-
 enum VURegFlags
 {
     REG_STATUS_FLAG	= 16,
@@ -68,7 +64,7 @@ union VECTOR {
 	s16 SS[8];
 	u8  UC[16];
 	s8  SC[16];
-} __packed;
+};
 
 struct REG_VI {
 	union {
@@ -82,7 +78,7 @@ struct REG_VI {
 	};
 	u32 padding[3]; // needs padding to make them 128bit; VU0 maps VU1's VI regs as 128bits to addr 0x4xx0 in
 					// VU0 mem, with only lower 16 bits valid, and the upper 112bits are hardwired to 0 (cottonvibes)
-} __packed;
+};
 
 //#define VUFLAG_BREAKONMFLAG		0x00000001
 #define VUFLAG_MFLAGSET			0x00000002
@@ -120,45 +116,61 @@ struct ialuPipe {
 	u32 Cycle;
 };
 
-struct VURegs {
+struct __aligned16 VURegs {
 	VECTOR	VF[32]; // VF and VI need to be first in this struct for proper mapping
 	REG_VI	VI[32]; // needs to be 128bit x 32 (cottonvibes)
+
 	VECTOR ACC;
 	REG_VI q;
 	REG_VI p;
 
+	uint idx;		// VU index (0 or 1)
+
+	// flags/cycle are needed by VIF dma code, so they have to be here (for now)
+	// We may replace these by accessors in the future, if merited.
+	u32 cycle;
+	u32 flags;
+
+	// Current opcode being interpreted or recompiled (this var is used by Interps and superVU
+	// but not microVU.  Would like to have it local to their respective classes... someday)
+	u32 code;
+
+	// branch/branchpc are used by interpreter only, but making them local to the interpreter
+	// classes requires considerable code refactoring.  Maybe later. >_<
+	u32 branch;
+	u32 branchpc;
+
+	// MAC/Status flags -- these are used by interpreters and superVU, but are kind of hacky
+	// and shouldn't be relied on for any useful/valid info.  Would like to move them out of
+	// this struct eventually.
 	u32 macflag;
 	u32 statusflag;
 	u32 clipflag;
 
-	u32 cycle;
-	u32 flags;
-
-	void (*vuExec)(VURegs*);
-	VIFregisters *vifRegs;
-
 	u8 *Mem;
 	u8 *Micro;
 
-	u32 code;
-	u32 maxmem;
-	u32 maxmicro;
-
-	u16 branch;
-	u16 ebit;
-	u32 branchpc;
+	u32 ebit;
 
 	fmacPipe fmac[8];
 	fdivPipe fdiv;
 	efuPipe efu;
 	ialuPipe ialu[8];
 
-	VURegs() :
-		Mem( NULL )
-	,	Micro( NULL )
+	VURegs()
 	{
+		Mem = NULL;
+		Micro = NULL;
 	}
-} __packed;
+
+	bool IsVU1() const;
+	bool IsVU0() const;
+
+	VIFregisters& GetVifRegs() const
+	{
+		return IsVU1() ? vif1Regs : vif0Regs;
+	}
+};
 
 enum VUPipeState
 {
@@ -171,27 +183,16 @@ enum VUPipeState
     VUPIPE_XGKICK
 };
 
-struct _VURegsNum {
-	u8 pipe; // if 0xff, COP2
-	u8 VFwrite;
-	u8 VFwxyzw;
-	u8 VFr0xyzw;
-	u8 VFr1xyzw;
-	u8 VFread0;
-	u8 VFread1;
-	u32 VIwrite;
-	u32 VIread;
-	int cycles;
-};
+extern __aligned16 VURegs vuRegs[2];
 
-#ifdef _MSC_VER // Restore to default pack alignment
-#	pragma pack()
-#endif
+// Obsolete(?)  -- I think I'd rather use vu0Regs/vu1Regs or actually have these explicit to any
+// CPP file that needs them only. --air
+static VURegs& VU0 = vuRegs[0];
+static VURegs& VU1 = vuRegs[1];
 
-extern VURegs* g_pVU1;
-extern __aligned16 VURegs VU0;
-
-#define VU1 (*g_pVU1)
+// Do not use __fi here because it fires 'multiple definition' error in GCC
+inline bool VURegs::IsVU1() const  { return this == &vuRegs[1]; }
+inline bool VURegs::IsVU0() const  { return this == &vuRegs[0]; }
 
 extern u32* GET_VU_MEM(VURegs* VU, u32 addr);
 

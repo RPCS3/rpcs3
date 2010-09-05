@@ -22,6 +22,7 @@
 
 //------------------ Includes
 #include "ZZoglCRTC.h"
+#include "GLWin.h"
 
 using namespace ZeroGS;
 

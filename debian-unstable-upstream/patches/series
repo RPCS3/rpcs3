@@ -2,7 +2,3 @@
 02_update_default_path.patch
 05_move_data_to_config.patch
 21_use_legacy_soundtouch_13.patch
-# Personnal patch that need advance testing
-#55_cmake_opt_clean.patch
-#56_cmake_enable_opt1.patch
-#57_cmake_enable_opt2.patch

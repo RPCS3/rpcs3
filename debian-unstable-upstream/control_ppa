@@ -24,21 +24,22 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     libgl1-mesa-dev,
     libglu1-mesa-dev,
     nvidia-cg-toolkit-pcsx2
-Standards-Version: 3.9.0
+Standards-Version: 3.9.1
 Homepage: http://pcsx2.net/
 
 Package: pcsx2-unstable
 Architecture: i386
-Depends: ${shlibs:Depends}, ${misc:Depends}, pcsx2-data-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    pcsx2-data-unstable (>= ${binary:Version}),
+    pcsx2-plugins-unstable (>= ${binary:Version})
 Conflicts: pcsx2
 Description: Playstation 2 emulator
- PCSX2 is a PlayStation 2 emulator for Windows and
- Linux, started by the same team that brought you PCSX
- (a Sony PlayStation 1 emulator).
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux, started by the same 
+ team that brought you PCSX (a Sony PlayStation 1 emulator).
  .
- WARNING: it requieres a CPU with sse2 instructions. If your
- CPU does not support this instruction set, it does not have
- enough horse power to run this emulator anyway.
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
  .
  This package includes the main binary file.
 
@@ -49,33 +50,32 @@ Depends: ${misc:Depends}
 Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
 Conflicts: pcsx2-data
 Description: data for pcsx2
- PCSX2 is a PlayStation 2 emulator for Windows and
- Linux, started by the same team that brought you PCSX
- (a Sony PlayStation 1 emulator).
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux, started by the same 
+ team that brought you PCSX (a Sony PlayStation 1 emulator).
  .
- WARNING: it requieres a CPU with sse2 instructions. If your
- CPU does not support this instruction set, it does not have
- enough horse power to run this emulator anyway.
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
  .
  This package includes data files.
 
 Package: pcsx2-plugins-unstable
 Architecture: i386
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-data-unstable (>= ${binary:Version}),
 # manually add nvidia-cg-toolkit for zzogl. Do not why is not found by shlibs !!!
+Depends: ${shlibs:Depends}, ${misc:Depends},
     nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1)
+Recommends: pcsx2-unstable (>= ${binary:Version}),
+    pcsx2-data-unstable (>= ${binary:Version})
 Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
- PCSX2 is a PlayStation 2 emulator for Windows and
- Linux, started by the same team that brought you PCSX
- (a Sony PlayStation 1 emulator).
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux, started by the same 
+ team that brought you PCSX (a Sony PlayStation 1 emulator).
  .
- WARNING: it requieres a CPU with sse2 instructions. If your
- CPU does not support this instruction set, it does not have
- enough horse power to run this emulator anyway.
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
  .
- This package includes the plugins of the emulator.
+ This package includes the plugins for PCSX2.
 
 Package: pcsx2-unstable-dbg
 Section: debug
@@ -84,9 +84,12 @@ Architecture: i386
 Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
 Conflicts: pcsx2-dbg
 Description: Debug symbols for pcsx2
- PCSX2 is a PlayStation 2 emulator for Windows and
- Linux, started by the same team that brought you PCSX
- (a Sony PlayStation 1 emulator).
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux, started by the same 
+ team that brought you PCSX (a Sony PlayStation 1 emulator).
+ .
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
  .
  This package contains the debug symbol of pcsx2.
 
@@ -96,9 +99,12 @@ Priority: extra
 Architecture: i386
 Depends: ${misc:Depends}, pcsx2-plugins-unstable (= ${binary:Version})
 Conflicts: pcsx2-plugins-dbg
-Description: Debug symbols for pcsx2-plugins
- PCSX2 is a PlayStation 2 emulator for Windows and
- Linux, started by the same team that brought you PCSX
- (a Sony PlayStation 1 emulator).
+Description: Debug symbols of the pcsx2-plugins
+ PCSX2 is a PlayStation 2 emulator for Windows and Linux, started by the same 
+ team that brought you PCSX (a Sony PlayStation 1 emulator).
  .
- This package contains the debug symbol of pcsx2 plugins.
+ WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
+ this instruction set, it does not have enough horse power to run this emulator
+ anyway.
+ .
+ This package contains the debug symbols of the pcsx2 plugins.

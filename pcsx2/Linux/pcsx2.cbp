@@ -137,6 +137,60 @@
 					<Add library="$(SvnRootDir)/deps/release/libUtilities.a" />
 				</Linker>
 			</Target>
+			<Target title="Devel-Debug">
+				<Option platforms="Windows;Unix;" />
+				<Option output="$(SvnRootDir)/bin/pcsx2-deb" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="$(SvnRootDir)/bin/" />
+				<Option object_output="./.objs/devel" />
+				<Option external_deps="../../tools/bin/bin2cpp;" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-fdefer-pop" />
+					<Add option="-fcprop-registers" />
+					<Add option="-fif-conversion" />
+					<Add option="-fif-conversion2" />
+					<Add option="-ftree-ccp" />
+					<Add option="-ftree-dce" />
+					<Add option="-ftree-dominator-opts" />
+					<Add option="-ftree-ter" />
+					<Add option="-ftree-lrs" />
+					<Add option="-ftree-sra" />
+					<Add option="-ftree-copyrename" />
+					<Add option="-ftree-fre" />
+					<Add option="-ftree-ch" />
+					<Add option="-funit-at-a-time" />
+					<Add option="-fmerge-constants" />
+					<Add option="-fthread-jumps" />
+					<Add option="-fcrossjumping" />
+					<Add option="-foptimize-sibling-calls" />
+					<Add option="-fcse-follow-jumps" />
+					<Add option="-fcse-skip-blocks" />
+					<Add option="-fgcse  -fgcse-lm" />
+					<Add option="-frerun-cse-after-loop" />
+					<Add option="-fcaller-saves" />
+					<Add option="-fpeephole2" />
+					<Add option="-fsched-interblock  -fsched-spec" />
+					<Add option="-fregmove" />
+					<Add option="-fstrict-overflow" />
+					<Add option="-fdelete-null-pointer-checks" />
+					<Add option="-freorder-blocks  -freorder-functions" />
+					<Add option="-falign-functions  -falign-jumps" />
+					<Add option="-falign-loops  -falign-labels" />
+					<Add option="-ftree-vrp" />
+					<Add option="-ftree-pre" />
+					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DPCSX2_DEVEL" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+				<ResourceCompiler>
+					<Add directory="$(ProjectRootDir)/gui" />
+				</ResourceCompiler>
+				<Linker>
+					<Add library="$(SvnRootDir)/deps/devel/libx86emitter.a" />
+					<Add library="$(SvnRootDir)/deps/devel/libUtilities.a" />
+				</Linker>
+			</Target>
 			<Environment>
 				<Variable name="SvnRootDir" value="../../" />
 				<Variable name="ProjectRootDir" value='&quot;$(SvnRootDir)/pcsx2/&quot;' />
@@ -240,6 +294,8 @@
 		<Unit filename="../IPU/IPU.h" />
 		<Unit filename="../IPU/IPU_Fifo.cpp" />
 		<Unit filename="../IPU/IPU_Fifo.h" />
+		<Unit filename="../IPU/IPUdma.cpp" />
+		<Unit filename="../IPU/IPUdma.h" />
 		<Unit filename="../IPU/mpeg2lib/Idct.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.h" />
@@ -522,9 +578,11 @@
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
+		<Unit filename="../ps2/HwInternal.h" />
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
 		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
 		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
+		<Unit filename="../ps2/LegacyDmac.cpp" />
 		<Unit filename="../vtlb.cpp" />
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />

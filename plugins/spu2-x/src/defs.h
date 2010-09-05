@@ -446,7 +446,7 @@ struct V_Core
 	// uninitialized constructor
 	V_Core() : Index( -1 ), DMAPtr( NULL ) {}
 	V_Core( int idx );			// our badass constructor
-	virtual ~V_Core() throw();
+	~V_Core() throw();
 
 	void	Reset( int index );
 	void	Init( int index );

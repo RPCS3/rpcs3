@@ -514,6 +514,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\ps2\eeHwTraceLog.inl"
+							>
+						</File>
+						<File
 							RelativePath="..\..\FiFo.cpp"
 							>
 						</File>
@@ -527,6 +531,10 @@
 						</File>
 						<File
 							RelativePath="..\..\Hw.h"
+							>
+						</File>
+						<File
+							RelativePath="..\..\ps2\HwInternal.h"
 							>
 						</File>
 						<File
@@ -749,6 +757,10 @@
 					<Filter
 						Name="DMAC"
 						>
+						<File
+							RelativePath="..\..\ps2\LegacyDmac.cpp"
+							>
+						</File>
 						<Filter
 							Name="Sif"
 							>
@@ -1316,6 +1328,14 @@
 					</File>
 					<File
 						RelativePath="..\..\Ipu\IPU_Fifo.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\IPU\IPUdma.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\IPU\IPUdma.h"
 						>
 					</File>
 					<File

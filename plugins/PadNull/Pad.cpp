@@ -102,7 +102,10 @@ EXPORT_C_(void) PADsetLogDir(const char* dir)
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;
 
 	// Reload the log file after updated the path
-	if (padLog) fclose(padLog);
+	if (padLog) {
+        fclose(padLog);
+        padLog = NULL;
+    }
     OpenLog();
 }
 
@@ -118,7 +121,7 @@ EXPORT_C_(s32) PADinit(u32 flags)
 EXPORT_C_(void) PADshutdown()
 {
 #ifdef PAD_LOG
-	if (padLog != NULL)
+	if (padLog)
 	{
 		fclose(padLog);
 		padLog = NULL;

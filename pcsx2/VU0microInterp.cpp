@@ -21,15 +21,13 @@
 
 extern void _vuFlushAll(VURegs* VU);
 
-_vuTables(VU0, VU0);
-
-void _vu0ExecUpper(VURegs* VU, u32 *ptr) {
+static void _vu0ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
 	IdebugUPPER(VU0);
 	VU0_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
-void _vu0ExecLower(VURegs* VU, u32 *ptr) {
+static void _vu0ExecLower(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[0];
 	IdebugLOWER(VU0);
 	VU0_LOWER_OPCODE[VU->code >> 25]();
@@ -48,15 +46,6 @@ static void _vu0Exec(VURegs* VU)
 	int vfreg;
 	int vireg;
 	int discard=0;
-
-	if(VU0.VI[REG_TPC].UL >= VU0.maxmicro){
-#ifdef CPU_LOG
-		Console.WriteLn("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
-#endif
-		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
-		VU->cycle++;
-		return;
-	}
 
 	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL];
 	VU->VI[REG_TPC].UL+=8;
@@ -166,21 +155,15 @@ static void _vu0Exec(VURegs* VU)
 		if( VU->ebit-- == 1 ) {
 			_vuFlushAll(VU);
 			VU0.VI[REG_VPU_STAT].UL&= ~0x1; /* E flag */
-			vif0Regs->stat.VEW = false;
+			vif0Regs.stat.VEW = false;
 		}
 	}
 }
 
 void vu0Exec(VURegs* VU)
 {
-	if (VU->VI[REG_TPC].UL >= VU->maxmicro) {
-#ifdef CPU_LOG
-		Console.Warning("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
-#endif
-		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
-	} else {
-		_vu0Exec(VU);
-	}
+	VU0.VI[REG_TPC].UL &= VU0_PROGMASK;
+	_vu0Exec(VU);
 	VU->cycle++;
 
 	if (VU->VI[0].UL != 0) DbgCon.Error("VI[0] != 0!!!!\n");

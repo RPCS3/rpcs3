@@ -38,7 +38,7 @@ namespace Internal {
 //
 
 template< typename T>
-static __ri const char* _log_GetIopHwName( u32 addr, T val )
+static __ri const char* _ioplog_GetHwName( u32 addr, T val )
 {
 	switch( addr )
 	{
@@ -200,20 +200,31 @@ static __ri const char* _log_GetIopHwName( u32 addr, T val )
 }
 
 template< typename T>
-static __ri void IopHwTraceLog( u32 addr, T val, const char* modestr )
+static __ri void IopHwTraceLog( u32 addr, T val, bool mode )
 {
-	if( !EmuConfig.Trace.IOP.m_EnableRegisters ) return;
+	if (!IsDevBuild) return;
+	if (!EmuConfig.Trace.IOP.m_EnableRegisters) return;
 
-	static char *temp = "Hw%s%d from %s, addr 0x%08x = 0x%0*x";
+	FastFormatAscii valStr;
+	FastFormatAscii labelStr;
+	labelStr.Write("Hw%s%u", mode ? "Read" : "Write", sizeof (T) * 8);
 
-	// Replace the * above with the operand size (this ensures nicely formatted
-	// zero-fill hex values):
-	temp[(sizeof temp)-3] = '0' + (sizeof(T)*2);
+	switch( sizeof (T) )
+	{
+		case 1: valStr.Write("0x%02x", val); break;
+		case 2: valStr.Write("0x%04x", val); break;
+		case 4: valStr.Write("0x%08x", val); break;
 
-	if( const char* regname = _log_GetIopHwName<T>( addr, val ) )
-		PSXHW_LOG( temp, modestr, (sizeof (T)) * 8, regname, addr, val );
+		case 8: valStr.Write("0x%08x.%08x", ((u32*)&val)[1], ((u32*)&val)[0]); break;
+		case 16: ((u128&)val).WriteTo(valStr);
+	}
+
+	static const char* temp = "%-12s @ 0x%08X/%-16s %s %s";
+
+	if( const char* regname = _ioplog_GetHwName<T>( addr, val ) )
+		PSXHW_LOG( temp, labelStr.c_str(), addr, regname, mode ? "->" : "<-", valStr.c_str() );
 	else
-		PSXUnkHW_LOG( temp, modestr, (sizeof (T)) * 8, "Unknown", addr, val );
+		PSXUnkHW_LOG( temp, labelStr.c_str(), addr, "Unknown", mode ? "->" : "<-", valStr.c_str() );
 }
 
 } };

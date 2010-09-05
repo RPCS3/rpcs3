@@ -816,7 +816,7 @@ void SQ()
 	// an address error due to unaligned access isn't possible like it is on other loads/stores.
 
 	u32 addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-	memWrite128(addr & ~0xf, cpuRegs.GPR.r[_Rt_].UD);
+	memWrite128(addr & ~0xf, cpuRegs.GPR.r[_Rt_].UQ);
 }
 
 /*********************************************************
@@ -868,8 +868,7 @@ void SYSCALL()
 	}
 
 	// The only thing this code is used for is the one log message, so don't execute it if we aren't logging bios messages.
-#ifdef PCSX2_DEVBUILD
-	if (SysTrace.EE.Bios.IsActive() && (call == 0x77))
+	if (SysTraceActive(EE.Bios) && (call == 0x77))
 	{
 		t_sif_dma_transfer *dmat;
 		//struct t_sif_cmd_header	*hdr;
@@ -891,7 +890,6 @@ void SYSCALL()
 				dmat->dest, dmat->src);
 		}
 	}
-#endif
 
 	cpuRegs.pc -= 4;
 	cpuException(0x20, cpuRegs.branch);

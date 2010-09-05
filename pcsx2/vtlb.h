@@ -71,13 +71,11 @@ template< typename DataType >
 extern DataType __fastcall vtlb_memRead(u32 mem);
 extern void __fastcall vtlb_memRead64(u32 mem, mem64_t *out);
 extern void __fastcall vtlb_memRead128(u32 mem, mem128_t *out);
-extern void __fastcall vtlb_memRead128(u32 mem, u64 (&out)[2]);
 
 template< typename DataType >
 extern void __fastcall vtlb_memWrite(u32 mem, DataType value);
 extern void __fastcall vtlb_memWrite64(u32 mem, const mem64_t* value);
 extern void __fastcall vtlb_memWrite128(u32 mem, const mem128_t* value);
-extern void __fastcall vtlb_memWrite128(u32 mem, const u64 (&value)[2]);
 
 extern void vtlb_DynGenWrite(u32 sz);
 extern void vtlb_DynGenRead32(u32 bits, bool sign);

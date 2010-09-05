@@ -127,11 +127,13 @@ public:
 	FastFormatAscii& Write( const char* fmt, ... );
 	FastFormatAscii& WriteV( const char* fmt, va_list argptr );
 
-	const char* GetResult() const;
-	operator const char*() const;
+	bool IsEmpty() const;
+
+	const char* c_str() const		{ return m_dest->GetPtr(); }
+	operator const char*() const	{ return m_dest->GetPtr(); }
 
 	const wxString GetString() const;
-	operator wxString() const;
+	//operator wxString() const;
 };
 
 class FastFormatUnicode
@@ -149,18 +151,11 @@ public:
 	FastFormatUnicode& WriteV( const char* fmt, va_list argptr );
 	FastFormatUnicode& WriteV( const wxChar* fmt, va_list argptr );
 
-	const wxChar* GetResult() const;
-	const wxString GetString() const;
+	bool IsEmpty() const;
 
-	operator const wxChar*() const
-	{
-		return (const wxChar*)m_dest->GetPtr();
-	}
-
-	operator wxString() const
-	{
-		return (const wxChar*)m_dest->GetPtr();
-	}
+	const wxChar* c_str() const		{ return (const wxChar*)m_dest->GetPtr(); }
+	operator const wxChar*() const	{ return (const wxChar*)m_dest->GetPtr(); }
+	operator wxString() const		{ return (const wxChar*)m_dest->GetPtr(); }
 };
 
 extern bool pxParseAssignmentString( const wxString& src, wxString& ldest, wxString& rdest );

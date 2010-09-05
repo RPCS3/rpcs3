@@ -15,17 +15,19 @@
 
 
 #include "PrecompiledHeader.h"
-#include "Common.h"
 
 #include <time.h>
 #include <cmath>
 
+#include "Common.h"
 #include "R3000A.h"
 #include "Counters.h"
 #include "IopCounters.h"
 
 #include "GS.h"
 #include "VUmicro.h"
+
+#include "ps2/HwInternal.h"
 
 using namespace Threading;
 
@@ -44,6 +46,15 @@ SyncCounter vsyncCounter;
 
 u32 nextsCounter;	// records the cpuRegs.cycle value of the last call to rcntUpdate()
 s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate()
+
+// Forward declarations needed because C/C++ both are wimpy single-pass compilers.
+
+static void rcntStartGate(bool mode, u32 sCycle);
+static void rcntEndGate(bool mode, u32 sCycle);
+static void rcntWcount(int index, u32 value);
+static void rcntWmode(int index, u32 value);
+static void rcntWtarget(int index, u32 value);
+static void rcntWhold(int index, u32 value);
 
 
 void rcntReset(int index) {
@@ -575,7 +586,7 @@ static __fi void _rcntSetGate( int index )
 }
 
 // mode - 0 means hblank source, 8 means vblank source.
-__fi void rcntStartGate(bool isVblank, u32 sCycle)
+static __fi void rcntStartGate(bool isVblank, u32 sCycle)
 {
 	int i;
 
@@ -636,7 +647,7 @@ __fi void rcntStartGate(bool isVblank, u32 sCycle)
 }
 
 // mode - 0 means hblank signal, 8 means vblank signal.
-__fi void rcntEndGate(bool isVblank , u32 sCycle)
+static __fi void rcntEndGate(bool isVblank , u32 sCycle)
 {
 	int i;
 
@@ -677,7 +688,15 @@ __fi void rcntEndGate(bool isVblank , u32 sCycle)
 	// rcntUpdate, since we're being called from there anyway.
 }
 
-__fi void rcntWmode(int index, u32 value)
+static __fi u32 rcntCycle(int index)
+{
+	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3))
+		return counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);
+	else
+		return counters[index].count;
+}
+
+static __fi void rcntWmode(int index, u32 value)
 {
 	if(counters[index].mode.IsCounting) {
 		if(counters[index].mode.ClockSource != 0x3) {
@@ -711,7 +730,7 @@ __fi void rcntWmode(int index, u32 value)
 	_rcntSet( index );
 }
 
-__fi void rcntWcount(int index, u32 value)
+static __fi void rcntWcount(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeCount = %x,   oldcount=%x, target=%x", index, value, counters[index].count, counters[index].target );
 
@@ -737,7 +756,7 @@ __fi void rcntWcount(int index, u32 value)
 	_rcntSet( index );
 }
 
-__fi void rcntWtarget(int index, u32 value)
+static __fi void rcntWtarget(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeTarget = %x", index, value);
 
@@ -766,7 +785,7 @@ __fi void rcntWtarget(int index, u32 value)
 	_rcntSet( index );
 }
 
-__fi void rcntWhold(int index, u32 value)
+static __fi void rcntWhold(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] Hold Write = %x", index, value);
 	counters[index].hold = value;
@@ -787,13 +806,75 @@ __fi u32 rcntRcount(int index)
 	return ret;
 }
 
-__fi u32 rcntCycle(int index)
+template< uint page >
+__fi u16 rcntRead32( u32 mem )
 {
-	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3))
-		return counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);
-	else
-		return counters[index].count;
+	// Important DevNote:
+	// Yes this uses a u16 return value on purpose!  The upper bits 16 of the counter registers
+	// are all fixed to 0, so we always truncate everything in these two pages using a u16
+	// return value! --air
+
+	iswitch( mem ) {
+	icase(RCNT0_COUNT)	return (u16)rcntRcount(0);
+	icase(RCNT0_MODE)	return (u16)counters[0].modeval;
+	icase(RCNT0_TARGET)	return (u16)counters[0].target;
+	icase(RCNT0_HOLD)	return (u16)counters[0].hold;
+
+	icase(RCNT1_COUNT)	return (u16)rcntRcount(1);
+	icase(RCNT1_MODE)	return (u16)counters[1].modeval;
+	icase(RCNT1_TARGET)	return (u16)counters[1].target;
+	icase(RCNT1_HOLD)	return (u16)counters[1].hold;
+
+	icase(RCNT2_COUNT)	return (u16)rcntRcount(2);
+	icase(RCNT2_MODE)	return (u16)counters[2].modeval;
+	icase(RCNT2_TARGET)	return (u16)counters[2].target;
+
+	icase(RCNT3_COUNT)	return (u16)rcntRcount(3);
+	icase(RCNT3_MODE)	return (u16)counters[3].modeval;
+	icase(RCNT3_TARGET)	return (u16)counters[3].target;
+	}
+	
+	return psHu16(mem);
 }
+
+template< uint page >
+__fi bool rcntWrite32( u32 mem, mem32_t& value )
+{
+	pxAssume( mem >= RCNT0_COUNT && mem < 0x10002000 );
+
+	// [TODO] : counters should actually just use the EE's hw register space for storing
+	// count, mode, target, and hold. This will allow for a simplified handler for register
+	// reads.
+
+	iswitch( mem ) {
+	icase(RCNT0_COUNT)	return rcntWcount(0, value),	false;
+	icase(RCNT0_MODE)	return rcntWmode(0, value),		false;
+	icase(RCNT0_TARGET)	return rcntWtarget(0, value),	false;
+	icase(RCNT0_HOLD)	return rcntWhold(0, value),		false;
+
+	icase(RCNT1_COUNT)	return rcntWcount(1, value),	false;
+	icase(RCNT1_MODE)	return rcntWmode(1, value),		false;
+	icase(RCNT1_TARGET)	return rcntWtarget(1, value),	false;
+	icase(RCNT1_HOLD)	return rcntWhold(1, value),		false;
+
+	icase(RCNT2_COUNT)	return rcntWcount(2, value),	false;
+	icase(RCNT2_MODE)	return rcntWmode(2, value),		false;
+	icase(RCNT2_TARGET)	return rcntWtarget(2, value),	false;
+
+	icase(RCNT3_COUNT)	return rcntWcount(3, value),	false;
+	icase(RCNT3_MODE)	return rcntWmode(3, value),		false;
+	icase(RCNT3_TARGET)	return rcntWtarget(3, value),	false;
+	}
+
+	// unhandled .. do memory writeback.
+	return true;
+}
+
+template u16 rcntRead32<0x00>( u32 mem );
+template u16 rcntRead32<0x01>( u32 mem );
+
+template bool rcntWrite32<0x00>( u32 mem, mem32_t& value );
+template bool rcntWrite32<0x01>( u32 mem, mem32_t& value );
 
 void SaveStateBase::rcntFreeze()
 {

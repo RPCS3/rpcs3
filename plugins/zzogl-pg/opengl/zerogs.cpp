@@ -31,6 +31,7 @@
 #include "zerogs.h"
 #include "zpipe.h"
 #include "targets.h"
+#include "GLWin.h"
 
 //----------------------- Defines
 

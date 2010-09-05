@@ -16,10 +16,6 @@
 #ifndef __CDVD_ISO_READER_H__
 #define __CDVD_ISO_READER_H__
 
-#ifdef _MSC_VER
-#pragma warning(disable:4018)
-#endif
-
 #include <stdio.h>
 
 #include "IopCommon.h"

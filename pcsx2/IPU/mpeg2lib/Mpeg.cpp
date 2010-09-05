@@ -680,7 +680,7 @@ static __fi bool slice_non_intra_DCT(s16 * const dest, const int stride, const b
 
 void __fi finishmpeg2sliceIDEC()
 {
-	ipuRegs->ctrl.SCD = 0;
+	ipuRegs.ctrl.SCD = 0;
 	coded_block_pattern = decoder.coded_block_pattern;
 
 	g_BP.BP += decoder.bitstream_bits - 16;
@@ -710,8 +710,8 @@ bool mpeg2sliceIDEC()
 		decoder.dc_dct_pred[2] = 128 << decoder.intra_dc_precision;
 
 		decoder.mbc = 0;
-		ipuRegs->top = 0;
-		ipuRegs->ctrl.ECD = 0;
+		ipuRegs.top = 0;
+		ipuRegs.ctrl.ECD = 0;
 
 	case 1:
 		ipu_cmd.pos[0] = 1;
@@ -907,17 +907,17 @@ finish_idec:
 		{
 			if (g_BP.BP & 7) g_BP.BP += 8 - (g_BP.BP & 7);
 
-			ipuRegs->ctrl.SCD = 1;
+			ipuRegs.ctrl.SCD = 1;
 		}
 
 	case 4:
-		if (!getBits32((u8*)&ipuRegs->top, 0))
+		if (!getBits32((u8*)&ipuRegs.top, 0))
 		{
 			ipu_cmd.pos[0] = 4;
 			return false;
 		}
 
-		BigEndian(ipuRegs->top, ipuRegs->top);
+		BigEndian(ipuRegs.top, ipuRegs.top);
 		break;
 	}
 
@@ -942,8 +942,8 @@ bool mpeg2_slice()
 			decoder.dc_dct_pred[2] = 128 << decoder.intra_dc_precision;
 		}
 			
-		ipuRegs->ctrl.ECD = 0;
-		ipuRegs->top = 0;
+		ipuRegs.ctrl.ECD = 0;
+		ipuRegs.top = 0;
 		memzero_sse_a(mb8);
 		memzero_sse_a(mb16);
 	case 1:
@@ -1082,7 +1082,7 @@ bool mpeg2_slice()
 		}
 
 		// Send The MacroBlock via DmaIpuFrom
-		ipuRegs->ctrl.SCD = 0;
+		ipuRegs.ctrl.SCD = 0;
 		coded_block_pattern = decoder.coded_block_pattern;
 		g_BP.BP += (int)decoder.bitstream_bits - 16;
 
@@ -1128,17 +1128,17 @@ bool mpeg2_slice()
 		{
 			if (g_BP.BP & 7) g_BP.BP += 8 - (g_BP.BP & 7);
 
-			ipuRegs->ctrl.SCD = 1;
+			ipuRegs.ctrl.SCD = 1;
 		}
 
 	case 5:
-		if (!getBits32((u8*)&ipuRegs->top, 0))
+		if (!getBits32((u8*)&ipuRegs.top, 0))
 		{
 			ipu_cmd.pos[0] = 5;
 			return false;
 		}
 
-		BigEndian(ipuRegs->top, ipuRegs->top);
+		BigEndian(ipuRegs.top, ipuRegs.top);
 		decoder.bitstream_bits = 0;
 		break;
 	}

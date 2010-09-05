@@ -23,6 +23,7 @@
 #include "GS.h"
 #include "Mem.h"
 #include "zerogs.h"
+#include "GLWin.h"
 
 #include "ZeroGSShaders/zerogsshaders.h"
 #include "targets.h"
@@ -948,20 +949,29 @@ void ZeroGS::Destroy(bool bD3D)
 	}
 
 	g_nCurVBOIndex = 0;
-
-	for (int i = 0; i < ARRAY_SIZE(pvs); ++i)
+	
+	if (pvs != NULL)
 	{
-		SAFE_RELEASE_PROG(pvs[i]);
+		for (int i = 0; i < ARRAY_SIZE(pvs); ++i)
+		{
+			SAFE_RELEASE_PROG(pvs[i]);
+		}
 	}
 
-	for (int i = 0; i < ARRAY_SIZE(ppsRegular); ++i)
+	if (ppsRegular != NULL)
 	{
-		SAFE_RELEASE_PROG(ppsRegular[i].prog);
+		for (int i = 0; i < ARRAY_SIZE(ppsRegular); ++i)
+		{
+			SAFE_RELEASE_PROG(ppsRegular[i].prog);
+		}
 	}
 
-	for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+	if (ppsTexture != NULL)
 	{
-		SAFE_RELEASE_PROG(ppsTexture[i].prog);
+		for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+		{
+			SAFE_RELEASE_PROG(ppsTexture[i].prog);
+		}
 	}
 
 	SAFE_RELEASE_PROG(pvsBitBlt.prog);
@@ -979,7 +989,7 @@ void ZeroGS::Destroy(bool bD3D)
 
 	SAFE_DELETE(font_p);
 
-	GLWin.ReleaseWindow();
+	GLWin.ReleaseContext();
 
 	mapGLExtensions.clear();
 }

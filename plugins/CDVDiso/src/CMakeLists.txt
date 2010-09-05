@@ -12,7 +12,6 @@ set(Output CDVDiso)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
-    -fpermissive
     )
 
 set(OptimizationFlags

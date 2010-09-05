@@ -34,33 +34,22 @@ static __fi void ZeroQWC( void* dest )
 	_mm_store_ps( (float*)dest, _mm_setzero_ps() );
 }
 
-// Various useful locations
-#define spr0 ((DMACh*)&eeMem->HW[0xD000])
-#define spr1 ((DMACh*)&eeMem->HW[0xD400])
-
-#define gif ((DMACh*)&eeMem->HW[0xA000])
-
-#define vif0ch ((DMACh*)&eeMem->HW[0x8000])
-#define vif1ch ((DMACh*)&eeMem->HW[0x9000])
-
-#define sif0dma ((DMACh*)&eeMem->HW[0xc000])
-#define sif1dma ((DMACh*)&eeMem->HW[0xc400])
-#define sif2dma ((DMACh*)&eeMem->HW[0xc800])
-
-#define ipu0dma ((DMACh *)&eeMem->HW[0xb000])
-#define ipu1dma ((DMACh *)&eeMem->HW[0xb400])
+static __fi void ZeroQWC( u128& dest )
+{
+	_mm_store_ps( (float*)&dest, _mm_setzero_ps() );
+}
 
 #define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 
-#define psHs8(mem)	(*(s8 *)&eeMem->HW[(mem) & 0xffff])
-#define psHs16(mem)	(*(s16*)&eeMem->HW[(mem) & 0xffff])
-#define psHs32(mem)	(*(s32*)&eeMem->HW[(mem) & 0xffff])
-#define psHs64(mem)	(*(s64*)&eeMem->HW[(mem) & 0xffff])
-#define psHu8(mem)	(*(u8 *)&eeMem->HW[(mem) & 0xffff])
-#define psHu16(mem)	(*(u16*)&eeMem->HW[(mem) & 0xffff])
-#define psHu32(mem)	(*(u32*)&eeMem->HW[(mem) & 0xffff])
-#define psHu64(mem)	(*(u64*)&eeMem->HW[(mem) & 0xffff])
-#define psHu128(mem)(*(u128*)&eeMem->HW[(mem) & 0xffff])
+#define psHs8(mem)	(*(s8 *)&eeHw[(mem) & 0xffff])
+#define psHs16(mem)	(*(s16*)&eeHw[(mem) & 0xffff])
+#define psHs32(mem)	(*(s32*)&eeHw[(mem) & 0xffff])
+#define psHs64(mem)	(*(s64*)&eeHw[(mem) & 0xffff])
+#define psHu8(mem)	(*(u8 *)&eeHw[(mem) & 0xffff])
+#define psHu16(mem)	(*(u16*)&eeHw[(mem) & 0xffff])
+#define psHu32(mem)	(*(u32*)&eeHw[(mem) & 0xffff])
+#define psHu64(mem)	(*(u64*)&eeHw[(mem) & 0xffff])
+#define psHu128(mem)(*(u128*)&eeHw[(mem) & 0xffff])
 
 #define psMs8(mem)	(*(s8 *)&eeMem->Main[(mem) & 0x1ffffff])
 #define psMs16(mem)	(*(s16*)&eeMem->Main[(mem) & 0x1ffffff])
@@ -114,8 +103,6 @@ static __fi void ZeroQWC( void* dest )
 #define psSu64(mem)		(*(u64 *)&eeMem->Scratch[(mem) & 0x3fff])
 #define psSu128(mem)	(*(u128*)&eeMem->Scratch[(mem) & 0x3fff])
 
-#define psH_DMACh(mem)	(*(DMACh*)&eeMem->HW[(mem) & 0xffff])
-
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();
@@ -135,13 +122,21 @@ extern void mmap_ResetBlockTracking();
 #define memRead8 vtlb_memRead<mem8_t>
 #define memRead16 vtlb_memRead<mem16_t>
 #define memRead32 vtlb_memRead<mem32_t>
-#define memRead64 vtlb_memRead64
-#define memRead128 vtlb_memRead128
 
 #define memWrite8 vtlb_memWrite<mem8_t>
 #define memWrite16 vtlb_memWrite<mem16_t>
 #define memWrite32 vtlb_memWrite<mem32_t>
-#define memWrite64 vtlb_memWrite64
-#define memWrite128 vtlb_memWrite128
+
+static __fi void memRead64(u32 mem, mem64_t* out)	{ vtlb_memRead64(mem, out); }
+static __fi void memRead64(u32 mem, mem64_t& out)	{ vtlb_memRead64(mem, &out); }
+
+static __fi void memRead128(u32 mem, mem128_t* out) { vtlb_memRead128(mem, out); }
+static __fi void memRead128(u32 mem, mem128_t& out) { vtlb_memRead128(mem, &out); }
+
+static __fi void memWrite64(u32 mem, const mem64_t* val)	{ vtlb_memWrite64(mem, val); }
+static __fi void memWrite64(u32 mem, const mem64_t& val)	{ vtlb_memWrite64(mem, &val); }
+static __fi void memWrite128(u32 mem, const mem128_t* val)	{ vtlb_memWrite128(mem, val); }
+static __fi void memWrite128(u32 mem, const mem128_t& val)	{ vtlb_memWrite128(mem, &val); }
+
 
 extern u16 ba0R16(u32 mem);

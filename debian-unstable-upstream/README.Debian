@@ -1,19 +1,19 @@
     pcsx2 for debian
 =========================
 
-* This version have some majors modification against default upstream
+* This version has some major modifications against the default upstream version. 
     -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
-    -> some features was removed to compile against libsound 1.3. Pcsx2 
-       needs the version 1.5
+    -> some features were removed so it could compile against libsound 1.3.
+    Pcsx2 needs at least soundtouch 1.5.
 
 * This package is highly experimental.
 
-* Documentation needs some loves. Feel free to help.
+* Documentation needs some love. Feel free to help.
 
 * -fPIC option was removed for multiple reason.
     - Code only support x86 architecture.
-    - Upstream code use ebx register so it is not compliant with PIC.
-    - Impact too much performance.
-    - only plugins so no others package link against us.
+    - Upstream code uses the ebx register so it's not compliant with PIC.
+    - Impacts the performance too much.
+    - Only plugins. No package will link to them.
 
  -- Gregory Hainaut <gregory.hainaut@gmail.com>  Sat, 24 Apr 2010 23:11:10 +0200

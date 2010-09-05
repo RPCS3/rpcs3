@@ -170,7 +170,7 @@ EXPORT_C_(s32) CDVDopen(const char* pTitle)
 	iso = isoOpen(IsoFile);
 	if (iso == NULL)
 	{
-		SysMessage("Error loading %s\n", IsoFile);
+		SysMessage("Error loading %s\nMake sure the iso file is not mounted in any disk emulation software!", IsoFile);
 		return -1;
 	}
 

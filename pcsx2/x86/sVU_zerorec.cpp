@@ -2750,7 +2750,7 @@ static void SuperVURecompile()
 					pxAssert(pchild->blocks.size() == 0);
 
 					AND32ItoM((uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu ? ~0x100 : ~0x001); // E flag
-					AND32ItoM((uptr)&VU->vifRegs->stat, ~VIF1_STAT_VEW);
+					AND32ItoM((uptr)&VU->GetVifRegs().stat, ~VIF1_STAT_VEW);
 
 					MOV32ItoM((uptr)&VU->VI[REG_TPC], pchild->endpc);
 					JMP32((uptr)SuperVUEndProgram - ((uptr)x86Ptr + 5));
@@ -3023,7 +3023,7 @@ void VuBaseBlock::Recompile()
 		_freeXMMregs();
 		_freeX86regs();
 		AND32ItoM((uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu ? ~0x100 : ~0x001); // E flag
-		AND32ItoM((uptr)&VU->vifRegs->stat, ~VIF1_STAT_VEW);
+		AND32ItoM((uptr)&VU->GetVifRegs().stat, ~VIF1_STAT_VEW);
 
 		if (!branch) MOV32ItoM((uptr)&VU->VI[REG_TPC], endpc);
 
@@ -4680,12 +4680,8 @@ void recSuperVU1::Execute(u32 cycles)
 
 	// [TODO] Debugging pre- and post- hooks?
 
-	if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
-		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL);
-	}
-
 	do { // while loop needed since not always will return finished
-		SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
+		SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & VU1_PROGMASK, 1);
 	} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
 }
 

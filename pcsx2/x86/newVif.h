@@ -82,7 +82,6 @@ struct nVifStruct {
 	vifStruct*				vif;			// Vif Struct ptr
 	VIFregisters*			vifRegs;		// Vif Regs   ptr
 	VURegs*					VU;				// VU  Regs   ptr
-	u8*						vuMemEnd;		// End of VU Memory
 	u32						vuMemLimit;		// Use for fast AND
 	u32						bSize;			// Size of 'buffer'
 	u32						bPtr;

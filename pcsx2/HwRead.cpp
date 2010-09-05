@@ -16,8 +16,10 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
 #include "Hardware.h"
+
+#include "ps2/HwInternal.h"
+#include "ps2/eeHwTraceLog.inl"
 
 using namespace R5900;
 
@@ -29,470 +31,270 @@ static __fi void IntCHackCheck()
 	if( diff > 0 ) cpuRegs.cycle = g_nextBranchCycle;
 }
 
-/////////////////////////////////////////////////////////////////////////
-// Hardware READ 8 bit
+static const uint HwF_VerboseConLog	= 1<<0;
+static const uint HwF_IntcStatHack	= 1<<1;	// used for Reads only.
 
-__fi mem8_t hwRead8(u32 mem)
+template< uint page > void __fastcall _hwRead128(u32 mem, mem128_t* result );
+
+template< uint page, bool intcstathack >
+mem32_t __fastcall _hwRead32(u32 mem)
 {
-	u8 ret;
+	pxAssume( (mem & 0x03) == 0 );
 
-	const u16 masked_mem = mem & 0xffff;
-	// TODO re-implement this warning along with a *complete* logging of all hw activity.
-	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
-	if( mem >= IPU_CMD && mem < D0_CHCR )
+	switch( page )
 	{
-#ifdef PCSX2_DEVBUILD
-		HW_LOG("8bit Hardware IPU Read at 0x%x, value=0x%x", mem, psHu8(mem) );
-#endif
-		return psHu8(mem);
-	}
-	//	DevCon.Warning("Unexpected hwRead8 from 0x%x", mem);
-#ifdef PCSX2_DEVBUILD
-	switch((mem >> 12) & 0xf)
-	{
-		case 0x03:
-			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read8 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
-			else HW_LOG("GIF Register Read8 at 0x%x, value=0x%x", mem, psHu32(mem) );
+		case 0x00:	return rcntRead32<0x00>( mem );
+		case 0x01:	return rcntRead32<0x01>( mem );
+		
+		case 0x02:	return ipuRead32( mem );
+
+		case 0x03:	return dmacRead32<0x03>( mem );
+		
 		case 0x04:
 		case 0x05:
 		case 0x06:
 		case 0x07:
-		case 0x08:
-		case 0x09:
-		case 0x0a:
-		case 0x0b:
-		case 0x0c:
-		case 0x0d:
 		{
-			const char* regName = "Unknown";
+			// [Ps2Confirm] Reading from FIFOs using non-128 bit reads is a complete mystery.
+			// No game is known to attempt such a thing (yay!), so probably nothing for us to
+			// worry about.  Chances are, though, doing so is "legal" and yields some sort
+			// of reproducible behavior.  Candidate for real hardware testing.
+			
+			// Current assumption: Reads 128 bits and discards the unused portion.
 
-			switch( mem & 0xf0)
-			{
-				case 0x00: regName = "CHCR"; break;
-				case 0x10: regName = "MADR"; break;
-				case 0x20: regName = "QWC"; break;
-				case 0x30: regName = "TADR"; break;
-				case 0x40: regName = "ASR0"; break;
-				case 0x50: regName = "ASR1"; break;
-				case 0x80: regName = "SADDR"; break;
-			}
+			DevCon.WriteLn( Color_Cyan, "Reading 32-bit FIFO data" );
 
-			HW_LOG("Hardware Read 8 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu8(mem) );
-			ret = psHu8(mem);
-			return ret;
+			u128 out128;
+			_hwRead128<page>(mem, &out128);
+			return out128._u32[(mem >> 2) & 0x3];
 		}
-}
-#endif
-
-	switch (mem)
-	{
-		case RCNT0_COUNT: ret = (u8)rcntRcount(0); break;
-		case RCNT0_MODE: ret = (u8)counters[0].modeval; break;
-		case RCNT0_TARGET: ret = (u8)counters[0].target; break;
-		case RCNT0_HOLD: ret = (u8)counters[0].hold; break;
-		case RCNT0_COUNT + 1: ret = (u8)(rcntRcount(0)>>8); break;
-		case RCNT0_MODE + 1: ret = (u8)(counters[0].modeval>>8); break;
-		case RCNT0_TARGET + 1: ret = (u8)(counters[0].target>>8); break;
-		case RCNT0_HOLD + 1: ret = (u8)(counters[0].hold>>8); break;
-
-		case RCNT1_COUNT: ret = (u8)rcntRcount(1); break;
-		case RCNT1_MODE: ret = (u8)counters[1].modeval; break;
-		case RCNT1_TARGET: ret = (u8)counters[1].target; break;
-		case RCNT1_HOLD: ret = (u8)counters[1].hold; break;
-		case RCNT1_COUNT + 1: ret = (u8)(rcntRcount(1)>>8); break;
-		case RCNT1_MODE + 1: ret = (u8)(counters[1].modeval>>8); break;
-		case RCNT1_TARGET + 1: ret = (u8)(counters[1].target>>8); break;
-		case RCNT1_HOLD + 1: ret = (u8)(counters[1].hold>>8); break;
-
-		case RCNT2_COUNT: ret = (u8)rcntRcount(2); break;
-		case RCNT2_MODE: ret = (u8)counters[2].modeval; break;
-		case RCNT2_TARGET: ret = (u8)counters[2].target; break;
-		case RCNT2_COUNT + 1: ret = (u8)(rcntRcount(2)>>8); break;
-		case RCNT2_MODE + 1: ret = (u8)(counters[2].modeval>>8); break;
-		case RCNT2_TARGET + 1: ret = (u8)(counters[2].target>>8); break;
-
-		case RCNT3_COUNT: ret = (u8)rcntRcount(3); break;
-		case RCNT3_MODE: ret = (u8)counters[3].modeval; break;
-		case RCNT3_TARGET: ret = (u8)counters[3].target; break;
-		case RCNT3_COUNT + 1: ret = (u8)(rcntRcount(3)>>8); break;
-		case RCNT3_MODE + 1: ret = (u8)(counters[3].modeval>>8); break;
-		case RCNT3_TARGET + 1: ret = (u8)(counters[3].target>>8); break;
-
-		default:
-			if ((mem & 0xffffff0f) == SBUS_F200)
-			{
-				switch (mem)
-				{
-					case SBUS_F240:
-						ret = psHu32(mem);
-						//psHu32(mem) &= ~0x4000;
-						break;
-
-					case SBUS_F260:
-						ret = 0;
-						break;
-
-					default:
-						ret = psHu32(mem);
-						break;
-				}
-				return (u8)ret;
-			}
-
-			ret = psHu8(mem);
-			UnknownHW_LOG("Hardware Read 8 from 0x%x = 0x%x", mem, ret);
-			break;
-	}
-
-	return ret;
-}
-
-/////////////////////////////////////////////////////////////////////////
-// Hardware READ 16 bit
-
-__fi mem16_t hwRead16(u32 mem)
-{
-	u16 ret;
-	const u16 masked_mem = mem & 0xffff;
-
-	// TODO re-implement this warning along with a *complete* logging of all hw activity.
-	// (implementation should be modelled after the iopHWRead/iopHwWrite files)
-	if( mem >= IPU_CMD && mem < D0_CHCR )
-	{
-#ifdef PCSX2_DEVBUILD
-		HW_LOG("16 bit Hardware IPU Read at 0x%x, value=0x%x", mem, psHu16(mem) );
-#endif
-		return psHu16(mem);
-	}
-	//	Console.Warning("Unexpected hwRead16 from 0x%x", mem);
-
-#ifdef PCSX2_DEVBUILD
-	switch((mem >> 12) & 0xf)
-	{
-		case 0x03:
-			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read8 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
-			else HW_LOG("GIF Register Read8 at 0x%x, value=0x%x", mem, psHu32(mem) );
-		case 0x04:
-		case 0x05:
-		case 0x06:
-		case 0x07:
-		case 0x08:
-		case 0x09:
-		case 0x0a:
-		case 0x0b:
-		case 0x0c:
-		case 0x0d:
-		{
-			const char* regName = "Unknown";
-
-			switch( mem & 0xf0)
-			{
-				case 0x00: regName = "CHCR"; break;
-				case 0x10: regName = "MADR"; break;
-				case 0x20: regName = "QWC"; break;
-				case 0x30: regName = "TADR"; break;
-				case 0x40: regName = "ASR0"; break;
-				case 0x50: regName = "ASR1"; break;
-				case 0x80: regName = "SADDR"; break;
-			}
-
-			HW_LOG("Hardware Read16 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu16(mem) );
-			ret = psHu16(mem);
-			return ret;
-		}
-}
-#endif
-
-	switch (mem)
-	{
-		case RCNT0_COUNT: ret = (u16)rcntRcount(0); break;
-		case RCNT0_MODE: ret = (u16)counters[0].modeval; break;
-		case RCNT0_TARGET: ret = (u16)counters[0].target; break;
-		case RCNT0_HOLD: ret = (u16)counters[0].hold; break;
-
-		case RCNT1_COUNT: ret = (u16)rcntRcount(1); break;
-		case RCNT1_MODE: ret = (u16)counters[1].modeval; break;
-		case RCNT1_TARGET: ret = (u16)counters[1].target; break;
-		case RCNT1_HOLD: ret = (u16)counters[1].hold; break;
-
-		case RCNT2_COUNT: ret = (u16)rcntRcount(2); break;
-		case RCNT2_MODE: ret = (u16)counters[2].modeval; break;
-		case RCNT2_TARGET: ret = (u16)counters[2].target; break;
-
-		case RCNT3_COUNT: ret = (u16)rcntRcount(3); break;
-		case RCNT3_MODE: ret = (u16)counters[3].modeval; break;
-		case RCNT3_TARGET: ret = (u16)counters[3].target; break;
-
-		default:
-			if ((mem & 0xffffff0f) == SBUS_F200)
-			{
-				switch (mem)
-				{
-					case SBUS_F240:
-						ret = psHu16(mem) | 0x0102;
-						psHu32(mem) &= ~0x4000; // not commented out like in bit mode?
-						break;
-
-					case SBUS_F260:
-						ret = 0;
-						break;
-
-					default:
-						ret = psHu32(mem);
-						break;
-				}
-				return (u16)ret;
-			}
-			ret = psHu16(mem);
-			UnknownHW_LOG("Hardware Read16 at 0x%x, value= 0x%x", ret, mem);
-			break;
-	}
-	return ret;
-}
-
-/////////////////////////////////////////////////////////////////////////
-// Hardware READ 32 bit
-
-// Reads hardware registers for page 0 (counters 0 and 1)
-mem32_t __fastcall hwRead32_page_00(u32 mem)
-{
-	mem &= 0xffff;
-	switch( mem )
-	{
-		case 0x00: return (u16)rcntRcount(0);
-		case 0x10: return (u16)counters[0].modeval;
-		case 0x20: return (u16)counters[0].target;
-		case 0x30: return (u16)counters[0].hold;
-
-		case 0x800: return (u16)rcntRcount(1);
-		case 0x810: return (u16)counters[1].modeval;
-		case 0x820: return (u16)counters[1].target;
-		case 0x830: return (u16)counters[1].hold;
-	}
-
-	return *((u32*)&eeMem->HW[mem]);
-}
-
-// Reads hardware registers for page 1 (counters 2 and 3)
-mem32_t __fastcall hwRead32_page_01(u32 mem)
-{
-	mem &= 0xffff;
-	switch( mem )
-	{
-		case 0x1000: return (u16)rcntRcount(2);
-		case 0x1010: return (u16)counters[2].modeval;
-		case 0x1020: return (u16)counters[2].target;
-
-		case 0x1800: return (u16)rcntRcount(3);
-		case 0x1810: return (u16)counters[3].modeval;
-		case 0x1820: return (u16)counters[3].target;
-	}
-
-	return *((u32*)&eeMem->HW[mem]);
-}
-
-// Reads hardware registers for page 15 (0x0F).
-// This is used internally to produce two inline versions, one with INTC_HACK, and one without.
-static __fi mem32_t __hwRead32_page_0F( u32 mem, bool intchack )
-{
-	// *Performance Warning*  This function is called -A-LOT.  Be wary when making changes.  It
-	// could impact FPS significantly.
-
-	mem &= 0xffff;
-
-	// INTC_STAT shortcut for heavy spinning.
-	// Performance Note: Visual Studio handles this best if we just manually check for it here,
-	// outside the context of the switch statement below.  This is likely fixed by PGO also,
-	// but it's an easy enough conditional to account for anyways.
-
-	static const uint ics = INTC_STAT & 0xffff;
-	if( mem == ics )		// INTC_STAT
-	{
-		if( intchack ) IntCHackCheck();
-		return *((u32*)&eeMem->HW[ics]);
-	}
-
-	switch( mem )
-	{
-		case 0xf010:
-			HW_LOG("INTC_MASK Read32, value=0x%x", psHu32(INTC_MASK));
 		break;
 
-		case 0xf130:	// SIO_ISR
-		case 0xf260:	// SBUS_F260
-		case 0xf410:	// 0x1000f410
-		case 0xf430:	// MCH_RICM
-			return 0;
+		case 0x0f:
+		{
+			// INTC_STAT shortcut for heavy spinning.
+			// Performance Note: Visual Studio handles this best if we just manually check for it here,
+			// outside the context of the switch statement below.  This is likely fixed by PGO also,
+			// but it's an easy enough conditional to account for anyways.
 
-		case 0xf240:	// SBUS_F240
-			return psHu32(0xf240) | 0xF0000102;
-
-		case 0xf440:	// MCH_DRD
-			if( !((psHu32(0xf430) >> 6) & 0xF) )
+			if (mem == INTC_STAT)
 			{
-				switch ((psHu32(0xf430)>>16) & 0xFFF)
-				{
-					//MCH_RICM: x:4|SA:12|x:5|SDEV:1|SOP:4|SBC:1|SDEV:5
+				if (intcstathack) IntCHackCheck();
+				return psHu32(INTC_STAT);
+			}
 
-					case 0x21://INIT
-						if(rdram_sdevid < rdram_devices)
-						{
-							rdram_sdevid++;
-							return 0x1F;
-						}
+			//if ((mem & 0x1000f200) == 0x1000f200)
+			//	Console.Error("SBUS");
+
+			switch( mem )
+			{
+				case SIO_ISR:
+				case SBUS_F260:
+				case 0x1000f410:
+				case MCH_RICM:
 					return 0;
 
-					case 0x23://CNFGA
-						return 0x0D0D;	//PVER=3 | MVER=16 | DBL=1 | REFBIT=5
+				case SBUS_F240:
+					return psHu32(SBUS_F240) | 0xF0000102;
 
-					case 0x24://CNFGB
-						//0x0110 for PSX  SVER=0 | CORG=8(5x9x7) | SPT=1 | DEVTYP=0 | BYTE=0
-						return 0x0090;	//SVER=0 | CORG=4(5x9x6) | SPT=1 | DEVTYP=0 | BYTE=0
+				case MCH_DRD:
+					if( !((psHu32(MCH_RICM) >> 6) & 0xF) )
+					{
+						switch ((psHu32(MCH_RICM)>>16) & 0xFFF)
+						{
+							//MCH_RICM: x:4|SA:12|x:5|SDEV:1|SOP:4|SBC:1|SDEV:5
 
-					case 0x40://DEVID
-						return psHu32(0xf430) & 0x1F;	// =SDEV
-				}
+							case 0x21://INIT
+								if(rdram_sdevid < rdram_devices)
+								{
+									rdram_sdevid++;
+									return 0x1F;
+								}
+							return 0;
+
+							case 0x23://CNFGA
+								return 0x0D0D;	//PVER=3 | MVER=16 | DBL=1 | REFBIT=5
+
+							case 0x24://CNFGB
+								//0x0110 for PSX  SVER=0 | CORG=8(5x9x7) | SPT=1 | DEVTYP=0 | BYTE=0
+								return 0x0090;	//SVER=0 | CORG=4(5x9x6) | SPT=1 | DEVTYP=0 | BYTE=0
+
+							case 0x40://DEVID
+								return psHu32(MCH_RICM) & 0x1F;	// =SDEV
+						}
+					}
+				return 0;
 			}
-			return 0;
+		}
+		break;
 	}
-	return *((u32*)&eeMem->HW[mem]);
+
+	return psHu32(mem);
 }
 
-mem32_t __fastcall hwRead32_page_0F(u32 mem)
+template< uint page >
+mem32_t __fastcall hwRead32(u32 mem)
 {
-	return __hwRead32_page_0F( mem, false );
+	mem32_t retval = _hwRead32<page,false>(mem);
+	eeHwTraceLog( mem, retval, true );
+	return retval;
 }
 
 mem32_t __fastcall hwRead32_page_0F_INTC_HACK(u32 mem)
 {
-	return __hwRead32_page_0F( mem, true );
+	mem32_t retval = _hwRead32<0x0f,true>(mem);
+	eeHwTraceLog( mem, retval, true );
+	return retval;
 }
 
-mem32_t __fastcall hwRead32_page_02(u32 mem)
+// --------------------------------------------------------------------------------------
+//  hwRead8 / hwRead16 / hwRead64 / hwRead128
+// --------------------------------------------------------------------------------------
+
+template< uint page >
+mem8_t __fastcall _hwRead8(u32 mem)
 {
-	return ipuRead32( mem );
+	u32 ret32 = _hwRead32<page, false>(mem & ~0x03);
+	return ((u8*)&ret32)[mem & 0x03];
 }
 
-// Used for all pages not explicitly specified above.
-mem32_t __fastcall hwRead32_generic(u32 mem)
+template< uint page >
+mem8_t __fastcall hwRead8(u32 mem)
 {
-	const u16 masked_mem = mem & 0xffff;
+	mem8_t ret8 = _hwRead8<0x0f>(mem);
+	eeHwTraceLog( mem, ret8, true );
+	return ret8;
+}
 
-	switch( masked_mem>>12 )		// switch out as according to the 4k page of the access.
+template< uint page >
+mem16_t __fastcall _hwRead16(u32 mem)
+{
+	pxAssume( (mem & 0x01) == 0 );
+
+	u32 ret32 = _hwRead32<page, false>(mem & ~0x03);
+	return ((u16*)&ret32)[(mem>>1) & 0x01];
+}
+
+template< uint page >
+mem16_t __fastcall hwRead16(u32 mem)
+{
+	u16 ret16 = _hwRead16<page>(mem);
+	eeHwTraceLog( mem, ret16, true );
+	return ret16;
+}
+
+mem16_t __fastcall hwRead16_page_0F_INTC_HACK(u32 mem)
+{
+	pxAssume( (mem & 0x01) == 0 );
+
+	u32 ret32 = _hwRead32<0x0f, true>(mem & ~0x03);
+	u16 ret16 = ((u16*)&ret32)[(mem>>1) & 0x01];
+
+	eeHwTraceLog( mem, ret16, "Read" );
+	return ret16;
+}
+
+template< uint page >
+static void _hwRead64(u32 mem, mem64_t* result )
+{
+	pxAssume( (mem & 0x07) == 0 );
+
+	switch (page)
 	{
-		case 0x03:
-			if(masked_mem >= 0x3800) HW_LOG("VIF%x Register Read32 at 0x%x, value=0x%x", (masked_mem < 0x3c00) ? 0 : 1, mem, psHu32(mem) );
-			else HW_LOG("GIF Register Read32 at 0x%x, value=0x%x", mem, psHu32(mem) );
-			
-			// Fixme: OPH hack. Toggle the flag on each GIF_STAT access. (rama)
-			if (CHECK_OPHFLAGHACK)
-			{
-				if (masked_mem == 0x3020)
-					gifRegs->stat.OPH = !gifRegs->stat.OPH;
-			}
-			break;
-		///////////////////////////////////////////////////////
-		// Most of the following case handlers are for developer builds only (logging).
-		// It'll all optimize to ziltch in public release builds.
-#ifdef PCSX2_DEVBUILD
+		case 0x02:
+			*result = ipuRead64(mem);
+		return;
+
 		case 0x04:
 		case 0x05:
 		case 0x06:
 		case 0x07:
-		case 0x08:
-		case 0x09:
-		case 0x0a:
-		case 0x0b:
-		case 0x0c:
-		case 0x0d:
 		{
-			const char* regName = "Unknown";
+			// [Ps2Confirm] Reading from FIFOs using non-128 bit reads is a complete mystery.
+			// No game is known to attempt such a thing (yay!), so probably nothing for us to
+			// worry about.  Chances are, though, doing so is "legal" and yields some sort
+			// of reproducible behavior.  Candidate for real hardware testing.
+			
+			// Current assumption: Reads 128 bits and discards the unused portion.
 
-			switch( mem & 0xf0)
-			{
-				case 0x00: regName = "CHCR"; break;
-				case 0x10: regName = "MADR"; break;
-				case 0x20: regName = "QWC"; break;
-				case 0x30: regName = "TADR"; break;
-				case 0x40: regName = "ASR0"; break;
-				case 0x50: regName = "ASR1"; break;
-				case 0x80: regName = "SADDR"; break;
-			}
+			uint wordpart = (mem >> 3) & 0x1;
+			DevCon.WriteLn( Color_Cyan, "Reading 64-bit FIFO data (%s 64 bits discarded)", wordpart ? "upper" : "lower" );
 
-			HW_LOG("Hardware Read32 at 0x%x (%ls %s), value=0x%x", mem, ChcrName(mem & ~0xff), regName, psHu32(mem) );
+			u128 out128;
+			_hwRead128<page>(mem, &out128);
+			*result = out128._u64[wordpart];
 		}
-		break;
-#endif
-		case 0x0e:
-#ifdef PCSX2_DEVBUILD
-			HW_LOG("DMAC Control Regs addr=0x%x Read32, value=0x%x", mem, psHu32(mem));
-#else
-			if( mem == DMAC_STAT)
-				HW_LOG("DMAC_STAT Read32, value=0x%x", psHu32(DMAC_STAT));
-#endif
-		break;
-
-		jNO_DEFAULT;
+		return;
 	}
 
-	return *((u32*)&eeMem->HW[masked_mem]);
+	*result = _hwRead32<page,false>( mem );
 }
 
-/////////////////////////////////////////////////////////////////////////
-// Hardware READ 64 bit
-
-void __fastcall hwRead64_page_00(u32 mem, mem64_t* result )
+template< uint page >
+void __fastcall hwRead64(u32 mem, mem64_t* result )
 {
-	*result = hwRead32_page_00( mem );
+	_hwRead64<page>( mem, result );
+	eeHwTraceLog( mem, *result, true );
 }
 
-void __fastcall hwRead64_page_01(u32 mem, mem64_t* result )
+template< uint page >
+void __fastcall _hwRead128(u32 mem, mem128_t* result )
 {
-	*result = hwRead32_page_01( mem );
+	pxAssume( (mem & 0x0f) == 0 );
+
+	// FIFOs are the only "legal" 128 bit registers, so we Handle them first.
+	// All other registers fall back on the 64-bit handler (and from there
+	// all non-IPU reads fall back to the 32-bit handler).
+
+	switch (page)
+	{
+		case 0x05:
+			ReadFIFO_VIF1( result );
+		break;
+
+		case 0x07:
+			if (mem & 0x10)
+				ZeroQWC( result );		// IPUin is write-only
+			else
+				ReadFIFO_IPUout( result );
+		break;
+
+		case 0x04:
+		case 0x06:
+			// VIF0 and GIF are write-only.
+			// [Ps2Confirm] Reads from these FIFOs (and IPUin) do one of the following:
+			// return zero, leave contents of the dest register unchanged, or in some
+			// indeterminate state.  The actual behavior probably isn't important.
+			ZeroQWC( result );
+		break;
+		
+		default:
+			_hwRead64<page>( mem, &result->lo );
+			result->hi = 0;
+		break;		
+	}
 }
 
-void __fastcall hwRead64_page_02(u32 mem, mem64_t* result )
+template< uint page >
+void __fastcall hwRead128(u32 mem, mem128_t* result )
 {
-	*result = ipuRead64(mem);
+	_hwRead128<page>( mem, result );
+	eeHwTraceLog( mem, *result, true );
 }
 
-void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t* result )
-{
-	if (mem == INTC_STAT) IntCHackCheck();
+#define InstantizeHwRead(pageidx) \
+	template mem8_t __fastcall hwRead8<pageidx>(u32 mem); \
+	template mem16_t __fastcall hwRead16<pageidx>(u32 mem); \
+	template mem32_t __fastcall hwRead32<pageidx>(u32 mem); \
+	template void __fastcall hwRead64<pageidx>(u32 mem, mem64_t* result ); \
+	template void __fastcall hwRead128<pageidx>(u32 mem, mem128_t* result ); \
+	template mem32_t __fastcall _hwRead32<pageidx, false>(u32 mem);
 
-	*result = psHu64(mem);
-	UnknownHW_LOG("Hardware Read 64 at %x",mem);
-}
-
-void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
-{
-	*result = psHu64(mem);
-	UnknownHW_LOG("Hardware Read 64 at %x",mem);
-}
-
-/////////////////////////////////////////////////////////////////////////
-// Hardware READ 128 bit
-
-void __fastcall hwRead128_page_00(u32 mem, mem128_t* result )
-{
-	result->lo = hwRead32_page_00( mem );
-	result->hi = 0;
-}
-
-void __fastcall hwRead128_page_01(u32 mem, mem128_t* result )
-{
-	result->lo = hwRead32_page_01( mem );
-	result->hi = 0;
-}
-
-void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
-{
-	// IPU is currently unhandled in 128 bit mode.
-	HW_LOG("Hardware Read 128 at %x (IPU)",mem);
-}
-
-void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
-{
-	CopyQWC(out, &psHu128(mem));
-	UnknownHW_LOG("Hardware Read 128 at %x",mem);
-}
+InstantizeHwRead(0x00);	InstantizeHwRead(0x08);
+InstantizeHwRead(0x01);	InstantizeHwRead(0x09);
+InstantizeHwRead(0x02);	InstantizeHwRead(0x0a);
+InstantizeHwRead(0x03);	InstantizeHwRead(0x0b);
+InstantizeHwRead(0x04);	InstantizeHwRead(0x0c);
+InstantizeHwRead(0x05);	InstantizeHwRead(0x0d);
+InstantizeHwRead(0x06);	InstantizeHwRead(0x0e);
+InstantizeHwRead(0x07);	InstantizeHwRead(0x0f);

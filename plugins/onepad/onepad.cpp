@@ -44,6 +44,7 @@ u16 status[2];
 int pressure;
 static keyEvent s_event;
 std::string s_strIniPath("inis/");
+std::string s_strLogPath("logs/");
 bool toggleAutoRepeat = true;
 
 const u32 version  = PS2E_PAD_VERSION;
@@ -215,12 +216,26 @@ void __LogToConsole(const char *fmt, ...)
 void initLogging()
 {
 #ifdef PAD_LOG
-	if (padLog == NULL)
-	{
-		padLog = fopen("logs/padLog.txt", "w");
-		if (padLog) setvbuf(padLog, NULL,  _IONBF, 0);
-	}
+	if (padLog) return;
+
+    const std::string LogFile(s_strLogPath + "padLog.txt");
+    padLog = fopen(LogFile.c_str(), "w");
+
+    if (padLog)
+        setvbuf(padLog, NULL,  _IONBF, 0);
+
 	PAD_LOG("PADinit\n");
+#endif
+}
+
+void CloseLogging()
+{
+#ifdef PAD_LOG
+	if (padLog)
+	{
+		fclose(padLog);
+		padLog = NULL;
+	}
 #endif
 }
 
@@ -256,13 +271,7 @@ EXPORT_C_(s32) PADinit(u32 flags)
 
 EXPORT_C_(void) PADshutdown()
 {
-#ifdef PAD_LOG
-	if (padLog != NULL)
-	{
-		fclose(padLog);
-		padLog = NULL;
-	}
-#endif
+    CloseLogging();
 }
 
 EXPORT_C_(s32) PADopen(void *pDsp)
@@ -285,6 +294,15 @@ EXPORT_C_(void) PADsetSettingsDir(const char* dir)
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
+EXPORT_C_(void) PADsetLogDir(const char* dir)
+{
+	// Get the path to the log directory.
+	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+
+	// Reload the log file after updated the path
+    CloseLogging();
+    initLogging();
+}
 
 EXPORT_C_(void) PADclose()
 {

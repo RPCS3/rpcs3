@@ -33,7 +33,7 @@ template< typename T >
 static __fi void _generic_write( u32 addr, T val )
 {
 	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
-	IopHwTraceLog<T>( addr, val, "Write" );
+	IopHwTraceLog<T>( addr, val, false );
 	psxHu(addr) = val;
 }
 
@@ -49,7 +49,7 @@ static __fi T _generic_read( u32 addr )
 	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 
 	T ret = psxHu(addr);
-	IopHwTraceLog<T>( addr, ret, "Read" );
+	IopHwTraceLog<T>( addr, ret, true );
 	return ret;
 }
 
@@ -84,12 +84,12 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 		default:
 			if( masked_addr >= 0x100 && masked_addr < 0x130 )
 			{
-				DevCon.Warning( "HwWrite8 to Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DbgCon.Warning( "HwWrite8 to Counter16 [ignored] @ addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				psxHu8( addr ) = val;
 			}
 			else if( masked_addr >= 0x480 && masked_addr < 0x4a0 )
 			{
-				DevCon.Warning( "HwWrite8 to Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DbgCon.Warning( "HwWrite8 to Counter32 [ignored] @ addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				psxHu8( addr ) = val;
 			}
 			else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
@@ -103,7 +103,7 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 		break;
 	}
 
-	IopHwTraceLog<mem8_t>( addr, val, "Write" );
+	IopHwTraceLog<mem8_t>( addr, val, false );
 }
 
 void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
@@ -137,7 +137,7 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 	}
 
 	psxHu8( addr ) = val;
-	IopHwTraceLog<mem8_t>( addr, val, "Write" );
+	IopHwTraceLog<mem8_t>( addr, val, false );
 }
 
 void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
@@ -150,7 +150,7 @@ void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 	else
 		psxHu8( addr ) = val;
 
-	IopHwTraceLog<mem8_t>( addr, val, "Write" );
+	IopHwTraceLog<mem8_t>( addr, val, false );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -244,7 +244,7 @@ static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 			SPU2write( addr, val );
 		else
 		{
-			DevCon.Warning( "HwWrite32 to SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
+			DbgCon.Warning( "HwWrite32 to SPU2? @ 0x%08X .. What manner of trickery is this?!", addr );
 			//psxHu(addr) = val;
 		}
 	}
@@ -481,7 +481,7 @@ static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 		}
 	}
 
-	IopHwTraceLog<T>( addr, val, "Write" );
+	IopHwTraceLog<T>( addr, val, false );
 }
 
 
@@ -497,7 +497,7 @@ void __fastcall iopHwWrite16_Page3( u32 addr, mem16_t val )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	IopHwTraceLog<mem16_t>( addr, val, "Write" );
+	IopHwTraceLog<mem16_t>( addr, val, false );
 }
 
 void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
@@ -505,7 +505,7 @@ void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
 	pxAssert( (addr >> 12) == 0x1f808 );
 	psxHu16(addr) = val;
-	IopHwTraceLog<mem16_t>( addr, val, "Write" );
+	IopHwTraceLog<mem16_t>( addr, val, false );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -520,7 +520,7 @@ void __fastcall iopHwWrite32_Page3( u32 addr, mem32_t val )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	IopHwTraceLog<mem32_t>( addr, val, "Write" );
+	IopHwTraceLog<mem32_t>( addr, val, false );
 }
 
 void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
@@ -567,7 +567,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 	}
 	else psxHu32(addr) = val;
 
-	IopHwTraceLog<mem32_t>( addr, val, "Write" );
+	IopHwTraceLog<mem32_t>( addr, val, false );
 }
 
 }

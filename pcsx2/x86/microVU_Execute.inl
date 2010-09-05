@@ -43,24 +43,24 @@ void mVUdispatcherA(mV) {
 
 	// Load Regs
 #if 1 // CHECK_MACROVU0 - Always on now
-	xMOV(gprF0, ptr32[&mVU->regs->VI[REG_STATUS_FLAG].UL]);
+	xMOV(gprF0, ptr32[&mVU->regs().VI[REG_STATUS_FLAG].UL]);
 	xMOV(gprF1, gprF0);
 	xMOV(gprF2, gprF0);
 	xMOV(gprF3, gprF0);
 #else
-	mVUallocSFLAGd((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL, 1);
+	mVUallocSFLAGd((uptr)&mVU->regs().VI[REG_STATUS_FLAG].UL, 1);
 #endif
 	
-	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_MAC_FLAG].UL]);
+	xMOVAPS(xmmT1, ptr128[&mVU->regs().VI[REG_MAC_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
 	xMOVAPS(ptr128[mVU->macFlag],  xmmT1);
 
-	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_CLIP_FLAG].UL]);
+	xMOVAPS(xmmT1, ptr128[&mVU->regs().VI[REG_CLIP_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
 	xMOVAPS(ptr128[mVU->clipFlag], xmmT1);
 
-	xMOVAPS(xmmT1, ptr128[&mVU->regs->VI[REG_P].UL]);
-	xMOVAPS(xmmPQ, ptr128[&mVU->regs->VI[REG_Q].UL]);
+	xMOVAPS(xmmT1, ptr128[&mVU->regs().VI[REG_P].UL]);
+	xMOVAPS(xmmPQ, ptr128[&mVU->regs().VI[REG_Q].UL]);
 	xSHUF.PS(xmmPQ, xmmT1, 0); // wzyx = PPQQ
 
 	// Jump to Recompiled Code Block
@@ -119,12 +119,12 @@ _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 _mVUt void mVUcleanUp() {
 	microVU* mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
-	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);
-	//mVUprint("microVU: VI0 = %x", mVU->regs->VI[0].UL);
+	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs().VF[0].UL[0], mVU->regs().VF[0].UL[1], mVU->regs().VF[0].UL[2], mVU->regs().VF[0].UL[3]);
+	//mVUprint("microVU: VI0 = %x", mVU->regs().VI[0].UL);
 	mVU->prog.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVU->prog.x86start, (uptr)(mVU->prog.x86end - mVU->prog.x86start));
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
-	mVU->regs->cycle += mVU->cycles;
+	mVU->regs().cycle += mVU->cycles;
 	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
 	//static int ax = 0; ax++;
 	//if (!(ax % 100000)) {

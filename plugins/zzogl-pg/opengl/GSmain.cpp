@@ -32,6 +32,7 @@ using namespace std;
 #include "Mem.h"
 #include "Regs.h"
 #include "Profile.h"
+#include "GLWin.h"
 
 #include "zerogs.h"
 #include "targets.h"
@@ -373,13 +374,11 @@ void CALLBACK GSshutdown()
 
 	ZZLog::Close();
 }
-
 void CALLBACK GSclose()
 {
 	FUNCLOG
 
 	ZeroGS::Destroy(1);
-
 	GLWin.CloseWindow();
 
 	SaveStateFile = NULL;
@@ -497,7 +496,7 @@ static __forceinline void SetGSTitle()
 //		ZZLog::Debug_Log("Set profile.");
 //		g_bWriteProfile = 1;
 //	}
-	if (!(conf.fullscreen())) GLWin.SetTitle(strtitle);
+	GLWin.SetTitle(strtitle);
 }
 
 void CALLBACK GSvsync(int interlace)

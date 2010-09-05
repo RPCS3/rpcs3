@@ -21,8 +21,6 @@
 
 extern void _vuFlushAll(VURegs* VU);
 
-_vuTables(VU1, VU1);
-
 void _vu1ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
 	IdebugUPPER(VU1);
@@ -50,13 +48,6 @@ static void _vu1Exec(VURegs* VU)
 	int vireg;
 	int discard=0;
 
-	if(VU->VI[REG_TPC].UL >= VU->maxmicro){
-		CPU_LOG("VU1 memory overflow!!: %x", VU->VI[REG_TPC].UL);
-		VU->VI[REG_TPC].UL &= 0x3FFF;
-		/*VU0.VI[REG_VPU_STAT].UL&= ~0x100;
-		VU->cycle++;
-		return;*/
-	}
 	ptr = (u32*)&VU->Micro[VU->VI[REG_TPC].UL];
 	VU->VI[REG_TPC].UL+=8;
 
@@ -159,7 +150,7 @@ static void _vu1Exec(VURegs* VU)
 		if( VU->ebit-- == 1 ) {
 			_vuFlushAll(VU);
 			VU0.VI[REG_VPU_STAT].UL &= ~0x100;
-			vif1Regs->stat.VEW = false;
+			vif1Regs.stat.VEW = false;
 		}
 	}
 }
@@ -184,6 +175,7 @@ InterpVU1::InterpVU1()
 
 void InterpVU1::Step()
 {
+	VU1.VI[REG_TPC].UL &= VU1_PROGMASK;
 	vu1Exec( &VU1 );
 }
 
@@ -192,11 +184,11 @@ void InterpVU1::Execute(u32 cycles)
 	for (int i = (int)cycles; i > 0 ; i--) {
 		if (!(VU0.VI[REG_VPU_STAT].UL & 0x100)) {
 			if (VU1.branch || VU1.ebit) {
-				vu1Exec(&VU1); // run branch delay slot?
+				Step(); // run branch delay slot?
 			}
 			break;
 		}
-		vu1Exec(&VU1);
+		Step();
 	}
 }
 

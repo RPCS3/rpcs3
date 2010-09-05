@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "IPU.h"
+#include "IPU/IPUdma.h"
 #include "mpeg2lib/Mpeg.h"
 
 
@@ -35,7 +36,7 @@ void IPU_Fifo_Input::clear()
 {
 	memzero(data);
 	g_BP.IFC = 0;
-	ipuRegs->ctrl.IFC = 0;
+	ipuRegs.ctrl.IFC = 0;
 	readpos = 0;
 	writepos = 0;
 }
@@ -43,7 +44,7 @@ void IPU_Fifo_Input::clear()
 void IPU_Fifo_Output::clear()
 {
 	memzero(data);
-	ipuRegs->ctrl.OFC = 0;
+	ipuRegs.ctrl.OFC = 0;
 	readpos = 0;
 	writepos = 0;
 }
@@ -89,9 +90,9 @@ int IPU_Fifo_Output::write(const u32 *value, int size)
 {
 	int transsize, firsttrans;
 
-	if ((int)ipuRegs->ctrl.OFC >= 8) IPU0dma();
+	if ((int)ipuRegs.ctrl.OFC >= 8) IPU0dma();
 
-	transsize = min(size, 8 - (int)ipuRegs->ctrl.OFC);
+	transsize = min(size, 8 - (int)ipuRegs.ctrl.OFC);
 	firsttrans = transsize;
 
 	while (transsize-- > 0)
@@ -104,7 +105,7 @@ int IPU_Fifo_Output::write(const u32 *value, int size)
 		value += 4;
 	}
 
-	ipuRegs->ctrl.OFC += firsttrans;
+	ipuRegs.ctrl.OFC += firsttrans;
 	IPU0dma();
 
 	return firsttrans;
@@ -150,7 +151,7 @@ void IPU_Fifo_Output::_readsingle(void *value)
 
 void IPU_Fifo_Output::read(void *value, int size)
 {
-	ipuRegs->ctrl.OFC -= size;
+	ipuRegs.ctrl.OFC -= size;
 	while (size > 0)
 	{
 		_readsingle(value);
@@ -161,38 +162,51 @@ void IPU_Fifo_Output::read(void *value, int size)
 
 void IPU_Fifo_Output::readsingle(void *value)
 {
-	if (ipuRegs->ctrl.OFC > 0)
+	if (ipuRegs.ctrl.OFC > 0)
 	{
-		ipuRegs->ctrl.OFC--;
+		ipuRegs.ctrl.OFC--;
 		_readsingle(value);
 	}
 }
 
 __fi bool decoder_t::ReadIpuData(u128* out)
 {
-	if(decoder.ipu0_data == 0) return false;
-	_mm_store_ps((float*)out, _mm_load_ps((float*)GetIpuDataPtr()));
+	if(ipu0_data == 0)
+	{
+		IPU_LOG( "ReadFIFO/IPUout -> (fifo empty/no data available)" );
+		return false;
+	}
+
+	CopyQWC(out, GetIpuDataPtr());
 
 	--ipu0_data;
 	++ipu0_idx;
 
+	IPU_LOG( "ReadFIFO/IPUout -> %ls", out->ToString().c_str() );
+
 	return true;
 }
 
-void __fastcall ReadFIFO_page_7(u32 mem, mem128_t* out)
+void __fastcall ReadFIFO_IPUout(mem128_t* out)
 {
-	pxAssert( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
+	// FIXME!  When ReadIpuData() doesn't succeed (returns false), the EE should probably stall
+	// until a value becomes available.  This isn't exactly easy to do since the virtualized EE
+	// in PCSX2 *has* to be running in order for the IPU DMA to upload new input data to allow
+	// IPUout's FIFO to fill.  Thus if we implement an EE stall, PCSX2 deadlocks.  Grr.  --air
 
-	// All addresses in this page map to 0x7000 and 0x7010:
-	mem &= 0x10;
-
-	if (mem == 0) // IPUout_FIFO
+	if (decoder.ReadIpuData(out))
 	{
-		if (decoder.ReadIpuData(out))
-		{
-			ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
-		}
+		ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
 	}
-	else // IPUin_FIFO
-		ipu_fifo.out.readsingle((void*)out);
+}
+
+void __fastcall WriteFIFO_IPUin(const mem128_t* value)
+{
+	IPU_LOG( "WriteFIFO/IPUin <- %ls", value->ToString().c_str() );
+
+	//committing every 16 bytes
+	if( ipu_fifo.in.write((u32*)value, 1) == 0 )
+	{
+		IPUProcessInterrupt();
+	}
 }

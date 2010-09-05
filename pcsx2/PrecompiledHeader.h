@@ -78,6 +78,7 @@ typedef int BOOL;
 #define TRUE  1
 #define FALSE 0
 
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
 // unchanged for long periods of time, or happen to be used by almost everything, so they
@@ -100,14 +101,23 @@ typedef int BOOL;
 
 #include "Config.h"
 
+typedef void FnType_Void();
+typedef FnType_Void* Fnptr_Void;
+
+static const s64 _1mb	= 0x100000;
+static const s64 _8mb	= _1mb * 8;
+static const s64 _16mb	= _1mb * 16;
+static const s64 _256mb	= _1mb * 256;
+static const s64 _1gb	= _256mb * 4;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Compiler/OS specific macros and defines -- Begin Section
+
 // Linux isn't set up for svn version numbers yet.
 #ifdef __LINUX__
 #	define SVN_REV 0
 #	define SVN_MODS 0
 #endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Compiler/OS specific macros and defines -- Begin Section
 
 #if defined(_MSC_VER)
 

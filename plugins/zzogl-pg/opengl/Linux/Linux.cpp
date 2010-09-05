@@ -25,6 +25,7 @@
 #include "GS.h"
 #include "Linux.h"
 #include "zerogs.h"
+#include "GLWin.h"
 
 #include <map>
 
@@ -52,7 +53,10 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 					break;
 
 				case XK_Escape:
-					if (conf.fullscreen()) GSclose();
+					if (conf.fullscreen()) 
+					{
+						GSclose();
+					}
 					break;
 
 				case XK_Shift_L:
@@ -206,7 +210,6 @@ void OnToggle_advopts(GtkCellRendererToggle *cell, gchar *path, gpointer user_da
 
 void DisplayAdvancedDialog()
 {
-	int return_value;
 	GtkWidget *dialog;
 	
 	GtkWidget *advanced_frame, *advanced_box;

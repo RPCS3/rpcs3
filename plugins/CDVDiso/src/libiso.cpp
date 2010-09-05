@@ -166,7 +166,7 @@ int _readfile(void *handle, void *dst, int size)
 	return ret;
 }
 
-int _writefile(void *handle, void *src, int size)
+int _writefile(void *handle, const void *src, int size)
 {
 	DWORD ret;
 
@@ -198,11 +198,12 @@ void *_openfile(const char *filename, int flags)
 
 u64 _tellfile(void *handle)
 {
-	s64 cursize = ftell(handle);
+	FILE* fp = (FILE*)handle;
+	s64 cursize = ftell(fp);
 	if (cursize == -1)
 	{
 		// try 64bit
-		cursize = ftello64(handle);
+		cursize = ftello64(fp);
 		if (cursize < -1)
 		{
 			// zero top 32 bits
@@ -214,7 +215,7 @@ u64 _tellfile(void *handle)
 
 int _seekfile(void *handle, u64 offset, int whence)
 {
-	int seekerr = fseeko64(handle, offset, whence);
+	int seekerr = fseeko64((FILE*)handle, offset, whence);
 
 	if (seekerr == -1) printf("failed to seek\n");
 
@@ -223,17 +224,17 @@ int _seekfile(void *handle, u64 offset, int whence)
 
 int _readfile(void *handle, void *dst, int size)
 {
-	return fread(dst, 1, size, handle);
+	return fread(dst, 1, size, (FILE*)handle);
 }
 
-int _writefile(void *handle, void *src, int size)
+int _writefile(void *handle, const void *src, int size)
 {
-	return fwrite(src, 1, size, handle);
+	return fwrite(src, 1, size, (FILE*)handle);
 }
 
 void _closefile(void *handle)
 {
-	fclose(handle);
+	fclose((FILE*)handle);
 }
 
 #endif

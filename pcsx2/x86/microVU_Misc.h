@@ -39,6 +39,16 @@ struct mVU_Globals {
 
 extern const __aligned(32) mVU_Globals mVUglob;
 
+static const uint _Ibit_ = 1 << 31;
+static const uint _Ebit_ = 1 << 30;
+static const uint _Mbit_ = 1 << 29;
+static const uint _Dbit_ = 1 << 28;
+static const uint _Tbit_ = 1 << 27;
+static const uint _DTbit_ = 0; //( _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
+
+static const uint divI = 0x1040000;
+static const uint divD = 0x2080000;
+
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------
@@ -71,29 +81,11 @@ extern const __aligned(32) mVU_Globals mVUglob;
 #define _Fsf_	((mVU->code >> 21) & 0x03)
 #define _Ftf_	((mVU->code >> 23) & 0x03)
 
-#if 0
-#define _Imm5_	(s16)(((mVU->code & 0x400) ? 0xfff0 : 0) | ((mVU->code >> 6) & 0xf))
-#define _Imm11_	(s32)((mVU->code & 0x400) ? (0xfffffc00 | (mVU->code & 0x3ff)) : (mVU->code & 0x3ff))
-#define _Imm12_	(((mVU->code >> 21) & 0x1) << 11) | (mVU->code & 0x7ff)
-#define _Imm15_	(((mVU->code >> 10) & 0x7800) | (mVU->code & 0x7ff))
-#define _Imm24_	(u32)(mVU->code & 0xffffff)
-#else
 #define _Imm5_	(mVU->Imm5())
 #define _Imm11_	(mVU->Imm11())
 #define _Imm12_	(mVU->Imm12())
 #define _Imm15_	(mVU->Imm15())
 #define _Imm24_	(mVU->Imm24())
-#endif
-
-#define _Ibit_ (1<<31)
-#define _Ebit_ (1<<30)
-#define _Mbit_ (1<<29)
-#define _Dbit_ (1<<28)
-#define _Tbit_ (1<<27)
-#define _DTbit_ 0 //( _Dbit_ | _Tbit_ ) // ToDo: Implement this stuff...
-
-#define divI 0x1040000
-#define divD 0x2080000
 
 #define isCOP2		(mVU->cop2  != 0)
 #define isVU1		(mVU->index != 0)
@@ -161,9 +153,6 @@ typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
 //------------------------------------------------------------------
 // Define mVUquickSearch
 //------------------------------------------------------------------
-// FIXME: I changed the below saerchXMM extern from __aligned16 to __pagealigned.
-// This *probably* fixes the crashing bugs in linux when using the optimized memcmp.
-// Needs testing... --air
 #ifndef __LINUX__
 extern __pagealigned u8 mVUsearchXMM[__pagesize];
 typedef u32 (__fastcall *mVUCall)(void*, void*);
@@ -205,24 +194,18 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
 #define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
-#define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
+#define curI		 ((u32*)mVU->regs().Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
 
-#if 0
-#define incPC(x)	 { iPC = ((iPC + (x)) & (mVU->progSize-1)); setCode(); }
-#define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
-#define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
-#else
 #define incPC(x)	 (mVU->advancePC(x))
 #define branchAddr	 mVU->getBranchAddr()
 #define branchAddrN	 mVU->getBranchAddrN()
-#endif
 
 #define incPC2(x)	 { iPC = ((iPC + (x)) & mVU->progMemMask); }
 #define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
-#define Rmem		 &mVU->regs->VI[REG_R].UL
+#define Rmem		 &mVU->regs().VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
@@ -262,12 +245,14 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 //------------------------------------------------------------------
 
 // Reg Alloc
-#define doRegAlloc 1 // Set to 0 to flush every 64bit Instruction
+static const bool doRegAlloc = 1; // Set to 0 to flush every 32bit Instruction
 // This turns off reg alloc for the most part, but reg alloc will still
-// be done between Upper/Lower and within instructions...
+// be done within instructions... Also on doSwapOp() regAlloc is needed between
+// Lower and Upper instructions, so in this case it flushes after the full
+// 64bit instruction (lower and upper)
 
 // No Flag Optimizations
-#define noFlagOpts 0 // Set to 1 to disable all flag setting optimizations
+static const bool noFlagOpts = 0; // Set to 1 to disable all flag setting optimizations
 // Note: The flag optimizations this disables should all be harmless, so
 // this option is mainly just for debugging... it effectively forces mVU
 // to always update Mac and Status Flags (both sticky and non-sticky) whenever
@@ -275,7 +260,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // flag instances between blocks...
 
 // Constant Propagation
-#define CHECK_VU_CONSTPROP 0 // Set to 1 to turn on vi15 const propagation
+static const bool doConstProp = 0; // Set to 1 to turn on vi15 const propagation
 // Enables Constant Propagation for Jumps based on vi15 'link-register'
 // allowing us to know many indirect jump target addresses.
 // Makes GoW a lot slower due to extra recompilation time and extra code-gen!
@@ -325,4 +310,3 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 extern void mVUmergeRegs(const xmm& dest, const xmm& src,  int xyzw, bool modXYZW=false);
 extern void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW);
 extern void mVUloadReg(const xmm& reg, xAddressVoid ptr, int xyzw);
-extern void mVUloadIreg(const xmm& reg, int xyzw, VURegs* vuRegs);

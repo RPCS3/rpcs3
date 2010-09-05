@@ -129,10 +129,10 @@ void iDumpRegisters(u32 startpc, u32 temp)
 	__Log("gif: %x %x %x", psHu32(0x3000), psHu32(0x3010), psHu32(0x3020));
 
 	for(i = 0; i < ArraySize(dmacs); ++i) {
-		DMACh* p = (DMACh*)(&eeMem->HW[dmacs[i]]);
+		DMACh* p = (DMACh*)(&eeHw[dmacs[i]]);
 		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr._u32, p->madr, p->qwc, p->tadr, p->sadr);
 	}
-	__Log(L"dmac " + dmacRegs->ctrl.desc() + L" " + dmacRegs->stat.desc() + L" " + dmacRegs->rbsr.desc() + L" " + dmacRegs->rbor.desc());
+	__Log(L"dmac " + dmacRegs.ctrl.desc() + L" " + dmacRegs.stat.desc() + L" " + dmacRegs.rbsr.desc() + L" " + dmacRegs.rbor.desc());
 	__Log(L"intc " + intcRegs->stat.desc() + L" " +  intcRegs->mask.desc());
 	__Log("sif: %x %x %x %x %x", psHu32(SBUS_F200), psHu32(SBUS_F220), psHu32(SBUS_F230), psHu32(SBUS_F240), psHu32(SBUS_F260));
 #endif

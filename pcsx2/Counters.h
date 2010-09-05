@@ -13,8 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __COUNTERS_H__
-#define __COUNTERS_H__
+#pragma once
 
 struct EECNT_MODE
 {
@@ -137,16 +136,10 @@ extern void rcntUpdate_vSync();
 extern void rcntUpdate();
 
 extern void rcntInit();
-extern void rcntStartGate(bool mode, u32 sCycle);
-extern void rcntEndGate(bool mode, u32 sCycle);
-extern void rcntWcount(int index, u32 value);
-extern void rcntWmode(int index, u32 value);
-extern void rcntWtarget(int index, u32 value);
-extern void rcntWhold(int index, u32 value);
 extern u32	rcntRcount(int index);
-extern u32	rcntCycle(int index);
+template< uint page > extern bool rcntWrite32( u32 mem, mem32_t& value );
+template< uint page > extern u16 rcntRead32( u32 mem );		// returns u16 by design! (see implementation for details)
 
 extern u32 UpdateVSyncRate();
 extern void frameLimitReset();
 
-#endif /* __COUNTERS_H__ */

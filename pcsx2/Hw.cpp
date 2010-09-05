@@ -18,6 +18,7 @@
 
 #include "Hardware.h"
 #include "newVif.h"
+#include "IPU/IPUdma.h"
 
 using namespace R5900;
 
@@ -45,17 +46,12 @@ void hwInit()
 	hwInitialized = true;
 }
 
-/*void hwShutdown()
-{
-	ipuShutdown();
-}*/
-
 void hwReset()
 {
 	hwInit();
 
-	memzero_ptr<Ps2MemSize::Hardware>( eeMem->HW );
-	//memset(eeMem->HW+0x2000, 0, 0x0000e000);
+	memzero_ptr<Ps2MemSize::Hardware>( eeHw );
+	//memset(eeHw+0x2000, 0, 0x0000e000);
 
 	psHu32(SBUS_F260) = 0x1D000060;
 
@@ -72,6 +68,9 @@ void hwReset()
 	ipuReset();
 	vif0Reset();
 	vif1Reset();
+
+	// needed for legacy DMAC
+	ipuDmaReset();
 }
 
 __fi void intcInterrupt()
@@ -104,7 +103,7 @@ __fi void dmacInterrupt()
 		return;
 	}
 
-	if (!(dmacRegs->ctrl.DMAE) || psHu8(DMAC_ENABLER+2) == 1) 
+	if (!(dmacRegs.ctrl.DMAE) || psHu8(DMAC_ENABLER+2) == 1) 
 	{
 		//DevCon.Warning("DMAC Suspended or Disabled on interrupt");
 		return;
@@ -131,7 +130,7 @@ void hwDmacIrq(int n)
 __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {
 	// all FIFO addresses should always be QWC-aligned.
-	pxAssume((dmacRegs->rbor.ADDR & 15) == 0);
+	pxAssume((dmacRegs.rbor.ADDR & 15) == 0);
 	pxAssume((addr & 15) == 0);
 
 	// DMAC Address resolution:  FIFO can be placed anywhere in the *physical* memory map
@@ -139,24 +138,24 @@ __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 	// valid/invalid page areas of ram, so realistically we only need to test the base address
 	// of the FIFO for address validity.
 
-	if (u128* dst = (u128*)PSM(dmacRegs->rbor.ADDR))
+	if (u128* dst = (u128*)PSM(dmacRegs.rbor.ADDR))
 	{
-		const u32 ringsize = (dmacRegs->rbsr.RMSK / 16) + 1;
-		pxAssertMsg( PSM(dmacRegs->rbor.ADDR+ringsize-1) != NULL, "Scratchpad/MFIFO ringbuffer spans into invalid (unmapped) physical memory!" );
-		uint startpos = (addr & dmacRegs->rbsr.RMSK)/16;
+		const u32 ringsize = (dmacRegs.rbsr.RMSK / 16) + 1;
+		pxAssertMsg( PSM(dmacRegs.rbor.ADDR+ringsize-1) != NULL, "Scratchpad/MFIFO ringbuffer spans into invalid (unmapped) physical memory!" );
+		uint startpos = (addr & dmacRegs.rbsr.RMSK)/16;
 		MemCopy_WrappedDest( data, dst, startpos, ringsize, qwc );
 	}
 	else
 	{
-		SPR_LOG( "Scratchpad/MFIFO: invalid base physical address: 0x%08x", dmacRegs->rbor.ADDR );
-		pxFailDev( wxsFormat( L"Scratchpad/MFIFO: Invalid base physical address: 0x%08x", dmacRegs->rbor.ADDR) );
+		SPR_LOG( "Scratchpad/MFIFO: invalid base physical address: 0x%08x", dmacRegs.rbor.ADDR );
+		pxFailDev( wxsFormat( L"Scratchpad/MFIFO: Invalid base physical address: 0x%08x", dmacRegs.rbor.ADDR) );
 		return false;
 	}
 
 	return true;
 }
 
-__ri bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
+__ri bool hwDmacSrcChainWithStack(DMACh& dma, int id) {
 	switch (id) {
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
             //End Transfer
@@ -164,49 +163,49 @@ __ri bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 
 		case TAG_CNT: // CNT - Transfer QWC following the tag.
             // Set MADR to QW afer tag, and set TADR to QW following the data.
-			dma->madr = dma->tadr + 16;
-			dma->tadr = dma->madr + (dma->qwc << 4);
+			dma.madr = dma.tadr + 16;
+			dma.tadr = dma.madr + (dma.qwc << 4);
 			return false;
 
 		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 		{
 		    // Set MADR to QW following the tag, and set TADR to the address formerly in MADR.
-			u32 temp = dma->madr;
-			dma->madr = dma->tadr + 16;
-			dma->tadr = temp;
+			u32 temp = dma.madr;
+			dma.madr = dma.tadr + 16;
+			dma.tadr = temp;
 			return false;
 		}
 		case TAG_REF: // Ref - Transfer QWC from ADDR field
 		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
             //Set TADR to next tag
-			dma->tadr += 16;
+			dma.tadr += 16;
 			return false;
 
 		case TAG_CALL: // Call - Transfer QWC following the tag, save succeeding tag
 		{
 		    // Store the address in MADR in temp, and set MADR to the data following the tag.
-			u32 temp = dma->madr;
-			dma->madr = dma->tadr + 16;
+			u32 temp = dma.madr;
+			dma.madr = dma.tadr + 16;
 
 			if(temp == 0)
 			{
 				DevCon.Warning("DMA Chain CALL next tag error. Tag Addr = 0");
-				dma->tadr = dma->madr + (dma->qwc << 4);
+				dma.tadr = dma.madr + (dma.qwc << 4);
 				return false;
 			}
 			// Stash an address on the address stack pointer.
-			switch(dma->chcr.ASP)
+			switch(dma.chcr.ASP)
             {
                 case 0: //Check if ASR0 is empty
                     // Store the succeeding tag in asr0, and mark chcr as having 1 address.
-                    dma->asr0 = dma->madr + (dma->qwc << 4);
-                    dma->chcr.ASP++;
+                    dma.asr0 = dma.madr + (dma.qwc << 4);
+                    dma.chcr.ASP++;
                     break;
 
                 case 1:
                     // Store the succeeding tag in asr1, and mark chcr as having 2 addresses.
-                    dma->asr1 = dma->madr + (dma->qwc << 4);
-                    dma->chcr.ASP++;
+                    dma.asr1 = dma.madr + (dma.qwc << 4);
+                    dma.chcr.ASP++;
                     break;
 
                 default:
@@ -215,48 +214,48 @@ __ri bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			}
 
 			// Set TADR to the address from MADR we stored in temp.
-			dma->tadr = temp;
+			dma.tadr = temp;
 
 			return false;
 		}
 
 		case TAG_RET: // Ret - Transfer QWC following the tag, load next tag
             //Set MADR to data following the tag.
-			dma->madr = dma->tadr + 16;
+			dma.madr = dma.tadr + 16;
 
 			// Snag an address from the address stack pointer.
-			switch(dma->chcr.ASP)
+			switch(dma.chcr.ASP)
             {
                 case 2:
                     // Pull asr1 from the stack, give it to TADR, and decrease the # of addresses.
-                    dma->tadr = dma->asr1;
-                    dma->asr1 = 0;
-                    dma->chcr.ASP--;
+                    dma.tadr = dma.asr1;
+                    dma.asr1 = 0;
+                    dma.chcr.ASP--;
                     break;
 
                 case 1:
                     // Pull asr0 from the stack, give it to TADR, and decrease the # of addresses.
-                    dma->tadr = dma->asr0;
-                    dma->asr0 = 0;
-                    dma->chcr.ASP--;
+                    dma.tadr = dma.asr0;
+                    dma.asr0 = 0;
+                    dma.chcr.ASP--;
                     break;
 
                 case 0:
                     // There aren't any addresses to pull, so end the transfer.
-                    //dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
+                    //dma.tadr += 16;						   //Clear tag address - Kills Klonoa 2
                     return true;
 
                 default:
                     // If ASR1 and ASR0 are messed up, end the transfer.
                     //Console.Error("TAG_RET: ASR 1 & 0 == 1. This shouldn't happen!");
-                    //dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
+                    //dma.tadr += 16;						   //Clear tag address - Kills Klonoa 2
                     return true;
             }
 			return false;
 
 		case TAG_END: // End - Transfer QWC following the tag
             //Set MADR to data following the tag, and end the transfer.
-			dma->madr = dma->tadr + 16;
+			dma.madr = dma.tadr + 16;
 			//Don't Increment tadr; breaks Soul Calibur II and III
 			return true;
 	}
@@ -264,7 +263,7 @@ __ri bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 	return false;
 }
 
-bool hwDmacSrcChain(DMACh *dma, int id)
+bool hwDmacSrcChain(DMACh& dma, int id)
 {
 	u32 temp;
 
@@ -276,26 +275,26 @@ bool hwDmacSrcChain(DMACh *dma, int id)
 
 		case TAG_CNT: // CNT - Transfer QWC following the tag.
             // Set MADR to QW after the tag, and TADR to QW following the data.
-			dma->madr = dma->tadr + 16;
-			dma->tadr = dma->madr + (dma->qwc << 4);
+			dma.madr = dma.tadr + 16;
+			dma.tadr = dma.madr + (dma.qwc << 4);
 			return false;
 
 		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
             // Set MADR to QW following the tag, and set TADR to the address formerly in MADR.
-			temp = dma->madr;
-			dma->madr = dma->tadr + 16;
-			dma->tadr = temp;
+			temp = dma.madr;
+			dma.madr = dma.tadr + 16;
+			dma.tadr = temp;
 			return false;
 
 		case TAG_REF: // Ref - Transfer QWC from ADDR field
 		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
             //Set TADR to next tag
-			dma->tadr += 16;
+			dma.tadr += 16;
 			return false;
 
 		case TAG_END: // End - Transfer QWC following the tag
             //Set MADR to data following the tag, and end the transfer.
-			dma->madr = dma->tadr + 16;
+			dma.madr = dma.tadr + 16;
 			//Don't Increment tadr; breaks Soul Calibur II and III
 			return true;
 	}

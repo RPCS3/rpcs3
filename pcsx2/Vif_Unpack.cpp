@@ -302,8 +302,8 @@ _vifT void vifUnpackSetup(const u32 *data) {
 
 	vifStruct& vifX = GetVifX;
 
-	if ((vifXRegs->cycle.wl == 0) && (vifXRegs->cycle.wl < vifXRegs->cycle.cl)) {
-        Console.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs->cycle.cl, vifXRegs->cycle.wl);
+	if ((vifXRegs.cycle.wl == 0) && (vifXRegs.cycle.wl < vifXRegs.cycle.cl)) {
+        Console.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs.cycle.cl, vifXRegs.cycle.wl);
 		vifX.cmd = 0;
         return; // Skipping write and 0 write-cycles, so do nothing!
 	}
@@ -311,33 +311,33 @@ _vifT void vifUnpackSetup(const u32 *data) {
 	
 	//if (!idx) vif0FLUSH(); // Only VU0?
 
-	vifX.usn   = (vifXRegs->code >> 14) & 0x01;
-	int vifNum = (vifXRegs->code >> 16) & 0xff;
+	vifX.usn   = (vifXRegs.code >> 14) & 0x01;
+	int vifNum = (vifXRegs.code >> 16) & 0xff;
 
 	if (vifNum == 0) vifNum = 256;
-	vifXRegs->num =  vifNum;
+	vifXRegs.num =  vifNum;
 
-	if (vifXRegs->cycle.wl <= vifXRegs->cycle.cl) {
+	if (vifXRegs.cycle.wl <= vifXRegs.cycle.cl) {
 		if (!idx) vif0.tag.size = ((vifNum * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
 		else	  vif1.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 	else {
-		int n = vifXRegs->cycle.cl * (vifNum / vifXRegs->cycle.wl) +
-		        _limit(vifNum % vifXRegs->cycle.wl, vifXRegs->cycle.cl);
+		int n = vifXRegs.cycle.cl * (vifNum / vifXRegs.cycle.wl) +
+		        _limit(vifNum % vifXRegs.cycle.wl, vifXRegs.cycle.cl);
 
 		if (!idx) vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
 		else	  vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
 	}
 
-	u32 addr = vifXRegs->code;
-	if (idx && ((addr>>15)&1)) addr += vif1Regs->tops;
+	u32 addr = vifXRegs.code;
+	if (idx && ((addr>>15)&1)) addr += vif1Regs.tops;
 	vifX.tag.addr = (addr<<4) & (idx ? 0x3ff0 : 0xff0);
 
 	VIF_LOG("Unpack VIF%x, QWC %x tagsize %x", idx, vifNum, vif0.tag.size);
 
 	vifX.cl			 = 0;
 	vifX.tag.cmd	 = vifX.cmd;
-	vifXRegs->offset = 0;
+	vifXRegs.offset = 0;
 }
 
 template void vifUnpackSetup<0>(const u32 *data);

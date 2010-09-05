@@ -26,12 +26,12 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 
 	if (VIFdmanum == 0) {
 		VU = &VU0;
-		vifRegs = vif0Regs;
+		vifRegs = &vif0Regs;
 		vif = &vif0;
 	}
 	else {
 		VU = &VU1;
-		vifRegs = vif1Regs;
+		vifRegs = &vif1Regs;
 		vif = &vif1;
 	}
 

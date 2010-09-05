@@ -37,7 +37,7 @@ void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 	uptr aligned = (pasthead + align-1) & ~(align-1);
 
 	AlignedMallocHeader* header = (AlignedMallocHeader*)(aligned-headsize);
-	jASSUME( (uptr)header >= (uptr)p );
+	pxAssume( (uptr)header >= (uptr)p );
 
 	header->baseptr = p;
 	header->size = size;

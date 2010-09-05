@@ -343,11 +343,11 @@ struct Pcsx2Config
 		void LoadSave( IniInterface& conf );
 
 		void Set( const wxString& list, bool enabled=true );
-		bool Clear( const wxString& list ) { Set( list, false ); }
+		void Clear( const wxString& list ) { Set( list, false ); }
 
 		bool Get( GamefixId id ) const;
 		void Set( GamefixId id, bool enabled=true );
-		bool Clear( GamefixId id ) { Set( id, false ); }
+		void Clear( GamefixId id ) { Set( id, false ); }
 
 		bool operator ==( const GamefixOptions& right ) const
 		{

@@ -61,7 +61,7 @@ void *_openfile(const char *filename, int flags);
 u64 _tellfile(void *handle);
 int _seekfile(void *handle, u64 offset, int whence);
 int _readfile(void *handle, void *dst, int size);
-int _writefile(void *handle, void *src, int size);
+int _writefile(void *handle, const void *src, int size);
 void _closefile(void *handle);
 
 #endif /* __LIBISO_H__ */

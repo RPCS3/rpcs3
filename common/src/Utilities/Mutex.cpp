@@ -253,11 +253,13 @@ Threading::ScopedLock::~ScopedLock() throw()
 
 Threading::ScopedLock::ScopedLock( const Mutex* locker )
 {
+	m_IsLocked = false;
 	AssignAndLock( locker );
 }
 
 Threading::ScopedLock::ScopedLock( const Mutex& locker )
 {
+	m_IsLocked = false;
 	AssignAndLock( locker );
 }
 
@@ -268,6 +270,8 @@ void Threading::ScopedLock::AssignAndLock( const Mutex& locker )
 
 void Threading::ScopedLock::AssignAndLock( const Mutex* locker )
 {
+	pxAssume(!m_IsLocked);		// if we're already locked, changing the lock is bad mojo.
+
 	m_lock = const_cast<Mutex*>(locker);
 	if( !m_lock ) return;
 

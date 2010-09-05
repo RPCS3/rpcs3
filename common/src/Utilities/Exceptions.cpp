@@ -49,21 +49,20 @@ pxDoAssertFnType* pxDoAssert = pxAssertImpl_LogIt;
 // response times from the Output window...
 wxString DiagnosticOrigin::ToString( const wxChar* msg ) const
 {
-	wxString message;
-	message.reserve( 2048 );
+	FastFormatUnicode message;
 
-	message.Printf( L"%s(%d) : assertion failed:\n", srcfile, line );
+	message.Write( L"%s(%d) : assertion failed:\n", srcfile, line );
 
 	if( function != NULL )
-		message	+= L"    Function:  " + fromUTF8(function) + L"\n";
+		message.Write( "    Function:  %s\n", function );
 
-	message		+= L"    Thread:    " + Threading::pxGetCurrentThreadName() + L"\n";
+		message.Write(L"    Thread:    %s\n", Threading::pxGetCurrentThreadName().c_str() );
 
 	if( condition != NULL )
-		message	+= L"    Condition: " + wxString(condition) + L"\n";
+		message.Write(L"    Condition: %s\n", condition);
 
 	if( msg != NULL )
-		message += L"    Message:   " + wxString(msg) + L"\n";
+		message.Write(L"    Message:   %s\n", msg);
 
 	return message;
 }

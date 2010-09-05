@@ -18,7 +18,7 @@
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
 
-typedef void FnType_Void();
+static VURegs& vu0Regs = vuRegs[0];
 
 //------------------------------------------------------------------
 // Macro VU - Helper Macros / Functions
@@ -36,9 +36,9 @@ void setupMacroOp(int mode, const char* opName) {
 	microVU0.code = cpuRegs.code;
 	memset(&microVU0.prog.IRinfo.info[0], 0, sizeof(microVU0.prog.IRinfo.info[0]));
 	iFlushCall(FLUSH_EVERYTHING);
-	microVU0.regAlloc->reset(microVU0.regs);
+	microVU0.regAlloc->reset();
 	if (mode & 0x01) { // Q-Reg will be Read
-		xMOVSSZX(xmmPQ, ptr32[&microVU0.regs->VI[REG_Q].UL]);
+		xMOVSSZX(xmmPQ, ptr32[&vu0Regs.VI[REG_Q].UL]);
 	}
 	if (mode & 0x08) { // Clip Instruction
 		microVU0.prog.IRinfo.info[0].cFlag.write	 = 0xff;
@@ -51,16 +51,16 @@ void setupMacroOp(int mode, const char* opName) {
 		microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
 		microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
 		microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
-		xMOV(gprF0, ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
+		xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
 	}
 }
 
 void endMacroOp(int mode) {
 	if (mode & 0x02) { // Q-Reg was Written To
-		xMOVSS(ptr32[&microVU0.regs->VI[REG_Q].UL], xmmPQ);
+		xMOVSS(ptr32[&vu0Regs.VI[REG_Q].UL], xmmPQ);
 	}
 	if (mode & 0x10) { // Status/Mac Flags were Updated
-		xMOV(ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL], gprF0);
+		xMOV(ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL], gprF0);
 	}
 	microVU0.regAlloc->flushAll();
 	microVU0.cop2 = 0;
@@ -269,10 +269,10 @@ static void recCFC2() {
 	iFlushCall(FLUSH_EVERYTHING);
 
 	if (_Rd_ == REG_STATUS_FLAG) { // Normalize Status Flag
-		xMOV(gprF0, ptr32[&microVU0.regs->VI[REG_STATUS_FLAG].UL]);
+		xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
 		mVUallocSFLAGc(eax, gprF0, 0);
 	}
-	else xMOV(eax, ptr32[&microVU0.regs->VI[_Rd_].UL]);
+	else xMOV(eax, ptr32[&vu0Regs.VI[_Rd_].UL]);
 
 	// FixMe: Should R-Reg have upper 9 bits 0?
 	xMOV(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], eax);
@@ -300,14 +300,14 @@ static void recCTC2() {
 		case REG_R:
 			xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
 			xOR (eax, 0x3f800000);
-			xMOV(ptr32[&microVU0.regs->VI[REG_R].UL], eax);
+			xMOV(ptr32[&vu0Regs.VI[REG_R].UL], eax);
 			break;
 		case REG_STATUS_FLAG:
 			if (_Rt_) { // Denormalizes flag into gprF1
 				mVUallocSFLAGd(&cpuRegs.GPR.r[_Rt_].UL[0], 0);
-				xMOV(ptr32[&microVU0.regs->VI[_Rd_].UL], gprF1);
+				xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], gprF1);
 			}
-			else xMOV(ptr32[&microVU0.regs->VI[_Rd_].UL], 0);
+			else xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], 0);
 			break;
 		case REG_CMSAR1:	// Execute VU1 Micro SubRoutine
 			if (_Rt_) {
@@ -318,7 +318,7 @@ static void recCTC2() {
 			break;
 		case REG_FBRST:
 			if (!_Rt_) { 
-				xMOV(ptr32[&microVU0.regs->VI[REG_FBRST].UL], 0); 
+				xMOV(ptr32[&vu0Regs.VI[REG_FBRST].UL], 0); 
 				return;
 			}
 			else xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
@@ -327,12 +327,12 @@ static void recCTC2() {
 			TEST_FBRST_RESET(vu1ResetRegs, 1);
 
 			xAND(eax, 0x0C0C);
-			xMOV(ptr32[&microVU0.regs->VI[REG_FBRST].UL], eax);
+			xMOV(ptr32[&vu0Regs.VI[REG_FBRST].UL], eax);
 			break;
 		default:
 			// Executing vu0 block here fixes the intro of Ratchet and Clank
 			// sVU's COP2 has a comment that "Donald Duck" needs this too...
-			if (_Rd_) _eeMoveGPRtoM((uptr)&microVU0.regs->VI[_Rd_].UL, _Rt_);
+			if (_Rd_) _eeMoveGPRtoM((uptr)&vu0Regs.VI[_Rd_].UL, _Rt_);
 			xMOV(ecx, (uptr)CpuVU0);
 			xCALL(BaseVUmicroCPU::ExecuteBlockJIT);
 			break;
@@ -349,7 +349,7 @@ static void recQMFC2() {
 	// FixMe: For some reason this line is needed or else games break:
 	_eeOnWriteReg(_Rt_, 0);
 
-	xMOVAPS(xmmT1, ptr128[&microVU0.regs->VF[_Rd_]]);
+	xMOVAPS(xmmT1, ptr128[&vu0Regs.VF[_Rd_]]);
 	xMOVAPS(ptr128[&cpuRegs.GPR.r[_Rt_]], xmmT1);
 }
 
@@ -361,7 +361,7 @@ static void recQMTC2() {
 	iFlushCall(FLUSH_EVERYTHING);
 
 	xMOVAPS(xmmT1, ptr128[&cpuRegs.GPR.r[_Rt_]]);
-	xMOVAPS(ptr128[&microVU0.regs->VF[_Rd_]], xmmT1);
+	xMOVAPS(ptr128[&vu0Regs.VF[_Rd_]], xmmT1);
 }
 
 //------------------------------------------------------------------
