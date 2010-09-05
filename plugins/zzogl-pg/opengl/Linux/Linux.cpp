@@ -53,10 +53,7 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 					break;
 
 				case XK_Escape:
-					if (conf.fullscreen()) 
-					{
-						GSclose();
-					}
+                    GSclose();
 					break;
 
 				case XK_Shift_L:
@@ -69,6 +66,10 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 				case XK_Alt_R:
 					bAlt = true;
 					break;
+
+                case XK_Return:
+                    if (bAlt)
+                        GLWin.ToggleFullscreen();
 			}
 			break;
 

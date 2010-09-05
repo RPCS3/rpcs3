@@ -50,8 +50,8 @@ class GLWindow
 		
 		bool CreateVisual();
 		void GetGLXVersion();
-		void GetGLXVidModeVersion();
 		void GetWindowSize();
+        void UpdateGrabKey();
 #endif
 		bool fullScreen, doubleBuffered;
 		s32 x, y;
@@ -60,6 +60,10 @@ class GLWindow
 	public:
 		void SwapGLBuffers();
 		bool ReleaseContext();
+
+#ifdef GL_X11_WINDOW
+        void ToggleFullscreen();
+#endif
 		
 		bool CreateWindow(void *pDisplay);
 		void CloseWindow();
@@ -67,6 +71,7 @@ class GLWindow
 		void SetTitle(char *strtitle);
 		void ResizeCheck();
 };
+
 
 extern GLWindow GLWin;
 
