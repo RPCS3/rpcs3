@@ -403,8 +403,8 @@ enum EE_EventType
 };
 
 extern void CPU_INT( EE_EventType n, s32 ecycle );
-extern void intcInterrupt();
-extern void dmacInterrupt();
+extern uint intcInterrupt();
+extern uint dmacInterrupt();
 
 
 extern void cpuInit();
