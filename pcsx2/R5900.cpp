@@ -26,6 +26,7 @@
 #include "R5900Exceptions.h"
 
 #include "Hardware.h"
+#include "IPU/IPUdma.h"
 
 #include "Elfheader.h"
 #include "CDVD/CDVD.h"
@@ -287,6 +288,8 @@ static __fi void TESTINT( u8 n, void (*callback)() )
 		cpuSetNextBranch( cpuRegs.sCycle[n], cpuRegs.eCycle[n] );
 }
 
+// [TODO] move this function to LegacyDmac.cpp, and remove most of the DMAC-related headers from
+// being included into R5900.cpp.
 static __fi void _cpuTestInterrupts()
 {
 	if (!dmacRegs.ctrl.DMAE || (psHu8(DMAC_ENABLER+2) & 1))

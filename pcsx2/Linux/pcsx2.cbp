@@ -294,6 +294,8 @@
 		<Unit filename="../IPU/IPU.h" />
 		<Unit filename="../IPU/IPU_Fifo.cpp" />
 		<Unit filename="../IPU/IPU_Fifo.h" />
+		<Unit filename="../IPU/IPUdma.cpp" />
+		<Unit filename="../IPU/IPUdma.h" />
 		<Unit filename="../IPU/mpeg2lib/Idct.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.cpp" />
 		<Unit filename="../IPU/mpeg2lib/Mpeg.h" />

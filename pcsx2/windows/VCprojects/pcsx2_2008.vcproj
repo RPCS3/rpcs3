@@ -1331,6 +1331,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\IPU\IPUdma.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\IPU\IPUdma.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\Ipu\yuv2rgb.cpp"
 						>
 					</File>

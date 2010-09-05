@@ -194,6 +194,7 @@ void SaveStateBase::FreezeRegisters()
 	vif1Freeze();
 	sifFreeze();
 	ipuFreeze();
+	ipuDmaFreeze();
 	gifFreeze();
 	sprFreeze();
 

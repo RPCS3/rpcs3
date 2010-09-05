@@ -459,9 +459,7 @@ void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(SIGNAL_IMR_Pending);
-
-	if( GetVersion() > 0 )
-		Freeze(gsRegionMode);
+	Freeze(gsRegionMode);
 
 	gifPathFreeze();
 }

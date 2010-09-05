@@ -18,6 +18,7 @@
 
 #include "Hardware.h"
 #include "newVif.h"
+#include "IPU/IPUdma.h"
 
 using namespace R5900;
 
@@ -45,11 +46,6 @@ void hwInit()
 	hwInitialized = true;
 }
 
-/*void hwShutdown()
-{
-	ipuShutdown();
-}*/
-
 void hwReset()
 {
 	hwInit();
@@ -72,6 +68,9 @@ void hwReset()
 	ipuReset();
 	vif0Reset();
 	vif1Reset();
+
+	// needed for legacy DMAC
+	ipuDmaReset();
 }
 
 __fi void intcInterrupt()
