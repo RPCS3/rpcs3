@@ -23,9 +23,6 @@ if(Linux)
     endif(GTK2_FOUND)
 
     find_package(X11)
-    # Manually find Xxf86vm because it is not done in the module...
-    FIND_LIBRARY(X11_Xxf86vm_LIB Xxf86vm       ${X11_LIB_SEARCH_PATH})
-    MARK_AS_ADVANCED(X11_Xxf86vm_LIB)
 endif(Linux)
 
 ## Use cmake package to find module

@@ -179,8 +179,10 @@ void GLWindow::ToggleFullscreen()
     XLockDisplay(glDisplay);
     if (!XSendEvent(glDisplay, RootWindow(glDisplay, vi->screen), False, mask, (XEvent*)(&cme)))
         ZZLog::Error_Log("Failed to send event: toggle fullscreen");
-    else
+    else {
         fullScreen = (!fullScreen);
+        conf.setFullscreen(fullScreen);
+    }
     XUnlockDisplay(glDisplay);
 
     // Apply the change
@@ -204,7 +206,6 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	
 	x = conf.x;
 	y = conf.y;
-	fullScreen = (conf.fullscreen());
 
 	if (!CreateVisual()) return false;
 	
@@ -247,7 +248,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	else
 		ZZLog::Error_Log("No Direct Rendering possible!");
 
-	if (fullScreen) {
+    // init fullscreen to 0. ToggleFullscreen will update it
+	fullScreen = 0;
+	if (conf.fullscreen()) {
         ToggleFullscreen();
     } else {
         // Restore the window position
