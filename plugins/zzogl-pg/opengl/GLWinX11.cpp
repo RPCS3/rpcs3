@@ -27,6 +27,10 @@
 
 bool GLWindow::CreateWindow(void *pDisplay)
 {
+    // init support of multi thread
+    if (!XInitThreads())
+        ZZLog::Error_Log("Failed to init the xlib concurent threads");
+
 	glDisplay = XOpenDisplay(0);
 	glScreen = DefaultScreen(glDisplay);
 
@@ -137,6 +141,7 @@ void GLWindow::GetGLXVersion()
 }
 
 void GLWindow::UpdateGrabKey() {
+    XLockDisplay(glDisplay);
     if (fullScreen) {
         XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
         XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
@@ -144,6 +149,7 @@ void GLWindow::UpdateGrabKey() {
         XUngrabPointer(glDisplay, CurrentTime);
         XUngrabKeyboard(glDisplay, CurrentTime);
     }
+    XUnlockDisplay(glDisplay);
 }
 
 #define _NET_WM_STATE_REMOVE 0
@@ -170,10 +176,12 @@ void GLWindow::ToggleFullscreen()
     cme.data.l[3] = 0;
 
     // send the event
+    XLockDisplay(glDisplay);
     if (!XSendEvent(glDisplay, RootWindow(glDisplay, vi->screen), False, mask, (XEvent*)(&cme)))
         ZZLog::Error_Log("Failed to send event: toggle fullscreen");
     else
         fullScreen = (!fullScreen);
+    XUnlockDisplay(glDisplay);
 
     // Apply the change
     XSync(glDisplay, False);
@@ -257,17 +265,20 @@ void GLWindow::SwapGLBuffers()
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	if (!fullScreen)
-	{
-		XTextProperty prop;
-        memset(&prop, 0, sizeof(prop));
+    if (!glDisplay or !glWindow) return;
+	if (fullScreen) return;
 
-		char* ptitle = strtitle;
-		if (XStringListToTextProperty(&ptitle, 1, &prop))
-			XSetWMName(glDisplay, glWindow, &prop);
+    XTextProperty prop;
+    memset(&prop, 0, sizeof(prop));
 
-        XFree(prop.value);
-	}
+    char* ptitle = strtitle;
+    if (XStringListToTextProperty(&ptitle, 1, &prop)) {
+        XLockDisplay(glDisplay);
+        XSetWMName(glDisplay, glWindow, &prop);
+        XUnlockDisplay(glDisplay);
+    }
+
+    XFree(prop.value);
 }
 
 void GLWindow::ResizeCheck()
