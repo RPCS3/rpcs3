@@ -217,8 +217,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	GetGLXVersion();
 
+    // Create a window at the last position/size
     glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-            0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
+            conf.x , conf.y , _width, _height, 0, vi->depth, InputOutput, vi->visual,
             CWBorderPixel | CWColormap | CWEventMask,
             &attr);
 
@@ -243,13 +244,10 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
     // init fullscreen to 0. ToggleFullscreen will update it
 	fullScreen = 0;
-	if (conf.fullscreen()) {
+	if (conf.fullscreen())
         ToggleFullscreen();
-    } else {
-        // Restore the window position
-        XMoveWindow(glDisplay, glWindow, conf.x, conf.y);
+    else
         GetWindowSize();
-    }
 
 	return true;
 }

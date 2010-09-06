@@ -29,10 +29,6 @@
 
 #undef CreateWindow	// Undo Windows.h global namespace pollution
 
-#ifdef GL_X11_WINDOW
-#include <X11/extensions/xf86vmode.h>
-#endif
-
 class GLWindow
 {
 	private:
@@ -44,9 +40,6 @@ class GLWindow
 		
 		Window glWindow;
 		XSetWindowAttributes attr;
-		
-		// Original desktop video mode
-		XF86VidModeModeInfo deskMode;
 		
 		bool CreateVisual();
 		void GetGLXVersion();
