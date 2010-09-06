@@ -60,8 +60,6 @@ bool GLWindow::ReleaseContext()
 
 void GLWindow::CloseWindow()
 {
-	conf.x = x;
-	conf.y = y;
 	SaveConfig();
 	if (!glDisplay) return;
 
@@ -128,7 +126,9 @@ void GLWindow::GetWindowSize()
     s32 yDummy;
 	
 	XGetGeometry(glDisplay, glWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
-    ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, x, y);
+	nBackbufferWidth = width;
+	nBackbufferHeight = height;
+    ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
 
 void GLWindow::GetGLXVersion()
@@ -202,21 +202,14 @@ void GLWindow::ToggleFullscreen()
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
-	Colormap cmap;
-	
-	x = conf.x;
-	y = conf.y;
-
 	if (!CreateVisual()) return false;
 	
 	/* create a GLX context */
 	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
 	
 	/* create a color map */
-	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
+	attr.colormap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
 						   vi->visual, AllocNone);
-	
-	attr.colormap = cmap;
 	attr.border_pixel = 0;
     attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
         StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
@@ -254,7 +247,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
         ToggleFullscreen();
     } else {
         // Restore the window position
-        XMoveWindow(glDisplay, glWindow, x, y);
+        XMoveWindow(glDisplay, glWindow, conf.x, conf.y);
         GetWindowSize();
     }
 
@@ -298,12 +291,12 @@ void GLWindow::ResizeCheck()
 		}
 
         if (!fullScreen) {
-            if ((event.xconfigure.x != x) || (event.xconfigure.y != y))
+            if ((event.xconfigure.x != conf.x) || (event.xconfigure.y != conf.y))
             {
                 // Fixme; x&y occassionally gives values near the top left corner rather then the real values,
                 // causing the window to change positions when adjusting ZZOgl's settings.
-                x = event.xconfigure.x;
-                y = event.xconfigure.y;
+                conf.x = event.xconfigure.x;
+                conf.y = event.xconfigure.y;
             }
         }
 	}

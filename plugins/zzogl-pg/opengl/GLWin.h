@@ -54,7 +54,7 @@ class GLWindow
         void UpdateGrabKey();
 #endif
 		bool fullScreen, doubleBuffered;
-		s32 x, y;
+		//s32 x, y;
 		u32 width, height, depth;
 
 	public:
