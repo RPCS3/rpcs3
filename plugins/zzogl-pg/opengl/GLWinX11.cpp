@@ -43,19 +43,28 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 bool GLWindow::ReleaseContext()
 {
-	if (context && (glDisplay != NULL))
+    bool status = true;
+    if (!glDisplay) return status;
+
+    // free the context
+	if (context)
 	{
-		if (!glXMakeCurrent(glDisplay, None, NULL))
-		{
+		if (!glXMakeCurrent(glDisplay, None, NULL)) {
 			ZZLog::Error_Log("Could not release drawing context.");
-		}
+            status = false;
+        }
 			
 		glXDestroyContext(glDisplay, context);
-
 		context = NULL;
 	}
 	
-	return true;
+    // free the visual
+    if (vi) {
+        XFree(vi);
+        vi = NULL;
+    }
+
+	return status;
 }
 
 void GLWindow::CloseWindow()
@@ -125,8 +134,11 @@ void GLWindow::GetWindowSize()
     s32 xDummy;
     s32 yDummy;
 	
+    XLockDisplay(glDisplay);
 	XGetGeometry(glDisplay, glWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
+    XUnlockDisplay(glDisplay);
 	nBackbufferWidth = width;
+	nBackbufferHeight = height;
 	nBackbufferHeight = height;
     ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
@@ -141,6 +153,8 @@ void GLWindow::GetGLXVersion()
 }
 
 void GLWindow::UpdateGrabKey() {
+    // Do not stole the key in debug mode. It is not breakpoint friendly...
+#ifndef _DEBUG
     XLockDisplay(glDisplay);
     if (fullScreen) {
         XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
@@ -150,6 +164,7 @@ void GLWindow::UpdateGrabKey() {
         XUngrabKeyboard(glDisplay, CurrentTime);
     }
     XUnlockDisplay(glDisplay);
+#endif
 }
 
 #define _NET_WM_STATE_REMOVE 0
@@ -159,6 +174,19 @@ void GLWindow::UpdateGrabKey() {
 void GLWindow::ToggleFullscreen()
 {
     if (!glDisplay or !glWindow) return;
+
+    // Force 4:3 ratio of the screen when going fullscreen
+    // FIXME add a nice configuration option
+    if(!fullScreen) {
+        XLockDisplay(glDisplay);
+        // Compute the width based on height
+        width = (4*height)/3;
+        conf.width = width;
+        // resize the window
+        XResizeWindow(glDisplay, glWindow, width, height);
+        XSync(glDisplay, False);
+        XUnlockDisplay(glDisplay);
+    }
 
     u32 mask = SubstructureRedirectMask | SubstructureNotifyMask;
     // Setup a new event structure
@@ -278,8 +306,10 @@ void GLWindow::SetTitle(char *strtitle)
 void GLWindow::ResizeCheck()
 {
 	XEvent event;
+    if (!glDisplay or !glWindow) return;
 
-	while (XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
+    XLockDisplay(glDisplay);
+	while (XCheckTypedWindowEvent(glDisplay, glWindow, ConfigureNotify, &event))
 	{
 		if ((event.xconfigure.width != width) || (event.xconfigure.height != height))
 		{
@@ -299,6 +329,7 @@ void GLWindow::ResizeCheck()
         }
 	}
 
+    XUnlockDisplay(glDisplay);
 }
 
 #endif
