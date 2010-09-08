@@ -234,7 +234,11 @@ void GLWindow::ToggleFullscreen()
 
     UpdateGrabKey();
 
-    Force43Ratio();
+    // avoid black border in widescreen fullscreen
+    if (fullScreen && conf.isWideScreen) {
+        conf.width = width;
+        conf.height = height;
+    }
 
     // Hide the cursor in the right bottom corner
     if(fullScreen)
