@@ -24,6 +24,7 @@
 #ifdef GL_X11_WINDOW
 
 #include <X11/Xlib.h>
+#include <stdlib.h>
 
 bool GLWindow::CreateWindow(void *pDisplay)
 {
@@ -72,11 +73,6 @@ void GLWindow::CloseWindow()
 	SaveConfig();
 	if (!glDisplay) return;
 
-	/* switch back to original desktop resolution if we were in fullscreen */
-    if (fullScreen)
-        ToggleFullscreen();
-
-    XSync(glDisplay, False);
     XCloseDisplay(glDisplay);
     glDisplay = NULL;
 }
@@ -137,9 +133,10 @@ void GLWindow::GetWindowSize()
     XLockDisplay(glDisplay);
 	XGetGeometry(glDisplay, glWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
     XUnlockDisplay(glDisplay);
-	nBackbufferWidth = width;
-	nBackbufferHeight = height;
-	nBackbufferHeight = height;
+
+    // update the gl buffer size
+    ZeroGS::ChangeWindowSize(width, height);
+
     ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
 
@@ -152,7 +149,8 @@ void GLWindow::GetGLXVersion()
 	ZZLog::Error_Log("glX-Version %d.%d", glxMajorVersion, glxMinorVersion);
 }
 
-void GLWindow::UpdateGrabKey() {
+void GLWindow::UpdateGrabKey()
+{
     // Do not stole the key in debug mode. It is not breakpoint friendly...
 #ifndef _DEBUG
     XLockDisplay(glDisplay);
@@ -167,6 +165,31 @@ void GLWindow::UpdateGrabKey() {
 #endif
 }
 
+void GLWindow::Force43Ratio()
+{
+    // avoid black border in fullscreen
+    if (fullScreen && conf.isWideScreen) {
+        conf.width = width;
+        conf.height = height;
+    }
+
+    if(!fullScreen && !conf.isWideScreen) {
+        // Compute the width based on height
+        s32 new_width = (4*height)/3;
+        // do not bother to resize for 5 pixels. Avoid a loop 
+        // due to round value
+        if ( abs(new_width - width) > 5) {
+            width = new_width;
+            conf.width = new_width;
+            // resize the window
+            XLockDisplay(glDisplay);
+            XResizeWindow(glDisplay, glWindow, new_width, height);
+            XSync(glDisplay, False);
+            XUnlockDisplay(glDisplay);
+        }
+    }
+}
+
 #define _NET_WM_STATE_REMOVE 0
 #define _NET_WM_STATE_ADD 1
 #define _NET_WM_STATE_TOGGLE 2
@@ -175,30 +198,20 @@ void GLWindow::ToggleFullscreen()
 {
     if (!glDisplay or !glWindow) return;
 
-    // Force 4:3 ratio of the screen when going fullscreen
-    // FIXME add a nice configuration option
-    if(!fullScreen) {
-        XLockDisplay(glDisplay);
-        // Compute the width based on height
-        width = (4*height)/3;
-        conf.width = width;
-        // resize the window
-        XResizeWindow(glDisplay, glWindow, width, height);
-        XSync(glDisplay, False);
-        XUnlockDisplay(glDisplay);
-    }
+    Force43Ratio();
 
     u32 mask = SubstructureRedirectMask | SubstructureNotifyMask;
     // Setup a new event structure
     XClientMessageEvent cme;
-
     cme.type = ClientMessage;
     cme.send_event = True;
     cme.display = glDisplay;
     cme.window  = glWindow;
     cme.message_type = XInternAtom(glDisplay, "_NET_WM_STATE", False);
     cme.format = 32;
-    cme.data.l[0] = _NET_WM_STATE_TOGGLE;
+    // Note: can not use _NET_WM_STATE_TOGGLE because the WM can change the fullscreen state
+    // and screw up the fullscreen variable... The test on fulscreen restore a sane configuration
+    cme.data.l[0] = fullScreen  ? _NET_WM_STATE_REMOVE : _NET_WM_STATE_ADD;
     cme.data.l[1] = (u32)XInternAtom(glDisplay, "_NET_WM_STATE_FULLSCREEN", False);
     cme.data.l[2] = 0;
     cme.data.l[3] = 0;
@@ -219,8 +232,9 @@ void GLWindow::ToggleFullscreen()
     // update info structure
     GetWindowSize();
 
-    // Grab key if needed
     UpdateGrabKey();
+
+    Force43Ratio();
 
     // Hide the cursor in the right bottom corner
     if(fullScreen)
@@ -270,12 +284,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	else
 		ZZLog::Error_Log("No Direct Rendering possible!");
 
-    // init fullscreen to 0. ToggleFullscreen will update it
+    // Always start in window mode
 	fullScreen = 0;
-	if (conf.fullscreen())
-        ToggleFullscreen();
-    else
-        GetWindowSize();
+    GetWindowSize();
 
 	return true;
 }
@@ -313,9 +324,10 @@ void GLWindow::ResizeCheck()
 	{
 		if ((event.xconfigure.width != width) || (event.xconfigure.height != height))
 		{
-			ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
 			width = event.xconfigure.width;
 			height = event.xconfigure.height;
+            Force43Ratio();
+			ZeroGS::ChangeWindowSize(width, height);
 		}
 
         if (!fullScreen) {
@@ -328,7 +340,6 @@ void GLWindow::ResizeCheck()
             }
         }
 	}
-
     XUnlockDisplay(glDisplay);
 }
 

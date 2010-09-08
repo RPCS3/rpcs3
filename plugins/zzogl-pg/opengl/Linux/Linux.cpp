@@ -260,7 +260,7 @@ void DisplayDialog()
 //	GtkWidget *wireframe_check, *avi_check;
 	GtkWidget *snap_label, *snap_box, *snap_holder;
 	GtkWidget *size_label, *size_box, *size_holder;
-//	GtkWidget *fullscreen_check, *widescreen_check;
+	GtkWidget *fullscreen_check, *widescreen_check;
 	GtkWidget *fullscreen_label;
 	
 	GtkWidget *advanced_button;
@@ -331,7 +331,8 @@ void DisplayDialog()
 
 //	fullscreen_check = gtk_check_button_new_with_label("Fullscreen");
 //	gtk_widget_set_tooltip_text(fullscreen_check, "Toggled by pressing Alt-Enter when running.");
-//	widescreen_check = gtk_check_button_new_with_label("Widescreen");
+	widescreen_check = gtk_check_button_new_with_label("Widescreen");
+	gtk_widget_set_tooltip_text(widescreen_check, "Force a 4:3 ration when disabled");
 	fullscreen_label = gtk_label_new("Fullscreen is toggled by pressing Alt-Enter when running.");
 
 	size_label = gtk_label_new("Window Size:");
@@ -383,7 +384,7 @@ void DisplayDialog()
 //	gtk_box_pack_start(GTK_BOX(option_box), avi_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), snap_holder, false, false, 2);
 //	gtk_box_pack_start(GTK_BOX(option_box), fullscreen_check, false, false, 2);
-//	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), advanced_button, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), separator, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), warning_label, false, false, 2);
@@ -397,7 +398,7 @@ void DisplayDialog()
 //	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.wireframe()));
 //	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.captureAvi()));
 //	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fullscreen_check), (conf.fullscreen()));
-//	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
 
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), main_frame);
 	g_signal_connect_swapped(GTK_OBJECT (advanced_button), "clicked", G_CALLBACK(DisplayAdvancedDialog), advanced_button);
@@ -430,7 +431,7 @@ void DisplayDialog()
 //		fake_options.wireframe = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check));
 //		fake_options.capture_avi = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(avi_check));
 //		fake_options.fullscreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check));
-//		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
+		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
 		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
 		
 		conf.SkipDraw = atoi((char*)gtk_entry_get_text(GTK_ENTRY(skipdraw_text)));

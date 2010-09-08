@@ -45,6 +45,7 @@ class GLWindow
 		void GetGLXVersion();
 		void GetWindowSize();
         void UpdateGrabKey();
+        void Force43Ratio();
 #endif
 		bool fullScreen, doubleBuffered;
 		//s32 x, y;
