@@ -58,7 +58,7 @@ __fi void vif1FLUSH()
 void vif1TransferToMemory()
 {
 	u32 size;
-	u64* pMem = (u64*)dmaGetAddr(vif1ch.madr, false);
+	u128* pMem = (u128*)dmaGetAddr(vif1ch.madr, false);
 
 	// VIF from gsMemory
 	if (pMem == NULL)  						//Is vif0ptag empty?
@@ -78,54 +78,34 @@ void vif1TransferToMemory()
 	// completely and execute the transfer there-after.
 	//Console.Warning("Real QWC %x", vif1ch.qwc);
 	size = min((u32)vif1ch.qwc, vif1.GSLastDownloadSize);
+	const u128* pMemEnd = pMem + vif1.GSLastDownloadSize;
 
 	if (GSreadFIFO2 == NULL)
 	{
 		for (;size > 0; --size)
 		{
 			GetMTGS().WaitGS();
-			GSreadFIFO(&psHu64(VIF1_FIFO));
-
-			pMem[0] = psHu64(VIF1_FIFO);
-			pMem[1] = psHu64(VIF1_FIFO + 8);
-			pMem += 2;
-		}
-		if(vif1ch.qwc > vif1.GSLastDownloadSize)
-		{
-			DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
-			for (size = vif1ch.qwc - vif1.GSLastDownloadSize; size > 0; --size)
-			{
-				psHu64(VIF1_FIFO) = 0;
-				psHu64(VIF1_FIFO + 8) = 0;
-				pMem[0] = psHu64(VIF1_FIFO);
-				pMem[1] = psHu64(VIF1_FIFO + 8);
-				pMem += 2;
-			}
+			GSreadFIFO((u64*)pMem);
+			++pMem;
 		}
 	}
 	else
 	{
 		GetMTGS().WaitGS();
-		GSreadFIFO2(pMem, size);
-
-		// set incase read
-		psHu64(VIF1_FIFO) = pMem[2*size-2];
-		psHu64(VIF1_FIFO + 8) = pMem[2*size-1];
-		pMem += size * 2;
-		if(vif1ch.qwc > vif1.GSLastDownloadSize)
-		{
-			DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
-			for (size = vif1ch.qwc - vif1.GSLastDownloadSize; size > 0; --size)
-			{
-				psHu64(VIF1_FIFO) = 0;
-				psHu64(VIF1_FIFO + 8) = 0;
-				pMem[0] = psHu64(VIF1_FIFO);
-				pMem[1] = psHu64(VIF1_FIFO + 8);
-				pMem += 2;
-			}
-		}
+		GSreadFIFO2((u64*)pMem, size);
+		pMem += size;
 	}
 
+	if(pMem < pMemEnd)
+	{
+		DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
+		
+		__m128 zeroreg = _mm_setzero_ps();
+		do {
+			_mm_store_ps((float*)pMem, zeroreg);
+			++pMem;
+		} while (pMem < pMemEnd);
+	}
 
 	g_vifCycles += vif1ch.qwc * 2;
 	vif1ch.madr += vif1ch.qwc * 16; // mgs3 scene changes

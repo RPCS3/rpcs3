@@ -31,9 +31,6 @@ void vif0Reset()
 	memzero(vif0);
 	memzero(vif0Regs);
 
-	psHu64(VIF0_FIFO) = 0;
-	psHu64(VIF0_FIFO + 8) = 0;
-
 	vif0Regs.stat.VPS = VPS_IDLE;
 	vif0Regs.stat.FQC = 0;
 
@@ -47,9 +44,6 @@ void vif1Reset()
 	/* Reset the whole VIF, meaning the internal pcsx2 vars, and all the registers */
 	memzero(vif1);
 	memzero(vif1Regs);
-
-	psHu64(VIF1_FIFO) = 0;
-	psHu64(VIF1_FIFO + 8) = 0;
 
 	vif1Regs.stat.VPS = VPS_IDLE;
 	vif1Regs.stat.FQC = 0; // FQC=0

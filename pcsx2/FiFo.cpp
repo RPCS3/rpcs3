@@ -53,7 +53,7 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 		if (vif1Regs.stat.FQC > 0)
 		{
 			GetMTGS().WaitGS();
-			GSreadFIFO(&psHu64(VIF1_FIFO));
+			GSreadFIFO(out);
 			vif1.GSLastDownloadSize--;
 			if (vif1.GSLastDownloadSize <= 16)
 				gifRegs.stat.OPH = false;
@@ -61,7 +61,6 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 		}
 	}
 
-	CopyQWC( out, &psHu128(VIF1_FIFO) );
 	VIF_LOG("ReadFIFO/VIF1 -> %ls", out->ToString().c_str());
 }
 
@@ -71,8 +70,6 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 void __fastcall WriteFIFO_VIF0(const mem128_t *value)
 {
 	VIF_LOG("WriteFIFO/VIF0 <- %ls", value->ToString().c_str());
-
-	CopyQWC(&psHu128(VIF0_FIFO), value);
 
 	vif0ch.qwc += 1;
 	if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 FIFO start!");
@@ -93,8 +90,6 @@ void __fastcall WriteFIFO_VIF0(const mem128_t *value)
 void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 {
 	VIF_LOG("WriteFIFO/VIF1 <- %ls", value->ToString().c_str());
-
-	CopyQWC(&psHu128(VIF1_FIFO), value);
 
 	if (vif1Regs.stat.FDR)
 		DevCon.Warning("writing to fifo when fdr is set!");
@@ -123,18 +118,15 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
-// Dummy GIF-TAG Packet to Guarantee Count = 1
-__aligned16 u128 nloop0_packet;
-
 void __fastcall WriteFIFO_GIF(const mem128_t *value)
 {
 	GIF_LOG("WriteFIFO/GIF <- %ls", value->ToString().c_str());
 
-	CopyQWC(&psHu128(GIF_FIFO), value);
-	CopyQWC(&nloop0_packet, value);
+	//CopyQWC(&psHu128(GIF_FIFO), value);
+	//CopyQWC(&nloop0_packet, value);
 
 	GetMTGS().PrepDataPacket(GIF_PATH_3, 1);
-	GIFPath_CopyTag( GIF_PATH_3, &nloop0_packet, 1 );
+	GIFPath_CopyTag( GIF_PATH_3, value, 1 );
 	GetMTGS().SendDataPacket();
 	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH3 )
 	{
