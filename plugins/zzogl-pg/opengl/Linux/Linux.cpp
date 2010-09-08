@@ -259,9 +259,10 @@ void DisplayDialog()
 	GtkWidget *aa_label, *aa_box, *aa_holder;
 //	GtkWidget *wireframe_check, *avi_check;
 	GtkWidget *snap_label, *snap_box, *snap_holder;
-	GtkWidget *size_label, *size_box, *size_holder;
-	GtkWidget *fullscreen_check, *widescreen_check;
-	GtkWidget *fullscreen_label;
+//	GtkWidget *size_label, *size_box, *size_holder;
+//	GtkWidget *fullscreen_check;
+	GtkWidget  *fullscreen_label, *widescreen_check;
+
 	
 	GtkWidget *advanced_button;
 	GtkWidget *separator;
@@ -334,22 +335,22 @@ void DisplayDialog()
 	widescreen_check = gtk_check_button_new_with_label("Widescreen");
 	gtk_widget_set_tooltip_text(widescreen_check, "Force a 4:3 ration when disabled");
 	fullscreen_label = gtk_label_new("Fullscreen is toggled by pressing Alt-Enter when running.");
+	gtk_label_set_single_line_mode(GTK_LABEL(fullscreen_label), false);
+	//size_label = gtk_label_new("Window Size:");
 
-	size_label = gtk_label_new("Window Size:");
+	//size_box = gtk_combo_box_new_text();
+	//gtk_widget_set_tooltip_text(size_box, "No speed impact.");
 
-	size_box = gtk_combo_box_new_text();
-	gtk_widget_set_tooltip_text(size_box, "No speed impact.");
-
-	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "640x480");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "800x600");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1024x768");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1280x960");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), conf.zz_options.dimensions);
+	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "640x480");
+	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "800x600");
+	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1024x768");
+	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1280x960");
+	//gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), conf.zz_options.dimensions);
 	
-	size_holder = gtk_hbox_new(false, 5);
-	gtk_box_pack_start(GTK_BOX(size_holder), size_label, false, false, 2);
-	gtk_box_pack_start(GTK_BOX(size_holder), size_box, false, false, 2);
-	
+	//size_holder = gtk_hbox_new(false, 5);
+	//gtk_box_pack_start(GTK_BOX(size_holder), size_label, false, false, 2);
+	//gtk_box_pack_start(GTK_BOX(size_holder), size_box, false, false, 2);
+	  
 	advanced_button = gtk_button_new_with_label("Advanced...");
 
 	separator = gtk_hseparator_new();
@@ -378,7 +379,7 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(option_box), bilinear_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), int_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), aa_holder, false, false, 2);
-	gtk_box_pack_start(GTK_BOX(option_box), size_holder, false, false, 2);
+	//gtk_box_pack_start(GTK_BOX(option_box), size_holder, false, false, 2);
 	
 //	gtk_box_pack_start(GTK_BOX(option_box), wireframe_check, false, false, 2);
 //	gtk_box_pack_start(GTK_BOX(option_box), avi_check, false, false, 2);
@@ -419,10 +420,10 @@ void DisplayDialog()
 
 		conf.negaa = 0;
 
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)) != -1)
-		{
-			fake_options.dimensions = gtk_combo_box_get_active(GTK_COMBO_BOX(size_box));
-		}
+//		if (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)) != -1)
+//		{
+//			fake_options.dimensions = gtk_combo_box_get_active(GTK_COMBO_BOX(size_box));
+//		}
 
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
 
@@ -440,7 +441,7 @@ void DisplayDialog()
 		//skipdraw_holder = gtk_hbox_new(false, 5);
 	
 		conf.zz_options = fake_options;
-		conf.set_dimensions(fake_options.dimensions);
+		//conf.set_dimensions(fake_options.dimensions);
 		conf.hacks = tempHacks;
 		GSsetGameCRC(g_LastCRC, conf.hacks._u32);
 

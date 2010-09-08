@@ -62,6 +62,8 @@ void LoadConfig()
 	conf.bilinear = 1;
 	conf.log = 1;
 	conf.SkipDraw = 0;
+	conf.width = 800;
+	conf.height = 600;
 
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	FILE* f = fopen(iniFile.c_str(), "r");
@@ -100,7 +102,8 @@ void LoadConfig()
 	if (conf.aa > 4) conf.aa = 0;
 	if (conf.width <= 0 || conf.height <= 0)
 	{
-		conf.set_dimensions(conf.zz_options.dimensions);
+		conf.width = 800;
+		conf.height = 600;
 	}
 
 	if (conf.x < 0 || conf.y < 0)

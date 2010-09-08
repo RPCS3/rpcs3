@@ -48,7 +48,6 @@ class GLWindow
         void Force43Ratio();
 #endif
 		bool fullScreen, doubleBuffered;
-		//s32 x, y;
 		u32 width, height, depth;
 
 	public:
