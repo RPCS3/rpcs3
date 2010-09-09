@@ -53,7 +53,7 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 		if (vif1Regs.stat.FQC > 0)
 		{
 			GetMTGS().WaitGS();
-			GSreadFIFO(out);
+			GSreadFIFO((u64*)out);
 			vif1.GSLastDownloadSize--;
 			if (vif1.GSLastDownloadSize <= 16)
 				gifRegs.stat.OPH = false;
