@@ -225,7 +225,6 @@ set(pcsx2Headers
 	Vif_Dma.h
 	Vif.h
 	Vif_Unpack.h
-	Vif_Unpack.inl
 	vtlb.h
 	VUflags.h
 	VUmicro.h

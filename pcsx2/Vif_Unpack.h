@@ -16,7 +16,6 @@
 #pragma once
 
 typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, const u32 *data);
-typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, const u32 *data, int size);
 typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, const u32 *data, int size);
 
 #define create_unpack_u_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, const u##bits *data);
@@ -39,11 +38,6 @@ struct VIFUnpackFuncTable
     UNPACKFUNCTYPE  funcU;
     UNPACKFUNCTYPE  funcS;
 
-	UNPACKFUNCTYPE_ODD  oddU;		// needed for old-style vif only, remove when old vif is removed.
-	UNPACKFUNCTYPE_ODD  oddS;		// needed for old-style vif only, remove when old vif is removed.
-
-	u8 bsize; // currently unused
-	u8 dsize; // byte size of one channel
 	u8 gsize; // size of data in bytes used for each write cycle
 	u8 qsize; // used for unpack parts, num of vectors that
 	// will be decompressed from data for 1 cycle

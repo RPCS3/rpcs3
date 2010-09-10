@@ -21,7 +21,6 @@
 #include "Common.h"
 #include "Vif_Dma.h"
 #include "newVif.h"
-#include "Vif_Unpack.inl"
 
 __aligned16 nVifStruct	nVif[2];
 __aligned16 nVifCall	nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]
@@ -47,7 +46,7 @@ __aligned16 const u8 nVifT[16] = {
 };
 
 // ----------------------------------------------------------------------------
-template< int idx, bool doMode, bool isFill, bool singleUnpack >
+template< int idx, bool doMode, bool isFill >
 __ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size);
 
 typedef void __fastcall FnType_VifUnpackLoop(const u8 *data, u32 size);
@@ -55,18 +54,10 @@ typedef FnType_VifUnpackLoop* Fnptr_VifUnpackLoop;
 
 // Unpacks Until 'Num' is 0
 static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = {
-	{{ _nVifUnpackLoop<0,0,0,0>, _nVifUnpackLoop<0,0,1,0> },
-	{  _nVifUnpackLoop<0,1,0,0>, _nVifUnpackLoop<0,1,1,0> },},
-	{{ _nVifUnpackLoop<1,0,0,0>, _nVifUnpackLoop<1,0,1,0> },
-	{  _nVifUnpackLoop<1,1,0,0>, _nVifUnpackLoop<1,1,1,0> },},
-};
-
-// Unpacks until 1 normal write cycle unpack has been written to VU mem
-static const __aligned16 Fnptr_VifUnpackLoop UnpackSingleTable[2][2][2] = {
-	{{ _nVifUnpackLoop<0,0,0,1>, _nVifUnpackLoop<0,0,1,1> },
-	{  _nVifUnpackLoop<0,1,0,1>, _nVifUnpackLoop<0,1,1,1> },},
-	{{ _nVifUnpackLoop<1,0,0,1>, _nVifUnpackLoop<1,0,1,1> },
-	{  _nVifUnpackLoop<1,1,0,1>, _nVifUnpackLoop<1,1,1,1> },},
+	{{ _nVifUnpackLoop<0,0,0>, _nVifUnpackLoop<0,0,1> },
+	{  _nVifUnpackLoop<0,1,0>, _nVifUnpackLoop<0,1,1> },},
+	{{ _nVifUnpackLoop<1,0,0>, _nVifUnpackLoop<1,0,1> },
+	{  _nVifUnpackLoop<1,1,0>, _nVifUnpackLoop<1,1,1> },},
 };
 // ----------------------------------------------------------------------------
 
@@ -195,7 +186,7 @@ static void setMasks(int idx, const VIFregisters& v) {
 // elimination that it would probably be a win in most cases (and for sure in many
 // "slow" games that need it most). --air
 
-template< int idx, bool doMode, bool isFill, bool singleUnpack >
+template< int idx, bool doMode, bool isFill >
 __ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
@@ -219,7 +210,8 @@ __ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 
 	while (vifRegs->num) {
 		if (vif->cl < cycleSize) {
-			if (size < ft.gsize) break;
+			// This should always be true as per the _1mb buffer used to merge partial transfers.
+			pxAssume (size >= ft.gsize);
 			if (doMode) {
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
 				func((u32*)dest, (u32*)data);
@@ -233,7 +225,6 @@ __ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
-			if (singleUnpack) return;
 		}
 		else if (isFill) {
 			//DevCon.WriteLn("isFill!");
@@ -250,12 +241,6 @@ __ri void __fastcall _nVifUnpackLoop(const u8 *data, u32 size) {
 }
 
 __fi void _nVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
-
-	if (useOldUnpack) {
-		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);
-		else	  VIFunpack<1>((u32*)data, &vif1.tag, size>>2);
-		return;
-	}
 
 	const bool doMode = !!vifRegs->mode;
 	UnpackLoopTable[idx][doMode][isFill]( data, size );

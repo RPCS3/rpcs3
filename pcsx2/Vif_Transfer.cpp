@@ -25,7 +25,7 @@
 // Doesn't stall if the next vifCode is the Mark command
 _vifT bool runMark(u32* &data) {
 	if (((vifXRegs.code >> 24) & 0x7f) == 0x7) {
-		Console.WriteLn("Vif%d: Running Mark with I-bit", idx);
+		DevCon.WriteLn("Vif%d: Running Mark with I-bit", idx);
 		return 1; // No Stall?
 	}
 	return 1; // Stall

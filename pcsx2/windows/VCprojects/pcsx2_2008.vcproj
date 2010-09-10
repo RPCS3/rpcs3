@@ -831,10 +831,6 @@
 									RelativePath="..\..\Vif_Unpack.h"
 									>
 								</File>
-								<File
-									RelativePath="..\..\Vif_Unpack.inl"
-									>
-								</File>
 								<Filter
 									Name="newVif"
 									>
