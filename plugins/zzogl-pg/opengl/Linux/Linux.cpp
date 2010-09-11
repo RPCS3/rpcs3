@@ -257,10 +257,7 @@ void DisplayDialog()
 	GtkWidget *int_label, *int_box, *int_holder;
 	GtkWidget *bilinear_check;
 	GtkWidget *aa_label, *aa_box, *aa_holder;
-//	GtkWidget *wireframe_check, *avi_check;
 	GtkWidget *snap_label, *snap_box, *snap_holder;
-//	GtkWidget *size_label, *size_box, *size_holder;
-//	GtkWidget *fullscreen_check;
 	GtkWidget  *fullscreen_label, *widescreen_check;
 
 	
@@ -298,7 +295,6 @@ void DisplayDialog()
 
 
 	bilinear_check = gtk_check_button_new_with_label("Bilinear Filtering");
-	//bilinear_label = gtk_label_new("Best quality is off. Turn on for speed.");
 	gtk_widget_set_tooltip_text(bilinear_check, "Best quality is off. Turn on for speed. Toggled by pressing Shift + F5 when running.");
 
 	aa_label = gtk_label_new("Anti-Aliasing:");
@@ -314,12 +310,6 @@ void DisplayDialog()
 	aa_holder = gtk_hbox_new(false, 5);
 	gtk_box_pack_start(GTK_BOX(aa_holder), aa_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(aa_holder), aa_box, false, false, 2);
-
-//	wireframe_check = gtk_check_button_new_with_label("Wireframe Rendering");
-//	gtk_widget_set_tooltip_text(wireframe_check, "Toggled by pressing Shift-F6 when running.");
-
-	// Looking at the code, it doesn't look like this is actually written yet for Linux.
-//	avi_check = gtk_check_button_new_with_label("Capture Avi (as zerogs.avi)");
 	
 	snap_label = gtk_label_new("Snapshot format:");
 	snap_box = gtk_combo_box_new_text();
@@ -330,29 +320,14 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(snap_holder), snap_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(snap_holder), snap_box, false, false, 2);
 
-//	fullscreen_check = gtk_check_button_new_with_label("Fullscreen");
-//	gtk_widget_set_tooltip_text(fullscreen_check, "Toggled by pressing Alt-Enter when running.");
 	widescreen_check = gtk_check_button_new_with_label("Widescreen");
 	gtk_widget_set_tooltip_text(widescreen_check, "Force a 4:3 ration when disabled");
-	fullscreen_label = gtk_label_new("Fullscreen is toggled by pressing Alt-Enter when running.");
+	fullscreen_label = gtk_label_new("Press Alt-Enter for Fullscreen.");
 	gtk_label_set_single_line_mode(GTK_LABEL(fullscreen_label), false);
-	//size_label = gtk_label_new("Window Size:");
-
-	//size_box = gtk_combo_box_new_text();
-	//gtk_widget_set_tooltip_text(size_box, "No speed impact.");
-
-	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "640x480");
-	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "800x600");
-	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1024x768");
-	//gtk_combo_box_append_text(GTK_COMBO_BOX(size_box), "1280x960");
-	//gtk_combo_box_set_active(GTK_COMBO_BOX(size_box), conf.zz_options.dimensions);
-	
-	//size_holder = gtk_hbox_new(false, 5);
-	//gtk_box_pack_start(GTK_BOX(size_holder), size_label, false, false, 2);
-	//gtk_box_pack_start(GTK_BOX(size_holder), size_box, false, false, 2);
 	  
 	advanced_button = gtk_button_new_with_label("Advanced...");
 
+#ifdef ZEROGS_DEVBUILD
 	separator = gtk_hseparator_new();
 	skipdraw_label = gtk_label_new("Skipdraw:");
 	skipdraw_text = gtk_entry_new();
@@ -364,6 +339,7 @@ void DisplayDialog()
 	
 	gtk_box_pack_start(GTK_BOX(skipdraw_holder), skipdraw_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(skipdraw_holder), skipdraw_text, false, false, 2);
+#endif
 	
 	main_box = gtk_hbox_new(false, 5);
 	main_frame = gtk_frame_new("ZZOgl PG Config");
@@ -379,26 +355,22 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(option_box), bilinear_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), int_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), aa_holder, false, false, 2);
-	//gtk_box_pack_start(GTK_BOX(option_box), size_holder, false, false, 2);
-	
-//	gtk_box_pack_start(GTK_BOX(option_box), wireframe_check, false, false, 2);
-//	gtk_box_pack_start(GTK_BOX(option_box), avi_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), snap_holder, false, false, 2);
-//	gtk_box_pack_start(GTK_BOX(option_box), fullscreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), advanced_button, false, false, 2);
+	
+#ifdef ZEROGS_DEVBUILD
 	gtk_box_pack_start(GTK_BOX(option_box), separator, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), warning_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), skipdraw_holder, false, false, 2);
+#endif
+
 	gtk_box_pack_start(GTK_BOX(option_box), fullscreen_label, false, false, 2);
 	
 	gtk_box_pack_start(GTK_BOX(main_box), option_frame, false, false, 2);
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), conf.log);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bilinear_check), conf.bilinear);
-//	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(wireframe_check), (conf.wireframe()));
-//	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(avi_check), (conf.captureAvi()));
-//	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fullscreen_check), (conf.fullscreen()));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
 
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), main_frame);
@@ -420,28 +392,16 @@ void DisplayDialog()
 
 		conf.negaa = 0;
 
-//		if (gtk_combo_box_get_active(GTK_COMBO_BOX(size_box)) != -1)
-//		{
-//			fake_options.dimensions = gtk_combo_box_get_active(GTK_COMBO_BOX(size_box));
-//		}
-
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
-
 		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
-
-//		fake_options.wireframe = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(wireframe_check));
-//		fake_options.capture_avi = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(avi_check));
-//		fake_options.fullscreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fullscreen_check));
 		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
 		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
 		
+#ifdef ZEROGS_DEVBUILD
 		conf.SkipDraw = atoi((char*)gtk_entry_get_text(GTK_ENTRY(skipdraw_text)));
-		//sprintf(buf, "%d", conf.SkipDraw);
-		//gtk_entry_get_text(GTK_ENTRY(skipdraw_text), buf);
-		//skipdraw_holder = gtk_hbox_new(false, 5);
+#endif
 	
 		conf.zz_options = fake_options;
-		//conf.set_dimensions(fake_options.dimensions);
 		conf.hacks = tempHacks;
 		GSsetGameCRC(g_LastCRC, conf.hacks._u32);
 
