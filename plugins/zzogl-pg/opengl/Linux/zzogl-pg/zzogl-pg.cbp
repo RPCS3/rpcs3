@@ -16,6 +16,7 @@
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-DZEROGS_DEVBUILD" />
 					<Add option="-D_DEBUG" />
 				</Compiler>
 				<Linker>
@@ -150,6 +151,8 @@
 		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />
 		<Unit filename="../../ZZoglFlush.cpp" />
+		<Unit filename="../../ZZoglFlushHack.cpp" />
+		<Unit filename="../../ZZoglFlushHack.h" />
 		<Unit filename="../../ZZoglSave.cpp" />
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShoots.cpp" />

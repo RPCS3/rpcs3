@@ -100,19 +100,19 @@ extern GSconf conf;
 // PSM types == Texture Storage Format
 enum PSM_value
 {
-	PSMCT32		= 0,		// 000000
-	PSMCT24		= 1,		// 000001
-	PSMCT16		= 2,		// 000010
-	PSMCT16S	= 10,		// 001010
-	PSMT8		= 19,		// 010011
-	PSMT4		= 20,		// 010100
-	PSMT8H		= 27,		// 011011
-	PSMT4HL		= 36,		// 100100
-	PSMT4HH		= 44,		// 101100
-	PSMT32Z		= 48,		// 110000
-	PSMT24Z		= 49,		// 110001
-	PSMT16Z		= 50,		// 110010
-	PSMT16SZ	= 58,		// 111010
+	PSMCT32		= 0,		// 00 0000
+	PSMCT24		= 1,		// 00 0001
+	PSMCT16		= 2,		// 00 0010
+	PSMCT16S	= 10,		// 00 1010
+	PSMT8		= 19,		// 01 0011
+	PSMT4		= 20,		// 01 0100
+	PSMT8H		= 27,		// 01 1011
+	PSMT4HL		= 36,		// 10 0100
+	PSMT4HH		= 44,		// 10 1100
+	PSMT32Z		= 48,		// 11 0000
+	PSMT24Z		= 49,		// 11 0001
+	PSMT16Z		= 50,		// 11 0010
+	PSMT16SZ	= 58,		// 11 1010
 };
 
 // Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
@@ -167,6 +167,25 @@ inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 // Check to see if it is 32 bits. According to code comments, anyways.
 // I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
 inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
+
+// This function updates the 6th and 5th bit of psm
+// 00 or 11 -> 00 ; 01 -> 10 ; 10 -> 01
+inline int Switch_Top_Bytes (int X) {
+	if ( ( X & 0x30 ) == 0 )
+		return X;
+	else
+		return (X ^ 0x30);
+}
+
+// Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
+// PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
+// We use slightly different versions of this function on comparison with GSDX, Storage format XOR 0x30 made Z-textures
+// similar to normal ones and change higher bits on short (8 and 4 bits) textures.
+inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
+	int SUM = Switch_Top_Bytes(fpsm)  + Switch_Top_Bytes(tpsm) ;
+	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
+}
+
 
 //----------------------- Data from registers -----------------------
 

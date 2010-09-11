@@ -24,9 +24,14 @@
 #ifdef GL_X11_WINDOW
 
 #include <X11/Xlib.h>
+#include <stdlib.h>
 
 bool GLWindow::CreateWindow(void *pDisplay)
 {
+    // init support of multi thread
+    if (!XInitThreads())
+        ZZLog::Error_Log("Failed to init the xlib concurent threads");
+
 	glDisplay = XOpenDisplay(0);
 	glScreen = DefaultScreen(glDisplay);
 
@@ -39,42 +44,37 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 bool GLWindow::ReleaseContext()
 {
-	if (context && (glDisplay != NULL))
+    bool status = true;
+    if (!glDisplay) return status;
+
+    // free the context
+	if (context)
 	{
-		if (!glXMakeCurrent(glDisplay, None, NULL))
-		{
+		if (!glXMakeCurrent(glDisplay, None, NULL)) {
 			ZZLog::Error_Log("Could not release drawing context.");
-		}
+            status = false;
+        }
 			
 		glXDestroyContext(glDisplay, context);
-
 		context = NULL;
 	}
 	
-	return true;
+    // free the visual
+    if (vi) {
+        XFree(vi);
+        vi = NULL;
+    }
+
+	return status;
 }
 
 void GLWindow::CloseWindow()
 {
-	conf.x = x;
-	conf.y = y;
 	SaveConfig();
+	if (!glDisplay) return;
 
-	/* switch back to original desktop resolution if we were in fullscreen */
-	if (glDisplay != NULL)
-	{
-		if (fullScreen)
-		{
-			XF86VidModeSwitchToMode(glDisplay, glScreen, &deskMode);
-			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
-		}
-	}
-	
-	if (glDisplay != NULL)
-	{
-		XCloseDisplay(glDisplay);
-		glDisplay = NULL;
-	}
+    XCloseDisplay(glDisplay);
+    glDisplay = NULL;
 }
 
 bool GLWindow::CreateVisual()
@@ -123,11 +123,21 @@ bool GLWindow::CreateVisual()
 
 void GLWindow::GetWindowSize()
 {
+    if (!glDisplay or !glWindow) return;
+
 	unsigned int borderDummy;
 	Window winDummy;
+    s32 xDummy;
+    s32 yDummy;
 	
-	XGetGeometry(glDisplay, glWindow, &winDummy, &x, &y, &width, &height, &borderDummy, &depth);
-	ZZLog::Error_Log("Depth %d", depth);
+    XLockDisplay(glDisplay);
+	XGetGeometry(glDisplay, glWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
+    XUnlockDisplay(glDisplay);
+
+    // update the gl buffer size
+    ZeroGS::ChangeWindowSize(width, height);
+
+    ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
 
 void GLWindow::GetGLXVersion()
@@ -139,123 +149,148 @@ void GLWindow::GetGLXVersion()
 	ZZLog::Error_Log("glX-Version %d.%d", glxMajorVersion, glxMinorVersion);
 }
 
-void GLWindow::GetGLXVidModeVersion()
+void GLWindow::UpdateGrabKey()
 {
-	int vidModeMajorVersion, vidModeMinorVersion;
-	
-	XF86VidModeQueryVersion(glDisplay, &vidModeMajorVersion, &vidModeMinorVersion);
-	
-	ZZLog::Error_Log("XF86VidModeExtension-Version %d.%d.", vidModeMajorVersion, vidModeMinorVersion);
-}	
+    // Do not stole the key in debug mode. It is not breakpoint friendly...
+#ifndef _DEBUG
+    XLockDisplay(glDisplay);
+    if (fullScreen) {
+        XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
+        XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+    } else {
+        XUngrabPointer(glDisplay, CurrentTime);
+        XUngrabKeyboard(glDisplay, CurrentTime);
+    }
+    XUnlockDisplay(glDisplay);
+#endif
+}
+
+void GLWindow::Force43Ratio()
+{
+    // avoid black border in fullscreen
+    if (fullScreen && conf.isWideScreen) {
+        conf.width = width;
+        conf.height = height;
+    }
+
+    if(!fullScreen && !conf.isWideScreen) {
+        // Compute the width based on height
+        s32 new_width = (4*height)/3;
+        // do not bother to resize for 5 pixels. Avoid a loop 
+        // due to round value
+        if ( abs(new_width - width) > 5) {
+            width = new_width;
+            conf.width = new_width;
+            // resize the window
+            XLockDisplay(glDisplay);
+            XResizeWindow(glDisplay, glWindow, new_width, height);
+            XSync(glDisplay, False);
+            XUnlockDisplay(glDisplay);
+        }
+    }
+}
+
+#define _NET_WM_STATE_REMOVE 0
+#define _NET_WM_STATE_ADD 1
+#define _NET_WM_STATE_TOGGLE 2
+
+void GLWindow::ToggleFullscreen()
+{
+    if (!glDisplay or !glWindow) return;
+
+    Force43Ratio();
+
+    u32 mask = SubstructureRedirectMask | SubstructureNotifyMask;
+    // Setup a new event structure
+    XClientMessageEvent cme;
+    cme.type = ClientMessage;
+    cme.send_event = True;
+    cme.display = glDisplay;
+    cme.window  = glWindow;
+    cme.message_type = XInternAtom(glDisplay, "_NET_WM_STATE", False);
+    cme.format = 32;
+    // Note: can not use _NET_WM_STATE_TOGGLE because the WM can change the fullscreen state
+    // and screw up the fullscreen variable... The test on fulscreen restore a sane configuration
+    cme.data.l[0] = fullScreen  ? _NET_WM_STATE_REMOVE : _NET_WM_STATE_ADD;
+    cme.data.l[1] = (u32)XInternAtom(glDisplay, "_NET_WM_STATE_FULLSCREEN", False);
+    cme.data.l[2] = 0;
+    cme.data.l[3] = 0;
+
+    // send the event
+    XLockDisplay(glDisplay);
+    if (!XSendEvent(glDisplay, RootWindow(glDisplay, vi->screen), False, mask, (XEvent*)(&cme)))
+        ZZLog::Error_Log("Failed to send event: toggle fullscreen");
+    else {
+        fullScreen = (!fullScreen);
+        conf.setFullscreen(fullScreen);
+    }
+    XUnlockDisplay(glDisplay);
+
+    // Apply the change
+    XSync(glDisplay, False);
+
+    // update info structure
+    GetWindowSize();
+
+    UpdateGrabKey();
+
+    // avoid black border in widescreen fullscreen
+    if (fullScreen && conf.isWideScreen) {
+        conf.width = width;
+        conf.height = height;
+    }
+
+    // Hide the cursor in the right bottom corner
+    if(fullScreen)
+        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, width, height);
+
+}
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
-	Colormap cmap;
-	
-	x = conf.x;
-	y = conf.y;
-	fullScreen = (conf.fullscreen());
-
 	if (!CreateVisual()) return false;
 	
 	/* create a GLX context */
 	context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
 	
 	/* create a color map */
-	cmap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
+	attr.colormap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
 						   vi->visual, AllocNone);
-	
-	attr.colormap = cmap;
 	attr.border_pixel = 0;
-	attr.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask;
+    attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
+        StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
+        EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
 
 	GetGLXVersion();
-	
-	if (fullScreen)
-	{
-		int dpyWidth, dpyHeight;
-		int modeNum = 0, bestMode = 0;
-		XF86VidModeModeInfo **modes = NULL;
-		
-		GetGLXVidModeVersion();
-		
-		XF86VidModeGetAllModeLines(glDisplay, glScreen, &modeNum, &modes);
 
-		if (modeNum > 0 && modes != NULL)
-		{
-			/* save desktop-resolution before switching modes */
-			deskMode = *modes[0];
+    // Create a window at the last position/size
+    glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
+            conf.x , conf.y , _width, _height, 0, vi->depth, InputOutput, vi->visual,
+            CWBorderPixel | CWColormap | CWEventMask,
+            &attr);
 
-			/* look for mode with requested resolution */
+    /* Allow to kill properly the window */
+    Atom wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
+    XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
 
-			for (int i = 0; i < modeNum; i++)
-			{
-				if ((modes[i]->hdisplay == _width) && (modes[i]->vdisplay == _height))
-				{
-					bestMode = i;
-				}
-			}
+    // Set icon name
+    XSetIconName(glDisplay, glWindow, "ZZogl-pg");
 
-			XF86VidModeSwitchToMode(glDisplay, glScreen, modes[bestMode]);
-
-			XF86VidModeSetViewPort(glDisplay, glScreen, 0, 0);
-			dpyWidth = modes[bestMode]->hdisplay;
-			dpyHeight = modes[bestMode]->vdisplay;
-			ZZLog::Error_Log("Resolution %dx%d.", dpyWidth, dpyHeight);
-			XFree(modes);
-
-			/* create a fullscreen window */
-			attr.override_redirect = True;
-			glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-									 0, 0, dpyWidth, dpyHeight, 0, vi->depth, InputOutput, vi->visual,
-									 CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect,
-									 &attr);
-			XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 0, 0);
-			XMapRaised(glDisplay, glWindow);
-			XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-			XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
-		}
-		else
-		{
-			ZZLog::Error_Log("Failed to start fullscreen. If you received the \n"
-							 "\"XFree86-VidModeExtension\" extension is missing, add\n"
-							 "Load \"extmod\"\n"
-							 "to your X configuration file (under the Module Section)");
-			fullScreen = false;
-		}
-	}
-
-	if (!fullScreen)
-	{
-		// create a window in window mode
-		glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-								 0, 0, _width, _height, 0, vi->depth, InputOutput, vi->visual,
-								 CWBorderPixel | CWColormap | CWEventMask, &attr);
-
-		// only set window title and handle wm_delete_events if in windowed mode
-		Atom wmDelete;
-		wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
-		XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
-		
-		XSetStandardProperties(glDisplay, glWindow, "ZZOgl-PG", "ZZOgl-PG", None, NULL, 0, NULL);
-		XMapRaised(glDisplay, glWindow);
-		XMoveWindow(glDisplay, glWindow, x, y);
-	}
+    // Draw the window
+    XMapRaised(glDisplay, glWindow);
+    XSync(glDisplay, false);
 
 	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
 	
-	GetWindowSize();
-
 	if (glXIsDirect(glDisplay, context))
 		ZZLog::Error_Log("You have Direct Rendering!");
 	else
 		ZZLog::Error_Log("No Direct Rendering possible!");
 
-	// better for pad plugin key input (thc)
-	XSelectInput(glDisplay, glWindow, ExposureMask | KeyPressMask | KeyReleaseMask |
-				 ButtonPressMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask |
-				 FocusChangeMask);
+    // Always start in window mode
+	fullScreen = 0;
+    GetWindowSize();
 
 	return true;
 }
@@ -267,40 +302,49 @@ void GLWindow::SwapGLBuffers()
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	if (!conf.fullscreen())
-	{
-		XTextProperty prop;
-		memset(&prop, 0, sizeof(prop));
-		char* ptitle = strtitle;
+    if (!glDisplay or !glWindow) return;
+	if (fullScreen) return;
 
-		if (XStringListToTextProperty(&ptitle, 1, &prop))
-			XSetWMName(glDisplay, glWindow, &prop);
+    XTextProperty prop;
+    memset(&prop, 0, sizeof(prop));
 
-		XFree(prop.value);
-	}
+    char* ptitle = strtitle;
+    if (XStringListToTextProperty(&ptitle, 1, &prop)) {
+        XLockDisplay(glDisplay);
+        XSetWMName(glDisplay, glWindow, &prop);
+        XUnlockDisplay(glDisplay);
+    }
+
+    XFree(prop.value);
 }
 
 void GLWindow::ResizeCheck()
 {
 	XEvent event;
+    if (!glDisplay or !glWindow) return;
 
-	while (XCheckTypedEvent(glDisplay, ConfigureNotify, &event))
+    XLockDisplay(glDisplay);
+	while (XCheckTypedWindowEvent(glDisplay, glWindow, ConfigureNotify, &event))
 	{
 		if ((event.xconfigure.width != width) || (event.xconfigure.height != height))
 		{
-			ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
 			width = event.xconfigure.width;
 			height = event.xconfigure.height;
+            Force43Ratio();
+			ZeroGS::ChangeWindowSize(width, height);
 		}
 
-		if ((event.xconfigure.x != x) || (event.xconfigure.y != y))
-		{
-			// Fixme; x&y occassionally gives values near the top left corner rather then the real values,
-			// causing the window to change positions when adjusting ZZOgl's settings.
-			x = event.xconfigure.x;
-			y = event.xconfigure.y;
-		}
+        if (!fullScreen) {
+            if ((event.xconfigure.x != conf.x) || (event.xconfigure.y != conf.y))
+            {
+                // Fixme; x&y occassionally gives values near the top left corner rather then the real values,
+                // causing the window to change positions when adjusting ZZOgl's settings.
+                conf.x = event.xconfigure.x;
+                conf.y = event.xconfigure.y;
+            }
+        }
 	}
+    XUnlockDisplay(glDisplay);
 }
 
 #endif
