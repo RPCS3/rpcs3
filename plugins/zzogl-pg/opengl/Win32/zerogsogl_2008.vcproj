@@ -524,6 +524,10 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\ps2hw.dat"
+			>
+		</File>
+		<File
 			RelativePath="..\ps2hw.dat"
 			>
 		</File>
