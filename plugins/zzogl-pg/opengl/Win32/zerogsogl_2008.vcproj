@@ -377,6 +377,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglFlushHack.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglSave.cpp"
 				>
 			</File>
@@ -487,6 +491,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZLog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglFlushHack.h"
 				>
 			</File>
 		</Filter>
