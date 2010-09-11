@@ -117,6 +117,7 @@ enum PSM_value
 
 // Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
 // 16, 16S, 16Z, 16SZ -- 2, PSMT8 and 8H - 3, PSMT4, 4HL, 4HH -- 4.
+// This code returns the same value on Z-textures, so texel storage mode is (BITMODE and !ISZTEX).
 inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
 
 inline int PSMT_BITS_NUM(int psm)
@@ -168,6 +169,11 @@ inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 // I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
 inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
+// When color format is RGB24 (PSMCT24) or RGBA16 (PSMCT16 & 16S) alpha value expanded, based on
+// TEXA register and AEM status.
+inline int PSMT_ALPHAEXP(int psm) {return (psm == PSMCT24 || psm == PSMCT16 || psm == PSMCT16S);}
+
+
 // This function updates the 6th and 5th bit of psm
 // 00 or 11 -> 00 ; 01 -> 10 ; 10 -> 01
 inline int Switch_Top_Bytes (int X) {
@@ -175,6 +181,19 @@ inline int Switch_Top_Bytes (int X) {
 		return X;
 	else
 		return (X ^ 0x30);
+}
+
+// How many pixel stored in 1 word.
+// PSMT8 has 4 pixels per 32bit, PSMT4 has 8. All 16-bit textures are 2 pixel per bit. And all others are 1 pixel in texture.
+inline int PIXELS_PER_WORD(int psm) 
+{
+	if (psm == PSMT8)
+		return 4;
+	if (psm == PSMT4)
+		return 8;
+	if (PSMT_IS16BIT(psm))
+		return 2;
+	return 1;
 }
 
 // Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
@@ -589,14 +608,17 @@ inline float Clamp(float fx, float fmin, float fmax)
 	return fx > fmax ? fmax : fx;
 }
 
-// PSMT16, 16S have shorter color per pixel, also cluted textures with half storage.
-inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0)
-{
-	if (PSMT_IS16BIT(tex0.psm) || (PSMT_ISCLUT(tex0.psm) && tex0.cpsm > 1))
-		return true;
-	else
-		return false;
-}
+// Get pixel storage format from tex0. Clutted textures store pixels in cpsm format.
+inline int PIXEL_STORAGE_FORMAT(const tex0Info& tex) {
+	if (PSMT_ISCLUT(tex.psm)) 
+		return tex.cpsm;
+ 	else
+		return tex.psm;
+ }
+ 
+// If pixel storage format not PSMCT24 ot PSMCT32, then it is 16-bit. 
+// Z-textures have 0x30 upper bits, so we eliminate them by &&(~0x30)
+inline bool PSMT_ISHALF_STORAGE(const tex0Info& tex0) { return ((PIXEL_STORAGE_FORMAT(tex0) & (~0x30)) > 1); }
 
 //--------------------------- Inlines for bitwise ops
 //--------------------------- textures

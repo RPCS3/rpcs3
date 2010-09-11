@@ -459,6 +459,8 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	}
 	else
 	{
+		u32 bit_idx = (s_AAx == 0) ? 0 : 1;
+		
 		// align the rect to the nearest page
 		// note that fbp is always aligned on page boundaries
 		tex0Info texframe;
@@ -472,16 +474,17 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		// write color and zero out stencil buf, always 0 context!
 		// force bilinear if using AA
 		// Fix in r133 -- FFX movies and Gust backgrounds!
-		SetTexVariablesInt(0, 0*(s_AAx || s_AAy) ? 2 : 0, texframe, pmemtarg, &ppsBitBlt[!!s_AAx], 1);
-		cgGLSetTextureParameter(ppsBitBlt[!!s_AAx].sMemory, pmemtarg->ptex->tex);
-		cgGLEnableTextureParameter(ppsBitBlt[!!s_AAx].sMemory);
+		//SetTexVariablesInt(0, 0*(s_AAx || s_AAy) ? 2 : 0, texframe, pmemtarg, &ppsBitBlt[!!s_AAx], 1);
+		SetTexVariablesInt(0, 0, texframe, pmemtarg, &ppsBitBlt[bit_idx], 1);
+		cgGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, pmemtarg->ptex->tex);
+		cgGLEnableTextureParameter(ppsBitBlt[bit_idx].sMemory);
 
 		v = Vector(1, 1, 0.0f, 0.0f);
 		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 		v.x = 1;
 		v.y = 2;
-		ZZcgSetParameter4fv(ppsBitBlt[!!s_AAx].sOneColor, v, "g_fOneColor");
+		ZZcgSetParameter4fv(ppsBitBlt[bit_idx].sOneColor, v, "g_fOneColor");
 
 		assert(ptex != 0);
 
@@ -496,8 +499,8 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		}
 
 		// render with an AA shader if possible (bilinearly interpolates data)
-		//cgGLLoadProgram(ppsBitBlt[!!s_AAx].prog);
-		SETPIXELSHADER(ppsBitBlt[!!s_AAx].prog);
+		//cgGLLoadProgram(ppsBitBlt[bit_idx].prog);
+		SETPIXELSHADER(ppsBitBlt[bit_idx].prog);
 	}
 
 	SETVERTEXSHADER(pvsBitBlt.prog);
@@ -1892,7 +1895,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 
 #define TARGET_THRESH 0x500
 
-extern int g_MaxTexWidth, g_MaxTexHeight;
+extern int g_MaxTexWidth, g_MaxTexHeight; // Maximum height & width of supported texture.
 
 //#define SORT_TARGETS
 inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIter(list<CMemoryTarget>::iterator& it)
@@ -2057,29 +2060,6 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget
 	return NULL;
 }
 
-static __forceinline int NumberOfChannels(int psm)
-{
-	int channels = 1;
-
-	if (PSMT_ISCLUT(psm))
-	{
-		if (psm == PSMT8)
-			channels = 4;
-		else if (psm == PSMT4)
-			channels = 8;
-	}
-	else
-	{
-		if (PSMT_IS16BIT(psm))
-		{
-			// 16z needs to be a8r8g8b8
-			channels = 2;
-		}
-	}
-
-	return channels;
-}
-
 ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
@@ -2093,9 +2073,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSea
 			if ((height <= itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
 			{
 				// check channels
-				int targchannels = NumberOfChannels(itbest->psm);
-
-				if (targchannels == channels) break;
+				if (PIXELS_PER_WORD(itbest->psm) == channels) break;
 			}
 
 			++itbest;
@@ -2140,12 +2118,14 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	u32 fmt = GL_UNSIGNED_BYTE;
 
+	// RGBA16 storage format
 	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 
 	int widthmult = 1, channels = 1;
 
+	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare.
 	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
-	channels = NumberOfChannels(tex0.psm);
+	channels = PIXELS_PER_WORD(tex0.psm);
 
 	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 

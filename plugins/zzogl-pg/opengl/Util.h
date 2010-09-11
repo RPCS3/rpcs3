@@ -352,6 +352,6 @@ extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
 #endif
 
-
+extern bool g_bDisplayFPS; // should we display FPS on screen?
 
 #endif // UTIL_H_INCLUDED

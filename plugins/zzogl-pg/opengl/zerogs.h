@@ -38,8 +38,6 @@
 
 using namespace std;
 
-
-
 //------------------------ Constants ----------------------
 #define VB_BUFFERSIZE			   0x400
 
@@ -47,7 +45,6 @@ using namespace std;
 const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 
 //------------------------ Inlines -------------------------
-
 
 // Calculate maximum height for target
 inline int get_maxheight(int fbp, int fbw, int psm)
@@ -62,29 +59,13 @@ inline int get_maxheight(int fbp, int fbw, int psm)
 	return ret;
 }
 
-// Does psm need Alpha test with alpha expansion?
-inline int nNeedAlpha(u8 psm)
-{
-	return (psm == PSMCT24 || psm == PSMCT16 || psm == PSMCT16S);
-}
-
-// Get color storage model psm, that is important on flush stage.
-inline u8 GetTexCPSM(const tex0Info& tex)
-{
-	if (PSMT_ISCLUT(tex.psm))
-		return tex.cpsm;
-	else
-		return tex.psm;
-}
-
-
 // ------------------------ Variables -------------------------
+
 // all textures have this width
-//#define GPU_TEXWIDTH		512
 extern int GPU_TEXWIDTH;
 extern float g_fiGPU_TEXWIDTH;
-#define MASKDIVISOR		0
-#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR) // bitwise mask width for region repeat mode
+#define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
+#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
 
 extern u32 ptexBilinearBlocks;
 
@@ -422,15 +403,6 @@ union
 	CDepthTarget* pdepth;
 
 };
-
-// Return, if tcc, aem or psm mode told us, than Alpha test should be used
-// if tcc == 0 than no alpha used, aem used for alpha expanding and I am not sure
-// that it's correct, psm -- color mode,
-inline bool
-IsAlphaTestExpansion(VB& curvb)
-{
-	return (curvb.tex0.tcc && gs.texa.aem && nNeedAlpha(GetTexCPSM(curvb.tex0)));
-}
 
 // visible members
 extern DrawFn drawfn[8];

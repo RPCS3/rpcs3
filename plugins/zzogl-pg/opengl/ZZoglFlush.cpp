@@ -119,12 +119,9 @@ void Draw(const VB& curvb)
 //------------------ variables
 
 extern int g_nDepthBias;
-extern float g_fBlockMult;
+extern float g_fBlockMult; // used for old cards, that do not support Alpha-32float textures. We store block data in u16 and use it.
 bool g_bUpdateStencil = 1;
 //u32 g_SaveFrameNum = 0;									// ZZ
-
-int GPU_TEXWIDTH = 512;
-float g_fiGPU_TEXWIDTH = 1 / 512.0f;
 
 extern CGprogram g_psprog;							// 2 -- ZZ
 
@@ -248,6 +245,14 @@ inline void SetAlphaTest(const pixTest& curtest)
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(g_dwAlphaCmp[curtest.atst], AlphaReferedValue(curtest.aref));
 	}
+}
+ 
+// Return, if tcc, aem or psm mode told us, than Alpha test should be used
+// if tcc == 0 than no alpha used, aem used for alpha expanding and I am not sure
+// that it's correct, psm -- color mode,
+inline bool IsAlphaTestExpansion(tex0Info tex0)
+{
+	return (tex0.tcc && gs.texa.aem && PSMT_ALPHAEXP(PIXEL_STORAGE_FORMAT(tex0)));
 }
 
 // Switch wireframe rendering off for first flush, so it's draw few solid primitives
@@ -951,11 +956,11 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 
 	GLuint ptexclut = 0;
 
-	//int psm = GetTexCPSM(curvb.tex0);
+	//int psm = PIXEL_STORAGE_FORMAT(curvb.tex0);
 	int shadertype = FlushGetShaderType(curvb, ptextarg, ptexclut);
 
 	FRAGMENTSHADER* pfragment = LoadShadeEffect(shadertype, 0, curvb.curprim.fge,
-								IsAlphaTestExpansion(curvb), exactcolor, curvb.clamp, context, NULL);
+								IsAlphaTestExpansion(curvb.tex0), exactcolor, curvb.clamp, context, NULL);
 
 	Vector vpageoffset = FlushSetPageOffset(pfragment, shadertype, ptextarg);
 
@@ -997,7 +1002,7 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 	}
 
 	FRAGMENTSHADER* pfragment = LoadShadeEffect(0, GetTexFilter(curvb.tex1), curvb.curprim.fge,
-								IsAlphaTestExpansion(curvb), exactcolor, curvb.clamp, context, NULL);
+								IsAlphaTestExpansion(curvb.tex0), exactcolor, curvb.clamp, context, NULL);
 
 	if (pfragment == NULL)
 		ZZLog::Error_Log("Could not find memory target shader.");
@@ -1115,9 +1120,6 @@ inline void AlphaSetDepthTest(VB& curvb, const pixTest curtest, FRAGMENTSHADER* 
 	}
 
 	GL_ZTEST(curtest.zte);
-
-//	glEnable (GL_POLYGON_OFFSET_FILL);
-//        glPolygonOffset (-1., -1.);
 
 	if (s_bWriteDepth)
 	{
@@ -1469,12 +1471,11 @@ inline void AlphaSaveTarget(VB& curvb)
 //#endif
 //		char str[255];
 //		sprintf(str, "frames/frame%.4d.tga", g_SaveFrameNum++);
-//		if( (g_bSaveFlushedFrame & 2) ) {
-//			//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
-//			//glFlush();
-//			//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
-//			SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
-//		}
+
+//		//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
+//		//glFlush();
+//		//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
+//		SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
 //	}
 #endif
 }
@@ -2122,9 +2123,9 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		Vector valpha, valpha2 ;
 
 		// if clut, use the frame format
-		int psm = GetTexCPSM(tex0);
+		int psm = PIXEL_STORAGE_FORMAT(tex0);
 
-//		printf ( "A %d psm, is-clut %d. cpsm %d | %d %d\n", psm,  PSMT_ISCLUT(psm), tex0.cpsm,  tex0.tfx, tex0.tcc );
+//		ZZLog::Error_Log( "A %d psm, is-clut %d. cpsm %d | %d %d", psm,  PSMT_ISCLUT(psm), tex0.cpsm,  tex0.tfx, tex0.tcc );
 
 		Vector vblack;
 		vblack.x = vblack.y = vblack.z = vblack.w = 10;
@@ -2149,7 +2150,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		valpha2.z = (tex0.tfx != 1) * 2 ;
 		valpha2.w = (tex0.tfx == 0) ;
 
-		if (tex0.tcc == 0 || !nNeedAlpha(psm))
+		if (tex0.tcc == 0 || !PSMT_ALPHAEXP(psm))
 		{
 			valpha.x = 0 ;
 			valpha.y = (!!tex0.tcc) * (1 + (tex0.tfx == 0)) ;
@@ -2157,7 +2158,8 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		else
 		{
 			valpha.x = (gs.texa.fta[0])  * (1 + (tex0.tfx == 0)) ;
-			valpha.y = (gs.texa.fta[psm!=1] - gs.texa.fta[0]) * (1 + (tex0.tfx == 0))  ;
+			valpha.y = (gs.texa.fta[psm != PSMCT24] - gs.texa.fta[0]) * (1 + (tex0.tfx == 0)) ;
+
 		}
 
 		valpha.z = (tex0.tfx >= 3) ;
@@ -2206,7 +2208,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 						valpha4.z = 0; valpha4.w = 0;
 					}
 
-					if( nNeedAlpha(psm) ) {
+					if( PSMT_ALPHAEXP(psm) ) {
 
 						if( tex0.tfx == 0 ) {
 							// make sure alpha is mult by two when the output is Cv = Ct*Cf
@@ -2241,17 +2243,17 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 				}
 
 				if ( equal_vectors(valpha, valpha3) && equal_vectors(valpha2, valpha4) ) {
-					if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][nNeedAlpha(psm)] == 0) {
-						printf ( "Good issue %d %d %d %d\n", tex0.tfx,  tex0.tcc, psm, nNeedAlpha(psm) );
-						CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][nNeedAlpha(psm) ] = 1;
+					if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm)] == 0) {
+						printf ( "Good issue %d %d %d %d\n", tex0.tfx,  tex0.tcc, psm, PSMT_ALPHAEXP(psm) );
+						CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm) ] = 1;
 					}
 				}
-				else if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][nNeedAlpha(psm)] == -1) {
+				else if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm)] == -1) {
 					printf ("Bad array, %d %d %d %d\n\tolf valpha %f, %f, %f, %f : valpha2 %f %f %f %f\n\tnew valpha %f, %f, %f, %f : valpha2 %f %f %f %f\n",
-						 tex0.tfx,  tex0.tcc, psm, nNeedAlpha(psm),
+						 tex0.tfx,  tex0.tcc, psm, PSMT_ALPHAEXP(psm),
 					 	valpha3.x, valpha3.y, valpha3.z, valpha3.w, valpha4.x, valpha4.y, valpha4.z, valpha4.w,
 					 	valpha.x, valpha.y, valpha.z, valpha.w,  valpha2.x, valpha2.y, valpha2.z, valpha2.w);
-					CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][nNeedAlpha(psm)] = -1 ;
+					CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm)] = -1 ;
 				}
 
 		// Test;*/
@@ -2259,7 +2261,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		ZZcgSetParameter4fv(pfragment->fTexAlpha, valpha, "g_fTexAlpha");
 		ZZcgSetParameter4fv(pfragment->fTexAlpha2, valpha2, "g_fTexAlpha2");
 
-		if (tex0.tcc && gs.texa.aem && nNeedAlpha(psm))
+		if (IsAlphaTestExpansion(tex0))
 			ZZcgSetParameter4fv(pfragment->fTestBlack, vblack, "g_fTestBlack");
 
 		SetTexClamping(context, pfragment);
@@ -2284,7 +2286,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 
 	if (pmemtarg == NULL || pfragment == NULL || pmemtarg->ptex == NULL)
 	{
-		printf("SetTexVariablesInt error\n");
+		ZZLog::Error_Log("SetTexVariablesInt error.");
 		return;
 	}
 

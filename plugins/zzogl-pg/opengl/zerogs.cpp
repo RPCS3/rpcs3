@@ -444,7 +444,7 @@ void ZeroGS::SetNegAA(int mode)
 void ZeroGS::SetAA(int mode)
 {
 	FUNCLOG
-	float f;
+	float f = 1.0f;
 
 	// need to flush all targets
 	s_RTs.ResolveAll();
@@ -453,27 +453,27 @@ void ZeroGS::SetAA(int mode)
 	s_DepthRTs.Destroy();
 
 	s_AAx = s_AAy = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-
+	
 	if (mode > 0)
 	{
-		s_AAx = (mode + 1) / 2;		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) -- it's used as binary shift, so x >> s_AAx, y >> s_AAy
+		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) 
+		// it's used as a binary shift, so x >> s_AAx, y >> s_AAy
+		s_AAx = (mode + 1) / 2;
 		s_AAy = mode / 2;
+		f = 2.0f;
 	}
 
 	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-
 	s_nLastResolveReset = 0;
 
 	vb[0].prndr = NULL;
 	vb[0].pdepth = NULL;
-	vb[0].bNeedFrameCheck = 1;
-	vb[0].bNeedZCheck = 1;
 	vb[1].prndr = NULL;
 	vb[1].pdepth = NULL;
-	vb[1].bNeedFrameCheck = 1;
-	vb[1].bNeedZCheck = 1;
+	
+	vb[0].bNeedFrameCheck = vb[0].bNeedZCheck = 1;
+	vb[1].bNeedFrameCheck = vb[1].bNeedZCheck = 1;
 
-	f = mode > 0 ? 2.0f : 1.0f;
 	glPointSize(f);
 }
 

@@ -41,8 +41,8 @@ FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
-extern u32 ptexBlocks;		// holds information on block tiling
-extern u32 ptexConv16to32;
+extern u32 ptexBlocks;		// holds information on block tiling. Its texture number in OpenGL -- if 0 than such texture
+extern u32 ptexConv16to32;	// does not exist. This textures should be created on start and released on finish.  
 extern u32 ptexConv32to16;
 bool g_bCRTCBilinear = true;
 u8* s_lpShaderResources = NULL;

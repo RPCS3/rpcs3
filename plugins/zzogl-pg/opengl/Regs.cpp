@@ -111,6 +111,7 @@ void __gifCall GIFPackedRegHandlerRGBA(const u32* data)
 void __gifCall GIFPackedRegHandlerSTQ(const u32* data)
 {
 	FUNCLOG
+	// Despite this code generating a warning, it's correct. float -> float reduction. S and Y are missed mantissas.
 	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
 	*(u32*)&gs.vertexregs.t = data[1] & 0xffffff00;
 	*(u32*)&gs.q = data[2];

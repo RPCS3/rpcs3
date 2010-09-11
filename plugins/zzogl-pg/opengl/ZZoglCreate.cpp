@@ -66,17 +66,6 @@
 }
 
 #define GL_BLEND_SET() zgsBlendFuncSeparateEXT(s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha)
-
-#define GL_STENCILFUNC(func, ref, mask) { \
-	s_stencilfunc  = func; \
-	s_stencilref = ref; \
-	s_stencilmask = mask; \
-	glStencilFunc(func, ref, mask); \
-}
-
-#define GL_STENCILFUNC_SET() glStencilFunc(s_stencilfunc, s_stencilref, s_stencilmask)
-
-#define VB_BUFFERSIZE			   0x400
 #define VB_NUMBUFFERS			   512
 
 // ----------------- Types
@@ -139,7 +128,6 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 //------------------ variables
 ////////////////////////////
 // State parameters
-float fiRendWidth, fiRendHeight;
 
 extern u8* s_lpShaderResources;
 CGprogram pvs[16] = {NULL};
@@ -167,6 +155,8 @@ int nLogoWidth, nLogoHeight;
 u32 s_ptexInterlace = 0;		 // holds interlace fields
 
 //------------------ Global Variables
+int GPU_TEXWIDTH = 512;
+float g_fiGPU_TEXWIDTH = 1/512.0f;
 int g_MaxTexWidth = 4096, g_MaxTexHeight = 4096;
 u32 s_uFramebuffer = 0;
 CGprofile cgvProf, cgfProf;
@@ -179,7 +169,6 @@ float g_fBlockMult = 1;
 u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
-bool g_bDisplayMsg = 1;
 int g_nDepthBias = 0;
 //u32 g_bSaveFlushedFrame = 0;
 
@@ -190,13 +179,10 @@ bool ZeroGS::IsGLExt(const char* szTargetExtension)
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
 }
 
-inline bool
-ZeroGS::Create_Window(int _width, int _height)
+inline bool ZeroGS::Create_Window(int _width, int _height)
 {
 	nBackbufferWidth = _width;
 	nBackbufferHeight = _height;
-	fiRendWidth = 1.0f / nBackbufferWidth;
-	fiRendHeight = 1.0f / nBackbufferHeight;
 
 	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
@@ -501,10 +487,10 @@ bool ZeroGS::Create(int _width, int _height)
     // Limit the texture size supported to 8192. We do not need bigger texture.
     // Besides the following assertion is false when texture are too big.
     // ZZoglFlush.cpp:2349:	assert(fblockstride >= 1.0f)
-    g_MaxTexWidth = min(8192, g_MaxTexWidth);
+    //g_MaxTexWidth = min(8192, g_MaxTexWidth);
 
 	g_MaxTexHeight = g_MaxTexWidth / 4;
-	GPU_TEXWIDTH = g_MaxTexWidth / 8;
+	GPU_TEXWIDTH = min (g_MaxTexWidth/8, 1024);
 	g_fiGPU_TEXWIDTH = 1.0f / GPU_TEXWIDTH;
 
 	if (!CreateOpenShadersFile()) return false;
@@ -837,9 +823,6 @@ bool ZeroGS::Create(int _width, int _height)
 
 	B_G(LoadEffects(), return false);
 
-	g_bDisplayMsg = 0;
-
-
 	// create a sample shader
 	clampInfo temp;
 
@@ -870,8 +853,6 @@ bool ZeroGS::Create(int _width, int _height)
 			ZZLog::Error_Log("Basic shader test failed.");
 		}
 	}
-
-	g_bDisplayMsg = 1;
 
 	if (g_nPixelShaderVer & SHADER_REDUCED) conf.bilinear = 0;
 

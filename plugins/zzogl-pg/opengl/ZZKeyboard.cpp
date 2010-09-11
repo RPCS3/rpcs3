@@ -96,7 +96,6 @@ void ProcessAASetting(bool reverse)
 void ProcessFPS()
 {
 	FUNCLOG
-	extern bool g_bDisplayFPS;
 	g_bDisplayFPS ^= 1;
 	ZZLog::Debug_Log("Toggled FPS.");
 }
