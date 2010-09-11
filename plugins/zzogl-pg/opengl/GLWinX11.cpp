@@ -227,7 +227,8 @@ void GLWindow::ToggleFullscreen()
     XUnlockDisplay(glDisplay);
 
     // Apply the change
-    XSync(glDisplay, False);
+    // Note: Xsync is not enough. All pending event must be flush.
+    XFlush(glDisplay);
 
     // update info structure
     GetWindowSize();
