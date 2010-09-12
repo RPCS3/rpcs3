@@ -21,9 +21,19 @@
 #define __ZEROGS_SHADERS_H__
 
 // I'll need to figure out a way to get rid of this dependency... --arcum42
-#include "GS.h"
+//#include "GS.h"
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
+
+#define ZZshProgram 		CGprogram
+#define ZZshShader 		CGprogram
+#define ZZshShaderLink		CGprogram
+#define ZZshParameter 		CGparameter
+#define ZZshContext		CGcontext
+#define ZZshProfile		CGprofile
+#define ZZshError		CGerror
+#define pZero			0			// Zero parameter
+#define sZero			0			// Zero program
 
 #define NUM_FILTERS 2 		// texture filtering
 #define NUM_TYPES 5 		// types of texture read modes
@@ -87,18 +97,18 @@ struct FRAGMENTSHADER
 		fTexAlpha2(0), fTexOffset(0), fTexDims(0), fTexBlock(0), fClampExts(0), fTexWrapMode(0),
 		fRealTexDims(0), fTestBlack(0), fPageOffset(0), fTexAlpha(0) {}
 	
-	CGprogram prog;
-	CGparameter sMemory, sFinal, sBitwiseANDX, sBitwiseANDY, sInterlace, sCLUT;
-	CGparameter sOneColor, sBitBltZ, sInvTexDims;
-	CGparameter fTexAlpha2, fTexOffset, fTexDims, fTexBlock, fClampExts, fTexWrapMode, fRealTexDims, fTestBlack, fPageOffset, fTexAlpha;
+	ZZshProgram prog;
+	ZZshParameter sMemory, sFinal, sBitwiseANDX, sBitwiseANDY, sInterlace, sCLUT;
+	ZZshParameter sOneColor, sBitBltZ, sInvTexDims;
+	ZZshParameter fTexAlpha2, fTexOffset, fTexDims, fTexBlock, fClampExts, fTexWrapMode, fRealTexDims, fTestBlack, fPageOffset, fTexAlpha;
 
 #ifdef _DEBUG
 	string filename;
 #endif
 
-	void set_uniform_param(CGparameter &var, const char *name)
+	void set_uniform_param(ZZshParameter &var, const char *name)
 	{
-		CGparameter p;
+		ZZshParameter p;
 		p = cgGetNamedParameter(prog, name);
 
 		if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE) var = p;
@@ -106,7 +116,7 @@ struct FRAGMENTSHADER
 
 	bool set_texture(GLuint texobj, const char *name)
 	{
-		CGparameter p;
+		ZZshParameter p;
 
 		p = cgGetNamedParameter(prog, name);
 
@@ -120,9 +130,9 @@ struct FRAGMENTSHADER
 		return false;
 	}
 
-	bool connect(CGparameter &tex, const char *name)
+	bool connect(ZZshParameter &tex, const char *name)
 	{
-		CGparameter p;
+		ZZshParameter p;
 
 		p = cgGetNamedParameter(prog, name);
 
@@ -135,9 +145,9 @@ struct FRAGMENTSHADER
 		return false;
 	}
 
-	bool set_texture(CGparameter &tex, const char *name)
+	bool set_texture(ZZshParameter &tex, const char *name)
 	{
-		CGparameter p;
+		ZZshParameter p;
 
 		p = cgGetNamedParameter(prog, name);
 
@@ -153,7 +163,7 @@ struct FRAGMENTSHADER
 
 	bool set_shader_const(Vector v, const char *name)
 	{
-		CGparameter p;
+		ZZshParameter p;
 
 		p = cgGetNamedParameter(prog, name);
 
@@ -170,20 +180,20 @@ struct FRAGMENTSHADER
 struct VERTEXSHADER
 {
 	VERTEXSHADER() : prog(0), sBitBltPos(0), sBitBltTex(0) {}
-	CGprogram prog;
-	CGparameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
+	ZZshProgram prog;
+	ZZshParameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
 };
 
 // ------------------------- Variables -------------------------------
 
 extern u8* s_lpShaderResources;
-extern CGprofile cgvProf, cgfProf;
+extern ZZshProfile cgvProf, cgfProf;
 extern int g_nPixelShaderVer;
-extern CGprogram pvs[16];
+extern ZZshProgram pvs[16];
 extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
 extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-extern CGprogram g_vsprog, g_psprog;
-extern CGparameter g_vparamPosXY[2], g_fparamFogColor;
+extern ZZshProgram g_vsprog, g_psprog;
+extern ZZshParameter g_vparamPosXY[2], g_fparamFogColor;
 
 // ------------------------- Functions -------------------------------
 extern const char* ShaderCallerName;
@@ -197,15 +207,15 @@ inline void SetHandleName(const char* Name) {
 	ShaderHandleName = Name;
 }
 
-extern bool ZZcgCheckProfilesSupport();
-extern bool ZZcgStartUsingShaders();
-extern void ZZcgGLDisableProfile();
-extern void ZZcgGLEnableProfile();
-extern void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name);
-extern void ZZcgGLSetTextureParameter(CGparameter param, GLuint texobj, const char* name);
-extern void ZZcgDefaultOneColor( FRAGMENTSHADER ptr );
-extern void ZZcgSetVertexShader(CGprogram prog);
-extern void ZZcgSetPixelShader(CGprogram prog);
+extern bool ZZshCheckProfilesSupport();
+extern bool ZZshStartUsingShaders();
+extern void ZZshGLDisableProfile();
+extern void ZZshGLEnableProfile();
+extern void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name);
+extern void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* name);
+extern void ZZshDefaultOneColor( FRAGMENTSHADER ptr );
+extern void ZZshSetVertexShader(ZZshShader prog);
+extern void ZZshSetPixelShader(ZZshShader prog);
 
 #define SAFE_RELEASE_PROG(x) { if( (x) != NULL ) { cgDestroyProgram(x); x = NULL; } }
 

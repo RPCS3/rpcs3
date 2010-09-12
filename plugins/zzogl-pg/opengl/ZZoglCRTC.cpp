@@ -222,7 +222,7 @@ inline void RenderStartHelper(u32 bInterlace)
 		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
-	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -282,7 +282,7 @@ inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 		valpha.w = 1;
 	}
 
-	ZZcgSetParameter4fv(prog->sOneColor, valpha, "g_fOneColor");
+	ZZshSetParameter4fv(prog->sOneColor, valpha, "g_fOneColor");
 
 	return valpha;
 }
@@ -295,7 +295,7 @@ inline void RenderCreateInterlaceTex(u32 bInterlace, int th, FRAGMENTSHADER* pro
 
 	int interlacetex = CreateInterlaceTex(2 * th);
 
-	ZZcgGLSetTextureParameter(prog->sInterlace, interlacetex, "Interlace");
+	ZZshGLSetTextureParameter(prog->sInterlace, interlacetex, "Interlace");
 }
 
 // Well, do blending setup prior to second pass of half-frame drawing
@@ -359,7 +359,7 @@ inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm)
 	SetShaderCaller("RenderCRTC24helper");
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
-	ZZcgSetPixelShader(ppsCRTC24[bInterlace].prog);
+	ZZshSetPixelShader(ppsCRTC24[bInterlace].prog);
 	
 	DrawTriangleArray();
 }
@@ -416,7 +416,7 @@ inline Vector RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
 		v.w += 1.0f / (float)dh ;
 	}
 
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 
 	return v;
 }
@@ -440,7 +440,7 @@ inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 		v.w += 1.0f / conf.height;
 	}
 
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	return v;
 }
@@ -451,7 +451,7 @@ inline Vector RenderSetTargetBitTrans(int th)
 {
 	SetShaderCaller("RenderSetTargetBitTrans");
 	Vector v = Vector(float(th), -float(th), float(th), float(th));
-	ZZcgSetParameter4fv(pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
+	ZZshSetParameter4fv(pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
 	return v;
 }
 
@@ -469,7 +469,7 @@ inline Vector RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHAD
 		v.y = 1.0f / (float)th;
 		v.z = (float)0.0;
 		v.w = -0.5f / (float)th;
-		ZZcgSetParameter4fv(prog->sInvTexDims, v, "g_fInvTexDims");
+		ZZshSetParameter4fv(prog->sInvTexDims, v, "g_fInvTexDims");
 	}
 
 	return v;
@@ -554,10 +554,10 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 				Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
 
 				// inside vb[0]'s target area, so render that region only
-				ZZcgGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
+				ZZshGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
 				RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTCTarg[bInterlace]);
 
-				ZZcgSetPixelShader(ppsCRTCTarg[bInterlace].prog);
+				ZZshSetPixelShader(ppsCRTCTarg[bInterlace].prog);
 
 				DrawTriangleArray();
 
@@ -626,9 +626,9 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
 	Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
 
-	ZZcgGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
+	ZZshGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
-	ZZcgSetPixelShader(ppsCRTC[bInterlace].prog);
+	ZZshSetPixelShader(ppsCRTC[bInterlace].prog);
 	
 	DrawTriangleArray();
 }

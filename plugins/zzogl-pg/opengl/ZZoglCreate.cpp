@@ -129,7 +129,7 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 // State parameters
 
 extern u8* s_lpShaderResources;
-CGprogram pvs[16] = {NULL};
+ZZshProgram pvs[16] = {NULL};
 
 // String's for shader file in developer mode
 #ifdef DEVBUILD
@@ -217,7 +217,7 @@ inline bool ZeroGS::CreateImportantCheck()
 		bSuccess = false;
 	}
 	
-	bSuccess &= ZZcgCheckProfilesSupport();
+	bSuccess &= ZZshCheckProfilesSupport();
 	
 	return bSuccess;
 }
@@ -767,7 +767,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	if (err != GL_NO_ERROR) bSuccess = false;
 
-	if (!ZZcgStartUsingShaders())  bSuccess = false;
+	if (!ZZshStartUsingShaders())  bSuccess = false;
 
 	GL_REPORT_ERROR();
 

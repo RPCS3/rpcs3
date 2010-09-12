@@ -48,13 +48,13 @@ extern u32 ptexConv32to16;
 bool g_bCRTCBilinear = true;
 u8* s_lpShaderResources = NULL;
 map<int, SHADERHEADER*> mapShaderResources;
-CGcontext g_cgcontext;
-CGprofile cgvProf, cgfProf;
+ZZshContext g_cgcontext;
+ZZshProfile cgvProf, cgfProf;
 int g_nPixelShaderVer = 0; 		// default
 
 //------------------ Code
 
-bool ZZcgCheckProfilesSupport() {
+bool ZZshCheckProfilesSupport() {
 	// load the effect, find the best profiles (if any)
 	if (cgGLIsProfileSupported(CG_PROFILE_ARBVP1) != CG_TRUE) {
 		ZZLog::Error_Log("arbvp1 not supported.");
@@ -68,7 +68,7 @@ bool ZZcgCheckProfilesSupport() {
 }
 
 // Error handler. Setup in ZZogl_Create once.
-void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
+void HandleCgError(ZZshContext ctx, ZZshError err, void* appdata)
 {
 	ZZLog::Error_Log("%s->%s: %s", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
 	const char* listing = cgGetLastListing(g_cgcontext);
@@ -76,7 +76,7 @@ void HandleCgError(CGcontext ctx, CGerror err, void* appdata)
 	if (listing != NULL) ZZLog::Debug_Log("	Last listing: %s", listing);
 }
 
-bool ZZcgStartUsingShaders() {
+bool ZZshStartUsingShaders() {
 	cgSetErrorHandler(HandleCgError, NULL);
 	g_cgcontext = cgCreateContext();
 				
@@ -130,12 +130,12 @@ bool ZZcgStartUsingShaders() {
 }
 
 // Disable CG
-void ZZcgGLDisableProfile() {
+void ZZshGLDisableProfile() {
 	cgGLDisableProfile(cgvProf);
 	cgGLDisableProfile(cgfProf);
 }
 //Enable CG
-void ZZcgGLEnableProfile() {
+void ZZshGLEnableProfile() {
 	cgGLEnableProfile(cgvProf);
 	cgGLEnableProfile(cgfProf);
 }
@@ -143,34 +143,34 @@ void ZZcgGLEnableProfile() {
 // This is a helper of cgGLSetParameter4fv, made for debugging purposes.
 // The name could be any string. We must use it on compilation time, because the erronious handler does not
 // return it.
-void ZZcgSetParameter4fv(CGparameter param, const float* v, const char* name)
+void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name)
 {
 	ShaderHandleName = name;
 	cgGLSetParameter4fv(param, v);
 }
  
 // The same function for texture, also to cgGLEnable
-void ZZcgGLSetTextureParameter(CGparameter param, GLuint texobj, const char* name) {
+void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* name) {
 	ShaderHandleName = name;
 	cgGLSetTextureParameter(param, texobj);
 	cgGLEnableTextureParameter(param);
 }
 
 // Used sometimes for color 1.
-void ZZcgDefaultOneColor( FRAGMENTSHADER ptr ) {
+void ZZshDefaultOneColor( FRAGMENTSHADER ptr ) {
 	ShaderHandleName = "Set Default One color";
 	Vector v = Vector ( 1, 1, 1, 1 );
-	ZZcgSetParameter4fv( ptr.sOneColor, v, "DefaultOne");
+	ZZshSetParameter4fv( ptr.sOneColor, v, "DefaultOne");
 }
 
-void ZZcgSetVertexShader(CGprogram prog) {
+void ZZshSetVertexShader(ZZshShader prog) {
 	if ((prog) != g_vsprog) {
 		cgGLBindProgram(prog); 
 		g_vsprog = prog; 
 	}
 }
 
-void ZZcgSetPixelShader(CGprogram prog) {
+void ZZshSetPixelShader(ZZshShader prog) {
 	if ((prog) != g_psprog) {
 		cgGLBindProgram(prog); 
 		g_psprog = prog; 
@@ -234,9 +234,9 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 
 static bool outdated_shaders = false;
 
-void SetupVertexProgramParameters(CGprogram prog, int context)
+void SetupVertexProgramParameters(ZZshProgram prog, int context)
 {
-	CGparameter p;
+	ZZshParameter p;
 
 	p = cgGetNamedParameter(prog, "g_fPosXY");
 

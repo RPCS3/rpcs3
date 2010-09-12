@@ -5,7 +5,7 @@
 #include "resrc1.h"
 
 #include "GS.h"
-#include "zerogsshaders.h"
+#include "ZZoglShaders.h"
 #include "Win32.h"
 
 #include <map>

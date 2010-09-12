@@ -155,9 +155,9 @@
 		<Unit filename="../../ZZoglFlushHack.h" />
 		<Unit filename="../../ZZoglSave.cpp" />
 		<Unit filename="../../ZZoglShaders.cpp" />
+		<Unit filename="../../ZZoglShaders.h" />
 		<Unit filename="../../ZZoglShoots.cpp" />
 		<Unit filename="../../ZZoglVB.cpp" />
-		<Unit filename="../../ZeroGSShaders/zerogsshaders.h" />
 		<Unit filename="../../common.h" />
 		<Unit filename="../../glprocs.c">
 			<Option compilerVar="CC" />

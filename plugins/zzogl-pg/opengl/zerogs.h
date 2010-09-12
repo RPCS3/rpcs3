@@ -34,7 +34,6 @@
 #include "GS.h"
 #include "CRC.h"
 #include "rasterfont.h" // simple font
-//#include "ZeroGSShaders/zerogsshaders.h"
 
 using namespace std;
 

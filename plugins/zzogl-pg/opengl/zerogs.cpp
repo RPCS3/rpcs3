@@ -51,7 +51,7 @@ extern int g_nFrame, g_nRealFrame;
 //-------------------------- Variables
 
 primInfo *prim;
-CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
+ZZshProgram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
 
 inline u32 FtoDW(float f) { return (*((u32*)&f)); }
 
@@ -82,7 +82,7 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
 /////////////////////
 // graphics resources
-CGparameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
+ZZshParameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
 bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
@@ -340,7 +340,7 @@ extern RasterFont* font_p;
 void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 {
 	FUNCLOG
-	ZZcgGLDisableProfile();
+	ZZshGLDisableProfile();
 
 	Vector v;
 	v.SetColor(color);
@@ -348,7 +348,7 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	//glColor3f(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff)/ 255.0f, (color & 0xff) / 255.0f);
 
 	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
-	ZZcgGLEnableProfile();
+	ZZshGLEnableProfile();
 }
 
 void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
@@ -481,14 +481,6 @@ void ZeroGS::Prim()
 	if (curvb.CheckPrim()) Flush(prim->ctxt);
 
 	curvb.curprim._val = prim->_val;
-
-	// flush the other pipe if sharing the same buffer
-//  if( vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp && vb[!prim->ctxt].nCount > 0 )
-//  {
-//	  assert( vb[prim->ctxt].nCount == 0 );
-//	  Flush(!prim->ctxt);
-//  }
-
 	curvb.curprim.prim = prim->prim;
 }
 
@@ -525,31 +517,32 @@ void ZeroGS::RenderCustom(float fAlpha)
 	DisableAllgl() ;
 	SetShaderCaller("RenderCustom");
 
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+	//glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+	glViewport(0, 0, conf.width, conf.height);
 
 	// play custom animation
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// tex coords
 	Vector v = Vector(1 / 32767.0f, 1 / 32767.0f, 0, 0);
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 	v.x = (float)nLogoWidth;
 	v.y = (float)nLogoHeight;
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	v.x = v.y = v.z = v.w = fAlpha;
-	ZZcgSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// inside vhDCb[0]'s target area, so render that region only
-	ZZcgGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo, "Logo");
+	ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo, "Logo");
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();
 
-	ZZcgSetVertexShader(pvsBitBlt.prog);
-	ZZcgSetPixelShader(ppsBaseTexture.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
 	
 	// restore
@@ -826,11 +819,8 @@ void ZeroGS::SetFogColor(u32 fog)
 	Vector v;
 
 	// set it immediately
-//	v.x = (gs.fogcol & 0xff) / 255.0f;
-//	v.y = ((gs.fogcol >> 8) & 0xff) / 255.0f;
-//	v.z = ((gs.fogcol >> 16) & 0xff) / 255.0f;
 	v.SetColor(gs.fogcol);
-	ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 
 //	}
 }
@@ -845,7 +835,7 @@ void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
 	v.x = fog->FCR / 255.0f;
 	v.y = fog->FCG / 255.0f;
 	v.z = fog->FCB / 255.0f;
-	ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 }
 
 void ZeroGS::ExtWrite()

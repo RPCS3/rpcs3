@@ -21,7 +21,7 @@
 
 #include "Util.h"
 #include "GS.h"
-#include "ZeroGSShaders/zerogsshaders.h"
+#include "ZZoglShaders.h"
 #include "Profile.h"
 #include "GLWin.h"
 
