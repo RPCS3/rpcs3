@@ -111,31 +111,6 @@ void ProcessWireFrame()
 	ZZLog::WriteToScreen(strtitle);
 }
 
-void ProcessNegAASetting(bool reverse)
-{
-	FUNCLOG
-
-	char strtitle[256];
-
-	if (reverse)
-	{
-		conf.negaa--; // -1
-		if (conf.negaa > 2) conf.negaa = 2;					// u8 in unsigned, so negative value is 255.
-		sprintf(strtitle, "down resolution - %s", s_naa[conf.negaa]);
-		ZeroGS::SetNegAA(conf.negaa);
-	}
-	else
-	{
-		conf.negaa++;
-		if (conf.negaa > 2) conf.negaa = 0;
-		sprintf(strtitle, "down resolution - %s", s_naa[conf.negaa]);
-		ZeroGS::SetNegAA(conf.negaa);
-	}
-
-	ZZLog::WriteToScreen(strtitle);
-	SaveConfig();
-}
-
 typedef struct GameHackStruct
 {
 	const char HackName[40];

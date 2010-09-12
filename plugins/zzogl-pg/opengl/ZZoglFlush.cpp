@@ -200,7 +200,6 @@ VB vb[2];
 float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
 u8 s_AAx = 0, s_AAy = 0; // if AAy is set, then AAx has to be set
-u8 s_AAz = 0, s_AAw = 0; // if AAy is set, then AAx has to be set
 
 int icurctx = -1;
 

@@ -404,38 +404,6 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 	assert(vb[0].pBufferData != NULL && vb[1].pBufferData != NULL);
 }
 
-
-void ZeroGS::SetNegAA(int mode)
-{
-	FUNCLOG
-	// need to flush all targets
-	s_RTs.ResolveAll();
-	s_RTs.Destroy();
-	s_DepthRTs.ResolveAll();
-	s_DepthRTs.Destroy();
-
-	s_AAz = s_AAw = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-
-	if (mode > 0)
-	{
-		s_AAz = (mode + 1) / 2;		// ( 1, 0 ) ; (  1, 1 ) -- it's used as binary shift, so x << s_AAz, y << s_AAw
-		s_AAw = mode / 2;
-	}
-
-	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-
-	s_nLastResolveReset = 0;
-
-	vb[0].prndr = NULL;
-	vb[0].pdepth = NULL;
-	vb[0].bNeedFrameCheck = 1;
-	vb[0].bNeedZCheck = 1;
-	vb[1].prndr = NULL;
-	vb[1].pdepth = NULL;
-	vb[1].bNeedFrameCheck = 1;
-	vb[1].bNeedZCheck = 1;
-}
-
 void ZeroGS::SetAA(int mode)
 {
 	FUNCLOG

@@ -161,7 +161,6 @@ namespace ZeroGS
 {
 extern void AddMessage(const char* pstr, u32 ms);
 extern void SetAA(int mode);
-extern void SetNegAA(int mode);
 extern bool Create(int width, int height);
 extern void Destroy(bool bD3D);
 extern void StartCapture();

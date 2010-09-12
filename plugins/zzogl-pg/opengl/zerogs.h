@@ -420,7 +420,6 @@ void ChangeWindowSize(int nNewWidth, int nNewHeight);
 void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 void SetAA(int mode);
-void SetNegAA(int mode);
 void SetCRC(int crc);
 
 void ReloadEffects();
