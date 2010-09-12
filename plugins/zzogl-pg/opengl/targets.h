@@ -27,13 +27,6 @@
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
 #endif
 
-inline Vector DefaultOneColor(FRAGMENTSHADER ptr)
-{
-	Vector v = Vector(1, 1, 1, 1);
-	cgGLSetParameter4fv(ptr.sOneColor, v);
-	return v ;
-}
-
 namespace ZeroGS
 {
 
@@ -242,10 +235,6 @@ inline list<ZeroGS::CRenderTarget*> CreateTargetsList(int start, int end)
 
 extern Vector g_vdepth;
 extern int icurctx;
-
-extern VERTEXSHADER pvsBitBlt;
-extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 extern GLuint vboRect;
 
 // Unworking

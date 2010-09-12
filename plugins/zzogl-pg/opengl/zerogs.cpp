@@ -32,6 +32,7 @@
 #include "zpipe.h"
 #include "targets.h"
 #include "GLWin.h"
+#include "ZZoglShaders.h"
 
 //----------------------- Defines
 
@@ -103,10 +104,6 @@ GLenum GetRenderTargetFormat() { return GetRenderFormat() == RFT_byte8 ? 4 : g_i
 
 // returns the first and last addresses aligned to a page that cover
 void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
-
-//	bool LoadEffects();
-//	bool LoadExtraEffects();
-//	FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
 int s_nNewWidth = -1, s_nNewHeight = -1;
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
@@ -343,8 +340,7 @@ extern RasterFont* font_p;
 void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 {
 	FUNCLOG
-	cgGLDisableProfile(cgvProf);
-	cgGLDisableProfile(cgfProf);
+	ZZcgGLDisableProfile();
 
 	Vector v;
 	v.SetColor(color);
@@ -352,8 +348,7 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	//glColor3f(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff)/ 255.0f, (color & 0xff) / 255.0f);
 
 	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
-	cgGLEnableProfile(cgvProf);
-	cgGLEnableProfile(cgfProf);
+	ZZcgGLEnableProfile();
 }
 
 void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
@@ -548,14 +543,13 @@ void ZeroGS::RenderCustom(float fAlpha)
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// inside vhDCb[0]'s target area, so render that region only
-	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+	ZZcgGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo, "Logo");
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();
 
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBaseTexture.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZcgSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
 	
 	// restore

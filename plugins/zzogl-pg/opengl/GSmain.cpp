@@ -36,7 +36,7 @@ using namespace std;
 
 #include "zerogs.h"
 #include "targets.h"
-#include "ZeroGSShaders/zerogsshaders.h"
+#include "ZZoglShaders.h"
 #include "ZZoglFlushHack.h"
 
 #ifdef _MSC_VER

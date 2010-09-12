@@ -25,7 +25,7 @@
 #include "zerogs.h"
 #include "GLWin.h"
 
-#include "ZeroGSShaders/zerogsshaders.h"
+#include "ZZoglShaders.h"
 #include "targets.h"
 // This include for windows resource file with Shaders
 #ifdef _WIN32
@@ -86,7 +86,6 @@ extern void KickDummy();
 extern bool LoadEffects();
 extern bool LoadExtraEffects();
 extern FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
-VERTEXSHADER pvsBitBlt;
 
 GLuint vboRect = 0;
 vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
@@ -159,8 +158,6 @@ int GPU_TEXWIDTH = 512;
 float g_fiGPU_TEXWIDTH = 1/512.0f;
 int g_MaxTexWidth = 4096, g_MaxTexHeight = 4096;
 u32 s_uFramebuffer = 0;
-CGprofile cgvProf, cgfProf;
-int g_nPixelShaderVer = 0; // default
 
 RasterFont* font_p = NULL;
 float g_fBlockMult = 1;
@@ -219,20 +216,9 @@ inline bool ZeroGS::CreateImportantCheck()
 		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_secondary_color\nZZogl: *********");
 		bSuccess = false;
 	}
-
-	// load the effect & find the best profiles (if any)
-	if (cgGLIsProfileSupported(CG_PROFILE_ARBVP1) != CG_TRUE)
-	{
-		ZZLog::Error_Log("arbvp1 not supported.");
-		bSuccess = false;
-	}
-
-	if (cgGLIsProfileSupported(CG_PROFILE_ARBFP1) != CG_TRUE)
-	{
-		ZZLog::Error_Log("arbfp1 not supported.");
-		bSuccess = false;
-	}
-
+	
+	bSuccess &= ZZcgCheckProfilesSupport();
+	
 	return bSuccess;
 }
 
@@ -440,9 +426,6 @@ inline bool CreateFillExtensionsMap()
 	return true;
 }
 
-
-const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
-
 void LoadglFunctions()
 {
 	GL_LOADFN(glIsRenderbufferEXT);
@@ -464,6 +447,20 @@ void LoadglFunctions()
 	GL_LOADFN(glGenerateMipmapEXT);
 }
 
+inline bool TryBlockFormat(GLint fmt, const GLvoid* vBlockData) {
+	g_internalFloatFmt = fmt; 
+	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, vBlockData);
+	return (glGetError() == GL_NO_ERROR);
+}
+
+inline bool TryBlinearFormat(GLint fmt32, GLint fmt16, const GLvoid* vBilinearData) {
+	g_internalRGBAFloatFmt = fmt32;
+	g_internalRGBAFloat16Fmt = fmt16;
+	glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, vBilinearData);
+	return (glGetError() == GL_NO_ERROR);
+}
+
+
 bool ZeroGS::Create(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;
@@ -473,7 +470,6 @@ bool ZeroGS::Create(int _width, int _height)
 	Destroy(1);
 	GSStateReset();
 
-	cgSetErrorHandler(HandleCgError, NULL);
 	g_RenderFormatType = RFT_float16;
 
 	if (!Create_Window(_width, _height)) return false;
@@ -614,43 +610,32 @@ bool ZeroGS::Create(int _width, int _height)
 
 	glGenTextures(1, &ptexBlocks);
 	glBindTexture(GL_TEXTURE_2D, ptexBlocks);
-
-	g_internalFloatFmt = GL_RGBA32F; // This is OpenGL 3.0 standard format, so it should be implemented in new cards. 
-	g_internalRGBAFloatFmt = GL_RGBA32F; 
-	g_internalRGBAFloat16Fmt = GL_RGBA16F;
-
-	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
-
-	if (glGetError() != GL_NO_ERROR) 
-	{
-		// try different internal format
-		g_internalFloatFmt = GL_ALPHA_FLOAT32_ATI; 
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, &vBlockData[0]);
+	
+	if 	(TryBlockFormat(GL_RGBA32F, &vBlockData[0]))
+		ZZLog::Error_Log("Use GL_RGBA32F for blockdata.");
+	else if (TryBlockFormat(GL_ALPHA_FLOAT32_ATI, &vBlockData[0]))
+	 	ZZLog::Error_Log("Use ATI_texture_float for blockdata.");
+	else if (TryBlockFormat(GL_ALPHA32F_ARB, &vBlockData[0]))
+		ZZLog::Error_Log("Use ARB_texture_float for blockdata.");
+	else 
+		{	// This case is bad. But for really old cards it could be nice. 			
+		g_fBlockMult = 65535.0f*(float)g_fiGPU_TEXWIDTH;
+		BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
+		g_internalFloatFmt = GL_ALPHA16;
 		
-		if (glGetError() != GL_NO_ERROR)  
-		{	
-			// This case is bad. But for really old cards it could be nice. 
-			
-			g_fBlockMult = 65535.0f*(float)g_fiGPU_TEXWIDTH ;
-			BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
-			g_internalFloatFmt = GL_ALPHA16 ;
-			// We store block data on u16 rather float numbers. It's not as precise, but ALPHA16 is OpenGL 2.0 standard
-			// and uses only 16 bit. Old zerogs use red channel, but it does not work.
-
-			glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_UNSIGNED_SHORT, &vBlockData[0]);
-			if (glGetError() != GL_NO_ERROR) 
-			{
-				ZZLog::Error_Log("Could not fill blocks.");
-				return false;
-			}
-			do_not_use_billinear = true;
-			ZZLog::Debug_Log("Using non-bilinear fill, quallity is outdated!");			
-		}
-		else
-			ZZLog::Debug_Log("Use ATI_texture_float for blockdata.");
+		// We store block data on u16 rather float numbers. It's not so preciese, but ALPHA16 is OpenGL 2.0 standart
+		// and use only 16 bit. Old zerogs use red channel, but it does not work.
+		
+		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_UNSIGNED_SHORT, &vBlockData[0]);
+		if( glGetError() != GL_NO_ERROR ) {
+			ZZLog::Error_Log("ZZogl ERROR: could not fill blocks");
+			return false;
+ 		}
+	
+		do_not_use_billinear = true;
+		conf.bilinear = 0;
+		ZZLog::Error_Log("Using non-bilinear fill, quallity is outdated!");	
 	}
-	else
-		ZZLog::Debug_Log("Use GL_RGBA32F for blockdata.");
 
 	setTex2DFilters(GL_NEAREST);
 	setTex2DWrap(GL_REPEAT);
@@ -660,33 +645,15 @@ bool ZeroGS::Create(int _width, int _height)
 		// fill in the bilinear blocks (main variant).
 		glGenTextures(1, &ptexBilinearBlocks);
 		glBindTexture(GL_TEXTURE_2D, ptexBilinearBlocks);
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-
-		if (glGetError() != GL_NO_ERROR) 
-		{
-			g_internalRGBAFloatFmt = GL_RGBA_FLOAT32_ATI;
-			g_internalRGBAFloat16Fmt = GL_RGBA_FLOAT16_ATI;
-			glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-			
-			if (glGetError() != GL_NO_ERROR) 
-			{
-				g_internalRGBAFloatFmt = GL_FLOAT_RGBA32_NV;
-				g_internalRGBAFloat16Fmt = GL_FLOAT_RGBA16_NV;
-				glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, &vBilinearData[0]);
-				
-				if (glGetError() != GL_NO_ERROR) 
-				{
-					ZZLog::Error_Log("Fill bilinear blocks failed!");
-					return false;
-				}
-				else
-					ZZLog::Debug_Log("Fill bilinear blocks with NVidia_float.");
-			}				
-			else				
-			ZZLog::Debug_Log("Fill bilinear blocks with ATI_texture_float.");
-		}
-		else
-			ZZLog::Debug_Log("Fill bilinear blocks OK.!");
+		
+		if 	(TryBlinearFormat(GL_RGBA32F, GL_RGBA16F, &vBilinearData[0]))
+			ZZLog::Error_Log("Fill bilinear blocks OK.!");
+		else if (TryBlinearFormat(GL_RGBA_FLOAT32_ATI, GL_RGBA_FLOAT16_ATI, &vBilinearData[0]))
+			ZZLog::Error_Log("Fill bilinear blocks with ATI_texture_float.");
+		else if (TryBlinearFormat(GL_FLOAT_RGBA32_NV, GL_FLOAT_RGBA16_NV, &vBilinearData[0]))
+			ZZLog::Error_Log("ZZogl Fill bilinear blocks with NVidia_float.");
+		else 
+			ZZLog::Error_Log("Fill bilinear blocks failed.");
 
 		setTex2DFilters(GL_NEAREST);
 		setTex2DWrap(GL_REPEAT);
@@ -800,67 +767,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	if (err != GL_NO_ERROR) bSuccess = false;
 
-	g_cgcontext = cgCreateContext();
-
-	cgvProf = CG_PROFILE_ARBVP1;
-	cgfProf = CG_PROFILE_ARBFP1;
-
-	cgGLEnableProfile(cgvProf);
-	cgGLEnableProfile(cgfProf);
-
-	cgGLSetOptimalOptions(cgvProf);
-	cgGLSetOptimalOptions(cgfProf);
-
-	cgGLSetManageTextureParameters(g_cgcontext, CG_FALSE);
-
-	//cgSetAutoCompile(g_cgcontext, CG_COMPILE_IMMEDIATE);
-
-	g_fparamFogColor = cgCreateParameter(g_cgcontext, CG_FLOAT4);
-	g_vparamPosXY[0] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
-	g_vparamPosXY[1] = cgCreateParameter(g_cgcontext, CG_FLOAT4);
-
-	ZZLog::GS_Log("Creating effects.");
-
-	B_G(LoadEffects(), return false);
-
-	// create a sample shader
-	clampInfo temp;
-
-	memset(&temp, 0, sizeof(temp));
-
-	temp.wms = 3;
-	temp.wmt = 3;
-
-	g_nPixelShaderVer = 0;//SHADER_ACCURATE;
-
-	// test
-	bool bFailed;
-
-	FRAGMENTSHADER* pfrag = LoadShadeEffect(0, 1, 1, 1, 1, temp, 0, &bFailed);
-
-	if (bFailed || pfrag == NULL)
-	{
-		g_nPixelShaderVer = SHADER_ACCURATE | SHADER_REDUCED;
-
-		pfrag = LoadShadeEffect(0, 0, 1, 1, 0, temp, 0, &bFailed);
-
-		if (pfrag != NULL)
-			cgGLLoadProgram(pfrag->prog);
-
-		if (bFailed || pfrag == NULL || cgGetError() != CG_NO_ERROR)
-		{
-			g_nPixelShaderVer = SHADER_REDUCED;
-			ZZLog::Error_Log("Basic shader test failed.");
-		}
-	}
-
-	if (g_nPixelShaderVer & SHADER_REDUCED) conf.bilinear = 0;
-
-	ZZLog::GS_Log("Creating extra effects.");
-
-	B_G(LoadExtraEffects(), return false);
-
-	ZZLog::GS_Log("Using %s shaders.", g_pShaders[g_nPixelShaderVer]);
+	if (!ZZcgStartUsingShaders())  bSuccess = false;
 
 	GL_REPORT_ERROR();
 

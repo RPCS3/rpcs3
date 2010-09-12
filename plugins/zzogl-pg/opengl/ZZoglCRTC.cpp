@@ -23,6 +23,7 @@
 //------------------ Includes
 #include "ZZoglCRTC.h"
 #include "GLWin.h"
+#include "ZZoglShaders.h"
 
 using namespace ZeroGS;
 
@@ -221,7 +222,7 @@ inline void RenderStartHelper(u32 bInterlace)
 		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
-	SETVERTEXSHADER(pvsBitBlt.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -294,8 +295,7 @@ inline void RenderCreateInterlaceTex(u32 bInterlace, int th, FRAGMENTSHADER* pro
 
 	int interlacetex = CreateInterlaceTex(2 * th);
 
-	cgGLSetTextureParameter(prog->sInterlace, interlacetex);
-	cgGLEnableTextureParameter(prog->sInterlace);
+	ZZcgGLSetTextureParameter(prog->sInterlace, interlacetex, "Interlace");
 }
 
 // Well, do blending setup prior to second pass of half-frame drawing
@@ -359,7 +359,7 @@ inline void RenderCRTC24helper(u32 bInterlace, int interlace, int psm)
 	SetShaderCaller("RenderCRTC24helper");
 	// assume that data is already in ptexMem (do Resolve?)
 	RenderGetForClip(bInterlace, interlace, psm, &ppsCRTC24[bInterlace]);
-	SETPIXELSHADER(ppsCRTC24[bInterlace].prog);
+	ZZcgSetPixelShader(ppsCRTC24[bInterlace].prog);
 	
 	DrawTriangleArray();
 }
@@ -554,11 +554,10 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 				Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
 
 				// inside vb[0]'s target area, so render that region only
-				cgGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex);
-				cgGLEnableTextureParameter(ppsCRTCTarg[bInterlace].sFinal);
+				ZZcgGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
 				RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTCTarg[bInterlace]);
 
-				SETPIXELSHADER(ppsCRTCTarg[bInterlace].prog);
+				ZZcgSetPixelShader(ppsCRTCTarg[bInterlace].prog);
 
 				DrawTriangleArray();
 
@@ -591,10 +590,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	}
 
 	// context has to be 0
-	CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
-
-	if ((pmemtarg == NULL) || (bInterlace >= 2))
-		ZZLog::Error_Log("CRCR Check for memory shader fault.");
+	if (bInterlace >= 2) ZZLog::Error_Log("CRCR Check for memory shader fault.");
 
 	//if (!(*bUsingStencil)) RenderUpdateStencil(i, bUsingStencil);
 		
@@ -607,7 +603,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 		h1 = texframe.th;
 		w2 = -0.5f;
 		h2 = -0.5f;
-		SetTexVariablesInt(0, 2, texframe, pmemtarg, &ppsCRTC[bInterlace], 1);
+		SetTexVariablesInt(0, 2, texframe, false, &ppsCRTC[bInterlace], 1);
 	}
 	else
 	{
@@ -615,7 +611,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 		h1 = 1;
 		w2 = -0.5f / (float)texframe.tw;
 		h2 = -0.5f / (float)texframe.th;
-		SetTexVariablesInt(0, 0, texframe, pmemtarg, &ppsCRTC[bInterlace], 1);
+		SetTexVariablesInt(0, 0, texframe, false, &ppsCRTC[bInterlace], 1);
 	}
 	
 	if (g_bSaveFinalFrame) SaveTex(&texframe, g_bSaveFinalFrame - 1 > 0);
@@ -630,12 +626,9 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
 	Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
 
-	cgGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, pmemtarg->ptex->tex);
-	cgGLEnableTextureParameter(ppsCRTC[bInterlace].sMemory);
-	
+	ZZcgGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
-
-	SETPIXELSHADER(ppsCRTC[bInterlace].prog);
+	ZZcgSetPixelShader(ppsCRTC[bInterlace].prog);
 	
 	DrawTriangleArray();
 }

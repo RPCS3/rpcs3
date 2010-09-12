@@ -34,7 +34,7 @@
 #include "GS.h"
 #include "CRC.h"
 #include "rasterfont.h" // simple font
-#include "ZeroGSShaders/zerogsshaders.h"
+//#include "ZeroGSShaders/zerogsshaders.h"
 
 using namespace std;
 
@@ -413,17 +413,6 @@ extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
-
-// Shaders variables
-extern Vector g_vdepth;
-extern Vector vlogz;
-extern VERTEXSHADER pvsBitBlt;
-extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-bool LoadEffects();
-bool LoadExtraEffects();
-FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
-
 extern RenderFormatType g_RenderFormatType;
 
 void AddMessage(const char* pstr, u32 ms = 5000);
@@ -517,10 +506,6 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 void SetContextTarget(int context) ;
 
 void NeedFactor(int w);
-// only sets a limited amount of state (for Update)
-void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
-void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, ZeroGS::CMemoryTarget* pmemtarg, FRAGMENTSHADER* pfragment, int force);
-
 void ResetAlphaVariables();
 
 void StartCapture();

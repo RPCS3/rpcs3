@@ -18,8 +18,6 @@
  */
 
 #include "GS.h"
-#include <Cg/cg.h>
-#include <Cg/cgGL.h>
 
 #include <stdlib.h>
 
@@ -27,6 +25,7 @@
 #include "x86.h"
 #include "zerogs.h"
 #include "targets.h"
+#include "ZZoglShaders.h"
 
 #define RHA
 //#define RW
@@ -434,8 +433,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	if (nUpdateTarg)
 	{
-		cgGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex);
-		cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+		ZZcgGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex, "BaseTexture.final");
 
 		//assert( ittarg->second->fbw == fbw );
 		int offset = (fbp - ittarg->second->fbp) * 64 / fbw;
@@ -451,9 +449,9 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 //		v = DefaultBitBltTex(); Maybe?
-		v = DefaultOneColor(ppsBaseTexture) ;
+		ZZcgDefaultOneColor ( ppsBaseTexture );
 
-		SETPIXELSHADER(ppsBaseTexture.prog);
+		ZZcgSetPixelShader(ppsBaseTexture.prog);
 
 		nUpdateTarg = 0;
 	}
@@ -469,15 +467,13 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		texframe.tw = fbw;
 		texframe.th = fbh;
 		texframe.psm = psm;
-		CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
 
 		// write color and zero out stencil buf, always 0 context!
 		// force bilinear if using AA
 		// Fix in r133 -- FFX movies and Gust backgrounds!
-		//SetTexVariablesInt(0, 0*(s_AAx || s_AAy) ? 2 : 0, texframe, pmemtarg, &ppsBitBlt[!!s_AAx], 1);
-		SetTexVariablesInt(0, 0, texframe, pmemtarg, &ppsBitBlt[bit_idx], 1);
-		cgGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, pmemtarg->ptex->tex);
-		cgGLEnableTextureParameter(ppsBitBlt[bit_idx].sMemory);
+		//SetTexVariablesInt(0, 0*(s_AAx || s_AAy)?2:0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
+		SetTexVariablesInt(0, 0, texframe, false, &ppsBitBlt[bit_idx], 1);
+		ZZcgGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
 
 		v = Vector(1, 1, 0.0f, 0.0f);
 		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
@@ -500,10 +496,10 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 		// render with an AA shader if possible (bilinearly interpolates data)
 		//cgGLLoadProgram(ppsBitBlt[bit_idx].prog);
-		SETPIXELSHADER(ppsBitBlt[bit_idx].prog);
+		ZZcgSetPixelShader(ppsBitBlt[bit_idx].prog);
 	}
 
-	SETVERTEXSHADER(pvsBitBlt.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
 
 	DrawTriangleArray();
 	
@@ -572,10 +568,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	FBTexture(0, ptexConv);
 	ZeroGS::ResetRenderTarget(1);
 
-	BindToSample(&ptex) ;
-
-	cgGLSetTextureParameter(ppsConvert16to32.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsBitBlt[!!s_AAx].sMemory);
+	BindToSample(&ptex);
+	ZZcgGLSetTextureParameter(ppsConvert16to32.sFinal, ptex, "Convert 16 to 32.Final");
 
 	fbh /= 2; // have 16 bit surfaces are usually 2x higher
 	SetViewport();
@@ -583,9 +577,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-
-	SETPIXELSHADER(ppsConvert16to32.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZcgSetPixelShader(ppsConvert16to32.prog);
 	DrawTriangleArray();
 	
 #ifdef _DEBUG
@@ -603,7 +596,6 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 
 	// restore
 	SAFE_RELEASE_TEX(ptex);
-
 	SAFE_RELEASE_TEX(ptexFeedback);
 
 	ptex = ptexConv;
@@ -612,7 +604,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// reset textures
-	BindToSample(&ptex) ;
+	BindToSample(&ptex);
 
 	glEnable(GL_SCISSOR_TEST);
 
@@ -678,10 +670,9 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	ZeroGS::ResetRenderTarget(1);
 	GL_REPORT_ERRORD();
 
-	BindToSample(&ptex) ;
+	BindToSample(&ptex);
 
-	cgGLSetTextureParameter(ppsConvert32to16.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsConvert32to16.sFinal);
+	ZZcgGLSetTextureParameter(ppsConvert32to16.sFinal, ptex, "Convert 32 to 16");
 
 //	fbh *= 2; // have 16 bit surfaces are usually 2x higher
 
@@ -690,9 +681,8 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-
-	SETPIXELSHADER(ppsConvert32to16.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZcgSetPixelShader(ppsConvert32to16.prog);
 	DrawTriangleArray();
 	
 #ifdef _DEBUG
@@ -705,7 +695,6 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 #endif
 
 	vposxy.y = -2.0f * (32767.0f / 8.0f) / (float)fbh;
-
 	vposxy.w = 1 + 0.5f / fbh;
 
 	// restore
@@ -775,8 +764,8 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	v.y = (float)(RH(fbh));
 	v.z = 0.0f;
 	v.w = 0.0f;
-	cgGLSetParameter4fv(pvsBitBlt.sBitBltTex, v);
-	v = DefaultOneColor(ppsBaseTexture);
+	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBlt.Feedback");
+	ZZcgDefaultOneColor(ppsBaseTexture);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -785,16 +774,15 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 	GL_REPORT_ERRORD();
 
-	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+	ZZcgGLSetTextureParameter(ppsBaseTexture.sFinal, ptex, "BaseTexture.Feedback");
 
 	SetViewport();
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBaseTexture.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZcgSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
 	
 	// restore
@@ -970,7 +958,6 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	texframe.tw = fbw;
 	texframe.th = fbh;
 	texframe.psm = psm;
-	CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
 
 	DisableAllgl();
 
@@ -989,11 +976,9 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	glDepthFunc(g_dwZCmp[curvb.test.ztst]);
 
 	// write color and zero out stencil buf, always 0 context!
-	SetTexVariablesInt(0, 0, texframe, pmemtarg, &ppsBitBltDepth, 1);
-
-	cgGLSetTextureParameter(ppsBitBltDepth.sMemory, pmemtarg->ptex->tex);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
-
+	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
+	ZZcgGLSetTextureParameter(ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
+	
 	Vector v = DefaultBitBltPos();
 
 	v = DefaultBitBltTex();
@@ -1042,8 +1027,8 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBitBltDepth.prog);
+	ZZcgSetVertexShader(pvsBitBlt.prog);
+	ZZcgSetPixelShader(ppsBitBltDepth.prog);
 
 	DrawTriangleArray();
 

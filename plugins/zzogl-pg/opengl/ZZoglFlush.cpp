@@ -26,6 +26,7 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglFlushHack.h"
+#include "ZZoglShaders.h"
 
 using namespace ZeroGS;
 
@@ -969,10 +970,7 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 	Vector vTexDims = FlushTextureDims(pfragment, shadertype, curvb, ptextarg);
 
 	if (pfragment->sCLUT != NULL && ptexclut != 0)
-	{
-		cgGLSetTextureParameter(pfragment->sCLUT, ptexclut);
-		cgGLEnableTextureParameter(pfragment->sCLUT);
-	}
+		ZZcgGLSetTextureParameter(pfragment->sCLUT, ptexclut, "CLUT");
 
 	FlushApplyResizeFilter(curvb, dwFilterOpts, ptextarg, context);
 
@@ -1016,35 +1014,25 @@ inline void FlushSetTexture(VB& curvb, FRAGMENTSHADER* pfragment, CRenderTarget*
 	SetTexVariables(context, pfragment);
 	SetTexInt(context, pfragment, ptextarg == NULL);
 
-	// have to enable the texture parameters(curtest.atst=
+	// have to enable the texture parameters(curtest.atst)
+	if( curvb.ptexClamp[0] != 0 ) 
+		ZZcgGLSetTextureParameter(pfragment->sBitwiseANDX, curvb.ptexClamp[0], "Clamp 0");
+	
+	if( curvb.ptexClamp[1] != 0 ) 
+		ZZcgGLSetTextureParameter(pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
+	
+	if( pfragment->sMemory != NULL && s_ptexCurSet[context] != 0) 
+		ZZcgGLSetTextureParameter(pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
 
-	if (curvb.ptexClamp[0] != 0)
-	{
-		cgGLSetTextureParameter(pfragment->sBitwiseANDX, curvb.ptexClamp[0]);
-		cgGLEnableTextureParameter(pfragment->sBitwiseANDX);
-	}
-
-	if (curvb.ptexClamp[1] != 0)
-	{
-		cgGLSetTextureParameter(pfragment->sBitwiseANDY, curvb.ptexClamp[1]);
-		cgGLEnableTextureParameter(pfragment->sBitwiseANDY);
-	}
-
-	if (pfragment->sMemory != NULL && s_ptexCurSet[context] != 0)
-	{
-		cgGLSetTextureParameter(pfragment->sMemory, s_ptexCurSet[context]);
-		cgGLEnableTextureParameter(pfragment->sMemory);
-	}
 }
 
-// Reset programm and texture variables;
+// Reset program and texture variables;
 inline void FlushBindProgramm(FRAGMENTSHADER* pfragment, int context)
 {
 	vb[context].bTexConstsSync = 0;
 	vb[context].bVarsTexSync = 0;
 
-	cgGLBindProgram(pfragment->prog);
-	g_psprog = pfragment->prog;
+	ZZcgSetPixelShader(pfragment->prog);
 }
 
 inline FRAGMENTSHADER* FlushRendererStage(VB& curvb, u32& dwFilterOpts, CRenderTarget* ptextarg, int exactcolor, int context)
@@ -1077,8 +1065,8 @@ inline FRAGMENTSHADER* FlushRendererStage(VB& curvb, u32& dwFilterOpts, CRenderT
 	GL_REPORT_ERRORD();
 
 	// set the shaders
-	SetShaderCaller("FlushRendererStage")	;
-	SETVERTEXSHADER(pvs[2 * ((curvb.curprim._val >> 1) & 3) + 8 * s_bWriteDepth + context]);
+	SetShaderCaller("FlushRendererStage");
+	ZZcgSetVertexShader(pvs[2 * ((curvb.curprim._val >> 1) & 3) + 8 * s_bWriteDepth + context]);
 	FlushBindProgramm(pfragment, context);
 
 	GL_REPORT_ERRORD();
@@ -1501,7 +1489,7 @@ inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 
 		SetShaderCaller("AlphaColorClamping");
 
-		SETPIXELSHADER(ppsOne.prog);
+		ZZcgSetPixelShader(ppsOne.prog);
 		GL_BLEND_RGB(GL_ONE, GL_ONE);
 
 		float f;
@@ -1764,7 +1752,7 @@ inline void ZeroGS::ProcessStencil(const VB& curvb)
 
 	SetShaderCaller("ProcessStencil");
 
-	SETPIXELSHADER(ppsOne.prog);
+	ZZcgSetPixelShader(ppsOne.prog);
 	Draw(curvb);
 
 	// process when alpha >= 0xff
@@ -1825,7 +1813,7 @@ __forceinline void ZeroGS::ProcessFBA(const VB& curvb, CGparameter sOneColor)
 
 	float f = 1;
 	ZZcgSetParameter4fv(sOneColor, &f, "g_fOneColor");
-	SETPIXELSHADER(ppsOne.prog);
+	ZZcgSetPixelShader(ppsOne.prog);
 	Draw(curvb);
 	glDisable(GL_ALPHA_TEST);
 
@@ -1981,13 +1969,13 @@ void ZeroGS::SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
 		{
 			if (vb[context].pmemtarg != pmemtarg)
 			{
-				SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);
+				SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, true, pfragment, s_bForceTexFlush);
 				vb[context].bVarsTexSync = true;
 			}
 		}
 		else
 		{
-			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, pmemtarg, pfragment, s_bForceTexFlush);
+			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, false, pfragment, s_bForceTexFlush);
 			vb[context].bVarsTexSync = true;
 
 			INC_TEXVARS();
@@ -2278,17 +2266,20 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 	}
 }
 
-void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, CMemoryTarget* pmemtarg, FRAGMENTSHADER* pfragment, int force)
+void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force)
 {
 	FUNCLOG
 	Vector v;
-	assert(pmemtarg != NULL && pfragment != NULL && pmemtarg->ptex != NULL);
+	CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(tex0, 1);
 
+	assert( pmemtarg != NULL && pfragment != NULL && pmemtarg->ptex != NULL);	
 	if (pmemtarg == NULL || pfragment == NULL || pmemtarg->ptex == NULL)
 	{
 		ZZLog::Error_Log("SetTexVariablesInt error.");
 		return;
 	}
+	
+	if (CheckVB && vb[context].pmemtarg == pmemtarg) return;
 
 	SetShaderCaller("SetTexVariablesInt");
 
@@ -2307,7 +2298,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 		if (pfragment->fRealTexDims)
 			ZZcgSetParameter4fv(pfragment->fRealTexDims, v, "g_fRealTexDims");
 		else
-			ZZcgSetParameter4fv(cgGetNamedParameter(pfragment->prog, "g_fRealTexDims"), v, "g_fRealTexDims");
+			ZZcgSetParameter4fv(cgGetNamedParameter(pfragment->prog,"g_fRealTexDims"),v, "g_fRealTexDims");	
 	}
 
 	if (m_Blocks[tex0.psm].bpp == 0)
