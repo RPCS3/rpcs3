@@ -254,7 +254,7 @@ void WriteBilinear()
 }
 
 #ifdef _WIN32
-void ProcessMessages()
+void ProcessEvents()
 {
 	MSG msg;
 
@@ -322,7 +322,7 @@ void ProcessMessages()
 
 #else // linux
 
-void ProcessMessages()
+void ProcessEvents()
 {
 	FUNCLOG
 

@@ -84,7 +84,7 @@ char *libraryName	 = "ZZ Ogl PG ";
 
 extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
 
-extern void ProcessMessages();
+extern void ProcessEvents();
 extern void WriteAA();
 extern void WriteBilinear();
 
@@ -513,7 +513,7 @@ void CALLBACK GSvsync(int interlace)
 	// !interlace? Hmmm... Fixme.
 	ZeroGS::RenderCRTC(!interlace);
 
-	ProcessMessages();
+	ProcessEvents();
 
 	if (--nToNextUpdate <= 0)
 	{
