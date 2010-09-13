@@ -199,18 +199,19 @@ extern CRenderTargetMngr s_RTs, s_DepthRTs;
 extern CBitwiseTextureMngr s_BitwiseTextures;
 extern CMemoryTargetMngr g_MemTargs;
 
-extern u8 s_AAx, s_AAy;
+//extern u8 s_AAx, s_AAy;
+extern Point AA;
 
-// Real rendered width, depends on AA and AAneg.
+// Real rendered width, depends on AA.
 inline int RW(int tbw)
 {
-    return (tbw << s_AAx);
+    return (tbw << AA.x);
 }
 
-// Real rendered height, depends on AA and AAneg.
+// Real rendered height, depends on AA.
 inline int RH(int tbh)
 {
-    return (tbh << s_AAy);
+    return (tbh << AA.y);
 }
 
 /*	inline void CreateTargetsList(int start, int end, list<ZeroGS::CRenderTarget*>& listTargs) {

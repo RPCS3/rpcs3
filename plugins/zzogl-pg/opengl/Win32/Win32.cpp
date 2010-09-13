@@ -169,7 +169,6 @@ void OnOK(HWND hW)
 		conf.aa = 0;
 	}
 
-	conf.negaa = 0;
 	conf.zz_options._u32 = 0;
 
 	conf.zz_options.capture_avi = IsDlgButtonChecked(hW, IDC_CONFIG_CAPTUREAVI) ? 1 : 0;

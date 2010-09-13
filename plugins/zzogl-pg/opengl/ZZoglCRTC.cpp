@@ -177,7 +177,6 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 	}
 }
 
-
 // Something should be done before Renderering the picture.
 inline void RenderStartHelper(u32 bInterlace)
 {
@@ -191,6 +190,7 @@ inline void RenderStartHelper(u32 bInterlace)
 //	  return;
 //	}
 //#endif
+
 	if (conf.mrtdepth && pvs[8] == NULL)
 	{
 		conf.mrtdepth = 0;

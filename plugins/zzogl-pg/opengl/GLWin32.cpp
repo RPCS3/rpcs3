@@ -301,6 +301,7 @@ void GLWindow::SwapGLBuffers()
 {
 	static u32 lastswaptime = 0;
 	SwapBuffers(hDC);
+	//glClear(GL_COLOR_BUFFER_BIT);
 	lastswaptime = timeGetTime();
 }
 

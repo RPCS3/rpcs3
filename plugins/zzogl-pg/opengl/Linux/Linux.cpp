@@ -390,8 +390,6 @@ void DisplayDialog()
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box)) != -1)
 			conf.aa = gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box));
 
-		conf.negaa = 0;
-
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
 		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
 		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));

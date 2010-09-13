@@ -457,7 +457,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	}
 	else
 	{
-		u32 bit_idx = (s_AAx == 0) ? 0 : 1;
+		u32 bit_idx = (AA.x == 0) ? 0 : 1;
 		
 		// align the rect to the nearest page
 		// note that fbp is always aligned on page boundaries
@@ -471,7 +471,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		// write color and zero out stencil buf, always 0 context!
 		// force bilinear if using AA
 		// Fix in r133 -- FFX movies and Gust backgrounds!
-		//SetTexVariablesInt(0, 0*(s_AAx || s_AAy)?2:0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
+		//SetTexVariablesInt(0, 0*(AA.x || AA.y) ? 2 : 0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
 		SetTexVariablesInt(0, 0, texframe, false, &ppsBitBlt[bit_idx], 1);
 		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
 
@@ -755,7 +755,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 
 	// tex coords, test ffx bikanel island when changing these
 
-//	Vector v = Vector(1, -1, 0.5f / (fbw<<s_AAx), 0.5f / (fbh << s_AAy));
+//	Vector v = Vector(1, -1, 0.5f / (fbw << AA.x), 0.5f / (fbh << AA.y));
 //	v *= 1/32767.0f;
 //	cgGLSetParameter4fv(pvsBitBlt.sBitBltPos, v);
 	Vector v = DefaultBitBltPos();
@@ -3087,11 +3087,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT24:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(32, u32, u32, 32A4, 8, 8, (u32), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(32, u32, u32, 32A4, 8, 8, (u32), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32, u32, u32, 32A2, 8, 8, (u32), Frame, 1, 0);
 				}
@@ -3104,11 +3104,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16, u16, u32, 16A2, 16, 8, RGBA32to16, Frame, 1, 0);
 				}
@@ -3121,11 +3121,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16S:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16S, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16S, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16S, u16, u32, 16A2, 16, 8, RGBA32to16, Frame, 1, 0);
 				}
@@ -3140,11 +3140,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT24Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(32Z, u32, u32, 32A4, 8, 8, (u32), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(32Z, u32, u32, 32A4, 8, 8, (u32), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32Z, u32, u32, 32A2, 8, 8, (u32), Frame, 1, 0);
 				}
@@ -3157,11 +3157,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16Z, u16, u32, 16A4, 16, 8, (u16), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16Z, u16, u32, 16A4, 16, 8, (u16), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16Z, u16, u32, 16A2, 16, 8, (u16), Frame, 1, 0);
 				}
@@ -3174,11 +3174,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16SZ:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16SZ, u16, u32, 16A4, 16, 8, (u16), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16SZ, u16, u32, 16A4, 16, 8, (u16), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16SZ, u16, u32, 16A2, 16, 8, (u16), Frame, 1, 0);
 				}
@@ -3199,11 +3199,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT24:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(32, u32, Vector_16F, 32A4, 8, 8, Float16ToARGB, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32, u32, Vector_16F, 32A2, 8, 8, Float16ToARGB, Frame16, 1, 0);
 				}
@@ -3216,11 +3216,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16, u16, Vector_16F, 16A4, 16, 8, Float16ToARGB16, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16, u16, Vector_16F, 16A2, 16, 8, Float16ToARGB16, Frame16, 1, 0);
 				}
@@ -3233,11 +3233,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16S:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16S, u16, Vector_16F, 16A4, 16, 8, Float16ToARGB16, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16S, u16, Vector_16F, 16A2, 16, 8, Float16ToARGB16, Frame16, 1, 0);
 				}
@@ -3252,11 +3252,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT24Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(32Z, u32, Vector_16F, 32ZA4, 8, 8, Float16ToARGB_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32Z, u32, Vector_16F, 32ZA2, 8, 8, Float16ToARGB_Z, Frame16, 1, 0);
 				}
@@ -3269,11 +3269,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16Z, u16, Vector_16F, 16ZA4, 16, 8, Float16ToARGB16_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16Z, u16, Vector_16F, 16ZA2, 16, 8, Float16ToARGB16_Z, Frame16, 1, 0);
 				}
@@ -3286,11 +3286,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16SZ:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16SZ, u16, Vector_16F, 16ZA4, 16, 8, Float16ToARGB16_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16SZ, u16, Vector_16F, 16ZA2, 16, 8, Float16ToARGB16_Z, Frame16, 1, 0);
 				}

@@ -34,7 +34,6 @@ extern u32 THR_KeyEvent; // value for passing out key events between threads
 extern bool THR_bShift, SaveStateExists;
 
 const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
-const char* s_naa[3] = { "native res |", "res /2 |", "res /4 |" };
 const char* pbilinear[] = { "off", "normal", "forced" };
 
 

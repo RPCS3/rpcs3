@@ -140,7 +140,7 @@ void __gifCall KickVertex(bool adc)
 		{
 			/* tri fans need special processing */
 			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
+				gs.primIndex = gs.primNext();
 		}
 	}
 }

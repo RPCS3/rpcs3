@@ -507,6 +507,10 @@ typedef struct
 	GIFRegDIMX dimx;
 	GSMemory mem;
 	GSClut clut_buffer;
+	int primNext(int inc = 1)
+	{
+		return ((primIndex + inc) % ARRAY_SIZE(gsvertex));
+	}
 	
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{
@@ -523,7 +527,7 @@ typedef struct
 		vertexregs.z = z;
 		vertexregs.f = f;
 		gsvertex[primIndex] = vertexregs;
-		primIndex = (primIndex + 1) % ARRAY_SIZE(gsvertex);
+		primIndex = primNext();
 	}
 	
 	void add_vertex(u16 x, u16 y, u32 z)
@@ -532,7 +536,7 @@ typedef struct
 		vertexregs.y = y;
 		vertexregs.z = z;
 		gsvertex[primIndex] = vertexregs;
-		primIndex = (primIndex + 1) % ARRAY_SIZE(gsvertex);
+		primIndex = primNext();
 	}
 } GSinternal;
 

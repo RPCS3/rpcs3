@@ -64,12 +64,11 @@ bool SaveStateExists = true;		// We could not know save slot status before first
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
 
 extern const char* s_aa[5];
-extern const char* s_naa[3];
 extern const char* pbilinear[];
 // statistics
 u32 g_nGenVars = 0, g_nTexVars = 0, g_nAlphaVars = 0, g_nResolve = 0;
 
-#define VER 1
+#define VER 2
 const unsigned char zgsversion	= PS2E_GS_VERSION;
 unsigned char zgsrevision = 0; // revision and build gives plugin version
 unsigned char zgsbuild	= VER;
@@ -477,8 +476,7 @@ static __forceinline void SetGSTitle()
 		SaveStateExists = true;
 
 	sprintf(strtitle, "ZZ Open GL 0.%d.%d | %.1f fps | %s%s%s savestate %d%s | shaders %s | (%.1f)", zgsbuild, zgsminor, fFPS,
-			g_pInterlace[conf.interlace], g_pBilinear[conf.bilinear],
-			(conf.aa >= conf.negaa) ? (conf.aa ? s_aa[conf.aa - conf.negaa] : "") : (conf.negaa ? s_naa[conf.negaa - conf.aa] : ""),
+			g_pInterlace[conf.interlace], g_pBilinear[conf.bilinear], (conf.aa ? s_aa[conf.aa] : ""),
 					CurrentSavestate, (SaveStateExists ? "" :  "*"),
 					g_pShaders[g_nPixelShaderVer], (ppf&0xfffff) / (float)UPDATE_FRAMES);
 

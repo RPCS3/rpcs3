@@ -415,14 +415,14 @@ void ZeroGS::SetAA(int mode)
 	s_DepthRTs.ResolveAll();
 	s_DepthRTs.Destroy();
 
-	s_AAx = s_AAy = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
+	AA.x = AA.y = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
 	
 	if (mode > 0)
 	{
 		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) 
-		// it's used as a binary shift, so x >> s_AAx, y >> s_AAy
-		s_AAx = (mode + 1) / 2;
-		s_AAy = mode / 2;
+		// it's used as a binary shift, so x >> AA.x, y >> AA.y
+		AA.x = (mode + 1) / 2;
+		AA.y = mode / 2;
 		f = 2.0f;
 	}
 
@@ -485,8 +485,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 	DisableAllgl() ;
 	SetShaderCaller("RenderCustom");
 
-	//glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
-	glViewport(0, 0, conf.width, conf.height);
+	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
 
 	// play custom animation
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -612,7 +611,7 @@ void ZeroGS::KickPoint()
 
 	curvb.NotifyWrite(1);
 
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 	SET_VERTEX(&p[0], last, curvb);
@@ -637,8 +636,8 @@ void ZeroGS::KickLine()
 
 	curvb.NotifyWrite(2);
 
-	int next = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int next = gs.primNext();
+	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 	SET_VERTEX(&p[0], next, curvb);
@@ -703,7 +702,7 @@ void ZeroGS::KickTriangleFan()
 
 	// add 1 to skip the first vertex
 
-	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = gs.primNext();
 
 	OUTPUT_VERT(p[0], 0);
 	OUTPUT_VERT(p[1], 1);
@@ -732,13 +731,12 @@ void ZeroGS::KickSprite()
 	}
 
 	curvb.NotifyWrite(6);
-
-	int next = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int next = gs.primNext();
+	int last = gs.primNext(2);
 	
 	// sprite is too small and AA shows lines (tek4, Mana Khemia)
-	gs.gsvertex[last].x += (4*s_AAx);
-	gs.gsvertex[last].y += (4*s_AAy);
+	gs.gsvertex[last].x += (4 * AA.x);
+	gs.gsvertex[last].y += (4 * AA.y);
 
 	// might be bad sprite (KH dialog text)
 	//if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
