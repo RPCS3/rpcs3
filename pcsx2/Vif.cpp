@@ -31,8 +31,6 @@ void vif0Reset()
 	memzero(vif0);
 	memzero(vif0Regs);
 
-	vif0.regs = &vif0Regs;
-
 	resetNewVif(0);
 }
 
@@ -41,8 +39,6 @@ void vif1Reset()
 	/* Reset the whole VIF, meaning the internal pcsx2 vars, and all the registers */
 	memzero(vif1);
 	memzero(vif1Regs);
-
-	vif1.regs = &vif1Regs;
 
 	resetNewVif(1);
 }
@@ -80,7 +76,6 @@ __fi void vif0FBRST(u32 value) {
 		//Console.WriteLn("Vif0 Reset %x", vif0Regs.stat._u32);
 
 		memzero(vif0);
-		vif0.regs = &vif0Regs;
 		vif0ch.qwc = 0; //?
 		cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		psHu64(VIF0_FIFO) = 0;
@@ -140,7 +135,6 @@ __fi void vif1FBRST(u32 value) {
 	if (FBRST(value).RST) // Reset Vif.
 	{
 		memzero(vif1);
-		vif1.regs = &vif1Regs;
 
 		//cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 		vif1ch.qwc -= min((int)vif1ch.qwc, 16); //?
