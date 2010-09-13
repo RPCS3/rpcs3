@@ -14,6 +14,7 @@ set(CommonFlags
 	-fno-dse
 	-fno-tree-dse
 	-fno-strict-aliasing
+    -Wstrict-aliasing # Allow to track strict aliasing issue.
 	-pipe
 	-Wno-format
 	-Wno-unused-parameter

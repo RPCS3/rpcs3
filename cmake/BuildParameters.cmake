@@ -99,7 +99,7 @@ if(DEFINED USER_CMAKE_C_FLAGS)
     string(STRIP "${USER_CMAKE_C_FLAGS}" CMAKE_C_FLAGS)
 endif(DEFINED USER_CMAKE_C_FLAGS)
 # Use some default machine flags
-string(STRIP "${CMAKE_C_FLAGS} -m32 -msse -msse2 -march=i686" CMAKE_C_FLAGS)
+string(STRIP "${CMAKE_C_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_C_FLAGS)
 
 
 ### C++ flags
@@ -110,7 +110,7 @@ if(DEFINED USER_CMAKE_CXX_FLAGS)
     string(STRIP "${USER_CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
 # Use some default machine flags
-string(STRIP "${CMAKE_CXX_FLAGS} -m32 -msse -msse2 -march=i686" CMAKE_CXX_FLAGS)
+string(STRIP "${CMAKE_CXX_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty
