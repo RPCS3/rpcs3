@@ -88,7 +88,6 @@
 			<Add library="jpeg" />
 			<Add library="GLEW" />
 			<Add library="GLU" />
-			<Add library="Xxf86vm" />
 			<Add library="z" />
 			<Add library="dl" />
 			<Add library="stdc++" />
