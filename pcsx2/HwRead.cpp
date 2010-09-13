@@ -48,7 +48,15 @@ mem32_t __fastcall _hwRead32(u32 mem)
 		
 		case 0x02:	return ipuRead32( mem );
 
-		case 0x03:	return dmacRead32<0x03>( mem );
+		case 0x03:
+			if (mem >= EEMemoryMap::VIF0_Start)
+			{
+				if(mem >= EEMemoryMap::VIF1_Start)
+					return vifRead32<1>(mem);
+				else
+					return vifRead32<0>(mem);
+			}
+			return dmacRead32<0x03>( mem );
 		
 		case 0x04:
 		case 0x05:

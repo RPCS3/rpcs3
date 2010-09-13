@@ -38,8 +38,8 @@ static __fi void vifFlush(int idx) {
 }
 
 static __fi void vuExecMicro(int idx, u32 addr) {
-	VURegs* VU = nVif[idx].VU;
-	VIFregisters& vifRegs = VU->GetVifRegs();
+	VURegs& VU = vuRegs[idx];
+	VIFregisters& vifRegs = vifXRegs;
 	int startcycles = 0;
 	//vifFlush(idx);
 
@@ -423,7 +423,7 @@ vifOp(vifCode_Offset) {
 	return 0;
 }
 
-template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem1, u32* pmem2) {
+template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem2) {
 	vifStruct& vifX = GetVifX;
 
 	int ret = min(4 - vifX.tag.addr, vifX.vifpacketsize);
@@ -432,16 +432,12 @@ template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem1,
 
 	switch (ret) {
 		case 4:
-			pmem1[12] = data[3];
 			pmem2[3]  = data[3];
 		case 3:
-			pmem1[8]  = data[2];
 			pmem2[2]  = data[2];
 		case 2:
-			pmem1[4]  = data[1];
 			pmem2[1]  = data[1];
 		case 1:
-			pmem1[0]  = data[0];
 			pmem2[0]  = data[0];
 			break;
 		jNO_DEFAULT
@@ -462,10 +458,7 @@ vifOp(vifCode_STCol) {
 		return 1;
 	}
 	pass2 {
-		u32* cols  = idx ? g_vifmask.Col1 : g_vifmask.Col0;
-		u32* pmem1 = &vifXRegs.c0 + (vifX.tag.addr << 2);
-		u32* pmem2 = cols		   +  vifX.tag.addr;
-		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
+		return _vifCode_STColRow<idx>(data, &vifX.MaskCol._u32[vifX.tag.addr]);
 	}
 	pass3 { VifCodeLog("STCol"); }
 	return 0;
@@ -480,10 +473,7 @@ vifOp(vifCode_STRow) {
 		return 1;
 	}
 	pass2 {
-		u32* rows  = idx ? g_vifmask.Row1 : g_vifmask.Row0;
-		u32* pmem1 = &vifXRegs.r0 + (vifX.tag.addr << 2);
-		u32* pmem2 = rows		   +  vifX.tag.addr;
-		return _vifCode_STColRow<idx>(data, pmem1, pmem2);
+		return _vifCode_STColRow<idx>(data, &vifX.MaskRow._u32[vifX.tag.addr]);
 	}
 	pass3 { VifCodeLog("STRow"); }
 	return 0;
@@ -516,11 +506,10 @@ vifOp(vifCode_STMod) {
 
 vifOp(vifCode_Unpack) {
 	pass1 {
-		if (!idx) vifUnpackSetup<0>(data);
-		else	  vifUnpackSetup<1>(data);
+		vifUnpackSetup<idx>(data);
 		return 1;
 	}
-	pass2 { return nVifUnpack(idx, (u8*)data); }
+	pass2 { return nVifUnpack<idx>((u8*)data); }
 	pass3 { VifCodeLog("Unpack");  }
 	return 0;
 }

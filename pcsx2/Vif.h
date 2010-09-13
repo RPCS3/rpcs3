@@ -213,8 +213,6 @@ struct VIFregisters {
 	u32 addr;
 };
 
-extern VIFregisters *vifRegs;
-
 static VIFregisters& vif0Regs = (VIFregisters&)eeHw[0x3800];
 static VIFregisters& vif1Regs = (VIFregisters&)eeHw[0x3C00];
 

@@ -19,15 +19,11 @@
 #include "Gif.h"
 #include "Vif_Dma.h"
 
-VIFregisters *vifRegs;
-vifStruct	 *vif;
 u16 vifqwc = 0;
 u32 g_vifCycles = 0;
 u32 g_vu0Cycles = 0;
 u32 g_vu1Cycles = 0;
 u32 g_packetsizeonvu = 0;
-
-__aligned16 VifMaskTypes g_vifmask;
 
 extern u32 g_vifCycles;
 

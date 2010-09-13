@@ -58,6 +58,7 @@ VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlo
 	usn			= (vB.upkType>>5) & 1;
 	doMask		= (vB.upkType>>4) & 1;
 	doMode		= vB.mode & 3;
+	vCL			= 0;
 }
 
 #define makeMergeMask(x) {									\
@@ -65,15 +66,15 @@ VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlo
 }
 
 __fi void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
+	const vifStruct& vif = v.idx ? vif1 : vif0;
+
 	u32 m0 = vB.mask;
 	u32 m1 =  m0 & 0xaaaaaaaa;
 	u32 m2 =(~m1>>1) &  m0;
 	u32 m3 = (m1>>1) & ~m0;
-	u32* row = (v.idx) ? g_vifmask.Row1 : g_vifmask.Row0;
-	u32* col = (v.idx) ? g_vifmask.Col1 : g_vifmask.Col0;
-	if((m2&&(doMask||isFill))||doMode) { xMOVAPS(xmmRow, ptr32[row]); }
+	if((m2&&(doMask||isFill))||doMode) { xMOVAPS(xmmRow, ptr128[&vif.MaskRow]); }
 	if (m3&&(doMask||isFill)) {
-		xMOVAPS(xmmCol0, ptr32[col]);
+		xMOVAPS(xmmCol0, ptr128[&vif.MaskCol]);
 		if ((cS>=2) && (m3&0x0000ff00)) xPSHUF.D(xmmCol1, xmmCol0, _v1);
 		if ((cS>=3) && (m3&0x00ff0000)) xPSHUF.D(xmmCol2, xmmCol0, _v2);
 		if ((cS>=4) && (m3&0xff000000)) xPSHUF.D(xmmCol3, xmmCol0, _v3);
@@ -95,8 +96,8 @@ void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 	makeMergeMask(m3);
 	makeMergeMask(m4);
 	if (doMask&&m4) { xMOVAPS(xmmTemp, ptr[dstIndirect]);			} // Load Write Protect
-	if (doMask&&m2) { mergeVectors(regX, xmmRow,						t, m2); } // Merge Row
-	if (doMask&&m3) { mergeVectors(regX, xRegisterSSE(xmmCol0.Id+cc),	t, m3); } // Merge Col
+	if (doMask&&m2) { mergeVectors(regX, xmmRow,						t, m2); } // Merge MaskRow
+	if (doMask&&m3) { mergeVectors(regX, xRegisterSSE(xmmCol0.Id+cc),	t, m3); } // Merge MaskCol
 	if (doMask&&m4) { mergeVectors(regX, xmmTemp,						t, m4); } // Merge Write Protect
 	if (doMode) {
 		u32 m5 = (~m1>>1) & ~m0;
@@ -117,8 +118,7 @@ void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 }
 
 void VifUnpackSSE_Dynarec::writeBackRow() const {
-	u32* row = (v.idx) ? g_vifmask.Row1 : g_vifmask.Row0;
-	xMOVAPS(ptr32[row], xmmRow);
+	xMOVAPS(ptr128[&((v.idx ? vif1 : vif0).MaskRow)], xmmRow);
 	DevCon.WriteLn("nVif: writing back row reg! [doMode = 2]");
 	// ToDo: Do we need to write back to vifregs.rX too!? :/
 }
@@ -138,16 +138,17 @@ static void ShiftDisplacementWindow( xAddressVoid& addr, const xRegister32& modR
 	if(addImm) xADD(modReg, addImm);
 }
 
-void VifUnpackSSE_Dynarec::CompileRoutine() {
-	const int  upkNum	 = v.vif->cmd & 0xf;
+void VifUnpackSSE_Dynarec::CompileRoutine(vifStruct& vif) {
+	const int  upkNum	 = vB.upkType & 0xf;
 	const u8&  vift		 = nVifT[upkNum];
 	const int  cycleSize = isFill ? vB.cl : vB.wl;
 	const int  blockSize = isFill ? vB.wl : vB.cl;
 	const int  skipSize	 = blockSize - cycleSize;
+	
+	uint vNum	= vB.num;
+	doMode		= (upkNum == 0xf) ? 0 : doMode;		// V4_5 has no mode feature.
 
-	int vNum = v.vifRegs->num;
-	vCL		 = v.vif->cl;
-	doMode	 = upkNum == 0xf ? 0 : doMode;
+	pxAssume(vCL == 0);
 
 	// Value passed determines # of col regs we need to load
 	SetMasks(isFill ? blockSize : cycleSize);
@@ -189,14 +190,17 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	}
 
 	if (doMode==2) writeBackRow();
-	xMOV(ptr32[&v.vif->cl],	     vCL);
-	xMOV(ptr32[&v.vifRegs->num], vNum);
 	xRET();
 }
 
-static __noinline u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
-	u8* startmem = v.VU->Mem + (v.vif->tag.addr & v.vuMemLimit);
-	u8* endmem = v.VU->Mem + (v.vuMemLimit+0x10);
+_vifT static __fi u8* dVifsetVUptr(uint cl, uint wl, bool isFill) {
+	vifStruct& vif			= GetVifX;
+	VIFregisters& vifRegs	= vifXRegs;
+	const VURegs& VU		= vuRegs[idx];
+	const uint vuMemLimit	= idx ? 0x4000 : 0x1000;
+
+	u8* startmem = VU.Mem + (vif.tag.addr & (vuMemLimit-0x10));
+	u8* endmem = VU.Mem + vuMemLimit;
 	uint length = _vBlock.num * 16;
 
 	if (!isFill) {
@@ -204,15 +208,15 @@ static __noinline u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isF
 		// shouldn't count as wrapped data.  Otherwise, a trailing skip can cause the emu to drop back
 		// to the interpreter. -- Refraction (test with MGS3)
 
-		int skipSize  = (cl - wl) * 16;
-		int blocks    = _vBlock.num / wl;
+		uint skipSize  = (cl - wl) * 16;
+		uint blocks    = _vBlock.num / wl;
 		length += (blocks-1) * skipSize;
 	}
 
 	if ( (startmem+length) <= endmem ) {
 		return startmem;
 	}
-	//Console.WriteLn("nVif%x - VU Mem Ptr Overflow; falling back to interpreter. Start = %x End = %x num = %x, wl = %x, cl = %x", v.idx, v.vif->tag.addr, v.vif->tag.addr + (_vBlock.num * 16), _vBlock.num, wl, cl);
+	//Console.WriteLn("nVif%x - VU Mem Ptr Overflow; falling back to interpreter. Start = %x End = %x num = %x, wl = %x, cl = %x", v.idx, vif.tag.addr, vif.tag.addr + (_vBlock.num * 16), _vBlock.num, wl, cl);
 	return NULL; // Fall Back to Interpreters which have wrap-around logic
 }
 
@@ -227,50 +231,57 @@ static __fi void dVifRecLimit(int idx) {
 	}
 }
 
-// Gcc complains about recursive functions being inlined.
-void dVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
-
+_vifT static __fi bool dVifExecuteUnpack(const u8* data, bool isFill)
+{
 	const nVifStruct& v		= nVif[idx];
-	const u8	upkType		= v.vif->cmd & 0x1f | ((!!v.vif->usn) << 5);
-	const int	doMask		= v.vif->cmd & 0x10;
-	const int	cycle_cl	= v.vifRegs->cycle.cl;
-	const int	cycle_wl	= v.vifRegs->cycle.wl;
-	const int	blockSize	= isFill ? cycle_wl : cycle_cl;
-
-	if (v.vif->cl >= blockSize) v.vif->cl = 0;
-
-	_vBlock.upkType = upkType;
-	_vBlock.num		= (u8&)v.vifRegs->num;
-	_vBlock.mode	= (u8&)v.vifRegs->mode;
-	_vBlock.scl		= v.vif->cl;
-	_vBlock.cl		= cycle_cl;
-	_vBlock.wl		= cycle_wl;
-
-	// Zero out the mask parameter if it's unused -- games leave random junk
-	// values here which cause false recblock cache misses.
-	_vBlock.mask	= doMask ? v.vifRegs->mask : 0;
+	VIFregisters& vifRegs	= vifXRegs;
 
 	if (nVifBlock* b = v.vifBlocks->find(&_vBlock)) {
-		if (u8* dest = dVifsetVUptr(v, cycle_cl, cycle_wl, isFill)) {
+		if (u8* dest = dVifsetVUptr<idx>(vifRegs.cycle.cl, vifRegs.cycle.wl, isFill)) {
 			//DevCon.WriteLn("Running Recompiled Block!");
 			((nVifrecCall)b->startPtr)((uptr)dest, (uptr)data);
 		}
 		else {
 			//DevCon.WriteLn("Running Interpreter Block");
-			_nVifUnpack(idx, data, size, isFill);
+			_nVifUnpack(idx, data, vifRegs.mode, isFill);
 		}
-		return;
+		return true;
 	}
+	return false;
+}
+
+_vifT __fi void dVifUnpack(const u8* data, bool isFill) {
+
+	const nVifStruct& v		= nVif[idx];
+	vifStruct& vif			= GetVifX;
+	VIFregisters& vifRegs	= vifXRegs;
+
+	const u8	upkType		= vif.cmd & 0x1f | ((!!vif.usn) << 5);
+	const int	doMask		= vif.cmd & 0x10;
+
+	_vBlock.upkType = upkType;
+	_vBlock.num		= (u8&)vifRegs.num;
+	_vBlock.mode	= (u8&)vifRegs.mode;
+	//_vBlock.scl		= vif.cl;	// scl is always zero now (effectively padding)
+	_vBlock.cl		= vifRegs.cycle.cl;
+	_vBlock.wl		= vifRegs.cycle.wl;
+
+	// Zero out the mask parameter if it's unused -- games leave random junk
+	// values here which cause false recblock cache misses.
+	_vBlock.mask	= doMask ? vifRegs.mask : 0;
+
 	//DevCon.WriteLn("nVif%d: Recompiled Block! [%d]", idx, nVif[idx].numBlocks++);
 	//DevCon.WriteLn(L"[num=% 3d][upkType=0x%02x][scl=%d][cl=%d][wl=%d][mode=%d][m=%d][mask=%s]",
 	//	_vBlock.num, _vBlock.upkType, _vBlock.scl, _vBlock.cl, _vBlock.wl, _vBlock.mode,
 	//	doMask >> 4, doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
 	//);
 
+	if (dVifExecuteUnpack<idx>(data, isFill)) return;
+
 	xSetPtr(v.recPtr);
 	_vBlock.startPtr = (uptr)xGetAlignedCallTarget();
 	v.vifBlocks->add(_vBlock);
-	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine();
+	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine(vif);
 	nVif[idx].recPtr = xGetPtr();
 
 	// [TODO] : Ideally we should test recompile buffer limits prior to each instruction,
@@ -279,5 +290,9 @@ void dVifUnpack(int idx, const u8 *data, u32 size, bool isFill) {
 
 	// Run the block we just compiled.  Various conditions may force us to still use
 	// the interpreter unpacker though, so a recursive call is the safest way here...
-	dVifUnpack(idx, data, size, isFill);
+	//dVifUnpack<idx,isFill>(data);
+	dVifExecuteUnpack<idx>(data, isFill);
 }
+
+template void dVifUnpack<0>(const u8* data, bool isFill);
+template void dVifUnpack<1>(const u8* data, bool isFill);
