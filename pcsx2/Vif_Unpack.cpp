@@ -33,7 +33,7 @@ static __fi u32 setVifRow(vifStruct& vif, u32 reg, u32 data) {
 // cycle derives from vif.cl
 // mode derives from vifRegs.mode
 template< uint idx, uint mode, bool doMask >
-static __ri void writeXYZW(u32 offnum, u32 &dest, u32 data, bool isV4_5 = false) {
+static __ri void writeXYZW(u32 offnum, u32 &dest, u32 data) {
 	int n = 0;
 
 	vifStruct& vif = GetVifX;
@@ -110,10 +110,10 @@ static void __fastcall UNPACK_V4_5(u32 *dest, const u32* src)
 {
 	u32 data = *src;
 
-	writeXYZW<idx,0,doMask>(OFFSET_X, *(dest+0),	((data & 0x001f) << 3), true);
-	writeXYZW<idx,0,doMask>(OFFSET_Y, *(dest+1),	((data & 0x03e0) >> 2), true);
-	writeXYZW<idx,0,doMask>(OFFSET_Z, *(dest+2),	((data & 0x7c00) >> 7), true);
-	writeXYZW<idx,0,doMask>(OFFSET_W, *(dest+3),	((data & 0x8000) >> 8), true);
+	writeXYZW<idx,0,doMask>(OFFSET_X, *(dest+0),	((data & 0x001f) << 3));
+	writeXYZW<idx,0,doMask>(OFFSET_Y, *(dest+1),	((data & 0x03e0) >> 2));
+	writeXYZW<idx,0,doMask>(OFFSET_Z, *(dest+2),	((data & 0x7c00) >> 7));
+	writeXYZW<idx,0,doMask>(OFFSET_W, *(dest+3),	((data & 0x8000) >> 8));
 }
 
 // =====================================================================================================
