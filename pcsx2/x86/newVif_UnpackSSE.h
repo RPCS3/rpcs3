@@ -126,7 +126,7 @@ public:
 
 	virtual bool IsUnmaskedOp() const{ return !doMode && !doMask; }
 
-	void CompileRoutine(vifStruct& vif);
+	void CompileRoutine();
 
 protected:
 	virtual void doMaskWrite(const xRegisterSSE& regX) const;

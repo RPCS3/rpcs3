@@ -138,14 +138,14 @@ static void ShiftDisplacementWindow( xAddressVoid& addr, const xRegister32& modR
 	if(addImm) xADD(modReg, addImm);
 }
 
-void VifUnpackSSE_Dynarec::CompileRoutine(vifStruct& vif) {
+void VifUnpackSSE_Dynarec::CompileRoutine() {
 	const int  upkNum	 = vB.upkType & 0xf;
 	const u8&  vift		 = nVifT[upkNum];
 	const int  cycleSize = isFill ? vB.cl : vB.wl;
 	const int  blockSize = isFill ? vB.wl : vB.cl;
 	const int  skipSize	 = blockSize - cycleSize;
 	
-	uint vNum	= vB.num;
+	uint vNum	= vB.num ? vB.num : 256;
 	doMode		= (upkNum == 0xf) ? 0 : doMode;		// V4_5 has no mode feature.
 
 	pxAssume(vCL == 0);
@@ -256,13 +256,12 @@ _vifT __fi void dVifUnpack(const u8* data, bool isFill) {
 	vifStruct& vif			= GetVifX;
 	VIFregisters& vifRegs	= vifXRegs;
 
-	const u8	upkType		= vif.cmd & 0x1f | ((!!vif.usn) << 5);
-	const int	doMask		= vif.cmd & 0x10;
+	const u8	upkType		= (vif.cmd & 0x1f) | (vif.usn << 5);
+	const int	doMask		= (vif.cmd & 0x10);
 
 	_vBlock.upkType = upkType;
 	_vBlock.num		= (u8&)vifRegs.num;
 	_vBlock.mode	= (u8&)vifRegs.mode;
-	//_vBlock.scl		= vif.cl;	// scl is always zero now (effectively padding)
 	_vBlock.cl		= vifRegs.cycle.cl;
 	_vBlock.wl		= vifRegs.cycle.wl;
 
@@ -281,7 +280,7 @@ _vifT __fi void dVifUnpack(const u8* data, bool isFill) {
 	xSetPtr(v.recPtr);
 	_vBlock.startPtr = (uptr)xGetAlignedCallTarget();
 	v.vifBlocks->add(_vBlock);
-	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine(vif);
+	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine();
 	nVif[idx].recPtr = xGetPtr();
 
 	// [TODO] : Ideally we should test recompile buffer limits prior to each instruction,
@@ -290,7 +289,6 @@ _vifT __fi void dVifUnpack(const u8* data, bool isFill) {
 
 	// Run the block we just compiled.  Various conditions may force us to still use
 	// the interpreter unpacker though, so a recursive call is the safest way here...
-	//dVifUnpack<idx,isFill>(data);
 	dVifExecuteUnpack<idx>(data, isFill);
 }
 

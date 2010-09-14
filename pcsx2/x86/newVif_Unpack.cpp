@@ -106,10 +106,10 @@ _vifT int nVifUnpack(const u8* data) {
 			v.bSize		+= size;
 			data		= v.buffer;
 
+			vif.cl		= 0;
 			vifRegs.num	= (vifXRegs.code >> 16) & 0xff;		// grab NUM form the original VIFcode input.
+			if (!vifRegs.num) vifRegs.num = 256;
 		}
-
-		vif.cl			= 0;
 
 		if (newVifDynaRec)	dVifUnpack<idx>(data, isFill);
 		else			   _nVifUnpack(idx, data, vifRegs.mode, isFill);

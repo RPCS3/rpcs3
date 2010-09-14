@@ -51,11 +51,6 @@ _vifT extern void  dVifUnpack  (const u8* data, bool isFill);
 #define xmmRow  xmm6
 #define xmmTemp xmm7
 
-#ifdef _MSC_VER
-#	pragma pack(1)
-#	pragma warning(disable:4996) // 'function': was declared deprecated
-#endif
-
 // nVifBlock - Ordered for Hashing; the 'num' field and the lower 6 bits of upkType are
 //             used as the hash bucket selector.
 //
@@ -63,17 +58,12 @@ struct __aligned16 nVifBlock {
 	u8   num;		// [00] Num  Field
 	u8   upkType;	// [01] Unpack Type [usn*1:mask*1:upk*4]
 	u8   mode;		// [02] Mode Field
-	u8   cl;		// [04] CL   Field
-	u8   wl;		// [05] WL   Field
-	u8	 scl;		// [03] Start Cycle
-	u32  mask;		// [06] Mask Field
-	u8	 padding[2];// [10] through [11]
+	u8   cl;		// [03] CL   Field
+	u32  mask;		// [04] Mask Field
+	u8   wl;		// [08] WL   Field
+	u8	 padding[3];// [09] through [11]
 	uptr startPtr;	// [12] Start Ptr of RecGen Code
-} __packed; // 16 bytes
-
-#ifdef _MSC_VER
-#	pragma pack()
-#endif
+}; // 16 bytes
 
 #define _hSize 0x4000 // [usn*1:mask*1:upk*4:num*8] hash...
 #define _cmpS  (sizeof(nVifBlock) - (4))
