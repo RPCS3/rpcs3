@@ -171,7 +171,7 @@ namespace ZZLog
 {
 extern bool IsLogging();
 void SetDir(const char* dir);
-extern bool Open();
+extern void Open();
 extern void Close();
 extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);

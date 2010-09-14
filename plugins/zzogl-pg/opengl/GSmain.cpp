@@ -303,7 +303,7 @@ s32 CALLBACK GSinit()
 {
 	FUNCLOG
 
-    if (ZZLog::Open() == false) return -1;
+    ZZLog::Open();
 	ZZLog::WriteLn("Calling GSinit.");
 
 	WriteTempRegs();
