@@ -164,9 +164,11 @@ void Greg_Log(const char *fmt, ...)
 
 	va_start(list, fmt);
 
-	fprintf(gsLog, "GRegs: ");
+	if (IsLogging()) {
+        fprintf(gsLog, "GRegs: ");
+        vfprintf(gsLog, fmt, list);
+    }
 	//fprintf(stderr,"GRegs: ");
-	if (IsLogging()) vfprintf(gsLog, fmt, list);
 	//vfprintf(stderr, fmt, list);
 
 	va_end(list);
