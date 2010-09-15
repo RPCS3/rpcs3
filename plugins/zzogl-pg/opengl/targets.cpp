@@ -92,11 +92,11 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 {
 	glGenTextures(1, ptr_p);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
-	
+
 	// initialize to default
 	GLenum texType = (GetRenderFormat() == RFT_float16) ? GL_FLOAT : GL_UNSIGNED_BYTE;
 	TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, texType, NULL);
-		
+
 	setRectWrap(GL_CLAMP);
 	setRectFilters(GL_LINEAR);
 
@@ -115,7 +115,7 @@ inline void FillOnlyStencilBuffer()
 
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilFunc(GL_ALWAYS, 1, 0xff);
-		
+
 		DrawTriangleArray();
 		glColorMask(1, 1, 1, 1);
 	}
@@ -458,7 +458,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	else
 	{
 		u32 bit_idx = (AA.x == 0) ? 0 : 1;
-		
+
 		// align the rect to the nearest page
 		// note that fbp is always aligned on page boundaries
 		tex0Info texframe;
@@ -502,7 +502,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	ZZshSetVertexShader(pvsBitBlt.prog);
 
 	DrawTriangleArray();
-	
+
 	// fill stencil buf only
 	FillOnlyStencilBuffer();
 	glEnable(GL_SCISSOR_TEST);
@@ -580,7 +580,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsConvert16to32.prog);
 	DrawTriangleArray();
-	
+
 #ifdef _DEBUG
 	if (g_bSaveZUpdate)
 	{
@@ -684,7 +684,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsConvert32to16.prog);
 	DrawTriangleArray();
-	
+
 #ifdef _DEBUG
 	//g_bSaveZUpdate = 1;
 	if (g_bSaveZUpdate)
@@ -784,7 +784,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
-	
+
 	// restore
 	swap(ptex, ptexFeedback);
 
@@ -807,7 +807,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
 {
 	FUNCLOG
-	
+
 	FBTexture(targ, ptex);
 
 	//GL_REPORT_ERRORD();
@@ -854,7 +854,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 				return false;
 			}
 		}
-		else 
+		else
 		{
 			pstencil = 0;
 		}
@@ -978,7 +978,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	// write color and zero out stencil buf, always 0 context!
 	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
 	ZZshGLSetTextureParameter(ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
-	
+
 	Vector v = DefaultBitBltPos();
 
 	v = DefaultBitBltTex();
@@ -1012,11 +1012,11 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_WIDTH_EXT, &w1);
 	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_HEIGHT_EXT, &h1);
 	SetDepthStencilSurface();
-	
+
 	FBTexture(1);
-	
+
 	GLenum buffer = GL_COLOR_ATTACHMENT0_EXT;
-	
+
 	//ZZLog::Error_Log("CDepthTarget::Update: w1 = 0x%x; h1 = 0x%x", w1, h1);
 	DrawBuffers(&buffer);
 
@@ -1065,7 +1065,7 @@ void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 		if (icount++ < 8)    // not going to fail if succeeded 4 times
 		{
 			GL_REPORT_ERRORD();
-			
+
 			if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
 				TextureRect(GL_STENCIL_ATTACHMENT_EXT);
@@ -1157,7 +1157,7 @@ void ZeroGS::CRenderTargetMngr::DestroyAllTargs(int start, int end, int fbw)
 
 			mapTargets.erase(it++);
 		}
-		else 
+		else
 		{
 			++it;
 		}
@@ -1198,7 +1198,7 @@ void ZeroGS::CRenderTargetMngr::DestroyIntersecting(CRenderTarget* prndr)
 
 			mapTargets.erase(it++);
 		}
-		else 
+		else
 		{
 			++it;
 		}
@@ -1458,7 +1458,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		// if more than 5s passed since target used, destroy
 
-		if ((it->second != vb[0].prndr) && (it->second != vb[1].prndr) && 
+		if ((it->second != vb[0].prndr) && (it->second != vb[1].prndr) &&
 			(it->second != vb[0].pdepth) && (it->second != vb[1].pdepth) &&
 				((timeGetTime() - it->second->lastused) > 5000))
 		{
@@ -1732,13 +1732,13 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	assert(ptex != NULL && ptex->memptr != NULL);
 
 	int result = memcmp_mmx(ptex->memptr + (checkstarty - realy) * 4 * GPU_TEXWIDTH, g_pbyGSMemory + checkstarty * 4 * GPU_TEXWIDTH, (checkendy - checkstarty) * 4 * GPU_TEXWIDTH);
-	
+
 	if (result == 0)
 	{
 		clearmaxy = 0;
 		return true;
 	}
-	
+
 	if (!bDeleteBadTex) return false;
 
 	// delete clearminy, clearmaxy range (not the checkstarty, checkendy range)
@@ -2193,7 +2193,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	const int texH = (targ->realheight + widthmult - 1) / widthmult;
 	const int texW = GPU_TEXWIDTH * channels * widthmult;
-	
+
 	// fill with data
 	if (targ->ptex->memptr == NULL)
 	{
@@ -2255,7 +2255,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 				// Later we would move eax by 16, so only we should verify is first element align
 				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
 				// Probably, usage of _aligned_maloc() would be preferable.
-				
+
 				// Note: this often happens when changing AA.
 				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
 				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
@@ -2298,7 +2298,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	if (targ->ptex->tex == 0) glGenTextures(1, &targ->ptex->tex);
 
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
-	
+
 	if (fmt == GL_UNSIGNED_BYTE)
 		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
 	else
@@ -2324,7 +2324,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 			DestroyOldest();
 		}
-		
+
 		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
 	}
 
@@ -2491,7 +2491,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 				glDeleteTextures(1, &it->second);
 				mapTextures.erase(it++);
 			}
-			else 
+			else
 			{
 				++it;
 			}
@@ -2513,7 +2513,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	{
 		data[i] = (((i << MASKDIVISOR) & bitvalue) << 6); // add the 1/2 offset so that
 	}
-	
+
 	//	data[GPU_TEXMASKWIDTH] = 0;	// I remove GPU_TEXMASKWIDTH+1 element of this texture, because it was a reason of FFC crush
 									// Probably, some sort of PoT incompability in drivers.
 
@@ -2924,7 +2924,84 @@ void FlushTransferRanges(const tex0Info* ptex)
 			src += RH(Pitch(fbw))/sizeof(Tsrc); \
 		} \
 	} \
- 
+
+template <typename T, typename Tret>
+inline Tret dummy_return(T value) { return value; }
+
+inline u16 RGBA32to16(u32 c)
+{
+	return (u16)((((c) & 0x000000f8) >>  3) |
+				 (((c) & 0x0000f800) >>  6) |
+				 (((c) & 0x00f80000) >>  9) |
+				 (((c) & 0x80000000) >> 16));
+}
+
+template <typename T, typename Tsrc, T (*convfn)(Tsrc)>
+inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
+{
+    u32 mask, imask;
+
+    if (PSMT_ISHALF(psm)) /* 16 bit */
+    {
+        /* mask is shifted*/
+        imask = RGBA32to16(fbm);
+        mask = (~imask)&0xffff;
+    }
+    else
+    {
+        mask = ~fbm;
+        imask = fbm;
+    }
+
+    Tsrc* src = (Tsrc*)(psrc);
+    T* pPageOffset = (T*)g_pbyGSMemory + fbp*(256/sizeof(T)), *dst;
+
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(T) * fbw);
+    if( maxfbh > fbh ) maxfbh = fbh;
+
+    for(int i = 0; i < maxfbh; ++i) {
+        for(int j = 0; j < fbw; ++j) {
+            T dsrc = (T)convfn(src[RW(j)]);
+            // They are 3 methods to call the functions
+            // macro (compact, inline) but need a nice psm ; swich (inline) ; function pointer (compact)
+            // Use a switch to allow inlining of the getPixel function.
+            // Note: psm is const so the switch is completely optimized
+            // Function method example:
+            // dst = pPageOffset + getPixelFun_0[psm](j, i, fbw);
+            switch (psm)
+            {
+                case PSMCT32:
+                case PSMCT24:
+                    dst = pPageOffset + getPixelAddress32_0(j, i, fbw);
+                    break;
+
+                case PSMCT16:
+                    dst = pPageOffset + getPixelAddress16_0(j, i, fbw);
+                    break;
+
+                case PSMCT16S:
+                    dst = pPageOffset + getPixelAddress16S_0(j, i, fbw);
+                    break;
+
+                case PSMT32Z:
+                case PSMT24Z:
+                    dst = pPageOffset + getPixelAddress32Z_0(j, i, fbw);
+                    break;
+
+                case PSMT16Z:
+                    dst = pPageOffset + getPixelAddress16Z_0(j, i, fbw);
+                    break;
+
+                case PSMT16SZ:
+                    dst = pPageOffset + getPixelAddress16SZ_0(j, i, fbw);
+                    break;
+            }
+            *dst = (dsrc & mask) | (*dst & imask);
+        }
+        src += RH(Pitch(fbw))/sizeof(Tsrc);
+    }
+}
+
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode = true)
 {
 	FUNCLOG
@@ -2943,30 +3020,32 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 		switch (psm)
 		{
 
+            // NOTE pass psm as a constant value otherwise gcc does not do its job. It keep
+            // the psm switch in Resolve_32_Bit
 			case PSMCT32:
 			case PSMCT24:
-				RESOLVE_32_BIT(32, u32, u32, (u32));
+                Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
 				break;
 
 			case PSMCT16:
-				RESOLVE_32_BIT(16, u16, u32, RGBA32to16);
+                Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
 				break;
 
 			case PSMCT16S:
-				RESOLVE_32_BIT(16S, u16, u32, RGBA32to16);
+                Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
 				break;
 
 			case PSMT32Z:
 			case PSMT24Z:
-				RESOLVE_32_BIT(32Z, u32, u32, (u32));
+                Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
 				break;
 
 			case PSMT16Z:
-				RESOLVE_32_BIT(16Z, u16, u32, (u16));
+                Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
 				break;
 
 			case PSMT16SZ:
-				RESOLVE_32_BIT(16SZ, u16, u32, (u16));
+                Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
 				break;
 		}
 	}
@@ -3077,7 +3156,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 			src += RH(Pitch(fbw))/sizeof(Tsrc); \
 		} \
 	} \
- 
+
 	if( GetRenderFormat() == RFT_byte8 ) {
 		// start the conversion process A8R8G8B8 -> psm
 		switch (psm)
