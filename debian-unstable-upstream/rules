@@ -77,6 +77,10 @@ override_dh_strip:
 	dh_strip --package=pcsx2-unstable --dbg-package=pcsx2-unstable-dbg
 	dh_strip --package=pcsx2-plugins-unstable --dbg-package=pcsx2-plugins-unstable-dbg
 
+# Avoid to relaunch the compilation twice. (build and dh_auto_build target)
+override_dh_auto_build:
+	# Do nothing
+
 %:
 	dh $@ --parallel
 

@@ -25,7 +25,6 @@
 using namespace x86Emitter;
 
 extern void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw);
-extern void loadRowCol(nVifStruct& v);
 
 // --------------------------------------------------------------------------------------
 //  VifUnpackSSE_Base

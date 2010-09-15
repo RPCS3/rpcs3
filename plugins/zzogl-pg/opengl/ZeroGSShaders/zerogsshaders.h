@@ -40,7 +40,7 @@ static __forceinline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, 
 	return type + texfilter*NUM_TYPES + NUM_FILTERS*NUM_TYPES*texwrap + NUM_TEXWRAPS*NUM_FILTERS*NUM_TYPES*(fog+2*writedepth+4*testaem+8*exactcolor+16*context+32*ps);
 }
 
-extern CGcontext g_cgcontext;
+extern ZZshContext g_cgcontext;
 
 static __forceinline CGprogram LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context)
 {
@@ -63,7 +63,7 @@ static __forceinline CGprogram LoadShaderFromType(const char* srcdir, const char
 	if( ps & SHADER_ACCURATE ) macros.push_back("-DACCURATE_DECOMPRESSION");
 	macros.push_back(NULL);
 
-	CGprogram prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, srcfile, CG_PROFILE_ARBFP1, str, &macros[0]);
+	ZZshProgram prog = cgCreateProgramFromFile(g_cgcontext, CG_SOURCE, srcfile, CG_PROFILE_ARBFP1, str, &macros[0]);
 	if( !cgIsProgram(prog) ) {
 		printf("Failed to load shader %s: \n%s\n", str, cgGetLastListing(g_cgcontext));
 		return NULL;

@@ -25,211 +25,98 @@ enum UnpackOffset {
 	OFFSET_W = 3
 };
 
-static __fi u32 setVifRowRegs(u32 reg, u32 data) {
-	switch (reg) {
-		case 0: vifRegs->r0 = data; break;
-		case 1: vifRegs->r1 = data; break;
-		case 2: vifRegs->r2 = data; break;
-		case 3: vifRegs->r3 = data; break;
-		jNO_DEFAULT;
-	}
+static __fi u32 setVifRow(vifStruct& vif, u32 reg, u32 data) {
+	vif.MaskRow._u32[reg] = data;
 	return data;
 }
 
-static __fi u32 getVifRowRegs(u32 reg) {
-	switch (reg) {
-		case 0: return vifRegs->r0; break;
-		case 1: return vifRegs->r1; break;
-		case 2: return vifRegs->r2; break;
-		case 3: return vifRegs->r3; break;
-		jNO_DEFAULT;
-	}
-	return 0; // unreachable...
-}
-
-static __fi u32 getVifColRegs(u32 reg) {
-	switch (reg) {
-		case 0:  return vifRegs->c0; break;
-		case 1:  return vifRegs->c1; break;
-		case 2:  return vifRegs->c2; break;
-		default: return vifRegs->c3; break;
-	}
-	return 0; // unreachable...
-}
-
-template< bool doMask >
+// cycle derives from vif.cl
+// mode derives from vifRegs.mode
+template< uint idx, uint mode, bool doMask >
 static __ri void writeXYZW(u32 offnum, u32 &dest, u32 data) {
-	u32 vifRowReg = getVifRowRegs(offnum);
 	int n = 0;
 
+	vifStruct& vif = GetVifX;
+
 	if (doMask) {
-		switch (vif->cl) {
-			case 0:  n = (vifRegs->mask >> (offnum * 2)) & 0x3;		   break;
-			case 1:  n = (vifRegs->mask >> ( 8 + (offnum * 2))) & 0x3; break;
-			case 2:  n = (vifRegs->mask >> (16 + (offnum * 2))) & 0x3; break;
-			default: n = (vifRegs->mask >> (24 + (offnum * 2))) & 0x3; break;
+		const VIFregisters& regs = vifXRegs;
+		switch (vif.cl) {
+			case 0:  n = (regs.mask >> (offnum * 2)) & 0x3;		break;
+			case 1:  n = (regs.mask >> ( 8 + (offnum * 2))) & 0x3;	break;
+			case 2:  n = (regs.mask >> (16 + (offnum * 2))) & 0x3;	break;
+			default: n = (regs.mask >> (24 + (offnum * 2))) & 0x3;	break;
 		}
 	}
+
+	// Four possible types of masking are handled below:
+	//   0 - Data
+	//   1 - MaskRow
+	//   2 - MaskCol
+	//   3 - Write protect
 
 	switch (n) {
 		case 0:
-			if ((vif->cmd & 0x6F) != 0x6f) {
-				switch (vifRegs->mode) {
-					case 1:  dest = data + vifRowReg; break;
-					case 2:  dest = setVifRowRegs(offnum, vifRowReg + data); break;
-					default: dest = data; break;
-				}
+			switch (mode) {
+				case 1:  dest = data + vif.MaskRow._u32[offnum]; break;
+				case 2:  dest = setVifRow(vif, offnum, vif.MaskRow._u32[offnum] + data); break;
+				default: dest = data; break;
 			}
-			else dest = data; // v4-5 Unpack Mode
 			break;
-		case 1: dest = vifRowReg; break;
-		case 2: dest = getVifColRegs(vif->cl); break;
+		case 1: dest = vif.MaskRow._u32[offnum]; break;
+		case 2: dest = vif.MaskCol._u32[min(vif.cl,3)]; break;
 		case 3: break;
 	}
 }
+#define tParam idx,mode,doMask
 
-template < bool doMask, class T >
-static __fi void __fastcall UNPACK_S(u32 *dest, const T *data, int size)
+template < uint idx, uint mode, bool doMask, class T >
+static void __fastcall UNPACK_S(u32* dest, const T* src)
 {
+	u32 data = *src;
+
 	//S-# will always be a complete packet, no matter what. So we can skip the offset bits
-	writeXYZW<doMask>(OFFSET_X, *dest++, *data);
-	writeXYZW<doMask>(OFFSET_Y, *dest++, *data);
-	writeXYZW<doMask>(OFFSET_Z, *dest++, *data);
-	writeXYZW<doMask>(OFFSET_W, *dest  , *data);
+	writeXYZW<tParam>(OFFSET_X, *(dest+0), data);
+	writeXYZW<tParam>(OFFSET_Y, *(dest+1), data);
+	writeXYZW<tParam>(OFFSET_Z, *(dest+2), data);
+	writeXYZW<tParam>(OFFSET_W, *(dest+3), data);
 }
 
-template <bool doMask, class T>
-static __ri void __fastcall UNPACK_V2(u32 *dest, const T *data, int size)
+// The PS2 console actually writes v1v0v1v0 for all V2 unpacks -- the second v1v0 pair
+// being officially "indeterminate" but some games very much depend on it.
+template < uint idx, uint mode, bool doMask, class T >
+static void __fastcall UNPACK_V2(u32* dest, const T* src)
 {
-	if (vifRegs->offset == OFFSET_X)
-	{
-		if (size > 0)
-		{
-			writeXYZW<doMask>(vifRegs->offset, *dest++, *data++);
-			vifRegs->offset = OFFSET_Y;
-			size--;
-		}
-	}
-
-	if (vifRegs->offset == OFFSET_Y)
-	{
-		if (size > 0)
-		{
-			writeXYZW<doMask>(vifRegs->offset, *dest++, *data);
-			vifRegs->offset = OFFSET_Z;
-			size--;
-		}
-	}
-
-	if (vifRegs->offset == OFFSET_Z)
-	{
-		writeXYZW<doMask>(vifRegs->offset, *dest++, *dest-2);
-		vifRegs->offset = OFFSET_W;
-	}
-
-	if (vifRegs->offset == OFFSET_W)
-	{
-		writeXYZW<doMask>(vifRegs->offset, *dest, *data);
-		vifRegs->offset = OFFSET_X;
-	}
+	writeXYZW<tParam>(OFFSET_X, *(dest+0), *(src+0));
+	writeXYZW<tParam>(OFFSET_Y, *(dest+1), *(src+1));
+	writeXYZW<tParam>(OFFSET_Z, *(dest+2), *(src+0));
+	writeXYZW<tParam>(OFFSET_W, *(dest+3), *(src+1));
 }
 
-template <bool doMask, class T>
-static __ri void __fastcall UNPACK_V3(u32 *dest, const T *data, int size)
+// V3 and V4 unpacks both use the V4 unpack logic, even though most of the OFFSET_W fields
+// during V3 unpacking end up being overwritten by the next unpack.  This is confirmed real
+// hardware behavior that games such as Ape Escape 3 depend on.
+template < uint idx, uint mode, bool doMask, class T >
+static void __fastcall UNPACK_V4(u32* dest, const T* src)
 {
-	if(vifRegs->offset == OFFSET_X)
-	{
-		if (size > 0)
-		{
-			writeXYZW<doMask>(vifRegs->offset, *dest++, *data++);
-			vifRegs->offset = OFFSET_Y;
-			size--;
-		}
-	}
-
-	if(vifRegs->offset == OFFSET_Y)
-	{
-		if (size > 0)
-		{
-			writeXYZW<doMask>(vifRegs->offset, *dest++, *data++);
-			vifRegs->offset = OFFSET_Z;
-			size--;
-		}
-	}
-
-	if(vifRegs->offset == OFFSET_Z)
-	{
-		if (size > 0)
-		{
-			writeXYZW<doMask>(vifRegs->offset, *dest++, *data++);
-			vifRegs->offset = OFFSET_W;
-			size--;
-		}
-	}
-
-	if(vifRegs->offset == OFFSET_W)
-	{
-		// V3-# does some bizarre thing with alignment, every 6qw of data the W becomes 0 (strange console!)
-		// Ape Escape doesn't seem to like it tho (what the hell?) gonna have to investigate
-		writeXYZW<doMask>(vifRegs->offset, *dest, *data);
-		vifRegs->offset = OFFSET_X;
-	}
+	writeXYZW<tParam>(OFFSET_X, *(dest+0), *(src+0));
+	writeXYZW<tParam>(OFFSET_Y, *(dest+1), *(src+1));
+	writeXYZW<tParam>(OFFSET_Z, *(dest+2), *(src+2));
+	writeXYZW<tParam>(OFFSET_W, *(dest+3), *(src+3));
 }
 
-template <bool doMask, class T>
-static __fi void __fastcall UNPACK_V4(u32 *dest, const T *data , int size)
+// V4_5 unpacks do not support the MODE register, and act as mode==0 always.
+template< uint idx, bool doMask >
+static void __fastcall UNPACK_V4_5(u32 *dest, const u32* src)
 {
-	while (size > 0)
-	{
-		writeXYZW<doMask>(vifRegs->offset, *dest++, *data++);
-		vifRegs->offset++;
-		size--;
-	}
+	u32 data = *src;
 
-	if (vifRegs->offset > OFFSET_W) vifRegs->offset = OFFSET_X;
-}
-
-template< bool doMask >
-static __ri void __fastcall UNPACK_V4_5(u32 *dest, const u32 *data, int size)
-{
-	//As with S-#, this will always be a complete packet
-	writeXYZW<doMask>(OFFSET_X, *dest++,	((*data & 0x001f) << 3));
-	writeXYZW<doMask>(OFFSET_Y, *dest++,	((*data & 0x03e0) >> 2));
-	writeXYZW<doMask>(OFFSET_Z, *dest++,	((*data & 0x7c00) >> 7));
-	writeXYZW<doMask>(OFFSET_W, *dest,		((*data & 0x8000) >> 8));
+	writeXYZW<idx,0,doMask>(OFFSET_X, *(dest+0),	((data & 0x001f) << 3));
+	writeXYZW<idx,0,doMask>(OFFSET_Y, *(dest+1),	((data & 0x03e0) >> 2));
+	writeXYZW<idx,0,doMask>(OFFSET_Z, *(dest+2),	((data & 0x7c00) >> 7));
+	writeXYZW<idx,0,doMask>(OFFSET_W, *(dest+3),	((data & 0x8000) >> 8));
 }
 
 // =====================================================================================================
-
-template < bool doMask, int size, class T >
-static void __fastcall fUNPACK_S(u32 *dest, const T *data)
-{
-	UNPACK_S<doMask>( dest, data, size );
-}
-
-template <bool doMask, int size, class T>
-static void __fastcall fUNPACK_V2(u32 *dest, const T *data)
-{
-	UNPACK_V2<doMask>( dest, data, size );
-}
-
-template <bool doMask, int size, class T>
-static void __fastcall fUNPACK_V3(u32 *dest, const T *data)
-{
-	UNPACK_V3<doMask>( dest, data, size );
-}
-
-template <bool doMask, int size, class T>
-static void __fastcall fUNPACK_V4(u32 *dest, const T *data)
-{
-	UNPACK_V4<doMask>( dest, data, size );
-}
-
-template< bool doMask >
-static void __fastcall fUNPACK_V4_5(u32 *dest, const u32 *data)
-{
-	UNPACK_V4_5<doMask>(dest, data, 0);		// size is ignored.
-}
 
 // --------------------------------------------------------------------------------------
 //  Main table for function unpacking.
@@ -245,53 +132,51 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, const u32 *data)
 // to be cast as. --air
 //
 
-#define _upk			(UNPACKFUNCTYPE)
-#define _odd			(UNPACKFUNCTYPE_ODD)
-#define _unpk_s(bits)	(UNPACKFUNCTYPE_S##bits)
-#define _odd_s(bits)	(UNPACKFUNCTYPE_ODD_S##bits)
-#define _unpk_u(bits)	(UNPACKFUNCTYPE_U##bits)
-#define _odd_u(bits)	(UNPACKFUNCTYPE_ODD_U##bits)
+#define _upk				(UNPACKFUNCTYPE)
+#define _unpk(usn, bits)	(UNPACKFUNCTYPE_##usn##bits)
 
-// 32-bits versions are unsigned-only!!
-#define UnpackFuncPair32( sizefac, vt, doMask ) \
-	(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_##vt<doMask, sizefac, u32>, \
-	(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_##vt<doMask, sizefac, u32>, \
-	(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_##vt<doMask, u32>, \
-	(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_##vt<doMask, u32>,
+#define UnpackFuncSet( vt, idx, mode, usn, doMask ) \
+	(UNPACKFUNCTYPE)_unpk(u,32)		UNPACK_##vt<idx, mode, doMask, u32>, \
+	(UNPACKFUNCTYPE)_unpk(usn,16)	UNPACK_##vt<idx, mode, doMask, usn##16>, \
+	(UNPACKFUNCTYPE)_unpk(usn,8)	UNPACK_##vt<idx, mode, doMask, usn##8> \
 
-#define UnpackFuncPair( sizefac, vt, bits, doMask ) \
-	(UNPACKFUNCTYPE)_unpk_u(bits) fUNPACK_##vt<doMask, sizefac, u##bits>, \
-	(UNPACKFUNCTYPE)_unpk_s(bits) fUNPACK_##vt<doMask, sizefac, s##bits>, \
-	(UNPACKFUNCTYPE_ODD)_odd_u(bits) UNPACK_##vt<doMask, u##bits>, \
-	(UNPACKFUNCTYPE_ODD)_odd_s(bits) UNPACK_##vt<doMask, s##bits>,
+#define UnpackV4_5set(idx, doMask) \
+	(UNPACKFUNCTYPE)_unpk(u,32) UNPACK_V4_5<idx, doMask> \
 
-#define UnpackFuncSet( doMask )													  \
- 	{	UnpackFuncPair32( 4, S,		 doMask )	 1, 4,  4, 4 },	/* 0x0 - S-32  */ \
-	{	UnpackFuncPair	( 4, S,  16, doMask )	 2, 2,  2, 4 },	/* 0x1 - S-16  */ \
-	{	UnpackFuncPair	( 4, S,   8, doMask )	 4, 1,  1, 4 },	/* 0x2 - S-8   */ \
-	{	NULL, NULL, NULL, NULL, 0, 0, 0, 0 },					/* 0x3 (NULL)  */ \
-	{	UnpackFuncPair32( 2, V2,	 doMask )	24, 4,  8, 2 },	/* 0x4 - V2-32 */ \
-	{	UnpackFuncPair	( 2, V2, 16, doMask )	12, 2,  4, 2 },	/* 0x5 - V2-16 */ \
-	{	UnpackFuncPair	( 2, V2,  8, doMask )	 6, 1,  2, 2 },	/* 0x6 - V2-8  */ \
-	{	NULL, NULL, NULL, NULL,0, 0, 0, 0 },					/* 0x7 (NULL)  */ \
-	{	UnpackFuncPair32( 3, V3,	 doMask )	36, 4, 12, 3 }, /* 0x8 - V3-32 */ \
-	{	UnpackFuncPair	( 3, V3, 16, doMask )	18, 2,  6, 3 }, /* 0x9 - V3-16 */ \
-	{	UnpackFuncPair	( 3, V3,  8, doMask )	 9, 1,  3, 3 }, /* 0xA - V3-8  */ \
-	{	NULL, NULL, NULL, NULL,0, 0, 0, 0 },					/* 0xB (NULL)  */ \
-	{	UnpackFuncPair32( 4, V4,	 doMask )	48, 4, 16, 4 }, /* 0xC - V4-32 */ \
-	{	UnpackFuncPair	( 4, V4, 16, doMask )	24, 2,  8, 4 }, /* 0xD - V4-16 */ \
-	{	UnpackFuncPair	( 4, V4,  8, doMask )	12, 1,  4, 4 }, /* 0xE - V4-8  */ \
-	{															/* 0xF - V4-5  */ \
-		(UNPACKFUNCTYPE)_unpk_u(32)		fUNPACK_V4_5<doMask>,	\
-		(UNPACKFUNCTYPE)_unpk_u(32)		fUNPACK_V4_5<doMask>,	\
-		(UNPACKFUNCTYPE_ODD)_odd_u(32)	UNPACK_V4_5<doMask>,	\
-		(UNPACKFUNCTYPE_ODD)_odd_u(32)	UNPACK_V4_5<doMask>,	\
-		6, 2, 2, 4 },
+#define UnpackModeSet(idx, mode) \
+	UnpackFuncSet( S,  idx, mode, s, 0 ), NULL,  \
+	UnpackFuncSet( V2, idx, mode, s, 0 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, s, 0 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, s, 0 ), UnpackV4_5set(idx, 0), \
+ \
+	UnpackFuncSet( S,  idx, mode, s, 1 ), NULL,  \
+	UnpackFuncSet( V2, idx, mode, s, 1 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, s, 1 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, s, 1 ), UnpackV4_5set(idx, 1), \
+ \
+	UnpackFuncSet( S,  idx, mode, u, 0 ), NULL,  \
+	UnpackFuncSet( V2, idx, mode, u, 0 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, u, 0 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, u, 0 ), UnpackV4_5set(idx, 0), \
+ \
+	UnpackFuncSet( S,  idx, mode, u, 1 ), NULL,  \
+	UnpackFuncSet( V2, idx, mode, u, 1 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, u, 1 ), NULL,  \
+	UnpackFuncSet( V4, idx, mode, u, 1 ), UnpackV4_5set(idx, 1)
 
-const __aligned16 VIFUnpackFuncTable VIFfuncTable[32] =
+__aligned16 const UNPACKFUNCTYPE VIFfuncTable[2][3][4 * 4 * 2 * 2] =
 {
-	UnpackFuncSet( false )
-	UnpackFuncSet( true )
+	{
+		{ UnpackModeSet(0,0) },
+		{ UnpackModeSet(0,1) },
+		{ UnpackModeSet(0,2) }
+	},
+
+	{
+		{ UnpackModeSet(1,0) },
+		{ UnpackModeSet(1,1) },
+		{ UnpackModeSet(1,2) }
+	}
 };
 
 //----------------------------------------------------------------------------
@@ -317,16 +202,23 @@ _vifT void vifUnpackSetup(const u32 *data) {
 	if (vifNum == 0) vifNum = 256;
 	vifXRegs.num =  vifNum;
 
+	// Traditional-style way of calculating the gsize, based on VN/VL parameters.
+	// Useful when VN/VL are known template params, but currently they are not so we use
+	// the LUT instead (for now).
+	//uint vl = vifX.cmd & 0x03;
+	//uint vn = (vifX.cmd >> 2) & 0x3;
+	//uint gsize = ((32 >> vl) * (vn+1)) / 8;
+
+	const u8& gsize = nVifT[vifX.cmd & 0x0f];
+
 	if (vifXRegs.cycle.wl <= vifXRegs.cycle.cl) {
-		if (!idx) vif0.tag.size = ((vifNum * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
-		else	  vif1.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+		vifX.tag.size = ((vifNum * gsize) + 3) / 4;
 	}
 	else {
 		int n = vifXRegs.cycle.cl * (vifNum / vifXRegs.cycle.wl) +
 		        _limit(vifNum % vifXRegs.cycle.wl, vifXRegs.cycle.cl);
 
-		if (!idx) vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
-		else	  vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+		vifX.tag.size = ((n * gsize) + 3) >> 2;
 	}
 
 	u32 addr = vifXRegs.code;
@@ -337,7 +229,6 @@ _vifT void vifUnpackSetup(const u32 *data) {
 
 	vifX.cl			 = 0;
 	vifX.tag.cmd	 = vifX.cmd;
-	vifXRegs.offset = 0;
 }
 
 template void vifUnpackSetup<0>(const u32 *data);

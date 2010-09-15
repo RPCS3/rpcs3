@@ -18,8 +18,6 @@
  */
 
 #include "GS.h"
-#include <Cg/cg.h>
-#include <Cg/cgGL.h>
 
 #include <stdlib.h>
 
@@ -27,6 +25,7 @@
 #include "x86.h"
 #include "zerogs.h"
 #include "targets.h"
+#include "ZZoglShaders.h"
 
 #define RHA
 //#define RW
@@ -128,7 +127,7 @@ inline Vector ZeroGS::CRenderTarget::DefaultBitBltPos()
 {
 	Vector v = Vector(1, -1, 0.5f / (float)RW(fbw), 0.5f / (float)RH(fbh));
 	v *= 1.0f / 32767.0f;
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_sBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_sBitBltPos");
 	return v;
 }
 
@@ -139,7 +138,7 @@ inline Vector ZeroGS::CRenderTarget::DefaultBitBltTex()
 	// I really sure that -0.5 is correct, because OpenGL have no half-offset
 	// issue, DirectX known for.
 	Vector v = Vector(1, -1, 0.5f / (float)RW(fbw), -0.5f / (float)RH(fbh));
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_sBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_sBitBltTex");
 	return v;
 }
 
@@ -237,11 +236,11 @@ void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int co
 		v.y = vposxy.y;
 		v.z = vposxy.z;
 		v.w = vposxy.w - dy * 2.0f / (float)fbh;
-		ZZcgSetParameter4fv(g_vparamPosXY[context], v, "g_fPosXY");
+		ZZshSetParameter4fv(g_vparamPosXY[context], v, "g_fPosXY");
 	}
 	else
 	{
-		ZZcgSetParameter4fv(g_vparamPosXY[context], vposxy, "g_fPosXY");
+		ZZshSetParameter4fv(g_vparamPosXY[context], vposxy, "g_fPosXY");
 	}
 
 	// set render states
@@ -434,8 +433,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	if (nUpdateTarg)
 	{
-		cgGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex);
-		cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+		ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex, "BaseTexture.final");
 
 		//assert( ittarg->second->fbw == fbw );
 		int offset = (fbp - ittarg->second->fbp) * 64 / fbw;
@@ -448,17 +446,19 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		v.z = 0.25f;
 		v.w = (float)RH(offset) + 0.25f;
 
-		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 //		v = DefaultBitBltTex(); Maybe?
-		v = DefaultOneColor(ppsBaseTexture) ;
+		ZZshDefaultOneColor ( ppsBaseTexture );
 
-		SETPIXELSHADER(ppsBaseTexture.prog);
+		ZZshSetPixelShader(ppsBaseTexture.prog);
 
 		nUpdateTarg = 0;
 	}
 	else
 	{
+		u32 bit_idx = (AA.x == 0) ? 0 : 1;
+		
 		// align the rect to the nearest page
 		// note that fbp is always aligned on page boundaries
 		tex0Info texframe;
@@ -467,21 +467,20 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		texframe.tw = fbw;
 		texframe.th = fbh;
 		texframe.psm = psm;
-		CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
 
 		// write color and zero out stencil buf, always 0 context!
 		// force bilinear if using AA
 		// Fix in r133 -- FFX movies and Gust backgrounds!
-		SetTexVariablesInt(0, 0*(s_AAx || s_AAy) ? 2 : 0, texframe, pmemtarg, &ppsBitBlt[!!s_AAx], 1);
-		cgGLSetTextureParameter(ppsBitBlt[!!s_AAx].sMemory, pmemtarg->ptex->tex);
-		cgGLEnableTextureParameter(ppsBitBlt[!!s_AAx].sMemory);
+		//SetTexVariablesInt(0, 0*(AA.x || AA.y) ? 2 : 0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
+		SetTexVariablesInt(0, 0, texframe, false, &ppsBitBlt[bit_idx], 1);
+		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
 
 		v = Vector(1, 1, 0.0f, 0.0f);
-		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 		v.x = 1;
 		v.y = 2;
-		ZZcgSetParameter4fv(ppsBitBlt[!!s_AAx].sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(ppsBitBlt[bit_idx].sOneColor, v, "g_fOneColor");
 
 		assert(ptex != 0);
 
@@ -496,11 +495,11 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		}
 
 		// render with an AA shader if possible (bilinearly interpolates data)
-		//cgGLLoadProgram(ppsBitBlt[!!s_AAx].prog);
-		SETPIXELSHADER(ppsBitBlt[!!s_AAx].prog);
+		//cgGLLoadProgram(ppsBitBlt[bit_idx].prog);
+		ZZshSetPixelShader(ppsBitBlt[bit_idx].prog);
 	}
 
-	SETVERTEXSHADER(pvsBitBlt.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
 
 	DrawTriangleArray();
 	
@@ -545,22 +544,22 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	v.y = (float)RH(16);
 	v.z = -(float)RW(fbw);
 	v.w = (float)RH(8);
-	ZZcgSetParameter4fv(ppsConvert16to32.fTexOffset, v, "g_fTexOffset");
+	ZZshSetParameter4fv(ppsConvert16to32.fTexOffset, v, "g_fTexOffset");
 
 	v.x = (float)RW(8);
 	v.y = 0;
 	v.z = 0;
 	v.w = 0.25f;
-	ZZcgSetParameter4fv(ppsConvert16to32.fPageOffset, v, "g_fPageOffset");
+	ZZshSetParameter4fv(ppsConvert16to32.fPageOffset, v, "g_fPageOffset");
 
 	v.x = (float)RW(2 * fbw);
 	v.y = (float)RH(fbh);
 	v.z = 0;
 	v.w = 0.0001f * (float)RH(fbh);
-	ZZcgSetParameter4fv(ppsConvert16to32.fTexDims, v, "g_fTexDims");
+	ZZshSetParameter4fv(ppsConvert16to32.fTexDims, v, "g_fTexDims");
 
 //	v.x = 0;
-//	ZZcgSetParameter4fv(ppsConvert16to32.fTexBlock, v, "g_fTexBlock");
+//	ZZshSetParameter4fv(ppsConvert16to32.fTexBlock, v, "g_fTexBlock");
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -569,10 +568,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	FBTexture(0, ptexConv);
 	ZeroGS::ResetRenderTarget(1);
 
-	BindToSample(&ptex) ;
-
-	cgGLSetTextureParameter(ppsConvert16to32.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsBitBlt[!!s_AAx].sMemory);
+	BindToSample(&ptex);
+	ZZshGLSetTextureParameter(ppsConvert16to32.sFinal, ptex, "Convert 16 to 32.Final");
 
 	fbh /= 2; // have 16 bit surfaces are usually 2x higher
 	SetViewport();
@@ -580,9 +577,8 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-
-	SETPIXELSHADER(ppsConvert16to32.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsConvert16to32.prog);
 	DrawTriangleArray();
 	
 #ifdef _DEBUG
@@ -600,7 +596,6 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 
 	// restore
 	SAFE_RELEASE_TEX(ptex);
-
 	SAFE_RELEASE_TEX(ptexFeedback);
 
 	ptex = ptexConv;
@@ -609,7 +604,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	// reset textures
-	BindToSample(&ptex) ;
+	BindToSample(&ptex);
 
 	glEnable(GL_SCISSOR_TEST);
 
@@ -653,19 +648,19 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	v.y = 8.0f / (float)fbh;
 	v.z = 0.5f * v.x;
 	v.w = 0.5f * v.y;
-	ZZcgSetParameter4fv(ppsConvert32to16.fTexOffset, v, "g_fTexOffset");
+	ZZshSetParameter4fv(ppsConvert32to16.fTexOffset, v, "g_fTexOffset");
 
 	v.x = 256.0f / 255.0f;
 	v.y = 256.0f / 255.0f;
 	v.z = 0.05f / 256.0f;
 	v.w = -0.001f / 256.0f;
-	ZZcgSetParameter4fv(ppsConvert32to16.fPageOffset, v, "g_fPageOffset");
+	ZZshSetParameter4fv(ppsConvert32to16.fPageOffset, v, "g_fPageOffset");
 
 	v.x = (float)RW(fbw);
 	v.y = (float)RH(2 * fbh);
 	v.z = 0;
 	v.w = -0.1f / RH(fbh);
-	ZZcgSetParameter4fv(ppsConvert32to16.fTexDims, v, "g_fTexDims");
+	ZZshSetParameter4fv(ppsConvert32to16.fTexDims, v, "g_fTexDims");
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -675,10 +670,9 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	ZeroGS::ResetRenderTarget(1);
 	GL_REPORT_ERRORD();
 
-	BindToSample(&ptex) ;
+	BindToSample(&ptex);
 
-	cgGLSetTextureParameter(ppsConvert32to16.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsConvert32to16.sFinal);
+	ZZshGLSetTextureParameter(ppsConvert32to16.sFinal, ptex, "Convert 32 to 16");
 
 //	fbh *= 2; // have 16 bit surfaces are usually 2x higher
 
@@ -687,9 +681,8 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-
-	SETPIXELSHADER(ppsConvert32to16.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsConvert32to16.prog);
 	DrawTriangleArray();
 	
 #ifdef _DEBUG
@@ -702,7 +695,6 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 #endif
 
 	vposxy.y = -2.0f * (32767.0f / 8.0f) / (float)fbh;
-
 	vposxy.w = 1 + 0.5f / fbh;
 
 	// restore
@@ -759,11 +751,11 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	// tex coords, test ffx bikanel island when changing these
 	/*	Vector v = DefaultBitBltPos();
 		v = Vector ((float)(RW(fbw+4)), (float)(RH(fbh+4)), +0.25f, -0.25f);
-		ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBltTex");*/
+		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBltTex");*/
 
 	// tex coords, test ffx bikanel island when changing these
 
-//	Vector v = Vector(1, -1, 0.5f / (fbw<<s_AAx), 0.5f / (fbh << s_AAy));
+//	Vector v = Vector(1, -1, 0.5f / (fbw << AA.x), 0.5f / (fbh << AA.y));
 //	v *= 1/32767.0f;
 //	cgGLSetParameter4fv(pvsBitBlt.sBitBltPos, v);
 	Vector v = DefaultBitBltPos();
@@ -772,8 +764,8 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	v.y = (float)(RH(fbh));
 	v.z = 0.0f;
 	v.w = 0.0f;
-	cgGLSetParameter4fv(pvsBitBlt.sBitBltTex, v);
-	v = DefaultOneColor(ppsBaseTexture);
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBlt.Feedback");
+	ZZshDefaultOneColor(ppsBaseTexture);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -782,16 +774,15 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 	GL_REPORT_ERRORD();
 
-	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptex);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+	ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ptex, "BaseTexture.Feedback");
 
 	SetViewport();
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// render with an AA shader if possible (bilinearly interpolates data)
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBaseTexture.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
 	
 	// restore
@@ -967,7 +958,6 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	texframe.tw = fbw;
 	texframe.th = fbh;
 	texframe.psm = psm;
-	CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(texframe, 1);
 
 	DisableAllgl();
 
@@ -986,11 +976,9 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	glDepthFunc(g_dwZCmp[curvb.test.ztst]);
 
 	// write color and zero out stencil buf, always 0 context!
-	SetTexVariablesInt(0, 0, texframe, pmemtarg, &ppsBitBltDepth, 1);
-
-	cgGLSetTextureParameter(ppsBitBltDepth.sMemory, pmemtarg->ptex->tex);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
-
+	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
+	ZZshGLSetTextureParameter(ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
+	
 	Vector v = DefaultBitBltPos();
 
 	v = DefaultBitBltTex();
@@ -999,7 +987,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	v.y = 2;
 	v.z = PSMT_IS16Z(psm) ? 1.0f : 0.0f;
 	v.w = g_filog32;
-	ZZcgSetParameter4fv(ppsBitBltDepth.sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(ppsBitBltDepth.sOneColor, v, "g_fOneColor");
 
 	Vector vdepth = g_vdepth;
 
@@ -1014,7 +1002,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	assert(ppsBitBltDepth.sBitBltZ != 0);
 
-	ZZcgSetParameter4fv(ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
+	ZZshSetParameter4fv(ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
 
 	assert(pdepth != 0);
 	//GLint w1 = 0;
@@ -1039,8 +1027,8 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBitBltDepth.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsBitBltDepth.prog);
 
 	DrawTriangleArray();
 
@@ -1892,7 +1880,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 
 #define TARGET_THRESH 0x500
 
-extern int g_MaxTexWidth, g_MaxTexHeight;
+extern int g_MaxTexWidth, g_MaxTexHeight; // Maximum height & width of supported texture.
 
 //#define SORT_TARGETS
 inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIter(list<CMemoryTarget>::iterator& it)
@@ -2057,29 +2045,6 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget
 	return NULL;
 }
 
-static __forceinline int NumberOfChannels(int psm)
-{
-	int channels = 1;
-
-	if (PSMT_ISCLUT(psm))
-	{
-		if (psm == PSMT8)
-			channels = 4;
-		else if (psm == PSMT4)
-			channels = 8;
-	}
-	else
-	{
-		if (PSMT_IS16BIT(psm))
-		{
-			// 16z needs to be a8r8g8b8
-			channels = 2;
-		}
-	}
-
-	return channels;
-}
-
 ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
@@ -2093,9 +2058,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSea
 			if ((height <= itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
 			{
 				// check channels
-				int targchannels = NumberOfChannels(itbest->psm);
-
-				if (targchannels == channels) break;
+				if (PIXELS_PER_WORD(itbest->psm) == channels) break;
 			}
 
 			++itbest;
@@ -2140,12 +2103,14 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	u32 fmt = GL_UNSIGNED_BYTE;
 
+	// RGBA16 storage format
 	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
 
 	int widthmult = 1, channels = 1;
 
+	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare.
 	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
-	channels = NumberOfChannels(tex0.psm);
+	channels = PIXELS_PER_WORD(tex0.psm);
 
 	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 
@@ -3122,11 +3087,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT24:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(32, u32, u32, 32A4, 8, 8, (u32), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(32, u32, u32, 32A4, 8, 8, (u32), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32, u32, u32, 32A2, 8, 8, (u32), Frame, 1, 0);
 				}
@@ -3139,11 +3104,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16, u16, u32, 16A2, 16, 8, RGBA32to16, Frame, 1, 0);
 				}
@@ -3156,11 +3121,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16S:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16S, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16S, u16, u32, 16A4, 16, 8, RGBA32to16, Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16S, u16, u32, 16A2, 16, 8, RGBA32to16, Frame, 1, 0);
 				}
@@ -3175,11 +3140,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT24Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(32Z, u32, u32, 32A4, 8, 8, (u32), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(32Z, u32, u32, 32A4, 8, 8, (u32), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32Z, u32, u32, 32A2, 8, 8, (u32), Frame, 1, 0);
 				}
@@ -3192,11 +3157,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16Z, u16, u32, 16A4, 16, 8, (u16), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16Z, u16, u32, 16A4, 16, 8, (u16), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16Z, u16, u32, 16A2, 16, 8, (u16), Frame, 1, 0);
 				}
@@ -3209,11 +3174,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16SZ:
 
-				if (s_AAy)
+				if (AA.y)
 				{
-					RESOLVE_32BIT(16SZ, u16, u32, 16A4, 16, 8, (u16), Frame, s_AAx, s_AAy);
+					RESOLVE_32BIT(16SZ, u16, u32, 16A4, 16, 8, (u16), Frame, AA.x, AA.y);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16SZ, u16, u32, 16A2, 16, 8, (u16), Frame, 1, 0);
 				}
@@ -3234,11 +3199,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT24:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(32, u32, Vector_16F, 32A4, 8, 8, Float16ToARGB, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32, u32, Vector_16F, 32A2, 8, 8, Float16ToARGB, Frame16, 1, 0);
 				}
@@ -3251,11 +3216,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16, u16, Vector_16F, 16A4, 16, 8, Float16ToARGB16, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16, u16, Vector_16F, 16A2, 16, 8, Float16ToARGB16, Frame16, 1, 0);
 				}
@@ -3268,11 +3233,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMCT16S:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16S, u16, Vector_16F, 16A4, 16, 8, Float16ToARGB16, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16S, u16, Vector_16F, 16A2, 16, 8, Float16ToARGB16, Frame16, 1, 0);
 				}
@@ -3287,11 +3252,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT24Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(32Z, u32, Vector_16F, 32ZA4, 8, 8, Float16ToARGB_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(32Z, u32, Vector_16F, 32ZA2, 8, 8, Float16ToARGB_Z, Frame16, 1, 0);
 				}
@@ -3304,11 +3269,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16Z:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16Z, u16, Vector_16F, 16ZA4, 16, 8, Float16ToARGB16_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16Z, u16, Vector_16F, 16ZA2, 16, 8, Float16ToARGB16_Z, Frame16, 1, 0);
 				}
@@ -3321,11 +3286,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
 			case PSMT16SZ:
 
-				if (s_AAy)
+				if (AA.y)
 				{
 					RESOLVE_32BIT(16SZ, u16, Vector_16F, 16ZA4, 16, 8, Float16ToARGB16_Z, Frame16, 1, 1);
 				}
-				else if (s_AAx)
+				else if (AA.x)
 				{
 					RESOLVE_32BIT(16SZ, u16, Vector_16F, 16ZA2, 16, 8, Float16ToARGB16_Z, Frame16, 1, 0);
 				}

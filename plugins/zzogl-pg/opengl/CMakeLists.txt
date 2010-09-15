@@ -14,6 +14,7 @@ set(CommonFlags
     -DZEROGS_SSE2
     -fno-regmove
     -fno-strict-aliasing
+    -Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wno-format
     -Wno-unused-parameter
     -Wno-unused-value
@@ -94,6 +95,7 @@ set(zzoglHeaders
     zerogsmath.h
     zpipe.h
     ZZoglCRTC.h
+    ZZoglShaders.h
     ZZGl.h
     ZZLog.h)
 
@@ -154,6 +156,9 @@ target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 
 # link target with X11
 target_link_libraries(${Output} ${X11_LIBRARIES})
+
+# link target with jpeg
+target_link_libraries(${Output} ${JPEG_LIBRARIES})
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

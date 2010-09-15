@@ -117,9 +117,9 @@ struct psxRegisters {
 
 extern __aligned16 psxRegisters psxRegs;
 
-extern u32 g_psxNextBranchCycle;
-extern s32 psxBreak;		// used when the IOP execution is broken and control returned to the EE
-extern s32 psxCycleEE;		// tracks IOP's current sych status with the EE
+extern u32 g_iopNextEventCycle;
+extern s32 iopBreak;		// used when the IOP execution is broken and control returned to the EE
+extern s32 iopCycleEE;		// tracks IOP's current sych status with the EE
 
 #ifndef _PC_
 
@@ -172,7 +172,7 @@ extern u32 EEoCycle;
 
 extern s32 psxNextCounter;
 extern u32 psxNextsCounter;
-extern bool iopBranchAction;
+extern bool iopEventAction;
 extern bool iopEventTestIsActive;
 
 // Branching status used when throwing exceptions.
@@ -196,7 +196,7 @@ extern R3000Acpu psxRec;
 
 extern void psxReset();
 extern void __fastcall psxException(u32 code, u32 step);
-extern void psxBranchTest();
+extern void iopEventTest();
 extern void psxMemReset();
 
 // Subsets

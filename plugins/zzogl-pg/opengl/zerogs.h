@@ -34,11 +34,8 @@
 #include "GS.h"
 #include "CRC.h"
 #include "rasterfont.h" // simple font
-#include "ZeroGSShaders/zerogsshaders.h"
 
 using namespace std;
-
-
 
 //------------------------ Constants ----------------------
 #define VB_BUFFERSIZE			   0x400
@@ -47,7 +44,6 @@ using namespace std;
 const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 
 //------------------------ Inlines -------------------------
-
 
 // Calculate maximum height for target
 inline int get_maxheight(int fbp, int fbw, int psm)
@@ -62,29 +58,13 @@ inline int get_maxheight(int fbp, int fbw, int psm)
 	return ret;
 }
 
-// Does psm need Alpha test with alpha expansion?
-inline int nNeedAlpha(u8 psm)
-{
-	return (psm == PSMCT24 || psm == PSMCT16 || psm == PSMCT16S);
-}
-
-// Get color storage model psm, that is important on flush stage.
-inline u8 GetTexCPSM(const tex0Info& tex)
-{
-	if (PSMT_ISCLUT(tex.psm))
-		return tex.cpsm;
-	else
-		return tex.psm;
-}
-
-
 // ------------------------ Variables -------------------------
+
 // all textures have this width
-//#define GPU_TEXWIDTH		512
 extern int GPU_TEXWIDTH;
 extern float g_fiGPU_TEXWIDTH;
-#define MASKDIVISOR		0
-#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR) // bitwise mask width for region repeat mode
+#define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
+#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
 
 extern u32 ptexBilinearBlocks;
 
@@ -423,15 +403,6 @@ union
 
 };
 
-// Return, if tcc, aem or psm mode told us, than Alpha test should be used
-// if tcc == 0 than no alpha used, aem used for alpha expanding and I am not sure
-// that it's correct, psm -- color mode,
-inline bool
-IsAlphaTestExpansion(VB& curvb)
-{
-	return (curvb.tex0.tcc && gs.texa.aem && nNeedAlpha(GetTexCPSM(curvb.tex0)));
-}
-
 // visible members
 extern DrawFn drawfn[8];
 
@@ -441,17 +412,6 @@ extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
-
-// Shaders variables
-extern Vector g_vdepth;
-extern Vector vlogz;
-extern VERTEXSHADER pvsBitBlt;
-extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-bool LoadEffects();
-bool LoadExtraEffects();
-FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
-
 extern RenderFormatType g_RenderFormatType;
 
 void AddMessage(const char* pstr, u32 ms = 5000);
@@ -460,7 +420,6 @@ void ChangeWindowSize(int nNewWidth, int nNewHeight);
 void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 void SetAA(int mode);
-void SetNegAA(int mode);
 void SetCRC(int crc);
 
 void ReloadEffects();
@@ -545,10 +504,6 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 void SetContextTarget(int context) ;
 
 void NeedFactor(int w);
-// only sets a limited amount of state (for Update)
-void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
-void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, ZeroGS::CMemoryTarget* pmemtarg, FRAGMENTSHADER* pfragment, int force);
-
 void ResetAlphaVariables();
 
 void StartCapture();

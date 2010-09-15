@@ -227,7 +227,8 @@ void GLWindow::ToggleFullscreen()
     XUnlockDisplay(glDisplay);
 
     // Apply the change
-    XSync(glDisplay, False);
+    // Note: Xsync is not enough. All pending event must be flush.
+    XFlush(glDisplay);
 
     // update info structure
     GetWindowSize();
@@ -298,6 +299,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 void GLWindow::SwapGLBuffers()
 {
 	glXSwapBuffers(glDisplay, glWindow);
+	//glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void GLWindow::SetTitle(char *strtitle)

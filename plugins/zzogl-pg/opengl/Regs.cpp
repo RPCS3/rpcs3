@@ -111,6 +111,7 @@ void __gifCall GIFPackedRegHandlerRGBA(const u32* data)
 void __gifCall GIFPackedRegHandlerSTQ(const u32* data)
 {
 	FUNCLOG
+	// Despite this code generating a warning, it's correct. float -> float reduction. S and Y are missed mantissas.
 	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
 	*(u32*)&gs.vertexregs.t = data[1] & 0xffffff00;
 	*(u32*)&gs.q = data[2];
@@ -147,7 +148,7 @@ void __forceinline KICK_VERTEX3()
 		{
 			/* tri fans need special processing */
 			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
+				gs.primIndex = gs.primNext();
 		}
 	}
 }
@@ -160,7 +161,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	gs.vertexregs.z = (data[2] >> 4) & 0xffffff;
 	gs.vertexregs.f = (data[3] >> 4) & 0xff;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	if (data[3] & 0x8000)
 	{
@@ -179,7 +180,7 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
 	gs.vertexregs.z = data[2];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ArraySize(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	if (data[3] & 0x8000)
 	{
@@ -428,7 +429,7 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 	gs.vertexregs.z = data[1] & 0xffffff;
 	gs.vertexregs.f = data[1] >> 24;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	KICK_VERTEX2();
 }
@@ -440,7 +441,7 @@ void __gifCall GIFRegHandlerXYZ2(const u32* data)
 	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
 	gs.vertexregs.z = data[1];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	KICK_VERTEX2();
 }
@@ -496,7 +497,7 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 	gs.vertexregs.z = data[1] & 0xffffff;
 	gs.vertexregs.f = data[1] >> 24;
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	KICK_VERTEX3();
 }
@@ -508,7 +509,7 @@ void __gifCall GIFRegHandlerXYZ3(const u32* data)
 	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
 	gs.vertexregs.z = data[1];
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	gs.primIndex = gs.primNext();
 
 	KICK_VERTEX3();
 }

@@ -27,13 +27,6 @@
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
 #endif
 
-inline Vector DefaultOneColor(FRAGMENTSHADER ptr)
-{
-	Vector v = Vector(1, 1, 1, 1);
-	cgGLSetParameter4fv(ptr.sOneColor, v);
-	return v ;
-}
-
 namespace ZeroGS
 {
 
@@ -206,24 +199,19 @@ extern CRenderTargetMngr s_RTs, s_DepthRTs;
 extern CBitwiseTextureMngr s_BitwiseTextures;
 extern CMemoryTargetMngr g_MemTargs;
 
-extern u8 s_AAx, s_AAy, s_AAz, s_AAw;
+//extern u8 s_AAx, s_AAy;
+extern Point AA;
 
-// Real rendered width, depends on AA and AAneg.
+// Real rendered width, depends on AA.
 inline int RW(int tbw)
 {
-	if (s_AAx >= s_AAz)
-		return (tbw << (s_AAx - s_AAz));
-	else
-		return (tbw >> (s_AAz - s_AAx));
+    return (tbw << AA.x);
 }
 
-// Real rendered height, depends on AA and AAneg.
+// Real rendered height, depends on AA.
 inline int RH(int tbh)
 {
-	if (s_AAy >= s_AAw)
-		return (tbh << (s_AAy - s_AAw));
-	else
-		return (tbh >> (s_AAw - s_AAy));
+    return (tbh << AA.y);
 }
 
 /*	inline void CreateTargetsList(int start, int end, list<ZeroGS::CRenderTarget*>& listTargs) {
@@ -242,10 +230,6 @@ inline list<ZeroGS::CRenderTarget*> CreateTargetsList(int start, int end)
 
 extern Vector g_vdepth;
 extern int icurctx;
-
-extern VERTEXSHADER pvsBitBlt;
-extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 extern GLuint vboRect;
 
 // Unworking

@@ -32,11 +32,12 @@ typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 #include "newVif_HashBucket.h"
 
 extern void  mVUmergeRegs(const xRegisterSSE& dest, const xRegisterSSE& src,  int xyzw, bool modXYZW = 0);
-extern void _nVifUnpack  (int idx,  const u8 *data, u32 size, bool isFill);
-extern void  dVifUnpack  (int idx,  const u8 *data, u32 size, bool isFill);
+extern void _nVifUnpack  (int idx, const u8* data, uint mode, bool isFill);
 extern void  dVifReset   (int idx);
 extern void  dVifClose   (int idx);
 extern void  VifUnpackSSE_Init();
+
+_vifT extern void  dVifUnpack  (const u8* data, bool isFill);
 
 #define VUFT VIFUnpackFuncTable
 #define	_v0 0
@@ -50,11 +51,6 @@ extern void  VifUnpackSSE_Init();
 #define xmmRow  xmm6
 #define xmmTemp xmm7
 
-#ifdef _MSC_VER
-#	pragma pack(1)
-#	pragma warning(disable:4996) // 'function': was declared deprecated
-#endif
-
 // nVifBlock - Ordered for Hashing; the 'num' field and the lower 6 bits of upkType are
 //             used as the hash bucket selector.
 //
@@ -62,30 +58,25 @@ struct __aligned16 nVifBlock {
 	u8   num;		// [00] Num  Field
 	u8   upkType;	// [01] Unpack Type [usn*1:mask*1:upk*4]
 	u8   mode;		// [02] Mode Field
-	u8	 scl;		// [03] Start Cycle
-	u8   cl;		// [04] CL   Field
-	u8   wl;		// [05] WL   Field
-	u32  mask;		// [06] Mask Field
-	u8	 padding[2];// [10] through [11]
+	u8   cl;		// [03] CL   Field
+	u32  mask;		// [04] Mask Field
+	u8   wl;		// [08] WL   Field
+	u8	 padding[3];// [09] through [11]
 	uptr startPtr;	// [12] Start Ptr of RecGen Code
-} __packed; // 16 bytes
-
-#ifdef _MSC_VER
-#	pragma pack()
-#endif
+}; // 16 bytes
 
 #define _hSize 0x4000 // [usn*1:mask*1:upk*4:num*8] hash...
 #define _cmpS  (sizeof(nVifBlock) - (4))
 #define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
-	u32						idx;			// VIF0 or VIF1
-	vifStruct*				vif;			// Vif Struct ptr
-	VIFregisters*			vifRegs;		// Vif Regs   ptr
-	VURegs*					VU;				// VU  Regs   ptr
-	u32						vuMemLimit;		// Use for fast AND
+
+	// Buffer for partial transfers (should always be first to ensure alignment)
+	// Maximum buffer size is 256 (vifRegs.Num max range) * 16 (quadword)
+	__aligned16 u8			buffer[256*16];
 	u32						bSize;			// Size of 'buffer'
 	u32						bPtr;
-	u8						buffer[_1mb];	// Buffer for partial transfers
+
+	u32						idx;			// VIF0 or VIF1
 	u8*						recPtr;			// Cur Pos to recompile to
 	u8*						recEnd;			// 'Safe' End of Rec Cache
 	BlockBuffer*			vifCache;		// Block Buffer
@@ -103,9 +94,7 @@ struct nVifStruct {
 };
 
 extern __aligned16 nVifStruct nVif[2];
-extern __aligned16 const u8 nVifT[16];
 extern __aligned16 nVifCall nVifUpk[(2*2*16)*4]; // ([USN][Masking][Unpack Type]) [curCycle]
 extern __aligned16 u32		nVifMask[3][4][4];	 // [MaskNumber][CycleNumber][Vector]
 
-static const bool useOldUnpack  = 0; // Use code in newVif_OldUnpack.inl
 static const bool newVifDynaRec = 1; // Use code in newVif_Dynarec.inl

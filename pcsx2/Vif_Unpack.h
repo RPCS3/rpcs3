@@ -15,44 +15,28 @@
 
 #pragma once
 
-typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, const u32 *data);
-typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, const u32 *data, int size);
-typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, const u32 *data, int size);
+struct vifStruct;
 
-#define create_unpack_u_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, const u##bits *data);
-#define create_unpack_odd_u_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_U##bits)(u32 *dest, const u##bits *data, int size);
-#define create_unpack_s_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_S##bits)(u32 *dest, const s##bits *data);
-#define create_unpack_odd_s_type(bits)	typedef void (__fastcall *UNPACKFUNCTYPE_ODD_S##bits)(u32 *dest, const s##bits *data, int size);
+typedef void (__fastcall *UNPACKFUNCTYPE)(void* dest, const void* src);
+
+#define create_unpack_u_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_u##bits)(u32* dest, const u##bits* src);
+#define create_unpack_s_type(bits)		typedef void (__fastcall *UNPACKFUNCTYPE_s##bits)(u32* dest, const s##bits* src);
 
 #define create_some_unpacks(bits)		\
 		create_unpack_u_type(bits);		\
-		create_unpack_odd_u_type(bits);	\
 		create_unpack_s_type(bits);		\
-		create_unpack_odd_s_type(bits);
 
 create_some_unpacks(32);
 create_some_unpacks(16);
 create_some_unpacks(8);
 
-struct VIFUnpackFuncTable
-{
-    UNPACKFUNCTYPE  funcU;
-    UNPACKFUNCTYPE  funcS;
+extern __aligned16 const u8 nVifT[16];
 
-	UNPACKFUNCTYPE_ODD  oddU;		// needed for old-style vif only, remove when old vif is removed.
-	UNPACKFUNCTYPE_ODD  oddS;		// needed for old-style vif only, remove when old vif is removed.
+// Array sub-dimension order: [vifidx] [mode] (VN * VL * USN * doMask)
+extern __aligned16 const UNPACKFUNCTYPE VIFfuncTable[2][3][(4 * 4 * 2 * 2)];
 
-	u8 bsize; // currently unused
-	u8 dsize; // byte size of one channel
-	u8 gsize; // size of data in bytes used for each write cycle
-	u8 qsize; // used for unpack parts, num of vectors that
-	// will be decompressed from data for 1 cycle
-};
-
-extern const __aligned16 VIFUnpackFuncTable VIFfuncTable[32];
-
-extern int  nVifUnpack (int idx, const u8 *data);
+_vifT extern int  nVifUnpack (const u8* data);
 extern void resetNewVif(int idx);
 
 template< int idx >
-extern void vifUnpackSetup(const u32 *data);
+extern void vifUnpackSetup(const u32* data);

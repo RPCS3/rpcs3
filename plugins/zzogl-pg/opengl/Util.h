@@ -201,7 +201,6 @@ typedef struct
 	u8 mrtdepth; // write color in render target
 	u8 interlace; // intelacing mode 0, 1, 3-off
 	u8 aa;	// antialiasing 0 - off, 1 - 2x, 2 - 4x, 3 - 8x, 4 - 16x
-	u8 negaa; // negative aliasing
 	u8 bilinear; // set to enable bilinear support. 0 - off, 1 -- on, 2 -- force (use for textures that usually need it)
 	ZZOptions zz_options;
 	gameHacks hacks; // game options -- different hacks.
@@ -352,6 +351,6 @@ extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
 extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
 #endif
 
-
+extern bool g_bDisplayFPS; // should we display FPS on screen?
 
 #endif // UTIL_H_INCLUDED

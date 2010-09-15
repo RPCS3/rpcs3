@@ -21,7 +21,7 @@
 
 #include "Util.h"
 #include "GS.h"
-#include "ZeroGSShaders/zerogsshaders.h"
+#include "ZZoglShaders.h"
 #include "Profile.h"
 #include "GLWin.h"
 
@@ -34,7 +34,6 @@ extern u32 THR_KeyEvent; // value for passing out key events between threads
 extern bool THR_bShift, SaveStateExists;
 
 const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
-const char* s_naa[3] = { "native res |", "res /2 |", "res /4 |" };
 const char* pbilinear[] = { "off", "normal", "forced" };
 
 
@@ -96,7 +95,6 @@ void ProcessAASetting(bool reverse)
 void ProcessFPS()
 {
 	FUNCLOG
-	extern bool g_bDisplayFPS;
 	g_bDisplayFPS ^= 1;
 	ZZLog::Debug_Log("Toggled FPS.");
 }
@@ -110,31 +108,6 @@ void ProcessWireFrame()
 	glPolygonMode(GL_FRONT_AND_BACK, (conf.wireframe()) ? GL_LINE : GL_FILL);
 	sprintf(strtitle, "wireframe rendering - %s", (conf.wireframe()) ? "on" : "off");
 	ZZLog::WriteToScreen(strtitle);
-}
-
-void ProcessNegAASetting(bool reverse)
-{
-	FUNCLOG
-
-	char strtitle[256];
-
-	if (reverse)
-	{
-		conf.negaa--; // -1
-		if (conf.negaa > 2) conf.negaa = 2;					// u8 in unsigned, so negative value is 255.
-		sprintf(strtitle, "down resolution - %s", s_naa[conf.negaa]);
-		ZeroGS::SetNegAA(conf.negaa);
-	}
-	else
-	{
-		conf.negaa++;
-		if (conf.negaa > 2) conf.negaa = 0;
-		sprintf(strtitle, "down resolution - %s", s_naa[conf.negaa]);
-		ZeroGS::SetNegAA(conf.negaa);
-	}
-
-	ZZLog::WriteToScreen(strtitle);
-	SaveConfig();
 }
 
 typedef struct GameHackStruct
@@ -281,7 +254,7 @@ void WriteBilinear()
 }
 
 #ifdef _WIN32
-void ProcessMessages()
+void ProcessEvents()
 {
 	MSG msg;
 
@@ -349,7 +322,7 @@ void ProcessMessages()
 
 #else // linux
 
-void ProcessMessages()
+void ProcessEvents()
 {
 	FUNCLOG
 

@@ -32,6 +32,7 @@
 #include "zpipe.h"
 #include "targets.h"
 #include "GLWin.h"
+#include "ZZoglShaders.h"
 
 //----------------------- Defines
 
@@ -50,7 +51,7 @@ extern int g_nFrame, g_nRealFrame;
 //-------------------------- Variables
 
 primInfo *prim;
-CGprogram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
+ZZshProgram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
 
 inline u32 FtoDW(float f) { return (*((u32*)&f)); }
 
@@ -81,7 +82,7 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
 /////////////////////
 // graphics resources
-CGparameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
+ZZshParameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
 bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
@@ -103,10 +104,6 @@ GLenum GetRenderTargetFormat() { return GetRenderFormat() == RFT_byte8 ? 4 : g_i
 
 // returns the first and last addresses aligned to a page that cover
 void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
-
-//	bool LoadEffects();
-//	bool LoadExtraEffects();
-//	FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
 int s_nNewWidth = -1, s_nNewHeight = -1;
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
@@ -343,8 +340,7 @@ extern RasterFont* font_p;
 void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 {
 	FUNCLOG
-	cgGLDisableProfile(cgvProf);
-	cgGLDisableProfile(cgfProf);
+	ZZshGLDisableProfile();
 
 	Vector v;
 	v.SetColor(color);
@@ -352,8 +348,7 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	//glColor3f(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff)/ 255.0f, (color & 0xff) / 255.0f);
 
 	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
-	cgGLEnableProfile(cgvProf);
-	cgGLEnableProfile(cgfProf);
+	ZZshGLEnableProfile();
 }
 
 void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
@@ -409,42 +404,10 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 	assert(vb[0].pBufferData != NULL && vb[1].pBufferData != NULL);
 }
 
-
-void ZeroGS::SetNegAA(int mode)
-{
-	FUNCLOG
-	// need to flush all targets
-	s_RTs.ResolveAll();
-	s_RTs.Destroy();
-	s_DepthRTs.ResolveAll();
-	s_DepthRTs.Destroy();
-
-	s_AAz = s_AAw = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-
-	if (mode > 0)
-	{
-		s_AAz = (mode + 1) / 2;		// ( 1, 0 ) ; (  1, 1 ) -- it's used as binary shift, so x << s_AAz, y << s_AAw
-		s_AAw = mode / 2;
-	}
-
-	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-
-	s_nLastResolveReset = 0;
-
-	vb[0].prndr = NULL;
-	vb[0].pdepth = NULL;
-	vb[0].bNeedFrameCheck = 1;
-	vb[0].bNeedZCheck = 1;
-	vb[1].prndr = NULL;
-	vb[1].pdepth = NULL;
-	vb[1].bNeedFrameCheck = 1;
-	vb[1].bNeedZCheck = 1;
-}
-
 void ZeroGS::SetAA(int mode)
 {
 	FUNCLOG
-	float f;
+	float f = 1.0f;
 
 	// need to flush all targets
 	s_RTs.ResolveAll();
@@ -452,28 +415,28 @@ void ZeroGS::SetAA(int mode)
 	s_DepthRTs.ResolveAll();
 	s_DepthRTs.Destroy();
 
-	s_AAx = s_AAy = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
-
+	AA.x = AA.y = 0;			// This is code for x0, x2, x4, x8 and x16 anti-aliasing.
+	
 	if (mode > 0)
 	{
-		s_AAx = (mode + 1) / 2;		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) -- it's used as binary shift, so x >> s_AAx, y >> s_AAy
-		s_AAy = mode / 2;
+		// ( 1, 0 ) ; (  1, 1 ) ; ( 2, 1 ) ; ( 2, 2 ) 
+		// it's used as a binary shift, so x >> AA.x, y >> AA.y
+		AA.x = (mode + 1) / 2;
+		AA.y = mode / 2;
+		f = 2.0f;
 	}
 
 	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-
 	s_nLastResolveReset = 0;
 
 	vb[0].prndr = NULL;
 	vb[0].pdepth = NULL;
-	vb[0].bNeedFrameCheck = 1;
-	vb[0].bNeedZCheck = 1;
 	vb[1].prndr = NULL;
 	vb[1].pdepth = NULL;
-	vb[1].bNeedFrameCheck = 1;
-	vb[1].bNeedZCheck = 1;
+	
+	vb[0].bNeedFrameCheck = vb[0].bNeedZCheck = 1;
+	vb[1].bNeedFrameCheck = vb[1].bNeedZCheck = 1;
 
-	f = mode > 0 ? 2.0f : 1.0f;
 	glPointSize(f);
 }
 
@@ -486,14 +449,6 @@ void ZeroGS::Prim()
 	if (curvb.CheckPrim()) Flush(prim->ctxt);
 
 	curvb.curprim._val = prim->_val;
-
-	// flush the other pipe if sharing the same buffer
-//  if( vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp && vb[!prim->ctxt].nCount > 0 )
-//  {
-//	  assert( vb[prim->ctxt].nCount == 0 );
-//	  Flush(!prim->ctxt);
-//  }
-
 	curvb.curprim.prim = prim->prim;
 }
 
@@ -537,25 +492,24 @@ void ZeroGS::RenderCustom(float fAlpha)
 
 	// tex coords
 	Vector v = Vector(1 / 32767.0f, 1 / 32767.0f, 0, 0);
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 	v.x = (float)nLogoWidth;
 	v.y = (float)nLogoHeight;
-	ZZcgSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	v.x = v.y = v.z = v.w = fAlpha;
-	ZZcgSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// inside vhDCb[0]'s target area, so render that region only
-	cgGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo);
-	cgGLEnableTextureParameter(ppsBaseTexture.sFinal);
+	ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo, "Logo");
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();
 
-	SETVERTEXSHADER(pvsBitBlt.prog);
-	SETPIXELSHADER(ppsBaseTexture.prog);
+	ZZshSetVertexShader(pvsBitBlt.prog);
+	ZZshSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
 	
 	// restore
@@ -657,7 +611,7 @@ void ZeroGS::KickPoint()
 
 	curvb.NotifyWrite(1);
 
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 	SET_VERTEX(&p[0], last, curvb);
@@ -682,8 +636,8 @@ void ZeroGS::KickLine()
 
 	curvb.NotifyWrite(2);
 
-	int next = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int next = gs.primNext();
+	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 	SET_VERTEX(&p[0], next, curvb);
@@ -748,7 +702,7 @@ void ZeroGS::KickTriangleFan()
 
 	// add 1 to skip the first vertex
 
-	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
+	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = gs.primNext();
 
 	OUTPUT_VERT(p[0], 0);
 	OUTPUT_VERT(p[1], 1);
@@ -777,13 +731,12 @@ void ZeroGS::KickSprite()
 	}
 
 	curvb.NotifyWrite(6);
-
-	int next = (gs.primIndex + 1) % ARRAY_SIZE(gs.gsvertex);
-	int last = (gs.primIndex + 2) % ARRAY_SIZE(gs.gsvertex);
+	int next = gs.primNext();
+	int last = gs.primNext(2);
 	
 	// sprite is too small and AA shows lines (tek4, Mana Khemia)
-	gs.gsvertex[last].x += (4*s_AAx);
-	gs.gsvertex[last].y += (4*s_AAy);
+	gs.gsvertex[last].x += (4 * AA.x);
+	gs.gsvertex[last].y += (4 * AA.y);
 
 	// might be bad sprite (KH dialog text)
 	//if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
@@ -832,11 +785,8 @@ void ZeroGS::SetFogColor(u32 fog)
 	Vector v;
 
 	// set it immediately
-//	v.x = (gs.fogcol & 0xff) / 255.0f;
-//	v.y = ((gs.fogcol >> 8) & 0xff) / 255.0f;
-//	v.z = ((gs.fogcol >> 16) & 0xff) / 255.0f;
 	v.SetColor(gs.fogcol);
-	ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 
 //	}
 }
@@ -851,7 +801,7 @@ void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
 	v.x = fog->FCR / 255.0f;
 	v.y = fog->FCG / 255.0f;
 	v.z = fog->FCB / 255.0f;
-	ZZcgSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 }
 
 void ZeroGS::ExtWrite()

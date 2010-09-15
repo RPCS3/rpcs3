@@ -37,7 +37,8 @@ __ri void UpdateCP0Status() {
 
 void __fastcall WriteCP0Status(u32 value) {
 	cpuRegs.CP0.n.Status.val = value;
-    UpdateCP0Status();
+    cpuUpdateOperationMode();
+    cpuSetNextEventDelta(4);
 }
 
 void MapTLB(int i)
@@ -532,7 +533,8 @@ void ERET() {
 		cpuRegs.pc = cpuRegs.CP0.n.EPC;
 		cpuRegs.CP0.n.Status.b.EXL = 0;
 	}
-	UpdateCP0Status();
+	cpuUpdateOperationMode();
+	cpuSetNextEventDelta(4);
 	intSetBranch();
 }
 
@@ -540,7 +542,8 @@ void DI() {
 	if (cpuRegs.CP0.n.Status.b._EDI || cpuRegs.CP0.n.Status.b.EXL ||
 		cpuRegs.CP0.n.Status.b.ERL || (cpuRegs.CP0.n.Status.b.KSU == 0)) {
 		cpuRegs.CP0.n.Status.b.EIE = 0;
-		//UpdateCP0Status();		// ints are disabled so checking for them is kinda silly...
+		// IRQs are disabled so no need to do a cpu exception/event test...
+		//cpuSetNextEventDelta();
 	}
 }
 
@@ -548,7 +551,8 @@ void EI() {
 	if (cpuRegs.CP0.n.Status.b._EDI || cpuRegs.CP0.n.Status.b.EXL ||
 		cpuRegs.CP0.n.Status.b.ERL || (cpuRegs.CP0.n.Status.b.KSU == 0)) {
 		cpuRegs.CP0.n.Status.b.EIE = 1;
-		UpdateCP0Status();
+		// schedule an event test, which will check for and raise pending IRQs.
+		cpuSetNextEventDelta(4);
 	}
 }
 

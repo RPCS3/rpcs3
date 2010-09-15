@@ -394,7 +394,6 @@
 		<Unit filename="../Vif_Transfer.cpp" />
 		<Unit filename="../Vif_Unpack.cpp" />
 		<Unit filename="../Vif_Unpack.h" />
-		<Unit filename="../Vif_Unpack.inl" />
 		<Unit filename="../ZipTools/ThreadedZipTools.h" />
 		<Unit filename="../ZipTools/thread_gzip.cpp" />
 		<Unit filename="../ZipTools/thread_lzma.cpp" />

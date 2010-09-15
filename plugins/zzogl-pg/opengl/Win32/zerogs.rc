@@ -40,88 +40,199 @@ IDR_SHADERS             RCDATA                  "ps2hw.dat"
 //
 // Dialog
 //
+
 IDD_CONFIG DIALOGEX 0, 0, 530, 290
-STYLE DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ZZ OpenGL PG Configuration"
-FONT 8, "Tahoma"
-{
-	CONTROL "Logging (For Debugging)", 1000, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 6, 102, 10 
-	CONTROL "Interlace Enable (toggle with F5). There are 2 modes + interlace off", IDC_CONFIG_INTERLACE, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 64, 137, 18 
-	CONTROL "Bilinear Filtering (Shift+F5). Best quality is on, turn off for speed.", IDC_CONFIG_BILINEAR, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 81, 137, 18 
-	CONTROL "None", IDC_CONFIG_AANONE, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE | WS_GROUP, 21, 38, 34, 11 
-	CONTROL "2X", IDC_CONFIG_AA2, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 21, 48, 26, 11 
-	CONTROL "4X", IDC_CONFIG_AA4, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 63, 38, 28, 11 
-	CONTROL "8X", IDC_CONFIG_AA8, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 63, 48, 26, 11 
-	CONTROL "16X", IDC_CONFIG_AA16, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 100, 42, 28, 11 
-	CONTROL "Wireframe rendering (F7)", IDC_CONFIG_WIREFRAME, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 183, 96, 10 
-	CONTROL "Capture Avi (zerogs.avi) (F12)", IDC_CONFIG_CAPTUREAVI, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 194, 109, 10 
-	CONTROL "Save Snapshots as BMP(default is JPG)", IDC_CONFIG_BMPSS, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 205, 141, 10 
-	CONTROL "Fullscreen (Alt+Enter),to get out press Alt+Enter again", IDC_CONFIG_FULLSCREEN, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 150, 135, 18 
-	CONTROL "Wide Screen", IDC_CONFIG_WIDESCREEN, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 167, 109, 10 
-	CONTROL "640 x 480", IDC_CONF_WIN640, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE | WS_GROUP, 17, 123, 59, 8 
-	CONTROL "800 x 600", IDC_CONF_WIN800, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 17, 135, 59, 8 
-	CONTROL "1024 x 768", IDC_CONF_WIN1024, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 82, 123, 59, 8 
-	CONTROL "1280 x 960", IDC_CONF_WIN1280, BUTTON, BS_AUTORADIOBUTTON | WS_CHILD | WS_VISIBLE, 82, 135, 53, 8 
-	CONTROL "Anti-aliasing for sharper graphics (F6)", IDC_STATIC, BUTTON, BS_GROUPBOX | WS_CHILD | WS_VISIBLE, 5, 21, 137, 41 
-	CONTROL "Default Window Size (no speed impact)", IDC_STATIC, BUTTON, BS_GROUPBOX | WS_CHILD | WS_VISIBLE, 6, 111, 137, 39 
-	CONTROL "Show Frames Per Second (Shift+F7)", IDC_STATIC, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 15, 219, 118, 20 
-
-	CONTROL "shortcuts: F6 - next, Shift+F6 - prev", IDC_STATIC, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 13, 28, 123, 11 
-
-	CONTROL "Advanced Options", IDC_STATIC, BUTTON, BS_GROUPBOX | WS_CHILD | WS_VISIBLE, 150, 0, 375, 272
-	CONTROL "Each option is presented with a unique ID in hex.", IDC_STATIC, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 155, 10, 365, 8 
-	CONTROL "Note, setting options here means that they will be ADDED to whatever options are set automatically.", IDC_STATIC, STATIC, SS_LEFT | WS_CHILD | WS_VISIBLE | WS_GROUP, 155, 20, 365, 8 
-	
-	CONTROL "Enable Multiple RTS - 00100000", IDC_CONFOPT_00100000, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 30, 365, 8 
-	CONTROL "Disable alpha testing - 00080000", IDC_CONFOPT_00080000, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 40, 365, 8 
-	CONTROL "Disable stencil buffer - 00002000, Usually safe to do for simple scenes. Harvest Moon", IDC_CONFOPT_00002000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 50, 365, 8 
-	CONTROL "No color clamping - 00000040, Speeds games up but might be too bright or too dim", IDC_CONFOPT_00000040, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 60, 365, 8 
-	CONTROL "Disable depth updates - 00000200", IDC_CONFOPT_00000200, BUTTON, BS_AUTOCHECKBOX | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 70, 365, 8 
-	CONTROL "No target CLUT - 00001000, Use on RE4, or foggy scenes.", IDC_CONFOPT_00001000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 80, 365, 8 
-	CONTROL "Alpha Fail hack - 00000100, Remove vertical stripes, coloring artefacts. (Sonic Unleashed, Shadow the Hedgehog, Ghost in the Shell)", IDC_CONFOPT_00000100, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 90, 365, 16 
-	CONTROL "Exact color testing - 00000020, Fixes overbright or shadow/black artifacts (crash n burn)", IDC_CONFOPT_00000020, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 110, 365, 8 
-	CONTROL "Tex Target checking - 00000001, Lego racers", IDC_CONFOPT_00000001, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 120, 365, 8 
-	CONTROL "Interlace 2X - 00000004, Fixes 2x bigger screen (Gradius 3)", IDC_CONFOPT_00000004, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 130, 365, 8 
-	CONTROL "Resolve Hack #2 - 00000800, Shadow Hearts, Urbz, (Destroys FFX)", IDC_CONFOPT_00000800, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 140, 365, 8 
-	CONTROL "Fast Update - 00040000, Speeds some games - (Okami, Sonic Unleashed)", 10IDC_CONFOPT_00040000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 150, 365, 8 
-	CONTROL "Partial Depth - 04000000, Tries to save the depth target as much as possible (mgs3)", IDC_CONFOPT_04000000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 160, 365, 8 
-	CONTROL "No target resolves - 00000010, Stops target resolving(try this first for very slow games). (Dark Cloud 1)", IDC_CONFOPT_00000010, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 170, 365, 8 
-	CONTROL "No logarithmic-Z - 20000000, Decreases number of Z artefacts", IDC_CONFOPT_20000000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 180, 365, 8 
-	CONTROL "No depth resolve - 00008000, Might give z buffer artifacts", IDC_CONFOPT_00008000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 190, 365, 8 
-	CONTROL "Auto Reset Targs - 00000002, Use when game is slow and toggling AA fixes it (SH, samurai warriors)", IDC_CONFOPT_00000002, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 200, 365, 8 
-	CONTROL "Full 16 bit resolution - 00010000, Use when half the screen is missing, etc", IDC_CONFOPT_00010000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 210, 365, 8 
-	CONTROL "Resolve Hack #1 - 00000400, Speeds some games (Kingdom Hearts)", IDC_CONFOPT_00000400, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 220, 365, 8 
-	CONTROL "Partial Targets - 02000000, Reduces artifacts and speeds up some games (mgs3)", IDC_CONFOPT_02000000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 230, 365, 8 
-	CONTROL "Resolve Hack #3 - 00020000, Neopets", IDC_CONFOPT_00020000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 240, 365, 8 
-	CONTROL "Specular Highlights - 01000000, Makes xenosaga and Okage graphics faster by removing highlights.", IDC_CONFOPT_01000000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 250, 365, 8 
-	CONTROL "Gust fix - 10000000, Makes gust games cleaner and faster.", IDC_CONFOPT_10000000, BUTTON, BS_AUTOCHECKBOX | BS_MULTILINE | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 155, 260, 365, 8 
-
-	CONTROL "OK", IDOK, BUTTON, BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 5, 275, 50, 12 
-	CONTROL "Cancel", IDCANCEL, BUTTON, BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 92, 275, 50, 12 
-	CONTROL "Use Defaults (recommended)", IDC_CONF_DEFAULT, BUTTON, BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 171, 275, 151, 12 
-	CONTROL "", IDC_CONFOPT_IDS, EDIT, ES_LEFT | ES_AUTOHSCROLL | ES_READONLY | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, 451, 275, 48, 12 
-	CONTROL "Compute OR of IDS", IDC_CONFOPT_COMPUTEOR, BUTTON, BS_PUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 373, 275, 73, 12 
-}
+FONT 8, "Tahoma", 0, 0, 0x1
+BEGIN
+    CONTROL         "Logging (For Debugging)",1000,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,6,102,10
+    CONTROL         "Interlace Enable (toggle with F5). There are 2 modes + interlace off",IDC_CONFIG_INTERLACE,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,5,64,137,18
+    CONTROL         "Bilinear Filtering (Shift+F5). Best quality is on, turn off for speed.",IDC_CONFIG_BILINEAR,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,5,81,137,18
+    CONTROL         "None",IDC_CONFIG_AANONE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,21,38,34,11
+    CONTROL         "2X",IDC_CONFIG_AA2,"Button",BS_AUTORADIOBUTTON,21,48,26,11
+    CONTROL         "4X",IDC_CONFIG_AA4,"Button",BS_AUTORADIOBUTTON,63,38,28,11
+    CONTROL         "8X",IDC_CONFIG_AA8,"Button",BS_AUTORADIOBUTTON,63,48,26,11
+    CONTROL         "16X",IDC_CONFIG_AA16,"Button",BS_AUTORADIOBUTTON,100,42,28,11
+    CONTROL         "Wireframe rendering (F7)",IDC_CONFIG_WIREFRAME,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,183,96,10
+    CONTROL         "Capture Avi (zerogs.avi) (F12)",IDC_CONFIG_CAPTUREAVI,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,194,109,10
+    CONTROL         "Save Snapshots as BMP(default is JPG)",IDC_CONFIG_BMPSS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,205,141,10
+    CONTROL         "Fullscreen (Alt+Enter),to get out press Alt+Enter again",IDC_CONFIG_FULLSCREEN,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,5,150,135,18
+    CONTROL         "Wide Screen",IDC_CONFIG_WIDESCREEN,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,5,167,109,10
+    CONTROL         "640 x 480",IDC_CONF_WIN640,"Button",BS_AUTORADIOBUTTON | WS_GROUP,17,123,59,8
+    CONTROL         "800 x 600",IDC_CONF_WIN800,"Button",BS_AUTORADIOBUTTON,17,135,59,8
+    CONTROL         "1024 x 768",IDC_CONF_WIN1024,"Button",BS_AUTORADIOBUTTON,82,123,59,8
+    CONTROL         "1280 x 960",IDC_CONF_WIN1280,"Button",BS_AUTORADIOBUTTON,82,135,53,8
+    GROUPBOX        "Anti-aliasing for sharper graphics (F6)",IDC_STATIC,5,21,137,41
+    GROUPBOX        "Default Window Size (no speed impact)",IDC_STATIC,6,111,137,39
+    LTEXT           "Show Frames Per Second (Shift+F7)",IDC_STATIC,15,219,118,20
+    LTEXT           "shortcuts: F6 - next, Shift+F6 - prev",IDC_STATIC,13,28,123,11
+    GROUPBOX        "Advanced Options",IDC_STATIC,150,0,375,272
+    LTEXT           "Each option is presented with a unique ID in hex.",IDC_STATIC,155,10,365,8
+    LTEXT           "Note, setting options here means that they will be ADDED to whatever options are set automatically.",IDC_STATIC,155,20,365,8
+    CONTROL         "Enable Multiple RTS - 00100000",IDC_CONFOPT_00100000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,155,30,365,8
+    CONTROL         "Disable alpha testing - 00080000",IDC_CONFOPT_00080000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,155,40,365,8
+    CONTROL         "Disable stencil buffer - 00002000, Usually safe to do for simple scenes. Harvest Moon",IDC_CONFOPT_00002000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,50,365,8
+    CONTROL         "No color clamping - 00000040, Speeds games up but might be too bright or too dim",IDC_CONFOPT_00000040,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,60,365,8
+    CONTROL         "Disable depth updates - 00000200",IDC_CONFOPT_00000200,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,155,70,365,8
+    CONTROL         "No target CLUT - 00001000, Use on RE4, or foggy scenes.",IDC_CONFOPT_00001000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,80,365,8
+    CONTROL         "Alpha Fail hack - 00000100, Remove vertical stripes, coloring artefacts. (Sonic Unleashed, Shadow the Hedgehog, Ghost in the Shell)",IDC_CONFOPT_00000100,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,90,365,16
+    CONTROL         "Exact color testing - 00000020, Fixes overbright or shadow/black artifacts (crash n burn)",IDC_CONFOPT_00000020,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,110,365,8
+    CONTROL         "Tex Target checking - 00000001, Lego racers",IDC_CONFOPT_00000001,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,120,365,8
+    CONTROL         "Interlace 2X - 00000004, Fixes 2x bigger screen (Gradius 3)",IDC_CONFOPT_00000004,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,130,365,8
+    CONTROL         "Resolve Hack #2 - 00000800, Shadow Hearts, Urbz, (Destroys FFX)",IDC_CONFOPT_00000800,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,140,365,8
+    CONTROL         "Fast Update - 00040000, Speeds some games - (Okami, Sonic Unleashed)",35527,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,150,365,8
+    CONTROL         "Partial Depth - 04000000, Tries to save the depth target as much as possible (mgs3)",IDC_CONFOPT_04000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,160,365,8
+    CONTROL         "No target resolves - 00000010, Stops target resolving(try this first for very slow games). (Dark Cloud 1)",IDC_CONFOPT_00000010,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,170,365,8
+    CONTROL         "No logarithmic-Z - 20000000, Decreases number of Z artefacts",IDC_CONFOPT_20000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,180,365,8
+    CONTROL         "No depth resolve - 00008000, Might give z buffer artifacts",IDC_CONFOPT_00008000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,190,365,8
+    CONTROL         "Auto Reset Targs - 00000002, Use when game is slow and toggling AA fixes it (SH, samurai warriors)",IDC_CONFOPT_00000002,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,200,365,8
+    CONTROL         "Full 16 bit resolution - 00010000, Use when half the screen is missing, etc",IDC_CONFOPT_00010000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,210,365,8
+    CONTROL         "Resolve Hack #1 - 00000400, Speeds some games (Kingdom Hearts)",IDC_CONFOPT_00000400,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,220,365,8
+    CONTROL         "Partial Targets - 02000000, Reduces artifacts and speeds up some games (mgs3)",IDC_CONFOPT_02000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,230,365,8
+    CONTROL         "Resolve Hack #3 - 00020000, Neopets",IDC_CONFOPT_00020000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,240,365,8
+    CONTROL         "Specular Highlights - 01000000, Makes xenosaga and Okage graphics faster by removing highlights.",IDC_CONFOPT_01000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,250,365,8
+    CONTROL         "Gust fix - 10000000, Makes gust games cleaner and faster.",IDC_CONFOPT_10000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,155,260,365,8
+    DEFPUSHBUTTON   "OK",IDOK,5,275,50,12
+    PUSHBUTTON      "Cancel",IDCANCEL,92,275,50,12
+    PUSHBUTTON      "Use Defaults (recommended)",IDC_CONF_DEFAULT,171,275,151,12
+    EDITTEXT        IDC_CONFOPT_IDS,451,275,48,12,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "Compute OR of IDS",IDC_CONFOPT_COMPUTEOR,373,275,73,12
+END
 
 IDD_ABOUT DIALOGEX 0, 0, 182, 220
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "GSabout"
-FONT 8, "MS Sans Serif"
-{
-	DEFPUSHBUTTON   "OK",IDOK,65,199,50,14
-	LTEXT           "ZZogl\n\nauthor: Zeydlitz(@gmail.com)\n\n\nthanks to Gabest for SSE optimizations",IDC_STATIC,7,7,160,47
-	LTEXT           "Static",IDC_ABOUTTEXT,7,65,152,124
-}
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,65,199,50,14
+    LTEXT           "ZZogl\n\nauthor: Zeydlitz(@gmail.com)\n\n\nthanks to Gabest for SSE optimizations",IDC_STATIC,7,7,160,47
+    LTEXT           "Static",IDC_ABOUTTEXT,7,65,152,124
+END
 
 IDD_LOGGING DIALOG  0, 0, 152, 55
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Dialog"
 FONT 8, "MS Sans Serif"
-{
+BEGIN
     DEFPUSHBUTTON   "OK",IDOK,40,35,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,95,35,50,14
     CONTROL         "Log",IDC_LOG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,60,15,28,10
-}
+END
+
+IDD_ADV_OPTIONS DIALOGEX 0, 0, 391, 308
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Advanced Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,279,287,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,333,287,50,14
+    GROUPBOX        "Advanced Options",IDC_STATIC,7,6,376,276
+    LTEXT           "Each option is presented with a unique ID in hex.",IDC_STATIC,14,15,365,8
+    LTEXT           "Note, setting options here means that they will be ADDED to whatever options are set automatically.",IDC_STATIC,14,25,365,8
+    CONTROL         "Enable Multiple RTS - 00100000",IDC_CONFOPT_00100000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,36,365,8
+    CONTROL         "Disable alpha testing - 00080000",IDC_CONFOPT_00080000,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,46,365,8
+    CONTROL         "Disable stencil buffer - 00002000, Usually safe to do for simple scenes. Harvest Moon",IDC_CONFOPT_00002000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,56,365,8
+    CONTROL         "No color clamping - 00000040, Speeds games up but might be too bright or too dim",IDC_CONFOPT_00000040,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,66,365,8
+    CONTROL         "Disable depth updates - 00000200",IDC_CONFOPT_00000200,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,76,365,8
+    CONTROL         "No target CLUT - 00001000, Use on RE4, or foggy scenes.",IDC_CONFOPT_00001000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,86,365,8
+    CONTROL         "Alpha Fail hack - 00000100, Remove vertical stripes, coloring artefacts. (Sonic Unleashed, Shadow the Hedgehog, Ghost in the Shell)",IDC_CONFOPT_00000100,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,96,365,16
+    CONTROL         "Exact color testing - 00000020, Fixes overbright or shadow/black artifacts (crash n burn)",IDC_CONFOPT_00000020,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,116,365,8
+    CONTROL         "Tex Target checking - 00000001, Lego racers",IDC_CONFOPT_00000001,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,126,365,8
+    CONTROL         "Interlace 2X - 00000004, Fixes 2x bigger screen (Gradius 3)",IDC_CONFOPT_00000004,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,136,365,8
+    CONTROL         "Resolve Hack #2 - 00000800, Shadow Hearts, Urbz, (Destroys FFX)",IDC_CONFOPT_00000800,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,146,365,8
+    CONTROL         "Fast Update - 00040000, Speeds some games - (Okami, Sonic Unleashed)",35527,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,156,365,8
+    CONTROL         "Partial Depth - 04000000, Tries to save the depth target as much as possible (mgs3)",IDC_CONFOPT_04000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,166,365,8
+    CONTROL         "No target resolves - 00000010, Stops target resolving(try this first for very slow games). (Dark Cloud 1)",IDC_CONFOPT_00000010,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,176,365,8
+    CONTROL         "No logarithmic-Z - 20000000, Decreases number of Z artefacts",IDC_CONFOPT_20000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,186,365,8
+    CONTROL         "No depth resolve - 00008000, Might give z buffer artifacts",IDC_CONFOPT_00008000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,196,365,8
+    CONTROL         "Auto Reset Targs - 00000002, Use when game is slow and toggling AA fixes it (SH, samurai warriors)",IDC_CONFOPT_00000002,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,206,365,8
+    CONTROL         "Full 16 bit resolution - 00010000, Use when half the screen is missing, etc",IDC_CONFOPT_00010000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,216,365,8
+    CONTROL         "Resolve Hack #1 - 00000400, Speeds some games (Kingdom Hearts)",IDC_CONFOPT_00000400,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,226,365,8
+    CONTROL         "Partial Targets - 02000000, Reduces artifacts and speeds up some games (mgs3)",IDC_CONFOPT_02000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,236,365,8
+    CONTROL         "Resolve Hack #3 - 00020000, Neopets",IDC_CONFOPT_00020000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,246,365,8
+    CONTROL         "Specular Highlights - 01000000, Makes xenosaga and Okage graphics faster by removing highlights.",IDC_CONFOPT_01000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,256,365,8
+    CONTROL         "Gust fix - 10000000, Makes gust games cleaner and faster.",IDC_CONFOPT_10000000,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,266,365,8
+END
+
+IDD_CONFIG2 DIALOGEX 0, 0, 171, 217
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ZZOgl Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,55,192,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,108,192,50,14
+    GROUPBOX        "Static",IDC_STATIC,7,7,152,183
+    CONTROL         "Logging (For Debugging)",1000,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,18,102,10
+    CONTROL         "Interlace Enable (toggle with F5). There are 2 modes + interlace off",IDC_CONFIG_INTERLACE,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,45,137,18
+    CONTROL         "Bilinear Filtering (Shift+F5). Best quality is on, turn off for speed.",IDC_CONFIG_BILINEAR,
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,67,137,18
+    CONTROL         "Capture Avi (zerogs.avi) (F12)",IDC_CONFIG_CAPTUREAVI,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,103,109,10
+    CONTROL         "Save Snapshots as BMP(default is JPG)",IDC_CONFIG_BMPSS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,116,141,10
+    CONTROL         "Wide Screen",IDC_CONFIG_WIDESCREEN,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,90,109,10
+    CONTROL         "640 x 480",IDC_CONF_WIN640,"Button",BS_AUTORADIOBUTTON | WS_GROUP,20,140,59,8
+    CONTROL         "800 x 600",IDC_CONF_WIN800,"Button",BS_AUTORADIOBUTTON,21,152,59,8
+    CONTROL         "1024 x 768",IDC_CONF_WIN1024,"Button",BS_AUTORADIOBUTTON,86,140,59,8
+    CONTROL         "1280 x 960",IDC_CONF_WIN1280,"Button",BS_AUTORADIOBUTTON,86,151,53,8
+    GROUPBOX        "Default Window Size (no speed impact)",IDC_STATIC,14,129,137,39
+    COMBOBOX        IDC_COMBO1,59,31,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Anti-aliasing",IDC_STATIC,15,33,43,13
+    PUSHBUTTON      "Advanced...",IDC_BUTTON1,17,170,134,14
+END
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -137,7 +248,6 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 420
         TOPMARGIN, 7
-        BOTTOMMARGIN, 394
     END
 
     IDD_ABOUT, DIALOG
@@ -154,6 +264,22 @@ BEGIN
         RIGHTMARGIN, 145
         TOPMARGIN, 7
         BOTTOMMARGIN, 48
+    END
+
+    IDD_ADV_OPTIONS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 389
+        TOPMARGIN, 6
+        BOTTOMMARGIN, 301
+    END
+
+    IDD_CONFIG2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 164
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 210
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -184,6 +310,27 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_CONFIG2 DLGINIT
+BEGIN
+    IDC_COMBO1, 0x403, 5, 0
+0x6f4e, 0x656e, "\000" 
+    IDC_COMBO1, 0x403, 3, 0
+0x5832, "\000" 
+    IDC_COMBO1, 0x403, 3, 0
+0x5834, "\000" 
+    IDC_COMBO1, 0x403, 3, 0
+0x5838, "\000" 
+    IDC_COMBO1, 0x403, 4, 0
+0x3631, 0x0058, 
+    0
+END
 
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////

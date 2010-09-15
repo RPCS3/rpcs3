@@ -68,7 +68,7 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 			zerofill._u32[(mem >> 2) & 0x03] = value;
 
 			DevCon.WriteLn( Color_Cyan, "Writing 32-bit FIFO data (zero-extended to 128 bits)" );
-			_hwWrite128<page>(mem, &zerofill);
+			_hwWrite128<page>(mem & ~0x0f, &zerofill);
 		}
 		return;
 
@@ -301,7 +301,7 @@ void __fastcall _hwWrite64( u32 mem, const mem64_t* srcval )
 
 			u128 zerofill = u128::From32(0);
 			zerofill._u64[(mem >> 3) & 0x01] = *srcval;
-			hwWrite128<page>(mem, &zerofill);
+			hwWrite128<page>(mem & ~0x0f, &zerofill);
 		}
 		return;
 		

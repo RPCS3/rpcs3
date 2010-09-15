@@ -21,8 +21,8 @@
 #include "GS.h"
 #include "Gif.h"
 
-vifStruct  vif0;
-vifStruct  vif1;
+__aligned16 vifStruct  vif0, vif1;
+
 tGSTransferStatus GSTransferStatus((STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE);
 
 void vif0Reset()
@@ -30,14 +30,6 @@ void vif0Reset()
 	/* Reset the whole VIF, meaning the internal pcsx2 vars and all the registers */
 	memzero(vif0);
 	memzero(vif0Regs);
-
-	psHu64(VIF0_FIFO) = 0;
-	psHu64(VIF0_FIFO + 8) = 0;
-
-	vif0Regs.stat.VPS = VPS_IDLE;
-	vif0Regs.stat.FQC = 0;
-
-	vif0.done = false;
 
 	resetNewVif(0);
 }
@@ -48,15 +40,6 @@ void vif1Reset()
 	memzero(vif1);
 	memzero(vif1Regs);
 
-	psHu64(VIF1_FIFO) = 0;
-	psHu64(VIF1_FIFO + 8) = 0;
-
-	vif1Regs.stat.VPS = VPS_IDLE;
-	vif1Regs.stat.FQC = 0; // FQC=0
-
-	vif1.done = false;
-	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-
 	resetNewVif(1);
 }
 
@@ -64,7 +47,6 @@ void SaveStateBase::vif0Freeze()
 {
 	FreezeTag("VIFdma");
 	Freeze(g_vifCycles); // Dunno if this one is needed, but whatever, it's small. :)
-	Freeze(g_vifmask);	 // mask settings for VIF0 and VIF1
 	Freeze(vif0);
 
 	Freeze(nVif[0].bSize);
@@ -153,6 +135,7 @@ __fi void vif1FBRST(u32 value) {
 	if (FBRST(value).RST) // Reset Vif.
 	{
 		memzero(vif1);
+
 		//cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 		vif1ch.qwc -= min((int)vif1ch.qwc, 16); //?
 		psHu64(VIF1_FIFO) = 0;
@@ -277,9 +260,29 @@ __fi void vif1STAT(u32 value) {
 
 #define caseVif(x) (idx ? VIF1_##x : VIF0_##x)
 
+_vifT __fi u32 vifRead32(u32 mem) {
+	vifStruct& vif = GetVifX;
+
+	switch (mem) {
+		case caseVif(ROW0): return vif.MaskRow._u32[0];
+		case caseVif(ROW1): return vif.MaskRow._u32[1];
+		case caseVif(ROW2): return vif.MaskRow._u32[2];
+		case caseVif(ROW3): return vif.MaskRow._u32[3];
+
+		case caseVif(COL0): return vif.MaskCol._u32[0];
+		case caseVif(COL1): return vif.MaskCol._u32[1];
+		case caseVif(COL2): return vif.MaskCol._u32[2];
+		case caseVif(COL3): return vif.MaskCol._u32[3];
+	}
+	
+	return psHu32(mem);
+}
+
 // returns FALSE if no writeback is needed (or writeback is handled internally)
 // returns TRUE if the caller should writeback the value to the eeHw register map.
 _vifT __fi bool vifWrite32(u32 mem, u32 value) {
+	vifStruct& vif = GetVifX;
+
 	switch (mem) {
 		case caseVif(MARK):
 			VIF_LOG("VIF%d_MARK write32 0x%8.8x", idx, value);
@@ -303,33 +306,23 @@ _vifT __fi bool vifWrite32(u32 mem, u32 value) {
 			// standard register writes -- handled by caller.
 		break;
 
-		case caseVif(ROW0):
-		case caseVif(ROW1):
-		case caseVif(ROW2):
-		case caseVif(ROW3):
-			// Here's a neat way to obfuscate code.  This is a super-fancy-complicated version
-			// of a standard psHu32(mem) = value; writeback.  Handled by caller for us, thanks! --air
-			//if (!idx) g_vifmask.Row0[ (mem>>4)&3 ]   = value;
-			//else	  g_vifmask.Row1[ (mem>>4)&3 ]   = value;
-			//((u32*)&vifXRegs.r0)   [((mem>>4)&3)*4] = value;
-		break;
+		case caseVif(ROW0): vif.MaskRow._u32[0] = value; return false;
+		case caseVif(ROW1): vif.MaskRow._u32[1] = value; return false;
+		case caseVif(ROW2): vif.MaskRow._u32[2] = value; return false;
+		case caseVif(ROW3): vif.MaskRow._u32[3] = value; return false;
 
-		case caseVif(COL0):
-		case caseVif(COL1):
-		case caseVif(COL2):
-		case caseVif(COL3):
-			// Here's a neat way to obfuscate code.  This is a super-fancy-complicated version
-			// of a standard psHu32(mem) = value; writeback.  Handled by caller for us, thanks! --air
-			//if (!idx) g_vifmask.Col0[ (mem>>4)&3 ]   = value;
-			//else	  g_vifmask.Col1[ (mem>>4)&3 ]   = value;
-			//((u32*)&vifXRegs.c0)   [((mem>>4)&3)*4] = value;
-		break;
+		case caseVif(COL0): vif.MaskCol._u32[0] = value; return false;
+		case caseVif(COL1): vif.MaskCol._u32[1] = value; return false;
+		case caseVif(COL2): vif.MaskCol._u32[2] = value; return false;
+		case caseVif(COL3): vif.MaskCol._u32[3] = value; return false;
 	}
 
 	// fall-through case: issue standard writeback behavior.
 	return true;
 }
 
+template u32 vifRead32<0>(u32 mem);
+template u32 vifRead32<1>(u32 mem);
 
 template bool vifWrite32<0>(u32 mem, u32 value);
 template bool vifWrite32<1>(u32 mem, u32 value);

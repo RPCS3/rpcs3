@@ -58,10 +58,15 @@ enum GIF_REG
 // are modified during the GIFtag unpacking process.
 struct GIFTAG
 {
-	u32 NLOOP	: 15;
-	u32 EOP		: 1;
-	u32 _dummy0	: 16;
+	u16 NLOOP	: 15;
+	u16 EOP		: 1;
+
+	// Note that contents of the Dummy bits on real hardware is likely used to maintain state
+	// information regarding tag processing (namely nllop and curreg info, so to resume partial
+	// transfers later).
+	u16 _dummy0	: 16;
 	u32 _dummy1	: 14;
+
 	u32 PRE		: 1;
 	u32 PRIM	: 11;
 	u32 FLG		: 2;

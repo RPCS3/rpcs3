@@ -34,21 +34,16 @@ bool IsLogging()
 	return (gsLog != NULL && conf.log);
 }
 
-bool Open() 
+void Open() 
 {
-    bool result = true;
     const std::string LogFile(s_strLogPath + "GSzzogl.log");
 
     gsLog = fopen(LogFile.c_str(), "w");
     if (gsLog != NULL)
         setvbuf(gsLog, NULL,  _IONBF, 0);
     else 
-    {
         SysMessage("Can't create log file %s\n", LogFile.c_str());
-        result = false;
-    }
 
-    return result;
 }
 
 void Close()
@@ -64,9 +59,11 @@ void SetDir(const char* dir)
 	// Get the path to the log directory.
 	s_strLogPath = (dir==NULL) ? "logs/" : dir;
 
-	// Reload the log file after updated the path
-    Close();
-	Open();
+	// Reload previously open log file
+    if (gsLog) {
+        Close();
+        Open();
+    }
 }
 
 void WriteToScreen(const char* pstr, u32 ms)
@@ -167,9 +164,11 @@ void Greg_Log(const char *fmt, ...)
 
 	va_start(list, fmt);
 
-	fprintf(gsLog, "GRegs: ");
+	if (IsLogging()) {
+        fprintf(gsLog, "GRegs: ");
+        vfprintf(gsLog, fmt, list);
+    }
 	//fprintf(stderr,"GRegs: ");
-	if (IsLogging()) vfprintf(gsLog, fmt, list);
 	//vfprintf(stderr, fmt, list);
 
 	va_end(list);

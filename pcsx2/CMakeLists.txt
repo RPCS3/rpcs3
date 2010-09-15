@@ -14,6 +14,7 @@ set(CommonFlags
 	-fno-dse
 	-fno-tree-dse
 	-fno-strict-aliasing
+    -Wstrict-aliasing # Allow to track strict aliasing issue.
 	-pipe
 	-Wno-format
 	-Wno-unused-parameter
@@ -225,7 +226,6 @@ set(pcsx2Headers
 	Vif_Dma.h
 	Vif.h
 	Vif_Unpack.h
-	Vif_Unpack.inl
 	vtlb.h
 	VUflags.h
 	VUmicro.h
