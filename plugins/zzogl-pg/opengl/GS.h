@@ -542,7 +542,9 @@ typedef struct
 
 extern GSinternal gs;
 
-static __forceinline u16 RGBA32to16(u32 c)
+// Note the function is used in a template parameter so it must be declared extern
+// Note2: In this case extern is not compatible with __forceinline so just inline it...
+extern inline u16 RGBA32to16(u32 c)
 {
 	return (u16)((((c) & 0x000000f8) >>  3) |
 				 (((c) & 0x0000f800) >>  6) |

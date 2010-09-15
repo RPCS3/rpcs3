@@ -2928,14 +2928,6 @@ void FlushTransferRanges(const tex0Info* ptex)
 template <typename T, typename Tret>
 inline Tret dummy_return(T value) { return value; }
 
-inline u16 RGBA32to16(u32 c)
-{
-	return (u16)((((c) & 0x000000f8) >>  3) |
-				 (((c) & 0x0000f800) >>  6) |
-				 (((c) & 0x00f80000) >>  9) |
-				 (((c) & 0x80000000) >> 16));
-}
-
 template <typename T, typename Tsrc, T (*convfn)(Tsrc)>
 inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
 {
