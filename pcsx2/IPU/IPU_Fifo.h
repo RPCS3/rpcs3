@@ -37,13 +37,10 @@ struct IPU_Fifo_Output
 	int readpos, writepos;
 
 	// returns number of qw read
-	int write(const u32 * value, int size);
-	void read(void *value,int size);
-	void readsingle(void *value);
+	int write(const u32 * value, uint size);
+	void read(void *value, uint size);
 	void clear();
 	wxString desc() const;
-
-	void _readsingle(void *value);
 };
 
 struct IPU_Fifo

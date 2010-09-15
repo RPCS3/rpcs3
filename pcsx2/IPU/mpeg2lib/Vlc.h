@@ -36,22 +36,21 @@
 
 static __fi int GETWORD()
 {
-	static u8 data[2];
+	if (decoder.bitstream_bits <= 0) return 1;
 
-	if (decoder.bitstream_bits > 0)
+	static u8 data[2];
+	
+	if(!getBits16(data,1))
 	{
-		if(!getBits16(data,1))
-		{
-			return 0;
-		}
-		
-		/*u32 data;
-		BigEndian(data, *(u32*)word);
-		decoder.bitstream_buf |=  (u64)data << decoder.bitstream_bits;
-		decoder.bitstream_bits -= 32;*/
-		decoder.bitstream_buf |= (((u32)data[0] << 8) | data[1]) << decoder.bitstream_bits;
-		decoder.bitstream_bits -= 16;
+		return 0;
 	}
+	
+	/*u32 data;
+	BigEndian(data, *(u32*)word);
+	decoder.bitstream_buf |=  (u64)data << decoder.bitstream_bits;
+	decoder.bitstream_bits -= 32;*/
+	decoder.bitstream_buf |= (((u32)data[0] << 8) | data[1]) << decoder.bitstream_bits;
+	decoder.bitstream_bits -= 16;
 
 	return 1;
 }

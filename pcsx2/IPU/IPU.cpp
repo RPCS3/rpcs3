@@ -924,11 +924,11 @@ __fi u8 __fastcall getBits16(u8 *address, u32 advance)
 		mask = mask | (mask << 8);
 
 		*(u16*)address = ((~mask & *(u16*)(readpos + 1)) >> (8 - shift)) | (((mask) & *(u16*)readpos) << shift);
-			}
+	}
 	else
 	{
 		*(u16*)address = *(u16*)readpos;
-			}
+	}
 
 	if (advance) g_BP.BP += 16;
 
@@ -947,14 +947,14 @@ u8 __fastcall getBits8(u8 *address, u32 advance)
 	readpos = readbits + (int)g_BP.BP / 8;
 
 	if (uint shift = (g_BP.BP & 7))
-			{
+	{
 		mask = (0xff >> shift);
 		*(u8*)address = (((~mask) & readpos[1]) >> (8 - shift)) | (((mask) & *readpos) << shift);
-			}
+	}
 	else
 	{
 		*(u8*)address = *(u8*)readpos;
-		}
+	}
 
 	if (advance) g_BP.BP += 8;
 

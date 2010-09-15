@@ -148,7 +148,7 @@ struct decoder_t {
 	macroblock_rgb32 rgb32;
 	macroblock_rgb16 rgb16;
 
-	uint ipu0_data;
+	uint ipu0_data;		// amount of data in the output macroblock (in QWC)
 	uint ipu0_idx;
 
 	/* bit parsing stuff */
@@ -230,7 +230,7 @@ struct decoder_t {
 		ipu0_data -= amt;
 	}
 	
-	bool ReadIpuData(u128* out);
+	__fi bool ReadIpuData(u128* out);
 };
 
 struct mpeg2_scan_pack

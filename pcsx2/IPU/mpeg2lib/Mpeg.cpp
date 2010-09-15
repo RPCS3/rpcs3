@@ -338,9 +338,6 @@ do {							\
 
 static __fi bool get_intra_block()
 {
-	int i;
-	int j;
-	int val;
 	const u8 * scan = decoder.scantype ? mpeg2_scan.alt : mpeg2_scan.norm;
 	const u8 (&quant_matrix)[64] = decoder.iq;
 	int quantizer_scale = decoder.quantizer_scale;
@@ -348,7 +345,7 @@ static __fi bool get_intra_block()
 	u16 code; 
 
 	/* decode AC coefficients */
-  for (i=1 + ipu_cmd.pos[4]; ; i++)
+  for (int i=1 + ipu_cmd.pos[4]; ; i++)
   {
 	  switch (ipu_cmd.pos[5])
 	  {
@@ -427,60 +424,64 @@ static __fi bool get_intra_block()
 			return true;
 		}
 		
-		i+= tab->run == 65 ? GETBITS(6) : tab->run;
+		i += (tab->run == 65) ? GETBITS(6) : tab->run;
 		if (i >= 64)
 		{
 			ipu_cmd.pos[4] = 0;
 			return true;
 		}
+
 	  case 1:
-		if (!GETWORD())
-		{
-		  ipu_cmd.pos[4] = i - 1;
-		  ipu_cmd.pos[5] = 1;
-		  return false;
+	  {
+			if (!GETWORD())
+			{
+				ipu_cmd.pos[4] = i - 1;
+				ipu_cmd.pos[5] = 1;
+				return false;
+			}
+
+			uint j = scan[i];
+			int val;
+
+			if (tab->run==65) /* escape */
+			{
+				if(!decoder.mpeg1)
+				{
+				  val = (SBITS(12) * quantizer_scale * quant_matrix[i]) >> 4;
+				  DUMPBITS(12);
+				}
+				else
+				{
+				  val = SBITS(8);
+				  DUMPBITS(8);
+
+				  if (!(val & 0x7f))
+				  {
+					val = GETBITS(8) + 2 * val;
+				  }
+
+				  val = (val * quantizer_scale * quant_matrix[i]) >> 4;
+				  val = (val + ~ (((s32)val) >> 31)) | 1;
+				}
+			}
+			else
+			{
+				val = (tab->level * quantizer_scale * quant_matrix[i]) >> 4;
+				if(decoder.mpeg1)
+				{
+					/* oddification */
+					val = (val - 1) | 1;
+				}
+
+				/* if (bitstream_get (1)) val = -val; */
+				val = (val ^ SBITS(1)) - SBITS(1);
+				DUMPBITS(1);
+			}
+
+			SATURATE(val);
+			dest[j] = val;
+			ipu_cmd.pos[5] = 0;
 		}
-
-		j = scan[i];
-
-		if (tab->run==65) /* escape */
-		{
-		  if(!decoder.mpeg1)
-		  {
-			  val = (SBITS(12) * quantizer_scale * quant_matrix[i]) >> 4;
-			  DUMPBITS(12);
-		  }
-		  else
-		  {
-			  val = SBITS(8);
-			  DUMPBITS(8);
-
-			  if (!(val & 0x7f))
-			  {
-				val = GETBITS(8) + 2 * val;
-			  }
-			
-			  val = (val * quantizer_scale * quant_matrix[i]) >> 4;
-			  val = (val + ~ (((s32)val) >> 31)) | 1;
-		  }
-		}
-		else
-		{
-		  val = (tab->level * quantizer_scale * quant_matrix[i]) >> 4;
-		  if(decoder.mpeg1)
-		  {
-			/* oddification */
-			val = (val - 1) | 1;
-		  }
-
- 		  /* if (bitstream_get (1)) val = -val; */
-		  val = (val ^ SBITS(1)) - SBITS(1);
-		  DUMPBITS(1);
-		}
-
-		SATURATE(val);
-		dest[j] = val;
-		ipu_cmd.pos[5] = 0;
 	 }
   }
 
@@ -798,6 +799,9 @@ bool mpeg2sliceIDEC()
 						ipu_cmd.pos[2] = 6;
 						return false;
 					}
+					break;
+
+				jNO_DEFAULT;
 				}
 
 				// Send The MacroBlock via DmaIpuFrom
@@ -812,23 +816,23 @@ bool mpeg2sliceIDEC()
 				}
 
 			case 2:
-				while (decoder.ipu0_data > 0)
-				{
-					uint read = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
+			{
+				pxAssume(decoder.ipu0_data > 0);
 
-					if (read == 0)
-					{
-						ipu_cmd.pos[1] = 2;
-						return false;
-					}
-					else
-					{
-						decoder.AdvanceIpuDataBy(read);
-					}
+				uint read = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
+				decoder.AdvanceIpuDataBy(read);
+
+				if (decoder.ipu0_data != 0)
+				{
+					// IPU FIFO filled up -- Will have to finish transferring later.
+					ipu_cmd.pos[1] = 2;
+					return false;
 				}
 
 				decoder.mbc++;
 				mbaCount = 0;
+			}
+			
 			case 3:
 				while (1)
 				{
@@ -886,6 +890,8 @@ bool mpeg2sliceIDEC()
 				}
 
 				break;
+
+			jNO_DEFAULT;
 			}
 
 			ipu_cmd.pos[1] = 0;
@@ -919,6 +925,8 @@ finish_idec:
 
 		BigEndian(ipuRegs.top, ipuRegs.top);
 		break;
+
+	jNO_DEFAULT;
 	}
 
 	return true;
@@ -1010,6 +1018,8 @@ bool mpeg2_slice()
 					return false;
 				}
 				break;
+
+			jNO_DEFAULT;
 			}
 
 			ipu_copy(mb8, mb16);
@@ -1077,6 +1087,8 @@ bool mpeg2_slice()
 						}
 					}
 					break;
+
+				jNO_DEFAULT;
 				}
 			}
 		}
@@ -1101,21 +1113,23 @@ bool mpeg2_slice()
 		decoder.SetOutputTo(mb16);
 
 	case 3:
-		while (decoder.ipu0_data > 0)
-		{
-			uint size = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
+	{
+		pxAssume(decoder.ipu0_data > 0);
 
-			if (size == 0)
-			{
-				ipu_cmd.pos[0] = 3;
-				return false;
-			}
-			else
-			{
-				decoder.AdvanceIpuDataBy(size);
-			}
+		uint read = ipu_fifo.out.write((u32*)decoder.GetIpuDataPtr(), decoder.ipu0_data);
+		decoder.AdvanceIpuDataBy(read);
+
+		if (decoder.ipu0_data != 0)
+		{
+			// IPU FIFO filled up -- Will have to finish transferring later.
+			ipu_cmd.pos[0] = 3;
+			return false;
 		}
 
+		decoder.mbc++;
+		mbaCount = 0;
+	}
+	
 	case 4:
 		bit8 = 1;
 		if (!getBits8((u8*)&bit8, 0))
