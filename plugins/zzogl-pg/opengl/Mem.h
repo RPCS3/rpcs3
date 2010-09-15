@@ -92,6 +92,29 @@ struct TransferFuncts
 extern TransferData tData[64];
 // rest not visible externally
 
+extern u32 g_blockTable32[4][8];
+extern u32 g_blockTable32Z[4][8];
+extern u32 g_blockTable16[8][4];
+extern u32 g_blockTable16S[8][4];
+extern u32 g_blockTable16Z[8][4];
+extern u32 g_blockTable16SZ[8][4];
+extern u32 g_blockTable8[4][8];
+extern u32 g_blockTable4[8][4];
+
+extern u32 g_columnTable32[8][8];
+extern u32 g_columnTable16[8][16];
+extern u32 g_columnTable8[16][16];
+extern u32 g_columnTable4[16][32];
+
+extern u32 g_pageTable32[32][64];
+extern u32 g_pageTable32Z[32][64];
+extern u32 g_pageTable16[64][64];
+extern u32 g_pageTable16S[64][64];
+extern u32 g_pageTable16Z[64][64];
+extern u32 g_pageTable16SZ[64][64];
+extern u32 g_pageTable8[64][128];
+extern u32 g_pageTable4[128][128];
+
 struct BLOCK
 {
 	BLOCK() { memset(this, 0, sizeof(BLOCK)); }
@@ -142,32 +165,60 @@ struct BLOCK
 		TransferHostLocal = TransferHostLocalFun[psm];
 		TransferLocalHost = TransferLocalHostFun[psm];
 	}
+
+    void SetTable(u32 psm)
+    {
+        switch (psm) {
+            case PSMCT32:
+                pageTable = &g_pageTable32[0][0];
+                blockTable = &g_blockTable32[0][0];
+                columnTable = &g_columnTable32[0][0];
+                break;
+            case PSMT32Z:
+                pageTable = &g_pageTable32Z[0][0];
+                blockTable = &g_blockTable32Z[0][0];
+                columnTable = &g_columnTable32[0][0];
+                break;
+            case PSMCT16:
+                pageTable = &g_pageTable16[0][0];
+                blockTable = &g_blockTable16[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMCT16S:
+                pageTable = &g_pageTable16S[0][0];
+                blockTable = &g_blockTable16S[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT16Z:
+                pageTable = &g_pageTable16Z[0][0];
+                blockTable = &g_blockTable16Z[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT16SZ:
+                pageTable = &g_pageTable16SZ[0][0];
+                blockTable = &g_blockTable16SZ[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT8:
+                pageTable = &g_pageTable8[0][0];
+                blockTable = &g_blockTable8[0][0];
+                columnTable = &g_columnTable8[0][0];
+                break;
+            case PSMT4:
+                pageTable = &g_pageTable4[0][0];
+                blockTable = &g_blockTable4[0][0];
+                columnTable = &g_columnTable4[0][0];
+                break;
+            default:
+                pageTable = NULL;
+                blockTable = NULL;
+                columnTable = NULL;
+                break;
+        }
+    }
 };
 
 extern BLOCK m_Blocks[];
-
-extern u32 g_blockTable32[4][8];
-extern u32 g_blockTable32Z[4][8];
-extern u32 g_blockTable16[8][4];
-extern u32 g_blockTable16S[8][4];
-extern u32 g_blockTable16Z[8][4];
-extern u32 g_blockTable16SZ[8][4];
-extern u32 g_blockTable8[4][8];
-extern u32 g_blockTable4[8][4];
-
-extern u32 g_columnTable32[8][8];
-extern u32 g_columnTable16[8][16];
-extern u32 g_columnTable8[16][16];
-extern u32 g_columnTable4[16][32];
-
-extern u32 g_pageTable32[32][64];
-extern u32 g_pageTable32Z[32][64];
-extern u32 g_pageTable16[64][64];
-extern u32 g_pageTable16S[64][64];
-extern u32 g_pageTable16Z[64][64];
-extern u32 g_pageTable16SZ[64][64];
-extern u32 g_pageTable8[64][128];
-extern u32 g_pageTable4[128][128];
 
 static __forceinline u32 getPixelAddress32(int x, int y, u32 bp, u32 bw)
 {
