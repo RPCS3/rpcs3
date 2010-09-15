@@ -26,6 +26,39 @@
 
 // ----------------- Defines
 
+#define TEXWRAP_REPEAT 0
+#define TEXWRAP_CLAMP 1
+#define TEXWRAP_REGION_REPEAT 2
+#define TEXWRAP_REPEAT_CLAMP 3
+
+#define SH_WRITEDEPTH 0x2000 // depth is written
+#define SH_CONTEXT1 0x1000 // context1 is used
+
+#define SH_REGULARVS 0x8000
+#define SH_TEXTUREVS 0x8001
+#define SH_REGULARFOGVS 0x8002
+#define SH_TEXTUREFOGVS 0x8003
+#define SH_REGULARPS 0x8004
+#define SH_REGULARFOGPS 0x8005
+#define SH_BITBLTVS 0x8006
+#define SH_BITBLTPS 0x8007
+#define SH_BITBLTDEPTHPS 0x8009
+#define SH_CRTCTARGPS 0x800a
+#define SH_CRTCPS 0x800b
+#define SH_CRTC24PS 0x800c
+#define SH_ZEROPS 0x800e
+#define SH_BASETEXTUREPS 0x800f
+#define SH_BITBLTAAPS 0x8010
+#define SH_CRTCTARGINTERPS 0x8012
+#define SH_CRTCINTERPS 0x8013
+#define SH_CRTC24INTERPS 0x8014
+#define SH_BITBLTDEPTHMRTPS 0x8016
+#define SH_CONVERT16TO32PS 0x8020
+#define SH_CONVERT32TO16PS 0x8021
+#define SH_CRTC_NEARESTPS 0x8022
+#define SH_CRTCINTER_NEARESTPS 0x8023
+
+
 using namespace ZeroGS;
 //------------------ Constants
 

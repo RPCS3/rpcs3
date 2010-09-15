@@ -20,11 +20,25 @@
 #ifndef __ZEROGS_SHADERS_H__
 #define __ZEROGS_SHADERS_H__
 
-// I'll need to figure out a way to get rid of this dependency... --arcum42
-//#include "GS.h"
+// -- Not very important things, but we keep it to enumerate shader
+#define NUM_FILTERS 2 		// texture filtering
+#define NUM_TYPES 5 		// types of texture read modes
+#define NUM_TEXWRAPS 4 		// texture wrapping
+#define NUM_SHADERS (NUM_FILTERS*NUM_TYPES*NUM_TEXWRAPS*32) // # shaders for a given ps
+
+// Just bitmask for different type of shaders
+#define SHADER_REDUCED 1	// equivalent to ps2.0
+#define SHADER_ACCURATE 2   	// for older cards with less accurate math (ps2.x+)
+// For output
+const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
+
+#define NVIDIA_CG_API
+// --------------------------- API abstraction level --------------------------------
+
+#ifdef NVIDIA_CG_API				// Code for NVIDIA cg-toolkit API
+
 #include <Cg/cg.h>
 #include <Cg/cgGL.h>
-
 #define ZZshProgram 		CGprogram
 #define ZZshShader 		CGprogram
 #define ZZshShaderLink		CGprogram
@@ -35,72 +49,42 @@
 #define pZero			0			// Zero parameter
 #define sZero			0			// Zero program
 
-#define NUM_FILTERS 2 		// texture filtering
-#define NUM_TYPES 5 		// types of texture read modes
-#define NUM_TEXWRAPS 4 		// texture wrapping
+#define SAFE_RELEASE_PROG(x) 	{ if( (x) != NULL ) { cgDestroyProgram(x); x = NULL; } }
+inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
-#define SHADER_REDUCED 1	// equivalent to ps2.0
-#define SHADER_ACCURATE 2   	// for older cards with less accurate math (ps2.x+)
+#endif					// end NVIDIA cg-toolkit API
 
-#define NUM_SHADERS (NUM_FILTERS*NUM_TYPES*NUM_TEXWRAPS*32) // # shaders for a given ps
-
-const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
 const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
 
-#define TEXWRAP_REPEAT 0
-#define TEXWRAP_CLAMP 1
-#define TEXWRAP_REGION_REPEAT 2
-#define TEXWRAP_REPEAT_CLAMP 3
+enum ZZshShaderType {ZZ_SH_ZERO, ZZ_SH_REGULAR, ZZ_SH_REGULAR_FOG, ZZ_SH_TEXTURE, ZZ_SH_TEXTURE_FOG, ZZ_SH_CRTC};
+// We have "compatible" shaders, as RegularFogVS and RegularFogPS, if we don't need to worry about incompatible shaders.
+// It's used only in GLSL mode. 
 
-inline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int context, int ps)
-{
-	return type + texfilter*NUM_TYPES + NUM_FILTERS*NUM_TYPES*texwrap + NUM_TEXWRAPS*NUM_FILTERS*NUM_TYPES*(fog+2*writedepth+4*testaem+8*exactcolor+16*context+32*ps);
-}
-	
-struct SHADERHEADER
-{
-	unsigned int index, offset, size; // if highest bit of index is set, pixel shader
-};
+// ------------------------- Variables -------------------------------
+extern int g_nPixelShaderVer;
+extern ZZshShaderLink pvs[16], g_vsprog, g_psprog;
+extern ZZshParameter g_vparamPosXY[2], g_fparamFogColor;
 
-#define SH_WRITEDEPTH 0x2000 // depth is written
-#define SH_CONTEXT1 0x1000 // context1 is used
-
-#define SH_REGULARVS 0x8000
-#define SH_TEXTUREVS 0x8001
-#define SH_REGULARFOGVS 0x8002
-#define SH_TEXTUREFOGVS 0x8003
-#define SH_REGULARPS 0x8004
-#define SH_REGULARFOGPS 0x8005
-#define SH_BITBLTVS 0x8006
-#define SH_BITBLTPS 0x8007
-#define SH_BITBLTDEPTHPS 0x8009
-#define SH_CRTCTARGPS 0x800a
-#define SH_CRTCPS 0x800b
-#define SH_CRTC24PS 0x800c
-#define SH_ZEROPS 0x800e
-#define SH_BASETEXTUREPS 0x800f
-#define SH_BITBLTAAPS 0x8010
-#define SH_CRTCTARGINTERPS 0x8012
-#define SH_CRTCINTERPS 0x8013
-#define SH_CRTC24INTERPS 0x8014
-#define SH_BITBLTDEPTHMRTPS 0x8016
-#define SH_CONVERT16TO32PS 0x8020
-#define SH_CONVERT32TO16PS 0x8021
-#define SH_CRTC_NEARESTPS 0x8022
-#define SH_CRTCINTER_NEARESTPS 0x8023
-
+#define MAX_ACTIVE_UNIFORMS 600
+#define MAX_ACTIVE_SHADERS 400
 
 struct FRAGMENTSHADER
 {
-	FRAGMENTSHADER() : prog(0), sMemory(0), sFinal(0), sBitwiseANDX(0), sBitwiseANDY(0), sInterlace(0), sCLUT(0), sOneColor(0), sBitBltZ(0),
-		fTexAlpha2(0), fTexOffset(0), fTexDims(0), fTexBlock(0), fClampExts(0), fTexWrapMode(0),
-		fRealTexDims(0), fTestBlack(0), fPageOffset(0), fTexAlpha(0) {}
-	
-	ZZshProgram prog;
+	FRAGMENTSHADER() : prog(sZero), Shader(0), sMemory(pZero), sFinal(pZero), sBitwiseANDX(pZero), sBitwiseANDY(pZero), sInterlace(pZero), sCLUT(pZero), sOneColor(pZero), sBitBltZ(pZero),
+		fTexAlpha2(pZero), fTexOffset(pZero), fTexDims(pZero), fTexBlock(pZero), fClampExts(pZero), fTexWrapMode(pZero),
+		fRealTexDims(pZero), fTestBlack(pZero), fPageOffset(pZero), fTexAlpha(pZero) {}
+		
+	ZZshShaderLink prog;						// it links to the FRAGMENTSHADER structure, for compatibility between GLSL and CG.
+	ZZshShader Shader;							// GLSL store shaders not as ready programs, but as shader compiled objects. VS and PS should be linked together to
+												// make a program.
+	ZZshShaderType ShaderType;					// Not every PS and VS are used together, only compatible ones.
+
 	ZZshParameter sMemory, sFinal, sBitwiseANDX, sBitwiseANDY, sInterlace, sCLUT;
 	ZZshParameter sOneColor, sBitBltZ, sInvTexDims;
 	ZZshParameter fTexAlpha2, fTexOffset, fTexDims, fTexBlock, fClampExts, fTexWrapMode, fRealTexDims, fTestBlack, fPageOffset, fTexAlpha;
+
+	int ParametersStart, ParametersFinish;				// this is part of UniformsIndex array in which parameters of this shader asre stored. The last one is ParametersFinish-1
 
 #ifdef _DEBUG
 	string filename;
@@ -179,23 +163,48 @@ struct FRAGMENTSHADER
 
 struct VERTEXSHADER
 {
-	VERTEXSHADER() : prog(0), sBitBltPos(0), sBitBltTex(0) {}
-	ZZshProgram prog;
+	VERTEXSHADER() : prog(sZero), Shader(0), sBitBltPos(pZero), sBitBltTex(pZero) {}
+	
+	ZZshShaderLink prog;
+	ZZshShader Shader;
+	ZZshShaderType ShaderType;
+
 	ZZshParameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
+
+	int ParametersStart, ParametersFinish;
 };
+
+namespace ZeroGS {
+	// Shaders variables
+	extern Vector g_vdepth;	
+	extern Vector vlogz;
+	extern VERTEXSHADER pvsBitBlt;
+	extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;					// ppsOne used to stop using shaders for draw
+	extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
+	bool LoadEffects();
+	bool LoadExtraEffects();
+	FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
+
+	// only sets a limited amount of state (for Update)
+	void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
+	void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force);
+}
 
 // ------------------------- Variables -------------------------------
 
 extern u8* s_lpShaderResources;
 extern ZZshProfile cgvProf, cgfProf;
-extern int g_nPixelShaderVer;
-extern ZZshProgram pvs[16];
 extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
 extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-extern ZZshProgram g_vsprog, g_psprog;
-extern ZZshParameter g_vparamPosXY[2], g_fparamFogColor;
 
 // ------------------------- Functions -------------------------------
+
+#ifdef NVIDIA_CG_API
+inline bool ZZshExistProgram(FRAGMENTSHADER* pf) {return (pf->prog != NULL); };			// We don't check ps != NULL, so be warned,
+inline bool ZZshExistProgram(VERTEXSHADER* pf) {return (pf->prog != NULL); };
+inline bool ZZshExistProgram(ZZshShaderLink prog) {return (prog != NULL); };
+#endif
+
 extern const char* ShaderCallerName;
 extern const char* ShaderHandleName;
 
@@ -205,6 +214,10 @@ inline void SetShaderCaller(const char* Name) {
 
 inline void SetHandleName(const char* Name) {
 	ShaderHandleName = Name;
+}
+		
+inline void ResetShaderCounters() {
+//	g_vsprog = g_psprog = sZero;
 }
 
 extern bool ZZshCheckProfilesSupport();
@@ -217,22 +230,14 @@ extern void ZZshDefaultOneColor( FRAGMENTSHADER ptr );
 extern void ZZshSetVertexShader(ZZshShader prog);
 extern void ZZshSetPixelShader(ZZshShader prog);
 
-#define SAFE_RELEASE_PROG(x) { if( (x) != NULL ) { cgDestroyProgram(x); x = NULL; } }
-
-namespace ZeroGS {
-	// Shaders variables
-	extern Vector g_vdepth;	
-	extern Vector vlogz;
-	extern VERTEXSHADER pvsBitBlt;
-	extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-	extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-	bool LoadEffects();
-	bool LoadExtraEffects();
-	FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
-
-	// only sets a limited amount of state (for Update)
-	void SetTexClamping(int context, FRAGMENTSHADER* pfragment);
-	void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force);
+inline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int context, int ps)
+{
+	return type + texfilter*NUM_TYPES + NUM_FILTERS*NUM_TYPES*texwrap + NUM_TEXWRAPS*NUM_FILTERS*NUM_TYPES*(fog+2*writedepth+4*testaem+8*exactcolor+16*context+32*ps);
 }
+	
+struct SHADERHEADER
+{
+	unsigned int index, offset, size; // if highest bit of index is set, pixel shader
+};
 
 #endif
