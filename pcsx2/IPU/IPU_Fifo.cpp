@@ -86,13 +86,16 @@ int IPU_Fifo_Input::write(u32* pMem, int size)
 int IPU_Fifo_Input::read(void *value)
 {
 	// wait until enough data to ensure proper streaming.
-	if (g_BP.IFC < 1)
+	if (g_BP.IFC < 4)
 	{
 		// IPU FIFO is empty and DMA is waiting so lets tell the DMA we are ready to put data in the FIFO
 		if(cpuRegs.eCycle[4] == 0x9999)
-			IPU1dma();
-
+		{
+			CPU_INT( DMAC_TO_IPU, 32 );
+		}
+		
 		if (g_BP.IFC == 0) return 0;
+		pxAssert(g_BP.IFC > 0);
 	}
 
 	CopyQWC(value, &data[readpos]);

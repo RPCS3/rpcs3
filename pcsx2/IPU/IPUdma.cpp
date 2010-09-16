@@ -189,7 +189,7 @@ int IPU1dma()
 			{
 				if(!WaitGSPaths())
 				{ // legacy WaitGSPaths() for now
-					IPU_INT_TO(4); //Give it a short wait.
+					IPU_INT_TO(32); //Give it a short wait.
 					return totalqwc;
 				}
 				IPU_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -203,7 +203,7 @@ int IPU1dma()
 				{
 					if(!WaitGSPaths())
 					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(32); //Give it a short wait.
 						return totalqwc;
 					}
 					IPU_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -283,7 +283,7 @@ int IPU1dma()
 
 					if(!WaitGSPaths() && ipu1dma.qwc > 0)
 					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(32); //Give it a short wait.
 						return totalqwc;
 					}
 					IPU_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
