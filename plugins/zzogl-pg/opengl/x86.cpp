@@ -28,6 +28,9 @@
 
 // swizzling
 
+//These were only used in the old version of RESOLVE_32_BITS. Keeping for reference.
+#if 0
+
 /* FrameSwizzleBlock32 */ 
 void __fastcall FrameSwizzleBlock32_c(u32* dst, u32* src, int srcpitch, u32 WriteMask) 
 { 
@@ -525,6 +528,7 @@ void __fastcall Frame16SwizzleBlock16ZA4_c(u16* dst, Vector_16F* src, int srcpit
 		src += srcpitch << 1; 
 	} 
 } 
+#endif
 
 #ifdef ZEROGS_SSE2
 
