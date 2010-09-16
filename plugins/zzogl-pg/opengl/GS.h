@@ -560,6 +560,7 @@ static __forceinline u32 RGBA16to32(u16 c)
 		   (((c) & 0x8000) ? 0xff000000 : 0);
 }
 
+#if 0
 // converts float16 [0,1] to BYTE [0,255] (assumes value is in range, otherwise will take lower 8bits)
 // f is a u16
 static __forceinline u16 Float16ToBYTE(u16 f)
@@ -605,6 +606,7 @@ static __forceinline u16 Float16ToALPHA(u16 f)
 // used for Z values
 #define Float16ToARGB_Z(f) COLOR_ARGB((u32)Float16ToBYTE_2(f.w), Float16ToBYTE_2(f.x), Float16ToBYTE_2(f.y), Float16ToBYTE_2(f.z))
 #define Float16ToARGB16_Z(f) ((Float16ToBYTE_2(f.y)<<8)|Float16ToBYTE_2(f.z))
+#endif
 
 
 inline float Clamp(float fx, float fmin, float fmax)

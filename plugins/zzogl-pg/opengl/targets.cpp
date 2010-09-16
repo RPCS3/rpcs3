@@ -2892,6 +2892,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 }
 
 
+#if 0
 // I removed some code here that wasn't getting called. The old versions #if'ed out below this.
 #define RESOLVE_32_BIT(PSM, T, Tsrc, convfn) \
 	{ \
@@ -2923,6 +2924,8 @@ void FlushTransferRanges(const tex0Info* ptex)
 			src += RH(Pitch(fbw))/sizeof(Tsrc); \
 		} \
 	} \
+
+#endif
 
 template <typename T, typename Tret>
 inline Tret dummy_return(T value) { return value; }
