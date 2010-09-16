@@ -243,8 +243,6 @@ void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 
 void fill_block(BLOCK b, vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
 {
-	assert( sizeof(b.pageTable) == b.width * b.height * sizeof(b.pageTable[0][0]) );
-
 	float* psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
     u16* psrcw = NULL;
     if (!floatfmt)

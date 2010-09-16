@@ -412,7 +412,6 @@ extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
-extern RenderFormatType g_RenderFormatType;
 
 void AddMessage(const char* pstr, u32 ms = 5000);
 void DrawText(const char* pstr, int left, int top, u32 color);
@@ -476,8 +475,6 @@ bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will cha
 
 // call to load CLUT data (depending on CLD)
 void texClutWrite(int ctx);
-RenderFormatType GetRenderFormat();
-GLenum GetRenderTargetFormat();
 
 int Save(s8* pbydata);
 bool Load(s8* pbydata);

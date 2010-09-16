@@ -100,7 +100,6 @@ Vector g_vdepth, vlogz;
 //	Vector g_vdepth = Vector( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
 
 extern CRangeManager s_RangeMngr; // manages overwritten memory
-GLenum GetRenderTargetFormat() { return GetRenderFormat() == RFT_byte8 ? 4 : g_internalRGBAFloat16Fmt; }
 
 // returns the first and last addresses aligned to a page that cover
 void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);

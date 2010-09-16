@@ -61,7 +61,7 @@ u32 TEXDESTROY_THRESH = 16;
 
 // memory size for one row of texture. It depends on width of texture and number of bytes
 // per pixel
-inline u32 Pitch(int fbw) { return (RW(fbw) * (GetRenderFormat() == RFT_float16 ? 8 : 4)) ; }
+inline u32 Pitch(int fbw) { return (RW(fbw) * 4) ; }
 
 // memory size of whole texture. It is number of rows multiplied by memory size of row
 inline u32 Tex_Memory_Size(int fbw, int fbh) { return (RH(fbh) * Pitch(fbw)); }
@@ -94,8 +94,7 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
 
 	// initialize to default
-	GLenum texType = (GetRenderFormat() == RFT_float16) ? GL_FLOAT : GL_UNSIGNED_BYTE;
-	TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, texType, NULL);
+	TextureRect(4, fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	setRectWrap(GL_CLAMP);
 	setRectFilters(GL_LINEAR);
@@ -3006,73 +3005,38 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	// note that fbp is always aligned on page boundaries
 	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
 
-	if (GetRenderFormat() == RFT_byte8)
-	{
-		// start the conversion process A8R8G8B8 -> psm
-		switch (psm)
-		{
+    // start the conversion process A8R8G8B8 -> psm
+    switch (psm)
+    {
 
-            // NOTE pass psm as a constant value otherwise gcc does not do its job. It keep
-            // the psm switch in Resolve_32_Bit
-			case PSMCT32:
-			case PSMCT24:
-                Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
-				break;
+        // NOTE pass psm as a constant value otherwise gcc does not do its job. It keep
+        // the psm switch in Resolve_32_Bit
+        case PSMCT32:
+        case PSMCT24:
+            Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
+            break;
 
-			case PSMCT16:
-                Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
-				break;
+        case PSMCT16:
+            Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
+            break;
 
-			case PSMCT16S:
-                Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
-				break;
+        case PSMCT16S:
+            Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
+            break;
 
-			case PSMT32Z:
-			case PSMT24Z:
-                Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
-				break;
+        case PSMT32Z:
+        case PSMT24Z:
+            Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
+            break;
 
-			case PSMT16Z:
-                Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
-				break;
+        case PSMT16Z:
+            Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
+            break;
 
-			case PSMT16SZ:
-                Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
-				break;
-		}
-	}
-	else  // float16
-	{
-		switch (psm)
-		{
-
-			case PSMCT32:
-			case PSMCT24:
-				RESOLVE_32_BIT(32, u32, Vector_16F, Float16ToARGB);
-				break;
-
-			case PSMCT16:
-				RESOLVE_32_BIT(16, u16, Vector_16F, Float16ToARGB16);
-				break;
-
-			case PSMCT16S:
-				RESOLVE_32_BIT(16S, u16, Vector_16F, Float16ToARGB16);
-				break;
-
-			case PSMT32Z:
-			case PSMT24Z:
-				RESOLVE_32_BIT(32Z, u32, Vector_16F,  Float16ToARGB_Z);
-				break;
-
-			case PSMT16Z:
-				RESOLVE_32_BIT(16Z, u16, Vector_16F, Float16ToARGB16_Z);
-				break;
-
-			case PSMT16SZ:
-				RESOLVE_32_BIT(16SZ, u16, Vector_16F, Float16ToARGB16_Z);
-				break;
-		}
-	}
+        case PSMT16SZ:
+            Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
+            break;
+    }
 
 	g_MemTargs.ClearRange(start, end);
 

@@ -170,41 +170,49 @@ struct BLOCK
     {
         switch (psm) {
             case PSMCT32:
+                assert( sizeof(g_pageTable32) == width * height * sizeof(g_pageTable32[0][0]) );
                 pageTable = &g_pageTable32[0][0];
                 blockTable = &g_blockTable32[0][0];
                 columnTable = &g_columnTable32[0][0];
                 break;
             case PSMT32Z:
+                assert( sizeof(g_pageTable32Z) == width * height * sizeof(g_pageTable32Z[0][0]) );
                 pageTable = &g_pageTable32Z[0][0];
                 blockTable = &g_blockTable32Z[0][0];
                 columnTable = &g_columnTable32[0][0];
                 break;
             case PSMCT16:
+                assert( sizeof(g_pageTable16) == width * height * sizeof(g_pageTable16[0][0]) );
                 pageTable = &g_pageTable16[0][0];
                 blockTable = &g_blockTable16[0][0];
                 columnTable = &g_columnTable16[0][0];
                 break;
             case PSMCT16S:
+                assert( sizeof(g_pageTable16S) == width * height * sizeof(g_pageTable16S[0][0]) );
                 pageTable = &g_pageTable16S[0][0];
                 blockTable = &g_blockTable16S[0][0];
                 columnTable = &g_columnTable16[0][0];
                 break;
             case PSMT16Z:
+                assert( sizeof(g_pageTable16Z) == width * height * sizeof(g_pageTable16Z[0][0]) );
                 pageTable = &g_pageTable16Z[0][0];
                 blockTable = &g_blockTable16Z[0][0];
                 columnTable = &g_columnTable16[0][0];
                 break;
             case PSMT16SZ:
+                assert( sizeof(g_pageTable16SZ) == width * height * sizeof(g_pageTable16SZ[0][0]) );
                 pageTable = &g_pageTable16SZ[0][0];
                 blockTable = &g_blockTable16SZ[0][0];
                 columnTable = &g_columnTable16[0][0];
                 break;
             case PSMT8:
+                assert( sizeof(g_pageTable8) == width * height * sizeof(g_pageTable8[0][0]) );
                 pageTable = &g_pageTable8[0][0];
                 blockTable = &g_blockTable8[0][0];
                 columnTable = &g_columnTable8[0][0];
                 break;
             case PSMT4:
+                assert( sizeof(g_pageTable4) == width * height * sizeof(g_pageTable4[0][0]) );
                 pageTable = &g_pageTable4[0][0];
                 blockTable = &g_blockTable4[0][0];
                 columnTable = &g_columnTable4[0][0];

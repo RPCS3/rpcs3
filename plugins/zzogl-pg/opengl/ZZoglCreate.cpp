@@ -75,8 +75,6 @@ map<string, GLbyte> mapGLExtensions;
 
 namespace ZeroGS
 {
-RenderFormatType g_RenderFormatType = RFT_float16;
-
 extern void KickPoint();
 extern void KickLine();
 extern void KickTriangle();
@@ -271,19 +269,6 @@ inline void ZeroGS::CreateOtherCheck()
 	if (Max_Texture_Size_NV < 1024)
 		ZZLog::Error_Log("Could not properly make bitmasks, so some textures will be missed.");
 
-	/* Zeydlitz: we don't support 128-bit targets yet. they are slow and weirdo
-	if( conf.settings() & GAME_32BITTARGS ) {
-		g_RenderFormatType = RFT_byte8;
-		ZZLog::Error_Log("Setting 32 bit render target.");
-	}
-	else {
-		if( !IsGLExt("GL_NV_float_buffer") && !IsGLExt("GL_ARB_color_buffer_float") && !IsGLExt("ATI_pixel_format_float") ) {
-			ZZLog::Error_Log("******\nZZogl: GS WARNING: Floating point render targets not supported, switching to 32bit\nZZogl: *********");
-			g_RenderFormatType = RFT_byte8;
-		}
-	}*/
-	g_RenderFormatType = RFT_byte8;
-
 #ifdef _WIN32
 	if (IsGLExt("WGL_EXT_swap_control") || IsGLExt("EXT_swap_control"))
 		wglSwapIntervalEXT(0);
@@ -469,8 +454,6 @@ bool ZeroGS::Create(int _width, int _height)
 
 	Destroy(1);
 	GSStateReset();
-
-	g_RenderFormatType = RFT_float16;
 
 	if (!Create_Window(_width, _height)) return false;
 	if (!CreateFillExtensionsMap()) return false;

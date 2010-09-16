@@ -207,8 +207,6 @@ int icurctx = -1;
 extern CRangeManager s_RangeMngr; // manages overwritten memory				// zz
 void FlushTransferRanges(const tex0Info* ptex);						//zz
 
-RenderFormatType GetRenderFormat() { return g_RenderFormatType; }					//zz
-
 // use to update the state
 void SetTexVariables(int context, FRAGMENTSHADER* pfragment);			// zz
 void SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint);		// zz
@@ -1468,66 +1466,6 @@ inline void AlphaSaveTarget(VB& curvb)
 #endif
 }
 
-inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
-{
-	// clamp the final colors, when enabled ffx2 credits mess up
-	//if (gs.colclamp) ZZLog::Error_Log("ColClamp!");
-	if ((curvb.curprim.abe && bAlphaClamping) && (GetRenderFormat() != RFT_byte8) && !(conf.settings().no_color_clamp))   // if !colclamp, skip
-	{
-		//ZZLog::Error_Log("Clamped.");
-		ResetAlphaVariables();
-
-		// if processing the clamping case, make sure can write to the front buffer
-		glDisable(GL_STENCIL_TEST);
-		glEnable(GL_BLEND);
-		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(0);
-		glColorMask(1, 1, 1, 0);
-
-		if (s_bWriteDepth) ResetRenderTarget(1);
-
-		SetShaderCaller("AlphaColorClamping");
-
-		ZZshSetPixelShader(ppsOne.prog);
-		GL_BLEND_RGB(GL_ONE, GL_ONE);
-
-		float f;
-
-		if (bAlphaClamping & 1)    // min
-		{
-			f = 0;
-			ZZshSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
-			GL_BLENDEQ_RGB(GL_MAX_EXT);
-			Draw(curvb);
-		}
-
-		// bios shows white screen
-		if (bAlphaClamping & 2)    // max
-		{
-			f = 1;
-			ZZshSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
-			GL_BLENDEQ_RGB(GL_MIN_EXT);
-			Draw(curvb);
-		}
-
-		if (!curvb.zbuf.zmsk)
-		{
-			glDepthMask(1);
-
-			if (s_bWriteDepth)
-			{
-				assert(curvb.pdepth != NULL);
-				curvb.pdepth->SetRenderTarget(1);
-			}
-		}
-
-		if (curvb.test.ate && USEALPHATESTING) glEnable(GL_ALPHA_TEST);
-
-		GL_ZTEST(curtest.zte);
-	}
-}
-
 inline void FlushUndoFiter(u32 dwFilterOpts)
 {
 	if (dwFilterOpts)
@@ -1585,7 +1523,6 @@ void ZeroGS::Flush(int context)
 	
 	GL_REPORT_ERRORD();
 
-	AlphaColorClamping(curvb, curtest);
 	FlushUndoFiter(dwFilterOpts);
 
 	ppf += curvb.nCount + 0x100000;
