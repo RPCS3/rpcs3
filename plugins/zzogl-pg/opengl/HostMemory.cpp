@@ -135,8 +135,7 @@
 
 	#if defined(ZEROGS_DEVBUILD)
 		if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-			ZZLog::Warn_Log("Transfer error, width exceeded.");
-
+			ZZLog::Debug_Log("Transfer error, width exceeded.");
 	#endif
 
 		//bool bHasFlushed = false;
@@ -260,10 +259,8 @@
 		assert(gs.trxpos.sx + gs.imageWnew <= 2048 && gs.trxpos.sy + gs.imageHnew <= 2048);
 
 	#if defined(ZEROGS_DEVBUILD)
-
 		if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-			ZZLog::Warn_Log("Transfer error, width exceeded.");
-
+			ZZLog::Debug_Log("Transfer error, width exceeded.");
 	#endif
 
 		gs.imageX = gs.trxpos.sx;
