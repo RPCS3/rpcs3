@@ -27,172 +27,504 @@
 #endif
 
 // swizzling
-#define _FrameSwizzleBlock(type, transfer, transfer16, incsrc) \
-/* FrameSwizzleBlock32 */ \
-void __fastcall FrameSwizzleBlock32##type##c(u32* dst, u32* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable32[0][0]; \
-	\
-	if( WriteMask == 0xffffffff ) { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				dst[d[j]] = (transfer); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				dst[d[j]] = ((transfer)&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-} \
-\
-void __fastcall FrameSwizzleBlock24##type##c(u32* dst, u32* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable32[0][0]; \
-	\
-	if( WriteMask == 0xffffffff ) { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				dst[d[j]] = (transfer); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				dst[d[j]] = ((transfer)&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-} \
-\
-/* FrameSwizzleBlock16 */ \
-void __fastcall FrameSwizzleBlock16##type##c(u16* dst, u32* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable16[0][0]; \
-	\
-	if( WriteMask == 0xffff ) {  \
-		for(int i = 0; i < 8; ++i, d += 16) { \
-			for(int j = 0; j < 16; ++j) { \
-				u32 temp = (transfer); \
-				dst[d[j]] = RGBA32to16(temp); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 16) { \
-			for(int j = 0; j < 16; ++j) { \
-			u32 temp = (transfer); \
-				u32 dsrc = RGBA32to16(temp); \
-				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-} \
-\
-/* Frame16SwizzleBlock32 */ \
-void __fastcall Frame16SwizzleBlock32##type##c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable32[0][0]; \
-\
-	if( WriteMask == 0xffffffff ) {  \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				dst[d[j]] = Float16ToARGB(dsrc16); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				u32 dsrc = Float16ToARGB(dsrc16); \
-				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
- } \
-\
-/* Frame16SwizzleBlock32Z */ \
-void __fastcall Frame16SwizzleBlock32Z##type##c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable32[0][0]; \
-	if( WriteMask == 0xffffffff ) { /* breaks KH text if not checked */ \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				dst[d[j]] = Float16ToARGB_Z(dsrc16); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 8) { \
-			for(int j = 0; j < 8; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				u32 dsrc = Float16ToARGB_Z(dsrc16); \
-				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
- } \
- \
- /* Frame16SwizzleBlock16 */ \
-void __fastcall Frame16SwizzleBlock16##type##c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable16[0][0]; \
-	\
-	if( (WriteMask&0xfff8f8f8) == 0xfff8f8f8) {  \
-		for(int i = 0; i < 8; ++i, d += 16) { \
-			for(int j = 0; j < 16; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				dst[d[j]] = Float16ToARGB16(dsrc16); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
-	else { \
-		for(int i = 0; i < 8; ++i, d += 16) { \
-			for(int j = 0; j < 16; ++j) { \
-				Vector_16F dsrc16 = (transfer16); \
-				u32 dsrc = Float16ToARGB16(dsrc16); \
-				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); \
-			} \
-			src += srcpitch << incsrc; \
-		} \
-	} \
- } \
- \
- /* Frame16SwizzleBlock16Z */ \
-void __fastcall Frame16SwizzleBlock16Z##type##c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) \
-{ \
-	u32* d = &g_columnTable16[0][0]; \
-	\
-	for(int i = 0; i < 8; ++i, d += 16) { \
-		for(int j = 0; j < 16; ++j) { \
-			Vector_16F dsrc16 = (transfer16); \
-			dst[d[j]] = Float16ToARGB16_Z(dsrc16); \
-		} \
-		src += srcpitch << incsrc; \
-	} \
-} \
+
+/* FrameSwizzleBlock32 */ 
+void __fastcall FrameSwizzleBlock32_c(u32* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	
+	if (WriteMask == 0xffffffff) 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				dst[d[j]] = (src[j]); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{				
+				dst[d[j]] = ((src[j])&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+} 
+
+void __fastcall FrameSwizzleBlock32A2_c(u32* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	
+	if( WriteMask == 0xffffffff ) { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
+				dst[d[j]] = ((src[2*j] + src[2*j+1]) >> 1); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
+				dst[d[j]] = (((src[2*j] + src[2*j+1]) >> 1)&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+} 
+
+void __fastcall FrameSwizzleBlock32A4_c(u32* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	
+	if( WriteMask == 0xffffffff ) { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
+				dst[d[j]] = ((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+	else { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
+				dst[d[j]] = (((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2)&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+} 
+
+#define FrameSwizzleBlock24_c FrameSwizzleBlock32_c
+#define FrameSwizzleBlock24A2_c FrameSwizzleBlock32A2_c
+#define FrameSwizzleBlock24A4_c FrameSwizzleBlock32A4_c
+
+/* FrameSwizzleBlock16 */ 
+void __fastcall FrameSwizzleBlock16_c(u16* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if (WriteMask == 0xffff) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = (src[j]); 
+				dst[d[j]] = RGBA32to16(temp); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = (src[j]); 
+				u32 dsrc = RGBA32to16(temp); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+}
+
+void __fastcall FrameSwizzleBlock16A2_c(u16* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if (WriteMask == 0xffff) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = ((src[2*j] + src[2*j+1]) >> 1); 
+				dst[d[j]] = RGBA32to16(temp); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = ((src[2*j] + src[2*j+1]) >> 1); 
+				u32 dsrc = RGBA32to16(temp); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+}
+
+void __fastcall FrameSwizzleBlock16A4_c(u16* dst, u32* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if (WriteMask == 0xffff) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = ((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2); 
+				dst[d[j]] = RGBA32to16(temp); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				u32 temp = ((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2); 
+				u32 dsrc = RGBA32to16(temp); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+}
+
+
+/* Frame16SwizzleBlock32 */ 
+void __fastcall Frame16SwizzleBlock32_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+
+	if( WriteMask == 0xffffffff ) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				dst[d[j]] = Float16ToARGB(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				u32 dsrc = Float16ToARGB(dsrc16);
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ } 
  
-_FrameSwizzleBlock(_, src[j], src[j], 0);
-_FrameSwizzleBlock(A2_, (src[2*j] + src[2*j+1]) >> 1, src[2*j], 0);
-_FrameSwizzleBlock(A4_, (src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2, src[2*j], 1);
+void __fastcall Frame16SwizzleBlock32A2_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+
+	if( WriteMask == 0xffffffff ) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB(dsrc16);
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ } 
+ 
+void __fastcall Frame16SwizzleBlock32A4_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+
+	if( WriteMask == 0xffffffff ) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB(dsrc16); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB(dsrc16);
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+ } 
+
+/* Frame16SwizzleBlock32Z */ 
+void __fastcall Frame16SwizzleBlock32Z_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	if( WriteMask == 0xffffffff )  /* breaks KH text if not checked */ 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				dst[d[j]] = Float16ToARGB_Z(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				u32 dsrc = Float16ToARGB_Z(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ }
+ 
+void __fastcall Frame16SwizzleBlock32ZA2_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	if( WriteMask == 0xffffffff )  /* breaks KH text if not checked */ 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB_Z(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB_Z(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ }
+ 
+void __fastcall Frame16SwizzleBlock32ZA4_c(u32* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable32[0][0]; 
+	if( WriteMask == 0xffffffff )  /* breaks KH text if not checked */ 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB_Z(dsrc16); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+	else 
+	{
+		for(int i = 0; i < 8; ++i, d += 8) 
+		{ 
+			for(int j = 0; j < 8; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB_Z(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+ }
+ 
+ 
+ /* Frame16SwizzleBlock16 */ 
+void __fastcall Frame16SwizzleBlock16_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if ((WriteMask&0xfff8f8f8) == 0xfff8f8f8) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				dst[d[j]] = Float16ToARGB16(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[j]); 
+				u32 dsrc = Float16ToARGB16(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ } 
+ 
+void __fastcall Frame16SwizzleBlock16A2_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if ((WriteMask&0xfff8f8f8) == 0xfff8f8f8) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB16(dsrc16); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB16(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch; 
+		} 
+	} 
+ } 
+ 
+void __fastcall Frame16SwizzleBlock16A4_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	if ((WriteMask&0xfff8f8f8) == 0xfff8f8f8) 
+	{  
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				dst[d[j]] = Float16ToARGB16(dsrc16); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+	else 
+	{ 
+		for(int i = 0; i < 8; ++i, d += 16) 
+		{ 
+			for(int j = 0; j < 16; ++j) 
+			{ 
+				Vector_16F dsrc16 = (src[2*j]); 
+				u32 dsrc = Float16ToARGB16(dsrc16); 
+				dst[d[j]] = (dsrc&WriteMask)|(dst[d[j]]&~WriteMask); 
+			} 
+			src += srcpitch << 1; 
+		} 
+	} 
+ } 
+ 
+ /* Frame16SwizzleBlock16Z */ 
+void __fastcall Frame16SwizzleBlock16Z_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	for(int i = 0; i < 8; ++i, d += 16) 
+	{ 
+		for(int j = 0; j < 16; ++j) 
+		{ 
+			Vector_16F dsrc16 = (src[j]); 
+			dst[d[j]] = Float16ToARGB16_Z(dsrc16); 
+		} 
+		src += srcpitch; 
+	} 
+} 
+
+void __fastcall Frame16SwizzleBlock16ZA2_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	for(int i = 0; i < 8; ++i, d += 16) 
+	{ 
+		for(int j = 0; j < 16; ++j) 
+		{ 
+			Vector_16F dsrc16 = (src[2*j]); 
+			dst[d[j]] = Float16ToARGB16_Z(dsrc16); 
+		} 
+		src += srcpitch; 
+	} 
+} 
+
+void __fastcall Frame16SwizzleBlock16ZA4_c(u16* dst, Vector_16F* src, int srcpitch, u32 WriteMask) 
+{ 
+	u32* d = &g_columnTable16[0][0]; 
+	
+	for(int i = 0; i < 8; ++i, d += 16) 
+	{ 
+		for(int j = 0; j < 16; ++j) 
+		{ 
+			Vector_16F dsrc16 = (src[2*j]); 
+			dst[d[j]] = Float16ToARGB16_Z(dsrc16); 
+		} 
+		src += srcpitch << 1; 
+	} 
+} 
 
 #ifdef ZEROGS_SSE2
 
