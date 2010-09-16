@@ -97,12 +97,6 @@ namespace ZeroGS
 
 typedef void (*DrawFn)();
 
-enum RenderFormatType
-{
-	RFT_byte8 = 0,	  // A8R8G8B8
-	RFT_float16 = 1,	// A32R32B32G32
-};
-
 // managers render-to-texture targets
 
 class CRenderTarget

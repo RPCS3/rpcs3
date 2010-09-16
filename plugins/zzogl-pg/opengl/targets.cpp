@@ -94,7 +94,7 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
 
 	// initialize to default
-	TextureRect(4, fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	TextureRect(GL_RGBA, fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	setRectWrap(GL_CLAMP);
 	setRectFilters(GL_LINEAR);
@@ -2299,7 +2299,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
 
 	if (fmt == GL_UNSIGNED_BYTE)
-		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
+		TextureRect(GL_RGBA, texW, texH, GL_RGBA, fmt, ptexdata);
 	else
 		TextureRect(GL_RGB5_A1, texW, texH, GL_RGBA, fmt, ptexdata);
 
@@ -2324,7 +2324,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 			DestroyOldest();
 		}
 
-		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
+		TextureRect(GL_RGBA, texW, texH, GL_RGBA, fmt, ptexdata);
 	}
 
 	setRectWrap(GL_CLAMP);

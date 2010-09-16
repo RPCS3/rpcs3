@@ -89,7 +89,7 @@ inline u32 CreateInterlaceTex(int width)
 
 	glGenTextures(1, &s_ptexInterlace);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, s_ptexInterlace);
-	TextureRect(4, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
+	TextureRect(GL_RGBA, width, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
 	setRectFilters(GL_NEAREST);
 	GL_REPORT_ERRORD();
 
