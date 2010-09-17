@@ -2953,6 +2953,8 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
     int maxfbh = (MEMORY_END-fbp*256) / (sizeof(T) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
 
+    ZZLog::Debug_Log("*** Resolve 32 bits: %dx%d in %x\n", maxfbh, fbw, psm);
+
     for(int i = 0; i < maxfbh; ++i) {
         for(int j = 0; j < fbw; ++j) {
             T dsrc = (T)convfn(src[RW(j)]);
