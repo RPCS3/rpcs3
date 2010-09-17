@@ -206,32 +206,28 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,266,365,8
 END
 
-IDD_CONFIG2 DIALOGEX 0, 0, 171, 217
+IDD_CONFIG2 DIALOGEX 0, 0, 159, 160
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "ZZOgl Options"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,55,192,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,108,192,50,14
-    GROUPBOX        "Static",IDC_STATIC,7,7,152,183
-    CONTROL         "Logging (For Debugging)",1000,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,18,102,10
+    DEFPUSHBUTTON   "OK",IDOK,37,138,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,91,138,50,14
+    CONTROL         "Logging (For Debugging)",1000,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,102,10
     CONTROL         "Interlace Enable (toggle with F5). There are 2 modes + interlace off",IDC_CONFIG_INTERLACE,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,45,137,18
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,32,137,18
     CONTROL         "Bilinear Filtering (Shift+F5). Best quality is on, turn off for speed.",IDC_CONFIG_BILINEAR,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,67,137,18
+                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,50,137,18
     CONTROL         "Capture Avi (zerogs.avi) (F12)",IDC_CONFIG_CAPTUREAVI,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,103,109,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,82,109,10
     CONTROL         "Save Snapshots as BMP(default is JPG)",IDC_CONFIG_BMPSS,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,116,141,10
-    CONTROL         "Wide Screen",IDC_CONFIG_WIDESCREEN,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,14,90,109,10
-    CONTROL         "640 x 480",IDC_CONF_WIN640,"Button",BS_AUTORADIOBUTTON | WS_GROUP,20,140,59,8
-    CONTROL         "800 x 600",IDC_CONF_WIN800,"Button",BS_AUTORADIOBUTTON,21,152,59,8
-    CONTROL         "1024 x 768",IDC_CONF_WIN1024,"Button",BS_AUTORADIOBUTTON,86,140,59,8
-    CONTROL         "1280 x 960",IDC_CONF_WIN1280,"Button",BS_AUTORADIOBUTTON,86,151,53,8
-    GROUPBOX        "Default Window Size (no speed impact)",IDC_STATIC,14,129,137,39
-    COMBOBOX        IDC_COMBO1,59,31,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Anti-aliasing",IDC_STATIC,15,33,43,13
-    PUSHBUTTON      "Advanced...",IDC_BUTTON1,17,170,134,14
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,93,141,10
+    CONTROL         "Wide Screen",IDC_CONFIG_WIDESCREEN,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,7,69,109,10
+    LTEXT           "Anti-aliasing",IDC_STATIC,7,20,43,13
+    PUSHBUTTON      "Advanced...",IDC_ADV_BTN,7,118,134,14
+    COMBOBOX        IDC_AA_COMBO,53,18,48,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_WIN_SIZE_COMBO,78,104,62,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Default Window Size",IDC_STATIC,7,106,68,8
 END
 
 
@@ -277,9 +273,9 @@ BEGIN
     IDD_CONFIG2, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 164
+        RIGHTMARGIN, 152
         TOPMARGIN, 7
-        BOTTOMMARGIN, 210
+        BOTTOMMARGIN, 152
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -310,27 +306,6 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Dialog Info
-//
-
-IDD_CONFIG2 DLGINIT
-BEGIN
-    IDC_COMBO1, 0x403, 5, 0
-0x6f4e, 0x656e, "\000" 
-    IDC_COMBO1, 0x403, 3, 0
-0x5832, "\000" 
-    IDC_COMBO1, 0x403, 3, 0
-0x5834, "\000" 
-    IDC_COMBO1, 0x403, 3, 0
-0x5838, "\000" 
-    IDC_COMBO1, 0x403, 4, 0
-0x3631, 0x0058, 
-    0
-END
 
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////

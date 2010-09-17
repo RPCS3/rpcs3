@@ -5,7 +5,6 @@
 #define IDC_CONF_DEFAULT                3
 #define IDR_DATA1                       112
 #define IDD_ADV_OPTIONS                 113
-#define IDD_DIALOG1                     114
 #define IDD_CONFIG2                     114
 #define IDC_ABOUTTEXT                   1015
 #define IDC_CONFIG_AA                   1016
@@ -52,12 +51,15 @@
 #define IDC_CONFOPT_00004000            1047
 #define IDC_BUTTON1                     1048
 #define IDC_CONFOPT_COMPUTEOR           1048
+#define IDC_ADV_BTN                     1048
 #define IDC_CONFOPT_4001                1049
 #define IDC_CONFOPT_00000010            1049
 #define IDC_CONFOPT_00008000            1050
 #define IDC_CONFOPT_00010000            1052
 #define IDC_CONFOPT_00020000            1054
+#define IDC_AA_COMBO                    1054
 #define IDC_CONFOPT_00000002            1055
+#define IDC_WIN_SIZE_COMBO              1055
 #define IDC_CONFOPT_01000000            1056
 #define IDC_CONFOPT_00800000            1057
 #define IDC_CONFOPT_00000008            1058
@@ -80,7 +82,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        116
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1051
+#define _APS_NEXT_CONTROL_VALUE         1056
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -37,62 +37,27 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 
 #include "Win32/resource.h"
 
-BOOL CALLBACK LoggingDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg)
-	{
-
-		case WM_INITDIALOG:
-
-			if (conf.log) CheckDlgButton(hW, IDC_LOG, true);
-
-			return true;
-
-		case WM_COMMAND:
-			switch (LOWORD(wParam))
-			{
-				case IDCANCEL:
-					EndDialog(hW, true);
-					return true;
-
-				case IDOK:
-
-					if (IsDlgButtonChecked(hW, IDC_LOG))
-						conf.log = 1;
-					else
-						conf.log = 0;
-
-					SaveConfig();
-
-					EndDialog(hW, false);
-
-					return true;
-			}
-	}
-
-	return false;
-}
-
 map<int, int> mapConfOpts;
 #define PUT_CONF(id) mapConfOpts[IDC_CONFOPT_##id] = 0x##id;
 
-void OnInitDialog(HWND hW)
+void OnAdvOK(HWND hW)
 {
-	if (!(conf.zz_options.loaded)) LoadConfig();
+	conf.hacks._u32 = 0;
 
-	CheckDlgButton(hW, IDC_CONFIG_INTERLACE, conf.interlace);
-	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
-	CheckDlgButton(hW, IDC_CONFIG_DEPTHWRITE, conf.mrtdepth);
-	CheckRadioButton(hW, IDC_CONFIG_AANONE, IDC_CONFIG_AA4, IDC_CONFIG_AANONE + conf.aa);
-	CheckDlgButton(hW, IDC_CONFIG_WIREFRAME, (conf.wireframe()) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_CAPTUREAVI, (conf.captureAvi()) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_FULLSCREEN, (conf.fullscreen()) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_WIDESCREEN, (conf.widescreen()) ? 1 : 0);
-	CheckDlgButton(hW, IDC_CONFIG_BMPSS, (conf.zz_options.tga_snap) ? 1 : 0);
-	CheckRadioButton(hW, IDC_CONF_WIN640, IDC_CONF_WIN1280, IDC_CONF_WIN640 + conf.zz_options.dimensions);
+	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
+	{
+		if (IsDlgButtonChecked(hW, it->first)) conf.hacks._u32 |= it->second;
+	}
 
-	prevbilinearfilter = conf.bilinear;
+	GSsetGameCRC(g_LastCRC, conf.hacks._u32);
 
+	SaveConfig();
+
+	EndDialog(hW, false);
+}
+
+void OnInitAdvDialog(HWND hW)
+{
 	mapConfOpts.clear();
 
 	PUT_CONF(00000001);
@@ -129,45 +94,87 @@ void OnInitDialog(HWND hW)
 	}
 }
 
-void OnOK(HWND hW)
+BOOL CALLBACK AdvancedDialogProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch (uMsg)
+	{
+		case WM_INITDIALOG:
+			OnInitAdvDialog(hW);
+			return true;
+
+		case WM_COMMAND:
+
+			switch (LOWORD(wParam))
+			{
+				case IDCANCEL:
+					EndDialog(hW, true);
+					return true;
+
+				case IDOK:
+					OnAdvOK(hW);
+					return true;
+			}
+	}
+
+	return false;
+}
+
+void CALLBACK AdvancedDialog()
+{
+	DialogBox(hInst,
+			  MAKEINTRESOURCE(IDD_ADV_OPTIONS),
+			  GetActiveWindow(),
+			  (DLGPROC)AdvancedDialogProc);
+}
+
+void OnInitConfDialog(HWND hW)
+{
+	if (!(conf.zz_options.loaded)) LoadConfig();
+
+     TCHAR *aaName[] = {"None", "x2", "x4", "x8", "x16"};
+ 
+     for(int i=0; i<5; i++)
+	 {
+		 ComboBox_AddString(GetDlgItem(hW, IDC_AA_COMBO), (LPARAM)aaName[i]);
+	 }
+	ComboBox_SelectString(GetDlgItem(hW, IDC_AA_COMBO), -1, (LPARAM)aaName[conf.aa]);
+
+    TCHAR *sizeName[] = {"640 x 480", "800 x 600", "1024 x 768", "1280 x 960"};
+ 
+    for(int i=0; i<4; i++)
+	{
+		ComboBox_AddString(GetDlgItem(hW, IDC_WIN_SIZE_COMBO), (LPARAM)sizeName[i]);
+	}
+	ComboBox_SelectString(GetDlgItem(hW, IDC_WIN_SIZE_COMBO), -1, (LPARAM)sizeName[conf.zz_options.dimensions]);
+
+	CheckDlgButton(hW, IDC_CONFIG_INTERLACE, conf.interlace);
+	CheckDlgButton(hW, IDC_CONFIG_BILINEAR, conf.bilinear);
+	CheckDlgButton(hW, IDC_CONFIG_DEPTHWRITE, conf.mrtdepth);
+	CheckDlgButton(hW, IDC_CONFIG_WIREFRAME, (conf.wireframe()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_CAPTUREAVI, (conf.captureAvi()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_FULLSCREEN, (conf.fullscreen()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_WIDESCREEN, (conf.widescreen()) ? 1 : 0);
+	CheckDlgButton(hW, IDC_CONFIG_BMPSS, (conf.zz_options.tga_snap) ? 1 : 0);
+
+	prevbilinearfilter = conf.bilinear;
+}
+
+void OnConfOK(HWND hW)
 {
 	u32 newinterlace = IsDlgButtonChecked(hW, IDC_CONFIG_INTERLACE);
 
-	if (!conf.interlace) conf.interlace = newinterlace;
-	else if (!newinterlace) conf.interlace = 2;  // off
+	if (!conf.interlace) 
+		conf.interlace = newinterlace;
+	else if (!newinterlace) 
+		conf.interlace = 2;  // off
 
 	conf.bilinear = IsDlgButtonChecked(hW, IDC_CONFIG_BILINEAR);
 
 	// restore
-	if (conf.bilinear && prevbilinearfilter)
-		conf.bilinear = prevbilinearfilter;
+	if (conf.bilinear && prevbilinearfilter) conf.bilinear = prevbilinearfilter;
 
-	//conf.mrtdepth = 1;//IsDlgButtonChecked(hW, IDC_CONFIG_DEPTHWRITE);
-
-	if (SendDlgItemMessage(hW, IDC_CONFIG_AANONE, BM_GETCHECK, 0, 0))
-	{
-		conf.aa = 0;
-	}
-	else if (SendDlgItemMessage(hW, IDC_CONFIG_AA2, BM_GETCHECK, 0, 0))
-	{
-		conf.aa = 1;
-	}
-	else if (SendDlgItemMessage(hW, IDC_CONFIG_AA4, BM_GETCHECK, 0, 0))
-	{
-		conf.aa = 2;
-	}
-	else if (SendDlgItemMessage(hW, IDC_CONFIG_AA8, BM_GETCHECK, 0, 0))
-	{
-		conf.aa = 3;
-	}
-	else if (SendDlgItemMessage(hW, IDC_CONFIG_AA16, BM_GETCHECK, 0, 0))
-	{
-		conf.aa = 4;
-	}
-	else 
-	{
-		conf.aa = 0;
-	}
+	if (ComboBox_GetCurSel(GetDlgItem(hW, IDC_AA_COMBO)) != -1)
+		conf.aa = ComboBox_GetCurSel(GetDlgItem(hW, IDC_AA_COMBO));
 
 	conf.zz_options._u32 = 0;
 
@@ -177,22 +184,13 @@ void OnOK(HWND hW)
 	conf.zz_options.widescreen = IsDlgButtonChecked(hW, IDC_CONFIG_WIDESCREEN) ? 1 : 0;
 	conf.zz_options.tga_snap = IsDlgButtonChecked(hW, IDC_CONFIG_BMPSS) ? 1 : 0;
 
-	conf.hacks._u32 = 0;
-
-	for (map<int, int>::iterator it = mapConfOpts.begin(); it != mapConfOpts.end(); ++it)
-	{
-		if (IsDlgButtonChecked(hW, it->first)) conf.hacks._u32 |= it->second;
-	}
-
-	GSsetGameCRC(g_LastCRC, conf.hacks._u32);
-
-	if (SendDlgItemMessage(hW, IDC_CONF_WIN640, BM_GETCHECK, 0, 0)) 
+	if (ComboBox_GetCurSel(GetDlgItem(hW, IDC_WIN_SIZE_COMBO)) == 0) 
 		conf.zz_options.dimensions = GSDim_640;
-	else if (SendDlgItemMessage(hW, IDC_CONF_WIN800, BM_GETCHECK, 0, 0)) 
+	else if (ComboBox_GetCurSel(GetDlgItem(hW, IDC_WIN_SIZE_COMBO)) == 1) 
 		conf.zz_options.dimensions = GSDim_800;
-	else if (SendDlgItemMessage(hW, IDC_CONF_WIN1024, BM_GETCHECK, 0, 0)) 
+	else if (ComboBox_GetCurSel(GetDlgItem(hW, IDC_WIN_SIZE_COMBO)) == 2) 
 		conf.zz_options.dimensions = GSDim_1024;
-	else if (SendDlgItemMessage(hW, IDC_CONF_WIN1280, BM_GETCHECK, 0, 0)) 
+	else if (ComboBox_GetCurSel(GetDlgItem(hW, IDC_WIN_SIZE_COMBO)) == 3) 
 		conf.zz_options.dimensions = GSDim_1280;
 
 	SaveConfig();
@@ -205,19 +203,26 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 		case WM_INITDIALOG:
-			OnInitDialog(hW);
+			OnInitConfDialog(hW);
 			return true;
 
 		case WM_COMMAND:
 
 			switch (LOWORD(wParam))
 			{
+                case IDC_AA_COMBO: 
+					break; 
+
+				case IDC_ADV_BTN:
+					AdvancedDialog();
+					return true;
+
 				case IDCANCEL:
 					EndDialog(hW, true);
 					return true;
 
 				case IDOK:
-					OnOK(hW);
+					OnConfOK(hW);
 					return true;
 			}
 	}
@@ -225,13 +230,26 @@ BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return false;
 }
 
+void CALLBACK GSconfigure()
+{
+	DialogBox(hInst,
+			  MAKEINTRESOURCE(IDD_CONFIG2),
+			  GetActiveWindow(),
+			  (DLGPROC)ConfigureDlgProc);
+
+	if (g_nPixelShaderVer == SHADER_REDUCED) conf.bilinear = 0;
+}
+
+s32 CALLBACK GStest()
+{
+	return 0;
+}
+
 BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
 		case WM_INITDIALOG:
-			//ZeroGS uses floating point render targets because A8R8G8B8 format is not sufficient for ps2 blending and this requires alpha blending on floating point render targets
-			//There might be a problem with pixel shader precision with older geforce models (textures will look blocky).
 			return true;
 
 		case WM_COMMAND:
@@ -244,21 +262,6 @@ BOOL CALLBACK AboutDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return false;
-}
-
-void CALLBACK GSconfigure()
-{
-	DialogBox(hInst,
-			  MAKEINTRESOURCE(IDD_CONFIG),
-			  GetActiveWindow(),
-			  (DLGPROC)ConfigureDlgProc);
-
-	if (g_nPixelShaderVer == SHADER_REDUCED) conf.bilinear = 0;
-}
-
-s32 CALLBACK GStest()
-{
-	return 0;
 }
 
 void CALLBACK GSabout()
