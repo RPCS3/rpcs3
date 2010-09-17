@@ -19,7 +19,6 @@
 #include "IPU/IPUdma.h"
 #include "mpeg2lib/Mpeg.h"
 
-
 __aligned16 IPU_Fifo ipu_fifo;
 
 void IPU_Fifo::init()
@@ -113,7 +112,7 @@ int IPU_Fifo_Output::write(const u32 *value, uint size)
 	do {
 		IPU0dma();
 	
-		uint transsize = min(size, 8 - ipuRegs.ctrl.OFC);
+		uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
 		if(!transsize) break;
 
 		ipuRegs.ctrl.OFC = transsize;
@@ -132,7 +131,7 @@ int IPU_Fifo_Output::write(const u32 *value, uint size)
 #if 0
 	if (ipuRegs.ctrl.OFC >= 8) IPU0dma();
 
-	uint transsize = min(size, 8 - ipuRegs.ctrl.OFC);
+	uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
 	uint firsttrans = transsize;
 
 	while (transsize > 0)
