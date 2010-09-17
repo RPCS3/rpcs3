@@ -32,7 +32,6 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	switch (msg)
 	{
-
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
@@ -76,21 +75,21 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	rc.bottom = conf.height;
 
 	WNDCLASSEX wc;
-	HINSTANCE hInstance = GetModuleHandle(NULL);
+	HINSTANCE hInstance = GetModuleHandle(NULL); // Grab An Instance For Our Window
 	DWORD dwExStyle, dwStyle;
 
 	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_CLASSDC;
-	wc.lpfnWndProc = (WNDPROC) MsgProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = hInstance;
-	wc.hIcon = NULL;
-	wc.hIconSm = NULL;
-	wc.hCursor = NULL;
-	wc.hbrBackground = NULL;
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = "PS2EMU_ZEROGS";
+	wc.style		= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;		// Redraw On Move, And Own DC For Window
+	wc.lpfnWndProc		= (WNDPROC) MsgProc;					// MsgProc Handles Messages
+	wc.cbClsExtra		= 0;									// No Extra Window Data
+	wc.cbWndExtra		= 0;									// No Extra Window Data
+	wc.hInstance		= hInstance;							// Set The Instance
+	wc.hIcon		= NULL;			
+	wc.hIconSm		= NULL;										// Load The Default Icon
+	wc.hCursor		= LoadCursor(NULL, IDC_ARROW);				// Load The Arrow Pointer
+	wc.hbrBackground	= (HBRUSH)GetStockObject(BLACK_BRUSH);	// No Background Required For GL
+	wc.lpszMenuName		= NULL;									// We Don't Want A Menu
+	wc.lpszClassName	= "PS2EMU_ZEROGS";						// Set The Class Name
 
 	RegisterClassEx(&wc);
 
@@ -102,26 +101,26 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	else
 	{
 		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-		dwStyle = WS_OVERLAPPEDWINDOW;
+		dwStyle = WS_OVERLAPPEDWINDOW | WS_BORDER;
 	}
 
+	dwStyle |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 	AdjustWindowRectEx(&rc, dwStyle, false, dwExStyle);
 
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
 
-	GShwnd = CreateWindowEx(
-				 dwExStyle,
-				 "PS2EMU_ZEROGS",
-				 "ZeroGS",
-				 dwStyle,
-				 (rcdesktop.right - (rc.right - rc.left)) / 2,
-				 (rcdesktop.bottom - (rc.bottom - rc.top)) / 2,
-				 rc.right - rc.left,
-				 rc.bottom - rc.top,
-				 NULL,
-				 NULL,
-				 hInstance,
-				 NULL);
+	GShwnd = CreateWindowEx(	dwExStyle,				// Extended Style For The Window
+					"PS2EMU_ZEROGS",				// Class Name
+					"ZZOgl",					// Window Title
+					dwStyle,				// Selected Window Style
+					(rcdesktop.right - (rc.right - rc.left)) / 2,  // Window Position
+					(rcdesktop.bottom - (rc.bottom - rc.top)) / 2, // Window Position
+					rc.right - rc.left,	// Calculate Adjusted Window Width
+					rc.bottom - rc.top,	// Calculate Adjusted Window Height
+					NULL,					// No Parent Window
+					NULL,					// No Menu
+					hInstance,				// Instance
+					NULL);					// Don't Pass Anything To WM_CREATE
 
 	if (GShwnd == NULL) return false;
 
@@ -197,6 +196,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		dwStyle = WS_OVERLAPPEDWINDOW;
 	}
+	dwStyle |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
 	RECT rc;
 
