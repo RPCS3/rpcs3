@@ -228,7 +228,6 @@ inline list<ZeroGS::CRenderTarget*> CreateTargetsList(int start, int end)
 	return listTargs;
 }
 
-extern float4 g_vdepth;
 extern int icurctx;
 extern GLuint vboRect;
 

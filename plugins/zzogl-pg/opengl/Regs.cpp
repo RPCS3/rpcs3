@@ -55,7 +55,7 @@ inline bool NoHighlights(int i)
 	
 //	if ( results[resultA] == 0 ) {
 //		results[resultA] = 1;
-//		ZZLog::ERROR_LOG("%x = %d %d %d %d %d %d %d %d \n", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix)) ;
+//		ZZLog::Error_Log("%x = %d %d %d %d %d %d %d %d \n", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix)) ;
 //	}
 //	if (resultA == 0xb && ZeroGS::vb[i].zbuf.zmsk ) return false; //ATF
 

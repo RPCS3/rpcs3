@@ -50,7 +50,6 @@ extern int g_nFrame, g_nRealFrame;
 //-------------------------- Variables
 
 primInfo *prim;
-ZZshProgram g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
 
 inline u32 FtoDW(float f) { return (*((u32*)&f)); }
 
@@ -81,7 +80,6 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
 /////////////////////
 // graphics resources
-ZZshParameter g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
 bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
@@ -93,8 +91,6 @@ int nBackbufferWidth, nBackbufferHeight;									// ZZ
 
 namespace ZeroGS
 {
-float4 g_vdepth, vlogz;
-
 //       	= float4( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
 //	float4 g_vdepth = float4( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
 
@@ -491,18 +487,18 @@ void ZeroGS::RenderCustom(float fAlpha)
 
 	// tex coords
 	float4 v = float4(1 / 32767.0f, 1 / 32767.0f, 0, 0);
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 	v.x = (float)nLogoWidth;
 	v.y = (float)nLogoHeight;
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	v.x = v.y = v.z = v.w = fAlpha;
-	ZZshSetParameter4fv(ppsBaseTexture.sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(ppsBaseTexture.prog, ppsBaseTexture.sOneColor, v, "g_fOneColor");
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	// inside vhDCb[0]'s target area, so render that region only
-	ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ptexLogo, "Logo");
+	ZZshGLSetTextureParameter(ppsBaseTexture.prog, ppsBaseTexture.sFinal, ptexLogo, "Logo");
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 
 	SET_STREAM();

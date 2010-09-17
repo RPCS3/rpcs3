@@ -282,7 +282,7 @@ inline float4 RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 		valpha.w = 1;
 	}
 
-	ZZshSetParameter4fv(prog->sOneColor, valpha, "g_fOneColor");
+	ZZshSetParameter4fv(prog->prog, prog->sOneColor, valpha, "g_fOneColor");
 
 	return valpha;
 }
@@ -295,7 +295,7 @@ inline void RenderCreateInterlaceTex(u32 bInterlace, int th, FRAGMENTSHADER* pro
 
 	int interlacetex = CreateInterlaceTex(2 * th);
 
-	ZZshGLSetTextureParameter(prog->sInterlace, interlacetex, "Interlace");
+	ZZshGLSetTextureParameter(prog->prog, prog->sInterlace, interlacetex, "Interlace");
 }
 
 // Well, do blending setup prior to second pass of half-frame drawing
@@ -416,7 +416,7 @@ inline float4 RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
 		v.w += 1.0f / (float)dh ;
 	}
 
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 
 	return v;
 }
@@ -440,7 +440,7 @@ inline float4 RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 		v.w += 1.0f / conf.height;
 	}
 
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	return v;
 }
@@ -451,7 +451,7 @@ inline float4 RenderSetTargetBitTrans(int th)
 {
 	SetShaderCaller("RenderSetTargetBitTrans");
 	float4 v = float4(float(th), -float(th), float(th), float(th));
-	ZZshSetParameter4fv(pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
 	return v;
 }
 
@@ -469,7 +469,7 @@ inline float4 RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHAD
 		v.y = 1.0f / (float)th;
 		v.z = (float)0.0;
 		v.w = -0.5f / (float)th;
-		ZZshSetParameter4fv(prog->sInvTexDims, v, "g_fInvTexDims");
+		ZZshSetParameter4fv(prog->prog, prog->sInvTexDims, v, "g_fInvTexDims");
 	}
 
 	return v;
@@ -554,7 +554,7 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 				float4 valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
 
 				// inside vb[0]'s target area, so render that region only
-				ZZshGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
+				ZZshGLSetTextureParameter(ppsCRTCTarg[bInterlace].prog, ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
 				RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTCTarg[bInterlace]);
 
 				ZZshSetPixelShader(ppsCRTCTarg[bInterlace].prog);
@@ -626,7 +626,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
 	float4 valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
 
-	ZZshGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
+	ZZshGLSetTextureParameter(ppsCRTC[bInterlace].prog, ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
 	ZZshSetPixelShader(ppsCRTC[bInterlace].prog);
 	

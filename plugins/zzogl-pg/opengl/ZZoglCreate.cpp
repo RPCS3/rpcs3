@@ -129,7 +129,6 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 // State parameters
 
 extern u8* s_lpShaderResources;
-ZZshProgram pvs[16] = {NULL};
 
 // String's for shader file in developer mode
 #ifdef DEVBUILD

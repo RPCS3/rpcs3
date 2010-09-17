@@ -312,7 +312,7 @@ void ZeroGS::ReloadEffects()
 
 	memset(ppsTexture, 0, sizeof(ppsTexture));
 
-	LoadExtraEffects();
+	ZZshLoadExtraEffects();
 #endif
 }
 
@@ -859,7 +859,7 @@ inline float4 FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRen
 	// zoe2
 	if (PSMT_ISZTEX(ptextarg->psm)) vpageoffset.w = -1.0f;
 
-	ZZshSetParameter4fv(pfragment->fPageOffset, vpageoffset, "g_fPageOffset");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fPageOffset, vpageoffset, "g_fPageOffset");
 
 	return vpageoffset;
 }
@@ -877,7 +877,7 @@ inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& c
 		v.y = 16.0f / (float)curvb.tex0.th;
 		v.z = 0.5f * v.x;
 		v.w = 0.5f * v.y;
-		ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 	}
 	else if (shadertype == 4)
 	{
@@ -886,7 +886,7 @@ inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& c
 		v.y = 16.0f / (float)ptextarg->fbh;
 		v.z = -1;
 		v.w = 8.0f / (float)ptextarg->fbh;
-		ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 	}
 
 	return v;
@@ -920,7 +920,7 @@ inline float4 FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& cu
 	if (shadertype == 4)
 		vTexDims.z += 8.0f;
 
-	ZZshSetParameter4fv(pfragment->fTexDims, vTexDims, "g_fTexDims");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexDims, vTexDims, "g_fTexDims");
 
 	return vTexDims;
 }
@@ -960,7 +960,7 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 	//int psm = PIXEL_STORAGE_FORMAT(curvb.tex0);
 	int shadertype = FlushGetShaderType(curvb, ptextarg, ptexclut);
 
-	FRAGMENTSHADER* pfragment = LoadShadeEffect(shadertype, 0, curvb.curprim.fge,
+	FRAGMENTSHADER* pfragment = ZZshLoadShadeEffect(shadertype, 0, curvb.curprim.fge,
 								IsAlphaTestExpansion(curvb.tex0), exactcolor, curvb.clamp, context, NULL);
 
 	float4 vpageoffset = FlushSetPageOffset(pfragment, shadertype, ptextarg);
@@ -970,7 +970,7 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 	float4 vTexDims = FlushTextureDims(pfragment, shadertype, curvb, ptextarg);
 
 	if (pfragment->sCLUT != NULL && ptexclut != 0)
-		ZZshGLSetTextureParameter(pfragment->sCLUT, ptexclut, "CLUT");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sCLUT, ptexclut, "CLUT");
 
 	FlushApplyResizeFilter(curvb, dwFilterOpts, ptextarg, context);
 
@@ -999,7 +999,7 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 		}
 	}
 
-	FRAGMENTSHADER* pfragment = LoadShadeEffect(0, GetTexFilter(curvb.tex1), curvb.curprim.fge,
+	FRAGMENTSHADER* pfragment = ZZshLoadShadeEffect(0, GetTexFilter(curvb.tex1), curvb.curprim.fge,
 								IsAlphaTestExpansion(curvb.tex0), exactcolor, curvb.clamp, context, NULL);
 
 	if (pfragment == NULL)
@@ -1016,13 +1016,13 @@ inline void FlushSetTexture(VB& curvb, FRAGMENTSHADER* pfragment, CRenderTarget*
 
 	// have to enable the texture parameters(curtest.atst)
 	if( curvb.ptexClamp[0] != 0 ) 
-		ZZshGLSetTextureParameter(pfragment->sBitwiseANDX, curvb.ptexClamp[0], "Clamp 0");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDX, curvb.ptexClamp[0], "Clamp 0");
 	
 	if( curvb.ptexClamp[1] != 0 ) 
-		ZZshGLSetTextureParameter(pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
 	
 	if( pfragment->sMemory != NULL && s_ptexCurSet[context] != 0) 
-		ZZshGLSetTextureParameter(pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
 
 }
 
@@ -1170,13 +1170,13 @@ inline u32 AlphaRenderAlpha(VB& curvb, const pixTest curtest, FRAGMENTSHADER* pf
 			v.w *= 255;
 		}
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 	}
 	else
 	{
 		// not using blending so set to defaults
 		float4 v = exactcolor ? float4(1, 510 * 255.0f / 256.0f, 0, 0) : float4(1, 2 * 255.0f / 256.0f, 0, 0);
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 	}
 
@@ -1267,7 +1267,7 @@ inline void AlphaPabe(VB& curvb, FRAGMENTSHADER* pfragment, int exactcolor)
 
 		if (exactcolor) v.y *= 255;
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		Draw(curvb);
 
@@ -1336,7 +1336,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 
 		if (exactcolor) { v.y *= 255; v.w *= 255; }
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		glEnable(GL_BLEND);
 		GL_STENCILFUNC(GL_EQUAL, s_stencilref | STENCIL_FBA, s_stencilmask | STENCIL_FBA);
@@ -1360,7 +1360,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 
 		if (exactcolor) v.y *= 255;
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		Draw(curvb);
 
@@ -1412,7 +1412,7 @@ inline void AlphaSpecialTesting(VB& curvb, FRAGMENTSHADER* pfragment, u32 dwUsin
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 		float4 v = float4(0, exactcolor ? 510.0f : 2.0f, 0, 0);
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 		Draw(curvb);
 
 		// don't need to restore
@@ -1497,7 +1497,7 @@ inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 		if (bAlphaClamping & 1)    // min
 		{
 			f = 0;
-			ZZshSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
+			ZZshSetParameter4fv(ppsOne.prog, ppsOne.sOneColor, &f, "g_fOneColor");
 			GL_BLENDEQ_RGB(GL_MAX_EXT);
 			Draw(curvb);
 		}
@@ -1506,7 +1506,7 @@ inline void AlphaColorClamping(VB& curvb, const pixTest curtest)
 		if (bAlphaClamping & 2)    // max
 		{
 			f = 1;
-			ZZshSetParameter4fv(ppsOne.sOneColor, &f, "g_fOneColor");
+			ZZshSetParameter4fv(ppsOne.prog, ppsOne.sOneColor, &f, "g_fOneColor");
 			GL_BLENDEQ_RGB(GL_MIN_EXT);
 			Draw(curvb);
 		}
@@ -1988,7 +1988,7 @@ void ZeroGS::SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
 }
 
 // clamp relies on texture width
-void ZeroGS::SetTexClamping(int context, FRAGMENTSHADER* pfragment)
+inline void SetTexClamping(int context, FRAGMENTSHADER* pfragment ) 
 {
 	FUNCLOG
 	SetShaderCaller("SetTexClamping");
@@ -1998,84 +1998,68 @@ void ZeroGS::SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 	u32* ptex = ZeroGS::vb[context].ptexClamp;
 	ptex[0] = ptex[1] = 0;
 
-	float fw = ZeroGS::vb[context].tex0.tw ;
-	float fh = ZeroGS::vb[context].tex0.th ;
+	float fw = ZeroGS::vb[context].tex0.tw;
+	float fh = ZeroGS::vb[context].tex0.th;
 
-	switch (pclamp->wms)
+	switch(pclamp->wms) 
 	{
 		case 0:
-			v2.x = -1e10;
-			v2.z = 1e10;
+			v2.x = -1e10;   v2.z = 1e10;
 			break;
-
 		case 1: // pclamp
 			// suikoden5 movie text
-			v2.x = 0;
-			v2.z = 1 - 0.5f / fw;
+			v2.x = 0; v2.z = 1-0.5f/fw;
 			break;
-
 		case 2: // reg pclamp
-			v2.x = (pclamp->minu + 0.5f) / fw;
-			v2.z = (pclamp->maxu - 0.5f) / fw;
+			v2.x = (pclamp->minu+0.5f)/fw;  v2.z = (pclamp->maxu-0.5f)/fw;
 			break;
 
 		case 3: // region rep x
 			v.x = 0.9999f;
-			v.z = (float)fw;
+			v.z = (float)fw ;  
 			v2.x = (float)GPU_TEXMASKWIDTH / fw;
 			v2.z = pclamp->maxu / fw;
 			int correctMinu = pclamp->minu & (~pclamp->maxu);		// (A && B) || C == (A && (B && !C)) + C
 
-			if (correctMinu != g_PrevBitwiseTexX)
+			if (correctMinu != g_PrevBitwiseTexX) 
 			{
 				g_PrevBitwiseTexX = correctMinu;
 				ptex[0] = ZeroGS::s_BitwiseTextures.GetTex(correctMinu, 0);
 			}
-
 			break;
 	}
 
-	switch (pclamp->wmt)
+	switch(pclamp->wmt) 
 	{
-
 		case 0:
-			v2.y = -1e10;
-			v2.w = 1e10;
+			v2.y = -1e10;   v2.w = 1e10;
 			break;
-
 		case 1: // pclamp
 			// suikoden5 movie text
-			v2.y = 0;
-			v2.w = 1 - 0.5f / fh;
+			v2.y = 0;   v2.w = 1-0.5f/fh;
 			break;
-
 		case 2: // reg pclamp
-			v2.y = (pclamp->minv + 0.5f) / fh;
-			v2.w = (pclamp->maxv - 0.5f) / fh;
+			v2.y = (pclamp->minv+0.5f)/fh; v2.w = (pclamp->maxv-0.5f)/fh;
 			break;
 
 		case 3: // region rep y
 			v.y = 0.9999f;
-			v.w = (float)fh;
+			v.w = (float)fh ;
 			v2.y = (float)GPU_TEXMASKWIDTH / fh;
 			v2.w = pclamp->maxv / fh;
 			int correctMinv = pclamp->minv & (~pclamp->maxv);		// (A && B) || C == (A && (B && !C)) + C
 
-			if (correctMinv != g_PrevBitwiseTexY)
-			{
+			if (correctMinv != g_PrevBitwiseTexY) {
 				g_PrevBitwiseTexY = correctMinv;
 				ptex[1] = ZeroGS::s_BitwiseTextures.GetTex(correctMinv, ptex[0]);
 			}
 			break;
-	}
+		}
 
-	if (pfragment->fTexWrapMode != 0)
-		ZZshSetParameter4fv(pfragment->fTexWrapMode, v, "g_fTexWrapMode");
-
-	if (pfragment->fClampExts != 0)
-		ZZshSetParameter4fv(pfragment->fClampExts, v2, "g_fClampExts");
-
-
+	if (ZZshActiveParameter(pfragment->fTexWrapMode))
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexWrapMode, v, "g_fTexWrapMode");
+	if (ZZshActiveParameter( pfragment->fClampExts))
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fClampExts, v2, "g_fClampExts");
 }
 
 // Fixme should be in float4 lib
@@ -2246,11 +2230,11 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 
 		// Test;*/
 
-		ZZshSetParameter4fv(pfragment->fTexAlpha, valpha, "g_fTexAlpha");
-		ZZshSetParameter4fv(pfragment->fTexAlpha2, valpha2, "g_fTexAlpha2");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexAlpha, valpha, "g_fTexAlpha");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexAlpha2, valpha2, "g_fTexAlpha2");
 
 		if (IsAlphaTestExpansion(tex0))
-			ZZshSetParameter4fv(pfragment->fTestBlack, vblack, "g_fTestBlack");
+			ZZshSetParameter4fv(pfragment->prog, pfragment->fTestBlack, vblack, "g_fTestBlack");
 
 		SetTexClamping(context, pfragment);
 
@@ -2296,7 +2280,7 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 		v.w = 1.0f / (float)fh;
 
 		if (pfragment->fRealTexDims)
-			ZZshSetParameter4fv(pfragment->fRealTexDims, v, "g_fRealTexDims");
+			ZZshSetParameter4fv(pfragment->prog, pfragment->fRealTexDims, v, "g_fRealTexDims");
 		else
 			ZZshSetParameter4fv(cgGetNamedParameter(pfragment->prog,"g_fRealTexDims"),v, "g_fRealTexDims");	
 	}
@@ -2352,11 +2336,11 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 		v.z *= b.bpp * (1 / 32.0f);
 	}
 
-	ZZshSetParameter4fv(pfragment->fTexDims, vTexDims, "g_fTexDims");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexDims, vTexDims, "g_fTexDims");
 
-//	ZZshSetParameter4fv(pfragment->fTexBlock, b.vTexBlock, "g_fTexBlock"); // I change it, and it's working. Seems casting from float4 to float[4] is ok.
-	ZZshSetParameter4fv(pfragment->fTexBlock, &b.vTexBlock.x, "g_fTexBlock");
-	ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+//	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexBlock, b.vTexBlock, "g_fTexBlock"); // I change it, and it's working. Seems casting from float4 to float[4] is ok.
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexBlock, &b.vTexBlock.x, "g_fTexBlock");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 
 	// get hardware texture dims
 	//int texheight = (pmemtarg->realheight+pmemtarg->widthmult-1)/pmemtarg->widthmult;
