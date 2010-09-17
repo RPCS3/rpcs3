@@ -245,6 +245,9 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 
 	if (CRCValueChanged && (crc != 0))
 	{
+        // Enable Path3 hack for all games
+        conf.def_hacks.path3 = 1;
+
 		for (int i = 0; i < GAME_INFO_INDEX; i++)
 		{
 			if (crc_game_list[i].crc == crc)
@@ -383,6 +386,7 @@ void CALLBACK GSclose()
 
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
+    g_LastCRC = 0;
 }
 
 void CALLBACK GSirqCallback(void (*callback)())
