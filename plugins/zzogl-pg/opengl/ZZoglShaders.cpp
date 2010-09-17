@@ -25,6 +25,12 @@
 #include "ZZoglShaders.h"
 #include "zpipe.h"
 	
+
+#ifdef _WIN32
+#	include "Win32.h"
+extern HINSTANCE hInst;
+#endif
+
 // ----------------- Defines
 
 using namespace ZeroGS; 
