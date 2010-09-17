@@ -264,7 +264,7 @@ void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 		} \
 	} \
 	\
-	psrcv = (Vector*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
+	psrcv = (float4*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
 	\
 	for(i = 0; i < b.height; ++i) \
 	{ \
@@ -273,7 +273,7 @@ void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 		for(j = 0; j < b.width; ++j) \
 		{ \
 			u32 temp = ((j + 1) % b.width); \
-			Vector* pv = &psrcv[i_width + j]; \
+			float4* pv = &psrcv[i_width + j]; \
 			pv->x = psrcf[i_width + j]; \
 			pv->y = psrcf[i_width + temp]; \
 			pv->z = psrcf[i_width2 + j]; \
@@ -390,13 +390,13 @@ void FillBlocksF(vector<char>& vBlockData, vector<char>& vBilinearData)
 {
 	FUNCLOG
 	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
-	vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(Vector));
+	vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(float4));
 
 	int i, j;
 	BLOCK b;
 	float* psrcf = NULL;
 	u16* psrcw = NULL;
-	Vector* psrcv = NULL;
+	float4* psrcv = NULL;
 
 	memset(m_Blocks, 0, sizeof(m_Blocks));
 

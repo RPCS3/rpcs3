@@ -97,8 +97,8 @@ struct BLOCK
 	BLOCK() { memset(this, 0, sizeof(BLOCK)); }
 
 	// shader constants for this block
-	Vector vTexBlock;
-	Vector vTexDims;
+	float4 vTexBlock;
+	float4 vTexDims;
 	int width, height;	// dims of one page in pixels
 	int ox, oy, mult;
 	int bpp;
@@ -124,8 +124,8 @@ struct BLOCK
 		ox = ox2;
 		oy = oy2;
 		mult = mult2;
-		vTexDims = Vector(BLOCK_TEXWIDTH/(float)(bw), BLOCK_TEXHEIGHT/(float)bh, 0, 0); 
-		vTexBlock = Vector((float)bw/BLOCK_TEXWIDTH, (float)bh/BLOCK_TEXHEIGHT, ((float)ox+0.2f)/BLOCK_TEXWIDTH, ((float)oy+0.05f)/BLOCK_TEXHEIGHT);
+		vTexDims = float4(BLOCK_TEXWIDTH/(float)(bw), BLOCK_TEXHEIGHT/(float)bh, 0, 0); 
+		vTexBlock = float4((float)bw/BLOCK_TEXWIDTH, (float)bh/BLOCK_TEXHEIGHT, ((float)ox+0.2f)/BLOCK_TEXWIDTH, ((float)oy+0.05f)/BLOCK_TEXHEIGHT);
 		width = bw;
 		height = bh;
 		colwidth = bh / 4;

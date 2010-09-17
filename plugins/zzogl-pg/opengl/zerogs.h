@@ -142,7 +142,7 @@ class CRenderTarget
 		int fbp, fbw, fbh, fbhCalc; // if fbp is negative, virtual target (not mapped to any real addr)
 		int start, end; // in bytes
 		u32 lastused;	// time stamp since last used
-		Vector vposxy;
+		float4 vposxy;
 
 		u32 fbm;
 		u16 status;
@@ -167,8 +167,8 @@ class CRenderTarget
 			TS_NeedConvert32 = 16,
 			TS_NeedConvert16 = 32,
 		};
-		inline Vector DefaultBitBltPos() ;
-		inline Vector DefaultBitBltTex() ;
+		inline float4 DefaultBitBltPos();
+		inline float4 DefaultBitBltTex();
 
 	private:
 		void _CreateFeedback();

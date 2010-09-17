@@ -192,7 +192,7 @@ void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* n
 // Used sometimes for color 1.
 void ZZshDefaultOneColor( FRAGMENTSHADER ptr ) {
 	ShaderHandleName = "Set Default One color";
-	Vector v = Vector ( 1, 1, 1, 1 );
+	float4 v = float4 ( 1, 1, 1, 1 );
 	ZZshSetParameter4fv( ptr.sOneColor, v, "DefaultOne");
 }
 
@@ -258,11 +258,11 @@ void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 	pf->set_texture(pf->sInterlace, "g_sInterlace");
 
 	// set global shader constants
-	pf->set_shader_const(Vector(0.5f, (conf.settings().exact_color) ? 0.9f / 256.0f : 0.5f / 256.0f, 0, 1 / 255.0f), "g_fExactColor");
-	pf->set_shader_const(Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f), "g_fBilinear");
-	pf->set_shader_const(Vector(1.0f / 256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
-	pf->set_shader_const(Vector(0, 1, 0.001f, 0.5f), "g_fc0");
-	pf->set_shader_const(Vector(1 / 1024.0f, 0.2f / 1024.0f, 1 / 128.0f, 1 / 512.0f), "g_fMult");
+	pf->set_shader_const(float4(0.5f, (conf.settings().exact_color) ? 0.9f / 256.0f : 0.5f / 256.0f, 0, 1 / 255.0f), "g_fExactColor");
+	pf->set_shader_const(float4(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f), "g_fBilinear");
+	pf->set_shader_const(float4(1.0f / 256.0f, 1.0004f, 1, 0.5f), "g_fZBias");
+	pf->set_shader_const(float4(0, 1, 0.001f, 0.5f), "g_fc0");
+	pf->set_shader_const(float4(1 / 1024.0f, 0.2f / 1024.0f, 1 / 128.0f, 1 / 512.0f), "g_fMult");
 }
 
 static bool outdated_shaders = false;
@@ -279,13 +279,13 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 	// Set Z-test, log or no log;
 	if (conf.settings().no_logz)
 	{
-		g_vdepth = Vector(255.0 / 256.0f,  255.0 / 65536.0f, 255.0f / (65535.0f * 256.0f), 1.0f / (65536.0f * 65536.0f));
-		vlogz = Vector(1.0f, 0.0f, 0.0f, 0.0f);
+		g_vdepth = float4(255.0 / 256.0f,  255.0 / 65536.0f, 255.0f / (65535.0f * 256.0f), 1.0f / (65536.0f * 65536.0f));
+		vlogz = float4(1.0f, 0.0f, 0.0f, 0.0f);
 	}
 	else
 	{
-		g_vdepth = Vector(256.0f * 65536.0f, 65536.0f, 256.0f, 65536.0f * 65536.0f);
-		vlogz = Vector(0.0f, 1.0f, 0.0f, 0.0f);
+		g_vdepth = float4(256.0f * 65536.0f, 65536.0f, 256.0f, 65536.0f * 65536.0f);
+		vlogz = float4(0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
 	p = cgGetNamedParameter(prog, "g_fZ");
@@ -311,7 +311,7 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 		}
 	}
 
-	Vector vnorm = Vector(g_filog32, 0, 0, 0);
+	float4 vnorm = float4(g_filog32, 0, 0, 0);
 
 	p = cgGetNamedParameter(prog, "g_fZNorm");
 
@@ -321,17 +321,17 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 	p = cgGetNamedParameter(prog, "g_fBilinear");
 
 	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
-		cgGLSetParameter4fv(p, Vector(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f));
+		cgGLSetParameter4fv(p, float4(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f));
 
 	p = cgGetNamedParameter(prog, "g_fZBias");
 
 	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
-		cgGLSetParameter4fv(p, Vector(1.0f / 256.0f, 1.0004f, 1, 0.5f));
+		cgGLSetParameter4fv(p, float4(1.0f / 256.0f, 1.0004f, 1, 0.5f));
 
 	p = cgGetNamedParameter(prog, "g_fc0");
 
 	if (p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE)
-		cgGLSetParameter4fv(p, Vector(0, 1, 0.001f, 0.5f));
+		cgGLSetParameter4fv(p, float4(0, 1, 0.001f, 0.5f));
 }
 
 #ifndef DEVBUILD

@@ -63,7 +63,7 @@ extern int s_nNewWidth, s_nNewHeight;
 extern CRangeManager s_RangeMngr; // manages overwritten memory
 extern void FlushTransferRanges(const tex0Info* ptex);
 extern void ProcessMessages();
-void AdjustTransToAspect(Vector& v);
+void AdjustTransToAspect(float4& v);
 
 // Interlace texture is lazy 1*(height) array of 1 and 0.
 // If its height (named s_nInterlaceTexWidth here) is hanging we must redo

@@ -29,7 +29,6 @@
 #include "Mem.h"
 #include "x86.h"
 #include "zerogs.h"
-#include "zpipe.h"
 #include "targets.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
@@ -94,10 +93,10 @@ int nBackbufferWidth, nBackbufferHeight;									// ZZ
 
 namespace ZeroGS
 {
-Vector g_vdepth, vlogz;
+float4 g_vdepth, vlogz;
 
-//       	= Vector( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
-//	Vector g_vdepth = Vector( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
+//       	= float4( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
+//	float4 g_vdepth = float4( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
 
 extern CRangeManager s_RangeMngr; // manages overwritten memory
 GLenum GetRenderTargetFormat() { return GetRenderFormat() == RFT_byte8 ? 4 : g_internalRGBAFloat16Fmt; }
@@ -342,7 +341,7 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	FUNCLOG
 	ZZshGLDisableProfile();
 
-	Vector v;
+	float4 v;
 	v.SetColor(color);
 	glColor3f(v.z, v.y, v.x);
 	//glColor3f(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff)/ 255.0f, (color & 0xff) / 255.0f);
@@ -491,7 +490,7 @@ void ZeroGS::RenderCustom(float fAlpha)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	// tex coords
-	Vector v = Vector(1 / 32767.0f, 1 / 32767.0f, 0, 0);
+	float4 v = float4(1 / 32767.0f, 1 / 32767.0f, 0, 0);
 	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 	v.x = (float)nLogoWidth;
 	v.y = (float)nLogoHeight;
@@ -782,7 +781,7 @@ void ZeroGS::SetFogColor(u32 fog)
 	ZeroGS::FlushBoth();
 
 	SetShaderCaller("SetFogColor");
-	Vector v;
+	float4 v;
 
 	// set it immediately
 	v.SetColor(gs.fogcol);
@@ -796,7 +795,7 @@ void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
 	FUNCLOG
 	
 	SetShaderCaller("SetFogColor");
-	Vector v;
+	float4 v;
 	
 	v.x = fog->FCR / 255.0f;
 	v.y = fog->FCG / 255.0f;

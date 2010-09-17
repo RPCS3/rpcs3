@@ -145,7 +145,7 @@ struct FRAGMENTSHADER
 		return false;
 	}
 
-	bool set_shader_const(Vector v, const char *name)
+	bool set_shader_const(float4 v, const char *name)
 	{
 		ZZshParameter p;
 
@@ -176,8 +176,8 @@ struct VERTEXSHADER
 
 namespace ZeroGS {
 	// Shaders variables
-	extern Vector g_vdepth;	
-	extern Vector vlogz;
+	extern float4 g_vdepth;	
+	extern float4 vlogz;
 	extern VERTEXSHADER pvsBitBlt;
 	extern FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;					// ppsOne used to stop using shaders for draw
 	extern FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
