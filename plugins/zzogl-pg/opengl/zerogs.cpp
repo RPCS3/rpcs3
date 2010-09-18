@@ -545,7 +545,7 @@ __forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
 
 int Values[100] = {0, };
 
-void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+inline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 {
 	int index = Index;
 	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);

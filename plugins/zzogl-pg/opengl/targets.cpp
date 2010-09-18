@@ -2930,7 +2930,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 template <typename T, typename Tret>
 inline Tret dummy_return(T value) { return value; }
 
-template <typename T, typename Tsrc, T (*convfn)(Tsrc)>
+template <typename Tdst, Tdst (*convfn)(u32)>
 inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
 {
     u32 mask, imask;
@@ -2947,17 +2947,21 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
         imask = fbm;
     }
 
-    Tsrc* src = (Tsrc*)(psrc);
-    T* pPageOffset = (T*)g_pbyGSMemory + fbp*(256/sizeof(T)), *dst;
+    Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
+    Tdst *dst;
 
-    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(T) * fbw);
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
+    ZZLog::Debug_Log("*** Resolve 32 bits: %dx%d in %x", maxfbh, fbw, psm);
 
-    ZZLog::Debug_Log("*** Resolve 32 bits: %dx%d in %x\n", maxfbh, fbw, psm);
+    // Start the src array at the end to reduce testing in loop
+    u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
+    u32* src = (u32*)(psrc) + maxfbh*raw_size;
 
-    for(int i = 0; i < maxfbh; ++i) {
-        for(int j = 0; j < fbw; ++j) {
-            T dsrc = (T)convfn(src[RW(j)]);
+    for(int i = maxfbh; i > 0; --i) {
+        src -= raw_size;
+        for(int j = fbw; j > 0; --j) {
+            Tdst dsrc = (Tdst)convfn(src[RW(j)]);
             // They are 3 methods to call the functions
             // macro (compact, inline) but need a nice psm ; swich (inline) ; function pointer (compact)
             // Use a switch to allow inlining of the getPixel function.
@@ -2994,7 +2998,6 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
             }
             *dst = (dsrc & mask) | (*dst & imask);
         }
-        src += RH(Pitch(fbw))/sizeof(Tsrc);
     }
 }
 
@@ -3018,28 +3021,28 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
         // the psm switch in Resolve_32_Bit
         case PSMCT32:
         case PSMCT24:
-            Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
+            Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
             break;
 
         case PSMCT16:
-            Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
+            Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
             break;
 
         case PSMCT16S:
-            Resolve_32_Bit<u16, u32, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
+            Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
             break;
 
         case PSMT32Z:
         case PSMT24Z:
-            Resolve_32_Bit<u32, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
+            Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
             break;
 
         case PSMT16Z:
-            Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
+            Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
             break;
 
         case PSMT16SZ:
-            Resolve_32_Bit<u16, u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
+            Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
             break;
     }
 

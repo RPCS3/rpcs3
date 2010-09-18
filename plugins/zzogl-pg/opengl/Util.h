@@ -87,6 +87,9 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 #define _aligned_malloc pcsx2_aligned_malloc
 #define _aligned_free pcsx2_aligned_free
 
+#endif
+
+#ifdef __LINUX__
 #include <sys/timeb.h>	// ftime(), struct timeb
 
 inline unsigned long timeGetTime()
@@ -95,6 +98,15 @@ inline unsigned long timeGetTime()
 	ftime(&t);
 
 	return (unsigned long)(t.time*1000 + t.millitm);
+}
+
+#include <time.h>
+inline unsigned long timeGetPreciseTime()
+{
+    timespec t;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
+
+    return t.tv_nsec;
 }
 
 struct RECT
@@ -138,6 +150,7 @@ enum GSWindowDim
 	GSDim_1024,
 	GSDim_1280,
 };
+
 typedef union 
 {
 	struct
