@@ -67,7 +67,7 @@ union tIPU_CTRL {
 	void reset() { _u32 = 0; }
 };
 
-__aligned16 struct tIPU_BP {
+struct __aligned16 tIPU_BP {
 	__aligned16 u128 internal_qwc[2];
 
 	u32 BP;		// Bit stream point (0 to 128*2)
