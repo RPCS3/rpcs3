@@ -2928,11 +2928,10 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 
     // Start the src array at the end to reduce testing in loop
     u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
-    u32* src = (u32*)(psrc) + maxfbh*raw_size;
+    u32* src = (u32*)(psrc) + (maxfbh-1)*raw_size;
 
-    for(int i = maxfbh; i > 0; --i) {
-        src -= raw_size;
-        for(int j = fbw; j > 0; --j) {
+    for(int i = maxfbh-1; i >= 0; --i) {
+        for(int j = fbw-1; j >= 0; --j) {
             Tdst dsrc = (Tdst)convfn(src[RW(j)]);
             // They are 3 methods to call the functions
             // macro (compact, inline) but need a nice psm ; swich (inline) ; function pointer (compact)
@@ -2970,6 +2969,7 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
             }
             *dst = (dsrc & mask) | (*dst & imask);
         }
+        src -= raw_size;
     }
 }
 
