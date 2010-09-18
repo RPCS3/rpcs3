@@ -2202,12 +2202,13 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	memcpy_amd(targ->ptex->memptr, g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy, 4 * GPU_TEXWIDTH * targ->height);
 
+	vector<u8> texdata;
 	u8* ptexdata = NULL;
 
 	if (PSMT_ISCLUT(tex0.psm))
 	{
-		u32 tex_size = ((tex0.cpsm <= 1) ? 4 : 2) * texW * texH;
-		ptexdata = (u8*)_aligned_malloc(tex_size, 16);
+		texdata.resize(((tex0.cpsm <= 1) ? 4 : 2) * texW * texH);
+		ptexdata = &texdata[0];
 
 		u8* psrc = (u8*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
 
@@ -2230,16 +2231,45 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	{
 		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
 		{
-			ptexdata = (u8*)_aligned_malloc(4 * texW * texH, 16);
-			
+			texdata.resize(4 * texW * texH
+#if defined(ZEROGS_SSE2)
+			+ 15 						// reserve additional elements for alignment if SSE2 used.
+										// better do it now, so less resizing would be needed
+#endif
+							);
+
+			ptexdata = &texdata[0];
+
 			// needs to be 8 bit, use xmm for unpacking
 			u16* dst = (u16*)ptexdata;
 			u16* src = (u16*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
 
 #if defined(ZEROGS_SSE2)
-			assert(((u32)(uptr)dst) % 16 == 0);
-			SSE2_UnswizzleZ16Target(dst, src, targ->height * GPU_TEXWIDTH / 16);
+			if (((u32)(uptr)dst) % 16 != 0)
+			{
+				// This is not unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2
+				// instruction movdqa [%eax], xmm0
+				// The idea would be resize vector to 15 elements, that set ptxedata to aligned position.
+				// Later we would move eax by 16, so only we should verify is first element align
+				
+				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
+				// Probably, usage of _aligned_maloc() would be preferable.
+				
+				// Update: Apparently not, as Zeydlitz says it leads to a heavy slowdown. --arcum42
+
+				// Note: this often happens when changing AA.
+				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
+				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
+				dst = (u16*)ptexdata;
+				ZZLog::GS_Log("Made alignment for texdata, 0x%x", dst);
+				assert(((u32)(uptr)dst) % 16 == 0);			// Assert, because at future could be vectors with uncontigious spaces
+			}
+
+			int iters = targ->height * GPU_TEXWIDTH / 16;
+
+			SSE2_UnswizzleZ16Target(dst, src, iters) ;
 #else // ZEROGS_SSE2
+
 			for (int i = 0; i < targ->height; ++i)
 			{
 				for (int j = 0; j < GPU_TEXWIDTH; ++j)

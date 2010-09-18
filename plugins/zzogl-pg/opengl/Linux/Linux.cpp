@@ -461,7 +461,7 @@ void SysMessage(const char *fmt, ...)
 
 void CALLBACK GSabout()
 {
-	SysMessage("ZZOgl PG: by Zeydlitz (PG version worked on by arcum42). Based off of ZeroGS, by zerofrog.");
+	SysMessage("ZZOgl PG: by Zeydlitz (PG version worked on by arcum42, gregory, and the pcsx2 development team). Based off of ZeroGS, by zerofrog.");
 }
 
 s32 CALLBACK GStest()
