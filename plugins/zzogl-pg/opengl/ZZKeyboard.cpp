@@ -116,7 +116,7 @@ typedef struct GameHackStruct
 	u32 HackMask;
 } GameHack;
 
-#define HACK_NUMBER 26
+#define HACK_NUMBER 25
 
 GameHack HackinshTable[HACK_NUMBER] =
 {
@@ -142,16 +142,16 @@ GameHack HackinshTable[HACK_NUMBER] =
 	{"***17 No Alpha Test", GAME_NOALPHATEST},
 	{"***18 Disable MRT depth", GAME_DISABLEMRTDEPTH},
 	//{"***xx 32 bit targs", GAME_32BITTARGS},
-	{"***19 Path 3 hack", GAME_PATH3HACK},
+	//{"***xx Path 3 hack", GAME_PATH3HACK},
 	//{"***xx Parallel calls", GAME_DOPARALLELCTX},
-	{"***20 Specular highlights", GAME_XENOSPECHACK},
+	{"***19 Specular highlights", GAME_XENOSPECHACK},
 	//{"***xx Partial pointers", GAME_PARTIALPOINTERS},
-	{"***21 Partial depth", GAME_PARTIALDEPTH},
-	{"***22 Reget hack", GAME_REGETHACK},
+	{"***20 Partial depth", GAME_PARTIALDEPTH},
+	{"***21 Reget hack", GAME_REGETHACK},
 
-	{"***23 Gust hack", GAME_GUSTHACK},
-	{"***24 Log-Z", GAME_NOLOGZ},
-	{"***25 Auto skipdraw", GAME_AUTOSKIPDRAW}
+	{"***22 Gust hack", GAME_GUSTHACK},
+	{"***23 Log-Z", GAME_NOLOGZ},
+	{"***24 Auto skipdraw", GAME_AUTOSKIPDRAW}
 };
 
 int CurrentHackSetting = 0;

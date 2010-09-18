@@ -153,7 +153,7 @@ void CreateGameHackTable(GtkWidget *treeview, gameHacks hacks)
 	add_map_entry(GAME_NOALPHATEST, "00080000", "Disable alpha testing - 00080000");
 	add_map_entry(GAME_DISABLEMRTDEPTH, "00100000", "Enable Multiple RTs - 00100000");
 	//GAME_32BITTARGS
-	//GAME_PATH3HACK (still implemented)
+	//GAME_PATH3HACK
 	//GAME_DOPARALLELCTX
 	add_map_entry(GAME_XENOSPECHACK, "01000000", "Specular Highlights - 01000000\nMakes graphics faster by removing highlights. (Automatically on for Xenosaga, Okami, & Okage.)");
 	//add_map_entry(GAME_PARTIALPOINTERS, "02000000", "Partial targets - 02000000");

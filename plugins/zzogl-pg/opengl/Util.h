@@ -217,7 +217,7 @@ typedef struct
 	gameHacks settings() 
 	{
 		gameHacks tempHack;
-		tempHack._u32 = (hacks._u32 | def_hacks._u32 | GAME_PATH3HACK);
+		tempHack._u32 = (hacks._u32 | def_hacks._u32);
 		 return tempHack; 
 	}
 	bool fullscreen() { return !!(zz_options.fullscreen); }

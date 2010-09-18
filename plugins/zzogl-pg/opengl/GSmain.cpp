@@ -153,7 +153,7 @@ void ReportHacks(gameHacks hacks)
 	if (hacks.no_alpha_test) ZZLog::WriteLn("'No alpha test' hack enabled.");
 	if (hacks.disable_mrt_depth) ZZLog::WriteLn("'Disable mrt depth' hack enabled.");
 	if (hacks.args_32_bit) ZZLog::WriteLn("'Args 32 bit' hack enabled.");
-	if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
+	//if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
 	if (hacks.parallel_context) ZZLog::WriteLn("'Parallel context' hack enabled.");
 	if (hacks.xenosaga_spec) ZZLog::WriteLn("'Xenosaga spec' hack enabled.");
 	if (hacks.partial_pointers) ZZLog::WriteLn("'Partial pointers' hack enabled.");
@@ -246,9 +246,6 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 
 	if (CRCValueChanged && (crc != 0))
 	{
-        // Enable Path3 hack for all games
-        conf.def_hacks.path3 = 1;
-
 		for (int i = 0; i < GAME_INFO_INDEX; i++)
 		{
 			if (crc_game_list[i].crc == crc)

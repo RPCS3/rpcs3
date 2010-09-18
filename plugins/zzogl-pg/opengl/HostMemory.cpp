@@ -79,6 +79,12 @@
 	static vector<u8> s_vTempBuffer, s_vTransferCache;
 	static int gs_imageEnd = 0;
 	
+//	From the start of monster labs. In all 3 cases, psm == 0.
+//	ZZogl-PG:  GetRectMemAddress(0x3f4000, 0x404000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f40, 0x100);
+//	ZZogl-PG:  GetRectMemAddress(0x3f8000, 0x408000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f80, 0x100);
+//	ZZogl-PG:  GetRectMemAddress(0x3fc000, 0x40c000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3fc0, 0x100);
+
+
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw)
 	{
 		FUNCLOG
@@ -158,7 +164,7 @@
 
 		if (end > MEMORY_END)
 		{
-			ZZLog::Warn_Log("Host local out of bounds!");
+			ZZLog::Warn_Log("Init host local out of bounds! (end == 0x%x)", end);
 			//gs.imageTransfer = -1;
 			end = MEMORY_END;
 		}
@@ -178,9 +184,8 @@
 		int start, end;
 
 		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.imageX, gs.imageY, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
-
+		
 		assert(start < gs_imageEnd);
-
 		end = gs_imageEnd;
 
 		// sometimes games can decompress to alpha channel of render target only, in this case
