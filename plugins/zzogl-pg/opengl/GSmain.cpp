@@ -144,6 +144,7 @@ void ReportHacks(gameHacks hacks)
 	if (hacks.quick_resolve_1) ZZLog::WriteLn("'Quick resolve 1' enabled.");
 	if (hacks.no_quick_resolve) ZZLog::WriteLn("'No Quick resolve' hack enabled.");
 	if (hacks.no_target_clut) ZZLog::WriteLn("'No target clut' hack enabled.");
+	if (hacks.no_stencil) ZZLog::WriteLn("'No stencil' hack enabled.");
 	if (hacks.vss_hack_off) ZZLog::WriteLn("VSS hack enabled.");
 	if (hacks.no_depth_resolve) ZZLog::WriteLn("'No depth resolve' hack enabled.");
 	if (hacks.full_16_bit_res) ZZLog::WriteLn("'Full 16 bit resolution' hack enabled.");
