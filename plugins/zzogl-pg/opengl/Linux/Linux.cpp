@@ -262,7 +262,7 @@ void DisplayDialog()
 	GtkWidget *option_frame, *option_box;
 	GtkWidget *log_check;
 	GtkWidget *int_label, *int_box, *int_holder;
-	GtkWidget *bilinear_check;
+	GtkWidget *bilinear_label, *bilinear_box, *bilinear_holder;
 	GtkWidget *aa_label, *aa_box, *aa_holder;
 	GtkWidget *snap_label, *snap_box, *snap_holder;
 	GtkWidget  *fullscreen_label, *widescreen_check;
@@ -300,10 +300,18 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(int_holder), int_label, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(int_holder), int_box, false, false, 2);
 
-
-	bilinear_check = gtk_check_button_new_with_label("Bilinear Filtering");
-	gtk_widget_set_tooltip_text(bilinear_check, "Best quality is off. Turn on for speed. Toggled by pressing Shift + F5 when running.");
-
+	bilinear_label = gtk_label_new("Bilinear Filtering:");
+	bilinear_box = gtk_combo_box_new_text();
+	
+	gtk_combo_box_append_text(GTK_COMBO_BOX(bilinear_box), "Off");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(bilinear_box), "Normal");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(bilinear_box), "Forced");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(bilinear_box), conf.bilinear);
+	gtk_widget_set_tooltip_text(bilinear_box, "Best quality is off. Turn on for speed. Toggled by pressing Shift + F5 when running.");
+	bilinear_holder = gtk_hbox_new(false, 5);
+	gtk_box_pack_start(GTK_BOX(bilinear_holder), bilinear_label, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(bilinear_holder), bilinear_box, false, false, 2);
+	
 	aa_label = gtk_label_new("Anti-Aliasing:");
 	aa_box = gtk_combo_box_new_text();
 
@@ -359,7 +367,7 @@ void DisplayDialog()
 	gtk_frame_set_shadow_type(GTK_FRAME(option_frame), GTK_SHADOW_NONE);
 
 	gtk_box_pack_start(GTK_BOX(option_box), log_check, false, false, 2);
-	gtk_box_pack_start(GTK_BOX(option_box), bilinear_check, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), bilinear_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), int_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), aa_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), snap_holder, false, false, 2);
@@ -377,7 +385,6 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(main_box), option_frame, false, false, 2);
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), conf.log);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(bilinear_check), conf.bilinear);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
 
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), main_frame);
@@ -396,9 +403,11 @@ void DisplayDialog()
 
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box)) != -1)
 			conf.aa = gtk_combo_box_get_active(GTK_COMBO_BOX(aa_box));
+			
+		if (gtk_combo_box_get_active(GTK_COMBO_BOX(bilinear_box)) != -1)
+			conf.bilinear = gtk_combo_box_get_active(GTK_COMBO_BOX(bilinear_box));
 
 		conf.log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
-		conf.bilinear = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(bilinear_check));
 		fake_options.widescreen = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widescreen_check));
 		fake_options.tga_snap = gtk_combo_box_get_active(GTK_COMBO_BOX(snap_box));
 		
