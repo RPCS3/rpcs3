@@ -78,12 +78,11 @@
 	
 	static vector<u8> s_vTempBuffer, s_vTransferCache;
 	static int gs_imageEnd = 0;
-	
+
 //	From the start of monster labs. In all 3 cases, psm == 0.
 //	ZZogl-PG:  GetRectMemAddress(0x3f4000, 0x404000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f40, 0x100);
 //	ZZogl-PG:  GetRectMemAddress(0x3f8000, 0x408000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f80, 0x100);
 //	ZZogl-PG:  GetRectMemAddress(0x3fc000, 0x40c000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3fc0, 0x100);
-
 
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw)
 	{
@@ -114,7 +113,7 @@
 		bits = PSMT_BITS_NUM(psm);
 		start = getPixelFun[psm](x, y, bp, bw);
 		end = getPixelFun[psm](x + w - 1, y + h - 1, bp, bw) + 1;
-		
+
 		if (bits > 0)
 		{
 			start *= bits;
