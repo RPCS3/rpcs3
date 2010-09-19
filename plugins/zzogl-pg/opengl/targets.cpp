@@ -2936,6 +2936,9 @@ template <typename Tdst, Tdst (*convfn)(u32)>
 inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
 {
     u32 mask, imask;
+#ifdef __LINUX__
+     u32 startime = timeGetPreciseTime();
+#endif
 
     if (PSMT_ISHALF(psm)) /* 16 bit */
     {
@@ -2950,7 +2953,7 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
     }
 
     Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
-    Tdst *dst;
+    Tdst* dst;
 
     int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
@@ -3001,6 +3004,129 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
         }
         src -= raw_size;
     }
+#ifdef __LINUX__
+    ZZLog::Error_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
+#endif
+}
+
+template <u32 pageTable[32][64], u32 (*convfn)(u32)>
+void Resolve_32b_to_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
+{
+#ifdef __LINUX__
+    u32 startime = timeGetPreciseTime();
+#endif
+    u32 mask = ~fbm;
+    u32 imask = fbm;
+
+    u32* pPageOffset = (u32*)g_pbyGSMemory + fbp*(256/sizeof(u32));
+
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(u32) * fbw);
+    if( maxfbh > fbh ) maxfbh = fbh;
+    ZZLog::Error_Log("*** Resolve 32 to 32 bits: %dx%d", maxfbh, fbw);
+
+    // Start the src array at the end to reduce testing in loop
+    u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
+    u32* src = (u32*)(psrc) + maxfbh*raw_size;
+
+    // Manually optimize the loop (typical 448x512). In particular unroll 64times the inner loop
+    // And move maximum code outside (compiler must do it normally...)
+    // Basic code look like this:
+    /* loop i : 0->maxfbh
+     * loop j : 0->fbw
+     *      Tdst dsrc = (Tdst)convfn(src[RW(j)]);
+     *      dst = pPageOffset + getPixelAddress16_0(j, i, fbw);
+     *      *dst = (dsrc & mask) | (*dst & imask);
+     * end loop i
+     *      *src += raw_size;
+     * end loop j
+     */
+    u32 fbw_div = (fbw >> 6);
+    for(int i = maxfbh-1; i >= 0; --i) {
+        u32 i_div = (i >> 5) * fbw_div;
+        u32 i_msk = i & 31;
+        // for(int j = fbw_div-1; j >= 0; --j) {
+        for(u32 j = 0 ; j < fbw_div; ++j) {
+            u32 basepage = (i_div + j) * 2048;
+
+#define update_pixel(x) \
+            { \
+                u32* dst_tmp ;\
+                dst_tmp = pPageOffset + basepage + pageTable[i_msk][(x)];\
+                u32 dsrc_tmp = convfn(src[RW((j<<6)+(x))]); \
+                *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask); \
+            }
+
+            update_pixel(0);
+            update_pixel(1);
+            update_pixel(2);
+            update_pixel(3);
+            update_pixel(4);
+            update_pixel(5);
+            update_pixel(6);
+            update_pixel(7);
+            update_pixel(8);
+            update_pixel(9);
+            update_pixel(10);
+            update_pixel(11);
+            update_pixel(12);
+            update_pixel(13);
+            update_pixel(14);
+            update_pixel(15);
+            update_pixel(16);
+            update_pixel(17);
+            update_pixel(18);
+            update_pixel(19);
+            update_pixel(20);
+            update_pixel(21);
+            update_pixel(22);
+            update_pixel(23);
+            update_pixel(24);
+            update_pixel(25);
+            update_pixel(26);
+            update_pixel(27);
+            update_pixel(28);
+            update_pixel(29);
+            update_pixel(30);
+            update_pixel(31);
+            update_pixel(32);
+            update_pixel(33);
+            update_pixel(34);
+            update_pixel(35);
+            update_pixel(36);
+            update_pixel(37);
+            update_pixel(38);
+            update_pixel(39);
+            update_pixel(40);
+            update_pixel(41);
+            update_pixel(42);
+            update_pixel(43);
+            update_pixel(44);
+            update_pixel(45);
+            update_pixel(46);
+            update_pixel(47);
+            update_pixel(48);
+            update_pixel(49);
+            update_pixel(50);
+            update_pixel(51);
+            update_pixel(52);
+            update_pixel(53);
+            update_pixel(54);
+            update_pixel(55);
+            update_pixel(56);
+            update_pixel(57);
+            update_pixel(58);
+            update_pixel(59);
+            update_pixel(60);
+            update_pixel(61);
+            update_pixel(62);
+            update_pixel(63);
+        }
+        src -= raw_size;
+        // src += raw_size;
+    }
+#ifdef __LINUX__
+    ZZLog::Error_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
+#endif
 }
 
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode = true)
@@ -3015,6 +3141,8 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	// note that fbp is always aligned on page boundaries
 	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
 
+    // Comment this to restore the previous resolve_32 version
+#define OPTI_RESOLVE_32 1
     // start the conversion process A8R8G8B8 -> psm
     switch (psm)
     {
@@ -3023,7 +3151,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
         // the psm switch in Resolve_32_Bit
         case PSMCT32:
         case PSMCT24:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b_to_32b<g_pageTable32, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
+#endif
             break;
 
         case PSMCT16:
@@ -3036,7 +3168,11 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
         case PSMT32Z:
         case PSMT24Z:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b_to_32b<g_pageTable32Z, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
+#endif
             break;
 
         case PSMT16Z:
