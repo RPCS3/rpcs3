@@ -3037,7 +3037,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 
     // Start the src array at the end to reduce testing in loop
     u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
-    u32* src = (u32*)(psrc) + maxfbh*raw_size;
+    u32* src = (u32*)(psrc) + (maxfbh-1)*raw_size;
 
     // Manually optimize the loop (typical 448x512). In particular unroll 64times the inner loop
     // And move maximum code outside (compiler must do it normally...)
