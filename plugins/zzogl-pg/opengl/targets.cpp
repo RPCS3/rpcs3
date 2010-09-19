@@ -3009,18 +3009,29 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 #endif
 }
 
-template <u32 pageTable[32][64], u32 (*convfn)(u32)>
-void Resolve_32b_to_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
+template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32)>
+void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 {
 #ifdef __LINUX__
     u32 startime = timeGetPreciseTime();
 #endif
-    u32 mask = ~fbm;
-    u32 imask = fbm;
+    u32 mask;
+    u32 imask;
+    if (size == 64) /* 16 bit format */
+    {
+        /* mask is shifted*/
+        imask = RGBA32to16(fbm);
+        mask = (~imask)&0xffff;
+    }
+    else
+    {
+        mask = ~fbm;
+        imask = fbm;
+    }
 
-    u32* pPageOffset = (u32*)g_pbyGSMemory + fbp*(256/sizeof(u32));
+    Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
 
-    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(u32) * fbw);
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
     ZZLog::Error_Log("*** Resolve 32 to 32 bits: %dx%d", maxfbh, fbw);
 
@@ -3040,19 +3051,20 @@ void Resolve_32b_to_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
      *      *src += raw_size;
      * end loop j
      */
+    assert(fbw%64 == 0); // Failure => bad loop unrolling
     u32 fbw_div = (fbw >> 6);
     for(int i = maxfbh-1; i >= 0; --i) {
-        u32 i_div = (i >> 5) * fbw_div;
-        u32 i_msk = i & 31;
+        u32 i_div = (i / size) * fbw_div;
+        u32 i_msk = i & (size-1);
         // for(int j = fbw_div-1; j >= 0; --j) {
         for(u32 j = 0 ; j < fbw_div; ++j) {
             u32 basepage = (i_div + j) * 2048;
 
 #define update_pixel(x) \
             { \
-                u32* dst_tmp ;\
+                Tdst* dst_tmp ;\
                 dst_tmp = pPageOffset + basepage + pageTable[i_msk][(x)];\
-                u32 dsrc_tmp = convfn(src[RW((j<<6)+(x))]); \
+                Tdst dsrc_tmp = convfn(src[RW((j<<6)+(x))]); \
                 *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask); \
             }
 
@@ -3152,35 +3164,51 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
         case PSMCT32:
         case PSMCT24:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b_to_32b<g_pageTable32, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<32, g_pageTable32, u32, dummy_return >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
 #endif
             break;
 
         case PSMCT16:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16, u16, RGBA32to16 >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
+#endif
             break;
 
         case PSMCT16S:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16S, u16, RGBA32to16 >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
+#endif
             break;
 
         case PSMT32Z:
         case PSMT24Z:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b_to_32b<g_pageTable32Z, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<32, g_pageTable32Z, u32, dummy_return >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
 #endif
             break;
 
         case PSMT16Z:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16Z, u16, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
+#endif
             break;
 
         case PSMT16SZ:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16SZ, u16, dummy_return >(psrc, fbp, fbw, fbh, fbm);
+#else
             Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
+#endif
             break;
     }
 
