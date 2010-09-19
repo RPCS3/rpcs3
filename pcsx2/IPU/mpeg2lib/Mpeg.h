@@ -148,12 +148,12 @@ struct decoder_t {
 	macroblock_rgb32 rgb32;
 	macroblock_rgb16 rgb16;
 
-	uint ipu0_data;
+	uint ipu0_data;		// amount of data in the output macroblock (in QWC)
 	uint ipu0_idx;
 
 	/* bit parsing stuff */
-	u32 bitstream_buf;		/* current 32 bit working set */
-	int bitstream_bits;			/* used bits in working set */
+	//u32 bitstream_buf;		/* current 32 bit working set */
+	//int bitstream_bits;			/* used bits in working set */
 
 	int quantizer_scale;	/* remove */
 	int dmv_offset;		/* remove */
@@ -230,7 +230,7 @@ struct decoder_t {
 		ipu0_data -= amt;
 	}
 	
-	bool ReadIpuData(u128* out);
+	__fi bool ReadIpuData(u128* out);
 };
 
 struct mpeg2_scan_pack
@@ -240,6 +240,10 @@ struct mpeg2_scan_pack
 
 	mpeg2_scan_pack();
 };
+
+extern int bitstream_init ();
+extern u32 UBITS(uint bits);
+extern s32 SBITS(uint bits);
 
 extern void mpeg2_idct_copy(s16 * block, u8* dest, int stride);
 extern void mpeg2_idct_add(int last, s16 * block, s16* dest, int stride);
@@ -258,20 +262,19 @@ extern int get_dmv();
 extern void ipu_csc(macroblock_8& mb8, macroblock_rgb32& rgb32, int sgn);
 extern void ipu_dither(const macroblock_rgb32& rgb32, macroblock_rgb16& rgb16, int dte);
 extern void ipu_vq(macroblock_rgb16& rgb16, u8* indx4);
-extern void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16);
 
 extern int slice (u8 * buffer);
 
 #ifdef _MSC_VER
-#define BigEndian(out, in) out = _byteswap_ulong(in)
+#define BigEndian(in) _byteswap_ulong(in)
 #else
-#define BigEndian(out, in) out = __builtin_bswap32(in) // or we could use the asm function bswap...
+#define BigEndian(in) __builtin_bswap32(in) // or we could use the asm function bswap...
 #endif
 
 #ifdef _MSC_VER
-#define BigEndian64(out, in) out = _byteswap_uint64(in)
+#define BigEndian64(in) _byteswap_uint64(in)
 #else
-#define BigEndian64(out, in) out = __builtin_bswap64(in) // or we could use the asm function bswap...
+#define BigEndian64(in) __builtin_bswap64(in) // or we could use the asm function bswap...
 #endif
 
 extern __aligned16 const mpeg2_scan_pack mpeg2_scan;

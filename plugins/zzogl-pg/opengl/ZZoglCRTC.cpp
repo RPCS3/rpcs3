@@ -50,7 +50,7 @@ extern bool g_bMakeSnapshot;
 extern string strSnapshot;
 
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
-void ZeroGS::AdjustTransToAspect(Vector& v)
+void ZeroGS::AdjustTransToAspect(float4& v)
 {
 	double temp;
 	float f;
@@ -242,11 +242,11 @@ inline void RenderStartHelper(u32 bInterlace)
 // on image y coords. So if we write valpha.z * F + valpha.w + 0.5, it would be switching odd
 // and even strings at each frame.
 // valpha.x and y are used for image blending.
-inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTSHADER* prog)
+inline float4 RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTSHADER* prog)
 {
 	SetShaderCaller("RenderGetForClip");
 
-	Vector valpha;
+	float4 valpha;
 	// first render the current render targets, then from ptexMem
 
 	if (psm == 1)
@@ -282,7 +282,7 @@ inline Vector RenderGetForClip(u32 bInterlace, int interlace, int psm, FRAGMENTS
 		valpha.w = 1;
 	}
 
-	ZZshSetParameter4fv(prog->sOneColor, valpha, "g_fOneColor");
+	ZZshSetParameter4fv(prog->prog, prog->sOneColor, valpha, "g_fOneColor");
 
 	return valpha;
 }
@@ -295,7 +295,7 @@ inline void RenderCreateInterlaceTex(u32 bInterlace, int th, FRAGMENTSHADER* pro
 
 	int interlacetex = CreateInterlaceTex(2 * th);
 
-	ZZshGLSetTextureParameter(prog->sInterlace, interlacetex, "Interlace");
+	ZZshGLSetTextureParameter(prog->prog, prog->sInterlace, interlacetex, "Interlace");
 }
 
 // Well, do blending setup prior to second pass of half-frame drawing
@@ -396,10 +396,10 @@ inline int RenderGetOffsets(int* dby, int* movy, tex0Info& texframe, CRenderTarg
 }
 
 // BltBit shader calculate vertex (4 coord's pixel) position at the viewport.
-inline Vector RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
+inline float4 RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
 {
 	SetShaderCaller("RenderSetTargetBitPos");
-	Vector v;
+	float4 v;
 	// dest rect
 	v.x = 1;
 	v.y = dh / (float)th;
@@ -416,7 +416,7 @@ inline Vector RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
 		v.w += 1.0f / (float)dh ;
 	}
 
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
 
 	return v;
 }
@@ -425,12 +425,12 @@ inline Vector RenderSetTargetBitPos(int dh, int th, int movy, bool isInterlace)
 // For example, use tw / X and tw / X magnify the viewport.
 // Interlaced output is little out of VB, it could be seen as an evil blinking line on top
 // and bottom, so we try to remove it.
-inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool isInterlace)
+inline float4 RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool isInterlace)
 {
 	SetShaderCaller("RenderSetTargetBitTex");
 
-	Vector v;
-	v = Vector(th, tw, dh, dw);
+	float4 v;
+	v = float4(th, tw, dh, dw);
 
 	// Incorrect Aspect ratio on interlaced frames
 
@@ -440,28 +440,28 @@ inline Vector RenderSetTargetBitTex(float th, float tw, float dh, float dw, bool
 		v.w += 1.0f / conf.height;
 	}
 
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 	return v;
 }
 
 // Translator for POSITION coordinates (-1.0:+1.0f at x axis, +1.0f:-1.0y at y) into target frame ones.
 // We don't need x coordinate, because interlacing is y-axis only.
-inline Vector RenderSetTargetBitTrans(int th)
+inline float4 RenderSetTargetBitTrans(int th)
 {
 	SetShaderCaller("RenderSetTargetBitTrans");
-	Vector v = Vector(float(th), -float(th), float(th), float(th));
-	ZZshSetParameter4fv(pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
+	float4 v = float4(float(th), -float(th), float(th), float(th));
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.fBitBltTrans, v, "g_fBitBltTrans");
 	return v;
 }
 
 // use g_fInvTexDims to store inverse texture dims
 // Seems, that Targ shader does not use it
-inline Vector RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHADER* prog)
+inline float4 RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHADER* prog)
 {
 	SetShaderCaller("RenderSetTargetInvTex");
 
-	Vector v = Vector(0, 0, 0, 0);
+	float4 v = float4(0, 0, 0, 0);
 
 	if (prog->sInvTexDims)
 	{
@@ -469,7 +469,7 @@ inline Vector RenderSetTargetInvTex(int bInterlace, int tw, int th, FRAGMENTSHAD
 		v.y = 1.0f / (float)th;
 		v.z = (float)0.0;
 		v.w = -0.5f / (float)th;
-		ZZshSetParameter4fv(prog->sInvTexDims, v, "g_fInvTexDims");
+		ZZshSetParameter4fv(prog->prog, prog->sInvTexDims, v, "g_fInvTexDims");
 	}
 
 	return v;
@@ -544,17 +544,17 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 				SetShaderCaller("RenderCheckForTargets");
 
 				// Texture
-				Vector v = RenderSetTargetBitTex((float)RW(texframe.tw), (float)RH(dh), (float)RW(pfb->DBX), (float)RH(dby), INTERLACE_COUNT);
+				float4 v = RenderSetTargetBitTex((float)RW(texframe.tw), (float)RH(dh), (float)RW(pfb->DBX), (float)RH(dby), INTERLACE_COUNT);
 
 				// dest rect
 				v = RenderSetTargetBitPos(dh, texframe.th, movy, INTERLACE_COUNT);
 				v = RenderSetTargetBitTrans(ptarg->fbh);
 				v = RenderSetTargetInvTex(bInterlace, texframe.tbw, ptarg->fbh, &ppsCRTCTarg[bInterlace]) ; 	// FIXME. This is no use
 
-				Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
+				float4 valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTCTarg[bInterlace]);
 
 				// inside vb[0]'s target area, so render that region only
-				ZZshGLSetTextureParameter(ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
+				ZZshGLSetTextureParameter(ppsCRTCTarg[bInterlace].prog, ppsCRTCTarg[bInterlace].sFinal, ptarg->ptex, "CRTC target");
 				RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTCTarg[bInterlace]);
 
 				ZZshSetPixelShader(ppsCRTCTarg[bInterlace].prog);
@@ -582,7 +582,7 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 // this is the function that does it.
 inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listTargs, int i, bool* bUsingStencil, int interlace, int bInterlace)
 {
-	Vector v;
+	float4 v;
 	
 	for (list<CRenderTarget*>::iterator it = listTargs.begin(); it != listTargs.end(); ++it)
 	{
@@ -624,9 +624,9 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetBitPos(1, 1, 0, INTERLACE_COUNT);
 	v = RenderSetTargetBitTrans(texframe.th);
 	v = RenderSetTargetInvTex(bInterlace, texframe.tw, texframe.th, &ppsCRTC[bInterlace]);
-	Vector valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
+	float4 valpha = RenderGetForClip(bInterlace, interlace, texframe.psm, &ppsCRTC[bInterlace]);
 
-	ZZshGLSetTextureParameter(ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
+	ZZshGLSetTextureParameter(ppsCRTC[bInterlace].prog, ppsCRTC[bInterlace].sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
 	RenderCreateInterlaceTex(bInterlace, texframe.th, &ppsCRTC[bInterlace]);
 	ZZshSetPixelShader(ppsCRTC[bInterlace].prog);
 	

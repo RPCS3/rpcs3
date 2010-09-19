@@ -19,7 +19,6 @@
 #include "IPU/IPUdma.h"
 #include "mpeg2lib/Mpeg.h"
 
-
 __aligned16 IPU_Fifo ipu_fifo;
 
 void IPU_Fifo::init()
@@ -75,10 +74,7 @@ int IPU_Fifo_Input::write(u32* pMem, int size)
 
 	while (transsize-- > 0)
 	{
-		for (int i = 0; i <= 3; i++)
-		{
-			data[writepos + i] = pMem[i];
-		}
+		CopyQWC(&data[writepos], pMem);
 		writepos = (writepos + 4) & 31;
 		pMem += 4;
 	}
@@ -86,118 +82,100 @@ int IPU_Fifo_Input::write(u32* pMem, int size)
 	return firsttrans;
 }
 
-int IPU_Fifo_Output::write(const u32 *value, int size)
-{
-	int transsize, firsttrans;
-
-	if ((int)ipuRegs.ctrl.OFC >= 8) IPU0dma();
-
-	transsize = min(size, 8 - (int)ipuRegs.ctrl.OFC);
-	firsttrans = transsize;
-
-	while (transsize-- > 0)
-	{
-		for (int i = 0; i <= 3; i++)
-		{
-			data[writepos + i] = ((u32*)value)[i];
-		}
-		writepos = (writepos + 4) & 31;
-		value += 4;
-	}
-
-	ipuRegs.ctrl.OFC += firsttrans;
-	IPU0dma();
-
-	return firsttrans;
-}
-
 int IPU_Fifo_Input::read(void *value)
 {
 	// wait until enough data to ensure proper streaming.
-	if (g_BP.IFC < 4)
+	if (g_BP.IFC < 3)
 	{
 		// IPU FIFO is empty and DMA is waiting so lets tell the DMA we are ready to put data in the FIFO
 		if(cpuRegs.eCycle[4] == 0x9999)
 		{
-			CPU_INT( DMAC_TO_IPU, 4 );
+			CPU_INT( DMAC_TO_IPU, 32 );
 		}
-		
+
 		if (g_BP.IFC == 0) return 0;
 		pxAssert(g_BP.IFC > 0);
 	}
 
-	// transfer 1 qword, split into two transfers
-	for (int i = 0; i <= 3; i++)
-	{
-		((u32*)value)[i] = data[readpos + i];
-		data[readpos + i] = 0;
-	}
+	CopyQWC(value, &data[readpos]);
 
 	readpos = (readpos + 4) & 31;
 	g_BP.IFC--;
 	return 1;
 }
 
-void IPU_Fifo_Output::_readsingle(void *value)
+int IPU_Fifo_Output::write(const u32 *value, uint size)
 {
-	// transfer 1 qword, split into two transfers
-	for (int i = 0; i <= 3; i++)
+	pxAssumeMsg(size>0, "Invalid size==0 when calling IPU_Fifo_Output::write");
+
+	uint origsize = size;
+	do {
+		IPU0dma();
+	
+		uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
+		if(!transsize) break;
+
+		ipuRegs.ctrl.OFC = transsize;
+		size -= transsize;
+		while (transsize > 0)
+		{
+			CopyQWC(&data[writepos], value);
+			writepos = (writepos + 4) & 31;
+			value += 4;
+			--transsize;
+		}
+	} while(true);
+
+	return origsize - size;
+
+#if 0
+	if (ipuRegs.ctrl.OFC >= 8) IPU0dma();
+
+	uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
+	uint firsttrans = transsize;
+
+	while (transsize > 0)
 	{
-		((u32*)value)[i] = data[readpos + i];
-		data[readpos + i] = 0;
+		CopyQWC(&data[writepos], value);
+		writepos = (writepos + 4) & 31;
+		value += 4;
+		--transsize;
 	}
-	readpos = (readpos + 4) & 31;
+
+	ipuRegs.ctrl.OFC += firsttrans;
+	IPU0dma();
+
+	return firsttrans;
+#endif
 }
 
-void IPU_Fifo_Output::read(void *value, int size)
+void IPU_Fifo_Output::read(void *value, uint size)
 {
+	pxAssume(ipuRegs.ctrl.OFC >= size);
 	ipuRegs.ctrl.OFC -= size;
+	
+	// Zeroing the read data is not needed, since the ringbuffer design will never read back
+	// the zero'd data anyway. --air
+
+	//__m128 zeroreg = _mm_setzero_ps();
 	while (size > 0)
 	{
-		_readsingle(value);
-		value = (u32*)value + 4;
-		size--;
+		CopyQWC(value, &data[readpos]);
+		//_mm_store_ps((float*)&data[readpos], zeroreg);
+
+		readpos = (readpos + 4) & 31;
+		value = (u128*)value + 1;
+		--size;
 	}
-}
-
-void IPU_Fifo_Output::readsingle(void *value)
-{
-	if (ipuRegs.ctrl.OFC > 0)
-	{
-		ipuRegs.ctrl.OFC--;
-		_readsingle(value);
-	}
-}
-
-__fi bool decoder_t::ReadIpuData(u128* out)
-{
-	if(ipu0_data == 0)
-	{
-		IPU_LOG( "ReadFIFO/IPUout -> (fifo empty/no data available)" );
-		return false;
-	}
-
-	CopyQWC(out, GetIpuDataPtr());
-
-	--ipu0_data;
-	++ipu0_idx;
-
-	IPU_LOG( "ReadFIFO/IPUout -> %ls", out->ToString().c_str() );
-
-	return true;
 }
 
 void __fastcall ReadFIFO_IPUout(mem128_t* out)
 {
-	// FIXME!  When ReadIpuData() doesn't succeed (returns false), the EE should probably stall
-	// until a value becomes available.  This isn't exactly easy to do since the virtualized EE
-	// in PCSX2 *has* to be running in order for the IPU DMA to upload new input data to allow
-	// IPUout's FIFO to fill.  Thus if we implement an EE stall, PCSX2 deadlocks.  Grr.  --air
+	if (!pxAssertDev( ipuRegs.ctrl.OFC > 0, "Attempted read from IPUout's FIFO, but the FIFO is empty!" )) return;
+	ipu_fifo.out.read(out, 1);
 
-	if (decoder.ReadIpuData(out))
-	{
-		ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
-	}
+	// Games should always check the fifo before reading from it -- so if the FIFO has no data
+	// its either some glitchy game or a bug in pcsx2.
 }
 
 void __fastcall WriteFIFO_IPUin(const mem128_t* value)

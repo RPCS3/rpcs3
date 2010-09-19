@@ -122,22 +122,22 @@ inline void FillOnlyStencilBuffer()
 
 // used for transformation from vertex position in GS window.coords (I hope)
 // to view coordinates (in range 0, 1).
-inline Vector ZeroGS::CRenderTarget::DefaultBitBltPos()
+inline float4 ZeroGS::CRenderTarget::DefaultBitBltPos()
 {
-	Vector v = Vector(1, -1, 0.5f / (float)RW(fbw), 0.5f / (float)RH(fbh));
+	float4 v = float4(1, -1, 0.5f / (float)RW(fbw), 0.5f / (float)RH(fbh));
 	v *= 1.0f / 32767.0f;
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltPos, v, "g_sBitBltPos");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_sBitBltPos");
 	return v;
 }
 
 // Used to transform texture coordinates from GS (when 0,0 is upper left) to
 // OpenGL (0,0 - lower left).
-inline Vector ZeroGS::CRenderTarget::DefaultBitBltTex()
+inline float4 ZeroGS::CRenderTarget::DefaultBitBltTex()
 {
 	// I really sure that -0.5 is correct, because OpenGL have no half-offset
 	// issue, DirectX known for.
-	Vector v = Vector(1, -1, 0.5f / (float)RW(fbw), -0.5f / (float)RH(fbh));
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_sBitBltTex");
+	float4 v = float4(1, -1, 0.5f / (float)RW(fbw), -0.5f / (float)RH(fbh));
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_sBitBltTex");
 	return v;
 }
 
@@ -222,7 +222,7 @@ void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int co
 
 	if (fbplocal != fbp)
 	{
-		Vector v;
+		float4 v;
 
 		// will be rendering to a subregion
 		u32 bpp = PSMT_ISHALF(psm) ? 2 : 4;
@@ -401,7 +401,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	((CDepthTarget*)pdepth)->SetDepthStencilSurface();
 
 	SetShaderCaller("CRenderTarget::Update");
-	Vector v = DefaultBitBltPos();
+	float4 v = DefaultBitBltPos();
 
 	CRenderTargetMngr::MAPTARGETS::iterator ittarg;
 
@@ -432,7 +432,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 	if (nUpdateTarg)
 	{
-		ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ittarg->second->ptex, "BaseTexture.final");
+		ZZshGLSetTextureParameter(ppsBaseTexture.prog, ppsBaseTexture.sFinal, ittarg->second->ptex, "BaseTexture.final");
 
 		//assert( ittarg->second->fbw == fbw );
 		int offset = (fbp - ittarg->second->fbp) * 64 / fbw;
@@ -445,7 +445,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		v.z = 0.25f;
 		v.w = (float)RH(offset) + 0.25f;
 
-		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+		ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 //		v = DefaultBitBltTex(); Maybe?
 		ZZshDefaultOneColor ( ppsBaseTexture );
@@ -472,14 +472,14 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 		// Fix in r133 -- FFX movies and Gust backgrounds!
 		//SetTexVariablesInt(0, 0*(AA.x || AA.y) ? 2 : 0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
 		SetTexVariablesInt(0, 0, texframe, false, &ppsBitBlt[bit_idx], 1);
-		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
+		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].prog, ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
 
-		v = Vector(1, 1, 0.0f, 0.0f);
-		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+		v = float4(1, 1, 0.0f, 0.0f);
+		ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
 
 		v.x = 1;
 		v.y = 2;
-		ZZshSetParameter4fv(ppsBitBlt[bit_idx].sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(ppsBitBlt[bit_idx].prog, ppsBitBlt[bit_idx].sOneColor, v, "g_fOneColor");
 
 		assert(ptex != 0);
 
@@ -536,26 +536,26 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	SetShaderCaller("CRenderTarget::ConvertTo32");
 
 	// tex coords, test ffx bikanel island when changing these
-	Vector v = DefaultBitBltPos();
+	float4 v = DefaultBitBltPos();
 	v = DefaultBitBltTex();
 
 	v.x = (float)RW(16);
 	v.y = (float)RH(16);
 	v.z = -(float)RW(fbw);
 	v.w = (float)RH(8);
-	ZZshSetParameter4fv(ppsConvert16to32.fTexOffset, v, "g_fTexOffset");
+	ZZshSetParameter4fv(ppsConvert16to32.prog, ppsConvert16to32.fTexOffset, v, "g_fTexOffset");
 
 	v.x = (float)RW(8);
 	v.y = 0;
 	v.z = 0;
 	v.w = 0.25f;
-	ZZshSetParameter4fv(ppsConvert16to32.fPageOffset, v, "g_fPageOffset");
+	ZZshSetParameter4fv(ppsConvert16to32.prog, ppsConvert16to32.fPageOffset, v, "g_fPageOffset");
 
 	v.x = (float)RW(2 * fbw);
 	v.y = (float)RH(fbh);
 	v.z = 0;
 	v.w = 0.0001f * (float)RH(fbh);
-	ZZshSetParameter4fv(ppsConvert16to32.fTexDims, v, "g_fTexDims");
+	ZZshSetParameter4fv(ppsConvert16to32.prog, ppsConvert16to32.fTexDims, v, "g_fTexDims");
 
 //	v.x = 0;
 //	ZZshSetParameter4fv(ppsConvert16to32.fTexBlock, v, "g_fTexBlock");
@@ -568,7 +568,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	ZeroGS::ResetRenderTarget(1);
 
 	BindToSample(&ptex);
-	ZZshGLSetTextureParameter(ppsConvert16to32.sFinal, ptex, "Convert 16 to 32.Final");
+	ZZshGLSetTextureParameter(ppsConvert16to32.prog, ppsConvert16to32.sFinal, ptex, "Convert 16 to 32.Final");
 
 	fbh /= 2; // have 16 bit surfaces are usually 2x higher
 	SetViewport();
@@ -640,26 +640,26 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	SetShaderCaller("CRenderTarget::ConvertTo16");
 
 	// tex coords, test ffx bikanel island when changing these
-	Vector v = DefaultBitBltPos();
+	float4 v = DefaultBitBltPos();
 	v = DefaultBitBltTex();
 
 	v.x = 16.0f / (float)fbw;
 	v.y = 8.0f / (float)fbh;
 	v.z = 0.5f * v.x;
 	v.w = 0.5f * v.y;
-	ZZshSetParameter4fv(ppsConvert32to16.fTexOffset, v, "g_fTexOffset");
+	ZZshSetParameter4fv(ppsConvert32to16.prog, ppsConvert32to16.fTexOffset, v, "g_fTexOffset");
 
 	v.x = 256.0f / 255.0f;
 	v.y = 256.0f / 255.0f;
 	v.z = 0.05f / 256.0f;
 	v.w = -0.001f / 256.0f;
-	ZZshSetParameter4fv(ppsConvert32to16.fPageOffset, v, "g_fPageOffset");
+	ZZshSetParameter4fv(ppsConvert32to16.prog, ppsConvert32to16.fPageOffset, v, "g_fPageOffset");
 
 	v.x = (float)RW(fbw);
 	v.y = (float)RH(2 * fbh);
 	v.z = 0;
 	v.w = -0.1f / RH(fbh);
-	ZZshSetParameter4fv(ppsConvert32to16.fTexDims, v, "g_fTexDims");
+	ZZshSetParameter4fv(ppsConvert32to16.prog, ppsConvert32to16.fTexDims, v, "g_fTexDims");
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 	SET_STREAM();
@@ -671,7 +671,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 
 	BindToSample(&ptex);
 
-	ZZshGLSetTextureParameter(ppsConvert32to16.sFinal, ptex, "Convert 32 to 16");
+	ZZshGLSetTextureParameter(ppsConvert32to16.prog, ppsConvert32to16.sFinal, ptex, "Convert 32 to 16");
 
 //	fbh *= 2; // have 16 bit surfaces are usually 2x higher
 
@@ -748,22 +748,22 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	ResetRenderTarget(1);
 
 	// tex coords, test ffx bikanel island when changing these
-	/*	Vector v = DefaultBitBltPos();
-		v = Vector ((float)(RW(fbw+4)), (float)(RH(fbh+4)), +0.25f, -0.25f);
-		ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBltTex");*/
+	/*	float4 v = DefaultBitBltPos();
+		v = float4 ((float)(RW(fbw+4)), (float)(RH(fbh+4)), +0.25f, -0.25f);
+		ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "BitBltTex");*/
 
 	// tex coords, test ffx bikanel island when changing these
 
-//	Vector v = Vector(1, -1, 0.5f / (fbw << AA.x), 0.5f / (fbh << AA.y));
+//	float4 v = float4(1, -1, 0.5f / (fbw << AA.x), 0.5f / (fbh << AA.y));
 //	v *= 1/32767.0f;
 //	cgGLSetParameter4fv(pvsBitBlt.sBitBltPos, v);
-	Vector v = DefaultBitBltPos();
+	float4 v = DefaultBitBltPos();
 
 	v.x = (float)(RW(fbw));
 	v.y = (float)(RH(fbh));
 	v.z = 0.0f;
 	v.w = 0.0f;
-	ZZshSetParameter4fv(pvsBitBlt.sBitBltTex, v, "BitBlt.Feedback");
+	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "BitBlt.Feedback");
 	ZZshDefaultOneColor(ppsBaseTexture);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
@@ -773,7 +773,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, ptex);
 	GL_REPORT_ERRORD();
 
-	ZZshGLSetTextureParameter(ppsBaseTexture.sFinal, ptex, "BaseTexture.Feedback");
+	ZZshGLSetTextureParameter(ppsBaseTexture.prog, ppsBaseTexture.sFinal, ptex, "BaseTexture.Feedback");
 
 	SetViewport();
 
@@ -976,9 +976,9 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	// write color and zero out stencil buf, always 0 context!
 	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
-	ZZshGLSetTextureParameter(ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
+	ZZshGLSetTextureParameter(ppsBitBltDepth.prog, ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
 
-	Vector v = DefaultBitBltPos();
+	float4 v = DefaultBitBltPos();
 
 	v = DefaultBitBltTex();
 
@@ -986,9 +986,9 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	v.y = 2;
 	v.z = PSMT_IS16Z(psm) ? 1.0f : 0.0f;
 	v.w = g_filog32;
-	ZZshSetParameter4fv(ppsBitBltDepth.sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sOneColor, v, "g_fOneColor");
 
-	Vector vdepth = g_vdepth;
+	float4 vdepth = g_vdepth;
 
 	if (psm == PSMT24Z)
 	{
@@ -1001,7 +1001,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	assert(ppsBitBltDepth.sBitBltZ != 0);
 
-	ZZshSetParameter4fv(ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
+	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
 
 	assert(pdepth != 0);
 	//GLint w1 = 0;

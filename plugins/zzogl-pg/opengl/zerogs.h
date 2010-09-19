@@ -66,7 +66,10 @@ extern float g_fiGPU_TEXWIDTH;
 #define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
 #define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
 
+extern u32 ptexBlocks;		// holds information on block tiling. It's texture number in OpenGL -- if 0 than such texture
+extern u32 ptexConv16to32;	// does not exists. This textures should be created on start and released on finish.  
 extern u32 ptexBilinearBlocks;
+extern u32 ptexConv32to16;
 
 // this is currently *not* used as a bool, in spite of its moniker --air
 // Actually, the only thing written to it is 1 or 0, which makes the (g_bSaveFlushedFrame & 0x80000000) check rather bizzare.
@@ -136,7 +139,7 @@ class CRenderTarget
 		int fbp, fbw, fbh, fbhCalc; // if fbp is negative, virtual target (not mapped to any real addr)
 		int start, end; // in bytes
 		u32 lastused;	// time stamp since last used
-		Vector vposxy;
+		float4 vposxy;
 
 		u32 fbm;
 		u16 status;
@@ -161,8 +164,8 @@ class CRenderTarget
 			TS_NeedConvert32 = 16,
 			TS_NeedConvert16 = 32,
 		};
-		inline Vector DefaultBitBltPos() ;
-		inline Vector DefaultBitBltTex() ;
+		inline float4 DefaultBitBltPos();
+		inline float4 DefaultBitBltTex();
 
 	private:
 		void _CreateFeedback();

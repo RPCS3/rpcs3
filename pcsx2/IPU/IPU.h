@@ -67,11 +67,66 @@ union tIPU_CTRL {
 	void reset() { _u32 = 0; }
 };
 
-struct tIPU_BP {
-	u32 BP;		// Bit stream point
-	u16 IFC;	// Input FIFO counter
-	u8 FP;		// FIFO point
-	u8 bufferhasnew; // Always 0.
+struct __aligned16 tIPU_BP {
+	__aligned16 u128 internal_qwc[2];
+
+	u32 BP;		// Bit stream point (0 to 128*2)
+	u32 IFC;	// Input FIFO counter (8QWC) (0 to 8)
+	u32 FP;		// internal FIFO (2QWC) fill status (0 to 2)
+
+	__fi void Align()
+	{
+		BP = (BP + 7) & ~7;
+		Advance(0);
+	}
+
+	__fi void Advance(uint bits)
+	{
+		BP += bits;
+		pxAssume( BP <= 256 );
+
+		if (BP > 127)
+		{
+			BP -= 128;
+
+			if (FP == 2)
+			{
+				// when BP is over 128 it means we're reading data from the second quadword.  Shift that one
+				// to the front and load the new quadword into the second QWC (its a manualized ringbuffer!)
+
+				CopyQWC(&internal_qwc[0], &internal_qwc[1]);
+				FP = 1;
+			}
+			else
+			{
+				// if FP == 1 then the buffer has been completely drained.
+				// if FP == 0 then an already-drained buffer is being advanced.
+				// In either case we just assign FP to 0.
+
+				FP = 0;
+			}
+		}
+	}
+
+	__fi bool FillBuffer(u32 bits)
+	{
+		while (FP < 2)
+		{
+			if (ipu_fifo.in.read(&internal_qwc[FP]) == 0)
+			{
+				// Here we *try* to fill the entire internal QWC buffer; however that may not necessarily
+				// be possible -- so if the fill fails we'll only return 0 if we don't have enough
+				// remaining bits in the FIFO to fill the request.
+
+				return ((FP!=0) && (BP + bits) <= 128);
+			}
+
+			++FP;
+		}
+
+		return true;
+	}
+
 	wxString desc() const
 	{
 		return wxsFormat(L"Ipu BP: bp = 0x%x, IFC = 0x%x, FP = 0x%x.", BP, IFC, FP);
@@ -217,10 +272,9 @@ extern void IPUCMD_WRITE(u32 val);
 extern void ipuSoftReset();
 extern void IPUProcessInterrupt();
 
-extern u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size);
-extern u8 __fastcall getBits128(u8 *address, u32 advance);
-extern u8 __fastcall getBits64(u8 *address, u32 advance);
-extern u8 __fastcall getBits32(u8 *address, u32 advance);
-extern u8 __fastcall getBits16(u8 *address, u32 advance);
-extern u8 __fastcall getBits8(u8 *address, u32 advance);
+extern u8 getBits128(u8 *address, bool advance);
+extern u8 getBits64(u8 *address, bool advance);
+extern u8 getBits32(u8 *address, bool advance);
+extern u8 getBits16(u8 *address, bool advance);
+extern u8 getBits8(u8 *address, bool advance);
 

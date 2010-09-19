@@ -189,7 +189,7 @@ int IPU1dma()
 			{
 				if(!WaitGSPaths())
 				{ // legacy WaitGSPaths() for now
-					IPU_INT_TO(4); //Give it a short wait.
+					IPU_INT_TO(32); //Give it a short wait.
 					return totalqwc;
 				}
 				IPU_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -203,7 +203,7 @@ int IPU1dma()
 				{
 					if(!WaitGSPaths())
 					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(32); //Give it a short wait.
 						return totalqwc;
 					}
 					IPU_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -283,7 +283,7 @@ int IPU1dma()
 
 					if(!WaitGSPaths() && ipu1dma.qwc > 0)
 					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(4); //Give it a short wait.
+						IPU_INT_TO(32); //Give it a short wait.
 						return totalqwc;
 					}
 					IPU_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
@@ -312,8 +312,9 @@ int IPU1dma()
 
 int IPU0dma()
 {
+	if(!ipuRegs.ctrl.OFC) return 0;
+
 	int readsize;
-	static int totalsize = 0;
 	tDMA_TAG* pMem;
 
 	if ((!(ipu0dma.chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma.qwc == 0))
@@ -329,7 +330,6 @@ int IPU0dma()
 	pMem = dmaGetAddr(ipu0dma.madr, true);
 
 	readsize = min(ipu0dma.qwc, (u16)ipuRegs.ctrl.OFC);
-	totalsize+=readsize;
 	ipu_fifo.out.read(pMem, readsize);
 
 	ipu0dma.madr += readsize << 4;
@@ -363,7 +363,6 @@ int IPU0dma()
 		//This broke vids in Digital Devil Saga
 		//Note that interrupting based on totalsize is just guessing..
 		IPU_INT_FROM( readsize * BIAS );
-		totalsize = 0;
 	}
 
 	return readsize;

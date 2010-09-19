@@ -469,10 +469,10 @@ __forceinline void _TransferLocalLocal_4()
 		assert((gs.srcbuf.psm&0x7) == (gs.dstbuf.psm&0x7));
 
 		if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-			ZZLog::Warn_Log("Transfer error, src width exceeded.");
+			ZZLog::Debug_Log("Transfer error, src width exceeded.");
 
 		if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-			ZZLog::Warn_Log("Transfer error, dst width exceeded.");
+			ZZLog::Debug_Log("Transfer error, dst width exceeded.");
 
 		int srcstart, srcend, dststart, dstend;
 

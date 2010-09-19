@@ -30,65 +30,24 @@
 #ifndef __VLC_H__
 #define __VLC_H__
 
-//static u8 word[4];
-//static u8 dword[8];
-//static u8 qword[16];
-
 static __fi int GETWORD()
 {
-	static u8 data[2];
-
-	if (decoder.bitstream_bits > 0)
-	{
-		if(!getBits16(data,1))
-		{
-			return 0;
-		}
-		
-		/*u32 data;
-		BigEndian(data, *(u32*)word);
-		decoder.bitstream_buf |=  (u64)data << decoder.bitstream_bits;
-		decoder.bitstream_bits -= 32;*/
-		decoder.bitstream_buf |= (((u32)data[0] << 8) | data[1]) << decoder.bitstream_bits;
-		decoder.bitstream_bits -= 16;
-	}
-
-	return 1;
+	return g_BP.FillBuffer(16);
 }
 
-static __fi int bitstream_init ()
+// Removes bits from the bitstream.  This is done independently of UBITS/SBITS because a
+// lot of mpeg streams have to read ahead and rewind bits and re-read them at different
+// bit depths or sign'age.
+static __fi void DUMPBITS(uint num)
 {
-	if (!getBits32((u8*)&decoder.bitstream_buf, 1))
-	{
-		return 0;
-	}
-
-	decoder.bitstream_bits = -16;
-	BigEndian(decoder.bitstream_buf, decoder.bitstream_buf);
-	/*decoder.bitstream_buf = *(u64*)dword;
-	BigEndian64(decoder.bitstream_buf, decoder.bitstream_buf);*/
-
-	return 1;
+	g_BP.Advance(num);
+	//pxAssume(g_BP.FP != 0);
 }
 
-/* remove num valid bits from bit_buf */
-static __fi void DUMPBITS(int num)
+static __fi u32 GETBITS(uint num)
 {
-	decoder.bitstream_buf <<= num;
-    decoder.bitstream_bits += num;
-}
-
-/* take num bits from the high part of bit_buf and zero extend them */
-#define UBITS(num) (((u32)decoder.bitstream_buf) >> (32 - (num)))
-
-/* take num bits from the high part of bit_buf and sign extend them */
-#define SBITS(num) (((s32)decoder.bitstream_buf) >> (32 - (num)))
-
-/* Get bits from bitstream */
-static __fi u32 GETBITS(int num)
-{
-	u16 retVal = UBITS(num);
-	DUMPBITS(num);
+	uint retVal = UBITS(num);
+	g_BP.Advance(num);
 
 	return retVal;
 }

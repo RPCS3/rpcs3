@@ -130,7 +130,7 @@ __ri void cpuException(u32 code, u32 bd)
 			//Reset / NMI
 			cpuRegs.pc = 0xBFC00000;
 			Console.Warning("Reset request");
-			UpdateCP0Status();
+			cpuUpdateOperationMode();
 			return;
 		}
 		else if((code & 0x38000) == 0x10000)
@@ -167,7 +167,7 @@ __ri void cpuException(u32 code, u32 bd)
 	else
 		cpuRegs.pc = 0xBFC00200 + offset;
 
-	UpdateCP0Status();
+	cpuUpdateOperationMode();
 }
 
 void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
@@ -196,7 +196,7 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 	}
 
 	cpuRegs.CP0.n.Status.b.EXL = 1;
-	UpdateCP0Status();
+	cpuUpdateOperationMode();
 //	Log=1; varLog|= 0x40000000;
 }
 
@@ -206,33 +206,6 @@ void cpuTlbMissR(u32 addr, u32 bd) {
 
 void cpuTlbMissW(u32 addr, u32 bd) {
 	cpuTlbMiss(addr, bd, EXC_CODE_TLBS);
-}
-
-__fi void _cpuTestMissingINTC() {
-	if (cpuRegs.CP0.n.Status.val & 0x400 &&
-		psHu32(INTC_STAT) & psHu32(INTC_MASK)) {
-		if ((cpuRegs.interrupt & (1 << 30)) == 0) {
-			Console.Error("*PCSX2*: Error, missing INTC Interrupt");
-		}
-	}
-}
-
-__fi void _cpuTestMissingDMAC() {
-	if (cpuRegs.CP0.n.Status.val & 0x800 &&
-		(psHu16(0xe012) & psHu16(0xe010) ||
-		 psHu16(0xe010) & 0x8000)) {
-		if ((cpuRegs.interrupt & (1 << 31)) == 0) {
-			Console.Error("*PCSX2*: Error, missing DMAC Interrupt");
-		}
-	}
-}
-
-void cpuTestMissingHwInts() {
-	if ((cpuRegs.CP0.n.Status.val & 0x10007) == 0x10001) {
-		_cpuTestMissingINTC();
-		_cpuTestMissingDMAC();
-//		_cpuTestTIMR();
-	}
 }
 
 // sets a branch test to occur some time from an arbitrary starting point.
@@ -253,7 +226,7 @@ __fi void cpuSetNextEventDelta( s32 delta )
 	cpuSetNextEvent( cpuRegs.cycle, delta );
 }
 
-// tests the cpu cycle agaisnt the given start and delta values.
+// tests the cpu cycle against the given start and delta values.
 // Returns true if the delta time has passed.
 __fi int cpuTestCycle( u32 startCycle, s32 delta )
 {
@@ -361,8 +334,8 @@ static bool cpuIntsEnabled(int Interrupt)
 {
 	bool IntType = !!(cpuRegs.CP0.n.Status.val & Interrupt); //Choose either INTC or DMAC, depending on what called it
 
-	return cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
-		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0) && IntType;
+	return IntType && cpuRegs.CP0.n.Status.b.EIE && cpuRegs.CP0.n.Status.b.IE &&
+		!cpuRegs.CP0.n.Status.b.EXL && (cpuRegs.CP0.n.Status.b.ERL == 0);
 }
 
 // if cpuRegs.cycle is greater than this cycle, should check cpuEventTest for updates
@@ -375,10 +348,19 @@ __fi void _cpuEventTest_Shared()
 	ScopedBool etest(eeEventTestIsActive);
 	g_nextEventCycle = cpuRegs.cycle + eeWaitCycles;
 
+	// ---- INTC / DMAC (CPU-level Exceptions) -----------------
+	// Done first because exceptions raised during event tests need to be postponed a few
+	// cycles (fixes Grandia II [PAL], which does a spin loop on a vsync and expects to
+	// be able to read the value before the exception handler clears it).
+
+	uint mask = intcInterrupt() | dmacInterrupt();
+	if (cpuIntsEnabled(mask)) cpuException(mask, cpuRegs.branch);
+
+
 	// ---- Counters -------------
 	// Important: the vsync counter must be the first to be checked.  It includes emulation
 	// escape/suspend hooks, and it's really a good idea to suspend/resume emulation before
-	// doing any actual meaninful branchtest logic.
+	// doing any actual meaningful branchtest logic.
 
 	if( cpuTestCycle( nextsCounter, nextCounter ) )
 	{
@@ -391,10 +373,10 @@ __fi void _cpuEventTest_Shared()
 	_cpuTestTIMR();
 
 	// ---- Interrupts -------------
-	// Handles all interrupts except 30 and 31, which are handled later.
+	// These are basically just DMAC-related events, which also piggy-back the same bits as
+	// the PS2's own DMA channel IRQs and IRQ Masks.
 
-	if( cpuRegs.interrupt & ~(3<<30) )
-		_cpuTestInterrupts();
+	_cpuTestInterrupts();
 
 	// ---- IOP -------------
 	// * It's important to run a iopEventTest before calling ExecuteBlock. This
@@ -418,11 +400,7 @@ __fi void _cpuEventTest_Shared()
 		//if( EEsCycle < -450 )
 		//	Console.WriteLn( " IOP ahead by: %d cycles", -EEsCycle );
 
-		// Experimental and Probably Unnecessary Logic -->
-		// Check if the EE already has an exception pending, and if so we shouldn't
-		// waste too much time updating the IOP.  Theory being that the EE and IOP should
-		// run closely in sync during raised exception events.  But in practice it didn't
-		// seem to make much of a difference.
+		EEsCycle = psxCpu->ExecuteBlock( EEsCycle );
 
 		iopEventAction = false;
 	}
@@ -456,22 +434,10 @@ __fi void _cpuEventTest_Shared()
 
 	// Apply vsync and other counter nextCycles
 	cpuSetNextEvent( nextsCounter, nextCounter );
-
-	// ---- INTC / DMAC Exceptions -----------------
-	// Raise the INTC and DMAC interrupts here, which usually throw exceptions.
-	// This should be done last since the IOP and the VU0 can raise several EE
-	// exceptions.
-
-	//if ((cpuRegs.CP0.n.Status.val & 0x10007) == 0x10001)
-	if( cpuIntsEnabled(0x400) ) TESTINT(30, intcInterrupt);
-	if( cpuIntsEnabled(0x800) ) TESTINT(31, dmacInterrupt);
 }
 
 __ri void cpuTestINTCInts()
 {
-	// Check the internal Event System -- if one's already scheduled then don't bother:
-	if( cpuRegs.interrupt & (1 << 30) ) return;
-
 	// Check the COP0's Status register for general interrupt disables, and the 0x400
 	// bit (which is INTC master toggle).
 	if( !cpuIntsEnabled(0x400) ) return;
@@ -488,9 +454,6 @@ __ri void cpuTestINTCInts()
 
 __fi void cpuTestDMACInts()
 {
-	// Check the internal Event System -- if one's already scheduled then don't bother:
-	if ( cpuRegs.interrupt & (1 << 31) ) return;
-
 	// Check the COP0's Status register for general interrupt disables, and the 0x800
 	// bit (which is the DMAC master toggle).
 	if( !cpuIntsEnabled(0x800) ) return;

@@ -92,9 +92,9 @@ set(zzoglHeaders
     Util.h
     x86.h
     zerogs.h
-    zerogsmath.h
     zpipe.h
     ZZoglCRTC.h
+    ZZoglMath.h
     ZZoglShaders.h
     ZZGl.h
     ZZLog.h)

@@ -482,10 +482,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\zerogsmath.h"
-				>
-			</File>
-			<File
 				RelativePath="..\ZZGl.h"
 				>
 			</File>
@@ -495,6 +491,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZoglFlushHack.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglMath.h"
 				>
 			</File>
 			<File
@@ -528,11 +528,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 	</Files>

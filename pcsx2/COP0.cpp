@@ -20,9 +20,10 @@
 u32 s_iLastCOP0Cycle = 0;
 u32 s_iLastPERFCycle[2] = { 0, 0 };
 
-__ri void UpdateCP0Status() {
-	//currently the 2 memory modes are not implemented. Given this function is called so much,
-	//it's commented out for now. Only the interrupt test is needed. (rama)
+// Updates the CPU's mode of operation (either, Kernel, Supervisor, or User modes).
+// Currently the different modes are not implemented.
+// Given this function is called so much, it's commented out for now. (rama)
+__ri void cpuUpdateOperationMode() {
 
 	//u32 value = cpuRegs.CP0.n.Status.val;
 
@@ -32,7 +33,6 @@ __ri void UpdateCP0Status() {
 	//} else { // User Mode
 	//	memSetUserMode();
 	//}
-	cpuTestHwInts();
 }
 
 void __fastcall WriteCP0Status(u32 value) {

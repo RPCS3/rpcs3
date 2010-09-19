@@ -82,8 +82,8 @@ extern void KickTriangleFan();
 extern void KickSprite();
 extern void KickDummy();
 extern bool LoadEffects();
-extern bool LoadExtraEffects();
-extern FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
+extern bool ZZshLoadExtraEffects();
+extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
 GLuint vboRect = 0;
 vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
@@ -127,7 +127,6 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 // State parameters
 
 extern u8* s_lpShaderResources;
-ZZshProgram pvs[16] = {NULL};
 
 // String's for shader file in developer mode
 #ifdef DEVBUILD

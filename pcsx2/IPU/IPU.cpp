@@ -55,9 +55,6 @@ int coded_block_pattern = 0;
 u8 indx4[16*16/2];
 __aligned16 decoder_t decoder;
 
-__aligned16 u8 _readbits[80];	//local buffer (ring buffer)
-u8* readbits = _readbits;		// always can decrement by one 1qw
-
 __fi void IPUProcessInterrupt()
 {
 	if (ipuRegs.ctrl.BUSY && g_BP.IFC) IPUWorker();
@@ -96,8 +93,6 @@ void ReportIPU()
 	Console.WriteLn("g_decoder = 0x%x.", &decoder);
 	Console.WriteLn("mpeg2_scan = 0x%x.", &mpeg2_scan);
 	Console.WriteLn(ipu_cmd.desc());
-	Console.WriteLn("_readbits = 0x%x. readbits - _readbits, which is also frozen, is 0x%x.",
-		_readbits, readbits - _readbits);
 	Console.Newline();
 }
 
@@ -114,15 +109,6 @@ void SaveStateBase::ipuFreeze()
 	Freeze(coded_block_pattern);
 	Freeze(decoder);
 	Freeze(ipu_cmd);
-	Freeze(_readbits);
-
-	int temp = readbits - _readbits;
-	Freeze(temp);
-
-	if (IsLoading())
-	{
-		readbits = _readbits;
-	}
 }
 
 void tIPU_CMD_IDEC::log() const
@@ -213,21 +199,27 @@ __fi u32 ipuRead32(u32 mem)
 	switch (mem)
 	{
 		ipucase(IPU_CTRL): // IPU_CTRL
+		{
 			ipuRegs.ctrl.IFC = g_BP.IFC;
 			ipuRegs.ctrl.CBP = coded_block_pattern;
 
 			if (!ipuRegs.ctrl.BUSY)
 				IPU_LOG("read32: IPU_CTRL=0x%08X", ipuRegs.ctrl._u32);
 
-		return ipuRegs.ctrl._u32;
+			return ipuRegs.ctrl._u32;
+		}		
 
 		ipucase(IPU_BP): // IPU_BP
+		{
+			pxAssume(g_BP.FP <= 2);
+			
 			ipuRegs.ipubp = g_BP.BP & 0x7f;
 			ipuRegs.ipubp |= g_BP.IFC << 8;
-			ipuRegs.ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
+			ipuRegs.ipubp |= g_BP.FP << 16;
 
 			IPU_LOG("read32: IPU_BP=0x%08X", ipuRegs.ipubp);
-		return ipuRegs.ipubp;
+			return ipuRegs.ipubp;
+		}
 
 		default:
 			IPU_LOG("read32: Addr=0x%08X Value = 0x%08X", mem, psHu32(IPU_CMD + mem));
@@ -283,9 +275,7 @@ void ipuSoftReset()
 	ipu_cmd.clear();
 	ipuRegs.cmd.BUSY = 0;
 
-	g_BP.BP = 0;
-	g_BP.FP = 0;
-	//g_BP.bufferhasnew = 0;
+	memzero(g_BP);
 }
 
 __fi bool ipuWrite32(u32 mem, u32 value)
@@ -354,12 +344,11 @@ static void ipuBCLR(u32 val)
 {
 	ipu_fifo.in.clear();
 
+	memzero(g_BP);
 	g_BP.BP = val & 0x7F;
-	g_BP.FP = 0;
-	//g_BP.bufferhasnew = 0;
+
 	ipuRegs.ctrl.BUSY = 0;
 	ipuRegs.cmd.BUSY = 0;
-	memzero(_readbits);
 	IPU_LOG("Clear IPU input FIFO. Set Bit offset=0x%X", g_BP.BP);
 }
 
@@ -370,7 +359,7 @@ static bool ipuIDEC(u32 val, bool resume)
 	if (!resume)
 	{
 		idec.log();
-		g_BP.BP += idec.FB;//skip FB bits
+		g_BP.Advance(idec.FB);
 
 	//from IPU_CTRL
 		ipuRegs.ctrl.PCT = I_TYPE; //Intra DECoding;)
@@ -407,7 +396,7 @@ static __fi bool ipuBDEC(u32 val, bool resume)
 		bdec.log(s_bdec);
 		if (IsDebugBuild) s_bdec++;
 
-	g_BP.BP += bdec.FB;//skip FB bits
+		g_BP.Advance(bdec.FB);
 		decoder.coding_type			= I_TYPE;
 		decoder.mpeg1				= ipuRegs.ctrl.MP1;
 		decoder.q_scale_type		= ipuRegs.ctrl.QST;
@@ -433,11 +422,7 @@ static bool __fastcall ipuVDEC(u32 val)
 	switch (ipu_cmd.pos[0])
 	{
 		case 0:
-			ipuRegs.cmd.DATA = 0;
-			if (!getBits32((u8*)&decoder.bitstream_buf, 0)) return false;
-
-			decoder.bitstream_bits = -16;
-			BigEndian(decoder.bitstream_buf, decoder.bitstream_buf);
+			if (!bitstream_init()) return false;
 
 			switch ((val >> 26) & 3)
 			{
@@ -459,17 +444,14 @@ static bool __fastcall ipuVDEC(u32 val)
 				case 3://DMVector
 					ipuRegs.cmd.DATA = get_dmv();
 					break;
+
+				jNO_DEFAULT
 			}
 
-			g_BP.BP += (int)decoder.bitstream_bits + 16;
+			ipuRegs.cmd.DATA &= 0xFFFF;
+			ipuRegs.cmd.DATA |= 0x10000;
 
-			if ((int)g_BP.BP < 0)
-			{
-				g_BP.BP += 128;
-				ReorderBitstream();
-			}
-
-			ipuRegs.cmd.DATA = (ipuRegs.cmd.DATA & 0xFFFF) | ((decoder.bitstream_bits + 16) << 16);
+			//ipuRegs.cmd.DATA = (ipuRegs.cmd.DATA & 0xFFFF) | ((decoder.bitstream_bits + 16) << 16);
 			ipuRegs.ctrl.ECD = (ipuRegs.cmd.DATA == 0);
 
 		case 1:
@@ -479,14 +461,14 @@ static bool __fastcall ipuVDEC(u32 val)
 				return false;
 			}
 
-			BigEndian(ipuRegs.top, ipuRegs.top);
+			ipuRegs.top = BigEndian(ipuRegs.top);
 
 			IPU_LOG("VDEC command data 0x%x(0x%x). Skip 0x%X bits/Table=%d (%s), pct %d",
 			        ipuRegs.cmd.DATA, ipuRegs.cmd.DATA >> 16, val & 0x3f, (val >> 26) & 3, (val >> 26) & 1 ?
 			        ((val >> 26) & 2 ? "DMV" : "MBT") : (((val >> 26) & 2 ? "MC" : "MBAI")), ipuRegs.ctrl.PCT);
 			return true;
 
-			jNO_DEFAULT
+		jNO_DEFAULT
 	}
 
 	return false;
@@ -496,7 +478,7 @@ static __fi bool ipuFDEC(u32 val)
 {
 	if (!getBits32((u8*)&ipuRegs.cmd.DATA, 0)) return false;
 
-	BigEndian(ipuRegs.cmd.DATA, ipuRegs.cmd.DATA);
+	ipuRegs.cmd.DATA = BigEndian(ipuRegs.cmd.DATA);
 	ipuRegs.top = ipuRegs.cmd.DATA;
 
 	IPU_LOG("FDEC read: 0x%08x", ipuRegs.top);
@@ -553,11 +535,10 @@ static bool ipuSETVQ(u32 val)
 		if (!getBits64(((u8*)vqclut) + 8 * ipu_cmd.pos[0], 1)) return false;
 	}
 
-	IPU_LOG("SETVQ command.\nRead VQCLUT table from FIFO.");
-	IPU_LOG(
-	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d "
-	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d"
-	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d "
+	IPU_LOG("SETVQ command.   Read VQCLUT table from FIFO.\n"
+	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
+	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
+	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
 	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d",
 	    vqclut[0] >> 10, (vqclut[0] >> 5) & 0x1F, vqclut[0] & 0x1F,
 	    vqclut[1] >> 10, (vqclut[1] >> 5) & 0x1F, vqclut[1] & 0x1F,
@@ -723,148 +704,48 @@ __fi void ipu_vq(macroblock_rgb16& rgb16, u8* indx4)
 	Console.Error("IPU: VQ not implemented");
 }
 
-__fi void ipu_copy(const macroblock_8& mb8, macroblock_16& mb16)
-{
-	const u8	*s = (const u8*)&mb8;
-	s16	*d = (s16*)&mb16;
-	int i;
-	for (i = 0; i < 256; i++) *d++ = *s++;		//Y  bias	- 16
-	for (i = 0; i < 64; i++) *d++ = *s++;		//Cr bias	- 128
-	for (i = 0; i < 64; i++) *d++ = *s++;		//Cb bias	- 128
-}
-
 
 // --------------------------------------------------------------------------------------
 //  Buffer reader
 // --------------------------------------------------------------------------------------
 
-// move the readbits queue
-__fi void inc_readbits()
+__ri u32 UBITS(uint bits)
 {
-	readbits += 16;
-	if (readbits >= _readbits + 64)
-	{
-		// move back
-		*(u64*)(_readbits) = *(u64*)(_readbits + 64);
-		*(u64*)(_readbits + 8) = *(u64*)(_readbits + 72);
-		readbits = _readbits;
-	}
+	uint readpos8 = g_BP.BP/8;
+
+	uint result = BigEndian(*(u32*)( (u8*)g_BP.internal_qwc + readpos8 ));
+	uint bp7 = (g_BP.BP & 7);
+	result <<= bp7;
+	result >>= (32 - bits);
+
+	return result;
 }
 
-// returns the pointer of readbits moved by 1 qword
-__fi u8* next_readbits()
+__ri s32 SBITS(uint bits)
 {
-	return readbits + 16;
-}
+	// Read an unaligned 32 bit value and then shift the bits up and then back down.
 
-// returns the pointer of readbits moved by 1 qword
-u8* prev_readbits()
-{
-	if (readbits < _readbits + 16) return _readbits + 48 - (readbits - _readbits);
+	uint readpos8 = g_BP.BP/8;
 
-	return readbits - 16;
-}
+	int result = BigEndian(*(s32*)( (s8*)g_BP.internal_qwc + readpos8 ));
+	uint bp7 = (g_BP.BP & 7);
+	result <<= bp7;
+	result >>= (32 - bits);
 
-void ReorderBitstream()
-{
-	readbits = prev_readbits();
-	g_BP.FP = 2;
-}
-
-// IPU has a 2qword internal buffer whose status is pointed by FP.
-// If FP is 1, there's 1 qword in buffer. Second qword is only loaded
-// incase there are less than 32bits available in the first qword.
-// \return Number of bits available (clamps at 16 bits)
-u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
-{
-	if (g_BP.FP == 0)
-	{
-		if (ipu_fifo.in.read(next_readbits()) == 0) return 0;
-
-		inc_readbits();
-		g_BP.FP = 1;
-	}
-
-	if ((g_BP.FP < 2) && ((*(int*)pointer + size) >= 128))
-	{
-		if (ipu_fifo.in.read(next_readbits())) g_BP.FP += 1;
-	}
-
-	if (*(int*)pointer >= 128)
-	{
-		pxAssert(g_BP.FP >= 1);
-
-		if (g_BP.FP > 1) inc_readbits();
-
-		if (advance)
-		{
-			g_BP.FP--;
-			*pointer &= 127;
-		}
-	}
-
-	return (g_BP.FP >= 1) ? g_BP.FP * 128 - (*(int*)pointer) : 0;
+	return result;
 }
 
 // whenever reading fractions of bytes. The low bits always come from the next byte
 // while the high bits come from the current byte
-u8 __fastcall getBits128(u8 *address, u32 advance)
+u8 getBits64(u8 *address, bool advance)
 {
-	u64 mask2;
-	u128 mask;
-	u8* readpos;
+	if (!g_BP.FillBuffer(64)) return 0;
 
-	// Check if the current BP has exceeded or reached the limit of 128
-	if (FillInternalBuffer(&g_BP.BP, 1, 128) < 128) return 0;
-
-	readpos = readbits + (int)g_BP.BP / 8;
+	const u8* readpos = &g_BP.internal_qwc[0]._u8[g_BP.BP/8];
 
 	if (uint shift = (g_BP.BP & 7))
 	{
-		mask2 = 0xff >> shift;
-		mask.lo = mask2 | (mask2 << 8) | (mask2 << 16) | (mask2 << 24) | (mask2 << 32) | (mask2 << 40) | (mask2 << 48) | (mask2 << 56);
-		mask.hi = mask2 | (mask2 << 8) | (mask2 << 16) | (mask2 << 24) | (mask2 << 32) | (mask2 << 40) | (mask2 << 48) | (mask2 << 56);		
-
-		u128 notMask;
-		u128 data = *(u128*)(readpos + 1);
-		notMask.lo = ~mask.lo & data.lo;
-		notMask.hi = ~mask.hi & data.hi;
-		notMask.lo >>= 8 - shift;
-		notMask.lo |= (notMask.hi & (ULLONG_MAX >> (64 - shift))) << (64 - shift);
-		notMask.hi >>= 8 - shift;
-
-		mask.hi = (((*(u128*)readpos).hi & mask.hi) << shift) | (((*(u128*)readpos).lo & mask.lo) >> (64 - shift));
-		mask.lo = ((*(u128*)readpos).lo & mask.lo) << shift;
-		
-		notMask.lo |= mask.lo;
-		notMask.hi |= mask.hi;
-		*(u128*)address = notMask;
-	}
-	else
-	{
-		*(u128*)address = *(u128*)readpos;
-	}
-
-	if (advance) g_BP.BP += 128;
-
-	return 1;
-}
-
-// whenever reading fractions of bytes. The low bits always come from the next byte
-// while the high bits come from the current byte
-u8 __fastcall getBits64(u8 *address, u32 advance)
-{
-	register u64 mask = 0;
-	u8* readpos;
-
-	// Check if the current BP has exceeded or reached the limit of 128
-	if (FillInternalBuffer(&g_BP.BP, 1, 64) < 64) return 0;
-
-	readpos = readbits + (int)g_BP.BP / 8;
-
-	if (uint shift = (g_BP.BP & 7))
-	{
-		mask = (0xff >> shift);
+		u64 mask = (0xff >> shift);
 		mask = mask | (mask << 8) | (mask << 16) | (mask << 24) | (mask << 32) | (mask << 40) | (mask << 48) | (mask << 56);
 
 		*(u64*)address = ((~mask & *(u64*)(readpos + 1)) >> (8 - shift)) | (((mask) & *(u64*)readpos) << shift);
@@ -874,89 +755,76 @@ u8 __fastcall getBits64(u8 *address, u32 advance)
 		*(u64*)address = *(u64*)readpos;
 	}
 
-	if (advance) g_BP.BP += 64;
+	if (advance) g_BP.Advance(64);
 
 	return 1;
 }
 
 // whenever reading fractions of bytes. The low bits always come from the next byte
 // while the high bits come from the current byte
-u8 __fastcall getBits32(u8 *address, u32 advance)
+__fi u8 getBits32(u8 *address, bool advance)
 {
-	u32 mask;
-	u8* readpos;
+	if (!g_BP.FillBuffer(32)) return 0;
 
-	// Check if the current BP has exceeded or reached the limit of 128
-	if (FillInternalBuffer(&g_BP.BP, 1, 32) < 32) return 0;
-
-	readpos = readbits + (int)g_BP.BP / 8;
-
-	if (uint shift = (g_BP.BP & 7))
+	const u8* readpos = &g_BP.internal_qwc->_u8[g_BP.BP/8];
+	
+	if(uint shift = (g_BP.BP & 7))
 	{
-		mask = (0xff >> shift);
+		u32 mask = (0xff >> shift);
 		mask = mask | (mask << 8) | (mask << 16) | (mask << 24);
 
 		*(u32*)address = ((~mask & *(u32*)(readpos + 1)) >> (8 - shift)) | (((mask) & *(u32*)readpos) << shift);
 	}
 	else
 	{
+		// Bit position-aligned -- no masking/shifting necessary
 		*(u32*)address = *(u32*)readpos;
 	}
 
-	if (advance) g_BP.BP += 32;
+	if (advance) g_BP.Advance(32);
 
 	return 1;
 }
 
-__fi u8 __fastcall getBits16(u8 *address, u32 advance)
+__fi u8 getBits16(u8 *address, bool advance)
 {
-	u32 mask;
-	u8* readpos;
+	if (!g_BP.FillBuffer(16)) return 0;
 
-	// Check if the current BP has exceeded or reached the limit of 128
-	if (FillInternalBuffer(&g_BP.BP, 1, 16) < 16) return 0;
-
-	readpos = readbits + (int)g_BP.BP / 8;
+	const u8* readpos = &g_BP.internal_qwc[0]._u8[g_BP.BP/8];
 
 	if (uint shift = (g_BP.BP & 7))
 	{
-		mask = (0xff >> shift);
+		uint mask = (0xff >> shift);
 		mask = mask | (mask << 8);
-
 		*(u16*)address = ((~mask & *(u16*)(readpos + 1)) >> (8 - shift)) | (((mask) & *(u16*)readpos) << shift);
-			}
+	}
 	else
 	{
 		*(u16*)address = *(u16*)readpos;
-			}
+	}
 
-	if (advance) g_BP.BP += 16;
+	if (advance) g_BP.Advance(16);
 
 	return 1;
 }
 
-u8 __fastcall getBits8(u8 *address, u32 advance)
+u8 getBits8(u8 *address, bool advance)
 {
-	u32 mask;
-	u8* readpos;
+	if (!g_BP.FillBuffer(8)) return 0;
 
-	// Check if the current BP has exceeded or reached the limit of 128
-	if (FillInternalBuffer(&g_BP.BP, 1, 8) < 8)
-		return 0;
-
-	readpos = readbits + (int)g_BP.BP / 8;
+	const u8* readpos = &g_BP.internal_qwc[0]._u8[g_BP.BP/8];
 
 	if (uint shift = (g_BP.BP & 7))
-			{
-		mask = (0xff >> shift);
+	{
+		uint mask = (0xff >> shift);
 		*(u8*)address = (((~mask) & readpos[1]) >> (8 - shift)) | (((mask) & *readpos) << shift);
-			}
+	}
 	else
 	{
 		*(u8*)address = *(u8*)readpos;
-		}
+	}
 
-	if (advance) g_BP.BP += 8;
+	if (advance) g_BP.Advance(8);
 
 	return 1;
 }
@@ -983,7 +851,7 @@ void IPUCMD_WRITE(u32 val)
 
 		case SCE_IPU_VDEC:
 
-			g_BP.BP += val & 0x3F;
+			g_BP.Advance(val & 0x3F);
 
 			// check if enough data in queue
 			if (ipuVDEC(val)) return;
@@ -993,9 +861,11 @@ void IPUCMD_WRITE(u32 val)
 			break;
 
 		case SCE_IPU_FDEC:
-			IPU_LOG("FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x",
-			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, g_BP.FP, ipu1dma.chcr._u32);
-			g_BP.BP += val & 0x3F;
+			IPU_LOG("FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, CHCR 0x%x",
+			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, ipu1dma.chcr._u32);
+
+			g_BP.Advance(val & 0x3F);
+
 			if (ipuFDEC(val)) return;
 			ipuRegs.cmd.BUSY = 0x80000000;
 			ipuRegs.topbusy = 0x80000000;
@@ -1009,7 +879,7 @@ void IPUCMD_WRITE(u32 val)
 		case SCE_IPU_SETIQ:
 			IPU_LOG("SETIQ command.");
 			if (val & 0x3f) IPU_LOG("Skip %d bits.", val & 0x3f);
-			g_BP.BP += val & 0x3F;
+			g_BP.Advance(val & 0x3F);
 			if (ipuSETIQ(val)) return;
 			break;
 
