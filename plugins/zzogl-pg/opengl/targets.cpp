@@ -3009,6 +3009,30 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 #endif
 }
 
+template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), u32 INDEX>
+__forceinline void update_4pixels(u32* src, Tdst* pPageOffset, u32 basepage, u32 i_msk, u32 j, u32 mask, u32 imask)
+{
+    Tdst* dst_tmp;
+    Tdst dsrc_tmp;
+
+    // Group 4 pixel to allow futur sse optimization of the convfn function
+    dst_tmp = pPageOffset + basepage + pageTable[i_msk][(INDEX)];
+    dsrc_tmp = convfn(src[RW((j<<6)+INDEX)]);
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = pPageOffset + basepage + pageTable[i_msk][INDEX+1];
+    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+1)]);
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = pPageOffset + basepage + pageTable[i_msk][INDEX+2];
+    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+2)]);
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = pPageOffset + basepage + pageTable[i_msk][INDEX+3];
+    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+3)]);
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+}
+
 template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32)>
 void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 {
@@ -3059,79 +3083,23 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         // for(int j = fbw_div-1; j >= 0; --j) {
         for(u32 j = 0 ; j < fbw_div; ++j) {
             u32 basepage = (i_div + j) * 2048;
+            update_4pixels<size, pageTable, Tdst, convfn, 0>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 4>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 8>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 12>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 16>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 20>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 24>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 28>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 32>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 36>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 40>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 44>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 48>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 52>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 56>(src, pPageOffset, basepage, i_msk, j, mask, imask);
+            update_4pixels<size, pageTable, Tdst, convfn, 60>(src, pPageOffset, basepage, i_msk, j, mask, imask);
 
-#define update_pixel(x) \
-            { \
-                Tdst* dst_tmp ;\
-                dst_tmp = pPageOffset + basepage + pageTable[i_msk][(x)];\
-                Tdst dsrc_tmp = convfn(src[RW((j<<6)+(x))]); \
-                *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask); \
-            }
-
-            update_pixel(0);
-            update_pixel(1);
-            update_pixel(2);
-            update_pixel(3);
-            update_pixel(4);
-            update_pixel(5);
-            update_pixel(6);
-            update_pixel(7);
-            update_pixel(8);
-            update_pixel(9);
-            update_pixel(10);
-            update_pixel(11);
-            update_pixel(12);
-            update_pixel(13);
-            update_pixel(14);
-            update_pixel(15);
-            update_pixel(16);
-            update_pixel(17);
-            update_pixel(18);
-            update_pixel(19);
-            update_pixel(20);
-            update_pixel(21);
-            update_pixel(22);
-            update_pixel(23);
-            update_pixel(24);
-            update_pixel(25);
-            update_pixel(26);
-            update_pixel(27);
-            update_pixel(28);
-            update_pixel(29);
-            update_pixel(30);
-            update_pixel(31);
-            update_pixel(32);
-            update_pixel(33);
-            update_pixel(34);
-            update_pixel(35);
-            update_pixel(36);
-            update_pixel(37);
-            update_pixel(38);
-            update_pixel(39);
-            update_pixel(40);
-            update_pixel(41);
-            update_pixel(42);
-            update_pixel(43);
-            update_pixel(44);
-            update_pixel(45);
-            update_pixel(46);
-            update_pixel(47);
-            update_pixel(48);
-            update_pixel(49);
-            update_pixel(50);
-            update_pixel(51);
-            update_pixel(52);
-            update_pixel(53);
-            update_pixel(54);
-            update_pixel(55);
-            update_pixel(56);
-            update_pixel(57);
-            update_pixel(58);
-            update_pixel(59);
-            update_pixel(60);
-            update_pixel(61);
-            update_pixel(62);
-            update_pixel(63);
         }
         src -= raw_size;
         // src += raw_size;
