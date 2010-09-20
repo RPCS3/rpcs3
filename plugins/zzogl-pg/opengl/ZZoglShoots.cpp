@@ -392,16 +392,16 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 		assert(pmemtarg != NULL);
 
 		glBindTexture(GL_TEXTURE_RECTANGLE_NV, pmemtarg->ptex->tex);
-		srcdata.resize(pmemtarg->realheight * GPU_TEXWIDTH * pmemtarg->widthmult * 4 * 8); // max of 8 cannels
+		srcdata.resize(4 * pmemtarg->texW * pmemtarg->texH);
 
 		glGetTexImage(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGBA, pmemtarg->fmt, &srcdata[0]);
 
-		u32 offset = pmemtarg->realy * 4 * GPU_TEXWIDTH;
+		u32 offset = MemorySize(pmemtarg->realy);
 
 		if (ptex->psm == PSMT8)
-			offset *= PSMT_IS32BIT(ptex->cpsm) ? 4 : 2;
+			offset *= CLUT_PIXEL_SIZE(ptex->cpsm);
 		else if (ptex->psm == PSMT4)
-			offset *= PSMT_IS32BIT(ptex->cpsm) ? 8 : 4;
+			offset *= CLUT_PIXEL_SIZE(ptex->cpsm) * 2;
 
 		psrc = &srcdata[0] - offset;
 	}

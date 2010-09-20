@@ -2296,8 +2296,8 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 	ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
 
 	// get hardware texture dims
-	//int texheight = (pmemtarg->realheight+pmemtarg->widthmult-1)/pmemtarg->widthmult;
-	int texwidth = GPU_TEXWIDTH * pmemtarg->widthmult * pmemtarg->channels;
+	//int texheight = pmemtarg->texH;
+	int texwidth = pmemtarg->texW;
 
 	v.y = 1.0f;
 	v.x = (fpageint - (float)pmemtarg->realy / (float)pmemtarg->widthmult + 0.5f);//*v.y;

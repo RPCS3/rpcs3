@@ -1730,8 +1730,8 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	// lock and compare
 	assert(ptex != NULL && ptex->memptr != NULL);
 
-	int result = memcmp_mmx(ptex->memptr + (checkstarty - realy) * 4 * GPU_TEXWIDTH, g_pbyGSMemory + checkstarty * 4 * GPU_TEXWIDTH, (checkendy - checkstarty) * 4 * GPU_TEXWIDTH);
-
+	int result = memcmp_mmx(ptex->memptr + MemorySize(checkstarty-realy), MemoryAddress(checkstarty), MemorySize(checkendy-checkstarty));
+	
 	if (result == 0)
 	{
 		clearmaxy = 0;
@@ -2054,7 +2054,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSea
 
 		while (itbest != listClearedTargets.end())
 		{
-			if ((height <= itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
+			if ((height == itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
 			{
 				// check channels
 				if (PIXELS_PER_WORD(itbest->psm) == channels) break;
@@ -2107,8 +2107,14 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	int widthmult = 1, channels = 1;
 
-	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare.
-	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
+	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare in modern cards.
+	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) 
+	{
+		// In this rare case we made a texture of half height and place it on the screen.
+		ZZLog::Debug_Log("Making a half height texture (start - end == 0x%x)", (end-start));
+		widthmult = 2;
+	}
+	
 	channels = PIXELS_PER_WORD(tex0.psm);
 
 	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
@@ -2180,6 +2186,8 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		targ->cpsm = tex0.cpsm;
 		targ->widthmult = widthmult;
 		targ->channels = channels;
+		targ->texH = (targ->realheight + widthmult - 1)/widthmult;
+		targ->texW = GPU_TEXWIDTH *  widthmult * channels;
 
 		// alloc the mem
 		targ->ptex = new CMemoryTarget::TEXTURE();
@@ -2187,30 +2195,27 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	}
 
 #if defined(ZEROGS_DEVBUILD)
-	g_TransferredToGPU += GPU_TEXWIDTH * channels * 4 * targ->height;
+	g_TransferredToGPU += MemorySize(channels * targ->height);
 #endif
-
-	const int texH = (targ->realheight + widthmult - 1) / widthmult;
-	const int texW = GPU_TEXWIDTH * channels * widthmult;
 
 	// fill with data
 	if (targ->ptex->memptr == NULL)
 	{
-		targ->ptex->memptr = (u8*)_aligned_malloc(4 * GPU_TEXWIDTH * targ->realheight, 16);
+		targ->ptex->memptr = (u8*)_aligned_malloc(MemorySize(targ->realheight), 16);
 		assert(targ->ptex->ref > 0);
 	}
 
-	memcpy_amd(targ->ptex->memptr, g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy, 4 * GPU_TEXWIDTH * targ->height);
+	memcpy_amd(targ->ptex->memptr, MemoryAddress(targ->realy), MemorySize(targ->height));
 
 	__aligned16 u8* ptexdata = NULL;
 	bool has_data = false;
 
 	if (PSMT_ISCLUT(tex0.psm))
 	{
-		ptexdata = (u8*)_aligned_malloc(((tex0.cpsm <= 1) ? 4 : 2) * texW * texH, 16);
+		ptexdata = (u8*)_aligned_malloc(CLUT_PIXEL_SIZE(tex0.cpsm) * targ->texH * targ->texW, 16);
 		has_data = true;
 
-		u8* psrc = (u8*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
+		u8* psrc = (u8*)(MemoryAddress(targ->realy));
 
 		if (PSMT_IS32BIT(tex0.cpsm))
 		{
@@ -2231,12 +2236,12 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	{
 		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
 		{
-			ptexdata = (u8*)_aligned_malloc(4 * texW * texH, 16);
+			ptexdata = (u8*)_aligned_malloc(4 * targ->texH * targ->texW, 16);
 			has_data = true;
 
 			// needs to be 8 bit, use xmm for unpacking
 			u16* dst = (u16*)ptexdata;
-			u16* src = (u16*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
+			u16* src = (u16*)(MemoryAddress(targ->realy));
 
 #if defined(ZEROGS_SSE2)
 			assert(((u32)(uptr)dst) % 16 == 0);
@@ -2276,11 +2281,9 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
 
 	if (fmt == GL_UNSIGNED_BYTE)
-		TextureRect(GL_RGBA, texW, texH, GL_RGBA, fmt, ptexdata);
+		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 	else
-		TextureRect(GL_RGB5_A1, texW, texH, GL_RGBA, fmt, ptexdata);
-
-	int realheight = targ->realheight;
+		TextureRect(GL_RGB5_A1, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 
 	while (glGetError() != GL_NO_ERROR)
 	{
@@ -2293,7 +2296,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		{
 			if (listTargets.size() == 0)
 			{
-				ZZLog::Error_Log("Failed to create %dx%x texture.", GPU_TEXWIDTH*channels*widthmult, (realheight + widthmult - 1) / widthmult);
+				ZZLog::Error_Log("Failed to create %dx%x texture.", targ->texW, targ->texH);
 				channels = 1;
 				if (has_data) _aligned_free(ptexdata);
 				return NULL;
@@ -2302,7 +2305,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 			DestroyOldest();
 		}
 
-		TextureRect(GL_RGBA, texW, texH, GL_RGBA, fmt, ptexdata);
+		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 	}
 
 	setRectWrap(GL_CLAMP);

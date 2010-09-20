@@ -205,6 +205,8 @@ inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
 	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
 }
 
+// If a clut is in 32-bit color, its size is 4 bytes, and 16-bit clut has a 2 byte size.
+inline int CLUT_PIXEL_SIZE(int cpsm) {return ((cpsm <= 1) ? 4 : 2); }
 
 //----------------------- Data from registers -----------------------
 
