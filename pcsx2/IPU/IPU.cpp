@@ -206,7 +206,7 @@ __fi u32 ipuRead32(u32 mem)
 			if (!ipuRegs.ctrl.BUSY)
 				IPU_LOG("read32: IPU_CTRL=0x%08X", ipuRegs.ctrl._u32);
 
-			return ipuRegs.ctrl._u32;
+		return ipuRegs.ctrl._u32;
 		}		
 
 		ipucase(IPU_BP): // IPU_BP
@@ -218,7 +218,7 @@ __fi u32 ipuRead32(u32 mem)
 			ipuRegs.ipubp |= g_BP.FP << 16;
 
 			IPU_LOG("read32: IPU_BP=0x%08X", ipuRegs.ipubp);
-			return ipuRegs.ipubp;
+		return ipuRegs.ipubp;
 		}
 
 		default:
@@ -448,6 +448,14 @@ static bool __fastcall ipuVDEC(u32 val)
 				jNO_DEFAULT
 			}
 
+			// HACK ATTACK!  This code OR's the MPEG decoder's bitstream position into the upper
+			// 16 bits of DATA; which really doesn't make sense since (a) we already rewound the bits
+			// back into the IPU internal buffer above, and (b) the IPU doesn't have an MPEG internal
+			// 32-bit decoder buffer of its own anyway.  Furthermore, setting the upper 16 bits to
+			// any value other than zero appears to work fine.  When set to zero, however, FMVs run
+			// very choppy (basically only decoding/updating every 30th frame or so). So yeah,
+			// someone with knowledge on the subject please feel free to explain this one. :) --air
+
 			ipuRegs.cmd.DATA &= 0xFFFF;
 			ipuRegs.cmd.DATA |= 0x10000;
 
@@ -466,6 +474,7 @@ static bool __fastcall ipuVDEC(u32 val)
 			IPU_LOG("VDEC command data 0x%x(0x%x). Skip 0x%X bits/Table=%d (%s), pct %d",
 			        ipuRegs.cmd.DATA, ipuRegs.cmd.DATA >> 16, val & 0x3f, (val >> 26) & 3, (val >> 26) & 1 ?
 			        ((val >> 26) & 2 ? "DMV" : "MBT") : (((val >> 26) & 2 ? "MC" : "MBAI")), ipuRegs.ctrl.PCT);
+
 			return true;
 
 		jNO_DEFAULT
@@ -488,8 +497,6 @@ static __fi bool ipuFDEC(u32 val)
 
 static bool ipuSETIQ(u32 val)
 {
-	int i;
-
 	if ((val >> 27) & 1)
 	{
 		u8 (&niq)[64] = decoder.niq;
@@ -500,7 +507,7 @@ static bool ipuSETIQ(u32 val)
 		}
 
 		IPU_LOG("Read non-intra quantization matrix from FIFO.");
-		for (i = 0; i < 8; i++)
+		for (uint i = 0; i < 8; i++)
 		{
 			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X",
 			        niq[i * 8 + 0], niq[i * 8 + 1], niq[i * 8 + 2], niq[i * 8 + 3],
@@ -517,7 +524,7 @@ static bool ipuSETIQ(u32 val)
 		}
 
 		IPU_LOG("Read intra quantization matrix from FIFO.");
-		for (i = 0; i < 8; i++)
+		for (uint i = 0; i < 8; i++)
 		{
 			IPU_LOG("%02X %02X %02X %02X %02X %02X %02X %02X",
 			        iq[i * 8 + 0], iq[i * 8 + 1], iq[i * 8 + 2], iq[i *8 + 3],
@@ -539,7 +546,7 @@ static bool ipuSETVQ(u32 val)
 	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
 	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
 	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d\n"
-	    "%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d",
+		"%02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d %02d:%02d:%02d",
 	    vqclut[0] >> 10, (vqclut[0] >> 5) & 0x1F, vqclut[0] & 0x1F,
 	    vqclut[1] >> 10, (vqclut[1] >> 5) & 0x1F, vqclut[1] & 0x1F,
 	    vqclut[2] >> 10, (vqclut[2] >> 5) & 0x1F, vqclut[2] & 0x1F,

@@ -22,13 +22,17 @@ static DMACh& sif0dma = (DMACh&)eeHw[0xc000];
 static DMACh& sif1dma = (DMACh&)eeHw[0xc400];
 static DMACh& sif2dma = (DMACh&)eeHw[0xc800];
 
-
+// Despite its name, this is actually the IOP's DMAtag, which itself also contains
+// the EE's DMAtag in its upper 64 bits.  Note that only the lower 24 bits of 'data' is
+// the IOP's chain transfer address (loaded into MADR).  Bits 30 and 31 are transfer stop
+// bits of some sort.
 struct sifData
 {
 	s32 data;
 	s32 words;
-	s32 count; // I think this is unused.
-	s32 addr; // This too.
+
+	tDMA_TAG	tag_lo;		// EE DMA tag
+	tDMA_TAG	tag_hi;		// EE DMA tag
 };
 
 struct sifFifo
@@ -100,6 +104,7 @@ struct sif_ee
 
 	s32 cycles;
 };
+
 struct sif_iop
 {
 	bool end;
@@ -110,6 +115,7 @@ struct sif_iop
 	s32 counter; // Used to keep track of how much is left in IOP.
 	struct sifData data; // Only used in IOP.
 };
+
 struct _sif
 {
 	sifFifo fifo; // Used in both.

@@ -161,7 +161,7 @@ union u128
 
 	bool operator!=( const u128& right ) const
 	{
-		return (lo != right.lo) && (hi != right.hi);
+		return (lo != right.lo) || (hi != right.hi);
 	}
 
 	// In order for the following ToString() and WriteTo methods to be available, you must
@@ -206,7 +206,7 @@ struct s128
 
 	bool operator!=( const s128& right ) const
 	{
-		return (lo != right.lo) && (hi != right.hi);
+		return (lo != right.lo) || (hi != right.hi);
 	}
 };
 
