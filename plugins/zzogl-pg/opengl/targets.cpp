@@ -1001,7 +1001,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	assert(ppsBitBltDepth.sBitBltZ != 0);
 
-	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
+	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sBitBltZ, (vdepth*(255.0f / 256.0f)), "g_fBitBltZ");
 
 	assert(pdepth != 0);
 	//GLint w1 = 0;

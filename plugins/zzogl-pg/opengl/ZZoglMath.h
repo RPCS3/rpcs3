@@ -1,83 +1,197 @@
- /* ZeroGS KOSMOS
-  *
-  * Zerofrog's ZeroGS KOSMOS (c)2005-2008
-  *
-  * Zerofrog forgot to write any copyright notice after releasing the plugin into GPLv2
-  * If someone can contact him successfully to clarify this matter that would be great.
-  */
-
-// Now that it's down to 82 lines, and most of it's fairly obvious, perhaps it'd be easier to 
-// just reimplement it... -arcum42
+/*  ZZ Open GL graphics plugin
+ *  Copyright (c)2009-2010 zeydlitz@gmail.com, arcum42@gmail.com
+ *  Based on Zerofrog's ZeroGS KOSMOS (c)2005-2008
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
 #ifndef ZZOGLMATH_H_INCLUDED
 #define ZZOGLMATH_H_INCLUDED
 
+//Remind me to check and see if this is necessary, and what uses it. --arcum42
 #ifndef _WIN32
 #include <alloca.h>
 #endif
 
-#include <string.h>
-#include <math.h>
 #include <assert.h>
 
-typedef float dReal;
-
-// class used for 3 and 4 dim vectors and quaternions
-// It is better to use this for a 3 dim vector because it is 16byte aligned and SIMD instructions can be used
-
-class float4
+template <class T>
+class Vector4
 {
 	public:
-		dReal x, y, z, w;
-
-		float4() : x(0), y(0), z(0), w(0) {}
-		float4(dReal x, dReal y, dReal z) : x(x), y(y), z(z), w(0) {}
-		float4(dReal x, dReal y, dReal z, dReal w) : x(x), y(y), z(z), w(w) {}
-		float4(const float4 &vec) : x(vec.x), y(vec.y), z(vec.z), w(vec.w) {}
-		float4(const dReal* pf) { assert(pf != NULL); x = pf[0]; y = pf[1]; z = pf[2]; w = 0; }
-		dReal  operator[](int i) const	   { return (&x)[i]; }
-		dReal& operator[](int i)			 { return (&x)[i]; }
+		T x, y, z, w;
 		
-		// casting operators
-		operator dReal*() { return &x; }
-		operator const dReal*() const { return (const dReal*)&x; }
+		Vector4(T x1 = 0, T y1 = 0, T z1 = 0, T w1 = 0) 
+		{ 
+			x = x1; 
+			y = y1; 
+			z = z1; 
+			w = w1; 
+		}
 		
-		// SCALAR FUNCTIONS
-		inline dReal dot(const float4 &v) const { return x*v.x + y*v.y + z*v.z + w*v.w; }
-		inline void Set3(const float* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; }
-		inline void Set4(const float* pvals) { x = pvals[0]; y = pvals[1]; z = pvals[2]; w = pvals[3]; }
-		inline void SetColor(u32 color)
+		Vector4(Vector4<T> &f) 
+		{ 
+			x = f.x; 
+			y = f.y; 
+			z = f.z; 
+			w = f.w; 
+		}
+		
+		Vector4(T* f) 
+		{
+			x = f[0]; 
+			y = f[1]; 
+			z = f[2]; 
+			w = f[3]; // For some reason, the old code set this to 0. 
+		}
+		
+		T& operator[](int i)
+		{
+			switch(i)
+			{
+				case 0: return x;
+				case 1: return y;
+				case 2: return z;
+				case 3: return w;
+				default: assert(0);
+			}
+		}
+		
+		operator T*()
+		{
+			return (T*) this;
+		}
+		
+		operator const T*() const
+		{
+			return (const T*) this;
+		}
+		
+		Vector4<T>& operator =(const Vector4<T>& v)
+		{
+			x = v.x;
+			y = v.y;
+			z = v.z;
+			w = v.w;
+			return *this;
+		}
+		
+		bool operator ==(const Vector4<T>& v)
+		{
+			return !!(	x == v.x &&
+						y == v.y &&
+						z == v.z &&
+						w == v.w	);
+		}
+		
+		Vector4<T> operator +(const Vector4<T>& v) const
+		{
+			return Vector4<T>(x + v.x, y + v.y, z + v.z, w + v.w);
+		}
+		
+		Vector4<T> operator -(const Vector4<T>& v) const
+		{
+			return Vector4<T>(x - v.x, y - v.y, z - v.z, w - v.w);
+		}
+		
+		Vector4<T> operator *(const Vector4<T>& v) const
+		{
+			return Vector4<T>(x * v.x, y * v.y, z * v.z, w * v.w);
+		}
+		
+		Vector4<T> operator /(const Vector4<T>& v) const
+		{
+			return Vector4<T>(x / v.x, y / v.y, z / v.z, w / v.w);
+		}
+		Vector4<T> operator +(T val) const
+		{
+			return Vector4<T>(x + val, y + val, z + val, w + val);
+		}
+		
+		Vector4<T> operator -(T val) const
+		{
+			return Vector4<T>(x - val, y - val, z - val, w - val);
+		}
+		
+		Vector4<T> operator *(T val) const
+		{
+			return Vector4<T>(x * val, y * val, z * val, w * val);
+		}
+		
+		Vector4<T> operator /(T val) const
+		{
+			return Vector4<T>(x / val, y / val, z / val, w / val);
+		}
+		
+		Vector4<T>& operator +=(const Vector4<T>& v)
+		{
+			*this = *this + v;
+			return *this;
+		}
+		
+		Vector4<T>& operator -=(const Vector4<T>& v)
+		{
+			*this = *this - v;
+			return *this;
+		}
+		
+		Vector4<T>& operator *=(const Vector4<T>& v)
+		{
+			*this = *this * v;
+			return *this;
+		}
+		
+		Vector4<T>& operator /=(const Vector4<T>& v)
+		{
+			*this = *this - v;
+			return *this;
+		}
+		
+		Vector4<T>& operator +=(T val)
+		{
+			*this = *this + (T)val;
+			return *this;
+		}
+		
+		Vector4<T>& operator -=(T val)
+		{
+			*this = *this - (T)val;
+			return *this;
+		}
+		
+		Vector4<T>& operator *=(T val)
+		{
+			*this = *this * (T)val;
+			return *this;
+		}
+		
+		Vector4<T>& operator /=(T val)
+		{
+			*this = *this / (T)val;
+			return *this;
+		}
+		
+		// Probably doesn't belong here, but I'll leave it in for the moment.
+		void SetColor(u32 color)
 		{
 			x = (color & 0xff) / 255.0f;
 			y = ((color >> 8) & 0xff) / 255.0f;
 			z = ((color >> 16) & 0xff) / 255.0f;
 		}
-
-		// 3 dim cross product, w is not touched
-		/// this = this x v
-		/// this = u x v
-		inline float4 operator-() const { float4 v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v; }
-		inline float4 operator+(const float4 &r) const { float4 v; v.x = x + r.x; v.y = y + r.y; v.z = z + r.z; v.w = w + r.w; return v; }
-		inline float4 operator-(const float4 &r) const { float4 v; v.x = x - r.x; v.y = y - r.y; v.z = z - r.z; v.w = w - r.w; return v; }
-		inline float4 operator*(const float4 &r) const { float4 v; v.x = r.x * x; v.y = r.y * y; v.z = r.z * z; v.w = r.w * w; return v; }
-		inline float4 operator*(dReal k) const { float4 v; v.x = k * x; v.y = k * y; v.z = k * z; v.w = k * w; return v; }
-		inline float4& operator += (const float4& r) { x += r.x; y += r.y; z += r.z; w += r.w; return *this; }
-		inline float4& operator -= (const float4& r) { x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this; }
-		inline float4& operator *= (const float4& r) { x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this; }
-		inline float4& operator *= (const dReal k) { x *= k; y *= k; z *= k; w *= k; return *this; }
-		inline float4& operator /= (const dReal _k) { dReal k = 1 / _k; x *= k; y *= k; z *= k; w *= k; return *this; }
-		friend float4 operator*(float f, const float4& v);
-		//friend ostream& operator<<(ostream& O, const float4& v);
-		//friend istream& operator>>(istream& I, float4& v);
 };
 
-inline float4 operator*(float f, const float4& left)
-{
-	float4 v;
-	v.x = f * left.x;
-	v.y = f * left.y;
-	v.z = f * left.z;
-	return v;
-}
+typedef Vector4<float> float4;
 
-#endif // ZZOGLMATH_H_INCLUDED
+#endif

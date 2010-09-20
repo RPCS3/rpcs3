@@ -56,6 +56,7 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include <vector>
 #include <string>
+#include <cstring>
 
 extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
