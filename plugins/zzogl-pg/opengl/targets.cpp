@@ -2909,10 +2909,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 #endif
 
-template <typename T, typename Tret>
-inline Tret dummy_return(T value) { return value; }
-
-template <typename Tdst, Tdst (*convfn)(u32)>
+template <typename Tdst, bool do_conversion>
 inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
 {
     u32 mask, imask;
@@ -2934,6 +2931,7 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 
     Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
     Tdst* dst;
+    Tdst  dsrc;
 
     int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
@@ -2945,7 +2943,11 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 
     for(int i = maxfbh-1; i >= 0; --i) {
         for(int j = fbw-1; j >= 0; --j) {
-            Tdst dsrc = (Tdst)convfn(src[RW(j)]);
+            if (do_conversion) {
+                dsrc = RGBA32to16(src[RW(j)]);
+            } else {
+                dsrc = (Tdst)src[RW(j)];
+            }
             // They are 3 methods to call the functions
             // macro (compact, inline) but need a nice psm ; swich (inline) ; function pointer (compact)
             // Use a switch to allow inlining of the getPixel function.
@@ -2989,27 +2991,42 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 #endif
 }
 
-template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), u32 INDEX>
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
 __forceinline void update_4pixels(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask, u32 imask)
 {
     Tdst* dst_tmp;
     Tdst dsrc_tmp;
 
-    // Group 4 pixel to allow futur sse optimization of the convfn function
     dst_tmp = basepage + pageTable[i_msk][(INDEX)];
-    dsrc_tmp = convfn(src[RW((j<<6)+INDEX)]);
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX)];
+    }
     *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+1];
-    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+1)]);
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+1)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+1)];
+    }
     *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+2];
-    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+2)]);
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+2)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+2)];
+    }
     *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+3];
-    dsrc_tmp = convfn(src[RW((j<<6)+INDEX+3)]);
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+3)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+3)];
+    }
     *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
 }
 
@@ -3018,7 +3035,7 @@ static const __aligned16 u32 pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F8000
 static const __aligned16 u32 pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
 static const __aligned16 u32 pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
 
-template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), u32 INDEX>
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
 __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask[4], u32 imask)
 {
     Tdst* dst_tmp;
@@ -3036,6 +3053,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     // NOTE: maybe look at g++ instrinsic. (maybe it could be compatible with the window compiler)
     if (AA.x == 2) {
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
+#ifdef __LINUX__
         __asm__ __volatile
         (
          ".intel_syntax noprefix\n"
@@ -3051,8 +3069,10 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          : [base_ptr]"r"(base_ptr)
          : "xmm0", "xmm1"
         );
+#endif
     } else if(AA.x ==1) {
         base_ptr = &src[(((j<<6)+INDEX)<<1)];
+#ifdef __LINUX__
         __asm__ __volatile
         (
          ".intel_syntax noprefix\n"
@@ -3068,8 +3088,10 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          : [base_ptr]"r"(base_ptr)
          : "xmm0", "xmm1"
         );
+#endif
     } else {
         base_ptr = &src[((j<<6)+INDEX)];
+#ifdef __LINUX__
         __asm__ __volatile
         (
          ".intel_syntax noprefix\n"
@@ -3081,16 +3103,19 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          : [base_ptr]"r"(base_ptr)
          : "xmm0"
         );
+#endif
     }
 
+    if (do_conversion) {
     // transform pixel from ARGB:8888 to ARGB:1555
     // It also does the fbm pixel mask
+#ifdef __LINUX__
     __asm__
         (
          ".intel_syntax noprefix\n"
 
          // The loading of the register is done above
-         // "movdqa    xmm0, [%[dsrc_tmp]]\n" // load 4 pixel
+         // "movdqa    xmm0, [%[src_tmp]]\n" // load 4 pixel
          "movdqa    xmm1, xmm0\n"
          "movdqa    xmm2, xmm0\n"
          "movdqa    xmm3, xmm0\n"
@@ -3127,22 +3152,48 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
             [pixel_Bmask]"m"(*pixel_Bmask), [pixel_Gmask]"m"(*pixel_Gmask)
          : "xmm0", "xmm1", "xmm2", "xmm3", "memory"
         );
+#endif
+    } else {
+#ifdef __LINUX__
+        // Just apply the fbm mask
+        // The real optimization is to reduce the register usage for dst_tmp update
+        // Because x86 does not have enough register gcc does multiples load/store value
+        // in the stack
+        __asm__
+            (
+             ".intel_syntax noprefix\n"
+
+             // Note pixel are already load above
+             // Apply the fbm mask
+             "movdqa    xmm1,[%[mask]]\n"
+             "pand      xmm0, xmm1\n"
+
+             // save the result
+             "movdqa    [%[src_tmp]], xmm0\n" // load 4 pixel
+
+             ".att_syntax\n"
+             :
+             : [src_tmp]"r"(src_tmp), [mask]"r"(mask)
+             : "xmm0", "xmm1", "memory"
+            );
+#endif
+    }
 
     // Group 4 pixel to allow futur sse optimization of the convfn function
     dst_tmp = basepage + pageTable[i_msk][(INDEX)];
-    *dst_tmp = (u16)src_tmp[0] | (*dst_tmp & imask);
+    *dst_tmp = (Tdst)src_tmp[0] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+1];
-    *dst_tmp = (u16)src_tmp[1] | (*dst_tmp & imask);
+    *dst_tmp = (Tdst)src_tmp[1] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+2];
-    *dst_tmp = (u16)src_tmp[2] | (*dst_tmp & imask);
+    *dst_tmp = (Tdst)src_tmp[2] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+3];
-    *dst_tmp = (u16)src_tmp[3] | (*dst_tmp & imask);
+    *dst_tmp = (Tdst)src_tmp[3] | (*dst_tmp & imask);
 }
 
-template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), bool do_conversion>
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion>
 void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 {
 #ifdef __LINUX__
@@ -3196,59 +3247,40 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         // for(int j = fbw_div-1; j >= 0; --j) {
         for(u32 j = 0 ; j < fbw_div; ++j) {
             Tdst* basepage = pPageOffset + (i_div + j) * 2048;
-#ifdef ZEROGS_SSE2
-            if (do_conversion) {
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 0>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 4>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 8>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 12>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 16>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 20>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 24>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 28>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 32>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 36>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 40>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 44>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 48>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 52>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 56>(src, basepage, i_msk, j, mask, imask);
-                update_4pixels_sse2<size, pageTable, Tdst, convfn, 60>(src, basepage, i_msk, j, mask, imask);
-            } else {
-                update_4pixels<size, pageTable, Tdst, convfn, 0>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 4>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 8>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 12>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 16>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 20>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 24>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 28>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 32>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 36>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 40>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 44>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 48>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 52>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 56>(src, basepage, i_msk, j, mask[0], imask);
-                update_4pixels<size, pageTable, Tdst, convfn, 60>(src, basepage, i_msk, j, mask[0], imask);
-            }
+#if defined(ZEROGS_SSE2) && defined(__LINUX__) // need to port asm to windows world
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask, imask);
 #else
-            update_4pixels<size, pageTable, Tdst, convfn, 0>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 4>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 8>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 12>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 16>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 20>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 24>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 28>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 32>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 36>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 40>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 44>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 48>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 52>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 56>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, convfn, 60>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask[0], imask);
 #endif
         }
         src -= raw_size;
@@ -3281,50 +3313,50 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
         case PSMCT32:
         case PSMCT24:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<32, g_pageTable32, u32, dummy_return, false >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<32, g_pageTable32, u32, false >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
+            Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
 #endif
             break;
 
         case PSMCT16:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16, u16, RGBA32to16, true >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<64, g_pageTable16, u16, true >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
+            Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
 #endif
             break;
 
         case PSMCT16S:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16S, u16, RGBA32to16, true >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<64, g_pageTable16S, u16, true >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u16, RGBA32to16 >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
+            Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
 #endif
             break;
 
         case PSMT32Z:
         case PSMT24Z:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<32, g_pageTable32Z, u32, dummy_return, false >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<32, g_pageTable32Z, u32, false >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u32, dummy_return >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
+            Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
 #endif
             break;
 
         case PSMT16Z:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16Z, u16, dummy_return, false >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<64, g_pageTable16Z, u16, false >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
+            Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
 #endif
             break;
 
         case PSMT16SZ:
 #ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16SZ, u16, dummy_return, false >(psrc, fbp, fbw, fbh, fbm);
+            Resolve_32b<64, g_pageTable16SZ, u16, false >(psrc, fbp, fbw, fbh, fbm);
 #else
-            Resolve_32_Bit<u16, dummy_return >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
+            Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
 #endif
             break;
     }
