@@ -3017,24 +3017,80 @@ static const __aligned16 u32 pixel_Amask[4] = {0x80000000, 0x80000000, 0x8000000
 static const __aligned16 u32 pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F80000, 0x00F80000};
 static const __aligned16 u32 pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
 static const __aligned16 u32 pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
+
 template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), u32 INDEX>
 __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask[4], u32 imask)
 {
     Tdst* dst_tmp;
-    __aligned16 u32 dsrc_tmp[4];
+    __aligned16 u32 src_tmp[4];
+    u32* base_ptr;
 
-    // load 4 pixel into a 128 array
-    dsrc_tmp[0] = src[RW((j<<6)+INDEX)];
-    dsrc_tmp[1] = src[RW((j<<6)+INDEX+1)];
-    dsrc_tmp[2] = src[RW((j<<6)+INDEX+2)];
-    dsrc_tmp[3] = src[RW((j<<6)+INDEX+3)];
+    // highly slow. memory -> register -> memory -> xmm ...
+    // Intel SSE4.1 support an instruction to load memory to a part of xmm
+#if 0
+    src_tmp[0] = src[RW((j<<6)+INDEX)];
+    src_tmp[1] = src[RW((j<<6)+INDEX+1)];
+    src_tmp[2] = src[RW((j<<6)+INDEX+2)];
+    src_tmp[3] = src[RW((j<<6)+INDEX+3)];
+#endif
+    // NOTE: maybe look at g++ instrinsic. (maybe it could be compatible with the window compiler)
+    if (AA.x == 2) {
+        base_ptr = &src[(((j<<6)+INDEX)<<2)];
+        __asm__ __volatile
+        (
+         ".intel_syntax noprefix\n"
+
+         "movq  xmm0, [%[base_ptr]+3]\n"
+         "movq  xmm1, [%[base_ptr]+11]\n"
+         // fusion the 2 registers into 1
+         "pslldq    xmm1, 8\n"
+         "pand  xmm0, xmm1\n"
+
+         ".att_syntax\n"
+         :
+         : [base_ptr]"r"(base_ptr)
+         : "xmm0", "xmm1"
+        );
+    } else if(AA.x ==1) {
+        base_ptr = &src[(((j<<6)+INDEX)<<1)];
+        __asm__ __volatile
+        (
+         ".intel_syntax noprefix\n"
+
+         "movq  xmm0, [%[base_ptr]+1]\n"
+         "movq  xmm1, [%[base_ptr]+5]\n"
+         // fusion the 2 registers into 1
+         "pslldq    xmm1, 8\n"
+         "pand  xmm0, xmm1\n"
+
+         ".att_syntax\n"
+         :
+         : [base_ptr]"r"(base_ptr)
+         : "xmm0", "xmm1"
+        );
+    } else {
+        base_ptr = &src[((j<<6)+INDEX)];
+        __asm__ __volatile
+        (
+         ".intel_syntax noprefix\n"
+
+         "movdqu xmm0, [%[base_ptr]]\n"
+
+         ".att_syntax\n"
+         :
+         : [base_ptr]"r"(base_ptr)
+         : "xmm0"
+        );
+    }
 
     // transform pixel from ARGB:8888 to ARGB:1555
+    // It also does the fbm pixel mask
     __asm__
         (
          ".intel_syntax noprefix\n"
 
-         "movdqa    xmm0, [%[dsrc_tmp]]\n" // load 4 pixel
+         // The loading of the register is done above
+         // "movdqa    xmm0, [%[dsrc_tmp]]\n" // load 4 pixel
          "movdqa    xmm1, xmm0\n"
          "movdqa    xmm2, xmm0\n"
          "movdqa    xmm3, xmm0\n"
@@ -3044,13 +3100,13 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          "psrld     xmm0, 15\n"
 
          "pand      xmm1, [%[pixel_Rmask]]\n"
-         "pslld     xmm1, 9\n"
+         "psrld     xmm1, 9\n"
 
          "pand      xmm2, [%[pixel_Gmask]]\n"
-         "pslld     xmm2, 6\n"
+         "psrld     xmm2, 6\n"
 
          "pand      xmm3, [%[pixel_Bmask]]\n"
-         "pslld     xmm2, 3\n"
+         "psrld     xmm3, 3\n"
 
          // Rebuild a full 16bits pixel
          "por       xmm0, xmm1\n"
@@ -3062,11 +3118,11 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          "pand      xmm0, xmm1\n"
 
          // save the result
-         "movdqa    [%[dsrc_tmp]], xmm0\n" // load 4 pixel
+         "movdqa    [%[src_tmp]], xmm0\n" // load 4 pixel
 
          ".att_syntax\n"
          :
-         : [dsrc_tmp]"r"(dsrc_tmp), [mask]"r"(mask), // note: I think 'm' only work for STATIC memory...
+         : [src_tmp]"r"(src_tmp), [mask]"r"(mask), // note: I think 'm' only work for STATIC memory...
             [pixel_Amask]"m"(*pixel_Amask), [pixel_Rmask]"m"(*pixel_Rmask),
             [pixel_Bmask]"m"(*pixel_Bmask), [pixel_Gmask]"m"(*pixel_Gmask)
          : "xmm0", "xmm1", "xmm2", "xmm3", "memory"
@@ -3074,16 +3130,16 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
 
     // Group 4 pixel to allow futur sse optimization of the convfn function
     dst_tmp = basepage + pageTable[i_msk][(INDEX)];
-    *dst_tmp = (u16)dsrc_tmp[0] | (*dst_tmp & imask);
+    *dst_tmp = (u16)src_tmp[0] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+1];
-    *dst_tmp = (u16)dsrc_tmp[1] | (*dst_tmp & imask);
+    *dst_tmp = (u16)src_tmp[1] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+2];
-    *dst_tmp = (u16)dsrc_tmp[2] | (*dst_tmp & imask);
+    *dst_tmp = (u16)src_tmp[2] | (*dst_tmp & imask);
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+3];
-    *dst_tmp = (u16)dsrc_tmp[3] | (*dst_tmp & imask);
+    *dst_tmp = (u16)src_tmp[3] | (*dst_tmp & imask);
 }
 
 template <u32 size, u32 pageTable[size][64], typename Tdst, Tdst (*convfn)(u32), bool do_conversion>
