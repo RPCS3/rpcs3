@@ -3030,10 +3030,11 @@ __forceinline void update_4pixels(u32* src, Tdst* basepage, u32 i_msk, u32 j, u3
     *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
 }
 
-static const __aligned16 u32 pixel_Amask[4] = {0x80000000, 0x80000000, 0x80000000, 0x80000000};
-static const __aligned16 u32 pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F80000, 0x00F80000};
-static const __aligned16 u32 pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
-static const __aligned16 u32 pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
+// This variable are used in ASM. ASM only support standard c type. Do not replace them with some typedef.
+static const __aligned16 unsigned int pixel_Amask[4] = {0x80000000, 0x80000000, 0x80000000, 0x80000000};
+static const __aligned16 unsigned int pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F80000, 0x00F80000};
+static const __aligned16 unsigned int pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
+static const __aligned16 unsigned int pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
 
 template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
 __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask[4], u32 imask)
@@ -3110,7 +3111,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     // transform pixel from ARGB:8888 to ARGB:1555
     // It also does the fbm pixel mask
 #ifdef __LINUX__
-    __asm__
+        __asm__ __volatile__
         (
          ".intel_syntax noprefix\n"
 
@@ -3121,16 +3122,16 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
          "movdqa    xmm3, xmm0\n"
 
          // keep 1 color and shift it
-         "pand      xmm0, [%[pixel_Amask]]\n"
+         "pand      xmm0, %[pixel_Amask]\n"
          "psrld     xmm0, 15\n"
 
-         "pand      xmm1, [%[pixel_Rmask]]\n"
+         "pand      xmm1, %[pixel_Rmask]\n"
          "psrld     xmm1, 9\n"
 
-         "pand      xmm2, [%[pixel_Gmask]]\n"
+         "pand      xmm2, %[pixel_Gmask]\n"
          "psrld     xmm2, 6\n"
 
-         "pand      xmm3, [%[pixel_Bmask]]\n"
+         "pand      xmm3, %[pixel_Bmask]\n"
          "psrld     xmm3, 3\n"
 
          // Rebuild a full 16bits pixel
@@ -3147,7 +3148,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
 
          ".att_syntax\n"
          :
-         : [src_tmp]"r"(src_tmp), [mask]"r"(mask), // note: I think 'm' only work for STATIC memory...
+             : [src_tmp]"r"(src_tmp), [mask]"r"(mask), // note: "m" need a standard type pointer (not a typedef)
             [pixel_Amask]"m"(*pixel_Amask), [pixel_Rmask]"m"(*pixel_Rmask),
             [pixel_Bmask]"m"(*pixel_Bmask), [pixel_Gmask]"m"(*pixel_Gmask)
          : "xmm0", "xmm1", "xmm2", "xmm3", "memory"
@@ -3159,7 +3160,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
         // The real optimization is to reduce the register usage for dst_tmp update
         // Because x86 does not have enough register gcc does multiples load/store value
         // in the stack
-        __asm__
+        __asm__ __volatile__
             (
              ".intel_syntax noprefix\n"
 
