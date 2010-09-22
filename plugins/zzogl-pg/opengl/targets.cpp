@@ -3053,17 +3053,18 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
 #endif
     // NOTE: maybe look at g++ instrinsic. (maybe it could be compatible with the window compiler)
     if (AA.x == 2) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p0 p0  p1 p1 p1 p1
+        // p2 p2 p2 p2  p3 p3 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
 #ifdef __LINUX__
         __asm__ __volatile
         (
          ".intel_syntax noprefix\n"
 
-         "movq  xmm0, [%[base_ptr]+3]\n"
-         "movq  xmm1, [%[base_ptr]+11]\n"
-         // fusion the 2 registers into 1
-         "pslldq    xmm1, 8\n"
-         "pand  xmm0, xmm1\n"
+         "movq  xmm0, [%[base_ptr]+12]\n" // read p0 p1
+         "movq  xmm1, [%[base_ptr]+44]\n" // read p2 p3
+         "punpcklqdq xmm0, xmm1\n"
 
          ".att_syntax\n"
          :
@@ -3078,11 +3079,9 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
         (
          ".intel_syntax noprefix\n"
 
-         "movq  xmm0, [%[base_ptr]+1]\n"
-         "movq  xmm1, [%[base_ptr]+5]\n"
-         // fusion the 2 registers into 1
-         "pslldq    xmm1, 8\n"
-         "pand  xmm0, xmm1\n"
+         "movq  xmm0, [%[base_ptr]+4]\n" // read p0 p1
+         "movq  xmm1, [%[base_ptr]+20]\n" // read p2 p3
+         "punpcklqdq xmm0, xmm1\n"
 
          ".att_syntax\n"
          :
@@ -3215,6 +3214,9 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
     else
     {
         mask[0] = ~fbm;
+        mask[1] = mask[0];
+        mask[2] = mask[0];
+        mask[3] = mask[0];
         imask = fbm;
     }
 
