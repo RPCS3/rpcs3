@@ -26,6 +26,8 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
+#include <emmintrin.h>
+#include <xmmintrin.h>
 
 #define RHA
 //#define RW
@@ -3042,6 +3044,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     Tdst* dst_tmp;
     __aligned16 u32 src_tmp[4];
     u32* base_ptr;
+    __m128i pixels;
 
     // highly slow. memory -> register -> memory -> xmm ...
     // Intel SSE4.1 support an instruction to load memory to a part of xmm
@@ -3051,132 +3054,58 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     src_tmp[2] = src[RW((j<<6)+INDEX+2)];
     src_tmp[3] = src[RW((j<<6)+INDEX+3)];
 #endif
-    // NOTE: maybe look at g++ instrinsic. (maybe it could be compatible with the window compiler)
     if (AA.x == 2) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p0 p0  p1 p1 p1 p1
         // p2 p2 p2 p2  p3 p3 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
-#ifdef __LINUX__
-        __asm__ __volatile
-        (
-         ".intel_syntax noprefix\n"
-
-         "movq  xmm0, [%[base_ptr]+12]\n" // read p0 p1
-         "movq  xmm1, [%[base_ptr]+44]\n" // read p2 p3
-         "punpcklqdq xmm0, xmm1\n"
-
-         ".att_syntax\n"
-         :
-         : [base_ptr]"r"(base_ptr)
-         : "xmm0", "xmm1"
-        );
-#endif
+        __m128i pixel_low = _mm_cvtsi32_si128(*(u64*)(base_ptr+3));
+        __m128i pixel_high = _mm_cvtsi32_si128(*(u64*)(base_ptr+11));
+        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else if(AA.x ==1) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p1 p1  p2 p2 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<1)];
-#ifdef __LINUX__
-        __asm__ __volatile
-        (
-         ".intel_syntax noprefix\n"
-
-         "movq  xmm0, [%[base_ptr]+4]\n" // read p0 p1
-         "movq  xmm1, [%[base_ptr]+20]\n" // read p2 p3
-         "punpcklqdq xmm0, xmm1\n"
-
-         ".att_syntax\n"
-         :
-         : [base_ptr]"r"(base_ptr)
-         : "xmm0", "xmm1"
-        );
-#endif
+        __m128i pixel_low = _mm_cvtsi32_si128(*(u64*)(base_ptr+1));
+        __m128i pixel_high = _mm_cvtsi32_si128(*(u64*)(base_ptr+5));
+        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else {
         base_ptr = &src[((j<<6)+INDEX)];
-#ifdef __LINUX__
-        __asm__ __volatile
-        (
-         ".intel_syntax noprefix\n"
-
-         "movdqu xmm0, [%[base_ptr]]\n"
-
-         ".att_syntax\n"
-         :
-         : [base_ptr]"r"(base_ptr)
-         : "xmm0"
-        );
-#endif
+        pixels = _mm_loadu_si128((__m128i*)base_ptr);
     }
 
     if (do_conversion) {
     // transform pixel from ARGB:8888 to ARGB:1555
     // It also does the fbm pixel mask
-#ifdef __LINUX__
-        __asm__ __volatile__
-        (
-         ".intel_syntax noprefix\n"
+        // Filter component of each pixel
+        __m128i pixel_A = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Amask));
+        __m128i pixel_R = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Rmask));
+        __m128i pixel_G = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Gmask));
+        __m128i pixel_B = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Bmask));
 
-         // The loading of the register is done above
-         // "movdqa    xmm0, [%[src_tmp]]\n" // load 4 pixel
-         "movdqa    xmm1, xmm0\n"
-         "movdqa    xmm2, xmm0\n"
-         "movdqa    xmm3, xmm0\n"
+        // shift the value
+        pixel_A = _mm_srli_si128(pixel_A, 15);
+        pixel_R = _mm_srli_si128(pixel_R, 9);
+        pixel_G = _mm_srli_si128(pixel_G, 6);
+        pixel_B = _mm_srli_si128(pixel_B, 3);
 
-         // keep 1 color and shift it
-         "pand      xmm0, %[pixel_Amask]\n"
-         "psrld     xmm0, 15\n"
+        // rebuild a complete pixel
+        pixels = _mm_or_si128(pixel_A, pixel_B);
+        pixels = _mm_or_si128(pixels, pixel_G);
+        pixels = _mm_or_si128(pixels, pixel_R);
 
-         "pand      xmm1, %[pixel_Rmask]\n"
-         "psrld     xmm1, 9\n"
+        // apply fbm mask
+        pixels = _mm_and_si128(pixels, _mm_load_si128((__m128i*)mask) );
 
-         "pand      xmm2, %[pixel_Gmask]\n"
-         "psrld     xmm2, 6\n"
+        _mm_store_si128((__m128i*)src_tmp, pixels);
 
-         "pand      xmm3, %[pixel_Bmask]\n"
-         "psrld     xmm3, 3\n"
-
-         // Rebuild a full 16bits pixel
-         "por       xmm0, xmm1\n"
-         "por       xmm0, xmm2\n"
-         "por       xmm0, xmm3\n"
-
-         // Apply the fbm mask
-         "movdqa    xmm1,[%[mask]]\n"
-         "pand      xmm0, xmm1\n"
-
-         // save the result
-         "movdqa    [%[src_tmp]], xmm0\n" // load 4 pixel
-
-         ".att_syntax\n"
-         :
-             : [src_tmp]"r"(src_tmp), [mask]"r"(mask), // note: "m" need a standard type pointer (not a typedef)
-            [pixel_Amask]"m"(*pixel_Amask), [pixel_Rmask]"m"(*pixel_Rmask),
-            [pixel_Bmask]"m"(*pixel_Bmask), [pixel_Gmask]"m"(*pixel_Gmask)
-         : "xmm0", "xmm1", "xmm2", "xmm3", "memory"
-        );
-#endif
     } else {
-#ifdef __LINUX__
         // Just apply the fbm mask
         // The real optimization is to reduce the register usage for dst_tmp update
         // Because x86 does not have enough register gcc does multiples load/store value
         // in the stack
-        __asm__ __volatile__
-            (
-             ".intel_syntax noprefix\n"
-
-             // Note pixel are already load above
-             // Apply the fbm mask
-             "movdqa    xmm1,[%[mask]]\n"
-             "pand      xmm0, xmm1\n"
-
-             // save the result
-             "movdqa    [%[src_tmp]], xmm0\n" // load 4 pixel
-
-             ".att_syntax\n"
-             :
-             : [src_tmp]"r"(src_tmp), [mask]"r"(mask)
-             : "xmm0", "xmm1", "memory"
-            );
-#endif
+        pixels = _mm_and_si128(pixels, _mm_loadu_si128((__m128i*)mask));
+        _mm_store_si128((__m128i*)src_tmp, pixels);
     }
 
     // Group 4 pixel to allow futur sse optimization of the convfn function
@@ -3224,7 +3153,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 
     int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
     if( maxfbh > fbh ) maxfbh = fbh;
-    ZZLog::Error_Log("*** Resolve 32 to 32 bits: %dx%d", maxfbh, fbw);
+    ZZLog::Error_Log("*** Resolve 32 to 32 bits: %dx%d. Frame Mask %x", maxfbh, fbw, imask);
 
     // Start the src array at the end to reduce testing in loop
     u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
