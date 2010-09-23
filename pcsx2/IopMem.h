@@ -17,10 +17,6 @@
 
 #include "MemoryTypes.h"
 
-extern u8 *psxM;
-extern u8 *psxP;
-extern u8 *psxH;
-extern u8 *psxS;
 extern uptr *psxMemWLUT;
 extern const uptr *psxMemRLUT;
 
@@ -51,29 +47,29 @@ static __fi const T* iopVirtMemR( u32 mem )
 // Obtains a pointer to the IOP's physical mapping (bypasses the TLB)
 static __fi u8* iopPhysMem( u32 addr )
 {
-	return &psxM[addr & 0x1fffff];
+	return &iopMem->Main[addr & 0x1fffff];
 }
 
-#define psxSs8(mem)		psxS[(mem) & 0x00ff]
-#define psxSs16(mem)	(*(s16*)&psxS[(mem) & 0x00ff])
-#define psxSs32(mem)	(*(s32*)&psxS[(mem) & 0x00ff])
-#define psxSu8(mem)		(*(u8*) &psxS[(mem) & 0x00ff])
-#define psxSu16(mem)	(*(u16*)&psxS[(mem) & 0x00ff])
-#define psxSu32(mem)	(*(u32*)&psxS[(mem) & 0x00ff])
+#define psxSs8(mem)		iopMem->Sif[(mem) & 0x00ff]
+#define psxSs16(mem)	(*(s16*)&iopMem->Sif[(mem) & 0x00ff])
+#define psxSs32(mem)	(*(s32*)&iopMem->Sif[(mem) & 0x00ff])
+#define psxSu8(mem)		(*(u8*) &iopMem->Sif[(mem) & 0x00ff])
+#define psxSu16(mem)	(*(u16*)&iopMem->Sif[(mem) & 0x00ff])
+#define psxSu32(mem)	(*(u32*)&iopMem->Sif[(mem) & 0x00ff])
 
-#define psxPs8(mem)		psxP[(mem) & 0xffff]
-#define psxPs16(mem)	(*(s16*)&psxP[(mem) & 0xffff])
-#define psxPs32(mem)	(*(s32*)&psxP[(mem) & 0xffff])
-#define psxPu8(mem)		(*(u8*) &psxP[(mem) & 0xffff])
-#define psxPu16(mem)	(*(u16*)&psxP[(mem) & 0xffff])
-#define psxPu32(mem)	(*(u32*)&psxP[(mem) & 0xffff])
+#define psxPs8(mem)		iopMem->P[(mem) & 0xffff]
+#define psxPs16(mem)	(*(s16*)&iopMem->P[(mem) & 0xffff])
+#define psxPs32(mem)	(*(s32*)&iopMem->P[(mem) & 0xffff])
+#define psxPu8(mem)		(*(u8*) &iopMem->P[(mem) & 0xffff])
+#define psxPu16(mem)	(*(u16*)&iopMem->P[(mem) & 0xffff])
+#define psxPu32(mem)	(*(u32*)&iopMem->P[(mem) & 0xffff])
 
-#define psxHs8(mem)		psxH[(mem) & 0xffff]
-#define psxHs16(mem)	(*(s16*)&psxH[(mem) & 0xffff])
-#define psxHs32(mem)	(*(s32*)&psxH[(mem) & 0xffff])
-#define psxHu8(mem)		(*(u8*) &psxH[(mem) & 0xffff])
-#define psxHu16(mem)	(*(u16*)&psxH[(mem) & 0xffff])
-#define psxHu32(mem)	(*(u32*)&psxH[(mem) & 0xffff])
+#define psxHs8(mem)		iopHw[(mem) & 0xffff]
+#define psxHs16(mem)	(*(s16*)&iopHw[(mem) & 0xffff])
+#define psxHs32(mem)	(*(s32*)&iopHw[(mem) & 0xffff])
+#define psxHu8(mem)		(*(u8*) &iopHw[(mem) & 0xffff])
+#define psxHu16(mem)	(*(u16*)&iopHw[(mem) & 0xffff])
+#define psxHu32(mem)	(*(u32*)&iopHw[(mem) & 0xffff])
 
 extern void psxMemAlloc();
 extern void psxMemReset();

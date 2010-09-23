@@ -1048,7 +1048,7 @@ bool SysCorePlugins::OpenPlugin_SPU2()
 	SPU2irqCallback( spu2Irq );
 #else
 	SPU2irqCallback( spu2Irq, spu2DMA4Irq, spu2DMA7Irq );
-	if( SPU2setDMABaseAddr != NULL ) SPU2setDMABaseAddr((uptr)psxM);
+	if( SPU2setDMABaseAddr != NULL ) SPU2setDMABaseAddr((uptr)iopMem->Main);
 #endif
 	if( SPU2setClockPtr != NULL ) SPU2setClockPtr(&psxRegs.cycle);
 	return true;
@@ -1072,7 +1072,7 @@ bool SysCorePlugins::OpenPlugin_USB()
 	USBirqCallback( usbIrq );
 	usbHandler = USBirqHandler();
 	if( USBsetRAM != NULL )
-		USBsetRAM(psxM);
+		USBsetRAM(iopMem->Main);
 	return true;
 }
 

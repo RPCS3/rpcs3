@@ -688,7 +688,7 @@ static void rpsxLW()
 
 	// read from psM directly
 	AND32ItoR(ECX, 0x1fffff);
-	ADD32ItoR(ECX, (uptr)psxM);
+	ADD32ItoR(ECX, (uptr)iopMem->Main);
 
 	MOV32RmtoR( ECX, ECX );
 	MOV32RtoM( (uptr)&psxRegs.GPR.r[_Rt_], ECX);
