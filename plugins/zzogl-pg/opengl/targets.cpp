@@ -26,7 +26,6 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
-#include <emmintrin.h>
 #include <xmmintrin.h>
 
 #define RHA
@@ -3046,28 +3045,22 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     u32* base_ptr;
     __m128i pixels;
 
-    // highly slow. memory -> register -> memory -> xmm ...
-    // Intel SSE4.1 support an instruction to load memory to a part of xmm
-#if 0
-    src_tmp[0] = src[RW((j<<6)+INDEX)];
-    src_tmp[1] = src[RW((j<<6)+INDEX+1)];
-    src_tmp[2] = src[RW((j<<6)+INDEX+2)];
-    src_tmp[3] = src[RW((j<<6)+INDEX+3)];
-#endif
+    // Directly load pixels into xmm registers
+    // NOTE: Intel SSE4.1 support an instruction to load 32bits memory to a part of an xmm registers
     if (AA.x == 2) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p0 p0  p1 p1 p1 p1
         // p2 p2 p2 p2  p3 p3 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
-        __m128i pixel_low = _mm_cvtsi32_si128(*(u64*)(base_ptr+3));
-        __m128i pixel_high = _mm_cvtsi32_si128(*(u64*)(base_ptr+11));
+        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+3));
+        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+11));
         pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else if(AA.x ==1) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p1 p1  p2 p2 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<1)];
-        __m128i pixel_low = _mm_cvtsi32_si128(*(u64*)(base_ptr+1));
-        __m128i pixel_high = _mm_cvtsi32_si128(*(u64*)(base_ptr+5));
+        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+1));
+        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+5));
         pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else {
         base_ptr = &src[((j<<6)+INDEX)];
@@ -3179,7 +3172,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         // for(int j = fbw_div-1; j >= 0; --j) {
         for(u32 j = 0 ; j < fbw_div; ++j) {
             Tdst* basepage = pPageOffset + (i_div + j) * 2048;
-#if defined(ZEROGS_SSE2) && defined(__LINUX__) // need to port asm to windows world
+#ifdef ZEROGS_SSE2
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask, imask);
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask, imask);
