@@ -206,8 +206,8 @@ __fi u32 ipuRead32(u32 mem)
 			if (!ipuRegs.ctrl.BUSY)
 				IPU_LOG("read32: IPU_CTRL=0x%08X", ipuRegs.ctrl._u32);
 
-		return ipuRegs.ctrl._u32;
-		}		
+			return ipuRegs.ctrl._u32;
+		}
 
 		ipucase(IPU_BP): // IPU_BP
 		{
@@ -218,7 +218,7 @@ __fi u32 ipuRead32(u32 mem)
 			ipuRegs.ipubp |= g_BP.FP << 16;
 
 			IPU_LOG("read32: IPU_BP=0x%08X", ipuRegs.ipubp);
-		return ipuRegs.ipubp;
+			return ipuRegs.ipubp;
 		}
 
 		default:
