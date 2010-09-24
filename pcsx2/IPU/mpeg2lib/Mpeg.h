@@ -37,7 +37,7 @@ __noinline void memzero_sse_a( T& dest )
 
 	float (*destxmm)[4] = (float(*)[4])&dest;
 
-#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx][0], zeroreg)
+#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx-1][0], zeroreg)
 
 	switch( MZFqwc & 0x07 )
 	{

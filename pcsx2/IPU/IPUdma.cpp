@@ -381,9 +381,7 @@ __fi void dmaIPU0() // fromIPU
 		hwDmacIrq(DMAC_FROM_IPU);
 	}
 
-	//IPUProcessInterrupt();
-	extern void IPUWorker();
-	if (ipuRegs.ctrl.BUSY) IPUWorker();
+	IPUProcessInterrupt();
 }
 
 __fi void dmaIPU1() // toIPU

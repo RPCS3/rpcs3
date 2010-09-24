@@ -688,7 +688,7 @@ void __fi finishmpeg2sliceIDEC()
 	coded_block_pattern = decoder.coded_block_pattern;
 }
 
-bool mpeg2sliceIDEC()
+__fi bool mpeg2sliceIDEC()
 {
 	u16 code;
 
@@ -922,7 +922,7 @@ finish_idec:
 	return true;
 }
 
-bool mpeg2_slice()
+__fi bool mpeg2_slice()
 {
 	int DCT_offset, DCT_stride;
 
