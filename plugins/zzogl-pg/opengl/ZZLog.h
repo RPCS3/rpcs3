@@ -185,6 +185,7 @@ extern void Prim_Log(const char *fmt, ...);
 extern void GS_Log(const char *fmt, ...);
 
 extern void Debug_Log(const char *fmt, ...);
+extern void Dev_Log(const char *fmt, ...);
 extern void Warn_Log(const char *fmt, ...);
 extern void Error_Log(const char *fmt, ...);
 };

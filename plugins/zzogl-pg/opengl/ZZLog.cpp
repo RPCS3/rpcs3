@@ -244,6 +244,27 @@ void Warn_Log(const char *fmt, ...)
 #endif
 }
 
+void Dev_Log(const char *fmt, ...)
+{
+#ifdef ZEROGS_DEVBUILD
+	va_list list;
+
+	va_start(list, fmt);
+
+	if (IsLogging())
+	{
+		vfprintf(gsLog, fmt, list);
+		fprintf(gsLog, "\n");
+	}
+
+	fprintf(stderr, "ZZogl-PG:  ");
+	vfprintf(stderr, fmt, list);
+	fprintf(stderr, "\n");
+	
+	va_end(list);
+#endif
+}
+
 void Debug_Log(const char *fmt, ...)
 {
 #if _DEBUG

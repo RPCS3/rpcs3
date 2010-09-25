@@ -1230,21 +1230,11 @@ void ZeroGS::CRenderTargetMngr::PrintTargets()
 #endif
 }
 
-CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
+bool ZeroGS::CRenderTargetMngr::isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight)
 {
-	FUNCLOG
-
-	if (frame.fbw <= 0 || frame.fbh <= 0) return NULL;
-
-	GL_REPORT_ERRORD();
-
-	u32 key = GetFrameKey(frame);
-
-	MAPTARGETS::iterator it = mapTargets.find(key);
-
 	// only enforce height if frame.fbh <= 0x1c0
 	bool bfound = it != mapTargets.end();
-
+	
 	if (bfound)
 	{
 		if (opts&TO_StrictHeight)
@@ -1291,7 +1281,26 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		}
 	}
 
-	if (bfound)
+	return bfound;
+}
+
+CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
+{
+	FUNCLOG
+
+	if (frame.fbw <= 0 || frame.fbh <= 0) 
+	{
+		//ZZLog::Dev_Log("frame fbw == %d; fbh == %d", frame.fbw, frame.fbh);
+		return NULL;
+	}
+
+	GL_REPORT_ERRORD();
+
+	u32 key = GetFrameKey(frame);
+
+	MAPTARGETS::iterator it = mapTargets.find(key);
+	
+	if (isFound(frame, it, opts, key, maxposheight))
 	{
 		// can be both 16bit and 32bit
 		if (PSMT_ISHALF(frame.psm) != PSMT_ISHALF(it->second->psm))
@@ -1326,9 +1335,8 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			// certain variables have to be reset every time
 			if ((it->second->psm & ~1) != (frame.psm & ~1))
 			{
-#if defined(ZEROGS_DEVBUILD)
-				ZZLog::Warn_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
-#endif
+				ZZLog::Dev_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
+				
 				it->second->psm = frame.psm;
 
 				// recalc extents
@@ -1338,7 +1346,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		if (it->second->fbm != frame.fbm)
 		{
-			//ZZLog::Warn_Log("Bad fbm: 0x%8.8x 0x%8.8x, psm: %d", frame.fbm, it->second->fbm, frame.psm);
+			//ZZLog::Dev_Log("Bad fbm: 0x%8.8x 0x%8.8x, psm: %d", frame.fbm, it->second->fbm, frame.psm);
 		}
 
 		it->second->fbm &= frame.fbm;
@@ -1974,7 +1982,7 @@ void MemoryTarget_GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
+ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
 {
 	for (list<CMemoryTarget>::iterator it = listTargets.begin(); it != listTargets.end();)
 	{
@@ -2045,7 +2053,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget
 	return NULL;
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
+ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
 
@@ -2094,7 +2102,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	MemoryTarget_GetClutVariables(nClutOffset, clutsize, tex0);
 	MemoryTarget_GetMemAddress(start, end, tex0);
 
-	ZeroGS::CMemoryTarget* it = MemoryTarget_SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
+	ZeroGS::CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
 
 	if (it != NULL) return it;
 
@@ -2118,7 +2126,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	
 	channels = PIXELS_PER_WORD(tex0.psm);
 
-	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
+	targ = ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 
 	// fill local clut
 	if (PSMT_ISCLUT(tex0.psm))
