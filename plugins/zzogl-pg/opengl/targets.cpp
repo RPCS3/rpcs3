@@ -2261,14 +2261,13 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 #define NEW_INTRINSIC_VERSION
 #ifdef NEW_INTRINSIC_VERSION
 
-            __m128i zero_128;
-            zero_128 = _mm_xor_si128(zero_128, zero_128);
+            __m128i zero_128 = _mm_setzero_si128();
             // NOTE: future performance improvement
             // SSE4.1 support uncacheable load 128bits. Maybe it can
             // avoid some cache pollution
             // NOTE2: I create multiple _n variable to mimic the previous ASM behavior
             // but I'm not sure there are real gains.
-			for (int i = targ->height * GPU_TEXWIDTH/16 ; i >=0 ; --i)
+			for (int i = targ->height * GPU_TEXWIDTH/16 ; i > 0 ; --i)
             {
                 // Convert 16 bits pixels to 32bits (zero extended)
                 // Batch 64 bytes (32 pixels) at once.
