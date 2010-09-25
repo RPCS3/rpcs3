@@ -676,9 +676,8 @@ extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
     vm2 = (__m128i)_mm_shuffle_ps((__m128)vm2, (__m128)vm3, 0x88);
     vm2 = _mm_shuffle_epi32(vm2, 0xD8);
 
-    // Create a zero regiters
-    __m128i zero_128;
-    zero_128 = _mm_xor_si128(zero_128, zero_128);
+    // Create a zero register.
+    __m128i zero_128 = _mm_setzero_si128();
 
     if ((u32)vm & 0x0F) {
         // Unaligned write.
