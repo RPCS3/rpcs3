@@ -127,26 +127,6 @@ int IPU_Fifo_Output::write(const u32 *value, uint size)
 	} while(true);
 
 	return origsize - size;
-
-#if 0
-	if (ipuRegs.ctrl.OFC >= 8) IPU0dma();
-
-	uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
-	uint firsttrans = transsize;
-
-	while (transsize > 0)
-	{
-		CopyQWC(&data[writepos], value);
-		writepos = (writepos + 4) & 31;
-		value += 4;
-		--transsize;
-	}
-
-	ipuRegs.ctrl.OFC += firsttrans;
-	IPU0dma();
-
-	return firsttrans;
-#endif
 }
 
 void IPU_Fifo_Output::read(void *value, uint size)

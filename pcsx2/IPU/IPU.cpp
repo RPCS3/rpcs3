@@ -51,7 +51,6 @@ u8 indx4[16*16/2];
 void tIPU_cmd::clear()
 {
 	memzero_sse_a(*this);
-	//memzero(*this);
 	current = 0xffffffff;
 }
 
@@ -365,7 +364,7 @@ static __ri void ipuIDEC(tIPU_CMD_IDEC idec)
 	decoder.scantype			= ipuRegs.ctrl.AS;
 	decoder.intra_dc_precision	= ipuRegs.ctrl.IDP;
 
-	//from IDEC value
+//from IDEC value
 	decoder.quantizer_scale		= idec.QSC;
 	decoder.frame_pred_frame_dct= !idec.DTD;
 	decoder.sgn = idec.SGN;
@@ -551,9 +550,8 @@ static bool ipuSETVQ(u32 val)
 }
 
 // IPU Transfers are split into 8Qwords so we need to send ALL the data
-static bool __fastcall ipuCSC(u32 val)
+static __ri bool ipuCSC(tIPU_CMD_CSC csc)
 {
-	tIPU_CMD_CSC csc(val);
 	csc.log_from_YCbCr();
 
 	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
@@ -568,21 +566,13 @@ static bool __fastcall ipuCSC(u32 val)
 		
 		if (csc.OFM)
 		{
-			while (ipu_cmd.pos[1] < 32)
-			{
-				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
-
-				if (ipu_cmd.pos[1] <= 0) return false;
-			}
+			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
+			if (ipu_cmd.pos[1] < 32) return false;
 		}
 		else
 		{
-			while (ipu_cmd.pos[1] < 64)
-			{
-				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb32) + 4 * ipu_cmd.pos[1], 64 - ipu_cmd.pos[1]);
-
-				if (ipu_cmd.pos[1] <= 0) return false;
-			}
+			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb32) + 4 * ipu_cmd.pos[1], 64 - ipu_cmd.pos[1]);
+			if (ipu_cmd.pos[1] < 64) return false;
 		}
 
 		ipu_cmd.pos[0] = 0;
@@ -592,10 +582,8 @@ static bool __fastcall ipuCSC(u32 val)
 	return true;
 }
 
-// Todo - Need to add the same stop and start code as CSC
-static bool ipuPACK(u32 val)
+static __ri bool ipuPACK(tIPU_CMD_CSC csc)
 {
-	tIPU_CMD_CSC  csc(val);
 	csc.log_from_RGB32();
 
 	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
@@ -613,13 +601,11 @@ static bool ipuPACK(u32 val)
 		if (csc.OFM)
 		{
 			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & decoder.rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
-
 			if (ipu_cmd.pos[1] < 32) return false;
 		}
 		else
 		{
 			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*)indx4) + 4 * ipu_cmd.pos[1], 8 - ipu_cmd.pos[1]);
-
 			if (ipu_cmd.pos[1] < 8) return false;
 		}
 
@@ -887,17 +873,13 @@ __fi void IPUCMD_WRITE(u32 val)
 			break;
 
 		case SCE_IPU_CSC:
-			ipu_cmd.pos[1] = 0;
-			ipu_cmd.index = 0;
 			break;
 
 		case SCE_IPU_PACK:
-			ipu_cmd.pos[1] = 0;
-			ipu_cmd.index = 0;
 			break;
 
 		jNO_DEFAULT;
-	}
+			}
 
 	ipuRegs.ctrl.BUSY = 1;
 
@@ -966,7 +948,7 @@ __noinline void IPUWorker()
 			break;
 
 		jNO_DEFAULT
-	}
+			}
 
 	// success
 	ipuRegs.ctrl.BUSY = 0;
