@@ -1906,7 +1906,7 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	return it;
 }
 
-int MemoryTarget_CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
+int ZeroGS::CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
 {
 	if (PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm))
 	{
@@ -1947,7 +1947,7 @@ int MemoryTarget_CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info
 	return 0;
 }
 
-void MemoryTarget_GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
+void ZeroGS::CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
 {
 	nClutOffset = 0;
 	clutsize = 0;
@@ -1969,7 +1969,7 @@ void MemoryTarget_GetClutVariables(int& nClutOffset, int& clutsize, const tex0In
 	}
 }
 
-void MemoryTarget_GetMemAddress(int& start, int& end,  const tex0Info& tex0)
+void ZeroGS::CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 {
 	int nbStart, nbEnd;
 	GetRectMemAddress(nbStart, nbEnd, tex0.psm, 0, 0, tex0.tw, tex0.th, tex0.tbp0, tex0.tbw);
@@ -1990,7 +1990,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::SearchExistTarget(int start, i
 		if (it->starty <= start && it->starty + it->height >= end)
 		{
 
-			int res = MemoryTarget_CompareTarget(it, tex0, clutsize, nClutOffset);
+			int res = CompareTarget(it, tex0, clutsize, nClutOffset);
 
 			if (res == 1)
 			{
@@ -2099,8 +2099,8 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	FUNCLOG
 	int start, end, nClutOffset, clutsize;
 
-	MemoryTarget_GetClutVariables(nClutOffset, clutsize, tex0);
-	MemoryTarget_GetMemAddress(start, end, tex0);
+	GetClutVariables(nClutOffset, clutsize, tex0);
+	GetMemAddress(start, end, tex0);
 
 	ZeroGS::CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
 

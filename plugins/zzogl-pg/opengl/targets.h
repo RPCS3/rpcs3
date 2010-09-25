@@ -127,6 +127,7 @@ class CMemoryTargetMngr
 		CMemoryTarget* GetMemoryTarget(const tex0Info& tex0, int forcevalidate); // pcbp is pointer to start of clut
 		CMemoryTarget* SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate);
 		CMemoryTarget* ClearedTargetsSearch(int fmt, int widthmult, int channels, int height);
+		int CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset);
 
 		void Destroy(); // destroy all targs
 
@@ -139,6 +140,8 @@ class CMemoryTargetMngr
 
 	private:
 		list<CMemoryTarget>::iterator DestroyTargetIter(list<CMemoryTarget>::iterator& it);
+		void GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0);
+		void GetMemAddress(int& start, int& end,  const tex0Info& tex0);
 };
 
 class CBitwiseTextureMngr
