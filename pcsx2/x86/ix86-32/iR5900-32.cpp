@@ -370,7 +370,7 @@ static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 
 static void _DynGen_StackFrameCheck()
 {
-	if( !EmuConfig.Recompiler.StackFrameChecks ) return;
+	if( !EmuConfig.Cpu.Recompiler.StackFrameChecks ) return;
 
 	// --------- EBP Here -----------
 
@@ -1400,7 +1400,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	_initXMMregs();
 	_initMMXregs();
 
-	if( EmuConfig.Recompiler.PreBlockCheckEE )
+	if( EmuConfig.Cpu.Recompiler.PreBlockCheckEE )
 	{
 		// per-block dump checks, for debugging purposes.
 		// [TODO] : These must be enabled from the GUI or INI to be used, otherwise the

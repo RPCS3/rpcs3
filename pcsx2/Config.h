@@ -240,7 +240,7 @@ struct Pcsx2Config
 			return !OpEqu( bitset );
 		}
 
-	} Recompiler;
+	};
 
 	// ------------------------------------------------------------------------
 	struct CpuOptions
