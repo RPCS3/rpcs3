@@ -188,7 +188,7 @@ _vifT void vifUnpackSetup(const u32 *data) {
 	vifStruct& vifX = GetVifX;
 
 	if ((vifXRegs.cycle.wl == 0) && (vifXRegs.cycle.wl < vifXRegs.cycle.cl)) {
-        Console.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs.cycle.cl, vifXRegs.cycle.wl);
+        DevCon.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs.cycle.cl, vifXRegs.cycle.wl);
 		vifX.cmd = 0;
         return; // Skipping write and 0 write-cycles, so do nothing!
 	}

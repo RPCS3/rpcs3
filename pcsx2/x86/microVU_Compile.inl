@@ -109,7 +109,7 @@ static void doIbit(mV) {
 		mVU->regAlloc->clearRegVF(33);
 
 		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
-			Console.WriteLn(Color_Green,"microVU%d: Clamping I Reg", mVU->index);
+			DevCon.WriteLn(Color_Green,"microVU%d: Clamping I Reg", mVU->index);
 			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
 		}
 		else tempI = curI;
@@ -372,7 +372,7 @@ static void mVUtestCycles(microVU* mVU) {
 
 // This gets run at the start of every loop of mVU's first pass
 static __fi void startLoop(mV) {
-	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
+	if (curI & _Mbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: M-bit set!", getIndex); }
 	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
 	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
 	memzero(mVUinfo);
