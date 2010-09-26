@@ -26,7 +26,9 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
-#include <xmmintrin.h>
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 #define RHA
 //#define RW
@@ -2301,6 +2303,9 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
                 src += 32;
                 dst += 64;
             }
+            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
+            // store fence insures that previous store are finish before execute new one.
+            _mm_sfence();
 #else
 			SSE2_UnswizzleZ16Target(dst, src, targ->height * GPU_TEXWIDTH / 16);
 #endif

@@ -22,7 +22,6 @@
 #include "x86.h"
 
 #if defined(ZEROGS_SSE2)
-#include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
 
@@ -679,7 +678,7 @@ extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
     // Create a zero register.
     __m128i zero_128 = _mm_setzero_si128();
 
-    if ((u32)vm & 0x0F) {
+    if ((u32)clut & 0x0F) {
         // Unaligned write.
 
         u16* clut_word_ptr = (u16*)clut;
