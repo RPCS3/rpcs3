@@ -35,12 +35,16 @@ void TraceLogFilters::LoadSave( IniInterface& ini )
 	IniEntry( IOP.bitset );
 }
 
-// all speedhacks are disabled by default
 Pcsx2Config::SpeedhackOptions::SpeedhackOptions()
 {
 	bitset			= 0;
 	EECycleRate		= 0;
 	VUCycleSteal	= 0;
+	
+	// Set recommended speedhacks to enabled by default. They'll still be off globally on resets.
+	WaitLoop = true;
+	IntcStat = true;
+	vuFlagHack = true;
 }
 
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
@@ -334,7 +338,9 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 Pcsx2Config::Pcsx2Config()
 {
 	bitset = 0;
+	// Set defaults for fresh installs / reset settings
 	McdEnableEjection = true;
+	EnablePatches = true;
 }
 
 void Pcsx2Config::LoadSave( IniInterface& ini )
