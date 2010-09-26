@@ -64,6 +64,7 @@
 -- IPUWaitHack    = 1 // FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
 -- EETimingHack	= 1 // General purpose timing hack.
 -- SkipMPEGHack	= 1 // Finds sceMpegIsEnd pattern in games and then recompiles code to say the videos are finished.
+-- OPHFLagHack = 1 // Bleach Bankais and others
 
 ---------------------------------------------
 -- Patches ([patches] or [patches = crc])
@@ -144,7 +145,8 @@ Compat = 5
 Serial = SCUS-97113
 Name   = Ico
 Region = NTSC-U
-Compat = 4
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCUS-97114
 Name   = NBA ShootOut 2001
@@ -301,6 +303,8 @@ Region = NTSC-U
 Serial = SCUS-97159
 Name   = Ico [Demo]
 Region = NTSC-U
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCUS-97160
 Name   = Extermination [Demo]
@@ -557,15 +561,7 @@ Region = NTSC-U
 Serial = SCUS-97231
 Name   = Arc the Lad - Twighlight of the Spirits
 Region = NTSC-U
-Compat = 4
-[patches = 2B2E1535]
-	
-	comment=Skips Video by Rudy_x
-	
-	//Skip introVideo(s)
-	patch=0,EE,001d7df8,word,24020001
-	
-[/patches]
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97232
 Name   = Getaway [Demo]
@@ -1683,7 +1679,7 @@ Region = NTSC-U
 Serial = SLUS-20002
 Name   = Ridge Racer V
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20003
 Name   = Portal Runner
@@ -1786,7 +1782,7 @@ Region = NTSC-U
 Serial = SLUS-20035
 Name   = Baldur's Gate - Dark Alliance
 Region = NTSC-U
-Compat = 3
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20037
 Name   = Run Like Hell - Hunt or Be Hunted
@@ -2103,7 +2099,7 @@ Region = NTSC-U
 Serial = SLUS-20130
 Name   = Street Fighter EX3
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20131
 Name   = Dark Angel - Vampire Apocalypse
@@ -2638,6 +2634,7 @@ Region = NTSC-U
 Serial = SLUS-20246
 Name   = Capcom vs. SNK 2 - Mark of the Millennium 2001
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20247
 Name   = Tetris Worlds
@@ -2677,9 +2674,9 @@ Region = NTSC-U
 Compat = 4
 ---------------------------------------------
 Serial = SLUS-20259
-Name   = Wizadry - Tale of the Forsaken
+Name   = Wizadry - Tale of the Forsaken Land
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20261
 Name   = ESPN - NBA 2 Night 2002
@@ -2719,7 +2716,7 @@ Compat = 4
 Serial = SLUS-20267
 Name   = dot Hack - Part 1 - Infection
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20268
 Name   = Star Wars - Racer Revenge
@@ -3587,7 +3584,7 @@ Compat = 5
 Serial = SLUS-20459
 Name   = Shinobi
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20460
 Name   = Super Bust-A-Move 2
@@ -4062,6 +4059,7 @@ Compat = 5
 Serial = SLUS-20564
 Name   = dot Hack - Part 4 - Quarantine
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20565
 Name   = Champions of Norrath
@@ -4071,7 +4069,7 @@ Compat = 2
 Serial = SLUS-20566
 Name   = Buffy the Vampire Slayer - Chaos Bleeds
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20567
 Name   = P.T.O. IV - Pacific Theater of Operations
@@ -4394,11 +4392,12 @@ Compat = 5
 Serial = SLUS-20643
 Name   = Soul Calibur 2
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20643
 Name   = SLUS-20643BD
 Region = Namco Transmission Demo Disc v1.03 [Soul Calibur II Pack-In]
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20644
 Name   = Armored Core - Silent Line
@@ -4534,6 +4533,7 @@ Compat = 5
 Serial = SLUS-20675
 Name   = Baldur's Gate - Dark Alliance 2
 Region = NTSC-U
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20676
 Name   = Lowrider
@@ -4901,12 +4901,12 @@ Compat = 4
 Serial = SLUS-20758
 Name   = Growlanser Generations [Disc1of2]
 Region = NTSC-U
-Compat = 5
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20759
 Name   = Growlanser Generations [Disc2of2]
 Region = NTSC-U
-Compat = 5
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20760
 Name   = World Championship Pool 2004
@@ -4994,6 +4994,7 @@ Serial = SLUS-20780
 Name   = R-Type Final
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SLUS-20781
 Name   = Karaoke Revolution
@@ -5125,7 +5126,7 @@ Compat = 1
 Serial = SLUS-20810
 Name   = Nightshade
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20811
 Name   = Need for Speed - Underground
@@ -5144,7 +5145,7 @@ Region = NTSC-U
 Serial = SLUS-20814
 Name   = Max Payne 2 - Fall of Max Payne
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20816
 Name   = American Idol
@@ -5798,7 +5799,7 @@ Compat = 4
 Serial = SLUS-20953
 Name   = Shaman King - Power of Spirit
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20954
 Name   = Hot Wheels - Stunt Track Challenge
@@ -5907,12 +5908,13 @@ Region = NTSC-U
 Serial = SLUS-20973
 Name   = Champions - Return to Arms
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20974
 Name   = Shin Megami Tensei - Digital Devil Saga
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-20975
 Name   = One Piece - Grand Battle
@@ -6634,7 +6636,7 @@ Compat = 5
 Serial = SLUS-21129
 Name   = Tenchu 4 - Fatal Shadows
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21130
 Name   = SnoCross 2 featuring Blair Morgan
@@ -6748,6 +6750,7 @@ Serial = SLUS-21152
 Name   = Shin Megami Tensei - Digital Devil Saga 2
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21153
 Name   = Dynasty Warriors 5
@@ -6972,7 +6975,7 @@ Compat = 1
 Serial = SLUS-21201
 Name   = Tales of Legendia
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21202
 Name   = Romance of the Three Kingdoms X
@@ -7036,7 +7039,7 @@ Compat = 5
 Serial = SLUS-21216
 Name   = Soul Calibur III
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21217
 Name   = Incredibles, The - Rise of the Underminers
@@ -7460,7 +7463,9 @@ Compat = 5
 Serial = SLUS-21304
 Name   = Justice League Heroes
 Region = NTSC-U
-Compat = 3
+Compat = 4
+EETimingHack = 1
+vuClampMode = 2		//Ingame capes are SPS mess with lower than extra VU clamp
 ---------------------------------------------
 Serial = SLUS-21305
 Name   = Arthur and the Invisibles
@@ -7517,7 +7522,7 @@ Compat = 5
 Serial = SLUS-21317
 Name   = Street Fighter Alpha Anthology
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21318
 Name   = Call of Duty 2 - Big Red One [Collector's Edition]
@@ -7561,6 +7566,7 @@ Serial = SLUS-21326
 Name   = Shadow Hearts - From the New World
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21327
 Name   = Atelier Iris 2 - The Azoth of Destiny
@@ -7806,6 +7812,11 @@ Compat = 5
 ---------------------------------------------
 Serial = SLUS-21374
 Name   = Marvel - Ultimate Alliance
+Region = NTSC-U
+Compat = 5
+---------------------------------------------
+Serial = SLUS-21879
+Name   = Marvel - Ultimate Alliance 2
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
@@ -8162,7 +8173,7 @@ Compat = 5
 Serial = SLUS-21448
 Name   = Rule of Rose
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21449
 Name   = Fast and the Furious, The - Tokyo Drift
@@ -8360,7 +8371,7 @@ Compat = 5
 Serial = SLUS-21489
 Name   = dot Hack - G.U. Vol.3 - Redemption
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21490
 Name   = Test Drive Unlimited
@@ -8593,7 +8604,7 @@ Compat = 5
 Serial = SLUS-21574
 Name   = Dawn of Mana
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21575
 Name   = Naruto - Ultimate Ninja 2
@@ -9290,7 +9301,12 @@ Compat = 1
 Serial = SLUS-21731
 Name   = Silent Hill - Origins
 Region = NTSC-U
-Compat = 2
+Compat = 5
+---------------------------------------------
+Serial = SLUS-21899
+Name   = Silent Hill - Shattered Memories
+Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21732
 Name   = El Tigre - The Adventures of Manny Rivera
@@ -9584,6 +9600,7 @@ Region = NTSC-U
 Serial = SLUS-28049
 Name   = Shin Megami Tensei - Digital Devil Saga [Trade Demo]
 Region = NTSC-U
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-28050
 Name   = Stella Deus - The Gate of Eternity [Trade Demo]
@@ -9612,6 +9629,7 @@ Region = NTSC-U
 Serial = SLUS-28062
 Name   = Shin Megami Tensei - Digital Devil Saga 2 [Trade Demo]
 Region = NTSC-U
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-28063
 Name   = Rule of Rose [Trade Demo]
@@ -9628,6 +9646,7 @@ Region = NTSC-U
 Serial = SLUS-29003
 Name   = Metal Gear Solid 2 - Sons of Liberty [Demo]
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-29004
 Name   = Unison & Dead or Alive 2 Hardcore [Demo]
@@ -9968,6 +9987,7 @@ Region = NTSC-U
 Serial = SLUS-29126
 Name   = Champions - Return to Arms [Demo]
 Region = NTSC-U
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-29129
 Name   = 25 to Life [Public Beta Vol.1.0]
@@ -10366,6 +10386,8 @@ Region = NTSC-Unk
 Serial = SCAJ-20029
 Name   = R-Type Final
 Region = NTSC-Unk
+Compat = 5
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SCAJ-20032
 Name   = Mosquito - Let's Go Hawaiian
@@ -10584,6 +10606,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20095
 Name   = Digital Devil Saga - Avatar Tuner
 Region = NTSC-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SCAJ-20096
 Name   = Guilty Gear Isuka
@@ -10600,6 +10623,8 @@ Region = NTSC-Unk
 Serial = SCAJ-20099
 Name   = Ico
 Region = NTSC-Unk
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCAJ-20100
 Name   = Tenchu Kurenai
@@ -10677,6 +10702,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20120
 Name   = Digital Devil Saga - Avatar Tuner 2
 Region = NTSC-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SCAJ-20121
 Name   = Armored Core - Formula Front
@@ -10899,6 +10925,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20177
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-Unk
+Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20178
@@ -10970,6 +10997,7 @@ Region = NTSC-Ch
 Serial = SCAJ-20197
 Name   = Valkyrie Profile 2 - Silmeria [Ultimate Hits]
 Region = NTSC-Unk
+Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCAJ-20198
@@ -11069,6 +11097,8 @@ Region = NTSC-E
 Serial = SCKA-20009
 Name   = R-Type Final
 Region = NTSC-K
+Compat = 5
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SCKA-20010
 Name   = Jak II
@@ -11090,6 +11120,8 @@ Region = NTSC-K
 Serial = SCKA-20028
 Name   = Ico [PlayStation2 Big Hit Series]
 Region = NTSC-K
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCKA-20029
 Name   = Gran Turismo Concept 2002 Tokyo-Seoul [PlayStation 2 Big Hit Series]
@@ -11203,6 +11235,7 @@ Region = NTSC-K
 Serial = SCKA-20079
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-K
+Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SCKA-20081
@@ -11229,6 +11262,7 @@ VuClipFlagHack = 1
 Serial = SCKA-20101
 Name   = Seiken Densetsu 4 (Dawn of Mana)
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20107
 Name   = Odin Sphere
@@ -11261,6 +11295,7 @@ Serial = SCPS-11003
 Name   = Ico
 Region = NTSC-J
 Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCPS-11004
 Name   = Bikkuri Mouse
@@ -11873,6 +11908,8 @@ Region = NTSC-J
 Serial = SCPS-15119
 Name   = Bleach - Blade Battles 2nd
 Region = NTSC-J
+OPHFLagHack = 1 // Special moves "Bankai" hang otherwise
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-17001
 Name   = Gran Turismo 4
@@ -11914,6 +11951,8 @@ Region = NTSC-J
 Serial = SCPS-19103
 Name   = Ico [PlayStation 2 The Best]
 Region = NTSC-J
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCPS-19104
 Name   = Pipo Saru 2001 [PlayStation 2 The Best]
@@ -11926,6 +11965,8 @@ Region = NTSC-J
 Serial = SCPS-19151
 Name   = Ico [PlayStation 2 The Best]
 Region = NTSC-J
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCPS-19152
 Name   = Saru Get You! 2 [PlayStation 2 The Best]
@@ -12182,6 +12223,8 @@ Region = NTSC-J
 Serial = SCPS-55001
 Name   = Ico
 Region = NTSC-J
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCPS-55002
 Name   = Zero
@@ -12251,6 +12294,7 @@ Serial = SCPS-55019
 Name   = Star Ocean 3 - Till the End of Time
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-55020
 Name   = Kengo 2
@@ -12897,6 +12941,7 @@ Region = NTSC-K
 Serial = SLKA-25300
 Name   = Digital Devil Saga [Special Package]
 Region = NTSC-J-K
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLKA-25311
 Name   = Marvel Nemesis - Rise of the Imperfects
@@ -13290,10 +13335,12 @@ Region = NTSC-J
 Serial = SLPM-62107
 Name   = Growlanser 3 - The Duel Darkness
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-62108
 Name   = Growlanser 3 - The Duel Darkness
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-62109
 Name   = Hippa Linda
@@ -13534,6 +13581,7 @@ Compat = 5
 Serial = SLPM-62206
 Name   = Growlanser 2 [Atlus The Best]
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-62207
 Name   = Simple 2000 Series Vol.09 - Bittersweet Fools
@@ -14237,10 +14285,12 @@ Region = NTSC-J
 Serial = SLPM-62438
 Name   = Growlanser Collection
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-62440
 Name   = Growlanser III [Atlus The Best]
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-62442
 Name   = Youkoso Hitsuji-Mura
@@ -16129,6 +16179,7 @@ Serial = SLPM-65209
 Name   = Star Ocean 3 [Limited Edition]
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65210
 Name   = Chou Battle Houshin - Bundle #1
@@ -16935,11 +16986,13 @@ Serial = SLPM-65438
 Name   = Star Ocean 3 [Director's Cut] [Disc1of2]
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65439
 Name   = Star Ocean 3 [Director's Cut] [Disc2of2]
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65441
 Name   = Ashita no Joe - Masshiro ni Moetsukuru
@@ -17503,6 +17556,7 @@ Region = NTSC-J
 Serial = SLPM-65597
 Name   = Digital Devil Saga - Avatar Tuner
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-65598
 Name   = Tenshou Gakuen Kensousoku
@@ -18209,6 +18263,7 @@ Compat = 5
 Serial = SLPM-65795
 Name   = Digital Devil Saga - Avatar Tuner 2
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-65796
 Name   = Project Altered Beast
@@ -18407,6 +18462,7 @@ Region = NTSC-J
 Serial = SLPM-65845
 Name   = Baldur's Gate - Dark Alliance II
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPM-65846
 Name   = Lord of the Rings, The - Uchitsu Kuni Daisanki
@@ -20259,10 +20315,12 @@ Region = NTSC-J
 Serial = SLPM-66372
 Name   = Digital Devil Saga - Avatar Tuner [Atlus Best Collection]
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-66373
 Name   = Digital Devil Saga - Avatar Tuner 2 (Atlus Best Collection]
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-66374
 Name   = World Soccer Winning Eleven 10
@@ -20424,7 +20482,7 @@ Region = NTSC-J
 Serial = SLPM-66419
 Name   = Valkyrie Profile 2 - Silmeria
 Region = NTSC-J
-Compat = 1
+Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66420
@@ -20650,15 +20708,18 @@ Serial = SLPM-66478
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc1of2]
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66479
 Name   = Star Ocean 3 - Till the End of Time [Ultimate Hits] [Disc2of2]
 Region = NTSC-J
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66480
 Name   = Dragon Quest V - Bride of the Sky [Ultimate Hits]
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66481
 Name   = Dragon Quest VIII [Ultimate Hits]
@@ -21748,6 +21809,7 @@ Region = NTSC-J
 Serial = SLPM-66782
 Name   = Valkyrie Profile 2 - Silmeria [Ultimate Hits]
 Region = NTSC-J
+Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLPM-66783
@@ -23208,10 +23270,12 @@ Region = NTSC-J
 Serial = SLPS-20105
 Name   = Growlanser II - The Sense of Justice [Deluxe Pack]
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPS-20106
 Name   = Growlanser II - The Sense of Justice
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPS-20108
 Name   = Quake III - Revolution
@@ -24611,6 +24675,7 @@ Region = NTSC-J
 Serial = SLPS-25139
 Name   = Baldur's Gate - Dark Alliance
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPS-25142
 Name   = Tiger Woods PGA Tour 2002
@@ -24949,12 +25014,7 @@ Serial = SLPS-25247
 Name   = R-Type Final
 Region = NTSC-J
 Compat = 5
-[patches = D0E17D26]
-	
-	//Skip Videos ("sceMpegIsEnd")
-	patch=0,EE,00116b88,word,24020001
-	
-[/patches]
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SLPS-25248
 Name   = Kino no Tabi - The Beautiful World
@@ -25077,6 +25137,7 @@ Region = NTSC-J
 Serial = SLPS-25291
 Name   = Baldur's Gate - Dark Alliance [PCCW The Best]
 Region = NTSC-J
+Compat = 4
 ---------------------------------------------
 Serial = SLPS-25292
 Name   = D-A - Black
@@ -27524,6 +27585,8 @@ Region = NTSC-J
 Serial = SLPS-73244
 Name   = R-Type Final [PlayStation 2 The Best]
 Region = NTSC-J
+Compat = 5
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SLPS-73245
 Name   = Fatal Frame - Zero [PlayStation 2 The Best]
@@ -28097,6 +28160,7 @@ Serial = SCES-50760
 Name   = Ico
 Region = PAL-M5
 Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
 ---------------------------------------------
 Serial = SCES-50781
 Name   = Destruction Derby Arena [Beta, Promo, & Full Retail]
@@ -28203,6 +28267,7 @@ Region = PAL-I
 Serial = SCES-50971
 Name   = Kingdom Hearts
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SCES-50982
 Name   = Moto GP 3
@@ -28253,12 +28318,6 @@ Compat = 4
 	
 	comment=patches by Nachbrenner
 	
-	//Skip Videos
-	patch=0,EE,003ec7d4,word,00000000
-	patch=0,EE,003ec4e0,word,00000000
-	//Skip custom IPU routine
-	patch=0,EE,003c44ac,word,00000000
-	patch=0,EE,003c4568,word,00000000
 	//fix VU wm 25.06.06
 	patch=0,EE,00391efc,word,00000000
 	
@@ -28694,6 +28753,7 @@ Region = PAL-Unk
 Serial = SCES-53054
 Name   = Death by Degrees
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SCES-53133
 Name   = God of War
@@ -29445,6 +29505,8 @@ Region = PAL-Unk
 Serial = SLES-50113
 Name   = Ring of Red
 Region = PAL-Unk
+Compat = 4
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-50114
 Name   = Kengo - Master of Bushido
@@ -30028,6 +30090,7 @@ Region = PAL-Unk
 Serial = SLES-50386
 Name   = Crash Bandicoot - Wrath of Cortex
 Region = PAL-M6
+Compat = 4
 ---------------------------------------------
 Serial = SLES-50390
 Name   = Driven
@@ -30584,6 +30647,7 @@ Region = PAL-Unk
 Serial = SLES-50672
 Name   = Baldur's Gate - Dark Alliance
 Region = PAL-M5
+Compat = 4
 ---------------------------------------------
 Serial = SLES-50677
 Name   = Shadow Hearts
@@ -31621,6 +31685,7 @@ Region = PAL-Unk
 Serial = SLES-51118
 Name   = Wizardry - Tales of the Forsaken Land
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51124
 Name   = Turok Evolution
@@ -32350,6 +32415,7 @@ Region = PAL-M5
 Serial = SLES-51448
 Name   = Resident Evil - Dead Aim
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51449
 Name   = Return to Castle Wolfenstein - Operation Resurrection
@@ -33353,6 +33419,8 @@ Compat = 5
 Serial = SLES-51952
 Name   = R-Type Final
 Region = PAL-E
+Compat = 5
+EETimingHack = 1 // Else serious slowdown due to VIF timing. Can be disabled once timing voodoo is fixed ;)
 ---------------------------------------------
 Serial = SLES-51953
 Name   = FIFA 2004
@@ -33636,6 +33704,7 @@ Region = PAL-Unk
 Serial = SLES-52095
 Name   = Gradius V
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52096
 Name   = Firefighter F.D. 18
@@ -33798,10 +33867,12 @@ Region = PAL-Unk
 Serial = SLES-52187
 Name   = Baldur's Gate - Dark Alliance 2
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SLES-52188
 Name   = Baldur's Gate - Dark Alliance 2
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SLES-52190
 Name   = RPM Tuning
@@ -35670,6 +35741,7 @@ Compat = 5
 Serial = SLES-53039
 Name   = Champions - Return to Arms
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SLES-53041
 Name   = RTL Ski Alpine 2005
@@ -36392,6 +36464,7 @@ Serial = SLES-53458
 Name   = Shin Megami Tensei - Digital Devil Saga
 Region = PAL-E
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-53459
 Name   = Marc Ecko's Getting Up - Contents Under Pressure
@@ -36425,6 +36498,7 @@ Region = PAL-Unk
 Serial = SLES-53483
 Name   = Magne Carta
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53484
 Name   = Eagle Eye Golf
@@ -37243,6 +37317,7 @@ Compat = 1
 Serial = SLES-53870
 Name   = Devil Kings
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53871
 Name   = Tengai
@@ -37853,25 +37928,17 @@ Region = PAL-R
 Serial = SLES-54185
 Name   = Dirge of Cerberus - Final Fantasy VII
 Region = PAL-E
-Compat = 4
-[patches = 33F7D21A]
+Compat = 5
+//[patches = 33F7D21A]
 	
-	comment=patches by nachbrenner
+	//comment=patches by nachbrenner
 	
-	//Fix "**** SQTHREAD ERROR : BAD LOCK STATE" 
-	patch=0,EE,0042d768,word,00000000
-	//Skip mcDelayThread (calls SleepThread)
-	patch=0,EE,00458008,word,00000000
-	//Skip Videos (for blockdump)
-	patch=0,EE,00241bac,word,00000000
 	//override sceScfGetLanguage
 	//patch=0,EE,002486d8,word,24020000 //japanese
-	patch=0,EE,002486d8,word,24020001 //english
+	//patch=0,EE,002486d8,word,24020001 //english
 	//patch=0,EE,002486d8,word,24020004 //german
-	//intro 3D - fix DMA0 vs. VU0REC
-	patch=0,EE,0026f960,word,10000020
 	
-[/patches]
+//[/patches]
 ---------------------------------------------
 Serial = SLES-54186
 Name   = Devil May Cry 3 - Dante's Awakening [Special Edition]
@@ -38382,6 +38449,7 @@ Compat = 5
 Serial = SLES-54490
 Name   = God Hand
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54492
 Name   = Need for Speed - Carbon [Collector's Edition]
@@ -38451,6 +38519,7 @@ Region = PAL-Unk
 Serial = SLES-54555
 Name   = Shin Megami Tensei - Digital Devil Saga 2
 Region = PAL-E
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-54560
 Name   = Alpine Ski Racing 2007
@@ -38575,11 +38644,13 @@ Serial = SLES-82028
 Name   = Star Ocean 3 - Till the End of Time [Disc1of2]
 Region = PAL-E
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLES-82029
 Name   = Star Ocean 3 - Till the End of Time [Disc2of2]
 Region = PAL-E
 VuAddSubHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLES-82030
 Name   = Shadow Hearts - Covenant [Disc1of2]
