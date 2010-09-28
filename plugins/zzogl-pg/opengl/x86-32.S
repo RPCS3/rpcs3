@@ -4,15 +4,15 @@
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation either ve%rsion 2, or (at your option)
 #  any later ve%rsion.
-#   
+#
 #  This Program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU General Public License for more details.
-#   
+#
 #  You should have received a copy of the GNU General Public License
 #  along with GNU Make see the file COPYING.  If not, write to
-#  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+#  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #  http://www.gnu.org/copyleft/gpl.html
 #
 #
@@ -20,6 +20,11 @@
 
 #ifdef ZEROGS_SSE2
 // SSE2 extensions
+
+// Note: pshufd 0xea <=> movdqa !!!
+// What the function does is
+// Interleave s1 and sd0 -> d1 (high) & sd0 (low)
+// Interleave s3 and sd2 -> d3 (high) & sd2 (low)
 #define punpck(op, sd0, sd2, s1, s3, d1, d3) \
 	movdqa %xmm##d1, %xmm##sd0; \
 	pshufd %xmm##d3, %xmm##sd2, 0xe4; \
@@ -28,7 +33,16 @@
 	punpckl##op %xmm##sd2, %xmm##s3; \
 	punpckh##op %xmm##d3, %xmm##s3; \
 
-	
+
+// Input xmm7 == 0x0F0F0F0F 0x0F0F0F0F  0x0F0F0F0F 0x0F0F0F0F
+// DATA xmm[0-3]
+// This function does a 4-bits interleaving of 4 xmm registers
+//
+// ARG Can not put comment in the middle of the define...
+// After the first por
+// low 32bits (4bits packed) == 1.6 0.6 1.4 0.4  1.2 0.2 1.0 0.0
+// After the second one
+// low 32bits (4bits packed) == 1.7 0.7 1.5 0.5  1.3 0.3 1.1 0.1
 #define punpcknb \
 	movdqa	%xmm4, %xmm0; \
 	pshufd	%xmm5, %xmm1, 0xe4; \
@@ -48,6 +62,7 @@
         \
 	movdqa	%xmm1, %xmm4; \
         \
+        \
 	movdqa	%xmm4, %xmm2; \
 	pshufd	%xmm5, %xmm3, 0xe4; \
         \
@@ -66,7 +81,13 @@
         \
 	movdqa	%xmm3, %xmm4; \
         \
-	punpck(bw, 0, 2, 1, 3, 4, 6); \
+	punpck(bw, 0, 2, 1, 3, 4, 6);\
+
+// output
+// low 32 bits 0 (4 bits packed) == 1.3  0.3  1.2  0.2    1.1  0.1  1.0  0.0
+// low 32 bits 4 (4 bits packed) == 1.19 0.19 1.18 0.18   1.17 0.17 1.16 0.16
+// low 32 bits 2 (4 bits packed) == 3.3  2.3  3.2  2.2    3.1  2.1  3.0  2.0
+// low 32 bits 6 (4 bits packed) == 3.19 2.19 3.18 2.18   3.17 2.17 3.16 2.16
 
 
 //
@@ -84,11 +105,15 @@ SwizzleBlock32_sse2:
 	push		%esi
 	push		%edi
 
+    // save dst
 	mov			%edi, %ecx
+    // save src
 	mov			%esi, %edx
+    // get pitch
 	mov			%edx, [%esp+4+8]
 	mov			%ecx, 4
 
+    // get WriteMask
 	mov			%eax, [%esp+8+8]
 	cmp			%eax, 0xffffffff
 	jne			SwizzleBlock32_sse2_2
@@ -100,6 +125,8 @@ SwizzleBlock32_sse2_1:
 	movdqa		%xmm1, [%esi+%edx]
 	movdqa		%xmm5, [%esi+%edx+16]
 
+    // 64bits interleave 1&0 -> 2&0
+    // 64bits interleave 5&4 -> 6&4
 	punpck(qdq, 0, 4, 1, 5, 2, 6)
 
 	movntps		[%edi+16*0], %xmm0
@@ -107,6 +134,7 @@ SwizzleBlock32_sse2_1:
 	movntps		[%edi+16*2], %xmm4
 	movntps		[%edi+16*3], %xmm6
 
+    // update ptr
 	lea			%esi, [%esi+%edx*2]
 	add			%edi, 64
 
@@ -120,9 +148,10 @@ SwizzleBlock32_sse2_1:
 
 SwizzleBlock32_sse2_2:
 
+    // WriteMask: 32bits to 4*32bits
 	movd		%xmm7, %eax
 	pshufd		%xmm7, %xmm7, 0
-	
+
 	.align 16
 SwizzleBlock32_sse2_3:
 	movdqa		%xmm0, [%esi]
@@ -130,13 +159,19 @@ SwizzleBlock32_sse2_3:
 	movdqa		%xmm1, [%esi+%edx]
 	movdqa		%xmm5, [%esi+%edx+16]
 
+    // 64bits interleave 1&0 -> 2&0
+    // 64bits interleave 5&4 -> 6&4
 	punpck(qdq, 0, 4, 1, 5, 2, 6)
 
+    // save a mask copy
 	movdqa		%xmm3, %xmm7
 	pshufd		%xmm5, %xmm7, 0xe4
 
+    // *dst & ~WriteMask
 	pandn		%xmm3, [%edi+16*0]
+    // *src & WriteMask
 	pand		%xmm0, %xmm7
+    // Final value to save
 	por			%xmm0, %xmm3
 	movntps		[%edi+16*0], %xmm0
 
@@ -158,6 +193,7 @@ SwizzleBlock32_sse2_3:
 	por			%xmm6, %xmm5
 	movntps		[%edi+16*3], %xmm6
 
+    // update ptr
 	lea			%esi, [%esi+%edx*2]
 	add			%edi, 64
 
@@ -179,6 +215,7 @@ SwizzleBlock16_sse2:
 
 	push		%ebx
 
+    // srcpitch
 	mov			%ebx, [%esp+4+4]
 	mov			%eax, 4
 
@@ -189,7 +226,11 @@ SwizzleBlock16_sse2_1:
 	movdqa		%xmm2, [%edx+%ebx]
 	movdqa		%xmm3, [%edx+%ebx+16]
 
+    // 16bits interleave 1&0 -> 4&0
+    // 16bits interleave 3&2 -> 6&2
 	punpck(wd, 0, 2, 1, 3, 4, 6)
+    // 64bits interleave 2&0 -> 1&0
+    // 64bits interleave 6&4 -> 5&4
 	punpck(qdq, 0, 4, 2, 6, 1, 5)
 
 	movntps		[%ecx+16*0], %xmm0
@@ -197,6 +238,7 @@ SwizzleBlock16_sse2_1:
 	movntps		[%ecx+16*2], %xmm4
 	movntps		[%ecx+16*3], %xmm5
 
+    // update ptr
 	lea			%edx, [%edx+%ebx*2]
 	add			%ecx, 64
 
@@ -217,7 +259,9 @@ SwizzleBlock8_sse2:
 
 	push		%ebx
 
+    // load srcpitch
 	mov			%ebx, [%esp+4+4]
+    // basic counter
 	mov			%eax, 2
 
 	.align 16
@@ -226,14 +270,23 @@ SwizzleBlock8_sse2_1:
 
 	movdqa		%xmm0, [%edx]
 	movdqa		%xmm2, [%edx+%ebx]
+    // update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
+    // 2 3  0 1
 	pshufd		%xmm1, [%edx], 0xb1
 	pshufd		%xmm3, [%edx+%ebx], 0xb1
+    // update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
+    // 8bits interleave 1&0 -> 4&0
+    // 8bits interleave 3&2 -> 6&2
 	punpck(bw, 0, 2, 1, 3, 4, 6)
+    // 16bits interleave 4&0 -> 1&0
+    // 16bits interleave 6&2 -> 3&2
 	punpck(wd, 0, 2, 4, 6, 1, 3)
+    // 64bits interleave 2&0 -> 4&0
+    // 64bits interleave 3&1 -> 5&1
 	punpck(qdq, 0, 1, 2, 3, 4, 5)
 
 	movntps		[%ecx+16*0], %xmm0
@@ -241,18 +294,27 @@ SwizzleBlock8_sse2_1:
 	movntps		[%ecx+16*2], %xmm1
 	movntps		[%ecx+16*3], %xmm5
 
-	// col 1, 3
+	// col 1, 3 (same as previous column)
 
+    // 2 3  0 1
 	pshufd		%xmm0, [%edx], 0xb1
 	pshufd		%xmm2, [%edx+%ebx], 0xb1
+    // update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
 	movdqa		%xmm1, [%edx]
 	movdqa		%xmm3, [%edx+%ebx]
+    // update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
+    // 8bits interleave 1&0 -> 4&0
+    // 8bits interleave 3&2 -> 6&2
 	punpck(bw, 0, 2, 1, 3, 4, 6)
+    // 16bits interleave 4&0 -> 1&0
+    // 16bits interleave 6&2 -> 3&2
 	punpck(wd, 0, 2, 4, 6, 1, 3)
+    // 64bits interleave 2&0 -> 4&0
+    // 64bits interleave 3&1 -> 5&1
 	punpck(qdq, 0, 1, 2, 3, 4, 5)
 
 	movntps		[%ecx+16*4], %xmm0
@@ -260,6 +322,7 @@ SwizzleBlock8_sse2_1:
 	movntps		[%ecx+16*6], %xmm1
 	movntps		[%ecx+16*7], %xmm5
 
+    // update dst pointer
 	add			%ecx, 128
 
 	dec			%eax
@@ -278,11 +341,13 @@ SwizzleBlock8_sse2_1:
 SwizzleBlock4_sse2:
 
 	push		%ebx
-	
+
+    // load 4 0x0F0F0F0F
 	mov         %eax, 0xf0f0f0f
-	movd        %xmm7, %eax 
+	movd        %xmm7, %eax
 	pshufd      %xmm7, %xmm7, 0
 
+    // load srcpitch
 	mov			%ebx, [%esp+4+4]
 	mov			%eax, 2
 
@@ -292,20 +357,32 @@ SwizzleBlock4_sse2_1:
 
 	movdqa		%xmm0, [%edx]
 	movdqa		%xmm2, [%edx+%ebx]
+    //update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
 	movdqa		%xmm1, [%edx]
 	movdqa		%xmm3, [%edx+%ebx]
+    // update src pointer
 	lea			%edx, [%edx+%ebx*2]
 
+    // - - - -  2 3 0 1
 	pshuflw		%xmm1, %xmm1, 0xb1
 	pshuflw		%xmm3, %xmm3, 0xb1
+    // 6 7 4 5  - - - -
 	pshufhw		%xmm1, %xmm1, 0xb1
 	pshufhw		%xmm3, %xmm3, 0xb1
 
+    // 4bits interleave 1&0 -> 4&0
+    // 4bits interleave 3&2 -> 6&2
 	punpcknb
+    // 8bits interleave 4&0 -> 1&0
+    // 8bits interleave 6&2 -> 3&2
 	punpck(bw, 0, 2, 4, 6, 1, 3)
+    // 8bits interleave 1&0 -> 4&0
+    // 8bits interleave 3&2 -> 6&2
 	punpck(bw, 0, 2, 1, 3, 4, 6)
+    // 64bits interleave 2&0 -> 1&0
+    // 64bits interleave 6&4 -> 3&4
 	punpck(qdq, 0, 4, 2, 6, 1, 3)
 
 	movntps		[%ecx+16*0], %xmm0
@@ -313,7 +390,7 @@ SwizzleBlock4_sse2_1:
 	movntps		[%ecx+16*2], %xmm4
 	movntps		[%ecx+16*3], %xmm3
 
-	// col 1, 3
+	// col 1, 3 (same as previous column)
 
 	movdqa		%xmm0, [%edx]
 	movdqa		%xmm2, [%edx+%ebx]
@@ -349,6 +426,9 @@ SwizzleBlock4_sse2_1:
 
 //
 // swizzling with unaligned reads
+// Same functions as a above with movdqu instead of movdqa for the reads
+// Movdqu is as fast as movdqa with aligned address... So do not bother, directly
+// use movdqu
 //
 
 //
@@ -400,7 +480,7 @@ SwizzleBlock32u_sse2_2:
 
 	movd		%xmm7, %eax
 	pshufd		%xmm7, %xmm7, 0
-	
+
 	.align 16
 SwizzleBlock32u_sse2_3:
 	movdqu		%xmm0, [%esi]
@@ -480,7 +560,7 @@ SwizzleBlock16u_sse2_1:
 
 	dec			%eax
 	jnz			SwizzleBlock16u_sse2_1
-        
+
 	pop			%ebx
 
 	ret			4
@@ -560,9 +640,9 @@ SwizzleBlock8u_sse2_1:
 SwizzleBlock4u_sse2:
 
 	push		%ebx
-	
+
 	mov         %eax, 0xf0f0f0f
-	movd        %xmm7, %eax 
+	movd        %xmm7, %eax
 	pshufd      %xmm7, %xmm7, 0
 
 	mov			%ebx, [%esp+4+4]
@@ -628,7 +708,7 @@ SwizzleBlock4u_sse2_1:
 	pop			%ebx
 
 	ret			4
-                        
+
 #endif
 
 #if defined(__linux__) && defined(__ELF__)
