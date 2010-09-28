@@ -3060,6 +3060,9 @@ __forceinline void update_4pixels(u32* src, Tdst* basepage, u32 i_msk, u32 j, u3
     Tdst* dst_tmp;
     Tdst dsrc_tmp;
 
+    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
+    // but can probably be used after their re-write
+
     dst_tmp = basepage + pageTable[i_msk][(INDEX)];
     if (do_conversion) {
         dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX)]);
@@ -3163,7 +3166,8 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
         _mm_store_si128((__m128i*)src_tmp, pixels);
     }
 
-    // Group 4 pixel to allow futur sse optimization of the convfn function
+    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
+    // but can probably be used after their re-write
     dst_tmp = basepage + pageTable[i_msk][(INDEX)];
     *dst_tmp = (Tdst)src_tmp[0] | (*dst_tmp & imask);
 
@@ -3231,8 +3235,8 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
     for(int i = maxfbh-1; i >= 0; --i) {
         u32 i_div = (i / size) * fbw_div;
         u32 i_msk = i & (size-1);
-        // for(int j = fbw_div-1; j >= 0; --j) {
-        for(u32 j = 0 ; j < fbw_div; ++j) {
+        for(int j = fbw_div-1; j >= 0; --j) {
+        // for(u32 j = 0 ; j < fbw_div; ++j) {
             Tdst* basepage = pPageOffset + (i_div + j) * 2048;
 #ifdef ZEROGS_SSE2
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
