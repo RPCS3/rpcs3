@@ -190,7 +190,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 		RadioPanelItem(_("microVU Recompiler"))
 		.SetToolTip(_("New Vector Unit recompiler with much improved compatibility. Recommended.")),
 
-		RadioPanelItem(_("superVU Recompiler [legacy, broken]"))
+		RadioPanelItem(_("superVU Recompiler [legacy]"))
 		.SetToolTip(_("Useful for diagnosing bugs or clamping issues in the new mVU recompiler."))
 	};
 

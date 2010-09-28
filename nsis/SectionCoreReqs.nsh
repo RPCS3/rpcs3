@@ -36,6 +36,11 @@
 
 	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
+    SetOutPath "$INSTDIR\Cheats"
+    !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+    File                                            ..\bin\Cheats\*
+    !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+    
     SetOutPath "$INSTDIR\Docs"
     !insertmacro UNINSTALL.LOG_OPEN_INSTALL
     File                                            ..\bin\docs\*
