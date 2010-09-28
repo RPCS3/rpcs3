@@ -109,6 +109,9 @@ public:
 	virtual ApplyStateStruct& GetApplyState() { return m_ApplyState; }
 };
 
+// --------------------------------------------------------------------------------------
+//  BaseApplicableDialog
+// --------------------------------------------------------------------------------------
 class BaseApplicableDialog
 	: public wxDialogWithHelpers
 	, public IApplyState
