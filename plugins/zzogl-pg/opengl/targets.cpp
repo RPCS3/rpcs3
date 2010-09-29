@@ -3198,6 +3198,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 #endif
     __aligned16 u32 mask[4];
     u32 imask;
+    u32 pix_mask;
     if (size == 64) /* 16 bit format */
     {
         /* mask is shifted*/
@@ -3207,6 +3208,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         mask[1] = mask[0];
         mask[2] = mask[0];
         mask[3] = mask[0];
+        pix_mask = imask;
     }
     else
     {
@@ -3215,6 +3217,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         mask[2] = mask[0];
         mask[3] = mask[0];
         imask = fbm;
+        pix_mask = fbm;
     }
 
     Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
@@ -3249,8 +3252,57 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         u32 i_msk = i & (size-1);
         for(int j = fbw_div-1; j >= 0; --j) {
         // for(u32 j = 0 ; j < fbw_div; ++j) {
-            Tdst* basepage = pPageOffset + (i_div + j) * 2048;
+#define DO_8_PIX
+#ifdef DO_8_PIX
+            u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 2>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 4>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 6>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 8>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 10>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 12>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 14>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 16>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 18>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 20>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 22>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 24>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 26>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 28>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 30>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 32>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 34>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 36>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 38>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 40>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 42>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 44>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 46>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 48>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 50>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 52>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 54>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 56>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 58>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 60>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, 62>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+            // validate memory write in update_4pixels_sse2_bis
+            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
+            // store fence insures that previous store are finish before execute new one.
+            // _mm_sfence();
+#else
 #ifdef ZEROGS_SSE2
+            Tdst* basepage;
+            // A bad hack for the moment
+            if(do_conversion) {
+                basepage = pPageOffset + (i_div + j) * 4096;
+            } else {
+                basepage = pPageOffset + (i_div + j) * 2048;
+            }
+
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask, imask);
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask, imask);
@@ -3284,6 +3336,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
             update_4pixels<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask[0], imask);
             update_4pixels<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask[0], imask);
             update_4pixels<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask[0], imask);
+#endif
 #endif
         }
         src -= raw_size;
