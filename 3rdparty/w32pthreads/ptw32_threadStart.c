@@ -102,10 +102,18 @@ ExceptionFilter (EXCEPTION_POINTERS * ep, DWORD * ei)
 	 * routine. We need to cleanup before letting the exception
 	 * out of thread scope.
 	 */
-	pthread_t self = pthread_self ();
 
-	(void) pthread_mutex_destroy (&((ptw32_thread_t *)self.p)->cancelLock);
-	ptw32_callUserDestroyRoutines (self);
+	  // Air Says: No we don't.  If a structured exception makes it this far, the program is
+	  // screwed anyway (will cause a GPF / close program dialog to the user) and so a little lost
+	  // cleanup isn't going to matter anyway.  Furthermore, no other stack objects are
+	  // getting unwound, so if anything in the User destroy routines are dependent on other
+	  // stack objects being unwound, it'll cause a secondary premature crash which can confuse
+	  // debugging efforts.  There is a reason microsoft recommends *not* doing much of anything
+	  // from the context of an exception filter... --air
+
+	  //pthread_t self = pthread_self ();
+	  //(void) pthread_mutex_destroy (&((ptw32_thread_t *)self.p)->cancelLock);
+	  //ptw32_callUserDestroyRoutines (self);
 
 	return EXCEPTION_CONTINUE_SEARCH;
 	break;
