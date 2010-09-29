@@ -272,7 +272,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	const CommandlineOverrides& overrides( wxGetApp().Overrides );
 	if( overrides.DisableSpeedhacks || !g_Conf->EnableSpeedHacks )
-		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
+		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions().DisableAll();
 
 	if( overrides.ApplyCustomGamefixes )
 	{
@@ -280,7 +280,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 			fixup.Gamefixes.Set( id, overrides.Gamefixes.Get(id) );
 	}
 	else if( !g_Conf->EnableGameFixes )
-		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
+		fixup.Gamefixes = Pcsx2Config::GamefixOptions().DisableAll();
 
 	wxString gameCRC;
 	wxString gameSerial;

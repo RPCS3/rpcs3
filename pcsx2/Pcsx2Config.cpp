@@ -37,14 +37,21 @@ void TraceLogFilters::LoadSave( IniInterface& ini )
 
 Pcsx2Config::SpeedhackOptions::SpeedhackOptions()
 {
-	bitset			= 0;
-	EECycleRate		= 0;
-	VUCycleSteal	= 0;
+	DisableAll();
 	
 	// Set recommended speedhacks to enabled by default. They'll still be off globally on resets.
 	WaitLoop = true;
 	IntcStat = true;
 	vuFlagHack = true;
+}
+
+Pcsx2Config::SpeedhackOptions& Pcsx2Config::SpeedhackOptions::DisableAll()
+{
+	bitset			= 0;
+	EECycleRate		= 0;
+	VUCycleSteal	= 0;
+	
+	return *this;
 }
 
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
@@ -79,7 +86,7 @@ Pcsx2Config::RecompilerOptions::RecompilerOptions()
 	bitset		= 0;
 
 	//StackFrameChecks	= false;
-	//PreBlockCheckEE		= false;
+	//PreBlockCheckEE	= false;
 
 	// All recs are enabled by default.
 
@@ -253,6 +260,18 @@ const wxChar *const tbl_GamefixNames[] =
 const __fi wxChar* EnumToString( GamefixId id )
 {
 	return tbl_GamefixNames[id];
+}
+
+// all gamefixes are disabled by default.
+Pcsx2Config::GamefixOptions::GamefixOptions()
+{
+	DisableAll();
+}
+
+Pcsx2Config::GamefixOptions& Pcsx2Config::GamefixOptions::DisableAll()
+{
+	bitset = 0;
+	return *this;
 }
 
 // Enables a full list of gamefixes.  The list can be either comma or pipe-delimited.
