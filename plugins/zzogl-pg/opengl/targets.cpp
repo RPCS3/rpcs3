@@ -3285,20 +3285,27 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     __m128i final_pixels_0;
     if (texture_16b) {
         old_pixels_0 = _mm_loadu_si128((__m128i*)dst_add); // 3H 3L 2H 2L  1H 1L 0H 0L
+        // Note: for futur improvement
+        // process 8 pixels -> no need to separate high and low word.
+        // Just apply the fbm mask to all old value
+        // do not check the alignment. first 4 are the low one, the second four are the high one.
 
-        // Update either High or low word
+        // Separate high and low word
+        __m128i old_pixels_0_L = _mm_andnot_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+        __m128i old_pixels_0_H = _mm_and_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+
         if (alignment) {
-            // Set high word to 0
-            old_pixels_0 = _mm_andnot_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+            // update high word (fbm)
+            old_pixels_0_H = _mm_and_si128(old_pixels_0_H, imask);
+            // Align pixels_0
             pixels_0 = _mm_slli_epi32(pixels_0, 16);
         } else {
-            // Set low word to 0
-            old_pixels_0 = _mm_and_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+            // update low word (fbm)
+            old_pixels_0_L = _mm_and_si128(old_pixels_0_H, imask);
         }
-        // apply the fbm mask
-        old_pixels_0 = _mm_and_si128(old_pixels_0, imask);
-        // rebuild the value
-        final_pixels_0 = _mm_or_si128(pixels_0, old_pixels_0);
+        // Merge all results
+        final_pixels_0 = _mm_or_si128(old_pixels_0_H, old_pixels_0_L);
+        final_pixels_0 = _mm_or_si128(final_pixels_0, pixels_0);
 
     } else {
         old_pixels_0 = _mm_and_si128(imask, _mm_load_si128((__m128i*)dst_add));
