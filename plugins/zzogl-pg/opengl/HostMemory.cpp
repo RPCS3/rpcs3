@@ -438,20 +438,20 @@ __forceinline void _TransferLocalLocal_4()
 			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+4)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+4)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
 	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+5)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+5)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+6)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+6)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
 	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+7)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+7)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 		}
 	}
