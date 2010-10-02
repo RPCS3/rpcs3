@@ -1,0 +1,4 @@
+01_rename_binary_generated.patch
+02_update_default_path.patch
+05_move_data_to_config.patch
+21_use_legacy_soundtouch_13.patch

@@ -1,0 +1,3 @@
+bin/pcsx2 usr/games
+debian/pcsx2.desktop usr/share/applications
+debian/pcsx2.xpm usr/share/pixmaps

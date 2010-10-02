@@ -34,8 +34,8 @@ else
 fi
 
 # Debian name of package and tarball
-PKG_NAME="pcsx2.snapshot-${SVN_CO_VERSION}"
-TAR_NAME="pcsx2.snapshot_${SVN_CO_VERSION}.orig.tar"
+PKG_NAME="pcsx2-${SVN_CO_VERSION}"
+TAR_NAME="pcsx2_${SVN_CO_VERSION}.orig.tar"
 
 # Directory
 TMP_DIR=/tmp
@@ -81,7 +81,7 @@ mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
     get_svn_dir bin common cmake pcsx2 tools;
-    get_svn_dir debian-unstable-upstream;
+    get_svn_dir debian-upstream;
 echo "Done")
 
 echo "Downloading Linux compatible plugins for revision ${SVN_CO_VERSION}"

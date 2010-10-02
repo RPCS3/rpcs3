@@ -1,0 +1,176 @@
+This patch removes recording feature beacause it needs libsoundtouch > 1.4.
+Howerever only the version 1.3 is in debian. Unfortunately the package seems 
+to be not actively maintained.
+Note it also correct the inlude path.
+Index: pcsx2-3369/plugins/spu2-x/src/Wavedump_wav.cpp
+===================================================================
+--- pcsx2-3369.orig/plugins/spu2-x/src/Wavedump_wav.cpp
++++ pcsx2-3369/plugins/spu2-x/src/Wavedump_wav.cpp
+@@ -16,16 +16,22 @@
+  */
+ 
+ #include "Global.h"
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ #include "soundtouch/WavFile.h"
++#endif
+ 
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ static WavOutFile* _new_WavOutFile( const char* destfile )
+ {
+ 	return new WavOutFile( destfile, 48000, 16, 2 );
+ }
++#endif
+ 
+ namespace WaveDump
+ {
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	static WavOutFile* m_CoreWav[2][CoreSrc_Count] = { NULL };
++#endif
+ 
+ 	static const char* m_tbl_CoreOutputTypeNames[CoreSrc_Count]  =
+ 	{
+@@ -42,6 +48,7 @@
+ 		if( !IsDevBuild ) return;
+ 		if( !WaveLog() ) return;
+ 
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 		char wavfilename[256];
+ 
+ 		for( uint cidx=0; cidx<2; cidx++ )
+@@ -68,11 +75,13 @@
+ 				}
+ 			}
+ 		}
++#endif
+ 	}
+ 
+ 	void Close()
+ 	{
+ 		if( !IsDevBuild ) return;
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 		for( uint cidx=0; cidx<2; cidx++ )
+ 		{
+ 			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
+@@ -80,13 +89,16 @@
+ 				safe_delete( m_CoreWav[cidx][srcidx]  );
+ 			}
+ 		}
++#endif
+ 	}
+ 
+ 	void WriteCore( uint coreidx, CoreSourceType src, const StereoOut16& sample )
+ 	{
+ 		if( !IsDevBuild ) return;
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 		if( m_CoreWav[coreidx][src] != NULL )
+ 			m_CoreWav[coreidx][src]->write( (s16*)&sample, 2 );
++#endif
+ 	}
+ 
+ 	void WriteCore( uint coreidx, CoreSourceType src, s16 left, s16 right )
+@@ -101,11 +113,14 @@
+ 
+ bool WavRecordEnabled = false;
+ 
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ static WavOutFile*		m_wavrecord = NULL;
++#endif
+ static Mutex			WavRecordMutex;
+ 
+ void RecordStart()
+ {
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	WavRecordEnabled = false;
+ 
+ 	try
+@@ -120,18 +135,23 @@
+ 		m_wavrecord = NULL;		// not needed, but what the heck. :)
+ 		SysMessage("SPU2-X couldn't open file for recording: %s.\nRecording to wavfile disabled.", "recording.wav");
+ 	}
++#endif
+ }
+ 
+ void RecordStop()
+ {
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	WavRecordEnabled = false;
+ 	ScopedLock lock( WavRecordMutex );
+ 	safe_delete( m_wavrecord );
++#endif
+ }
+ 
+ void RecordWrite( const StereoOut16& sample )
+ {
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	ScopedLock lock( WavRecordMutex );
+ 	if( m_wavrecord == NULL ) return;
+ 	m_wavrecord->write( (s16*)&sample, 2 );
++#endif
+ }
+Index: pcsx2-3369/plugins/zerospu2/zerospu2.cpp
+===================================================================
+--- pcsx2-3369.orig/plugins/zerospu2/zerospu2.cpp
++++ pcsx2-3369/plugins/zerospu2/zerospu2.cpp
+@@ -28,7 +28,9 @@
+ #include <stdlib.h>
+ 
+ #include "soundtouch/SoundTouch.h"
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ #include "soundtouch/WavFile.h"
++#endif
+ 
+ char libraryName[256];
+ 
+@@ -74,7 +76,9 @@
+ 
+ // time stretch variables
+ soundtouch::SoundTouch* pSoundTouch=NULL;
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ extern WavOutFile* g_pWavRecord; // used for recording
++#endif
+ 
+ u64 s_GlobalTimeStamp = 0;
+ s32 s_nDurations[64]={0};
+@@ -361,7 +365,9 @@
+ 
+ 	RemoveSound();
+ 
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	delete g_pWavRecord; g_pWavRecord = NULL;
++#endif
+ 	delete pSoundTouch; pSoundTouch = NULL;
+ 
+ 	for (u32 i = 0; i < ArraySize(s_pAudioBuffers); ++i)
+Index: pcsx2-3369/plugins/zerospu2/zeroworker.cpp
+===================================================================
+--- pcsx2-3369.orig/plugins/zerospu2/zeroworker.cpp
++++ pcsx2-3369/plugins/zerospu2/zeroworker.cpp
+@@ -19,10 +19,14 @@
+ #include "zerospu2.h"
+ #include "zeroworker.h"
+ #include "soundtouch/SoundTouch.h"
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ #include "soundtouch/WavFile.h"
++#endif
+ 
+ s32 g_logsound = 0;
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ WavOutFile* g_pWavRecord=NULL; // used for recording
++#endif
+ 
+ const s32 f[5][2] = {
+ 				{    0,     0 },
+@@ -302,6 +306,7 @@
+ 
+ void LogRawSound(void* pleft, s32 leftstride, void* pright, s32 rightstride, s32 numsamples)
+ {
++#if defined(SOUNDTOUCH_VERSION_ID) & (SOUNDTOUCH_VERSION_ID >= 10400)
+ 	if (g_pWavRecord == NULL )
+ 		g_pWavRecord = new WavOutFile(RECORD_FILENAME, SAMPLE_RATE, 16, 2);
+ 
+@@ -320,4 +325,5 @@
+ 	}
+ 
+ 	g_pWavRecord->write(&tempbuf[0], numsamples*2);
++#endif
+ }
