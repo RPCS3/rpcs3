@@ -663,7 +663,10 @@ extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
     vm1 = _mm_shufflehi_epi16(vm1, 0x88);
     vm1 = _mm_shufflelo_epi16(vm1, 0x88); // 14 12 14 12  10 8 10 8
 
-    vm0 = (__m128i)_mm_shuffle_ps((__m128)vm0, (__m128)vm1, 0x88); // 14 12 10 8  6 4 2 0
+    // Note: MSVC complains about direct c-cast...
+    // vm0 = (__m128i)_mm_shuffle_ps((__m128)vm0, (__m128)vm1, 0x88); // 14 12 10 8  6 4 2 0
+    __m128 vm0_f = (_mm_shuffle_ps((__m128&)vm0, (__m128&)vm1, 0x88)); // 14 12 10 8  6 4 2 0
+    vm0 = (__m128i&)vm0_f;
     vm0 = _mm_shuffle_epi32(vm0, 0xD8); // 14 12 6 4  10 8 2 0
 
     // *** Same jobs for vm2 and vm3
@@ -672,7 +675,10 @@ extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
     vm3 = _mm_shufflehi_epi16(vm3, 0x88);
     vm3 = _mm_shufflelo_epi16(vm3, 0x88);
 
-    vm2 = (__m128i)_mm_shuffle_ps((__m128)vm2, (__m128)vm3, 0x88);
+    // Note: MSVC complains about direct c-cast...
+    // vm2 = (__m128i)_mm_shuffle_ps((__m128)vm2, (__m128)vm3, 0x88);
+    __m128 vm2_f = (_mm_shuffle_ps((__m128&)vm2, (__m128&)vm3, 0x88)); // 14 12 10 8  6 4 2 0
+    vm2 = (__m128i&)vm2_f;
     vm2 = _mm_shuffle_epi32(vm2, 0xD8);
 
     // Create a zero register.

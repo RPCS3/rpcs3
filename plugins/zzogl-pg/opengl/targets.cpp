@@ -3152,7 +3152,7 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
         __m128i pixel_B = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Bmask));
 
         // shift the value
-        pixel_A = _mm_srli_epi32(pixel_A, 15);
+        pixel_A = _mm_srli_epi32(pixel_A, 16);
         pixel_R = _mm_srli_epi32(pixel_R, 9);
         pixel_G = _mm_srli_epi32(pixel_G, 6);
         pixel_B = _mm_srli_epi32(pixel_B, 3);
@@ -3249,7 +3249,7 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
         __m128i pixel_A = _mm_and_si128(pixels_0, pixel_mask_base);
 
         // shift the value
-        pixel_A = _mm_srli_epi32(pixel_A, 15);
+        pixel_A = _mm_srli_epi32(pixel_A, 16);
         pixel_R = _mm_srli_epi32(pixel_R, 9);
         pixel_G = _mm_srli_epi32(pixel_G, 6);
         pixel_B = _mm_srli_epi32(pixel_B, 3);
@@ -3337,7 +3337,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         mask[1] = mask[0];
         mask[2] = mask[0];
         mask[3] = mask[0];
-        pix_mask = (imask<<16) & imask;
+        pix_mask = (imask<<16) | imask;
     }
     else
     {
@@ -3426,7 +3426,7 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 #ifdef ZEROGS_SSE2
             Tdst* basepage;
             // A bad hack for the moment
-            if(do_conversion) {
+            if(texture_16b) {
                 basepage = pPageOffset + (i_div + j) * 4096;
             } else {
                 basepage = pPageOffset + (i_div + j) * 2048;
@@ -3449,6 +3449,14 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask, imask);
             update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask, imask);
 #else
+            Tdst* basepage;
+            // A bad hack for the moment
+            if(texture_16b) {
+                basepage = pPageOffset + (i_div + j) * 4096;
+            } else {
+                basepage = pPageOffset + (i_div + j) * 2048;
+            }
+
             update_4pixels<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask[0], imask);
             update_4pixels<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask[0], imask);
             update_4pixels<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask[0], imask);
