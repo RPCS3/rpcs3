@@ -3189,6 +3189,12 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
 
     dst_tmp = basepage + pageTable[i_msk][INDEX+3];
     *dst_tmp = (Tdst)src_tmp[3] | (*dst_tmp & imask);
+    // The MS compiler complains about the missing of the emms clear function...
+    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
+    // of the compiler probably generates better code. -- Gregory
+#ifdef _WIN32
+	_mm_empty();
+#endif
 }
 
 template <u32 size, u32 pageTable[size][64], bool do_conversion, bool texture_16b, u32 INDEX>
@@ -3227,6 +3233,8 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
         // p2 p3  p6 p7
         base_ptr = &src[((j<<6)+INDEX)];
         __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)base_ptr);
+
+		// MSVC currently crashes about here.
         __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + src_pitch));
         pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
     }
@@ -3285,7 +3293,7 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     __m128i final_pixels_0;
     if (texture_16b) {
         old_pixels_0 = _mm_loadu_si128((__m128i*)dst_add); // 3H 3L 2H 2L  1H 1L 0H 0L
-        // Note: for futur improvement
+        // Note: for future improvement
         // process 8 pixels -> no need to separate high and low word.
         // Just apply the fbm mask to all old value
         // do not check the alignment. first 4 are the low one, the second four are the high one.
@@ -3322,15 +3330,17 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     // My guess, it uses the mmx register for the 64 bits transfer. Newer version
     // of the compiler probably generates better code. -- Gregory
 #ifdef _WIN32
-    _mm_empty();
+	_mm_empty();
 #endif
 }
 
 template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, bool texture_16b>
 void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 {
+#ifdef LOG_RESOLVE_PROFILE
 #ifdef __LINUX__
     u32 startime = timeGetPreciseTime();
+#endif
 #endif
     __aligned16 u32 mask[4];
     u32 imask;
@@ -3388,7 +3398,12 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         u32 i_msk = i & (size-1);
         for(int j = fbw_div-1; j >= 0; --j) {
         // for(u32 j = 0 ; j < fbw_div; ++j) {
+
+// Workaround until we work out why update_4pixels_sse2_bis is crashing Windows.
+#ifndef _WIN32
 #define DO_8_PIX
+#endif
+
 #ifdef DO_8_PIX
             u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
             update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
