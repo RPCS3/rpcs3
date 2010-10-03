@@ -22,7 +22,6 @@
 #include "x86.h"
 
 #if defined(ZEROGS_SSE2)
-#include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
 
@@ -64,23 +63,17 @@ void __fastcall FrameSwizzleBlock32A2_c(u32* dst, u32* src, int srcpitch, u32 Wr
 { 
 	u32* d = &g_columnTable32[0][0]; 
 	
-	if( WriteMask == 0xffffffff ) 
-	{ 
-		for(int i = 0; i < 8; ++i, d += 8) 
-		{ 
-			for(int j = 0; j < 8; ++j) 
-			{ 
+	if( WriteMask == 0xffffffff ) { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
 				dst[d[j]] = ((src[2*j] + src[2*j+1]) >> 1); 
 			} 
 			src += srcpitch; 
 		} 
 	} 
-	else 
-	{ 
-		for(int i = 0; i < 8; ++i, d += 8) 
-		{ 
-			for(int j = 0; j < 8; ++j) 
-			{ 
+	else { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
 				dst[d[j]] = (((src[2*j] + src[2*j+1]) >> 1)&WriteMask)|(dst[d[j]]&~WriteMask); 
 			} 
 			src += srcpitch; 
@@ -92,23 +85,17 @@ void __fastcall FrameSwizzleBlock32A4_c(u32* dst, u32* src, int srcpitch, u32 Wr
 { 
 	u32* d = &g_columnTable32[0][0]; 
 	
-	if( WriteMask == 0xffffffff ) 
-	{ 
-		for(int i = 0; i < 8; ++i, d += 8) 
-		{ 
-			for(int j = 0; j < 8; ++j) 
-			{ 
+	if( WriteMask == 0xffffffff ) { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
 				dst[d[j]] = ((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2); 
 			} 
 			src += srcpitch << 1; 
 		} 
 	} 
-	else 
-	{ 
-		for(int i = 0; i < 8; ++i, d += 8) 
-		{ 
-			for(int j = 0; j < 8; ++j) 
-			{ 
+	else { 
+		for(int i = 0; i < 8; ++i, d += 8) { 
+			for(int j = 0; j < 8; ++j) { 
 				dst[d[j]] = (((src[2*j] + src[2*j+1] + src[2*j+srcpitch] + src[2*j+srcpitch+1]) >> 2)&WriteMask)|(dst[d[j]]&~WriteMask); 
 			} 
 			src += srcpitch << 1; 
@@ -663,6 +650,120 @@ static const __aligned16 int s_clut16mask[8] = { 0xffff0000, 0xffff0000, 0xffff0
 
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {
+#define YET_ANOTHER_INTRINSIC
+#ifdef YET_ANOTHER_INTRINSIC
+    __m128i vm0 = _mm_load_si128((__m128i*)vm);
+    __m128i vm1 = _mm_load_si128((__m128i*)vm+1);
+    __m128i vm2 = _mm_load_si128((__m128i*)vm+2);
+    __m128i vm3 = _mm_load_si128((__m128i*)vm+3);
+
+    // rearrange 16bits words
+    vm0 = _mm_shufflehi_epi16(vm0, 0x88);
+    vm0 = _mm_shufflelo_epi16(vm0, 0x88); // 6 4 6 4  2 0 2 0
+    vm1 = _mm_shufflehi_epi16(vm1, 0x88);
+    vm1 = _mm_shufflelo_epi16(vm1, 0x88); // 14 12 14 12  10 8 10 8
+
+    // Note: MSVC complains about direct c-cast...
+    // vm0 = (__m128i)_mm_shuffle_ps((__m128)vm0, (__m128)vm1, 0x88); // 14 12 10 8  6 4 2 0
+    __m128 vm0_f = (_mm_shuffle_ps((__m128&)vm0, (__m128&)vm1, 0x88)); // 14 12 10 8  6 4 2 0
+    vm0 = (__m128i&)vm0_f;
+    vm0 = _mm_shuffle_epi32(vm0, 0xD8); // 14 12 6 4  10 8 2 0
+
+    // *** Same jobs for vm2 and vm3
+    vm2 = _mm_shufflehi_epi16(vm2, 0x88);
+    vm2 = _mm_shufflelo_epi16(vm2, 0x88);
+    vm3 = _mm_shufflehi_epi16(vm3, 0x88);
+    vm3 = _mm_shufflelo_epi16(vm3, 0x88);
+
+    // Note: MSVC complains about direct c-cast...
+    // vm2 = (__m128i)_mm_shuffle_ps((__m128)vm2, (__m128)vm3, 0x88);
+    __m128 vm2_f = (_mm_shuffle_ps((__m128&)vm2, (__m128&)vm3, 0x88)); // 14 12 10 8  6 4 2 0
+    vm2 = (__m128i&)vm2_f;
+    vm2 = _mm_shuffle_epi32(vm2, 0xD8);
+
+    // Create a zero register.
+    __m128i zero_128 = _mm_setzero_si128();
+
+    if ((u32)clut & 0x0F) {
+        // Unaligned write.
+
+        u16* clut_word_ptr = (u16*)clut;
+        __m128i clut_mask = _mm_load_si128((__m128i*)s_clut16mask2);
+
+        // Load previous data and clear high 16 bits of double words
+        __m128i clut_0 = _mm_load_si128((__m128i*)(clut_word_ptr-1)); // 6 5 4 3  2 1 0 x
+        __m128i clut_2 = _mm_load_si128((__m128i*)(clut_word_ptr-1)+2); // 22 21 20 19  18 17 16 15
+        clut_0 = _mm_and_si128(clut_0, clut_mask); // - 5 - 3  - 1 - x
+        clut_2 = _mm_and_si128(clut_2, clut_mask); // - 21 - 19  - 17 - 15
+
+        // Convert 16bits to 32 bits vm0 (zero entended)
+        __m128i vm0_low = _mm_unpacklo_epi16(vm0, zero_128); // - 10 - 8  - 2 - 0
+        __m128i vm0_high = _mm_unpackhi_epi16(vm0, zero_128); // - 14 - 12  - 6  - 4
+
+        // shift the value to aligned it with clut
+        vm0_low = _mm_slli_epi32(vm0_low, 16); // 10 - 8 -  2 - 0 -
+        vm0_high = _mm_slli_epi32(vm0_high, 16); // 14 - 12 -  6 - 4 -
+
+        // Interlace old and new data
+        clut_0 = _mm_or_si128(clut_0, vm0_low); // 10 5 8 3  2 1 0 x
+        clut_2 = _mm_or_si128(clut_2, vm0_high); // 14 21 12 19  6 17 4 15
+
+        // Save the result
+        _mm_store_si128((__m128i*)(clut_word_ptr-1), clut_0);
+        _mm_store_si128((__m128i*)(clut_word_ptr-1)+2, clut_2);
+
+        // *** Same jobs for clut_1 and clut_3
+        __m128i clut_1 = _mm_load_si128((__m128i*)(clut_word_ptr-1)+1);
+        __m128i clut_3 = _mm_load_si128((__m128i*)(clut_word_ptr-1)+3);
+        clut_1 = _mm_and_si128(clut_1, clut_mask);
+        clut_3 = _mm_and_si128(clut_3, clut_mask);
+
+        __m128i vm2_low = _mm_unpacklo_epi16(vm2, zero_128);
+        __m128i vm2_high = _mm_unpackhi_epi16(vm2, zero_128);
+        vm2_low = _mm_slli_epi32(vm2_low, 16);
+        vm2_high = _mm_slli_epi32(vm2_high, 16);
+
+        clut_1 = _mm_or_si128(clut_1, vm2_low);
+        clut_3 = _mm_or_si128(clut_3, vm2_high);
+
+        _mm_store_si128((__m128i*)(clut_word_ptr-1)+1, clut_1);
+        _mm_store_si128((__m128i*)(clut_word_ptr-1)+3, clut_3);
+    } else {
+        // Standard write
+
+        __m128i clut_mask = _mm_load_si128((__m128i*)s_clut16mask);
+
+        // Load previous data and clear low 16 bits of double words
+        __m128i clut_0 = _mm_and_si128(_mm_load_si128((__m128i*)clut), clut_mask); // 7 - 5 -  3 - 1 -
+        __m128i clut_2 = _mm_and_si128(_mm_load_si128((__m128i*)clut+2), clut_mask); // 23 - 21 -  19 - 17 -
+
+        //  Convert 16bits to 32 bits vm0 (zero entended)
+        __m128i vm0_low = _mm_unpacklo_epi16(vm0, zero_128); // - 10 - 8  - 2 - 0
+        __m128i vm0_high = _mm_unpackhi_epi16(vm0, zero_128); // - 14 - 12  - 6  - 4
+
+        // Interlace old and new data
+        clut_0 = _mm_or_si128(clut_0, vm0_low); // 7 10 5 8  3 2 1 0
+        clut_2 = _mm_or_si128(clut_2, vm0_high); // 23 14 21 12  19 6 17 4
+
+        // Save the result
+        _mm_store_si128((__m128i*)clut, clut_0);
+        _mm_store_si128((__m128i*)clut+2, clut_2);
+
+        // *** Same jobs for clut_1 and clut_3
+        __m128i clut_1 = _mm_and_si128(_mm_load_si128((__m128i*)clut+1), clut_mask);
+        __m128i clut_3 = _mm_and_si128(_mm_load_si128((__m128i*)clut+3), clut_mask);
+
+        __m128i vm2_low = _mm_unpacklo_epi16(vm2, zero_128);
+        __m128i vm2_high = _mm_unpackhi_epi16(vm2, zero_128);
+
+        clut_1 = _mm_or_si128(clut_1, vm2_low);
+        clut_3 = _mm_or_si128(clut_3, vm2_high);
+
+        _mm_store_si128((__m128i*)clut+1, clut_1);
+        _mm_store_si128((__m128i*)clut+3, clut_3);
+    }
+
+#else
 #if defined(_MSC_VER)
 	__asm
 	{
@@ -893,6 +994,7 @@ End:
     : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
        );
 #endif // _MSC_VER
+#endif
 }
 
 #endif // ZEROGS_SSE2
@@ -1115,3 +1217,4 @@ Z16Loop:
        );
 #endif // _MSC_VER
 }
+

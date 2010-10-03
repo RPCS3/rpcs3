@@ -92,6 +92,29 @@ struct TransferFuncts
 extern TransferData tData[64];
 // rest not visible externally
 
+extern u32 g_blockTable32[4][8];
+extern u32 g_blockTable32Z[4][8];
+extern u32 g_blockTable16[8][4];
+extern u32 g_blockTable16S[8][4];
+extern u32 g_blockTable16Z[8][4];
+extern u32 g_blockTable16SZ[8][4];
+extern u32 g_blockTable8[4][8];
+extern u32 g_blockTable4[8][4];
+
+extern u32 g_columnTable32[8][8];
+extern u32 g_columnTable16[8][16];
+extern u32 g_columnTable8[16][16];
+extern u32 g_columnTable4[16][32];
+
+extern u32 g_pageTable32[32][64];
+extern u32 g_pageTable32Z[32][64];
+extern u32 g_pageTable16[64][64];
+extern u32 g_pageTable16S[64][64];
+extern u32 g_pageTable16Z[64][64];
+extern u32 g_pageTable16SZ[64][64];
+extern u32 g_pageTable8[64][128];
+extern u32 g_pageTable4[128][128];
+
 struct BLOCK
 {
 	BLOCK() { memset(this, 0, sizeof(BLOCK)); }
@@ -142,46 +165,68 @@ struct BLOCK
 		TransferHostLocal = TransferHostLocalFun[psm];
 		TransferLocalHost = TransferLocalHostFun[psm];
 	}
+
+    void SetTable(u32 psm)
+    {
+        switch (psm) {
+            case PSMCT32:
+                assert( sizeof(g_pageTable32) == width * height * sizeof(g_pageTable32[0][0]) );
+                pageTable = &g_pageTable32[0][0];
+                blockTable = &g_blockTable32[0][0];
+                columnTable = &g_columnTable32[0][0];
+                break;
+            case PSMT32Z:
+                assert( sizeof(g_pageTable32Z) == width * height * sizeof(g_pageTable32Z[0][0]) );
+                pageTable = &g_pageTable32Z[0][0];
+                blockTable = &g_blockTable32Z[0][0];
+                columnTable = &g_columnTable32[0][0];
+                break;
+            case PSMCT16:
+                assert( sizeof(g_pageTable16) == width * height * sizeof(g_pageTable16[0][0]) );
+                pageTable = &g_pageTable16[0][0];
+                blockTable = &g_blockTable16[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMCT16S:
+                assert( sizeof(g_pageTable16S) == width * height * sizeof(g_pageTable16S[0][0]) );
+                pageTable = &g_pageTable16S[0][0];
+                blockTable = &g_blockTable16S[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT16Z:
+                assert( sizeof(g_pageTable16Z) == width * height * sizeof(g_pageTable16Z[0][0]) );
+                pageTable = &g_pageTable16Z[0][0];
+                blockTable = &g_blockTable16Z[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT16SZ:
+                assert( sizeof(g_pageTable16SZ) == width * height * sizeof(g_pageTable16SZ[0][0]) );
+                pageTable = &g_pageTable16SZ[0][0];
+                blockTable = &g_blockTable16SZ[0][0];
+                columnTable = &g_columnTable16[0][0];
+                break;
+            case PSMT8:
+                assert( sizeof(g_pageTable8) == width * height * sizeof(g_pageTable8[0][0]) );
+                pageTable = &g_pageTable8[0][0];
+                blockTable = &g_blockTable8[0][0];
+                columnTable = &g_columnTable8[0][0];
+                break;
+            case PSMT4:
+                assert( sizeof(g_pageTable4) == width * height * sizeof(g_pageTable4[0][0]) );
+                pageTable = &g_pageTable4[0][0];
+                blockTable = &g_blockTable4[0][0];
+                columnTable = &g_columnTable4[0][0];
+                break;
+            default:
+                pageTable = NULL;
+                blockTable = NULL;
+                columnTable = NULL;
+                break;
+        }
+    }
 };
 
 extern BLOCK m_Blocks[];
-
-extern u32 g_blockTable32[4][8];
-extern u32 g_blockTable32Z[4][8];
-extern u32 g_blockTable16[8][4];
-extern u32 g_blockTable16S[8][4];
-extern u32 g_blockTable16Z[8][4];
-extern u32 g_blockTable16SZ[8][4];
-extern u32 g_blockTable8[4][8];
-extern u32 g_blockTable4[8][4];
-
-extern u32 g_columnTable32[8][8];
-extern u32 g_columnTable16[8][16];
-extern u32 g_columnTable8[16][16];
-extern u32 g_columnTable4[16][32];
-
-extern u32 g_pageTable32[32][64];
-extern u32 g_pageTable32Z[32][64];
-extern u32 g_pageTable16[64][64];
-extern u32 g_pageTable16S[64][64];
-extern u32 g_pageTable16Z[64][64];
-extern u32 g_pageTable16SZ[64][64];
-extern u32 g_pageTable8[64][128];
-extern u32 g_pageTable4[128][128];
-
-static __forceinline u32 getPixelAddress32(int x, int y, u32 bp, u32 bw)
-{
-	u32 basepage = ((y >> 5) * (bw >> 6)) + (x >> 6);
-	u32 word = bp * 64 + basepage * 2048 + g_pageTable32[y&31][x&63];
-	return word;
-}
-
-static __forceinline u32 getPixelAddress32_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 5) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 2048 + g_pageTable32[y&31][x&63];
-	return word;
-}
 
 #define getPixelAddress24 getPixelAddress32
 #define getPixelAddress24_0 getPixelAddress32_0
@@ -191,18 +236,20 @@ static __forceinline u32 getPixelAddress32_0(int x, int y, u32 bw)
 #define getPixelAddress4HL_0 getPixelAddress32_0
 #define getPixelAddress4HH getPixelAddress32
 #define getPixelAddress4HH_0 getPixelAddress32_0
+#define getPixelAddress24Z getPixelAddress32Z
+#define getPixelAddress24Z_0 getPixelAddress32Z_0
+
+static __forceinline u32 getPixelAddress32(int x, int y, u32 bp, u32 bw)
+{
+	u32 basepage = ((y >> 5) * (bw >> 6)) + (x >> 6);
+	u32 word = bp * 64 + basepage * 2048 + g_pageTable32[y&31][x&63];
+	return word;
+}
 
 static __forceinline u32 getPixelAddress16(int x, int y, u32 bp, u32 bw)
 {
 	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
 	u32 word = bp * 128 + basepage * 4096 + g_pageTable16[y&63][x&63];
-	return word;
-}
-
-static __forceinline u32 getPixelAddress16_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 4096 + g_pageTable16[y&63][x&63];
 	return word;
 }
 
@@ -213,24 +260,10 @@ static __forceinline u32 getPixelAddress16S(int x, int y, u32 bp, u32 bw)
 	return word;
 }
 
-static __forceinline u32 getPixelAddress16S_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 4096 + g_pageTable16S[y&63][x&63];
-	return word;
-}
-
 static __forceinline u32 getPixelAddress8(int x, int y, u32 bp, u32 bw)
 {
 	u32 basepage = ((y >> 6) * ((bw + 127) >> 7)) + (x >> 7);
 	u32 word = bp * 256 + basepage * 8192 + g_pageTable8[y&63][x&127];
-	return word;
-}
-
-static __forceinline u32 getPixelAddress8_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 6) * ((bw + 127) >> 7)) + (x >> 7);
-	u32 word = basepage * 8192 + g_pageTable8[y&63][x&127];
 	return word;
 }
 
@@ -241,13 +274,6 @@ static __forceinline u32 getPixelAddress4(int x, int y, u32 bp, u32 bw)
 	return word;
 }
 
-static __forceinline u32 getPixelAddress4_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 7) * ((bw + 127) >> 7)) + (x >> 7);
-	u32 word = basepage * 16384 + g_pageTable4[y&127][x&127];
-	return word;
-}
-
 static __forceinline u32 getPixelAddress32Z(int x, int y, u32 bp, u32 bw)
 {
 	u32 basepage = ((y >> 5) * (bw >> 6)) + (x >> 6);
@@ -255,27 +281,10 @@ static __forceinline u32 getPixelAddress32Z(int x, int y, u32 bp, u32 bw)
 	return word;
 }
 
-static __forceinline u32 getPixelAddress32Z_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 5) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 2048 + g_pageTable32Z[y&31][x&63];
-	return word;
-}
-
-#define getPixelAddress24Z getPixelAddress32Z
-#define getPixelAddress24Z_0 getPixelAddress32Z_0
-
 static __forceinline u32 getPixelAddress16Z(int x, int y, u32 bp, u32 bw)
 {
 	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
 	u32 word = bp * 128 + basepage * 4096 + g_pageTable16Z[y&63][x&63];
-	return word;
-}
-
-static __forceinline u32 getPixelAddress16Z_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 4096 + g_pageTable16Z[y&63][x&63];
 	return word;
 }
 
@@ -286,15 +295,7 @@ static __forceinline u32 getPixelAddress16SZ(int x, int y, u32 bp, u32 bw)
 	return word;
 }
 
-static __forceinline u32 getPixelAddress16SZ_0(int x, int y, u32 bw)
-{
-	u32 basepage = ((y >> 6) * (bw >> 6)) + (x >> 6);
-	u32 word = basepage * 4096 + g_pageTable16SZ[y&63][x&63];
-	return word;
-}
-
-//#define getPixelAddress_0(psm,x,y,bw) getPixelAddress##psm##_0(x,y,bw)
-//#define getPixelAddress(psm,x,y,bp,bw) getPixelAddress##psm##(x,y,bp,bw)
+///////////////
 
 static __forceinline void writePixel32(void* pmem, int x, int y, u32 pixel, u32 bp, u32 bw)
 {
@@ -374,7 +375,6 @@ static __forceinline void writePixel16SZ(void* pmem, int x, int y, u32 pixel, u3
 {
 	((u16*)pmem)[getPixelAddress16SZ(x, y, bp, bw)] = pixel;
 }
-
 
 ///////////////
 
@@ -457,161 +457,48 @@ static __forceinline u32 readPixel16SZ(const void* pmem, int x, int y, u32 bp, u
 // Functions that take 0 bps //
 ///////////////////////////////
 
-static __forceinline void writePixel32_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u32*)pmem)[getPixelAddress32_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel24_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	u8 *buf = (u8*) & ((u32*)pmem)[getPixelAddress32_0(x, y, bw)];
-	u8 *pix = (u8*) & pixel;
-	buf[0] = pix[0];
-	buf[1] = pix[1];
-	buf[2] = pix[2];
-}
-
-static __forceinline void writePixel16_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u16*)pmem)[getPixelAddress16_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel16S_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u16*)pmem)[getPixelAddress16S_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel8_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u8*)pmem)[getPixelAddress8_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel8H_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u8*)pmem)[4*getPixelAddress32_0(x, y, bw)+3] = pixel;
-}
-
-static __forceinline void writePixel4_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	u32 addr = getPixelAddress4_0(x, y, bw);
-	u8 pix = ((u8*)pmem)[addr/2];
-
-	if (addr & 0x1)((u8*)pmem)[addr/2] = (pix & 0x0f) | (pixel << 4);
-	else ((u8*)pmem)[addr/2] = (pix & 0xf0) | (pixel);
-}
-
-static __forceinline void writePixel4HL_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	u8 *p = (u8*)pmem + 4 * getPixelAddress4HL_0(x, y, bw) + 3;
-	*p = (*p & 0xf0) | pixel;
-}
-
-static __forceinline void writePixel4HH_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	u8 *p = (u8*)pmem + 4 * getPixelAddress4HH_0(x, y, bw) + 3;
-	*p = (*p & 0x0f) | (pixel << 4);
-}
-
-static __forceinline void writePixel32Z_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u32*)pmem)[getPixelAddress32Z_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel24Z_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	u8 *buf = (u8*)pmem + 4 * getPixelAddress32Z_0(x, y, bw);
-	u8 *pix = (u8*) & pixel;
-	buf[0] = pix[0];
-	buf[1] = pix[1];
-	buf[2] = pix[2];
-}
-
-static __forceinline void writePixel16Z_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u16*)pmem)[getPixelAddress16Z_0(x, y, bw)] = pixel;
-}
-
-static __forceinline void writePixel16SZ_0(void* pmem, int x, int y, u32 pixel, u32 bw)
-{
-	((u16*)pmem)[getPixelAddress16SZ_0(x, y, bw)] = pixel;
-}
+static __forceinline u32 getPixelAddress32_0(int x, int y, u32 bw) { return getPixelAddress32(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress16_0(int x, int y, u32 bw) { return getPixelAddress16(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress16S_0(int x, int y, u32 bw) { return getPixelAddress16S(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress8_0(int x, int y, u32 bw) { return getPixelAddress8(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress4_0(int x, int y, u32 bw) { return getPixelAddress4(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress32Z_0(int x, int y, u32 bw) { return getPixelAddress32Z(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress16Z_0(int x, int y, u32 bw) { return getPixelAddress16Z(x, y, 0, bw); }
+static __forceinline u32 getPixelAddress16SZ_0(int x, int y, u32 bw) { return getPixelAddress16SZ(x, y, 0, bw); }
 
 ///////////////
 
-static __forceinline u32 readPixel32_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u32*)pmem)[getPixelAddress32_0(x, y, bw)];
-}
-
-static __forceinline u32 readPixel24_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u32*)pmem)[getPixelAddress32_0(x, y, bw)] & 0xffffff;
-}
-
-static __forceinline u32 readPixel16_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u16*)pmem)[getPixelAddress16_0(x, y, bw)];
-}
-
-static __forceinline u32 readPixel16S_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u16*)pmem)[getPixelAddress16S_0(x, y, bw)];
-}
-
-static __forceinline u32 readPixel8_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u8*)pmem)[getPixelAddress8_0(x, y, bw)];
-}
-
-static __forceinline u32 readPixel8H_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u8*)pmem)[4*getPixelAddress32_0(x, y, bw) + 3];
-}
-
-static __forceinline u32 readPixel4_0(const void* pmem, int x, int y, u32 bw)
-{
-	u32 addr = getPixelAddress4_0(x, y, bw);
-	u8 pix = ((const u8*)pmem)[addr/2];
-
-	if (addr & 0x1)
-		return pix >> 4;
-	else
-		return pix & 0xf;
-}
-
-static __forceinline u32 readPixel4HL_0(const void* pmem, int x, int y, u32 bw)
-{
-	const u8 *p = (const u8*)pmem + 4 * getPixelAddress4HL_0(x, y, bw) + 3;
-	return *p & 0x0f;
-}
-
-static __forceinline u32 readPixel4HH_0(const void* pmem, int x, int y, u32 bw)
-{
-	const u8 *p = (const u8*)pmem + 4 * getPixelAddress4HH_0(x, y, bw) + 3;
-	return *p >> 4;
-}
+static __forceinline void writePixel32_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel32(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel24_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel24(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel16_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel16(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel16S_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel16S(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel8_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel8(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel8H_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel8H(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel4_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel4(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel4HL_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel4HL(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel4HH_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel4HH(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel32Z_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel32Z(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel24Z_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel24Z(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel16Z_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel16Z(pmem, x, y, pixel, 0, bw); }
+static __forceinline void writePixel16SZ_0(void* pmem, int x, int y, u32 pixel, u32 bw) { writePixel16SZ(pmem, x, y, pixel, 0, bw); }
 
 ///////////////
 
-static __forceinline u32 readPixel32Z_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u32*)pmem)[getPixelAddress32Z_0(x, y, bw)];
-}
+static __forceinline u32 readPixel32_0(const void* pmem, int x, int y, u32 bw) { return readPixel32(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel24_0(const void* pmem, int x, int y, u32 bw) { return readPixel24(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel16_0(const void* pmem, int x, int y, u32 bw) { return readPixel16(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel16S_0(const void* pmem, int x, int y, u32 bw) { return readPixel16S(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel8_0(const void* pmem, int x, int y, u32 bw) { return readPixel8(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel8H_0(const void* pmem, int x, int y, u32 bw) { return readPixel8H(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel4_0(const void* pmem, int x, int y, u32 bw) { return readPixel4(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel4HL_0(const void* pmem, int x, int y, u32 bw) { return readPixel4HL(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel4HH_0(const void* pmem, int x, int y, u32 bw) { return readPixel4HH(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel32Z_0(const void* pmem, int x, int y, u32 bw) { return readPixel32Z(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel24Z_0(const void* pmem, int x, int y, u32 bw) { return readPixel24Z(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel16Z_0(const void* pmem, int x, int y, u32 bw) { return readPixel16Z(pmem, x, y, 0, bw); }
+static __forceinline u32 readPixel16SZ_0(const void* pmem, int x, int y, u32 bw) { return readPixel16SZ(pmem, x, y, 0, bw); }
 
-static __forceinline u32 readPixel24Z_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u32*)pmem)[getPixelAddress32Z_0(x, y, bw)] & 0xffffff;
-}
-
-static __forceinline u32 readPixel16Z_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u16*)pmem)[getPixelAddress16Z_0(x, y, bw)];
-}
-
-static __forceinline u32 readPixel16SZ_0(const void* pmem, int x, int y, u32 bw)
-{
-	return ((const u16*)pmem)[getPixelAddress16SZ_0(x, y, bw)];
-}
+///////////////
 
 extern int TransferHostLocal32(const void* pbyMem, u32 nQWordSize);
 extern int TransferHostLocal32Z(const void* pbyMem, u32 nQWordSize);

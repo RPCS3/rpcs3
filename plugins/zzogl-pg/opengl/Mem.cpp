@@ -184,7 +184,7 @@ static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSiz
 	tempY = gs.imageY;
 	tempX = gs.imageX;
 	Point alignedPt;
-	
+
 	nSize = (nQWordSize * 4 * 2) / tp2;
 	nSize = min(nSize, gs.imageWnew * gs.imageHnew);
 
@@ -241,237 +241,136 @@ void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 
-#define FILL_BLOCK(psm, psmcol) \
-{ \
-	b.pageTable = &g_pageTable##psm[0][0]; \
-	b.blockTable = &g_blockTable##psm[0][0]; \
-	b.columnTable = &g_columnTable##psmcol[0][0]; \
-	\
-	assert( sizeof(g_pageTable##psm) == b.width * b.height * sizeof(g_pageTable##psm[0][0]) ); \
-	\
-	psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
-	psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
-	\
-	for(i = 0; i < b.height; ++i) \
-	{ \
-		u32 i_width = i*BLOCK_TEXWIDTH; \
-		for(j = 0; j < b.width; ++j) \
-		{ \
-			/* fill the table */ \
-			u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * b.mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
-			b.pageTable[i * b.width + j] = u; \
-			psrcf[i_width + j] = (float)(u) / (float)(GPU_TEXWIDTH * b.mult); \
-		} \
-	} \
-	\
-	psrcv = (float4*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
-	\
-	for(i = 0; i < b.height; ++i) \
-	{ \
-		u32 i_width = i*BLOCK_TEXWIDTH; \
-		u32 i_width2 = ((i+1)%b.height)*BLOCK_TEXWIDTH; \
-		for(j = 0; j < b.width; ++j) \
-		{ \
-			u32 temp = ((j + 1) % b.width); \
-			float4* pv = &psrcv[i_width + j]; \
-			pv->x = psrcf[i_width + j]; \
-			pv->y = psrcf[i_width + temp]; \
-			pv->z = psrcf[i_width2 + j]; \
-			pv->w = psrcf[i_width2 + temp]; \
-		} \
-	} \
-} 
-
-#define FILL_BLOCK_NF(psm, psmcol) \
-{ \
-	b.pageTable = &g_pageTable##psm[0][0]; \
-	b.blockTable = &g_blockTable##psm[0][0]; \
-	b.columnTable = &g_columnTable##psmcol[0][0]; \
-	\
-	assert( sizeof(g_pageTable##psm) == b.width * b.height * sizeof(g_pageTable##psm[0][0]) ); \
-	\
-	psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
-	psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH; \
-	\
-	for(i = 0; i < b.height; ++i) \
-	{ \
-		u32 i_width = i*BLOCK_TEXWIDTH; \
-		for(j = 0; j < b.width; ++j) \
-		{ \
-			/* fill the table */ \
-			u32 u = g_blockTable##psm[(i / b.colheight)][(j / b.colwidth)] * 64 * b.mult + g_columnTable##psmcol[i%b.colheight][j%b.colwidth]; \
-			b.pageTable[i * b.width + j] = u; \
-			psrcw[i_width + j] = u; \
-		} \
-	} \
-} 
-
-void FillBlocksNF(vector<char>& vBlockData, vector<char>& vBilinearData)
+void fill_block(BLOCK b, vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
 {
-	FUNCLOG
-	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 2);
+	float* psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
+    u16* psrcw = NULL;
+    if (!floatfmt)
+        psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
 
-	int i, j;
-	BLOCK b;
-	float* psrcf = NULL;
-	u16* psrcw = NULL;
+	for(int i = 0; i < b.height; ++i)
+	{
+		u32 i_width = i*BLOCK_TEXWIDTH;
+		for(int j = 0; j < b.width; ++j)
+		{
+			/* fill the table */
+            u32 bt = b.blockTable[(i / b.colheight)*(b.width/b.colwidth) + (j / b.colwidth)];
+            u32 ct = b.columnTable[(i%b.colheight)*b.colwidth + (j%b.colwidth)];
+            u32 u = bt * 64 * b.mult + ct;
+			b.pageTable[i * b.width + j] = u;
+            if (floatfmt)
+                psrcf[i_width + j] = (float)(u) / (float)(GPU_TEXWIDTH * b.mult);
+            else
+                psrcw[i_width + j] = u;
 
-	memset(m_Blocks, 0, sizeof(m_Blocks));
+		}
+	}
 
-	// 32
-	b.SetDim(64, 32, 0, 0, 1);
-	FILL_BLOCK_NF(32, 32);
-	m_Blocks[PSMCT32] = b;
-	m_Blocks[PSMCT32].SetFun(PSMCT32);
+    if (floatfmt) {
+        float4* psrcv = (float4*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
 
-	// 24 (same as 32 except write/readPixel are different)
-	m_Blocks[PSMCT24] = b;
-	m_Blocks[PSMCT24].SetFun(PSMCT24);
-
-	// 8H (same as 32 except write/readPixel are different)
-	m_Blocks[PSMT8H] = b;
-	m_Blocks[PSMT8H].SetFun(PSMT8H);
-
-	m_Blocks[PSMT4HL] = b;
-	m_Blocks[PSMT4HL].SetFun(PSMT4HL);
-	
-	m_Blocks[PSMT4HH] = b;
-	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
-
-	// 32z
-	b.SetDim(64, 32, 64, 0, 1);
-	FILL_BLOCK_NF(32Z, 32);
-	m_Blocks[PSMT32Z] = b;
-	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
-
-	// 24Z (same as 32Z except write/readPixel are different)
-	m_Blocks[PSMT24Z] = b;
-	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
-
-	// 16
-	b.SetDim(64, 64, 0, 32, 2);
-	FILL_BLOCK_NF(16, 16);
-	m_Blocks[PSMCT16] = b;
-	m_Blocks[PSMCT16].SetFun(PSMCT16);
-
-	// 16s
-	b.SetDim(64, 64, 64, 32, 2);
-	FILL_BLOCK_NF(16S, 16);
-	m_Blocks[PSMCT16S] = b;
-	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
-
-	// 16z
-	b.SetDim(64, 64, 0, 96, 2);
-	FILL_BLOCK_NF(16Z, 16);
-	m_Blocks[PSMT16Z] = b;
-	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
-
-	// 16sz
-	b.SetDim(64, 64, 64, 96, 2);
-	FILL_BLOCK_NF(16SZ, 16);
-	m_Blocks[PSMT16SZ] = b;
-	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
-
-	// 8
-	b.SetDim(128, 64, 0, 160, 4);
-	FILL_BLOCK_NF(8, 8);
-	m_Blocks[PSMT8] = b;
-	m_Blocks[PSMT8].SetFun(PSMT8);
-
-	// 4
-	b.SetDim(128, 128, 0, 224, 8);
-	FILL_BLOCK_NF(4, 4);
-	m_Blocks[PSMT4] = b;
-	m_Blocks[PSMT4].SetFun(PSMT4);
-}
-
-
-void FillBlocksF(vector<char>& vBlockData, vector<char>& vBilinearData)
-{
-	FUNCLOG
-	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
-	vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(float4));
-
-	int i, j;
-	BLOCK b;
-	float* psrcf = NULL;
-	u16* psrcw = NULL;
-	float4* psrcv = NULL;
-
-	memset(m_Blocks, 0, sizeof(m_Blocks));
-
-	// 32
-	b.SetDim(64, 32, 0, 0, 1);
-	FILL_BLOCK(32, 32);
-	m_Blocks[PSMCT32] = b;
-	m_Blocks[PSMCT32].SetFun(PSMCT32);
-
-	// 24 (same as 32 except write/readPixel are different)
-	m_Blocks[PSMCT24] = b;
-	m_Blocks[PSMCT24].SetFun(PSMCT24);
-
-	// 8H (same as 32 except write/readPixel are different)
-	m_Blocks[PSMT8H] = b;
-	m_Blocks[PSMT8H].SetFun(PSMT8H);
-
-	m_Blocks[PSMT4HL] = b;
-	m_Blocks[PSMT4HL].SetFun(PSMT4HL);
-	
-	m_Blocks[PSMT4HH] = b;
-	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
-
-	// 32z
-	b.SetDim(64, 32, 64, 0, 1);
-	FILL_BLOCK(32Z, 32);
-	m_Blocks[PSMT32Z] = b;
-	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
-
-	// 24Z (same as 32Z except write/readPixel are different)
-	m_Blocks[PSMT24Z] = b;
-	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
-
-	// 16
-	b.SetDim(64, 64, 0, 32, 2);
-	FILL_BLOCK(16, 16);
-	m_Blocks[PSMCT16] = b;
-	m_Blocks[PSMCT16].SetFun(PSMCT16);
-
-	// 16s
-	b.SetDim(64, 64, 64, 32, 2);
-	FILL_BLOCK(16S, 16);
-	m_Blocks[PSMCT16S] = b;
-	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
-
-	// 16z
-	b.SetDim(64, 64, 0, 96, 2);
-	FILL_BLOCK(16Z, 16);
-	m_Blocks[PSMT16Z] = b;
-	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
-
-	// 16sz
-	b.SetDim(64, 64, 64, 96, 2);
-	FILL_BLOCK(16SZ, 16);
-	m_Blocks[PSMT16SZ] = b;
-	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
-
-	// 8
-	b.SetDim(128, 64, 0, 160, 4);
-	FILL_BLOCK(8, 8);
-	m_Blocks[PSMT8] = b;
-	m_Blocks[PSMT8].SetFun(PSMT8);
-
-	// 4
-	b.SetDim(128, 128, 0, 224, 8);
-	FILL_BLOCK(4, 4);
-	m_Blocks[PSMT4] = b;
-	m_Blocks[PSMT4].SetFun(PSMT4);
+        for(int i = 0; i < b.height; ++i)
+        {
+            u32 i_width = i*BLOCK_TEXWIDTH;
+            u32 i_width2 = ((i+1)%b.height)*BLOCK_TEXWIDTH;
+            for(int j = 0; j < b.width; ++j)
+            {
+                u32 temp = ((j + 1) % b.width);
+                float4* pv = &psrcv[i_width + j];
+                pv->x = psrcf[i_width + j];
+                pv->y = psrcf[i_width + temp];
+                pv->z = psrcf[i_width2 + j];
+                pv->w = psrcf[i_width2 + temp];
+            }
+        }
+    }
 }
 
 void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
 {
 	FUNCLOG
-	if (floatfmt) 
-		FillBlocksF(vBlockData, vBilinearData);
-	else
-		FillBlocksNF(vBlockData, vBilinearData);
+    if (floatfmt) {
+        vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
+        vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(float4));
+    } else {
+        vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 2);
+    }
+
+	BLOCK b;
+
+	memset(m_Blocks, 0, sizeof(m_Blocks));
+
+	// 32
+	b.SetDim(64, 32, 0, 0, 1);
+    b.SetTable(PSMCT32);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMCT32] = b;
+	m_Blocks[PSMCT32].SetFun(PSMCT32);
+
+	// 24 (same as 32 except write/readPixel are different)
+	m_Blocks[PSMCT24] = b;
+	m_Blocks[PSMCT24].SetFun(PSMCT24);
+
+	// 8H (same as 32 except write/readPixel are different)
+	m_Blocks[PSMT8H] = b;
+	m_Blocks[PSMT8H].SetFun(PSMT8H);
+
+	m_Blocks[PSMT4HL] = b;
+	m_Blocks[PSMT4HL].SetFun(PSMT4HL);
+
+	m_Blocks[PSMT4HH] = b;
+	m_Blocks[PSMT4HH].SetFun(PSMT4HH);
+
+	// 32z
+	b.SetDim(64, 32, 64, 0, 1);
+    b.SetTable(PSMT32Z);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMT32Z] = b;
+	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
+
+	// 24Z (same as 32Z except write/readPixel are different)
+	m_Blocks[PSMT24Z] = b;
+	m_Blocks[PSMT24Z].SetFun(PSMT24Z);
+
+	// 16
+	b.SetDim(64, 64, 0, 32, 2);
+    b.SetTable(PSMCT16);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMCT16] = b;
+	m_Blocks[PSMCT16].SetFun(PSMCT16);
+
+	// 16s
+	b.SetDim(64, 64, 64, 32, 2);
+    b.SetTable(PSMCT16S);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMCT16S] = b;
+	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
+
+	// 16z
+	b.SetDim(64, 64, 0, 96, 2);
+    b.SetTable(PSMT16Z);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMT16Z] = b;
+	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
+
+	// 16sz
+	b.SetDim(64, 64, 64, 96, 2);
+    b.SetTable(PSMT16SZ);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMT16SZ] = b;
+	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
+
+	// 8
+	b.SetDim(128, 64, 0, 160, 4);
+    b.SetTable(PSMT8);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMT8] = b;
+	m_Blocks[PSMT8].SetFun(PSMT8);
+
+	// 4
+	b.SetDim(128, 128, 0, 224, 8);
+    b.SetTable(PSMT4);
+    fill_block(b, vBlockData, vBilinearData, floatfmt);
+	m_Blocks[PSMT4] = b;
+	m_Blocks[PSMT4].SetFun(PSMT4);
 }

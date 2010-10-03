@@ -116,7 +116,7 @@ typedef struct GameHackStruct
 	u32 HackMask;
 } GameHack;
 
-#define HACK_NUMBER 30
+#define HACK_NUMBER 25
 
 GameHack HackinshTable[HACK_NUMBER] =
 {
@@ -127,30 +127,31 @@ GameHack HackinshTable[HACK_NUMBER] =
 	{"*** 4 TexA hack", GAME_TEXAHACK},
 	{"*** 5 No Target Resolve", GAME_NOTARGETRESOLVE},
 	{"*** 6 Exact color", GAME_EXACTCOLOR},
-	{"*** 7 No color clamp", GAME_NOCOLORCLAMP},
-	{"*** 8 FFX hack", GAME_FFXHACK},
-	{"*** 9 No Alpha Fail", GAME_NOALPHAFAIL},
-	{"***10 No Depth Update", GAME_NODEPTHUPDATE},
-	{"***11 Quick Resolve 1", GAME_QUICKRESOLVE1},
-	{"***12 No quick resolve", GAME_NOQUICKRESOLVE},
-	{"***13 Notaget clut", GAME_NOTARGETCLUT},
-	{"***14 No Stencil", GAME_NOSTENCIL},
-	{"***15 No Depth resolve", GAME_NODEPTHRESOLVE},
-	{"***16 Full 16 bit", GAME_FULL16BITRES},
-	{"***17 Resolve promoted", GAME_RESOLVEPROMOTED},
-	{"***18 Fast Update", GAME_FASTUPDATE},
-	{"***19 No Alpha Test", GAME_NOALPHATEST},
-	{"***20 Disable MRT deprh", GAME_DISABLEMRTDEPTH},
-	{"***21 32 bit targes", GAME_32BITTARGS},
-	{"***22 path 3 hack", GAME_PATH3HACK},
-	{"***23 parallelise calls", GAME_DOPARALLELCTX},
-	{"***24 specular highligths", GAME_XENOSPECHACK},
-	{"***25 partial pointers", GAME_PARTIALPOINTERS},
-	{"***26 partial depth", GAME_PARTIALDEPTH},
-	{"***27 reget hack", GAME_REGETHACK},
+	//{"***xx No color clamp", GAME_NOCOLORCLAMP},
+	//{"***xx FFX hack", GAME_FFXHACK},
+	{"*** 7 No Alpha Fail", GAME_NOALPHAFAIL},
+	{"*** 8 No Depth Update", GAME_NODEPTHUPDATE},
+	{"*** 9 Quick Resolve 1", GAME_QUICKRESOLVE1},
+	{"***10 No quick resolve", GAME_NOQUICKRESOLVE},
+	{"***11 Notaget clut", GAME_NOTARGETCLUT},
+	{"***12 No Stencil", GAME_NOSTENCIL},
+	{"***13 No Depth resolve", GAME_NODEPTHRESOLVE},
+	{"***14 Full 16 bit", GAME_FULL16BITRES},
+	{"***15 Resolve promoted", GAME_RESOLVEPROMOTED},
+	{"***16 Fast Update", GAME_FASTUPDATE},
+	{"***17 No Alpha Test", GAME_NOALPHATEST},
+	{"***18 Disable MRT depth", GAME_DISABLEMRTDEPTH},
+	//{"***xx 32 bit targs", GAME_32BITTARGS},
+	//{"***xx Path 3 hack", GAME_PATH3HACK},
+	//{"***xx Parallel calls", GAME_DOPARALLELCTX},
+	{"***19 Specular highlights", GAME_XENOSPECHACK},
+	//{"***xx Partial pointers", GAME_PARTIALPOINTERS},
+	{"***20 Partial depth", GAME_PARTIALDEPTH},
+	{"***21 Reget hack", GAME_REGETHACK},
 
-	{"***28 gust hack", GAME_GUSTHACK},
-	{"***29 log-Z", GAME_NOLOGZ}
+	{"***22 Gust hack", GAME_GUSTHACK},
+	{"***23 Log-Z", GAME_NOLOGZ},
+	{"***24 Auto skipdraw", GAME_AUTOSKIPDRAW}
 };
 
 int CurrentHackSetting = 0;
@@ -172,7 +173,7 @@ void ProcessHackSetting(bool reverse)
 	{
 		CurrentHackSetting++;
 
-		if (CurrentHackSetting == HACK_NUMBER) CurrentHackSetting = 0;
+		if (CurrentHackSetting >= HACK_NUMBER) CurrentHackSetting = 0;
 	}
 
 	conf.hacks._u32 |= HackinshTable[CurrentHackSetting].HackMask;

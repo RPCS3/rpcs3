@@ -54,6 +54,7 @@ void ZeroGS::AdjustTransToAspect(float4& v)
 {
 	double temp;
 	float f;
+	const float mult = 1 / 32767.0f;
 
 	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth) // limited by width
 	{
@@ -74,7 +75,7 @@ void ZeroGS::AdjustTransToAspect(float4& v)
 		v.z *= f;
 	}
 
-	v *= 1 / 32767.0f;
+	v  *= mult;
 }
 
 inline bool FrameSkippingHelper()

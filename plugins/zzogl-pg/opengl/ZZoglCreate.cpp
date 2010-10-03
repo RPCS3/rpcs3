@@ -75,8 +75,6 @@ map<string, GLbyte> mapGLExtensions;
 
 namespace ZeroGS
 {
-RenderFormatType g_RenderFormatType = RFT_float16;
-
 extern void KickPoint();
 extern void KickLine();
 extern void KickTriangle();
@@ -84,8 +82,8 @@ extern void KickTriangleFan();
 extern void KickSprite();
 extern void KickDummy();
 extern bool LoadEffects();
-extern bool LoadExtraEffects();
-extern FRAGMENTSHADER* LoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
+extern bool ZZshLoadExtraEffects();
+extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
 GLuint vboRect = 0;
 vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
@@ -269,19 +267,6 @@ inline void ZeroGS::CreateOtherCheck()
 
 	if (Max_Texture_Size_NV < 1024)
 		ZZLog::Error_Log("Could not properly make bitmasks, so some textures will be missed.");
-
-	/* Zeydlitz: we don't support 128-bit targets yet. they are slow and weirdo
-	if( conf.settings() & GAME_32BITTARGS ) {
-		g_RenderFormatType = RFT_byte8;
-		ZZLog::Error_Log("Setting 32 bit render target.");
-	}
-	else {
-		if( !IsGLExt("GL_NV_float_buffer") && !IsGLExt("GL_ARB_color_buffer_float") && !IsGLExt("ATI_pixel_format_float") ) {
-			ZZLog::Error_Log("******\nZZogl: GS WARNING: Floating point render targets not supported, switching to 32bit\nZZogl: *********");
-			g_RenderFormatType = RFT_byte8;
-		}
-	}*/
-	g_RenderFormatType = RFT_byte8;
 
 #ifdef _WIN32
 	if (IsGLExt("WGL_EXT_swap_control") || IsGLExt("EXT_swap_control"))
@@ -469,8 +454,6 @@ bool ZeroGS::Create(int _width, int _height)
 	Destroy(1);
 	GSStateReset();
 
-	g_RenderFormatType = RFT_float16;
-
 	if (!Create_Window(_width, _height)) return false;
 	if (!CreateFillExtensionsMap()) return false;
 	if (!CreateImportantCheck()) return false;
@@ -574,7 +557,7 @@ bool ZeroGS::Create(int _width, int _height)
 	PBITMAPINFO pinfo = (PBITMAPINFO)LockResource(hBitmapGlob);
 
 	GLenum tempFmt = (pinfo->bmiHeader.biBitCount == 32) ? GL_RGBA : GL_RGB;
-	TextureRect(4, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, tempFmt, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
+	TextureRect(GL_RGBA, pinfo->bmiHeader.biWidth, pinfo->bmiHeader.biHeight, tempFmt, GL_UNSIGNED_BYTE, (u8*)pinfo + pinfo->bmiHeader.biSize);
 
 	nLogoWidth = pinfo->bmiHeader.biWidth;
 	nLogoHeight = pinfo->bmiHeader.biHeight;

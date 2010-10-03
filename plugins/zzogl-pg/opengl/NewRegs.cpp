@@ -638,7 +638,7 @@ void __gifCall GIFRegHandlerSCISSOR(const u32* data)
 		Flush();
 	}
 
-	m_env.CTXT[i].SCISSOR = (Vector4i)r->SCISSOR;
+	m_env.CTXT[i].SCISSOR = (GSVector4i)r->SCISSOR;
 
 	m_env.CTXT[i].UpdateScissor();*/
 	ZZLog::Greg_Log("SCISSOR%d", i);

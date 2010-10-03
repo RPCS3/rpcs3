@@ -38,6 +38,7 @@ using namespace std;
 #include "targets.h"
 #include "ZZoglShaders.h"
 #include "ZZoglFlushHack.h"
+#include "ZZoglFlushHack.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -68,7 +69,7 @@ extern const char* pbilinear[];
 // statistics
 u32 g_nGenVars = 0, g_nTexVars = 0, g_nAlphaVars = 0, g_nResolve = 0;
 
-#define VER 2
+#define VER 3
 const unsigned char zgsversion	= PS2E_GS_VERSION;
 unsigned char zgsrevision = 0; // revision and build gives plugin version
 unsigned char zgsbuild	= VER;
@@ -143,6 +144,7 @@ void ReportHacks(gameHacks hacks)
 	if (hacks.quick_resolve_1) ZZLog::WriteLn("'Quick resolve 1' enabled.");
 	if (hacks.no_quick_resolve) ZZLog::WriteLn("'No Quick resolve' hack enabled.");
 	if (hacks.no_target_clut) ZZLog::WriteLn("'No target clut' hack enabled.");
+	if (hacks.no_stencil) ZZLog::WriteLn("'No stencil' hack enabled.");
 	if (hacks.vss_hack_off) ZZLog::WriteLn("VSS hack enabled.");
 	if (hacks.no_depth_resolve) ZZLog::WriteLn("'No depth resolve' hack enabled.");
 	if (hacks.full_16_bit_res) ZZLog::WriteLn("'Full 16 bit resolution' hack enabled.");
@@ -151,7 +153,7 @@ void ReportHacks(gameHacks hacks)
 	if (hacks.no_alpha_test) ZZLog::WriteLn("'No alpha test' hack enabled.");
 	if (hacks.disable_mrt_depth) ZZLog::WriteLn("'Disable mrt depth' hack enabled.");
 	if (hacks.args_32_bit) ZZLog::WriteLn("'Args 32 bit' hack enabled.");
-	if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
+	//if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
 	if (hacks.parallel_context) ZZLog::WriteLn("'Parallel context' hack enabled.");
 	if (hacks.xenosaga_spec) ZZLog::WriteLn("'Xenosaga spec' hack enabled.");
 	if (hacks.partial_pointers) ZZLog::WriteLn("'Partial pointers' hack enabled.");
@@ -382,6 +384,7 @@ void CALLBACK GSclose()
 
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
+    g_LastCRC = 0;
 }
 
 void CALLBACK GSirqCallback(void (*callback)())

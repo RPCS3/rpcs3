@@ -152,6 +152,7 @@
 		<Unit filename="../../ZZoglFlush.cpp" />
 		<Unit filename="../../ZZoglFlushHack.cpp" />
 		<Unit filename="../../ZZoglFlushHack.h" />
+		<Unit filename="../../ZZoglMath.h" />
 		<Unit filename="../../ZZoglSave.cpp" />
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShaders.h" />
@@ -171,7 +172,6 @@
 		<Unit filename="../../x86.h" />
 		<Unit filename="../../zerogs.cpp" />
 		<Unit filename="../../zerogs.h" />
-		<Unit filename="../../zerogsmath.h" />
 		<Unit filename="../../zpipe.cpp" />
 		<Unit filename="../../zpipe.h" />
 		<Extensions>

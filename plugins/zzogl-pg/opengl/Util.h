@@ -56,6 +56,7 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include <vector>
 #include <string>
+#include <cstring>
 
 extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
@@ -87,6 +88,9 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 #define _aligned_malloc pcsx2_aligned_malloc
 #define _aligned_free pcsx2_aligned_free
 
+#endif
+
+#ifdef __LINUX__
 #include <sys/timeb.h>	// ftime(), struct timeb
 
 inline unsigned long timeGetTime()
@@ -95,6 +99,15 @@ inline unsigned long timeGetTime()
 	ftime(&t);
 
 	return (unsigned long)(t.time*1000 + t.millitm);
+}
+
+#include <time.h>
+inline unsigned long timeGetPreciseTime()
+{
+    timespec t;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
+
+    return t.tv_nsec;
 }
 
 struct RECT
@@ -138,6 +151,7 @@ enum GSWindowDim
 	GSDim_1024,
 	GSDim_1280,
 };
+
 typedef union 
 {
 	struct
@@ -217,7 +231,7 @@ typedef struct
 	gameHacks settings() 
 	{
 		gameHacks tempHack;
-		tempHack._u32 = (hacks._u32 | def_hacks._u32 | GAME_PATH3HACK);
+		tempHack._u32 = (hacks._u32 | def_hacks._u32);
 		 return tempHack; 
 	}
 	bool fullscreen() { return !!(zz_options.fullscreen); }

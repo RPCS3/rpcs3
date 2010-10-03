@@ -29,6 +29,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <math.h>
 
 #include "ZZGl.h"
 #include "GS.h"
@@ -99,12 +100,6 @@ namespace ZeroGS
 {
 
 typedef void (*DrawFn)();
-
-enum RenderFormatType
-{
-	RFT_byte8 = 0,	  // A8R8G8B8
-	RFT_float16 = 1,	// A32R32B32G32
-};
 
 // managers render-to-texture targets
 
@@ -237,6 +232,8 @@ class CMemoryTarget
 			clearminy = r.clearminy;
 			clearmaxy = r.clearmaxy;
 			widthmult = r.widthmult;
+			texH = r.texH;
+			texW = r.texW;
 			channels = r.channels;
 			validatecount = r.validatecount;
 			fmt = r.fmt;
@@ -267,14 +264,20 @@ class CMemoryTarget
 
 		int starty, height; // assert(starty >= realy)
 		int realy, realheight; // this is never touched once allocated
+		// realy is start pointer of data in 4M data block (start) and size (end-start).
+		
 		u32 usedstamp;
 		u8 psm, cpsm; // texture and clut format. For psm, only 16bit/32bit differentiation matters
 
 		u32 fmt;
 
-		int widthmult;
-		int channels;
-		int clearminy, clearmaxy; // when maxy > 0, need to check for clearing
+		int widthmult;	// Either 1 or 2.
+		int channels;	// The number of pixels per PSM format word. channels == PIXELS_PER_WORD(psm)
+						// This is the real drawing size in pixels of the texture in renderbuffer.
+		int texW;		// (realheight + widthmult - 1)/widthmult == realheight or [(realheight+1)/2]
+		int texH;		//  GPU_TEXWIDTH *widthmult * channels;			
+
+		int clearminy, clearmaxy;	// when maxy > 0, need to check for clearing
 
 		int validatecount; // count how many times has been validated, if too many, destroy
 
@@ -415,7 +418,6 @@ extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
-extern RenderFormatType g_RenderFormatType;
 
 void AddMessage(const char* pstr, u32 ms = 5000);
 void DrawText(const char* pstr, int left, int top, u32 color);
@@ -479,8 +481,6 @@ bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will cha
 
 // call to load CLUT data (depending on CLD)
 void texClutWrite(int ctx);
-RenderFormatType GetRenderFormat();
-GLenum GetRenderTargetFormat();
 
 int Save(s8* pbydata);
 bool Load(s8* pbydata);
@@ -523,7 +523,25 @@ inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
 	tex0->cld  = ZZOglGet_cld_TexBits(Data);
 
 	ZeroGS::texClutWrite(ictx);
+ };
+ 
+// The size in bytes of x strings (of texture).
+inline int MemorySize(int x) 
+{
+	return 4 * GPU_TEXWIDTH * x;
 }
-};
 
+// Return the address in memory of data block for string x. 
+inline u8* MemoryAddress(int x) 
+{
+	return g_pbyGSMemory + MemorySize(x);
+}
+
+template <u32 mult>
+inline u8* _MemoryAddress(int x) 
+{
+	return g_pbyGSMemory + mult * x;
+}
+
+};
 #endif

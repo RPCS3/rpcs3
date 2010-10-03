@@ -87,9 +87,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 			path->setTag(pMem);
 			pMem += 4;
 			size--;
-
-			if ((conf.settings().path3) && (index == 2) && path->eop) nPath3Hack = 1;
-
+			
 			// eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and
 			// values other than the EOP field are disregarded."
 			if (path->nloop > 0)

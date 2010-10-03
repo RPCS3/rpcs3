@@ -78,7 +78,12 @@
 	
 	static vector<u8> s_vTempBuffer, s_vTransferCache;
 	static int gs_imageEnd = 0;
-	
+
+//	From the start of monster labs. In all 3 cases, psm == 0.
+//	ZZogl-PG:  GetRectMemAddress(0x3f4000, 0x404000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f40, 0x100);
+//	ZZogl-PG:  GetRectMemAddress(0x3f8000, 0x408000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3f80, 0x100);
+//	ZZogl-PG:  GetRectMemAddress(0x3fc000, 0x40c000, 0x0, 0x0, 0x0, 0x100, 0x40, 0x3fc0, 0x100);
+
 	void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw)
 	{
 		FUNCLOG
@@ -108,7 +113,7 @@
 		bits = PSMT_BITS_NUM(psm);
 		start = getPixelFun[psm](x, y, bp, bw);
 		end = getPixelFun[psm](x + w - 1, y + h - 1, bp, bw) + 1;
-		
+
 		if (bits > 0)
 		{
 			start *= bits;
@@ -158,7 +163,7 @@
 
 		if (end > MEMORY_END)
 		{
-			ZZLog::Warn_Log("Host local out of bounds!");
+			ZZLog::Warn_Log("Init host local out of bounds! (end == 0x%x)", end);
 			//gs.imageTransfer = -1;
 			end = MEMORY_END;
 		}
@@ -178,9 +183,8 @@
 		int start, end;
 
 		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.imageX, gs.imageY, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
-
+		
 		assert(start < gs_imageEnd);
-
 		end = gs_imageEnd;
 
 		// sometimes games can decompress to alpha channel of render target only, in this case
@@ -434,20 +438,20 @@ __forceinline void _TransferLocalLocal_4()
 			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+4)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+4)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
 	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+5)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+5)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 	
-			read = gsp((j+2)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+2)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+6)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+6)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0xf0)|(pSrcBuf[read]&0x0f);
 	
-			read = gsp((j+3)%2048, i%2048, gs.srcbuf.bw);
-			write = gdp((j2+3)%2048, i2%2048, gs.dstbuf.bw);
+			read = gsp((j+7)%2048, i%2048, gs.srcbuf.bw);
+			write = gdp((j2+7)%2048, i2%2048, gs.dstbuf.bw);
 			pDstBuf[write] = (pDstBuf[write]&0x0f)|(pSrcBuf[read]&0xf0);
 		}
 	}

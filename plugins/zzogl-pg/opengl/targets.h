@@ -50,7 +50,9 @@ class CRenderTargetMngr
 
 		void Destroy();
 		static MAPTARGETS::iterator GetOldestTarg(MAPTARGETS& m);
-
+		
+		bool isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight);
+		
 		CRenderTarget* GetTarg(const frameInfo& frame, u32 Options, int maxposheight);
 		inline CRenderTarget* GetTarg(int fbp, int fbw, VB& curvb)
 		{
@@ -119,13 +121,13 @@ class CRenderTargetMngr
 
 class CMemoryTargetMngr
 {
-
 	public:
 		CMemoryTargetMngr() : curstamp(0) {}
 
 		CMemoryTarget* GetMemoryTarget(const tex0Info& tex0, int forcevalidate); // pcbp is pointer to start of clut
-		CMemoryTarget* MemoryTarget_SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate);
-		CMemoryTarget* MemoryTarget_ClearedTargetsSearch(int fmt, int widthmult, int channels, int height);
+		CMemoryTarget* SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate);
+		CMemoryTarget* ClearedTargetsSearch(int fmt, int widthmult, int channels, int height);
+		int CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset);
 
 		void Destroy(); // destroy all targs
 
@@ -138,6 +140,8 @@ class CMemoryTargetMngr
 
 	private:
 		list<CMemoryTarget>::iterator DestroyTargetIter(list<CMemoryTarget>::iterator& it);
+		void GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0);
+		void GetMemAddress(int& start, int& end,  const tex0Info& tex0);
 };
 
 class CBitwiseTextureMngr

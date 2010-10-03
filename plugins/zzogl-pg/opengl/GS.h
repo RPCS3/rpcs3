@@ -205,6 +205,8 @@ inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
 	return (SUM == 0x15 || SUM == 0x1D || SUM == 0x2C || SUM == 0x30);
 }
 
+// If a clut is in 32-bit color, its size is 4 bytes, and 16-bit clut has a 2 byte size.
+inline int CLUT_PIXEL_SIZE(int cpsm) {return ((cpsm <= 1) ? 4 : 2); }
 
 //----------------------- Data from registers -----------------------
 
@@ -542,7 +544,9 @@ typedef struct
 
 extern GSinternal gs;
 
-static __forceinline u16 RGBA32to16(u32 c)
+// Note the function is used in a template parameter so it must be declared extern
+// Note2: In this case extern is not compatible with __forceinline so just inline it...
+extern inline u16 RGBA32to16(u32 c)
 {
 	return (u16)((((c) & 0x000000f8) >>  3) |
 				 (((c) & 0x0000f800) >>  6) |
@@ -558,6 +562,7 @@ static __forceinline u32 RGBA16to32(u16 c)
 		   (((c) & 0x8000) ? 0xff000000 : 0);
 }
 
+#if 0
 // converts float16 [0,1] to BYTE [0,255] (assumes value is in range, otherwise will take lower 8bits)
 // f is a u16
 static __forceinline u16 Float16ToBYTE(u16 f)
@@ -603,6 +608,7 @@ static __forceinline u16 Float16ToALPHA(u16 f)
 // used for Z values
 #define Float16ToARGB_Z(f) COLOR_ARGB((u32)Float16ToBYTE_2(f.w), Float16ToBYTE_2(f.x), Float16ToBYTE_2(f.y), Float16ToBYTE_2(f.z))
 #define Float16ToARGB16_Z(f) ((Float16ToBYTE_2(f.y)<<8)|Float16ToBYTE_2(f.z))
+#endif
 
 
 inline float Clamp(float fx, float fmin, float fmax)

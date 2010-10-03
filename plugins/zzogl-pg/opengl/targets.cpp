@@ -26,6 +26,9 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 #define RHA
 //#define RW
@@ -61,7 +64,7 @@ u32 TEXDESTROY_THRESH = 16;
 
 // memory size for one row of texture. It depends on width of texture and number of bytes
 // per pixel
-inline u32 Pitch(int fbw) { return (RW(fbw) * (GetRenderFormat() == RFT_float16 ? 8 : 4)) ; }
+inline u32 Pitch(int fbw) { return (RW(fbw) * 4) ; }
 
 // memory size of whole texture. It is number of rows multiplied by memory size of row
 inline u32 Tex_Memory_Size(int fbw, int fbh) { return (RH(fbh) * Pitch(fbw)); }
@@ -92,11 +95,10 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 {
 	glGenTextures(1, ptr_p);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
-	
+
 	// initialize to default
-	GLenum texType = (GetRenderFormat() == RFT_float16) ? GL_FLOAT : GL_UNSIGNED_BYTE;
-	TextureRect(GetRenderTargetFormat(), fbw, fbh, GL_RGBA, texType, NULL);
-		
+	TextureRect(GL_RGBA, fbw, fbh, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
 	setRectWrap(GL_CLAMP);
 	setRectFilters(GL_LINEAR);
 
@@ -115,7 +117,7 @@ inline void FillOnlyStencilBuffer()
 
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilFunc(GL_ALWAYS, 1, 0xff);
-		
+
 		DrawTriangleArray();
 		glColorMask(1, 1, 1, 1);
 	}
@@ -458,7 +460,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	else
 	{
 		u32 bit_idx = (AA.x == 0) ? 0 : 1;
-		
+
 		// align the rect to the nearest page
 		// note that fbp is always aligned on page boundaries
 		tex0Info texframe;
@@ -502,7 +504,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	ZZshSetVertexShader(pvsBitBlt.prog);
 
 	DrawTriangleArray();
-	
+
 	// fill stencil buf only
 	FillOnlyStencilBuffer();
 	glEnable(GL_SCISSOR_TEST);
@@ -580,7 +582,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsConvert16to32.prog);
 	DrawTriangleArray();
-	
+
 #ifdef _DEBUG
 	if (g_bSaveZUpdate)
 	{
@@ -684,7 +686,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsConvert32to16.prog);
 	DrawTriangleArray();
-	
+
 #ifdef _DEBUG
 	//g_bSaveZUpdate = 1;
 	if (g_bSaveZUpdate)
@@ -784,7 +786,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	ZZshSetVertexShader(pvsBitBlt.prog);
 	ZZshSetPixelShader(ppsBaseTexture.prog);
 	DrawTriangleArray();
-	
+
 	// restore
 	swap(ptex, ptexFeedback);
 
@@ -807,7 +809,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
 {
 	FUNCLOG
-	
+
 	FBTexture(targ, ptex);
 
 	//GL_REPORT_ERRORD();
@@ -854,7 +856,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 				return false;
 			}
 		}
-		else 
+		else
 		{
 			pstencil = 0;
 		}
@@ -978,7 +980,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	// write color and zero out stencil buf, always 0 context!
 	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
 	ZZshGLSetTextureParameter(ppsBitBltDepth.prog, ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
-	
+
 	float4 v = DefaultBitBltPos();
 
 	v = DefaultBitBltTex();
@@ -1002,7 +1004,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	assert(ppsBitBltDepth.sBitBltZ != 0);
 
-	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sBitBltZ, ((255.0f / 256.0f)*vdepth), "g_fBitBltZ");
+	ZZshSetParameter4fv(ppsBitBltDepth.prog, ppsBitBltDepth.sBitBltZ, (vdepth*(255.0f / 256.0f)), "g_fBitBltZ");
 
 	assert(pdepth != 0);
 	//GLint w1 = 0;
@@ -1012,11 +1014,11 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_WIDTH_EXT, &w1);
 	//glGetRenderbufferParameterivEXT(GL_RENDERBUFFER_EXT, GL_RENDERBUFFER_HEIGHT_EXT, &h1);
 	SetDepthStencilSurface();
-	
+
 	FBTexture(1);
-	
+
 	GLenum buffer = GL_COLOR_ATTACHMENT0_EXT;
-	
+
 	//ZZLog::Error_Log("CDepthTarget::Update: w1 = 0x%x; h1 = 0x%x", w1, h1);
 	DrawBuffers(&buffer);
 
@@ -1065,7 +1067,7 @@ void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 		if (icount++ < 8)    // not going to fail if succeeded 4 times
 		{
 			GL_REPORT_ERRORD();
-			
+
 			if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
 				TextureRect(GL_STENCIL_ATTACHMENT_EXT);
@@ -1157,7 +1159,7 @@ void ZeroGS::CRenderTargetMngr::DestroyAllTargs(int start, int end, int fbw)
 
 			mapTargets.erase(it++);
 		}
-		else 
+		else
 		{
 			++it;
 		}
@@ -1198,7 +1200,7 @@ void ZeroGS::CRenderTargetMngr::DestroyIntersecting(CRenderTarget* prndr)
 
 			mapTargets.erase(it++);
 		}
-		else 
+		else
 		{
 			++it;
 		}
@@ -1230,21 +1232,11 @@ void ZeroGS::CRenderTargetMngr::PrintTargets()
 #endif
 }
 
-CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
+bool ZeroGS::CRenderTargetMngr::isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight)
 {
-	FUNCLOG
-
-	if (frame.fbw <= 0 || frame.fbh <= 0) return NULL;
-
-	GL_REPORT_ERRORD();
-
-	u32 key = GetFrameKey(frame);
-
-	MAPTARGETS::iterator it = mapTargets.find(key);
-
 	// only enforce height if frame.fbh <= 0x1c0
 	bool bfound = it != mapTargets.end();
-
+	
 	if (bfound)
 	{
 		if (opts&TO_StrictHeight)
@@ -1291,7 +1283,26 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 		}
 	}
 
-	if (bfound)
+	return bfound;
+}
+
+CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
+{
+	FUNCLOG
+
+	if (frame.fbw <= 0 || frame.fbh <= 0) 
+	{
+		//ZZLog::Dev_Log("frame fbw == %d; fbh == %d", frame.fbw, frame.fbh);
+		return NULL;
+	}
+
+	GL_REPORT_ERRORD();
+
+	u32 key = GetFrameKey(frame);
+
+	MAPTARGETS::iterator it = mapTargets.find(key);
+	
+	if (isFound(frame, it, opts, key, maxposheight))
 	{
 		// can be both 16bit and 32bit
 		if (PSMT_ISHALF(frame.psm) != PSMT_ISHALF(it->second->psm))
@@ -1326,9 +1337,8 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 			// certain variables have to be reset every time
 			if ((it->second->psm & ~1) != (frame.psm & ~1))
 			{
-#if defined(ZEROGS_DEVBUILD)
-				ZZLog::Warn_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
-#endif
+				ZZLog::Dev_Log("Bad formats 2: %d %d", frame.psm, it->second->psm);
+				
 				it->second->psm = frame.psm;
 
 				// recalc extents
@@ -1338,7 +1348,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		if (it->second->fbm != frame.fbm)
 		{
-			//ZZLog::Warn_Log("Bad fbm: 0x%8.8x 0x%8.8x, psm: %d", frame.fbm, it->second->fbm, frame.psm);
+			//ZZLog::Dev_Log("Bad fbm: 0x%8.8x 0x%8.8x, psm: %d", frame.fbm, it->second->fbm, frame.psm);
 		}
 
 		it->second->fbm &= frame.fbm;
@@ -1458,7 +1468,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		// if more than 5s passed since target used, destroy
 
-		if ((it->second != vb[0].prndr) && (it->second != vb[1].prndr) && 
+		if ((it->second != vb[0].prndr) && (it->second != vb[1].prndr) &&
 			(it->second != vb[0].pdepth) && (it->second != vb[1].pdepth) &&
 				((timeGetTime() - it->second->lastused) > 5000))
 		{
@@ -1731,14 +1741,14 @@ bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int 
 	// lock and compare
 	assert(ptex != NULL && ptex->memptr != NULL);
 
-	int result = memcmp_mmx(ptex->memptr + (checkstarty - realy) * 4 * GPU_TEXWIDTH, g_pbyGSMemory + checkstarty * 4 * GPU_TEXWIDTH, (checkendy - checkstarty) * 4 * GPU_TEXWIDTH);
+	int result = memcmp_mmx(ptex->memptr + MemorySize(checkstarty-realy), MemoryAddress(checkstarty), MemorySize(checkendy-checkstarty));
 	
 	if (result == 0)
 	{
 		clearmaxy = 0;
 		return true;
 	}
-	
+
 	if (!bDeleteBadTex) return false;
 
 	// delete clearminy, clearmaxy range (not the checkstarty, checkendy range)
@@ -1898,7 +1908,7 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	return it;
 }
 
-int MemoryTarget_CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
+int ZeroGS::CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
 {
 	if (PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm))
 	{
@@ -1939,7 +1949,7 @@ int MemoryTarget_CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info
 	return 0;
 }
 
-void MemoryTarget_GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
+void ZeroGS::CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
 {
 	nClutOffset = 0;
 	clutsize = 0;
@@ -1961,7 +1971,7 @@ void MemoryTarget_GetClutVariables(int& nClutOffset, int& clutsize, const tex0In
 	}
 }
 
-void MemoryTarget_GetMemAddress(int& start, int& end,  const tex0Info& tex0)
+void ZeroGS::CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 {
 	int nbStart, nbEnd;
 	GetRectMemAddress(nbStart, nbEnd, tex0.psm, 0, 0, tex0.tw, tex0.th, tex0.tbp0, tex0.tbw);
@@ -1974,7 +1984,7 @@ void MemoryTarget_GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
+ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
 {
 	for (list<CMemoryTarget>::iterator it = listTargets.begin(); it != listTargets.end();)
 	{
@@ -1982,7 +1992,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget
 		if (it->starty <= start && it->starty + it->height >= end)
 		{
 
-			int res = MemoryTarget_CompareTarget(it, tex0, clutsize, nClutOffset);
+			int res = CompareTarget(it, tex0, clutsize, nClutOffset);
 
 			if (res == 1)
 			{
@@ -2045,7 +2055,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_SearchExistTarget
 	return NULL;
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
+ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
 
@@ -2055,7 +2065,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::MemoryTarget_ClearedTargetsSea
 
 		while (itbest != listClearedTargets.end())
 		{
-			if ((height <= itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
+			if ((height == itbest->realheight) && (itbest->fmt == fmt) && (itbest->widthmult == widthmult) && (itbest->channels == channels))
 			{
 				// check channels
 				if (PIXELS_PER_WORD(itbest->psm) == channels) break;
@@ -2091,10 +2101,10 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	FUNCLOG
 	int start, end, nClutOffset, clutsize;
 
-	MemoryTarget_GetClutVariables(nClutOffset, clutsize, tex0);
-	MemoryTarget_GetMemAddress(start, end, tex0);
+	GetClutVariables(nClutOffset, clutsize, tex0);
+	GetMemAddress(start, end, tex0);
 
-	ZeroGS::CMemoryTarget* it = MemoryTarget_SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
+	ZeroGS::CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
 
 	if (it != NULL) return it;
 
@@ -2108,11 +2118,17 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 	int widthmult = 1, channels = 1;
 
-	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare.
-	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) widthmult = 2;
+	// If our texture is too big and could not be placed in 1 GPU texture. Pretty rare in modern cards.
+	if ((g_MaxTexHeight < 4096) && (end - start > g_MaxTexHeight)) 
+	{
+		// In this rare case we made a texture of half height and place it on the screen.
+		ZZLog::Debug_Log("Making a half height texture (start - end == 0x%x)", (end-start));
+		widthmult = 2;
+	}
+	
 	channels = PIXELS_PER_WORD(tex0.psm);
 
-	targ = MemoryTarget_ClearedTargetsSearch(fmt, widthmult, channels, end - start);
+	targ = ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 
 	// fill local clut
 	if (PSMT_ISCLUT(tex0.psm))
@@ -2181,6 +2197,8 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		targ->cpsm = tex0.cpsm;
 		targ->widthmult = widthmult;
 		targ->channels = channels;
+		targ->texH = (targ->realheight + widthmult - 1)/widthmult;
+		targ->texW = GPU_TEXWIDTH *  widthmult * channels;
 
 		// alloc the mem
 		targ->ptex = new CMemoryTarget::TEXTURE();
@@ -2188,30 +2206,27 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	}
 
 #if defined(ZEROGS_DEVBUILD)
-	g_TransferredToGPU += GPU_TEXWIDTH * channels * 4 * targ->height;
+	g_TransferredToGPU += MemorySize(channels * targ->height);
 #endif
 
-	const int texH = (targ->realheight + widthmult - 1) / widthmult;
-	const int texW = GPU_TEXWIDTH * channels * widthmult;
-	
 	// fill with data
 	if (targ->ptex->memptr == NULL)
 	{
-		targ->ptex->memptr = (u8*)_aligned_malloc(4 * GPU_TEXWIDTH * targ->realheight, 16);
+		targ->ptex->memptr = (u8*)_aligned_malloc(MemorySize(targ->realheight), 16);
 		assert(targ->ptex->ref > 0);
 	}
 
-	memcpy_amd(targ->ptex->memptr, g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy, 4 * GPU_TEXWIDTH * targ->height);
+	memcpy_amd(targ->ptex->memptr, MemoryAddress(targ->realy), MemorySize(targ->height));
 
-	vector<u8> texdata;
-	u8* ptexdata = NULL;
+	__aligned16 u8* ptexdata = NULL;
+	bool has_data = false;
 
 	if (PSMT_ISCLUT(tex0.psm))
 	{
-		texdata.resize(((tex0.cpsm <= 1) ? 4 : 2) * texW * texH);
-		ptexdata = &texdata[0];
+		ptexdata = (u8*)_aligned_malloc(CLUT_PIXEL_SIZE(tex0.cpsm) * targ->texH * targ->texW, 16);
+		has_data = true;
 
-		u8* psrc = (u8*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
+		u8* psrc = (u8*)(MemoryAddress(targ->realy));
 
 		if (PSMT_IS32BIT(tex0.cpsm))
 		{
@@ -2232,41 +2247,68 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	{
 		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
 		{
-			texdata.resize(4 * texW * texH
-#if defined(ZEROGS_SSE2)
-			+ 15 						// reserve additional elements for alignment if SSE2 used.
-										// better do it now, so less resizing would be needed
-#endif
-							);
-
-			ptexdata = &texdata[0];
+			ptexdata = (u8*)_aligned_malloc(4 * targ->texH * targ->texW, 16);
+			has_data = true;
 
 			// needs to be 8 bit, use xmm for unpacking
 			u16* dst = (u16*)ptexdata;
-			u16* src = (u16*)(g_pbyGSMemory + 4 * GPU_TEXWIDTH * targ->realy);
+			u16* src = (u16*)(MemoryAddress(targ->realy));
 
 #if defined(ZEROGS_SSE2)
+			assert(((u32)(uptr)dst) % 16 == 0);
+            // FIXME Uncomment to test intrinsic versions (instead of asm)
+            // perf improvement vs asm:
+            // 1/ gcc updates both pointer with 1 addition
+            // 2/ Bypass the cache for the store
+#define NEW_INTRINSIC_VERSION
+#ifdef NEW_INTRINSIC_VERSION
 
-			if (((u32)(uptr)dst) % 16 != 0)
-			{
-				// This is not unusual situation, when vector<u8> does not 16bit alignment, that is destructive for SSE2
-				// instruction movdqa [%eax], xmm0
-				// The idea would be resize vector to 15 elements, that set ptxedata to aligned position.
-				// Later we would move eax by 16, so only we should verify is first element align
-				// FIXME. As I see, texdata used only once here, it does not have any impact on other code.
-				// Probably, usage of _aligned_maloc() would be preferable.
-				
-				// Note: this often happens when changing AA.
-				int disalignment = 16 - ((u32)(uptr)dst) % 16;		// This is value of shift. It could be 0 < disalignment <= 15
-				ptexdata = &texdata[disalignment];			// Set pointer to aligned element
-				dst = (u16*)ptexdata;
-				ZZLog::GS_Log("Made alignment for texdata, 0x%x", dst);
-				assert(((u32)(uptr)dst) % 16 == 0);			// Assert, because at future could be vectors with uncontigious spaces
-			}
+            __m128i zero_128 = _mm_setzero_si128();
+            // NOTE: future performance improvement
+            // SSE4.1 support uncacheable load 128bits. Maybe it can
+            // avoid some cache pollution
+            // NOTE2: I create multiple _n variable to mimic the previous ASM behavior
+            // but I'm not sure there are real gains.
+			for (int i = targ->height * GPU_TEXWIDTH/16 ; i > 0 ; --i)
+            {
+                // Convert 16 bits pixels to 32bits (zero extended)
+                // Batch 64 bytes (32 pixels) at once.
+                __m128i pixels_1 = _mm_load_si128((__m128i*)src);
+                __m128i pixels_2 = _mm_load_si128((__m128i*)(src+8));
+                __m128i pixels_3 = _mm_load_si128((__m128i*)(src+16));
+                __m128i pixels_4 = _mm_load_si128((__m128i*)(src+24));
 
-			int iters = targ->height * GPU_TEXWIDTH / 16;
+                __m128i pix_low_1 = _mm_unpacklo_epi16(pixels_1, zero_128);
+                __m128i pix_high_1 = _mm_unpackhi_epi16(pixels_1, zero_128);
+                __m128i pix_low_2 = _mm_unpacklo_epi16(pixels_2, zero_128);
+                __m128i pix_high_2 = _mm_unpackhi_epi16(pixels_2, zero_128);
 
-			SSE2_UnswizzleZ16Target(dst, src, iters) ;
+                // Note: bypass cache
+                _mm_stream_si128((__m128i*)dst, pix_low_1);
+                _mm_stream_si128((__m128i*)(dst+8), pix_high_1);
+                _mm_stream_si128((__m128i*)(dst+16), pix_low_2);
+                _mm_stream_si128((__m128i*)(dst+24), pix_high_2);
+
+                __m128i pix_low_3 = _mm_unpacklo_epi16(pixels_3, zero_128);
+                __m128i pix_high_3 = _mm_unpackhi_epi16(pixels_3, zero_128);
+                __m128i pix_low_4 = _mm_unpacklo_epi16(pixels_4, zero_128);
+                __m128i pix_high_4 = _mm_unpackhi_epi16(pixels_4, zero_128);
+
+                // Note: bypass cache
+                _mm_stream_si128((__m128i*)(dst+32), pix_low_3);
+                _mm_stream_si128((__m128i*)(dst+40), pix_high_3);
+                _mm_stream_si128((__m128i*)(dst+48), pix_low_4);
+                _mm_stream_si128((__m128i*)(dst+56), pix_high_4);
+
+                src += 32;
+                dst += 64;
+            }
+            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
+            // store fence insures that previous store are finish before execute new one.
+            _mm_sfence();
+#else
+			SSE2_UnswizzleZ16Target(dst, src, targ->height * GPU_TEXWIDTH / 16);
+#endif
 #else // ZEROGS_SSE2
 
 			for (int i = 0; i < targ->height; ++i)
@@ -2287,6 +2329,8 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		else
 		{
 			ptexdata = targ->ptex->memptr;
+			// We really don't want to deallocate memptr. As a reminder...
+			has_data = false;
 		}
 	}
 
@@ -2298,13 +2342,11 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	if (targ->ptex->tex == 0) glGenTextures(1, &targ->ptex->tex);
 
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
-	
-	if (fmt == GL_UNSIGNED_BYTE)
-		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
-	else
-		TextureRect(GL_RGB5_A1, texW, texH, GL_RGBA, fmt, ptexdata);
 
-	int realheight = targ->realheight;
+	if (fmt == GL_UNSIGNED_BYTE)
+		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
+	else
+		TextureRect(GL_RGB5_A1, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 
 	while (glGetError() != GL_NO_ERROR)
 	{
@@ -2317,18 +2359,20 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 		{
 			if (listTargets.size() == 0)
 			{
-				ZZLog::Error_Log("Failed to create %dx%x texture.", GPU_TEXWIDTH*channels*widthmult, (realheight + widthmult - 1) / widthmult);
+				ZZLog::Error_Log("Failed to create %dx%x texture.", targ->texW, targ->texH);
 				channels = 1;
+				if (has_data) _aligned_free(ptexdata);
 				return NULL;
 			}
 
 			DestroyOldest();
 		}
-		
-		TextureRect(4, texW, texH, GL_RGBA, fmt, ptexdata);
+
+		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 	}
 
 	setRectWrap(GL_CLAMP);
+	if (has_data) _aligned_free(ptexdata);
 
 	assert(tex0.psm != 0xd);
 
@@ -2491,7 +2535,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 				glDeleteTextures(1, &it->second);
 				mapTextures.erase(it++);
 			}
-			else 
+			else
 			{
 				++it;
 			}
@@ -2513,7 +2557,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	{
 		data[i] = (((i << MASKDIVISOR) & bitvalue) << 6); // add the 1/2 offset so that
 	}
-	
+
 	//	data[GPU_TEXMASKWIDTH] = 0;	// I remove GPU_TEXMASKWIDTH+1 element of this texture, because it was a reason of FFC crush
 									// Probably, some sort of PoT incompability in drivers.
 
@@ -2893,6 +2937,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 }
 
 
+#if 0
 // I removed some code here that wasn't getting called. The old versions #if'ed out below this.
 #define RESOLVE_32_BIT(PSM, T, Tsrc, convfn) \
 	{ \
@@ -2924,7 +2969,544 @@ void FlushTransferRanges(const tex0Info* ptex)
 			src += RH(Pitch(fbw))/sizeof(Tsrc); \
 		} \
 	} \
- 
+
+#endif
+
+//#define LOG_RESOLVE_PROFILE
+
+template <typename Tdst, bool do_conversion>
+inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
+{
+    u32 mask, imask;
+#ifdef LOG_RESOLVE_PROFILE
+#ifdef __LINUX__
+     u32 startime = timeGetPreciseTime();
+#endif
+#endif
+
+    if (PSMT_ISHALF(psm)) /* 16 bit */
+    {
+        /* mask is shifted*/
+        imask = RGBA32to16(fbm);
+        mask = (~imask)&0xffff;
+    }
+    else
+    {
+        mask = ~fbm;
+        imask = fbm;
+    }
+
+    Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
+    Tdst* dst;
+    Tdst  dsrc;
+
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
+    if( maxfbh > fbh ) maxfbh = fbh;
+    
+#ifdef LOG_RESOLVE_PROFILE
+    ZZLog::Dev_Log("*** Resolve 32 bits: %dx%d in %x", maxfbh, fbw, psm);
+#endif
+
+    // Start the src array at the end to reduce testing in loop
+    u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
+    u32* src = (u32*)(psrc) + (maxfbh-1)*raw_size;
+
+    for(int i = maxfbh-1; i >= 0; --i) {
+        for(int j = fbw-1; j >= 0; --j) {
+            if (do_conversion) {
+                dsrc = RGBA32to16(src[RW(j)]);
+            } else {
+                dsrc = (Tdst)src[RW(j)];
+            }
+            // They are 3 methods to call the functions
+            // macro (compact, inline) but need a nice psm ; swich (inline) ; function pointer (compact)
+            // Use a switch to allow inlining of the getPixel function.
+            // Note: psm is const so the switch is completely optimized
+            // Function method example:
+            // dst = pPageOffset + getPixelFun_0[psm](j, i, fbw);
+            switch (psm)
+            {
+                case PSMCT32:
+                case PSMCT24:
+                    dst = pPageOffset + getPixelAddress32_0(j, i, fbw);
+                    break;
+
+                case PSMCT16:
+                    dst = pPageOffset + getPixelAddress16_0(j, i, fbw);
+                    break;
+
+                case PSMCT16S:
+                    dst = pPageOffset + getPixelAddress16S_0(j, i, fbw);
+                    break;
+
+                case PSMT32Z:
+                case PSMT24Z:
+                    dst = pPageOffset + getPixelAddress32Z_0(j, i, fbw);
+                    break;
+
+                case PSMT16Z:
+                    dst = pPageOffset + getPixelAddress16Z_0(j, i, fbw);
+                    break;
+
+                case PSMT16SZ:
+                    dst = pPageOffset + getPixelAddress16SZ_0(j, i, fbw);
+                    break;
+            }
+            *dst = (dsrc & mask) | (*dst & imask);
+        }
+        src -= raw_size;
+    }
+#ifdef LOG_RESOLVE_PROFILE
+#ifdef __LINUX__
+    ZZLog::Dev_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
+#endif
+#endif
+}
+
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
+__forceinline void update_4pixels(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask, u32 imask)
+{
+    Tdst* dst_tmp;
+    Tdst dsrc_tmp;
+
+    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
+    // but can probably be used after their re-write
+
+    dst_tmp = basepage + pageTable[i_msk][(INDEX)];
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX)];
+    }
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+1];
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+1)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+1)];
+    }
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+2];
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+2)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+2)];
+    }
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+3];
+    if (do_conversion) {
+        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+3)]);
+    } else {
+        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+3)];
+    }
+    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
+}
+
+// This variable are used in ASM. ASM only support standard c type. Do not replace them with some typedef.
+static const __aligned16 unsigned int pixel_Amask[4] = {0x80000000, 0x80000000, 0x80000000, 0x80000000};
+static const __aligned16 unsigned int pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F80000, 0x00F80000};
+static const __aligned16 unsigned int pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
+static const __aligned16 unsigned int pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
+static const __aligned16 unsigned int pixel_upper_mask[4] = {0xFFFF0000, 0xFFFF0000, 0xFFFF0000, 0xFFFF0000};
+
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
+__forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask[4], u32 imask)
+{
+    Tdst* dst_tmp;
+    __aligned16 u32 src_tmp[4];
+    u32* base_ptr;
+    __m128i pixels;
+
+    // Directly load pixels into xmm registers
+    // NOTE: Intel SSE4.1 support an instruction to load 32bits memory to a part of an xmm registers
+    if (AA.x == 2) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p0 p0  p1 p1 p1 p1
+        // p2 p2 p2 p2  p3 p3 p3 p3
+        base_ptr = &src[(((j<<6)+INDEX)<<2)];
+        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+3));
+        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+11));
+        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
+    } else if(AA.x ==1) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p1 p1  p2 p2 p3 p3
+        base_ptr = &src[(((j<<6)+INDEX)<<1)];
+        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+1));
+        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+5));
+        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
+    } else {
+        base_ptr = &src[((j<<6)+INDEX)];
+        pixels = _mm_loadu_si128((__m128i*)base_ptr);
+    }
+
+    if (do_conversion) {
+    // transform pixel from ARGB:8888 to ARGB:1555
+    // It also does the fbm pixel mask
+        // Filter component of each pixel
+        __m128i pixel_A = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Amask));
+        __m128i pixel_R = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Rmask));
+        __m128i pixel_G = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Gmask));
+        __m128i pixel_B = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Bmask));
+
+        // shift the value
+        pixel_A = _mm_srli_epi32(pixel_A, 16);
+        pixel_R = _mm_srli_epi32(pixel_R, 9);
+        pixel_G = _mm_srli_epi32(pixel_G, 6);
+        pixel_B = _mm_srli_epi32(pixel_B, 3);
+
+        // rebuild a complete pixel
+        pixels = _mm_or_si128(pixel_A, pixel_B);
+        pixels = _mm_or_si128(pixels, pixel_G);
+        pixels = _mm_or_si128(pixels, pixel_R);
+
+        // apply fbm mask
+        pixels = _mm_and_si128(pixels, _mm_load_si128((__m128i*)mask) );
+
+        _mm_store_si128((__m128i*)src_tmp, pixels);
+
+    } else {
+        // Just apply the fbm mask
+        // The real optimization is to reduce the register usage for dst_tmp update
+        // Because x86 does not have enough register gcc does multiples load/store value
+        // in the stack
+        pixels = _mm_and_si128(pixels, _mm_loadu_si128((__m128i*)mask));
+        _mm_store_si128((__m128i*)src_tmp, pixels);
+    }
+
+    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
+    // but can probably be used after their re-write
+    dst_tmp = basepage + pageTable[i_msk][(INDEX)];
+    *dst_tmp = (Tdst)src_tmp[0] | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+1];
+    *dst_tmp = (Tdst)src_tmp[1] | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+2];
+    *dst_tmp = (Tdst)src_tmp[2] | (*dst_tmp & imask);
+
+    dst_tmp = basepage + pageTable[i_msk][INDEX+3];
+    *dst_tmp = (Tdst)src_tmp[3] | (*dst_tmp & imask);
+    // The MS compiler complains about the missing of the emms clear function...
+    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
+    // of the compiler probably generates better code. -- Gregory
+#ifdef _WIN32
+	_mm_empty();
+#endif
+}
+
+template <u32 size, u32 pageTable[size][64], bool do_conversion, bool texture_16b, u32 INDEX>
+__forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u32 j, u32 pix_mask, u32 src_pitch)
+{
+    u32* base_ptr;
+    __m128i pixels_0;
+
+    // TODO DEBUG: properly setup the loop
+    if (i_msk & 0x1) { return; }
+
+    // Directly load pixels into xmm registers
+    // Note: we read 2 lines at onces
+    if (AA.x == 2) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p0 p0  p1 p1 p1 p1  p4 p4 p4 p4  p5 p5 p5 p5
+        // ...
+        // p2 p2 p2 p2  p3 p3 p3 p3  p6 p6 p6 p6  p7 p7 p7 p7
+        base_ptr = &src[(((j<<6)+INDEX)<<2)];
+        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)(base_ptr + 3));
+        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + 3 + src_pitch));
+        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+    } else if(AA.x ==1) {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p0 p1 p1  p4 p4 p5 p5
+        // ...
+        // p2 p2 p3 p3  p6 p6 p7 p7
+        base_ptr = &src[(((j<<6)+INDEX)<<1)];
+        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)(base_ptr + 1));
+        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + 1 + src_pitch));
+        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+    } else {
+        // Note: pixels (32bits) are stored like that:
+        // p0 p1  p4 p5
+        // ...
+        // p2 p3  p6 p7
+        base_ptr = &src[((j<<6)+INDEX)];
+        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)base_ptr);
+
+		// MSVC currently crashes about here.
+        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + src_pitch));
+        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+    }
+
+    if (do_conversion) {
+        // transform pixel from ARGB:8888 to ARGB:1555
+        // It also does the fbm pixel mask
+
+        // Filter component of each pixel. Note rebuild all mask from the Bmask. (save memory access)
+        __m128i pixel_mask_base = _mm_load_si128((__m128i*)pixel_Bmask);
+        __m128i pixel_B = _mm_and_si128(pixels_0, pixel_mask_base);
+
+        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 8);
+        __m128i pixel_G = _mm_and_si128(pixels_0, pixel_mask_base);
+
+        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 8);
+        __m128i pixel_R = _mm_and_si128(pixels_0, pixel_mask_base);
+
+        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 12);
+        __m128i pixel_A = _mm_and_si128(pixels_0, pixel_mask_base);
+
+        // shift the value
+        pixel_A = _mm_srli_epi32(pixel_A, 16);
+        pixel_R = _mm_srli_epi32(pixel_R, 9);
+        pixel_G = _mm_srli_epi32(pixel_G, 6);
+        pixel_B = _mm_srli_epi32(pixel_B, 3);
+
+        // rebuild a complete pixel
+        pixels_0 = _mm_or_si128(pixel_A, pixel_B);
+        pixels_0 = _mm_or_si128(pixels_0, pixel_G);
+        pixels_0 = _mm_or_si128(pixels_0, pixel_R);
+    }
+    // Status 16 bits
+    // pixels_0 = 0 p3 0 p2  0 p1 0 p0
+    // Status 32 bits
+    // pixels_0 = p3 p2 p1 p0
+
+    // Build fbm mask (tranform a u32 to a 4 packets u32)
+    // In 16 bits texture one packet is "0000 DATA"
+    __m128i imask = _mm_cvtsi32_si128(pix_mask);
+    imask = _mm_shuffle_epi32(imask, 0);
+
+    // apply the mask on new values
+    pixels_0 = _mm_andnot_si128(imask, pixels_0);
+
+    // apply the mask on old values
+    u32* dst_add;
+    u32 alignment;
+    if (texture_16b) {
+        dst_add = basepage + (pageTable[i_msk][(INDEX)] >> 1);
+        alignment =  pageTable[i_msk][(INDEX)] & 0x1;
+    } else {
+        dst_add = basepage + pageTable[i_msk][(INDEX)];
+    }
+    __m128i old_pixels_0;
+    __m128i final_pixels_0;
+    if (texture_16b) {
+        old_pixels_0 = _mm_loadu_si128((__m128i*)dst_add); // 3H 3L 2H 2L  1H 1L 0H 0L
+        // Note: for future improvement
+        // process 8 pixels -> no need to separate high and low word.
+        // Just apply the fbm mask to all old value
+        // do not check the alignment. first 4 are the low one, the second four are the high one.
+
+        // Separate high and low word
+        __m128i old_pixels_0_L = _mm_andnot_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+        __m128i old_pixels_0_H = _mm_and_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
+
+        if (alignment) {
+            // update high word (fbm)
+            old_pixels_0_H = _mm_and_si128(old_pixels_0_H, imask);
+            // Align pixels_0
+            pixels_0 = _mm_slli_epi32(pixels_0, 16);
+        } else {
+            // update low word (fbm)
+            old_pixels_0_L = _mm_and_si128(old_pixels_0_H, imask);
+        }
+        // Merge all results
+        final_pixels_0 = _mm_or_si128(old_pixels_0_H, old_pixels_0_L);
+        final_pixels_0 = _mm_or_si128(final_pixels_0, pixels_0);
+
+    } else {
+        old_pixels_0 = _mm_and_si128(imask, _mm_load_si128((__m128i*)dst_add));
+        final_pixels_0 = _mm_or_si128(old_pixels_0, pixels_0);
+    }
+
+    // TODO replace with NT and add a fence in the out of the loop
+    // The old value is read so already in the cache (maybe worth if imask = 0 no need to read previous value)
+    _mm_store_si128((__m128i*)dst_add, final_pixels_0);
+    // FIXME not sure it support unaligned write maybe use _mm_stream_pd
+    // _mm_stream_si128((__m128i*)dst_add, final_pixels_0);
+
+    // The MS compiler complains about the missing of the emms clear function...
+    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
+    // of the compiler probably generates better code. -- Gregory
+#ifdef _WIN32
+	_mm_empty();
+#endif
+}
+
+template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, bool texture_16b>
+void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
+{
+#ifdef LOG_RESOLVE_PROFILE
+#ifdef __LINUX__
+    u32 startime = timeGetPreciseTime();
+#endif
+#endif
+    __aligned16 u32 mask[4];
+    u32 imask;
+    u32 pix_mask;
+    if (texture_16b) /* 16 bit format */
+    {
+        /* mask is shifted*/
+        imask = RGBA32to16(fbm);
+        // Use a 4*32 mask to ease SSE instruction
+        mask[0] = (~imask)&0xffff;
+        mask[1] = mask[0];
+        mask[2] = mask[0];
+        mask[3] = mask[0];
+        pix_mask = (imask<<16) | imask;
+    }
+    else
+    {
+        mask[0] = ~fbm;
+        mask[1] = mask[0];
+        mask[2] = mask[0];
+        mask[3] = mask[0];
+        imask = fbm;
+        pix_mask = fbm;
+    }
+
+    Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
+
+    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
+    if( maxfbh > fbh ) maxfbh = fbh;
+    
+#ifdef LOG_RESOLVE_PROFILE
+    ZZLog::Dev_Log("*** Resolve 32 to 32 bits: %dx%d. Frame Mask %x", maxfbh, fbw, imask);
+#endif
+
+    // Start the src array at the end to reduce testing in loop
+    u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
+    u32* src = (u32*)(psrc) + (maxfbh-1)*raw_size;
+
+    // Manually optimize the loop (typical 448x512). In particular unroll 64times the inner loop
+    // And move maximum code outside (compiler must do it normally...)
+    // Basic code look like this:
+    /* loop i : 0->maxfbh
+     * loop j : 0->fbw
+     *      Tdst dsrc = (Tdst)convfn(src[RW(j)]);
+     *      dst = pPageOffset + getPixelAddress16_0(j, i, fbw);
+     *      *dst = (dsrc & mask) | (*dst & imask);
+     * end loop i
+     *      *src += raw_size;
+     * end loop j
+     */
+    assert(fbw%64 == 0); // Failure => bad loop unrolling
+    u32 fbw_div = (fbw >> 6);
+    for(int i = maxfbh-1; i >= 0; --i) {
+        u32 i_div = (i / size) * fbw_div;
+        u32 i_msk = i & (size-1);
+        for(int j = fbw_div-1; j >= 0; --j) {
+        // for(u32 j = 0 ; j < fbw_div; ++j) {
+
+// Workaround until we work out why update_4pixels_sse2_bis is crashing Windows.
+#ifndef _WIN32
+#define DO_8_PIX
+#endif
+
+#ifdef DO_8_PIX
+            u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 2>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 4>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 6>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 8>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 10>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 12>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 14>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 16>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 18>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 20>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 22>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 24>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 26>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 28>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 30>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 32>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 34>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 36>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 38>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 40>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 42>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 44>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 46>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 48>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 50>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 52>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 54>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 56>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 58>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 60>(src, basepage, i_msk, j, pix_mask, raw_size);
+            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 62>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+            // validate memory write in update_4pixels_sse2_bis
+            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
+            // store fence insures that previous store are finish before execute new one.
+            // _mm_sfence();
+#else
+#ifdef ZEROGS_SSE2
+            Tdst* basepage;
+            // A bad hack for the moment
+            if(texture_16b) {
+                basepage = pPageOffset + (i_div + j) * 4096;
+            } else {
+                basepage = pPageOffset + (i_div + j) * 2048;
+            }
+
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask, imask);
+            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask, imask);
+#else
+            Tdst* basepage;
+            // A bad hack for the moment
+            if(texture_16b) {
+                basepage = pPageOffset + (i_div + j) * 4096;
+            } else {
+                basepage = pPageOffset + (i_div + j) * 2048;
+            }
+
+            update_4pixels<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask[0], imask);
+            update_4pixels<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask[0], imask);
+#endif
+#endif
+        }
+        src -= raw_size;
+    }
+#ifdef LOG_RESOLVE_PROFILE
+#ifdef __LINUX__
+    ZZLog::Dev_Log("*** 32 bits: execution time %d (convert %d)", timeGetPreciseTime()-startime, do_conversion);
+#endif
+#endif
+}
+
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode = true)
 {
 	FUNCLOG
@@ -2937,71 +3519,64 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	// note that fbp is always aligned on page boundaries
 	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
 
-	if (GetRenderFormat() == RFT_byte8)
-	{
-		// start the conversion process A8R8G8B8 -> psm
-		switch (psm)
-		{
+    // Comment this to restore the previous resolve_32 version
+#define OPTI_RESOLVE_32 1
+    // start the conversion process A8R8G8B8 -> psm
+    switch (psm)
+    {
 
-			case PSMCT32:
-			case PSMCT24:
-				RESOLVE_32_BIT(32, u32, u32, (u32));
-				break;
+        // NOTE pass psm as a constant value otherwise gcc does not do its job. It keep
+        // the psm switch in Resolve_32_Bit
+        case PSMCT32:
+        case PSMCT24:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<32, g_pageTable32, u32, false, false >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
+#endif
+            break;
 
-			case PSMCT16:
-				RESOLVE_32_BIT(16, u16, u32, RGBA32to16);
-				break;
+        case PSMCT16:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16, u16, true, true >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
+#endif
+            break;
 
-			case PSMCT16S:
-				RESOLVE_32_BIT(16S, u16, u32, RGBA32to16);
-				break;
+        case PSMCT16S:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16S, u16, true, true >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
+#endif
+            break;
 
-			case PSMT32Z:
-			case PSMT24Z:
-				RESOLVE_32_BIT(32Z, u32, u32, (u32));
-				break;
+        case PSMT32Z:
+        case PSMT24Z:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<32, g_pageTable32Z, u32, false, false >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
+#endif
+            break;
 
-			case PSMT16Z:
-				RESOLVE_32_BIT(16Z, u16, u32, (u16));
-				break;
+        case PSMT16Z:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16Z, u16, false, true >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
+#endif
+            break;
 
-			case PSMT16SZ:
-				RESOLVE_32_BIT(16SZ, u16, u32, (u16));
-				break;
-		}
-	}
-	else  // float16
-	{
-		switch (psm)
-		{
-
-			case PSMCT32:
-			case PSMCT24:
-				RESOLVE_32_BIT(32, u32, Vector_16F, Float16ToARGB);
-				break;
-
-			case PSMCT16:
-				RESOLVE_32_BIT(16, u16, Vector_16F, Float16ToARGB16);
-				break;
-
-			case PSMCT16S:
-				RESOLVE_32_BIT(16S, u16, Vector_16F, Float16ToARGB16);
-				break;
-
-			case PSMT32Z:
-			case PSMT24Z:
-				RESOLVE_32_BIT(32Z, u32, Vector_16F,  Float16ToARGB_Z);
-				break;
-
-			case PSMT16Z:
-				RESOLVE_32_BIT(16Z, u16, Vector_16F, Float16ToARGB16_Z);
-				break;
-
-			case PSMT16SZ:
-				RESOLVE_32_BIT(16SZ, u16, Vector_16F, Float16ToARGB16_Z);
-				break;
-		}
-	}
+        case PSMT16SZ:
+#ifdef OPTI_RESOLVE_32
+            Resolve_32b<64, g_pageTable16SZ, u16, false, true >(psrc, fbp, fbw, fbh, fbm);
+#else
+            Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
+#endif
+            break;
+    }
 
 	g_MemTargs.ClearRange(start, end);
 
@@ -3077,7 +3652,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 			src += RH(Pitch(fbw))/sizeof(Tsrc); \
 		} \
 	} \
- 
+
 	if( GetRenderFormat() == RFT_byte8 ) {
 		// start the conversion process A8R8G8B8 -> psm
 		switch (psm)
