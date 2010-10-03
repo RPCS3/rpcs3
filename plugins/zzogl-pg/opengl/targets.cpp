@@ -3317,6 +3317,13 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     _mm_store_si128((__m128i*)dst_add, final_pixels_0);
     // FIXME not sure it support unaligned write maybe use _mm_stream_pd
     // _mm_stream_si128((__m128i*)dst_add, final_pixels_0);
+
+    // The MS compiler complains about the missing of the emms clear function...
+    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
+    // of the compiler probably generates better code. -- Gregory
+#ifdef _WIN32
+    _mm_empty();
+#endif
 }
 
 template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, bool texture_16b>
