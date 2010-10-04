@@ -74,7 +74,36 @@ struct GIFTAG
 	u32 REGS[2];
 
 	GIFTAG() {}
+
+	wxString DumpRegsToString() const;
 };
+
+wxString GIFTAG::DumpRegsToString() const
+{
+	static const char* PackedModeRegsLabel[] =
+	{
+		"PRIM",		"RGBA",		"STQ",		"UV",
+		"XYZF2",	"XYZ2",		"TEX0_1",	"TEX0_2",
+		"CLAMP_1",	"CLAMP_2",	"FOG",		"Unknown",
+		"XYZF3",	"XYZ3",		"A_D",		"NOP"
+	};
+
+	u32 tempreg		= REGS[0];
+	uint numregs	= ((NREG-1)&0xf) + 1;
+
+	FastFormatUnicode result;
+	result.Write("NREG=0x%02X (", NREG);
+
+	for (u32 i = 0; i < numregs; i++) {
+		if (i == 8) tempreg = REGS[1];
+		if (i > 0) result.Write(" ");
+		result.Write(PackedModeRegsLabel[tempreg & 0xf]);
+		tempreg >>= 4;
+	}
+
+	result.Write(")");
+	return result;
+}
 
 // --------------------------------------------------------------------------------------
 //  GIFPath -- PS2 GIFtag info (one for each path).
@@ -655,7 +684,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
-					GIF_LOG("Packed Mode EOP %x", tag.EOP);
+					GIF_LOG("Packed Mode EOP %x : %ls", tag.EOP, tag.DumpRegsToString().c_str());
 					PrepPackedRegs();
 
 					if(DetectE > 0)

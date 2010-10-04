@@ -21,12 +21,12 @@
 static __ri bool _eelog_enabled( u32 addr )
 {
 	// Selective enable/disable ability for specific register maps
-	if (eeAddrInRange(RCNT0, addr)) return false;
+	if (eeAddrInRange(RCNT0, addr)) return true;
 	if (eeAddrInRange(RCNT1, addr)) return true;
 	if (eeAddrInRange(RCNT2, addr)) return true;
 	if (eeAddrInRange(RCNT3, addr)) return true;
 
-	if (eeAddrInRange(SBUS, addr)) return false;
+	if (eeAddrInRange(SBUS, addr)) return true;
 
 	// INTC!
 	if (addr == INTC_STAT || addr == INTC_MASK) return true;

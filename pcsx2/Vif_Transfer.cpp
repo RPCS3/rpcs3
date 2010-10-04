@@ -85,9 +85,9 @@ _vifT void vifTransferLoop(u32* &data) {
 			vifXRegs.code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
-			
-			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
+
 			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
+			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
@@ -98,7 +98,7 @@ _vifT void vifTransferLoop(u32* &data) {
 		pSize  -= ret;
 		if (analyzeIbit<idx>(data, iBit)) break;
 	}
-	
+
 	if (pSize)	  vifX.vifstalled	 = true;
 }
 
