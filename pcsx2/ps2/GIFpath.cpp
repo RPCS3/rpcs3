@@ -218,7 +218,7 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 //
 static void __fastcall RegHandlerFINISH(const u32* data)
 {
-	GIF_LOG("GIFpath FINISH data=%x_%x CSRr=%x", data[0], data[1], GSCSRr);
+	GifTagLog("GIFpath FINISH data=%x_%x CSRr=%x", data[0], data[1], GSCSRr);
 
 	// The FINISH bit is set here, and then it will be cleared when all three
 	// logical GIFpaths finish their packets (EOPs) At that time (found below
@@ -229,7 +229,7 @@ static void __fastcall RegHandlerFINISH(const u32* data)
 
 static void __fastcall RegHandlerLABEL(const u32* data)
 {
-	GIF_LOG( "GIFpath LABEL" );
+	GifTagLog( "GIFpath LABEL" );
 	GSSIGLBLID.LBLID = (GSSIGLBLID.LBLID&~data[1])|(data[0]&data[1]);
 }
 
@@ -431,7 +431,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 				{
-					GIF_LOG("Packed Mode");
+					GifTagLog("Packed Mode");
 					numregs	= ((tag.NREG-1)&0xf) + 1;
 
 					// Note: curreg is *usually* zero here, but can be non-zero if a previous fragment was
@@ -475,7 +475,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
+					GifTagLog("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
 					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
@@ -520,7 +520,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
-					GIF_LOG("IMAGE Mode");
+					GifTagLog("IMAGE Mode");
 					int len = aMin(size, nloop);
 					incTag(len);
 					nloop -= len;
@@ -684,7 +684,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
-					GIF_LOG("Packed Mode EOP %x : %ls", tag.EOP, tag.DumpRegsToString().c_str());
+					GifTagLog("Packed Mode EOP %x : %ls", tag.EOP, tag.DumpRegsToString().c_str());
 					PrepPackedRegs();
 
 					if(DetectE > 0)
@@ -744,7 +744,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
+					GifTagLog("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
 					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
@@ -790,7 +790,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
-					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
+					GifTagLog("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
 
 					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
