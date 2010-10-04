@@ -42,7 +42,7 @@ void SaveConfig()
 	int i, j;
 	FILE *f;
 	
-	const std::string iniFile(s_strIniPath + "zeropad.ini");
+	const std::string iniFile(s_strIniPath + "/zeropad.ini");
 	f = fopen(iniFile.c_str(), "w");
 	if (f == NULL)
 	{
@@ -85,7 +85,7 @@ void LoadConfig()
 	conf.keys[0][15] = XK_s;			// LEFT
 	conf.log = 0;
 
-	const std::string iniFile(s_strIniPath + "zeropad.ini");
+	const std::string iniFile(s_strIniPath + "/zeropad.ini");
 	f = fopen(iniFile.c_str(), "r");
 	if (f == NULL)
 	{
