@@ -122,7 +122,9 @@ void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 	// Save status of the NTFS compress checkbox for future reference.
 	// [TODO] Remove g_Conf->McdCompressNTFS, and have this dialog load/save directly from the ini.
 
+#ifdef __WXMSW__
 	g_Conf->McdCompressNTFS = m_check_CompressNTFS->GetValue();
+#endif
 
 	if( !CreateIt(
 		m_filepicker		? m_filepicker->GetPath()					: (m_mcdpath + m_mcdfile).GetFullPath(),
