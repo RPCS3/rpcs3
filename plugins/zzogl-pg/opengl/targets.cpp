@@ -3391,6 +3391,8 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         for(int j = fbw_div-1; j >= 0; --j) {
         // for(u32 j = 0 ; j < fbw_div; ++j) {
 
+#define DO_8_PIX
+
 #ifdef DO_8_PIX
             u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
             update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
