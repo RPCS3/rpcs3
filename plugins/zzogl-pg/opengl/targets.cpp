@@ -3127,15 +3127,15 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
         // p0 p0 p0 p0  p1 p1 p1 p1
         // p2 p2 p2 p2  p3 p3 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
-        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+3));
-        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+11));
+        __m128i pixel_low = _mm_loadl_epi64((__m128i*)(base_ptr+3));
+        __m128i pixel_high = _mm_loadl_epi64((__m128i*)(base_ptr+11));
         pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else if(AA.x ==1) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p1 p1  p2 p2 p3 p3
         base_ptr = &src[(((j<<6)+INDEX)<<1)];
-        __m128i pixel_low = _mm_movpi64_epi64(*(__m64*)(base_ptr+1));
-        __m128i pixel_high = _mm_movpi64_epi64(*(__m64*)(base_ptr+5));
+        __m128i pixel_low = _mm_loadl_epi64((__m128i*)(base_ptr+1));
+        __m128i pixel_high = _mm_loadl_epi64((__m128i*)(base_ptr+5));
         pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
     } else {
         base_ptr = &src[((j<<6)+INDEX)];
@@ -3192,9 +3192,6 @@ __forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 
     // The MS compiler complains about the missing of the emms clear function...
     // My guess, it uses the mmx register for the 64 bits transfer. Newer version
     // of the compiler probably generates better code. -- Gregory
-#ifdef _WIN32
-	_mm_empty();
-#endif
 }
 
 template <u32 size, u32 pageTable[size][64], bool do_conversion, bool texture_16b, u32 INDEX>
@@ -3214,17 +3211,17 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
         // ...
         // p2 p2 p2 p2  p3 p3 p3 p3  p6 p6 p6 p6  p7 p7 p7 p7
         base_ptr = &src[(((j<<6)+INDEX)<<2)];
-        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)(base_ptr + 3));
-        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + 3 + src_pitch));
-        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 3));
+        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 3 + src_pitch));
+		pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
     } else if(AA.x ==1) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p1 p1  p4 p4 p5 p5
         // ...
         // p2 p2 p3 p3  p6 p6 p7 p7
         base_ptr = &src[(((j<<6)+INDEX)<<1)];
-        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)(base_ptr + 1));
-        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + 1 + src_pitch));
+        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 1));
+        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 1 + src_pitch));
         pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
     } else {
         // Note: pixels (32bits) are stored like that:
@@ -3232,10 +3229,8 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
         // ...
         // p2 p3  p6 p7
         base_ptr = &src[((j<<6)+INDEX)];
-        __m128i pixel_0_low = _mm_movpi64_epi64(*(__m64*)base_ptr);
-
-		// MSVC currently crashes about here.
-        __m128i pixel_0_high = _mm_movpi64_epi64(*(__m64*)(base_ptr + src_pitch));
+        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)base_ptr);
+        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + src_pitch));
         pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
     }
 
@@ -3329,9 +3324,6 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     // The MS compiler complains about the missing of the emms clear function...
     // My guess, it uses the mmx register for the 64 bits transfer. Newer version
     // of the compiler probably generates better code. -- Gregory
-#ifdef _WIN32
-	_mm_empty();
-#endif
 }
 
 template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, bool texture_16b>
@@ -3398,11 +3390,6 @@ void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
         u32 i_msk = i & (size-1);
         for(int j = fbw_div-1; j >= 0; --j) {
         // for(u32 j = 0 ; j < fbw_div; ++j) {
-
-// Workaround until we work out why update_4pixels_sse2_bis is crashing Windows.
-#ifndef _WIN32
-#define DO_8_PIX
-#endif
 
 #ifdef DO_8_PIX
             u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
