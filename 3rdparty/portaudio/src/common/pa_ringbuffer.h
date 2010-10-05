@@ -8,7 +8,7 @@
  * Author: Phil Burk, http://www.softsynth.com
  * modified for SMP safety on OS X by Bjorn Roche.
  * also allowed for const where possible.
- * modified for multiple-byte-sized data elements by Sven Fischer
+ * modified for multiple-byte-sized data elements by Sven Fischer 
  *
  * Note that this is safe only for a single-thread reader
  * and a single-thread writer.
@@ -38,13 +38,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however,
+ * The text above constitutes the entire PortAudio license; however, 
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also
- * requested that these non-binding requests be included along with the
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
  * license above.
  */
 
@@ -58,11 +58,11 @@
  a single reader and a single writer (ie. one thread or callback writes
  to the ring buffer, another thread or callback reads from it).
 
- The PaUtilRingBuffer structure manages a ring buffer containing N
- elements, where N must be a power of two. An element may be any size
+ The PaUtilRingBuffer structure manages a ring buffer containing N 
+ elements, where N must be a power of two. An element may be any size 
  (specified in bytes).
 
- The memory area used to store the buffer elements must be allocated by
+ The memory area used to store the buffer elements must be allocated by 
  the client prior to calling PaUtil_InitializeRingBuffer() and must outlive
  the use of the ring buffer.
 */

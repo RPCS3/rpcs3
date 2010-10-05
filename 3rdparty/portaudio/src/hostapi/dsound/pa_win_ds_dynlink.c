@@ -29,13 +29,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however,
+ * The text above constitutes the entire PortAudio license; however, 
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also
- * requested that these non-binding requests be included along with the
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
  * license above.
  */
 
@@ -180,7 +180,7 @@ void PaWinDs_InitializeDSoundEntryPoints(void)
 #ifdef PAWIN_USE_DIRECTSOUNDFULLDUPLEXCREATE
         paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 =
                 (HRESULT (WINAPI *)(LPCGUID, LPCGUID, LPCDSCBUFFERDESC, LPCDSBUFFERDESC,
-                                    HWND, DWORD, LPDIRECTSOUNDFULLDUPLEX *, LPDIRECTSOUNDCAPTUREBUFFER8 *,
+                                    HWND, DWORD, LPDIRECTSOUNDFULLDUPLEX *, LPDIRECTSOUNDCAPTUREBUFFER8 *, 
                                     LPDIRECTSOUNDBUFFER8 *, LPUNKNOWN))
                 GetProcAddress( paWinDsDSoundEntryPoints.hInstance_, "DirectSoundFullDuplexCreate" );
         if( paWinDsDSoundEntryPoints.DirectSoundFullDuplexCreate8 == NULL )

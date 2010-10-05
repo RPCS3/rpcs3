@@ -1,5 +1,5 @@
 /*
- * $Id: pa_linux_alsa.c 1415 2009-06-03 18:57:56Z aknudsen $
+ * $Id: pa_linux_alsa.c 1540 2010-09-20 16:23:30Z dmitrykos $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * ALSA implementation by Joshua Haberman and Arve Knudsen
@@ -149,7 +149,7 @@ typedef struct PaAlsaStream
 
     int primeBuffers;
     int callbackMode;              /* bool: are we running in callback mode? */
-    int pcmsSynced;	            /* Have we successfully synced pcms */
+    int pcmsSynced;                /* Have we successfully synced pcms */
     int rtSched;
 
     /* the callback thread uses these to poll the sound device(s), waiting
@@ -486,10 +486,10 @@ static const HwDevInfo *FindDeviceName( const char *name )
 
     for( i = 0; predefinedNames[i].alsaName; i++ )
     {
-	if( strcmp( name, predefinedNames[i].alsaName ) == 0 )
-	{
-	    return &predefinedNames[i];
-	}
+        if( strcmp( name, predefinedNames[i].alsaName ) == 0 )
+        {
+            return &predefinedNames[i];
+        }
     }
 
     return NULL;
@@ -765,7 +765,7 @@ static PaError BuildDeviceList( PaAlsaHostApiRepresentation *alsaApi )
             int err = 0;
 
             char *alsaDeviceName, *deviceName;
-	    const HwDevInfo *predefined = NULL;
+            const HwDevInfo *predefined = NULL;
             snd_config_t *n = snd_config_iterator_entry( i ), * tp = NULL;;
 
             if( (err = snd_config_search( n, "type", &tp )) < 0 )
@@ -802,22 +802,22 @@ static PaError BuildDeviceList( PaAlsaHostApiRepresentation *alsaApi )
                         paInsufficientMemory );
             }
 
-	    predefined = FindDeviceName( alsaDeviceName );
+            predefined = FindDeviceName( alsaDeviceName );
 
             hwDevInfos[numDeviceNames - 1].alsaName = alsaDeviceName;
             hwDevInfos[numDeviceNames - 1].name = deviceName;
             hwDevInfos[numDeviceNames - 1].isPlug = 1;
 
-	    if( predefined )
-	    {
+            if( predefined )
+            {
                 hwDevInfos[numDeviceNames - 1].hasPlayback = predefined->hasPlayback;
                 hwDevInfos[numDeviceNames - 1].hasCapture = predefined->hasCapture;
-	    }
-	    else
-	    {
-		hwDevInfos[numDeviceNames - 1].hasPlayback = 1;
-		hwDevInfos[numDeviceNames - 1].hasCapture = 1;
-	    }
+            }
+            else
+            {
+                hwDevInfos[numDeviceNames - 1].hasPlayback = 1;
+                hwDevInfos[numDeviceNames - 1].hasCapture = 1;
+            }
         }
     }
     else
@@ -1251,47 +1251,56 @@ static PaError PaAlsaStreamComponent_InitialConfigure( PaAlsaStreamComponent *se
 
     if( self->userInterleaved )
     {
-        accessMode = SND_PCM_ACCESS_MMAP_INTERLEAVED;
+        accessMode          = SND_PCM_ACCESS_MMAP_INTERLEAVED;
         alternateAccessMode = SND_PCM_ACCESS_MMAP_NONINTERLEAVED;
 
         /* test if MMAP supported */
         self->canMmap = snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ||
                         snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0;
+
+        PA_DEBUG(("%s: device MMAP SND_PCM_ACCESS_MMAP_INTERLEAVED: %s\n", __FUNCTION__, (snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ? "YES" : "NO")));
+        PA_DEBUG(("%s: device MMAP SND_PCM_ACCESS_MMAP_NONINTERLEAVED: %s\n", __FUNCTION__, (snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0 ? "YES" : "NO")));
+
         if (!self->canMmap)
         {
             accessMode          = SND_PCM_ACCESS_RW_INTERLEAVED;
             alternateAccessMode = SND_PCM_ACCESS_RW_NONINTERLEAVED;
-    }
+        }
     }
     else
     {
-        accessMode = SND_PCM_ACCESS_MMAP_NONINTERLEAVED;
+        accessMode          = SND_PCM_ACCESS_MMAP_NONINTERLEAVED;
         alternateAccessMode = SND_PCM_ACCESS_MMAP_INTERLEAVED;
 
         /* test if MMAP supported */
         self->canMmap = snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ||
                         snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0;
+
+        PA_DEBUG(("%s: device MMAP SND_PCM_ACCESS_MMAP_NONINTERLEAVED: %s\n", __FUNCTION__, (snd_pcm_hw_params_test_access( pcm, hwParams, accessMode ) >= 0 ? "YES" : "NO")));
+        PA_DEBUG(("%s: device MMAP SND_PCM_ACCESS_MMAP_INTERLEAVED: %s\n", __FUNCTION__, (snd_pcm_hw_params_test_access( pcm, hwParams, alternateAccessMode ) >= 0 ? "YES" : "NO")));
+
         if (!self->canMmap)
         {
             accessMode          = SND_PCM_ACCESS_RW_NONINTERLEAVED;
             alternateAccessMode = SND_PCM_ACCESS_RW_INTERLEAVED;
+        }
     }
-    }
-    PA_DEBUG(("%s: device can MMAP: %s\n", __FUNCTION__, (self->canMmap ? "YES" : "NO"))); 
+
+    PA_DEBUG(("%s: device can MMAP: %s\n", __FUNCTION__, (self->canMmap ? "YES" : "NO")));
 
     /* If requested access mode fails, try alternate mode */
     if( snd_pcm_hw_params_set_access( pcm, hwParams, accessMode ) < 0 )
     {
-                int err = 0;
+        int err = 0;
         if( (err = snd_pcm_hw_params_set_access( pcm, hwParams, alternateAccessMode )) < 0)
-                {
-                    result = paUnanticipatedHostError;
-                    PaUtil_SetLastHostErrorInfo( paALSA, err, snd_strerror( err ) );
-                    goto error;
-                }
-            /* Flip mode */
-            self->hostInterleaved = !self->userInterleaved;
+        {
+            result = paUnanticipatedHostError;
+            PaUtil_SetLastHostErrorInfo( paALSA, err, snd_strerror( err ) );
+            goto error;
         }
+        /* Flip mode */
+        self->hostInterleaved = !self->userInterleaved;
+    }
 
     ENSURE_( snd_pcm_hw_params_set_format( pcm, hwParams, self->nativeFormat ), paUnanticipatedHostError );
 
@@ -1465,6 +1474,40 @@ static int CalculatePollTimeout( const PaAlsaStream *stream, unsigned long frame
     return (int)ceil( 1000 * frames / stream->streamRepresentation.streamInfo.sampleRate );
 }
 
+/** Align value in backward direction.
+ *
+ * @param v: Value to align.
+ * @param align: Alignment.
+ */
+static unsigned long PaAlsa_AlignBackward(unsigned long v, unsigned long align)
+{
+	return ((v - (align ? v % align : 0)));
+}
+
+/** Align value in forward direction.
+ *
+ * @param v: Value to align.
+ * @param align: Alignment.
+ */
+static unsigned long PaAlsa_AlignForward(unsigned long v, unsigned long align)
+{
+	unsigned long remainder = (align ? (v % align) : 0);
+	return (remainder != 0 ? v + (align - remainder) : v);
+}
+
+/** Get size of host buffer maintained from the number of user frames, sample rate and suggested latency. Minimum double buffering
+ *  is maintained to allow 100% CPU usage inside user callback.
+ *
+ * @param userFramesPerBuffer: User buffer size in number of frames.
+ * @param suggestedLatency: User provided desired latency.
+ * @param sampleRate: Sample rate.
+ */
+static unsigned long PaAlsa_GetFramesPerHostBuffer(unsigned long userFramesPerBuffer, PaTime suggestedLatency, double sampleRate)
+{
+	unsigned long frames = userFramesPerBuffer + PA_MAX( userFramesPerBuffer, (unsigned long)(suggestedLatency * sampleRate) );
+	return frames;
+}
+
 /** Determine size per host buffer.
  *
  * During this method call, the component's framesPerBuffer attribute gets computed, and the corresponding period size
@@ -1475,18 +1518,20 @@ static PaError PaAlsaStreamComponent_DetermineFramesPerBuffer( PaAlsaStreamCompo
         unsigned long framesPerUserBuffer, double sampleRate, snd_pcm_hw_params_t* hwParams, int* accurate )
 {
     PaError result = paNoError;
-    unsigned long bufferSize = params->suggestedLatency * sampleRate, framesPerHostBuffer;
+    unsigned long bufferSize, framesPerHostBuffer;
     int dir = 0;
 
-    {
-        snd_pcm_uframes_t tmp;
-        snd_pcm_hw_params_get_buffer_size_min( hwParams, &tmp );
-        bufferSize = PA_MAX( bufferSize, tmp );
-        snd_pcm_hw_params_get_buffer_size_max( hwParams, &tmp );
-        bufferSize = PA_MIN( bufferSize, tmp );
-    }
+    /* Calculate host buffer size */
+    bufferSize = PaAlsa_GetFramesPerHostBuffer(framesPerUserBuffer, params->suggestedLatency, sampleRate);
 
-    assert( bufferSize > 0 );
+    /* Log */
+    PA_DEBUG(( "%s: user-buffer (frames)           = %lu\n", __FUNCTION__, framesPerUserBuffer ));
+    PA_DEBUG(( "%s: user-buffer (sec)              = %f\n",  __FUNCTION__, (double)(framesPerUserBuffer / sampleRate) ));
+    PA_DEBUG(( "%s: suggested latency (sec)        = %f\n",  __FUNCTION__, params->suggestedLatency ));
+    PA_DEBUG(( "%s: suggested host buffer (frames) = %lu\n", __FUNCTION__, bufferSize ));
+    PA_DEBUG(( "%s: suggested host buffer (sec)    = %f\n",  __FUNCTION__, (double)(bufferSize / sampleRate) ));
+
+#ifdef PA_ALSA_USE_OBSOLETE_HOST_BUFFER_CALC
 
     if( framesPerUserBuffer != paFramesPerBufferUnspecified )
     {
@@ -1528,15 +1573,62 @@ static PaError PaAlsaStreamComponent_DetermineFramesPerBuffer( PaAlsaStreamCompo
         }
     }
 
-    /* Using the base number of periods, we try to approximate the suggested latency (+1 period),
-       finding a combination of period/buffer size which best fits these constraints */
-    {
-        unsigned numPeriods = numPeriods_, maxPeriods = 0;
+#endif
+
+	{
+        unsigned numPeriods = numPeriods_, maxPeriods = 0, minPeriods = numPeriods_;
+
         /* It may be that the device only supports 2 periods for instance */
         dir = 0;
+        ENSURE_( snd_pcm_hw_params_get_periods_min( hwParams, &minPeriods, &dir ), paUnanticipatedHostError )
         ENSURE_( snd_pcm_hw_params_get_periods_max( hwParams, &maxPeriods, &dir ), paUnanticipatedHostError );
         assert( maxPeriods > 1 );
-        numPeriods = PA_MIN( maxPeriods, numPeriods );
+
+        /* Clamp to min/max */
+        numPeriods = PA_MIN(maxPeriods, PA_MAX(minPeriods, numPeriods));
+
+        PA_DEBUG(( "%s: periods min = %lu, max = %lu, req = %lu \n", __FUNCTION__, minPeriods, maxPeriods, numPeriods ));
+
+#ifndef PA_ALSA_USE_OBSOLETE_HOST_BUFFER_CALC
+
+        /* Calculate period size */
+        framesPerHostBuffer = (bufferSize / numPeriods);
+
+        /* Align & test size */
+        if( framesPerUserBuffer != paFramesPerBufferUnspecified )
+        {
+            /* Align to user buffer size */
+            framesPerHostBuffer = PaAlsa_AlignForward(framesPerHostBuffer, framesPerUserBuffer);
+
+            /* Test (borrowed from older implementation) */
+            if( framesPerHostBuffer < framesPerUserBuffer )
+            {
+                assert( framesPerUserBuffer % framesPerHostBuffer == 0 );
+                if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer, 0 ) < 0 )
+                {
+                    if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer * 2, 0 ) == 0 )
+                        framesPerHostBuffer *= 2;
+                    else 
+                    if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer / 2, 0 ) == 0 )
+                        framesPerHostBuffer /= 2;
+                }
+            }
+            else
+            {
+                assert( framesPerHostBuffer % framesPerUserBuffer == 0 );
+                if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer, 0 ) < 0 )
+                {
+                    if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer + framesPerUserBuffer, 0 ) == 0 )
+                        framesPerHostBuffer += framesPerUserBuffer;
+                    else 
+                    if( snd_pcm_hw_params_test_period_size( self->pcm, hwParams, framesPerHostBuffer - framesPerUserBuffer, 0 ) == 0 )
+                        framesPerHostBuffer -= framesPerUserBuffer;
+                }
+            }
+        }
+#endif
+
+#ifdef PA_ALSA_USE_OBSOLETE_HOST_BUFFER_CALC
 
         if( framesPerUserBuffer != paFramesPerBufferUnspecified )
         {
@@ -1594,41 +1686,49 @@ static PaError PaAlsaStreamComponent_DetermineFramesPerBuffer( PaAlsaStreamCompo
         {
             framesPerHostBuffer = bufferSize / numPeriods;
         }
-    }
 
-    /* non-mmap mode needs a reasonably-sized buffer or it'll stutter */
-    if( !self->canMmap && framesPerHostBuffer < 2048 )
-        framesPerHostBuffer = 2048;
+        /* non-mmap mode needs a reasonably-sized buffer or it'll stutter */
+        if( !self->canMmap && framesPerHostBuffer < 2048 )
+            framesPerHostBuffer = 2048;
+#endif
+        PA_DEBUG(( "%s: suggested host buffer period   = %lu \n", __FUNCTION__, framesPerHostBuffer ));
+	}
 
-    assert( framesPerHostBuffer > 0 );
     {
-        snd_pcm_uframes_t min = 0, max = 0;
+        /* Get min/max period sizes and adjust our chosen */
+        snd_pcm_uframes_t min = 0, max = 0, minmax_diff;
         ENSURE_( snd_pcm_hw_params_get_period_size_min( hwParams, &min, NULL ), paUnanticipatedHostError );
         ENSURE_( snd_pcm_hw_params_get_period_size_max( hwParams, &max, NULL ), paUnanticipatedHostError );
+        minmax_diff = max - min;
 
         if( framesPerHostBuffer < min )
         {
-            PA_DEBUG(( "%s: The determined period size (%lu) is less than minimum (%lu)\n", __FUNCTION__,
-                        framesPerHostBuffer, min ));
-            framesPerHostBuffer = min;
+            PA_DEBUG(( "%s: The determined period size (%lu) is less than minimum (%lu)\n", __FUNCTION__, framesPerHostBuffer, min ));
+            framesPerHostBuffer = ((minmax_diff == 2) ? min + 1 : min);
         }
-        else if( framesPerHostBuffer > max )
+        else 
+        if( framesPerHostBuffer > max )
         {
-            PA_DEBUG(( "%s: The determined period size (%lu) is greater than maximum (%lu)\n", __FUNCTION__,
-                        framesPerHostBuffer, max ));
-            framesPerHostBuffer = max;
+            PA_DEBUG(( "%s: The determined period size (%lu) is greater than maximum (%lu)\n", __FUNCTION__, framesPerHostBuffer, max ));
+            framesPerHostBuffer = ((minmax_diff == 2) ? max - 1 : max);
         }
 
-        assert( framesPerHostBuffer >= min && framesPerHostBuffer <= max );
+		PA_DEBUG(( "%s: device period minimum          = %lu\n", __FUNCTION__, min ));
+		PA_DEBUG(( "%s: device period maximum          = %lu\n", __FUNCTION__, max ));
+		PA_DEBUG(( "%s: host buffer period             = %lu\n", __FUNCTION__, framesPerHostBuffer ));
+		PA_DEBUG(( "%s: host buffer period latency     = %f\n", __FUNCTION__, (double)(framesPerHostBuffer / sampleRate) ));
+
+        /* Try setting period size */
         dir = 0;
-        ENSURE_( snd_pcm_hw_params_set_period_size_near( self->pcm, hwParams, &framesPerHostBuffer, &dir ),
-                paUnanticipatedHostError );
+        ENSURE_( snd_pcm_hw_params_set_period_size_near( self->pcm, hwParams, &framesPerHostBuffer, &dir ), paUnanticipatedHostError );
         if( dir != 0 )
         {
             PA_DEBUG(( "%s: The configured period size is non-integer.\n", __FUNCTION__, dir ));
             *accurate = 0;
         }
     }
+
+    /* Set result */
     self->framesPerBuffer = framesPerHostBuffer;
 
 error:
@@ -1996,8 +2096,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
     PA_ENSURE( PaAlsaStream_Configure( stream, inputParameters, outputParameters, sampleRate, framesPerBuffer,
                 &inputLatency, &outputLatency, &hostBufferSizeMode ) );
-    hostInputSampleFormat = stream->capture.hostSampleFormat;
-    hostOutputSampleFormat = stream->playback.hostSampleFormat;
+    hostInputSampleFormat = stream->capture.hostSampleFormat | (!stream->capture.hostInterleaved ? paNonInterleaved : 0);
+    hostOutputSampleFormat = stream->playback.hostSampleFormat | (!stream->playback.hostInterleaved ? paNonInterleaved : 0);
 
     PA_ENSURE( PaUtil_InitializeBufferProcessor( &stream->bufferProcessor,
                     numInputChannels, inputSampleFormat, hostInputSampleFormat,
@@ -2012,6 +2112,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     if( numOutputChannels > 0 )
         stream->streamRepresentation.streamInfo.outputLatency = outputLatency + (PaTime)(
                 PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor ) / sampleRate);
+
+    PA_DEBUG(( "%s: Stream: framesPerBuffer = %lu, maxFramesPerHostBuffer = %lu, latency = i(%f)/o(%f), \n", __FUNCTION__, framesPerBuffer, stream->maxFramesPerHostBuffer, stream->streamRepresentation.streamInfo.inputLatency, stream->streamRepresentation.streamInfo.outputLatency));
 
     *s = (PaStream*)stream;
 
@@ -2031,9 +2133,6 @@ static PaError CloseStream( PaStream* s )
 {
     PaError result = paNoError;
     PaAlsaStream *stream = (PaAlsaStream*)s;
-
-	free(stream->playback.nonMmapBuffer);
-	free(stream->capture.nonMmapBuffer);
 
     PaUtil_TerminateBufferProcessor( &stream->bufferProcessor );
     PaUtil_TerminateStreamRepresentation( &stream->streamRepresentation );
@@ -2345,6 +2444,7 @@ static double GetStreamCpuLoad( PaStream* s )
 
 static int SetApproximateSampleRate( snd_pcm_t *pcm, snd_pcm_hw_params_t *hwParams, double sampleRate )
 {
+    PaError result = paNoError;
     unsigned long approx = (unsigned long) sampleRate;
     int dir = 0;
     double fraction = sampleRate - approx;
@@ -2362,7 +2462,24 @@ static int SetApproximateSampleRate( snd_pcm_t *pcm, snd_pcm_hw_params_t *hwPara
             dir = 1;
     }
 
-    return snd_pcm_hw_params_set_rate( pcm, hwParams, approx, dir );
+    if( snd_pcm_hw_params_set_rate( pcm, hwParams, approx, dir ) < 0)
+        result = paInvalidSampleRate;
+        
+end:
+
+    return result;
+
+error:
+
+    /* Log */
+    {
+        unsigned int _min = 0, _max = 0; int _dir = 0;
+        ENSURE_( snd_pcm_hw_params_get_rate_min( hwParams, &_min, &_dir ), paUnanticipatedHostError );
+        ENSURE_( snd_pcm_hw_params_get_rate_max( hwParams, &_max, &_dir ), paUnanticipatedHostError );
+        PA_DEBUG(( "%s: SR min = %d, max = %d, req = %lu\n", __FUNCTION__, _min, _max, approx ));
+    }
+
+    goto end;
 }
 
 /* Return exact sample rate in param sampleRate */
@@ -2425,8 +2542,8 @@ static PaError PaAlsaStream_HandleXrun( PaAlsaStream *self )
                 {
                     PA_DEBUG(( "%s: [playback] non-MMAP-PCM failed recovering from XRUN, will restart Alsa\n", __FUNCTION__ ));
                     ++ restartAlsa; /* did not manage to recover */
-        }
-    }
+                }
+            }
             else
                 ++ restartAlsa; /* always restart MMAPed device */
         }
@@ -2445,8 +2562,8 @@ static PaError PaAlsaStream_HandleXrun( PaAlsaStream *self )
                 {
                     PA_DEBUG(( "%s: [capture] non-MMAP-PCM failed recovering from XRUN, will restart Alsa\n", __FUNCTION__ ));
                     ++ restartAlsa; /* did not manage to recover */
-        }
-    }
+                }
+            }
             else
                 ++ restartAlsa; /* always restart MMAPed device */
         }
@@ -2987,6 +3104,8 @@ static PaError PaAlsaStream_WaitForFrames( PaAlsaStream *self, unsigned long *fr
             /* not else ! */
             if (timeouts >= 64) /* audio device not working, shall return error to notify waiters */
             {
+				*framesAvail = 0; /* no frames available for processing */
+
                 PA_DEBUG(( "%s: poll timed out, returning error\n", __FUNCTION__, timeouts ));
                 PA_ENSURE( paTimedOut );
             }
@@ -2997,19 +3116,19 @@ static PaError PaAlsaStream_WaitForFrames( PaAlsaStream *self, unsigned long *fr
             /* reset timouts counter */
             timeouts = 0;
 
-        /* check the return status of our pfds */
-        if( pollCapture )
-        {
-            PA_ENSURE( PaAlsaStreamComponent_EndPolling( &self->capture, capturePfds, &pollCapture, &xrun ) );
-        }
-        if( pollPlayback )
-        {
-            PA_ENSURE( PaAlsaStreamComponent_EndPolling( &self->playback, playbackPfds, &pollPlayback, &xrun ) );
-        }
-        if( xrun )
-        {
-            break;
-        }
+            /* check the return status of our pfds */
+            if( pollCapture )
+            {
+                PA_ENSURE( PaAlsaStreamComponent_EndPolling( &self->capture, capturePfds, &pollCapture, &xrun ) );
+            }
+            if( pollPlayback )
+            {
+                PA_ENSURE( PaAlsaStreamComponent_EndPolling( &self->playback, playbackPfds, &pollPlayback, &xrun ) );
+            }
+            if( xrun )
+            {
+                break;
+            }
         }
 
         /* @concern FullDuplex If only one of two pcms is ready we may want to compromise between the two.
@@ -3113,19 +3232,15 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
     }
     else
     {
-        /* using realloc for optimisation
-        free( self->nonMmapBuffer );
-        self->nonMmapBuffer = calloc( self->numHostChannels, snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 ) );
-        */
-        unsigned int bufferSize = self->numHostChannels * snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 );
+        unsigned int bufferSize = self->numHostChannels * snd_pcm_format_size( self->nativeFormat, *numFrames );
         if (bufferSize > self->nonMmapBufferSize)
         {
             self->nonMmapBuffer = realloc(self->nonMmapBuffer, (self->nonMmapBufferSize = bufferSize));
-            if (!self->nonMmapBuffer) 
+            if (!self->nonMmapBuffer)
             {
                 result = paInsufficientMemory;
                 goto error;
-    }
+            }
         }
     }
 
@@ -3144,20 +3259,22 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
     else
     {
         if( self->canMmap )
+        {
             for( i = 0; i < self->numUserChannels; ++i )
             {
                 area = areas + i;
                 buffer = ExtractAddress( area, self->offset );
                 setChannel( bp, i, buffer, 1 );
             }
+        }
         else
         {
-            int bufsize = snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 );
+            unsigned int buf_per_ch_size = self->nonMmapBufferSize / self->numHostChannels;
             buffer = self->nonMmapBuffer;
             for( i = 0; i < self->numUserChannels; ++i )
             {
                 setChannel( bp, i, buffer, 1 );
-                buffer += bufsize;
+                buffer += buf_per_ch_size;
             }
         }
     }
@@ -3171,13 +3288,13 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
         else
         {
             void *bufs[self->numHostChannels];
-            int bufsize = snd_pcm_format_size( self->nativeFormat, self->framesPerBuffer + 1 );
+            unsigned int buf_per_ch_size = self->nonMmapBufferSize / self->numHostChannels;
             unsigned char *buffer = self->nonMmapBuffer;
             int i;
             for( i = 0; i < self->numHostChannels; ++i )
             {
                 bufs[i] = buffer;
-                buffer += bufsize;
+                buffer += buf_per_ch_size;
             }
             res = snd_pcm_readn( self->pcm, bufs, *numFrames );
         }
@@ -3185,11 +3302,6 @@ static PaError PaAlsaStreamComponent_RegisterChannels( PaAlsaStreamComponent* se
         {
             *xrun = 1;
             *numFrames = 0;
-
-            /* using realloc for optimisation
-            free( self->nonMmapBuffer );
-            self->nonMmapBuffer = NULL;
-            */
         }
     }
 

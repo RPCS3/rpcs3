@@ -1,5 +1,5 @@
 /*
- * $Id: pa_unix_util.c 1419 2009-10-22 17:28:35Z bjornroche $
+ * $Id: pa_unix_util.c 1510 2010-06-10 08:05:29Z dmitrykos $
  * Portable Audio I/O Library
  * UNIX platform-specific support functions
  *
@@ -27,20 +27,20 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however,
+ * The text above constitutes the entire PortAudio license; however, 
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also
- * requested that these non-binding requests be included along with the
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
  * license above.
  */
 
 /** @file
  @ingroup unix_src
 */
-
+ 
 #include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -129,7 +129,7 @@ void Pa_Sleep( long msec )
 /*
     Discussion on the CoreAudio mailing list suggests that calling
     gettimeofday (or anything else in the BSD layer) is not real-time
-    safe, so we use mach_absolute_time on OSX. This implementation is
+    safe, so we use mach_absolute_time on OSX. This implementation is 
     based on these two links:
 
     Technical Q&A QA1398 - Mach Absolute Time Units
@@ -140,7 +140,7 @@ void Pa_Sleep( long msec )
 */
 
 /* Scaler to convert the result of mach_absolute_time to seconds */
-static double machSecondsConversionScaler_ = 0.0;
+static double machSecondsConversionScaler_ = 0.0; 
 #endif
 
 void PaUtil_InitializeClock( void )
@@ -193,9 +193,15 @@ PaError PaUtil_CancelThreading( PaUtilThreading *threading, int wait, PaError *e
     if( exitResult )
         *exitResult = paNoError;
 
+    /* If pthread_cancel is not supported (Android platform) whole this function can lead to indefinite waiting if 
+       working thread (callbackThread) has'n received any stop signals from outside, please keep 
+       this in mind when considering using PaUtil_CancelThreading
+    */
+#ifdef PTHREAD_CANCELED
     /* Only kill the thread if it isn't in the process of stopping (flushing adaptation buffers) */
     if( !wait )
         pthread_cancel( threading->callbackThread );   /* XXX: Safe to call this if the thread has exited on its own? */
+#endif
     pthread_join( threading->callbackThread, &pret );
 
 #ifdef PTHREAD_CANCELED
@@ -214,7 +220,7 @@ PaError PaUtil_CancelThreading( PaUtilThreading *threading, int wait, PaError *e
 }
 
 /* Threading */
-/* paUnixMainThread
+/* paUnixMainThread 
  * We have to be a bit careful with defining this global variable,
  * as explained below. */
 #ifdef __APPLE__
@@ -294,7 +300,7 @@ PaError PaUnixThread_New( PaUnixThread* self, void* (*threadFunc)( void* ), void
 
     PA_UNLESS( !pthread_attr_init( &attr ), paInternalError );
     /* Priority relative to other processes */
-    PA_UNLESS( !pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM ), paInternalError );
+    PA_UNLESS( !pthread_attr_setscope( &attr, PTHREAD_SCOPE_SYSTEM ), paInternalError );   
 
     PA_UNLESS( !pthread_create( &self->thread, &attr, threadFunc, threadArg ), paInternalError );
     started = 1;
@@ -344,7 +350,7 @@ PaError PaUnixThread_New( PaUnixThread* self, void* (*threadFunc)( void* ), void
             pthread_getschedparam(self->thread, &policy, &spm);
         }
     }
-
+    
     if( self->parentWaiting )
     {
         PaTime till;
@@ -427,12 +433,19 @@ PaError PaUnixThread_Terminate( PaUnixThread* self, int wait, PaError* exitResul
     {
         PA_DEBUG(( "%s: Canceling thread %d\n", __FUNCTION__, self->thread ));
         /* XXX: Safe to call this if the thread has exited on its own? */
+#ifdef PTHREAD_CANCELED
         pthread_cancel( self->thread );
+#endif
     }
     PA_DEBUG(( "%s: Joining thread %d\n", __FUNCTION__, self->thread ));
     PA_ENSURE_SYSTEM( pthread_join( self->thread, &pret ), 0 );
 
+#ifdef PTHREAD_CANCELED
     if( pret && PTHREAD_CANCELED != pret )
+#else
+    /* !wait means the thread may have been canceled */
+    if( pret && wait )
+#endif
     {
         if( exitResult )
         {
@@ -500,15 +513,17 @@ PaError PaUnixMutex_Terminate( PaUnixMutex* self )
 
 /** Lock mutex.
  *
- * We're disabling thread cancellation while the thread is holding a lock, so mutexes are
+ * We're disabling thread cancellation while the thread is holding a lock, so mutexes are 
  * properly unlocked at termination time.
  */
 PaError PaUnixMutex_Lock( PaUnixMutex* self )
 {
     PaError result = paNoError;
-    int oldState;
-
+    
+#ifdef PTHREAD_CANCEL
+	int oldState;
     PA_ENSURE_SYSTEM( pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldState ), 0 );
+#endif
     PA_ENSURE_SYSTEM( pthread_mutex_lock( &self->mtx ), 0 );
 
 error:
@@ -522,10 +537,12 @@ error:
 PaError PaUnixMutex_Unlock( PaUnixMutex* self )
 {
     PaError result = paNoError;
-    int oldState;
 
     PA_ENSURE_SYSTEM( pthread_mutex_unlock( &self->mtx ), 0 );
+#ifdef PTHREAD_CANCEL
+	int oldState;
     PA_ENSURE_SYSTEM( pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldState ), 0 );
+#endif
 
 error:
     return result;
@@ -578,7 +595,7 @@ static void *WatchdogFunc( void *userData )
     while( 1 )
     {
         double lowpassCoeff = 0.9, lowpassCoeff1 = 0.99999 - lowpassCoeff;
-
+        
         /* Test before and after in case whatever underlying sleep call isn't interrupted by pthread_cancel */
         pthread_testcancel();
         Pa_Sleep( intervalMsec );
@@ -663,7 +680,7 @@ error:
     /* Pass on error code */
     pres = malloc( sizeof (PaError) );
     *pres = result;
-
+    
     pthread_exit( pres );
 }
 

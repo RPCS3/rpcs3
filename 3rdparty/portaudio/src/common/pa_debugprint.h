@@ -101,7 +101,7 @@ void PaUtil_DebugPrint( const char *format, ... );
 
 
 #ifdef PA_LOG_API_CALLS
-#define PA_LOGAPI(x) PaUtil_DebugPrint x
+#define PA_LOGAPI(x) PaUtil_DebugPrint x 
 
 #define PA_LOGAPI_ENTER(functionName) PaUtil_DebugPrint( functionName " called.\n" )
 
@@ -133,7 +133,7 @@ void PaUtil_DebugPrint( const char *format, ... );
 #define PA_LOGAPI_EXIT_PAERROR_OR_T_RESULT( functionName, positiveResultFormatString, result )
 #endif
 
-
+    
 typedef void (*PaUtilLogCallback ) (const char *log);
 
 /**
