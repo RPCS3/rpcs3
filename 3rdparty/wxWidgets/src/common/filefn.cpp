@@ -1179,6 +1179,9 @@ wxRenameFile(const wxString& file1, const wxString& file2, bool overwrite)
         return false;
     }
 
+#ifdef __WXMSW__
+	return ::MoveFileEx(file1,file2, MOVEFILE_REPLACE_EXISTING) != 0;
+#else
 #if !defined(__WXWINCE__) && !defined(__WXPALMOS__)
     // Normal system call
   if ( wxRename (file1, file2) == 0 )
@@ -1192,6 +1195,7 @@ wxRenameFile(const wxString& file1, const wxString& file2, bool overwrite)
   }
   // Give up
   return false;
+#endif
 }
 
 bool wxRemoveFile(const wxString& file)
