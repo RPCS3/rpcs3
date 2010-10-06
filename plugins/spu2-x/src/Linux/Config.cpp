@@ -46,7 +46,7 @@ int ReverbBoost = 0;
 
 // OUTPUT
 u32 OutputModule = 0;
-int SndOutLatencyMS = 150;
+int SndOutLatencyMS = 300;
 int SynchMode = 0; // Time Stretch, Async or Disabled
 
 /*****************************************************************************/
@@ -69,7 +69,7 @@ void ReadSettings()
 	CfgReadStr( L"OUTPUT", L"Output_Module", temp, PortaudioOut->GetIdent() );
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 
-	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
+	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 300);
 	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 
 	PortaudioOut->ReadSettings();
