@@ -376,7 +376,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\SndOut_Portaudio.cpp" />
-    <ClCompile Include="..\decoder.cpp" />
     <ClCompile Include="..\3rdparty\liba52\bit_allocate.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugStrict|Win32'">
       </PrecompiledHeader>

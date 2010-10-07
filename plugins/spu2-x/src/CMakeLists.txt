@@ -41,7 +41,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(spu2xSources
     ADSR.cpp
     Debug.cpp
-    Decoder.cpp
     Dma.cpp
     iconvert.cpp
     Lowpass.cpp
@@ -123,9 +122,6 @@ target_link_libraries(${Output} ${PORTAUDIO_LIBRARIES})
 
 # link target with SoundTouch
 target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})
-
-# link target with A52
-target_link_libraries(${Output} ${A52_LIBRARIES})
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

@@ -17,10 +17,6 @@
 
 #include "Global.h"
 
-//#include <float.h>
-
-extern void	spdif_update();
-
 void ADMAOutLogWrite(void *lpData, u32 ulSize);
 
 static const s32 tbl_XA_Factor[5][2] =
@@ -785,10 +781,6 @@ __forceinline void Mix()
 
 		Out = clamp_mix( Out, SndOutVolumeShift );
 	}
-
-	// Update spdif (called each sample)
-	if(PlayMode&4)
-		spdif_update();
 
 	SndBuffer::Write( Out );
 

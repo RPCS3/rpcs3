@@ -669,10 +669,6 @@
 				Name="decoder"
 				>
 				<File
-					RelativePath="..\decoder.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\spdif.h"
 					>
 				</File>

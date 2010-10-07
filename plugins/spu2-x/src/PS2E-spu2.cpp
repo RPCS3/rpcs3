@@ -434,7 +434,7 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	try
 	{
 		SndBuffer::Init();
-		spdif_init();
+		
 #ifndef __LINUX__
 		DspLoadLibrary(dspPlugin,dspPluginModule);
 #endif
@@ -460,7 +460,6 @@ EXPORT_C_(void) SPU2close()
 	DspCloseLibrary();
 #endif
 
-	spdif_shutdown();
 	SndBuffer::Cleanup();
 }
 
