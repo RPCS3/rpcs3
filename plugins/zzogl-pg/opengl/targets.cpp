@@ -3063,210 +3063,157 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 #endif
 }
 
-template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
-__forceinline void update_4pixels(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask, u32 imask)
-{
-    Tdst* dst_tmp;
-    Tdst dsrc_tmp;
+static const __aligned16 unsigned int pixel_5b_mask[4] = {0x0000001F, 0x0000001F, 0x0000001F, 0x0000001F};
 
-    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
-    // but can probably be used after their re-write
-
-    dst_tmp = basepage + pageTable[i_msk][(INDEX)];
-    if (do_conversion) {
-        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX)]);
-    } else {
-        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX)];
-    }
-    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+1];
-    if (do_conversion) {
-        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+1)]);
-    } else {
-        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+1)];
-    }
-    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+2];
-    if (do_conversion) {
-        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+2)]);
-    } else {
-        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+2)];
-    }
-    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+3];
-    if (do_conversion) {
-        dsrc_tmp = RGBA32to16(src[RW((j<<6)+INDEX+3)]);
-    } else {
-        dsrc_tmp = (Tdst)src[RW((j<<6)+INDEX+3)];
-    }
-    *dst_tmp = (dsrc_tmp & mask) | (*dst_tmp & imask);
-}
-
-// This variable are used in ASM. ASM only support standard c type. Do not replace them with some typedef.
-static const __aligned16 unsigned int pixel_Amask[4] = {0x80000000, 0x80000000, 0x80000000, 0x80000000};
-static const __aligned16 unsigned int pixel_Rmask[4] = {0x00F80000, 0x00F80000, 0x00F80000, 0x00F80000};
-static const __aligned16 unsigned int pixel_Gmask[4] = {0x0000F800, 0x0000F800, 0x0000F800, 0x0000F800};
-static const __aligned16 unsigned int pixel_Bmask[4] = {0x000000F8, 0x000000F8, 0x000000F8, 0x000000F8};
-static const __aligned16 unsigned int pixel_upper_mask[4] = {0xFFFF0000, 0xFFFF0000, 0xFFFF0000, 0xFFFF0000};
-
-template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, u32 INDEX>
-__forceinline void update_4pixels_sse2(u32* src, Tdst* basepage, u32 i_msk, u32 j, u32 mask[4], u32 imask)
-{
-    Tdst* dst_tmp;
-    __aligned16 u32 src_tmp[4];
-    u32* base_ptr;
-    __m128i pixels;
-
-    // Directly load pixels into xmm registers
-    // NOTE: Intel SSE4.1 support an instruction to load 32bits memory to a part of an xmm registers
-    if (AA.x == 2) {
-        // Note: pixels (32bits) are stored like that:
-        // p0 p0 p0 p0  p1 p1 p1 p1
-        // p2 p2 p2 p2  p3 p3 p3 p3
-        base_ptr = &src[(((j<<6)+INDEX)<<2)];
-        __m128i pixel_low = _mm_loadl_epi64((__m128i*)(base_ptr+3));
-        __m128i pixel_high = _mm_loadl_epi64((__m128i*)(base_ptr+11));
-        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
-    } else if(AA.x ==1) {
-        // Note: pixels (32bits) are stored like that:
-        // p0 p0 p1 p1  p2 p2 p3 p3
-        base_ptr = &src[(((j<<6)+INDEX)<<1)];
-        __m128i pixel_low = _mm_loadl_epi64((__m128i*)(base_ptr+1));
-        __m128i pixel_high = _mm_loadl_epi64((__m128i*)(base_ptr+5));
-        pixels = _mm_unpacklo_epi64(pixel_low, pixel_high);
-    } else {
-        base_ptr = &src[((j<<6)+INDEX)];
-        pixels = _mm_loadu_si128((__m128i*)base_ptr);
-    }
-
-    if (do_conversion) {
-    // transform pixel from ARGB:8888 to ARGB:1555
-    // It also does the fbm pixel mask
-        // Filter component of each pixel
-        __m128i pixel_A = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Amask));
-        __m128i pixel_R = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Rmask));
-        __m128i pixel_G = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Gmask));
-        __m128i pixel_B = _mm_and_si128(pixels, _mm_load_si128((__m128i*)pixel_Bmask));
-
-        // shift the value
-        pixel_A = _mm_srli_epi32(pixel_A, 16);
-        pixel_R = _mm_srli_epi32(pixel_R, 9);
-        pixel_G = _mm_srli_epi32(pixel_G, 6);
-        pixel_B = _mm_srli_epi32(pixel_B, 3);
-
-        // rebuild a complete pixel
-        pixels = _mm_or_si128(pixel_A, pixel_B);
-        pixels = _mm_or_si128(pixels, pixel_G);
-        pixels = _mm_or_si128(pixels, pixel_R);
-
-        // apply fbm mask
-        pixels = _mm_and_si128(pixels, _mm_load_si128((__m128i*)mask) );
-
-        _mm_store_si128((__m128i*)src_tmp, pixels);
-
-    } else {
-        // Just apply the fbm mask
-        // The real optimization is to reduce the register usage for dst_tmp update
-        // Because x86 does not have enough register gcc does multiples load/store value
-        // in the stack
-        pixels = _mm_and_si128(pixels, _mm_loadu_si128((__m128i*)mask));
-        _mm_store_si128((__m128i*)src_tmp, pixels);
-    }
-
-    // Note: Future improvement. GetPixelAddress, WritePixel need some improvement
-    // but can probably be used after their re-write
-    dst_tmp = basepage + pageTable[i_msk][(INDEX)];
-    *dst_tmp = (Tdst)src_tmp[0] | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+1];
-    *dst_tmp = (Tdst)src_tmp[1] | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+2];
-    *dst_tmp = (Tdst)src_tmp[2] | (*dst_tmp & imask);
-
-    dst_tmp = basepage + pageTable[i_msk][INDEX+3];
-    *dst_tmp = (Tdst)src_tmp[3] | (*dst_tmp & imask);
-    // The MS compiler complains about the missing of the emms clear function...
-    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
-    // of the compiler probably generates better code. -- Gregory
-}
-
-template <u32 size, u32 pageTable[size][64], bool do_conversion, bool texture_16b, u32 INDEX>
-__forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u32 j, u32 pix_mask, u32 src_pitch)
+// The function process 2*2 pixels in 32bits. And 2*4 pixels in 16bits
+template <u32 psm, u32 size, u32 pageTable[size][64], bool null_second_line, u32 INDEX>
+__forceinline void update_8pixels_sse2(u32* src, u32* basepage, u32 i_msk, u32 j, u32 pix_mask, u32 src_pitch)
 {
     u32* base_ptr;
     __m128i pixels_0;
+    __m128i pixel_0_low;
+    __m128i pixel_0_high;
 
-    // TODO DEBUG: properly setup the loop
-    if (i_msk & 0x1) { return; }
+    __m128i pixels_1;
+    __m128i pixel_1_low;
+    __m128i pixel_1_high;
 
-    // Directly load pixels into xmm registers
-    // Note: we read 2 lines at onces
+    assert((i_msk&0x1) == 0); // Failure => wrong line selected
+
+    // Note: pixels have a special arrangement in column. Here a short description when AA.x = 0
+    //
+    // 32 bits format: 8x2 pixels: the idea is to read pixels 0-3
+    // It is easier to process 4 bits (we can not cross column bondary)
+    //      0 1 4 5 8  9  12 13
+    //      2 3 6 7 10 11 14 15
+    //
+    // 16 bits format: 16x2 pixels, each pixels have a lower and higher part.
+    // Here the idea to read 0L-3L & 0H-3H to combine lower and higher part this avoid
+    // data interleaving and useless read/write
+    //      0L 1L 4L 5L 8L  9L  12L 13L  0H 1H 4H 5H 8H  9H  12H 13H
+    //      2L 3L 6L 7L 10L 11L 14L 15L  2H 3H 6H 7H 10H 11H 14H 15H
+    //
     if (AA.x == 2) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p0 p0  p1 p1 p1 p1  p4 p4 p4 p4  p5 p5 p5 p5
         // ...
         // p2 p2 p2 p2  p3 p3 p3 p3  p6 p6 p6 p6  p7 p7 p7 p7
-        base_ptr = &src[(((j<<6)+INDEX)<<2)];
-        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 3));
-        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 3 + src_pitch));
-		pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+        base_ptr = &src[((j+INDEX)<<2)];
+        pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 3));
+        if (!null_second_line) pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 3 + src_pitch));
+
+        if (PSMT_ISHALF(psm)) {
+            pixel_1_low = _mm_loadl_epi64((__m128i*)(base_ptr + 3 + 32));
+            if (!null_second_line) pixel_1_high = _mm_loadl_epi64((__m128i*)(base_ptr + 3 + 32 + src_pitch));
+        }
     } else if(AA.x ==1) {
         // Note: pixels (32bits) are stored like that:
         // p0 p0 p1 p1  p4 p4 p5 p5
         // ...
         // p2 p2 p3 p3  p6 p6 p7 p7
-        base_ptr = &src[(((j<<6)+INDEX)<<1)];
-        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 1));
-        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 1 + src_pitch));
-        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+        base_ptr = &src[((j+INDEX)<<1)];
+        pixel_0_low = _mm_loadl_epi64((__m128i*)(base_ptr + 1));
+        if (!null_second_line) pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + 1 + src_pitch));
+
+        if (PSMT_ISHALF(psm)) {
+            pixel_1_low = _mm_loadl_epi64((__m128i*)(base_ptr + 1 + 16));
+            if (!null_second_line) pixel_1_high = _mm_loadl_epi64((__m128i*)(base_ptr + 1 + 16 + src_pitch));
+        }
     } else {
         // Note: pixels (32bits) are stored like that:
         // p0 p1  p4 p5
-        // ...
         // p2 p3  p6 p7
-        base_ptr = &src[((j<<6)+INDEX)];
-        __m128i pixel_0_low = _mm_loadl_epi64((__m128i*)base_ptr);
-        __m128i pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + src_pitch));
-        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+        base_ptr = &src[(j+INDEX)];
+        pixel_0_low = _mm_loadl_epi64((__m128i*)base_ptr);
+        if (!null_second_line) pixel_0_high = _mm_loadl_epi64((__m128i*)(base_ptr + src_pitch));
+
+        if (PSMT_ISHALF(psm)) {
+            pixel_1_low = _mm_loadl_epi64((__m128i*)(base_ptr + 8));
+            if (!null_second_line) pixel_1_high = _mm_loadl_epi64((__m128i*)(base_ptr + 8 + src_pitch));
+        }
     }
 
-    if (do_conversion) {
+    // 2nd line does not exist... Just duplicate the pixel value
+    if(null_second_line) {
+        pixel_0_high = pixel_0_low;
+        if (PSMT_ISHALF(psm)) pixel_1_high = pixel_1_low;
+    }
+
+    // Merge the 2 dword
+        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+    if (PSMT_ISHALF(psm)) pixels_1 = _mm_unpacklo_epi64(pixel_1_low, pixel_1_high);
+
         // transform pixel from ARGB:8888 to ARGB:1555
-        // It also does the fbm pixel mask
+    if (psm == PSMCT16 || psm == PSMCT16S) {
+        // shift pixel instead of the mask. It allow to keep 1 mask into a register
+        // instead of 4 (not enough room on x86...).
+        __m128i pixel_mask = _mm_load_si128((__m128i*)pixel_5b_mask);
 
-        // Filter component of each pixel. Note rebuild all mask from the Bmask. (save memory access)
-        __m128i pixel_mask_base = _mm_load_si128((__m128i*)pixel_Bmask);
-        __m128i pixel_B = _mm_and_si128(pixels_0, pixel_mask_base);
+        __m128i pixel_0_B = _mm_srli_epi32(pixels_0, 3);
+        pixel_0_B = _mm_and_si128(pixel_0_B, pixel_mask);
 
-        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 8);
-        __m128i pixel_G = _mm_and_si128(pixels_0, pixel_mask_base);
+        __m128i pixel_0_G = _mm_srli_epi32(pixels_0, 11);
+        pixel_0_G = _mm_and_si128(pixel_0_G, pixel_mask);
 
-        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 8);
-        __m128i pixel_R = _mm_and_si128(pixels_0, pixel_mask_base);
+        __m128i pixel_0_R = _mm_srli_epi32(pixels_0, 19);
+        pixel_0_R = _mm_and_si128(pixel_0_R, pixel_mask);
 
-        pixel_mask_base = _mm_slli_epi32(pixel_mask_base, 12);
-        __m128i pixel_A = _mm_and_si128(pixels_0, pixel_mask_base);
+        // Note: because of the logical shift we do not need to mask the value
+        __m128i pixel_0_A = _mm_srli_epi32(pixels_0, 31);
 
-        // shift the value
-        pixel_A = _mm_srli_epi32(pixel_A, 16);
-        pixel_R = _mm_srli_epi32(pixel_R, 9);
-        pixel_G = _mm_srli_epi32(pixel_G, 6);
-        pixel_B = _mm_srli_epi32(pixel_B, 3);
+        // Realignment of pixels
+        pixel_0_A = _mm_slli_epi32(pixel_0_A, 15);
+        pixel_0_R = _mm_slli_epi32(pixel_0_R, 10);
+        pixel_0_G = _mm_slli_epi32(pixel_0_G, 5);
 
         // rebuild a complete pixel
-        pixels_0 = _mm_or_si128(pixel_A, pixel_B);
-        pixels_0 = _mm_or_si128(pixels_0, pixel_G);
-        pixels_0 = _mm_or_si128(pixels_0, pixel_R);
+        pixels_0 = _mm_or_si128(pixel_0_A, pixel_0_B);
+        pixels_0 = _mm_or_si128(pixels_0, pixel_0_G);
+        pixels_0 = _mm_or_si128(pixels_0, pixel_0_R);
+
+        // do the same for pixel_1
+        __m128i pixel_1_B = _mm_srli_epi32(pixels_1, 3);
+        pixel_1_B = _mm_and_si128(pixel_1_B, pixel_mask);
+
+        __m128i pixel_1_G = _mm_srli_epi32(pixels_1, 11);
+        pixel_1_G = _mm_and_si128(pixel_1_G, pixel_mask);
+
+        __m128i pixel_1_R = _mm_srli_epi32(pixels_1, 19);
+        pixel_1_R = _mm_and_si128(pixel_1_R, pixel_mask);
+
+        __m128i pixel_1_A = _mm_srli_epi32(pixels_1, 31);
+
+        // Realignment of pixels
+        pixel_1_A = _mm_slli_epi32(pixel_1_A, 15);
+        pixel_1_R = _mm_slli_epi32(pixel_1_R, 10);
+        pixel_1_G = _mm_slli_epi32(pixel_1_G, 5);
+
+        // rebuild a complete pixel
+        pixels_1 = _mm_or_si128(pixel_1_A, pixel_1_B);
+        pixels_1 = _mm_or_si128(pixels_1, pixel_1_G);
+        pixels_1 = _mm_or_si128(pixels_1, pixel_1_R);
     }
+
+    // Move the pixels to higher parts and merge it with pixels_0
+    if (PSMT_ISHALF(psm)) {
+        pixels_1 = _mm_slli_epi32(pixels_1, 16);
+        pixels_0 = _mm_or_si128(pixels_0, pixels_1);
+    }
+
     // Status 16 bits
-    // pixels_0 = 0 p3 0 p2  0 p1 0 p0
+    // pixels_0 = p3H p3L p2H p2L  p1H p1L p0H p0L
     // Status 32 bits
     // pixels_0 = p3 p2 p1 p0
 
+    // load the destination add
+    u32* dst_add;
+    if (PSMT_ISHALF(psm))
+        dst_add = basepage + (pageTable[i_msk][(INDEX)] >> 1);
+    else
+        dst_add = basepage + pageTable[i_msk][(INDEX)];
+
+    // Save some memory access when pix_mask is 0.
+    if (pix_mask) {
     // Build fbm mask (tranform a u32 to a 4 packets u32)
     // In 16 bits texture one packet is "0000 DATA"
     __m128i imask = _mm_cvtsi32_si128(pix_mask);
@@ -3275,223 +3222,157 @@ __forceinline void update_4pixels_sse2_bis(u32* src, u32* basepage, u32 i_msk, u
     // apply the mask on new values
     pixels_0 = _mm_andnot_si128(imask, pixels_0);
 
-    // apply the mask on old values
-    u32* dst_add;
-    u32 alignment;
-    if (texture_16b) {
-        dst_add = basepage + (pageTable[i_msk][(INDEX)] >> 1);
-        alignment =  pageTable[i_msk][(INDEX)] & 0x1;
-    } else {
-        dst_add = basepage + pageTable[i_msk][(INDEX)];
-    }
     __m128i old_pixels_0;
     __m128i final_pixels_0;
-    if (texture_16b) {
-        old_pixels_0 = _mm_loadu_si128((__m128i*)dst_add); // 3H 3L 2H 2L  1H 1L 0H 0L
-        // Note: for future improvement
-        // process 8 pixels -> no need to separate high and low word.
-        // Just apply the fbm mask to all old value
-        // do not check the alignment. first 4 are the low one, the second four are the high one.
 
-        // Separate high and low word
-        __m128i old_pixels_0_L = _mm_andnot_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
-        __m128i old_pixels_0_H = _mm_and_si128(_mm_load_si128((__m128i*)pixel_upper_mask), old_pixels_0);
-
-        if (alignment) {
-            // update high word (fbm)
-            old_pixels_0_H = _mm_and_si128(old_pixels_0_H, imask);
-            // Align pixels_0
-            pixels_0 = _mm_slli_epi32(pixels_0, 16);
-        } else {
-            // update low word (fbm)
-            old_pixels_0_L = _mm_and_si128(old_pixels_0_H, imask);
-        }
-        // Merge all results
-        final_pixels_0 = _mm_or_si128(old_pixels_0_H, old_pixels_0_L);
-        final_pixels_0 = _mm_or_si128(final_pixels_0, pixels_0);
-
-    } else {
         old_pixels_0 = _mm_and_si128(imask, _mm_load_si128((__m128i*)dst_add));
         final_pixels_0 = _mm_or_si128(old_pixels_0, pixels_0);
-    }
 
-    // TODO replace with NT and add a fence in the out of the loop
-    // The old value is read so already in the cache (maybe worth if imask = 0 no need to read previous value)
-    _mm_store_si128((__m128i*)dst_add, final_pixels_0);
-    // FIXME not sure it support unaligned write maybe use _mm_stream_pd
-    // _mm_stream_si128((__m128i*)dst_add, final_pixels_0);
+        _mm_store_si128((__m128i*)dst_add, final_pixels_0);
+        } else {
+        // Note: because we did not read the previous value of add. We could bypass the cache.
+        // We gains a few percents
+        _mm_stream_si128((__m128i*)dst_add, pixels_0);
+        }
 
-    // The MS compiler complains about the missing of the emms clear function...
-    // My guess, it uses the mmx register for the 64 bits transfer. Newer version
-    // of the compiler probably generates better code. -- Gregory
 }
 
-template <u32 size, u32 pageTable[size][64], typename Tdst, bool do_conversion, bool texture_16b>
-void Resolve_32b(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
+// Update 2 lines of a page (2*64 pixels)
+template <u32 psm, u32 size, u32 pageTable[size][64], bool null_second_line>
+__forceinline void update_pixels_row_sse2(u32* src, u32* basepage, u32 i_msk, u32 j, u32 pix_mask, u32 raw_size)
 {
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 2>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 4>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 6>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+    if(!PSMT_ISHALF(psm)) {
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 8>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 10>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 12>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 14>(src, basepage, i_msk, j, pix_mask, raw_size);
+    }
+
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 16>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 18>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 20>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 22>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+    if(!PSMT_ISHALF(psm)) {
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 24>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 26>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 28>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 30>(src, basepage, i_msk, j, pix_mask, raw_size);
+    }
+
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 32>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 34>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 36>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 38>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+    if(!PSMT_ISHALF(psm)) {
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 40>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 42>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 44>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 46>(src, basepage, i_msk, j, pix_mask, raw_size);
+    }
+
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 48>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 50>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 52>(src, basepage, i_msk, j, pix_mask, raw_size);
+    update_8pixels_sse2<psm, size, pageTable, null_second_line, 54>(src, basepage, i_msk, j, pix_mask, raw_size);
+
+    if(!PSMT_ISHALF(psm)) {
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 56>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 58>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 60>(src, basepage, i_msk, j, pix_mask, raw_size);
+        update_8pixels_sse2<psm, size, pageTable, null_second_line, 62>(src, basepage, i_msk, j, pix_mask, raw_size);
+    }
+}
+
+template <u32 psm, u32 size, u32 pageTable[size][64]>
+void Resolve_32_Bit_sse2(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
+{
+    // Note a basic implementation was done in Resolve_32_Bit function
 #ifdef LOG_RESOLVE_PROFILE
 #ifdef __LINUX__
     u32 startime = timeGetPreciseTime();
 #endif
 #endif
-    __aligned16 u32 mask[4];
-    u32 imask;
     u32 pix_mask;
-    if (texture_16b) /* 16 bit format */
+    if (PSMT_ISHALF(psm)) /* 16 bit format */
     {
-        /* mask is shifted*/
-        imask = RGBA32to16(fbm);
-        // Use a 4*32 mask to ease SSE instruction
-        mask[0] = (~imask)&0xffff;
-        mask[1] = mask[0];
-        mask[2] = mask[0];
-        mask[3] = mask[0];
-        pix_mask = (imask<<16) | imask;
+        /* Use 2 16bits mask */
+        u32 pix16_mask = RGBA32to16(fbm);
+        pix_mask = (pix16_mask<<16) | pix16_mask;
     }
     else
-    {
-        mask[0] = ~fbm;
-        mask[1] = mask[0];
-        mask[2] = mask[0];
-        mask[3] = mask[0];
-        imask = fbm;
         pix_mask = fbm;
-    }
 
-    Tdst* pPageOffset = (Tdst*)g_pbyGSMemory + fbp*(256/sizeof(Tdst));
+    // Note GS register: frame_register__fbp is specified in units of the 32 bits address divided by 2048
+    // fbp is stored as 32*frame_register__fbp
+    u32* pPageOffset = (u32*)g_pbyGSMemory + (fbp/32)*2048;
 
-    int maxfbh = (MEMORY_END-fbp*256) / (sizeof(Tdst) * fbw);
+    int maxfbh;
+    int memory_space = MEMORY_END-(fbp/32)*2048*4;
+    if (PSMT_ISHALF(psm))
+        maxfbh = memory_space / (2*fbw);
+    else
+        maxfbh = memory_space / (4*fbw);
+
     if( maxfbh > fbh ) maxfbh = fbh;
     
 #ifdef LOG_RESOLVE_PROFILE
-    ZZLog::Dev_Log("*** Resolve 32 to 32 bits: %dx%d. Frame Mask %x", maxfbh, fbw, imask);
+    ZZLog::Dev_Log("*** Resolve 32 to 32 bits: %dx%d. Frame Mask %x. Format %x", maxfbh, fbw, pix_mask, psm);
 #endif
 
     // Start the src array at the end to reduce testing in loop
+    // If maxfbh is odd, proces maxfbh -1 alone and then go back to maxfbh -3
     u32 raw_size = RH(Pitch(fbw))/sizeof(u32);
-    u32* src = (u32*)(psrc) + (maxfbh-1)*raw_size;
+    u32* src;
+    if (maxfbh&0x1) {
+        ZZLog::Dev_Log("*** Warning resolve 32bits have an odd number of lines");
 
-    // Manually optimize the loop (typical 448x512). In particular unroll 64times the inner loop
-    // And move maximum code outside (compiler must do it normally...)
-    // Basic code look like this:
-    /* loop i : 0->maxfbh
-     * loop j : 0->fbw
-     *      Tdst dsrc = (Tdst)convfn(src[RW(j)]);
-     *      dst = pPageOffset + getPixelAddress16_0(j, i, fbw);
-     *      *dst = (dsrc & mask) | (*dst & imask);
-     * end loop i
-     *      *src += raw_size;
-     * end loop j
-     */
-    assert(fbw%64 == 0); // Failure => bad loop unrolling
-    u32 fbw_div = (fbw >> 6);
-    for(int i = maxfbh-1; i >= 0; --i) {
-        u32 i_div = (i / size) * fbw_div;
-        u32 i_msk = i & (size-1);
-        for(int j = fbw_div-1; j >= 0; --j) {
-        // for(u32 j = 0 ; j < fbw_div; ++j) {
+        // decrease maxfbh to process the bottom line (maxfbh-1)
+        maxfbh--;
 
-#define DO_8_PIX
-
-#ifdef DO_8_PIX
-            u32* basepage = (u32*)pPageOffset + (i_div + j) * 2048;
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 0>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 2>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 4>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 6>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 8>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 10>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 12>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 14>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 16>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 18>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 20>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 22>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 24>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 26>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 28>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 30>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 32>(src, basepage, i_msk, j, pix_mask, raw_size);
-
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 34>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 36>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 38>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 40>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 42>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 44>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 46>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 48>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 50>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 52>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 54>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 56>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 58>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 60>(src, basepage, i_msk, j, pix_mask, raw_size);
-            update_4pixels_sse2_bis<size, pageTable, do_conversion, texture_16b, 62>(src, basepage, i_msk, j, pix_mask, raw_size);
-
-            // validate memory write in update_4pixels_sse2_bis
-            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
-            // store fence insures that previous store are finish before execute new one.
-            // _mm_sfence();
-#else
-#ifdef ZEROGS_SSE2
-            Tdst* basepage;
-            // A bad hack for the moment
-            if(texture_16b) {
-                basepage = pPageOffset + (i_div + j) * 4096;
-            } else {
-                basepage = pPageOffset + (i_div + j) * 2048;
-            }
-
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask, imask);
-            update_4pixels_sse2<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask, imask);
-#else
-            Tdst* basepage;
-            // A bad hack for the moment
-            if(texture_16b) {
-                basepage = pPageOffset + (i_div + j) * 4096;
-            } else {
-                basepage = pPageOffset + (i_div + j) * 2048;
-            }
-
-            update_4pixels<size, pageTable, Tdst, do_conversion, 0>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 4>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 8>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 12>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 16>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 20>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 24>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 28>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 32>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 36>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 40>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 44>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 48>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 52>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 56>(src, basepage, i_msk, j, mask[0], imask);
-            update_4pixels<size, pageTable, Tdst, do_conversion, 60>(src, basepage, i_msk, j, mask[0], imask);
-#endif
-#endif
+        src = (u32*)(psrc) + maxfbh*raw_size;
+        u32 i_msk = maxfbh & (size-1);
+        // Note fbw is a multiple of 64. So you can unroll the loop 64 times
+        for(int j = (fbw - 64); j >= 0; j -= 64) {
+            u32* basepage = pPageOffset + ((maxfbh/size) * (fbw/64) + (j/64)) * 2048;
+            update_pixels_row_sse2<psm, size, pageTable, true>(src, basepage, i_msk, j, pix_mask, raw_size);
         }
-        src -= raw_size;
+        // realign the src pointer to process others lines
+        src -= 2*raw_size;
+    } else {
+        // Because we process 2 lines at once go back to maxfbh-2.
+        src = (u32*)(psrc) + (maxfbh-2)*raw_size;
     }
+
+    // Note i must be even for the update_8pixels functions
+    assert((maxfbh&0x1) == 0);
+    for(int i = (maxfbh-2); i >= 0; i -= 2) {
+        u32 i_msk = i & (size-1);
+        // Note fbw is a multiple of 64. So you can unroll the loop 64 times
+        for(int j = (fbw - 64); j >= 0; j -= 64) {
+            u32* basepage = pPageOffset + ((i/size) * (fbw/64) + (j/64)) * 2048;
+            update_pixels_row_sse2<psm, size, pageTable, false>(src, basepage, i_msk, j, pix_mask, raw_size);
+        }
+
+        // Note update_8pixels process 2 lines at onces hence the factor 2
+        src -= 2*raw_size;
+            }
+
+    if(!pix_mask) {
+        // Ensure that previous (out of order) write are done. It must be done after non temporal instruction
+        // (or *_stream_* intrinsic)
+        _mm_sfence();
+            }
+
 #ifdef LOG_RESOLVE_PROFILE
 #ifdef __LINUX__
-    ZZLog::Dev_Log("*** 32 bits: execution time %d (convert %d)", timeGetPreciseTime()-startime, do_conversion);
+    ZZLog::Dev_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
 #endif
 #endif
 }
@@ -3509,7 +3390,7 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 	GetRectMemAddress(start, end, psm, 0, 0, fbw, fbh, fbp, fbw);
 
     // Comment this to restore the previous resolve_32 version
-#define OPTI_RESOLVE_32 1
+#define OPTI_RESOLVE_32
     // start the conversion process A8R8G8B8 -> psm
     switch (psm)
     {
@@ -3518,24 +3399,24 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
         // the psm switch in Resolve_32_Bit
         case PSMCT32:
         case PSMCT24:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<32, g_pageTable32, u32, false, false >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMCT32, 32, g_pageTable32 >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMCT32, fbm);
 #endif
             break;
 
         case PSMCT16:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16, u16, true, true >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMCT16, 64, g_pageTable16 >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16, fbm);
 #endif
             break;
 
         case PSMCT16S:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16S, u16, true, true >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMCT16S, 64, g_pageTable16S >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u16, true >(psrc, fbp, fbw, fbh, PSMCT16S, fbm);
 #endif
@@ -3543,24 +3424,24 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 
         case PSMT32Z:
         case PSMT24Z:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<32, g_pageTable32Z, u32, false, false >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMT32Z, 32, g_pageTable32Z >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u32, false >(psrc, fbp, fbw, fbh, PSMT32Z, fbm);
 #endif
             break;
 
         case PSMT16Z:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16Z, u16, false, true >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMT16Z, 64, g_pageTable16Z >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16Z, fbm);
 #endif
             break;
 
         case PSMT16SZ:
-#ifdef OPTI_RESOLVE_32
-            Resolve_32b<64, g_pageTable16SZ, u16, false, true >(psrc, fbp, fbw, fbh, fbm);
+#if defined(ZEROGS_SSE2) && defined(OPTI_RESOLVE_32)
+            Resolve_32_Bit_sse2<PSMT16SZ, 64, g_pageTable16SZ >(psrc, fbp, fbw, fbh, fbm);
 #else
             Resolve_32_Bit<u16, false >(psrc, fbp, fbw, fbh, PSMT16SZ, fbm);
 #endif
