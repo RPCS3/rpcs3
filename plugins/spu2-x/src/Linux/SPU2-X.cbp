@@ -101,7 +101,6 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../Decoder.cpp" />
 		<Unit filename="../Dma.cpp" />
 		<Unit filename="../Dma.h" />
 		<Unit filename="../Global.h" />
