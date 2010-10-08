@@ -242,8 +242,9 @@ void GLWindow::ToggleFullscreen()
     }
 
     // Hide the cursor in the right bottom corner
+    // Note: Use big value instead of width/height to be sure it is really out of the screen
     if(fullScreen)
-        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, width, height);
+        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 4000, 2000);
 
 }
 

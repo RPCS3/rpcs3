@@ -3140,10 +3140,10 @@ __forceinline void update_8pixels_sse2(u32* src, u32* basepage, u32 i_msk, u32 j
     }
 
     // Merge the 2 dword
-        pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
+    pixels_0 = _mm_unpacklo_epi64(pixel_0_low, pixel_0_high);
     if (PSMT_ISHALF(psm)) pixels_1 = _mm_unpacklo_epi64(pixel_1_low, pixel_1_high);
 
-        // transform pixel from ARGB:8888 to ARGB:1555
+    // transform pixel from ARGB:8888 to ARGB:1555
     if (psm == PSMCT16 || psm == PSMCT16S) {
         // shift pixel instead of the mask. It allow to keep 1 mask into a register
         // instead of 4 (not enough room on x86...).
@@ -3214,26 +3214,26 @@ __forceinline void update_8pixels_sse2(u32* src, u32* basepage, u32 i_msk, u32 j
 
     // Save some memory access when pix_mask is 0.
     if (pix_mask) {
-    // Build fbm mask (tranform a u32 to a 4 packets u32)
-    // In 16 bits texture one packet is "0000 DATA"
-    __m128i imask = _mm_cvtsi32_si128(pix_mask);
-    imask = _mm_shuffle_epi32(imask, 0);
+        // Build fbm mask (tranform a u32 to a 4 packets u32)
+        // In 16 bits texture one packet is "0000 DATA"
+        __m128i imask = _mm_cvtsi32_si128(pix_mask);
+        imask = _mm_shuffle_epi32(imask, 0);
 
-    // apply the mask on new values
-    pixels_0 = _mm_andnot_si128(imask, pixels_0);
+        // apply the mask on new values
+        pixels_0 = _mm_andnot_si128(imask, pixels_0);
 
-    __m128i old_pixels_0;
-    __m128i final_pixels_0;
+        __m128i old_pixels_0;
+        __m128i final_pixels_0;
 
         old_pixels_0 = _mm_and_si128(imask, _mm_load_si128((__m128i*)dst_add));
         final_pixels_0 = _mm_or_si128(old_pixels_0, pixels_0);
 
         _mm_store_si128((__m128i*)dst_add, final_pixels_0);
-        } else {
+    } else {
         // Note: because we did not read the previous value of add. We could bypass the cache.
         // We gains a few percents
         _mm_stream_si128((__m128i*)dst_add, pixels_0);
-        }
+    }
 
 }
 
@@ -3362,13 +3362,13 @@ void Resolve_32_Bit_sse2(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 
         // Note update_8pixels process 2 lines at onces hence the factor 2
         src -= 2*raw_size;
-            }
+    }
 
     if(!pix_mask) {
         // Ensure that previous (out of order) write are done. It must be done after non temporal instruction
         // (or *_stream_* intrinsic)
         _mm_sfence();
-            }
+    }
 
 #ifdef LOG_RESOLVE_PROFILE
 #ifdef __LINUX__
