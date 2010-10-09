@@ -89,6 +89,9 @@ SndOutModule* mods[]=
 	WaveOut,
 #endif
 	PortaudioOut,
+#ifdef __LINUX__
+	AlsaOut,
+#endif
 	NULL		// signals the end of our list
 };
 

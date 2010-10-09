@@ -223,7 +223,7 @@ public:
 
 	const wchar_t* GetLongName() const
 	{
-		return L"Alsa ('tis all ya get)";
+		return L"Alsa";
 	}
 
 	void ReadSettings()
