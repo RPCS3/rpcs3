@@ -227,8 +227,11 @@ void GLWindow::ToggleFullscreen()
     XUnlockDisplay(glDisplay);
 
     // Apply the change
-    // Note: Xsync is not enough. All pending event must be flush.
-    XFlush(glDisplay);
+    XSync(glDisplay, false);
+
+    // Wait a little that the VM does his joes. Actually the best is to check some WM event
+    // but it not sure it will appear so a time out is necessary.
+    usleep(100*1000); // 100 us should be far enough for old computer and unnoticeable for users
 
     // update info structure
     GetWindowSize();
@@ -242,9 +245,8 @@ void GLWindow::ToggleFullscreen()
     }
 
     // Hide the cursor in the right bottom corner
-    // Note: Use big value instead of width/height to be sure it is really out of the screen
     if(fullScreen)
-        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 4000, 2000);
+        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 2*width, 2*height);
 
 }
 
