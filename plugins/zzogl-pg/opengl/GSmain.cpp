@@ -166,7 +166,7 @@ void ReportHacks(gameHacks hacks)
 
 void ListHacks()
 {
-	if (conf.def_hacks._u32 != 0)
+	if ((!conf.disableHacks) && (conf.def_hacks._u32 != 0))
 	{
 		ZZLog::WriteLn("AutoEnabling these hacks:");
 		ReportHacks(conf.def_hacks);
@@ -267,8 +267,11 @@ void CALLBACK GSsetGameCRC(int crc, int options)
                 // FIXME need to check SkipDraw is positive (enabled by users)
                 GetSkipCount_Handler = GSC_list[crc_game_list[i].title];
 
-				conf.def_hacks._u32 |= crc_game_list[i].flags;
-				ListHacks();
+				if (!conf.disableHacks) 
+				{
+					conf.def_hacks._u32 |= crc_game_list[i].flags;
+					ListHacks();
+				}
 				return;
 			}
 		}

@@ -224,16 +224,25 @@ typedef struct
 	bool isWideScreen; // Widescreen support
 	u32 SkipDraw;
 	u32 log;
+	u32 disableHacks;
 	
 	void incAA() { aa++; if (aa > 4) aa = 0; }
 	void decAA() { aa--; if (aa > 4) aa = 4; } // u8 is unsigned, so negative value is 255.
 	
 	gameHacks settings() 
 	{
-		gameHacks tempHack;
-		tempHack._u32 = (hacks._u32 | def_hacks._u32);
-		 return tempHack; 
+		if (disableHacks)
+		{
+			return hacks;
+		}
+		else
+		{
+			gameHacks tempHack;
+			tempHack._u32 = (hacks._u32 | def_hacks._u32);
+			return tempHack;
+		}
 	}
+	
 	bool fullscreen() { return !!(zz_options.fullscreen); }
 	bool wireframe() { return !!(zz_options.wireframe); }
 	bool widescreen() { return !!(zz_options.widescreen); }

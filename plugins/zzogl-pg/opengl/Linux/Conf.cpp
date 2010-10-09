@@ -28,7 +28,6 @@ void SaveConfig()
 {
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	
-	u32 tempHacks = conf.hacks._u32 & ~conf.def_hacks._u32;
 	FILE* f = fopen(iniFile.c_str(), "w");
 
 	if (f == NULL)
@@ -41,7 +40,7 @@ void SaveConfig()
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
 	fprintf(f, "zzoptions = %x\n", conf.zz_options._u32);
-	fprintf(f, "options = %x\n", tempHacks);
+	fprintf(f, "options = %x\n", conf.hacks);
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
 	fprintf(f, "width = %x\n", conf.width);
@@ -50,6 +49,7 @@ void SaveConfig()
 	fprintf(f, "y = %x\n", conf.y);
 	fprintf(f, "log = %x\n", conf.log);
 	fprintf(f, "skipdraw = %x\n", conf.SkipDraw);
+	fprintf(f, "disablehacks = %x\n", conf.disableHacks);
 	fclose(f);
 }
 
@@ -64,6 +64,7 @@ void LoadConfig()
 	conf.SkipDraw = 0;
 	conf.width = 800;
 	conf.height = 600;
+	conf.disableHacks = 0;
 
 	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
 	FILE* f = fopen(iniFile.c_str(), "r");
@@ -88,6 +89,7 @@ void LoadConfig()
 	err = fscanf(f, "y = %x\n", &conf.y);
 	err = fscanf(f, "log = %x\n", &conf.log);
 	err = fscanf(f, "skipdraw = %x\n", &conf.SkipDraw);
+	err = fscanf(f, "disablehacks = %x\n", &conf.disableHacks);
 	fclose(f);
 
 	// turn off all hacks by default

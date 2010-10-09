@@ -43,6 +43,7 @@ void LoadConfig()
 	conf.width = 640;
 	conf.height = 480;
 	conf.SkipDraw = 0;
+	conf.disableHacks = 0;
 
 	FILE *fp = fopen(iniFile.c_str(), "rt");
 
