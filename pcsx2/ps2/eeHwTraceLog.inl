@@ -21,15 +21,15 @@
 static __ri bool _eelog_enabled( u32 addr )
 {
 	// Selective enable/disable ability for specific register maps
-	if (eeAddrInRange(RCNT0, addr)) return true;
+	if (eeAddrInRange(RCNT0, addr)) return false;
 	if (eeAddrInRange(RCNT1, addr)) return true;
 	if (eeAddrInRange(RCNT2, addr)) return true;
 	if (eeAddrInRange(RCNT3, addr)) return true;
 
-	if (eeAddrInRange(SBUS, addr)) return true;
+	if (eeAddrInRange(SBUS, addr)) return false;
 
 	// INTC!
-	if (addr == INTC_STAT || addr == INTC_MASK) return true;
+	if (addr == INTC_STAT || addr == INTC_MASK) return false;
 
 	return true;
 }
@@ -175,10 +175,13 @@ static __ri const char* _eelog_GetHwName( u32 addr, T val )
 		EasyCase(fromSPR_CHCR);
 		EasyCase(fromSPR_MADR);
 		EasyCase(fromSPR_QWC);
+		EasyCase(fromSPR_SADR);
 		
 		EasyCase(toSPR_CHCR);
 		EasyCase(toSPR_MADR);
 		EasyCase(toSPR_QWC);
+		EasyCase(toSPR_TADR);
+		EasyCase(toSPR_SADR);
 
 		// DMAC!		
 		EasyCase(DMAC_CTRL);

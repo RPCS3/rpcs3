@@ -76,6 +76,7 @@ struct GIFTAG
 	GIFTAG() {}
 
 	wxString DumpRegsToString() const;
+	wxString ToString() const;
 };
 
 wxString GIFTAG::DumpRegsToString() const
@@ -104,6 +105,21 @@ wxString GIFTAG::DumpRegsToString() const
 	result.Write(")");
 	return result;
 }
+
+wxString GIFTAG::ToString() const
+{
+	static const char* GifTagModeLabel[] =
+	{
+		"Packed", "RegList", "Image", "Image2"
+	};
+
+	FastFormatUnicode result;
+	result.Write("NLOOP=0x%04X, EOP=%u, PRE=%u, PRIM=0x%03X, MODE=%s",
+		NLOOP, EOP, PRE, PRIM, GifTagModeLabel[FLG]);
+
+	return result;
+}
+
 
 // --------------------------------------------------------------------------------------
 //  GIFPath -- PS2 GIFtag info (one for each path).
@@ -622,7 +638,9 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 
 			SetTag<Aligned>((u8*)pMem128);
 			copyTag();
-			
+
+			GifTagLog("\tSetTag: %ls", tag.ToString().c_str());
+
 			if(nloop > 0)
 			{
 				switch(pathidx)
