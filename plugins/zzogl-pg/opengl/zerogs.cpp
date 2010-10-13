@@ -841,7 +841,7 @@ bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
 	if (cpsm > 1 || csm)
 	{
 		// Mana Khemia triggers this.
-		//ZZLog::Error_Log("16 bit clut not supported.");
+        //ZZLog::Error_Log("16 bit clut not supported.");
 		return true;
 	}
 
@@ -861,30 +861,41 @@ bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
 #ifdef TEST_THIS
     while(entries != 0) {
 #ifdef ZEROGS_SSE2
-        __m128i result = _mm_cmpeq_epi32(_mm_load_si128((__m128i*)src), _mm_load_si128((__m128i*)dst));
+        // Note: local memory datas are swizzles
+        __m128i src_0 = _mm_load_si128((__m128i*)src);   // 9  8  1 0
+        __m128i src_1 = _mm_load_si128((__m128i*)src+1); // 11 10 3 2
+        __m128i src_2 = _mm_load_si128((__m128i*)src+2); // 13 12 5 4
+        __m128i src_3 = _mm_load_si128((__m128i*)src+3); // 15 14 7 6
 
-        __m128i result_tmp = _mm_cmpeq_epi32(_mm_load_si128((__m128i*)src+1), _mm_load_si128((__m128i*)dst+1));
+        __m128i dst_0 = _mm_load_si128((__m128i*)dst);
+        __m128i dst_1 = _mm_load_si128((__m128i*)dst+1);
+        __m128i dst_2 = _mm_load_si128((__m128i*)dst+2);
+        __m128i dst_3 = _mm_load_si128((__m128i*)dst+3);
+
+        __m128i result = _mm_cmpeq_epi32(_mm_unpacklo_epi64(src_0, src_1), dst_0);
+
+        __m128i result_tmp = _mm_cmpeq_epi32(_mm_unpacklo_epi64(src_2, src_3), dst_1);
         result = _mm_and_si128(result, result_tmp);
 
-        result_tmp = _mm_cmpeq_epi32(_mm_load_si128((__m128i*)src+2), _mm_load_si128((__m128i*)dst+2));
+        result_tmp = _mm_cmpeq_epi32(_mm_unpackhi_epi64(src_0, src_1), dst_2);
         result = _mm_and_si128(result, result_tmp);
 
-        result_tmp = _mm_cmpeq_epi32(_mm_load_si128((__m128i*)src+3), _mm_load_si128((__m128i*)dst+3));
+        result_tmp = _mm_cmpeq_epi32(_mm_unpackhi_epi64(src_2, src_3), dst_3);
         result = _mm_and_si128(result, result_tmp);
 
         u32 result_int = _mm_movemask_epi8(result);
-        if (result_int != 0xFF) {
+        if (result_int != 0xFFFF) {
             bRet = true;
             break;
         }
 #else
         // I see no point to keep an mmx version. SSE2 versions is probably faster.
         // Keep a slow portable C version for reference/debug
-        for (int i=0; i < 16 ; i++) {
-            if (*((u32*)src+i) != *((u32*)dst+i)) {
-                bRet = true;
-                break;
-            }
+        // Note: local memory datas are swizzles
+        if (dst[0] != src[0] || dst[1] != src[2] || dst[2] != src[4] || dst[3] != src[6]
+                || dst[4] != src[1] || dst[5] != src[3] || dst[6] != src[5] || dst[7] != src[7]) {
+            bRet = true;
+            break;
         }
 #endif
 

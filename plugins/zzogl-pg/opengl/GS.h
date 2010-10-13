@@ -167,6 +167,7 @@ inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 
 // Check to see if it is 32 bits. According to code comments, anyways.
 // I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
+// Note: the function only works for clut format. Clut PSM is 4 bits only. The possible value are PSMCT32, PSMCT16, PSMCT16S
 inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
 // When color format is RGB24 (PSMCT24) or RGBA16 (PSMCT16 & 16S) alpha value expanded, based on
@@ -544,9 +545,7 @@ typedef struct
 
 extern GSinternal gs;
 
-// Note the function is used in a template parameter so it must be declared extern
-// Note2: In this case extern is not compatible with __forceinline so just inline it...
-extern inline u16 RGBA32to16(u32 c)
+static __forceinline u16 RGBA32to16(u32 c)
 {
 	return (u16)((((c) & 0x000000f8) >>  3) |
 				 (((c) & 0x0000f800) >>  6) |
