@@ -1221,7 +1221,11 @@ void ZeroGS::texClutWrite(int ctx)
 					break;
 
 				default:
-					WriteCLUT_T16_I4_CSM1(src, (u32*)(g_pbyGSClut + 64*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
+#ifdef ZEROGS_SSE2
+					WriteCLUT_T16_I4_CSM1_sse2(src, tex0.csa);
+#else
+					WriteCLUT_T16_I4_CSM1_c(src, (u32*)(g_pbyGSClut + 64*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
+#endif
 					break;
 			}
 		}

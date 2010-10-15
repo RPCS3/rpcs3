@@ -663,17 +663,19 @@ void __fastcall WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
 
     __m128i clut_mask = _mm_load_si128((__m128i*)s_clut_16bits_mask);
 
-    // Note:
     // !HIGH_16BITS_VM
-    // CSA in 0-15 -> Replace lower 16 bits of clut0 with lower 16 bits of vm
-    // CSA in 16-31 -> Replace higher 16 bits of clut0 with lower 16 bits of vm
+    // CSA in 0-15
+    // Replace lower 16 bits of clut0 with lower 16 bits of vm
+    // CSA in 16-31
+    // Replace higher 16 bits of clut0 with lower 16 bits of vm
 
     // HIGH_16BITS_VM
-    // CSA in 0-15 -> Replace lower 16 bits of clut0 with higher 16 bits of vm
-    // CSA in 16-31 -> Replace higher 16 bits of clut0 with higher 16 bits of vm
-
+    // CSA in 0-15
+    // Replace lower 16 bits of clut0 with higher 16 bits of vm
+    // CSA in 16-31
+    // Replace higher 16 bits of clut0 with higher 16 bits of vm
     if(HIGH_16BITS_VM && CSA_0_15) {
-        // move high to low
+        // move up to low
         vm_0 = _mm_load_si128((__m128i*)vm); // 9 8 1 0
         vm_1 = _mm_load_si128((__m128i*)vm+1); // 11 10 3 2
         vm_2 = _mm_load_si128((__m128i*)vm+2); // 13 12 5 4
@@ -739,13 +741,13 @@ void __fastcall WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
     _mm_store_si128((__m128i*)clut+3, clut_3);
 }
 
-extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
+extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32 csa)
 {
-    if ((u32)clut & 0x0F) {
-        // CSA 16-31 && low 16bits vm
+    u32* clut = (u32*)(g_pbyGSClut + 64*(csa & 15));
+
+    if (csa > 15) {
         WriteCLUT_T16_I4_CSM1_core_sse2<false, false>(vm, clut);
     } else {
-        // CSA 0-15 && low 16bits vm
         WriteCLUT_T16_I4_CSM1_core_sse2<true, false>(vm, clut);
     }
 }
