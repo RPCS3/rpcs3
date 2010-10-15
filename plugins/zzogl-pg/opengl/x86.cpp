@@ -649,14 +649,9 @@ static const __aligned16 int s_clut16mask[8] = { 0xffff0000, 0xffff0000, 0xffff0
 										   0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff
 										   };
 
-template<bool CSA_0_15>
-__forceinline void WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
+template<bool CSA_0_15, bool HIGH_16BITS_VM>
+void __fastcall WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
 {
-    // CSA 0-15
-    // Replace lower 16 bits of clut with lower 16 bits of vm
-    // CSA 16-31
-    // Replace higher 16 bits of clut with higher 16 bits of vm
-
     __m128i vm_0;
     __m128i vm_1;
     __m128i vm_2;
@@ -668,19 +663,47 @@ __forceinline void WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
 
     __m128i clut_mask = _mm_load_si128((__m128i*)s_clut_16bits_mask);
 
-    // load new data & remove useless part
-    if(CSA_0_15) {
+    // Note:
+    // !HIGH_16BITS_VM
+    // CSA in 0-15 -> Replace lower 16 bits of clut0 with lower 16 bits of vm
+    // CSA in 16-31 -> Replace higher 16 bits of clut0 with lower 16 bits of vm
+
+    // HIGH_16BITS_VM
+    // CSA in 0-15 -> Replace lower 16 bits of clut0 with higher 16 bits of vm
+    // CSA in 16-31 -> Replace higher 16 bits of clut0 with higher 16 bits of vm
+
+    if(HIGH_16BITS_VM && CSA_0_15) {
+        // move high to low
+        vm_0 = _mm_load_si128((__m128i*)vm); // 9 8 1 0
+        vm_1 = _mm_load_si128((__m128i*)vm+1); // 11 10 3 2
+        vm_2 = _mm_load_si128((__m128i*)vm+2); // 13 12 5 4
+        vm_3 = _mm_load_si128((__m128i*)vm+3); // 15 14 7 6
+        vm_0 = _mm_srli_epi32(vm_0, 16);
+        vm_1 = _mm_srli_epi32(vm_1, 16);
+        vm_2 = _mm_srli_epi32(vm_2, 16);
+        vm_3 = _mm_srli_epi32(vm_3, 16);
+    } else if(HIGH_16BITS_VM && !CSA_0_15) {
+        // Remove lower 16 bits
+        vm_0 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm)); // 9 8 1 0
+        vm_1 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+1)); // 11 10 3 2
+        vm_2 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+2)); // 13 12 5 4
+        vm_3 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+3)); // 15 14 7 6
+    } else if(!HIGH_16BITS_VM && CSA_0_15) {
         // Remove higher 16 bits
         vm_0 = _mm_and_si128(clut_mask, _mm_load_si128((__m128i*)vm)); // 9 8 1 0
         vm_1 = _mm_and_si128(clut_mask, _mm_load_si128((__m128i*)vm+1)); // 11 10 3 2
         vm_2 = _mm_and_si128(clut_mask, _mm_load_si128((__m128i*)vm+2)); // 13 12 5 4
         vm_3 = _mm_and_si128(clut_mask, _mm_load_si128((__m128i*)vm+3)); // 15 14 7 6
-    } else {
-        // Remove lower 16 bits
-        vm_0 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm));
-        vm_1 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+1));
-        vm_2 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+2));
-        vm_3 = _mm_andnot_si128(clut_mask, _mm_load_si128((__m128i*)vm+3));
+    } else if(!HIGH_16BITS_VM && !CSA_0_15) {
+        // move low to high
+        vm_0 = _mm_load_si128((__m128i*)vm); // 9 8 1 0
+        vm_1 = _mm_load_si128((__m128i*)vm+1); // 11 10 3 2
+        vm_2 = _mm_load_si128((__m128i*)vm+2); // 13 12 5 4
+        vm_3 = _mm_load_si128((__m128i*)vm+3); // 15 14 7 6
+        vm_0 = _mm_slli_epi32(vm_0, 16);
+        vm_1 = _mm_slli_epi32(vm_1, 16);
+        vm_2 = _mm_slli_epi32(vm_2, 16);
+        vm_3 = _mm_slli_epi32(vm_3, 16);
     }
 
     // Unsizzle the data
@@ -719,9 +742,11 @@ __forceinline void WriteCLUT_T16_I4_CSM1_core_sse2(u32* vm, u32* clut)
 extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut)
 {
     if ((u32)clut & 0x0F) {
-        WriteCLUT_T16_I4_CSM1_core_sse2<false>(vm, clut);
+        // CSA 16-31 && low 16bits vm
+        WriteCLUT_T16_I4_CSM1_core_sse2<false, false>(vm, clut);
     } else {
-        WriteCLUT_T16_I4_CSM1_core_sse2<true>(vm, clut);
+        // CSA 0-15 && low 16bits vm
+        WriteCLUT_T16_I4_CSM1_core_sse2<true, false>(vm, clut);
     }
 }
 
@@ -1078,23 +1103,36 @@ __forceinline void  WriteCLUT_T16_I8_CSM1_sse2(u32* vm, u32 csa)
 {
     // update the right clut column (csa < 16)
     u32* clut = (u32*)(g_pbyGSClut + 64*(csa & 15));
-    // u32 csa_right = (csa < 16) ? 16 - csa : 0;
-    u32 csa_right = 16 - csa;
+    u32 csa_right = (csa < 16) ? 16 - csa : 0;
 
-    for(int i = csa_right; i > 0 ; --i) {
-        WriteCLUT_T16_I4_CSM1_core_sse2<true>(vm, clut);
-        vm += 16; // go down one column
+    for(int i = (csa_right/2); i > 0 ; --i) {
+        WriteCLUT_T16_I4_CSM1_core_sse2<true,false>(vm, clut);
         clut += 16;
+        WriteCLUT_T16_I4_CSM1_core_sse2<true,true>(vm, clut);
+        clut += 16;
+        vm += 16; // go down one column
     }
 
     // update the left clut column
-    clut = (u32*)(g_pbyGSClut);
     u32 csa_left = (csa >= 16) ? 16 : csa;
 
-    for(int i = csa_left; i > 0 ; --i) {
-        WriteCLUT_T16_I4_CSM1_core_sse2<false>(vm, clut);
-        vm += 16; // go down one column
+    // In case csa_right is odd (so csa_left is also odd), we cross the clut column
+    if(csa_right & 0x1) {
+        WriteCLUT_T16_I4_CSM1_core_sse2<true,false>(vm, clut);
+        // go back to the base before processing left clut column
+        clut = (u32*)(g_pbyGSClut);
+        WriteCLUT_T16_I4_CSM1_core_sse2<false,true>(vm, clut);
+    } else if(csa_right != 0) {
+        // go back to the base before processing left clut column
+        clut = (u32*)(g_pbyGSClut);
+    }
+
+    for(int i = (csa_left/2); i > 0 ; --i) {
+        WriteCLUT_T16_I4_CSM1_core_sse2<false,false>(vm, clut);
         clut += 16;
+        WriteCLUT_T16_I4_CSM1_core_sse2<false,true>(vm, clut);
+        clut += 16;
+        vm += 16; // go down one column
     }
 }
 
