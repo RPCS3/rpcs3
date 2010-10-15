@@ -23,7 +23,7 @@
 
 namespace Dialogs {
 
-class LogOptionsDialog : public BaseApplicableDialog
+class LogOptionsDialog : public BaseConfigurationDialog
 {
 public:
 	LogOptionsDialog( wxWindow* parent=NULL );
@@ -35,6 +35,13 @@ public:
 protected:
 	void OnOk_Click( wxCommandEvent& evt );
 	void OnApply_Click( wxCommandEvent& evt );
+	
+	wxString& GetConfSettingsTabName() const
+	{
+		static wxString bleh = L"TraceLogs";
+		pxFailDev("No tabs yet!");
+		return bleh;
+	}
 };
 
 }	// end namespace Dialogs

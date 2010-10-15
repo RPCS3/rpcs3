@@ -17,34 +17,17 @@
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 
-u8 *psxM = NULL;
-u8 *psxP = NULL;
-u8 *psxH = NULL;	// standard hardware registers (0x000->0x3ff is the scratchpad)
-u8 *psxS = NULL;	// 'undocumented' SIF communication registers
-
 uptr *psxMemWLUT = NULL;
 const uptr *psxMemRLUT = NULL;
 
-static u8* m_psxAllMem = NULL;
-static const uint m_psxMemSize =
-	Ps2MemSize::IopRam +
-	Ps2MemSize::IopHardware +
-	0x00010000 +		// psxP
-	0x00000100 ;		// psxS
+IopVM_MemoryAllocMess* iopMem = NULL;
+
+__pagealigned u8 iopHw[Ps2MemSize::IopHardware];
 
 void psxMemAlloc()
 {
-	if( m_psxAllMem == NULL )
-		m_psxAllMem = vtlb_malloc( m_psxMemSize, 4096 );
-
-	if( m_psxAllMem == NULL)
-		throw Exception::OutOfMemory( L"IOP system ram (and roms)" );
-
-	u8* curpos = m_psxAllMem;
-	psxM = curpos; curpos += Ps2MemSize::IopRam;
-	psxP = curpos; curpos += 0x00010000;
-	psxH = curpos; curpos += Ps2MemSize::IopHardware;
-	psxS = curpos; //curpos += 0x00010000;
+	if( iopMem == NULL )
+		iopMem = (IopVM_MemoryAllocMess*)vtlb_malloc( sizeof(*iopMem), 4096 );
 
 	psxMemWLUT = (uptr*)_aligned_malloc(0x2000 * sizeof(uptr) * 2, 16);
 	psxMemRLUT = psxMemWLUT + 0x2000; //(uptr*)_aligned_malloc(0x10000 * sizeof(uptr),16);
@@ -55,12 +38,12 @@ void psxMemAlloc()
 void psxMemReset()
 {
 	pxAssume( psxMemWLUT != NULL );
-	pxAssume( m_psxAllMem != NULL );
+	pxAssume( iopMem != NULL );
 
 	DbgCon.WriteLn( "IOP Resetting physical ram..." );
 
 	memzero_ptr<0x2000 * sizeof(uptr) * 2>( psxMemWLUT );	// clears both allocations, RLUT and WLUT
-	memzero_ptr<m_psxMemSize>( m_psxAllMem );
+	memzero( *iopMem );
 
 	// Trick!  We're accessing RLUT here through WLUT, since it's the non-const pointer.
 	// So the ones with a 0x2000 prefixed are RLUT tables.
@@ -69,20 +52,20 @@ void psxMemReset()
 	// at 0x0, 0x8000, and 0xa000:
 	for (int i=0; i<0x0080; i++)
 	{
-		psxMemWLUT[i + 0x0000] = (uptr)&psxM[(i & 0x1f) << 16];
+		psxMemWLUT[i + 0x0000] = (uptr)&iopMem->Main[(i & 0x1f) << 16];
 
 		// RLUTs, accessed through WLUT.
-		psxMemWLUT[i + 0x2000] = (uptr)&psxM[(i & 0x1f) << 16];
+		psxMemWLUT[i + 0x2000] = (uptr)&iopMem->Main[(i & 0x1f) << 16];
 	}
 
 	// A few single-page allocations for things we store in special locations.
-	psxMemWLUT[0x2000 + 0x1f00] = (uptr)psxP;
-	psxMemWLUT[0x2000 + 0x1f80] = (uptr)psxH;
-	//psxMemWLUT[0x1bf80] = (uptr)psxH;
+	psxMemWLUT[0x2000 + 0x1f00] = (uptr)iopMem->P;
+	psxMemWLUT[0x2000 + 0x1f80] = (uptr)iopHw;
+	//psxMemWLUT[0x1bf80] = (uptr)iopHw;
 
-	psxMemWLUT[0x1f00] = (uptr)psxP;
-	psxMemWLUT[0x1f80] = (uptr)psxH;
-	//psxMemWLUT[0xbf80] = (uptr)psxH;
+	psxMemWLUT[0x1f00] = (uptr)iopMem->P;
+	psxMemWLUT[0x1f80] = (uptr)iopHw;
+	//psxMemWLUT[0xbf80] = (uptr)iopHw;
 
 	// Read-only memory areas, so don't map WLUT for these...
 	for (int i=0; i<0x0040; i++)
@@ -96,8 +79,8 @@ void psxMemReset()
 	}
 
 	// sif!! (which is read only? (air))
-	psxMemWLUT[0x2000 + 0x1d00] = (uptr)psxS;
-	//psxMemWLUT[0x1bd00] = (uptr)psxS;
+	psxMemWLUT[0x2000 + 0x1d00] = (uptr)iopMem->Sif;
+	//psxMemWLUT[0x1bd00] = (uptr)iopMem->Sif;
 
 	// this one looks like an old hack for some special write-only memory area,
 	// but leaving it in for reference (air)
@@ -106,10 +89,8 @@ void psxMemReset()
 
 void psxMemShutdown()
 {
-	vtlb_free( m_psxAllMem, m_psxMemSize );
-	m_psxAllMem = NULL;
-
-	psxM = psxP = psxH = psxS = NULL;
+	vtlb_free( iopMem, sizeof(*iopMem) );
+	iopMem = NULL;
 
 	safe_aligned_free(psxMemWLUT);
 	psxMemRLUT = NULL;

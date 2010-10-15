@@ -21,7 +21,7 @@
 #include <wx/listctrl.h>
 
 // --------------------------------------------------------------------------------------
-//  McdListItem
+//  McdListItem / IMcdList
 // --------------------------------------------------------------------------------------
 struct McdListItem
 {
@@ -67,6 +67,16 @@ public:
 	virtual wxDirName GetMcdPath() const=0;
 };
 
+struct ListViewColumnInfo
+{
+	const wxChar*		name;
+	int					width;
+	wxListColumnFormat	align;
+};
+
+// --------------------------------------------------------------------------------------
+//  BaseMcdListView
+// --------------------------------------------------------------------------------------
 class BaseMcdListView : public wxListView
 {
 	typedef wxListView _parent;
@@ -86,27 +96,13 @@ public:
 	}
 
 	virtual void SetCardCount( int length )=0;
+	virtual void SetMcdProvider( IMcdList* face );
 
-	virtual void SetMcdProvider( IMcdList* face )
-	{
-		m_CardProvider = face;
-		SetCardCount( m_CardProvider ? m_CardProvider->GetLength() : 0 );
-	}
-	
-	virtual const IMcdList& GetMcdProvider() const
-	{
-		pxAssume( m_CardProvider );
-		return *m_CardProvider;
-	}
-	
-	virtual void SetTargetedItem( int sel )
-	{
-		if( m_TargetedItem == sel ) return;
+	virtual void LoadSaveColumns( IniInterface& ini );
+	virtual const ListViewColumnInfo& GetDefaultColumnInfo( uint idx ) const=0;
 
-		if( m_TargetedItem >= 0 ) RefreshItem( m_TargetedItem );
-		m_TargetedItem = sel;
-		RefreshItem( sel );
-	}
+	virtual const IMcdList& GetMcdProvider() const;
+	virtual void SetTargetedItem( int sel );
 };
 
 // --------------------------------------------------------------------------------------
@@ -121,7 +117,9 @@ public:
 	MemoryCardListView_Simple( wxWindow* parent );
 
 	void CreateColumns();
+
 	virtual void SetCardCount( int length );
+	virtual const ListViewColumnInfo& GetDefaultColumnInfo( uint idx ) const;
 
 protected:
 	// Overrides for wxLC_VIRTUAL
@@ -131,28 +129,6 @@ protected:
 	virtual wxListItemAttr *OnGetItemAttr(long item) const;
 };
 
-
-// --------------------------------------------------------------------------------------
-//  MemoryCardListView_Advanced
-// --------------------------------------------------------------------------------------
-class MemoryCardListView_Advanced : public BaseMcdListView
-{
-	typedef BaseMcdListView _parent;
-
-public:
-	virtual ~MemoryCardListView_Advanced() throw() { }
-	MemoryCardListView_Advanced( wxWindow* parent );
-
-	void CreateColumns();
-	virtual void SetCardCount( int length );
-
-protected:
-	// Overrides for wxLC_VIRTUAL
-	virtual wxString OnGetItemText(long item, long column) const;
-	virtual int OnGetItemImage(long item) const;
-	virtual int OnGetItemColumnImage(long item, long column) const;
-	virtual wxListItemAttr *OnGetItemAttr(long item) const;
-};
 
 namespace Panels
 {
@@ -195,7 +171,8 @@ namespace Panels
 			RefreshMcds();
 		}
 
-		void AppStatusEvent_OnSettingsApplied();
+		virtual void Apply();
+		virtual void AppStatusEvent_OnSettingsApplied();
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -230,11 +207,12 @@ namespace Panels
 	protected:
 		void OnCreateCard(wxCommandEvent& evt);
 		void OnMountCard(wxCommandEvent& evt);
+		void OnRelocateCard(wxCommandEvent& evt);
 		
 		void OnListDrag(wxListEvent& evt);
 		void OnListSelectionChanged(wxListEvent& evt);
 		void OnOpenItemContextMenu(wxListEvent& evt);
-		
+
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
 
 		virtual void Apply();
@@ -254,10 +232,6 @@ namespace Panels
 		pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
 
-		#ifdef __WXMSW__
-		pxCheckBox*		m_check_CompressNTFS;
-		#endif
-	
 	public:
 		McdConfigPanel_Toggles( wxWindow* parent );
 		virtual ~McdConfigPanel_Toggles() throw() { }

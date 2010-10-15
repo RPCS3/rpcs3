@@ -17,20 +17,20 @@ s32 PrepareEERead()
 {
 	static __aligned16 u32 tag[4];
 
-	// Process DMA tag at hw_dma(9).tadr
-	sif0.iop.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
+	// Process DMA tag at hw_dma9.tadr
+	sif0.iop.data = *(sifData *)iopPhysMem(hw_dma9.tadr);
 	sif0.iop.data.words = (sif0.iop.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
-	memcpy(tag, (u32*)iopPhysMem(hw_dma(9).tadr + 8), 16);
+	memcpy(tag, (u32*)iopPhysMem(hw_dma9.tadr + 8), 16);
 
-	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
+	hw_dma9.tadr += 16; ///hw_dma9.madr + 16 + sif0.sifData.words << 2;
 
 	// We're only copying the first 24 bits.
-	hw_dma(9).madr = sif0data & 0xFFFFFF;
+	hw_dma9.madr = sif0data & 0xFFFFFF;
 	sif0.iop.counter = sif0words;
 
 	if (sif0tag.IRQ  || (sif0tag.ID & 4)) sif0.iop.end = true;
 	SIF_LOG("SIF0 IOP to EE Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)"
-		"\n\tread tag: %x %x %x %x", hw_dma(9).madr, hw_dma(9).tadr, sif0.iop.counter, sif0words, sif0data,
+		"\n\tread tag: %x %x %x %x", hw_dma9.madr, hw_dma9.tadr, sif0.iop.counter, sif0words, sif0data,
 		tag[0], tag[1], tag[2], tag[3]);
 
 	sif0dma.unsafeTransfer(((tDMA_TAG*)(tag)));
@@ -98,7 +98,7 @@ s32 DoSifRead(u32 iopAvailable)
 		return false;
 	}
 
-	memcpy((u32*)ptag, (u32*)iopPhysMem(hw_dma(9).madr), transferSizeBytes);
+	memcpy((u32*)ptag, (u32*)iopPhysMem(hw_dma9.madr), transferSizeBytes);
 
 	// Clearing handled by vtlb memory protection and manual blocks.
 	//Cpu->Clear(sif0dma.madr, readSize*4);

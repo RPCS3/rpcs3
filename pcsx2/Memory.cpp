@@ -150,7 +150,7 @@ void memMapPhy()
 	// IOP memory
 	// (used by the EE Bios Kernel during initial hardware initialization, Apps/Games
 	//  are "supposed" to use the thread-safe SIF instead.)
-	vtlb_MapBlock(psxM,0x1c000000,0x00800000);
+	vtlb_MapBlock(iopMem->Main,0x1c000000,0x00800000);
 
 	// Generic Handlers; These fallback to mem* stuff...
 	vtlb_MapHandler(tlb_fallback_7,0x14000000,0x10000);
@@ -647,7 +647,9 @@ void memReset()
 	// rest of the emu is not really set up to support a "soft" reset of that sort
 	// we opt for the hard/safe version.
 
+	pxAssume( eeMem != NULL );
 	memzero( *eeMem );
+
 #ifdef ENABLECACHE
 	memset(pCache,0,sizeof(_cacheS)*64);
 #endif

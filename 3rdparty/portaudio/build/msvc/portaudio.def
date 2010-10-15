@@ -46,3 +46,5 @@ PaWasapi_GetDeviceRole              @57
 PaWasapi_ThreadPriorityBoost        @58
 PaWasapi_ThreadPriorityRevert       @59
 PaWasapi_GetFramesPerHostBuffer     @60
+PaWasapi_GetJackDescription         @61
+PaWasapi_GetJackCount               @62

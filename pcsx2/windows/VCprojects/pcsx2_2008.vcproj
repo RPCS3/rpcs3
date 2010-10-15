@@ -2040,10 +2040,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\Dialogs\CreateMemoryCardDialog.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\gui\Dialogs\FirstTimeWizard.cpp"
 					>
 				</File>
@@ -2884,6 +2880,10 @@
 				<Filter
 					Name="gui"
 					>
+					<File
+						RelativePath="..\..\gui\Dialogs\CreateMemoryCardDialog.cpp"
+						>
+					</File>
 					<File
 						RelativePath="..\..\gui\Dialogs\McdConfigDialog.cpp"
 						>

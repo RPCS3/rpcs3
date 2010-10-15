@@ -29,13 +29,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however,
+ * The text above constitutes the entire PortAudio license; however, 
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also
- * requested that these non-binding requests be included along with the
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
  * license above.
  */
 
@@ -44,7 +44,7 @@
 
  @brief Allocation Group prototypes. An Allocation Group makes it easy to
  allocate multiple blocks of memory and free them all at once.
-
+ 
  An allocation group is useful for keeping track of multiple blocks
  of memory which are allocated at the same time (such as during initialization)
  and need to be deallocated at the same time. The allocation group maintains

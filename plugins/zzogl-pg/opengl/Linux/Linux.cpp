@@ -167,7 +167,16 @@ void CreateGameHackTable(GtkWidget *treeview, gameHacks hacks)
 	{
 		gtk_list_store_append(treestore, &treeiter);//new row
 		itval = (hacks._u32 & it->second.value) ? true : false;
-		snprintf(descbuf, 254, "%s", it->second.desc);
+		
+		if (conf.def_hacks._u32 & it->second.value)
+		{
+			snprintf(descbuf, 254, "*%s", it->second.desc);
+		}
+		else
+		{
+			snprintf(descbuf, 254, "%s", it->second.desc);
+		}
+		
 		gtk_list_store_set(treestore, &treeiter, 0, itval, 1, descbuf, -1);
 	}
 
@@ -260,12 +269,12 @@ void DisplayDialog()
 	GtkWidget *main_frame, *main_box;
 
 	GtkWidget *option_frame, *option_box;
-	GtkWidget *log_check;
+	GtkWidget *log_check, *dis_hacks_check;
 	GtkWidget *int_label, *int_box, *int_holder;
 	GtkWidget *bilinear_label, *bilinear_box, *bilinear_holder;
 	GtkWidget *aa_label, *aa_box, *aa_holder;
 	GtkWidget *snap_label, *snap_box, *snap_holder;
-	GtkWidget  *fullscreen_label, *widescreen_check;
+	GtkWidget *fullscreen_label, *widescreen_check;
 
 	
 	GtkWidget *advanced_button;
@@ -342,6 +351,9 @@ void DisplayDialog()
 	  
 	advanced_button = gtk_button_new_with_label("Advanced...");
 
+	dis_hacks_check = gtk_check_button_new_with_label("Disable Automatic Hacks");
+	gtk_widget_set_tooltip_text(dis_hacks_check, "Used for testing how useful hacks that are on automatically are.");
+	
 #ifdef ZEROGS_DEVBUILD
 	separator = gtk_hseparator_new();
 	skipdraw_label = gtk_label_new("Skipdraw:");
@@ -373,6 +385,7 @@ void DisplayDialog()
 	gtk_box_pack_start(GTK_BOX(option_box), snap_holder, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), widescreen_check, false, false, 2);
 	gtk_box_pack_start(GTK_BOX(option_box), advanced_button, false, false, 2);
+	gtk_box_pack_start(GTK_BOX(option_box), dis_hacks_check, false, false, 2);
 	
 #ifdef ZEROGS_DEVBUILD
 	gtk_box_pack_start(GTK_BOX(option_box), separator, false, false, 2);
@@ -386,10 +399,11 @@ void DisplayDialog()
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), conf.log);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widescreen_check), (conf.widescreen()));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dis_hacks_check), (conf.disableHacks));
 
 	gtk_container_add(GTK_CONTAINER(GTK_DIALOG(dialog)->vbox), main_frame);
 	g_signal_connect_swapped(GTK_OBJECT (advanced_button), "clicked", G_CALLBACK(DisplayAdvancedDialog), advanced_button);
-	tempHacks = conf.settings();
+	tempHacks = conf.hacks;
 	gtk_widget_show_all(dialog);
 
 	return_value = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -417,6 +431,9 @@ void DisplayDialog()
 	
 		conf.zz_options = fake_options;
 		conf.hacks = tempHacks;
+		
+		conf.disableHacks = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dis_hacks_check));
+			
 		GSsetGameCRC(g_LastCRC, conf.hacks._u32);
 
 		SaveConfig();

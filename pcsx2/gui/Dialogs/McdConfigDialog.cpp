@@ -44,18 +44,11 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 		)
 	);
 
-#ifdef __WXMSW__
-	m_check_CompressNTFS = new pxCheckBox( this,
-		_("Enable NTFS Compression on all cards by default."),
-		GetMsg_McdNtfsCompress()
-		);
-#endif
-
 	for( uint i=0; i<2; ++i )
 	{
-		m_check_Multitap[i] = new pxCheckBox( this, wxsFormat(_("Enable Multitap on Port %u"), i+1) );
+		m_check_Multitap[i] = new pxCheckBox( this, pxsFmt(_("Enable Multitap on Port %u"), i+1) );
 		m_check_Multitap[i]->SetClientData( (void*)i );
-		m_check_Multitap[i]->SetName(wxsFormat( L"CheckBox::Multitap%u", i ));
+		m_check_Multitap[i]->SetName(pxsFmt( L"CheckBox::Multitap%u", i ));
 	}
 
 	// ------------------------------
@@ -68,9 +61,6 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	*this += 4;
 
 	*this += m_check_Ejection;	
-	#ifdef __WXMSW__
- 	*this += m_check_CompressNTFS;
-	#endif
 }
 
 void Panels::McdConfigPanel_Toggles::Apply()
@@ -79,9 +69,6 @@ void Panels::McdConfigPanel_Toggles::Apply()
 	g_Conf->EmuOptions.MultitapPort1_Enabled = m_check_Multitap[1]->GetValue();
 
 	g_Conf->EmuOptions.McdEnableEjection	= m_check_Ejection->GetValue();
-	#ifdef __WXMSW__
-	g_Conf->McdCompressNTFS		= m_check_CompressNTFS->GetValue();
-	#endif
 }
 
 void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
@@ -90,10 +77,6 @@ void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 	m_check_Multitap[1]	->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
 
 	m_check_Ejection	->SetValue( g_Conf->EmuOptions.McdEnableEjection );
-
-	#ifdef __WXMSW__
-	m_check_CompressNTFS->SetValue( g_Conf->McdCompressNTFS );
-	#endif
 }
 
 
@@ -104,7 +87,7 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	: BaseConfigurationDialog( parent, _("MemoryCard Manager"), 600 )
 {
 	m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
-
+	
 	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
 	// to configure the names of each memory card slot.
 
@@ -122,7 +105,7 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 
 	for( uint i=0; i<2; ++i )
 	{
-		if( pxCheckBox* check = (pxCheckBox*)FindWindow(wxsFormat( L"CheckBox::Multitap%u", i )) )
+		if( pxCheckBox* check = (pxCheckBox*)FindWindow(pxsFmt( L"CheckBox::Multitap%u", i )) )
 			Connect( check->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigDialog::OnMultitapClicked) );
 	}
 

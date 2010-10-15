@@ -252,6 +252,7 @@
 		<Unit filename="../CDVD/IsoFileTools.cpp" />
 		<Unit filename="../CDVD/IsoFileTools.h" />
 		<Unit filename="../COP0.cpp" />
+		<Unit filename="../COP0.h" />
 		<Unit filename="../COP2.cpp" />
 		<Unit filename="../Cache.cpp" />
 		<Unit filename="../Cache.h" />
@@ -317,6 +318,7 @@
 		<Unit filename="../IopMem.h" />
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
+		<Unit filename="../Ipu_fifo.h" />
 		<Unit filename="LnxHostSys.cpp" />
 		<Unit filename="LnxKeyCodes.cpp">
 			<Option compiler="gcc" use="1" buildCommand="$compiler $options $includes `pkg-config gtk+-2.0 --cflags` -c $file -o $object" />
@@ -325,6 +327,7 @@
 		<Unit filename="../MTGS.cpp" />
 		<Unit filename="../Memory.cpp" />
 		<Unit filename="../Memory.h" />
+		<Unit filename="../MemoryTypes.h" />
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
@@ -334,6 +337,7 @@
 		<Unit filename="../Pcsx2Config.cpp" />
 		<Unit filename="../PluginManager.cpp" />
 		<Unit filename="../Plugins.h" />
+		<Unit filename="../PrecompiledHeader.cpp" />
 		<Unit filename="../PrecompiledHeader.h" />
 		<Unit filename="../R3000A.cpp" />
 		<Unit filename="../R3000A.h" />
@@ -362,6 +366,7 @@
 		<Unit filename="../Stats.cpp" />
 		<Unit filename="../Stats.h" />
 		<Unit filename="../StringUtils.h" />
+		<Unit filename="../SysForwardDefs.h" />
 		<Unit filename="../System.cpp" />
 		<Unit filename="../System.h" />
 		<Unit filename="../System/PageFaultSource.h" />
@@ -582,6 +587,8 @@
 		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
 		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
 		<Unit filename="../ps2/LegacyDmac.cpp" />
+		<Unit filename="../ps2/eeHwTraceLog.inl" />
+		<Unit filename="../sio_internal.h" />
 		<Unit filename="../vtlb.cpp" />
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />

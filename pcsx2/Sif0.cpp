@@ -69,8 +69,8 @@ static __fi bool WriteIOPtoFifo()
 
 	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.iop.counter);
 
-	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
-	hw_dma(9).madr += writeSize << 2;
+	sif0.fifo.write((u32*)iopPhysMem(hw_dma9.madr), writeSize);
+	hw_dma9.madr += writeSize << 2;
 
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords).
 	sif0.iop.cycles += (writeSize >> 2)/* * BIAS*/;		// fixme : should be >> 4
@@ -83,13 +83,13 @@ static __fi bool WriteIOPtoFifo()
 static __fi bool ProcessEETag()
 {
 	static __aligned16 u32 tag[4];
+	tDMA_TAG& ptag(*(tDMA_TAG*)tag);
 
 	sif0.fifo.read((u32*)&tag[0], 4); // Tag
 	SIF_LOG("SIF0 EE read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
-	sif0dma.unsafeTransfer(((tDMA_TAG*)(tag)));
+	sif0dma.unsafeTransfer(&ptag);
 	sif0dma.madr = tag[1];
-	tDMA_TAG ptag(tag[0]);
 
 	SIF_LOG("SIF0 EE dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)",
 		sif0dma.madr, sif0dma.qwc, ptag.ID, ptag.IRQ, tag[1], tag[0]);
@@ -102,16 +102,12 @@ static __fi bool ProcessEETag()
 
 	switch (ptag.ID)
 	{
-		case TAG_REFE:
-			sif0.ee.end = true;
-			if (dmacRegs.ctrl.STS != NO_STS)
-				dmacRegs.stadr.ADDR = sif0dma.madr + (sif0dma.qwc * 16);
-				break;
+		case TAG_CNT:	break;
 
-		case TAG_REFS:
+		case TAG_CNTS:
 			if (dmacRegs.ctrl.STS != NO_STS)
 				dmacRegs.stadr.ADDR = sif0dma.madr + (sif0dma.qwc * 16);
-				break;
+			break;
 
 		case TAG_END:
 			sif0.ee.end = true;
@@ -120,22 +116,29 @@ static __fi bool ProcessEETag()
 	return true;
 }
 
-// Read Fifo into an iop tag, and transfer it to hw_dma(9). And presumably process it.
+// Read Fifo into an iop tag, and transfer it to hw_dma9. And presumably process it.
 static __fi bool ProcessIOPTag()
 {
-	// Process DMA tag at hw_dma(9).tadr
-	sif0.iop.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
+	// Process DMA tag at hw_dma9.tadr
+	sif0.iop.data = *(sifData *)iopPhysMem(hw_dma9.tadr);
 	sif0.iop.data.words = (sif0.iop.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
-	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).tadr + 8), 4);
 
-	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
+	// send the EE's side of the DMAtag.  The tag is only 64 bits, with the upper 64 bits
+	// ignored by the EE.
 
-	// We're only copying the first 24 bits.
-	hw_dma(9).madr = sif0data & 0xFFFFFF;
+	sif0.fifo.write((u32*)iopPhysMem(hw_dma9.tadr + 8), 2);
+	sif0.fifo.writePos = (sif0.fifo.writePos + 2) & (FIFO_SIF_W - 1);		// iggy on the upper 64.
+	sif0.fifo.size += 2;
+
+	hw_dma9.tadr += 16; ///hw_dma9.madr + 16 + sif0.sifData.words << 2;
+
+	// We're only copying the first 24 bits.  Bits 30 and 31 (checked below) are Stop/IRQ bits.
+	hw_dma9.madr = sif0data & 0xFFFFFF;
 	sif0.iop.counter = sif0words;
 
+	// IOP tags have an IRQ bit and an End of Transfer bit:
 	if (sif0tag.IRQ  || (sif0tag.ID & 4)) sif0.iop.end = true;
-	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma(9).madr, hw_dma(9).tadr, sif0.iop.counter, sif0words, sif0data);
+	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma9.madr, hw_dma9.tadr, sif0.iop.counter, sif0words, sif0data);
 
 	return true;
 }
@@ -265,7 +268,7 @@ static __fi void HandleIOPTransfer()
 		}
 		else
 		{
-			// Read Fifo into an iop tag, and transfer it to hw_dma(9).
+			// Read Fifo into an iop tag, and transfer it to hw_dma9.
 			// And presumably process it.
 			ProcessIOPTag();
 		}
@@ -282,6 +285,9 @@ static __fi void HandleIOPTransfer()
 
 static __fi void Sif0End()
 {
+	psHu32(SBUS_F240) &= ~0x20;
+	psHu32(SBUS_F240) &= ~0x2000;
+
 	SIF_LOG("SIF0 DMA end...");
 }
 
@@ -351,8 +357,5 @@ __fi void dmaSIF0()
 	{
         //hwIntcIrq(INTC_SBUS); // not sure, so let's not
 		SIF0Dma();
-		// Do we really want to mess with the SIF flags like that? Nah.
-		//psHu32(SBUS_F240) &= ~0x20;
-		//psHu32(SBUS_F240) &= ~0x2000;
 	}
 }

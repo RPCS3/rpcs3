@@ -57,6 +57,7 @@ int Dialogs::BiosSelectorDialog::ShowModal()
 
 void Dialogs::BiosSelectorDialog::OnOk_Click( wxCommandEvent& evt )
 {
+	wxWindowDisabler disableOk( FindWindow( wxID_OK ) );
 	if( m_ApplyState.ApplyAll() )
 	{
 		Close();

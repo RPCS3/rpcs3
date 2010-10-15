@@ -68,9 +68,9 @@ static __fi bool WriteFifoToIOP()
 
 	SIF_LOG("Sif 1 IOP doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
-	sif1.fifo.read((u32*)iopPhysMem(hw_dma(10).madr), readSize);
-	psxCpu->Clear(hw_dma(10).madr, readSize);
-	hw_dma(10).madr += readSize << 2;
+	sif1.fifo.read((u32*)iopPhysMem(hw_dma10.madr), readSize);
+	psxCpu->Clear(hw_dma10.madr, readSize);
+	hw_dma10.madr += readSize << 2;
 	sif1.iop.cycles += readSize >> 2;		// fixme: should be >> 4
 	sif1.iop.counter -= readSize;
 
@@ -151,7 +151,7 @@ static __fi bool SIFIOPReadTag()
 		sif1data & 0xffffff, sif1words, sif1tag.ID, sif1tag.IRQ);
 
 	// Only use the first 24 bits.
-	hw_dma(10).madr = sif1data & 0xffffff;
+	hw_dma10.madr = sif1data & 0xffffff;
 
 	sif1.iop.counter = sif1words;
 	if (sif1tag.IRQ  || (sif1tag.ID & 4)) sif1.iop.end = true;
@@ -276,6 +276,9 @@ static __fi void HandleIOPTransfer()
 
 static __fi void Sif1End()
 {
+	psHu32(SBUS_F240) &= ~0x40;
+	psHu32(SBUS_F240) &= ~0x4000;
+
 	SIF_LOG("SIF1 DMA end...");
 }
 
@@ -349,9 +352,5 @@ __fi void dmaSIF1()
 	if (sif1.iop.busy)
 	{
 		SIF1Dma();
-		// Do we really want to mess with the SIF flags like that? Nah.
-		//psHu32(SBUS_F240) &= ~0x40;
-		//psHu32(SBUS_F240) &= ~0x100;
-		//psHu32(SBUS_F240) &= ~0x4000;
 	}
 }

@@ -107,14 +107,32 @@ struct ParsedAssignmentString
 	ParsedAssignmentString( const wxString& src );
 };
 
-// --------------------------------------------------------------------------------------
-//  FastFormatAscii
-// --------------------------------------------------------------------------------------
-// Fast formatting of ASCII text.  This class uses a process-wide format buffer that is
-// allocated only once and grown to accommodate string formatting needs.  The buffer is
-// thread-safe.  This technique reduces the overhead of formatting strings by eliminating
-// most or all heap allocation actions.
+// ======================================================================================
+//  FastFormatAscii / FastFormatUnicode  (overview!)
+// ======================================================================================
+// Fast formatting of ASCII or Unicode text.  These classes uses a series of thread-local
+// format buffers that are allocated only once and grown to accommodate string formatting
+// needs.  Because the buffers are thread-local, no thread synch objects are required in
+// order to format strings, allowing for multi-threaded string formatting operations to be
+// performed with maximum efficiency.  This class also reduces the overhead typically required
+// to allocate string buffers off the heap.
 //
+// Drawbacks:
+//  * Some overhead is added to the creation and destruction of threads, however since thread
+//    construction is a typically slow process, and often avoided to begin with, this should
+//    be a sound trade-off.
+//
+// Notes:
+//  * conversion to wxString requires a heap allocation.
+//  * FastFormatUnicode can accept either UTF8 or UTF16/32 (wchar_t) input, but FastFormatAscii
+//    accepts Ascii/UTF8 only.
+//
+
+
+// --------------------------------------------------------------------------------------
+//  FastFormatAscii 
+// --------------------------------------------------------------------------------------
+
 class FastFormatAscii
 {
 protected:
@@ -127,6 +145,7 @@ public:
 	FastFormatAscii& Write( const char* fmt, ... );
 	FastFormatAscii& WriteV( const char* fmt, va_list argptr );
 
+	void Clear();
 	bool IsEmpty() const;
 
 	const char* c_str() const		{ return m_dest->GetPtr(); }
@@ -136,6 +155,9 @@ public:
 	//operator wxString() const;
 };
 
+// --------------------------------------------------------------------------------------
+//  FastFormatUnicode
+// --------------------------------------------------------------------------------------
 class FastFormatUnicode
 {
 protected:
@@ -151,6 +173,7 @@ public:
 	FastFormatUnicode& WriteV( const char* fmt, va_list argptr );
 	FastFormatUnicode& WriteV( const wxChar* fmt, va_list argptr );
 
+	void Clear();
 	bool IsEmpty() const;
 
 	const wxChar* c_str() const		{ return (const wxChar*)m_dest->GetPtr(); }

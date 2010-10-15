@@ -52,7 +52,7 @@ set(zzoglSources
     GSmain.cpp
     HostMemory.cpp
     Mem.cpp
-    memcpy_amd.cpp
+    # memcpy_amd.cpp
     Mem_Swizzle.cpp
     Mem_Tables.cpp
     Profile.cpp
@@ -79,7 +79,7 @@ set(zzoglHeaders
     common.h
     CRC.h
     GifTransfer.h
-    glprocs.h
+    # glprocs.h
     GS.h
     Mem.h
     Mem_Swizzle.h

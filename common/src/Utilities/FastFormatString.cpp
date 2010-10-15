@@ -39,12 +39,17 @@ static const int MaxFormattedStringLength = 0x80000;
 // --------------------------------------------------------------------------------------
 //  FastFormatBuffers
 // --------------------------------------------------------------------------------------
-template< typename CharType >
+// This class provides a series of pre-allocated thread-local buffers for use by string
+// formatting tools.  These buffers are handed out in round-robin style and require *no*
+// thread sync objects and avoid multi-thread contention completely -- allowing multiple
+// threads to format complicated strings concurrently with maximum efficiency.
+//
 class FastFormatBuffers
 {
 	DeclareNoncopyableObject(FastFormatBuffers);
 
 protected:
+	typedef char CharType;
 	typedef SafeAlignedArray<CharType,16> BufferType;
 
 	static const uint BufferCount = 4;
@@ -62,7 +67,7 @@ public:
 		for (uint i=0; i<BufferCount; ++i)
 		{
 			m_buffers[i].Name = wxsFormat(L"%s Formatting Buffer (slot%d)",
-				(sizeof(CharType)==1) ? L"Ascii" : L"Unicode", i);
+				(sizeof(CharType)==1) ? L"UTF8/Ascii" : L"Wide-char", i);
 			m_buffers[i].MakeRoomFor(1024);
 			m_buffers[i].ChunkSize = 2048;
 		}
@@ -72,7 +77,11 @@ public:
 
 	virtual ~FastFormatBuffers() throw()
 	{
-		pxAssumeDev(m_curslot==0, "Dangling Ascii formatting buffer detected!");
+		pxAssumeDev(m_curslot==0,
+			wxsFormat(L"Dangling %s formatting buffer detected!",
+				(sizeof(CharType)==1) ? L"UTF8/Ascii" : L"Wide-char"
+			)
+		);
 	}
 
 	bool HasFreeBuffer() const
@@ -139,7 +148,7 @@ public:
 };
 
 static bool buffer_is_avail = false;
-static GlobalBufferManager< BaseTlsVariable< FastFormatBuffers< char > > > m_buffer_tls(buffer_is_avail);
+static GlobalBufferManager< BaseTlsVariable< FastFormatBuffers > > m_buffer_tls(buffer_is_avail);
 
 static __ri void format_that_ascii_mess( SafeArray<char>& buffer, uint writepos, const char* fmt, va_list argptr )
 {
@@ -218,10 +227,16 @@ SafeArray<char>* GetFormatBuffer( bool& deleteDest )
 // --------------------------------------------------------------------------------------
 //  FastFormatUnicode  (implementations)
 // --------------------------------------------------------------------------------------
+// [TODO] This class should actually be renamed to FastFormatNative or FastFormatString, and
+// adopted to properly support 1-byte wxChar types (mostly requiring some changes to the
+// WriteV functions).  The current implementation is fine for wx2.8, which always defaults
+// to wide-varieties of wxChar -- but wx3.0 will use UTF8 for linux distros, which will break
+// this class nicely in its current state. --air
+
 FastFormatUnicode::FastFormatUnicode()
 {
 	m_dest = GetFormatBuffer(m_deleteDest);
-	((wxChar*)m_dest->GetPtr())[0] = 0;
+	Clear();
 }
 
 FastFormatUnicode::~FastFormatUnicode() throw()
@@ -230,6 +245,11 @@ FastFormatUnicode::~FastFormatUnicode() throw()
 		delete m_dest;
 	else
 		m_buffer_tls.Get()->ReleaseBuffer();
+}
+
+void FastFormatUnicode::Clear()
+{
+	((wxChar*)m_dest->GetPtr())[0] = 0;
 }
 
 FastFormatUnicode& FastFormatUnicode::WriteV( const char* fmt, va_list argptr )
@@ -278,7 +298,7 @@ bool FastFormatUnicode::IsEmpty() const
 FastFormatAscii::FastFormatAscii()
 {
 	m_dest = GetFormatBuffer(m_deleteDest);
-	m_dest->GetPtr()[0] = 0;
+	Clear();
 }
 
 FastFormatAscii::~FastFormatAscii() throw()
@@ -289,15 +309,15 @@ FastFormatAscii::~FastFormatAscii() throw()
 		m_buffer_tls.Get()->ReleaseBuffer();
 }
 
+void FastFormatAscii::Clear()
+{
+	m_dest->GetPtr()[0] = 0;
+}
+
 const wxString FastFormatAscii::GetString() const
 {
 	return fromAscii(m_dest->GetPtr());
 }
-
-/*FastFormatAscii::operator wxString() const
-{
-	return fromAscii(m_dest->GetPtr());
-}*/
 
 FastFormatAscii& FastFormatAscii::WriteV( const char* fmt, va_list argptr )
 {

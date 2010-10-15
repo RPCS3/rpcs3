@@ -240,7 +240,7 @@ struct Pcsx2Config
 			return !OpEqu( bitset );
 		}
 
-	} Recompiler;
+	};
 
 	// ------------------------------------------------------------------------
 	struct CpuOptions
@@ -338,9 +338,9 @@ struct Pcsx2Config
 				OPHFlagHack		:1;		// Skips MPEG videos (Katamari and other games need this)
 		BITFIELD_END
 
-		// all gamefixes are disabled by default.
-		GamefixOptions() : bitset( 0 ) {}
+		GamefixOptions();
 		void LoadSave( IniInterface& conf );
+		GamefixOptions& DisableAll();
 
 		void Set( const wxString& list, bool enabled=true );
 		void Clear( const wxString& list ) { Set( list, false ); }
@@ -378,6 +378,7 @@ struct Pcsx2Config
 
 		SpeedhackOptions();
 		void LoadSave( IniInterface& conf );
+		SpeedhackOptions& DisableAll();
 
 		bool operator ==( const SpeedhackOptions& right ) const
 		{

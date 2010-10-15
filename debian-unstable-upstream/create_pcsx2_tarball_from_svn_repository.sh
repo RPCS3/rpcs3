@@ -132,8 +132,9 @@ rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
 rm -fr "${NEW_DIR}/tools/GSDumpGUI"
 rm -fr "${NEW_DIR}/common/vsprops"
 echo "Remove useless files (copyright issues)"
-rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders/zlib"
+rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
+rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/memcpy_amd.cpp"
 
 ## BUILD
 echo "Build the tar.gz file"

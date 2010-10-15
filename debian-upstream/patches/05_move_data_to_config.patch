@@ -1,0 +1,17 @@
+Index: pcsx2-3369/pcsx2/gui/AppConfig.cpp
+===================================================================
+--- pcsx2-3369.orig/pcsx2/gui/AppConfig.cpp
++++ pcsx2-3369/pcsx2/gui/AppConfig.cpp
+@@ -125,7 +125,12 @@
+ 	{
+ 		switch( mode )
+ 		{
++#ifdef __LINUX__
++            // By default on linux move all user data file into central configuration directory
++			case DocsFolder_User:	return GetUserLocalDataDir();
++#else
+ 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), pxGetAppName() );
++#endif
+ 			//case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
+ 			case DocsFolder_Custom: return CustomDocumentsFolder;
+ 

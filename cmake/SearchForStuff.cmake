@@ -42,7 +42,6 @@ if(NOT FORCE_INTERNAL_ZLIB)
 endif(NOT FORCE_INTERNAL_ZLIB)
 
 ## Use pcsx2 package to find module
-include(FindA52)
 include(FindCg)
 include(FindGlew)
 include(FindPortAudio)
@@ -95,11 +94,6 @@ if(Linux)
 		include_directories(${X11_INCLUDE_DIR})
 	endif(X11_FOUND)
 endif(Linux)
-
-# A52
-if(A52_FOUND)
-	include_directories(${A52_INCLUDE_DIR})
-endif(A52_FOUND)
 
 # ALSA
 if(ALSA_FOUND)

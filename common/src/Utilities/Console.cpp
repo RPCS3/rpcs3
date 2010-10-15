@@ -55,11 +55,8 @@ void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 			writer.DoWriteLn( ConsoleBuffer_Get() );
 	}
 
-	const_cast<IConsoleWriter&>(Console)= writer;
-
-#ifdef PCSX2_DEVBUILD
-	const_cast<IConsoleWriter&>(DevCon)	= writer;
-#endif
+	const_cast<IConsoleWriter&>(Console)		= writer;
+	const_cast<IConsoleWriter&>(DevConWriter)	= writer;
 
 #ifdef PCSX2_DEBUG
 	const_cast<IConsoleWriter&>(DbgCon)	= writer;

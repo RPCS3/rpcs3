@@ -74,7 +74,52 @@ struct GIFTAG
 	u32 REGS[2];
 
 	GIFTAG() {}
+
+	wxString DumpRegsToString() const;
+	wxString ToString() const;
 };
+
+wxString GIFTAG::DumpRegsToString() const
+{
+	static const char* PackedModeRegsLabel[] =
+	{
+		"PRIM",		"RGBA",		"STQ",		"UV",
+		"XYZF2",	"XYZ2",		"TEX0_1",	"TEX0_2",
+		"CLAMP_1",	"CLAMP_2",	"FOG",		"Unknown",
+		"XYZF3",	"XYZ3",		"A_D",		"NOP"
+	};
+
+	u32 tempreg		= REGS[0];
+	uint numregs	= ((NREG-1)&0xf) + 1;
+
+	FastFormatUnicode result;
+	result.Write("NREG=0x%02X (", NREG);
+
+	for (u32 i = 0; i < numregs; i++) {
+		if (i == 8) tempreg = REGS[1];
+		if (i > 0) result.Write(" ");
+		result.Write(PackedModeRegsLabel[tempreg & 0xf]);
+		tempreg >>= 4;
+	}
+
+	result.Write(")");
+	return result;
+}
+
+wxString GIFTAG::ToString() const
+{
+	static const char* GifTagModeLabel[] =
+	{
+		"Packed", "RegList", "Image", "Image2"
+	};
+
+	FastFormatUnicode result;
+	result.Write("NLOOP=0x%04X, EOP=%u, PRE=%u, PRIM=0x%03X, MODE=%s",
+		NLOOP, EOP, PRE, PRIM, GifTagModeLabel[FLG]);
+
+	return result;
+}
+
 
 // --------------------------------------------------------------------------------------
 //  GIFPath -- PS2 GIFtag info (one for each path).
@@ -189,7 +234,7 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 //
 static void __fastcall RegHandlerFINISH(const u32* data)
 {
-	GIF_LOG("GIFpath FINISH data=%x_%x CSRr=%x", data[0], data[1], GSCSRr);
+	GifTagLog("GIFpath FINISH data=%x_%x CSRr=%x", data[0], data[1], GSCSRr);
 
 	// The FINISH bit is set here, and then it will be cleared when all three
 	// logical GIFpaths finish their packets (EOPs) At that time (found below
@@ -200,7 +245,7 @@ static void __fastcall RegHandlerFINISH(const u32* data)
 
 static void __fastcall RegHandlerLABEL(const u32* data)
 {
-	GIF_LOG( "GIFpath LABEL" );
+	GifTagLog( "GIFpath LABEL" );
 	GSSIGLBLID.LBLID = (GSSIGLBLID.LBLID&~data[1])|(data[0]&data[1]);
 }
 
@@ -402,7 +447,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
 				{
-					GIF_LOG("Packed Mode");
+					GifTagLog("Packed Mode");
 					numregs	= ((tag.NREG-1)&0xf) + 1;
 
 					// Note: curreg is *usually* zero here, but can be non-zero if a previous fragment was
@@ -446,7 +491,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
+					GifTagLog("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
 					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
@@ -491,7 +536,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
-					GIF_LOG("IMAGE Mode");
+					GifTagLog("IMAGE Mode");
 					int len = aMin(size, nloop);
 					incTag(len);
 					nloop -= len;
@@ -593,7 +638,9 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 
 			SetTag<Aligned>((u8*)pMem128);
 			copyTag();
-			
+
+			GifTagLog("\tSetTag: %ls", tag.ToString().c_str());
+
 			if(nloop > 0)
 			{
 				switch(pathidx)
@@ -655,7 +702,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 	
 			switch(tag.FLG) {
 				case GIF_FLG_PACKED:
-					GIF_LOG("Packed Mode EOP %x", tag.EOP);
+					GifTagLog("Packed Mode EOP %x : %ls", tag.EOP, tag.DumpRegsToString().c_str());
 					PrepPackedRegs();
 
 					if(DetectE > 0)
@@ -715,7 +762,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 				break;
 				case GIF_FLG_REGLIST:
 				{
-					GIF_LOG("Reglist Mode EOP %x", tag.EOP);
+					GifTagLog("Reglist Mode EOP %x", tag.EOP);
 
 					// In reglist mode, the GIF packs 2 registers into each QWC.  The nloop however
 					// can be an odd number, in which case the upper half of the final QWC is ignored (skipped).
@@ -761,7 +808,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 				case GIF_FLG_IMAGE:
 				case GIF_FLG_IMAGE2:
 				{
-					GIF_LOG("IMAGE Mode EOP %x", tag.EOP);
+					GifTagLog("IMAGE Mode EOP %x", tag.EOP);
 					int len = aMin(size, nloop);
 
 					MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );

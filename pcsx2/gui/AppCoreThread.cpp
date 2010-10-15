@@ -221,18 +221,18 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game, bool verbo
 	if (game.keyExists("eeClampMode")) {
 		int clampMode = game.getInt("eeClampMode");
 		if(verbose) Console.WriteLn("(GameDB) Changing EE/FPU clamp mode [mode=%d]", clampMode);
-		dest.Recompiler.fpuOverflow			= (clampMode >= 1);
-		dest.Recompiler.fpuExtraOverflow	= (clampMode >= 2);
-		dest.Recompiler.fpuFullMode			= (clampMode >= 3);
+		dest.Cpu.Recompiler.fpuOverflow			= (clampMode >= 1);
+		dest.Cpu.Recompiler.fpuExtraOverflow	= (clampMode >= 2);
+		dest.Cpu.Recompiler.fpuFullMode			= (clampMode >= 3);
 		gf++;
 	}
 
 	if (game.keyExists("vuClampMode")) {
 		int clampMode = game.getInt("vuClampMode");
 		if(verbose) Console.WriteLn("(GameDB) Changing VU0/VU1 clamp mode [mode=%d]", clampMode);
-		dest.Recompiler.vuOverflow			= (clampMode >= 1);
-		dest.Recompiler.vuExtraOverflow		= (clampMode >= 2);
-		dest.Recompiler.vuSignOverflow		= (clampMode >= 3);
+		dest.Cpu.Recompiler.vuOverflow			= (clampMode >= 1);
+		dest.Cpu.Recompiler.vuExtraOverflow		= (clampMode >= 2);
+		dest.Cpu.Recompiler.vuSignOverflow		= (clampMode >= 3);
 		gf++;
 	}
 
@@ -272,7 +272,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	const CommandlineOverrides& overrides( wxGetApp().Overrides );
 	if( overrides.DisableSpeedhacks || !g_Conf->EnableSpeedHacks )
-		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
+		fixup.Speedhacks.DisableAll();
 
 	if( overrides.ApplyCustomGamefixes )
 	{
@@ -280,7 +280,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 			fixup.Gamefixes.Set( id, overrides.Gamefixes.Get(id) );
 	}
 	else if( !g_Conf->EnableGameFixes )
-		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
+		fixup.Gamefixes.DisableAll();
 
 	wxString gameCRC;
 	wxString gameSerial;

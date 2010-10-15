@@ -46,7 +46,7 @@ int ReverbBoost = 0;
 
 // OUTPUT
 u32 OutputModule = 0;
-int SndOutLatencyMS = 150;
+int SndOutLatencyMS = 300;
 int SynchMode = 0; // Time Stretch, Async or Disabled
 
 /*****************************************************************************/
@@ -69,7 +69,7 @@ void ReadSettings()
 	CfgReadStr( L"OUTPUT", L"Output_Module", temp, PortaudioOut->GetIdent() );
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 
-	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
+	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 300);
 	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 
 	PortaudioOut->ReadSettings();
@@ -175,10 +175,8 @@ void DisplayDialog()
     mod_box = gtk_combo_box_new_text ();
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "0 - No Sound (emulate SPU2 only)");
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "1 - PortAudio (cross-platform)");
-    if (OutputModule == 0)
-		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 0);
-	else
-		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 1);
+    //gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "2 - Alsa (probably doesn't work)");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), OutputModule);
 
     latency_label = gtk_label_new ("Latency:");
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
@@ -246,10 +244,8 @@ void DisplayDialog()
     	if (gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box)) != -1)
 			ReverbBoost = gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box));
 
-    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(mod_box)) != 1)
-			OutputModule = 0;
-		else
-			OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
+    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(mod_box)) != -1)
+			OutputModule = gtk_combo_box_get_active(GTK_COMBO_BOX(mod_box));
 
     	SndOutLatencyMS = gtk_range_get_value(GTK_RANGE(latency_slide));
     	

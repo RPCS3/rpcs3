@@ -37,7 +37,7 @@ __noinline void memzero_sse_a( T& dest )
 
 	float (*destxmm)[4] = (float(*)[4])&dest;
 
-#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx][0], zeroreg)
+#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx-1][0], zeroreg)
 
 	switch( MZFqwc & 0x07 )
 	{
@@ -151,12 +151,7 @@ struct decoder_t {
 	uint ipu0_data;		// amount of data in the output macroblock (in QWC)
 	uint ipu0_idx;
 
-	/* bit parsing stuff */
-	//u32 bitstream_buf;		/* current 32 bit working set */
-	//int bitstream_bits;			/* used bits in working set */
-
-	int quantizer_scale;	/* remove */
-	int dmv_offset;		/* remove */
+	int quantizer_scale;
 
 	/* now non-slice-specific information */
 
@@ -191,8 +186,6 @@ struct decoder_t {
 	int dte;
 	// Output Format
 	int ofm;
-	// Macroblock count
-	int mbc;
 	// Macroblock type
 	int macroblock_modes;
 	// DC Reset
@@ -204,8 +197,6 @@ struct decoder_t {
 
 	/* the zigzag scan we're supposed to be using, true for alt, false for normal */
 	bool scantype;
-
-	int second_field;
 
 	int mpeg1;
 
@@ -225,12 +216,10 @@ struct decoder_t {
 	
 	void AdvanceIpuDataBy(uint amt)
 	{
-		pxAssumeDev(ipu0_data>=amt, "IPU FIFO Overflow on advance!" );
+		pxAssumeMsg(ipu0_data>=amt, "IPU FIFO Overflow on advance!" );
 		ipu0_idx += amt;
 		ipu0_data -= amt;
 	}
-	
-	__fi bool ReadIpuData(u128* out);
 };
 
 struct mpeg2_scan_pack
@@ -247,9 +236,6 @@ extern s32 SBITS(uint bits);
 
 extern void mpeg2_idct_copy(s16 * block, u8* dest, int stride);
 extern void mpeg2_idct_add(int last, s16 * block, s16* dest, int stride);
-
-#define IDEC	0
-#define BDEC	1
 
 extern bool mpeg2sliceIDEC();
 extern bool mpeg2_slice();

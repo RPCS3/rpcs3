@@ -1,8 +1,8 @@
 /*
  * $Id: pa_mac_core_old.c 1083 2006-08-23 07:30:49Z rossb $
  * pa_mac_core.c
- * Implementation of PortAudio for Mac OS X CoreAudio
- *
+ * Implementation of PortAudio for Mac OS X CoreAudio       
+ *                                                                                         
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  *
@@ -30,13 +30,13 @@
  */
 
 /*
- * The text above constitutes the entire PortAudio license; however,
+ * The text above constitutes the entire PortAudio license; however, 
  * the PortAudio community also makes the following non-binding requests:
  *
  * Any person wishing to distribute modifications to the Software is
  * requested to send the modifications to the original developer so that
- * they can be incorporated into the canonical version. It is also
- * requested that these non-binding requests be included along with the
+ * they can be incorporated into the canonical version. It is also 
+ * requested that these non-binding requests be included along with the 
  * license above.
  */
 
@@ -67,7 +67,7 @@ typedef struct PaMacCore_HAR
     PaUtilHostApiRepresentation inheritedHostApiRep;
     PaUtilStreamInterface callbackStreamInterface;
     PaUtilStreamInterface blockingStreamInterface;
-
+    
     PaUtilAllocationGroup *allocations;
     AudioDeviceID *macCoreDeviceIds;
 }
@@ -85,28 +85,28 @@ typedef struct PaMacCore_S
     PaUtilStreamRepresentation streamRepresentation;
     PaUtilCpuLoadMeasurer cpuLoadMeasurer;
     PaUtilBufferProcessor bufferProcessor;
-
+    
     int primeStreamUsingCallback;
-
+    
     AudioDeviceID inputDevice;
     AudioDeviceID outputDevice;
-
+    
     // Processing thread management --------------
 //    HANDLE abortEvent;
 //    HANDLE processingThread;
 //    DWORD processingThreadId;
-
+    
     char throttleProcessingThreadOnOverload; // 0 -> don't throtte, non-0 -> throttle
     int processingThreadPriority;
     int highThreadPriority;
     int throttledThreadPriority;
     unsigned long throttledSleepMsecs;
-
+    
     int isStopped;
     volatile int isActive;
     volatile int stopProcessing; // stop thread once existing buffers have been returned
     volatile int abortProcessing; // stop thread immediately
-
+    
 //    DWORD allBuffersDurationMs; // used to calculate timeouts
 }
 PaMacCoreStream;
@@ -136,7 +136,7 @@ PaMacClientData;
 static PaError conv_err(OSStatus error)
 {
     PaError result;
-
+    
     switch (error) {
         case kAudioHardwareNoError:
             result = paNoError; break;
@@ -163,7 +163,7 @@ static PaError conv_err(OSStatus error)
         default:
             result = paInternalError;
     }
-
+    
     return result;
 }
 
@@ -175,7 +175,7 @@ static AudioStreamBasicDescription *InitializeStreamDescription(const PaStreamPa
     streamDescription->mFormatID = kAudioFormatLinearPCM;
     streamDescription->mFormatFlags = 0;
     streamDescription->mFramesPerPacket = 1;
-
+    
     if (parameters->sampleFormat & paNonInterleaved) {
         streamDescription->mFormatFlags |= kLinearPCMFormatFlagIsNonInterleaved;
         streamDescription->mChannelsPerFrame = 1;
@@ -185,10 +185,10 @@ static AudioStreamBasicDescription *InitializeStreamDescription(const PaStreamPa
     else {
         streamDescription->mChannelsPerFrame = parameters->channelCount;
     }
-
+    
     streamDescription->mBytesPerFrame = Pa_GetSampleSize(parameters->sampleFormat) * streamDescription->mChannelsPerFrame;
     streamDescription->mBytesPerPacket = streamDescription->mBytesPerFrame * streamDescription->mFramesPerPacket;
-
+    
     if (parameters->sampleFormat & paFloat32) {
         streamDescription->mFormatFlags |= kLinearPCMFormatFlagIsFloat;
         streamDescription->mBitsPerChannel = 32;
@@ -208,11 +208,11 @@ static AudioStreamBasicDescription *InitializeStreamDescription(const PaStreamPa
     else if (parameters->sampleFormat & paInt8) {
         streamDescription->mFormatFlags |= kLinearPCMFormatFlagIsSignedInteger;
         streamDescription->mBitsPerChannel = 8;
-    }
+    }    
     else if (parameters->sampleFormat & paInt32) {
         streamDescription->mBitsPerChannel = 8;
     }
-
+    
     return streamDescription;
 }
 */
@@ -220,11 +220,11 @@ static AudioStreamBasicDescription *InitializeStreamDescription(const PaStreamPa
 static PaStreamCallbackTimeInfo *InitializeTimeInfo(const AudioTimeStamp* now, const AudioTimeStamp* inputTime, const AudioTimeStamp* outputTime)
 {
     PaStreamCallbackTimeInfo *timeInfo = PaUtil_AllocateMemory(sizeof(PaStreamCallbackTimeInfo));
-
+    
     timeInfo->inputBufferAdcTime = inputTime->mSampleTime;
     timeInfo->currentTime = now->mSampleTime;
     timeInfo->outputBufferDacTime = outputTime->mSampleTime;
-
+    
     return timeInfo;
 }
 
@@ -238,8 +238,8 @@ static void CleanUp(PaMacCoreHostApiRepresentation *macCoreHostApi)
         PaUtil_FreeAllAllocations( macCoreHostApi->allocations );
         PaUtil_DestroyAllocationGroup( macCoreHostApi->allocations );
     }
-
-    PaUtil_FreeMemory( macCoreHostApi );
+    
+    PaUtil_FreeMemory( macCoreHostApi );    
 }
 
 static PaError GetChannelInfo(PaDeviceInfo *deviceInfo, AudioDeviceID macCoreDeviceId, int isInput)
@@ -257,12 +257,12 @@ static PaError GetChannelInfo(PaDeviceInfo *deviceInfo, AudioDeviceID macCoreDev
         for (i = 0; i < buflist->mNumberBuffers; ++i) {
             numChannels += buflist->mBuffers[i].mNumberChannels;
         }
-
+		
 		if (isInput)
 			deviceInfo->maxInputChannels = numChannels;
 		else
 			deviceInfo->maxOutputChannels = numChannels;
-
+		
         int frameLatency;
         propSize = sizeof(UInt32);
         err = conv_err(AudioDeviceGetProperty(macCoreDeviceId, 0, isInput, kAudioDevicePropertyLatency, &propSize, &frameLatency));
@@ -279,7 +279,7 @@ static PaError GetChannelInfo(PaDeviceInfo *deviceInfo, AudioDeviceID macCoreDev
         }
     }
     PaUtil_FreeMemory(buflist);
-
+    
     return err;
 }
 
@@ -288,7 +288,7 @@ static PaError InitializeDeviceInfo(PaMacCoreDeviceInfo *macCoreDeviceInfo,  Aud
     PaDeviceInfo *deviceInfo = &macCoreDeviceInfo->inheritedDeviceInfo;
     deviceInfo->structVersion = 2;
     deviceInfo->hostApi = hostApiIndex;
-
+    
     PaError err = paNoError;
     UInt32 propSize;
 
@@ -299,7 +299,7 @@ static PaError InitializeDeviceInfo(PaMacCoreDeviceInfo *macCoreDeviceInfo,  Aud
     if (!err) {
         deviceInfo->name = name;
     }
-
+    
     Float64 sampleRate;
     propSize = sizeof(Float64);
     err = conv_err(AudioDeviceGetProperty(macCoreDeviceId, 0, 0, kAudioDevicePropertyNominalSampleRate, &propSize, &sampleRate));
@@ -326,7 +326,7 @@ static PaError InitializeDeviceInfos( PaMacCoreHostApiRepresentation *macCoreHos
     hostApi->info.deviceCount = 0;
     hostApi->info.defaultInputDevice = paNoDevice;
     hostApi->info.defaultOutputDevice = paNoDevice;
-
+    
     UInt32 propsize;
     AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDevices, &propsize, NULL);
     int numDevices = propsize / sizeof(AudioDeviceID);
@@ -346,7 +346,7 @@ static PaError InitializeDeviceInfos( PaMacCoreHostApiRepresentation *macCoreHos
         {
             return paInsufficientMemory;
         }
-
+        
         macCoreHostApi->macCoreDeviceIds = PaUtil_GroupAllocateMemory(macCoreHostApi->allocations, propsize);
         AudioHardwareGetProperty(kAudioHardwarePropertyDevices, &propsize, macCoreHostApi->macCoreDeviceIds);
 
@@ -354,7 +354,7 @@ static PaError InitializeDeviceInfos( PaMacCoreHostApiRepresentation *macCoreHos
         propsize = sizeof(AudioDeviceID);
         AudioHardwareGetProperty(kAudioHardwarePropertyDefaultInputDevice, &propsize, &defaultInputDevice);
         AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice, &propsize, &defaultOutputDevice);
-
+        
         UInt32 i;
         for (i = 0; i < numDevices; ++i) {
             if (macCoreHostApi->macCoreDeviceIds[i] == defaultInputDevice) {
@@ -364,7 +364,7 @@ static PaError InitializeDeviceInfos( PaMacCoreHostApiRepresentation *macCoreHos
                 hostApi->info.defaultOutputDevice = i;
             }
             InitializeDeviceInfo(&deviceInfoArray[i], macCoreHostApi->macCoreDeviceIds[i], hostApiIndex);
-            hostApi->deviceInfos[i] = &(deviceInfoArray[i].inheritedDeviceInfo);
+            hostApi->deviceInfos[i] = &(deviceInfoArray[i].inheritedDeviceInfo);      
         }
     }
 
@@ -402,7 +402,7 @@ static OSStatus CopyInputData(PaMacClientData* destination, const AudioBufferLis
         frameSpacing = destination->inputChannelCount;
         channelSpacing = 1;
     }
-
+    
     AudioBuffer const *inputBuffer = &source->mBuffers[0];
     void *coreAudioBuffer = inputBuffer->mData;
     void *portAudioBuffer = destination->inputBuffer;
@@ -432,7 +432,7 @@ static OSStatus CopyOutputData(AudioBufferList* destination, PaMacClientData *so
         frameSpacing = source->outputChannelCount;
         channelSpacing = 1;
     }
-
+    
     AudioBuffer *outputBuffer = &destination->mBuffers[0];
     void *coreAudioBuffer = outputBuffer->mData;
     void *portAudioBuffer = source->outputBuffer;
@@ -455,15 +455,15 @@ static OSStatus AudioIOProc( AudioDeviceID inDevice,
                       const AudioTimeStamp* inNow,
                       const AudioBufferList* inInputData,
                       const AudioTimeStamp* inInputTime,
-                      AudioBufferList* outOutputData,
+                      AudioBufferList* outOutputData, 
                       const AudioTimeStamp* inOutputTime,
                       void* inClientData)
 {
     PaMacClientData *clientData = (PaMacClientData *)inClientData;
     PaStreamCallbackTimeInfo *timeInfo = InitializeTimeInfo(inNow, inInputTime, inOutputTime);
-
+    
     PaUtil_BeginCpuLoadMeasurement( &clientData->stream->cpuLoadMeasurer );
-
+    
     AudioBuffer *outputBuffer = &outOutputData->mBuffers[0];
     unsigned long frameCount = outputBuffer->mDataByteSize / (outputBuffer->mNumberChannels * sizeof(Float32));
 
@@ -476,7 +476,7 @@ static OSStatus AudioIOProc( AudioDeviceID inDevice,
     }
 
     PaUtil_EndCpuLoadMeasurement( &clientData->stream->cpuLoadMeasurer, frameCount );
-
+    
     if (result == paComplete || result == paAbort) {
         Pa_StopStream(clientData->stream);
     }
@@ -490,7 +490,7 @@ static OSStatus AudioInputProc( AudioDeviceID inDevice,
                          const AudioTimeStamp* inNow,
                          const AudioBufferList* inInputData,
                          const AudioTimeStamp* inInputTime,
-                         AudioBufferList* outOutputData,
+                         AudioBufferList* outOutputData, 
                          const AudioTimeStamp* inOutputTime,
                          void* inClientData)
 {
@@ -504,7 +504,7 @@ static OSStatus AudioInputProc( AudioDeviceID inDevice,
 
     CopyInputData(clientData, inInputData, frameCount);
     PaStreamCallbackResult result = clientData->callback(clientData->inputBuffer, clientData->outputBuffer, frameCount, timeInfo, paNoFlag, clientData->userData);
-
+    
     PaUtil_EndCpuLoadMeasurement( &clientData->stream->cpuLoadMeasurer, frameCount );
     if( result == paComplete || result == paAbort )
        Pa_StopStream(clientData->stream);
@@ -517,7 +517,7 @@ static OSStatus AudioOutputProc( AudioDeviceID inDevice,
                           const AudioTimeStamp* inNow,
                           const AudioBufferList* inInputData,
                           const AudioTimeStamp* inInputTime,
-                          AudioBufferList* outOutputData,
+                          AudioBufferList* outOutputData, 
                           const AudioTimeStamp* inOutputTime,
                           void* inClientData)
 {
@@ -540,18 +540,18 @@ static OSStatus AudioOutputProc( AudioDeviceID inDevice,
 static PaError SetSampleRate(AudioDeviceID device, double sampleRate, int isInput)
 {
     PaError result = paNoError;
-
+    
     double actualSampleRate;
     UInt32 propSize = sizeof(double);
     result = conv_err(AudioDeviceSetProperty(device, NULL, 0, isInput, kAudioDevicePropertyNominalSampleRate, propSize, &sampleRate));
-
+    
     result = conv_err(AudioDeviceGetProperty(device, 0, isInput, kAudioDevicePropertyNominalSampleRate, &propSize, &actualSampleRate));
-
+    
     if (result == paNoError && actualSampleRate != sampleRate) {
         result = paInvalidSampleRate;
     }
-
-    return result;
+    
+    return result;    
 }
 
 static PaError SetFramesPerBuffer(AudioDeviceID device, unsigned long framesPerBuffer, int isInput)
@@ -561,13 +561,13 @@ static PaError SetFramesPerBuffer(AudioDeviceID device, unsigned long framesPerB
     //    while (preferredFramesPerBuffer > UINT32_MAX) {
     //        preferredFramesPerBuffer /= 2;
     //    }
-
+    
     UInt32 actualFramesPerBuffer;
     UInt32 propSize = sizeof(UInt32);
     result = conv_err(AudioDeviceSetProperty(device, NULL, 0, isInput, kAudioDevicePropertyBufferFrameSize, propSize, &preferredFramesPerBuffer));
-
+    
     result = conv_err(AudioDeviceGetProperty(device, 0, isInput, kAudioDevicePropertyBufferFrameSize, &propSize, &actualFramesPerBuffer));
-
+    
     if (result != paNoError) {
         // do nothing
     }
@@ -577,10 +577,10 @@ static PaError SetFramesPerBuffer(AudioDeviceID device, unsigned long framesPerB
     else if (actualFramesPerBuffer < framesPerBuffer) {
         result = paBufferTooBig;
     }
-
-    return result;
+    
+    return result;    
 }
-
+    
 static PaError SetUpUnidirectionalStream(AudioDeviceID device, double sampleRate, unsigned long framesPerBuffer, int isInput)
 {
     PaError err = paNoError;
@@ -597,9 +597,9 @@ static PaError SetUpUnidirectionalStream(AudioDeviceID device, double sampleRate
 extern "C"
 {
 #endif // __cplusplus
-
+    
     PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex index );
-
+    
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -607,7 +607,7 @@ extern "C"
 static void Terminate( struct PaUtilHostApiRepresentation *hostApi )
 {
     PaMacCoreHostApiRepresentation *macCoreHostApi = (PaMacCoreHostApiRepresentation*)hostApi;
-
+    
     CleanUp(macCoreHostApi);
 }
 
@@ -618,7 +618,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
 {
     PaMacCoreHostApiRepresentation *macCoreHostApi = (PaMacCoreHostApiRepresentation*)hostApi;
     PaDeviceInfo *deviceInfo;
-
+    
     PaError result = paNoError;
     if (inputParameters) {
         deviceInfo = macCoreHostApi->inheritedHostApiRep.deviceInfos[inputParameters->device];
@@ -657,14 +657,14 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     stream->isStopped = 1;
     stream->inputDevice = kAudioDeviceUnknown;
     stream->outputDevice = kAudioDeviceUnknown;
-
+    
     PaUtil_InitializeStreamRepresentation( &stream->streamRepresentation,
                                            ( (streamCallback)
                                              ? &macCoreHostApi->callbackStreamInterface
                                              : &macCoreHostApi->blockingStreamInterface ),
                                            streamCallback, userData );
     PaUtil_InitializeCpuLoadMeasurer( &stream->cpuLoadMeasurer, sampleRate );
-
+    
     *s = (PaStream*)stream;
     PaMacClientData *clientData = PaUtil_AllocateMemory(sizeof(PaMacClientData));
     clientData->stream = stream;
@@ -674,7 +674,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     clientData->outputBuffer = 0;
     clientData->ditherGenerator = PaUtil_AllocateMemory(sizeof(PaUtilTriangularDitherGenerator));
     PaUtil_InitializeTriangularDitherState(clientData->ditherGenerator);
-
+    
     if (inputParameters != NULL) {
         stream->inputDevice = macCoreHostApi->macCoreDeviceIds[inputParameters->device];
         clientData->inputConverter = PaUtil_SelectConverter(paFloat32, inputParameters->sampleFormat, streamFlags);
@@ -683,7 +683,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         clientData->inputSampleFormat = inputParameters->sampleFormat;
         err = SetUpUnidirectionalStream(stream->inputDevice, sampleRate, framesPerBuffer, 1);
     }
-
+    
     if (err == paNoError && outputParameters != NULL) {
         stream->outputDevice = macCoreHostApi->macCoreDeviceIds[outputParameters->device];
         clientData->outputConverter = PaUtil_SelectConverter(outputParameters->sampleFormat, paFloat32, streamFlags);
@@ -703,7 +703,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         AudioDeviceAddIOProc(stream->inputDevice, AudioInputProc, clientData);
         AudioDeviceAddIOProc(stream->outputDevice, AudioOutputProc, clientData);
     }
-
+    
     return err;
 }
 
@@ -727,7 +727,7 @@ static PaError CloseStream( PaStream* s )
     else {
         err = conv_err(AudioDeviceRemoveIOProc(stream->outputDevice, AudioIOProc));
     }
-
+    
     return err;
 }
 
@@ -749,7 +749,7 @@ static PaError StartStream( PaStream *s )
     else {
         err = conv_err(AudioDeviceStart(stream->outputDevice, AudioIOProc));
     }
-
+    
     stream->isActive = 1;
     stream->isStopped = 0;
     return err;
@@ -759,7 +759,7 @@ static PaError AbortStream( PaStream *s )
 {
     PaError err = paNoError;
     PaMacCoreStream *stream = (PaMacCoreStream*)s;
-
+    
     if (stream->inputDevice != kAudioDeviceUnknown) {
         if (stream->outputDevice == kAudioDeviceUnknown || stream->outputDevice == stream->inputDevice) {
             err = conv_err(AudioDeviceStop(stream->inputDevice, AudioIOProc));
@@ -772,11 +772,11 @@ static PaError AbortStream( PaStream *s )
     else {
         err = conv_err(AudioDeviceStop(stream->outputDevice, AudioIOProc));
     }
-
+    
     stream->isActive = 0;
     stream->isStopped = 1;
     return err;
-}
+}    
 
 static PaError StopStream( PaStream *s )
 {
@@ -787,7 +787,7 @@ static PaError StopStream( PaStream *s )
 static PaError IsStreamStopped( PaStream *s )
 {
     PaMacCoreStream *stream = (PaMacCoreStream*)s;
-
+    
     return stream->isStopped;
 }
 
@@ -813,7 +813,7 @@ static PaTime GetStreamTime( PaStream *s )
     else {
         err = AudioDeviceGetCurrentTime(stream->outputDevice, timeStamp);
     }
-
+    
     result = err ? 0 : timeStamp->mSampleTime;
     PaUtil_FreeMemory(timeStamp);
 
@@ -824,7 +824,7 @@ static PaTime GetStreamTime( PaStream *s )
 static double GetStreamCpuLoad( PaStream* s )
 {
     PaMacCoreStream *stream = (PaMacCoreStream*)s;
-
+    
     return PaUtil_GetCpuLoad( &stream->cpuLoadMeasurer );
 }
 
@@ -868,14 +868,14 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
         result = paInsufficientMemory;
         goto error;
     }
-
+    
     macCoreHostApi->allocations = PaUtil_CreateAllocationGroup();
     if( !macCoreHostApi->allocations )
     {
         result = paInsufficientMemory;
         goto error;
     }
-
+    
     *hostApi = &macCoreHostApi->inheritedHostApiRep;
     (*hostApi)->info.structVersion = 1;
     (*hostApi)->info.type = paCoreAudio;
@@ -885,29 +885,29 @@ PaError PaMacCore_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIn
     if (result != paNoError) {
         goto error;
     }
-
+    
     // Set up the proper callbacks to this HostApi's functions
     (*hostApi)->Terminate = Terminate;
     (*hostApi)->OpenStream = OpenStream;
     (*hostApi)->IsFormatSupported = IsFormatSupported;
-
+    
     PaUtil_InitializeStreamInterface( &macCoreHostApi->callbackStreamInterface, CloseStream, StartStream,
                                       StopStream, AbortStream, IsStreamStopped, IsStreamActive,
                                       GetStreamTime, GetStreamCpuLoad,
                                       PaUtil_DummyRead, PaUtil_DummyWrite,
                                       PaUtil_DummyGetReadAvailable, PaUtil_DummyGetWriteAvailable );
-
+    
     PaUtil_InitializeStreamInterface( &macCoreHostApi->blockingStreamInterface, CloseStream, StartStream,
                                       StopStream, AbortStream, IsStreamStopped, IsStreamActive,
                                       GetStreamTime, PaUtil_DummyGetCpuLoad,
                                       ReadStream, WriteStream, GetStreamReadAvailable, GetStreamWriteAvailable );
-
+    
     return result;
-
+    
 error:
         if( macCoreHostApi ) {
             CleanUp(macCoreHostApi);
         }
-
+    
     return result;
 }

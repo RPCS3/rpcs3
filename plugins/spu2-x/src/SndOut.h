@@ -489,6 +489,9 @@ extern SndOutModule* DSoundOut;
 extern SndOutModule* XAudio2Out;
 #endif
 extern SndOutModule* PortaudioOut;
+#ifdef __LINUX__
+extern SndOutModule* AlsaOut;
+#endif
 
 extern SndOutModule* mods[];
 

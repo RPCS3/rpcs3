@@ -688,7 +688,7 @@ void __fi finishmpeg2sliceIDEC()
 	coded_block_pattern = decoder.coded_block_pattern;
 }
 
-bool mpeg2sliceIDEC()
+__fi bool mpeg2sliceIDEC()
 {
 	u16 code;
 
@@ -699,7 +699,6 @@ bool mpeg2sliceIDEC()
 		decoder.dc_dct_pred[1] =
 		decoder.dc_dct_pred[2] = 128 << decoder.intra_dc_precision;
 
-		decoder.mbc = 0;
 		ipuRegs.top = 0;
 		ipuRegs.ctrl.ECD = 0;
 
@@ -818,7 +817,6 @@ bool mpeg2sliceIDEC()
 					return false;
 				}
 
-				decoder.mbc++;
 				mbaCount = 0;
 			}
 			
@@ -867,8 +865,6 @@ bool mpeg2sliceIDEC()
 					decoder.dc_dct_pred[0] =
 					decoder.dc_dct_pred[1] =
 					decoder.dc_dct_pred[2] = 128 << decoder.intra_dc_precision;
-
-					decoder.mbc += mbaCount;
 				}
 
 			case 4:
@@ -922,7 +918,7 @@ finish_idec:
 	return true;
 }
 
-bool mpeg2_slice()
+__fi bool mpeg2_slice()
 {
 	int DCT_offset, DCT_stride;
 
@@ -1110,7 +1106,6 @@ bool mpeg2_slice()
 		ipuRegs.ctrl.SCD = 0;
 		coded_block_pattern = decoder.coded_block_pattern;
 
-		decoder.mbc = 1;
 		decoder.SetOutputTo(mb16);
 
 	case 3:
@@ -1127,7 +1122,6 @@ bool mpeg2_slice()
 			return false;
 		}
 
-		decoder.mbc++;
 		mbaCount = 0;
 	}
 	

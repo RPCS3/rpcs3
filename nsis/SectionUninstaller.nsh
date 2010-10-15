@@ -19,6 +19,7 @@ Section "Un.Exes and Plugins ${APP_NAME}"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Docs"
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Cheats"
 
 SectionEnd
 

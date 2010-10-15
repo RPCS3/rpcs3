@@ -108,8 +108,11 @@ __fi uint dmacInterrupt()
 		//DevCon.Warning("DMAC Suspended or Disabled on interrupt");
 		return 0;
 	}
-	HW_LOG("dmacInterrupt %x", (psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT) |
-								psHu16(DMAC_STAT) & 0x8000));
+
+	DMA_LOG("dmacInterrupt %x",
+		((psHu16(DMAC_STAT + 2) & psHu16(DMAC_STAT)) |
+		 (psHu16(DMAC_STAT) & 0x8000))
+	);
 
 	//cpuException(0x800, cpuRegs.branch);
 	return 0x800;

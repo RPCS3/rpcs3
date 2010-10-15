@@ -36,6 +36,9 @@ __ri void cpuUpdateOperationMode() {
 }
 
 void __fastcall WriteCP0Status(u32 value) {
+
+	DMA_LOG("COP0 Status write = 0x%08x", value);
+
 	cpuRegs.CP0.n.Status.val = value;
     cpuUpdateOperationMode();
     cpuSetNextEventDelta(4);

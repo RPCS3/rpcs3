@@ -174,18 +174,6 @@ static __fi void IopTestEvent( IopEventId n, void (*callback)() )
 		psxSetNextBranch( psxRegs.sCycle[n], psxRegs.eCycle[n] );
 }
 
-static __fi void sifHackInterrupt()
-{
-	// No reason -- just that sometimes the SIF fell asleep, and this wakes it up.
-
-	iopIntcIrq( 3 );		// IOP DMAC int
-	//hwIntcIrq(INTC_SBUS);	// EE's SIF BUS notifier... maybe or maybe not needed?
-
-	// hack is rescheduled as needed by the event handler (depending on if it's actively
-	// signalling an interrupt or not).. better there than here.
-	//PSX_INT( IopEvt_SIFhack, 128 );
-}
-
 static __fi void _psxTestInterrupts()
 {
 	IopTestEvent(IopEvt_SIF0,		sif0Interrupt);	// SIF0

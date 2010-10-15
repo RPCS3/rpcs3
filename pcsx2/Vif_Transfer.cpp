@@ -85,9 +85,15 @@ _vifT void vifTransferLoop(u32* &data) {
 			vifXRegs.code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
-			
+
+			//VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
+			if (IsDevBuild && SysTrace.EE.VIFcode.IsActive())
+			{
+				// Pass 2 means "log it"
+				vifCmdHandler[idx][vifX.cmd & 0x7f](2, data);
+			}
+
 			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
-			VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
 			data++; pSize--;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
@@ -98,11 +104,11 @@ _vifT void vifTransferLoop(u32* &data) {
 		pSize  -= ret;
 		if (analyzeIbit<idx>(data, iBit)) break;
 	}
-	
+
 	if (pSize)	  vifX.vifstalled	 = true;
 }
 
-_vifT static __fi bool vifTransfer(u32 *data, int size) {
+_vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	vifStruct& vifX = GetVifX;
 
 	// irqoffset necessary to add up the right qws, or else will spin (spiderman)
@@ -133,6 +139,8 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
+	if (TTE) return !vifX.vifstalled;
+
 	transferred   = transferred >> 2;
 
 	vifXch.madr +=(transferred << 4);
@@ -155,9 +163,10 @@ _vifT static __fi bool vifTransfer(u32 *data, int size) {
 	return !vifX.vifstalled;
 }
 
-bool VIF0transfer(u32 *data, int size) {
-	return vifTransfer<0>(data, size);
+// When TTE is set to 1, MADR and QWC are not updated as part of the transfer.
+bool VIF0transfer(u32 *data, int size, bool TTE) {
+	return vifTransfer<0>(data, size, TTE);
 }
-bool VIF1transfer(u32 *data, int size) {
-	return vifTransfer<1>(data, size);
+bool VIF1transfer(u32 *data, int size, bool TTE) {
+	return vifTransfer<1>(data, size, TTE);
 }

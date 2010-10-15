@@ -164,7 +164,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
 
 	m_check_vuBlockHack = new pxCheckBox( vuHacksPanel, _("mVU Block Hack"),
-		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
+		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc...") );
 
 	m_check_vuMinMax = new pxCheckBox( vuHacksPanel, _("mVU Min/Max Hack"),
 		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc... [Not Recommended]") );

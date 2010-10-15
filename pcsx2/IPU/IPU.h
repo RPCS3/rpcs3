@@ -33,6 +33,11 @@ struct tIPU_CMD
 {
 	u32 DATA;
 	u32 BUSY;
+	
+	void SetBusy(bool busy=true)
+	{
+		BUSY = busy ? 0x80000000 : 0;
+	}
 };
 
 union tIPU_CTRL {
@@ -85,7 +90,7 @@ struct __aligned16 tIPU_BP {
 		BP += bits;
 		pxAssume( BP <= 256 );
 
-		if (BP > 127)
+		if (BP >= 128)
 		{
 			BP -= 128;
 
@@ -100,8 +105,11 @@ struct __aligned16 tIPU_BP {
 			else
 			{
 				// if FP == 1 then the buffer has been completely drained.
-				// if FP == 0 then an already-drained buffer is being advanced.
-				// In either case we just assign FP to 0.
+				// if FP == 0 then an already-drained buffer is being advanced, and we need to drop a
+				// quadword from the IPU FIFO.
+
+				if (!FP)
+					ipu_fifo.in.read(&internal_qwc[0]);
 
 				FP = 0;
 			}
@@ -220,44 +228,60 @@ enum SCE_IPU
 };
 
 struct IPUregisters {
-  tIPU_CMD  cmd;
-  u32 dummy0[2];
-  tIPU_CTRL ctrl;
-  u32 dummy1[3];
-  u32   ipubp;
-  u32 dummy2[3];
-  u32		top;
-  u32		topbusy;
-  u32 dummy3[2];
+	tIPU_CMD	cmd;
+	u32			dummy0[2];
+
+	tIPU_CTRL	ctrl;
+	u32			dummy1[3];
+
+	u32			ipubp;
+	u32			dummy2[3];
+
+	u32			top;
+	u32			topbusy;
+	u32			dummy3[2];
+
+	void SetTopBusy()
+	{
+		topbusy = 0x80000000;
+	}
+
+	void SetDataBusy()
+	{
+		cmd.BUSY = 0x80000000;
+		topbusy = 0x80000000;
+	}
+
 };
 
-struct tIPU_cmd
+union tIPU_cmd
 {
-	int index;
-	int pos[6];
-	union {
-		struct {
-			u32 OPTION : 28;
-			u32 CMD : 4;
-		};
-		u32 current;
-	};
-	void clear()
+	struct
 	{
-		memzero(pos);
-		index = 0;
-		current = 0xffffffff;
-	}
+		int index;
+		int pos[6];
+		union {
+			struct {
+				u32 OPTION : 28;
+				u32 CMD : 4;
+			};
+			u32 current;
+		};
+	};
+	
+	u128 _u128[2];
+
+	void clear();
 	wxString desc() const
 	{
-		return wxsFormat(L"Ipu cmd: index = 0x%x, current = 0x%x, pos[0] = 0x%x, pos[1] = 0x%x",
+		return pxsFmt(L"Ipu cmd: index = 0x%x, current = 0x%x, pos[0] = 0x%x, pos[1] = 0x%x",
 			index, current, pos[0], pos[1]);
 	}
 };
 
 static IPUregisters& ipuRegs = (IPUregisters&)eeHw[0x2000];
 
-extern tIPU_cmd ipu_cmd;
+extern __aligned16 tIPU_cmd ipu_cmd;
 extern int coded_block_pattern;
 
 extern int ipuInit();

@@ -24,7 +24,7 @@ namespace IopMemory {
 using namespace Internal;
 
 // Template-compatible version of the psxHu macro.  Used for writing.
-#define psxHu(mem)	(*(u32*)&psxH[(mem) & 0xffff])
+#define psxHu(mem)	(*(u32*)&iopHw[(mem) & 0xffff])
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -155,12 +155,25 @@ void mfifoVIF1transfer(int qwc)
 		{
             bool ret;
 
-			if (vif1.vifstalled)
-				ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on Stall
-			else
-				ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
+			static __aligned16 u128 masked_tag;
 
-			if ((ret == false) && vif1.irqoffset < 2)
+			masked_tag._u64[0] = 0;
+			masked_tag._u64[1] = *((u64*)ptag + 1);
+
+			VIF_LOG("\tVIF1 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
+
+			if (vif1.vifstalled)
+			{
+				ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset, 4 - vif1.irqoffset, true);  //Transfer Tag on stall
+				//ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
+			}
+			else
+			{
+				ret = VIF1transfer((u32*)&masked_tag, 4, true);  //Transfer Tag
+				//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
+			}
+
+			if (!ret && vif1.irqoffset)
 			{
 				return;        //IRQ set by VIFTransfer
 				

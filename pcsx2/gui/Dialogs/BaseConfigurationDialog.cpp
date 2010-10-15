@@ -180,15 +180,67 @@ void Dialogs::BaseConfigurationDialog::OnCloseWindow( wxCloseEvent& evt )
 	evt.Skip();
 }
 
+class ScopedOkButtonDisabler
+{
+protected:
+	wxWindow* m_apply;
+	wxWindow* m_ok;
+	wxWindow* m_cancel;
+
+public:
+	ScopedOkButtonDisabler( wxWindow* parent )
+	{
+		m_apply		= parent->FindWindow( wxID_APPLY );
+		m_ok		= parent->FindWindow( wxID_OK );
+		m_cancel	= parent->FindWindow( wxID_CANCEL );
+
+		if (m_apply)	m_apply	->Disable();
+		if (m_ok)		m_ok	->Disable();
+		if (m_cancel)	m_cancel->Disable();
+	}
+
+	// Use this to prevent the Apply buton from being re-enabled.
+	void DetachApply()
+	{
+		m_apply = NULL;
+	}
+
+	void DetachAll()
+	{
+		m_apply = m_ok = m_cancel = NULL;
+	}
+	
+	virtual ~ScopedOkButtonDisabler() throw()
+	{
+		if (m_apply)	m_apply	->Enable();
+		if (m_ok)		m_ok	->Enable();
+		if (m_cancel)	m_cancel->Enable();
+	}
+};
+
 void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
+	ScopedOkButtonDisabler disabler(this);
+
 	if( m_ApplyState.ApplyAll() )
 	{
 		if( wxWindow* apply = FindWindow( wxID_APPLY ) ) apply->Disable();
 		if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 		AppSaveSettings();
+		disabler.DetachAll();
 		evt.Skip();
 	}
+}
+
+void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
+{
+	ScopedOkButtonDisabler disabler(this);
+
+	if( m_ApplyState.ApplyAll() )
+		disabler.DetachApply();
+
+	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
+	AppSaveSettings();
 }
 
 void Dialogs::BaseConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
@@ -196,16 +248,6 @@ void Dialogs::BaseConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
 	evt.Skip();
 	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 }
-
-void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
-{
-	if( m_ApplyState.ApplyAll() )
-		FindWindow( wxID_APPLY )->Disable();
-
-	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
-	AppSaveSettings();
-}
-
 
 void Dialogs::BaseConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 {

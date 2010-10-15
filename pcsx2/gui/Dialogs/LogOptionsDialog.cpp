@@ -24,33 +24,8 @@ using namespace pxSizerFlags;
 
 
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
-	: BaseApplicableDialog( parent, _("Trace Logging"), pxDialogFlags().Resize() )
+	: BaseConfigurationDialog( parent, _("Trace Logging"), 720 )
 {
 	*this += new LogOptionsPanel( this ) | StdExpand();
-
-	AddOkCancel( *GetSizer(), true );
-	FindWindow( wxID_APPLY )->Disable();
-
-	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnOk_Click ) );
-	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnApply_Click ) );
-}
-
-void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
-{
-	if( m_ApplyState.ApplyAll() )
-	{
-		FindWindow( wxID_APPLY )->Disable();
-		AppSaveSettings();
-
-		Close();
-		evt.Skip();
-	}
-}
-
-void Dialogs::LogOptionsDialog::OnApply_Click( wxCommandEvent& evt )
-{
-	if( m_ApplyState.ApplyAll() )
-		FindWindow( wxID_APPLY )->Disable();
-
-	AppSaveSettings();
+	AddOkCancel();
 }

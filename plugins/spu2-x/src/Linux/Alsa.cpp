@@ -19,11 +19,11 @@
 
 #include <alsa/asoundlib.h>
 
-#define ALSA_MEM_DEF
 #include "Global.h"
 #include "Alsa.h"
 #include "SndOut.h"
-
+	
+// Does not work, except as effectively a null plugin.
 class AlsaMod: public SndOutModule
 {
 protected:
@@ -44,7 +44,7 @@ protected:
 	void _InternalCallback()
 	{
 		snd_pcm_sframes_t avail;
-		//int err;
+		fprintf(stderr,"* SPU2-X:Iz in your internal callback.\n");
 
 		avail = snd_pcm_avail_update( handle );
 		while (avail >= period_time )
@@ -62,15 +62,20 @@ protected:
 
 	// Preps and invokes the _InternalCallback above.  This provides a cdecl-compliant
 	// entry point for our C++ified object state. :)
-	static void ExternalCallback( snd_async_handler_t *pcm_callback )
+	static void ExternalCallback( snd_async_handler_t *pcm_call)
 	{
-		AlsaMod *data = (AlsaMod*)snd_async_handler_get_callback_private( pcm_callback );
+		fprintf(stderr,"* SPU2-X:Iz in your external callback.\n");
+		AlsaMod *data = (AlsaMod*)snd_async_handler_get_callback_private( pcm_call );
 
 		jASSUME( data != NULL );
-		jASSUME( data->handle == snd_async_handler_get_pcm(pcm_callback) );
+		//jASSUME( data->handle == snd_async_handler_get_pcm(pcm_call) );
 
 		// Not sure if we just need an assert, or something like this:
-		//if( data->handle != snd_async_handler_get_pcm(pcm_callback) ) return;
+		if (data->handle != snd_async_handler_get_pcm(pcm_call)) 
+		{	
+			fprintf(stderr,"* SPU2-X: Failed to handle sound.\n");
+			return;
+		}
 
 		data->_InternalCallback();
 	}
@@ -79,6 +84,7 @@ public:
 
 	s32 Init()
 	{
+		//fprintf(stderr,"* SPU2-X: Initing Alsa\n");
 		snd_pcm_hw_params_t *hwparams;
 		snd_pcm_sw_params_t *swparams;
 		snd_pcm_status_t *status;
@@ -96,17 +102,17 @@ public:
 
 		int err;
 
-		err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+		err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC /*| SND_PCM_NONBLOCK*/);
 		if(err < 0)
 		{
-			ERROR_LOG("Audio open error: %s\n", snd_strerror(err));
+			fprintf(stderr,"Audio open error: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_nonblock(handle, 0);
 		if(err < 0)
 		{
-			ERROR_LOG("Can't set blocking mode: %s\n", snd_strerror(err));
+			fprintf(stderr,"Can't set blocking mode: %s\n", snd_strerror(err));
 			return -1;
 		}
 
@@ -116,54 +122,54 @@ public:
 		err = snd_pcm_hw_params_any(handle, hwparams);
 		if (err < 0)
 		{
-			ERROR_LOG("Broken configuration for this PCM: %s\n", snd_strerror(err));
+			fprintf(stderr,"Broken configuration for this PCM: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_access(handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
 		if (err < 0)
 		{
-			ERROR_LOG("Access type not available: %s\n", snd_strerror(err));
+			fprintf(stderr,"Access type not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_format(handle, hwparams, format);
 		if (err < 0)
 		{
-			ERROR_LOG("Sample format not available: %s\n", snd_strerror(err));
+			fprintf(stderr,"Sample format not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_channels(handle, hwparams, pchannels);
 		if (err < 0)
 		{
-			ERROR_LOG("Channels count not available: %s\n", snd_strerror(err));
+			fprintf(stderr,"Channels count not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 		err = snd_pcm_hw_params_set_rate_near(handle, hwparams, &pspeed, 0);
 		if (err < 0)
 		{
-			ERROR_LOG("Rate not available: %s\n", snd_strerror(err));
+			fprintf(stderr,"Rate not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_buffer_time_near(handle, hwparams, &buffer_time, 0);
 		if(err < 0) {
-			ERROR_LOG("Buffer time error: %s\n", snd_strerror(err));
+			fprintf(stderr,"Buffer time error: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_period_time_near(handle, hwparams, &period_time, 0);
 		if (err < 0)
 		{
-			ERROR_LOG("Period time error: %s\n", snd_strerror(err));
+			fprintf(stderr,"Period time error: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params(handle, hwparams);
 		if (err < 0)
 		{
-			ERROR_LOG("Unable to install hw params: %s\n", snd_strerror(err));
+			fprintf(stderr,"Unable to install hw params: %s\n", snd_strerror(err));
 			return -1;
 		}
 
@@ -171,23 +177,33 @@ public:
 		err = snd_pcm_status(handle, status);
 		if(err < 0)
 		{
-			ERROR_LOG("Unable to get status: %s\n", snd_strerror(err));
+			fprintf(stderr,"Unable to get status: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		// Bind our asynchronous callback magic:
 
+		if (handle == NULL) fprintf(stderr, "No handle.");
+		
+		//fprintf(stderr,"* SPU2-X:Iz setting your internal callback.\n");
+		// The external handler never seems to get called after this.
 		snd_async_add_pcm_handler( &pcm_callback, handle, ExternalCallback, this );
-
-		snd_pcm_start( handle );
+		err = snd_pcm_start( handle );
+		if(err < 0)
+		{
+			fprintf(stderr,"Pcm start failed: %s\n", snd_strerror(err));
+			return -1;
+		}
 		// Diagnostic code:
 		//buffer_size = snd_pcm_status_get_avail(status);
-
+		
+		//fprintf(stderr,"All set up.\n");
 		return 0;
 	}
 
 	void Close()
 	{
+		//fprintf(stderr,"* SPU2-X: Closing Alsa\n");
 		if(handle == NULL) return;
 
 		snd_pcm_drop(handle);
@@ -208,7 +224,11 @@ public:
 
 	int GetEmptySampleCount()
 	{
-		if(handle == NULL) return 0;
+		if(handle == NULL) 
+		{
+			fprintf(stderr,"Handle is NULL!\n");
+			return 0;
+		}
 
 		// Returns the amount of free buffer space, in samples.
 		uint l = snd_pcm_avail_update(handle);
@@ -223,7 +243,7 @@ public:
 
 	const wchar_t* GetLongName() const
 	{
-		return L"Alsa ('tis all ya get)";
+		return L"Alsa";
 	}
 
 	void ReadSettings()

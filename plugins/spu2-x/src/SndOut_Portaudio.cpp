@@ -22,6 +22,8 @@
 
 #include "portaudio.h"
 
+#include "wchar.h"
+
 #ifdef __WIN32__
 #include "pa_win_wasapi.h"
 #endif
@@ -120,16 +122,9 @@ public:
 
 			if(apiinfo->type == m_ApiId)
 			{
-#ifdef __WIN32__
 				static wchar_t buffer [1000];
-				MultiByteToWideChar(CP_UTF8,0,info->name,strlen(info->name),buffer,999);
+				mbstowcs(buffer,info->name,1000);
 				buffer[999]=0;
-#else
-//#	error TODO
-				static wchar_t buffer [1000];
-				//MultiByteToWideChar(CP_UTF8,0,info->name,strlen(info->name),buffer,999);
-				buffer[999]=0;
-#endif
 
 				if(m_Device == buffer)
 				{
@@ -182,7 +177,7 @@ public:
 				deviceIndex,
 				2,
 				paInt32,
-				0, //?
+				0.2f,
 				infoPtr
 			};
 
@@ -250,9 +245,10 @@ public:
 				stream=NULL;
 			}
 
-			PaError err = Pa_Terminate();
-			if( err != paNoError )
-				fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+			// Seems to do more harm than good.
+			//PaError err = Pa_Terminate();
+			//if( err != paNoError )
+			//	fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
 
 			started=false;
 		}

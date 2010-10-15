@@ -503,13 +503,37 @@ vifOp(vifCode_STMod) {
 	return 0;
 }
 
+template< uint idx >
+static uint calc_addr(bool flg)
+{
+	VIFregisters& vifRegs = vifXRegs;
+
+	uint retval = vifRegs.code;
+	if (idx && flg) retval += vifRegs.tops;
+	return retval & (idx ? 0x3ff : 0xff);
+}
+
 vifOp(vifCode_Unpack) {
 	pass1 {
 		vifUnpackSetup<idx>(data);
 		return 1;
 	}
 	pass2 { return nVifUnpack<idx>((u8*)data); }
-	pass3 { VifCodeLog("Unpack");  }
+	pass3 {
+		vifStruct& vifX = GetVifX;
+		VIFregisters& vifRegs = vifXRegs;
+		uint vl = vifX.cmd & 0x03;
+		uint vn = (vifX.cmd >> 2) & 0x3;
+		bool flg = (vifRegs.code >> 15) & 1;
+		static const char* const	vntbl[] = { "S", "V2", "V3", "V4" };
+		static const uint			vltbl[] = { 32,	  16,   8,    5   };
+
+		VifCodeLog("Unpack %s_%u (%s) @ 0x%04X%s (cl=%u  wl=%u  num=0x%02X)",
+			vntbl[vn], vltbl[vl], (vifX.cmd & 0x10) ? "masked" : "unmasked",
+			calc_addr<idx>(flg), flg ? "(FLG)" : "",
+			vifRegs.cycle.cl, vifRegs.cycle.wl, (vifXRegs.code >> 16) & 0xff
+		);
+	}
 	return 0;
 }
 

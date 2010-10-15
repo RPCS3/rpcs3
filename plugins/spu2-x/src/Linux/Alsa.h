@@ -29,22 +29,11 @@
 #include <sys/soundcard.h>
 #include <unistd.h>
 
-// Make it easier to check and set checkmarks in the gui
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
-
 #define ALSA_PCM_NEW_HW_PARAMS_API
 #define ALSA_PCM_NEW_SW_PARAMS_API
 
-#ifdef ALSA_MEM_DEF
-#define ALSA_MEM_EXTERN
-#else
-#define ALSA_MEM_EXTERN extern
-#endif
-
 #define SOUNDSIZE 500000
 #define SAMPLE_RATE 48000L
-#define ERROR_LOG printf
 
 // Pull in from Alsa.cpp
 extern int AlsaSetupSound();

@@ -489,7 +489,7 @@ static void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 {
 	vector<VuFunctionHeader::RANGE>::iterator itrange;
 	list<VuFunctionHeader*>::iterator it = s_listVUHeaders[vuindex].begin();
-	u32 endpc = startpc + (size + (8 - (size & 7))); // Adding this code to ensure size is always a multiple of 8, it can be simplified to startpc+size if size is always a multiple of 8 (cottonvibes)
+	u32 endpc = startpc + ((size * 4 + 7) & ~7); // Adding this code to ensure size is always a multiple of 8, it can be simplified to startpc+size if size is always a multiple of 8 (cottonvibes)
 	while (it != s_listVUHeaders[vuindex].end())
 	{
 

@@ -85,7 +85,6 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 	*this += s_padding | StdExpand();
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
-	//Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnApply_Click ) );
 }
 
 wxDirName Dialogs::CreateMemoryCardDialog::GetPathToMcds() const
@@ -93,7 +92,7 @@ wxDirName Dialogs::CreateMemoryCardDialog::GetPathToMcds() const
 	return m_filepicker ? (wxDirName)m_filepicker->GetPath() : m_mcdpath;
 }
 
-// When this GUI is moved itno the FileMemoryCard plugin (where it eventually belongs),
+// When this GUI is moved into the FileMemoryCard plugin (where it eventually belongs),
 // this function will be removed and the MemoryCardFile::Create() function will be used
 // instead.
 static bool CreateIt( const wxString& mcdFile, uint sizeInMB )
@@ -120,6 +119,13 @@ static bool CreateIt( const wxString& mcdFile, uint sizeInMB )
 
 void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 {
+	// Save status of the NTFS compress checkbox for future reference.
+	// [TODO] Remove g_Conf->McdCompressNTFS, and have this dialog load/save directly from the ini.
+
+#ifdef __WXMSW__
+	g_Conf->McdCompressNTFS = m_check_CompressNTFS->GetValue();
+#endif
+
 	if( !CreateIt(
 		m_filepicker		? m_filepicker->GetPath()					: (m_mcdpath + m_mcdfile).GetFullPath(),
 		m_radio_CardSize	? m_radio_CardSize->SelectedItem().SomeInt	: 8
@@ -138,9 +144,18 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 {
 	#ifdef __WXMSW__
 	m_check_CompressNTFS = new pxCheckBox( this,
-		_("Use NTFS compression on this card"),
+		_("Use NTFS compression when creating this card."),
 		GetMsg_McdNtfsCompress()
 	);
+
+	m_check_CompressNTFS->SetToolTip( pxE( ".Tooltip:ChangingNTFS",
+			L"NTFS compression can be changed manually at any time by using file properties from Windows Explorer."
+		)
+	);
+
+	// Initial value of the checkbox is saved between calls to the dialog box.  If the user checks
+	// the option, it remains checked for future dialog.  If the user unchecks it, ditto.
+	m_check_CompressNTFS->SetValue( g_Conf->McdCompressNTFS );
 	#endif
 
 	const RadioPanelItem tbl_CardSizes[] =

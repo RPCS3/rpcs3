@@ -89,6 +89,9 @@ SndOutModule* mods[]=
 	WaveOut,
 #endif
 	PortaudioOut,
+#ifdef __LINUX__
+	AlsaOut,
+#endif
 	NULL		// signals the end of our list
 };
 
@@ -283,9 +286,6 @@ void SndBuffer::Init()
 	sndTempProgress = 0;
 
 	soundtouchInit();		// initializes the timestretching
-
-	// some crap
-	spdif_set51(mods[OutputModule]->Is51Out());
 
 	// initialize module
 	if( mods[OutputModule]->Init() == -1 ) _InitFail();

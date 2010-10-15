@@ -98,11 +98,21 @@ struct EEVM_MemoryAllocMess
 
 #endif
 
-// EE Hardware registers.
-// DevNote: These are done as a static array instead of a pointer in order to allow for simpler
-// macros and reference handles to be defined  (we can safely use compile-time references to
-// registers instead of having to use instance variables).
+struct IopVM_MemoryAllocMess
+{
+	u8 Main[Ps2MemSize::IopRam];			// Main memory (hard-wired to 2MB)
+	u8 P[0x00010000];						// I really have no idea what this is... --air
+	u8 Sif[0x100];							// a few special SIF/SBUS registers (likely not needed)
+};
+
+
+// DevNote: EE and IOP hardware registers are done as a static array instead of a pointer in
+// order to allow for simpler macros and reference handles to be defined  (we can safely use
+// compile-time references to registers instead of having to use instance variables).
+
 extern __pagealigned u8 eeHw[Ps2MemSize::Hardware];
+extern __pagealigned u8 iopHw[Ps2MemSize::IopHardware];
 
 
 extern EEVM_MemoryAllocMess* eeMem;
+extern IopVM_MemoryAllocMess* iopMem;

@@ -1950,10 +1950,10 @@ static PaError PaAsiHpi_PrimeOutputWithSilence( PaAsiHpiStream *stream )
     zeroer(out->tempBuffer, 1, out->tempBufferSize / Pa_GetSampleSize(outputFormat) );
     /* Write temp buffer to hardware fifo twice, to get started */
 #if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream,
+    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream, 
                                               out->tempBuffer, out->tempBufferSize, &out->hpiFormat),
                                               paUnanticipatedHostError );
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream,
+    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream, 
                                               out->tempBuffer, out->tempBufferSize, &out->hpiFormat),
                                               paUnanticipatedHostError );
 #else
@@ -2482,7 +2482,7 @@ static PaError PaAsiHpi_BeginProcessing( PaAsiHpiStream *stream, unsigned long *
     if( stream->input )
     {
         PaAsiHpiStreamInfo info;
-
+	
 #if (HPI_VER < HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
         HPI_DATA data;
 #endif
@@ -2514,7 +2514,7 @@ static PaError PaAsiHpi_BeginProcessing( PaAsiHpiStream *stream, unsigned long *
 #if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
         /* Read block of data into temp buffer */
         PA_ASIHPI_UNLESS_( HPI_InStreamReadBuf( stream->input->hpiDevice->subSys,
-                                             stream->input->hpiStream,
+                                             stream->input->hpiStream, 
                                              stream->input->tempBuffer,
                                              framesToGet * stream->input->bytesPerFrame),
                            paUnanticipatedHostError );
@@ -2583,9 +2583,9 @@ static PaError PaAsiHpi_EndProcessing( PaAsiHpiStream *stream, unsigned long num
 #if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
         /* Write temp buffer to HPI stream */
         PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( stream->output->hpiDevice->subSys,
-                                           stream->output->hpiStream,
+                                           stream->output->hpiStream, 
                                            stream->output->tempBuffer,
-                                           numFrames * stream->output->bytesPerFrame,
+                                           numFrames * stream->output->bytesPerFrame, 
                                            &stream->output->hpiFormat),
                            paUnanticipatedHostError );
 #else

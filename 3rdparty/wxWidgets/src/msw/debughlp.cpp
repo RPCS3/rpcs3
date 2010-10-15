@@ -85,7 +85,8 @@ bool wxDbgHelpDLL::BindFunctions(const wxDynamicLibrary& dllDbgHelp)
 	// of WinDbgHlp (v6.5 or later).  If it binds as NULL, that's ok.  Its only needed in
 	// order to reload symbols for apps that dynamically unload/reload plugins.
 
-	SymRefreshModuleList = (SymRefreshModuleList_t)dllDbgHelp.GetSymbol(_T("SymRefreshModuleList"));
+	SymRefreshModuleList = (SymRefreshModuleList_t) (dllDbgHelp.HasSymbol(_T("SymRefreshModuleList")) ?	
+		dllDbgHelp.GetSymbol(_T("SymRefreshModuleList")) : NULL);
 
     return true;
 }

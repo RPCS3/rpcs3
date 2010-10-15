@@ -92,6 +92,8 @@ union tDMA_TAG {
 	};
 	u32 _u32;
 
+	tDMA_TAG() {}
+
 	tDMA_TAG(u32 val) { _u32 = val; }
 	u16 upper() const { return (_u32 >> 16); }
 	u16 lower() const { return (u16)_u32; }

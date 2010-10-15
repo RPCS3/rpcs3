@@ -156,9 +156,9 @@ void SaveStateBase::FreezeMainMemory()
 	FreezeMem(eeMem->Scratch,	Ps2MemSize::Scratch);	// scratch pad
 	FreezeMem(eeHw,		Ps2MemSize::Hardware);	// hardware memory
 
-	FreezeMem(psxM, Ps2MemSize::IopRam);		// 2 MB main memory
-	FreezeMem(psxH, Ps2MemSize::IopHardware);	// hardware memory
-	FreezeMem(psxS, 0x000100);					// iop's sif memory
+	FreezeMem(iopMem->Main, Ps2MemSize::IopRam);		// 2 MB main memory
+	FreezeMem(iopHw, Ps2MemSize::IopHardware);	// hardware memory
+	FreezeMem(iopMem->Sif, 0x000100);					// iop's sif memory
 }
 
 void SaveStateBase::FreezeRegisters()

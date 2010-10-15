@@ -167,6 +167,7 @@ inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 
 // Check to see if it is 32 bits. According to code comments, anyways.
 // I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
+// Note: the function only works for clut format. Clut PSM is 4 bits only. The possible value are PSMCT32, PSMCT16, PSMCT16S
 inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
 // When color format is RGB24 (PSMCT24) or RGBA16 (PSMCT16 & 16S) alpha value expanded, based on

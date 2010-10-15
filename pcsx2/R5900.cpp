@@ -189,7 +189,7 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 		cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
 	}
 
-	if ((cpuRegs.CP0.n.Status.val & 0x1) == 0) {
+	if (!cpuRegs.CP0.n.Status.b.IE) {
 		cpuRegs.pc = 0x80000000;
 	} else {
 		cpuRegs.pc = 0x80000180;
