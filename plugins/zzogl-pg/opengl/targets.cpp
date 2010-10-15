@@ -1688,6 +1688,7 @@ int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
 	return 0;
 }
 
+#if 0
 bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
 {
 	FUNCLOG
@@ -1720,6 +1721,7 @@ bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
 
 	return true;
 }
+#endif
 
 bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex)
 {
