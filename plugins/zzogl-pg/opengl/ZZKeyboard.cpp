@@ -160,7 +160,7 @@ void ProcessHackSetting(bool reverse)
 {
 	FUNCLOG
 
-//	printf ("A %d\n", HackinshTable[CurrentHackSetting].HackMask);
+//	ZZLog::Debug_Log("A %d", HackinshTable[CurrentHackSetting].HackMask);
 	conf.hacks._u32 &= !(HackinshTable[CurrentHackSetting].HackMask);
 
 	if (reverse)

@@ -138,9 +138,10 @@
 	{
 		FUNCLOG
 
-	#if defined(ZEROGS_DEVBUILD)
+	#if defined(_DEBUG)
+		// Xenosaga 1.
 		if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-			ZZLog::Debug_Log("Transfer error, width exceeded.");
+			ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0X%x)", gs.trxpos.dx + gs.imageWnew, gs.dstbuf.bw);
 	#endif
 
 		//bool bHasFlushed = false;
@@ -163,6 +164,12 @@
 
 		if (end > MEMORY_END)
 		{
+			// Monster Lab - the screwed up title screen
+			// Init host local out of bounds! (end == 0x404000)
+			// Init host local out of bounds! (end == 0x408000)
+			// Init host local out of bounds! (end == 0x40c000)
+			// MEMORY_END is 0x400000...
+
 			ZZLog::Warn_Log("Init host local out of bounds! (end == 0x%x)", end);
 			//gs.imageTransfer = -1;
 			end = MEMORY_END;
@@ -262,9 +269,9 @@
 		FUNCLOG
 		assert(gs.trxpos.sx + gs.imageWnew <= 2048 && gs.trxpos.sy + gs.imageHnew <= 2048);
 
-	#if defined(ZEROGS_DEVBUILD)
+	#if defined(_DEBUG)
 		if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-			ZZLog::Debug_Log("Transfer error, width exceeded.");
+			ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0x%x)", gs.trxpos.sx + gs.imageWnew, gs.srcbuf.bw);
 	#endif
 
 		gs.imageX = gs.trxpos.sx;
@@ -469,10 +476,10 @@ __forceinline void _TransferLocalLocal_4()
 		assert((gs.srcbuf.psm&0x7) == (gs.dstbuf.psm&0x7));
 
 		if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-			ZZLog::Debug_Log("Transfer error, src width exceeded.");
+			ZZLog::Debug_Log("Transfer error, src width exceeded.(0x%x > 0x%x)", gs.trxpos.sx + gs.imageWnew, gs.srcbuf.bw);
 
 		if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-			ZZLog::Debug_Log("Transfer error, dst width exceeded.");
+			ZZLog::Debug_Log("Transfer error, dst width exceeded.(0x%x > 0x%x)", gs.trxpos.dx + gs.imageWnew, gs.dstbuf.bw);
 
 		int srcstart, srcend, dststart, dstend;
 

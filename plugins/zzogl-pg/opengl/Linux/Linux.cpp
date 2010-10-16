@@ -495,7 +495,7 @@ void *SysLoadSym(void *lib, char *sym)
 {
 	void *ret = dlsym(lib, sym);
 
-	if (ret == NULL) printf("null: %s\n", sym);
+	if (ret == NULL) ZZLog::Debug_Log("null: %s", sym);
 
 	return dlsym(lib, sym);
 }

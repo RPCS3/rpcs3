@@ -346,7 +346,7 @@ union tex_0_info
 
 	u32 psm_fix()
 	{
-		//	printf ("psm %d\n", psm);
+		//	ZZLog::Debug_Log("psm %d\n", psm);
 		if (psm == 9) return 1;
 
 		return psm;
@@ -675,7 +675,7 @@ static __forceinline int ZZOglGet_psm_TexBitsFix(u32 data)
 {
 	//return tex_0_info(data).psm_fix();
 	int result = ZZOglGet_psm_TexBits(data) ;
-//	printf ("result %d\n", result);
+//	ZZLog::Debug_Log("result %d", result);
 
 	if (result == 9) result = 1;
 

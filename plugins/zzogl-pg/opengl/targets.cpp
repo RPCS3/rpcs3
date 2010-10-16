@@ -1441,7 +1441,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 
 		if (besttarg != 0 && pbesttarg->fbw != frame.fbw)
 		{
-//			printf ("A %d %d %d %d\n", frame.psm, frame.fbw, pbesttarg->psm, pbesttarg->fbw);
+			//ZZLog::Debug_Log("A %d %d %d %d\n", frame.psm, frame.fbw, pbesttarg->psm, pbesttarg->fbw);
 
 			vb[0].frame.fbw = pbesttarg->fbw;
 			// Something should be here, but what?

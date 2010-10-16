@@ -60,10 +60,10 @@ class CRenderTargetMngr
 
 			/*			if (fbp == 0x3600 && fbw == 0x100 && it == mapTargets.end())
 						{
-							printf("%x\n", GetFrameKey(fbp, fbw, curvb)) ;
-							printf("%x %x\n", fbp, fbw);
+							ZZLog::Debug_Log("%x", GetFrameKey(fbp, fbw, curvb)) ;
+							ZZLog::Debug_Log("%x %x", fbp, fbw);
 							for(MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
-								printf ("\t %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
+								ZZLog::Debug_Log("\t %x %x %x %x", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
 						}*/
 			return it != mapTargets.end() ? it->second : NULL;
 		}
