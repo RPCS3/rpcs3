@@ -168,7 +168,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 					switch (gs.imageTransfer)
 					{
 						case 0:
-							ZeroGS::TransferHostLocal(pMem, len * 4);
+							TransferHostLocal(pMem, len * 4);
 							break;
 
 						case 1:
@@ -176,11 +176,11 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 							// a GIFtag operation.  They're an entirely separate process that can only be
 							// done through the ReverseFIFO transfer (aka ReadFIFO). --air
 							assert(0);
-							//ZeroGS::TransferLocalHost(pMem, len);
+							//TransferLocalHost(pMem, len);
 							break;
 
 						case 2:
-							//ZeroGS::TransferLocalLocal();
+							//TransferLocalLocal();
 							break;
 
 						case 3:

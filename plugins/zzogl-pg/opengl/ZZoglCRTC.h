@@ -56,8 +56,6 @@ extern int g_nDepthUsed; // ffx2 pal movies
 
 extern u32 s_ptexInterlace;		 // holds interlace fields
 
-namespace ZeroGS
-{
 extern int s_nNewWidth, s_nNewHeight;
 
 extern CRangeManager s_RangeMngr; // manages overwritten memory
@@ -94,7 +92,6 @@ inline u32 CreateInterlaceTex(int width)
 	GL_REPORT_ERRORD();
 
 	return s_ptexInterlace;
-}
 }
 
 #endif // ZZOGLCRTC_H_INCLUDED

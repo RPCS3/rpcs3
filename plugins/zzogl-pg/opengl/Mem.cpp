@@ -158,8 +158,8 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 		assert(gs.imageTransfer == -1 || tempY == gs.imageEndY);
 		gs.imageTransfer = -1;
 		/*int start, end;
-		ZeroGS::GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
-		ZeroGS::g_MemTargs.ClearRange(start, end);*/
+		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
+		g_MemTargs.ClearRange(start, end);*/
 	}
 	else
 	{

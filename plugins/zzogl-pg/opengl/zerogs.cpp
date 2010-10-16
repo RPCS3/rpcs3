@@ -43,8 +43,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
 //-------------------------- Extern variables
 
-using namespace ZeroGS;
-
 extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
 extern char *libraryName;
 extern int g_nFrame, g_nRealFrame;
@@ -92,8 +90,6 @@ int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
 // State parameters
 int nBackbufferWidth, nBackbufferHeight;									// ZZ
 
-namespace ZeroGS
-{
 //       	= float4( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
 //	float4 g_vdepth = float4( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
 
@@ -144,8 +140,6 @@ DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
 					 KickDummy, KickDummy, KickDummy, KickDummy
 				   };
 
-}; // end namespace
-
 // does one time only initializing/destruction
 
 class ZeroGSInit
@@ -180,7 +174,7 @@ static ZeroGSInit s_ZeroGSInit;
 #define GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT 0x8CD8
 #endif
 
-void ZeroGS::HandleGLError()
+void HandleGLError()
 {
 	FUNCLOG
 	// check the error status of this framebuffer */
@@ -241,7 +235,7 @@ void ZeroGS::HandleGLError()
 	}
 }
 
-void ZeroGS::GSStateReset()
+void ZZGSStateReset()
 {
 	FUNCLOG
 	icurctx = -1;
@@ -249,7 +243,7 @@ void ZeroGS::GSStateReset()
 	for (int i = 0; i < 2; ++i)
 	{
 		vb[i].Destroy();
-		memset(&vb[i], 0, sizeof(ZeroGS::VB));
+		memset(&vb[i], 0, sizeof(VB));
 
 		vb[i].tex0.tw = 1;
 		vb[i].tex0.th = 1;
@@ -270,7 +264,7 @@ void ZeroGS::GSStateReset()
 	vb[1].ictx = 1;
 }
 
-void ZeroGS::Reset()
+void ZZReset()
 {
 	FUNCLOG
 	s_RTs.ResolveAll();
@@ -285,8 +279,8 @@ void ZeroGS::Reset()
 	icurctx = -1;
 	g_vsprog = g_psprog = 0;
 
-	GSStateReset();
-	Destroy(0);
+	ZZGSStateReset();
+	ZZDestroy(0);
 
 	drawfn[0] = KickDummy;
 	drawfn[1] = KickDummy;
@@ -298,13 +292,13 @@ void ZeroGS::Reset()
 	drawfn[7] = KickDummy;
 }
 
-void ZeroGS::GSReset()
+void ZZGSReset()
 {
 	FUNCLOG
 
 	memset(&gs, 0, sizeof(gs));
 
-	ZeroGS::GSStateReset();
+	ZZGSStateReset();
 
 	gs.prac = 1;
 	prim = &gs._prim[0];
@@ -313,7 +307,7 @@ void ZeroGS::GSReset()
 	gs.q = 1;
 }
 
-void ZeroGS::GSSoftReset(u32 mask)
+void ZZGSSoftReset(u32 mask)
 {
 	FUNCLOG
 
@@ -326,7 +320,7 @@ void ZeroGS::GSSoftReset(u32 mask)
 	gs.nTriFanVert = -1;
 }
 
-void ZeroGS::AddMessage(const char* pstr, u32 ms)
+void ZZAddMessage(const char* pstr, u32 ms)
 {
 	FUNCLOG
 	listMsgs.push_back(MESSAGE(pstr, timeGetTime() + ms));
@@ -334,7 +328,7 @@ void ZeroGS::AddMessage(const char* pstr, u32 ms)
 }
 
 extern RasterFont* font_p;
-void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
+void DrawText(const char* pstr, int left, int top, u32 color)
 {
 	FUNCLOG
 	ZZshGLDisableProfile();
@@ -348,7 +342,7 @@ void ZeroGS::DrawText(const char* pstr, int left, int top, u32 color)
 	ZZshGLEnableProfile();
 }
 
-void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
+void ChangeWindowSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
 	nBackbufferWidth = max(nNewWidth, 16);
@@ -361,7 +355,7 @@ void ZeroGS::ChangeWindowSize(int nNewWidth, int nNewHeight)
 	}
 }
 
-void ZeroGS::SetChangeDeviceSize(int nNewWidth, int nNewHeight)
+void SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
 	s_nNewWidth = nNewWidth;
@@ -374,18 +368,18 @@ void ZeroGS::SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 	}
 }
 
-void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
+void ChangeDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
 	//int oldscreen = s_nFullscreen;
 
 	int oldwidth = nBackbufferWidth, oldheight = nBackbufferHeight;
 
-	if (!Create(nNewWidth&~7, nNewHeight&~7))
+	if (!ZZCreate(nNewWidth&~7, nNewHeight&~7))
 	{
 		ZZLog::Error_Log("Failed to recreate, changing to old device.");
 
-		if (Create(oldwidth, oldheight))
+		if (ZZCreate(oldwidth, oldheight))
 		{
 			SysMessage("Failed to create device, exiting...");
 			exit(0);
@@ -401,7 +395,7 @@ void ZeroGS::ChangeDeviceSize(int nNewWidth, int nNewHeight)
 	assert(vb[0].pBufferData != NULL && vb[1].pBufferData != NULL);
 }
 
-void ZeroGS::SetAA(int mode)
+void SetAA(int mode)
 {
 	FUNCLOG
 	float f = 1.0f;
@@ -437,7 +431,7 @@ void ZeroGS::SetAA(int mode)
 	glPointSize(f);
 }
 
-void ZeroGS::Prim()
+void Prim()
 {
 	FUNCLOG
 
@@ -449,7 +443,7 @@ void ZeroGS::Prim()
 	curvb.curprim.prim = prim->prim;
 }
 
-void ZeroGS::ProcessMessages()
+void ProcessMessages()
 {
 	FUNCLOG
 
@@ -471,7 +465,7 @@ void ZeroGS::ProcessMessages()
 	}
 }
 
-void ZeroGS::RenderCustom(float fAlpha)
+void RenderCustom(float fAlpha)
 {
 	FUNCLOG
 	GL_REPORT_ERROR();
@@ -591,7 +585,7 @@ static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
 #endif
 }
 
-void ZeroGS::KickPoint()
+void KickPoint()
 {
 	FUNCLOG
 	assert(gs.primC >= 1);
@@ -617,7 +611,7 @@ void ZeroGS::KickPoint()
 	OUTPUT_VERT(p[0], 0);
 }
 
-void ZeroGS::KickLine()
+void KickLine()
 {
 	FUNCLOG
 	assert(gs.primC >= 2);
@@ -646,7 +640,7 @@ void ZeroGS::KickLine()
 	OUTPUT_VERT(p[1], 1);
 }
 
-void ZeroGS::KickTriangle()
+void KickTriangle()
 {
 	FUNCLOG
 	assert(gs.primC >= 3);
@@ -674,7 +668,7 @@ void ZeroGS::KickTriangle()
 	OUTPUT_VERT(p[2], 2);
 }
 
-void ZeroGS::KickTriangleFan()
+void KickTriangleFan()
 {
 	FUNCLOG
 	assert(gs.primC >= 3);
@@ -713,7 +707,7 @@ void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
 	MOVFOG(p, v);
 }
 
-void ZeroGS::KickSprite()
+void KickSprite()
 {
 	FUNCLOG
 	assert(gs.primC >= 2);
@@ -761,13 +755,13 @@ void ZeroGS::KickSprite()
 	OUTPUT_VERT(p[1], 1);
 }
 
-void ZeroGS::KickDummy()
+void KickDummy()
 {
 	FUNCLOG
 	//ZZLog::Greg_Log("Kicking bad primitive: %.8x\n", *(u32*)prim);
 }
 
-void ZeroGS::SetFogColor(u32 fog)
+void SetFogColor(u32 fog)
 {
 	FUNCLOG
 
@@ -776,7 +770,7 @@ void ZeroGS::SetFogColor(u32 fog)
 //	{
 	gs.fogcol = fog;
 
-	ZeroGS::FlushBoth();
+	FlushBoth();
 
 	SetShaderCaller("SetFogColor");
 	float4 v;
@@ -788,7 +782,7 @@ void ZeroGS::SetFogColor(u32 fog)
 //	}
 }
 
-void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
+void SetFogColor(GIFRegFOGCOL* fog)
 {
 	FUNCLOG
 	
@@ -801,7 +795,7 @@ void ZeroGS::SetFogColor(GIFRegFOGCOL* fog)
 	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
 }
 
-void ZeroGS::ExtWrite()
+void ExtWrite()
 {
 	FUNCLOG
 	ZZLog::Warn_Log("A hollow voice says 'EXTWRITE'! Nothing happens.");
@@ -1053,7 +1047,7 @@ Return:
 // 101 - cbp1 is compared with cbp. if different, clut data is loaded.
 
 // GSdx sets cbp0 & cbp1 when checking for clut changes. ZeroGS sets them in texClutWrite.
-bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
+bool CheckChangeInClut(u32 highdword, u32 psm)
 {
 	FUNCLOG
 	int cld = ZZOglGet_cld_TexBits(highdword);
@@ -1096,7 +1090,7 @@ bool ZeroGS::CheckChangeInClut(u32 highdword, u32 psm)
 	return IsDirty(highdword, psm, cld, cbp);
 }
 
-void ZeroGS::texClutWrite(int ctx)
+void texClutWrite(int ctx)
 {
 	FUNCLOG
 	s_bTexFlush = false;

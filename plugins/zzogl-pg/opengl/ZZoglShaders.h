@@ -174,7 +174,6 @@ struct VERTEXSHADER
 	int ParametersStart, ParametersFinish;
 };
 
-namespace ZeroGS { 
 	extern float4 g_vdepth;	
 	extern float4 vlogz;
 	extern VERTEXSHADER pvsBitBlt;
@@ -183,7 +182,6 @@ namespace ZeroGS {
 
 	extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
 	extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-}
 
 // ------------------------- Functions -------------------------------
 
@@ -225,8 +223,7 @@ extern bool ZZshLoadExtraEffects();
 
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
-namespace ZeroGS {
 	// only sets a limited amount of state (for Update)
 	void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force);
-}
+
 #endif

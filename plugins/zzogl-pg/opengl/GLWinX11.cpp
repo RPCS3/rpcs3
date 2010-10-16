@@ -135,7 +135,7 @@ void GLWindow::GetWindowSize()
     XUnlockDisplay(glDisplay);
 
     // update the gl buffer size
-    ZeroGS::ChangeWindowSize(width, height);
+    ChangeWindowSize(width, height);
 
     ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
@@ -336,7 +336,7 @@ void GLWindow::ResizeCheck()
 			width = event.xconfigure.width;
 			height = event.xconfigure.height;
             Force43Ratio();
-			ZeroGS::ChangeWindowSize(width, height);
+			ChangeWindowSize(width, height);
 		}
 
         if (!fullScreen) {

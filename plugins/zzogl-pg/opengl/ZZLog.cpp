@@ -68,7 +68,7 @@ void SetDir(const char* dir)
 
 void WriteToScreen(const char* pstr, u32 ms)
 {
-	ZeroGS::AddMessage(pstr, ms);
+	ZZAddMessage(pstr, ms);
 }
 
 void _Message(const char *str)

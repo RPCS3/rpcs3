@@ -86,7 +86,7 @@ void ProcessAASetting(bool reverse)
 		conf.incAA();
 	
 	sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
-	ZeroGS::SetAA(conf.aa);
+	SetAA(conf.aa);
 	ZZLog::WriteToScreen(strtitle);
 
 	SaveConfig();
@@ -286,7 +286,7 @@ void ProcessEvents()
 							{
 								// destroy that msg
 								conf.setFullscreen(false);
-								ZeroGS::ChangeDeviceSize(conf.width, conf.height);
+								ChangeDeviceSize(conf.width, conf.height);
 								UpdateWindow(GShwnd);
 								continue; // so that msg doesn't get sent
 							}
@@ -315,7 +315,7 @@ void ProcessEvents()
 	{
 		conf.zz_options.fullscreen = !conf.zz_options.fullscreen;
 
-		ZeroGS::SetChangeDeviceSize(
+		SetChangeDeviceSize(
 			(conf.fullscreen()) ? 1280 : conf.width,
 			(conf.fullscreen()) ? 960 : conf.height);
 	}

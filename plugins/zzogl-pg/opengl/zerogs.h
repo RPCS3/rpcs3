@@ -96,9 +96,6 @@ extern u32 ptexLogo;
 extern int nLogoWidth, nLogoHeight;
 extern int nBackbufferWidth, nBackbufferHeight;
 
-namespace ZeroGS
-{
-
 typedef void (*DrawFn)();
 
 // managers render-to-texture targets
@@ -419,7 +416,7 @@ extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
 
-void AddMessage(const char* pstr, u32 ms = 5000);
+void ZZAddMessage(const char* pstr, u32 ms = 5000);
 void DrawText(const char* pstr, int left, int top, u32 color);
 void ChangeWindowSize(int nNewWidth, int nNewHeight);
 void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
@@ -432,13 +429,13 @@ void ReloadEffects();
 // Methods //
 bool IsGLExt(const char* szTargetExtension);   ///< returns true if the the opengl extension is supported
 inline bool Create_Window(int _width, int _height);
-bool Create(int width, int height);
-void Destroy(bool bD3D);
+bool ZZCreate(int width, int height);
+void ZZDestroy(bool bD3D);
 
-void Reset(); // call to destroy video resources
-void GSStateReset();
-void GSReset();
-void GSSoftReset(u32 mask);
+void ZZReset(); // call to destroy video resources
+void ZZGSStateReset();
+void ZZGSReset();
+void ZZGSSoftReset(u32 mask);
 
 void HandleGLError();
 
@@ -482,8 +479,8 @@ bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will cha
 // call to load CLUT data (depending on CLD)
 void texClutWrite(int ctx);
 
-int Save(s8* pbydata);
-bool Load(s8* pbydata);
+int ZZSave(s8* pbydata);
+bool ZZLoad(s8* pbydata);
 
 void SaveSnapshot(const char* filename);
 bool SaveRenderTarget(const char* filename, int width, int height, int jpeg);
@@ -522,7 +519,7 @@ inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
 	tex0->csa  = ZZOglGet_csa_TexBits(Data);
 	tex0->cld  = ZZOglGet_cld_TexBits(Data);
 
-	ZeroGS::texClutWrite(ictx);
+	texClutWrite(ictx);
  };
  
 // The size in bytes of x strings (of texture).
@@ -542,6 +539,4 @@ inline u8* _MemoryAddress(int x)
 {
 	return g_pbyGSMemory + mult * x;
 }
-
-};
 #endif

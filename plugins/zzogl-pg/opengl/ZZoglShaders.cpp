@@ -33,8 +33,6 @@ extern HINSTANCE hInst;
 
 // ----------------- Defines
 
-using namespace ZeroGS; 
-
 #define TEXWRAP_REPEAT 0
 #define TEXWRAP_CLAMP 1
 #define TEXWRAP_REGION_REPEAT 2
@@ -87,7 +85,6 @@ char* EFFECT_DIR;
 
 bool g_bCRTCBilinear = true;
 
-namespace ZeroGS { 
 	float4 g_vdepth, vlogz;
 	FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
 	FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
@@ -96,7 +93,6 @@ namespace ZeroGS {
 	VERTEXSHADER pvsBitBlt;
 	
 	inline bool LoadEffects();
-}
 
 struct SHADERHEADER
 {
@@ -506,7 +502,7 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 	SetupFragmentProgramParameters(&fragment, !!(Index&SH_CONTEXT1), 0);  \
 } \
 
-inline bool ZeroGS::LoadEffects()
+inline bool LoadEffects()
 {
 	assert( s_lpShaderResources != NULL );
 
@@ -711,7 +707,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	SET_PSFILENAME(fragment, name); \
 } \
 
-inline bool ZeroGS::LoadEffects()
+inline bool LoadEffects()
 {
 	// clear the textures
 	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {

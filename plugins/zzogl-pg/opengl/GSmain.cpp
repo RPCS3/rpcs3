@@ -296,12 +296,12 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 
 void CALLBACK GSreset()
 {
-	ZeroGS::GSReset();
+	ZZGSReset();
 }
 
 void CALLBACK GSgifSoftReset(u32 mask)
 {
-	ZeroGS::GSSoftReset(mask);
+	ZZGSSoftReset(mask);
 }
 
 s32 CALLBACK GSinit()
@@ -359,7 +359,7 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
 	ZZLog::WriteLn("Creating ZZOgl window.");
 
-	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
+	if (!ZZCreate(conf.width, conf.height)) return -1;
 
 	ZZLog::WriteLn("Initialization successful.");
 
@@ -382,7 +382,7 @@ void CALLBACK GSclose()
 {
 	FUNCLOG
 
-	ZeroGS::Destroy(1);
+	ZZDestroy(1);
 	GLWin.CloseWindow();
 
 	SaveStateFile = NULL;
@@ -414,7 +414,7 @@ void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 
 	char str[255];
 	sprintf(str, "save state %d", newstate);
-	ZeroGS::AddMessage(str);
+	ZZAddMessage(str);
 	CurrentSavestate = newstate;
 
 	SaveStateFile = filename;
@@ -463,7 +463,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	fclose(bmpfile);
 
 	// get the bits
-	ZeroGS::SaveSnapshot(filename);
+	SaveSnapshot(filename);
 }
 
 // I'll probably move this somewhere else later, but it's got a ton of dependencies.
@@ -491,7 +491,7 @@ static __forceinline void SetGSTitle()
 			100*g_nFramesSkipped / g_nFrame,
 			g_nGenVars / (float)UPDATE_FRAMES, g_nTexVars / (float)UPDATE_FRAMES, g_nAlphaVars / (float)UPDATE_FRAMES,
 			g_nResolve / (float)UPDATE_FRAMES, (ppf&0xfffff) / (float)UPDATE_FRAMES,
-			ZeroGS::g_MemTargs.listTargets.size(), ZeroGS::g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
+			g_MemTargs.listTargets.size(), g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
 
 	//_snprintf(strtitle, 512, "%x %x", *(int*)(g_pbyGSMemory + 256 * 0x3e0c + 4), *(int*)(g_pbyGSMemory + 256 * 0x3e04 + 4));
 #endif
@@ -517,7 +517,7 @@ void CALLBACK GSvsync(int interlace)
 	g_nRealFrame++;
 
 	// !interlace? Hmmm... Fixme.
-	ZeroGS::RenderCRTC(!interlace);
+	RenderCRTC(!interlace);
 
 	ProcessEvents();
 
@@ -571,7 +571,7 @@ void CALLBACK GSreadFIFO(u64 *pMem)
 
 	//ZZLog::GS_Log("Calling GSreadFIFO.");
 
-	ZeroGS::TransferLocalHost((u32*)pMem, 1);
+	TransferLocalHost((u32*)pMem, 1);
 }
 
 void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
@@ -580,7 +580,7 @@ void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
 
 	//ZZLog::GS_Log("Calling GSreadFIFO2.");
 
-	ZeroGS::TransferLocalHost((u32*)pMem, qwc);
+	TransferLocalHost((u32*)pMem, qwc);
 }
 
 int CALLBACK GSsetupRecording(int start, void* pData)
@@ -588,9 +588,9 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	FUNCLOG
 
 	if (start)
-		ZeroGS::StartCapture();
+		StartCapture();
 	else
-		ZeroGS::StopCapture();
+		StopCapture();
 
 	return 1;
 }
@@ -602,16 +602,16 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 	switch (mode)
 	{
 		case FREEZE_LOAD:
-			if (!ZeroGS::Load(data->data)) ZZLog::Error_Log("GS: Bad load format!");
+			if (!ZZLoad(data->data)) ZZLog::Error_Log("GS: Bad load format!");
 			g_nRealFrame += 100;
 			break;
 
 		case FREEZE_SAVE:
-			ZeroGS::Save(data->data);
+			ZZSave(data->data);
 			break;
 
 		case FREEZE_SIZE:
-			data->size = ZeroGS::Save(NULL);
+			data->size = ZZSave(NULL);
 			break;
 
 		default:

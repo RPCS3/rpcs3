@@ -79,5 +79,5 @@ void GSC_StarOcean3(const GSFrameInfo& fi, int& skip);
 void GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip);
 void GSC_RadiataStories(const GSFrameInfo& fi, int& skip);
 
-extern bool IsBadFrame(ZeroGS::VB& curvb);
+extern bool IsBadFrame(VB& curvb);
 #endif

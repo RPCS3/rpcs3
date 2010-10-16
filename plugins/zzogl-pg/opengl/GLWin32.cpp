@@ -47,14 +47,14 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 			nWindowWidth = lParam & 0xffff;
 			nWindowHeight = lParam >> 16;
-			ZeroGS::ChangeWindowSize(nWindowWidth, nWindowHeight);
+			ChangeWindowSize(nWindowWidth, nWindowHeight);
 			break;
 
 		case WM_SIZING:
 			// if button is 0, then just released so can resize
 			if (GetSystemMetrics(SM_SWAPBUTTON) ? !GetAsyncKeyState(VK_RBUTTON) : !GetAsyncKeyState(VK_LBUTTON))
 			{
-				ZeroGS::SetChangeDeviceSize(nWindowWidth, nWindowHeight);
+				SetChangeDeviceSize(nWindowWidth, nWindowHeight);
 			}
 			break;
 

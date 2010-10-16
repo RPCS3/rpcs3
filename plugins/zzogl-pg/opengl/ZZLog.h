@@ -99,7 +99,7 @@ static bool SPAM_PASS;
 	if( err != GL_NO_ERROR ) \
 	{ \
 		ZZLog::Error_Log("%s:%d: gl error %s(0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
-		ZeroGS::HandleGLError(); \
+		HandleGLError(); \
 	} \
 }
 
@@ -110,7 +110,7 @@ static bool SPAM_PASS;
 	if( err != GL_NO_ERROR ) \
 	{ \
 		ZZLog::Error_Log("%s:%d: gl error %s (0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
-		ZeroGS::HandleGLError(); \
+		HandleGLError(); \
 	} \
 }
 #else
@@ -156,16 +156,13 @@ inline const char *error_name(int err)
 
 extern void __LogToConsole(const char *fmt, ...);
 
-// Subset of zerogs, to avoid that whole huge header.
-namespace ZeroGS
-{
-extern void AddMessage(const char* pstr, u32 ms);
+extern void ZZAddMessage(const char* pstr, u32 ms);
 extern void SetAA(int mode);
-extern bool Create(int width, int height);
-extern void Destroy(bool bD3D);
+extern bool ZZCreate(int width, int height);
+extern void ZZDestroy(bool bD3D);
 extern void StartCapture();
 extern void StopCapture();
-}
+
 
 namespace ZZLog
 {

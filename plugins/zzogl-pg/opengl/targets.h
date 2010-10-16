@@ -27,9 +27,6 @@
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
 #endif
 
-namespace ZeroGS
-{
-
 inline u32 GetFrameKey(int fbp, int fbw, VB& curvb);
 
 // manages render targets
@@ -69,7 +66,7 @@ class CRenderTargetMngr
 		}
 
 		// gets all targets with a range
-		void GetTargs(int start, int end, list<ZeroGS::CRenderTarget*>& listTargets) const;
+		void GetTargs(int start, int end, list<CRenderTarget*>& listTargets) const;
 
 		// resolves all targets within a range
 		__forceinline void Resolve(int start, int end);
@@ -218,15 +215,15 @@ inline int RH(int tbh)
     return (tbh << AA.y);
 }
 
-/*	inline void CreateTargetsList(int start, int end, list<ZeroGS::CRenderTarget*>& listTargs) {
+/*	inline void CreateTargetsList(int start, int end, list<CRenderTarget*>& listTargs) {
 		s_DepthRTs.GetTargs(start, end, listTargs);
 		s_RTs.GetTargs(start, end, listTargs);
 	}*/
 
 // This pattern of functions is called 3 times, so I add creating Targets list into one.
-inline list<ZeroGS::CRenderTarget*> CreateTargetsList(int start, int end)
+inline list<CRenderTarget*> CreateTargetsList(int start, int end)
 {
-	list<ZeroGS::CRenderTarget*> listTargs;
+	list<CRenderTarget*> listTargs;
 	s_DepthRTs.GetTargs(start, end, listTargs);
 	s_RTs.GetTargs(start, end, listTargs);
 	return listTargs;
@@ -289,8 +286,6 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 {
 	return GetFrameKeyDummy(frame->fbp, frame->fbw, frame->fbh, frame->psm);
 }
-
-} // End of namespace
 
 #include "Mem.h"
 

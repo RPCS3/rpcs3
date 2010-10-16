@@ -25,8 +25,6 @@
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 
-using namespace ZeroGS;
-
 //------------------ Defines
 #if !defined(ZEROGS_DEVBUILD)
 #define g_bSaveFrame 0
@@ -50,7 +48,7 @@ extern bool g_bMakeSnapshot;
 extern string strSnapshot;
 
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
-void ZeroGS::AdjustTransToAspect(float4& v)
+void AdjustTransToAspect(float4& v)
 {
 	double temp;
 	float f;
@@ -670,7 +668,7 @@ inline void AfterRenderMadeSnapshoot()
 	{
 		char str[255];
 		sprintf(str, "saved %s\n", strSnapshot.c_str());
-		AddMessage(str, 500);
+		ZZAddMessage(str, 500);
 	}
 	
 		g_bMakeSnapshot = false;
@@ -679,7 +677,7 @@ inline void AfterRenderMadeSnapshoot()
 // If needed reset
 inline void AfterRendererResizeWindow()
 {
-	Reset();
+	ZZReset();
 	ChangeDeviceSize(s_nNewWidth, s_nNewHeight);
 	s_nNewWidth = s_nNewHeight = -1;
 }
@@ -823,7 +821,7 @@ inline void AfterRendererAutoresetTargets()
 
 int count = 0;
 // The main renderer function
-void ZeroGS::RenderCRTC(int interlace)
+void RenderCRTC(int interlace)
 {
 	if (FrameSkippingHelper()) return;
 

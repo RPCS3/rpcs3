@@ -33,7 +33,6 @@
 #define RHA
 //#define RW
 
-using namespace ZeroGS;
 extern int g_TransferredToGPU;
 extern bool g_bUpdateStencil;
 
@@ -47,12 +46,9 @@ extern int s_nResolved;
 extern u32 g_nResolve;
 extern bool g_bSaveTrans;
 
-namespace ZeroGS
-{
 CRenderTargetMngr s_RTs, s_DepthRTs;
 CBitwiseTextureMngr s_BitwiseTextures;
 CMemoryTargetMngr g_MemTargs;
-}
 
 //extern u32 s_ptexCurSet[2];
 bool g_bSaveZUpdate = 0;
@@ -91,7 +87,7 @@ inline void DestroyAllTargetsHelper(void* ptr)
 // returns false if creating texture was unsuccessful
 // fbh and fdb should be properly shifted before calling this!
 // We should ignore framebuffer trouble here, as we put textures of different sizes to it.
-inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw, int fbh)
+inline bool CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw, int fbh)
 {
 	glGenTextures(1, ptr_p);
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, *ptr_p);
@@ -109,7 +105,7 @@ inline bool ZeroGS::CRenderTarget::InitialiseDefaultTexture(u32 *ptr_p, int fbw,
 // Draw 4 triangles from binded array using only stencil buffer
 inline void FillOnlyStencilBuffer()
 {
-	if (ZeroGS::IsWriteDestAlphaTest() && !(conf.settings().no_stencil))
+	if (IsWriteDestAlphaTest() && !(conf.settings().no_stencil))
 	{
 		glColorMask(0, 0, 0, 0);
 		glEnable(GL_ALPHA_TEST);
@@ -125,7 +121,7 @@ inline void FillOnlyStencilBuffer()
 
 // used for transformation from vertex position in GS window.coords (I hope)
 // to view coordinates (in range 0, 1).
-inline float4 ZeroGS::CRenderTarget::DefaultBitBltPos()
+inline float4 CRenderTarget::DefaultBitBltPos()
 {
 	float4 v = float4(1, -1, 0.5f / (float)RW(fbw), 0.5f / (float)RH(fbh));
 	v *= 1.0f / 32767.0f;
@@ -135,7 +131,7 @@ inline float4 ZeroGS::CRenderTarget::DefaultBitBltPos()
 
 // Used to transform texture coordinates from GS (when 0,0 is upper left) to
 // OpenGL (0,0 - lower left).
-inline float4 ZeroGS::CRenderTarget::DefaultBitBltTex()
+inline float4 CRenderTarget::DefaultBitBltTex()
 {
 	// I really sure that -0.5 is correct, because OpenGL have no half-offset
 	// issue, DirectX known for.
@@ -153,19 +149,19 @@ inline void BindToSample(u32 *p_ptr)
 ////////////////////
 // Render Targets //
 ////////////////////
-ZeroGS::CRenderTarget::CRenderTarget() : ptex(0), ptexFeedback(0), psys(NULL)
+CRenderTarget::CRenderTarget() : ptex(0), ptexFeedback(0), psys(NULL)
 {
 	FUNCLOG
 	nUpdateTarg = 0;
 }
 
-ZeroGS::CRenderTarget::~CRenderTarget()
+CRenderTarget::~CRenderTarget()
 {
 	FUNCLOG
 	Destroy();
 }
 
-bool ZeroGS::CRenderTarget::Create(const frameInfo& frame)
+bool CRenderTarget::Create(const frameInfo& frame)
 {
 	FUNCLOG
 	Resolve();
@@ -208,7 +204,7 @@ bool ZeroGS::CRenderTarget::Create(const frameInfo& frame)
 	return true;
 }
 
-void ZeroGS::CRenderTarget::Destroy()
+void CRenderTarget::Destroy()
 {
 	FUNCLOG
 	created = 1;
@@ -218,7 +214,7 @@ void ZeroGS::CRenderTarget::Destroy()
 	SAFE_RELEASE_TEX(ptexFeedback);
 }
 
-void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int context)
+void CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int context)
 {
 	FUNCLOG
 	int dy = 0;
@@ -261,7 +257,7 @@ void ZeroGS::CRenderTarget::SetTarget(int fbplocal, const Rect2& scissor, int co
 	scissorrect.h = RH(scissorrect.h);
 }
 
-void ZeroGS::CRenderTarget::SetViewport()
+void CRenderTarget::SetViewport()
 {
 	FUNCLOG
 	glViewport(0, 0, RW(fbw), RH(fbh));
@@ -272,7 +268,7 @@ inline bool NotResolveHelper()
 	return ((s_nResolved > 8 && (2 * s_nResolved > fFPS - 10)) || (conf.settings().no_target_resolve));
 }
 
-void ZeroGS::CRenderTarget::Resolve()
+void CRenderTarget::Resolve()
 {
 	FUNCLOG
 
@@ -281,7 +277,7 @@ void ZeroGS::CRenderTarget::Resolve()
 		// flush if necessary
 		FlushIfNecesary(this) ;
 
-		if ((IsDepth() && !ZeroGS::IsWriteDepth()) || NotResolveHelper())
+		if ((IsDepth() && !IsWriteDepth()) || NotResolveHelper())
 		{
 			// don't resolve if depths aren't used
 			status = TS_Resolved;
@@ -314,7 +310,7 @@ void ZeroGS::CRenderTarget::Resolve()
 	}
 }
 
-void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
+void CRenderTarget::Resolve(int startrange, int endrange)
 {
 	FUNCLOG
 
@@ -387,7 +383,7 @@ void ZeroGS::CRenderTarget::Resolve(int startrange, int endrange)
 	}
 }
 
-void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
+void CRenderTarget::Update(int context, CRenderTarget* pdepth)
 {
 	FUNCLOG
 
@@ -488,7 +484,7 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 
 		if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		if (ZeroGS::IsWriteDestAlphaTest())
+		if (IsWriteDestAlphaTest())
 		{
 			glEnable(GL_STENCIL_TEST);
 			glStencilFunc(GL_ALWAYS, 0, 0xff);
@@ -510,17 +506,17 @@ void ZeroGS::CRenderTarget::Update(int context, ZeroGS::CRenderTarget* pdepth)
 	glEnable(GL_SCISSOR_TEST);
 
 	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	if (conf.mrtdepth && pdepth != NULL && ZeroGS::IsWriteDepth()) pdepth->SetRenderTarget(1);
+	if (conf.mrtdepth && pdepth != NULL && IsWriteDepth()) pdepth->SetRenderTarget(1);
 
 	status = TS_Resolved;
 
 	// reset since settings changed
 	vb[0].bVarsTexSync = 0;
 
-	ZeroGS::ResetAlphaVariables();
+	ResetAlphaVariables();
 }
 
-void ZeroGS::CRenderTarget::ConvertTo32()
+void CRenderTarget::ConvertTo32()
 {
 	FUNCLOG
 
@@ -568,7 +564,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 
 	// assume depth already set !?
 	FBTexture(0, ptexConv);
-	ZeroGS::ResetRenderTarget(1);
+	ResetRenderTarget(1);
 
 	BindToSample(&ptex);
 	ZZshGLSetTextureParameter(ppsConvert16to32.prog, ppsConvert16to32.sFinal, ptex, "Convert 16 to 32.Final");
@@ -613,7 +609,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	status = TS_Resolved;
 
 	// TODO, reset depth?
-	if (ZeroGS::icurctx >= 0)
+	if (icurctx >= 0)
 	{
 		// reset since settings changed
 		vb[icurctx].bVarsTexSync = 0;
@@ -623,7 +619,7 @@ void ZeroGS::CRenderTarget::ConvertTo32()
 	vb[0].bVarsTexSync = 0;
 }
 
-void ZeroGS::CRenderTarget::ConvertTo16()
+void CRenderTarget::ConvertTo16()
 {
 	FUNCLOG
 
@@ -669,7 +665,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 
 	// assume depth already set !?
 	FBTexture(0, ptexConv);
-	ZeroGS::ResetRenderTarget(1);
+	ResetRenderTarget(1);
 	GL_REPORT_ERRORD();
 
 	BindToSample(&ptex);
@@ -719,7 +715,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	status = TS_Resolved;
 
 	// TODO, reset depth?
-	if (ZeroGS::icurctx >= 0)
+	if (icurctx >= 0)
 	{
 		// reset since settings changed
 		vb[icurctx].bVarsTexSync = 0;
@@ -729,7 +725,7 @@ void ZeroGS::CRenderTarget::ConvertTo16()
 	vb[0].bVarsTexSync = 0;
 }
 
-void ZeroGS::CRenderTarget::_CreateFeedback()
+void CRenderTarget::_CreateFeedback()
 {
 	FUNCLOG
 
@@ -797,7 +793,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	status |= TS_FeedbackReady;
 
 	// TODO, reset depth?
-	if (ZeroGS::icurctx >= 0)
+	if (icurctx >= 0)
 	{
 		// reset since settings changed
 		vb[icurctx].bVarsTexSync = 0;
@@ -806,7 +802,7 @@ void ZeroGS::CRenderTarget::_CreateFeedback()
 	GL_REPORT_ERRORD();
 }
 
-void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
+void CRenderTarget::SetRenderTarget(int targ)
 {
 	FUNCLOG
 
@@ -817,16 +813,16 @@ void ZeroGS::CRenderTarget::SetRenderTarget(int targ)
 		//ERROR_LOG_SPAM("The Framebuffer is not complete. Glitches could appear onscreen.\n");
 }
 
-ZeroGS::CDepthTarget::CDepthTarget() : CRenderTarget(), pdepth(0), pstencil(0), icount(0) {}
+CDepthTarget::CDepthTarget() : CRenderTarget(), pdepth(0), pstencil(0), icount(0) {}
 
-ZeroGS::CDepthTarget::~CDepthTarget()
+CDepthTarget::~CDepthTarget()
 {
 	FUNCLOG
 
 	Destroy();
 }
 
-bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
+bool CDepthTarget::Create(const frameInfo& frame)
 {
 	FUNCLOG
 
@@ -871,7 +867,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 	return true;
 }
 
-void ZeroGS::CDepthTarget::Destroy()
+void CDepthTarget::Destroy()
 {
 	FUNCLOG
 
@@ -903,11 +899,11 @@ void ZeroGS::CDepthTarget::Destroy()
 
 extern int g_nDepthUsed; // > 0 if depth is used
 
-void ZeroGS::CDepthTarget::Resolve()
+void CDepthTarget::Resolve()
 {
 	FUNCLOG
 
-	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && ZeroGS::IsWriteDepth() && !(conf.settings().no_depth_resolve))
+	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && IsWriteDepth() && !(conf.settings().no_depth_resolve))
 		CRenderTarget::Resolve();
 	else
 	{
@@ -919,15 +915,15 @@ void ZeroGS::CDepthTarget::Resolve()
 
 	if (!(status&TS_Virtual))
 	{
-		ZeroGS::SetWriteDepth();
+		SetWriteDepth();
 	}
 }
 
-void ZeroGS::CDepthTarget::Resolve(int startrange, int endrange)
+void CDepthTarget::Resolve(int startrange, int endrange)
 {
 	FUNCLOG
 
-	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && ZeroGS::IsWriteDepth())
+	if (g_nDepthUsed > 0 && conf.mrtdepth && !(status&TS_Virtual) && IsWriteDepth())
 	{
 		CRenderTarget::Resolve(startrange, endrange);
 	}
@@ -942,11 +938,11 @@ void ZeroGS::CDepthTarget::Resolve(int startrange, int endrange)
 
 	if (!(status&TS_Virtual))
 	{
-		ZeroGS::SetWriteDepth();
+		SetWriteDepth();
 	}
 }
 
-void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
+void CDepthTarget::Update(int context, CRenderTarget* prndr)
 {
 	FUNCLOG
 
@@ -963,7 +959,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	DisableAllgl();
 
-	ZeroGS::VB& curvb = vb[context];
+	VB& curvb = vb[context];
 
 	if (curvb.test.zte == 0) return;
 
@@ -1036,7 +1032,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 
 	status = TS_Resolved;
 
-	if (!ZeroGS::IsWriteDepth())
+	if (!IsWriteDepth())
 	{
 		ResetRenderTarget(1);
 	}
@@ -1054,7 +1050,7 @@ void ZeroGS::CDepthTarget::Update(int context, ZeroGS::CRenderTarget* prndr)
 #endif
 }
 
-void ZeroGS::CDepthTarget::SetDepthStencilSurface()
+void CDepthTarget::SetDepthStencilSurface()
 {
 	FUNCLOG
 	TextureRect(GL_DEPTH_ATTACHMENT_EXT, pdepth);
@@ -1085,7 +1081,7 @@ void ZeroGS::CDepthTarget::SetDepthStencilSurface()
 	}
 }
 
-void ZeroGS::CRenderTargetMngr::Destroy()
+void CRenderTargetMngr::Destroy()
 {
 	FUNCLOG
 
@@ -1104,7 +1100,7 @@ void ZeroGS::CRenderTargetMngr::Destroy()
 	mapDummyTargs.clear();
 }
 
-void ZeroGS::CRenderTargetMngr::DestroyAllTargs(int start, int end, int fbw)
+void CRenderTargetMngr::DestroyAllTargs(int start, int end, int fbw)
 {
 	FUNCLOG
 
@@ -1166,14 +1162,14 @@ void ZeroGS::CRenderTargetMngr::DestroyAllTargs(int start, int end, int fbw)
 	}
 }
 
-void ZeroGS::CRenderTargetMngr::DestroyTarg(CRenderTarget* ptarg)
+void CRenderTargetMngr::DestroyTarg(CRenderTarget* ptarg)
 {
 	FUNCLOG
 	DestroyAllTargetsHelper(ptarg) ;
 	delete ptarg;
 }
 
-void ZeroGS::CRenderTargetMngr::DestroyIntersecting(CRenderTarget* prndr)
+void CRenderTargetMngr::DestroyIntersecting(CRenderTarget* prndr)
 {
 	FUNCLOG
 	assert(prndr != NULL);
@@ -1221,7 +1217,7 @@ inline bool CheckWidthIsSame(const frameInfo& frame, CRenderTarget* ptarg)
 		return (2 * frame.fbw == ptarg->fbw);
 }
 
-void ZeroGS::CRenderTargetMngr::PrintTargets()
+void CRenderTargetMngr::PrintTargets()
 {
 #ifdef _DEBUG
 	for (MAPTARGETS::iterator it1 = mapDummyTargs.begin(); it1 != mapDummyTargs.end(); ++it1)
@@ -1232,7 +1228,7 @@ void ZeroGS::CRenderTargetMngr::PrintTargets()
 #endif
 }
 
-bool ZeroGS::CRenderTargetMngr::isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight)
+bool CRenderTargetMngr::isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight)
 {
 	// only enforce height if frame.fbh <= 0x1c0
 	bool bfound = it != mapTargets.end();
@@ -1286,7 +1282,7 @@ bool ZeroGS::CRenderTargetMngr::isFound(const frameInfo& frame, MAPTARGETS::iter
 	return bfound;
 }
 
-CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
+CRenderTarget* CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 opts, int maxposheight)
 {
 	FUNCLOG
 
@@ -1594,7 +1590,7 @@ CRenderTarget* ZeroGS::CRenderTargetMngr::GetTarg(const frameInfo& frame, u32 op
 	return ptarg;
 }
 
-ZeroGS::CRenderTargetMngr::MAPTARGETS::iterator ZeroGS::CRenderTargetMngr::GetOldestTarg(MAPTARGETS& m)
+CRenderTargetMngr::MAPTARGETS::iterator CRenderTargetMngr::GetOldestTarg(MAPTARGETS& m)
 {
 	FUNCLOG
 
@@ -1614,7 +1610,7 @@ ZeroGS::CRenderTargetMngr::MAPTARGETS::iterator ZeroGS::CRenderTargetMngr::GetOl
 	return itmaxtarg;
 }
 
-void ZeroGS::CRenderTargetMngr::GetTargs(int start, int end, list<ZeroGS::CRenderTarget*>& listTargets) const
+void CRenderTargetMngr::GetTargs(int start, int end, list<CRenderTarget*>& listTargets) const
 {
 	FUNCLOG
 
@@ -1624,7 +1620,7 @@ void ZeroGS::CRenderTargetMngr::GetTargs(int start, int end, list<ZeroGS::CRende
 	}
 }
 
-void ZeroGS::CRenderTargetMngr::Resolve(int start, int end)
+void CRenderTargetMngr::Resolve(int start, int end)
 {
 	FUNCLOG
 
@@ -1635,7 +1631,7 @@ void ZeroGS::CRenderTargetMngr::Resolve(int start, int end)
 	}
 }
 
-void ZeroGS::CMemoryTargetMngr::Destroy()
+void CMemoryTargetMngr::Destroy()
 {
 	FUNCLOG
 	listTargets.clear();
@@ -1689,7 +1685,7 @@ int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
 }
 
 #if 0
-bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
+bool CMemoryTarget::ValidateClut(const tex0Info& tex0)
 {
 	FUNCLOG
 	assert(tex0.psm == psm && PSMT_ISCLUT(psm) && cpsm == tex0.cpsm);
@@ -1723,7 +1719,7 @@ bool ZeroGS::CMemoryTarget::ValidateClut(const tex0Info& tex0)
 }
 #endif
 
-bool ZeroGS::CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex)
+bool CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex)
 {
 	FUNCLOG
 
@@ -1895,7 +1891,7 @@ static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* 
 extern int g_MaxTexWidth, g_MaxTexHeight; // Maximum height & width of supported texture.
 
 //#define SORT_TARGETS
-inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIter(list<CMemoryTarget>::iterator& it)
+inline list<CMemoryTarget>::iterator CMemoryTargetMngr::DestroyTargetIter(list<CMemoryTarget>::iterator& it)
 {
 	// find the target and destroy
 	list<CMemoryTarget>::iterator itprev = it;
@@ -1910,7 +1906,7 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	return it;
 }
 
-int ZeroGS::CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
+int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
 {
 	if (PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm))
 	{
@@ -1951,7 +1947,7 @@ int ZeroGS::CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, 
 	return 0;
 }
 
-void ZeroGS::CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
+void CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
 {
 	nClutOffset = 0;
 	clutsize = 0;
@@ -1973,7 +1969,7 @@ void ZeroGS::CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize
 	}
 }
 
-void ZeroGS::CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0Info& tex0)
+void CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0Info& tex0)
 {
 	int nbStart, nbEnd;
 	GetRectMemAddress(nbStart, nbEnd, tex0.psm, 0, 0, tex0.tw, tex0.th, tex0.tbp0, tex0.tbw);
@@ -1986,7 +1982,7 @@ void ZeroGS::CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0I
 
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
+CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
 {
 	for (list<CMemoryTarget>::iterator it = listTargets.begin(); it != listTargets.end();)
 	{
@@ -2057,7 +2053,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::SearchExistTarget(int start, i
 	return NULL;
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
+CMemoryTarget* CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
 
@@ -2098,7 +2094,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::ClearedTargetsSearch(int fmt, 
 	return targ;
 }
 
-ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forcevalidate)
+CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forcevalidate)
 {
 	FUNCLOG
 	int start, end, nClutOffset, clutsize;
@@ -2106,7 +2102,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	GetClutVariables(nClutOffset, clutsize, tex0);
 	GetMemAddress(start, end, tex0);
 
-	ZeroGS::CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
+	CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
 
 	if (it != NULL) return it;
 
@@ -2383,7 +2379,7 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 	return targ;
 }
 
-void ZeroGS::CMemoryTargetMngr::ClearRange(int nbStartY, int nbEndY)
+void CMemoryTargetMngr::ClearRange(int nbStartY, int nbEndY)
 {
 	FUNCLOG
 	int starty = nbStartY / (4 * GPU_TEXWIDTH);
@@ -2455,7 +2451,7 @@ void ZeroGS::CMemoryTargetMngr::ClearRange(int nbStartY, int nbEndY)
 //  }
 }
 
-void ZeroGS::CMemoryTargetMngr::DestroyCleared()
+void CMemoryTargetMngr::DestroyCleared()
 {
 	FUNCLOG
 
@@ -2488,7 +2484,7 @@ void ZeroGS::CMemoryTargetMngr::DestroyCleared()
 	++curstamp;
 }
 
-void ZeroGS::CMemoryTargetMngr::DestroyOldest()
+void CMemoryTargetMngr::DestroyOldest()
 {
 	FUNCLOG
 
@@ -2511,7 +2507,7 @@ void ZeroGS::CMemoryTargetMngr::DestroyOldest()
 //////////////////////////////////////
 // Texture Mngr For Bitwise AND Ops //
 //////////////////////////////////////
-void ZeroGS::CBitwiseTextureMngr::Destroy()
+void CBitwiseTextureMngr::Destroy()
 {
 	FUNCLOG
 
@@ -2523,7 +2519,7 @@ void ZeroGS::CBitwiseTextureMngr::Destroy()
 	mapTextures.clear();
 }
 
-u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
+u32 CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 {
 	FUNCLOG
 
@@ -2593,7 +2589,7 @@ u32 ZeroGS::CBitwiseTextureMngr::GetTexInt(u32 bitvalue, u32 ptexDoNotDelete)
 	return ptex;
 }
 
-void ZeroGS::CRangeManager::RangeSanityCheck()
+void CRangeManager::RangeSanityCheck()
 {
 #ifdef _DEBUG
 	// sanity check
@@ -2606,7 +2602,7 @@ void ZeroGS::CRangeManager::RangeSanityCheck()
 #endif
 }
 
-void ZeroGS::CRangeManager::Insert(int start, int end)
+void CRangeManager::Insert(int start, int end)
 {
 	FUNCLOG
 	int imin = 0, imax = (int)ranges.size(), imid;
@@ -2759,9 +2755,6 @@ void ZeroGS::CRangeManager::Insert(int start, int end)
 	RangeSanityCheck();
 }
 
-namespace ZeroGS
-{
-
 CRangeManager s_RangeMngr; // manages overwritten memory
 
 void ResolveInRange(int start, int end)
@@ -2892,7 +2885,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 				// get start of left-most boundry page
 				int targstart, targend;
-				ZeroGS::GetRectMemAddress(targstart, targend, ptarg->psm, 0, 0, ptarg->fbw, ptarg->fbh & ~(m_Blocks[ptarg->psm].height - 1), ptarg->fbp, ptarg->fbw);
+				GetRectMemAddress(targstart, targend, ptarg->psm, 0, 0, ptarg->fbw, ptarg->fbh & ~(m_Blocks[ptarg->psm].height - 1), ptarg->fbp, ptarg->fbw);
 
 				if (start >= targend)
 				{
@@ -2932,7 +2925,7 @@ void FlushTransferRanges(const tex0Info* ptex)
 			}
 		}
 
-		ZeroGS::g_MemTargs.ClearRange(start, end);
+		g_MemTargs.ClearRange(start, end);
 	}
 
 	s_RangeMngr.Clear();
@@ -3756,5 +3749,3 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 }
 
 #endif
-
-} // End of namespece ZeroGS

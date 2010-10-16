@@ -44,7 +44,7 @@ char *libraryNameX	 = "ZeroGS Playground OpenGL ";
 extern char *libraryName;
 extern u32 s_uTex1Data[2][2], s_uClampData[2];
 
-int ZeroGS::Save(s8* pbydata)
+int ZZSave(s8* pbydata)
 {
 	if (pbydata == NULL)
 		return 40 + MEMORY_END + sizeof(gs) + 2*VBSAVELIMIT + 2*sizeof(frameInfo) + 4 + 256*4;
@@ -85,7 +85,7 @@ int ZeroGS::Save(s8* pbydata)
 	return 0;
 }
 
-bool ZeroGS::Load(s8* pbydata)
+bool ZZLoad(s8* pbydata)
 {
 	memset(s_uTex1Data, 0, sizeof(s_uTex1Data));
 	memset(s_uClampData, 0, sizeof(s_uClampData));
@@ -99,7 +99,7 @@ bool ZeroGS::Load(s8* pbydata)
 	{
 		g_MemTargs.Destroy();
 
-		GSStateReset();
+		ZZGSStateReset();
 		pbydata += 32;
 
 		//int context = *(int*)pbydata;

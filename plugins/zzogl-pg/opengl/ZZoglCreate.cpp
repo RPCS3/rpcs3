@@ -73,8 +73,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
 map<string, GLbyte> mapGLExtensions;
 
-namespace ZeroGS
-{
 extern void KickPoint();
 extern void KickLine();
 extern void KickTriangle();
@@ -92,7 +90,6 @@ int g_nCurVBOIndex = 0;
 inline bool CreateImportantCheck();
 inline void CreateOtherCheck();
 inline bool CreateOpenShadersFile();
-}
 
 //------------------ Dummies
 #ifdef _WIN32
@@ -136,8 +133,6 @@ char* EFFECT_DIR = "";
 
 /////////////////////
 // graphics resources
-FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
 GLenum s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha; // set by zgsBlendFuncSeparateEXT
 u32 s_stencilfunc, s_stencilref, s_stencilmask;
 GLenum s_drawbuffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
@@ -168,12 +163,12 @@ int g_nDepthBias = 0;
 
 //------------------ Code
 
-bool ZeroGS::IsGLExt(const char* szTargetExtension)
+bool IsGLExt(const char* szTargetExtension)
 {
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
 }
 
-inline bool ZeroGS::Create_Window(int _width, int _height)
+inline bool Create_Window(int _width, int _height)
 {
 	nBackbufferWidth = _width;
 	nBackbufferHeight = _height;
@@ -188,7 +183,7 @@ inline bool ZeroGS::Create_Window(int _width, int _height)
 }
 
 // Function asks about different OGL extensions, that are required to setup accordingly. Return false if checks failed
-inline bool ZeroGS::CreateImportantCheck()
+inline bool CreateImportantCheck()
 {
 	bool bSuccess = true;
 #ifndef _WIN32
@@ -220,7 +215,7 @@ inline bool ZeroGS::CreateImportantCheck()
 }
 
 // This is a check for less important open gl extensions.
-inline void ZeroGS::CreateOtherCheck()
+inline void CreateOtherCheck()
 {
 	if (!IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL)
 	{
@@ -294,7 +289,7 @@ inline void ZeroGS::CreateOtherCheck()
 
 // open shader file according to build target
 
-inline bool ZeroGS::CreateOpenShadersFile()
+inline bool CreateOpenShadersFile()
 {
 #ifndef DEVBUILD
 #	ifdef _WIN32
@@ -445,20 +440,20 @@ inline bool TryBlinearFormat(GLint fmt32, GLint fmt16, const GLvoid* vBilinearDa
 }
 
 
-bool ZeroGS::Create(int _width, int _height)
+bool ZZCreate(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;
 	bool bSuccess = true;
 	int i;
 
-	Destroy(1);
-	GSStateReset();
+	ZZDestroy(1);
+	ZZGSStateReset();
 
 	if (!Create_Window(_width, _height)) return false;
 	if (!CreateFillExtensionsMap()) return false;
 	if (!CreateImportantCheck()) return false;
 
-	ZeroGS::CreateOtherCheck();
+	CreateOtherCheck();
 
 	// check the max texture width and height
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
@@ -793,7 +788,7 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 }
 
-void ZeroGS::Destroy(bool bD3D)
+void ZZDestroy(bool bD3D)
 {
 	Delete_Avi_Capture();
 

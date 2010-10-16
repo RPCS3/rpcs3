@@ -71,8 +71,6 @@
 	
  extern _getPixelAddress getPixelFun[64];
 
- namespace ZeroGS
- {
 	extern CRangeManager s_RangeMngr; // manages overwritten memory
 	extern void ResolveInRange(int start, int end);
 	
@@ -535,5 +533,3 @@ __forceinline void _TransferLocalLocal_4()
 
 	#endif
 	}
-
- }
