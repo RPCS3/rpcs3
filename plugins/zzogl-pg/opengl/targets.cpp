@@ -1906,43 +1906,33 @@ inline list<CMemoryTarget>::iterator CMemoryTargetMngr::DestroyTargetIter(list<C
 	return it;
 }
 
+// Compare target to current texture info
+// Not same format -> 1
+// Same format, not same data (clut only) -> 2
+// identical -> 0
 int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
 {
 	if (PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm))
-	{
 		return 1;
-	}
 
-	if (PSMT_ISCLUT(tex0.psm))
-	{
+	if (PSMT_ISCLUT(tex0.psm)) {
 		assert(it->clut.size() > 0);
 
 		if (it->psm != tex0.psm || it->cpsm != tex0.cpsm || it->clut.size() != clutsize)
-		{
 			return 1;
-		}
 
-		if	(PSMT_IS32BIT(tex0.cpsm))
-		{
+		if	(PSMT_IS32BIT(tex0.cpsm)) {
 			if (memcmp_mmx(&it->clut[0], g_pbyGSClut + nClutOffset, clutsize))
-			{
 				return 2;
-			}
-		}
-		else
-		{
+		} else {
 			if (memcmp_clut16((u16*)&it->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize))
-			{
 				return 2;
-			}
 		}
 
-	}
-	else
+	} else {
 		if (PSMT_IS16BIT(tex0.psm) != PSMT_IS16BIT(it->psm))
-		{
 			return 1;
-		}
+    }
 
 	return 0;
 }
@@ -2001,9 +1991,8 @@ CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClu
 					if (listTargets.size() == 0) break;
 				}
 				else
-				{
 					++it;
-				}
+
 				continue;
 			}
 			else if (res == 2)
@@ -2027,9 +2016,7 @@ CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClu
 							break;
 					}
 					else
-					{
 						++it;
-					}
 
 					continue;
 				}
@@ -2109,10 +2096,17 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 	// couldn't find so create
 	CMemoryTarget* targ;
 
-	u32 fmt = GL_UNSIGNED_BYTE;
-
-	// RGBA16 storage format
-	if (PSMT_ISHALF_STORAGE(tex0)) fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+	u32 fmt;
+    u32 internal_fmt;
+	if (PSMT_ISHALF_STORAGE(tex0)) {
+        // RGBA_5551 storage format
+        fmt = GL_UNSIGNED_SHORT_1_5_5_5_REV;
+        internal_fmt = GL_RGB5_A1;
+    } else {
+        // RGBA_8888 storage format
+        fmt = GL_UNSIGNED_BYTE;
+        internal_fmt = GL_RGBA;
+    }
 
 	int widthmult = 1, channels = 1;
 
@@ -2182,10 +2176,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 		targ->psm = tex0.psm;
 		targ->cpsm = tex0.cpsm;
 		targ->height = end - start;
-	}
-
-	if (targ->ptex == NULL)
-	{
+	} else {
 		// not initialized yet
 		targ->fmt = fmt;
 		targ->realy = targ->starty = start;
@@ -2341,10 +2332,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 
 	glBindTexture(GL_TEXTURE_RECTANGLE_NV, targ->ptex->tex);
 
-	if (fmt == GL_UNSIGNED_BYTE)
-		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
-	else
-		TextureRect(GL_RGB5_A1, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
+    TextureRect(internal_fmt, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 
 	while (glGetError() != GL_NO_ERROR)
 	{
@@ -2366,7 +2354,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 			DestroyOldest();
 		}
 
-		TextureRect(GL_RGBA, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
+        TextureRect(internal_fmt, targ->texW, targ->texH, GL_RGBA, fmt, ptexdata);
 	}
 
 	setRectWrap(GL_CLAMP);
