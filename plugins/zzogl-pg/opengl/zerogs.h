@@ -54,10 +54,6 @@ extern bool s_bWriteDepth;
 
 extern int nBackbufferWidth, nBackbufferHeight;
 
-// visible members
-typedef void (*DrawFn)();
-extern DrawFn drawfn[8];
-
 extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;

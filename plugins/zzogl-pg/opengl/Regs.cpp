@@ -24,11 +24,9 @@
 
 #include "zerogs.h"
 #include "targets.h"
+#include "ZZKick.h"
 
 #ifdef USE_OLD_REGS
-
-const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
-const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -43,44 +41,6 @@ u32 s_uTex1Data[2][2] = {{0, }};
 u32 s_uClampData[2] = {0, };
 
 //u32 results[65535] = {0, };
-
-// return true if triangle SHOULD be painted.
-inline bool NoHighlights(int i)
-{
-//	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
-
-	int dummy = 0;
-	
-	u32 resultA = prim->iip + (2 * (prim->tme)) + (4 * (prim->fge)) + (8 * (prim->abe)) + (16 * (prim->aa1)) + (32 * (prim->fst)) + (64 * (prim->ctxt)) + (128 * (prim->fix));
-	
-//	if ( results[resultA] == 0 ) {
-//		results[resultA] = 1;
-//		ZZLog::Error_Log("%x = %d %d %d %d %d %d %d %d \n", resultA, prim->iip, (prim->tme), (prim->fge), (prim->abe) , (prim->aa1) ,(prim->fst), (prim->ctxt), (prim->fix)) ;
-//	}
-//	if (resultA == 0xb && vb[i].zbuf.zmsk ) return false; //ATF
-
-	const pixTest curtest = vb[i].test;
-	
-	u32 result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
-//	if (resultA == 0xb)
-//		if ( results[result] == 0) {
-//			results[result] = 1;
-//			ZZLog::Error_Log("0x%x = %d %d %d %d %d %d %d %d ", result, curtest.ate, curtest.atst, curtest.aref, curtest.afail, curtest.date, curtest.datm, curtest.zte, curtest.ztst);
-//		}
-
-	//if (result == 0x50b && vb[i].zbuf.zmsk ) return false; //ATF
-	//if ((resultA == 0x3a2a || resultA == 0x312a) && (result == 0x302 || result == 0x700) && (vb[i].zbuf.zmsk)) return false; // Silent Hill:SM and Front Mission 5, result != 0x300
-	//if (((resultA == 0x3100) || (resultA == 0x3108)) && ((result == 0x54c) || (result == 0x50c)) && (vb[i].zbuf.zmsk)) return false; // Okage
-
-	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
-
-	//if (resultA == 0x3a6a && (result == 0x300 || result == 0x500) && vb[i].zbuf.zmsk) return false; // Okami, result != 0x30d
-
-	//if ((resultA == 0x300b) && (result == 0x300) && vb[i].zbuf.zmsk) return false; // ATF, but no Melty Blood
-
-//	Old code
-	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
-}
 
 void __gifCall GIFPackedRegHandlerNull(const u32* data)
 {
@@ -122,35 +82,6 @@ void __gifCall GIFPackedRegHandlerUV(const u32* data)
 	FUNCLOG
 	gs.vertexregs.u = data[0] & 0x3fff;
 	gs.vertexregs.v = data[1] & 0x3fff;
-}
-
-void __forceinline KICK_VERTEX2()
-{
-	FUNCLOG
-
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
-		if (NoHighlights(prim->ctxt)) (*drawfn[prim->prim])();
-
-		gs.primC -= g_primsub[prim->prim];
-	}
-}
-
-void __forceinline KICK_VERTEX3()
-{
-	FUNCLOG
-
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
-		gs.primC -= g_primsub[prim->prim];
-
-		if (prim->prim == 5)
-		{
-			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = gs.primNext();
-		}
-	}
 }
 
 void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)

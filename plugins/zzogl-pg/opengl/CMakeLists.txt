@@ -72,6 +72,7 @@ set(zzoglSources
     ZZoglShoots.cpp
     ZZoglVB.cpp
     ZZKeyboard.cpp
+    ZZKick.cpp
     ZZLog.cpp)
 
 # zzogl headers
@@ -94,6 +95,7 @@ set(zzoglHeaders
     zerogs.h
     zpipe.h
     ZZoglCRTC.h
+    ZZKick.h
     ZZoglMath.h
     ZZoglShaders.h
     ZZoglShoots.h

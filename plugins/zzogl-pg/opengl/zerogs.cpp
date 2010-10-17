@@ -32,6 +32,8 @@
 #include "targets.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
+#include "ZZKick.h"
+
 #ifdef ZEROGS_SSE2
 #include <emmintrin.h>
 #endif
@@ -105,13 +107,6 @@ void RenderCustom(float fAlpha); // intro anim
 // Method Prototypes //
 ///////////////////////
 
-void KickPoint();
-void KickLine();
-void KickTriangle();
-void KickTriangleFan();
-void KickSprite();
-void KickDummy();
-
 void ResolveInRange(int start, int end);
 
 void ExtWrite();
@@ -120,10 +115,6 @@ void ResetRenderTarget(int index)
 {
 	FBTexture(index);
 }
-
-DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
-					 KickDummy, KickDummy, KickDummy, KickDummy
-				   };
 
 // does one time only initializing/destruction
 
@@ -266,15 +257,7 @@ void ZZReset()
 
 	ZZGSStateReset();
 	ZZDestroy(0);
-
-	drawfn[0] = KickDummy;
-	drawfn[1] = KickDummy;
-	drawfn[2] = KickDummy;
-	drawfn[3] = KickDummy;
-	drawfn[4] = KickDummy;
-	drawfn[5] = KickDummy;
-	drawfn[6] = KickDummy;
-	drawfn[7] = KickDummy;
+	clear_drawfn();
 }
 
 void ZZGSReset()
@@ -467,243 +450,7 @@ void RenderCustom(float fAlpha)
 // Internal Definitions //
 //////////////////////////
 
-
-__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
-{
-	p->z = (curvb.zprimmask == 0xffff) ? min((u32)0xffff, gsz) : gsz;
-}
-
-__forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
-{
-	p->f = ((s16)(gsf).f << 7) | 0x7f;
-}
-
-
 int Values[100] = {0, };
-
-inline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
-{
-	int index = Index;
-	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);
-	p->y = ((((int)gs.gsvertex[index].y - curvb.offset.y) >> 1) & 0xffff);
-	p->f = ((s16)gs.gsvertex[index].f << 7) | 0x7f;
-
-	MOVZ(p, gs.gsvertex[index].z, curvb);
-
-	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
-
-// 	This code is somehow incorrect
-//	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0))
-//		p->rgba = 0;
-
-	if (conf.settings().texa)
-	{
-		u32 B = ((p->rgba & 0xfe000000) >> 1) +
-				(0x01000000 * curvb.fba.fba) ;
-		p->rgba = (p->rgba & 0xffffff) + B;
-	}
-
-	if (prim->tme)
-	{
-		if (prim->fst)
-		{
-			p->s = (float)gs.gsvertex[index].u * fiTexWidth[prim->ctxt];
-			p->t = (float)gs.gsvertex[index].v * fiTexHeight[prim->ctxt];
-			p->q = 1;
-		}
-		else
-		{
-			p->s = gs.gsvertex[index].s;
-			p->t = gs.gsvertex[index].t;
-			p->q = gs.gsvertex[index].q;
-		}
-	}
-}
-
-static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
-{
-#ifdef WRITE_PRIM_LOGS
-	ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
-					id == 0 ? '*' : ' ', id, prim->prim, vert.x / 8, vert.y / 8, vert.z, vert.f / 128,
-					vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10));
-#endif
-}
-
-void KickPoint()
-{
-	FUNCLOG
-	assert(gs.primC >= 1);
-
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(1);
-
-	int last = gs.primNext(2);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], last, curvb);
-	curvb.nCount++;
-
-	OUTPUT_VERT(p[0], 0);
-}
-
-void KickLine()
-{
-	FUNCLOG
-	assert(gs.primC >= 2);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(2);
-
-	int next = gs.primNext();
-	int last = gs.primNext(2);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], next, curvb);
-	SET_VERTEX(&p[1], last, curvb);
-
-	curvb.nCount += 2;
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-}
-
-void KickTriangle()
-{
-	FUNCLOG
-	assert(gs.primC >= 3);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(3);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0, curvb);
-	SET_VERTEX(&p[1], 1, curvb);
-	SET_VERTEX(&p[2], 2, curvb);
-
-	curvb.nCount += 3;
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-	OUTPUT_VERT(p[2], 2);
-}
-
-void KickTriangleFan()
-{
-	FUNCLOG
-	assert(gs.primC >= 3);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(3);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0, curvb);
-	SET_VERTEX(&p[1], 1, curvb);
-	SET_VERTEX(&p[2], 2, curvb);
-
-	curvb.nCount += 3;
-
-	// add 1 to skip the first vertex
-
-	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = gs.primNext();
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-	OUTPUT_VERT(p[2], 2);
-}
-
-void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
-{
-	SET_VERTEX(p, next, curvb);
-	MOVZ(p, v.z, curvb);
-	MOVFOG(p, v);
-}
-
-void KickSprite()
-{
-	FUNCLOG
-	assert(gs.primC >= 2);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(6);
-	int next = gs.primNext();
-	int last = gs.primNext(2);
-	
-	// sprite is too small and AA shows lines (tek4, Mana Khemia)
-	gs.gsvertex[last].x += (4 * AA.x);
-	gs.gsvertex[last].y += (4 * AA.y);
-
-	// might be bad sprite (KH dialog text)
-	//if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
-	//return;
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-
-	SetKickVertex(&p[0], gs.gsvertex[last], next, curvb);
-	SetKickVertex(&p[3], gs.gsvertex[last], next, curvb);
-	SetKickVertex(&p[1], gs.gsvertex[last], last, curvb);
-	SetKickVertex(&p[4], gs.gsvertex[last], last, curvb);
-	SetKickVertex(&p[2], gs.gsvertex[last], next, curvb);
-
-	p[2].s = p[1].s;
-	p[2].x = p[1].x;
-
-	SetKickVertex(&p[5], gs.gsvertex[last], last, curvb);
-
-	p[5].s = p[0].s;
-	p[5].x = p[0].x;
-
-	curvb.nCount += 6;
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-}
-
-void KickDummy()
-{
-	FUNCLOG
-	//ZZLog::Greg_Log("Kicking bad primitive: %.8x\n", *(u32*)prim);
-}
 
 void SetFogColor(u32 fog)
 {

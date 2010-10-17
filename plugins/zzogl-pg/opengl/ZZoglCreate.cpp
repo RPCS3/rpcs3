@@ -28,7 +28,7 @@
 
 #include "targets.h"
 #include "rasterfont.h" // simple font
-
+#include "ZZKick.h"
 
 // This include for windows resource file with Shaders
 #ifdef _WIN32
@@ -76,12 +76,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
 map<string, GLbyte> mapGLExtensions;
 
-extern void KickPoint();
-extern void KickLine();
-extern void KickTriangle();
-extern void KickTriangleFan();
-extern void KickSprite();
-extern void KickDummy();
 extern bool LoadEffects();
 extern bool ZZshLoadExtraEffects();
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
@@ -508,15 +502,8 @@ bool ZZCreate(int _width, int _height)
 	if (err != GL_NO_ERROR) bSuccess = false;
 
 	// init draw fns
-	drawfn[0] = KickPoint;
-	drawfn[1] = KickLine;
-	drawfn[2] = KickLine;
-	drawfn[3] = KickTriangle;
-	drawfn[4] = KickTriangle;
-	drawfn[5] = KickTriangleFan;
-	drawfn[6] = KickSprite;
-	drawfn[7] = KickDummy;
-
+	init_drawfn();
+	
 	SetAA(conf.aa);
 
 	GSsetGameCRC(g_LastCRC, conf.settings()._u32);

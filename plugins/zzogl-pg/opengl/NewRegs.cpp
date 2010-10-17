@@ -28,9 +28,7 @@
 #ifdef USE_OLD_REGS
 #include "Regs.h"
 #else
-
-const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
-const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
+#include "ZZKick.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -45,28 +43,6 @@ u32 s_uTex1Data[2][2] = {{0, }};
 u32 s_uClampData[2] = {0, };
 
 //u32 results[65535] = {0, };
-
-// return true if triangle SHOULD be painted.
-// My brain hurts. --arcum42
-
-// return true if triangle SHOULD be painted.
-inline bool NoHighlights(int i)
-{
-//	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
-
-	int dummy = 0;
-	
-	u32 resultA = prim->iip + (2 * (prim->tme)) + (4 * (prim->fge)) + (8 * (prim->abe)) + (16 * (prim->aa1)) + (32 * (prim->fst)) + (64 * (prim->ctxt)) + (128 * (prim->fix));
-	
-	const pixTest curtest = vb[i].test;
-	
-	u32 result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
-	
-	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
-	
-	//Old code
-	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
-}
 
 void __gifCall GIFPackedRegHandlerNull(const u32* data)
 {
@@ -125,24 +101,6 @@ void __gifCall GIFPackedRegHandlerUV(const u32* data)
 	gs.vertexregs.u = r->U;
 	gs.vertexregs.v = r->V;
 	ZZLog::Greg_Log("Packed UV: 0x%x, 0x%x", r->U, r->V);
-}
-
-void __gifCall KickVertex(bool adc)
-{
-	FUNCLOG
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
-		if (!adc && NoHighlights(prim->ctxt)) (*drawfn[prim->prim])();
-		
-		gs.primC -= g_primsub[prim->prim];
-
-		if (adc && prim->prim == 5)
-		{
-			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = gs.primNext();
-		}
-	}
 }
 
 void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
