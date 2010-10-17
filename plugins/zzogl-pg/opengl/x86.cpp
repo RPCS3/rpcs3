@@ -594,6 +594,7 @@ void __fastcall Frame16SwizzleBlock16ZA4_c(u16* dst, Vector_16F* src, int srcpit
 //  }
 //}
 
+#if 0
 extern "C" void __fastcall WriteCLUT_T32_I8_CSM1_sse2(u32* vm, u32* clut)
 {
 	__m128i* src = (__m128i*)vm;
@@ -1137,9 +1138,11 @@ __forceinline void  WriteCLUT_T16_I8_CSM1_sse2(u32* vm, u32 csa)
         vm += 16; // go down one column
     }
 }
+#endif
 
 #endif // ZEROGS_SSE2
 
+#if 0
 void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* _vm, u32* _clut)
 {
 	const static u32 map[] =
@@ -1250,6 +1253,8 @@ void __fastcall WriteCLUT_T32_I4_CSM1_c(u32* vm, u32* clut)
 	dst[6] = src[5];
 	dst[7] = src[7];
 }
+
+#endif
 
 void SSE2_UnswizzleZ16Target(u16* dst, u16* src, int iters)
 {

@@ -46,6 +46,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zzogl sources
 set(zzoglSources
+    Clut.cpp
     GifTransfer.cpp
     GLWin32.cpp
     GLWinX11.cpp
@@ -77,6 +78,7 @@ set(zzoglSources
 
 # zzogl headers
 set(zzoglHeaders
+    Clut.h
     common.h
     CRC.h
     GifTransfer.h

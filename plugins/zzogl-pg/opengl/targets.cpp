@@ -26,6 +26,7 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
+#include "Clut.h"
 
 #ifdef ZEROGS_SSE2
 #include <emmintrin.h>
@@ -1642,87 +1643,6 @@ void CMemoryTargetMngr::Destroy()
 	listClearedTargets.clear();
 }
 
-int memcmp_clut16(u16* pSavedBuffer, u16* pClutBuffer, int clutsize)
-{
-	FUNCLOG
-	assert((clutsize&31) == 0);
-
-	// left > 0 only when csa < 16
-	int left = 0;
-	if (((u32)(uptr)pClutBuffer & 2) == 0)
-	{
-		left = (((u32)(uptr)pClutBuffer & 0x3ff) / 2) + clutsize - 512;
-		clutsize -= left;
-	}
-
-	while (clutsize > 0)
-	{
-		for (int i = 0; i < 16; ++i)
-		{
-			if (pSavedBuffer[i] != pClutBuffer[2*i]) return 1;
-		}
-
-		clutsize -= 32;
-		pSavedBuffer += 16;
-		pClutBuffer += 32;
-	}
-
-	if (left > 0)
-	{
-		pClutBuffer = (u16*)(g_pbyGSClut + 2);
-
-		while (left > 0)
-		{
-			for (int i = 0; i < 16; ++i)
-			{
-				if (pSavedBuffer[i] != pClutBuffer[2*i]) return 1;
-			}
-
-			left -= 32;
-
-			pSavedBuffer += 16;
-			pClutBuffer += 32;
-		}
-	}
-
-	return 0;
-}
-
-#if 0
-bool CMemoryTarget::ValidateClut(const tex0Info& tex0)
-{
-	FUNCLOG
-	assert(tex0.psm == psm && PSMT_ISCLUT(psm) && cpsm == tex0.cpsm);
-
-	int nClutOffset = 0, clutsize = 0;
-	int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
-
-	if (PSMT_IS32BIT(tex0.cpsm))   // 32 bit
-	{
-		nClutOffset = 64 * tex0.csa;
-		clutsize = min(entries, 256 - tex0.csa * 16) * 4;
-	}
-	else
-	{
-		nClutOffset = 32 * (tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0);
-		clutsize = min(entries, 512 - tex0.csa * 16) * 2;
-	}
-
-	assert(clutsize == clut.size());
-
-	if (PSMT_IS32BIT(cpsm))
-	{
-		if (memcmp_mmx(&clut[0], g_pbyGSClut + nClutOffset, clutsize)) return false;
-	}
-	else
-	{
-		if (memcmp_clut16((u16*)&clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize)) return false;
-	}
-
-	return true;
-}
-#endif
-
 bool CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex)
 {
 	FUNCLOG
@@ -1783,113 +1703,6 @@ bool CMemoryTarget::ValidateTex(const tex0Info& tex0, int starttex, int endtex, 
 	return false;
 }
 
-// used to build clut textures (note that this is for both 16 and 32 bit cluts)
-template <class T>
-static __forceinline void BuildClut(u32 psm, u32 height, T* pclut, u8* psrc, T* pdst)
-{
-	switch (psm)
-	{
-		case PSMT8:
-			for (u32 i = 0; i < height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH / 2; ++j)
-				{
-					pdst[0] = pclut[psrc[0]];
-					pdst[1] = pclut[psrc[1]];
-					pdst[2] = pclut[psrc[2]];
-					pdst[3] = pclut[psrc[3]];
-					pdst[4] = pclut[psrc[4]];
-					pdst[5] = pclut[psrc[5]];
-					pdst[6] = pclut[psrc[6]];
-					pdst[7] = pclut[psrc[7]];
-					pdst += 8;
-					psrc += 8;
-				}
-			}
-			break;
-
-		case PSMT4:
-			for (u32 i = 0; i < height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH; ++j)
-				{
-					pdst[0] = pclut[psrc[0] & 15];
-					pdst[1] = pclut[psrc[0] >> 4];
-					pdst[2] = pclut[psrc[1] & 15];
-					pdst[3] = pclut[psrc[1] >> 4];
-					pdst[4] = pclut[psrc[2] & 15];
-					pdst[5] = pclut[psrc[2] >> 4];
-					pdst[6] = pclut[psrc[3] & 15];
-					pdst[7] = pclut[psrc[3] >> 4];
-
-					pdst += 8;
-					psrc += 4;
-				}
-			}
-			break;
-
-		case PSMT8H:
-			for (u32 i = 0; i < height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH / 8; ++j)
-				{
-					pdst[0] = pclut[psrc[3]];
-					pdst[1] = pclut[psrc[7]];
-					pdst[2] = pclut[psrc[11]];
-					pdst[3] = pclut[psrc[15]];
-					pdst[4] = pclut[psrc[19]];
-					pdst[5] = pclut[psrc[23]];
-					pdst[6] = pclut[psrc[27]];
-					pdst[7] = pclut[psrc[31]];
-					pdst += 8;
-					psrc += 32;
-				}
-			}
-			break;
-
-		case PSMT4HH:
-			for (u32 i = 0; i < height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH / 8; ++j)
-				{
-					pdst[0] = pclut[psrc[3] >> 4];
-					pdst[1] = pclut[psrc[7] >> 4];
-					pdst[2] = pclut[psrc[11] >> 4];
-					pdst[3] = pclut[psrc[15] >> 4];
-					pdst[4] = pclut[psrc[19] >> 4];
-					pdst[5] = pclut[psrc[23] >> 4];
-					pdst[6] = pclut[psrc[27] >> 4];
-					pdst[7] = pclut[psrc[31] >> 4];
-					pdst += 8;
-					psrc += 32;
-				}
-			}
-			break;
-
-		case PSMT4HL:
-			for (u32 i = 0; i < height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH / 8; ++j)
-				{
-					pdst[0] = pclut[psrc[3] & 15];
-					pdst[1] = pclut[psrc[7] & 15];
-					pdst[2] = pclut[psrc[11] & 15];
-					pdst[3] = pclut[psrc[15] & 15];
-					pdst[4] = pclut[psrc[19] & 15];
-					pdst[5] = pclut[psrc[23] & 15];
-					pdst[6] = pclut[psrc[27] & 15];
-					pdst[7] = pclut[psrc[31] & 15];
-					pdst += 8;
-					psrc += 32;
-				}
-			}
-			break;
-
-		default:
-			assert(0);
-	}
-}
-
 #define TARGET_THRESH 0x500
 
 extern int g_MaxTexWidth, g_MaxTexHeight; // Maximum height & width of supported texture.
@@ -1926,10 +1739,10 @@ int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const te
 			return 1;
 
 		if	(PSMT_IS32BIT(tex0.cpsm)) {
-			if (memcmp_mmx(&it->clut[0], g_pbyGSClut + nClutOffset, clutsize))
+			if (Cmp_ClutBuffer_SavedClut<u32>((u32*)&it->clut[0], (u32*)(g_pbyGSClut + nClutOffset), clutsize))
 				return 2;
 		} else {
-			if (memcmp_clut16((u16*)&it->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize))
+			if (Cmp_ClutBuffer_SavedClut<u16>((u16*)&it->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize))
 				return 2;
 		}
 
@@ -2136,38 +1949,9 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 		targ->clut.resize(clutsize);
 
 		if (PSMT_IS32BIT(tex0.cpsm))
-		{
-			memcpy_amd(&targ->clut[0], g_pbyGSClut + nClutOffset, clutsize);
-		}
-		else
-		{
-			u16* pClutBuffer = (u16*)(g_pbyGSClut + nClutOffset);
-			u16* pclut = (u16*) & targ->clut[0];
-			int left = ((u32)nClutOffset & 2) ? 0 : ((nClutOffset & 0x3ff) / 2) + clutsize - 512;
-
-			if (left > 0) clutsize -= left;
-
-			while (clutsize > 0)
-			{
-				pclut[0] = pClutBuffer[0];
-				pclut++;
-				pClutBuffer += 2;
-				clutsize -= 2;
-			}
-
-			if (left > 0)
-			{
-				pClutBuffer = (u16*)(g_pbyGSClut + 2);
-
-				while (left > 0)
-				{
-					pclut[0] = pClutBuffer[0];
-					left -= 2;
-					pClutBuffer += 2;
-					pclut++;
-				}
-			}
-		}
+            ClutBuffer_to_Array<u32>((u32*)&targ->clut[0], (u32*)(g_pbyGSClut + nClutOffset), clutsize);
+        else
+            ClutBuffer_to_Array<u16>((u16*)&targ->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize);
 	}
 
 	if (targ->ptex != NULL)
@@ -2226,14 +2010,14 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 			u32* pclut = (u32*) & targ->clut[0];
 			u32* pdst = (u32*)ptexdata;
 
-			BuildClut<u32>(tex0.psm, targ->height, pclut, psrc, pdst);
+			Build_Clut_Texture<u32>(tex0.psm, targ->height, pclut, psrc, pdst);
 		}
 		else
 		{
 			u16* pclut = (u16*) & targ->clut[0];
 			u16* pdst = (u16*)ptexdata;
 
-			BuildClut<u16>(tex0.psm, targ->height, pclut, psrc, pdst);
+			Build_Clut_Texture<u16>(tex0.psm, targ->height, pclut, psrc, pdst);
 		}
 	}
 	else

@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #ifndef ZZLOG_H_INCLUDED
 #define ZZLOG_H_INCLUDED
 
@@ -110,7 +110,7 @@ static bool SPAM_PASS;
 	if( err != GL_NO_ERROR ) \
 	{ \
 		ZZLog::Error_Log("%s:%d: gl error %s (0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
-		HandleGLError(); \
+		/* HandleGLError();*/ \
 	} \
 }
 #else
@@ -148,7 +148,7 @@ inline const char *error_name(int err)
 
 		case GL_INVALID_FRAMEBUFFER_OPERATION:
 			return "GL_INVALID_FRAMEBUFFER_OPERATION";
-			
+
 		default:
 			return "Unknown GL error";
 	}

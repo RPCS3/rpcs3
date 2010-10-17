@@ -33,10 +33,7 @@
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 #include "ZZKick.h"
-
-#ifdef ZEROGS_SSE2
-#include <emmintrin.h>
-#endif
+#include "Clut.h"
 
 //----------------------- Defines
 
@@ -518,217 +515,6 @@ void ExtWrite()
 //	case 7: ASSERT(0); return false;
 //	default: __assume(0);
 
-bool IsDirty(u32 highdword, u32 psm, int cld, int cbp)
-{
-	int cpsm = ZZOglGet_cpsm_TexBits(highdword);
-	int csm = ZZOglGet_csm_TexBits(highdword);
-
-	if (cpsm > 1 || csm)
-	{
-		// Mana Khemia triggers this.
-        //ZZLog::Error_Log("16 bit clut not supported.");
-		return true;
-	}
-
-	int csa = ZZOglGet_csa_TexBits(highdword);
-
-	int entries = PSMT_IS8CLUT(psm) ? 256 : 16;
-
-	u64* src = (u64*)(g_pbyGSMemory + cbp * 256);
-	u64* dst = (u64*)(g_pbyGSClut + 64 * csa);
-
-	bool bRet = false;
-
-#define TEST_THIS
-#ifdef TEST_THIS
-    while(entries != 0) {
-#ifdef ZEROGS_SSE2
-        // Note: local memory datas are swizzles
-        __m128i src_0 = _mm_load_si128((__m128i*)src);   // 9  8  1 0
-        __m128i src_1 = _mm_load_si128((__m128i*)src+1); // 11 10 3 2
-        __m128i src_2 = _mm_load_si128((__m128i*)src+2); // 13 12 5 4
-        __m128i src_3 = _mm_load_si128((__m128i*)src+3); // 15 14 7 6
-
-        __m128i dst_0 = _mm_load_si128((__m128i*)dst);
-        __m128i dst_1 = _mm_load_si128((__m128i*)dst+1);
-        __m128i dst_2 = _mm_load_si128((__m128i*)dst+2);
-        __m128i dst_3 = _mm_load_si128((__m128i*)dst+3);
-
-        __m128i result = _mm_cmpeq_epi32(_mm_unpacklo_epi64(src_0, src_1), dst_0);
-
-        __m128i result_tmp = _mm_cmpeq_epi32(_mm_unpacklo_epi64(src_2, src_3), dst_1);
-        result = _mm_and_si128(result, result_tmp);
-
-        result_tmp = _mm_cmpeq_epi32(_mm_unpackhi_epi64(src_0, src_1), dst_2);
-        result = _mm_and_si128(result, result_tmp);
-
-        result_tmp = _mm_cmpeq_epi32(_mm_unpackhi_epi64(src_2, src_3), dst_3);
-        result = _mm_and_si128(result, result_tmp);
-
-        u32 result_int = _mm_movemask_epi8(result);
-        if (result_int != 0xFFFF) {
-            bRet = true;
-            break;
-        }
-#else
-        // I see no point to keep an mmx version. SSE2 versions is probably faster.
-        // Keep a slow portable C version for reference/debug
-        // Note: local memory datas are swizzles
-        if (dst[0] != src[0] || dst[1] != src[2] || dst[2] != src[4] || dst[3] != src[6]
-                || dst[4] != src[1] || dst[5] != src[3] || dst[6] != src[5] || dst[7] != src[7]) {
-            bRet = true;
-            break;
-        }
-#endif
-
-        // go to the next memory block
-        src += 32;
-
-        // go back to the previous memory block then down one memory column
-        if (entries & 0x10) {
-            src -= (64-8);
-        }
-        // In case previous operation (down one column) cross the block boundary
-        // Go to the next block
-        if (entries == 0x90) {
-            src += 32;
-        }
-
-        dst += 8;
-        entries -= 16;
-    }
-#else
-
-	// do a fast test with MMX
-#ifdef _MSC_VER
-	int storeebx;
-	__asm
-	{
-		mov storeebx, ebx
-		mov edx, dst
-		mov ecx, src
-		mov ebx, entries
-
-Start:
-		movq mm0, [edx]
-		movq mm1, [edx+8]
-		pcmpeqd mm0, [ecx]
-		pcmpeqd mm1, [ecx+16]
-
-		movq mm2, [edx+16]
-		movq mm3, [edx+24]
-		pcmpeqd mm2, [ecx+32]
-		pcmpeqd mm3, [ecx+48]
-
-		pand mm0, mm1
-		pand mm2, mm3
-		movq mm4, [edx+32]
-		movq mm5, [edx+40]
-		pcmpeqd mm4, [ecx+8]
-		pcmpeqd mm5, [ecx+24]
-
-		pand mm0, mm2
-		pand mm4, mm5
-		movq mm6, [edx+48]
-		movq mm7, [edx+56]
-		pcmpeqd mm6, [ecx+40]
-		pcmpeqd mm7, [ecx+56]
-
-		pand mm0, mm4
-		pand mm6, mm7
-		pand mm0, mm6
-
-		pmovmskb eax, mm0
-		cmp eax, 0xff
-		je Continue
-		mov bRet, 1
-		jmp Return
-
-Continue:
-		cmp ebx, 16
-		jle Return
-
-		test ebx, 0x10
-		jz AddEcx
-		sub ecx, 448 // go back and down one column,
-
-AddEcx:
-		add ecx, 256 // go to the right block
-
-
-		jne Continue1
-		add ecx, 256 // skip whole block
-
-Continue1:
-		add edx, 64
-		sub ebx, 16
-		jmp Start
-
-Return:
-		emms
-		mov ebx, storeebx
-	}
-
-#else // linux
-	// do a fast test with MMX
-	__asm__(
-		".intel_syntax\n"
-		"Start:\n"
-		"movq %%mm0, [%%ecx]\n"
-		"movq %%mm1, [%%ecx+8]\n"
-		"pcmpeqd %%mm0, [%%edx]\n"
-		"pcmpeqd %%mm1, [%%edx+16]\n"
-		"movq %%mm2, [%%ecx+16]\n"
-		"movq %%mm3, [%%ecx+24]\n"
-		"pcmpeqd %%mm2, [%%edx+32]\n"
-		"pcmpeqd %%mm3, [%%edx+48]\n"
-		"pand %%mm0, %%mm1\n"
-		"pand %%mm2, %%mm3\n"
-		"movq %%mm4, [%%ecx+32]\n"
-		"movq %%mm5, [%%ecx+40]\n"
-		"pcmpeqd %%mm4, [%%edx+8]\n"
-		"pcmpeqd %%mm5, [%%edx+24]\n"
-		"pand %%mm0, %%mm2\n"
-		"pand %%mm4, %%mm5\n"
-		"movq %%mm6, [%%ecx+48]\n"
-		"movq %%mm7, [%%ecx+56]\n"
-		"pcmpeqd %%mm6, [%%edx+40]\n"
-		"pcmpeqd %%mm7, [%%edx+56]\n"
-		"pand %%mm0, %%mm4\n"
-		"pand %%mm6, %%mm7\n"
-		"pand %%mm0, %%mm6\n"
-		"pmovmskb %%eax, %%mm0\n"
-		"cmp %%eax, 0xff\n"
-		"je Continue\n"
-		".att_syntax\n"
-		"movb $1, %0\n"
-		".intel_syntax\n"
-		"jmp Return\n"
-		"Continue:\n"
-		"cmp %%esi, 16\n"
-		"jle Return\n"
-		"test %%esi, 0x10\n"
-		"jz AddEcx\n"
-		"sub %%edx, 448\n" // go back and down one column
-		"AddEcx:\n"
-		"add %%edx, 256\n" // go to the right block
-		"cmp %%esi, 0x90\n"
-		"jne Continue1\n"
-		"add %%edx, 256\n" // skip whole block
-		"Continue1:\n"
-		"add %%ecx, 64\n"
-		"sub %%esi, 16\n"
-		"jmp Start\n"
-		"Return:\n"
-		"emms\n"
-
-	".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "S"(entries) : "eax", "memory");
-
-#endif // _WIN32
-#endif
-	return bRet;
-}
-
 // cld state:
 // 000 - clut data is not loaded; data in the temp buffer is stored
 // 001 - clut data is always loaded.
@@ -769,16 +555,29 @@ bool CheckChangeInClut(u32 highdword, u32 psm)
 			if (gs.cbp[1] == cbp) return false;
 			break;
 
-			//case 4: return gs.cbp[0] != cbp;
-			//case 5: return gs.cbp[1] != cbp;
-
-			// default: load
-
 		default:
 			break;
 	}
 
-	return IsDirty(highdword, psm, cld, cbp);
+    // Compare the cache with current memory
+
+    // CSM2 is not supported
+    if (ZZOglGet_csm_TexBits(highdword))
+		return true;
+
+	int cpsm = ZZOglGet_cpsm_TexBits(highdword);
+	int csa = ZZOglGet_csa_TexBits(highdword);
+	int entries = PSMT_IS8CLUT(psm) ? 256 : 16;
+
+	u8* GSMem = g_pbyGSMemory + cbp * 256;
+
+    if (PSMT_IS32BIT(cpsm))
+        return Cmp_ClutBuffer_GSMem<u32>((u32*)GSMem, csa, entries);
+    else {
+		// Mana Khemia triggers this.
+        //ZZLog::Error_Log("16 bit clut not supported.");
+		return Cmp_ClutBuffer_GSMem<u16>((u16*)GSMem, csa, entries);
+    }
 }
 
 void texClutWrite(int ctx)
@@ -823,118 +622,7 @@ void texClutWrite(int ctx)
 
 	Flush(!ctx);
 
-	int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
-
-	if (tex0.csm)
-	{
-		switch (tex0.cpsm)
-		{
-				// 16bit psm
-				// eggomania uses non16bit textures for csm2
-
-			case PSMCT16:
-			{
-				u16* src = (u16*)g_pbyGSMemory + tex0.cbp * 128;
-				u16 *dst = (u16*)(g_pbyGSClut + 64 * (tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0));
-
-				for (int i = 0; i < entries; ++i)
-				{
-					*dst = src[getPixelAddress16_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
-					dst += 2;
-
-					// check for wrapping
-
-					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut + 2);
-				}
-				break;
-			}
-
-			case PSMCT16S:
-			{
-				u16* src = (u16*)g_pbyGSMemory + tex0.cbp * 128;
-				u16 *dst = (u16*)(g_pbyGSClut + 64 * (tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0));
-
-				for (int i = 0; i < entries; ++i)
-				{
-					*dst = src[getPixelAddress16S_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
-					dst += 2;
-
-					// check for wrapping
-
-					if (((u32)(uptr)dst & 0x3ff) == 0) dst = (u16*)(g_pbyGSClut + 2);
-				}
-				break;
-			}
-
-			case PSMCT32:
-			case PSMCT24:
-			{
-				u32* src = (u32*)g_pbyGSMemory + tex0.cbp * 64;
-				u32 *dst = (u32*)(g_pbyGSClut + 64 * tex0.csa);
-
-				// check if address exceeds src
-
-				if (src + getPixelAddress32_0(gs.clut.cou + entries - 1, gs.clut.cov, gs.clut.cbw) >= (u32*)g_pbyGSMemory + 0x00100000)
-					ZZLog::Error_Log("texClutWrite out of bounds.");
-				else
-					for (int i = 0; i < entries; ++i)
-					{
-						*dst = src[getPixelAddress32_0(gs.clut.cou+i, gs.clut.cov, gs.clut.cbw)];
-						dst++;
-					}
-				break;
-			}
-
-			default:
-			{
-				//ZZLog::Debug_Log("Unknown cpsm: %x (%x).", tex0.cpsm, tex0.psm);
-				break;
-			}
-		}
-	}
-	else
-	{
-		u32* src = (u32*)(g_pbyGSMemory + 256 * tex0.cbp);
-		
-		if (entries == 16)
-		{
-			switch (tex0.cpsm)
-			{
-				case PSMCT24:
-				case PSMCT32:
-					WriteCLUT_T32_I4_CSM1(src, (u32*)(g_pbyGSClut + 64 * tex0.csa));
-					break;
-
-				default:
-#ifdef ZEROGS_SSE2
-					WriteCLUT_T16_I4_CSM1_sse2(src, tex0.csa);
-#else
-					WriteCLUT_T16_I4_CSM1_c(src, (u32*)(g_pbyGSClut + 64*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
-#endif
-					break;
-			}
-		}
-		else
-		{
-			switch (tex0.cpsm)
-			{
-				case PSMCT24:
-				case PSMCT32:
-					WriteCLUT_T32_I8_CSM1(src, (u32*)(g_pbyGSClut + 64 * tex0.csa));
-					break;
-
-				default:
-					// sse2 for 256 is more complicated, so use regular
-#ifdef ZEROGS_SSE2
-					WriteCLUT_T16_I8_CSM1_sse2(src, tex0.csa);
-#else
-					WriteCLUT_T16_I8_CSM1_c(src, (u32*)(g_pbyGSClut + 64*(tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0)));
-#endif
-					break;
-			}
-
-		}
-	}
+    // Write the memory to clut buffer
+    GSMem_to_ClutBuffer(tex0);
 }
-
 
