@@ -36,7 +36,6 @@ extern int s_frameskipping;
 extern float fFPS;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
 
-//extern u32 g_SaveFrameNum;
 extern int s_nWriteDepthCount;
 extern int s_nWireframeCount;
 extern int s_nWriteDestAlphaTest;

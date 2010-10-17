@@ -24,6 +24,7 @@
 #include "ZZoglCRTC.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
+#include "rasterfont.h" // simple font
 
 //------------------ Defines
 #if !defined(ZEROGS_DEVBUILD)
@@ -137,9 +138,6 @@ inline void FrameSavingHelper()
 		}
 #endif
 	}
-
-//	g_SaveFrameNum = 0;
-//	g_bSaveFlushedFrame = 1;
 }
 
 // Function populated tex0Info[2] array
@@ -179,17 +177,6 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 // Something should be done before Renderering the picture.
 inline void RenderStartHelper(u32 bInterlace)
 {
-	// Crashes Final Fantasy X at startup if uncommented. --arcum42
-//#ifdef !defined(ZEROGS_DEVBUILD)
-//	if(g_nRealFrame < 80 ) {
-//		RenderCustom( min(1.0f, 2.0f - (float)g_nRealFrame / 40.0f) );
-//
-//	  if( g_nRealFrame == 79 )
-//		SAFE_RELEASE_TEX(ptexLogo);
-//	  return;
-//	}
-//#endif
-
 	if (conf.mrtdepth && pvs[8] == NULL)
 	{
 		conf.mrtdepth = 0;
@@ -632,6 +619,21 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	DrawTriangleArray();
 }
 
+extern RasterFont* font_p;
+
+void DrawText(const char* pstr, int left, int top, u32 color)
+{
+	FUNCLOG
+	ZZshGLDisableProfile();
+
+	float4 v;
+	v.SetColor(color);
+	glColor3f(v.z, v.y, v.x);
+
+	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
+	ZZshGLEnableProfile();
+}
+
 // Put FPS counter on screen (not in window title)
 inline void AfterRenderDisplayFPS()
 {
@@ -740,6 +742,8 @@ inline void AfterRendererUnimportantJob()
 
 	maxmin = 608;
 }
+
+extern u32 s_uFramebuffer;
 
 // Swich Framebuffers
 inline void AfterRendererSwitchBackToTextures()

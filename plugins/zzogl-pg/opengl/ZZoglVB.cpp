@@ -354,6 +354,8 @@ inline void VB::CheckFrame16vs32Conversion()
 	}
 }
 
+void SetContextTarget(int context);
+
 // A lot of times, the target is too big and overwrites the texture.
 // If tbp != 0, use it to bound.
 void VB::CheckFrame(int tbp)

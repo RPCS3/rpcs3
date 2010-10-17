@@ -912,6 +912,21 @@ inline bool ZZOglClutStorageUnchanged(const u32* oldtex, const u32* newtex)
 	return ((oldtex[1] & 0x1ff10000) == (newtex[1] & 0x1ff10000));
 }
 
+// call to load CLUT data (depending on CLD)
+void texClutWrite(int ctx);
+
+// Perform clutting for flushed texture. Better check if it needs a prior call.
+inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
+{
+	tex0->cbp  = ZZOglGet_cbp_TexBits(Data);
+	tex0->cpsm = ZZOglGet_cpsm_TexBits(Data);
+	tex0->csm  = ZZOglGet_csm_TexBits(Data);
+	tex0->csa  = ZZOglGet_csa_TexBits(Data);
+	tex0->cld  = ZZOglGet_cld_TexBits(Data);
+
+	texClutWrite(ictx);
+ };
+ 
 // CSA and CPSM bitmask 0001 1111 0111 1000 ...
 //                         60   56   52
 #define CPSM_CSA_BITMASK 0x1f780000

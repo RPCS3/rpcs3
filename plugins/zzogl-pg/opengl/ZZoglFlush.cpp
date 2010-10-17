@@ -120,7 +120,6 @@ void Draw(const VB& curvb)
 extern int g_nDepthBias;
 extern float g_fBlockMult; // used for old cards, that do not support Alpha-32float textures. We store block data in u16 and use it.
 bool g_bUpdateStencil = 1;
-//u32 g_SaveFrameNum = 0;									// ZZ
 
 extern ZZshProgram g_psprog;							// 2 -- ZZ
 
@@ -216,6 +215,8 @@ inline void ProcessStencil(const VB& curvb);
 inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor);
 inline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor);			// zz
 
+void SetContextTarget(int context);
+
 //------------------ Code
 
 inline float AlphaReferedValue(int aref)
@@ -270,6 +271,8 @@ inline void SwitchWireframeOn()
 		}
 	}
 }
+
+extern u32 ptexBilinearBlocks;
 
 int GetTexFilter(const tex1Info& tex1)
 {
@@ -336,7 +339,6 @@ inline void VisualBufferMessage(int context)
 	ZZLog::Error_Log("TGA name '%s'.", Name);
 	free(Name);
 //	}
-//	ZZLog::Debug_Log("frame: %d, buffer %ld.\n", g_SaveFrameNum, BufferNumber);
 	ZZLog::Debug_Log("buffer %ld.\n", BufferNumber);
 #endif
 }
@@ -345,12 +347,10 @@ inline void SaveRendererTarget(VB& curvb)
 {
 #ifdef _DEBUG
 
-//	if (g_bSaveFlushedFrame & 0x80000000)
-//	{
+//		Needs a # after rndr to work...
 //		char str[255];
-//		sprintf(str, "rndr%d.tga", g_SaveFrameNum);
+//		sprintf(str, "rndr.tga");
 //		SaveRenderTarget(str, curvb.prndr->fbw, curvb.prndr->fbh, 0);
-//	}
 
 #endif
 }
@@ -1439,7 +1439,6 @@ inline void AlphaSaveTarget(VB& curvb)
 #ifdef _DEBUG
 	return; // Do nothing
 
-//	if( g_bSaveFlushedFrame & 0xf ) {
 //#ifdef _WIN32
 //		CreateDirectory("frames", NULL);
 //#else
@@ -1448,13 +1447,14 @@ inline void AlphaSaveTarget(VB& curvb)
 //		system(strdir);
 //#endif
 //		char str[255];
-//		sprintf(str, "frames/frame%.4d.tga", g_SaveFrameNum++);
+
+//		Needs a # after frame to work properly.
+//		sprintf(str, "frames/frame.tga");
 
 //		//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
 //		//glFlush();
 //		//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
 //		SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
-//	}
 #endif
 }
 

@@ -38,7 +38,6 @@ using namespace std;
 #include "targets.h"
 #include "ZZoglShaders.h"
 #include "ZZoglFlushHack.h"
-#include "ZZoglFlushHack.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)

@@ -95,26 +95,11 @@ int nBackbufferWidth, nBackbufferHeight;									// ZZ
 
 extern CRangeManager s_RangeMngr; // manages overwritten memory
 
-// returns the first and last addresses aligned to a page that cover
-void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
-
 int s_nNewWidth = -1, s_nNewHeight = -1;
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 
 void ProcessMessages();
 void RenderCustom(float fAlpha); // intro anim
-
-struct MESSAGE
-{
-	MESSAGE() {}
-
-	MESSAGE(const char* p, u32 dw) { strcpy(str, p); dwTimeStamp = dw; }
-
-	char str[255];
-	u32 dwTimeStamp;
-};
-
-static list<MESSAGE> listMsgs;
 
 ///////////////////////
 // Method Prototypes //
@@ -320,28 +305,6 @@ void ZZGSSoftReset(u32 mask)
 	gs.nTriFanVert = -1;
 }
 
-void ZZAddMessage(const char* pstr, u32 ms)
-{
-	FUNCLOG
-	listMsgs.push_back(MESSAGE(pstr, timeGetTime() + ms));
-	ZZLog::Log("%s\n", pstr);
-}
-
-extern RasterFont* font_p;
-void DrawText(const char* pstr, int left, int top, u32 color)
-{
-	FUNCLOG
-	ZZshGLDisableProfile();
-
-	float4 v;
-	v.SetColor(color);
-	glColor3f(v.z, v.y, v.x);
-	//glColor3f(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff)/ 255.0f, (color & 0xff) / 255.0f);
-
-	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
-	ZZshGLEnableProfile();
-}
-
 void ChangeWindowSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
@@ -443,27 +406,8 @@ void Prim()
 	curvb.curprim.prim = prim->prim;
 }
 
-void ProcessMessages()
-{
-	FUNCLOG
-
-	if (listMsgs.size() > 0)
-	{
-		int left = 25, top = 15;
-		list<MESSAGE>::iterator it = listMsgs.begin();
-
-		while (it != listMsgs.end())
-		{
-			DrawText(it->str, left + 1, top + 1, 0xff000000);
-			DrawText(it->str, left, top, 0xffffff30);
-			top += 15;
-
-			if ((int)(it->dwTimeStamp - timeGetTime()) < 0)
-				it = listMsgs.erase(it);
-			else ++it;
-		}
-	}
-}
+extern u32 ptexLogo;
+extern int nLogoWidth, nLogoHeight;
 
 void RenderCustom(float fAlpha)
 {

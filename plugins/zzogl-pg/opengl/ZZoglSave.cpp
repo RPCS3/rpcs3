@@ -85,6 +85,8 @@ int ZZSave(s8* pbydata)
 	return 0;
 }
 
+extern u32 s_uFramebuffer;
+
 bool ZZLoad(s8* pbydata)
 {
 	memset(s_uTex1Data, 0, sizeof(s_uTex1Data));

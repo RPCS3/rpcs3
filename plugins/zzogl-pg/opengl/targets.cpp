@@ -30,6 +30,7 @@
 #include <emmintrin.h>
 #endif
 
+const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 #define RHA
 //#define RW
 

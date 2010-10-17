@@ -34,51 +34,12 @@
 #include "ZZGl.h"
 #include "GS.h"
 #include "CRC.h"
-#include "rasterfont.h" // simple font
 #include "targets.h"
-
-using namespace std;
-
-//------------------------ Constants ----------------------
-
-// Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
-const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
-
-//------------------------ Inlines -------------------------
-
-// Calculate maximum height for target
-inline int get_maxheight(int fbp, int fbw, int psm)
-{
-	int ret;
-
-	if (fbw == 0) return 0;
-
-	ret = (((0x00100000 - 64 * fbp) / fbw) & ~0x1f);
-	if (PSMT_ISHALF(psm)) ret *= 2;
-
-	return ret;
-}
 
 // ------------------------ Variables -------------------------
 
-// all textures have this width
-extern int GPU_TEXWIDTH;
-extern float g_fiGPU_TEXWIDTH;
-#define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
-#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
-
-extern u32 ptexBlocks;		// holds information on block tiling. It's texture number in OpenGL -- if 0 than such texture
-extern u32 ptexConv16to32;	// does not exists. This textures should be created on start and released on finish.  
-extern u32 ptexBilinearBlocks;
-extern u32 ptexConv32to16;
-
-// this is currently *not* used as a bool, in spite of its moniker --air
-// Actually, the only thing written to it is 1 or 0, which makes the (g_bSaveFlushedFrame & 0x80000000) check rather bizzare.
-//extern u32 g_bSaveFlushedFrame;	
-
 //////////////////////////
 // State parameters
-
 
 #ifdef ZEROGS_DEVBUILD
 extern char* EFFECT_NAME;
@@ -87,18 +48,14 @@ extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
 extern bool g_bSaveTrans, g_bUpdateEffect, g_bSaveTex, g_bSaveResolved;
 #endif
 
-extern u32 s_uFramebuffer;
 extern int g_nPixelShaderVer;
 
 extern bool s_bWriteDepth;
 
-extern u32 ptexLogo;
-extern int nLogoWidth, nLogoHeight;
 extern int nBackbufferWidth, nBackbufferHeight;
 
-typedef void (*DrawFn)();
-
 // visible members
+typedef void (*DrawFn)();
 extern DrawFn drawfn[8];
 
 extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
@@ -106,8 +63,6 @@ extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 extern GLuint vboRect;
 extern int g_nCurVBOIndex;
 
-void ZZAddMessage(const char* pstr, u32 ms = 5000);
-void DrawText(const char* pstr, int left, int top, u32 color);
 void ChangeWindowSize(int nNewWidth, int nNewHeight);
 void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
 void ChangeDeviceSize(int nNewWidth, int nNewHeight);
@@ -166,9 +121,6 @@ void ResetRenderTarget(int index);
 
 bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
 
-// call to load CLUT data (depending on CLD)
-void texClutWrite(int ctx);
-
 int ZZSave(s8* pbydata);
 bool ZZLoad(s8* pbydata);
 
@@ -187,30 +139,12 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 // returns the first and last addresses aligned to a page that cover
 void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
 
-// inits the smallest rectangle in ptexMem that covers this region in ptexMem
-// returns the offset that needs to be added to the locked rect to get the beginning of the buffer
-//void GetMemRect(RECT& rc, int psm, int x, int y, int w, int h, int bp, int bw);
-
-void SetContextTarget(int context) ;
-
 void NeedFactor(int w);
 void ResetAlphaVariables();
 
 void StartCapture();
 void StopCapture();
 void CaptureFrame();
-
-// Perform clutting for flushed texture. Better check if it needs a prior call.
-inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
-{
-	tex0->cbp  = ZZOglGet_cbp_TexBits(Data);
-	tex0->cpsm = ZZOglGet_cpsm_TexBits(Data);
-	tex0->csm  = ZZOglGet_csm_TexBits(Data);
-	tex0->csa  = ZZOglGet_csa_TexBits(Data);
-	tex0->cld  = ZZOglGet_cld_TexBits(Data);
-
-	texClutWrite(ictx);
- };
  
 // The size in bytes of x strings (of texture).
 inline int MemorySize(int x) 

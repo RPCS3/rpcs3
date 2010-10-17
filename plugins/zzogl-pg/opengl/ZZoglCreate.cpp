@@ -27,6 +27,9 @@
 
 #include "ZZoglShaders.h"
 #include "targets.h"
+#include "rasterfont.h" // simple font
+
+
 // This include for windows resource file with Shaders
 #ifdef _WIN32
 #	include "Win32.h"
@@ -159,7 +162,6 @@ u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
 int g_nDepthBias = 0;
-//u32 g_bSaveFlushedFrame = 0;
 
 //------------------ Code
 
@@ -772,8 +774,6 @@ bool ZZCreate(int _width, int _height)
 
 	vb[0].Init(VB_BUFFERSIZE);
 	vb[1].Init(VB_BUFFERSIZE);
-
-//	g_bSaveFlushedFrame = 1;
 
 	g_vsprog = g_psprog = 0;
 

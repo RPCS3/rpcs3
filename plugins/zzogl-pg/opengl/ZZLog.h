@@ -21,7 +21,7 @@
 #define ZZLOG_H_INCLUDED
 
 #include "Util.h"
-
+#include <cstring>
 
 //Logging for errors that are called often should have a time counter.
 #ifdef __LINUX__
@@ -154,9 +154,20 @@ inline const char *error_name(int err)
 	}
 }
 
+struct MESSAGE
+{
+	MESSAGE() {}
+
+	MESSAGE(const char* p, u32 dw) { strcpy(str, p); dwTimeStamp = dw; }
+
+	char str[255];
+	u32 dwTimeStamp;
+};
+
+extern void DrawText(const char* pstr, int left, int top, u32 color);
 extern void __LogToConsole(const char *fmt, ...);
 
-extern void ZZAddMessage(const char* pstr, u32 ms);
+extern void ZZAddMessage(const char* pstr, u32 ms = 5000);
 extern void SetAA(int mode);
 extern bool ZZCreate(int width, int height);
 extern void ZZDestroy(bool bD3D);

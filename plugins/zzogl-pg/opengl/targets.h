@@ -29,6 +29,12 @@
 
 #define VB_BUFFERSIZE			   0x400
 
+// all textures have this width
+extern int GPU_TEXWIDTH;
+extern float g_fiGPU_TEXWIDTH;
+#define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
+#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
+
 // managers render-to-texture targets
 class CRenderTarget
 {
@@ -694,4 +700,21 @@ static __forceinline void setRectWrap2(GLint type)
 	
 // VB variables
 extern VB vb[2];
+
+
+//------------------------ Inlines -------------------------
+
+// Calculate maximum height for target
+inline int get_maxheight(int fbp, int fbw, int psm)
+{
+	int ret;
+
+	if (fbw == 0) return 0;
+
+	ret = (((0x00100000 - 64 * fbp) / fbw) & ~0x1f);
+	if (PSMT_ISHALF(psm)) ret *= 2;
+
+	return ret;
+}
+
 #endif

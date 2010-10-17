@@ -66,6 +66,9 @@ extern HINSTANCE hInst;
 
 //------------------ Constants
 
+// Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
+const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
+
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
 
 // ----------------- Global Variables 
@@ -85,14 +88,19 @@ char* EFFECT_DIR;
 
 bool g_bCRTCBilinear = true;
 
-	float4 g_vdepth, vlogz;
-	FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-	FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-	FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-	FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-	VERTEXSHADER pvsBitBlt;
-	
-	inline bool LoadEffects();
+float4 g_vdepth, vlogz;
+FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
+FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
+FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
+FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
+VERTEXSHADER pvsBitBlt;
+
+extern u32 ptexBlocks;		// holds information on block tiling. It's texture number in OpenGL -- if 0 than such texture
+extern u32 ptexConv16to32;	// does not exists. This textures should be created on start and released on finish.  
+extern u32 ptexBilinearBlocks;
+extern u32 ptexConv32to16;
+
+inline bool LoadEffects();
 
 struct SHADERHEADER
 {
