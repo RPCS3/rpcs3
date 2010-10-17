@@ -25,6 +25,7 @@
 
 #include "Util.h"
 #include "GifTransfer.h"
+#include "HostMemory.h"
 
 using namespace std;
 
@@ -33,31 +34,6 @@ extern float fFPS;
 #define MEMORY_END 0x00400000
 
 extern int g_LastCRC;
-extern u8* g_pBasePS2Mem;
-
-extern u8* g_pbyGSMemory;
-
-class GSMemory
-{
-	public:
-		void init();
-		void destroy();
-		u8* get();
-		u8* get(u32 addr);
-		u8* get_raw(u32 addr);
-};
-
-extern u8* g_pbyGSClut;		// the temporary clut buffer
-
-class GSClut
-{
-	public:
-		void init();
-		void destroy();
-		u8* get();
-		u8* get(u32 addr);
-		u8* get_raw(u32 addr);
-};
 
 struct Vector_16F
 {

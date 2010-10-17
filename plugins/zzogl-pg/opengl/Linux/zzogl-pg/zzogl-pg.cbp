@@ -106,6 +106,7 @@
 		<Unit filename="../../GifTransfer.cpp" />
 		<Unit filename="../../GifTransfer.h" />
 		<Unit filename="../../HostMemory.cpp" />
+		<Unit filename="../../HostMemory.h" />
 		<Unit filename="../Conf.cpp" />
 		<Unit filename="../Linux.cpp" />
 		<Unit filename="../Linux.h" />

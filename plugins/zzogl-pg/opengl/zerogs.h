@@ -100,42 +100,8 @@ void SetFogColor(GIFRegFOGCOL* fog);
 void SaveTex(tex0Info* ptex, int usevid);
 char* NamedSaveTex(tex0Info* ptex, int usevid);
 
-// called when trxdir is accessed. If host is involved, transfers memory to temp buffer byTransferBuf.
-// Otherwise performs the transfer. TODO: Perhaps divide the transfers into chunks?
-void InitTransferHostLocal();
-void TransferHostLocal(const void* pbyMem, u32 nQWordSize);
-
-void InitTransferLocalHost();
-void TransferLocalHost(void* pbyMem, u32 nQWordSize);
-inline void TerminateLocalHost() {}
-
-void TransferLocalLocal();
-
 // switches the render target to the real target, flushes the current render targets and renders the real image
 void RenderCRTC(int interlace);
 void ResetRenderTarget(int index);
 
-
-// private methods
-
-// returns the first and last addresses aligned to a page that cover
-void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
- 
-// The size in bytes of x strings (of texture).
-inline int MemorySize(int x) 
-{
-	return 4 * GPU_TEXWIDTH * x;
-}
-
-// Return the address in memory of data block for string x. 
-inline u8* MemoryAddress(int x) 
-{
-	return g_pbyGSMemory + MemorySize(x);
-}
-
-template <u32 mult>
-inline u8* _MemoryAddress(int x) 
-{
-	return g_pbyGSMemory + mult * x;
-}
 #endif

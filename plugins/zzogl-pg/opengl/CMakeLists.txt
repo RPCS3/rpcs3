@@ -82,6 +82,7 @@ set(zzoglHeaders
     GifTransfer.h
     # glprocs.h
     GS.h
+    HostMemory.h
     Mem.h
     Mem_Swizzle.h
     Mem_Transmit.h

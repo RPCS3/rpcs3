@@ -869,7 +869,7 @@ void __gifCall GIFRegHandlerTRXDIR(const u32* data)
 	switch (gs.imageTransfer)
 	{
 		case 0: // host->loc
-			gs.imageTransfer = -1;
+			TerminateHostLocal();
 			break;
 
 		case 1: // loc->host
