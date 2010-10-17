@@ -38,6 +38,7 @@ using namespace std;
 #include "targets.h"
 #include "ZZoglShaders.h"
 #include "ZZoglFlushHack.h"
+#include "ZZoglShoots.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -593,6 +594,9 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 
 	return 1;
 }
+
+int ZZSave(s8* pbydata);
+bool ZZLoad(s8* pbydata);
 
 s32 CALLBACK GSfreeze(int mode, freezeData *data)
 {

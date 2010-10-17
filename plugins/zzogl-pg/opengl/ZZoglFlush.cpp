@@ -205,7 +205,7 @@ void FlushTransferRanges(const tex0Info* ptex);						//zz
 void SetTexVariables(int context, FRAGMENTSHADER* pfragment);			// zz
 void SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint);		// zz
 void SetAlphaVariables(const alphaInfo& ainfo);					// zzz
-void ResetAlphaVariables();
+//void ResetAlphaVariables();
 
 inline void SetAlphaTestInt(pixTest curtest);
 
@@ -2360,9 +2360,9 @@ void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool Ch
 // } \
 // else { \
 
-void ResetAlphaVariables() {
-	FUNCLOG
-}
+//void ResetAlphaVariables() {
+//	FUNCLOG
+//}
 
 inline void NeedFactor(int w)
 {

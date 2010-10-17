@@ -26,6 +26,7 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
+
 #ifdef ZEROGS_SSE2
 #include <emmintrin.h>
 #endif
@@ -56,6 +57,8 @@ bool g_bSaveZUpdate = 0;
 
 int VALIDATE_THRESH = 8;
 u32 TEXDESTROY_THRESH = 16;
+
+void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
 
 // ------------------------- Useful inlines ------------------------------------
 
@@ -514,7 +517,7 @@ void CRenderTarget::Update(int context, CRenderTarget* pdepth)
 	// reset since settings changed
 	vb[0].bVarsTexSync = 0;
 
-	ResetAlphaVariables();
+//	ResetAlphaVariables();
 }
 
 void CRenderTarget::ConvertTo32()

@@ -119,32 +119,11 @@ void TransferLocalLocal();
 void RenderCRTC(int interlace);
 void ResetRenderTarget(int index);
 
-bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
-
-int ZZSave(s8* pbydata);
-bool ZZLoad(s8* pbydata);
-
-void SaveSnapshot(const char* filename);
-bool SaveRenderTarget(const char* filename, int width, int height, int jpeg);
-bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
-bool SaveJPEG(const char* filename, int width, int height, const void* pdata, int quality);
-bool SaveTGA(const char* filename, int width, int height, void* pdata);
-void Stop_Avi();
-void Delete_Avi_Capture();
 
 // private methods
-void FlushSysMem(const RECT* prc);
-void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
 
 // returns the first and last addresses aligned to a page that cover
 void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
-
-void NeedFactor(int w);
-void ResetAlphaVariables();
-
-void StartCapture();
-void StopCapture();
-void CaptureFrame();
  
 // The size in bytes of x strings (of texture).
 inline int MemorySize(int x) 

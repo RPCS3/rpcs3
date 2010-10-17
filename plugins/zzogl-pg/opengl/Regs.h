@@ -23,6 +23,8 @@
 
 #ifdef USE_OLD_REGS
 
+bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
+
 enum GIF_REG
 {
 	GIF_REG_PRIM	= 0x00,

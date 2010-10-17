@@ -157,6 +157,7 @@
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShaders.h" />
 		<Unit filename="../../ZZoglShoots.cpp" />
+		<Unit filename="../../ZZoglShoots.h" />
 		<Unit filename="../../ZZoglVB.cpp" />
 		<Unit filename="../../common.h" />
 		<Unit filename="../../glprocs.c">

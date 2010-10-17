@@ -24,8 +24,8 @@
 #include "Mem.h"
 #include "zerogs.h"
 #include "GLWin.h"
-
 #include "ZZoglShaders.h"
+
 #include "targets.h"
 #include "rasterfont.h" // simple font
 
@@ -162,6 +162,8 @@ u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
 int g_nDepthBias = 0;
+
+extern void Delete_Avi_Capture();
 
 //------------------ Code
 

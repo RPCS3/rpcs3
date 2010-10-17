@@ -389,7 +389,7 @@ void VB::CheckFrame(int tbp)
 		if ((prndr != NULL) && (prndr->psm != gsfb.psm))
 		{
 			// behavior for dest alpha varies
-			ResetAlphaVariables();
+//			ResetAlphaVariables();
 		}
 
 		bChanged = CheckFrameResolveRender(tbp);

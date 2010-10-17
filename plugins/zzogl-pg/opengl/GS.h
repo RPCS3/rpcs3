@@ -385,6 +385,8 @@ union tex_0_info
 #define TEX_HIGHLIGHT 2
 #define TEX_HIGHLIGHT2 3
 
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
+
 typedef struct
 {
 	int lcm;

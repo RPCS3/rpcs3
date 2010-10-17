@@ -96,6 +96,7 @@ set(zzoglHeaders
     ZZoglCRTC.h
     ZZoglMath.h
     ZZoglShaders.h
+    ZZoglShoots.h
     ZZGl.h
     ZZLog.h)
 

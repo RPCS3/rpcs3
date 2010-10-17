@@ -30,6 +30,7 @@
 #include "zerogs.h"
 #include "targets.h"
 #include "Mem.h"
+#include "ZZoglShoots.h"
 
 // AVI Capture
 int s_avicapturing = 0;

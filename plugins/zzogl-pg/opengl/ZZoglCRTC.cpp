@@ -24,6 +24,7 @@
 #include "ZZoglCRTC.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
+#include "ZZoglShoots.h"
 #include "rasterfont.h" // simple font
 
 //------------------ Defines
