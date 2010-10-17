@@ -1939,21 +1939,6 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 
 	targ = ClearedTargetsSearch(fmt, widthmult, channels, end - start);
 
-	// fill local clut
-	if (PSMT_ISCLUT(tex0.psm))
-	{
-		assert(clutsize > 0);
-
-		targ->cpsm = tex0.cpsm;
-		targ->clut.reserve(256*4); // no matter what
-		targ->clut.resize(clutsize);
-
-		if (PSMT_IS32BIT(tex0.cpsm))
-            ClutBuffer_to_Array<u32>((u32*)&targ->clut[0], (u32*)(g_pbyGSClut + nClutOffset), clutsize);
-        else
-            ClutBuffer_to_Array<u16>((u16*)&targ->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize);
-	}
-
 	if (targ->ptex != NULL)
 	{
 		assert(end - start <= targ->realheight && targ->fmt == fmt && targ->widthmult == widthmult);
@@ -2000,25 +1985,34 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 
 	if (PSMT_ISCLUT(tex0.psm))
 	{
+		assert(clutsize > 0);
+
+        // Local clut parameter
+		targ->cpsm = tex0.cpsm;
+		targ->clut.reserve(256*4); // no matter what
+		targ->clut.resize(clutsize);
+
+        // texture parameter
 		ptexdata = (u8*)_aligned_malloc(CLUT_PIXEL_SIZE(tex0.cpsm) * targ->texH * targ->texW, 16);
 		has_data = true;
 
 		u8* psrc = (u8*)(MemoryAddress(targ->realy));
 
+        // Fill a local clut then build the real texture
 		if (PSMT_IS32BIT(tex0.cpsm))
 		{
 			u32* pclut = (u32*) & targ->clut[0];
-			u32* pdst = (u32*)ptexdata;
-
-			Build_Clut_Texture<u32>(tex0.psm, targ->height, pclut, psrc, pdst);
+            ClutBuffer_to_Array<u32>(pclut, (u32*)(g_pbyGSClut + nClutOffset), clutsize);
+			Build_Clut_Texture<u32>(tex0.psm, targ->height, pclut, psrc, (u32*)ptexdata);
 		}
 		else
 		{
 			u16* pclut = (u16*) & targ->clut[0];
-			u16* pdst = (u16*)ptexdata;
-
-			Build_Clut_Texture<u16>(tex0.psm, targ->height, pclut, psrc, pdst);
+            ClutBuffer_to_Array<u16>(pclut, (u16*)(g_pbyGSClut + nClutOffset), clutsize);
+			Build_Clut_Texture<u16>(tex0.psm, targ->height, pclut, psrc, (u16*)ptexdata);
 		}
+
+        assert(targ->clut.size() > 0);
 	}
 	else
 	{
@@ -2149,8 +2143,6 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 	if (has_data) _aligned_free(ptexdata);
 
 	assert(tex0.psm != 0xd);
-
-	if (PSMT_ISCLUT(tex0.psm)) assert(targ->clut.size() > 0);
 
 	return targ;
 }
