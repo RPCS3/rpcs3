@@ -28,6 +28,7 @@
 
 #include "GS.h"
 #include "zerogs.h"
+#include "targets.h"
 
 extern int g_SkipFlushFrame;
 
