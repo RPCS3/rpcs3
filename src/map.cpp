@@ -1,7 +1,7 @@
 #include "map.h"
-#include "node.h"
-#include "eventhandler.h"
-#include "exceptions.h"
+#include "yaml-cpp/node.h"
+#include "yaml-cpp/eventhandler.h"
+#include "yaml-cpp/exceptions.h"
 
 namespace YAML
 {

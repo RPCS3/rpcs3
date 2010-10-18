@@ -1,6 +1,6 @@
 #include "sequence.h"
-#include "eventhandler.h"
-#include "node.h"
+#include "yaml-cpp/eventhandler.h"
+#include "yaml-cpp/node.h"
 #include <stdexcept>
 
 namespace YAML

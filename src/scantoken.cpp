@@ -1,6 +1,6 @@
 #include "scanner.h"
 #include "token.h"
-#include "exceptions.h"
+#include "yaml-cpp/exceptions.h"
 #include "exp.h"
 #include "scanscalar.h"
 #include "scantag.h"

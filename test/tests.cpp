@@ -2,7 +2,7 @@
 #include "emittertests.h"
 #include "parsertests.h"
 #include "spectests.h"
-#include "yaml.h"
+#include "yaml-cpp/yaml.h"
 #include <fstream>
 #include <sstream>
 #include <vector>

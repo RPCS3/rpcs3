@@ -4,8 +4,8 @@
 #define SINGLEDOCPARSER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 
-#include "anchor.h"
-#include "noncopyable.h"
+#include "yaml-cpp/anchor.h"
+#include "yaml-cpp/noncopyable.h"
 #include <string>
 #include <map>
 #include <memory>

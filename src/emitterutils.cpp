@@ -1,7 +1,7 @@
 #include "emitterutils.h"
 #include "exp.h"
 #include "indentation.h"
-#include "exceptions.h"
+#include "yaml-cpp/exceptions.h"
 #include "stringsource.h"
 #include <sstream>
 #include <iomanip>

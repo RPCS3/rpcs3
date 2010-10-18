@@ -5,7 +5,7 @@
 
 
 #include "setting.h"
-#include "emittermanip.h"
+#include "yaml-cpp/emittermanip.h"
 #include <cassert>
 #include <vector>
 #include <stack>

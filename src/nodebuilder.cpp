@@ -1,7 +1,7 @@
 #include "nodebuilder.h"
-#include "mark.h"
-#include "node.h"
-#include "nodeproperties.h"
+#include "yaml-cpp/mark.h"
+#include "yaml-cpp/node.h"
+#include "yaml-cpp/nodeproperties.h"
 #include <cassert>
 
 namespace YAML

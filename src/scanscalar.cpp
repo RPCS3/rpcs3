@@ -1,7 +1,7 @@
 #include "scanscalar.h"
 #include "scanner.h"
 #include "exp.h"
-#include "exceptions.h"
+#include "yaml-cpp/exceptions.h"
 #include "token.h"
 
 namespace YAML

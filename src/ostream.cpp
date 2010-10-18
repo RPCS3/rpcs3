@@ -1,4 +1,4 @@
-#include "ostream.h"
+#include "yaml-cpp/ostream.h"
 #include <cstring>
 
 namespace YAML

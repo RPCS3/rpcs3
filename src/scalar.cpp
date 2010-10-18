@@ -1,5 +1,5 @@
 #include "scalar.h"
-#include "eventhandler.h"
+#include "yaml-cpp/eventhandler.h"
 
 namespace YAML
 {

@@ -1,5 +1,5 @@
 #include "content.h"
-#include "node.h"
+#include "yaml-cpp/node.h"
 #include <cassert>
 
 namespace YAML

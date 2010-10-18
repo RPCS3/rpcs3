@@ -1,7 +1,7 @@
 #include "scanner.h"
 #include "regex.h"
 #include "exp.h"
-#include "exceptions.h"
+#include "yaml-cpp/exceptions.h"
 
 namespace YAML
 {

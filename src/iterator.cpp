@@ -1,5 +1,5 @@
-#include "node.h"
-#include "exceptions.h"
+#include "yaml-cpp/node.h"
+#include "yaml-cpp/exceptions.h"
 #include "iterpriv.h"
 
 namespace YAML

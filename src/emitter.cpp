@@ -1,8 +1,8 @@
-#include "emitter.h"
+#include "yaml-cpp/emitter.h"
 #include "emitterstate.h"
 #include "emitterutils.h"
 #include "indentation.h"
-#include "exceptions.h"
+#include "yaml-cpp/exceptions.h"
 #include <sstream>
 
 namespace YAML
