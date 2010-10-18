@@ -4,8 +4,8 @@
 #define EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 
-#include "mark.h"
-#include "traits.h"
+#include "yaml-cpp/mark.h"
+#include "yaml-cpp/traits.h"
 #include <exception>
 #include <string>
 #include <sstream>

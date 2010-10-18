@@ -4,11 +4,11 @@
 #define NODE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 
-#include "conversion.h"
-#include "exceptions.h"
-#include "iterator.h"
-#include "mark.h"
-#include "noncopyable.h"
+#include "yaml-cpp/conversion.h"
+#include "yaml-cpp/exceptions.h"
+#include "yaml-cpp/iterator.h"
+#include "yaml-cpp/mark.h"
+#include "yaml-cpp/noncopyable.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -138,7 +138,7 @@ namespace YAML
 	bool operator != (const Node& node, const char *value);
 }
 
-#include "nodeimpl.h"
-#include "nodereadimpl.h"
+#include "yaml-cpp/nodeimpl.h"
+#include "yaml-cpp/nodereadimpl.h"
 
 #endif // NODE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
