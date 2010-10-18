@@ -43,7 +43,7 @@
 namespace Exception
 {
 	int MakeNewType();
-	BaseException* FromErrno( const wxString& streamname, errno_t errcode );
+	BaseException* FromErrno( const wxString& streamname, int errcode );
 
 	// --------------------------------------------------------------------------------------
 	//  BaseException

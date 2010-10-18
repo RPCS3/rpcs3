@@ -17,7 +17,7 @@
 
 #include "Dependencies.h"
 #include "SafeArray.h"
-#include "ScopedMalloc.h"
+#include "ScopedAlloc.h"
 
 #include <wx/tokenzr.h>
 

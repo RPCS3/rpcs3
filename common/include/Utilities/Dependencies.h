@@ -231,5 +231,5 @@ extern bool pxIsEnglish( int id );
 #define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
 #include "Utilities/ScopedPtr.h"
-#include "Utilities/ScopedMalloc.h"
+#include "Utilities/ScopedAlloc.h"
 #include "Utilities/Assertions.h"

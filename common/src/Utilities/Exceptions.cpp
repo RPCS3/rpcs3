@@ -245,7 +245,7 @@ wxString Exception::Stream::FormatDisplayMessage() const
 
 // Translates an Errno code into an exception.
 // Throws an exception based on the given error code (usually taken from ANSI C's errno)
-BaseException* Exception::FromErrno( const wxString& streamname, errno_t errcode )
+BaseException* Exception::FromErrno( const wxString& streamname, int errcode )
 {
 	pxAssumeDev( errcode != 0, "Invalid NULL error code?  (errno)" );
 

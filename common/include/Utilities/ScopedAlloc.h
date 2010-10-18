@@ -154,21 +154,21 @@ public:
 
 	virtual void Alloc( size_t newsize )
 	{
-		safe_free(m_buffer);
-		m_size = newsize;
+		safe_free(this->m_buffer);
+		this->m_size = newsize;
 		if (!m_size) return;
 
-		m_buffer = (T*)malloc( m_size * sizeof(T) );
-		if (!m_buffer)
+		this->m_buffer = (T*)malloc( m_size * sizeof(T) );
+		if (!this->m_buffer)
 			throw Exception::OutOfMemory("ScopedAlloc");
 	}
 
 	virtual void Resize( size_t newsize )
 	{
-		m_size		= newsize;
-		m_buffer	= (T*)realloc(m_buffer * sizeof(T), newsize);
+		this->m_size		= newsize;
+		this->m_buffer	= (T*)realloc(this->m_buffer * sizeof(T), newsize);
 
-		if (!m_buffer)
+		if (!this->m_buffer)
 			throw Exception::OutOfMemory("ScopedAlloc::Resize");
 	}
 };
@@ -198,21 +198,21 @@ public:
 
 	virtual void Alloc( size_t newsize )
 	{
-		safe_aligned_free(m_buffer);
-		m_size = newsize;
-		if (!m_size) return;
+		safe_aligned_free(this->m_buffer);
+		this->m_size = newsize;
+		if (!this->m_size) return;
 
-		m_buffer = (T*)_aligned_malloc( m_size * sizeof(T), align );
-		if (!m_buffer)
+		this->m_buffer = (T*)_aligned_malloc( this->m_size * sizeof(T), align );
+		if (!this->m_buffer)
 			throw Exception::OutOfMemory(L"ScopedAlignedAlloc");
 	}
 
 	virtual void Resize( size_t newsize )
 	{
-		m_size		= newsize;
-		m_buffer	= (T*)_aligned_realloc(m_buffer, newsize * sizeof(T), align);
+		this->m_size		= newsize;
+		this->m_buffer	= (T*)_aligned_realloc(this->m_buffer, newsize * sizeof(T), align);
 
-		if (!m_buffer)
+		if (!this->m_buffer)
 			throw Exception::OutOfMemory(L"ScopedAlignedAlloc::Resize");
 	}
 };
