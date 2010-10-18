@@ -451,12 +451,12 @@ __forceinline void GSMem_to_ClutBuffer(tex0Info &tex0)
 		else
 		{
             if (tex0.cpsm < 2) {
-            } else {
 #ifdef ZEROGS_SSE2
 					GSMem_to_ClutBuffer__T32_I8_CSM1_sse2(src, tex0.csa);
 #else
 					GSMem_to_ClutBuffer__T32_I8_CSM1_c(src, tex0.csa);
 #endif
+            } else {
 #ifdef ZEROGS_SSE2
 					GSMem_to_ClutBuffer__T16_I8_CSM1_sse2(src, tex0.csa);
 #else
