@@ -84,18 +84,18 @@ extern int SynchMode;
 namespace SoundtouchCfg
 {
 	// Timestretch Slider Bounds, Min/Max
-	static const int SequenceLen_Min = 30;
-	static const int SequenceLen_Max = 90;
+	static const int SequenceLen_Min = 20;
+	static const int SequenceLen_Max = 100;
 
 	static const int SeekWindow_Min = 10;
-	static const int SeekWindow_Max = 32;
+	static const int SeekWindow_Max = 30;
 
-	static const int Overlap_Min = 3;
+	static const int Overlap_Min = 5;
 	static const int Overlap_Max = 15;
 
-	static int SequenceLenMS = 50;
-	static int SeekWindowMS = 15;
-	static int OverlapMS = 25;
+	static int SequenceLenMS = 30;
+	static int SeekWindowMS = 20;
+	static int OverlapMS = 10;
 
 	void ReadSettings();
 	void WriteSettings();
