@@ -23,10 +23,10 @@
 
 #include "Mem.h"
 #include "x86.h"
-#include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
 #include "Clut.h"
+#include <math.h>
 
 #ifdef ZEROGS_SSE2
 #include <emmintrin.h>
@@ -60,6 +60,10 @@ int VALIDATE_THRESH = 8;
 u32 TEXDESTROY_THRESH = 16;
 
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
+void SetWriteDepth();
+bool IsWriteDepth();
+bool IsWriteDestAlphaTest();
+void ResetRenderTarget(int index);
 
 // ------------------------- Useful inlines ------------------------------------
 

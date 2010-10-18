@@ -26,6 +26,7 @@
 #endif
 
 #include <assert.h>
+#include "Pcsx2Defs.h"
 
 //#define ZZ_MMATH
 

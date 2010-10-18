@@ -23,6 +23,8 @@
 #include "Util.h"
 #include <cstring>
 
+extern void HandleGLError();
+
 //Logging for errors that are called often should have a time counter.
 #ifdef __LINUX__
 static u32 __attribute__((unused)) lasttime = 0;
@@ -168,9 +170,6 @@ extern void DrawText(const char* pstr, int left, int top, u32 color);
 extern void __LogToConsole(const char *fmt, ...);
 
 extern void ZZAddMessage(const char* pstr, u32 ms = 5000);
-extern void SetAA(int mode);
-extern bool ZZCreate(int width, int height);
-extern void ZZDestroy(bool bD3D);
 extern void StartCapture();
 extern void StopCapture();
 

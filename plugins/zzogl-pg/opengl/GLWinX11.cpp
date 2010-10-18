@@ -19,7 +19,6 @@
 
 #include "Util.h"
 #include "GLWin.h"
-#include "zerogs.h"
 
 #ifdef GL_X11_WINDOW
 

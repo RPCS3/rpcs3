@@ -36,6 +36,7 @@ extern bool THR_bShift, SaveStateExists;
 const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
 const char* pbilinear[] = { "off", "normal", "forced" };
 
+extern void SetAA(int mode);
 
 void ProcessBilinear()
 {
@@ -255,6 +256,9 @@ void WriteBilinear()
 }
 
 #ifdef _WIN32
+
+extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
+
 void ProcessEvents()
 {
 	MSG msg;

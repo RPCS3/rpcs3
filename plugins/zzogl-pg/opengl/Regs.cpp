@@ -22,7 +22,6 @@
 #include "Regs.h"
 #include "PS2Etypes.h"
 
-#include "zerogs.h"
 #include "targets.h"
 #include "ZZKick.h"
 

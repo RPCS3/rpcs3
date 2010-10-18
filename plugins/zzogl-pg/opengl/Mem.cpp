@@ -19,7 +19,6 @@
 
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "targets.h"
 #include "x86.h"
 

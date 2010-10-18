@@ -21,10 +21,10 @@
 // VB stands for Visual Buffer, as I think
 
 //------------------- Includes
-#include "zerogs.h"
 #include "targets.h"
 #include "GS.h"
 #include "Mem.h"
+extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
 // ----------------- Defines
 #define MINMAX_SHIFT	3

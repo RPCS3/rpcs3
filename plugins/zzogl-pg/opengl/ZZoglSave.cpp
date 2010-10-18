@@ -20,9 +20,9 @@
 // Save and Load.
 
 //------------------ Includes
-#include "zerogs.h"
 #include "targets.h"
 
+extern void ZZGSStateReset();
 //----------------------- Defines
 
 #define VBSAVELIMIT ((u32)((u8*)&vb[0].nNextFrameHeight-(u8*)&vb[0]))
@@ -43,6 +43,9 @@ char *libraryNameX	 = "ZeroGS Playground OpenGL ";
 
 extern char *libraryName;
 extern u32 s_uTex1Data[2][2], s_uClampData[2];
+
+void SetFogColor(u32 fog);
+void SetFogColor(GIFRegFOGCOL* fog);
 
 int ZZSave(s8* pbydata)
 {
@@ -86,6 +89,7 @@ int ZZSave(s8* pbydata)
 }
 
 extern u32 s_uFramebuffer;
+extern int g_nCurVBOIndex;
 
 bool ZZLoad(s8* pbydata)
 {

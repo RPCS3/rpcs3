@@ -24,8 +24,10 @@
 #include <stdlib.h>
 #include "Mem.h"
 #include "x86.h"
-#include "zerogs.h"
 #include "targets.h"
+
+// flush current vertices, call before setting new registers (the main render method)
+extern void Flush(int context);
 
 u8* g_pbyGSMemory = NULL;   // 4Mb GS system mem
 

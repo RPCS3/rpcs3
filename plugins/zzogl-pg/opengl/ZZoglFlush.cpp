@@ -23,10 +23,10 @@
 
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "targets.h"
 #include "ZZoglFlushHack.h"
 #include "ZZoglShaders.h"
+#include <math.h>
 
 //------------------ Defines
 #ifndef ZEROGS_DEVBUILD
@@ -144,6 +144,7 @@ static u32 s_ptexNextSet[2] = {0};				// ZZ
 
 extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
 extern bool s_bTexFlush;
+extern int g_nCurVBOIndex;
 bool s_bWriteDepth = false;
 bool s_bDestAlphaTest = false;
 int s_ClutResolve = 0;						// ZZ
@@ -192,6 +193,7 @@ int s_nWireframeCount = 0;
 
 VB vb[2];
 float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
+extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 
 //u8 s_AAx = 0, s_AAy = 0; // if AAy is set, then AAx has to be set
 Point AA = {0,0};
@@ -216,6 +218,11 @@ inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor);
 inline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor);			// zz
 
 void SetContextTarget(int context);
+
+void SetWriteDepth();
+bool IsWriteDepth();
+void SetDestAlphaTest();
+void ResetRenderTarget(int index);
 
 //------------------ Code
 

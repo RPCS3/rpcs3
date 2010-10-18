@@ -20,7 +20,7 @@
 #ifndef PROFILE_H_INCLUDED
 #define PROFILE_H_INCLUDED
 
-#include "zerogs.h"
+#include "Util.h"
 
 #if !defined(ZEROGS_DEVBUILD)
 #define g_bWriteProfile 0

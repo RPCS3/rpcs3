@@ -18,10 +18,12 @@
  */
 
 #include "ZZKick.h"
-#include "zerogs.h"
+#include "targets.h"
 
 const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
 const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
+
+extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
 DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
 					 KickDummy, KickDummy, KickDummy, KickDummy

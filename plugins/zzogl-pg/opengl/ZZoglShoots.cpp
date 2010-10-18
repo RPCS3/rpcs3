@@ -27,7 +27,6 @@
 #endif
 #include <stdlib.h>
 
-#include "zerogs.h"
 #include "targets.h"
 #include "Mem.h"
 #include "ZZoglShoots.h"
@@ -44,8 +43,11 @@ extern "C"
 #define HAVE_BOOLEAN
 #endif
 
-#include "jpeglib.h" 	// This library want to be after zerogs.h
+#include "jpeglib.h"
 }
+
+
+extern int nBackbufferWidth, nBackbufferHeight;
 
 //------------------ Defines
 #define 	TGA_FILE_NAME_MAX_LENGTH 	 20

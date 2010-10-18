@@ -24,8 +24,6 @@
 #include "Regs.h"
 #else
 
-bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
-
 enum GIF_REG
 {
 	GIF_REG_PRIM	= 0x00,
@@ -779,6 +777,19 @@ REG_SET_END
 extern void WriteTempRegs();
 extern void SetFrameSkip(bool skip);
 extern void ResetRegs();
+
+extern void SetTexFlush();
+extern void SetFogColor(u32 fog);
+extern void SetFogColor(GIFRegFOGCOL* fog);
+extern bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
+
+// flush current vertices, call before setting new registers (the main render method)
+void Flush(int context);
+void FlushBoth();
+
+// called on a primitive switch
+void Prim();
+
 #endif
 
 #endif // NEWREGS_H_INCLUDED

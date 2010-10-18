@@ -67,5 +67,6 @@ class GLWindow
 
 
 extern GLWindow GLWin;
+extern void ChangeWindowSize(int nNewWidth, int nNewHeight);
 
 #endif // GLWIN_H_INCLUDED

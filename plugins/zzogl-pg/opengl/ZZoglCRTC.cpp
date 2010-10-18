@@ -25,7 +25,9 @@
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 #include "ZZoglShoots.h"
+#include "ZZKick.h"
 #include "rasterfont.h" // simple font
+#include <math.h>
 
 //------------------ Defines
 #if !defined(ZEROGS_DEVBUILD)
@@ -49,6 +51,11 @@ vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of
 extern bool g_bMakeSnapshot;
 extern string strSnapshot;
 
+extern void ExtWrite();
+extern void ZZDestroy();
+extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
+
+extern GLuint vboRect;
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
 void AdjustTransToAspect(float4& v)
 {
@@ -174,6 +181,8 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 		}
 	}
 }
+
+extern bool s_bWriteDepth;
 
 // Something should be done before Renderering the picture.
 inline void RenderStartHelper(u32 bInterlace)
@@ -675,6 +684,27 @@ inline void AfterRenderMadeSnapshoot()
 	}
 	
 		g_bMakeSnapshot = false;
+}
+
+// call to destroy video resources
+void ZZReset()
+{
+	FUNCLOG
+	s_RTs.ResolveAll();
+	s_DepthRTs.ResolveAll();
+
+	vb[0].nCount = 0;
+	vb[1].nCount = 0;
+
+	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
+	s_nLastResolveReset = 0;
+
+	icurctx = -1;
+	g_vsprog = g_psprog = 0;
+
+	ZZGSStateReset();
+	ZZDestroy();
+	clear_drawfn();
 }
 
 // If needed reset

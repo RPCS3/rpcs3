@@ -22,7 +22,6 @@
 //------------------ Includes
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 
@@ -87,6 +86,9 @@ int g_nCurVBOIndex = 0;
 inline bool CreateImportantCheck();
 inline void CreateOtherCheck();
 inline bool CreateOpenShadersFile();
+
+void ZZGSStateReset();
+extern int nBackbufferWidth, nBackbufferHeight;
 
 //------------------ Dummies
 #ifdef _WIN32
@@ -158,9 +160,12 @@ u32 ptexConv32to16 = 0;
 int g_nDepthBias = 0;
 
 extern void Delete_Avi_Capture();
+extern void ZZDestroy();
+extern void SetAA(int mode);
 
 //------------------ Code
 
+///< returns true if the the opengl extension is supported
 bool IsGLExt(const char* szTargetExtension)
 {
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
@@ -444,7 +449,7 @@ bool ZZCreate(int _width, int _height)
 	bool bSuccess = true;
 	int i;
 
-	ZZDestroy(1);
+	ZZDestroy();
 	ZZGSStateReset();
 
 	if (!Create_Window(_width, _height)) return false;
@@ -777,7 +782,7 @@ bool ZZCreate(int _width, int _height)
 	}
 }
 
-void ZZDestroy(bool bD3D)
+void ZZDestroy()
 {
 	Delete_Avi_Capture();
 

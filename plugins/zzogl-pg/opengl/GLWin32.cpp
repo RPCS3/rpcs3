@@ -18,7 +18,6 @@
  */
 
 #include "GS.h"
-#include "zerogs.h"
 #include "GLWin.h"
 
 #ifdef GL_WIN32_WINDOW

@@ -95,10 +95,11 @@ int nBackbufferWidth, nBackbufferHeight;									// ZZ
 extern CRangeManager s_RangeMngr; // manages overwritten memory
 
 int s_nNewWidth = -1, s_nNewHeight = -1;
-void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 
 void ProcessMessages();
 void RenderCustom(float fAlpha); // intro anim
+
+bool ZZCreate(int width, int height);
 
 ///////////////////////
 // Method Prototypes //
@@ -107,6 +108,7 @@ void RenderCustom(float fAlpha); // intro anim
 void ResolveInRange(int start, int end);
 
 void ExtWrite();
+extern GLuint vboRect;
 
 void ResetRenderTarget(int index)
 {
@@ -235,54 +237,6 @@ void ZZGSStateReset()
 
 	vb[0].ictx = 0;
 	vb[1].ictx = 1;
-}
-
-void ZZReset()
-{
-	FUNCLOG
-	s_RTs.ResolveAll();
-	s_DepthRTs.ResolveAll();
-
-	vb[0].nCount = 0;
-	vb[1].nCount = 0;
-
-	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
-	s_nLastResolveReset = 0;
-
-	icurctx = -1;
-	g_vsprog = g_psprog = 0;
-
-	ZZGSStateReset();
-	ZZDestroy(0);
-	clear_drawfn();
-}
-
-void ZZGSReset()
-{
-	FUNCLOG
-
-	memset(&gs, 0, sizeof(gs));
-
-	ZZGSStateReset();
-
-	gs.prac = 1;
-	prim = &gs._prim[0];
-	gs.nTriFanVert = -1;
-	gs.imageTransfer = -1;
-	gs.q = 1;
-}
-
-void ZZGSSoftReset(u32 mask)
-{
-	FUNCLOG
-
-	if (mask & 1) memset(&gs.path[0], 0, sizeof(gs.path[0]));
-	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
-	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
-
-	gs.imageTransfer = -1;
-	gs.q = 1;
-	gs.nTriFanVert = -1;
 }
 
 void ChangeWindowSize(int nNewWidth, int nNewHeight)

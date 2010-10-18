@@ -22,7 +22,6 @@
 
 #include <stdlib.h>
 
-#include "zerogs.h"
 #include "targets.h"
 
 #define INTERLACE_COUNT (bInterlace && interlace == (conf.interlace))
@@ -61,6 +60,9 @@ extern CRangeManager s_RangeMngr; // manages overwritten memory
 extern void FlushTransferRanges(const tex0Info* ptex);
 extern void ProcessMessages();
 void AdjustTransToAspect(float4& v);
+
+void ZZGSStateReset();
+extern int nBackbufferWidth, nBackbufferHeight;
 
 // Interlace texture is lazy 1*(height) array of 1 and 0.
 // If its height (named s_nInterlaceTexWidth here) is hanging we must redo

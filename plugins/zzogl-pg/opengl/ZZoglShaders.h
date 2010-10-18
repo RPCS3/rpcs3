@@ -29,6 +29,10 @@
 // Just bitmask for different type of shaders
 #define SHADER_REDUCED 1	// equivalent to ps2.0
 #define SHADER_ACCURATE 2   	// for older cards with less accurate math (ps2.x+)
+
+#include "ZZoglMath.h"
+#include "GS.h"
+
 // For output
 const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
 

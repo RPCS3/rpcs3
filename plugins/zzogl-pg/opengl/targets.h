@@ -22,6 +22,10 @@
 
 #define TARGET_VIRTUAL_KEY 0x80000000
 #include "PS2Edefs.h"
+#include <list>
+#include <map>
+#include "GS.h"
+#include "ZZGl.h"
 
 #ifndef GL_TEXTURE_RECTANGLE
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV

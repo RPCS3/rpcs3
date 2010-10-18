@@ -21,10 +21,10 @@
 // ZZogl Shader manipulation functions.
 
 //------------------- Includes
-#include "zerogs.h"
 #include "ZZoglShaders.h"
 #include "zpipe.h"
-	
+#include <math.h>
+#include <map>
 
 #ifdef _WIN32
 #	include "Win32.h"
@@ -101,6 +101,7 @@ extern u32 ptexBilinearBlocks;
 extern u32 ptexConv32to16;
 
 inline bool LoadEffects();
+extern bool s_bWriteDepth;
 
 struct SHADERHEADER
 {

@@ -34,7 +34,6 @@ using namespace std;
 #include "Profile.h"
 #include "GLWin.h"
 
-#include "zerogs.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
 #include "ZZoglFlushHack.h"
@@ -88,6 +87,12 @@ extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
 extern void ProcessEvents();
 extern void WriteAA();
 extern void WriteBilinear();
+extern void ZZDestroy();
+extern bool ZZCreate(int width, int height);
+extern void ZZGSStateReset();
+
+// switches the render target to the real target, flushes the current render targets and renders the real image
+void RenderCRTC(int interlace);
 
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
@@ -296,12 +301,30 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 
 void CALLBACK GSreset()
 {
-	ZZGSReset();
+	FUNCLOG
+
+	memset(&gs, 0, sizeof(gs));
+
+	ZZGSStateReset();
+
+	gs.prac = 1;
+	prim = &gs._prim[0];
+	gs.nTriFanVert = -1;
+	gs.imageTransfer = -1;
+	gs.q = 1;
 }
 
 void CALLBACK GSgifSoftReset(u32 mask)
 {
-	ZZGSSoftReset(mask);
+	FUNCLOG
+
+	if (mask & 1) memset(&gs.path[0], 0, sizeof(gs.path[0]));
+	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
+	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
+
+	gs.imageTransfer = -1;
+	gs.q = 1;
+	gs.nTriFanVert = -1;
 }
 
 s32 CALLBACK GSinit()
@@ -382,7 +405,7 @@ void CALLBACK GSclose()
 {
 	FUNCLOG
 
-	ZZDestroy(1);
+	ZZDestroy();
 	GLWin.CloseWindow();
 
 	SaveStateFile = NULL;

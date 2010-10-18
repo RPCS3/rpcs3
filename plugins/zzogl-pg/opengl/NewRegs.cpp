@@ -22,7 +22,6 @@
 #include "NewRegs.h"
 #include "PS2Etypes.h"
 
-#include "zerogs.h"
 #include "targets.h"
 
 #ifdef USE_OLD_REGS

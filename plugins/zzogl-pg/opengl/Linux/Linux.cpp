@@ -24,7 +24,6 @@
 
 #include "GS.h"
 #include "Linux.h"
-#include "zerogs.h"
 #include "GLWin.h"
 
 #include <map>
