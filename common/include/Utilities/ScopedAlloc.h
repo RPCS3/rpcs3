@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "Exceptions.h"
+
 // pxUSE_SECURE_MALLOC - enables bounds checking on scoped malloc allocations.
 
 #ifndef pxUSE_SECURE_MALLOC
@@ -142,7 +144,7 @@ template< typename T >
 class ScopedAlloc : public BaseScopedAlloc<T>
 {
 public:
-	ScopedAlloc( size_t size=0 ) : BaseScopedAlloc()
+	ScopedAlloc( size_t size=0 ) : BaseScopedAlloc<T>()
 	{
 		Alloc(size);
 	}
@@ -156,9 +158,9 @@ public:
 	{
 		safe_free(this->m_buffer);
 		this->m_size = newsize;
-		if (!m_size) return;
+		if (!this->m_size) return;
 
-		this->m_buffer = (T*)malloc( m_size * sizeof(T) );
+		this->m_buffer = (T*)malloc( this->m_size * sizeof(T) );
 		if (!this->m_buffer)
 			throw Exception::OutOfMemory("ScopedAlloc");
 	}

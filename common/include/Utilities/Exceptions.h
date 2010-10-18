@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "Dependencies.h"
-#include "StringHelpers.h"
+#include "Assertions.h"
+#include "ScopedPtr.h"
 
 // --------------------------------------------------------------------------------------
 //  DESTRUCTOR_CATCHALL - safe destructor helper

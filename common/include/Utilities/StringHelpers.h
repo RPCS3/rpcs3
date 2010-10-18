@@ -64,9 +64,6 @@ public:
 
 extern void px_fputs( FILE* fp, const char* src );
 
-extern wxString fromUTF8( const char* src );
-extern wxString fromAscii( const char* src );
-
 // wxWidgets lacks one of its own...
 extern const wxRect wxDefaultRect;
 

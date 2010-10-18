@@ -185,6 +185,9 @@ extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* en
 extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
 extern bool pxIsEnglish( int id );
 
+extern wxString fromUTF8( const char* src );
+extern wxString fromAscii( const char* src );
+
 // --------------------------------------------------------------------------------------
 //  wxLt(x)   [macro]
 // --------------------------------------------------------------------------------------
@@ -230,6 +233,7 @@ extern bool pxIsEnglish( int id );
 
 #define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
+#include "Utilities/Assertions.h"
+#include "Utilities/Exceptions.h"
 #include "Utilities/ScopedPtr.h"
 #include "Utilities/ScopedAlloc.h"
-#include "Utilities/Assertions.h"
