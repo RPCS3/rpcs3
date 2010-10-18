@@ -5,7 +5,8 @@ project (YAML_CPP)
 set(LIB_TYPE SHARED)
 
 if(IPHONE)
-  set(CMAKE_OSX_SYSROOT iphoneos2.2.1)
+  set(CMAKE_OSX_SYSROOT iphoneos4.0)
+  set(CMAKE_OSX_ARCHITECTURES $(ARCHS_STANDARD_32_BIT))
   set(LIB_TYPE)
 endif(IPHONE)
 
@@ -58,6 +59,10 @@ set_target_properties(yaml-cpp PROPERTIES
 	VERSION "${YAML_CPP_VERSION}"
 	SOVERSION "${YAML_CPP_VERSION_MAJOR}.${YAML_CPP_VERSION_MINOR}"
 )
+
+if(IPHONE)
+set_target_properties(yaml-cpp PROPERTIES XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "3.0")
+endif(IPHONE)
 
 install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
 install(
