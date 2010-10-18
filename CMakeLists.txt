@@ -43,7 +43,7 @@ set(_INSTALL_DESTINATIONS
 	ARCHIVE DESTINATION lib${LIB_SUFFIX}
 )
 #
-file(GLOB public_headers include/[a-z]*.h)
+file(GLOB public_headers include/yaml-cpp/[a-z]*.h)
 file(GLOB private_headers src/[a-z]*.h)
 file(GLOB sources src/[a-z]*.cpp)
 
