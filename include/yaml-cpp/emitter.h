@@ -6,6 +6,7 @@
 
 #include "yaml-cpp/emittermanip.h"
 #include "yaml-cpp/ostream.h"
+#include "yaml-cpp/noncopyable.h"
 #include "yaml-cpp/null.h"
 #include <memory>
 #include <string>
@@ -15,7 +16,7 @@ namespace YAML
 {
 	class EmitterState;
 	
-	class Emitter
+	class Emitter: private noncopyable
 	{
 	public:
 		Emitter();
