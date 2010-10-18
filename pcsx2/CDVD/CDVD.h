@@ -42,7 +42,7 @@ static __fi s32 msf_to_lba(u8 m, u8 s, u8 f)
 	return lsn;
 }
 
-static __fi void lsn_to_msf(u8 *Time, s32 lsn)
+static __fi void lsn_to_msf(u8* Time, s32 lsn)
 {
 	u8 m, s, f;
 

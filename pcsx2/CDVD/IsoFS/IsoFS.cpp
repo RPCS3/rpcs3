@@ -94,7 +94,7 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 	}
 
 	if( !isValid )
-		throw Exception::FileNotFound(L"IsoFS")	// FIXME: Should report the name of the ISO here...
+		throw Exception::FileNotFound(L"IsoFileSystem")	// FIXME: Should report the name of the ISO here...
 			.SetDiagMsg(L"IsoFS could not find the root directory on the ISO image.");
 
 	DevCon.WriteLn( L"(IsoFS) Filesystem is " + FStype_ToString() );

@@ -75,7 +75,7 @@ int AppOpenModalDialog( wxWindow* parent=NULL )
 		return DialogType( parent ).ShowModal();
 }
 
-static bool HandlePluginError( Exception::BaseException& ex )
+static bool HandlePluginError( BaseException& ex )
 {
 	if( !pxDialogExists( L"CoreSettings" ) )
 	{
@@ -127,7 +127,7 @@ void PluginErrorEvent::InvokeEvent()
 {
 	if( !m_except ) return;
 
-	ScopedPtr<BaseException> deleteMe( m_except );
+	ScopedExcept deleteMe( m_except );
 	m_except = NULL;
 
 	if( !HandlePluginError( *deleteMe ) )
@@ -141,7 +141,7 @@ void PluginInitErrorEvent::InvokeEvent()
 {
 	if( !m_except ) return;
 
-	ScopedPtr<BaseException> deleteMe( m_except );
+	ScopedExcept deleteMe( m_except );
 	m_except = NULL;
 
 	if( !HandlePluginError( *deleteMe ) )

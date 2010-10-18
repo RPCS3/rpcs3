@@ -238,7 +238,6 @@ set(pcsx2CDVDSources
 	CDVD/CDVD.cpp
 	CDVD/CDVDisoReader.cpp
 	CDVD/IsoFileFormats.cpp
-	CDVD/IsoFileTools.cpp
 	CDVD/IsoFS/IsoFile.cpp
 	CDVD/IsoFS/IsoFSCDVD.cpp
 	CDVD/IsoFS/IsoFS.cpp)
@@ -251,7 +250,6 @@ set(pcsx2CDVDHeaders
 	CDVD/CDVD_internal.h
 	CDVD/CDVDisoReader.h
 	CDVD/IsoFileFormats.h
-	CDVD/IsoFileTools.h
 	CDVD/IsoFS/IsoDirectory.h
 	CDVD/IsoFS/IsoFileDescriptor.h
 	CDVD/IsoFS/IsoFile.h

@@ -16,41 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "Win32.h"
 
-// Translates an Errno code into an exception.
-// Throws an exception based on the given error code (usually taken from ANSI C's errno)
-void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode )
-{
-	if( errcode == 0 ) return;
-
-	switch( errcode )
-	{
-		case EINVAL:
-			pxFailDev( L"Invalid argument" );
-			throw Exception::Stream( streamname ).SetDiagMsg(L"Invalid argument" );
-
-		case EACCES:	// Access denied!
-			throw Exception::AccessDenied( streamname );
-
-		case EMFILE:	// Too many open files!
-			throw Exception::CannotCreateStream( streamname ).SetDiagMsg(L"Too many open files");	// File handle allocation failure
-
-		case EEXIST:
-			throw Exception::CannotCreateStream( streamname ).SetDiagMsg(L"File already exists");
-
-		case ENOENT:	// File not found!
-			throw Exception::FileNotFound( streamname );
-
-		case EPIPE:
-			throw Exception::BadStream( streamname ).SetDiagMsg(L"Broken pipe");
-
-		case EBADF:
-			throw Exception::BadStream( streamname ).SetDiagMsg(L"Bad file number");
-
-		default:
-			throw Exception::Stream( streamname ).SetDiagMsg(wxsFormat( L"General file/stream error [errno: %d]", errcode ));
-	}
-}
-
 // Throws an exception based on the value returned from GetLastError.
 // Performs an option return value success/fail check on hresult.
 void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
@@ -84,21 +49,6 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 			throw Exception::Stream( streamname ).SetDiagMsg(wxsFormat( L"General Win32 File/stream error [GetLastError: %d]", error ));
 		}
 	}
-}
-
-// returns TRUE if an error occurred.
-bool StreamException_LogFromErrno( const wxString& streamname, const wxChar* action, errno_t result )
-{
-	try
-	{
-		StreamException_ThrowFromErrno( streamname, result );
-	}
-	catch( Exception::Stream& ex )
-	{
-		Console.WriteLn( Color_Yellow, L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() );
-		return true;
-	}
-	return false;
 }
 
 // returns TRUE if an error occurred.

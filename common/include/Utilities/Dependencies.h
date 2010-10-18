@@ -23,7 +23,13 @@
 // --------------------------------------------------------------------------------------
 
 class wxOutputStream;
+class wxFileOutputStream;
+class wxFFileOutputStream;
+
 class wxInputStream;
+class wxFileInputStream;
+class wxFFileInputStream;
+
 class wxPoint;
 class wxRect;
 class wxSize;
@@ -36,6 +42,11 @@ namespace Threading
 	class Mutex;
 	class Semaphore;
 	class pxThread;
+}
+
+namespace Exception
+{
+	class BaseException;
 }
 
 // This should prove useful....
@@ -219,4 +230,6 @@ extern bool pxIsEnglish( int id );
 
 #define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
+#include "Utilities/ScopedPtr.h"
+#include "Utilities/ScopedMalloc.h"
 #include "Utilities/Assertions.h"
