@@ -526,11 +526,11 @@ bool CheckChangeInClut(u32 highdword, u32 psm)
 	u8* GSMem = g_pbyGSMemory + cbp * 256;
 
     if (PSMT_IS32BIT(cpsm))
-        return Cmp_ClutBuffer_GSMem<u32>((u32*)GSMem, csa, entries);
+        return Cmp_ClutBuffer_GSMem<u32>((u32*)GSMem, csa, entries*4);
     else {
 		// Mana Khemia triggers this.
         //ZZLog::Error_Log("16 bit clut not supported.");
-		return Cmp_ClutBuffer_GSMem<u16>((u16*)GSMem, csa, entries);
+		return Cmp_ClutBuffer_GSMem<u16>((u16*)GSMem, csa, entries*2);
     }
 }
 

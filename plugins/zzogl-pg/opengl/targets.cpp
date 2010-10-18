@@ -1731,7 +1731,7 @@ inline list<CMemoryTarget>::iterator CMemoryTargetMngr::DestroyTargetIter(list<C
 // Not same format -> 1
 // Same format, not same data (clut only) -> 2
 // identical -> 0
-int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset)
+int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize)
 {
 	if (PSMT_ISCLUT(it->psm) != PSMT_ISCLUT(tex0.psm))
 		return 1;
@@ -1743,10 +1743,10 @@ int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const te
 			return 1;
 
 		if	(PSMT_IS32BIT(tex0.cpsm)) {
-			if (Cmp_ClutBuffer_SavedClut<u32>((u32*)&it->clut[0], (u32*)(g_pbyGSClut + nClutOffset), clutsize))
+			if (Cmp_ClutBuffer_SavedClut<u32>((u32*)&it->clut[0], tex0.csa, clutsize))
 				return 2;
 		} else {
-			if (Cmp_ClutBuffer_SavedClut<u16>((u16*)&it->clut[0], (u16*)(g_pbyGSClut + nClutOffset), clutsize))
+			if (Cmp_ClutBuffer_SavedClut<u16>((u16*)&it->clut[0], tex0.csa, clutsize))
 				return 2;
 		}
 
@@ -1758,9 +1758,8 @@ int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const te
 	return 0;
 }
 
-void CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0)
+void CMemoryTargetMngr::GetClutVariables(int& clutsize, const tex0Info& tex0)
 {
-	nClutOffset = 0;
 	clutsize = 0;
 
 	if (PSMT_ISCLUT(tex0.psm))
@@ -1768,15 +1767,9 @@ void CMemoryTargetMngr::GetClutVariables(int& nClutOffset, int& clutsize, const 
 		int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
 
 		if (PSMT_IS32BIT(tex0.cpsm))
-		{
-			nClutOffset = 64 * tex0.csa;
 			clutsize = min(entries, 256 - tex0.csa * 16) * 4;
-		}
 		else
-		{
-			nClutOffset = 64 * (tex0.csa & 15) + (tex0.csa >= 16 ? 2 : 0);
 			clutsize = min(entries, 512 - tex0.csa * 16) * 2;
-		}
 	}
 }
 
@@ -1793,7 +1786,7 @@ void CMemoryTargetMngr::GetMemAddress(int& start, int& end,  const tex0Info& tex
 
 }
 
-CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate)
+CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int clutsize, const tex0Info& tex0, int forcevalidate)
 {
 	for (list<CMemoryTarget>::iterator it = listTargets.begin(); it != listTargets.end();)
 	{
@@ -1801,7 +1794,7 @@ CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int nClu
 		if (it->starty <= start && it->starty + it->height >= end)
 		{
 
-			int res = CompareTarget(it, tex0, clutsize, nClutOffset);
+			int res = CompareTarget(it, tex0, clutsize);
 
 			if (res == 1)
 			{
@@ -1905,12 +1898,12 @@ CMemoryTarget* CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, i
 CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forcevalidate)
 {
 	FUNCLOG
-	int start, end, nClutOffset, clutsize;
+	int start, end, clutsize;
 
-	GetClutVariables(nClutOffset, clutsize, tex0);
+	GetClutVariables(clutsize, tex0);
 	GetMemAddress(start, end, tex0);
 
-	CMemoryTarget* it = SearchExistTarget(start, end, nClutOffset, clutsize, tex0, forcevalidate);
+	CMemoryTarget* it = SearchExistTarget(start, end, clutsize, tex0, forcevalidate);
 
 	if (it != NULL) return it;
 
@@ -2006,13 +1999,13 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 		if (PSMT_IS32BIT(tex0.cpsm))
 		{
 			u32* pclut = (u32*) & targ->clut[0];
-            ClutBuffer_to_Array<u32>(pclut, (u32*)(g_pbyGSClut + nClutOffset), clutsize);
+            ClutBuffer_to_Array<u32>(pclut, tex0.csa, clutsize);
 			Build_Clut_Texture<u32>(tex0.psm, targ->height, pclut, psrc, (u32*)ptexdata);
 		}
 		else
 		{
 			u16* pclut = (u16*) & targ->clut[0];
-            ClutBuffer_to_Array<u16>(pclut, (u16*)(g_pbyGSClut + nClutOffset), clutsize);
+            ClutBuffer_to_Array<u16>(pclut, tex0.csa, clutsize);
 			Build_Clut_Texture<u16>(tex0.psm, targ->height, pclut, psrc, (u16*)ptexdata);
 		}
 

@@ -25,6 +25,19 @@
 #include <emmintrin.h>
 #endif
 
+// Local Clut buffer:
+// It supports both 32 bits and 16 bits colors formats. The size of the buffer is 1KBytes.
+// The 16 bits entries are arranged in 2 columns. One row is a 32 bits colors.
+// 256  0
+// 271  1
+// ...  ..
+// 510  254
+// 511  255
+//
+// CSA -> clut buffer offset:
+// 16 bits format: CSA < 32 <=> 16 entries, 16 half-row of the buffer (for example 0 to 15)
+// 32 bits format: CSA < 16 <=> 16 entries, 16 full row of the buffer (for example 256|0 to 271|15)
+
 static const __aligned16 int s_clut_16bits_mask[4] = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
 
 template <class T>
@@ -472,48 +485,115 @@ __forceinline void GSMem_to_ClutBuffer(tex0Info &tex0)
  * Clut buffer -> local C array (linear)
  * *****************************************************************/
 template <class T>
-__forceinline void ClutBuffer_to_Array(T* dst, T* clut, u32 clutsize) {}
+__forceinline void ClutBuffer_to_Array(T* dst, u32 csa, u32 clutsize) {}
 
 template <>
-__forceinline void ClutBuffer_to_Array<u32>(u32* dst, u32* clut, u32 clutsize)
+__forceinline void ClutBuffer_to_Array<u32>(u32* dst, u32 csa, u32 clutsize)
 {
-    ZZLog::Error_Log("Fill 32b clut");
-    memcpy_amd((u8*)dst, (u8*)clut, clutsize);
+    u8* clut = (u8*)GetClutBufferAddress<u32>(csa);
+    memcpy_amd((u8*)dst, clut, clutsize);
 }
 
 template <>
-__forceinline void ClutBuffer_to_Array<u16>(u16* dst, u16* clut, u32 clutsize)
+__forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
 {
-    ZZLog::Error_Log("Fill 16b clut");
-    int left = ((u32)clut & 2) ? 0 : (((u32)clut & 0x3ff) / 2) + clutsize - 512;
+    u16* clut = (u16*)GetClutBufferAddress<u32>(csa); // Keep aligned version for sse2
 
-    if (left > 0) clutsize -= left;
-
-    while (clutsize > 0)
-    {
-        dst[0] = clut[0];
-        dst++;
-        clut += 2;
-        clutsize -= 2;
+    // which side to copy
+    u32 clutsize_right;
+    u32 clutsize_left;
+    if (csa < 16) {
+        clutsize_right = min(clutsize, (16-csa)*64);
+        clutsize_left = clutsize - clutsize_right;
+    } else {
+        clutsize_right = 0;
+        clutsize_left = clutsize;
     }
 
-    if (left > 0)
+    while (clutsize_right > 0)
     {
-        clut = GetClutBufferAddress<u16>(16);
+#ifdef ZEROGS_SSE4
+        // only lower 16 bits of dword are valid
+        __m128i clut_0 = _mm_load_si128((__m128i*)clut);
+        __m128i clut_1 = _mm_load_si128((__m128i*)clut+1);
+        __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
+        __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
 
-        while (left > 0)
-        {
-            dst[0] = clut[0];
-            left -= 2;
-            clut += 2;
-            dst++;
-        }
+        clut_0 = _mm_shufflelo_epi16(clut_0, 0x32);
+        clut_1 = _mm_shufflelo_epi16(clut_1, 0x32);
+        clut_2 = _mm_shufflelo_epi16(clut_2, 0x32);
+        clut_3 = _mm_shufflelo_epi16(clut_3, 0x32);
+
+        clut_0 = _mm_shufflehi_epi16(clut_0, 0xD8); // - - 3 2 1 0 - -
+        clut_1 = _mm_shufflehi_epi16(clut_1, 0xD8);
+        clut_2 = _mm_shufflehi_epi16(clut_2, 0xD8);
+        clut_3 = _mm_shufflehi_epi16(clut_3, 0xD8);
+
+        clut_0 = _mm_srli_si128(clut_0, 4);
+        clut_1 = _mm_srli_si128(clut_1, 4);
+        clut_2 = _mm_srli_si128(clut_2, 4);
+        clut_3 = _mm_srli_si128(clut_3, 4);
+
+        _mm_store_si128((__m128i*)dst, _mm_unpacklo_epi64(clut_0, clut_1));
+        _mm_store_si128((__m128i*)dst+1, _mm_unpacklo_epi64(clut_2, clut_3));
+#else
+        for(int i = 0; i < 16; ++i)
+            dst[i] = clut[2*i];
+#endif
+
+        dst += 16;
+        clut += 32;
+        clutsize_right -= 32;
+    }
+
+    if(csa < 16) {
+        // go back to the base before processing left clut column
+        clut = (u16*)GetClutBufferAddress<u32>(0); // Keep aligned version for sse2
+    }
+
+    while (clutsize_left > 0)
+    {
+#ifdef ZEROGS_SSE2
+        // only higher 16 bits of dword are valid
+        __m128i clut_0 = _mm_load_si128((__m128i*)clut);
+        __m128i clut_1 = _mm_load_si128((__m128i*)clut+1);
+        __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
+        __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
+
+        clut_0 = _mm_shufflelo_epi16(clut_0, 0xD8);
+        clut_1 = _mm_shufflelo_epi16(clut_1, 0xD8);
+        clut_2 = _mm_shufflelo_epi16(clut_2, 0xD8);
+        clut_3 = _mm_shufflelo_epi16(clut_3, 0xD8);
+
+        clut_0 = _mm_shufflehi_epi16(clut_0, 0x63); // - - 3 2 1 0 - -
+        clut_1 = _mm_shufflehi_epi16(clut_1, 0x63);
+        clut_2 = _mm_shufflehi_epi16(clut_2, 0x63);
+        clut_3 = _mm_shufflehi_epi16(clut_3, 0x63);
+
+        clut_0 = _mm_srli_si128(clut_0, 4);
+        clut_1 = _mm_srli_si128(clut_1, 4);
+        clut_2 = _mm_srli_si128(clut_2, 4);
+        clut_3 = _mm_srli_si128(clut_3, 4);
+
+        _mm_store_si128((__m128i*)dst, _mm_unpacklo_epi64(clut_0, clut_1));
+        _mm_store_si128((__m128i*)dst+1, _mm_unpacklo_epi64(clut_2, clut_3));
+#else
+        // Note +1 because we change higher 16 bits
+        for(int i = 0; i < 16; ++i)
+            dst[i] = clut[2*i];
+#endif
+
+        dst += 16;
+        clut += 32;
+        clutsize_left -= 32;
     }
 }
 
 /* *****************************************************************
  * Compare: Clut buffer <-> Local Memory
  * *****************************************************************/
+// false -> identical
+// true  -> different
 template <class T>
 __forceinline bool Cmp_ClutBuffer_GSMem(T* GSmem, u32 csa, u32 clutsize);
 
@@ -563,17 +643,17 @@ __forceinline bool Cmp_ClutBuffer_GSMem<u32>(u32* GSmem, u32 csa, u32 clutsize)
         _GSmem += 32;
 
         // go back to the previous memory block then down one memory column
-        if (clutsize & 0x10) {
+        if (clutsize & 0x40) {
             _GSmem -= (64-8);
         }
         // In case previous operation (down one column) cross the block boundary
         // Go to the next block
-        if (clutsize == 0x90) {
+        if (clutsize == 0x240) {
             _GSmem += 32;
         }
 
         clut += 8;
-        clutsize -= 16;
+        clutsize -= 64;
     }
 
     return false;
@@ -589,59 +669,120 @@ __forceinline bool Cmp_ClutBuffer_GSMem<u16>(u16* GSmem, u32 csa, u32 clutsize)
 /* *****************************************************************
  * Compare: Clut buffer <-> local C array (linear)
  * *****************************************************************/
+// false -> identical
+// true  -> different
 template <class T>
-__forceinline bool Cmp_ClutBuffer_SavedClut(T* saved_clut, T* clut, u32 clutsize);
+__forceinline bool Cmp_ClutBuffer_SavedClut(T* saved_clut, u32 csa, u32 clutsize);
 
 template <>
-__forceinline bool Cmp_ClutBuffer_SavedClut<u32>(u32* saved_clut, u32* clut, u32 clutsize)
+__forceinline bool Cmp_ClutBuffer_SavedClut<u32>(u32* saved_clut, u32 csa, u32 clutsize)
 {
+    u32* clut = GetClutBufferAddress<u32>(csa);
     return memcmp_mmx(saved_clut, clut, clutsize);
 }
 
 template <>
-__forceinline bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u16* clut, u32 clutsize)
+__forceinline bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u32 csa, u32 clutsize)
 {
 	assert((clutsize&31) == 0);
 
-	// left > 0 only when csa < 16
-	int left = 0;
-	if (((u32)clut & 2) == 0)
-	{
-		left = (((u32)clut & 0x3ff) / 2) + clutsize - 512;
-		clutsize -= left;
-	}
+#ifdef ZEROGS_SSE2
+    __m128i zero_128 = _mm_setzero_si128();
+#endif
+    u16* clut = (u16*)GetClutBufferAddress<u32>(csa); // Keep aligned version for sse2
 
-	while (clutsize > 0)
-	{
+    // which side to cmp
+    u32 clutsize_right;
+    u32 clutsize_left;
+    if (csa < 16) {
+        clutsize_right = min(clutsize, (16-csa)*64);
+        clutsize_left = clutsize - clutsize_right;
+    } else {
+        clutsize_right = 0;
+        clutsize_left = clutsize;
+    }
+
+    while (clutsize_right > 0)
+    {
+#ifdef ZEROGS_SSE2
+        // only lower 16 bits of dword are valid
+        __m128i clut_0 = _mm_load_si128((__m128i*)clut);
+        __m128i clut_1 = _mm_load_si128((__m128i*)clut+1);
+        __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
+        __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
+
+        // value must converted to 32 bits
+        __m128i saved_clut_0 = _mm_load_si128((__m128i*)saved_clut);
+        __m128i saved_clut_1 = _mm_load_si128((__m128i*)saved_clut+1);
+
+        __m128i result = _mm_cmpeq_epi16(_mm_unpacklo_epi16(saved_clut_0, zero_128), clut_0);
+        __m128i result_tmp = _mm_cmpeq_epi16(_mm_unpackhi_epi16(saved_clut_0, zero_128), clut_1);
+        result = _mm_and_si128(result, result_tmp);
+
+        result_tmp = _mm_cmpeq_epi16(_mm_unpacklo_epi16(saved_clut_1, zero_128), clut_2);
+        result = _mm_and_si128(result, result_tmp);
+
+        result_tmp = _mm_cmpeq_epi16(_mm_unpackhi_epi16(saved_clut_1, zero_128), clut_3);
+        result = _mm_and_si128(result, result_tmp);
+
+        u32 result_int = _mm_movemask_epi8(result);
+        // only lower 16bits must be checked
+        if ((result_int&0x3333) != 0x3333)
+            return true;
+#else
 		for (int i = 0; i < 16; ++i)
-		{
-			if (saved_clut[i] != clut[2*i]) return 1;
-		}
+			if (saved_clut[i] != clut[2*i]) return true;
+#endif
 
-		clutsize -= 32;
 		saved_clut += 16;
 		clut += 32;
+        clutsize_right -= 32;
 	}
 
-	if (left > 0)
-	{
-		clut = (u16*)(g_pbyGSClut + 2);
+    if(csa < 16) {
+        // go back to the base before processing left clut column
+        clut = (u16*)GetClutBufferAddress<u32>(0); // Keep aligned version for sse2
+    }
 
-		while (left > 0)
-		{
-			for (int i = 0; i < 16; ++i)
-			{
-				if (saved_clut[i] != clut[2*i]) return 1;
-			}
+    while (clutsize_left > 0)
+    {
+#ifdef ZEROGS_SSE2
+        // only higher 16 bits of dword are valid
+        __m128i clut_0 = _mm_load_si128((__m128i*)clut);
+        __m128i clut_1 = _mm_load_si128((__m128i*)clut+1);
+        __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
+        __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
 
-			left -= 32;
+        // value must converted to 32 bits (with 0 in lower 16 bits)
+        __m128i saved_clut_0 = _mm_load_si128((__m128i*)saved_clut);
+        __m128i saved_clut_1 = _mm_load_si128((__m128i*)saved_clut+1);
 
-			saved_clut += 16;
-			clut += 32;
-		}
-	}
+        __m128i result = _mm_cmpeq_epi16(_mm_unpacklo_epi16(zero_128, saved_clut_0), clut_0);
+        __m128i result_tmp = _mm_cmpeq_epi16(_mm_unpackhi_epi16(zero_128, saved_clut_0), clut_1);
+        result = _mm_and_si128(result, result_tmp);
 
-	return 0;
+        result_tmp = _mm_cmpeq_epi16(_mm_unpacklo_epi16(zero_128, saved_clut_1), clut_2);
+        result = _mm_and_si128(result, result_tmp);
+
+        result_tmp = _mm_cmpeq_epi16(_mm_unpackhi_epi16(zero_128, saved_clut_1), clut_3);
+        result = _mm_and_si128(result, result_tmp);
+
+        u32 result_int = _mm_movemask_epi8(result);
+        // only higher 16bits must be checked
+        if ((result_int&0xCCCC) != 0xCCCC)
+            return true;
+#else
+        // Note +1 because we change higher 16 bits
+        for (int i = 0; i < 16; ++i)
+            if (saved_clut[i] != clut[2*i+1]) return true;
+#endif
+
+        saved_clut += 16;
+        clut += 32;
+        clutsize_left -= 32;
+    }
+
+	return false;
 }
 
 
@@ -653,7 +794,6 @@ __forceinline bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u16* clut, u32
 template <class T>
 __forceinline void Build_Clut_Texture(u32 psm, u32 height, T* pclut, u8* psrc, T* pdst)
 {
-    ZZLog::Error_Log("Build clut texture");
 	switch (psm)
 	{
 		case PSMT8:
