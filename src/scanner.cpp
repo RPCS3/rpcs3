@@ -32,13 +32,8 @@ namespace YAML
 	void Scanner::pop()
 	{
 		EnsureTokensInQueue();
-		if(!m_tokens.empty()) {
-			// Saved anchors shouldn't survive popping the document end marker
-			if (m_tokens.front().type == Token::DOC_END) {
-				ClearAnchors();
-			}
+		if(!m_tokens.empty())
 			m_tokens.pop();
-		}
 	}
 
 	// peek
@@ -245,7 +240,6 @@ namespace YAML
 		IndentMarker *pIndent = new IndentMarker(-1, IndentMarker::NONE);
 		m_indentRefs.push_back(pIndent);
 		m_indents.push(pIndent);
-		m_anchors.clear();
 	}
 
 	// EndStream
@@ -378,29 +372,6 @@ namespace YAML
 		return m_indents.top()->column;
 	}
 
-	// Save
-	// . Saves a pointer to the Node object referenced by a particular anchor
-	//   name.
-	void Scanner::Save(const std::string& anchor, Node* value)
-	{
-		m_anchors[anchor] = value;
-	}
-
-	// Retrieve
-	// . Retrieves a pointer previously saved for an anchor name.
-	// . Throws an exception if the anchor has not been defined.
-	const Node *Scanner::Retrieve(const std::string& anchor) const
-	{
-		typedef std::map<std::string, const Node *> map;
-
-		map::const_iterator itNode = m_anchors.find(anchor);
-
-		if(m_anchors.end() == itNode)
-			ThrowParserException(ErrorMsg::UNKNOWN_ANCHOR);
-
-		return itNode->second;
-	}
-
 	// ThrowParserException
 	// . Throws a ParserException with the current token location
 	//   (if available).
@@ -413,11 +384,6 @@ namespace YAML
 			mark = token.mark;
 		}
 		throw ParserException(mark, msg);
-	}
-
-	void Scanner::ClearAnchors()
-	{
-		m_anchors.clear();
 	}
 }
 

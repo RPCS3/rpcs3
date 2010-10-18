@@ -29,11 +29,6 @@ namespace YAML
 		void pop();
 		Token& peek();
 
-		// anchor management
-		void Save(const std::string& anchor, Node* value);
-		const Node *Retrieve(const std::string& anchor) const;
-		void ClearAnchors();
-
 	private:
 		struct IndentMarker {
 			enum INDENT_TYPE { MAP, SEQ, NONE };
@@ -127,7 +122,6 @@ namespace YAML
 		std::stack <IndentMarker *> m_indents;
 		std::vector <IndentMarker *> m_indentRefs; // for "garbage collection"
 		std::stack <FLOW_MARKER> m_flows;
-		std::map <std::string, const Node *> m_anchors;
 	};
 }
 

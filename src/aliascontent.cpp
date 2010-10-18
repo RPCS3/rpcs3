@@ -2,23 +2,8 @@
 
 namespace YAML
 {
-	AliasContent::AliasContent(Content* pNodeContent)
-		: m_pRef(pNodeContent)
+	AliasContent::AliasContent(Content* pNodeContent): m_pRef(pNodeContent)
 	{
-	}
-
-	Content *AliasContent::Clone() const
-	{
-		return 0; // TODO: how to clone an alias?
-	}
-
-	void AliasContent::Parse(Scanner * /*pScanner*/, ParserState& /*state*/)
-	{
-	}
-
-	void AliasContent::Write(Emitter&) const
-	{
-		// no content (just an alias)
 	}
 
 	bool AliasContent::GetBegin(std::vector <Node *>::const_iterator& i) const
@@ -69,6 +54,11 @@ namespace YAML
 	bool AliasContent::GetScalar(std::string& scalar) const
 	{
 		return m_pRef->GetScalar(scalar);
+	}
+
+	void AliasContent::EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const
+	{
+		m_pRef->EmitEvents(am, eventHandler, mark, tag, anchor);
 	}
 
 	int AliasContent::Compare(Content *pContent)

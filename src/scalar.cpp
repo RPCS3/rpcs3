@@ -1,9 +1,5 @@
 #include "scalar.h"
-#include "scanner.h"
-#include "token.h"
-#include "exceptions.h"
-#include "node.h"
-#include "emitter.h"
+#include "eventhandler.h"
 
 namespace YAML
 {
@@ -11,29 +7,13 @@ namespace YAML
 	{
 	}
 
-	Scalar::Scalar(const std::string& data): m_data(data)
-	{
-	}
-
 	Scalar::~Scalar()
 	{
 	}
 
-	Content *Scalar::Clone() const
+	void Scalar::EmitEvents(AliasManager&, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const
 	{
-		return new Scalar(m_data);
-	}
-
-	void Scalar::Parse(Scanner *pScanner, ParserState& /*state*/)
-	{
-		Token& token = pScanner->peek();
-		m_data = token.value;
-		pScanner->pop();
-	}
-
-	void Scalar::Write(Emitter& out) const
-	{
-		out << m_data;
+		eventHandler.OnScalar(mark, tag, anchor, m_data);
 	}
 
 	int Scalar::Compare(Content *pContent)

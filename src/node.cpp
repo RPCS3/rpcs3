@@ -1,15 +1,20 @@
 #include "node.h"
-#include "token.h"
-#include "scanner.h"
-#include "content.h"
-#include "parser.h"
-#include "scalar.h"
-#include "sequence.h"
-#include "map.h"
 #include "aliascontent.h"
-#include "iterpriv.h"
+#include "aliasmanager.h"
+#include "content.h"
+#include "emitfromevents.h"
 #include "emitter.h"
+#include "eventhandler.h"
+#include "iterpriv.h"
+#include "map.h"
+#include "nodebuilder.h"
+#include "nodeproperties.h"
+#include "scalar.h"
+#include "scanner.h"
+#include "sequence.h"
 #include "tag.h"
+#include "token.h"
+#include <cassert>
 #include <stdexcept>
 
 namespace YAML
@@ -20,15 +25,8 @@ namespace YAML
 		return *pNode1 < *pNode2;
 	}
 
-	Node::Node(): m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(true)
+	Node::Node(): m_type(CT_NONE), m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(false)
 	{
-	}
-
-	Node::Node(const Mark& mark, const std::string& anchor, const std::string& tag, const Content *pContent)
-	: m_mark(mark), m_anchor(anchor), m_tag(tag), m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(false)
-	{
-		if(pContent)
-			m_pContent = pContent->Clone();
 	}
 
 	Node::~Node()
@@ -39,156 +37,112 @@ namespace YAML
 	void Node::Clear()
 	{
 		delete m_pContent;
+		m_type = CT_NONE;
 		m_pContent = 0;
 		m_alias = false;
 		m_referenced = false;
-		m_anchor.clear();
 		m_tag.clear();
 	}
 	
 	std::auto_ptr<Node> Node::Clone() const
 	{
-		if(m_alias)
-			throw std::runtime_error("yaml-cpp: Can't clone alias");  // TODO: what to do about aliases?
-		
-		return std::auto_ptr<Node> (new Node(m_mark, m_anchor, m_tag, m_pContent));
+		std::auto_ptr<Node> pNode(new Node);
+		NodeBuilder nodeBuilder(*pNode);
+		EmitEvents(nodeBuilder);
+		return pNode;
 	}
 
-	void Node::Parse(Scanner *pScanner, ParserState& state)
+	void Node::EmitEvents(EventHandler& eventHandler) const
+	{
+		eventHandler.OnDocumentStart(m_mark);
+		AliasManager am;
+		EmitEvents(am, eventHandler);
+		eventHandler.OnDocumentEnd();
+	}
+
+	void Node::EmitEvents(AliasManager& am, EventHandler& eventHandler) const
+	{
+		anchor_t anchor = NullAnchor;
+		if(m_referenced || m_alias) {
+			if(const Node *pOther = am.LookupReference(*this)) {
+				eventHandler.OnAlias(m_mark, am.LookupAnchor(*pOther));
+				return;
+			}
+			
+			am.RegisterReference(*this);
+			anchor = am.LookupAnchor(*this);
+		}
+		
+		if(m_pContent)
+			m_pContent->EmitEvents(am, eventHandler, m_mark, GetTag(), anchor);
+		else
+			eventHandler.OnNull(GetTag(), anchor);
+	}
+
+	void Node::Init(CONTENT_TYPE type, const Mark& mark, const std::string& tag)
 	{
 		Clear();
+		m_mark = mark;
+		m_type = type;
+		m_tag = tag;
+		m_alias = false;
+		m_pIdentity = this;
+		m_referenced = false;
 
-		// an empty node *is* a possibility
-		if(pScanner->empty())
-			return;
-
-		// save location
-		m_mark = pScanner->peek().mark;
-		
-		// special case: a value node by itself must be a map, with no header
-		if(pScanner->peek().type == Token::VALUE) {
-			m_pContent = new Map;
-			m_pContent->Parse(pScanner, state);
-			return;
-		}
-
-		ParseHeader(pScanner, state);
-
-		// is this an alias? if so, its contents are an alias to
-		// a previously defined anchor
-		if(m_alias) {
-			// the scanner throws an exception if it doesn't know this anchor name
-			const Node *pReferencedNode = pScanner->Retrieve(m_anchor);
-			m_pIdentity = pReferencedNode;
-
-			// mark the referenced node for the sake of the client code
-			pReferencedNode->m_referenced = true;
-
-			// use of an Alias object keeps the referenced content from
-			// being deleted twice
-			Content *pAliasedContent = pReferencedNode->m_pContent;
-			if(pAliasedContent)
-				m_pContent = new AliasContent(pAliasedContent);
-			
-			return;
-		}
-
-		// now split based on what kind of node we should be
-		switch(pScanner->peek().type) {
-			case Token::SCALAR:
+		switch(type) {
+			case CT_SCALAR:
 				m_pContent = new Scalar;
 				break;
-			case Token::FLOW_SEQ_START:
-			case Token::BLOCK_SEQ_START:
+			case CT_SEQUENCE:
 				m_pContent = new Sequence;
 				break;
-			case Token::FLOW_MAP_START:
-			case Token::BLOCK_MAP_START:
+			case CT_MAP:
 				m_pContent = new Map;
 				break;
-			case Token::KEY:
-				// compact maps can only go in a flow sequence
-				if(state.GetCurCollectionType() == ParserState::FLOW_SEQ)
-					m_pContent = new Map;
-				break;
 			default:
+				m_pContent = 0;
 				break;
 		}
-
-		// Have to save anchor before parsing to allow for aliases as
-		// contained node (recursive structure)
-		if(!m_anchor.empty())
-			pScanner->Save(m_anchor, this);
-
-		if(m_pContent)
-			m_pContent->Parse(pScanner, state);
 	}
 
-	// ParseHeader
-	// . Grabs any tag, alias, or anchor tokens and deals with them.
-	void Node::ParseHeader(Scanner *pScanner, ParserState& state)
+	void Node::InitNull(const std::string& tag)
 	{
-		while(1) {
-			if(pScanner->empty())
-				return;
+		Clear();
+		m_tag = tag;
+		m_alias = false;
+		m_pIdentity = this;
+		m_referenced = false;
+	}
 
-			switch(pScanner->peek().type) {
-				case Token::TAG: ParseTag(pScanner, state); break;
-				case Token::ANCHOR: ParseAnchor(pScanner, state); break;
-				case Token::ALIAS: ParseAlias(pScanner, state); break;
-				default: return;
-			}
+	void Node::InitAlias(const Mark& mark, const Node& identity)
+	{
+		Clear();
+		m_mark = mark;
+		m_alias = true;
+		m_pIdentity = &identity;
+		if(identity.m_pContent) {
+			m_pContent = new AliasContent(identity.m_pContent);
+			m_type = identity.GetType();
 		}
+		identity.m_referenced = true;
 	}
 
-	void Node::ParseTag(Scanner *pScanner, ParserState& state)
+	void Node::SetData(const std::string& data)
 	{
-		Token& token = pScanner->peek();
-		if(m_tag != "")
-			throw ParserException(token.mark, ErrorMsg::MULTIPLE_TAGS);
+		assert(m_pContent); // TODO: throw
+		m_pContent->SetData(data);
+	}
 
-		Tag tag(token);
-		m_tag = tag.Translate(state);
-		pScanner->pop();
+	void Node::Append(std::auto_ptr<Node> pNode)
+	{
+		assert(m_pContent); // TODO: throw
+		m_pContent->Append(pNode);
 	}
 	
-	void Node::ParseAnchor(Scanner *pScanner, ParserState& /*state*/)
+	void Node::Insert(std::auto_ptr<Node> pKey, std::auto_ptr<Node> pValue)
 	{
-		Token& token = pScanner->peek();
-		if(m_anchor != "")
-			throw ParserException(token.mark, ErrorMsg::MULTIPLE_ANCHORS);
-
-		m_anchor = token.value;
-		m_alias = false;
-		pScanner->pop();
-	}
-
-	void Node::ParseAlias(Scanner *pScanner, ParserState& /*state*/)
-	{
-		Token& token = pScanner->peek();
-		if(m_anchor != "")
-			throw ParserException(token.mark, ErrorMsg::MULTIPLE_ALIASES);
-		if(m_tag != "")
-			throw ParserException(token.mark, ErrorMsg::ALIAS_CONTENT);
-
-		m_anchor = token.value;
-		m_alias = true;
-		pScanner->pop();
-	}
-
-	CONTENT_TYPE Node::GetType() const
-	{
-		if(!m_pContent)
-			return CT_NONE;
-
-		if(m_pContent->IsScalar())
-			return CT_SCALAR;
-		else if(m_pContent->IsSequence())
-			return CT_SEQUENCE;
-		else if(m_pContent->IsMap())
-			return CT_MAP;
-			
-		return CT_NONE;
+		assert(m_pContent); // TODO: throw
+		m_pContent->Insert(pKey, pValue);
 	}
 
 	// begin
@@ -261,23 +215,8 @@ namespace YAML
 
 	Emitter& operator << (Emitter& out, const Node& node)
 	{
-		// write anchor/alias
-		if(node.m_anchor != "") {
-			if(node.m_alias)
-				out << Alias(node.m_anchor);
-			else
-				out << Anchor(node.m_anchor);
-		}
-
-		if(node.m_tag != "")
-			out << VerbatimTag(node.m_tag);
-
-		// write content
-		if(node.m_pContent)
-			node.m_pContent->Write(out);
-		else if(!node.m_alias)
-			out << Null;
-
+		EmitFromEvents emitFromEvents(out);
+		node.EmitEvents(emitFromEvents);
 		return out;
 	}
 

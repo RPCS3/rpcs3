@@ -1,8 +1,6 @@
 #include "sequence.h"
+#include "eventhandler.h"
 #include "node.h"
-#include "scanner.h"
-#include "token.h"
-#include "emitter.h"
 #include <stdexcept>
 
 namespace YAML
@@ -10,12 +8,6 @@ namespace YAML
 	Sequence::Sequence()
 	{
 
-	}
-
-	Sequence::Sequence(const std::vector<Node *>& data)
-	{
-		for(std::size_t i=0;i<data.size();i++)
-			m_data.push_back(data[i]->Clone().release());
 	}
 
 	Sequence::~Sequence()
@@ -28,11 +20,6 @@ namespace YAML
 		for(std::size_t i=0;i<m_data.size();i++)
 			delete m_data[i];
 		m_data.clear();
-	}
-
-	Content *Sequence::Clone() const
-	{
-		return new Sequence(m_data);
 	}
 
 	bool Sequence::GetBegin(std::vector <Node *>::const_iterator& it) const
@@ -59,90 +46,17 @@ namespace YAML
 		return m_data.size();
 	}
 
-	void Sequence::Parse(Scanner *pScanner, ParserState& state)
+	void Sequence::Append(std::auto_ptr<Node> pNode)
 	{
-		Clear();
-
-		// split based on start token
-		switch(pScanner->peek().type) {
-			case Token::BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
-			case Token::FLOW_SEQ_START: ParseFlow(pScanner, state); break;
-			default: break;
-		}
+		m_data.push_back(pNode.release());
 	}
-
-	void Sequence::ParseBlock(Scanner *pScanner, ParserState& state)
+	
+	void Sequence::EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const
 	{
-		// eat start token
-		pScanner->pop();
-		state.PushCollectionType(ParserState::BLOCK_SEQ);
-
-		while(1) {
-			if(pScanner->empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ);
-
-			Token token = pScanner->peek();
-			if(token.type != Token::BLOCK_ENTRY && token.type != Token::BLOCK_SEQ_END)
-				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ);
-
-			pScanner->pop();
-			if(token.type == Token::BLOCK_SEQ_END)
-				break;
-
-			Node *pNode = new Node;
-			m_data.push_back(pNode);
-			
-			// check for null
-			if(!pScanner->empty()) {
-				const Token& token = pScanner->peek();
-				if(token.type == Token::BLOCK_ENTRY || token.type == Token::BLOCK_SEQ_END)
-					continue;
-			}
-			
-			pNode->Parse(pScanner, state);
-		}
-
-		state.PopCollectionType(ParserState::BLOCK_SEQ);
-	}
-
-	void Sequence::ParseFlow(Scanner *pScanner, ParserState& state)
-	{
-		// eat start token
-		pScanner->pop();
-		state.PushCollectionType(ParserState::FLOW_SEQ);
-
-		while(1) {
-			if(pScanner->empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ_FLOW);
-
-			// first check for end
-			if(pScanner->peek().type == Token::FLOW_SEQ_END) {
-				pScanner->pop();
-				break;
-			}
-
-			// then read the node
-			Node *pNode = new Node;
-			m_data.push_back(pNode);
-			pNode->Parse(pScanner, state);
-
-			// now eat the separator (or could be a sequence end, which we ignore - but if it's neither, then it's a bad node)
-			Token& token = pScanner->peek();
-			if(token.type == Token::FLOW_ENTRY)
-				pScanner->pop();
-			else if(token.type != Token::FLOW_SEQ_END)
-				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ_FLOW);
-		}
-
-		state.PopCollectionType(ParserState::FLOW_SEQ);
-	}
-
-	void Sequence::Write(Emitter& out) const
-	{
-		out << BeginSeq;
+		eventHandler.OnSequenceStart(mark, tag, anchor);
 		for(std::size_t i=0;i<m_data.size();i++)
-			out << *m_data[i];
-		out << EndSeq;
+			m_data[i]->EmitEvents(am, eventHandler);
+		eventHandler.OnSequenceEnd();
 	}
 
 	int Sequence::Compare(Content *pContent)

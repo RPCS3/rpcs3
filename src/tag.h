@@ -8,7 +8,7 @@
 namespace YAML
 {
 	struct Token;
-	struct ParserState;
+	struct Directives;
 
 	struct Tag {
 		enum TYPE {
@@ -16,7 +16,7 @@ namespace YAML
 		};
 		
 		Tag(const Token& token);
-		const std::string Translate(const ParserState& state);
+		const std::string Translate(const Directives& directives);
 		
 		TYPE type;
 		std::string handle, value;

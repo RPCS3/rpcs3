@@ -4,32 +4,30 @@
 #define CONTENT_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 
-#include <vector>
-#include <map>
-#include "parserstate.h"
+#include "anchor.h"
 #include "exceptions.h"
 #include "ltnode.h"
+#include <map>
+#include <memory>
+#include <vector>
 
 namespace YAML
 {
-	class Scanner;
-	class Parser;
+	struct Mark;
+	struct NodeProperties;
+	class AliasManager;
+	class EventHandler;
+	class Map;
 	class Node;
 	class Scalar;
+	class Scanner;
 	class Sequence;
-	class Map;
-	class Emitter;
 
 	class Content
 	{
 	public:
 		Content() {}
 		virtual ~Content() {}
-		
-		virtual Content *Clone() const = 0;
-
-		virtual void Parse(Scanner *pScanner, ParserState& state) = 0;
-		virtual void Write(Emitter& out) const = 0;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator&) const { return false; }
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator&) const { return false; }
@@ -40,6 +38,11 @@ namespace YAML
 		virtual bool IsScalar() const { return false; }
 		virtual bool IsMap() const { return false; }
 		virtual bool IsSequence() const { return false; }
+		
+		virtual void SetData(const std::string& data);
+		virtual void Append(std::auto_ptr<Node> pNode);
+		virtual void Insert(std::auto_ptr<Node> pKey, std::auto_ptr<Node> pValue);
+		virtual void EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const = 0;
 
 		// extraction
 		virtual bool GetScalar(std::string&) const { return false; }

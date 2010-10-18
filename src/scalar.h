@@ -13,15 +13,12 @@ namespace YAML
 	{
 	public:
 		Scalar();
-		Scalar(const std::string& data);
 		virtual ~Scalar();
 
-		virtual Content *Clone() const;
-
-		virtual void Parse(Scanner *pScanner, ParserState& state);
-		virtual void Write(Emitter& out) const;
+		virtual void SetData(const std::string& data) { m_data = data; }
 
 		virtual bool IsScalar() const { return true; }
+		virtual void EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const;
 
 		// extraction
 		virtual bool GetScalar(std::string& scalar) const {

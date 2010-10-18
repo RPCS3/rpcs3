@@ -12,11 +12,6 @@ namespace YAML
 	{
 	public:
 		AliasContent(Content *pNodeContent);
-		
-		virtual Content *Clone() const;
-
-		virtual void Parse(Scanner* pScanner, ParserState& state);
-		virtual void Write(Emitter&) const;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator&) const;
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator&) const;
@@ -29,6 +24,7 @@ namespace YAML
 		virtual bool IsSequence() const;
 
 		virtual bool GetScalar(std::string& s) const;
+		virtual void EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const;
 
 		virtual int Compare(Content *);
 		virtual int Compare(Scalar *);

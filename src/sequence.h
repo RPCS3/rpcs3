@@ -15,19 +15,17 @@ namespace YAML
 	{
 	public:
 		Sequence();
-		Sequence(const std::vector<Node *>& data);
 		virtual ~Sequence();
 
 		void Clear();
-		virtual Content *Clone() const;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const;
 		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) const;
 		virtual Node *GetNode(std::size_t i) const;
 		virtual std::size_t GetSize() const;
 
-		virtual void Parse(Scanner *pScanner, ParserState& state);
-		virtual void Write(Emitter& out) const;
+		virtual void Append(std::auto_ptr<Node> pNode);
+		virtual void EmitEvents(AliasManager& am, EventHandler& eventHandler, const Mark& mark, const std::string& tag, anchor_t anchor) const;
 
 		virtual bool IsSequence() const { return true; }
 
@@ -36,10 +34,6 @@ namespace YAML
 		virtual int Compare(Scalar *) { return 1; }
 		virtual int Compare(Sequence *pSeq);
 		virtual int Compare(Map *) { return -1; }
-
-	private:
-		void ParseBlock(Scanner *pScanner, ParserState& state);
-		void ParseFlow(Scanner *pScanner, ParserState& state);
 
 	protected:
 		std::vector <Node *> m_data;

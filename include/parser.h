@@ -4,19 +4,18 @@
 #define PARSER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 
-#include "node.h"
 #include "noncopyable.h"
 #include <ios>
-#include <string>
-#include <vector>
-#include <map>
 #include <memory>
 
 namespace YAML
 {
-	class Scanner;
-	struct ParserState;
+	struct Directives;
+	struct Mark;
 	struct Token;
+	class EventHandler;
+	class Node;
+	class Scanner;
 
 	class Parser: private noncopyable
 	{
@@ -28,6 +27,8 @@ namespace YAML
 		operator bool() const;
 
 		void Load(std::istream& in);
+		bool HandleNextDocument(EventHandler& eventHandler);
+		
 		bool GetNextDocument(Node& document);
 		void PrintTokens(std::ostream& out);
 
@@ -36,10 +37,10 @@ namespace YAML
 		void HandleDirective(const Token& token);
 		void HandleYamlDirective(const Token& token);
 		void HandleTagDirective(const Token& token);
-
+		
 	private:
 		std::auto_ptr<Scanner> m_pScanner;
-		std::auto_ptr<ParserState> m_pState;
+		std::auto_ptr<Directives> m_pDirectives;
 	};
 }
 
