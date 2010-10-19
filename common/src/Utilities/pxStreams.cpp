@@ -19,6 +19,7 @@
 
 #include <wx/stream.h>
 
+#include <errno.h>
 
 // --------------------------------------------------------------------------------------
 //  pxStreamReader  (implementations)

@@ -48,6 +48,19 @@
 #define safe_aligned_free( ptr ) \
 	((void) ( _aligned_free( ptr ), (ptr) = NULL ))
 
+
+extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
+extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
+extern void pcsx2_aligned_free(void* pmem);
+
+// aligned_malloc: Implement/declare linux equivalents here!
+#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
+#	define _aligned_malloc	pcsx2_aligned_malloc
+#	define _aligned_free	pcsx2_aligned_free
+# 	define _aligned_realloc	pcsx2_aligned_realloc
+#endif
+
+
 // --------------------------------------------------------------------------------------
 //  BaseScopedAlloc
 // --------------------------------------------------------------------------------------
@@ -188,7 +201,7 @@ template< typename T, uint align >
 class ScopedAlignedAlloc : public BaseScopedAlloc<T>
 {
 public:
-	ScopedAlignedAlloc( size_t size=0 ) : BaseScopedAlloc()
+	ScopedAlignedAlloc( size_t size=0 ) : BaseScopedAlloc<T>()
 	{
 		Alloc(size);
 	}

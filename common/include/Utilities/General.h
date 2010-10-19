@@ -176,14 +176,3 @@ extern u64  GetTickFrequency();
 extern u64  GetCPUTicks();
 
 extern wxString GetOSVersionString();
-
-extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
-extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
-extern void pcsx2_aligned_free(void* pmem);
-
-// aligned_malloc: Implement/declare linux equivalents here!
-#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
-#	define _aligned_malloc	pcsx2_aligned_malloc
-#	define _aligned_free	pcsx2_aligned_free
-# 	define _aligned_realloc	pcsx2_aligned_realloc
-#endif
