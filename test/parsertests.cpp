@@ -706,6 +706,106 @@ namespace Test
 				return false;
 			return true;
 		}
+		
+		void PrepareNodeForTagExam(YAML::Node& doc, const std::string& input)
+		{
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			parser.GetNextDocument(doc);
+		}
+		
+		struct TagMismatch: public std::exception {
+			TagMismatch(const std::string& actualTag, const std::string& expectedTag) {
+				std::stringstream output;
+				output << "Tag has value \"" << actualTag << "\" but \"" << expectedTag << "\" was expected";
+				what_ = output.str();
+			}
+			virtual ~TagMismatch() throw() {}
+			virtual const char *what() const throw() { return what_.c_str(); }
+			
+		private:
+			std::string what_;
+		};
+		
+		bool ExpectedTagValue(YAML::Node& node, const char* tag)
+		{
+			if(node.GetTag() == tag)
+			  return true;
+			
+			throw TagMismatch(node.GetTag(), tag);
+		}
+		
+		bool DefaultPlainScalarTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- 12");
+
+			return ExpectedTagValue(node, "?");
+		}
+		
+		bool DefaultSingleQuotedScalarTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- '12'");
+			
+			return ExpectedTagValue(node, "!");
+		}
+		
+		bool ExplicitNonSpecificPlainScalarTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- ! 12");
+			
+			return ExpectedTagValue(node, "!");
+		}
+		
+		bool BasicLocalTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- !foo 12");
+			
+			return ExpectedTagValue(node, "!foo");
+		}
+		
+		bool VerbatimLocalTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- !<!foo> 12");
+			
+			return ExpectedTagValue(node, "!foo");
+		}
+		
+		bool StandardShortcutTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- !!int 12");
+			
+			return ExpectedTagValue(node, "tag:yaml.org,2002:int");
+		}
+		
+		bool VerbatimURITag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- !<tag:yaml.org,2002:int> 12");
+			
+			return ExpectedTagValue(node, "tag:yaml.org,2002:int");
+		}
+		
+		bool DefaultSequenceTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- [12]");
+			
+			return ExpectedTagValue(node, "?");
+		}
+		
+		bool ExplicitNonSpecificSequenceTag()
+		{
+			YAML::Node node;
+			PrepareNodeForTagExam(node, "--- ! [12]");
+			
+			return ExpectedTagValue(node, "!");
+		}
 	}
 	
 	namespace {
@@ -746,7 +846,10 @@ namespace Test
 				ok = test();
 			} catch(const YAML::Exception& e) {
 				ok = false;
-				error = e.msg;
+				error = e.what();
+			} catch(const Parser::TagMismatch& e) {
+				ok = false;
+				error = e.what();
 			}
 			if(ok) {
 				passed++;
@@ -969,6 +1072,16 @@ namespace Test
 		RunParserTest(&Parser::Bases, "bases", passed, total);
 		RunParserTest(&Parser::KeyNotFound, "key not found", passed, total);
 		RunParserTest(&Parser::DuplicateKey, "duplicate key", passed, total);
+		RunParserTest(&Parser::DefaultPlainScalarTag, "default plain scalar tag", passed, total);
+		RunParserTest(&Parser::DefaultSingleQuotedScalarTag, "default single-quoted scalar tag", passed, total);
+		RunParserTest(&Parser::ExplicitNonSpecificPlainScalarTag, "explicit, non-specific plain scalar tag", passed, total);
+		RunParserTest(&Parser::BasicLocalTag, "basic local tag", passed, total);
+		RunParserTest(&Parser::VerbatimLocalTag, "verbatim local tag", passed, total);
+		RunParserTest(&Parser::StandardShortcutTag, "standard shortcut tag", passed, total);
+		RunParserTest(&Parser::VerbatimURITag, "verbatim URI tag", passed, total);
+		RunParserTest(&Parser::DefaultPlainScalarTag, "default plain scalar tag", passed, total);
+		RunParserTest(&Parser::DefaultSequenceTag, "default sequence tag", passed, total);
+		RunParserTest(&Parser::ExplicitNonSpecificSequenceTag, "explicit, non-specific sequence tag", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);

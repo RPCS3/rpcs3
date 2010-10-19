@@ -373,6 +373,31 @@ namespace Test
 			desiredOutput = "---\n- !<!foo>\n  []\n- !<!bar>\n  {}";
 		}
 
+		void ByKindTagWithScalar(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::DoubleQuoted << "12";
+			out << "12";
+			out << YAML::TagByKind << "12";
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n- \"12\"\n- 12\n- ! 12";
+		}
+
+		void LocalTagWithScalar(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::LocalTag("foo") << "bar";
+			
+			desiredOutput = "--- !foo bar";
+		}
+
+		void BadLocalTag(YAML::Emitter& out, std::string& desiredError)
+		{
+			out << YAML::LocalTag("e!far") << "bar";
+			
+			desiredError = "invalid tag";
+		}
+
 		void ComplexDoc(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::BeginMap;
@@ -789,6 +814,8 @@ namespace Test
 		RunEmitterTest(&Emitter::VerbatimTagWithEmptySeq, "verbatim tag with empty seq", passed, total);
 		RunEmitterTest(&Emitter::VerbatimTagWithEmptyMap, "verbatim tag with empty map", passed, total);
 		RunEmitterTest(&Emitter::VerbatimTagWithEmptySeqAndMap, "verbatim tag with empty seq and map", passed, total);
+		RunEmitterTest(&Emitter::ByKindTagWithScalar, "by-kind tag with scalar", passed, total);
+		RunEmitterTest(&Emitter::LocalTagWithScalar, "local tag with scalar", passed, total);
 		RunEmitterTest(&Emitter::ComplexDoc, "complex doc", passed, total);
 		RunEmitterTest(&Emitter::STLContainers, "STL containers", passed, total);
 		RunEmitterTest(&Emitter::SimpleComment, "simple comment", passed, total);
@@ -815,6 +842,7 @@ namespace Test
 		RunEmitterErrorTest(&Emitter::MissingValue, "missing value", passed, total);
 		RunEmitterErrorTest(&Emitter::UnexpectedKey, "unexpected key", passed, total);
 		RunEmitterErrorTest(&Emitter::UnexpectedValue, "unexpected value", passed, total);
+		RunEmitterErrorTest(&Emitter::BadLocalTag, "bad local tag", passed, total);
 
 		std::cout << "Emitter tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
