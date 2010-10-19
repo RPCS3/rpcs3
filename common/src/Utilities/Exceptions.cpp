@@ -169,24 +169,20 @@ Exception::RuntimeError::RuntimeError( const std::runtime_error& ex, const wxStr
 {
 	IsSilent = false;
 
-	const wxString msg( pxsFmt( L"STL Runtime Error%s: %s",
+	SetDiagMsg( pxsFmt( L"STL Runtime Error%s: %s",
 		(prefix.IsEmpty() ? prefix.c_str() : pxsFmt(L" (%s)", prefix.c_str()).c_str()),
 		fromUTF8( ex.what() ).c_str()
 	) );
-
-	SetDiagMsg( msg );
 }
 
 Exception::RuntimeError::RuntimeError( const std::exception& ex, const wxString& prefix )
 {
 	IsSilent = false;
 
-	const wxString msg( pxsFmt( L"STL Exception%s: %s",
+	SetDiagMsg( pxsFmt( L"STL Exception%s: %s",
 		(prefix.IsEmpty() ? prefix.c_str() : pxsFmt(L" (%s)", prefix.c_str()).c_str()),
 		fromUTF8( ex.what() ).c_str()
 	) );
-
-	SetDiagMsg( msg );
 }
 
 // --------------------------------------------------------------------------------------
