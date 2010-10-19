@@ -11,6 +11,7 @@ namespace YAML
 	enum EMITTER_MANIP {
 		// general manipulators
 		Auto,
+		TagByKind,
 
 		// output character set
 		EmitNonAscii,
@@ -82,14 +83,24 @@ namespace YAML
 	}
 	
 	struct _Tag {
-		_Tag(const std::string& content_): content(content_), verbatim(true) {}
+		explicit _Tag(const std::string& content_)
+		: content(content_), verbatim(true)
+		{
+		}
 		std::string content;
 		bool verbatim;
 	};
 	
-	inline _Tag VerbatimTag(const std::string& content) {
-		return _Tag(content);
-	}
+	typedef _Tag VerbatimTag;
+	
+	struct LocalTag : public _Tag
+	{
+		explicit LocalTag(const std::string& content_)
+		: _Tag(content_)
+		{
+			verbatim = false;
+		}
+	};
 
 	struct _Comment {
 		_Comment(const std::string& content_): content(content_) {}

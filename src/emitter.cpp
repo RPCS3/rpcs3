@@ -120,6 +120,9 @@ namespace YAML
 			case Value:
 				EmitValue();
 				break;
+			case TagByKind:
+				EmitKindTag();
+				break;
 			default:
 				m_pState->SetLocalValue(value);
 				break;
@@ -651,15 +654,26 @@ namespace YAML
 		if(!good())
 			return *this;
 		
+		EmitTag(tag.verbatim, tag);
+		return *this;
+	}
+	
+	void Emitter::EmitTag(bool verbatim, const _Tag& tag)
+	{
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
-		if(!Utils::WriteTag(m_stream, tag.content)) {
+		if(!Utils::WriteTag(m_stream, tag.content, verbatim)) {
 			m_pState->SetError(ErrorMsg::INVALID_TAG);
-			return *this;
+			return;
 		}
 		m_pState->RequireSeparation();
 		// Note: no PostAtomicWrite() because we need another value for this node
-		return *this;
+	}
+	
+	void Emitter::EmitKindTag()
+	{
+		_Tag tag("");
+		EmitTag(false, tag);
 	}
 
 	Emitter& Emitter::Write(const _Comment& comment)

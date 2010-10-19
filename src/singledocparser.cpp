@@ -8,6 +8,7 @@
 #include "token.h"
 #include <sstream>
 #include <cstdio>
+#include <algorithm>
 
 namespace YAML
 {
@@ -73,10 +74,17 @@ namespace YAML
 		anchor_t anchor;
 		ParseProperties(tag, anchor);
 		
+		const Token& token = m_scanner.peek();
+		
+		// add non-specific tags
+		if(tag.empty())
+			tag = (token.type == Token::NON_PLAIN_SCALAR ? "!" : "?");
+		
 		// now split based on what kind of node we should be
-		switch(m_scanner.peek().type) {
-			case Token::SCALAR:
-				eventHandler.OnScalar(mark, tag, anchor, m_scanner.peek().value);
+		switch(token.type) {
+			case Token::PLAIN_SCALAR:
+			case Token::NON_PLAIN_SCALAR:
+				eventHandler.OnScalar(mark, tag, anchor, token.value);
 				m_scanner.pop();
 				return;
 			case Token::FLOW_SEQ_START:

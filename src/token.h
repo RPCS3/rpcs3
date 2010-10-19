@@ -57,9 +57,10 @@ namespace YAML
 			ANCHOR,
 			ALIAS,
 			TAG,
-			SCALAR
+			PLAIN_SCALAR,
+			NON_PLAIN_SCALAR
 		};
-				
+
 		// data
 		Token(TYPE type_, const Mark& mark_): status(VALID), type(type_), mark(mark_), data(0) {}
 

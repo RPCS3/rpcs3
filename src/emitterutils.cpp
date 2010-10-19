@@ -294,12 +294,13 @@ namespace YAML
 			return WriteAliasName(out, str);
 		}
 
-		bool WriteTag(ostream& out, const std::string& str)
+		bool WriteTag(ostream& out, const std::string& str, bool verbatim)
 		{
-			out << "!<";
+			out << (verbatim ? "!<" : "!");
 			StringCharSource buffer(str.c_str(), str.size());
+			const RegEx& reValid = verbatim ? Exp::URI() : Exp::Tag();
 			while(buffer) {
-				int n = Exp::URI().Match(buffer);
+				int n = reValid.Match(buffer);
 				if(n <= 0)
 					return false;
 
@@ -308,7 +309,8 @@ namespace YAML
 					++buffer;
 				}
 			}
-			out << ">";
+			if (verbatim)
+				out << ">";
 			return true;
 		}
 	}
