@@ -186,6 +186,10 @@ class CMemoryTarget
 			}
 
 			ptex = NULL;
+
+            _aligned_free(clut);
+            clut = NULL;
+            clutsize = 0;
 		}
 
 		// returns true if clut data is synced
@@ -218,7 +222,8 @@ class CMemoryTarget
 
 		int validatecount; // count how many times has been validated, if too many, destroy
 
-		vector<u8> clut; // if nonzero, texture uses CLUT
+		u8* clut;        // Clut texture data. Null otherwise
+        int clutsize;    // size of the clut array. 0 otherwise 
 };
 
 

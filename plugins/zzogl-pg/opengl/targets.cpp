@@ -1737,9 +1737,7 @@ int CMemoryTargetMngr::CompareTarget(list<CMemoryTarget>::iterator& it, const te
 		return 1;
 
 	if (PSMT_ISCLUT(tex0.psm)) {
-		assert(it->clut.size() > 0);
-
-		if (it->psm != tex0.psm || it->cpsm != tex0.cpsm || it->clut.size() != clutsize)
+		if (it->psm != tex0.psm || it->cpsm != tex0.cpsm || it->clutsize != clutsize)
 			return 1;
 
 		if	(PSMT_IS32BIT(tex0.cpsm)) {
@@ -1986,8 +1984,17 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 
         // Local clut parameter
 		targ->cpsm = tex0.cpsm;
-		targ->clut.reserve(256*4); // no matter what
-		targ->clut.resize(clutsize);
+
+        // Allocate a local clut array
+        targ->clutsize = clutsize;
+        if(targ->clut == NULL)
+            targ->clut = (u8*)_aligned_malloc(clutsize, 16);
+        else {
+            // In case it could occured
+            // realloc would be better but you need to get it from libutilies first
+            _aligned_free(targ->clut);
+            targ->clut = (u8*)_aligned_malloc(clutsize, 16);
+        }
 
         // texture parameter
 		ptexdata = (u8*)_aligned_malloc(CLUT_PIXEL_SIZE(tex0.cpsm) * targ->texH * targ->texW, 16);
@@ -1998,15 +2005,13 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
         // Fill a local clut then build the real texture
 		if (PSMT_IS32BIT(tex0.cpsm))
 		{
-			u32* pclut = (u32*) & targ->clut[0];
-            ClutBuffer_to_Array<u32>(pclut, tex0.csa, clutsize);
-			Build_Clut_Texture<u32>(tex0.psm, targ->height, pclut, psrc, (u32*)ptexdata);
+            ClutBuffer_to_Array<u32>((u32*)targ->clut, tex0.csa, clutsize);
+			Build_Clut_Texture<u32>(tex0.psm, targ->height, (u32*)targ->clut, psrc, (u32*)ptexdata);
 		}
 		else
 		{
-			u16* pclut = (u16*) & targ->clut[0];
-            ClutBuffer_to_Array<u16>(pclut, tex0.csa, clutsize);
-			Build_Clut_Texture<u16>(tex0.psm, targ->height, pclut, psrc, (u16*)ptexdata);
+            ClutBuffer_to_Array<u16>((u16*)targ->clut, tex0.csa, clutsize);
+			Build_Clut_Texture<u16>(tex0.psm, targ->height, (u16*)targ->clut, psrc, (u16*)ptexdata);
 		}
 
         assert(targ->clut.size() > 0);
