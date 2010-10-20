@@ -25,7 +25,7 @@
 #include "x86.h"
 #include "targets.h"
 #include "ZZoglShaders.h"
-#include "Clut.h"
+#include "ZZClut.h"
 #include <math.h>
 
 #ifdef ZEROGS_SSE2

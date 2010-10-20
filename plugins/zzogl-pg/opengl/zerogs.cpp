@@ -33,7 +33,7 @@
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 #include "ZZKick.h"
-#include "Clut.h"
+#include "ZZClut.h"
 
 //----------------------- Defines
 
