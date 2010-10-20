@@ -46,7 +46,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zzogl sources
 set(zzoglSources
-    Clut.cpp
     GifTransfer.cpp
     GLWin32.cpp
     GLWinX11.cpp
@@ -64,6 +63,10 @@ set(zzoglSources
     x86.cpp
     zerogs.cpp
     zpipe.cpp
+    ZZClut.cpp
+    ZZKeyboard.cpp
+    ZZKick.cpp
+    ZZLog.cpp
     ZZoglCreate.cpp
     ZZoglCRTC.cpp
     ZZoglFlush.cpp
@@ -72,13 +75,10 @@ set(zzoglSources
     ZZoglShaders.cpp
     ZZoglShoots.cpp
     ZZoglVB.cpp
-    ZZKeyboard.cpp
-    ZZKick.cpp
-    ZZLog.cpp)
+    )
 
 # zzogl headers
 set(zzoglHeaders
-    Clut.h
     common.h
     CRC.h
     GifTransfer.h
@@ -97,13 +97,15 @@ set(zzoglHeaders
     x86.h
     zerogs.h
     zpipe.h
-    ZZoglCRTC.h
+    ZZClut.h
+    ZZGl.h
     ZZKick.h
+    ZZLog.h
+    ZZoglCRTC.h
     ZZoglMath.h
     ZZoglShaders.h
     ZZoglShoots.h
-    ZZGl.h
-    ZZLog.h)
+    )
 
 # zzogl S sources
 set(zzoglSSources
