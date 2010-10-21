@@ -46,7 +46,10 @@ void isoFile::_ReadDtable()
 	_IsoPart& headpart( m_parts[0] );
 
 	wxFileOffset flen = headpart.handle->GetLength();
-	m_dtablesize	= (flen - BlockDumpHeaderSize) / (m_blocksize + 4);
+	static const wxFileOffset datalen = flen - BlockDumpHeaderSize;
+	pxAssert( (datalen % (m_blocksize + 4)) == 0);
+
+	m_dtablesize	= datalen / (m_blocksize + 4);
 	m_dtable		= new u32[m_dtablesize];
 
 	headpart.Seek(BlockDumpHeaderSize);
@@ -174,6 +177,7 @@ void isoFile::_ReadBlockD(u8* dst, uint lsn)
 #endif
 
 		m_parts[0].Read( dst + m_blockofs, m_blocksize );
+		return;
 	}
 
 	Console.WriteLn("Block %u not found in dump", lsn);
@@ -240,6 +244,13 @@ void isoFile::_WriteBlock(const u8* src, uint lsn)
 
 void isoFile::_WriteBlockD(const u8* src, uint lsn)
 {
+	// Find and ignore blocks that have already been dumped:
+	for (uint i=0; i<m_dtablesize; ++i)
+	{
+		if (m_dtable[i] == lsn) return;
+	}
+
+	m_dtable[m_dtablesize++] = lsn;
 	outWrite<u32>( lsn );
 	outWrite( src + m_blockofs, m_blocksize );
 }
@@ -403,12 +414,14 @@ void isoFile::Open( const wxString& srcfile )
 	if (!Detect())
 		throw Exception::BadStream().SetUserMsg(wxLt("Unrecognized ISO file format."));
 
-	m_blocks = m_parts[0].CalculateBlocks( 0, m_blocksize );
-
-	FindParts();
-	if (m_numparts > 1)
+	if (!(m_flags & ISOFLAGS_BLOCKDUMP_V2))
 	{
-		Console.WriteLn( Color_Blue, "isoFile: multi-part ISO detected.  %u parts found." );
+		m_blocks = m_parts[0].CalculateBlocks( 0, m_blocksize );
+		FindParts();
+		if (m_numparts > 1)
+		{
+			Console.WriteLn( Color_Blue, "isoFile: multi-part ISO detected.  %u parts found." );
+		}
 	}
 
 	const char* isotypename = NULL;
