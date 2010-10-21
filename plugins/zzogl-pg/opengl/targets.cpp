@@ -2014,7 +2014,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 			Build_Clut_Texture<u16>(tex0.psm, targ->height, (u16*)targ->clut, psrc, (u16*)ptexdata);
 		}
 
-        assert(targ->clut.size() > 0);
+        assert(targ->clutsize > 0);
 	}
 	else
 	{
@@ -2027,7 +2027,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 			u16* dst = (u16*)ptexdata;
 			u16* src = (u16*)(MemoryAddress(targ->realy));
 
-#if defined(ZEROGS_SSE2)
+#ifdef ZEROGS_SSE2
 			assert(((u32)(uptr)dst) % 16 == 0);
             // FIXME Uncomment to test intrinsic versions (instead of asm)
             // perf improvement vs asm:
@@ -2830,6 +2830,7 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
 
 static const __aligned16 unsigned int pixel_5b_mask[4] = {0x0000001F, 0x0000001F, 0x0000001F, 0x0000001F};
 
+#ifdef ZEROGS_SSE2
 // The function process 2*2 pixels in 32bits. And 2*4 pixels in 16bits
 template <u32 psm, u32 size, u32 pageTable[size][64], bool null_second_line, u32 INDEX>
 __forceinline void update_8pixels_sse2(u32* src, u32* basepage, u32 i_msk, u32 j, u32 pix_mask, u32 src_pitch)
@@ -3141,6 +3142,7 @@ void Resolve_32_Bit_sse2(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 #endif
 #endif
 }
+#endif
 
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode = true)
 {

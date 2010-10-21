@@ -136,7 +136,7 @@ void GLWindow::GetWindowSize()
     // update the gl buffer size
     ChangeWindowSize(width, height);
 
-    ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
+    ZZLog::Dev_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
 
 void GLWindow::GetGLXVersion()

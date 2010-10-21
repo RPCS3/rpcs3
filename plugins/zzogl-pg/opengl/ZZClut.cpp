@@ -173,10 +173,10 @@ __forceinline void GSMem_to_ClutBuffer__T16_I4_CSM1_core_sse2(u32* vm, u32* clut
     }
 
     // Unsizzle the data
-    __m128i row_0 = _mm_unpacklo_epi32(vm_0, vm_1); // 3 2 1 0
-    __m128i row_1 = _mm_unpacklo_epi32(vm_2, vm_3); // 7 6 5 4
-    __m128i row_2 = _mm_unpackhi_epi32(vm_0, vm_1); // 11 10 9 8
-    __m128i row_3 = _mm_unpackhi_epi32(vm_2, vm_3); // 15 14 13 12
+    __m128i row_0 = _mm_unpacklo_epi64(vm_0, vm_1); // 3 2 1 0
+    __m128i row_1 = _mm_unpacklo_epi64(vm_2, vm_3); // 7 6 5 4
+    __m128i row_2 = _mm_unpackhi_epi64(vm_0, vm_1); // 11 10 9 8
+    __m128i row_3 = _mm_unpackhi_epi64(vm_2, vm_3); // 15 14 13 12
 
     // load old data & remove useless part
     if(CSA_0_15) {
@@ -241,6 +241,8 @@ __forceinline void GSMem_to_ClutBuffer__T16_I8_CSM1_sse2(u32* vm, u32 csa)
         clut = GetClutBufferAddress<u32>(0); // Keep aligned version for sse2
 
         GSMem_to_ClutBuffer__T16_I4_CSM1_core_sse2<false,true>(vm, clut);
+        clut += 16;
+        vm += 16; // go down one column
     } else if(csa_right != 0) {
         // go back to the base before processing left clut column
         clut = GetClutBufferAddress<u32>(0); // Keep aligned version for sse2
@@ -512,7 +514,7 @@ __forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
 
     while (clutsize_right > 0)
     {
-#ifdef ZEROGS_SSE4
+#ifdef ZEROGS_SSE2
         // only lower 16 bits of dword are valid
         __m128i clut_0 = _mm_load_si128((__m128i*)clut);
         __m128i clut_1 = _mm_load_si128((__m128i*)clut+1);
