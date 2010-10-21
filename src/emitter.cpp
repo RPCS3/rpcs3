@@ -123,6 +123,9 @@ namespace YAML
 			case TagByKind:
 				EmitKindTag();
 				break;
+			case Newline:
+				EmitNewline();
+				break;
 			default:
 				m_pState->SetLocalValue(value);
 				break;
@@ -505,6 +508,15 @@ namespace YAML
 			assert(false);
 	}
 
+	// EmitNewline
+	void Emitter::EmitNewline()
+	{
+		if(!good())
+			return;
+		
+		m_stream << '\n';
+	}
+
 	// *******************************************************************************************
 	// overloads of Write
 	
@@ -551,7 +563,7 @@ namespace YAML
 		PostAtomicWrite();
 		return *this;
 	}
-	
+
 	void Emitter::PreWriteIntegralType(std::stringstream& str)
 	{
 		PreAtomicWrite();
@@ -572,7 +584,7 @@ namespace YAML
 				assert(false);
 		}
 	}
-	
+
 	void Emitter::PostWriteIntegralType(const std::stringstream& str)
 	{
 		m_stream << str.str();

@@ -78,6 +78,7 @@ namespace YAML
 		void EmitEndMap();
 		void EmitKey();
 		void EmitValue();
+		void EmitNewline();
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		

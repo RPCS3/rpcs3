@@ -651,7 +651,29 @@ namespace Test
 			
 			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n- ~";
 		}
-
+		
+		void NewlineAtEnd(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << "Hello" << YAML::Newline << YAML::Newline;
+			desiredOutput = "--- Hello\n\n";
+		}
+		
+		void NewlineInBlockSequence(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << "a" << YAML::Newline << "b" << "c" << YAML::Newline << "d";
+			out << YAML::EndSeq;
+			desiredOutput = "---\n- a\n\n- b\n- c\n\n- d";
+		}
+		
+		void NewlineInFlowSequence(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginSeq;
+			out << "a" << YAML::Newline << "b" << "c" << YAML::Newline << "d";
+			out << YAML::EndSeq;
+			desiredOutput = "--- [a\n, b, c\n, d]";
+		}
+		
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -832,6 +854,9 @@ namespace Test
 		RunEmitterTest(&Emitter::UserTypeInContainer, "user type in container", passed, total);
 		RunEmitterTest(&Emitter::PointerToInt, "pointer to int", passed, total);
 		RunEmitterTest(&Emitter::PointerToUserType, "pointer to user type", passed, total);
+		RunEmitterTest(&Emitter::NewlineAtEnd, "newline at end", passed, total);
+		RunEmitterTest(&Emitter::NewlineInBlockSequence, "newline in block sequence", passed, total);
+		RunEmitterTest(&Emitter::NewlineInFlowSequence, "newline in flow sequence", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

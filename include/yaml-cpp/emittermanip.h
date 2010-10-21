@@ -12,6 +12,7 @@ namespace YAML
 		// general manipulators
 		Auto,
 		TagByKind,
+		Newline,
 
 		// output character set
 		EmitNonAscii,
