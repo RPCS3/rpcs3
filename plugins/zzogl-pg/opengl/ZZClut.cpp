@@ -521,15 +521,15 @@ __forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
         __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
         __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
 
-        clut_0 = _mm_shufflelo_epi16(clut_0, 0x32);
-        clut_1 = _mm_shufflelo_epi16(clut_1, 0x32);
-        clut_2 = _mm_shufflelo_epi16(clut_2, 0x32);
-        clut_3 = _mm_shufflelo_epi16(clut_3, 0x32);
+        clut_0 = _mm_shufflelo_epi16(clut_0, 0x88);
+        clut_1 = _mm_shufflelo_epi16(clut_1, 0x88);
+        clut_2 = _mm_shufflelo_epi16(clut_2, 0x88);
+        clut_3 = _mm_shufflelo_epi16(clut_3, 0x88);
 
-        clut_0 = _mm_shufflehi_epi16(clut_0, 0xD8); // - - 3 2 1 0 - -
-        clut_1 = _mm_shufflehi_epi16(clut_1, 0xD8);
-        clut_2 = _mm_shufflehi_epi16(clut_2, 0xD8);
-        clut_3 = _mm_shufflehi_epi16(clut_3, 0xD8);
+        clut_0 = _mm_shufflehi_epi16(clut_0, 0x88); // - - 3 2 1 0 - -
+        clut_1 = _mm_shufflehi_epi16(clut_1, 0x88);
+        clut_2 = _mm_shufflehi_epi16(clut_2, 0x88);
+        clut_3 = _mm_shufflehi_epi16(clut_3, 0x88);
 
         clut_0 = _mm_srli_si128(clut_0, 4);
         clut_1 = _mm_srli_si128(clut_1, 4);
@@ -562,15 +562,15 @@ __forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
         __m128i clut_2 = _mm_load_si128((__m128i*)clut+2);
         __m128i clut_3 = _mm_load_si128((__m128i*)clut+3);
 
-        clut_0 = _mm_shufflelo_epi16(clut_0, 0xD8);
-        clut_1 = _mm_shufflelo_epi16(clut_1, 0xD8);
-        clut_2 = _mm_shufflelo_epi16(clut_2, 0xD8);
-        clut_3 = _mm_shufflelo_epi16(clut_3, 0xD8);
+        clut_0 = _mm_shufflelo_epi16(clut_0, 0x88);
+        clut_1 = _mm_shufflelo_epi16(clut_1, 0x88);
+        clut_2 = _mm_shufflelo_epi16(clut_2, 0x88);
+        clut_3 = _mm_shufflelo_epi16(clut_3, 0x88);
 
-        clut_0 = _mm_shufflehi_epi16(clut_0, 0x63); // - - 3 2 1 0 - -
-        clut_1 = _mm_shufflehi_epi16(clut_1, 0x63);
-        clut_2 = _mm_shufflehi_epi16(clut_2, 0x63);
-        clut_3 = _mm_shufflehi_epi16(clut_3, 0x63);
+        clut_0 = _mm_shufflehi_epi16(clut_0, 0x88); // - - 3 2 1 0 - -
+        clut_1 = _mm_shufflehi_epi16(clut_1, 0x88);
+        clut_2 = _mm_shufflehi_epi16(clut_2, 0x88);
+        clut_3 = _mm_shufflehi_epi16(clut_3, 0x88);
 
         clut_0 = _mm_srli_si128(clut_0, 4);
         clut_1 = _mm_srli_si128(clut_1, 4);
