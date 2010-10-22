@@ -51,7 +51,7 @@ uptr psxhwLUT[0x10000];
 
 #define HWADDR(mem) (psxhwLUT[mem >> 16] + (mem))
 
-static RecompiledCodeReserve recMem(L"R3000A recompiled code cache", _1mb * 2);
+static RecompiledCodeReserve* recMem = NULL;
 
 static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
@@ -757,7 +757,11 @@ static const uint m_recBlockAllocSize =
 
 static void recReserve()
 {
-	recMem.Reserve( _16mb, HostMemoryMap::IOPrec );
+	if (!recMem)
+	{
+		recMem = new RecompiledCodeReserve(L"R3000A recompiled code cache", _1mb * 2);
+		recMem->Reserve( _16mb, HostMemoryMap::IOPrec );
+	}
 }
 
 static void recAlloc()
@@ -786,14 +790,14 @@ static void recAlloc()
 	if( s_pInstCache == NULL )
 		throw Exception::OutOfMemory( L"R3000 InstCache." );
 
-	ProfilerRegisterSource( "IOP Rec", recMem, recMem.GetReserveSizeInBytes() );
+	ProfilerRegisterSource( "IOP Rec", *recMem, recMem->GetReserveSizeInBytes() );
 	_DynGen_Dispatchers();
 }
 
 void recResetIOP()
 {
 	recAlloc();
-	recMem.Reset();
+	recMem->Reset();
 
 	DevCon.WriteLn( "iR3000A Recompiler reset." );
 
@@ -836,14 +840,14 @@ void recResetIOP()
 	recBlocks.Reset();
 	g_psxMaxRecMem = 0;
 
-	recPtr = recMem;
+	recPtr = *recMem;
 	psxbranch = 0;
 }
 
 static void recShutdown()
 {
 	ProfilerTerminateSource( "IOPRec" );
-	recMem.Free();
+	safe_delete( recMem );
 
 	safe_aligned_free( m_recBlockAlloc );
 
@@ -1191,7 +1195,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 	pxAssert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if (recPtr >= (recMem.GetPtrEnd() - _64kb)) {
+	if (recPtr >= (recMem->GetPtrEnd() - _64kb)) {
 		recResetIOP();
 	}
 
@@ -1380,7 +1384,7 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( xGetPtr() < recMem.GetPtrEnd() );
+	pxAssert( xGetPtr() < recMem->GetPtrEnd() );
 
 	pxAssert(xGetPtr() - recPtr < _64kb);
 	s_pCurBlockEx->x86size = xGetPtr() - recPtr;

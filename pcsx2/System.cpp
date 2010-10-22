@@ -31,16 +31,18 @@ extern void resetNewVif(int idx);
 
 template class EventSource< IEventListener_PageFault >;
 
-SrcType_PageFault Source_PageFault;
+SrcType_PageFault* Source_PageFault = NULL;
 
 EventListener_PageFault::EventListener_PageFault()
 {
-	Source_PageFault.Add( *this );
+	pxAssume(Source_PageFault);
+	Source_PageFault->Add( *this );
 }
 
 EventListener_PageFault::~EventListener_PageFault() throw()
 {
-	Source_PageFault.Remove( *this );
+	if (Source_PageFault)
+		Source_PageFault->Remove( *this );
 }
 
 void SrcType_PageFault::Dispatch( const PageFaultInfo& params )
@@ -108,11 +110,19 @@ void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds
 	DevCon.WriteLn( Color_Blue, L"%s mapped @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
 		m_baseptr, (uptr)m_baseptr+reserved_bytes, reserved_bytes / _1mb);
 
-	if (m_def_commit)
+	/*if (m_def_commit)
 	{
-		HostSys::MmapCommit(m_baseptr, m_def_commit*__pagesize);
-		HostSys::MemProtect(m_baseptr, m_def_commit*__pagesize, m_prot_mode);
-	}
+		const uint camt = m_def_commit * __pagesize;
+		HostSys::MmapCommit(m_baseptr, camt);
+		HostSys::MemProtect(m_baseptr, camt, m_prot_mode);
+
+		u8* init = (u8*)m_baseptr;
+		u8* endpos = init + camt;
+		for( ; init<endpos; init += m_block_size*__pagesize )
+		OnCommittedBlock(init);
+
+		m_commited += m_def_commit * __pagesize;
+	}*/
 	
 	return m_baseptr;
 }
@@ -153,9 +163,9 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 			for( ; init<endpos; init += m_block_size*__pagesize )
 				OnCommittedBlock(init);
 
-			handled = true;
 			m_commited += m_def_commit * __pagesize;
 
+			handled = true;
 			return;
 		}
 
@@ -176,7 +186,7 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 		OnOutOfMemory( ex, (u8*)m_baseptr + (offset * __pagesize), handled );
 	}
 	#ifndef __WXMSW__
-	// In windows we can let exceptions bubble out of the pag fault handler.  SEH will more
+	// In windows we can let exceptions bubble out of the page fault handler.  SEH will more
 	// or less handle them in a semi-expected way, and might even avoid a GPF long enough
 	// for the system to log the error or something.
 	
@@ -485,6 +495,31 @@ static wxString GetMemoryErrorVM()
 		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
 		L"Close out some memory hogging background tasks and try again."
 	);
+}
+
+// --------------------------------------------------------------------------------------
+//  SysReserveVM  (implementations)
+// --------------------------------------------------------------------------------------
+SysReserveVM::SysReserveVM()
+{
+	if (!Source_PageFault) Source_PageFault = new SrcType_PageFault();
+
+	// [TODO] : Reserve memory addresses for PS2 virtual machine
+	//DevCon.WriteLn( "Reserving memory addresses for the PS2 virtual machine..." );
+}
+
+void SysReserveVM::CleanupMess() throw()
+{
+	try
+	{
+		safe_delete(Source_PageFault);
+	}
+	DESTRUCTOR_CATCHALL
+}
+
+SysReserveVM::~SysReserveVM() throw()
+{
+	CleanupMess();
 }
 
 // --------------------------------------------------------------------------------------

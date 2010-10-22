@@ -64,7 +64,7 @@ bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalExcept
 #define X86
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
-static RecompiledCodeReserve recMem(L"R5900-32 recompiled code cache", _1mb * 4);
+static RecompiledCodeReserve* recMem = NULL;
 
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
@@ -562,7 +562,8 @@ static void recReserve()
 	if ( !x86caps.hasStreamingSIMD2Extensions )
 		recThrowHardwareDeficiency( L"SSE2" );
 
-	recMem.Reserve( _64mb, HostMemoryMap::EErec );
+	recMem = new RecompiledCodeReserve(L"R5900-32 recompiled code cache", _1mb * 4);
+	recMem->Reserve( _64mb, HostMemoryMap::EErec );
 }
 
 static void recAlloc()
@@ -595,7 +596,7 @@ static void recAlloc()
 
 	// No errors.. Proceed with initialization:
 
-	ProfilerRegisterSource( "EE Rec", recMem, recMem.GetReserveSizeInBytes() );
+	ProfilerRegisterSource( "EE Rec", *recMem, recMem->GetReserveSizeInBytes() );
 	_DynGen_Dispatchers();
 
 	x86FpuState = FPU_STATE;
@@ -624,7 +625,7 @@ static void recResetRaw()
 
 	Console.WriteLn( Color_StrongBlack, "EE/iR5900-32 Recompiler Reset" );
 
-	recMem.Reset();
+	recMem->Reset();
 
 	maxrecmem = 0;
 
@@ -674,9 +675,9 @@ static void recResetRaw()
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
 
-	x86SetPtr(recMem);
+	x86SetPtr(*recMem);
 
-	recPtr = recMem;
+	recPtr = *recMem;
 	recConstBufPtr = recConstBuf;
 	x86FpuState = FPU_STATE;
 
@@ -686,7 +687,7 @@ static void recResetRaw()
 static void recShutdown()
 {
 	ProfilerTerminateSource( "EERec" );
-	recMem.Free();
+	safe_delete( recMem );
 	recBlocks.Reset();
 
 	safe_aligned_free( m_recBlockAlloc );
@@ -1355,7 +1356,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	pxAssume( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if (recPtr >= (recMem.GetPtrEnd() - _64kb)) {
+	if (recPtr >= (recMem->GetPtrEnd() - _64kb)) {
 		AtomicExchange( eeRecNeedsReset, true );
 	}
 	else if ((recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64) {
@@ -1844,7 +1845,7 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( xGetPtr() < recMem.GetPtrEnd() );
+	pxAssert( xGetPtr() < recMem->GetPtrEnd() );
 	pxAssert( recConstBufPtr < recConstBuf + RECCONSTBUF_SIZE );
 	pxAssert( x86FpuState == 0 );
 

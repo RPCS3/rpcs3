@@ -193,5 +193,5 @@ extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 
 extern void InstallSignalHandler();
 
-extern SrcType_PageFault Source_PageFault;
+extern SrcType_PageFault* Source_PageFault;
 

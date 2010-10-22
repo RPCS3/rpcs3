@@ -252,6 +252,8 @@ void Pcsx2App::AllocateCoreStuffs()
 	SysLogMachineCaps();
 	AppApplySettings();
 
+	if (!m_VmReserve) m_VmReserve = new SysReserveVM();
+
 	if( !m_CpuProviders )
 	{
 		// FIXME : Some or all of SysCpuProviderPack should be run from the SysExecutor thread,

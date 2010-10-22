@@ -476,6 +476,7 @@ public:
 	// blocked threads stalling the GUI.
 	ExecutorThread					SysExecutorThread;
 	ScopedPtr<SysCpuProviderPack>	m_CpuProviders;
+	ScopedPtr<SysReserveVM>			m_VmReserve;
 	ScopedPtr<SysAllocVM>			m_VmAllocs;
 
 protected:

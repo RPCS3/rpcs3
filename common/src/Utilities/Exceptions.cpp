@@ -68,12 +68,6 @@ wxString DiagnosticOrigin::ToString( const wxChar* msg ) const
 }
 
 
-bool pxAssertImpl_LogIt( const DiagnosticOrigin& origin, const wxChar *msg )
-{
-	wxLogError( L"%s", origin.ToString( msg ).c_str() );
-	return false;
-}
-
 // Because wxTrap isn't available on Linux builds of wxWidgets (non-Debug, typically)
 void pxTrap()
 {
@@ -93,6 +87,16 @@ void pxTrap()
     // TODO
 #endif // Win/Unix
 }
+
+
+bool pxAssertImpl_LogIt( const DiagnosticOrigin& origin, const wxChar *msg )
+{
+	//wxLogError( L"%s", origin.ToString( msg ).c_str() );
+	wxMessageOutputDebug().Printf( L"%s", origin.ToString( msg ).c_str() );
+	pxTrap();
+	return false;
+}
+
 
 DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg )
 {

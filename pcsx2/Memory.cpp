@@ -582,7 +582,7 @@ protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 };
 
-static mmap_PageFaultHandler mmap_faultHandler;
+static mmap_PageFaultHandler* mmap_faultHandler = NULL;
 
 EEVM_MemoryAllocMess* eeMem = NULL;
 
@@ -596,12 +596,13 @@ void memAlloc()
 	if( eeMem == NULL)
 		throw Exception::OutOfMemory( L"memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );
 
-	Source_PageFault.Add( mmap_faultHandler );
+	pxAssume(Source_PageFault);
+	mmap_faultHandler = new mmap_PageFaultHandler();
 }
 
 void memShutdown()
 {
-	Source_PageFault.Remove( mmap_faultHandler );
+	safe_delete(mmap_faultHandler);
 
 	vtlb_free( eeMem, sizeof(*eeMem) );
 	eeMem = NULL;
