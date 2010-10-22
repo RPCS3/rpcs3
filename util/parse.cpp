@@ -47,11 +47,10 @@ int main(int argc, char **argv)
 		YAML::Parser parser(input);
 		YAML::Node doc;
 		NullEventHandler handler;
-//		while(parser.GetNextDocument(doc)) {
-		while(parser.HandleNextDocument(handler)) {
-//			YAML::Emitter emitter;
-//			emitter << doc;
-//			std::cout << emitter.c_str() << "\n";
+		while(parser.GetNextDocument(doc)) {
+			YAML::Emitter emitter;
+			emitter << doc;
+			std::cout << emitter.c_str() << "\n";
 		}
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";

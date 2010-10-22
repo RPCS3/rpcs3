@@ -98,7 +98,7 @@ namespace YAML
 	
 	void EmitFromEvents::EmitProps(const std::string& tag, anchor_t anchor)
 	{
-		if(!tag.empty())
+		if(!tag.empty() && tag != "?")
 			m_emitter << VerbatimTag(tag);
 		if(anchor)
 			m_emitter << Anchor(ToString(anchor));

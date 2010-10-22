@@ -513,8 +513,19 @@ namespace YAML
 	{
 		if(!good())
 			return;
-		
-		m_stream << '\n';
+
+		if(CanEmitNewline())
+			m_stream << '\n';
+	}
+
+	bool Emitter::CanEmitNewline() const
+	{
+		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
+		if(flowType == FT_BLOCK && m_pState->CurrentlyInLongKey())
+			return true;
+
+		EMITTER_STATE curState = m_pState->GetCurState();
+		return curState != ES_DONE_WITH_BLOCK_MAP_KEY && curState != ES_WAITING_FOR_BLOCK_MAP_VALUE && curState != ES_WRITING_BLOCK_MAP_VALUE;
 	}
 
 	// *******************************************************************************************

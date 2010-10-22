@@ -82,6 +82,8 @@ namespace YAML
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		
+		bool CanEmitNewline() const;
+		
 	private:
 		ostream m_stream;
 		std::auto_ptr <EmitterState> m_pState;

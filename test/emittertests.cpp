@@ -673,7 +673,42 @@ namespace Test
 			out << YAML::EndSeq;
 			desiredOutput = "--- [a\n, b, c\n, d]";
 		}
+
+		void NewlineInBlockMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "a" << YAML::Value << "foo" << YAML::Newline;
+			out << YAML::Key << "b" << YAML::Newline << YAML::Value << "bar";
+			out << YAML::LongKey << YAML::Key << "c" << YAML::Newline << YAML::Value << "car";
+			out << YAML::EndMap;
+			desiredOutput = "---\na: foo\n\nb: bar\n? c\n\n: car";
+		}
 		
+		void NewlineInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginMap;
+			out << YAML::Key << "a" << YAML::Value << "foo" << YAML::Newline;
+			out << YAML::Key << "b" << YAML::Newline << YAML::Value << "bar";
+			out << YAML::EndMap;
+			desiredOutput = "--- {a: foo\n, b\n: bar}";
+		}
+		
+		void LotsOfNewlines(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << "a" << YAML::Newline;
+			out << YAML::BeginSeq;
+			out << "b" << "c" << YAML::Newline;
+			out << YAML::EndSeq;
+			out << YAML::Newline;
+			out << YAML::BeginMap;
+			out << YAML::Newline << YAML::Key << "d" << YAML::Value << YAML::Newline << "e";
+			out << YAML::LongKey << YAML::Key << "f" << YAML::Newline << YAML::Value << "foo";
+			out << YAML::EndMap;
+			out << YAML::EndSeq;
+			desiredOutput = "---\n- a\n\n-\n  - b\n  - c\n\n\n-\n\n  d: e\n  ? f\n\n  : foo";
+		}
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -857,6 +892,9 @@ namespace Test
 		RunEmitterTest(&Emitter::NewlineAtEnd, "newline at end", passed, total);
 		RunEmitterTest(&Emitter::NewlineInBlockSequence, "newline in block sequence", passed, total);
 		RunEmitterTest(&Emitter::NewlineInFlowSequence, "newline in flow sequence", passed, total);
+		RunEmitterTest(&Emitter::NewlineInBlockMap, "newline in block map", passed, total);
+		RunEmitterTest(&Emitter::NewlineInFlowMap, "newline in flow map", passed, total);
+		RunEmitterTest(&Emitter::LotsOfNewlines, "lots of newlines", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
