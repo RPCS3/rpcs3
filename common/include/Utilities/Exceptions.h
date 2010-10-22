@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "Dependencies.h"
-#include "StringHelpers.h"
+#include "Assertions.h"
+#include "ScopedPtr.h"
 
 // --------------------------------------------------------------------------------------
 //  DESTRUCTOR_CATCHALL - safe destructor helper
@@ -43,6 +43,7 @@
 namespace Exception
 {
 	int MakeNewType();
+	BaseException* FromErrno( const wxString& streamname, int errcode );
 
 	// --------------------------------------------------------------------------------------
 	//  BaseException
@@ -91,6 +92,8 @@ namespace Exception
 		virtual void Rethrow() const=0;
 		virtual BaseException* Clone() const=0;
 	};
+
+	typedef ScopedPtr<BaseException> ScopedExcept;
 
 	// --------------------------------------------------------------------------------------
 	//  Ps2Generic Exception
@@ -337,3 +340,4 @@ public: \
 }
 
 using Exception::BaseException;
+using Exception::ScopedExcept;

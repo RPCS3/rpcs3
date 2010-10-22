@@ -98,7 +98,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 
 	{
 		ScopedCoreThreadPopup suspender;
-		if( !Msgbox::OkCancel( wxsFormat(
+		if( !Msgbox::OkCancel( pxsFmt(
 			pxE( ".Popup:DeleteSettings",
 				L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to "
 				L"manually restart %s after this operation.\n\n"
@@ -222,12 +222,13 @@ static wxString JoinFiletypes( const wxChar** src )
 		if( !dest.IsEmpty() )
 			dest += L";";
 
-		dest += wxsFormat(L"*.%s", *src);
+		dest += pxsFmt(L"*.%s", *src);
 
-		#ifdef __LINUX__
-		// omgosh!  linux is CaSE SeNSiTiVE!!
-		dest += wxsFormat(L";*.%s", *src).MakeUpper();
-		#endif
+		if (wxFileName::IsCaseSensitive())
+		{
+			// omgosh!  the filesystem is CaSE SeNSiTiVE!!
+			dest += pxsFmt(L";*.%s", *src).ToUpper();
+		}
 
 		++src;
 	}
@@ -248,13 +249,13 @@ bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 	
 	wxArrayString isoFilterTypes;
 
-	isoFilterTypes.Add(wxsFormat(_("All Supported (%s)"), (isoSupportedLabel + L" .dump").c_str()));
+	isoFilterTypes.Add(pxsFmt(_("All Supported (%s)"), (isoSupportedLabel + L" .dump").c_str()));
 	isoFilterTypes.Add(isoSupportedList + L";*.dump");
 
-	isoFilterTypes.Add(wxsFormat(_("Disc Images (%s)"), isoSupportedLabel.c_str() ));
+	isoFilterTypes.Add(pxsFmt(_("Disc Images (%s)"), isoSupportedLabel.c_str() ));
 	isoFilterTypes.Add(isoSupportedList);
 
-	isoFilterTypes.Add(wxsFormat(_("Blockdumps (%s)"), L".dump" ));
+	isoFilterTypes.Add(pxsFmt(_("Blockdumps (%s)"), L".dump" ));
 	isoFilterTypes.Add(L"*.dump");
 
 	isoFilterTypes.Add(_("All Files (*.*)"));

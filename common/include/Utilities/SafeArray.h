@@ -15,34 +15,12 @@
 
 #pragma once
 
+// pxUSE_SECURE_MALLOC - enables bounds checking on scoped malloc allocations.
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Safe deallocation macros -- checks pointer validity (non-null) when needed, and sets
-// pointer to null after deallocation.
+#ifndef pxUSE_SECURE_MALLOC
+#define pxUSE_SECURE_MALLOC 0
+#endif
 
-#define safe_delete( ptr ) \
-	((void) (delete (ptr)), (ptr) = NULL)
-
-#define safe_delete_array( ptr ) \
-	((void) (delete[] (ptr)), (ptr) = NULL)
-
-// No checks for NULL -- wxWidgets says it's safe to skip NULL checks and it runs on 
-// just about every compiler and libc implementation of any recentness.
-#define safe_free( ptr ) \
-	( (void) (free( ptr ), !!0), (ptr) = NULL )
-	//((void) (( ( (ptr) != NULL ) && (free( ptr ), !!0) ), (ptr) = NULL))
-
-#define safe_fclose( ptr ) \
-	((void) (( ( (ptr) != NULL ) && (fclose( ptr ), !!0) ), (ptr) = NULL))
-
-// Implementation note: all known implementations of _aligned_free check the pointer for
-// NULL status (our implementation under GCC, and microsoft's under MSVC), so no need to
-// do it here.
-#define safe_aligned_free( ptr ) \
-	((void) ( _aligned_free( ptr ), (ptr) = NULL ))
-
-#define SafeSysMunmap( ptr, size ) \
-	((void) ( HostSys::Munmap( (uptr)(ptr), size ), (ptr) = NULL ))
 
 // Microsoft Windows only macro, useful for freeing out COM objects:
 #define safe_release( ptr ) \
@@ -76,11 +54,7 @@ protected:
 
 	// A safe array index fetcher.  Asserts if the index is out of bounds (dev and debug
 	// builds only -- no bounds checking is done in release builds).
-	T* _getPtr( uint i ) const
-	{
-		IndexBoundsAssumeDev( Name.c_str(), i, m_size );
-		return &m_ptr[i];
-	}
+	T* _getPtr( uint i ) const;
 
 public:
 	virtual ~SafeArray() throw();
@@ -154,11 +128,7 @@ protected:
 	virtual T* _virtual_realloc( int newsize );
 	void _MakeRoomFor_threshold( int newsize );
 
-	T* _getPtr( uint i ) const
-	{
-		IndexBoundsAssumeDev( Name.c_str(), i, m_length );
-		return &m_ptr[i];
-	}
+	T* _getPtr( uint i ) const;
 
 public:
 	virtual ~SafeList() throw();

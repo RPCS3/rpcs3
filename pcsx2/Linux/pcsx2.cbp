@@ -249,8 +249,6 @@
 		<Unit filename="../CDVD/IsoFS/SectorSource.h" />
 		<Unit filename="../CDVD/IsoFileFormats.cpp" />
 		<Unit filename="../CDVD/IsoFileFormats.h" />
-		<Unit filename="../CDVD/IsoFileTools.cpp" />
-		<Unit filename="../CDVD/IsoFileTools.h" />
 		<Unit filename="../COP0.cpp" />
 		<Unit filename="../COP0.h" />
 		<Unit filename="../COP2.cpp" />

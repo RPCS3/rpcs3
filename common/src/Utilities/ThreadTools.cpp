@@ -154,7 +154,7 @@ bool Threading::_WaitGui_RecursionGuard( const wxChar* name )
 
 	if( !guard.IsReentrant() ) return false;
 	pxThreadLog.Write( pxGetCurrentThreadName(),
-		wxsFormat(L"Yield recursion in %s; opening modal dialog.", name)
+		pxsFmt(L"Yield recursion in %s; opening modal dialog.", name)
 	);
 	return true;
 }
@@ -210,7 +210,7 @@ bool Threading::pxThread::AffinityAssert_AllowFromSelf( const DiagnosticOrigin& 
 	if( IsSelf() ) return true;
 
 	if( IsDevBuild )
-		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", GetName().c_str() ) );
+		pxOnAssert( origin, pxsFmt( L"Thread affinity violation: Call allowed from '%s' thread only.", GetName().c_str() ) );
 
 	return false;
 }
@@ -220,7 +220,7 @@ bool Threading::pxThread::AffinityAssert_DisallowFromSelf( const DiagnosticOrigi
 	if( !IsSelf() ) return true;
 
 	if( IsDevBuild )
-		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", GetName().c_str() ) );
+		pxOnAssert( origin, pxsFmt( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", GetName().c_str() ) );
 
 	return false;
 }
@@ -404,10 +404,8 @@ void Threading::pxThread::RethrowException() const
 	// pointer might still be invalid after detachment, so might as well just detach and check
 	// after.
 
-	ScopedPtr<BaseException> ptr( const_cast<pxThread*>(this)->m_except.DetachPtr() );
+	ScopedExcept ptr( const_cast<pxThread*>(this)->m_except.DetachPtr() );
 	if( ptr ) ptr->Rethrow();
-
-	//m_except->Rethrow();
 }
 
 static bool m_BlockDeletions = false;
@@ -429,13 +427,13 @@ void Threading::pxThread::_selfRunningTest( const wxChar* name ) const
 {
 	if( HasPendingException() )
 	{
-		pxThreadLog.Error( GetName(), wxsFormat(L"An exception was thrown while waiting on a %s.", name) );
+		pxThreadLog.Error( GetName(), pxsFmt(L"An exception was thrown while waiting on a %s.", name) );
 		RethrowException();
 	}
 
 	if( !m_running )
 	{
-		throw Exception::CancelEvent( wxsFormat(
+		throw Exception::CancelEvent( pxsFmt(
 			L"Blocking thread %s was terminated while another thread was waiting on a %s.",
 			GetName().c_str(), name )
 		);
@@ -558,7 +556,7 @@ void Threading::pxThread::_try_virtual_invoke( void (pxThread::*method)() )
 	catch( Exception::RuntimeError& ex )
 	{
 		BaseException* woot = ex.Clone();
-		woot->DiagMsg() += wxsFormat( L"(thread:%s)", GetName().c_str() );
+		woot->DiagMsg() += pxsFmt( L"(thread:%s)", GetName().c_str() );
 		m_except = woot;
 	}
 #ifndef PCSX2_DEVBUILD
@@ -568,13 +566,13 @@ void Threading::pxThread::_try_virtual_invoke( void (pxThread::*method)() )
 	// the MSVC debugger (or by silent random annoying fail on debug-less linux).
 	/*catch( std::logic_error& ex )
 	{
-		throw BaseException( wxsFormat( L"STL Logic Error (thread:%s): %s",
+		throw BaseException( pxsFmt( L"STL Logic Error (thread:%s): %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}
 	catch( std::exception& ex )
 	{
-		throw BaseException( wxsFormat( L"STL exception (thread:%s): %s",
+		throw BaseException( pxsFmt( L"STL exception (thread:%s): %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}*/
@@ -584,7 +582,7 @@ void Threading::pxThread::_try_virtual_invoke( void (pxThread::*method)() )
 	catch( BaseException& ex )
 	{
 		BaseException* woot = ex.Clone();
-		woot->DiagMsg() += wxsFormat( L"(thread:%s)", GetName().c_str() );
+		woot->DiagMsg() += pxsFmt( L"(thread:%s)", GetName().c_str() );
 		m_except = woot;
 	}
 #endif
@@ -862,12 +860,12 @@ __fi void* Threading::_AtomicCompareExchangePointer( volatile uptr& target, uptr
 
 wxString Exception::BaseThreadError::FormatDiagnosticMessage() const
 {
-    return wxsFormat( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
+    return pxsFmt( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
 wxString Exception::BaseThreadError::FormatDisplayMessage() const
 {
-    return wxsFormat( m_message_user, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
+    return pxsFmt( m_message_user, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
 pxThread& Exception::BaseThreadError::Thread()

@@ -30,7 +30,7 @@
 
 static u8 *pbuffer;
 static u8 cdbuffer[2352] = {0};
-static isoFile *iso = NULL;
+static isoFile iso;
 
 static int psize, cdtype;
 
@@ -38,8 +38,7 @@ static s32 layer1start = -1;
 
 void CALLBACK ISOclose()
 {
-	isoClose(iso);
-	iso = NULL;
+	iso.Close();
 }
 
 s32 CALLBACK ISOopen(const char* pTitle)
@@ -52,14 +51,19 @@ s32 CALLBACK ISOopen(const char* pTitle)
 		return -1;
 	}
 
-	iso = isoOpen(pTitle);
-	if (iso == NULL)
+	// The current plugin API doesn't expect exceptions to propagate out of the API
+	// calls, so we need to catch them, log them, and return -1.
+
+	try {
+		iso.Open(fromUTF8(pTitle));
+	}
+	catch( BaseException& ex )
 	{
-		Console.Error( "CDVDiso Error: Failed loading  %s", pTitle );
+		Console.Error( ex.FormatDiagnosticMessage() );
 		return -1;
 	}
 
-	switch (iso->type)
+	switch (iso.GetType())
 	{
 		case ISOTYPE_DVD:
 			cdtype = CDVD_TYPE_PS2DVD;
@@ -113,7 +117,7 @@ s32 CALLBACK ISOgetTD(u8 Track, cdvdTD *Buffer)
 {
 	if (Track == 0)
 	{
-		Buffer->lsn = iso->blocks;
+		Buffer->lsn = iso.GetBlockCount();
 	}
 	else
 	{
@@ -129,7 +133,7 @@ s32 CALLBACK ISOgetTD(u8 Track, cdvdTD *Buffer)
 
 static bool testForPartitionInfo( const u8 (&tempbuffer)[CD_FRAMESIZE_RAW] )
 {
-	const int off	= iso->blockofs;
+	const int off = iso.GetBlockOffset();
 
 	// test for: CD001
 	return (
@@ -143,9 +147,9 @@ static bool testForPartitionInfo( const u8 (&tempbuffer)[CD_FRAMESIZE_RAW] )
 
 static bool FindLayer1Start()
 {
-	if( (layer1start != -1) || (iso->blocks < 0x230540) ) return true;
+	if( (layer1start != -1) || (iso.GetBlockCount() < 0x230540) ) return true;
 
-	Console.WriteLn("CDVDiso: searching for layer1...");
+	Console.WriteLn("isoFile: searching for layer1...");
 
 	int blockresult = -1;
 
@@ -156,28 +160,28 @@ static bool FindLayer1Start()
 	wxString layerCacheFile( Path::Combine(GetSettingsFolder().ToString(), L"LayerBreakCache.ini") );
 	wxFileConfig layerCacheIni( wxEmptyString, wxEmptyString, layerCacheFile, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
 
-	wxString cacheKey;
-	cacheKey.Printf( L"%X", HashTools::Hash( iso->filename, strlen( iso->filename ) ) );
+	FastFormatUnicode cacheKey;
+	cacheKey.Write( L"%X", HashTools::Hash( (s8*)iso.GetFilename().c_str(), iso.GetFilename().Length() * sizeof(wxChar) ) );
 
 	blockresult = layerCacheIni.Read( cacheKey, -1 );
 	if( blockresult != -1 )
 	{
 		u8 tempbuffer[CD_FRAMESIZE_RAW];
-		isoReadBlock(iso, tempbuffer, blockresult);
+		iso.ReadBlock(tempbuffer, blockresult);
 
 		if( testForPartitionInfo( tempbuffer ) )
 		{
-			Console.WriteLn( "CDVDiso: loaded second layer from settings cache, sector=0x%8.8x", blockresult );
+			Console.WriteLn( "isoFile: loaded second layer from settings cache, sector=0x%08x", blockresult );
 			layer1start = blockresult;
 		}
 		else
 		{
-			Console.Warning( "CDVDiso: second layer info in the settings cache appears to be obsolete or invalid." );
+			Console.Warning( "isoFile: second layer info in the settings cache appears to be obsolete or invalid.  Ignoring..." );
 		}
 	}
 	else
 	{
-		DevCon.WriteLn( "CDVDiso: no cached info for second layer found." );
+		DevCon.WriteLn( "isoFile: no cached info for second layer found." );
 	}
 
 	if( layer1start == -1 )
@@ -197,28 +201,29 @@ static bool FindLayer1Start()
 		// to create the window and pass progress increments back to it.
 
 
-		uint midsector = (iso->blocks / 2) & ~0xf;
+		uint midsector = (iso.GetBlockCount() / 2) & ~0xf;
 		uint deviation = 0;
 
 		while( (layer1start == -1) && (deviation < midsector-16) )
 		{
 			u8 tempbuffer[CD_FRAMESIZE_RAW];
-			isoReadBlock(iso, tempbuffer, midsector-deviation);
+			iso.ReadBlock(tempbuffer, midsector-deviation);
 
 			if(testForPartitionInfo( tempbuffer ))
 				layer1start = midsector-deviation;
 			else
 			{
-				isoReadBlock(iso, tempbuffer, midsector+deviation);
+				iso.ReadBlock(tempbuffer, midsector+deviation);
 				if( testForPartitionInfo( tempbuffer ) )
 					layer1start = midsector+deviation;
 			}
 
 			if( layer1start != -1 )
 			{
-				if( !pxAssertDev( tempbuffer[iso->blockofs] == 0x01, "Layer1-Detect: CD001 tag found, but the partition type is invalid." ) )
+				const int blockofs = iso.GetBlockOffset();
+				if( !pxAssertDev( tempbuffer[blockofs] == 0x01, "Layer1-Detect: CD001 tag found, but the partition type is invalid." ) )
 				{
-					Console.Error( "CDVDiso: Invalid partition type on layer 1!? (type=0x%x)", tempbuffer[iso->blockofs] );
+					Console.Error( "isoFile: Invalid partition type on layer 1!? (type=0x%x)", tempbuffer[blockofs] );
 				}
 			}
 			deviation += 16;
@@ -226,12 +231,12 @@ static bool FindLayer1Start()
 
 		if( layer1start == -1 )
 		{
-			Console.Warning("CDVDiso: Couldn't find second layer... ignoring");
+			Console.Error("isoFile: Couldn't find layer1... iso image is probably corrupt or incomplete.");
 			return false;
 		}
 		else
 		{
-			Console.WriteLn("CDVDiso: second layer found at sector 0x%8.8x", layer1start);
+			Console.WriteLn( Color_Blue, "isoFile: second layer found at sector 0x%08x", layer1start);
 
 			// Save layer information to configuration:
 
@@ -249,7 +254,7 @@ s32 CALLBACK ISOgetDualInfo(s32* dualType, u32* _layer1start)
 	if(layer1start<0)
 	{
 		*dualType = 0;
-		*_layer1start = iso->blocks;
+		*_layer1start = iso.GetBlockCount();
 	}
 	else
 	{
@@ -374,44 +379,43 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
-	if (_lsn < 0) lsn = iso->blocks + _lsn;
-	if (lsn > iso->blocks) return -1;
+	if (_lsn < 0) lsn = iso.GetBlockCount() + _lsn;
+	if (lsn > iso.GetBlockCount()) return -1;
 
 	if(mode == CDVD_MODE_2352)
 	{
-		isoReadBlock(iso, tempbuffer, lsn);
+		iso.ReadBlock(tempbuffer, lsn);
 		return 0;
 	}
 
-	isoReadBlock(iso, cdbuffer, lsn);
+	iso.ReadBlock(cdbuffer, lsn);
 
 	pbuffer = cdbuffer;
 
 	switch (mode)
 	{
-	case CDVD_MODE_2352:
-		psize = 2352;
-		break;
-	case CDVD_MODE_2340:
-		pbuffer += 12;
-		psize = 2340;
-		break;
-	case CDVD_MODE_2328:
-		pbuffer += 24;
-		psize = 2328;
-		break;
-	case CDVD_MODE_2048:
-		pbuffer += 24;
-		psize = 2048;
-		break;
+		case CDVD_MODE_2352:
+			// Unreachable due to shortcut above.
+			pxAssume(false);
+			break;
+
+		case CDVD_MODE_2340:
+			pbuffer += 12;
+			psize = 2340;
+			break;
+		case CDVD_MODE_2328:
+			pbuffer += 24;
+			psize = 2328;
+			break;
+		case CDVD_MODE_2048:
+			pbuffer += 24;
+			psize = 2048;
+			break;
+		
+		jNO_DEFAULT
 	}
 
-	// version 3 blockdumps have no pbuffer header, so lets reset back to the
-	// original pointer. :)
-	if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
-		pbuffer = cdbuffer;
-
-	memcpy_fast(tempbuffer,pbuffer,psize);
+	memcpy_fast(tempbuffer, pbuffer, psize);
 
 	return 0;
 }
@@ -420,10 +424,10 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
-	if (_lsn < 0) lsn = iso->blocks + _lsn;
-	if (lsn > iso->blocks) return -1;
+	if (_lsn < 0) lsn = iso.GetBlockCount() + _lsn;
+	if (lsn > iso.GetBlockCount()) return -1;
 
-	isoReadBlock(iso, cdbuffer, lsn);
+	iso.ReadBlock(cdbuffer, lsn);
 	pbuffer = cdbuffer;
 
 	switch (mode)
@@ -445,17 +449,12 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 		break;
 	}
 
-	// version 3 blockdumps have no pbuffer header, so lets reset back to the
-	// original pointer. :)
-	if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
-		pbuffer = cdbuffer;
-
 	return 0;
 }
 
 s32 CALLBACK ISOgetBuffer2(u8* buffer)
 {
-	memcpy_fast(buffer,pbuffer,psize);
+	memcpy_fast(buffer, pbuffer, psize);
 	return 0;
 }
 

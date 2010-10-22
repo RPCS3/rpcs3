@@ -113,7 +113,7 @@ set(UtilitiesSources
 	pxCheckBox.cpp
 	pxRadioPanel.cpp
 	pxStaticText.cpp
-	pxTextStream.cpp
+	pxStreams.cpp
 	pxTranslate.cpp
 	pxWindowTextWriter.cpp
 	Semaphore.cpp
@@ -149,8 +149,10 @@ set(UtilitiesHeaders
 	../../include/Utilities/pxCheckBox.h
 	../../include/Utilities/pxRadioPanel.h
 	../../include/Utilities/pxStaticText.h
+	../../include/Utilities/pxStreams.h
 	../../include/Utilities/RedtapeWindows.h
 	../../include/Utilities/SafeArray.h
+	../../include/Utilities/ScopedAlloc.h
 	../../include/Utilities/ScopedPtr.h
 	../../include/Utilities/ScopedPtrMT.h
 	../../include/Utilities/StringHelpers.h

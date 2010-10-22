@@ -31,47 +31,66 @@ wxString GetMsg_ConfirmSysReset()
 	);
 }
 
-bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
+// --------------------------------------------------------------------------------------
+//  DroppedTooManyFiles
+// --------------------------------------------------------------------------------------
+class DroppedTooManyFiles : public pxActionEvent
 {
-	ScopedCoreThreadPopup stopped_core;
+protected:
+	wxWindowID	m_ownerid;
 
-	if( filenames.GetCount() > 1 )
+public:
+	DroppedTooManyFiles( const wxWindow* window )
+		: pxActionEvent()
 	{
-		wxDialogWithHelpers dialog( m_WindowBound, _("Drag and Drop Error") );
-		dialog += dialog.Heading(AddAppName(_("It is an error to drop multiple files onto a %s window.  One at a time please, thank you.")));
-		pxIssueConfirmation( dialog, MsgButtons().Cancel() );
-		return false;
+		m_ownerid = window->GetId();
 	}
 
-	Console.WriteLn( L"(Drag&Drop) Received filename: " + filenames[0] );
+	virtual ~DroppedTooManyFiles() throw() { }
+	virtual DroppedTooManyFiles *Clone() const { return new DroppedTooManyFiles(*this); }
 
-	// ---------------
-	//    ELF CHECK
-	// ---------------
+protected:
+	virtual void InvokeEvent()
 	{
-	wxFileInputStream filechk( filenames[0] );
+		ScopedCoreThreadPopup stopped_core;
 
-	if( !filechk.IsOk() )
-		throw Exception::CannotCreateStream( filenames[0] );
+		wxDialogWithHelpers dialog( wxWindow::FindWindowById(m_ownerid), _("Drag and Drop Error") );
+		dialog += dialog.Heading(AddAppName(_("It is an error to drop multiple files onto a %s window.  One at a time please, thank you.")));
+		pxIssueConfirmation( dialog, MsgButtons().Cancel() );
+	}
+};
 
-	u8 ident[16];
-	filechk.Read( ident, 16 );
-	static const u8 elfIdent[4] = { 0x7f, 'E', 'L', 'F' };
+// --------------------------------------------------------------------------------------
+//  DroppedElf
+// --------------------------------------------------------------------------------------
+class DroppedElf : public pxActionEvent
+{
+protected:
+	wxWindowID	m_ownerid;
 
-	if( ((u32&)ident) == ((u32&)elfIdent) )
+public:
+	DroppedElf( const wxWindow* window )
+		: pxActionEvent()
 	{
-		Console.WriteLn( L"(Drag&Drop) Found ELF file type!" );
+		m_ownerid = window->GetId();
+	}
 
-		g_Conf->CurrentELF = filenames[0];
+	virtual ~DroppedElf() throw() { }
+	virtual DroppedElf *Clone() const { return new DroppedElf(*this); }
+
+protected:
+	virtual void InvokeEvent()
+	{
+		ScopedCoreThreadPopup stopped_core;
 
 		bool confirmed = true;
 		if( SysHasValidState() )
 		{
-			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset") );
+			wxDialogWithHelpers dialog( wxWindow::FindWindowById(m_ownerid), _("Confirm PS2 Reset") );
 
 			dialog += dialog.Heading(AddAppName(_("You have dropped the following ELF binary into %s:\n\n")));
 			dialog += dialog.GetCharHeight();
-			dialog += dialog.Text( filenames[0] );
+			dialog += dialog.Text( g_Conf->CurrentELF );
 			dialog += dialog.GetCharHeight();
 			dialog += dialog.Heading(GetMsg_ConfirmSysReset());
 
@@ -85,32 +104,106 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		}
 		else
 			stopped_core.AllowResume();
-
-		return true;
 	}
-	}
+};
 
-	// ---------------
-	//    ISO CHECK
-	// ---------------
+// --------------------------------------------------------------------------------------
+//  DroppedIso
+// --------------------------------------------------------------------------------------
+class DroppedIso : public pxActionEvent
+{
+protected:
+	wxWindowID	m_ownerid;
+	wxString	m_filename;
 
-	// FIXME : The whole IsoFileFormats api (meaning isoOpen / isoDetect / etc) needs to be
-	//   converted to C++ and wxInputStream .  Until then this is a nasty little exception unsafe
-	//   hack ;)
-
-	isoFile iso;
-	memzero(iso);
-	iso.handle = _openfile(filenames[0].ToUTF8(), O_RDONLY);
-
-	if( iso.handle == NULL )
-		throw Exception::CannotCreateStream( filenames[0] );
-
-	if (isoDetect(&iso))
+public:
+	DroppedIso( const wxWindow* window, const wxString& filename )
+		: pxActionEvent()
+		, m_filename( filename )
 	{
-		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
-		SwapOrReset_Iso(m_WindowBound, stopped_core, filenames[0], AddAppName(_("You have dropped the following ISO image into %s:")));
+		m_ownerid = window->GetId();
 	}
 
-	_closefile( iso.handle );
-	return true;
+	virtual ~DroppedIso() throw() { }
+	virtual DroppedIso *Clone() const { return new DroppedIso(*this); }
+
+protected:
+	virtual void InvokeEvent()
+	{
+		ScopedCoreThreadPopup stopped_core;
+		SwapOrReset_Iso(wxWindow::FindWindowById(m_ownerid), stopped_core, m_filename,
+			AddAppName(_("You have dropped the following ISO image into %s:"))
+		);
+	}
+};
+
+bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
+{
+	// WARNING: Doing *anything* from the context of OnDropFiles will result in Windows
+	// Explorer getting tied up waiting for a response from the application's message pump.
+	// So whenever possible, issue messages from this function only, such that the
+	// messages are processed later on after the application has allowed Explorer to resume
+	// itself.
+	//
+	// This most likely *includes* throwing exceptions, hence all exceptions here-in being
+	// caught and re-packaged as messages posted back to the application, so that the drag&
+	// drop procedure is free to release the Windows Explorer from the tyranny of drag&drop
+	// interplay.
+
+	try
+	{
+		if( filenames.GetCount() > 1 )
+		{
+			wxGetApp().AddIdleEvent( DroppedTooManyFiles(m_WindowBound) );
+			return false;
+		}
+
+		Console.WriteLn( L"(Drag&Drop) Received filename: " + filenames[0] );
+
+		// ---------------
+		//    ELF CHECK
+		// ---------------
+		{
+		wxFileInputStream filechk( filenames[0] );
+
+		if( !filechk.IsOk() )
+			throw Exception::CannotCreateStream( filenames[0] );
+
+		u8 ident[16];
+		filechk.Read( ident, 16 );
+		static const u8 elfIdent[4] = { 0x7f, 'E', 'L', 'F' };
+
+		if( ((u32&)ident) == ((u32&)elfIdent) )
+		{
+			Console.WriteLn( L"(Drag&Drop) Found ELF file type!" );
+
+			g_Conf->CurrentELF = filenames[0];
+
+			wxGetApp().PostEvent( DroppedElf(m_WindowBound) );
+			return true;
+		}
+		}
+
+		// ---------------
+		//    ISO CHECK
+		// ---------------
+
+		isoFile iso;
+
+		if (iso.Test( filenames[0] ))
+		{
+			DevCon.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
+			wxGetApp().PostEvent( DroppedIso(m_WindowBound, filenames[0]) );
+			return true;
+		}
+	}
+	catch (BaseException& ex)
+	{
+		wxGetApp().AddIdleEvent( pxExceptionEvent(ex) );
+	}
+	catch (std::runtime_error& ex)
+	{
+		wxGetApp().AddIdleEvent( pxExceptionEvent(Exception::RuntimeError(ex)) );
+	}
+	return false;
 }

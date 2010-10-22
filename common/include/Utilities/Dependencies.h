@@ -23,7 +23,13 @@
 // --------------------------------------------------------------------------------------
 
 class wxOutputStream;
+class wxFileOutputStream;
+class wxFFileOutputStream;
+
 class wxInputStream;
+class wxFileInputStream;
+class wxFFileInputStream;
+
 class wxPoint;
 class wxRect;
 class wxSize;
@@ -36,6 +42,11 @@ namespace Threading
 	class Mutex;
 	class Semaphore;
 	class pxThread;
+}
+
+namespace Exception
+{
+	class BaseException;
 }
 
 // This should prove useful....
@@ -174,6 +185,9 @@ extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* en
 extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
 extern bool pxIsEnglish( int id );
 
+extern wxString fromUTF8( const char* src );
+extern wxString fromAscii( const char* src );
+
 // --------------------------------------------------------------------------------------
 //  wxLt(x)   [macro]
 // --------------------------------------------------------------------------------------
@@ -220,3 +234,6 @@ extern bool pxIsEnglish( int id );
 #define pxE(key, english)			pxExpandMsg( wxT(key),						english )
 
 #include "Utilities/Assertions.h"
+#include "Utilities/Exceptions.h"
+#include "Utilities/ScopedPtr.h"
+#include "Utilities/ScopedAlloc.h"
