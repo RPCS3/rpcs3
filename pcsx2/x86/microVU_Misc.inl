@@ -481,7 +481,7 @@ static __pagealigned u8 mVUsearchXMM[__pagesize];
 // Generates a custom optimized block-search function
 // Note: Structs must be 16-byte aligned! (GCC doesn't guarantee this)
 void mVUcustomSearch() {
-	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadWrite, false);
+	HostSys::MemProtectStatic(mVUsearchXMM, PageAccess_ReadWrite());
 	memset_8<0xcc,__pagesize>(mVUsearchXMM);
 	xSetPtr(mVUsearchXMM);
 
@@ -526,5 +526,5 @@ void mVUcustomSearch() {
 
 	exitPoint.SetTarget();
 	xRET();
-	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadOnly, true);
+	HostSys::MemProtectStatic(mVUsearchXMM, PageAccess_ExecOnly());
 }

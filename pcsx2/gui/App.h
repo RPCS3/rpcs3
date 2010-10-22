@@ -107,6 +107,7 @@ enum MenuIdentifiers
 	MenuId_Config_SysSettings,
 	MenuId_Config_McdSettings,
 	MenuId_Config_AppSettings,
+	MenuId_Config_GameDatabase,
 	MenuId_Config_BIOS,
 
 	// Plugin ID order is important.  Must match the order in tbl_PluginInfo.

@@ -72,7 +72,7 @@ extern void iDumpVU1Registers();
 
 #define SUPERVU_CHECKCONDITION 0 // has to be 0!!
 
-#define VU_EXESIZE 0x00800000
+static const uint VU_EXESIZE = _1mb * 8;
 
 #define _Imm11_ 	(s32)( (vucode & 0x400) ? (0xfffffc00 | (vucode & 0x3ff)) : (vucode & 0x3ff) )
 #define _UImm11_	(s32)(vucode & 0x7ff)
@@ -352,7 +352,7 @@ static void SuperVUAlloc(int vuindex)
 	{
 		// upper 4 bits must be zero!
 		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
-		s_recVUMem = SysMmapEx(0xf1e0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+		s_recVUMem = SysMmapEx(HostMemoryMap::sVUrec, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
 
 		// Try again at some other random memory location... whatever. >_<
 		if( s_recVUMem == NULL )
@@ -361,7 +361,7 @@ static void SuperVUAlloc(int vuindex)
 		if (s_recVUMem == NULL)
 		{
 			throw Exception::VirtualMemoryMapConflict()
-				.SetDiagMsg(wxsFormat( L"SuperVU failed to allocate virtual memory below 256MB." ))
+				.SetDiagMsg(pxsFmt( L"SuperVU failed to allocate virtual memory below 256MB." ))
 				.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
 					L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "
 					L"ranges required, and will not be available for use.  This is not a critical error, since "

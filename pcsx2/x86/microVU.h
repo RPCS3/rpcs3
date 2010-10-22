@@ -171,7 +171,7 @@ struct microVU {
 	u32 progMemMask;	// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
-	microProgManager prog;		// Micro Program Data
+	microProgManager			prog;		// Micro Program Data
 	ScopedPtr<microRegAlloc>	regAlloc;	// Reg Alloc Class
 	ScopedPtr<AsciiFile>		logFile;	// Log File Pointer
 

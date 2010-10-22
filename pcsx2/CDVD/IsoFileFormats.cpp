@@ -245,7 +245,7 @@ void isoFile::_WriteBlock(const u8* src, uint lsn)
 void isoFile::_WriteBlockD(const u8* src, uint lsn)
 {
 	// Find and ignore blocks that have already been dumped:
-	for (uint i=0; i<m_dtablesize; ++i)
+	for (int i=0; i<m_dtablesize; ++i)
 	{
 		if (m_dtable[i] == lsn) return;
 	}

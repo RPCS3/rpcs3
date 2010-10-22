@@ -178,11 +178,12 @@ extern bool iopEventTestIsActive;
 // Branching status used when throwing exceptions.
 extern bool iopIsDelaySlot;
 
-////////////////////////////////////////////////////////////////////
-// R3000A  Public Interface / API
+// --------------------------------------------------------------------------------------
+//  R3000Acpu
+// --------------------------------------------------------------------------------------
 
 struct R3000Acpu {
-	void (*Allocate)();
+	void (*Reserve)();
 	void (*Reset)();
 	void (*Execute)();
 	s32 (*ExecuteBlock)( s32 eeCycles );		// executes the given number of EE cycles.

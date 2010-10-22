@@ -87,8 +87,8 @@ extern void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const );
 
 namespace vtlb_private
 {
-	// Allocate enough memory for both EE and IOP memory space (IOP is roughly 2.5mb,
-	// so we alloc 4mb for now -- a little more than is needed).
+	// Allocate enough memory for EE, IOP, and VU, memory space (IOP + VU is roughly
+	// 2.5mb, so we alloc 4mb for now -- a little more than is needed).
 	static const uint VTLB_ALLOC_SIZE = sizeof(*eeMem) + (_1mb*4);
 
 	static const uint VTLB_PAGE_BITS = 12;
@@ -101,16 +101,17 @@ namespace vtlb_private
 
 	struct MapData
 	{
-		u8* alloc_base;			//base of the memory array
-		int alloc_current;		//current base
-
-		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
-		s32 vmap[VTLB_VMAP_ITEMS];   //4MB
-
 		// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
 		// second indexer -- read/write  [0 or 1]
 		// third indexer -- 128 possible handlers!
 		void* RWFT[5][2][128];
+
+		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
+
+		s32* vmap;				//4MB (allocated by vtlb_init)
+
+		u8* alloc_base;			//base of the memory array
+		int alloc_current;		//current base
 	};
 
 	extern __aligned(64) MapData vtlbdata;

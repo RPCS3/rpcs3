@@ -17,46 +17,81 @@
 #include "Utilities/RedtapeWindows.h"
 #include <winnt.h>
 
-namespace HostSys
+void* HostSys::MmapReserve(uptr base, size_t size)
 {
-	void *Mmap(uptr base, u32 size)
+	return VirtualAlloc((void*)base, size, MEM_RESERVE, PAGE_NOACCESS);
+}
+
+void HostSys::MmapCommit(void* base, size_t size)
+{
+	// Execution flag for this and the Reserve should match... ?
+	void* result = VirtualAlloc(base, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	pxAssumeDev(result, L"VirtualAlloc COMMIT failed: " + Exception::WinApiError().GetMsgFromWindows());
+}
+
+void HostSys::MmapReset(void* base, size_t size)
+{
+	// Execution flag is actually irrelevant for this operation, but whatever.
+	//void* result = VirtualAlloc((void*)base, size, MEM_RESET, PAGE_EXECUTE_READWRITE);
+	//pxAssumeDev(result, L"VirtualAlloc RESET failed: " + Exception::WinApiError().GetMsgFromWindows());
+
+	VirtualFree(base, size, MEM_DECOMMIT);
+}
+
+void* HostSys::Mmap(uptr base, size_t size)
+{
+	return VirtualAlloc((void*)base, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+}
+
+void HostSys::Munmap(uptr base, size_t size)
+{
+	if (!base) return;
+	VirtualFree((void*)base, size, MEM_DECOMMIT);
+	VirtualFree((void*)base, 0, MEM_RELEASE);
+}
+
+void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode& mode )
+{
+	pxAssertDev( ((size & (__pagesize-1)) == 0), wxsFormat(
+		L"Memory block size must be a multiple of the target platform's page size.\n"
+		L"\tPage Size: 0x%04x (%d), Block Size: 0x%04x (%d)",
+		__pagesize, __pagesize, size, size )
+	);
+
+	DWORD winmode = PAGE_NOACCESS;
+
+	// Windows has some really bizarre memory protection enumeration that uses bitwise
+	// numbering (like flags) but is in fact not a flag value.  *Someone* from the early
+	// microsoft days wasn't a very good coder, me thinks.  --air
+
+	if (mode.CanExecute())
 	{
-		return VirtualAlloc((void*)base, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+		winmode = mode.CanWrite() ? PAGE_EXECUTE_READWRITE : PAGE_EXECUTE_READ;
 	}
-
-	void Munmap(uptr base, u32 size)
+	else if (mode.CanRead())
 	{
-		if( base == NULL ) return;
-		VirtualFree((void*)base, size, MEM_DECOMMIT);
-		VirtualFree((void*)base, 0, MEM_RELEASE);
+		winmode = mode.CanWrite() ? PAGE_READWRITE : PAGE_READONLY;
 	}
-
-	void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
+	
+	DWORD OldProtect;	// enjoy my uselessness, yo!
+	if (!VirtualProtect( baseaddr, size, winmode, &OldProtect ))
 	{
-		pxAssertDev( ((size & (__pagesize-1)) == 0), wxsFormat(
-			L"Memory block size must be a multiple of the target platform's page size.\n"
-			L"\tPage Size: 0x%04x (%d), Block Size: 0x%04x (%d)",
-			__pagesize, __pagesize, size, size )
-		);
-
-		DWORD winmode = 0;
-
-		switch( mode )
-		{
-			case Protect_NoAccess:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE : PAGE_NOACCESS;
-			break;
-
-			case Protect_ReadOnly:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE_READ : PAGE_READONLY;
-			break;
-
-			case Protect_ReadWrite:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
-			break;
-		}
-
-		DWORD OldProtect;	// enjoy my uselessness, yo!
-		VirtualProtect( baseaddr, size, winmode, &OldProtect );
+		throw Exception::WinApiError().SetDiagMsg(
+			pxsFmt(L"VirtualProtect failed @ 0x%08X -> 0x%08X  (mode=%s)",
+			baseaddr, (uptr)baseaddr + size, mode.ToString().c_str()
+		));
 	}
+}
+
+wxString PageProtectionMode::ToString() const
+{
+	wxString modeStr;
+
+	if (m_read)		modeStr += L"Read";
+	if (m_write)	modeStr += L"Write";
+	if (m_exec)		modeStr += L"Exec";
+
+	if (modeStr.Length() <= 5) modeStr += L"Only";
+	
+	return modeStr;
 }

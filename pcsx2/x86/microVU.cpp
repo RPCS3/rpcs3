@@ -123,7 +123,7 @@ void microVU::reset() {
 	x86SetPtr(dispCache);
 	mVUdispatcherA(this);
 	mVUdispatcherB(this);
-	mVUemitSearch();
+		mVUemitSearch();
 
 	// Clear All Program Data
 	//memset(&prog, 0, sizeof(prog));
@@ -190,7 +190,7 @@ static void mVUresizeCache(mV, u32 size) {
 
 	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
 
-	u8* cache = SysMmapEx(0, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
+	u8* cache = SysMmapEx(mVU->index ? HostMemoryMap::mVU1rec : HostMemoryMap::mVU0rec, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
 	if(!cache && !mVU->cache) throw Exception::OutOfMemory( wxsFormat( L"Micro VU%d recompiled code cache", mVU->index) );
 	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); mVU->reset(); return; }
 	if (mVU->cache) {

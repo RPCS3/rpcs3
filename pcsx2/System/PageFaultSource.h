@@ -58,6 +58,9 @@ protected:
 	virtual void OnPageFaultEvent( const PageFaultInfo& evtinfo, bool& handled ) {}
 };
 
+// --------------------------------------------------------------------------------------
+//  EventListener_PageFault
+// --------------------------------------------------------------------------------------
 class EventListener_PageFault : public IEventListener_PageFault
 {
 public:
@@ -84,6 +87,92 @@ protected:
 	virtual void _DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const PageFaultInfo& evt );
 };
 
+// --------------------------------------------------------------------------------------
+//  BaseVirtualMemoryReserve   (WIP!!)
+// --------------------------------------------------------------------------------------
+class BaseVirtualMemoryReserve : public EventListener_PageFault
+{
+	DeclareNoncopyableObject( BaseVirtualMemoryReserve );
+
+public:
+	wxString Name;
+
+protected:
+	void*	m_baseptr;
+
+	// reserved memory (in pages).
+	uptr	m_reserved;
+
+	// Incremental size by which the buffer grows (in pages)
+	uptr	m_block_size;
+
+	// Protection mode to be applied to committed blocks.
+	PageProtectionMode m_prot_mode;
+
+	// Specifies the number of blocks that should be committed automatically when the
+	// reserve is created.  Typically this chunk is larger than the block size, and
+	// should be based on whatever typical overhead is needed for basic block use.
+	uint	m_def_commit;
+
+	// Records the number of pages committed to memory.
+	// (metric for analysis of buffer usage)
+	uptr	m_commited;
+
+public:
+	BaseVirtualMemoryReserve( const wxString& name );
+	virtual ~BaseVirtualMemoryReserve() throw()
+	{
+		Free();
+	}
+
+	void* Reserve( uint size, uptr base = 0, uptr upper_bounds = 0 );
+	void Reset();
+	void Free();
+	
+	uptr GetReserveSizeInBytes() const { return m_reserved * __pagesize; }
+	uptr GetReserveSizeInPages() const { return m_reserved; }
+
+	u8* GetPtr()					{ return (u8*)m_baseptr; }
+	const u8* GetPtr() const		{ return (u8*)m_baseptr; }
+
+	u8* GetPtrEnd()					{ return (u8*)m_baseptr + (m_reserved * __pagesize); }
+	const u8* GetPtrEnd() const		{ return (u8*)m_baseptr + (m_reserved * __pagesize); }
+
+	operator void*()				{ return m_baseptr; }
+	operator const void*() const	{ return m_baseptr; }
+
+	operator u8*()					{ return (u8*)m_baseptr; }
+	operator const u8*() const		{ return (u8*)m_baseptr; }
+
+protected:
+	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
+
+	virtual void OnCommittedBlock( void* block )=0;
+	virtual void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
+	{
+		throw;
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  RecompiledCodeReserve
+// --------------------------------------------------------------------------------------
+class RecompiledCodeReserve : public BaseVirtualMemoryReserve
+{
+protected:
+
+public:
+	RecompiledCodeReserve( const wxString& name, uint defCommit = 0 );
+	void OnCommittedBlock( void* block );
+	void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled );
+
+	operator void*()				{ return m_baseptr; }
+	operator const void*() const	{ return m_baseptr; }
+
+	operator u8*()				{ return (u8*)m_baseptr; }
+	operator const u8*() const	{ return (u8*)m_baseptr; }
+};
+
 #ifdef __LINUX__
 
 #	define PCSX2_PAGEFAULT_PROTECT
@@ -105,3 +194,4 @@ extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 extern void InstallSignalHandler();
 
 extern SrcType_PageFault Source_PageFault;
+

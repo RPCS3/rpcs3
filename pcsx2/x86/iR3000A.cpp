@@ -22,6 +22,7 @@
 
 #include "iR3000A.h"
 #include "BaseblockEx.h"
+#include "PageFaultSource.h"
 
 #include <time.h>
 
@@ -50,13 +51,8 @@ uptr psxhwLUT[0x10000];
 
 #define HWADDR(mem) (psxhwLUT[mem >> 16] + (mem))
 
-#define MAPBASE			0x48000000
-#define RECMEM_SIZE		(8*1024*1024)
+static RecompiledCodeReserve recMem(L"R3000A recompiled code cache", _1mb * 2);
 
-// R3000A statics
-int psxreclog = 0;
-
-static u8 *recMem = NULL;	// the recompiled blocks will be here
 static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
 static BASEBLOCK *recROM1 = NULL;	// also here
@@ -346,7 +342,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 static void _DynGen_Dispatchers()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( iopRecDispatchers, PageAccess_ReadWrite() );
 
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,__pagesize>( iopRecDispatchers );
@@ -363,7 +359,7 @@ static void _DynGen_Dispatchers()
 	iopJITCompileInBlock	= _DynGen_JITCompileInBlock();
 	iopEnterRecompiledCode	= _DynGen_EnterRecompiledCode();
 
-	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( iopRecDispatchers, PageAccess_ExecOnly() );
 
 	recBlocks.SetJITCompile( iopJITCompile );
 }
@@ -759,18 +755,13 @@ static u8* m_recBlockAlloc = NULL;
 static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK));
 
+static void recReserve()
+{
+	recMem.Reserve( _16mb, HostMemoryMap::IOPrec );
+}
+
 static void recAlloc()
 {
-	// Note: the VUrec depends on being able to grab an allocation below the 0x10000000 line,
-	// so we give the EErec an address above that to try first as it's basemem address, hence
-	// the 0x28000000 pick (0x20000000 is picked by the EE)
-
-	if( recMem == NULL )
-		recMem = (u8*)SysMmapEx( 0x28000000, RECMEM_SIZE, 0, "recAlloc(R3000a)" );
-
-	if( recMem == NULL )
-		throw Exception::OutOfMemory( L"R3000A recompiled code cache" );
-
 	// Goal: Allocate BASEBLOCKs for every possible branch target in IOP memory.
 	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
 	// always 4 bytes long).
@@ -795,19 +786,17 @@ static void recAlloc()
 	if( s_pInstCache == NULL )
 		throw Exception::OutOfMemory( L"R3000 InstCache." );
 
-	ProfilerRegisterSource( "IOP Rec", recMem, RECMEM_SIZE );
+	ProfilerRegisterSource( "IOP Rec", recMem, recMem.GetReserveSizeInBytes() );
 	_DynGen_Dispatchers();
 }
 
 void recResetIOP()
 {
-	// calling recResetIOP without first calling recInit is bad mojo.
-	pxAssert( recMem != NULL );
-	pxAssert( m_recBlockAlloc != NULL );
+	recAlloc();
+	recMem.Reset();
 
 	DevCon.WriteLn( "iR3000A Recompiler reset." );
 
-	memset_8<0xcc,RECMEM_SIZE>( recMem );	// 0xcc is INT3
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 
@@ -854,8 +843,8 @@ void recResetIOP()
 static void recShutdown()
 {
 	ProfilerTerminateSource( "IOPRec" );
+	recMem.Free();
 
-	SafeSysMunmap(recMem, RECMEM_SIZE);
 	safe_aligned_free( m_recBlockAlloc );
 
 	safe_free( s_pInstCache );
@@ -1202,8 +1191,9 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 	pxAssert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
+	if (recPtr >= (recMem.GetPtrEnd() - _64kb)) {
 		recResetIOP();
+	}
 
 	x86SetPtr( recPtr );
 	x86Align(16);
@@ -1390,12 +1380,12 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( x86Ptr < recMem+RECMEM_SIZE );
+	pxAssert( xGetPtr() < recMem.GetPtrEnd() );
 
-	pxAssert(x86Ptr - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr - recPtr;
+	pxAssert(xGetPtr() - recPtr < _64kb);
+	s_pCurBlockEx->x86size = xGetPtr() - recPtr;
 
-	recPtr = x86Ptr;
+	recPtr = xGetPtr();
 
 	pxAssert( (g_psxHasConstReg&g_psxFlushedConstReg) == g_psxHasConstReg );
 
@@ -1404,7 +1394,7 @@ StartRecomp:
 }
 
 R3000Acpu psxRec = {
-	recAlloc,
+	recReserve,
 	recResetIOP,
 	recExecute,
 	recExecuteBlock,

@@ -78,9 +78,9 @@ DataType __fastcall vtlb_memRead(u32 addr)
 
 	switch( DataSize )
 	{
-	case 8: return ((vtlbMemR8FP*)vtlbdata.RWFT[0][0][hand])(paddr);
-	case 16: return ((vtlbMemR16FP*)vtlbdata.RWFT[1][0][hand])(paddr);
-	case 32: return ((vtlbMemR32FP*)vtlbdata.RWFT[2][0][hand])(paddr);
+		case 8: return ((vtlbMemR8FP*)vtlbdata.RWFT[0][0][hand])(paddr);
+		case 16: return ((vtlbMemR16FP*)vtlbdata.RWFT[1][0][hand])(paddr);
+		case 32: return ((vtlbMemR32FP*)vtlbdata.RWFT[2][0][hand])(paddr);
 
 		jNO_DEFAULT;
 	}
@@ -562,33 +562,46 @@ void vtlb_Term()
 }
 
 // Reserves the vtlb core allocation used by various emulation components!
-//
-void vtlb_Core_Alloc()
+// [TODO] basemem - request allocating memory at the specified virtual location, which can allow
+//    for easier debugging and/or 3rd party cheat programs.  If 0, the operating system
+//    default is used.
+void vtlb_Core_Alloc( /*uptr basemem*/ )
 {
 	if( vtlbdata.alloc_base != NULL ) return;
 
 	vtlbdata.alloc_current = 0;
+	vtlbdata.alloc_base = SysMmapEx( HostMemoryMap::EEmem, VTLB_ALLOC_SIZE, 0x80000000, "Vtlb" );
 
-#ifdef __LINUX__
-	vtlbdata.alloc_base = SysMmapEx( 0x16000000, VTLB_ALLOC_SIZE, 0x80000000, "Vtlb" );
-#else
-	// Win32 just needs this, since malloc always maps below 2GB.
-	vtlbdata.alloc_base = (u8*)_aligned_malloc( VTLB_ALLOC_SIZE, 4096 );
-	if( vtlbdata.alloc_base == NULL )
-		throw Exception::OutOfMemory( pxsFmt(L"PS2 mappable system ram (%u megs)", VTLB_ALLOC_SIZE / _1mb) );
+#ifndef __WXMSW__
+	// [TODO] Win32 can fall back on this, since malloc always maps below 2GB.  (but we need to
+	//  make sure we flag it and call the right free -- and really it should never fail anyway
+	//  since SysMmapEx should still grab addresses below the 2gb line when given the 0 param
+	//  (OS picks the location).
+
+	//if (!vtlbdata.alloc_base)
+	//	vtlbdata.alloc_base = (u8*)_aligned_malloc( VTLB_ALLOC_SIZE, 4096 );
 #endif
+
+	if (!vtlbdata.alloc_base)
+		throw Exception::OutOfMemory( pxsFmt(L"PS2 mappable system ram (%u megs)", VTLB_ALLOC_SIZE / _1mb) );
+
+	vtlbdata.vmap = (s32*)_aligned_malloc( VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap), 16 );
+	if (!vtlbdata.vmap)
+		throw Exception::OutOfMemory( pxsFmt(L"VTLB virtual LUT (%u megs)", VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap) / _1mb) );
 }
 
 void vtlb_Core_Shutdown()
 {
-	if( vtlbdata.alloc_base == NULL ) return;
+	safe_aligned_free( vtlbdata.vmap );
 
-#ifdef __LINUX__
+	if (!vtlbdata.alloc_base) return;
+	
 	SafeSysMunmap( vtlbdata.alloc_base, VTLB_ALLOC_SIZE );
-#else
+
+#ifdef __WXMSW__
 	// Make sure and unprotect memory first, since CrtDebug will try to write to it.
-	HostSys::MemProtect( vtlbdata.alloc_base, VTLB_ALLOC_SIZE, Protect_ReadWrite );
-	safe_aligned_free( vtlbdata.alloc_base );
+	//HostSys::MemProtect( vtlbdata.alloc_base, VTLB_ALLOC_SIZE, Protect_ReadWrite );
+	//safe_aligned_free( vtlbdata.alloc_base );
 #endif
 
 }
@@ -613,9 +626,8 @@ u8* vtlb_malloc( uint size, uint align )
 
 void vtlb_free( void* pmem, uint size )
 {
+	if (!pmem) return;
+
 	vtlbdata.alloc_current -= size;
-
 	pxAssertDev( vtlbdata.alloc_current >= 0, "(vtlb_free) mismatched calls to vtlb_malloc and free detected via memory underflow." );
-
-	return;
 }

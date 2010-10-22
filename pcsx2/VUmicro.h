@@ -72,6 +72,14 @@ public:
 	virtual const char* GetShortName() const=0;
 	virtual wxString GetLongName() const=0;
 
+	// returns the number of bytes committed to the working caches for this CPU
+	// provider (typically this refers to recompiled code caches, but could also refer
+	// to other optional growable allocations).
+	virtual size_t GetCommittedCache() const
+	{
+		return 0;
+	}
+
 	virtual void Allocate()=0;
 	virtual void Shutdown()=0;
 	virtual void Reset()=0;

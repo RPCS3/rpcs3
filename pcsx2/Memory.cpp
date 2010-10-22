@@ -137,9 +137,9 @@ void memMapVUmicro()
 void memMapPhy()
 {
 	// Main memory
-	vtlb_MapBlock(eeMem->Main,	0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
+	vtlb_MapBlock(eeMem->Main,	0x00000000,Ps2MemSize::MainRam);//mirrored on first 256 mb ?
 	// High memory, uninstalled on the configuration we emulate
-	vtlb_MapHandler(null_handler, Ps2MemSize::Base, 0x10000000 - Ps2MemSize::Base);
+	vtlb_MapHandler(null_handler, Ps2MemSize::MainRam, 0x10000000 - Ps2MemSize::MainRam);
 
 	// Various ROMs (all read-only)
 	vtlb_MapBlock(eeMem->ROM,	0x1fc00000,Ps2MemSize::Rom);
@@ -796,15 +796,17 @@ enum vtlb_ProtectionMode
 
 struct vtlb_PageProtectionInfo
 {
-	// Ram De-mapping -- used to convert fully translated/mapped offsets into psM back
-	// into their originating ps2 physical ram address.  Values are assigned when pages
-	// are marked for protection.
+	// Ram De-mapping -- used to convert fully translated/mapped offsets (which reside with
+	// in the eeMem->Main block) back into their originating ps2 physical ram address.
+	// Values are assigned when pages are marked for protection.  since pages are automatically
+	// cleared and reset when TLB-remapped, stale values in this table (due to on-the-fly TLB
+	// changes) will be re-assigned the next time the page is accessed.
 	u32 ReverseRamMap;
 
 	vtlb_ProtectionMode Mode;
 };
 
-static __aligned16 vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::Base >> 12];
+static __aligned16 vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::MainRam >> 12];
 
 
 // returns:
@@ -820,14 +822,14 @@ int mmap_GetRamPageInfo( u32 paddr )
 	uptr ptr = (uptr)PSM( paddr );
 	uptr rampage = ptr - (uptr)eeMem->Main;
 
-	if (rampage >= Ps2MemSize::Base)
+	if (rampage >= Ps2MemSize::MainRam)
 		return -1; //not in ram, no tracking done ...
 
 	rampage >>= 12;
 	return ( m_PageProtectInfo[rampage].Mode == ProtMode_Manual ) ? 1 : 0;
 }
 
-// paddr - physically mapped address
+// paddr - physically mapped PS2 address
 void mmap_MarkCountedRamPage( u32 paddr )
 {
 	paddr &= ~0xfff;
@@ -835,8 +837,9 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	uptr ptr = (uptr)PSM( paddr );
 	int rampage = (ptr - (uptr)eeMem->Main) >> 12;
 
-	// Important: reassign paddr here, since TLB changes could alter the paddr->psM mapping
-	// (and clear blocks accordingly), but don't necessarily clear the protection status.
+	// Important: Update the ReverseRamMap here because TLB changes could alter the paddr
+	// mapping into eeMem->Main.
+
 	m_PageProtectInfo[rampage].ReverseRamMap = paddr;
 
 	if( m_PageProtectInfo[rampage].Mode == ProtMode_Write )
@@ -848,7 +851,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	);
 
 	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
-	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, Protect_ReadOnly );
+	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, PageAccess_ReadOnly() );
 }
 
 // offset - offset of address relative to psM.
@@ -863,7 +866,7 @@ static __fi void mmap_ClearCpuBlock( uint offset )
 	pxAssertMsg( m_PageProtectInfo[rampage].Mode != ProtMode_Manual,
 		"Attempted to clear a block that is already under manual protection." );
 
-	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, Protect_ReadWrite );
+	HostSys::MemProtect( &eeMem->Main[rampage<<12], __pagesize, PageAccess_ReadWrite() );
 	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }
@@ -872,7 +875,7 @@ void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& h
 {
 	// get bad virtual address
 	uptr offset = info.addr - (uptr)eeMem->Main;
-	if( offset >= Ps2MemSize::Base ) return;
+	if( offset >= Ps2MemSize::MainRam ) return;
 
 	mmap_ClearCpuBlock( offset );
 	handled = true;
@@ -886,5 +889,5 @@ void mmap_ResetBlockTracking()
 {
 	//DbgCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
 	memzero( m_PageProtectInfo );
-	HostSys::MemProtect( eeMem->Main, Ps2MemSize::Base, Protect_ReadWrite );
+	HostSys::MemProtect( eeMem->Main, Ps2MemSize::MainRam, PageAccess_ReadWrite() );
 }
