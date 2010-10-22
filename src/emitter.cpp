@@ -201,10 +201,6 @@ namespace YAML
 				m_pState->SetError(ErrorMsg::EXPECTED_VALUE_TOKEN);
 				return true;
 			case ES_WAITING_FOR_BLOCK_MAP_VALUE:
-				if(m_pState->CurrentlyInLongKey())
-					m_stream << IndentTo(curIndent);
-				m_stream << ':';
-				m_pState->RequireSeparation();
 				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_VALUE);
 				return true;
 			case ES_WRITING_BLOCK_MAP_VALUE:
@@ -286,6 +282,10 @@ namespace YAML
 				
 				// block map
 			case ES_WRITING_BLOCK_MAP_KEY:
+				if(!m_pState->CurrentlyInLongKey()) {
+					m_stream << ':';
+					m_pState->RequireSeparation();
+				}
 				m_pState->SwitchState(ES_DONE_WITH_BLOCK_MAP_KEY);
 				break;
 			case ES_WRITING_BLOCK_MAP_VALUE:
@@ -499,8 +499,12 @@ namespace YAML
 			return m_pState->SetError(ErrorMsg::UNEXPECTED_VALUE_TOKEN);
 
 		if(flowType == FT_BLOCK) {
-			if(m_pState->CurrentlyInLongKey())
+			if(m_pState->CurrentlyInLongKey()) {
 				m_stream << '\n';
+				m_stream << IndentTo(m_pState->GetCurIndent());
+				m_stream << ':';
+				m_pState->RequireSeparation();
+			}
 			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_VALUE);
 		} else if(flowType == FT_FLOW) {
 			m_pState->SwitchState(ES_WAITING_FOR_FLOW_MAP_VALUE);
