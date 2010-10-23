@@ -63,7 +63,7 @@ bool __forceinline NoHighlights(int i)
 	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
 }
 
-void __forceinline Kick::KickVERTEX2()
+void Kick::KickVERTEX2()
 {
 	FUNCLOG
 
@@ -75,7 +75,7 @@ void __forceinline Kick::KickVERTEX2()
 	}
 }
 
-void __forceinline Kick::KickVERTEX3()
+void Kick::KickVERTEX3()
 {
 	FUNCLOG
 

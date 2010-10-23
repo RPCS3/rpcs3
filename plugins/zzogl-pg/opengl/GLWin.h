@@ -68,5 +68,7 @@ class GLWindow
 
 extern GLWindow GLWin;
 extern void ChangeWindowSize(int nNewWidth, int nNewHeight);
+extern void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
+extern int nBackbufferWidth, nBackbufferHeight;
 
 #endif // GLWIN_H_INCLUDED

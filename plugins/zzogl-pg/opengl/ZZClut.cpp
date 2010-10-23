@@ -372,7 +372,7 @@ __forceinline void GSMem_to_ClutBuffer__T32_I4_CSM1_c(u32* vm, u32 csa)
 }
 
 // Main GSmem to Clutbuffer function
-__forceinline void GSMem_to_ClutBuffer(tex0Info &tex0)
+/*__forceinline*/ void GSMem_to_ClutBuffer(tex0Info &tex0)
 {
 	int entries = PSMT_IS8CLUT(tex0.psm) ? 256 : 16;
 
@@ -487,17 +487,17 @@ __forceinline void GSMem_to_ClutBuffer(tex0Info &tex0)
  * Clut buffer -> local C array (linear)
  * *****************************************************************/
 template <class T>
-__forceinline void ClutBuffer_to_Array(T* dst, u32 csa, u32 clutsize) {}
+/*__forceinline*/ void ClutBuffer_to_Array(T* dst, u32 csa, u32 clutsize) {}
 
 template <>
-__forceinline void ClutBuffer_to_Array<u32>(u32* dst, u32 csa, u32 clutsize)
+/*__forceinline*/ void ClutBuffer_to_Array<u32>(u32* dst, u32 csa, u32 clutsize)
 {
     u8* clut = (u8*)GetClutBufferAddress<u32>(csa);
     memcpy_amd((u8*)dst, clut, clutsize);
 }
 
 template <>
-__forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
+/*__forceinline*/ void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
 {
     u16* clut = (u16*)GetClutBufferAddress<u32>(csa); // Keep aligned version for sse2
 
@@ -597,10 +597,10 @@ __forceinline void ClutBuffer_to_Array<u16>(u16* dst, u32 csa, u32 clutsize)
 // false -> identical
 // true  -> different
 template <class T>
-__forceinline bool Cmp_ClutBuffer_GSMem(T* GSmem, u32 csa, u32 clutsize);
+/*__forceinline*/ bool Cmp_ClutBuffer_GSMem(T* GSmem, u32 csa, u32 clutsize);
 
 template <>
-__forceinline bool Cmp_ClutBuffer_GSMem<u32>(u32* GSmem, u32 csa, u32 clutsize)
+/*__forceinline*/ bool Cmp_ClutBuffer_GSMem<u32>(u32* GSmem, u32 csa, u32 clutsize)
 {
     u64* _GSmem = (u64*) GSmem;
     u64* clut = (u64*)GetClutBufferAddress<u32>(csa);
@@ -769,7 +769,7 @@ __forceinline bool Cmp_ClutBuffer_GSMem_core(u16* GSmem, u16* clut)
 #endif
 
 template <>
-__forceinline bool Cmp_ClutBuffer_GSMem<u16>(u16* GSmem, u32 csa, u32 clutsize)
+/*__forceinline*/ bool Cmp_ClutBuffer_GSMem<u16>(u16* GSmem, u32 csa, u32 clutsize)
 {
 #ifdef ZEROGS_SSE2
     u16* clut = (u16*)GetClutBufferAddress<u32>(csa); // Keep aligned version for sse2
@@ -853,17 +853,17 @@ __forceinline bool Cmp_ClutBuffer_GSMem<u16>(u16* GSmem, u32 csa, u32 clutsize)
 // false -> identical
 // true  -> different
 template <class T>
-__forceinline bool Cmp_ClutBuffer_SavedClut(T* saved_clut, u32 csa, u32 clutsize);
+/*__forceinline*/ bool Cmp_ClutBuffer_SavedClut(T* saved_clut, u32 csa, u32 clutsize);
 
 template <>
-__forceinline bool Cmp_ClutBuffer_SavedClut<u32>(u32* saved_clut, u32 csa, u32 clutsize)
+/*__forceinline*/ bool Cmp_ClutBuffer_SavedClut<u32>(u32* saved_clut, u32 csa, u32 clutsize)
 {
     u32* clut = GetClutBufferAddress<u32>(csa);
-    return memcmp_mmx(saved_clut, clut, clutsize);
+    return !!memcmp_mmx(saved_clut, clut, clutsize);
 }
 
 template <>
-__forceinline bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u32 csa, u32 clutsize)
+/*__forceinline*/ bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u32 csa, u32 clutsize)
 {
 	assert((clutsize&31) == 0);
 
@@ -973,7 +973,7 @@ __forceinline bool Cmp_ClutBuffer_SavedClut<u16>(u16* saved_clut, u32 csa, u32 c
 
 // used to build clut textures (note that this is for both 16 and 32 bit cluts)
 template <class T>
-__forceinline void Build_Clut_Texture(u32 psm, u32 height, T* pclut, u8* psrc, T* pdst)
+/*__forceinline*/ void Build_Clut_Texture(u32 psm, u32 height, T* pclut, u8* psrc, T* pdst)
 {
 	switch (psm)
 	{

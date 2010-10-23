@@ -357,7 +357,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZClut.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZKeyboard.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZKick.cpp"
 				>
 			</File>
 			<File
@@ -414,7 +422,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GLWin.h"
+				>
+			</File>
+			<File
 				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\HostMemory.h"
 				>
 			</File>
 			<File
@@ -482,11 +498,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\zpipe.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZClut.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZGl.h"
 				>
 			</File>
 			<File
+				RelativePath="..\ZZKick.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZLog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglCRTC.h"
 				>
 			</File>
 			<File
@@ -499,6 +531,14 @@
 			</File>
 			<File
 				RelativePath="..\ZZoglShaders.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglShoots.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglVB.h"
 				>
 			</File>
 		</Filter>
@@ -528,11 +568,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 	</Files>
