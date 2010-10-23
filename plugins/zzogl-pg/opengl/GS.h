@@ -31,8 +31,6 @@ using namespace std;
 
 extern float fFPS;
 
-#define MEMORY_END 0x00400000
-
 extern int g_LastCRC;
 
 struct Vector_16F

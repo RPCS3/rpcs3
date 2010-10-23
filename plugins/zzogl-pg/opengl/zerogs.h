@@ -25,44 +25,62 @@
 #endif
 
 // ----------------------------- Includes
-//#include <list>
-//#include <vector>
-//#include <map>
-//#include <string>
-//#include <math.h>
-
-//#include "ZZGl.h"
-//#include "CRC.h"
-//#include "targets.h"
 #include "PS2Edefs.h"
 // ------------------------ Variables -------------------------
 
 //////////////////////////
 // State parameters
 
-#ifdef ZEROGS_DEVBUILD
-extern char* EFFECT_NAME;
-extern char* EFFECT_DIR;
-extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
-extern bool g_bSaveTrans, g_bUpdateEffect, g_bSaveTex, g_bSaveResolved;
+#if defined(_WIN32)
+#	include <windows.h>
+#	include "resource.h"
 #endif
 
-extern bool s_bWriteDepth;
+#include <stdlib.h>
 
-extern int nBackbufferWidth, nBackbufferHeight;
+#include "GS.h"
+#include "targets.h"
+#include "GLWin.h"
+#include "ZZoglShaders.h"
+#include "ZZClut.h"
+#include "HostMemory.h"
 
-extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
+typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
-// Methods //
+PFNGLISRENDERBUFFEREXTPROC glIsRenderbufferEXT = NULL;
+PFNGLBINDRENDERBUFFEREXTPROC glBindRenderbufferEXT = NULL;
+PFNGLDELETERENDERBUFFERSEXTPROC glDeleteRenderbuffersEXT = NULL;
+PFNGLGENRENDERBUFFERSEXTPROC glGenRenderbuffersEXT = NULL;
+PFNGLRENDERBUFFERSTORAGEEXTPROC glRenderbufferStorageEXT = NULL;
+PFNGLGETRENDERBUFFERPARAMETERIVEXTPROC glGetRenderbufferParameterivEXT = NULL;
+PFNGLISFRAMEBUFFEREXTPROC glIsFramebufferEXT = NULL;
+PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT = NULL;
+PFNGLDELETEFRAMEBUFFERSEXTPROC glDeleteFramebuffersEXT = NULL;
+PFNGLGENFRAMEBUFFERSEXTPROC glGenFramebuffersEXT = NULL;
+PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC glCheckFramebufferStatusEXT = NULL;
+PFNGLFRAMEBUFFERTEXTURE1DEXTPROC glFramebufferTexture1DEXT = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT = NULL;
+PFNGLFRAMEBUFFERTEXTURE3DEXTPROC glFramebufferTexture3DEXT = NULL;
+PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC glFramebufferRenderbufferEXT = NULL;
+PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmentParameterivEXT = NULL;
+PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT = NULL;
+PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
+#ifndef GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT
+#define GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT 0x8CD8
+#endif
+
+bool ZZCreate(int width, int height);
 void ZZGSStateReset();
-
 
 // flush current vertices, call before setting new registers (the main render method)
 void Flush(int context);
 void FlushBoth();
 
-// called on a primitive switch
-void Prim();
+//extern u32 ptexLogo;
+//extern int nLogoWidth, nLogoHeight;
+//extern GLuint vboRect;
+//void ProcessMessages();
+//void RenderCustom(float fAlpha); // intro anim
 
 #endif

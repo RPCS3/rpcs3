@@ -34,8 +34,6 @@
 #include "GS.h"
 
 // For output
-const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
-
 #define NVIDIA_CG_API
 // --------------------------- API abstraction level --------------------------------
 
@@ -58,7 +56,7 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
 #endif					// end NVIDIA cg-toolkit API
 
-const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
+//const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
 
 enum ZZshShaderType {ZZ_SH_ZERO, ZZ_SH_REGULAR, ZZ_SH_REGULAR_FOG, ZZ_SH_TEXTURE, ZZ_SH_TEXTURE_FOG, ZZ_SH_CRTC};
 // We have "compatible" shaders, as RegularFogVS and RegularFogPS. if don't need to wory about incompatible shaders

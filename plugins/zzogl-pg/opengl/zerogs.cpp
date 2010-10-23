@@ -18,65 +18,7 @@
  */
 
 //-------------------------- Includes
-#if defined(_WIN32)
-#	include <windows.h>
-#	include "resource.h"
-#endif
-
-#include <stdlib.h>
-
-#include "GS.h"
-#include "Mem.h"
-#include "x86.h"
 #include "zerogs.h"
-#include "targets.h"
-#include "GLWin.h"
-#include "ZZoglShaders.h"
-#include "ZZKick.h"
-#include "ZZClut.h"
-
-//----------------------- Defines
-
-//-------------------------- Typedefs
-typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
-
-//-------------------------- Extern variables
-
-extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
-extern char *libraryName;
-extern int g_nFrame, g_nRealFrame;
-
-//extern int s_nFullscreen;
-//-------------------------- Variables
-
-primInfo *prim;
-
-inline u32 FtoDW(float f) { return (*((u32*)&f)); }
-
-int g_nDepthUpdateCount = 0;
-
-// Consts
-const GLenum primtype[8] = { GL_POINTS, GL_LINES, GL_LINES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, 0xffffffff };
-static const int PRIMMASK = 0x0e;   // for now ignore 0x10 (AA)
-
-PFNGLISRENDERBUFFEREXTPROC glIsRenderbufferEXT = NULL;
-PFNGLBINDRENDERBUFFEREXTPROC glBindRenderbufferEXT = NULL;
-PFNGLDELETERENDERBUFFERSEXTPROC glDeleteRenderbuffersEXT = NULL;
-PFNGLGENRENDERBUFFERSEXTPROC glGenRenderbuffersEXT = NULL;
-PFNGLRENDERBUFFERSTORAGEEXTPROC glRenderbufferStorageEXT = NULL;
-PFNGLGETRENDERBUFFERPARAMETERIVEXTPROC glGetRenderbufferParameterivEXT = NULL;
-PFNGLISFRAMEBUFFEREXTPROC glIsFramebufferEXT = NULL;
-PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT = NULL;
-PFNGLDELETEFRAMEBUFFERSEXTPROC glDeleteFramebuffersEXT = NULL;
-PFNGLGENFRAMEBUFFERSEXTPROC glGenFramebuffersEXT = NULL;
-PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC glCheckFramebufferStatusEXT = NULL;
-PFNGLFRAMEBUFFERTEXTURE1DEXTPROC glFramebufferTexture1DEXT = NULL;
-PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT = NULL;
-PFNGLFRAMEBUFFERTEXTURE3DEXTPROC glFramebufferTexture3DEXT = NULL;
-PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC glFramebufferRenderbufferEXT = NULL;
-PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmentParameterivEXT = NULL;
-PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT = NULL;
-PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 
 /////////////////////
 // graphics resources
@@ -84,70 +26,17 @@ PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
 bool s_bTexFlush = false;
 int s_nLastResolveReset = 0;
 int s_nResolveCounts[30] = {0}; // resolve counts for last 30 frames
-
-////////////////////
-// State parameters
-int nBackbufferWidth, nBackbufferHeight;									// ZZ
-
-//       	= float4( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
-//	float4 g_vdepth = float4( 65536.0f*65536.0f, 256.0f*65536.0f, 65536.0f, 256.0f);
-
-extern CRangeManager s_RangeMngr; // manages overwritten memory
-
 int s_nNewWidth = -1, s_nNewHeight = -1;
 
-void ProcessMessages();
-void RenderCustom(float fAlpha); // intro anim
-
-bool ZZCreate(int width, int height);
-
-///////////////////////
-// Method Prototypes //
-///////////////////////
-
-void ResolveInRange(int start, int end);
-
-void ExtWrite();
-extern GLuint vboRect;
-
-void ResetRenderTarget(int index)
-{
-	FBTexture(index);
-}
-
-// does one time only initializing/destruction
-
-class ZeroGSInit
-{
-
-	public:
-		ZeroGSInit()
-		{
-			const u32 mem_size = MEMORY_END + 0x10000; // leave some room for out of range accesses (saves on the checks)
-			// clear
-			g_pbyGSMemory = (u8*)_aligned_malloc(mem_size, 1024);
-			memset(g_pbyGSMemory, 0, mem_size);
-
-			g_pbyGSClut = (u8*)_aligned_malloc(256 * 8, 1024); // need 512 alignment!
-			memset(g_pbyGSClut, 0, 256*8);
-			memset(&GLWin, 0, sizeof(GLWin));
-		}
-
-		~ZeroGSInit()
-		{
-			_aligned_free(g_pbyGSMemory);
-			g_pbyGSMemory = NULL;
-			
-			_aligned_free(g_pbyGSClut);
-			g_pbyGSClut = NULL;
-		}
-};
+primInfo *prim;
+////////////////////
+// State parameters
+int nBackbufferWidth, nBackbufferHeight;
+int g_nDepthUpdateCount = 0;
 
 static ZeroGSInit s_ZeroGSInit;
 
-#ifndef GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT
-#define GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT_EXT 0x8CD8
-#endif
+// does one time only initializing/destruction
 
 void HandleGLError()
 {
@@ -328,113 +217,97 @@ void SetAA(int mode)
 	glPointSize(f);
 }
 
-void Prim()
-{
-	FUNCLOG
-
-	VB& curvb = vb[prim->ctxt];
-
-	if (curvb.CheckPrim()) Flush(prim->ctxt);
-
-	curvb.curprim._val = prim->_val;
-	curvb.curprim.prim = prim->prim;
-}
-
-extern u32 ptexLogo;
-extern int nLogoWidth, nLogoHeight;
-
-void RenderCustom(float fAlpha)
-{
-	FUNCLOG
-	GL_REPORT_ERROR();
-
-	fAlpha = 1;
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);   // switch to the backbuffer
-
-	DisableAllgl() ;
-	SetShaderCaller("RenderCustom");
-
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
-
-	// play custom animation
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-	// tex coords
-	float4 v = float4(1 / 32767.0f, 1 / 32767.0f, 0, 0);
-	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
-	v.x = (float)nLogoWidth;
-	v.y = (float)nLogoHeight;
-	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
-
-	v.x = v.y = v.z = v.w = fAlpha;
-	ZZshSetParameter4fv(ppsBaseTexture.prog, ppsBaseTexture.sOneColor, v, "g_fOneColor");
-
-	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	// inside vhDCb[0]'s target area, so render that region only
-	ZZshGLSetTextureParameter(ppsBaseTexture.prog, ppsBaseTexture.sFinal, ptexLogo, "Logo");
-	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
-
-	SET_STREAM();
-
-	ZZshSetVertexShader(pvsBitBlt.prog);
-	ZZshSetPixelShader(ppsBaseTexture.prog);
-	DrawTriangleArray();
-	
-	// restore
-	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	ProcessMessages();
-
-	GLWin.SwapGLBuffers();
-
-	glEnable(GL_SCISSOR_TEST);
-	glEnable(GL_STENCIL_TEST);
-
-	vb[0].bSyncVars = 0;
-	vb[1].bSyncVars = 0;
-
-	GL_REPORT_ERROR();
-}
+//void RenderCustom(float fAlpha)
+//{
+//	FUNCLOG
+//	GL_REPORT_ERROR();
+//
+//	fAlpha = 1;
+//	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);   // switch to the backbuffer
+//
+//	DisableAllgl() ;
+//	SetShaderCaller("RenderCustom");
+//
+//	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+//
+//	// play custom animation
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+//
+//	// tex coords
+//	float4 v = float4(1 / 32767.0f, 1 / 32767.0f, 0, 0);
+//	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltPos, v, "g_fBitBltPos");
+//	v.x = (float)nLogoWidth;
+//	v.y = (float)nLogoHeight;
+//	ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");
+//
+//	v.x = v.y = v.z = v.w = fAlpha;
+//	ZZshSetParameter4fv(ppsBaseTexture.prog, ppsBaseTexture.sOneColor, v, "g_fOneColor");
+//
+//	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//
+//	// inside vhDCb[0]'s target area, so render that region only
+//	ZZshGLSetTextureParameter(ppsBaseTexture.prog, ppsBaseTexture.sFinal, ptexLogo, "Logo");
+//	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
+//
+//	SET_STREAM();
+//
+//	ZZshSetVertexShader(pvsBitBlt.prog);
+//	ZZshSetPixelShader(ppsBaseTexture.prog);
+//	DrawTriangleArray();
+//	
+//	// restore
+//	if (conf.wireframe()) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//
+//	ProcessMessages();
+//
+//	GLWin.SwapGLBuffers();
+//
+//	glEnable(GL_SCISSOR_TEST);
+//	glEnable(GL_STENCIL_TEST);
+//
+//	vb[0].bSyncVars = 0;
+//	vb[1].bSyncVars = 0;
+//
+//	GL_REPORT_ERROR();
+//}
 
 //////////////////////////
 // Internal Definitions //
 //////////////////////////
 
-int Values[100] = {0, };
-
-void SetFogColor(u32 fog)
-{
-	FUNCLOG
-
-//	Always set the fog color, even if it was already set.
-//	if (gs.fogcol != fog)
-//	{
-	gs.fogcol = fog;
-
-	FlushBoth();
-
-	SetShaderCaller("SetFogColor");
-	float4 v;
-
-	// set it immediately
-	v.SetColor(gs.fogcol);
-	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
-
-//	}
-}
-
-void SetFogColor(GIFRegFOGCOL* fog)
+__forceinline void SetFogColor(float4 v)
 {
 	FUNCLOG
 	
 	SetShaderCaller("SetFogColor");
+	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+}
+
+__forceinline void SetFogColor(u32 fog)
+{
+	FUNCLOG
+
+	gs.fogcol = fog;
+
+	FlushBoth();
+	
+	float4 v;
+
+	// set it immediately
+	v.SetColor(gs.fogcol);
+	SetFogColor(v);
+}
+
+__forceinline void SetFogColor(GIFRegFOGCOL* fog)
+{
+	FUNCLOG
+	
 	float4 v;
 	
 	v.x = fog->FCR / 255.0f;
 	v.y = fog->FCG / 255.0f;
 	v.z = fog->FCB / 255.0f;
-	ZZshSetParameter4fv(g_fparamFogColor, v, "g_fParamFogColor");
+	SetFogColor(v);
 }
 
 void ExtWrite()

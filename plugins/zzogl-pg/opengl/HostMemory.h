@@ -20,6 +20,10 @@
 #ifndef HOSTMEMORY_H_INCLUDED
 #define HOSTMEMORY_H_INCLUDED
 
+#include "GLWin.h"
+
+#define MEMORY_END 0x00400000
+
 extern int GPU_TEXWIDTH;
 
 extern u8* g_pBasePS2Mem;
@@ -45,6 +49,32 @@ class GSClut
 		u8* get();
 		u8* get(u32 addr);
 		u8* get_raw(u32 addr);
+};
+
+class ZeroGSInit
+{
+
+	public:
+		ZeroGSInit()
+		{
+			const u32 mem_size = MEMORY_END + 0x10000; // leave some room for out of range accesses (saves on the checks)
+			// clear
+			g_pbyGSMemory = (u8*)_aligned_malloc(mem_size, 1024);
+			memset(g_pbyGSMemory, 0, mem_size);
+
+			g_pbyGSClut = (u8*)_aligned_malloc(256 * 8, 1024); // need 512 alignment!
+			memset(g_pbyGSClut, 0, 256*8);
+			memset(&GLWin, 0, sizeof(GLWin));
+		}
+
+		~ZeroGSInit()
+		{
+			_aligned_free(g_pbyGSMemory);
+			g_pbyGSMemory = NULL;
+			
+			_aligned_free(g_pbyGSClut);
+			g_pbyGSClut = NULL;
+		}
 };
 
 // The size in bytes of x strings (of texture).

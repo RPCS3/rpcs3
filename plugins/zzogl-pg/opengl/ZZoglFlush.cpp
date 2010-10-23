@@ -222,7 +222,6 @@ void SetContextTarget(int context);
 void SetWriteDepth();
 bool IsWriteDepth();
 void SetDestAlphaTest();
-void ResetRenderTarget(int index);
 
 //------------------ Code
 
@@ -1086,6 +1085,8 @@ inline void AlphaSetStencil(bool DoIt)
 	}
 	else glDisable(GL_STENCIL_TEST);
 }
+
+//inline u32 FtoDW(float f) { return (*((u32*)&f)); }
 
 inline void AlphaSetDepthTest(VB& curvb, const pixTest curtest, FRAGMENTSHADER* pfragment)
 {

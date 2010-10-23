@@ -226,6 +226,7 @@ class CMemoryTarget
         int clutsize;    // size of the clut array. 0 otherwise 
 };
 
+extern const GLenum primtype[8];
 
 struct VB
 {
@@ -522,6 +523,7 @@ class CRangeManager
 extern CRenderTargetMngr s_RTs, s_DepthRTs;
 extern CBitwiseTextureMngr s_BitwiseTextures;
 extern CMemoryTargetMngr g_MemTargs;
+extern CRangeManager s_RangeMngr; // manages overwritten memory
 
 //extern u8 s_AAx, s_AAy;
 extern Point AA;
@@ -634,6 +636,11 @@ static __forceinline void FBTexture(int attach, int id = 0)
 	GL_REPORT_ERRORD();
 }
 
+static __forceinline void ResetRenderTarget(int index)
+{
+	FBTexture(index);
+}
+
 static __forceinline void Texture2D(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
 {
 	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, width, height, 0, format, type, pixels);
@@ -709,7 +716,6 @@ static __forceinline void setRectWrap2(GLint type)
 	
 // VB variables
 extern VB vb[2];
-
 
 //------------------------ Inlines -------------------------
 

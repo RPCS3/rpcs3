@@ -23,6 +23,8 @@
 const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
 const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
 
+const GLenum primtype[8] = { GL_POINTS, GL_LINES, GL_LINES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, 0xffffffff };
+
 extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
 DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
@@ -52,6 +54,20 @@ void clear_drawfn()
 	drawfn[5] = KickDummy;
 	drawfn[6] = KickDummy;
 	drawfn[7] = KickDummy;
+}
+
+// Still thinking about the best place to put this.
+// called on a primitive switch
+void Prim()
+{
+	FUNCLOG
+
+	VB& curvb = vb[prim->ctxt];
+
+	if (curvb.CheckPrim()) Flush(prim->ctxt);
+
+	curvb.curprim._val = prim->_val;
+	curvb.curprim.prim = prim->prim;
 }
 
 __forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)

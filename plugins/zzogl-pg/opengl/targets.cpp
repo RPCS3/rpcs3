@@ -63,7 +63,6 @@ void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, boo
 void SetWriteDepth();
 bool IsWriteDepth();
 bool IsWriteDestAlphaTest();
-void ResetRenderTarget(int index);
 
 // ------------------------- Useful inlines ------------------------------------
 

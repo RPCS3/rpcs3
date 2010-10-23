@@ -69,7 +69,10 @@ extern HINSTANCE hInst;
 // Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
 const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 
+#ifdef _DEBUG
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
+#endif
+const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 
 // ----------------- Global Variables 
 
