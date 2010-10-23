@@ -25,6 +25,17 @@
 
 extern bool __forceinline NoHighlights(int i);
 
+enum PRIM_TYPE {
+    PRIM_POINT = 0,
+    PRIM_LINE,
+    PRIM_LINE_STRIP,
+    PRIM_TRIANGLE,
+    PRIM_TRIANGLE_STRIP,
+    PRIM_TRIANGLE_FAN,
+    PRIM_SPRITE,
+    PRIM_DUMMY
+};
+
 class Kick
 {
 	private:
@@ -36,16 +47,7 @@ class Kick
 		~Kick() { }
 		
 		void KickVertex(bool adc);
-		void KickVERTEX2();
-		void KickVERTEX3();
-		
-		void fn(u32 i);
-		void Point();
-		void Line();
-		void Triangle();
-		void TriangleFan();
-		void Sprite();
-		void Dummy();
+		void DrawPrim(u32 i);
 };
 extern Kick* ZZKick;
 

@@ -32,7 +32,7 @@
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
 #endif
 
-#define VB_BUFFERSIZE			   0x400
+#define VB_BUFFERSIZE			   0x4000
 
 // all textures have this width
 extern int GPU_TEXWIDTH;

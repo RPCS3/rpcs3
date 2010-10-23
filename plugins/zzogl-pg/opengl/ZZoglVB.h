@@ -77,22 +77,17 @@ public:
 	inline void FlushTexClutting() ;
 	inline void FlushTexSetNewVars(u32 psm) ;
 
-	// notify VB that nVerts need to be written to pbuf
-	inline void NotifyWrite(int nVerts)
-	{
-		assert(pBufferData != NULL && nCount <= nNumVertices && nVerts > 0);
-
-		if (nCount + nVerts > nNumVertices)
-		{
-			// recreate except with a bigger count
-			VertexGPU* ptemp = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nNumVertices * 2, 256);
-			memcpy_amd(ptemp, pBufferData, sizeof(VertexGPU) * nCount);
-			nNumVertices *= 2;
-			assert(nCount + nVerts <= nNumVertices);
-			_aligned_free(pBufferData);
-			pBufferData = ptemp;
-		}
-	}
+    // Increase the size of pbuf
+    void IncreaseVertexBuffer()
+    {
+		assert(pBufferData != NULL && nCount > nNumVertices);
+        VertexGPU* ptemp = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nNumVertices * 2, 256);
+        memcpy_amd(ptemp, pBufferData, sizeof(VertexGPU) * nCount);
+        nNumVertices *= 2;
+        assert(nCount <= nNumVertices);
+        _aligned_free(pBufferData);
+        pBufferData = ptemp;
+    }
 
 	void Init(int nVerts)
 	{

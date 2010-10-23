@@ -94,14 +94,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	if (data[3] & 0x8000)
-	{
-		ZZKick->KickVERTEX3();
-	}
-	else
-	{
-		ZZKick->KickVERTEX2();
-	}
+    ZZKick->KickVertex(!!(data[3]>>31));
 }
 
 void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
@@ -113,14 +106,7 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	if (data[3] & 0x8000)
-	{
-		ZZKick->KickVERTEX3();
-	}
-	else
-	{
-		ZZKick->KickVERTEX2();
-	}
+    ZZKick->KickVertex(!!(data[3]>>31));
 }
 
 void __gifCall GIFPackedRegHandlerFOG(const u32* data)
@@ -368,7 +354,7 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	ZZKick->KickVERTEX2();
+    ZZKick->KickVertex(false);
 }
 
 void __gifCall GIFRegHandlerXYZ2(const u32* data)
@@ -380,7 +366,7 @@ void __gifCall GIFRegHandlerXYZ2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	ZZKick->KickVERTEX2();
+    ZZKick->KickVertex(false);
 }
 
 void __gifCall GIFRegHandlerTEX0_1(const u32* data)
@@ -428,7 +414,7 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	ZZKick->KickVERTEX3();
+    ZZKick->KickVertex(true);
 }
 
 void __gifCall GIFRegHandlerXYZ3(const u32* data)
@@ -440,7 +426,7 @@ void __gifCall GIFRegHandlerXYZ3(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	ZZKick->KickVERTEX3();
+    ZZKick->KickVertex(true);
 }
 
 void __gifCall GIFRegHandlerNOP(const u32* data)

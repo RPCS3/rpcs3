@@ -47,40 +47,17 @@ void Prim()
 // Hackish and should be replaced.
 bool __forceinline NoHighlights(int i)
 {
-//	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
-
-	int dummy = 0;
-	
-	u32 resultA = prim->iip + (2 * (prim->tme)) + (4 * (prim->fge)) + (8 * (prim->abe)) + (16 * (prim->aa1)) + (32 * (prim->fst)) + (64 * (prim->ctxt)) + (128 * (prim->fix));
-	
-	const pixTest curtest = vb[i].test;
-	
-	u32 result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
-	
-	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
-	
 	//Old code
 	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
 }
 
-void Kick::KickVERTEX2()
+void __forceinline Kick::KickVertex(bool adc)
 {
 	FUNCLOG
-
 	if (++gs.primC >= (int)g_primmult[prim->prim])
 	{
-		if (NoHighlights(prim->ctxt)) ZZKick->fn(prim->prim);
-
-		gs.primC -= g_primsub[prim->prim];
-	}
-}
-
-void Kick::KickVERTEX3()
-{
-	FUNCLOG
-
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
+		if (!adc && NoHighlights(prim->ctxt)) DrawPrim(prim->prim);
+		
 		gs.primC -= g_primsub[prim->prim];
 
 		if (prim->prim == 5)
@@ -91,24 +68,7 @@ void Kick::KickVERTEX3()
 	}
 }
 
-void __forceinline Kick::KickVertex(bool adc)
-{
-	FUNCLOG
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
-		if (!adc && NoHighlights(prim->ctxt)) fn(prim->prim);
-		
-		gs.primC -= g_primsub[prim->prim];
-
-		if (adc && prim->prim == 5)
-		{
-			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex) gs.primIndex = gs.primNext();
-		}
-	}
-}
-
-inline void Kick::SET_VERTEX(VertexGPU *p, int i)
+void Kick::SET_VERTEX(VertexGPU *p, int i)
 {
 	p->move_x(gs.gsvertex[i], vb[prim->ctxt].offset.x);
 	p->move_y(gs.gsvertex[i], vb[prim->ctxt].offset.y);
@@ -149,134 +109,103 @@ __forceinline void Kick::OUTPUT_VERT(VertexGPU vert, u32 id)
 #endif
 }
 
-void Kick::fn(u32 i)
+void Kick::DrawPrim(u32 prim_type)
 {
-	switch (i)
-	{
-		case 0: Point(); break;
-		case 1: Line(); break;
-		case 2: Line(); break;
-		case 3: Triangle(); break;
-		case 4: Triangle(); break;
-		case 5: TriangleFan(); break;
-		case 6: Sprite(); break;
-		default: Dummy(); break;
-	}
-}
-	
-void Kick::Point()
-{
-	FUNCLOG
-	assert(gs.primC >= 1);
+    VB& curvb = vb[prim->ctxt];
 
-	VB& curvb = vb[prim->ctxt];
+    curvb.FlushTexData();
 
-	curvb.FlushTexData();
+    if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
+    {
+        assert(vb[prim->ctxt].nCount == 0);
+        Flush(!prim->ctxt);
+    }
 
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
+    // check enough place is left for the biggest primitive (sprite)
+    // This function is unlikely to be called so do not inline it.
+    if (unlikely(curvb.nCount + 6 > curvb.nNumVertices))
+        curvb.IncreaseVertexBuffer();
 
-	curvb.NotifyWrite(1);
+    VertexGPU* p = curvb.pBufferData + curvb.nCount;
 
-	int last = gs.primNext(2);
+    u32 next;
+    u32 last;
+    switch(prim_type) {
+        case PRIM_POINT:
+            assert(gs.primC >= 1);
 
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], last);
-	curvb.nCount++;
+            SET_VERTEX(&p[0], gs.primNext(2));
+            curvb.nCount ++;
+            break;
 
-	OUTPUT_VERT(p[0], 0);
-}
+        case PRIM_LINE:
+        case PRIM_LINE_STRIP:
+            assert(gs.primC >= 2);
 
-void Kick::Line()
-{
-	FUNCLOG
-	assert(gs.primC >= 2);
-	VB& curvb = vb[prim->ctxt];
+            SET_VERTEX(&p[0], gs.primNext());
+            SET_VERTEX(&p[1], gs.primNext(2));
+            curvb.nCount += 2;
+            break;
 
-	curvb.FlushTexData();
+        case PRIM_TRIANGLE:
+        case PRIM_TRIANGLE_STRIP:
+        case PRIM_TRIANGLE_FAN:
+            assert(gs.primC >= 3);
 
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
+            SET_VERTEX(&p[0], 0);
+            SET_VERTEX(&p[1], 1);
+            SET_VERTEX(&p[2], 2);
+            curvb.nCount += 3;
+            break;
 
-	curvb.NotifyWrite(2);
+        case PRIM_SPRITE:
+            assert(gs.primC >= 2);
 
-	int next = gs.primNext();
-	int last = gs.primNext(2);
+            next = gs.primNext();
+            last = gs.primNext(2);
 
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], next);
-	SET_VERTEX(&p[1], last);
+            // sprite is too small and AA shows lines (tek4, Mana Khemia)
+            gs.gsvertex[last].x += (4 * AA.x);
+            gs.gsvertex[last].y += (4 * AA.y);
 
-	curvb.nCount += 2;
+            // might be bad sprite (KH dialog text)
+            //if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
+            //return;
 
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-}
+            // process sprite as 2 triangles. The common diagonal is 0,1 and 3,4
+            SetKickVertex(&p[0], gs.gsvertex[last], next);
+            SetKickVertex(&p[1], gs.gsvertex[last], last);
+            // Duplicate the vertex
+            p[3] = p[0];
+            p[2] = p[0];
+            p[4] = p[1];
+            p[5] = p[1];
+            // Move some vertex x coord to create the others corners of the sprite
+            p[2].s = p[1].s;
+            p[2].x = p[1].x;
+            p[5].s = p[0].s;
+            p[5].x = p[0].x;
 
-void Kick::Triangle()
-{
-	FUNCLOG
-	assert(gs.primC >= 3);
-	VB& curvb = vb[prim->ctxt];
+            curvb.nCount += 6;
+            break;
 
-	curvb.FlushTexData();
+        default: break;
+    }
 
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(3);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0);
-	SET_VERTEX(&p[1], 1);
-	SET_VERTEX(&p[2], 2);
-
-	curvb.nCount += 3;
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-	OUTPUT_VERT(p[2], 2);
-}
-
-void Kick::TriangleFan()
-{
-	FUNCLOG
-	assert(gs.primC >= 3);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(3);
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0);
-	SET_VERTEX(&p[1], 1);
-	SET_VERTEX(&p[2], 2);
-
-	curvb.nCount += 3;
-
-	// add 1 to skip the first vertex
-
-	if (gs.primIndex == gs.nTriFanVert) gs.primIndex = gs.primNext();
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-	OUTPUT_VERT(p[2], 2);
+    // Print DEBUG info
+    switch(prim_type) {
+        case PRIM_TRIANGLE:
+        case PRIM_TRIANGLE_STRIP:
+        case PRIM_TRIANGLE_FAN:
+            OUTPUT_VERT(p[2],2);
+        case PRIM_LINE:
+        case PRIM_LINE_STRIP:
+        case PRIM_SPRITE:
+            OUTPUT_VERT(p[1],1);
+        case PRIM_POINT:
+            OUTPUT_VERT(p[0],0);
+        default: break;
+    }
 }
 
 void Kick::SetKickVertex(VertexGPU *p, Vertex &v, int next)
@@ -284,58 +213,4 @@ void Kick::SetKickVertex(VertexGPU *p, Vertex &v, int next)
 	SET_VERTEX(p, next);
 	p->move_z(v, vb[prim->ctxt].zprimmask);
 	p->move_fog(v);
-}
-
-void Kick::Sprite()
-{
-	FUNCLOG
-	assert(gs.primC >= 2);
-	VB& curvb = vb[prim->ctxt];
-
-	curvb.FlushTexData();
-
-	if ((vb[!prim->ctxt].nCount > 0) && (vb[prim->ctxt].gsfb.fbp == vb[!prim->ctxt].gsfb.fbp))
-	{
-		assert(vb[prim->ctxt].nCount == 0);
-		Flush(!prim->ctxt);
-	}
-
-	curvb.NotifyWrite(6);
-	int next = gs.primNext();
-	int last = gs.primNext(2);
-	
-	// sprite is too small and AA shows lines (tek4, Mana Khemia)
-	gs.gsvertex[last].x += (4 * AA.x);
-	gs.gsvertex[last].y += (4 * AA.y);
-
-	// might be bad sprite (KH dialog text)
-	//if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
-	//return;
-
-	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-
-    // process sprite as 2 triangles. The common diagonal is 0,1 and 3,4
-	SetKickVertex(&p[0], gs.gsvertex[last], next);
-	SetKickVertex(&p[1], gs.gsvertex[last], last);
-    // Duplicate the vertex
-    p[3] = p[0];
-    p[2] = p[0];
-    p[4] = p[1];
-    p[5] = p[1];
-    // Move some vertex x coord to create the others corners of the sprite
-	p[2].s = p[1].s;
-	p[2].x = p[1].x;
-	p[5].s = p[0].s;
-	p[5].x = p[0].x;
-
-	curvb.nCount += 6;
-
-	OUTPUT_VERT(p[0], 0);
-	OUTPUT_VERT(p[1], 1);
-}
-
-void Kick::Dummy()
-{
-	FUNCLOG
-	//ZZLog::Greg_Log("Kicking bad primitive: %.8x\n", *(u32*)prim);
 }
