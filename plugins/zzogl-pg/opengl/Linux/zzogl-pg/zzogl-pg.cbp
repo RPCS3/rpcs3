@@ -98,8 +98,6 @@
 			<Mode after="always" />
 		</ExtraCommands>
 		<Unit filename="../../CRC.h" />
-		<Unit filename="../../ZZClut.cpp" />
-		<Unit filename="../../ZZClut.h" />
 		<Unit filename="../../GLWin.h" />
 		<Unit filename="../../GLWin32.cpp" />
 		<Unit filename="../../GLWinX11.cpp" />
@@ -145,6 +143,8 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../ZZClut.cpp" />
+		<Unit filename="../../ZZClut.h" />
 		<Unit filename="../../ZZGl.h" />
 		<Unit filename="../../ZZKeyboard.cpp" />
 		<Unit filename="../../ZZKick.cpp" />
@@ -164,6 +164,7 @@
 		<Unit filename="../../ZZoglShoots.cpp" />
 		<Unit filename="../../ZZoglShoots.h" />
 		<Unit filename="../../ZZoglVB.cpp" />
+		<Unit filename="../../ZZoglVB.h" />
 		<Unit filename="../../common.h" />
 		<Unit filename="../../glprocs.c">
 			<Option compilerVar="CC" />

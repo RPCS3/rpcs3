@@ -179,6 +179,8 @@ extern int g_PrevBitwiseTexX, g_PrevBitwiseTexY;
 
 void tex0Write(int i, u32 *data)
 {
+	if (!NoHighlights(i)) return;
+	
 	u32 psm = (data[0] >> 20) & 0x3f;
 	if( psm == 9 ) psm = 1; // hmm..., ffx intro menu
 
@@ -340,6 +342,8 @@ __forceinline void testWrite(int i, u32 *data)
 
 __forceinline void clampWrite(int i, u32 *data)
 {
+	if (!NoHighlights(i)) return;
+	
 	clampInfo& clamp = ZeroGS::vb[i].clamp;
 
 	if( s_uClampData[i] != data[0] || ((clamp.minv>>8)|(clamp.maxv<<2)) != (data[1]&0x0fff) ) {
@@ -500,6 +504,8 @@ void __fastcall GIFRegHandlerNOP(u32* data)
 
 void tex1Write(int i, u32* data)
 {
+	if (!NoHighlights(i)) return;
+	
 	tex1Info& tex1 = ZeroGS::vb[i].tex1;
 
 	if( conf.bilinear == 1 && (tex1.mmag != ((data[0] >>  5) & 0x1) || tex1.mmin != ((data[0] >>  6) & 0x7)) ) {

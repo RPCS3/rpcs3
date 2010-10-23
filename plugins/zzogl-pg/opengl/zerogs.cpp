@@ -19,6 +19,7 @@
 
 //-------------------------- Includes
 #include "zerogs.h"
+#include "ZZoglVB.h"
 
 /////////////////////
 // graphics resources

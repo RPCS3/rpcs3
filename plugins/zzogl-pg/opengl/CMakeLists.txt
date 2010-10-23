@@ -105,6 +105,7 @@ set(zzoglHeaders
     ZZoglMath.h
     ZZoglShaders.h
     ZZoglShoots.h
+    ZZoglVB.h
     )
 
 # zzogl S sources

@@ -28,6 +28,7 @@
 #include "ZZKick.h"
 #include "rasterfont.h" // simple font
 #include <math.h>
+#include "ZZoglVB.h"
 
 //------------------ Defines
 #if !defined(ZEROGS_DEVBUILD)
@@ -704,7 +705,8 @@ void ZZReset()
 
 	ZZGSStateReset();
 	ZZDestroy();
-	clear_drawfn();
+	//clear_drawfn();
+	if (ZZKick != NULL) delete ZZKick;
 }
 
 // If needed reset

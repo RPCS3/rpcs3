@@ -26,6 +26,7 @@
 #include <map>
 #include "GS.h"
 #include "ZZGl.h"
+//#include "ZZoglVB.h"
 
 #ifndef GL_TEXTURE_RECTANGLE
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
@@ -226,133 +227,7 @@ class CMemoryTarget
         int clutsize;    // size of the clut array. 0 otherwise 
 };
 
-extern const GLenum primtype[8];
-
-struct VB
-{
-	VB();
-	~VB();
-
-	void Destroy();
-
-	inline bool CheckPrim()
-	{
-		static const int PRIMMASK = 0x0e;   // for now ignore 0x10 (AA)
-
-		if ((PRIMMASK & prim->_val) != (PRIMMASK & curprim._val) || primtype[prim->prim] != primtype[curprim.prim])
-			return nCount > 0;
-
-		return false;
-	}
-
-	void CheckFrame(int tbp);
-
-	// context specific state
-	Point offset;
-	Rect2 scissor;
-	tex0Info tex0;
-	tex1Info tex1;
-	miptbpInfo miptbp0;
-	miptbpInfo miptbp1;
-	alphaInfo alpha;
-	fbaInfo fba;
-	clampInfo clamp;
-	pixTest test;
-	u32 ptexClamp[2]; // textures for x and y dir region clamping
-
-public:
-	void FlushTexData();
-	inline int CheckFrameAddConstraints(int tbp);
-	inline void CheckScissors(int maxpos);
-	inline void CheckFrame32bitRes(int maxpos);
-	inline int FindMinimalMemoryConstrain(int tbp, int maxpos);
-	inline int FindZbufferMemoryConstrain(int tbp, int maxpos);
-	inline int FindMinimalHeightConstrain(int maxpos);
-
-	inline int CheckFrameResolveRender(int tbp);
-	inline void CheckFrame16vs32Conversion();
-	inline int CheckFrameResolveDepth(int tbp);
-
-	inline void FlushTexUnchangedClutDontUpdate() ;
-	inline void FlushTexClutDontUpdate() ;
-	inline void FlushTexClutting() ;
-	inline void FlushTexSetNewVars(u32 psm) ;
-
-	// notify VB that nVerts need to be written to pbuf
-	inline void NotifyWrite(int nVerts)
-	{
-		assert(pBufferData != NULL && nCount <= nNumVertices && nVerts > 0);
-
-		if (nCount + nVerts > nNumVertices)
-		{
-			// recreate except with a bigger count
-			VertexGPU* ptemp = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nNumVertices * 2, 256);
-			memcpy_amd(ptemp, pBufferData, sizeof(VertexGPU) * nCount);
-			nNumVertices *= 2;
-			assert(nCount + nVerts <= nNumVertices);
-			_aligned_free(pBufferData);
-			pBufferData = ptemp;
-		}
-	}
-
-	void Init(int nVerts)
-	{
-		if (pBufferData == NULL && nVerts > 0)
-		{
-			pBufferData = (VertexGPU*)_aligned_malloc(sizeof(VertexGPU) * nVerts, 256);
-			nNumVertices = nVerts;
-		}
-
-		nCount = 0;
-	}
-
-	u8 bNeedFrameCheck;
-	u8 bNeedZCheck;
-	u8 bNeedTexCheck;
-	u8 dummy0;
-
-	union
-	{
-		struct
-		{
-			u8 bTexConstsSync; // only pixel shader constants that context owns
-			u8 bVarsTexSync; // texture info
-			u8 bVarsSetTarg;
-			u8 dummy1;
-		};
-
-		u32 bSyncVars;
-	};
-
-	int ictx;
-	VertexGPU* pBufferData; // current allocated data
-
-	int nNumVertices;   // size of pBufferData in terms of VertexGPU objects
-	int nCount;
-	primInfo curprim;	// the previous prim the current buffers are set to
-
-	zbufInfo zbuf;
-	frameInfo gsfb; // the real info set by FRAME cmd
-	frameInfo frame;
-	int zprimmask; // zmask for incoming points
-
-union
-{
-	u32 uCurTex0Data[2]; // current tex0 data
-	GIFRegTEX0 uCurTex0;	
-};
-	u32 uNextTex0Data[2]; // tex0 data that has to be applied if bNeedTexCheck is 1
-
-	//int nFrameHeights[8];	// frame heights for the past frame changes
-	int nNextFrameHeight;
-
-	CMemoryTarget* pmemtarg; // the current mem target set
-	CRenderTarget* prndr;
-	CDepthTarget* pdepth;
-
-};
-
-inline u32 GetFrameKey(int fbp, int fbw, VB& curvb);
+inline u32 GetFrameKey(int fbp, int fbw);
 
 // manages render targets
 class CRenderTargetMngr
@@ -375,13 +250,13 @@ class CRenderTargetMngr
 		bool isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight);
 		
 		CRenderTarget* GetTarg(const frameInfo& frame, u32 Options, int maxposheight);
-		inline CRenderTarget* GetTarg(int fbp, int fbw, VB& curvb)
+		inline CRenderTarget* GetTarg(int fbp, int fbw)
 		{
-			MAPTARGETS::iterator it = mapTargets.find(GetFrameKey(fbp, fbw, curvb));
+			MAPTARGETS::iterator it = mapTargets.find(GetFrameKey(fbp, fbw));
 
 			/*			if (fbp == 0x3600 && fbw == 0x100 && it == mapTargets.end())
 						{
-							ZZLog::Debug_Log("%x", GetFrameKey(fbp, fbw, curvb)) ;
+							ZZLog::Debug_Log("%x", GetFrameKey(fbp, fbw)) ;
 							ZZLog::Debug_Log("%x %x", fbp, fbw);
 							for(MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
 								ZZLog::Debug_Log("\t %x %x %x %x", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
@@ -572,7 +447,7 @@ inline u32 GetFrameKey(CRenderTarget* frame)
 	return (((frame->fbw) << 16) | (frame->fbp));
 }
 
-inline u32 GetFrameKey(int fbp, int fbw,  VB& curvb)
+inline u32 GetFrameKey(int fbp, int fbw)
 {
 	return (((fbw) << 16) | (fbp));
 }
@@ -713,9 +588,6 @@ static __forceinline void setRectWrap2(GLint type)
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, type);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, type);
 }
-	
-// VB variables
-extern VB vb[2];
 
 //------------------------ Inlines -------------------------
 

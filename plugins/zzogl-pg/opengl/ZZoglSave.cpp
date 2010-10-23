@@ -20,7 +20,7 @@
 // Save and Load.
 
 //------------------ Includes
-#include "targets.h"
+#include "ZZoglVB.h"
 
 extern void ZZGSStateReset();
 //----------------------- Defines

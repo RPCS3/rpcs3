@@ -40,6 +40,19 @@ struct Vector_16F
 
 // PS2 vertex
 
+// Almost same as VertexGPU, controlled by prim.fst flags
+
+struct Vertex
+{
+	u16 x, y, f, resv0;		// note: xy is 12d3
+	u32 rgba;
+	u32 z;
+	float s, t, q;
+	// Texel coordinate of vertex. Used if prim.fst == 1
+	// Bits 0-14 and 16-30 of UV
+	u16 u, v;
+};
+
 struct VertexGPU
 {
 	// gained from XYZ2, XYZ3, XYZF2, XYZF3,
@@ -53,19 +66,26 @@ struct VertexGPU
 	// Texture coordinates. S & T going from ST register (bits 0-31, and 32-63).
 	// Q goes from RGBAQ register, bits 32-63
 	float s, t, q;
-};
+	
+	void move_x(Vertex v, int offset)
+	{
+		x = ((((int)v.x - offset) >> 1) & 0xffff);
+	}
+	
+	void move_y(Vertex v, int offset)
+	{
+		y = ((((int)v.y - offset) >> 1) & 0xffff);
+	}
+	
+	void move_z(Vertex v, int mask)
+	{
+		z = (mask == 0xffff) ? min((u32)0xffff, v.z) : v.z;
+	}
 
-// Almost same as previous, controlled by prim.fst flags
-
-struct Vertex
-{
-	u16 x, y, f, resv0;		// note: xy is 12d3
-	u32 rgba;
-	u32 z;
-	float s, t, q;
-	// Texel coordinate of vertex. Used if prim.fst == 1
-	// Bits 0-14 and 16-30 of UV
-	u16 u, v;
+	void move_fog(Vertex v)
+	{
+		f = ((s16)(v).f << 7) | 0x7f;
+	}
 };
 
 extern GSconf conf;

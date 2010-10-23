@@ -27,6 +27,7 @@
 #include "ZZoglShaders.h"
 #include "ZZClut.h"
 #include <math.h>
+#include "ZZoglVB.h"
 
 #ifdef ZEROGS_SSE2
 #include <emmintrin.h>

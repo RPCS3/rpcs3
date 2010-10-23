@@ -23,6 +23,7 @@
 #include "PS2Etypes.h"
 
 #include "targets.h"
+#include "ZZoglVB.h"
 #include "ZZKick.h"
 
 #ifdef USE_OLD_REGS
@@ -95,11 +96,11 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 
 	if (data[3] & 0x8000)
 	{
-		KICK_VERTEX3();
+		ZZKick->KickVERTEX3();
 	}
 	else
 	{
-		KICK_VERTEX2();
+		ZZKick->KickVERTEX2();
 	}
 }
 
@@ -114,11 +115,11 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 
 	if (data[3] & 0x8000)
 	{
-		KICK_VERTEX3();
+		ZZKick->KickVERTEX3();
 	}
 	else
 	{
-		KICK_VERTEX2();
+		ZZKick->KickVERTEX2();
 	}
 }
 
@@ -146,6 +147,9 @@ void __gifCall GIFPackedRegHandlerNOP(const u32* data)
 void tex0Write(int i, const u32 *data)
 {
 	FUNCLOG
+	
+	if (!NoHighlights(i)) return;
+	
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
 	if (m_Blocks[psm].bpp == 0)
@@ -274,6 +278,9 @@ __forceinline
 void clampWrite(int i, const u32 *data)
 {
 	FUNCLOG
+	
+	if (!NoHighlights(i)) return;
+	
 	clampInfo& clamp = vb[i].clamp;
 
 	if ((s_uClampData[i] != data[0]) || (((clamp.minv >> 8) | (clamp.maxv << 2)) != (data[1]&0x0fff)))
@@ -361,7 +368,7 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	KICK_VERTEX2();
+	ZZKick->KickVERTEX2();
 }
 
 void __gifCall GIFRegHandlerXYZ2(const u32* data)
@@ -373,24 +380,20 @@ void __gifCall GIFRegHandlerXYZ2(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	KICK_VERTEX2();
+	ZZKick->KickVERTEX2();
 }
 
 void __gifCall GIFRegHandlerTEX0_1(const u32* data)
 {
 	FUNCLOG
-
-	if (!NoHighlights(0)) return;
-
+	
 	tex0Write(0, data);
 }
 
 void __gifCall GIFRegHandlerTEX0_2(const u32* data)
 {
 	FUNCLOG
-
-	if (!NoHighlights(1)) return;
-
+	
 	tex0Write(1, data);
 }
 
@@ -398,16 +401,12 @@ void __gifCall GIFRegHandlerCLAMP_1(const u32* data)
 {
 	FUNCLOG
 
-	if (!NoHighlights(0)) return;
-
 	clampWrite(0, data);
 }
 
 void __gifCall GIFRegHandlerCLAMP_2(const u32* data)
 {
 	FUNCLOG
-
-	if (!NoHighlights(1)) return;
 
 	clampWrite(1, data);
 }
@@ -429,7 +428,7 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	KICK_VERTEX3();
+	ZZKick->KickVERTEX3();
 }
 
 void __gifCall GIFRegHandlerXYZ3(const u32* data)
@@ -441,7 +440,7 @@ void __gifCall GIFRegHandlerXYZ3(const u32* data)
 	gs.gsvertex[gs.primIndex] = gs.vertexregs;
 	gs.primIndex = gs.primNext();
 
-	KICK_VERTEX3();
+	ZZKick->KickVERTEX3();
 }
 
 void __gifCall GIFRegHandlerNOP(const u32* data)
@@ -452,6 +451,9 @@ void __gifCall GIFRegHandlerNOP(const u32* data)
 void tex1Write(int i, const u32* data)
 {
 	FUNCLOG
+	
+	if (!NoHighlights(i)) return;
+	
 	tex1Info& tex1 = vb[i].tex1;
 
 	if (conf.bilinear == 1 && (tex1.mmag != ((data[0] >>  5) & 0x1) || tex1.mmin != ((data[0] >>  6) & 0x7)))
@@ -461,7 +463,6 @@ void tex1Write(int i, const u32* data)
 	}
 
 	tex1.lcm  = (data[0]) & 0x1;
-
 	tex1.mxl  = (data[0] >>  2) & 0x7;
 	tex1.mmag = (data[0] >>  5) & 0x1;
 	tex1.mmin = (data[0] >>  6) & 0x7;
@@ -473,9 +474,7 @@ void tex1Write(int i, const u32* data)
 void __gifCall GIFRegHandlerTEX1_1(const u32* data)
 {
 	FUNCLOG
-
-	if (!NoHighlights(0)) return;
-
+	
 	tex1Write(0, data);
 }
 
@@ -483,20 +482,20 @@ void __gifCall GIFRegHandlerTEX1_2(const u32* data)
 {
 	FUNCLOG
 
-	if (!NoHighlights(1)) return;
-
 	tex1Write(1, data);
 }
 
 void __gifCall GIFRegHandlerTEX2_1(const u32* data)
 {
 	FUNCLOG
+	
 	tex2Write(0, data);
 }
 
 void __gifCall GIFRegHandlerTEX2_2(const u32* data)
 {
 	FUNCLOG
+	
 	tex2Write(1, data);
 }
 

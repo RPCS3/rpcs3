@@ -464,18 +464,18 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	if ((ptextarg == NULL) && (tpsm == PSMT8) && (conf.settings().reget))
 	{
 		// check for targets with half the width. Break Valkyrie Chronicles
-		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb);
+		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2);
 
 		if (ptextarg == NULL)
 		{
 			tbp0 &= ~0x7ff;
-			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb); // mgs3 hack
+			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
 
 			if (ptextarg == NULL)
 			{
 				// check the next level (mgs3)
 				tbp0 &= ~0xfff;
-				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb); // mgs3 hack
+				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
 			}
 
 			if (ptextarg != NULL && ptextarg->start > tbp0*256)
@@ -490,7 +490,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	if (PSMT_ISZTEX(tpsm) && (ptextarg == NULL))
 	{
 		// try depth
-		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw, curvb);
+		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw);
 	}
 
 	if ((ptextarg == NULL) && (conf.settings().texture_targs))
@@ -556,7 +556,7 @@ inline CRenderTarget* FlushGetTarget(VB& curvb)
 		tpsm = curvb.tex0.psm;
 	}
 
-	ptextarg = s_RTs.GetTarg(tbp0, tbw, curvb);
+	ptextarg = s_RTs.GetTarg(tbp0, tbw);
 
 	if (ptextarg == NULL)
 		ptextarg = FlushReGetTarget(tbw, tbp0, tpsm, curvb);

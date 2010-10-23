@@ -20,30 +20,33 @@
 #ifndef ZZKICK_H_INCLUDED
 #define ZZKICK_H_INCLUDED
 
+#include "Util.h"
 #include "GS.h"
-
-// visible members
-typedef void (*DrawFn)();
-extern DrawFn drawfn[8];
-
-// Older Kick Vertex functions.
-void __forceinline KICK_VERTEX2();
-void __forceinline KICK_VERTEX3();
-
-// Newer version.
-extern void __forceinline KickVertex(bool adc);
 
 extern bool __forceinline NoHighlights(int i);
 
-extern void init_drawfn();
-extern void clear_drawfn();
-
-extern void KickPoint();
-extern void KickLine();
-extern void KickTriangle();
-extern void KickTriangleFan();
-extern void KickSprite();
-extern void KickDummy();
-
+class Kick
+{
+	private:
+		void SET_VERTEX(VertexGPU *p, int i);
+		void SetKickVertex(VertexGPU *p, Vertex v, int next);
+		void OUTPUT_VERT(VertexGPU vert, u32 id);
+	public:
+		Kick() { }
+		~Kick() { }
+		
+		void KickVertex(bool adc);
+		void KickVERTEX2();
+		void KickVERTEX3();
+		
+		void fn(u32 i);
+		void Point();
+		void Line();
+		void Triangle();
+		void TriangleFan();
+		void Sprite();
+		void Dummy();
+};
+extern Kick* ZZKick;
 
 #endif // ZZKICK_H_INCLUDED

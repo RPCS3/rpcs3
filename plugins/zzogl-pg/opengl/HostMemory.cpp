@@ -25,6 +25,7 @@
 #include "Mem.h"
 #include "x86.h"
 #include "targets.h"
+#include "ZZoglVB.h"
 
 // flush current vertices, call before setting new registers (the main render method)
 extern void Flush(int context);

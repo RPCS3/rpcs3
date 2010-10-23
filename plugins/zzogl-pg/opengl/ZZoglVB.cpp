@@ -22,6 +22,7 @@
 
 //------------------- Includes
 #include "targets.h"
+#include "ZZoglVB.h"
 #include "GS.h"
 #include "Mem.h"
 extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height

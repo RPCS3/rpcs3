@@ -28,6 +28,7 @@
 #include "targets.h"
 #include "rasterfont.h" // simple font
 #include "ZZKick.h"
+#include "ZZoglVB.h"
 
 // This include for windows resource file with Shaders
 #ifdef _WIN32
@@ -507,7 +508,9 @@ bool ZZCreate(int _width, int _height)
 	if (err != GL_NO_ERROR) bSuccess = false;
 
 	// init draw fns
-	init_drawfn();
+	//init_drawfn();
+	if (ZZKick != NULL) delete ZZKick;
+	ZZKick = new Kick;
 	
 	SetAA(conf.aa);
 

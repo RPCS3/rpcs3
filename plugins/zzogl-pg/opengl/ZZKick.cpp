@@ -18,7 +18,9 @@
  */
 
 #include "ZZKick.h"
-#include "targets.h"
+#include "ZZoglVB.h"
+
+Kick* ZZKick;
 
 const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
 const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
@@ -26,35 +28,6 @@ const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
 const GLenum primtype[8] = { GL_POINTS, GL_LINES, GL_LINES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, GL_TRIANGLES, 0xffffffff };
 
 extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
-
-DrawFn drawfn[8] = { KickDummy, KickDummy, KickDummy, KickDummy,
-					 KickDummy, KickDummy, KickDummy, KickDummy
-				   };
-				   
-void init_drawfn()
-{
-	drawfn[0] = KickPoint;
-	drawfn[1] = KickLine;
-	drawfn[2] = KickLine;
-	drawfn[3] = KickTriangle;
-	drawfn[4] = KickTriangle;
-	drawfn[5] = KickTriangleFan;
-	drawfn[6] = KickSprite;
-	drawfn[7] = KickDummy;
-}
-
-void clear_drawfn()
-{
-	
-	drawfn[0] = KickDummy;
-	drawfn[1] = KickDummy;
-	drawfn[2] = KickDummy;
-	drawfn[3] = KickDummy;
-	drawfn[4] = KickDummy;
-	drawfn[5] = KickDummy;
-	drawfn[6] = KickDummy;
-	drawfn[7] = KickDummy;
-}
 
 // Still thinking about the best place to put this.
 // called on a primitive switch
@@ -68,16 +41,6 @@ void Prim()
 
 	curvb.curprim._val = prim->_val;
 	curvb.curprim.prim = prim->prim;
-}
-
-__forceinline void MOVZ(VertexGPU *p, u32 gsz, const VB& curvb)
-{
-	p->z = (curvb.zprimmask == 0xffff) ? min((u32)0xffff, gsz) : gsz;
-}
-
-__forceinline void MOVFOG(VertexGPU *p, Vertex gsf)
-{
-	p->f = ((s16)(gsf).f << 7) | 0x7f;
 }
 
 // return true if triangle SHOULD be painted.
@@ -100,19 +63,19 @@ bool __forceinline NoHighlights(int i)
 	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
 }
 
-void __forceinline KICK_VERTEX2()
+void __forceinline Kick::KickVERTEX2()
 {
 	FUNCLOG
 
 	if (++gs.primC >= (int)g_primmult[prim->prim])
 	{
-		if (NoHighlights(prim->ctxt)) (*drawfn[prim->prim])();
+		if (NoHighlights(prim->ctxt)) ZZKick->fn(prim->prim);
 
 		gs.primC -= g_primsub[prim->prim];
 	}
 }
 
-void __forceinline KICK_VERTEX3()
+void __forceinline Kick::KickVERTEX3()
 {
 	FUNCLOG
 
@@ -123,50 +86,40 @@ void __forceinline KICK_VERTEX3()
 		if (prim->prim == 5)
 		{
 			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = gs.primNext();
+			if (gs.nTriFanVert == gs.primIndex) gs.primIndex = gs.primNext();
 		}
 	}
 }
 
-void __forceinline KickVertex(bool adc)
+void __forceinline Kick::KickVertex(bool adc)
 {
 	FUNCLOG
 	if (++gs.primC >= (int)g_primmult[prim->prim])
 	{
-		if (!adc && NoHighlights(prim->ctxt)) (*drawfn[prim->prim])();
+		if (!adc && NoHighlights(prim->ctxt)) fn(prim->prim);
 		
 		gs.primC -= g_primsub[prim->prim];
 
 		if (adc && prim->prim == 5)
 		{
 			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = gs.primNext();
+			if (gs.nTriFanVert == gs.primIndex) gs.primIndex = gs.primNext();
 		}
 	}
 }
 
-
-inline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
+inline void Kick::SET_VERTEX(VertexGPU *p, int i)
 {
-	int index = Index;
-	p->x = ((((int)gs.gsvertex[index].x - curvb.offset.x) >> 1) & 0xffff);
-	p->y = ((((int)gs.gsvertex[index].y - curvb.offset.y) >> 1) & 0xffff);
-	p->f = ((s16)gs.gsvertex[index].f << 7) | 0x7f;
+	p->move_x(gs.gsvertex[i], vb[prim->ctxt].offset.x);
+	p->move_y(gs.gsvertex[i], vb[prim->ctxt].offset.y);
+	p->move_z(gs.gsvertex[i], vb[prim->ctxt].zprimmask);
+	p->move_fog(gs.gsvertex[i]);
 
-	MOVZ(p, gs.gsvertex[index].z, curvb);
-
-	p->rgba = prim->iip ? gs.gsvertex[index].rgba : gs.rgba;
-
-// 	This code is somehow incorrect
-//	if ((gs.texa.aem) && ((p->rgba & 0xffffff ) == 0))
-//		p->rgba = 0;
+	p->rgba = prim->iip ? gs.gsvertex[i].rgba : gs.rgba;
 
 	if (conf.settings().texa)
 	{
-		u32 B = ((p->rgba & 0xfe000000) >> 1) +
-				(0x01000000 * curvb.fba.fba) ;
+		u32 B = ((p->rgba & 0xfe000000) >> 1) + (0x01000000 * vb[prim->ctxt].fba.fba);
 		p->rgba = (p->rgba & 0xffffff) + B;
 	}
 
@@ -174,20 +127,20 @@ inline void SET_VERTEX(VertexGPU *p, int Index, const VB& curvb)
 	{
 		if (prim->fst)
 		{
-			p->s = (float)gs.gsvertex[index].u * fiTexWidth[prim->ctxt];
-			p->t = (float)gs.gsvertex[index].v * fiTexHeight[prim->ctxt];
+			p->s = (float)gs.gsvertex[i].u * fiTexWidth[prim->ctxt];
+			p->t = (float)gs.gsvertex[i].v * fiTexHeight[prim->ctxt];
 			p->q = 1;
 		}
 		else
 		{
-			p->s = gs.gsvertex[index].s;
-			p->t = gs.gsvertex[index].t;
-			p->q = gs.gsvertex[index].q;
+			p->s = gs.gsvertex[i].s;
+			p->t = gs.gsvertex[i].t;
+			p->q = gs.gsvertex[i].q;
 		}
 	}
 }
 
-static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
+__forceinline void Kick::OUTPUT_VERT(VertexGPU vert, u32 id)
 {
 #ifdef WRITE_PRIM_LOGS
 	ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
@@ -196,7 +149,22 @@ static __forceinline void OUTPUT_VERT(VertexGPU vert, u32 id)
 #endif
 }
 
-void KickPoint()
+void Kick::fn(u32 i)
+{
+	switch (i)
+	{
+		case 0: Point(); break;
+		case 1: Line(); break;
+		case 2: Line(); break;
+		case 3: Triangle(); break;
+		case 4: Triangle(); break;
+		case 5: TriangleFan(); break;
+		case 6: Sprite(); break;
+		default: Dummy(); break;
+	}
+}
+	
+void Kick::Point()
 {
 	FUNCLOG
 	assert(gs.primC >= 1);
@@ -216,13 +184,13 @@ void KickPoint()
 	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], last, curvb);
+	SET_VERTEX(&p[0], last);
 	curvb.nCount++;
 
 	OUTPUT_VERT(p[0], 0);
 }
 
-void KickLine()
+void Kick::Line()
 {
 	FUNCLOG
 	assert(gs.primC >= 2);
@@ -242,8 +210,8 @@ void KickLine()
 	int last = gs.primNext(2);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], next, curvb);
-	SET_VERTEX(&p[1], last, curvb);
+	SET_VERTEX(&p[0], next);
+	SET_VERTEX(&p[1], last);
 
 	curvb.nCount += 2;
 
@@ -251,7 +219,7 @@ void KickLine()
 	OUTPUT_VERT(p[1], 1);
 }
 
-void KickTriangle()
+void Kick::Triangle()
 {
 	FUNCLOG
 	assert(gs.primC >= 3);
@@ -268,9 +236,9 @@ void KickTriangle()
 	curvb.NotifyWrite(3);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0, curvb);
-	SET_VERTEX(&p[1], 1, curvb);
-	SET_VERTEX(&p[2], 2, curvb);
+	SET_VERTEX(&p[0], 0);
+	SET_VERTEX(&p[1], 1);
+	SET_VERTEX(&p[2], 2);
 
 	curvb.nCount += 3;
 
@@ -279,7 +247,7 @@ void KickTriangle()
 	OUTPUT_VERT(p[2], 2);
 }
 
-void KickTriangleFan()
+void Kick::TriangleFan()
 {
 	FUNCLOG
 	assert(gs.primC >= 3);
@@ -296,9 +264,9 @@ void KickTriangleFan()
 	curvb.NotifyWrite(3);
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
-	SET_VERTEX(&p[0], 0, curvb);
-	SET_VERTEX(&p[1], 1, curvb);
-	SET_VERTEX(&p[2], 2, curvb);
+	SET_VERTEX(&p[0], 0);
+	SET_VERTEX(&p[1], 1);
+	SET_VERTEX(&p[2], 2);
 
 	curvb.nCount += 3;
 
@@ -311,14 +279,14 @@ void KickTriangleFan()
 	OUTPUT_VERT(p[2], 2);
 }
 
-void SetKickVertex(VertexGPU *p, Vertex v, int next, const VB& curvb)
+void Kick::SetKickVertex(VertexGPU *p, Vertex v, int next)
 {
-	SET_VERTEX(p, next, curvb);
-	MOVZ(p, v.z, curvb);
-	MOVFOG(p, v);
+	SET_VERTEX(p, next);
+	p->move_z(v, vb[prim->ctxt].zprimmask);
+	p->move_fog(v);
 }
 
-void KickSprite()
+void Kick::Sprite()
 {
 	FUNCLOG
 	assert(gs.primC >= 2);
@@ -346,16 +314,16 @@ void KickSprite()
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 
-	SetKickVertex(&p[0], gs.gsvertex[last], next, curvb);
-	SetKickVertex(&p[3], gs.gsvertex[last], next, curvb);
-	SetKickVertex(&p[1], gs.gsvertex[last], last, curvb);
-	SetKickVertex(&p[4], gs.gsvertex[last], last, curvb);
-	SetKickVertex(&p[2], gs.gsvertex[last], next, curvb);
+	SetKickVertex(&p[0], gs.gsvertex[last], next);
+	SetKickVertex(&p[3], gs.gsvertex[last], next);
+	SetKickVertex(&p[1], gs.gsvertex[last], last);
+	SetKickVertex(&p[4], gs.gsvertex[last], last);
+	SetKickVertex(&p[2], gs.gsvertex[last], next);
 
 	p[2].s = p[1].s;
 	p[2].x = p[1].x;
 
-	SetKickVertex(&p[5], gs.gsvertex[last], last, curvb);
+	SetKickVertex(&p[5], gs.gsvertex[last], last);
 
 	p[5].s = p[0].s;
 	p[5].x = p[0].x;
@@ -366,7 +334,7 @@ void KickSprite()
 	OUTPUT_VERT(p[1], 1);
 }
 
-void KickDummy()
+void Kick::Dummy()
 {
 	FUNCLOG
 	//ZZLog::Greg_Log("Kicking bad primitive: %.8x\n", *(u32*)prim);
