@@ -279,7 +279,7 @@ void Kick::TriangleFan()
 	OUTPUT_VERT(p[2], 2);
 }
 
-void Kick::SetKickVertex(VertexGPU *p, Vertex v, int next)
+void Kick::SetKickVertex(VertexGPU *p, Vertex &v, int next)
 {
 	SET_VERTEX(p, next);
 	p->move_z(v, vb[prim->ctxt].zprimmask);
@@ -314,17 +314,17 @@ void Kick::Sprite()
 
 	VertexGPU* p = curvb.pBufferData + curvb.nCount;
 
+    // process sprite as 2 triangles. The common diagonal is 0,1 and 3,4
 	SetKickVertex(&p[0], gs.gsvertex[last], next);
-	SetKickVertex(&p[3], gs.gsvertex[last], next);
 	SetKickVertex(&p[1], gs.gsvertex[last], last);
-	SetKickVertex(&p[4], gs.gsvertex[last], last);
-	SetKickVertex(&p[2], gs.gsvertex[last], next);
-
+    // Duplicate the vertex
+    p[3] = p[0];
+    p[2] = p[0];
+    p[4] = p[1];
+    p[5] = p[1];
+    // Move some vertex x coord to create the others corners of the sprite
 	p[2].s = p[1].s;
 	p[2].x = p[1].x;
-
-	SetKickVertex(&p[5], gs.gsvertex[last], last);
-
 	p[5].s = p[0].s;
 	p[5].x = p[0].x;
 

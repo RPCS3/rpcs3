@@ -86,6 +86,17 @@ struct VertexGPU
 	{
 		f = ((s16)(v).f << 7) | 0x7f;
 	}
+
+    void operator = (const VertexGPU &v) {
+        x = v.x;
+        y = v.y;
+        f = v.f;
+        rgba = v.rgba;
+        z = v.z;
+        s = v.s;
+        t = v.t;
+        q = v.q;
+    }
 };
 
 extern GSconf conf;

@@ -29,7 +29,7 @@ class Kick
 {
 	private:
 		void SET_VERTEX(VertexGPU *p, int i);
-		void SetKickVertex(VertexGPU *p, Vertex v, int next);
+		void SetKickVertex(VertexGPU *p, Vertex &v, int next);
 		void OUTPUT_VERT(VertexGPU vert, u32 id);
 	public:
 		Kick() { }
