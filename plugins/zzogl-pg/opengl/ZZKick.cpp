@@ -69,7 +69,7 @@ void __forceinline Kick::KickVertex(bool adc)
 }
 
 template<bool DO_Z_FOG>
-void Kick::SET_VERTEX(VertexGPU *p, int i)
+void Kick::Set_Vertex(VertexGPU *p, int i)
 {
     VB& curvb = vb[prim->ctxt];
     
