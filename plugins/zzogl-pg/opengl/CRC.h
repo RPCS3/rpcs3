@@ -374,8 +374,10 @@ static const Game_Info crc_game_list[] =
 	//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK, -1, -1},
 	{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK, -1, -1},
 	{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK, -1, -1},
-	{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK , -1, -1},
-	{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
+	
+	// According to Zeydlitz, Mana Khemia no longer needs the Gust Hack.
+	//{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK, -1, -1},
+	//{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
 	//{0xda11c6d4, AtelierJudie, JP, GAME_GUSTHACK, -1, -1},
 	//{0x3e72c085, AtelierLilie, JP, GAME_GUSTHACK, -1, -1},
 	//{0x6eac076b, AtelierViorate, JP, GAME_GUSTHACK, -1, -1},

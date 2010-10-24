@@ -70,9 +70,11 @@ void __forceinline Kick::KickVertex(bool adc)
 
 void Kick::SET_VERTEX(VertexGPU *p, int i)
 {
-	p->move_x(gs.gsvertex[i], vb[prim->ctxt].offset.x);
-	p->move_y(gs.gsvertex[i], vb[prim->ctxt].offset.y);
-	p->move_z(gs.gsvertex[i], vb[prim->ctxt].zprimmask);
+    VB& curvb = vb[prim->ctxt];
+    
+	p->move_x(gs.gsvertex[i], curvb.offset.x);
+	p->move_y(gs.gsvertex[i], curvb.offset.y);
+	p->move_z(gs.gsvertex[i], curvb.zprimmask);
 	p->move_fog(gs.gsvertex[i]);
 
 	p->rgba = prim->iip ? gs.gsvertex[i].rgba : gs.rgba;

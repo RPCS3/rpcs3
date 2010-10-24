@@ -770,8 +770,7 @@ inline void AfterRendererUnimportantJob()
 
 	AfterRenderCountStatistics();
 
-	if (s_nNewWidth >= 0 && s_nNewHeight >= 0)
-		AfterRendererResizeWindow();
+	if (s_nNewWidth >= 0 && s_nNewHeight >= 0) AfterRendererResizeWindow();
 
 	maxmin = 608;
 }
