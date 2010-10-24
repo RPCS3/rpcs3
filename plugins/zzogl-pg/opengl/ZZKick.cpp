@@ -68,14 +68,17 @@ void __forceinline Kick::KickVertex(bool adc)
 	}
 }
 
+template<bool DO_Z_FOG>
 void Kick::SET_VERTEX(VertexGPU *p, int i)
 {
     VB& curvb = vb[prim->ctxt];
     
 	p->move_x(gs.gsvertex[i], curvb.offset.x);
 	p->move_y(gs.gsvertex[i], curvb.offset.y);
-	p->move_z(gs.gsvertex[i], curvb.zprimmask);
-	p->move_fog(gs.gsvertex[i]);
+    if(DO_Z_FOG) {
+        p->move_z(gs.gsvertex[i], curvb.zprimmask);
+        p->move_fog(gs.gsvertex[i]);
+    }
 
 	p->rgba = prim->iip ? gs.gsvertex[i].rgba : gs.rgba;
 
@@ -102,7 +105,7 @@ void Kick::SET_VERTEX(VertexGPU *p, int i)
 	}
 }
 
-__forceinline void Kick::OUTPUT_VERT(VertexGPU vert, u32 id)
+__forceinline void Kick::Output_Vertex(VertexGPU vert, u32 id)
 {
 #ifdef WRITE_PRIM_LOGS
 	ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
@@ -136,7 +139,7 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_POINT:
             assert(gs.primC >= 1);
 
-            SET_VERTEX(&p[0], gs.primNext(2));
+            Set_Vertex<true>(&p[0], gs.primNext(2));
             curvb.nCount ++;
             break;
 
@@ -144,8 +147,8 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_LINE_STRIP:
             assert(gs.primC >= 2);
 
-            SET_VERTEX(&p[0], gs.primNext());
-            SET_VERTEX(&p[1], gs.primNext(2));
+            Set_Vertex<true>(&p[0], gs.primNext());
+            Set_Vertex<true>(&p[1], gs.primNext(2));
             curvb.nCount += 2;
             break;
 
@@ -154,9 +157,9 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_TRIANGLE_FAN:
             assert(gs.primC >= 3);
 
-            SET_VERTEX(&p[0], 0);
-            SET_VERTEX(&p[1], 1);
-            SET_VERTEX(&p[2], 2);
+            Set_Vertex<true>(&p[0], 0);
+            Set_Vertex<true>(&p[1], 1);
+            Set_Vertex<true>(&p[2], 2);
             curvb.nCount += 3;
             break;
 
@@ -175,13 +178,19 @@ void Kick::DrawPrim(u32 prim_type)
             //return;
 
             // process sprite as 2 triangles. The common diagonal is 0,1 and 3,4
-            SetKickVertex(&p[0], gs.gsvertex[last], next);
-            SetKickVertex(&p[1], gs.gsvertex[last], last);
+            Set_Vertex<false>(&p[0], next);
+            Set_Vertex<true>(&p[1], last);
+
+            // Only fog and Z of last vertex is valid
+            p[0].z = p[1].z;
+            p[0].f = p[1].f;
+
             // Duplicate the vertex
             p[3] = p[0];
             p[2] = p[0];
             p[4] = p[1];
             p[5] = p[1];
+
             // Move some vertex x coord to create the others corners of the sprite
             p[2].s = p[1].s;
             p[2].x = p[1].x;
@@ -199,20 +208,13 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_TRIANGLE:
         case PRIM_TRIANGLE_STRIP:
         case PRIM_TRIANGLE_FAN:
-            OUTPUT_VERT(p[2],2);
+            Output_Vertex(p[2],2);
         case PRIM_LINE:
         case PRIM_LINE_STRIP:
         case PRIM_SPRITE:
-            OUTPUT_VERT(p[1],1);
+            Output_Vertex(p[1],1);
         case PRIM_POINT:
-            OUTPUT_VERT(p[0],0);
+            Output_Vertex(p[0],0);
         default: break;
     }
-}
-
-void Kick::SetKickVertex(VertexGPU *p, Vertex &v, int next)
-{
-	SET_VERTEX(p, next);
-	p->move_z(v, vb[prim->ctxt].zprimmask);
-	p->move_fog(v);
 }
