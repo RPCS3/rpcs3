@@ -58,7 +58,16 @@ struct VertexGPU
 	// gained from XYZ2, XYZ3, XYZF2, XYZF3,
 	// X -- bits 0-15, Y-16-31. Z - 32-63 if no F used, 32-55 otherwise, F (fog) - 56-63
 	// X, Y stored in 12d3 format,
-	s16 x, y, f, resv0;		// note: xy is 12d3
+    union // Allow faster copy of the structure
+    {
+        struct
+        {
+            s16 x, y;
+        };
+        u32 xy;
+    };
+    s16 f, resv0;
+
 	// Vertex color settings. RGB -- luminance of red/green/blue, A -- alpha. 1.0 == 0x80.
 	// Goes grom RGBAQ register, bits 0-7, 8-15, 16-23 and 24-31 accordingly
 	u32 rgba;
@@ -88,9 +97,7 @@ struct VertexGPU
 	}
 
     void operator = (const VertexGPU &v) {
-        x = v.x;
-        y = v.y;
-        f = v.f;
+        xy = v.xy;
         rgba = v.rgba;
         z = v.z;
         s = v.s;
