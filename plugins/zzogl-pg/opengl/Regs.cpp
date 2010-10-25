@@ -87,12 +87,8 @@ void __gifCall GIFPackedRegHandlerUV(const u32* data)
 void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
-	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
-	gs.vertexregs.z = (data[2] >> 4) & 0xffffff;
-	gs.vertexregs.f = (data[3] >> 4) & 0xff;
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFPackedXYZF2* r = (GIFPackedXYZF2*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
     ZZKick->KickVertex(!!(data[3]>>31));
 }
@@ -100,11 +96,8 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0] >> 0) & 0xffff;
-	gs.vertexregs.y = (data[1] >> 0) & 0xffff;
-	gs.vertexregs.z = data[2];
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFPackedXYZ2* r = (GIFPackedXYZ2*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z);
 
     ZZKick->KickVertex(!!(data[3]>>31));
 }
@@ -310,13 +303,14 @@ void __gifCall GIFRegHandlerPRIM(const u32 *data)
 		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
 	//}
 
-	gs.nTriFanVert = gs.primIndex;
 
 	gs.primC = 0;
 	prim->prim = (data[0]) & 0x7;
 	gs._prim[0].prim = (data[0]) & 0x7;
 	gs._prim[1].prim = (data[0]) & 0x7;
 	gs._prim[1]._val = (data[0] >> 3) & 0xff;
+
+    gs.nTriFanVert = gs.primIndex;
 
 	Prim();
 }
@@ -347,12 +341,8 @@ void __gifCall GIFRegHandlerUV(const u32* data)
 void __gifCall GIFRegHandlerXYZF2(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1] & 0xffffff;
-	gs.vertexregs.f = data[1] >> 24;
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFRegXYZF* r = (GIFRegXYZF*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
     ZZKick->KickVertex(false);
 }
@@ -360,11 +350,8 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 void __gifCall GIFRegHandlerXYZ2(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1];
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFRegXYZ* r = (GIFRegXYZ*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z);
 
     ZZKick->KickVertex(false);
 }
@@ -407,12 +394,8 @@ void __gifCall GIFRegHandlerFOG(const u32* data)
 void __gifCall GIFRegHandlerXYZF3(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1] & 0xffffff;
-	gs.vertexregs.f = data[1] >> 24;
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFRegXYZF* r = (GIFRegXYZF*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
     ZZKick->KickVertex(true);
 }
@@ -420,11 +403,8 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 void __gifCall GIFRegHandlerXYZ3(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.x = (data[0]) & 0xffff;
-	gs.vertexregs.y = (data[0] >> (16)) & 0xffff;
-	gs.vertexregs.z = data[1];
-	gs.gsvertex[gs.primIndex] = gs.vertexregs;
-	gs.primIndex = gs.primNext();
+	GIFRegXYZ* r = (GIFRegXYZ*)(data);
+	gs.add_vertex(r->X, r->Y,r->Z);
 
     ZZKick->KickVertex(true);
 }

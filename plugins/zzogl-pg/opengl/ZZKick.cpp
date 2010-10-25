@@ -60,27 +60,30 @@ void __forceinline Kick::KickVertex(bool adc)
 		
 		gs.primC -= g_primsub[prim->prim];
 
+        gs.primIndex = gs.primNext();
 		if (prim->prim == 5)
 		{
 			/* tri fans need special processing */
 			if (gs.nTriFanVert == gs.primIndex) gs.primIndex = gs.primNext();
 		}
+	} else {
+        gs.primIndex = gs.primNext();
 	}
 }
 
 template<bool DO_Z_FOG>
-void Kick::Set_Vertex(VertexGPU *p, int i)
+void Kick::Set_Vertex(VertexGPU *p, Vertex & gsvertex)
 {
     VB& curvb = vb[prim->ctxt];
     
-	p->move_x(gs.gsvertex[i], curvb.offset.x);
-	p->move_y(gs.gsvertex[i], curvb.offset.y);
+	p->move_x(gsvertex, curvb.offset.x);
+	p->move_y(gsvertex, curvb.offset.y);
     if(DO_Z_FOG) {
-        p->move_z(gs.gsvertex[i], curvb.zprimmask);
-        p->move_fog(gs.gsvertex[i]);
+        p->move_z(gsvertex, curvb.zprimmask);
+        p->move_fog(gsvertex);
     }
 
-	p->rgba = prim->iip ? gs.gsvertex[i].rgba : gs.rgba;
+	p->rgba = prim->iip ? gsvertex.rgba : gs.rgba;
 
 	if (conf.settings().texa)
 	{
@@ -92,15 +95,15 @@ void Kick::Set_Vertex(VertexGPU *p, int i)
 	{
 		if (prim->fst)
 		{
-			p->s = (float)gs.gsvertex[i].u * fiTexWidth[prim->ctxt];
-			p->t = (float)gs.gsvertex[i].v * fiTexHeight[prim->ctxt];
+			p->s = (float)gsvertex.u * fiTexWidth[prim->ctxt];
+			p->t = (float)gsvertex.v * fiTexHeight[prim->ctxt];
 			p->q = 1;
 		}
 		else
 		{
-			p->s = gs.gsvertex[i].s;
-			p->t = gs.gsvertex[i].t;
-			p->q = gs.gsvertex[i].q;
+			p->s = gsvertex.s;
+			p->t = gsvertex.t;
+			p->q = gsvertex.q;
 		}
 	}
 }
@@ -133,13 +136,13 @@ void Kick::DrawPrim(u32 prim_type)
 
     VertexGPU* p = curvb.pBufferData + curvb.nCount;
 
-    u32 next;
+    u32 prev;
     u32 last;
     switch(prim_type) {
         case PRIM_POINT:
             assert(gs.primC >= 1);
 
-            Set_Vertex<true>(&p[0], gs.primNext(2));
+            Set_Vertex<true>(&p[0], gs.gsvertex[gs.primIndex]);
             curvb.nCount ++;
             break;
 
@@ -147,8 +150,8 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_LINE_STRIP:
             assert(gs.primC >= 2);
 
-            Set_Vertex<true>(&p[0], gs.primNext());
-            Set_Vertex<true>(&p[1], gs.primNext(2));
+            Set_Vertex<true>(&p[0], gs.gsvertex[gs.primPrev()]);
+            Set_Vertex<true>(&p[1], gs.gsvertex[gs.primIndex]);
             curvb.nCount += 2;
             break;
 
@@ -157,29 +160,29 @@ void Kick::DrawPrim(u32 prim_type)
         case PRIM_TRIANGLE_FAN:
             assert(gs.primC >= 3);
 
-            Set_Vertex<true>(&p[0], 0);
-            Set_Vertex<true>(&p[1], 1);
-            Set_Vertex<true>(&p[2], 2);
+            Set_Vertex<true>(&p[0], gs.gsvertex[0]);
+            Set_Vertex<true>(&p[1], gs.gsvertex[1]);
+            Set_Vertex<true>(&p[2], gs.gsvertex[2]);
             curvb.nCount += 3;
             break;
 
         case PRIM_SPRITE:
             assert(gs.primC >= 2);
 
-            next = gs.primNext();
-            last = gs.primNext(2);
+            prev = gs.primPrev();
+            last = gs.primIndex;
 
             // sprite is too small and AA shows lines (tek4, Mana Khemia)
             gs.gsvertex[last].x += (4 * AA.x);
             gs.gsvertex[last].y += (4 * AA.y);
 
             // might be bad sprite (KH dialog text)
-            //if( gs.gsvertex[next].x == gs.gsvertex[last].x || gs.gsvertex[next].y == gs.gsvertex[last].y )
+            //if( gs.gsvertex[prev].x == gs.gsvertex[last].x || gs.gsvertex[prev].y == gs.gsvertex[last].y )
             //return;
 
             // process sprite as 2 triangles. The common diagonal is 0,1 and 3,4
-            Set_Vertex<false>(&p[0], next);
-            Set_Vertex<true>(&p[1], last);
+            Set_Vertex<false>(&p[0], gs.gsvertex[prev]);
+            Set_Vertex<true>(&p[1], gs.gsvertex[last]);
 
             // Only fog and Z of last vertex is valid
             p[0].z = p[1].z;

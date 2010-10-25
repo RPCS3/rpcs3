@@ -515,6 +515,12 @@ typedef struct
 		return ((primIndex + inc) % ARRAY_SIZE(gsvertex));
 	}
 	
+    int primPrev(int dec = 1)
+    {
+        // Note: assert( dec <= ARRAY_SIZE(gsvertex) );
+		return ((primIndex + (ARRAY_SIZE(gsvertex) - dec)) % ARRAY_SIZE(gsvertex));
+    }
+	
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{
 		rgba = (r & 0xff) |
@@ -523,23 +529,21 @@ typedef struct
 			  ((a & 0xff) << 24);
 	}
 	
-	void add_vertex(u16 x, u16 y, u32 z, u16 f)
+	inline void add_vertex(u16 x, u16 y, u32 z, u16 f)
 	{
 		vertexregs.x = x;
 		vertexregs.y = y;
 		vertexregs.z = z;
 		vertexregs.f = f;
 		gsvertex[primIndex] = vertexregs;
-		primIndex = primNext();
 	}
 	
-	void add_vertex(u16 x, u16 y, u32 z)
+	inline void add_vertex(u16 x, u16 y, u32 z)
 	{
 		vertexregs.x = x;
 		vertexregs.y = y;
 		vertexregs.z = z;
 		gsvertex[primIndex] = vertexregs;
-		primIndex = primNext();
 	}
 } GSinternal;
 

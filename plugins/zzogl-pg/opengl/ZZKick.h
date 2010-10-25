@@ -39,7 +39,8 @@ enum PRIM_TYPE {
 class Kick
 {
 	private:
-        template<bool DO_Z_FOG> void Set_Vertex(VertexGPU *p, int i);
+        // template<bool DO_Z_FOG> void Set_Vertex(VertexGPU *p, int i);
+        template<bool DO_Z_FOG> void Set_Vertex(VertexGPU *p, Vertex &gsvertex);
 		void Output_Vertex(VertexGPU vert, u32 id);
 	public:
 		Kick() { }
