@@ -471,14 +471,16 @@ typedef struct
 
 typedef struct
 {
-	Vertex gsvertex[3];
-	u32 rgba;
+	Vertex gsvertex[4]; // circular buffer that contains the vertex
+    Vertex gsTriFanVertex; // Base of triangle fan primitive vertex
+	u32 rgba; // global color for flat shading texture
 	float q;
-	Vertex vertexregs;
+	Vertex vertexregs; // accumulation buffer that collect current vertex data
 
 	int primC;		// number of verts current storing
 	int primIndex;	// current prim index
-	int nTriFanVert;
+	int nTriFanVert; // remember the index of the base of triangle fan
+    int new_tri_fan; // 1 if we process a new triangle fan primitive. 0 otherwise
 
 	int prac;
 	int dthe;
@@ -512,12 +514,14 @@ typedef struct
 	GSClut clut_buffer;
 	int primNext(int inc = 1)
 	{
+        // Note: ARRAY_SIZE(gsvertex) == 2^n => modulo is replaced by an and instruction
 		return ((primIndex + inc) % ARRAY_SIZE(gsvertex));
 	}
 	
     int primPrev(int dec = 1)
     {
         // Note: assert( dec <= ARRAY_SIZE(gsvertex) );
+        // Note: ARRAY_SIZE(gsvertex) == 2^n => modulo is replaced by an and instruction
 		return ((primIndex + (ARRAY_SIZE(gsvertex) - dec)) % ARRAY_SIZE(gsvertex));
     }
 	
@@ -535,7 +539,12 @@ typedef struct
 		vertexregs.y = y;
 		vertexregs.z = z;
 		vertexregs.f = f;
-		gsvertex[primIndex] = vertexregs;
+        if (likely(!new_tri_fan)) {
+            gsvertex[primIndex] = vertexregs;
+        } else {
+            gsTriFanVertex = vertexregs;
+            new_tri_fan = false;
+        }
 	}
 	
 	inline void add_vertex(u16 x, u16 y, u32 z)
@@ -543,7 +552,12 @@ typedef struct
 		vertexregs.x = x;
 		vertexregs.y = y;
 		vertexregs.z = z;
-		gsvertex[primIndex] = vertexregs;
+        if (likely(!new_tri_fan)) {
+            gsvertex[primIndex] = vertexregs;
+        } else {
+            gsTriFanVertex = vertexregs;
+            new_tri_fan = false;
+        }
 	}
 } GSinternal;
 

@@ -305,12 +305,14 @@ void __gifCall GIFRegHandlerPRIM(const u32 *data)
 
 
 	gs.primC = 0;
-	prim->prim = (data[0]) & 0x7;
-	gs._prim[0].prim = (data[0]) & 0x7;
-	gs._prim[1].prim = (data[0]) & 0x7;
+    u16 prim_type = (data[0]) & 0x7;
+	prim->prim = prim_type;
+	gs._prim[0].prim = prim_type;
+	gs._prim[1].prim = prim_type;
 	gs._prim[1]._val = (data[0] >> 3) & 0xff;
 
-    gs.nTriFanVert = gs.primIndex;
+    gs.new_tri_fan = !(prim_type ^ PRIM_TRIANGLE_FAN);
+    ZZKick->DirtyValidPrevPrim();
 
 	Prim();
 }

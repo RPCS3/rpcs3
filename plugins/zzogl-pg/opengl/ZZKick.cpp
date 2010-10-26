@@ -57,18 +57,11 @@ void __forceinline Kick::KickVertex(bool adc)
 	if (++gs.primC >= (int)g_primmult[prim->prim])
 	{
 		if (!adc && NoHighlights(prim->ctxt)) DrawPrim(prim->prim);
+        else DirtyValidPrevPrim();
 		
 		gs.primC -= g_primsub[prim->prim];
-
-        gs.primIndex = gs.primNext();
-		if (prim->prim == 5)
-		{
-			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex) gs.primIndex = gs.primNext();
 		}
-	} else {
-        gs.primIndex = gs.primNext();
-	}
+    gs.primIndex = gs.primNext();
 }
 
 template<bool DO_Z_FOG>
@@ -111,7 +104,7 @@ void Kick::Set_Vertex(VertexGPU *p, Vertex & gsvertex)
 __forceinline void Kick::Output_Vertex(VertexGPU vert, u32 id)
 {
 #ifdef WRITE_PRIM_LOGS
-	ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)\n",
+	ZZLog::Prim_Log("%c%d(%d): xyzf=(%4d,%4d,0x%x,%3d), rgba=0x%8.8x, stq = (%2.5f,%2.5f,%2.5f)",
 					id == 0 ? '*' : ' ', id, prim->prim, vert.x / 8, vert.y / 8, vert.z, vert.f / 128,
 					vert.rgba, Clamp(vert.s, -10, 10), Clamp(vert.t, -10, 10), Clamp(vert.q, -10, 10));
 #endif
@@ -140,35 +133,70 @@ void Kick::DrawPrim(u32 prim_type)
     u32 last;
     switch(prim_type) {
         case PRIM_POINT:
-            assert(gs.primC >= 1);
-
             Set_Vertex<true>(&p[0], gs.gsvertex[gs.primIndex]);
             curvb.nCount ++;
             break;
 
         case PRIM_LINE:
-        case PRIM_LINE_STRIP:
-            assert(gs.primC >= 2);
-
             Set_Vertex<true>(&p[0], gs.gsvertex[gs.primPrev()]);
             Set_Vertex<true>(&p[1], gs.gsvertex[gs.primIndex]);
             curvb.nCount += 2;
             break;
 
-        case PRIM_TRIANGLE:
-        case PRIM_TRIANGLE_STRIP:
-        case PRIM_TRIANGLE_FAN:
-            assert(gs.primC >= 3);
+        case PRIM_LINE_STRIP:
+            if (likely(ValidPrevPrim)) {
+                assert(curvb.nCount >= 1);
+                p[0] = p[-1];
+            } else {
+                Set_Vertex<true>(&p[0], gs.gsvertex[gs.primPrev()]);
+                ValidPrevPrim = true;
+            }
 
-            Set_Vertex<true>(&p[0], gs.gsvertex[0]);
-            Set_Vertex<true>(&p[1], gs.gsvertex[1]);
-            Set_Vertex<true>(&p[2], gs.gsvertex[2]);
+            Set_Vertex<true>(&p[1], gs.gsvertex[gs.primIndex]);
+            curvb.nCount += 2;
+            break;
+
+        case PRIM_TRIANGLE:
+            Set_Vertex<true>(&p[0], gs.gsvertex[gs.primPrev(2)]);
+            Set_Vertex<true>(&p[1], gs.gsvertex[gs.primPrev()]);
+            Set_Vertex<true>(&p[2], gs.gsvertex[gs.primIndex]);
+            curvb.nCount += 3;
+            break;
+
+        case PRIM_TRIANGLE_STRIP:
+            if (likely(ValidPrevPrim)) {
+                assert(curvb.nCount >= 2);
+                p[0] = p[-2];
+                p[1] = p[-1];
+            } else {
+                Set_Vertex<true>(&p[0], gs.gsvertex[gs.primPrev(2)]);
+                Set_Vertex<true>(&p[1], gs.gsvertex[gs.primPrev()]);
+                ValidPrevPrim = true;
+            }
+
+            Set_Vertex<true>(&p[2], gs.gsvertex[gs.primIndex]);
+            curvb.nCount += 3;
+            break;
+
+        case PRIM_TRIANGLE_FAN:
+            if (likely(ValidPrevPrim)) {
+                assert(curvb.nCount >= 2);
+                VertexGPU* TriFanVert = curvb.pBufferData + gs.nTriFanVert;
+                p[0] = TriFanVert[0];
+                p[1] = p[-1];
+            } else {
+                Set_Vertex<true>(&p[0], gs.gsTriFanVertex);
+                Set_Vertex<true>(&p[1], gs.gsvertex[gs.primPrev(1)]);
+                ValidPrevPrim = true;
+                // Remenber the base for future processing
+                gs.nTriFanVert = curvb.nCount;
+            }
+
+            Set_Vertex<true>(&p[2], gs.gsvertex[gs.primIndex]);
             curvb.nCount += 3;
             break;
 
         case PRIM_SPRITE:
-            assert(gs.primC >= 2);
-
             prev = gs.primPrev();
             last = gs.primIndex;
 
@@ -206,17 +234,20 @@ void Kick::DrawPrim(u32 prim_type)
         default: break;
     }
 
-    // Print DEBUG info
+    // Print DEBUG info and code assertion
     switch(prim_type) {
         case PRIM_TRIANGLE:
         case PRIM_TRIANGLE_STRIP:
         case PRIM_TRIANGLE_FAN:
+            assert(gs.primC >= 3);
             Output_Vertex(p[2],2);
         case PRIM_LINE:
         case PRIM_LINE_STRIP:
         case PRIM_SPRITE:
+            assert(gs.primC >= 2);
             Output_Vertex(p[1],1);
         case PRIM_POINT:
+            assert(gs.primC >= 1);
             Output_Vertex(p[0],0);
         default: break;
     }

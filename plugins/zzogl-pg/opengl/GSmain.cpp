@@ -309,7 +309,6 @@ void CALLBACK GSreset()
 
 	gs.prac = 1;
 	prim = &gs._prim[0];
-	gs.nTriFanVert = -1;
 	gs.imageTransfer = -1;
 	gs.q = 1;
 }
@@ -324,7 +323,6 @@ void CALLBACK GSgifSoftReset(u32 mask)
 
 	gs.imageTransfer = -1;
 	gs.q = 1;
-	gs.nTriFanVert = -1;
 }
 
 s32 CALLBACK GSinit()

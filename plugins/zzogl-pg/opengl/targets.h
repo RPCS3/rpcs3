@@ -151,7 +151,7 @@ class CMemoryTarget
 			int ref;
 		};
 
-		inline CMemoryTarget() : ptex(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), cpsm(0), channels(0), clearminy(0), clearmaxy(0), validatecount(0), clutsize(0), clut(NULL) {}
+		inline CMemoryTarget() : ptex(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), cpsm(0), channels(0), clearminy(0), clearmaxy(0), validatecount(0), clut(NULL), clutsize(0) {}
 
 		inline CMemoryTarget(const CMemoryTarget& r)
 		{

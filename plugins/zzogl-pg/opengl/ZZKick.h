@@ -42,12 +42,17 @@ class Kick
         // template<bool DO_Z_FOG> void Set_Vertex(VertexGPU *p, int i);
         template<bool DO_Z_FOG> void Set_Vertex(VertexGPU *p, Vertex &gsvertex);
 		void Output_Vertex(VertexGPU vert, u32 id);
+        bool ValidPrevPrim;
 	public:
 		Kick() { }
 		~Kick() { }
 		
 		void KickVertex(bool adc);
 		void DrawPrim(u32 i);
+
+        inline void DirtyValidPrevPrim() {
+            ValidPrevPrim = 0;
+        }
 };
 extern Kick* ZZKick;
 
