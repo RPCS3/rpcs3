@@ -82,17 +82,3 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 		));
 	}
 }
-
-wxString PageProtectionMode::ToString() const
-{
-	wxString modeStr;
-
-	if (m_read)		modeStr += L"Read";
-	if (m_write)	modeStr += L"Write";
-	if (m_exec)		modeStr += L"Exec";
-
-	if (modeStr.IsEmpty()) return L"NoAccess";
-	if (modeStr.Length() <= 5) modeStr += L"Only";
-	
-	return modeStr;
-}

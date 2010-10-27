@@ -201,3 +201,31 @@ void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 {
 	return __parent::Reserve( size, base, upper_bounds );
 }
+
+void SpatialArrayReserve::OnCommittedBlock( void* block )
+{
+
+}
+
+void SpatialArrayReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
+{
+
+}
+
+
+// --------------------------------------------------------------------------------------
+//  PageProtectionMode  (implementations)
+// --------------------------------------------------------------------------------------
+wxString PageProtectionMode::ToString() const
+{
+	wxString modeStr;
+
+	if (m_read)		modeStr += L"Read";
+	if (m_write)	modeStr += L"Write";
+	if (m_exec)		modeStr += L"Exec";
+
+	if (modeStr.IsEmpty()) return L"NoAccess";
+	if (modeStr.Length() <= 5) modeStr += L"Only";
+
+	return modeStr;
+}
