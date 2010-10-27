@@ -53,6 +53,7 @@ public:
 
 	void Clear() { wxFileName::Clear(); }
 
+	wxCharBuffer ToUTF8() const { return GetPath().ToUTF8(); }
 	wxCharBuffer ToAscii() const { return GetPath().ToAscii(); }
 	wxString ToString() const { return GetPath(); }
 
@@ -130,6 +131,7 @@ namespace Path
 
 	extern wxString Normalize( const wxString& srcpath );
 	extern wxString Normalize( const wxDirName& srcpath );
+	extern wxString MakeAbsolute( const wxString& srcpath );
 
 	extern wxString	Combine( const wxString& srcPath, const wxString& srcFile );
 	extern wxString	Combine( const wxDirName& srcPath, const wxFileName& srcFile );
