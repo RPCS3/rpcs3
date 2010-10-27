@@ -92,7 +92,7 @@ void mVUdispatcherB(mV) {
 
 	xRET();
 
-	mVUcacheCheck(x86Ptr, mVU->dispCache, mVUdispCacheSize);
+	pxAssertDev(xGetPtr() < (mVU->dispCache + mVUdispCacheSize), "microVU: Dispatcher generation exceeded reserved cache area!");
 }
 
 //------------------------------------------------------------------
@@ -121,8 +121,14 @@ _mVUt void mVUcleanUp() {
 	//mVUprint("microVU: Program exited successfully!");
 	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs().VF[0].UL[0], mVU->regs().VF[0].UL[1], mVU->regs().VF[0].UL[2], mVU->regs().VF[0].UL[3]);
 	//mVUprint("microVU: VI0 = %x", mVU->regs().VI[0].UL);
+
 	mVU->prog.x86ptr = x86Ptr;
-	mVUcacheCheck(x86Ptr, mVU->prog.x86start, (uptr)(mVU->prog.x86end - mVU->prog.x86start));
+
+	if ((xGetPtr() < mVU->prog.x86start) || (xGetPtr() >= mVU->prog.x86end)) {
+		Console.WriteLn(vuIndex ? Color_Orange : Color_Magenta, "microVU%d: Program cache limit reached.", mVU->index);
+		mVU->reset();
+	}
+	
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
 	mVU->regs().cycle += mVU->cycles;
 	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;

@@ -21,16 +21,15 @@
 #include "R5900Exceptions.h"
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
-
 #include "BaseblockEx.h"
+#include "System/RecTypes.h"
+
 #include "vtlb.h"
 #include "SamplProf.h"
 #include "Dump.h"
 
 #include "System/SysThreads.h"
-#include "System/PageFaultSource.h"
 #include "GS.h"
-
 #include "CDVD/CDVD.h"
 #include "Elfheader.h"
 
@@ -562,7 +561,7 @@ static void recReserve()
 	if ( !x86caps.hasStreamingSIMD2Extensions )
 		recThrowHardwareDeficiency( L"SSE2" );
 
-	recMem = new RecompiledCodeReserve(L"R5900-32 recompiled code cache", _1mb * 4);
+	recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
 	recMem->Reserve( _64mb, HostMemoryMap::EErec );
 }
 
@@ -614,6 +613,7 @@ static __aligned16 u8 manual_counter[Ps2MemSize::MainRam >> 12];
 static u32 eeRecIsReset = false;
 static u32 eeRecNeedsReset = false;
 static bool eeRecIsActive = false;
+static bool eeCpuExecuting = false;
 
 ////////////////////////////////////////////////////
 static void recResetRaw()
@@ -701,7 +701,7 @@ static void recShutdown()
 
 static void recResetEE()
 {
-	if (eeRecIsActive)
+	if (eeRecIsActive || eeCpuExecuting)
 	{
 		AtomicExchange( eeRecNeedsReset, true );
 		return;
@@ -746,8 +746,6 @@ static void recCheckExecutionState()
 	}
 }
 
-static bool m_recExecutingCode = false;
-
 static void recExecute()
 {
 	// Implementation Notes:
@@ -755,12 +753,14 @@ static void recExecute()
 
 #if PCSX2_SEH
 	eeRecIsReset = false;
-	ScopedBool executing(m_recExecutingCode);
+	ScopedBool executing(eeCpuExecuting);
 
 	try {
 		EnterRecompiledCode();
 	}
-	catch( Exception::ExitCpuExecute& ) { }
+	catch( Exception::ExitCpuExecute& )
+	{
+	}
 
 #else
 
@@ -1369,7 +1369,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	// From here on we need to have EE recompile resets disabled, since to reset
 	// the rec while we're writing to it typically leads to GPF.
 
-	ScopedBool active_scope(eeRecIsActive);
+	//ScopedBool active_scope(eeRecIsActive);
 
 	xSetPtr( recPtr );
 	recPtr = xGetAlignedCallTarget();
@@ -1868,7 +1868,7 @@ static void recThrowException( const BaseR5900Exception& ex )
 #if PCSX2_SEH
 	ex.Rethrow();
 #else
-	if (!m_recExecutingCode) ex.Rethrow();
+	if (!eeCpuExecuting) ex.Rethrow();
 	m_cpuException = ex.Clone();
 	recExitExecution();
 #endif
@@ -1879,7 +1879,7 @@ static void recThrowException( const BaseException& ex )
 #if PCSX2_SEH
 	ex.Rethrow();
 #else
-	if (!m_recExecutingCode) ex.Rethrow();
+	if (!eeCpuExecuting) ex.Rethrow();
 	m_Exception = ex.Clone();
 	recExitExecution();
 #endif

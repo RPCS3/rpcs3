@@ -91,6 +91,7 @@ wxString PageProtectionMode::ToString() const
 	if (m_write)	modeStr += L"Write";
 	if (m_exec)		modeStr += L"Exec";
 
+	if (modeStr.IsEmpty()) return L"NoAccess";
 	if (modeStr.Length() <= 5) modeStr += L"Only";
 	
 	return modeStr;

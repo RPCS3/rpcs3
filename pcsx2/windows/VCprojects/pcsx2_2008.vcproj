@@ -460,6 +460,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\System\RecTypes.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\SamplProf.h"
 					>
 				</File>

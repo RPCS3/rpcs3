@@ -22,9 +22,9 @@
 #include "GS.h"
 #include "Elfheader.h"
 #include "Patch.h"
-#include "PageFaultSource.h"
 #include "SysThreads.h"
 
+#include "Utilities/PageFaultSource.h"
 #include "Utilities/TlsVariable.inl"
 
 #ifdef __WXMSW__

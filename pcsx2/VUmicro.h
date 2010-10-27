@@ -47,9 +47,9 @@ static const uint VU1_PROGMASK = VU1_PROGSIZE-1;
 class BaseCpuProvider
 {
 protected:
-	// allocation counter for multiple init/shutdown calls
-	// (most or all implementations will need this!)
-	int		m_AllocCount;
+	// allocation counter for multiple calls to Reserve.  Most implementations should utilize
+	// this variable for sake of robustness.
+	u32		m_Reserved;
 
 public:
 	// this boolean indicates to some generic logging facilities if the VU's registers
@@ -60,13 +60,13 @@ public:
 public:
 	BaseCpuProvider()
 	{
-		m_AllocCount   = 0;
+		m_Reserved = 0;
 	}
 
 	virtual ~BaseCpuProvider() throw()
 	{
-		if( m_AllocCount != 0 )
-			Console.Warning( "Cleanup miscount detected on CPU provider.  Count=%d", m_AllocCount );
+		if( m_Reserved != 0 )
+			Console.Warning( "Cleanup miscount detected on CPU provider.  Count=%d", m_Reserved );
 	}
 
 	virtual const char* GetShortName() const=0;
@@ -80,7 +80,7 @@ public:
 		return 0;
 	}
 
-	virtual void Allocate()=0;
+	virtual void Reserve()=0;
 	virtual void Shutdown()=0;
 	virtual void Reset()=0;
 	virtual void Execute(u32 cycles)=0;
@@ -96,6 +96,15 @@ public:
 	{
 		cpu->Execute(1024);
 	}
+
+	// Gets the current cache reserve allocated to this CPU (value returned in megabytes)
+	virtual uint GetCacheReserve() const=0;
+	
+	// Specifies the maximum cache reserve amount for this CPU (value in megabytes).
+	// CPU providers are allowed to reset their reserves (recompiler resets, etc) if such is
+	// needed to conform to the new amount requested.
+	virtual void SetCacheReserve( uint reserveInMegs ) const=0;
+
 };
 
 // --------------------------------------------------------------------------------------
@@ -157,13 +166,16 @@ public:
 	const char* GetShortName() const	{ return "intVU0"; }
 	wxString GetLongName() const		{ return L"VU0 Interpreter"; }
 
-	void Allocate() { }
+	void Reserve() { }
 	void Shutdown() throw() { }
 	void Reset() { }
 
 	void Step();
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
+
+	uint GetCacheReserve() const { return 0; }
+	void SetCacheReserve( uint reserveInMegs ) const {}
 };
 
 class InterpVU1 : public BaseVUmicroCPU
@@ -175,13 +187,16 @@ public:
 	const char* GetShortName() const	{ return "intVU1"; }
 	wxString GetLongName() const		{ return L"VU1 Interpreter"; }
 
-	void Allocate() { }
+	void Reserve() { }
 	void Shutdown() throw() { }
 	void Reset() { }
 
 	void Step();
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
+
+	uint GetCacheReserve() const { return 0; }
+	void SetCacheReserve( uint reserveInMegs ) const {}
 };
 
 // --------------------------------------------------------------------------------------
@@ -196,13 +211,16 @@ public:
 	const char* GetShortName() const	{ return "mVU0"; }
 	wxString GetLongName() const		{ return L"microVU0 Recompiler"; }
 
-	void Allocate();
+	void Reserve();
 	void Shutdown() throw();
 
 	void Reset();
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
+
+	uint GetCacheReserve() const;
+	void SetCacheReserve( uint reserveInMegs ) const;
 };
 
 class recMicroVU1 : public BaseVUmicroCPU
@@ -214,12 +232,15 @@ public:
 	const char* GetShortName() const	{ return "mVU1"; }
 	wxString GetLongName() const		{ return L"microVU1 Recompiler"; }
 
-	void Allocate();
+	void Reserve();
 	void Shutdown() throw();
 	void Reset();
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
+
+	uint GetCacheReserve() const;
+	void SetCacheReserve( uint reserveInMegs ) const;
 };
 
 // --------------------------------------------------------------------------------------
@@ -234,11 +255,14 @@ public:
 	const char* GetShortName() const	{ return "sVU0"; }
 	wxString GetLongName() const		{ return L"SuperVU0 Recompiler"; }
 
-	void Allocate();
+	void Reserve();
 	void Shutdown() throw();
 	void Reset();
 	void Execute(u32 cycles);
 	void Clear(u32 Addr, u32 Size);
+
+	uint GetCacheReserve() const;
+	void SetCacheReserve( uint reserveInMegs ) const;
 };
 
 class recSuperVU1 : public BaseVUmicroCPU
@@ -249,11 +273,14 @@ public:
 	const char* GetShortName() const	{ return "sVU1"; }
 	wxString GetLongName() const		{ return L"SuperVU1 Recompiler"; }
 
-	void Allocate();
+	void Reserve();
 	void Shutdown() throw();
 	void Reset();
 	void Execute(u32 cycles);
 	void Clear(u32 Addr, u32 Size);
+
+	uint GetCacheReserve() const;
+	void SetCacheReserve( uint reserveInMegs ) const;
 };
 
 extern BaseVUmicroCPU* CpuVU0;

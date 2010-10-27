@@ -16,192 +16,24 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "IopCommon.h"
-
-#include "System/PageFaultSource.h"
-#include "Utilities/EventSource.inl"
+#include "VUmicro.h"
 
 // Includes needed for cleanup, since we don't have a good system (yet) for
 // cleaning up these things.
-#include "sVU_zerorec.h"
 #include "GameDatabase.h"
 #include "Elfheader.h"
+
+#include "System/RecTypes.h"
+
+#include "Utilities/MemsetFast.inl"
+
 
 extern void closeNewVif(int idx);
 extern void resetNewVif(int idx);
 
-template class EventSource< IEventListener_PageFault >;
-
-SrcType_PageFault* Source_PageFault = NULL;
-
-EventListener_PageFault::EventListener_PageFault()
-{
-	pxAssume(Source_PageFault);
-	Source_PageFault->Add( *this );
-}
-
-EventListener_PageFault::~EventListener_PageFault() throw()
-{
-	if (Source_PageFault)
-		Source_PageFault->Remove( *this );
-}
-
-void SrcType_PageFault::Dispatch( const PageFaultInfo& params )
-{
-	m_handled = false;
-	_parent::Dispatch( params );
-}
-
-void SrcType_PageFault::_DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const PageFaultInfo& evt )
-{
-	do {
-		(*iter)->DispatchEvent( evt, m_handled );
-	} while( (++iter != iend) && !m_handled );
-}
-
 // --------------------------------------------------------------------------------------
-//  BaseVirtualMemoryReserve  (implementations)
+//  RecompiledCodeReserve  (implementations)
 // --------------------------------------------------------------------------------------
-
-BaseVirtualMemoryReserve::BaseVirtualMemoryReserve( const wxString& name )
-	: Name( name )
-{
-	m_commited		= 0;
-	m_reserved		= 0;
-	m_baseptr		= NULL;
-	m_block_size	= __pagesize;
-	m_prot_mode		= PageAccess_None();
-}
-
-// Parameters:
-//   upper_bounds - criteria that must be met for the allocation to be valid.
-//     If the OS refuses to allocate the memory below the specified address, the
-//     object will fail to initialize and an exception will be thrown.
-void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds )
-{
-	if (!pxAssertDev( m_baseptr == NULL, "(VirtualMemoryReserve) Invalid object state; object has already been reserved." ))
-		return m_baseptr;
-
-	m_reserved = (size + __pagesize-4) / __pagesize;
-	uptr reserved_bytes = m_reserved * __pagesize;
-
-	m_baseptr = (void*)HostSys::MmapReserve(base, reserved_bytes);
-
-	if (!m_baseptr && (upper_bounds != 0 && (((uptr)m_baseptr + reserved_bytes) > upper_bounds)))
-	{
-		if (base)
-		{
-			DevCon.Warning( L"%s default address 0x%08x is unavailable; falling back on OS-default address.", Name.c_str(), base );
-
-			// Let's try again at an OS-picked memory area, and then hope it meets needed
-			// boundschecking criteria below.
-			SafeSysMunmap( m_baseptr, reserved_bytes );
-			m_baseptr = (void*)HostSys::MmapReserve( NULL, reserved_bytes );
-		}
-
-		if ((upper_bounds != 0) && (((uptr)m_baseptr + reserved_bytes) > upper_bounds))
-		{
-			SafeSysMunmap( m_baseptr, reserved_bytes );
-			// returns null, caller should throw an exception or handle appropriately.
-		}
-	}
-
-	if (!m_baseptr) return NULL;
-	
-	DevCon.WriteLn( Color_Blue, L"%s mapped @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
-		m_baseptr, (uptr)m_baseptr+reserved_bytes, reserved_bytes / _1mb);
-
-	/*if (m_def_commit)
-	{
-		const uint camt = m_def_commit * __pagesize;
-		HostSys::MmapCommit(m_baseptr, camt);
-		HostSys::MemProtect(m_baseptr, camt, m_prot_mode);
-
-		u8* init = (u8*)m_baseptr;
-		u8* endpos = init + camt;
-		for( ; init<endpos; init += m_block_size*__pagesize )
-		OnCommittedBlock(init);
-
-		m_commited += m_def_commit * __pagesize;
-	}*/
-	
-	return m_baseptr;
-}
-
-// Clears all committed blocks, restoring the allocation to a reserve only.
-void BaseVirtualMemoryReserve::Reset()
-{
-	if (!m_commited) return;
-	
-	HostSys::MemProtect(m_baseptr, m_commited*__pagesize, PageAccess_None());
-	HostSys::MmapReset(m_baseptr, m_commited*__pagesize);
-	m_commited = 0;
-}
-
-void BaseVirtualMemoryReserve::Free()
-{
-	HostSys::Munmap((uptr)m_baseptr, m_reserved*__pagesize);
-}
-
-void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool& handled)
-{
-	uptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
-	if (offset >= m_reserved) return;
-
-	try	{
-
-		if (!m_commited && m_def_commit)
-		{
-			const uint camt = m_def_commit * __pagesize;
-			// first block being committed!  Commit the default requested
-			// amount if its different from the blocksize.
-			
-			HostSys::MmapCommit(m_baseptr, camt);
-			HostSys::MemProtect(m_baseptr, camt, m_prot_mode);
-
-			u8* init = (u8*)m_baseptr;
-			u8* endpos = init + camt;
-			for( ; init<endpos; init += m_block_size*__pagesize )
-				OnCommittedBlock(init);
-
-			m_commited += m_def_commit * __pagesize;
-
-			handled = true;
-			return;
-		}
-
-		void* bleh = (u8*)m_baseptr + (offset * __pagesize);
-	
-		// Depending on the operating system, one or both of these could fail if the system
-		// is low on either physical ram or virtual memory.
-		HostSys::MmapCommit(bleh, m_block_size*__pagesize);
-		HostSys::MemProtect(bleh, m_block_size*__pagesize, m_prot_mode);
-
-		m_commited += m_block_size;
-		OnCommittedBlock(bleh);
-
-		handled = true;
-	}
-	catch (Exception::OutOfMemory& ex)
-	{
-		OnOutOfMemory( ex, (u8*)m_baseptr + (offset * __pagesize), handled );
-	}
-	#ifndef __WXMSW__
-	// In windows we can let exceptions bubble out of the page fault handler.  SEH will more
-	// or less handle them in a semi-expected way, and might even avoid a GPF long enough
-	// for the system to log the error or something.
-	
-	// In Linux, however, the SIGNAL handler is very limited in what it can do, and not only
-	// can't we let the C++ exception try to unwind the stack, we can't really log it either.
-	// We can't issue a proper assertion (requires user popup).  We can't do jack or shit,
-	// *unless* its attached to a debugger;  then we can, at a bare minimum, trap it.
-	catch (Exception::BaseException& ex)
-	{
-		wxTrap();
-		handled = false;
-	}
-	#endif
-}
-
 RecompiledCodeReserve::RecompiledCodeReserve( const wxString& name, uint defCommit )
 	: BaseVirtualMemoryReserve( name )
 {
@@ -209,46 +41,6 @@ RecompiledCodeReserve::RecompiledCodeReserve( const wxString& name, uint defComm
 	m_prot_mode		= PageAccess_Any();
 	m_def_commit	= defCommit / __pagesize;
 }
-
-template< u8 data >
-__noinline void memset_sse_a( void* dest, const size_t size )
-{
-	const uint MZFqwc = size / 16;
-
-	pxAssert( (size & 0xf) == 0 );
-
-	static __aligned16 const u8 loadval[8] = { data,data,data,data,data,data,data,data };
-	__m128 srcreg = _mm_load_ps( (float*)loadval );
-	srcreg = _mm_loadh_pi( srcreg, (__m64*)loadval );
-
-	float (*destxmm)[4] = (float(*)[4])dest;
-
-#define StoreDestIdx(idx) case idx: _mm_store_ps(&destxmm[idx-1][0], srcreg)
-
-	switch( MZFqwc & 0x07 )
-	{
-		StoreDestIdx(0x07);
-		StoreDestIdx(0x06);
-		StoreDestIdx(0x05);
-		StoreDestIdx(0x04);
-		StoreDestIdx(0x03);
-		StoreDestIdx(0x02);
-		StoreDestIdx(0x01);
-	}
-
-	destxmm += (MZFqwc & 0x07);
-	for( uint i=0; i<MZFqwc / 8; ++i, destxmm+=8 )
-	{
-		_mm_store_ps(&destxmm[0][0], srcreg);
-		_mm_store_ps(&destxmm[1][0], srcreg);
-		_mm_store_ps(&destxmm[2][0], srcreg);
-		_mm_store_ps(&destxmm[3][0], srcreg);
-		_mm_store_ps(&destxmm[4][0], srcreg);
-		_mm_store_ps(&destxmm[5][0], srcreg);
-		_mm_store_ps(&destxmm[6][0], srcreg);
-		_mm_store_ps(&destxmm[7][0], srcreg);
-	}
-};
 
 
 void RecompiledCodeReserve::OnCommittedBlock( void* block )
@@ -263,23 +55,25 @@ void RecompiledCodeReserve::OnCommittedBlock( void* block )
 	}
 }
 
-void RecompiledCodeReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
+void RecompiledCodeReserve::ResetProcessReserves() const
 {
-	// Truncate and reset reserves of all other in-use recompiler caches, as this should
-	// help free up quite a bit of emergency memory.
-
 	//Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 3) / 2 );
 	Cpu->Reset();
 
-	//CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
+	CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
 	CpuVU0->Reset();
 
-	//CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
+	CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
 	CpuVU1->Reset();
 
 	//psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 3) / 2 );
 	psxCpu->Reset();
+}
 
+
+// Default behavior for out of memory: the 
+void RecompiledCodeReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
+{
 	// Since the recompiler is happy writing away to memory, we have to truncate the reserve
 	// to include the page currently being accessed, and cannot go any smaller.  This will
 	// allow the rec to finish emitting the current block of instructions, detect that it has
@@ -293,6 +87,11 @@ void RecompiledCodeReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, voi
 
 	try
 	{
+		// Truncate and reset reserves of all other in-use recompiler caches, as this should
+		// help free up quite a bit of emergency memory.
+
+		ResetProcessReserves();
+
 		uint cusion = std::min<uint>( m_block_size, 4 );
 		HostSys::MmapCommit((u8*)blockptr, cusion * __pagesize);
 		HostSys::MemProtect((u8*)blockptr, cusion * __pagesize, m_prot_mode);
@@ -442,7 +241,7 @@ CpuInitializer< CpuType >::CpuInitializer()
 {
 	try {
 		MyCpu = new CpuType();
-		MyCpu->Allocate();
+		MyCpu->Reserve();
 	}
 	catch( Exception::RuntimeError& ex )
 	{
@@ -461,7 +260,7 @@ CpuInitializer< CpuType >::CpuInitializer()
 template< typename CpuType >
 CpuInitializer< CpuType >::~CpuInitializer() throw()
 {
-	if( MyCpu )
+	if (MyCpu)
 		MyCpu->Shutdown();
 }
 
@@ -608,11 +407,6 @@ SysCpuProviderPack::SysCpuProviderPack()
 	}
 
 	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
-
-	// If both VUrecs failed, then make sure the SuperVU is totally closed out, because it
-	// actually initializes everything once and then shares it between both VU recs.
-	if( !IsRecAvailable_SuperVU0() && !IsRecAvailable_SuperVU1() )
-		SuperVUDestroy( -1 );
 }
 
 bool SysCpuProviderPack::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
@@ -632,9 +426,6 @@ void SysCpuProviderPack::CleanupMess() throw()
 	{
 		closeNewVif(0);
 		closeNewVif(1);
-
-		// Special SuperVU "complete" terminator (stupid hacky recompiler)
-		SuperVUDestroy( -1 );
 
 		psxRec.Shutdown();
 		recCpu.Shutdown();
@@ -694,10 +485,6 @@ BaseVUmicroCPU* SysCpuProviderPack::getVUprovider(int whichProvider, int vuIndex
 void SysClearExecutionCache()
 {
 	GetCpuProviders().ApplyConfig();
-
-	// SuperVUreset will do nothing is none of the recs are initialized.
-	// But it's needed if one or the other is initialized.
-	SuperVUReset(-1);
 
 	Cpu->Reset();
 	psxCpu->Reset();

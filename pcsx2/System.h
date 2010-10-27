@@ -22,8 +22,9 @@
 #include "CDVD/CDVDaccess.h"
 
 typedef SafeArray<u8> VmStateBuffer;
-class BaseVUmicroCPU;
 
+class BaseVUmicroCPU;
+class RecompiledCodeReserve;
 
 // This is a table of default virtual map addresses for ps2vm components.  These locations
 // are provided and used to assist in debugging and possibly hacking; as it makes it possible
@@ -38,8 +39,9 @@ class BaseVUmicroCPU;
 namespace HostMemoryMap
 {
 	// superVU is OLD SCHOOL, and it requires its allocation to be in the lower 256mb
-	// of the virtual memory space. (8mb)
-	static const uptr sVUrec	= 0x0f1e0000;
+	// of the virtual memory space. (8mb each)
+	static const uptr sVU0rec	= _256mb - (_16mb*2);
+	static const uptr sVU1rec	= _256mb - (_16mb*1);
 
 	// PS2 main memory, SPR, and ROMs
 	static const uptr EEmem		= 0x20000000;

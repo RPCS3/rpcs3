@@ -432,7 +432,7 @@ set(pcsx2SystemSources
 
 # System headers
 set(pcsx2SystemHeaders
-	System/PageFaultSource.h
+	System/RecTypes.h
 	System/SysThreads.h)
 
 # Utilities sources

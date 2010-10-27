@@ -18,7 +18,7 @@
 #include <winnt.h>
 
 #include "Common.h"
-#include "System/PageFaultSource.h"
+#include "Utilities/PageFaultSource.h"
 
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {

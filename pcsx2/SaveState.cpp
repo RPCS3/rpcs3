@@ -48,7 +48,7 @@ static void PostLoadPrep()
 wxString SaveStateBase::GetFilename( int slot )
 {
 	return (g_Conf->Folders.Savestates +
-		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
+		pxsFmt( L"%08X.%03d", ElfCRC, slot )).GetFullPath();
 }
 
 SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )

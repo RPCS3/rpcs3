@@ -35,6 +35,7 @@
 
 #include "R5900.h"
 #include "iR5900.h"
+#include "System/RecTypes.h"
 
 #include "sVU_zerorec.h"
 #include "SamplProf.h"
@@ -72,7 +73,7 @@ extern void iDumpVU1Registers();
 
 #define SUPERVU_CHECKCONDITION 0 // has to be 0!!
 
-static const uint VU_EXESIZE = _1mb * 8;
+static const uint sVU_EXESIZE = _8mb;
 
 #define _Imm11_ 	(s32)( (vucode & 0x400) ? (0xfffffc00 | (vucode & 0x3ff)) : (vucode & 0x3ff) )
 #define _UImm11_	(s32)(vucode & 0x7ff)
@@ -90,7 +91,9 @@ static const u32 PWaitTimes[] = { 53, 43, 28, 23, 17, 11, 10 };
 static u32 s_vuInfo; // info passed into rec insts
 
 static const u32 s_MemSize[2] = {VU0_MEMSIZE, VU1_MEMSIZE};
-static u8* s_recVUMem = NULL, *s_recVUPtr = NULL;
+//static u8* s_recVUMem = NULL, *s_recVUPtr = NULL;
+static RecompiledCodeReserve* s_recVUMem[2] = { NULL, NULL };
+static u8* s_recVUPtr[2] = { NULL, NULL };
 
 // tables which are defined at the bottom of this massive file.
 extern void (*recVU_UPPER_OPCODE[64])(VURegs* VU, s32 info);
@@ -315,9 +318,11 @@ VuBaseBlock::VuBaseBlock()
 
 static list<VuFunctionHeader*> s_listVUHeaders[2];
 static list<VuFunctionHeader*>* s_plistCachedHeaders[2] = {NULL, NULL};
-static VuFunctionHeader** recVUHeaders[2] = {NULL, NULL};
-static VuBlockHeader* recVUBlocks[2] = {NULL, NULL};
-static u8* recVUStack = NULL, *recVUStackPtr = NULL;
+static VuFunctionHeader** recVUHeaders[2]	= { NULL, NULL };
+static VuBlockHeader* recVUBlocks[2]		= { NULL, NULL };
+static u8* recVUStack[2]					= { NULL, NULL };
+static u8* recVUStackPtr[2]					= { NULL, NULL };
+
 static vector<_x86regs> s_vecRegArray(128);
 
 static VURegs* VU = NULL;
@@ -343,47 +348,24 @@ static void SuperVURecompile();
 // allocate VU resources
 static void SuperVUAlloc(int vuindex)
 {
-	// The old -1 crap has been depreciated on this function.  Please
-	// specify either 0 or 1, thanks.
-	pxAssert(vuindex >= 0);
+	if (s_recVUMem[vuindex]) return;
 
+	s_recVUMem[vuindex] = new RecompiledCodeReserve( L"SuperVU Recompiler Cache", 0 );
+	s_recVUMem[vuindex]->Reserve( sVU_EXESIZE, vuindex ? HostMemoryMap::sVU1rec : HostMemoryMap::sVU0rec, _256mb );
+	
 	// upper 4 bits must be zero!
-	if (s_recVUMem == NULL)
+	if (!s_recVUMem[vuindex]->IsOk())
 	{
-		// upper 4 bits must be zero!
-		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
-		s_recVUMem = SysMmapEx(HostMemoryMap::sVUrec, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+		safe_delete(s_recVUMem[vuindex]);
+		throw Exception::VirtualMemoryMapConflict()
+			.SetDiagMsg(pxsFmt( L"SuperVU failed to allocate virtual memory below 256MB." ))
+			.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
+				L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "
+				L"ranges required, and will not be available for use.  This is not a critical error, since "
+				L"the sVU rec is obsolete, and you should use microVU instead anyway. :)"
+			));
 
-		// Try again at some other random memory location... whatever. >_<
-		if( s_recVUMem == NULL )
-			s_recVUMem = SysMmapEx(0xc2b0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
-
-		if (s_recVUMem == NULL)
-		{
-			throw Exception::VirtualMemoryMapConflict()
-				.SetDiagMsg(pxsFmt( L"SuperVU failed to allocate virtual memory below 256MB." ))
-				.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
-					L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "
-					L"ranges required, and will not be available for use.  This is not a critical error, since "
-					L"the sVU rec is obsolete, and you should use microVU instead anyway. :)"
-				));
-		}
-
-		ProfilerRegisterSource("sVU Rec", s_recVUMem, VU_EXESIZE);
-
-		if (recVUStack == NULL) recVUStack = new u8[SUPERVU_STACKSIZE * 4];
-	}
-
-	if (vuindex >= 0)
-	{
-		pxAssert(s_recVUMem != NULL);
-
-		if (recVUHeaders[vuindex] == NULL)
-			recVUHeaders[vuindex] = new VuFunctionHeader* [s_MemSize[vuindex] / 8];
-		if (recVUBlocks[vuindex] == NULL)
-			recVUBlocks[vuindex] = new VuBlockHeader[s_MemSize[vuindex] / 8];
-		if (s_plistCachedHeaders[vuindex] == NULL)
-			s_plistCachedHeaders[vuindex] = new list<VuFunctionHeader*>[s_MemSize[vuindex] / 8];
+		ProfilerRegisterSource("sVU Rec", *s_recVUMem[vuindex], sVU_EXESIZE);
 	}
 }
 
@@ -416,72 +398,66 @@ void DestroyVUHeaders(int vuindex)
 // destroy VU resources
 void SuperVUDestroy(int vuindex)
 {
-	list<VuFunctionHeader*>::iterator it;
+	pxAssumeDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
 
-	if (vuindex < 0)
-	{
-		SuperVUDestroy(0);
-		SuperVUDestroy(1);
-		ProfilerTerminateSource("VURec");
-		SafeSysMunmap(s_recVUMem, VU_EXESIZE);
-		safe_delete_array(recVUStack);
-	}
-	else
-	{
-		safe_delete_array(recVUHeaders[vuindex]);
-		safe_delete_array(recVUBlocks[vuindex]);
+	safe_delete_array(recVUHeaders[vuindex]);
+	safe_delete_array(recVUBlocks[vuindex]);
 
-		if (s_plistCachedHeaders[vuindex] != NULL)
+	if (s_plistCachedHeaders[vuindex] != NULL)
+	{
+		for (u32 j = 0; j < s_MemSize[vuindex] / 8; ++j)
 		{
-			for (u32 j = 0; j < s_MemSize[vuindex] / 8; ++j)
-			{
-				DestroyCachedHeaders(vuindex, j);
-			}
-			safe_delete_array(s_plistCachedHeaders[vuindex]);
+			DestroyCachedHeaders(vuindex, j);
 		}
-		DestroyVUHeaders(vuindex);
+		safe_delete_array(s_plistCachedHeaders[vuindex]);
 	}
+	DestroyVUHeaders(vuindex);
+
+	ProfilerTerminateSource(vuindex ? "sVU1Rec" : "sVU0Rec");
+
+	safe_delete(s_recVUMem[vuindex]);
+	safe_delete_array(recVUStack[vuindex]);
 }
 
 // reset VU
 void SuperVUReset(int vuindex)
 {
+	pxAssumeDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
+
 #ifdef PCSX2_DEBUG
 	s_vucount = 0;
 #endif
 
-	if (s_recVUMem == NULL)
-		return;
+	DevCon.WriteLn("SuperVU%d: Resetting function and block lists.", vuindex);
 
-	//pxAssume( s_recVUMem != NULL );
+	if (recVUHeaders[vuindex] == NULL)
+		recVUHeaders[vuindex] = new VuFunctionHeader* [s_MemSize[vuindex] / 8];
+	if (recVUBlocks[vuindex] == NULL)
+		recVUBlocks[vuindex] = new VuBlockHeader[s_MemSize[vuindex] / 8];
+	if (s_plistCachedHeaders[vuindex] == NULL)
+		s_plistCachedHeaders[vuindex] = new std::list<VuFunctionHeader*>[s_MemSize[vuindex] / 8];
 
-	if (vuindex < 0)
+	if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
+	if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
+
+	if (s_plistCachedHeaders[vuindex] != NULL)
 	{
-		DbgCon.WriteLn("SuperVU: Resetting recompiler memory and structures.");
-
-		// Does this cause problems on VU recompiler resets?  It could, if the VU works like
-		// the EE used to, and actually tries to re-enter the recBlock after issuing a clear. (air)
-
-		//memset_8<0xcd, VU_EXESIZE>(s_recVUMem);
-		memzero_ptr<SUPERVU_STACKSIZE>(recVUStack);
-
-		s_recVUPtr = s_recVUMem;
-	}
-	else
-	{
-		DbgCon.WriteLn("SuperVU [VU%d]: Resetting the recs and junk", vuindex);
-		if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
-		if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
-
-		if (s_plistCachedHeaders[vuindex] != NULL)
+		for (u32 j = 0; j < s_MemSize[vuindex] / 8; ++j)
 		{
-			for (u32 j = 0; j < s_MemSize[vuindex] / 8; ++j)
-			{
-				DestroyCachedHeaders(vuindex, j);
-			}
+			DestroyCachedHeaders(vuindex, j);
 		}
-		DestroyVUHeaders(vuindex);
 	}
+	DestroyVUHeaders(vuindex);
+
+	if (!s_recVUMem[vuindex] || !s_recVUMem[vuindex]->IsOk()) return;
+
+	DevCon.WriteLn("SuperVU%u: Resetting recompiler cache.", vuindex);
+
+	if (!recVUStack[vuindex]) recVUStack[vuindex] = new u8[SUPERVU_STACKSIZE * 4];
+	memzero_ptr<SUPERVU_STACKSIZE>(recVUStack[vuindex]);
+
+	s_recVUMem[vuindex]->Reset();
+	s_recVUPtr[vuindex] = *s_recVUMem[vuindex];
 }
 
 // clear the block and any joining blocks
@@ -847,16 +823,15 @@ void VuBaseBlock::GetInstsAtPc(int instpc, list<VuInstruction*>& listinsts)
 static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 {
 	pxAssert(vuindex < 2);
-	pxAssert(s_recVUPtr != NULL);
+	pxAssert(s_recVUPtr[vuindex] != NULL);
 	//Console.WriteLn("svu%c rec: %x", '0'+vuindex, startpc);
 
 	// if recPtr reached the mem limit reset whole mem
-	if (((uptr)s_recVUPtr - (uptr)s_recVUMem) >= VU_EXESIZE - 0x40000)
+	if ((s_recVUPtr[vuindex] < s_recVUMem[vuindex]->GetPtr()) || (s_recVUPtr[vuindex] >= s_recVUMem[vuindex]->GetPtrEnd() - _256kb))
 	{
-		//Console.WriteLn("SuperVU reset mem");
+		Console.WriteLn("SuperVU%u: Recompiler cache reset...", vuindex);
 		SuperVUReset(0);
 		SuperVUReset(1);
-		SuperVUReset(-1);
 		if (s_TotalVUCycles > 0)
 		{
 			// already executing, so return NULL
@@ -912,12 +887,12 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 #endif
 
 	// code generation
-	x86SetPtr(s_recVUPtr);
+	xSetPtr(s_recVUPtr[vuindex]);
 	branch = 0;
 
 	SuperVURecompile();
 
-	s_recVUPtr = x86Ptr;
+	s_recVUPtr[vuindex] = xGetPtr();
 
 	// set the function's range
 	VuFunctionHeader::RANGE r;
@@ -947,7 +922,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 	}
 	s_listBlocks.clear();
 
-	pxAssert(s_recVUPtr < s_recVUMem + VU_EXESIZE);
+	pxAssertDev(s_recVUPtr[vuindex] < s_recVUMem[vuindex]->GetPtrEnd(), "SuperVU recompiler cache exceeded! (possible memory corruption)");
 
 	return s_pFnHeader;
 }
@@ -2697,18 +2672,18 @@ void SuperVUFlush(int p, int wait)
 // executed only once per program
 static u32* SuperVUStaticAlloc(u32 size)
 {
-	pxAssert(recVUStackPtr + size <= recVUStack + SUPERVU_STACKSIZE);
+	pxAssert(recVUStackPtr[s_vu] + size <= recVUStack[s_vu] + SUPERVU_STACKSIZE);
 	// always zero
-	if (size == 4) *(u32*)recVUStackPtr = 0;
-	else memset(recVUStackPtr, 0, size);
-	recVUStackPtr += size;
-	return (u32*)(recVUStackPtr - size);
+	if (size == 4) *(u32*)recVUStackPtr[s_vu] = 0;
+	else memset(recVUStackPtr[s_vu], 0, size);
+	recVUStackPtr[s_vu] += size;
+	return (u32*)(recVUStackPtr[s_vu] - size);
 }
 
 static void SuperVURecompile()
 {
 	// save cpu state
-	recVUStackPtr = recVUStack;
+	recVUStackPtr[s_vu] = recVUStack[s_vu];
 
 	_initXMMregs();
 
@@ -4617,9 +4592,9 @@ recSuperVU0::recSuperVU0()
 	IsInterpreter = false;
 }
 
-void recSuperVU0::Allocate()
+void recSuperVU0::Reserve()
 {
-	SuperVUAlloc( 0 );
+	SuperVUAlloc(0);
 }
 
 void recSuperVU0::Shutdown() throw()
@@ -4645,6 +4620,15 @@ void recSuperVU0::Clear(u32 Addr, u32 Size)
 	SuperVUClear(Addr, Size, 0);
 }
 
+uint recSuperVU0::GetCacheReserve() const
+{
+	return sVU_EXESIZE / _1mb;
+}
+
+void recSuperVU0::SetCacheReserve( uint reserveInMegs ) const
+{
+	//microVU0.cacheSize = reserveInMegs * _1mb;
+}
 
 // --------------------------------------------------------------------------------------
 //  recSuperVU1 Interface
@@ -4655,9 +4639,9 @@ recSuperVU1::recSuperVU1()
 	IsInterpreter = false;
 }
 
-void recSuperVU1::Allocate()
+void recSuperVU1::Reserve()
 {
-	SuperVUAlloc( 1 );
+	SuperVUAlloc(1);
 }
 
 void recSuperVU1::Shutdown() throw()
@@ -4668,6 +4652,16 @@ void recSuperVU1::Shutdown() throw()
 void recSuperVU1::Reset()
 {
 	SuperVUReset( 1 );
+}
+
+uint recSuperVU1::GetCacheReserve() const
+{
+	return sVU_EXESIZE / _1mb;
+}
+
+void recSuperVU1::SetCacheReserve( uint reserveInMegs ) const
+{
+	//microVU0.cacheSize = reserveInMegs * _1mb;
 }
 
 #if 0

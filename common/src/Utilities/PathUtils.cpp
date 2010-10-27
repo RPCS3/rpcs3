@@ -136,7 +136,7 @@ wxString Path::Combine( const wxDirName& srcPath, const wxFileName& srcFile )
 
 wxString Path::Combine( const wxString& srcPath, const wxDirName& srcFile )
 {
-	return ((wxDirName)srcPath + srcFile).ToString();
+	return (wxDirName( srcPath ) + srcFile).ToString();
 }
 
 // Replaces the extension of the file with the one given.

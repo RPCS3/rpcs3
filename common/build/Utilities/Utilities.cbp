@@ -155,6 +155,8 @@
 		<Unit filename="../../include/Utilities/HashMap.h" />
 		<Unit filename="../../include/Utilities/IniInterface.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
+		<Unit filename="../../include/Utilities/MemsetFast.inl" />
+		<Unit filename="../../include/Utilities/PageFaultSource.h" />
 		<Unit filename="../../include/Utilities/Path.h" />
 		<Unit filename="../../include/Utilities/PersistentThread.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
@@ -200,6 +202,7 @@
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />
 		<Unit filename="../../src/Utilities/ThreadingDialogs.cpp" />
 		<Unit filename="../../src/Utilities/ThreadingInternal.h" />
+		<Unit filename="../../src/Utilities/VirtualMemory.cpp" />
 		<Unit filename="../../src/Utilities/pxCheckBox.cpp" />
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/pxStaticText.cpp" />

@@ -22,7 +22,7 @@
 
 #include "iR3000A.h"
 #include "BaseblockEx.h"
-#include "PageFaultSource.h"
+#include "System/RecTypes.h"
 
 #include <time.h>
 
@@ -759,8 +759,9 @@ static void recReserve()
 {
 	if (!recMem)
 	{
-		recMem = new RecompiledCodeReserve(L"R3000A recompiled code cache", _1mb * 2);
+		recMem = new RecompiledCodeReserve(L"R3000A Recompiler Cache", _1mb * 2);
 		recMem->Reserve( _16mb, HostMemoryMap::IOPrec );
+		ProfilerRegisterSource( "IOP Rec", *recMem, recMem->GetReserveSizeInBytes() );
 	}
 }
 
@@ -790,16 +791,15 @@ static void recAlloc()
 	if( s_pInstCache == NULL )
 		throw Exception::OutOfMemory( L"R3000 InstCache." );
 
-	ProfilerRegisterSource( "IOP Rec", *recMem, recMem->GetReserveSizeInBytes() );
 	_DynGen_Dispatchers();
 }
 
 void recResetIOP()
 {
+	DevCon.WriteLn( "iR3000A Recompiler reset." );
+
 	recAlloc();
 	recMem->Reset();
-
-	DevCon.WriteLn( "iR3000A Recompiler reset." );
 
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));

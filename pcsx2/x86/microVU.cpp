@@ -18,6 +18,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "microVU.h"
+#include "RecTypes.h"
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Clamp.inl"
@@ -99,22 +100,22 @@ void microVU::init(uint vuIndex) {
 	microMemSize	= (index ? 0x4000 : 0x1000);
 	progSize		= (index ? 0x4000 : 0x1000) / 4;
 	progMemMask		= progSize-1;
-	dispCache		= NULL;
-	cache			= NULL;
-	cacheSize		= mVUcacheSize;
-	regAlloc		= new microRegAlloc(index);
-
-	for (u32 i = 0; i < (progSize / 2); i++) {
-		prog.prog[i] = new deque<microProgram*>();
-	}
 
 	dispCache = SysMmapEx(0, mVUdispCacheSize, 0, (index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
 	if (!dispCache) throw Exception::OutOfMemory( index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );
 	memset(dispCache, 0xcc, mVUdispCacheSize);
 
-	// Allocates rec-cache and calls mVUreset()
-	mVUresizeCache(this, cacheSize + mVUcacheSafeZone);
-	//if (vuIndex) gen_memcpy_vibes();
+	cache_reserve = new RecompiledCodeReserve( pxsFmt("Micro VU%u Recompiler Cache", index) );
+	cache = index ?
+		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU1rec ) :
+		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU0rec );
+
+	if(!cache_reserve->IsOk())
+		throw Exception::VirtualMemoryMapConflict().SetDiagMsg(pxsFmt( L"Micro VU%u Recompiler Cache", index ));
+
+	ProfilerRegisterSource	(index ? "mVU1 Rec" : "mVU0 Rec", cache, cacheSize);
+
+	regAlloc		= new microRegAlloc(index);
 }
 
 // Resets Rec Data
@@ -144,9 +145,15 @@ void microVU::reset() {
 	u8* z = cache;
 	prog.x86start	= z;
 	prog.x86ptr		= z;
-	prog.x86end		= (u8*)((uptr)z + (uptr)(cacheSize - mVUcacheSafeZone)); // "Safe Zone"
+	prog.x86end		= z + (cacheSize - mVUcacheSafeZone);
 
 	for (u32 i = 0; i < (progSize / 2); i++) {
+		if (!prog.prog[i])
+		{
+			prog.prog[i] = new deque<microProgram*>();
+			continue;
+		}
+
 		deque<microProgram*>::iterator it(prog.prog[i]->begin());
 		for ( ; it != prog.prog[i]->end(); ++it) {
 			if (index)	mVUdeleteProg<1>(it[0]);
@@ -161,11 +168,17 @@ void microVU::reset() {
 // Free Allocated Resources
 void microVU::close() {
 
-	if (dispCache)	{ HostSys::Munmap(dispCache, mVUdispCacheSize); dispCache = NULL; }
-	if (cache)		{ HostSys::Munmap(cache, cacheSize); cache = NULL; }
+	if (cache_reserve && cache_reserve->IsOk())
+	{
+		ProfilerTerminateSource	(index ? "mVU1 Rec" : "mVU0 Rec");
+		safe_delete(cache_reserve);
+	}
+
+	SafeSysMunmap(dispCache, mVUdispCacheSize);
 
 	// Delete Programs and Block Managers
 	for (u32 i = 0; i < (progSize / 2); i++) {
+		if (!prog.prog[i]) continue;
 		deque<microProgram*>::iterator it(prog.prog[i]->begin());
 		for ( ; it != prog.prog[i]->end(); ++it) {
 			if (index)	mVUdeleteProg<1>(it[0]);
@@ -173,35 +186,6 @@ void microVU::close() {
 		}
 		safe_delete(prog.prog[i]);
 	}
-}
-
-static void mVUresizeCache(mV, u32 size) {
-
-	if (size >= (u32)mVUcacheMaxSize) {
-		if (mVU->cacheSize==mVUcacheMaxSize) {
-			// We can't grow the rec any larger, so just reset it and start over.
-			//(if we don't reset, the rec will eventually crash)
-			Console.WriteLn(Color_Magenta, "microVU%d: Cannot grow cache, size limit reached! [%dmb].  Resetting rec.", mVU->index, mVU->cacheSize/_1mb);
-			mVU->reset();
-			return;
-		}
-		size = mVUcacheMaxSize;
-	}
-
-	if (mVU->cache) Console.WriteLn(Color_Green, "microVU%d: Attempting to resize Cache [%dmb]", mVU->index, size/_1mb);
-
-	u8* cache = SysMmapEx(mVU->index ? HostMemoryMap::mVU1rec : HostMemoryMap::mVU0rec, size, 0, (mVU->index ? "Micro VU1 RecCache" : "Micro VU0 RecCache"));
-	if(!cache && !mVU->cache) throw Exception::OutOfMemory( wxsFormat( L"Micro VU%d recompiled code cache", mVU->index) );
-	if(!cache) { Console.Error("microVU%d Error - Cache Resize Failed...", mVU->index); mVU->reset(); return; }
-	if (mVU->cache) {
-		HostSys::Munmap(mVU->cache, mVU->cacheSize);
-		ProfilerTerminateSource(isVU1?"mVU1 Rec":"mVU0 Rec");
-	}
-
-	mVU->cache	   = cache;
-	mVU->cacheSize = size;
-	ProfilerRegisterSource(isVU1?"mVU1 Rec":"mVU0 Rec", mVU->cache, mVU->cacheSize);
-	mVU->reset();
 }
 
 // Clears Block Data in specified range
@@ -323,55 +307,40 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 // recMicroVU0 / recMicroVU1
 //------------------------------------------------------------------
 
-static u32 mvu0_allocated = 0;
-static u32 mvu1_allocated = 0;
-
 recMicroVU0::recMicroVU0()		  { m_Idx = 0; IsInterpreter = false; }
 recMicroVU1::recMicroVU1()		  { m_Idx = 1; IsInterpreter = false; }
 void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(&microVU0); }
 void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(&microVU1); }
 
-void recMicroVU0::Allocate() {
-	if(!m_AllocCount) {
-		m_AllocCount++;
-		if (AtomicExchange(mvu0_allocated, 1) == 0)
-			microVU0.init(0);
-	}
+void recMicroVU0::Reserve() {
+	if (AtomicExchange(m_Reserved, 1) == 0)
+		microVU0.init(0);
 }
-void recMicroVU1::Allocate() {
-	if(!m_AllocCount) {
-		m_AllocCount++;
-		if (AtomicExchange(mvu1_allocated, 1) == 0)
-			microVU1.init(1);
-	}
+void recMicroVU1::Reserve() {
+	if (AtomicExchange(m_Reserved, 1) == 0)
+		microVU1.init(1);
 }
 
 void recMicroVU0::Shutdown() throw() {
-	if (m_AllocCount > 0) {
-		m_AllocCount--;
-		if (AtomicExchange(mvu0_allocated, 0) == 1)
-			microVU0.close();
-	}
+	if (AtomicExchange(m_Reserved, 0) == 1)
+		microVU0.close();
 }
 void recMicroVU1::Shutdown() throw() {
-	if (m_AllocCount > 0) {
-		m_AllocCount--;
-		if (AtomicExchange(mvu1_allocated, 0) == 1)
-			microVU1.close();
-	}
+	if (AtomicExchange(m_Reserved, 0) == 1)
+		microVU1.close();
 }
 
 void recMicroVU0::Reset() {
-	if(!pxAssertDev(m_AllocCount, "MicroVU0 CPU Provider has not been allocated prior to reset!")) return;
+	if(!pxAssertDev(m_Reserved, "MicroVU0 CPU Provider has not been reserved prior to reset!")) return;
 	microVU0.reset();
 }
 void recMicroVU1::Reset() {
-	if(!pxAssertDev(m_AllocCount, "MicroVU1 CPU Provider has not been allocated prior to reset!")) return;
+	if(!pxAssertDev(m_Reserved, "MicroVU1 CPU Provider has not been reserved prior to reset!")) return;
 	microVU1.reset();
 }
 
 void recMicroVU0::Execute(u32 cycles) {
-	pxAssert(mvu0_allocated); // please allocate me first! :|
+	pxAssert(m_Reserved); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
@@ -381,17 +350,35 @@ void recMicroVU0::Execute(u32 cycles) {
 	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
 }
 void recMicroVU1::Execute(u32 cycles) {
-	pxAssert(mvu1_allocated); // please allocate me first! :|
+	pxAssert(m_Reserved); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
 }
 
 void recMicroVU0::Clear(u32 addr, u32 size) {
-	pxAssert(mvu0_allocated); // please allocate me first! :|
+	pxAssert(m_Reserved); // please allocate me first! :|
 	mVUclear(&microVU0, addr, size);
 }
 void recMicroVU1::Clear(u32 addr, u32 size) {
-	pxAssert(mvu1_allocated); // please allocate me first! :|
+	pxAssert(m_Reserved); // please allocate me first! :|
 	mVUclear(&microVU1, addr, size);
+}
+
+uint recMicroVU0::GetCacheReserve() const
+{
+	return microVU0.cacheSize / _1mb;
+}
+uint recMicroVU1::GetCacheReserve() const
+{
+	return microVU1.cacheSize / _1mb;
+}
+
+void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const
+{
+	microVU0.cacheSize = reserveInMegs * _1mb;
+}
+void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const
+{
+	microVU1.cacheSize = reserveInMegs * _1mb;
 }

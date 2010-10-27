@@ -40,10 +40,11 @@ BIOS
 #include "IopCommon.h"
 #include "VUmicro.h"
 #include "GS.h"
-#include "System/PageFaultSource.h"
 
 #include "ps2/HwInternal.h"
 #include "ps2/BiosTools.h"
+
+#include "Utilities/PageFaultSource.h"
 
 #ifdef ENABLECACHE
 #include "Cache.h"
