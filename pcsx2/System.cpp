@@ -510,14 +510,14 @@ u8* SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
-		if( base != NULL )
+		if( base )
 		{
 			DbgCon.Warning( "First try failed allocating %s at address 0x%x", caller, base );
 
 			// Let's try again at an OS-picked memory area, and then hope it meets needed
 			// boundschecking criteria below.
 			SafeSysMunmap( Mem, size );
-			Mem = (u8*)HostSys::Mmap( NULL, size );
+			Mem = (u8*)HostSys::Mmap( 0, size );
 		}
 
 		if( (bounds != 0) && (((uptr)Mem + size) > bounds) )

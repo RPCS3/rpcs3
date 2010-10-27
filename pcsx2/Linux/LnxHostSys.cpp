@@ -18,7 +18,8 @@
 #include <sys/mman.h>
 #include <signal.h>
 #include "Common.h"
-#include "System/PageFaultSource.h"
+
+#include "Utilities/PageFaultSource.h"
 
 extern void SignalExit(int sig);
 
@@ -30,11 +31,11 @@ static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 	// Note: Use of most stdio functions isn't safe here.  Avoid console logs,
 	// assertions, file logs, or just about anything else useful.
 
-	Source_PageFault.Dispatch( PageFaultInfo( (uptr)siginfo->si_addr & ~m_pagemask ) );
+	Source_PageFault->Dispatch( PageFaultInfo( (uptr)siginfo->si_addr & ~m_pagemask ) );
 
 	// resumes execution right where we left off (re-executes instruction that
 	// caused the SIGSEGV).
-	if( Source_PageFault.WasHandled() ) return;
+	if( Source_PageFault->WasHandled() ) return;
 
 	// Bad mojo!  Completely invalid address.
 	// Instigate a trap if we're in a debugger, and if not then do a SIGKILL.
@@ -45,6 +46,7 @@ static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 
 void InstallSignalHandler()
 {
+	Console.WriteLn("Installing POSIX SIGSEGV handler...");
 	struct sigaction sa;
 
 	sigemptyset(&sa.sa_mask);

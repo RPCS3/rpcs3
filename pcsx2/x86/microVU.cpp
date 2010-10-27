@@ -18,7 +18,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "microVU.h"
-#include "RecTypes.h"
+#include "System/RecTypes.h"
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
 #include "microVU_Clamp.inl"

@@ -18,10 +18,11 @@
 
 #include <sys/mman.h>
 #include <signal.h>
+#include <errno.h>
 
 static __ri void PageSizeAssertionTest( size_t size )
 {
-	pxAssert( (__pagesize == getpagesize()), pxsFmt(
+	pxAssertMsg( (__pagesize == getpagesize()), pxsFmt(
 		"Internal system error: Operating system pagesize does not match compiled pagesize.\n\t"
 		L"\tOS Page Size: 0x%x (%d), Compiled Page Size: 0x%x (%u)",
 		getpagesize(), getpagesize(), __pagesize, __pagesize )
@@ -64,26 +65,26 @@ void HostSys::MmapReset(void* base, size_t size)
 	// pretty well stops all PCSX2 threads anyway).
 
 	Munmap(base, size);
-	void* result = Mmap(base, size);
+	void* result = Mmap((uptr)base, size);
 
-	pxAssertRel (result != base, pxsFmt(
+	pxAssertRel ((uptr)result != (uptr)base, pxsFmt(
 		"Virtual memory decommit failed: memory at 0x%08X -> 0x%08X could not be remapped.  "
 		"This is likely caused by multi-thread memory contention.", base, base+size
 	));
 }
 
-void* HostSys::Mmap(void* base, size_t size)
+void* HostSys::Mmap(uptr base, size_t size)
 {
 	PageSizeAssertionTest(size);
 
 	// MAP_ANONYMOUS - means we have no associated file handle (or device).
 
-	return mmap(base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	return mmap((void*)base, size, PROT_EXEC | PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
-void HostSys::Munmap(void* base, size_t size)
+void HostSys::Munmap(uptr base, size_t size)
 {
-	munmap(base, size);
+	munmap((void*)base, size);
 }
 
 void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode& mode )
@@ -103,20 +104,20 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 		switch(errno)
 		{
 			case EINVAL:
-				pxFailDev(pxsFmt(L"mprotect returned EINVAL @ 0x%08X -> 0x%08X  (mode=%s)"),
-					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str()
+				pxFailDev(pxsFmt(L"mprotect returned EINVAL @ 0x%08X -> 0x%08X  (mode=%s)",
+					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
 				);
 			break;
 			
 			case ENOMEM:
-				throw Exception::OutOfMemory( psxFmt( L"mprotect failed @ 0x%08X -> 0x%08X  (mode=%s)"),
-					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str()
+				throw Exception::OutOfMemory( pxsFmt( L"mprotect failed @ 0x%08X -> 0x%08X  (mode=%s)",
+					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
 				);
 			break;
 			
 			case EACCES:
 			break;
 		}
-		throw Exception::OutOfMemory()
+		throw Exception::OutOfMemory();
 	}
 }
