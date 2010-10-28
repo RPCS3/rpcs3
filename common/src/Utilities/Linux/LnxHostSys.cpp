@@ -99,7 +99,7 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 
 	int result = mprotect( baseaddr, size, lnxmode );
 
-	if (!result)
+	if (result != 0)
 	{
 		switch(errno)
 		{
