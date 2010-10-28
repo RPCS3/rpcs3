@@ -189,6 +189,9 @@ struct R3000Acpu {
 	s32 (*ExecuteBlock)( s32 eeCycles );		// executes the given number of EE cycles.
 	void (*Clear)(u32 Addr, u32 Size);
 	void (*Shutdown)();
+	
+	uint (*GetCacheReserve)();
+	void (*SetCacheReserve)( uint reserveInMegs );
 };
 
 extern R3000Acpu *psxCpu;

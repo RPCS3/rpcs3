@@ -376,6 +376,9 @@ struct R5900cpu
 	//   doesn't matter if we're stripping it out soon. ;)
 	//
 	void (*Clear)(u32 Addr, u32 Size);
+	
+	uint (*GetCacheReserve)();
+	void (*SetCacheReserve)( uint reserveInMegs );
 };
 
 extern R5900cpu *Cpu;

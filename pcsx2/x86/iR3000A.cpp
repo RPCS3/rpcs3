@@ -1397,12 +1397,26 @@ StartRecomp:
 	s_pCurBlockEx = NULL;
 }
 
+static void recSetCacheReserve( uint reserveInMegs )
+{
+	//m_ConfiguredCacheReserve = reserveInMegs * _1mb;
+}
+
+static uint recGetCacheReserve()
+{
+	return 0;
+	//return m_ConfiguredCacheReserve / _1mb;
+}
+
 R3000Acpu psxRec = {
 	recReserve,
 	recResetIOP,
 	recExecute,
 	recExecuteBlock,
 	recClearIOP,
-	recShutdown
+	recShutdown,
+	
+	recGetCacheReserve,
+	recSetCacheReserve
 };
 

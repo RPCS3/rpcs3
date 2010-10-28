@@ -64,6 +64,7 @@ bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalExcept
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
 static RecompiledCodeReserve* recMem = NULL;
+static uptr m_ConfiguredCacheReserve = _64mb;
 
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
@@ -548,6 +549,42 @@ static void recThrowHardwareDeficiency( const wxChar* extFail )
 		.SetUserMsg(pxsFmt(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
+// This error message is shared by R5900, R3000, and microVU recompilers.  It is not used by the
+// SuperVU recompiler, since it has its own customized message.
+wxString GetMsg_RecVmFailed( const char* recName )
+{
+	return pxE( ".Error:Recompiler:VirtualMemoryAlloc",
+		pxsFmt(
+			"The %s recompiler was unable to reserve contiguous memory required "
+			"for internal caches.  This problem may be fixable by reducing the default "
+			"cache sizes for all PCSX2 recompilers, found under Host Settings.",
+			recName
+		)
+	);
+}
+
+static void recReserveCache()
+{
+	if (!recMem) recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
+
+	recMem->Reserve( m_ConfiguredCacheReserve, HostMemoryMap::EErec );
+
+	while (!recMem->IsOk() && (m_ConfiguredCacheReserve >= 16))
+	{
+		m_ConfiguredCacheReserve /= 2;
+		recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::EErec );
+	}
+	
+	if (!recMem->IsOk())
+	{
+		throw Exception::VirtualMemoryMapConflict()
+			.SetDiagMsg(pxsFmt( L"R5900-32 recompiled code cache could not be mapped." ))
+			.SetUserMsg(GetMsg_RecVmFailed("R5900-32"));
+	}
+
+	ProfilerRegisterSource( "EE Rec", *recMem, recMem->GetReserveSizeInBytes() );
+}
+
 static void recReserve()
 {
 	// Hardware Requirements Check...
@@ -561,8 +598,7 @@ static void recReserve()
 	if ( !x86caps.hasStreamingSIMD2Extensions )
 		recThrowHardwareDeficiency( L"SSE2" );
 
-	recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
-	recMem->Reserve( _64mb, HostMemoryMap::EErec );
+	recReserveCache();
 }
 
 static void recAlloc()
@@ -595,7 +631,6 @@ static void recAlloc()
 
 	// No errors.. Proceed with initialization:
 
-	ProfilerRegisterSource( "EE Rec", *recMem, recMem->GetReserveSizeInBytes() );
 	_DynGen_Dispatchers();
 
 	x86FpuState = FPU_STATE;
@@ -1885,6 +1920,16 @@ static void recThrowException( const BaseException& ex )
 #endif
 }
 
+static void recSetCacheReserve( uint reserveInMegs )
+{
+	m_ConfiguredCacheReserve = reserveInMegs * _1mb;
+}
+
+static uint recGetCacheReserve()
+{
+	return m_ConfiguredCacheReserve / _1mb;
+}
+
 R5900cpu recCpu =
 {
 	recReserve,
@@ -1898,4 +1943,7 @@ R5900cpu recCpu =
 	recThrowException,
 	recThrowException,
 	recClear,
+	
+	recGetCacheReserve,
+	recSetCacheReserve,
 };
