@@ -19,6 +19,7 @@ namespace YAML
 		bool WriteAlias(ostream& out, const std::string& str);
 		bool WriteAnchor(ostream& out, const std::string& str);
 		bool WriteTag(ostream& out, const std::string& str, bool verbatim);
+		bool WriteBinary(ostream& out, const char *data, std::size_t size);
 	}
 }
 

@@ -724,5 +724,19 @@ namespace YAML
 		PostAtomicWrite();
 		return *this;
 	}
+
+	Emitter& Emitter::Write(const _Binary& binary)
+	{
+		if(!good())
+			return *this;
+
+		// TODO: write tag !!binary
+		
+		PreAtomicWrite();
+		EmitSeparationIfNecessary();
+		Utils::WriteBinary(m_stream, binary.data, binary.size);
+		PostAtomicWrite();
+		return *this;
+	}
 }
 

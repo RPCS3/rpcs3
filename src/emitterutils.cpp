@@ -313,6 +313,43 @@ namespace YAML
 				out << ">";
 			return true;
 		}
+
+		bool WriteBinary(ostream& out, const char *data, std::size_t size)
+		{
+			static const char encoding[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+			const char PAD = '=';
+			
+			out << "\"";
+			std::size_t chunks = size / 3;
+			std::size_t remainder = size % 3;
+
+			for(std::size_t i=0;i<chunks;i++, data += 3) {
+				out << encoding[data[0] >> 2];
+				out << encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
+				out << encoding[((data[1] & 0xf) << 2) | (data[2] >> 6)];
+				out << encoding[data[2] & 0x3f];
+			}
+			
+			switch(remainder) {
+				case 0:
+					break;
+				case 1:
+					out << encoding[data[0] >> 2];
+					out << encoding[((data[0] & 0x3) << 4)];
+					out << PAD;
+					out << PAD;
+					break;
+				case 2:
+					out << encoding[data[0] >> 2];
+					out << encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
+					out << encoding[((data[1] & 0xf) << 2)];
+					out << PAD;
+					break;
+			}
+			
+			out << "\"";
+			return true;
+		}
 	}
 }
 
