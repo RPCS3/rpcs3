@@ -84,24 +84,32 @@ namespace YAML
 	}
 	
 	struct _Tag {
-		explicit _Tag(const std::string& content_)
-		: content(content_), verbatim(true)
+		struct Type { enum value { Verbatim, PrimaryHandle, NamedHandle }; };
+		
+		explicit _Tag(const std::string& prefix_, const std::string& content_, Type::value type_)
+		: prefix(prefix_), content(content_), type(type_)
 		{
 		}
+		std::string prefix;
 		std::string content;
-		bool verbatim;
+		Type::value type;
 	};
 	
-	typedef _Tag VerbatimTag;
-	
-	struct LocalTag : public _Tag
-	{
-		explicit LocalTag(const std::string& content_)
-		: _Tag(content_)
-		{
-			verbatim = false;
-		}
-	};
+	inline _Tag VerbatimTag(const std::string content) {
+		return _Tag("", content, _Tag::Type::Verbatim);
+	}
+
+	inline _Tag LocalTag(const std::string content) {
+		return _Tag("", content, _Tag::Type::PrimaryHandle);
+	}
+
+	inline _Tag LocalTag(const std::string& prefix, const std::string content) {
+		return _Tag(prefix, content, _Tag::Type::NamedHandle);
+	}
+
+	inline _Tag SecondaryTag(const std::string content) {
+		return _Tag("", content, _Tag::Type::NamedHandle);
+	}
 
 	struct _Comment {
 		_Comment(const std::string& content_): content(content_) {}

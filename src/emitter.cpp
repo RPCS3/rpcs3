@@ -680,27 +680,31 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		EmitTag(tag.verbatim, tag);
-		return *this;
-	}
-	
-	void Emitter::EmitTag(bool verbatim, const _Tag& tag)
-	{
+
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
-		if(!Utils::WriteTag(m_stream, tag.content, verbatim)) {
+		
+		bool success = false;
+		if(tag.type == _Tag::Type::Verbatim)
+			success = Utils::WriteTag(m_stream, tag.content, true);
+		else if(tag.type == _Tag::Type::PrimaryHandle)
+			success = Utils::WriteTag(m_stream, tag.content, false);
+		else
+			success = Utils::WriteTagWithPrefix(m_stream, tag.prefix, tag.content);
+		
+		if(!success) {
 			m_pState->SetError(ErrorMsg::INVALID_TAG);
-			return;
+			return *this;
 		}
+		
 		m_pState->RequireSeparation();
 		// Note: no PostAtomicWrite() because we need another value for this node
+		return *this;
 	}
-	
+
 	void Emitter::EmitKindTag()
 	{
-		_Tag tag("");
-		EmitTag(false, tag);
+		Write(LocalTag(""));
 	}
 
 	Emitter& Emitter::Write(const _Comment& comment)
@@ -727,10 +731,10 @@ namespace YAML
 
 	Emitter& Emitter::Write(const _Binary& binary)
 	{
+		Write(SecondaryTag("binary"));
+
 		if(!good())
 			return *this;
-
-		// TODO: write tag !!binary
 		
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();

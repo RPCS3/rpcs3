@@ -314,6 +314,36 @@ namespace YAML
 			return true;
 		}
 
+		bool WriteTagWithPrefix(ostream& out, const std::string& prefix, const std::string& tag)
+		{
+			out << "!";
+			StringCharSource prefixBuffer(prefix.c_str(), prefix.size());
+			while(prefixBuffer) {
+				int n = Exp::URI().Match(prefixBuffer);
+				if(n <= 0)
+					return false;
+				
+				while(--n >= 0) {
+					out << prefixBuffer[0];
+					++prefixBuffer;
+				}
+			}
+
+			out << "!";
+			StringCharSource tagBuffer(tag.c_str(), tag.size());
+			while(tagBuffer) {
+				int n = Exp::Tag().Match(tagBuffer);
+				if(n <= 0)
+					return false;
+				
+				while(--n >= 0) {
+					out << tagBuffer[0];
+					++tagBuffer;
+				}
+			}
+			return true;
+		}
+
 		bool WriteBinary(ostream& out, const char *data, std::size_t size)
 		{
 			static const char encoding[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
