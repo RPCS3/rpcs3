@@ -195,19 +195,47 @@ Exception::RuntimeError::RuntimeError( const std::exception& ex, const wxString&
 Exception::OutOfMemory::OutOfMemory( const wxString& allocdesc )
 {
 	AllocDescription	= allocdesc;
-	m_message_diag		= L"Out of memory exception, while allocating the %s.";
 	m_message_user		= _("Memory allocation failure!  Your system has insufficient memory or resources to meet PCSX2's lofty needs.");
 }
 
 wxString Exception::OutOfMemory::FormatDiagnosticMessage() const
 {
-	return wxsFormat(m_message_diag, AllocDescription.c_str());
+	FastFormatUnicode details;
+	if (!m_message_diag.IsEmpty())
+		details.Write(":\n%s",m_message_diag.c_str());
+
+	return pxsFmt(L"Out of memory while allocating '%s'%s", AllocDescription.c_str(), details.c_str());
 }
 
 wxString Exception::OutOfMemory::FormatDisplayMessage() const
 {
 	if (m_message_user.IsEmpty()) return FormatDisplayMessage();
-	return m_message_user + pxsFmt( L"\n\nInternal allocation descriptor: %s", AllocDescription.c_str());
+	return m_message_user;
+}
+
+
+// --------------------------------------------------------------------------------------
+//  Exception::VirtualMemoryMapConflict   (implementations)
+// --------------------------------------------------------------------------------------
+Exception::VirtualMemoryMapConflict::VirtualMemoryMapConflict( const wxString& allocdesc )
+{
+	AllocDescription	= allocdesc;
+	m_message_user		= _("Virtual memory mapping failure!  Your system may have conflicting device drivers, services, or may simply have insufficient memory or resources to meet PCSX2's lofty needs.");
+}
+
+wxString Exception::VirtualMemoryMapConflict::FormatDiagnosticMessage() const
+{
+	FastFormatUnicode details;
+	if (!m_message_diag.IsEmpty())
+		details.Write(":\n%s",m_message_diag.c_str());
+
+	return pxsFmt(L"Out of virtual memory while reserving '%s'%s", AllocDescription.c_str(), details.c_str());
+}
+
+wxString Exception::VirtualMemoryMapConflict::FormatDisplayMessage() const
+{
+	if (m_message_user.IsEmpty()) return FormatDisplayMessage();
+	return m_message_user;
 }
 
 

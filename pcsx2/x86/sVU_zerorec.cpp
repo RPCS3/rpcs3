@@ -357,7 +357,7 @@ static void SuperVUAlloc(int vuindex)
 	if (!s_recVUMem[vuindex]->IsOk())
 	{
 		safe_delete(s_recVUMem[vuindex]);
-		throw Exception::VirtualMemoryMapConflict()
+		throw Exception::VirtualMemoryMapConflict( s_recVUMem[vuindex]->GetName() )
 			.SetDiagMsg(pxsFmt( L"SuperVU failed to allocate virtual memory below 256MB." ))
 			.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
 				L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "

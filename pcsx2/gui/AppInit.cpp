@@ -531,8 +531,9 @@ bool Pcsx2App::OnInit()
 	g_Conf = new AppConfig();
     wxInitAllImageHandlers();
 
-	Console.WriteLn("Begin parsing commandline...");
+	Console.WriteLn("Command line parsing...");
 	if( !_parent::OnInit() ) return false;
+	Console.WriteLn("Command line parsed!");
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 

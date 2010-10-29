@@ -577,7 +577,7 @@ static void recReserveCache()
 	
 	if (!recMem->IsOk())
 	{
-		throw Exception::VirtualMemoryMapConflict()
+		throw Exception::VirtualMemoryMapConflict(recMem->GetName())
 			.SetDiagMsg(pxsFmt( L"R5900-32 recompiled code cache could not be mapped." ))
 			.SetUserMsg(GetMsg_RecVmFailed("R5900-32"));
 	}

@@ -133,7 +133,8 @@ public:
 	virtual void Free();
 
 	bool IsOk() const { return m_baseptr !=  NULL; }
-	
+	wxString GetName() const { return Name; }
+
 	uptr GetReserveSizeInBytes() const { return m_reserved * __pagesize; }
 	uptr GetReserveSizeInPages() const { return m_reserved; }
 

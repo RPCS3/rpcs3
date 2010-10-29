@@ -209,7 +209,7 @@ public: \
 	//
 	class OutOfMemory : public RuntimeError
 	{
-		DEFINE_RUNTIME_EXCEPTION( OutOfMemory, RuntimeError, wxLt("Out of memory?!") )
+		DEFINE_RUNTIME_EXCEPTION( OutOfMemory, RuntimeError, wxEmptyString )
 
 	public:
 		wxString	AllocDescription;
@@ -236,7 +236,12 @@ public: \
 	// we'd really like to have access to.
 	class VirtualMemoryMapConflict : public OutOfMemory
 	{
-		DEFINE_RUNTIME_EXCEPTION( VirtualMemoryMapConflict, OutOfMemory, wxLt("Virtual memory map confict: Unable to claim specific required memory regions.") )
+		DEFINE_RUNTIME_EXCEPTION( VirtualMemoryMapConflict, OutOfMemory, wxEmptyString )
+
+		VirtualMemoryMapConflict( const wxString& allocdesc );
+
+		virtual wxString FormatDisplayMessage() const;
+		virtual wxString FormatDiagnosticMessage() const;
 	};
 
 	class HardwareDeficiency : public RuntimeError

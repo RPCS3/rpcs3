@@ -595,7 +595,8 @@ void memAlloc()
 		eeMem = (EEVM_MemoryAllocMess*)vtlb_malloc( sizeof(*eeMem), 4096 );
 
 	if( eeMem == NULL)
-		throw Exception::OutOfMemory( L"memAlloc > failed to allocate PS2's base ram/rom/scratchpad." );
+		throw Exception::OutOfMemory( L"PS2 Main Memory (VTLB)" )
+			.SetUserMsg(L"Could not allocate memory needed for the PS2 virtual machine's main memory (approx. 42mb).");
 
 	pxAssume(Source_PageFault);
 	mmap_faultHandler = new mmap_PageFaultHandler();
