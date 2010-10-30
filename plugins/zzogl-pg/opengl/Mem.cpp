@@ -24,6 +24,9 @@
 
 #include "Mem_Transmit.h"
 #include "Mem_Swizzle.h"
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 BLOCK m_Blocks[0x40]; // do so blocks are indexable
 
@@ -129,6 +132,12 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 			u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits / 8;
 			swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize), 0xffffffff);
 		}
+#ifdef ZEROGS_SSE2
+        // Note: swizzle function uses some non temporal move (mm_stream) instruction.
+        // store fence insures that previous store are finish before execute new one.
+        _mm_sfence();
+
+#endif
 
 		/* transfer the rest */
 		if (alignedPt.x < gs.imageEndX)
