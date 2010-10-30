@@ -1249,14 +1249,6 @@
 							RelativePath="..\..\CDVD\CDVDisoReader.h"
 							>
 						</File>
-						<File
-							RelativePath="..\..\CDVD\IsoFileTools.cpp"
-							>
-						</File>
-						<File
-							RelativePath="..\..\CDVD\IsoFileTools.h"
-							>
-						</File>
 					</Filter>
 				</Filter>
 				<Filter

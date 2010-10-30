@@ -90,6 +90,13 @@ void SafeArray<T>::Dispose()
 	safe_free( m_ptr );
 }
 
+template< typename T >
+T* SafeArray<T>::_getPtr( uint i ) const
+{
+	IndexBoundsAssumeDev( Name.c_str(), i, m_size );
+	return &m_ptr[i];
+}
+
 // reallocates the array to the explicit size.  Can be used to shrink or grow an
 // array, and bypasses the internal threshold growth indicators.
 template< typename T >
@@ -201,6 +208,13 @@ SafeList<T>::SafeList( int initialSize, const wxChar* name )
 		new (&m_ptr[i]) T();
 	}
 
+}
+
+template< typename T >
+T* SafeList<T>::_getPtr( uint i ) const
+{
+	IndexBoundsAssumeDev( Name.c_str(), i, m_length );
+	return &m_ptr[i];
 }
 
 // Ensures that the allocation is large enough to fit data of the

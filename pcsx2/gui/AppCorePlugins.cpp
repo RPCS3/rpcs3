@@ -418,6 +418,8 @@ protected:
 
 int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 {
+	if (!searchpath.Exists()) return 0;
+
 	ScopedPtr<wxArrayString> placebo;
 	wxArrayString* realdest = dest;
 	if( realdest == NULL )
@@ -432,8 +434,23 @@ int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 	wxString pattern( L"*%s*" );
 #endif
 
-	return searchpath.Exists() ?
-		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( pattern, wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
+	wxDir::GetAllFiles( searchpath.ToString(), realdest, pxsFmt( pattern, wxDynamicLibrary::GetDllExt()), wxDIR_FILES );
+	
+	// SECURITY ISSUE:  (applies primarily to Windows, but is a good idea on any platform)
+	//   The search folder order for plugins can vary across operating systems, and in some poorly designed
+	//   cases (old versions of windows), the search order is a security hazard because it does not
+	//   search where you might really expect.  In our case wedo not want *any* searching.  The only
+	//   plugins we want to load are the ones we found in the directly the user specified, so make
+	//   sure all paths are FULLY QUALIFIED ABSOLUTE PATHS.
+	//
+	// (for details, read: http://msdn.microsoft.com/en-us/library/ff919712.aspx )
+
+	for (uint i=0; i<realdest->GetCount(); ++i )
+	{
+		(*realdest)[i] = Path::MakeAbsolute((*realdest)[i]);
+	}
+
+	return realdest->GetCount();
 }
 
 // Posts a message to the App to reload plugins.  Plugins are loaded via a background thread

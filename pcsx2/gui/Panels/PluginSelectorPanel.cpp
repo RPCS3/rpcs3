@@ -634,8 +634,24 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 	if( ConfigureFnptr configfunc = (ConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
+		
 		wxWindowDisabler disabler;
 		ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(pid) );
+		if (!CorePlugins.AreLoaded())
+		{
+			typedef void	(CALLBACK* SetDirFnptr)( const char* dir );
+
+			if( SetDirFnptr func = (SetDirFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"setSettingsDir" ) )
+			{
+				func( GetSettingsFolder().ToUTF8() );
+			}
+
+			if( SetDirFnptr func = (SetDirFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"setLogDir" ) )
+			{
+				func( GetLogFolder().ToUTF8() );
+			}
+		}
+
 		configfunc();
 	}
 }

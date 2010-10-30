@@ -148,12 +148,12 @@ BEGIN
     CTEXT           "Seekwindow Size",IDC_STATIC,70,125,66,9
     CONTROL         "",IDC_OVERLAP_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,50,170,105,10
     CTEXT           "Overlap",IDC_STATIC,86,162,34,9
-    LTEXT           "50",IDC_STATIC,50,112,9,8
-    LTEXT           "90",IDC_STATIC,146,112,9,8
+    LTEXT           "20",IDC_STATIC,50,112,9,8
+    LTEXT           "100",IDC_STATIC,146,112,13,8
     LTEXT           "10",IDC_STATIC,50,149,9,8
-    LTEXT           "32",IDC_STATIC,146,149,9,8
-    LTEXT           "3",IDC_STATIC,52,184,8,8
-    LTEXT           "25",IDC_STATIC,146,184,9,8
+    LTEXT           "30",IDC_STATIC,146,149,9,8
+    LTEXT           "5",IDC_STATIC,52,184,8,8
+    LTEXT           "15",IDC_STATIC,146,184,9,8
     PUSHBUTTON      "Reset Defaults",IDC_RESET_DEFAULTS,61,62,82,12
 END
 

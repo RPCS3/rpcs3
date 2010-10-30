@@ -145,12 +145,12 @@ void pxActionEvent::SetException( const BaseException& ex )
 
 void pxActionEvent::SetException( BaseException* ex )
 {
-	const wxString& prefix( wxsFormat(L"(%s) ", GetClassInfo()->GetClassName()) );
+	const wxString& prefix( pxsFmt(L"(%s) ", GetClassInfo()->GetClassName()) );
 	ex->DiagMsg() = prefix + ex->DiagMsg();
 
 	if( !m_state )
 	{
-		ScopedPtr<BaseException> exptr( ex );		// auto-delete it after handling.
+		ScopedExcept exptr( ex );		// auto-delete it after handling.
 		ex->Rethrow();
 	}
 
@@ -209,7 +209,7 @@ void pxSynchronousCommandEvent::SetException( BaseException* ex )
 {
 	if( !m_sync )
 	{
-		ScopedPtr<BaseException> exptr( ex );		// auto-delete it after handling.
+		ScopedExcept exptr( ex );		// auto-delete it after handling.
 		ex->Rethrow();
 	}
 
@@ -278,7 +278,7 @@ pxExceptionEvent::pxExceptionEvent( const BaseException& ex )
 
 void pxExceptionEvent::InvokeEvent()
 {
-	ScopedPtr<BaseException> deleteMe( m_except );
+	ScopedExcept deleteMe( m_except );
 	if( deleteMe ) deleteMe->Rethrow();
 }
 

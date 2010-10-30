@@ -35,7 +35,7 @@ class SynchronousActionState
 protected:
 	bool						m_posted;
 	Threading::Semaphore		m_sema;
-	ScopedPtr<BaseException>	m_exception;
+	ScopedExcept	m_exception;
 
 public:
 	sptr						return_value;

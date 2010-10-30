@@ -163,7 +163,7 @@ class CpuInitializer
 {
 public:
 	ScopedPtr<CpuType>			MyCpu;
-	ScopedPtr<BaseException>	ExThrown;
+	ScopedExcept	ExThrown;
 	
 	CpuInitializer();
 	virtual ~CpuInitializer() throw();
@@ -213,6 +213,9 @@ CpuInitializer< CpuType >::~CpuInitializer() throw()
 		MyCpu->Shutdown();
 }
 
+// --------------------------------------------------------------------------------------
+//  CpuInitializerSet
+// --------------------------------------------------------------------------------------
 class CpuInitializerSet
 {
 public:
@@ -231,7 +234,6 @@ public:
 	CpuInitializerSet() {}
 	virtual ~CpuInitializerSet() throw() {}
 };
-
 
 
 // returns the translated error message for the Virtual Machine failing to allocate!

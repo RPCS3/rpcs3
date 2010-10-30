@@ -57,7 +57,7 @@ int lastLSN;		// needed for block dumping
 
 // Records last read block length for block dumping
 //static int plsn = 0;
-static isoFile *blockDumpFile = NULL;
+static isoFile blockDumpFile;
 
 // Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
 // relying on DEP exceptions -- and a little more reliable too.
@@ -341,56 +341,57 @@ bool DoCDVDopen()
 
 	int cdtype = DoCDVDdetectDiskType();
 
-	if (EmuConfig.CdvdDumpBlocks && (cdtype != CDVD_TYPE_NODISC))
+	if (!EmuConfig.CdvdDumpBlocks || (cdtype == CDVD_TYPE_NODISC))
 	{
-		// TODO: Add a blockdumps configurable folder, and use that instead of CWD().
+		blockDumpFile.Close();
+		return true;
+	}
 
-		// TODO: "Untitled" should use pnach/slus name resolution, slus if no patch,
-		// and finally an "Untitled-[ElfCRC]" if no slus.
+	// TODO: Add a blockdumps configurable folder, and use that instead of CWD().
 
-		wxString somepick( Path::GetFilenameWithoutExt( m_SourceFilename[m_CurrentSourceType] ) );
-		if( somepick.IsEmpty() )
-			somepick = L"Untitled";
+	// TODO: "Untitled" should use pnach/slus name resolution, slus if no patch,
+	// and finally an "Untitled-[ElfCRC]" if no slus.
 
-		wxString temp( Path::Combine( wxGetCwd(), somepick ) );
+	wxString somepick( Path::GetFilenameWithoutExt( m_SourceFilename[m_CurrentSourceType] ) );
+	if( somepick.IsEmpty() )
+		somepick = L"Untitled";
+
+	wxString temp( Path::Combine( wxGetCwd(), somepick ) );
 
 #ifdef ENABLE_TIMESTAMPS
-		wxDateTime curtime( wxDateTime::GetTimeNow() );
+	wxDateTime curtime( wxDateTime::GetTimeNow() );
 
-		temp += wxsFormat( L" (%04d-%02d-%02d %02d-%02d-%02d)",
-			curtime.GetYear(), curtime.GetMonth(), curtime.GetDay(),
-			curtime.GetHour(), curtime.GetMinute(), curtime.GetSecond()
-		);
+	temp += pxsFmt( L" (%04d-%02d-%02d %02d-%02d-%02d)",
+		curtime.GetYear(), curtime.GetMonth(), curtime.GetDay(),
+		curtime.GetHour(), curtime.GetMinute(), curtime.GetSecond()
+	);
 #endif
-		temp += L".dump";
+	temp += L".dump";
 
-		cdvdTD td;
-		CDVD->getTD(0, &td);
+	cdvdTD td;
+	CDVD->getTD(0, &td);
 
-		blockDumpFile = isoCreate(temp.ToUTF8(), ISOFLAGS_BLOCKDUMP_V3);
+	blockDumpFile.Create(temp, ISOFLAGS_BLOCKDUMP_V3);
 
-		if( blockDumpFile != NULL )
-		{
-			int blockofs = 0, blocksize = CD_FRAMESIZE_RAW, blocks = td.lsn;
-
-			// hack: Because of limitations of the current cdvd design, we can't query the blocksize
-			// of the underlying media.  So lets make a best guess:
-
-			switch(cdtype)
-			{
-				case CDVD_TYPE_PS2DVD:
-				case CDVD_TYPE_DVDV:
-				case CDVD_TYPE_DETCTDVDS:
-				case CDVD_TYPE_DETCTDVDD:
-					blocksize = 2048;
-				break;
-			}
-			isoSetFormat(blockDumpFile, blockofs, blocksize, blocks);
-		}
-	}
-	else
+	if( blockDumpFile.IsOpened() )
 	{
-		blockDumpFile = NULL;
+		int  blockofs	= 0;
+		uint blocksize	= CD_FRAMESIZE_RAW;
+		uint blocks		= td.lsn;
+
+		// hack: Because of limitations of the current cdvd design, we can't query the blocksize
+		// of the underlying media.  So lets make a best guess:
+
+		switch(cdtype)
+		{
+			case CDVD_TYPE_PS2DVD:
+			case CDVD_TYPE_DVDV:
+			case CDVD_TYPE_DETCTDVDS:
+			case CDVD_TYPE_DETCTDVDD:
+				blocksize = 2048;
+			break;
+		}
+		blockDumpFile.WriteFormat(blockofs, blocksize, blocks);
 	}
 
 	return true;
@@ -399,7 +400,8 @@ bool DoCDVDopen()
 void DoCDVDclose()
 {
 	CheckNullCDVD();
-	if(blockDumpFile) isoClose(blockDumpFile);
+	blockDumpFile.Close();
+
 	if( CDVD->close != NULL )
 		CDVD->close();
 
@@ -411,9 +413,9 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 	CheckNullCDVD();
 	int ret = CDVD->readSector(buffer,lsn,mode);
 
-	if(ret == 0 && blockDumpFile != NULL )
+	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		isoWriteBlock(blockDumpFile, buffer, lsn);
+		blockDumpFile.WriteBlock(buffer, lsn);
 	}
 
 	return ret;
@@ -450,9 +452,9 @@ s32 DoCDVDgetBuffer(u8* buffer)
 	CheckNullCDVD();
 	int ret = CDVD->getBuffer2(buffer);
 
-	if (ret == 0 && blockDumpFile != NULL)
+	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		isoWriteBlock(blockDumpFile, buffer, lastLSN);
+		blockDumpFile.WriteBlock(buffer, lastLSN);
 	}
 
 	return ret;

@@ -13,11 +13,11 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __LIBISO_H__
-#define __LIBISO_H__
+#pragma once
 
 #include "CDVD.h"
-#include "IsoFileTools.h"
+#include "wx/wfstream.h"
+
 
 enum isoType
 {
@@ -30,49 +30,134 @@ enum isoType
 
 enum isoFlags
 {
-	ISOFLAGS_Z =			0x0001,
-	ISOFLAGS_Z2	=			0x0002,
 	ISOFLAGS_BLOCKDUMP_V2 =	0x0004,
-	ISOFLAGS_MULTI =		0x0008,
-	ISOFLAGS_BZ2 =			0x0010,
 	ISOFLAGS_BLOCKDUMP_V3 =	0x0020
 };
 
 static const int CD_FRAMESIZE_RAW	= 2448;
 
-struct _multih
+// --------------------------------------------------------------------------------------
+//  MultiPartIso
+// --------------------------------------------------------------------------------------
+// An encapsulating class for array boundschecking and easy ScopedPointer behavior.
+//
+class _IsoPart
 {
-	u32 slsn;
-	u32 elsn;
-	void *handle;
+	DeclareNoncopyableObject( _IsoPart );
+
+public:
+	// starting block index of this part of the iso.
+	u32			slsn;
+	// ending bock index of this part of the iso.
+	u32			elsn;
+
+	wxString						filename;
+	ScopedPtr<wxFileInputStream>	handle;
+
+public:	
+	_IsoPart() {}
+	~_IsoPart() throw();
+	
+	void Read( void* dest, size_t size );
+
+	void Seek(wxFileOffset pos, wxSeekMode mode = wxFromStart);
+	void SeekEnd(wxFileOffset pos=0);
+	wxFileOffset Tell() const;
+	uint CalculateBlocks( uint startBlock, uint blocksize );
+
+	template< typename T >
+	void Read( T& dest )
+	{
+		Read( &dest, sizeof(dest) );
+	}
 };
 
-struct isoFile
+// --------------------------------------------------------------------------------------
+//  isoFile
+// --------------------------------------------------------------------------------------
+class isoFile
 {
-	char filename[256];
-	isoType type;
-	u32  flags;
-	s32  offset;
-	s32  blockofs;
-	u32  blocksize;
-	u32  blocks;
-	void *handle;
-	void *htable;
-	char *Ztable;
-	u32  *dtable;
-	int  dtablesize;
-	_multih multih[8];
-	int  buflsn;
-	u8 *buffer;
+	DeclareNoncopyableObject( isoFile );
+
+protected:
+	static const uint MaxSplits = 8;
+
+protected:
+	wxString	m_filename;
+	uint		m_numparts;
+	_IsoPart	m_parts[MaxSplits];
+
+	isoType		m_type;
+	u32			m_flags;
+
+	s32			m_offset;
+	s32			m_blockofs;
+	u32			m_blocksize;
+
+	// total number of blocks in the ISO image (including all parts)
+	u32			m_blocks;
+
+	// dtable / dtablesize are used when reading blockdumps
+	ScopedArray<u32>	m_dtable;
+	int					m_dtablesize;
+
+	ScopedPtr<wxFileOutputStream>	m_outstream;
+
+	// Currently unused internal buffer (it was used for compressed
+	// iso support, before it was removed).
+	//ScopedArray<u8>		m_buffer;
+	//int					m_buflsn;
+			
+public:	
+	isoFile();
+	virtual ~isoFile() throw();
+
+	bool IsOpened() const;
+	
+	isoType GetType() const		{ return m_type; }
+
+	// Returns the number of blocks in the ISO image.
+	uint GetBlockCount() const	{ return m_blocks; }
+	
+	int GetBlockOffset() const	{ return m_blockofs; }
+	
+	const wxString& GetFilename() const
+	{
+		return m_filename;
+	}
+
+	bool Test( const wxString& srcfile );
+	void Open( const wxString& srcfile );
+	void Create(const wxString& filename, int mode);
+	void Close();
+	bool Detect( bool readType=true );
+
+	void WriteFormat(int blockofs, uint blocksize, uint blocks);
+
+	void ReadBlock(u8* dst, uint lsn);
+	void WriteBlock(const u8* src, uint lsn);
+	
+protected:
+	bool detect();
+	void _init();
+	void _ReadDtable();
+	void _ReadBlock(u8* dst, uint lsn);
+	void _ReadBlockD(u8* dst, uint lsn);
+
+	void _WriteBlock(const u8* src, uint lsn);
+	void _WriteBlockD(const u8* src, uint lsn);
+
+	bool tryIsoType(u32 _size, s32 _offset, s32 _blockofs);
+	void FindParts();
+	
+	void outWrite( const void* src, size_t size );
+
+	template< typename T >
+	void outWrite( const T& data )
+	{
+		outWrite( &data, sizeof(data) );
+	}
 };
 
 
-extern isoFile *isoOpen(const char *filename);
-extern isoFile *isoCreate(const char *filename, int mode);
-extern bool isoSetFormat(isoFile *iso, int blockofs, uint blocksize, uint blocks);
-extern bool isoDetect(isoFile *iso);
-extern bool isoReadBlock(isoFile *iso, u8 *dst, uint lsn);
-extern bool isoWriteBlock(isoFile *iso, u8 *src, uint lsn);
-extern void isoClose(isoFile *iso);
 
-#endif /* __LIBISO_H__ */

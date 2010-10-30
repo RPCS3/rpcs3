@@ -20,19 +20,19 @@
 
 #include "SoundTouch/SoundTouch.h"
 
-static int SequenceLenMS = 50;
-static int SeekWindowMS = 15;
-static int OverlapMS = 25;
+static int SequenceLenMS = 30;
+static int SeekWindowMS = 20;
+static int OverlapMS = 10;
 
 // Timestretch Slider Bounds, Min/Max
-static const int SequenceLen_Min = 50;
-static const int SequenceLen_Max = 90;
+static const int SequenceLen_Min = 20;
+static const int SequenceLen_Max = 100;
 
 static const int SeekWindow_Min = 10;
-static const int SeekWindow_Max = 32;
+static const int SeekWindow_Max = 30;
 
-static const int Overlap_Min = 3;
-static const int Overlap_Max = 25;
+static const int Overlap_Min = 5;
+static const int Overlap_Max = 15;
 
 void SoundtouchCfg::ApplySettings( soundtouch::SoundTouch& sndtouch )
 {
@@ -50,9 +50,9 @@ static void ClampValues()
 
 void SoundtouchCfg::ReadSettings()
 {
-	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 50 );
-	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 15 );
-	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 25 );
+	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 30 );
+	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 20 );
+	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 10 );
 
 	ClampValues();
 }

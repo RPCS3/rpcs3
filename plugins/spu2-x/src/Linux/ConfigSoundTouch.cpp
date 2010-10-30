@@ -42,9 +42,9 @@ void ApplySettings( soundtouch::SoundTouch& sndtouch )
 
 void ReadSettings()
 {
-	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 63 );
-	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 16 );
-	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 7 );
+	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 30 );
+	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 20 );
+	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 10 );
 
 	ClampValues();
 	WriteSettings();
@@ -62,9 +62,9 @@ static GtkWidget *seq_slide, *seek_slide, *over_slide;
 
 void restore_defaults()
 {
-    gtk_range_set_value(GTK_RANGE(seq_slide), 63);
-    gtk_range_set_value(GTK_RANGE(seek_slide), 16);
-    gtk_range_set_value(GTK_RANGE(over_slide), 7);
+    gtk_range_set_value(GTK_RANGE(seq_slide), 30);
+    gtk_range_set_value(GTK_RANGE(seek_slide), 20);
+    gtk_range_set_value(GTK_RANGE(over_slide), 10);
 }
 
 void DisplayDialog()

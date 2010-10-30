@@ -117,7 +117,7 @@ endif(JPEG_FOUND)
 
 # GLEW
 if(GLEW_FOUND)
-	include_directories(${GLEW_INCLUDE_PATH})
+    include_directories(${GLEW_INCLUDE_DIR})
 endif(GLEW_FOUND)
 
 # OpenGL

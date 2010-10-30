@@ -17,6 +17,7 @@
 
 #include "Dependencies.h"
 #include "SafeArray.h"
+#include "ScopedAlloc.h"
 
 #include <wx/tokenzr.h>
 
@@ -62,9 +63,6 @@ public:
 };
 
 extern void px_fputs( FILE* fp, const char* src );
-
-extern wxString fromUTF8( const char* src );
-extern wxString fromAscii( const char* src );
 
 // wxWidgets lacks one of its own...
 extern const wxRect wxDefaultRect;
@@ -128,7 +126,6 @@ struct ParsedAssignmentString
 //    accepts Ascii/UTF8 only.
 //
 
-
 // --------------------------------------------------------------------------------------
 //  FastFormatAscii 
 // --------------------------------------------------------------------------------------
@@ -136,8 +133,9 @@ struct ParsedAssignmentString
 class FastFormatAscii
 {
 protected:
-	SafeArray<char>*	m_dest;
+	ScopedAlignedAlloc<char,16>*	m_dest;
 	bool				m_deleteDest;
+	uint				m_Length;
 	
 public:
 	FastFormatAscii();
@@ -147,12 +145,31 @@ public:
 
 	void Clear();
 	bool IsEmpty() const;
+	uint Length() const { return m_Length; }
 
 	const char* c_str() const		{ return m_dest->GetPtr(); }
 	operator const char*() const	{ return m_dest->GetPtr(); }
 
 	const wxString GetString() const;
 	//operator wxString() const;
+
+	FastFormatAscii& operator+=(const wxString& s)
+	{
+		Write( "%ls", s.c_str() );
+		return *this;
+	}
+
+	FastFormatAscii& operator+=(const wxChar* psz )
+	{
+		Write( "%ls", psz );
+		return *this;
+	}
+
+	FastFormatAscii& operator+=(const char* psz )
+	{
+		Write( "%s", psz );
+		return *this;
+	}
 };
 
 // --------------------------------------------------------------------------------------
@@ -161,8 +178,9 @@ public:
 class FastFormatUnicode
 {
 protected:
-	SafeArray<char>*	m_dest;
+	ScopedAlignedAlloc<char,16>*	m_dest;
 	bool				m_deleteDest;
+	uint				m_Length;
 
 public:
 	FastFormatUnicode();
@@ -175,16 +193,39 @@ public:
 
 	void Clear();
 	bool IsEmpty() const;
+	uint Length() const { return m_Length; }
+
+	FastFormatUnicode& ToUpper();
+	FastFormatUnicode& ToLower();
 
 	const wxChar* c_str() const		{ return (const wxChar*)m_dest->GetPtr(); }
 	operator const wxChar*() const	{ return (const wxChar*)m_dest->GetPtr(); }
 	operator wxString() const		{ return (const wxChar*)m_dest->GetPtr(); }
+
+	FastFormatUnicode& operator+=(const wxString& s)
+	{
+		Write( L"%s", s.c_str() );
+		return *this;
+	}
+
+	FastFormatUnicode& operator+=(const wxChar* psz )
+	{
+		Write( L"%s", psz );
+		return *this;
+	}
+
+	FastFormatUnicode& operator+=(const char* psz );
 };
 
 extern bool pxParseAssignmentString( const wxString& src, wxString& ldest, wxString& rdest );
 
-#define pxsFmt FastFormatUnicode().Write
-#define pxsFmtV FastFormatUnicode().WriteV
+#define pxsFmt	FastFormatUnicode().Write
+#define pxsFmtV	FastFormatUnicode().WriteV
+
+extern wxString& operator+=(wxString& str1, const FastFormatUnicode& str2);
+extern wxString operator+(const wxString& str1, const FastFormatUnicode& str2);
+extern wxString operator+(const wxChar* str1, const FastFormatUnicode& str2);
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Custom internal sprintf functions, which are ASCII only (even in UNICODE builds)

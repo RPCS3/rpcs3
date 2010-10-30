@@ -16,7 +16,6 @@
 #pragma once
 
 #include "Dependencies.h"
-#include "Exceptions.h"
 
 template< int Precision >
 struct FixedInt

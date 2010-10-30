@@ -166,7 +166,7 @@ wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButton
 		cfg->SetRecordDefaults( recdef );
 		cfg->SetPath( L"/" );
 
-		result.LowerCase();
+		result.MakeLower();
 		wxArrayString split;
 		SplitString( split, result, L"," );
 

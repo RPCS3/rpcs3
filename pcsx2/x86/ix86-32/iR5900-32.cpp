@@ -716,7 +716,7 @@ void recStep( void )
 #	define SETJMP_CODE(x)  x
 	static jmp_buf		m_SetJmp_StateCheck;
 	static ScopedPtr<BaseR5900Exception>	m_cpuException;
-	static ScopedPtr<BaseException>			m_Exception;
+	static ScopedExcept			m_Exception;
 #else
 #	define SETJMP_CODE(x)
 #endif
