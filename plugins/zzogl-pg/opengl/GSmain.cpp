@@ -212,7 +212,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		GSC_list[OnePieceGrandBattle] = GSC_OnePieceGrandBattle;
 		GSC_list[ICO] = GSC_ICO;
 		GSC_list[GT4] = GSC_GT4;
-		//FIXME GSC_list[WildArms4] = GSC_WildArms4;
+		GSC_list[WildArms4] = GSC_WildArms4;
 		GSC_list[WildArms5] = GSC_WildArms5;
 		GSC_list[Manhunt2] = GSC_Manhunt2;
 		GSC_list[CrashBandicootWoC] = GSC_CrashBandicootWoC;

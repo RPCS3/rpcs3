@@ -93,7 +93,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	GIFPackedXYZF2* r = (GIFPackedXYZF2*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-    ZZKick->KickVertex(!!(data[3]>>15));
+    ZZKick->KickVertex(((data[3]>>15) & 0x1));
 }
 
 void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
@@ -102,7 +102,7 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	GIFPackedXYZ2* r = (GIFPackedXYZ2*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-    ZZKick->KickVertex(!!(data[3]>>15));
+    ZZKick->KickVertex(((data[3]>>15) & 0x1));
 }
 
 void __gifCall GIFPackedRegHandlerFOG(const u32* data)
