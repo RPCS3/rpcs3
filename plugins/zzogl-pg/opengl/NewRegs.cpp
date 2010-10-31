@@ -410,14 +410,14 @@ void __gifCall GIFRegHandlerPRIM(const u32 *data)
 		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
 	//}
 
-	// Come back to this one...
-	gs.nTriFanVert = gs.primIndex;
-
 	gs.primC = 0;
 	prim->prim = r->PRIM;
 	gs._prim[0].prim = r->PRIM;
 	gs._prim[1].prim = r->PRIM;
 	gs._prim[1]._val = (data[0] >> 3) & 0xff; // Setting the next 8 flags after prim at once.
+
+    gs.new_tri_fan = !(prim_type ^ PRIM_TRIANGLE_FAN);
+    ZZKick->DirtyValidPrevPrim();
 
 	Prim();
 	ZZLog::Greg_Log("PRIM");
