@@ -32,8 +32,8 @@
 #define INTRINSIC_PORT_8
 #define INTRINSIC_PORT_4
 #ifdef ZEROGS_SSE2
-static const __aligned16 u32 mask_24b_H[4] = {0x0000FFFF, 0xFF000000, 0x0000FFFF, 0xFF000000};
-static const __aligned16 u32 mask_24b_L[4] = {0x00000000, 0x00FFFFFF, 0x00000000, 0x00FFFFFF};
+static const __aligned16 u32 mask_24b_H[4] = {0xFF000000, 0x0000FFFF, 0xFF000000, 0x0000FFFF};
+static const __aligned16 u32 mask_24b_L[4] = {0x00FFFFFF, 0x00000000, 0x00FFFFFF, 0x00000000};
 
 template<bool aligned>
 __forceinline void SwizzleBlock32_sse2_I(u8 *dst, u8 *src, int pitch, u32 WriteMask)
@@ -503,8 +503,8 @@ __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask)
         src_1 = _mm_slli_si128(src_1, 2);
         src_1 = _mm_shufflelo_epi16(src_1, 0x39);
 
-        src_2 = _mm_slli_si128(src_0, 2);
-        src_2 = _mm_shufflelo_epi16(src_0, 0x39);
+        src_2 = _mm_slli_si128(src_2, 2);
+        src_2 = _mm_shufflelo_epi16(src_2, 0x39);
 
         src_3 = _mm_slli_si128(src_3, 2);
         src_3 = _mm_shufflelo_epi16(src_3, 0x39);
