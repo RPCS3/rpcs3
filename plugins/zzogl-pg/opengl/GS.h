@@ -88,6 +88,38 @@ struct VertexGPU
 	{
 		f = ((s16)(v).f << 7) | 0x7f;
 	}
+    
+    void set_xy(s16 x1, s16 y1)
+    {
+    	x = x1;
+    	y = y1;
+    }
+    void set_xyz(s16 x1, s16 y1, u32 z1)
+    {
+    	x = x1;
+    	y = y1;
+    	z = z1;
+    }
+    
+    void set_st(float s1, float t1)
+    {
+    	s = s1;
+    	t = t1;
+    }
+    
+    void set_stq(float s1, float t1, float q1)
+    {
+    	s = s1;
+    	t = t1;
+    	q = q1;
+    }
+    
+    void set_xyzst(s16 x1, s16 y1, u32 z1, float s1, float t1)
+    {
+    	set_xyz(x1, y1, z1);
+    	set_st(s1, t1);
+    }
+    
 };
 
 extern GSconf conf;

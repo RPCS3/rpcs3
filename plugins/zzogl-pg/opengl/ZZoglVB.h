@@ -44,6 +44,12 @@ class VB
 
 			return false;
 		}
+		
+		void SetCurrentPrim()
+		{
+			curprim._val = prim->_val;
+			curprim.prim = prim->prim;
+		}
 
 		void CheckFrame(int tbp);
 
@@ -76,7 +82,7 @@ class VB
 		inline void FlushTexClutDontUpdate() ;
 		inline void FlushTexClutting() ;
 		inline void FlushTexSetNewVars(u32 psm) ;
-
+		
 		// Increase the size of pbuf
 		void IncreaseVertexBuffer()
 		{

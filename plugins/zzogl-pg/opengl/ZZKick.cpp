@@ -38,9 +38,7 @@ void Prim()
 	VB& curvb = vb[prim->ctxt];
 
 	if (curvb.CheckPrim()) Flush(prim->ctxt);
-
-	curvb.curprim._val = prim->_val;
-	curvb.curprim.prim = prim->prim;
+	curvb.SetCurrentPrim();
 }
 
 // return true if triangle SHOULD be painted.

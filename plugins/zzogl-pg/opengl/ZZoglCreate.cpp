@@ -651,32 +651,16 @@ bool ZZCreate(int _width, int _height)
 
 	VertexGPU* pvert = &verts[0];
 
-	pvert->x = -0x7fff;
-	pvert->y = 0x7fff;
-	pvert->z = 0;
-	pvert->s = 0;
-	pvert->t = 0;
+	pvert->set_xyzst(-0x7fff, 0x7fff, 0, 0, 0);
 	pvert++;
 
-	pvert->x = 0x7fff;
-	pvert->y = 0x7fff;
-	pvert->z = 0;
-	pvert->s = 1;
-	pvert->t = 0;
+	pvert->set_xyzst(0x7fff, 0x7fff, 0, 1, 0);
 	pvert++;
 
-	pvert->x = -0x7fff;
-	pvert->y = -0x7fff;
-	pvert->z = 0;
-	pvert->s = 0;
-	pvert->t = 1;
+	pvert->set_xyzst(-0x7fff, -0x7fff, 0, 0, 1);
 	pvert++;
 
-	pvert->x = 0x7fff;
-	pvert->y = -0x7fff;
-	pvert->z = 0;
-	pvert->s = 1;
-	pvert->t = 1;
+	pvert->set_xyzst(0x7fff, -0x7fff, 0, 1, 1);
 	pvert++;
 
 	glBufferDataARB(GL_ARRAY_BUFFER, 4*sizeof(VertexGPU), &verts[0], GL_STATIC_DRAW);
