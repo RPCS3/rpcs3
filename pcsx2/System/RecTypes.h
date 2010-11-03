@@ -30,6 +30,11 @@ class RecompiledCodeReserve : public BaseVirtualMemoryReserve
 	typedef BaseVirtualMemoryReserve __parent;
 
 protected:
+	// Specifies the number of blocks that should be committed automatically when the
+	// reserve is created.  Typically this chunk is larger than the block size, and
+	// should be based on whatever typical overhead is needed for basic block use.
+	uint		m_def_commit;
+
 	wxString	m_profiler_name;
 	bool		m_profiler_registered;
 
@@ -47,8 +52,6 @@ public:
 		return SetProfilerName( fromUTF8(shortname) );
 	}
 
-	virtual bool TryResize( uint newsize );
-
 	operator void*()				{ return m_baseptr; }
 	operator const void*() const	{ return m_baseptr; }
 
@@ -57,7 +60,10 @@ public:
 
 protected:
 	void ResetProcessReserves() const;
-	
+	void DoCommitAndProtect( uptr page );
+
 	void _registerProfiler();
 	void _termProfiler();
+	
+	uint _calcDefaultCommitInBlocks() const;
 };

@@ -81,8 +81,8 @@ const __aligned(32) mVU_Globals mVUglob = {
 
 static __fi void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
 	throw Exception::HardwareDeficiency()
-		.SetDiagMsg(wxsFormat(L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail))
-		.SetUserMsg(wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
+		.SetDiagMsg(pxsFmt(L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail))
+		.SetUserMsg(pxsFmt(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
 void microVU::reserveCache()
@@ -91,8 +91,8 @@ void microVU::reserveCache()
 	cache_reserve->SetProfilerName( pxsFmt("mVU%urec", index) );
 	
 	cache = index ?
-		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU1rec ) :
-		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU0rec );
+		(u8*)cache_reserve->Reserve( cacheSize * _1mb, HostMemoryMap::mVU1rec ) :
+		(u8*)cache_reserve->Reserve( cacheSize * _1mb, HostMemoryMap::mVU0rec );
 
 	if(!cache_reserve->IsOk())
 		throw Exception::VirtualMemoryMapConflict().SetDiagMsg(pxsFmt( L"Micro VU%u Recompiler Cache", index ));
@@ -113,6 +113,8 @@ void microVU::init(uint vuIndex) {
 	microMemSize	= (index ? 0x4000 : 0x1000);
 	progSize		= (index ? 0x4000 : 0x1000) / 4;
 	progMemMask		= progSize-1;
+
+	reserveCache();
 
 	dispCache = SysMmapEx(0, mVUdispCacheSize, 0, (index ? "Micro VU1 Dispatcher" : "Micro VU0 Dispatcher"));
 	if (!dispCache) throw Exception::OutOfMemory( index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );

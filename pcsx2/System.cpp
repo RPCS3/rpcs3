@@ -43,7 +43,7 @@ extern void resetNewVif(int idx);
 RecompiledCodeReserve::RecompiledCodeReserve( const wxString& name, uint defCommit )
 	: BaseVirtualMemoryReserve( name )
 {
-	m_block_size	= (1024 * 128) / __pagesize;
+	m_blocksize		= (1024 * 128) / __pagesize;
 	m_prot_mode		= PageAccess_Any();
 	m_def_commit	= defCommit / __pagesize;
 	
@@ -68,6 +68,11 @@ void RecompiledCodeReserve::_termProfiler()
 		ProfilerTerminateSource( m_profiler_name );
 }
 
+uint RecompiledCodeReserve::_calcDefaultCommitInBlocks() const
+{
+	return (m_def_commit + m_blocksize - 1) / m_blocksize;
+}
+
 void* RecompiledCodeReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 {
 	if (!__parent::Reserve(size, base, upper_bounds)) return NULL;
@@ -75,55 +80,6 @@ void* RecompiledCodeReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 	return m_baseptr;
 }
 
-
-// If growing the array, or if shrinking the array to some point that's still *greater* than the
-// committed memory range, then attempt a passive "on-the-fly" resize that maps/unmaps some portion
-// of the reserve.
-//
-// If the above conditions are not met, or if the map/unmap fails, this method returns false.
-// The caller will be responsible for manually resetting the reserve.
-//
-// Parameters:
-//  newsize - new size of the reserved buffer, in bytes.
-bool RecompiledCodeReserve::TryResize( uint newsize )
-{
-	uint newPages = (newsize + __pagesize - 1) / __pagesize;
-
-	if (newPages > m_reserved)
-	{
-		uint toReservePages = newPages - m_reserved;
-		uint toReserveBytes = toReservePages * __pagesize;
-
-		DevCon.WriteLn( L"%-32s is being expanded by %u pages.", Name.c_str(), toReservePages);
-
-		m_baseptr = (void*)HostSys::MmapReserve((uptr)GetPtrEnd(), toReserveBytes);
-
-		if (!m_baseptr)
-		{
-			Console.Warning("%-32s could not be passively resized due to virtual memory conflict!");
-			Console.Indent().Warning("(attempted to map memory @ 0x%08X -> 0x%08X", m_baseptr, (uptr)m_baseptr+toReserveBytes);
-		}
-
-		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
-			m_baseptr, (uptr)m_baseptr+toReserveBytes, toReserveBytes / _1mb);
-	}
-	else if (newPages < m_reserved)
-	{
-		if (m_commited > newsize) return false;
-	
-		uint toRemovePages = m_reserved - newPages;
-		uint toRemoveBytes = toRemovePages * __pagesize;
-
-		DevCon.WriteLn( L"%-32s is being shrunk by %u pages.", Name.c_str(), toRemovePages);
-
-		HostSys::MmapResetPtr(GetPtrEnd(), toRemoveBytes);
-
-		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
-			m_baseptr, (uptr)m_baseptr+toRemoveBytes, toRemoveBytes / _1mb);
-	}
-	
-	return true;
-}
 
 // Sets the abbreviated name used by the profiler.  Name should be under 10 characters long.
 // After a name has been set, a profiler source will be automatically registered and cleared
@@ -135,6 +91,11 @@ RecompiledCodeReserve& RecompiledCodeReserve::SetProfilerName( const wxString& s
 	return *this;
 }
 
+void RecompiledCodeReserve::DoCommitAndProtect( uptr page )
+{
+	CommitBlocks(page, (m_commited || !m_def_commit) ? 1 : _calcDefaultCommitInBlocks() );
+}
+
 void RecompiledCodeReserve::OnCommittedBlock( void* block )
 {
 	if (IsDevBuild)
@@ -143,7 +104,7 @@ void RecompiledCodeReserve::OnCommittedBlock( void* block )
 		// the assembly dump more cleanly.  We don't clear the block on Release builds since
 		// it can add a noticeable amount of overhead to large block recompilations.
 
-		memset_sse_a<0xcc>( block, m_block_size * __pagesize );
+		memset_sse_a<0xcc>( block, m_blocksize * __pagesize );
 	}
 }
 
@@ -184,7 +145,7 @@ void RecompiledCodeReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, voi
 
 		ResetProcessReserves();
 
-		uint cusion = std::min<uint>( m_block_size, 4 );
+		uint cusion = std::min<uint>( m_blocksize, 4 );
 		HostSys::MmapCommitPtr((u8*)blockptr, cusion * __pagesize, m_prot_mode);
 		
 		handled = true;

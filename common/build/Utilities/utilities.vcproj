@@ -426,6 +426,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\PageFaultSource.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\Path.h"
 				>
 			</File>

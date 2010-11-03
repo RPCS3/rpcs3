@@ -58,7 +58,7 @@ BaseVirtualMemoryReserve::BaseVirtualMemoryReserve( const wxString& name )
 	m_commited		= 0;
 	m_reserved		= 0;
 	m_baseptr		= NULL;
-	m_block_size	= __pagesize;
+	m_blocksize	= __pagesize;
 	m_prot_mode		= PageAccess_None();
 }
 
@@ -118,45 +118,84 @@ void BaseVirtualMemoryReserve::Free()
 	HostSys::Munmap((uptr)m_baseptr, m_reserved*__pagesize);
 }
 
-void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool& handled)
+// If growing the array, or if shrinking the array to some point that's still *greater* than the
+// committed memory range, then attempt a passive "on-the-fly" resize that maps/unmaps some portion
+// of the reserve.
+//
+// If the above conditions are not met, or if the map/unmap fails, this method returns false.
+// The caller will be responsible for manually resetting the reserve.
+//
+// Parameters:
+//  newsize - new size of the reserved buffer, in bytes.
+bool BaseVirtualMemoryReserve::TryResize( uint newsize )
 {
-	uptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
-	if (offset >= m_reserved) return;
+	uint newPages = (newsize + __pagesize - 1) / __pagesize;
 
-	try	{
+	if (newPages > m_reserved)
+	{
+		uint toReservePages = newPages - m_reserved;
+		uint toReserveBytes = toReservePages * __pagesize;
 
-		if (!m_commited && m_def_commit)
+		DevCon.WriteLn( L"%-32s is being expanded by %u pages.", Name.c_str(), toReservePages);
+
+		m_baseptr = (void*)HostSys::MmapReserve((uptr)GetPtrEnd(), toReserveBytes);
+
+		if (!m_baseptr)
 		{
-			const uint camt = m_def_commit * __pagesize;
-			// first block being committed!  Commit the default requested
-			// amount if its different from the blocksize.
-			
-			HostSys::MmapCommitPtr(m_baseptr, camt, m_prot_mode);
-
-			u8* init = (u8*)m_baseptr;
-			u8* endpos = init + camt;
-			for( ; init<endpos; init += m_block_size*__pagesize )
-				OnCommittedBlock(init);
-
-			m_commited += m_def_commit;
-
-			handled = true;
-			return;
+			Console.Warning("%-32s could not be passively resized due to virtual memory conflict!");
+			Console.Indent().Warning("(attempted to map memory @ 0x%08X -> 0x%08X", m_baseptr, (uptr)m_baseptr+toReserveBytes);
 		}
 
-		void* bleh = (u8*)m_baseptr + (offset * __pagesize);
+		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
+			m_baseptr, (uptr)m_baseptr+toReserveBytes, toReserveBytes / _1mb);
+	}
+	else if (newPages < m_reserved)
+	{
+		if (m_commited > newsize) return false;
 	
-		// Depending on the operating system, one or both of these could fail if the system
-		// is low on either physical ram or virtual memory.
-		HostSys::MmapCommitPtr(bleh, m_block_size*__pagesize, m_prot_mode);
+		uint toRemovePages = m_reserved - newPages;
+		uint toRemoveBytes = toRemovePages * __pagesize;
 
-		m_commited += m_block_size;
-		OnCommittedBlock(bleh);
+		DevCon.WriteLn( L"%-32s is being shrunk by %u pages.", Name.c_str(), toRemovePages);
 
+		HostSys::MmapResetPtr(GetPtrEnd(), toRemoveBytes);
+
+		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
+			m_baseptr, (uptr)m_baseptr+toRemoveBytes, toRemoveBytes / _1mb);
+	}
+	
+	return true;
+}
+
+void BaseVirtualMemoryReserve::CommitBlocks( uptr page, uint blocks )
+{
+	const uint blocksbytes = blocks * m_blocksize * __pagesize;
+	void* blockptr = (u8*)m_baseptr + (page * __pagesize);
+
+	// Depending on the operating system, one or both of these could fail if the system
+	// is low on either physical ram or virtual memory.
+	HostSys::MmapCommitPtr(blockptr, blocksbytes, m_prot_mode);
+
+	u8* init = (u8*)blockptr;
+	u8* endpos = init + blocksbytes;
+	for( ; init<endpos; init += m_blocksize*__pagesize )
+		OnCommittedBlock(init);
+
+	m_commited += m_blocksize * blocks;
+}
+
+void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool& handled)
+{
+	sptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
+	if ((offset < 0) || ((uptr)offset >= m_reserved)) return;
+
+	try	{
+		DoCommitAndProtect( offset );
 		handled = true;
 	}
 	catch (Exception::OutOfMemory& ex)
 	{
+		handled = false;
 		OnOutOfMemory( ex, (u8*)m_baseptr + (offset * __pagesize), handled );
 	}
 	#ifndef __WXMSW__
@@ -170,8 +209,8 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 	// *unless* its attached to a debugger;  then we can, at a bare minimum, trap it.
 	catch (Exception::BaseException& ex)
 	{
-		wxTrap();
 		handled = false;
+		wxTrap();
 	}
 	#endif
 }
@@ -181,14 +220,79 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 //  SpatialArrayReserve  (implementations)
 // --------------------------------------------------------------------------------------
 
+uint SpatialArrayReserve::_calcBlockBitArrayLength() const
+{
+	return (m_numblocks + 127) / 128;
+}
+
 void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 {
 	return __parent::Reserve( size, base, upper_bounds );
 }
 
+// Resets/clears the spatial array, reducing the memory commit pool overhead to zero (0).
+void SpatialArrayReserve::Reset()
+{
+	__parent::Reset();
+	memzero_sse_a(m_blockbits.GetPtr(), _calcBlockBitArrayLength());
+}
+
+// This method allows the programmer to specify the block size of the array as a function
+// of its reserved size.  This function *must* be called *after* the reserve has been made,
+// and *before* the array contents have been accessed.
+//
+// Calls to this function prior to initializing the reserve or after the reserve has been
+// accessed (resulting in committed blocks) will be ignored -- and will generate an assertion
+// in debug builds.
+SpatialArrayReserve& SpatialArrayReserve::SetBlockCount( uint blocks )
+{
+	pxAssumeDev( !m_commited, "Invalid object state: SetBlockCount must be called prior to reserved memory accesses." );
+
+	// Calculate such that the last block extends past the end of the array, if necessary.
+
+	m_numblocks = blocks;
+	m_blocksize = (m_reserved + m_numblocks-1) / m_numblocks;
+	
+	return *this;
+}
+
+// Sets the block size via pages (pages are defined by the __pagesize global, which is
+// typically 4096).
+//
+// This method must be called prior to accessing or modifying the array contents.  Calls to
+// a modified buffer will be ignored (and generate an assertion in dev/debug modes).
+SpatialArrayReserve& SpatialArrayReserve::SetBlockSizeInPages( uint pages )
+{
+	if (pxAssertDev(m_commited, "Invalid object state: Block size can only be changed prior to accessing or modifying the reserved buffer contents."))
+	{
+		m_blocksize = pages;
+		m_numblocks = (m_reserved + m_blocksize - 1) / m_blocksize;
+		m_blockbits.Alloc( _calcBlockBitArrayLength() );
+	}
+	return *this;
+}
+
+// This method assigns the block size of the spatial array, in bytes.  The actual size of
+// each block will be rounded up to the nearest page size.  The resulting size is returned.
+//
+// This method must be called prior to accessing or modifying the array contents.  Calls to
+// a modified buffer will be ignored (and generate an assertion in dev/debug modes).
+uint SpatialArrayReserve::SetBlockSize( uint bytes )
+{
+	SetBlockSizeInPages((bytes + __pagesize - 1) / __pagesize);
+	return m_blocksize * __pagesize;
+}
+
 void SpatialArrayReserve::OnCommittedBlock( void* block )
 {
+	// Determine the block position in the blockbits array, flag it, and be done!
+	
+	uptr relative = (uptr)m_baseptr - (uptr)block;
+	pxAssume( (relative % (m_blocksize * __pagesize)) == 0);
+	relative /= m_blocksize * __pagesize;
 
+	m_blockbits[relative/32] |= 1 << (relative & 31);
+	m_commited += m_blocksize;
 }
 
 void SpatialArrayReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )

@@ -107,15 +107,10 @@ protected:
 	uptr	m_reserved;
 
 	// Incremental size by which the buffer grows (in pages)
-	uptr	m_block_size;
+	uptr	m_blocksize;
 
 	// Protection mode to be applied to committed blocks.
 	PageProtectionMode m_prot_mode;
-
-	// Specifies the number of blocks that should be committed automatically when the
-	// reserve is created.  Typically this chunk is larger than the block size, and
-	// should be based on whatever typical overhead is needed for basic block use.
-	uint	m_def_commit;
 
 	// Records the number of pages committed to memory.
 	// (metric for analysis of buffer usage)
@@ -131,6 +126,9 @@ public:
 	virtual void* Reserve( uint size, uptr base = 0, uptr upper_bounds = 0 );
 	virtual void Reset();
 	virtual void Free();
+	virtual bool TryResize( uint newsize );
+
+	virtual void CommitBlocks( uptr page, uint blocks );
 
 	bool IsOk() const { return m_baseptr !=  NULL; }
 	wxString GetName() const { return Name; }
@@ -153,6 +151,17 @@ public:
 protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 
+	// This function is called from OnPageFaultEvent after the address has been translated
+	// and confirmed to apply to this reserved area in question.  OnPageFaultEvent contains 
+	// a try/catch exception handler, which ensures "reasonable" error response behavior if
+	// this function throws exceptions.
+	//
+	// Important: This method is called from the context of an exception/signal handler.  On
+	// Windows this isn't a big deal (most operations are ok).  On Linux, however, logging
+	// and other facilities are probably not a good idea.
+	virtual void DoCommitAndProtect( uptr offset )=0;
+
+	// This function is called for every committed block.
 	virtual void OnCommittedBlock( void* block )=0;
 	virtual void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
 	{
@@ -190,27 +199,25 @@ class SpatialArrayReserve : public BaseVirtualMemoryReserve
 	typedef BaseVirtualMemoryReserve __parent;
 
 protected:
+	uint			m_numblocks;
+
+	// Array of block bits, each bit indicating if the block has been committed to memory
+	// or not.  The array length is typically determined via ((numblocks+7) / 8), though the
+	// actual array size may be larger in order to accommodate 32-bit or 128-bit accelerated
+	// operations.
+	ScopedAlignedAlloc<u8,16>	m_blockbits;
 
 public:
 	SpatialArrayReserve( const wxString& name, uint defCommit = 0 );
 
 	virtual void* Reserve( uint size, uptr base = 0, uptr upper_bounds = 0 );
+	virtual void Reset();
 
 	void OnCommittedBlock( void* block );
 	void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled );
 	
-	// This method allows the programmer to specify the block size of the array as a function
-	// of its reserved size.  This function *must* be called *after* the reserve has been made.
-	// Calls to this function prior to initializing the reserve will be ignored (and will
-	// generate an assertion in debug builds).
 	SpatialArrayReserve& SetBlockCount( uint blocks );
-
-	// Sets the block size via pages (pages are defined by the __pagesize global, which is
-	// typically 4096).
 	SpatialArrayReserve& SetBlockSizeInPages( uint bytes );
-
-	// This method assigns the block size of the spatial array, in bytes.  The actual size of
-	// each block will be rounded up to the nearest page size.  The resulting size is returned.
 	uint SetBlockSize( uint bytes );
 
 
@@ -219,6 +226,9 @@ public:
 
 	operator u8*()				{ return (u8*)m_baseptr; }
 	operator const u8*() const	{ return (u8*)m_baseptr; }
+
+protected:
+	uint _calcBlockBitArrayLength() const;
 };
 
 #ifdef __LINUX__
