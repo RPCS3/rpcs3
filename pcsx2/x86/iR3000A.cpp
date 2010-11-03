@@ -33,7 +33,6 @@
 #include "IopCommon.h"
 #include "iCore.h"
 
-#include "SamplProf.h"
 #include "NakedAsm.h"
 #include "AppConfig.h"
 
@@ -750,19 +749,41 @@ void psxRecompileCodeConst3(R3000AFNPTR constcode, R3000AFNPTR_INFO constscode, 
 	noconstcode(0);
 }
 
+static uptr m_ConfiguredCacheReserve = 32;
 static u8* m_recBlockAlloc = NULL;
 
 static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK));
 
+static void recReserveCache()
+{
+	extern wxString GetMsg_RecVmFailed();
+
+	if (!recMem) recMem = new RecompiledCodeReserve(L"R3000A Recompiler Cache", _1mb * 2);
+	recMem->SetProfilerName("IOPrec");
+
+	while (!recMem->IsOk())
+	{
+		if (recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::IOPrec ) != NULL) break;
+
+		// If it failed, then try again (if possible):
+		if (m_ConfiguredCacheReserve < 4) break;
+		m_ConfiguredCacheReserve /= 2;
+	}
+
+	if (!recMem->IsOk())
+	{
+		throw Exception::VirtualMemoryMapConflict(recMem->GetName())
+			.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
+			.SetUserMsg(GetMsg_RecVmFailed());
+	}
+}
+
 static void recReserve()
 {
-	if (!recMem)
-	{
-		recMem = new RecompiledCodeReserve(L"R3000A Recompiler Cache", _1mb * 2);
-		recMem->Reserve( _16mb, HostMemoryMap::IOPrec );
-		ProfilerRegisterSource( "IOP Rec", *recMem, recMem->GetReserveSizeInBytes() );
-	}
+	// IOP has no hardware requirements!
+
+	recReserveCache();
 }
 
 static void recAlloc()
@@ -846,7 +867,6 @@ void recResetIOP()
 
 static void recShutdown()
 {
-	ProfilerTerminateSource( "IOPRec" );
 	safe_delete( recMem );
 
 	safe_aligned_free( m_recBlockAlloc );
@@ -1399,13 +1419,12 @@ StartRecomp:
 
 static void recSetCacheReserve( uint reserveInMegs )
 {
-	//m_ConfiguredCacheReserve = reserveInMegs * _1mb;
+	m_ConfiguredCacheReserve = reserveInMegs;
 }
 
 static uint recGetCacheReserve()
 {
-	return 0;
-	//return m_ConfiguredCacheReserve / _1mb;
+	return m_ConfiguredCacheReserve;
 }
 
 R3000Acpu psxRec = {

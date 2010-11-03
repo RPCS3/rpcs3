@@ -119,45 +119,57 @@ static bool _registeredName( const wxString& name )
 	return false;
 }
 
-void ProfilerRegisterSource(const char* Name, const void* buff, u32 sz)
+void ProfilerRegisterSource(const wxString& Name, const void* buff, u32 sz)
 {
 	if( ProfRunning )
 		EnterCriticalSection( &ProfModulesLock );
 
-	wxString strName( fromUTF8(Name) );
-	if( !_registeredName( strName ) )
-		ProfModules.push_back( Module( strName, buff, sz ) );
+	if( !_registeredName( Name ) )
+		ProfModules.push_back( Module( Name, buff, sz ) );
 
 	if( ProfRunning )
 		LeaveCriticalSection( &ProfModulesLock );
+}
+
+void ProfilerRegisterSource(const wxString& Name, const void* function)
+{
+	if( ProfRunning )
+		EnterCriticalSection( &ProfModulesLock );
+
+	if( !_registeredName( Name ) )
+		ProfModules.push_back( Module(Name,function) );
+
+	if( ProfRunning )
+		LeaveCriticalSection( &ProfModulesLock );
+}
+
+void ProfilerRegisterSource(const char* Name, const void* buff, u32 sz)
+{
+	ProfilerRegisterSource( fromUTF8(Name), buff, sz );
 }
 
 void ProfilerRegisterSource(const char* Name, const void* function)
 {
-	if( ProfRunning )
-		EnterCriticalSection( &ProfModulesLock );
-
-	wxString strName( fromUTF8(Name) );
-	if( !_registeredName( strName ) )
-		ProfModules.push_back( Module(strName,function) );
-
-	if( ProfRunning )
-		LeaveCriticalSection( &ProfModulesLock );
+	ProfilerRegisterSource( fromUTF8(Name), function );
 }
 
-void ProfilerTerminateSource( const char* Name )
+void ProfilerTerminateSource( const wxString& Name )
 {
-	wxString strName( fromUTF8(Name) );
 	for( vector<Module>::const_iterator
 		iter = ProfModules.begin(),
 		end = ProfModules.end(); iter<end; ++iter )
 	{
-		if( iter->name.compare( strName ) == 0 )
+		if( iter->name.compare( Name ) == 0 )
 		{
 			ProfModules.erase( iter );
 			break;
 		}
 	}
+}
+
+void ProfilerTerminateSource( const char* Name )
+{
+	ProfilerTerminateSource( fromUTF8(Name) );
 }
 
 static bool DispatchKnownModules( uint Eip )

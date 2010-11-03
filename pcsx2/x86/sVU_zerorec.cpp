@@ -38,7 +38,6 @@
 #include "System/RecTypes.h"
 
 #include "sVU_zerorec.h"
-#include "SamplProf.h"
 #include "NakedAsm.h"
 #include "AppConfig.h"
 
@@ -350,9 +349,10 @@ static void SuperVUAlloc(int vuindex)
 {
 	if (s_recVUMem[vuindex]) return;
 
-	s_recVUMem[vuindex] = new RecompiledCodeReserve( L"SuperVU Recompiler Cache", 0 );
+	s_recVUMem[vuindex] = new RecompiledCodeReserve( pxsFmt("SuperVU%u Recompiler Cache", vuindex), 0 );
 	s_recVUMem[vuindex]->Reserve( sVU_EXESIZE, vuindex ? HostMemoryMap::sVU1rec : HostMemoryMap::sVU0rec, _256mb );
-	
+	s_recVUMem[vuindex]->SetProfilerName(pxsFmt("sVU%urec",vuindex));
+
 	// upper 4 bits must be zero!
 	if (!s_recVUMem[vuindex]->IsOk())
 	{
@@ -364,8 +364,6 @@ static void SuperVUAlloc(int vuindex)
 				L"ranges required, and will not be available for use.  This is not a critical error, since "
 				L"the sVU rec is obsolete, and you should use microVU instead anyway. :)"
 			));
-
-		ProfilerRegisterSource("sVU Rec", *s_recVUMem[vuindex], sVU_EXESIZE);
 	}
 }
 
@@ -412,8 +410,6 @@ void SuperVUDestroy(int vuindex)
 		safe_delete_array(s_plistCachedHeaders[vuindex]);
 	}
 	DestroyVUHeaders(vuindex);
-
-	ProfilerTerminateSource(vuindex ? "sVU1Rec" : "sVU0Rec");
 
 	safe_delete(s_recVUMem[vuindex]);
 	safe_delete_array(recVUStack[vuindex]);

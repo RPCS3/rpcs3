@@ -85,6 +85,19 @@ static __fi void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) 
 		.SetUserMsg(wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
+void microVU::reserveCache()
+{
+	cache_reserve = new RecompiledCodeReserve( pxsFmt("Micro VU%u Recompiler Cache", index) );
+	cache_reserve->SetProfilerName( pxsFmt("mVU%urec", index) );
+	
+	cache = index ?
+		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU1rec ) :
+		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU0rec );
+
+	if(!cache_reserve->IsOk())
+		throw Exception::VirtualMemoryMapConflict().SetDiagMsg(pxsFmt( L"Micro VU%u Recompiler Cache", index ));
+}
+
 // Only run this once per VU! ;)
 void microVU::init(uint vuIndex) {
 
@@ -105,16 +118,6 @@ void microVU::init(uint vuIndex) {
 	if (!dispCache) throw Exception::OutOfMemory( index ? L"Micro VU1 Dispatcher" : L"Micro VU0 Dispatcher" );
 	memset(dispCache, 0xcc, mVUdispCacheSize);
 
-	cache_reserve = new RecompiledCodeReserve( pxsFmt("Micro VU%u Recompiler Cache", index) );
-	cache = index ?
-		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU1rec ) :
-		(u8*)cache_reserve->Reserve( cacheSize, HostMemoryMap::mVU0rec );
-
-	if(!cache_reserve->IsOk())
-		throw Exception::VirtualMemoryMapConflict().SetDiagMsg(pxsFmt( L"Micro VU%u Recompiler Cache", index ));
-
-	ProfilerRegisterSource	(index ? "mVU1 Rec" : "mVU0 Rec", cache, cacheSize);
-
 	regAlloc		= new microRegAlloc(index);
 }
 
@@ -130,10 +133,6 @@ void microVU::reset() {
 	//memset(&prog, 0, sizeof(prog));
 	memset(&prog.lpState, 0, sizeof(prog.lpState));
 
-	if (IsDevBuild) { // Release builds shouldn't need this
-		memset(cache, 0xcc, cacheSize);
-	}
-
 	// Program Variables
 	prog.cleared	=  1;
 	prog.isSame		= -1;
@@ -145,7 +144,7 @@ void microVU::reset() {
 	u8* z = cache;
 	prog.x86start	= z;
 	prog.x86ptr		= z;
-	prog.x86end		= z + (cacheSize - mVUcacheSafeZone);
+	prog.x86end		= z + ((cacheSize - mVUcacheSafeZone) * _1mb);
 
 	for (u32 i = 0; i < (progSize / 2); i++) {
 		if (!prog.prog[i])
@@ -168,11 +167,7 @@ void microVU::reset() {
 // Free Allocated Resources
 void microVU::close() {
 
-	if (cache_reserve && cache_reserve->IsOk())
-	{
-		ProfilerTerminateSource	(index ? "mVU1 Rec" : "mVU0 Rec");
-		safe_delete(cache_reserve);
-	}
+	safe_delete(cache_reserve);
 
 	SafeSysMunmap(dispCache, mVUdispCacheSize);
 
@@ -367,18 +362,18 @@ void recMicroVU1::Clear(u32 addr, u32 size) {
 
 uint recMicroVU0::GetCacheReserve() const
 {
-	return microVU0.cacheSize / _1mb;
+	return microVU0.cacheSize;
 }
 uint recMicroVU1::GetCacheReserve() const
 {
-	return microVU1.cacheSize / _1mb;
+	return microVU1.cacheSize;
 }
 
 void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const
 {
-	microVU0.cacheSize = reserveInMegs * _1mb;
+	microVU0.cacheSize = reserveInMegs;
 }
 void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const
 {
-	microVU1.cacheSize = reserveInMegs * _1mb;
+	microVU1.cacheSize = reserveInMegs;
 }

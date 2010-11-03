@@ -184,11 +184,23 @@ static void intClear(u32 Addr, u32 Size) {
 static void intShutdown() {
 }
 
+static void intSetCacheReserve( uint reserveInMegs )
+{
+}
+
+static uint intGetCacheReserve()
+{
+	return 0;
+}
+
 R3000Acpu psxInt = {
 	intReserve,
 	intReset,
 	intExecute,
 	intExecuteBlock,
 	intClear,
-	intShutdown
+	intShutdown,
+
+	intGetCacheReserve,
+	intSetCacheReserve
 };

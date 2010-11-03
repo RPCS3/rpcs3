@@ -27,20 +27,37 @@
 //
 class RecompiledCodeReserve : public BaseVirtualMemoryReserve
 {
+	typedef BaseVirtualMemoryReserve __parent;
+
 protected:
+	wxString	m_profiler_name;
+	bool		m_profiler_registered;
 
 public:
 	RecompiledCodeReserve( const wxString& name, uint defCommit = 0 );
-	
+	virtual ~RecompiledCodeReserve() throw();
+
+	virtual void* Reserve( uint size, uptr base=0, uptr upper_bounds=0 );
 	virtual void OnCommittedBlock( void* block );
 	virtual void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled );
+
+	virtual RecompiledCodeReserve& SetProfilerName( const wxString& shortname );
+	virtual RecompiledCodeReserve& SetProfilerName( const char* shortname )
+	{
+		return SetProfilerName( fromUTF8(shortname) );
+	}
+
+	virtual bool TryResize( uint newsize );
 
 	operator void*()				{ return m_baseptr; }
 	operator const void*() const	{ return m_baseptr; }
 
 	operator u8*()				{ return (u8*)m_baseptr; }
 	operator const u8*() const	{ return (u8*)m_baseptr; }
-	
+
 protected:
 	void ResetProcessReserves() const;
+	
+	void _registerProfiler();
+	void _termProfiler();
 };

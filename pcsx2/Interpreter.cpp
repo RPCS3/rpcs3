@@ -437,6 +437,14 @@ static void intThrowException( const BaseException& ex )
 	ex.Rethrow();
 }
 
+static void intSetCacheReserve( uint reserveInMegs )
+{
+}
+
+static uint intGetCacheReserve()
+{
+	return 0;
+}
 
 R5900cpu intCpu =
 {
@@ -451,4 +459,7 @@ R5900cpu intCpu =
 	intThrowException,
 	intThrowException,
 	intClear,
+
+	intGetCacheReserve,
+	intSetCacheReserve,
 };

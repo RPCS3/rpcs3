@@ -32,7 +32,6 @@
 #include "CDVD/CDVD.h"
 #include "Patch.h"
 #include "GameDatabase.h"
-#include "SamplProf.h"
 
 using namespace R5900;	// for R5900 disasm tools
 

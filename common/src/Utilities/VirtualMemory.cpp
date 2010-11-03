@@ -85,7 +85,7 @@ void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds
 			// Let's try again at an OS-picked memory area, and then hope it meets needed
 			// boundschecking criteria below.
 			SafeSysMunmap( m_baseptr, reserved_bytes );
-			m_baseptr = (void*)HostSys::MmapReserve( NULL, reserved_bytes );
+			m_baseptr = HostSys::MmapReserve( 0, reserved_bytes );
 		}
 
 		if ((upper_bounds != 0) && (((uptr)m_baseptr + reserved_bytes) > upper_bounds))
@@ -100,20 +100,6 @@ void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds
 	DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
 		m_baseptr, (uptr)m_baseptr+reserved_bytes, reserved_bytes / _1mb);
 
-	/*if (m_def_commit)
-	{
-		const uint camt = m_def_commit * __pagesize;
-		HostSys::MmapCommit(m_baseptr, camt);
-		HostSys::MemProtect(m_baseptr, camt, m_prot_mode);
-
-		u8* init = (u8*)m_baseptr;
-		u8* endpos = init + camt;
-		for( ; init<endpos; init += m_block_size*__pagesize )
-		OnCommittedBlock(init);
-
-		m_commited += m_def_commit * __pagesize;
-	}*/
-	
 	return m_baseptr;
 }
 
@@ -123,7 +109,7 @@ void BaseVirtualMemoryReserve::Reset()
 	if (!m_commited) return;
 	
 	HostSys::MemProtect(m_baseptr, m_commited*__pagesize, PageAccess_None());
-	HostSys::MmapReset(m_baseptr, m_commited*__pagesize);
+	HostSys::MmapResetPtr(m_baseptr, m_commited*__pagesize);
 	m_commited = 0;
 }
 
@@ -145,8 +131,7 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 			// first block being committed!  Commit the default requested
 			// amount if its different from the blocksize.
 			
-			HostSys::MmapCommit(m_baseptr, camt);
-			HostSys::MemProtect(m_baseptr, camt, m_prot_mode);
+			HostSys::MmapCommitPtr(m_baseptr, camt, m_prot_mode);
 
 			u8* init = (u8*)m_baseptr;
 			u8* endpos = init + camt;
@@ -163,8 +148,7 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 	
 		// Depending on the operating system, one or both of these could fail if the system
 		// is low on either physical ram or virtual memory.
-		HostSys::MmapCommit(bleh, m_block_size*__pagesize);
-		HostSys::MemProtect(bleh, m_block_size*__pagesize, m_prot_mode);
+		HostSys::MmapCommitPtr(bleh, m_block_size*__pagesize, m_prot_mode);
 
 		m_commited += m_block_size;
 		OnCommittedBlock(bleh);

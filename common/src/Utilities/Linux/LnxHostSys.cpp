@@ -35,7 +35,7 @@ static __ri void PageSizeAssertionTest( size_t size )
 	);
 }
 
-void* HostSys::MmapReserve(uptr base, size_t size)
+void* HostSys::MmapReservePtr(void* base, size_t size)
 {
 	PageSizeAssertionTest(size);
 
@@ -43,17 +43,21 @@ void* HostSys::MmapReserve(uptr base, size_t size)
 	// or anonymous source, with PROT_NONE (no-access) permission.  Since the mapping
 	// is completely inaccessible, the OS will simply reserve it and will not put it
 	// against the commit table.
-	return mmap((void*)base, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	return mmap(base, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
-void HostSys::MmapCommit(void* base, size_t size)
+void HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
 {
 	// In linux, reserved memory is automatically committed when its permissions are
-	// changed to something other than PROT_NONE.  Since PCSX2 code *must* do that itself
-	// prior to making use of memory anyway, this call should be a NOP.
+	// changed to something other than PROT_NONE.  If the user is committing memory
+	// as PROT_NONE, then just ignore this call (memory will be committed automatically
+	// later when the user changes permissions to something useful via calls to MemProtect).
+
+	if (mode.IsNone()) return;
+	MemProtect( base, size, mode );
 }
 
-void HostSys::MmapReset(void* base, size_t size)
+void HostSys::MmapResetPtr(void* base, size_t size)
 {
 	// On linux the only way to reset the memory is to unmap and remap it as PROT_NONE.
 	// That forces linux to unload all committed pages and start from scratch.
@@ -71,6 +75,21 @@ void HostSys::MmapReset(void* base, size_t size)
 		"Virtual memory decommit failed: memory at 0x%08X -> 0x%08X could not be remapped.  "
 		"This is likely caused by multi-thread memory contention.", base, base+size
 	));
+}
+
+void* HostSys::MmapReserve(uptr base, size_t size)
+{
+	return MmapReservePtr((void*)base, size);
+}
+
+void HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
+{
+	MmapCommitPtr( (void*)base, size, mode );
+}
+
+void HostSys::MmapReset(uptr base, size_t size)
+{
+	MmapResetPtr((void*)base, size);
 }
 
 void* HostSys::Mmap(uptr base, size_t size)

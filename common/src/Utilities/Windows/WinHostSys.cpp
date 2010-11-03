@@ -17,26 +17,58 @@
 #include "Utilities/RedtapeWindows.h"
 #include <winnt.h>
 
-void* HostSys::MmapReserve(uptr base, size_t size)
+static DWORD ConvertToWinApi( const PageProtectionMode& mode )
 {
-	return VirtualAlloc((void*)base, size, MEM_RESERVE, PAGE_NOACCESS);
+	DWORD winmode = PAGE_NOACCESS;
+
+	// Windows has some really bizarre memory protection enumeration that uses bitwise
+	// numbering (like flags) but is in fact not a flag value.  *Someone* from the early
+	// microsoft days wasn't a very good coder, me thinks.  --air
+
+	if (mode.CanExecute())
+	{
+		winmode = mode.CanWrite() ? PAGE_EXECUTE_READWRITE : PAGE_EXECUTE_READ;
+	}
+	else if (mode.CanRead())
+	{
+		winmode = mode.CanWrite() ? PAGE_READWRITE : PAGE_READONLY;
+	}
+
+	return winmode;
 }
 
-void HostSys::MmapCommit(void* base, size_t size)
+void* HostSys::MmapReservePtr(void* base, size_t size)
 {
-	// Execution flag for this and the Reserve should match... ?
-	void* result = VirtualAlloc(base, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	return VirtualAlloc(base, size, MEM_RESERVE, PAGE_NOACCESS);
+}
+
+void HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
+{
+	void* result = VirtualAlloc(base, size, MEM_COMMIT, ConvertToWinApi(mode));
 	pxAssumeDev(result, L"VirtualAlloc COMMIT failed: " + Exception::WinApiError().GetMsgFromWindows());
 }
 
-void HostSys::MmapReset(void* base, size_t size)
+void HostSys::MmapResetPtr(void* base, size_t size)
 {
-	// Execution flag is actually irrelevant for this operation, but whatever.
-	//void* result = VirtualAlloc((void*)base, size, MEM_RESET, PAGE_EXECUTE_READWRITE);
-	//pxAssumeDev(result, L"VirtualAlloc RESET failed: " + Exception::WinApiError().GetMsgFromWindows());
-
 	VirtualFree(base, size, MEM_DECOMMIT);
 }
+
+
+void* HostSys::MmapReserve(uptr base, size_t size)
+{
+	return MmapReservePtr((void*)base, size);
+}
+
+void HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
+{
+	MmapCommitPtr( (void*)base, size, mode );
+}
+
+void HostSys::MmapReset(uptr base, size_t size)
+{
+	MmapResetPtr((void*)base, size);
+}
+
 
 void* HostSys::Mmap(uptr base, size_t size)
 {
@@ -57,24 +89,9 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 		L"\tPage Size: 0x%04x (%d), Block Size: 0x%04x (%d)",
 		__pagesize, __pagesize, size, size )
 	);
-
-	DWORD winmode = PAGE_NOACCESS;
-
-	// Windows has some really bizarre memory protection enumeration that uses bitwise
-	// numbering (like flags) but is in fact not a flag value.  *Someone* from the early
-	// microsoft days wasn't a very good coder, me thinks.  --air
-
-	if (mode.CanExecute())
-	{
-		winmode = mode.CanWrite() ? PAGE_EXECUTE_READWRITE : PAGE_EXECUTE_READ;
-	}
-	else if (mode.CanRead())
-	{
-		winmode = mode.CanWrite() ? PAGE_READWRITE : PAGE_READONLY;
-	}
 	
 	DWORD OldProtect;	// enjoy my uselessness, yo!
-	if (!VirtualProtect( baseaddr, size, winmode, &OldProtect ))
+	if (!VirtualProtect( baseaddr, size, ConvertToWinApi(mode), &OldProtect ))
 	{
 		throw Exception::WinApiError().SetDiagMsg(
 			pxsFmt(L"VirtualProtect failed @ 0x%08X -> 0x%08X  (mode=%s)",

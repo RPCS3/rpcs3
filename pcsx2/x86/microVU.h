@@ -28,7 +28,6 @@ using namespace x86Emitter;
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 #include "x86emitter/x86emitter.h"
-#include "SamplProf.h"
 #include "microVU_Misc.h"
 #include "microVU_IR.h"
 
@@ -150,11 +149,8 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUdispCacheSize (__pagesize)		// Dispatcher Cache Size
-#define mVUcacheSize     ((index) ? (_1mb *  17) : (_1mb *  7)) // Initial Size (Excluding Safe-Zone)
-#define mVUcacheMaxSize  ((mVU->index) ? (_1mb * 100) : (_1mb * 50)) // Max Size allowed to grow to
-#define mVUcacheGrowBy	 ((mVU->index) ? (_1mb *  15) : (_1mb * 10)) // Grows by this amount
-#define mVUcacheSafeZone ((index) ? (_1mb *   3) : (_1mb *  3)) // Safe-Zone for last program
+static const uint mVUdispCacheSize = __pagesize;	// Dispatcher Cache Size (in bytes)
+static const uint mVUcacheSafeZone = 3;				// Safe-Zone for program recompilation (in megabytes)
 
 struct microVU {
 
@@ -229,13 +225,14 @@ struct microVU {
 	
 	microVU()
 	{
-		cacheSize		= _1mb * 64;
+		cacheSize		= 64;
 		cache			= NULL;
 		dispCache		= NULL;
 		startFunct		= NULL;
 		exitFunct		= NULL;
 	}
 
+	void reserveCache();
 	void init(uint vuIndex);
 	void reset();
 	void close();

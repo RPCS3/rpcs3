@@ -286,40 +286,40 @@ void Pcsx2App::AllocateCoreStuffs()
 			
 			if( BaseException* ex = m_CpuProviders->GetException_EE() )
 			{
-				scrollableTextArea->AppendText( L"* R5900 (EE)\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* R5900 (EE)\n\t" + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.EnableEE		= false;
 			}
 
 			if( BaseException* ex = m_CpuProviders->GetException_IOP() )
 			{
-				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\t"  + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\t"  + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.EnableIOP	= false;
 			}
 
 			if( BaseException* ex = m_CpuProviders->GetException_MicroVU0() )
 			{
-				scrollableTextArea->AppendText( L"* microVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* microVU0\n\t" + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.UseMicroVU0	= false;
 				recOps.EnableVU0	= recOps.EnableVU0 && m_CpuProviders->IsRecAvailable_SuperVU0();
 			}
 
 			if( BaseException* ex = m_CpuProviders->GetException_MicroVU1() )
 			{
-				scrollableTextArea->AppendText( L"* microVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* microVU1\n\t" + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.UseMicroVU1	= false;
 				recOps.EnableVU1	= recOps.EnableVU1 && m_CpuProviders->IsRecAvailable_SuperVU1();
 			}
 
 			if( BaseException* ex = m_CpuProviders->GetException_SuperVU0() )
 			{
-				scrollableTextArea->AppendText( L"* SuperVU0\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* SuperVU0\n\t" + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.UseMicroVU0	= m_CpuProviders->IsRecAvailable_MicroVU0();
 				recOps.EnableVU0	= recOps.EnableVU0 && recOps.UseMicroVU0;
 			}
 
 			if( BaseException* ex = m_CpuProviders->GetException_SuperVU1() )
 			{
-				scrollableTextArea->AppendText( L"* SuperVU1\n\t" + ex->FormatDiagnosticMessage() + L"\n\n" );
+				scrollableTextArea->AppendText( L"* SuperVU1\n\t" + ex->FormatDisplayMessage() + L"\n\n" );
 				recOps.UseMicroVU1	= m_CpuProviders->IsRecAvailable_MicroVU1();
 				recOps.EnableVU1	= recOps.EnableVU1 && recOps.UseMicroVU1;
 			}

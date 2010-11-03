@@ -25,7 +25,6 @@
 #include "System/RecTypes.h"
 
 #include "vtlb.h"
-#include "SamplProf.h"
 #include "Dump.h"
 
 #include "System/SysThreads.h"
@@ -64,7 +63,7 @@ bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalExcept
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
 static RecompiledCodeReserve* recMem = NULL;
-static uptr m_ConfiguredCacheReserve = _64mb;
+static uptr m_ConfiguredCacheReserve = 64;
 
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
@@ -551,38 +550,35 @@ static void recThrowHardwareDeficiency( const wxChar* extFail )
 
 // This error message is shared by R5900, R3000, and microVU recompilers.  It is not used by the
 // SuperVU recompiler, since it has its own customized message.
-wxString GetMsg_RecVmFailed( const char* recName )
+wxString GetMsg_RecVmFailed()
 {
 	return pxE( ".Error:Recompiler:VirtualMemoryAlloc",
-		pxsFmt(
-			"The %s recompiler was unable to reserve contiguous memory required "
-			"for internal caches.  This problem may be fixable by reducing the default "
-			"cache sizes for all PCSX2 recompilers, found under Host Settings.",
-			recName
-		)
+		L"This recompiler was unable to reserve contiguous memory required "
+		L"for internal caches.  This problem may be fixable by reducing the default "
+		L"cache sizes for all PCSX2 recompilers, found under Host Settings."
 	);
 }
 
 static void recReserveCache()
 {
 	if (!recMem) recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
+	recMem->SetProfilerName("EErec");
 
-	recMem->Reserve( m_ConfiguredCacheReserve, HostMemoryMap::EErec );
-
-	while (!recMem->IsOk() && (m_ConfiguredCacheReserve >= 16))
+	while (!recMem->IsOk())
 	{
+		if (recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::EErec ) != NULL) break;
+
+		// If it failed, then try again (if possible):
+		if (m_ConfiguredCacheReserve < 16) break;
 		m_ConfiguredCacheReserve /= 2;
-		recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::EErec );
 	}
 	
 	if (!recMem->IsOk())
 	{
 		throw Exception::VirtualMemoryMapConflict(recMem->GetName())
-			.SetDiagMsg(pxsFmt( L"R5900-32 recompiled code cache could not be mapped." ))
-			.SetUserMsg(GetMsg_RecVmFailed("R5900-32"));
+			.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
+			.SetUserMsg(GetMsg_RecVmFailed());
 	}
-
-	ProfilerRegisterSource( "EE Rec", *recMem, recMem->GetReserveSizeInBytes() );
 }
 
 static void recReserve()
@@ -721,7 +717,6 @@ static void recResetRaw()
 
 static void recShutdown()
 {
-	ProfilerTerminateSource( "EERec" );
 	safe_delete( recMem );
 	recBlocks.Reset();
 
@@ -1922,12 +1917,12 @@ static void recThrowException( const BaseException& ex )
 
 static void recSetCacheReserve( uint reserveInMegs )
 {
-	m_ConfiguredCacheReserve = reserveInMegs * _1mb;
+	m_ConfiguredCacheReserve = reserveInMegs;
 }
 
 static uint recGetCacheReserve()
 {
-	return m_ConfiguredCacheReserve / _1mb;
+	return m_ConfiguredCacheReserve;
 }
 
 R5900cpu recCpu =

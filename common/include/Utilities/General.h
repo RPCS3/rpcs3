@@ -172,10 +172,11 @@ public:
 		m_read = m_write = m_exec = allow;
 		return *this;
 	}
-	
+
 	bool CanRead() const	{ return m_read; }
 	bool CanWrite() const	{ return m_write; }
 	bool CanExecute() const	{ return m_exec && m_read; }
+	bool IsNone() const		{ return !m_read && !m_write; }
 	
 	wxString ToString() const;
 };
@@ -218,8 +219,12 @@ static __fi PageProtectionMode PageAccess_Any()
 namespace HostSys
 {
 	void* MmapReserve(uptr base, size_t size);
-	void MmapCommit(void* base, size_t size);
-	void MmapReset(void* base, size_t size);
+	void MmapCommit(uptr base, size_t size, const PageProtectionMode& mode);
+	void MmapReset(uptr base, size_t size);
+
+	void* MmapReservePtr(void* base, size_t size);
+	void MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode);
+	void MmapResetPtr(void* base, size_t size);
 
 	// Maps a block of memory for use as a recompiled code buffer.
 	// Returns NULL on allocation failure.
