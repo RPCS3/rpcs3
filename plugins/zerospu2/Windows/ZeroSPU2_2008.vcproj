@@ -60,7 +60,6 @@
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="ZeroSPU2.def"
 				SubSystem="2"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -128,7 +127,6 @@
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="ZeroSPU2.def"
 				SubSystem="2"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -199,7 +197,6 @@
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="ZeroSPU2.def"
 				SubSystem="2"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
