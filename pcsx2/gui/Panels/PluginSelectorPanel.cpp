@@ -59,7 +59,15 @@ namespace Exception
 	class NotEnumerablePlugin : public BadStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( NotEnumerablePlugin, BadStream, wxLt("File is not a PCSX2 plugin") );
+		DEFINE_STREAM_EXCEPTION( NotEnumerablePlugin, BadStream );
+
+		wxString FormatDiagnosticMessage() const
+		{
+			FastFormatUnicode retval;
+			retval.Write("File is not a PCSX2 plugin");
+			_formatDiagMsg(retval);
+			return retval;
+		}
 	};
 }
 

@@ -21,9 +21,7 @@
 //  RecompiledCodeReserve
 // --------------------------------------------------------------------------------------
 // A recompiled code reserve is a simple sequential-growth block of memory which is auto-
-// cleared to INT 3 (0xcc) as needed.  When using this class, care should be take to re-
-// implement the provided OnOutOfMemory handler so that it clears other recompiled memory
-// reserves that are known to be attached to the process.
+// cleared to INT 3 (0xcc) as needed.
 //
 class RecompiledCodeReserve : public BaseVirtualMemoryReserve
 {
@@ -44,7 +42,6 @@ public:
 
 	virtual void* Reserve( uint size, uptr base=0, uptr upper_bounds=0 );
 	virtual void OnCommittedBlock( void* block );
-	virtual void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled );
 
 	virtual RecompiledCodeReserve& SetProfilerName( const wxString& shortname );
 	virtual RecompiledCodeReserve& SetProfilerName( const char* shortname )

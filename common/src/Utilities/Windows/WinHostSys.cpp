@@ -42,10 +42,26 @@ void* HostSys::MmapReservePtr(void* base, size_t size)
 	return VirtualAlloc(base, size, MEM_RESERVE, PAGE_NOACCESS);
 }
 
-void HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
+bool HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
 {
 	void* result = VirtualAlloc(base, size, MEM_COMMIT, ConvertToWinApi(mode));
-	pxAssumeDev(result, L"VirtualAlloc COMMIT failed: " + Exception::WinApiError().GetMsgFromWindows());
+	if (result) return true;
+
+	const DWORD errcode = GetLastError();
+	if (errcode == ERROR_COMMITMENT_MINIMUM)
+	{
+		Console.Warning("(MmapCommit) Received windows error %u {Virtual Memory Minimum Too Low}.", ERROR_COMMITMENT_MINIMUM);
+		Sleep(1000);	// Cut windows some time to rework its memory...
+	}
+	else if (errcode != ERROR_NOT_ENOUGH_MEMORY && errcode != ERROR_OUTOFMEMORY)
+	{
+		pxFailDev(L"VirtualAlloc COMMIT failed: " + Exception::WinApiError().GetMsgFromWindows());
+		return false;
+	}
+
+	if (!pxDoOutOfMemory) return false;
+	pxDoOutOfMemory(size);
+	return VirtualAlloc(base, size, MEM_COMMIT, ConvertToWinApi(mode)) != NULL;
 }
 
 void HostSys::MmapResetPtr(void* base, size_t size)
@@ -59,9 +75,9 @@ void* HostSys::MmapReserve(uptr base, size_t size)
 	return MmapReservePtr((void*)base, size);
 }
 
-void HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
+bool HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
 {
-	MmapCommitPtr( (void*)base, size, mode );
+	return MmapCommitPtr( (void*)base, size, mode );
 }
 
 void HostSys::MmapReset(uptr base, size_t size)

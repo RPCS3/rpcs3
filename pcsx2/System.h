@@ -134,6 +134,7 @@ extern SysCpuProviderPack& GetCpuProviders();
 
 extern void SysLogMachineCaps();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
+extern void SysOutOfMemory_EmergencyResponse(uptr blocksize);
 
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );

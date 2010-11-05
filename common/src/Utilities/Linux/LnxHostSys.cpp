@@ -35,6 +35,44 @@ static __ri void PageSizeAssertionTest( size_t size )
 	);
 }
 
+// returns FALSE if the mprotect call fails with an ENOMEM.
+// Raises assertions on other types of POSIX errors (since those typically reflect invalid object
+// or memory states).
+static bool _memprotect( void* baseaddr, size_t size, const PageProtectionMode& mode )
+{
+	PageSizeAssertionTest(size);
+
+	uint lnxmode = 0;
+
+	if (mode.CanWrite())	lnxmode |= PROT_WRITE;
+	if (mode.CanRead())		lnxmode |= PROT_READ;
+	if (mode.CanExecute())	lnxmode |= PROT_EXEC | PROT_READ;
+
+	const int result = mprotect( baseaddr, size, lnxmode );
+
+	if (result == 0) return true;
+	
+	switch(errno)
+	{
+		case EINVAL:
+			pxFailDev(pxsFmt(L"mprotect returned EINVAL @ 0x%08X -> 0x%08X  (mode=%s)",
+				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
+			);
+		break;
+		
+		case EACCES:
+			pxFailDev(pxsFmt(L"mprotect returned EACCES @ 0x%08X -> 0x%08X  (mode=%s)",
+				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
+			);
+		break;
+
+		case ENOMEM:
+			// caller handles assertion or exception, or whatever.
+		break;
+	}
+	return false;
+}
+
 void* HostSys::MmapReservePtr(void* base, size_t size)
 {
 	PageSizeAssertionTest(size);
@@ -46,7 +84,7 @@ void* HostSys::MmapReservePtr(void* base, size_t size)
 	return mmap(base, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 }
 
-void HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
+bool HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode)
 {
 	// In linux, reserved memory is automatically committed when its permissions are
 	// changed to something other than PROT_NONE.  If the user is committing memory
@@ -54,7 +92,12 @@ void HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& m
 	// later when the user changes permissions to something useful via calls to MemProtect).
 
 	if (mode.IsNone()) return;
-	MemProtect( base, size, mode );
+
+	if (_memprotect( base, size, mode )) return true;
+
+	if (!pxDoOutOfMemory) return false;
+	pxDoOutOfMemory(size);
+	return _memprotect( base, size, mode );
 }
 
 void HostSys::MmapResetPtr(void* base, size_t size)
@@ -82,9 +125,9 @@ void* HostSys::MmapReserve(uptr base, size_t size)
 	return MmapReservePtr((void*)base, size);
 }
 
-void HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
+bool HostSys::MmapCommit(uptr base, size_t size, const PageProtectionMode& mode)
 {
-	MmapCommitPtr( (void*)base, size, mode );
+	return MmapCommitPtr( (void*)base, size, mode );
 }
 
 void HostSys::MmapReset(uptr base, size_t size)
@@ -108,35 +151,12 @@ void HostSys::Munmap(uptr base, size_t size)
 
 void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode& mode )
 {
-	PageSizeAssertionTest(size);
-
-	uint lnxmode = 0;
-
-	if (mode.CanWrite())	lnxmode |= PROT_WRITE;
-	if (mode.CanRead())		lnxmode |= PROT_READ;
-	if (mode.CanExecute())	lnxmode |= PROT_EXEC | PROT_READ;
-
-	int result = mprotect( baseaddr, size, lnxmode );
-
-	if (result != 0)
+	if (!_memprotect(baseaddr, size, mode))
 	{
-		switch(errno)
-		{
-			case EINVAL:
-				pxFailDev(pxsFmt(L"mprotect returned EINVAL @ 0x%08X -> 0x%08X  (mode=%s)",
-					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
-				);
-			break;
-			
-			case ENOMEM:
-				throw Exception::OutOfMemory( pxsFmt( L"mprotect failed @ 0x%08X -> 0x%08X  (mode=%s)",
-					baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
-				);
-			break;
-			
-			case EACCES:
-			break;
-		}
-		throw Exception::OutOfMemory();
+		throw Exception::OutOfMemory( "MemProtect" )
+			.SetDiagMsg(pxsFmt( L"mprotect failed @ 0x%08X -> 0x%08X  (mode=%s)",
+				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str()
+			)
+		);
 	}
 }

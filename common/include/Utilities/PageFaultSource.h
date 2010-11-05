@@ -163,10 +163,6 @@ protected:
 
 	// This function is called for every committed block.
 	virtual void OnCommittedBlock( void* block )=0;
-	virtual void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
-	{
-		throw;
-	}
 };
 
 // --------------------------------------------------------------------------------------
@@ -212,9 +208,9 @@ public:
 
 	virtual void* Reserve( uint size, uptr base = 0, uptr upper_bounds = 0 );
 	virtual void Reset();
+	virtual bool TryResize( uint newsize );
 
 	void OnCommittedBlock( void* block );
-	void OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled );
 	
 	SpatialArrayReserve& SetBlockCount( uint blocks );
 	SpatialArrayReserve& SetBlockSizeInPages( uint bytes );

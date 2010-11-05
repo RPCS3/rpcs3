@@ -108,57 +108,39 @@ void RecompiledCodeReserve::OnCommittedBlock( void* block )
 	}
 }
 
-void RecompiledCodeReserve::ResetProcessReserves() const
+void SysOutOfMemory_EmergencyResponse(uptr blocksize)
 {
-	Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 3) / 2 );
-	Cpu->Reset();
+	// An out of memory error occurred.  All we can try to do in response is reset the various
+	// recompiler caches (which can sometimes total over 120megs, so it can be quite helpful).
+	// If the user is using interpreters, or if the memory allocation failure was on a very small
+	// allocation, then this code could fail; but that's fine.  We're already trying harder than
+	// 99.995% of all programs ever written. -- air
 
-	CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
-	CpuVU0->Reset();
-
-	CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
-	CpuVU1->Reset();
-
-	psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 3) / 2 );
-	psxCpu->Reset();
-}
-
-
-// Default behavior for out of memory: the 
-void RecompiledCodeReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
-{
-	// Since the recompiler is happy writing away to memory, we have to truncate the reserve
-	// to include the page currently being accessed, and cannot go any smaller.  This will
-	// allow the rec to finish emitting the current block of instructions, detect that it has
-	// exceeded the threshold buffer, and reset the buffer on its own.
-	
-	// Note: We attempt to commit multiple pages first, since a single block of recompiled
-	// code can pretty easily surpass 4k.  We should have enough for this, since we just
-	// cleared the other rec caches above -- but who knows what could happen if the user
-	// has another process sucking up RAM or if the operating system is fickle.  If even
-	// that fails, give up and kill the process.
-
-	try
+	if (Cpu)
 	{
-		// Truncate and reset reserves of all other in-use recompiler caches, as this should
-		// help free up quite a bit of emergency memory.
-
-		ResetProcessReserves();
-
-		uint cusion = std::min<uint>( m_blocksize, 4 );
-		HostSys::MmapCommitPtr((u8*)blockptr, cusion * __pagesize, m_prot_mode);
-		
-		handled = true;
+		Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 3) / 2 );
+		Cpu->Reset();
 	}
-	catch (Exception::BaseException&)
-	{
-		// Fickle has become our reality.  By setting handled to FALSE, the OS should kill
-		// the process for us.  No point trying to log anything; this is a super-awesomely
-		// serious condition that likely means the system is hosed. ;)
 
-		handled = false;
+	if (CpuVU0)
+	{
+		CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
+		CpuVU0->Reset();
+	}
+
+	if (CpuVU1)
+	{
+		CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
+		CpuVU1->Reset();
+	}
+
+	if (psxCpu)
+	{
+		psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 3) / 2 );
+		psxCpu->Reset();
 	}
 }
+
 
 #if _MSC_VER
 #	include "svnrev.h"

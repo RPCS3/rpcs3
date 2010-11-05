@@ -259,43 +259,40 @@ public: \
 		virtual classname& SetStreamName( const wxString& name )	{ StreamName = name;			return *this; } \
 		virtual classname& SetStreamName( const char* name )		{ StreamName = fromUTF8(name);	return *this; }
 
-	#define DEFINE_STREAM_EXCEPTION( classname, parent, message ) \
-		DEFINE_RUNTIME_EXCEPTION( classname, parent, message ) \
+	#define DEFINE_STREAM_EXCEPTION( classname, parent ) \
+		DEFINE_RUNTIME_EXCEPTION( classname, parent, wxEmptyString ) \
 		classname( const wxString& filename ) { \
 			StreamName = filename; \
-			SetBothMsgs(message); \
 		} \
 		DEFINE_STREAM_EXCEPTION_ACCESSORS( classname )
 	
-	// Generic stream error.  Contains the name of the stream and a message.
-	// This exception is usually thrown via derived classes, except in the (rare) case of a
-	// generic / unknown error.
+	// A generic base error class for bad streams -- corrupted data, sudden closures, loss of
+	// connection, or anything else that would indicate a failure to open a stream or read the
+	// data after the stream was successfully opened.
 	//
-	class Stream : public RuntimeError
+	class BadStream : public RuntimeError
 	{
-		DEFINE_STREAM_EXCEPTION( Stream, RuntimeError, wxLt("General file operation error.") )
+		DEFINE_STREAM_EXCEPTION( BadStream, RuntimeError )
 
 	public:
 		wxString StreamName;		// name of the stream (if applicable)
 
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
-	};
 
-	// A generic base error class for bad streams -- corrupted data, sudden closures, loss of
-	// connection, or anything else that would indicate a failure to read the data after the
-	// stream was successfully opened.
-	//
-	class BadStream : public Stream
-	{
-		DEFINE_STREAM_EXCEPTION( BadStream, Stream, wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly.") )
+	protected:
+		void _formatDiagMsg( FastFormatUnicode& dest ) const;
+		void _formatUserMsg( FastFormatUnicode& dest ) const;
 	};
 
 	// A generic exception for odd-ball stream creation errors.
 	//
-	class CannotCreateStream : public Stream
+	class CannotCreateStream : public BadStream
 	{
-		DEFINE_STREAM_EXCEPTION( CannotCreateStream, Stream, wxLt("File could not be created or opened.") )
+		DEFINE_STREAM_EXCEPTION( CannotCreateStream, BadStream )
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 	// Exception thrown when an attempt to open a non-existent file is made.
@@ -304,22 +301,31 @@ public: \
 	class FileNotFound : public CannotCreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( FileNotFound, CannotCreateStream, wxLt("File not found.") )
+		DEFINE_STREAM_EXCEPTION( FileNotFound, CannotCreateStream )
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 	class AccessDenied : public CannotCreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( AccessDenied, CannotCreateStream, wxLt("Permission denied to file.") )
+		DEFINE_STREAM_EXCEPTION( AccessDenied, CannotCreateStream )
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 	// EndOfStream can be used either as an error, or used just as a shortcut for manual
 	// feof checks.
 	//
-	class EndOfStream : public Stream
+	class EndOfStream : public BadStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( EndOfStream, Stream, wxLt("Unexpected end of file or stream.") );
+		DEFINE_STREAM_EXCEPTION( EndOfStream, BadStream )
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 #ifdef __WXMSW__

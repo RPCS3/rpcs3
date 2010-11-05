@@ -219,11 +219,11 @@ static __fi PageProtectionMode PageAccess_Any()
 namespace HostSys
 {
 	void* MmapReserve(uptr base, size_t size);
-	void MmapCommit(uptr base, size_t size, const PageProtectionMode& mode);
+	bool MmapCommit(uptr base, size_t size, const PageProtectionMode& mode);
 	void MmapReset(uptr base, size_t size);
 
 	void* MmapReservePtr(void* base, size_t size);
-	void MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode);
+	bool MmapCommitPtr(void* base, size_t size, const PageProtectionMode& mode);
 	void MmapResetPtr(void* base, size_t size);
 
 	// Maps a block of memory for use as a recompiled code buffer.

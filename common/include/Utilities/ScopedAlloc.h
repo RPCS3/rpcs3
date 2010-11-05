@@ -60,6 +60,26 @@ extern void pcsx2_aligned_free(void* pmem);
 # 	define _aligned_realloc	pcsx2_aligned_realloc
 #endif
 
+// --------------------------------------------------------------------------------------
+//  pxDoOutOfMemory
+// --------------------------------------------------------------------------------------
+
+typedef void FnType_OutOfMemory( uptr blocksize );
+typedef FnType_OutOfMemory* Fnptr_OutOfMemory;
+
+// This method is meant to be assigned by applications that link against pxWex.  It is called
+// (invoked) prior to most pxWex built-in memory/array classes throwing exceptions, and can be
+// used by an application to remove unneeded memory allocations and/or reduce internal cache
+// reserves.
+//
+// Example: PCSX2 uses several bloated recompiler code caches.  Larger caches improve performance,
+// however a rouge cache growth could cause memory constraints in the operating system.  If an out-
+// of-memory error occurs, PCSX2's implementation of this function attempts to reset all internal
+// recompiler caches.  This can typically free up 100-150 megs of memory, and will allow the app
+// to continue running without crashing or hanging the operating system, etc.
+//
+extern Fnptr_OutOfMemory pxDoOutOfMemory;
+
 
 // --------------------------------------------------------------------------------------
 //  BaseScopedAlloc

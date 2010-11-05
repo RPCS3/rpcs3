@@ -527,7 +527,9 @@ bool Pcsx2App::OnInit()
 
 	InitCPUTicks();
 
-	pxDoAssert = AppDoAssert;
+	pxDoAssert		= AppDoAssert;
+	pxDoOutOfMemory	= SysOutOfMemory_EmergencyResponse;
+
 	g_Conf = new AppConfig();
     wxInitAllImageHandlers();
 

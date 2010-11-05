@@ -674,18 +674,34 @@ SysCorePlugins *g_plugins = NULL;
 //       Plugin-related Exception Implementations
 // ---------------------------------------------------------------------------------
 
+wxString Exception::SaveStateLoadError::FormatDiagnosticMessage() const
+{
+	FastFormatUnicode retval;
+	retval.Write("Savestate is corrupt or incomplete!");
+	_formatDiagMsg(retval);
+	return retval;
+}
+
+wxString Exception::SaveStateLoadError::FormatDisplayMessage() const
+{
+	FastFormatUnicode retval;
+	retval.Write(_("The savestate cannot be loaded, as it appears to be corrupt or incomplete."));
+	_formatUserMsg(retval);
+	return retval;
+}
+
 Exception::PluginOpenError::PluginOpenError( PluginsEnum_t pid )
 {
 	PluginId = pid;
 	m_message_diag = L"%s plugin failed to open!";
-	m_message_user = L"%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.";
+	m_message_user = _("%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.");
 }
 
 Exception::PluginInitError::PluginInitError( PluginsEnum_t pid )
 {
 	PluginId = pid;
 	m_message_diag = L"%s plugin initialization failed!";
-	m_message_user = L"%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.";
+	m_message_user = _("%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.");
 }
 
 Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid )
@@ -695,29 +711,29 @@ Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid )
 
 wxString Exception::PluginLoadError::FormatDiagnosticMessage() const
 {
-	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
+	return pxsFmt( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
 		L"\n\n" + StreamName;
 }
 
 wxString Exception::PluginLoadError::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
+	return pxsFmt( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
 		L"\n\n" + StreamName;
 }
 
 wxString Exception::PluginError::FormatDiagnosticMessage() const
 {
-	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() );
+	return pxsFmt( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
 wxString Exception::PluginError::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
+	return pxsFmt( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
 wxString Exception::FreezePluginFailure::FormatDiagnosticMessage() const
 {
-	return wxsFormat(
+	return pxsFmt(
 		L"%s plugin returned an error while saving the state.\n\n",
 		tbl_PluginInfo[PluginId].shortname
 	);
@@ -731,7 +747,7 @@ wxString Exception::FreezePluginFailure::FormatDisplayMessage() const
 
 wxString Exception::ThawPluginFailure::FormatDiagnosticMessage() const
 {
-	return wxsFormat(
+	return pxsFmt(
 		L"%s plugin returned an error while loading the state.\n\n",
 		tbl_PluginInfo[PluginId].shortname
 	);

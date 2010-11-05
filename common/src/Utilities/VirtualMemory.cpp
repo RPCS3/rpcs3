@@ -167,14 +167,19 @@ bool BaseVirtualMemoryReserve::TryResize( uint newsize )
 	return true;
 }
 
+
 void BaseVirtualMemoryReserve::CommitBlocks( uptr page, uint blocks )
 {
-	const uint blocksbytes = blocks * m_blocksize * __pagesize;
+	const uptr blocksbytes = blocks * m_blocksize * __pagesize;
 	void* blockptr = (u8*)m_baseptr + (page * __pagesize);
 
-	// Depending on the operating system, one or both of these could fail if the system
-	// is low on either physical ram or virtual memory.
-	HostSys::MmapCommitPtr(blockptr, blocksbytes, m_prot_mode);
+	// Depending on the operating system, this call could fail if the system is low on either
+	// physical ram or virtual memory.
+	if (!HostSys::MmapCommitPtr(blockptr, blocksbytes, m_prot_mode))
+	{
+		throw Exception::OutOfMemory(Name)
+			.SetDiagMsg(pxsFmt("An additional %u blocks @ 0x%08x were requested, but could not be committed!", blocks, blockptr));
+	}
 
 	u8* init = (u8*)blockptr;
 	u8* endpos = init + blocksbytes;
@@ -189,28 +194,37 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 	sptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
 	if ((offset < 0) || ((uptr)offset >= m_reserved)) return;
 
-	try	{
-		DoCommitAndProtect( offset );
-		handled = true;
-	}
-	catch (Exception::OutOfMemory& ex)
-	{
-		handled = false;
-		OnOutOfMemory( ex, (u8*)m_baseptr + (offset * __pagesize), handled );
-	}
-	#ifndef __WXMSW__
+	// Linux Note!  the SIGNAL handler is very limited in what it can do, and not only can't 
+	// we let the C++ exception try to unwind the stack, we may not be able to log it either.
+	// (but we might as well try -- kernel/posix rules says not to do it, but Linux kernel
+	//  implementations seem to support it).
+	// Note also that logging the exception and/or issuing an assertion dialog are always
+	// possible if the thread handling the signal is not the main thread.
+
 	// In windows we can let exceptions bubble out of the page fault handler.  SEH will more
 	// or less handle them in a semi-expected way, and might even avoid a GPF long enough
 	// for the system to log the error or something.
-	
-	// In Linux, however, the SIGNAL handler is very limited in what it can do, and not only
-	// can't we let the C++ exception try to unwind the stack, we can't really log it either.
-	// We can't issue a proper assertion (requires user popup).  We can't do jack or shit,
-	// *unless* its attached to a debugger;  then we can, at a bare minimum, trap it.
+
+	#ifndef __WXMSW__
+	try	{
+	#endif
+		throw Exception::OutOfMemory( L"Right Here" );
+		DoCommitAndProtect( offset );
+		handled = true;
+
+	#ifndef __WXMSW__
+	}
 	catch (Exception::BaseException& ex)
 	{
 		handled = false;
-		wxTrap();
+		if (!wxThread::IsMain())
+		{
+			pxFailRel( ex.FormatDiagnosticMessage() );
+		}
+		else
+		{
+			wxTrap();
+		}
 	}
 	#endif
 }
@@ -235,6 +249,33 @@ void SpatialArrayReserve::Reset()
 {
 	__parent::Reset();
 	memzero_sse_a(m_blockbits.GetPtr(), _calcBlockBitArrayLength());
+}
+
+// Important!  The number of blocks of the array will be altered when using this method.
+// 
+bool SpatialArrayReserve::TryResize( uint newsize )
+{
+	uint newpages = (newsize + __pagesize - 1) / __pagesize;
+
+	// find the last allocated block -- we cannot be allowed to resize any smaller than that:
+
+	uint i;
+	for (i=m_numblocks-1; i; --i)
+	{
+		uint bit = i & 7;
+		if (m_blockbits[i / 8] & bit) break;
+	}
+
+	uint pages_in_use = i * m_blocksize;
+	if (newpages < pages_in_use) return false;
+
+	if (!__parent::TryResize( newsize )) return false;
+	
+	// On success, we must re-calibrate the internal blockbits array.
+	
+	m_blockbits.Resize( (m_numblocks + 7) / 8 );
+	
+	return true;
 }
 
 // This method allows the programmer to specify the block size of the array as a function
@@ -272,7 +313,7 @@ SpatialArrayReserve& SpatialArrayReserve::SetBlockSizeInPages( uint pages )
 	return *this;
 }
 
-// This method assigns the block size of the spatial array, in bytes.  The actual size of
+// SetBlockSize assigns the block size of the spatial array, in bytes.  The actual size of
 // each block will be rounded up to the nearest page size.  The resulting size is returned.
 //
 // This method must be called prior to accessing or modifying the array contents.  Calls to
@@ -293,11 +334,6 @@ void SpatialArrayReserve::OnCommittedBlock( void* block )
 
 	m_blockbits[relative/32] |= 1 << (relative & 31);
 	m_commited += m_blocksize;
-}
-
-void SpatialArrayReserve::OnOutOfMemory( const Exception::OutOfMemory& ex, void* blockptr, bool& handled )
-{
-
 }
 
 

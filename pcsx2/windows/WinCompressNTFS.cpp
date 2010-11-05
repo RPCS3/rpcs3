@@ -46,7 +46,7 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 
 		default:
 		{
-			throw Exception::Stream( streamname ).SetDiagMsg(wxsFormat( L"General Win32 File/stream error [GetLastError: %d]", error ));
+			throw Exception::BadStream( streamname ).SetDiagMsg(pxsFmt( L"General Win32 File/stream error [GetLastError: %d]", error ));
 		}
 	}
 }
@@ -58,7 +58,7 @@ bool StreamException_LogLastError( const wxString& streamname, const wxChar* act
 	{
 		StreamException_ThrowLastError( streamname, result );
 	}
-	catch( Exception::Stream& ex )
+	catch( Exception::BadStream& ex )
 	{
 		Console.WriteLn( Color_Yellow, L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() );
 		return true;

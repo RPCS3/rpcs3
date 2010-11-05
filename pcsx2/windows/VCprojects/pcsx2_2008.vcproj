@@ -452,10 +452,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\System\PageFaultSource.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Plugins.h"
 					>
 				</File>
