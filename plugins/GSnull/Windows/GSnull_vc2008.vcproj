@@ -161,10 +161,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Registers.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\Linux\GSLinux.cpp"
 				>
 				<FileConfiguration
@@ -190,6 +186,10 @@
 			</File>
 			<File
 				RelativePath=".\GSwin.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Registers.cpp"
 				>
 			</File>
 			<File

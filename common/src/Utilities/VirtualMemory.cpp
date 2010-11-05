@@ -208,7 +208,6 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 	#ifndef __WXMSW__
 	try	{
 	#endif
-		throw Exception::OutOfMemory( L"Right Here" );
 		DoCommitAndProtect( offset );
 		handled = true;
 

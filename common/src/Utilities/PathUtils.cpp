@@ -121,6 +121,13 @@ wxString Path::Normalize( const wxDirName& src )
 	return wxDirName(src).Normalize().ToString();
 }
 
+wxString Path::MakeAbsolute( const wxString& src )
+{
+	wxFileName absolute( src );
+	absolute.MakeAbsolute();
+	return absolute.GetFullPath();
+}
+
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
 //

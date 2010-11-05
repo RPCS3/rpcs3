@@ -58,7 +58,6 @@
 				AdditionalDependencies="user32.lib kernel32.lib dxguid.lib dinput8.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="PadSSSPSX.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -126,7 +125,6 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="dxguid.lib dinput8.lib"
 				ModuleDefinitionFile="PadSSSPSX.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool

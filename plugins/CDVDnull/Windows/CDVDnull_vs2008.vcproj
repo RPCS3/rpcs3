@@ -5,6 +5,7 @@
 	Name="CDVDnull"
 	ProjectGUID="{F38D9DF0-F68D-49D9-B3A0-932E74FB74A0}"
 	RootNamespace="CDVDnull"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -63,7 +64,6 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ModuleDefinitionFile=".\CDVDnull.def"
-				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"
 			/>
 			<Tool

@@ -54,7 +54,6 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="FireWireNull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -117,7 +116,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="FireWireNull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -164,11 +162,11 @@
 			Filter="h;hpp;hxx;hm;inl;inc"
 			>
 			<File
-				RelativePath="..\FW.h"
+				RelativePath="..\Config.h"
 				>
 			</File>
 			<File
-				RelativePath="..\Config.h"
+				RelativePath="..\FW.h"
 				>
 			</File>
 		</Filter>

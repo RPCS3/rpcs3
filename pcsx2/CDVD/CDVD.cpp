@@ -324,8 +324,8 @@ static __fi ElfObject* loadElf( const wxString filename )
 		Console.WriteLn( Color_Blue, "(LoadELF) Non-conforming version suffix detected and replaced." );
 
 	IsoFSCDVD isofs;
-	IsoFile file(isofs, filename);
-	return new ElfObject(filename, file);
+	IsoFile file(isofs, fixedname);
+	return new ElfObject(fixedname, file);
 }
 
 static __fi void _reloadElfInfo(wxString elfpath)

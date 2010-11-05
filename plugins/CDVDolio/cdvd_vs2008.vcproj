@@ -6,6 +6,7 @@
 	ProjectGUID="{FCDF5AE2-EA47-4CC6-9F20-23A0517FEBCB}"
 	RootNamespace="cdvd"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
