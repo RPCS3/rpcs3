@@ -19,6 +19,10 @@
 #include "EventSource.inl"
 #include "MemsetFast.inl"
 
+#ifndef __WXMSW__
+#include <wx/thread.h>
+#endif
+
 template class EventSource< IEventListener_PageFault >;
 
 SrcType_PageFault* Source_PageFault = NULL;

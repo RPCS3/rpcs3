@@ -91,7 +91,7 @@ bool HostSys::MmapCommitPtr(void* base, size_t size, const PageProtectionMode& m
 	// as PROT_NONE, then just ignore this call (memory will be committed automatically
 	// later when the user changes permissions to something useful via calls to MemProtect).
 
-	if (mode.IsNone()) return;
+	if (mode.IsNone()) return false;
 
 	if (_memprotect( base, size, mode )) return true;
 
@@ -153,7 +153,7 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 {
 	if (!_memprotect(baseaddr, size, mode))
 	{
-		throw Exception::OutOfMemory( "MemProtect" )
+		throw Exception::OutOfMemory( L"MemProtect" )
 			.SetDiagMsg(pxsFmt( L"mprotect failed @ 0x%08X -> 0x%08X  (mode=%s)",
 				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str()
 			)
