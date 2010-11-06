@@ -53,6 +53,7 @@ extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include "ZZoglMath.h"
+#include "Profile.h"
 
 #include <vector>
 #include <string>
@@ -87,34 +88,6 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 
 #define _aligned_malloc pcsx2_aligned_malloc
 #define _aligned_free pcsx2_aligned_free
-
-#endif
-
-#ifdef __LINUX__
-#include <sys/timeb.h>	// ftime(), struct timeb
-
-inline unsigned long timeGetTime()
-{
-	timeb t;
-	ftime(&t);
-
-	return (unsigned long)(t.time*1000 + t.millitm);
-}
-
-#include <time.h>
-inline unsigned long timeGetPreciseTime()
-{
-    timespec t;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
-
-    return t.tv_nsec;
-}
-
-struct RECT
-{
-	int left, top;
-	int right, bottom;
-};
 
 #endif
 

@@ -35,6 +35,23 @@ extern u64 luPerfFreq;
 #ifdef __LINUX__
 
 #include <sys/time.h>
+#include <sys/timeb.h>	// ftime(), struct timeb
+
+inline unsigned long timeGetTime()
+{
+	timeb t;
+	ftime(&t);
+
+	return (unsigned long)(t.time*1000 + t.millitm);
+}
+
+inline unsigned long timeGetPreciseTime()
+{
+    timespec t;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
+
+    return t.tv_nsec;
+}
 
 static __forceinline void InitCPUTicks()
 {
@@ -55,6 +72,18 @@ static __forceinline u64 GetCPUTicks()
 
 #else
 static __aligned16 LARGE_INTEGER lfreq;
+
+inline unsigned long timeGetTime()
+{
+	// Implement later.
+	return (unsigned long)0;
+}
+
+inline unsigned long timeGetPreciseTime()
+{
+	// Implement later.
+    return 0;
+}
 
 static __forceinline void InitCPUTicks()
 {

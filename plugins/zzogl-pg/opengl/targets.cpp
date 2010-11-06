@@ -2737,16 +2737,16 @@ void FlushTransferRanges(const tex0Info* ptex)
 
 #endif
 
+#ifdef __LINUX__
 //#define LOG_RESOLVE_PROFILE
+#endif
 
 template <typename Tdst, bool do_conversion>
 inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const int psm, u32 fbm)
 {
     u32 mask, imask;
 #ifdef LOG_RESOLVE_PROFILE
-#ifdef __LINUX__
      u32 startime = timeGetPreciseTime();
-#endif
 #endif
 
     if (PSMT_ISHALF(psm)) /* 16 bit */
@@ -2822,9 +2822,7 @@ inline void Resolve_32_Bit(const void* psrc, int fbp, int fbw, int fbh, const in
         src -= raw_size;
     }
 #ifdef LOG_RESOLVE_PROFILE
-#ifdef __LINUX__
     ZZLog::Dev_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
-#endif
 #endif
 }
 
@@ -3061,9 +3059,7 @@ void Resolve_32_Bit_sse2(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
 {
     // Note a basic implementation was done in Resolve_32_Bit function
 #ifdef LOG_RESOLVE_PROFILE
-#ifdef __LINUX__
     u32 startime = timeGetPreciseTime();
-#endif
 #endif
     u32 pix_mask;
     if (PSMT_ISHALF(psm)) /* 16 bit format */
@@ -3137,9 +3133,7 @@ void Resolve_32_Bit_sse2(const void* psrc, int fbp, int fbw, int fbh, u32 fbm)
     }
 
 #ifdef LOG_RESOLVE_PROFILE
-#ifdef __LINUX__
     ZZLog::Dev_Log("*** 32 bits: execution time %d", timeGetPreciseTime()-startime);
-#endif
 #endif
 }
 #endif
