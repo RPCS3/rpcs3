@@ -73,12 +73,6 @@ static __forceinline u64 GetCPUTicks()
 #else
 static __aligned16 LARGE_INTEGER lfreq;
 
-inline unsigned long timeGetTime()
-{
-	// Implement later.
-	return (unsigned long)0;
-}
-
 inline unsigned long timeGetPreciseTime()
 {
 	// Implement later.

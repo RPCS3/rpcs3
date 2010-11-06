@@ -49,7 +49,9 @@ bool __forceinline NoHighlights(int i)
 	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
 }
 
-void __forceinline Kick::KickVertex(bool adc)
+// Not inlining for the moment to avoid getting 'unresolved external symbol' errors in Windows. 
+// This could also be resolved by moving the function into the header...
+void Kick::KickVertex(bool adc)
 {
 	FUNCLOG
 	if (++gs.primC >= (int)g_primmult[prim->prim])

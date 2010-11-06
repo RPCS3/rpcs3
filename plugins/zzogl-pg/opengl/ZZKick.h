@@ -48,6 +48,7 @@ class Kick
 		~Kick() { }
 		
 		void KickVertex(bool adc);
+
 		void DrawPrim(u32 i);
 
         inline void DirtyValidPrevPrim() {
