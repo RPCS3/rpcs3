@@ -286,10 +286,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\memcpy_amd.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\NewRegs.cpp"
 				>
 			</File>
@@ -568,11 +564,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 	</Files>

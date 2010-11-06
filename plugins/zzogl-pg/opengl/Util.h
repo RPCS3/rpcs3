@@ -91,9 +91,11 @@ static __forceinline void pcsx2_aligned_free(void* pmem)
 
 #endif
 
+#include "Utilities/MemcpyFast.h"
+#define memcpy_amd memcpy_fast
+
 #define max(a,b)			(((a) > (b)) ? (a) : (b))
 #define min(a,b)			(((a) < (b)) ? (a) : (b))
-
 
 typedef struct
 {
@@ -344,14 +346,6 @@ extern char* EFFECT_NAME;
 extern char* EFFECT_DIR;
 extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
 extern bool g_bSaveTrans, g_bUpdateEffect, g_bSaveTex, g_bSaveResolved;
-#endif
-
-#ifdef __LINUX__
-#include "Utilities/MemcpyFast.h"
-#define memcpy_amd memcpy_fast
-#else
-extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
-extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
 #endif
 
 extern bool g_bDisplayFPS; // should we display FPS on screen?
