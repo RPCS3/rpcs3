@@ -237,14 +237,28 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 //  SpatialArrayReserve  (implementations)
 // --------------------------------------------------------------------------------------
 
+SpatialArrayReserve::SpatialArrayReserve( const wxString& name ) :
+	__parent( name )
+{
+	m_prot_mode = PageAccess_ReadWrite();
+}
+
 uint SpatialArrayReserve::_calcBlockBitArrayLength() const
 {
-	return (m_numblocks + 127) / 128;
+	// divide by 8 (rounded up) to compress 8 bits into each byte.
+	// mask off lower bits (rounded up) to allow for 128-bit alignment and SSE operations.
+	return (((m_numblocks + 7) / 8) + 15) & ~15;
 }
 
 void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 {
-	return __parent::Reserve( size, base, upper_bounds );
+	void* addr = __parent::Reserve( size, base, upper_bounds );
+	if (!addr) return NULL;
+
+	if (m_blocksize) SetBlockSizeInPages( m_blocksize );
+	m_blockbits.Alloc( _calcBlockBitArrayLength() );
+
+	return addr;
 }
 
 // Resets/clears the spatial array, reducing the memory commit pool overhead to zero (0).
@@ -307,7 +321,7 @@ SpatialArrayReserve& SpatialArrayReserve::SetBlockCount( uint blocks )
 // a modified buffer will be ignored (and generate an assertion in dev/debug modes).
 SpatialArrayReserve& SpatialArrayReserve::SetBlockSizeInPages( uint pages )
 {
-	if (pxAssertDev(m_commited, "Invalid object state: Block size can only be changed prior to accessing or modifying the reserved buffer contents."))
+	if (pxAssertDev(!m_commited, "Invalid object state: Block size can only be changed prior to accessing or modifying the reserved buffer contents."))
 	{
 		m_blocksize = pages;
 		m_numblocks = (m_reserved + m_blocksize - 1) / m_blocksize;
@@ -327,16 +341,23 @@ uint SpatialArrayReserve::SetBlockSize( uint bytes )
 	return m_blocksize * __pagesize;
 }
 
+void SpatialArrayReserve::DoCommitAndProtect( uptr page )
+{
+	// Spatial Arrays work on block granularity only:
+	// Round the page into a block, and commit the whole block that the page belongs to.
+	
+	uint block = page / m_blocksize;
+	CommitBlocks(block*m_blocksize, 1);
+}
+
 void SpatialArrayReserve::OnCommittedBlock( void* block )
 {
 	// Determine the block position in the blockbits array, flag it, and be done!
 	
-	uptr relative = (uptr)m_baseptr - (uptr)block;
-	pxAssume( (relative % (m_blocksize * __pagesize)) == 0);
+	uptr relative = (uptr)block - (uptr)m_baseptr;
 	relative /= m_blocksize * __pagesize;
 
 	m_blockbits[relative/32] |= 1 << (relative & 31);
-	m_commited += m_blocksize;
 }
 
 

@@ -70,6 +70,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="zlib.lib rpcrt4.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.exe"
+				RandomizedBaseAddress="1"
 			/>
 			<Tool
 				Name="VCALinkTool"

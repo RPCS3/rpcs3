@@ -148,6 +148,18 @@ public:
 	operator u8*()					{ return (u8*)m_baseptr; }
 	operator const u8*() const		{ return (u8*)m_baseptr; }
 
+	u8& operator[](uint idx)
+	{
+		pxAssume(idx < (m_reserved * __pagesize));
+		return *((u8*)m_baseptr + idx);
+	}
+
+	const u8& operator[](uint idx) const
+	{
+		pxAssume(idx < (m_reserved * __pagesize));
+		return *((u8*)m_baseptr + idx);
+	}
+
 protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 
@@ -204,7 +216,7 @@ protected:
 	ScopedAlignedAlloc<u8,16>	m_blockbits;
 
 public:
-	SpatialArrayReserve( const wxString& name, uint defCommit = 0 );
+	SpatialArrayReserve( const wxString& name );
 
 	virtual void* Reserve( uint size, uptr base = 0, uptr upper_bounds = 0 );
 	virtual void Reset();
@@ -216,14 +228,16 @@ public:
 	SpatialArrayReserve& SetBlockSizeInPages( uint bytes );
 	uint SetBlockSize( uint bytes );
 
-
 	operator void*()				{ return m_baseptr; }
 	operator const void*() const	{ return m_baseptr; }
 
 	operator u8*()				{ return (u8*)m_baseptr; }
 	operator const u8*() const	{ return (u8*)m_baseptr; }
+	
+	using __parent::operator[];
 
 protected:
+	void DoCommitAndProtect( uptr page );
 	uint _calcBlockBitArrayLength() const;
 };
 
