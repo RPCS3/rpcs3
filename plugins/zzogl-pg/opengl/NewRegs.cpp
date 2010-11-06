@@ -27,6 +27,7 @@
 #ifdef USE_OLD_REGS
 #include "Regs.h"
 #else
+#include "ZZoglVB.h"
 #include "ZZKick.h"
 
 #ifdef _MSC_VER
@@ -109,7 +110,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
 	// Fix Vertexes up later.
-	KickVertex(!!(r->ADC));
+	ZZKick->KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -120,7 +121,7 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z);
 
 	// Fix Vertexes up later.
-	KickVertex(!!(r->ADC));
+	ZZKick->KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZ2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -197,7 +198,7 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KickVertex(false);
+	ZZKick->KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -207,7 +208,7 @@ void __gifCall GIFRegHandlerXYZ2(const u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KickVertex(false);
+	ZZKick->KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -294,7 +295,7 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KickVertex(true);
+	ZZKick->KickVertex(true);
 	ZZLog::Greg_Log("XYZF3: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -304,7 +305,7 @@ void __gifCall GIFRegHandlerXYZ3(const u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KickVertex(true);
+	ZZKick->KickVertex(true);
 	ZZLog::Greg_Log("XYZ3: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -416,7 +417,7 @@ void __gifCall GIFRegHandlerPRIM(const u32 *data)
 	gs._prim[1].prim = r->PRIM;
 	gs._prim[1]._val = (data[0] >> 3) & 0xff; // Setting the next 8 flags after prim at once.
 
-    gs.new_tri_fan = !(prim_type ^ PRIM_TRIANGLE_FAN);
+    gs.new_tri_fan = !(r->PRIM ^ PRIM_TRIANGLE_FAN);
     ZZKick->DirtyValidPrevPrim();
 
 	Prim();
