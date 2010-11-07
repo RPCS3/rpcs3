@@ -304,7 +304,7 @@ void ReloadEffects()
 {
 #ifdef ZEROGS_DEVBUILD
 
-	for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+	for (int i = 0; i < ArraySize(ppsTexture); ++i)
 	{
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
@@ -2013,15 +2013,6 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 		ZZshSetParameter4fv(pfragment->fClampExts, v2, "g_fClampExts");
 
 
-}
-
-// Fixme should be in float4 lib
-inline bool equal_vectors(float4 a, float4 b)
-{
-	if (abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z) + abs(a.w - b.w) < 0.01)
-		return true;
-	else
-		return false;
 }
 
 int CheckTexArray[4][2][2][2] = {{{{0, }}}};

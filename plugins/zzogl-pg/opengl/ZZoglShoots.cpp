@@ -20,6 +20,7 @@
 // Texture and avi saving to file functions
 
 //------------------ Includes
+ #include "Util.h"
 #if defined(_WIN32)
 #	include <windows.h>
 #	include <aviUtil.h>

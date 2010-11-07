@@ -329,7 +329,7 @@ inline bool CreateOpenShadersFile()
 	// test if ps2hw.fx exists
 	char tempstr[255];
 	char curwd[255];
-	getcwd(curwd, ARRAY_SIZE(curwd));
+	getcwd(curwd, ArraySize(curwd));
 
 	strcpy(tempstr, "/plugins/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
@@ -798,7 +798,7 @@ void ZZDestroy()
 	
 	if (pvs != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(pvs); ++i)
+		for (int i = 0; i < ArraySize(pvs); ++i)
 		{
 			SAFE_RELEASE_PROG(pvs[i]);
 		}
@@ -806,7 +806,7 @@ void ZZDestroy()
 
 	if (ppsRegular != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(ppsRegular); ++i)
+		for (int i = 0; i < ArraySize(ppsRegular); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsRegular[i].prog);
 		}
@@ -814,7 +814,7 @@ void ZZDestroy()
 
 	if (ppsTexture != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+		for (int i = 0; i < ArraySize(ppsTexture); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		}
@@ -833,7 +833,7 @@ void ZZDestroy()
 	SAFE_RELEASE_PROG(ppsCRTC24[1].prog);
 	SAFE_RELEASE_PROG(ppsOne.prog);
 
-	SAFE_DELETE(font_p);
+	safe_delete(font_p);
 
 	GLWin.ReleaseContext();
 

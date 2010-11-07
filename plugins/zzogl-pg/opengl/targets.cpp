@@ -1992,6 +1992,7 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
         else {
             // In case it could occured
             // realloc would be better but you need to get it from libutilies first
+            // _aligned_realloc is brought in from ScopedAlloc.h now. --arcum42
             _aligned_free(targ->clut);
             targ->clut = (u8*)_aligned_malloc(clutsize, 16);
         }

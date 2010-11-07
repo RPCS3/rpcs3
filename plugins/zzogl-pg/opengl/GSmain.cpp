@@ -536,7 +536,7 @@ void CALLBACK GSvsync(int interlace)
 	if (--nToNextUpdate <= 0)
 	{
 		u32 d = timeGetTime();
-		fFPS = UPDATE_FRAMES * 1000.0f / (float)max(d - dwTime, 1);
+		fFPS = UPDATE_FRAMES * 1000.0f / (float)max(d - dwTime, (u32)1);
 		dwTime = d;
 		g_nFrame += UPDATE_FRAMES;
 		SetGSTitle();

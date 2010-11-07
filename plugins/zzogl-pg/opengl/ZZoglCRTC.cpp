@@ -21,6 +21,7 @@
 // It draw picture direct on screen, so here we have interlacing and frame skipping.
 
 //------------------ Includes
+ #include "Util.h"
 #include "ZZoglCRTC.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
@@ -814,13 +815,13 @@ inline void AfterRendererAutoresetTargets()
 	if (conf.settings().auto_reset)
 	{
 		s_nResolveCounts[s_nCurResolveIndex] = s_nResolved;
-		s_nCurResolveIndex = (s_nCurResolveIndex + 1) % ARRAY_SIZE(s_nResolveCounts);
+		s_nCurResolveIndex = (s_nCurResolveIndex + 1) % ArraySize(s_nResolveCounts);
 
 		int total = 0;
 
-		for (int i = 0; i < ARRAY_SIZE(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
+		for (int i = 0; i < ArraySize(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
 
-		if (total / ARRAY_SIZE(s_nResolveCounts) > 3)
+		if (total / ArraySize(s_nResolveCounts) > 3)
 		{
 			if (s_nLastResolveReset > (int)(fFPS * 8))
 			{

@@ -546,15 +546,15 @@ typedef struct
 	GSClut clut_buffer;
 	int primNext(int inc = 1)
 	{
-        // Note: ARRAY_SIZE(gsvertex) == 2^n => modulo is replaced by an and instruction
-		return ((primIndex + inc) % ARRAY_SIZE(gsvertex));
+        // Note: ArraySize(gsvertex) == 2^n => modulo is replaced by an and instruction
+		return ((primIndex + inc) % ArraySize(gsvertex));
 	}
 	
     int primPrev(int dec = 1)
     {
-        // Note: assert( dec <= ARRAY_SIZE(gsvertex) );
-        // Note: ARRAY_SIZE(gsvertex) == 2^n => modulo is replaced by an and instruction
-		return ((primIndex + (ARRAY_SIZE(gsvertex) - dec)) % ARRAY_SIZE(gsvertex));
+        // Note: assert( dec <= ArraySize(gsvertex) );
+        // Note: ArraySize(gsvertex) == 2^n => modulo is replaced by an and instruction
+		return ((primIndex + (ArraySize(gsvertex) - dec)) % ArraySize(gsvertex));
     }
 	
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)

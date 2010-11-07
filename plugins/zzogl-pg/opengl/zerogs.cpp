@@ -18,6 +18,7 @@
  */
 
 //-------------------------- Includes
+#include "Util.h"
 #include "zerogs.h"
 #include "ZZoglVB.h"
 

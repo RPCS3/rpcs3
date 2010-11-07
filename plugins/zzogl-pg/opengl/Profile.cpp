@@ -60,7 +60,7 @@ struct DVPROFSTRUCT
 
 		while (it != listpChild.end())
 		{
-			SAFE_DELETE(*it);
+			safe_delete(*it);
 			++it;
 		}
 	}

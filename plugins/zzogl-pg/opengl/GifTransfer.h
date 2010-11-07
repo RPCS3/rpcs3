@@ -20,9 +20,9 @@
 #ifndef GIFTRANSFER_H_INCLUDED
 #define GIFTRANSFER_H_INCLUDED
 
+#include "Util.h"
 #include "GS.h"
 #include "Regs.h"
-#include "Util.h"
 
 enum GIF_FLG
 {

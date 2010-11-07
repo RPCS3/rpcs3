@@ -195,6 +195,15 @@ class Vector4
 			y = ((color >> 8) & 0xff) / 255.0f;
 			z = ((color >> 16) & 0xff) / 255.0f;
 		}
+		
+		bool equal_vectors(const Vector4<T>&  v)
+		{
+			if (abs(x - v.x) + abs(y - v.y) + abs(z - v.z) + abs(w - v.w) < 0.01)
+				return true;
+			else
+				return false;
+		}
+
 };
 
 typedef Vector4<float> float4;
@@ -442,6 +451,14 @@ class float4
 		friend float4 operator <= (const float4& v1, const float4& v2)
 		{
 			return float4(_mm_cmple_ps(v1.m, v2.m));
+		}
+		
+		bool equal_vectors(const float4& v)
+		{
+			if (abs(x - v.x) + abs(y - v.y) + abs(z - v.z) + abs(w - v.w) < 0.01)
+				return true;
+			else
+				return false;
 		}
 		
 		// This looked interesting, so I thought I'd include it...

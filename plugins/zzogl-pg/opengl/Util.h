@@ -43,7 +43,10 @@ extern HWND GShwnd;
 
 
 #define GSdefs
-#include "PS2Edefs.h"
+
+//Pcsx2Defs is included in Dependencies.h.
+#include "Utilities/Dependencies.h"
+
 #include "CRC.h"
 #include "ZZLog.h"
 
@@ -55,47 +58,10 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 #include "ZZoglMath.h"
 #include "Profile.h"
 
-#include <vector>
-#include <string>
-#include <cstring>
-
-extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
-
-#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
-#include <malloc.h>
-
-// declare linux equivalents
-static __forceinline void* pcsx2_aligned_malloc(size_t size, size_t align)
-{
-	assert(align < 0x10000);
-	char* p = (char*)malloc(size + align);
-	int off = 2 + align - ((int)(uptr)(p + 2) % align);
-
-	p += off;
-	*(u16*)(p - 2) = off;
-
-	return p;
-}
-
-static __forceinline void pcsx2_aligned_free(void* pmem)
-{
-	if (pmem != NULL)
-	{
-		char* p = (char*)pmem;
-		free(p - (int)*(u16*)(p - 2));
-	}
-}
-
-#define _aligned_malloc pcsx2_aligned_malloc
-#define _aligned_free pcsx2_aligned_free
-
-#endif
-
 #include "Utilities/MemcpyFast.h"
 #define memcpy_amd memcpy_fast
 
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
+extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
 
 typedef struct
 {
@@ -273,21 +239,7 @@ union name			\
  
 #define REG_SET_END };
 
-#ifndef SAFE_DELETE
-#	define SAFE_DELETE(x)		if( (x) != NULL ) { delete (x); (x) = NULL; }
-#endif
-#ifndef SAFE_DELETE_ARRAY
-#	define SAFE_DELETE_ARRAY(x)	if( (x) != NULL ) { delete[] (x); (x) = NULL; }
-#endif
-#ifndef SAFE_RELEASE
-#	define SAFE_RELEASE(x)		if( (x) != NULL ) { (x)->Release(); (x) = NULL; }
-#endif
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
- 
-#ifndef ARRAY_SIZE
-#	define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif
 
 extern void LoadConfig();
 extern void SaveConfig();

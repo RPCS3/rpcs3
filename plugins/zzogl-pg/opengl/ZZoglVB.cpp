@@ -21,6 +21,7 @@
 // VB stands for Visual Buffer, as I think
 
 //------------------- Includes
+ #include "Util.h"
 #include "targets.h"
 #include "ZZoglVB.h"
 #include "GS.h"

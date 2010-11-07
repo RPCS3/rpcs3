@@ -21,6 +21,7 @@
 // ZZogl Shader manipulation functions.
 
 //------------------- Includes
+#include "Util.h"
 #include "ZZoglShaders.h"
 #include "zpipe.h"
 #include <math.h>
@@ -227,7 +228,7 @@ bool ZZshCreateOpenShadersFile() {
 	// test if ps2hw.fx exists
 	char tempstr[255];
 	char curwd[255];
-	getcwd(curwd, ARRAY_SIZE(curwd));
+	getcwd(curwd, ArraySize(curwd));
 
 	strcpy(tempstr, "/plugins/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
@@ -538,7 +539,7 @@ inline bool LoadEffects()
 	}
 
 	// clear the textures
-	for(u16 i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for(u16 i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		ppsTexture[i].prog = NULL;
 	}
@@ -645,7 +646,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
 	
-	assert( index < ARRAY_SIZE(ppsTexture) );
+	assert( index < ArraySize(ppsTexture) );
 	FRAGMENTSHADER* pf = ppsTexture+index;
 	
 	if( pbFailed != NULL ) *pbFailed = false;
@@ -722,7 +723,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 inline bool LoadEffects()
 {
 	// clear the textures
-	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
 
