@@ -100,7 +100,7 @@ void HostSys::Munmap(uptr base, size_t size)
 
 void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode& mode )
 {
-	pxAssertDev( ((size & (__pagesize-1)) == 0), wxsFormat(
+	pxAssertDev( ((size & (__pagesize-1)) == 0), pxsFmt(
 		L"Memory block size must be a multiple of the target platform's page size.\n"
 		L"\tPage Size: 0x%04x (%d), Block Size: 0x%04x (%d)",
 		__pagesize, __pagesize, size, size )
@@ -109,9 +109,13 @@ void HostSys::MemProtect( void* baseaddr, size_t size, const PageProtectionMode&
 	DWORD OldProtect;	// enjoy my uselessness, yo!
 	if (!VirtualProtect( baseaddr, size, ConvertToWinApi(mode), &OldProtect ))
 	{
-		throw Exception::WinApiError().SetDiagMsg(
+		Exception::WinApiError apiError;
+		
+		apiError.SetDiagMsg(
 			pxsFmt(L"VirtualProtect failed @ 0x%08X -> 0x%08X  (mode=%s)",
 			baseaddr, (uptr)baseaddr + size, mode.ToString().c_str()
 		));
+
+		pxFailDev( apiError.FormatDiagnosticMessage() );
 	}
 }

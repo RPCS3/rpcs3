@@ -125,7 +125,7 @@ static void recEventTest()
 //      stackframe setup code in this function)
 static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 {
-	pxFailDev( wxsFormat( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
+	pxFailDev( pxsFmt( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
 		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
 	);
 
@@ -827,6 +827,7 @@ void recResetIOP()
 
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(psxRecLUT, 0, 0, 0, i, 0);
+
 	// IOP knows 64k pages, hence for the 0x10000's
 
 	// The bottom 2 bits of PC are always zero, so we <<14 to "compress"
@@ -834,6 +835,7 @@ void recResetIOP()
 
 	// We're only mapping 20 pages here in 4 places.
 	// 0x80 comes from : (Ps2MemSize::IopRam / 0x10000) * 4
+
 	for (int i=0; i<0x80; i++)
 	{
 		recLUT_SetPage(psxRecLUT, psxhwLUT, recRAM, 0x0000, i, i & 0x1f);

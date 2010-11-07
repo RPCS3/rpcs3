@@ -264,7 +264,20 @@ void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 // Resets/clears the spatial array, reducing the memory commit pool overhead to zero (0).
 void SpatialArrayReserve::Reset()
 {
-	__parent::Reset();
+	if (m_commited)
+	{
+		u8* curptr = GetPtr();
+		const uint blockBytes = m_blocksize * __pagesize;
+		for (uint i=0; i<m_numblocks; ++i, curptr+=blockBytes)
+		{
+			uint thisbit = 1 << (i & 7);
+			if (!(m_blockbits[i/8] & thisbit)) continue;
+
+			HostSys::MemProtect(curptr, blockBytes, PageAccess_None());
+			HostSys::MmapResetPtr(curptr, blockBytes);
+		}
+	}
+
 	memzero_sse_a(m_blockbits.GetPtr(), _calcBlockBitArrayLength());
 }
 
@@ -357,7 +370,10 @@ void SpatialArrayReserve::OnCommittedBlock( void* block )
 	uptr relative = (uptr)block - (uptr)m_baseptr;
 	relative /= m_blocksize * __pagesize;
 
-	m_blockbits[relative/32] |= 1 << (relative & 31);
+	//DbgCon.WriteLn("Check me out @ 0x%08x", block);
+	
+	pxAssert( (m_blockbits[relative/8] & (1 << (relative & 7))) == 0 );
+	m_blockbits[relative/8] |= 1 << (relative & 7);
 }
 
 
