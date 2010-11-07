@@ -111,75 +111,26 @@ void ProcessWireFrame()
 	ZZLog::WriteToScreen(strtitle);
 }
 
-typedef struct GameHackStruct
-{
-	const char HackName[40];
-	u32 HackMask;
-} GameHack;
-
-#define HACK_NUMBER 25
-
-GameHack HackinshTable[HACK_NUMBER] =
-{
-	{"*** 0 No Hack", 0},
-	{"*** 1 TexTargets Check", GAME_TEXTURETARGS},
-	{"*** 2 Autoreset Targets", GAME_AUTORESET},
-	{"*** 3 Interlace 2x", GAME_INTERLACE2X},
-	{"*** 4 TexA hack", GAME_TEXAHACK},
-	{"*** 5 No Target Resolve", GAME_NOTARGETRESOLVE},
-	{"*** 6 Exact color", GAME_EXACTCOLOR},
-	//{"***xx No color clamp", GAME_NOCOLORCLAMP},
-	//{"***xx FFX hack", GAME_FFXHACK},
-	{"*** 7 No Alpha Fail", GAME_NOALPHAFAIL},
-	{"*** 8 No Depth Update", GAME_NODEPTHUPDATE},
-	{"*** 9 Quick Resolve 1", GAME_QUICKRESOLVE1},
-	{"***10 No quick resolve", GAME_NOQUICKRESOLVE},
-	{"***11 Notaget clut", GAME_NOTARGETCLUT},
-	{"***12 No Stencil", GAME_NOSTENCIL},
-	{"***13 No Depth resolve", GAME_NODEPTHRESOLVE},
-	{"***14 Full 16 bit", GAME_FULL16BITRES},
-	{"***15 Resolve promoted", GAME_RESOLVEPROMOTED},
-	{"***16 Fast Update", GAME_FASTUPDATE},
-	{"***17 No Alpha Test", GAME_NOALPHATEST},
-	{"***18 Disable MRT depth", GAME_DISABLEMRTDEPTH},
-	//{"***xx 32 bit targs", GAME_32BITTARGS},
-	//{"***xx Path 3 hack", GAME_PATH3HACK},
-	//{"***xx Parallel calls", GAME_DOPARALLELCTX},
-	{"***19 Specular highlights", GAME_XENOSPECHACK},
-	//{"***xx Partial pointers", GAME_PARTIALPOINTERS},
-	{"***20 Partial depth", GAME_PARTIALDEPTH},
-	{"***21 Reget hack", GAME_REGETHACK},
-
-	{"***22 Gust hack", GAME_GUSTHACK},
-	{"***23 Log-Z", GAME_NOLOGZ},
-	{"***24 Auto skipdraw", GAME_AUTOSKIPDRAW}
-};
-
-int CurrentHackSetting = 0;
-
 void ProcessHackSetting(bool reverse)
 {
 	FUNCLOG
-
-//	ZZLog::Debug_Log("A %d", HackinshTable[CurrentHackSetting].HackMask);
-	conf.hacks._u32 &= !(HackinshTable[CurrentHackSetting].HackMask);
+	
+	int hack = CurrentHack;
 
 	if (reverse)
 	{
-		CurrentHackSetting--;
+		hack--;
 
-		if (CurrentHackSetting == -1) CurrentHackSetting = HACK_NUMBER - 1;
+		if (hack < 0) hack = HACK_NUMBER - 1;
 	}
 	else
 	{
-		CurrentHackSetting++;
+		hack++;
 
-		if (CurrentHackSetting >= HACK_NUMBER) CurrentHackSetting = 0;
+		if (hack >= HACK_NUMBER) hack = 0;
 	}
-
-	conf.hacks._u32 |= HackinshTable[CurrentHackSetting].HackMask;
-
-	ZZLog::WriteToScreen(HackinshTable[CurrentHackSetting].HackName);
+	ChangeCurrentHack(hack);
+		
 	SaveConfig();
 }
 
@@ -189,7 +140,7 @@ void ProcessSaveState()
 	char strtitle[256];
 	sprintf(strtitle, "Saving in savestate %d", CurrentSavestate);
 	SaveStateExists = true;
-	ZZLog::WriteToScreen(HackinshTable[CurrentHackSetting].HackName);
+	if (CurrentHack != 0) DisplayHack(CurrentHack);
 }
 
 void OnFKey(int key, int shift)

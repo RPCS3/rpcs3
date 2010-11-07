@@ -104,7 +104,6 @@ HWND GShwnd = NULL;
 u32 THR_KeyEvent = 0; // Value for key event processing between threads
 bool THR_bShift = false;
 
-
 u32 CALLBACK PS2EgetLibType()
 {
 	return PS2E_LT_GS;
@@ -133,55 +132,6 @@ void CALLBACK GSsetSettingsDir(const char* dir)
 void CALLBACK GSsetLogDir(const char* dir)
 {
 	ZZLog::SetDir(dir);
-}
-
-void ReportHacks(gameHacks hacks)
-{
-	if (hacks.texture_targs) ZZLog::WriteLn("'Texture targs' hack enabled.");
-	if (hacks.auto_reset) ZZLog::WriteLn("'Auto reset' hack enabled.");
-	if (hacks.interlace_2x) ZZLog::WriteLn("'Interlace 2x' hack enabled.");
-	if (hacks.texa) ZZLog::WriteLn("'Texa' hack enabled.");
-	if (hacks.no_target_resolve) ZZLog::WriteLn("'No target resolve' hack enabled.");
-	if (hacks.exact_color) ZZLog::WriteLn("Exact color hack enabled.");
-	if (hacks.no_color_clamp) ZZLog::WriteLn("'No color clamp' hack enabled.");
-	if (hacks.no_alpha_fail) ZZLog::WriteLn("'No alpha fail' hack enabled.");
-	if (hacks.no_depth_update) ZZLog::WriteLn("'No depth update' hack enabled.");
-	if (hacks.quick_resolve_1) ZZLog::WriteLn("'Quick resolve 1' enabled.");
-	if (hacks.no_quick_resolve) ZZLog::WriteLn("'No Quick resolve' hack enabled.");
-	if (hacks.no_target_clut) ZZLog::WriteLn("'No target clut' hack enabled.");
-	if (hacks.no_stencil) ZZLog::WriteLn("'No stencil' hack enabled.");
-	if (hacks.vss_hack_off) ZZLog::WriteLn("VSS hack enabled.");
-	if (hacks.no_depth_resolve) ZZLog::WriteLn("'No depth resolve' hack enabled.");
-	if (hacks.full_16_bit_res) ZZLog::WriteLn("'Full 16 bit resolution' hack enabled.");
-	if (hacks.resolve_promoted) ZZLog::WriteLn("'Resolve promoted' hack enabled.");
-	if (hacks.fast_update) ZZLog::WriteLn("'Fast update' hack enabled.");
-	if (hacks.no_alpha_test) ZZLog::WriteLn("'No alpha test' hack enabled.");
-	if (hacks.disable_mrt_depth) ZZLog::WriteLn("'Disable mrt depth' hack enabled.");
-	if (hacks.args_32_bit) ZZLog::WriteLn("'Args 32 bit' hack enabled.");
-	//if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
-	if (hacks.parallel_context) ZZLog::WriteLn("'Parallel context' hack enabled.");
-	if (hacks.xenosaga_spec) ZZLog::WriteLn("'Xenosaga spec' hack enabled.");
-	if (hacks.partial_pointers) ZZLog::WriteLn("'Partial pointers' hack enabled.");
-	if (hacks.partial_depth) ZZLog::WriteLn("'Partial depth' hack enabled.");
-	if (hacks.reget) ZZLog::WriteLn("Reget hack enabled.");
-	if (hacks.gust) ZZLog::WriteLn("Gust hack enabled.");
-	if (hacks.no_logz) ZZLog::WriteLn("'No logz' hack enabled.");
-	if (hacks.automatic_skip_draw) ZZLog::WriteLn("'Automatic skip draw' hack enabled.");
-}
-
-void ListHacks()
-{
-	if ((!conf.disableHacks) && (conf.def_hacks._u32 != 0))
-	{
-		ZZLog::WriteLn("AutoEnabling these hacks:");
-		ReportHacks(conf.def_hacks);
-	}
-	
-	if (conf.hacks._u32 != 0)
-	{
-		ZZLog::WriteLn("You've manually enabled these hacks:");
-		ReportHacks(conf.hacks);
-	}
 }
 
 void CALLBACK GSsetGameCRC(int crc, int options)
@@ -350,7 +300,6 @@ extern LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 extern HINSTANCE hInst;
 #endif
 
-
 s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
@@ -392,6 +341,48 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	ZZLog::GS_Log("GSopen finished.");
 	return 0;
 }
+
+#ifdef USE_GOPEN2
+s32 CALLBACK GSopen2( void* pDsp, INT32 flags )
+{
+	FUNCLOG
+
+	bool err;
+
+	g_GSMultiThreaded = true;
+
+	ZZLog::WriteLn("Calling GSopen2.");
+
+#if defined(_WIN32) && defined(_DEBUG)
+	g_hCurrentThread = GetCurrentThread();
+#endif
+
+	LoadConfig();
+	strcpy(GStitle, Title);
+	
+	err = GLWin.GetWindow(pDsp); // Needs to be added.
+	if (!err)
+	{
+		ZZLog::Error_Log("Failed to acquire window. Exiting...");
+		return -1;
+	}
+
+	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+
+	if (!ZZCreate2(conf.width, conf.height)) return -1; // Needs to be added.
+
+	ZZLog::WriteLn("Initialization successful.");
+
+	WriteBilinear();
+	WriteAA();
+	InitProfile();
+	InitPath();
+	ResetRegs();
+	ZZLog::GS_Log("GSopen2 finished.");
+	return 0;
+	
+}
+#endif
 
 void CALLBACK GSshutdown()
 {

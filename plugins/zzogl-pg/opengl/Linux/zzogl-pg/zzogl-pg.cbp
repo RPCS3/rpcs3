@@ -146,6 +146,8 @@
 		<Unit filename="../../ZZClut.cpp" />
 		<Unit filename="../../ZZClut.h" />
 		<Unit filename="../../ZZGl.h" />
+		<Unit filename="../../ZZHacks.cpp" />
+		<Unit filename="../../ZZHacks.h" />
 		<Unit filename="../../ZZKeyboard.cpp" />
 		<Unit filename="../../ZZKick.cpp" />
 		<Unit filename="../../ZZKick.h" />

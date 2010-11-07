@@ -64,6 +64,7 @@ set(zzoglSources
     zerogs.cpp
     zpipe.cpp
     ZZClut.cpp
+    ZZHacks.cpp
     ZZKeyboard.cpp
     ZZKick.cpp
     ZZLog.cpp
@@ -99,6 +100,7 @@ set(zzoglHeaders
     zpipe.h
     ZZClut.h
     ZZGl.h
+    ZZHacks.h
     ZZKick.h
     ZZLog.h
     ZZoglCRTC.h

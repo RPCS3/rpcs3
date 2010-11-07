@@ -183,6 +183,7 @@ extern void Close();
 extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);
 void WriteToScreen(const char* pstr, u32 ms = 5000);
+void WriteToScreen2(const char* pstr, ...);
 extern void WriteToConsole(const char *fmt, ...);
 extern void Print(const char *fmt, ...);
 extern void WriteLn(const char *fmt, ...);

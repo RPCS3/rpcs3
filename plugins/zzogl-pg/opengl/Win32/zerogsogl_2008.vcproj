@@ -361,6 +361,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZHacks.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZKick.cpp"
 				>
 			</File>
@@ -503,6 +507,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZGl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZHacks.h"
 				>
 			</File>
 			<File

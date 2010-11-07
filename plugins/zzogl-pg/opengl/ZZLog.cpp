@@ -106,6 +106,18 @@ void WriteToScreen(const char* pstr, u32 ms)
 	ZZAddMessage(pstr, ms);
 }
 
+void WriteToScreen2(const char* fmt, ...)
+{
+	va_list list;
+	char tmp[512];
+
+	va_start(list, fmt);
+	vsprintf(tmp, fmt, list);
+	va_end(list);
+
+	ZZAddMessage(tmp, 5000);
+}
+
 void _Message(const char *str)
 {
 	SysMessage(str);

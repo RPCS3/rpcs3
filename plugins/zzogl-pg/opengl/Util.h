@@ -127,47 +127,6 @@ enum GSWindowDim
 	GSDim_1280,
 };
 
-typedef union 
-{
-	struct
-	{
-		u32 texture_targs : 1;
-		u32 auto_reset : 1;
-		u32 interlace_2x : 1;
-		u32 texa : 1; // apply texa to non textured polys
-		u32 no_target_resolve : 1;
-		u32 exact_color : 1;
-		u32 no_color_clamp : 1;
-		u32 ffx : 1;
-		u32 no_alpha_fail : 1;
-		u32 no_depth_update : 1;
-		u32 quick_resolve_1 : 1;
-		u32 no_quick_resolve : 1;
-		u32 no_target_clut : 1; // full 16 bit resolution
-		u32 no_stencil : 1;
-		u32 vss_hack_off : 1; // vertical stripe syndrome
-		u32 no_depth_resolve : 1;
-		u32 full_16_bit_res : 1;
-		u32 resolve_promoted : 1;
-		u32 fast_update : 1;
-		u32 no_alpha_test : 1;
-		u32 disable_mrt_depth : 1;
-		u32 args_32_bit : 1;
-		u32 path3 : 1;
-		u32 parallel_context : 1; // tries to parallelize both contexts so that render calls are reduced (xenosaga)
-									// makes the game faster, but can be buggy
-		u32 xenosaga_spec : 1; // xenosaga specularity hack (ignore any zmask=1 draws)
-		u32 partial_pointers : 1; // whenver the texture or render target are small, tries to look for bigger ones to read from
-		u32 partial_depth : 1; // tries to save depth targets as much as possible across height changes
-		u32 reget : 1; // some sort of weirdness in ReGet() code
-		u32 gust : 1; // Needed for Gustgames fast update.
-		u32 no_logz : 1; // Intended for linux -- not logarithmic Z.
-		u32 automatic_skip_draw :1; // allow debug of the automatic skip draw option
-		u32 reserved2 :1;
-	};
-	u32 _u32;
-} gameHacks;
-
 typedef union
 {
 	struct
