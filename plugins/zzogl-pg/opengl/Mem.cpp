@@ -130,7 +130,7 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 		for (int tempj = gs.trxpos.dx; tempj < alignedPt.x; tempj += data.blockwidth, pbuf += TransPitch(data.blockwidth, data.transfersize) / TSize)
 		{
 			u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits / 8;
-			swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize), 0xffffffff);
+			swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize));
 		}
 #ifdef ZEROGS_SSE2
         // Note: swizzle function uses some non temporal move (mm_stream) instruction.

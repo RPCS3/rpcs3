@@ -27,7 +27,6 @@
 // WARNING a sfence instruction must be call after SwizzleBlock sse2 function
 
 // Current port of the ASM function to intrinsic
-#define INTRINSIC_PORT_32
 #define INTRINSIC_PORT_16
 #define INTRINSIC_PORT_8
 #define INTRINSIC_PORT_4
@@ -36,100 +35,43 @@ static const __aligned16 u32 mask_24b_H[4] = {0xFF000000, 0x0000FFFF, 0xFF000000
 static const __aligned16 u32 mask_24b_L[4] = {0x00FFFFFF, 0x00000000, 0x00FFFFFF, 0x00000000};
 
 template<bool aligned>
-__forceinline void SwizzleBlock32_sse2_I(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock32_sse2_I(u8 *dst, u8 *src, int pitch)
 {
     __m128i src_0;
     __m128i src_1;
     __m128i src_2;
     __m128i src_3;
 
-	if (WriteMask == 0xffffffff) {
-        for (int i=3 ; i >= 0 ; --i) {
-            // load
-            if (aligned) {
-                src_0 = _mm_load_si128((__m128i*)src); // 5 4 1 0
-                src_1 = _mm_load_si128((__m128i*)(src+16)); // 13 12 9 8
-                src_2 = _mm_load_si128((__m128i*)(src+pitch)); // 7 6 3 2
-                src_3 = _mm_load_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
-            } else {
-                src_0 = _mm_loadu_si128((__m128i*)src); // 5 4 1 0
-                src_1 = _mm_loadu_si128((__m128i*)(src+16)); // 13 12 9 8
-                src_2 = _mm_loadu_si128((__m128i*)(src+pitch)); // 7 6 3 2
-                src_3 = _mm_loadu_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
-            }
-
-            //  Reorder
-            __m128i dst_0 = _mm_unpacklo_epi64(src_0, src_2); // 3 2 1 0
-            __m128i dst_1 = _mm_unpackhi_epi64(src_0, src_2); // 7 6 5 4
-            __m128i dst_2 = _mm_unpacklo_epi64(src_1, src_3); // 11 10 9 8
-            __m128i dst_3 = _mm_unpackhi_epi64(src_1, src_3); // 15 14 13 12
-
-            // store
-            _mm_stream_si128((__m128i*)dst, dst_0);
-            _mm_stream_si128(((__m128i*)dst)+1, dst_1);
-            _mm_stream_si128(((__m128i*)dst)+2, dst_2);
-            _mm_stream_si128(((__m128i*)dst)+3, dst_3);
-
-            // update the pointer
-            dst += 64;
-            src += 2*pitch;
+    for (int i=3 ; i >= 0 ; --i) {
+        // load
+        if (aligned) {
+            src_0 = _mm_load_si128((__m128i*)src); // 5 4 1 0
+            src_1 = _mm_load_si128((__m128i*)(src+16)); // 13 12 9 8
+            src_2 = _mm_load_si128((__m128i*)(src+pitch)); // 7 6 3 2
+            src_3 = _mm_load_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
+        } else {
+            src_0 = _mm_loadu_si128((__m128i*)src); // 5 4 1 0
+            src_1 = _mm_loadu_si128((__m128i*)(src+16)); // 13 12 9 8
+            src_2 = _mm_loadu_si128((__m128i*)(src+pitch)); // 7 6 3 2
+            src_3 = _mm_loadu_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
         }
-	}
-	else
-	{
-        // Build the mask (tranform a u32 to a 4 packets u32)
-        __m128i mask = _mm_cvtsi32_si128(WriteMask);
-        mask = _mm_shuffle_epi32(mask, 0);
 
-        for (int i=3 ; i >= 0 ; --i) {
-            // load
-            if (aligned) {
-                src_0 = _mm_load_si128((__m128i*)src); // 5 4 1 0
-                src_1 = _mm_load_si128((__m128i*)(src+16)); // 13 12 9 8
-                src_2 = _mm_load_si128((__m128i*)(src+pitch)); // 7 6 3 2
-                src_3 = _mm_load_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
-            } else {
-                src_0 = _mm_loadu_si128((__m128i*)src); // 5 4 1 0
-                src_1 = _mm_loadu_si128((__m128i*)(src+16)); // 13 12 9 8
-                src_2 = _mm_loadu_si128((__m128i*)(src+pitch)); // 7 6 3 2
-                src_3 = _mm_loadu_si128((__m128i*)(src+16+pitch)); // 15 14 11 10
-            }
+        //  Reorder
+        __m128i dst_0 = _mm_unpacklo_epi64(src_0, src_2); // 3 2 1 0
+        __m128i dst_1 = _mm_unpackhi_epi64(src_0, src_2); // 7 6 5 4
+        __m128i dst_2 = _mm_unpacklo_epi64(src_1, src_3); // 11 10 9 8
+        __m128i dst_3 = _mm_unpackhi_epi64(src_1, src_3); // 15 14 13 12
 
-            // Apply the WriteMask before reordering
-            src_0 = _mm_and_si128(src_0, mask);
-            src_1 = _mm_and_si128(src_1, mask);
-            src_2 = _mm_and_si128(src_2, mask);
-            src_3 = _mm_and_si128(src_3, mask);
+        // store
+        _mm_stream_si128((__m128i*)dst, dst_0);
+        _mm_stream_si128(((__m128i*)dst)+1, dst_1);
+        _mm_stream_si128(((__m128i*)dst)+2, dst_2);
+        _mm_stream_si128(((__m128i*)dst)+3, dst_3);
 
-            //  Reorder
-            __m128i dst_0 = _mm_unpacklo_epi64(src_0, src_2); // 3 2 1 0
-            __m128i dst_1 = _mm_unpackhi_epi64(src_0, src_2); // 7 6 5 4
-            __m128i dst_2 = _mm_unpacklo_epi64(src_1, src_3); // 11 10 9 8
-            __m128i dst_3 = _mm_unpackhi_epi64(src_1, src_3); // 15 14 13 12
-
-            // Load previous value and apply the ~mask
-            __m128i old_dst_0 = _mm_andnot_si128(mask, _mm_load_si128((__m128i*)dst));
-            __m128i old_dst_1 = _mm_andnot_si128(mask, _mm_load_si128(((__m128i*)dst)+1));
-            __m128i old_dst_2 = _mm_andnot_si128(mask, _mm_load_si128(((__m128i*)dst)+2));
-            __m128i old_dst_3 = _mm_andnot_si128(mask, _mm_load_si128(((__m128i*)dst)+3));
-
-            // Build the final value
-            dst_0 = _mm_or_si128(dst_0, old_dst_0);
-            dst_1 = _mm_or_si128(dst_1, old_dst_1);
-            dst_2 = _mm_or_si128(dst_2, old_dst_2);
-            dst_3 = _mm_or_si128(dst_3, old_dst_3);
-
-            // store
-            _mm_stream_si128((__m128i*)dst, dst_0);
-            _mm_stream_si128(((__m128i*)dst)+1, dst_1);
-            _mm_stream_si128(((__m128i*)dst)+2, dst_2);
-            _mm_stream_si128(((__m128i*)dst)+3, dst_3);
-
-            // update the pointer
-            dst += 64;
-            src += 2*pitch;
-        }
-	}
+        // update the pointer
+        dst += 64;
+        src += 2*pitch;
+    }
 }
 
 template<bool aligned>
@@ -373,7 +315,7 @@ __forceinline void SwizzleBlock4_sse2_I(u8 *dst, u8 *src, int pitch)
 }
 
 template<bool FOUR_BIT, bool UPPER>
-__forceinline void SwizzleBlock8H_4H(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8H_4H(u8 *dst, u8 *src, int pitch)
 {
     __m128i zero_128 = _mm_setzero_si128();
     __m128i src_0;
@@ -470,16 +412,12 @@ __forceinline void SwizzleBlock8H_4H(u8 *dst, u8 *src, int pitch, u32 WriteMask)
 
 // special swizzle macros - which I converted to functions.
 
-__forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_32
-    SwizzleBlock32_sse2_I<true>(dst, src, pitch, WriteMask);
-#else
-	SwizzleBlock32_sse2(dst, src, pitch, WriteMask);
-#endif
+    SwizzleBlock32_sse2_I<true>(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch)
 {
     __m128i mask_H = _mm_load_si128((__m128i*)mask_24b_H);
     __m128i mask_L = _mm_load_si128((__m128i*)mask_24b_L);
@@ -561,127 +499,123 @@ __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask)
     }
 }
 
-__forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_16
-	SwizzleBlock16_sse2_I<true>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16_sse2_I<true>(dst, src, pitch);
 #else
-	SwizzleBlock16_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_8
-	SwizzleBlock8_sse2_I<true>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8_sse2_I<true>(dst, src, pitch);
 #else
-	SwizzleBlock8_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_4
-	SwizzleBlock4_sse2_I<true>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4_sse2_I<true>(dst, src, pitch);
 #else
-	SwizzleBlock4_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_32
-    SwizzleBlock32_sse2_I<false>(dst, src, pitch, WriteMask);
-#else
-	SwizzleBlock32u_sse2(dst, src, pitch, WriteMask);
-#endif
+    SwizzleBlock32_sse2_I<false>(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_16
-	SwizzleBlock16_sse2_I<false>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16_sse2_I<false>(dst, src, pitch);
 #else
-	SwizzleBlock16u_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16u_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_8
-	SwizzleBlock8_sse2_I<false>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8_sse2_I<false>(dst, src, pitch);
 #else
-	SwizzleBlock8u_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8u_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch)
 {
 #ifdef INTRINSIC_PORT_4
-	SwizzleBlock4_sse2_I<false>(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4_sse2_I<false>(dst, src, pitch);
 #else
-	SwizzleBlock4u_sse2(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4u_sse2(dst, src, pitch);
 #endif
 }
 
-__forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch)
 {
-    SwizzleBlock8H_4H<false, false>(dst, src, pitch, WriteMask);
+    SwizzleBlock8H_4H<false, false>(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch)
 {
-    SwizzleBlock8H_4H<true, true>(dst, src, pitch, WriteMask);
+    SwizzleBlock8H_4H<true, true>(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch)
 {
-    SwizzleBlock8H_4H<true, false>(dst, src, pitch, WriteMask);
+    SwizzleBlock8H_4H<true, false>(dst, src, pitch);
 }
 
 #else
 
-__forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock32_c(dst, src, pitch, WriteMask);
+	SwizzleBlock32_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock16_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock8_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock4_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock32_c(dst, src, pitch, WriteMask);
+	SwizzleBlock32_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock16_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock16_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock8_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock8_c(dst, src, pitch);
 }
 
-__forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch)
 {
-	SwizzleBlock4_c(dst, src, pitch/*, WriteMask*/);
+	SwizzleBlock4_c(dst, src, pitch);
 }
 
-__forceinline void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
+__forceinline void __fastcall SwizzleBlock32_mask(u8* dst, u8* src, int srcpitch, u32 WriteMask)
 {
 	u32* d = &g_columnTable32[0][0];
 
@@ -699,26 +633,12 @@ __forceinline void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch, u
 	}
 }
 
-
-__forceinline void __fastcall SwizzleBlock24_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
+__forceinline void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch)
 {
-	u32* d = &g_columnTable32[0][0];
-
-	if (WriteMask == 0x00ffffff)
-	{
-		for (int j = 0; j < 8; j++, d += 8, src += srcpitch)
-			for (int i = 0; i < 8; i++)
-				((u32*)dst)[d[i]] = ((u32*)src)[i];
-	}
-	else
-	{
-		for (int j = 0; j < 8; j++, d += 8, src += srcpitch)
-			for (int i = 0; i < 8; i++)
-				((u32*)dst)[d[i]] = (((u32*)dst)[d[i]] & ~WriteMask) | (((u32*)src)[i] & WriteMask);
-	}
+    SwizzleBlock32_mask(dst, src, srcpitch, 0xffffffff);
 }
 
-__forceinline void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
+__forceinline void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch)
 {
 	u32* d = &g_columnTable16[0][0];
 
@@ -727,7 +647,7 @@ __forceinline void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch, u
 			((u16*)dst)[d[i]] = ((u16*)src)[i];
 }
 
-__forceinline void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
+__forceinline void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch)
 {
 	u32* d = &g_columnTable8[0][0];
 
@@ -736,7 +656,7 @@ __forceinline void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch, u3
 			dst[d[i]] = src[i];
 }
 
-__forceinline void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch, u32 WriteMask)
+__forceinline void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch)
 {
 	u32* d = &g_columnTable4[0][0];
 
@@ -752,7 +672,7 @@ __forceinline void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch, u3
 	}
 }
 
-__forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch)
 {
 	u8* pnewsrc = src;
 	u32* pblock = tempblock;
@@ -767,10 +687,10 @@ __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask)
 		}
 	}
 
-	SwizzleBlock32((u8*)dst, (u8*)tempblock, 32, 0x00ffffff);
+	SwizzleBlock32_mask((u8*)dst, (u8*)tempblock, 32, 0x00ffffff);
 }
 
-__forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch)
 {
 	u8* pnewsrc = src;
 	u32* pblock = tempblock;
@@ -789,10 +709,10 @@ __forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask)
 		pblock[7] = u;
 	}
 
-	SwizzleBlock32((u8*)dst, (u8*)tempblock, 32, 0xff000000);
+	SwizzleBlock32_mask((u8*)dst, (u8*)tempblock, 32, 0xff000000);
 }
 
-__forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch)
 {
 	u8* pnewsrc = src;
 	u32* pblock = tempblock;
@@ -810,10 +730,10 @@ __forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask)
 		pblock[7] = u;
 	}
 
-	SwizzleBlock32((u8*)dst, (u8*)tempblock, 32, 0xf0000000);
+	SwizzleBlock32_mask((u8*)dst, (u8*)tempblock, 32, 0xf0000000);
 }
 
-__forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask)
+__forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch)
 {
 	u8* pnewsrc = src;
 	u32* pblock = tempblock;
@@ -831,6 +751,6 @@ __forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask)
 		pblock[7] = u >> 4;
 	}
 
-	SwizzleBlock32((u8*)dst, (u8*)tempblock, 32, 0x0f000000);
+	SwizzleBlock32_mask((u8*)dst, (u8*)tempblock, 32, 0x0f000000);
 }
 #endif
