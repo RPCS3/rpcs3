@@ -63,6 +63,7 @@ class GLWindow
 		bool DisplayWindow(int _width, int _height);
 		void SetTitle(char *strtitle);
 		void ResizeCheck();
+		void ProcessEvents();
 };
 
 
@@ -70,5 +71,6 @@ extern GLWindow GLWin;
 extern void ChangeWindowSize(int nNewWidth, int nNewHeight);
 extern void SetChangeDeviceSize(int nNewWidth, int nNewHeight);
 extern int nBackbufferWidth, nBackbufferHeight;
+extern void OnFKey(int key, int shift);
 
 #endif // GLWIN_H_INCLUDED

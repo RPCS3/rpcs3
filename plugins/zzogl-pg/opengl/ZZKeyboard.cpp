@@ -30,8 +30,7 @@ extern char *libraryName;
 extern const unsigned char zgsversion;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
 
-extern u32 THR_KeyEvent; // value for passing out key events between threads
-extern bool THR_bShift, SaveStateExists;
+extern bool SaveStateExists;
 
 const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
 const char* pbilinear[] = { "off", "normal", "forced" };
@@ -205,102 +204,3 @@ void WriteBilinear()
 			break;
 	}
 }
-
-#ifdef _WIN32
-
-extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
-
-void ProcessEvents()
-{
-	MSG msg;
-
-	ZeroMemory(&msg, sizeof(msg));
-
-	while (1)
-	{
-		if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-		{
-			switch (msg.message)
-			{
-				case WM_KEYDOWN :
-					int my_KeyEvent = msg.wParam;
-					bool my_bShift = !!(GetKeyState(VK_SHIFT) & 0x8000);
-
-					switch (msg.wParam)
-					{
-						case VK_F5:
-						case VK_F6:
-						case VK_F7:
-						case VK_F9:
-							OnFKey(msg.wParam - VK_F1 + 1, my_bShift);
-							break;
-
-						case VK_ESCAPE:
-
-							if (conf.fullscreen())
-							{
-								// destroy that msg
-								conf.setFullscreen(false);
-								ChangeDeviceSize(conf.width, conf.height);
-								UpdateWindow(GShwnd);
-								continue; // so that msg doesn't get sent
-							}
-							else
-							{
-								SendMessage(GShwnd, WM_DESTROY, 0, 0);
-								return;
-							}
-
-							break;
-					}
-
-					break;
-			}
-
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	if ((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_RETURN) & 0x8000))
-	{
-		conf.zz_options.fullscreen = !conf.zz_options.fullscreen;
-
-		SetChangeDeviceSize(
-			(conf.fullscreen()) ? 1280 : conf.width,
-			(conf.fullscreen()) ? 960 : conf.height);
-	}
-}
-
-#else // linux
-
-void ProcessEvents()
-{
-	FUNCLOG
-
-	// check resizing
-	GLWin.ResizeCheck();
-
-	if (THR_KeyEvent)     // This value was passed from GSKeyEvents which could be in another thread
-	{
-		int my_KeyEvent = THR_KeyEvent;
-		bool my_bShift = THR_bShift;
-		THR_KeyEvent = 0;
-
-		switch (my_KeyEvent)
-		{
-			case XK_F5:
-			case XK_F6:
-			case XK_F7:
-			case XK_F9:
-				OnFKey(my_KeyEvent - XK_F1 + 1, my_bShift);
-				break;
-		}
-	}
-}
-
-#endif // linux

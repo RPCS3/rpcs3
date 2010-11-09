@@ -172,20 +172,6 @@ bool IsGLExt(const char* szTargetExtension)
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
 }
 
-inline bool Create_Window(int _width, int _height)
-{
-	nBackbufferWidth = _width;
-	nBackbufferHeight = _height;
-
-	if (!GLWin.DisplayWindow(_width, _height)) return false;
-
-	//s_nFullscreen = (conf.fullscreen()) ? 1 : 0;
-
-	conf.mrtdepth = 0; // for now
-
-	return true;
-}
-
 // Function asks about different OGL extensions, that are required to setup accordingly. Return false if checks failed
 inline bool CreateImportantCheck()
 {
@@ -452,8 +438,14 @@ bool ZZCreate(int _width, int _height)
 
 	ZZDestroy();
 	ZZGSStateReset();
+	
+	nBackbufferWidth = _width;
+	nBackbufferHeight = _height;
 
-	if (!Create_Window(_width, _height)) return false;
+	if (!GLWin.DisplayWindow(_width, _height)) return false;
+
+	conf.mrtdepth = 0; // for now
+
 	if (!CreateFillExtensionsMap()) return false;
 	if (!CreateImportantCheck()) return false;
 

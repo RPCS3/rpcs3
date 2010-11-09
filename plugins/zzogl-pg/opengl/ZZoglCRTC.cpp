@@ -647,7 +647,7 @@ void DrawText(const char* pstr, int left, int top, u32 color)
 }
 
 // Put FPS counter on screen (not in window title)
-inline void AfterRenderDisplayFPS()
+inline void DisplayFPS()
 {
 	char str[64];
 	int left = 10, top = 15;
@@ -657,16 +657,8 @@ inline void AfterRenderDisplayFPS()
 	DrawText(str, left, top, 0xffc0ffff);
 }
 
-// Swapping buffers, so we could use another window
-inline void AfterRenderSwapBuffers()
-{
-	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
-
-	GLWin.SwapGLBuffers();
-}
-
 // SnapeShoot helper
-inline void AfterRenderMadeSnapshoot()
+inline void MakeSnapshot()
 {
 	
 	if (!g_bMakeSnapshot) return;
@@ -685,7 +677,7 @@ inline void AfterRenderMadeSnapshoot()
 		ZZAddMessage(str, 500);
 	}
 	
-		g_bMakeSnapshot = false;
+	g_bMakeSnapshot = false;
 }
 
 // call to destroy video resources
@@ -710,16 +702,8 @@ void ZZReset()
 	if (ZZKick != NULL) delete ZZKick;
 }
 
-// If needed reset
-inline void AfterRendererResizeWindow()
-{
-	ZZReset();
-	ChangeDeviceSize(s_nNewWidth, s_nNewHeight);
-	s_nNewWidth = s_nNewHeight = -1;
-}
-
 // Put new values on statistic variable
-inline void AfterRenderCountStatistics()
+inline void CountStatistics()
 {
 	if (s_nWriteDepthCount > 0)
 	{
@@ -742,7 +726,6 @@ inline void AfterRenderCountStatistics()
 	if (g_nDepthUsed > 0) --g_nDepthUsed;
 
 	s_ClutResolve = 0;
-
 	g_nDepthUpdateCount = 0;
 }
 
@@ -751,27 +734,27 @@ inline void AfterRendererUnimportantJob()
 {
 	ProcessMessages();
 
-	if (g_bDisplayFPS) AfterRenderDisplayFPS();
+	if (g_bDisplayFPS) DisplayFPS();
 
-	AfterRenderSwapBuffers();
+	// Swapping buffers, so we could use another window
+	GLWin.SwapGLBuffers();
 
-	if (conf.wireframe())
-	{
-		// clear all targets
-		s_nWireframeCount = 1;
-	}
+	// clear all targets
+	if (conf.wireframe()) s_nWireframeCount = 1;
 
-	if (g_bMakeSnapshot)
-	{
-		AfterRenderMadeSnapshoot();
-		g_bMakeSnapshot = false;
-	}
+	if (g_bMakeSnapshot) MakeSnapshot();
 
 	CaptureFrame();
+	CountStatistics();
 
-	AfterRenderCountStatistics();
+	if (s_nNewWidth >= 0 && s_nNewHeight >= 0) 
+	{
+		// If needed reset
+		ZZReset();
 
-	if (s_nNewWidth >= 0 && s_nNewHeight >= 0) AfterRendererResizeWindow();
+		ChangeDeviceSize(s_nNewWidth, s_nNewHeight);
+		s_nNewWidth = s_nNewHeight = -1;
+	}
 
 	maxmin = 608;
 }

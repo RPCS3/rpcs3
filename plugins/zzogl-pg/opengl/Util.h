@@ -22,14 +22,13 @@
 
 
 #ifdef _WIN32
+#include <io.h>
 #include "Utilities/RedtapeWindows.h"
 #include <windows.h>
 #include <windowsx.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"
-
-extern HWND GShwnd;
 
 #else // linux basic definitions
 

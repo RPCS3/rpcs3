@@ -159,7 +159,6 @@ void SetChangeDeviceSize(int nNewWidth, int nNewHeight)
 void ChangeDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
-	//int oldscreen = s_nFullscreen;
 
 	int oldwidth = nBackbufferWidth, oldheight = nBackbufferHeight;
 

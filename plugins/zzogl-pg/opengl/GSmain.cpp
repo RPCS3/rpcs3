@@ -16,28 +16,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
-#if defined(_WIN32)
-#include <windows.h>
-#include "Win32.h"
-#include <io.h>
-#endif
 
-#include <stdlib.h>
-#include <string>
+#include "Util.h"
+#include "GS.h"
+#include "Profile.h"
+#include "GLWin.h"
+#include "ZZoglFlushHack.h"
 
 using namespace std;
 
-#include "GS.h"
-#include "Mem.h"
-#include "Regs.h"
-#include "Profile.h"
-#include "GLWin.h"
-
-#include "targets.h"
-#include "ZZoglShaders.h"
-#include "ZZoglFlushHack.h"
-#include "ZZoglShoots.h"
+extern void SaveSnapshot(const char* filename);
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -45,8 +33,8 @@ using namespace std;
 
 GLWindow GLWin;
 GSinternal gs;
-char GStitle[256];
 GSconf conf;
+char GStitle[256];
 
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
 int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
@@ -84,7 +72,6 @@ char *libraryName	 = "ZZ Ogl PG ";
 
 extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
 
-extern void ProcessEvents();
 extern void WriteAA();
 extern void WriteBilinear();
 extern void ZZDestroy();
@@ -92,17 +79,10 @@ extern bool ZZCreate(int width, int height);
 extern void ZZGSStateReset();
 
 // switches the render target to the real target, flushes the current render targets and renders the real image
-void RenderCRTC(int interlace);
+extern void RenderCRTC(int interlace);
 
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
-
-#ifdef _WIN32
-HWND GShwnd = NULL;
-#endif
-
-u32 THR_KeyEvent = 0; // Value for key event processing between threads
-bool THR_bShift = false;
 
 u32 CALLBACK PS2EgetLibType()
 {
@@ -304,20 +284,19 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
 
-	bool err;
-
+	bool err = false;
 	g_GSMultiThreaded = multithread;
 
 	ZZLog::WriteLn("Calling GSopen.");
 
-#ifdef _WIN32
-#ifdef _DEBUG
+#if defined(_WIN32) && defined(_DEBUG)
 	g_hCurrentThread = GetCurrentThread();
-#endif
 #endif
 
 	LoadConfig();
 	strcpy(GStitle, Title);
+
+	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
 	
 	err = GLWin.CreateWindow(pDsp);
 	if (!err)
@@ -326,7 +305,6 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 		return -1;
 	}
 
-	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
 	ZZLog::WriteLn("Creating ZZOgl window.");
 
 	if (!ZZCreate(conf.width, conf.height)) return -1;
@@ -531,7 +509,7 @@ void CALLBACK GSvsync(int interlace)
 	// !interlace? Hmmm... Fixme.
 	RenderCRTC(!interlace);
 
-	ProcessEvents();
+	GLWin.ProcessEvents();
 
 	if (--nToNextUpdate <= 0)
 	{
