@@ -124,7 +124,7 @@ static __fi void mfifo_VIF1chain()
 	}
 }
 
-
+int NextTADR = 0; //Bodge for Clock Tower 3 (see below)
 
 void mfifoVIF1transfer(int qwc)
 {
@@ -178,6 +178,7 @@ void mfifoVIF1transfer(int qwc)
 				return;        //IRQ set by VIFTransfer
 				
 			} //else vif1.vifstalled = false;
+			g_vifCycles += 2;
 		}
 
 		vif1.irqoffset = 0;
@@ -193,13 +194,13 @@ void mfifoVIF1transfer(int qwc)
 		switch (ptag->ID)
 		{
 			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
-				vif1ch.tadr = qwctag(vif1ch.tadr + 16);
+				NextTADR = qwctag(vif1ch.tadr + 16);
 				vif1.done = true;										//End Transfer
 				break;
 
 			case TAG_CNT: // CNT - Transfer QWC following the tag.
 				vif1ch.madr = qwctag(vif1ch.tadr + 16);						//Set MADR to QW after Tag
-				vif1ch.tadr = qwctag(vif1ch.madr + (vif1ch.qwc << 4));			//Set TADR to QW following the data
+				NextTADR = qwctag(vif1ch.madr + (vif1ch.qwc << 4));			//Set TADR to QW following the data
 				vif1.done = false;
 				break;
 
@@ -207,7 +208,7 @@ void mfifoVIF1transfer(int qwc)
 			{
 				int temp = vif1ch.madr;								//Temporarily Store ADDR
 				vif1ch.madr = qwctag(vif1ch.tadr + 16); 					  //Set MADR to QW following the tag
-				vif1ch.tadr = temp;								//Copy temporarily stored ADDR to Tag
+				NextTADR = temp;								//Copy temporarily stored ADDR to Tag
 				if ((temp & dmacRegs.rbsr.RMSK) != dmacRegs.rbor.ADDR) Console.WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
 				vif1.done = false;
 				break;
@@ -215,13 +216,13 @@ void mfifoVIF1transfer(int qwc)
 
 			case TAG_REF: // Ref - Transfer QWC from ADDR field
 			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
-				vif1ch.tadr = qwctag(vif1ch.tadr + 16);							//Set TADR to next tag
+				NextTADR = qwctag(vif1ch.tadr + 16);							//Set TADR to next tag
 				vif1.done = false;
 				break;
 
 			case TAG_END: // End - Transfer QWC following the tag
 				vif1ch.madr = qwctag(vif1ch.tadr + 16);		//Set MADR to data following the tag
-				vif1ch.tadr = qwctag(vif1ch.madr + (vif1ch.qwc << 4));			//Set TADR to QW following the data
+				NextTADR = qwctag(vif1ch.madr + (vif1ch.qwc << 4));			//Set TADR to QW following the data
 				vif1.done = true;										//End Transfer
 				break;
 		}
@@ -244,6 +245,17 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	VIF_LOG("vif mfifo interrupt");
+
+	
+	if(NextTADR != 0 && vif1ch.qwc == 0)  
+	{
+		// Clock Tower 3 Note!
+		/* If the DMA starts the transfer then hammers the TADR to see when the transfer has finished(as clock tower does) 
+		   and we have preincremented before all data has arrived, it breaks. Idealy we increment this as we transfer the data.
+		   "NextTADR" bodge in for the moment! - Refraction */
+		vif1ch.tadr = NextTADR;
+		NextTADR = 0;
+	}
 
 	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH2)
 	{
@@ -304,6 +316,8 @@ void vifMFIFOInterrupt()
 				}
 
                 mfifoVIF1transfer(0);
+				
+
                 CPU_INT(DMAC_MFIFO_VIF, 4);
 				return;
 

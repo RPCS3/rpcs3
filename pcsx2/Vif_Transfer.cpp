@@ -139,13 +139,13 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
-	if (TTE) return !vifX.vifstalled;
+	if (!TTE) // *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
+	{
+		transferred   = transferred >> 2;
 
-	transferred   = transferred >> 2;
-
-	vifXch.madr +=(transferred << 4);
-	vifXch.qwc  -= transferred;
-
+		vifXch.madr +=(transferred << 4);
+		vifXch.qwc  -= transferred;
+	}
 	if (!vifXch.qwc && !vifX.irqoffset) vifX.inprogress &= ~0x1;
 
 	if (vifX.irq && vifX.cmd == 0) {
