@@ -34,7 +34,11 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	glDisplay = XOpenDisplay(0);
 	glScreen = DefaultScreen(glDisplay);
 
-	if (pDisplay == NULL) return false;
+	if (pDisplay == NULL) 
+	{
+		ZZLog::Error_Log("Failed to create window. Exiting...");
+		return false;
+	}
 
 	*(Display**)pDisplay = glDisplay;
 
@@ -251,6 +255,9 @@ void GLWindow::ToggleFullscreen()
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
+	nBackbufferWidth = _width;
+	nBackbufferHeight = _height;
+	
 	if (!CreateVisual()) return false;
 	
 	/* create a GLX context */

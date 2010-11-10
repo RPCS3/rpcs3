@@ -51,6 +51,8 @@ class GLWindow
 		u32 width, height, depth;
 
 	public:
+		char title[256];
+		
 		void SwapGLBuffers();
 		bool ReleaseContext();
 

@@ -122,7 +122,11 @@ bool GLWindow::CreateWindow(void *pDisplay)
 					hInstance,				// Instance
 					NULL);					// Don't Pass Anything To WM_CREATE
 
-	if (GShwnd == NULL) return false;
+	if (GShwnd == NULL) 
+	{
+		ZZLog::Error_Log("Failed to create window. Exiting...");
+		return false;
+	}
 
 	if (pDisplay != NULL) *(HWND*)pDisplay = GShwnd;
 
@@ -135,6 +139,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 	SetFocus(GShwnd);
 
+	if (pDisplay == NULL) ZZLog::Error_Log("Failed to create window. Exiting...");
 	return (pDisplay != NULL);
 }
 
@@ -195,6 +200,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	{
 		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		dwStyle = WS_OVERLAPPEDWINDOW;
+		nBackbufferWidth = _width;
+		nBackbufferHeight = _height;
 	}
 	dwStyle |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 

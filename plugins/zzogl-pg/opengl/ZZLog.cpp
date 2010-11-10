@@ -314,7 +314,7 @@ void Dev_Log(const char *fmt, ...)
 
 void Debug_Log(const char *fmt, ...)
 {
-#if _DEBUG
+#ifdef _DEBUG
 	va_list list;
 
 	va_start(list, fmt);

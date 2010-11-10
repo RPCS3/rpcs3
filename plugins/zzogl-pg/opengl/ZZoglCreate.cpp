@@ -126,7 +126,7 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 extern u8* s_lpShaderResources;
 
 // String's for shader file in developer mode
-#ifdef DEVBUILD
+#ifdef ZEROGS_DEVBUILD
 char* EFFECT_NAME = "";
 char* EFFECT_DIR = "";
 #endif
@@ -277,18 +277,21 @@ inline void CreateOtherCheck()
 #endif
 }
 
-// open shader file according to build target
 
-inline bool CreateOpenShadersFile()
+#ifdef _WIN32
+__forceinline bool LoadShadersFromRes()
 {
-#ifndef DEVBUILD
-#	ifdef _WIN32
 	HRSRC hShaderSrc = FindResource(hInst, MAKEINTRESOURCE(IDR_SHADERS), RT_RCDATA);
 	assert(hShaderSrc != NULL);
 	HGLOBAL hShaderGlob = LoadResource(hInst, hShaderSrc);
 	assert(hShaderGlob != NULL);
 	s_lpShaderResources = (u8*)LockResource(hShaderGlob);
-#	else // not _WIN32
+	return true;
+}
+#else
+
+__forceinline bool LoadShadersFromDat()
+{
 	FILE* fres = fopen("ps2hw.dat", "rb");
 
 	if (fres == NULL)
@@ -309,9 +312,12 @@ inline bool CreateOpenShadersFile()
 	fseek(fres, 0, SEEK_SET);
 	fread(s_lpShaderResources, s, 1, fres);
 	s_lpShaderResources[s] = 0;
-#	endif // _WIN32
-#else // defined(ZEROGS_DEVBUILD)
-#	ifndef _WIN32 // NOT WINDOWS
+	
+	return true;
+}
+
+__forceinline bool LoadShadersFromFX()
+{
 	// test if ps2hw.fx exists
 	char tempstr[255];
 	char curwd[255];
@@ -339,58 +345,55 @@ inline bool CreateOpenShadersFile()
 
 	sprintf(EFFECT_DIR, "%s/%s", curwd, tempstr);
 	sprintf(EFFECT_NAME, "%sps2hw.fx", EFFECT_DIR);
+	
+	return true;
+}
+#endif
+
+
+// open shader file according to build target
+
+inline bool CreateOpenShadersFile()
+{
+#ifndef DEVBUILD
+#	ifdef _WIN32
+	return LoadShadersFromRes();
+#	else // not _WIN32
+	return LoadShadersFromDat();
+#	endif // _WIN32
+#else // defined(ZEROGS_DEVBUILD)
+#	ifndef _WIN32 // NOT WINDOWS
+	return LoadShadersFromFX();
+	
+	// No else clause?
 #endif
 #endif // !defined(ZEROGS_DEVBUILD)
-	return true;
 }
 
 // Read all extensions name and fill mapGLExtensions
 inline bool CreateFillExtensionsMap()
 {
-	// fill the opengl extension map
-	const char* ptoken = (const char*)glGetString(GL_EXTENSIONS);
+	int max_ext = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
+	
+	PFNGLGETSTRINGIPROC glGetStringi = 0;
+	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
 
-	if (ptoken == NULL) return false;
-
-	int prevlog = conf.log;
-
-	conf.log = 1;
-
-	ZZLog::GS_Log("Supported OpenGL Extensions:\n%s\n", ptoken);	 // write to the log file
-
-	// Probably a better way to do it, but seems to crash.
-	/*int n;
-	glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-	ZZLog::GS_Log("Supported OpenGL Extensions:\n");
-	for (int i = 0; i < n; i++)
+	string temp("");
+	for (GLint i = 0; i < max_ext; i++)
 	{
-		ZZLog::GS_Log("%s/n", (const char*)glGetStringi(GL_EXTENSIONS, i));
-	}*/
-
-	conf.log = prevlog;
-
-	// insert all exts into mapGLExtensions
-
-	const char* pend = NULL;
-
-	while (ptoken != NULL)
-	{
-		pend = strchr(ptoken, ' ');
-
-		if (pend != NULL)
-		{
-			mapGLExtensions[string(ptoken, pend-ptoken)];
-		}
-		else
-		{
-			mapGLExtensions[string(ptoken)];
-			break;
-		}
-
-		ptoken = pend;
-
-		while (*ptoken == ' ') ++ptoken;
+		string extension((const char*)glGetStringi(GL_EXTENSIONS, i));
+		mapGLExtensions[extension];
+		
+		temp = temp + extension;
+		if (i != (max_ext - 1)) temp += ", ";
 	}
+	
+	// Write the extension list to the log, but only write it to the screen on a debug build.
+#ifndef _DEBUG
+	ZZLog::Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
+#endif
+	ZZLog::Debug_Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
 
 	return true;
 }
@@ -434,14 +437,10 @@ bool ZZCreate(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;
 	bool bSuccess = true;
-	int i;
 
 	ZZDestroy();
 	ZZGSStateReset();
 	
-	nBackbufferWidth = _width;
-	nBackbufferHeight = _height;
-
 	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
 	conf.mrtdepth = 0; // for now
@@ -560,7 +559,7 @@ bool ZZCreate(int _width, int _height)
 	g_vboBuffers.resize(VB_NUMBUFFERS);
 	glGenBuffers((GLsizei)g_vboBuffers.size(), &g_vboBuffers[0]);
 
-	for (i = 0; i < (int)g_vboBuffers.size(); ++i)
+	for (int i = 0; i < (int)g_vboBuffers.size(); ++i)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, g_vboBuffers[i]);
 		glBufferData(GL_ARRAY_BUFFER, 0x100*sizeof(VertexGPU), NULL, GL_STREAM_DRAW);
@@ -676,7 +675,7 @@ bool ZZCreate(int _width, int _height)
 
 	vector<u32> conv16to32data(256*256);
 
-	for (i = 0; i < 256*256; ++i)
+	for (int i = 0; i < 256*256; ++i)
 	{
 		u32 tempcol = RGBA16to32(i);
 		// have to flip r and b
@@ -700,7 +699,7 @@ bool ZZCreate(int _width, int _height)
 
 	u32* dst = &conv32to16data[0];
 
-	for (i = 0; i < 32; ++i)
+	for (int i = 0; i < 32; ++i)
 	{
 		for (int j = 0; j < 32; ++j)
 		{

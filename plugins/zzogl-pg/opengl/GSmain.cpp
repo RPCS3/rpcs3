@@ -34,7 +34,6 @@ extern void SaveSnapshot(const char* filename);
 GLWindow GLWin;
 GSinternal gs;
 GSconf conf;
-char GStitle[256];
 
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
 int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
@@ -269,22 +268,23 @@ s32 CALLBACK GSinit()
 	return 0;
 }
 
-#ifdef _WIN32
-
-#ifdef _DEBUG
+#if defined(_WIN32) && defined(_DEBUG)
 HANDLE g_hCurrentThread = NULL;
 #endif
 
-
-extern LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-extern HINSTANCE hInst;
-#endif
+__forceinline void InitMisc()
+{
+	WriteBilinear();
+	WriteAA();
+	InitProfile();
+	InitPath();
+	ResetRegs();
+}
 
 s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
 
-	bool err = false;
 	g_GSMultiThreaded = multithread;
 
 	ZZLog::WriteLn("Calling GSopen.");
@@ -294,28 +294,16 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 #endif
 
 	LoadConfig();
-	strcpy(GStitle, Title);
+	strcpy(GLWin.title, Title);
 
 	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
 	
-	err = GLWin.CreateWindow(pDsp);
-	if (!err)
-	{
-		ZZLog::Error_Log("Failed to create window. Exiting...");
-		return -1;
-	}
-
 	ZZLog::WriteLn("Creating ZZOgl window.");
-
-	if (!ZZCreate(conf.width, conf.height)) return -1;
+	if ((!GLWin.CreateWindow(pDsp)) || (!ZZCreate(conf.width, conf.height))) return -1;
 
 	ZZLog::WriteLn("Initialization successful.");
 
-	WriteBilinear();
-	WriteAA();
-	InitProfile();
-	InitPath();
-	ResetRegs();
+	InitMisc();
 	ZZLog::GS_Log("GSopen finished.");
 	return 0;
 }
@@ -336,26 +324,15 @@ s32 CALLBACK GSopen2( void* pDsp, INT32 flags )
 #endif
 
 	LoadConfig();
-	strcpy(GStitle, Title);
 	
-	err = GLWin.GetWindow(pDsp); // Needs to be added.
-	if (!err)
-	{
-		ZZLog::Error_Log("Failed to acquire window. Exiting...");
-		return -1;
-	}
-
 	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
 
-	if (!ZZCreate2(conf.width, conf.height)) return -1; // Needs to be added.
+	ZZLog::WriteLn("Capturing ZZOgl window.");
+	if ((!GLWin.GetWindow(pDsp)) || (!ZZCreate2(conf.width, conf.height))) return -1;// Needs to be added.
 
 	ZZLog::WriteLn("Initialization successful.");
 
-	WriteBilinear();
-	WriteAA();
-	InitProfile();
-	InitPath();
-	ResetRegs();
+	InitMisc();
 	ZZLog::GS_Log("GSopen2 finished.");
 	return 0;
 	

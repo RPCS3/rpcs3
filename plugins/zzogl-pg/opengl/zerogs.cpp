@@ -166,7 +166,7 @@ void ChangeDeviceSize(int nNewWidth, int nNewHeight)
 	{
 		ZZLog::Error_Log("Failed to recreate, changing to old device.");
 
-		if (ZZCreate(oldwidth, oldheight))
+		if (!ZZCreate(oldwidth, oldheight))
 		{
 			SysMessage("Failed to create device, exiting...");
 			exit(0);
