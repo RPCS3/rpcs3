@@ -205,7 +205,7 @@ __fi void vif1SetupTransfer()
 			    bool ret;
 
 				static __aligned16 u128 masked_tag;
-
+				
 				masked_tag._u64[0] = 0;
 				masked_tag._u64[1] = *((u64*)ptag + 1);
 
@@ -218,7 +218,10 @@ __fi void vif1SetupTransfer()
 				}
 				else
 				{
-					ret = VIF1transfer((u32*)&masked_tag, 4, true);  //Transfer Tag
+					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
+					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
+					vif1.irqoffset = 2;
+					ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
 					//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 				}
 				
@@ -226,8 +229,7 @@ __fi void vif1SetupTransfer()
 				{
 					vif1.inprogress &= ~1; //Better clear this so it has to do it again (Jak 1)
 					return;        //IRQ set by VIFTransfer
-					
-				} //else vif1.vifstalled = false;
+				}
 			}
 			vif1.irqoffset = 0;
 
