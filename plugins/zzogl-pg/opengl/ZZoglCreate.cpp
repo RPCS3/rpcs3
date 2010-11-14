@@ -89,7 +89,6 @@ inline void CreateOtherCheck();
 inline bool CreateOpenShadersFile();
 
 void ZZGSStateReset();
-extern int nBackbufferWidth, nBackbufferHeight;
 
 //------------------ Dummies
 #ifdef _WIN32
@@ -373,13 +372,13 @@ inline bool CreateOpenShadersFile()
 // Read all extensions name and fill mapGLExtensions
 inline bool CreateFillExtensionsMap()
 {
+	string temp("");
 	int max_ext = 0;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 	
 	PFNGLGETSTRINGIPROC glGetStringi = 0;
 	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
 
-	string temp("");
 	for (GLint i = 0; i < max_ext; i++)
 	{
 		string extension((const char*)glGetStringi(GL_EXTENSIONS, i));
@@ -512,7 +511,7 @@ bool ZZCreate(int _width, int _height)
 	//s_bWriteDepth = true;
 
 	GL_BLEND_ALL(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);					 // Reset The Current Viewport
+	glViewport(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h);					 // Reset The Current Viewport
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();

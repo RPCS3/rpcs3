@@ -47,9 +47,6 @@ extern "C"
 #include "jpeglib.h"
 }
 
-
-extern int nBackbufferWidth, nBackbufferHeight;
-
 //------------------ Defines
 #define 	TGA_FILE_NAME_MAX_LENGTH 	 20
 #define		MAX_NUMBER_SAVED_TGA		200
@@ -355,15 +352,15 @@ void CaptureFrame()
 {
 	if ((!s_avicapturing) || (!s_aviinit)) return;
 
-	vector<u32> data(nBackbufferWidth*nBackbufferHeight);
-	glReadPixels(0, 0, nBackbufferWidth, nBackbufferHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
+	vector<u32> data(GLWin.backbuffer.w * GLWin.backbuffer.h);
+	glReadPixels(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
 
 	if (glGetError() != GL_NO_ERROR) return;
 
 #ifdef _WIN32
 	int fps = SMODE1->CMOD == 3 ? 50 : 60;
 
-	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, nBackbufferWidth, nBackbufferHeight, 32, &data[0]);
+	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, GLWin.backbuffer.w, GLWin.backbuffer.h, 32, &data[0]);
 
 	if (!bSuccess)
 	{

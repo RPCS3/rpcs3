@@ -22,15 +22,20 @@
 
 
 #ifdef _WIN32
+
 #include <io.h>
 #include "Utilities/RedtapeWindows.h"
+
 #include <windows.h>
 #include <windowsx.h>
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"
 
 #else // linux basic definitions
+
+#include <sys/stat.h>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -39,7 +44,6 @@
 #include <gtk/gtk.h>
 
 #endif
-
 
 #define GSdefs
 
@@ -71,6 +75,11 @@ typedef struct
 {
 	int x, y;
 } Point;
+
+typedef struct
+{
+	int w, h;
+} Size;
 
 typedef struct
 {

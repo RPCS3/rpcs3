@@ -23,6 +23,7 @@
 #include "GLWin.h"
 #include "ZZoglFlushHack.h"
 
+
 using namespace std;
 
 extern void SaveSnapshot(const char* filename);
@@ -45,7 +46,7 @@ float fFPS = 0;
 
 void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
-std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
+string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
@@ -76,9 +77,15 @@ extern void WriteBilinear();
 extern void ZZDestroy();
 extern bool ZZCreate(int width, int height);
 extern void ZZGSStateReset();
+extern int ZZSave(s8* pbydata);
+extern bool ZZLoad(s8* pbydata);
 
 // switches the render target to the real target, flushes the current render targets and renders the real image
 extern void RenderCRTC(int interlace);
+
+#if defined(_WIN32) && defined(_DEBUG)
+HANDLE g_hCurrentThread = NULL;
+#endif
 
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
@@ -124,10 +131,6 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		inited = true;
 
 		memset(GSC_list, 0, sizeof(GSC_list));
-		// for(int i = 0; i < NUMBER_OF_TITLES; i++)
-		// {
-		// 	GSC_list[i] = GSC_Null;
-		// }
 		
 		GSC_list[Okami] = GSC_Okami;
 		GSC_list[MetalGearSolid3] = GSC_MetalGearSolid3;
@@ -267,10 +270,6 @@ s32 CALLBACK GSinit()
 	ZZLog::WriteLn("GSinit finished.");
 	return 0;
 }
-
-#if defined(_WIN32) && defined(_DEBUG)
-HANDLE g_hCurrentThread = NULL;
-#endif
 
 __forceinline void InitMisc()
 {
@@ -415,13 +414,12 @@ void CALLBACK GSmakeSnapshot(char *path)
 	if ((bmpfile = fopen(filename, "wb")) == NULL)
 	{
 		char strdir[255];
+		sprintf(strdir, "%s", path);
 
 #ifdef _WIN32
-		sprintf(strdir, "%s", path);
 		CreateDirectory(strdir, NULL);
 #else
-		sprintf(strdir, "mkdir %s", path);
-		system(strdir);
+		mkdir(path, 0777);
 #endif
 
 		if ((bmpfile = fopen(filename, "wb")) == NULL) return;
@@ -561,9 +559,6 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 
 	return 1;
 }
-
-int ZZSave(s8* pbydata);
-bool ZZLoad(s8* pbydata);
 
 s32 CALLBACK GSfreeze(int mode, freezeData *data)
 {

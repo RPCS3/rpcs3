@@ -47,14 +47,14 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 			nWindowWidth = lParam & 0xffff;
 			nWindowHeight = lParam >> 16;
-			ChangeWindowSize(nWindowWidth, nWindowHeight);
+			UpdateWindowSize(nWindowWidth, nWindowHeight);
 			break;
 
 		case WM_SIZING:
 			// if button is 0, then just released so can resize
 			if (GetSystemMetrics(SM_SWAPBUTTON) ? !GetAsyncKeyState(VK_RBUTTON) : !GetAsyncKeyState(VK_LBUTTON))
 			{
-				SetChangeDeviceSize(nWindowWidth, nWindowHeight);
+				SetDeviceSize(nWindowWidth, nWindowHeight);
 			}
 			break;
 
@@ -189,8 +189,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	if (conf.fullscreen())
 	{
-		nBackbufferWidth = rcdesktop.right - rcdesktop.left;
-		nBackbufferHeight = rcdesktop.bottom - rcdesktop.top;
+		backbuffer.w = rcdesktop.right - rcdesktop.left;
+		backbuffer.h = rcdesktop.bottom - rcdesktop.top;
 
 		dwExStyle = WS_EX_APPWINDOW;
 		dwStyle = WS_POPUP;
@@ -200,8 +200,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	{
 		dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		dwStyle = WS_OVERLAPPEDWINDOW;
-		nBackbufferWidth = _width;
-		nBackbufferHeight = _height;
+		backbuffer.w = _width;
+		backbuffer.h = _height;
 	}
 	dwStyle |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
@@ -209,8 +209,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	rc.left = 0;
 	rc.top = 0;
-	rc.right = nBackbufferWidth;
-	rc.bottom = nBackbufferHeight;
+	rc.right = backbuffer.h;
+	rc.bottom = backbuffer.h;
 	AdjustWindowRectEx(&rc, dwStyle, false, dwExStyle);
 	int X = (rcdesktop.right - rcdesktop.left) / 2 - (rc.right - rc.left) / 2;
 	int Y = (rcdesktop.bottom - rcdesktop.top) / 2 - (rc.bottom - rc.top) / 2;
@@ -225,8 +225,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
 		dmScreenSettings.dmSize = sizeof(dmScreenSettings);
-		dmScreenSettings.dmPelsWidth	= nBackbufferWidth;
-		dmScreenSettings.dmPelsHeight   = nBackbufferHeight;
+		dmScreenSettings.dmPelsWidth	= backbuffer.w;
+		dmScreenSettings.dmPelsHeight   = backbuffer.h;
 		dmScreenSettings.dmBitsPerPel   = 32;
 		dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
@@ -387,7 +387,7 @@ void GLWindow::ProcessEvents()
 	{
 		conf.zz_options.fullscreen = !conf.zz_options.fullscreen;
 
-		SetChangeDeviceSize(
+		SetDeviceSize(
 			(conf.fullscreen()) ? 1280 : conf.width,
 			(conf.fullscreen()) ? 960 : conf.height);
 	}

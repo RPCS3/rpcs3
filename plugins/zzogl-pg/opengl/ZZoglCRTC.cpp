@@ -65,21 +65,21 @@ void AdjustTransToAspect(float4& v)
 	float f;
 	const float mult = 1 / 32767.0f;
 
-	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth) // limited by width
+	if (conf.width * GLWin.backbuffer.h > conf.height * GLWin.backbuffer.w) // limited by width
 	{
 		// change in ratio
-		f = ((float)nBackbufferWidth / (float)conf.width) / ((float)nBackbufferHeight / (float)conf.height);
+		f = ((float)GLWin.backbuffer.w / (float)conf.width) / ((float)GLWin.backbuffer.h / (float)conf.height);
 		v.y *= f;
 		v.w *= f;
 
 		// scanlines mess up when not aligned right
-		v.y += (1 - (float)modf(v.y * (float)nBackbufferHeight * 0.5f + 0.05f, &temp)) * 2.0f / (float)nBackbufferHeight;
-		v.w += (1 - (float)modf(v.w * (float)nBackbufferHeight * 0.5f + 0.05f, &temp)) * 2.0f / (float)nBackbufferHeight;
+		v.y += (1 - (float)modf(v.y * (float)GLWin.backbuffer.h * 0.5f + 0.05f, &temp)) * 2.0f / (float)GLWin.backbuffer.h;
+		v.w += (1 - (float)modf(v.w * (float)GLWin.backbuffer.h * 0.5f + 0.05f, &temp)) * 2.0f / (float)GLWin.backbuffer.h;
 	}
 	else // limited by height
 	{
-		f = ((float)nBackbufferHeight / (float)conf.height) / ((float)nBackbufferWidth / (float)conf.width);
-		f -= (float)modf(f * nBackbufferWidth, &temp) / (float)nBackbufferWidth;
+		f = ((float)GLWin.backbuffer.h / (float)conf.height) / ((float)GLWin.backbuffer.w / (float)conf.width);
+		f -= (float)modf(f * GLWin.backbuffer.w, &temp) / (float)GLWin.backbuffer.w;
 		v.x *= f;
 		v.z *= f;
 	}
@@ -211,7 +211,7 @@ inline void RenderStartHelper(u32 bInterlace)
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);   // switch to the backbuffer
 
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+	glViewport(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h);
 
 	// if interlace, only clear every other vsync
 	if (!bInterlace)
@@ -642,7 +642,7 @@ void DrawText(const char* pstr, int left, int top, u32 color)
 	v.SetColor(color);
 	glColor3f(v.z, v.y, v.x);
 
-	font_p->printString(pstr, left * 2.0f / (float)nBackbufferWidth - 1, 1 - top * 2.0f / (float)nBackbufferHeight, 0);
+	font_p->printString(pstr, left * 2.0f / (float)GLWin.backbuffer.w - 1, 1 - top * 2.0f / (float)GLWin.backbuffer.h, 0);
 	ZZshGLEnableProfile();
 }
 
@@ -670,7 +670,7 @@ inline void MakeSnapshot()
 	DrawText(str, left + 1, top + 1, 0xff000000);
 	DrawText(str, left, top, 0xffc0ffff);
 
-	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", nBackbufferWidth, -nBackbufferHeight, 0))  //(conf.options.tga_snap)?0:1) ) {
+	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", GLWin.backbuffer.w, -GLWin.backbuffer.h, 0))  //(conf.options.tga_snap)?0:1) ) {
 	{
 		char str[255];
 		sprintf(str, "saved %s\n", strSnapshot.c_str());

@@ -138,7 +138,7 @@ void GLWindow::GetWindowSize()
     XUnlockDisplay(glDisplay);
 
     // update the gl buffer size
-    ChangeWindowSize(width, height);
+    UpdateWindowSize(width, height);
 
     ZZLog::Dev_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
@@ -255,8 +255,8 @@ void GLWindow::ToggleFullscreen()
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
-	nBackbufferWidth = _width;
-	nBackbufferHeight = _height;
+	backbuffer.w = _width;
+	backbuffer.h = _height;
 	
 	if (!CreateVisual()) return false;
 	
@@ -342,7 +342,7 @@ void GLWindow::ResizeCheck()
 			width = event.xconfigure.width;
 			height = event.xconfigure.height;
             Force43Ratio();
-			ChangeWindowSize(width, height);
+			UpdateWindowSize(width, height);
 		}
 
         if (!fullScreen) {

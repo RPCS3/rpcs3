@@ -33,7 +33,6 @@ int s_nNewWidth = -1, s_nNewHeight = -1;
 primInfo *prim;
 ////////////////////
 // State parameters
-int nBackbufferWidth, nBackbufferHeight;
 int g_nDepthUpdateCount = 0;
 
 static ZeroGSInit s_ZeroGSInit;
@@ -130,20 +129,7 @@ void ZZGSStateReset()
 	vb[1].ictx = 1;
 }
 
-void ChangeWindowSize(int nNewWidth, int nNewHeight)
-{
-	FUNCLOG
-	nBackbufferWidth = max(nNewWidth, 16);
-	nBackbufferHeight = max(nNewHeight, 16);
-
-	if (!(conf.fullscreen()))
-	{
-		conf.width = nNewWidth;
-		conf.height = nNewHeight;
-	}
-}
-
-void SetChangeDeviceSize(int nNewWidth, int nNewHeight)
+void SetDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
 	s_nNewWidth = nNewWidth;
@@ -160,13 +146,13 @@ void ChangeDeviceSize(int nNewWidth, int nNewHeight)
 {
 	FUNCLOG
 
-	int oldwidth = nBackbufferWidth, oldheight = nBackbufferHeight;
+	Size oldSize = GLWin.backbuffer;
 
 	if (!ZZCreate(nNewWidth&~7, nNewHeight&~7))
 	{
 		ZZLog::Error_Log("Failed to recreate, changing to old device.");
 
-		if (!ZZCreate(oldwidth, oldheight))
+		if (!ZZCreate(oldSize.w, oldSize.h))
 		{
 			SysMessage("Failed to create device, exiting...");
 			exit(0);
@@ -229,7 +215,7 @@ void SetAA(int mode)
 //	DisableAllgl() ;
 //	SetShaderCaller("RenderCustom");
 //
-//	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+//	glViewport(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h);
 //
 //	// play custom animation
 //	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
