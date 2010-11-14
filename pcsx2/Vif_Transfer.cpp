@@ -158,10 +158,9 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 		if(((vifXRegs.code >> 24) & 0x7f) != 0x7)
 		{
 			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?
-		}
-
-		return false;
-	}
+			vifX.vifstalled = true;
+		}		
+	}	
 
 	return !vifX.vifstalled;
 }
