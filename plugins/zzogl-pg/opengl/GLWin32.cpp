@@ -47,7 +47,7 @@ LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 			nWindowWidth = lParam & 0xffff;
 			nWindowHeight = lParam >> 16;
-			UpdateWindowSize(nWindowWidth, nWindowHeight);
+			GLWin.UpdateWindowSize(nWindowWidth, nWindowHeight);
 			break;
 
 		case WM_SIZING:
