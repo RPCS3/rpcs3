@@ -17,18 +17,18 @@
 
 namespace Ps2MemSize
 {
-	static const uint MainRam	= 0x02000000;		// 32 MB main memory!
-	static const uint Rom	= 0x00400000;		// 4 MB main rom
-	static const uint Rom1	= 0x00040000;		// DVD player
-	static const uint Rom2	= 0x00080000;		// Chinese rom extension (?)
-	static const uint ERom	= 0x001C0000;		// DVD player extensions (?)
-	static const uint Hardware = 0x00010000;
-	static const uint Scratch = 0x00004000;
+	static const uint MainRam	= _32mb;			// 32 MB main memory!
+	static const uint Rom		= _1mb * 4;			// 4 MB main rom
+	static const uint Rom1		= 0x00040000;		// DVD player
+	static const uint Rom2		= 0x00080000;		// Chinese rom extension (?)
+	static const uint ERom		= 0x001C0000;		// DVD player extensions (?)
+	static const uint Hardware	= _64kb;
+	static const uint Scratch	= _16kb;
 
-	static const uint IopRam = 0x00200000;		// 2MB main ram on the IOP.
-	static const uint IopHardware = 0x00010000;
+	static const uint IopRam	= _1mb * 2;			// 2MB main ram on the IOP.
+	static const uint IopHardware = _64kb;
 
-	static const uint GSregs = 0x00002000;		// 8k for the GS registers and stuff.
+	static const uint GSregs = 0x00002000;			// 8k for the GS registers and stuff.
 }
 
 typedef u8 mem8_t;
@@ -52,6 +52,9 @@ typedef u128 mem128_t;
 // direct memory access (one AND and one MOV instruction).  If the access is to another area of
 // memory, such as hardware registers or scratchpad, the access will generate a page fault, the
 // compiled block will be cleared and re-compiled using "full" VTLB translation logic.
+//
+// Note that support for this feature may not be doable under x86/32 platforms, due to the
+// 2gb/3gb limit of Windows XP (the 3gb feature will make it slightly more feasible at least).
 //
 #define VTLB_UsePageFaulting 0
 
@@ -101,7 +104,7 @@ struct EEVM_MemoryAllocMess
 struct IopVM_MemoryAllocMess
 {
 	u8 Main[Ps2MemSize::IopRam];			// Main memory (hard-wired to 2MB)
-	u8 P[0x00010000];						// I really have no idea what this is... --air
+	u8 P[_64kb];							// I really have no idea what this is... --air
 	u8 Sif[0x100];							// a few special SIF/SBUS registers (likely not needed)
 };
 

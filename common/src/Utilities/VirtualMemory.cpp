@@ -27,6 +27,21 @@ template class EventSource< IEventListener_PageFault >;
 
 SrcType_PageFault* Source_PageFault = NULL;
 
+void pxInstallSignalHandler()
+{
+	if (!Source_PageFault)
+	{
+		Source_PageFault = new SrcType_PageFault();
+	}
+
+	_platform_InstallSignalHandler();
+
+	// NOP on Win32 systems -- we use __try{} __except{} instead.
+}
+
+// --------------------------------------------------------------------------------------
+//  EventListener_PageFault  (implementations)
+// --------------------------------------------------------------------------------------
 EventListener_PageFault::EventListener_PageFault()
 {
 	pxAssume(Source_PageFault);
@@ -53,50 +68,78 @@ void SrcType_PageFault::_DispatchRaw( ListenerIterator iter, const ListenerItera
 }
 
 // --------------------------------------------------------------------------------------
-//  BaseVirtualMemoryReserve  (implementations)
+//  VirtualMemoryReserve  (implementations)
 // --------------------------------------------------------------------------------------
-
-BaseVirtualMemoryReserve::BaseVirtualMemoryReserve( const wxString& name )
+VirtualMemoryReserve::VirtualMemoryReserve( const wxString& name, size_t size )
 	: Name( name )
 {
-	m_commited		= 0;
-	m_reserved		= 0;
-	m_baseptr		= NULL;
-	m_blocksize	= __pagesize;
-	m_prot_mode		= PageAccess_None();
+	m_defsize			= size;
+
+	m_pages_commited	= 0;
+	m_pages_reserved	= 0;
+	m_baseptr			= NULL;
+	m_prot_mode			= PageAccess_None();
 }
 
+VirtualMemoryReserve& VirtualMemoryReserve::SetBaseAddr( uptr newaddr )
+{
+	if (!pxAssertDev(!m_pages_reserved, "Invalid object state: you must release the virtual memory reserve prior to changing its base address!")) return *this;
+	
+	m_baseptr = (void*)newaddr;
+	return *this;
+}
+
+VirtualMemoryReserve& VirtualMemoryReserve::SetPageAccessOnCommit( const PageProtectionMode& mode )
+{
+	m_prot_mode = mode;
+	return *this;
+}
+
+
+// Notes:
+//  * This method should be called if the object is already in an released (unreserved) state.
+//    Subsequent calls will be ignored, and the existing reserve will be returned.
+//
 // Parameters:
+//   size - size of the reserve, in bytes. (optional)
+//     If not specified (or zero), then the default size specified in the constructor for the
+//     object instance is used.
+//
 //   upper_bounds - criteria that must be met for the allocation to be valid.
 //     If the OS refuses to allocate the memory below the specified address, the
 //     object will fail to initialize and an exception will be thrown.
-void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds )
+void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 {
 	if (!pxAssertDev( m_baseptr == NULL, "(VirtualMemoryReserve) Invalid object state; object has already been reserved." ))
 		return m_baseptr;
 
-	m_reserved = (size + __pagesize-4) / __pagesize;
-	uptr reserved_bytes = m_reserved * __pagesize;
+	if (!size) size = m_defsize;
+	if (!size) return NULL;
+
+	m_pages_reserved = (size + __pagesize-4) / __pagesize;
+	uptr reserved_bytes = m_pages_reserved * __pagesize;
 
 	m_baseptr = (void*)HostSys::MmapReserve(base, reserved_bytes);
 
-	if (!m_baseptr && (upper_bounds != 0 && (((uptr)m_baseptr + reserved_bytes) > upper_bounds)))
+	if (!m_baseptr || (upper_bounds != 0 && (((uptr)m_baseptr + reserved_bytes) > upper_bounds)))
 	{
+		DevCon.Warning( L"%s: host memory @ 0x%08x -> 0x%08x is unavailable; attempting to map elsewhere...",
+			Name.c_str(), base, base + size );
+
+		SafeSysMunmap(m_baseptr, reserved_bytes);
+
 		if (base)
 		{
-			DevCon.Warning( L"%s: address 0x%08x is unavailable; trying OS-selected address instead.", Name.c_str(), base );
-
 			// Let's try again at an OS-picked memory area, and then hope it meets needed
 			// boundschecking criteria below.
-			SafeSysMunmap( m_baseptr, reserved_bytes );
 			m_baseptr = HostSys::MmapReserve( 0, reserved_bytes );
 		}
-
-		if ((upper_bounds != 0) && (((uptr)m_baseptr + reserved_bytes) > upper_bounds))
-		{
-			SafeSysMunmap( m_baseptr, reserved_bytes );
-			// returns null, caller should throw an exception or handle appropriately.
-		}
+	}
+	
+	if ((upper_bounds != 0) && (((uptr)m_baseptr + reserved_bytes) > upper_bounds))
+	{
+		SafeSysMunmap(m_baseptr, reserved_bytes);
+		// returns null, caller should throw an exception or handle appropriately.
 	}
 
 	if (!m_baseptr) return NULL;
@@ -108,19 +151,29 @@ void* BaseVirtualMemoryReserve::Reserve( uint size, uptr base, uptr upper_bounds
 }
 
 // Clears all committed blocks, restoring the allocation to a reserve only.
-void BaseVirtualMemoryReserve::Reset()
+void VirtualMemoryReserve::Reset()
 {
-	if (!m_commited) return;
-	
-	HostSys::MemProtect(m_baseptr, m_commited*__pagesize, PageAccess_None());
-	HostSys::MmapResetPtr(m_baseptr, m_commited*__pagesize);
-	m_commited = 0;
+	if (!m_pages_commited) return;
+
+	HostSys::MemProtect(m_baseptr, m_pages_commited*__pagesize, PageAccess_None());
+	HostSys::MmapResetPtr(m_baseptr, m_pages_commited*__pagesize);
+	m_pages_commited = 0;
 }
 
-void BaseVirtualMemoryReserve::Free()
+void VirtualMemoryReserve::Release()
 {
-	HostSys::Munmap((uptr)m_baseptr, m_reserved*__pagesize);
+	SafeSysMunmap(m_baseptr, m_pages_reserved*__pagesize);
 }
+
+bool VirtualMemoryReserve::Commit()
+{
+	if (!m_pages_reserved) return false;
+	if (!pxAssert(!m_pages_commited)) return true;
+
+	m_pages_commited = m_pages_reserved;
+	return HostSys::MmapCommitPtr(m_baseptr, m_pages_reserved*__pagesize, m_prot_mode);
+}
+
 
 // If growing the array, or if shrinking the array to some point that's still *greater* than the
 // committed memory range, then attempt a passive "on-the-fly" resize that maps/unmaps some portion
@@ -131,13 +184,13 @@ void BaseVirtualMemoryReserve::Free()
 //
 // Parameters:
 //  newsize - new size of the reserved buffer, in bytes.
-bool BaseVirtualMemoryReserve::TryResize( uint newsize )
+bool VirtualMemoryReserve::TryResize( uint newsize )
 {
 	uint newPages = (newsize + __pagesize - 1) / __pagesize;
 
-	if (newPages > m_reserved)
+	if (newPages > m_pages_reserved)
 	{
-		uint toReservePages = newPages - m_reserved;
+		uint toReservePages = newPages - m_pages_reserved;
 		uint toReserveBytes = toReservePages * __pagesize;
 
 		DevCon.WriteLn( L"%-32s is being expanded by %u pages.", Name.c_str(), toReservePages);
@@ -153,11 +206,11 @@ bool BaseVirtualMemoryReserve::TryResize( uint newsize )
 		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
 			m_baseptr, (uptr)m_baseptr+toReserveBytes, toReserveBytes / _1mb);
 	}
-	else if (newPages < m_reserved)
+	else if (newPages < m_pages_reserved)
 	{
-		if (m_commited > newsize) return false;
+		if (m_pages_commited > newsize) return false;
 	
-		uint toRemovePages = m_reserved - newPages;
+		uint toRemovePages = m_pages_reserved - newPages;
 		uint toRemoveBytes = toRemovePages * __pagesize;
 
 		DevCon.WriteLn( L"%-32s is being shrunk by %u pages.", Name.c_str(), toRemovePages);
@@ -171,8 +224,18 @@ bool BaseVirtualMemoryReserve::TryResize( uint newsize )
 	return true;
 }
 
+// --------------------------------------------------------------------------------------
+//  BaseVmReserveListener  (implementations)
+// --------------------------------------------------------------------------------------
 
-void BaseVirtualMemoryReserve::CommitBlocks( uptr page, uint blocks )
+BaseVmReserveListener::BaseVmReserveListener( const wxString& name, size_t size )
+	: VirtualMemoryReserve( name, size )
+	, m_pagefault_listener( this )
+{
+	m_blocksize		= __pagesize;
+}
+
+void BaseVmReserveListener::CommitBlocks( uptr page, uint blocks )
 {
 	const uptr blocksbytes = blocks * m_blocksize * __pagesize;
 	void* blockptr = (u8*)m_baseptr + (page * __pagesize);
@@ -190,13 +253,13 @@ void BaseVirtualMemoryReserve::CommitBlocks( uptr page, uint blocks )
 	for( ; init<endpos; init += m_blocksize*__pagesize )
 		OnCommittedBlock(init);
 
-	m_commited += m_blocksize * blocks;
+	m_pages_commited += m_blocksize * blocks;
 }
 
-void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool& handled)
+void BaseVmReserveListener::OnPageFaultEvent(const PageFaultInfo& info, bool& handled)
 {
 	sptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
-	if ((offset < 0) || ((uptr)offset >= m_reserved)) return;
+	if ((offset < 0) || ((uptr)offset >= m_pages_reserved)) return;
 
 	// Linux Note!  the SIGNAL handler is very limited in what it can do, and not only can't 
 	// we let the C++ exception try to unwind the stack, we may not be able to log it either.
@@ -238,7 +301,7 @@ void BaseVirtualMemoryReserve::OnPageFaultEvent(const PageFaultInfo& info, bool&
 // --------------------------------------------------------------------------------------
 
 SpatialArrayReserve::SpatialArrayReserve( const wxString& name ) :
-	__parent( name )
+	_parent( name )
 {
 	m_prot_mode = PageAccess_ReadWrite();
 }
@@ -250,9 +313,9 @@ uint SpatialArrayReserve::_calcBlockBitArrayLength() const
 	return (((m_numblocks + 7) / 8) + 15) & ~15;
 }
 
-void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
+void* SpatialArrayReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 {
-	void* addr = __parent::Reserve( size, base, upper_bounds );
+	void* addr = _parent::Reserve( size, base, upper_bounds );
 	if (!addr) return NULL;
 
 	if (m_blocksize) SetBlockSizeInPages( m_blocksize );
@@ -264,7 +327,7 @@ void* SpatialArrayReserve::Reserve( uint size, uptr base, uptr upper_bounds )
 // Resets/clears the spatial array, reducing the memory commit pool overhead to zero (0).
 void SpatialArrayReserve::Reset()
 {
-	if (m_commited)
+	if (m_pages_commited)
 	{
 		u8* curptr = GetPtr();
 		const uint blockBytes = m_blocksize * __pagesize;
@@ -299,7 +362,7 @@ bool SpatialArrayReserve::TryResize( uint newsize )
 	uint pages_in_use = i * m_blocksize;
 	if (newpages < pages_in_use) return false;
 
-	if (!__parent::TryResize( newsize )) return false;
+	if (!_parent::TryResize( newsize )) return false;
 	
 	// On success, we must re-calibrate the internal blockbits array.
 	
@@ -317,12 +380,12 @@ bool SpatialArrayReserve::TryResize( uint newsize )
 // in debug builds.
 SpatialArrayReserve& SpatialArrayReserve::SetBlockCount( uint blocks )
 {
-	pxAssumeDev( !m_commited, "Invalid object state: SetBlockCount must be called prior to reserved memory accesses." );
+	pxAssumeDev( !m_pages_commited, "Invalid object state: SetBlockCount must be called prior to reserved memory accesses." );
 
 	// Calculate such that the last block extends past the end of the array, if necessary.
 
 	m_numblocks = blocks;
-	m_blocksize = (m_reserved + m_numblocks-1) / m_numblocks;
+	m_blocksize = (m_pages_reserved + m_numblocks-1) / m_numblocks;
 	
 	return *this;
 }
@@ -334,10 +397,10 @@ SpatialArrayReserve& SpatialArrayReserve::SetBlockCount( uint blocks )
 // a modified buffer will be ignored (and generate an assertion in dev/debug modes).
 SpatialArrayReserve& SpatialArrayReserve::SetBlockSizeInPages( uint pages )
 {
-	if (pxAssertDev(!m_commited, "Invalid object state: Block size can only be changed prior to accessing or modifying the reserved buffer contents."))
+	if (pxAssertDev(!m_pages_commited, "Invalid object state: Block size can only be changed prior to accessing or modifying the reserved buffer contents."))
 	{
 		m_blocksize = pages;
-		m_numblocks = (m_reserved + m_blocksize - 1) / m_blocksize;
+		m_numblocks = (m_pages_reserved + m_blocksize - 1) / m_blocksize;
 		m_blockbits.Alloc( _calcBlockBitArrayLength() );
 	}
 	return *this;

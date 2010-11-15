@@ -476,8 +476,7 @@ public:
 	// blocked threads stalling the GUI.
 	ExecutorThread					SysExecutorThread;
 	ScopedPtr<SysCpuProviderPack>	m_CpuProviders;
-	ScopedPtr<SysReserveVM>			m_VmReserve;
-	ScopedPtr<SysAllocVM>			m_VmAllocs;
+	ScopedPtr<SysMainMemory>	m_VmReserve;
 
 protected:
 	wxWindowID			m_id_MainFrame;
@@ -498,6 +497,8 @@ public:
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void LogicalVsync();
+	
+	SysMainMemory& GetVmReserve();
 	
 	GSFrame&		GetGsFrame() const;
 	MainEmuFrame&	GetMainFrame() const;
@@ -528,8 +529,6 @@ public:
 	void StartPendingSave();
 	void ClearPendingSave();
 	
-	void AllocateVM();
-
 	// --------------------------------------------------------------------------
 	//  App-wide Resources
 	// --------------------------------------------------------------------------

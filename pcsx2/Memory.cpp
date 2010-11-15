@@ -586,30 +586,8 @@ protected:
 static mmap_PageFaultHandler* mmap_faultHandler = NULL;
 
 EEVM_MemoryAllocMess* eeMem = NULL;
-
 __pagealigned u8 eeHw[Ps2MemSize::Hardware];
 
-void memAlloc()
-{
-	if( eeMem == NULL )
-		eeMem = (EEVM_MemoryAllocMess*)vtlb_malloc( sizeof(*eeMem), 4096 );
-
-	if( eeMem == NULL)
-		throw Exception::OutOfMemory( L"PS2 Main Memory (VTLB)" )
-			.SetUserMsg(L"Could not allocate memory needed for the PS2 virtual machine's main memory (approx. 42mb).");
-
-	pxAssume(Source_PageFault);
-	mmap_faultHandler = new mmap_PageFaultHandler();
-}
-
-void memShutdown()
-{
-	safe_delete(mmap_faultHandler);
-
-	vtlb_free( eeMem, sizeof(*eeMem) );
-	eeMem = NULL;
-	vtlb_Term();
-}
 
 void memBindConditionalHandlers()
 {
@@ -639,19 +617,39 @@ void memBindConditionalHandlers()
 	}
 }
 
-// Resets memory mappings, unmaps TLBs, reloads bios roms, etc.
-void memReset()
+
+// --------------------------------------------------------------------------------------
+//  eeMemoryReserve  (implementations)
+// --------------------------------------------------------------------------------------
+eeMemoryReserve::eeMemoryReserve()
+	: _parent( L"EE Main Memory", sizeof(*eeMem) )
 {
-	// VTLB Protection Preparations.
-	//HostSys::MemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
+}
+
+void eeMemoryReserve::Reserve()
+{
+	_parent::Reserve(HostMemoryMap::EEmem);
+	//_parent::Reserve(EmuConfig.HostMap.IOP);
+	eeMem = (EEVM_MemoryAllocMess*)m_reserve.GetPtr();
+}
+
+// Resets memory mappings, unmaps TLBs, reloads bios roms, etc.
+void eeMemoryReserve::Reset()
+{
+	if (!mmap_faultHandler)
+	{
+		pxAssume(Source_PageFault);
+		mmap_faultHandler = new mmap_PageFaultHandler();
+	}
+	
+	_parent::Reset();
 
 	// Note!!  Ideally the vtlb should only be initialized once, and then subsequent
 	// resets of the system hardware would only clear vtlb mappings, but since the
 	// rest of the emu is not really set up to support a "soft" reset of that sort
 	// we opt for the hard/safe version.
 
-	pxAssume( eeMem != NULL );
-	memzero( *eeMem );
+	pxAssume( eeMem );
 
 #ifdef ENABLECACHE
 	memset(pCache,0,sizeof(_cacheS)*64);
@@ -764,9 +762,18 @@ void memReset()
 	LoadBIOS();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Memory Protection and Block Checking, vtlb Style!
-//
+void eeMemoryReserve::Release()
+{
+	safe_delete(mmap_faultHandler);
+	_parent::Release();
+	eeMem = NULL;
+	vtlb_Term();
+}
+
+
+// ===========================================================================================
+//  Memory Protection and Block Checking, vtlb Style! 
+// ===========================================================================================
 // For the first time code is recompiled (executed), the PS2 ram page for that code is
 // protected using Virtual Memory (mprotect).  If the game modifies its own code then this
 // protection causes an *exception* to be raised (signal in Linux), which is handled by

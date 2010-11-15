@@ -18,43 +18,41 @@
 #include "Common.h"
 #include "VUmicro.h"
 
+
 __aligned16 VURegs vuRegs[2];
 
-static u8* m_vuAllMem = NULL;
-static const uint m_vuMemSize =
-	0x1000 +					// VU0micro memory
-	0x4000 +					// VU0 memory
-	0x4000 +					// VU1 memory
-	0x4000;
 
-void vuMicroMemAlloc()
+vuMemoryReserve::vuMemoryReserve()
+	: _parent( L"VU0/1 on-chip memory", VU1_PROGSIZE + VU1_MEMSIZE + VU0_PROGSIZE + VU0_MEMSIZE )
 {
-	if( m_vuAllMem == NULL )
-		m_vuAllMem = vtlb_malloc( m_vuMemSize, 16 );
+}
 
-	if( m_vuAllMem == NULL )
-		throw Exception::OutOfMemory( L"VU0 and VU1 on-chip memory" );
+void vuMemoryReserve::Reserve()
+{
+	_parent::Reserve(HostMemoryMap::VUmem);
+	//_parent::Reserve(EmuConfig.HostMemMap.VUmem);
 
-	u8* curpos = m_vuAllMem;
+	u8* curpos = m_reserve.GetPtr();
 	VU0.Micro	= curpos; curpos += 0x1000;
 	VU0.Mem		= curpos; curpos += 0x4000;
 	VU1.Micro	= curpos; curpos += 0x4000;
 	VU1.Mem		= curpos;
-	 //curpos += 0x4000;
 }
 
-void vuMicroMemShutdown()
+void vuMemoryReserve::Release()
 {
-	// -- VTLB Memory Allocation --
+	_parent::Release();
 
-	vtlb_free( m_vuAllMem, m_vuMemSize );
-	m_vuAllMem = NULL;
+	VU0.Micro	= VU0.Mem	= NULL;
+	VU1.Micro	= VU1.Mem	= NULL;
 }
 
-void vuMicroMemReset()
+void vuMemoryReserve::Reset()
 {
-	pxAssume( VU0.Mem != NULL );
-	pxAssume( VU1.Mem != NULL );
+	_parent::Reset();
+	
+	pxAssume( VU0.Mem );
+	pxAssume( VU1.Mem );
 
 	memMapVUmicro();
 
@@ -67,8 +65,6 @@ void vuMicroMemReset()
 	VU0.VF[0].f.z = 0.0f;
 	VU0.VF[0].f.w = 1.0f;
 	VU0.VI[0].UL = 0;
-	memzero_ptr<4*1024>(VU0.Mem);
-	memzero_ptr<4*1024>(VU0.Micro);
 
 	// === VU1 Initialization ===
 	memzero(VU1.ACC);
@@ -79,8 +75,6 @@ void vuMicroMemReset()
 	VU1.VF[0].f.z = 0.0f;
 	VU1.VF[0].f.w = 1.0f;
 	VU1.VI[0].UL = 0;
-	memzero_ptr<16*1024>(VU1.Mem);
-	memzero_ptr<16*1024>(VU1.Micro);
 }
 
 void SaveStateBase::vuMicroFreeze()

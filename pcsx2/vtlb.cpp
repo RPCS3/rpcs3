@@ -33,8 +33,9 @@
 #include "Common.h"
 #include "vtlb.h"
 #include "COP0.h"
-
 #include "R5900Exceptions.h"
+
+#include "Utilities\MemsetFast.inl"
 
 using namespace R5900;
 using namespace vtlb_private;
@@ -46,7 +47,7 @@ namespace vtlb_private
 	__aligned(64) MapData vtlbdata;
 }
 
-static vtlbHandler vtlbHandlerCount=0;
+static vtlbHandler vtlbHandlerCount = 0;
 
 static vtlbHandler DefaultPhyHandler;
 static vtlbHandler UnmappedVirtHandler0;
@@ -565,69 +566,67 @@ void vtlb_Term()
 // [TODO] basemem - request allocating memory at the specified virtual location, which can allow
 //    for easier debugging and/or 3rd party cheat programs.  If 0, the operating system
 //    default is used.
-void vtlb_Core_Alloc( /*uptr basemem*/ )
+void vtlb_Core_Alloc()
 {
-	if( vtlbdata.alloc_base != NULL ) return;
-
-	vtlbdata.alloc_current = 0;
-	vtlbdata.alloc_base = SysMmapEx( HostMemoryMap::EEmem, VTLB_ALLOC_SIZE, 0x80000000, "Vtlb" );
-
-#ifndef __WXMSW__
-	// [TODO] Win32 can fall back on this, since malloc always maps below 2GB.  (but we need to
-	//  make sure we flag it and call the right free -- and really it should never fail anyway
-	//  since SysMmapEx should still grab addresses below the 2gb line when given the 0 param
-	//  (OS picks the location).
-
-	//if (!vtlbdata.alloc_base)
-	//	vtlbdata.alloc_base = (u8*)_aligned_malloc( VTLB_ALLOC_SIZE, 4096 );
-#endif
-
-	if (!vtlbdata.alloc_base)
-		throw Exception::OutOfMemory( pxsFmt(L"PS2 mappable system ram (%u megs)", VTLB_ALLOC_SIZE / _1mb) );
-
 	vtlbdata.vmap = (s32*)_aligned_malloc( VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap), 16 );
 	if (!vtlbdata.vmap)
-		throw Exception::OutOfMemory( pxsFmt(L"VTLB virtual LUT (%u megs)", VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap) / _1mb) );
+		throw Exception::OutOfMemory( L"VTLB Virtual Address Translation LUT" )
+			.SetDiagMsg(pxsFmt("(%u megs)", VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap) / _1mb)
+		);
 }
 
-void vtlb_Core_Shutdown()
+void vtlb_Core_Free()
 {
 	safe_aligned_free( vtlbdata.vmap );
-
-	if (!vtlbdata.alloc_base) return;
-	
-	SafeSysMunmap( vtlbdata.alloc_base, VTLB_ALLOC_SIZE );
-
-#ifdef __WXMSW__
-	// Make sure and unprotect memory first, since CrtDebug will try to write to it.
-	//HostSys::MemProtect( vtlbdata.alloc_base, VTLB_ALLOC_SIZE, Protect_ReadWrite );
-	//safe_aligned_free( vtlbdata.alloc_base );
-#endif
-
 }
 
-// This function allocates memory block with are compatible with the Vtlb's requirements
-// for memory locations.  The Vtlb requires the topmost bit (Sign bit) of the memory
-// pointer to be cleared.  Some operating systems and/or implementations of malloc do that,
-// but others do not.  So use this instead to allocate the memory correctly for your
-// platform.
-//
-u8* vtlb_malloc( uint size, uint align )
+// --------------------------------------------------------------------------------------
+//  VtlbMemoryReserve  (implementations)
+// --------------------------------------------------------------------------------------
+VtlbMemoryReserve::VtlbMemoryReserve( const wxString& name, size_t size )
+	: m_reserve( name, size )
 {
-	vtlbdata.alloc_current += align-1;
-	vtlbdata.alloc_current &= ~(align-1);
-
-	int rv = vtlbdata.alloc_current;
-	vtlbdata.alloc_current += size;
-
-	pxAssertDev( vtlbdata.alloc_current < VTLB_ALLOC_SIZE, "(vtlb_malloc) memory overflow! Please increase the size of VTLB_ALLOC_SIZE!" );
-	return &vtlbdata.alloc_base[rv];
+	m_reserve.SetPageAccessOnCommit( PageAccess_ReadWrite() );
 }
 
-void vtlb_free( void* pmem, uint size )
+void VtlbMemoryReserve::SetBaseAddr( uptr newaddr )
 {
-	if (!pmem) return;
+	m_reserve.SetBaseAddr( newaddr );
+}
 
-	vtlbdata.alloc_current -= size;
-	pxAssertDev( vtlbdata.alloc_current >= 0, "(vtlb_free) mismatched calls to vtlb_malloc and free detected via memory underflow." );
+void VtlbMemoryReserve::Reserve( sptr hostptr )
+{
+	m_reserve.Reserve();
+	if (!m_reserve.IsOk())
+		throw Exception::OutOfMemory( m_reserve.GetName() );
+}
+
+void VtlbMemoryReserve::Commit()
+{
+	if (IsCommitted()) return;
+	if (!m_reserve.Commit())
+		throw Exception::OutOfMemory( m_reserve.GetName() );
+}
+
+void VtlbMemoryReserve::Reset()
+{
+	if (!m_reserve.Commit())
+		throw Exception::OutOfMemory( m_reserve.GetName() );
+
+	memzero_sse_a(m_reserve.GetPtr(), m_reserve.GetCommittedBytes());
+}
+
+void VtlbMemoryReserve::Shutdown()
+{
+	m_reserve.Reset();
+}
+
+void VtlbMemoryReserve::Release()
+{
+	m_reserve.Release();
+}
+
+bool VtlbMemoryReserve::IsCommitted() const
+{
+	return !!m_reserve.GetCommittedPageCount();
 }

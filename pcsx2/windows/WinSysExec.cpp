@@ -19,17 +19,3 @@
 
 #include "Common.h"
 #include "Utilities/PageFaultSource.h"
-
-int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
-{
-	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
-		return EXCEPTION_CONTINUE_SEARCH;
-
-	Source_PageFault->Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
-	return Source_PageFault->WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
-}
-
-void InstallSignalHandler()
-{
-	// NOP on Win32 systems -- we use __try{} __except{} instead.
-}

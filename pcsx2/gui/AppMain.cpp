@@ -702,6 +702,12 @@ void Pcsx2App::PostIdleAppMethod( FnPtr_Pcsx2App method )
 	AddIdleEvent( evt );
 }
 
+SysMainMemory& Pcsx2App::GetVmReserve()
+{
+	if (!m_VmReserve) m_VmReserve = new SysMainMemory();
+	return *m_VmReserve;
+}
+
 void Pcsx2App::OpenGsPanel()
 {
 	if( AppRpc_TryInvoke( &Pcsx2App::OpenGsPanel ) ) return;
@@ -851,7 +857,7 @@ protected:
 
 		DbgCon.WriteLn( Color_Gray, "(SysExecute) received." );
 
-		CoreThread.Reset();
+		CoreThread.ResetQuick();
 
 		CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 		if( m_UseCDVDsrc )
@@ -928,6 +934,11 @@ MainEmuFrame& GetMainFrame()
 MainEmuFrame* GetMainFramePtr()
 {
 	return wxTheApp ? wxGetApp().GetMainFramePtr() : NULL;
+}
+
+SysMainMemory& GetVmMemory()
+{
+	return wxGetApp().GetVmReserve();
 }
 
 SysCoreThread& GetCoreThread()

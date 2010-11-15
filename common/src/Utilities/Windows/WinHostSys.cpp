@@ -15,7 +15,24 @@
 
 #include "PrecompiledHeader.h"
 #include "Utilities/RedtapeWindows.h"
+#include "PageFaultSource.h"
+
 #include <winnt.h>
+
+int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
+{
+	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	Source_PageFault->Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
+	return Source_PageFault->WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+}
+
+void _platform_InstallSignalHandler()
+{
+	// NOP on Win32 systems -- we use __try{} __except{} instead.
+}
+
 
 static DWORD ConvertToWinApi( const PageProtectionMode& mode )
 {
@@ -94,7 +111,7 @@ void* HostSys::Mmap(uptr base, size_t size)
 void HostSys::Munmap(uptr base, size_t size)
 {
 	if (!base) return;
-	VirtualFree((void*)base, size, MEM_DECOMMIT);
+	//VirtualFree((void*)base, size, MEM_DECOMMIT);
 	VirtualFree((void*)base, 0, MEM_RELEASE);
 }
 

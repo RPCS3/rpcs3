@@ -15,10 +15,63 @@
 
 
 #include "../PrecompiledHeader.h"
+#include "PageFaultSource.h"
 
 #include <sys/mman.h>
 #include <signal.h>
 #include <errno.h>
+
+extern void SignalExit(int sig);
+
+static const uptr m_pagemask = getpagesize()-1;
+
+// Linux implementation of SIGSEGV handler.  Bind it using sigaction().
+static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
+{
+	// [TODO] : Add a thread ID filter to the Linux Signal handler here.
+	// Rationale: On windows, the __try/__except model allows per-thread specific behavior
+	// for page fault handling.  On linux, there is a single signal handler for the whole
+	// process, but the handler is executed by the thread that caused the exception.
+
+
+	// Stdio Usage note: SIGSEGV handling is a synchronous in-thread signal.  It is done
+	// from the context of the current thread and stackframe.  So long as the thread is not
+	// the main/ui thread, use of the px assertion system should be safe.  Use of stdio should
+	// be safe even on the main thread.
+	//  (in other words, stdio limitations only really apply to process-level asynchronous
+	//   signals)
+	
+	// Note: Use of stdio functions isn't safe here.  Avoid console logs,
+	// assertions, file logs, or just about anything else useful.
+
+	Source_PageFault->Dispatch( PageFaultInfo( (uptr)siginfo->si_addr & ~m_pagemask ) );
+
+	// resumes execution right where we left off (re-executes instruction that
+	// caused the SIGSEGV).
+	if (Source_PageFault->WasHandled()) return;
+
+	if (!wxThread::IsMain())
+	{
+		pxFailRel(pxsFmt("Unhandled page fault @ 0x%08x", siginfo->si_addr));
+	}
+
+	// Bad mojo!  Completely invalid address.
+	// Instigate a trap if we're in a debugger, and if not then do a SIGKILL.
+
+	wxTrap();
+	if (!IsDebugBuild) raise( SIGKILL );
+}
+
+void _platform_InstallSignalHandler()
+{
+	Console.WriteLn("Installing POSIX SIGSEGV handler...");
+	struct sigaction sa;
+
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO;
+	sa.sa_sigaction = SysPageFaultSignalFilter;
+	sigaction(SIGSEGV, &sa, NULL);
+}
 
 static __ri void PageSizeAssertionTest( size_t size )
 {

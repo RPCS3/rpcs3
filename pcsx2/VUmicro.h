@@ -19,15 +19,15 @@
 #include "VUops.h"
 #include "R5900.h"
 
-static const uint VU0_MEMSIZE = 0x1000;
-static const uint VU0_PROGSIZE = 0x1000;
-static const uint VU1_MEMSIZE = 0x4000;
-static const uint VU1_PROGSIZE = 0x4000;
+static const uint VU0_MEMSIZE	= 0x1000;		// 4kb
+static const uint VU0_PROGSIZE	= 0x1000;		// 4kb
+static const uint VU1_MEMSIZE	= 0x4000;		// 16kb
+static const uint VU1_PROGSIZE	= 0x4000;		// 16kb
 
-static const uint VU0_MEMMASK = VU0_MEMSIZE-1;
-static const uint VU0_PROGMASK = VU0_PROGSIZE-1;
-static const uint VU1_MEMMASK = VU1_MEMSIZE-1;
-static const uint VU1_PROGMASK = VU1_PROGSIZE-1;
+static const uint VU0_MEMMASK	= VU0_MEMSIZE-1;
+static const uint VU0_PROGMASK	= VU0_PROGSIZE-1;
+static const uint VU1_MEMMASK	= VU1_MEMSIZE-1;
+static const uint VU1_PROGMASK	= VU1_PROGSIZE-1;
 
 #define vuRunCycles  (512*12)  // Cycles to run ExecuteBlockJIT() for (called from within recs)
 #define vu0RunCycles (512*12)  // Cycles to run vu0 for whenever ExecuteBlock() is called
@@ -286,10 +286,6 @@ public:
 extern BaseVUmicroCPU* CpuVU0;
 extern BaseVUmicroCPU* CpuVU1;
 
-
-extern void vuMicroMemAlloc();
-extern void vuMicroMemShutdown();
-extern void vuMicroMemReset();
 
 // VU0
 extern void vu0ResetRegs();

@@ -65,11 +65,11 @@ bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalExcept
 // --------------------------------------------------------------------------------------
 class R5900LutReserve_RAM : public SpatialArrayReserve
 {
-	typedef SpatialArrayReserve __parent;
+	typedef SpatialArrayReserve _parent;
 
 public:
 	R5900LutReserve_RAM( const wxString& name )
-		: __parent( name )
+		: _parent( name )
 	{
 	}
 
@@ -567,7 +567,7 @@ static __ri void ClearRecLUT(BASEBLOCK* base, int memsize)
 
 void R5900LutReserve_RAM::OnCommittedBlock( void* block )
 {
-	__parent::OnCommittedBlock(block);
+	_parent::OnCommittedBlock(block);
 	ClearRecLUT((BASEBLOCK*)block, __pagesize * m_blocksize);
 }
 

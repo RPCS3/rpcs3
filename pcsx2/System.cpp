@@ -41,7 +41,7 @@ extern void resetNewVif(int idx);
 // Parameters:
 //   name - a nice long name that accurately describes the contents of this reserve.
 RecompiledCodeReserve::RecompiledCodeReserve( const wxString& name, uint defCommit )
-	: BaseVirtualMemoryReserve( name )
+	: BaseVmReserveListener( name )
 {
 	m_blocksize		= (1024 * 128) / __pagesize;
 	m_prot_mode		= PageAccess_Any();
@@ -73,9 +73,9 @@ uint RecompiledCodeReserve::_calcDefaultCommitInBlocks() const
 	return (m_def_commit + m_blocksize - 1) / m_blocksize;
 }
 
-void* RecompiledCodeReserve::Reserve( uint size, uptr base, uptr upper_bounds )
+void* RecompiledCodeReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 {
-	if (!__parent::Reserve(size, base, upper_bounds)) return NULL;
+	if (!_parent::Reserve(size, base, upper_bounds)) return NULL;
 	_registerProfiler();
 	return m_baseptr;
 }
@@ -93,7 +93,7 @@ RecompiledCodeReserve& RecompiledCodeReserve::SetProfilerName( const wxString& s
 
 void RecompiledCodeReserve::DoCommitAndProtect( uptr page )
 {
-	CommitBlocks(page, (m_commited || !m_def_commit) ? 1 : _calcDefaultCommitInBlocks() );
+	CommitBlocks(page, (m_pages_commited || !m_def_commit) ? 1 : _calcDefaultCommitInBlocks() );
 }
 
 void RecompiledCodeReserve::OnCommittedBlock( void* block )
@@ -333,83 +333,70 @@ static wxString GetMemoryErrorVM()
 // --------------------------------------------------------------------------------------
 //  SysReserveVM  (implementations)
 // --------------------------------------------------------------------------------------
-SysReserveVM::SysReserveVM()
+SysMainMemory::SysMainMemory()
 {
-	if (!Source_PageFault) Source_PageFault = new SrcType_PageFault();
-
-	// [TODO] : Reserve memory addresses for PS2 virtual machine
-	//DevCon.WriteLn( "Reserving memory addresses for the PS2 virtual machine..." );
 }
 
-void SysReserveVM::CleanupMess() throw()
+SysMainMemory::~SysMainMemory() throw()
 {
-	try
-	{
-		safe_delete(Source_PageFault);
-	}
-	DESTRUCTOR_CATCHALL
+	ShutdownAll();
+	ReleaseAll();
 }
 
-SysReserveVM::~SysReserveVM() throw()
+void SysMainMemory::ReserveAll()
 {
-	CleanupMess();
+	pxInstallSignalHandler();
+
+	DevCon.WriteLn( "PS2vm: Mapping host memory for all virtual systems..." );
+
+	m_ee.Reserve();
+	m_iop.Reserve();
+	m_vu.Reserve();
 }
 
-// --------------------------------------------------------------------------------------
-//  SysAllocVM  (implementations)
-// --------------------------------------------------------------------------------------
-SysAllocVM::SysAllocVM()
+void SysMainMemory::CommitAll()
 {
-	InstallSignalHandler();
+	if (m_ee.IsCommitted() && m_iop.IsCommitted() && m_vu.IsCommitted()) return;
 
-	Console.WriteLn( "Allocating memory for the PS2 virtual machine..." );
+	DevCon.WriteLn( "PS2vm: Allocating host memory for all virtual systems..." );
 
-	try
-	{
-		vtlb_Core_Alloc();
-		memAlloc();
-		psxMemAlloc();
-		vuMicroMemAlloc();
-	}
-	// ----------------------------------------------------------------------------
-	catch( Exception::OutOfMemory& ex )
-	{
-		ex.UserMsg() += L"\n\n" + GetMemoryErrorVM();
-		CleanupMess();
-		throw;
-	}
-	catch( std::bad_alloc& ex )
-	{
-		CleanupMess();
-
-		// re-throw std::bad_alloc as something more friendly.  This is needed since
-		// much of the code uses new/delete internally, which throw std::bad_alloc on fail.
-
-		throw Exception::OutOfMemory()
-			.SetDiagMsg(
-				L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
-				L"Error Details: " + fromUTF8( ex.what() )
-			)
-			.SetUserMsg(GetMemoryErrorVM()); 	// translated
-	}
+	m_ee.Commit();
+	m_iop.Commit();
+	m_vu.Commit();
 }
 
-void SysAllocVM::CleanupMess() throw()
+
+void SysMainMemory::ResetAll()
 {
-	try
-	{
-		vuMicroMemShutdown();
-		psxMemShutdown();
-		memShutdown();
-		vtlb_Core_Shutdown();
-	}
-	DESTRUCTOR_CATCHALL
+	CommitAll();
+
+	DevCon.WriteLn( "PS2vm: Resetting host memory for all virtual systems..." );
+
+	m_ee.Reset();
+	m_iop.Reset();
+	m_vu.Reset();
 }
 
-SysAllocVM::~SysAllocVM() throw()
+void SysMainMemory::ShutdownAll()
 {
-	CleanupMess();
+	Console.WriteLn( "PS2vm: Shutting down host memory for all virtual systems..." );
+
+	m_ee.Shutdown();
+	m_iop.Shutdown();
+	m_vu.Shutdown();
 }
+
+void SysMainMemory::ReleaseAll()
+{
+	Console.WriteLn( "PS2vm: Releasing host memory maps for all virtual systems..." );
+
+	m_ee.Shutdown();
+	m_iop.Shutdown();
+	m_vu.Shutdown();
+
+	safe_delete(Source_PageFault);
+}
+
 
 // --------------------------------------------------------------------------------------
 //  SysCpuProviderPack  (implementations)

@@ -238,12 +238,6 @@ void Pcsx2App::OpenProgramLog()
 	if( m_current_focus ) m_current_focus->SetFocus();
 }
 
-void Pcsx2App::AllocateVM()
-{
-	if (m_VmAllocs) return;
-	m_VmAllocs = new SysAllocVM();
-}
-
 void Pcsx2App::AllocateCoreStuffs()
 {
 	if( AppRpc_TryInvokeAsync( &Pcsx2App::AllocateCoreStuffs ) ) return;
@@ -252,7 +246,7 @@ void Pcsx2App::AllocateCoreStuffs()
 	SysLogMachineCaps();
 	AppApplySettings();
 
-	if (!m_VmReserve) m_VmReserve = new SysReserveVM();
+	GetVmReserve().ReserveAll();
 
 	if( !m_CpuProviders )
 	{
@@ -820,12 +814,12 @@ void Pcsx2App::CleanUp()
 
 __fi wxString AddAppName( const wxChar* fmt )
 {
-	return wxsFormat( fmt, pxGetAppName().c_str() );
+	return pxsFmt( fmt, pxGetAppName().c_str() );
 }
 
 __fi wxString AddAppName( const char* fmt )
 {
-	return wxsFormat( fromUTF8(fmt), pxGetAppName().c_str() );
+	return pxsFmt( fromUTF8(fmt), pxGetAppName().c_str() );
 }
 
 // ------------------------------------------------------------------------------------------

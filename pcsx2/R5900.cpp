@@ -50,14 +50,14 @@ static const uint eeWaitCycles = 3072;
 
 bool eeEventTestIsActive = false;
 
+extern SysMainMemory& GetVmMemory();
+
 void cpuReset()
 {
-	if( GetMTGS().IsOpen() )
+	if (GetMTGS().IsOpen())
 		GetMTGS().WaitGS();		// GS better be done processing before we reset the EE, just in case.
 
-	memReset();
-	psxMemReset();
-	vuMicroMemReset();
+	GetVmMemory().ResetAll();
 
 	memzero(cpuRegs);
 	memzero(fpuRegs);

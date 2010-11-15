@@ -23,9 +23,9 @@
 // A recompiled code reserve is a simple sequential-growth block of memory which is auto-
 // cleared to INT 3 (0xcc) as needed.
 //
-class RecompiledCodeReserve : public BaseVirtualMemoryReserve
+class RecompiledCodeReserve : public BaseVmReserveListener
 {
-	typedef BaseVirtualMemoryReserve __parent;
+	typedef BaseVmReserveListener _parent;
 
 protected:
 	// Specifies the number of blocks that should be committed automatically when the
@@ -40,7 +40,7 @@ public:
 	RecompiledCodeReserve( const wxString& name, uint defCommit = 0 );
 	virtual ~RecompiledCodeReserve() throw();
 
-	virtual void* Reserve( uint size, uptr base=0, uptr upper_bounds=0 );
+	virtual void* Reserve( size_t size, uptr base=0, uptr upper_bounds=0 );
 	virtual void OnCommittedBlock( void* block );
 
 	virtual RecompiledCodeReserve& SetProfilerName( const wxString& shortname );
