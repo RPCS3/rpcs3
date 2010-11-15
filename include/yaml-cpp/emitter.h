@@ -138,6 +138,8 @@ namespace YAML
 	inline Emitter& operator << (Emitter& emitter, unsigned short v) { return emitter.WriteIntegralType(v); }
 	inline Emitter& operator << (Emitter& emitter, long v) { return emitter.WriteIntegralType(v); }
 	inline Emitter& operator << (Emitter& emitter, unsigned long v) { return emitter.WriteIntegralType(v); }
+	inline Emitter& operator << (Emitter& emitter, long long v) { return emitter.WriteIntegralType(v); }
+	inline Emitter& operator << (Emitter& emitter, unsigned long long v) { return emitter.WriteIntegralType(v); }
 
 	inline Emitter& operator << (Emitter& emitter, float v) { return emitter.WriteStreamable(v); }
 	inline Emitter& operator << (Emitter& emitter, double v) { return emitter.WriteStreamable(v); }
