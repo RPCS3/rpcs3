@@ -37,7 +37,7 @@ protected:
 	bool		m_profiler_registered;
 
 public:
-	RecompiledCodeReserve( const wxString& name, uint defCommit = 0 );
+	RecompiledCodeReserve( const wxString& name=wxEmptyString, uint defCommit = 0 );
 	virtual ~RecompiledCodeReserve() throw();
 
 	virtual void* Reserve( size_t size, uptr base=0, uptr upper_bounds=0 );
@@ -48,6 +48,8 @@ public:
 	{
 		return SetProfilerName( fromUTF8(shortname) );
 	}
+	
+	void ThrowIfNotOk() const;
 
 	operator void*()				{ return m_baseptr; }
 	operator const void*() const	{ return m_baseptr; }

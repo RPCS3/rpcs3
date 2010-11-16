@@ -541,7 +541,6 @@ set(pcsx2x86Headers
 	x86/microVU_Tables.inl
 	x86/microVU_Upper.inl
 	x86/newVif.h
-	x86/newVif_BlockBuffer.h
 	x86/newVif_HashBucket.h
 	x86/newVif_UnpackSSE.h
 	x86/sVU_Compare.h

@@ -127,10 +127,9 @@ class VirtualMemoryReserve
 {
 	DeclareNoncopyableObject( VirtualMemoryReserve );
 
-public:
-	wxString Name;
-
 protected:
+	wxString m_name;
+
 	// Default size of the reserve, in bytes.  Can be specified when the object is contructed.
 	// Is used as the reserve size when Reserve() is called, unless an override is specified
 	// in the Reserve parameters.
@@ -149,7 +148,7 @@ protected:
 	uptr	m_pages_commited;
 
 public:
-	VirtualMemoryReserve( const wxString& name, size_t size = 0 );
+	VirtualMemoryReserve( const wxString& name=wxEmptyString, size_t size = 0 );
 	virtual ~VirtualMemoryReserve() throw()
 	{
 		Release();
@@ -167,7 +166,7 @@ public:
 	virtual bool Commit();
 
 	bool IsOk() const { return m_baseptr !=  NULL; }
-	wxString GetName() const { return Name; }
+	wxString GetName() const { return m_name; }
 
 	uptr GetReserveSizeInBytes() const	{ return m_pages_reserved * __pagesize; }
 	uptr GetReserveSizeInPages() const	{ return m_pages_reserved; }
@@ -179,6 +178,7 @@ public:
 	u8* GetPtrEnd()					{ return (u8*)m_baseptr + (m_pages_reserved * __pagesize); }
 	const u8* GetPtrEnd() const		{ return (u8*)m_baseptr + (m_pages_reserved * __pagesize); }
 
+	VirtualMemoryReserve& SetName( const wxString& newname );
 	VirtualMemoryReserve& SetBaseAddr( uptr newaddr );
 	VirtualMemoryReserve& SetPageAccessOnCommit( const PageProtectionMode& mode );
 

@@ -22,10 +22,10 @@
 class StackDump : public wxStackWalker
 {
 protected:
-	wxString		m_stackTrace;
-	wxString		m_srcFuncName;
-	bool			m_ignoreDone;
-	int				m_skipped;
+	FastFormatUnicode	m_stackTrace;
+	wxString			m_srcFuncName;
+	bool				m_ignoreDone;
+	int					m_skipped;
 
 public:
 	StackDump( const FnChar_t* src_function_name )
@@ -37,17 +37,12 @@ public:
 		m_skipped		= 0;
 	}
 
-	const wxString& GetStackTrace() const { return m_stackTrace; }
+	const wxChar* GetStackTrace() const { return m_stackTrace.c_str(); }
 
 protected:
 	virtual void OnStackFrame(const wxStackFrame& frame)
 	{
-		wxString name( frame.GetName() );
-		if( name.IsEmpty() )
-		{
-			name = wxsFormat( L"%p ", frame.GetAddress() );
-		}
-		/*else if( m_srcFuncName.IsEmpty() || m_srcFuncName == name )
+		/*if( m_srcFuncName.IsEmpty() || m_srcFuncName == name )
 		{
 			// FIXME: This logic isn't reliable yet.
 			// It's possible for our debug information to not match the function names returned by
@@ -71,27 +66,25 @@ protected:
 			return;
 		}*/
 
-		//wxString briefName;
-		wxString essenName;
+		m_stackTrace.Write(pxsFmt( L"[%02d]", frame.GetLevel()-m_skipped));
+		
+		if (!frame.GetName().IsEmpty())
+			m_stackTrace.Write(pxsFmt( L" %-44s", frame.GetName().c_str() ));
+		else
+			m_stackTrace.Write(pxsFmt( L" 0x%-42p", frame.GetAddress() ));
 
 		if( frame.HasSourceLocation() )
 		{
 			wxFileName wxfn(frame.GetFileName());
-			//briefName.Printf( L"(%s:%d)", wxfn.GetFullName().c_str(), frame.GetLine() );
 
 			wxfn.SetVolume( wxEmptyString );
-			//int count = wxfn.GetDirCount();
 			for( int i=0; i<2; ++i )
 				wxfn.RemoveDir(0);
 
-			essenName.Printf( L"%s:%d", wxfn.GetFullPath().c_str(), frame.GetLine() );
+			m_stackTrace.Write( L" %s:%d", wxfn.GetFullPath().c_str(), frame.GetLine() );
 		}
-
-		m_stackTrace += pxsFmt( L"[%02d] %-44s %s\n",
-			frame.GetLevel()-m_skipped,
-			name.c_str(),
-			essenName.c_str()
-		);
+		
+		m_stackTrace.Write(L"\n");
 	}
 };
 

@@ -174,7 +174,7 @@ static __ri void format_that_ascii_mess( CharBufferType& buffer, uint writepos, 
 
 		len += writepos;
 		if (len < size) break;
-		buffer.Alloc( len + 128 );
+		buffer.Resize( len + 128 );
 	};
 
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even
@@ -205,7 +205,7 @@ static __ri uint format_that_unicode_mess( CharBufferType& buffer, uint writepos
 
 		len += writepos;
 		if (len < size) return len;
-		buffer.Alloc( (len + 128) * sizeof(wxChar) );
+		buffer.Resize( (len + 128) * sizeof(wxChar) );
 	};
 
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even

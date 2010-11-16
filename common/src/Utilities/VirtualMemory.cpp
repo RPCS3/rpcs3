@@ -71,7 +71,7 @@ void SrcType_PageFault::_DispatchRaw( ListenerIterator iter, const ListenerItera
 //  VirtualMemoryReserve  (implementations)
 // --------------------------------------------------------------------------------------
 VirtualMemoryReserve::VirtualMemoryReserve( const wxString& name, size_t size )
-	: Name( name )
+	: m_name( name )
 {
 	m_defsize			= size;
 
@@ -79,6 +79,12 @@ VirtualMemoryReserve::VirtualMemoryReserve( const wxString& name, size_t size )
 	m_pages_reserved	= 0;
 	m_baseptr			= NULL;
 	m_prot_mode			= PageAccess_None();
+}
+
+VirtualMemoryReserve& VirtualMemoryReserve::SetName( const wxString& newname )
+{
+	m_name = newname;
+	return *this;
 }
 
 VirtualMemoryReserve& VirtualMemoryReserve::SetBaseAddr( uptr newaddr )
@@ -124,7 +130,7 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 	if (!m_baseptr || (upper_bounds != 0 && (((uptr)m_baseptr + reserved_bytes) > upper_bounds)))
 	{
 		DevCon.Warning( L"%s: host memory @ 0x%08x -> 0x%08x is unavailable; attempting to map elsewhere...",
-			Name.c_str(), base, base + size );
+			m_name.c_str(), base, base + size );
 
 		SafeSysMunmap(m_baseptr, reserved_bytes);
 
@@ -143,9 +149,16 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 	}
 
 	if (!m_baseptr) return NULL;
-	
-	DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
-		m_baseptr, (uptr)m_baseptr+reserved_bytes, reserved_bytes / _1mb);
+
+	FastFormatUnicode mbkb;
+	uint mbytes = reserved_bytes / _1mb;
+	if (mbytes)
+		mbkb.Write( "[%umb]", mbytes );
+	else
+		mbkb.Write( "[%ukb]", reserved_bytes / 1024 );
+
+	DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p %s", m_name.c_str(),
+		m_baseptr, (uptr)m_baseptr+reserved_bytes, mbkb.c_str());
 
 	return m_baseptr;
 }
@@ -193,17 +206,17 @@ bool VirtualMemoryReserve::TryResize( uint newsize )
 		uint toReservePages = newPages - m_pages_reserved;
 		uint toReserveBytes = toReservePages * __pagesize;
 
-		DevCon.WriteLn( L"%-32s is being expanded by %u pages.", Name.c_str(), toReservePages);
+		DevCon.WriteLn( L"%-32s is being expanded by %u pages.", m_name.c_str(), toReservePages);
 
 		m_baseptr = (void*)HostSys::MmapReserve((uptr)GetPtrEnd(), toReserveBytes);
 
 		if (!m_baseptr)
 		{
 			Console.Warning("%-32s could not be passively resized due to virtual memory conflict!");
-			Console.Indent().Warning("(attempted to map memory @ 0x%08X -> 0x%08X", m_baseptr, (uptr)m_baseptr+toReserveBytes);
+			Console.Indent().Warning("(attempted to map memory @ 0x%08p -> 0x%08p", m_baseptr, (uptr)m_baseptr+toReserveBytes);
 		}
 
-		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
+		DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p [%umb]", m_name.c_str(),
 			m_baseptr, (uptr)m_baseptr+toReserveBytes, toReserveBytes / _1mb);
 	}
 	else if (newPages < m_pages_reserved)
@@ -213,11 +226,11 @@ bool VirtualMemoryReserve::TryResize( uint newsize )
 		uint toRemovePages = m_pages_reserved - newPages;
 		uint toRemoveBytes = toRemovePages * __pagesize;
 
-		DevCon.WriteLn( L"%-32s is being shrunk by %u pages.", Name.c_str(), toRemovePages);
+		DevCon.WriteLn( L"%-32s is being shrunk by %u pages.", m_name.c_str(), toRemovePages);
 
 		HostSys::MmapResetPtr(GetPtrEnd(), toRemoveBytes);
 
-		DevCon.WriteLn( Color_Blue, L"%-32s @ 0x%08X -> 0x%08X [%umb]", Name.c_str(),
+		DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p [%umb]", m_name.c_str(),
 			m_baseptr, (uptr)m_baseptr+toRemoveBytes, toRemoveBytes / _1mb);
 	}
 	
@@ -244,7 +257,7 @@ void BaseVmReserveListener::CommitBlocks( uptr page, uint blocks )
 	// physical ram or virtual memory.
 	if (!HostSys::MmapCommitPtr(blockptr, blocksbytes, m_prot_mode))
 	{
-		throw Exception::OutOfMemory(Name)
+		throw Exception::OutOfMemory(m_name)
 			.SetDiagMsg(pxsFmt("An additional %u blocks @ 0x%08x were requested, but could not be committed!", blocks, blockptr));
 	}
 

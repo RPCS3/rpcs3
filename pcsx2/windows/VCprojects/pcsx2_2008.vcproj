@@ -840,10 +840,6 @@
 										>
 									</File>
 									<File
-										RelativePath="..\..\x86\newVif_BlockBuffer.h"
-										>
-									</File>
-									<File
 										RelativePath="..\..\x86\newVif_HashBucket.h"
 										>
 									</File>

@@ -757,8 +757,6 @@ static const uint m_recBlockAllocSize =
 
 static void recReserveCache()
 {
-	extern wxString GetMsg_RecVmFailed();
-
 	if (!recMem) recMem = new RecompiledCodeReserve(L"R3000A Recompiler Cache", _1mb * 2);
 	recMem->SetProfilerName("IOPrec");
 
@@ -771,12 +769,7 @@ static void recReserveCache()
 		m_ConfiguredCacheReserve /= 2;
 	}
 
-	if (!recMem->IsOk())
-	{
-		throw Exception::VirtualMemoryMapConflict(recMem->GetName())
-			.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
-			.SetUserMsg(GetMsg_RecVmFailed());
-	}
+	recMem->ThrowIfNotOk();
 }
 
 static void recReserve()

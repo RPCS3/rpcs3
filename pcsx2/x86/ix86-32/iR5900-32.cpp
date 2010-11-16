@@ -578,18 +578,6 @@ static void recThrowHardwareDeficiency( const wxChar* extFail )
 		.SetUserMsg(pxsFmt(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
-// This error message is shared by R5900, R3000, and microVU recompilers.  It is not used by the
-// SuperVU recompiler, since it has its own customized message.
-wxString GetMsg_RecVmFailed()
-{
-	return pxE( ".Error:Recompiler:VirtualMemoryAlloc",
-		L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
-		L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
-		L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
-		L"cache sizes for all PCSX2 recompilers, found under Host Settings."
-	);
-}
-
 static void recReserveCache()
 {
 	if (!recMem) recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
@@ -604,12 +592,7 @@ static void recReserveCache()
 		m_ConfiguredCacheReserve /= 2;
 	}
 	
-	if (!recMem->IsOk())
-	{
-		throw Exception::VirtualMemoryMapConflict(recMem->GetName())
-			.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
-			.SetUserMsg(GetMsg_RecVmFailed());
-	}
+	recMem->ThrowIfNotOk();
 }
 
 static void recReserve()

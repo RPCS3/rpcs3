@@ -61,11 +61,18 @@ namespace HostMemoryMap
 	// IOP recompiler code cache area (16 or 32mb)
 	static const uptr IOPrec	= 0x34000000;
 
+	// newVif0 recompiler code cache area (16mb)
+	static const uptr VIF0rec	= 0x36000000;
+
+	// newVif1 recompiler code cache area (32mb)
+	static const uptr VIF1rec	= 0x38000000;
+
 	// microVU1 recompiler code cache area (32 or 64mb)
-	static const uptr mVU0rec	= 0x38000000;
+	static const uptr mVU0rec	= 0x3C000000;
 
 	// microVU0 recompiler code cache area (64mb)
 	static const uptr mVU1rec	= 0x40000000;
+	
 }
 
 // --------------------------------------------------------------------------------------

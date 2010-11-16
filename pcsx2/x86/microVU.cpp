@@ -94,8 +94,7 @@ void microVU::reserveCache()
 		(u8*)cache_reserve->Reserve( cacheSize * _1mb, HostMemoryMap::mVU1rec ) :
 		(u8*)cache_reserve->Reserve( cacheSize * _1mb, HostMemoryMap::mVU0rec );
 
-	if(!cache_reserve->IsOk())
-		throw Exception::VirtualMemoryMapConflict().SetDiagMsg(pxsFmt( L"Micro VU%u Recompiler Cache", index ));
+	cache_reserve->ThrowIfNotOk();
 }
 
 // Only run this once per VU! ;)

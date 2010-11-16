@@ -646,7 +646,6 @@
 		<Unit filename="../x86/microVU_Tables.inl" />
 		<Unit filename="../x86/microVU_Upper.inl" />
 		<Unit filename="../x86/newVif.h" />
-		<Unit filename="../x86/newVif_BlockBuffer.h" />
 		<Unit filename="../x86/newVif_Dynarec.cpp" />
 		<Unit filename="../x86/newVif_HashBucket.h" />
 		<Unit filename="../x86/newVif_Unpack.cpp" />

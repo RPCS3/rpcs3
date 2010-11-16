@@ -17,6 +17,7 @@
 #include "Common.h"
 #include "IopCommon.h"
 #include "VUmicro.h"
+#include "newVif.h"
 
 #include "SamplProf.h"
 
@@ -29,9 +30,6 @@
 
 #include "Utilities/MemsetFast.inl"
 
-
-extern void closeNewVif(int idx);
-extern void resetNewVif(int idx);
 
 // --------------------------------------------------------------------------------------
 //  RecompiledCodeReserve  (implementations)
@@ -107,6 +105,23 @@ void RecompiledCodeReserve::OnCommittedBlock( void* block )
 		memset_sse_a<0xcc>( block, m_blocksize * __pagesize );
 	}
 }
+
+// This error message is shared by R5900, R3000, and microVU recompilers.  It is not used by the
+// SuperVU recompiler, since it has its own customized message.
+void RecompiledCodeReserve::ThrowIfNotOk() const
+{
+	if (IsOk()) return;
+
+	throw Exception::OutOfMemory(m_name)
+		.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
+		.SetUserMsg( pxE( ".Error:Recompiler:VirtualMemoryAlloc",
+			L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
+			L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
+			L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
+			L"cache sizes for all PCSX2 recompilers, found under Host Settings."
+		));
+}
+
 
 void SysOutOfMemory_EmergencyResponse(uptr blocksize)
 {
@@ -346,11 +361,15 @@ void SysMainMemory::ReserveAll()
 {
 	pxInstallSignalHandler();
 
-	DevCon.WriteLn( "PS2vm: Mapping host memory for all virtual systems..." );
+	DevCon.WriteLn( Color_StrongBlue, "Mapping host memory for virtual systems..." );
+	ConsoleIndentScope indent(1);
 
 	m_ee.Reserve();
 	m_iop.Reserve();
 	m_vu.Reserve();
+	
+	reserveNewVif(0);
+	reserveNewVif(1);
 }
 
 void SysMainMemory::CommitAll()
@@ -358,7 +377,8 @@ void SysMainMemory::CommitAll()
 	vtlb_Core_Alloc();
 	if (m_ee.IsCommitted() && m_iop.IsCommitted() && m_vu.IsCommitted()) return;
 
-	DevCon.WriteLn( "PS2vm: Allocating host memory for all virtual systems..." );
+	DevCon.WriteLn( Color_StrongBlue, "Allocating host memory for virtual systems..." );
+	ConsoleIndentScope indent(1);
 
 	m_ee.Commit();
 	m_iop.Commit();
@@ -370,23 +390,30 @@ void SysMainMemory::ResetAll()
 {
 	CommitAll();
 
-	DevCon.WriteLn( "PS2vm: Resetting host memory for all virtual systems..." );
+	DevCon.WriteLn( Color_StrongBlue, "Resetting host memory for virtual systems..." );
+	ConsoleIndentScope indent(1);
 
 	m_ee.Reset();
 	m_iop.Reset();
 	m_vu.Reset();
+	
+	// Note: newVif is reset as part of other VIF structures.
 }
 
 void SysMainMemory::DecommitAll()
 {
 	if (!m_ee.IsCommitted() && !m_iop.IsCommitted() && !m_vu.IsCommitted()) return;
 
-	Console.WriteLn( "PS2vm: Decommitting host memory for all virtual systems..." );
+	Console.WriteLn( Color_Blue, "Decommitting host memory for virtual systems..." );
+	ConsoleIndentScope indent(1);
 
 	m_ee.Decommit();
 	m_iop.Decommit();
 	m_vu.Decommit();
 
+	closeNewVif(0);
+	closeNewVif(1);
+	
 	vtlb_Core_Free();
 }
 
@@ -394,9 +421,13 @@ void SysMainMemory::ReleaseAll()
 {
 	DecommitAll();
 
-	Console.WriteLn( "PS2vm: Releasing host memory maps for all virtual systems..." );
+	Console.WriteLn( Color_Blue, "Releasing host memory maps for virtual systems..." );
+	ConsoleIndentScope indent(1);
 
 	vtlb_Core_Free();		// Just to be sure... (calling order could result in it getting missed during Decommit).
+
+	releaseNewVif(0);
+	releaseNewVif(1);
 
 	m_ee.Decommit();
 	m_iop.Decommit();
@@ -411,7 +442,8 @@ void SysMainMemory::ReleaseAll()
 // --------------------------------------------------------------------------------------
 SysCpuProviderPack::SysCpuProviderPack()
 {
-	Console.WriteLn( "Reserving memory for recompilers..." );
+	Console.WriteLn( Color_StrongBlue, "Reserving memory for recompilers..." );
+	ConsoleIndentScope indent(1);
 
 	CpuProviders = new CpuInitializerSet();
 
@@ -453,9 +485,6 @@ void SysCpuProviderPack::CleanupMess() throw()
 {
 	try
 	{
-		closeNewVif(0);
-		closeNewVif(1);
-
 		psxRec.Shutdown();
 		recCpu.Shutdown();
 	}
@@ -574,5 +603,5 @@ wxString SysGetDiscID()
 		// region and revision).
 	}
 
-	return wxsFormat( L"%8.8x", ElfCRC );
+	return pxsFmt( L"%08x", ElfCRC );
 }
