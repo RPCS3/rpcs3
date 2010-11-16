@@ -35,7 +35,7 @@
 #include "COP0.h"
 #include "R5900Exceptions.h"
 
-#include "Utilities\MemsetFast.inl"
+#include "Utilities/MemsetFast.inl"
 
 using namespace R5900;
 using namespace vtlb_private;

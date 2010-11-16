@@ -78,7 +78,6 @@ bool isoFile::tryIsoType(u32 _size, s32 _offset, s32 _blockofs)
 bool isoFile::Detect( bool readType )
 {
 	char buf[32];
-	int len = m_filename.Length();
 
 	m_type = ISOTYPE_ILLEGAL;
 

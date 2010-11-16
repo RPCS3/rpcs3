@@ -17,6 +17,8 @@
 #include "../PrecompiledHeader.h"
 #include "PageFaultSource.h"
 
+#include <wx/thread.h>
+
 #include <sys/mman.h>
 #include <signal.h>
 #include <errno.h>
@@ -169,7 +171,7 @@ void HostSys::MmapResetPtr(void* base, size_t size)
 
 	pxAssertRel ((uptr)result != (uptr)base, pxsFmt(
 		"Virtual memory decommit failed: memory at 0x%08X -> 0x%08X could not be remapped.  "
-		"This is likely caused by multi-thread memory contention.", base, base+size
+		"This is likely caused by multi-thread memory contention.", base, (uptr)base+size
 	));
 }
 

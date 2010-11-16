@@ -19,89 +19,87 @@
 
 #include <wx/stackwalk.h>
 
+class StackDump : public wxStackWalker
+{
+protected:
+	wxString		m_stackTrace;
+	wxString		m_srcFuncName;
+	bool			m_ignoreDone;
+	int				m_skipped;
+
+public:
+	StackDump( const FnChar_t* src_function_name )
+	{
+		if( src_function_name != NULL )
+			m_srcFuncName = fromUTF8(src_function_name);
+
+		m_ignoreDone	= false;
+		m_skipped		= 0;
+	}
+
+	const wxString& GetStackTrace() const { return m_stackTrace; }
+
+protected:
+	virtual void OnStackFrame(const wxStackFrame& frame)
+	{
+		wxString name( frame.GetName() );
+		if( name.IsEmpty() )
+		{
+			name = wxsFormat( L"%p ", frame.GetAddress() );
+		}
+		/*else if( m_srcFuncName.IsEmpty() || m_srcFuncName == name )
+		{
+			// FIXME: This logic isn't reliable yet.
+			// It's possible for our debug information to not match the function names returned by
+			// __pxFUNCTION__ (might happen in linux a lot, and could happen in win32 due to
+			// inlining on Dev aserts).  The better approach is a system the queues up all the
+			// stacktrace info in individual wxStrings, and does a two-pass check -- first pass
+			// for the function name and, if not found, a second pass that just skips the first
+			// few stack entries.
+
+			// It's important we only walk the stack once because Linux (argh, always linux!) has
+			// a really god aweful slow stack walker.
+
+			// I'm not doing it right now because I've worked on this mess enough for one week. --air
+
+			m_ignoreDone = true;
+		}
+
+		if( !m_ignoreDone )
+		{
+			m_skipped++;
+			return;
+		}*/
+
+		//wxString briefName;
+		wxString essenName;
+
+		if( frame.HasSourceLocation() )
+		{
+			wxFileName wxfn(frame.GetFileName());
+			//briefName.Printf( L"(%s:%d)", wxfn.GetFullName().c_str(), frame.GetLine() );
+
+			wxfn.SetVolume( wxEmptyString );
+			//int count = wxfn.GetDirCount();
+			for( int i=0; i<2; ++i )
+				wxfn.RemoveDir(0);
+
+			essenName.Printf( L"%s:%d", wxfn.GetFullPath().c_str(), frame.GetLine() );
+		}
+
+		m_stackTrace += pxsFmt( L"[%02d] %-44s %s\n",
+			frame.GetLevel()-m_skipped,
+			name.c_str(),
+			essenName.c_str()
+		);
+	}
+};
+
 static wxString pxGetStackTrace( const FnChar_t* calledFrom )
 {
-    wxString stackTrace;
-
-    class StackDump : public wxStackWalker
-    {
-	protected:
-		wxString		m_stackTrace;
-		wxString		m_srcFuncName;
-		bool			m_ignoreDone;
-		int				m_skipped;
-
-    public:
-        StackDump( const FnChar_t* src_function_name )
-        {
-			if( src_function_name != NULL )
-				m_srcFuncName = fromUTF8(src_function_name);
-
-			m_ignoreDone	= false;
-			m_skipped		= 0;
-        }
-
-        const wxString& GetStackTrace() const { return m_stackTrace; }
-
-    protected:
-        virtual void OnStackFrame(const wxStackFrame& frame)
-        {
-			wxString name( frame.GetName() );
-			if( name.IsEmpty() )
-			{
-				name = wxsFormat( L"%p ", frame.GetAddress() );
-			}
-			/*else if( m_srcFuncName.IsEmpty() || m_srcFuncName == name )
-			{
-				// FIXME: This logic isn't reliable yet.
-				// It's possible for our debug information to not match the function names returned by
-				// __pxFUNCTION__ (might happen in linux a lot, and could happen in win32 due to
-				// inlining on Dev aserts).  The better approach is a system the queues up all the
-				// stacktrace info in individual wxStrings, and does a two-pass check -- first pass
-				// for the function name and, if not found, a second pass that just skips the first
-				// few stack entries.
-
-				// It's important we only walk the stack once because Linux (argh, always linux!) has
-				// a really god aweful slow stack walker.
-
-				// I'm not doing it right now because I've worked on this mess enough for one week. --air
-
-				m_ignoreDone = true;
-			}
-
-			if( !m_ignoreDone )
-			{
-				m_skipped++;
-				return;
-			}*/
-
-			//wxString briefName;
-			wxString essenName;
-
-			if( frame.HasSourceLocation() )
-			{
-				wxFileName wxfn(frame.GetFileName());
-				//briefName.Printf( L"(%s:%d)", wxfn.GetFullName().c_str(), frame.GetLine() );
-
-				wxfn.SetVolume( wxEmptyString );
-				int count = wxfn.GetDirCount();
-				for( int i=0; i<2; ++i )
-					wxfn.RemoveDir(0);
-
-				essenName.Printf( L"%s:%d", wxfn.GetFullPath().c_str(), frame.GetLine() );
-			}
-
-            m_stackTrace += wxString::Format( L"[%02d] %-44s %s\n",
-				frame.GetLevel()-m_skipped,
-				name.c_str(),
-				essenName.c_str()
-			);
-        }
-    };
-
-    StackDump dump( calledFrom );
-    dump.Walk( 3 );
-    return dump.GetStackTrace();
+	StackDump dump( calledFrom );
+	dump.Walk( 3 );
+	return dump.GetStackTrace();
 }
 
 #ifdef __WXDEBUG__

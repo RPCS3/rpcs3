@@ -92,7 +92,6 @@ static vtlbHandler
 	null_handler,
 
 	tlb_fallback_0,
-	tlb_fallback_1,
 	tlb_fallback_2,
 	tlb_fallback_3,
 	tlb_fallback_4,

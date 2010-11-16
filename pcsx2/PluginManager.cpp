@@ -1278,7 +1278,7 @@ void SysCorePlugins::Init( PluginsEnum_t pid )
 	if( !m_info[pid] || m_info[pid]->IsInitialized ) return;
 
 	Console.Indent().WriteLn( "Init %s", tbl_PluginInfo[pid].shortname );
-	if( NULL != m_info[pid]->CommonBindings.Init() )
+	if( 0 != m_info[pid]->CommonBindings.Init() )
 		throw Exception::PluginInitError( pid );
 
 	m_info[pid]->IsInitialized = true;
