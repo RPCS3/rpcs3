@@ -47,25 +47,25 @@ namespace HostMemoryMap
 	static const uptr sVU1rec	= _256mb - (_8mb*2);
 
 	// PS2 main memory, SPR, and ROMs
-	static const uptr EEmem		= 0x30000000;
+	static const uptr EEmem		= 0x20000000;
 
 	// IOP main memory and ROMs
-	static const uptr IOPmem	= 0x34000000;
+	static const uptr IOPmem	= 0x24000000;
 
 	// VU0 and VU1 memory.
-	static const uptr VUmem		= 0x38000000;
+	static const uptr VUmem		= 0x28000000;
 
 	// EE recompiler code cache area (64mb)
-	static const uptr EErec		= 0x40000000;
+	static const uptr EErec		= 0x30000000;
 
 	// IOP recompiler code cache area (16 or 32mb)
-	static const uptr IOPrec	= 0x44000000;
+	static const uptr IOPrec	= 0x34000000;
 
 	// microVU1 recompiler code cache area (32 or 64mb)
-	static const uptr mVU0rec	= 0x48000000;
+	static const uptr mVU0rec	= 0x38000000;
 
 	// microVU0 recompiler code cache area (64mb)
-	static const uptr mVU1rec	= 0x50000000;
+	static const uptr mVU1rec	= 0x40000000;
 }
 
 // --------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ public:
 	virtual void ReserveAll();
 	virtual void CommitAll();
 	virtual void ResetAll();
-	virtual void ShutdownAll();
+	virtual void DecommitAll();
 	virtual void ReleaseAll();
 };
 

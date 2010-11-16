@@ -383,7 +383,6 @@ set(pcsx2IPUHeaders
 
 # Linux sources
 set(pcsx2LinuxSources
-	Linux/LnxHostSys.cpp
 	Linux/LnxKeyCodes.cpp)
 
 # Linux headers

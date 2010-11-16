@@ -148,9 +148,9 @@ void __fastcall vtlb_memWrite(u32 addr, DataType data)
 
 		switch( DataSize )
 		{
-		case 8: return ((vtlbMemW8FP*)vtlbdata.RWFT[0][1][hand])(paddr, (u8)data);
-		case 16: return ((vtlbMemW16FP*)vtlbdata.RWFT[1][1][hand])(paddr, (u16)data);
-		case 32: return ((vtlbMemW32FP*)vtlbdata.RWFT[2][1][hand])(paddr, (u32)data);
+			case 8: return ((vtlbMemW8FP*)vtlbdata.RWFT[0][1][hand])(paddr, (u8)data);
+			case 16: return ((vtlbMemW16FP*)vtlbdata.RWFT[1][1][hand])(paddr, (u16)data);
+			case 32: return ((vtlbMemW32FP*)vtlbdata.RWFT[2][1][hand])(paddr, (u32)data);
 
 			jNO_DEFAULT;
 		}
@@ -378,24 +378,25 @@ __ri vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMem
 // function.
 //
 // The memory region start and size parameters must be pagesize aligned.
-void vtlb_MapHandler(vtlbHandler handler,u32 start,u32 size)
+void vtlb_MapHandler(vtlbHandler handler, u32 start, u32 size)
 {
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
-	s32 value=handler|0x80000000;
 
-	while(size>0)
+	s32 value = handler | 0x80000000;
+	u32 end = start + (size - VTLB_PAGE_SIZE);
+	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
+
+	while (start <= end)
 	{
-		vtlbdata.pmap[start>>VTLB_PAGE_BITS]=value;
-
-		start+=VTLB_PAGE_SIZE;
-		size-=VTLB_PAGE_SIZE;
+		vtlbdata.pmap[start>>VTLB_PAGE_BITS] = value;
+		start += VTLB_PAGE_SIZE;
 	}
 }
 
-void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize)
+void vtlb_MapBlock(void* base, u32 start, u32 size, u32 blocksize)
 {
-	s32 baseint=(s32)base;
+	s32 baseint = (s32)base;
 
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
@@ -404,19 +405,21 @@ void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize)
 	verify(0==(blocksize&VTLB_PAGE_MASK) && blocksize>0);
 	verify(0==(size%blocksize));
 
-	while(size>0)
+	u32 end = start + (size - VTLB_PAGE_SIZE);
+	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
+
+	while (start <= end)
 	{
-		u32 blocksz=blocksize;
-		s32 ptr=baseint;
+		u32 loopsz = blocksize;
+		s32 ptr = baseint;
 
-		while(blocksz>0)
+		while (loopsz > 0)
 		{
-			vtlbdata.pmap[start>>VTLB_PAGE_BITS]=ptr;
+			vtlbdata.pmap[start>>VTLB_PAGE_BITS] = ptr;
 
-			start+=VTLB_PAGE_SIZE;
-			ptr+=VTLB_PAGE_SIZE;
-			blocksz-=VTLB_PAGE_SIZE;
-			size-=VTLB_PAGE_SIZE;
+			start	+= VTLB_PAGE_SIZE;
+			ptr		+= VTLB_PAGE_SIZE;
+			loopsz	-= VTLB_PAGE_SIZE;
 		}
 	}
 }
@@ -427,13 +430,15 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
 
-	while(size>0)
-	{
-		vtlbdata.pmap[start>>VTLB_PAGE_BITS]=vtlbdata.pmap[new_region>>VTLB_PAGE_BITS];
+	u32 end = start + (size-VTLB_PAGE_SIZE);
+	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
 
-		start+=VTLB_PAGE_SIZE;
-		new_region+=VTLB_PAGE_SIZE;
-		size-=VTLB_PAGE_SIZE;
+	while(start <= end)
+	{
+		vtlbdata.pmap[start>>VTLB_PAGE_BITS] = vtlbdata.pmap[new_region>>VTLB_PAGE_BITS];
+
+		start		+= VTLB_PAGE_SIZE;
+		new_region	+= VTLB_PAGE_SIZE;
 	}
 }
 
@@ -470,6 +475,7 @@ void vtlb_VMap(u32 vaddr,u32 paddr,u32 sz)
 			if (pme<0)
 				pme|=paddr;// top bit is set anyway ...
 		}
+
 		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=pme-vaddr;
 		vaddr+=VTLB_PAGE_SIZE;
 		paddr+=VTLB_PAGE_SIZE;
@@ -568,11 +574,14 @@ void vtlb_Term()
 //    default is used.
 void vtlb_Core_Alloc()
 {
-	vtlbdata.vmap = (s32*)_aligned_malloc( VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap), 16 );
 	if (!vtlbdata.vmap)
-		throw Exception::OutOfMemory( L"VTLB Virtual Address Translation LUT" )
-			.SetDiagMsg(pxsFmt("(%u megs)", VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap) / _1mb)
-		);
+	{
+		vtlbdata.vmap = (s32*)_aligned_malloc( VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap), 16 );
+		if (!vtlbdata.vmap)
+			throw Exception::OutOfMemory( L"VTLB Virtual Address Translation LUT" )
+				.SetDiagMsg(pxsFmt("(%u megs)", VTLB_VMAP_ITEMS * sizeof(*vtlbdata.vmap) / _1mb)
+			);
+	}
 }
 
 void vtlb_Core_Free()
@@ -596,7 +605,7 @@ void VtlbMemoryReserve::SetBaseAddr( uptr newaddr )
 
 void VtlbMemoryReserve::Reserve( sptr hostptr )
 {
-	m_reserve.Reserve();
+	m_reserve.ReserveAt( hostptr );
 	if (!m_reserve.IsOk())
 		throw Exception::OutOfMemory( m_reserve.GetName() );
 }
@@ -610,13 +619,11 @@ void VtlbMemoryReserve::Commit()
 
 void VtlbMemoryReserve::Reset()
 {
-	if (!m_reserve.Commit())
-		throw Exception::OutOfMemory( m_reserve.GetName() );
-
+	Commit();
 	memzero_sse_a(m_reserve.GetPtr(), m_reserve.GetCommittedBytes());
 }
 
-void VtlbMemoryReserve::Shutdown()
+void VtlbMemoryReserve::Decommit()
 {
 	m_reserve.Reset();
 }

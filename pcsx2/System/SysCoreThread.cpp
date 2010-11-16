@@ -124,7 +124,7 @@ void SysCoreThread::ResetQuick()
 void SysCoreThread::Reset()
 {
 	ResetQuick();
-	GetVmMemory().ShutdownAll();
+	GetVmMemory().DecommitAll();
 	SysClearExecutionCache();
 }
 

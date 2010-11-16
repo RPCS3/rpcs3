@@ -33,10 +33,10 @@ void vuMemoryReserve::Reserve()
 	//_parent::Reserve(EmuConfig.HostMemMap.VUmem);
 
 	u8* curpos = m_reserve.GetPtr();
-	VU0.Micro	= curpos; curpos += 0x1000;
-	VU0.Mem		= curpos; curpos += 0x4000;
-	VU1.Micro	= curpos; curpos += 0x4000;
-	VU1.Mem		= curpos;
+	VU0.Micro	= curpos; curpos += VU0_PROGSIZE;
+	VU0.Mem		= curpos; curpos += VU0_MEMSIZE;
+	VU1.Micro	= curpos; curpos += VU1_PROGSIZE;
+	VU1.Mem		= curpos; curpos += VU1_MEMSIZE;
 }
 
 void vuMemoryReserve::Release()

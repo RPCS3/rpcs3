@@ -57,7 +57,6 @@ public:
 		pxFailRel( "Don't call me, damnit.  Use DispatchException instead." );
 	}
 
-protected:
 	virtual void OnPageFaultEvent( const PageFaultInfo& evtinfo, bool& handled ) {}
 };
 
@@ -93,7 +92,7 @@ public:
 protected:
 	virtual void OnPageFaultEvent( const PageFaultInfo& info, bool& handled )
 	{
-		OnPageFaultEvent( info, handled );
+		Owner->OnPageFaultEvent( info, handled );
 	}
 
 };
@@ -230,8 +229,9 @@ public:
 
 	using _parent::operator[];
 
-protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
+
+protected:
 
 	// This function is called from OnPageFaultEvent after the address has been translated
 	// and confirmed to apply to this reserved area in question.  OnPageFaultEvent contains 

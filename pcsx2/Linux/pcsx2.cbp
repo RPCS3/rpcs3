@@ -317,7 +317,6 @@
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
 		<Unit filename="../Ipu_fifo.h" />
-		<Unit filename="LnxHostSys.cpp" />
 		<Unit filename="LnxKeyCodes.cpp">
 			<Option compiler="gcc" use="1" buildCommand="$compiler $options $includes `pkg-config gtk+-2.0 --cflags` -c $file -o $object" />
 		</Unit>

@@ -339,7 +339,6 @@ SysMainMemory::SysMainMemory()
 
 SysMainMemory::~SysMainMemory() throw()
 {
-	ShutdownAll();
 	ReleaseAll();
 }
 
@@ -356,6 +355,7 @@ void SysMainMemory::ReserveAll()
 
 void SysMainMemory::CommitAll()
 {
+	vtlb_Core_Alloc();
 	if (m_ee.IsCommitted() && m_iop.IsCommitted() && m_vu.IsCommitted()) return;
 
 	DevCon.WriteLn( "PS2vm: Allocating host memory for all virtual systems..." );
@@ -377,22 +377,30 @@ void SysMainMemory::ResetAll()
 	m_vu.Reset();
 }
 
-void SysMainMemory::ShutdownAll()
+void SysMainMemory::DecommitAll()
 {
-	Console.WriteLn( "PS2vm: Shutting down host memory for all virtual systems..." );
+	if (!m_ee.IsCommitted() && !m_iop.IsCommitted() && !m_vu.IsCommitted()) return;
 
-	m_ee.Shutdown();
-	m_iop.Shutdown();
-	m_vu.Shutdown();
+	Console.WriteLn( "PS2vm: Decommitting host memory for all virtual systems..." );
+
+	m_ee.Decommit();
+	m_iop.Decommit();
+	m_vu.Decommit();
+
+	vtlb_Core_Free();
 }
 
 void SysMainMemory::ReleaseAll()
 {
+	DecommitAll();
+
 	Console.WriteLn( "PS2vm: Releasing host memory maps for all virtual systems..." );
 
-	m_ee.Shutdown();
-	m_iop.Shutdown();
-	m_vu.Shutdown();
+	vtlb_Core_Free();		// Just to be sure... (calling order could result in it getting missed during Decommit).
+
+	m_ee.Decommit();
+	m_iop.Decommit();
+	m_vu.Decommit();
 
 	safe_delete(Source_PageFault);
 }

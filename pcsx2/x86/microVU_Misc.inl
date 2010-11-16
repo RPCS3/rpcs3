@@ -251,7 +251,7 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 	else {
 		if (IsDevBuild && !isCOP2) mVUbackupRegs(mVU, true);
 		xTEST(gprReg, 0x400);
-		xForwardJNZ8 jmpA; // if addr & 0x4000, reads VU1's VF regs and VI regs
+		xForwardJNZ8 jmpA;		// if addr & 0x4000, reads VU1's VF regs and VI regs
 			xAND(gprReg, 0xff); // if !(addr & 0x4000), wrap around
 			xForwardJump8 jmpB;
 		jmpA.SetTarget();

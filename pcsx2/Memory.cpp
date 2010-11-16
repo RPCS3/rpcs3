@@ -579,7 +579,7 @@ void memClearPageAddr(u32 vaddr)
 
 class mmap_PageFaultHandler : public EventListener_PageFault
 {
-protected:
+public:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 };
 

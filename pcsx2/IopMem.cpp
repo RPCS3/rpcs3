@@ -99,9 +99,9 @@ void iopMemoryReserve::Reset()
 	//for (i=0; i<0x0008; i++) psxMemWLUT[i + 0xbfc0] = (uptr)&psR[i << 16];
 }
 
-void iopMemoryReserve::Shutdown()
+void iopMemoryReserve::Decommit()
 {
-	_parent::Shutdown();
+	_parent::Decommit();
 
 	safe_aligned_free(psxMemWLUT);
 	psxMemRLUT = NULL;

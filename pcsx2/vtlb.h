@@ -107,7 +107,7 @@ public:
 
 	virtual void Commit();
 	virtual void Reset();
-	virtual void Shutdown();
+	virtual void Decommit();
 	virtual void SetBaseAddr( uptr newaddr );
 	
 	bool IsCommitted() const;
@@ -149,7 +149,7 @@ public:
 	void Reserve();
 	void Release();
 	void Reset();
-	void Shutdown();
+	void Decommit();
 };
 
 // --------------------------------------------------------------------------------------
@@ -178,8 +178,8 @@ namespace vtlb_private
 	static const uint VTLB_PAGE_MASK = 4095;
 	static const uint VTLB_PAGE_SIZE = 4096;
 
-	static const uint VTLB_PMAP_ITEMS	= _256mb / VTLB_PAGE_SIZE;
-	static const uint VTLB_PMAP_SZ		= _256mb;
+	static const uint VTLB_PMAP_SZ		= _1mb * 512;
+	static const uint VTLB_PMAP_ITEMS	= VTLB_PMAP_SZ / VTLB_PAGE_SIZE;
 	static const uint VTLB_VMAP_ITEMS	= _4gb / VTLB_PAGE_SIZE;
 
 	struct MapData
@@ -193,10 +193,10 @@ namespace vtlb_private
 
 		s32* vmap;				//4MB (allocated by vtlb_init)
 
-		u8* reserve_base;		//base of the memory array
-		
-		u8* alloc_base;			//base of the memory array
-		int alloc_current;		//current base
+		MapData()
+		{
+			vmap = NULL;
+		}
 	};
 
 	extern __aligned(64) MapData vtlbdata;
