@@ -29,7 +29,7 @@
 #include "CDVDisoReader.h"
 
 static u8 *pbuffer;
-static u8 cdbuffer[2352] = {0};
+static u8 cdbuffer[CD_FRAMESIZE_RAW] = {0};
 static isoFile iso;
 
 static int psize, cdtype;
