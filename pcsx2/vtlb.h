@@ -128,8 +128,10 @@ public:
 	}
 
 	void Reserve();
-	void Release();
+	void Commit();
+	void Decommit();
 	void Reset();
+	void Release();
 };
 
 // --------------------------------------------------------------------------------------
@@ -147,9 +149,10 @@ public:
 	}
 
 	void Reserve();
+	void Commit();
+	void Decommit();
 	void Release();
 	void Reset();
-	void Decommit();
 };
 
 // --------------------------------------------------------------------------------------
@@ -182,12 +185,14 @@ namespace vtlb_private
 	static const uint VTLB_PMAP_ITEMS	= VTLB_PMAP_SZ / VTLB_PAGE_SIZE;
 	static const uint VTLB_VMAP_ITEMS	= _4gb / VTLB_PAGE_SIZE;
 
+	static const uint VTLB_HANDLER_ITEMS = 128;
+
 	struct MapData
 	{
 		// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
 		// second indexer -- read/write  [0 or 1]
 		// third indexer -- 128 possible handlers!
-		void* RWFT[5][2][128];
+		void* RWFT[5][2][VTLB_HANDLER_ITEMS];
 
 		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
 

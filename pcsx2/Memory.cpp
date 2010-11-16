@@ -154,14 +154,14 @@ void memMapPhy()
 	vtlb_MapBlock(iopMem->Main,0x1c000000,0x00800000);
 
 	// Generic Handlers; These fallback to mem* stuff...
-	vtlb_MapHandler(tlb_fallback_7,0x14000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_4,0x18000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_5,0x1a000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_6,0x12000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_8,0x1f000000,0x10000);
-	vtlb_MapHandler(tlb_fallback_3,0x1f400000,0x10000);
-	vtlb_MapHandler(tlb_fallback_2,0x1f800000,0x10000);
-	vtlb_MapHandler(tlb_fallback_8,0x1f900000,0x10000);
+	vtlb_MapHandler(tlb_fallback_7,0x14000000, _64kb);
+	vtlb_MapHandler(tlb_fallback_4,0x18000000, _64kb);
+	vtlb_MapHandler(tlb_fallback_5,0x1a000000, _64kb);
+	vtlb_MapHandler(tlb_fallback_6,0x12000000, _64kb);
+	vtlb_MapHandler(tlb_fallback_8,0x1f000000, _64kb);
+	vtlb_MapHandler(tlb_fallback_3,0x1f400000, _64kb);
+	vtlb_MapHandler(tlb_fallback_2,0x1f800000, _64kb);
+	vtlb_MapHandler(tlb_fallback_8,0x1f900000, _64kb);
 
 	// Hardware Register Handlers : specialized/optimized per-page handling of HW register accesses
 	// (note that hw_by_page handles are assigned in memReset prior to calling this function)
@@ -187,9 +187,9 @@ void memMapKernelMem()
 	//lower 512 mb: direct map
 	//vtlb_VMap(0x00000000,0x00000000,0x20000000);
 	//0x8* mirror
-	vtlb_VMap(0x80000000,0x00000000,0x20000000);
+	vtlb_VMap(0x80000000, 0x00000000, _1mb*512);
 	//0xa* mirror
-	vtlb_VMap(0xA0000000,0x00000000,0x20000000);
+	vtlb_VMap(0xA0000000, 0x00000000, _1mb*512);
 }
 
 //what do do with these ?
@@ -630,6 +630,11 @@ void eeMemoryReserve::Reserve()
 {
 	_parent::Reserve(HostMemoryMap::EEmem);
 	//_parent::Reserve(EmuConfig.HostMap.IOP);
+}
+
+void eeMemoryReserve::Commit()
+{
+	_parent::Commit();
 	eeMem = (EEVM_MemoryAllocMess*)m_reserve.GetPtr();
 }
 
@@ -762,6 +767,12 @@ void eeMemoryReserve::Reset()
 	LoadBIOS();
 }
 
+void eeMemoryReserve::Decommit()
+{
+	_parent::Decommit();
+	eeMem = NULL;
+}
+
 void eeMemoryReserve::Release()
 {
 	safe_delete(mmap_faultHandler);
@@ -827,6 +838,8 @@ static __aligned16 vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::MainRam
 //
 int mmap_GetRamPageInfo( u32 paddr )
 {
+	pxAssume( eeMem );
+
 	paddr &= ~0xfff;
 
 	uptr ptr = (uptr)PSM( paddr );
@@ -842,6 +855,8 @@ int mmap_GetRamPageInfo( u32 paddr )
 // paddr - physically mapped PS2 address
 void mmap_MarkCountedRamPage( u32 paddr )
 {
+	pxAssume( eeMem );
+	
 	paddr &= ~0xfff;
 
 	uptr ptr = (uptr)PSM( paddr );
@@ -869,6 +884,8 @@ void mmap_MarkCountedRamPage( u32 paddr )
 // from code residing in this page will use manual protection.
 static __fi void mmap_ClearCpuBlock( uint offset )
 {
+	pxAssume( eeMem );
+
 	int rampage = offset >> 12;
 
 	// Assertion: This function should never be run on a block that's already under
@@ -883,6 +900,8 @@ static __fi void mmap_ClearCpuBlock( uint offset )
 
 void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& handled )
 {
+	pxAssume( eeMem );
+
 	// get bad virtual address
 	uptr offset = info.addr - (uptr)eeMem->Main;
 	if( offset >= Ps2MemSize::MainRam ) return;
@@ -899,5 +918,5 @@ void mmap_ResetBlockTracking()
 {
 	//DbgCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
 	memzero( m_PageProtectInfo );
-	HostSys::MemProtect( eeMem->Main, Ps2MemSize::MainRam, PageAccess_ReadWrite() );
+	if (eeMem) HostSys::MemProtect( eeMem->Main, Ps2MemSize::MainRam, PageAccess_ReadWrite() );
 }

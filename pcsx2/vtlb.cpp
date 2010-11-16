@@ -256,65 +256,55 @@ _tmpl(void) vtlbUnmappedPWriteLg(u32 addr,const OperandType* data)	{ vtlb_BusErr
 
 static mem8_t __fastcall vtlbDefaultPhyRead8(u32 addr)
 {
-	Console.Error("vtlbDefaultPhyRead8: 0x%08X", addr);
-	pxFailDev("(VTLB) Attempted read from an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted read8 from unmapped physical address @ 0x%08X.", addr));
 	return 0;
 }
 
 static mem16_t __fastcall vtlbDefaultPhyRead16(u32 addr)
 {
-	Console.Error("vtlbDefaultPhyRead16: 0x%08X", addr);
-	pxFailDev("(VTLB) Attempted read from an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted read16 from unmapped physical address @ 0x%08X.", addr));
 	return 0;
 }
 
 static mem32_t __fastcall vtlbDefaultPhyRead32(u32 addr)
 {
-	Console.Error("vtlbDefaultPhyRead32: 0x%08X", addr);
-	pxFailDev("(VTLB) Attempted read from an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted read32 from unmapped physical address @ 0x%08X.", addr));
 	return 0;
 }
 
 static void __fastcall vtlbDefaultPhyRead64(u32 addr, mem64_t* dest)
 {
-	Console.Error("vtlbDefaultPhyRead64: 0x%08X", addr);
-	pxFailDev("(VTLB) Attempted read from an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted read64 from unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyRead128(u32 addr, mem128_t* dest)
 {
-	Console.Error("vtlbDefaultPhyRead128: 0x%08X", addr);
-	pxFailDev("(VTLB) Attempted read from an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted read128 from unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyWrite8(u32 addr, mem8_t data)
 {
-	Console.Error("vtlbDefaultPhyWrite8: 0x%08X",addr);
-	pxFailDev("(VTLB) Attempted write to an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted write8 to unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyWrite16(u32 addr, mem16_t data)
 {
-	Console.Error("vtlbDefaultPhyWrite16: 0x%08X",addr);
-	pxFailDev("(VTLB) Attempted write to an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted write16 to unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyWrite32(u32 addr, mem32_t data)
 {
-	Console.Error("vtlbDefaultPhyWrite32: 0x%08X",addr);
-	pxFailDev("(VTLB) Attempted write to an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted write32 to unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data)
 {
-	Console.Error("vtlbDefaultPhyWrite64: 0x%08X",addr);
-	pxFailDev("(VTLB) Attempted write to an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted write64 to unmapped physical address @ 0x%08X.", addr));
 }
 
 static void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data)
 {
-	Console.Error("vtlbDefaultPhyWrite128: 0x%08X",addr);
-	pxFailDev("(VTLB) Attempted write to an unmapped physical address.");
+	pxFailDev(pxsFmt("(VTLB) Attempted write128 to unmapped physical address @ 0x%08X.", addr));
 }
 #undef _tmpl
 
@@ -334,6 +324,8 @@ __ri void vtlb_ReassignHandler( vtlbHandler rv,
 							   vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
 							   vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128 )
 {
+	pxAssume(rv < VTLB_HANDLER_ITEMS);
+
 	vtlbdata.RWFT[0][0][rv] = (void*)((r8!=0)   ? r8	: vtlbDefaultPhyRead8);
 	vtlbdata.RWFT[1][0][rv] = (void*)((r16!=0)  ? r16	: vtlbDefaultPhyRead16);
 	vtlbdata.RWFT[2][0][rv] = (void*)((r32!=0)  ? r32	: vtlbDefaultPhyRead32);
@@ -349,7 +341,7 @@ __ri void vtlb_ReassignHandler( vtlbHandler rv,
 
 vtlbHandler vtlb_NewHandler()
 {
-	pxAssertDev( vtlbHandlerCount < 127, "VTLB allowed handler count exceeded!" );
+	pxAssertDev( vtlbHandlerCount < VTLB_HANDLER_ITEMS, "VTLB handler count overflow!" );
 	return vtlbHandlerCount++;
 }
 
@@ -363,7 +355,7 @@ vtlbHandler vtlb_NewHandler()
 // Returns a handle for the newly created handler  See vtlb_MapHandler for use of the return value.
 //
 __ri vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
-									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128)
+										vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128)
 {
 	vtlbHandler rv = vtlb_NewHandler();
 	vtlb_ReassignHandler( rv, r8, r16, r32, r64, r128, w8, w16, w32, w64, w128 );
@@ -396,15 +388,14 @@ void vtlb_MapHandler(vtlbHandler handler, u32 start, u32 size)
 
 void vtlb_MapBlock(void* base, u32 start, u32 size, u32 blocksize)
 {
-	s32 baseint = (s32)base;
-
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
-	if (blocksize==0)
-		blocksize=size;
+	if (!blocksize)
+		blocksize = size;
 	verify(0==(blocksize&VTLB_PAGE_MASK) && blocksize>0);
 	verify(0==(size%blocksize));
 
+	s32 baseint = (s32)base;
 	u32 end = start + (size - VTLB_PAGE_SIZE);
 	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
 
@@ -452,67 +443,70 @@ __fi void* vtlb_GetPhyPtr(u32 paddr)
 
 //virtual mappings
 //TODO: Add invalid paddr checks
-void vtlb_VMap(u32 vaddr,u32 paddr,u32 sz)
+void vtlb_VMap(u32 vaddr,u32 paddr,u32 size)
 {
 	verify(0==(vaddr&VTLB_PAGE_MASK));
 	verify(0==(paddr&VTLB_PAGE_MASK));
-	verify(0==(sz&VTLB_PAGE_MASK) && sz>0);
+	verify(0==(size&VTLB_PAGE_MASK) && size>0);
 
-	while(sz>0)
+	while (size > 0)
 	{
 		s32 pme;
-		if (paddr>=VTLB_PMAP_SZ)
+		if (paddr >= VTLB_PMAP_SZ)
 		{
-			pme=UnmappedPhyHandler0;
-			if (paddr&0x80000000)
-				pme=UnmappedPhyHandler1;
-			pme|=0x80000000;
-			pme|=paddr;// top bit is set anyway ...
+			pme = UnmappedPhyHandler0;
+			if (paddr & 0x80000000)
+				pme = UnmappedPhyHandler1;
+			pme |= 0x80000000;
+			pme |= paddr;// top bit is set anyway ...
 		}
 		else
 		{
-			pme=vtlbdata.pmap[paddr>>VTLB_PAGE_BITS];
+			pme = vtlbdata.pmap[paddr>>VTLB_PAGE_BITS];
 			if (pme<0)
-				pme|=paddr;// top bit is set anyway ...
+				pme |= paddr;// top bit is set anyway ...
 		}
 
-		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=pme-vaddr;
-		vaddr+=VTLB_PAGE_SIZE;
-		paddr+=VTLB_PAGE_SIZE;
-		sz-=VTLB_PAGE_SIZE;
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS] = pme-vaddr;
+		vaddr += VTLB_PAGE_SIZE;
+		paddr += VTLB_PAGE_SIZE;
+		size -= VTLB_PAGE_SIZE;
 	}
 }
 
-void vtlb_VMapBuffer(u32 vaddr,void* buffer,u32 sz)
+void vtlb_VMapBuffer(u32 vaddr,void* buffer,u32 size)
 {
 	verify(0==(vaddr&VTLB_PAGE_MASK));
-	verify(0==(sz&VTLB_PAGE_MASK) && sz>0);
-	u32 bu8=(u32)buffer;
-	while(sz>0)
+	verify(0==(size&VTLB_PAGE_MASK) && size>0);
+
+	u32 bu8 = (u32)buffer;
+	while (size > 0)
 	{
-		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=bu8-vaddr;
-		vaddr+=VTLB_PAGE_SIZE;
-		bu8+=VTLB_PAGE_SIZE;
-		sz-=VTLB_PAGE_SIZE;
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS] = bu8-vaddr;
+		vaddr += VTLB_PAGE_SIZE;
+		bu8 += VTLB_PAGE_SIZE;
+		size -= VTLB_PAGE_SIZE;
 	}
 }
-void vtlb_VMapUnmap(u32 vaddr,u32 sz)
+void vtlb_VMapUnmap(u32 vaddr,u32 size)
 {
 	verify(0==(vaddr&VTLB_PAGE_MASK));
-	verify(0==(sz&VTLB_PAGE_MASK) && sz>0);
+	verify(0==(size&VTLB_PAGE_MASK) && size>0);
 
-	while(sz>0)
+	while (size > 0)
 	{
-		u32 handl=UnmappedVirtHandler0;
-		if (vaddr&0x80000000)
+		u32 handl = UnmappedVirtHandler0;
+		if (vaddr & 0x80000000)
 		{
-			handl=UnmappedVirtHandler1;
+			handl = UnmappedVirtHandler1;
 		}
-		handl|=vaddr; // top bit is set anyway ...
-		handl|=0x80000000;
-		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS]=handl-vaddr;
-		vaddr+=VTLB_PAGE_SIZE;
-		sz-=VTLB_PAGE_SIZE;
+
+		handl |= vaddr; // top bit is set anyway ...
+		handl |= 0x80000000;
+
+		vtlbdata.vmap[vaddr>>VTLB_PAGE_BITS] = handl-vaddr;
+		vaddr += VTLB_PAGE_SIZE;
+		size -= VTLB_PAGE_SIZE;
 	}
 }
 
@@ -589,6 +583,14 @@ void vtlb_Core_Free()
 	safe_aligned_free( vtlbdata.vmap );
 }
 
+static wxString GetHostVmErrorMsg()
+{
+	return pxE(".Error:HostVmReserve",
+		L"Your system is too low on virtual resources for PCSX2 to run.  This can be "
+		L"caused by having a small or disabled swapfile, or by other programs that are "
+		L"hogging resources."
+	);
+}
 // --------------------------------------------------------------------------------------
 //  VtlbMemoryReserve  (implementations)
 // --------------------------------------------------------------------------------------
@@ -605,16 +607,23 @@ void VtlbMemoryReserve::SetBaseAddr( uptr newaddr )
 
 void VtlbMemoryReserve::Reserve( sptr hostptr )
 {
-	m_reserve.ReserveAt( hostptr );
-	if (!m_reserve.IsOk())
-		throw Exception::OutOfMemory( m_reserve.GetName() );
+	if (!m_reserve.ReserveAt( hostptr ))
+	{
+		throw Exception::OutOfMemory( m_reserve.GetName() )
+			.SetDiagMsg(L"Vtlb memory could not be reserved.")
+			.SetUserMsg(GetHostVmErrorMsg());
+	}
 }
 
 void VtlbMemoryReserve::Commit()
 {
 	if (IsCommitted()) return;
 	if (!m_reserve.Commit())
-		throw Exception::OutOfMemory( m_reserve.GetName() );
+	{
+		throw Exception::OutOfMemory( m_reserve.GetName() )
+			.SetDiagMsg(L"Vtlb memory could not be committed.")
+			.SetUserMsg(GetHostVmErrorMsg());
+	}
 }
 
 void VtlbMemoryReserve::Reset()

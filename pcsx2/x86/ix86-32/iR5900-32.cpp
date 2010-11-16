@@ -583,8 +583,9 @@ static void recThrowHardwareDeficiency( const wxChar* extFail )
 wxString GetMsg_RecVmFailed()
 {
 	return pxE( ".Error:Recompiler:VirtualMemoryAlloc",
-		L"This recompiler was unable to reserve contiguous memory required "
-		L"for internal caches.  This problem may be fixable by reducing the default "
+		L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
+		L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
+		L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
 		L"cache sizes for all PCSX2 recompilers, found under Host Settings."
 	);
 }

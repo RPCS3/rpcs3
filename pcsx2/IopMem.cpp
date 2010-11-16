@@ -36,6 +36,11 @@ void iopMemoryReserve::Reserve()
 {
 	_parent::Reserve(HostMemoryMap::IOPmem);
 	//_parent::Reserve(EmuConfig.HostMap.IOP);
+}
+
+void iopMemoryReserve::Commit()
+{
+	_parent::Commit();
 	iopMem = (IopVM_MemoryAllocMess*)m_reserve.GetPtr();
 }
 
@@ -105,6 +110,7 @@ void iopMemoryReserve::Decommit()
 
 	safe_aligned_free(psxMemWLUT);
 	psxMemRLUT = NULL;
+	iopMem = NULL;
 }
 
 void iopMemoryReserve::Release()
