@@ -268,9 +268,7 @@
 		<Unit filename="../DebugTools/DisVUmicro.h" />
 		<Unit filename="../DebugTools/DisVUops.h" />
 		<Unit filename="../Dmac.h" />
-		<Unit filename="../Docs/ChangeLog.txt" />
 		<Unit filename="../Docs/License.txt" />
-		<Unit filename="../Docs/devblog.txt" />
 		<Unit filename="../Dump.cpp" />
 		<Unit filename="../Dump.h" />
 		<Unit filename="../Elfheader.cpp" />
@@ -316,7 +314,6 @@
 		<Unit filename="../IopMem.h" />
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
-		<Unit filename="../Ipu_fifo.h" />
 		<Unit filename="LnxKeyCodes.cpp">
 			<Option compiler="gcc" use="1" buildCommand="$compiler $options $includes `pkg-config gtk+-2.0 --cflags` -c $file -o $object" />
 		</Unit>
@@ -362,14 +359,13 @@
 		<Unit filename="../SourceLog.cpp" />
 		<Unit filename="../Stats.cpp" />
 		<Unit filename="../Stats.h" />
-		<Unit filename="../StringUtils.h" />
 		<Unit filename="../SysForwardDefs.h" />
 		<Unit filename="../System.cpp" />
 		<Unit filename="../System.h" />
+		<Unit filename="../System/RecTypes.h" />
 		<Unit filename="../System/SysCoreThread.cpp" />
 		<Unit filename="../System/SysThreadBase.cpp" />
 		<Unit filename="../System/SysThreads.h" />
-		<Unit filename="../System/RecTypes.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
@@ -420,7 +416,6 @@
 		<Unit filename="../gui/AppRes.cpp" />
 		<Unit filename="../gui/AppSaveStates.h" />
 		<Unit filename="../gui/ApplyState.h" />
-		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
 		<Unit filename="../gui/CpuUsageProvider.cpp" />
@@ -448,7 +443,6 @@
 		<Unit filename="../gui/Dialogs/StuckThreadDialog.cpp" />
 		<Unit filename="../gui/Dialogs/SysConfigDialog.cpp" />
 		<Unit filename="../gui/ExecutorThread.cpp" />
-		<Unit filename="../gui/ExecutorThread.h" />
 		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/GlobalCommands.cpp" />
 		<Unit filename="../gui/IsoDropTarget.cpp" />
@@ -465,7 +459,6 @@
 		<Unit filename="../gui/MessageBoxes.cpp" />
 		<Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BaseApplicableConfigPanel.cpp" />
-		<Unit filename="../gui/Panels/BaseConfigPanel.h" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
@@ -571,10 +564,8 @@
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/SysState.cpp" />
 		<Unit filename="../gui/UpdateUI.cpp" />
-		<Unit filename="../gui/gsFrame.h" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-		<Unit filename="../gui/pxEvtThread.h" />
 		<Unit filename="../gui/pxLogTextCtrl.cpp" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />

@@ -42,7 +42,7 @@ static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 	// be safe even on the main thread.
 	//  (in other words, stdio limitations only really apply to process-level asynchronous
 	//   signals)
-	
+
 	// Note: Use of stdio functions isn't safe here.  Avoid console logs,
 	// assertions, file logs, or just about anything else useful.
 
@@ -106,7 +106,7 @@ static bool _memprotect( void* baseaddr, size_t size, const PageProtectionMode& 
 	const int result = mprotect( baseaddr, size, lnxmode );
 
 	if (result == 0) return true;
-	
+
 	switch(errno)
 	{
 		case EINVAL:
@@ -114,7 +114,7 @@ static bool _memprotect( void* baseaddr, size_t size, const PageProtectionMode& 
 				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
 			);
 		break;
-		
+
 		case EACCES:
 			pxFailDev(pxsFmt(L"mprotect returned EACCES @ 0x%08X -> 0x%08X  (mode=%s)",
 				baseaddr, (uptr)baseaddr+size, mode.ToString().c_str())
@@ -201,6 +201,7 @@ void* HostSys::Mmap(uptr base, size_t size)
 
 void HostSys::Munmap(uptr base, size_t size)
 {
+	if (!base) return;
 	munmap((void*)base, size);
 }
 

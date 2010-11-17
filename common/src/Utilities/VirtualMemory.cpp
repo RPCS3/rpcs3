@@ -14,14 +14,15 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "PageFaultSource.h"
-#include "EventSource.inl"
-#include "MemsetFast.inl"
 
 #ifndef __WXMSW__
 #include <wx/thread.h>
 #endif
+
+#include "EventSource.inl"
+#include "MemsetFast.inl"
+#include "TlsVariable.inl"
 
 template class EventSource< IEventListener_PageFault >;
 
@@ -90,7 +91,7 @@ VirtualMemoryReserve& VirtualMemoryReserve::SetName( const wxString& newname )
 VirtualMemoryReserve& VirtualMemoryReserve::SetBaseAddr( uptr newaddr )
 {
 	if (!pxAssertDev(!m_pages_reserved, "Invalid object state: you must release the virtual memory reserve prior to changing its base address!")) return *this;
-	
+
 	m_baseptr = (void*)newaddr;
 	return *this;
 }
@@ -101,6 +102,34 @@ VirtualMemoryReserve& VirtualMemoryReserve::SetPageAccessOnCommit( const PagePro
 	return *this;
 }
 
+template< uint T >
+struct pxMiniCharBuffer
+{
+	wxChar chars[T];
+	pxMiniCharBuffer() {}
+};
+
+// Rational for this function: %p behavior is undefined, and not well-implemented in most cases.
+// MSVC doesn't prefix 0x, and Linux doesn't pad with zeros.  (furthermore, 64-bit formatting is unknown
+// and has even more room for variation and confusion).   As is typical, we need portability, and so this
+// isn't really acceptable.  So here's a portable version!
+const wxChar* pxPtrToString( void* ptr )
+{
+	static Threading::TlsVariable< pxMiniCharBuffer < 32 > > buffer;
+
+#ifdef __x86_64__
+	wxSnprintf( buffer->chars, 31, wxT("0x%08X.%08X"), ptr );
+#else
+	wxSnprintf( buffer->chars, 31, wxT("0x%08X"), ptr );
+#endif
+
+	return buffer->chars;
+}
+
+const wxChar* pxPtrToString( uptr ptr )
+{
+	pxPtrToString( (void*)ptr );
+}
 
 // Notes:
 //  * This method should be called if the object is already in an released (unreserved) state.
@@ -129,8 +158,8 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 
 	if (!m_baseptr || (upper_bounds != 0 && (((uptr)m_baseptr + reserved_bytes) > upper_bounds)))
 	{
-		DevCon.Warning( L"%s: host memory @ 0x%08x -> 0x%08x is unavailable; attempting to map elsewhere...",
-			m_name.c_str(), base, base + size );
+		DevCon.Warning( L"%s: host memory @ %s -> %s is unavailable; attempting to map elsewhere...",
+			m_name.c_str(), pxPtrToString(base), pxPtrToString(base + size) );
 
 		SafeSysMunmap(m_baseptr, reserved_bytes);
 
@@ -141,7 +170,7 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 			m_baseptr = HostSys::MmapReserve( 0, reserved_bytes );
 		}
 	}
-	
+
 	if ((upper_bounds != 0) && (((uptr)m_baseptr + reserved_bytes) > upper_bounds))
 	{
 		SafeSysMunmap(m_baseptr, reserved_bytes);
@@ -157,8 +186,8 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 	else
 		mbkb.Write( "[%ukb]", reserved_bytes / 1024 );
 
-	DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p %s", m_name.c_str(),
-		m_baseptr, (uptr)m_baseptr+reserved_bytes, mbkb.c_str());
+	DevCon.WriteLn( Color_Gray, L"%-32s @ %s -> %s %s", m_name.c_str(),
+		pxPtrToString(m_baseptr), pxPtrToString((uptr)m_baseptr+reserved_bytes), mbkb.c_str());
 
 	return m_baseptr;
 }
@@ -213,16 +242,16 @@ bool VirtualMemoryReserve::TryResize( uint newsize )
 		if (!m_baseptr)
 		{
 			Console.Warning("%-32s could not be passively resized due to virtual memory conflict!");
-			Console.Indent().Warning("(attempted to map memory @ 0x%08p -> 0x%08p", m_baseptr, (uptr)m_baseptr+toReserveBytes);
+			Console.Indent().Warning("(attempted to map memory @ %08p -> %08p)", m_baseptr, (uptr)m_baseptr+toReserveBytes);
 		}
 
-		DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p [%umb]", m_name.c_str(),
+		DevCon.WriteLn( Color_Gray, L"%-32s @ %08p -> %08p [%umb]", m_name.c_str(),
 			m_baseptr, (uptr)m_baseptr+toReserveBytes, toReserveBytes / _1mb);
 	}
 	else if (newPages < m_pages_reserved)
 	{
 		if (m_pages_commited > newsize) return false;
-	
+
 		uint toRemovePages = m_pages_reserved - newPages;
 		uint toRemoveBytes = toRemovePages * __pagesize;
 
@@ -230,10 +259,10 @@ bool VirtualMemoryReserve::TryResize( uint newsize )
 
 		HostSys::MmapResetPtr(GetPtrEnd(), toRemoveBytes);
 
-		DevCon.WriteLn( Color_Gray, L"%-32s @ 0x%08p -> 0x%08p [%umb]", m_name.c_str(),
+		DevCon.WriteLn( Color_Gray, L"%-32s @ %08p -> %08p [%umb]", m_name.c_str(),
 			m_baseptr, (uptr)m_baseptr+toRemoveBytes, toRemoveBytes / _1mb);
 	}
-	
+
 	return true;
 }
 
@@ -274,7 +303,7 @@ void BaseVmReserveListener::OnPageFaultEvent(const PageFaultInfo& info, bool& ha
 	sptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
 	if ((offset < 0) || ((uptr)offset >= m_pages_reserved)) return;
 
-	// Linux Note!  the SIGNAL handler is very limited in what it can do, and not only can't 
+	// Linux Note!  the SIGNAL handler is very limited in what it can do, and not only can't
 	// we let the C++ exception try to unwind the stack, we may not be able to log it either.
 	// (but we might as well try -- kernel/posix rules says not to do it, but Linux kernel
 	//  implementations seem to support it).
@@ -358,7 +387,7 @@ void SpatialArrayReserve::Reset()
 }
 
 // Important!  The number of blocks of the array will be altered when using this method.
-// 
+//
 bool SpatialArrayReserve::TryResize( uint newsize )
 {
 	uint newpages = (newsize + __pagesize - 1) / __pagesize;
@@ -376,11 +405,11 @@ bool SpatialArrayReserve::TryResize( uint newsize )
 	if (newpages < pages_in_use) return false;
 
 	if (!_parent::TryResize( newsize )) return false;
-	
+
 	// On success, we must re-calibrate the internal blockbits array.
-	
+
 	m_blockbits.Resize( (m_numblocks + 7) / 8 );
-	
+
 	return true;
 }
 
@@ -399,7 +428,7 @@ SpatialArrayReserve& SpatialArrayReserve::SetBlockCount( uint blocks )
 
 	m_numblocks = blocks;
 	m_blocksize = (m_pages_reserved + m_numblocks-1) / m_numblocks;
-	
+
 	return *this;
 }
 
@@ -434,7 +463,7 @@ void SpatialArrayReserve::DoCommitAndProtect( uptr page )
 {
 	// Spatial Arrays work on block granularity only:
 	// Round the page into a block, and commit the whole block that the page belongs to.
-	
+
 	uint block = page / m_blocksize;
 	CommitBlocks(block*m_blocksize, 1);
 }
@@ -442,12 +471,12 @@ void SpatialArrayReserve::DoCommitAndProtect( uptr page )
 void SpatialArrayReserve::OnCommittedBlock( void* block )
 {
 	// Determine the block position in the blockbits array, flag it, and be done!
-	
+
 	uptr relative = (uptr)block - (uptr)m_baseptr;
 	relative /= m_blocksize * __pagesize;
 
 	//DbgCon.WriteLn("Check me out @ 0x%08x", block);
-	
+
 	pxAssert( (m_blockbits[relative/8] & (1 << (relative & 7))) == 0 );
 	m_blockbits[relative/8] |= 1 << (relative & 7);
 }

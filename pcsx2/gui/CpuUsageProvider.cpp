@@ -56,7 +56,7 @@ DefaultCpuUsageProvider::DefaultCpuUsageProvider()
 
 void DefaultCpuUsageProvider::Reset()
 {
-	for( int i=0; i<QueueDepth; ++i )
+	for( uint i=0; i<QueueDepth; ++i )
 		m_queue[i].LoadWithCurrentTimes();
 }
 
