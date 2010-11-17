@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 
+#include "TlsVariable.inl"
+
 __fi wxString fromUTF8( const char* src )
 {
 	// IMPORTANT:  We cannot use wxString::FromUTF8 because it *stupidly* relies on a C++ global instance of
@@ -117,6 +119,37 @@ wxString JoinString( const wxChar** src, const wxString& separator )
 	}
 	return dest;
 }
+
+
+template< uint T >
+struct pxMiniCharBuffer
+{
+	wxChar chars[T];
+	pxMiniCharBuffer() {}
+};
+
+// Rational for this function: %p behavior is undefined, and not well-implemented in most cases.
+// MSVC doesn't prefix 0x, and Linux doesn't pad with zeros.  (furthermore, 64-bit formatting is unknown
+// and has even more room for variation and confusion).   As is typical, we need portability, and so this
+// isn't really acceptable.  So here's a portable version!
+const wxChar* pxPtrToString( void* ptr )
+{
+	static Threading::TlsVariable< pxMiniCharBuffer < 32 > > buffer;
+
+#ifdef __x86_64__
+	wxSnprintf( buffer->chars, 31, wxT("0x%08X.%08X"), ptr );
+#else
+	wxSnprintf( buffer->chars, 31, wxT("0x%08X"), ptr );
+#endif
+
+	return buffer->chars;
+}
+
+const wxChar* pxPtrToString( uptr ptr )
+{
+	return pxPtrToString( (void*)ptr );
+}
+
 
 // Attempts to parse and return a value for the given template type, and throws a ParseError
 // exception if the parse fails.  The template type can be anything that is supported/
