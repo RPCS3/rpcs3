@@ -21,8 +21,6 @@ Dialogs::GameDatabaseDialog::GameDatabaseDialog(wxWindow* parent)
 	: BaseConfigurationDialog( parent, AddAppName(_("Game Database - %s")), 580 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
-
 	*this += new Panels::GameDatabasePanel(this);
-	
 	AddOkCancel();
 }

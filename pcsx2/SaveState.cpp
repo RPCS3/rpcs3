@@ -48,7 +48,7 @@ static void PostLoadPrep()
 wxString SaveStateBase::GetFilename( int slot )
 {
 	return (g_Conf->Folders.Savestates +
-		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
+		pxsFmt( L"%08X.%03d", ElfCRC, slot )).GetFullPath();
 }
 
 SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )
@@ -142,7 +142,7 @@ void SaveStateBase::FreezeBios()
 }
 
 static const int MainMemorySizeInBytes =
-	Ps2MemSize::Base + Ps2MemSize::Scratch + Ps2MemSize::Hardware +
+	Ps2MemSize::MainRam + Ps2MemSize::Scratch + Ps2MemSize::Hardware +
 	Ps2MemSize::IopRam + Ps2MemSize::IopHardware + 0x0100;
 
 void SaveStateBase::FreezeMainMemory()
@@ -152,7 +152,7 @@ void SaveStateBase::FreezeMainMemory()
 
 	// First Block - Memory Dumps
 	// ---------------------------
-	FreezeMem(eeMem->Main,		Ps2MemSize::Base);		// 32 MB main memory
+	FreezeMem(eeMem->Main,		Ps2MemSize::MainRam);		// 32 MB main memory
 	FreezeMem(eeMem->Scratch,	Ps2MemSize::Scratch);	// scratch pad
 	FreezeMem(eeHw,		Ps2MemSize::Hardware);	// hardware memory
 

@@ -184,6 +184,7 @@ public:
 
 	virtual void OnResumeReady();
 	virtual void Reset();
+	virtual void ResetQuick();
 	virtual void Cancel( bool isBlocking=true );
 	virtual bool Cancel( const wxTimeSpan& timeout );
 

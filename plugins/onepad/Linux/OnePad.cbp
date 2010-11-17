@@ -53,7 +53,6 @@
 		<Unit filename="ini.cpp" />
 		<Unit filename="linux.cpp" />
 		<Unit filename="linux.h" />
-		<Unit filename="onepad.glade" />
 		<Unit filename="../analog.cpp" />
 		<Unit filename="../analog.h" />
 		<Unit filename="../bitwise.h" />
@@ -68,6 +67,7 @@
 		<Extensions>
 			<code_completion />
 			<debugger />
+			<envvars />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

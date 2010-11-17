@@ -26,6 +26,8 @@
 #include "Vif_Dma.h"
 #include <limits.h>
 
+#include "Utilities/MemsetFast.inl"
+
 // the BP doesn't advance and returns -1 if there is no data to be read
 __aligned16 tIPU_cmd ipu_cmd;
 __aligned16 tIPU_BP g_BP;

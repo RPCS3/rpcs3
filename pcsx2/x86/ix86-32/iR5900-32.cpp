@@ -21,15 +21,14 @@
 #include "R5900Exceptions.h"
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
-
 #include "BaseblockEx.h"
+#include "System/RecTypes.h"
+
 #include "vtlb.h"
-#include "SamplProf.h"
 #include "Dump.h"
 
 #include "System/SysThreads.h"
 #include "GS.h"
-
 #include "CDVD/CDVD.h"
 #include "Elfheader.h"
 
@@ -37,14 +36,18 @@
 #	include <csetjmp>
 #endif
 
+
+#include "Utilities/MemsetFast.inl"
+
+
 using namespace x86Emitter;
 using namespace R5900;
 
 #define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
 
 u32 maxrecmem = 0;
-static __aligned16 uptr recLUT[0x10000];
-static __aligned16 uptr hwLUT[0x10000];
+static __aligned16 uptr recLUT[_64kb];
+static __aligned16 uptr hwLUT[_64kb];
 
 #define HWADDR(mem) (hwLUT[mem >> 16] + (mem))
 
@@ -57,18 +60,41 @@ __aligned16 GPR_reg64 g_cpuConstRegs[32] = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 bool g_cpuFlushedPC, g_cpuFlushedCode, g_recompilingDelaySlot, g_maySignalException;
 
+// --------------------------------------------------------------------------------------
+//  R5900LutReserve_RAM
+// --------------------------------------------------------------------------------------
+class R5900LutReserve_RAM : public SpatialArrayReserve
+{
+	typedef SpatialArrayReserve _parent;
+
+public:
+	R5900LutReserve_RAM( const wxString& name )
+		: _parent( name )
+	{
+	}
+
+protected:
+	void OnCommittedBlock( void* block );
+};
+
+
 ////////////////////////////////////////////////////////////////
 // Static Private Variables - R5900 Dynarec
 
 #define X86
 static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
-static u8 *recMem = NULL;			// the recompiled blocks will be here
+static RecompiledCodeReserve* recMem = NULL;
+static SpatialArrayReserve* recRAMCopy = NULL;
+static R5900LutReserve_RAM* recLutReserve_RAM = NULL;
+
+static uptr m_ConfiguredCacheReserve = 64;
+
 static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
-static u32 *recRAMCopy = NULL;
+
 static BaseBlocks recBlocks;
 static u8* recPtr = NULL;
 static u32 *recConstBufPtr = NULL;
@@ -506,7 +532,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 static void _DynGen_Dispatchers()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtectStatic( eeRecDispatchers, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( eeRecDispatchers, PageAccess_ReadWrite() );
 
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,__pagesize>( eeRecDispatchers );
@@ -523,7 +549,7 @@ static void _DynGen_Dispatchers()
 	JITCompileInBlock	= _DynGen_JITCompileInBlock();
 	EnterRecompiledCode	= _DynGen_EnterRecompiledCode();
 
-	HostSys::MemProtectStatic( eeRecDispatchers, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( eeRecDispatchers, PageAccess_ExecOnly() );
 
 	recBlocks.SetJITCompile( JITCompile );
 }
@@ -531,24 +557,45 @@ static void _DynGen_Dispatchers()
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-static const int REC_CACHEMEM = 0x01000000;
 static void __fastcall dyna_block_discard(u32 start,u32 sz);
 
-// memory allocation handle for the entire BASEBLOCK and stack allocations.
-static u8* m_recBlockAlloc = NULL;
+static __ri void ClearRecLUT(BASEBLOCK* base, int memsize)
+{
+	for (int i = 0; i < memsize/4; i++)
+		base[i].SetFnptr((uptr)JITCompile);
+}
 
-static const uint m_recBlockAllocSize =
-	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
-+	RECCONSTBUF_SIZE * sizeof(u32) + Ps2MemSize::Base;
+void R5900LutReserve_RAM::OnCommittedBlock( void* block )
+{
+	_parent::OnCommittedBlock(block);
+	ClearRecLUT((BASEBLOCK*)block, __pagesize * m_blocksize);
+}
 
 static void recThrowHardwareDeficiency( const wxChar* extFail )
 {
 	throw Exception::HardwareDeficiency()
-		.SetDiagMsg(wxsFormat( L"R5900-32 recompiler init failed: %s is not available.", extFail))
-		.SetUserMsg(wxsFormat(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
+		.SetDiagMsg(pxsFmt( L"R5900-32 recompiler init failed: %s is not available.", extFail))
+		.SetUserMsg(pxsFmt(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail ));
 }
 
-static void recAlloc()
+static void recReserveCache()
+{
+	if (!recMem) recMem = new RecompiledCodeReserve(L"R5900-32 Recompiler Cache", _1mb * 4);
+	recMem->SetProfilerName("EErec");
+
+	while (!recMem->IsOk())
+	{
+		if (recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::EErec ) != NULL) break;
+
+		// If it failed, then try again (if possible):
+		if (m_ConfiguredCacheReserve < 16) break;
+		m_ConfiguredCacheReserve /= 2;
+	}
+	
+	recMem->ThrowIfNotOk();
+}
+
+static void recReserve()
 {
 	// Hardware Requirements Check...
 
@@ -561,99 +608,31 @@ static void recAlloc()
 	if ( !x86caps.hasStreamingSIMD2Extensions )
 		recThrowHardwareDeficiency( L"SSE2" );
 
-	if( recMem == NULL )
-	{
-		// It's handy to have a constant base address for the EE recompiler buffer, since it
-		// allows me to key in the address directly in the debugger, and also recognize EE
-		// recompiled code from user-provisioned stack traces.  But besides those, the recompiler
-		// has no actual restrictions on where it's compiled code buffer is located.
-
-		// Note: the SuperVU recompiler depends on being able to grab an allocation below the
-		// 0x10000000 line, so we give the EErec an address above that to try first as it's
-		// basemem address, hence the 0x20000000 pick.
-
-		const uint cachememsize = REC_CACHEMEM+0x1000;
-		recMem = (u8*)SysMmapEx( 0x20000000, cachememsize, 0, "recAlloc(R5900)" );
-	}
-
-	if( recMem == NULL )
-		throw Exception::OutOfMemory( L"R5900-32 recompiled code cache" );
-
-	// Goal: Allocate BASEBLOCKs for every possible branch target in PS2 memory.
-	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
-	// always 4 bytes long).
-
-    if( m_recBlockAlloc == NULL )
-		m_recBlockAlloc = (u8*) _aligned_malloc( m_recBlockAllocSize, 4096 );
-
-	if( m_recBlockAlloc == NULL )
-		throw Exception::OutOfMemory( L"R5900-32 BASEBLOCK tables" );
-
-	u8* curpos = m_recBlockAlloc;
-	recRAM		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
-	recROM		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
-	recROM1		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
-	recConstBuf	= (u32*)curpos; curpos += RECCONSTBUF_SIZE * sizeof(u32);
-	recRAMCopy	= (u32*)curpos;
-
-	if( s_pInstCache == NULL )
-	{
-		s_nInstCacheSize = 128;
-		s_pInstCache = (EEINST*)malloc( sizeof(EEINST) * s_nInstCacheSize );
-	}
-
-	if( s_pInstCache == NULL )
-		throw Exception::OutOfMemory( L"R5900-32 InstCache" );
-
-	// No errors.. Proceed with initialization:
-
-	ProfilerRegisterSource( "EE Rec", recMem, REC_CACHEMEM+0x1000 );
-	_DynGen_Dispatchers();
-
-	x86FpuState = FPU_STATE;
+	recReserveCache();
 }
 
-struct ManualPageTracking
+static void recAlloc()
 {
-	u16 page;
-	u8  counter;
-};
+	if (!recRAMCopy)
+	{
+		recRAMCopy	= new SpatialArrayReserve( L"R5900 RAM copy" );
+		recRAMCopy->SetBlockSize(_16kb);
+		recRAMCopy->Reserve(Ps2MemSize::MainRam);
+	}
+	
+	if (!recRAM)
+	{
+		recLutReserve_RAM	= new R5900LutReserve_RAM( L"R5900 RAM LUT" );
+		recLutReserve_RAM->SetBlockSize(_16kb);
+		recLutReserve_RAM->Reserve(Ps2MemSize::MainRam + Ps2MemSize::Rom + Ps2MemSize::Rom1);
+	}
 
-static __aligned16 u16 manual_page[Ps2MemSize::Base >> 12];
-static __aligned16 u8 manual_counter[Ps2MemSize::Base >> 12];
+	BASEBLOCK* basepos = (BASEBLOCK*)recLutReserve_RAM->GetPtr();
+	recRAM		= basepos; basepos += (Ps2MemSize::MainRam / 4);
+	recROM		= basepos; basepos += (Ps2MemSize::Rom / 4);
+	recROM1		= basepos; basepos += (Ps2MemSize::Rom1 / 4);
 
-static u32 eeRecIsReset = false;
-
-////////////////////////////////////////////////////
-void recResetEE( void )
-{
-	//AtomicExchange( eeRecNeedsReset, false );
-	if( AtomicExchange( eeRecIsReset, true ) ) return;
-
-	Console.WriteLn( Color_StrongBlack, "EE/iR5900-32 Recompiler Reset" );
-
-	maxrecmem = 0;
-
-	if (IsDevBuild)
-		memset_8<0xcc, REC_CACHEMEM>(recMem); // 0xcc is INT3
-	memzero_ptr<m_recBlockAllocSize - Ps2MemSize::Base>( m_recBlockAlloc ); // Excluding the 32mb ram copy
-	memzero_ptr<RECCONSTBUF_SIZE * sizeof(u32)>(recConstBuf);
-	memzero( manual_page );
-	memzero( manual_counter );
-	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
-		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
-
-	if( s_pInstCache )
-		memset( s_pInstCache, 0, sizeof(EEINST)*s_nInstCacheSize );
-
-	recBlocks.Reset();
-	mmap_ResetBlockTracking();
-
-#ifdef _MSC_VER
-	__asm emms;
-#else
-    __asm__("emms");
-#endif
+	pxAssert(recLutReserve_RAM->GetPtrEnd() == (u8*)basepos);
 
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(recLUT, 0, 0, 0, i, 0);
@@ -684,28 +663,98 @@ void recResetEE( void )
 		recLUT_SetPage(recLUT, hwLUT, recROM1, 0xa000, i, i - 0x1e00);
 	}
 
-	x86SetPtr(recMem);
+    if( recConstBuf == NULL )
+		recConstBuf = (u32*) _aligned_malloc( RECCONSTBUF_SIZE * sizeof(*recConstBuf), 16 );
 
-	recPtr = recMem;
+	if( recConstBuf == NULL )
+		throw Exception::OutOfMemory( L"R5900-32 SIMD Constants Buffer" );
+
+	if( s_pInstCache == NULL )
+	{
+		s_nInstCacheSize = 128;
+		s_pInstCache = (EEINST*)malloc( sizeof(EEINST) * s_nInstCacheSize );
+	}
+
+	if( s_pInstCache == NULL )
+		throw Exception::OutOfMemory( L"R5900-32 InstCache" );
+
+	// No errors.. Proceed with initialization:
+
+	_DynGen_Dispatchers();
+
+	x86FpuState = FPU_STATE;
+}
+
+struct ManualPageTracking
+{
+	u16 page;
+	u8  counter;
+};
+
+static __aligned16 u16 manual_page[Ps2MemSize::MainRam >> 12];
+static __aligned16 u8 manual_counter[Ps2MemSize::MainRam >> 12];
+
+static u32 eeRecIsReset = false;
+static u32 eeRecNeedsReset = false;
+static bool eeCpuExecuting = false;
+
+////////////////////////////////////////////////////
+static void recResetRaw()
+{
+	recAlloc();
+
+	if( AtomicExchange( eeRecIsReset, true ) ) return;
+	AtomicExchange( eeRecNeedsReset, false );
+
+	Console.WriteLn( Color_StrongBlack, "EE/iR5900-32 Recompiler Reset" );
+
+	recMem->Reset();
+	recRAMCopy->Reset();
+	recLutReserve_RAM->Reset();
+
+	maxrecmem = 0;
+
+	memzero_ptr<RECCONSTBUF_SIZE * sizeof(recConstBuf)>(recConstBuf);
+
+	if( s_pInstCache )
+		memset( s_pInstCache, 0, sizeof(EEINST)*s_nInstCacheSize );
+
+	recBlocks.Reset();
+	mmap_ResetBlockTracking();
+
+	x86SetPtr(*recMem);
+
+	recPtr = *recMem;
 	recConstBufPtr = recConstBuf;
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
 }
 
-static void recShutdown( void )
+static void recShutdown()
 {
-	ProfilerTerminateSource( "EERec" );
+	safe_delete( recMem );
+	safe_delete( recRAMCopy );
+	safe_delete( recLutReserve_RAM );
+
 	recBlocks.Reset();
 
-	SafeSysMunmap( recMem, REC_CACHEMEM );
-	safe_aligned_free( m_recBlockAlloc );
 	recRAM = recROM = recROM1 = NULL;
-	recConstBuf = NULL;
-	recRAMCopy = NULL;
 
+	safe_aligned_free( recConstBuf );
 	safe_free( s_pInstCache );
 	s_nInstCacheSize = 0;
+}
+
+static void recResetEE()
+{
+	if (eeCpuExecuting)
+	{
+		AtomicExchange( eeRecNeedsReset, true );
+		return;
+	}
+
+	recResetRaw();
 }
 
 void recStep( void )
@@ -744,8 +793,6 @@ static void recCheckExecutionState()
 	}
 }
 
-static bool m_recExecutingCode = false;
-
 static void recExecute()
 {
 	// Implementation Notes:
@@ -753,12 +800,14 @@ static void recExecute()
 
 #if PCSX2_SEH
 	eeRecIsReset = false;
-	ScopedBool executing(m_recExecutingCode);
+	ScopedBool executing(eeCpuExecuting);
 
 	try {
 		EnterRecompiledCode();
 	}
-	catch( Exception::ExitCpuExecute& ) { }
+	catch( Exception::ExitCpuExecute& )
+	{
+	}
 
 #else
 
@@ -816,18 +865,8 @@ void R5900::Dynarec::OpcodeImpl::recBREAK( void )
 	//branch = 2;
 }
 
-// Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
-static __ri void ClearRecLUT(BASEBLOCK* base, int count)
-{
-	for (int i = 0; i < count; i++)
-		base[i].SetFnptr((uptr)JITCompile);
-}
-
 void recClear(u32 addr, u32 size)
 {
-	BASEBLOCKEX* pexblock;
-	BASEBLOCK* pblock;
-
 	// necessary since recompiler doesn't call femms/emms
 #ifdef _MSC_VER
 	__asm emms;
@@ -846,14 +885,14 @@ void recClear(u32 addr, u32 size)
 
 	u32 lowerextent = (u32)-1, upperextent = 0, ceiling = (u32)-1;
 
-	pexblock = recBlocks[blockidx + 1];
+	BASEBLOCKEX* pexblock = recBlocks[blockidx + 1];
 	if (pexblock)
 		ceiling = pexblock->startpc;
 
 	while (pexblock = recBlocks[blockidx]) {
 		u32 blockstart = pexblock->startpc;
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
-		pblock = PC_GETBLOCK(blockstart);
+		BASEBLOCK* pblock = PC_GETBLOCK(blockstart);
 
 		if (pblock == s_pCurBlock) {
 			blockidx--;
@@ -889,7 +928,7 @@ void recClear(u32 addr, u32 size)
 	}
 
 	if (upperextent > lowerextent)
-		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
+		ClearRecLUT(PC_GETBLOCK(lowerextent), upperextent - lowerextent);
 }
 
 
@@ -1354,17 +1393,22 @@ static void __fastcall recRecompile( const u32 startpc )
 	pxAssume( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
-		recResetEE();
+	if (recPtr >= (recMem->GetPtrEnd() - _64kb)) {
+		AtomicExchange( eeRecNeedsReset, true );
 	}
-	if ( (recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64 ) {
+	else if ((recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64) {
 		Console.WriteLn("EE recompiler stack reset");
-		recResetEE();
+		AtomicExchange( eeRecNeedsReset, true );
 	}
+
+	if (eeRecNeedsReset) recResetRaw();
 
 	xSetPtr( recPtr );
 	recPtr = xGetAlignedCallTarget();
 
+	if (0x8000d618 == startpc)
+		DbgCon.WriteLn("Compiling block @ 0x%08x", startpc);
+	
 	s_pCurBlock = PC_GETBLOCK(startpc);
 
 	pxAssert(s_pCurBlock->GetFnptr() == (uptr)JITCompile
@@ -1764,7 +1808,7 @@ StartRecomp:
 	pxAssert( (pc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (pc-startpc)>>2;
 
-	if (HWADDR(pc) <= Ps2MemSize::Base) {
+	if (HWADDR(pc) <= Ps2MemSize::MainRam) {
 		BASEBLOCKEX *oldBlock;
 		int i;
 
@@ -1774,10 +1818,12 @@ StartRecomp:
 				continue;
 			if (oldBlock->startpc >= HWADDR(pc))
 				continue;
-			if (oldBlock->startpc + oldBlock->size * 4 <= HWADDR(startpc))
+			if ((oldBlock->startpc + oldBlock->size * 4) <= HWADDR(startpc))
 				break;
-			if (memcmp(&recRAMCopy[oldBlock->startpc / 4], PSM(oldBlock->startpc),
-			           oldBlock->size * 4)) {
+
+			if (memcmp(&(*recRAMCopy)[oldBlock->startpc / 4], PSM(oldBlock->startpc),
+			           oldBlock->size * 4))
+			{
 				recClear(startpc, (pc - startpc) / 4);
 				s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
 				pxAssert(s_pCurBlockEx->startpc == HWADDR(startpc));
@@ -1785,7 +1831,7 @@ StartRecomp:
 			}
 		}
 
-		memcpy_fast(&recRAMCopy[HWADDR(startpc) / 4], PSM(startpc), pc - startpc);
+		memcpy_fast(&(*recRAMCopy)[HWADDR(startpc) / 4], PSM(startpc), pc - startpc);
 	}
 
 	s_pCurBlock->SetFnptr((uptr)recPtr);
@@ -1836,11 +1882,11 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( xGetPtr() < recMem+REC_CACHEMEM );
+	pxAssert( xGetPtr() < recMem->GetPtrEnd() );
 	pxAssert( recConstBufPtr < recConstBuf + RECCONSTBUF_SIZE );
 	pxAssert( x86FpuState == 0 );
 
-	pxAssert(xGetPtr() - recPtr < 0x10000);
+	pxAssert(xGetPtr() - recPtr < _64kb);
 	s_pCurBlockEx->x86size = xGetPtr() - recPtr;
 
 	recPtr = xGetPtr();
@@ -1859,7 +1905,7 @@ static void recThrowException( const BaseR5900Exception& ex )
 #if PCSX2_SEH
 	ex.Rethrow();
 #else
-	if (!m_recExecutingCode) ex.Rethrow();
+	if (!eeCpuExecuting) ex.Rethrow();
 	m_cpuException = ex.Clone();
 	recExitExecution();
 #endif
@@ -1870,15 +1916,25 @@ static void recThrowException( const BaseException& ex )
 #if PCSX2_SEH
 	ex.Rethrow();
 #else
-	if (!m_recExecutingCode) ex.Rethrow();
+	if (!eeCpuExecuting) ex.Rethrow();
 	m_Exception = ex.Clone();
 	recExitExecution();
 #endif
 }
 
+static void recSetCacheReserve( uint reserveInMegs )
+{
+	m_ConfiguredCacheReserve = reserveInMegs;
+}
+
+static uint recGetCacheReserve()
+{
+	return m_ConfiguredCacheReserve;
+}
+
 R5900cpu recCpu =
 {
-	recAlloc,
+	recReserve,
 	recShutdown,
 
 	recResetEE,
@@ -1889,4 +1945,7 @@ R5900cpu recCpu =
 	recThrowException,
 	recThrowException,
 	recClear,
+	
+	recGetCacheReserve,
+	recSetCacheReserve,
 };

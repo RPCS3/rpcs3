@@ -24,26 +24,43 @@ IopVM_MemoryAllocMess* iopMem = NULL;
 
 __pagealigned u8 iopHw[Ps2MemSize::IopHardware];
 
-void psxMemAlloc()
+// --------------------------------------------------------------------------------------
+//  iopMemoryReserve
+// --------------------------------------------------------------------------------------
+iopMemoryReserve::iopMemoryReserve()
+	: _parent( L"IOP Main Memory (2mb)", sizeof(*iopMem) )
 {
-	if( iopMem == NULL )
-		iopMem = (IopVM_MemoryAllocMess*)vtlb_malloc( sizeof(*iopMem), 4096 );
+}
 
-	psxMemWLUT = (uptr*)_aligned_malloc(0x2000 * sizeof(uptr) * 2, 16);
-	psxMemRLUT = psxMemWLUT + 0x2000; //(uptr*)_aligned_malloc(0x10000 * sizeof(uptr),16);
+void iopMemoryReserve::Reserve()
+{
+	_parent::Reserve(HostMemoryMap::IOPmem);
+	//_parent::Reserve(EmuConfig.HostMap.IOP);
+}
+
+void iopMemoryReserve::Commit()
+{
+	_parent::Commit();
+	iopMem = (IopVM_MemoryAllocMess*)m_reserve.GetPtr();
 }
 
 // Note!  Resetting the IOP's memory state is dependent on having *all* psx memory allocated,
 // which is performed by MemInit and PsxMemInit()
-void psxMemReset()
+void iopMemoryReserve::Reset()
 {
-	pxAssume( psxMemWLUT != NULL );
-	pxAssume( iopMem != NULL );
+	_parent::Reset();
 
-	DbgCon.WriteLn( "IOP Resetting physical ram..." );
+	pxAssume( iopMem );
+
+	if (!psxMemWLUT)
+	{
+		psxMemWLUT = (uptr*)_aligned_malloc(0x2000 * sizeof(uptr) * 2, 16);
+		psxMemRLUT = psxMemWLUT + 0x2000; //(uptr*)_aligned_malloc(0x10000 * sizeof(uptr),16);
+	}
+
+	DbgCon.WriteLn("IOP resetting main memory...");
 
 	memzero_ptr<0x2000 * sizeof(uptr) * 2>( psxMemWLUT );	// clears both allocations, RLUT and WLUT
-	memzero( *iopMem );
 
 	// Trick!  We're accessing RLUT here through WLUT, since it's the non-const pointer.
 	// So the ones with a 0x2000 prefixed are RLUT tables.
@@ -87,14 +104,21 @@ void psxMemReset()
 	//for (i=0; i<0x0008; i++) psxMemWLUT[i + 0xbfc0] = (uptr)&psR[i << 16];
 }
 
-void psxMemShutdown()
+void iopMemoryReserve::Decommit()
 {
-	vtlb_free( iopMem, sizeof(*iopMem) );
-	iopMem = NULL;
+	_parent::Decommit();
 
 	safe_aligned_free(psxMemWLUT);
 	psxMemRLUT = NULL;
+	iopMem = NULL;
 }
+
+void iopMemoryReserve::Release()
+{
+	_parent::Release();
+	iopMem = NULL;
+}
+
 
 u8 __fastcall iopMemRead8(u32 mem)
 {

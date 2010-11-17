@@ -193,7 +193,7 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	new (&m_table[Color_StrongCyan])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 	new (&m_table[Color_StrongYellow])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 	new (&m_table[Color_StrongWhite])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
-	
+
 	SetColorScheme_Light();
 }
 
@@ -281,10 +281,10 @@ enum MenuIDs_t
 	MenuId_FontSize_Normal,
 	MenuId_FontSize_Large,
 	MenuId_FontSize_Huge,
-	
+
 	MenuId_ColorScheme_Light = 0x20,
 	MenuId_ColorScheme_Dark,
-	
+
 	MenuId_LogSource_EnableAll = 0x30,
 	MenuId_LogSource_DisableAll,
 	MenuId_LogSource_Devel,
@@ -322,7 +322,7 @@ public:
 	}
 };
 
-static ConsoleLogSource* const ConLogSources[] = 
+static ConsoleLogSource* const ConLogSources[] =
 {
 	(ConsoleLogSource*)&SysConsole.eeConsole,
 	(ConsoleLogSource*)&SysConsole.iopConsole,
@@ -334,7 +334,7 @@ static ConsoleLogSource* const ConLogSources[] =
 	(ConsoleLogSource*)&pxConLog_Thread,
 };
 
-static const bool ConLogDefaults[] = 
+static const bool ConLogDefaults[] =
 {
 	true,
 	true,
@@ -437,7 +437,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	menuSources.Append( MenuId_LogSource_Devel, _("Dev/Verbose"), _("Shows PCSX2 developer logs"), wxITEM_CHECK );
 	menuSources.AppendSeparator();
-	
+
 	uint srcnt = ArraySize(ConLogSources);
 	for (uint i=0; i<srcnt; ++i)
 	{
@@ -609,7 +609,7 @@ bool ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	{
 		// Too many color changes causes huge slowdowns when decorating the rich textview, so
 		// include a secondary check to avoid having a colorful log spam killing gui responsiveness.
-		
+
 		if( m_CurQueuePos > 0x100000 || m_QueueColorSection.GetLength() > 256 )
 		{
 			++m_WaitingThreadsForFlush;
@@ -629,7 +629,7 @@ bool ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 			if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
 		}
 	}
-	
+
 	return false;
 }
 
@@ -790,7 +790,7 @@ void ConsoleLogFrame::OnToggleSource( wxCommandEvent& evt )
 
 	if (!pxAssertDev( ArraySize(ConLogSources) > srcid, "Invalid source log index (out of bounds)" )) return;
 	if (!pxAssertDev( ConLogSources[srcid] != NULL, "Invalid source log index (NULL pointer [separator])" )) return;
-	
+
 	if( wxMenuItem* item = GetMenuBar()->FindItem(evt.GetId()) )
 	{
 		pxAssertDev( item->IsCheckable(), "Uncheckable log source menu item?  Seems fishy!" );
@@ -926,7 +926,7 @@ void ConsoleLogFrame::DoFlushQueue()
 	// cap at 512k for now...
 	// fixme - 512k runs well on win32 but appears to be very sluggish on linux (but that could
 	// be a result of my using Xming + CoLinux).  Might need platform dependent defaults here. --air
-	
+
 	static const int BufferSize = 0x80000;
 	if( (insertPoint + m_CurQueuePos) > BufferSize )
 	{
@@ -1040,6 +1040,8 @@ const IConsoleWriter    ConsoleWriter_File =
 	ConsoleToFile_DoWrite,
 	ConsoleToFile_Newline,
 	ConsoleToFile_SetTitle,
+
+	0
 };
 
 Mutex& Pcsx2App::GetProgramLogLock()
@@ -1111,6 +1113,8 @@ static const IConsoleWriter	ConsoleWriter_Window =
 	ConsoleToWindow_DoWrite<ConsoleWriter_Stdout>,
 	ConsoleToWindow_Newline<ConsoleWriter_Stdout>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_Stdout>,
+
+	0
 };
 
 static const IConsoleWriter	ConsoleWriter_WindowAndFile =
@@ -1122,6 +1126,8 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 	ConsoleToWindow_DoWrite<ConsoleWriter_File>,
 	ConsoleToWindow_Newline<ConsoleWriter_File>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_File>,
+
+	0
 };
 
 void Pcsx2App::EnableAllLogging()

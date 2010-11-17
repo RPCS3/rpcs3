@@ -295,7 +295,7 @@ static void nVifGen(int usn, int mask, int curCycle) {
 
 void VifUnpackSSE_Init()
 {
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
+	HostSys::MemProtectStatic(nVifUpkExec, PageAccess_ReadWrite());
 	memset8<0xcc>( nVifUpkExec );
 
 	xSetPtr( nVifUpkExec );
@@ -306,5 +306,5 @@ void VifUnpackSSE_Init()
 				nVifGen(a, b, c);
 			}}}
 
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
+	HostSys::MemProtectStatic(nVifUpkExec, PageAccess_ExecOnly());
 }

@@ -21,8 +21,81 @@
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "CDVD/CDVDaccess.h"
 
+#include "vtlb.h"
+
 typedef SafeArray<u8> VmStateBuffer;
+
 class BaseVUmicroCPU;
+class RecompiledCodeReserve;
+
+// This is a table of default virtual map addresses for ps2vm components.  These locations
+// are provided and used to assist in debugging and possibly hacking; as it makes it possible
+// for a programmer to know exactly where to look (consistently!) for the base address of
+// the various virtual machine components.  These addresses can be keyed directly into the
+// debugger's disasm window to get disassembly of recompiled code, and they can be used to help
+// identify recompiled code addresses in the callstack.
+
+// All of these areas should be reserved as soon as possible during program startup, and its
+// important that none of the areas overlap.  In all but superVU's case, failure due to overlap
+// or other conflict will result in the operating system picking a preferred address for the mapping.
+
+namespace HostMemoryMap
+{
+	// superVU is OLD SCHOOL, and it requires its allocation to be in the lower 256mb
+	// of the virtual memory space. (8mb each)
+	static const uptr sVU0rec	= _256mb - (_8mb*3);
+	static const uptr sVU1rec	= _256mb - (_8mb*2);
+
+	// PS2 main memory, SPR, and ROMs
+	static const uptr EEmem		= 0x20000000;
+
+	// IOP main memory and ROMs
+	static const uptr IOPmem	= 0x24000000;
+
+	// VU0 and VU1 memory.
+	static const uptr VUmem		= 0x28000000;
+
+	// EE recompiler code cache area (64mb)
+	static const uptr EErec		= 0x30000000;
+
+	// IOP recompiler code cache area (16 or 32mb)
+	static const uptr IOPrec	= 0x34000000;
+
+	// newVif0 recompiler code cache area (16mb)
+	static const uptr VIF0rec	= 0x36000000;
+
+	// newVif1 recompiler code cache area (32mb)
+	static const uptr VIF1rec	= 0x38000000;
+
+	// microVU1 recompiler code cache area (32 or 64mb)
+	static const uptr mVU0rec	= 0x3C000000;
+
+	// microVU0 recompiler code cache area (64mb)
+	static const uptr mVU1rec	= 0x40000000;
+	
+}
+
+// --------------------------------------------------------------------------------------
+//  SysMainMemory
+// --------------------------------------------------------------------------------------
+// This class provides the main memory for the virtual machines.  
+class SysMainMemory
+{
+protected:
+	eeMemoryReserve			m_ee;
+	iopMemoryReserve		m_iop;
+	vuMemoryReserve			m_vu;
+	
+public:
+	SysMainMemory();
+	virtual ~SysMainMemory() throw();
+
+	virtual void ReserveAll();
+	virtual void CommitAll();
+	virtual void ResetAll();
+	virtual void DecommitAll();
+	virtual void ReleaseAll();
+};
 
 // --------------------------------------------------------------------------------------
 //  SysAllocVM
@@ -83,12 +156,15 @@ extern SysCpuProviderPack& GetCpuProviders();
 
 extern void SysLogMachineCaps();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
+extern void SysOutOfMemory_EmergencyResponse(uptr blocksize);
 
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
 extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 
 extern wxString SysGetDiscID();
+
+extern SysMainMemory& GetVmMemory();
 
 // --------------------------------------------------------------------------------------
 //  PCSX2_SEH - Defines existence of "built in" Structured Exception Handling support.

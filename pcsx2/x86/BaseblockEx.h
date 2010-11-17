@@ -81,9 +81,6 @@ public:
 	__fi int Index (u32 startpc) const
 	{
 		int idx = LastIndex(startpc);
-		// fixme: I changed the parenthesis to be unambiguous, but this needs to be checked to see if ((x or y or z) and w)
-		// is correct, or ((x or y) or (z and w)), or some other variation. --arcum42
-		// Mixing &&'s and ||'s is not actually ambiguous; &&'s take precedence.  Reverted to old behavior -- ChickenLiver.
 		if ((idx == -1) || (startpc < blocks[idx].startpc) ||
 			((blocks[idx].size) && (startpc >= blocks[idx].startpc + blocks[idx].size * 4)))
 			return -1;
@@ -139,9 +136,10 @@ public:
 static void recLUT_SetPage(uptr reclut[0x10000], uptr hwlut[0x10000],
 						   BASEBLOCK *mapbase, uint pagebase, uint pageidx, uint mappage)
 {
+	// this value is in 64k pages!
 	uint page = pagebase + pageidx;
 
-	jASSUME( page < 0x10000 );
+	pxAssume( page < 0x10000 );
 	reclut[page] = (uptr)&mapbase[(mappage - page) << 14];
 	if (hwlut)
 		hwlut[page] = 0u - (pagebase << 16);

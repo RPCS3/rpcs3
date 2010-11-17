@@ -251,7 +251,7 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 	else {
 		if (IsDevBuild && !isCOP2) mVUbackupRegs(mVU, true);
 		xTEST(gprReg, 0x400);
-		xForwardJNZ8 jmpA; // if addr & 0x4000, reads VU1's VF regs and VI regs
+		xForwardJNZ8 jmpA;		// if addr & 0x4000, reads VU1's VF regs and VI regs
 			xAND(gprReg, 0xff); // if !(addr & 0x4000), wrap around
 			xForwardJump8 jmpB;
 		jmpA.SetTarget();
@@ -481,7 +481,7 @@ static __pagealigned u8 mVUsearchXMM[__pagesize];
 // Generates a custom optimized block-search function
 // Note: Structs must be 16-byte aligned! (GCC doesn't guarantee this)
 void mVUcustomSearch() {
-	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadWrite, false);
+	HostSys::MemProtectStatic(mVUsearchXMM, PageAccess_ReadWrite());
 	memset_8<0xcc,__pagesize>(mVUsearchXMM);
 	xSetPtr(mVUsearchXMM);
 
@@ -526,5 +526,5 @@ void mVUcustomSearch() {
 
 	exitPoint.SetTarget();
 	xRET();
-	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadOnly, true);
+	HostSys::MemProtectStatic(mVUsearchXMM, PageAccess_ExecOnly());
 }

@@ -287,7 +287,7 @@ void vtlb_dynarec_init()
 	hasBeenCalled = true;
 
 	// In case init gets called multiple times:
-	HostSys::MemProtectStatic( m_IndirectDispatchers, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( m_IndirectDispatchers, PageAccess_ReadWrite() );
 
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,0x1000>( m_IndirectDispatchers );
@@ -309,7 +309,7 @@ void vtlb_dynarec_init()
 		}
 	}
 
-	HostSys::MemProtectStatic( m_IndirectDispatchers, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( m_IndirectDispatchers, PageAccess_ExecOnly() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

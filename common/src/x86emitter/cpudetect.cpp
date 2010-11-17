@@ -59,13 +59,13 @@ void x86capabilities::SIMD_EstablishMXCSRmask()
 	// the fxsave buffer must be 16-byte aligned to avoid GPF.  I just save it to an
 	// unused portion of recSSE, since it has plenty of room to spare.
 
-	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
+	HostSys::MemProtectStatic( recSSE, PageAccess_ReadWrite() );
 
 	xSetPtr( recSSE );
 	xFXSAVE( ptr[&targetFXSAVE] );
 	xRET();
 
-	HostSys::MemProtectStatic( recSSE, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( recSSE, PageAccess_ExecOnly() );
 
 	CallAddress( recSSE );
 
@@ -310,7 +310,7 @@ u32 x86capabilities::CalculateMHz() const
 // Results of CPU
 void x86capabilities::SIMD_ExceptionTest()
 {
-	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
+	HostSys::MemProtectStatic( recSSE, PageAccess_ReadWrite() );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// SIMD Instruction Support Detection (Second Pass)
@@ -336,7 +336,7 @@ void x86capabilities::SIMD_ExceptionTest()
 		xMOVDQU( xmm1, ptr[ecx] );
 		xRET();
 
-		HostSys::MemProtectStatic( recSSE, Protect_ReadOnly, true );
+		HostSys::MemProtectStatic( recSSE, PageAccess_ExecOnly() );
 
 		bool sse3_result = _test_instruction( recSSE );  // sse3
 		bool ssse3_result = _test_instruction( funcSSSE3 );

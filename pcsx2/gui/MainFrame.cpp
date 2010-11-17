@@ -155,6 +155,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_SysSettings,	Menu_SysSettings_Click );
 	ConnectMenu( MenuId_Config_McdSettings,	Menu_McdSettings_Click );
 	ConnectMenu( MenuId_Config_AppSettings,	Menu_WindowSettings_Click );
+	ConnectMenu( MenuId_Config_GameDatabase,Menu_GameDatabase_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectPluginsBios_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
@@ -421,7 +422,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&Memory cards") );
-	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector...") );
+	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector") );
+	m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
 	m_menuConfig.AppendSeparator();
 
 	m_menuConfig.Append(MenuId_Config_GS,		_("&Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);

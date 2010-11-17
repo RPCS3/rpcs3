@@ -472,15 +472,15 @@ int GetPS2ElfName( wxString& name )
 			return 0;
 		}
 	}
-	catch (Exception::BadStream& ex)
-	{
-		Console.Error(ex.FormatDiagnosticMessage());
-		return 0;		// ISO error
-	}
 	catch( Exception::FileNotFound& )
 	{
 		//Console.Warning(ex.FormatDiagnosticMessage());
 		return 0;		// no SYSTEM.CNF, not a PS1/PS2 disc.
+	}
+	catch (Exception::BadStream& ex)
+	{
+		Console.Error(ex.FormatDiagnosticMessage());
+		return 0;		// ISO error
 	}
 
 #ifdef PCSX2_DEVBUILD

@@ -70,6 +70,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="zlib.lib rpcrt4.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.exe"
+				RandomizedBaseAddress="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -452,11 +453,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\System\PageFaultSource.h"
+					RelativePath="..\..\Plugins.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\Plugins.h"
+					RelativePath="..\..\System\RecTypes.h"
 					>
 				</File>
 				<File
@@ -836,10 +837,6 @@
 									>
 									<File
 										RelativePath="..\..\x86\newVif.h"
-										>
-									</File>
-									<File
-										RelativePath="..\..\x86\newVif_BlockBuffer.h"
 										>
 									</File>
 									<File

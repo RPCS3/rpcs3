@@ -383,7 +383,6 @@ set(pcsx2IPUHeaders
 
 # Linux sources
 set(pcsx2LinuxSources
-	Linux/LnxHostSys.cpp
 	Linux/LnxKeyCodes.cpp)
 
 # Linux headers
@@ -432,7 +431,7 @@ set(pcsx2SystemSources
 
 # System headers
 set(pcsx2SystemHeaders
-	System/PageFaultSource.h
+	System/RecTypes.h
 	System/SysThreads.h)
 
 # Utilities sources
@@ -542,7 +541,6 @@ set(pcsx2x86Headers
 	x86/microVU_Tables.inl
 	x86/microVU_Upper.inl
 	x86/newVif.h
-	x86/newVif_BlockBuffer.h
 	x86/newVif_HashBucket.h
 	x86/newVif_UnpackSSE.h
 	x86/sVU_Compare.h

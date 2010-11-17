@@ -48,6 +48,11 @@ void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
 	AppOpenDialog<McdConfigDialog>( this );
 }
 
+void MainEmuFrame::Menu_GameDatabase_Click(wxCommandEvent &event)
+{
+	AppOpenDialog<McdConfigDialog>( this );
+}
+
 void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent &event)
 {
 	wxCommandEvent evt( pxEvt_SetSettingsPage );

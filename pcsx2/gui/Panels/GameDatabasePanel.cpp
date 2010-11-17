@@ -59,7 +59,7 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 		gameFixes[i] = new pxCheckBox(this, EnumToString(i), wxCHK_3STATE | wxCHK_ALLOW_3RD_STATE_FOR_USER );
 
 	*this	+= Heading(_("Game Database Editor")).Bold() | StdExpand();
-	*this	+= Heading(_("This panel lets you add and edit game titles, game fixes, and game patches.")) | StdExpand();
+	//*this	+= Heading(_("This panel lets you add and edit game titles, game fixes, and game patches.")) | StdExpand();
 
 	wxFlexGridSizer& sizer1(*new wxFlexGridSizer(5, StdPadding));
 	sizer1.AddGrowableCol(0);

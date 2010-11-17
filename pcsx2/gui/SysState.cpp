@@ -62,21 +62,6 @@ static void SaveStateFile_ReadHeader( IStreamReader& thr )
 			.SetUserMsg(_("Cannot load this savestate. The state is an unsupported version, likely created by a newer edition of PCSX2."));
 };
 
-class gzError : public Exception::BadStream
-{
-	DEFINE_STREAM_EXCEPTION( gzError, BadStream, wxLt("Invalid or corrupted gzip archive") )
-};
-
-class gzReadError : public gzError
-{
-
-};
-
-class gzWriteError : public gzError
-{
-
-};
-
 // --------------------------------------------------------------------------------------
 //  gzipReader
 // --------------------------------------------------------------------------------------

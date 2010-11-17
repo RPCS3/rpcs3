@@ -132,9 +132,6 @@
 		</Unit>
 		<Unit filename="../../Win32/Win32.h" />
 		<Unit filename="../../Win32/aviUtil.h" />
-		<Unit filename="../../Win32/jconfig.h" />
-		<Unit filename="../../Win32/jmorecfg.h" />
-		<Unit filename="../../Win32/jpeglib.h" />
 		<Unit filename="../../Win32/resource.h" />
 		<Unit filename="../../Win32/resrc1.h" />
 		<Unit filename="../../Win32/wglext.h" />
@@ -177,6 +174,7 @@
 		<Extensions>
 			<code_completion />
 			<debugger />
+			<envvars />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

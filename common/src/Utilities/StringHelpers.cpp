@@ -118,6 +118,7 @@ wxString JoinString( const wxChar** src, const wxString& separator )
 	return dest;
 }
 
+
 // Attempts to parse and return a value for the given template type, and throws a ParseError
 // exception if the parse fails.  The template type can be anything that is supported/
 // implemented via one of the TryParse() method overloads.

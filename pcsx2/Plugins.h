@@ -57,12 +57,15 @@ namespace Exception
 	// Exception thrown when a corrupted or truncated savestate is encountered.
 	class SaveStateLoadError : public BadStream
 	{
-		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, BadStream, wxLt("The savestate appears to be corrupt or incomplete.") )
+		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, BadStream )
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 	class PluginError : public RuntimeError
 	{
-		DEFINE_RUNTIME_EXCEPTION( PluginError, RuntimeError, L"Generic plugin error")
+		DEFINE_RUNTIME_EXCEPTION( PluginError, RuntimeError, L"Generic plugin error!" )
 
 	public:
 		PluginsEnum_t PluginId;
