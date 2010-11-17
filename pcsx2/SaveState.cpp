@@ -88,7 +88,7 @@ void SaveStateBase::PrepBlock( int size )
 void SaveStateBase::FreezeTag( const char* src )
 {
 	const uint allowedlen = sizeof( m_tagspace )-1;
-	pxAssertDev( strlen(src) < allowedlen, wxsFormat( L"Tag name exceeds the allowed length of %d chars.", allowedlen) );
+	pxAssertDev( strlen(src) < allowedlen, pxsFmt( L"Tag name exceeds the allowed length of %d chars.", allowedlen) );
 
 	memzero( m_tagspace );
 	strcpy( m_tagspace, src );
@@ -141,24 +141,22 @@ void SaveStateBase::FreezeBios()
 	m_DidBios = true;
 }
 
-static const int MainMemorySizeInBytes =
-	Ps2MemSize::MainRam + Ps2MemSize::Scratch + Ps2MemSize::Hardware +
-	Ps2MemSize::IopRam + Ps2MemSize::IopHardware + 0x0100;
+static const uint MainMemorySizeInBytes =
+	Ps2MemSize::MainRam	+ Ps2MemSize::Scratch		+ Ps2MemSize::Hardware +
+	Ps2MemSize::IopRam	+ Ps2MemSize::IopHardware;
 
 void SaveStateBase::FreezeMainMemory()
 {
-	if( IsLoading() )
-		PreLoadPrep();
+	if (IsLoading()) PreLoadPrep();
 
 	// First Block - Memory Dumps
 	// ---------------------------
 	FreezeMem(eeMem->Main,		Ps2MemSize::MainRam);		// 32 MB main memory
-	FreezeMem(eeMem->Scratch,	Ps2MemSize::Scratch);	// scratch pad
-	FreezeMem(eeHw,		Ps2MemSize::Hardware);	// hardware memory
+	FreezeMem(eeMem->Scratch,	Ps2MemSize::Scratch);		// scratch pad
+	FreezeMem(eeHw,				Ps2MemSize::Hardware);		// hardware memory
 
-	FreezeMem(iopMem->Main, Ps2MemSize::IopRam);		// 2 MB main memory
-	FreezeMem(iopHw, Ps2MemSize::IopHardware);	// hardware memory
-	FreezeMem(iopMem->Sif, 0x000100);					// iop's sif memory
+	FreezeMem(iopMem->Main, 	Ps2MemSize::IopRam);		// 2 MB main memory
+	FreezeMem(iopHw,			Ps2MemSize::IopHardware);	// hardware memory
 }
 
 void SaveStateBase::FreezeRegisters()
@@ -201,6 +199,8 @@ void SaveStateBase::FreezeRegisters()
 	// Fifth Block - iop-related systems
 	// ---------------------------------
 	FreezeTag( "IOP-Subsystems" );
+	FreezeMem(iopMem->Sif, sizeof(iopMem->Sif));		// iop's sif memory (not really needed, but oh well)
+
 #ifdef ENABLE_NEW_IOPDMA
 	iopDmacFreeze();
 #endif
@@ -231,13 +231,13 @@ void SaveStateBase::WritebackSectionLength( int seekpos, int sectlen, const wxCh
 		if( sectlen != realsectsize )		// if they don't match then we have a problem, jim.
 		{
 			throw Exception::SaveStateLoadError()
-				.SetDiagMsg(wxsFormat(L"Invalid size encountered on section '%s'.", sectname ))
+				.SetDiagMsg(pxsFmt(L"Invalid size encountered on section '%s'.", sectname ))
 				.SetUserMsg(_("The savestate data is invalid or corrupted."));
 		}
 	}
 }
 
-bool SaveStateBase::FreezeSection( int seek_section )
+bool SaveStateBase::FreezeSection( bool freezeMem, int seek_section )
 {
 	const bool isSeeking = (seek_section != FreezeId_NotSeeking );
 	if( IsSaving() ) pxAssertDev( !isSeeking, "Cannot seek on a saving-mode savestate stream." );
@@ -273,25 +273,28 @@ bool SaveStateBase::FreezeSection( int seek_section )
 
 		case FreezeId_Memory:
 		{
-			FreezeTag( "MainMemory" );
-
-			int seekpos = m_idx+4;
-			int sectlen = MainMemorySizeInBytes;
-			Freeze( sectlen );
-			if( sectlen != MainMemorySizeInBytes )
+			if (freezeMem)
 			{
-				throw Exception::SaveStateLoadError()
-					.SetDiagMsg(L"Invalid size encountered on MainMemory section.")
-					.SetUserMsg(_("The savestate data is invalid or corrupted."));
+				FreezeTag( "MainMemory" );
+
+				int seekpos = m_idx+4;
+				int sectlen = MainMemorySizeInBytes;
+				Freeze( sectlen );
+				if( sectlen != MainMemorySizeInBytes )
+				{
+					throw Exception::SaveStateLoadError()
+						.SetDiagMsg(L"Invalid size encountered on MainMemory section.")
+						.SetUserMsg(_("The savestate data is invalid or corrupted."));
+				}
+
+				if( isSeeking )
+					m_idx += sectlen;
+				else
+					FreezeMainMemory();
+
+				int realsectsize = m_idx - seekpos;
+				pxAssert( sectlen == realsectsize );
 			}
-
-			if( isSeeking )
-				m_idx += sectlen;
-			else
-				FreezeMainMemory();
-
-			int realsectsize = m_idx - seekpos;
-			pxAssert( sectlen == realsectsize );
 			m_sectid++;
 		}
 		break;
@@ -360,7 +363,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 	return true;
 }
 
-void SaveStateBase::FreezeAll()
+void SaveStateBase::FreezeAll( bool freezeMem )
 {
 	if( IsSaving() )
 	{
@@ -371,7 +374,7 @@ void SaveStateBase::FreezeAll()
 		m_pid		= PluginId_GS;
 	}
 
-	while( FreezeSection() );
+	while( FreezeSection( freezeMem ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -395,15 +398,14 @@ void memSavingState::FreezeMem( void* data, int size )
 	m_idx += size;
 }
 
-void memSavingState::FreezeAll()
+void memSavingState::FreezeAll( bool freezeMem )
 {
 	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
 
-	// 90% of all savestates fit in under 45 megs (and require more than 43 megs, so might as well...)
 	m_memory->ChunkSize = ReallocThreshold;
-	m_memory->MakeRoomFor( MemoryBaseAllocSize );
+	m_memory->MakeRoomFor( MemoryBaseAllocSize + (freezeMem ? MainMemorySizeInBytes : 0) );
 
-	_parent::FreezeAll();
+	_parent::FreezeAll( freezeMem );
 }
 
 memLoadingState::memLoadingState( const SafeArray<u8>& load_from )
@@ -452,22 +454,21 @@ bool memLoadingState::SeekToSection( PluginsEnum_t pid )
 wxString Exception::UnsupportedStateVersion::FormatDiagnosticMessage() const
 {
 	// Note: no stacktrace needed for this one...
-	return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
+	return pxsFmt( L"Unknown or unsupported savestate version: 0x%x", Version );
 }
 
 wxString Exception::UnsupportedStateVersion::FormatDisplayMessage() const
 {
 	// m_message_user contains a recoverable savestate error which is helpful to the user.
-	return wxsFormat(
+	return
 		m_message_user + L"\n\n" +
-		wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
-	);
+		pxsFmt( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version );
 }
 
 wxString Exception::StateCrcMismatch::FormatDiagnosticMessage() const
 {
 	// Note: no stacktrace needed for this one...
-	return wxsFormat(
+	return pxsFmt(
 		L"Game/CDVD does not match the savestate CRC.\n"
 		L"\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n",
 		Crc_Savestate, Crc_Cdvd
@@ -476,11 +477,10 @@ wxString Exception::StateCrcMismatch::FormatDiagnosticMessage() const
 
 wxString Exception::StateCrcMismatch::FormatDisplayMessage() const
 {
-	return wxsFormat(
+	return
 		m_message_user + L"\n\n" +
-		wxsFormat(
+		pxsFmt(
 			L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
 			Crc_Savestate, Crc_Cdvd
-		)
-	);
+		);
 }

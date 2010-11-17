@@ -16,92 +16,52 @@
 #pragma once
 
 #include "Utilities/PersistentThread.h"
-//#include <zlib/zlib.h>
+#include "Utilities/pxStreams.h"
+#include "wx/zipstrm.h"
 
 using namespace Threading;
-
-class IStreamWriter
-{
-public:
-	virtual ~IStreamWriter() throw() {}
-
-	virtual void Write( const void* data, size_t size )=0;
-	virtual wxString GetStreamName() const=0;
-
-	template< typename T >
-	void Write( const T& data )
-	{
-		Write( &data, sizeof(data) );
-	}
-};
-
-class IStreamReader
-{
-public:
-	virtual ~IStreamReader() throw() {}
-
-	virtual void Read( void* dest, size_t size )=0;
-	virtual wxString GetStreamName() const=0;
-
-	template< typename T >
-	void Read( T& dest )
-	{
-		Read( &dest, sizeof(dest) );
-	}
-};
-
-typedef void FnType_WriteCompressedHeader( IStreamWriter& thr );
-typedef void FnType_ReadCompressedHeader( IStreamReader& thr );
 
 // --------------------------------------------------------------------------------------
 //  BaseCompressThread
 // --------------------------------------------------------------------------------------
 class BaseCompressThread
 	: public pxThread
-	, public IStreamWriter
 {
 	typedef pxThread _parent;
 
 protected:
-	FnType_WriteCompressedHeader*	m_WriteHeaderInThread;
-
-	const wxString					m_filename;
 	ScopedPtr< SafeArray< u8 > >	m_src_buffer;
+	ScopedPtr< pxStreamWriter >		m_gzfp;
 	bool							m_PendingSaveFlag;
+	
+	wxString						m_final_filename;
 
-	BaseCompressThread( const wxString& file, SafeArray<u8>* srcdata, FnType_WriteCompressedHeader* writeHeader=NULL)
-		: m_filename( file )
-		, m_src_buffer( srcdata )
+	BaseCompressThread( SafeArray<u8>* srcdata, pxStreamWriter* outarchive)
+		: m_src_buffer( srcdata )
 	{
-		m_WriteHeaderInThread	= writeHeader;
-		m_PendingSaveFlag		= false;
+		m_gzfp				= outarchive;
+		m_PendingSaveFlag	= false;
 	}
 
+	BaseCompressThread( SafeArray<u8>* srcdata, ScopedPtr<pxStreamWriter>& outarchive)
+		: m_src_buffer( srcdata )
+	{
+		m_gzfp				= outarchive.DetachPtr();
+		m_PendingSaveFlag	= false;
+	}
+	
 	virtual ~BaseCompressThread() throw();
 	
 	void SetPendingSave();
-
-public:
-	wxString GetStreamName() const { return m_filename; }
-};
-
-// --------------------------------------------------------------------------------------
-//   CompressThread_gzip
-// --------------------------------------------------------------------------------------
-class CompressThread_gzip : public BaseCompressThread
-{
-	typedef BaseCompressThread _parent;
-
-protected:
-	gzFile		m_gzfp;
-
-public:
-	CompressThread_gzip( const wxString& file, SafeArray<u8>* srcdata, FnType_WriteCompressedHeader* writeHeader=NULL );
-	CompressThread_gzip( const wxString& file, ScopedPtr<SafeArray<u8> >& srcdata, FnType_WriteCompressedHeader* writeHeader=NULL );
-	virtual ~CompressThread_gzip() throw();
-
-protected:
-	void Write( const void* data, size_t size );
 	void ExecuteTaskInThread();
 	void OnCleanupInThread();
+	
+public:
+	wxString GetStreamName() const { return m_gzfp->GetStreamName(); }
+
+	BaseCompressThread& SetTargetFilename(const wxString& filename)
+	{
+		m_final_filename = filename;
+		return *this;
+	}
 };

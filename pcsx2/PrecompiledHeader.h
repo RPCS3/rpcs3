@@ -84,7 +84,6 @@ typedef int BOOL;
 // unchanged for long periods of time, or happen to be used by almost everything, so they
 // need a full recompile anyway, when modified (etc)
 
-#include "zlib.h"
 #include "Pcsx2Defs.h"
 #include "i18n.h"
 

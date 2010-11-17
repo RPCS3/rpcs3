@@ -24,7 +24,7 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = 0x8b4c0000;
+static const u32 g_SaveVersion = (0x9A01 << 16) | 0x0000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
@@ -39,10 +39,8 @@ enum FreezeSectionId
 	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
 	// but can be skipped if the savestate has only plugins.
 	FreezeId_Bios,
-
 	FreezeId_Memory,
 	FreezeId_Registers,
-
 	FreezeId_Plugin,
 
 	// anything here and beyond we can skip, with a warning
@@ -144,7 +142,7 @@ public:
 	// Loads or saves the entire emulation state.
 	// Note: The Cpu state must be reset, and plugins *open*, prior to Defrosting
 	// (loading) a state!
-	virtual void FreezeAll();
+	virtual void FreezeAll( bool freezeMemory=true );
 
 	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.
 	// For dynamically allocated pointers use FreezeMem instead.
@@ -175,7 +173,7 @@ public:
 	}
 
 	void WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname );
-	bool FreezeSection( int seek_section = FreezeId_NotSeeking );
+	bool FreezeSection( bool freezeMem, int seek_section = FreezeId_NotSeeking );
 
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
@@ -238,8 +236,8 @@ class memSavingState : public SaveStateBase
 	typedef SaveStateBase _parent;
 
 protected:
-	static const int ReallocThreshold = 0x200000;	// 256k reallocation block size.
-	static const int MemoryBaseAllocSize = 0x02b00000;  // 45 meg base alloc
+	static const int ReallocThreshold		= _1mb / 4;		// 256k reallocation block size.
+	static const int MemoryBaseAllocSize	= _8mb;			// 8 meg base alloc when PS2 main memory is excluded
 
 public:
 	virtual ~memSavingState() throw() { }
@@ -248,7 +246,7 @@ public:
 
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
-	void FreezeAll();
+	void FreezeAll( bool freezeMemory );
 
 	bool IsSaving() const { return true; }
 };

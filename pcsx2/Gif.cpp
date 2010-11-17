@@ -95,7 +95,7 @@ extern bool SIGNAL_IMR_Pending;
 
 __fi void gsInterrupt()
 {
-	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
+	GIF_LOG("gsInterrupt caught!");
 
 	if(SIGNAL_IMR_Pending == true)
 	{
