@@ -160,7 +160,8 @@ protected:
 				.SetDiagMsg(L"SysExecEvent_DownloadState: Cannot freeze/download an invalid VM state!")
 				.SetUserMsg(L"There is no active virtual machine state to download or save." );
 
-		memSavingState( m_dest_buffer ).FreezeAll( false );
+		memSavingState saveme( m_dest_buffer );
+		saveme.FreezeAll();
 
 		UI_EnableStateActions();
 		paused_core.AllowResume();
@@ -437,7 +438,7 @@ protected:
 		reader->Read( buffer.GetPtr(), foundInternal->GetSize() );
 
 		//GetCoreThread().UploadStateCopy( buffer );
-		memLoadingState( buffer ).FreezeAll( false );
+		memLoadingState( buffer ).FreezeAll();
 		GetCoreThread().Resume();	// force resume regardless of emulation state earlier.
 	}
 };

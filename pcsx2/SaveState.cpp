@@ -45,6 +45,9 @@ static void PostLoadPrep()
 	UpdateVSyncRate();
 }
 
+// --------------------------------------------------------------------------------------
+//  SaveStateBase  (implementations)
+// --------------------------------------------------------------------------------------
 wxString SaveStateBase::GetFilename( int slot )
 {
 	return (g_Conf->Folders.Savestates +
@@ -147,7 +150,10 @@ static const uint MainMemorySizeInBytes =
 
 void SaveStateBase::FreezeMainMemory()
 {
-	if (IsLoading()) PreLoadPrep();
+	if (IsLoading())
+		PreLoadPrep();
+	else
+		m_memory->MakeRoomFor( m_idx + MainMemorySizeInBytes );
 
 	// First Block - Memory Dumps
 	// ---------------------------
@@ -237,7 +243,7 @@ void SaveStateBase::WritebackSectionLength( int seekpos, int sectlen, const wxCh
 	}
 }
 
-bool SaveStateBase::FreezeSection( bool freezeMem, int seek_section )
+bool SaveStateBase::FreezeSection( int seek_section )
 {
 	const bool isSeeking = (seek_section != FreezeId_NotSeeking );
 	if( IsSaving() ) pxAssertDev( !isSeeking, "Cannot seek on a saving-mode savestate stream." );
@@ -267,34 +273,6 @@ bool SaveStateBase::FreezeSection( bool freezeMem, int seek_section )
 				m_idx += sectlen;
 			else
 				FreezeBios();
-			m_sectid++;
-		}
-		break;
-
-		case FreezeId_Memory:
-		{
-			if (freezeMem)
-			{
-				FreezeTag( "MainMemory" );
-
-				int seekpos = m_idx+4;
-				int sectlen = MainMemorySizeInBytes;
-				Freeze( sectlen );
-				if( sectlen != MainMemorySizeInBytes )
-				{
-					throw Exception::SaveStateLoadError()
-						.SetDiagMsg(L"Invalid size encountered on MainMemory section.")
-						.SetUserMsg(_("The savestate data is invalid or corrupted."));
-				}
-
-				if( isSeeking )
-					m_idx += sectlen;
-				else
-					FreezeMainMemory();
-
-				int realsectsize = m_idx - seekpos;
-				pxAssert( sectlen == realsectsize );
-			}
 			m_sectid++;
 		}
 		break;
@@ -363,7 +341,7 @@ bool SaveStateBase::FreezeSection( bool freezeMem, int seek_section )
 	return true;
 }
 
-void SaveStateBase::FreezeAll( bool freezeMem )
+void SaveStateBase::FreezeAll()
 {
 	if( IsSaving() )
 	{
@@ -374,10 +352,12 @@ void SaveStateBase::FreezeAll( bool freezeMem )
 		m_pid		= PluginId_GS;
 	}
 
-	while( FreezeSection( freezeMem ) );
+	while( FreezeSection() );
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  memSavingState (implementations)
+// --------------------------------------------------------------------------------------
 // uncompressed to/from memory state saves implementation
 
 memSavingState::memSavingState( SafeArray<u8>& save_to )
@@ -398,14 +378,14 @@ void memSavingState::FreezeMem( void* data, int size )
 	m_idx += size;
 }
 
-void memSavingState::FreezeAll( bool freezeMem )
+void memSavingState::FreezeAll()
 {
 	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
 
 	m_memory->ChunkSize = ReallocThreshold;
-	m_memory->MakeRoomFor( MemoryBaseAllocSize + (freezeMem ? MainMemorySizeInBytes : 0) );
+	m_memory->MakeRoomFor( m_idx + MemoryBaseAllocSize );
 
-	_parent::FreezeAll( freezeMem );
+	_parent::FreezeAll();
 }
 
 memLoadingState::memLoadingState( const SafeArray<u8>& load_from )

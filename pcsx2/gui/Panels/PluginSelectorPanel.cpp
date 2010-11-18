@@ -273,7 +273,10 @@ void SysExecEvent_ApplyPlugins::InvokeEvent()
 		// FIXME : We only actually have to save plugins here, except the recovery code
 		// in SysCoreThread isn't quite set up yet to handle that (I think...) --air
 
-		memSavingState( *(buffer.Reassign(new VmStateBuffer(L"StateBuffer_ApplyNewPlugins"))) ).FreezeAll();
+		memSavingState saveme( *(buffer.Reassign(new VmStateBuffer(L"StateBuffer_ApplyNewPlugins"))) );
+		
+		saveme.FreezeMainMemory();
+		saveme.FreezeAll();
 	}
 
 	ScopedCoreThreadClose closed_core;

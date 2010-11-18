@@ -79,22 +79,10 @@ void vuMemoryReserve::Reset()
 
 void SaveStateBase::vuMicroFreeze()
 {
-	FreezeTag( "vuMicro" );
-
-	pxAssume( VU0.Mem != NULL );
-	pxAssume( VU1.Mem != NULL );
+	FreezeTag( "vuMicroRegs" );
 
 	Freeze(VU0.ACC);
-
-	// Seemingly silly and pointless use of temp var:  GCC is unable to bind packed fields
-	// (appears to be a bug, tracked here: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=36566 ).
-	// Dereferencing outside the context of the function (via a temp var) seems to circumvent it. --air
-	
-	u32& temp_vu0_code = VU0.code;
-	Freeze(temp_vu0_code);
-
-	FreezeMem(VU0.Mem,   4*1024);
-	FreezeMem(VU0.Micro, 4*1024);
+	Freeze(VU0.code);
 
 	Freeze(VU0.VF);
 	Freeze(VU0.VI);
@@ -103,9 +91,6 @@ void SaveStateBase::vuMicroFreeze()
 
 	u32& temp_vu1_code = VU1.code;
 	Freeze(temp_vu1_code);
-
-	FreezeMem(VU1.Mem,   16*1024);
-	FreezeMem(VU1.Micro, 16*1024);
 
 	Freeze(VU1.VF);
 	Freeze(VU1.VI);

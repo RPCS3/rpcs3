@@ -257,7 +257,7 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	{
 		if ( biosFileSize < (int)fileOffset)
 		{
-			description += wxsFormat( L" %d%%", ((biosFileSize*100) / (int)fileOffset) );
+			description += pxsFmt( L" %d%%", ((biosFileSize*100) / (int)fileOffset) );
 			// we force users to have correct bioses,
 			// not that lame scph10000 of 513KB ;-)
 		}

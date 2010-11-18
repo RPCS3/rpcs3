@@ -39,7 +39,6 @@ enum FreezeSectionId
 	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
 	// but can be skipped if the savestate has only plugins.
 	FreezeId_Bios,
-	FreezeId_Memory,
 	FreezeId_Registers,
 	FreezeId_Plugin,
 
@@ -142,7 +141,9 @@ public:
 	// Loads or saves the entire emulation state.
 	// Note: The Cpu state must be reset, and plugins *open*, prior to Defrosting
 	// (loading) a state!
-	virtual void FreezeAll( bool freezeMemory=true );
+	virtual void FreezeAll();
+
+	void FreezeMainMemory();
 
 	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.
 	// For dynamically allocated pointers use FreezeMem instead.
@@ -173,7 +174,7 @@ public:
 	}
 
 	void WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname );
-	bool FreezeSection( bool freezeMem, int seek_section = FreezeId_NotSeeking );
+	bool FreezeSection( int seek_section = FreezeId_NotSeeking );
 
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
@@ -200,7 +201,6 @@ protected:
 	// Load/Save functions for the various components of our glorious emulator!
 
 	void FreezeBios();
-	void FreezeMainMemory();
 	void FreezeRegisters();
 
 	void rcntFreeze();
@@ -246,7 +246,7 @@ public:
 
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
-	void FreezeAll( bool freezeMemory );
+	void FreezeAll();
 
 	bool IsSaving() const { return true; }
 };
