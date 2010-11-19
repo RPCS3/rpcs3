@@ -502,6 +502,7 @@ void dmaVIF1()
 	{
 		vif1.dmamode = VIF_CHAIN_MODE;
 		vif1.done = false;
+		vif1.inprogress = 0;
 	}
 
 	if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);

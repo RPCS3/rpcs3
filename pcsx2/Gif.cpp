@@ -629,12 +629,6 @@ void gifMFIFOInterrupt()
     GIF_LOG("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
-	if((gifstate & GIF_STATE_EMPTY))
-	{
-		FireMFIFOEmpty();
-		if(!(gifstate & GIF_STATE_STALL)) return;
-	}
-
 	if (dmacRegs.ctrl.MFD != MFD_GIF)
 	{
 		DevCon.Warning("Not in GIF MFIFO mode! Stopping GIF MFIFO");
@@ -654,6 +648,12 @@ void gifMFIFOInterrupt()
 		GSTransferStatus.PTH3 = STOPPED_MODE;
 		gifRegs.stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs.stat.P1Q) gsPath1Interrupt();
+	}
+
+	if((gifstate & GIF_STATE_EMPTY))
+	{
+		FireMFIFOEmpty();
+		if(!(gifstate & GIF_STATE_STALL)) return;
 	}
 
 	if(CheckPaths(11) == false) return;

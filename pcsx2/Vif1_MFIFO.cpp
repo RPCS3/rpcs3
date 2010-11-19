@@ -248,11 +248,7 @@ void vifMFIFOInterrupt()
 	g_vifCycles = 0;
 	VIF_LOG("vif mfifo interrupt");
 
-	if(vif1.inprogress & 0x10)
-	{
-		FireMFIFOEmpty();
-		if(!(vif1.done && vif1ch.qwc == 0))return;
-	}
+	
 	if (dmacRegs.ctrl.MFD != MFD_VIF1)
 	{
 		DevCon.Warning("Not in VIF MFIFO mode! Stopping VIF MFIFO");
@@ -289,6 +285,11 @@ void vifMFIFOInterrupt()
 		vif1Regs.stat.VPS = VPS_IDLE;
 	}
 
+	if(vif1.inprogress & 0x10)
+	{
+		FireMFIFOEmpty();
+		if(!(vif1.done && vif1ch.qwc == 0) || !(vif1.irq && vif1.tag.size == 0))return;
+	}
 	if (vif1.irq && vif1.tag.size == 0)
 	{
 		SPR_LOG("VIF MFIFO Code Interrupt detected");
