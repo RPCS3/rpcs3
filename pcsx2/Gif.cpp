@@ -535,7 +535,7 @@ static __fi bool mfifoGIFchain()
 		gifch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{
 		bool ret = true;
-		if(gifch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge GIF");
+	//	if(gifch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge GIF");
 		if (!mfifoGIFrbTransfer()) ret = false;
 		if(QWCinGIFMFIFO(gifch.madr) == 0) gifstate |= GIF_STATE_EMPTY;
 		return ret;

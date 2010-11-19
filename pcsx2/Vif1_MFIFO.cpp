@@ -124,7 +124,7 @@ static __fi void mfifo_VIF1chain()
 	if (vif1ch.madr >= dmacRegs.rbor.ADDR &&
 	        vif1ch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{		
-		if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
+		//if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
 		mfifoVIF1rbTransfer();
 
 		if(QWCinVIFMFIFO(vif1ch.madr) == 0) vif1.inprogress |= 0x10;

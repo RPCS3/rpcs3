@@ -312,6 +312,7 @@ bool hwDmacSrcChain(DMACh& dma, int id)
 	switch (id)
 	{
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
+			dma.tadr += 16;
             // End the transfer.
 			return true;
 
