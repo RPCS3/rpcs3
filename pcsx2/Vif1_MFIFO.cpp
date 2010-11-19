@@ -98,7 +98,7 @@ static __fi bool mfifoVIF1rbTransfer()
 	else
 	{
 		SPR_LOG("Direct MFIFO");
-		vif1ch.madr = qwctag(vif1ch.madr);
+		
 		/* it doesn't, so just transfer 'qwc*4' words */
 		src = (u32*)PSM(vif1ch.madr);
 		if (src == NULL) return false;
@@ -124,9 +124,12 @@ static __fi void mfifo_VIF1chain()
 	if (vif1ch.madr >= dmacRegs.rbor.ADDR &&
 	        vif1ch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{		
-		//if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
+		if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
+		
+		vif1ch.madr = qwctag(vif1ch.madr);
 		mfifoVIF1rbTransfer();
-
+		vif1ch.tadr = qwctag(vif1ch.tadr);
+		vif1ch.madr = qwctag(vif1ch.madr);
 		if(QWCinVIFMFIFO(vif1ch.madr) == 0) vif1.inprogress |= 0x10;
 
 		//vifqwc -= startqwc - vif1ch.qwc;
@@ -209,7 +212,7 @@ void mfifoVIF1transfer(int qwc)
 			} //else vif1.vifstalled = false;
 			g_vifCycles += 2;
 		}
-
+		
 		vif1.irqoffset = 0;
 
         vif1ch.unsafeTransfer(ptag);
@@ -231,6 +234,8 @@ void mfifoVIF1transfer(int qwc)
 
 		
 		if(vif1ch.qwc > 0) 	vif1.inprogress |= 1;
+
+		vif1ch.tadr = qwctag(vif1ch.tadr);
 
 		if(QWCinVIFMFIFO(vif1ch.tadr) == 0) vif1.inprogress |= 0x10;
 	}
