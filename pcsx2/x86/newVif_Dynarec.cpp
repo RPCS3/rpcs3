@@ -204,7 +204,7 @@ _vifT static __fi u8* dVifsetVUptr(uint cl, uint wl, bool isFill) {
 
 	u8* startmem = VU.Mem + (vif.tag.addr & (vuMemLimit-0x10));
 	u8* endmem = VU.Mem + vuMemLimit;
-	uint length = _vBlock.num * 16;
+	uint length = (_vBlock.num > 0) ? (_vBlock.num * 16) : 4096; // 0 = 256
 
 	if (!isFill) {
 		// Accounting for skipping mode: Subtract the last skip cycle, since the skipped part of the run
