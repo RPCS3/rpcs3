@@ -130,6 +130,14 @@ void hwDmacIrq(int n)
 	if(psHu16(DMAC_STAT+2) & (1<<n))cpuTestDMACInts();
 }
 
+void FireMFIFOEmpty()
+{
+	SPR_LOG("VIF MFIFO Data Empty");
+	hwDmacIrq(DMAC_MFIFO_EMPTY);
+
+	if (dmacRegs.ctrl.MFD == MFD_VIF1) vif1Regs.stat.FQC = 0;
+	else if (dmacRegs.ctrl.MFD == MFD_GIF) gifRegs.stat.FQC = 0;
+}
 // Write 'size' bytes to memory address 'addr' from 'data'.
 __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {
@@ -137,6 +145,7 @@ __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 	pxAssume((dmacRegs.rbor.ADDR & 15) == 0);
 	pxAssume((addr & 15) == 0);
 
+	if(qwc > ((dmacRegs.rbsr.RMSK + 16) >> 4)) DevCon.Warning("MFIFO Write bigger than MFIFO! QWC=%x FifoSize=%x", qwc, ((dmacRegs.rbsr.RMSK + 16) >> 4));
 	// DMAC Address resolution:  FIFO can be placed anywhere in the *physical* memory map
 	// for the PS2.  Its probably a serious error for a PS2 app to have the buffer cross
 	// valid/invalid page areas of ram, so realistically we only need to test the base address
@@ -162,13 +171,15 @@ __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 __ri bool hwDmacSrcChainWithStack(DMACh& dma, int id) {
 	switch (id) {
 		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
+			dma.tadr += 16;
             //End Transfer
 			return true;
 
 		case TAG_CNT: // CNT - Transfer QWC following the tag.
             // Set MADR to QW afer tag, and set TADR to QW following the data.
-			dma.madr = dma.tadr + 16;
-			dma.tadr = dma.madr + (dma.qwc << 4);
+			dma.tadr += 16;
+			dma.madr = dma.tadr;
+			//dma.tadr = dma.madr + (dma.qwc << 4);
 			return false;
 
 		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
@@ -267,6 +278,33 @@ __ri bool hwDmacSrcChainWithStack(DMACh& dma, int id) {
 	return false;
 }
 
+
+/********TADR NOTES***********
+From what i've gathered from testing tadr increment stuff (with CNT) is that we might not be 100% accurate in what
+increments it and what doesnt. Previously we presumed REFE and END didn't increment the tag, but SIF and IPU never
+liked this.
+
+From what i've deduced, REFE does in fact increment, but END doesn't, after much testing, i've concluded this is how
+we can standardize DMA chains, so i've modified the code to work like this.   The below function controls the increment
+of the TADR along with the MADR on VIF, GIF and SPR1 when using the CNT tag, the others don't use it yet, but they 
+can probably be modified to do so now.
+
+Reason for this:- Many games  (such as clock tower 3 and FFX Videos) watched the TADR to see when a transfer has finished, 
+so we need to simulate this wherever we can!  Even the FFX video gets corruption and tries to fire multiple DMA Kicks 
+if this doesnt happen, which was the reasoning for the hacked up SPR timing we had, that is no longer required.
+
+-Refraction
+******************************/
+
+void hwDmacSrcTadrInc(DMACh& dma)
+{
+	u16 tagid = (dma.chcr.TAG >> 12) & 0x7;
+
+	if(tagid == TAG_CNT)
+	{
+		dma.tadr = dma.madr;
+	}
+}
 bool hwDmacSrcChain(DMACh& dma, int id)
 {
 	u32 temp;
@@ -280,7 +318,7 @@ bool hwDmacSrcChain(DMACh& dma, int id)
 		case TAG_CNT: // CNT - Transfer QWC following the tag.
             // Set MADR to QW after the tag, and TADR to QW following the data.
 			dma.madr = dma.tadr + 16;
-			dma.tadr = dma.madr + (dma.qwc << 4);
+			dma.tadr = dma.madr;
 			return false;
 
 		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
@@ -305,3 +343,4 @@ bool hwDmacSrcChain(DMACh& dma, int id)
 
 	return false;
 }
+

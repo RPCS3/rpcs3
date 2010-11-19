@@ -42,21 +42,6 @@ void SaveStateBase::ipuDmaFreeze()
 	Freeze(IPU1Status);
 }
 
-static __fi bool ipuDmacPartialChain(tDMA_TAG tag)
-{
-	switch (tag.ID)
-	{
-		case TAG_REFE:  // refe
-			ipu1dma.tadr += 16;
-			return true;
-
-		case TAG_END: // end
-			ipu1dma.tadr = ipu1dma.madr;
-			return true;
-	}
-	return false;
-}
-
 static __fi void ipuDmacSrcChain()
 {
 	switch (IPU1Status.ChainMode)
@@ -82,7 +67,7 @@ static __fi void ipuDmacSrcChain()
 			break;
 
 		case TAG_END: // end
-			ipu1dma.tadr = ipu1dma.madr;
+			//ipu1dma.tadr = ipu1dma.madr;
 			IPU1Status.DMAFinished = true;
 			break;
 	}
@@ -136,15 +121,12 @@ static __fi int IPU1chain() {
 		ipu1dma.qwc -= qwc;
 		totalqwc += qwc;
 	}
+
+	//Update TADR etc
+	if(IPU1Status.DMAMode == DMA_MODE_CHAIN) ipuDmacSrcChain();
+
 	if( ipu1dma.qwc == 0)
-	{
-		//Update TADR etc
-		if(IPU1Status.DMAMode == DMA_MODE_CHAIN) ipuDmacSrcChain();
-		//If the transfer has finished or we have room in the FIFO, schedule to the interrupt code.
-		
-		//No data left
 		IPU1Status.InProgress = false;
-	} //If we still have data the commands should pull this across when need be.
 
 	return totalqwc;
 }
@@ -238,7 +220,8 @@ int IPU1dma()
 							break;
 
 						case TAG_CNT: // cnt
-							ipu1dma.madr = ipu1dma.tadr + 16;
+							ipu1dma.tadr += 16;
+							ipu1dma.madr = ipu1dma.tadr;
 							IPU_LOG("Tag should end on %x", ipu1dma.madr + ipu1dma.qwc * 16);
 							//ipu1dma.tadr = ipu1dma.madr + (ipu1dma.qwc * 16);
 							// Set the taddr to the next tag
@@ -262,7 +245,7 @@ int IPU1dma()
 						case TAG_END: // end
 							// do not change tadr
 							ipu1dma.madr = ipu1dma.tadr + 16;
-							ipu1dma.tadr += 16;
+							//ipu1dma.tadr += 16;
 							IPU_LOG("Tag should end on %x", ipu1dma.madr + ipu1dma.qwc * 16);
 
 							break;

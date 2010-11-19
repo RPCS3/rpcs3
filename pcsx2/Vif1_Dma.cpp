@@ -155,9 +155,9 @@ bool _VIF1chain()
 	        vif1ch.qwc, vif1ch.madr, vif1ch.tadr);
 
 	if (vif1.vifstalled)
-		return VIF1transfer(pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset);
+		return VIF1transfer(pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset, false);
 	else
-		return VIF1transfer(pMem, vif1ch.qwc * 4);
+		return VIF1transfer(pMem, vif1ch.qwc * 4, false);
 }
 
 __fi void vif1SetupTransfer()
@@ -490,7 +490,7 @@ void dmaVIF1()
 		if(vif1ch.chcr.MOD == CHAIN_MODE && vif1.dmamode != VIF_NORMAL_TO_MEM_MODE) 
 		{
 			vif1.dmamode = VIF_CHAIN_MODE;
-			DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
+			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
 			
 			if ((vif1ch.chcr.tag().ID == TAG_REFE) || (vif1ch.chcr.tag().ID == TAG_END))
 			{
