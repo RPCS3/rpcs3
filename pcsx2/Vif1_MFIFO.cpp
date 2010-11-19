@@ -285,11 +285,7 @@ void vifMFIFOInterrupt()
 		vif1Regs.stat.VPS = VPS_IDLE;
 	}
 
-	if(vif1.inprogress & 0x10)
-	{
-		FireMFIFOEmpty();
-		if(!(vif1.done && vif1ch.qwc == 0) || !(vif1.irq && vif1.tag.size == 0))return;
-	}
+	
 	if (vif1.irq && vif1.tag.size == 0)
 	{
 		SPR_LOG("VIF MFIFO Code Interrupt detected");
@@ -301,8 +297,14 @@ void vifMFIFOInterrupt()
 		{
 			/*vif1Regs.stat.FQC = 0; // FQC=0
 			vif1ch.chcr.STR = false;*/
-			if(vif1ch.qwc > 0 || !vif1.done) return;
+			if((vif1ch.qwc > 0 || !vif1.done) && !(vif1.inprogress & 0x10)) return;
 		}
+	}
+
+	if(vif1.inprogress & 0x10)
+	{
+		FireMFIFOEmpty();
+		if(!(vif1.done && vif1ch.qwc == 0))return;
 	}
 
 	if (vif1.done == false || vif1ch.qwc)
