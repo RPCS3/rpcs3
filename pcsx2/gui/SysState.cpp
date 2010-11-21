@@ -336,6 +336,15 @@ void StateCopy_SaveToSlot( uint num )
 {
 	const wxString file( SaveStateBase::GetFilename( num ) );
 
+	// Backup old Savestate if one exists.
+	if( wxFileExists( file ) && EmuConfig.BackupSavestate )
+	{
+		const wxString copy( SaveStateBase::GetFilename( num ) + pxsFmt( L".backup") );
+		
+		Console.Indent().WriteLn( Color_StrongGreen, L"Backing up existing state in slot %d.", num);
+		wxCopyFile( file, copy );
+	}
+
 	Console.WriteLn( Color_StrongGreen, "Saving savestate to slot %d...", num );
 	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", file.c_str() );
 

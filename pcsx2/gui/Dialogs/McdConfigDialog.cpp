@@ -44,6 +44,8 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 		)
 	);
 
+	m_check_SavestateBackup = new pxCheckBox( this, pxsFmt(_("Backup existing Savestate when creating a new one")) );
+
 	for( uint i=0; i<2; ++i )
 	{
 		m_check_Multitap[i] = new pxCheckBox( this, pxsFmt(_("Enable Multitap on Port %u"), i+1) );
@@ -60,23 +62,29 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 		
 	*this += 4;
 
+	*this += m_check_SavestateBackup;
+
+	*this += 4;
+
 	*this += m_check_Ejection;	
 }
 
 void Panels::McdConfigPanel_Toggles::Apply()
 {
-	g_Conf->EmuOptions.MultitapPort0_Enabled = m_check_Multitap[0]->GetValue();
-	g_Conf->EmuOptions.MultitapPort1_Enabled = m_check_Multitap[1]->GetValue();
+	g_Conf->EmuOptions.MultitapPort0_Enabled	= m_check_Multitap[0]->GetValue();
+	g_Conf->EmuOptions.MultitapPort1_Enabled	= m_check_Multitap[1]->GetValue();
 
-	g_Conf->EmuOptions.McdEnableEjection	= m_check_Ejection->GetValue();
+	g_Conf->EmuOptions.BackupSavestate			= m_check_SavestateBackup->GetValue();
+	g_Conf->EmuOptions.McdEnableEjection		= m_check_Ejection->GetValue();
 }
 
 void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 {
-	m_check_Multitap[0]	->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
-	m_check_Multitap[1]	->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
+	m_check_Multitap[0]		->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
+	m_check_Multitap[1]		->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	m_check_Ejection	->SetValue( g_Conf->EmuOptions.McdEnableEjection );
+	m_check_SavestateBackup ->SetValue( g_Conf->EmuOptions.BackupSavestate );
+	m_check_Ejection		->SetValue( g_Conf->EmuOptions.McdEnableEjection );
 }
 
 
