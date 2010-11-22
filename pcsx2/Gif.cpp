@@ -97,6 +97,13 @@ __fi void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
+	if (dmacRegs.ctrl.MFD == MFD_GIF)  // GIF MFIFO
+	{
+		//Console.WriteLn("GIF MFIFO");
+		gifMFIFOInterrupt();
+		return;
+	}	
+
 	if(SIGNAL_IMR_Pending == true)
 	{
 		//DevCon.Warning("Path 3 Paused");
@@ -432,14 +439,9 @@ void dmaGIF()
 		}
 	}
 
-	if (dmacRegs.ctrl.MFD == MFD_GIF)  // GIF MFIFO
-	{
-		//Console.WriteLn("GIF MFIFO");
-		gifMFIFOInterrupt();
-		return;
-	}	
+	
 
-	GIFdma();
+	gsInterrupt();
 }
 
 static u16 QWCinGIFMFIFO(u32 DrainADDR)
