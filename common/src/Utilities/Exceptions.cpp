@@ -292,7 +292,7 @@ wxString Exception::BadStream::FormatDisplayMessage() const
 	return retval;
 }
 
-void  Exception::BadStream::_formatDiagMsg( FastFormatUnicode& dest ) const
+void Exception::BadStream::_formatDiagMsg( FastFormatUnicode& dest ) const
 {
 	dest.Write( L"Path: " );
 	if (!StreamName.IsEmpty())

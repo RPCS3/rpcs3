@@ -43,26 +43,38 @@ void BaseCompressThread::ExecuteTaskInThread()
 	// TODO : Add an API to PersistentThread for this! :)  --air
 	//SetThreadPriority( THREAD_PRIORITY_BELOW_NORMAL );
 
-	if( !m_src_buffer ) return;
+	// Notes:
+	//  * Safeguard against corruption by writing to a temp file, and then copying the final
+	//    result over the original.
+
+	if( !m_src_list ) return;
 
 	SetPendingSave();
 
 	Yield( 3 );
 
-	static const int BlockSize = 0x64000;
-	int curidx = 0;
+	uint listlen = m_src_list->GetLength();
+	for( uint i=0; i<listlen; ++i )
+	{
+		const ArchiveEntry& entry = (*m_src_list)[i];
 
-	// Safeguard against corruption by writing to a temp file, and then
-	// copying the final result over the original:
+		wxArchiveOutputStream& woot = *(wxArchiveOutputStream*)m_gzfp->GetWxStreamBase();
+		woot.PutNextEntry( entry.GetFilename() );
 
-	do {
-		int thisBlockSize = std::min( BlockSize, m_src_buffer->GetSizeInBytes() - curidx );
-		m_gzfp->Write(m_src_buffer->GetPtr(curidx), thisBlockSize);
-		curidx += thisBlockSize;
-		Yield( 2 );
-	} while( curidx < m_src_buffer->GetSizeInBytes() );
+		static const uint BlockSize = 0x64000;
+		uint curidx = 0;
 
-	//m_gzfp->CloseEntry();
+		do {
+			uint thisBlockSize = std::min( BlockSize, entry.GetDataSize() - curidx );
+			m_gzfp->Write(m_src_list->GetPtr( entry.GetDataIndex() + curidx ), thisBlockSize);
+			curidx += thisBlockSize;
+			Yield( 2 );
+		} while( curidx < entry.GetDataSize() );
+		
+		woot.CloseEntry();
+	}
+
+
 	m_gzfp->Close();
 
 	if( !wxRenameFile( m_gzfp->GetStreamName(), m_final_filename, true ) )

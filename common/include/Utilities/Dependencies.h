@@ -26,6 +26,7 @@ class wxOutputStream;
 class wxFileOutputStream;
 class wxFFileOutputStream;
 
+class wxStreamBase;
 class wxInputStream;
 class wxFileInputStream;
 class wxFFileInputStream;

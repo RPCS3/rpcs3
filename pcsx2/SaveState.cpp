@@ -20,6 +20,7 @@
 
 #include "ps2/BiosTools.h"
 #include "COP0.h"
+#include "VUmicro.h"
 #include "Cache.h"
 #include "AppConfig.h"
 
@@ -163,6 +164,12 @@ void SaveStateBase::FreezeMainMemory()
 
 	FreezeMem(iopMem->Main, 	Ps2MemSize::IopRam);		// 2 MB main memory
 	FreezeMem(iopHw,			Ps2MemSize::IopHardware);	// hardware memory
+	
+	FreezeMem(vuRegs[0].Micro,	VU0_PROGSIZE);
+	FreezeMem(vuRegs[0].Mem,	VU0_MEMSIZE);
+
+	FreezeMem(vuRegs[1].Micro,	VU1_PROGSIZE);
+	FreezeMem(vuRegs[1].Mem,	VU1_MEMSIZE);
 }
 
 void SaveStateBase::FreezeRegisters()
@@ -378,16 +385,24 @@ void memSavingState::FreezeMem( void* data, int size )
 	m_idx += size;
 }
 
-void memSavingState::FreezeAll()
+void memSavingState::MakeRoomForData()
 {
 	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
 
 	m_memory->ChunkSize = ReallocThreshold;
 	m_memory->MakeRoomFor( m_idx + MemoryBaseAllocSize );
+}
 
+// Saving of state data to a memory buffer
+void memSavingState::FreezeAll()
+{
+	MakeRoomForData();
 	_parent::FreezeAll();
 }
 
+// --------------------------------------------------------------------------------------
+//  memLoadingState  (implementations)
+// --------------------------------------------------------------------------------------
 memLoadingState::memLoadingState( const SafeArray<u8>& load_from )
 	: SaveStateBase( const_cast<SafeArray<u8>&>(load_from) )
 {
@@ -400,7 +415,7 @@ memLoadingState::memLoadingState( const SafeArray<u8>* load_from )
 
 memLoadingState::~memLoadingState() throw() { }
 
-// Loading of state data
+// Loading of state data from a memory buffer...
 void memLoadingState::FreezeMem( void* data, int size )
 {
 	const u8* const src = m_memory->GetPtr(m_idx);

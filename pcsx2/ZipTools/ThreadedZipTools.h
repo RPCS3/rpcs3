@@ -22,6 +22,140 @@
 using namespace Threading;
 
 // --------------------------------------------------------------------------------------
+//  BaseArchiveEntry
+// --------------------------------------------------------------------------------------
+class BaseArchiveEntry
+{
+protected:
+	BaseArchiveEntry() {}
+	virtual ~BaseArchiveEntry() throw() {}
+
+public:
+	virtual wxString GetFilename() const=0;
+	virtual u8* GetDataPtr() const=0;
+	virtual uint GetDataSize() const=0;
+};
+
+
+// --------------------------------------------------------------------------------------
+//  ArchiveEntry
+// --------------------------------------------------------------------------------------
+class ArchiveEntry
+{
+protected:
+	wxString	m_filename;
+	uptr		m_dataidx;
+	size_t		m_datasize;
+	
+public:
+	ArchiveEntry( const wxString& filename=wxEmptyString )
+		: m_filename( filename )
+	{
+		m_dataidx	= 0;
+		m_datasize	= 0;
+	}
+
+	virtual ~ArchiveEntry() throw() {}
+
+	ArchiveEntry& SetDataIndex( uptr idx )
+	{
+		m_dataidx = idx;
+		return *this;
+	}
+
+	ArchiveEntry& SetDataSize( size_t size )
+	{
+		m_datasize = size;
+		return *this;
+	}
+
+	wxString GetFilename() const
+	{
+		return m_filename;
+	}
+	
+	uptr GetDataIndex() const
+	{
+		return m_dataidx;
+	}
+
+	uint GetDataSize() const
+	{
+		return m_datasize;
+	}
+};
+
+typedef SafeArray< u8 > ArchiveDataBuffer;
+
+// --------------------------------------------------------------------------------------
+//  ArchiveEntryList
+// --------------------------------------------------------------------------------------
+class ArchiveEntryList
+{
+	DeclareNoncopyableObject( ArchiveEntryList );
+
+protected:
+	std::vector<ArchiveEntry>		m_list;
+	ScopedPtr<ArchiveDataBuffer>	m_data;
+
+public:
+	ArchiveEntryList() {}
+
+	ArchiveEntryList( ArchiveDataBuffer* data )
+	{
+		m_data = data;
+	}
+
+	ArchiveEntryList( ScopedPtr<ArchiveDataBuffer>& data )
+	{
+		m_data = data.DetachPtr();
+	}
+
+	virtual ~ArchiveEntryList() throw() {}
+	
+	const VmStateBuffer* GetBuffer() const
+	{
+		return m_data;
+	}
+
+	VmStateBuffer* GetBuffer()
+	{
+		return m_data;
+	}
+	
+	u8* GetPtr( uint idx )
+	{
+		return &(*m_data)[idx];
+	}
+
+	const u8* GetPtr( uint idx ) const
+	{
+		return &(*m_data)[idx];
+	}
+
+	ArchiveEntryList& Add( const ArchiveEntry& src )
+	{
+		m_list.push_back( src );
+		return *this;
+	}
+	
+	size_t GetLength() const
+	{
+		return m_list.size();
+	}
+	
+	ArchiveEntry& operator[](uint idx)
+	{
+		return m_list[idx];
+	}
+	
+	const ArchiveEntry& operator[](uint idx) const
+	{
+		return m_list[idx];
+	}
+};
+
+// --------------------------------------------------------------------------------------
 //  BaseCompressThread
 // --------------------------------------------------------------------------------------
 class BaseCompressThread
@@ -30,33 +164,45 @@ class BaseCompressThread
 	typedef pxThread _parent;
 
 protected:
-	ScopedPtr< SafeArray< u8 > >	m_src_buffer;
-	ScopedPtr< pxStreamWriter >		m_gzfp;
+	ScopedPtr< ArchiveEntryList >	m_src_list;
+	ScopedPtr< pxOutputStream >		m_gzfp;
 	bool							m_PendingSaveFlag;
 	
 	wxString						m_final_filename;
 
-	BaseCompressThread( SafeArray<u8>* srcdata, pxStreamWriter* outarchive)
-		: m_src_buffer( srcdata )
+public:
+	virtual ~BaseCompressThread() throw();
+
+	BaseCompressThread& SetSource( ArchiveEntryList* srcdata )
 	{
-		m_gzfp				= outarchive;
-		m_PendingSaveFlag	= false;
+		m_src_list = srcdata;
+		return *this;
 	}
 
-	BaseCompressThread( SafeArray<u8>* srcdata, ScopedPtr<pxStreamWriter>& outarchive)
-		: m_src_buffer( srcdata )
+	BaseCompressThread& SetSource( ScopedPtr< ArchiveEntryList >& srcdata )
 	{
-		m_gzfp				= outarchive.DetachPtr();
-		m_PendingSaveFlag	= false;
+		m_src_list = srcdata.DetachPtr();
+		return *this;
 	}
-	
-	virtual ~BaseCompressThread() throw();
-	
-	void SetPendingSave();
-	void ExecuteTaskInThread();
-	void OnCleanupInThread();
-	
-public:
+
+	BaseCompressThread& SetOutStream( pxOutputStream* out )
+	{
+		m_gzfp = out;
+		return *this;
+	}
+
+	BaseCompressThread& SetOutStream( ScopedPtr< pxOutputStream >& out )
+	{
+		m_gzfp = out.DetachPtr();
+		return *this;
+	}
+
+	BaseCompressThread& SetFinishedPath( const wxString& path )
+	{
+		m_final_filename = path;
+		return *this;
+	}
+
 	wxString GetStreamName() const { return m_gzfp->GetStreamName(); }
 
 	BaseCompressThread& SetTargetFilename(const wxString& filename)
@@ -64,4 +210,14 @@ public:
 		m_final_filename = filename;
 		return *this;
 	}
+	
+protected:
+	BaseCompressThread()
+	{
+		m_PendingSaveFlag	= false;
+	}
+
+	void SetPendingSave();
+	void ExecuteTaskInThread();
+	void OnCleanupInThread();
 };

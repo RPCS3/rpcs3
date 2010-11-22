@@ -118,7 +118,7 @@ protected:
 
 	u32 m_version;		// version of the savestate being loaded.
 
-	int m_idx;		// current read/write index of the allocation
+	int m_idx;			// current read/write index of the allocation
 	int m_sectid;
 	int m_pid;
 
@@ -163,9 +163,19 @@ public:
 
 	void PrepBlock( int size );
 
+	uint GetCurrentPos() const
+	{
+		return m_idx;
+	}
+
 	u8* GetBlockPtr()
 	{
 		return m_memory->GetPtr(m_idx);
+	}
+	
+	u8* GetPtrEnd() const
+	{
+		return m_memory->GetPtrEnd();
 	}
 
 	void CommitBlock( int size )
@@ -244,7 +254,8 @@ public:
 	memSavingState( VmStateBuffer& save_to );
 	memSavingState( VmStateBuffer* save_to );
 
-	// Saving of state data to a memory buffer
+	void MakeRoomForData();
+
 	void FreezeMem( void* data, int size );
 	void FreezeAll();
 
@@ -259,7 +270,6 @@ public:
 	memLoadingState( const VmStateBuffer& load_from );
 	memLoadingState( const VmStateBuffer* load_from );
 
-	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
 	bool SeekToSection( PluginsEnum_t pid );
 

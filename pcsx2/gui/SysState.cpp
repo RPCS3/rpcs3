@@ -19,10 +19,11 @@
 
 #include "System/SysThreads.h"
 #include "SaveState.h"
+#include "VUmicro.h"
 
 #include "ZipTools/ThreadedZipTools.h"
 
-#include "wx/wfstream.h"
+#include <wx/wfstream.h>
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
 //static VmStateBuffer state_buffer( L"Public Savestate Buffer" );
@@ -31,52 +32,86 @@ static const wxChar* EntryFilename_StateVersion			= L"PCSX2 Savestate Version.id
 static const wxChar* EntryFilename_Screenshot			= L"Screenshot.jpg";
 static const wxChar* EntryFilename_InternalStructures	= L"PCSX2 Internal Structures.bin";
 
-class BaseSavestateEntry
-{
-public:
-	virtual const wxChar* GetFilename() const=0;
-	virtual void* GetDataPtr() const=0;
-	virtual uint GetDataSize() const=0;
-};
 
-class SavestateEntry_EmotionMemory : public BaseSavestateEntry
+// --------------------------------------------------------------------------------------
+//  SavestateEntry_* (EmotionMemory, IopMemory, etc)
+// --------------------------------------------------------------------------------------
+// Implementation Rationale:
+//  The address locations of PS2 virtual memory components is fully dynamic, so we need to
+//  resolve the pointers at the time they are requested (eeMem, iopMem, etc).  Thusly, we
+//  cannot use static struct member initializers -- we need virtual functions that compute
+//  and resolve the addresses on-demand instead... --air
+
+class SavestateEntry_EmotionMemory : public BaseArchiveEntry
 {
 public:
-	const wxChar* GetFilename() const	{ return L"eeMemory.bin"; }
-	void* GetDataPtr() const			{ return eeMem->Main; }
+	wxString GetFilename() const		{ return L"eeMemory.bin"; }
+	u8* GetDataPtr() const				{ return eeMem->Main; }
 	uint GetDataSize() const			{ return sizeof(eeMem->Main); }
 };
 
-class SavestateEntry_IopMemory : public BaseSavestateEntry
+class SavestateEntry_IopMemory : public BaseArchiveEntry
 {
 public:
-	const wxChar* GetFilename() const	{ return L"iopMemory.bin"; }
-	void* GetDataPtr() const			{ return iopMem->Main; }
+	wxString GetFilename() const		{ return L"iopMemory.bin"; }
+	u8* GetDataPtr() const				{ return iopMem->Main; }
 	uint GetDataSize() const			{ return sizeof(iopMem->Main); }
 };
 
-class SavestateEntry_HwRegs : public BaseSavestateEntry
+class SavestateEntry_HwRegs : public BaseArchiveEntry
 {
 public:
-	const wxChar* GetFilename() const	{ return L"eeHwRegs.bin"; }
-	void* GetDataPtr() const			{ return eeHw; }
+	wxString GetFilename() const		{ return L"eeHwRegs.bin"; }
+	u8* GetDataPtr() const				{ return eeHw; }
 	uint GetDataSize() const			{ return sizeof(eeHw); }
 };
 
-class SavestateEntry_IopHwRegs : public BaseSavestateEntry
+class SavestateEntry_IopHwRegs : public BaseArchiveEntry
 {
 public:
-	const wxChar* GetFilename() const	{ return L"iopHwRegs.bin"; }
-	void* GetDataPtr() const			{ return iopHw; }
+	wxString GetFilename() const		{ return L"iopHwRegs.bin"; }
+	u8* GetDataPtr() const				{ return iopHw; }
 	uint GetDataSize() const			{ return sizeof(iopHw); }
 };
 
-class SavestateEntry_Scratchpad : public BaseSavestateEntry
+class SavestateEntry_Scratchpad : public BaseArchiveEntry
 {
 public:
-	const wxChar* GetFilename() const	{ return L"Scratchpad.bin"; }
-	void* GetDataPtr() const			{ return eeMem->Scratch; }
+	wxString GetFilename() const		{ return L"Scratchpad.bin"; }
+	u8* GetDataPtr() const				{ return eeMem->Scratch; }
 	uint GetDataSize() const			{ return sizeof(eeMem->Scratch); }
+};
+
+class SavestateEntry_VU0mem : public BaseArchiveEntry
+{
+public:
+	wxString GetFilename() const		{ return L"vu0Memory.bin"; }
+	u8* GetDataPtr() const				{ return vuRegs[0].Mem; }
+	uint GetDataSize() const			{ return VU0_MEMSIZE; }
+};
+
+class SavestateEntry_VU1mem : public BaseArchiveEntry
+{
+public:
+	wxString GetFilename() const		{ return L"vu1Memory.bin"; }
+	u8* GetDataPtr() const				{ return vuRegs[1].Mem; }
+	uint GetDataSize() const			{ return VU1_MEMSIZE; }
+};
+
+class SavestateEntry_VU0prog : public BaseArchiveEntry
+{
+public:
+	wxString GetFilename() const		{ return L"vu0Programs.bin"; }
+	u8* GetDataPtr() const				{ return vuRegs[0].Micro; }
+	uint GetDataSize() const			{ return VU0_PROGSIZE; }
+};
+
+class SavestateEntry_VU1prog : public BaseArchiveEntry
+{
+public:
+	wxString GetFilename() const		{ return L"vu1Programs.bin"; }
+	u8* GetDataPtr() const				{ return vuRegs[1].Micro; }
+	uint GetDataSize() const			{ return VU1_PROGSIZE; }
 };
 
 // [TODO] : Add other components as files to the savestate gzip?
@@ -88,13 +123,17 @@ public:
 //  would not be useful).
 //
 
-static const BaseSavestateEntry* const SavestateEntries[] = 
+static const BaseArchiveEntry* const SavestateEntries[] = 
 {
 	new SavestateEntry_EmotionMemory,
 	new SavestateEntry_IopMemory,
 	new SavestateEntry_HwRegs,
 	new SavestateEntry_IopHwRegs,
 	new SavestateEntry_Scratchpad,
+	new SavestateEntry_VU0mem,
+	new SavestateEntry_VU1mem,
+	new SavestateEntry_VU0prog,
+	new SavestateEntry_VU1prog,
 };
 
 static const uint NumSavestateEntries = ArraySize(SavestateEntries);
@@ -107,7 +146,7 @@ static const uint NumSavestateEntries = ArraySize(SavestateEntries);
 //
 static Mutex mtx_CompressToDisk;
 
-static void CheckVersion( pxStreamReader& thr )
+static void CheckVersion( pxInputStream& thr )
 {
 	u32 savever;
 	thr.Read( savever );
@@ -135,16 +174,16 @@ static void CheckVersion( pxStreamReader& thr )
 class SysExecEvent_DownloadState : public SysExecEvent
 {
 protected:
-	VmStateBuffer*	m_dest_buffer;
+	ArchiveEntryList*	m_dest_list;
 
 public:
 	wxString GetEventName() const { return L"VM_Download"; }
 
 	virtual ~SysExecEvent_DownloadState() throw() {}
 	SysExecEvent_DownloadState* Clone() const { return new SysExecEvent_DownloadState( *this ); }
-	SysExecEvent_DownloadState( VmStateBuffer* dest=NULL )
+	SysExecEvent_DownloadState( ArchiveEntryList* dest_list=NULL )
 	{
-		m_dest_buffer = dest;
+		m_dest_list = dest_list;
 	}
 
 	bool IsCriticalEvent() const { return true; }
@@ -160,8 +199,24 @@ protected:
 				.SetDiagMsg(L"SysExecEvent_DownloadState: Cannot freeze/download an invalid VM state!")
 				.SetUserMsg(L"There is no active virtual machine state to download or save." );
 
-		memSavingState saveme( m_dest_buffer );
+		memSavingState saveme( m_dest_list->GetBuffer() );
+		ArchiveEntry internals( EntryFilename_InternalStructures );
+		internals.SetDataIndex( saveme.GetCurrentPos() );
+
 		saveme.FreezeAll();
+
+		internals.SetDataSize( saveme.GetCurrentPos() - internals.GetDataIndex() );
+		m_dest_list->Add( internals );
+		
+		for (uint i=0; i<NumSavestateEntries; ++i)
+		{
+			m_dest_list->Add( ArchiveEntry( SavestateEntries[i]->GetFilename() )
+				.SetDataIndex( saveme.GetCurrentPos() )
+				.SetDataSize( SavestateEntries[i]->GetDataSize() )
+			);
+
+			saveme.FreezeMem( SavestateEntries[i]->GetDataPtr(), SavestateEntries[i]->GetDataSize() );
+		}
 
 		UI_EnableStateActions();
 		paused_core.AllowResume();
@@ -180,14 +235,7 @@ protected:
 	ScopedLock		m_lock_Compress;
 
 public:
-	VmStateCompressThread( VmStateBuffer* srcdata, pxStreamWriter* outarchive )
-		: _parent( srcdata, outarchive )
-	{
-		m_lock_Compress.Assign(mtx_CompressToDisk);
-	}
-
-	VmStateCompressThread( ScopedPtr<VmStateBuffer>& srcdata, ScopedPtr<pxStreamWriter>& outarchive )
-		: _parent( srcdata, outarchive )
+	VmStateCompressThread()
 	{
 		m_lock_Compress.Assign(mtx_CompressToDisk);
 	}
@@ -216,7 +264,7 @@ protected:
 class SysExecEvent_ZipToDisk : public SysExecEvent
 {
 protected:
-	VmStateBuffer*		m_src_buffer;
+	ArchiveEntryList*	m_src_list;
 	wxString			m_filename;
 
 public:
@@ -228,16 +276,16 @@ public:
 
 	SysExecEvent_ZipToDisk* Clone() const { return new SysExecEvent_ZipToDisk( *this ); }
 
-	SysExecEvent_ZipToDisk( ScopedPtr<VmStateBuffer>& src, const wxString& filename )
+	SysExecEvent_ZipToDisk( ScopedPtr<ArchiveEntryList>& srclist, const wxString& filename )
 		: m_filename( filename )
 	{
-		m_src_buffer = src.DetachPtr();
+		m_src_list = srclist.DetachPtr();
 	}
 
-	SysExecEvent_ZipToDisk( VmStateBuffer* src, const wxString& filename )
+	SysExecEvent_ZipToDisk( ArchiveEntryList* srclist, const wxString& filename )
 		: m_filename( filename )
 	{
-		m_src_buffer = src;
+		m_src_list = srclist;
 	}
 
 	bool IsCriticalEvent() const { return true; }
@@ -246,6 +294,9 @@ public:
 protected:
 	void InvokeEvent()
 	{
+		// Provisionals for scoped cleanup, in case of exception:
+		ScopedPtr<ArchiveEntryList> elist( m_src_list );
+
 		wxString tempfile( m_filename + L".tmp" );
 
 		wxFFileOutputStream* woot = new wxFFileOutputStream(tempfile);
@@ -253,8 +304,8 @@ protected:
 			throw Exception::CannotCreateStream(tempfile);
 
 		// Write the version and screenshot:
-		ScopedPtr<pxStreamWriter> out( new pxStreamWriter(tempfile, new wxZipOutputStream(woot)) );
-		wxZipOutputStream* gzfp = (wxZipOutputStream*)out->GetBaseStream();
+		ScopedPtr<pxOutputStream> out( new pxOutputStream(tempfile, new wxZipOutputStream(woot)) );
+		wxZipOutputStream* gzfp = (wxZipOutputStream*)out->GetWxStreamBase();
 
 		{
 			wxZipEntry* vent = new wxZipEntry(EntryFilename_StateVersion);
@@ -277,16 +328,21 @@ protected:
 
 
 		//m_gzfp->PutNextEntry(EntryFilename_Screenshot);
-		//m_gzfp->Write();	
+		//m_gzfp->Write();
 		//m_gzfp->CloseEntry();
 
-		(new VmStateCompressThread( m_src_buffer, out ))->
-			SetTargetFilename(m_filename).Start();
+		(*new VmStateCompressThread())
+			.SetSource(m_src_list)
+			.SetOutStream(out)
+			.SetFinishedPath(m_filename)
+			.Start();
+
+		// No errors?  Release cleanup handlers:			
+		elist.DetachPtr();
 	}
 	
 	void CleanupEvent()
 	{
-		m_src_buffer = NULL;
 	}
 };
 
@@ -325,8 +381,7 @@ protected:
 		if (!woot->IsOk())
 			throw Exception::CannotCreateStream( m_filename ).SetDiagMsg(L"Cannot open file for reading.");
 
-
-		ScopedPtr<pxStreamReader> reader( new pxStreamReader(m_filename, new wxZipInputStream(woot)) );
+		ScopedPtr<pxInputStream> reader( new pxInputStream(m_filename, new wxZipInputStream(woot)) );
 		woot.DetachPtr();
 
 		if (!reader->IsOk())
@@ -336,7 +391,7 @@ protected:
 				.SetUserMsg(_("This savestate cannot be loaded because it is not a valid gzip archive.  It may have been created by an older unsupported version of PCSX2, or it may be corrupted."));
 		}
 
-		wxZipInputStream* gzreader = (wxZipInputStream*)reader->GetBaseStream();
+		wxZipInputStream* gzreader = (wxZipInputStream*)reader->GetWxStreamBase();
 
 		// look for version and screenshot information in the zip stream:
 
@@ -359,12 +414,14 @@ protected:
 				DevCon.WriteLn(L" ... found '%s'", EntryFilename_StateVersion);
 				foundVersion = true;
 				CheckVersion(*reader);
+				continue;
 			}
 
 			if (entry->GetName().CmpNoCase(EntryFilename_InternalStructures) == 0)
 			{
 				DevCon.WriteLn(L" ... found '%s'", EntryFilename_InternalStructures);
 				foundInternal = entry.DetachPtr();
+				continue;
 			}
 
 			// No point in finding screenshots when loading states -- the screenshots are
@@ -411,6 +468,7 @@ protected:
 		// *ALWAYS* start execution after the new savestate is loaded.
 
 		GetCoreThread().Pause();
+		SysClearExecutionCache();
 
 		for (uint i=0; i<NumSavestateEntries; ++i)
 		{
@@ -437,7 +495,6 @@ protected:
 		VmStateBuffer buffer( foundInternal->GetSize(), L"StateBuffer_UnzipFromDisk" );		// start with an 8 meg buffer to avoid frequent reallocation.
 		reader->Read( buffer.GetPtr(), foundInternal->GetSize() );
 
-		//GetCoreThread().UploadStateCopy( buffer );
 		memLoadingState( buffer ).FreezeAll();
 		GetCoreThread().Resume();	// force resume regardless of emulation state earlier.
 	}
@@ -451,9 +508,10 @@ void StateCopy_SaveToFile( const wxString& file )
 {
 	UI_DisableStateActions();
 
-	ScopedPtr<VmStateBuffer> zipbuf(new VmStateBuffer( L"Zippable Savestate" ));
-	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState( zipbuf ));
-	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk( zipbuf, file ));
+	ScopedPtr<ArchiveEntryList>	ziplist	(new ArchiveEntryList( new VmStateBuffer( L"Zippable Savestate" ) ));
+	
+	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState	( ziplist ));
+	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk		( ziplist, file ));
 }
 
 void StateCopy_LoadFromFile( const wxString& file )
