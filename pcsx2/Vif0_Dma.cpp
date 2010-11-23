@@ -107,17 +107,36 @@ __fi void vif0SetupTransfer()
 
 			if (vif0ch.chcr.TTE)
 			{
+				// Transfer dma tag if tte is set
+
 			    bool ret;
 
-				if (vif0.vifstalled)
-					ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset);  //Transfer Tag on stall
-				else
-					ret = VIF0transfer((u32*)ptag + 2, 2);  //Transfer Tag
+				static __aligned16 u128 masked_tag;
 
-				if ((ret == false) && vif0.irqoffset < 2)
+				masked_tag._u64[0] = 0;
+				masked_tag._u64[1] = *((u64*)ptag + 1);
+
+				VIF_LOG("\tVIF0 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
+
+				if (vif0.vifstalled)
+				{
+					ret = VIF0transfer((u32*)&masked_tag + vif0.irqoffset, 4 - vif0.irqoffset, true);  //Transfer Tag on stall
+					//ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset);  //Transfer Tag on stall
+				}
+				else
+				{
+					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
+					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
+					vif0.irqoffset = 2;
+					ret = VIF0transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
+					//ret = VIF0transfer((u32*)ptag + 2, 2);  //Transfer Tag
+				}
+				
+				if (!ret && vif0.irqoffset)
 				{
 					vif0.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
-					return;       //There has been an error or an interrupt
+					return;        //IRQ set by VIFTransfer
+					
 				}
 			}
 

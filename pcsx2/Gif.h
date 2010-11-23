@@ -26,7 +26,7 @@ enum gifstate_t
 
 enum GSTransferModes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
 {
-	PENDINGIMAGE_MODE = 0,
+	WAITING_MODE = 0,
 	IMAGE_MODE = 1,
 	TRANSFER_MODE = 2,
 	PENDINGSTOP_MODE = 3,

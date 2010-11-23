@@ -73,7 +73,6 @@
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -155,7 +154,6 @@
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
-				RandomizedBaseAddress="1"
 				SupportUnloadOfDelayLoadedDLL="false"
 				TargetMachine="1"
 			/>
@@ -242,7 +240,6 @@
 				ModuleDefinitionFile=".\Spu2-X.def"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
 				StripPrivateSymbols=""
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -326,7 +323,6 @@
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
 				ModuleDefinitionFile=".\Spu2-X.def"
-				RandomizedBaseAddress="1"
 				SupportUnloadOfDelayLoadedDLL="false"
 				ImportLibrary=".\Debug/spu2-x.lib"
 				TargetMachine="1"

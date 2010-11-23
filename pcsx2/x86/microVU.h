@@ -28,7 +28,6 @@ using namespace x86Emitter;
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 #include "x86emitter/x86emitter.h"
-#include "SamplProf.h"
 #include "microVU_Misc.h"
 #include "microVU_IR.h"
 
@@ -150,11 +149,8 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUdispCacheSize (0x1000) // Dispatcher Cache Size
-#define mVUcacheSize     ((index) ? (_1mb *  17) : (_1mb *  7)) // Initial Size (Excluding Safe-Zone)
-#define mVUcacheMaxSize  ((mVU->index) ? (_1mb * 100) : (_1mb * 50)) // Max Size allowed to grow to
-#define mVUcacheGrowBy	 ((mVU->index) ? (_1mb *  15) : (_1mb * 10)) // Grows by this amount
-#define mVUcacheSafeZone ((index) ? (_1mb *   3) : (_1mb *  3)) // Safe-Zone for last program
+static const uint mVUdispCacheSize = __pagesize;	// Dispatcher Cache Size (in bytes)
+static const uint mVUcacheSafeZone = 3;				// Safe-Zone for program recompilation (in megabytes)
 
 struct microVU {
 
@@ -171,11 +167,13 @@ struct microVU {
 	u32 progMemMask;	// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
-	microProgManager prog;		// Micro Program Data
+	microProgManager			prog;		// Micro Program Data
 	ScopedPtr<microRegAlloc>	regAlloc;	// Reg Alloc Class
 	ScopedPtr<AsciiFile>		logFile;	// Log File Pointer
 
-	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
+
+	RecompiledCodeReserve* cache_reserve;
+	u8*		cache;       // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		dispCache;	 // Dispatchers Cache (where startFunct and exitFunct are written to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs
 	u8*		exitFunct;	 // Ptr Function to the Exit  code for recompiled programs
@@ -224,7 +222,17 @@ struct microVU {
 		pxAssumeDev((prog.IRinfo.curPC & 1) == 0, "microVU recompiler: Upper instructions cannot have valid branch addresses.");
 		return (((prog.IRinfo.curPC + 4)  + (Imm11() * 2)) & progMemMask) * 4;
 	}
+	
+	microVU()
+	{
+		cacheSize		= 64;
+		cache			= NULL;
+		dispCache		= NULL;
+		startFunct		= NULL;
+		exitFunct		= NULL;
+	}
 
+	void reserveCache();
 	void init(uint vuIndex);
 	void reset();
 	void close();
@@ -239,7 +247,6 @@ int mVUdebugNow = 0;
 
 // Main Functions
 static void  mVUclear(mV, u32, u32);
-static void  mVUresizeCache(mV, u32);
 static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 _mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 

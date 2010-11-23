@@ -29,12 +29,13 @@
 #include "CDVDisoReader.h"
 
 static u8 *pbuffer;
-static u8 cdbuffer[2352] = {0};
+static u8 cdbuffer[CD_FRAMESIZE_RAW] = {0};
 static isoFile iso;
 
 static int psize, cdtype;
 
 static s32 layer1start = -1;
+static bool layer1searched = false;
 
 void CALLBACK ISOclose()
 {
@@ -77,7 +78,8 @@ s32 CALLBACK ISOopen(const char* pTitle)
 	}
 
 	layer1start = -1;
-
+	layer1searched = false;
+	
 	return 0;
 }
 
@@ -145,11 +147,14 @@ static bool testForPartitionInfo( const u8 (&tempbuffer)[CD_FRAMESIZE_RAW] )
 	);
 }
 
-static bool FindLayer1Start()
+static void FindLayer1Start()
 {
-	if( (layer1start != -1) || (iso.GetBlockCount() < 0x230540) ) return true;
+	if (iso.GetBlockCount() < 0x230540) return;
+	if (layer1start != -1) return;
+	if (layer1searched) return;
 
 	Console.WriteLn("isoFile: searching for layer1...");
+	layer1searched = true;
 
 	int blockresult = -1;
 
@@ -232,7 +237,6 @@ static bool FindLayer1Start()
 		if( layer1start == -1 )
 		{
 			Console.Error("isoFile: Couldn't find layer1... iso image is probably corrupt or incomplete.");
-			return false;
 		}
 		else
 		{
@@ -243,15 +247,14 @@ static bool FindLayer1Start()
 			layerCacheIni.Write( cacheKey, layer1start );
 		}
 	}
-	return true;
 }
 
 // Should return 0 if no error occurred, or -1 if layer detection FAILED.
 s32 CALLBACK ISOgetDualInfo(s32* dualType, u32* _layer1start)
 {
-	if( !FindLayer1Start() ) return -1;
+	FindLayer1Start();
 
-	if(layer1start<0)
+	if (layer1start < 0)
 	{
 		*dualType = 0;
 		*_layer1start = iso.GetBlockCount();

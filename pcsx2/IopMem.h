@@ -71,6 +71,7 @@ static __fi u8* iopPhysMem( u32 addr )
 #define psxHu16(mem)	(*(u16*)&iopHw[(mem) & 0xffff])
 #define psxHu32(mem)	(*(u32*)&iopHw[(mem) & 0xffff])
 
+extern void psxMemReserve();
 extern void psxMemAlloc();
 extern void psxMemReset();
 extern void psxMemShutdown();

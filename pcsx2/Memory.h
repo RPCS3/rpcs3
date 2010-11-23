@@ -24,6 +24,10 @@
 
 #include <xmmintrin.h>
 
+// [TODO] This *could* be replaced with an assignment operator on u128 that implicitly
+// uses _mm_store and _mm_load internally.  However, there are alignment concerns --
+// u128 is not alignment strict.  (we would need a u128 and u128a for types known to
+// be strictly 128-bit aligned).
 static __fi void CopyQWC( void* dest, const void* src )
 {
 	_mm_store_ps( (float*)dest, _mm_load_ps((const float*)src) );
@@ -103,9 +107,7 @@ static __fi void ZeroQWC( u128& dest )
 #define psSu64(mem)		(*(u64 *)&eeMem->Scratch[(mem) & 0x3fff])
 #define psSu128(mem)	(*(u128*)&eeMem->Scratch[(mem) & 0x3fff])
 
-extern void memAlloc();
-extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
-extern void memShutdown();
+
 extern void memSetKernelMode();
 //extern void memSetSupervisorMode();
 extern void memSetUserMode();

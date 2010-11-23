@@ -231,6 +231,7 @@ namespace Panels
 	protected:
 		pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
+		pxCheckBox*		m_check_SavestateBackup;
 
 	public:
 		McdConfigPanel_Toggles( wxWindow* parent );

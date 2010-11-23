@@ -154,7 +154,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		}
 		if(SIGNAL_IMR_Pending == true)
 		{
-			DevCon.Warning("Path 2 Paused (At start)");
+			//DevCon.Warning("Path 2 Paused (At start)");
 			vif1.vifstalled    = true;
 			return 0;
 		}

@@ -17,6 +17,10 @@
 
 #include "MemoryTypes.h"
 
+#include "Utilities/PageFaultSource.h"
+
+static const uptr VTLB_AllocUpperBounds = _1gb * 2;
+
 // Specialized function pointers for each read type
 typedef  mem8_t __fastcall vtlbMemR8FP(u32 addr);
 typedef  mem16_t __fastcall vtlbMemR16FP(u32 addr);
@@ -34,12 +38,10 @@ typedef  void __fastcall vtlbMemW128FP(u32 addr,const mem128_t* data);
 typedef u32 vtlbHandler;
 
 extern void vtlb_Core_Alloc();
-extern void vtlb_Core_Shutdown();
+extern void vtlb_Core_Free();
 extern void vtlb_Init();
 extern void vtlb_Reset();
 extern void vtlb_Term();
-extern u8* vtlb_malloc( uint size, uint align );
-extern void vtlb_free( void* pmem, uint size );
 
 
 extern vtlbHandler vtlb_NewHandler();
@@ -85,32 +87,121 @@ extern void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const );
 extern void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const );
 extern void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const );
 
+// --------------------------------------------------------------------------------------
+//  VtlbMemoryReserve
+// --------------------------------------------------------------------------------------
+class VtlbMemoryReserve
+{
+protected:
+	VirtualMemoryReserve	m_reserve;
+
+public:
+	VtlbMemoryReserve( const wxString& name, size_t size );
+	virtual ~VtlbMemoryReserve() throw()
+	{
+		m_reserve.Release();
+	}
+
+	virtual void Reserve( sptr hostptr );
+	virtual void Release();
+
+	virtual void Commit();
+	virtual void Reset();
+	virtual void Decommit();
+	virtual void SetBaseAddr( uptr newaddr );
+	
+	bool IsCommitted() const;
+};
+
+// --------------------------------------------------------------------------------------
+//  eeMemoryReserve
+// --------------------------------------------------------------------------------------
+class eeMemoryReserve : public VtlbMemoryReserve
+{
+	typedef VtlbMemoryReserve _parent;
+
+public:
+	eeMemoryReserve();
+	virtual ~eeMemoryReserve() throw()
+	{
+		Release();
+	}
+
+	void Reserve();
+	void Commit();
+	void Decommit();
+	void Reset();
+	void Release();
+};
+
+// --------------------------------------------------------------------------------------
+//  iopMemoryReserve
+// --------------------------------------------------------------------------------------
+class iopMemoryReserve : public VtlbMemoryReserve
+{
+	typedef VtlbMemoryReserve _parent;
+
+public:
+	iopMemoryReserve();
+	virtual ~iopMemoryReserve() throw()
+	{
+		Release();
+	}
+
+	void Reserve();
+	void Commit();
+	void Decommit();
+	void Release();
+	void Reset();
+};
+
+// --------------------------------------------------------------------------------------
+//  vuMemoryReserve
+// --------------------------------------------------------------------------------------
+class vuMemoryReserve : public VtlbMemoryReserve
+{
+	typedef VtlbMemoryReserve _parent;
+
+public:
+	vuMemoryReserve();
+	virtual ~vuMemoryReserve() throw()
+	{
+		Release();
+	}
+
+	virtual void Reserve();
+	virtual void Release();
+
+	void Reset();
+};
+
 namespace vtlb_private
 {
-	// Allocate enough memory for both EE and IOP memory space (IOP is roughly 2.5mb,
-	// so we alloc 4mb for now -- a little more than is needed).
-	static const uint VTLB_ALLOC_SIZE = sizeof(*eeMem) + (_1mb*4);
-
 	static const uint VTLB_PAGE_BITS = 12;
 	static const uint VTLB_PAGE_MASK = 4095;
 	static const uint VTLB_PAGE_SIZE = 4096;
 
-	static const uint VTLB_PMAP_ITEMS = 0x20000000 / VTLB_PAGE_SIZE;
-	static const uint VTLB_PMAP_SZ = 0x20000000;
-	static const uint VTLB_VMAP_ITEMS = 0x100000000ULL / VTLB_PAGE_SIZE;
+	static const uint VTLB_PMAP_SZ		= _1mb * 512;
+	static const uint VTLB_PMAP_ITEMS	= VTLB_PMAP_SZ / VTLB_PAGE_SIZE;
+	static const uint VTLB_VMAP_ITEMS	= _4gb / VTLB_PAGE_SIZE;
+
+	static const uint VTLB_HANDLER_ITEMS = 128;
 
 	struct MapData
 	{
-		u8* alloc_base;			//base of the memory array
-		int alloc_current;		//current base
-
-		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
-		s32 vmap[VTLB_VMAP_ITEMS];   //4MB
-
 		// first indexer -- 8/16/32/64/128 bit tables [values 0-4]
 		// second indexer -- read/write  [0 or 1]
 		// third indexer -- 128 possible handlers!
-		void* RWFT[5][2][128];
+		void* RWFT[5][2][VTLB_HANDLER_ITEMS];
+
+		s32 pmap[VTLB_PMAP_ITEMS];	//512KB
+
+		s32* vmap;				//4MB (allocated by vtlb_init)
+
+		MapData()
+		{
+			vmap = NULL;
+		}
 	};
 
 	extern __aligned(64) MapData vtlbdata;

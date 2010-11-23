@@ -359,11 +359,19 @@ void JALR()
 
 } } }		// end namespace R5900::Interpreter::OpcodeImpl
 
-////////////////////////////////////////////////////////
+
+// --------------------------------------------------------------------------------------
+//  R5900cpu/intCpu interface (implementations)
+// --------------------------------------------------------------------------------------
+
+static void intReserve()
+{
+	// fixme : detect cpu for use the optimize asm code
+}
 
 static void intAlloc()
 {
-	 // fixme : detect cpu for use the optimize asm code
+	// Nothing to do!
 }
 
 static void intReset()
@@ -419,19 +427,28 @@ static void intShutdown() {
 
 static void intThrowException( const BaseR5900Exception& ex )
 {
-	// No tricks needed; C++ stack unwnding shoud suffice for MSW and GCC alike.
+	// No tricks needed; C++ stack unwnding should suffice for MSW and GCC alike.
 	ex.Rethrow();
 }
 
 static void intThrowException( const BaseException& ex )
 {
-	// No tricks needed; C++ stack unwnding shoud suffice for MSW and GCC alike.
+	// No tricks needed; C++ stack unwnding should suffice for MSW and GCC alike.
 	ex.Rethrow();
+}
+
+static void intSetCacheReserve( uint reserveInMegs )
+{
+}
+
+static uint intGetCacheReserve()
+{
+	return 0;
 }
 
 R5900cpu intCpu =
 {
-	intAlloc,
+	intReserve,
 	intShutdown,
 
 	intReset,
@@ -442,4 +459,7 @@ R5900cpu intCpu =
 	intThrowException,
 	intThrowException,
 	intClear,
+
+	intGetCacheReserve,
+	intSetCacheReserve,
 };

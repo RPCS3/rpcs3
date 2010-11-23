@@ -109,6 +109,17 @@ void AppCoreThread::Reset()
 	_parent::Reset();
 }
 
+void AppCoreThread::ResetQuick()
+{
+	if( !GetSysExecutorThread().IsSelf() )
+	{
+		GetSysExecutorThread().PostEvent( SysExecEvent_InvokeCoreThreadMethod(&AppCoreThread::ResetQuick) );
+		return;
+	}
+
+	_parent::ResetQuick();
+}
+
 ExecutorThread& GetSysExecutorThread()
 {
 	return wxGetApp().SysExecutorThread;
@@ -183,7 +194,6 @@ void Pcsx2App::SysApplySettings()
 void AppCoreThread::OnResumeReady()
 {
 	wxGetApp().SysApplySettings();
-	wxGetApp().AllocateVM();
 	wxGetApp().PostMethod( AppSaveSettings );
 	_parent::OnResumeReady();
 }

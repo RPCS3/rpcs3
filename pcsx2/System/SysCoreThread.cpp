@@ -22,9 +22,9 @@
 #include "GS.h"
 #include "Elfheader.h"
 #include "Patch.h"
-#include "PageFaultSource.h"
 #include "SysThreads.h"
 
+#include "Utilities/PageFaultSource.h"
 #include "Utilities/TlsVariable.inl"
 
 #ifdef __WXMSW__
@@ -111,12 +111,23 @@ void SysCoreThread::SetElfOverride( const wxString& elf )
 	Hle_SetElfPath(elf.ToUTF8());
 }
 
-void SysCoreThread::Reset()
+// Performs a quicker reset that does not deallocate memory associated with PS2 virtual machines
+// or cpu providers (recompilers).
+void SysCoreThread::ResetQuick()
 {
 	Suspend();
+
 	m_resetVirtualMachine	= true;
 	m_hasActiveMachine		= false;
 }
+
+void SysCoreThread::Reset()
+{
+	ResetQuick();
+	GetVmMemory().DecommitAll();
+	SysClearExecutionCache();
+}
+
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
@@ -158,6 +169,8 @@ void SysCoreThread::_reset_stuff_as_needed()
 	// Note that resetting recompilers along with the virtual machine is only really needed
 	// because of changes to the TLB.  We don't actually support the TLB, however, so rec
 	// resets aren't in fact *needed* ... yet.  But might as well, no harm.  --air
+
+	GetVmMemory().CommitAll();
 
 	if( m_resetVirtualMachine || m_resetRecompilers || m_resetProfilers )
 	{

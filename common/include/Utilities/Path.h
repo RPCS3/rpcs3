@@ -102,6 +102,7 @@ public:
 
 	wxFileName operator+( const wxFileName& right ) const	{ return Combine( right ); }
 	wxDirName operator+( const wxDirName& right )  const	{ return Combine( right ); }
+	wxFileName operator+( const wxString& right )  const	{ return Combine( wxFileName(right) ); }
 
 	bool operator==(const wxDirName& filename) const { return SameAs(filename); }
 	bool operator!=(const wxDirName& filename) const { return !SameAs(filename); }
@@ -122,7 +123,7 @@ public:
 // --------------------------------------------------------------------------------------
 // Cross-platform utilities for manipulation of paths and filenames.  Mostly these fall
 // back on wxWidgets APIs internally, but are still helpful because some of wx's file stuff
-// has minor glitches, or requies sloppy wxFileName typecasting.
+// has minor glitches, or requires sloppy wxFileName typecasting.
 //
 namespace Path
 {

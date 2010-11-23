@@ -70,7 +70,6 @@
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\"
 				ModuleDefinitionFile=".\GSsoftdx.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -138,7 +137,6 @@
 				AdditionalLibraryDirectories="..\"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile=".\GSsoftdx.def"
-				RandomizedBaseAddress="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -218,7 +216,6 @@
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\"
 				ModuleDefinitionFile=".\GSsoftdx.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool

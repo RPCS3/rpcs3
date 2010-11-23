@@ -155,9 +155,9 @@ bool _VIF1chain()
 	        vif1ch.qwc, vif1ch.madr, vif1ch.tadr);
 
 	if (vif1.vifstalled)
-		return VIF1transfer(pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset);
+		return VIF1transfer(pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset, false);
 	else
-		return VIF1transfer(pMem, vif1ch.qwc * 4);
+		return VIF1transfer(pMem, vif1ch.qwc * 4, false);
 }
 
 __fi void vif1SetupTransfer()
@@ -205,7 +205,7 @@ __fi void vif1SetupTransfer()
 			    bool ret;
 
 				static __aligned16 u128 masked_tag;
-
+				
 				masked_tag._u64[0] = 0;
 				masked_tag._u64[1] = *((u64*)ptag + 1);
 
@@ -218,7 +218,10 @@ __fi void vif1SetupTransfer()
 				}
 				else
 				{
-					ret = VIF1transfer((u32*)&masked_tag, 4, true);  //Transfer Tag
+					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
+					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
+					vif1.irqoffset = 2;
+					ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
 					//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 				}
 				
@@ -226,8 +229,7 @@ __fi void vif1SetupTransfer()
 				{
 					vif1.inprogress &= ~1; //Better clear this so it has to do it again (Jak 1)
 					return;        //IRQ set by VIFTransfer
-					
-				} //else vif1.vifstalled = false;
+				}
 			}
 			vif1.irqoffset = 0;
 
@@ -488,7 +490,7 @@ void dmaVIF1()
 		if(vif1ch.chcr.MOD == CHAIN_MODE && vif1.dmamode != VIF_NORMAL_TO_MEM_MODE) 
 		{
 			vif1.dmamode = VIF_CHAIN_MODE;
-			DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
+			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
 			
 			if ((vif1ch.chcr.tag().ID == TAG_REFE) || (vif1ch.chcr.tag().ID == TAG_END))
 			{
@@ -500,6 +502,7 @@ void dmaVIF1()
 	{
 		vif1.dmamode = VIF_CHAIN_MODE;
 		vif1.done = false;
+		vif1.inprogress = 0;
 	}
 
 	if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);

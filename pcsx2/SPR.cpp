@@ -86,7 +86,7 @@ int  _SPR0chain()
 
 __fi void SPR0chain()
 {
-	CPU_INT(DMAC_FROM_SPR, _SPR0chain() / BIAS);
+	CPU_INT(DMAC_FROM_SPR, _SPR0chain() * BIAS);
 	spr0ch.qwc = 0;
 }
 
@@ -102,7 +102,7 @@ void _SPR0interleave()
 	SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr0ch.qwc, tqwc, sqwc, spr0ch.madr, spr0ch.sadr);
 
-	CPU_INT(DMAC_FROM_SPR, qwc / BIAS);
+	CPU_INT(DMAC_FROM_SPR, qwc * BIAS);
 
 	while (qwc > 0)
 	{
@@ -290,13 +290,14 @@ int  _SPR1chain()
 
 	SPR1transfer(pMem, spr1ch.qwc);
 	spr1ch.madr += spr1ch.qwc * 16;
+	hwDmacSrcTadrInc(spr1ch);
 
 	return (spr1ch.qwc);
 }
 
 __fi void SPR1chain()
 {
-	CPU_INT(DMAC_TO_SPR, _SPR1chain() / BIAS);
+	CPU_INT(DMAC_TO_SPR, _SPR1chain() * BIAS);
 	spr1ch.qwc = 0;
 }
 
@@ -310,7 +311,7 @@ void _SPR1interleave()
 	if (tqwc == 0) tqwc = qwc;
 	SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr1ch.qwc, tqwc, sqwc, spr1ch.madr, spr1ch.sadr);
-	CPU_INT(DMAC_TO_SPR, qwc / BIAS);
+	CPU_INT(DMAC_TO_SPR, qwc * BIAS);
 	while (qwc > 0)
 	{
 		spr1ch.qwc = std::min(tqwc, qwc);

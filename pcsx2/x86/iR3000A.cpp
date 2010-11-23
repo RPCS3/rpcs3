@@ -22,6 +22,7 @@
 
 #include "iR3000A.h"
 #include "BaseblockEx.h"
+#include "System/RecTypes.h"
 
 #include <time.h>
 
@@ -32,7 +33,6 @@
 #include "IopCommon.h"
 #include "iCore.h"
 
-#include "SamplProf.h"
 #include "NakedAsm.h"
 #include "AppConfig.h"
 
@@ -50,13 +50,8 @@ uptr psxhwLUT[0x10000];
 
 #define HWADDR(mem) (psxhwLUT[mem >> 16] + (mem))
 
-#define MAPBASE			0x48000000
-#define RECMEM_SIZE		(8*1024*1024)
+static RecompiledCodeReserve* recMem = NULL;
 
-// R3000A statics
-int psxreclog = 0;
-
-static u8 *recMem = NULL;	// the recompiled blocks will be here
 static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
 static BASEBLOCK *recROM1 = NULL;	// also here
@@ -130,7 +125,7 @@ static void recEventTest()
 //      stackframe setup code in this function)
 static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 {
-	pxFailDev( wxsFormat( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
+	pxFailDev( pxsFmt( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
 		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
 	);
 
@@ -346,7 +341,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 static void _DynGen_Dispatchers()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( iopRecDispatchers, PageAccess_ReadWrite() );
 
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,__pagesize>( iopRecDispatchers );
@@ -363,7 +358,7 @@ static void _DynGen_Dispatchers()
 	iopJITCompileInBlock	= _DynGen_JITCompileInBlock();
 	iopEnterRecompiledCode	= _DynGen_EnterRecompiledCode();
 
-	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( iopRecDispatchers, PageAccess_ExecOnly() );
 
 	recBlocks.SetJITCompile( iopJITCompile );
 }
@@ -754,23 +749,38 @@ void psxRecompileCodeConst3(R3000AFNPTR constcode, R3000AFNPTR_INFO constscode, 
 	noconstcode(0);
 }
 
+static uptr m_ConfiguredCacheReserve = 32;
 static u8* m_recBlockAlloc = NULL;
 
 static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK));
 
+static void recReserveCache()
+{
+	if (!recMem) recMem = new RecompiledCodeReserve(L"R3000A Recompiler Cache", _1mb * 2);
+	recMem->SetProfilerName("IOPrec");
+
+	while (!recMem->IsOk())
+	{
+		if (recMem->Reserve( m_ConfiguredCacheReserve * _1mb, HostMemoryMap::IOPrec ) != NULL) break;
+
+		// If it failed, then try again (if possible):
+		if (m_ConfiguredCacheReserve < 4) break;
+		m_ConfiguredCacheReserve /= 2;
+	}
+
+	recMem->ThrowIfNotOk();
+}
+
+static void recReserve()
+{
+	// IOP has no hardware requirements!
+
+	recReserveCache();
+}
+
 static void recAlloc()
 {
-	// Note: the VUrec depends on being able to grab an allocation below the 0x10000000 line,
-	// so we give the EErec an address above that to try first as it's basemem address, hence
-	// the 0x28000000 pick (0x20000000 is picked by the EE)
-
-	if( recMem == NULL )
-		recMem = (u8*)SysMmapEx( 0x28000000, RECMEM_SIZE, 0, "recAlloc(R3000a)" );
-
-	if( recMem == NULL )
-		throw Exception::OutOfMemory( L"R3000A recompiled code cache" );
-
 	// Goal: Allocate BASEBLOCKs for every possible branch target in IOP memory.
 	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
 	// always 4 bytes long).
@@ -795,24 +805,22 @@ static void recAlloc()
 	if( s_pInstCache == NULL )
 		throw Exception::OutOfMemory( L"R3000 InstCache." );
 
-	ProfilerRegisterSource( "IOP Rec", recMem, RECMEM_SIZE );
 	_DynGen_Dispatchers();
 }
 
 void recResetIOP()
 {
-	// calling recResetIOP without first calling recInit is bad mojo.
-	pxAssert( recMem != NULL );
-	pxAssert( m_recBlockAlloc != NULL );
-
 	DevCon.WriteLn( "iR3000A Recompiler reset." );
 
-	memset_8<0xcc,RECMEM_SIZE>( recMem );	// 0xcc is INT3
+	recAlloc();
+	recMem->Reset();
+
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::IopRam + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(psxRecLUT, 0, 0, 0, i, 0);
+
 	// IOP knows 64k pages, hence for the 0x10000's
 
 	// The bottom 2 bits of PC are always zero, so we <<14 to "compress"
@@ -820,6 +828,7 @@ void recResetIOP()
 
 	// We're only mapping 20 pages here in 4 places.
 	// 0x80 comes from : (Ps2MemSize::IopRam / 0x10000) * 4
+
 	for (int i=0; i<0x80; i++)
 	{
 		recLUT_SetPage(psxRecLUT, psxhwLUT, recRAM, 0x0000, i, i & 0x1f);
@@ -847,15 +856,14 @@ void recResetIOP()
 	recBlocks.Reset();
 	g_psxMaxRecMem = 0;
 
-	recPtr = recMem;
+	recPtr = *recMem;
 	psxbranch = 0;
 }
 
 static void recShutdown()
 {
-	ProfilerTerminateSource( "IOPRec" );
+	safe_delete( recMem );
 
-	SafeSysMunmap(recMem, RECMEM_SIZE);
 	safe_aligned_free( m_recBlockAlloc );
 
 	safe_free( s_pInstCache );
@@ -1202,8 +1210,9 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 	pxAssert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
-	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
+	if (recPtr >= (recMem->GetPtrEnd() - _64kb)) {
 		recResetIOP();
+	}
 
 	x86SetPtr( recPtr );
 	x86Align(16);
@@ -1390,12 +1399,12 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( x86Ptr < recMem+RECMEM_SIZE );
+	pxAssert( xGetPtr() < recMem->GetPtrEnd() );
 
-	pxAssert(x86Ptr - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr - recPtr;
+	pxAssert(xGetPtr() - recPtr < _64kb);
+	s_pCurBlockEx->x86size = xGetPtr() - recPtr;
 
-	recPtr = x86Ptr;
+	recPtr = xGetPtr();
 
 	pxAssert( (g_psxHasConstReg&g_psxFlushedConstReg) == g_psxHasConstReg );
 
@@ -1403,12 +1412,25 @@ StartRecomp:
 	s_pCurBlockEx = NULL;
 }
 
+static void recSetCacheReserve( uint reserveInMegs )
+{
+	m_ConfiguredCacheReserve = reserveInMegs;
+}
+
+static uint recGetCacheReserve()
+{
+	return m_ConfiguredCacheReserve;
+}
+
 R3000Acpu psxRec = {
-	recAlloc,
+	recReserve,
 	recResetIOP,
 	recExecute,
 	recExecuteBlock,
 	recClearIOP,
-	recShutdown
+	recShutdown,
+	
+	recGetCacheReserve,
+	recSetCacheReserve
 };
 

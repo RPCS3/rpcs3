@@ -298,15 +298,6 @@ static const bool doConstProp = 0; // Set to 1 to turn on vi15 const propagation
 
 //------------------------------------------------------------------
 
-// Cache Limit Check
-#define mVUcacheCheck(ptr, start, limit) {														  \
-	uptr diff = ptr - start;																	  \
-	if (diff >= limit) {																		  \
-		DevCon.WriteLn("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
-		mVUresizeCache(mVU, mVU->cacheSize + mVUcacheGrowBy);									  \
-	}																							  \
-}
-
 extern void mVUmergeRegs(const xmm& dest, const xmm& src,  int xyzw, bool modXYZW=false);
 extern void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW);
 extern void mVUloadReg(const xmm& reg, xAddressVoid ptr, int xyzw);

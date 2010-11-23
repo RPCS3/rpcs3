@@ -52,6 +52,7 @@ static __fi bool WriteEEtoFifo()
 	sif1.fifo.write((u32*)ptag, writeSize << 2);
 
 	sif1dma.madr += writeSize << 4;
+	hwDmacSrcTadrInc(sif1dma);
 	sif1.ee.cycles += writeSize;		// fixme : BIAS is factored in above
 	sif1dma.qwc -= writeSize;
 
@@ -114,8 +115,8 @@ static __fi bool ProcessEETag()
 			break;
 
 		case TAG_CNT:
-			sif1dma.madr = sif1dma.tadr + 16;
-			sif1dma.tadr = sif1dma.madr + (sif1dma.qwc << 4);
+			sif1dma.tadr += 16;
+			sif1dma.madr = sif1dma.tadr;
 			break;
 
 		case TAG_NEXT:
@@ -132,7 +133,7 @@ static __fi bool ProcessEETag()
 		case TAG_END:
 			sif1.ee.end = true;
 			sif1dma.madr = sif1dma.tadr + 16;
-			sif1dma.tadr = sif1dma.madr + (sif1dma.qwc << 4);
+			//sif1dma.tadr = sif1dma.madr + (sif1dma.qwc << 4);
 			break;
 
 		default:

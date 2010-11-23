@@ -273,25 +273,25 @@ extern void __fastcall eeloadReplaceOSDSYS();
 struct R5900cpu
 {
 	// Memory allocation function, for allocating virtual memory spaces needed by
-	// the emulator.  (ints/recs are free to allocate additional memory while running
-	// code, however any virtual mapped memory should always be allocated as soon
-	// as possible, to claim the memory before some plugin does..)
-	//
+	// the virtual cpu provider.  Allocating additional heap memory from this method is
+	// NOT recommended.  Heap allocations should be performed by Reset only.  This
+	// maximizes the likeliness of reservations claiming addresses they prefer.
+	// 
 	// Thread Affinity:
-	//   Can be called from any thread.  Execute status must be suspended or stopped
-	//   to prevent multi-thread race conditions.
+	//   Called from the main/UI thread only.  Cpu execution status is guaranteed to
+	//   be inactive.  No locking is necessary.
 	//
 	// Exception Throws:
+	//   HardwareDeficiency - The host machine's hardware does not support this CPU provider.
 	//   OutOfMemory - Not enough memory, or the memory areas required were already
 	//                 reserved.
-	//
-	void (*Allocate)();
+	void (*Reserve)();
 
-	// Deallocates ram allocated by Allocate and/or by runtime code execution.
+	// Deallocates ram allocated by Allocate, Reserve, and/or by runtime code execution.
 	//
 	// Thread Affinity:
-	//   Can be called from any thread.  Execute status must be suspended or stopped
-	//   to prevent multi-thread race conditions.
+	//   Called from the main/UI thread only.  Cpu execution status is guaranteed to
+	//   be inactive.  No locking is necessary.
 	//
 	// Exception Throws:  None.  This function is a destructor, and should not throw.
 	//
@@ -302,8 +302,10 @@ struct R5900cpu
 	// rely on the CPU/VM states almost entirely.
 	//
 	// Thread Affinity:
-	//   Can be called from any thread.  Execute status must be suspended or stopped
-	//   to prevent multi-thread race conditions.
+	//   Can be called from any thread.  CPU execution status is indeterminate and may
+	//   already be in progress.  Implementations should be sure to queue and execute
+	//   resets at the earliest safe convenience (typically right before recompiling a
+	//   new block of code, or after a vsync event).
 	//
 	// Exception Throws:  Emulator-defined.  Common exception types to expect are
 	//   OutOfMemory, Stream Exceptions
@@ -365,7 +367,7 @@ struct R5900cpu
 	// better off replaced with some generic API callbacks from VTLB block protection.
 	// Also: the calls from COP0's TLB remap code should be replaced with full recompiler
 	// resets, since TLB remaps affect more than just the code they contain (code that
-	// may reference the remaped blocks via memory loads/stores, for example).
+	// may reference the remapped blocks via memory loads/stores, for example).
 	//
 	// Thread Affinity Rule:
 	//   Can be called from any thread (namely for being called from debugging threads)
@@ -374,6 +376,9 @@ struct R5900cpu
 	//   doesn't matter if we're stripping it out soon. ;)
 	//
 	void (*Clear)(u32 Addr, u32 Size);
+	
+	uint (*GetCacheReserve)();
+	void (*SetCacheReserve)( uint reserveInMegs );
 };
 
 extern R5900cpu *Cpu;

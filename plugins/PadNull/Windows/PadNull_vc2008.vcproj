@@ -56,7 +56,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="PadNull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -123,7 +122,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="PadNull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool

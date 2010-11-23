@@ -54,7 +54,6 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="USBnull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -117,7 +116,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="USBnull.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -157,7 +155,7 @@
 			<File
 				RelativePath="..\USB.cpp"
 				>
-			</File> 
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

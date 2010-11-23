@@ -150,10 +150,14 @@ static void doBranch(s32 tar) {
 	iopEventTest();
 }
 
+static void intReserve() {
+}
+
 static void intAlloc() {
 }
 
 static void intReset() {
+	intAlloc();
 }
 
 static void intExecute() {
@@ -180,11 +184,23 @@ static void intClear(u32 Addr, u32 Size) {
 static void intShutdown() {
 }
 
+static void intSetCacheReserve( uint reserveInMegs )
+{
+}
+
+static uint intGetCacheReserve()
+{
+	return 0;
+}
+
 R3000Acpu psxInt = {
-	intAlloc,
+	intReserve,
 	intReset,
 	intExecute,
 	intExecuteBlock,
 	intClear,
-	intShutdown
+	intShutdown,
+
+	intGetCacheReserve,
+	intSetCacheReserve
 };

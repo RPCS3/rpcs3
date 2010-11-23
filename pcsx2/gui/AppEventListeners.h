@@ -163,6 +163,12 @@ public:
 // this second layer class to act as a bridge between the event system and the class's
 // handler implementations.
 //
+// Explained in detail: The class that wants to listen to shit will implement its expected
+// virtual overrides from the listener classes (OnCoreThread_Started, for example), and then
+// it adds an instance of the EventListenerHelper_CoreThread class to itself, instead of
+// *inheriting* from it.  Thusly, the Helper gets initialized when the class is created,
+// and when events are dispatched to the listener, it forwards the event to the main class.
+//  --air
 
 template< typename TypeToDispatchTo >
 class EventListenerHelper_CoreThread : public EventListener_CoreThread
@@ -212,9 +218,9 @@ public:
 protected:
 	void CorePlugins_OnLoaded()		{ Owner.OnCorePlugins_Loaded(); }
 	void CorePlugins_OnInit()		{ Owner.OnCorePlugins_Init(); }
-	void CorePlugins_OnOpening()		{ Owner.OnCorePlugins_Opening(); }
+	void CorePlugins_OnOpening()	{ Owner.OnCorePlugins_Opening(); }
 	void CorePlugins_OnOpened()		{ Owner.OnCorePlugins_Opened(); }
-	void CorePlugins_OnClosing()		{ Owner.OnCorePlugins_Closing(); }
+	void CorePlugins_OnClosing()	{ Owner.OnCorePlugins_Closing(); }
 	void CorePlugins_OnClosed()		{ Owner.OnCorePlugins_Closed(); }
 	void CorePlugins_OnShutdown()	{ Owner.OnCorePlugins_Shutdown(); }
 	void CorePlugins_OnUnloaded()	{ Owner.OnCorePlugins_Unloaded(); }
