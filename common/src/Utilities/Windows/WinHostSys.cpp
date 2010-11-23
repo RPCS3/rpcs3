@@ -19,6 +19,7 @@
 
 #include <winnt.h>
 
+
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
 	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )

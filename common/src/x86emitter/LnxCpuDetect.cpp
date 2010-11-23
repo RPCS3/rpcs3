@@ -21,19 +21,10 @@
 // FreeBSD/OsX need something far more complicated (apparently)
 void x86capabilities::CountLogicalCores()
 {
-	const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
-	if( numCPU > 0 )
-	{
-		//isMultiCore = numCPU > 1;
-		LogicalCores = numCPU;
-		PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-	}
-	else
-	{
-		// Indeterminate?
-		LogicalCores = 1;
-		PhysicalCores = 1;
-	}
+	// Note : GetCPUCount uses sysconf( _SC_NPROCESSORS_ONLN ) internally, which can return 1
+	// if sysconf info isn't available (a long standing linux bug).  There are no fallbacks or
+	// alternatives, apparently.
+	LogicalCores = wxThread::GetCPUCount();
 }
 
 bool CanEmitShit()

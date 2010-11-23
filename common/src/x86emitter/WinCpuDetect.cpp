@@ -37,10 +37,6 @@ void x86capabilities::CountLogicalCores()
 	}
 
 	LogicalCores = CPUs;
-	if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
-		LogicalCoresPerPhysicalCPU = CPUs;
-
-	PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 }
 
 bool _test_instruction( void* pfnCall )

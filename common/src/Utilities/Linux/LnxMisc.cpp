@@ -20,11 +20,18 @@
 #include <sys/time.h>
 #include <wx/utils.h>
 
-extern "C" __aligned16 u8 _xmm_backup[16*2];
-extern "C" __aligned16 u8 _mmx_backup[8*4];
+// Returns 0 on failure (not supported by the operating system).
+u64 GetPhysicalMemory()
+{
+	u64 pages		= 0;
 
-u8 _xmm_backup[16*2];
-u8 _mmx_backup[8*4];
+#ifdef _SC_PHYS_PAGES
+	pages = sysconf(_SC_PHYS_PAGES);
+#endif
+
+	return pages * getpagesize();
+}
+
 
 void InitCPUTicks()
 {

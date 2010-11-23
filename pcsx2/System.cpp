@@ -201,30 +201,37 @@ TraceLogFilters& SetTraceConfig()
 // This function should be called once during program execution.
 void SysLogMachineCaps()
 {
-	Console.WriteLn( Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Console.WriteLn( Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__,
+		PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 
 	Console.WriteLn( "Savestate version: 0x%x", g_SaveVersion);
 	Console.Newline();
 
-	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
+	Console.WriteLn( Color_StrongBlack, "Host Machine Init:" );
+
+	Console.Indent().WriteLn(
+		L"Operating System = %s\n"
+		L"Physical RAM     = %u MB",
+
+		GetOSVersionString().c_str(),
+		(u32)(GetPhysicalMemory() / _1mb)
+	);
 
 	u32 speed = x86caps.CalculateMHz();
 
 	Console.Indent().WriteLn(
-		L"CPU vendor name  =  %s\n"
-		L"FamilyID         =  %x\n"
-		L"x86Family        =  %s\n"
-		L"CPU speed        =  %d.%03d ghz\n"
-		L"Cores            =  %d physical [%d logical]\n"
+		L"CPU name         =  %s\n"
+		L"Vendor/Model     =  %s - stepping=%02X\n"
+		L"CPU speed        =  %u.%03u ghz (%u logical thread%s)\n"
 		L"x86PType         =  %s\n"
-		L"x86Flags         =  %8.8x %8.8x\n"
-		L"x86EFlags        =  %8.8x",
-			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
+		L"x86Flags         =  %08x %08x\n"
+		L"x86EFlags        =  %08x",
 			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
+			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
 			speed / 1000, speed % 1000,
-			x86caps.PhysicalCores, x86caps.LogicalCores,
+			x86caps.LogicalCores, (x86caps.LogicalCores==1) ? L"" : L"s",
 			x86caps.GetTypeName().c_str(),
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
