@@ -24,7 +24,7 @@
 
 #include "targets.h"
 #include "ZZoglVB.h"
-#include "ZZKick.h"
+#include "ZZoglDrawing.h"
 
 #ifdef USE_OLD_REGS
 

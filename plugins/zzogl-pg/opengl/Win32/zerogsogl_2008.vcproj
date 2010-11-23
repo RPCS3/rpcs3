@@ -365,7 +365,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZKick.cpp"
+				RelativePath="..\ZZoglDrawing.cpp"
 				>
 			</File>
 			<File
@@ -514,7 +514,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZKick.h"
+				RelativePath="..\ZZoglDrawing.h"
 				>
 			</File>
 			<File

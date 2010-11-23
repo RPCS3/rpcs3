@@ -26,7 +26,7 @@
 #include "GLWin.h"
 #include "ZZoglShaders.h"
 #include "ZZoglShoots.h"
-#include "ZZKick.h"
+#include "ZZoglDrawing.h"
 #include "rasterfont.h" // simple font
 #include <math.h>
 #include "ZZoglVB.h"

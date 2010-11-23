@@ -28,7 +28,7 @@
 #include "Regs.h"
 #else
 #include "ZZoglVB.h"
-#include "ZZKick.h"
+#include "ZZoglDrawing.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)

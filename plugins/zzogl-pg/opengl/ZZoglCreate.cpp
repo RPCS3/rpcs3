@@ -27,7 +27,7 @@
 
 #include "targets.h"
 #include "rasterfont.h" // simple font
-#include "ZZKick.h"
+#include "ZZoglDrawing.h"
 #include "ZZoglVB.h"
 
 // This include for windows resource file with Shaders
