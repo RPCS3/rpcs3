@@ -449,6 +449,39 @@ void recOR_(int info)
 
 EERECOMPILE_CODE0(OR, XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED);
 
+void recLogicalOp(int info, int op)
+{
+	pxAssert( !(info & PROCESS_EE_XMM) );
+
+	if( _Rd_ == _Rs_ || _Rd_ == _Rt_ ) {
+		int vreg = _Rd_ == _Rs_ ? _Rt_ : _Rs_;
+		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
+		MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+		LogicalOp32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX, op );
+		LogicalOp32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ] + 4, EDX, op );
+		if( op == 3 ) {
+			NOT32M((int)&cpuRegs.GPR.r[ _Rd_ ]);
+			NOT32M((int)&cpuRegs.GPR.r[ _Rd_ ]+4);
+		}
+
+	}
+	else {
+		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ]);
+		MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rs_ ] + 4 );
+		LogicalOp32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rt_ ], op );
+		LogicalOp32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rt_ ] + 4, op );
+
+		if( op == 3 ) {
+			NOT32R(EAX);
+			NOT32R(ECX);
+		}
+
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
+	}
+}
+
+
 //// XOR
 void recXOR_const()
 {
@@ -489,12 +522,13 @@ void recXOR_(int info)
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	int rs = _Rs_, rt = _Rt_;
+
 	if (_Rd_ == _Rt_)
 		rs = _Rt_, rt = _Rs_;
 
 	for (int i = 0; i < 2; i++) {
 		if (rs == rt) {
-			xMOV(ptr32[&cpuRegs.GPR.r[_Rd_]], 0);
+			xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[i]], 0);
 		} else if (_Rd_ == rs) {
 			xMOV(eax, ptr32[&cpuRegs.GPR.r[rt].UL[i]]);
 			xXOR(ptr32[&cpuRegs.GPR.r[_Rd_].UL[i]], eax);
