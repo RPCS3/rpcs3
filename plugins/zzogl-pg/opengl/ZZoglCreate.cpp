@@ -315,6 +315,7 @@ __forceinline bool LoadShadersFromDat()
 	return true;
 }
 
+#ifdef DEVBUILD
 __forceinline bool LoadShadersFromFX()
 {
 	// test if ps2hw.fx exists
@@ -347,6 +348,7 @@ __forceinline bool LoadShadersFromFX()
 	
 	return true;
 }
+#endif
 #endif
 
 
