@@ -21,11 +21,15 @@
 // It draw picture direct on screen, so here we have interlacing and frame skipping.
 
 //------------------ Includes
+ #include "Util.h"
 #include "ZZoglCRTC.h"
 #include "GLWin.h"
 #include "ZZoglShaders.h"
-
-using namespace ZeroGS;
+#include "ZZoglShoots.h"
+#include "ZZoglDrawing.h"
+#include "rasterfont.h" // simple font
+#include <math.h>
+#include "ZZoglVB.h"
 
 //------------------ Defines
 #if !defined(ZEROGS_DEVBUILD)
@@ -49,28 +53,33 @@ vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of
 extern bool g_bMakeSnapshot;
 extern string strSnapshot;
 
+extern void ExtWrite();
+extern void ZZDestroy();
+extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
+
+extern GLuint vboRect;
 // Adjusts vertex shader BitBltPos vector v to preserve aspect ratio. It used to emulate 4:3 or 16:9.
-void ZeroGS::AdjustTransToAspect(float4& v)
+void AdjustTransToAspect(float4& v)
 {
 	double temp;
 	float f;
 	const float mult = 1 / 32767.0f;
 
-	if (conf.width * nBackbufferHeight > conf.height * nBackbufferWidth) // limited by width
+	if (conf.width * GLWin.backbuffer.h > conf.height * GLWin.backbuffer.w) // limited by width
 	{
 		// change in ratio
-		f = ((float)nBackbufferWidth / (float)conf.width) / ((float)nBackbufferHeight / (float)conf.height);
+		f = ((float)GLWin.backbuffer.w / (float)conf.width) / ((float)GLWin.backbuffer.h / (float)conf.height);
 		v.y *= f;
 		v.w *= f;
 
 		// scanlines mess up when not aligned right
-		v.y += (1 - (float)modf(v.y * (float)nBackbufferHeight * 0.5f + 0.05f, &temp)) * 2.0f / (float)nBackbufferHeight;
-		v.w += (1 - (float)modf(v.w * (float)nBackbufferHeight * 0.5f + 0.05f, &temp)) * 2.0f / (float)nBackbufferHeight;
+		v.y += (1 - (float)modf(v.y * (float)GLWin.backbuffer.h * 0.5f + 0.05f, &temp)) * 2.0f / (float)GLWin.backbuffer.h;
+		v.w += (1 - (float)modf(v.w * (float)GLWin.backbuffer.h * 0.5f + 0.05f, &temp)) * 2.0f / (float)GLWin.backbuffer.h;
 	}
 	else // limited by height
 	{
-		f = ((float)nBackbufferHeight / (float)conf.height) / ((float)nBackbufferWidth / (float)conf.width);
-		f -= (float)modf(f * nBackbufferWidth, &temp) / (float)nBackbufferWidth;
+		f = ((float)GLWin.backbuffer.h / (float)conf.height) / ((float)GLWin.backbuffer.w / (float)conf.width);
+		f -= (float)modf(f * GLWin.backbuffer.w, &temp) / (float)GLWin.backbuffer.w;
 		v.x *= f;
 		v.z *= f;
 	}
@@ -139,9 +148,6 @@ inline void FrameSavingHelper()
 		}
 #endif
 	}
-
-//	g_SaveFrameNum = 0;
-//	g_bSaveFlushedFrame = 1;
 }
 
 // Function populated tex0Info[2] array
@@ -178,20 +184,11 @@ inline void FrameObtainDispinfo(u32 bInterlace, tex0Info* dispinfo)
 	}
 }
 
+extern bool s_bWriteDepth;
+
 // Something should be done before Renderering the picture.
 inline void RenderStartHelper(u32 bInterlace)
 {
-	// Crashes Final Fantasy X at startup if uncommented. --arcum42
-//#ifdef !defined(ZEROGS_DEVBUILD)
-//	if(g_nRealFrame < 80 ) {
-//		RenderCustom( min(1.0f, 2.0f - (float)g_nRealFrame / 40.0f) );
-//
-//	  if( g_nRealFrame == 79 )
-//		SAFE_RELEASE_TEX(ptexLogo);
-//	  return;
-//	}
-//#endif
-
 	if (conf.mrtdepth && pvs[8] == NULL)
 	{
 		conf.mrtdepth = 0;
@@ -214,7 +211,7 @@ inline void RenderStartHelper(u32 bInterlace)
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);   // switch to the backbuffer
 
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);
+	glViewport(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h);
 
 	// if interlace, only clear every other vsync
 	if (!bInterlace)
@@ -634,8 +631,23 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	DrawTriangleArray();
 }
 
+extern RasterFont* font_p;
+
+void DrawText(const char* pstr, int left, int top, u32 color)
+{
+	FUNCLOG
+	ZZshGLDisableProfile();
+
+	float4 v;
+	v.SetColor(color);
+	glColor3f(v.z, v.y, v.x);
+
+	font_p->printString(pstr, left * 2.0f / (float)GLWin.backbuffer.w - 1, 1 - top * 2.0f / (float)GLWin.backbuffer.h, 0);
+	ZZshGLEnableProfile();
+}
+
 // Put FPS counter on screen (not in window title)
-inline void AfterRenderDisplayFPS()
+inline void DisplayFPS()
 {
 	char str[64];
 	int left = 10, top = 15;
@@ -645,16 +657,8 @@ inline void AfterRenderDisplayFPS()
 	DrawText(str, left, top, 0xffc0ffff);
 }
 
-// Swapping buffers, so we could use another window
-inline void AfterRenderSwapBuffers()
-{
-	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
-
-	GLWin.SwapGLBuffers();
-}
-
 // SnapeShoot helper
-inline void AfterRenderMadeSnapshoot()
+inline void MakeSnapshot()
 {
 	
 	if (!g_bMakeSnapshot) return;
@@ -666,26 +670,40 @@ inline void AfterRenderMadeSnapshoot()
 	DrawText(str, left + 1, top + 1, 0xff000000);
 	DrawText(str, left, top, 0xffc0ffff);
 
-	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", nBackbufferWidth, -nBackbufferHeight, 0))  //(conf.options.tga_snap)?0:1) ) {
+	if (SaveRenderTarget(strSnapshot != "" ? strSnapshot.c_str() : "temp.jpg", GLWin.backbuffer.w, -GLWin.backbuffer.h, 0))  //(conf.options.tga_snap)?0:1) ) {
 	{
 		char str[255];
 		sprintf(str, "saved %s\n", strSnapshot.c_str());
-		AddMessage(str, 500);
+		ZZAddMessage(str, 500);
 	}
 	
-		g_bMakeSnapshot = false;
+	g_bMakeSnapshot = false;
 }
 
-// If needed reset
-inline void AfterRendererResizeWindow()
+// call to destroy video resources
+void ZZReset()
 {
-	Reset();
-	ChangeDeviceSize(s_nNewWidth, s_nNewHeight);
-	s_nNewWidth = s_nNewHeight = -1;
+	FUNCLOG
+	s_RTs.ResolveAll();
+	s_DepthRTs.ResolveAll();
+
+	vb[0].nCount = 0;
+	vb[1].nCount = 0;
+
+	memset(s_nResolveCounts, 0, sizeof(s_nResolveCounts));
+	s_nLastResolveReset = 0;
+
+	icurctx = -1;
+	g_vsprog = g_psprog = 0;
+
+	ZZGSStateReset();
+	ZZDestroy();
+	//clear_drawfn();
+	if (ZZKick != NULL) delete ZZKick;
 }
 
 // Put new values on statistic variable
-inline void AfterRenderCountStatistics()
+inline void CountStatistics()
 {
 	if (s_nWriteDepthCount > 0)
 	{
@@ -708,7 +726,6 @@ inline void AfterRenderCountStatistics()
 	if (g_nDepthUsed > 0) --g_nDepthUsed;
 
 	s_ClutResolve = 0;
-
 	g_nDepthUpdateCount = 0;
 }
 
@@ -717,31 +734,32 @@ inline void AfterRendererUnimportantJob()
 {
 	ProcessMessages();
 
-	if (g_bDisplayFPS) AfterRenderDisplayFPS();
+	if (g_bDisplayFPS) DisplayFPS();
 
-	AfterRenderSwapBuffers();
+	// Swapping buffers, so we could use another window
+	GLWin.SwapGLBuffers();
 
-	if (conf.wireframe())
-	{
-		// clear all targets
-		s_nWireframeCount = 1;
-	}
+	// clear all targets
+	if (conf.wireframe()) s_nWireframeCount = 1;
 
-	if (g_bMakeSnapshot)
-	{
-		AfterRenderMadeSnapshoot();
-		g_bMakeSnapshot = false;
-	}
+	if (g_bMakeSnapshot) MakeSnapshot();
 
 	CaptureFrame();
+	CountStatistics();
 
-	AfterRenderCountStatistics();
+	if (s_nNewWidth >= 0 && s_nNewHeight >= 0) 
+	{
+		// If needed reset
+		ZZReset();
 
-	if (s_nNewWidth >= 0 && s_nNewHeight >= 0)
-		AfterRendererResizeWindow();
+		ChangeDeviceSize(s_nNewWidth, s_nNewHeight);
+		s_nNewWidth = s_nNewHeight = -1;
+	}
 
 	maxmin = 608;
 }
+
+extern u32 s_uFramebuffer;
 
 // Swich Framebuffers
 inline void AfterRendererSwitchBackToTextures()
@@ -780,13 +798,13 @@ inline void AfterRendererAutoresetTargets()
 	if (conf.settings().auto_reset)
 	{
 		s_nResolveCounts[s_nCurResolveIndex] = s_nResolved;
-		s_nCurResolveIndex = (s_nCurResolveIndex + 1) % ARRAY_SIZE(s_nResolveCounts);
+		s_nCurResolveIndex = (s_nCurResolveIndex + 1) % ArraySize(s_nResolveCounts);
 
 		int total = 0;
 
-		for (int i = 0; i < ARRAY_SIZE(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
+		for (int i = 0; i < ArraySize(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
 
-		if (total / ARRAY_SIZE(s_nResolveCounts) > 3)
+		if (total / ArraySize(s_nResolveCounts) > 3)
 		{
 			if (s_nLastResolveReset > (int)(fFPS * 8))
 			{
@@ -823,7 +841,7 @@ inline void AfterRendererAutoresetTargets()
 
 int count = 0;
 // The main renderer function
-void ZeroGS::RenderCRTC(int interlace)
+void RenderCRTC(int interlace)
 {
 	if (FrameSkippingHelper()) return;
 

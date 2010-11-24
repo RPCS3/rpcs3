@@ -16,6 +16,7 @@
 
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
+#include <wx/thread.h>
 
 // Note: Apparently this solution is Linux/Solaris only.
 // FreeBSD/OsX need something far more complicated (apparently)

@@ -20,44 +20,7 @@
 #ifndef CRC_H_INCLUDED
 #define CRC_H_INCLUDED
 
-// don't change these values!
-enum GAME_HACK_OPTIONS
-{
-	GAME_TEXTURETARGS		=	0x00000001,
-	GAME_AUTORESET			=	0x00000002,
-	GAME_INTERLACE2X		=	0x00000004,
-	GAME_TEXAHACK			=	0x00000008, // apply texa to non textured polys
-	GAME_NOTARGETRESOLVE	=	0x00000010,
-	GAME_EXACTCOLOR			=	0x00000020,
-	GAME_NOCOLORCLAMP		=	0x00000040,
-	GAME_FFXHACK			=	0x00000080,
-	GAME_NOALPHAFAIL		=	0x00000100,
-	GAME_NODEPTHUPDATE		=	0x00000200,
-	GAME_QUICKRESOLVE1		=	0x00000400,
-	GAME_NOQUICKRESOLVE		=	0x00000800,
-	GAME_NOTARGETCLUT		=	0x00001000, // full 16 bit resolution
-	GAME_NOSTENCIL			=	0x00002000,
-	GAME_VSSHACKOFF			=	0x00004000, // vertical stripe syndrome
-	GAME_NODEPTHRESOLVE		=	0x00008000,
-	GAME_FULL16BITRES		=	0x00010000,
-	GAME_RESOLVEPROMOTED	=	0x00020000,
-	GAME_FASTUPDATE			=	0x00040000,
-	GAME_NOALPHATEST		=	0x00080000,
-	GAME_DISABLEMRTDEPTH	=	0x00100000,
-	GAME_32BITTARGS			=	0x00200000,
-	GAME_PATH3HACK			=	0x00400000,
-	GAME_DOPARALLELCTX		=	0x00800000, // tries to parallelize both contexts so that render calls are reduced (xenosaga)
-	// makes the game faster, but can be buggy
-	GAME_XENOSPECHACK		=	0x01000000, // xenosaga specularity hack (ignore any zmask=1 draws)
-	GAME_PARTIALPOINTERS	=	0x02000000, // whenver the texture or render target are small, tries to look for bigger ones to read from
-	GAME_PARTIALDEPTH		=	0x04000000, // tries to save depth targets as much as possible across height changes
-	GAME_REGETHACK			=	0x08000000, // some sort of weirdness in ReGet() code
-	GAME_GUSTHACK			=	0x10000000, // Needed for Gustgames fast update.
-	GAME_NOLOGZ				=	0x20000000, // Intended for linux -- not logarithmic Z.
-	GAME_AUTOSKIPDRAW		=	0x40000000 // Remove blur effect on some games
-};
-
-#define USEALPHATESTING (!(conf.settings().no_alpha_test))
+#include "ZZHacks.h"
 
 // CRC Information
 enum Title_Info
@@ -374,8 +337,10 @@ static const Game_Info crc_game_list[] =
 	//{0x4437F4B1, ArTonelico1, US, GAME_GUSTHACK, -1, -1},
 	{0xF95F37EE, ArTonelico2, US, GAME_GUSTHACK, -1, -1},
 	{0xF46142D3, ArTonelico2, JPUNDUB, GAME_GUSTHACK, -1, -1},
-	{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK , -1, -1},
-	{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
+	
+	// According to Zeydlitz, Mana Khemia no longer needs the Gust Hack.
+	//{0x77b0236f, ManaKhemia1, US, GAME_GUSTHACK, -1, -1},
+	//{0x433951e7, ManaKhemia2, US, GAME_GUSTHACK, -1, -1},
 	//{0xda11c6d4, AtelierJudie, JP, GAME_GUSTHACK, -1, -1},
 	//{0x3e72c085, AtelierLilie, JP, GAME_GUSTHACK, -1, -1},
 	//{0x6eac076b, AtelierViorate, JP, GAME_GUSTHACK, -1, -1},

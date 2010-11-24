@@ -21,12 +21,13 @@
 // VB stands for Visual Buffer, as I think
 
 //------------------- Includes
-#include "zerogs.h"
+ #include "Util.h"
 #include "targets.h"
+#include "ZZoglVB.h"
 #include "GS.h"
 #include "Mem.h"
+extern float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
 
-using namespace ZeroGS;
 // ----------------- Defines
 #define MINMAX_SHIFT	3
 
@@ -37,20 +38,20 @@ int maxmin = 608;
 // ----------------- Code
 
 // Constructor. Set width and height to 1
-ZeroGS::VB::VB()
+VB::VB()
 {
-	memset(this, 0, sizeof(ZeroGS::VB));
+	memset(this, 0, sizeof(VB));
 	tex0.tw = 1;
 	tex0.th = 1;
 }
 
 // Destructor
-ZeroGS::VB::~VB()
+VB::~VB()
 {
 	Destroy();
 }
 
-void ZeroGS::VB::Destroy()
+void VB::Destroy()
 {
 	_aligned_free(pBufferData);
 	pBufferData = NULL;
@@ -65,7 +66,7 @@ int ConstraintReason;
 // Return number of 64-pixels block, that guaranted could be hold in memory
 // from gsfb.fbp and tbp (textrure pase), zbuf.zbp (Z-buffer), frame.fbp
 // (previous frame).
-inline int ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos)
+inline int VB::FindMinimalMemoryConstrain(int tbp, int maxpos)
 {
 	int MinConstraint = maxpos;
 
@@ -116,7 +117,7 @@ inline int ZeroGS::VB::FindMinimalMemoryConstrain(int tbp, int maxpos)
 
 // Return number of 64 pizel words that could be placed in Z-Buffer
 // If no Z-buffer present return old constraint
-inline int ZeroGS::VB::FindZbufferMemoryConstrain(int tbp, int maxpos)
+inline int VB::FindZbufferMemoryConstrain(int tbp, int maxpos)
 {
 	int MinConstraint = maxpos;
 
@@ -147,7 +148,7 @@ inline int GetScissorY(int y)
 
 //There is several reasons to limit a height of frame: maximum buffer size, calculated size
 //from fbw and fbh and scissoring.
-inline int ZeroGS::VB::FindMinimalHeightConstrain(int maxpos)
+inline int VB::FindMinimalHeightConstrain(int maxpos)
 {
 	int MinConstraint = maxpos;
 
@@ -176,7 +177,7 @@ inline int ZeroGS::VB::FindMinimalHeightConstrain(int maxpos)
 
 // 32 bit frames have additional constraints to frame
 // maxpos was maximum length of frame at normal constraints
-inline void ZeroGS::VB::CheckFrame32bitRes(int maxpos)
+inline void VB::CheckFrame32bitRes(int maxpos)
 {
 	int fbh = frame.fbh;
 
@@ -215,7 +216,7 @@ inline void ZeroGS::VB::CheckFrame32bitRes(int maxpos)
 // 4Mb memory in 64 bit (4 bytes) words.
 // |------------------------|---------------------|----------|----------|---------------------|
 // 0                     gsfb.fbp               zbuff.zpb   tbp    frame.fbp              2^20/64
-inline int ZeroGS::VB::CheckFrameAddConstraints(int tbp)
+inline int VB::CheckFrameAddConstraints(int tbp)
 {
 	if (gsfb.fbw <= 0)
 	{
@@ -263,7 +264,7 @@ inline int ZeroGS::VB::CheckFrameAddConstraints(int tbp)
 
 // Check if after resizing new depth target is needed to be used.
 // it returns 2 if a new depth target is used. 
-inline int ZeroGS::VB::CheckFrameResolveDepth(int tbp)
+inline int VB::CheckFrameResolveDepth(int tbp)
 {
 	int result = 0;
 	CDepthTarget* pprevdepth = pdepth;
@@ -289,7 +290,7 @@ inline int ZeroGS::VB::CheckFrameResolveDepth(int tbp)
 
 // Check if after resizing, a new render target is needed to be used. Also perform deptarget check.
 // Returns 1 if only 1 render target is changed and 3 -- if both.
-inline int ZeroGS::VB::CheckFrameResolveRender(int tbp)
+inline int VB::CheckFrameResolveRender(int tbp)
 {
 	int result = 0;
 
@@ -335,7 +336,7 @@ inline int ZeroGS::VB::CheckFrameResolveRender(int tbp)
 }
 
 // After frame resetting, it is possible that 16 to 32 or 32 to 16 (color bits) conversion should be made.
-inline void ZeroGS::VB::CheckFrame16vs32Conversion()
+inline void VB::CheckFrame16vs32Conversion()
 {
 	if (prndr->status & CRenderTarget::TS_NeedConvert32)
 	{
@@ -355,9 +356,11 @@ inline void ZeroGS::VB::CheckFrame16vs32Conversion()
 	}
 }
 
+void SetContextTarget(int context);
+
 // A lot of times, the target is too big and overwrites the texture.
 // If tbp != 0, use it to bound.
-void ZeroGS::VB::CheckFrame(int tbp)
+void VB::CheckFrame(int tbp)
 {
 	GL_REPORT_ERRORD();
 	
@@ -388,7 +391,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 		if ((prndr != NULL) && (prndr->psm != gsfb.psm))
 		{
 			// behavior for dest alpha varies
-			ResetAlphaVariables();
+//			ResetAlphaVariables();
 		}
 
 		bChanged = CheckFrameResolveRender(tbp);
@@ -407,11 +410,11 @@ void ZeroGS::VB::CheckFrame(int tbp)
 }
 
 // This is the case, most easy to perform, when nothing was changed
-inline void ZeroGS::VB::FlushTexUnchangedClutDontUpdate()
+inline void VB::FlushTexUnchangedClutDontUpdate()
 {
 	if (ZZOglGet_cld_TexBits(uNextTex0Data[1]))
 	{
-		ZeroGS::texClutWrite(ictx);
+		texClutWrite(ictx);
 		// invalidate to make sure target didn't change!
 		bVarsTexSync = false;
 	}
@@ -419,9 +422,9 @@ inline void ZeroGS::VB::FlushTexUnchangedClutDontUpdate()
 
 // The second of easy branch. We does not change storage model, so we don't need to
 // update anything except texture itself
-inline void ZeroGS::VB::FlushTexClutDontUpdate()
+inline void VB::FlushTexClutDontUpdate()
 {
-	if (!ZZOglClutStorageUnchanged(uCurTex0Data, uNextTex0Data)) ZeroGS::Flush(ictx);
+	if (!ZZOglClutStorageUnchanged(uCurTex0Data, uNextTex0Data)) Flush(ictx);
 
 	// clut memory isn't going to be loaded so can ignore, but at least update CSA and CPSM!
 	uCurTex0Data[1] = (uCurTex0Data[1] & CPSM_CSA_NOTMASK) | (uNextTex0Data[1] & CPSM_CSA_BITMASK);
@@ -429,14 +432,14 @@ inline void ZeroGS::VB::FlushTexClutDontUpdate()
 	tex0.csa  = ZZOglGet_csa_TexBits(uNextTex0Data[1]);
 	tex0.cpsm = ZZOglGet_cpsm_TexBits(uNextTex0Data[1]);
 
-	ZeroGS::texClutWrite(ictx);
+	texClutWrite(ictx);
 
 	bVarsTexSync = false;
 }
 
 
 // Set texture variables after big change
-inline void ZeroGS::VB::FlushTexSetNewVars(u32 psm)
+inline void VB::FlushTexSetNewVars(u32 psm)
 {
 	tex0.tbp0 = ZZOglGet_tbp0_TexBits(uNextTex0Data[0]);
 	tex0.tbw  = ZZOglGet_tbw_TexBitsMult(uNextTex0Data[0]);
@@ -447,13 +450,13 @@ inline void ZeroGS::VB::FlushTexSetNewVars(u32 psm)
 	tex0.tcc  = ZZOglGet_tcc_TexBits(uNextTex0Data[1]);
 	tex0.tfx  = ZZOglGet_tfx_TexBits(uNextTex0Data[1]);
 
-	ZeroGS::fiTexWidth[ictx] = (1 / 16.0f) / tex0.tw;
-	ZeroGS::fiTexHeight[ictx] = (1 / 16.0f) / tex0.th;
+	fiTexWidth[ictx] = (1 / 16.0f) / tex0.tw;
+	fiTexHeight[ictx] = (1 / 16.0f) / tex0.th;
 }
 
 // Flush == draw on screen
 // This function made VB state consistant before real Flush.
-void ZeroGS::VB::FlushTexData()
+void VB::FlushTexData()
 {
 	GL_REPORT_ERRORD();
 	
@@ -487,7 +490,7 @@ void ZeroGS::VB::FlushTexData()
 		}
 
 		// Made the full update
-		ZeroGS::Flush(ictx);
+		Flush(ictx);
 
 		bVarsTexSync = false;
 		bTexConstsSync = false;
@@ -497,7 +500,7 @@ void ZeroGS::VB::FlushTexData()
 
 		FlushTexSetNewVars(psm);
 
-		if (PSMT_ISCLUT(psm)) ZeroGS::CluttingForFlushedTex(&tex0, uNextTex0Data[1], ictx) ;
+		if (PSMT_ISCLUT(psm)) CluttingForFlushedTex(&tex0, uNextTex0Data[1], ictx) ;
 		GL_REPORT_ERRORD();
 	}
 }

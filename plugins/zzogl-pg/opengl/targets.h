@@ -22,18 +22,214 @@
 
 #define TARGET_VIRTUAL_KEY 0x80000000
 #include "PS2Edefs.h"
+#include <list>
+#include <map>
+#include "GS.h"
+#include "ZZGl.h"
+//#include "ZZoglVB.h"
 
 #ifndef GL_TEXTURE_RECTANGLE
 #define GL_TEXTURE_RECTANGLE GL_TEXTURE_RECTANGLE_NV
 #endif
 
-namespace ZeroGS
+#define VB_BUFFERSIZE			   0x4000
+
+// all textures have this width
+extern int GPU_TEXWIDTH;
+extern float g_fiGPU_TEXWIDTH;
+#define MASKDIVISOR		0							// Used for decrement bitwise mask texture size if 1024 is too big
+#define GPU_TEXMASKWIDTH	(1024 >> MASKDIVISOR)	// bitwise mask width for region repeat mode
+
+// managers render-to-texture targets
+class CRenderTarget
 {
 
-inline u32 GetFrameKey(int fbp, int fbw, VB& curvb);
+	public:
+		CRenderTarget();
+		virtual ~CRenderTarget();
+
+		virtual bool Create(const frameInfo& frame);
+		virtual void Destroy();
+
+		// set the GPU_POSXY variable, scissor rect, and current render target
+		void SetTarget(int fbplocal, const Rect2& scissor, int context);
+		void SetViewport();
+
+		// copies/creates the feedback contents
+		inline void CreateFeedback()
+		{
+			if (ptexFeedback == 0 || !(status&TS_FeedbackReady))
+				_CreateFeedback();
+		}
+
+		virtual void Resolve();
+		virtual void Resolve(int startrange, int endrange); // resolves only in the allowed range
+		virtual void Update(int context, CRenderTarget* pdepth);
+		virtual void ConvertTo32(); // converts a psm==2 target, to a psm==0
+		virtual void ConvertTo16(); // converts a psm==0 target, to a psm==2
+
+		virtual bool IsDepth() { return false; }
+
+		void SetRenderTarget(int targ);
+
+		void* psys;   // system data used for comparison
+		u32 ptex;
+
+		int fbp, fbw, fbh, fbhCalc; // if fbp is negative, virtual target (not mapped to any real addr)
+		int start, end; // in bytes
+		u32 lastused;	// time stamp since last used
+		float4 vposxy;
+
+		u32 fbm;
+		u16 status;
+		u8 psm;
+		u8 resv0;
+		Rect scissorrect;
+
+		u8 created;	// Check for object destruction/creating for r201.
+
+		//int startresolve, endresolve;
+		u32 nUpdateTarg; // use this target to update the texture if non 0 (one time only)
+
+		// this is optionally used when feedback effects are used (render target is used as a texture when rendering to itself)
+		u32 ptexFeedback;
+
+		enum TargetStatus
+		{
+			TS_Resolved = 1,
+			TS_NeedUpdate = 2,
+			TS_Virtual = 4, // currently not mapped to memory
+			TS_FeedbackReady = 8, // feedback effect is ready and doesn't need to be updated
+			TS_NeedConvert32 = 16,
+			TS_NeedConvert16 = 32,
+		};
+		inline float4 DefaultBitBltPos();
+		inline float4 DefaultBitBltTex();
+
+	private:
+		void _CreateFeedback();
+		inline bool InitialiseDefaultTexture(u32 *p_ptr, int fbw, int fbh) ;
+};
+
+// manages zbuffers
+
+class CDepthTarget : public CRenderTarget
+{
+
+	public:
+		CDepthTarget();
+		virtual ~CDepthTarget();
+
+		virtual bool Create(const frameInfo& frame);
+		virtual void Destroy();
+
+		virtual void Resolve();
+		virtual void Resolve(int startrange, int endrange); // resolves only in the allowed range
+		virtual void Update(int context, CRenderTarget* prndr);
+
+		virtual bool IsDepth() { return true; }
+
+		void SetDepthStencilSurface();
+
+		u32 pdepth;		 // 24 bit, will contain the stencil buffer if possible
+		u32 pstencil;	   // if not 0, contains the stencil buffer
+		int icount;		 // internal counter
+};
+
+// manages contiguous chunks of memory (width is always 1024)
+
+class CMemoryTarget
+{
+	public:
+		struct TEXTURE
+		{
+			inline TEXTURE() : tex(0), memptr(NULL), ref(0) {}
+			inline ~TEXTURE() { glDeleteTextures(1, &tex); _aligned_free(memptr); }
+
+			u32 tex;
+			u8* memptr;  // GPU memory used for comparison
+			int ref;
+		};
+
+		inline CMemoryTarget() : ptex(NULL), starty(0), height(0), realy(0), realheight(0), usedstamp(0), psm(0), cpsm(0), channels(0), clearminy(0), clearmaxy(0), validatecount(0), clut(NULL), clutsize(0) {}
+
+		inline CMemoryTarget(const CMemoryTarget& r)
+		{
+			ptex = r.ptex;
+
+			if (ptex != NULL) ptex->ref++;
+
+			starty = r.starty;
+			height = r.height;
+			realy = r.realy;
+			realheight = r.realheight;
+			usedstamp = r.usedstamp;
+			psm = r.psm;
+			cpsm = r.cpsm;
+			clut = r.clut;
+			clearminy = r.clearminy;
+			clearmaxy = r.clearmaxy;
+			widthmult = r.widthmult;
+			texH = r.texH;
+			texW = r.texW;
+			channels = r.channels;
+			validatecount = r.validatecount;
+			fmt = r.fmt;
+		}
+
+		~CMemoryTarget() { Destroy(); }
+
+		inline void Destroy()
+		{
+			if (ptex != NULL && ptex->ref > 0)
+			{
+				if (--ptex->ref <= 0) delete ptex;
+			}
+
+			ptex = NULL;
+
+            _aligned_free(clut);
+            clut = NULL;
+            clutsize = 0;
+		}
+
+		// returns true if clut data is synced
+		bool ValidateClut(const tex0Info& tex0);
+		// returns true if tex data is synced
+		bool ValidateTex(const tex0Info& tex0, int starttex, int endtex, bool bDeleteBadTex);
+
+		// realy is offset in pixels from start of valid region
+		// so texture in memory is [realy,starty+height]
+		// valid texture is [starty,starty+height]
+		// offset in mem [starty-realy, height]
+		TEXTURE* ptex; // can be 16bit
+
+		int starty, height; // assert(starty >= realy)
+		int realy, realheight; // this is never touched once allocated
+		// realy is start pointer of data in 4M data block (start) and size (end-start).
+		
+		u32 usedstamp;
+		u8 psm, cpsm; // texture and clut format. For psm, only 16bit/32bit differentiation matters
+
+		u32 fmt;
+
+		int widthmult;	// Either 1 or 2.
+		int channels;	// The number of pixels per PSM format word. channels == PIXELS_PER_WORD(psm)
+						// This is the real drawing size in pixels of the texture in renderbuffer.
+		int texW;		// (realheight + widthmult - 1)/widthmult == realheight or [(realheight+1)/2]
+		int texH;		//  GPU_TEXWIDTH *widthmult * channels;			
+
+		int clearminy, clearmaxy;	// when maxy > 0, need to check for clearing
+
+		int validatecount; // count how many times has been validated, if too many, destroy
+
+		u8* clut;        // Clut texture data. Null otherwise
+        int clutsize;    // size of the clut array. 0 otherwise 
+};
+
+inline u32 GetFrameKey(int fbp, int fbw);
 
 // manages render targets
-
 class CRenderTargetMngr
 {
 	public:
@@ -54,22 +250,22 @@ class CRenderTargetMngr
 		bool isFound(const frameInfo& frame, MAPTARGETS::iterator& it, u32 opts, u32 key, int maxposheight);
 		
 		CRenderTarget* GetTarg(const frameInfo& frame, u32 Options, int maxposheight);
-		inline CRenderTarget* GetTarg(int fbp, int fbw, VB& curvb)
+		inline CRenderTarget* GetTarg(int fbp, int fbw)
 		{
-			MAPTARGETS::iterator it = mapTargets.find(GetFrameKey(fbp, fbw, curvb));
+			MAPTARGETS::iterator it = mapTargets.find(GetFrameKey(fbp, fbw));
 
 			/*			if (fbp == 0x3600 && fbw == 0x100 && it == mapTargets.end())
 						{
-							printf("%x\n", GetFrameKey(fbp, fbw, curvb)) ;
-							printf("%x %x\n", fbp, fbw);
+							ZZLog::Debug_Log("%x", GetFrameKey(fbp, fbw)) ;
+							ZZLog::Debug_Log("%x %x", fbp, fbw);
 							for(MAPTARGETS::iterator it1 = mapTargets.begin(); it1 != mapTargets.end(); ++it1)
-								printf ("\t %x %x %x %x\n", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
+								ZZLog::Debug_Log("\t %x %x %x %x", it1->second->fbw, it1->second->fbh, it1->second->psm, it1->second->fbp);
 						}*/
 			return it != mapTargets.end() ? it->second : NULL;
 		}
 
 		// gets all targets with a range
-		void GetTargs(int start, int end, list<ZeroGS::CRenderTarget*>& listTargets) const;
+		void GetTargs(int start, int end, list<CRenderTarget*>& listTargets) const;
 
 		// resolves all targets within a range
 		__forceinline void Resolve(int start, int end);
@@ -125,9 +321,9 @@ class CMemoryTargetMngr
 		CMemoryTargetMngr() : curstamp(0) {}
 
 		CMemoryTarget* GetMemoryTarget(const tex0Info& tex0, int forcevalidate); // pcbp is pointer to start of clut
-		CMemoryTarget* SearchExistTarget(int start, int end, int nClutOffset, int clutsize, const tex0Info& tex0, int forcevalidate);
+		CMemoryTarget* SearchExistTarget(int start, int end, int clutsize, const tex0Info& tex0, int forcevalidate);
 		CMemoryTarget* ClearedTargetsSearch(int fmt, int widthmult, int channels, int height);
-		int CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize, int nClutOffset);
+		int CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize);
 
 		void Destroy(); // destroy all targs
 
@@ -140,7 +336,7 @@ class CMemoryTargetMngr
 
 	private:
 		list<CMemoryTarget>::iterator DestroyTargetIter(list<CMemoryTarget>::iterator& it);
-		void GetClutVariables(int& nClutOffset, int& clutsize, const tex0Info& tex0);
+		void GetClutVariables(int& clutsize, const tex0Info& tex0);
 		void GetMemAddress(int& start, int& end,  const tex0Info& tex0);
 };
 
@@ -202,6 +398,7 @@ class CRangeManager
 extern CRenderTargetMngr s_RTs, s_DepthRTs;
 extern CBitwiseTextureMngr s_BitwiseTextures;
 extern CMemoryTargetMngr g_MemTargs;
+extern CRangeManager s_RangeMngr; // manages overwritten memory
 
 //extern u8 s_AAx, s_AAy;
 extern Point AA;
@@ -218,15 +415,15 @@ inline int RH(int tbh)
     return (tbh << AA.y);
 }
 
-/*	inline void CreateTargetsList(int start, int end, list<ZeroGS::CRenderTarget*>& listTargs) {
+/*	inline void CreateTargetsList(int start, int end, list<CRenderTarget*>& listTargs) {
 		s_DepthRTs.GetTargs(start, end, listTargs);
 		s_RTs.GetTargs(start, end, listTargs);
 	}*/
 
 // This pattern of functions is called 3 times, so I add creating Targets list into one.
-inline list<ZeroGS::CRenderTarget*> CreateTargetsList(int start, int end)
+inline list<CRenderTarget*> CreateTargetsList(int start, int end)
 {
-	list<ZeroGS::CRenderTarget*> listTargs;
+	list<CRenderTarget*> listTargs;
 	s_DepthRTs.GetTargs(start, end, listTargs);
 	s_RTs.GetTargs(start, end, listTargs);
 	return listTargs;
@@ -250,7 +447,7 @@ inline u32 GetFrameKey(CRenderTarget* frame)
 	return (((frame->fbw) << 16) | (frame->fbp));
 }
 
-inline u32 GetFrameKey(int fbp, int fbw,  VB& curvb)
+inline u32 GetFrameKey(int fbp, int fbw)
 {
 	return (((fbw) << 16) | (fbp));
 }
@@ -290,8 +487,6 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 	return GetFrameKeyDummy(frame->fbp, frame->fbw, frame->fbh, frame->psm);
 }
 
-} // End of namespace
-
 #include "Mem.h"
 
 static __forceinline void DrawTriangleArray()
@@ -314,6 +509,11 @@ static __forceinline void FBTexture(int attach, int id = 0)
 {
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + attach, GL_TEXTURE_RECTANGLE_NV, id, 0);
 	GL_REPORT_ERRORD();
+}
+
+static __forceinline void ResetRenderTarget(int index)
+{
+	FBTexture(index);
 }
 
 static __forceinline void Texture2D(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
@@ -388,5 +588,20 @@ static __forceinline void setRectWrap2(GLint type)
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, type);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, type);
 }
-	
+
+//------------------------ Inlines -------------------------
+
+// Calculate maximum height for target
+inline int get_maxheight(int fbp, int fbw, int psm)
+{
+	int ret;
+
+	if (fbw == 0) return 0;
+
+	ret = (((0x00100000 - 64 * fbp) / fbw) & ~0x1f);
+	if (PSMT_ISHALF(psm)) ret *= 2;
+
+	return ret;
+}
+
 #endif

@@ -27,7 +27,8 @@
 #define ZZOGL_FLUSH_HACK_H_INCLUDED
 
 #include "GS.h"
-#include "zerogs.h"
+#include "targets.h"
+#include "ZZoglVB.h"
 
 extern int g_SkipFlushFrame;
 
@@ -79,5 +80,5 @@ void GSC_StarOcean3(const GSFrameInfo& fi, int& skip);
 void GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip);
 void GSC_RadiataStories(const GSFrameInfo& fi, int& skip);
 
-extern bool IsBadFrame(ZeroGS::VB& curvb);
+extern bool IsBadFrame(VB& curvb);
 #endif

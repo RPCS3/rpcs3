@@ -39,7 +39,7 @@ set(SoundTouchSources
 	RateTransposer.cpp
 	SoundTouch.cpp
 	TDStretch.cpp
-	WavFile.cpp
+    # WavFile.cpp # directly include in spu2x
 	cpu_detect_x86_gcc.cpp
 	mmx_optimized.cpp
 	sse_optimized.cpp)
@@ -55,7 +55,7 @@ set(SoundTouchHeaders
 	STTypes.h
 	SoundTouch.h
 	TDStretch.h
-	WavFile.h
+    # WavFile.h # directly include in spu2x
 	cpu_detect.h)
 
 # add library

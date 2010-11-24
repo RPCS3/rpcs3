@@ -155,6 +155,7 @@
     <ClCompile Include="..\x86.cpp" />
     <ClCompile Include="..\zerogs.cpp" />
     <ClCompile Include="..\zpipe.cpp" />
+    <ClCompile Include="..\ZZHacks.cpp" />
     <ClCompile Include="..\ZZKeyboard.cpp" />
     <ClCompile Include="..\ZZLog.cpp" />
     <ClCompile Include="..\ZZoglCreate.cpp" />
@@ -203,6 +204,7 @@
     <ClInclude Include="Win32.h" />
     <ClInclude Include="..\x86.h" />
     <ClInclude Include="..\ZZGl.h" />
+    <ClInclude Include="..\ZZHacks.h" />
     <ClInclude Include="..\ZZLog.h" />
     <ClInclude Include="..\zerogs.h" />
     <ClInclude Include="..\zerogsmath.h" />

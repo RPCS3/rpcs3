@@ -22,7 +22,6 @@
 
 #include <stdlib.h>
 
-#include "zerogs.h"
 #include "targets.h"
 
 #define INTERLACE_COUNT (bInterlace && interlace == (conf.interlace))
@@ -36,7 +35,6 @@ extern int s_frameskipping;
 extern float fFPS;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
 
-//extern u32 g_SaveFrameNum;
 extern int s_nWriteDepthCount;
 extern int s_nWireframeCount;
 extern int s_nWriteDestAlphaTest;
@@ -56,14 +54,14 @@ extern int g_nDepthUsed; // ffx2 pal movies
 
 extern u32 s_ptexInterlace;		 // holds interlace fields
 
-namespace ZeroGS
-{
 extern int s_nNewWidth, s_nNewHeight;
 
 extern CRangeManager s_RangeMngr; // manages overwritten memory
 extern void FlushTransferRanges(const tex0Info* ptex);
 extern void ProcessMessages();
 void AdjustTransToAspect(float4& v);
+
+void ZZGSStateReset();
 
 // Interlace texture is lazy 1*(height) array of 1 and 0.
 // If its height (named s_nInterlaceTexWidth here) is hanging we must redo
@@ -94,7 +92,6 @@ inline u32 CreateInterlaceTex(int width)
 	GL_REPORT_ERRORD();
 
 	return s_ptexInterlace;
-}
 }
 
 #endif // ZZOGLCRTC_H_INCLUDED

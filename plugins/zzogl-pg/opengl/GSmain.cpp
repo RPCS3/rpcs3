@@ -16,29 +16,17 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
-#if defined(_WIN32)
-#include <windows.h>
-#include "Win32.h"
-#include <io.h>
-#endif
 
-#include <stdlib.h>
-#include <string>
+#include "Util.h"
+#include "GS.h"
+#include "Profile.h"
+#include "GLWin.h"
+#include "ZZoglFlushHack.h"
+
 
 using namespace std;
 
-#include "GS.h"
-#include "Mem.h"
-#include "Regs.h"
-#include "Profile.h"
-#include "GLWin.h"
-
-#include "zerogs.h"
-#include "targets.h"
-#include "ZZoglShaders.h"
-#include "ZZoglFlushHack.h"
-#include "ZZoglFlushHack.h"
+extern void SaveSnapshot(const char* filename);
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -46,7 +34,6 @@ using namespace std;
 
 GLWindow GLWin;
 GSinternal gs;
-char GStitle[256];
 GSconf conf;
 
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
@@ -59,7 +46,7 @@ float fFPS = 0;
 
 void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
-std::string s_strIniPath("inis/");  	// Air's new ini path (r2361)
+string s_strIniPath("inis/");  	// Air's new ini path (r2361)
 
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
@@ -85,20 +72,23 @@ char *libraryName	 = "ZZ Ogl PG ";
 
 extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;
 
-extern void ProcessEvents();
 extern void WriteAA();
 extern void WriteBilinear();
+extern void ZZDestroy();
+extern bool ZZCreate(int width, int height);
+extern void ZZGSStateReset();
+extern int ZZSave(s8* pbydata);
+extern bool ZZLoad(s8* pbydata);
+
+// switches the render target to the real target, flushes the current render targets and renders the real image
+extern void RenderCRTC(int interlace);
+
+#if defined(_WIN32) && defined(_DEBUG)
+HANDLE g_hCurrentThread = NULL;
+#endif
 
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
-
-#ifdef _WIN32
-HWND GShwnd = NULL;
-#endif
-
-u32 THR_KeyEvent = 0; // Value for key event processing between threads
-bool THR_bShift = false;
-
 
 u32 CALLBACK PS2EgetLibType()
 {
@@ -130,55 +120,6 @@ void CALLBACK GSsetLogDir(const char* dir)
 	ZZLog::SetDir(dir);
 }
 
-void ReportHacks(gameHacks hacks)
-{
-	if (hacks.texture_targs) ZZLog::WriteLn("'Texture targs' hack enabled.");
-	if (hacks.auto_reset) ZZLog::WriteLn("'Auto reset' hack enabled.");
-	if (hacks.interlace_2x) ZZLog::WriteLn("'Interlace 2x' hack enabled.");
-	if (hacks.texa) ZZLog::WriteLn("'Texa' hack enabled.");
-	if (hacks.no_target_resolve) ZZLog::WriteLn("'No target resolve' hack enabled.");
-	if (hacks.exact_color) ZZLog::WriteLn("Exact color hack enabled.");
-	if (hacks.no_color_clamp) ZZLog::WriteLn("'No color clamp' hack enabled.");
-	if (hacks.no_alpha_fail) ZZLog::WriteLn("'No alpha fail' hack enabled.");
-	if (hacks.no_depth_update) ZZLog::WriteLn("'No depth update' hack enabled.");
-	if (hacks.quick_resolve_1) ZZLog::WriteLn("'Quick resolve 1' enabled.");
-	if (hacks.no_quick_resolve) ZZLog::WriteLn("'No Quick resolve' hack enabled.");
-	if (hacks.no_target_clut) ZZLog::WriteLn("'No target clut' hack enabled.");
-	if (hacks.no_stencil) ZZLog::WriteLn("'No stencil' hack enabled.");
-	if (hacks.vss_hack_off) ZZLog::WriteLn("VSS hack enabled.");
-	if (hacks.no_depth_resolve) ZZLog::WriteLn("'No depth resolve' hack enabled.");
-	if (hacks.full_16_bit_res) ZZLog::WriteLn("'Full 16 bit resolution' hack enabled.");
-	if (hacks.resolve_promoted) ZZLog::WriteLn("'Resolve promoted' hack enabled.");
-	if (hacks.fast_update) ZZLog::WriteLn("'Fast update' hack enabled.");
-	if (hacks.no_alpha_test) ZZLog::WriteLn("'No alpha test' hack enabled.");
-	if (hacks.disable_mrt_depth) ZZLog::WriteLn("'Disable mrt depth' hack enabled.");
-	if (hacks.args_32_bit) ZZLog::WriteLn("'Args 32 bit' hack enabled.");
-	//if (hacks.path3) ZZLog::WriteLn("'Path3' hack enabled.");
-	if (hacks.parallel_context) ZZLog::WriteLn("'Parallel context' hack enabled.");
-	if (hacks.xenosaga_spec) ZZLog::WriteLn("'Xenosaga spec' hack enabled.");
-	if (hacks.partial_pointers) ZZLog::WriteLn("'Partial pointers' hack enabled.");
-	if (hacks.partial_depth) ZZLog::WriteLn("'Partial depth' hack enabled.");
-	if (hacks.reget) ZZLog::WriteLn("Reget hack enabled.");
-	if (hacks.gust) ZZLog::WriteLn("Gust hack enabled.");
-	if (hacks.no_logz) ZZLog::WriteLn("'No logz' hack enabled.");
-	if (hacks.automatic_skip_draw) ZZLog::WriteLn("'Automatic skip draw' hack enabled.");
-}
-
-void ListHacks()
-{
-	if ((!conf.disableHacks) && (conf.def_hacks._u32 != 0))
-	{
-		ZZLog::WriteLn("AutoEnabling these hacks:");
-		ReportHacks(conf.def_hacks);
-	}
-	
-	if (conf.hacks._u32 != 0)
-	{
-		ZZLog::WriteLn("You've manually enabled these hacks:");
-		ReportHacks(conf.hacks);
-	}
-}
-
 void CALLBACK GSsetGameCRC(int crc, int options)
 {
     // build a list of function pointer for GetSkipCount (SkipDraw)
@@ -190,10 +131,6 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		inited = true;
 
 		memset(GSC_list, 0, sizeof(GSC_list));
-		// for(int i = 0; i < NUMBER_OF_TITLES; i++)
-		// {
-		// 	GSC_list[i] = GSC_Null;
-		// }
 		
 		GSC_list[Okami] = GSC_Okami;
 		GSC_list[MetalGearSolid3] = GSC_MetalGearSolid3;
@@ -207,7 +144,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 		GSC_list[OnePieceGrandBattle] = GSC_OnePieceGrandBattle;
 		GSC_list[ICO] = GSC_ICO;
 		GSC_list[GT4] = GSC_GT4;
-		//FIXME GSC_list[WildArms4] = GSC_WildArms4;
+		GSC_list[WildArms4] = GSC_WildArms4;
 		GSC_list[WildArms5] = GSC_WildArms5;
 		GSC_list[Manhunt2] = GSC_Manhunt2;
 		GSC_list[CrashBandicootWoC] = GSC_CrashBandicootWoC;
@@ -296,12 +233,28 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 
 void CALLBACK GSreset()
 {
-	ZeroGS::GSReset();
+	FUNCLOG
+
+	memset(&gs, 0, sizeof(gs));
+
+	ZZGSStateReset();
+
+	gs.prac = 1;
+	prim = &gs._prim[0];
+	gs.imageTransfer = -1;
+	gs.q = 1;
 }
 
 void CALLBACK GSgifSoftReset(u32 mask)
 {
-	ZeroGS::GSSoftReset(mask);
+	FUNCLOG
+
+	if (mask & 1) memset(&gs.path[0], 0, sizeof(gs.path[0]));
+	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
+	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
+
+	gs.imageTransfer = -1;
+	gs.q = 1;
 }
 
 s32 CALLBACK GSinit()
@@ -318,59 +271,72 @@ s32 CALLBACK GSinit()
 	return 0;
 }
 
-#ifdef _WIN32
-
-#ifdef _DEBUG
-HANDLE g_hCurrentThread = NULL;
-#endif
-
-
-extern LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-extern HINSTANCE hInst;
-#endif
-
-
-s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
+__forceinline void InitMisc()
 {
-	FUNCLOG
-
-	bool err;
-
-	g_GSMultiThreaded = multithread;
-
-	ZZLog::WriteLn("Calling GSopen.");
-
-#ifdef _WIN32
-#ifdef _DEBUG
-	g_hCurrentThread = GetCurrentThread();
-#endif
-#endif
-
-	LoadConfig();
-	strcpy(GStitle, Title);
-	
-	err = GLWin.CreateWindow(pDsp);
-	if (!err)
-	{
-		ZZLog::Error_Log("Failed to create window. Exiting...");
-		return -1;
-	}
-
-	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
-	ZZLog::WriteLn("Creating ZZOgl window.");
-
-	if (!ZeroGS::Create(conf.width, conf.height)) return -1;
-
-	ZZLog::WriteLn("Initialization successful.");
-
 	WriteBilinear();
 	WriteAA();
 	InitProfile();
 	InitPath();
 	ResetRegs();
+}
+
+s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
+{
+	FUNCLOG
+
+	g_GSMultiThreaded = multithread;
+
+	ZZLog::WriteLn("Calling GSopen.");
+
+#if defined(_WIN32) && defined(_DEBUG)
+	g_hCurrentThread = GetCurrentThread();
+#endif
+
+	LoadConfig();
+	strcpy(GLWin.title, Title);
+
+	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+	
+	ZZLog::WriteLn("Creating ZZOgl window.");
+	if ((!GLWin.CreateWindow(pDsp)) || (!ZZCreate(conf.width, conf.height))) return -1;
+
+	ZZLog::WriteLn("Initialization successful.");
+
+	InitMisc();
 	ZZLog::GS_Log("GSopen finished.");
 	return 0;
 }
+
+#ifdef USE_GOPEN2
+s32 CALLBACK GSopen2( void* pDsp, INT32 flags )
+{
+	FUNCLOG
+
+	bool err;
+
+	g_GSMultiThreaded = true;
+
+	ZZLog::WriteLn("Calling GSopen2.");
+
+#if defined(_WIN32) && defined(_DEBUG)
+	g_hCurrentThread = GetCurrentThread();
+#endif
+
+	LoadConfig();
+	
+	ZZLog::GS_Log("Using %s:%d.%d.%d.", libraryName, zgsrevision, zgsbuild, zgsminor);
+
+	ZZLog::WriteLn("Capturing ZZOgl window.");
+	if ((!GLWin.GetWindow(pDsp)) || (!ZZCreate2(conf.width, conf.height))) return -1;// Needs to be added.
+
+	ZZLog::WriteLn("Initialization successful.");
+
+	InitMisc();
+	ZZLog::GS_Log("GSopen2 finished.");
+	return 0;
+	
+}
+#endif
 
 void CALLBACK GSshutdown()
 {
@@ -382,7 +348,7 @@ void CALLBACK GSclose()
 {
 	FUNCLOG
 
-	ZeroGS::Destroy(1);
+	ZZDestroy();
 	GLWin.CloseWindow();
 
 	SaveStateFile = NULL;
@@ -414,7 +380,7 @@ void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 
 	char str[255];
 	sprintf(str, "save state %d", newstate);
-	ZeroGS::AddMessage(str);
+	ZZAddMessage(str);
 	CurrentSavestate = newstate;
 
 	SaveStateFile = filename;
@@ -448,13 +414,12 @@ void CALLBACK GSmakeSnapshot(char *path)
 	if ((bmpfile = fopen(filename, "wb")) == NULL)
 	{
 		char strdir[255];
+		sprintf(strdir, "%s", path);
 
 #ifdef _WIN32
-		sprintf(strdir, "%s", path);
 		CreateDirectory(strdir, NULL);
 #else
-		sprintf(strdir, "mkdir %s", path);
-		system(strdir);
+		mkdir(path, 0777);
 #endif
 
 		if ((bmpfile = fopen(filename, "wb")) == NULL) return;
@@ -463,7 +428,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	fclose(bmpfile);
 
 	// get the bits
-	ZeroGS::SaveSnapshot(filename);
+	SaveSnapshot(filename);
 }
 
 // I'll probably move this somewhere else later, but it's got a ton of dependencies.
@@ -491,7 +456,7 @@ static __forceinline void SetGSTitle()
 			100*g_nFramesSkipped / g_nFrame,
 			g_nGenVars / (float)UPDATE_FRAMES, g_nTexVars / (float)UPDATE_FRAMES, g_nAlphaVars / (float)UPDATE_FRAMES,
 			g_nResolve / (float)UPDATE_FRAMES, (ppf&0xfffff) / (float)UPDATE_FRAMES,
-			ZeroGS::g_MemTargs.listTargets.size(), ZeroGS::g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
+			g_MemTargs.listTargets.size(), g_MemTargs.listClearedTargets.size(), g_TransferredToGPU >> 10);
 
 	//_snprintf(strtitle, 512, "%x %x", *(int*)(g_pbyGSMemory + 256 * 0x3e0c + 4), *(int*)(g_pbyGSMemory + 256 * 0x3e04 + 4));
 #endif
@@ -517,14 +482,14 @@ void CALLBACK GSvsync(int interlace)
 	g_nRealFrame++;
 
 	// !interlace? Hmmm... Fixme.
-	ZeroGS::RenderCRTC(!interlace);
+	RenderCRTC(!interlace);
 
-	ProcessEvents();
+	GLWin.ProcessEvents();
 
 	if (--nToNextUpdate <= 0)
 	{
 		u32 d = timeGetTime();
-		fFPS = UPDATE_FRAMES * 1000.0f / (float)max(d - dwTime, 1);
+		fFPS = UPDATE_FRAMES * 1000.0f / (float)max(d - dwTime, (u32)1);
 		dwTime = d;
 		g_nFrame += UPDATE_FRAMES;
 		SetGSTitle();
@@ -571,7 +536,7 @@ void CALLBACK GSreadFIFO(u64 *pMem)
 
 	//ZZLog::GS_Log("Calling GSreadFIFO.");
 
-	ZeroGS::TransferLocalHost((u32*)pMem, 1);
+	TransferLocalHost((u32*)pMem, 1);
 }
 
 void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
@@ -580,7 +545,7 @@ void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
 
 	//ZZLog::GS_Log("Calling GSreadFIFO2.");
 
-	ZeroGS::TransferLocalHost((u32*)pMem, qwc);
+	TransferLocalHost((u32*)pMem, qwc);
 }
 
 int CALLBACK GSsetupRecording(int start, void* pData)
@@ -588,9 +553,9 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	FUNCLOG
 
 	if (start)
-		ZeroGS::StartCapture();
+		StartCapture();
 	else
-		ZeroGS::StopCapture();
+		StopCapture();
 
 	return 1;
 }
@@ -602,16 +567,16 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 	switch (mode)
 	{
 		case FREEZE_LOAD:
-			if (!ZeroGS::Load(data->data)) ZZLog::Error_Log("GS: Bad load format!");
+			if (!ZZLoad(data->data)) ZZLog::Error_Log("GS: Bad load format!");
 			g_nRealFrame += 100;
 			break;
 
 		case FREEZE_SAVE:
-			ZeroGS::Save(data->data);
+			ZZSave(data->data);
 			break;
 
 		case FREEZE_SIZE:
-			data->size = ZeroGS::Save(NULL);
+			data->size = ZZSave(NULL);
 			break;
 
 		default:

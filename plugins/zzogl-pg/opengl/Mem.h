@@ -42,7 +42,7 @@ typedef u32(*_readPixel)(const void* pmem, int x, int y, u32 bp, u32 bw);
 typedef u32(*_readPixel_0)(const void* pmem, int x, int y, u32 bw);
 typedef int (*_TransferHostLocal)(const void* pbyMem, u32 nQWordSize);
 typedef void (*_TransferLocalHost)(void* pbyMem, u32 nQWordSize);
-typedef void (*_SwizzleBlock)(u8 *dst, u8 *src, int pitch, u32 WriteMask);
+typedef void (*_SwizzleBlock)(u8 *dst, u8 *src, int pitch);
 
 extern _getPixelAddress_0 getPixelFun_0[64];
 extern _writePixel_0 writePixelFun_0[64];

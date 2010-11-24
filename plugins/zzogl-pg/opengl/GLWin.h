@@ -29,6 +29,9 @@
 
 #undef CreateWindow	// Undo Windows.h global namespace pollution
 
+extern void SetDeviceSize(int nNewWidth, int nNewHeight);
+extern void OnFKey(int key, int shift);
+
 class GLWindow
 {
 	private:
@@ -51,6 +54,9 @@ class GLWindow
 		u32 width, height, depth;
 
 	public:
+		char title[256];
+		Size backbuffer;
+		
 		void SwapGLBuffers();
 		bool ReleaseContext();
 
@@ -63,8 +69,21 @@ class GLWindow
 		bool DisplayWindow(int _width, int _height);
 		void SetTitle(char *strtitle);
 		void ResizeCheck();
-};
+		void ProcessEvents();
+	
+		void UpdateWindowSize(int nNewWidth, int nNewHeight)
+		{
+			FUNCLOG
+			backbuffer.w = std::max(nNewWidth, 16);
+			backbuffer.h = std::max(nNewHeight, 16);
 
+			if (!(conf.fullscreen()))
+			{
+				conf.width = nNewWidth;
+				conf.height = nNewHeight;
+			}
+		}
+};
 
 extern GLWindow GLWin;
 

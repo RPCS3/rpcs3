@@ -23,15 +23,19 @@
 
 #ifdef _WIN32
 
+#include <io.h>
+#include "Utilities/RedtapeWindows.h"
+
 #include <windows.h>
 #include <windowsx.h>
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"
 
-extern HWND GShwnd;
-
 #else // linux basic definitions
+
+#include <sys/stat.h>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -41,9 +45,11 @@ extern HWND GShwnd;
 
 #endif
 
-
 #define GSdefs
-#include "PS2Edefs.h"
+
+//Pcsx2Defs is included in Dependencies.h.
+#include "Utilities/Dependencies.h"
+
 #include "CRC.h"
 #include "ZZLog.h"
 
@@ -53,74 +59,12 @@ extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include "ZZoglMath.h"
+#include "Profile.h"
 
-#include <vector>
-#include <string>
-#include <cstring>
+#include "Utilities/MemcpyFast.h"
+#define memcpy_amd memcpy_fast
 
 extern std::string s_strIniPath; // Air's new (r2361) new constant for ini file path
-
-#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
-#include <malloc.h>
-
-// declare linux equivalents
-static __forceinline void* pcsx2_aligned_malloc(size_t size, size_t align)
-{
-	assert(align < 0x10000);
-	char* p = (char*)malloc(size + align);
-	int off = 2 + align - ((int)(uptr)(p + 2) % align);
-
-	p += off;
-	*(u16*)(p - 2) = off;
-
-	return p;
-}
-
-static __forceinline void pcsx2_aligned_free(void* pmem)
-{
-	if (pmem != NULL)
-	{
-		char* p = (char*)pmem;
-		free(p - (int)*(u16*)(p - 2));
-	}
-}
-
-#define _aligned_malloc pcsx2_aligned_malloc
-#define _aligned_free pcsx2_aligned_free
-
-#endif
-
-#ifdef __LINUX__
-#include <sys/timeb.h>	// ftime(), struct timeb
-
-inline unsigned long timeGetTime()
-{
-	timeb t;
-	ftime(&t);
-
-	return (unsigned long)(t.time*1000 + t.millitm);
-}
-
-#include <time.h>
-inline unsigned long timeGetPreciseTime()
-{
-    timespec t;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
-
-    return t.tv_nsec;
-}
-
-struct RECT
-{
-	int left, top;
-	int right, bottom;
-};
-
-#endif
-
-#define max(a,b)			(((a) > (b)) ? (a) : (b))
-#define min(a,b)			(((a) < (b)) ? (a) : (b))
-
 
 typedef struct
 {
@@ -131,6 +75,11 @@ typedef struct
 {
 	int x, y;
 } Point;
+
+typedef struct
+{
+	int w, h;
+} Size;
 
 typedef struct
 {
@@ -151,47 +100,6 @@ enum GSWindowDim
 	GSDim_1024,
 	GSDim_1280,
 };
-
-typedef union 
-{
-	struct
-	{
-		u32 texture_targs : 1;
-		u32 auto_reset : 1;
-		u32 interlace_2x : 1;
-		u32 texa : 1; // apply texa to non textured polys
-		u32 no_target_resolve : 1;
-		u32 exact_color : 1;
-		u32 no_color_clamp : 1;
-		u32 ffx : 1;
-		u32 no_alpha_fail : 1;
-		u32 no_depth_update : 1;
-		u32 quick_resolve_1 : 1;
-		u32 no_quick_resolve : 1;
-		u32 no_target_clut : 1; // full 16 bit resolution
-		u32 no_stencil : 1;
-		u32 vss_hack_off : 1; // vertical stripe syndrome
-		u32 no_depth_resolve : 1;
-		u32 full_16_bit_res : 1;
-		u32 resolve_promoted : 1;
-		u32 fast_update : 1;
-		u32 no_alpha_test : 1;
-		u32 disable_mrt_depth : 1;
-		u32 args_32_bit : 1;
-		u32 path3 : 1;
-		u32 parallel_context : 1; // tries to parallelize both contexts so that render calls are reduced (xenosaga)
-									// makes the game faster, but can be buggy
-		u32 xenosaga_spec : 1; // xenosaga specularity hack (ignore any zmask=1 draws)
-		u32 partial_pointers : 1; // whenver the texture or render target are small, tries to look for bigger ones to read from
-		u32 partial_depth : 1; // tries to save depth targets as much as possible across height changes
-		u32 reget : 1; // some sort of weirdness in ReGet() code
-		u32 gust : 1; // Needed for Gustgames fast update.
-		u32 no_logz : 1; // Intended for linux -- not logarithmic Z.
-		u32 automatic_skip_draw :1; // allow debug of the automatic skip draw option
-		u32 reserved2 :1;
-	};
-	u32 _u32;
-} gameHacks;
 
 typedef union
 {
@@ -339,21 +247,7 @@ union name			\
  
 #define REG_SET_END };
 
-#ifndef SAFE_DELETE
-#	define SAFE_DELETE(x)		if( (x) != NULL ) { delete (x); (x) = NULL; }
-#endif
-#ifndef SAFE_DELETE_ARRAY
-#	define SAFE_DELETE_ARRAY(x)	if( (x) != NULL ) { delete[] (x); (x) = NULL; }
-#endif
-#ifndef SAFE_RELEASE
-#	define SAFE_RELEASE(x)		if( (x) != NULL ) { (x)->Release(); (x) = NULL; }
-#endif
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
- 
-#ifndef ARRAY_SIZE
-#	define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif
 
 extern void LoadConfig();
 extern void SaveConfig();
@@ -366,12 +260,11 @@ extern char *SysLibError();					// Gets previous error loading sysbols
 extern void SysCloseLibrary(void *lib);		// Closes Library
 extern void SysMessage(const char *fmt, ...);
 
-#ifdef __LINUX__
-#include "Utilities/MemcpyFast.h"
-#define memcpy_amd memcpy_fast
-#else
-extern "C" void * memcpy_amd(void *dest, const void *src, size_t n);
-extern "C" u8 memcmp_mmx(const void *dest, const void *src, int n);
+#ifdef ZEROGS_DEVBUILD
+extern char* EFFECT_NAME;
+extern char* EFFECT_DIR;
+extern u32 g_nGenVars, g_nTexVars, g_nAlphaVars, g_nResolve;
+extern bool g_bSaveTrans, g_bUpdateEffect, g_bSaveTex, g_bSaveResolved;
 #endif
 
 extern bool g_bDisplayFPS; // should we display FPS on screen?

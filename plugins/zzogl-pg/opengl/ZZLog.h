@@ -16,12 +16,14 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #ifndef ZZLOG_H_INCLUDED
 #define ZZLOG_H_INCLUDED
 
 #include "Util.h"
+#include <cstring>
 
+extern void HandleGLError();
 
 //Logging for errors that are called often should have a time counter.
 #ifdef __LINUX__
@@ -99,7 +101,7 @@ static bool SPAM_PASS;
 	if( err != GL_NO_ERROR ) \
 	{ \
 		ZZLog::Error_Log("%s:%d: gl error %s(0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
-		ZeroGS::HandleGLError(); \
+		HandleGLError(); \
 	} \
 }
 
@@ -110,7 +112,7 @@ static bool SPAM_PASS;
 	if( err != GL_NO_ERROR ) \
 	{ \
 		ZZLog::Error_Log("%s:%d: gl error %s (0x%x)", __FILE__, (int)__LINE__, error_name(err), err); \
-		ZeroGS::HandleGLError(); \
+		/* HandleGLError();*/ \
 	} \
 }
 #else
@@ -148,24 +150,29 @@ inline const char *error_name(int err)
 
 		case GL_INVALID_FRAMEBUFFER_OPERATION:
 			return "GL_INVALID_FRAMEBUFFER_OPERATION";
-			
+
 		default:
 			return "Unknown GL error";
 	}
 }
 
+struct MESSAGE
+{
+	MESSAGE() {}
+
+	MESSAGE(const char* p, u32 dw) { strcpy(str, p); dwTimeStamp = dw; }
+
+	char str[255];
+	u32 dwTimeStamp;
+};
+
+extern void DrawText(const char* pstr, int left, int top, u32 color);
 extern void __LogToConsole(const char *fmt, ...);
 
-// Subset of zerogs, to avoid that whole huge header.
-namespace ZeroGS
-{
-extern void AddMessage(const char* pstr, u32 ms);
-extern void SetAA(int mode);
-extern bool Create(int width, int height);
-extern void Destroy(bool bD3D);
+extern void ZZAddMessage(const char* pstr, u32 ms = 5000);
 extern void StartCapture();
 extern void StopCapture();
-}
+
 
 namespace ZZLog
 {
@@ -176,6 +183,7 @@ extern void Close();
 extern void Message(const char *fmt, ...);
 extern void Log(const char *fmt, ...);
 void WriteToScreen(const char* pstr, u32 ms = 5000);
+void WriteToScreen2(const char* pstr, ...);
 extern void WriteToConsole(const char *fmt, ...);
 extern void Print(const char *fmt, ...);
 extern void WriteLn(const char *fmt, ...);

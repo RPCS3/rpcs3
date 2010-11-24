@@ -23,12 +23,10 @@
 
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "targets.h"
 #include "ZZoglFlushHack.h"
 #include "ZZoglShaders.h"
-
-using namespace ZeroGS;
+#include <math.h>
 
 //------------------ Defines
 #ifndef ZEROGS_DEVBUILD
@@ -122,7 +120,6 @@ void Draw(const VB& curvb)
 extern int g_nDepthBias;
 extern float g_fBlockMult; // used for old cards, that do not support Alpha-32float textures. We store block data in u16 and use it.
 bool g_bUpdateStencil = 1;
-//u32 g_SaveFrameNum = 0;									// ZZ
 
 extern ZZshProgram g_psprog;							// 2 -- ZZ
 
@@ -147,6 +144,7 @@ static u32 s_ptexNextSet[2] = {0};				// ZZ
 
 extern vector<u32> s_vecTempTextures;		   // temporary textures, released at the end of every frame
 extern bool s_bTexFlush;
+extern int g_nCurVBOIndex;
 bool s_bWriteDepth = false;
 bool s_bDestAlphaTest = false;
 int s_ClutResolve = 0;						// ZZ
@@ -193,11 +191,9 @@ int s_nWireframeCount = 0;
 
 //------------------ Namespace
 
-namespace ZeroGS
-{
-
 VB vb[2];
 float fiTexWidth[2], fiTexHeight[2];	// current tex width and height
+extern vector<GLuint> g_vboBuffers; // VBOs for all drawing commands
 
 //u8 s_AAx = 0, s_AAy = 0; // if AAy is set, then AAx has to be set
 Point AA = {0,0};
@@ -211,7 +207,7 @@ void FlushTransferRanges(const tex0Info* ptex);						//zz
 void SetTexVariables(int context, FRAGMENTSHADER* pfragment);			// zz
 void SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint);		// zz
 void SetAlphaVariables(const alphaInfo& ainfo);					// zzz
-void ResetAlphaVariables();
+//void ResetAlphaVariables();
 
 inline void SetAlphaTestInt(pixTest curtest);
 
@@ -221,8 +217,11 @@ inline void ProcessStencil(const VB& curvb);
 inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor);
 inline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor);			// zz
 
+void SetContextTarget(int context);
 
-}
+void SetWriteDepth();
+bool IsWriteDepth();
+void SetDestAlphaTest();
 
 //------------------ Code
 
@@ -279,6 +278,8 @@ inline void SwitchWireframeOn()
 	}
 }
 
+extern u32 ptexBilinearBlocks;
+
 int GetTexFilter(const tex1Info& tex1)
 {
 	// always force
@@ -299,11 +300,11 @@ int GetTexFilter(const tex1Info& tex1)
 	return texfilter;
 }
 
-void ZeroGS::ReloadEffects()
+void ReloadEffects()
 {
 #ifdef ZEROGS_DEVBUILD
 
-	for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+	for (int i = 0; i < ArraySize(ppsTexture); ++i)
 	{
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
@@ -321,7 +322,7 @@ inline void VisualBufferMessage(int context)
 {
 #if defined(WRITE_PRIM_LOGS) && defined(_DEBUG)
 	BufferNumber++;
-	ZeroGS::VB& curvb = vb[context];
+	VB& curvb = vb[context];
 	static const char* patst[8] = { "NEVER", "ALWAYS", "LESS", "LEQUAL", "EQUAL", "GEQUAL", "GREATER", "NOTEQUAL"};
 	static const char* pztst[4] = { "NEVER", "ALWAYS", "GEQUAL", "GREATER" };
 	static const char* pafail[4] = { "KEEP", "FB_ONLY", "ZB_ONLY", "RGB_ONLY" };
@@ -344,7 +345,6 @@ inline void VisualBufferMessage(int context)
 	ZZLog::Error_Log("TGA name '%s'.", Name);
 	free(Name);
 //	}
-//	ZZLog::Debug_Log("frame: %d, buffer %ld.\n", g_SaveFrameNum, BufferNumber);
 	ZZLog::Debug_Log("buffer %ld.\n", BufferNumber);
 #endif
 }
@@ -353,12 +353,10 @@ inline void SaveRendererTarget(VB& curvb)
 {
 #ifdef _DEBUG
 
-//	if (g_bSaveFlushedFrame & 0x80000000)
-//	{
+//		Needs a # after rndr to work...
 //		char str[255];
-//		sprintf(str, "rndr%d.tga", g_SaveFrameNum);
+//		sprintf(str, "rndr.tga");
 //		SaveRenderTarget(str, curvb.prndr->fbw, curvb.prndr->fbh, 0);
-//	}
 
 #endif
 }
@@ -466,18 +464,18 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	if ((ptextarg == NULL) && (tpsm == PSMT8) && (conf.settings().reget))
 	{
 		// check for targets with half the width. Break Valkyrie Chronicles
-		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb);
+		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2);
 
 		if (ptextarg == NULL)
 		{
 			tbp0 &= ~0x7ff;
-			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb); // mgs3 hack
+			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
 
 			if (ptextarg == NULL)
 			{
 				// check the next level (mgs3)
 				tbp0 &= ~0xfff;
-				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2, curvb); // mgs3 hack
+				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
 			}
 
 			if (ptextarg != NULL && ptextarg->start > tbp0*256)
@@ -492,7 +490,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	if (PSMT_ISZTEX(tpsm) && (ptextarg == NULL))
 	{
 		// try depth
-		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw, curvb);
+		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw);
 	}
 
 	if ((ptextarg == NULL) && (conf.settings().texture_targs))
@@ -509,24 +507,24 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 	{
 		if (ptextarg == NULL)
 		{
-			printf("Miss %x 0x%x %d\n", tbw, tbp0, tpsm);
+			ZZLog::Debug_Log("Miss %x 0x%x %d", tbw, tbp0, tpsm);
 
 			typedef map<u32, CRenderTarget*> MAPTARGETS;
 
 			for (MAPTARGETS::iterator itnew = s_RTs.mapTargets.begin(); itnew != s_RTs.mapTargets.end(); ++itnew)
 			{
-				printf("\tRender %x 0x%x %x\n", itnew->second->fbw, itnew->second->fbp, itnew->second->psm);
+				ZZLog::Debug_Log("\tRender %x 0x%x %x", itnew->second->fbw, itnew->second->fbp, itnew->second->psm);
 			}
 
 			for (MAPTARGETS::iterator itnew = s_DepthRTs.mapTargets.begin(); itnew != s_DepthRTs.mapTargets.end(); ++itnew)
 			{
-				printf("\tDepth %x 0x%x %x\n", itnew->second->fbw, itnew->second->fbp, itnew->second->psm);
+				ZZLog::Debug_Log("\tDepth %x 0x%x %x", itnew->second->fbw, itnew->second->fbp, itnew->second->psm);
 			}
 
-			printf("\tCurvb 0x%x 0x%x 0x%x %x\n", curvb.frame.fbp, curvb.prndr->end, curvb.prndr->fbp, curvb.prndr->fbw);
+			ZZLog::Debug_Log("\tCurvb 0x%x 0x%x 0x%x %x", curvb.frame.fbp, curvb.prndr->end, curvb.prndr->fbp, curvb.prndr->fbw);
 		}
 		else
-			printf("Hit  %x 0x%x %x\n", tbw, tbp0, tpsm);
+			ZZLog::Debug_Log("Hit  %x 0x%x %x", tbw, tbp0, tpsm);
 	}
 
 #endif
@@ -545,7 +543,7 @@ inline CRenderTarget* FlushGetTarget(VB& curvb)
 
 	if (curvb.bNeedTexCheck)
 	{
-		printf("How it is possible?\n");
+		ZZLog::Error_Log("How it is possible?");
 		// not yet initied, but still need to get correct target! (xeno3 ingame)
 		tbp0 = ZZOglGet_tbp0_TexBits(curvb.uNextTex0Data[0]);
 		tbw  = ZZOglGet_tbw_TexBitsMult(curvb.uNextTex0Data[0]);
@@ -558,7 +556,7 @@ inline CRenderTarget* FlushGetTarget(VB& curvb)
 		tpsm = curvb.tex0.psm;
 	}
 
-	ptextarg = s_RTs.GetTarg(tbp0, tbw, curvb);
+	ptextarg = s_RTs.GetTarg(tbp0, tbw);
 
 	if (ptextarg == NULL)
 		ptextarg = FlushReGetTarget(tbw, tbp0, tpsm, curvb);
@@ -733,7 +731,7 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut)
 		int entries = PSMT_IS8CLUT(curvb.tex0.psm) ? 256 : 16;
 
 		if (curvb.tex0.csm && curvb.tex0.csa)
-			printf("ERROR, csm1\n");
+			ZZLog::Debug_Log("ERROR, csm1.");
 
 		if (PSMT_IS32BIT(curvb.tex0.cpsm))   // 32 bit
 		{
@@ -1088,6 +1086,8 @@ inline void AlphaSetStencil(bool DoIt)
 	else glDisable(GL_STENCIL_TEST);
 }
 
+//inline u32 FtoDW(float f) { return (*((u32*)&f)); }
+
 inline void AlphaSetDepthTest(VB& curvb, const pixTest curtest, FRAGMENTSHADER* pfragment)
 {
 	glDepthMask(!curvb.zbuf.zmsk && curtest.zte);
@@ -1223,7 +1223,7 @@ inline void AlphaRenderStencil(VB& curvb, bool s_bDestAlphaTest, bool bCanRender
 
 inline void AlphaTest(VB& curvb)
 {
-//	printf ("%d %d %d %d %d\n", curvb.test.date, curvb.test.datm, gs.texa.aem, curvb.test.ate, curvb.test.atst );
+//	ZZLog::Debug_Log("%d %d %d %d %d", curvb.test.date, curvb.test.datm, gs.texa.aem, curvb.test.ate, curvb.test.atst );
 
 //	return;
 	// Zeydlitz changed this with a reason! It's an "Alpha more than 1 hack."
@@ -1236,7 +1236,7 @@ inline void AlphaTest(VB& curvb)
 		else
 		{
 			glAlphaFunc(GL_LESS, 1.0f);
-			printf("%d %d %d\n", curvb.test.date, curvb.test.datm, gs.texa.aem);
+			ZZLog::Debug_Log("%d %d %d", curvb.test.date, curvb.test.datm, gs.texa.aem);
 		}
 	}
 
@@ -1447,7 +1447,6 @@ inline void AlphaSaveTarget(VB& curvb)
 #ifdef _DEBUG
 	return; // Do nothing
 
-//	if( g_bSaveFlushedFrame & 0xf ) {
 //#ifdef _WIN32
 //		CreateDirectory("frames", NULL);
 //#else
@@ -1456,13 +1455,14 @@ inline void AlphaSaveTarget(VB& curvb)
 //		system(strdir);
 //#endif
 //		char str[255];
-//		sprintf(str, "frames/frame%.4d.tga", g_SaveFrameNum++);
+
+//		Needs a # after frame to work properly.
+//		sprintf(str, "frames/frame.tga");
 
 //		//glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 ); // switch to the backbuffer
 //		//glFlush();
 //		//SaveTexture("tex.jpg", GL_TEXTURE_RECTANGLE_NV, curvb.prndr->ptex, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh));
 //		SaveRenderTarget(str, RW(curvb.prndr->fbw), RH(curvb.prndr->fbh), 0);
-//	}
 #endif
 }
 
@@ -1477,7 +1477,7 @@ inline void FlushUndoFiter(u32 dwFilterOpts)
 }
 
 // This is the most important function! It draws all collected info onscreen.
-void ZeroGS::Flush(int context)
+void Flush(int context)
 {
 	FUNCLOG
 	VB& curvb = vb[context];
@@ -1535,13 +1535,13 @@ void ZeroGS::Flush(int context)
 	GL_REPORT_ERRORD();
 }
 
-void ZeroGS::FlushBoth()
+void FlushBoth()
 {
 	Flush(0);
 	Flush(1);
 }
 
-inline void ZeroGS::RenderFBA(const VB& curvb, ZZshParameter sOneColor)
+inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor)
 {
 	// add fba to all pixels
 	GL_STENCILFUNC(GL_ALWAYS, STENCIL_FBA, 0xff);
@@ -1585,7 +1585,7 @@ inline void ZeroGS::RenderFBA(const VB& curvb, ZZshParameter sOneColor)
 	GL_ZTEST(curvb.test.zte);
 }
 
-__forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor)
+__forceinline void RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor)
 {
 	if (!g_bUpdateStencil) return;
 
@@ -1653,7 +1653,7 @@ __forceinline void ZeroGS::RenderAlphaTest(const VB& curvb, ZZshParameter sOneCo
 	}
 }
 
-inline void ZeroGS::RenderStencil(const VB& curvb, u32 dwUsingSpecialTesting)
+inline void RenderStencil(const VB& curvb, u32 dwUsingSpecialTesting)
 {
 	//NOTE: This stencil hack for dest alpha testing ONLY works when
 	// the geometry in one DrawPrimitive call does not overlap
@@ -1670,7 +1670,7 @@ inline void ZeroGS::RenderStencil(const VB& curvb, u32 dwUsingSpecialTesting)
 	GL_STENCILFUNC_SET();
 }
 
-inline void ZeroGS::ProcessStencil(const VB& curvb)
+inline void ProcessStencil(const VB& curvb)
 {
 	assert(!curvb.fba.fba);
 
@@ -1723,7 +1723,7 @@ inline void ZeroGS::ProcessStencil(const VB& curvb)
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 }
 
-__forceinline void ZeroGS::ProcessFBA(const VB& curvb, ZZshParameter sOneColor)
+__forceinline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor)
 {
 	if ((curvb.frame.fbm&0x80000000)) return;
 
@@ -1784,7 +1784,7 @@ __forceinline void ZeroGS::ProcessFBA(const VB& curvb, ZZshParameter sOneColor)
 	GL_ZTEST(curvb.test.zte);
 }
 
-void ZeroGS::SetContextTarget(int context)
+void SetContextTarget(int context)
 {
 	FUNCLOG
 	VB& curvb = vb[context];
@@ -1841,7 +1841,7 @@ void ZeroGS::SetContextTarget(int context)
 	if (curvb.prndr->status & CRenderTarget::TS_NeedUpdate)
 	{
 		/*		if(bSetTarg) {
-		*			printf ( " Here\n ");
+		*			ZZLog::Debug_Log( " Here ");
 		*			if(s_bWriteDepth) {
 		*				curvb.pdepth->SetRenderTarget(1);
 		*				curvb.pdepth->SetDepthStencilSurface();
@@ -1859,7 +1859,7 @@ void ZeroGS::SetContextTarget(int context)
 		//if( bSetTarg && ((vb[0].pdepth != vb[1].pdepth && vb[!context].bVarsSetTarg) || !vb[context].bVarsSetTarg) )
 		curvb.pdepth->SetDepthStencilSurface();
 
-		if (conf.mrtdepth && ZeroGS::IsWriteDepth()) curvb.pdepth->SetRenderTarget(1);
+		if (conf.mrtdepth && IsWriteDepth()) curvb.pdepth->SetRenderTarget(1);
 		if (s_ptexCurSet[0] == curvb.prndr->ptex) s_ptexCurSet[0] = 0;
 		if (s_ptexCurSet[1] == curvb.prndr->ptex) s_ptexCurSet[1] = 0;
 
@@ -1892,7 +1892,7 @@ void ZeroGS::SetContextTarget(int context)
 }
 
 
-void ZeroGS::SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
+void SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
 {
 	FUNCLOG
 
@@ -1929,14 +1929,14 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 {
 	FUNCLOG
 	SetShaderCaller("SetTexClamping");
-	clampInfo* pclamp = &ZeroGS::vb[context].clamp;
+	clampInfo* pclamp = &vb[context].clamp;
 	float4 v, v2;
 	v.x = v.y = 0;
-	u32* ptex = ZeroGS::vb[context].ptexClamp;
+	u32* ptex = vb[context].ptexClamp;
 	ptex[0] = ptex[1] = 0;
 
-	float fw = ZeroGS::vb[context].tex0.tw ;
-	float fh = ZeroGS::vb[context].tex0.th ;
+	float fw = vb[context].tex0.tw ;
+	float fh = vb[context].tex0.th ;
 
 	switch (pclamp->wms)
 	{
@@ -1966,7 +1966,7 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 			if (correctMinu != g_PrevBitwiseTexX)
 			{
 				g_PrevBitwiseTexX = correctMinu;
-				ptex[0] = ZeroGS::s_BitwiseTextures.GetTex(correctMinu, 0);
+				ptex[0] = s_BitwiseTextures.GetTex(correctMinu, 0);
 			}
 
 			break;
@@ -2001,7 +2001,7 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 			if (correctMinv != g_PrevBitwiseTexY)
 			{
 				g_PrevBitwiseTexY = correctMinv;
-				ptex[1] = ZeroGS::s_BitwiseTextures.GetTex(correctMinv, ptex[0]);
+				ptex[1] = s_BitwiseTextures.GetTex(correctMinv, ptex[0]);
 			}
 			break;
 	}
@@ -2015,17 +2015,8 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 
 }
 
-// Fixme should be in float4 lib
-inline bool equal_vectors(float4 a, float4 b)
-{
-	if (abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z) + abs(a.w - b.w) < 0.01)
-		return true;
-	else
-		return false;
-}
-
 int CheckTexArray[4][2][2][2] = {{{{0, }}}};
-void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
+void SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 {
 	FUNCLOG
 
@@ -2169,12 +2160,12 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 
 				if ( equal_vectors(valpha, valpha3) && equal_vectors(valpha2, valpha4) ) {
 					if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm)] == 0) {
-						printf ( "Good issue %d %d %d %d\n", tex0.tfx,  tex0.tcc, psm, PSMT_ALPHAEXP(psm) );
+						ZZLog::Debug_Log ( "Good issue %d %d %d %d", tex0.tfx,  tex0.tcc, psm, PSMT_ALPHAEXP(psm) );
 						CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm) ] = 1;
 					}
 				}
 				else if (CheckTexArray[tex0.tfx][tex0.tcc][psm!=1][PSMT_ALPHAEXP(psm)] == -1) {
-					printf ("Bad array, %d %d %d %d\n\tolf valpha %f, %f, %f, %f : valpha2 %f %f %f %f\n\tnew valpha %f, %f, %f, %f : valpha2 %f %f %f %f\n",
+					ZZLog::Debug_Log ("Bad array, %d %d %d %d\n\tolf valpha %f, %f, %f, %f : valpha2 %f %f %f %f\n\tnew valpha %f, %f, %f, %f : valpha2 %f %f %f %f",
 						 tex0.tfx,  tex0.tcc, psm, PSMT_ALPHAEXP(psm),
 					 	valpha3.x, valpha3.y, valpha3.z, valpha3.w, valpha4.x, valpha4.y, valpha4.z, valpha4.w,
 					 	valpha.x, valpha.y, valpha.z, valpha.w,  valpha2.x, valpha2.y, valpha2.z, valpha2.w);
@@ -2203,7 +2194,7 @@ void ZeroGS::SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 	}
 }
 
-void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force)
+void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force)
 {
 	FUNCLOG
 	float4 v;
@@ -2363,16 +2354,16 @@ void ZeroGS::SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0,
 //if( a.fix <= 0x80 ) { \
 // dwTemp = (a.fix*2)>255?255:(a.fix*2); \
 // dwTemp = dwTemp|(dwTemp<<8)|(dwTemp<<16)|0x80000000; \
-// printf("bfactor: %8.8x\n", dwTemp); \
+// ZZLog::Debug_Log("bfactor: %8.8x", dwTemp); \
 // glBlendColorEXT(dwTemp); \
 // } \
 // else { \
 
-void ZeroGS::ResetAlphaVariables() {
-	FUNCLOG
-}
+//void ResetAlphaVariables() {
+//	FUNCLOG
+//}
 
-inline void ZeroGS::NeedFactor(int w)
+inline void NeedFactor(int w)
 {
 	if (bDestAlphaColor == 2)
 	{
@@ -2384,7 +2375,7 @@ inline void ZeroGS::NeedFactor(int w)
 
 //static int CheckArray[48][2] = {{0,}};
 
-void ZeroGS::SetAlphaVariables(const alphaInfo& a)
+void SetAlphaVariables(const alphaInfo& a)
 {
 	FUNCLOG
 	bool alphaenable = true;
@@ -2849,8 +2840,8 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 
 		if ( alphaenable && (t_rgbeq != s_rgbeq || s_srcrgb != t_srcrgb || t_dstrgb != s_dstrgb || tAlphaClamping != bAlphaClamping)) {
 			if (CheckArray[code][(bDestAlphaColor==2)] != -1) {
-			printf ( "A code %d, 0x%x, 0x%x, 0x%x, 0x%x %d\n", code, alpha, one_minus_alpha, one, zero, bDestAlphaColor );
-			printf ( "       Difference %d %d %d %d | 0x%x  0x%x | 0x%x  0x%x | 0x%x  0x%x | %d %d\n",
+			ZZLog::Debug_Log( "A code %d, 0x%x, 0x%x, 0x%x, 0x%x %d", code, alpha, one_minus_alpha, one, zero, bDestAlphaColor );
+			ZZLog::Debug_Log( "       Difference %d %d %d %d | 0x%x  0x%x | 0x%x  0x%x | 0x%x  0x%x | %d %d",
 				code, a.a, a.b, a.d,
 				t_rgbeq, s_rgbeq, t_srcrgb, s_srcrgb, t_dstrgb, s_dstrgb, tAlphaClamping, bAlphaClamping);
 			CheckArray[code][(bDestAlphaColor==2)] = -1;
@@ -2858,7 +2849,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 		}
 		else
 		if (CheckArray[code][(bDestAlphaColor==2)] == 0){
-			printf ( "Add good code %d %d, psm %d  destA %d\n", code, a.c, vb[icurctx].prndr->psm, bDestAlphaColor);
+			ZZLog::Debug_Log( "Add good code %d %d, psm %d  destA %d", code, a.c, vb[icurctx].prndr->psm, bDestAlphaColor);
 			CheckArray[code][(bDestAlphaColor==2)] = 1;
 		}*/
 
@@ -2877,7 +2868,7 @@ void ZeroGS::SetAlphaVariables(const alphaInfo& a)
 	INC_ALPHAVARS();
 }
 
-void ZeroGS::SetWriteDepth()
+void SetWriteDepth()
 {
 	FUNCLOG
 
@@ -2888,26 +2879,26 @@ void ZeroGS::SetWriteDepth()
 	}
 }
 
-bool ZeroGS::IsWriteDepth()
+bool IsWriteDepth()
 {
 	FUNCLOG
 	return s_bWriteDepth;
 }
 
-bool ZeroGS::IsWriteDestAlphaTest()
+bool IsWriteDestAlphaTest()
 {
 	FUNCLOG
 	return s_bDestAlphaTest;
 }
 
-void ZeroGS::SetDestAlphaTest()
+void SetDestAlphaTest()
 {
 	FUNCLOG
 	s_bDestAlphaTest = true;
 	s_nWriteDestAlphaTest = 4;
 }
 
-void ZeroGS::SetTexFlush()
+void SetTexFlush()
 {
 	FUNCLOG
 	s_bTexFlush = true;

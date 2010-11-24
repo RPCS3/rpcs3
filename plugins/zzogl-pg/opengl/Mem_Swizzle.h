@@ -24,26 +24,25 @@
 #include "Mem.h"
 #include "x86.h"
 
-extern __forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
+extern __forceinline void SwizzleBlock32(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch);
 
-extern __forceinline void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void __fastcall SwizzleBlock24_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch, u32 WriteMask = 0xffffffff);
+extern __forceinline void __fastcall SwizzleBlock32_c(u8* dst, u8* src, int srcpitch);
+extern __forceinline void __fastcall SwizzleBlock16_c(u8* dst, u8* src, int srcpitch);
+extern __forceinline void __fastcall SwizzleBlock8_c(u8* dst, u8* src, int srcpitch);
+extern __forceinline void __fastcall SwizzleBlock4_c(u8* dst, u8* src, int srcpitch);
 
 // special swizzle macros - which I converted to functions.
-extern __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
-extern __forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch, u32 WriteMask = 0xffffffff);
+extern __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock4HH(u8 *dst, u8 *src, int pitch);
+extern __forceinline void SwizzleBlock4HL(u8 *dst, u8 *src, int pitch);
 #define SwizzleBlock24u SwizzleBlock24
 #define SwizzleBlock8Hu SwizzleBlock8H
 #define SwizzleBlock4HHu SwizzleBlock4HH

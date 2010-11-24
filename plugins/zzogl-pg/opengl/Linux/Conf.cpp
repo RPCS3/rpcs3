@@ -40,7 +40,7 @@ void SaveConfig()
 
 	fprintf(f, "mrtdepth = %hhx\n", conf.mrtdepth);
 	fprintf(f, "zzoptions = %x\n", conf.zz_options._u32);
-	fprintf(f, "options = %x\n", conf.hacks);
+	fprintf(f, "options = %x\n", conf.hacks._u32);
 	fprintf(f, "bilinear  = %hhx\n", conf.bilinear);
 	fprintf(f, "aliasing = %hhx\n", conf.aa);
 	fprintf(f, "width = %x\n", conf.width);

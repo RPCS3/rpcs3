@@ -116,13 +116,7 @@ extern FnType_GIFRegHandler GIFPackedRegHandlerXYZ2;
 extern FnType_GIFRegHandler GIFPackedRegHandlerFOG;
 extern FnType_GIFRegHandler GIFPackedRegHandlerA_D;
 extern FnType_GIFRegHandler GIFPackedRegHandlerNOP;
-
-// These are unimplemented, and fall back on the non-packed versions.
 extern FnType_GIFRegHandler GIFPackedRegHandlerPRIM;
-extern FnType_GIFRegHandler GIFPackedRegHandlerTEX0_1;
-extern FnType_GIFRegHandler GIFPackedRegHandlerTEX0_2;
-extern FnType_GIFRegHandler GIFPackedRegHandlerCLAMP_1;
-extern FnType_GIFRegHandler GIFPackedRegHandlerCLAMP_2;
 extern FnType_GIFRegHandler GIFPackedRegHandlerXYZF3;
 extern FnType_GIFRegHandler GIFPackedRegHandlerXYZ3;
 
@@ -133,47 +127,21 @@ extern FnType_GIFRegHandler GIFRegHandlerST;
 extern FnType_GIFRegHandler GIFRegHandlerUV;
 extern FnType_GIFRegHandler GIFRegHandlerXYZF2;
 extern FnType_GIFRegHandler GIFRegHandlerXYZ2;
-extern FnType_GIFRegHandler GIFRegHandlerTEX0_1;
-extern FnType_GIFRegHandler GIFRegHandlerTEX0_2;
-extern FnType_GIFRegHandler GIFRegHandlerCLAMP_1;
-extern FnType_GIFRegHandler GIFRegHandlerCLAMP_2;
 extern FnType_GIFRegHandler GIFRegHandlerFOG;
 extern FnType_GIFRegHandler GIFRegHandlerXYZF3;
 extern FnType_GIFRegHandler GIFRegHandlerXYZ3;
 extern FnType_GIFRegHandler GIFRegHandlerNOP;
-extern FnType_GIFRegHandler GIFRegHandlerTEX1_1;
-extern FnType_GIFRegHandler GIFRegHandlerTEX1_2;
-extern FnType_GIFRegHandler GIFRegHandlerTEX2_1;
-extern FnType_GIFRegHandler GIFRegHandlerTEX2_2;
-extern FnType_GIFRegHandler GIFRegHandlerXYOFFSET_1;
-extern FnType_GIFRegHandler GIFRegHandlerXYOFFSET_2;
 extern FnType_GIFRegHandler GIFRegHandlerPRMODECONT;
 extern FnType_GIFRegHandler GIFRegHandlerPRMODE;
 extern FnType_GIFRegHandler GIFRegHandlerTEXCLUT;
 extern FnType_GIFRegHandler GIFRegHandlerSCANMSK;
-extern FnType_GIFRegHandler GIFRegHandlerMIPTBP1_1;
-extern FnType_GIFRegHandler GIFRegHandlerMIPTBP1_2;
-extern FnType_GIFRegHandler GIFRegHandlerMIPTBP2_1;
-extern FnType_GIFRegHandler GIFRegHandlerMIPTBP2_2;
 extern FnType_GIFRegHandler GIFRegHandlerTEXA;
 extern FnType_GIFRegHandler GIFRegHandlerFOGCOL;
 extern FnType_GIFRegHandler GIFRegHandlerTEXFLUSH;
-extern FnType_GIFRegHandler GIFRegHandlerSCISSOR_1;
-extern FnType_GIFRegHandler GIFRegHandlerSCISSOR_2;
-extern FnType_GIFRegHandler GIFRegHandlerALPHA_1;
-extern FnType_GIFRegHandler GIFRegHandlerALPHA_2;
 extern FnType_GIFRegHandler GIFRegHandlerDIMX;
 extern FnType_GIFRegHandler GIFRegHandlerDTHE;
 extern FnType_GIFRegHandler GIFRegHandlerCOLCLAMP;
-extern FnType_GIFRegHandler GIFRegHandlerTEST_1;
-extern FnType_GIFRegHandler GIFRegHandlerTEST_2;
 extern FnType_GIFRegHandler GIFRegHandlerPABE;
-extern FnType_GIFRegHandler GIFRegHandlerFBA_1;
-extern FnType_GIFRegHandler GIFRegHandlerFBA_2;
-extern FnType_GIFRegHandler GIFRegHandlerFRAME_1;
-extern FnType_GIFRegHandler GIFRegHandlerFRAME_2;
-extern FnType_GIFRegHandler GIFRegHandlerZBUF_1;
-extern FnType_GIFRegHandler GIFRegHandlerZBUF_2;
 extern FnType_GIFRegHandler GIFRegHandlerBITBLTBUF;
 extern FnType_GIFRegHandler GIFRegHandlerTRXPOS;
 extern FnType_GIFRegHandler GIFRegHandlerTRXREG;
@@ -183,8 +151,39 @@ extern FnType_GIFRegHandler GIFRegHandlerSIGNAL;
 extern FnType_GIFRegHandler GIFRegHandlerFINISH;
 extern FnType_GIFRegHandler GIFRegHandlerLABEL;
 
-// GifReg & GifPackedReg structs from GSdx, slightly modified
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFPackedRegHandlerTEX0;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFPackedRegHandlerCLAMP;
+template<u32 ctxt>
 
+extern FnType_GIFRegHandler GIFRegHandlerTEX0;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerCLAMP;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerTEX1;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerTEX2;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerXYOFFSET;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP1;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerMIPTBP2;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerSCISSOR;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerALPHA;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerTEST;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerFBA;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerFRAME;
+template<u32 ctxt>
+extern FnType_GIFRegHandler GIFRegHandlerZBUF;
+
+// GifReg & GifPackedReg structs from GSdx, slightly modified.
 enum GS_ATST
 {
 	ATST_NEVER		= 0,
@@ -946,6 +945,19 @@ REG_END
 extern void WriteTempRegs();
 extern void SetFrameSkip(bool skip);
 extern void ResetRegs();
+
+extern void SetTexFlush();
+extern void SetFogColor(u32 fog);
+extern void SetFogColor(GIFRegFOGCOL* fog);
+extern bool CheckChangeInClut(u32 highdword, u32 psm); // returns true if clut will change after this tex0 op
+
+// flush current vertices, call before setting new registers (the main render method)
+void Flush(int context);
+void FlushBoth();
+
+// called on a primitive switch
+void Prim();
+
 #else
 #include "NewRegs.h"
 #endif

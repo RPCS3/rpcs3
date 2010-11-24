@@ -25,39 +25,13 @@
 
 #include "Util.h"
 #include "GifTransfer.h"
+#include "HostMemory.h"
 
 using namespace std;
 
 extern float fFPS;
 
-#define MEMORY_END 0x00400000
-
 extern int g_LastCRC;
-extern u8* g_pBasePS2Mem;
-
-extern u8* g_pbyGSMemory;
-
-class GSMemory
-{
-	public:
-		void init();
-		void destroy();
-		u8* get();
-		u8* get(u32 addr);
-		u8* get_raw(u32 addr);
-};
-
-extern u8* g_pbyGSClut;		// the temporary clut buffer
-
-class GSClut
-{
-	public:
-		void init();
-		void destroy();
-		u8* get();
-		u8* get(u32 addr);
-		u8* get_raw(u32 addr);
-};
 
 struct Vector_16F
 {
@@ -66,22 +40,7 @@ struct Vector_16F
 
 // PS2 vertex
 
-struct VertexGPU
-{
-	// gained from XYZ2, XYZ3, XYZF2, XYZF3,
-	// X -- bits 0-15, Y-16-31. Z - 32-63 if no F used, 32-55 otherwise, F (fog) - 56-63
-	// X, Y stored in 12d3 format,
-	s16 x, y, f, resv0;		// note: xy is 12d3
-	// Vertex color settings. RGB -- luminance of red/green/blue, A -- alpha. 1.0 == 0x80.
-	// Goes grom RGBAQ register, bits 0-7, 8-15, 16-23 and 24-31 accordingly
-	u32 rgba;
-	u32 z;
-	// Texture coordinates. S & T going from ST register (bits 0-31, and 32-63).
-	// Q goes from RGBAQ register, bits 32-63
-	float s, t, q;
-};
-
-// Almost same as previous, controlled by prim.fst flags
+// Almost same as VertexGPU, controlled by prim.fst flags
 
 struct Vertex
 {
@@ -92,6 +51,75 @@ struct Vertex
 	// Texel coordinate of vertex. Used if prim.fst == 1
 	// Bits 0-14 and 16-30 of UV
 	u16 u, v;
+};
+
+struct VertexGPU
+{
+	// gained from XYZ2, XYZ3, XYZF2, XYZF3,
+	// X -- bits 0-15, Y-16-31. Z - 32-63 if no F used, 32-55 otherwise, F (fog) - 56-63
+	// X, Y stored in 12d3 format,
+    s16 x, y;
+    s16 f, resv0;
+
+	// Vertex color settings. RGB -- luminance of red/green/blue, A -- alpha. 1.0 == 0x80.
+	// Goes grom RGBAQ register, bits 0-7, 8-15, 16-23 and 24-31 accordingly
+	u32 rgba;
+	u32 z;
+	// Texture coordinates. S & T going from ST register (bits 0-31, and 32-63).
+	// Q goes from RGBAQ register, bits 32-63
+	float s, t, q;
+	
+	void move_x(Vertex v, int offset)
+	{
+		x = ((((int)v.x - offset) >> 1) & 0xffff);
+	}
+	
+	void move_y(Vertex v, int offset)
+	{
+		y = ((((int)v.y - offset) >> 1) & 0xffff);
+	}
+	
+	void move_z(Vertex v, int mask)
+	{
+		z = (mask == 0xffff) ? min((u32)0xffff, v.z) : v.z;
+	}
+
+	void move_fog(Vertex v)
+	{
+		f = ((s16)(v).f << 7) | 0x7f;
+	}
+    
+    void set_xy(s16 x1, s16 y1)
+    {
+    	x = x1;
+    	y = y1;
+    }
+    void set_xyz(s16 x1, s16 y1, u32 z1)
+    {
+    	x = x1;
+    	y = y1;
+    	z = z1;
+    }
+    
+    void set_st(float s1, float t1)
+    {
+    	s = s1;
+    	t = t1;
+    }
+    
+    void set_stq(float s1, float t1, float q1)
+    {
+    	s = s1;
+    	t = t1;
+    	q = q1;
+    }
+    
+    void set_xyzst(s16 x1, s16 y1, u32 z1, float s1, float t1)
+    {
+    	set_xyz(x1, y1, z1);
+    	set_st(s1, t1);
+    }
+    
 };
 
 extern GSconf conf;
@@ -346,7 +374,7 @@ union tex_0_info
 
 	u32 psm_fix()
 	{
-		//	printf ("psm %d\n", psm);
+		//	ZZLog::Debug_Log("psm %d\n", psm);
 		if (psm == 9) return 1;
 
 		return psm;
@@ -384,6 +412,10 @@ union tex_0_info
 #define TEX_DECAL 1
 #define TEX_HIGHLIGHT 2
 #define TEX_HIGHLIGHT2 3
+
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
+extern void SaveTex(tex0Info* ptex, int usevid);
+extern char* NamedSaveTex(tex0Info* ptex, int usevid);
 
 typedef struct
 {
@@ -471,14 +503,16 @@ typedef struct
 
 typedef struct
 {
-	Vertex gsvertex[3];
-	u32 rgba;
+	Vertex gsvertex[4]; // circular buffer that contains the vertex
+    Vertex gsTriFanVertex; // Base of triangle fan primitive vertex
+	u32 rgba; // global color for flat shading texture
 	float q;
-	Vertex vertexregs;
+	Vertex vertexregs; // accumulation buffer that collect current vertex data
 
 	int primC;		// number of verts current storing
 	int primIndex;	// current prim index
-	int nTriFanVert;
+	int nTriFanVert; // remember the index of the base of triangle fan
+    int new_tri_fan; // 1 if we process a new triangle fan primitive. 0 otherwise
 
 	int prac;
 	int dthe;
@@ -512,8 +546,16 @@ typedef struct
 	GSClut clut_buffer;
 	int primNext(int inc = 1)
 	{
-		return ((primIndex + inc) % ARRAY_SIZE(gsvertex));
+        // Note: ArraySize(gsvertex) == 2^n => modulo is replaced by an and instruction
+		return ((primIndex + inc) % ArraySize(gsvertex));
 	}
+	
+    int primPrev(int dec = 1)
+    {
+        // Note: assert( dec <= ArraySize(gsvertex) );
+        // Note: ArraySize(gsvertex) == 2^n => modulo is replaced by an and instruction
+		return ((primIndex + (ArraySize(gsvertex) - dec)) % ArraySize(gsvertex));
+    }
 	
 	void setRGBA(u32 r, u32 g, u32 b, u32 a)
 	{
@@ -523,29 +565,39 @@ typedef struct
 			  ((a & 0xff) << 24);
 	}
 	
-	void add_vertex(u16 x, u16 y, u32 z, u16 f)
+	inline void add_vertex(u16 x, u16 y, u32 z, u16 f)
 	{
 		vertexregs.x = x;
 		vertexregs.y = y;
 		vertexregs.z = z;
 		vertexregs.f = f;
-		gsvertex[primIndex] = vertexregs;
-		primIndex = primNext();
+        if (likely(!new_tri_fan)) {
+            gsvertex[primIndex] = vertexregs;
+        } else {
+            gsTriFanVertex = vertexregs;
+            new_tri_fan = false;
+        }
 	}
 	
-	void add_vertex(u16 x, u16 y, u32 z)
+	inline void add_vertex(u16 x, u16 y, u32 z)
 	{
 		vertexregs.x = x;
 		vertexregs.y = y;
 		vertexregs.z = z;
-		gsvertex[primIndex] = vertexregs;
-		primIndex = primNext();
+        if (likely(!new_tri_fan)) {
+            gsvertex[primIndex] = vertexregs;
+        } else {
+            gsTriFanVertex = vertexregs;
+            new_tri_fan = false;
+        }
 	}
 } GSinternal;
 
 extern GSinternal gs;
 
-static __forceinline u16 RGBA32to16(u32 c)
+// Note the function is used in a template parameter so it must be declared extern
+// Note2: In this case extern is not compatible with __forceinline so just inline it...
+extern inline u16 RGBA32to16(u32 c)
 {
 	return (u16)((((c) & 0x000000f8) >>  3) |
 				 (((c) & 0x0000f800) >>  6) |
@@ -673,7 +725,7 @@ static __forceinline int ZZOglGet_psm_TexBitsFix(u32 data)
 {
 	//return tex_0_info(data).psm_fix();
 	int result = ZZOglGet_psm_TexBits(data) ;
-//	printf ("result %d\n", result);
+//	ZZLog::Debug_Log("result %d", result);
 
 	if (result == 9) result = 1;
 
@@ -910,6 +962,21 @@ inline bool ZZOglClutStorageUnchanged(const u32* oldtex, const u32* newtex)
 	return ((oldtex[1] & 0x1ff10000) == (newtex[1] & 0x1ff10000));
 }
 
+// call to load CLUT data (depending on CLD)
+void texClutWrite(int ctx);
+
+// Perform clutting for flushed texture. Better check if it needs a prior call.
+inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
+{
+	tex0->cbp  = ZZOglGet_cbp_TexBits(Data);
+	tex0->cpsm = ZZOglGet_cpsm_TexBits(Data);
+	tex0->csm  = ZZOglGet_csm_TexBits(Data);
+	tex0->csa  = ZZOglGet_csa_TexBits(Data);
+	tex0->cld  = ZZOglGet_cld_TexBits(Data);
+
+	texClutWrite(ictx);
+ };
+ 
 // CSA and CPSM bitmask 0001 1111 0111 1000 ...
 //                         60   56   52
 #define CPSM_CSA_BITMASK 0x1f780000
