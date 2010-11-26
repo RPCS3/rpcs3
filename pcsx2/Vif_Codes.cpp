@@ -192,18 +192,21 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			static __aligned16 u32 partial_write[4];
 			static uint partial_count = 0;
 
+			ret = 0;
 			for( uint i=0; i<(minSize & 3); ++i)
+			{
 				partial_write[partial_count++] = ((u32*)data)[i];
+				ret++;
+			}
 
 			pxAssume( partial_count <= 4 );
-			ret = 0;
+			
 			if (partial_count == 4)
 			{
 				GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
 				GIFPath_CopyTag(GIF_PATH_2, (u128*)partial_write, 1);
 				GetMTGS().SendDataPacket();
 				partial_count = 0;
-				ret = 4;
 			}
 		}
 		else
