@@ -122,9 +122,6 @@ find $NEW_DIR -name "configure.ac" -exec rm -f {} \;
 find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
 echo "Remove 3rd party directories"
 find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
-# I really need to clean this mess one day
-# echo "Remove plugins/zzogl-pg/opengl/ZeroGSShaders (some zlib source in the middle)"
-# rm -fr $NEW_DIR/plugins/zzogl-pg/opengl/ZeroGSShaders
 echo "Remove windows file (useless & copyright issue)"
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
@@ -134,7 +131,6 @@ rm -fr "${NEW_DIR}/common/vsprops"
 echo "Remove useless files (copyright issues)"
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
-rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/memcpy_amd.cpp"
 
 ## BUILD
 echo "Build the tar.gz file"
