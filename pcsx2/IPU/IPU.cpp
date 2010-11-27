@@ -909,7 +909,7 @@ __noinline void IPUWorker()
 			// CHECK!: IPU0dma remains when IDEC is done, so we need to clear it
 			// Check Mana Khemia 1 "off campus" to trigger a GUST IDEC messup.
 			// This hackfixes it :/
-			if (ipu0dma.qwc > 0 && ipu0dma.chcr.STR) ipu0Interrupt();
+			//if (ipu0dma.qwc > 0 && ipu0dma.chcr.STR) ipu0Interrupt();
 			break;
 
 		case SCE_IPU_BDEC:

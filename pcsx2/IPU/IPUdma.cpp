@@ -293,15 +293,23 @@ int IPU1dma()
 	return totalqwc;
 }
 
-int IPU0dma()
+void IPU0dma()
 {
-	if(!ipuRegs.ctrl.OFC) return 0;
+	if(!ipuRegs.ctrl.OFC) 
+	{
+		IPU_INT_FROM( 64 );
+		IPUProcessInterrupt();
+		return;
+	}
 
 	int readsize;
 	tDMA_TAG* pMem;
 
 	if ((!(ipu0dma.chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma.qwc == 0))
-		return 0;
+	{
+		DevCon.Warning("How??");
+		return;
+	}
 
 	pxAssert(!(ipu0dma.chcr.TTE));
 
@@ -345,10 +353,11 @@ int IPU0dma()
 		//This was IPU_INT_FROM(readsize*BIAS );
 		//This broke vids in Digital Devil Saga
 		//Note that interrupting based on totalsize is just guessing..
-		IPU_INT_FROM( readsize * BIAS );
 	}
+	IPU_INT_FROM( readsize * BIAS );
+	if(ipuRegs.ctrl.IFC > 0) IPUProcessInterrupt();
 
-	return readsize;
+	//return readsize;
 }
 
 __fi void dmaIPU0() // fromIPU
@@ -364,7 +373,10 @@ __fi void dmaIPU0() // fromIPU
 		hwDmacIrq(DMAC_FROM_IPU);
 	}
 
-	IPUProcessInterrupt();
+	IPU_INT_FROM( 64 );
+
+
+	
 }
 
 __fi void dmaIPU1() // toIPU
@@ -433,6 +445,11 @@ void ipu0Interrupt()
 {
 	IPU_LOG("ipu0Interrupt: %x", cpuRegs.cycle);
 
+	if(ipu0dma.qwc > 0)
+	{
+		IPU0dma();
+		return;
+	}
 	if (g_nDMATransfer.FIREINT0)
 	{
 		g_nDMATransfer.FIREINT0 = false;
