@@ -167,7 +167,7 @@ void HostSys::MmapResetPtr(void* base, size_t size)
 	// pretty well stops all PCSX2 threads anyway).
 
 	Munmap(base, size);
-	void* result = Mmap((uptr)base, size);
+	void* result = MmapReservePtr(base, size);
 
 	pxAssertRel ((uptr)result != (uptr)base, pxsFmt(
 		"Virtual memory decommit failed: memory at 0x%08X -> 0x%08X could not be remapped.  "
