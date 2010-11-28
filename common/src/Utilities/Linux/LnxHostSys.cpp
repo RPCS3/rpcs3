@@ -169,7 +169,7 @@ void HostSys::MmapResetPtr(void* base, size_t size)
 	Munmap(base, size);
 	void* result = MmapReservePtr(base, size);
 
-	pxAssertRel ((uptr)result != (uptr)base, pxsFmt(
+	pxAssertRel ((uptr)result == (uptr)base, pxsFmt(
 		"Virtual memory decommit failed: memory at 0x%08X -> 0x%08X could not be remapped.  "
 		"This is likely caused by multi-thread memory contention.", base, (uptr)base+size
 	));

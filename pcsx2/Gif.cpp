@@ -27,7 +27,6 @@ using std::min;
 // A three-way toggle used to determine if the GIF is stalling (transferring) or done (finished).
 // Should be a gifstate_t rather then int, but I don't feel like possibly interfering with savestates right now.
 static int gifstate = GIF_STATE_READY;
-static bool gifempty = false;
 
 static bool gspath3done = false;
 
@@ -716,7 +715,6 @@ void SaveStateBase::gifFreeze()
 	Freeze( gifqwc );
 	Freeze( gspath3done );
 	Freeze( gscycles );
-	//Freeze(gifempty);
 	// Note: mfifocycles is not a persistent var, so no need to save it here.
 
 	int bufsize = Path1WritePos - Path1ReadPos;
