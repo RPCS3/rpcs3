@@ -413,6 +413,16 @@ __fi bool dmacWrite32( u32 mem, mem32_t& value )
 	}
 	}
 
+	//DMA Writes are invalid to everything except the STR on CHCR when it is busy
+	if((mem & 0xf0))
+	{	
+		if((psHu32(mem & ~0xff) & 0x100) && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
+		{
+			DevCon.Warning("Write to DMA addr %x while STR is busy! Ignoring", mem);
+			return false;
+		}
+	}
+
 	// fall-through: use the default writeback provided by caller.
 	return true;
 }
