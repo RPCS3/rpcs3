@@ -1900,23 +1900,14 @@ void SetTexInt(int context, FRAGMENTSHADER* pfragment, int settexint)
 	{
 		tex0Info& tex0 = vb[context].tex0;
 
-		CMemoryTarget* pmemtarg = g_MemTargs.GetMemoryTarget(tex0, 1);
+        if (vb[context].bVarsTexSync) {
+            SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, true, pfragment, s_bForceTexFlush);
+        } else {
+            SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, false, pfragment, s_bForceTexFlush);
 
-		if (vb[context].bVarsTexSync)
-		{
-			if (vb[context].pmemtarg != pmemtarg)
-			{
-				SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, true, pfragment, s_bForceTexFlush);
-				vb[context].bVarsTexSync = true;
-			}
-		}
-		else
-		{
-			SetTexVariablesInt(context, GetTexFilter(vb[context].tex1), tex0, false, pfragment, s_bForceTexFlush);
-			vb[context].bVarsTexSync = true;
-
-			INC_TEXVARS();
-		}
+            INC_TEXVARS();
+        }
+        vb[context].bVarsTexSync = true;
 	}
 	else
 	{

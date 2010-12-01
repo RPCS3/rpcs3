@@ -59,6 +59,7 @@ bool g_bSaveZUpdate = 0;
 
 int VALIDATE_THRESH = 8;
 u32 TEXDESTROY_THRESH = 16;
+#define FORCE_TEXDESTROY_THRESH (3) // destroy texture after FORCE_TEXDESTROY_THRESH frames
 
 void _Resolve(const void* psrc, int fbp, int fbw, int fbh, int psm, u32 fbm, bool mode);
 void SetWriteDepth();
@@ -1817,15 +1818,14 @@ CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int clut
 			{
 				// do more validation checking. delete if not been used for a while
 
-				if (!it->ValidateTex(tex0, start, end, curstamp > it->usedstamp + 3))
+				if (!it->ValidateTex(tex0, start, end, curstamp > it->usedstamp + FORCE_TEXDESTROY_THRESH))
 				{
 
 					if (it->height <= 0)
 					{
 						it = DestroyTargetIter(it);
 
-						if (listTargets.size() == 0)
-							break;
+						if (listTargets.size() == 0) break;
 					}
 					else
 						++it;
@@ -2228,7 +2228,7 @@ void CMemoryTargetMngr::DestroyCleared()
 
 	for (list<CMemoryTarget>::iterator it = listClearedTargets.begin(); it != listClearedTargets.end();)
 	{
-		if (it->usedstamp < curstamp - 2)
+		if (it->usedstamp < curstamp - (FORCE_TEXDESTROY_THRESH -1))
 		{
 			it = listClearedTargets.erase(it);
 			continue;
@@ -2237,12 +2237,12 @@ void CMemoryTargetMngr::DestroyCleared()
 		++it;
 	}
 
-	if ((curstamp % 3) == 0)
+	if ((curstamp % FORCE_TEXDESTROY_THRESH) == 0)
 	{
-		// purge old targets every 3 frames
+		// purge old targets every FORCE_TEXDESTROY_THRESH frames
 		for (list<CMemoryTarget>::iterator it = listTargets.begin(); it != listTargets.end();)
 		{
-			if (it->usedstamp < curstamp - 3)
+			if (it->usedstamp < curstamp - FORCE_TEXDESTROY_THRESH)
 			{
 				it = listTargets.erase(it);
 				continue;
