@@ -455,53 +455,8 @@ inline bool FlushInitialTest(VB& curvb, const pixTest& curtest, int context)
 	return false;
 }
 
-// Try to different approach if texture target was not found
-inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb)
+inline void TargetLog(int& tbw, int& tbp0, int& tpsm, VB& curvb)
 {
-	// This was incorrect code
-	CRenderTarget* ptextarg = NULL;
-
-	if ((ptextarg == NULL) && (tpsm == PSMT8) && (conf.settings().reget))
-	{
-		// check for targets with half the width. Break Valkyrie Chronicles
-		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2);
-
-		if (ptextarg == NULL)
-		{
-			tbp0 &= ~0x7ff;
-			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
-
-			if (ptextarg == NULL)
-			{
-				// check the next level (mgs3)
-				tbp0 &= ~0xfff;
-				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
-			}
-
-			if (ptextarg != NULL && ptextarg->start > tbp0*256)
-			{
-				// target beyond range, so ignore
-				ptextarg = NULL;
-			}
-		}
-	}
-
-
-	if (PSMT_ISZTEX(tpsm) && (ptextarg == NULL))
-	{
-		// try depth
-		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw);
-	}
-
-	if ((ptextarg == NULL) && (conf.settings().texture_targs))
-	{
-		// check if any part of the texture intersects the current target
-		if (!PSMT_ISCLUT(tpsm) && (curvb.tex0.tbp0 >= curvb.frame.fbp) && ((curvb.tex0.tbp0) < curvb.prndr->end))
-		{
-			ptextarg = curvb.prndr;
-		}
-	}
-
 #ifdef _DEBUG
 	if (tbp0 == 0x3600 && tbw == 0x100)
 	{
@@ -526,20 +481,69 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 		else
 			ZZLog::Debug_Log("Hit  %x 0x%x %x", tbw, tbp0, tpsm);
 	}
-
 #endif
+}
+
+// Try to different approach if texture target was not found
+inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb)
+{
+	// This was incorrect code
+	CRenderTarget* ptextarg = NULL;
+	
+	if (PSMT_ISZTEX(tpsm))
+	{
+		// try depth
+		ptextarg = s_DepthRTs.GetTarg(tbp0, tbw);
+	}
+	
+	// I wonder if either of these hacks are useful, or if I can just remove them?
+	if ((conf.settings().reget) && (tpsm == PSMT8))
+	{
+		// check for targets with half the width. Break Valkyrie Chronicles
+		ptextarg = s_RTs.GetTarg(tbp0, tbw / 2);
+
+		if (ptextarg == NULL)
+		{
+			tbp0 &= ~0x7ff;
+			ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
+
+			if (ptextarg == NULL)
+			{
+				// check the next level (mgs3)
+				tbp0 &= ~0xfff;
+				ptextarg = s_RTs.GetTarg(tbp0, tbw / 2); // mgs3 hack
+			}
+
+			if (ptextarg != NULL && ptextarg->start > tbp0*256)
+			{
+				// target beyond range, so ignore
+				ptextarg = NULL;
+			}
+		}
+	}
+
+	if ((conf.settings().texture_targs) && (ptextarg == NULL))
+	{
+		// check if any part of the texture intersects the current target
+		if (!PSMT_ISCLUT(tpsm) && (curvb.tex0.tbp0 >= curvb.frame.fbp) && ((curvb.tex0.tbp0) < curvb.prndr->end))
+		{
+			ptextarg = curvb.prndr;
+		}
+	}
+	
+	TargetLog(tbw, tbp0, tpsm, curvb);
 
 	return ptextarg;
 }
 
-// Find target to draw a texture, it's highly p
+// Find target to draw a texture.
 inline CRenderTarget* FlushGetTarget(VB& curvb)
 {
 	int tbw, tbp0, tpsm;
 
 	CRenderTarget* ptextarg = NULL;
 
-	if (!curvb.curprim.tme) return ptextarg;
+	if (!curvb.curprim.tme) return ptextarg; // Which would be NULL, currently.
 
 	if (curvb.bNeedTexCheck)
 	{
@@ -558,8 +562,7 @@ inline CRenderTarget* FlushGetTarget(VB& curvb)
 
 	ptextarg = s_RTs.GetTarg(tbp0, tbw);
 
-	if (ptextarg == NULL)
-		ptextarg = FlushReGetTarget(tbw, tbp0, tpsm, curvb);
+	if (ptextarg == NULL) ptextarg = FlushReGetTarget(tbw, tbp0, tpsm, curvb);
 
 	if ((ptextarg != NULL) && !(ptextarg->status & CRenderTarget::TS_NeedUpdate))
 	{
@@ -596,6 +599,7 @@ inline CRenderTarget* FlushGetTarget(VB& curvb)
 	}
 	else 
 	{
+		// If a texture needs updating, clear it.
 		ptextarg = NULL;
 	}
 
