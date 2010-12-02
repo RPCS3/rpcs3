@@ -474,7 +474,12 @@ EXPORT_C GSgetLastTag(uint32* tag)
 
 EXPORT_C GSgetTitleInfo(char dest[128])
 {
-	//s_gs->GetWindowTitle
+	if (!TryEnterCriticalSection(&(s_gs->m_pGSsetTitle_Crit)))
+		return; //for performance's sake, no one would miss a single title update
+	
+	strncpy(dest, s_gs->m_GStitleInfoBuffer, sizeof(s_gs->m_GStitleInfoBuffer)-1);
+	LeaveCriticalSection(&(s_gs->m_pGSsetTitle_Crit));
+	
 }
 
 EXPORT_C GSsetFrameSkip(int frameskip)

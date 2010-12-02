@@ -48,6 +48,8 @@ GSRenderer::GSRenderer()
 	s_save = !!theApp.GetConfig("save", 0);
 	s_savez = !!theApp.GetConfig("savez", 0);
 	s_saven = theApp.GetConfig("saven", 0);
+
+	InitializeCriticalSection(&m_pGSsetTitle_Crit);
 }
 
 GSRenderer::~GSRenderer()
@@ -60,6 +62,7 @@ GSRenderer::~GSRenderer()
 	_aligned_free( m_tex_buff );
 
 	delete m_dev;
+	DeleteCriticalSection(&m_pGSsetTitle_Crit);
 }
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)
@@ -307,7 +310,7 @@ void GSRenderer::VSync(int field)
 
 	// osd
 
-	if((m_perfmon.GetFrame() & 0x1f) == 0 && m_wnd.IsManaged())
+	if((m_perfmon.GetFrame() & 0x1f) == 0)
 	{
 		m_perfmon.Update();
 
@@ -317,33 +320,68 @@ void GSRenderer::VSync(int field)
 
 		GSVector4i r = GetDisplayRect();
 
-		string s = format(
-			"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
-			m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
-			s2.c_str(),
-			GSSettingsDlg::g_interlace[m_interlace].name.c_str(),
-			GSSettingsDlg::g_aspectratio[m_aspectratio].name.c_str(),
-			(int)m_perfmon.Get(GSPerfMon::Quad),
-			(int)m_perfmon.Get(GSPerfMon::Prim),
-			(int)m_perfmon.Get(GSPerfMon::Draw),
-			m_perfmon.CPU(),
-			m_perfmon.Get(GSPerfMon::Swizzle) / 1024,
-			m_perfmon.Get(GSPerfMon::Unswizzle) / 1024
-		);
+		string s;
 
-		double fillrate = m_perfmon.Get(GSPerfMon::Fillrate);
+#ifdef GSTITLEINFO_API_FORCE_VERBOSE
+		if (1)//force verbose reply
+#else
+		if (m_wnd.IsManaged())
+#endif
+		{//GSdx owns the window's title, be verbose.
+			s = format(
+				"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
+				m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
+				s2.c_str(),
+				GSSettingsDlg::g_interlace[m_interlace].name.c_str(),
+				GSSettingsDlg::g_aspectratio[m_aspectratio].name.c_str(),
+				(int)m_perfmon.Get(GSPerfMon::Quad),
+				(int)m_perfmon.Get(GSPerfMon::Prim),
+				(int)m_perfmon.Get(GSPerfMon::Draw),
+				m_perfmon.CPU(),
+				m_perfmon.Get(GSPerfMon::Swizzle) / 1024,
+				m_perfmon.Get(GSPerfMon::Unswizzle) / 1024
+			);
 
-		if(fillrate > 0)
-		{
-			s += format(" | %.2f mpps", fps * fillrate / (1024 * 1024));
+			double fillrate = m_perfmon.Get(GSPerfMon::Fillrate);
+
+			if(fillrate > 0)
+			{
+				s += format(" | %.2f mpps", fps * fillrate / (1024 * 1024));
+			}
+
 		}
+		else
+		{//Satisfy PCSX2's request for title info: minimal verbosity due to more external title text
+			s = format(
+				"%dx%d | %s - %s",
+				r.width(), r.height(),
+				s2.c_str(),
+				GSSettingsDlg::g_interlace[m_interlace].name.c_str()
+			);
+		}
+
 
 		if(m_capture.IsCapturing())
 		{
 			s += " | Recording...";
 		}
 
-		m_wnd.SetWindowText(s.c_str());
+		if (m_wnd.IsManaged())
+		{
+			m_wnd.SetWindowText(s.c_str());
+		}
+		else
+		{
+			if (!TryEnterCriticalSection(&m_pGSsetTitle_Crit))
+				return; //for performance's sake, no one would miss a single title update
+
+			strncpy(m_GStitleInfoBuffer, s.c_str(), sizeof(m_GStitleInfoBuffer)-1);
+			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer)-1]=0;//make sure null terminated even if text overflows
+
+			LeaveCriticalSection(&m_pGSsetTitle_Crit);
+		}
+
+		
 	}
 	else
 	{

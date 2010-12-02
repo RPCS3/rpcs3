@@ -186,10 +186,13 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 }
 
 void CALLBACK GS_getTitleInfo( char dest[128] )
-{
-	dest[0] = 'G';
-	dest[1] = 'S';
-	dest[2] = 0;
+{//default GS title reply if not supported by the plugin: provide the info we can: interlace mode only
+ //NOTE: i18n is ignored here. Since the api is ascii7, result is plain ascii english
+	const u64& smode2 = *(u64*)PS2GS_BASE(GS_SMODE2);
+	sprintf(dest, "%s (%s)",
+			(smode2 & 1) ? "Interlaced" : "Progressive",
+			(smode2 & 2) ? "frame" : "field"
+			);
 }
 
 // This legacy passthrough function is needed because the old GS plugins tended to assume that
