@@ -361,7 +361,7 @@ public:
 			// variable do not exist
 			user_local_dir = (wxDirName)Path::Combine( GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
 		}
-		return user_local_dir;
+		return user_local_dir.ToString();
 	}
 #endif
 };

@@ -274,7 +274,6 @@ set(pcsx2DebugToolsHeaders
 
 # gui sources
 set(pcsx2GuiSources
-	gui/AdvancedDialog.cpp
 	gui/AppAssert.cpp
 	gui/AppConfig.cpp
 	gui/AppCorePlugins.cpp
@@ -338,7 +337,6 @@ set(pcsx2GuiSources
 
 # gui headers
 set(pcsx2GuiHeaders
-	gui/AdvancedDialog.h
 	gui/App.h
 	gui/ApplyState.h
 	gui/AppAccelerators.h
