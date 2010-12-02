@@ -1997,14 +1997,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\AdvancedDialog.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\AdvancedDialog.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\gui\Dialogs\AssertionDialog.cpp"
 					>
 				</File>

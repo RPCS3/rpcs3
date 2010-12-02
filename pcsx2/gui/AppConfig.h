@@ -195,8 +195,8 @@ public:
 	wxString	AppSettingsTabName;
 	wxString	GameDatabaseTabName;
 
-	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
-	wxLanguage	LanguageId;
+	// Current language in use (correlates to the universal language codes, such as "en_US", "de_DE", etc).
+	wxString	LanguageCode;
 
 	int			RecentIsoCount;		// number of files displayed in the Recent Isos list.
 

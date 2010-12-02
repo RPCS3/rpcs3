@@ -32,20 +32,25 @@ bool pxIsEnglish( int id )
 // (without this second pass many tooltips would just show up as "Savestate Tooltip" instead
 //  of something meaningful).
 //
-// Rationale: Traditional gnu-style gnu_gettext stuff tends to stop translating strings when 
+// Rationale: Traditional gnu-style gettext stuff tends to stop translating strings when 
 // the slightest change to a string is made (including punctuation and possibly even case).
 // On long strings especially, this can be unwanted since future revisions of the app may have
-// simple tyop fixes that *should not* break existing translations.  Furthermore
+// simple typo or newline fixes that *should not* break existing translations.  Furthermore,
+// icons can be used in places where otherwise identical english verbage for two separate
+// terms can be differentiated.  GNU gettext has some new tools for using fuzzy logic heuristics
+// matching, but it is also imperfect and complicated, so we have opted to continue using this
+// system instead.
+//
 const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
 {
 #ifdef PCSX2_DEVBUILD
 	static const wxChar* tbl_pxE_Prefixes[] =
 	{
-		L".Panel:",
-		L".Popup:",
-		L".Error:",
-		L".Wizard:",
-		L".Tooltip:",
+		L"!Panel:",
+		L"!Notice:",
+		L"!Wizard:",
+		L"!Tooltip:",
+		L"!ContextTip:",
 		NULL
 	};
 
@@ -57,7 +62,7 @@ const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishCo
 		++prefix;
 	}
 	pxAssertDev( *prefix != NULL,
-		wxsFormat( L"Invalid pxE key prefix in key '%s'.  Prefix must be one of the valid prefixes listed in pxExpandMsg.", key )
+		pxsFmt( L"Invalid pxE key prefix in key '%s'.  Prefix must be one of the valid prefixes listed in pxExpandMsg.", key )
 	);
 #endif
 

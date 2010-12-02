@@ -27,7 +27,7 @@ using namespace pxSizerFlags;
 
 wxString GetMsg_McdNtfsCompress()
 {
-	return pxE( ".Panel:Mcd:NtfsCompress", 
+	return pxE( "!Panel:Mcd:NtfsCompress", 
 		L"NTFS compression is built-in, fast, and completely reliable; and typically compresses memory cards "
 		L"very well (this option is highly recommended)."
 	);
@@ -38,7 +38,7 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 {
 	m_check_Ejection = new pxCheckBox( this,
 		_("Auto-eject memory cards when loading savestates"),
-		pxE( ".Panel:Mcd:EnableEjection",
+		pxE( "!Panel:Mcd:EnableEjection",
 			L"Avoids memory card corruption by forcing games to re-index card contents after "
 			L"loading from savestates.  May not be compatible with all games (Guitar Hero)."
 		)

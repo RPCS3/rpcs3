@@ -423,12 +423,14 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&Memory cards") );
 	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector") );
-	//m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
+	if (IsDebugBuild)
+		m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
+
 	m_menuConfig.AppendSeparator();
 
 	m_menuConfig.Append(MenuId_Config_GS,		_("&Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);
 	m_menuConfig.Append(MenuId_Config_SPU2,		_("&Audio (SPU2)"),		m_PluginMenuPacks[PluginId_SPU2]);
-	m_menuConfig.Append(MenuId_Config_PAD,		_("&Controllers (PAD)"),	m_PluginMenuPacks[PluginId_PAD]);
+	m_menuConfig.Append(MenuId_Config_PAD,		_("&Controllers (PAD)"),m_PluginMenuPacks[PluginId_PAD]);
 	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),				m_PluginMenuPacks[PluginId_DEV9]);
 	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),				m_PluginMenuPacks[PluginId_USB]);
 	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),			m_PluginMenuPacks[PluginId_FW]);

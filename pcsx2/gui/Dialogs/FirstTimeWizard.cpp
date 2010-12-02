@@ -45,12 +45,12 @@ bool ApplicableWizardPage::PrepForApply()
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent )
 	: DirPickerPanel( parent, FolderId_Settings, _("Settings"), AddAppName(_("Select a folder for %s settings")) )
 {
-	pxSetToolTip( this, pxE( ".Tooltip:Folders:Settings",
+	pxSetToolTip( this, pxEt( "!ContextTip:Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
 		L"by most plugins (some older plugins may not respect this value)."
 	) );
 
-	SetStaticDesc( pxE( ".Panel:Folders:Settings",
+	SetStaticDesc( pxE( "!Panel:Folders:Settings",
 		L"You may optionally specify a location for your PCSX2 settings here.  If the location "
 		L"contains existing PCSX2 settings, you will be given the option to import or overwrite them."
 	) );
@@ -106,7 +106,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 		// FIXME: There's already a file by the same name.. not sure what we should do here.
 		throw Exception::BadStream( path.ToString() )
 			.SetDiagMsg(L"Targeted documents folder is already occupied by a file.")
-			.SetUserMsg(pxE( ".Error:DocsFolderFileConflict",
+			.SetUserMsg(pxE( "!Notice:DocsFolderFileConflict",
 				L"PCSX2 cannot create a documents folder in the requested location.  "
 				L"The path name matches an existing file.  Delete the file or change the documents location, "
 				L"and then try again."
@@ -149,7 +149,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	// Temporary tutorial message for the BIOS, needs proof-reading!!
 	m_page_bios		+= 12;
 	m_page_bios		+= new pxStaticHeading( &m_page_bios,
-		pxE( ".Wizard:Bios:Tutorial",
+		pxE( "!Wizard:Bios:Tutorial",
 			L"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
 			L"You cannot use a copy obtained from a friend or the Internet.\n"
 			L"You must dump the BIOS from your *own* Playstation 2 console."

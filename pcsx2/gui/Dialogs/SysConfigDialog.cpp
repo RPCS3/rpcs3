@@ -23,6 +23,7 @@
 #include "Panels/ConfigurationPanels.h"
 
 using namespace Panels;
+using namespace pxSizerFlags;
 
 static void CheckHacksOverrides()
 {
@@ -33,7 +34,7 @@ static void CheckHacksOverrides()
 
 	wxDialogWithHelpers dialog( wxFindWindowByName( L"Dialog:" + Dialogs::SysConfigDialog::GetNameStatic() ), _("Config Overrides Warning") );
 	
-	dialog += dialog.Text( pxE(".Panel:HasHacksOverrides",
+	dialog += dialog.Text( pxE("!Panel:HasHacksOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured settings.  "
 		L"These command line options will not be reflected in the Settings dialog, and will be disabled "
 		L"if you apply any changes here."
@@ -53,7 +54,7 @@ static void CheckPluginsOverrides()
 
 	wxDialogWithHelpers dialog( NULL, _("Components Overrides Warning") );
 	
-	dialog += dialog.Text( pxE(".Panel:HasPluginsOverrides",
+	dialog += dialog.Text( pxE("!Panel:HasPluginsOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured plugin and/or folder settings.  "
 		L"These command line options will not be reflected in the settings dialog, and will be disabled "
 		L"when you apply settings changes here."

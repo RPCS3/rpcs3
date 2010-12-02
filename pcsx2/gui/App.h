@@ -359,6 +359,10 @@ class Pcsx2AppTraits : public wxGUIAppTraits
 public:
 	virtual ~Pcsx2AppTraits() {}
 	wxMessageOutput* CreateMessageOutput();
+
+#ifdef wxUSE_STDPATHS
+	wxStandardPathsBase& GetStandardPaths();
+#endif
 };
 
 // =====================================================================================================

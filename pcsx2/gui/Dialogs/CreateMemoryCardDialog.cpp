@@ -148,7 +148,7 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 		GetMsg_McdNtfsCompress()
 	);
 
-	m_check_CompressNTFS->SetToolTip( pxE( ".Tooltip:ChangingNTFS",
+	m_check_CompressNTFS->SetToolTip( pxEt( "!ContextTip:ChangingNTFS",
 			L"NTFS compression can be changed manually at any time by using file properties from Windows Explorer."
 		)
 	);

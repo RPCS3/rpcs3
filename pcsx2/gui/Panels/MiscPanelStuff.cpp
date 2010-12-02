@@ -32,13 +32,13 @@ using namespace pxSizerFlags;
 Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isFirstTime )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL, _("Usermode Selection") )
 {
-	const wxString usermodeExplained( pxE( ".Panel:Usermode:Explained",
+	const wxString usermodeExplained( pxE( "!Panel:Usermode:Explained",
 		L"Please select your preferred default location for PCSX2 user-level documents below "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
 		L"These folder locations can be overridden at any time using the Core Settings panel."
 	) );
 
-	const wxString usermodeWarning( pxE( ".Panel:Usermode:Warning",
+	const wxString usermodeWarning( pxE( "!Panel:Usermode:Warning",
 		L"You can change the preferred default location for PCSX2 user-level documents here "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
 		L"This option only affects Standard Paths which are set to use the installation default value."
@@ -127,7 +127,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	m_picker = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 
-	*this	+= Label(_("Select a language: (unimplemented)")) | pxMiddle;
+	*this	+= Label(_("Select a language:")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
 
@@ -144,13 +144,13 @@ void Panels::LanguageSelectionPanel::Apply()
 
 	wxString sel( m_picker->GetString( m_picker->GetSelection() ) );
 
-	g_Conf->LanguageId = wxLANGUAGE_DEFAULT;	// use this if no matches found
+	g_Conf->LanguageCode = L"default";	// use this if no matches found
 	int size = m_langs.size();
 	for( int i=0; i<size; ++i )
 	{
 		if( m_langs[i].englishName == sel )
 		{
-			g_Conf->LanguageId = m_langs[i].wxLangId;
+			g_Conf->LanguageCode = m_langs[i].canonicalName;
 			break;
 		}
 	}
@@ -158,5 +158,17 @@ void Panels::LanguageSelectionPanel::Apply()
 
 void Panels::LanguageSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
-	if( m_picker ) m_picker->SetSelection( g_Conf->LanguageId );
+	if (m_picker) 
+	{
+		if (g_Conf->LanguageCode.IsEmpty())
+			g_Conf->LanguageCode = L"default";
+
+		for (uint i=0; i<m_langs.size(); ++i)
+		{
+			if (0==m_langs[i].canonicalName.CmpNoCase(g_Conf->LanguageCode))
+			{
+				m_picker->SetSelection( i );
+			}
+		}
+	}
 }

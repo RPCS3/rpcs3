@@ -50,7 +50,7 @@ void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_GameDatabase_Click(wxCommandEvent &event)
 {
-	AppOpenDialog<McdConfigDialog>( this );
+	AppOpenDialog<GameDatabaseDialog>( this );
 }
 
 void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent &event)
@@ -104,7 +104,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 	{
 		ScopedCoreThreadPopup suspender;
 		if( !Msgbox::OkCancel( pxsFmt(
-			pxE( ".Popup:DeleteSettings",
+			pxE( "!Notice:DeleteSettings",
 				L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to "
 				L"manually restart %s after this operation.\n\n"
 				L"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?"

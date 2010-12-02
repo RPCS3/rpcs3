@@ -22,8 +22,11 @@ class LangPackEnumeration
 {
 public:
 	wxLanguage	wxLangId;
+	wxString	canonicalName;
 	wxString	englishName;
-	wxString	xlatedName;
+
+	// [TODO] : Might be nice, but have no idea how to implement it...
+	//wxString	xlatedName;
 
 public:
 	LangPackEnumeration( wxLanguage langId );
@@ -32,6 +35,7 @@ public:
 
 typedef std::vector<LangPackEnumeration> LangPackList;
 
+extern bool i18n_SetLanguage( const wxString& langCode );
 extern bool i18n_SetLanguage( int wxLangId );
 extern void i18n_EnumeratePackages( LangPackList& langs );
 

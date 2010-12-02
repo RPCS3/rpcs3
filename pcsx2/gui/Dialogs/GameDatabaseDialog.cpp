@@ -17,10 +17,13 @@
 #include "ConfigurationDialog.h"
 #include "Panels/ConfigurationPanels.h"
 
+using namespace Panels;
+using namespace pxSizerFlags;
+
 Dialogs::GameDatabaseDialog::GameDatabaseDialog(wxWindow* parent)
-	: BaseConfigurationDialog( parent, AddAppName(_("Game Database - %s")), 580 )
+	: BaseConfigurationDialog( parent, AddAppName(_("Game database - %s")), 580 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
-	*this += new Panels::GameDatabasePanel(this);
+	*this += new GameDatabasePanel(this) | StdExpand();
 	AddOkCancel();
 }

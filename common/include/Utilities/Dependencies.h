@@ -191,7 +191,6 @@ static const s64 _256mb		= _1mb * 256;
 static const s64 _1gb		= _256mb * 4;
 static const s64 _4gb		= _1gb * 4;
 
-
 // ===========================================================================================
 //  i18n/Translation Feature Set!
 // ===========================================================================================
@@ -215,7 +214,7 @@ extern wxString fromAscii( const char* src );
 #endif
 
 // --------------------------------------------------------------------------------------
-//  pxE(x)   [macro]
+//  pxE(key, msg) and pxEt(key, msg)  [macros]
 // --------------------------------------------------------------------------------------
 // Translation Feature: pxE is used as a method of dereferencing very long english text
 // descriptions via a "key" identifier.  In this way, the english text can be revised without
@@ -225,28 +224,30 @@ extern wxString fromAscii( const char* src );
 //
 // Valid prefix types:
 //
-// .Panel:   Key-based translation of a panel or dialog text; usually either a header or
-//           checkbox description, by may also include some controls with long labels.
-//           These have the highest translation priority.
+// !Panel:       Key-based translation of a panel or dialog text; usually either a header or
+//               checkbox description, by may also include some controls with long labels.
+//               These have the highest translation priority.
 //
-// .Popup:   Key-based translation of a popup dialog box; either a notice, confirmation,
-//           or error.  These typically have very high translation priority (roughly equal
-//           or slightly less than pxE_Panel).
+// !Notice:      Key-based translation of a popup dialog box; either a notice, confirmation,
+//               or error.  These typically have very high translation priority (roughly equal
+//               or slightly less than pxE_Panel).
 //
-// .Error    Key-based translation of error messages, typically used when throwing exceptions
-//           that have end-user errors.  These are normally (but not always) displayed as popups
-//           to the user.  Translation priority is medium.
+// !Tooltip:     Key-based translation of a tooltip for a button on a tool bar.  Since buttons are
+//               rarely self-explanatory, these translations are considered medium to high priority.
 //
-// .Wizard   Key-based translation of a heading, checkbox item, description, or other text
-//           associated with the First-time wizard.  Translation of these items is considered
-//           lower-priority to most other messages; but equal or higher priority to tooltips.
+// !Wizard       Key-based translation of a heading, checkbox item, description, or other text
+//               associated with the First-time wizard.  Translation of these items is considered
+//               lower-priority to most other messages; but equal or higher priority to ContextTips.
 //
-// .Tooltip: Key-based translation of a tooltip for a control on a dialog/panel.  Translation
-//           of these items is typically considered "lowest priority" as they usually provide
-//           the most tertiary of info to the user.
+// !ContextTip:  Key-based translation of a tooltip for a control on a dialog/panel.  Translation
+//               of these items is typically considered "lowest priority" as they usually provide
+//               only tertiary (extra) info to the user.
 //
 
-#define pxE(key, english)			pxExpandMsg( wxT(key),						english )
+#define pxE(key, english)			pxExpandMsg( wxT(key),	english )
+
+// For use with tertiary translations (low priority).
+#define pxEt(key, english)			pxExpandMsg( wxT(key),	english )
 
 #include "Utilities/Assertions.h"
 #include "Utilities/Exceptions.h"

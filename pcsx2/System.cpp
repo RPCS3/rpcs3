@@ -21,9 +21,6 @@
 
 #include "SamplProf.h"
 
-// Includes needed for cleanup, since we don't have a good system (yet) for
-// cleaning up these things.
-#include "GameDatabase.h"
 #include "Elfheader.h"
 
 #include "System/RecTypes.h"
@@ -114,7 +111,7 @@ void RecompiledCodeReserve::ThrowIfNotOk() const
 
 	throw Exception::OutOfMemory(m_name)
 		.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
-		.SetUserMsg( pxE( ".Error:Recompiler:VirtualMemoryAlloc",
+		.SetUserMsg( pxE( "!Notice:Recompiler:VirtualMemoryAlloc",
 			L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
 			L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
 			L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
@@ -212,8 +209,8 @@ void SysLogMachineCaps()
 	Console.WriteLn( Color_StrongBlack, "Host Machine Init:" );
 
 	Console.Indent().WriteLn(
-		L"Operating System = %s\n"
-		L"Physical RAM     = %u MB",
+		L"Operating System =  %s\n"
+		L"Physical RAM     =  %u MB",
 
 		GetOSVersionString().c_str(),
 		(u32)(GetPhysicalMemory() / _1mb)
@@ -223,7 +220,7 @@ void SysLogMachineCaps()
 
 	Console.Indent().WriteLn(
 		L"CPU name         =  %s\n"
-		L"Vendor/Model     =  %s - stepping=%02X\n"
+		L"Vendor/Model     =  %s (stepping %02X)\n"
 		L"CPU speed        =  %u.%03u ghz (%u logical thread%s)\n"
 		L"x86PType         =  %s\n"
 		L"x86Flags         =  %08x %08x\n"
@@ -346,7 +343,7 @@ public:
 // returns the translated error message for the Virtual Machine failing to allocate!
 static wxString GetMemoryErrorVM()
 {
-	return pxE( ".Error:EmuCore::MemoryForVM",
+	return pxE( "!Notice:EmuCore::MemoryForVM",
 		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
 		L"Close out some memory hogging background tasks and try again."
 	);
