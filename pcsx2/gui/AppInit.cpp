@@ -236,6 +236,15 @@ void Pcsx2App::OpenProgramLog()
 	EnableAllLogging();
 
 	if( m_current_focus ) m_current_focus->SetFocus();
+	
+	/*
+	// This is test code for printing out all supported languages and their canonical names in wiki-fied
+	// format.  I might use it again soon, so I'm leaving it in for now... --air
+	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
+	{
+		if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( li ))
+			Console.WriteLn( L"|| %-30s || %s ||", info->Description.c_str(), info->CanonicalName.c_str() );
+	}*/
 }
 
 void Pcsx2App::AllocateCoreStuffs()

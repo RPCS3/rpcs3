@@ -157,8 +157,8 @@ bool i18n_SetLanguage( int wxLangId )
 	static const wxChar* dictFiles[] =
 	{
 		L"pcsx2_Main",
-		L"pcsx2_Notices",
-		L"pcsx2_ContextTips"
+		L"pcsx2_Iconized",
+		L"pcsx2_Tertiary"
 	};
 	
 	bool foundone = false;
