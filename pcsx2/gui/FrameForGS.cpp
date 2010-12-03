@@ -386,7 +386,7 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	double fps = wxGetApp().FpsManager.GetFramerate();
 
 	char gsDest[128];
-	GSgetTitleInfo( gsDest, sizeof(gsDest) );
+	GSgetTitleInfo2( gsDest, sizeof(gsDest) );
 
 	const wxChar* limiterStr = L"None";
 

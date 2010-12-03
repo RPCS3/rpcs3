@@ -478,7 +478,7 @@ EXPORT_C GSgetLastTag(uint32* tag)
 #define snprintf _snprintf
 #endif
 
-EXPORT_C GSgetTitleInfo(char* dest, size_t length)
+EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
 	if (!s_gs->m_GStitleInfoBuffer[0])
 		strcpy(dest, "GSdx");

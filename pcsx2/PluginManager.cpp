@@ -152,7 +152,7 @@ _GSgifSoftReset    GSgifSoftReset;
 _GSreadFIFO        GSreadFIFO;
 _GSreadFIFO2       GSreadFIFO2;
 _GSchangeSaveState GSchangeSaveState;
-_GSgetTitleInfo    GSgetTitleInfo;
+_GSgetTitleInfo2   GSgetTitleInfo2;
 _GSmakeSnapshot	   GSmakeSnapshot;
 _GSmakeSnapshot2   GSmakeSnapshot2;
 _GSirqCallback 	   GSirqCallback;
@@ -185,7 +185,7 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 	Console.WriteLn(msg);
 }
 
-void CALLBACK GS_getTitleInfo( char* dest, size_t length )
+void CALLBACK GS_getTitleInfo2( char* dest, size_t length )
 {
 	// Just return a generic "GS" title -- a plugin actually implementing this feature
 	// should return a title such as "GSdx" or "ZZogl" instead.  --air
@@ -375,7 +375,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSsetVsync",		(vMeth**)&GSsetVsync,		(vMeth*)GS_setVsync	},
 	{	"GSsetExclusive",	(vMeth**)&GSsetExclusive,	(vMeth*)GS_setExclusive	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState,(vMeth*)GS_changeSaveState },
-	{	"GSgetTitleInfo",	(vMeth**)&GSgetTitleInfo,	(vMeth*)GS_getTitleInfo },
+	{	"GSgetTitleInfo2",	(vMeth**)&GSgetTitleInfo2,	(vMeth*)GS_getTitleInfo2 },
 	{ NULL }
 };
 

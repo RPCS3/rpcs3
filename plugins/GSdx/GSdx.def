@@ -42,4 +42,4 @@ EXPORTS
 	GSgetLastTag
 	GSReplay
 	GSBenchmark
-	GSgetTitleInfo
+	GSgetTitleInfo2
