@@ -5,8 +5,8 @@ project (YAML_CPP)
 set(LIB_TYPE SHARED)
 
 if(IPHONE)
-  set(CMAKE_OSX_SYSROOT iphoneos4.0)
-  set(CMAKE_OSX_ARCHITECTURES $(ARCHS_STANDARD_32_BIT))
+  set(CMAKE_OSX_SYSROOT iphoneos4.2)
+  set(CMAKE_OSX_ARCHITECTURES "armv6;armv7")
   set(LIB_TYPE)
 endif(IPHONE)
 

@@ -58,7 +58,13 @@ namespace YAML
 	template<>
 	inline bool RegEx::IsValidSource<StringCharSource>(const StringCharSource&source) const
 	{
-		return source || m_op == REGEX_EMPTY;
+		switch(m_op) {
+			case REGEX_MATCH:
+			case REGEX_RANGE:
+				return source;
+			default:
+				return true;
+		}
 	}
 
 	template <typename Source>

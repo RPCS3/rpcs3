@@ -726,6 +726,21 @@ namespace Test
 			out << YAML::Binary("", 0);
 			desiredOutput = "--- !!binary \"\"";
 		}
+		
+		void ColonAtEndOfScalar(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << "a:";
+			desiredOutput = "--- \"a:\"";
+		}
+
+		void ColonAsScalar(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "apple" << YAML::Value << ":";
+			out << YAML::Key << "banana" << YAML::Value << ":";
+			out << YAML::EndMap;
+			desiredOutput = "---\napple: \":\"\nbanana: \":\"";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -916,6 +931,8 @@ namespace Test
 		RunEmitterTest(&Emitter::Binary, "binary", passed, total);
 		RunEmitterTest(&Emitter::LongBinary, "long binary", passed, total);
 		RunEmitterTest(&Emitter::EmptyBinary, "empty binary", passed, total);
+		RunEmitterTest(&Emitter::ColonAtEndOfScalar, "colon at end of scalar", passed, total);
+		RunEmitterTest(&Emitter::ColonAsScalar, "colon as scalar", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
