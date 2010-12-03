@@ -229,7 +229,7 @@ int __fi get_dmv()
 {
 	const DMVtab* tab = DMV_2 + UBITS(2);
 	DUMPBITS(tab->len);
-	return tab->dmv;
+	return (tab->dmv | (tab->len << 16));
 }
 
 int get_macroblock_address_increment()
