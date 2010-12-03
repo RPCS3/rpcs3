@@ -478,18 +478,15 @@ EXPORT_C GSgetLastTag(uint32* tag)
 #define snprintf _snprintf
 #endif
 
-EXPORT_C GSgetTitleInfo(char dest[128])
+EXPORT_C GSgetTitleInfo(char* dest, size_t length)
 {
-	// NOTE: MSVC appears to generate an incorrect sizeof for dest, returning 4 (size of a pointer)
-	// instead of 128.  So let's hardcode it. (sigh).  --air
-
 	if (!s_gs->m_GStitleInfoBuffer[0])
 		strcpy(dest, "GSdx");
 	else
 	{
 		EnterCriticalSection(&s_gs->m_pGSsetTitle_Crit);
-		snprintf(dest, 127, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
-		dest[127] = 0;		// just in case!
+		snprintf(dest, length-1, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
+		dest[length-1] = 0;		// just in case!
 		LeaveCriticalSection(&s_gs->m_pGSsetTitle_Crit);
 	}
 }

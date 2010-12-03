@@ -185,7 +185,7 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 	Console.WriteLn(msg);
 }
 
-void CALLBACK GS_getTitleInfo( char dest[128] )
+void CALLBACK GS_getTitleInfo( char* dest, size_t length )
 {
 	// Just return a generic "GS" title -- a plugin actually implementing this feature
 	// should return a title such as "GSdx" or "ZZogl" instead.  --air
