@@ -29,6 +29,8 @@ GSRenderer::GSRenderer()
 	, m_dev(NULL)
 	, m_shader(0)
 {
+	m_GStitleInfoBuffer[0] = 0;
+
 	m_interlace = theApp.GetConfig("interlace", 0);
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);
 	m_filter = theApp.GetConfig("filter", 1);
@@ -316,8 +318,6 @@ void GSRenderer::VSync(int field)
 
 		double fps = 1000.0f / m_perfmon.Get(GSPerfMon::Frame);
 
-		string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
-
 		GSVector4i r = GetDisplayRect();
 
 		string s;
@@ -328,6 +328,7 @@ void GSRenderer::VSync(int field)
 		if (m_wnd.IsManaged())
 #endif
 		{//GSdx owns the window's title, be verbose.
+			string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
 			s = format(
 				"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
 				m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
@@ -351,11 +352,11 @@ void GSRenderer::VSync(int field)
 
 		}
 		else
-		{//Satisfy PCSX2's request for title info: minimal verbosity due to more external title text
+		{
+			//Satisfy PCSX2's request for title info: minimal verbosity due to more external title text
 			s = format(
-				"%dx%d | %s - %s",
+				"%dx%d | %s",
 				r.width(), r.height(),
-				s2.c_str(),
 				GSSettingsDlg::g_interlace[m_interlace].name.c_str()
 			);
 		}
@@ -372,11 +373,15 @@ void GSRenderer::VSync(int field)
 		}
 		else
 		{
-			if (!TryEnterCriticalSection(&m_pGSsetTitle_Crit))
-				return; //for performance's sake, no one would miss a single title update
+			// note: do not use TryEnterCriticalSection.  It is unnecessary code complication in
+			// an area that absolutely does not matter (even if it were 100 times slower, it wouldn't
+			// be noticeable).  Besides, these locks are extremely short -- overhead of conditional
+			// is way more expensive than just waiting for the CriticalSection in 1 of 10,000,000 tries. --air
 
-			strncpy(m_GStitleInfoBuffer, s.c_str(), sizeof(m_GStitleInfoBuffer)-1);
-			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer)-1]=0;//make sure null terminated even if text overflows
+			EnterCriticalSection(&m_pGSsetTitle_Crit);
+
+			strncpy(m_GStitleInfoBuffer, s.c_str(), ArraySize(m_GStitleInfoBuffer)-1);
+			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer)-1] = 0;// make sure null terminated even if text overflows
 
 			LeaveCriticalSection(&m_pGSsetTitle_Crit);
 		}

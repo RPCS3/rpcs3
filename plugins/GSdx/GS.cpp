@@ -27,6 +27,7 @@
 #include "GSRendererNull.h"
 #include "GSSettingsDlg.h"
 
+
 #define PS2E_LT_GS 0x01
 #define PS2E_GS_VERSION 0x0006
 #define PS2E_X86 0x01   // 32 bit
@@ -472,14 +473,25 @@ EXPORT_C GSgetLastTag(uint32* tag)
 	s_gs->GetLastTag(tag);
 }
 
+
+#ifdef _MSC_VER
+#define snprintf _snprintf
+#endif
+
 EXPORT_C GSgetTitleInfo(char dest[128])
 {
-	if (!TryEnterCriticalSection(&(s_gs->m_pGSsetTitle_Crit)))
-		return; //for performance's sake, no one would miss a single title update
-	
-	strncpy(dest, s_gs->m_GStitleInfoBuffer, sizeof(s_gs->m_GStitleInfoBuffer)-1);
-	LeaveCriticalSection(&(s_gs->m_pGSsetTitle_Crit));
-	
+	// NOTE: MSVC appears to generate an incorrect sizeof for dest, returning 4 (size of a pointer)
+	// instead of 128.  So let's hardcode it. (sigh).  --air
+
+	if (!s_gs->m_GStitleInfoBuffer[0])
+		strcpy(dest, "GSdx");
+	else
+	{
+		EnterCriticalSection(&s_gs->m_pGSsetTitle_Crit);
+		snprintf(dest, 127, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
+		dest[127] = 0;		// just in case!
+		LeaveCriticalSection(&s_gs->m_pGSsetTitle_Crit);
+	}
 }
 
 EXPORT_C GSsetFrameSkip(int frameskip)
