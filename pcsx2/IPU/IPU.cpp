@@ -440,10 +440,9 @@ static __fi bool ipuVDEC(u32 val)
 			// very choppy (basically only decoding/updating every 30th frame or so). So yeah,
 			// someone with knowledge on the subject please feel free to explain this one. :) --air
 
-			ipuRegs.cmd.DATA &= 0xFFFF;
-			ipuRegs.cmd.DATA |= 0x10000;
+			// The upper bits are the "length" of the decoded command, where the lower is the address.
+			// This is due to differences with IPU and the MPEG standard. See get_macroblock_address_increment().
 
-			//ipuRegs.cmd.DATA = (ipuRegs.cmd.DATA & 0xFFFF) | ((decoder.bitstream_bits + 16) << 16);
 			ipuRegs.ctrl.ECD = (ipuRegs.cmd.DATA == 0);
 
 		case 1:
