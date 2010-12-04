@@ -233,7 +233,8 @@ protected:
 			m_Close		:1;
 	BITFIELD_END
 
-	wxString m_CustomLabel;
+	wxString	m_CustomLabel;
+	wxString	m_CustomLabelId;
 
 public:
 	MsgButtons() { bitset = 0; }
@@ -251,9 +252,12 @@ public:
 	MsgButtons& Reset()		{ m_Reset		= true; return *this; }
 	MsgButtons& Close()		{ m_Close		= true; return *this; }
 
-	MsgButtons& Custom( const wxString& label)
+	// label - native language label displayed to user
+	// id - raw ASCII identifier used in the config file (do not translate, hence char*)
+	MsgButtons& Custom( const wxString& label, const char* id )
 	{
 		m_CustomLabel = label;
+		m_CustomLabelId = fromUTF8(id);
 		return *this;
 	}
 
@@ -274,7 +278,8 @@ public:
 	bool HasClose() const	{ return m_Close; }
 
 	bool HasCustom() const	{ return !m_CustomLabel.IsEmpty(); }
-	const wxString& GetCustomLabel() const { return m_CustomLabel; }
+	const wxString& GetCustomLabel() const		{ return m_CustomLabel; }
+	const wxString& GetCustomLabelId() const	{ return m_CustomLabelId; }
 
 	bool Allows( wxWindowID id ) const;
 	void SetBestFocus( wxWindow* dialog ) const;

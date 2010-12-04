@@ -787,6 +787,28 @@ protected:
 Pcsx2App::Pcsx2App() 
 	: SysExecutorThread( new SysEvtHandler() )
 {
+	#if 0
+	{
+		// Some common labels provided by wxWidgets.  wxWidgets translation files are chucked full
+		// of worthless crap, and tally more than 200k each.  We only need these couple.
+
+		_("OK");
+		_("&OK");
+		_("Cancel");
+		_("&Cancel");
+		_("&Apply");
+		_("&Next >");
+		_("&Back >");
+		_("&Back");
+		_("&Finish");
+
+		_("&Save");
+		_("Save &As...");
+		_("&Help");
+		_("&Home");
+	}
+	#endif
+
 	m_PendingSaves			= 0;
 	m_ScheduledTermination	= false;
 

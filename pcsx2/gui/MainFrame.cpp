@@ -290,8 +290,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) )
 	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
-	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
-	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, _("Show Console"), wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, _("Console to Stdio"), wxEmptyString, wxITEM_CHECK ) )
 
 {
 	m_RestartEmuOnDelete = false;
@@ -460,7 +460,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	//m_menuMisc.Append(41, "Patch Browser...", wxEmptyString, wxITEM_NORMAL);
 	//m_menuMisc.Append(42, "Patch Finder...", wxEmptyString, wxITEM_NORMAL);
 
-	m_menuMisc.Append(MenuId_CDVD_Info, _T("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(MenuId_CDVD_Info, _("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	//Todo:

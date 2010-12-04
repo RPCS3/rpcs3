@@ -120,7 +120,7 @@ bool FirstTimeWizard::UsermodePage::PrepForApply()
 		dialog += 12;
 		dialog += dialog.Heading( path.ToString() );
 
-		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create")).Cancel(), L"CreateNewFolder" ) )
+		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create"), "create").Cancel(), L"CreateNewFolder" ) )
 			return false;
 	}
 	path.Mkdir();

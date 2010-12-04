@@ -65,7 +65,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 		);
 
 		wxWindowID result = pxIssueConfirmation( createPathDlg,
-			MsgButtons().Custom(_("Create")).Cancel(),
+			MsgButtons().Custom(_("Create"), "create").Cancel(),
 			L"DirPicker:CreateOnExplore"
 		);
 
@@ -225,7 +225,7 @@ void Panels::DirPickerPanel::Apply()
 		dialog += 12;
 		dialog += dialog.Heading( path );
 
-		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create")).Cancel(), L"CreateNewFolder" ) )
+		if( wxID_CANCEL == pxIssueConfirmation( dialog, MsgButtons().Custom(_("Create"), "create").Cancel(), L"CreateNewFolder" ) )
 			throw Exception::CannotApplySettings( this );
 	}
 

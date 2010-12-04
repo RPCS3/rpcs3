@@ -146,7 +146,7 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		dialog += dialog.GetCharHeight();
 		dialog += dialog.Heading(_("Do you want to swap discs or boot the new image (via system reset)?"));
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc"), "swap"), L"DragDrop.BootSwapIso" );
 		if( result == wxID_CANCEL )
 		{
 			core_control.AllowResume();
@@ -189,7 +189,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 			_("Do you want to swap discs or boot the new image (system reset)?")
 		);
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc"), "swap"), L"DragDrop.BootSwapIso" );
 
 		if( result == wxID_CANCEL )
 		{

@@ -43,7 +43,7 @@ Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActi
 		L"\nOr press [Ignore] to suppress further assertions."
 	);
 
-	*this += new ModalButtonPanel( this, MsgButtons().Cancel().Custom(L"Wait") ) | StdCenter();
+	*this += new ModalButtonPanel( this, MsgButtons().Cancel().Custom(L"Wait", "wait") ) | StdCenter();
 
 	if( wxWindow* idyes = FindWindowById( wxID_YES ) )
 		idyes->SetFocus();

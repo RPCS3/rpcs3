@@ -65,7 +65,7 @@ static wxString ResultToString( int result, const MsgButtons& buttons )
 		case wxID_ABORT:	return L"abort";
 		case wxID_RETRY:	return L"retry";
 
-			// [TODO] : maybe add in an Ignore All?
+		// [TODO] : maybe add in an Ignore All?
 		case wxID_IGNORE:	return L"ignore";
 
 		case wxID_RESET:	return L"reset";
@@ -73,7 +73,7 @@ static wxString ResultToString( int result, const MsgButtons& buttons )
 	}
 
 	if (result <= wxID_LOWEST)
-		return buttons.GetCustomLabel();
+		return buttons.GetCustomLabelId();
 
 	return wxEmptyString;
 }
