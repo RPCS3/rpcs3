@@ -38,4 +38,5 @@ typedef std::vector<LangPackEnumeration> LangPackList;
 extern bool i18n_SetLanguage( const wxString& langCode );
 extern bool i18n_SetLanguage( int wxLangId );
 extern void i18n_EnumeratePackages( LangPackList& langs );
+extern bool i18n_IsLegacyLanguageId( wxLanguage lang );
 

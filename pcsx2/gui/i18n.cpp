@@ -45,15 +45,21 @@ LangPackEnumeration::LangPackEnumeration()
 		englishName += L" [" + info->Description + L"]";
 }
 
+// Some of the codes provided by wxWidgets are 'obsolete' -- effectively replaced by more specific
+// region-qualified language codes.  This function can be used to filter them out.
+bool i18n_IsLegacyLanguageId( wxLanguage lang )
+{
+	return
+		(lang == wxLANGUAGE_ENGLISH) ||
+		(lang == wxLANGUAGE_CHINESE) ||
+		(lang == wxLANGUAGE_CHINESE_TAIWAN) ||
+		(lang == wxLANGUAGE_SERBIAN) ||
+		(lang == wxLANGUAGE_SPANISH);
+}
 
 static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 {
-	// Plain english is a special case that's built in, and we only want it added to the list
-	// once, so we check for wxLANGUAGE_ENGLISH and then ignore other IsEnglish ids below.
-	if( wxLangId == wxLANGUAGE_ENGLISH )
-		langs.push_back( LangPackEnumeration( wxLangId ) );
-
-	if( pxIsEnglish( wxLangId ) ) return;
+	if( i18n_IsLegacyLanguageId( wxLangId ) ) return;
 
 	// Note: wx auto-preserves the current locale for us
 	if( !wxLocale::IsAvailable( wxLangId ) ) return;

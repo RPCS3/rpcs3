@@ -237,14 +237,18 @@ void Pcsx2App::OpenProgramLog()
 
 	if( m_current_focus ) m_current_focus->SetFocus();
 	
-	/*
 	// This is test code for printing out all supported languages and their canonical names in wiki-fied
 	// format.  I might use it again soon, so I'm leaving it in for now... --air
+	/*
 	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
 	{
 		if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( li ))
-			Console.WriteLn( L"|| %-30s || %s ||", info->Description.c_str(), info->CanonicalName.c_str() );
-	}*/
+		{			
+			if (i18n_IsLegacyLanguageId((wxLanguage)info->Language)) continue;			
+			Console.WriteLn( L"|| %-30s || %-8s ||", info->Description.c_str(), info->CanonicalName.c_str() );
+		}
+	}
+	*/
 }
 
 void Pcsx2App::AllocateCoreStuffs()
@@ -374,7 +378,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
-			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
+			pxsFmt( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
 		);
 	} while( ++pi, pi->shortname != NULL );
 
