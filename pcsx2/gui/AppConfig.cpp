@@ -364,6 +364,7 @@ AppConfig::AppConfig()
 	, GameDatabaseTabName( L"none" )
 	, DeskTheme( L"default" )
 {
+	LanguageId			= wxLANGUAGE_DEFAULT;
 	LanguageCode		= L"default";
 	RecentIsoCount		= 12;
 	Listbook_ImageSize	= 32;
@@ -467,6 +468,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( McdSettingsTabName );
 	IniEntry( AppSettingsTabName );
 	IniEntry( GameDatabaseTabName );
+	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
 	IniEntry( LanguageCode );
 	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );

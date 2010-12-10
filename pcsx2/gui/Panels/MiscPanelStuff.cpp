@@ -151,6 +151,7 @@ void Panels::LanguageSelectionPanel::Apply()
 		if( m_langs[i].englishName == sel )
 		{
 			g_Conf->LanguageCode = m_langs[i].canonicalName;
+			g_Conf->LanguageId = m_langs[i].wxLangId;
 			break;
 		}
 	}

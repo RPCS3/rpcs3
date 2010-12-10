@@ -669,11 +669,11 @@ void AppApplySettings( const AppConfig* oldconf )
 	if( (oldconf == NULL) || (oldconf->LanguageCode.CmpNoCase(g_Conf->LanguageCode)) )
 	{
 		wxDoNotLogInThisScope please;
-		if( !i18n_SetLanguage( g_Conf->LanguageCode ) )
+		if( !i18n_SetLanguage( g_Conf->LanguageId, g_Conf->LanguageCode ) )
 		{
 			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
 			{
-				i18n_SetLanguage( wxLANGUAGE_ENGLISH );
+				i18n_SetLanguage( wxLANGUAGE_ENGLISH_US );
 			}
 		}
 	}
