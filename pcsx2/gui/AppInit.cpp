@@ -70,7 +70,8 @@ void Pcsx2App::WipeUserModeSettings()
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	wxString groupname( pxsFmt( L"CWD.%08x", hashres ) );
+	FastFormatUnicode groupname;
+	groupname.Write( L"CWD.%08x", hashres );
 	Console.WriteLn( "(UserModeSettings) Removing entry:" );
 	Console.Indent().WriteLn( L"Path: %s\nHash:%s", cwd.c_str(), groupname.c_str() );
 	conf_usermode->DeleteGroup( groupname );
@@ -121,7 +122,8 @@ void Pcsx2App::ReadUserModeSettings()
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
+	FastFormatUnicode groupname;
+	groupname.Write( L"CWD.%08x", hashres );
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
 	bool forceWiz = Startup.ForceWizard || !hasGroup;
@@ -549,8 +551,7 @@ bool Pcsx2App::OnInit()
     wxInitAllImageHandlers();
 
 	Console.WriteLn("Applying operating system default language...");
-	//i18n_SetLanguage( wxLANGUAGE_DEFAULT );
-	i18n_SetLanguage( wxLANGUAGE_CHINESE );
+	i18n_SetLanguage( wxLANGUAGE_DEFAULT );
 
 	Console.WriteLn("Command line parsing...");
 	if( !_parent::OnInit() ) return false;
