@@ -108,9 +108,14 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 	mVUsetupBranch(mVU, mFC);
 	mVUbackupRegs(mVU);
 
-	if (isEvilJump) xMOV(gprT2, ptr32[&mVU->evilBranch]);
-	else			xMOV(gprT2, ptr32[&mVU->branch]);
-	xMOV(gprT3, (uptr)&mVUpBlock->pStateEnd);
+	if(!mVUpBlock->jumpCache) { // Create the jump cache for this block
+		mVUpBlock->jumpCache = new microJumpCache[mProgSize/2];
+	}
+
+	if (isEvilJump)		xMOV(gprT2, ptr32[&mVU->evilBranch]);
+	else				xMOV(gprT2, ptr32[&mVU->branch]);
+	if (doJumpCaching)	xMOV(gprT3, (uptr)mVUpBlock);
+	else				xMOV(gprT3, (uptr)&mVUpBlock->pStateEnd);
 
 	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
 	else			 xCALL(mVUcompileJIT<1>);

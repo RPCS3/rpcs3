@@ -49,10 +49,9 @@ public:
 	}
 	~microBlockManager() { reset(); }
 	void reset() {
-		microBlockLink* linkI = blockList;
-		while( linkI != NULL )
-		{
+		for(microBlockLink* linkI = blockList; linkI != NULL; ) {
 			microBlockLink* freeI = linkI;
+			safe_delete_array(linkI->block.jumpCache);
 			linkI = linkI->next;
 			_aligned_free(freeI);
 		}
@@ -63,7 +62,8 @@ public:
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
 			listI++;
-			microBlockLink* newBlock = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
+			microBlockLink* newBlock  = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
+			newBlock->block.jumpCache = NULL;
 			newBlock->next = NULL;
 
 			if (blockEnd) {
@@ -248,7 +248,7 @@ int mVUdebugNow = 0;
 // Main Functions
 static void  mVUclear(mV, u32, u32);
 static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
-_mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
+_mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr);
 
 // Prototypes for Linux
 extern void  __fastcall mVUcleanUpVU0();

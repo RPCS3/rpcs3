@@ -265,6 +265,13 @@ static const bool doConstProp = 0; // Set to 1 to turn on vi15 const propagation
 // allowing us to know many indirect jump target addresses.
 // Makes GoW a lot slower due to extra recompilation time and extra code-gen!
 
+// Indirect Jump Caching
+static const bool doJumpCaching = 1; // Set to 1 to enable jump caching
+// Indirect jumps (JR/JALR) will remember the entry points to their previously
+// jumped-to addresses. This allows us to skip the microBlockManager::search()
+// routine that is performed every indirect jump in order to find a block within a
+// program that matches the correct pipeline state.
+
 //------------------------------------------------------------------
 // Speed Hacks (can cause infinite loops, SPS, Black Screens, etc...)
 //------------------------------------------------------------------
