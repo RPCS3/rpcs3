@@ -277,6 +277,12 @@ public:
 	virtual void Printf(const wxChar* format, ...);
 };
 
+// EXTRAORDINARY HACK!  wxWidgets does not provide a clean way of overriding the commandline options
+// display dialog.  The default one uses operating system built-in message/notice windows, which are
+// appaling, ugly, and not at all suited to a large number of command line options.  Fortunately,
+// wxMessageOutputMessageBox::PrintF is only used in like two places, so we can just check for the
+// commandline window using an identifier we know is contained in it, and then format our own window
+// display. :D  --air
 void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 {
 	using namespace pxSizerFlags;
@@ -287,14 +293,16 @@ void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 	out.PrintfV(format, args);
 	va_end(args);
 
-	int pos = out.Find( L"[IsoFile]" );
+	FastFormatUnicode isoFormatted;
+	isoFormatted.Write( L"[%s]", _("IsoFile") );
+	int pos = out.Find( isoFormatted );
 	
 	if(pos == wxNOT_FOUND)
 	{
 		Msgbox::Alert( out ); return;
 	}
 
-	pos += 9;		// strlen of [IsoFile]
+	pos += isoFormatted.Length();
 
 	wxDialogWithHelpers popup( NULL, AddAppName(_("%s Commandline Options")) );
 	popup.SetMinWidth( 640 );
@@ -307,8 +315,8 @@ void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 		wxTE_READONLY | wxTE_MULTILINE | wxTE_RICH2 | wxHSCROLL
 	);
 
-	traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont() ) );
-	traceArea->SetFont( pxGetFixedFont() );
+	traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont(9) ) );
+	traceArea->SetFont( pxGetFixedFont(9) );
 
 	int fonty = traceArea->GetCharHeight();
 
@@ -669,13 +677,7 @@ void AppApplySettings( const AppConfig* oldconf )
 	if( (oldconf == NULL) || (oldconf->LanguageCode.CmpNoCase(g_Conf->LanguageCode)) )
 	{
 		wxDoNotLogInThisScope please;
-		if( !i18n_SetLanguage( g_Conf->LanguageId, g_Conf->LanguageCode ) )
-		{
-			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
-			{
-				i18n_SetLanguage( wxLANGUAGE_ENGLISH_US );
-			}
-		}
+		i18n_SetLanguage( g_Conf->LanguageId, g_Conf->LanguageCode );
 	}
 	
 	CorePlugins.SetSettingsFolder( GetSettingsFolder().ToString() );

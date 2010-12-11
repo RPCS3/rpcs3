@@ -113,26 +113,32 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	i18n_EnumeratePackages( m_langs );
 
 	int size = m_langs.size();
-	int cursel = 0;
-	ScopedArray<wxString> compiled( size ); //, L"Compiled Language Names" );
-	wxString configLangName( wxLocale::GetLanguageName( wxLANGUAGE_DEFAULT ) );
+	ScopedArray<wxString> compiled( size );
 
 	for( int i=0; i<size; ++i )
-	{
-		compiled[i].Printf( L"%s", m_langs[i].englishName.c_str() ); //, xltNames[i].c_str() );
-		if( m_langs[i].englishName == configLangName )
-			cursel = i;
-	}
+		compiled[i].Printf( L"%s", m_langs[i].englishName.c_str() );
 
 	m_picker = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 
+	wxButton* applyButton = new wxButton( this, pxID_RestartWizard, _("Apply") );
+	applyButton->SetToolTip(_("Make this language my default right now!"));
+
 	*this	+= Label(_("Select a language:")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
+	*this	+= 5;
+	*this	+= applyButton | pxSizerFlags::StdSpace();
 
-	m_picker->SetSelection( cursel );
-	//AppStatusEvent_OnSettingsApplied();
+	Connect( pxID_RestartWizard,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( LanguageSelectionPanel::OnApplyLanguage_Clicked ) );
+
+	m_picker->SetSelection( 0 );		// always default to System Default
+}
+
+void Panels::LanguageSelectionPanel::OnApplyLanguage_Clicked( wxCommandEvent& evt )
+{
+	evt.Skip();
+	Apply();
 }
 
 void Panels::LanguageSelectionPanel::Apply()
@@ -145,22 +151,29 @@ void Panels::LanguageSelectionPanel::Apply()
 	wxString sel( m_picker->GetString( m_picker->GetSelection() ) );
 
 	g_Conf->LanguageCode = L"default";	// use this if no matches found
+	g_Conf->LanguageId = wxLANGUAGE_DEFAULT; 
 	int size = m_langs.size();
 	for( int i=0; i<size; ++i )
 	{
 		if( m_langs[i].englishName == sel )
 		{
-			g_Conf->LanguageCode = m_langs[i].canonicalName;
-			g_Conf->LanguageId = m_langs[i].wxLangId;
+			if( i18n_SetLanguage( m_langs[i].wxLangId, m_langs[i].canonicalName ) )
+			{
+				g_Conf->LanguageCode = m_langs[i].canonicalName;
+				g_Conf->LanguageId = m_langs[i].wxLangId;
+			}
 			break;
 		}
 	}
+
 }
 
 void Panels::LanguageSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
-	if (m_picker) 
+	if (m_picker)
 	{
+		m_picker->SetSelection( 0 );		// always default to System Default
+
 		if (g_Conf->LanguageCode.IsEmpty())
 			g_Conf->LanguageCode = L"default";
 

@@ -70,10 +70,27 @@ void Pcsx2App::WipeUserModeSettings()
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
+	wxString groupname( pxsFmt( L"CWD.%08x", hashres ) );
 	Console.WriteLn( "(UserModeSettings) Removing entry:" );
 	Console.Indent().WriteLn( L"Path: %s\nHash:%s", cwd.c_str(), groupname.c_str() );
 	conf_usermode->DeleteGroup( groupname );
+}
+
+static void DoFirstTimeWizard()
+{
+	// first time startup, so give the user the choice of user mode:
+	while(true)
+	{
+		// PCSX2's FTWizard allows improptu restarting of the wizard without cancellation.  This is 
+		// typically used to change the user's language selection.
+
+		FirstTimeWizard wiz( NULL );
+		if( wiz.RunWizard( wiz.GetUsermodePage() ) ) break;
+		if (wiz.GetReturnCode() != pxID_RestartWizard)
+			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
+
+		Console.WriteLn( Color_StrongBlack, "Restarting First Time Wizard!" );
+	}
 }
 
 // User mode settings can't be stored in the CWD for two reasons:
@@ -135,10 +152,7 @@ void Pcsx2App::ReadUserModeSettings()
 		}
 		#endif
 	
-		// first time startup, so give the user the choice of user mode:
-		FirstTimeWizard wiz( NULL );
-		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
-			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
+		DoFirstTimeWizard();
 
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
@@ -159,14 +173,8 @@ void Pcsx2App::ReadUserModeSettings()
 		if( !wxFile::Exists( GetSettingsFilename() ) )
 		{
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
-			// (we skip the first page since it's a usermode.ini thing)
-			
-			// Fixme : Skipping the first page is a bad idea, as it does a lot of file / directory checks on hitting Apply.
-			// If anything is missing, the first page prompts to fix it.
-			// If we skip this check, it's very likely that actions like creating Memory Cards will fail.
-			FirstTimeWizard wiz( NULL );
-			if( !wiz.RunWizard( /*wiz.GetPostUsermodePage()*/ wiz.GetUsermodePage() ) )
-				throw Exception::StartupAborted( L"User canceled Configuration Wizard." );
+
+			DoFirstTimeWizard();
 
 			// Save user's new settings
 			IniSaver saver( *conf_usermode );
@@ -539,6 +547,10 @@ bool Pcsx2App::OnInit()
 
 	g_Conf = new AppConfig();
     wxInitAllImageHandlers();
+
+	Console.WriteLn("Applying operating system default language...");
+	//i18n_SetLanguage( wxLANGUAGE_DEFAULT );
+	i18n_SetLanguage( wxLANGUAGE_CHINESE );
 
 	Console.WriteLn("Command line parsing...");
 	if( !_parent::OnInit() ) return false;

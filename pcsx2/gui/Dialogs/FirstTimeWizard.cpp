@@ -175,11 +175,19 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	Connect( wxEVT_WIZARD_PAGE_CHANGED,				wxWizardEventHandler	(FirstTimeWizard::OnPageChanged) );
 	Connect( wxEVT_WIZARD_PAGE_CHANGING,			wxWizardEventHandler	(FirstTimeWizard::OnPageChanging) );
 	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED,	wxCommandEventHandler	(FirstTimeWizard::OnDoubleClicked) );
+
+	Connect( pxID_RestartWizard,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( FirstTimeWizard::OnRestartWizard ) );
 }
 
 FirstTimeWizard::~FirstTimeWizard() throw()
 {
 
+}
+
+void FirstTimeWizard::OnRestartWizard( wxCommandEvent& evt )
+{
+	EndModal( pxID_RestartWizard );
+	evt.Skip();
 }
 
 static void _OpenConsole()

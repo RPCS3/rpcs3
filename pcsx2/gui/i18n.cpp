@@ -67,8 +67,8 @@ LangPackEnumeration::LangPackEnumeration()
 	if (sysLang == wxLANGUAGE_UNKNOWN)
 		sysLang = wxLANGUAGE_ENGLISH_US;
 
-	if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( sysLang ))
-		englishName += L" [" + i18n_GetBetterLanguageName(info) + L"]";
+	//if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( sysLang ))
+	//	englishName += L" [" + i18n_GetBetterLanguageName(info) + L"]";
 }
 
 static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
@@ -177,7 +177,7 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 		if (!info)
 			Console.Warning( "Invalid language identifier (wxID=%d)", wxLangId );
 
-		if (!langCode.IsEmpty())
+		if (!langCode.IsEmpty() && (langCode.CmpNoCase(L"default")!=0))
 		{
 			info = wxLocale::FindLanguageInfo(langCode);
 			if (!info)
@@ -186,12 +186,14 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 	}
 
 	if (!info) return false;
+	if (wxGetLocale() && (info->Language == wxGetLocale()->GetLanguage())) return true;
+	
 	ScopedPtr<wxLocale> locale( new wxLocale(info->Language) );
 
 	if( !locale->IsOk() )
 	{
 		Console.Warning( L"SetLanguage: '%s' [%s] is not supported by the operating system",
-			locale->GetLocale(), locale->GetCanonicalName().c_str()
+			i18n_GetBetterLanguageName(info).c_str(), locale->GetCanonicalName().c_str()
 		);
 		return false;
 	}
@@ -205,10 +207,14 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 	}
 
 	// English/US is built in, so no need to load MO/PO files.
-	if( pxIsEnglish(wxLangId) ) return true;
+	if( pxIsEnglish(wxLangId) )
+	{
+		locale.DetachPtr();
+		return true;
+	}
 	
-	Console.WriteLn( Color_StrongBlack, L"Loading language translation databases for '%s' [%s]",
-		wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
+	Console.WriteLn( L"Loading language translation databases for '%s' [%s]",
+		i18n_GetBetterLanguageName(info).c_str(), locale->GetCanonicalName().c_str()
 	);
 
 	static const wxChar* dictFiles[] =
@@ -224,14 +230,14 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 		if (!dictFiles[i]) continue;
 
 		if (!locale->AddCatalog(dictFiles[i]))
-			Console.Indent().WriteLn(Color_StrongYellow, "%s not found -- translation dictionary may be incomplete.", dictFiles[i]);
+			Console.Indent().WriteLn(Color_StrongYellow, "%ls not found -- translation dictionary may be incomplete.", dictFiles[i]);
 		else
 			foundone = true;
 	}
 
 	if (!foundone)	
 	{
-		Console.Warning("SetLanguage: Requested translation is not implemented yet, using English.");
+		Console.Warning("SetLanguage: Requested translation is not implemented yet.");
 		return false;
 	}
 
