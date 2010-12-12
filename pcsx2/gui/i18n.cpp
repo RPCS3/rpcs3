@@ -75,9 +75,6 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 {
 	if( i18n_IsLegacyLanguageId( wxLangId ) ) return;
 
-	//if( !wxLocale::IsAvailable( wxLangId ) )
-	//	return;
-
 	// note: wx preserves the current locale for us, so creating a new locale and deleting
 	// will not affect program status.
 	ScopedPtr<wxLocale> locale( new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING ) );
@@ -86,7 +83,8 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 	// matching logic, which will bypass the catalog loader for all english-based dialects, and
 	// (wrongly) enumerate a bunch of locales that don't actually exist.
 
-	if( locale->IsOk() && locale->AddCatalog( L"pcsx2_Main", wxLANGUAGE_UNKNOWN, NULL ) )
+	if ((locale->GetLanguage() == wxLANGUAGE_ENGLISH_US) ||
+		(locale->IsOk() && locale->AddCatalog( L"pcsx2_Main", wxLANGUAGE_UNKNOWN, NULL )) )
 		langs.push_back( LangPackEnumeration( wxLangId ) );
 }
 

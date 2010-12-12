@@ -90,6 +90,26 @@ namespace Dialogs
 	};
 
 	// --------------------------------------------------------------------------------------
+	//  LanguageSelectionDialog
+	// --------------------------------------------------------------------------------------
+	class LanguageSelectionDialog : public BaseConfigurationDialog
+	{
+	public:
+		virtual ~LanguageSelectionDialog() throw() {}
+		LanguageSelectionDialog(wxWindow* parent=NULL);
+		static wxString GetNameStatic() { return L"LanguageSelector"; }
+		wxString GetDialogName() const { return GetNameStatic(); }
+
+	protected:
+		virtual wxString& GetConfSettingsTabName() const
+		{
+			pxFailDev("Language selector does not have a listbook or settings tab.");
+			static wxString fail;
+			return fail;
+		}
+	};
+
+	// --------------------------------------------------------------------------------------
 	//  McdConfigDialog
 	// --------------------------------------------------------------------------------------
 	class McdConfigDialog : public BaseConfigurationDialog

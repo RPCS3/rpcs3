@@ -106,3 +106,13 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 	if( wxGetApp().Overrides.HasPluginsOverride() )
 		wxGetApp().PostMethod( CheckPluginsOverrides );
 }
+
+Dialogs::LanguageSelectionDialog::LanguageSelectionDialog(wxWindow *parent)
+	: BaseConfigurationDialog( parent, AddAppName(_("Language Selector - %s")), 400 )
+{
+	ScopedBusyCursor busy( Cursor_ReallyBusy );
+
+	*this += new Panels::LanguageSelectionPanel( this ) | pxCenter;
+
+	wxDialogWithHelpers::AddOkCancel( NULL, false );
+}

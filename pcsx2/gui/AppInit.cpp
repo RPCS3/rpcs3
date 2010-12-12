@@ -581,8 +581,6 @@ bool Pcsx2App::OnInit()
 		InitDefaultGlobalAccelerators();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 
-		m_RecentIsoList = new RecentIsoList();
-
 #ifdef __WXMSW__
 		pxDwm_Load();
 #endif

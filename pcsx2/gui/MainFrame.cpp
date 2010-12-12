@@ -61,6 +61,29 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 	//	exists ? Path::GetFilename(g_Conf->CurrentIso).c_str() : _("Empty") ) );
 }
 
+bool MainEmuFrame::Destroy()
+{
+	// Sigh: wxWidgets doesn't issue Destroy() calls for children windows when the parent
+	// is destroyed (it just deletes them, quite suddenly).  So let's do it for them, since
+	// our children have configuration stuff they like to do when they're closing.
+
+	for (
+		wxWindowList::const_iterator
+			i	= wxTopLevelWindows.begin(),
+			end = wxTopLevelWindows.end();
+		i != end; ++i
+		)
+	{
+		wxTopLevelWindow * const win = wx_static_cast(wxTopLevelWindow *, *i);
+		if (win == this) continue;
+		if (win->GetParent() != this) continue;
+
+		win->Destroy();
+	}
+	
+	return _parent::Destroy();
+}
+
 // ------------------------------------------------------------------------
 //     MainFrame OnEvent Handlers
 // ------------------------------------------------------------------------
@@ -157,6 +180,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_AppSettings,	Menu_WindowSettings_Click );
 	ConnectMenu( MenuId_Config_GameDatabase,Menu_GameDatabase_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectPluginsBios_Click );
+	ConnectMenu( MenuId_Config_Language,	Menu_Language_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
@@ -424,7 +448,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&Memory cards") );
 	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector") );
 	if (IsDebugBuild)
+	{
 		m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
+		m_menuConfig.Append(MenuId_Config_Language,		_("Language...") );
+	}
 
 	m_menuConfig.AppendSeparator();
 

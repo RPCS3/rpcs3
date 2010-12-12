@@ -80,13 +80,13 @@ pxAppResources::~pxAppResources() throw() {}
 
 wxMenu& Pcsx2App::GetRecentIsoMenu()
 {
-	pxAssert( !!m_RecentIsoList->Menu );
+	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList();
 	return *m_RecentIsoList->Menu;
 }
 
 RecentIsoManager& Pcsx2App::GetRecentIsoManager()
 {
-	pxAssert( !!m_RecentIsoList->Manager );
+	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList();
 	return *m_RecentIsoList->Manager;
 }
 
