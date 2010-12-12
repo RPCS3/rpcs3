@@ -149,8 +149,10 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-static const uint mVUdispCacheSize = __pagesize;	// Dispatcher Cache Size (in bytes)
-static const uint mVUcacheSafeZone = 3;				// Safe-Zone for program recompilation (in megabytes)
+static const uint mVUdispCacheSize    = __pagesize;	// Dispatcher Cache Size (in bytes)
+static const uint mVUcacheSafeZone    = 3;			// Safe-Zone for program recompilation (in megabytes)
+static const uint mVUcacheInitReserve = 64;			// Initial Reserve Cache Size (in megabytes)
+static const uint mVUcacheMaxReserve  = 128;		// Max Reserve Cache Size (in megabytes)
 
 struct microVU {
 
@@ -196,7 +198,7 @@ struct microVU {
 	__fi VECTOR& getVF(uint reg) const	{ return regs().VF[reg]; }
 
 
-	__fi s16 Imm5() const	{ return ((code & 0x400) ? 0xfff0 : 0) | ((code >> 6) & 0xf); }
+	__fi s16 Imm5()  const	{ return ((code & 0x400) ? 0xfff0 : 0) | ((code >> 6) & 0xf); }
 	__fi s32 Imm11() const	{ return (code & 0x400) ? (0xfffffc00 | (code & 0x3ff)) : (code & 0x3ff); }
 	__fi u32 Imm12() const	{ return (((code >> 21) & 0x1) << 11) | (code & 0x7ff); }
 	__fi u32 Imm15() const	{ return ((code >> 10) & 0x7800) | (code & 0x7ff); }
@@ -225,7 +227,7 @@ struct microVU {
 	
 	microVU()
 	{
-		cacheSize		= 64;
+		cacheSize		= mVUcacheInitReserve;
 		cache			= NULL;
 		dispCache		= NULL;
 		startFunct		= NULL;

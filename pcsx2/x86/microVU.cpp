@@ -148,8 +148,7 @@ void microVU::reset() {
 	prog.x86end		= z + ((cacheSize - mVUcacheSafeZone) * _1mb);
 
 	for (u32 i = 0; i < (progSize / 2); i++) {
-		if (!prog.prog[i])
-		{
+		if(!prog.prog[i]) {
 			prog.prog[i] = new deque<microProgram*>();
 			continue;
 		}
@@ -186,10 +185,10 @@ void microVU::close() {
 
 // Clears Block Data in specified range
 static __fi void mVUclear(mV, u32 addr, u32 size) {
-	if (!mVU->prog.cleared) {
-		memzero(mVU->prog.lpState); // Clear pipeline state
+	if(!mVU->prog.cleared) {
 		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
-		for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+		memzero(mVU->prog.lpState); // Clear pipeline state
+		for(u32 i = 0; i < (mVU->progSize / 2); i++) {
 			mVU->prog.quick[i].block = NULL; // Clear current quick-reference block
 			mVU->prog.quick[i].prog  = NULL; // Clear current quick-reference prog
 		}
@@ -225,10 +224,11 @@ _mVUt __fi microProgram* mVUcreateProg(int startPC) {
 	prog->startPC = startPC;
 	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
 	double cacheSize = (double)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
-	double cacheUsed =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
+	double cacheUsed =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / (double)_1mb;
+	double cachePerc =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
-	DevCon.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %3.3f%%)",
-					vuIndex, prog->idx, startPC, mVU->prog.prog[startPC]->size()+1, cacheUsed);
+	DevCon.WriteLn(c, "microVU%d: Cached Prog = [%03d] [PC=%04x] [List=%02d] (Cache=%3.3f%%) [%3.1fmb]",
+				   vuIndex, prog->idx, startPC*8, mVU->prog.prog[startPC]->size()+1, cachePerc, cacheUsed);
 	return prog;
 }
 
@@ -372,9 +372,11 @@ uint recMicroVU1::GetCacheReserve() const
 
 void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const
 {
-	microVU0.cacheSize = reserveInMegs;
+	DevCon.WriteLn("microVU0: Upping cache size [%dmb]", reserveInMegs);
+	microVU0.cacheSize = min(reserveInMegs, mVUcacheMaxReserve);
 }
 void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const
 {
-	microVU1.cacheSize = reserveInMegs;
+	DevCon.WriteLn("microVU1: Upping cache size [%dmb]", reserveInMegs);
+	microVU1.cacheSize = min(reserveInMegs, mVUcacheMaxReserve);
 }

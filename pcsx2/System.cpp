@@ -130,25 +130,25 @@ void SysOutOfMemory_EmergencyResponse(uptr blocksize)
 
 	if (Cpu)
 	{
-		Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 3) / 2 );
+		Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 2) / 3 );
 		Cpu->Reset();
 	}
 
 	if (CpuVU0)
 	{
-		CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
+		CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 2) / 3 );
 		CpuVU0->Reset();
 	}
 
 	if (CpuVU1)
 	{
-		CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
+		CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 2) / 3 );
 		CpuVU1->Reset();
 	}
 
 	if (psxCpu)
 	{
-		psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 3) / 2 );
+		psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 2) / 3 );
 		psxCpu->Reset();
 	}
 }
