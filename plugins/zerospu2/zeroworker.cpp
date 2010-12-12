@@ -19,7 +19,11 @@
 #include "zerospu2.h"
 #include "zeroworker.h"
 #include "soundtouch/SoundTouch.h"
+#ifdef __LINUX__
+#include "WavFile.h"
+#else
 #include "soundtouch/WavFile.h"
+#endif
 
 s32 g_logsound = 0;
 WavOutFile* g_pWavRecord=NULL; // used for recording

@@ -40,6 +40,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 # zerospu2 sources
 set(zerospu2Sources
 	voices.cpp
+    WavFile.cpp
 	zerodma.cpp
 	zerospu2.cpp
 	zeroworker.cpp)
@@ -48,6 +49,7 @@ set(zerospu2Sources
 set(zerospu2Headers
 	misc.h
 	reg.h
+    WavFile.h
 	zerodma.h
 	zerospu2.h
 	zeroworker.h)
