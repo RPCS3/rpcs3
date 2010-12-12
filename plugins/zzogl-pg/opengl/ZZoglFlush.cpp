@@ -455,12 +455,12 @@ inline bool FlushInitialTest(VB& curvb, const pixTest& curtest, int context)
 	return false;
 }
 
-inline void TargetLog(int& tbw, int& tbp0, int& tpsm, VB& curvb)
+inline void TargetLog(int& tbw, int& tbp0, int& tpsm, VB& curvb, bool miss)
 {
 #ifdef _DEBUG
 	if (tbp0 == 0x3600 && tbw == 0x100)
 	{
-		if (ptextarg == NULL)
+		if (miss)
 		{
 			ZZLog::Debug_Log("Miss %x 0x%x %d", tbw, tbp0, tpsm);
 
@@ -531,7 +531,7 @@ inline CRenderTarget* FlushReGetTarget(int& tbw, int& tbp0, int& tpsm, VB& curvb
 		}
 	}
 	
-	TargetLog(tbw, tbp0, tpsm, curvb);
+	TargetLog(tbw, tbp0, tpsm, curvb, (ptextarg == NULL));
 
 	return ptextarg;
 }
