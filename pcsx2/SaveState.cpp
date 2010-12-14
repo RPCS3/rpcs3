@@ -55,7 +55,7 @@ wxString SaveStateBase::GetFilename( int slot )
 	if (serialName.IsEmpty()) serialName = L"BIOS";
 
 	return (g_Conf->Folders.Savestates +
-		pxsFmt( L"%s (%08X).%02d.ps2z", serialName.c_str(), ElfCRC, slot )).GetFullPath();
+		pxsFmt( L"%s (%08X).%02d.p2z", serialName.c_str(), ElfCRC, slot )).GetFullPath();
 
 	//return (g_Conf->Folders.Savestates +
 	//	pxsFmt( L"%08X.%03d", ElfCRC, slot )).GetFullPath();

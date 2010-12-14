@@ -47,6 +47,7 @@ public:
 	virtual wxString GetFilename() const=0;
 	virtual void FreezeIn( pxInputStream& reader ) const=0;
 	virtual void FreezeOut( SaveStateBase& writer ) const=0;
+	virtual bool IsRequired() const=0;
 };
 
 class MemorySavestateEntry : public BaseSavestateEntry
@@ -58,6 +59,7 @@ protected:
 public:
 	virtual void FreezeIn( pxInputStream& reader ) const;
 	virtual void FreezeOut( SaveStateBase& writer ) const;
+	virtual bool IsRequired() const { return true; }
 
 protected:
 	virtual u8* GetDataPtr() const=0;
@@ -80,6 +82,8 @@ public:
 	virtual wxString GetFilename() const;
 	virtual void FreezeIn( pxInputStream& reader ) const;
 	virtual void FreezeOut( SaveStateBase& writer ) const;
+
+	virtual bool IsRequired() const { return false; }
 
 protected:
 	virtual PluginsEnum_t GetPluginId() const { return m_pid; }
@@ -121,6 +125,7 @@ void PluginSavestateEntry::FreezeOut( SaveStateBase& writer ) const
 	{
 		writer.PrepBlock( size );
 		GetCorePlugins().FreezeOut( GetPluginId(), writer.GetBlockPtr() );
+		writer.CommitBlock( size );
 	}
 }
 
@@ -139,6 +144,12 @@ public:
 	wxString GetFilename() const		{ return L"eeMemory.bin"; }
 	u8* GetDataPtr() const				{ return eeMem->Main; }
 	uint GetDataSize() const			{ return sizeof(eeMem->Main); }
+	
+	virtual void FreezeIn( pxInputStream& reader ) const
+	{
+		SysClearExecutionCache();
+		MemorySavestateEntry::FreezeIn( reader );
+	}
 };
 
 class SavestateEntry_IopMemory : public MemorySavestateEntry
@@ -323,7 +334,7 @@ protected:
 
 		internals.SetDataSize( saveme.GetCurrentPos() - internals.GetDataIndex() );
 		m_dest_list->Add( internals );
-		
+
 		for (uint i=0; i<SavestateEntries.GetSize(); ++i)
 		{
 			uint startpos = saveme.GetCurrentPos();
@@ -566,8 +577,12 @@ protected:
 		for (uint i=0; i<NumSavestateEntries; ++i)
 		{
 			if (foundEntry[i]) continue;
-			throwIt = true;
-			Console.WriteLn( Color_Red, " ... not found '%s'!", SavestateEntries[i]->GetFilename() );
+			
+			if (SavestateEntries[i]->IsRequired())
+			{
+				throwIt = true;
+				Console.WriteLn( Color_Red, " ... not found '%s'!", SavestateEntries[i]->GetFilename() );
+			}
 		}
 
 		if (throwIt)
@@ -583,6 +598,8 @@ protected:
 
 		for (uint i=0; i<NumSavestateEntries; ++i)
 		{
+			if (!foundEntry[i]) continue;
+
 			Threading::pxTestCancel();
 
 			gzreader->OpenEntry( *foundEntry[i] );

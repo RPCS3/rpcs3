@@ -331,6 +331,7 @@ wxString Exception::CannotCreateStream::FormatDisplayMessage() const
 {
 	FastFormatUnicode retval;
 	retval.Write(_("A file could not be created."));
+	retval.Write("\n");
 	_formatUserMsg(retval);
 	return retval;
 }
@@ -341,7 +342,7 @@ wxString Exception::CannotCreateStream::FormatDisplayMessage() const
 wxString Exception::FileNotFound::FormatDiagnosticMessage() const
 {
 	FastFormatUnicode retval;
-	retval.Write("File not found.");
+	retval.Write("File not found.\n");
 	_formatDiagMsg(retval);
 	return retval;
 }
@@ -350,6 +351,7 @@ wxString Exception::FileNotFound::FormatDisplayMessage() const
 {
 	FastFormatUnicode retval;
 	retval.Write(_("File not found."));
+	retval.Write("\n");
 	_formatUserMsg(retval);
 	return retval;
 }
@@ -360,7 +362,7 @@ wxString Exception::FileNotFound::FormatDisplayMessage() const
 wxString Exception::AccessDenied::FormatDiagnosticMessage() const
 {
 	FastFormatUnicode retval;
-	retval.Write("Permission denied to file.");
+	retval.Write("Permission denied to file.\n");
 	_formatDiagMsg(retval);
 	return retval;
 }
@@ -369,6 +371,7 @@ wxString Exception::AccessDenied::FormatDisplayMessage() const
 {
 	FastFormatUnicode retval;
 	retval.Write(_("Permission denied while trying to open file, likely due to insufficient user account rights."));
+	retval.Write("\n");
 	_formatUserMsg(retval);
 	return retval;
 }
@@ -379,7 +382,7 @@ wxString Exception::AccessDenied::FormatDisplayMessage() const
 wxString Exception::EndOfStream::FormatDiagnosticMessage() const
 {
 	FastFormatUnicode retval;
-	retval.Write("Unexpected end of file or stream.");
+	retval.Write("Unexpected end of file or stream.\n");
 	_formatDiagMsg(retval);
 	return retval;
 }
@@ -388,6 +391,7 @@ wxString Exception::EndOfStream::FormatDisplayMessage() const
 {
 	FastFormatUnicode retval;
 	retval.Write(_("Unexpected end of file or stream encountered.  File is probably truncated or corrupted."));
+	retval.Write("\n");
 	_formatUserMsg(retval);
 	return retval;
 }

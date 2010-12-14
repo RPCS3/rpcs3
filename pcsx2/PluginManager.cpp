@@ -681,7 +681,7 @@ SysCorePlugins *g_plugins = NULL;
 wxString Exception::SaveStateLoadError::FormatDiagnosticMessage() const
 {
 	FastFormatUnicode retval;
-	retval.Write("Savestate is corrupt or incomplete!");
+	retval.Write("Savestate is corrupt or incomplete!\n");
 	_formatDiagMsg(retval);
 	return retval;
 }
@@ -690,6 +690,7 @@ wxString Exception::SaveStateLoadError::FormatDisplayMessage() const
 {
 	FastFormatUnicode retval;
 	retval.Write(_("The savestate cannot be loaded, as it appears to be corrupt or incomplete."));
+	retval.Write("\n");
 	_formatUserMsg(retval);
 	return retval;
 }

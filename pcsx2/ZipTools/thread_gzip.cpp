@@ -57,6 +57,7 @@ void BaseCompressThread::ExecuteTaskInThread()
 	for( uint i=0; i<listlen; ++i )
 	{
 		const ArchiveEntry& entry = (*m_src_list)[i];
+		if (!entry.GetDataSize()) continue;
 
 		wxArchiveOutputStream& woot = *(wxArchiveOutputStream*)m_gzfp->GetWxStreamBase();
 		woot.PutNextEntry( entry.GetFilename() );
