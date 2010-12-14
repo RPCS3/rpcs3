@@ -51,8 +51,14 @@ static void PostLoadPrep()
 // --------------------------------------------------------------------------------------
 wxString SaveStateBase::GetFilename( int slot )
 {
+	wxString serialName( DiscSerial );
+	if (serialName.IsEmpty()) serialName = L"BIOS";
+
 	return (g_Conf->Folders.Savestates +
-		pxsFmt( L"%08X.%03d", ElfCRC, slot )).GetFullPath();
+		pxsFmt( L"%s (%08X).%02d.ps2z", serialName.c_str(), ElfCRC, slot )).GetFullPath();
+
+	//return (g_Conf->Folders.Savestates +
+	//	pxsFmt( L"%08X.%03d", ElfCRC, slot )).GetFullPath();
 }
 
 SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )

@@ -215,29 +215,41 @@ public:
 //  would not be useful).
 //
 
-static const BaseSavestateEntry* const SavestateEntries[] = 
-{
-	new SavestateEntry_EmotionMemory,
-	new SavestateEntry_IopMemory,
-	new SavestateEntry_HwRegs,
-	new SavestateEntry_IopHwRegs,
-	new SavestateEntry_Scratchpad,
-	new SavestateEntry_VU0mem,
-	new SavestateEntry_VU1mem,
-	new SavestateEntry_VU0prog,
-	new SavestateEntry_VU1prog,
-	
-	new PluginSavestateEntry( PluginId_GS ),
-	new PluginSavestateEntry( PluginId_PAD ),
-	new PluginSavestateEntry( PluginId_SPU2 ),
-	new PluginSavestateEntry( PluginId_CDVD ),
-	new PluginSavestateEntry( PluginId_USB ),
-	new PluginSavestateEntry( PluginId_FW ),
-	new PluginSavestateEntry( PluginId_DEV9 ),
+static const uint NumSavestateEntries = 9 + PluginId_Count;
 
+class SavestateEntryPack : public ScopedAlloc<const BaseSavestateEntry*>
+{
+	typedef ScopedAlloc<const BaseSavestateEntry*> _parent;
+
+public:
+	SavestateEntryPack()
+		: _parent( NumSavestateEntries )
+	{
+		uint i = 0;		// more convenient in case we re-arrange anything...
+
+		this->operator[](i++)	= new SavestateEntry_EmotionMemory;
+		this->operator[](i++)	= new SavestateEntry_IopMemory;
+		this->operator[](i++)	= new SavestateEntry_HwRegs;
+		this->operator[](i++)	= new SavestateEntry_IopHwRegs;
+		this->operator[](i++)	= new SavestateEntry_Scratchpad;
+		this->operator[](i++)	= new SavestateEntry_VU0mem;
+		this->operator[](i++)	= new SavestateEntry_VU1mem;
+		this->operator[](i++)	= new SavestateEntry_VU0prog;
+		this->operator[](i++)	= new SavestateEntry_VU1prog;
+		
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_GS );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_PAD );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_SPU2 );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_CDVD );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_USB );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_FW );
+		this->operator[](i++)	= new PluginSavestateEntry( PluginId_DEV9 );
+	}
+	
+	using _parent::operator[];
 };
 
-static const uint NumSavestateEntries = ArraySize(SavestateEntries);
+static const SavestateEntryPack SavestateEntries;
 
 // It's bad mojo to have savestates trying to read and write from the same file at the
 // same time.  To prevent that we use this mutex lock, which is used by both the
@@ -312,7 +324,7 @@ protected:
 		internals.SetDataSize( saveme.GetCurrentPos() - internals.GetDataIndex() );
 		m_dest_list->Add( internals );
 		
-		for (uint i=0; i<NumSavestateEntries; ++i)
+		for (uint i=0; i<SavestateEntries.GetSize(); ++i)
 		{
 			uint startpos = saveme.GetCurrentPos();
 			SavestateEntries[i]->FreezeOut( saveme );
@@ -496,7 +508,7 @@ protected:
 
 		bool foundVersion = false;
 		//bool foundScreenshot = false;
-		//bool foundEntry[NumSavestateEntries] = false;
+		//bool foundEntry[numSavestateEntries] = false;
 
 		ScopedPtr<wxZipEntry> foundInternal;
 		ScopedPtr<wxZipEntry> foundEntry[NumSavestateEntries];
