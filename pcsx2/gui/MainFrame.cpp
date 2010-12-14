@@ -450,7 +450,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	if (IsDebugBuild)
 	{
 		m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
-		m_menuConfig.Append(MenuId_Config_Language,		_("Language...") );
+		m_menuConfig.Append(MenuId_Config_Language,		_("Appearance...") );
 	}
 
 	m_menuConfig.AppendSeparator();

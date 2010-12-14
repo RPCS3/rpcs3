@@ -34,6 +34,10 @@ RecentIsoManager::RecentIsoManager( wxMenu* menu )
 {
 	m_cursel	= 0;
 	m_Separator	= NULL;
+
+	IniLoader loader;
+	LoadListFrom(loader);
+
 	Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoManager::OnChangedSelection) );
 }
 
@@ -59,10 +63,8 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 
 	m_cursel = i;
 
-	// TODO: Dialog asking for hotswap or reset!!!!
-
 	ScopedCoreThreadPopup stopped_core;
-	//SysUpdateIsoSrcFile( m_Items[i].Filename );
+
 #ifdef __LINUX__
 	// Likely not what was intended, but it compiles for the moment...
 	SwapOrReset_Iso( NULL, stopped_core, m_Items[i].Filename, GetMsg_IsoImageChanged());
@@ -70,6 +72,7 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 	// Getting a window from the menu?
 	SwapOrReset_Iso( m_Menu->GetWindow(), stopped_core, m_Items[i].Filename, GetMsg_IsoImageChanged());
 #endif
+
 	stopped_core.AllowResume();
 }
 
@@ -157,6 +160,27 @@ void RecentIsoManager::InsertIntoMenu( int id )
 		curitem.ItemPtr->Check();
 }
 
+void RecentIsoManager::LoadListFrom( IniInterface& ini )
+{
+	if (!ini.IsOk()) return;
+
+	ini.GetConfig().SetRecordDefaults( false );
+
+	RemoveAllFromMenu();
+
+	m_MaxLength = g_Conf->RecentIsoCount;
+	ScopedIniGroup groupie( ini, L"RecentIso" );
+	for( uint i=0; i<m_MaxLength; ++i )
+	{
+		wxString loadtmp;
+		ini.Entry( pxsFmt( L"Filename%02d", i ), loadtmp );
+		if( !loadtmp.IsEmpty() ) Add( loadtmp );
+	}
+	Add( g_Conf->CurrentIso );
+
+	ini.GetConfig().SetRecordDefaults( true );
+}
+
 void RecentIsoManager::AppStatusEvent_OnSettingsApplied()
 {
 	// TODO : Implement application of Recent Iso List "maximum" history option
@@ -166,12 +190,12 @@ void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEvent
 {
 	IniInterface& ini( evt.GetIni() );
 
-	ini.GetConfig().SetRecordDefaults( false );
-
 	if( ini.IsSaving() )
 	{
 		// Wipe existing recent iso list if we're saving, because our size might have changed
 		// and that could leave some residual entries in the config.
+
+		ini.GetConfig().SetRecordDefaults( false );
 
 		ini.GetConfig().DeleteGroup( L"RecentIso" );
 		ScopedIniGroup groupie( ini, L"RecentIso" );
@@ -179,23 +203,13 @@ void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEvent
 		int cnt = m_Items.size();
 		for( int i=0; i<cnt; ++i )
 		{
-			ini.Entry( wxsFormat( L"Filename%02d", i ), m_Items[i].Filename );
+			ini.Entry( pxsFmt( L"Filename%02d", i ), m_Items[i].Filename );
 		}
+		
+		ini.GetConfig().SetRecordDefaults( true );
 	}
 	else
 	{
-		RemoveAllFromMenu();
-		
-		m_MaxLength = g_Conf->RecentIsoCount;
-		ScopedIniGroup groupie( ini, L"RecentIso" );
-		for( uint i=0; i<m_MaxLength; ++i )
-		{
-			wxString loadtmp;
-			ini.Entry( wxsFormat( L"Filename%02d", i ), loadtmp );
-			if( !loadtmp.IsEmpty() ) Add( loadtmp );
-		}
-		Add( g_Conf->CurrentIso );
+		LoadListFrom(ini);
 	}
-
-	ini.GetConfig().SetRecordDefaults( true );
 }

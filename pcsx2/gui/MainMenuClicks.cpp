@@ -74,8 +74,8 @@ void MainEmuFrame::Menu_SelectPluginsBios_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Language_Click(wxCommandEvent &event)
 {
-	//AppOpenDialog<LanguageSelectionDialog>( this );
-	LanguageSelectionDialog(this).ShowModal();
+	//AppOpenDialog<InterfaceConfigDialog>( this );
+	InterfaceConfigDialog(this).ShowModal();
 }
 
 static void WipeSettings()

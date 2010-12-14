@@ -98,7 +98,6 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 
 	AddPage<PluginSelectorPanel>	( wxLt("Plugins"),		cfgid.Plugins );
 	AddPage<BiosSelectorPanel>		( wxLt("BIOS"),			cfgid.Cpu );
-	AddPage<StandardPathsPanel>		( wxLt("Folders"),		cfgid.Paths );
 
 	AddListbook();
 	AddOkCancel();
@@ -107,12 +106,20 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 		wxGetApp().PostMethod( CheckPluginsOverrides );
 }
 
-Dialogs::LanguageSelectionDialog::LanguageSelectionDialog(wxWindow *parent)
+Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
 	: BaseConfigurationDialog( parent, AddAppName(_("Language Selector - %s")), 400 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
 
-	*this += new Panels::LanguageSelectionPanel( this ) | pxCenter;
+	CreateListbook( wxGetApp().GetImgList_Config() );
+	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	wxDialogWithHelpers::AddOkCancel( NULL, false );
+	AddPage<StandardPathsPanel>		( wxLt("Appearance"),	cfgid.Appearance );
+	AddPage<StandardPathsPanel>		( wxLt("Folders"),		cfgid.Paths );
+
+	AddListbook();
+	AddOkCancel();
+
+	//*this += new Panels::LanguageSelectionPanel( this ) | pxCenter;
+	//wxDialogWithHelpers::AddOkCancel( NULL, false );
 }

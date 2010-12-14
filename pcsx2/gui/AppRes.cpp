@@ -31,6 +31,7 @@
 #include "Resources/ConfigIcon_Paths.h"
 #include "Resources/ConfigIcon_Plugins.h"
 #include "Resources/ConfigIcon_MemoryCard.h"
+#include "Resources/ConfigIcon_Appearance.h"
 
 #include "Resources/AppIcon16.h"
 #include "Resources/AppIcon32.h"
@@ -184,6 +185,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		FancyLoadMacro( MemoryCard );
 		FancyLoadMacro( Video );
 		FancyLoadMacro( Cpu );
+		FancyLoadMacro( Appearance );
 	}
 	return *images;
 }
