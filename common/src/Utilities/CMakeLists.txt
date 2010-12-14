@@ -150,6 +150,7 @@ set(UtilitiesHeaders
 	../../include/Utilities/Path.h
 	../../include/Utilities/PageFaultSource.h
 	../../include/Utilities/pxCheckBox.h
+	../../include/Utilities/pxForwardDefs.h
 	../../include/Utilities/pxRadioPanel.h
 	../../include/Utilities/pxStaticText.h
 	../../include/Utilities/pxStreams.h
