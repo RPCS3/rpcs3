@@ -96,9 +96,11 @@ extern void __fastcall SwizzleColumn16_c(int y, u8* dst, u8* src, int srcpitch);
 extern void __fastcall SwizzleColumn8_c(int y, u8* dst, u8* src, int srcpitch);
 extern void __fastcall SwizzleColumn4_c(int y, u8* dst, u8* src, int srcpitch);
 
-extern "C" void __fastcall WriteCLUT_T16_I8_CSM1_sse2(u32* vm, u32* clut);
+// extern "C" void __fastcall WriteCLUT_T16_I8_CSM1_sse2(u32* vm, u32* clut);
+extern "C" void __fastcall WriteCLUT_T16_I8_CSM1_sse2(u32* vm, u32 csa);
 extern "C" void __fastcall WriteCLUT_T32_I8_CSM1_sse2(u32* vm, u32* clut);
-extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut);
+// extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32* clut);
+extern "C" void __fastcall WriteCLUT_T16_I4_CSM1_sse2(u32* vm, u32 csa);
 extern "C" void __fastcall WriteCLUT_T32_I4_CSM1_sse2(u32* vm, u32* clut);
 extern void __fastcall WriteCLUT_T16_I8_CSM1_c(u32* vm, u32* clut);
 extern void __fastcall WriteCLUT_T32_I8_CSM1_c(u32* vm, u32* clut);

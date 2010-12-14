@@ -33,7 +33,7 @@ ConsoleLogSource_App::ConsoleLogSource_App()
 	static const TraceLogDescriptor myDesc =
 	{
 		L"AppEvents",		L"App Events",
-		wxLt("Includes idle event processing and some other uncommon event usages.")
+		pxLt("Includes idle event processing and some other uncommon event usages.")
 	};
 	
 	m_Descriptor = &myDesc;

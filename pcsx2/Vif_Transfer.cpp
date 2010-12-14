@@ -25,7 +25,7 @@
 // Doesn't stall if the next vifCode is the Mark command
 _vifT bool runMark(u32* &data) {
 	if (((vifXRegs.code >> 24) & 0x7f) == 0x7) {
-		DevCon.WriteLn("Vif%d: Running Mark with I-bit", idx);
+		//DevCon.WriteLn("Vif%d: Running Mark with I-bit", idx);
 		return 1; // No Stall?
 	}
 	return 1; // Stall
@@ -145,12 +145,21 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 
 		vifXch.madr +=(transferred << 4);
 		vifXch.qwc  -= transferred;
-	}
+		if(vifXch.chcr.STR)hwDmacSrcTadrInc(vifXch);
 
-	if (!vifXch.qwc && !vifX.irqoffset) 
+		if (!vifXch.qwc) 
+		{
+			vifX.inprogress &= ~0x1;
+			vifX.vifstalled = false;
+		}
+	}
+	else
 	{
-		vifX.inprogress &= ~0x1;
-		vifX.vifstalled = false;
+		
+		if(!vifX.irqoffset)
+		{
+			vifX.vifstalled = false;
+		}
 	}
 
 	if (vifX.irq && vifX.cmd == 0) {

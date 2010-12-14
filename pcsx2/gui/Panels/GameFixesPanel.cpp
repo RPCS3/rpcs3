@@ -64,7 +64,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		},
 		{
 			_("EE timing hack - Multi purpose hack. Try if all else fails."),
-			pxE( ".Tooltip:Gamefixes:EE Timing Hack",
+			pxEt( "!ContextTip:Gamefixes:EE Timing Hack",
 				L"Known to affect following games:\n"
 				L" * Digital Devil Saga (Fixes FMV and crashes)\n"
 				L" * SSX (Fixes bad graphics and crashes)\n"
@@ -77,7 +77,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		},
 		{
 			_("OPH Flag hack - Try if your game freezes showing the same frame."),
-			pxE( ".Tooltip:Gamefixes:OPH Flag hack",
+			pxEt( "!ContextTip:Gamefixes:OPH Flag hack",
 				L"Known to affect following games:\n"
 				L" * Bleach Blade Battler\n"
 				L" * Growlanser II and III\n"
@@ -93,7 +93,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	}
 
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
-		pxE( ".Panel:Gamefixes:Compat Warning",
+		pxE( "!Panel:Gamefixes:Compat Warning",
 			L"Gamefixes can fix wrong emulation in some games. However "
             L"it can cause compatibility or performance issues in other games.  You "
 			L"will need to turn off fixes manually when changing games."

@@ -28,7 +28,11 @@
 #include <stdlib.h>
 
 #include "soundtouch/SoundTouch.h"
+#ifdef __LINUX__
+#include "WavFile.h"
+#else
 #include "soundtouch/WavFile.h"
+#endif
 
 char libraryName[256];
 

@@ -30,12 +30,12 @@ extern char *libraryName;
 extern const unsigned char zgsversion;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;
 
-extern u32 THR_KeyEvent; // value for passing out key events between threads
-extern bool THR_bShift, SaveStateExists;
+extern bool SaveStateExists;
 
 const char* s_aa[5] = { "AA none |", "AA 2x |", "AA 4x |", "AA 8x |", "AA 16x |" };
 const char* pbilinear[] = { "off", "normal", "forced" };
 
+extern void SetAA(int mode);
 
 void ProcessBilinear()
 {
@@ -86,7 +86,7 @@ void ProcessAASetting(bool reverse)
 		conf.incAA();
 	
 	sprintf(strtitle, "anti-aliasing - %s", s_aa[conf.aa]);
-	ZeroGS::SetAA(conf.aa);
+	SetAA(conf.aa);
 	ZZLog::WriteToScreen(strtitle);
 
 	SaveConfig();
@@ -110,75 +110,26 @@ void ProcessWireFrame()
 	ZZLog::WriteToScreen(strtitle);
 }
 
-typedef struct GameHackStruct
-{
-	const char HackName[40];
-	u32 HackMask;
-} GameHack;
-
-#define HACK_NUMBER 25
-
-GameHack HackinshTable[HACK_NUMBER] =
-{
-	{"*** 0 No Hack", 0},
-	{"*** 1 TexTargets Check", GAME_TEXTURETARGS},
-	{"*** 2 Autoreset Targets", GAME_AUTORESET},
-	{"*** 3 Interlace 2x", GAME_INTERLACE2X},
-	{"*** 4 TexA hack", GAME_TEXAHACK},
-	{"*** 5 No Target Resolve", GAME_NOTARGETRESOLVE},
-	{"*** 6 Exact color", GAME_EXACTCOLOR},
-	//{"***xx No color clamp", GAME_NOCOLORCLAMP},
-	//{"***xx FFX hack", GAME_FFXHACK},
-	{"*** 7 No Alpha Fail", GAME_NOALPHAFAIL},
-	{"*** 8 No Depth Update", GAME_NODEPTHUPDATE},
-	{"*** 9 Quick Resolve 1", GAME_QUICKRESOLVE1},
-	{"***10 No quick resolve", GAME_NOQUICKRESOLVE},
-	{"***11 Notaget clut", GAME_NOTARGETCLUT},
-	{"***12 No Stencil", GAME_NOSTENCIL},
-	{"***13 No Depth resolve", GAME_NODEPTHRESOLVE},
-	{"***14 Full 16 bit", GAME_FULL16BITRES},
-	{"***15 Resolve promoted", GAME_RESOLVEPROMOTED},
-	{"***16 Fast Update", GAME_FASTUPDATE},
-	{"***17 No Alpha Test", GAME_NOALPHATEST},
-	{"***18 Disable MRT depth", GAME_DISABLEMRTDEPTH},
-	//{"***xx 32 bit targs", GAME_32BITTARGS},
-	//{"***xx Path 3 hack", GAME_PATH3HACK},
-	//{"***xx Parallel calls", GAME_DOPARALLELCTX},
-	{"***19 Specular highlights", GAME_XENOSPECHACK},
-	//{"***xx Partial pointers", GAME_PARTIALPOINTERS},
-	{"***20 Partial depth", GAME_PARTIALDEPTH},
-	{"***21 Reget hack", GAME_REGETHACK},
-
-	{"***22 Gust hack", GAME_GUSTHACK},
-	{"***23 Log-Z", GAME_NOLOGZ},
-	{"***24 Auto skipdraw", GAME_AUTOSKIPDRAW}
-};
-
-int CurrentHackSetting = 0;
-
 void ProcessHackSetting(bool reverse)
 {
 	FUNCLOG
-
-//	printf ("A %d\n", HackinshTable[CurrentHackSetting].HackMask);
-	conf.hacks._u32 &= !(HackinshTable[CurrentHackSetting].HackMask);
+	
+	int hack = CurrentHack;
 
 	if (reverse)
 	{
-		CurrentHackSetting--;
+		hack--;
 
-		if (CurrentHackSetting == -1) CurrentHackSetting = HACK_NUMBER - 1;
+		if (hack < 0) hack = HACK_NUMBER - 1;
 	}
 	else
 	{
-		CurrentHackSetting++;
+		hack++;
 
-		if (CurrentHackSetting >= HACK_NUMBER) CurrentHackSetting = 0;
+		if (hack >= HACK_NUMBER) hack = 0;
 	}
-
-	conf.hacks._u32 |= HackinshTable[CurrentHackSetting].HackMask;
-
-	ZZLog::WriteToScreen(HackinshTable[CurrentHackSetting].HackName);
+	ChangeCurrentHack(hack);
+		
 	SaveConfig();
 }
 
@@ -188,7 +139,7 @@ void ProcessSaveState()
 	char strtitle[256];
 	sprintf(strtitle, "Saving in savestate %d", CurrentSavestate);
 	SaveStateExists = true;
-	ZZLog::WriteToScreen(HackinshTable[CurrentHackSetting].HackName);
+	if (CurrentHack != 0) DisplayHack(CurrentHack);
 }
 
 void OnFKey(int key, int shift)
@@ -253,99 +204,3 @@ void WriteBilinear()
 			break;
 	}
 }
-
-#ifdef _WIN32
-void ProcessEvents()
-{
-	MSG msg;
-
-	ZeroMemory(&msg, sizeof(msg));
-
-	while (1)
-	{
-		if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-		{
-			switch (msg.message)
-			{
-				case WM_KEYDOWN :
-					int my_KeyEvent = msg.wParam;
-					bool my_bShift = !!(GetKeyState(VK_SHIFT) & 0x8000);
-
-					switch (msg.wParam)
-					{
-						case VK_F5:
-						case VK_F6:
-						case VK_F7:
-						case VK_F9:
-							OnFKey(msg.wParam - VK_F1 + 1, my_bShift);
-							break;
-
-						case VK_ESCAPE:
-
-							if (conf.fullscreen())
-							{
-								// destroy that msg
-								conf.setFullscreen(false);
-								ZeroGS::ChangeDeviceSize(conf.width, conf.height);
-								UpdateWindow(GShwnd);
-								continue; // so that msg doesn't get sent
-							}
-							else
-							{
-								SendMessage(GShwnd, WM_DESTROY, 0, 0);
-								return;
-							}
-
-							break;
-					}
-
-					break;
-			}
-
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	if ((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_RETURN) & 0x8000))
-	{
-		conf.zz_options.fullscreen = !conf.zz_options.fullscreen;
-
-		ZeroGS::SetChangeDeviceSize(
-			(conf.fullscreen()) ? 1280 : conf.width,
-			(conf.fullscreen()) ? 960 : conf.height);
-	}
-}
-
-#else // linux
-
-void ProcessEvents()
-{
-	FUNCLOG
-
-	// check resizing
-	GLWin.ResizeCheck();
-
-	if (THR_KeyEvent)     // This value was passed from GSKeyEvents which could be in another thread
-	{
-		int my_KeyEvent = THR_KeyEvent;
-		bool my_bShift = THR_bShift;
-		THR_KeyEvent = 0;
-
-		switch (my_KeyEvent)
-		{
-			case XK_F5:
-			case XK_F6:
-			case XK_F7:
-			case XK_F9:
-				OnFKey(my_KeyEvent - XK_F1 + 1, my_bShift);
-				break;
-		}
-	}
-}
-
-#endif // linux

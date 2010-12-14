@@ -19,45 +19,73 @@
 
 #include "Utilities/SafeArray.h"
 
-LangPackEnumeration::LangPackEnumeration( wxLanguage langId )
-	: wxLangId( langId )
-	, englishName( wxLocale::GetLanguageName( wxLangId ) )
-	, xlatedName( pxIsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
+// Some of the codes provided by wxWidgets are 'obsolete' -- effectively replaced by more specific
+// region-qualified language codes.  This function can be used to filter them out.
+bool i18n_IsLegacyLanguageId( wxLanguage lang )
 {
+	return
+		(lang == wxLANGUAGE_ENGLISH) ||
+		(lang == wxLANGUAGE_CHINESE) ||
+		(lang == wxLANGUAGE_CHINESE_TRADITIONAL) ||
+		(lang == wxLANGUAGE_SERBIAN) ||
+		(lang == wxLANGUAGE_SPANISH);
+}
+
+static wxString i18n_GetBetterLanguageName( const wxLanguageInfo* info )
+{
+	switch (info->Language)
+	{
+		case wxLANGUAGE_CHINESE:				return L"Chinese (Traditional)";
+		case wxLANGUAGE_CHINESE_TRADITIONAL:	return L"Chinese (Traditional)";
+		case wxLANGUAGE_CHINESE_TAIWAN:			return L"Chinese (Traditional, Taiwan)";
+		case wxLANGUAGE_CHINESE_HONGKONG:		return L"Chinese (Traditional, Hong Kong)";
+		case wxLANGUAGE_CHINESE_MACAU:			return L"Chinese (Traditional, Macau)";
+	}
+
+	return info->Description;
+}
+
+LangPackEnumeration::LangPackEnumeration( wxLanguage langId )
+{
+	wxLangId = langId;
+
+	if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( wxLangId ))
+	{
+		canonicalName = info->CanonicalName;
+		englishName = i18n_GetBetterLanguageName(info);
+	}
 }
 
 LangPackEnumeration::LangPackEnumeration()
-	: wxLangId( wxLANGUAGE_DEFAULT )
-	, englishName( L" System Default" )		// left-side space forces it to sort to the front of the lists
-	, xlatedName()
 {
-	int sysLang( wxLocale::GetSystemLanguage() );
-	if( sysLang != wxLANGUAGE_UNKNOWN )
-		englishName += L"  [" + wxLocale::GetLanguageName( sysLang ) + L"]";
-}
+	wxLangId = wxLANGUAGE_DEFAULT;
+	englishName = L" System Default";		// left-side space forces it to sort to the front of the lists
+	canonicalName = L"default";
 
+	int sysLang = wxLocale::GetSystemLanguage();
+
+	if (sysLang == wxLANGUAGE_UNKNOWN)
+		sysLang = wxLANGUAGE_ENGLISH_US;
+
+	//if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( sysLang ))
+	//	englishName += L" [" + i18n_GetBetterLanguageName(info) + L"]";
+}
 
 static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 {
-	// Plain english is a special case that's built in, and we only want it added to the list
-	// once, so we check for wxLANGUAGE_ENGLISH and then ignore other IsEnglish ids below.
-	if( wxLangId == wxLANGUAGE_ENGLISH )
-		langs.push_back( LangPackEnumeration( wxLangId ) );
+	if( i18n_IsLegacyLanguageId( wxLangId ) ) return;
 
-	if( pxIsEnglish( wxLangId ) ) return;
-
-	// Note: wx auto-preserves the current locale for us
-	if( !wxLocale::IsAvailable( wxLangId ) ) return;
-	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
+	// note: wx preserves the current locale for us, so creating a new locale and deleting
+	// will not affect program status.
+	ScopedPtr<wxLocale> locale( new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING ) );
 
 	// Force the msgIdLanguage param to wxLANGUAGE_UNKNOWN to disable wx's automatic english
 	// matching logic, which will bypass the catalog loader for all english-based dialects, and
 	// (wrongly) enumerate a bunch of locales that don't actually exist.
 
-	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident", wxLANGUAGE_UNKNOWN, NULL ) )
+	if ((locale->GetLanguage() == wxLANGUAGE_ENGLISH_US) ||
+		(locale->IsOk() && locale->AddCatalog( L"pcsx2_Main", wxLANGUAGE_UNKNOWN, NULL )) )
 		langs.push_back( LangPackEnumeration( wxLangId ) );
-
-	delete locale;
 }
 
 // Finds all valid PCSX2 language packs, and enumerates them for configuration selection.
@@ -67,11 +95,11 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 // safe way to enumerate the languages is by forcibly loading every possible locale in the wx
 // database.  Anything which hasn't been installed will fail to load.
 //
-// Because loading and hashing the entire pcsx2 translation for every possible language would
-// asinine and slow, I've decided to use a two-file translation system.  One file (pcsx2ident.mo)
-// is very small and simply contains the name of the language in the language native.  The
-// second file (pcsx2.mo) is loaded only if the user picks the language (or if it's the default
-// language of the user's OS installation).
+// Because loading and hashing the entire pcsx2 translation for every possible language would be
+// asinine and slow, I've decided to use a file dedicated to being a translation detection anchor.
+// This file is named pcsx2ident.mo, and contains only the name of the language in the language
+// native form.  Additional translation files are only loaded if the user picks the language (or
+// if it's the default language of the user's OS installation).
 //
 void i18n_EnumeratePackages( LangPackList& langs )
 {
@@ -96,30 +124,118 @@ void i18n_EnumeratePackages( LangPackList& langs )
 	//i18n_DoPackageCheck( wxLANGUAGE_SAMI, englishNames, xlatedNames );
 }
 
-bool i18n_SetLanguage( int wxLangId )
+#if 0
+// warning: wxWidgets uses duplicated canonical codes for many languages, and has some bizarre
+// matching heuristics.  Using this function doesn't really match the language and sublanguage
+// (dialect) that the user selected.
+bool i18n_SetLanguage( const wxString& langCode )
 {
-	if( !wxLocale::IsAvailable( wxLangId ) )
+	if (langCode.IsEmpty() || langCode.CmpNoCase(L"default"))
 	{
-		Console.Warning( "Invalid Language Identifier (wxID=%d).", wxLangId );
-		return false;
+		wxLanguage sysLang = (wxLanguage)wxLocale::GetSystemLanguage();
+
+		if (sysLang == wxLANGUAGE_UNKNOWN)
+			sysLang = wxLANGUAGE_ENGLISH;
 	}
 
-	ScopedPtr<wxLocale> locale( new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING ) );
+	const wxLanguageInfo* woot = wxLocale::FindLanguageInfo( langCode );
+	if (!woot) return false;
+	return i18n_SetLanguage( woot->Language );
+}
+#endif
+
+// This method sets the requested language, based on wxLanguage id and an optional 'confirmation'
+// canonical code.  If the canonical code is provided, it is used to confirm that the ID matches
+// the intended language/dialect.  If the ID and canonical do not match, this method will use
+// wx's FindLAnguageInfo to provide a "best guess" canonical match (usually relying on the user's
+// operating system default).
+//
+// Rationale: wxWidgets language IDs are just simple enums, and not especially unique.  Future
+// versions of PCSX2 may have language ID changes if built against new/different versions of wx.
+// To prevent PCSX2 from selecting a completely wrong language when upgraded, we double-check
+// the wxLanguage code against the canonical name.  We can't simply use canonical names either
+// because those are not unique (dialects of chinese, for example), and wx returns the generic
+// form over a specific dialect, when given a choice.  Thus a two-tier check is required.
+//
+//  wxLanguage for specific dialect, and canonical as a fallback/safeguard in case the wxLanguage
+//  id appears to be out of date.
+//
+//
+bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
+{
+	const wxLanguageInfo* info = wxLocale::GetLanguageInfo(wxLangId);
+
+	// note: language canonical name mismatch probably means wxWidgets version changed since 
+	// the user's ini file was provided.  Missing/invalid ID probably means the same thing.
+	// If either is true, and the caller provided a canonical name, then let wx do a best
+	// match based on the canonical name.
+
+	if (!info || (!langCode.IsEmpty() && (langCode.CmpNoCase(info->CanonicalName) != 0)))
+	{
+		if (!info)
+			Console.Warning( "Invalid language identifier (wxID=%d)", wxLangId );
+
+		if (!langCode.IsEmpty() && (langCode.CmpNoCase(L"default")!=0))
+		{
+			info = wxLocale::FindLanguageInfo(langCode);
+			if (!info)
+				Console.Warning( "Unrecognized language canonical name '%ls'", langCode.c_str() );
+		}
+	}
+
+	if (!info) return false;
+	if (wxGetLocale() && (info->Language == wxGetLocale()->GetLanguage())) return true;
+	
+	ScopedPtr<wxLocale> locale( new wxLocale(info->Language) );
 
 	if( !locale->IsOk() )
 	{
 		Console.Warning( L"SetLanguage: '%s' [%s] is not supported by the operating system",
-			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
+			i18n_GetBetterLanguageName(info).c_str(), locale->GetCanonicalName().c_str()
 		);
 		return false;
 	}
 
-	if( !pxIsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
+	wxLangId = (wxLanguage)locale->GetLanguage();
+	
+	if (wxLangId == wxLANGUAGE_UNKNOWN)
 	{
-		/*Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
-			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
-		);*/
-		Console.Warning("SetLanguage is not implemented yet, using English.");
+		Console.WriteLn("System-default language is unknown?  Defaulting back to English/US.");
+		wxLangId = wxLANGUAGE_ENGLISH_US;
+	}
+
+	// English/US is built in, so no need to load MO/PO files.
+	if( pxIsEnglish(wxLangId) )
+	{
+		locale.DetachPtr();
+		return true;
+	}
+	
+	Console.WriteLn( L"Loading language translation databases for '%s' [%s]",
+		i18n_GetBetterLanguageName(info).c_str(), locale->GetCanonicalName().c_str()
+	);
+
+	static const wxChar* dictFiles[] =
+	{
+		L"pcsx2_Main",
+		L"pcsx2_Iconized",
+		L"pcsx2_Tertiary"
+	};
+	
+	bool foundone = false;
+	for (uint i=0; i<ArraySize(dictFiles); ++i)
+	{
+		if (!dictFiles[i]) continue;
+
+		if (!locale->AddCatalog(dictFiles[i]))
+			Console.Indent().WriteLn(Color_StrongYellow, "%ls not found -- translation dictionary may be incomplete.", dictFiles[i]);
+		else
+			foundone = true;
+	}
+
+	if (!foundone)	
+	{
+		Console.Warning("SetLanguage: Requested translation is not implemented yet.");
 		return false;
 	}
 

@@ -22,22 +22,6 @@
 using namespace Threading;
 
 // --------------------------------------------------------------------------------------
-//  BaseArchiveEntry
-// --------------------------------------------------------------------------------------
-class BaseArchiveEntry
-{
-protected:
-	BaseArchiveEntry() {}
-	virtual ~BaseArchiveEntry() throw() {}
-
-public:
-	virtual wxString GetFilename() const=0;
-	virtual u8* GetDataPtr() const=0;
-	virtual uint GetDataSize() const=0;
-};
-
-
-// --------------------------------------------------------------------------------------
 //  ArchiveEntry
 // --------------------------------------------------------------------------------------
 class ArchiveEntry

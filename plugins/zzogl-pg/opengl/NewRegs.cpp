@@ -22,15 +22,13 @@
 #include "NewRegs.h"
 #include "PS2Etypes.h"
 
-#include "zerogs.h"
 #include "targets.h"
 
 #ifdef USE_OLD_REGS
 #include "Regs.h"
 #else
-
-const u32 g_primmult[8] = { 1, 2, 2, 3, 3, 3, 2, 0xff };
-const u32 g_primsub[8] = { 1, 2, 1, 3, 1, 1, 2, 0 };
+#include "ZZoglVB.h"
+#include "ZZoglDrawing.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244)
@@ -45,28 +43,6 @@ u32 s_uTex1Data[2][2] = {{0, }};
 u32 s_uClampData[2] = {0, };
 
 //u32 results[65535] = {0, };
-
-// return true if triangle SHOULD be painted.
-// My brain hurts. --arcum42
-
-// return true if triangle SHOULD be painted.
-inline bool NoHighlights(int i)
-{
-//	This is hack-code, I still in search of correct reason, why some triangles should not be drawn.
-
-	int dummy = 0;
-	
-	u32 resultA = prim->iip + (2 * (prim->tme)) + (4 * (prim->fge)) + (8 * (prim->abe)) + (16 * (prim->aa1)) + (32 * (prim->fst)) + (64 * (prim->ctxt)) + (128 * (prim->fix));
-	
-	const pixTest curtest = ZeroGS::vb[i].test;
-	
-	u32 result = curtest.ate + ((curtest.atst) << 1) +((curtest.afail) << 4) + ((curtest.date) << 6) + ((curtest.datm) << 7) + ((curtest.zte) << 8) + ((curtest.ztst)<< 9);
-	
-	if ((resultA == 0x310a) && (result == 0x0)) return false; // Radiata Stories
-	
-	//Old code
-	return (!(conf.settings().xenosaga_spec) || !ZeroGS::vb[i].zbuf.zmsk || prim->iip) ;
-}
 
 void __gifCall GIFPackedRegHandlerNull(const u32* data)
 {
@@ -127,24 +103,6 @@ void __gifCall GIFPackedRegHandlerUV(const u32* data)
 	ZZLog::Greg_Log("Packed UV: 0x%x, 0x%x", r->U, r->V);
 }
 
-void __gifCall KickVertex(bool adc)
-{
-	FUNCLOG
-	if (++gs.primC >= (int)g_primmult[prim->prim])
-	{
-		if (!adc && NoHighlights(prim->ctxt)) (*ZeroGS::drawfn[prim->prim])();
-		
-		gs.primC -= g_primsub[prim->prim];
-
-		if (adc && prim->prim == 5)
-		{
-			/* tri fans need special processing */
-			if (gs.nTriFanVert == gs.primIndex)
-				gs.primIndex = gs.primNext();
-		}
-	}
-}
-
 void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 {
 	FUNCLOG
@@ -152,7 +110,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
 	// Fix Vertexes up later.
-	KickVertex(!!(r->ADC));
+	ZZKick->KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -163,7 +121,7 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	gs.add_vertex(r->X, r->Y,r->Z);
 
 	// Fix Vertexes up later.
-	KickVertex(!!(r->ADC));
+	ZZKick->KickVertex(!!(r->ADC));
 	ZZLog::Greg_Log("Packed XYZ2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -240,7 +198,7 @@ void __gifCall GIFRegHandlerXYZF2(const u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KickVertex(false);
+	ZZKick->KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -250,7 +208,7 @@ void __gifCall GIFRegHandlerXYZ2(const u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KickVertex(false);
+	ZZKick->KickVertex(false);
 	ZZLog::Greg_Log("XYZF2: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -275,22 +233,22 @@ void __gifCall GIFRegHandlerTEX0(const u32* data)
 	}
 	
 	// Order is important.
-	ZeroGS::vb[i].uNextTex0Data[0] = r->ai32[0];
-	ZeroGS::vb[i].uNextTex0Data[1] = r->ai32[1];
-	ZeroGS::vb[i].bNeedTexCheck = 1;
+	vb[i].uNextTex0Data[0] = r->ai32[0];
+	vb[i].uNextTex0Data[1] = r->ai32[1];
+	vb[i].bNeedTexCheck = 1;
 	
 	// don't update unless necessary
 	if (PSMT_ISCLUT(psm))
 	{
-		if (ZeroGS::CheckChangeInClut(data[1], psm))
+		if (CheckChangeInClut(data[1], psm))
 		{
 			// loading clut, so flush whole texture
-			ZeroGS::vb[i].FlushTexData();
+			vb[i].FlushTexData();
 		}
-		else if (r->CSA != (ZeroGS::vb[i].uCurTex0.CSA))
+		else if (r->CSA != (vb[i].uCurTex0.CSA))
 		{
 			// check if csa is the same!! (ffx bisaid island, grass)
-			ZeroGS::Flush(i); // flush any previous entries
+			Flush(i); // flush any previous entries
 		}
 	}
 }
@@ -299,7 +257,7 @@ template <u32 i>
 void __gifCall GIFRegHandlerCLAMP(const u32* data)
 {
 	FUNCLOG
-	clampInfo& clamp = ZeroGS::vb[i].clamp;
+	clampInfo& clamp = vb[i].clamp;
 	GIFRegCLAMP* r = (GIFRegCLAMP*)(data);
 
 	// Worry about this later.
@@ -307,9 +265,9 @@ void __gifCall GIFRegHandlerCLAMP(const u32* data)
 
 	if ((s_uClampData[i] != data[0]) || (((clamp.minv >> 8) | (clamp.maxv << 2)) != (data[1]&0x0fff)))
 	{
-		ZeroGS::Flush(i);
+		Flush(i);
 
-		ZeroGS::vb[i].bTexConstsSync = false;
+		vb[i].bTexConstsSync = false;
 	}
 	
 	s_uClampData[i] = data[0];
@@ -337,7 +295,7 @@ void __gifCall GIFRegHandlerXYZF3(const u32* data)
 	GIFRegXYZF* r = (GIFRegXYZF*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-	KickVertex(true);
+	ZZKick->KickVertex(true);
 	ZZLog::Greg_Log("XYZF3: 0x%x, 0x%x, 0x%x, %f", r->X, r->Y, r->Z, r->F);
 }
 
@@ -347,7 +305,7 @@ void __gifCall GIFRegHandlerXYZ3(const u32* data)
 	GIFRegXYZ* r = (GIFRegXYZ*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-	KickVertex(true);
+	ZZKick->KickVertex(true);
 	ZZLog::Greg_Log("XYZ3: 0x%x, 0x%x, 0x%x", r->X, r->Y, r->Z);
 }
 
@@ -361,15 +319,15 @@ void __fastcall GIFRegHandlerTEX1(const u32* data)
 {
 	FUNCLOG
 	GIFRegTEX1* r = (GIFRegTEX1*)(data);
-	tex1Info& tex1 = ZeroGS::vb[i].tex1;
+	tex1Info& tex1 = vb[i].tex1;
 
 	// Worry about this later.
 	if (!NoHighlights(i)) return;
 
 	if (conf.bilinear == 1 && (tex1.mmag != r->MMAG || tex1.mmin != r->MMIN))
 	{
-		ZeroGS::Flush(i);
-		ZeroGS::vb[i].bVarsTexSync = false;
+		Flush(i);
+		vb[i].bVarsTexSync = false;
 	}
 
 	tex1.lcm  = r->LCM;
@@ -387,13 +345,13 @@ template <u32 i>
 void __gifCall GIFRegHandlerTEX2(const u32* data)
 {
 	FUNCLOG
-	tex0Info& tex0 = ZeroGS::vb[i].tex0;
+	tex0Info& tex0 = vb[i].tex0;
 
-	ZeroGS::vb[i].FlushTexData();
+	vb[i].FlushTexData();
 
 	u32 psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
-	u32* s_uTex0Data = ZeroGS::vb[i].uCurTex0Data;
+	u32* s_uTex0Data = vb[i].uCurTex0Data;
 
 	// don't update unless necessary
 //	if( ZZOglGet_psm_TexBitsFix(*s_uTex0Data) == ZZOglGet_psm_TexBitsFix(data[0]) ) { // psm is the same
@@ -408,26 +366,26 @@ void __gifCall GIFRegHandlerTEX2(const u32* data)
 
 			if (tex0.cld != 0)
 			{
-				ZeroGS::texClutWrite(i);
+				texClutWrite(i);
 				// invalidate to make sure target didn't change!
-				ZeroGS::vb[i].bVarsTexSync = false;
+				vb[i].bVarsTexSync = false;
 			}
 
 			return;
 		}
 	}
 
-	ZeroGS::Flush(i);
+	Flush(i);
 
-	ZeroGS::vb[i].bVarsTexSync = false;
-	ZeroGS::vb[i].bTexConstsSync = false;
+	vb[i].bVarsTexSync = false;
+	vb[i].bTexConstsSync = false;
 
 	s_uTex0Data[0] = (s_uTex0Data[0] & ~0x03f00000) | (psm << 20);
 	s_uTex0Data[1] = (s_uTex0Data[1] & 0x1f) | (data[1] & ~0x1f);
 
 	tex0.psm = ZZOglGet_psm_TexBitsFix(data[0]);
 
-	if (PSMT_ISCLUT(tex0.psm)) ZeroGS::CluttingForFlushedTex(&tex0, data[1], i);
+	if (PSMT_ISCLUT(tex0.psm)) CluttingForFlushedTex(&tex0, data[1], i);
 	ZZLog::Greg_Log("TEX2_%d: 0x%x", i, data);
 }
 
@@ -437,8 +395,8 @@ void __gifCall GIFRegHandlerXYOFFSET(const u32* data)
 	FUNCLOG
 	// Affects that Mana Khemia opening dialog (when i == 0).
 	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
-	ZeroGS::vb[i].offset.x = r->OFX;
-	ZeroGS::vb[i].offset.y = r->OFY;
+	vb[i].offset.x = r->OFX;
+	vb[i].offset.y = r->OFY;
 	ZZLog::Greg_Log("XYOFFSET_%d: 0x%x, 0x%x", i, r->OFX, r->OFY);
 }
 
@@ -453,16 +411,16 @@ void __gifCall GIFRegHandlerPRIM(const u32 *data)
 		//ZZLog::Warn_Log("Warning: unknown bits in prim %8.8lx_%8.8lx", data[1], data[0]);
 	//}
 
-	// Come back to this one...
-	gs.nTriFanVert = gs.primIndex;
-
 	gs.primC = 0;
 	prim->prim = r->PRIM;
 	gs._prim[0].prim = r->PRIM;
 	gs._prim[1].prim = r->PRIM;
 	gs._prim[1]._val = (data[0] >> 3) & 0xff; // Setting the next 8 flags after prim at once.
 
-	ZeroGS::Prim();
+    gs.new_tri_fan = !(r->PRIM ^ PRIM_TRIANGLE_FAN);
+    ZZKick->DirtyValidPrevPrim();
+
+	Prim();
 	ZZLog::Greg_Log("PRIM");
 }
 
@@ -474,7 +432,7 @@ void __gifCall GIFRegHandlerPRMODE(const u32* data)
 	// Re-examine all code dealing with PRIMs in a bit.
 	gs._prim[0]._val = (data[0] >> 3) & 0xff;
 
-	if (gs.prac == 0) ZeroGS::Prim();
+	if (gs.prac == 0) Prim();
 	ZZLog::Greg_Log("PRMODE");
 }
 
@@ -487,7 +445,7 @@ void __gifCall GIFRegHandlerPRMODECONT(const u32* data)
 	gs.prac = r->AC;
 	prim = &gs._prim[gs.prac];
 
-	ZeroGS::Prim();
+	Prim();
 	ZZLog::Greg_Log("PRMODECONT");
 }
 
@@ -497,8 +455,8 @@ void __gifCall GIFRegHandlerTEXCLUT(const u32* data)
 	// Affects background coloration of initial Mana Khemia dialog.
 	GIFRegTEXCLUT* r = (GIFRegTEXCLUT*)(data);
 
-	ZeroGS::vb[0].FlushTexData();
-	ZeroGS::vb[1].FlushTexData();
+	vb[0].FlushTexData();
+	vb[1].FlushTexData();
 	
 	// Fixme.
 	gs.clut.cbw = r->CBW << 6;
@@ -514,9 +472,9 @@ void __gifCall GIFRegHandlerSCANMSK(const u32* data)
 	
 	if(r->MSK != gs.smask)
 	{
-		ZeroGS::FlushBoth();
-//		ZeroGS::ResolveC(&ZeroGS::vb[0]);
-//		ZeroGS::ResolveZ(&ZeroGS::vb[0]);
+		FlushBoth();
+//		ResolveC(&vb[0]);
+//		ResolveZ(&vb[0]);
 	}
 	
 	gs.smask = r->MSK;
@@ -533,7 +491,7 @@ void __gifCall GIFRegHandlerMIPTBP1(const u32* data)
 		Flush();
 	}*/
 	
-	miptbpInfo& miptbp0 = ZeroGS::vb[i].miptbp0;
+	miptbpInfo& miptbp0 = vb[i].miptbp0;
 	miptbp0.tbp[0] = r->TBP1;
 	miptbp0.tbw[0] = r->TBW1;
 	miptbp0.tbp[1] = r->TBP2;
@@ -550,7 +508,7 @@ void __gifCall GIFRegHandlerMIPTBP2(const u32* data)
 	GIFRegMIPTBP2* r = (GIFRegMIPTBP2*)(data);
 	// Yep.
 	
-	miptbpInfo& miptbp1 = ZeroGS::vb[i].miptbp1;
+	miptbpInfo& miptbp1 = vb[i].miptbp1;
 	miptbp1.tbp[0] = r->TBP4;
 	miptbp1.tbw[0] = r->TBW4;
 	miptbp1.tbp[1] = r->TBP5;
@@ -568,10 +526,10 @@ void __gifCall GIFRegHandlerTEXA(const u32* data)
 	
 	if ((r->AEM != gs.texa.aem) || (r->TA0 != gs.texa.ta[0]) || (r->TA1 != gs.texa.ta[1]))
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 
-		ZeroGS::vb[0].bTexConstsSync = false;
-		ZeroGS::vb[1].bTexConstsSync = false;
+		vb[0].bTexConstsSync = false;
+		vb[1].bTexConstsSync = false;
 	}
 		
 	gs.texa.aem = r->AEM;
@@ -589,10 +547,10 @@ void __gifCall GIFRegHandlerFOGCOL(const u32* data)
 	
 	if (gs.fogcol != r->ai32[0])
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 	}
 	
-	ZeroGS::SetFogColor(r);
+	SetFogColor(r);
 	gs.fogcol = r->ai32[0];
 	ZZLog::Greg_Log("FOGCOL: 0x%x", r->ai32[0]);
 }
@@ -601,7 +559,7 @@ void __gifCall GIFRegHandlerTEXFLUSH(const u32* data)
 {
 	FUNCLOG
 	// GSdx doesn't even do anything here.
-	ZeroGS::SetTexFlush();
+	SetTexFlush();
 	ZZLog::Greg_Log("TEXFLUSH");
 }
 
@@ -610,7 +568,7 @@ void __gifCall GIFRegHandlerSCISSOR(const u32* data)
 {
 	FUNCLOG
 	GIFRegSCISSOR* r = (GIFRegSCISSOR*)(data);
-	Rect2& scissor = ZeroGS::vb[i].scissor;
+	Rect2& scissor = vb[i].scissor;
 
 	Rect2 newscissor;
 
@@ -623,10 +581,10 @@ void __gifCall GIFRegHandlerSCISSOR(const u32* data)
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
 	{
-		ZeroGS::Flush(i);
+		Flush(i);
 		
 		// flush everything
-		ZeroGS::vb[i].bNeedFrameCheck = 1;
+		vb[i].bNeedFrameCheck = 1;
 	}
 	
 	scissor = newscissor;
@@ -663,12 +621,12 @@ void __gifCall GIFRegHandlerALPHA(const u32* data)
 	if (newalpha.c == 3) newalpha.c = 0;
 	if (newalpha.d == 3) newalpha.d = 0;
 	
-	if ((newalpha.abcd != ZeroGS::vb[i].alpha.abcd) || (newalpha.fix != ZeroGS::vb[i].alpha.fix))
+	if ((newalpha.abcd != vb[i].alpha.abcd) || (newalpha.fix != vb[i].alpha.fix))
 	{
-		ZeroGS::Flush(i);
+		Flush(i);
 	}
 	
-	ZeroGS::vb[i].alpha = newalpha;
+	vb[i].alpha = newalpha;
 	ZZLog::Greg_Log("ALPHA%d: A:0x%x B:0x%x C:0x%x D:0x%x FIX:0x%x ", i, r->A, r->B, r->C, r->D, r->FIX);
 }
 
@@ -682,7 +640,7 @@ void __gifCall GIFRegHandlerDIMX(const u32* data)
 
 	if (r->i64 != gs.dimx.i64)
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 
 		update = true;
 	}
@@ -703,7 +661,7 @@ void __gifCall GIFRegHandlerDTHE(const u32* data)
 	
 	if (r->DTHE != gs.dthe)
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 	}
 	
 	gs.dthe = r->DTHE;
@@ -717,7 +675,7 @@ void __gifCall GIFRegHandlerCOLCLAMP(const u32* data)
 	
 	if (r->CLAMP != gs.colclamp)
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 	}
 	
 	gs.colclamp = r->CLAMP;
@@ -728,12 +686,12 @@ template <u32 i>
 void __gifCall GIFRegHandlerTEST(const u32* data)
 {
 	FUNCLOG
-	pixTest* test = &ZeroGS::vb[i].test;
+	pixTest* test = &vb[i].test;
 	GIFRegTEST* r = (GIFRegTEST*)(data);
 	
 	if (test->_val != r->ai32[0])
 	{
-		ZeroGS::Flush(i);
+		Flush(i);
 	}
 
 	test->_val = r->ai32[0];
@@ -747,9 +705,9 @@ void __gifCall GIFRegHandlerPABE(const u32* data)
 	
 	if (gs.pabe != r->PABE)
 	{
-		ZeroGS::FlushBoth();
-//		ZeroGS::SetAlphaChanged(0, GPUREG_PABE);
-//		ZeroGS::SetAlphaChanged(1, GPUREG_PABE);
+		FlushBoth();
+//		SetAlphaChanged(0, GPUREG_PABE);
+//		SetAlphaChanged(1, GPUREG_PABE);
 	}
 
 	gs.pabe = r->PABE;
@@ -762,12 +720,12 @@ void __gifCall GIFRegHandlerFBA(const u32* data)
 	FUNCLOG
 	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
-	if (r->FBA != ZeroGS::vb[i].fba.fba)
+	if (r->FBA != vb[i].fba.fba)
 	{
-		ZeroGS::FlushBoth();
+		FlushBoth();
 	}
 	
-	ZeroGS::vb[i].fba.fba = r->FBA;
+	vb[i].fba.fba = r->FBA;
 	ZZLog::Greg_Log("FBA%d: 0x%x ", i, r->FBA);
 }
 
@@ -778,7 +736,7 @@ void __gifCall GIFRegHandlerFRAME(const u32* data)
 	// Affects opening dialogs, movie, and menu on Mana Khemia.
 	
 	GIFRegFRAME* r = (GIFRegFRAME*)(data);
-	frameInfo& gsfb = ZeroGS::vb[i].gsfb;
+	frameInfo& gsfb = vb[i].gsfb;
 	
 	int fbw = r->FBW * 64;
 	int fbp = r->FBP * 32;
@@ -798,7 +756,7 @@ void __gifCall GIFRegHandlerFRAME(const u32* data)
 		return;
 	}
 
-	ZeroGS::FlushBoth();
+	FlushBoth();
 	if (r->FBW > 0) fbh = ZZOgl_fbh_Calc(r->FBP, r->FBW, r->PSM);
 
 	gsfb.fbp = fbp;
@@ -808,7 +766,7 @@ void __gifCall GIFRegHandlerFRAME(const u32* data)
 	gsfb.fbm = ZZOglGet_fbm_FrameBitsFix(data[0], data[1]);
 	
 
-	ZeroGS::vb[i].bNeedFrameCheck = 1;
+	vb[i].bNeedFrameCheck = 1;
 	ZZLog::Greg_Log("FRAME_%d", i);
 }
 
@@ -820,7 +778,7 @@ void __gifCall GIFRegHandlerZBUF(const u32* data)
 	GIFRegZBUF* r = (GIFRegZBUF*)(data);
 	ZZLog::Greg_Log("ZBUF_1");
 	
-	zbufInfo& zbuf = ZeroGS::vb[i].zbuf;
+	zbufInfo& zbuf = vb[i].zbuf;
 	int psm = (0x30 | r->PSM);
 	int zbp = r->ZBP * 32;
 
@@ -834,17 +792,17 @@ void __gifCall GIFRegHandlerZBUF(const u32* data)
 	// error detection
 	if (m_Blocks[psm].bpp == 0) return;
 
-	ZeroGS::FlushBoth();
+	FlushBoth();
 
 	zbuf.zbp = zbp;
 	zbuf.psm = psm;
 	zbuf.zmsk = r->ZMSK;
 
-	ZeroGS::vb[i].zprimmask = 0xffffffff;
+	vb[i].zprimmask = 0xffffffff;
 
-	if (zbuf.psm > 0x31) ZeroGS::vb[i].zprimmask = 0xffff;
+	if (zbuf.psm > 0x31) vb[i].zprimmask = 0xffff;
 
-	ZeroGS::vb[i].bNeedZCheck = 1;
+	vb[i].bNeedZCheck = 1;
 }
 
 void __gifCall GIFRegHandlerBITBLTBUF(const u32* data)
@@ -911,11 +869,11 @@ void __gifCall GIFRegHandlerTRXDIR(const u32* data)
 	switch (gs.imageTransfer)
 	{
 		case 0: // host->loc
-			gs.imageTransfer = -1;
+			TerminateHostLocal();
 			break;
 
 		case 1: // loc->host
-			ZeroGS::TerminateLocalHost();
+			TerminateLocalHost();
 			break;
 	}
 
@@ -932,15 +890,15 @@ void __gifCall GIFRegHandlerTRXDIR(const u32* data)
 		switch (gs.imageTransfer)
 		{
 			case 0: // host->loc
-				ZeroGS::InitTransferHostLocal();
+				InitTransferHostLocal();
 				break;
 
 			case 1: // loc->host
-				ZeroGS::InitTransferLocalHost();
+				InitTransferLocalHost();
 				break;
 
 			case 2:
-				ZeroGS::TransferLocalLocal();
+				TransferLocalLocal();
 				break;
 
 			case 3:
@@ -967,7 +925,7 @@ void __gifCall GIFRegHandlerHWREG(const u32* data)
 
 	if (gs.imageTransfer == 0)
 	{
-		ZeroGS::TransferHostLocal(data, 2);
+		TransferHostLocal(data, 2);
 	}
 	else
 	{

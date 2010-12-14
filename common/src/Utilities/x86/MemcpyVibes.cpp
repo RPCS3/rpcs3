@@ -183,11 +183,11 @@ __fi void memcpy_vibes(void * dest, const void * src, int size) {
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
-				"mov		eax, %[qwc]\n"				// keep a copy of count for looping
-				"shr		eax, 1\n"
-				"jz			memcpy_qwc_1_%=\n"				// only one 16 byte block to copy?
+                "sub        %[qwc], 1\n"                // dec the counter to ease the count of 16bytes block later (optimization)
+                                                        // Note after this line, real value of the counter is %[qwc] + 1
+                "jle        memcpy_qwc_1_%=\n"             // only one 16 byte block to copy? Or nothing.
 
-				"cmp		eax, 64\n"					// "IN_CACHE_COPY/32"
+				"cmp		%[qwc], 127\n"					// "IN_CACHE_COPY/16"
 				"jb			memcpy_qwc_loop1_%=\n"			// small copies should be cached (definite speedup --air)
 		
 			"memcpy_qwc_loop2_%=:\n"						// 32-byte blocks, uncached copy
@@ -204,8 +204,8 @@ __fi void memcpy_vibes(void * dest, const void * src, int size) {
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		eax,1\n"
-				"jnz		memcpy_qwc_loop2_%=\n"			// last 64-byte block?
+				"sub		%[qwc],2\n"
+				"jg 		memcpy_qwc_loop2_%=\n"			// last 64-byte block?
 				"sfence\n"								// flush the write buffer
 				"jmp		memcpy_qwc_1_%=\n"
 
@@ -227,12 +227,12 @@ __fi void memcpy_vibes(void * dest, const void * src, int size) {
 
 				"add		%[src],32\n"				// update source pointer
 				"add		%[dest],32\n"				// update destination pointer
-				"sub		eax,1\n"
-				"jnz		memcpy_qwc_loop1_%=\n"			// last 64-byte block?
+				"sub		%[qwc],2\n"
+				"jg 		memcpy_qwc_loop2_%=\n"			// last 64-byte block?
 
 			"memcpy_qwc_1_%=:\n"
-				"test %[qwc],1\n"
-				"jz			memcpy_qwc_final_%=\n"
+				"cmp        %[qwc],0\n"
+				"jne		memcpy_qwc_final_%=\n"
 				"movq		mm0,[%[src]]\n"
 				"movq		mm1,[%[src]+8]\n"
 				"movq		[%[dest]], mm0\n"
@@ -243,7 +243,7 @@ __fi void memcpy_vibes(void * dest, const void * src, int size) {
 			".att_syntax\n"
 					: "=&r"(dest), "=&r"(src), "=&r"(qwc)
 					: [dest]"0"(dest), [src]"1"(src), [qwc]"2"(qwc)
-					: "memory", "eax", "mm0", "mm1", "mm2", "mm3"
+					: "memory", "mm0", "mm1", "mm2", "mm3"
 		);
 	}
 #endif

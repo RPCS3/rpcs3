@@ -22,11 +22,14 @@
 //------------------ Includes
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "GLWin.h"
-
 #include "ZZoglShaders.h"
+
 #include "targets.h"
+#include "rasterfont.h" // simple font
+#include "ZZoglDrawing.h"
+#include "ZZoglVB.h"
+
 // This include for windows resource file with Shaders
 #ifdef _WIN32
 #	include "Win32.h"
@@ -73,14 +76,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
 map<string, GLbyte> mapGLExtensions;
 
-namespace ZeroGS
-{
-extern void KickPoint();
-extern void KickLine();
-extern void KickTriangle();
-extern void KickTriangleFan();
-extern void KickSprite();
-extern void KickDummy();
 extern bool LoadEffects();
 extern bool ZZshLoadExtraEffects();
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
@@ -92,7 +87,8 @@ int g_nCurVBOIndex = 0;
 inline bool CreateImportantCheck();
 inline void CreateOtherCheck();
 inline bool CreateOpenShadersFile();
-}
+
+void ZZGSStateReset();
 
 //------------------ Dummies
 #ifdef _WIN32
@@ -129,15 +125,13 @@ void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum) = NULL;
 extern u8* s_lpShaderResources;
 
 // String's for shader file in developer mode
-#ifdef DEVBUILD
+#ifdef ZEROGS_DEVBUILD
 char* EFFECT_NAME = "";
 char* EFFECT_DIR = "";
 #endif
 
 /////////////////////
 // graphics resources
-FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
 GLenum s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha; // set by zgsBlendFuncSeparateEXT
 u32 s_stencilfunc, s_stencilref, s_stencilmask;
 GLenum s_drawbuffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
@@ -164,31 +158,21 @@ u32 ptexBlocks = 0, ptexConv16to32 = 0;	 // holds information on block tiling
 u32 ptexBilinearBlocks = 0;
 u32 ptexConv32to16 = 0;
 int g_nDepthBias = 0;
-//u32 g_bSaveFlushedFrame = 0;
+
+extern void Delete_Avi_Capture();
+extern void ZZDestroy();
+extern void SetAA(int mode);
 
 //------------------ Code
 
-bool ZeroGS::IsGLExt(const char* szTargetExtension)
+///< returns true if the the opengl extension is supported
+bool IsGLExt(const char* szTargetExtension)
 {
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
 }
 
-inline bool ZeroGS::Create_Window(int _width, int _height)
-{
-	nBackbufferWidth = _width;
-	nBackbufferHeight = _height;
-
-	if (!GLWin.DisplayWindow(_width, _height)) return false;
-
-	//s_nFullscreen = (conf.fullscreen()) ? 1 : 0;
-
-	conf.mrtdepth = 0; // for now
-
-	return true;
-}
-
 // Function asks about different OGL extensions, that are required to setup accordingly. Return false if checks failed
-inline bool ZeroGS::CreateImportantCheck()
+inline bool CreateImportantCheck()
 {
 	bool bSuccess = true;
 #ifndef _WIN32
@@ -220,7 +204,7 @@ inline bool ZeroGS::CreateImportantCheck()
 }
 
 // This is a check for less important open gl extensions.
-inline void ZeroGS::CreateOtherCheck()
+inline void CreateOtherCheck()
 {
 	if (!IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL)
 	{
@@ -292,18 +276,21 @@ inline void ZeroGS::CreateOtherCheck()
 #endif
 }
 
-// open shader file according to build target
 
-inline bool ZeroGS::CreateOpenShadersFile()
+#ifdef _WIN32
+__forceinline bool LoadShadersFromRes()
 {
-#ifndef DEVBUILD
-#	ifdef _WIN32
 	HRSRC hShaderSrc = FindResource(hInst, MAKEINTRESOURCE(IDR_SHADERS), RT_RCDATA);
 	assert(hShaderSrc != NULL);
 	HGLOBAL hShaderGlob = LoadResource(hInst, hShaderSrc);
 	assert(hShaderGlob != NULL);
 	s_lpShaderResources = (u8*)LockResource(hShaderGlob);
-#	else // not _WIN32
+	return true;
+}
+#else
+
+__forceinline bool LoadShadersFromDat()
+{
 	FILE* fres = fopen("ps2hw.dat", "rb");
 
 	if (fres == NULL)
@@ -324,13 +311,17 @@ inline bool ZeroGS::CreateOpenShadersFile()
 	fseek(fres, 0, SEEK_SET);
 	fread(s_lpShaderResources, s, 1, fres);
 	s_lpShaderResources[s] = 0;
-#	endif // _WIN32
-#else // defined(ZEROGS_DEVBUILD)
-#	ifndef _WIN32 // NOT WINDOWS
+	
+	return true;
+}
+
+#ifdef DEVBUILD
+__forceinline bool LoadShadersFromFX()
+{
 	// test if ps2hw.fx exists
 	char tempstr[255];
 	char curwd[255];
-	getcwd(curwd, ARRAY_SIZE(curwd));
+	getcwd(curwd, ArraySize(curwd));
 
 	strcpy(tempstr, "/plugins/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
@@ -354,58 +345,56 @@ inline bool ZeroGS::CreateOpenShadersFile()
 
 	sprintf(EFFECT_DIR, "%s/%s", curwd, tempstr);
 	sprintf(EFFECT_NAME, "%sps2hw.fx", EFFECT_DIR);
+	
+	return true;
+}
+#endif
+#endif
+
+
+// open shader file according to build target
+
+inline bool CreateOpenShadersFile()
+{
+#ifndef DEVBUILD
+#	ifdef _WIN32
+	return LoadShadersFromRes();
+#	else // not _WIN32
+	return LoadShadersFromDat();
+#	endif // _WIN32
+#else // defined(ZEROGS_DEVBUILD)
+#	ifndef _WIN32 // NOT WINDOWS
+	return LoadShadersFromFX();
+	
+	// No else clause?
 #endif
 #endif // !defined(ZEROGS_DEVBUILD)
-	return true;
 }
 
 // Read all extensions name and fill mapGLExtensions
 inline bool CreateFillExtensionsMap()
 {
-	// fill the opengl extension map
-	const char* ptoken = (const char*)glGetString(GL_EXTENSIONS);
+	string temp("");
+	int max_ext = 0;
+	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
+	
+	PFNGLGETSTRINGIPROC glGetStringi = 0;
+	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
 
-	if (ptoken == NULL) return false;
-
-	int prevlog = conf.log;
-
-	conf.log = 1;
-
-	ZZLog::GS_Log("Supported OpenGL Extensions:\n%s\n", ptoken);	 // write to the log file
-
-	// Probably a better way to do it, but seems to crash.
-	/*int n;
-	glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-	ZZLog::GS_Log("Supported OpenGL Extensions:\n");
-	for (int i = 0; i < n; i++)
+	for (GLint i = 0; i < max_ext; i++)
 	{
-		ZZLog::GS_Log("%s/n", (const char*)glGetStringi(GL_EXTENSIONS, i));
-	}*/
-
-	conf.log = prevlog;
-
-	// insert all exts into mapGLExtensions
-
-	const char* pend = NULL;
-
-	while (ptoken != NULL)
-	{
-		pend = strchr(ptoken, ' ');
-
-		if (pend != NULL)
-		{
-			mapGLExtensions[string(ptoken, pend-ptoken)];
-		}
-		else
-		{
-			mapGLExtensions[string(ptoken)];
-			break;
-		}
-
-		ptoken = pend;
-
-		while (*ptoken == ' ') ++ptoken;
+		string extension((const char*)glGetStringi(GL_EXTENSIONS, i));
+		mapGLExtensions[extension];
+		
+		temp = temp + extension;
+		if (i != (max_ext - 1)) temp += ", ";
 	}
+	
+	// Write the extension list to the log, but only write it to the screen on a debug build.
+#ifndef _DEBUG
+	ZZLog::Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
+#endif
+	ZZLog::Debug_Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
 
 	return true;
 }
@@ -445,20 +434,22 @@ inline bool TryBlinearFormat(GLint fmt32, GLint fmt16, const GLvoid* vBilinearDa
 }
 
 
-bool ZeroGS::Create(int _width, int _height)
+bool ZZCreate(int _width, int _height)
 {
 	GLenum err = GL_NO_ERROR;
 	bool bSuccess = true;
-	int i;
 
-	Destroy(1);
-	GSStateReset();
+	ZZDestroy();
+	ZZGSStateReset();
+	
+	if (!GLWin.DisplayWindow(_width, _height)) return false;
 
-	if (!Create_Window(_width, _height)) return false;
+	conf.mrtdepth = 0; // for now
+
 	if (!CreateFillExtensionsMap()) return false;
 	if (!CreateImportantCheck()) return false;
 
-	ZeroGS::CreateOtherCheck();
+	CreateOtherCheck();
 
 	// check the max texture width and height
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
@@ -509,15 +500,10 @@ bool ZeroGS::Create(int _width, int _height)
 	if (err != GL_NO_ERROR) bSuccess = false;
 
 	// init draw fns
-	drawfn[0] = KickPoint;
-	drawfn[1] = KickLine;
-	drawfn[2] = KickLine;
-	drawfn[3] = KickTriangle;
-	drawfn[4] = KickTriangle;
-	drawfn[5] = KickTriangleFan;
-	drawfn[6] = KickSprite;
-	drawfn[7] = KickDummy;
-
+	//init_drawfn();
+	if (ZZKick != NULL) delete ZZKick;
+	ZZKick = new Kick;
+	
 	SetAA(conf.aa);
 
 	GSsetGameCRC(g_LastCRC, conf.settings()._u32);
@@ -527,7 +513,7 @@ bool ZeroGS::Create(int _width, int _height)
 	//s_bWriteDepth = true;
 
 	GL_BLEND_ALL(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
-	glViewport(0, 0, nBackbufferWidth, nBackbufferHeight);					 // Reset The Current Viewport
+	glViewport(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h);					 // Reset The Current Viewport
 	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -574,7 +560,7 @@ bool ZeroGS::Create(int _width, int _height)
 	g_vboBuffers.resize(VB_NUMBUFFERS);
 	glGenBuffers((GLsizei)g_vboBuffers.size(), &g_vboBuffers[0]);
 
-	for (i = 0; i < (int)g_vboBuffers.size(); ++i)
+	for (int i = 0; i < (int)g_vboBuffers.size(); ++i)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, g_vboBuffers[i]);
 		glBufferData(GL_ARRAY_BUFFER, 0x100*sizeof(VertexGPU), NULL, GL_STREAM_DRAW);
@@ -657,32 +643,16 @@ bool ZeroGS::Create(int _width, int _height)
 
 	VertexGPU* pvert = &verts[0];
 
-	pvert->x = -0x7fff;
-	pvert->y = 0x7fff;
-	pvert->z = 0;
-	pvert->s = 0;
-	pvert->t = 0;
+	pvert->set_xyzst(-0x7fff, 0x7fff, 0, 0, 0);
 	pvert++;
 
-	pvert->x = 0x7fff;
-	pvert->y = 0x7fff;
-	pvert->z = 0;
-	pvert->s = 1;
-	pvert->t = 0;
+	pvert->set_xyzst(0x7fff, 0x7fff, 0, 1, 0);
 	pvert++;
 
-	pvert->x = -0x7fff;
-	pvert->y = -0x7fff;
-	pvert->z = 0;
-	pvert->s = 0;
-	pvert->t = 1;
+	pvert->set_xyzst(-0x7fff, -0x7fff, 0, 0, 1);
 	pvert++;
 
-	pvert->x = 0x7fff;
-	pvert->y = -0x7fff;
-	pvert->z = 0;
-	pvert->s = 1;
-	pvert->t = 1;
+	pvert->set_xyzst(0x7fff, -0x7fff, 0, 1, 1);
 	pvert++;
 
 	glBufferDataARB(GL_ARRAY_BUFFER, 4*sizeof(VertexGPU), &verts[0], GL_STATIC_DRAW);
@@ -706,7 +676,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	vector<u32> conv16to32data(256*256);
 
-	for (i = 0; i < 256*256; ++i)
+	for (int i = 0; i < 256*256; ++i)
 	{
 		u32 tempcol = RGBA16to32(i);
 		// have to flip r and b
@@ -730,7 +700,7 @@ bool ZeroGS::Create(int _width, int _height)
 
 	u32* dst = &conv32to16data[0];
 
-	for (i = 0; i < 32; ++i)
+	for (int i = 0; i < 32; ++i)
 	{
 		for (int j = 0; j < 32; ++j)
 		{
@@ -778,8 +748,6 @@ bool ZeroGS::Create(int _width, int _height)
 	vb[0].Init(VB_BUFFERSIZE);
 	vb[1].Init(VB_BUFFERSIZE);
 
-//	g_bSaveFlushedFrame = 1;
-
 	g_vsprog = g_psprog = 0;
 
 	if (glGetError() == GL_NO_ERROR)
@@ -793,7 +761,7 @@ bool ZeroGS::Create(int _width, int _height)
 	}
 }
 
-void ZeroGS::Destroy(bool bD3D)
+void ZZDestroy()
 {
 	Delete_Avi_Capture();
 
@@ -822,7 +790,7 @@ void ZeroGS::Destroy(bool bD3D)
 	
 	if (pvs != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(pvs); ++i)
+		for (int i = 0; i < ArraySize(pvs); ++i)
 		{
 			SAFE_RELEASE_PROG(pvs[i]);
 		}
@@ -830,7 +798,7 @@ void ZeroGS::Destroy(bool bD3D)
 
 	if (ppsRegular != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(ppsRegular); ++i)
+		for (int i = 0; i < ArraySize(ppsRegular); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsRegular[i].prog);
 		}
@@ -838,7 +806,7 @@ void ZeroGS::Destroy(bool bD3D)
 
 	if (ppsTexture != NULL)
 	{
-		for (int i = 0; i < ARRAY_SIZE(ppsTexture); ++i)
+		for (int i = 0; i < ArraySize(ppsTexture); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		}
@@ -857,7 +825,7 @@ void ZeroGS::Destroy(bool bD3D)
 	SAFE_RELEASE_PROG(ppsCRTC24[1].prog);
 	SAFE_RELEASE_PROG(ppsOne.prog);
 
-	SAFE_DELETE(font_p);
+	safe_delete(font_p);
 
 	GLWin.ReleaseContext();
 

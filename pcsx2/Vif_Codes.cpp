@@ -115,6 +115,8 @@ vifOp(vifCode_Base) {
 }
 
 extern bool SIGNAL_IMR_Pending;
+static __aligned16 u32 partial_write[4];
+static uint partial_count = 0;
 
 template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
 	pass1 {
@@ -154,7 +156,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		}
 		if(SIGNAL_IMR_Pending == true)
 		{
-			DevCon.Warning("Path 2 Paused (At start)");
+			//DevCon.Warning("Path 2 Paused (At start)");
 			vif1.vifstalled    = true;
 			return 0;
 		}
@@ -175,7 +177,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		uint minSize	 = aMin(vif1.vifpacketsize, vif1.tag.size);
 		uint ret;
 
-		if(minSize < 4)
+		if(minSize < 4 || partial_count > 0)
 		{
 			// When TTE==1, the VIF might end up sending us 8-byte packets instead of the usual 16-byte
 			// variety, if DIRECT tags cross chain dma boundaries.  The actual behavior of real hardware
@@ -189,21 +191,24 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			// be any need to worry about queuing more than 16 bytes of data,
 			//
 
-			static __aligned16 u32 partial_write[4];
-			static uint partial_count = 0;
+			
 
+			ret = 0;
+			minSize = aMin(minSize, 4-partial_count);
 			for( uint i=0; i<(minSize & 3); ++i)
+			{
 				partial_write[partial_count++] = ((u32*)data)[i];
+				ret++;
+			}
 
 			pxAssume( partial_count <= 4 );
-			ret = 0;
+			
 			if (partial_count == 4)
 			{
 				GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
 				GIFPath_CopyTag(GIF_PATH_2, (u128*)partial_write, 1);
 				GetMTGS().SendDataPacket();
 				partial_count = 0;
-				ret = 4;
 			}
 		}
 		else
@@ -372,14 +377,16 @@ vifOp(vifCode_MSCNT) {
 vifOp(vifCode_MskPath3) {
 	vif1Only();
 	pass1 {
+		//I Hate the timing sensitivity of this stuff
 		if (vif1ch.chcr.STR && vif1.lastcmd != 0x13) {
-			schedulepath3msk = 0x10 | ((vif1Regs.code >> 15) & 0x1);
-			vif1.vifstalled = true;
+			schedulepath3msk = 0x10 | ((vif1Regs.code >> 15) & 0x1);			
 		}
-		else {
+		else 
+		{
 			schedulepath3msk = (vif1Regs.code >> 15) & 0x1;
 			Vif1MskPath3();
 		}
+		if(vif1ch.chcr.STR)vif1.vifstalled = true;
 		vif1.cmd = 0;
 	}
 	pass3 { VifCodeLog("MskPath3"); }

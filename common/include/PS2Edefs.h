@@ -278,7 +278,9 @@ void CALLBACK GSsetFrameSkip(int frameskip);
 int CALLBACK GSsetupRecording(int start, void* pData);
 
 void CALLBACK GSreset();
-void CALLBACK GSgetTitleInfo( char dest[128] );
+//deprecated: GSgetTitleInfo was used in PCSX2 but no plugin supported it prior to r4070:
+//void CALLBACK GSgetTitleInfo( char dest[128] );
+void CALLBACK GSgetTitleInfo2( char* dest, size_t length );
 void CALLBACK GSwriteCSR(u32 value);
 s32  CALLBACK GSfreeze(int mode, freezeData *data);
 void CALLBACK GSconfigure();
@@ -575,7 +577,7 @@ typedef void (CALLBACK* _GSreadFIFO)(u64 *pMem);
 typedef void (CALLBACK* _GSreadFIFO2)(u64 *pMem, int qwc);
 
 typedef void (CALLBACK* _GSchangeSaveState)(int, const char* filename);
-typedef void (CALLBACK* _GSgetTitleInfo)(char dest[128]);
+typedef void (CALLBACK* _GSgetTitleInfo2)(char* dest, size_t length);
 typedef void (CALLBACK* _GSirqCallback)(void (*callback)());
 typedef void (CALLBACK* _GSprintf)(int timeout, char *fmt, ...);
 typedef void (CALLBACK* _GSsetBaseMem)(void*);
@@ -729,7 +731,7 @@ extern _GSreadFIFO        GSreadFIFO;
 extern _GSreadFIFO2       GSreadFIFO2;
 
 extern _GSchangeSaveState GSchangeSaveState;
-extern _GSgetTitleInfo    GSgetTitleInfo;
+extern _GSgetTitleInfo2   GSgetTitleInfo2;
 extern _GSmakeSnapshot	  GSmakeSnapshot;
 extern _GSmakeSnapshot2   GSmakeSnapshot2;
 extern _GSirqCallback 	  GSirqCallback;

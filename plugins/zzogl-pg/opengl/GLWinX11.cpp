@@ -19,7 +19,6 @@
 
 #include "Util.h"
 #include "GLWin.h"
-#include "zerogs.h"
 
 #ifdef GL_X11_WINDOW
 
@@ -35,7 +34,11 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	glDisplay = XOpenDisplay(0);
 	glScreen = DefaultScreen(glDisplay);
 
-	if (pDisplay == NULL) return false;
+	if (pDisplay == NULL) 
+	{
+		ZZLog::Error_Log("Failed to create window. Exiting...");
+		return false;
+	}
 
 	*(Display**)pDisplay = glDisplay;
 
@@ -135,9 +138,9 @@ void GLWindow::GetWindowSize()
     XUnlockDisplay(glDisplay);
 
     // update the gl buffer size
-    ZeroGS::ChangeWindowSize(width, height);
+    UpdateWindowSize(width, height);
 
-    ZZLog::Error_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
+    ZZLog::Dev_Log("Resolution %dx%d. Depth %d bpp. Position (%d,%d)", width, height, depth, conf.x, conf.y);
 }
 
 void GLWindow::GetGLXVersion()
@@ -252,6 +255,9 @@ void GLWindow::ToggleFullscreen()
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
+	backbuffer.w = _width;
+	backbuffer.h = _height;
+	
 	if (!CreateVisual()) return false;
 	
 	/* create a GLX context */
@@ -301,8 +307,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 void GLWindow::SwapGLBuffers()
 {
+	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
 	glXSwapBuffers(glDisplay, glWindow);
-	//glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void GLWindow::SetTitle(char *strtitle)
@@ -336,7 +342,7 @@ void GLWindow::ResizeCheck()
 			width = event.xconfigure.width;
 			height = event.xconfigure.height;
             Force43Ratio();
-			ZeroGS::ChangeWindowSize(width, height);
+			UpdateWindowSize(width, height);
 		}
 
         if (!fullScreen) {
@@ -350,6 +356,34 @@ void GLWindow::ResizeCheck()
         }
 	}
     XUnlockDisplay(glDisplay);
+}
+
+u32 THR_KeyEvent = 0; // Value for key event processing between threads
+bool THR_bShift = false;
+
+void GLWindow::ProcessEvents()
+{
+	FUNCLOG
+
+	// check resizing
+	ResizeCheck();
+
+	if (THR_KeyEvent)     // This value was passed from GSKeyEvents which could be in another thread
+	{
+		int my_KeyEvent = THR_KeyEvent;
+		bool my_bShift = THR_bShift;
+		THR_KeyEvent = 0;
+
+		switch (my_KeyEvent)
+		{
+			case XK_F5:
+			case XK_F6:
+			case XK_F7:
+			case XK_F9:
+				OnFKey(my_KeyEvent - XK_F1 + 1, my_bShift);
+				break;
+		}
+	}
 }
 
 #endif

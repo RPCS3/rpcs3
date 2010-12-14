@@ -74,7 +74,7 @@ protected:
 
 	wxString GetDisabledMessage( uint slot ) const
 	{
-		return pxE( ".Popup:Mcd:HasBeenDisabled", wxsFormat(
+		return pxE( "!Notice:Mcd:HasBeenDisabled", wxsFormat(
 			L"The memory card in slot %d has been automatically disabled.  You can correct the problem\n"
 			L"and re-enable the memory card at any time using Config:Memory cards from the main menu.",
 			slot

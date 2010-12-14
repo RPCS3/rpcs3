@@ -18,11 +18,301 @@
 #include "AppGameDatabase.h"
 #include "ConfigurationPanels.h"
 
+#include <wx/listctrl.h>
+
 extern wxString DiscSerial;
+
 using namespace pxSizerFlags;
 
-#define blankLine() {												\
-	sizer1+=5; sizer1+=5; sizer1+=Text(L""); sizer1+=5; sizer1+=5;	\
+
+enum GameDataColumnId
+{
+	GdbCol_Serial = 0,
+	GdbCol_Title,
+	GdbCol_Region,
+	GdbCol_Compat,
+	GdbCol_Patches,
+
+	GdbCol_Count
+};
+
+struct ListViewColumnInfo
+{
+	const wxChar*		name;
+	int					width;
+	wxListColumnFormat	align;
+};
+
+// --------------------------------------------------------------------------------------
+//  GameDatabaseListView
+// --------------------------------------------------------------------------------------
+class GameDatabaseListView : public wxListView
+{
+	typedef wxListView _parent;
+
+protected:
+	wxArrayString	m_GamesInView;
+
+public:
+	virtual ~GameDatabaseListView() throw() { }
+	GameDatabaseListView( wxWindow* parent );
+
+	void CreateColumns();
+	GameDatabaseListView& AddGame( const wxString& serial );
+	GameDatabaseListView& RemoveGame( const wxString& serial );
+	GameDatabaseListView& ClearAllGames();
+	GameDatabaseListView& SortBy( GameDataColumnId column );
+
+protected:
+	// Overrides for wxLC_VIRTUAL
+	virtual wxString OnGetItemText(long item, long column) const;
+	virtual int OnGetItemImage(long item) const;
+	virtual int OnGetItemColumnImage(long item, long column) const;
+	virtual wxListItemAttr* OnGetItemAttr(long item) const;
+
+	const ListViewColumnInfo& GetDefaultColumnInfo( uint idx ) const;
+};
+
+// --------------------------------------------------------------------------------------
+//  GameDatabaseListView  (implementations)
+// --------------------------------------------------------------------------------------
+GameDatabaseListView::GameDatabaseListView( wxWindow* parent )
+	: _parent( parent )
+{
+	CreateColumns();
+}
+
+const ListViewColumnInfo& GameDatabaseListView::GetDefaultColumnInfo( uint idx ) const
+{
+	static const ListViewColumnInfo columns[] =
+	{
+		{ L"Serial",		96,		wxLIST_FORMAT_LEFT		},
+		{ L"Title",			132,	wxLIST_FORMAT_LEFT		},
+		{ L"Region",		72,		wxLIST_FORMAT_CENTER	},
+		{ L"Compat",		48,		wxLIST_FORMAT_CENTER	},
+		{ L"Patches",		48,		wxLIST_FORMAT_CENTER	},
+	};
+
+	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
+	return columns[idx];
+}
+
+void GameDatabaseListView::CreateColumns()
+{
+	for( int i=0; i<GdbCol_Count; ++i )
+	{
+		const ListViewColumnInfo& info = GetDefaultColumnInfo(i);
+		InsertColumn( i, pxGetTranslation(info.name), info.align, info.width );
+	}
+}
+
+GameDatabaseListView& GameDatabaseListView::AddGame( const wxString& serial )
+{
+	if (m_GamesInView.Index( serial, false ) != wxNOT_FOUND) return *this;
+	m_GamesInView.Add( serial );
+	
+	return *this;
+}
+
+GameDatabaseListView& GameDatabaseListView::RemoveGame( const wxString& serial )
+{
+	m_GamesInView.Remove( serial );
+	return *this;
+}
+
+GameDatabaseListView& GameDatabaseListView::ClearAllGames()
+{
+	m_GamesInView.Clear();
+	return *this;
+}
+
+
+class BaseGameListSort
+{
+protected:
+	IGameDatabase*	m_GameDB;
+	bool			m_descending;
+
+public:
+	BaseGameListSort( bool descend )
+	{
+		m_GameDB = AppHost_GetGameDatabase();
+		m_descending = descend;
+	}
+
+	virtual ~BaseGameListSort() throw() {}
+
+	// Note: Return TRUE if the first value is less than the second value.
+	bool operator()(const wxString& i1, const wxString& i2)
+	{
+		if (!m_GameDB || (i1 == i2)) return false;
+
+		// note: Anything not in the database gets sorted to the bottom of the list ...
+		Game_Data first, second;
+		if (!m_GameDB->findGame(first, i1))		return false;
+		if (!m_GameDB->findGame(second, i2))	return true;
+
+		if (int retval = _doCompare(first, second))
+			return m_descending ? (retval>0) : (retval<0);
+
+		return 0;
+	}
+
+	virtual int _doCompare( const Game_Data& first, const Game_Data& second )=0;
+};
+
+class GLSort_bySerial : public BaseGameListSort
+{
+public:
+	GLSort_bySerial( bool descend ) : BaseGameListSort( descend ) { }
+
+protected:
+	int _doCompare( const Game_Data& g1, const Game_Data& g2 )
+	{
+		return g1.getString("Serial").CmpNoCase( g2.getString("Serial") );
+	}
+};
+
+class GLSort_byTitle : public BaseGameListSort
+{
+public:
+	GLSort_byTitle( bool descend ) : BaseGameListSort( descend ) { }
+
+protected:
+	int _doCompare( const Game_Data& g1, const Game_Data& g2 )
+	{
+		return g1.getString("Name").Cmp( g2.getString("Name") );
+	}
+};
+
+class GLSort_byRegion : public BaseGameListSort
+{
+public:
+	GLSort_byRegion( bool descend ) : BaseGameListSort( descend )  { }
+
+protected:
+	int _doCompare( const Game_Data& g1, const Game_Data& g2 )
+	{
+		return g1.getString("Region").CmpNoCase( g2.getString("Region") );
+	}
+};
+
+class GLSort_byCompat : public BaseGameListSort
+{
+public:
+	GLSort_byCompat( bool descend ) : BaseGameListSort( descend ) { }
+
+protected:
+	int _doCompare( const Game_Data& g1, const Game_Data& g2 )
+	{
+		return g1.getInt("Compat") - g2.getInt("Compat");
+	}
+};
+
+class GLSort_byPatches : public BaseGameListSort
+{
+public:
+	GLSort_byPatches( bool descend ) : BaseGameListSort( descend ) { }
+
+protected:
+	int _doCompare( const Game_Data& g1, const Game_Data& g2 )
+	{
+		bool hasPatches1 = !g1.getString("[patches]").IsEmpty();
+		bool hasPatches2 = !g2.getString("[patches]").IsEmpty();
+		
+		if (hasPatches1 == hasPatches2) return 0;
+
+		return hasPatches1 ? -1 : 1;
+	}
+};
+
+GameDatabaseListView& GameDatabaseListView::SortBy( GameDataColumnId column )
+{
+	wxArrayString::CompareFunction cmpfunc = NULL;
+
+	const bool isDescending = false;
+
+	wxArrayString::iterator begin	= m_GamesInView.begin();
+	wxArrayString::iterator end		= m_GamesInView.end();
+
+	// Note: std::sort does not pass predicate instances by reference, which means we can't use
+	// object polymorphism to simplify the code below. --air
+
+	switch( column )
+	{
+		case GdbCol_Serial:		std::sort(begin, end, GLSort_bySerial(isDescending));	break;
+		case GdbCol_Title:		std::sort(begin, end, GLSort_byTitle(isDescending));	break;
+		case GdbCol_Region:		std::sort(begin, end, GLSort_byRegion(isDescending));	break;
+		case GdbCol_Compat:		std::sort(begin, end, GLSort_byCompat(isDescending));	break;
+		case GdbCol_Patches:	std::sort(begin, end, GLSort_byPatches(isDescending));	break;
+
+		// do not use jNO_DEFAULT here -- keeps release builds from crashing (it'll just
+		// ignore the sort request!)
+	}
+	//m_GamesInView.(  );
+	
+	return *this;
+}
+
+// return the text for the given column of the given item
+wxString GameDatabaseListView::OnGetItemText(long item, long column) const
+{
+	IGameDatabase* GameDB = AppHost_GetGameDatabase();
+
+	if (!GameDB || (item < 0) || ((uint)item >= m_GamesInView.GetCount()))
+		return _parent::OnGetItemText(item, column);
+
+	Game_Data game;
+	if (!GameDB->findGame(game, m_GamesInView[item]))
+	{
+		pxFail( "Unknown row index in GameDatabaseListView -- returning default value." );
+		return _parent::OnGetItemText(item, column);
+	}
+
+	switch( column )
+	{
+		case GdbCol_Serial:		return m_GamesInView[item];
+		case GdbCol_Title:		return game.getString("Name");
+		case GdbCol_Region:		return game.getString("Region");
+		case GdbCol_Compat:		return game.getString("Compat");
+		case GdbCol_Patches:	return game.getString("[patches]").IsEmpty() ? L"No" : L"Yes";
+	}
+
+	pxFail( "Unknown column index in GameDatabaseListView -- returning an empty string." );
+	return wxEmptyString;
+}
+
+// return the icon for the given item. In report view, OnGetItemImage will
+// only be called for the first column. See OnGetItemColumnImage for
+// details.
+int GameDatabaseListView::OnGetItemImage(long item) const
+{
+	return _parent::OnGetItemImage( item );
+}
+
+// return the icon for the given item and column.
+int GameDatabaseListView::OnGetItemColumnImage(long item, long column) const
+{
+	return _parent::OnGetItemColumnImage( item, column );
+}
+
+static wxListItemAttr m_ItemAttr;
+
+// return the attribute for the item (may return NULL if none)
+wxListItemAttr* GameDatabaseListView::OnGetItemAttr(long item) const
+{
+	m_ItemAttr = wxListItemAttr();		// Wipe it clean!
+
+	// For eventual drag&drop ?
+	//if( m_TargetedItem == item )
+	//	m_ItemAttr.SetBackgroundColour( wxColour(L"Wheat") );
+
+	return &m_ItemAttr;
+}
+
+
+#define blankLine() {	\
+	sizer1+=5; sizer1+=5; sizer1+=Text(wxEmptyString); sizer1+=5; sizer1+=5;	\
 }
 
 #define placeTextBox(wxBox, txt) {	\
@@ -43,9 +333,6 @@ wxTextCtrl* CreateMultiLineTextCtrl( wxWindow* parent, int digits, long flags = 
 Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	IGameDatabase* GameDB = AppHost_GetGameDatabase();
-	pxAssume( GameDB != NULL );
-	
 	searchBtn  = new wxButton  (this, wxID_ANY, _("Search"));
 
 	serialBox  = CreateNumericalTextCtrl(this, 40, wxTE_LEFT);
@@ -59,7 +346,8 @@ Panels::GameDatabasePanel::GameDatabasePanel( wxWindow* parent )
 		gameFixes[i] = new pxCheckBox(this, EnumToString(i), wxCHK_3STATE | wxCHK_ALLOW_3RD_STATE_FOR_USER );
 
 	*this	+= Heading(_("Game Database Editor")).Bold() | StdExpand();
-	//*this	+= Heading(_("This panel lets you add and edit game titles, game fixes, and game patches.")) | StdExpand();
+
+	*this	+= new GameDatabaseListView( this ) | StdExpand();
 
 	wxFlexGridSizer& sizer1(*new wxFlexGridSizer(5, StdPadding));
 	sizer1.AddGrowableCol(0);

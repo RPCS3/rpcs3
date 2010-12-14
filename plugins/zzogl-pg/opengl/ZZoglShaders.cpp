@@ -21,10 +21,11 @@
 // ZZogl Shader manipulation functions.
 
 //------------------- Includes
-#include "zerogs.h"
+#include "Util.h"
 #include "ZZoglShaders.h"
 #include "zpipe.h"
-	
+#include <math.h>
+#include <map>
 
 #ifdef _WIN32
 #	include "Win32.h"
@@ -32,8 +33,6 @@ extern HINSTANCE hInst;
 #endif
 
 // ----------------- Defines
-
-using namespace ZeroGS; 
 
 #define TEXWRAP_REPEAT 0
 #define TEXWRAP_CLAMP 1
@@ -68,7 +67,13 @@ using namespace ZeroGS;
 
 //------------------ Constants
 
+// Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
+const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
+
+#ifdef _DEBUG
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
+#endif
+const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 
 // ----------------- Global Variables 
 
@@ -87,16 +92,20 @@ char* EFFECT_DIR;
 
 bool g_bCRTCBilinear = true;
 
-namespace ZeroGS { 
-	float4 g_vdepth, vlogz;
-	FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
-	FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
-	FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-	FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-	VERTEXSHADER pvsBitBlt;
-	
-	inline bool LoadEffects();
-}
+float4 g_vdepth, vlogz;
+FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
+FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
+FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
+FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
+VERTEXSHADER pvsBitBlt;
+
+extern u32 ptexBlocks;		// holds information on block tiling. It's texture number in OpenGL -- if 0 than such texture
+extern u32 ptexConv16to32;	// does not exists. This textures should be created on start and released on finish.  
+extern u32 ptexBilinearBlocks;
+extern u32 ptexConv32to16;
+
+inline bool LoadEffects();
+extern bool s_bWriteDepth;
 
 struct SHADERHEADER
 {
@@ -219,7 +228,7 @@ bool ZZshCreateOpenShadersFile() {
 	// test if ps2hw.fx exists
 	char tempstr[255];
 	char curwd[255];
-	getcwd(curwd, ARRAY_SIZE(curwd));
+	getcwd(curwd, ArraySize(curwd));
 
 	strcpy(tempstr, "/plugins/");
 	sprintf(EFFECT_NAME, "%sps2hw.fx", tempstr);
@@ -506,7 +515,7 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 	SetupFragmentProgramParameters(&fragment, !!(Index&SH_CONTEXT1), 0);  \
 } \
 
-inline bool ZeroGS::LoadEffects()
+inline bool LoadEffects()
 {
 	assert( s_lpShaderResources != NULL );
 
@@ -530,7 +539,7 @@ inline bool ZeroGS::LoadEffects()
 	}
 
 	// clear the textures
-	for(u16 i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for(u16 i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		ppsTexture[i].prog = NULL;
 	}
@@ -637,7 +646,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
 	
-	assert( index < ARRAY_SIZE(ppsTexture) );
+	assert( index < ArraySize(ppsTexture) );
 	FRAGMENTSHADER* pf = ppsTexture+index;
 	
 	if( pbFailed != NULL ) *pbFailed = false;
@@ -711,10 +720,10 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	SET_PSFILENAME(fragment, name); \
 } \
 
-inline bool ZeroGS::LoadEffects()
+inline bool LoadEffects()
 {
 	// clear the textures
-	for(int i = 0; i < ARRAY_SIZE(ppsTexture); ++i) {
+	for(int i = 0; i < ArraySize(ppsTexture); ++i) {
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}
 

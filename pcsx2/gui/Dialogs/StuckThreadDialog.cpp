@@ -30,7 +30,7 @@ Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActi
 	stuck_thread.AddListener( this );
 
 	*this += Heading( wxsFormat(
-		pxE( ".Panel:StuckThread:Heading",
+		pxE( "!Panel:StuckThread:Heading",
 			L"The thread '%s' is not responding.  It could be deadlocked, or it might "
 			L"just be running *really* slowly."
 		),
@@ -43,7 +43,7 @@ Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActi
 		L"\nOr press [Ignore] to suppress further assertions."
 	);
 
-	*this += new ModalButtonPanel( this, MsgButtons().Cancel().Custom(L"Wait") ) | StdCenter();
+	*this += new ModalButtonPanel( this, MsgButtons().Cancel().Custom(L"Wait", "wait") ) | StdCenter();
 
 	if( wxWindow* idyes = FindWindowById( wxID_YES ) )
 		idyes->SetFocus();

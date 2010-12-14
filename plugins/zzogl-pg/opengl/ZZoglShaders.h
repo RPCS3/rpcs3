@@ -29,9 +29,11 @@
 // Just bitmask for different type of shaders
 #define SHADER_REDUCED 1	// equivalent to ps2.0
 #define SHADER_ACCURATE 2   	// for older cards with less accurate math (ps2.x+)
-// For output
-const static char* g_pShaders[] = { "full", "reduced", "accurate", "accurate-reduced" };
 
+#include "ZZoglMath.h"
+#include "GS.h"
+
+// For output
 #define NVIDIA_CG_API
 // --------------------------- API abstraction level --------------------------------
 
@@ -54,7 +56,7 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
 #endif					// end NVIDIA cg-toolkit API
 
-const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
+//const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
 
 enum ZZshShaderType {ZZ_SH_ZERO, ZZ_SH_REGULAR, ZZ_SH_REGULAR_FOG, ZZ_SH_TEXTURE, ZZ_SH_TEXTURE_FOG, ZZ_SH_CRTC};
 // We have "compatible" shaders, as RegularFogVS and RegularFogPS. if don't need to wory about incompatible shaders
@@ -174,7 +176,6 @@ struct VERTEXSHADER
 	int ParametersStart, ParametersFinish;
 };
 
-namespace ZeroGS { 
 	extern float4 g_vdepth;	
 	extern float4 vlogz;
 	extern VERTEXSHADER pvsBitBlt;
@@ -183,7 +184,6 @@ namespace ZeroGS {
 
 	extern FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
 	extern FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
-}
 
 // ------------------------- Functions -------------------------------
 
@@ -225,8 +225,7 @@ extern bool ZZshLoadExtraEffects();
 
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
-namespace ZeroGS {
 	// only sets a limited amount of state (for Update)
 	void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool CheckVB, FRAGMENTSHADER* pfragment, int force);
-}
+
 #endif

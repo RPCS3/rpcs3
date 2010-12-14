@@ -34,7 +34,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
 
-	m_check_LimiterDisable->SetToolTip( pxE( ".Tooltip:Framelimiter:Disable",
+	m_check_LimiterDisable->SetToolTip( pxEt( "!ContextTip:Framelimiter:Disable",
 		L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
 		L"be available either."
 	) );
@@ -102,8 +102,8 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	*this	+= 5;
 
-	//*this	+= Heading( pxE( ".Panel:Framelimiter:Heading",
-	*this	+= new pxStaticText( this, pxE( ".Panel:Framelimiter:Heading",
+	//*this	+= Heading( pxE( "!Panel:Framelimiter:Heading",
+	*this	+= new pxStaticText( this, pxE( "!Panel:Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
@@ -145,11 +145,11 @@ void Panels::FramelimiterPanel::Apply()
 	catch( Exception::ParseError& )
 	{
 		throw Exception::CannotApplySettings( this )
-			.SetDiagMsg(wxsFormat(
+			.SetDiagMsg(pxsFmt(
 				L"Error while parsing either NTSC or PAL framerate settings.\n\tNTSC Input = %s\n\tPAL Input  = %s",
 				m_text_BaseNtsc->GetValue().c_str(), m_text_BasePal->GetValue().c_str()
 			) )
-			.SetUserMsg(_("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."));
+			.SetUserMsg(_t("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."));
 	}
 
 	appfps.SanityCheck();
@@ -168,12 +168,12 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	m_check_EnableSkip = new pxCheckBox( this, _("Use Frameskip"),
 		_(".") );
 
-	m_check_EnableSkip->SetToolTip( pxE( ".Tooltip:Frameskip:Disable",
+	m_check_EnableSkip->SetToolTip( pxEt( "!ContextTip:Frameskip:Disable",
 		L""
 		L""
 	) );
 
-	m_check_EnableSkipOnTurbo->SetToolTip( pxE( ".Tooltip:Frameskip:UseForTurbo",
+	m_check_EnableSkipOnTurbo->SetToolTip( pxEt( "!ContextTip:Frameskip:UseForTurbo",
 		L"Recommended option! Since frameskipping glitches typically aren't as annoying when you're "
 		L" just trying to speed through stuff."
 	) );*/
@@ -227,7 +227,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 	*this	+= s_spins	| StdExpand();
 
-	*this	+= Text( pxE( ".Panel:Frameskip:Heading",
+	*this	+= Text( pxE( "!Panel:Frameskip:Heading",
 		L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
 		L"Enabling it will cause severe graphical errors in some games." )
 	) | StdExpand();
@@ -289,18 +289,18 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
 
 	m_check_SynchronousGS = new pxCheckBox( right, _("Use Synchronized MTGS"),
-		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
+		_t("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
 	);
 
 	m_check_DisableOutput = new pxCheckBox( right, _("Disable all GS output"),
-		_("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
+		_t("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
 	);
 
-	m_check_SynchronousGS->SetToolTip( pxE( ".Tooltip:GS:SyncMTGS",
+	m_check_SynchronousGS->SetToolTip( pxEt( "!ContextTip:GS:SyncMTGS",
 		L"Enable this if you think MTGS thread sync is causing crashes or graphical errors.")
 	) ;
 
-	m_check_DisableOutput->SetToolTip( pxE( ".Tooltip:GS:DisableOutput",
+	m_check_DisableOutput->SetToolTip( pxEt( "!ContextTip:GS:DisableOutput",
 		L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: "
 		L"save a state at an ideal scene, enable this option, and re-load the savestate.\n\n"
 		L"Warning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."

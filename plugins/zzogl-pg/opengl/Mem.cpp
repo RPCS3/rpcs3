@@ -19,12 +19,14 @@
 
 #include "GS.h"
 #include "Mem.h"
-#include "zerogs.h"
 #include "targets.h"
 #include "x86.h"
 
 #include "Mem_Transmit.h"
 #include "Mem_Swizzle.h"
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 BLOCK m_Blocks[0x40]; // do so blocks are indexable
 
@@ -128,8 +130,14 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 		for (int tempj = gs.trxpos.dx; tempj < alignedPt.x; tempj += data.blockwidth, pbuf += TransPitch(data.blockwidth, data.transfersize) / TSize)
 		{
 			u8 *temp = pstart + fun.gp(tempj, tempY, gs.dstbuf.bw) * data.blockbits / 8;
-			swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize), 0xffffffff);
+			swizzle(temp, (u8*)pbuf, TransPitch(pitch, data.transfersize));
 		}
+#ifdef ZEROGS_SSE2
+        // Note: swizzle function uses some non temporal move (mm_stream) instruction.
+        // store fence insures that previous store are finish before execute new one.
+        _mm_sfence();
+
+#endif
 
 		/* transfer the rest */
 		if (alignedPt.x < gs.imageEndX)
@@ -158,8 +166,8 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 		assert(gs.imageTransfer == -1 || tempY == gs.imageEndY);
 		gs.imageTransfer = -1;
 		/*int start, end;
-		ZeroGS::GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
-		ZeroGS::g_MemTargs.ClearRange(start, end);*/
+		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
+		g_MemTargs.ClearRange(start, end);*/
 	}
 	else
 	{

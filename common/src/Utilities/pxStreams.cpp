@@ -35,6 +35,12 @@ bool pxStreamBase::IsOk() const
 	return woot && woot->IsOk();
 }
 
+wxFileOffset pxStreamBase::Length() const
+{
+	if (!GetWxStreamBase()) return 0;
+	return GetWxStreamBase()->GetLength();
+}
+
 // --------------------------------------------------------------------------------------
 //  pxInputStream  (implementations)
 // --------------------------------------------------------------------------------------
@@ -54,6 +60,16 @@ pxInputStream::pxInputStream(const wxString& filename, wxInputStream* input)
 }
 
 wxStreamBase* pxInputStream::GetWxStreamBase() const { return m_stream_in.GetPtr(); }
+
+wxFileOffset pxInputStream::Tell() const
+{
+	return m_stream_in->TellI();
+}
+
+wxFileOffset pxInputStream::Seek( wxFileOffset ofs, wxSeekMode mode )
+{
+	return m_stream_in->SeekI(ofs, mode);
+}
 
 void pxInputStream::SetStream( const wxString& filename, ScopedPtr<wxInputStream>& stream )
 {
@@ -107,6 +123,15 @@ pxOutputStream::pxOutputStream(const wxString& filename, wxOutputStream* output)
 
 wxStreamBase* pxOutputStream::GetWxStreamBase() const { return m_stream_out.GetPtr(); }
 
+wxFileOffset pxOutputStream::Tell() const
+{
+	return m_stream_out->TellO();
+}
+
+wxFileOffset pxOutputStream::Seek( wxFileOffset ofs, wxSeekMode mode )
+{
+	return m_stream_out->SeekO( ofs, mode );
+}
 
 void pxOutputStream::SetStream( const wxString& filename, ScopedPtr<wxOutputStream>& stream )
 {

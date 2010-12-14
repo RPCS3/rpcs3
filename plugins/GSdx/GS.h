@@ -31,6 +31,10 @@
 #define MAX_PAGES 512
 #define MAX_BLOCKS 16384
 
+//if defined, will send much info in reply to the API title info queri from PCSX2
+//default should be undefined
+//#define GSTITLEINFO_API_FORCE_VERBOSE
+
 #include "GSVector.h"
 
 #pragma pack(push, 1)

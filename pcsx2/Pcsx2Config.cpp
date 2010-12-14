@@ -374,6 +374,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( ConsoleToStdio );
 	IniBitBool( HostFs );
 
+	IniBitBool( BackupSavestate );
 	IniBitBool( McdEnableEjection );
 	IniBitBool( MultitapPort0_Enabled );
 	IniBitBool( MultitapPort1_Enabled );

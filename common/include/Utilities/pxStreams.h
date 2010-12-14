@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "wx/filefn.h"
+
 // --------------------------------------------------------------------------------------
 //  pxStreamBase
 // --------------------------------------------------------------------------------------
@@ -36,7 +38,10 @@ public:
 	// or wxOputStream derivative).
 	virtual wxStreamBase* GetWxStreamBase() const=0;
 	virtual void Close()=0;
-	
+	virtual wxFileOffset Tell() const=0;
+	virtual wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart )=0;
+
+	virtual wxFileOffset Length() const;
 	bool IsOk() const;
 	wxString GetStreamName() const { return m_filename; }
 };
@@ -71,6 +76,9 @@ public:
 	{
 		Write( &data, sizeof(data) );
 	}
+
+	wxFileOffset Tell() const;
+	wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart );
 };
 
 // --------------------------------------------------------------------------------------
@@ -102,4 +110,7 @@ public:
 	{
 		Read( &dest, sizeof(dest) );
 	}
+
+	wxFileOffset Tell() const;
+	wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart );
 };

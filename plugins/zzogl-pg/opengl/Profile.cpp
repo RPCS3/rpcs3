@@ -25,6 +25,7 @@
 #include <string>
 #include <map>
 #include "Profile.h"
+#include "Util.h"
 
 using namespace std;
 
@@ -59,7 +60,7 @@ struct DVPROFSTRUCT
 
 		while (it != listpChild.end())
 		{
-			SAFE_DELETE(*it);
+			safe_delete(*it);
 			++it;
 		}
 	}

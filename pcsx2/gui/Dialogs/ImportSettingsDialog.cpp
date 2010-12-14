@@ -25,8 +25,10 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 {
 	SetMinWidth( 440 );
 
-	pxStaticText& heading( Text( wxsFormat(
-		pxE( ".Popup:ImportExistingSettings",
+	pxStaticText& heading( Text( pxsFmt(
+
+		/// (%s is the app name, normally PCSX2 -- omitting one or both %s is allowed)
+		pxE( "!Notice:ImportExistingSettings",
 			L"Existing %s settings have been found in the configured settings folder.  "
 			L"Would you like to import these settings or overwrite them with %s default values?"
 			L"\n\n(or press Cancel to select a different settings folder)"

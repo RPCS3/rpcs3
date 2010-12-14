@@ -395,8 +395,6 @@
 		<Unit filename="../ZipTools/ThreadedZipTools.h" />
 		<Unit filename="../ZipTools/thread_gzip.cpp" />
 		<Unit filename="../ZipTools/thread_lzma.cpp" />
-		<Unit filename="../gui/AdvancedDialog.cpp" />
-		<Unit filename="../gui/AdvancedDialog.h" />
 		<Unit filename="../gui/App.h" />
 		<Unit filename="../gui/AppAccelerators.h" />
 		<Unit filename="../gui/AppAssert.cpp" />

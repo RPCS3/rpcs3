@@ -133,23 +133,6 @@ void x86capabilities::CountCores()
 	s32 regs[ 4 ];
 	u32 cmds;
 
-	LogicalCoresPerPhysicalCPU = 0;
-	PhysicalCoresPerPhysicalCPU = 1;
-
-	// detect multicore for Intel cpu
-
-	__cpuid( regs, 0 );
-	cmds = regs[ 0 ];
-	
-	if( cmds >= 0x00000001 )
-		LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
-
-	if ((cmds >= 0x00000004) && (VendorID == x86Vendor_Intel))
-	{
-		__cpuid( regs, 0x00000004 );
-		PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
-	}
-
 	__cpuid( regs, 0x80000000 );
 	cmds = regs[ 0 ];
 
@@ -157,18 +140,12 @@ void x86capabilities::CountCores()
 
 	if ((cmds >= 0x80000008) && (VendorID == x86Vendor_AMD) )
 	{
-		__cpuid( regs, 0x80000008 );
-		PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
-		
 		// AMD note: they don't support hyperthreading, but they like to flag this true
 		// anyway.  Let's force-unflag it until we come up with a better solution.
 		// (note: seems to affect some Phenom II's only? -- Athlon X2's and PhenomI's do
 		// not seem to do this) --air
 		hasMultiThreading = 0;
 	}
-
-	if( !hasMultiThreading || LogicalCoresPerPhysicalCPU == 0 )
-		LogicalCoresPerPhysicalCPU = 1;
 
 	// This will assign values into LogicalCores and PhysicalCores
 	CountLogicalCores();

@@ -31,21 +31,6 @@ static const u32 g_SaveVersion = (0x9A01 << 16) | 0x0000;
 extern s32 CALLBACK gsSafeFreeze( int mode, freezeData *data );
 
 
-enum FreezeSectionId
-{
-	FreezeId_NotSeeking = -2,
-	FreezeId_End,
-
-	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
-	// but can be skipped if the savestate has only plugins.
-	FreezeId_Bios,
-	FreezeId_Registers,
-	FreezeId_Plugin,
-
-	// anything here and beyond we can skip, with a warning
-	FreezeId_Unknown,
-};
-
 namespace Exception
 {
 	// ---------------------------------------------------------------------------------------
@@ -119,8 +104,6 @@ protected:
 	u32 m_version;		// version of the savestate being loaded.
 
 	int m_idx;			// current read/write index of the allocation
-	int m_sectid;
-	int m_pid;
 
 	bool m_DidBios;
 
@@ -141,9 +124,12 @@ public:
 	// Loads or saves the entire emulation state.
 	// Note: The Cpu state must be reset, and plugins *open*, prior to Defrosting
 	// (loading) a state!
-	virtual void FreezeAll();
+	virtual SaveStateBase& FreezeAll();
 
-	void FreezeMainMemory();
+	virtual SaveStateBase& FreezeMainMemory();
+	virtual SaveStateBase& FreezeBios();
+	virtual SaveStateBase& FreezeInternals();
+	virtual SaveStateBase& FreezePlugins();
 
 	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.
 	// For dynamically allocated pointers use FreezeMem instead.
@@ -183,9 +169,6 @@ public:
 		m_idx += size;
 	}
 
-	void WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname );
-	bool FreezeSection( int seek_section = FreezeId_NotSeeking );
-
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
 	// skewed (if the value does not match then the error occurs somewhere prior to that
@@ -209,9 +192,6 @@ protected:
 	void Init( VmStateBuffer* memblock );
 
 	// Load/Save functions for the various components of our glorious emulator!
-
-	void FreezeBios();
-	void FreezeRegisters();
 
 	void rcntFreeze();
 	void vuMicroFreeze();
@@ -257,7 +237,7 @@ public:
 	void MakeRoomForData();
 
 	void FreezeMem( void* data, int size );
-	void FreezeAll();
+	memSavingState& FreezeAll();
 
 	bool IsSaving() const { return true; }
 };
@@ -271,7 +251,6 @@ public:
 	memLoadingState( const VmStateBuffer* load_from );
 
 	void FreezeMem( void* data, int size );
-	bool SeekToSection( PluginsEnum_t pid );
 
 	bool IsSaving() const { return false; }
 	bool IsFinished() const { return m_idx >= m_memory->GetSizeInBytes(); }

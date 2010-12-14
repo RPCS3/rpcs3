@@ -359,7 +359,7 @@ static void SuperVUAlloc(int vuindex)
 		safe_delete(s_recVUMem[vuindex]);
 		throw Exception::VirtualMemoryMapConflict( s_recVUMem[vuindex]->GetName() )
 			.SetDiagMsg(pxsFmt( L"SuperVU failed to allocate virtual memory below 256MB." ))
-			.SetUserMsg(pxE( ".Error:superVU:VirtualMemoryAlloc",
+			.SetUserMsg(pxE( "!Notice:superVU:VirtualMemoryAlloc",
 				L"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory "
 				L"ranges required, and will not be available for use.  This is not a critical error, since "
 				L"the sVU rec is obsolete, and you should use microVU instead anyway. :)"

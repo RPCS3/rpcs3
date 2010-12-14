@@ -109,6 +109,9 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+
+	protected:
+		void OnApplyLanguage_Clicked( wxCommandEvent& evt );
 	};
 
 	// --------------------------------------------------------------------------------------

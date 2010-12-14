@@ -897,25 +897,39 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 			case GIF_PATH_2:
 				GSTransferStatus.PTH2 = STOPPED_MODE;
 				break;
-			case GIF_PATH_3:
+			case GIF_PATH_3:				
 				//For huge chunks we may have delay problems, so we need to stall it till the interrupt, else we get desync (Lemmings)
 				if(size > 8) GSTransferStatus.PTH3 = PENDINGSTOP_MODE;
 				else  GSTransferStatus.PTH3 = STOPPED_MODE;
-				if (gifch.chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
-					//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
-					gifch.madr += size * 16;
-					gifch.qwc  -= size;
-				}
 				break;
 		}
 	}
-	else if(pathidx == 2)
+	else if( nloop == 0)
+	{
+		//Need to set GIF as WAITING, sometimes it can get stuck in a bit of a loop if other paths think it's still doing REGLIST for example.
+		//Do NOT use IDLE mode here, it will freak Path3 masking out if it gets used.
+		switch(pathidx)
+		{
+			case GIF_PATH_1:
+				GSTransferStatus.PTH1 = WAITING_MODE;
+				break;
+			case GIF_PATH_2:
+				GSTransferStatus.PTH2 = WAITING_MODE;
+				break;
+			case GIF_PATH_3:
+				if(GSTransferStatus.PTH3 < IDLE_MODE) GSTransferStatus.PTH3 = WAITING_MODE;
+				break;	
+		}
+	}
+		
+	if(pathidx == 2)
 	{
 		//if(nloop <= 16 && GSTransferStatus.PTH3 == IMAGE_MODE)GSTransferStatus.PTH3 = PENDINGIMAGE_MODE;
 		if (gifch.chcr.STR) { //Make sure we are really doing a DMA and not using FIFO
 			//GIF_LOG("Path3 end EOP %x NLOOP %x Status %x", tag.EOP, nloop, GSTransferStatus.PTH3);
 			gifch.madr += size * 16;
 			gifch.qwc  -= size;
+			hwDmacSrcTadrInc(gifch);
 		}
 	}
 

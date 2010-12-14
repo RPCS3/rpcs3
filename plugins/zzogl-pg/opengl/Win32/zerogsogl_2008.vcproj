@@ -286,10 +286,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\memcpy_amd.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\NewRegs.cpp"
 				>
 			</File>
@@ -357,7 +353,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZClut.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZKeyboard.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZHacks.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglDrawing.cpp"
 				>
 			</File>
 			<File
@@ -414,7 +422,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GLWin.h"
+				>
+			</File>
+			<File
 				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\HostMemory.h"
 				>
 			</File>
 			<File
@@ -482,11 +498,31 @@
 				>
 			</File>
 			<File
+				RelativePath="..\zpipe.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZClut.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZGl.h"
 				>
 			</File>
 			<File
+				RelativePath="..\ZZHacks.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglDrawing.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZLog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglCRTC.h"
 				>
 			</File>
 			<File
@@ -499,6 +535,14 @@
 			</File>
 			<File
 				RelativePath="..\ZZoglShaders.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglShoots.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglVB.h"
 				>
 			</File>
 		</Filter>

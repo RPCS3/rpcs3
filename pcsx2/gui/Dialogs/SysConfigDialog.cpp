@@ -23,6 +23,7 @@
 #include "Panels/ConfigurationPanels.h"
 
 using namespace Panels;
+using namespace pxSizerFlags;
 
 static void CheckHacksOverrides()
 {
@@ -33,7 +34,7 @@ static void CheckHacksOverrides()
 
 	wxDialogWithHelpers dialog( wxFindWindowByName( L"Dialog:" + Dialogs::SysConfigDialog::GetNameStatic() ), _("Config Overrides Warning") );
 	
-	dialog += dialog.Text( pxE(".Panel:HasHacksOverrides",
+	dialog += dialog.Text( pxE("!Panel:HasHacksOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured settings.  "
 		L"These command line options will not be reflected in the Settings dialog, and will be disabled "
 		L"if you apply any changes here."
@@ -53,7 +54,7 @@ static void CheckPluginsOverrides()
 
 	wxDialogWithHelpers dialog( NULL, _("Components Overrides Warning") );
 	
-	dialog += dialog.Text( pxE(".Panel:HasPluginsOverrides",
+	dialog += dialog.Text( pxE("!Panel:HasPluginsOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured plugin and/or folder settings.  "
 		L"These command line options will not be reflected in the settings dialog, and will be disabled "
 		L"when you apply settings changes here."
@@ -72,13 +73,12 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<CpuPanelEE>				( wxLt("EE/IOP"),		cfgid.Cpu );
-	AddPage<CpuPanelVU>				( wxLt("VUs"),			cfgid.Cpu );
-	AddPage<VideoPanel>				( wxLt("GS"),			cfgid.Cpu );
-	AddPage<GSWindowSettingsPanel>	( wxLt("GS Window"),	cfgid.Video );
-	AddPage<SpeedHacksPanel>		( wxLt("Speedhacks"),	cfgid.Speedhacks );
-	AddPage<GameFixesPanel>			( wxLt("Game Fixes"),	cfgid.Gamefixes );
-	//AddPage<GameDatabasePanel>		( wxLt("Game Database"),cfgid.Plugins );
+	AddPage<CpuPanelEE>				( pxL("EE/IOP"),		cfgid.Cpu );
+	AddPage<CpuPanelVU>				( pxL("VUs"),			cfgid.Cpu );
+	AddPage<VideoPanel>				( pxL("GS"),			cfgid.Cpu );
+	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),	cfgid.Video );
+	AddPage<SpeedHacksPanel>		( pxL("Speedhacks"),	cfgid.Speedhacks );
+	AddPage<GameFixesPanel>			( pxL("Game Fixes"),	cfgid.Gamefixes );
 
 	AddListbook();
 	AddOkCancel();
@@ -95,13 +95,23 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<PluginSelectorPanel>	( wxLt("Plugins"),		cfgid.Plugins );
-	AddPage<BiosSelectorPanel>		( wxLt("BIOS"),			cfgid.Cpu );
-	AddPage<StandardPathsPanel>		( wxLt("Folders"),		cfgid.Paths );
+	AddPage<PluginSelectorPanel>	( pxL("Plugins"),		cfgid.Plugins );
+	AddPage<BiosSelectorPanel>		( pxL("BIOS"),			cfgid.Cpu );
+	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
 
 	AddListbook();
 	AddOkCancel();
 
 	if( wxGetApp().Overrides.HasPluginsOverride() )
 		wxGetApp().PostMethod( CheckPluginsOverrides );
+}
+
+Dialogs::LanguageSelectionDialog::LanguageSelectionDialog(wxWindow *parent)
+	: BaseConfigurationDialog( parent, AddAppName(_("Language Selector - %s")), 400 )
+{
+	ScopedBusyCursor busy( Cursor_ReallyBusy );
+
+	*this += new Panels::LanguageSelectionPanel( this ) | pxCenter;
+
+	wxDialogWithHelpers::AddOkCancel( NULL, false );
 }

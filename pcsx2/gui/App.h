@@ -47,6 +47,14 @@ static const int pxID_PadHandler_Keydown = 8030;
 // single for-loop to create them.
 static const int PluginMenuId_Interval = 0x10;
 
+// ID and return code used for modal popups that have a custom button.
+static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;
+
+// Return code used by first time wizard if the dialog needs to be automatically recreated
+// (assigned an arbitrary value)
+static const wxWindowID pxID_RestartWizard = wxID_LOWEST - 100;
+
+
 // Forces the Interface to destroy the GS viewport window when the GS plugin is
 // destroyed.  This has the side effect of forcing all plugins to close and re-open
 // along with the GS, since the GS viewport window handle will have changed.
@@ -109,6 +117,7 @@ enum MenuIdentifiers
 	MenuId_Config_AppSettings,
 	MenuId_Config_GameDatabase,
 	MenuId_Config_BIOS,
+	MenuId_Config_Language,
 
 	// Plugin ID order is important.  Must match the order in tbl_PluginInfo.
 	MenuId_Config_GS,
@@ -359,6 +368,10 @@ class Pcsx2AppTraits : public wxGUIAppTraits
 public:
 	virtual ~Pcsx2AppTraits() {}
 	wxMessageOutput* CreateMessageOutput();
+
+#ifdef wxUSE_STDPATHS
+	wxStandardPathsBase& GetStandardPaths();
+#endif
 };
 
 // =====================================================================================================

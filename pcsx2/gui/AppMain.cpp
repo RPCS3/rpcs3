@@ -29,6 +29,8 @@
 
 #include "Utilities/IniInterface.h"
 
+#include <wx/stdpaths.h>
+
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed to implement the app!
 #endif
@@ -275,6 +277,12 @@ public:
 	virtual void Printf(const wxChar* format, ...);
 };
 
+// EXTRAORDINARY HACK!  wxWidgets does not provide a clean way of overriding the commandline options
+// display dialog.  The default one uses operating system built-in message/notice windows, which are
+// appaling, ugly, and not at all suited to a large number of command line options.  Fortunately,
+// wxMessageOutputMessageBox::PrintF is only used in like two places, so we can just check for the
+// commandline window using an identifier we know is contained in it, and then format our own window
+// display. :D  --air
 void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 {
 	using namespace pxSizerFlags;
@@ -285,14 +293,16 @@ void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 	out.PrintfV(format, args);
 	va_end(args);
 
-	int pos = out.Find( L"[IsoFile]" );
+	FastFormatUnicode isoFormatted;
+	isoFormatted.Write( L"[%s]", _("IsoFile") );
+	int pos = out.Find( isoFormatted );
 	
 	if(pos == wxNOT_FOUND)
 	{
 		Msgbox::Alert( out ); return;
 	}
 
-	pos += 9;		// strlen of [IsoFile]
+	pos += isoFormatted.Length();
 
 	wxDialogWithHelpers popup( NULL, AddAppName(_("%s Commandline Options")) );
 	popup.SetMinWidth( 640 );
@@ -305,8 +315,8 @@ void pxMessageOutputMessageBox::Printf(const wxChar* format, ...)
 		wxTE_READONLY | wxTE_MULTILINE | wxTE_RICH2 | wxHSCROLL
 	);
 
-	traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont() ) );
-	traceArea->SetFont( pxGetFixedFont() );
+	traceArea->SetDefaultStyle( wxTextAttr( wxNullColour, wxNullColour, pxGetFixedFont(9) ) );
+	traceArea->SetFont( pxGetFixedFont(9) );
 
 	int fonty = traceArea->GetCharHeight();
 
@@ -328,7 +338,54 @@ wxMessageOutput* Pcsx2AppTraits::CreateMessageOutput()
 	return new pxMessageOutputMessageBox;
 #endif
 }
-	
+
+// --------------------------------------------------------------------------------------
+//  Pcsx2StandardPaths
+// --------------------------------------------------------------------------------------
+#ifdef wxUSE_STDPATHS
+class Pcsx2StandardPaths : public wxStandardPaths
+{
+public:
+	wxString GetResourcesDir() const
+	{
+		return Path::Combine( GetDataDir(), L"Langs" );
+	}
+
+#ifdef __LINUX__
+	wxString GetUserLocalDataDir() const
+	{
+		// Note: GetUserLocalDataDir() on linux return $HOME/.pcsx2 unfortunately it does not follow the XDG standard
+		// So we re-implement it, to follow the standard.
+		wxDirName user_local_dir;
+		wxString xdg_home_value;
+		if( wxGetEnv(L"XDG_CONFIG_HOME", &xdg_home_value) ) {
+			if ( xdg_home_value.IsEmpty() ) {
+				// variable exist but it is empty. So use the default value
+				user_local_dir = (wxDirName)Path::Combine( GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
+			} else {
+				user_local_dir = (wxDirName)Path::Combine( xdg_home_value, pxGetAppName());
+			}
+		} else {
+			// variable do not exist
+			user_local_dir = (wxDirName)Path::Combine( GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
+		}
+		return user_local_dir.ToString();
+	}
+#endif
+};
+
+wxStandardPathsBase& Pcsx2AppTraits::GetStandardPaths()
+{
+	static Pcsx2StandardPaths stdPaths;
+	return stdPaths;
+}
+#endif
+
+wxAppTraits* Pcsx2App::CreateTraits()
+{
+	return new Pcsx2AppTraits;
+}
+
 // --------------------------------------------------------------------------------------
 //  FramerateManager  (implementations)
 // --------------------------------------------------------------------------------------
@@ -423,7 +480,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 // are multiple variations on the BIOS and BIOS folder checks).
 wxString BIOS_GetMsg_Required()
 {
-	return pxE( ".Popup:BiosDumpRequired",
+	return pxE( "!Notice:BiosDumpRequired",
 		L"\n\n"
 		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
 		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"
@@ -507,7 +564,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		wxDialogWithHelpers dialog( NULL, _("PCSX2 Unresponsive Thread"), wxVERTICAL );
 		
 		dialog += dialog.Heading( ex.FormatDisplayMessage() + L"\n\n" +
-			pxE( ".Popup Error:Thread Deadlock Actions",
+			pxE( "!Notice Error:Thread Deadlock Actions",
 				L"'Ignore' to continue waiting for the thread to respond.\n"
 				L"'Cancel' to attempt to cancel the thread.\n"
 				L"'Terminate' to quit PCSX2 immediately.\n"
@@ -574,11 +631,6 @@ void Pcsx2App::ClearPendingSave()
 	}
 }
 
-wxAppTraits* Pcsx2App::CreateTraits()
-{
-	return new Pcsx2AppTraits;
-}
-
 // This method generates debug assertions if the MainFrame handle is NULL (typically
 // indicating that PCSX2 is running in NoGUI mode, or that the main frame has been
 // closed).  In most cases you'll want to use HasMainFrame() to test for thread
@@ -622,16 +674,10 @@ void AppApplySettings( const AppConfig* oldconf )
 
 	RelocateLogfile();
 
-	if( (oldconf == NULL) || (oldconf->LanguageId != g_Conf->LanguageId) )
+	if( (oldconf == NULL) || (oldconf->LanguageCode.CmpNoCase(g_Conf->LanguageCode)) )
 	{
 		wxDoNotLogInThisScope please;
-		if( !i18n_SetLanguage( g_Conf->LanguageId ) )
-		{
-			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
-			{
-				i18n_SetLanguage( wxLANGUAGE_ENGLISH );
-			}
-		}
+		i18n_SetLanguage( g_Conf->LanguageId, g_Conf->LanguageCode );
 	}
 	
 	CorePlugins.SetSettingsFolder( GetSettingsFolder().ToString() );

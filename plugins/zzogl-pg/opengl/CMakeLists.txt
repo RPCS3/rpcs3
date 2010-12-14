@@ -63,6 +63,11 @@ set(zzoglSources
     x86.cpp
     zerogs.cpp
     zpipe.cpp
+    ZZClut.cpp
+    ZZHacks.cpp
+    ZZKeyboard.cpp
+    ZZoglDrawing.cpp
+    ZZLog.cpp
     ZZoglCreate.cpp
     ZZoglCRTC.cpp
     ZZoglFlush.cpp
@@ -71,8 +76,7 @@ set(zzoglSources
     ZZoglShaders.cpp
     ZZoglShoots.cpp
     ZZoglVB.cpp
-    ZZKeyboard.cpp
-    ZZLog.cpp)
+    )
 
 # zzogl headers
 set(zzoglHeaders
@@ -81,6 +85,7 @@ set(zzoglHeaders
     GifTransfer.h
     # glprocs.h
     GS.h
+    HostMemory.h
     Mem.h
     Mem_Swizzle.h
     Mem_Transmit.h
@@ -93,11 +98,17 @@ set(zzoglHeaders
     x86.h
     zerogs.h
     zpipe.h
+    ZZClut.h
+    ZZGl.h
+    ZZHacks.h
+    ZZoglDrawing.h
+    ZZLog.h
     ZZoglCRTC.h
     ZZoglMath.h
     ZZoglShaders.h
-    ZZGl.h
-    ZZLog.h)
+    ZZoglShoots.h
+    ZZoglVB.h
+    )
 
 # zzogl S sources
 set(zzoglSSources

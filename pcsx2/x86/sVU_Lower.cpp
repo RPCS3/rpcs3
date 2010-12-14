@@ -1982,7 +1982,17 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
 	u8* pDest;
 
-	if(gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.APATH == GIF_APATH3 && gifRegs.stat.IP3 == true) && SIGNAL_IMR_Pending == false)
+	///////////////////////////////////////////////
+	///////////////SIGNAL WARNING!!////////////////
+	///////////////////////////////////////////////
+	/* Due to the face SIGNAL can cause the loop
+	   to leave early, we can end up missing data.
+	   The only way we can avoid this is to queue
+	   it :(, im relying on someone else to come
+	   up with a better solution!                 */
+
+
+	/*if(gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.APATH == GIF_APATH3 && gifRegs.stat.IP3 == true) && SIGNAL_IMR_Pending == false)
 	{
 		if(Path1WritePos != 0)	
 		{
@@ -2000,7 +2010,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		}
 	}
 	else
-	{
+	{*/
 		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs.stat.APATH, Path1WritePos, Path1ReadPos);
 		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
 		pDest = &Path1Buffer[Path1WritePos*16];
@@ -2019,8 +2029,7 @@ void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		}
 		//if(!gifRegs.stat.P1Q) CPU_INT(28, 128);
 		gifRegs.stat.P1Q = true;
-	}
-
-
+	//}
+		gsPath1Interrupt();
 }
 //------------------------------------------------------------------

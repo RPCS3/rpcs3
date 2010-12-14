@@ -20,6 +20,13 @@
 #include <wx/dnd.h>
 #include <wx/listctrl.h>
 
+struct ListViewColumnInfo
+{
+	const wxChar*		name;
+	int					width;
+	wxListColumnFormat	align;
+};
+
 // --------------------------------------------------------------------------------------
 //  McdListItem / IMcdList
 // --------------------------------------------------------------------------------------
@@ -65,13 +72,6 @@ public:
 	virtual McdListItem& GetCard( int idx )=0;
 
 	virtual wxDirName GetMcdPath() const=0;
-};
-
-struct ListViewColumnInfo
-{
-	const wxChar*		name;
-	int					width;
-	wxListColumnFormat	align;
 };
 
 // --------------------------------------------------------------------------------------
@@ -231,6 +231,7 @@ namespace Panels
 	protected:
 		pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
+		pxCheckBox*		m_check_SavestateBackup;
 
 	public:
 		McdConfigPanel_Toggles( wxWindow* parent );

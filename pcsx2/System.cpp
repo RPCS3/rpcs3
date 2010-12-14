@@ -21,9 +21,6 @@
 
 #include "SamplProf.h"
 
-// Includes needed for cleanup, since we don't have a good system (yet) for
-// cleaning up these things.
-#include "GameDatabase.h"
 #include "Elfheader.h"
 
 #include "System/RecTypes.h"
@@ -114,7 +111,7 @@ void RecompiledCodeReserve::ThrowIfNotOk() const
 
 	throw Exception::OutOfMemory(m_name)
 		.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
-		.SetUserMsg( pxE( ".Error:Recompiler:VirtualMemoryAlloc",
+		.SetUserMsg( pxE( "!Notice:Recompiler:VirtualMemoryAlloc",
 			L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
 			L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
 			L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
@@ -133,25 +130,25 @@ void SysOutOfMemory_EmergencyResponse(uptr blocksize)
 
 	if (Cpu)
 	{
-		Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 3) / 2 );
+		Cpu->SetCacheReserve( (Cpu->GetCacheReserve() * 2) / 3 );
 		Cpu->Reset();
 	}
 
 	if (CpuVU0)
 	{
-		CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 3) / 2 );
+		CpuVU0->SetCacheReserve( (CpuVU0->GetCacheReserve() * 2) / 3 );
 		CpuVU0->Reset();
 	}
 
 	if (CpuVU1)
 	{
-		CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 3) / 2 );
+		CpuVU1->SetCacheReserve( (CpuVU1->GetCacheReserve() * 2) / 3 );
 		CpuVU1->Reset();
 	}
 
 	if (psxCpu)
 	{
-		psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 3) / 2 );
+		psxCpu->SetCacheReserve( (psxCpu->GetCacheReserve() * 2) / 3 );
 		psxCpu->Reset();
 	}
 }
@@ -201,30 +198,37 @@ TraceLogFilters& SetTraceConfig()
 // This function should be called once during program execution.
 void SysLogMachineCaps()
 {
-	Console.WriteLn( Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Console.WriteLn( Color_StrongGreen, "PCSX2 %u.%u.%u.r%d %s - compiled on " __DATE__,
+		PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 
 	Console.WriteLn( "Savestate version: 0x%x", g_SaveVersion);
 	Console.Newline();
 
-	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
+	Console.WriteLn( Color_StrongBlack, "Host Machine Init:" );
+
+	Console.Indent().WriteLn(
+		L"Operating System =  %s\n"
+		L"Physical RAM     =  %u MB",
+
+		GetOSVersionString().c_str(),
+		(u32)(GetPhysicalMemory() / _1mb)
+	);
 
 	u32 speed = x86caps.CalculateMHz();
 
 	Console.Indent().WriteLn(
-		L"CPU vendor name  =  %s\n"
-		L"FamilyID         =  %x\n"
-		L"x86Family        =  %s\n"
-		L"CPU speed        =  %d.%03d ghz\n"
-		L"Cores            =  %d physical [%d logical]\n"
+		L"CPU name         =  %s\n"
+		L"Vendor/Model     =  %s (stepping %02X)\n"
+		L"CPU speed        =  %u.%03u ghz (%u logical thread%s)\n"
 		L"x86PType         =  %s\n"
-		L"x86Flags         =  %8.8x %8.8x\n"
-		L"x86EFlags        =  %8.8x",
-			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
+		L"x86Flags         =  %08x %08x\n"
+		L"x86EFlags        =  %08x",
 			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
+			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
 			speed / 1000, speed % 1000,
-			x86caps.PhysicalCores, x86caps.LogicalCores,
+			x86caps.LogicalCores, (x86caps.LogicalCores==1) ? L"" : L"s",
 			x86caps.GetTypeName().c_str(),
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
@@ -339,7 +343,7 @@ public:
 // returns the translated error message for the Virtual Machine failing to allocate!
 static wxString GetMemoryErrorVM()
 {
-	return pxE( ".Error:EmuCore::MemoryForVM",
+	return pxE( "!Notice:EmuCore::MemoryForVM",
 		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
 		L"Close out some memory hogging background tasks and try again."
 	);
@@ -598,7 +602,7 @@ wxString SysGetDiscID()
 	
 	if( !ElfCRC )
 	{
-		// FIXME: If the system is currently running the BIOS, it should return a serial based on
+		// FIXME: system is currently running the BIOS, so it should return a serial based on
 		// the BIOS being run (either a checksum of the BIOS roms, and/or a string based on BIOS
 		// region and revision).
 	}

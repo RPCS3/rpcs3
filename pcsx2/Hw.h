@@ -308,6 +308,7 @@ enum EERegisterAddresses
 	DMAC_RBSR		=	0x1000E040,
 	DMAC_RBOR		=	0x1000E050,
 	DMAC_STADR		=	0x1000E060,
+	DMAC_FAKESTAT	=	0x1000E100, //Midway, you're idiots (checked this in the MK Deception ELF!) (Refraction)
 
 	INTC_STAT		=	0x1000F000,
 	INTC_MASK		=	0x1000F010,

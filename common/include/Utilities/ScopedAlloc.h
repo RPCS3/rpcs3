@@ -195,16 +195,16 @@ public:
 
 		this->m_buffer = (T*)malloc( this->m_size * sizeof(T) );
 		if (!this->m_buffer)
-			throw Exception::OutOfMemory("ScopedAlloc");
+			throw Exception::OutOfMemory(L"ScopedAlloc");
 	}
 
 	virtual void Resize( size_t newsize )
 	{
 		this->m_size		= newsize;
-		this->m_buffer	= (T*)realloc(this->m_buffer * sizeof(T), newsize);
+		this->m_buffer		= (T*)realloc(this->m_buffer, this->m_size * sizeof(T));
 
 		if (!this->m_buffer)
-			throw Exception::OutOfMemory("ScopedAlloc::Resize");
+			throw Exception::OutOfMemory(L"ScopedAlloc::Resize");
 	}
 };
 

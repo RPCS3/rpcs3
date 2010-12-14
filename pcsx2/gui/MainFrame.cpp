@@ -61,6 +61,29 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 	//	exists ? Path::GetFilename(g_Conf->CurrentIso).c_str() : _("Empty") ) );
 }
 
+bool MainEmuFrame::Destroy()
+{
+	// Sigh: wxWidgets doesn't issue Destroy() calls for children windows when the parent
+	// is destroyed (it just deletes them, quite suddenly).  So let's do it for them, since
+	// our children have configuration stuff they like to do when they're closing.
+
+	for (
+		wxWindowList::const_iterator
+			i	= wxTopLevelWindows.begin(),
+			end = wxTopLevelWindows.end();
+		i != end; ++i
+		)
+	{
+		wxTopLevelWindow * const win = wx_static_cast(wxTopLevelWindow *, *i);
+		if (win == this) continue;
+		if (win->GetParent() != this) continue;
+
+		win->Destroy();
+	}
+	
+	return _parent::Destroy();
+}
+
 // ------------------------------------------------------------------------
 //     MainFrame OnEvent Handlers
 // ------------------------------------------------------------------------
@@ -157,6 +180,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_AppSettings,	Menu_WindowSettings_Click );
 	ConnectMenu( MenuId_Config_GameDatabase,Menu_GameDatabase_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectPluginsBios_Click );
+	ConnectMenu( MenuId_Config_Language,	Menu_Language_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
@@ -290,8 +314,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) )
 	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
-	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
-	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, _("Show Console"), wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, _("Console to Stdio"), wxEmptyString, wxITEM_CHECK ) )
 
 {
 	m_RestartEmuOnDelete = false;
@@ -423,12 +447,17 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&Memory cards") );
 	m_menuConfig.Append(MenuId_Config_BIOS,			_("&Plugin/BIOS Selector") );
-	m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
+	if (IsDebugBuild)
+	{
+		m_menuConfig.Append(MenuId_Config_GameDatabase,	_("Game Database Editor") );
+		m_menuConfig.Append(MenuId_Config_Language,		_("Language...") );
+	}
+
 	m_menuConfig.AppendSeparator();
 
 	m_menuConfig.Append(MenuId_Config_GS,		_("&Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);
 	m_menuConfig.Append(MenuId_Config_SPU2,		_("&Audio (SPU2)"),		m_PluginMenuPacks[PluginId_SPU2]);
-	m_menuConfig.Append(MenuId_Config_PAD,		_("&Controllers (PAD)"),	m_PluginMenuPacks[PluginId_PAD]);
+	m_menuConfig.Append(MenuId_Config_PAD,		_("&Controllers (PAD)"),m_PluginMenuPacks[PluginId_PAD]);
 	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),				m_PluginMenuPacks[PluginId_DEV9]);
 	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),				m_PluginMenuPacks[PluginId_USB]);
 	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),			m_PluginMenuPacks[PluginId_FW]);
@@ -458,7 +487,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	//m_menuMisc.Append(41, "Patch Browser...", wxEmptyString, wxITEM_NORMAL);
 	//m_menuMisc.Append(42, "Patch Finder...", wxEmptyString, wxITEM_NORMAL);
 
-	m_menuMisc.Append(MenuId_CDVD_Info, _T("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(MenuId_CDVD_Info, _("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	//Todo:

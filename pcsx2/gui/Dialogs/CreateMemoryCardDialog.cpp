@@ -148,7 +148,7 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 		GetMsg_McdNtfsCompress()
 	);
 
-	m_check_CompressNTFS->SetToolTip( pxE( ".Tooltip:ChangingNTFS",
+	m_check_CompressNTFS->SetToolTip( pxEt( "!ContextTip:ChangingNTFS",
 			L"NTFS compression can be changed manually at any time by using file properties from Windows Explorer."
 		)
 	);
@@ -161,19 +161,19 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 	const RadioPanelItem tbl_CardSizes[] =
 	{
 		RadioPanelItem(_("8 MB [most compatible]"), _("This is the standard Sony-provisioned size, and is supported by all games and BIOS versions."))
-		.	SetToolTip(_("Always use this option if you want the safest and surest memory card behavior."))
+		.	SetToolTip(_t("Always use this option if you want the safest and surest memory card behavior."))
 		.	SetInt(8),
 
 		RadioPanelItem(_("16 MB"), _("A typical size for 3rd-party memory cards which should work with most games."))
-		.	SetToolTip(_("16 and 32 MB cards have roughly the same compatibility factor."))
+		.	SetToolTip(_t("16 and 32 MB cards have roughly the same compatibility factor."))
 		.	SetInt(16),
 
 		RadioPanelItem(_("32 MB"), _("A typical size for 3rd-party memory cards which should work with most games."))
-		.	SetToolTip(_("16 and 32 MB cards have roughly the same compatibility factor."))
+		.	SetToolTip(_t("16 and 32 MB cards have roughly the same compatibility factor."))
 		.	SetInt(32),
 
 		RadioPanelItem(_("64 MB"), _("Low compatibility warning: Yes it's very big, but may not work with many games."))
-		.	SetToolTip(_("Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."))
+		.	SetToolTip(_t("Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."))
 		.	SetInt(64)
 	};
 

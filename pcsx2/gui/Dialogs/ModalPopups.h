@@ -21,8 +21,6 @@
 
 #include <wx/wizard.h>
 
-static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;
-
 class FirstTimeWizard : public wxWizard
 {
 	typedef wxWizard _parent;
@@ -71,6 +69,8 @@ protected:
 	virtual void OnPageChanging( wxWizardEvent& evt );
 	virtual void OnPageChanged( wxWizardEvent& evt );
 	virtual void OnDoubleClicked( wxCommandEvent& evt );
+
+	void OnRestartWizard( wxCommandEvent& evt );
 };
 
 

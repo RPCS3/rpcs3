@@ -386,8 +386,7 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	double fps = wxGetApp().FpsManager.GetFramerate();
 
 	char gsDest[128];
-	GSgetTitleInfo( gsDest );
-
+	GSgetTitleInfo2( gsDest, sizeof(gsDest) );
 
 	const wxChar* limiterStr = L"None";
 
@@ -401,16 +400,16 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 		}
 	}
 
-	wxString cpuUsage;
+	FastFormatUnicode cpuUsage;
 	if( m_CpuUsage.IsImplemented() )
 	{
 		m_CpuUsage.UpdateStats();
-		cpuUsage = wxsFormat( L" | EE: %3d%% | GS: %3d%% | UI: %3d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
+		cpuUsage.Write( L" | EE: %3d%% | GS: %3d%% | UI: %3d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
 	}
 
 	const u64& smode2 = *(u64*)PS2GS_BASE(GS_SMODE2);
 
-	SetTitle( wxsFormat( L"%s | %s (%s) | Limiter: %s | fps: %6.02f%s",
+	SetTitle( pxsFmt( L"%s | %s (%s) | Limiter: %s | fps: %6.02f%s",
 		fromUTF8(gsDest).c_str(),
 		(smode2 & 1) ? L"Interlaced" : L"Progressive",
 		(smode2 & 2) ? L"frame" : L"field",

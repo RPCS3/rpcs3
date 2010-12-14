@@ -107,6 +107,10 @@ public:
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
 	uint8* GetTextureBufferLock() { return m_tex_buff; }
 	void ReleaseTextureBufferLock() { }
+
+public:
+	CRITICAL_SECTION m_pGSsetTitle_Crit;
+	char m_GStitleInfoBuffer[128];
 };
 
 template<class Vertex> class GSRendererT : public GSRenderer

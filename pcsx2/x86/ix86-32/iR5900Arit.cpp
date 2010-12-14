@@ -494,7 +494,7 @@ void recXOR_(int info)
 
 	for (int i = 0; i < 2; i++) {
 		if (rs == rt) {
-			xMOV(ptr32[&cpuRegs.GPR.r[_Rd_]], 0);
+			xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].UL[i]], 0);
 		} else if (_Rd_ == rs) {
 			xMOV(eax, ptr32[&cpuRegs.GPR.r[rt].UL[i]]);
 			xXOR(ptr32[&cpuRegs.GPR.r[_Rd_].UL[i]], eax);

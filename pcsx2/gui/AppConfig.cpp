@@ -97,26 +97,7 @@ namespace PathDefs
     // Specifies the main configuration folder.
     wxDirName GetUserLocalDataDir()
     {
-#ifdef __LINUX__
-        // Note: GetUserLocalDataDir() on linux return $HOME/.pcsx2 unfortunately it does not follow the XDG standard
-        // So we re-implement it, to follow the standard.
-        wxDirName user_local_dir;
-        wxString xdg_home_value;
-        if( wxGetEnv(L"XDG_CONFIG_HOME", &xdg_home_value) ) {
-            if ( xdg_home_value.IsEmpty() ) {
-                // variable exist but it is empty. So use the default value
-                user_local_dir = (wxDirName)Path::Combine( wxStandardPaths::Get().GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
-            } else {
-                user_local_dir = (wxDirName)Path::Combine( xdg_home_value, pxGetAppName());
-            }
-        } else {
-            // variable do not exist
-            user_local_dir = (wxDirName)Path::Combine( wxStandardPaths::Get().GetUserConfigDir() , wxDirName( L".config/pcsx2" ));
-        }
-        return user_local_dir;
-#else
         return wxDirName(wxStandardPaths::Get().GetUserLocalDataDir());
-#endif
     }
 
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
@@ -384,6 +365,7 @@ AppConfig::AppConfig()
 	, DeskTheme( L"default" )
 {
 	LanguageId			= wxLANGUAGE_DEFAULT;
+	LanguageCode		= L"default";
 	RecentIsoCount		= 12;
 	Listbook_ImageSize	= 32;
 	Toolbar_ImageSize	= 24;
@@ -487,6 +469,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( AppSettingsTabName );
 	IniEntry( GameDatabaseTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
+	IniEntry( LanguageCode );
 	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );
 	IniEntry( Listbook_ImageSize );
@@ -780,7 +763,8 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 	if( overwrite )
 	{
 		if( wxFileExists( iniFilename ) && !wxRemoveFile( iniFilename ) )
-			throw Exception::AccessDenied(iniFilename).SetBothMsgs(wxLt("Failed to overwrite existing settings file; permission was denied."));
+			throw Exception::AccessDenied(iniFilename)
+				.SetBothMsgs(pxL("Failed to overwrite existing settings file; permission was denied."));
 	}
 
 	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever

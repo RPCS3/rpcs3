@@ -16,7 +16,7 @@
 #ifndef PCSX2_PRECOMPILED_HEADER
 #define PCSX2_PRECOMPILED_HEADER
 
-//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well
+//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well anyway)
 
 // Disable some pointless warnings...
 #ifdef _MSC_VER
@@ -24,20 +24,7 @@
 #	pragma warning(disable:4996) //ignore the stricmp deprecated warning
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Define PCSX2's own i18n helpers.  These override the wxWidgets helpers and provide
-// additional functionality.
-//
-#define WXINTL_NO_GETTEXT_MACRO
-#undef _
-#define _(s)		pxGetTranslation(_T(s))
-
-// macro provided for tagging translation strings, without actually running them through the
-// translator (which the _() does automatically, and sometimes we don't want that).  This is
-// a shorthand replacement for wxTRANSLATE.
-#ifndef wxLt
-#	define wxLt(a)	wxT(a)
-#endif
+#include "Utilities/Dependencies.h"
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 

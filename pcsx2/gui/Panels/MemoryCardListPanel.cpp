@@ -362,7 +362,7 @@ public:
 
 			if( dest.IsPresent && dest.IsFormatted )
 			{
-				pxsFmt( pxE( ".Popup:Mcd:Overwrite", 
+				pxsFmt( pxE( "!Notice:Mcd:Overwrite", 
 					L"This will copy the contents of the memory card in slot %u over the memory card in slot %u. "
 					L"All data on the target slot will be lost.  Are you sure?" ), 
 					src.Slot, dest.Slot
@@ -376,7 +376,7 @@ public:
 			if( !wxCopyFile( srcfile.GetFullPath(), destfile.GetFullPath(),	true ) )
 			{
 				wxString heading;
-				heading.Printf( pxE( ".Error:Mcd:Copy Failed", 
+				heading.Printf( pxE( "!Notice:Mcd:Copy Failed", 
 					L"Error!  Could not copy the memory card into slot %u.  The destination file is in use." ),
 					dest.Slot
 				);
@@ -582,7 +582,7 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 		{
 			wxString content;
 			content.Printf(
-				pxE( ".Popup:Mcd:Delete",
+				pxE( "!Notice:Mcd:Delete",
 					L"You are about to delete the formatted memory card in slot %u. "
 					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
 				), slot

@@ -20,6 +20,7 @@
 // Texture and avi saving to file functions
 
 //------------------ Includes
+ #include "Util.h"
 #if defined(_WIN32)
 #	include <windows.h>
 #	include <aviUtil.h>
@@ -27,9 +28,9 @@
 #endif
 #include <stdlib.h>
 
-#include "zerogs.h"
 #include "targets.h"
 #include "Mem.h"
+#include "ZZoglShoots.h"
 
 // AVI Capture
 int s_avicapturing = 0;
@@ -43,7 +44,7 @@ extern "C"
 #define HAVE_BOOLEAN
 #endif
 
-#include "jpeglib.h" 	// This library want to be after zerogs.h
+#include "jpeglib.h"
 }
 
 //------------------ Defines
@@ -65,14 +66,14 @@ string strSnapshot;
 //------------------ Code
 
 // Set variables need to made a snapshoot when it's possible
-void ZeroGS::SaveSnapshot(const char* filename)
+void SaveSnapshot(const char* filename)
 {
 	g_bMakeSnapshot = true;
 	strSnapshot = filename;
 }
 
 // Save curent renderer in jpeg or TGA format
-bool ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int jpeg)
+bool SaveRenderTarget(const char* filename, int width, int height, int jpeg)
 {
 	bool bflip = height < 0;
 	height = abs(height);
@@ -100,7 +101,7 @@ bool ZeroGS::SaveRenderTarget(const char* filename, int width, int height, int j
 }
 
 // Save selected texture as TGA
-bool ZeroGS::SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
 {
 	vector<u32> data(width*height);
 	glBindTexture(textarget, tex);
@@ -112,7 +113,7 @@ bool ZeroGS::SaveTexture(const char* filename, u32 textarget, u32 tex, int width
 }
 
 // save image as JPEG
-bool ZeroGS::SaveJPEG(const char* filename, int image_width, int image_height, const void* pdata, int quality)
+bool SaveJPEG(const char* filename, int image_width, int image_height, const void* pdata, int quality)
 {
 	u8* image_buffer = new u8[image_width * image_height * 3];
 	u8* psrc = (u8*)pdata;
@@ -286,7 +287,7 @@ __attribute__((packed));
 #endif
 
 // Save image as TGA
-bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
+bool SaveTGA(const char* filename, int width, int height, void* pdata)
 {
 	int err = 0;
 	TGA_HEADER hdr;
@@ -314,7 +315,7 @@ bool ZeroGS::SaveTGA(const char* filename, int width, int height, void* pdata)
 
 // AVI capture stuff
 // AVI start -- set needed global variables
-void ZeroGS::StartCapture()
+void StartCapture()
 {
 	if (conf.captureAvi()) return;
 	if (!s_aviinit)
@@ -338,7 +339,7 @@ void ZeroGS::StartCapture()
 }
 
 // Stop.
-void ZeroGS::StopCapture()
+void StopCapture()
 {
 	if (!conf.captureAvi()) return;
 	s_avicapturing = 0;
@@ -347,25 +348,25 @@ void ZeroGS::StopCapture()
 }
 
 // And capture frame does not work on linux.
-void ZeroGS::CaptureFrame()
+void CaptureFrame()
 {
 	if ((!s_avicapturing) || (!s_aviinit)) return;
 
-	vector<u32> data(nBackbufferWidth*nBackbufferHeight);
-	glReadPixels(0, 0, nBackbufferWidth, nBackbufferHeight, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
+	vector<u32> data(GLWin.backbuffer.w * GLWin.backbuffer.h);
+	glReadPixels(0, 0, GLWin.backbuffer.w, GLWin.backbuffer.h, GL_RGBA, GL_UNSIGNED_BYTE, &data[0]);
 
 	if (glGetError() != GL_NO_ERROR) return;
 
 #ifdef _WIN32
 	int fps = SMODE1->CMOD == 3 ? 50 : 60;
 
-	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, nBackbufferWidth, nBackbufferHeight, 32, &data[0]);
+	bool bSuccess = ADD_FRAME_FROM_DIB_TO_AVI("AAAA", fps, GLWin.backbuffer.w, GLWin.backbuffer.h, 32, &data[0]);
 
 	if (!bSuccess)
 	{
 		s_avicapturing = 0;
 		STOP_AVI();
-		ZeroGS::AddMessage("Failed to create avi");
+		ZZAddMessage("Failed to create avi");
 		return;
 	}
 
@@ -376,7 +377,7 @@ void ZeroGS::CaptureFrame()
 
 // It's nearly the same as save texture
 void
-ZeroGS::SaveTex(tex0Info* ptex, int usevid)
+SaveTex(tex0Info* ptex, int usevid)
 {
 	vector<u32> data(ptex->tw*ptex->th);
 	vector<u8> srcdata;
@@ -617,7 +618,7 @@ ZeroGS::SaveTex(tex0Info* ptex, int usevid)
 
 // Do the save texture and return file name of it
 // Do not forget to call free(), other wise there would be memory leak!
-char* ZeroGS::NamedSaveTex(tex0Info* ptex, int usevid)
+char* NamedSaveTex(tex0Info* ptex, int usevid)
 {
 	SaveTex(ptex, usevid);
 	char* Name = (char*)malloc(TGA_FILE_NAME_MAX_LENGTH);
@@ -631,7 +632,7 @@ char* ZeroGS::NamedSaveTex(tex0Info* ptex, int usevid)
 }
 
 // Special function, which is safe to call from any other file, without aviutils problems.
-void ZeroGS::Stop_Avi()
+void Stop_Avi()
 {
 #ifdef _WIN32
 	STOP_AVI();
@@ -640,7 +641,7 @@ void ZeroGS::Stop_Avi()
 #endif
 }
 
-void ZeroGS::Delete_Avi_Capture()
+void Delete_Avi_Capture()
 {
 	if (s_aviinit)
 	{

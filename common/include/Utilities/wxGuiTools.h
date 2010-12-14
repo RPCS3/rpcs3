@@ -522,6 +522,7 @@ public:
 // --------------------------------------------------------------------------------------
 class wxDialogWithHelpers : public wxDialog
 {
+	typedef wxDialog _parent;
 	DECLARE_DYNAMIC_CLASS_NO_COPY(wxDialogWithHelpers)
 
 protected:
@@ -541,6 +542,7 @@ public:
 	virtual void SmartCenterFit();
 	virtual int ShowModal();
 	virtual bool Show( bool show=true );
+	virtual bool Destroy();
 
 	// Must return the same thing as GetNameStatic; a name ideal for use in uniquely
 	// identifying dialogs.  (this version is the 'instance' version, which is called

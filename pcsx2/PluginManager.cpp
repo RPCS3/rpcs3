@@ -23,6 +23,7 @@
 #include "CDVD/CDVDisoReader.h"
 
 #include "Utilities/ScopedPtr.h"
+#include "Utilities/pxStreams.h"
 
 #if _MSC_VER
 #	include "svnrev.h"
@@ -152,7 +153,7 @@ _GSgifSoftReset    GSgifSoftReset;
 _GSreadFIFO        GSreadFIFO;
 _GSreadFIFO2       GSreadFIFO2;
 _GSchangeSaveState GSchangeSaveState;
-_GSgetTitleInfo    GSgetTitleInfo;
+_GSgetTitleInfo2   GSgetTitleInfo2;
 _GSmakeSnapshot	   GSmakeSnapshot;
 _GSmakeSnapshot2   GSmakeSnapshot2;
 _GSirqCallback 	   GSirqCallback;
@@ -185,8 +186,11 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 	Console.WriteLn(msg);
 }
 
-void CALLBACK GS_getTitleInfo( char dest[128] )
+void CALLBACK GS_getTitleInfo2( char* dest, size_t length )
 {
+	// Just return a generic "GS" title -- a plugin actually implementing this feature
+	// should return a title such as "GSdx" or "ZZogl" instead.  --air
+
 	dest[0] = 'G';
 	dest[1] = 'S';
 	dest[2] = 0;
@@ -372,7 +376,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSsetVsync",		(vMeth**)&GSsetVsync,		(vMeth*)GS_setVsync	},
 	{	"GSsetExclusive",	(vMeth**)&GSsetExclusive,	(vMeth*)GS_setExclusive	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState,(vMeth*)GS_changeSaveState },
-	{	"GSgetTitleInfo",	(vMeth**)&GSgetTitleInfo,	(vMeth*)GS_getTitleInfo },
+	{	"GSgetTitleInfo2",	(vMeth**)&GSgetTitleInfo2,	(vMeth*)GS_getTitleInfo2 },
 	{ NULL }
 };
 
@@ -807,11 +811,11 @@ SysCorePlugins::PluginStatus_t::PluginStatus_t( PluginsEnum_t _pid, const wxStri
 
 	if( !wxFile::Exists( Filename ) )
 		throw Exception::PluginLoadError( pid ).SetStreamName(srcfile)
-			.SetBothMsgs(wxLt("The configured %s plugin file was not found"));
+			.SetBothMsgs(pxL("The configured %s plugin file was not found"));
 
 	if( !Lib.Load( Filename ) )
 		throw Exception::PluginLoadError( pid ).SetStreamName(Filename)
-			.SetBothMsgs(wxLt("The configured %s plugin file is not a valid dynamic library"));
+			.SetBothMsgs(pxL("The configured %s plugin file is not a valid dynamic library"));
 
 
 	// Try to enumerate the new v2.0 plugin interface first.
@@ -1321,7 +1325,7 @@ bool SysCorePlugins::Init()
 		{
 			// fixme: use plugin's GetLastError (not implemented yet!)
 			throw Exception::PluginInitError( PluginId_Mcd )
-				.SetBothMsgs(wxLt("Internal Memorycard Plugin failed to initialize."));
+				.SetBothMsgs(pxLt("Internal Memorycard Plugin failed to initialize."));
 		}
 	}
 
@@ -1399,15 +1403,15 @@ void SysCorePlugins::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 	// No locking leeded -- DoFreeze locks as needed, and this avoids MTGS deadlock.
 	//ScopedLock lock( m_mtx_PluginStatus );
 
-	Console.Indent().WriteLn( "%s %s", state.IsSaving() ? "Saving" : "Loading",
-		tbl_PluginInfo[pid].shortname );
-
 	freezeData fP = { 0, NULL };
 	if( !DoFreeze( pid, FREEZE_SIZE, &fP ) )
 		fP.size = 0;
 
 	int fsize = fP.size;
 	state.Freeze( fsize );
+
+	Console.Indent().WriteLn( "%s %s", state.IsSaving() ? "Saving" : "Loading",
+		tbl_PluginInfo[pid].shortname );
 
 	if( state.IsLoading() && (fsize == 0) )
 	{
@@ -1441,6 +1445,82 @@ void SysCorePlugins::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 	}
 
 	state.CommitBlock( fP.size );
+}
+
+size_t SysCorePlugins::GetFreezeSize( PluginsEnum_t pid )
+{
+	freezeData fP = { 0, NULL };
+	if (!DoFreeze( pid, FREEZE_SIZE, &fP)) return 0;
+	return fP.size;
+}
+
+void SysCorePlugins::FreezeOut( PluginsEnum_t pid, void* dest )
+{
+	// No locking needed -- DoFreeze locks as needed, and this avoids MTGS deadlock.
+	//ScopedLock lock( m_mtx_PluginStatus );
+
+	freezeData fP = { 0, (s8*)dest };
+	if (!DoFreeze( pid, FREEZE_SIZE, &fP)) return;
+	if (!fP.size) return;
+
+	Console.Indent().WriteLn( "Saving %s", tbl_PluginInfo[pid].shortname );
+
+	if (!DoFreeze(pid, FREEZE_SAVE, &fP))
+		throw Exception::FreezePluginFailure( pid );
+}
+
+void SysCorePlugins::FreezeOut( PluginsEnum_t pid, pxOutputStream& outfp )
+{
+	// No locking needed -- DoFreeze locks as needed, and this avoids MTGS deadlock.
+	//ScopedLock lock( m_mtx_PluginStatus );
+
+	freezeData fP = { 0, NULL };
+	if (!DoFreeze( pid, FREEZE_SIZE, &fP)) return;
+	if (!fP.size) return;
+
+	Console.Indent().WriteLn( "Saving %s", tbl_PluginInfo[pid].shortname );
+
+	ScopedAlloc<s8> data( fP.size );
+	fP.data = data.GetPtr();
+
+	if (!DoFreeze(pid, FREEZE_SAVE, &fP))
+		throw Exception::FreezePluginFailure( pid );
+
+	outfp.Write( fP.data, fP.size );
+}
+
+void SysCorePlugins::FreezeIn( PluginsEnum_t pid, pxInputStream& infp )
+{
+	// No locking needed -- DoFreeze locks as needed, and this avoids MTGS deadlock.
+	//ScopedLock lock( m_mtx_PluginStatus );
+
+	freezeData fP = { 0, NULL };
+	if (!DoFreeze( pid, FREEZE_SIZE, &fP ))
+		fP.size = 0;
+
+	Console.Indent().WriteLn( "Loading %s", tbl_PluginInfo[pid].shortname );
+
+	if (!infp.IsOk() || !infp.Length())
+	{
+		// no state data to read, but the plugin expects some state data?
+		// Issue a warning to console...
+		if( fP.size != 0 )
+			Console.Indent().Warning( "Warning: No data for this plugin was found. Plugin status may be unpredictable." );
+
+		return;
+
+		// Note: Size mismatch check could also be done here on loading, but
+		// some plugins may have built-in version support for non-native formats or
+		// older versions of a different size... or could give different sizes depending
+		// on the status of the plugin when loading, so let's ignore it.
+	}
+
+	ScopedAlloc<s8> data( fP.size );
+	fP.data = data.GetPtr();
+
+	infp.Read( fP.data, fP.size );
+	if (!DoFreeze(pid, FREEZE_LOAD, &fP))
+		throw Exception::ThawPluginFailure( pid );
 }
 
 bool SysCorePlugins::KeyEvent( const keyEvent& evt )

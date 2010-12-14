@@ -19,8 +19,43 @@
  
 #include <stdio.h>
 #include "ZZLog.h"
+#include <list>
+#include <cstring>
  
 extern GSconf conf;
+
+using namespace std;
+
+static list<MESSAGE> listMsgs;
+
+void ProcessMessages()
+{
+	FUNCLOG
+
+	if (listMsgs.size() > 0)
+	{
+		int left = 25, top = 15;
+		list<MESSAGE>::iterator it = listMsgs.begin();
+
+		while (it != listMsgs.end())
+		{
+			DrawText(it->str, left + 1, top + 1, 0xff000000);
+			DrawText(it->str, left, top, 0xffffff30);
+			top += 15;
+
+			if ((int)(it->dwTimeStamp - timeGetTime()) < 0)
+				it = listMsgs.erase(it);
+			else ++it;
+		}
+	}
+}
+
+void ZZAddMessage(const char* pstr, u32 ms)
+{
+	FUNCLOG
+	listMsgs.push_back(MESSAGE(pstr, timeGetTime() + ms));
+	ZZLog::Log("%s\n", pstr);
+}
 
 namespace ZZLog
 {
@@ -68,7 +103,19 @@ void SetDir(const char* dir)
 
 void WriteToScreen(const char* pstr, u32 ms)
 {
-	ZeroGS::AddMessage(pstr, ms);
+	ZZAddMessage(pstr, ms);
+}
+
+void WriteToScreen2(const char* fmt, ...)
+{
+	va_list list;
+	char tmp[512];
+
+	va_start(list, fmt);
+	vsprintf(tmp, fmt, list);
+	va_end(list);
+
+	ZZAddMessage(tmp, 5000);
 }
 
 void _Message(const char *str)
@@ -267,7 +314,7 @@ void Dev_Log(const char *fmt, ...)
 
 void Debug_Log(const char *fmt, ...)
 {
-#if _DEBUG
+#ifdef _DEBUG
 	va_list list;
 
 	va_start(list, fmt);

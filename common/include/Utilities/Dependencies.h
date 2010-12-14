@@ -18,37 +18,7 @@
 // Dependencies.h : Contains classes required by all Utilities headers.
 //   This file is included by most .h files provided by the Utilities class.
 
-// --------------------------------------------------------------------------------------
-//  Forward Declarations Section
-// --------------------------------------------------------------------------------------
-
-class wxOutputStream;
-class wxFileOutputStream;
-class wxFFileOutputStream;
-
-class wxStreamBase;
-class wxInputStream;
-class wxFileInputStream;
-class wxFFileInputStream;
-
-class wxPoint;
-class wxRect;
-class wxSize;
-
-extern const wxSize wxDefaultSize;
-extern const wxPoint wxDefaultPosition;
-
-namespace Threading
-{
-	class Mutex;
-	class Semaphore;
-	class pxThread;
-}
-
-namespace Exception
-{
-	class BaseException;
-}
+#include "pxForwardDefs.h"
 
 // This should prove useful....
 #define wxsFormat wxString::Format
@@ -165,6 +135,50 @@ public:
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  _(x) / _t(x) / _d(x) / pxL(x) / pxLt(x)  [macros]
+// --------------------------------------------------------------------------------------
+// Define pxWex's own i18n helpers.  These override the wxWidgets helpers and provide
+// additional functionality.  Define them FIRST THING, to make sure that wx's own gettext
+// macros aren't in place.
+//
+// _   is for standard translations
+// _t  is for tertiary low priority translations
+// _d  is for debug/devel build translations
+
+#define WXINTL_NO_GETTEXT_MACRO
+
+#ifndef _
+#	define _(s)		pxGetTranslation(_T(s))
+#endif
+
+#ifndef _t
+#	define _t(s)	pxGetTranslation(_T(s))
+#endif
+
+#ifndef _d
+#	define _d(s)	pxGetTranslation(_T(s))
+#endif
+
+// pxL / pxLt / pxDt -- macros provided for tagging translation strings, without actually running
+// them through the translator (which the _() does automatically, and sometimes we don't
+// want that).  This is a shorthand replacement for wxTRANSLATE.  pxL is a standard translation
+// moniker.  pxLt is for tertiary strings that have a very low translation priority.  pxDt is for
+// debug/devel specific translations.
+//
+#ifndef pxL
+#	define pxL(a)		wxT(a)
+#endif
+
+#ifndef pxLt
+#	define pxLt(a)		wxT(a)
+#endif
+
+#ifndef pxDt
+#	define pxDt(a)		wxT(a)
+#endif
+
+
 #include <wx/string.h>
 #include <wx/intl.h>
 #include <wx/log.h>
@@ -177,6 +191,9 @@ public:
 #include <list>
 
 #include "Pcsx2Defs.h"
+
+// --------------------------------------------------------------------------------------
+//  Handy Human-readable constants for common immediate values (_16kb -> _4gb)
 
 static const sptr _64kb		= 0x10000;
 static const sptr _16kb		= _64kb / 4;
@@ -193,30 +210,8 @@ static const s64 _1gb		= _256mb * 4;
 static const s64 _4gb		= _1gb * 4;
 
 
-// ===========================================================================================
-//  i18n/Translation Feature Set!
-// ===========================================================================================
-
-extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
-extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
-extern bool pxIsEnglish( int id );
-
-extern wxString fromUTF8( const char* src );
-extern wxString fromAscii( const char* src );
-
 // --------------------------------------------------------------------------------------
-//  wxLt(x)   [macro]
-// --------------------------------------------------------------------------------------
-// macro provided for tagging translation strings, without actually running them through the
-// translator (which the _() does automatically, and sometimes we don't want that).  This is
-// a shorthand replacement for wxTRANSLATE.
-//
-#ifndef wxLt
-#	define wxLt(a)		wxT(a)
-#endif
-
-// --------------------------------------------------------------------------------------
-//  pxE(x)   [macro]
+//  pxE(key, msg) and pxEt(key, msg)  [macros]
 // --------------------------------------------------------------------------------------
 // Translation Feature: pxE is used as a method of dereferencing very long english text
 // descriptions via a "key" identifier.  In this way, the english text can be revised without
@@ -226,28 +221,42 @@ extern wxString fromAscii( const char* src );
 //
 // Valid prefix types:
 //
-// .Panel:   Key-based translation of a panel or dialog text; usually either a header or
-//           checkbox description, by may also include some controls with long labels.
-//           These have the highest translation priority.
+// !Panel:       Key-based translation of a panel or dialog text; usually either a header or
+//               checkbox description, by may also include some controls with long labels.
+//               These have the highest translation priority.
 //
-// .Popup:   Key-based translation of a popup dialog box; either a notice, confirmation,
-//           or error.  These typically have very high translation priority (roughly equal
-//           or slightly less than pxE_Panel).
+// !Notice:      Key-based translation of a popup dialog box; either a notice, confirmation,
+//               or error.  These typically have very high translation priority (roughly equal
+//               or slightly less than pxE_Panel).
 //
-// .Error    Key-based translation of error messages, typically used when throwing exceptions
-//           that have end-user errors.  These are normally (but not always) displayed as popups
-//           to the user.  Translation priority is medium.
+// !Tooltip:     Key-based translation of a tooltip for a button on a tool bar.  Since buttons are
+//               rarely self-explanatory, these translations are considered medium to high priority.
 //
-// .Wizard   Key-based translation of a heading, checkbox item, description, or other text
-//           associated with the First-time wizard.  Translation of these items is considered
-//           lower-priority to most other messages; but equal or higher priority to tooltips.
+// !Wizard       Key-based translation of a heading, checkbox item, description, or other text
+//               associated with the First-time wizard.  Translation of these items is considered
+//               lower-priority to most other messages; but equal or higher priority to ContextTips.
 //
-// .Tooltip: Key-based translation of a tooltip for a control on a dialog/panel.  Translation
-//           of these items is typically considered "lowest priority" as they usually provide
-//           the most tertiary of info to the user.
+// !ContextTip:  Key-based translation of a tooltip for a control on a dialog/panel.  Translation
+//               of these items is typically considered "lowest priority" as they usually provide
+//               only tertiary (extra) info to the user.
 //
 
-#define pxE(key, english)			pxExpandMsg( wxT(key),						english )
+#define pxE(key, english)			pxExpandMsg( wxT(key),	english )
+
+// For use with tertiary translations (low priority).
+#define pxEt(key, english)			pxExpandMsg( wxT(key),	english )
+
+// For use with Dev/debug build translations (low priority).
+#define pxE_dev(key, english)		pxExpandMsg( wxT(key),	english )
+
+
+extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
+extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
+extern bool pxIsEnglish( int id );
+
+extern wxString fromUTF8( const char* src );
+extern wxString fromAscii( const char* src );
+
 
 #include "Utilities/Assertions.h"
 #include "Utilities/Exceptions.h"

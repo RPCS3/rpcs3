@@ -400,7 +400,7 @@ struct Pcsx2Config
 
 		// when enabled uses BOOT2 injection, skipping sony bios splashes
 			UseBOOT2Injection	:1,
-
+			BackupSavestate		:1,
 		// enables simulated ejection of memory cards when loading savestates
 			McdEnableEjection	:1,
 

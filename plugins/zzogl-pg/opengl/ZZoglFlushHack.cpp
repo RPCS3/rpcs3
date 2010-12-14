@@ -464,7 +464,7 @@ static const u32 MAX_FRAMES = 500;
 static GSFrameInfo FrameAppear[MAX_FRAMES];
 static u32 Rec_Numbers = 0;
 
-void RecordNewFrames(ZeroGS::VB& curvb, GSFrameInfo fi) {
+void RecordNewFrames(VB& curvb, GSFrameInfo fi) {
     if (Rec_Numbers >= MAX_FRAMES)
         return;
 
@@ -486,12 +486,12 @@ void RecordNewFrames(ZeroGS::VB& curvb, GSFrameInfo fi) {
         // Dump a nice picture of the frame
         char filename[255];
         sprintf(filename, "SkipFlushFrame_%d__%d.tga", g_SkipFlushFrame, Rec_Numbers);
-        ZeroGS::SaveRenderTarget(filename, curvb.prndr->fbw, curvb.prndr->fbh, 0);
+        SaveRenderTarget(filename, curvb.prndr->fbw, curvb.prndr->fbh, 0);
     }
 }
 #endif
 
-__forceinline bool IsBadFrame(ZeroGS::VB& curvb)
+__forceinline bool IsBadFrame(VB& curvb)
 {
 	GSFrameInfo fi;
 

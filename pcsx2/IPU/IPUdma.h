@@ -87,7 +87,7 @@ extern void ipu1Interrupt();
 
 extern void dmaIPU0();
 extern void dmaIPU1();
-extern int IPU0dma();
+extern void IPU0dma();
 extern int IPU1dma();
 
 extern void ipuDmaReset();

@@ -17,7 +17,7 @@
 
 namespace Exception
 {
-	class BiosLoadFailed : public FileNotFound
+	class BiosLoadFailed : public BadStream
 	{
 		DEFINE_EXCEPTION_COPYTORS( BiosLoadFailed, FileNotFound )
 		DEFINE_EXCEPTION_MESSAGES( BiosLoadFailed )
@@ -29,6 +29,8 @@ namespace Exception
 }
 
 extern u32 BiosVersion;		//  Used by CDVD
+extern u32 BiosChecksum;
+extern wxString BiosDescription;
 
 extern void LoadBIOS();
 extern bool IsBIOS(const wxString& filename, wxString& description);

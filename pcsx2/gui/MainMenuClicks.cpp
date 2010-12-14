@@ -50,7 +50,7 @@ void MainEmuFrame::Menu_McdSettings_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_GameDatabase_Click(wxCommandEvent &event)
 {
-	AppOpenDialog<McdConfigDialog>( this );
+	AppOpenDialog<GameDatabaseDialog>( this );
 }
 
 void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent &event)
@@ -72,6 +72,11 @@ void MainEmuFrame::Menu_SelectPluginsBios_Click(wxCommandEvent &event)
 	AppOpenDialog<ComponentsConfigDialog>( this );
 }
 
+void MainEmuFrame::Menu_Language_Click(wxCommandEvent &event)
+{
+	//AppOpenDialog<LanguageSelectionDialog>( this );
+	LanguageSelectionDialog(this).ShowModal();
+}
 
 static void WipeSettings()
 {
@@ -104,7 +109,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 	{
 		ScopedCoreThreadPopup suspender;
 		if( !Msgbox::OkCancel( pxsFmt(
-			pxE( ".Popup:DeleteSettings",
+			pxE( "!Notice:DeleteSettings",
 				L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to "
 				L"manually restart %s after this operation.\n\n"
 				L"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?"
@@ -146,7 +151,7 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		dialog += dialog.GetCharHeight();
 		dialog += dialog.Heading(_("Do you want to swap discs or boot the new image (via system reset)?"));
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc"), "swap"), L"DragDrop.BootSwapIso" );
 		if( result == wxID_CANCEL )
 		{
 			core_control.AllowResume();
@@ -189,7 +194,7 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 			_("Do you want to swap discs or boot the new image (system reset)?")
 		);
 
-		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop.BootSwapIso" );
+		result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc"), "swap"), L"DragDrop.BootSwapIso" );
 
 		if( result == wxID_CANCEL )
 		{

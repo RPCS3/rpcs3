@@ -446,6 +446,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\pxForwardDefs.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\pxRadioPanel.h"
 				>
 			</File>

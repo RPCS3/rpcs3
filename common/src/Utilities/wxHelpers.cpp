@@ -274,13 +274,13 @@ pxStaticText& wxDialogWithHelpers::Heading( const wxString& label )
 	return *new pxStaticHeading( this, label );
 }
 
-void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
+bool wxDialogWithHelpers::Destroy()
 {
 	// Save the dialog position if the dialog is named...
 	// FIXME : This doesn't get called if the app is exited by alt-f4'ing the main app window.
 	//   ... not sure how to fix that yet.  I could register a list of open windows into wxAppWithHelpers
 	//   that systematically get closed.  Seems like work, maybe later.  --air
-	
+
 	if( wxConfigBase* cfg = IsIconized() ? NULL : wxConfigBase::Get( false ) )
 	{
 		const wxString dlgName( GetDialogName() );
@@ -300,6 +300,11 @@ void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
 		}
 	}
 
+	return _parent::Destroy();
+}
+
+void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
+{
 	if( !IsModal() ) Destroy();
 	evt.Skip();
 }

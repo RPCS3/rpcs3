@@ -41,7 +41,7 @@ static void CpuCheckSSE2()
 
 	wxDialogWithHelpers exconf( NULL, _("PCSX2 - SSE2 Recommended") );
 
-	exconf += exconf.Heading( pxE( ".Popup:Startup:NoSSE2",
+	exconf += exconf.Heading( pxE( "!Notice:Startup:NoSSE2",
 		L"Warning: Your computer does not support SSE2, which is required by many PCSX2 recompilers and plugins. "
 		L"Your options will be limited and emulation will be *very* slow." )
 	);
@@ -70,10 +70,28 @@ void Pcsx2App::WipeUserModeSettings()
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
+	FastFormatUnicode groupname;
+	groupname.Write( L"CWD.%08x", hashres );
 	Console.WriteLn( "(UserModeSettings) Removing entry:" );
 	Console.Indent().WriteLn( L"Path: %s\nHash:%s", cwd.c_str(), groupname.c_str() );
 	conf_usermode->DeleteGroup( groupname );
+}
+
+static void DoFirstTimeWizard()
+{
+	// first time startup, so give the user the choice of user mode:
+	while(true)
+	{
+		// PCSX2's FTWizard allows improptu restarting of the wizard without cancellation.  This is 
+		// typically used to change the user's language selection.
+
+		FirstTimeWizard wiz( NULL );
+		if( wiz.RunWizard( wiz.GetUsermodePage() ) ) break;
+		if (wiz.GetReturnCode() != pxID_RestartWizard)
+			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
+
+		Console.WriteLn( Color_StrongBlack, "Restarting First Time Wizard!" );
+	}
 }
 
 // User mode settings can't be stored in the CWD for two reasons:
@@ -104,7 +122,8 @@ void Pcsx2App::ReadUserModeSettings()
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
+	FastFormatUnicode groupname;
+	groupname.Write( L"CWD.%08x", hashres );
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
 	bool forceWiz = Startup.ForceWizard || !hasGroup;
@@ -135,10 +154,7 @@ void Pcsx2App::ReadUserModeSettings()
 		}
 		#endif
 	
-		// first time startup, so give the user the choice of user mode:
-		FirstTimeWizard wiz( NULL );
-		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
-			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
+		DoFirstTimeWizard();
 
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
@@ -159,14 +175,8 @@ void Pcsx2App::ReadUserModeSettings()
 		if( !wxFile::Exists( GetSettingsFilename() ) )
 		{
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
-			// (we skip the first page since it's a usermode.ini thing)
-			
-			// Fixme : Skipping the first page is a bad idea, as it does a lot of file / directory checks on hitting Apply.
-			// If anything is missing, the first page prompts to fix it.
-			// If we skip this check, it's very likely that actions like creating Memory Cards will fail.
-			FirstTimeWizard wiz( NULL );
-			if( !wiz.RunWizard( /*wiz.GetPostUsermodePage()*/ wiz.GetUsermodePage() ) )
-				throw Exception::StartupAborted( L"User canceled Configuration Wizard." );
+
+			DoFirstTimeWizard();
 
 			// Save user's new settings
 			IniSaver saver( *conf_usermode );
@@ -236,6 +246,19 @@ void Pcsx2App::OpenProgramLog()
 	EnableAllLogging();
 
 	if( m_current_focus ) m_current_focus->SetFocus();
+	
+	// This is test code for printing out all supported languages and their canonical names in wiki-fied
+	// format.  I might use it again soon, so I'm leaving it in for now... --air
+	/*
+	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
+	{
+		if (const wxLanguageInfo* info = wxLocale::GetLanguageInfo( li ))
+		{			
+			if (i18n_IsLegacyLanguageId((wxLanguage)info->Language)) continue;			
+			Console.WriteLn( L"|| %-30s || %-8s ||", info->Description.c_str(), info->CanonicalName.c_str() );
+		}
+	}
+	*/
 }
 
 void Pcsx2App::AllocateCoreStuffs()
@@ -264,7 +287,7 @@ void Pcsx2App::AllocateCoreStuffs()
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)") );
 
 			exconf += 12;
-			exconf += exconf.Heading( pxE( ".Popup:RecompilerInit:Header",
+			exconf += exconf.Heading( pxE( "!Notice:RecompilerInit:Header",
 				L"Warning: Some of the configured PS2 recompilers failed to initialize and have been disabled:" )
 			);
 
@@ -318,7 +341,7 @@ void Pcsx2App::AllocateCoreStuffs()
 				recOps.EnableVU1	= recOps.EnableVU1 && recOps.UseMicroVU1;
 			}
 
-			exconf += exconf.Heading( pxE(".Popup:RecompilerInit:Footer",
+			exconf += exconf.Heading( pxE("!Notice:RecompilerInit:Footer",
 				L"Note: Recompilers are not necessary for PCSX2 to run, however they typically improve emulation speed substantially. "
 				L"You may have to manually re-enable the recompilers listed above, if you resolve the errors." )
 			);
@@ -365,7 +388,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
-			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
+			pxsFmt( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
 		);
 	} while( ++pi, pi->shortname != NULL );
 
@@ -524,6 +547,9 @@ bool Pcsx2App::OnInit()
 	g_Conf = new AppConfig();
     wxInitAllImageHandlers();
 
+	Console.WriteLn("Applying operating system default language...");
+	i18n_SetLanguage( wxLANGUAGE_DEFAULT );
+
 	Console.WriteLn("Command line parsing...");
 	if( !_parent::OnInit() ) return false;
 	Console.WriteLn("Command line parsed!");
@@ -551,8 +577,6 @@ bool Pcsx2App::OnInit()
 	{
 		InitDefaultGlobalAccelerators();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
-
-		m_RecentIsoList = new RecentIsoList();
 
 #ifdef __WXMSW__
 		pxDwm_Load();
@@ -775,6 +799,28 @@ protected:
 Pcsx2App::Pcsx2App() 
 	: SysExecutorThread( new SysEvtHandler() )
 {
+	#if 0
+	{
+		// Some common labels provided by wxWidgets.  wxWidgets translation files are chucked full
+		// of worthless crap, and tally more than 200k each.  We only need these couple.
+
+		_("OK");
+		_("&OK");
+		_("Cancel");
+		_("&Cancel");
+		_("&Apply");
+		_("&Next >");
+		_("&Back >");
+		_("&Back");
+		_("&Finish");
+
+		_("&Save");
+		_("Save &As...");
+		_("&Help");
+		_("&Home");
+	}
+	#endif
+
 	m_PendingSaves			= 0;
 	m_ScheduledTermination	= false;
 

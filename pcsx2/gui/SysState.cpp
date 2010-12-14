@@ -22,6 +22,7 @@
 #include "VUmicro.h"
 
 #include "ZipTools/ThreadedZipTools.h"
+#include "Utilities/pxStreams.h"
 
 #include <wx/wfstream.h>
 
@@ -30,8 +31,98 @@
 
 static const wxChar* EntryFilename_StateVersion			= L"PCSX2 Savestate Version.id";
 static const wxChar* EntryFilename_Screenshot			= L"Screenshot.jpg";
-static const wxChar* EntryFilename_InternalStructures	= L"PCSX2 Internal Structures.bin";
+static const wxChar* EntryFilename_InternalStructures	= L"PCSX2 Internal Structures.dat";
 
+
+// --------------------------------------------------------------------------------------
+//  BaseSavestateEntry
+// --------------------------------------------------------------------------------------
+class BaseSavestateEntry
+{
+protected:
+	BaseSavestateEntry() {}
+	virtual ~BaseSavestateEntry() throw() {}
+
+public:
+	virtual wxString GetFilename() const=0;
+	virtual void FreezeIn( pxInputStream& reader ) const=0;
+	virtual void FreezeOut( SaveStateBase& writer ) const=0;
+};
+
+class MemorySavestateEntry : public BaseSavestateEntry
+{
+protected:
+	MemorySavestateEntry() {}
+	virtual ~MemorySavestateEntry() throw() {}
+
+public:
+	virtual void FreezeIn( pxInputStream& reader ) const;
+	virtual void FreezeOut( SaveStateBase& writer ) const;
+
+protected:
+	virtual u8* GetDataPtr() const=0;
+	virtual uint GetDataSize() const=0;
+};
+
+class PluginSavestateEntry : public BaseSavestateEntry
+{
+protected:
+	PluginsEnum_t m_pid;
+
+public:
+	PluginSavestateEntry( PluginsEnum_t pid )
+	{
+		m_pid = pid;
+	}
+
+	virtual ~PluginSavestateEntry() throw() {}
+
+	virtual wxString GetFilename() const;
+	virtual void FreezeIn( pxInputStream& reader ) const;
+	virtual void FreezeOut( SaveStateBase& writer ) const;
+
+protected:
+	virtual PluginsEnum_t GetPluginId() const { return m_pid; }
+};
+
+void MemorySavestateEntry::FreezeIn( pxInputStream& reader ) const
+{
+	const uint entrySize		= reader.Length();
+	const uint expectedSize		= GetDataSize();
+
+	if (entrySize < expectedSize)
+	{
+		Console.WriteLn( Color_Yellow, " '%s' is incomplete (expected 0x%x bytes, loading only 0x%x bytes)",
+			GetFilename(), expectedSize, entrySize );
+	}
+
+	uint copylen = std::min(entrySize, expectedSize);
+	reader.Read( GetDataPtr(), copylen );
+}
+
+void MemorySavestateEntry::FreezeOut( SaveStateBase& writer ) const
+{
+	writer.FreezeMem( GetDataPtr(), GetDataSize() );
+}
+
+wxString PluginSavestateEntry::GetFilename() const
+{
+	return pxsFmt( "Plugin %s.dat", tbl_PluginInfo[m_pid].shortname );
+}
+
+void PluginSavestateEntry::FreezeIn( pxInputStream& reader ) const
+{
+	GetCorePlugins().FreezeIn( GetPluginId(), reader );
+}
+
+void PluginSavestateEntry::FreezeOut( SaveStateBase& writer ) const
+{
+	if (uint size = GetCorePlugins().GetFreezeSize( GetPluginId() ))
+	{
+		writer.PrepBlock( size );
+		GetCorePlugins().FreezeOut( GetPluginId(), writer.GetBlockPtr() );
+	}
+}
 
 // --------------------------------------------------------------------------------------
 //  SavestateEntry_* (EmotionMemory, IopMemory, etc)
@@ -42,7 +133,7 @@ static const wxChar* EntryFilename_InternalStructures	= L"PCSX2 Internal Structu
 //  cannot use static struct member initializers -- we need virtual functions that compute
 //  and resolve the addresses on-demand instead... --air
 
-class SavestateEntry_EmotionMemory : public BaseArchiveEntry
+class SavestateEntry_EmotionMemory : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"eeMemory.bin"; }
@@ -50,7 +141,7 @@ public:
 	uint GetDataSize() const			{ return sizeof(eeMem->Main); }
 };
 
-class SavestateEntry_IopMemory : public BaseArchiveEntry
+class SavestateEntry_IopMemory : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"iopMemory.bin"; }
@@ -58,7 +149,7 @@ public:
 	uint GetDataSize() const			{ return sizeof(iopMem->Main); }
 };
 
-class SavestateEntry_HwRegs : public BaseArchiveEntry
+class SavestateEntry_HwRegs : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"eeHwRegs.bin"; }
@@ -66,7 +157,7 @@ public:
 	uint GetDataSize() const			{ return sizeof(eeHw); }
 };
 
-class SavestateEntry_IopHwRegs : public BaseArchiveEntry
+class SavestateEntry_IopHwRegs : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"iopHwRegs.bin"; }
@@ -74,7 +165,7 @@ public:
 	uint GetDataSize() const			{ return sizeof(iopHw); }
 };
 
-class SavestateEntry_Scratchpad : public BaseArchiveEntry
+class SavestateEntry_Scratchpad : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"Scratchpad.bin"; }
@@ -82,7 +173,7 @@ public:
 	uint GetDataSize() const			{ return sizeof(eeMem->Scratch); }
 };
 
-class SavestateEntry_VU0mem : public BaseArchiveEntry
+class SavestateEntry_VU0mem : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"vu0Memory.bin"; }
@@ -90,7 +181,7 @@ public:
 	uint GetDataSize() const			{ return VU0_MEMSIZE; }
 };
 
-class SavestateEntry_VU1mem : public BaseArchiveEntry
+class SavestateEntry_VU1mem : public MemorySavestateEntry
 {
 public:
 	wxString GetFilename() const		{ return L"vu1Memory.bin"; }
@@ -98,21 +189,22 @@ public:
 	uint GetDataSize() const			{ return VU1_MEMSIZE; }
 };
 
-class SavestateEntry_VU0prog : public BaseArchiveEntry
+class SavestateEntry_VU0prog : public MemorySavestateEntry
 {
 public:
-	wxString GetFilename() const		{ return L"vu0Programs.bin"; }
+	wxString GetFilename() const		{ return L"vu0MicroMem.bin"; }
 	u8* GetDataPtr() const				{ return vuRegs[0].Micro; }
 	uint GetDataSize() const			{ return VU0_PROGSIZE; }
 };
 
-class SavestateEntry_VU1prog : public BaseArchiveEntry
+class SavestateEntry_VU1prog : public MemorySavestateEntry
 {
 public:
-	wxString GetFilename() const		{ return L"vu1Programs.bin"; }
+	wxString GetFilename() const		{ return L"vu1MicroMem.bin"; }
 	u8* GetDataPtr() const				{ return vuRegs[1].Micro; }
 	uint GetDataSize() const			{ return VU1_PROGSIZE; }
 };
+
 
 // [TODO] : Add other components as files to the savestate gzip?
 //  * VU0/VU1 memory banks?  VU0prog, VU1prog, VU0data, VU1data.
@@ -123,7 +215,7 @@ public:
 //  would not be useful).
 //
 
-static const BaseArchiveEntry* const SavestateEntries[] = 
+static const BaseSavestateEntry* const SavestateEntries[] = 
 {
 	new SavestateEntry_EmotionMemory,
 	new SavestateEntry_IopMemory,
@@ -134,6 +226,15 @@ static const BaseArchiveEntry* const SavestateEntries[] =
 	new SavestateEntry_VU1mem,
 	new SavestateEntry_VU0prog,
 	new SavestateEntry_VU1prog,
+	
+	new PluginSavestateEntry( PluginId_GS ),
+	new PluginSavestateEntry( PluginId_PAD ),
+	new PluginSavestateEntry( PluginId_SPU2 ),
+	new PluginSavestateEntry( PluginId_CDVD ),
+	new PluginSavestateEntry( PluginId_USB ),
+	new PluginSavestateEntry( PluginId_FW ),
+	new PluginSavestateEntry( PluginId_DEV9 ),
+
 };
 
 static const uint NumSavestateEntries = ArraySize(SavestateEntries);
@@ -169,7 +270,9 @@ static void CheckVersion( pxInputStream& thr )
 // --------------------------------------------------------------------------------------
 //  SysExecEvent_DownloadState
 // --------------------------------------------------------------------------------------
-// Pauses core emulation and downloads the savestate into the state_buffer.
+// Pauses core emulation and downloads the savestate into a memory buffer.  The memory buffer
+// is then mailed to another thread for zip archiving, while the main emulation process is
+// allowed to continue execution.
 //
 class SysExecEvent_DownloadState : public SysExecEvent
 {
@@ -203,19 +306,20 @@ protected:
 		ArchiveEntry internals( EntryFilename_InternalStructures );
 		internals.SetDataIndex( saveme.GetCurrentPos() );
 
-		saveme.FreezeAll();
+		saveme.FreezeBios();
+		saveme.FreezeInternals();
 
 		internals.SetDataSize( saveme.GetCurrentPos() - internals.GetDataIndex() );
 		m_dest_list->Add( internals );
 		
 		for (uint i=0; i<NumSavestateEntries; ++i)
 		{
+			uint startpos = saveme.GetCurrentPos();
+			SavestateEntries[i]->FreezeOut( saveme );
 			m_dest_list->Add( ArchiveEntry( SavestateEntries[i]->GetFilename() )
-				.SetDataIndex( saveme.GetCurrentPos() )
-				.SetDataSize( SavestateEntries[i]->GetDataSize() )
+				.SetDataIndex( startpos )
+				.SetDataSize( saveme.GetCurrentPos() - startpos )
 			);
-
-			saveme.FreezeMem( SavestateEntries[i]->GetDataPtr(), SavestateEntries[i]->GetDataSize() );
 		}
 
 		UI_EnableStateActions();
@@ -326,11 +430,6 @@ protected:
 			gzfp->CloseEntry();
 		}
 
-
-		//m_gzfp->PutNextEntry(EntryFilename_Screenshot);
-		//m_gzfp->Write();
-		//m_gzfp->CloseEntry();
-
 		(*new VmStateCompressThread())
 			.SetSource(m_src_list)
 			.SetOutStream(out)
@@ -411,7 +510,7 @@ protected:
 
 			if (entry->GetName().CmpNoCase(EntryFilename_StateVersion) == 0)
 			{
-				DevCon.WriteLn(L" ... found '%s'", EntryFilename_StateVersion);
+				DevCon.WriteLn( Color_Green, L" ... found '%s'", EntryFilename_StateVersion);
 				foundVersion = true;
 				CheckVersion(*reader);
 				continue;
@@ -419,7 +518,7 @@ protected:
 
 			if (entry->GetName().CmpNoCase(EntryFilename_InternalStructures) == 0)
 			{
-				DevCon.WriteLn(L" ... found '%s'", EntryFilename_InternalStructures);
+				DevCon.WriteLn( Color_Green, L" ... found '%s'", EntryFilename_InternalStructures);
 				foundInternal = entry.DetachPtr();
 				continue;
 			}
@@ -435,7 +534,7 @@ protected:
 			{
 				if (entry->GetName().CmpNoCase(SavestateEntries[i]->GetFilename()) == 0)
 				{
-					DevCon.WriteLn( Color_Green, L" ... found '%s'", SavestateEntries[i]->GetFilename() );
+					DevCon.WriteLn( Color_Green, L" ... found '%s'", SavestateEntries[i]->GetFilename().c_str() );
 					foundEntry[i] = entry.DetachPtr();
 					break;
 				}
@@ -475,18 +574,8 @@ protected:
 			Threading::pxTestCancel();
 
 			gzreader->OpenEntry( *foundEntry[i] );
-			const uint entrySize		= foundEntry[i]->GetSize();
-			const uint expectedSize		= SavestateEntries[i]->GetDataSize();
-
-			if (entrySize < expectedSize)
-			{
-				Console.WriteLn( Color_Yellow, " '%s' is incomplete (expected 0x%x bytes, loading only 0x%x bytes)",
-					SavestateEntries[i]->GetFilename(), expectedSize, entrySize );
-			}
-
-			uint copylen = std::min(entrySize, expectedSize);
-			reader->Read( SavestateEntries[i]->GetDataPtr(), copylen );
-		}		
+			SavestateEntries[i]->FreezeIn( *reader );
+		}
 
 		// Load all the internal data
 
@@ -495,7 +584,7 @@ protected:
 		VmStateBuffer buffer( foundInternal->GetSize(), L"StateBuffer_UnzipFromDisk" );		// start with an 8 meg buffer to avoid frequent reallocation.
 		reader->Read( buffer.GetPtr(), foundInternal->GetSize() );
 
-		memLoadingState( buffer ).FreezeAll();
+		memLoadingState( buffer ).FreezeBios().FreezeInternals();
 		GetCoreThread().Resume();	// force resume regardless of emulation state earlier.
 	}
 };
@@ -527,6 +616,15 @@ void StateCopy_LoadFromFile( const wxString& file )
 void StateCopy_SaveToSlot( uint num )
 {
 	const wxString file( SaveStateBase::GetFilename( num ) );
+
+	// Backup old Savestate if one exists.
+	if( wxFileExists( file ) && EmuConfig.BackupSavestate )
+	{
+		const wxString copy( SaveStateBase::GetFilename( num ) + pxsFmt( L".backup") );
+		
+		Console.Indent().WriteLn( Color_StrongGreen, L"Backing up existing state in slot %d.", num);
+		wxCopyFile( file, copy );
+	}
 
 	Console.WriteLn( Color_StrongGreen, "Saving savestate to slot %d...", num );
 	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", file.c_str() );
