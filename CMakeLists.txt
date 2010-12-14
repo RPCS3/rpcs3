@@ -77,6 +77,7 @@ set(resourceList AppIcon16.png
 				 AppIcon32.png
 				 AppIcon64.png
 				 BackgroundLogo.png
+                 ConfigIcon_Appearance.png
 				 ButtonIcon_Camera.png
 				 ConfigIcon_Cpu.png
 				 ConfigIcon_Gamefixes.png
