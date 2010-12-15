@@ -75,7 +75,6 @@ void BaseCompressThread::ExecuteTaskInThread()
 		woot.CloseEntry();
 	}
 
-
 	m_gzfp->Close();
 
 	if( !wxRenameFile( m_gzfp->GetStreamName(), m_final_filename, true ) )

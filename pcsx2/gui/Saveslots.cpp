@@ -37,6 +37,8 @@ bool States_isSlotUsed(int num)
 		return wxFileExists( SaveStateBase::GetFilename( num ) );
 }
 
+// FIXME : Use of the IsSavingOrLoading flag is mostly a hack until we implement a
+// complete thread to manage queuing savestate tasks, and zipping states to disk.  --air
 static volatile u32 IsSavingOrLoading = false;
 
 class SysExecEvent_ClearSavingLoadingFlag : public SysExecEvent
@@ -60,7 +62,10 @@ protected:
 
 void States_FreezeCurrentSlot()
 {
-	if( AtomicExchange(IsSavingOrLoading, true) )
+	// FIXME : Use of the IsSavingOrLoading flag is mostly a hack until we implement a
+	// complete thread to manage queuing savestate tasks, and zipping states to disk.  --air
+
+	if( wxGetApp().HasPendingSaves() || AtomicExchange(IsSavingOrLoading, true) )
 	{
 		Console.WriteLn( "Load or save action is already pending." );
 		return;
@@ -84,8 +89,6 @@ void States_DefrostCurrentSlot()
 	StateCopy_LoadFromSlot( StatesC );
 
 	GetSysExecutorThread().PostIdleEvent( SysExecEvent_ClearSavingLoadingFlag() );
-
-	//SysStatus( wxsFormat( _("Loaded State (slot %d)"), StatesC ) );
 }
 
 static void OnSlotChanged()

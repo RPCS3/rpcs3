@@ -605,6 +605,8 @@ wxString SysGetDiscID()
 		// FIXME: system is currently running the BIOS, so it should return a serial based on
 		// the BIOS being run (either a checksum of the BIOS roms, and/or a string based on BIOS
 		// region and revision).
+		
+		return wxEmptyString;
 	}
 
 	return pxsFmt( L"%08x", ElfCRC );

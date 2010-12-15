@@ -539,6 +539,7 @@ public:
 	void WipeUserModeSettings();
 	void ReadUserModeSettings();
 
+	bool HasPendingSaves() const;
 	void StartPendingSave();
 	void ClearPendingSave();
 	
