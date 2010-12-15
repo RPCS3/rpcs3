@@ -332,10 +332,13 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		}
 	}
 
-	if (gameName.IsEmpty() && gameSerial.IsEmpty() && BiosChecksum)
+	if (gameName.IsEmpty() && gameSerial.IsEmpty() && gameCRC.IsEmpty())
 	{
-		gameName = L"BIOS";
-		gameCRC.Printf( L"%8.8x", BiosChecksum );
+		// if all these conditions are met, it should mean that we're currently running BIOS code.
+		// Chances are the BiosChecksum value is still zero or out of date, however -- because
+		// the BIos isn't loaded until after initial calls to ApplySettings.
+
+		gameName = L"Booting PS2 BIOS... ";
 	}
 
 	if (EmuConfig.EnableCheats) {

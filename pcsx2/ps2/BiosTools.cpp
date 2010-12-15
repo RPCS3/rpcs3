@@ -64,7 +64,7 @@ Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename )
 
 // This method throws a BadStream exception if the bios information could not be obtained.
 //  (indicating that the file is invalid, incomplete, corrupted, or plain naughty).
-static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& description )
+static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& description, wxString& zoneStr=wxString() )
 {
 	uint i;
 	romdir rd;
@@ -132,6 +132,7 @@ static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& descript
 			Console.WriteLn(L"Bios Found: %s", result.c_str());
 
 			description = result.c_str();
+			zoneStr = fromUTF8(zone);
 		}
 
 		if ((rd.fileSize % 0x10) == 0)
@@ -196,11 +197,11 @@ static void LoadExtraRom( const wxChar* ext, u8 (&dest)[_size] )
 			}
 		}
 
-		// if we made it this far, we have a successful file found:
-
 		wxFile fp( Bios1 );
 		fp.Read( dest, std::min<s64>( _size, filesize ) );
-		ChecksumIt( BiosChecksum, dest );
+		
+		// Checksum for ROM1, ROM2, EROM?  Rama says no, Gigaherz says yes.  I'm not sure either way.  --air
+		//ChecksumIt( BiosChecksum, dest );
 	}
 	catch (Exception::BadStream& ex)
 	{
@@ -212,9 +213,7 @@ static void LoadExtraRom( const wxChar* ext, u8 (&dest)[_size] )
 		Console.Indent().WriteLn(L"Details: %s", ex.FormatDiagnosticMessage());
 		Console.Indent().WriteLn(L"File size: %llu", filesize);
 	}
-
 }
-
 
 // Loads the configured bios rom file into PS2 memory.  PS2 memory must be allocated prior to
 // this method being called.
@@ -248,13 +247,16 @@ void LoadBIOS()
 
 		BiosChecksum = 0;
 
+		wxString biosZone;
 		wxFFile fp( Bios );
 		fp.Read( eeMem->ROM, std::min<s64>( Ps2MemSize::Rom, filesize ) );
 
 		ChecksumIt( BiosChecksum, eeMem->ROM );
 
 		pxInputStream memfp( Bios, new wxMemoryInputStream( eeMem->ROM, sizeof(eeMem->ROM) ) );
-		LoadBiosVersion( memfp, BiosVersion, BiosDescription );
+		LoadBiosVersion( memfp, BiosVersion, BiosDescription, biosZone );
+		
+		Console.SetTitle( pxsFmt( "Running BIOS (%s v%u.%u)", biosZone.c_str(), BiosChecksum, BiosVersion >> 8, BiosVersion & 0xff ) );
 
 		//injectIRX("host.irx");	//not fully tested; still buggy
 
