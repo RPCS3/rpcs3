@@ -229,6 +229,9 @@ bool GSDevice11::Create(GSWnd* wnd)
 		}
 	}
 
+	if (m_msaa_desc.Count == 1)
+		m_msaa = 0;
+
 	// convert
 
 	D3D11_INPUT_ELEMENT_DESC il_convert[] =
