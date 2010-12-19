@@ -35,7 +35,6 @@
             this.cmdBrowseDumps = new System.Windows.Forms.Button();
             this.lblDumpDirectory = new System.Windows.Forms.Label();
             this.txtDumpsDirectory = new System.Windows.Forms.TextBox();
-            this.cmdSaveAndReload = new System.Windows.Forms.Button();
             this.lstGSDX = new System.Windows.Forms.ListBox();
             this.lstDumps = new System.Windows.Forms.ListBox();
             this.lblDumps = new System.Windows.Forms.Label();
@@ -52,21 +51,24 @@
             this.rdaDX10SW = new System.Windows.Forms.RadioButton();
             this.lblOverride = new System.Windows.Forms.Label();
             this.rdaNone = new System.Windows.Forms.RadioButton();
+            this.lblInternalLog = new System.Windows.Forms.Label();
+            this.txtIntLog = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
             // txtGSDXDirectory
             // 
-            this.txtGSDXDirectory.Location = new System.Drawing.Point(624, 26);
+            this.txtGSDXDirectory.Location = new System.Drawing.Point(703, 25);
             this.txtGSDXDirectory.Name = "txtGSDXDirectory";
             this.txtGSDXDirectory.Size = new System.Drawing.Size(243, 20);
             this.txtGSDXDirectory.TabIndex = 0;
             this.txtGSDXDirectory.TabStop = false;
+            this.txtGSDXDirectory.Leave += new System.EventHandler(this.txtGSDXDirectory_Leave);
             // 
             // lblDirectory
             // 
             this.lblDirectory.AutoSize = true;
-            this.lblDirectory.Location = new System.Drawing.Point(627, 10);
+            this.lblDirectory.Location = new System.Drawing.Point(706, 9);
             this.lblDirectory.Name = "lblDirectory";
             this.lblDirectory.Size = new System.Drawing.Size(82, 13);
             this.lblDirectory.TabIndex = 1;
@@ -74,7 +76,7 @@
             // 
             // cmdBrowseGSDX
             // 
-            this.cmdBrowseGSDX.Location = new System.Drawing.Point(873, 24);
+            this.cmdBrowseGSDX.Location = new System.Drawing.Point(952, 23);
             this.cmdBrowseGSDX.Name = "cmdBrowseGSDX";
             this.cmdBrowseGSDX.Size = new System.Drawing.Size(29, 23);
             this.cmdBrowseGSDX.TabIndex = 2;
@@ -85,7 +87,7 @@
             // 
             // cmdBrowseDumps
             // 
-            this.cmdBrowseDumps.Location = new System.Drawing.Point(873, 67);
+            this.cmdBrowseDumps.Location = new System.Drawing.Point(952, 66);
             this.cmdBrowseDumps.Name = "cmdBrowseDumps";
             this.cmdBrowseDumps.Size = new System.Drawing.Size(29, 23);
             this.cmdBrowseDumps.TabIndex = 5;
@@ -97,7 +99,7 @@
             // lblDumpDirectory
             // 
             this.lblDumpDirectory.AutoSize = true;
-            this.lblDumpDirectory.Location = new System.Drawing.Point(624, 54);
+            this.lblDumpDirectory.Location = new System.Drawing.Point(703, 53);
             this.lblDumpDirectory.Name = "lblDumpDirectory";
             this.lblDumpDirectory.Size = new System.Drawing.Size(85, 13);
             this.lblDumpDirectory.TabIndex = 4;
@@ -105,29 +107,19 @@
             // 
             // txtDumpsDirectory
             // 
-            this.txtDumpsDirectory.Location = new System.Drawing.Point(624, 70);
+            this.txtDumpsDirectory.Location = new System.Drawing.Point(703, 69);
             this.txtDumpsDirectory.Name = "txtDumpsDirectory";
             this.txtDumpsDirectory.Size = new System.Drawing.Size(243, 20);
             this.txtDumpsDirectory.TabIndex = 3;
             this.txtDumpsDirectory.TabStop = false;
-            // 
-            // cmdSaveAndReload
-            // 
-            this.cmdSaveAndReload.Location = new System.Drawing.Point(626, 97);
-            this.cmdSaveAndReload.Name = "cmdSaveAndReload";
-            this.cmdSaveAndReload.Size = new System.Drawing.Size(276, 23);
-            this.cmdSaveAndReload.TabIndex = 6;
-            this.cmdSaveAndReload.TabStop = false;
-            this.cmdSaveAndReload.Text = "Save And Reload";
-            this.cmdSaveAndReload.UseVisualStyleBackColor = true;
-            this.cmdSaveAndReload.Click += new System.EventHandler(this.cmdSave_Click);
+            this.txtDumpsDirectory.Leave += new System.EventHandler(this.txtDumpsDirectory_Leave);
             // 
             // lstGSDX
             // 
             this.lstGSDX.FormattingEnabled = true;
-            this.lstGSDX.Location = new System.Drawing.Point(319, 24);
+            this.lstGSDX.Location = new System.Drawing.Point(367, 24);
             this.lstGSDX.Name = "lstGSDX";
-            this.lstGSDX.Size = new System.Drawing.Size(301, 225);
+            this.lstGSDX.Size = new System.Drawing.Size(330, 199);
             this.lstGSDX.TabIndex = 1;
             // 
             // lstDumps
@@ -135,7 +127,7 @@
             this.lstDumps.FormattingEnabled = true;
             this.lstDumps.Location = new System.Drawing.Point(12, 24);
             this.lstDumps.Name = "lstDumps";
-            this.lstDumps.Size = new System.Drawing.Size(301, 225);
+            this.lstDumps.Size = new System.Drawing.Size(349, 199);
             this.lstDumps.TabIndex = 0;
             this.lstDumps.SelectedIndexChanged += new System.EventHandler(this.lstDumps_SelectedIndexChanged);
             // 
@@ -151,7 +143,7 @@
             // GsdxList
             // 
             this.GsdxList.AutoSize = true;
-            this.GsdxList.Location = new System.Drawing.Point(316, 9);
+            this.GsdxList.Location = new System.Drawing.Point(364, 9);
             this.GsdxList.Name = "GsdxList";
             this.GsdxList.Size = new System.Drawing.Size(56, 13);
             this.GsdxList.TabIndex = 10;
@@ -159,7 +151,7 @@
             // 
             // cmdStart
             // 
-            this.cmdStart.Location = new System.Drawing.Point(720, 192);
+            this.cmdStart.Location = new System.Drawing.Point(802, 164);
             this.cmdStart.Name = "cmdStart";
             this.cmdStart.Size = new System.Drawing.Size(182, 58);
             this.cmdStart.TabIndex = 11;
@@ -170,7 +162,7 @@
             // 
             // cmdConfigGSDX
             // 
-            this.cmdConfigGSDX.Location = new System.Drawing.Point(720, 130);
+            this.cmdConfigGSDX.Location = new System.Drawing.Point(802, 102);
             this.cmdConfigGSDX.Name = "cmdConfigGSDX";
             this.cmdConfigGSDX.Size = new System.Drawing.Size(88, 56);
             this.cmdConfigGSDX.TabIndex = 12;
@@ -181,27 +173,27 @@
             // 
             // txtLog
             // 
-            this.txtLog.Location = new System.Drawing.Point(269, 275);
+            this.txtLog.Location = new System.Drawing.Point(269, 249);
             this.txtLog.Multiline = true;
             this.txtLog.Name = "txtLog";
             this.txtLog.ReadOnly = true;
             this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtLog.Size = new System.Drawing.Size(633, 208);
+            this.txtLog.Size = new System.Drawing.Size(351, 208);
             this.txtLog.TabIndex = 13;
             this.txtLog.TabStop = false;
             // 
             // lblLog
             // 
             this.lblLog.AutoSize = true;
-            this.lblLog.Location = new System.Drawing.Point(266, 259);
+            this.lblLog.Location = new System.Drawing.Point(266, 233);
             this.lblLog.Name = "lblLog";
-            this.lblLog.Size = new System.Drawing.Size(25, 13);
+            this.lblLog.Size = new System.Drawing.Size(58, 13);
             this.lblLog.TabIndex = 14;
-            this.lblLog.Text = "Log";
+            this.lblLog.Text = "Log GSDX";
             // 
             // cmdOpenIni
             // 
-            this.cmdOpenIni.Location = new System.Drawing.Point(814, 130);
+            this.cmdOpenIni.Location = new System.Drawing.Point(896, 102);
             this.cmdOpenIni.Name = "cmdOpenIni";
             this.cmdOpenIni.Size = new System.Drawing.Size(88, 56);
             this.cmdOpenIni.TabIndex = 15;
@@ -212,7 +204,7 @@
             // 
             // pctBox
             // 
-            this.pctBox.Location = new System.Drawing.Point(12, 262);
+            this.pctBox.Location = new System.Drawing.Point(12, 236);
             this.pctBox.Name = "pctBox";
             this.pctBox.Size = new System.Drawing.Size(248, 221);
             this.pctBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
@@ -223,7 +215,7 @@
             // rdaDX9HW
             // 
             this.rdaDX9HW.AutoSize = true;
-            this.rdaDX9HW.Location = new System.Drawing.Point(626, 165);
+            this.rdaDX9HW.Location = new System.Drawing.Point(708, 137);
             this.rdaDX9HW.Name = "rdaDX9HW";
             this.rdaDX9HW.Size = new System.Drawing.Size(68, 17);
             this.rdaDX9HW.TabIndex = 18;
@@ -235,7 +227,7 @@
             // rdaDX10HW
             // 
             this.rdaDX10HW.AutoSize = true;
-            this.rdaDX10HW.Location = new System.Drawing.Point(626, 188);
+            this.rdaDX10HW.Location = new System.Drawing.Point(708, 160);
             this.rdaDX10HW.Name = "rdaDX10HW";
             this.rdaDX10HW.Size = new System.Drawing.Size(74, 17);
             this.rdaDX10HW.TabIndex = 19;
@@ -247,7 +239,7 @@
             // rdaDX9SW
             // 
             this.rdaDX9SW.AutoSize = true;
-            this.rdaDX9SW.Location = new System.Drawing.Point(626, 211);
+            this.rdaDX9SW.Location = new System.Drawing.Point(708, 183);
             this.rdaDX9SW.Name = "rdaDX9SW";
             this.rdaDX9SW.Size = new System.Drawing.Size(67, 17);
             this.rdaDX9SW.TabIndex = 20;
@@ -259,7 +251,7 @@
             // rdaDX10SW
             // 
             this.rdaDX10SW.AutoSize = true;
-            this.rdaDX10SW.Location = new System.Drawing.Point(626, 234);
+            this.rdaDX10SW.Location = new System.Drawing.Point(708, 206);
             this.rdaDX10SW.Name = "rdaDX10SW";
             this.rdaDX10SW.Size = new System.Drawing.Size(73, 17);
             this.rdaDX10SW.TabIndex = 21;
@@ -271,7 +263,7 @@
             // lblOverride
             // 
             this.lblOverride.AutoSize = true;
-            this.lblOverride.Location = new System.Drawing.Point(621, 130);
+            this.lblOverride.Location = new System.Drawing.Point(703, 102);
             this.lblOverride.Name = "lblOverride";
             this.lblOverride.Size = new System.Drawing.Size(94, 13);
             this.lblOverride.TabIndex = 22;
@@ -281,7 +273,7 @@
             // 
             this.rdaNone.AutoSize = true;
             this.rdaNone.Checked = true;
-            this.rdaNone.Location = new System.Drawing.Point(625, 146);
+            this.rdaNone.Location = new System.Drawing.Point(707, 118);
             this.rdaNone.Name = "rdaNone";
             this.rdaNone.Size = new System.Drawing.Size(51, 17);
             this.rdaNone.TabIndex = 23;
@@ -291,11 +283,33 @@
             this.rdaNone.UseVisualStyleBackColor = true;
             this.rdaNone.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
+            // lblInternalLog
+            // 
+            this.lblInternalLog.AutoSize = true;
+            this.lblInternalLog.Location = new System.Drawing.Point(626, 233);
+            this.lblInternalLog.Name = "lblInternalLog";
+            this.lblInternalLog.Size = new System.Drawing.Size(63, 13);
+            this.lblInternalLog.TabIndex = 25;
+            this.lblInternalLog.Text = "Log Internal";
+            // 
+            // txtIntLog
+            // 
+            this.txtIntLog.Location = new System.Drawing.Point(629, 249);
+            this.txtIntLog.Multiline = true;
+            this.txtIntLog.Name = "txtIntLog";
+            this.txtIntLog.ReadOnly = true;
+            this.txtIntLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtIntLog.Size = new System.Drawing.Size(351, 208);
+            this.txtIntLog.TabIndex = 24;
+            this.txtIntLog.TabStop = false;
+            // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(906, 495);
+            this.ClientSize = new System.Drawing.Size(988, 467);
+            this.Controls.Add(this.lblInternalLog);
+            this.Controls.Add(this.txtIntLog);
             this.Controls.Add(this.rdaNone);
             this.Controls.Add(this.lblOverride);
             this.Controls.Add(this.rdaDX10SW);
@@ -312,7 +326,6 @@
             this.Controls.Add(this.GsdxList);
             this.Controls.Add(this.lblDumps);
             this.Controls.Add(this.lstDumps);
-            this.Controls.Add(this.cmdSaveAndReload);
             this.Controls.Add(this.cmdBrowseDumps);
             this.Controls.Add(this.lblDumpDirectory);
             this.Controls.Add(this.txtDumpsDirectory);
@@ -341,7 +354,6 @@
         private System.Windows.Forms.Button cmdBrowseDumps;
         private System.Windows.Forms.Label lblDumpDirectory;
         private System.Windows.Forms.TextBox txtDumpsDirectory;
-        private System.Windows.Forms.Button cmdSaveAndReload;
         private System.Windows.Forms.ListBox lstGSDX;
         private System.Windows.Forms.ListBox lstDumps;
         private System.Windows.Forms.Label lblDumps;
@@ -358,6 +370,8 @@
         private System.Windows.Forms.RadioButton rdaDX10SW;
         private System.Windows.Forms.Label lblOverride;
         private System.Windows.Forms.RadioButton rdaNone;
+        private System.Windows.Forms.Label lblInternalLog;
+        private System.Windows.Forms.TextBox txtIntLog;
     }
 }
 

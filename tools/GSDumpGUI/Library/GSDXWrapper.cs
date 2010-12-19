@@ -57,6 +57,7 @@ namespace GSDumpGUI
         {
             this.DLL = DLL;
             NativeMethods.SetErrorMode(0x8007);
+
             if (!IsValidGSDX(DLL))
                 throw new Exception("Invalid GSDX DLL");
 

@@ -63,6 +63,8 @@ namespace GSDumpGUI
 
         public void ReloadGSDXs()
         {
+            txtIntLog.Text += "Starting GSDX Loading Procedures" + Environment.NewLine + Environment.NewLine;
+
             txtGSDXDirectory.Text = Properties.Settings.Default.GSDXDir;
             txtDumpsDirectory.Text = Properties.Settings.Default.DumpDir;
 
@@ -79,11 +81,24 @@ namespace GSDumpGUI
                     if (GSDXWrapper.IsValidGSDX(itm))
                     {
                         wrap.Load(itm);
+
                         lstGSDX.Items.Add(Path.GetFileName(itm) + " | " + wrap.PSEGetLibName());
+                        txtIntLog.Text += "\"" + itm + "\" correctly identified as " + wrap.PSEGetLibName() + Environment.NewLine;
+                        
                         wrap.Unload();
                     }
+                    else
+                    {
+                        txtIntLog.Text += "Failed to load \"" + itm + "\". Is it really a GSDX DLL?" + Environment.NewLine;
+                    }
                 }
+            }
 
+            txtIntLog.Text += Environment.NewLine + "Completed GSDX Loading Procedures" + Environment.NewLine + Environment.NewLine;
+
+            txtIntLog.Text += "Starting GSDX Dumps Loading Procedures : " + Environment.NewLine + Environment.NewLine;
+            if (Directory.Exists(txtDumpsDirectory.Text))
+            {
                 String[] Dumps = Directory.GetFiles(txtDumpsDirectory.Text, "*.gs", SearchOption.TopDirectoryOnly);
 
                 foreach (var itm in Dumps)
@@ -91,9 +106,13 @@ namespace GSDumpGUI
                     BinaryReader br = new BinaryReader(System.IO.File.Open(itm, FileMode.Open));
                     Int32 CRC = br.ReadInt32();
                     br.Close();
-                    lstDumps.Items.Add(Path.GetFileName(itm) +  " | CRC : " + CRC.ToString("X"));
+                    lstDumps.Items.Add(Path.GetFileName(itm) + " | CRC : " + CRC.ToString("X"));
+                    txtIntLog.Text += "Identified Dump for game (" + CRC.ToString("X") + ") with filename \"" + itm + "\"" + Environment.NewLine;
                 }
             }
+            txtIntLog.Text += Environment.NewLine + "Completed GSDX Dumps Loading Procedures : " + Environment.NewLine + Environment.NewLine;
+            txtIntLog.SelectionStart = txtIntLog.TextLength;
+            txtIntLog.ScrollToCaret();
         }
 
         private void GSDumpGUI_Load(object sender, EventArgs e)
@@ -111,6 +130,8 @@ namespace GSDumpGUI
             fbd.SelectedPath = AppDomain.CurrentDomain.BaseDirectory;
             if (fbd.ShowDialog() == DialogResult.OK)
                 txtGSDXDirectory.Text = fbd.SelectedPath;
+            SaveConfig();
+            ReloadGSDXs();
         }
 
         private void cmdBrowseDumps_Click(object sender, EventArgs e)
@@ -120,33 +141,8 @@ namespace GSDumpGUI
             fbd.SelectedPath = AppDomain.CurrentDomain.BaseDirectory;
             if (fbd.ShowDialog() == DialogResult.OK)
                 txtDumpsDirectory.Text = fbd.SelectedPath;
-        }
-
-        private void cmdSave_Click(object sender, EventArgs e)
-        {
-            Boolean Err = false;
-
-            if (System.IO.Directory.Exists(txtDumpsDirectory.Text))
-                Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
-            else
-            {
-                Err = true;
-                MessageBox.Show("Select a correct directory for dumps", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-
-            if (System.IO.Directory.Exists(txtGSDXDirectory.Text))
-                Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
-            else
-            {
-                Err = true;
-                MessageBox.Show("Select a correct directory for GSDX", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-
-            if (!Err)
-            {
-                Properties.Settings.Default.Save();
-                ReloadGSDXs();
-            }
+            SaveConfig();
+            ReloadGSDXs();
         }
 
         private void cmdStart_Click(object sender, EventArgs e)
@@ -335,6 +331,25 @@ namespace GSDumpGUI
             RadioButton itm = ((RadioButton)(sender));
             if (itm.Checked == true)
                 SelectedRad = Convert.ToInt32(itm.Tag);
+        }
+
+        private void txtGSDXDirectory_Leave(object sender, EventArgs e)
+        {
+            SaveConfig();
+            ReloadGSDXs();
+        }
+
+        private void txtDumpsDirectory_Leave(object sender, EventArgs e)
+        {
+            SaveConfig(); 
+            ReloadGSDXs();
+        }
+
+        private void SaveConfig()
+        {
+            Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
+            Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
+            Properties.Settings.Default.Save();
         }
     }
 }
