@@ -35,5 +35,9 @@ namespace GSDumpGUI
         [SuppressUnmanagedCodeSecurityAttribute]
         [DllImport("user32", CharSet = CharSet.Ansi)]
         public extern static int SetClassLong(IntPtr HWND, int index, long newlong);
+
+        [SuppressUnmanagedCodeSecurityAttribute]
+        [DllImport("user32", CharSet = CharSet.Ansi)]
+        public extern static bool IsWindowVisible(IntPtr HWND);
     }
 }

@@ -36,7 +36,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
@@ -54,6 +54,8 @@
     <Compile Include="Forms\frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
+    <Compile Include="Library\GSDump\GSData.cs" />
+    <Compile Include="Library\GSDump\GSDump.cs" />
     <Compile Include="Library\GSDXWrapper.cs" />
     <Compile Include="Library\NativeMethods.cs" />
     <Compile Include="Core\Program.cs" />

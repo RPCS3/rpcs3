@@ -55,11 +55,9 @@ namespace GSDumpGUI
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + Path.GetFileName(DLLPath) + "\\"));
                 if (Operation == "GSReplay")
                 {
+                    GSDump dump = GSDump.LoadDump(DumpPath);
+                    wrap.Run(dump, Renderer);
                     ChangeIcon = true;
-                    if (Renderer != -1)
-                        wrap.GSReplayDump(Renderer + " " + DumpPath);
-                    else
-                        wrap.GSReplayDump(DumpPath);
                 }
                 else
                     wrap.GSConfig();
