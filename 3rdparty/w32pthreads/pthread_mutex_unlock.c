@@ -60,8 +60,7 @@ pthread_mutex_unlock (pthread_mutex_t * mutex)
 	{
 	  LONG idx;
 
-	  idx = (LONG) PTW32_INTERLOCKED_EXCHANGE ((LPLONG) &mx->lock_idx,
-						   (LONG) 0);
+	  idx = _InterlockedExchange (&mx->lock_idx, 0);
 	  if (idx != 0)
 	    {
 	      if (idx < 0)
@@ -92,8 +91,7 @@ pthread_mutex_unlock (pthread_mutex_t * mutex)
 		{
 		  mx->ownerThread.p = NULL;
 
-		  if ((LONG) PTW32_INTERLOCKED_EXCHANGE ((LPLONG) &mx->lock_idx,
-							 (LONG) 0) < 0)
+		  if (_InterlockedExchange (&mx->lock_idx, 0) < 0)
 		    {
 		      /* Someone may be waiting on that mutex */
 		      if (SetEvent (mx->event) == 0)
