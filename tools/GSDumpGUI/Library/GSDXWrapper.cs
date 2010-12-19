@@ -65,7 +65,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
 
                 NativeMethods.FreeLibrary(hmod);
-                if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0)))
+                if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0) && (funcaddrGIF.ToInt64() > 0)))
                 {
                     Int32 id = NativeMethods.GetLastError();
                     System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
