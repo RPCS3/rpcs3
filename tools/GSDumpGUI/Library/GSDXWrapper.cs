@@ -6,7 +6,6 @@ using System.IO;
 
 namespace GSDumpGUI
 {
-    public delegate void GSReplay(IntPtr HWND, IntPtr HInstance, String File, Boolean Show);
     public delegate void GSgifTransfer1(IntPtr data, int size);
     public delegate void GSgifTransfer2(IntPtr data, int size);
     public delegate void GSgifTransfer3(IntPtr data, int size);
@@ -24,8 +23,6 @@ namespace GSDumpGUI
 
     public class GSDXWrapper
     {
-
-        private GSReplay gsReplay;
         private GSConfigure gsConfigure;
         private PSEgetLibName PsegetLibName;
         private GSgifTransfer1 GSgifTransfer1;
@@ -57,7 +54,6 @@ namespace GSDumpGUI
             IntPtr hmod = NativeMethods.LoadLibrary(DLL);
             if (hmod.ToInt64() > 0)
             {
-                IntPtr funcaddrReplay = NativeMethods.GetProcAddress(hmod, "GSReplay");
                 IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
@@ -75,7 +71,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
 
                 NativeMethods.FreeLibrary(hmod);
-                if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0) && (funcaddrReplay.ToInt64() > 0)))
+                if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0)))
                 {
                     Int32 id = NativeMethods.GetLastError();
                     System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
@@ -109,7 +105,6 @@ namespace GSDumpGUI
             IntPtr hmod = NativeMethods.LoadLibrary(DLL);
             if (hmod.ToInt64() > 0)
             {
-                IntPtr funcaddrReplay = NativeMethods.GetProcAddress(hmod, "GSReplay");
                 IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
@@ -126,7 +121,6 @@ namespace GSDumpGUI
                 IntPtr funcaddrGSreadFIFO2 = NativeMethods.GetProcAddress(hmod, "GSreadFIFO2");
                 IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
 
-                gsReplay = (GSReplay)Marshal.GetDelegateForFunctionPointer(funcaddrReplay, typeof(GSReplay));
                 gsConfigure = (GSConfigure)Marshal.GetDelegateForFunctionPointer(funcaddrConfig, typeof(GSConfigure));
                 PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
 
@@ -161,13 +155,6 @@ namespace GSDumpGUI
             gsConfigure.Invoke();
         }
 
-        public void GSReplayDump(String DumpFilename)
-        {
-            if (!Loaded)
-                throw new Exception("GSDX is not loaded");
-            gsReplay.Invoke(new IntPtr(0), new IntPtr(0), DumpFilename, false);
-        }
-
         public String PSEGetLibName()
         {
             if (!Loaded)
@@ -191,7 +178,7 @@ namespace GSDumpGUI
                     GSVSync(1);
 
                     while (Running)
-                    { /*"C:\Users\Alessio\Desktop\Plugins\Dll\gsdx-sse4-r3878.dll" "C:\Users\Alessio\Desktop\Plugins\Dumps\gsdx_20100603052628.gs" "GSReplay" 0*/
+                    {
                         if (!NativeMethods.IsWindowVisible(new IntPtr(HWND)))
                         {
                             Running = false;
