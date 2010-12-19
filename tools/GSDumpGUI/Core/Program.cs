@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
 using GSDumpGUI.Properties;
+using System.IO;
 
 namespace GSDumpGUI
 {
@@ -51,6 +52,7 @@ namespace GSDumpGUI
 
                 GSDXWrapper wrap = new GSDXWrapper();
                 wrap.Load(DLLPath);
+                Directory.SetCurrentDirectory(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + Path.GetFileName(DLLPath) + "\\"));
                 if (Operation == "GSReplay")
                 {
                     ChangeIcon = true;

@@ -124,18 +124,29 @@ namespace GSDumpGUI
 
         private void cmdSave_Click(object sender, EventArgs e)
         {
+            Boolean Err = false;
+
             if (System.IO.Directory.Exists(txtDumpsDirectory.Text))
                 Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
             else
+            {
+                Err = true;
                 MessageBox.Show("Select a correct directory for dumps", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
             if (System.IO.Directory.Exists(txtGSDXDirectory.Text))
                 Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
             else
+            {
+                Err = true;
                 MessageBox.Show("Select a correct directory for GSDX", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
-            Properties.Settings.Default.Save();
-            ReloadGSDXs();
+            if (!Err)
+            {
+                Properties.Settings.Default.Save();
+                ReloadGSDXs();
+            }
         }
 
         private void cmdStart_Click(object sender, EventArgs e)

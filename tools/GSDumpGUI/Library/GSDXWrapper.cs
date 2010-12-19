@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace GSDumpGUI
 {
@@ -24,6 +25,8 @@ namespace GSDumpGUI
         {
             NativeMethods.SetErrorMode(0x8007);
             Boolean Ris = true;
+
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(DLL));
             IntPtr hmod = NativeMethods.LoadLibrary(DLL);
             if (hmod.ToInt64() > 0)
             {
@@ -35,16 +38,17 @@ namespace GSDumpGUI
                 if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0) && (funcaddrReplay.ToInt64() > 0)))
                 {
                     Int32 id = NativeMethods.GetLastError();
-                    System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "test.txt", DLL + " failed to load. Error " + id);
+                    System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
                     Ris = false;
                 }
             }
             else
             {
                 Int32 id = NativeMethods.GetLastError();
-                System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "test.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
+                System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
                 Ris = false;
             }
+
             NativeMethods.SetErrorMode(0x0000);
             return Ris;
         }
@@ -60,6 +64,7 @@ namespace GSDumpGUI
                 Unload();
 
             Loaded = true;
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(DLL));
             IntPtr hmod = NativeMethods.LoadLibrary(DLL);
             if (hmod.ToInt64() > 0)
             {
