@@ -119,7 +119,19 @@ namespace GSDumpGUI
                 case MessageType.SizeDump:
                     frmMain.Invoke(new Action<object>(delegate(object e)
                        {
-                           frmMain.txtDumpSize.Text = (((int)Mess.Parameters[0]) / 1024f / 1024f).ToString("F2");
+                           frmMain.txtDumpSize.Text = (((int)Mess.Parameters[0]) / 1024f / 1024f).ToString("F2") + " MB";
+                       }), new object[] { null });
+                    break;
+                case MessageType.Statistics:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                       {
+                           frmMain.txtGIFPackets.Text = ((int)Mess.Parameters[0]).ToString();
+                           frmMain.txtPath1.Text = ((int)Mess.Parameters[1]).ToString();
+                           frmMain.txtPath2.Text = ((int)Mess.Parameters[2]).ToString();
+                           frmMain.txtPath3.Text = ((int)Mess.Parameters[3]).ToString();
+                           frmMain.txtReadFifo.Text = ((int)Mess.Parameters[5]).ToString();
+                           frmMain.txtVSync.Text = ((int)Mess.Parameters[4]).ToString();
+                           frmMain.txtRegisters.Text = ((int)Mess.Parameters[6]).ToString();
                        }), new object[] { null });
                     break;
                 default:
@@ -129,6 +141,7 @@ namespace GSDumpGUI
 
         static void Client_OnMessageReceived(TCPLibrary.Core.Client sender, TCPLibrary.MessageBased.Core.TCPMessage Mess)
         {
+            TCPMessage msg;
             switch (Mess.MessageType)
             {
                 case TCPLibrary.MessageBased.Core.MessageType.Connect:
@@ -136,12 +149,37 @@ namespace GSDumpGUI
                 case TCPLibrary.MessageBased.Core.MessageType.MaxUsers:
                     break;
                 case TCPLibrary.MessageBased.Core.MessageType.SizeDump:
-                    TCPMessage msg = new TCPMessage();
+                    msg = new TCPMessage();
                     msg.MessageType = MessageType.SizeDump;
                     if (dump != null)
                         msg.Parameters.Add(dump.Size);
                     else
                         msg.Parameters.Add(0);
+                    Client.Send(msg);
+                    break;
+                case MessageType.Statistics:
+                    msg = new TCPMessage();
+                    msg.MessageType = MessageType.Statistics;
+                    if (dump != null)
+                    {
+                        msg.Parameters.Add(dump.Data.Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && (a.data[0] == 3 || a.data[0] == 0)).Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 1).Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 2).Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 1).Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 2).Count);
+                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 3).Count);
+                    }
+                    else
+                    {
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                        msg.Parameters.Add(0);
+                    }
                     Client.Send(msg);
                     break;
                 default:

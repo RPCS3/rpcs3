@@ -59,6 +59,20 @@
             this.lblDumpSize = new System.Windows.Forms.Label();
             this.txtDumpSize = new System.Windows.Forms.Label();
             this.lblWIP = new System.Windows.Forms.Label();
+            this.txtGIFPackets = new System.Windows.Forms.Label();
+            this.lblGIFPackets = new System.Windows.Forms.Label();
+            this.txtPath1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtPath2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtPath3 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.txtVSync = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.txtReadFifo = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.txtRegisters = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
@@ -323,7 +337,7 @@
             this.lstProcesses.FormattingEnabled = true;
             this.lstProcesses.Location = new System.Drawing.Point(12, 502);
             this.lstProcesses.Name = "lstProcesses";
-            this.lstProcesses.Size = new System.Drawing.Size(248, 251);
+            this.lstProcesses.Size = new System.Drawing.Size(248, 277);
             this.lstProcesses.TabIndex = 27;
             this.lstProcesses.SelectedIndexChanged += new System.EventHandler(this.lstProcesses_SelectedIndexChanged);
             // 
@@ -339,9 +353,10 @@
             // lblDumpSize
             // 
             this.lblDumpSize.AutoSize = true;
+            this.lblDumpSize.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblDumpSize.Location = new System.Drawing.Point(279, 487);
             this.lblDumpSize.Name = "lblDumpSize";
-            this.lblDumpSize.Size = new System.Drawing.Size(58, 13);
+            this.lblDumpSize.Size = new System.Drawing.Size(67, 13);
             this.lblDumpSize.TabIndex = 29;
             this.lblDumpSize.Text = "Dump Size";
             // 
@@ -358,17 +373,157 @@
             this.lblWIP.AutoSize = true;
             this.lblWIP.Font = new System.Drawing.Font("Times New Roman", 48F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblWIP.ForeColor = System.Drawing.Color.Red;
-            this.lblWIP.Location = new System.Drawing.Point(407, 589);
+            this.lblWIP.Location = new System.Drawing.Point(468, 587);
             this.lblWIP.Name = "lblWIP";
             this.lblWIP.Size = new System.Drawing.Size(508, 73);
             this.lblWIP.TabIndex = 31;
             this.lblWIP.Text = "Work in Progress";
             // 
+            // txtGIFPackets
+            // 
+            this.txtGIFPackets.AutoSize = true;
+            this.txtGIFPackets.Location = new System.Drawing.Point(279, 539);
+            this.txtGIFPackets.Name = "txtGIFPackets";
+            this.txtGIFPackets.Size = new System.Drawing.Size(0, 13);
+            this.txtGIFPackets.TabIndex = 33;
+            // 
+            // lblGIFPackets
+            // 
+            this.lblGIFPackets.AutoSize = true;
+            this.lblGIFPackets.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblGIFPackets.Location = new System.Drawing.Point(279, 523);
+            this.lblGIFPackets.Name = "lblGIFPackets";
+            this.lblGIFPackets.Size = new System.Drawing.Size(110, 13);
+            this.lblGIFPackets.TabIndex = 32;
+            this.lblGIFPackets.Text = "Total GIF Packets";
+            // 
+            // txtPath1
+            // 
+            this.txtPath1.AutoSize = true;
+            this.txtPath1.Location = new System.Drawing.Point(279, 578);
+            this.txtPath1.Name = "txtPath1";
+            this.txtPath1.Size = new System.Drawing.Size(0, 13);
+            this.txtPath1.TabIndex = 35;
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(279, 560);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(114, 13);
+            this.label2.TabIndex = 34;
+            this.label2.Text = "Path1 GIF Packets";
+            // 
+            // txtPath2
+            // 
+            this.txtPath2.AutoSize = true;
+            this.txtPath2.Location = new System.Drawing.Point(279, 618);
+            this.txtPath2.Name = "txtPath2";
+            this.txtPath2.Size = new System.Drawing.Size(0, 13);
+            this.txtPath2.TabIndex = 37;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.Location = new System.Drawing.Point(279, 601);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(114, 13);
+            this.label3.TabIndex = 36;
+            this.label3.Text = "Path2 GIF Packets";
+            // 
+            // txtPath3
+            // 
+            this.txtPath3.AutoSize = true;
+            this.txtPath3.Location = new System.Drawing.Point(279, 653);
+            this.txtPath3.Name = "txtPath3";
+            this.txtPath3.Size = new System.Drawing.Size(0, 13);
+            this.txtPath3.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(279, 635);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(114, 13);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Path3 GIF Packets";
+            // 
+            // txtVSync
+            // 
+            this.txtVSync.AutoSize = true;
+            this.txtVSync.Location = new System.Drawing.Point(279, 690);
+            this.txtVSync.Name = "txtVSync";
+            this.txtVSync.Size = new System.Drawing.Size(0, 13);
+            this.txtVSync.TabIndex = 41;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label4.Location = new System.Drawing.Point(279, 671);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(91, 13);
+            this.label4.TabIndex = 40;
+            this.label4.Text = "Vsync Packets";
+            // 
+            // txtReadFifo
+            // 
+            this.txtReadFifo.AutoSize = true;
+            this.txtReadFifo.Location = new System.Drawing.Point(279, 724);
+            this.txtReadFifo.Name = "txtReadFifo";
+            this.txtReadFifo.Size = new System.Drawing.Size(0, 13);
+            this.txtReadFifo.TabIndex = 43;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label7.Location = new System.Drawing.Point(279, 709);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(114, 13);
+            this.label7.TabIndex = 42;
+            this.label7.Text = "ReadFIFO Packets";
+            // 
+            // txtRegisters
+            // 
+            this.txtRegisters.AutoSize = true;
+            this.txtRegisters.Location = new System.Drawing.Point(279, 764);
+            this.txtRegisters.Name = "txtRegisters";
+            this.txtRegisters.Size = new System.Drawing.Size(0, 13);
+            this.txtRegisters.TabIndex = 45;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label6.Location = new System.Drawing.Point(279, 744);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(110, 13);
+            this.label6.TabIndex = 44;
+            this.label6.Text = "Registers Packets";
+            // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(988, 766);
+            this.ClientSize = new System.Drawing.Size(988, 790);
+            this.Controls.Add(this.txtRegisters);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.txtReadFifo);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.txtVSync);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.txtPath3);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.txtPath2);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtPath1);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.txtGIFPackets);
+            this.Controls.Add(this.lblGIFPackets);
             this.Controls.Add(this.lblWIP);
             this.Controls.Add(this.txtDumpSize);
             this.Controls.Add(this.lblDumpSize);
@@ -445,6 +600,20 @@
         private System.Windows.Forms.Label lblDumpSize;
         public System.Windows.Forms.Label txtDumpSize;
         private System.Windows.Forms.Label lblWIP;
+        public System.Windows.Forms.Label txtGIFPackets;
+        private System.Windows.Forms.Label lblGIFPackets;
+        public System.Windows.Forms.Label txtPath1;
+        private System.Windows.Forms.Label label2;
+        public System.Windows.Forms.Label txtPath2;
+        private System.Windows.Forms.Label label3;
+        public System.Windows.Forms.Label txtPath3;
+        private System.Windows.Forms.Label label5;
+        public System.Windows.Forms.Label txtVSync;
+        private System.Windows.Forms.Label label4;
+        public System.Windows.Forms.Label txtReadFifo;
+        private System.Windows.Forms.Label label7;
+        public System.Windows.Forms.Label txtRegisters;
+        private System.Windows.Forms.Label label6;
     }
 }
 

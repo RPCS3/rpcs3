@@ -7,6 +7,8 @@ using System.IO;
 namespace GSDumpGUI
 {
     public delegate void GSgifTransfer(IntPtr data, int size);
+    public delegate void GSgifTransfer2(IntPtr data, int size);
+    public delegate void GSgifTransfer3(IntPtr data, int size);
     public delegate void GSVSync(byte field);
     public delegate void GSreadFIFO2(IntPtr data, int size);
     public delegate void GSsetGameCRC(int crc, int options);
@@ -24,6 +26,8 @@ namespace GSDumpGUI
         private GSConfigure gsConfigure;
         private PSEgetLibName PsegetLibName;
         private GSgifTransfer GSgifTransfer;
+        private GSgifTransfer2 GSgifTransfer2;
+        private GSgifTransfer3 GSgifTransfer3;
         private GSVSync GSVSync;
         private GSreadFIFO2 GSreadFIFO2;
         private GSsetGameCRC GSsetGameCRC;
@@ -103,6 +107,8 @@ namespace GSDumpGUI
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
                 IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
+                IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
+                IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
                 IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
                 IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
                 IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
@@ -117,6 +123,8 @@ namespace GSDumpGUI
                 PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
 
                 this.GSgifTransfer = (GSgifTransfer)Marshal.GetDelegateForFunctionPointer(funcaddrGIF, typeof(GSgifTransfer));
+                this.GSgifTransfer2 = (GSgifTransfer2)Marshal.GetDelegateForFunctionPointer(funcaddrGIF2, typeof(GSgifTransfer2));
+                this.GSgifTransfer3 = (GSgifTransfer3)Marshal.GetDelegateForFunctionPointer(funcaddrGIF3, typeof(GSgifTransfer3));
                 this.GSVSync = (GSVSync)Marshal.GetDelegateForFunctionPointer(funcaddrVSync, typeof(GSVSync));
                 this.GSsetBaseMem = (GSsetBaseMem)Marshal.GetDelegateForFunctionPointer(funcaddrSetBaseMem, typeof(GSsetBaseMem));
                 this.GSopen = (GSopen)Marshal.GetDelegateForFunctionPointer(funcaddrOpen, typeof(GSopen));
@@ -188,36 +196,36 @@ namespace GSDumpGUI
 
         private unsafe void Step(GSData itm, byte* registers)
         {
+            /*"C:\Users\Alessio\Desktop\Plugins\Dll\gsdx-sse4-r3878.dll" "C:\Users\Alessio\Desktop\Plugins\Dumps\gsdx_20101219182059.gs" "GSReplay" 0*/
             switch (itm.id)
             {
                 case GSType.Transfer:
                     switch (itm.data[0])
-                    {/*
+                    {
                         case 0:
-                                byte[] data = new byte[16384];
-                                for (int i = 0; i < itm.data; i++)
-                                {
-
-                                }
-                                fixed (byte* gifdata = data)
-                                {
-                                GSgifTransfer1(new IntPtr(gifdata + 5), 16384 - size);
-                            }
-                            break;*/
-                        case 0:
-                        case 1:
-                        case 2:
                             fixed (byte* gifdata = itm.data)
                             {
                                 GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
                             }
-                            break;/*
+                            break;
+                        case 1:
+                            fixed (byte* gifdata = itm.data)
+                            {
+                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                            }
+                            break;
                         case 2:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
+                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
                             }
-                            break;*/
+                            break;
+                        case 3:
+                            fixed (byte* gifdata = itm.data)
+                            {
+                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                            }
+                            break;
                     }
                     break;
                 case GSType.VSync:
@@ -226,7 +234,11 @@ namespace GSDumpGUI
                 case GSType.ReadFIFO2:
                     fixed (byte* FIFO = itm.data)
                     {
-                        GSreadFIFO2(new IntPtr(FIFO), itm.data.Length / 16);
+                        byte[] arrnew = new byte[*((int*)FIFO)];
+                        fixed (byte* arrn = arrnew)
+                        {
+                            GSreadFIFO2(new IntPtr(arrn), *((int*)FIFO));
+                        }
                     }
                     break;
                 case GSType.Registers:

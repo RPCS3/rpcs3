@@ -360,6 +360,9 @@ namespace GSDumpGUI
                 TCPMessage msg = new TCPMessage();
                 msg.MessageType = MessageType.SizeDump;
                 Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+                msg = new TCPMessage();
+                msg.MessageType = MessageType.Statistics;
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
             }
         }
     }

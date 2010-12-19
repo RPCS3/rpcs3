@@ -65,10 +65,12 @@ namespace GSDumpGUI
                         break;
                     case GSType.ReadFIFO2:
                         Int32 sF = br.ReadInt32();
-                        data.data = br.ReadBytes(sF);
+                        data.data = BitConverter.GetBytes(sF);
                         break;
                     case GSType.Registers:
                         data.data = br.ReadBytes(8192);
+                        break;
+                    default:
                         break;
                 }
                 dmp.Data.Add(data);

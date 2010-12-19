@@ -109,6 +109,7 @@ namespace TCPLibrary.MessageBased.Core
     {
         Connect,
         MaxUsers,
-        SizeDump
+        SizeDump,
+        Statistics
     }
 }
