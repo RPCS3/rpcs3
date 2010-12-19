@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
 using System.Security;
+using TCPLibrary.MessageBased.Core;
 
 namespace GSDumpGUI
 {
@@ -350,6 +351,16 @@ namespace GSDumpGUI
             Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
             Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
             Properties.Settings.Default.Save();
+        }
+
+        private void lstProcesses_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (lstProcesses.SelectedIndex != -1)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.SizeDump;
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
         }
     }
 }

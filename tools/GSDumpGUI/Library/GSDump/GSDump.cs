@@ -11,6 +11,22 @@ namespace GSDumpGUI
         public byte[] StateData;
         public byte[] Registers; // 8192 bytes
 
+        public int Size
+        {
+            get
+            {
+                int size = 0;
+                size = 4;
+                size += StateData.Length;
+                size += Registers.Length;
+                foreach (var itm in Data)
+                {
+                    size += itm.data.Length;
+                }
+                return size;
+            }
+        }
+
         public List<GSData> Data;
 
         public GSDump()
@@ -37,31 +53,12 @@ namespace GSDumpGUI
                 {
                     case GSType.Transfer:
                         byte index = br.ReadByte();
-                        if (index == 0)
-                        {
-                            Int32 size = br.ReadInt32();
+                        Int32 size = br.ReadInt32();
 
-                            byte[] dat = new byte[16384];
-                            List<byte> Data = new List<byte>();
-                            Data.Add(index);
-                            Data.AddRange(BitConverter.GetBytes(size));
-                            Data.AddRange(dat);
-
-                            int startaddr = 16389 - size;
-
-                            for (int i = 0; i < size; i++)
-                               Data[startaddr + i] = br.ReadByte();
-                            data.data = Data.ToArray();
-                        }
-                        else
-                        {
-                            Int32 size = br.ReadInt32();
-
-                            List<byte> Data = new List<byte>();
-                            Data.Add(index);
-                            Data.AddRange(br.ReadBytes(size));
-                            data.data = Data.ToArray();
-                        }
+                        List<byte> Data = new List<byte>();
+                        Data.Add(index);
+                        Data.AddRange(br.ReadBytes(size));
+                        data.data = Data.ToArray();
                         break;
                     case GSType.VSync:
                         data.data = br.ReadBytes(1);

@@ -8,20 +8,36 @@ using System.Threading;
 using System.Diagnostics;
 using GSDumpGUI.Properties;
 using System.IO;
+using TCPLibrary.MessageBased.Core;
 
 namespace GSDumpGUI
 {
     static class Program
     {
         static public GSDumpGUI frmMain;
+        static public TCPLibrary.MessageBased.Core.BaseMessageServer Server;
+        static public List<TCPLibrary.MessageBased.Core.BaseMessageClientS> Clients;
 
+        static public TCPLibrary.MessageBased.Core.BaseMessageClient Client;
         static private Boolean ChangeIcon;
+        static private GSDump dump;
 
         [STAThread]
         static void Main(String[] args)
         {
             if (args.Length == 4)
             {
+                try
+                {
+                    Client = new TCPLibrary.MessageBased.Core.BaseMessageClient();
+                    Client.OnMessageReceived += new TCPLibrary.MessageBased.Core.BaseMessageClient.MessageReceivedHandler(Client_OnMessageReceived);
+                    Client.Connect("localhost", 9999);
+                }
+                catch (Exception)
+                {
+                    Client = null;
+                }
+
                 Thread thd = new Thread(new ThreadStart(delegate
                 {
                     while (true)
@@ -55,21 +71,101 @@ namespace GSDumpGUI
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + Path.GetFileName(DLLPath) + "\\"));
                 if (Operation == "GSReplay")
                 {
-                    GSDump dump = GSDump.LoadDump(DumpPath);
+                    dump = GSDump.LoadDump(DumpPath);
                     wrap.Run(dump, Renderer);
                     ChangeIcon = true;
                 }
                 else
                     wrap.GSConfig();
                 wrap.Unload();
+
+                if (Client != null)
+                    Client.Disconnect();
             }
             else
             {
+                Clients = new List<TCPLibrary.MessageBased.Core.BaseMessageClientS>();
+
+                Server = new TCPLibrary.MessageBased.Core.BaseMessageServer();
+                Server.OnClientMessageReceived += new BaseMessageServer.MessageReceivedHandler(Server_OnClientMessageReceived);
+                Server.OnClientAfterConnect += new TCPLibrary.Core.Server.ConnectedHandler(Server_OnClientAfterConnect);
+                Server.OnClientAfterDisconnected += new TCPLibrary.Core.Server.DisconnectedHandler(Server_OnClientAfterDisconnected);
+                Server.Port = 9999;
+                Server.Enabled = true;
+
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 frmMain = new GSDumpGUI();
                 Application.Run(frmMain);
+
+                Server.Enabled = false;
             }
+        }
+
+        static void Server_OnClientAfterDisconnected(TCPLibrary.Core.Server server, TCPLibrary.Core.ClientS sender)
+        {
+            Clients.Remove((TCPLibrary.MessageBased.Core.BaseMessageClientS)sender);
+            RefreshList();
+        }
+
+        static void Server_OnClientMessageReceived(BaseMessageServer server, BaseMessageClientS sender, TCPMessage Mess)
+        {
+            switch (Mess.MessageType)
+            {
+                case MessageType.Connect:
+                    break;
+                case MessageType.MaxUsers:
+                    break;
+                case MessageType.SizeDump:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                       {
+                           frmMain.txtDumpSize.Text = (((int)Mess.Parameters[0]) / 1024f / 1024f).ToString("F2");
+                       }), new object[] { null });
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        static void Client_OnMessageReceived(TCPLibrary.Core.Client sender, TCPLibrary.MessageBased.Core.TCPMessage Mess)
+        {
+            switch (Mess.MessageType)
+            {
+                case TCPLibrary.MessageBased.Core.MessageType.Connect:
+                    break;
+                case TCPLibrary.MessageBased.Core.MessageType.MaxUsers:
+                    break;
+                case TCPLibrary.MessageBased.Core.MessageType.SizeDump:
+                    TCPMessage msg = new TCPMessage();
+                    msg.MessageType = MessageType.SizeDump;
+                    if (dump != null)
+                        msg.Parameters.Add(dump.Size);
+                    else
+                        msg.Parameters.Add(0);
+                    Client.Send(msg);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        static void Server_OnClientAfterConnect(TCPLibrary.Core.Server server, TCPLibrary.Core.ClientS sender)
+        {
+            Clients.Add((TCPLibrary.MessageBased.Core.BaseMessageClientS)sender);
+            RefreshList();
+        }
+
+        private static void RefreshList()
+        {
+            frmMain.Invoke(new Action<object>( delegate(object e)
+            {
+                frmMain.lstProcesses.Items.Clear(); 
+                
+                foreach (var itm in Clients)
+                {
+                    frmMain.lstProcesses.Items.Add(itm.IPAddress);
+                }
+            }), new object[] { null});
         }
     }
 }

@@ -186,52 +186,7 @@ namespace GSDumpGUI
                         }
                         foreach (var itm in dump.Data)
                         {
-                            switch (itm.id)
-                            {
-                                case GSType.Transfer:
-                                    switch (itm.data[0])
-                                    {
-                                        case 0:
-                                            fixed (byte* gifdata = itm.data)
-                                            {
-                                                byte[] data = new byte[4];
-                                                data[0]=*(gifdata+1);
-                                                data[1]=*(gifdata+2);
-                                                data[2]=*(gifdata+3);
-                                                data[3]=*(gifdata+4);
-                                                Int32 size = BitConverter.ToInt32(data, 0);
-                                                GSgifTransfer1(new IntPtr(gifdata + 5), 16384 - size);
-                                            }
-                                            break;
-                                        case 1:
-                                            fixed (byte* gifdata = itm.data)
-                                            {
-                                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
-                                            }
-                                            break;
-                                        case 2:
-                                            fixed (byte* gifdata = itm.data)
-                                            {
-                                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
-                                            }
-                                            break;
-                                    }
-                                    break;
-                                case GSType.VSync:
-                                    GSVSync(itm.data[0]);
-                                    break;
-                                case GSType.ReadFIFO2:
-                                    fixed (byte* FIFO = itm.data)
-                                    {
-                                        GSreadFIFO2(new IntPtr(FIFO), itm.data.Length / 16);
-                                    }
-                                    break;
-                                case GSType.Registers:
-                                    Marshal.Copy(itm.data, 0, new IntPtr(pointer), 8192);
-                                    break;
-                                default:
-                                    break;
-                            }
+                            Step(itm, pointer);
                         }
                     }
 
@@ -239,6 +194,57 @@ namespace GSDumpGUI
                     GSshutdown();
                 }
             }
+        }
+
+        private unsafe void Step(GSData itm, byte* registers)
+        {
+            switch (itm.id)
+            {
+                case GSType.Transfer:
+                    switch (itm.data[0])
+                    {/*
+                        case 0:
+                                byte[] data = new byte[16384];
+                                for (int i = 0; i < itm.data; i++)
+                                {
+
+                                }
+                                fixed (byte* gifdata = data)
+                                {
+                                GSgifTransfer1(new IntPtr(gifdata + 5), 16384 - size);
+                            }
+                            break;*/
+                        case 0:
+                        case 1:
+                        case 2:
+                            fixed (byte* gifdata = itm.data)
+                            {
+                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
+                            }
+                            break;/*
+                        case 2:
+                            fixed (byte* gifdata = itm.data)
+                            {
+                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
+                            }
+                            break;*/
+                    }
+                    break;
+                case GSType.VSync:
+                    GSVSync(itm.data[0]);
+                    break;
+                case GSType.ReadFIFO2:
+                    fixed (byte* FIFO = itm.data)
+                    {
+                        GSreadFIFO2(new IntPtr(FIFO), itm.data.Length / 16);
+                    }
+                    break;
+                case GSType.Registers:
+                    Marshal.Copy(itm.data, 0, new IntPtr(registers), 8192);
+                    break;
+                default:
+                    break;
+            }            
         }
 
         public void Stop()

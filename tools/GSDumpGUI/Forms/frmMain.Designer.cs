@@ -53,6 +53,12 @@
             this.rdaNone = new System.Windows.Forms.RadioButton();
             this.lblInternalLog = new System.Windows.Forms.Label();
             this.txtIntLog = new System.Windows.Forms.TextBox();
+            this.lblDebugger = new System.Windows.Forms.Label();
+            this.lstProcesses = new System.Windows.Forms.ListBox();
+            this.lblChild = new System.Windows.Forms.Label();
+            this.lblDumpSize = new System.Windows.Forms.Label();
+            this.txtDumpSize = new System.Windows.Forms.Label();
+            this.lblWIP = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
@@ -303,11 +309,72 @@
             this.txtIntLog.TabIndex = 24;
             this.txtIntLog.TabStop = false;
             // 
+            // lblDebugger
+            // 
+            this.lblDebugger.AutoSize = true;
+            this.lblDebugger.Location = new System.Drawing.Point(417, 470);
+            this.lblDebugger.Name = "lblDebugger";
+            this.lblDebugger.Size = new System.Drawing.Size(54, 13);
+            this.lblDebugger.TabIndex = 26;
+            this.lblDebugger.Text = "Debugger";
+            // 
+            // lstProcesses
+            // 
+            this.lstProcesses.FormattingEnabled = true;
+            this.lstProcesses.Location = new System.Drawing.Point(12, 502);
+            this.lstProcesses.Name = "lstProcesses";
+            this.lstProcesses.Size = new System.Drawing.Size(248, 251);
+            this.lstProcesses.TabIndex = 27;
+            this.lstProcesses.SelectedIndexChanged += new System.EventHandler(this.lstProcesses_SelectedIndexChanged);
+            // 
+            // lblChild
+            // 
+            this.lblChild.AutoSize = true;
+            this.lblChild.Location = new System.Drawing.Point(9, 487);
+            this.lblChild.Name = "lblChild";
+            this.lblChild.Size = new System.Drawing.Size(82, 13);
+            this.lblChild.TabIndex = 28;
+            this.lblChild.Text = "Child Processes";
+            // 
+            // lblDumpSize
+            // 
+            this.lblDumpSize.AutoSize = true;
+            this.lblDumpSize.Location = new System.Drawing.Point(279, 487);
+            this.lblDumpSize.Name = "lblDumpSize";
+            this.lblDumpSize.Size = new System.Drawing.Size(58, 13);
+            this.lblDumpSize.TabIndex = 29;
+            this.lblDumpSize.Text = "Dump Size";
+            // 
+            // txtDumpSize
+            // 
+            this.txtDumpSize.AutoSize = true;
+            this.txtDumpSize.Location = new System.Drawing.Point(279, 502);
+            this.txtDumpSize.Name = "txtDumpSize";
+            this.txtDumpSize.Size = new System.Drawing.Size(0, 13);
+            this.txtDumpSize.TabIndex = 30;
+            // 
+            // lblWIP
+            // 
+            this.lblWIP.AutoSize = true;
+            this.lblWIP.Font = new System.Drawing.Font("Times New Roman", 48F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblWIP.ForeColor = System.Drawing.Color.Red;
+            this.lblWIP.Location = new System.Drawing.Point(407, 589);
+            this.lblWIP.Name = "lblWIP";
+            this.lblWIP.Size = new System.Drawing.Size(508, 73);
+            this.lblWIP.TabIndex = 31;
+            this.lblWIP.Text = "Work in Progress";
+            // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(988, 467);
+            this.ClientSize = new System.Drawing.Size(988, 766);
+            this.Controls.Add(this.lblWIP);
+            this.Controls.Add(this.txtDumpSize);
+            this.Controls.Add(this.lblDumpSize);
+            this.Controls.Add(this.lstProcesses);
+            this.Controls.Add(this.lblChild);
+            this.Controls.Add(this.lblDebugger);
             this.Controls.Add(this.lblInternalLog);
             this.Controls.Add(this.txtIntLog);
             this.Controls.Add(this.rdaNone);
@@ -372,6 +439,12 @@
         private System.Windows.Forms.RadioButton rdaNone;
         private System.Windows.Forms.Label lblInternalLog;
         private System.Windows.Forms.TextBox txtIntLog;
+        private System.Windows.Forms.Label lblDebugger;
+        private System.Windows.Forms.Label lblChild;
+        public System.Windows.Forms.ListBox lstProcesses;
+        private System.Windows.Forms.Label lblDumpSize;
+        public System.Windows.Forms.Label txtDumpSize;
+        private System.Windows.Forms.Label lblWIP;
     }
 }
 

@@ -59,6 +59,15 @@
     <Compile Include="Library\GSDXWrapper.cs" />
     <Compile Include="Library\NativeMethods.cs" />
     <Compile Include="Core\Program.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClient.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageServer.cs" />
+    <Compile Include="Library\TCPLibrary\Base\CancelArgs.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Client.cs" />
+    <Compile Include="Library\TCPLibrary\Base\ClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Data.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Server.cs" />
+    <Compile Include="Library\TCPLibrary\Message\TCPMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Forms\frmMain.resx">
       <DependentUpon>frmMain.cs</DependentUpon>
