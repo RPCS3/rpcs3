@@ -6,9 +6,7 @@ using System.IO;
 
 namespace GSDumpGUI
 {
-    public delegate void GSgifTransfer1(IntPtr data, int size);
-    public delegate void GSgifTransfer2(IntPtr data, int size);
-    public delegate void GSgifTransfer3(IntPtr data, int size);
+    public delegate void GSgifTransfer(IntPtr data, int size);
     public delegate void GSVSync(byte field);
     public delegate void GSreadFIFO2(IntPtr data, int size);
     public delegate void GSsetGameCRC(int crc, int options);
@@ -25,9 +23,7 @@ namespace GSDumpGUI
     {
         private GSConfigure gsConfigure;
         private PSEgetLibName PsegetLibName;
-        private GSgifTransfer1 GSgifTransfer1;
-        private GSgifTransfer2 GSgifTransfer2;
-        private GSgifTransfer3 GSgifTransfer3;
+        private GSgifTransfer GSgifTransfer;
         private GSVSync GSVSync;
         private GSreadFIFO2 GSreadFIFO2;
         private GSsetGameCRC GSsetGameCRC;
@@ -57,9 +53,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
-                IntPtr funcaddrGIF1 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer1");
-                IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
-                IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
+                IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
                 IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
                 IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
                 IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
@@ -108,9 +102,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
-                IntPtr funcaddrGIF1 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer1");
-                IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
-                IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
+                IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
                 IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
                 IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
                 IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
@@ -124,9 +116,7 @@ namespace GSDumpGUI
                 gsConfigure = (GSConfigure)Marshal.GetDelegateForFunctionPointer(funcaddrConfig, typeof(GSConfigure));
                 PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
 
-                this.GSgifTransfer1 = (GSgifTransfer1)Marshal.GetDelegateForFunctionPointer(funcaddrGIF1, typeof(GSgifTransfer1));
-                this.GSgifTransfer2 = (GSgifTransfer2)Marshal.GetDelegateForFunctionPointer(funcaddrGIF2, typeof(GSgifTransfer2));
-                this.GSgifTransfer3 = (GSgifTransfer3)Marshal.GetDelegateForFunctionPointer(funcaddrGIF3, typeof(GSgifTransfer3));
+                this.GSgifTransfer = (GSgifTransfer)Marshal.GetDelegateForFunctionPointer(funcaddrGIF, typeof(GSgifTransfer));
                 this.GSVSync = (GSVSync)Marshal.GetDelegateForFunctionPointer(funcaddrVSync, typeof(GSVSync));
                 this.GSsetBaseMem = (GSsetBaseMem)Marshal.GetDelegateForFunctionPointer(funcaddrSetBaseMem, typeof(GSsetBaseMem));
                 this.GSopen = (GSopen)Marshal.GetDelegateForFunctionPointer(funcaddrOpen, typeof(GSopen));
@@ -219,7 +209,7 @@ namespace GSDumpGUI
                         case 2:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
+                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
                             }
                             break;/*
                         case 2:
