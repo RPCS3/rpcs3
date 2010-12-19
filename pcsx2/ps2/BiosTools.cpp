@@ -62,9 +62,9 @@ Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename )
 	StreamName = filename;
 }
 
-// This method throws a BadStream exception if the bios information could not be obtained.
+// This method throws a BadStream exception if the bios information chould not be obtained.
 //  (indicating that the file is invalid, incomplete, corrupted, or plain naughty).
-static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& description, wxString& zoneStr=wxString() )
+static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& description, wxString& zoneStr )
 {
 	uint i;
 	romdir rd;
@@ -157,6 +157,12 @@ static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& descript
 		// we force users to have correct bioses,
 		// not that lame scph10000 of 513KB ;-)
 	}
+}
+
+static void LoadBiosVersion( pxInputStream& fp, u32& version, wxString& description )
+{
+	wxString zoneStr;
+	LoadBiosVersion( fp,version, description, zoneStr );
 }
 
 template< size_t _size >
@@ -256,7 +262,9 @@ void LoadBIOS()
 		pxInputStream memfp( Bios, new wxMemoryInputStream( eeMem->ROM, sizeof(eeMem->ROM) ) );
 		LoadBiosVersion( memfp, BiosVersion, BiosDescription, biosZone );
 		
-		Console.SetTitle( pxsFmt( "Running BIOS (%s v%u.%u)", biosZone.c_str(), BiosChecksum, BiosVersion >> 8, BiosVersion & 0xff ) );
+		Console.SetTitle( pxsFmt( L"Running BIOS (%s v%u.%u)",
+			biosZone.c_str(), BiosVersion >> 8, BiosVersion & 0xff
+		));
 
 		//injectIRX("host.irx");	//not fully tested; still buggy
 
