@@ -211,19 +211,19 @@ namespace GSDumpGUI
                         case 1:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
                             }
                             break;
                         case 2:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
                             }
                             break;
                         case 3:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
                             }
                             break;
                     }
