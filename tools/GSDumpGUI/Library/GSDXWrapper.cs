@@ -200,30 +200,30 @@ namespace GSDumpGUI
             switch (itm.id)
             {
                 case GSType.Transfer:
-                    switch (itm.data[0])
+                    switch (((GSTransfer)itm).Path)
                     {
-                        case 0:
+                        case GSTransferPath.Path1Old:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) / 16);
+                                GSgifTransfer(new IntPtr(gifdata), (itm.data.Length) / 16);
                             }
                             break;
-                        case 1:
+                        case GSTransferPath.Path2:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer2(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer2(new IntPtr(gifdata), (itm.data.Length) /16);
                             }
                             break;
-                        case 2:
+                        case GSTransferPath.Path3:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer3(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer3(new IntPtr(gifdata), (itm.data.Length) /16);
                             }
                             break;
-                        case 3:
+                        case GSTransferPath.Path1New:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer(new IntPtr(gifdata + 1), (itm.data.Length - 1) /16);
+                                GSgifTransfer(new IntPtr(gifdata), (itm.data.Length) /16);
                             }
                             break;
                     }

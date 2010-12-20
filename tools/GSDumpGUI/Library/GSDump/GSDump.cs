@@ -46,34 +46,46 @@ namespace GSDumpGUI
 
             while (br.PeekChar() != -1)
             {
-                GSData data = new GSData();
-                data.id = (GSType)br.ReadByte();
-
-                switch (data.id)
+                GSType id = (GSType)br.ReadByte();
+                switch (id)
                 {
                     case GSType.Transfer:
+                        GSTransfer data = new GSTransfer();
+
                         byte index = br.ReadByte();
+
+                        data.id = id;
+                        data.Path = (GSTransferPath)index;
+
                         Int32 size = br.ReadInt32();
 
                         List<byte> Data = new List<byte>();
-                        Data.Add(index);
                         Data.AddRange(br.ReadBytes(size));
                         data.data = Data.ToArray();
+                        dmp.Data.Add(data);
                         break;
                     case GSType.VSync:
-                        data.data = br.ReadBytes(1);
+                        GSData dataV = new GSData();
+                        dataV.id = id;
+                        dataV.data = br.ReadBytes(1);
+                        dmp.Data.Add(dataV);
                         break;
                     case GSType.ReadFIFO2:
+                        GSData dataR = new GSData();
+                        dataR.id = id;
                         Int32 sF = br.ReadInt32();
-                        data.data = BitConverter.GetBytes(sF);
+                        dataR.data = BitConverter.GetBytes(sF);
+                        dmp.Data.Add(dataR);
                         break;
                     case GSType.Registers:
-                        data.data = br.ReadBytes(8192);
+                        GSData dataRR = new GSData();
+                        dataRR.id = id;
+                        dataRR.data = br.ReadBytes(8192);
+                        dmp.Data.Add(dataRR);
                         break;
                     default:
                         break;
                 }
-                dmp.Data.Add(data);
             }
             br.Close();
 

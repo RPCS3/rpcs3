@@ -55,8 +55,9 @@
     <Compile Include="Forms\frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="Library\GSDump\GSData.cs" />
+    <Compile Include="Library\GSDump\GSData\GSData.cs" />
     <Compile Include="Library\GSDump\GSDump.cs" />
+    <Compile Include="Library\GSDump\GSData\GSTransfer.cs" />
     <Compile Include="Library\GSDXWrapper.cs" />
     <Compile Include="Library\NativeMethods.cs" />
     <Compile Include="Core\Program.cs" />
