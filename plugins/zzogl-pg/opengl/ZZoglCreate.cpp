@@ -188,7 +188,7 @@ inline bool CreateImportantCheck()
 
 	if (!IsGLExt("GL_EXT_framebuffer_object"))
 	{
-		ZZLog::Error_Log("*********\nZZogl: ERROR: Need GL_EXT_framebufer_object for multiple render targets\nZZogl: *********");
+		ZZLog::Error_Log("*********\nZZogl: ERROR: Need GL_EXT_framebuffer_object for multiple render targets\nZZogl: *********");
 		bSuccess = false;
 	}
 

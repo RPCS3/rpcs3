@@ -395,6 +395,8 @@ SaveTex(tex0Info* ptex, int usevid)
 		glBindTexture(GL_TEXTURE_RECTANGLE_NV, pmemtarg->ptex->tex);
 		srcdata.resize(4 * pmemtarg->texW * pmemtarg->texH);
 
+        // FIXME strangely this function call seem to crash pcsx2 on atelier of iris 1
+        // Note: fmt is GL_UNSIGNED_SHORT_1_5_5_5_REV
 		glGetTexImage(GL_TEXTURE_RECTANGLE_NV, 0, GL_RGBA, pmemtarg->fmt, &srcdata[0]);
 
 		u32 offset = MemorySize(pmemtarg->realy);
@@ -613,6 +615,9 @@ SaveTex(tex0Info* ptex, int usevid)
 
 	snprintf(Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber);
 	SaveTGA(Name, ptex->tw, ptex->th, &data[0]);
+
+	TexNumber++;
+	if (TexNumber > MAX_NUMBER_SAVED_TGA) TexNumber = 0;
 }
 
 
@@ -621,12 +626,9 @@ SaveTex(tex0Info* ptex, int usevid)
 char* NamedSaveTex(tex0Info* ptex, int usevid)
 {
 	SaveTex(ptex, usevid);
+
 	char* Name = (char*)malloc(TGA_FILE_NAME_MAX_LENGTH);
 	snprintf(Name, TGA_FILE_NAME_MAX_LENGTH, "Tex.%d.tga", TexNumber);
-
-	TexNumber++;
-
-	if (TexNumber > MAX_NUMBER_SAVED_TGA) TexNumber = 0;
 
 	return Name;
 }

@@ -475,6 +475,9 @@ void CRenderTarget::Update(int context, CRenderTarget* pdepth)
 		texframe.tw = fbw;
 		texframe.th = fbh;
 		texframe.psm = psm;
+        // FIXME some field are not initialized...
+        // in particular the clut related one
+        assert(!PSMT_ISCLUT(psm));
 
 		// write color and zero out stencil buf, always 0 context!
 		// force bilinear if using AA
@@ -966,6 +969,9 @@ void CDepthTarget::Update(int context, CRenderTarget* prndr)
 	texframe.tw = fbw;
 	texframe.th = fbh;
 	texframe.psm = psm;
+    // FIXME some field are not initialized...
+    // in particular the clut related one
+    assert(!PSMT_ISCLUT(psm));
 
 	DisableAllgl();
 
@@ -2017,96 +2023,93 @@ CMemoryTarget* CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forc
 
         assert(targ->clutsize > 0);
 	}
-	else
-	{
-		if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
-		{
-			ptexdata = (u8*)_aligned_malloc(4 * targ->texH * targ->texW, 16);
-			has_data = true;
+	else if (tex0.psm == PSMT16Z || tex0.psm == PSMT16SZ)
+    {
+        ptexdata = (u8*)_aligned_malloc(4 * targ->texH * targ->texW, 16);
+        has_data = true;
 
-			// needs to be 8 bit, use xmm for unpacking
-			u16* dst = (u16*)ptexdata;
-			u16* src = (u16*)(MemoryAddress(targ->realy));
+        // needs to be 8 bit, use xmm for unpacking
+        u16* dst = (u16*)ptexdata;
+        u16* src = (u16*)(MemoryAddress(targ->realy));
 
 #ifdef ZEROGS_SSE2
-			assert(((u32)(uptr)dst) % 16 == 0);
-            // FIXME Uncomment to test intrinsic versions (instead of asm)
-            // perf improvement vs asm:
-            // 1/ gcc updates both pointer with 1 addition
-            // 2/ Bypass the cache for the store
+        assert(((u32)(uptr)dst) % 16 == 0);
+        // FIXME Uncomment to test intrinsic versions (instead of asm)
+        // perf improvement vs asm:
+        // 1/ gcc updates both pointer with 1 addition
+        // 2/ Bypass the cache for the store
 #define NEW_INTRINSIC_VERSION
 #ifdef NEW_INTRINSIC_VERSION
 
-            __m128i zero_128 = _mm_setzero_si128();
-            // NOTE: future performance improvement
-            // SSE4.1 support uncacheable load 128bits. Maybe it can
-            // avoid some cache pollution
-            // NOTE2: I create multiple _n variable to mimic the previous ASM behavior
-            // but I'm not sure there are real gains.
-			for (int i = targ->height * GPU_TEXWIDTH/16 ; i > 0 ; --i)
-            {
-                // Convert 16 bits pixels to 32bits (zero extended)
-                // Batch 64 bytes (32 pixels) at once.
-                __m128i pixels_1 = _mm_load_si128((__m128i*)src);
-                __m128i pixels_2 = _mm_load_si128((__m128i*)(src+8));
-                __m128i pixels_3 = _mm_load_si128((__m128i*)(src+16));
-                __m128i pixels_4 = _mm_load_si128((__m128i*)(src+24));
+        __m128i zero_128 = _mm_setzero_si128();
+        // NOTE: future performance improvement
+        // SSE4.1 support uncacheable load 128bits. Maybe it can
+        // avoid some cache pollution
+        // NOTE2: I create multiple _n variable to mimic the previous ASM behavior
+        // but I'm not sure there are real gains.
+        for (int i = targ->height * GPU_TEXWIDTH/16 ; i > 0 ; --i)
+        {
+            // Convert 16 bits pixels to 32bits (zero extended)
+            // Batch 64 bytes (32 pixels) at once.
+            __m128i pixels_1 = _mm_load_si128((__m128i*)src);
+            __m128i pixels_2 = _mm_load_si128((__m128i*)(src+8));
+            __m128i pixels_3 = _mm_load_si128((__m128i*)(src+16));
+            __m128i pixels_4 = _mm_load_si128((__m128i*)(src+24));
 
-                __m128i pix_low_1 = _mm_unpacklo_epi16(pixels_1, zero_128);
-                __m128i pix_high_1 = _mm_unpackhi_epi16(pixels_1, zero_128);
-                __m128i pix_low_2 = _mm_unpacklo_epi16(pixels_2, zero_128);
-                __m128i pix_high_2 = _mm_unpackhi_epi16(pixels_2, zero_128);
+            __m128i pix_low_1 = _mm_unpacklo_epi16(pixels_1, zero_128);
+            __m128i pix_high_1 = _mm_unpackhi_epi16(pixels_1, zero_128);
+            __m128i pix_low_2 = _mm_unpacklo_epi16(pixels_2, zero_128);
+            __m128i pix_high_2 = _mm_unpackhi_epi16(pixels_2, zero_128);
 
-                // Note: bypass cache
-                _mm_stream_si128((__m128i*)dst, pix_low_1);
-                _mm_stream_si128((__m128i*)(dst+8), pix_high_1);
-                _mm_stream_si128((__m128i*)(dst+16), pix_low_2);
-                _mm_stream_si128((__m128i*)(dst+24), pix_high_2);
+            // Note: bypass cache
+            _mm_stream_si128((__m128i*)dst, pix_low_1);
+            _mm_stream_si128((__m128i*)(dst+8), pix_high_1);
+            _mm_stream_si128((__m128i*)(dst+16), pix_low_2);
+            _mm_stream_si128((__m128i*)(dst+24), pix_high_2);
 
-                __m128i pix_low_3 = _mm_unpacklo_epi16(pixels_3, zero_128);
-                __m128i pix_high_3 = _mm_unpackhi_epi16(pixels_3, zero_128);
-                __m128i pix_low_4 = _mm_unpacklo_epi16(pixels_4, zero_128);
-                __m128i pix_high_4 = _mm_unpackhi_epi16(pixels_4, zero_128);
+            __m128i pix_low_3 = _mm_unpacklo_epi16(pixels_3, zero_128);
+            __m128i pix_high_3 = _mm_unpackhi_epi16(pixels_3, zero_128);
+            __m128i pix_low_4 = _mm_unpacklo_epi16(pixels_4, zero_128);
+            __m128i pix_high_4 = _mm_unpackhi_epi16(pixels_4, zero_128);
 
-                // Note: bypass cache
-                _mm_stream_si128((__m128i*)(dst+32), pix_low_3);
-                _mm_stream_si128((__m128i*)(dst+40), pix_high_3);
-                _mm_stream_si128((__m128i*)(dst+48), pix_low_4);
-                _mm_stream_si128((__m128i*)(dst+56), pix_high_4);
+            // Note: bypass cache
+            _mm_stream_si128((__m128i*)(dst+32), pix_low_3);
+            _mm_stream_si128((__m128i*)(dst+40), pix_high_3);
+            _mm_stream_si128((__m128i*)(dst+48), pix_low_4);
+            _mm_stream_si128((__m128i*)(dst+56), pix_high_4);
 
-                src += 32;
-                dst += 64;
-            }
-            // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
-            // store fence insures that previous store are finish before execute new one.
-            _mm_sfence();
+            src += 32;
+            dst += 64;
+        }
+        // It is advise to use a fence instruction after non temporal move (mm_stream) instruction...
+        // store fence insures that previous store are finish before execute new one.
+        _mm_sfence();
 #else
-			SSE2_UnswizzleZ16Target(dst, src, targ->height * GPU_TEXWIDTH / 16);
+        SSE2_UnswizzleZ16Target(dst, src, targ->height * GPU_TEXWIDTH / 16);
 #endif
 #else // ZEROGS_SSE2
 
-			for (int i = 0; i < targ->height; ++i)
-			{
-				for (int j = 0; j < GPU_TEXWIDTH; ++j)
-				{
-					dst[0] = src[0];
-					dst[1] = 0;
-					dst[2] = src[1];
-					dst[3] = 0;
-					dst += 4;
-					src += 2;
-				}
-			}
+        for (int i = 0; i < targ->height; ++i)
+        {
+            for (int j = 0; j < GPU_TEXWIDTH; ++j)
+            {
+                dst[0] = src[0];
+                dst[1] = 0;
+                dst[2] = src[1];
+                dst[3] = 0;
+                dst += 4;
+                src += 2;
+            }
+        }
 
 #endif // ZEROGS_SSE2
-		}
-		else
-		{
-			ptexdata = targ->ptex->memptr;
-			// We really don't want to deallocate memptr. As a reminder...
-			has_data = false;
-		}
-	}
+    }
+    else
+    {
+        ptexdata = targ->ptex->memptr;
+        // We really don't want to deallocate memptr. As a reminder...
+        has_data = false;
+    }
 
 	// create the texture
 	GL_REPORT_ERRORD();
