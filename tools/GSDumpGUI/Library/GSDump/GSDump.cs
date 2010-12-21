@@ -8,6 +8,7 @@ namespace GSDumpGUI
     public class GSDump
     {
         public Int32 CRC;
+        public byte[] GSFreeze;
         public byte[] StateData;
         public byte[] Registers; // 8192 bytes
 
@@ -34,14 +35,51 @@ namespace GSDumpGUI
             Data = new List<GSData>();
         }
 
+        public GSDump Clone()
+        {
+            GSDump newDump = new GSDump();
+            newDump.CRC = this.CRC;
+
+            byte[] state = new byte[StateData.Length];
+            Array.Copy(StateData,state, StateData.Length);
+            newDump.StateData = state;
+
+            newDump.Registers = new byte[8192];
+            Array.Copy(this.Registers, newDump.Registers, 8192);
+
+            foreach (var itm in this.Data)
+            {
+                if (itm.GetType().IsInstanceOfType(typeof(GSTransfer)))
+                {
+                    GSTransfer gt = new GSTransfer();
+                    gt.id = itm.id;
+                    gt.Path = ((GSTransfer)itm).Path;
+                    gt.data = new byte[itm.data.Length];
+                    Array.Copy(itm.data, gt.data, itm.data.Length);
+                    newDump.Data.Add(gt);
+                }
+                else
+                {
+                    GSData gt = new GSData();
+                    gt.id = itm.id;
+                    gt.data = new byte[itm.data.Length];
+                    Array.Copy(itm.data, gt.data, itm.data.Length);
+                    newDump.Data.Add(gt);
+                }
+            }
+            return newDump;
+        }
+
         static public GSDump LoadDump(String FileName)
         {
             GSDump dmp = new GSDump();
 
             BinaryReader br = new BinaryReader(System.IO.File.Open(FileName, FileMode.Open));
             dmp.CRC = br.ReadInt32();
+
             Int32 ss = br.ReadInt32();
-            dmp.StateData = br.ReadBytes(ss);
+            dmp.StateData = br.ReadBytes(ss);         
+        
             dmp.Registers = br.ReadBytes(8192);
 
             while (br.PeekChar() != -1)

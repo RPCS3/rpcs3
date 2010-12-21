@@ -7,12 +7,13 @@ using System.IO;
 namespace GSDumpGUI
 {
     public delegate void GSgifTransfer(IntPtr data, int size);
+    public delegate void GSgifTransfer1(IntPtr data, int size);
     public delegate void GSgifTransfer2(IntPtr data, int size);
     public delegate void GSgifTransfer3(IntPtr data, int size);
     public delegate void GSVSync(byte field);
     public delegate void GSreadFIFO2(IntPtr data, int size);
     public delegate void GSsetGameCRC(int crc, int options);
-    public delegate void GSfreeze(int mode, IntPtr data);
+    public delegate int GSfreeze(int mode, IntPtr data);
     public delegate void GSopen(IntPtr hwnd, String Title, int renderer);
     public delegate void GSclose();
     public delegate void GSshutdown();
@@ -23,9 +24,12 @@ namespace GSDumpGUI
 
     public class GSDXWrapper
     {
+        static public bool DumpTooOld = false;
+
         private GSConfigure gsConfigure;
         private PSEgetLibName PsegetLibName;
         private GSgifTransfer GSgifTransfer;
+        private GSgifTransfer1 GSgifTransfer1;
         private GSgifTransfer2 GSgifTransfer2;
         private GSgifTransfer3 GSgifTransfer3;
         private GSVSync GSVSync;
@@ -107,6 +111,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
                 IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
+                IntPtr funcaddrGIF1 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer1");
                 IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
                 IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
                 IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
@@ -123,6 +128,7 @@ namespace GSDumpGUI
                 PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
 
                 this.GSgifTransfer = (GSgifTransfer)Marshal.GetDelegateForFunctionPointer(funcaddrGIF, typeof(GSgifTransfer));
+                this.GSgifTransfer1 = (GSgifTransfer1)Marshal.GetDelegateForFunctionPointer(funcaddrGIF1, typeof(GSgifTransfer1));
                 this.GSgifTransfer2 = (GSgifTransfer2)Marshal.GetDelegateForFunctionPointer(funcaddrGIF2, typeof(GSgifTransfer2));
                 this.GSgifTransfer3 = (GSgifTransfer3)Marshal.GetDelegateForFunctionPointer(funcaddrGIF3, typeof(GSgifTransfer3));
                 this.GSVSync = (GSVSync)Marshal.GetDelegateForFunctionPointer(funcaddrVSync, typeof(GSVSync));
@@ -172,24 +178,37 @@ namespace GSDumpGUI
                 GSsetGameCRC(dump.CRC, 0);
                 fixed (byte* freeze = dump.StateData)
                 {
-                    GSfreeze(0, new IntPtr(freeze));
-                    GSVSync(1);
+                    byte[] GSFreez = new byte[8];
+                    Array.Copy(BitConverter.GetBytes(dump.StateData.Length), 0, GSFreez, 0, 4);
+                    Array.Copy(BitConverter.GetBytes(new IntPtr(freeze).ToInt32()), 0, GSFreez, 4, 4);
 
-                    while (Running)
+                    fixed (byte* fr = GSFreez)
                     {
-                        if (!NativeMethods.IsWindowVisible(new IntPtr(HWND)))
+                        int ris = GSfreeze(0, new IntPtr(fr));
+                        if (ris == -1)
                         {
-                            Running = false;
-                            break;
+                            DumpTooOld = true;
+                            return;
                         }
-                        foreach (var itm in dump.Data)
-                        {
-                            Step(itm, pointer);
-                        }
-                    }
+                        GSVSync(1);
 
-                    GSclose();
-                    GSshutdown();
+                        while (Running)
+                        {
+                            if (!NativeMethods.IsWindowVisible(new IntPtr(HWND)))
+                            {
+                                Running = false;
+                                break;
+                            }
+                            foreach (var itm in dump.Data)
+                            {
+                                Step(itm, pointer);
+                            }
+
+                        }
+
+                        GSclose();
+                        GSshutdown();
+                    }
                 }
             }
         }
@@ -203,27 +222,30 @@ namespace GSDumpGUI
                     switch (((GSTransfer)itm).Path)
                     {
                         case GSTransferPath.Path1Old:
-                            fixed (byte* gifdata = itm.data)
+                            byte[] data = new byte[16384];
+                            int addr = 16384 - itm.data.Length;
+                            Array.Copy(itm.data, 0, data, addr, itm.data.Length);
+                            fixed (byte* gifdata = data)
                             {
-                                GSgifTransfer(new IntPtr(gifdata), (itm.data.Length) / 16);
+                                GSgifTransfer1(new IntPtr(gifdata), addr);
                             }
                             break;
                         case GSTransferPath.Path2:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer2(new IntPtr(gifdata), (itm.data.Length) /16);
+                                GSgifTransfer2(new IntPtr(gifdata), (itm.data.Length) / 16);
                             }
                             break;
                         case GSTransferPath.Path3:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer3(new IntPtr(gifdata), (itm.data.Length) /16);
+                                GSgifTransfer3(new IntPtr(gifdata), (itm.data.Length) / 16);
                             }
                             break;
                         case GSTransferPath.Path1New:
                             fixed (byte* gifdata = itm.data)
                             {
-                                GSgifTransfer(new IntPtr(gifdata), (itm.data.Length) /16);
+                                GSgifTransfer(new IntPtr(gifdata), (itm.data.Length) / 16);
                             }
                             break;
                     }

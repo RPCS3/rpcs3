@@ -110,6 +110,7 @@ namespace TCPLibrary.MessageBased.Core
         Connect,
         MaxUsers,
         SizeDump,
-        Statistics
+        Statistics,
+        StateOld
     }
 }

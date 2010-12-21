@@ -79,6 +79,16 @@ namespace GSDumpGUI
                     wrap.GSConfig();
                 wrap.Unload();
 
+                if (GSDXWrapper.DumpTooOld)
+                {
+                    if (Client != null)
+                    {
+                        TCPMessage msg = new TCPMessage();
+                        msg.MessageType = MessageType.StateOld;
+                        Client.Send(msg);
+                    }
+                }
+
                 if (Client != null)
                     Client.Disconnect();
             }
@@ -133,6 +143,12 @@ namespace GSDumpGUI
                            frmMain.txtVSync.Text = ((int)Mess.Parameters[4]).ToString();
                            frmMain.txtRegisters.Text = ((int)Mess.Parameters[6]).ToString();
                        }), new object[] { null });
+                    break;
+                case MessageType.StateOld:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                    {
+                        MessageBox.Show("Savestate too old to be read. :(", "Warning");
+                    }), new object[] { null });                    
                     break;
                 default:
                     break;
