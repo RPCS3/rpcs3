@@ -189,6 +189,18 @@ namespace GSDumpGUI
                     SelectedRenderer = "4";
                     break;
             }
+            if (SelectedRenderer != "-1")
+            {
+                if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini"))
+                {
+                    String ini = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini");
+                    int pos = ini.IndexOf("Renderer=", 0);
+                    String newini = ini.Substring(0, pos + 9);
+                    newini += SelectedRenderer;
+                    newini += ini.Substring(pos + 10, ini.Length - pos - 10);
+                    File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", newini);
+                }
+            }
             if (lstDumps.SelectedItem != null)
                 DumpPath = Properties.Settings.Default.DumpDir + "\\" + 
                            lstDumps.SelectedItem.ToString().Split(new char[] { '|' })[0];
