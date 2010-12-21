@@ -148,6 +148,7 @@ namespace GSDumpGUI
                     frmMain.Invoke(new Action<object>(delegate(object e)
                     {
                         MessageBox.Show("Savestate too old to be read. :(", "Warning");
+                        frmMain.Focus();
                     }), new object[] { null });                    
                     break;
                 default:
