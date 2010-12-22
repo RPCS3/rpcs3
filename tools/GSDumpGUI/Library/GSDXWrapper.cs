@@ -181,6 +181,8 @@ namespace GSDumpGUI
             Running = true;
             ExternalEvent = new AutoResetEvent(true);
 
+            int lastVSyncField;
+
             GSinit();
             fixed (byte* pointer = dump.Registers)
             {
@@ -265,25 +267,14 @@ namespace GSDumpGUI
                                             TCPMessage Mess = QueueMessage.Dequeue();
                                             if (Mess.MessageType == MessageType.Step)
                                             {
-                                                Step(itm, pointer);
-
-                                                GSData g = new GSData();
-                                                g.id = GSType.VSync;
-                                                g.data = new byte[1];
-                                                g.data[0] = 0;
-                                                Step(g, pointer);
-
-                                                TCPMessage Msg = new TCPMessage();
-                                                Msg.MessageType = MessageType.Step;
-                                                Msg.Parameters.Add(i);
-                                                Program.Client.Send(Msg); 
-
-                                                ExternalEvent.Set();
+                                                RunTo = i;
+                                                i = 0;
                                             }
                                             else
                                                 if (Mess.MessageType == MessageType.RunToCursor)
                                                 {
                                                     RunTo = (int)Mess.Parameters[0];
+                                                    i = 0;
                                                 }
                                         }
                                     }
