@@ -510,6 +510,11 @@
 			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
+		<Unit filename="../gui/Resources/ConfigIcon_Appearance.png">
+			<Option compile="1" />
+			<Option weight="0" />
+			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
+		</Unit>
 		<Unit filename="../gui/Resources/ConfigIcon_Cpu.h" />
 		<Unit filename="../gui/Resources/ConfigIcon_Cpu.png">
 			<Option compile="1" />
