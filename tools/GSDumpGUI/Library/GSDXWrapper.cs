@@ -184,7 +184,9 @@ namespace GSDumpGUI
             int lastVSyncField;
 
             GSinit();
-            fixed (byte* pointer = dump.Registers)
+            byte[] tempregisters = new byte[8192];
+            Array.Copy(dump.Registers, tempregisters, 8192);
+            fixed (byte* pointer = tempregisters)
             {
                 GSsetBaseMem(new IntPtr(pointer));
                 Int32 HWND = 0;
@@ -269,12 +271,18 @@ namespace GSDumpGUI
                                             {
                                                 RunTo = i;
                                                 i = 0;
+
+                                                Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
+                                                GSfreeze(0, new IntPtr(fr));
                                             }
                                             else
                                                 if (Mess.MessageType == MessageType.RunToCursor)
                                                 {
                                                     RunTo = (int)Mess.Parameters[0];
                                                     i = 0;
+
+                                                    Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
+                                                    GSfreeze(0, new IntPtr(fr));
                                                 }
                                         }
                                     }
