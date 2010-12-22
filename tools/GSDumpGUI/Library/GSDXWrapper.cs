@@ -225,6 +225,12 @@ namespace GSDumpGUI
                                         {
                                             RunTo = -1;
 
+                                            GSData g = new GSData();
+                                            g.id = GSType.VSync;
+                                            g.data = new byte[1];
+                                            g.data[0] = 0;
+                                            Step(g, pointer);
+
                                             TCPMessage Msg = new TCPMessage();
                                             Msg.MessageType = MessageType.RunToCursor;
                                             Msg.Parameters.Add(i);
@@ -260,6 +266,12 @@ namespace GSDumpGUI
                                             if (Mess.MessageType == MessageType.Step)
                                             {
                                                 Step(itm, pointer);
+
+                                                GSData g = new GSData();
+                                                g.id = GSType.VSync;
+                                                g.data = new byte[1];
+                                                g.data[0] = 0;
+                                                Step(g, pointer);
 
                                                 TCPMessage Msg = new TCPMessage();
                                                 Msg.MessageType = MessageType.Step;
