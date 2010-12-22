@@ -427,5 +427,20 @@ namespace GSDumpGUI
             else
                 MessageBox.Show("You have not selected a node to jump to");
         }
+
+        private void cmdGoToStart_Click(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.RunToCursor;
+            msg.Parameters.Add(0);
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+        }
+
+        private void cmdGoToNextVSync_Click(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.RunToNextVSync;
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+        }
     }
 }

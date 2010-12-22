@@ -118,6 +118,7 @@ namespace TCPLibrary.MessageBased.Core
         DebugState,
 
         Step,
-        RunToCursor
+        RunToCursor,
+        RunToNextVSync
     }
 }

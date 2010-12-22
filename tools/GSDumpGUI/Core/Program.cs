@@ -77,6 +77,13 @@ namespace GSDumpGUI
                 if (Operation == "GSReplay")
                 {
                     dump = GSDump.LoadDump(DumpPath);
+
+                    if (Client != null)
+                    {
+                        SendStatistics();
+                        SendDumpSize();
+                    }
+
                     wrap.Run(dump, Renderer);
                     ChangeIcon = true;
                 }
@@ -120,7 +127,7 @@ namespace GSDumpGUI
         static void Server_OnClientAfterDisconnected(TCPLibrary.Core.Server server, TCPLibrary.Core.ClientS sender)
         {
             Clients.Remove((TCPLibrary.MessageBased.Core.BaseMessageClientS)sender);
-            RefreshList();
+            RefreshList(false);
         }
 
         static void Server_OnClientMessageReceived(BaseMessageServer server, BaseMessageClientS sender, TCPMessage Mess)
@@ -165,6 +172,8 @@ namespace GSDumpGUI
                         frmMain.btnRunToSelection.Enabled = frmMain.chkDebugMode.Checked;
                         frmMain.treTreeView.Enabled = frmMain.chkDebugMode.Checked;
                         frmMain.btnStep.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.cmdGoToStart.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.cmdGoToNextVSync.Enabled = frmMain.chkDebugMode.Checked;
                         if (frmMain.chkDebugMode.Checked == false)
                             frmMain.treTreeView.Nodes.Clear();
 
@@ -244,38 +253,10 @@ namespace GSDumpGUI
                 case TCPLibrary.MessageBased.Core.MessageType.MaxUsers:
                     break;
                 case TCPLibrary.MessageBased.Core.MessageType.SizeDump:
-                    msg = new TCPMessage();
-                    msg.MessageType = MessageType.SizeDump;
-                    if (dump != null)
-                        msg.Parameters.Add(dump.Size);
-                    else
-                        msg.Parameters.Add(0);
-                    Client.Send(msg);
+                    SendDumpSize();
                     break;
                 case MessageType.Statistics:
-                    msg = new TCPMessage();
-                    msg.MessageType = MessageType.Statistics;
-                    if (dump != null)
-                    {
-                        msg.Parameters.Add(dump.Data.Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && (a.data[0] == 3 || a.data[0] == 0)).Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 1).Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 2).Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 1).Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 2).Count);
-                        msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 3).Count);
-                    }
-                    else
-                    {
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                        msg.Parameters.Add(0);
-                    }
-                    Client.Send(msg);
+                    SendStatistics();
                     break;
                 case MessageType.SetDebugMode:
                     wrap.DebugMode = (Boolean)Mess.Parameters[0];
@@ -318,12 +299,8 @@ namespace GSDumpGUI
                     }
                     break;
                 case MessageType.Step:
-                    wrap.ExternalEvent.WaitOne();
-                    wrap.ExternalEvent.Reset();
-                    wrap.QueueMessage.Enqueue(Mess);
-                    wrap.ThereIsWork = true;
-                    break;
                 case MessageType.RunToCursor:
+                case MessageType.RunToNextVSync:
                     wrap.ExternalEvent.WaitOne();
                     wrap.ExternalEvent.Reset();
                     wrap.QueueMessage.Enqueue(Mess);
@@ -334,13 +311,53 @@ namespace GSDumpGUI
             }
         }
 
+        private static void SendDumpSize()
+        {
+            TCPMessage msg;
+            msg = new TCPMessage();
+            msg.MessageType = MessageType.SizeDump;
+            if (dump != null)
+                msg.Parameters.Add(dump.Size);
+            else
+                msg.Parameters.Add(0);
+            Client.Send(msg);
+        }
+
+        private static void SendStatistics()
+        {
+            TCPMessage msg;
+            msg = new TCPMessage();
+            msg.MessageType = MessageType.Statistics;
+            if (dump != null)
+            {
+                msg.Parameters.Add(dump.Data.Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && (a.data[0] == 3 || a.data[0] == 0)).Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 1).Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 0 && a.data[0] == 2).Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 1).Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 2).Count);
+                msg.Parameters.Add(dump.Data.FindAll(a => (int)a.id == 3).Count);
+            }
+            else
+            {
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+                msg.Parameters.Add(0);
+            }
+            Client.Send(msg);
+        }
+
         static void Server_OnClientAfterConnect(TCPLibrary.Core.Server server, TCPLibrary.Core.ClientS sender)
         {
             Clients.Add((TCPLibrary.MessageBased.Core.BaseMessageClientS)sender);
-            RefreshList();
+            RefreshList(true);
         }
 
-        private static void RefreshList()
+        private static void RefreshList(bool SelectLast)
         {
             frmMain.Invoke(new Action<object>( delegate(object e)
             {
@@ -350,6 +367,7 @@ namespace GSDumpGUI
                 {
                     frmMain.lstProcesses.Items.Add(itm.IPAddress);
                 }
+                frmMain.lstProcesses.SelectedIndex = frmMain.lstProcesses.Items.Count - 1;
                 if (frmMain.lstProcesses.SelectedIndex == -1)
                 {
                     frmMain.chkDebugMode.Checked = false;
@@ -357,6 +375,8 @@ namespace GSDumpGUI
                     frmMain.btnRunToSelection.Enabled = frmMain.chkDebugMode.Checked;
                     frmMain.treTreeView.Enabled = frmMain.chkDebugMode.Checked;
                     frmMain.btnStep.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.cmdGoToStart.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.cmdGoToNextVSync.Enabled = frmMain.chkDebugMode.Checked;
                     frmMain.treTreeView.Nodes.Clear();
                 }
             }), new object[] { null});

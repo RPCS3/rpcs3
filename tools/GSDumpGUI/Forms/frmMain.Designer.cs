@@ -77,6 +77,8 @@
             this.btnStep = new System.Windows.Forms.Button();
             this.btnRunToSelection = new System.Windows.Forms.Button();
             this.treTreeView = new System.Windows.Forms.TreeView();
+            this.cmdGoToStart = new System.Windows.Forms.Button();
+            this.cmdGoToNextVSync = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
@@ -502,7 +504,7 @@
             // 
             this.chkDebugMode.AutoSize = true;
             this.chkDebugMode.Enabled = false;
-            this.chkDebugMode.Location = new System.Drawing.Point(481, 487);
+            this.chkDebugMode.Location = new System.Drawing.Point(629, 501);
             this.chkDebugMode.Name = "chkDebugMode";
             this.chkDebugMode.Size = new System.Drawing.Size(88, 17);
             this.chkDebugMode.TabIndex = 46;
@@ -514,7 +516,7 @@
             // 
             this.lblGif.AutoSize = true;
             this.lblGif.Enabled = false;
-            this.lblGif.Location = new System.Drawing.Point(427, 520);
+            this.lblGif.Location = new System.Drawing.Point(417, 487);
             this.lblGif.Name = "lblGif";
             this.lblGif.Size = new System.Drawing.Size(66, 13);
             this.lblGif.TabIndex = 48;
@@ -523,7 +525,7 @@
             // btnStep
             // 
             this.btnStep.Enabled = false;
-            this.btnStep.Location = new System.Drawing.Point(629, 533);
+            this.btnStep.Location = new System.Drawing.Point(629, 575);
             this.btnStep.Name = "btnStep";
             this.btnStep.Size = new System.Drawing.Size(108, 40);
             this.btnStep.TabIndex = 49;
@@ -535,7 +537,7 @@
             // btnRunToSelection
             // 
             this.btnRunToSelection.Enabled = false;
-            this.btnRunToSelection.Location = new System.Drawing.Point(629, 579);
+            this.btnRunToSelection.Location = new System.Drawing.Point(629, 621);
             this.btnRunToSelection.Name = "btnRunToSelection";
             this.btnRunToSelection.Size = new System.Drawing.Size(108, 40);
             this.btnRunToSelection.TabIndex = 50;
@@ -547,16 +549,42 @@
             // treTreeView
             // 
             this.treTreeView.Enabled = false;
-            this.treTreeView.Location = new System.Drawing.Point(420, 539);
+            this.treTreeView.Location = new System.Drawing.Point(420, 503);
             this.treTreeView.Name = "treTreeView";
-            this.treTreeView.Size = new System.Drawing.Size(200, 240);
+            this.treTreeView.Size = new System.Drawing.Size(200, 276);
             this.treTreeView.TabIndex = 51;
+            // 
+            // cmdGoToStart
+            // 
+            this.cmdGoToStart.Enabled = false;
+            this.cmdGoToStart.Location = new System.Drawing.Point(629, 529);
+            this.cmdGoToStart.Name = "cmdGoToStart";
+            this.cmdGoToStart.Size = new System.Drawing.Size(108, 40);
+            this.cmdGoToStart.TabIndex = 52;
+            this.cmdGoToStart.TabStop = false;
+            this.cmdGoToStart.Text = "Go to Start";
+            this.cmdGoToStart.UseVisualStyleBackColor = true;
+            this.cmdGoToStart.Click += new System.EventHandler(this.cmdGoToStart_Click);
+            // 
+            // cmdGoToNextVSync
+            // 
+            this.cmdGoToNextVSync.Enabled = false;
+            this.cmdGoToNextVSync.Location = new System.Drawing.Point(629, 671);
+            this.cmdGoToNextVSync.Name = "cmdGoToNextVSync";
+            this.cmdGoToNextVSync.Size = new System.Drawing.Size(108, 40);
+            this.cmdGoToNextVSync.TabIndex = 53;
+            this.cmdGoToNextVSync.TabStop = false;
+            this.cmdGoToNextVSync.Text = "Go to next VSync";
+            this.cmdGoToNextVSync.UseVisualStyleBackColor = true;
+            this.cmdGoToNextVSync.Click += new System.EventHandler(this.cmdGoToNextVSync_Click);
             // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(988, 790);
+            this.Controls.Add(this.cmdGoToNextVSync);
+            this.Controls.Add(this.cmdGoToStart);
             this.Controls.Add(this.treTreeView);
             this.Controls.Add(this.btnRunToSelection);
             this.Controls.Add(this.btnStep);
@@ -669,6 +697,8 @@
         public System.Windows.Forms.Label lblGif;
         public System.Windows.Forms.Button btnStep;
         public System.Windows.Forms.Button btnRunToSelection;
+        public System.Windows.Forms.Button cmdGoToStart;
+        public System.Windows.Forms.Button cmdGoToNextVSync;
     }
 }
 

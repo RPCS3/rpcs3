@@ -267,23 +267,25 @@ namespace GSDumpGUI
                                         if (QueueMessage.Count > 0)
                                         {
                                             TCPMessage Mess = QueueMessage.Dequeue();
-                                            if (Mess.MessageType == MessageType.Step)
+                                            switch (Mess.MessageType)
                                             {
-                                                RunTo = i;
-                                                i = 0;
-
-                                                Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
-                                                GSfreeze(0, new IntPtr(fr));
-                                            }
-                                            else
-                                                if (Mess.MessageType == MessageType.RunToCursor)
-                                                {
+                                                case MessageType.Step:
+                                                    RunTo = i;
+                                                    i = -1;
+                                                    break;
+                                                case MessageType.RunToCursor:
                                                     RunTo = (int)Mess.Parameters[0];
-                                                    i = 0;
-
-                                                    Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
-                                                    GSfreeze(0, new IntPtr(fr));
-                                                }
+                                                    i = -1;
+                                                    break;
+                                                case MessageType.RunToNextVSync:
+                                                    RunTo = dump.Data.FindIndex(i, a => a.id == GSType.VSync);
+                                                    i = -1;
+                                                    break;
+                                                default:
+                                                    break;
+                                            }
+                                            Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
+                                            GSfreeze(0, new IntPtr(fr));
                                         }
                                     }
                                 }
