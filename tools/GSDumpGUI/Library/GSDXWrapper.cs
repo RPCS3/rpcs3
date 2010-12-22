@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
+using TCPLibrary.MessageBased.Core;
+using System.Threading;
 
 namespace GSDumpGUI
 {
@@ -48,6 +50,11 @@ namespace GSDumpGUI
         private IntPtr DLLAddr;
 
         private Boolean Running;
+
+        public List<TCPMessage> QueueMessage;
+        public Boolean DebugMode;
+        public GSData CurrentGIFPacket;
+        public AutoResetEvent Event;
 
         static public Boolean IsValidGSDX(String DLL)
         {
@@ -168,7 +175,10 @@ namespace GSDumpGUI
 
         public unsafe void Run(GSDump dump, int rendererOverride)
         {
+            QueueMessage = new List<TCPMessage>();
             Running = true;
+            Event = new AutoResetEvent(true);
+
             GSinit();
             fixed (byte* pointer = dump.Registers)
             {
@@ -199,11 +209,13 @@ namespace GSDumpGUI
                                 Running = false;
                                 break;
                             }
+
                             foreach (var itm in dump.Data)
                             {
+                                CurrentGIFPacket = itm;
+
                                 Step(itm, pointer);
                             }
-
                         }
 
                         GSclose();
@@ -274,6 +286,26 @@ namespace GSDumpGUI
         public void Stop()
         {
             Running = false;
+        }
+
+        internal List<Object> GetGifPackets(GSDump dump)
+        {
+            List<Object> Data = new List<Object>();
+            for (int i = 0; i < dump.Data.Count; i++)
+            {
+                String act = i.ToString() + "|";
+                act += dump.Data[i].id.ToString() + "|";
+                if (dump.Data[i].GetType().IsSubclassOf(typeof(GSData)))
+                {
+                    act += ((GSTransfer)dump.Data[i]).Path.ToString();
+                }
+                else
+                {
+
+                }
+                Data.Add(act);
+            }
+            return Data;
         }
     }
 }

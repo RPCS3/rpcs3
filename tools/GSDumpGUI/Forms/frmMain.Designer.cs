@@ -58,7 +58,6 @@
             this.lblChild = new System.Windows.Forms.Label();
             this.lblDumpSize = new System.Windows.Forms.Label();
             this.txtDumpSize = new System.Windows.Forms.Label();
-            this.lblWIP = new System.Windows.Forms.Label();
             this.txtGIFPackets = new System.Windows.Forms.Label();
             this.lblGIFPackets = new System.Windows.Forms.Label();
             this.txtPath1 = new System.Windows.Forms.Label();
@@ -73,6 +72,11 @@
             this.label7 = new System.Windows.Forms.Label();
             this.txtRegisters = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
+            this.chkDebugMode = new System.Windows.Forms.CheckBox();
+            this.lblGif = new System.Windows.Forms.Label();
+            this.btnStep = new System.Windows.Forms.Button();
+            this.btnRunToSelection = new System.Windows.Forms.Button();
+            this.treTreeView = new System.Windows.Forms.TreeView();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
@@ -368,17 +372,6 @@
             this.txtDumpSize.Size = new System.Drawing.Size(0, 13);
             this.txtDumpSize.TabIndex = 30;
             // 
-            // lblWIP
-            // 
-            this.lblWIP.AutoSize = true;
-            this.lblWIP.Font = new System.Drawing.Font("Times New Roman", 48F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblWIP.ForeColor = System.Drawing.Color.Red;
-            this.lblWIP.Location = new System.Drawing.Point(468, 587);
-            this.lblWIP.Name = "lblWIP";
-            this.lblWIP.Size = new System.Drawing.Size(508, 73);
-            this.lblWIP.TabIndex = 31;
-            this.lblWIP.Text = "Work in Progress";
-            // 
             // txtGIFPackets
             // 
             this.txtGIFPackets.AutoSize = true;
@@ -505,11 +498,70 @@
             this.label6.TabIndex = 44;
             this.label6.Text = "Registers Packets";
             // 
+            // chkDebugMode
+            // 
+            this.chkDebugMode.AutoSize = true;
+            this.chkDebugMode.Enabled = false;
+            this.chkDebugMode.Location = new System.Drawing.Point(481, 487);
+            this.chkDebugMode.Name = "chkDebugMode";
+            this.chkDebugMode.Size = new System.Drawing.Size(88, 17);
+            this.chkDebugMode.TabIndex = 46;
+            this.chkDebugMode.Text = "Debug Mode";
+            this.chkDebugMode.UseVisualStyleBackColor = true;
+            this.chkDebugMode.CheckedChanged += new System.EventHandler(this.chkDebugMode_CheckedChanged);
+            // 
+            // lblGif
+            // 
+            this.lblGif.AutoSize = true;
+            this.lblGif.Enabled = false;
+            this.lblGif.Location = new System.Drawing.Point(427, 520);
+            this.lblGif.Name = "lblGif";
+            this.lblGif.Size = new System.Drawing.Size(66, 13);
+            this.lblGif.TabIndex = 48;
+            this.lblGif.Text = "GIF Packets";
+            // 
+            // btnStep
+            // 
+            this.btnStep.Enabled = false;
+            this.btnStep.Location = new System.Drawing.Point(629, 533);
+            this.btnStep.Name = "btnStep";
+            this.btnStep.Size = new System.Drawing.Size(108, 40);
+            this.btnStep.TabIndex = 49;
+            this.btnStep.TabStop = false;
+            this.btnStep.Text = "Step";
+            this.btnStep.UseVisualStyleBackColor = true;
+            this.btnStep.Click += new System.EventHandler(this.btnStep_Click);
+            // 
+            // btnRunToSelection
+            // 
+            this.btnRunToSelection.Enabled = false;
+            this.btnRunToSelection.Location = new System.Drawing.Point(629, 579);
+            this.btnRunToSelection.Name = "btnRunToSelection";
+            this.btnRunToSelection.Size = new System.Drawing.Size(108, 40);
+            this.btnRunToSelection.TabIndex = 50;
+            this.btnRunToSelection.TabStop = false;
+            this.btnRunToSelection.Text = "Run To Selection";
+            this.btnRunToSelection.UseVisualStyleBackColor = true;
+            this.btnRunToSelection.Click += new System.EventHandler(this.btnRunToSelection_Click);
+            // 
+            // treTreeView
+            // 
+            this.treTreeView.Enabled = false;
+            this.treTreeView.Location = new System.Drawing.Point(420, 539);
+            this.treTreeView.Name = "treTreeView";
+            this.treTreeView.Size = new System.Drawing.Size(200, 240);
+            this.treTreeView.TabIndex = 51;
+            // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(988, 790);
+            this.Controls.Add(this.treTreeView);
+            this.Controls.Add(this.btnRunToSelection);
+            this.Controls.Add(this.btnStep);
+            this.Controls.Add(this.lblGif);
+            this.Controls.Add(this.chkDebugMode);
             this.Controls.Add(this.txtRegisters);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.txtReadFifo);
@@ -524,7 +576,6 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.txtGIFPackets);
             this.Controls.Add(this.lblGIFPackets);
-            this.Controls.Add(this.lblWIP);
             this.Controls.Add(this.txtDumpSize);
             this.Controls.Add(this.lblDumpSize);
             this.Controls.Add(this.lstProcesses);
@@ -599,7 +650,6 @@
         public System.Windows.Forms.ListBox lstProcesses;
         private System.Windows.Forms.Label lblDumpSize;
         public System.Windows.Forms.Label txtDumpSize;
-        private System.Windows.Forms.Label lblWIP;
         public System.Windows.Forms.Label txtGIFPackets;
         private System.Windows.Forms.Label lblGIFPackets;
         public System.Windows.Forms.Label txtPath1;
@@ -614,6 +664,11 @@
         private System.Windows.Forms.Label label7;
         public System.Windows.Forms.Label txtRegisters;
         private System.Windows.Forms.Label label6;
+        public System.Windows.Forms.CheckBox chkDebugMode;
+        public System.Windows.Forms.TreeView treTreeView;
+        public System.Windows.Forms.Label lblGif;
+        public System.Windows.Forms.Button btnStep;
+        public System.Windows.Forms.Button btnRunToSelection;
     }
 }
 

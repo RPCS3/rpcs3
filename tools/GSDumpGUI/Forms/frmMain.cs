@@ -195,10 +195,17 @@ namespace GSDumpGUI
                 {
                     String ini = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini");
                     int pos = ini.IndexOf("Renderer=", 0);
-                    String newini = ini.Substring(0, pos + 9);
-                    newini += SelectedRenderer;
-                    newini += ini.Substring(pos + 10, ini.Length - pos - 10);
-                    File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", newini);
+                    if (pos != -1)
+                    {
+                        String newini = ini.Substring(0, pos + 9);
+                        newini += SelectedRenderer;
+                        newini += ini.Substring(pos + 10, ini.Length - pos - 10);
+                        File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", newini);
+                    }
+                    else
+                    {
+                        File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", ini + Environment.NewLine + "Renderer=" + SelectedRenderer);
+                    }
                 }
             }
             if (lstDumps.SelectedItem != null)
@@ -369,13 +376,43 @@ namespace GSDumpGUI
         {
             if (lstProcesses.SelectedIndex != -1)
             {
+                chkDebugMode.Enabled = true;
+
                 TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.GetDebugMode;
+                msg.Parameters.Add(chkDebugMode.Checked);
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+
+                msg = new TCPMessage();
                 msg.MessageType = MessageType.SizeDump;
                 Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+
                 msg = new TCPMessage();
                 msg.MessageType = MessageType.Statistics;
                 Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
             }
+            else
+            {
+                chkDebugMode.Enabled = false;
+            }
+        }
+
+        private void chkDebugMode_CheckedChanged(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.SetDebugMode;
+            msg.Parameters.Add(chkDebugMode.Checked);
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+        }
+
+        private void btnStep_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Not Implemented");
+        }
+
+        private void btnRunToSelection_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Not Implemented");
         }
     }
 }

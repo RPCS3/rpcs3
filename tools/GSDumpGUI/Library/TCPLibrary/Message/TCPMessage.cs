@@ -111,6 +111,10 @@ namespace TCPLibrary.MessageBased.Core
         MaxUsers,
         SizeDump,
         Statistics,
-        StateOld
+        StateOld,
+
+        GetDebugMode,
+        SetDebugMode,
+        DebugState
     }
 }

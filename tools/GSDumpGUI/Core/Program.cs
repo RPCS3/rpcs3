@@ -21,6 +21,7 @@ namespace GSDumpGUI
         static public TCPLibrary.MessageBased.Core.BaseMessageClient Client;
         static private Boolean ChangeIcon;
         static private GSDump dump;
+        static private GSDXWrapper wrap;
 
         [STAThread]
         static void Main(String[] args)
@@ -66,7 +67,7 @@ namespace GSDumpGUI
                 String Operation = args[2];
                 Int32 Renderer = Convert.ToInt32(args[3]);
 
-                GSDXWrapper wrap = new GSDXWrapper();
+                wrap = new GSDXWrapper();
                 wrap.Load(DLLPath);
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + Path.GetFileName(DLLPath) + "\\"));
                 if (Operation == "GSReplay")
@@ -149,6 +150,53 @@ namespace GSDumpGUI
                     {
                         MessageBox.Show("Savestate too old to be read. :(", "Warning");
                         frmMain.Focus();
+                    }), new object[] { null });
+                    break;
+                case MessageType.GetDebugMode:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                    {
+                        frmMain.chkDebugMode.Checked = (Boolean)Mess.Parameters[0];
+
+                        frmMain.lblGif.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.btnRunToSelection.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.treTreeView.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.btnStep.Enabled = frmMain.chkDebugMode.Checked;
+                        if (frmMain.chkDebugMode.Checked == false)
+                            frmMain.treTreeView.Nodes.Clear();
+
+                    }), new object[] { null });
+                    break;
+                case MessageType.DebugState:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                    {
+                        frmMain.treTreeView.Nodes.Clear();
+                        List<TreeNode> parents = new List<TreeNode>();
+                        List<TreeNode> nodes = new List<TreeNode>();
+                        foreach (var itm in Mess.Parameters)
+                        {
+                            String[] parts = itm.ToString().Split(new char[] { '|' });
+                            switch (parts[1])
+                            {
+                                case "Transfer":
+                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1] + " - " + parts[2]));
+                                    break;
+                                case "ReadFIFO2":
+                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1]));
+                                    break;
+                                case "VSync":
+                                    TreeNode tn = new TreeNode();
+                                    tn.Text = parts[0] + " - " + parts[1];
+                                    tn.Nodes.AddRange(nodes.ToArray());
+                                    parents.Add(tn);
+
+                                    nodes.Clear();
+                                    break;
+                                case "Registers":
+                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1]));
+                                    break;
+                            }
+                        }
+                        frmMain.treTreeView.Nodes.AddRange(parents.ToArray());
                     }), new object[] { null });                    
                     break;
                 default:
@@ -199,6 +247,37 @@ namespace GSDumpGUI
                     }
                     Client.Send(msg);
                     break;
+                case MessageType.SetDebugMode:
+                    wrap.DebugMode = (Boolean)Mess.Parameters[0];
+
+                    msg = new TCPMessage();
+                    msg.MessageType = MessageType.GetDebugMode;
+                    msg.Parameters.Add(wrap.DebugMode);
+                    Client.Send(msg);
+
+                    if (wrap.DebugMode)
+                    {
+                        msg = new TCPMessage();
+                        msg.MessageType = MessageType.DebugState;
+                        msg.Parameters.AddRange(wrap.GetGifPackets(dump));
+                        Client.Send(msg);
+                    }
+                    break;
+                case MessageType.GetDebugMode:
+                    msg = new TCPMessage();
+                    msg.MessageType = MessageType.GetDebugMode;
+                    msg.Parameters.Add(wrap.DebugMode);
+                    Client.Send(msg);
+
+                    if (wrap.DebugMode)
+                    {
+                        msg = new TCPMessage();
+                        msg.MessageType = MessageType.DebugState;
+                        msg.Parameters.AddRange(wrap.GetGifPackets(dump));
+                        Client.Send(msg);
+                    }
+                    break;
+
                 default:
                     break;
             }
