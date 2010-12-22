@@ -410,12 +410,22 @@ namespace GSDumpGUI
 
         private void btnStep_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Not Implemented");
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.Step;
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);            
         }
 
         private void btnRunToSelection_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Not Implemented");
+            if (treTreeView.SelectedNode != null)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.RunToCursor;
+                msg.Parameters.Add(Convert.ToInt32(treTreeView.SelectedNode.Text.Split(new string[]{" - "}, StringSplitOptions.None)[0]));
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
+            else
+                MessageBox.Show("You have not selected a node to jump to");
         }
     }
 }

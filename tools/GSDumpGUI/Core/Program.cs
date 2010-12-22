@@ -9,6 +9,7 @@ using System.Diagnostics;
 using GSDumpGUI.Properties;
 using System.IO;
 using TCPLibrary.MessageBased.Core;
+using System.Drawing;
 
 namespace GSDumpGUI
 {
@@ -22,6 +23,8 @@ namespace GSDumpGUI
         static private Boolean ChangeIcon;
         static private GSDump dump;
         static private GSDXWrapper wrap;
+
+        static private TreeNode CurrentNode;
 
         [STAThread]
         static void Main(String[] args)
@@ -43,15 +46,16 @@ namespace GSDumpGUI
                 {
                     while (true)
                     {
+                        IntPtr pt = Process.GetCurrentProcess().MainWindowHandle;
                         if (ChangeIcon)
                         {
-                            IntPtr pt = Process.GetCurrentProcess().MainWindowHandle;
                             if (pt.ToInt64() != 0)
                             {
                                 NativeMethods.SetClassLong(pt, -14, Resources.AppIcon.Handle.ToInt64());
                                 ChangeIcon = false;
                             }
                         }
+
                         Int32 tmp = NativeMethods.GetAsyncKeyState(0x1b) & 0xf;
                         if (tmp != 0)
                             Process.GetCurrentProcess().Kill();
@@ -178,13 +182,20 @@ namespace GSDumpGUI
                             switch (parts[1])
                             {
                                 case "Transfer":
-                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1] + " - " + parts[2]));
+                                    TreeNode tn2 = new TreeNode();
+                                    tn2.Name = parts[0];
+                                    tn2.Text = parts[0] + " - " + parts[1] + " - " + parts[2];
+                                    nodes.Add(tn2);
                                     break;
                                 case "ReadFIFO2":
-                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1]));
+                                    TreeNode tn3 = new TreeNode();
+                                    tn3.Name = parts[0];
+                                    tn3.Text = parts[0] + " - " + parts[1];
+                                    nodes.Add(tn3);
                                     break;
                                 case "VSync":
                                     TreeNode tn = new TreeNode();
+                                    tn.Name = parts[0];
                                     tn.Text = parts[0] + " - " + parts[1];
                                     tn.Nodes.AddRange(nodes.ToArray());
                                     parents.Add(tn);
@@ -192,12 +203,31 @@ namespace GSDumpGUI
                                     nodes.Clear();
                                     break;
                                 case "Registers":
-                                    nodes.Add(new TreeNode(parts[0] + " - " + parts[1]));
+                                    TreeNode tn4 = new TreeNode();
+                                    tn4.Name = parts[0];
+                                    tn4.Text = parts[0] + " - " + parts[1];
+                                    nodes.Add(tn4);
                                     break;
                             }
                         }
                         frmMain.treTreeView.Nodes.AddRange(parents.ToArray());
                     }), new object[] { null });                    
+                    break;
+                case MessageType.Step:
+                case MessageType.RunToCursor:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                    {
+                        int idtoselect = (int)Mess.Parameters[0];
+                        TreeNode[] noes = frmMain.treTreeView.Nodes.Find(idtoselect.ToString(), true);
+                        if (noes.Length > 0)
+                        {
+                            if (CurrentNode != null)
+                                CurrentNode.BackColor = Color.White;
+                            noes[0].BackColor = Color.LightBlue;
+                            CurrentNode = noes[0];
+                            frmMain.treTreeView.SelectedNode = noes[0];
+                        }
+                    }), new object[] { null });
                     break;
                 default:
                     break;
@@ -261,6 +291,11 @@ namespace GSDumpGUI
                         msg.MessageType = MessageType.DebugState;
                         msg.Parameters.AddRange(wrap.GetGifPackets(dump));
                         Client.Send(msg);
+
+                        msg = new TCPMessage();
+                        msg.MessageType = MessageType.Step;
+                        msg.Parameters.Add(dump.Data.FindIndex(a => a == wrap.CurrentGIFPacket));
+                        Client.Send(msg);
                     }
                     break;
                 case MessageType.GetDebugMode:
@@ -275,9 +310,25 @@ namespace GSDumpGUI
                         msg.MessageType = MessageType.DebugState;
                         msg.Parameters.AddRange(wrap.GetGifPackets(dump));
                         Client.Send(msg);
+
+                        msg = new TCPMessage();
+                        msg.MessageType = MessageType.Step;
+                        msg.Parameters.Add(dump.Data.FindIndex(a => a == wrap.CurrentGIFPacket));
+                        Client.Send(msg);
                     }
                     break;
-
+                case MessageType.Step:
+                    wrap.ExternalEvent.WaitOne();
+                    wrap.ExternalEvent.Reset();
+                    wrap.QueueMessage.Enqueue(Mess);
+                    wrap.ThereIsWork = true;
+                    break;
+                case MessageType.RunToCursor:
+                    wrap.ExternalEvent.WaitOne();
+                    wrap.ExternalEvent.Reset();
+                    wrap.QueueMessage.Enqueue(Mess);
+                    wrap.ThereIsWork = true;
+                    break;
                 default:
                     break;
             }

@@ -51,10 +51,12 @@ namespace GSDumpGUI
 
         private Boolean Running;
 
-        public List<TCPMessage> QueueMessage;
+        public Queue<TCPMessage> QueueMessage;
         public Boolean DebugMode;
         public GSData CurrentGIFPacket;
-        public AutoResetEvent Event;
+        public bool ThereIsWork;
+        public AutoResetEvent ExternalEvent;
+        public int RunTo;
 
         static public Boolean IsValidGSDX(String DLL)
         {
@@ -175,9 +177,9 @@ namespace GSDumpGUI
 
         public unsafe void Run(GSDump dump, int rendererOverride)
         {
-            QueueMessage = new List<TCPMessage>();
+            QueueMessage = new Queue<TCPMessage>();
             Running = true;
-            Event = new AutoResetEvent(true);
+            ExternalEvent = new AutoResetEvent(true);
 
             GSinit();
             fixed (byte* pointer = dump.Registers)
@@ -210,11 +212,74 @@ namespace GSDumpGUI
                                 break;
                             }
 
-                            foreach (var itm in dump.Data)
+                            for (int i = 0; i < dump.Data.Count; i++)
                             {
+                                GSData itm = dump.Data[i];
                                 CurrentGIFPacket = itm;
 
-                                Step(itm, pointer);
+                                if (DebugMode)
+                                {
+                                    if (RunTo != -1)
+                                    {
+                                        if (i == RunTo)
+                                        {
+                                            RunTo = -1;
+
+                                            TCPMessage Msg = new TCPMessage();
+                                            Msg.MessageType = MessageType.RunToCursor;
+                                            Msg.Parameters.Add(i);
+                                            Program.Client.Send(Msg);
+
+                                            ExternalEvent.Set();
+                                        }
+                                        else
+                                        {
+                                            Step(itm, pointer);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        while (!ThereIsWork && Running)
+                                        {
+                                            NativeMessage message;
+                                            while (NativeMethods.PeekMessage(out message, IntPtr.Zero, 0, 0, 1))
+                                            {
+                                                if (!NativeMethods.IsWindowVisible(new IntPtr(HWND)))
+                                                {
+                                                    Running = false;
+                                                }
+                                                NativeMethods.TranslateMessage(ref message);
+                                                NativeMethods.DispatchMessage(ref message);
+                                            }
+                                        }
+
+                                        ThereIsWork = false;
+                                        if (QueueMessage.Count > 0)
+                                        {
+                                            TCPMessage Mess = QueueMessage.Dequeue();
+                                            if (Mess.MessageType == MessageType.Step)
+                                            {
+                                                Step(itm, pointer);
+
+                                                TCPMessage Msg = new TCPMessage();
+                                                Msg.MessageType = MessageType.Step;
+                                                Msg.Parameters.Add(i);
+                                                Program.Client.Send(Msg); 
+
+                                                ExternalEvent.Set();
+                                            }
+                                            else
+                                                if (Mess.MessageType == MessageType.RunToCursor)
+                                                {
+                                                    RunTo = (int)Mess.Parameters[0];
+                                                }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    Step(itm, pointer);
+                                }
                             }
                         }
 
