@@ -723,6 +723,80 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	return TD + ApplyVolume( RV*temp, FxVol );
 }
 
+// Filters that work on the final output to de-alias and equlize it.
+// Taken from http://nenolod.net/projects/upse/
+#define OVERALL_SCALE (0.87f)
+
+StereoOut32 Apply_Frequency_Response_Filter(StereoOut32 &SoundStream)
+{
+	static FrequencyResponseFilter FRF = FrequencyResponseFilter();
+
+	s32 in, out;
+	s32 l, r;
+	s32 mid, side;
+
+	l = SoundStream.Left;
+	r = SoundStream.Right;
+
+	mid  = l + r;
+	side = l - r;
+
+	in = mid;
+	out = FRF.la0 * in + FRF.la1 * FRF.lx1 + FRF.la2 * FRF.lx2 - FRF.lb1 * FRF.ly1 - FRF.lb2 * FRF.ly2;
+
+	FRF.lx2 = FRF.lx1;
+	FRF.lx1 = in;
+
+	FRF.ly2 = FRF.ly1;
+	FRF.ly1 = out;
+
+	mid = out;
+
+	l = ((0.5) * (OVERALL_SCALE)) * (mid + side);
+	r = ((0.5) * (OVERALL_SCALE)) * (mid - side);
+
+	in = l;
+	out = FRF.ha0 * in + FRF.ha1 * FRF.History_One_In.Left + FRF.ha2 * FRF.History_Two_In.Left - FRF.hb1 * FRF.History_One_Out.Left - FRF.hb2 * FRF.History_Two_Out.Left;
+	FRF.History_Two_In.Left = FRF.History_One_In.Left; FRF.History_One_In.Left = in;
+	FRF.History_Two_Out.Left = FRF.History_One_Out.Left; FRF.History_One_Out.Left = out;
+	l = out;
+
+	in = r;
+	out = FRF.ha0 * in + FRF.ha1 * FRF.History_One_In.Right + FRF.ha2 * FRF.History_Two_In.Right - FRF.hb1 * FRF.History_One_Out.Right - FRF.hb2 * FRF.History_Two_Out.Right;
+	FRF.History_Two_In.Right = FRF.History_One_In.Right; FRF.History_One_In.Right = in;
+	FRF.History_Two_Out.Right = FRF.History_One_Out.Right; FRF.History_One_Out.Right = out;
+	r = out;
+
+	//clamp_mix(l);
+	//clamp_mix(r);
+
+	SoundStream.Left = l;
+	SoundStream.Right = r;
+
+	return SoundStream;
+}
+
+StereoOut32 Apply_Dealias_Filter(StereoOut32 &SoundStream)
+{
+	static StereoOut32 Old = StereoOut32::Empty;
+
+	s32 l, r;
+
+	l = SoundStream.Left;
+	r = SoundStream.Right;
+
+	l += (l - Old.Left);
+	r += (r - Old.Right);
+
+	Old.Left = SoundStream.Left;
+	Old.Right = SoundStream.Right;
+
+	SoundStream.Left = l;
+	SoundStream.Right = r;
+
+	return SoundStream;
+}
+
 // used to throttle the output rate of cache stat reports
 static int p_cachestat_counter=0;
 
@@ -780,11 +854,18 @@ __forceinline void Mix()
 		Out.Left = MulShr32( Out.Left<<(SndOutVolumeShift+1), Cores[1].MasterVol.Left.Value );
 		Out.Right = MulShr32( Out.Right<<(SndOutVolumeShift+1), Cores[1].MasterVol.Right.Value );
 
+		#ifdef DEBUG_KEYS
+		if(postprocess_filter_enabled)
+		#endif
+		{
+			Out = Apply_Dealias_Filter ( Out );
+			Out = Apply_Frequency_Response_Filter ( Out );
+		}
+
 		// Final Clamp!
 		// Like any good audio system, the PS2 pumps the volume and incurs some distortion in its
 		// output, giving us a nice thumpy sound at times.  So we add 1 above (2x volume pump) and
 		// then clamp it all here.
-
 		Out = clamp_mix( Out, SndOutVolumeShift );
 	}
 

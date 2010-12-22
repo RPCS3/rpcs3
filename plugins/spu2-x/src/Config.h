@@ -63,6 +63,7 @@ extern int Interpolation;
 extern int ReverbBoost;
 extern int numSpeakers;
 extern bool EffectsDisabled;
+extern bool postprocess_filter_enabled;
 
 extern u32 OutputModule;
 extern int SndOutLatencyMS;

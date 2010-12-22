@@ -88,6 +88,9 @@ extern void SysMessage(const wchar_t *fmt, ...);
 #	define SPU2_LOG
 #endif
 
+// Uncomment to enable debug keys on numpad (0 to 5)
+//#define DEBUG_KEYS
+
 #include "Utilities/Exceptions.h"
 #include "Utilities/SafeArray.h"
 

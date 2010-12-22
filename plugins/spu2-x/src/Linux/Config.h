@@ -69,6 +69,7 @@ static __forceinline bool RegDump() { return _RegDump & DebugEnabled; }*/
 extern int Interpolation;
 extern int ReverbBoost;
 extern bool EffectsDisabled;
+extern bool postprocess_filter_enabled = 1;
 
 extern int AutoDMAPlayRate[2];
 
