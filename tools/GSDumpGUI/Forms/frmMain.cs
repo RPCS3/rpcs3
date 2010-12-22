@@ -399,10 +399,13 @@ namespace GSDumpGUI
 
         private void chkDebugMode_CheckedChanged(object sender, EventArgs e)
         {
-            TCPMessage msg = new TCPMessage();
-            msg.MessageType = MessageType.SetDebugMode;
-            msg.Parameters.Add(chkDebugMode.Checked);
-            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            if (lstProcesses.SelectedIndex != -1)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.SetDebugMode;
+                msg.Parameters.Add(chkDebugMode.Checked);
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
         }
 
         private void btnStep_Click(object sender, EventArgs e)

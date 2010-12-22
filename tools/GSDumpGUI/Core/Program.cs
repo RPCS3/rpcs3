@@ -299,6 +299,15 @@ namespace GSDumpGUI
                 {
                     frmMain.lstProcesses.Items.Add(itm.IPAddress);
                 }
+                if (frmMain.lstProcesses.SelectedIndex == -1)
+                {
+                    frmMain.chkDebugMode.Checked = false;
+                    frmMain.lblGif.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.btnRunToSelection.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.treTreeView.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.btnStep.Enabled = frmMain.chkDebugMode.Checked;
+                    frmMain.treTreeView.Nodes.Clear();
+                }
             }), new object[] { null});
         }
     }
