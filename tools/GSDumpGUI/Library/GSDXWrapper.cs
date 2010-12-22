@@ -216,6 +216,9 @@ namespace GSDumpGUI
                                 break;
                             }
 
+                            Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
+                            GSfreeze(0, new IntPtr(fr));
+
                             for (int i = 0; i < dump.Data.Count; i++)
                             {
                                 GSData itm = dump.Data[i];
