@@ -367,7 +367,8 @@ namespace GSDumpGUI
                 {
                     frmMain.lstProcesses.Items.Add(itm.IPAddress);
                 }
-                frmMain.lstProcesses.SelectedIndex = frmMain.lstProcesses.Items.Count - 1;
+                if (SelectLast)
+                    frmMain.lstProcesses.SelectedIndex = frmMain.lstProcesses.Items.Count - 1;
                 if (frmMain.lstProcesses.SelectedIndex == -1)
                 {
                     frmMain.chkDebugMode.Checked = false;
