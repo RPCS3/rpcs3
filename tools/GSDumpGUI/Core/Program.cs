@@ -31,6 +31,9 @@ namespace GSDumpGUI
         {
             if (args.Length == 4)
             {
+                // do this first, else racy mess ;)
+                wrap = new GSDXWrapper();
+
                 try
                 {
                     Client = new TCPLibrary.MessageBased.Core.BaseMessageClient();
@@ -71,7 +74,6 @@ namespace GSDumpGUI
                 String Operation = args[2];
                 Int32 Renderer = Convert.ToInt32(args[3]);
 
-                wrap = new GSDXWrapper();
                 wrap.Load(DLLPath);
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + Path.GetFileName(DLLPath) + "\\"));
                 if (Operation == "GSReplay")
