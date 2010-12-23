@@ -94,6 +94,9 @@ ptw32_processTerminate (void)
 	  tp = tpNext;
 	}
 
+	  ptw32_threadReuseTop = PTW32_THREAD_REUSE_EMPTY;
+	  ptw32_threadReuseBottom = PTW32_THREAD_REUSE_EMPTY;
+
       LeaveCriticalSection (&ptw32_thread_reuse_lock);
 
       /*

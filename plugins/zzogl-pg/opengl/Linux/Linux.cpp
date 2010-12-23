@@ -234,7 +234,8 @@ void DisplayAdvancedDialog()
 				 
 	dialog = gtk_dialog_new();
 	gtk_window_set_title(GTK_WINDOW(dialog), "ZZOgl PG Advanced Config");
-	gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 600);
+	// A good value for the heigh will be 1000 instead of 800 but I'm afraid that some people still uses small screen...
+	gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 800);
 	gtk_window_set_modal(GTK_WINDOW(dialog), true);
 	
 	advanced_box = gtk_vbox_new(false, 5);

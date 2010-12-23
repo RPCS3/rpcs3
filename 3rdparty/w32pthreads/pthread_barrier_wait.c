@@ -84,13 +84,8 @@ pthread_barrier_wait (pthread_barrier_t * barrier)
    */
   if (0 == result)
     {
-      result = ((PTW32_INTERLOCKED_LONG) step ==
-		PTW32_INTERLOCKED_COMPARE_EXCHANGE ((PTW32_INTERLOCKED_LPLONG)
-						    & (b->iStep),
-						    (PTW32_INTERLOCKED_LONG)
-						    (1L - step),
-						    (PTW32_INTERLOCKED_LONG)
-						    step) ?
+      result = ( step ==
+		_InterlockedCompareExchange ( &(b->iStep), (1L - step), step) ?
 		PTHREAD_BARRIER_SERIAL_THREAD : 0);
     }
 

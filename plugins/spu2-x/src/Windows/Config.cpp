@@ -37,6 +37,7 @@ int Interpolation = 1;
 */
 int ReverbBoost = 0;
 bool EffectsDisabled = false;
+bool postprocess_filter_enabled = 1;
 
 // OUTPUT
 int SndOutLatencyMS = 150;

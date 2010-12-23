@@ -91,10 +91,10 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	if(!m_d3d) return false;
 
-	if (TestDepthFormat(m_d3d, D3DFMT_D32F_LOCKABLE))
-		m_depth_format = D3DFMT_D32F_LOCKABLE;
-	else if (TestDepthFormat(m_d3d, D3DFMT_D32))
+	if (TestDepthFormat(m_d3d, D3DFMT_D32))
 		m_depth_format = D3DFMT_D32;
+	else if (TestDepthFormat(m_d3d, D3DFMT_D32F_LOCKABLE))
+		m_depth_format = D3DFMT_D32F_LOCKABLE;
 	else if (TestDepthFormat(m_d3d, D3DFMT_D24S8))
 		m_depth_format = D3DFMT_D24S8;
 	else
@@ -154,6 +154,9 @@ bool GSDevice9::Create(GSWnd* wnd)
 			if(i >= m_msaa) break;
 		}
 	}
+
+	if (m_msaa_desc.Count == 1)
+		m_msaa = 0;
 
 	//
 

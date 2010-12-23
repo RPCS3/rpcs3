@@ -360,7 +360,8 @@ AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
 	, SysSettingsTabName( L"Cpu" )
 	, McdSettingsTabName( L"none" )
-	, AppSettingsTabName( L"Plugins" )
+	, ComponentsTabName( L"Plugins" )
+	, AppSettingsTabName( L"Appearance" )
 	, GameDatabaseTabName( L"none" )
 	, DeskTheme( L"default" )
 {
@@ -466,6 +467,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( MainGuiPosition );
 	IniEntry( SysSettingsTabName );
 	IniEntry( McdSettingsTabName );
+	IniEntry( ComponentsTabName );
 	IniEntry( AppSettingsTabName );
 	IniEntry( GameDatabaseTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );

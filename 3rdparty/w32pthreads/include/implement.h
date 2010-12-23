@@ -45,6 +45,9 @@
 
 #include <windows.h>
 #include <intrin.h>
+#include <winsock.h>
+#include <malloc.h>
+#include <limits.h>
 
 /*
  * In case windows.h doesn't define it (e.g. WinCE perhaps)
@@ -54,23 +57,10 @@ typedef VOID (APIENTRY *PAPCFUNC)(DWORD dwParam);
 #endif
 
 /*
- * note: ETIMEDOUT is correctly defined in winsock.h
- */
-#include <winsock.h>
-
-/*
- * In case ETIMEDOUT hasn't been defined above somehow.
+ * In case ETIMEDOUT hasn't been defined in winsock.h somehow.
  */
 #ifndef ETIMEDOUT
-#  define ETIMEDOUT 10060	/* This is the value in winsock.h. */
-#endif
-
-#if !defined(malloc)
-#include <malloc.h>
-#endif
-
-#if !defined(INT_MAX)
-#include <limits.h>
+#	define ETIMEDOUT 10060	/* This is the value in winsock.h. */
 #endif
 
 /* use local include files during development */
@@ -81,14 +71,6 @@ typedef VOID (APIENTRY *PAPCFUNC)(DWORD dwParam);
 #define INLINE __forceinline
 #else
 #define INLINE
-#endif
-
-#if defined (__MINGW32__) || (_MSC_VER >= 1300)
-#define PTW32_INTERLOCKED_LONG long
-#define PTW32_INTERLOCKED_LPLONG long*
-#else
-#define PTW32_INTERLOCKED_LONG PVOID
-#define PTW32_INTERLOCKED_LPLONG PVOID*
 #endif
 
 #if defined(__MINGW32__)
@@ -338,9 +320,9 @@ struct ptw32_mcs_node_t_
 {
   struct ptw32_mcs_node_t_ **lock;        /* ptr to tail of queue */
   struct ptw32_mcs_node_t_  *next;        /* ptr to successor in queue */
-  LONG                       readyFlag;   /* set after lock is released by
+  HANDLE                     readyFlag;   /* set after lock is released by
                                              predecessor */
-  LONG                       nextFlag;    /* set after 'next' ptr is set by
+  HANDLE                     nextFlag;    /* set after 'next' ptr is set by
                                              successor */
 };
 
@@ -668,18 +650,32 @@ extern "C"
 #endif
 
 
-/*
- * Defaults. Could be overridden when building the inlined version of the dll.
- * See ptw32_InterlockedCompareExchange.c
- */
-// Default to inlining the pthreads versions... (air)
-#ifndef PTW32_INTERLOCKED_COMPARE_EXCHANGE
-#define PTW32_INTERLOCKED_COMPARE_EXCHANGE _InterlockedCompareExchange
+static INLINE void* _InterlockedExchangePointer( void* volatile* target, void* value )
+{
+#ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
+	return (void*)_InterlockedExchange64( (LONG_PTR*)target, value );
+#else
+	return (void*)_InterlockedExchange( (LONG_PTR*)target, (LONG_PTR)value );
 #endif
+}
 
-#ifndef PTW32_INTERLOCKED_EXCHANGE
-#define PTW32_INTERLOCKED_EXCHANGE _InterlockedExchange
+static INLINE void* _InterlockedCompareExchangePointer( void* volatile* target, void* value, void* comparand )
+{
+#ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
+	return (void*)_InterlockedCompareExchange64( (LONG_PTR*)target, value, comparand );
+#else
+	return (void*)_InterlockedCompareExchange( (LONG_PTR*)target, (LONG_PTR)value, (LONG_PTR)comparand );
 #endif
+}
+
+static INLINE void* _InterlockedExchangeAddPointer( void* volatile* target, void* value )
+{
+#ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
+	return (void*)_InterlockedExchangeAdd64( (LONG_PTR*)target, (LONG_PTR)value );
+#else
+	return (void*)_InterlockedExchangeAdd( (LONG_PTR*)target, (LONG_PTR)value );
+#endif
+}
 
 
 /*

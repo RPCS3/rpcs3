@@ -363,6 +363,24 @@ set(pcsx2GuiHeaders
 	gui/RecentIsoList.h
 	)
 
+# Gui resources headers
+set(pcsx2GuiResources
+    gui/Resources/AppIcon16.h
+    gui/Resources/AppIcon32.h
+    gui/Resources/AppIcon64.h
+    gui/Resources/BackgroundLogo.h
+    gui/Resources/ConfigIcon_Appearance.h
+    gui/Resources/ButtonIcon_Camera.h
+    gui/Resources/ConfigIcon_Cpu.h
+    gui/Resources/ConfigIcon_Gamefixes.h
+    gui/Resources/ConfigIcon_MemoryCard.h
+    gui/Resources/ConfigIcon_Paths.h
+    gui/Resources/ConfigIcon_Plugins.h
+    gui/Resources/ConfigIcon_Speedhacks.h
+    gui/Resources/ConfigIcon_Video.h
+    gui/Resources/Dualshock.h
+    )
+
 # IPU sources
 set(pcsx2IPUSources
 	IPU/IPU.cpp
@@ -568,6 +586,7 @@ set(Common
 	${pcsx2DebugToolsSources}
 	${pcsx2DebugToolsSources}
 	${pcsx2GuiSources}
+    ${pcsx2GuiResources}
 	${pcsx2GuiHeaders}
 	${pcsx2IPUSources}
 	${pcsx2IPUHeaders}
@@ -618,8 +637,21 @@ add_executable(${Output}
 			   ${Common}
 			   ${Platform})
 
-# add dependencies
-add_dependencies(${Output} Resources)
+# Generate the resources files
+add_custom_command(OUTPUT   "gui/Resources/AppIcon16.h"               COMMAND   bin2cpp   "gui/Resources/AppIcon16.png")
+add_custom_command(OUTPUT   "gui/Resources/AppIcon32.h"               COMMAND   bin2cpp   "gui/Resources/AppIcon32.png")
+add_custom_command(OUTPUT   "gui/Resources/AppIcon64.h"               COMMAND   bin2cpp   "gui/Resources/AppIcon64.png")
+add_custom_command(OUTPUT   "gui/Resources/BackgroundLogo.h"          COMMAND   bin2cpp   "gui/Resources/BackgroundLogo.png")
+add_custom_command(OUTPUT   "gui/Resources/ButtonIcon_Camera.h"       COMMAND   bin2cpp   "gui/Resources/ButtonIcon_Camera.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Appearance.h"   COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Appearance.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Cpu.h"          COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Cpu.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Gamefixes.h"    COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Gamefixes.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_MemoryCard.h"   COMMAND   bin2cpp   "gui/Resources/ConfigIcon_MemoryCard.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Paths.h"        COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Paths.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Plugins.h"      COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Plugins.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Speedhacks.h"   COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Speedhacks.png")
+add_custom_command(OUTPUT   "gui/Resources/ConfigIcon_Video.h"        COMMAND   bin2cpp   "gui/Resources/ConfigIcon_Video.png")
+add_custom_command(OUTPUT   "gui/Resources/Dualshock.h"               COMMAND   bin2cpp   "gui/Resources/Dualshock.jpg")
 
 # link target with project internal libraries
 target_link_libraries(${Output} Utilities x86emitter)

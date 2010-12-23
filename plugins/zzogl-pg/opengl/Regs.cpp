@@ -42,6 +42,42 @@ u32 s_uClampData[2] = {0, };
 
 //u32 results[65535] = {0, };
 
+// Note that not all the registers are currently handled, even if they write values out.
+// For reference, I'm starting a list of unhandled flags here. I'm sure I missed some,
+// so feel free to add to this, or remove ones that are handled that I missed.
+// Cases where these values are set would be useful, too.
+//
+// In GIFRegHandlerFOG, I don't see gs.vertexregs.f being used anywhere afterwards.
+// GIFRegHandlerTEX1 doesn't look like anything other then mmag and mmin are handled.
+//     This includes:
+//          lcm  - the lod (level of detail) calculation method. If 0, it's (log2(1/|Q|)<<L)+K), whereas if it is one, it's just K.
+//          mxl  - This is what MIPMAP level we use. The default is 0, and any other level uses miptbp0 & 1 to get the texture width. 
+//          mtba - this is the base address specification for MIPMAP level 1+.
+//          l    - Yeah, this is for the LOD calculation.
+//          k    - This too.
+//     This largely sums up as that we don't support MIPMAP level 1+ (much like GSdx), and LOD.
+//
+// In GIFRegHandlerSCANMSK, it doesn't look like gs.smask is used, though it may have been in the old resolve code.
+//     Lets see: 00 is normal drawing, 01 is reserved, 10 prohibits drawing to even y coords, and 11 prohibits drawing to odd y coords.
+//
+// In GIFRegHandlerMIPTBP1 & 2, both miptbp0 & miptbp1 look unused, which isn't suprising, given mxl not being checked.
+//
+// GIFRegHandlerDIMX doesn't even have any code in it!
+//     This is supposed to read in the matrix for dithering.
+//
+// In GIFRegHandlerDTHE, nothing is done with gs.dthe.
+//     This goes right with the last one, because dthe is set to 1 when dithering with the dthe matrix.
+
+// In GIFRegHandlerCOLCLAMP, gs.colclamp is not used.
+//     This is color clamping on the RGB value. If it's 0, it is set to mask, the lower 8 bits are enabled, and it wraps around. At 1, it is clamped from 0-255.
+
+//#define SPAM_UNUSED_REGISTERS
+#ifdef SPAM_UNUSED_REGISTERS
+#define REG_LOG ZZLog::Error_Log
+#else
+#define REG_LOG 0 && 
+#endif
+
 void __gifCall GIFPackedRegHandlerNull(const u32* data)
 {
 	FUNCLOG
@@ -109,6 +145,7 @@ void __gifCall GIFPackedRegHandlerFOG(const u32* data)
 {
 	FUNCLOG
 	gs.vertexregs.f = (data[3] & 0xff0) >> 4;
+	if (gs.vertexregs.f != 0) REG_LOG("GIFPackedRegHandlerFOG == %d", gs.vertexregs.f);
 }
 
 void __gifCall GIFPackedRegHandlerA_D(const u32* data)
@@ -273,6 +310,8 @@ void __gifCall GIFRegHandlerFOG(const u32* data)
 	FUNCLOG
 	//gs.gsvertex[gs.primIndex].f = (data[1] >> 24);	// shift to upper bits
 	gs.vertexregs.f = data[1] >> 24;
+	if (gs.vertexregs.f != 0) REG_LOG("GIFPackedRegHandlerFOG == %d", gs.vertexregs.f);
+	
 }
 
 void __gifCall GIFRegHandlerXYZF3(const u32* data)
@@ -320,6 +359,11 @@ void __gifCall GIFRegHandlerTEX1(const u32* data)
 	tex1.mtba = (data[0] >>  9) & 0x1;
 	tex1.l	= (data[0] >> 19) & 0x3;
 	tex1.k	= (data[1] >> 4) & 0xff;
+	
+#ifdef SPAM_UNUSED_REGISTERS
+	REG_LOG("Lcm = %d, l = %d, k = %d", tex1.lcm, tex1.l, tex1.k);
+	if (tex1.mxl != 0) REG_LOG("MIPMAP level set to %d, which is unsupported.");
+#endif
 }
 
 template <u32 ctxt>
@@ -420,6 +464,7 @@ void __gifCall GIFRegHandlerSCANMSK(const u32* data)
 //  ResolveZ(&vb[0]);
 
 	gs.smask = data[0] & 0x3;
+	REG_LOG("Scanmsk == %d", gs.smask);
 }
 
 template <u32 ctxt>
@@ -433,6 +478,13 @@ void __gifCall GIFRegHandlerMIPTBP1(const u32* data)
 	miptbp0.tbw[1] = (data[1] >>  2) & 0x3f;
 	miptbp0.tbp[2] = (data[1] >>  8) & 0x3fff;
 	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
+#ifdef SPAM_UNUSED_REGISTERS
+	if ((miptbp0.tbp[0] != 0) || (miptbp0.tbp[1] != 0) || (miptbp0.tbp[2] != 0))
+	{
+		REG_LOG("MIPTBP1: 0:%d(%d) 1:%d(%d) 2:%d(%d).", \
+						miptbp0.tbp[0], miptbp0.tbw[0], miptbp0.tbp[1], miptbp0.tbw[1], miptbp0.tbp[2], miptbp0.tbw[2]);
+	}
+#endif
 }
 
 template <u32 ctxt>
@@ -446,6 +498,13 @@ void __gifCall GIFRegHandlerMIPTBP2(const u32* data)
 	miptbp1.tbw[1] = (data[1] >>  2) & 0x3f;
 	miptbp1.tbp[2] = (data[1] >>  8) & 0x3fff;
 	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
+#ifdef SPAM_UNUSED_REGISTERS
+	if ((miptbp1.tbp[0] != 0) || (miptbp1.tbp[1] != 0) || (miptbp1.tbp[2] != 0))
+	{
+		REG_LOG("MIPTBP2: 0:%d(%d) 1:%d(%d) 2:%d(%d).", \
+					miptbp1.tbp[0], miptbp1.tbw[0], miptbp1.tbp[1], miptbp1.tbw[1], miptbp1.tbp[2], miptbp1.tbw[2]);
+	}
+#endif
 }
 
 void __gifCall GIFRegHandlerTEXA(const u32* data)
@@ -535,12 +594,17 @@ void __gifCall GIFRegHandlerDTHE(const u32* data)
 {
 	FUNCLOG
 	gs.dthe = data[0] & 0x1;
+	if (gs.dthe != 0) REG_LOG("Dithering set. (but not implemented.)");
 }
 
 void __gifCall GIFRegHandlerCOLCLAMP(const u32* data)
 {
 	FUNCLOG
 	gs.colclamp = data[0] & 0x1;
+	if (gs.colclamp == 0) 
+		REG_LOG("COLCLAMP == MASK");
+	else
+		REG_LOG("COLCLAMP == CLAMP");
 }
 
 template <u32 ctxt>

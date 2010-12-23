@@ -26,8 +26,6 @@
 #	include "svnrev.h"
 #endif
 
-// Uncomment to enable debug keys
-//#define DEBUG_KEYS
 
 // PCSX2 expects ASNI, not unicode, so this MUST always be char...
 static char libraryName[256];
@@ -511,7 +509,7 @@ static bool numpad_plus = false, numpad_plus_old = false;
 
 #ifdef DEBUG_KEYS
 static u32 lastTicks;
-static bool lState[5];
+static bool lState[6];
 #endif
 
 EXPORT_C_(void) SPU2async(u32 cycles)
@@ -530,16 +528,22 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 
 #ifdef DEBUG_KEYS
 	u32 curTicks = GetTickCount();
-	if((curTicks - lastTicks) >= 100)
+	if((curTicks - lastTicks) >= 50)
 	{
 		int oldI = Interpolation;
-		bool cState[5];
-		for(int i=0;i<5;i++)
+		bool cState[6];
+		for(int i=0;i<6;i++)
 		{
 			cState[i] = !!(GetAsyncKeyState(VK_NUMPAD0+i)&0x8000);
 
-			if(cState[i] && !lState[i])
+			if((cState[i] && !lState[i]) && i != 5)
 				Interpolation = i;
+
+			if((cState[i] && !lState[i]) && i == 5)
+			{
+				postprocess_filter_enabled = !postprocess_filter_enabled;
+				printf("Post process filters %s \n", postprocess_filter_enabled? "enabled" : "disabled");
+			}
 
 			lState[i] = cState[i];
 		}

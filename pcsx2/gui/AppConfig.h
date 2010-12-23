@@ -192,6 +192,7 @@ public:
 	// by it's UTF/ASCII name).
 	wxString	SysSettingsTabName;
 	wxString	McdSettingsTabName;
+	wxString	ComponentsTabName;
 	wxString	AppSettingsTabName;
 	wxString	GameDatabaseTabName;
 

@@ -85,7 +85,9 @@ void GSSettingsDlg::OnInit()
 
 		ComboBoxAppend(IDC_RESOLUTION, "Please select...", (LPARAM)&m_modes.back(), true);
 
-		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
+		CComPtr<IDirect3D9> d3d;
+		d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
+		if(d3d)
 		{
 			uint32 w = theApp.GetConfig("ModeWidth", 0);
 			uint32 h = theApp.GetConfig("ModeHeight", 0);

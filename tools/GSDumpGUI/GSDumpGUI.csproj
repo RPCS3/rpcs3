@@ -28,6 +28,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -36,7 +37,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
@@ -54,9 +55,21 @@
     <Compile Include="Forms\frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
+    <Compile Include="Library\GSDump\GSData\GSData.cs" />
+    <Compile Include="Library\GSDump\GSDump.cs" />
+    <Compile Include="Library\GSDump\GSData\GSTransfer.cs" />
     <Compile Include="Library\GSDXWrapper.cs" />
     <Compile Include="Library\NativeMethods.cs" />
     <Compile Include="Core\Program.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClient.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Message\BaseMessageServer.cs" />
+    <Compile Include="Library\TCPLibrary\Base\CancelArgs.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Client.cs" />
+    <Compile Include="Library\TCPLibrary\Base\ClientS.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Data.cs" />
+    <Compile Include="Library\TCPLibrary\Base\Server.cs" />
+    <Compile Include="Library\TCPLibrary\Message\TCPMessage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Forms\frmMain.resx">
       <DependentUpon>frmMain.cs</DependentUpon>

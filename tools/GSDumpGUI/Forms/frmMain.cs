@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
 using System.Security;
+using TCPLibrary.MessageBased.Core;
 
 namespace GSDumpGUI
 {
@@ -63,6 +64,8 @@ namespace GSDumpGUI
 
         public void ReloadGSDXs()
         {
+            txtIntLog.Text += "Starting GSDX Loading Procedures" + Environment.NewLine + Environment.NewLine;
+
             txtGSDXDirectory.Text = Properties.Settings.Default.GSDXDir;
             txtDumpsDirectory.Text = Properties.Settings.Default.DumpDir;
 
@@ -79,11 +82,24 @@ namespace GSDumpGUI
                     if (GSDXWrapper.IsValidGSDX(itm))
                     {
                         wrap.Load(itm);
+
                         lstGSDX.Items.Add(Path.GetFileName(itm) + " | " + wrap.PSEGetLibName());
+                        txtIntLog.Text += "\"" + itm + "\" correctly identified as " + wrap.PSEGetLibName() + Environment.NewLine;
+                        
                         wrap.Unload();
                     }
+                    else
+                    {
+                        txtIntLog.Text += "Failed to load \"" + itm + "\". Is it really a GSDX DLL?" + Environment.NewLine;
+                    }
                 }
+            }
 
+            txtIntLog.Text += Environment.NewLine + "Completed GSDX Loading Procedures" + Environment.NewLine + Environment.NewLine;
+
+            txtIntLog.Text += "Starting GSDX Dumps Loading Procedures : " + Environment.NewLine + Environment.NewLine;
+            if (Directory.Exists(txtDumpsDirectory.Text))
+            {
                 String[] Dumps = Directory.GetFiles(txtDumpsDirectory.Text, "*.gs", SearchOption.TopDirectoryOnly);
 
                 foreach (var itm in Dumps)
@@ -91,9 +107,13 @@ namespace GSDumpGUI
                     BinaryReader br = new BinaryReader(System.IO.File.Open(itm, FileMode.Open));
                     Int32 CRC = br.ReadInt32();
                     br.Close();
-                    lstDumps.Items.Add(Path.GetFileName(itm) +  " | CRC : " + CRC.ToString("X"));
+                    lstDumps.Items.Add(Path.GetFileName(itm) + " | CRC : " + CRC.ToString("X"));
+                    txtIntLog.Text += "Identified Dump for game (" + CRC.ToString("X") + ") with filename \"" + itm + "\"" + Environment.NewLine;
                 }
             }
+            txtIntLog.Text += Environment.NewLine + "Completed GSDX Dumps Loading Procedures : " + Environment.NewLine + Environment.NewLine;
+            txtIntLog.SelectionStart = txtIntLog.TextLength;
+            txtIntLog.ScrollToCaret();
         }
 
         private void GSDumpGUI_Load(object sender, EventArgs e)
@@ -111,6 +131,8 @@ namespace GSDumpGUI
             fbd.SelectedPath = AppDomain.CurrentDomain.BaseDirectory;
             if (fbd.ShowDialog() == DialogResult.OK)
                 txtGSDXDirectory.Text = fbd.SelectedPath;
+            SaveConfig();
+            ReloadGSDXs();
         }
 
         private void cmdBrowseDumps_Click(object sender, EventArgs e)
@@ -120,21 +142,7 @@ namespace GSDumpGUI
             fbd.SelectedPath = AppDomain.CurrentDomain.BaseDirectory;
             if (fbd.ShowDialog() == DialogResult.OK)
                 txtDumpsDirectory.Text = fbd.SelectedPath;
-        }
-
-        private void cmdSave_Click(object sender, EventArgs e)
-        {
-            if (System.IO.Directory.Exists(txtDumpsDirectory.Text))
-                Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
-            else
-                MessageBox.Show("Select a correct directory for dumps", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-            if (System.IO.Directory.Exists(txtGSDXDirectory.Text))
-                Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
-            else
-                MessageBox.Show("Select a correct directory for GSDX", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-            Properties.Settings.Default.Save();
+            SaveConfig();
             ReloadGSDXs();
         }
 
@@ -180,6 +188,25 @@ namespace GSDumpGUI
                 case 4:
                     SelectedRenderer = "4";
                     break;
+            }
+            if (SelectedRenderer != "-1")
+            {
+                if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini"))
+                {
+                    String ini = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini");
+                    int pos = ini.IndexOf("Renderer=", 0);
+                    if (pos != -1)
+                    {
+                        String newini = ini.Substring(0, pos + 9);
+                        newini += SelectedRenderer;
+                        newini += ini.Substring(pos + 10, ini.Length - pos - 10);
+                        File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", newini);
+                    }
+                    else
+                    {
+                        File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "GSDumpGSDXConfigs\\" + GSDXName + "\\inis\\gsdx.ini", ini + Environment.NewLine + "Renderer=" + SelectedRenderer);
+                    }
+                }
             }
             if (lstDumps.SelectedItem != null)
                 DumpPath = Properties.Settings.Default.DumpDir + "\\" + 
@@ -324,6 +351,96 @@ namespace GSDumpGUI
             RadioButton itm = ((RadioButton)(sender));
             if (itm.Checked == true)
                 SelectedRad = Convert.ToInt32(itm.Tag);
+        }
+
+        private void txtGSDXDirectory_Leave(object sender, EventArgs e)
+        {
+            SaveConfig();
+            ReloadGSDXs();
+        }
+
+        private void txtDumpsDirectory_Leave(object sender, EventArgs e)
+        {
+            SaveConfig(); 
+            ReloadGSDXs();
+        }
+
+        private void SaveConfig()
+        {
+            Properties.Settings.Default.GSDXDir = txtGSDXDirectory.Text;
+            Properties.Settings.Default.DumpDir = txtDumpsDirectory.Text;
+            Properties.Settings.Default.Save();
+        }
+
+        private void lstProcesses_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (lstProcesses.SelectedIndex != -1)
+            {
+                chkDebugMode.Enabled = true;
+
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.GetDebugMode;
+                msg.Parameters.Add(chkDebugMode.Checked);
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+
+                msg = new TCPMessage();
+                msg.MessageType = MessageType.SizeDump;
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+
+                msg = new TCPMessage();
+                msg.MessageType = MessageType.Statistics;
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
+            else
+            {
+                chkDebugMode.Enabled = false;
+            }
+        }
+
+        private void chkDebugMode_CheckedChanged(object sender, EventArgs e)
+        {
+            if (lstProcesses.SelectedIndex != -1)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.SetDebugMode;
+                msg.Parameters.Add(chkDebugMode.Checked);
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
+        }
+
+        private void btnStep_Click(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.Step;
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);            
+        }
+
+        private void btnRunToSelection_Click(object sender, EventArgs e)
+        {
+            if (treTreeView.SelectedNode != null)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.RunToCursor;
+                msg.Parameters.Add(Convert.ToInt32(treTreeView.SelectedNode.Text.Split(new string[]{" - "}, StringSplitOptions.None)[0]));
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
+            else
+                MessageBox.Show("You have not selected a node to jump to");
+        }
+
+        private void cmdGoToStart_Click(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.RunToCursor;
+            msg.Parameters.Add(0);
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+        }
+
+        private void cmdGoToNextVSync_Click(object sender, EventArgs e)
+        {
+            TCPMessage msg = new TCPMessage();
+            msg.MessageType = MessageType.RunToNextVSync;
+            Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
         }
     }
 }

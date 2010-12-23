@@ -190,14 +190,15 @@ struct AppImageIds
 			Gamefixes,
 			MemoryCard,
 			Video,
-			Cpu;
+			Cpu,
+			Appearance;
 
 		ConfigIds()
 		{
-			Paths		= Plugins	=
-			Speedhacks	= Gamefixes	=
-			Video		= Cpu		= 
-			MemoryCard	= -1;
+			Paths		= Plugins		=
+			Speedhacks	= Gamefixes		=
+			Video		= Cpu			= 
+			MemoryCard	= Appearance	= -1;
 		}
 	} Config;
 

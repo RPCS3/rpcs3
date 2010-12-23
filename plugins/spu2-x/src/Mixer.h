@@ -78,6 +78,48 @@ struct StereoOut32
 
 };
 
+struct FrequencyResponseFilter
+{
+	static FrequencyResponseFilter Empty;
+
+	StereoOut32 History_One_In;
+	StereoOut32 History_One_Out;
+	StereoOut32 History_Two_In;
+	StereoOut32 History_Two_Out;
+
+	s32 lx1;
+	s32 lx2;
+	s32 ly1;
+	s32 ly2;
+
+	float la0, la1, la2, lb1, lb2;
+	float ha0, ha1, ha2, hb1, hb2;
+
+	FrequencyResponseFilter() :
+		History_One_In( 0, 0 ),
+		History_One_Out( 0, 0 ),
+		History_Two_In( 0, 0 ),
+		History_Two_Out( 0, 0 ),
+		lx1 ( 0 ),
+		lx2 ( 0 ),
+		ly1 ( 0 ),
+		ly2 ( 0 ),
+		
+		la0 ( 1.00320890889339290000 ),
+		la1 ( -1.97516434134506300000 ),
+		la2 ( 0.97243484967313087000 ),
+		lb1 ( -1.97525280404731810000 ),
+		lb2 ( 0.97555529586426892000 ),
+
+		ha0 ( 1.52690772687271160000 ),
+		ha1 ( -1.62653918974914990000 ),
+		ha2 ( 0.57997976029249387000 ),
+		hb1 ( -0.80955590379048203000 ),
+		hb2 ( 0.28990420120653748000 )
+	{
+	}
+
+};
 
 extern void	Mix();
 extern s32	clamp_mix( s32 x, u8 bitshift=0 );

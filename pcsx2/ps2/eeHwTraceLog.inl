@@ -166,6 +166,7 @@ static __ri const char* _eelog_GetHwName( u32 addr, T val )
 		EasyCase(SIF1_CHCR);
 		EasyCase(SIF1_MADR);
 		EasyCase(SIF1_QWC);
+		EasyCase(SIF1_TADR);
 
 		EasyCase(SIF2_CHCR);
 		EasyCase(SIF2_MADR);

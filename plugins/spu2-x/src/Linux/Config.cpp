@@ -43,6 +43,7 @@ int Interpolation = 1;
 
 bool EffectsDisabled = false;
 int ReverbBoost = 0;
+bool postprocess_filter_enabled = 1;
 
 // OUTPUT
 u32 OutputModule = 0;

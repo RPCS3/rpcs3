@@ -59,13 +59,8 @@ pthread_spin_lock (pthread_spinlock_t * lock)
 
   s = *lock;
 
-  while ((PTW32_INTERLOCKED_LONG) PTW32_SPIN_LOCKED ==
-	 PTW32_INTERLOCKED_COMPARE_EXCHANGE ((PTW32_INTERLOCKED_LPLONG) &
-					     (s->interlock),
-					     (PTW32_INTERLOCKED_LONG)
-					     PTW32_SPIN_LOCKED,
-					     (PTW32_INTERLOCKED_LONG)
-					     PTW32_SPIN_UNLOCKED))
+  while (PTW32_SPIN_LOCKED ==
+	 _InterlockedCompareExchange(&(s->interlock), PTW32_SPIN_LOCKED, PTW32_SPIN_UNLOCKED))
     {
     }
 

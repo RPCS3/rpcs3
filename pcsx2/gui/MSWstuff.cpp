@@ -39,9 +39,12 @@ void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width )
 	// way over generous.  This little bit of Win32-specific code ensures proper icon spacing, scaled
 	// to the size of the frame's ideal width.
 
-	ListView_SetIconSpacing( (HWND)listbook.GetListView()->GetHWND(),
-		(width / listbook.GetPageCount()) - 4, g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
-	);
+	if (listbook.GetPageCount())
+	{
+		ListView_SetIconSpacing( (HWND)listbook.GetListView()->GetHWND(),
+			(width / listbook.GetPageCount()) - 4, g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
+		);
+	}
 #endif
 }
 

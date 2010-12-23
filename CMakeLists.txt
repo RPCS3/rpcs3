@@ -65,28 +65,3 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
     add_subdirectory(plugins)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
-
-#-------------------------------------------------------------------------------
-#								Resources
-#-------------------------------------------------------------------------------
-# Specify all binary images to convert them into c/c++ header files.
-#
-#-------------------------------------------------------------------------------
-# add resources here
-set(resourceList AppIcon16.png
-				 AppIcon32.png
-				 AppIcon64.png
-				 BackgroundLogo.png
-				 ButtonIcon_Camera.png
-				 ConfigIcon_Cpu.png
-				 ConfigIcon_Gamefixes.png
-				 ConfigIcon_MemoryCard.png
-				 ConfigIcon_Paths.png
-				 ConfigIcon_Plugins.png
-				 ConfigIcon_Speedhacks.png
-				 ConfigIcon_Video.png
-				 Dualshock.jpg)
-
-createResourceTarget(${resourceList})
-#-------------------------------------------------------------------------------
-

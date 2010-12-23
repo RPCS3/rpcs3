@@ -26,6 +26,7 @@
 #include "targets.h"
 #include "ZZoglFlushHack.h"
 #include "ZZoglShaders.h"
+#include "ZZClut.h"
 #include <math.h>
 
 //------------------ Defines
@@ -337,14 +338,9 @@ inline void VisualBufferMessage(int context)
 					 curvb.tex0.th, curvb.tex0.tcc, curvb.tex0.tfx, curvb.tex0.cbp,
 					 curvb.tex0.cpsm, curvb.tex0.csm, curvb.tex0.csa, curvb.tex0.cld);
 	char* Name;
-//	if (g_bSaveTex) {
-//		if (g_bSaveTex == 1)
 	Name = NamedSaveTex(&curvb.tex0, 1);
-//		else
-//			Name = NamedSaveTex(&curvb.tex0, 0);
 	ZZLog::Error_Log("TGA name '%s'.", Name);
 	free(Name);
-//	}
 	ZZLog::Debug_Log("buffer %ld.\n", BufferNumber);
 #endif
 }
@@ -730,57 +726,19 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut)
 
 	if (ptexclut != 0)
 	{
-
-		int nClutOffset = 0, clutsize;
+		int clutsize;
 		int entries = PSMT_IS8CLUT(curvb.tex0.psm) ? 256 : 16;
 
 		if (curvb.tex0.csm && curvb.tex0.csa)
 			ZZLog::Debug_Log("ERROR, csm1.");
 
-		if (PSMT_IS32BIT(curvb.tex0.cpsm))   // 32 bit
-		{
-			nClutOffset = 64 * curvb.tex0.csa;
+		if (PSMT_IS32BIT(curvb.tex0.cpsm)) {
 			clutsize = min(entries, 256 - curvb.tex0.csa * 16) * 4;
-		}
-		else
-		{
-			nClutOffset = 64 * (curvb.tex0.csa & 15) + (curvb.tex0.csa >= 16 ? 2 : 0);
+		    ClutBuffer_to_Array<u32>((u32*)&data[0], curvb.tex0.csa, clutsize);
+        } else {
 			clutsize = min(entries, 512 - curvb.tex0.csa * 16) * 2;
-		}
-
-		if (PSMT_IS32BIT(curvb.tex0.cpsm))   // 32 bit
-		{
-			memcpy_amd(&data[0], g_pbyGSClut + nClutOffset, clutsize);
-		}
-		else
-		{
-			u16* pClutBuffer = (u16*)(g_pbyGSClut + nClutOffset);
-			u16* pclut = (u16*) & data[0];
-			int left = ((u32)nClutOffset & 2) ? 0 : ((nClutOffset & 0x3ff) / 2) + clutsize - 512;
-
-			if (left > 0) clutsize -= left;
-
-			while (clutsize > 0)
-			{
-				pclut[0] = pClutBuffer[0];
-				pclut++;
-				pClutBuffer += 2;
-				clutsize -= 2;
-			}
-
-			if (left > 0)
-			{
-				pClutBuffer = (u16*)(g_pbyGSClut + 2);
-
-				while (left > 0)
-				{
-					pclut[0] = pClutBuffer[0];
-					left -= 2;
-					pClutBuffer += 2;
-					pclut++;
-				}
-			}
-		}
+		    ClutBuffer_to_Array<u16>((u16*)&data[0], curvb.tex0.csa, clutsize);
+        }
 
 		GLenum tempType = PSMT_ISHALF_STORAGE(curvb.tex0) ? GL_UNSIGNED_SHORT_5_5_5_1 : GL_UNSIGNED_BYTE;
 		Texture2D(4, 256, 1, GL_RGBA, tempType, &data[0]);
@@ -987,6 +945,7 @@ inline FRAGMENTSHADER* FlushMadeNewTarget(VB& curvb, int exactcolor, int context
 	// save the texture
 	if (g_bSaveTex)
 	{
+        // FIXME: I suspect one of g_bSaveTex test variable is wrong
 		if (g_bSaveTex == 1)
 		{
 			SaveTex(&curvb.tex0, 1);

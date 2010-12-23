@@ -35,7 +35,6 @@
             this.cmdBrowseDumps = new System.Windows.Forms.Button();
             this.lblDumpDirectory = new System.Windows.Forms.Label();
             this.txtDumpsDirectory = new System.Windows.Forms.TextBox();
-            this.cmdSaveAndReload = new System.Windows.Forms.Button();
             this.lstGSDX = new System.Windows.Forms.ListBox();
             this.lstDumps = new System.Windows.Forms.ListBox();
             this.lblDumps = new System.Windows.Forms.Label();
@@ -52,21 +51,50 @@
             this.rdaDX10SW = new System.Windows.Forms.RadioButton();
             this.lblOverride = new System.Windows.Forms.Label();
             this.rdaNone = new System.Windows.Forms.RadioButton();
+            this.lblInternalLog = new System.Windows.Forms.Label();
+            this.txtIntLog = new System.Windows.Forms.TextBox();
+            this.lblDebugger = new System.Windows.Forms.Label();
+            this.lstProcesses = new System.Windows.Forms.ListBox();
+            this.lblChild = new System.Windows.Forms.Label();
+            this.lblDumpSize = new System.Windows.Forms.Label();
+            this.txtDumpSize = new System.Windows.Forms.Label();
+            this.txtGIFPackets = new System.Windows.Forms.Label();
+            this.lblGIFPackets = new System.Windows.Forms.Label();
+            this.txtPath1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtPath2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtPath3 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.txtVSync = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.txtReadFifo = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.txtRegisters = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.chkDebugMode = new System.Windows.Forms.CheckBox();
+            this.lblGif = new System.Windows.Forms.Label();
+            this.btnStep = new System.Windows.Forms.Button();
+            this.btnRunToSelection = new System.Windows.Forms.Button();
+            this.treTreeView = new System.Windows.Forms.TreeView();
+            this.cmdGoToStart = new System.Windows.Forms.Button();
+            this.cmdGoToNextVSync = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pctBox)).BeginInit();
             this.SuspendLayout();
             // 
             // txtGSDXDirectory
             // 
-            this.txtGSDXDirectory.Location = new System.Drawing.Point(624, 26);
+            this.txtGSDXDirectory.Location = new System.Drawing.Point(703, 25);
             this.txtGSDXDirectory.Name = "txtGSDXDirectory";
             this.txtGSDXDirectory.Size = new System.Drawing.Size(243, 20);
             this.txtGSDXDirectory.TabIndex = 0;
             this.txtGSDXDirectory.TabStop = false;
+            this.txtGSDXDirectory.Leave += new System.EventHandler(this.txtGSDXDirectory_Leave);
             // 
             // lblDirectory
             // 
             this.lblDirectory.AutoSize = true;
-            this.lblDirectory.Location = new System.Drawing.Point(627, 10);
+            this.lblDirectory.Location = new System.Drawing.Point(706, 9);
             this.lblDirectory.Name = "lblDirectory";
             this.lblDirectory.Size = new System.Drawing.Size(82, 13);
             this.lblDirectory.TabIndex = 1;
@@ -74,7 +102,7 @@
             // 
             // cmdBrowseGSDX
             // 
-            this.cmdBrowseGSDX.Location = new System.Drawing.Point(873, 24);
+            this.cmdBrowseGSDX.Location = new System.Drawing.Point(952, 23);
             this.cmdBrowseGSDX.Name = "cmdBrowseGSDX";
             this.cmdBrowseGSDX.Size = new System.Drawing.Size(29, 23);
             this.cmdBrowseGSDX.TabIndex = 2;
@@ -85,7 +113,7 @@
             // 
             // cmdBrowseDumps
             // 
-            this.cmdBrowseDumps.Location = new System.Drawing.Point(873, 67);
+            this.cmdBrowseDumps.Location = new System.Drawing.Point(952, 66);
             this.cmdBrowseDumps.Name = "cmdBrowseDumps";
             this.cmdBrowseDumps.Size = new System.Drawing.Size(29, 23);
             this.cmdBrowseDumps.TabIndex = 5;
@@ -97,7 +125,7 @@
             // lblDumpDirectory
             // 
             this.lblDumpDirectory.AutoSize = true;
-            this.lblDumpDirectory.Location = new System.Drawing.Point(624, 54);
+            this.lblDumpDirectory.Location = new System.Drawing.Point(703, 53);
             this.lblDumpDirectory.Name = "lblDumpDirectory";
             this.lblDumpDirectory.Size = new System.Drawing.Size(85, 13);
             this.lblDumpDirectory.TabIndex = 4;
@@ -105,29 +133,19 @@
             // 
             // txtDumpsDirectory
             // 
-            this.txtDumpsDirectory.Location = new System.Drawing.Point(624, 70);
+            this.txtDumpsDirectory.Location = new System.Drawing.Point(703, 69);
             this.txtDumpsDirectory.Name = "txtDumpsDirectory";
             this.txtDumpsDirectory.Size = new System.Drawing.Size(243, 20);
             this.txtDumpsDirectory.TabIndex = 3;
             this.txtDumpsDirectory.TabStop = false;
-            // 
-            // cmdSaveAndReload
-            // 
-            this.cmdSaveAndReload.Location = new System.Drawing.Point(626, 97);
-            this.cmdSaveAndReload.Name = "cmdSaveAndReload";
-            this.cmdSaveAndReload.Size = new System.Drawing.Size(276, 23);
-            this.cmdSaveAndReload.TabIndex = 6;
-            this.cmdSaveAndReload.TabStop = false;
-            this.cmdSaveAndReload.Text = "Save And Reload";
-            this.cmdSaveAndReload.UseVisualStyleBackColor = true;
-            this.cmdSaveAndReload.Click += new System.EventHandler(this.cmdSave_Click);
+            this.txtDumpsDirectory.Leave += new System.EventHandler(this.txtDumpsDirectory_Leave);
             // 
             // lstGSDX
             // 
             this.lstGSDX.FormattingEnabled = true;
-            this.lstGSDX.Location = new System.Drawing.Point(319, 24);
+            this.lstGSDX.Location = new System.Drawing.Point(367, 24);
             this.lstGSDX.Name = "lstGSDX";
-            this.lstGSDX.Size = new System.Drawing.Size(301, 225);
+            this.lstGSDX.Size = new System.Drawing.Size(330, 199);
             this.lstGSDX.TabIndex = 1;
             // 
             // lstDumps
@@ -135,7 +153,7 @@
             this.lstDumps.FormattingEnabled = true;
             this.lstDumps.Location = new System.Drawing.Point(12, 24);
             this.lstDumps.Name = "lstDumps";
-            this.lstDumps.Size = new System.Drawing.Size(301, 225);
+            this.lstDumps.Size = new System.Drawing.Size(349, 199);
             this.lstDumps.TabIndex = 0;
             this.lstDumps.SelectedIndexChanged += new System.EventHandler(this.lstDumps_SelectedIndexChanged);
             // 
@@ -151,7 +169,7 @@
             // GsdxList
             // 
             this.GsdxList.AutoSize = true;
-            this.GsdxList.Location = new System.Drawing.Point(316, 9);
+            this.GsdxList.Location = new System.Drawing.Point(364, 9);
             this.GsdxList.Name = "GsdxList";
             this.GsdxList.Size = new System.Drawing.Size(56, 13);
             this.GsdxList.TabIndex = 10;
@@ -159,7 +177,7 @@
             // 
             // cmdStart
             // 
-            this.cmdStart.Location = new System.Drawing.Point(720, 192);
+            this.cmdStart.Location = new System.Drawing.Point(802, 164);
             this.cmdStart.Name = "cmdStart";
             this.cmdStart.Size = new System.Drawing.Size(182, 58);
             this.cmdStart.TabIndex = 11;
@@ -170,7 +188,7 @@
             // 
             // cmdConfigGSDX
             // 
-            this.cmdConfigGSDX.Location = new System.Drawing.Point(720, 130);
+            this.cmdConfigGSDX.Location = new System.Drawing.Point(802, 102);
             this.cmdConfigGSDX.Name = "cmdConfigGSDX";
             this.cmdConfigGSDX.Size = new System.Drawing.Size(88, 56);
             this.cmdConfigGSDX.TabIndex = 12;
@@ -181,27 +199,27 @@
             // 
             // txtLog
             // 
-            this.txtLog.Location = new System.Drawing.Point(269, 275);
+            this.txtLog.Location = new System.Drawing.Point(269, 249);
             this.txtLog.Multiline = true;
             this.txtLog.Name = "txtLog";
             this.txtLog.ReadOnly = true;
             this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtLog.Size = new System.Drawing.Size(633, 208);
+            this.txtLog.Size = new System.Drawing.Size(351, 208);
             this.txtLog.TabIndex = 13;
             this.txtLog.TabStop = false;
             // 
             // lblLog
             // 
             this.lblLog.AutoSize = true;
-            this.lblLog.Location = new System.Drawing.Point(266, 259);
+            this.lblLog.Location = new System.Drawing.Point(266, 233);
             this.lblLog.Name = "lblLog";
-            this.lblLog.Size = new System.Drawing.Size(25, 13);
+            this.lblLog.Size = new System.Drawing.Size(58, 13);
             this.lblLog.TabIndex = 14;
-            this.lblLog.Text = "Log";
+            this.lblLog.Text = "Log GSDX";
             // 
             // cmdOpenIni
             // 
-            this.cmdOpenIni.Location = new System.Drawing.Point(814, 130);
+            this.cmdOpenIni.Location = new System.Drawing.Point(896, 102);
             this.cmdOpenIni.Name = "cmdOpenIni";
             this.cmdOpenIni.Size = new System.Drawing.Size(88, 56);
             this.cmdOpenIni.TabIndex = 15;
@@ -212,7 +230,7 @@
             // 
             // pctBox
             // 
-            this.pctBox.Location = new System.Drawing.Point(12, 262);
+            this.pctBox.Location = new System.Drawing.Point(12, 236);
             this.pctBox.Name = "pctBox";
             this.pctBox.Size = new System.Drawing.Size(248, 221);
             this.pctBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
@@ -223,7 +241,7 @@
             // rdaDX9HW
             // 
             this.rdaDX9HW.AutoSize = true;
-            this.rdaDX9HW.Location = new System.Drawing.Point(626, 165);
+            this.rdaDX9HW.Location = new System.Drawing.Point(708, 137);
             this.rdaDX9HW.Name = "rdaDX9HW";
             this.rdaDX9HW.Size = new System.Drawing.Size(68, 17);
             this.rdaDX9HW.TabIndex = 18;
@@ -235,7 +253,7 @@
             // rdaDX10HW
             // 
             this.rdaDX10HW.AutoSize = true;
-            this.rdaDX10HW.Location = new System.Drawing.Point(626, 188);
+            this.rdaDX10HW.Location = new System.Drawing.Point(708, 160);
             this.rdaDX10HW.Name = "rdaDX10HW";
             this.rdaDX10HW.Size = new System.Drawing.Size(74, 17);
             this.rdaDX10HW.TabIndex = 19;
@@ -247,7 +265,7 @@
             // rdaDX9SW
             // 
             this.rdaDX9SW.AutoSize = true;
-            this.rdaDX9SW.Location = new System.Drawing.Point(626, 211);
+            this.rdaDX9SW.Location = new System.Drawing.Point(708, 183);
             this.rdaDX9SW.Name = "rdaDX9SW";
             this.rdaDX9SW.Size = new System.Drawing.Size(67, 17);
             this.rdaDX9SW.TabIndex = 20;
@@ -259,7 +277,7 @@
             // rdaDX10SW
             // 
             this.rdaDX10SW.AutoSize = true;
-            this.rdaDX10SW.Location = new System.Drawing.Point(626, 234);
+            this.rdaDX10SW.Location = new System.Drawing.Point(708, 206);
             this.rdaDX10SW.Name = "rdaDX10SW";
             this.rdaDX10SW.Size = new System.Drawing.Size(73, 17);
             this.rdaDX10SW.TabIndex = 21;
@@ -271,7 +289,7 @@
             // lblOverride
             // 
             this.lblOverride.AutoSize = true;
-            this.lblOverride.Location = new System.Drawing.Point(621, 130);
+            this.lblOverride.Location = new System.Drawing.Point(703, 102);
             this.lblOverride.Name = "lblOverride";
             this.lblOverride.Size = new System.Drawing.Size(94, 13);
             this.lblOverride.TabIndex = 22;
@@ -281,7 +299,7 @@
             // 
             this.rdaNone.AutoSize = true;
             this.rdaNone.Checked = true;
-            this.rdaNone.Location = new System.Drawing.Point(625, 146);
+            this.rdaNone.Location = new System.Drawing.Point(707, 118);
             this.rdaNone.Name = "rdaNone";
             this.rdaNone.Size = new System.Drawing.Size(51, 17);
             this.rdaNone.TabIndex = 23;
@@ -291,11 +309,308 @@
             this.rdaNone.UseVisualStyleBackColor = true;
             this.rdaNone.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
+            // lblInternalLog
+            // 
+            this.lblInternalLog.AutoSize = true;
+            this.lblInternalLog.Location = new System.Drawing.Point(626, 233);
+            this.lblInternalLog.Name = "lblInternalLog";
+            this.lblInternalLog.Size = new System.Drawing.Size(63, 13);
+            this.lblInternalLog.TabIndex = 25;
+            this.lblInternalLog.Text = "Log Internal";
+            // 
+            // txtIntLog
+            // 
+            this.txtIntLog.Location = new System.Drawing.Point(629, 249);
+            this.txtIntLog.Multiline = true;
+            this.txtIntLog.Name = "txtIntLog";
+            this.txtIntLog.ReadOnly = true;
+            this.txtIntLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtIntLog.Size = new System.Drawing.Size(351, 208);
+            this.txtIntLog.TabIndex = 24;
+            this.txtIntLog.TabStop = false;
+            // 
+            // lblDebugger
+            // 
+            this.lblDebugger.AutoSize = true;
+            this.lblDebugger.Location = new System.Drawing.Point(417, 470);
+            this.lblDebugger.Name = "lblDebugger";
+            this.lblDebugger.Size = new System.Drawing.Size(54, 13);
+            this.lblDebugger.TabIndex = 26;
+            this.lblDebugger.Text = "Debugger";
+            // 
+            // lstProcesses
+            // 
+            this.lstProcesses.FormattingEnabled = true;
+            this.lstProcesses.Location = new System.Drawing.Point(12, 502);
+            this.lstProcesses.Name = "lstProcesses";
+            this.lstProcesses.Size = new System.Drawing.Size(248, 277);
+            this.lstProcesses.TabIndex = 27;
+            this.lstProcesses.SelectedIndexChanged += new System.EventHandler(this.lstProcesses_SelectedIndexChanged);
+            // 
+            // lblChild
+            // 
+            this.lblChild.AutoSize = true;
+            this.lblChild.Location = new System.Drawing.Point(9, 487);
+            this.lblChild.Name = "lblChild";
+            this.lblChild.Size = new System.Drawing.Size(82, 13);
+            this.lblChild.TabIndex = 28;
+            this.lblChild.Text = "Child Processes";
+            // 
+            // lblDumpSize
+            // 
+            this.lblDumpSize.AutoSize = true;
+            this.lblDumpSize.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblDumpSize.Location = new System.Drawing.Point(279, 487);
+            this.lblDumpSize.Name = "lblDumpSize";
+            this.lblDumpSize.Size = new System.Drawing.Size(67, 13);
+            this.lblDumpSize.TabIndex = 29;
+            this.lblDumpSize.Text = "Dump Size";
+            // 
+            // txtDumpSize
+            // 
+            this.txtDumpSize.AutoSize = true;
+            this.txtDumpSize.Location = new System.Drawing.Point(279, 502);
+            this.txtDumpSize.Name = "txtDumpSize";
+            this.txtDumpSize.Size = new System.Drawing.Size(0, 13);
+            this.txtDumpSize.TabIndex = 30;
+            // 
+            // txtGIFPackets
+            // 
+            this.txtGIFPackets.AutoSize = true;
+            this.txtGIFPackets.Location = new System.Drawing.Point(279, 539);
+            this.txtGIFPackets.Name = "txtGIFPackets";
+            this.txtGIFPackets.Size = new System.Drawing.Size(0, 13);
+            this.txtGIFPackets.TabIndex = 33;
+            // 
+            // lblGIFPackets
+            // 
+            this.lblGIFPackets.AutoSize = true;
+            this.lblGIFPackets.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblGIFPackets.Location = new System.Drawing.Point(279, 523);
+            this.lblGIFPackets.Name = "lblGIFPackets";
+            this.lblGIFPackets.Size = new System.Drawing.Size(110, 13);
+            this.lblGIFPackets.TabIndex = 32;
+            this.lblGIFPackets.Text = "Total GIF Packets";
+            // 
+            // txtPath1
+            // 
+            this.txtPath1.AutoSize = true;
+            this.txtPath1.Location = new System.Drawing.Point(279, 578);
+            this.txtPath1.Name = "txtPath1";
+            this.txtPath1.Size = new System.Drawing.Size(0, 13);
+            this.txtPath1.TabIndex = 35;
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(279, 560);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(114, 13);
+            this.label2.TabIndex = 34;
+            this.label2.Text = "Path1 GIF Packets";
+            // 
+            // txtPath2
+            // 
+            this.txtPath2.AutoSize = true;
+            this.txtPath2.Location = new System.Drawing.Point(279, 618);
+            this.txtPath2.Name = "txtPath2";
+            this.txtPath2.Size = new System.Drawing.Size(0, 13);
+            this.txtPath2.TabIndex = 37;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.Location = new System.Drawing.Point(279, 601);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(114, 13);
+            this.label3.TabIndex = 36;
+            this.label3.Text = "Path2 GIF Packets";
+            // 
+            // txtPath3
+            // 
+            this.txtPath3.AutoSize = true;
+            this.txtPath3.Location = new System.Drawing.Point(279, 653);
+            this.txtPath3.Name = "txtPath3";
+            this.txtPath3.Size = new System.Drawing.Size(0, 13);
+            this.txtPath3.TabIndex = 39;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.Location = new System.Drawing.Point(279, 635);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(114, 13);
+            this.label5.TabIndex = 38;
+            this.label5.Text = "Path3 GIF Packets";
+            // 
+            // txtVSync
+            // 
+            this.txtVSync.AutoSize = true;
+            this.txtVSync.Location = new System.Drawing.Point(279, 690);
+            this.txtVSync.Name = "txtVSync";
+            this.txtVSync.Size = new System.Drawing.Size(0, 13);
+            this.txtVSync.TabIndex = 41;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label4.Location = new System.Drawing.Point(279, 671);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(91, 13);
+            this.label4.TabIndex = 40;
+            this.label4.Text = "Vsync Packets";
+            // 
+            // txtReadFifo
+            // 
+            this.txtReadFifo.AutoSize = true;
+            this.txtReadFifo.Location = new System.Drawing.Point(279, 724);
+            this.txtReadFifo.Name = "txtReadFifo";
+            this.txtReadFifo.Size = new System.Drawing.Size(0, 13);
+            this.txtReadFifo.TabIndex = 43;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label7.Location = new System.Drawing.Point(279, 709);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(114, 13);
+            this.label7.TabIndex = 42;
+            this.label7.Text = "ReadFIFO Packets";
+            // 
+            // txtRegisters
+            // 
+            this.txtRegisters.AutoSize = true;
+            this.txtRegisters.Location = new System.Drawing.Point(279, 764);
+            this.txtRegisters.Name = "txtRegisters";
+            this.txtRegisters.Size = new System.Drawing.Size(0, 13);
+            this.txtRegisters.TabIndex = 45;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label6.Location = new System.Drawing.Point(279, 744);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(110, 13);
+            this.label6.TabIndex = 44;
+            this.label6.Text = "Registers Packets";
+            // 
+            // chkDebugMode
+            // 
+            this.chkDebugMode.AutoSize = true;
+            this.chkDebugMode.Enabled = false;
+            this.chkDebugMode.Location = new System.Drawing.Point(629, 501);
+            this.chkDebugMode.Name = "chkDebugMode";
+            this.chkDebugMode.Size = new System.Drawing.Size(88, 17);
+            this.chkDebugMode.TabIndex = 46;
+            this.chkDebugMode.Text = "Debug Mode";
+            this.chkDebugMode.UseVisualStyleBackColor = true;
+            this.chkDebugMode.CheckedChanged += new System.EventHandler(this.chkDebugMode_CheckedChanged);
+            // 
+            // lblGif
+            // 
+            this.lblGif.AutoSize = true;
+            this.lblGif.Enabled = false;
+            this.lblGif.Location = new System.Drawing.Point(417, 487);
+            this.lblGif.Name = "lblGif";
+            this.lblGif.Size = new System.Drawing.Size(66, 13);
+            this.lblGif.TabIndex = 48;
+            this.lblGif.Text = "GIF Packets";
+            // 
+            // btnStep
+            // 
+            this.btnStep.Enabled = false;
+            this.btnStep.Location = new System.Drawing.Point(629, 575);
+            this.btnStep.Name = "btnStep";
+            this.btnStep.Size = new System.Drawing.Size(108, 40);
+            this.btnStep.TabIndex = 49;
+            this.btnStep.TabStop = false;
+            this.btnStep.Text = "Step";
+            this.btnStep.UseVisualStyleBackColor = true;
+            this.btnStep.Click += new System.EventHandler(this.btnStep_Click);
+            // 
+            // btnRunToSelection
+            // 
+            this.btnRunToSelection.Enabled = false;
+            this.btnRunToSelection.Location = new System.Drawing.Point(629, 621);
+            this.btnRunToSelection.Name = "btnRunToSelection";
+            this.btnRunToSelection.Size = new System.Drawing.Size(108, 40);
+            this.btnRunToSelection.TabIndex = 50;
+            this.btnRunToSelection.TabStop = false;
+            this.btnRunToSelection.Text = "Run To Selection";
+            this.btnRunToSelection.UseVisualStyleBackColor = true;
+            this.btnRunToSelection.Click += new System.EventHandler(this.btnRunToSelection_Click);
+            // 
+            // treTreeView
+            // 
+            this.treTreeView.Enabled = false;
+            this.treTreeView.Location = new System.Drawing.Point(420, 503);
+            this.treTreeView.Name = "treTreeView";
+            this.treTreeView.Size = new System.Drawing.Size(200, 276);
+            this.treTreeView.TabIndex = 51;
+            // 
+            // cmdGoToStart
+            // 
+            this.cmdGoToStart.Enabled = false;
+            this.cmdGoToStart.Location = new System.Drawing.Point(629, 529);
+            this.cmdGoToStart.Name = "cmdGoToStart";
+            this.cmdGoToStart.Size = new System.Drawing.Size(108, 40);
+            this.cmdGoToStart.TabIndex = 52;
+            this.cmdGoToStart.TabStop = false;
+            this.cmdGoToStart.Text = "Go to Start";
+            this.cmdGoToStart.UseVisualStyleBackColor = true;
+            this.cmdGoToStart.Click += new System.EventHandler(this.cmdGoToStart_Click);
+            // 
+            // cmdGoToNextVSync
+            // 
+            this.cmdGoToNextVSync.Enabled = false;
+            this.cmdGoToNextVSync.Location = new System.Drawing.Point(629, 671);
+            this.cmdGoToNextVSync.Name = "cmdGoToNextVSync";
+            this.cmdGoToNextVSync.Size = new System.Drawing.Size(108, 40);
+            this.cmdGoToNextVSync.TabIndex = 53;
+            this.cmdGoToNextVSync.TabStop = false;
+            this.cmdGoToNextVSync.Text = "Go to next VSync";
+            this.cmdGoToNextVSync.UseVisualStyleBackColor = true;
+            this.cmdGoToNextVSync.Click += new System.EventHandler(this.cmdGoToNextVSync_Click);
+            // 
             // GSDumpGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(906, 495);
+            this.ClientSize = new System.Drawing.Size(988, 790);
+            this.Controls.Add(this.cmdGoToNextVSync);
+            this.Controls.Add(this.cmdGoToStart);
+            this.Controls.Add(this.treTreeView);
+            this.Controls.Add(this.btnRunToSelection);
+            this.Controls.Add(this.btnStep);
+            this.Controls.Add(this.lblGif);
+            this.Controls.Add(this.chkDebugMode);
+            this.Controls.Add(this.txtRegisters);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.txtReadFifo);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.txtVSync);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.txtPath3);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.txtPath2);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.txtPath1);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.txtGIFPackets);
+            this.Controls.Add(this.lblGIFPackets);
+            this.Controls.Add(this.txtDumpSize);
+            this.Controls.Add(this.lblDumpSize);
+            this.Controls.Add(this.lstProcesses);
+            this.Controls.Add(this.lblChild);
+            this.Controls.Add(this.lblDebugger);
+            this.Controls.Add(this.lblInternalLog);
+            this.Controls.Add(this.txtIntLog);
             this.Controls.Add(this.rdaNone);
             this.Controls.Add(this.lblOverride);
             this.Controls.Add(this.rdaDX10SW);
@@ -312,7 +627,6 @@
             this.Controls.Add(this.GsdxList);
             this.Controls.Add(this.lblDumps);
             this.Controls.Add(this.lstDumps);
-            this.Controls.Add(this.cmdSaveAndReload);
             this.Controls.Add(this.cmdBrowseDumps);
             this.Controls.Add(this.lblDumpDirectory);
             this.Controls.Add(this.txtDumpsDirectory);
@@ -341,7 +655,6 @@
         private System.Windows.Forms.Button cmdBrowseDumps;
         private System.Windows.Forms.Label lblDumpDirectory;
         private System.Windows.Forms.TextBox txtDumpsDirectory;
-        private System.Windows.Forms.Button cmdSaveAndReload;
         private System.Windows.Forms.ListBox lstGSDX;
         private System.Windows.Forms.ListBox lstDumps;
         private System.Windows.Forms.Label lblDumps;
@@ -358,6 +671,34 @@
         private System.Windows.Forms.RadioButton rdaDX10SW;
         private System.Windows.Forms.Label lblOverride;
         private System.Windows.Forms.RadioButton rdaNone;
+        private System.Windows.Forms.Label lblInternalLog;
+        private System.Windows.Forms.TextBox txtIntLog;
+        private System.Windows.Forms.Label lblDebugger;
+        private System.Windows.Forms.Label lblChild;
+        public System.Windows.Forms.ListBox lstProcesses;
+        private System.Windows.Forms.Label lblDumpSize;
+        public System.Windows.Forms.Label txtDumpSize;
+        public System.Windows.Forms.Label txtGIFPackets;
+        private System.Windows.Forms.Label lblGIFPackets;
+        public System.Windows.Forms.Label txtPath1;
+        private System.Windows.Forms.Label label2;
+        public System.Windows.Forms.Label txtPath2;
+        private System.Windows.Forms.Label label3;
+        public System.Windows.Forms.Label txtPath3;
+        private System.Windows.Forms.Label label5;
+        public System.Windows.Forms.Label txtVSync;
+        private System.Windows.Forms.Label label4;
+        public System.Windows.Forms.Label txtReadFifo;
+        private System.Windows.Forms.Label label7;
+        public System.Windows.Forms.Label txtRegisters;
+        private System.Windows.Forms.Label label6;
+        public System.Windows.Forms.CheckBox chkDebugMode;
+        public System.Windows.Forms.TreeView treTreeView;
+        public System.Windows.Forms.Label lblGif;
+        public System.Windows.Forms.Button btnStep;
+        public System.Windows.Forms.Button btnRunToSelection;
+        public System.Windows.Forms.Button cmdGoToStart;
+        public System.Windows.Forms.Button cmdGoToNextVSync;
     }
 }
 
