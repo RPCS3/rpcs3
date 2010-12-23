@@ -326,6 +326,10 @@ public:
 	virtual bool IsInitialized( PluginsEnum_t pid ) const;
 	virtual bool IsLoaded( PluginsEnum_t pid ) const;
 	
+	virtual size_t GetFreezeSize( PluginsEnum_t pid );
+	virtual void FreezeOut( PluginsEnum_t pid, void* dest );
+	virtual void FreezeOut( PluginsEnum_t pid, pxOutputStream& outfp );
+	virtual void FreezeIn( PluginsEnum_t pid, pxInputStream& infp );
 	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state );
 	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
 

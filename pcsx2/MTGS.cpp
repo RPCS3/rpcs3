@@ -806,7 +806,7 @@ void SysMtgsThread::WaitForOpen()
 			//   emulator forcefully, or to continue waiting on the GS.
 
 			throw Exception::PluginOpenError( PluginId_GS )
-				.SetBothMsgs(wxLt("The MTGS thread has become unresponsive while waiting for the GS plugin to open."));
+				.SetBothMsgs(pxLt("The MTGS thread has become unresponsive while waiting for the GS plugin to open."));
 		}
 	}
 

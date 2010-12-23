@@ -409,22 +409,22 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	// create Appearance menu and submenus
 
-	menuFontSizes.Append( MenuId_FontSize_Small,	_("Small"),	_("Fits a lot of log in a microcosmically small area."),
+	menuFontSizes.Append( MenuId_FontSize_Small,	_("Small"),	_t("Fits a lot of log in a microcosmically small area."),
 		wxITEM_RADIO )->Check( options.FontSize == 7 );
-	menuFontSizes.Append( MenuId_FontSize_Normal,	_("Normal"),_("It's what I use (the programmer guy)."),
+	menuFontSizes.Append( MenuId_FontSize_Normal,	_("Normal"),_t("It's what I use (the programmer guy)."),
 		wxITEM_RADIO )->Check( options.FontSize == 8 );
-	menuFontSizes.Append( MenuId_FontSize_Large,	_("Large"),	_("Its nice and readable."),
+	menuFontSizes.Append( MenuId_FontSize_Large,	_("Large"),	_t("Its nice and readable."),
 		wxITEM_RADIO )->Check( options.FontSize == 10 );
-	menuFontSizes.Append( MenuId_FontSize_Huge,		_("Huge"),	_("In case you have a really high res display."),
+	menuFontSizes.Append( MenuId_FontSize_Huge,		_("Huge"),	_t("In case you have a really high res display."),
 		wxITEM_RADIO )->Check( options.FontSize == 12 );
 
 	menuFontSizes.AppendSeparator();
-	menuFontSizes.Append( MenuId_ColorScheme_Light,	_("Light theme"), _("Default soft-tone color scheme."), wxITEM_RADIO );
-	menuFontSizes.Append( MenuId_ColorScheme_Dark,	_("Dark theme"), _("Classic black color scheme for people who enjoy having text seared into their optic nerves."), wxITEM_RADIO );
+	menuFontSizes.Append( MenuId_ColorScheme_Light,	_("Light theme"),	_t("Default soft-tone color scheme."), wxITEM_RADIO );
+	menuFontSizes.Append( MenuId_ColorScheme_Dark,	_("Dark theme"),	_t("Classic black color scheme for people who enjoy having text seared into their optic nerves."), wxITEM_RADIO );
 
 	menuAppear.AppendSeparator();
 	menuAppear.Append( wxID_ANY, _("Always on Top"),
-		_("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
+		_t("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
 
 	menuLog.Append(wxID_SAVE,	_("&Save..."),		_("Save log contents to file"));
 	menuLog.Append(wxID_CLEAR,	_("C&lear"),		_("Clear the log window contents"));

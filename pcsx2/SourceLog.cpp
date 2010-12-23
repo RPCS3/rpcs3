@@ -93,27 +93,27 @@ static const TraceLogDescriptor
 
 TLD_ELF = {
 	L"ELF",			L"ELF",
-	wxLt("Dumps detailed information for PS2 executables (ELFs).")
+	pxDt("Dumps detailed information for PS2 executables (ELFs).")
 }, 
 
 TLD_eeRecPerf = {
 	L"EErecPerf",	L"EErec Performance",
-	wxLt("Logs manual protection, split blocks, and other things that might impact performance.")
+	pxDt("Logs manual protection, split blocks, and other things that might impact performance.")
 },
 
 TLD_eeConsole = {
 	L"EEout",		L"EE Console",
-	wxLt("Shows the game developer's logging text (EE processor)")
+	pxDt("Shows the game developer's logging text (EE processor)")
 },
 
 TLD_iopConsole = {
 	L"IOPout",		L"IOP Console",
-	wxLt("Shows the game developer's logging text (IOP processor)")
+	pxDt("Shows the game developer's logging text (IOP processor)")
 },
 
 TLD_deci2 = {
 	L"DECI2",		L"DECI2 Console",
-	wxLt("Shows DECI2 debugging logs (EE processor)")
+	pxDt("Shows DECI2 debugging logs (EE processor)")
 };
 
 SysConsoleLogPack::SysConsoleLogPack()
@@ -131,7 +131,7 @@ SysConsoleLogPack::SysConsoleLogPack()
 static const SysTraceLogDescriptor
 TLD_SIF = {
 	L"SIF",			L"SIF (EE <-> IOP)",
-	wxLt(""),
+	pxDt(""),
 	"SIF"
 };
 
@@ -142,109 +142,109 @@ TLD_SIF = {
 static const SysTraceLogDescriptor
 TLD_EE_Bios = {
 	L"Bios",		L"Bios",
-	wxLt("SYSCALL and DECI2 activity."),
+	pxDt("SYSCALL and DECI2 activity."),
 	"EE"
 },
 
 TLD_EE_Memory = {
 	L"Memory",		L"Memory",
-	wxLt("Direct memory accesses to unknown or unmapped EE memory space."),
+	pxDt("Direct memory accesses to unknown or unmapped EE memory space."),
 	"eMem"
 },
 
 TLD_EE_R5900 = {
 	L"R5900",		L"R5900 Core",
-	wxLt("Disasm of executing core instructions (excluding COPs and CACHE)."),
+	pxDt("Disasm of executing core instructions (excluding COPs and CACHE)."),
 	"eDis"
 },
 
 TLD_EE_COP0 = {
 	L"COP0",		L"COP0",
-	wxLt("Disasm of COP0 instructions (MMU, cpu and dma status, etc)."),
+	pxDt("Disasm of COP0 instructions (MMU, cpu and dma status, etc)."),
 	"eDis"
 },
 
 TLD_EE_COP1 = {
 	L"FPU",			L"COP1/FPU",
-	wxLt("Disasm of the EE's floating point unit (FPU) only."),
+	pxDt("Disasm of the EE's floating point unit (FPU) only."),
 	"eDis"
 },
 
 TLD_EE_COP2 = {
 	L"VUmacro",		L"COP2/VUmacro",
-	wxLt("Disasm of the EE's VU0macro co-processor instructions."),
+	pxDt("Disasm of the EE's VU0macro co-processor instructions."),
 	"eDis"
 },
 
 TLD_EE_Cache = {
 	L"Cache",		L"Cache",
-	wxLt("Execution of EE cache instructions."),
+	pxDt("Execution of EE cache instructions."),
 	"eDis"
 },
 
 TLD_EE_KnownHw = {
 	L"HwRegs",		L"Hardware Regs",
-	wxLt("All known hardware register accesses (very slow!); not including sub filter options below."),
+	pxDt("All known hardware register accesses (very slow!); not including sub filter options below."),
 	"eReg"
 },
 
 TLD_EE_UnknownHw = {
 	L"UnknownRegs",	L"Unknown Regs",
-	wxLt("Logs only unknown, unmapped, or unimplemented register accesses."),
+	pxDt("Logs only unknown, unmapped, or unimplemented register accesses."),
 	"eReg"
 },
 
 TLD_EE_DMAhw = {
 	L"DmaRegs",		L"DMA Regs",
-	wxLt("Logs only DMA-related registers."),
+	pxDt("Logs only DMA-related registers."),
 	"eReg"
 },
 
 TLD_EE_IPU = {
 	L"IPU",			L"IPU",
-	wxLt("IPU activity: hardware registers, decoding operations, DMA status, etc."),
+	pxDt("IPU activity: hardware registers, decoding operations, DMA status, etc."),
 	"IPU"
 },
 
 TLD_EE_GIFtag = {
 	L"GIFtags",		L"GIFtags",
-	wxLt("All GIFtag parse activity; path index, tag type, etc."),
+	pxDt("All GIFtag parse activity; path index, tag type, etc."),
 	"GIF"
 },
 
 TLD_EE_VIFcode = {
 	L"VIFcodes",	L"VIFcodes",
-	wxLt("All VIFcode processing; command, tag style, interrupts."),
+	pxDt("All VIFcode processing; command, tag style, interrupts."),
 	"VIF"
 },
 
 TLD_EE_SPR = {
 	L"MFIFO",		L"Scratchpad MFIFO",
-	wxLt("Scratchpad's MFIFO activity."),
+	pxDt("Scratchpad's MFIFO activity."),
 	"SPR"
 },
 
 TLD_EE_DMAC = {
 	L"DmaCtrl",		L"DMA Controller",
-	wxLt("Actual data transfer logs, bus right arbitration, stalls, etc."),
+	pxDt("Actual data transfer logs, bus right arbitration, stalls, etc."),
 	"eDmaC"
 },
 
 TLD_EE_Counters = {
 	L"Counters",	L"Counters",
-	wxLt("Tracks all EE counters events and some counter register activity."),
+	pxDt("Tracks all EE counters events and some counter register activity."),
 	"eCnt"
 },
 
 TLD_EE_VIF = {
 	L"VIF",			L"VIF",
-	wxLt("Dumps various VIF and VIFcode processing data."),
+	pxDt("Dumps various VIF and VIFcode processing data."),
 	"VIF"
 },
 
 TLD_EE_GIF = {
 	L"GIF",			L"GIF",
-	wxLt("Dumps various GIF and GIFtag parsing data."),
+	pxDt("Dumps various GIF and GIFtag parsing data."),
 	"GIF"
 };
 
@@ -255,73 +255,73 @@ TLD_EE_GIF = {
 static const SysTraceLogDescriptor
 TLD_IOP_Bios = {
 	L"Bios",		L"Bios",
-	wxLt("SYSCALL and IRX activity."),
+	pxDt("SYSCALL and IRX activity."),
 	"IOP"
 },
 
 TLD_IOP_Memory = {
 	L"Memory",		L"Memory",
-	wxLt("Direct memory accesses to unknown or unmapped IOP memory space."),
+	pxDt("Direct memory accesses to unknown or unmapped IOP memory space."),
 	"iMem"
 },
 
 TLD_IOP_R3000A = {
 	L"R3000A",		L"R3000A Core",
-	wxLt("Disasm of executing core instructions (excluding COPs and CACHE)."),
+	pxDt("Disasm of executing core instructions (excluding COPs and CACHE)."),
 	"iDis"
 },
 
 TLD_IOP_COP2 = {
 	L"COP2/GPU",		L"COP2",
-	wxLt("Disasm of the IOP's GPU co-processor instructions."),
+	pxDt("Disasm of the IOP's GPU co-processor instructions."),
 	"iDis"
 },
 
 TLD_IOP_KnownHw = {
 	L"HwRegs",			L"Hardware Regs",
-	wxLt("All known hardware register accesses, not including the sub-filters below."),
+	pxDt("All known hardware register accesses, not including the sub-filters below."),
 	"iReg"
 },
 
 TLD_IOP_UnknownHw = {
 	L"UnknownRegs",		L"Unknown Regs",
-	wxLt("Logs only unknown, unmapped, or unimplemented register accesses."),
+	pxDt("Logs only unknown, unmapped, or unimplemented register accesses."),
 	"iReg"
 },
 
 TLD_IOP_DMAhw = {
 	L"DmaRegs",			L"DMA Regs",
-	wxLt("Logs only DMA-related registers."),
+	pxDt("Logs only DMA-related registers."),
 	"iReg"
 },
 
 TLD_IOP_Memcards = {
 	L"Memorycards",		L"Memorycards",
-	wxLt("Memorycard reads, writes, erases, terminators, and other processing."),
+	pxDt("Memorycard reads, writes, erases, terminators, and other processing."),
 	"Mcd"
 },
 
 TLD_IOP_PAD = {
 	L"Pad",				L"Pad",
-	wxLt("Gamepad activity on the SIO."),
+	pxDt("Gamepad activity on the SIO."),
 	"Pad"
 },
 
 TLD_IOP_DMAC = {
 	L"DmaCrl",			L"DMA Controller",
-	wxLt("Actual DMA event processing and data transfer logs."),
+	pxDt("Actual DMA event processing and data transfer logs."),
 	"iDmaC"
 },
 
 TLD_IOP_Counters = {
 	L"Counters",		L"Counters",
-	wxLt("Tracks all IOP counters events and some counter register activity."),
+	pxDt("Tracks all IOP counters events and some counter register activity."),
 	"iCnt"
 },
 
 TLD_IOP_CDVD = {
 	L"CDVD",			L"CDVD",
-	wxLt("Detailed logging of CDVD hardware."),
+	pxDt("Detailed logging of CDVD hardware."),
 	"CDVD"
 };
 

@@ -504,9 +504,6 @@ class GameDatabaseLoaderThread : public pxThread
 {
 	typedef pxThread _parent;
 
-protected:
-	gzFile		m_gzfp;
-
 public:
 	GameDatabaseLoaderThread()
 		: pxThread( L"GameDatabaseLoader" )

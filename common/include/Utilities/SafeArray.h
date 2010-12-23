@@ -86,8 +86,14 @@ public:
 
 	// Gets a pointer to the requested allocation index.
 	// DevBuilds : Generates assertion if the index is invalid.
-	T *GetPtr( uint idx=0 ) { return _getPtr( idx ); }
-	const T *GetPtr( uint idx=0 ) const { return _getPtr( idx ); }
+	T* GetPtr( uint idx=0 )				{ return _getPtr( idx ); }
+	const T* GetPtr( uint idx=0 ) const	{ return _getPtr( idx ); }
+
+	// Gets a pointer to the element directly after the last element in the array.
+	// This is equivalent to doing GetPtr(GetLength()), except that this call *avoids*
+	// the out-of-bounds assertion check that typically occurs when you do that. :)
+	T* GetPtrEnd( uint idx=0 )				{ return &m_ptr[m_size]; }
+	const T* GetPtrEnd( uint idx=0 ) const	{ return &m_ptr[m_size]; }
 
 	// Gets an element of this memory allocation much as if it were an array.
 	// DevBuilds : Generates assertion if the index is invalid.

@@ -602,9 +602,11 @@ wxString SysGetDiscID()
 	
 	if( !ElfCRC )
 	{
-		// FIXME: If the system is currently running the BIOS, it should return a serial based on
+		// FIXME: system is currently running the BIOS, so it should return a serial based on
 		// the BIOS being run (either a checksum of the BIOS roms, and/or a string based on BIOS
 		// region and revision).
+		
+		return wxEmptyString;
 	}
 
 	return pxsFmt( L"%08x", ElfCRC );

@@ -184,7 +184,7 @@ public: \
 	// an App message loop we'll still want it to be handled in a reasonably graceful manner.
 	class CancelEvent : public RuntimeError
 	{
-		DEFINE_RUNTIME_EXCEPTION( CancelEvent, RuntimeError, wxLt("No reason given.") )
+		DEFINE_RUNTIME_EXCEPTION( CancelEvent, RuntimeError, pxLt("No reason given.") )
 
 	public:
 		explicit CancelEvent( const wxString& logmsg )
@@ -223,7 +223,7 @@ public: \
 
 	class ParseError : public RuntimeError
 	{
-		DEFINE_RUNTIME_EXCEPTION( ParseError, RuntimeError, wxLt("Parse error") );
+		DEFINE_RUNTIME_EXCEPTION( ParseError, RuntimeError, pxL("Parse error") );
 	};
 
 	// ---------------------------------------------------------------------------------------
@@ -247,7 +247,7 @@ public: \
 	class HardwareDeficiency : public RuntimeError
 	{
 	public:
-		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, RuntimeError, wxLt("Your machine's hardware is incapable of running PCSX2.  Sorry dood.") );
+		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, RuntimeError, pxL("Your machine's hardware is incapable of running PCSX2.  Sorry dood.") );
 	};
 
 	// ---------------------------------------------------------------------------------------

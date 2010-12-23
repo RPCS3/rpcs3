@@ -22,39 +22,71 @@
 #include <errno.h>
 
 // --------------------------------------------------------------------------------------
-//  pxStreamReader  (implementations)
+//  pxStreamBase  (implementations)
+// --------------------------------------------------------------------------------------
+pxStreamBase::pxStreamBase(const wxString& filename)
+	: m_filename( filename )
+{
+}
+
+bool pxStreamBase::IsOk() const
+{
+	wxStreamBase* woot = GetWxStreamBase();
+	return woot && woot->IsOk();
+}
+
+wxFileOffset pxStreamBase::Length() const
+{
+	if (!GetWxStreamBase()) return 0;
+	return GetWxStreamBase()->GetLength();
+}
+
+// --------------------------------------------------------------------------------------
+//  pxInputStream  (implementations)
 // --------------------------------------------------------------------------------------
 // Interface for reading data from a gzip stream.
 //
 
-pxStreamReader::pxStreamReader(const wxString& filename, ScopedPtr<wxInputStream>& input)
-	: m_filename( filename )
-	, m_stream( input.DetachPtr() )
+pxInputStream::pxInputStream(const wxString& filename, ScopedPtr<wxInputStream>& input)
+	: pxStreamBase( filename )
+	, m_stream_in( input.DetachPtr() )
 {
 }
 
-pxStreamReader::pxStreamReader(const wxString& filename, wxInputStream* input)
-	: m_filename( filename )
-	, m_stream( input )
+pxInputStream::pxInputStream(const wxString& filename, wxInputStream* input)
+	: pxStreamBase( filename )
+	, m_stream_in( input )
 {
 }
 
-void pxStreamReader::SetStream( const wxString& filename, ScopedPtr<wxInputStream>& stream )
+wxStreamBase* pxInputStream::GetWxStreamBase() const { return m_stream_in.GetPtr(); }
+
+wxFileOffset pxInputStream::Tell() const
+{
+	return m_stream_in->TellI();
+}
+
+wxFileOffset pxInputStream::Seek( wxFileOffset ofs, wxSeekMode mode )
+{
+	return m_stream_in->SeekI(ofs, mode);
+}
+
+void pxInputStream::SetStream( const wxString& filename, ScopedPtr<wxInputStream>& stream )
 {
 	m_filename = filename;
-	m_stream = stream.DetachPtr();
+	m_stream_in = stream.DetachPtr();
 }
 
-void pxStreamReader::SetStream( const wxString& filename, wxInputStream* stream )
+void pxInputStream::SetStream( const wxString& filename, wxInputStream* stream )
 {
 	m_filename = filename;
-	m_stream = stream;
+	m_stream_in = stream;
 }
 
-void pxStreamReader::Read( void* dest, size_t size )
+void pxInputStream::Read( void* dest, size_t size )
 {
-	m_stream->Read(dest, size);
-	if (m_stream->GetLastError() == wxSTREAM_READ_ERROR)
+	m_stream_in->Read(dest, size);
+	if (m_stream_in->GetLastError() == wxSTREAM_READ_ERROR)
 	{
 		int err = errno;
 		if (!err)
@@ -69,43 +101,55 @@ void pxStreamReader::Read( void* dest, size_t size )
 	// must always use the explicit check against the number of bytes read to determine
 	// end-of-stream conditions.
 
-	if ((size_t)m_stream->LastRead() < size)
+	if ((size_t)m_stream_in->LastRead() < size)
 		throw Exception::EndOfStream( m_filename );
 }
 
 // --------------------------------------------------------------------------------------
-//  pxStreamWriter
+//  pxOutputStream
 // --------------------------------------------------------------------------------------
-pxStreamWriter::pxStreamWriter(const wxString& filename, ScopedPtr<wxOutputStream>& output)
-	: m_filename( filename )
-	, m_outstream( output.DetachPtr() )
+pxOutputStream::pxOutputStream(const wxString& filename, ScopedPtr<wxOutputStream>& output)
+	: pxStreamBase( filename )
+	, m_stream_out( output.DetachPtr() )
 {
 	
 }
 
-pxStreamWriter::pxStreamWriter(const wxString& filename, wxOutputStream* output)
-	: m_filename( filename )
-	, m_outstream( output )
+pxOutputStream::pxOutputStream(const wxString& filename, wxOutputStream* output)
+	: pxStreamBase( filename )
+	, m_stream_out( output )
 {
 }
 
-void pxStreamWriter::SetStream( const wxString& filename, ScopedPtr<wxOutputStream>& stream )
+wxStreamBase* pxOutputStream::GetWxStreamBase() const { return m_stream_out.GetPtr(); }
+
+wxFileOffset pxOutputStream::Tell() const
+{
+	return m_stream_out->TellO();
+}
+
+wxFileOffset pxOutputStream::Seek( wxFileOffset ofs, wxSeekMode mode )
+{
+	return m_stream_out->SeekO( ofs, mode );
+}
+
+void pxOutputStream::SetStream( const wxString& filename, ScopedPtr<wxOutputStream>& stream )
 {
 	m_filename = filename;
-	m_outstream = stream.DetachPtr();
+	m_stream_out = stream.DetachPtr();
 }
 
-void pxStreamWriter::SetStream( const wxString& filename, wxOutputStream* stream )
+void pxOutputStream::SetStream( const wxString& filename, wxOutputStream* stream )
 {
 	m_filename = filename;
-	m_outstream = stream;
+	m_stream_out = stream;
 }
 
 
-void pxStreamWriter::Write( const void* src, size_t size )
+void pxOutputStream::Write( const void* src, size_t size )
 {
-	m_outstream->Write(src, size);
-	if(m_outstream->GetLastError() == wxSTREAM_WRITE_ERROR)
+	m_stream_out->Write(src, size);
+	if(m_stream_out->GetLastError() == wxSTREAM_WRITE_ERROR)
 	{
 		int err = errno;
 		if (!err)

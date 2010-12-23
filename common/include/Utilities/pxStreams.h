@@ -13,68 +13,104 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
+#include "wx/filefn.h"
+
 // --------------------------------------------------------------------------------------
-//  pxStreamWriter
+//  pxStreamBase
 // --------------------------------------------------------------------------------------
-class pxStreamWriter
+class pxStreamBase
 {
-	DeclareNoncopyableObject(pxStreamWriter);
+	DeclareNoncopyableObject(pxStreamBase);
 
 protected:
-	wxString					m_filename;
-	ScopedPtr<wxOutputStream>	m_outstream;
+	// Filename of the stream, provided by the creator/caller.  This is typically used *only*
+	// for generating comprehensive error messages when an error occurs (the stream name is
+	// passed to the exception handlers).
+	wxString	m_filename;
 
 public:
-	pxStreamWriter(const wxString& filename, ScopedPtr<wxOutputStream>& output);
-	pxStreamWriter(const wxString& filename, wxOutputStream* output);
+	pxStreamBase(const wxString& filename);
+	virtual ~pxStreamBase() throw() {}
 
-	virtual ~pxStreamWriter() throw() {}
+	// Implementing classes should return the base wxStream object (usually either a wxInputStream
+	// or wxOputStream derivative).
+	virtual wxStreamBase* GetWxStreamBase() const=0;
+	virtual void Close()=0;
+	virtual wxFileOffset Tell() const=0;
+	virtual wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart )=0;
+
+	virtual wxFileOffset Length() const;
+	bool IsOk() const;
+	wxString GetStreamName() const { return m_filename; }
+};
+
+
+// --------------------------------------------------------------------------------------
+//  pxOutputStream
+// --------------------------------------------------------------------------------------
+class pxOutputStream : public pxStreamBase
+{
+	DeclareNoncopyableObject(pxOutputStream);
+
+protected:
+	ScopedPtr<wxOutputStream>	m_stream_out;
+
+public:
+	pxOutputStream(const wxString& filename, ScopedPtr<wxOutputStream>& output);
+	pxOutputStream(const wxString& filename, wxOutputStream* output);
+
+	virtual ~pxOutputStream() throw() {}
 	virtual void Write( const void* data, size_t size );
 	
-	void Close() { m_outstream.Delete(); }
-	wxOutputStream* GetBaseStream() const { return m_outstream; }
-
 	void SetStream( const wxString& filename, ScopedPtr<wxOutputStream>& stream );
 	void SetStream( const wxString& filename, wxOutputStream* stream );
-	
-	wxString GetStreamName() const { return m_filename; }
+
+	void Close() { m_stream_out.Delete(); }
+
+	virtual wxStreamBase* GetWxStreamBase() const;
 
 	template< typename T >
 	void Write( const T& data )
 	{
 		Write( &data, sizeof(data) );
 	}
+
+	wxFileOffset Tell() const;
+	wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart );
 };
 
 // --------------------------------------------------------------------------------------
-//  pxStreamReader
+//  pxInputStream
 // --------------------------------------------------------------------------------------
-class pxStreamReader
+class pxInputStream : public pxStreamBase
 {
-	DeclareNoncopyableObject(pxStreamReader);
+	DeclareNoncopyableObject(pxInputStream);
 
 protected:
-	wxString					m_filename;
-	ScopedPtr<wxInputStream>	m_stream;
+	ScopedPtr<wxInputStream>	m_stream_in;
 
 public:
-	pxStreamReader(const wxString& filename, ScopedPtr<wxInputStream>& input);
-	pxStreamReader(const wxString& filename, wxInputStream* input);
+	pxInputStream(const wxString& filename, ScopedPtr<wxInputStream>& input);
+	pxInputStream(const wxString& filename, wxInputStream* input);
 
-	virtual ~pxStreamReader() throw() {}
+	virtual ~pxInputStream() throw() {}
 	virtual void Read( void* dest, size_t size );
 	
 	void SetStream( const wxString& filename, ScopedPtr<wxInputStream>& stream );
 	void SetStream( const wxString& filename, wxInputStream* stream );
 
-	wxInputStream* GetBaseStream() const { return m_stream; }
-	void Close() { m_stream.Delete(); }
+	void Close() { m_stream_in.Delete(); }
 
-	wxString GetStreamName() const { return m_filename; }
+	virtual wxStreamBase* GetWxStreamBase() const;
 
 	template< typename T >
 	void Read( T& dest )
 	{
 		Read( &dest, sizeof(dest) );
 	}
+
+	wxFileOffset Tell() const;
+	wxFileOffset Seek( wxFileOffset ofs, wxSeekMode mode = wxFromStart );
 };

@@ -605,6 +605,12 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	}
 }
 
+bool Pcsx2App::HasPendingSaves() const
+{
+	AffinityAssert_AllowFrom_MainUI();
+	return !!m_PendingSaves;
+}
+
 // A call to this method informs the app that there is a pending save operation that must be
 // finished prior to exiting the app, or else data loss will occur.  Any call to this method
 // should be matched by a call to ClearPendingSave().

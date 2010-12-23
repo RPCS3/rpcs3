@@ -145,11 +145,11 @@ void Panels::FramelimiterPanel::Apply()
 	catch( Exception::ParseError& )
 	{
 		throw Exception::CannotApplySettings( this )
-			.SetDiagMsg(wxsFormat(
+			.SetDiagMsg(pxsFmt(
 				L"Error while parsing either NTSC or PAL framerate settings.\n\tNTSC Input = %s\n\tPAL Input  = %s",
 				m_text_BaseNtsc->GetValue().c_str(), m_text_BasePal->GetValue().c_str()
 			) )
-			.SetUserMsg(_("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."));
+			.SetUserMsg(_t("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."));
 	}
 
 	appfps.SanityCheck();
@@ -289,11 +289,11 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
 
 	m_check_SynchronousGS = new pxCheckBox( right, _("Use Synchronized MTGS"),
-		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
+		_t("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
 	);
 
 	m_check_DisableOutput = new pxCheckBox( right, _("Disable all GS output"),
-		_("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
+		_t("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
 	);
 
 	m_check_SynchronousGS->SetToolTip( pxEt( "!ContextTip:GS:SyncMTGS",

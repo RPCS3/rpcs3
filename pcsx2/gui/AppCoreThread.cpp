@@ -298,8 +298,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	wxString gameFixes;
 	wxString gameCheats;
 
-	// [TODO] : Fix this so that it recognizes and reports BIOS-booting status!
-	wxString gameName	(L"Unknown");
+	wxString gameName;
 	wxString gameCompat;
 
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
@@ -309,25 +308,37 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	const bool verbose( newGameKey != curGameKey );
 	curGameKey = newGameKey;
 
-	if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
+	if (!curGameKey.IsEmpty())
 	{
-		Game_Data game;
-		if (GameDB->findGame(game, curGameKey)) {
-			int compat = game.getInt("Compat");
-			gameName   = game.getString("Name");
-			gameName  += L" (" + game.getString("Region") + L")";
-			gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
-		}
+		if (IGameDatabase* GameDB = AppHost_GetGameDatabase() )
+		{
+			Game_Data game;
+			if (GameDB->findGame(game, curGameKey)) {
+				int compat = game.getInt("Compat");
+				gameName   = game.getString("Name");
+				gameName  += L" (" + game.getString("Region") + L")";
+				gameCompat = L" [Status = "+compatToStringWX(compat)+L"]";
+			}
 
-		if (EmuConfig.EnablePatches) {
-			if (int patches = InitPatches(gameCRC, game)) {
-				gamePatch.Printf(L" [%d Patches]", patches);
-				if (verbose) Console.WriteLn(Color_Green, "(GameDB) Patches Loaded: %d", patches);
-			}
-			if (int fixes = loadGameSettings(fixup, game, verbose)) {
-				gameFixes.Printf(L" [%d Fixes]", fixes);
+			if (EmuConfig.EnablePatches) {
+				if (int patches = InitPatches(gameCRC, game)) {
+					gamePatch.Printf(L" [%d Patches]", patches);
+					if (verbose) Console.WriteLn(Color_Green, "(GameDB) Patches Loaded: %d", patches);
+				}
+				if (int fixes = loadGameSettings(fixup, game, verbose)) {
+					gameFixes.Printf(L" [%d Fixes]", fixes);
+				}
 			}
 		}
+	}
+
+	if (gameName.IsEmpty() && gameSerial.IsEmpty() && gameCRC.IsEmpty())
+	{
+		// if all these conditions are met, it should mean that we're currently running BIOS code.
+		// Chances are the BiosChecksum value is still zero or out of date, however -- because
+		// the BIos isn't loaded until after initial calls to ApplySettings.
+
+		gameName = L"Booting PS2 BIOS... ";
 	}
 
 	if (EmuConfig.EnableCheats) {

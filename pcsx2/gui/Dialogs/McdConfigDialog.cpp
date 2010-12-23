@@ -99,9 +99,6 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
 	// to configure the names of each memory card slot.
 
-	//AddPage<McdConfigPanel_Toggles>		( wxLt("Settings"),		cfgid.MemoryCard );
-	//AddPage<McdConfigPanel_Standard>	( wxLt("Slots 1/2"),	cfgid.MemoryCard );
-
 	*this	+= Heading(_("Drag items over other items in the list to swap or copy memory cards."))	| StdExpand();
 	*this	+= StdPadding;
 

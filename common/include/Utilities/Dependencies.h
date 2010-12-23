@@ -18,36 +18,7 @@
 // Dependencies.h : Contains classes required by all Utilities headers.
 //   This file is included by most .h files provided by the Utilities class.
 
-// --------------------------------------------------------------------------------------
-//  Forward Declarations Section
-// --------------------------------------------------------------------------------------
-
-class wxOutputStream;
-class wxFileOutputStream;
-class wxFFileOutputStream;
-
-class wxInputStream;
-class wxFileInputStream;
-class wxFFileInputStream;
-
-class wxPoint;
-class wxRect;
-class wxSize;
-
-extern const wxSize wxDefaultSize;
-extern const wxPoint wxDefaultPosition;
-
-namespace Threading
-{
-	class Mutex;
-	class Semaphore;
-	class pxThread;
-}
-
-namespace Exception
-{
-	class BaseException;
-}
+#include "pxForwardDefs.h"
 
 // This should prove useful....
 #define wxsFormat wxString::Format
@@ -164,6 +135,50 @@ public:
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  _(x) / _t(x) / _d(x) / pxL(x) / pxLt(x)  [macros]
+// --------------------------------------------------------------------------------------
+// Define pxWex's own i18n helpers.  These override the wxWidgets helpers and provide
+// additional functionality.  Define them FIRST THING, to make sure that wx's own gettext
+// macros aren't in place.
+//
+// _   is for standard translations
+// _t  is for tertiary low priority translations
+// _d  is for debug/devel build translations
+
+#define WXINTL_NO_GETTEXT_MACRO
+
+#ifndef _
+#	define _(s)		pxGetTranslation(_T(s))
+#endif
+
+#ifndef _t
+#	define _t(s)	pxGetTranslation(_T(s))
+#endif
+
+#ifndef _d
+#	define _d(s)	pxGetTranslation(_T(s))
+#endif
+
+// pxL / pxLt / pxDt -- macros provided for tagging translation strings, without actually running
+// them through the translator (which the _() does automatically, and sometimes we don't
+// want that).  This is a shorthand replacement for wxTRANSLATE.  pxL is a standard translation
+// moniker.  pxLt is for tertiary strings that have a very low translation priority.  pxDt is for
+// debug/devel specific translations.
+//
+#ifndef pxL
+#	define pxL(a)		wxT(a)
+#endif
+
+#ifndef pxLt
+#	define pxLt(a)		wxT(a)
+#endif
+
+#ifndef pxDt
+#	define pxDt(a)		wxT(a)
+#endif
+
+
 #include <wx/string.h>
 #include <wx/intl.h>
 #include <wx/log.h>
@@ -176,6 +191,9 @@ public:
 #include <list>
 
 #include "Pcsx2Defs.h"
+
+// --------------------------------------------------------------------------------------
+//  Handy Human-readable constants for common immediate values (_16kb -> _4gb)
 
 static const sptr _64kb		= 0x10000;
 static const sptr _16kb		= _64kb / 4;
@@ -191,27 +209,6 @@ static const s64 _256mb		= _1mb * 256;
 static const s64 _1gb		= _256mb * 4;
 static const s64 _4gb		= _1gb * 4;
 
-// ===========================================================================================
-//  i18n/Translation Feature Set!
-// ===========================================================================================
-
-extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
-extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
-extern bool pxIsEnglish( int id );
-
-extern wxString fromUTF8( const char* src );
-extern wxString fromAscii( const char* src );
-
-// --------------------------------------------------------------------------------------
-//  wxLt(x)   [macro]
-// --------------------------------------------------------------------------------------
-// macro provided for tagging translation strings, without actually running them through the
-// translator (which the _() does automatically, and sometimes we don't want that).  This is
-// a shorthand replacement for wxTRANSLATE.
-//
-#ifndef wxLt
-#	define wxLt(a)		wxT(a)
-#endif
 
 // --------------------------------------------------------------------------------------
 //  pxE(key, msg) and pxEt(key, msg)  [macros]
@@ -248,6 +245,18 @@ extern wxString fromAscii( const char* src );
 
 // For use with tertiary translations (low priority).
 #define pxEt(key, english)			pxExpandMsg( wxT(key),	english )
+
+// For use with Dev/debug build translations (low priority).
+#define pxE_dev(key, english)		pxExpandMsg( wxT(key),	english )
+
+
+extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
+extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
+extern bool pxIsEnglish( int id );
+
+extern wxString fromUTF8( const char* src );
+extern wxString fromAscii( const char* src );
+
 
 #include "Utilities/Assertions.h"
 #include "Utilities/Exceptions.h"

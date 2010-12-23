@@ -411,7 +411,9 @@ void isoFile::Open( const wxString& srcfile )
 	// (and if numparts is incremented, elsn will get assigned accordingly)
 	
 	if (!Detect())
-		throw Exception::BadStream().SetUserMsg(wxLt("Unrecognized ISO file format."));
+		throw Exception::BadStream()
+			.SetUserMsg(L"Unrecognized ISO image file format")
+			.SetDiagMsg(_("ISO mounting failed: PCSX2 is unable to identify the ISO image type."));
 
 	if (!(m_flags & ISOFLAGS_BLOCKDUMP_V2))
 	{

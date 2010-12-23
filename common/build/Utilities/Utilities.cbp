@@ -171,8 +171,9 @@
 		<Unit filename="../../include/Utilities/TlsVariable.inl" />
 		<Unit filename="../../include/Utilities/TraceLog.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
-		<Unit filename="../../include/Utilities/pxCheckBox.h" />
-		<Unit filename="../../include/Utilities/pxEvents.h" />
+    <Unit filename="../../include/Utilities/pxForwardDefs.h" />
+    <Unit filename="../../include/Utilities/pxCheckBox.h" />
+    <Unit filename="../../include/Utilities/pxEvents.h" />
 		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/pxStaticText.h" />
     <Unit filename="../../include/Utilities/pxStreams.h" />

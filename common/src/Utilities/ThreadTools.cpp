@@ -38,7 +38,7 @@ ConsoleLogSource_Threading::ConsoleLogSource_Threading()
 	static const TraceLogDescriptor myDesc =
 	{
 		L"pxThread",	L"pxThread",
-		wxLt("Threading activity: start, detach, sync, deletion, etc.")
+		pxLt("Threading activity: start, detach, sync, deletion, etc.")
 	};
 
 	m_Descriptor = &myDesc;

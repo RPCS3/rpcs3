@@ -176,8 +176,10 @@ public:
 template< typename T >
 class ScopedAlloc : public BaseScopedAlloc<T>
 {
+	typedef BaseScopedAlloc<T> _parent;
+
 public:
-	ScopedAlloc( size_t size=0 ) : BaseScopedAlloc<T>()
+	ScopedAlloc( size_t size=0 ) : _parent()
 	{
 		Alloc(size);
 	}
@@ -195,17 +197,19 @@ public:
 
 		this->m_buffer = (T*)malloc( this->m_size * sizeof(T) );
 		if (!this->m_buffer)
-			throw Exception::OutOfMemory("ScopedAlloc");
+			throw Exception::OutOfMemory(L"ScopedAlloc");
 	}
 
 	virtual void Resize( size_t newsize )
 	{
 		this->m_size		= newsize;
-		this->m_buffer	= (T*)realloc(this->m_buffer * sizeof(T), newsize);
+		this->m_buffer		= (T*)realloc(this->m_buffer, this->m_size * sizeof(T));
 
 		if (!this->m_buffer)
-			throw Exception::OutOfMemory("ScopedAlloc::Resize");
+			throw Exception::OutOfMemory(L"ScopedAlloc::Resize");
 	}
+	
+	using _parent::operator[];
 };
 
 // --------------------------------------------------------------------------------------
@@ -220,8 +224,10 @@ public:
 template< typename T, uint align >
 class ScopedAlignedAlloc : public BaseScopedAlloc<T>
 {
+	typedef BaseScopedAlloc<T> _parent;
+
 public:
-	ScopedAlignedAlloc( size_t size=0 ) : BaseScopedAlloc<T>()
+	ScopedAlignedAlloc( size_t size=0 ) : _parent()
 	{
 		Alloc(size);
 	}
@@ -250,4 +256,6 @@ public:
 		if (!this->m_buffer)
 			throw Exception::OutOfMemory(L"ScopedAlignedAlloc::Resize");
 	}
+	
+	using _parent::operator[];
 };

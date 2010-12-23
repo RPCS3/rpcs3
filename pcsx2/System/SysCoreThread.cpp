@@ -150,8 +150,8 @@ void SysCoreThread::UploadStateCopy( const VmStateBuffer& copy )
 {
 	if( !pxAssertDev( IsPaused(), "CoreThread is not paused; new VM state cannot be uploaded." ) ) return;
 
-	SysClearExecutionCache();
-	memLoadingState( copy ).FreezeAll();
+	memLoadingState loadme( copy );
+	loadme.FreezeAll();
 	m_resetVirtualMachine = false;
 }
 

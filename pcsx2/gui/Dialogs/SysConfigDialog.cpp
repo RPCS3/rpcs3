@@ -73,13 +73,12 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<CpuPanelEE>				( wxLt("EE/IOP"),		cfgid.Cpu );
-	AddPage<CpuPanelVU>				( wxLt("VUs"),			cfgid.Cpu );
-	AddPage<VideoPanel>				( wxLt("GS"),			cfgid.Cpu );
-	AddPage<GSWindowSettingsPanel>	( wxLt("GS Window"),	cfgid.Video );
-	AddPage<SpeedHacksPanel>		( wxLt("Speedhacks"),	cfgid.Speedhacks );
-	AddPage<GameFixesPanel>			( wxLt("Game Fixes"),	cfgid.Gamefixes );
-	//AddPage<GameDatabasePanel>		( wxLt("Game Database"),cfgid.Plugins );
+	AddPage<CpuPanelEE>				( pxL("EE/IOP"),		cfgid.Cpu );
+	AddPage<CpuPanelVU>				( pxL("VUs"),			cfgid.Cpu );
+	AddPage<VideoPanel>				( pxL("GS"),			cfgid.Cpu );
+	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),	cfgid.Video );
+	AddPage<SpeedHacksPanel>		( pxL("Speedhacks"),	cfgid.Speedhacks );
+	AddPage<GameFixesPanel>			( pxL("Game Fixes"),	cfgid.Gamefixes );
 
 	AddListbook();
 	AddOkCancel();
@@ -96,8 +95,8 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<PluginSelectorPanel>	( wxLt("Plugins"),		cfgid.Plugins );
-	AddPage<BiosSelectorPanel>		( wxLt("BIOS"),			cfgid.Cpu );
+	AddPage<PluginSelectorPanel>	( pxL("Plugins"),		cfgid.Plugins );
+	AddPage<BiosSelectorPanel>		( pxL("BIOS"),			cfgid.Cpu );
 
 	AddListbook();
 	AddOkCancel();
@@ -114,8 +113,8 @@ Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<StandardPathsPanel>		( wxLt("Appearance"),	cfgid.Appearance );
-	AddPage<StandardPathsPanel>		( wxLt("Folders"),		cfgid.Paths );
+	AddPage<StandardPathsPanel>		( pxL("Appearance"),	cfgid.Appearance );
+	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
 
 	AddListbook();
 	AddOkCancel();

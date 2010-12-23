@@ -765,7 +765,8 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 	if( overwrite )
 	{
 		if( wxFileExists( iniFilename ) && !wxRemoveFile( iniFilename ) )
-			throw Exception::AccessDenied(iniFilename).SetBothMsgs(wxLt("Failed to overwrite existing settings file; permission was denied."));
+			throw Exception::AccessDenied(iniFilename)
+				.SetBothMsgs(pxL("Failed to overwrite existing settings file; permission was denied."));
 	}
 
 	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever

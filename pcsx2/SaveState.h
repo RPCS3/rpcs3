@@ -24,30 +24,12 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = 0x8b4c0000;
+static const u32 g_SaveVersion = (0x9A01 << 16) | 0x0000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
 extern s32 CALLBACK gsSafeFreeze( int mode, freezeData *data );
 
-
-enum FreezeSectionId
-{
-	FreezeId_NotSeeking = -2,
-	FreezeId_End,
-
-	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
-	// but can be skipped if the savestate has only plugins.
-	FreezeId_Bios,
-
-	FreezeId_Memory,
-	FreezeId_Registers,
-
-	FreezeId_Plugin,
-
-	// anything here and beyond we can skip, with a warning
-	FreezeId_Unknown,
-};
 
 namespace Exception
 {
@@ -121,9 +103,7 @@ protected:
 
 	u32 m_version;		// version of the savestate being loaded.
 
-	int m_idx;		// current read/write index of the allocation
-	int m_sectid;
-	int m_pid;
+	int m_idx;			// current read/write index of the allocation
 
 	bool m_DidBios;
 
@@ -144,7 +124,12 @@ public:
 	// Loads or saves the entire emulation state.
 	// Note: The Cpu state must be reset, and plugins *open*, prior to Defrosting
 	// (loading) a state!
-	virtual void FreezeAll();
+	virtual SaveStateBase& FreezeAll();
+
+	virtual SaveStateBase& FreezeMainMemory();
+	virtual SaveStateBase& FreezeBios();
+	virtual SaveStateBase& FreezeInternals();
+	virtual SaveStateBase& FreezePlugins();
 
 	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.
 	// For dynamically allocated pointers use FreezeMem instead.
@@ -164,18 +149,25 @@ public:
 
 	void PrepBlock( int size );
 
+	uint GetCurrentPos() const
+	{
+		return m_idx;
+	}
+
 	u8* GetBlockPtr()
 	{
 		return m_memory->GetPtr(m_idx);
+	}
+	
+	u8* GetPtrEnd() const
+	{
+		return m_memory->GetPtrEnd();
 	}
 
 	void CommitBlock( int size )
 	{
 		m_idx += size;
 	}
-
-	void WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname );
-	bool FreezeSection( int seek_section = FreezeId_NotSeeking );
 
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
@@ -200,10 +192,6 @@ protected:
 	void Init( VmStateBuffer* memblock );
 
 	// Load/Save functions for the various components of our glorious emulator!
-
-	void FreezeBios();
-	void FreezeMainMemory();
-	void FreezeRegisters();
 
 	void rcntFreeze();
 	void vuMicroFreeze();
@@ -238,17 +226,18 @@ class memSavingState : public SaveStateBase
 	typedef SaveStateBase _parent;
 
 protected:
-	static const int ReallocThreshold = 0x200000;	// 256k reallocation block size.
-	static const int MemoryBaseAllocSize = 0x02b00000;  // 45 meg base alloc
+	static const int ReallocThreshold		= _1mb / 4;		// 256k reallocation block size.
+	static const int MemoryBaseAllocSize	= _8mb;			// 8 meg base alloc when PS2 main memory is excluded
 
 public:
 	virtual ~memSavingState() throw() { }
 	memSavingState( VmStateBuffer& save_to );
 	memSavingState( VmStateBuffer* save_to );
 
-	// Saving of state data to a memory buffer
+	void MakeRoomForData();
+
 	void FreezeMem( void* data, int size );
-	void FreezeAll();
+	memSavingState& FreezeAll();
 
 	bool IsSaving() const { return true; }
 };
@@ -261,9 +250,7 @@ public:
 	memLoadingState( const VmStateBuffer& load_from );
 	memLoadingState( const VmStateBuffer* load_from );
 
-	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
-	bool SeekToSection( PluginsEnum_t pid );
 
 	bool IsSaving() const { return false; }
 	bool IsFinished() const { return m_idx >= m_memory->GetSizeInBytes(); }
