@@ -244,32 +244,41 @@ namespace GSDumpGUI
                 case MessageType.PacketInfo:
                     frmMain.Invoke(new Action<object>(delegate(object e)
                     {
-                        string[] vals = Mess.Parameters[0].ToString().Split('|');
-                        frmMain.txtGifPacketSize.Text = vals[0] + " bytes";
-
-                        frmMain.treeGifPacketContent.Nodes.Clear();
-
-                        frmMain.treeGifPacketContent.Nodes.Add(vals[1]);
-
-                        if (vals.Length > 2)
+                        if (Mess.Parameters[0].ToString() != "No Data Available")
                         {
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[2]);
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[3]);
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[4]);
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[5]);
+                            string[] vals = Mess.Parameters[0].ToString().Split('|');
+                            frmMain.txtGifPacketSize.Text = vals[0] + " bytes";
 
-                            TreeNode nodePrim = new TreeNode("Prim");
-                            string[] prim = vals[6].Split('~');
-                            for (int j = 1; j < prim.Length; j++)
+                            frmMain.treeGifPacketContent.Nodes.Clear();
+
+                            frmMain.treeGifPacketContent.Nodes.Add(vals[1]);
+
+                            if (vals.Length > 2)
                             {
-                                nodePrim.Nodes.Add(prim[j]);
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[2]);
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[3]);
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[4]);
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[5]);
+
+                                TreeNode nodePrim = new TreeNode("Prim");
+                                string[] prim = vals[6].Split('~');
+                                for (int j = 1; j < prim.Length; j++)
+                                {
+                                    nodePrim.Nodes.Add(prim[j]);
+                                }
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
+
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[7]);
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[8]);
                             }
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
-                            
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[7]);
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[8]);
+                            frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
                         }
-                        frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
+                        else
+                        {
+                            frmMain.treeGifPacketContent.Nodes.Clear();
+
+                            frmMain.treeGifPacketContent.Nodes.Add(Mess.Parameters[0].ToString());
+                        }
                     }), new object[] { null });
                     break;
                 default:

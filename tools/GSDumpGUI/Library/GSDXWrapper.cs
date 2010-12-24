@@ -396,6 +396,28 @@ namespace GSDumpGUI
 
         internal String GetGifPacketInfo(GSDump dump, int i)
         {
+            int nloop = 0;
+            for (int j = 0; j <= i; j++)
+            {
+                if (nloop != 0 && j==i)
+                    return "No Data Available";
+                if (nloop != 0)
+                {
+                    nloop--;
+                }
+                else
+                {
+                    switch (dump.Data[i].id)
+                    {
+                        case GSType.Transfer:
+                            GIFTag tag = ExtractGifTag(dump.Data[j].data);
+                            if (tag.nloop != 0)
+                                nloop = tag.nloop;
+                            break;
+                    }
+                }
+            }
+
             string val = dump.Data[i].data.Length.ToString() + "|";
 
             switch (dump.Data[i].id)
@@ -437,14 +459,10 @@ namespace GSDumpGUI
             Int32 pad2PrePrimFlgNReg = 0;
             Int64 regs = 0;
 
-            if (data.Length >= 16)
-                nloopEOP = BitConverter.ToInt16(data, 0);
-            if (data.Length >= 32)
-                pad1 = BitConverter.ToInt16(data, 16);
-            if (data.Length >= 64)
-                pad2PrePrimFlgNReg = BitConverter.ToInt32(data, 32);
-            if (data.Length >= 128)
-                regs = BitConverter.ToInt64(data, 64);
+            nloopEOP = BitConverter.ToInt16(data, 0);
+            pad1 = BitConverter.ToInt16(data, 2);
+            pad2PrePrimFlgNReg = BitConverter.ToInt32(data, 4);
+            regs = BitConverter.ToInt64(data, 8);
 
             GIFTag t = new GIFTag();
             t.nloop = (nloopEOP & 0x7FFF);
