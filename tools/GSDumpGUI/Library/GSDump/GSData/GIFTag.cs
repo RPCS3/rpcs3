@@ -14,7 +14,7 @@ namespace GSDumpGUI
         public GIFPrim prim;
         public Int32 flg;
         public Int32 nreg;
-        public Int64 regs;
+        public List<GIFReg> regs;
     }
 
     public class GIFPrim
@@ -28,6 +28,31 @@ namespace GSDumpGUI
         public Int32 FST;
         public Int32 CTXT;
         public Int32 FIX;
+    }
+
+    public class GIFReg
+    {
+        public GIFRegDescriptor Descriptor;
+    }
+
+    public enum GIFRegDescriptor
+    {
+        PRIM = 0,
+        RGBAQ = 1,
+        ST = 2,
+        UV = 3,
+        XYZF2 = 4,
+        XYZ2 = 5,
+        TEX0_1 = 6,
+        TEX0_2 = 7,
+        CLAMP_1 = 8,
+        CLAMP_2 = 9,
+        FOG = 10,
+        Reserved = 11,
+        XYZF3 = 12,
+        XYZ3 = 13,
+        AD = 14,
+        NOP = 15
     }
 
     public enum GIFFLG

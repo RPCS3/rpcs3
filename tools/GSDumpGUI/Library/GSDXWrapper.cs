@@ -412,7 +412,9 @@ namespace GSDumpGUI
                     val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = "+ tag.prim.TME + "~FGE = "+ tag.prim.FGE + "~ABE = "+ 
                             tag.prim.ABE + "~AA1 = "+ tag.prim.AA1 + "~FST = "+ tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
                     val += "nreg = " + (tag.nreg == 0 ? 16 : tag.nreg) + "|";
-                    val += "regs = " + tag.regs;
+                    val += "regs~ ";
+                    foreach (var itm in tag.regs)
+                        val += itm.Descriptor.ToString() + "~";
                     break;
                 case GSType.VSync:
                     val += "Field = " + dump.Data[i].data[0].ToString();
@@ -464,7 +466,14 @@ namespace GSDumpGUI
 
             t.flg = (pad2PrePrimFlgNReg & 0xC000000) >> 26;
             t.nreg = (int)(pad2PrePrimFlgNReg & 0xF0000000) >> 28;
-            t.regs = regs;
+
+            t.regs = new List<GIFReg>();
+            for (int i = 0; i < t.nreg; i++)
+            {
+                GIFReg reg = new GIFReg();
+                reg.Descriptor = (GIFRegDescriptor)((regs & (Convert.ToInt32(Math.Pow(16, i + 1)) - 1)) >> i*4);
+                t.regs.Add(reg);
+            }
             return t;
         }
     }

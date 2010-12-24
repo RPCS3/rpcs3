@@ -269,7 +269,14 @@ namespace GSDumpGUI
                                 frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
 
                                 frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[7]);
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[8]);
+
+                                TreeNode nodeReg = new TreeNode("reg");
+                                string[] reg = vals[8].Split(new char[]{'~'}, StringSplitOptions.RemoveEmptyEntries);
+                                for (int j = 1; j < reg.Length; j++)
+                                {
+                                    nodeReg.Nodes.Add(reg[j]);
+                                }
+                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodeReg);
                             }
                             frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
                         }
