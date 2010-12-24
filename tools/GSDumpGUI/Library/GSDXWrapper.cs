@@ -411,8 +411,8 @@ namespace GSDumpGUI
                     val += "pre = " + tag.pre + "|";
                     val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = "+ tag.prim.TME + "~FGE = "+ tag.prim.FGE + "~ABE = "+ 
                             tag.prim.ABE + "~AA1 = "+ tag.prim.AA1 + "~FST = "+ tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
-                    val += "nreg = " + tag.nreg + "|";
-                    val += "regs = " + (tag.regs == 0 ? 16 : tag.regs);
+                    val += "nreg = " + (tag.nreg == 0 ? 16 : tag.nreg) + "|";
+                    val += "regs = " + tag.regs;
                     break;
                 case GSType.VSync:
                     val += "Field = " + dump.Data[i].data[0].ToString();
