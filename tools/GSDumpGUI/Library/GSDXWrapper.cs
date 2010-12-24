@@ -396,28 +396,6 @@ namespace GSDumpGUI
 
         internal String GetGifPacketInfo(GSDump dump, int i)
         {
-            int nloop = 0;
-            for (int j = 0; j <= i; j++)
-            {
-                if (nloop != 0 && j==i)
-                    return "No Data Available";
-                if (nloop != 0)
-                {
-                    nloop--;
-                }
-                else
-                {
-                    switch (dump.Data[i].id)
-                    {
-                        case GSType.Transfer:
-                            GIFTag tag = ExtractGifTag(dump.Data[j].data);
-                            if (tag.nloop != 0)
-                                nloop = tag.nloop;
-                            break;
-                    }
-                }
-            }
-
             string val = dump.Data[i].data.Length.ToString() + "|";
 
             switch (dump.Data[i].id)
@@ -434,7 +412,7 @@ namespace GSDumpGUI
                     val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = "+ tag.prim.TME + "~FGE = "+ tag.prim.FGE + "~ABE = "+ 
                             tag.prim.ABE + "~AA1 = "+ tag.prim.AA1 + "~FST = "+ tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
                     val += "nreg = " + tag.nreg + "|";
-                    val += "regs = " + tag.regs;
+                    val += "regs = " + (tag.regs == 0 ? 16 : tag.regs);
                     break;
                 case GSType.VSync:
                     val += "Field = " + dump.Data[i].data[0].ToString();
