@@ -236,6 +236,11 @@ namespace GSDumpGUI
                                         if (i == RunTo)
                                         {
                                             RunTo = -1;
+                                            int idxnextReg = dump.Data.FindIndex(i, a => a.id == GSType.Registers);
+                                            if (idxnextReg != -1)
+                                            {
+                                                Step(dump.Data[idxnextReg], pointer);
+                                            }
 
                                             GSData g = new GSData();
                                             g.id = GSType.VSync;
