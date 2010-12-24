@@ -644,7 +644,7 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), joy_choose_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), keys_frame);
 
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
+    gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
     
     fir->update();
     

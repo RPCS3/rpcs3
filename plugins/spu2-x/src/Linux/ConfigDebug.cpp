@@ -259,7 +259,7 @@ void DisplayDialog()
     gtk_container_add (GTK_CONTAINER(main_box), dump_frame);
 
     // Add all our widgets, and show everything we've added to the dialog.
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
+    gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
     gtk_widget_show_all (dialog);
 
     return_value = gtk_dialog_run (GTK_DIALOG (dialog));

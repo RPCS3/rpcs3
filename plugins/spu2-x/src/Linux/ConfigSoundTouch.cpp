@@ -113,10 +113,10 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER (main_box), seek_slide);
 	gtk_container_add(GTK_CONTAINER (main_box), over_label);
 	gtk_container_add(GTK_CONTAINER (main_box), over_slide);
-    gtk_container_add (GTK_CONTAINER(main_frame), main_box);
+    gtk_container_add(GTK_CONTAINER(main_frame), main_box);
 
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_label);
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
+	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_label);
+    gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
     gtk_widget_show_all (dialog);
 
     g_signal_connect_swapped(GTK_OBJECT (default_button), "clicked", G_CALLBACK(restore_defaults), default_button);

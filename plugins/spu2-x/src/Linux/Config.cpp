@@ -226,7 +226,7 @@ void DisplayDialog()
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
 
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
+    gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
     gtk_widget_show_all (dialog);
 
     g_signal_connect_swapped(GTK_OBJECT (advanced_button), "clicked", G_CALLBACK(advanced_dialog), advanced_button);

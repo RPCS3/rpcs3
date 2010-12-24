@@ -128,6 +128,10 @@
 			<Add option="-pipe -msse -msse2" />
 			<Add option="-m32" />
 			<Add option="-fvisibility=hidden" />
+			<Add option="-DGDK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
+			<Add option="-DGSEAL_ENABLE" />
 			<Add directory="../../include/Utilities" />
 			<Add directory="../../include" />
 			<Add directory="../../../3rdparty" />
@@ -162,8 +166,8 @@
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
 		<Unit filename="../../include/Utilities/RwMutex.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
-    <Unit filename="../../include/Utilities/ScopedAlloc.h" />
-    <Unit filename="../../include/Utilities/ScopedPtr.h" />
+		<Unit filename="../../include/Utilities/ScopedAlloc.h" />
+		<Unit filename="../../include/Utilities/ScopedPtr.h" />
 		<Unit filename="../../include/Utilities/ScopedPtrMT.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
@@ -171,13 +175,13 @@
 		<Unit filename="../../include/Utilities/TlsVariable.inl" />
 		<Unit filename="../../include/Utilities/TraceLog.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
-    <Unit filename="../../include/Utilities/pxForwardDefs.h" />
-    <Unit filename="../../include/Utilities/pxCheckBox.h" />
-    <Unit filename="../../include/Utilities/pxEvents.h" />
+		<Unit filename="../../include/Utilities/pxCheckBox.h" />
+		<Unit filename="../../include/Utilities/pxEvents.h" />
+		<Unit filename="../../include/Utilities/pxForwardDefs.h" />
 		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/pxStaticText.h" />
-    <Unit filename="../../include/Utilities/pxStreams.h" />
-    <Unit filename="../../include/Utilities/win_memzero.h" />
+		<Unit filename="../../include/Utilities/pxStreams.h" />
+		<Unit filename="../../include/Utilities/win_memzero.h" />
 		<Unit filename="../../include/Utilities/wxAppWithHelpers.h" />
 		<Unit filename="../../include/Utilities/wxBaseTools.h" />
 		<Unit filename="../../include/Utilities/wxGuiTools.h" />

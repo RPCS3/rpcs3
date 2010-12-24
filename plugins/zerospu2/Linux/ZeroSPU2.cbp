@@ -110,6 +110,10 @@
 			<Add option="-fPIC" />
 			<Add option="-m32" />
 			<Add option="-msse2" />
+			<Add option="-DGDK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
+			<Add option="-DGSEAL_ENABLE" />
 			<Add directory="../Linux" />
 			<Add directory="../../zerospu2" />
 			<Add directory="../../../common/include" />

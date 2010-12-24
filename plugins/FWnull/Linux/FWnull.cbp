@@ -35,6 +35,10 @@
 			<Add option="-fPIC" />
 			<Add option="-m32" />
 			<Add option="-fvisibility=hidden" />
+			<Add option="-DGDK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
+			<Add option="-DGSEAL_ENABLE" />
 			<Add directory="../../../common/include" />
 			<Add directory="../Linux" />
 			<Add directory="../../FWnull" />

@@ -16,9 +16,12 @@
 #include "../PrecompiledHeader.h"
 #include "ConsoleLogger.h"
 
-//#include <wx/gtk/win_gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <gdk/gdkx.h>
+#if (GTK_MAJOR_VERSION > 2)
+// All those GDK_<key> defines are now GDK_KEY_<key>, as of around Gtk+ 2.22. This include gets brought in automatically until Gtk 3.0,
+// But we want to bring it in after that, too, until we're ready to break compatability prior to Gtk+ 2.22.
+#include <gdk/gdkkeysyms-compat.h>
+#endif
 
 void NTFS_CompressFile( const wxString& file, bool compressStatus ) {}
 

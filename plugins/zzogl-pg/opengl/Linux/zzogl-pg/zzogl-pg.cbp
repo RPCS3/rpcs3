@@ -74,6 +74,10 @@
 			<Add option="-fno-regmove" />
 			<Add option="-fno-strict-aliasing" />
 			<Add option="-DZEROGS_SSE2" />
+			<Add option="-DGDK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
+			<Add option="-DGSEAL_ENABLE" />
 			<Add directory="../../Linux" />
 			<Add directory="../../../opengl" />
 			<Add directory="../../../../../common/include" />
@@ -147,13 +151,13 @@
 		<Unit filename="../../ZZHacks.cpp" />
 		<Unit filename="../../ZZHacks.h" />
 		<Unit filename="../../ZZKeyboard.cpp" />
-		<Unit filename="../../ZZoglDrawing.cpp" />
-		<Unit filename="../../ZZoglDrawing.h" />
 		<Unit filename="../../ZZLog.cpp" />
 		<Unit filename="../../ZZLog.h" />
 		<Unit filename="../../ZZoglCRTC.cpp" />
 		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />
+		<Unit filename="../../ZZoglDrawing.cpp" />
+		<Unit filename="../../ZZoglDrawing.h" />
 		<Unit filename="../../ZZoglFlush.cpp" />
 		<Unit filename="../../ZZoglFlushHack.cpp" />
 		<Unit filename="../../ZZoglFlushHack.h" />

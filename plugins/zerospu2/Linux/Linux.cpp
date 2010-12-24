@@ -155,7 +155,7 @@ void DisplayDialog()
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(mute_check), (conf.options & OPTION_MUTE));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(logging_check), (conf.Log));
 
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_box);
+    gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_box);
     gtk_widget_show_all (dialog);
 
     return_value = gtk_dialog_run (GTK_DIALOG (dialog));

@@ -212,9 +212,9 @@ static void __forceinline PluginNullConfigure(std::string desc, int &log)
     g_signal_connect_swapped(GTK_OBJECT (check_box), "toggled", G_CALLBACK(set_logging), check_box);
 
     /* Add all our widgets, and show everything we've added to the dialog. */
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->action_area), okay_button);
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), label);
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), check_box);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_action_area(GTK_DIALOG(dialog))), okay_button);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area(GTK_DIALOG(dialog))), check_box);
     gtk_widget_show_all (dialog);
 
     log = gtk_dialog_run (GTK_DIALOG (dialog));

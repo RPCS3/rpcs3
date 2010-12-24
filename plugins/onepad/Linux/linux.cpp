@@ -76,7 +76,7 @@ s32  _PADopen(void *pDsp)
 	    // comes along instead. Later, we can fiddle with this, but I'm not sure the
 	    // best way to get a Display* out of a GtkScrolledWindow. A GtkWindow I might
 	    // be able to manage... --arcum42
-        GSdsp = GDK_DISPLAY();
+        GSdsp = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
 	}
 	else
 	{
