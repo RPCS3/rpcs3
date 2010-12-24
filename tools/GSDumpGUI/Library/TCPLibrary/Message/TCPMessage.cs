@@ -116,6 +116,7 @@ namespace TCPLibrary.MessageBased.Core
         GetDebugMode,
         SetDebugMode,
         DebugState,
+        PacketInfo,
 
         Step,
         RunToCursor,

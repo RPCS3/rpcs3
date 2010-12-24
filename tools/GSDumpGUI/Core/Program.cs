@@ -176,6 +176,7 @@ namespace GSDumpGUI
                         frmMain.btnStep.Enabled = frmMain.chkDebugMode.Checked;
                         frmMain.cmdGoToStart.Enabled = frmMain.chkDebugMode.Checked;
                         frmMain.cmdGoToNextVSync.Enabled = frmMain.chkDebugMode.Checked;
+                        frmMain.treeGifPacketContent.Enabled = frmMain.chkDebugMode.Checked;
                         if (frmMain.chkDebugMode.Checked == false)
                             frmMain.treTreeView.Nodes.Clear();
 
@@ -195,19 +196,19 @@ namespace GSDumpGUI
                                 case "Transfer":
                                     TreeNode tn2 = new TreeNode();
                                     tn2.Name = parts[0];
-                                    tn2.Text = parts[0] + " - " + parts[1] + " - " + parts[2];
+                                    tn2.Text = parts[0] + " - " + parts[1] + " - " + parts[2] + " - " + parts[3] + " byte";
                                     nodes.Add(tn2);
                                     break;
                                 case "ReadFIFO2":
                                     TreeNode tn3 = new TreeNode();
                                     tn3.Name = parts[0];
-                                    tn3.Text = parts[0] + " - " + parts[1];
+                                    tn3.Text = parts[0] + " - " + parts[1] + " - " + parts[2] + " byte";
                                     nodes.Add(tn3);
                                     break;
                                 case "VSync":
                                     TreeNode tn = new TreeNode();
                                     tn.Name = parts[0];
-                                    tn.Text = parts[0] + " - " + parts[1];
+                                    tn.Text = parts[0] + " - " + parts[1] + " - " + parts[2] + " byte";
                                     tn.Nodes.AddRange(nodes.ToArray());
                                     parents.Add(tn);
 
@@ -216,7 +217,7 @@ namespace GSDumpGUI
                                 case "Registers":
                                     TreeNode tn4 = new TreeNode();
                                     tn4.Name = parts[0];
-                                    tn4.Text = parts[0] + " - " + parts[1];
+                                    tn4.Text = parts[0] + " - " + parts[1] + " - " + parts[2] + " byte";
                                     nodes.Add(tn4);
                                     break;
                             }
@@ -238,6 +239,37 @@ namespace GSDumpGUI
                             CurrentNode = noes[0];
                             frmMain.treTreeView.SelectedNode = noes[0];
                         }
+                    }), new object[] { null });
+                    break;
+                case MessageType.PacketInfo:
+                    frmMain.Invoke(new Action<object>(delegate(object e)
+                    {
+                        string[] vals = Mess.Parameters[0].ToString().Split('|');
+                        frmMain.txtGifPacketSize.Text = vals[0] + " bytes";
+
+                        frmMain.treeGifPacketContent.Nodes.Clear();
+
+                        frmMain.treeGifPacketContent.Nodes.Add(vals[1]);
+
+                        if (vals.Length > 2)
+                        {
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[2]);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[3]);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[4]);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[5]);
+
+                            TreeNode nodePrim = new TreeNode("Prim");
+                            string[] prim = vals[6].Split('~');
+                            for (int j = 1; j < prim.Length; j++)
+                            {
+                                nodePrim.Nodes.Add(prim[j]);
+                            }
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
+                            
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[7]);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[8]);
+                        }
+                        frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
                     }), new object[] { null });
                     break;
                 default:
@@ -299,6 +331,14 @@ namespace GSDumpGUI
                         msg.Parameters.Add(dump.Data.FindIndex(a => a == wrap.CurrentGIFPacket));
                         Client.Send(msg);
                     }
+                    break;
+
+                case MessageType.PacketInfo:
+                    int id = (int)Mess.Parameters[0];
+                    msg = new TCPMessage();
+                    msg.MessageType = MessageType.PacketInfo;
+                    msg.Parameters.Add(wrap.GetGifPacketInfo(dump, id));
+                    Client.Send(msg);
                     break;
                 case MessageType.Step:
                 case MessageType.RunToCursor:
@@ -381,6 +421,7 @@ namespace GSDumpGUI
                     frmMain.cmdGoToStart.Enabled = frmMain.chkDebugMode.Checked;
                     frmMain.cmdGoToNextVSync.Enabled = frmMain.chkDebugMode.Checked;
                     frmMain.treTreeView.Nodes.Clear();
+                    frmMain.treeGifPacketContent.Nodes.Clear();
                 }
             }), new object[] { null});
         }

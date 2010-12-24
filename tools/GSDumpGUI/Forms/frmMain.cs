@@ -328,20 +328,6 @@ namespace GSDumpGUI
             if (e.KeyCode == Keys.F1)
                 cmdConfigGSDX_Click(sender, e);
 
-            if ((e.KeyCode == Keys.Down))
-            {
-                e.Handled = true;
-                if (lstDumps.Items.Count > lstDumps.SelectedIndex + 1)
-                    lstDumps.SelectedIndex++;
-            }
-
-            if ((e.KeyCode == Keys.Up))
-            {
-                e.Handled = true;
-                if (lstDumps.SelectedIndex > 0)
-                    lstDumps.SelectedIndex--;
-            }
-
             if ((e.KeyCode == Keys.F2))
                 SelectedRad++;
         }
@@ -441,6 +427,18 @@ namespace GSDumpGUI
             TCPMessage msg = new TCPMessage();
             msg.MessageType = MessageType.RunToNextVSync;
             Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+        }
+
+        private void treTreeView_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            if (treTreeView.SelectedNode != null)
+            {
+                TCPMessage msg = new TCPMessage();
+                msg.MessageType = MessageType.PacketInfo;
+                msg.Parameters.Add(Convert.ToInt32(treTreeView.SelectedNode.Text.Split(new string[] { " - " }, StringSplitOptions.None)[0]));
+                Program.Clients.Find(a => a.IPAddress == lstProcesses.SelectedItem.ToString()).Send(msg);
+            }
+            treTreeView.SelectedNode = e.Node;
         }
     }
 }

@@ -13,6 +13,7 @@ namespace GSDumpGUI
     public delegate void GSgifTransfer2(IntPtr data, int size);
     public delegate void GSgifTransfer3(IntPtr data, int size);
     public delegate void GSVSync(byte field);
+    public delegate void GSreset();
     public delegate void GSreadFIFO2(IntPtr data, int size);
     public delegate void GSsetGameCRC(int crc, int options);
     public delegate int GSfreeze(int mode, IntPtr data);
@@ -43,6 +44,7 @@ namespace GSDumpGUI
         private GSshutdown GSshutdown;
         private GSsetBaseMem GSsetBaseMem;
         private GSinit GSinit;
+        private GSreset GSreset;
 
         private Boolean Loaded;
 
@@ -125,6 +127,7 @@ namespace GSDumpGUI
                 IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
                 IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
                 IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
+                IntPtr funcaddrGSReset = NativeMethods.GetProcAddress(hmod, "GSreset");
                 IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
                 IntPtr funcaddrSetCRC = NativeMethods.GetProcAddress(hmod, "GSsetGameCRC");
                 IntPtr funcaddrClose = NativeMethods.GetProcAddress(hmod, "GSclose");
@@ -147,6 +150,7 @@ namespace GSDumpGUI
                 this.GSclose = (GSclose)Marshal.GetDelegateForFunctionPointer(funcaddrClose, typeof(GSclose));
                 this.GSshutdown = (GSshutdown)Marshal.GetDelegateForFunctionPointer(funcaddrShutdown, typeof(GSshutdown));
                 this.GSfreeze = (GSfreeze)Marshal.GetDelegateForFunctionPointer(funcaddrFreeze, typeof(GSfreeze));
+                this.GSreset = (GSreset)Marshal.GetDelegateForFunctionPointer(funcaddrGSReset, typeof(GSreset));
                 this.GSreadFIFO2 = (GSreadFIFO2)Marshal.GetDelegateForFunctionPointer(funcaddrGSreadFIFO2, typeof(GSreadFIFO2));
                 this.GSinit = (GSinit)Marshal.GetDelegateForFunctionPointer(funcaddrinit, typeof(GSinit));
 
@@ -181,8 +185,6 @@ namespace GSDumpGUI
             Running = true;
             ExternalEvent = new AutoResetEvent(true);
 
-            int lastVSyncField;
-
             GSinit();
             byte[] tempregisters = new byte[8192];
             Array.Copy(dump.Registers, tempregisters, 8192);
@@ -192,6 +194,7 @@ namespace GSDumpGUI
                 Int32 HWND = 0;
                 GSopen(new IntPtr(&HWND), "", rendererOverride);
                 GSsetGameCRC(dump.CRC, 0);
+
                 fixed (byte* freeze = dump.StateData)
                 {
                     byte[] GSFreez = new byte[8];
@@ -216,7 +219,9 @@ namespace GSDumpGUI
                                 break;
                             }
 
+                            GSreset();
                             Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
+                            GSsetBaseMem(new IntPtr(pointer));
                             GSfreeze(0, new IntPtr(fr));
 
                             for (int i = 0; i < dump.Data.Count; i++)
@@ -234,8 +239,6 @@ namespace GSDumpGUI
 
                                             GSData g = new GSData();
                                             g.id = GSType.VSync;
-                                            g.data = new byte[1];
-                                            g.data[0] = 0;
                                             Step(g, pointer);
 
                                             TCPMessage Msg = new TCPMessage();
@@ -274,21 +277,17 @@ namespace GSDumpGUI
                                             {
                                                 case MessageType.Step:
                                                     RunTo = i;
-                                                    i = -1;
                                                     break;
                                                 case MessageType.RunToCursor:
                                                     RunTo = (int)Mess.Parameters[0];
-                                                    i = -1;
                                                     break;
                                                 case MessageType.RunToNextVSync:
                                                     RunTo = dump.Data.FindIndex(i, a => a.id == GSType.VSync);
-                                                    i = -1;
                                                     break;
                                                 default:
                                                     break;
                                             }
-                                            Marshal.Copy(dump.Registers, 0, new IntPtr(pointer), 8192);
-                                            GSfreeze(0, new IntPtr(fr));
+                                            break;
                                         }
                                     }
                                 }
@@ -308,7 +307,7 @@ namespace GSDumpGUI
 
         private unsafe void Step(GSData itm, byte* registers)
         {
-            /*"C:\Users\Alessio\Desktop\Plugins\Dll\gsdx-sse4-r3878.dll" "C:\Users\Alessio\Desktop\Plugins\Dumps\gsdx_20101219182059.gs" "GSReplay" 0*/
+            /*"C:\Users\Alessio\Desktop\Plugins\Dll\GSdx-SSE4.dll" "C:\Users\Alessio\Desktop\Plugins\Dumps\gsdx_20101222215004.gs" "GSReplay" 0*/
             switch (itm.id)
             {
                 case GSType.Transfer:
@@ -344,7 +343,7 @@ namespace GSDumpGUI
                     }
                     break;
                 case GSType.VSync:
-                    GSVSync(itm.data[0]);
+                    GSVSync((*((int*)(registers + 4096)) & 0x2000) > 0 ? (byte)1 : (byte)0);
                     break;
                 case GSType.ReadFIFO2:
                     fixed (byte* FIFO = itm.data)
@@ -378,15 +377,94 @@ namespace GSDumpGUI
                 act += dump.Data[i].id.ToString() + "|";
                 if (dump.Data[i].GetType().IsSubclassOf(typeof(GSData)))
                 {
-                    act += ((GSTransfer)dump.Data[i]).Path.ToString();
+                    act += ((GSTransfer)dump.Data[i]).Path.ToString() + "|";
+                    act += ((GSTransfer)dump.Data[i]).data.Length;
                 }
                 else
                 {
-
+                    act += ((GSData)dump.Data[i]).data.Length;
                 }
                 Data.Add(act);
             }
             return Data;
+        }
+
+        internal String GetGifPacketInfo(GSDump dump, int i)
+        {
+            string val = dump.Data[i].data.Length.ToString() + "|";
+
+            switch (dump.Data[i].id)
+            {
+                case GSType.Transfer:
+                    GIFTag tag = ExtractGifTag(dump.Data[i].data);
+                    val += "Transfer Path " + ((GSTransfer)dump.Data[i]).Path.ToString() + "|";
+                    val += "NLoop = " + tag.nloop + "|";
+                    //val += "Pad1 = " + tag._pad1 + "|";
+                    //val += "Pad2 = " + tag._pad2 + "|";
+                    val += "eop = " + tag.eop + "|";
+                    val += "flg = " + ((GIFFLG)tag.flg).ToString() + "|";
+                    val += "pre = " + tag.pre + "|";
+                    val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = "+ tag.prim.TME + "~FGE = "+ tag.prim.FGE + "~ABE = "+ 
+                            tag.prim.ABE + "~AA1 = "+ tag.prim.AA1 + "~FST = "+ tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
+                    val += "nreg = " + tag.nreg + "|";
+                    val += "regs = " + tag.regs;
+                    break;
+                case GSType.VSync:
+                    val += "Field = " + dump.Data[i].data[0].ToString();
+                    break;
+                case GSType.ReadFIFO2:
+                    val += "ReadFIFO2 : Size = " + BitConverter.ToInt32(dump.Data[i].data, 0).ToString() + " byte";
+                    break;
+                case GSType.Registers:
+                    val += "Registers";
+                    break;
+                default:
+                    break;
+            }
+
+            return val;
+        }
+
+        internal GIFTag ExtractGifTag(byte[] data)
+        {
+            Int16 nloopEOP = 0;
+            Int16 pad1 = 0;
+            Int32 pad2PrePrimFlgNReg = 0;
+            Int64 regs = 0;
+
+            if (data.Length >= 16)
+                nloopEOP = BitConverter.ToInt16(data, 0);
+            if (data.Length >= 32)
+                pad1 = BitConverter.ToInt16(data, 16);
+            if (data.Length >= 64)
+                pad2PrePrimFlgNReg = BitConverter.ToInt32(data, 32);
+            if (data.Length >= 128)
+                regs = BitConverter.ToInt64(data, 64);
+
+            GIFTag t = new GIFTag();
+            t.nloop = (nloopEOP & 0x7FFF);
+            t.eop = (nloopEOP & 0x8000) >> 15;
+            t._pad1 = pad1;
+            t._pad2 = (pad2PrePrimFlgNReg & 0x00003FFF);
+            t.pre = (pad2PrePrimFlgNReg & 0x00004000) >> 14;
+
+            int prim = (pad2PrePrimFlgNReg & 0x03FF8000) >> 15;
+            GIFPrim pri = new GIFPrim();
+            pri.Prim = (prim & 0x007);
+            pri.IIP = (prim & 0x008) >> 3;
+            pri.TME = (prim & 0x010) >> 4;
+            pri.FGE = (prim & 0x020) >> 5;
+            pri.ABE = (prim & 0x040) >> 6;
+            pri.AA1 = (prim & 0x080) >> 7;
+            pri.FST = (prim & 0x100) >> 8;
+            pri.CTXT = (prim & 0x200) >> 9;
+            pri.FIX = (prim & 0x400) >> 10;
+            t.prim = pri;
+
+            t.flg = (pad2PrePrimFlgNReg & 0xC000000) >> 26;
+            t.nreg = (int)(pad2PrePrimFlgNReg & 0xF0000000) >> 28;
+            t.regs = regs;
+            return t;
         }
     }
 }
