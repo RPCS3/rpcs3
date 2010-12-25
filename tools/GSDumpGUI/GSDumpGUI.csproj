@@ -55,7 +55,17 @@
     <Compile Include="Forms\frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="Library\GSDump\GSData\GIFTag.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFPrim.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedXYZ.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedXYZF.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedUV.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedST.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFReg.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GifImage.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedPrim.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedRGBAQ.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\IGifData.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFTag.cs" />
     <Compile Include="Library\GSDump\GSData\GSData.cs" />
     <Compile Include="Library\GSDump\GSDump.cs" />
     <Compile Include="Library\GSDump\GSData\GSTransfer.cs" />

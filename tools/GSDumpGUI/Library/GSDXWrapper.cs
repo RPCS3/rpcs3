@@ -401,7 +401,7 @@ namespace GSDumpGUI
             switch (dump.Data[i].id)
             {
                 case GSType.Transfer:
-                    GIFTag tag = ExtractGifTag(dump.Data[i].data);
+                    GIFTag tag = GIFTag.ExtractGifTag(dump.Data[i].data);
                     val += "Transfer Path " + ((GSTransfer)dump.Data[i]).Path.ToString() + "|";
                     val += "NLoop = " + tag.nloop + "|";
                     //val += "Pad1 = " + tag._pad1 + "|";
@@ -412,9 +412,48 @@ namespace GSDumpGUI
                     val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = "+ tag.prim.TME + "~FGE = "+ tag.prim.FGE + "~ABE = "+ 
                             tag.prim.ABE + "~AA1 = "+ tag.prim.AA1 + "~FST = "+ tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
                     val += "nreg = " + (tag.nreg == 0 ? 16 : tag.nreg) + "|";
-                    val += "regs~ ";
+                    val += "regs~";
                     foreach (var itm in tag.regs)
-                        val += itm.Descriptor.ToString() + "~";
+                    {
+                        if (itm.GetType().IsSubclassOf(typeof(GIFReg)))
+                        {
+                            if (itm.GetType() == typeof(GIFRegPackedPrim))
+                            {
+                                GIFRegPackedPrim p = (GIFRegPackedPrim)itm;
+                                val += "Packed Primitive@Primitive Type : " + p.PrimitiveType.ToString() + "@IIP : " + p.IIP.ToString() + "@TME : " + p.TME.ToString() + "@FGE : " + p.FGE.ToString()
+                                    + "@ABE : " + p.ABE.ToString() + "@AA1 : " + p.AA1.ToString() + "@FST : " + p.FST.ToString() + "@CTXT : " + p.CTXT.ToString() + "@FIX : " + p.FIX.ToString() + "~";
+                            }
+                            if (itm.GetType() == typeof(GIFRegPackedRGBAQ))
+                            {
+                                GIFRegPackedRGBAQ p = (GIFRegPackedRGBAQ)itm;
+                                val += "Packed RGBAQ@Red : " + p.R.ToString() + "@Green : " + p.G.ToString() + "@Blue : " + p.B.ToString() + "@Alpha : " + p.A.ToString() + "~";
+                            } 
+                            if (itm.GetType() == typeof(GIFRegPackedST))
+                            {
+                                GIFRegPackedST p = (GIFRegPackedST)itm;
+                                val += "Packed ST@S : " + p.S.ToString("F8") + "@T : " + p.T.ToString("F8") + "@Q : " + p.Q.ToString("F8") + "~";
+                            } 
+                            if (itm.GetType() == typeof(GIFRegPackedUV))
+                            {
+                                GIFRegPackedUV p = (GIFRegPackedUV)itm;
+                                val += "Packed UV@U : " + p.U.ToString("F4") + "@V : " + p.V.ToString("F4") + "~";
+                            }
+                            if (itm.GetType() == typeof(GIFRegPackedXYZF))
+                            {
+                                GIFRegPackedXYZF p = (GIFRegPackedXYZF)itm;
+                                val += "Packed XYZF@X : " + p.X.ToString("F4") + "@Y : " + p.Y.ToString("F4") + "@Z : " + p.Z.ToString() + "@F : " + p.F.ToString() + "@ADC : " + p.ADC.ToString() + "~";
+                            }
+                            if (itm.GetType() == typeof(GIFRegPackedXYZ))
+                            {
+                                GIFRegPackedXYZ p = (GIFRegPackedXYZ)itm;
+                                val += "Packed XYZ@X : " + p.X.ToString("F4") + "@Y : " + p.Y.ToString("F4") + "@Z : " + p.Z.ToString() + "@ADC : " + p.ADC.ToString() + "~";
+                            }
+                        }
+                        else
+                        {
+
+                        }
+                    }
                     break;
                 case GSType.VSync:
                     val += "Field = " + dump.Data[i].data[0].ToString();
@@ -430,51 +469,6 @@ namespace GSDumpGUI
             }
 
             return val;
-        }
-
-        internal GIFTag ExtractGifTag(byte[] data)
-        {
-            Int16 nloopEOP = 0;
-            Int16 pad1 = 0;
-            Int32 pad2PrePrimFlgNReg = 0;
-            Int64 regs = 0;
-
-            nloopEOP = BitConverter.ToInt16(data, 0);
-            pad1 = BitConverter.ToInt16(data, 2);
-            pad2PrePrimFlgNReg = BitConverter.ToInt32(data, 4);
-            regs = BitConverter.ToInt64(data, 8);
-
-            GIFTag t = new GIFTag();
-            t.nloop = (nloopEOP & 0x7FFF);
-            t.eop = (nloopEOP & 0x8000) >> 15;
-            t._pad1 = pad1;
-            t._pad2 = (pad2PrePrimFlgNReg & 0x00003FFF);
-            t.pre = (pad2PrePrimFlgNReg & 0x00004000) >> 14;
-
-            int prim = (pad2PrePrimFlgNReg & 0x03FF8000) >> 15;
-            GIFPrim pri = new GIFPrim();
-            pri.Prim = (prim & 0x007);
-            pri.IIP = (prim & 0x008) >> 3;
-            pri.TME = (prim & 0x010) >> 4;
-            pri.FGE = (prim & 0x020) >> 5;
-            pri.ABE = (prim & 0x040) >> 6;
-            pri.AA1 = (prim & 0x080) >> 7;
-            pri.FST = (prim & 0x100) >> 8;
-            pri.CTXT = (prim & 0x200) >> 9;
-            pri.FIX = (prim & 0x400) >> 10;
-            t.prim = pri;
-
-            t.flg = (pad2PrePrimFlgNReg & 0xC000000) >> 26;
-            t.nreg = (int)(pad2PrePrimFlgNReg & 0xF0000000) >> 28;
-
-            t.regs = new List<GIFReg>();
-            for (int i = 0; i < t.nreg; i++)
-            {
-                GIFReg reg = new GIFReg();
-                reg.Descriptor = (GIFRegDescriptor)((regs & (Convert.ToInt32(Math.Pow(16, i + 1)) - 1)) >> i*4);
-                t.regs.Add(reg);
-            }
-            return t;
         }
     }
 }
