@@ -17,15 +17,15 @@ namespace GSDumpGUI
                 GIFRegST st = new GIFRegST();
                 st.Descriptor = GIFRegDescriptor.ST;
 
-                ulong pt = ((LowData & 0xFFFFFFFF));
+                ulong pt = GIFReg.GetBit(LowData, 0, 32);
                 void* ptt = &pt;
                 st.S = *(float*)ptt;
 
-                pt = ((LowData & 0xFFFFFFFF00000000) >> 32);
+                pt = GIFReg.GetBit(LowData, 32, 32);
                 ptt = &pt;
                 st.T = *(float*)ptt;
 
-                pt = ((HighData & 0xFFFFFFFF));
+                pt = GIFReg.GetBit(HighData, 0, 32);
                 ptt = &pt;
                 st.Q = *(float*)ptt;
                 return st;

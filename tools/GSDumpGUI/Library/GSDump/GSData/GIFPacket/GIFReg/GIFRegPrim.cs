@@ -20,15 +20,15 @@ namespace GSDumpGUI
         {
             GIFRegPrim pr = new GIFRegPrim();
             pr.Descriptor = GIFRegDescriptor.PRIM;
-            pr.PrimitiveType = (GS_PRIM)(LowData & 0x7);
-            pr.IIP = (GSIIP)((LowData & 0x8) >> 3);
-            pr.TME = Convert.ToBoolean(((LowData & 0x10) >> 4));
-            pr.FGE = Convert.ToBoolean(((LowData & 0x20) >> 5));
-            pr.ABE = Convert.ToBoolean(((LowData & 0x40) >> 6));
-            pr.AA1 = Convert.ToBoolean(((LowData & 0x80) >> 7));
-            pr.FST = (GSFST)((LowData & 0x100) >> 8);
-            pr.CTXT = (GSCTXT)((LowData & 0x200) >> 9);
-            pr.FIX = (GSFIX)((LowData & 0x400) >> 10);
+            pr.PrimitiveType = (GS_PRIM)GIFReg.GetBit(LowData, 0, 3);
+            pr.IIP = (GSIIP)GIFReg.GetBit(LowData, 3, 1);
+            pr.TME = Convert.ToBoolean(GIFReg.GetBit(LowData, 4, 1));
+            pr.FGE = Convert.ToBoolean(GIFReg.GetBit(LowData, 5, 1));
+            pr.ABE = Convert.ToBoolean(GIFReg.GetBit(LowData, 6, 1));
+            pr.AA1 = Convert.ToBoolean(GIFReg.GetBit(LowData, 7, 1));
+            pr.FST = (GSFST)(GIFReg.GetBit(LowData, 8, 1));
+            pr.CTXT = (GSCTXT)(GIFReg.GetBit(LowData, 9, 1));
+            pr.FIX = (GSFIX)(GIFReg.GetBit(LowData, 10, 1));
             return pr;
         }
     }

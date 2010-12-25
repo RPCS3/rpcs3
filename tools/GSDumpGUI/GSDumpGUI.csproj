@@ -56,6 +56,7 @@
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFPrim.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegTEX0.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegFOG.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegXYZ.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegXYZF.cs" />

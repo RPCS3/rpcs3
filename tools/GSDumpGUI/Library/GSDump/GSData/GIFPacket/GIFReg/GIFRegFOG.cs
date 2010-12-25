@@ -12,7 +12,7 @@ namespace GSDumpGUI
         {
             GIFRegFOG u = new GIFRegFOG();
             u.Descriptor = GIFRegDescriptor.FOG;
-            u.F = (UInt16)((HighData & 0xFF000000000) >> 36);
+            u.F = (UInt16)(GIFReg.GetBit(HighData, 36, 8));
             return u;
         }
     }

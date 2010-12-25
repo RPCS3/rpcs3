@@ -13,8 +13,8 @@ namespace GSDumpGUI
         {
             GIFRegUV u = new GIFRegUV();
             u.Descriptor = GIFRegDescriptor.UV;
-            u.U = (LowData & 0x3FFF) / 16d;
-            u.V = ((LowData & 0x3FFF00000000) >> 32) / 16d;
+            u.U = GIFReg.GetBit(LowData, 0, 14) / 16d;
+            u.V = GIFReg.GetBit(LowData, 32, 14) / 16d;
             return u;
         }
     }

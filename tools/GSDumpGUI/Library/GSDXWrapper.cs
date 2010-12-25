@@ -448,6 +448,13 @@ namespace GSDumpGUI
                                 GIFRegXYZ p = (GIFRegXYZ)itm;
                                 val += "Packed XYZ@X : " + p.X.ToString("F4") + "@Y : " + p.Y.ToString("F4") + "@Z : " + p.Z.ToString() + "@ADC : " + p.ADC.ToString() + "~";
                             }
+                            if (itm.GetType() == typeof(GIFRegTEX0))
+                            {
+                                GIFRegTEX0 p = (GIFRegTEX0)itm;
+                                val += "Packed TEX0@TBP0 : " + p.TBP0.ToString() + "@TBW : " + p.TBW.ToString() + "@PSM : " + p.PSM.ToString() + "@TW : " + p.TW.ToString() + "@TH : " + p.TH.ToString()
+                                    + "@TCC : " + p.TCC.ToString() + "@TFX : " + p.TFX.ToString() + "@CBP : " + p.CBP.ToString() + "@CPSM : " + p.CPSM.ToString() + "@CSM : " + p.CSM.ToString()
+                                    + "@CSA : " + p.CSA.ToString() + "@CLD : " + p.CLD.ToString() + "~";
+                            }
                         }
                         else
                         {

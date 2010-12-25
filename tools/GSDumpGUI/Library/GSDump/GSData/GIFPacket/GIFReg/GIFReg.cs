@@ -7,6 +7,11 @@ namespace GSDumpGUI
     abstract public class GIFReg : IGifData
     {
         public GIFRegDescriptor Descriptor;
+
+        static public UInt64 GetBit(UInt64 value, byte lower, byte count)
+        {
+            return (value >> lower) & (ulong)((Math.Pow(2, count)) - 1);
+        }
     }
 
     public enum GIFRegDescriptor

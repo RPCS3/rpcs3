@@ -14,13 +14,13 @@ namespace GSDumpGUI
 
         static public GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat)
         {
-            GIFRegXYZ xf2 = new GIFRegXYZ();
-            xf2.ADC = ((HighData & 0x1000000000000) >> 46) == 1;
+            GIFRegXYZF xf2 = new GIFRegXYZF();
+            xf2.ADC = GIFReg.GetBit(HighData, 47, 1) == 1;
             xf2.Descriptor = (xf2.ADC == true ? GIFRegDescriptor.XYZF3 : GIFRegDescriptor.XYZF2);
-            xf2.X = (LowData & 0xFFFF) / 16d;
-            xf2.Y = ((LowData & 0xFFFF00000000) >> 32) / 16d;
-            xf2.Z = (UInt32)((HighData & 0xFFFFFF0) >> 4);
-            xf2.F = (UInt16)((HighData & 0xFF000000000) >> 36);
+            xf2.X = GIFReg.GetBit(LowData, 0, 16) / 16d;
+            xf2.Y = GIFReg.GetBit(LowData, 32, 16) / 16d;
+            xf2.Z = (UInt32)(GIFReg.GetBit(HighData, 4, 24));
+            xf2.F = (UInt16)(GIFReg.GetBit(HighData, 36, 8));
             return xf2;
         }
     }

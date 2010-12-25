@@ -15,10 +15,10 @@ namespace GSDumpGUI
         {
             GIFRegRGBAQ r = new GIFRegRGBAQ();
             r.Descriptor = GIFRegDescriptor.RGBAQ;
-            r.R = (int)(LowData & 0xFF);
-            r.G = (int)((LowData & 0xFF00000000) >> 32);
-            r.B = (int)((HighData & 0xFF));
-            r.A = (int)((HighData & 0xFF00000000) >> 32);
+            r.R = (int)GIFReg.GetBit(LowData, 0, 8);
+            r.G = (int)GIFReg.GetBit(LowData, 32, 8);
+            r.B = (int)GIFReg.GetBit(HighData, 0, 8);
+            r.A = (int)GIFReg.GetBit(HighData, 32, 8);
             return r;
         }
     }

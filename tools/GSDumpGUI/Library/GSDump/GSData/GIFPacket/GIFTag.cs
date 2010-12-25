@@ -53,7 +53,7 @@ namespace GSDumpGUI
                 for (int i = 0; i < registers.Count; i++)
                 {
                     UInt64 LowData = BitConverter.ToUInt64(data, (16 + (i * 16) + (j * 16 * registers.Count)));
-                    UInt64 HighData = BitConverter.ToUInt64(data, (16 + (i * 16) + (j * 16 * registers.Count)));
+                    UInt64 HighData = BitConverter.ToUInt64(data, (16 + (i * 16) + 8 + (j * 16 * registers.Count)));
 
                     switch (t.flg)
                     {
@@ -82,6 +82,10 @@ namespace GSDumpGUI
                                 case GIFRegDescriptor.FOG:
                                     t.regs.Add(GIFRegFOG.Unpack(LowData, HighData, false));
                                     break;
+                                case GIFRegDescriptor.TEX0_1:
+                                case GIFRegDescriptor.TEX0_2:
+                                    t.regs.Add(GIFRegTEX0.Unpack(LowData, HighData, true));
+                                    break;
                                 case GIFRegDescriptor.Reserved:
                                     // TODO?
                                     break;
@@ -94,6 +98,8 @@ namespace GSDumpGUI
                                 case GIFRegDescriptor.AD:
                                     int destaddr = (int)(HighData & 0xF);
                                     UInt64 datat = LowData;
+                                    if (destaddr == (int)GIFRegDescriptor.TEX0_1 || destaddr == (int)GIFRegDescriptor.TEX0_2)
+                                        t.regs.Add(GIFRegTEX0.Unpack(datat, HighData, true));
                                     break;
                                 case GIFRegDescriptor.NOP:
                                     // TODO?
