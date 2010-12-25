@@ -6,6 +6,9 @@ namespace GSDumpGUI
 {
     public class GIFTag
     {
+        public delegate GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat);
+        static public Dictionary<int, Unpack> Registers;
+
         public Int32 nloop;
         public Int32 eop;
         public Int32 _pad1;
@@ -18,6 +21,19 @@ namespace GSDumpGUI
 
         static internal unsafe GIFTag ExtractGifTag(byte[] data)
         {
+            Registers = new Dictionary<int, Unpack>();
+            Registers.Add((int)GIFRegDescriptor.PRIM, new Unpack(GIFRegPrim.Unpack));
+            Registers.Add((int)GIFRegDescriptor.ST, new Unpack(GIFRegST.Unpack));
+            Registers.Add((int)GIFRegDescriptor.TEX0_1, new Unpack(GIFRegTEX0.Unpack));
+            Registers.Add((int)GIFRegDescriptor.TEX0_2, new Unpack(GIFRegTEX0.Unpack));
+            Registers.Add((int)GIFRegDescriptor.XYZ2, new Unpack(GIFRegXYZ.Unpack));
+            Registers.Add((int)GIFRegDescriptor.XYZ3, new Unpack(GIFRegXYZ.Unpack));
+            Registers.Add((int)GIFRegDescriptor.XYZF2, new Unpack(GIFRegXYZF.Unpack));
+            Registers.Add((int)GIFRegDescriptor.XYZF3, new Unpack(GIFRegXYZF.Unpack));
+            Registers.Add((int)GIFRegDescriptor.FOG, new Unpack(GIFRegFOG.Unpack));
+            Registers.Add((int)GIFRegDescriptor.UV, new Unpack(GIFRegUV.Unpack));
+            Registers.Add((int)GIFRegDescriptor.RGBAQ, new Unpack(GIFRegRGBAQ.Unpack));
+
             Int16 nloopEOP = 0;
             Int16 pad1 = 0;
             Int32 pad2PrePrimFlgNReg = 0;
@@ -58,58 +74,23 @@ namespace GSDumpGUI
                     switch (t.flg)
                     {
                         case GIFFLG.GIF_FLG_PACKED:
-                            switch (registers[i])
+                            try
                             {
-                                case GIFRegDescriptor.PRIM:
-                                    if (t.pre == 1)
-                                        t.regs.Add(GIFRegPrim.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.RGBAQ:
-                                    t.regs.Add(GIFRegRGBAQ.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.ST:
-                                    t.regs.Add(GIFRegST.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.UV:
-                                    t.regs.Add(GIFRegUV.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.XYZF2:
-                                    t.regs.Add(GIFRegXYZF.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.XYZ2:
-                                    t.regs.Add(GIFRegXYZ.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.FOG:
-                                    t.regs.Add(GIFRegFOG.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.TEX0_1:
-                                case GIFRegDescriptor.TEX0_2:
-                                    t.regs.Add(GIFRegTEX0.Unpack(LowData, HighData, true));
-                                    break;
-                                case GIFRegDescriptor.Reserved:
-                                    // TODO?
-                                    break;
-                                case GIFRegDescriptor.XYZF3:
-                                    t.regs.Add(GIFRegXYZF.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.XYZ3:
-                                    t.regs.Add(GIFRegXYZ.Unpack(LowData, HighData, false));
-                                    break;
-                                case GIFRegDescriptor.AD:
+                                if (registers[i] == GIFRegDescriptor.AD)
+                                {
                                     int destaddr = (int)(HighData & 0xF);
-                                    UInt64 datat = LowData;
-                                    if (destaddr == (int)GIFRegDescriptor.TEX0_1 || destaddr == (int)GIFRegDescriptor.TEX0_2)
-                                        t.regs.Add(GIFRegTEX0.Unpack(datat, HighData, true));
-                                    break;
-                                case GIFRegDescriptor.NOP:
-                                    // TODO?
-                                    break;
-                                default:
-                                    break;
+                                    t.regs.Add(Registers[destaddr].Invoke(LowData, HighData, false));
+                                }
+                                else
+                                    t.regs.Add(Registers[(int)registers[i]].Invoke(LowData, HighData, false));
+                            }
+                            catch ()
+                            {
+                                // For now till we get all regs implemented
                             }
                             break;
                         case GIFFLG.GIF_FLG_REGLIST:
-                            // TODO : 
+                            t.regs.Add(Registers[(int)registers[i]].Invoke(LowData, HighData, true));
                             break;
                         case GIFFLG.GIF_FLG_IMAGE:
                             GifImage image = new GifImage();
