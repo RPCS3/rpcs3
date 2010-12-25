@@ -62,104 +62,41 @@ namespace GSDumpGUI
                             {
                                 case GIFRegDescriptor.PRIM:
                                     if (t.pre == 1)
-                                    {
-                                        GIFRegPackedPrim pr = new GIFRegPackedPrim();
-                                        pr.Descriptor = registers[i];
-                                        pr.PrimitiveType = (GS_PRIM)(LowData & 0x7);
-                                        pr.IIP = (GSIIP)((LowData & 0x8) >> 3);
-                                        pr.TME = Convert.ToBoolean(((LowData & 0x10) >> 4));
-                                        pr.FGE = Convert.ToBoolean(((LowData & 0x20) >> 5));
-                                        pr.ABE = Convert.ToBoolean(((LowData & 0x40) >> 6));
-                                        pr.AA1 = Convert.ToBoolean(((LowData & 0x80) >> 7));
-                                        pr.FST = (GSFST)((LowData & 0x100) >> 8);
-                                        pr.CTXT = (GSCTXT)((LowData & 0x200) >> 9);
-                                        pr.FIX = (GSFIX)((LowData & 0x400) >> 10);
-                                        t.regs.Add(pr);
-                                    }
+                                        t.regs.Add(GIFRegPrim.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.RGBAQ:
-                                    GIFRegPackedRGBAQ r = new GIFRegPackedRGBAQ();
-                                    r.Descriptor = registers[i];
-                                    r.R = (int)(LowData & 0xFF);
-                                    r.G = (int)((LowData & 0xFF00000000) >> 32);
-                                    r.B = (int)((HighData & 0xFF));
-                                    r.A = (int)((HighData & 0xFF00000000) >> 32);
-                                    t.regs.Add(r);
+                                    t.regs.Add(GIFRegRGBAQ.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.ST:
-                                    GIFRegPackedST st = new GIFRegPackedST();
-                                    st.Descriptor = registers[i];
-
-                                    ulong pt = ((LowData & 0xFFFFFFFF));
-                                    void* ptt = &pt;
-                                    st.S = *(float*)ptt;
-
-                                    pt = ((LowData & 0xFFFFFFFF00000000) >> 32);
-                                    ptt = &pt;
-                                    st.T = *(float*)ptt;
-
-                                    pt = ((HighData & 0xFFFFFFFF));
-                                    ptt = &pt;
-                                    st.Q = *(float*)ptt;
-
-                                    t.regs.Add(st);
+                                    t.regs.Add(GIFRegST.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.UV:
-                                    GIFRegPackedUV u = new GIFRegPackedUV();
-                                    u.Descriptor = registers[i];
-                                    u.U = (LowData & 0x3FFF) / 16d;
-                                    u.V = ((LowData & 0x3FFF00000000) >> 32) / 16d;
-
-                                    t.regs.Add(u);
+                                    t.regs.Add(GIFRegUV.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.XYZF2:
-                                    GIFRegPackedXYZF xf = new GIFRegPackedXYZF();
-                                    xf.Descriptor = registers[i];
-                                    xf.X = (LowData & 0xFFFF) / 16d;
-                                    xf.Y = ((LowData & 0xFFFF00000000) >> 32) / 16d;
-                                    xf.Z = (UInt32)((HighData & 0xFFFFFF0) >> 4);
-                                    xf.F = (UInt16)((HighData & 0xFF000000000) >> 36);
-                                    xf.ADC = ((HighData & 0x1000000000000) >> 46) == 1;
-                                    t.regs.Add(xf);
+                                    t.regs.Add(GIFRegXYZF.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.XYZ2:
-                                    GIFRegPackedXYZ xf2 = new GIFRegPackedXYZ();
-                                    xf2.Descriptor = registers[i];
-                                    xf2.X = (LowData & 0xFFFF) / 16d;
-                                    xf2.Y = ((LowData & 0xFFFF00000000) >> 32) / 16d;
-                                    xf2.Z = (UInt32)((HighData & 0xFFFFFF0) >> 4);
-                                    xf2.ADC = ((HighData & 0x1000000000000) >> 46) == 1;
-                                    t.regs.Add(xf2);
+                                    t.regs.Add(GIFRegXYZ.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.FOG:
+                                    t.regs.Add(GIFRegFOG.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.Reserved:
+                                    // TODO?
                                     break;
                                 case GIFRegDescriptor.XYZF3:
-                                    GIFRegPackedXYZF xf3 = new GIFRegPackedXYZF();
-                                    xf3.Descriptor = registers[i];
-                                    xf3.X = (LowData & 0xFFFF) / 16d;
-                                    xf3.Y = ((LowData & 0xFFFF00000000) >> 32) / 16d;
-                                    xf3.Z = (UInt32)((HighData & 0xFFFFFF0) >> 4);
-                                    xf3.F = (UInt16)((HighData & 0xFF000000000) >> 36);
-                                    xf3.ADC = ((HighData & 0x1000000000000) >> 46) == 1;
-                                    t.regs.Add(xf3);
+                                    t.regs.Add(GIFRegXYZF.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.XYZ3:
-                                    GIFRegPackedXYZ xf4 = new GIFRegPackedXYZ();
-                                    xf4.Descriptor = registers[i];
-                                    xf4.X = (LowData & 0xFFFF) / 16d;
-                                    xf4.Y = ((LowData & 0xFFFF00000000) >> 32) / 16d;
-                                    xf4.Z = (UInt32)((HighData & 0xFFFFFF0) >> 4);
-                                    xf4.ADC = ((HighData & 0x1000000000000) >> 46) == 1;
-                                    t.regs.Add(xf4);
+                                    t.regs.Add(GIFRegXYZ.Unpack(LowData, HighData, false));
                                     break;
                                 case GIFRegDescriptor.AD:
                                     int destaddr = (int)(HighData & 0xF);
-                                    
+                                    UInt64 datat = LowData;
                                     break;
                                 case GIFRegDescriptor.NOP:
-
+                                    // TODO?
                                     break;
                                 default:
                                     break;

@@ -11,21 +11,22 @@ namespace GSDumpGUI
 
     public enum GIFRegDescriptor
     {
-        PRIM = 0,
-        RGBAQ = 1,
-        ST = 2,
-        UV = 3,
-        XYZF2 = 4,
-        XYZ2 = 5,
-        TEX0_1 = 6,
-        TEX0_2 = 7,
-        CLAMP_1 = 8,
-        CLAMP_2 = 9,
-        FOG = 10,
-        Reserved = 11,
-        XYZF3 = 12,
-        XYZ3 = 13,
-        AD = 14,
-        NOP = 15
+        PRIM = 0x00,
+        RGBAQ = 0x01,
+        ST = 0x02,
+        UV = 0x03,
+        XYZF2 = 0x04,
+        XYZ2 = 0x05,
+        TEX0_1 = 0x06,
+        TEX0_2 = 0x07,
+        CLAMP_1 = 0x08,
+        CLAMP_2 = 0x09,
+        FOG = 0x0a,
+        Reserved = 0x0b,
+        XYZF3 = 0x0c,
+        XYZ3 = 0x0d,
+        AD = 0x0e,
+        NOP = 0x0f
     }
+
 }

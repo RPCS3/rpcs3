@@ -417,35 +417,35 @@ namespace GSDumpGUI
                     {
                         if (itm.GetType().IsSubclassOf(typeof(GIFReg)))
                         {
-                            if (itm.GetType() == typeof(GIFRegPackedPrim))
+                            if (itm.GetType() == typeof(GIFRegPrim))
                             {
-                                GIFRegPackedPrim p = (GIFRegPackedPrim)itm;
+                                GIFRegPrim p = (GIFRegPrim)itm;
                                 val += "Packed Primitive@Primitive Type : " + p.PrimitiveType.ToString() + "@IIP : " + p.IIP.ToString() + "@TME : " + p.TME.ToString() + "@FGE : " + p.FGE.ToString()
                                     + "@ABE : " + p.ABE.ToString() + "@AA1 : " + p.AA1.ToString() + "@FST : " + p.FST.ToString() + "@CTXT : " + p.CTXT.ToString() + "@FIX : " + p.FIX.ToString() + "~";
                             }
-                            if (itm.GetType() == typeof(GIFRegPackedRGBAQ))
+                            if (itm.GetType() == typeof(GIFRegRGBAQ))
                             {
-                                GIFRegPackedRGBAQ p = (GIFRegPackedRGBAQ)itm;
+                                GIFRegRGBAQ p = (GIFRegRGBAQ)itm;
                                 val += "Packed RGBAQ@Red : " + p.R.ToString() + "@Green : " + p.G.ToString() + "@Blue : " + p.B.ToString() + "@Alpha : " + p.A.ToString() + "~";
                             } 
-                            if (itm.GetType() == typeof(GIFRegPackedST))
+                            if (itm.GetType() == typeof(GIFRegST))
                             {
-                                GIFRegPackedST p = (GIFRegPackedST)itm;
+                                GIFRegST p = (GIFRegST)itm;
                                 val += "Packed ST@S : " + p.S.ToString("F8") + "@T : " + p.T.ToString("F8") + "@Q : " + p.Q.ToString("F8") + "~";
                             } 
-                            if (itm.GetType() == typeof(GIFRegPackedUV))
+                            if (itm.GetType() == typeof(GIFRegUV))
                             {
-                                GIFRegPackedUV p = (GIFRegPackedUV)itm;
+                                GIFRegUV p = (GIFRegUV)itm;
                                 val += "Packed UV@U : " + p.U.ToString("F4") + "@V : " + p.V.ToString("F4") + "~";
                             }
-                            if (itm.GetType() == typeof(GIFRegPackedXYZF))
+                            if (itm.GetType() == typeof(GIFRegXYZF))
                             {
-                                GIFRegPackedXYZF p = (GIFRegPackedXYZF)itm;
+                                GIFRegXYZF p = (GIFRegXYZF)itm;
                                 val += "Packed XYZF@X : " + p.X.ToString("F4") + "@Y : " + p.Y.ToString("F4") + "@Z : " + p.Z.ToString() + "@F : " + p.F.ToString() + "@ADC : " + p.ADC.ToString() + "~";
                             }
-                            if (itm.GetType() == typeof(GIFRegPackedXYZ))
+                            if (itm.GetType() == typeof(GIFRegXYZ))
                             {
-                                GIFRegPackedXYZ p = (GIFRegPackedXYZ)itm;
+                                GIFRegXYZ p = (GIFRegXYZ)itm;
                                 val += "Packed XYZ@X : " + p.X.ToString("F4") + "@Y : " + p.Y.ToString("F4") + "@Z : " + p.Z.ToString() + "@ADC : " + p.ADC.ToString() + "~";
                             }
                         }

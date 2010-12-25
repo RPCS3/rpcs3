@@ -56,14 +56,15 @@
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFPrim.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedXYZ.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedXYZF.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedUV.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedST.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegFOG.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegXYZ.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegXYZF.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegUV.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegST.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFReg.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GifImage.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedPrim.cs" />
-    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPackedRGBAQ.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegPrim.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegRGBAQ.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\IGifData.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFTag.cs" />
     <Compile Include="Library\GSDump\GSData\GSData.cs" />
