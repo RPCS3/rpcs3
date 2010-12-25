@@ -42,7 +42,7 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
-  #include <windows.h>
+  #include "Utilities/RedtapeWindows.h"
   #include <GL/gl.h>//"gl.h"  /* Include local "gl.h". Don't include vc32 <GL/gl.h>. */
   #include "glprocs.h"
 #else /* GLX */

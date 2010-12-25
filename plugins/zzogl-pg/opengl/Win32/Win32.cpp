@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <windows.h>
+
+#include "Utilities/RedtapeWindows.h"
 #include <windowsx.h>
 
 #include "resrc1.h"
@@ -131,7 +132,7 @@ void OnInitConfDialog(HWND hW)
 {
 	if (!(conf.zz_options.loaded)) LoadConfig();
 
-     TCHAR *aaName[] = {"None", "x2", "x4", "x8", "x16"};
+     TCHAR *aaName[] = {L"None", L"x2", L"x4", L"x8", L"x16"};
  
      for(int i=0; i<5; i++)
 	 {
@@ -139,7 +140,7 @@ void OnInitConfDialog(HWND hW)
 	 }
 	ComboBox_SelectString(GetDlgItem(hW, IDC_AA_COMBO), -1, (LPARAM)aaName[conf.aa]);
 
-    TCHAR *sizeName[] = {"640 x 480", "800 x 600", "1024 x 768", "1280 x 960"};
+    TCHAR *sizeName[] = {L"640 x 480", L"800 x 600", L"1024 x 768", L"1280 x 960"};
  
     for(int i=0; i<4; i++)
 	{
@@ -285,7 +286,7 @@ static int errval;
 
 void *SysLoadLibrary(char *lib)
 {
-	return LoadLibrary(lib);
+	return LoadLibrary(wxString::FromUTF8(lib));
 }
 
 void *SysLoadSym(void *lib, char *sym)
@@ -320,5 +321,5 @@ void SysMessage(const char *fmt, ...)
 	va_start(list, fmt);
 	vsprintf(tmp, fmt, list);
 	va_end(list);
-	MessageBox(0, tmp, "ZZOgl-PG Msg", 0);
+	MessageBox(0, wxString::FromUTF8(tmp), L"ZZOgl-PG Msg", 0);
 }

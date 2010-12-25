@@ -8,31 +8,31 @@ extern HINSTANCE hInst;
 
 void SaveConfig()
 {
-	char szValue[256];
-	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
+	wxChar szValue[256];
+	const wxString iniFile( wxString::FromUTF8(s_strIniPath.c_str()) + L"zzogl-pg.ini");
 
-	sprintf(szValue, "%u", conf.interlace);
-	WritePrivateProfileString("Settings", "Interlace", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.aa);
-	WritePrivateProfileString("Settings", "Antialiasing", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.bilinear);
-	WritePrivateProfileString("Settings", "Bilinear", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.zz_options);
-	WritePrivateProfileString("Settings", "ZZOptions", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.hacks);
-	WritePrivateProfileString("Settings", "AdvancedOptions", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.width);
-	WritePrivateProfileString("Settings", "Width", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.height);
-	WritePrivateProfileString("Settings", "Height", szValue, iniFile.c_str());
-	sprintf(szValue, "%u", conf.SkipDraw);
-	WritePrivateProfileString("Settings", "SkipDraw", szValue, iniFile.c_str());
+	wxSprintf(szValue, L"%u", conf.interlace);
+	WritePrivateProfileString(L"Settings", L"Interlace", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.aa);
+	WritePrivateProfileString(L"Settings", L"Antialiasing", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.bilinear);
+	WritePrivateProfileString(L"Settings", L"Bilinear", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.zz_options);
+	WritePrivateProfileString(L"Settings", L"ZZOptions", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.hacks);
+	WritePrivateProfileString(L"Settings", L"AdvancedOptions", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.width);
+	WritePrivateProfileString(L"Settings", L"Width", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.height);
+	WritePrivateProfileString(L"Settings", L"Height", szValue, iniFile);
+	wxSprintf(szValue, L"%u", conf.SkipDraw);
+	WritePrivateProfileString(L"Settings", L"SkipDraw", szValue, iniFile);
 }
 
 void LoadConfig()
 {
-	char szValue[256];
-	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
+	wxChar szValue[256];
+	const wxString iniFile( wxString::FromUTF8(s_strIniPath.c_str()) + L"zzogl-pg.ini");
 
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
@@ -45,34 +45,34 @@ void LoadConfig()
 	conf.SkipDraw = 0;
 	conf.disableHacks = 0;
 
-	FILE *fp = fopen(iniFile.c_str(), "rt");
+	FILE *fp = wxFopen(iniFile, L"rt");
 
 	if (!fp)
 	{
 		SysMessage("Unable to open ZZOgl-PG's ini file!");
-		CreateDirectory(s_strIniPath.c_str(), NULL);
+		CreateDirectory(wxString::FromUTF8(s_strIniPath.c_str()), NULL);
 		SaveConfig();//save and return
 		return ;
 	}
 
 	fclose(fp);
 
-	GetPrivateProfileString("Settings", "Interlace", NULL, szValue, 20, iniFile.c_str());
-	conf.interlace = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Antialiasing", NULL, szValue, 20, iniFile.c_str());
-	conf.aa = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "ZZOptions", NULL, szValue, 20, iniFile.c_str());
-	conf.zz_options._u32 = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "AdvancedOptions", NULL, szValue, 20, iniFile.c_str());
-	conf.hacks._u32 = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, iniFile.c_str());
-	conf.bilinear = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Width", NULL, szValue, 20, iniFile.c_str());
-	conf.width = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Height", NULL, szValue, 20, iniFile.c_str());
-	conf.height = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "SkipDraw", NULL, szValue, 20, iniFile.c_str());
-	conf.SkipDraw = strtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"Interlace", NULL, szValue, 20, iniFile);
+	conf.interlace = (u8)wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"Antialiasing", NULL, szValue, 20, iniFile);
+	conf.aa = (u8)wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"ZZOptions", NULL, szValue, 20, iniFile);
+	conf.zz_options._u32 = wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"AdvancedOptions", NULL, szValue, 20, iniFile);
+	conf.hacks._u32 = wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"Bilinear", NULL, szValue, 20, iniFile);
+	conf.bilinear = (u8)wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"Width", NULL, szValue, 20, iniFile);
+	conf.width = wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"Height", NULL, szValue, 20, iniFile);
+	conf.height = wxStrtoul(szValue, NULL, 10);
+	GetPrivateProfileString(L"Settings", L"SkipDraw", NULL, szValue, 20, iniFile);
+	conf.SkipDraw = wxStrtoul(szValue, NULL, 10);
 
 	if (conf.aa < 0 || conf.aa > 4) conf.aa = 0;
 

@@ -89,7 +89,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	wc.hCursor		= LoadCursor(NULL, IDC_ARROW);				// Load The Arrow Pointer
 	wc.hbrBackground	= (HBRUSH)GetStockObject(BLACK_BRUSH);	// No Background Required For GL
 	wc.lpszMenuName		= NULL;									// We Don't Want A Menu
-	wc.lpszClassName	= "PS2EMU_ZEROGS";						// Set The Class Name
+	wc.lpszClassName	= L"PS2EMU_ZEROGS";						// Set The Class Name
 
 	RegisterClassEx(&wc);
 
@@ -110,8 +110,8 @@ bool GLWindow::CreateWindow(void *pDisplay)
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
 
 	GShwnd = CreateWindowEx(	dwExStyle,				// Extended Style For The Window
-					"PS2EMU_ZEROGS",				// Class Name
-					"ZZOgl",					// Window Title
+					L"PS2EMU_ZEROGS",				// Class Name
+					L"ZZOgl",					// Window Title
 					dwStyle,				// Selected Window Style
 					(rcdesktop.right - (rc.right - rc.left)) / 2,  // Window Position
 					(rcdesktop.bottom - (rc.bottom - rc.top)) / 2, // Window Position
@@ -149,12 +149,12 @@ bool GLWindow::ReleaseContext()
 	{
 		if (!wglMakeCurrent(NULL, NULL))				 // Are We Able To Release The DC And RC Contexts?
 		{
-			MessageBox(NULL, "Release Of DC And RC Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+			MessageBox(NULL, L"Release Of DC And RC Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		}
 
 		if (!wglDeleteContext(hRC))					 // Are We Able To Delete The RC?
 		{
-			MessageBox(NULL, "Release Rendering Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+			MessageBox(NULL, L"Release Rendering Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		}
 
 		hRC = NULL;									 // Set RC To NULL
@@ -162,7 +162,7 @@ bool GLWindow::ReleaseContext()
 
 	if (hDC && !ReleaseDC(GShwnd, hDC))				 // Are We Able To Release The DC
 	{
-		MessageBox(NULL, "Release Device Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		MessageBox(NULL, L"Release Device Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		hDC = NULL;									 // Set DC To NULL
 	}
 
@@ -234,7 +234,10 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 		if (ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
-			if (MessageBox(NULL, "The Requested Fullscreen Mode Is Not Supported By\nYour Video Card. Use Windowed Mode Instead?", "NeHe GL", MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
+			if (MessageBox(NULL,
+					L"The Requested Fullscreen Mode Is Not Supported By\nYour Video Card. Use Windowed Mode Instead?",
+					L"NeHe GL",
+					MB_YESNO | MB_ICONEXCLAMATION) == IDYES)
 				conf.setFullscreen(false);
 			else
 				return false;
@@ -271,31 +274,31 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	if (!(hDC = GetDC(GShwnd)))
 	{
-		MessageBox(NULL, "(1) Can't Create A GL Device Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"(1) Can't Create A GL Device Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!(PixelFormat = ChoosePixelFormat(hDC, &pfd)))
 	{
-		MessageBox(NULL, "(2) Can't Find A Suitable PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"(2) Can't Find A Suitable PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!SetPixelFormat(hDC, PixelFormat, &pfd))
 	{
-		MessageBox(NULL, "(3) Can't Set The PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"(3) Can't Set The PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!(hRC = wglCreateContext(hDC)))
 	{
-		MessageBox(NULL, "(4) Can't Create A GL Rendering Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"(4) Can't Create A GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!wglMakeCurrent(hDC, hRC))
 	{
-		MessageBox(NULL, "(5) Can't Activate The GL Rendering Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"(5) Can't Activate The GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
@@ -316,7 +319,7 @@ void GLWindow::SwapGLBuffers()
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	if (!conf.fullscreen()) SetWindowText(GShwnd, strtitle);
+	if (!conf.fullscreen()) SetWindowText(GShwnd, wxString::FromUTF8(strtitle));
 }
 
 void GLWindow::ResizeCheck()

@@ -20,7 +20,7 @@
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
-			UseOfATL="1"
+			UseOfATL="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
 			WholeProgramOptimization="0"
@@ -69,7 +69,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="winmm.lib dsound.lib soundtouch.lib x86emitter.lib utilities.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
@@ -104,7 +104,7 @@
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
-			UseOfATL="1"
+			UseOfATL="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
 			>
@@ -150,7 +150,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="winmm.lib dsound.lib soundtouch.lib x86emitter.lib utilities.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
@@ -185,7 +185,7 @@
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
-			UseOfATL="1"
+			UseOfATL="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -233,7 +233,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="winmm.lib dsound.lib soundtouch.lib x86emitter.lib utilities.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
@@ -271,7 +271,7 @@
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="0"
-			UseOfATL="1"
+			UseOfATL="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
 			>
@@ -318,7 +318,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="winmm.lib dsound.lib soundtouch.lib x86emitter.lib utilities.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""

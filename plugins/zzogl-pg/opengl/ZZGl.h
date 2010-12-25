@@ -26,7 +26,8 @@
 // Need this before gl.h
 #ifdef _WIN32
 
-#include <windows.h>
+#include "Utilities/RedtapeWindows.h"
+
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"

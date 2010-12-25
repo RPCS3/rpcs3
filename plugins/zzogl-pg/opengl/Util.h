@@ -26,8 +26,8 @@
 #include <io.h>
 #include "Utilities/RedtapeWindows.h"
 
-#include <windows.h>
-#include <windowsx.h>
+//#include <windows.h>
+//#include <windowsx.h>
 
 #include <GL/gl.h>
 #include <GL/glext.h>

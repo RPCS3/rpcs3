@@ -17,7 +17,7 @@ BOOL AVI_Init()
 	if (wVer < 0x010a){
 	     /* oops, we are too old, blow out of here */
 	     //MessageBeep(MB_ICONHAND);
-	     MessageBox(NULL, "Cant't init AVI File - Video for Windows version is to old", "Error", MB_OK|MB_ICONSTOP);
+	     MessageBox(NULL, L"Cant't init AVI File - Video for Windows version is to old", L"Error", MB_OK|MB_ICONSTOP);
 	     return FALSE;
 	}
 
@@ -29,7 +29,7 @@ BOOL AVI_Init()
 BOOL AVI_FileOpenWrite(PAVIFILE * pfile, const char *filename)
 {
 	HRESULT hr = AVIFileOpen(pfile,	   // returned file pointer
-		       filename,		  // file name
+		       wxString::FromUTF8(filename),		  // file name
 		       OF_WRITE | OF_CREATE,      // mode to open file with
 		       NULL);		     // use handler determined
 						  // from file extension....
@@ -272,9 +272,9 @@ BOOL AVI_AddFrame(PAVISTREAM psCompressed, int time, LPBITMAPINFOHEADER lpbi)
 		NULL);
 	if (hr != AVIERR_OK)
 	{
-		char strMsg[255];
-		_snprintf(strMsg, 255, "Error: AVIStreamWrite, error %d",hr);
-		MessageBox(NULL, strMsg, "", MB_OK);
+		TCHAR strMsg[255];
+		_snwprintf(strMsg, 255, L"Error: AVIStreamWrite, error %d",hr);
+		MessageBox(NULL, strMsg, L"", MB_OK);
 		return FALSE;
 	}
 
@@ -410,9 +410,9 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int widt
 		NULL);
 	if (hr != AVIERR_OK)
 	{
-		char strMsg[255];
-		_snprintf(strMsg, 255, "Error: AVIStreamWrite, error %d",hr);
-		MessageBox(NULL, strMsg, "", MB_OK);
+		TCHAR strMsg[255];
+		_snwprintf(strMsg, 255, L"Error: AVIStreamWrite, error %d",hr);
+		MessageBox(NULL, strMsg, L"", MB_OK);
 		return FALSE;
 	}
 

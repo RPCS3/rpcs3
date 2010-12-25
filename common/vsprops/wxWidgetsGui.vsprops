@@ -12,7 +12,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="wxAdv28.lib wxBase28.lib wxCore28.lib zlib.lib libjpeg7.lib"
+		AdditionalDependencies="wxAdv28.lib wxBase28.lib wxCore28.lib zlib.lib libjpeg7.lib Comctl32.lib rpcrt4.lib"
 		AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\$(ConfigurationName)&quot;"
 	/>
 </VisualStudioPropertySheet>

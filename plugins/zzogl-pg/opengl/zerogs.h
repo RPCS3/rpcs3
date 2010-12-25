@@ -32,7 +32,7 @@
 // State parameters
 
 #if defined(_WIN32)
-#	include <windows.h>
+#	include "Utilities/RedtapeWindows.h"
 #	include "resource.h"
 #endif
 

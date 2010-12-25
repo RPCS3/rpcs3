@@ -22,7 +22,7 @@
 #include "GifTransfer.h"
 
 #ifdef _DEBUG
-static int count = 0;
+static int path1_count = 0;
 #endif
 
 static int nPath3Hack = 0;
@@ -241,8 +241,8 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	//ZZLog::GS_Log("GSgifTransfer1 0x%x (mode %d).", addr, path->mode);
 
 #ifdef _DEBUG
-	ZZLog::Prim_Log("count: %d\n", count);
-	count++;
+	ZZLog::Prim_Log("count: %d\n", path1_count);
+	path1_count++;
 #endif
 
 	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr) / 16);

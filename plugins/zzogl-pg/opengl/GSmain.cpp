@@ -417,7 +417,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 		sprintf(strdir, "%s", path);
 
 #ifdef _WIN32
-		CreateDirectory(strdir, NULL);
+		CreateDirectory(wxString::FromUTF8(strdir), NULL);
 #else
 		mkdir(path, 0777);
 #endif

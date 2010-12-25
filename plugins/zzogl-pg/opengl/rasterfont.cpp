@@ -18,7 +18,7 @@
  */
 
 #ifdef _WIN32
-#include <windows.h>
+#include "Utilities/RedtapeWindows.h"
 #endif
 
 #include <GL/gl.h>

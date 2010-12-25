@@ -18,10 +18,10 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -91,8 +91,8 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops"
-			CharacterSet="2"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -112,7 +112,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\&quot;;&quot;$(ProjectRootDir)\ZeroGSShaders\&quot;;&quot;$(ProjectRootDir)\Win32&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
-				PreprocessorDefinitions="_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__"
+				PreprocessorDefinitions="wxUSE_GUI=0;_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -156,10 +156,10 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
+			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops;..\..\..\..\common\vsprops\pthreads.vsprops;..\..\..\..\common\vsprops\wxWidgetsGui.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
+			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
 			<Tool
@@ -357,15 +357,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZKeyboard.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\ZZHacks.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\ZZoglDrawing.cpp"
+				RelativePath="..\ZZKeyboard.cpp"
 				>
 			</File>
 			<File
@@ -378,6 +374,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZoglCRTC.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglDrawing.cpp"
 				>
 			</File>
 			<File
@@ -514,15 +514,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\ZZoglDrawing.h"
-				>
-			</File>
-			<File
 				RelativePath="..\ZZLog.h"
 				>
 			</File>
 			<File
 				RelativePath="..\ZZoglCRTC.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglDrawing.h"
 				>
 			</File>
 			<File
@@ -572,11 +572,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 	</Files>

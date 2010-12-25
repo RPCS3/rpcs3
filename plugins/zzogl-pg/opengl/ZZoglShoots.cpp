@@ -22,7 +22,7 @@
 //------------------ Includes
  #include "Util.h"
 #if defined(_WIN32)
-#	include <windows.h>
+#	include "Utilities/RedtapeWindows.h"
 #	include <aviUtil.h>
 #	include "resource.h"
 #endif

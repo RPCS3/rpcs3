@@ -144,7 +144,7 @@ inline void FrameSavingHelper()
 #ifdef _WIN32
 		else 
 		{
-			DeleteFile("frame2.tga");
+			DeleteFile(L"frame2.tga");
 		}
 #endif
 	}
