@@ -21,26 +21,21 @@ namespace GSDumpGUI
 
         static public GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat)
         {
-            if (PlainFormat)
-            {
-                GIFRegTEX0 r = new GIFRegTEX0();
-                r.Descriptor = GIFRegDescriptor.TEX0_1;
-                r.TBP0 = (int)GetBit(LowData, 0, 14);
-                r.TBW = (int)GetBit(LowData, 14, 6);
-                r.PSM = (TEXPSM)(int)GetBit(LowData, 20, 6);
-                r.TW = (int)GetBit(LowData, 26, 4);
-                r.TH = (int)GetBit(LowData, 30, 4);
-                r.TCC = (TEXTCC)(int)GetBit(LowData, 34, 1);
-                r.TFX = (TEXTFX)(int)GetBit(LowData, 35, 2);
-                r.CBP = (int)GetBit(LowData, 37, 14);
-                r.CPSM = (TEXCPSM)(int)GetBit(LowData, 51, 4);
-                r.CSM = (TEXCSM)(int)GetBit(LowData, 55, 1);
-                r.CSA = (int)GetBit(LowData, 56, 5);
-                r.CLD = (int)GetBit(LowData, 61, 3);
-                return r;
-            }
-            else
-                throw new ArgumentException("TEX0 Does not have packed format");
+            GIFRegTEX0 r = new GIFRegTEX0();
+            r.Descriptor = GIFRegDescriptor.TEX0_1;
+            r.TBP0 = (int)GetBit(LowData, 0, 14);
+            r.TBW = (int)GetBit(LowData, 14, 6);
+            r.PSM = (TEXPSM)(int)GetBit(LowData, 20, 6);
+            r.TW = (int)GetBit(LowData, 26, 4);
+            r.TH = (int)GetBit(LowData, 30, 4);
+            r.TCC = (TEXTCC)(int)GetBit(LowData, 34, 1);
+            r.TFX = (TEXTFX)(int)GetBit(LowData, 35, 2);
+            r.CBP = (int)GetBit(LowData, 37, 14);
+            r.CPSM = (TEXCPSM)(int)GetBit(LowData, 51, 4);
+            r.CSM = (TEXCSM)(int)GetBit(LowData, 55, 1);
+            r.CSA = (int)GetBit(LowData, 56, 5);
+            r.CLD = (int)GetBit(LowData, 61, 3);
+            return r;
         }
     }
 
