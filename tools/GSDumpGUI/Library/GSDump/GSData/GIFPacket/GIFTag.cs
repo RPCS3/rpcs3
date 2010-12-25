@@ -84,7 +84,7 @@ namespace GSDumpGUI
                                 else
                                     t.regs.Add(Registers[(int)registers[i]].Invoke(LowData, HighData, false));
                             }
-                            catch ()
+                            catch (Exception)
                             {
                                 // For now till we get all regs implemented
                             }
