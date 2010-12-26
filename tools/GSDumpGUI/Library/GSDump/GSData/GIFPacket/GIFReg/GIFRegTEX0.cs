@@ -19,23 +19,30 @@ namespace GSDumpGUI
         public int CSA;
         public int CLD;
 
-        static public GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat)
+        static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegTEX0 r = new GIFRegTEX0();
-            r.Descriptor = GIFRegDescriptor.TEX0_1;
-            r.TBP0 = (int)GetBit(LowData, 0, 14);
-            r.TBW = (int)GetBit(LowData, 14, 6);
-            r.PSM = (TEXPSM)(int)GetBit(LowData, 20, 6);
-            r.TW = (int)GetBit(LowData, 26, 4);
-            r.TH = (int)GetBit(LowData, 30, 4);
-            r.TCC = (TEXTCC)(int)GetBit(LowData, 34, 1);
-            r.TFX = (TEXTFX)(int)GetBit(LowData, 35, 2);
-            r.CBP = (int)GetBit(LowData, 37, 14);
-            r.CPSM = (TEXCPSM)(int)GetBit(LowData, 51, 4);
-            r.CSM = (TEXCSM)(int)GetBit(LowData, 55, 1);
-            r.CSA = (int)GetBit(LowData, 56, 5);
-            r.CLD = (int)GetBit(LowData, 61, 3);
-            return r;
+            GIFRegTEX0 tex0 = new GIFRegTEX0();
+            tex0.Descriptor = (GIFRegDescriptor)addr;
+            tex0.TBP0 = (int)GetBit(LowData, 0, 14);
+            tex0.TBW = (int)GetBit(LowData, 14, 6);
+            tex0.PSM = (TEXPSM)(int)GetBit(LowData, 20, 6);
+            tex0.TW = (int)GetBit(LowData, 26, 4);
+            tex0.TH = (int)GetBit(LowData, 30, 4);
+            tex0.TCC = (TEXTCC)(int)GetBit(LowData, 34, 1);
+            tex0.TFX = (TEXTFX)(int)GetBit(LowData, 35, 2);
+            tex0.CBP = (int)GetBit(LowData, 37, 14);
+            tex0.CPSM = (TEXCPSM)(int)GetBit(LowData, 51, 4);
+            tex0.CSM = (TEXCSM)(int)GetBit(LowData, 55, 1);
+            tex0.CSA = (int)GetBit(LowData, 56, 5);
+            tex0.CLD = (int)GetBit(LowData, 61, 3);
+            return tex0;
+        }
+
+        public override string ToString()
+        {
+            return Descriptor.ToString() + "@TBP0 : " + TBP0.ToString() + "@TBW : " + TBW.ToString() + "@PSM : " + PSM.ToString() + "@TW : " + TW.ToString() + "@TH : " + TH.ToString()
+                                    + "@TCC : " + TCC.ToString() + "@TFX : " + TFX.ToString() + "@CBP : " + CBP.ToString() + "@CPSM : " + CPSM.ToString() + "@CSM : " + CSM.ToString()
+                                    + "@CSA : " + CSA.ToString() + "@CLD : " + CLD.ToString();
         }
     }
 

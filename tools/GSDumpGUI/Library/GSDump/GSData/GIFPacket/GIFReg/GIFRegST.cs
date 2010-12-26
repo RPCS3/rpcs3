@@ -10,26 +10,30 @@ namespace GSDumpGUI
         public float T;
         public float Q;
 
-        static public GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat)
+        public bool isSTQ;
+
+        static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            unsafe
+            GIFRegST st = new GIFRegST();
+            st.Descriptor = (GIFRegDescriptor)addr;
+
+            st.S = BitConverter.ToSingle(BitConverter.GetBytes(LowData), 0);
+            st.T = BitConverter.ToSingle(BitConverter.GetBytes(LowData), 4);
+            if (PackedFormat)
             {
-                GIFRegST st = new GIFRegST();
-                st.Descriptor = GIFRegDescriptor.ST;
-
-                ulong pt = GIFReg.GetBit(LowData, 0, 32);
-                void* ptt = &pt;
-                st.S = *(float*)ptt;
-
-                pt = GIFReg.GetBit(LowData, 32, 32);
-                ptt = &pt;
-                st.T = *(float*)ptt;
-
-                pt = GIFReg.GetBit(HighData, 0, 32);
-                ptt = &pt;
-                st.Q = *(float*)ptt;
-                return st;
+                st.Q = BitConverter.ToSingle(BitConverter.GetBytes(HighData), 0);
+                tag.Q = st.Q;
+                st.isSTQ = true;
             }
+            else
+                st.isSTQ = false;
+
+            return st;
+        }
+
+        public override string ToString()
+        {
+            return Descriptor.ToString() + "@S : " + S.ToString("F8") + "@T : " + T.ToString("F8") + (isSTQ ? "@Q : " + Q.ToString("F8") : "");
         }
     }
 }

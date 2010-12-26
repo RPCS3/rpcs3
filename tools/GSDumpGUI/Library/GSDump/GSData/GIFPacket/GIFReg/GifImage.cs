@@ -6,7 +6,6 @@ namespace GSDumpGUI
 {
     public class GifImage : IGifData
     {
-        public byte[] LowData;
-        public byte[] HighData;
+        public byte[] Data;
     }
 }

@@ -9,13 +9,26 @@ namespace GSDumpGUI
         public double U;
         public double V;
 
-        static public GIFReg Unpack(UInt64 LowData, UInt64 HighData, bool PlainFormat)
+        static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegUV u = new GIFRegUV();
-            u.Descriptor = GIFRegDescriptor.UV;
-            u.U = GIFReg.GetBit(LowData, 0, 14) / 16d;
-            u.V = GIFReg.GetBit(LowData, 32, 14) / 16d;
-            return u;
+            GIFRegUV uv = new GIFRegUV();
+            uv.Descriptor = (GIFRegDescriptor)addr;
+            if (PackedFormat)
+            {
+                uv.U = GetBit(LowData, 0, 14) / 16d;
+                uv.V = GetBit(LowData, 32, 14) / 16d;
+            }
+            else
+            {
+                uv.U = GetBit(LowData, 0, 14) / 16d;
+                uv.V = GetBit(LowData, 16, 14) / 16d;
+            }
+            return uv;
+        }
+
+        public override string ToString()
+        {
+            return Descriptor.ToString() + "@U : " + U.ToString("F4") + "@V : " + V.ToString("F4");
         }
     }
 }
