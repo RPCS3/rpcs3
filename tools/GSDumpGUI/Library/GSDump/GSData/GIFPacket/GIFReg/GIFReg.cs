@@ -13,10 +13,7 @@ namespace GSDumpGUI
             return (value >> lower) & (ulong)((1 << count) - 1);
         }
 
-        public override string ToString()
-        {
-            return Descriptor.ToString();
-        }
+        abstract public new String ToString();
     }
 
     public enum GIFRegDescriptor
