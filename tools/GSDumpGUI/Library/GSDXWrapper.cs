@@ -415,7 +415,7 @@ namespace GSDumpGUI
                     val += "regs~";
                     foreach (var itm in tag.regs)
                     {
-                        val += itm.ToString() + "~";
+                        val += ((GIFReg)itm).ToString() + "~";
                     }
                     break;
                 case GSType.VSync:
