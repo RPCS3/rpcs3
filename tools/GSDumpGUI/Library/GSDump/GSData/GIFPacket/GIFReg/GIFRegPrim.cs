@@ -16,9 +16,11 @@ namespace GSDumpGUI
         public GSCTXT CTXT;
         public GSFIX FIX;
 
+        public GIFRegPRIM(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+
         static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegPRIM pr = new GIFRegPRIM();
+            GIFRegPRIM pr = new GIFRegPRIM(addr, LowData, HighData, PackedFormat);
             pr.Descriptor = (GIFRegDescriptor)addr;
             pr.PrimitiveType = (GS_PRIM)GetBit(LowData, 0, 3);
             pr.IIP = (GSIIP)GetBit(LowData, 3, 1);

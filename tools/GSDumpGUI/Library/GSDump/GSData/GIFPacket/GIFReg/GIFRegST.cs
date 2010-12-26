@@ -12,9 +12,11 @@ namespace GSDumpGUI
 
         public bool isSTQ;
 
+        public GIFRegST(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+
         static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegST st = new GIFRegST();
+            GIFRegST st = new GIFRegST(addr, LowData, HighData, PackedFormat);
             st.Descriptor = (GIFRegDescriptor)addr;
 
             st.S = BitConverter.ToSingle(BitConverter.GetBytes(LowData), 0);

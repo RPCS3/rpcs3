@@ -13,9 +13,11 @@ namespace GSDumpGUI
 
         public bool IsXYZF;
 
+        public GIFRegXYZF(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+
         static public GIFReg UnpackXYZ(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegXYZF xyzf = new GIFRegXYZF();
+            GIFRegXYZF xyzf = new GIFRegXYZF(addr, LowData, HighData, PackedFormat);
 
             xyzf.IsXYZF = false;
             if (PackedFormat && addr == (int)GIFRegDescriptor.XYZ2 && GetBit(HighData, 47, 1) == 1)
@@ -40,7 +42,7 @@ namespace GSDumpGUI
 
         static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegXYZF xyzf = new GIFRegXYZF();
+            GIFRegXYZF xyzf = new GIFRegXYZF(addr, LowData, HighData, PackedFormat);
 
             xyzf.IsXYZF = true;
             if (PackedFormat && addr == (int)GIFRegDescriptor.XYZF2 && GetBit(HighData, 47, 1) == 1)

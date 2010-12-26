@@ -19,9 +19,11 @@ namespace GSDumpGUI
         public int CSA;
         public int CLD;
 
+        public GIFRegTEX0(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+
         static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegTEX0 tex0 = new GIFRegTEX0();
+            GIFRegTEX0 tex0 = new GIFRegTEX0(addr, LowData, HighData, PackedFormat);
             tex0.Descriptor = (GIFRegDescriptor)addr;
             tex0.TBP0 = (int)GetBit(LowData, 0, 14);
             tex0.TBW = (int)GetBit(LowData, 14, 6);

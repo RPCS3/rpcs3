@@ -9,9 +9,11 @@ namespace GSDumpGUI
         public double U;
         public double V;
 
+        public GIFRegUV(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+
         static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
-            GIFRegUV uv = new GIFRegUV();
+            GIFRegUV uv = new GIFRegUV(addr, LowData, HighData, PackedFormat);
             uv.Descriptor = (GIFRegDescriptor)addr;
             if (PackedFormat)
             {
