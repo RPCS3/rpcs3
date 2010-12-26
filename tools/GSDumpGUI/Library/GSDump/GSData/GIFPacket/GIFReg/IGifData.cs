@@ -6,5 +6,6 @@ namespace GSDumpGUI
 {
     public interface IGifData
     {
+        String ToString();
     }
 }
