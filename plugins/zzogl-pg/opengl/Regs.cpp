@@ -99,10 +99,8 @@ void __gifCall GIFPackedRegHandlerXYZ3(const u32* data) { GIFRegHandlerXYZ3(data
 void __gifCall GIFPackedRegHandlerRGBA(const u32* data)
 {
 	FUNCLOG
-	gs.rgba = (data[0] & 0xff) |
-			  ((data[1] & 0xff) <<  8) |
-			  ((data[2] & 0xff) << 16) |
-			  ((data[3] & 0xff) << 24);
+	GIFPackedRGBA* r = (GIFPackedRGBA*)(data);
+	gs.rgba = (r->R | (r->G <<  8) | (r->B << 16) | (r->A << 24));
 	gs.vertexregs.rgba = gs.rgba;
 	gs.vertexregs.q = gs.q;
 }
@@ -110,6 +108,10 @@ void __gifCall GIFPackedRegHandlerRGBA(const u32* data)
 void __gifCall GIFPackedRegHandlerSTQ(const u32* data)
 {
 	FUNCLOG
+//	GIFPackedSTQ* r = (GIFPackedSTQ*)(data);
+//	gs.vertexregs.s = r->S;
+//	gs.vertexregs.t = r->T;
+//	gs.q = r->Q;
 	// Despite this code generating a warning, it's correct. float -> float reduction. S and Y are missed mantissas.
 	*(u32*)&gs.vertexregs.s = data[0] & 0xffffff00;
 	*(u32*)&gs.vertexregs.t = data[1] & 0xffffff00;
@@ -119,8 +121,10 @@ void __gifCall GIFPackedRegHandlerSTQ(const u32* data)
 void __gifCall GIFPackedRegHandlerUV(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.u = data[0] & 0x3fff;
-	gs.vertexregs.v = data[1] & 0x3fff;
+	GIFPackedUV* r = (GIFPackedUV*)(data);
+	
+	gs.vertexregs.u = r->U;
+	gs.vertexregs.v = r->V;
 }
 
 void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
@@ -129,7 +133,7 @@ void __gifCall GIFPackedRegHandlerXYZF2(const u32* data)
 	GIFPackedXYZF2* r = (GIFPackedXYZF2*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z, r->F);
 
-    ZZKick->KickVertex(((data[3]>>15) & 0x1));
+	ZZKick->KickVertex(!!(r->ADC));
 }
 
 void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
@@ -138,13 +142,15 @@ void __gifCall GIFPackedRegHandlerXYZ2(const u32* data)
 	GIFPackedXYZ2* r = (GIFPackedXYZ2*)(data);
 	gs.add_vertex(r->X, r->Y,r->Z);
 
-    ZZKick->KickVertex(((data[3]>>15) & 0x1));
+	ZZKick->KickVertex(!!(r->ADC));
 }
 
 void __gifCall GIFPackedRegHandlerFOG(const u32* data)
 {
 	FUNCLOG
-	gs.vertexregs.f = (data[3] & 0xff0) >> 4;
+	GIFPackedFOG* r = (GIFPackedFOG*)(data);
+	gs.vertexregs.f = r->F;
+//	gs.vertexregs.f = (data[3] & 0xff0) >> 4;
 	if (gs.vertexregs.f != 0) REG_LOG("GIFPackedRegHandlerFOG == %d", gs.vertexregs.f);
 }
 
@@ -220,9 +226,13 @@ void __gifCall GIFRegHandlerST(const u32* data)
 
 void __gifCall GIFRegHandlerUV(const u32* data)
 {
+	// Baroque breaks if u&v are 16 bits instead of 14.
 	FUNCLOG
-	gs.vertexregs.u = (data[0]) & 0x3fff;
-	gs.vertexregs.v = (data[0] >> 16) & 0x3fff;
+//	gs.vertexregs.u = (data[0]) & 0x3fff;
+//	gs.vertexregs.v = (data[0] >> 16) & 0x3fff;
+	GIFRegUV* r = (GIFRegUV*)(data);
+	gs.vertexregs.u = r->U;
+	gs.vertexregs.v = r->V;
 }
 
 void __gifCall GIFRegHandlerXYZF2(const u32* data)
@@ -288,18 +298,19 @@ void __gifCall GIFRegHandlerCLAMP(const u32* data)
 	if (!NoHighlights(ctxt)) return;
 	
 	clampInfo& clamp = vb[ctxt].clamp;
+	GIFRegCLAMP* r = (GIFRegCLAMP*)(data);
 
 	if ((s_uClampData[ctxt] != data[0]) || (((clamp.minv >> 8) | (clamp.maxv << 2)) != (data[1]&0x0fff)))
 	{
 		Flush(ctxt);
 		s_uClampData[ctxt] = data[0];
 
-		clamp.wms  = (data[0]) & 0x3;
-		clamp.wmt  = (data[0] >>  2) & 0x3;
-		clamp.minu = (data[0] >>  4) & 0x3ff;
-		clamp.maxu = (data[0] >> 14) & 0x3ff;
-		clamp.minv = ((data[0] >> 24) & 0xff) | ((data[1] & 0x3) << 8);
-		clamp.maxv = (data[1] >> 2) & 0x3ff;
+		clamp.wms  = r->WMS;
+		clamp.wmt  = r->WMT;
+		clamp.minu = r->MINU;
+		clamp.maxu = r->MAXU;
+		clamp.minv = r->MINV;
+		clamp.maxv = r->MAXV;
 
 		vb[ctxt].bTexConstsSync = false;
 	}
@@ -309,7 +320,8 @@ void __gifCall GIFRegHandlerFOG(const u32* data)
 {
 	FUNCLOG
 	//gs.gsvertex[gs.primIndex].f = (data[1] >> 24);	// shift to upper bits
-	gs.vertexregs.f = data[1] >> 24;
+	GIFRegFOG* r = (GIFRegFOG*)(data);
+	gs.vertexregs.f = r->F;
 	if (gs.vertexregs.f != 0) REG_LOG("GIFPackedRegHandlerFOG == %d", gs.vertexregs.f);
 	
 }
@@ -344,6 +356,7 @@ void __gifCall GIFRegHandlerTEX1(const u32* data)
 	
 	if (!NoHighlights(ctxt)) return;
 	
+	GIFRegTEX1* r = (GIFRegTEX1*)(data);
 	tex1Info& tex1 = vb[ctxt].tex1;
 
 	if (conf.bilinear == 1 && (tex1.mmag != ((data[0] >>  5) & 0x1) || tex1.mmin != ((data[0] >>  6) & 0x7)))
@@ -352,13 +365,14 @@ void __gifCall GIFRegHandlerTEX1(const u32* data)
 		vb[ctxt].bVarsTexSync = false;
 	}
 
-	tex1.lcm  = (data[0]) & 0x1;
-	tex1.mxl  = (data[0] >>  2) & 0x7;
-	tex1.mmag = (data[0] >>  5) & 0x1;
-	tex1.mmin = (data[0] >>  6) & 0x7;
-	tex1.mtba = (data[0] >>  9) & 0x1;
-	tex1.l	= (data[0] >> 19) & 0x3;
-	tex1.k	= (data[1] >> 4) & 0xff;
+	tex1.lcm  = r->LCM;
+
+	tex1.mxl  = r->MXL;
+	tex1.mmag = r->MMAG;
+	tex1.mmin = r->MMIN;
+	tex1.mtba = r->MTBA;
+	tex1.l	= r->L;
+	tex1.k	= r->K;
 	
 #ifdef SPAM_UNUSED_REGISTERS
 	REG_LOG("Lcm = %d, l = %d, k = %d", tex1.lcm, tex1.l, tex1.k);
@@ -418,8 +432,9 @@ template <u32 ctxt>
 void __gifCall GIFRegHandlerXYOFFSET(const u32* data)
 {
 	FUNCLOG
-	vb[ctxt].offset.x = (data[0]) & 0xffff;
-	vb[ctxt].offset.y = (data[1]) & 0xffff;
+	GIFRegXYOFFSET* r = (GIFRegXYOFFSET*)(data);
+	vb[ctxt].offset.x = r->OFX;
+	vb[ctxt].offset.y = r->OFY;
 
 //  if( !conf.interlace ) {
 //	  vb[1].offset.x &= ~15;
@@ -447,23 +462,26 @@ void __gifCall GIFRegHandlerPRMODE(const u32* data)
 void __gifCall GIFRegHandlerTEXCLUT(const u32* data)
 {
 	FUNCLOG
+	// Affects background coloration of initial Mana Khemia dialog.
+	GIFRegTEXCLUT* r = (GIFRegTEXCLUT*)(data);
 
 	vb[0].FlushTexData();
 	vb[1].FlushTexData();
 
-	gs.clut.cbw = ((data[0]) & 0x3f) * 64;
-	gs.clut.cou = ((data[0] >>  6) & 0x3f) * 16;
-	gs.clut.cov = (data[0] >> 12) & 0x3ff;
+	gs.clut.cbw = r->CBW << 6;
+	gs.clut.cou = r->COU << 4;
+	gs.clut.cov = r->COV;
 }
 
 void __gifCall GIFRegHandlerSCANMSK(const u32* data)
 {
 	FUNCLOG
+	GIFRegSCANMSK* r = (GIFRegSCANMSK*)(data);
 //  FlushBoth();
 //  ResolveC(&vb[0]);
 //  ResolveZ(&vb[0]);
 
-	gs.smask = data[0] & 0x3;
+	gs.smask = r->MSK;
 	REG_LOG("Scanmsk == %d", gs.smask);
 }
 
@@ -471,13 +489,16 @@ template <u32 ctxt>
 void __gifCall GIFRegHandlerMIPTBP1(const u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP1* r = (GIFRegMIPTBP1*)(data);
+	
 	miptbpInfo& miptbp0 = vb[ctxt].miptbp0;
-	miptbp0.tbp[0] = (data[0]) & 0x3fff;
-	miptbp0.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp0.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp0.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp0.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp0.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp0.tbp[0] = r->TBP1;
+	miptbp0.tbw[0] = r->TBW1;
+	miptbp0.tbp[1] = r->TBP2;
+	miptbp0.tbw[1] = r->TBW2;
+	miptbp0.tbp[2] = r->TBP3;
+	miptbp0.tbw[2] = r->TBW3;
+	
 #ifdef SPAM_UNUSED_REGISTERS
 	if ((miptbp0.tbp[0] != 0) || (miptbp0.tbp[1] != 0) || (miptbp0.tbp[2] != 0))
 	{
@@ -491,13 +512,16 @@ template <u32 ctxt>
 void __gifCall GIFRegHandlerMIPTBP2(const u32* data)
 {
 	FUNCLOG
+	GIFRegMIPTBP2* r = (GIFRegMIPTBP2*)(data);
+	
 	miptbpInfo& miptbp1 = vb[ctxt].miptbp1;
-	miptbp1.tbp[0] = (data[0]) & 0x3fff;
-	miptbp1.tbw[0] = (data[0] >> 14) & 0x3f;
-	miptbp1.tbp[1] = ((data[0] >> 20) & 0xfff) | ((data[1] & 0x3) << 12);
-	miptbp1.tbw[1] = (data[1] >>  2) & 0x3f;
-	miptbp1.tbp[2] = (data[1] >>  8) & 0x3fff;
-	miptbp1.tbw[2] = (data[1] >> 22) & 0x3f;
+	miptbp1.tbp[0] = r->TBP4;
+	miptbp1.tbw[0] = r->TBW4;
+	miptbp1.tbp[1] = r->TBP5;
+	miptbp1.tbw[1] = r->TBW5;
+	miptbp1.tbp[2] = r->TBP6;
+	miptbp1.tbw[2] = r->TBW6;
+	
 #ifdef SPAM_UNUSED_REGISTERS
 	if ((miptbp1.tbp[0] != 0) || (miptbp1.tbp[1] != 0) || (miptbp1.tbp[2] != 0))
 	{
@@ -532,7 +556,9 @@ void __gifCall GIFRegHandlerTEXA(const u32* data)
 void __gifCall GIFRegHandlerFOGCOL(const u32* data)
 {
 	FUNCLOG
-	SetFogColor(data[0]&0xffffff);
+	GIFRegFOGCOL* r = (GIFRegFOGCOL*)(data);
+	SetFogColor(r);
+	gs.fogcol = r->ai32[0];
 }
 
 void __gifCall GIFRegHandlerTEXFLUSH(const u32* data)
@@ -545,13 +571,15 @@ template <u32 ctxt>
 void __gifCall GIFRegHandlerSCISSOR(const u32* data)
 {
 	FUNCLOG
+	GIFRegSCISSOR* r = (GIFRegSCISSOR*)(data);
+	
 	Rect2& scissor = vb[ctxt].scissor;
 	Rect2 newscissor;
 
-	newscissor.x0 = ((data[0]) & 0x7ff) << 3;
-	newscissor.x1 = ((data[0] >> 16) & 0x7ff) << 3;
-	newscissor.y0 = ((data[1]) & 0x7ff) << 3;
-	newscissor.y1 = ((data[1] >> 16) & 0x7ff) << 3;
+	newscissor.x0 = r->SCAX0 << 3;
+	newscissor.x1 = r->SCAX1 << 3;
+	newscissor.y0 = r->SCAY0 << 3;
+	newscissor.y1 = r->SCAY1 << 3;
 
 	if (newscissor.x1 != scissor.x1 || newscissor.y1 != scissor.y1 ||
 			newscissor.x0 != scissor.x0 || newscissor.y0 != scissor.y0)
@@ -588,19 +616,27 @@ void __gifCall GIFRegHandlerALPHA(const u32* data)
 void __gifCall GIFRegHandlerDIMX(const u32* data)
 {
 	FUNCLOG
+	GIFRegDIMX* r = (GIFRegDIMX*)(data);
+	
+	gs.dimx.i64 = r->i64;
 }
 
 void __gifCall GIFRegHandlerDTHE(const u32* data)
 {
 	FUNCLOG
-	gs.dthe = data[0] & 0x1;
+	GIFRegDTHE* r = (GIFRegDTHE*)(data);
+	
+	gs.dthe = r->DTHE;
 	if (gs.dthe != 0) REG_LOG("Dithering set. (but not implemented.)");
 }
 
 void __gifCall GIFRegHandlerCOLCLAMP(const u32* data)
 {
 	FUNCLOG
-	gs.colclamp = data[0] & 0x1;
+	GIFRegCOLCLAMP* r = (GIFRegCOLCLAMP*)(data);
+	
+	gs.colclamp = r->CLAMP;
+	
 	if (gs.colclamp == 0) 
 		REG_LOG("COLCLAMP == MASK");
 	else
@@ -633,21 +669,23 @@ void __gifCall GIFRegHandlerTEST(const u32* data)
 void __gifCall GIFRegHandlerPABE(const u32* data)
 {
 	FUNCLOG
+	GIFRegPABE* r = (GIFRegPABE*)(data);
 	//SetAlphaChanged(0, GPUREG_PABE);
 	//SetAlphaChanged(1, GPUREG_PABE);
 	FlushBoth();
 
-	gs.pabe = *data & 0x1;
+	gs.pabe = r->PABE;
 }
 
 template <u32 ctxt>
 void __gifCall GIFRegHandlerFBA(const u32* data)
 {
 	FUNCLOG
+	GIFRegFBA* r = (GIFRegFBA*)(data);
 	
 	FlushBoth();
 	
-	vb[ctxt].fba.fba = *data & 0x1;
+	vb[ctxt].fba.fba = r->FBA;
 }
 
 template <u32 ctxt>
@@ -710,12 +748,14 @@ void __gifCall GIFRegHandlerZBUF(const u32* data)
 void __gifCall GIFRegHandlerBITBLTBUF(const u32* data)
 {
 	FUNCLOG
-	gs.srcbufnew.bp  = ((data[0]) & 0x3fff);   // * 64;
-	gs.srcbufnew.bw  = ((data[0] >> 16) & 0x3f) * 64;
-	gs.srcbufnew.psm = (data[0] >> 24) & 0x3f;
-	gs.dstbufnew.bp  = ((data[1]) & 0x3fff);   // * 64;
-	gs.dstbufnew.bw  = ((data[1] >> 16) & 0x3f) * 64;
-	gs.dstbufnew.psm = (data[1] >> 24) & 0x3f;
+	GIFRegBITBLTBUF* r = (GIFRegBITBLTBUF*)(data);
+	
+	gs.srcbufnew.bp  = r->SBP;
+	gs.srcbufnew.bw  = r->SBW << 6;
+	gs.srcbufnew.psm = r->SPSM;
+	gs.dstbufnew.bp  = r->DBP;
+	gs.dstbufnew.bw  = r->DBW << 6;
+	gs.dstbufnew.psm = r->DPSM;
 
 	if (gs.dstbufnew.bw == 0) gs.dstbufnew.bw = 64;
 }
@@ -723,19 +763,22 @@ void __gifCall GIFRegHandlerBITBLTBUF(const u32* data)
 void __gifCall GIFRegHandlerTRXPOS(const u32* data)
 {
 	FUNCLOG
+	GIFRegTRXPOS* r = (GIFRegTRXPOS*)(data);
 	
-	gs.trxposnew.sx  = (data[0]) & 0x7ff;
-	gs.trxposnew.sy  = (data[0] >> 16) & 0x7ff;
-	gs.trxposnew.dx  = (data[1]) & 0x7ff;
-	gs.trxposnew.dy  = (data[1] >> 16) & 0x7ff;
-	gs.trxposnew.dir = (data[1] >> 27) & 0x3;
+	gs.trxposnew.sx  = r->SSAX;
+	gs.trxposnew.sy  = r->SSAY;
+	gs.trxposnew.dx  = r->DSAX;
+	gs.trxposnew.dy  = r->DSAY;
+	gs.trxposnew.dirx = r->DIRX;
+	gs.trxposnew.diry = r->DIRY;
 }
 
 void __gifCall GIFRegHandlerTRXREG(const u32* data)
 {
 	FUNCLOG
-	gs.imageWtemp = data[0] & 0xfff;
-	gs.imageHtemp = data[1] & 0xfff;
+	GIFRegTRXREG* r = (GIFRegTRXREG*)(data);
+	gs.imageWtemp = r->RRW;
+	gs.imageHtemp = r->RRH;
 }
 
 void __gifCall GIFRegHandlerTRXDIR(const u32* data)

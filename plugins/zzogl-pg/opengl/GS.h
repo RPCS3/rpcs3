@@ -464,12 +464,8 @@ typedef struct
 	int sy;
 	int dx;
 	int dy;
-#ifdef USE_OLD_REGS
-	int dir;
-#else
 	int diry;
 	int dirx;
-#endif
 } trxposInfo;
 
 typedef struct 
