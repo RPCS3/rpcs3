@@ -216,7 +216,7 @@ static void LoadExtraRom( const wxChar* ext, u8 (&dest)[_size] )
 		// still work fine.
 
 		Console.Warning(L"BIOS Warning: %s could not be read (permission denied?)", ext);
-		Console.Indent().WriteLn(L"Details: %s", ex.FormatDiagnosticMessage());
+		Console.Indent().WriteLn(L"Details: %s", ex.FormatDiagnosticMessage().c_str());
 		Console.Indent().WriteLn(L"File size: %llu", filesize);
 	}
 }

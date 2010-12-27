@@ -97,7 +97,7 @@ void MemorySavestateEntry::FreezeIn( pxInputStream& reader ) const
 	if (entrySize < expectedSize)
 	{
 		Console.WriteLn( Color_Yellow, " '%s' is incomplete (expected 0x%x bytes, loading only 0x%x bytes)",
-			GetFilename(), expectedSize, entrySize );
+			GetFilename().c_str(), expectedSize, entrySize );
 	}
 
 	uint copylen = std::min(entrySize, expectedSize);
@@ -581,7 +581,7 @@ protected:
 			if (SavestateEntries[i]->IsRequired())
 			{
 				throwIt = true;
-				Console.WriteLn( Color_Red, " ... not found '%s'!", SavestateEntries[i]->GetFilename() );
+				Console.WriteLn( Color_Red, " ... not found '%s'!", SavestateEntries[i]->GetFilename().c_str() );
 			}
 		}
 
