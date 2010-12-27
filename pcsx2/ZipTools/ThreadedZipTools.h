@@ -83,6 +83,8 @@ protected:
 	ScopedPtr<ArchiveDataBuffer>	m_data;
 
 public:
+	virtual ~ArchiveEntryList() throw() {}
+
 	ArchiveEntryList() {}
 
 	ArchiveEntryList( ArchiveDataBuffer* data )
@@ -90,12 +92,10 @@ public:
 		m_data = data;
 	}
 
-	ArchiveEntryList( ScopedPtr<ArchiveDataBuffer>& data )
+	ArchiveEntryList( ArchiveDataBuffer& data )
 	{
-		m_data = data.DetachPtr();
+		m_data = &data;
 	}
-
-	virtual ~ArchiveEntryList() throw() {}
 	
 	const VmStateBuffer* GetBuffer() const
 	{
@@ -148,8 +148,8 @@ class BaseCompressThread
 	typedef pxThread _parent;
 
 protected:
-	ScopedPtr< ArchiveEntryList >	m_src_list;
-	ScopedPtr< pxOutputStream >		m_gzfp;
+	pxOutputStream*					m_gzfp;
+	ArchiveEntryList*				m_src_list;
 	bool							m_PendingSaveFlag;
 	
 	wxString						m_final_filename;
@@ -163,9 +163,9 @@ public:
 		return *this;
 	}
 
-	BaseCompressThread& SetSource( ScopedPtr< ArchiveEntryList >& srcdata )
+	BaseCompressThread& SetSource( ArchiveEntryList& srcdata )
 	{
-		m_src_list = srcdata.DetachPtr();
+		m_src_list = &srcdata;
 		return *this;
 	}
 
@@ -175,9 +175,9 @@ public:
 		return *this;
 	}
 
-	BaseCompressThread& SetOutStream( ScopedPtr< pxOutputStream >& out )
+	BaseCompressThread& SetOutStream( pxOutputStream& out )
 	{
-		m_gzfp = out.DetachPtr();
+		m_gzfp = &out;
 		return *this;
 	}
 

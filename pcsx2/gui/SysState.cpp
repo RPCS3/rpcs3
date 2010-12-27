@@ -403,10 +403,10 @@ public:
 
 	SysExecEvent_ZipToDisk* Clone() const { return new SysExecEvent_ZipToDisk( *this ); }
 
-	SysExecEvent_ZipToDisk( ScopedPtr<ArchiveEntryList>& srclist, const wxString& filename )
+	SysExecEvent_ZipToDisk( ArchiveEntryList& srclist, const wxString& filename )
 		: m_filename( filename )
 	{
-		m_src_list = srclist.DetachPtr();
+		m_src_list = &srclist;
 	}
 
 	SysExecEvent_ZipToDisk( ArchiveEntryList* srclist, const wxString& filename )
@@ -454,13 +454,14 @@ protected:
 		}
 
 		(*new VmStateCompressThread())
-			.SetSource(m_src_list)
+			.SetSource(elist)
 			.SetOutStream(out)
 			.SetFinishedPath(m_filename)
 			.Start();
 
 		// No errors?  Release cleanup handlers:			
 		elist.DetachPtr();
+		out.DetachPtr();
 	}
 	
 	void CleanupEvent()
@@ -630,6 +631,8 @@ void StateCopy_SaveToFile( const wxString& file )
 	
 	GetSysExecutorThread().PostEvent(new SysExecEvent_DownloadState	( ziplist ));
 	GetSysExecutorThread().PostEvent(new SysExecEvent_ZipToDisk		( ziplist, file ));
+	
+	ziplist.DetachPtr();
 }
 
 void StateCopy_LoadFromFile( const wxString& file )

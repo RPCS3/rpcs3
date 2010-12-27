@@ -48,9 +48,8 @@ void BaseCompressThread::ExecuteTaskInThread()
 	//    result over the original.
 
 	if( !m_src_list ) return;
-
 	SetPendingSave();
-
+	
 	Yield( 3 );
 
 	uint listlen = m_src_list->GetLength();
@@ -89,5 +88,8 @@ void BaseCompressThread::OnCleanupInThread()
 {
 	_parent::OnCleanupInThread();
 	wxGetApp().DeleteThread( this );
+
+	safe_delete(m_gzfp);
+	safe_delete(m_src_list);
 }
 

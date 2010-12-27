@@ -781,7 +781,7 @@ void Pcsx2App::OnDestroyWindow( wxWindowDestroyEvent& evt )
 // --------------------------------------------------------------------------------------
 //  SysEventHandler
 // --------------------------------------------------------------------------------------
-class SysEvtHandler : public pxEvtHandler
+class SysEvtHandler : public pxEvtQueue
 {
 public:
 	wxString GetEvtHandlerName() const { return L"SysExecutor"; }

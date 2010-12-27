@@ -22,7 +22,7 @@
 // TODO!!  Make the system defined in this header system a bit more generic, and then move
 // it to the Utilities library.
 
-class pxEvtHandler;
+class pxEvtQueue;
 class SysExecEvent;
 
 // --------------------------------------------------------------------------------------
@@ -38,9 +38,9 @@ public:
 
 	ConsoleLogSource_Event();
 
-	bool Write( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
-	bool Warn( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
-	bool Error( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+	bool Write( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+	bool Warn( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg );
+	bool Error( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg );
 };
 
 extern ConsoleLogSource_Event pxConLog_Event;
@@ -51,7 +51,7 @@ extern ConsoleLogSource_Event pxConLog_Event;
 // --------------------------------------------------------------------------------------
 //  SysExecEvent
 // --------------------------------------------------------------------------------------
-// Base class for all pxEvtHandler processable events.
+// Base class for all pxEvtQueue processable events.
 //
 // Rules for deriving:
 //  * Override InvokeEvent(), *NOT* _DoInvokeEvent().  _DoInvokeEvent() performs setup and
@@ -67,7 +67,11 @@ extern ConsoleLogSource_Event pxConLog_Event;
 //    awaking the invoking thread as soon as the queue has caught up to and processed
 //    the event.
 //
-//  * Avoid using virtual class inheritence.  It's unreliable at best.
+//  * Avoid using virtual class inheritence to 'cleverly' bind a SysExecEvent to another
+//    existing class.  Multiple inheritence is unreliable at best, and virtual inheritence
+//    is even worse.  Create a SysExecEvent wrapper class instead, and embed an instance of
+//    the other class you want to turn into an event within it.  It might feel like more work
+//    but it *will* be less work in the long run.
 //
 class SysExecEvent : public ICloneable
 {
@@ -174,13 +178,15 @@ protected:
 #endif
 
 // --------------------------------------------------------------------------------------
-//  pxEvtHandler
+//  pxEvtQueue
 // --------------------------------------------------------------------------------------
-// Purpose: To provide a safe environment for queuing tasks that must be executed in
-// sequential order (in blocking fashion).  Unlike the wxWidgets event handlers, instances
-// of this handler can be stalled for extended periods of time without affecting the
-// responsiveness of the GUI or frame updates of the DirectX output windows.  This class
-// is mostly intended to be used from the context of an ExecutorThread.
+// Thread-safe platform-independent message queue, intended to act as a proxy between
+// control threads (such as the Main/UI thread) and worker threads.
+//
+// Proxy message queues provide a safe environment for queuing tasks that must be executed
+// in sequential order (in blocking fashion) on one or more worker threads.  The queue is
+// deadlock-free, which means the Main/UI thread can queue events into this EventQueue without
+// fear of causing unresponsiveness within the user interface.
 //
 // Rationales:
 //  * Using the main event handler of wxWidgets is dangerous because it must call itself
@@ -189,12 +195,11 @@ protected:
 //    running events that expect the suspend to be complete while the suspend was still
 //    pending.
 //
-//  * wxWidgets Event Queue (wxEvtHandler) isn't thread-safe and isn't even
-//    intended for use for anything other than wxWindow events (it uses static vars
-//    and checks/modifies wxApp globals while processing), so it's useless to us.
-//    Have to roll our own. -_-
+//  * wxWidgets Event Queue (wxEvtHandler) isn't thread-safe and isn't even intended for
+//    use for anything other than wxWindow events (it uses static vars and checks/modifies
+//    wxApp globals while processing), so it's useless to us.  Have to roll our own. -_-
 //
-class pxEvtHandler
+class pxEvtQueue
 {
 protected:
 	pxEvtList					m_pendingEvents;
@@ -210,10 +215,10 @@ protected:
 	volatile u64				m_qpc_Start;
 
 public:
-	pxEvtHandler();
-	virtual ~pxEvtHandler() throw() {}
+	pxEvtQueue();
+	virtual ~pxEvtQueue() throw() {}
 
-	virtual wxString GetEventHandlerName() const { return L"pxEvtHandler"; }
+	virtual wxString GetEventHandlerName() const { return L"pxEvtQueue"; }
 
 	virtual void ShutdownQueue();
 	bool IsShuttingDown() const { return !!m_Quitting; }
@@ -243,8 +248,22 @@ protected:
 // --------------------------------------------------------------------------------------
 //  ExecutorThread
 // --------------------------------------------------------------------------------------
-// Threaded wrapper class for implementing pxEvtHandler.  Simply create the desired
-// EvtHandler, start the thread, and enjoy queued event execution in fully blocking fashion.
+// Threaded wrapper class for implementing a pxEvtQueue on its own thread, to serve as a
+// proxy between worker threads and response threads (which cannot be allowed to stall or
+// deadlock).  Simply create the desired EvtHandler, start the thread, and enjoy queued
+// event execution in fully blocking fashion.
+//
+// Deadlock Protection Notes:
+//  The ExecutorThread utilizes an underlying pxEventQueue, which only locks the queue for
+//  adding and removing items only.  Events are processed during an unlocked queue state,
+//  which allows other threads to add events with a guarantee that the add operation will
+//  take very little time.
+//
+// Implementation Notes:
+//  We use object encapsulation instead of multiple inheritance in order to avoid the many
+//  unavoidable catastrophes and pitfalls involved in multi-inheritance that would ruin our
+//  will to live.  The alternative requires manually exposing the interface of the underlying
+//  instance of pxEventQueue; and that's ok really when you consider the alternative. --air
 //
 class ExecutorThread : public Threading::pxThread
 {
@@ -252,10 +271,10 @@ class ExecutorThread : public Threading::pxThread
 
 protected:
 	ScopedPtr<wxTimer>		m_ExecutorTimer;
-	ScopedPtr<pxEvtHandler>	m_EvtHandler;
+	ScopedPtr<pxEvtQueue>	m_EvtHandler;
 
 public:
-	ExecutorThread( pxEvtHandler* evtandler = NULL );
+	ExecutorThread( pxEvtQueue* evtandler = NULL );
 	virtual ~ExecutorThread() throw() { }
 
 	virtual void ShutdownQueue();

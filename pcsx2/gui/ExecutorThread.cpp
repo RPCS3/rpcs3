@@ -22,13 +22,13 @@ using namespace pxSizerFlags;
 //  ConsoleLogSource_Event  (implementations)
 // --------------------------------------------------------------------------------------
 
-bool ConsoleLogSource_Event::Write( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
+bool ConsoleLogSource_Event::Write( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
 	return _parent::Write( pxsFmt(L"(%s:%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
 }
-bool ConsoleLogSource_Event::Warn( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg )	{
+bool ConsoleLogSource_Event::Warn( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg )	{
 	return _parent::Write( pxsFmt(L"(%s:%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
 }
-bool ConsoleLogSource_Event::Error( const pxEvtHandler* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
+bool ConsoleLogSource_Event::Error( const pxEvtQueue* evtHandler, const SysExecEvent* evt, const wxChar* msg ) {
 	return _parent::Write( pxsFmt(L"(%s:%s) ", evtHandler->GetEventHandlerName().c_str(), evt->GetEventName().c_str()) + msg );
 }
 
@@ -84,7 +84,7 @@ void SysExecEvent::SetException( BaseException* ex )
 {
 	if( !ex ) return;
 
-	ex->DiagMsg() += wxsFormat(L"(%s) ", GetEventName().c_str());
+	ex->DiagMsg() += pxsFmt(L"(%s) ", GetEventName().c_str());
 	//ex->UserMsg() = prefix + ex->UserMsg();
 
 	if( m_sync )
@@ -153,9 +153,9 @@ void SysExecEvent::PostResult() const
 }
 
 // --------------------------------------------------------------------------------------
-//  pxEvtHandler Implementations
+//  pxEvtQueue Implementations
 // --------------------------------------------------------------------------------------
-pxEvtHandler::pxEvtHandler()
+pxEvtQueue::pxEvtQueue()
 {
 	AtomicExchange( m_Quitting, false );
 	m_qpc_Start = 0;
@@ -167,7 +167,7 @@ pxEvtHandler::pxEvtHandler()
 // (typically these are shutdown events critical to closing the app cleanly). Once
 // all such events have been processed, the thread is stopped.
 //
-void pxEvtHandler::ShutdownQueue()
+void pxEvtQueue::ShutdownQueue()
 {
 	if( m_Quitting ) return;
 	AtomicExchange( m_Quitting, true );
@@ -190,7 +190,7 @@ struct ScopedThreadCancelDisable
 };
 
 // isIdle  - parameter is useful for logging only (currently)
-void pxEvtHandler::ProcessEvents( pxEvtList& list, bool isIdle )
+void pxEvtQueue::ProcessEvents( pxEvtList& list, bool isIdle )
 {
 	ScopedLock synclock( m_mtx_pending );
     
@@ -238,19 +238,19 @@ void pxEvtHandler::ProcessEvents( pxEvtList& list, bool isIdle )
 	}
 }
 
-void pxEvtHandler::ProcessIdleEvents()
+void pxEvtQueue::ProcessIdleEvents()
 {
 	ProcessEvents( m_idleEvents, true );
 }
 
-void pxEvtHandler::ProcessPendingEvents()
+void pxEvtQueue::ProcessPendingEvents()
 {
 	ProcessEvents( m_pendingEvents );
 }
 
 // This method is provided for wxWidgets API conformance.  I like to use PostEvent instead
 // since it's reminiscent of PostMessage in Windows (and behaves rather similarly).
-void pxEvtHandler::AddPendingEvent( SysExecEvent& evt )
+void pxEvtQueue::AddPendingEvent( SysExecEvent& evt )
 {
 	PostEvent( evt );
 }
@@ -261,7 +261,7 @@ void pxEvtHandler::AddPendingEvent( SysExecEvent& evt )
 // to it automatically when the event has been executed.  If you are using a scoped event
 // you should use the Reference/Handle overload instead!
 //
-void pxEvtHandler::PostEvent( SysExecEvent* evt )
+void pxEvtQueue::PostEvent( SysExecEvent* evt )
 {
 	ScopedPtr<SysExecEvent> sevt( evt );
 	if( !sevt ) return;
@@ -274,19 +274,19 @@ void pxEvtHandler::PostEvent( SysExecEvent* evt )
 
 	ScopedLock synclock( m_mtx_pending );
 	
-	pxEvtLog.Write( this, evt, wxsFormat(L"Posting event! (pending=%d, idle=%d)", m_pendingEvents.size(), m_idleEvents.size()) );
+	pxEvtLog.Write( this, evt, pxsFmt(L"Posting event! (pending=%d, idle=%d)", m_pendingEvents.size(), m_idleEvents.size()) );
 
 	m_pendingEvents.push_back( sevt.DetachPtr() );
 	if( m_pendingEvents.size() == 1)
 		m_wakeup.Post();
 }
 
-void pxEvtHandler::PostEvent( const SysExecEvent& evt )
+void pxEvtQueue::PostEvent( const SysExecEvent& evt )
 {
 	PostEvent( evt.Clone() );
 }
 
-void pxEvtHandler::PostIdleEvent( SysExecEvent* evt )
+void pxEvtQueue::PostIdleEvent( SysExecEvent* evt )
 {
 	if( !evt ) return;
 
@@ -298,7 +298,7 @@ void pxEvtHandler::PostIdleEvent( SysExecEvent* evt )
 
 	ScopedLock synclock( m_mtx_pending );
 
-	pxEvtLog.Write( this, evt, wxsFormat(L"Posting event! (pending=%d, idle=%d) [idle]", m_pendingEvents.size(), m_idleEvents.size()) );
+	pxEvtLog.Write( this, evt, pxsFmt(L"Posting event! (pending=%d, idle=%d) [idle]", m_pendingEvents.size(), m_idleEvents.size()) );
 
 	if( m_pendingEvents.size() == 0)
 	{
@@ -309,12 +309,12 @@ void pxEvtHandler::PostIdleEvent( SysExecEvent* evt )
 		m_idleEvents.push_back( evt );
 }
 
-void pxEvtHandler::PostIdleEvent( const SysExecEvent& evt )
+void pxEvtQueue::PostIdleEvent( const SysExecEvent& evt )
 {
 	PostIdleEvent( evt.Clone() );
 }
 
-void pxEvtHandler::ProcessEvent( SysExecEvent& evt )
+void pxEvtQueue::ProcessEvent( SysExecEvent& evt )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
@@ -327,7 +327,7 @@ void pxEvtHandler::ProcessEvent( SysExecEvent& evt )
 		evt._DoInvokeEvent();
 }
 
-void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
+void pxEvtQueue::ProcessEvent( SysExecEvent* evt )
 {
 	if( !evt ) return;
 
@@ -345,7 +345,7 @@ void pxEvtHandler::ProcessEvent( SysExecEvent* evt )
 	}
 }
 
-bool pxEvtHandler::Rpc_TryInvokeAsync( FnType_Void* method, const wxChar* traceName )
+bool pxEvtQueue::Rpc_TryInvokeAsync( FnType_Void* method, const wxChar* traceName )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
@@ -356,7 +356,7 @@ bool pxEvtHandler::Rpc_TryInvokeAsync( FnType_Void* method, const wxChar* traceN
 	return false;
 }
 
-bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method, const wxChar* traceName )
+bool pxEvtQueue::Rpc_TryInvoke( FnType_Void* method, const wxChar* traceName )
 {
 	if( wxThread::GetCurrentId() != m_OwnerThreadId )
 	{
@@ -376,19 +376,17 @@ bool pxEvtHandler::Rpc_TryInvoke( FnType_Void* method, const wxChar* traceName )
 // This method invokes the derived class Idle implementations (if any) and then enters
 // the sleep state until such time that new messages are received.
 //
-// FUTURE: Processes idle messages from the idle message queue (not implemented yet).
-//
 // Extending: Derived classes should override _DoIdle instead, unless it is necessary
 // to implement post-wakeup behavior.
 //
-void pxEvtHandler::Idle()
+void pxEvtQueue::Idle()
 {
 	ProcessIdleEvents();
 	_DoIdle();
 	m_wakeup.WaitWithoutYield();
 }
 
-void pxEvtHandler::SetActiveThread()
+void pxEvtQueue::SetActiveThread()
 {
 	m_OwnerThreadId = wxThread::GetCurrentId();
 }
@@ -454,7 +452,7 @@ void WaitingForThreadedTaskDialog::OnTerminateApp_Clicked( wxCommandEvent& evt )
 // --------------------------------------------------------------------------------------
 //  ExecutorThread Implementations
 // --------------------------------------------------------------------------------------
-ExecutorThread::ExecutorThread( pxEvtHandler* evthandler )
+ExecutorThread::ExecutorThread( pxEvtQueue* evthandler )
 {
 	m_EvtHandler = evthandler;
 }
@@ -465,7 +463,7 @@ bool ExecutorThread::IsRunning() const
 	return( !m_EvtHandler->IsShuttingDown() );
 }
 
-// Exposes the internal pxEvtHandler::ShutdownQueue API.  See pxEvtHandler for details.
+// Exposes the internal pxEvtQueue::ShutdownQueue API.  See pxEvtQueue for details.
 void ExecutorThread::ShutdownQueue()
 {
 	if( !m_EvtHandler ) return;
@@ -476,7 +474,7 @@ void ExecutorThread::ShutdownQueue()
 	Block();
 }
 
-// Exposes the internal pxEvtHandler::PostEvent API.  See pxEvtHandler for details.
+// Exposes the internal pxEvtQueue::PostEvent API.  See pxEvtQueue for details.
 void ExecutorThread::PostEvent( SysExecEvent* evt )
 {
 	if( !pxAssert( m_EvtHandler ) ) { delete evt; return; }
@@ -489,7 +487,7 @@ void ExecutorThread::PostEvent( const SysExecEvent& evt )
 	m_EvtHandler->PostEvent( evt );
 }
 
-// Exposes the internal pxEvtHandler::PostIdleEvent API.  See pxEvtHandler for details.
+// Exposes the internal pxEvtQueue::PostIdleEvent API.  See pxEvtQueue for details.
 void ExecutorThread::PostIdleEvent( SysExecEvent* evt )
 {
 	if( !pxAssert( m_EvtHandler ) ) return;
@@ -502,7 +500,7 @@ void ExecutorThread::PostIdleEvent( const SysExecEvent& evt )
 	m_EvtHandler->PostIdleEvent( evt );
 }
 
-// Exposes the internal pxEvtHandler::ProcessEvent API.  See pxEvtHandler for details.
+// Exposes the internal pxEvtQueue::ProcessEvent API.  See pxEvtQueue for details.
 void ExecutorThread::ProcessEvent( SysExecEvent* evt )
 {
 	if( m_EvtHandler )
