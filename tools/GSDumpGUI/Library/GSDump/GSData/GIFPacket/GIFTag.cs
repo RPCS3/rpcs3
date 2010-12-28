@@ -154,7 +154,11 @@ namespace GSDumpGUI
                 case GIFFLG.GIF_FLG_IMAGE2:
                     GifImage image = new GifImage();
                     image.Data = new byte[t.nloop * 16];
-                    Array.Copy(data, 16, image.Data, 0, t.nloop * 16);
+                    try
+                    {
+                        Array.Copy(data, 16, image.Data, 0, t.nloop * 16);
+                    }
+                    catch (ArgumentException) { }
                     t.regs.Add(image);
                     break;
                 default:
