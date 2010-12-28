@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
-    abstract public class GIFReg : IGifData
+    abstract public class GIFReg : GIFUtil, IGifData
     {
         public GIFRegDescriptor Descriptor;
         public UInt64 LowData, HighData;
@@ -12,16 +12,11 @@ namespace GSDumpGUI
 
         private GIFReg() { }
 
-        public GIFReg(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
+        public GIFReg(byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
             this.LowData = LowData;
             this.HighData = HighData;
             this.PackedFormat = PackedFormat;
-        }
-
-        static public UInt64 GetBit(UInt64 value, byte lower, byte count)
-        {
-            return (value >> lower) & (ulong)((1 << count) - 1);
         }
 
         abstract public new String ToString();

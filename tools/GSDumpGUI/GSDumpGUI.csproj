@@ -70,6 +70,7 @@
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\GIFRegRGBAQ.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFReg\IGifData.cs" />
     <Compile Include="Library\GSDump\GSData\GIFPacket\GIFTag.cs" />
+    <Compile Include="Library\GSDump\GSData\GIFUtil.cs" />
     <Compile Include="Library\GSDump\GSData\GSData.cs" />
     <Compile Include="Library\GSDump\GSDump.cs" />
     <Compile Include="Library\GSDump\GSData\GSTransfer.cs" />

@@ -13,9 +13,9 @@ namespace GSDumpGUI
 
         public bool IsXYZF;
 
-        public GIFRegXYZF(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+        public GIFRegXYZF(byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
 
-        static public GIFReg UnpackXYZ(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
+        static public GIFReg UnpackXYZ(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
             GIFRegXYZF xyzf = new GIFRegXYZF(addr, LowData, HighData, PackedFormat);
 
@@ -40,7 +40,7 @@ namespace GSDumpGUI
             return xyzf;
         }
 
-        static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
+        static public GIFReg Unpack(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
             GIFRegXYZF xyzf = new GIFRegXYZF(addr, LowData, HighData, PackedFormat);
 

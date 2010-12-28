@@ -6,37 +6,37 @@ namespace GSDumpGUI
 {
     public class GIFRegTEX0 : GIFReg
     {
-        public int TBP0;
-        public int TBW;
+        public ushort TBP0;
+        public byte TBW;
         public TEXPSM PSM;
-        public int TW;
-        public int TH;
+        public byte TW;
+        public byte TH;
         public TEXTCC TCC;
         public TEXTFX TFX;
-        public int CBP;
+        public ushort CBP;
         public TEXCPSM CPSM;
         public TEXCSM CSM;
-        public int CSA;
-        public int CLD;
+        public byte CSA;
+        public byte CLD;
 
-        public GIFRegTEX0(int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
+        public GIFRegTEX0(byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat) : base(addr, LowData, HighData, PackedFormat) { }
 
-        static public GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
+        static public GIFReg Unpack(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)
         {
             GIFRegTEX0 tex0 = new GIFRegTEX0(addr, LowData, HighData, PackedFormat);
             tex0.Descriptor = (GIFRegDescriptor)addr;
-            tex0.TBP0 = (int)GetBit(LowData, 0, 14);
-            tex0.TBW = (int)GetBit(LowData, 14, 6);
-            tex0.PSM = (TEXPSM)(int)GetBit(LowData, 20, 6);
-            tex0.TW = (int)GetBit(LowData, 26, 4);
-            tex0.TH = (int)GetBit(LowData, 30, 4);
-            tex0.TCC = (TEXTCC)(int)GetBit(LowData, 34, 1);
-            tex0.TFX = (TEXTFX)(int)GetBit(LowData, 35, 2);
-            tex0.CBP = (int)GetBit(LowData, 37, 14);
-            tex0.CPSM = (TEXCPSM)(int)GetBit(LowData, 51, 4);
-            tex0.CSM = (TEXCSM)(int)GetBit(LowData, 55, 1);
-            tex0.CSA = (int)GetBit(LowData, 56, 5);
-            tex0.CLD = (int)GetBit(LowData, 61, 3);
+            tex0.TBP0 = (ushort)GetBit(LowData, 0, 14);
+            tex0.TBW = (byte)GetBit(LowData, 14, 6);
+            tex0.PSM = (TEXPSM)GetBit(LowData, 20, 6);
+            tex0.TW = (byte)GetBit(LowData, 26, 4);
+            tex0.TH = (byte)GetBit(LowData, 30, 4);
+            tex0.TCC = (TEXTCC)GetBit(LowData, 34, 1);
+            tex0.TFX = (TEXTFX)GetBit(LowData, 35, 2);
+            tex0.CBP = (ushort)GetBit(LowData, 37, 14);
+            tex0.CPSM = (TEXCPSM)GetBit(LowData, 51, 4);
+            tex0.CSM = (TEXCSM)GetBit(LowData, 55, 1);
+            tex0.CSA = (byte)GetBit(LowData, 56, 5);
+            tex0.CLD = (byte)GetBit(LowData, 61, 3);
             return tex0;
         }
 

@@ -4,19 +4,19 @@ using System.Text;
 
 namespace GSDumpGUI
 {
-    public class GIFTag
+    public class GIFTag : GIFUtil
     {
-        public delegate GIFReg Unpack(GIFTag tag, int addr, UInt64 LowData, UInt64 HighData, bool PackedFormat);
+        public delegate GIFReg Unpack(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat);
         static public Dictionary<int, Unpack> UnpackReg;
 
-        public Int32 nloop;
-        public Int32 eop;
-        public Int32 _pad1;
-        public Int32 _pad2;
-        public Int32 pre;
+        public UInt64 TAG, REGS;
+
+        public UInt32 nloop;
+        public UInt32 eop;
+        public UInt32 pre;
         public GIFPrim prim;
         public GIFFLG flg;
-        public Int32 nreg;
+        public UInt32 nreg;
         public List<IGifData> regs;
         public float Q; // GIF has an internal Q register which is reset to 1.0 at the tag and updated on packed ST(Q) for output at next RGBAQ
         
@@ -90,40 +90,28 @@ namespace GSDumpGUI
 
         static internal GIFTag ExtractGifTag(byte[] data)
         {
-            Int16 nloopEOP = 0;
-            Int16 pad1 = 0;
-            Int32 pad2PrePrimFlgNReg = 0;
-            Int64 regs = 0;
-
-            nloopEOP = BitConverter.ToInt16(data, 0);
-            pad1 = BitConverter.ToInt16(data, 2);
-            pad2PrePrimFlgNReg = BitConverter.ToInt32(data, 4);
-            regs = BitConverter.ToInt64(data, 8);
-
             GIFTag t = new GIFTag();
+
+            t.TAG = BitConverter.ToUInt64(data, 0);
+            t.REGS = BitConverter.ToUInt64(data, 8);
+
             t.Q = 1f;
-            t.nloop = (nloopEOP & 0x7FFF);
-            t.eop = (nloopEOP & 0x8000) >> 15;
-            t._pad1 = pad1;
-            t._pad2 = (pad2PrePrimFlgNReg & 0x00003FFF);
-            t.pre = (pad2PrePrimFlgNReg & 0x00004000) >> 14;
-
-            int prim = (pad2PrePrimFlgNReg & 0x03FF8000) >> 15;
-            GIFPrim primm = GIFPrim.ExtractGIFPrim(prim);
-            t.prim = primm;
-
-            t.flg = (GIFFLG)((pad2PrePrimFlgNReg & 0xC000000) >> 26);
-            t.nreg = (int)(pad2PrePrimFlgNReg & 0xF0000000) >> 28;
+            t.nloop = (uint)GetBit(t.TAG, 0, 15);
+            t.eop = (uint)GetBit(t.TAG, 15, 1);
+            t.pre = (uint)GetBit(t.TAG, 46, 1);
+            t.prim = GIFPrim.ExtractGIFPrim((uint)GetBit(t.TAG, 47, 11));
+            t.flg = (GIFFLG)GetBit(t.TAG, 58, 2);
+            t.nreg = (uint)GetBit(t.TAG, 60, 4);
             if (t.nreg == 0)
                 t.nreg = 16;
 
-            int[] registers = new int[t.nreg];
+            byte[] registers = new byte[t.nreg];
             Unpack[] regsunpack = new Unpack[t.nreg];
 
             t.regs = new List<IGifData>();
-            for (int i = 0; i < t.nreg; i++)
+            for (byte i = 0; i < t.nreg; i++)
             {
-                int reg = (int)(regs >> (i * 4) & 15);
+                byte reg = (byte)GetBit(t.REGS, i * 4, 4);
                 registers[i] = reg;
                 regsunpack[i] = GetUnpack(reg);
             }

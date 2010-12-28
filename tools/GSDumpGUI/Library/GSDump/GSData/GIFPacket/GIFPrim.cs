@@ -4,19 +4,19 @@ using System.Text;
 
 namespace GSDumpGUI
 {
-    public class GIFPrim
+    public class GIFPrim : GIFUtil
     {
-        public Int32 Prim;
-        public Int32 IIP;
-        public Int32 TME;
-        public Int32 FGE;
-        public Int32 ABE;
-        public Int32 AA1;
-        public Int32 FST;
-        public Int32 CTXT;
-        public Int32 FIX;
+        public UInt32 Prim;
+        public UInt32 IIP;
+        public UInt32 TME;
+        public UInt32 FGE;
+        public UInt32 ABE;
+        public UInt32 AA1;
+        public UInt32 FST;
+        public UInt32 CTXT;
+        public UInt32 FIX;
 
-        static internal GIFPrim ExtractGIFPrim(Int32 rawValue)
+        static internal GIFPrim ExtractGIFPrim(UInt32 rawValue)
         {
             GIFPrim pri = new GIFPrim();
             pri.Prim = (rawValue & 0x007);
