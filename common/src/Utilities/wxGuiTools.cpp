@@ -264,8 +264,122 @@ wxSizerFlags pxSizerFlags::Checkbox()
 }
 
 // --------------------------------------------------------------------------------------
-//  pxTextWrapper / pxTextWrapperBase  (mplementations)
+//  pxTextWrapper / pxTextWrapperBase  (implementations)
 // --------------------------------------------------------------------------------------
+
+static bool is_cjk_char(const uint ch)
+{
+	/**
+	 * You can check these range at http://unicode.org/charts/
+	 * see the "East Asian Scripts" part.
+	 * Notice that not all characters in that part is still in use today, so don't list them all here.
+	 */
+
+	// FIXME: add range from Japanese-specific and Korean-specific section if you know the
+	// characters are used today.
+
+	if (ch < 0x2e80) return false; // shortcut for common non-CJK
+
+	return
+		// Han Ideographs: all except Supplement
+		(ch >= 0x4e00 && ch < 0x9fcf) ||
+		(ch >= 0x3400 && ch < 0x4dbf) ||
+		(ch >= 0x20000 && ch < 0x2a6df) ||
+		(ch >= 0xf900 && ch < 0xfaff) ||
+		(ch >= 0x3190 && ch < 0x319f) ||
+
+		// Radicals: all except Ideographic Description
+		(ch >= 0x2e80 && ch < 0x2eff) ||
+		(ch >= 0x2f00 && ch < 0x2fdf) ||
+		(ch >= 0x31c0 && ch < 0x31ef) ||
+
+		// Chinese-specific: Bopomofo
+		(ch >= 0x3000 && ch < 0x303f) ||
+
+		// Japanese-specific: Halfwidth Katakana
+		(ch >= 0xff00 && ch < 0xffef) ||
+
+		// Japanese-specific: Hiragana, Katakana
+		(ch >= 0x3040 && ch <= 0x309f) ||
+		(ch >= 0x30a0 && ch <= 0x30ff) ||
+
+		// Korean-specific: Hangul Syllables, Halfwidth Jamo
+		(ch >= 0xac00 && ch < 0xd7af) ||
+		(ch >= 0xff00 && ch < 0xffef);
+}
+
+/*
+ * According to Kinsoku-Shori, Japanese rules about line-breaking:
+ *
+ * * the following characters cannot begin a line (so we will never break before them):
+ * 、。，．）〕］｝〉》」』】’”ゝゞヽヾ々？！：；ぁぃぅぇぉゃゅょゎァィゥェォャュョヮっヵッヶ・…ー
+ *
+ * * the following characters cannot end a line (so we will never break after them):
+ * （〔［｛〈《「『【‘“
+ *
+ * Unicode range that concerns word wrap for Chinese:
+ *   全角ASCII、全角中英文标点 (Fullwidth Character for ASCII, English punctuations and part of Chinese punctuations)
+ *   http://www.unicode.org/charts/PDF/UFF00.pdf
+ *   CJK 标点符号 (CJK punctuations)
+ *   http://www.unicode.org/charts/PDF/U3000.pdf
+ */
+static bool no_break_after(const uint ch)
+{
+	switch( ch )
+	{
+		/**
+		 * don't break after these Japanese/Chinese characters
+		 */
+		case 0x2018: case 0x201c: case 0x3008: case 0x300a:
+		case 0x300c: case 0x300e: case 0x3010: case 0x3014:
+		case 0x3016: case 0x301a: case 0x301d:
+		case 0xff08: case 0xff3b: case 0xff5b:
+
+		/**
+		 * FIXME don't break after these Korean characters
+		 */
+
+			return true;
+	}
+
+	return false;
+}
+
+static bool no_break_before(const uint ch)
+{
+	switch(ch)
+	{
+		/**
+		 * don't break before these Japanese characters
+		 */
+		case 0x2019: case 0x201d: case 0x2026: case 0x3001: case 0x3002:
+		case 0x3005: case 0x3009: case 0x300b: case 0x300d: case 0x300f:
+		case 0x301c: case 0x3011: case 0x3015: case 0x3017: case 0x301b:
+		case 0x301e: case 0x3041: case 0x3043: case 0x3045:
+		case 0x3047: case 0x3049: case 0x3063: case 0x3083: case 0x3085:
+		case 0x3087: case 0x308e: case 0x309d: case 0x309e: case 0x30a1:
+		case 0x30a3: case 0x30a5: case 0x30a7: case 0x30a9: case 0x30c3:
+		case 0x30e3: case 0x30e5: case 0x30e7: case 0x30ee: case 0x30f5:
+		case 0x30f6: case 0x30fb: case 0x30fc: case 0x30fd: case 0x30fe:
+		case 0xff01: case 0xff09: case 0xff0c: case 0xff0d: case 0xff0e: case 0xff1a:
+		case 0xff1b: case 0xff1f: case 0xff3d: case 0xff5d: case 0xff64: case 0xff65: 
+
+		/**
+		 * FIXME don't break before these Korean characters
+		 */
+
+		/**
+		 * don't break before these Chinese characters
+		 * contains
+		 *   many Chinese punctuations that should not start a line
+		 *   and right side of different kinds of brackets, quotes
+		 */
+		
+		
+			return true;
+	}
+	return false;
+}
 
 pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString& text, int widthMax )
 {
@@ -277,7 +391,7 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
     wxString line;
     line.Alloc( text.Length()+12 );
 
-    const wxChar *lineStart = text.c_str();
+    const wxChar* lineStart = text.wc_str();
     for ( const wxChar *p = lineStart; ; p++ )
     {
         if ( IsStartOfNewLine() )
@@ -303,7 +417,15 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
         }
         else // not EOL
         {
-            if ( *p == L' ' || *p == L',' || *p == L'/' )
+			if (is_cjk_char(*p))
+			{
+				if (!no_break_before(*p))
+				{
+					if (p == lineStart || no_break_after(*(p-1)))
+						lastSpace = p;
+				}
+			}
+			else if ( *p == L' ' || *p == L',' || *p == L'/' )
                 lastSpace = p;
 
             line += *p;
