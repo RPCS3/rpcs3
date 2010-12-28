@@ -481,10 +481,9 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 wxString BIOS_GetMsg_Required()
 {
 	return pxE( "!Notice:BiosDumpRequired",
-		L"\n\n"
-		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
-		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"
-		L"Please consult the FAQs and Guides for further instructions.\n"
+		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain "
+		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).  "
+		L"Please consult the FAQs and Guides for further instructions."
 	);
 }
 
@@ -509,7 +508,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	catch( Exception::BiosLoadFailed& ex )
 	{
 		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error") );
-		dialog += dialog.Heading( ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.") );
+		dialog += dialog.Heading( ex.FormatDisplayMessage() + L"\n\n" + BIOS_GetMsg_Required() + L"\n\n" + _("Press Ok to go to the BIOS Configuration Panel.") );
 		dialog += new ModalButtonPanel( &dialog, MsgButtons().OKCancel() );
 		
 		if( dialog.ShowModal() == wxID_CANCEL )

@@ -316,7 +316,7 @@ void MainEmuFrame::_DoBootCdvd()
 
 			wxDialogWithHelpers dialog( this, _("ISO file not found!") );
 			dialog += dialog.Heading(
-				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" +
+				_("An error occurred while trying to open the file:") + wxString(L"\n\n") + g_Conf->CurrentIso + L"\n\n" +
 				_("Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD.")
 			);
 

@@ -334,7 +334,6 @@ wxString operator+(const wxString& str1, const FastFormatUnicode& str2)
 {
 	wxString s = str1;
 	s += str2;
-
 	return s;
 }
 
@@ -342,7 +341,20 @@ wxString operator+(const wxChar* str1, const FastFormatUnicode& str2)
 {
 	wxString s = str1;
 	s += str2;
+	return s;
+}
 
+wxString operator+(const FastFormatUnicode& str1, const wxString& str2)
+{
+	wxString s = str2;
+	s += str1;
+	return s;
+}
+
+wxString operator+(const FastFormatUnicode& str1, const wxChar* str2)
+{
+	wxString s = str2;
+	s += str1;
 	return s;
 }
 

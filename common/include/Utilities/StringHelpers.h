@@ -227,6 +227,8 @@ extern bool pxParseAssignmentString( const wxString& src, wxString& ldest, wxStr
 extern wxString& operator+=(wxString& str1, const FastFormatUnicode& str2);
 extern wxString operator+(const wxString& str1, const FastFormatUnicode& str2);
 extern wxString operator+(const wxChar* str1, const FastFormatUnicode& str2);
+extern wxString operator+(const FastFormatUnicode& str1, const wxString& str2);
+extern wxString operator+(const FastFormatUnicode& str1, const wxChar* str2);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

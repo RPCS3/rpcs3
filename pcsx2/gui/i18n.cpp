@@ -219,7 +219,10 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 	{
 		L"pcsx2_Main",
 		L"pcsx2_Iconized",
-		L"pcsx2_Tertiary"
+		L"pcsx2_Tertiary",
+#ifdef PCSX2_DEVBUILD
+		L"pcsx2_devel"
+#endif
 	};
 	
 	bool foundone = false;

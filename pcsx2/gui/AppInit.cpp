@@ -623,7 +623,7 @@ bool Pcsx2App::OnInit()
 	}
 	catch( Exception::HardwareDeficiency& ex )
 	{
-		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(_("\n\nPress OK to close %s.")), _("PCSX2 Error: Hardware Deficiency") );
+		Msgbox::Alert( ex.FormatDisplayMessage() + L"\n\n" + AddAppName(_("Press OK to close %s.")), _("PCSX2 Error: Hardware Deficiency") );
 		CleanupOnExit();
 		return false;
 	}
@@ -635,7 +635,7 @@ bool Pcsx2App::OnInit()
 	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( ex.FormatDiagnosticMessage() );
-		Msgbox::Alert( ex.FormatDisplayMessage() + AddAppName(_("\n\nPress OK to close %s.")),
+		Msgbox::Alert( ex.FormatDisplayMessage() + L"\n\n" + AddAppName(_("Press OK to close %s.")),
 			AddAppName(_("%s Critical Error")), wxICON_ERROR );
 		CleanupOnExit();
 		return false;
