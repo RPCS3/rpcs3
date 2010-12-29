@@ -4,6 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public static class GIFRegAD
     {
         static public GIFReg Unpack(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat)

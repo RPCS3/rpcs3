@@ -4,6 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GIFRegPRIM : GIFReg
     {
         public GS_PRIM PrimitiveType;

@@ -4,31 +4,38 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GIFPrim : GIFUtil
     {
-        public UInt32 Prim;
-        public UInt32 IIP;
-        public UInt32 TME;
-        public UInt32 FGE;
-        public UInt32 ABE;
-        public UInt32 AA1;
-        public UInt32 FST;
-        public UInt32 CTXT;
-        public UInt32 FIX;
+        public GS_PRIM PrimitiveType;
+        public GSIIP IIP;
+        public bool TME;
+        public bool FGE;
+        public bool ABE;
+        public bool AA1;
+        public GSFST FST;
+        public GSCTXT CTXT;
+        public GSFIX FIX;
 
-        static internal GIFPrim ExtractGIFPrim(UInt32 rawValue)
+        static internal GIFPrim ExtractGIFPrim(UInt32 LowData)
         {
-            GIFPrim pri = new GIFPrim();
-            pri.Prim = (rawValue & 0x007);
-            pri.IIP = (rawValue & 0x008) >> 3;
-            pri.TME = (rawValue & 0x010) >> 4;
-            pri.FGE = (rawValue & 0x020) >> 5;
-            pri.ABE = (rawValue & 0x040) >> 6;
-            pri.AA1 = (rawValue & 0x080) >> 7;
-            pri.FST = (rawValue & 0x100) >> 8;
-            pri.CTXT = (rawValue & 0x200) >> 9;
-            pri.FIX = (rawValue & 0x400) >> 10;
-            return pri;
+            GIFPrim pr = new GIFPrim();
+            pr.PrimitiveType = (GS_PRIM)GetBit(LowData, 0, 3);
+            pr.IIP = (GSIIP)GetBit(LowData, 3, 1);
+            pr.TME = Convert.ToBoolean(GetBit(LowData, 4, 1));
+            pr.FGE = Convert.ToBoolean(GetBit(LowData, 5, 1));
+            pr.ABE = Convert.ToBoolean(GetBit(LowData, 6, 1));
+            pr.AA1 = Convert.ToBoolean(GetBit(LowData, 7, 1));
+            pr.FST = (GSFST)(GetBit(LowData, 8, 1));
+            pr.CTXT = (GSCTXT)(GetBit(LowData, 9, 1));
+            pr.FIX = (GSFIX)(GetBit(LowData, 10, 1));
+            return pr;
+        }
+
+        public override string ToString()
+        {
+            return "Primitive Type : " + PrimitiveType.ToString() + "@IIP : " + IIP.ToString() + "@TME : " + TME.ToString() + "@FGE : " + FGE.ToString()
+                + "@ABE : " + ABE.ToString() + "@AA1 : " + AA1.ToString() + "@FST : " + FST.ToString() + "@CTXT : " + CTXT.ToString() + "@FIX : " + FIX.ToString();
         }
     }
 

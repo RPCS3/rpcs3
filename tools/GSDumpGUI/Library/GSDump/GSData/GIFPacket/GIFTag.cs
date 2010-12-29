@@ -4,13 +4,16 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GIFTag : GIFUtil
     {
         public delegate GIFReg Unpack(GIFTag tag, byte addr, UInt64 LowData, UInt64 HighData, bool PackedFormat);
         static public Dictionary<int, Unpack> UnpackReg;
 
-        public UInt64 TAG, REGS;
+        private UInt64 TAG, REGS;
+        internal float Q; // GIF has an internal Q register which is reset to 1.0 at the tag and updated on packed ST(Q) for output at next RGBAQ
 
+        public GSTransferPath path;
         public UInt32 nloop;
         public UInt32 eop;
         public UInt32 pre;
@@ -18,7 +21,7 @@ namespace GSDumpGUI
         public GIFFLG flg;
         public UInt32 nreg;
         public List<IGifData> regs;
-        public float Q; // GIF has an internal Q register which is reset to 1.0 at the tag and updated on packed ST(Q) for output at next RGBAQ
+        public int size;
         
         static GIFTag()
         {
@@ -88,10 +91,11 @@ namespace GSDumpGUI
             return ret;
         }
 
-        static internal GIFTag ExtractGifTag(byte[] data)
+        static internal GIFTag ExtractGifTag(byte[] data, GSTransferPath path)
         {
             GIFTag t = new GIFTag();
-
+            t.size = data.Length;
+            t.path = path;
             t.TAG = BitConverter.ToUInt64(data, 0);
             t.REGS = BitConverter.ToUInt64(data, 8);
 

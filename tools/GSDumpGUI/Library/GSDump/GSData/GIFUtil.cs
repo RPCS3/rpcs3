@@ -2,6 +2,7 @@
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GIFUtil
     {
         public static UInt64 GetBit(UInt64 value, int lower, int count)

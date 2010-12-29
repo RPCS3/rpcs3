@@ -4,6 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GIFRegRGBAQ : GIFReg
     {
         public byte R;

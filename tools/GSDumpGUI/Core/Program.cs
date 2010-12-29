@@ -244,54 +244,52 @@ namespace GSDumpGUI
                 case MessageType.PacketInfo:
                     frmMain.Invoke(new Action<object>(delegate(object e)
                     {
-                        if (Mess.Parameters[0].ToString() != "No Data Available")
+                        if (Mess.Parameters[0].GetType() == typeof(GIFTag))
                         {
-                            string[] vals = Mess.Parameters[0].ToString().Split('|');
-                            frmMain.txtGifPacketSize.Text = vals[0] + " bytes";
+                            GIFTag tag = (GIFTag)Mess.Parameters[0];
 
+                            frmMain.txtGifPacketSize.Text = tag.size + " bytes";
                             frmMain.treeGifPacketContent.Nodes.Clear();
 
-                            frmMain.treeGifPacketContent.Nodes.Add(vals[1]);
+                            frmMain.treeGifPacketContent.Nodes.Add("Transfer Path " + tag.path);
 
-                            if (vals.Length > 2)
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("nloop = " + tag.nloop);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("eop = " + tag.eop);
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("flg = " + tag.flg.ToString());
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("pre = " + tag.pre);
+
+                            TreeNode nodePrim = new TreeNode("Prim");
+                            string[] prim = tag.prim.ToString().Split(new char[] { '@' });
+                            for (int j = 0; j < prim.Length; j++)
+                                nodePrim.Nodes.Add(prim[j]);
+
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
+
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("nreg = " + tag.nreg.ToString());
+
+                            TreeNode nodeReg = new TreeNode("reg");
+                            for (int j = 0; j < tag.regs.Count; j++)
                             {
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[2]);
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[3]);
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[4]);
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[5]);
-
-                                TreeNode nodePrim = new TreeNode("Prim");
-                                string[] prim = vals[6].Split('~');
-                                for (int j = 1; j < prim.Length; j++)
+                                string[] fvals = tag.regs[j].ToString().Split(new char[] { '@' }, StringSplitOptions.RemoveEmptyEntries);
+                                TreeNode nodeObj = new TreeNode(fvals[0]);
+                                for (int z = 1; z < fvals.Length; z++)
                                 {
-                                    nodePrim.Nodes.Add(prim[j]);
+                                    TreeNode item = new TreeNode(fvals[z]);
+                                    nodeObj.Nodes.Add(item);
                                 }
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
-
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(vals[7]);
-
-                                TreeNode nodeReg = new TreeNode("reg");
-                                string[] reg = vals[8].Split(new char[]{'~'}, StringSplitOptions.RemoveEmptyEntries);
-                                for (int j = 1; j < reg.Length; j++)
-                                {
-                                    string[] fvals = reg[j].Split(new char[] { '@' }, StringSplitOptions.RemoveEmptyEntries);
-                                    TreeNode nodeObj = new TreeNode(fvals[0]);
-                                    for (int z = 1; z < fvals.Length; z++)
-                                    {
-                                        TreeNode item = new TreeNode(fvals[z]);
-                                        nodeObj.Nodes.Add(item);
-                                    }
-                                    nodeReg.Nodes.Add(nodeObj);
-                                }
-                                frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodeReg);
+                                nodeReg.Nodes.Add(nodeObj);
                             }
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodeReg);
+
                             frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
                         }
                         else
                         {
+                            String[] vals = Mess.Parameters[0].ToString().Split('|');
+                            frmMain.txtGifPacketSize.Text = vals[0] + " bytes";
                             frmMain.treeGifPacketContent.Nodes.Clear();
-
-                            frmMain.treeGifPacketContent.Nodes.Add(Mess.Parameters[0].ToString());
+                            frmMain.treeGifPacketContent.Nodes.Add(vals[1]);
+                            frmMain.treeGifPacketContent.Nodes[0].ExpandAll();
                         }
                     }), new object[] { null });
                     break;

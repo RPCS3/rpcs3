@@ -4,6 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     public class GifImage : IGifData
     {
         public byte[] Data;

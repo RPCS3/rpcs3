@@ -394,52 +394,24 @@ namespace GSDumpGUI
             return Data;
         }
 
-        internal String GetGifPacketInfo(GSDump dump, int i)
+        internal object GetGifPacketInfo(GSDump dump, int i)
         {
-            string val = dump.Data[i].data.Length.ToString() + "|";
-
-            switch (dump.Data[i].id)
+            if (dump.Data[i].id == GSType.Transfer)
+                return GIFTag.ExtractGifTag(dump.Data[i].data, ((GSTransfer)dump.Data[i]).Path);
+            else
             {
-                case GSType.Transfer:
-                    try
-                    {
-                        GIFTag tag = GIFTag.ExtractGifTag(dump.Data[i].data);
-                        val += "Transfer Path " + ((GSTransfer)dump.Data[i]).Path.ToString() + "|";
-                        val += "NLoop = " + tag.nloop + "|";
-                        //val += "Pad1 = " + tag._pad1 + "|";
-                        //val += "Pad2 = " + tag._pad2 + "|";
-                        val += "eop = " + tag.eop + "|";
-                        val += "flg = " + ((GIFFLG)tag.flg).ToString() + "|";
-                        val += "pre = " + tag.pre + "|";
-                        val += "prim~Prim Class = " + ((GS_PRIM)tag.prim.Prim).ToString() + "~IIP = " + tag.prim.IIP + "~TME = " + tag.prim.TME + "~FGE = " + tag.prim.FGE + "~ABE = " +
-                                tag.prim.ABE + "~AA1 = " + tag.prim.AA1 + "~FST = " + tag.prim.FST + "~CTXT = " + tag.prim.CTXT + "~FIX = " + tag.prim.FIX + "|";
-                        val += "nreg = " + (tag.nreg == 0 ? 16 : tag.nreg) + "|";
-                        val += "regs~";
-                        foreach (var itm in tag.regs)
-                        {
-                            val += itm.ToString() + "~";
-                        }
-                    }
-                    catch (ArgumentException) // out of bounds because of split primitive
-                    {
-                        // accomodating hacked up tree builder
-                        val += "Unhandled split GIF primitive|||||||||";
-                    }
-                    break;
-                case GSType.VSync:
-                    val += "Field = " + dump.Data[i].data[0].ToString();
-                    break;
-                case GSType.ReadFIFO2:
-                    val += "ReadFIFO2 : Size = " + BitConverter.ToInt32(dump.Data[i].data, 0).ToString() + " byte";
-                    break;
-                case GSType.Registers:
-                    val += "Registers";
-                    break;
-                default:
-                    break;
+                switch (dump.Data[i].id)
+                {
+                    case GSType.VSync:
+                        return dump.Data[i].data.Length + "|Field = " + dump.Data[i].data[0].ToString();
+                    case GSType.ReadFIFO2:
+                        return dump.Data[i].data.Length + "|ReadFIFO2 : Size = " + BitConverter.ToInt32(dump.Data[i].data, 0).ToString() + " byte";
+                    case GSType.Registers:
+                        return dump.Data[i].data.Length + "|Registers";
+                    default:
+                        return "";
+                }
             }
-
-            return val;
         }
     }
 }

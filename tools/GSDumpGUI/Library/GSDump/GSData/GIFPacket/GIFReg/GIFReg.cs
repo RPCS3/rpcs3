@@ -4,6 +4,7 @@ using System.Text;
 
 namespace GSDumpGUI
 {
+    [Serializable]
     abstract public class GIFReg : GIFUtil, IGifData
     {
         public GIFRegDescriptor Descriptor;
