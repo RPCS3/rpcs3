@@ -397,7 +397,17 @@ namespace GSDumpGUI
         internal object GetGifPacketInfo(GSDump dump, int i)
         {
             if (dump.Data[i].id == GSType.Transfer)
-                return GIFTag.ExtractGifTag(dump.Data[i].data, ((GSTransfer)dump.Data[i]).Path);
+            {
+                try
+                {
+                    GIFTag val = GIFTag.ExtractGifTag(dump.Data[i].data, ((GSTransfer)dump.Data[i]).Path);
+                    return val;
+                }
+                catch (Exception)
+                {
+                    return new GIFTag();
+                }
+            }
             else
             {
                 switch (dump.Data[i].id)

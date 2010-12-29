@@ -265,7 +265,7 @@ namespace GSDumpGUI
 
                             frmMain.treeGifPacketContent.Nodes[0].Nodes.Add(nodePrim);
 
-                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("nreg = " + tag.nreg.ToString());
+                            frmMain.treeGifPacketContent.Nodes[0].Nodes.Add("nreg = " + (tag.nreg == 0 ? (16).ToString() : tag.nreg.ToString()));
 
                             TreeNode nodeReg = new TreeNode("reg");
                             for (int j = 0; j < tag.regs.Count; j++)
