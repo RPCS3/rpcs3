@@ -130,7 +130,7 @@ class VirtualMemoryReserve
 protected:
 	wxString m_name;
 
-	// Default size of the reserve, in bytes.  Can be specified when the object is contructed.
+	// Default size of the reserve, in bytes.  Can be specified when the object is constructed.
 	// Is used as the reserve size when Reserve() is called, unless an override is specified
 	// in the Reserve parameters.
 	size_t	m_defsize;
@@ -140,12 +140,18 @@ protected:
 	// reserved memory (in pages).
 	uptr	m_pages_reserved;
 
-	// Protection mode to be applied to committed blocks.
-	PageProtectionMode m_prot_mode;
-
 	// Records the number of pages committed to memory.
 	// (metric for analysis of buffer usage)
 	uptr	m_pages_commited;
+
+	// Protection mode to be applied to committed blocks.
+	PageProtectionMode m_prot_mode;
+	
+	// Controls write access to the entire reserve.  When true (the default), the reserve
+	// operates normally.  When set to false, all committed blocks are re-protected with
+	// write disabled, and accesses to uncommitted blocks (read or write) will cause a GPF
+	// as well.
+	bool	m_allow_writes;
 
 public:
 	VirtualMemoryReserve( const wxString& name=wxEmptyString, size_t size = 0 );
@@ -164,6 +170,9 @@ public:
 	virtual void Release();
 	virtual bool TryResize( uint newsize );
 	virtual bool Commit();
+	
+	virtual void ForbidModification();
+	virtual void AllowModification();
 
 	bool IsOk() const { return m_baseptr !=  NULL; }
 	wxString GetName() const { return m_name; }
@@ -200,6 +209,8 @@ public:
 		return *((u8*)m_baseptr + idx);
 	}
 
+protected:
+	virtual void ReprotectCommittedBlocks( const PageProtectionMode& newmode );
 };
 
 // --------------------------------------------------------------------------------------
@@ -231,6 +242,12 @@ public:
 
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
 
+	virtual uptr SetBlockSize( uptr bytes )
+	{
+		m_blocksize = (bytes + __pagesize - 1) / __pagesize;
+		return m_blocksize * __pagesize;
+	}
+	
 protected:
 
 	// This function is called from OnPageFaultEvent after the address has been translated
@@ -298,7 +315,8 @@ public:
 	
 	SpatialArrayReserve& SetBlockCount( uint blocks );
 	SpatialArrayReserve& SetBlockSizeInPages( uint bytes );
-	uint SetBlockSize( uint bytes );
+
+	uptr SetBlockSize( uptr bytes );
 
 	operator void*()				{ return m_baseptr; }
 	operator const void*() const	{ return m_baseptr; }
@@ -309,6 +327,7 @@ public:
 	using _parent::operator[];
 
 protected:
+	void ReprotectCommittedBlocks( const PageProtectionMode& newmode );
 	void DoCommitAndProtect( uptr page );
 	uint _calcBlockBitArrayLength() const;
 };

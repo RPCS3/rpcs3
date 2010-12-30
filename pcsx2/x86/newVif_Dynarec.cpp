@@ -32,24 +32,29 @@ void dVifReserve(int idx)
 
 void dVifReset(int idx) {
 
-	if( !nVif[idx].vifBlocks )
+	pxAssumeDev(nVif[idx].recReserve, "Dynamic VIF recompiler reserve must be created prior to VIF use or reset!");
+
+	if (!nVif[idx].vifBlocks)
 		nVif[idx].vifBlocks = new HashBucket<_tParams>();
 	else
 		nVif[idx].vifBlocks->clear();
 
 	nVif[idx].recReserve->Reset();
+
 	nVif[idx].numBlocks		=  0;
 	nVif[idx].recWritePtr	= nVif[idx].recReserve->GetPtr();
 }
 
 void dVifClose(int idx) {
 	nVif[idx].numBlocks = 0;
-	nVif[idx].recReserve->Reset();
+	if (nVif[idx].recReserve)
+		nVif[idx].recReserve->Reset();
 
 	safe_delete(nVif[idx].vifBlocks);
 }
 
 void dVifRelease(int idx) {
+	dVifClose(idx);
 	safe_delete(nVif[idx].recReserve);
 }
 
@@ -227,7 +232,9 @@ _vifT static __fi u8* dVifsetVUptr(uint cl, uint wl, bool isFill) {
 //    it clears the buffer only.
 static __fi void dVifRecLimit(int idx) {
 	if (nVif[idx].recWritePtr > (nVif[idx].recReserve->GetPtrEnd() - _256kb)) {
-		DevCon.WriteLn("nVif Recompiler Cache Reset! [0x%08x > 0x%08x]", nVif[idx].recWritePtr, nVif[idx].recReserve->GetPtrEnd());
+		DevCon.WriteLn(L"nVif Recompiler Cache Reset! [%s > %s]",
+			pxsPtr(nVif[idx].recWritePtr), pxsPtr(nVif[idx].recReserve->GetPtrEnd())
+		);
 		nVif[idx].recReserve->Reset();
 		nVif[idx].recWritePtr = nVif[idx].recReserve->GetPtr();
 	}

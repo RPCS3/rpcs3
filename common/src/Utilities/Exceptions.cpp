@@ -218,8 +218,8 @@ wxString Exception::OutOfMemory::FormatDisplayMessage() const
 	FastFormatUnicode retmsg;
 	retmsg.Write( L"%s", _("Oh noes! Out of memory!") );
 
-	if (!m_message_diag.IsEmpty())
-		retmsg.Write(L"\n\n%s", m_message_diag.c_str());
+	if (!m_message_user.IsEmpty())
+		retmsg.Write(L"\n\n%s", m_message_user.c_str());
 
 	return retmsg;
 }

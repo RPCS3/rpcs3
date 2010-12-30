@@ -80,7 +80,6 @@ nVifStruct::nVifStruct()
 
 void reserveNewVif(int idx)
 {
-	if (newVifDynaRec) dVifReserve(idx);
 }
 
 void resetNewVif(int idx)
@@ -96,11 +95,9 @@ void resetNewVif(int idx)
 }
 
 void closeNewVif(int idx) {
-	if (newVifDynaRec) dVifClose(idx);
 }
 
 void releaseNewVif(int idx) {
-	if (newVifDynaRec) dVifRelease(idx);
 }
 
 static __fi u8* getVUptr(uint idx, int offset) {

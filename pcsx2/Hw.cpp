@@ -46,6 +46,15 @@ void hwInit()
 	hwInitialized = true;
 }
 
+void hwShutdown()
+{
+	if (!hwInitialized) return;
+
+	VifUnpackSSE_Destroy();
+
+	hwInitialized = false;
+}
+
 void hwReset()
 {
 	hwInit();

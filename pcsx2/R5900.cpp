@@ -96,6 +96,11 @@ void cpuReset()
 	LastELF = L"";
 }
 
+void cpuShutdown()
+{
+	hwShutdown();
+}
+
 __ri void cpuException(u32 code, u32 bd)
 {
 	bool errLevel2, checkStatus;

@@ -405,7 +405,8 @@ void Threading::pxThread::RethrowException() const
 	// after.
 
 	ScopedExcept ptr( const_cast<pxThread*>(this)->m_except.DetachPtr() );
-	if( ptr ) ptr->Rethrow();
+	if (ptr)
+		ptr->Rethrow();
 }
 
 static bool m_BlockDeletions = false;

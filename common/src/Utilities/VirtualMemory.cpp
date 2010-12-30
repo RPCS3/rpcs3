@@ -79,6 +79,7 @@ VirtualMemoryReserve::VirtualMemoryReserve( const wxString& name, size_t size )
 	m_pages_reserved	= 0;
 	m_baseptr			= NULL;
 	m_prot_mode			= PageAccess_None();
+	m_allow_writes		= true;
 }
 
 VirtualMemoryReserve& VirtualMemoryReserve::SetName( const wxString& newname )
@@ -162,12 +163,18 @@ void* VirtualMemoryReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 	return m_baseptr;
 }
 
+void VirtualMemoryReserve::ReprotectCommittedBlocks( const PageProtectionMode& newmode )
+{
+	if (!m_pages_commited) return;
+	HostSys::MemProtect(m_baseptr, m_pages_commited*__pagesize, newmode);
+}
+
 // Clears all committed blocks, restoring the allocation to a reserve only.
 void VirtualMemoryReserve::Reset()
 {
 	if (!m_pages_commited) return;
 
-	HostSys::MemProtect(m_baseptr, m_pages_commited*__pagesize, PageAccess_None());
+	ReprotectCommittedBlocks(PageAccess_None());
 	HostSys::MmapResetPtr(m_baseptr, m_pages_commited*__pagesize);
 	m_pages_commited = 0;
 }
@@ -184,6 +191,18 @@ bool VirtualMemoryReserve::Commit()
 
 	m_pages_commited = m_pages_reserved;
 	return HostSys::MmapCommitPtr(m_baseptr, m_pages_reserved*__pagesize, m_prot_mode);
+}
+
+void VirtualMemoryReserve::AllowModification()
+{
+	m_allow_writes = true;
+	HostSys::MemProtect(m_baseptr, m_pages_commited*__pagesize, m_prot_mode);
+}
+
+void VirtualMemoryReserve::ForbidModification()
+{
+	m_allow_writes = false;
+	HostSys::MemProtect(m_baseptr, m_pages_commited*__pagesize, PageProtectionMode(m_prot_mode).Write(false));	
 }
 
 
@@ -273,6 +292,16 @@ void BaseVmReserveListener::OnPageFaultEvent(const PageFaultInfo& info, bool& ha
 	sptr offset = (info.addr - (uptr)m_baseptr) / __pagesize;
 	if ((offset < 0) || ((uptr)offset >= m_pages_reserved)) return;
 
+	if (!m_allow_writes)
+	{
+		pxFailRel( pxsFmt(
+			L"Memory Protection Fault @ %s (%s)\n"
+			L"Modification of this reserve has been disabled (m_allow_writes == false).",
+			pxsPtr(info.addr), m_name.c_str())
+		);
+		return;
+	}
+
 	// Linux Note!  the SIGNAL handler is very limited in what it can do, and not only can't
 	// we let the C++ exception try to unwind the stack, we may not be able to log it either.
 	// (but we might as well try -- kernel/posix rules says not to do it, but Linux kernel
@@ -336,23 +365,26 @@ void* SpatialArrayReserve::Reserve( size_t size, uptr base, uptr upper_bounds )
 	return addr;
 }
 
+void SpatialArrayReserve::ReprotectCommittedBlocks( const PageProtectionMode& newmode )
+{
+	if (!m_pages_commited) return;
+	
+	u8* curptr = GetPtr();
+	const uint blockBytes = m_blocksize * __pagesize;
+	for (uint i=0; i<m_numblocks; ++i, curptr+=blockBytes)
+	{
+		uint thisbit = 1 << (i & 7);
+		if (!(m_blockbits[i/8] & thisbit)) continue;
+
+		HostSys::MemProtect(curptr, blockBytes, newmode);
+		HostSys::MmapResetPtr(curptr, blockBytes);
+	}
+}
+
 // Resets/clears the spatial array, reducing the memory commit pool overhead to zero (0).
 void SpatialArrayReserve::Reset()
 {
-	if (m_pages_commited)
-	{
-		u8* curptr = GetPtr();
-		const uint blockBytes = m_blocksize * __pagesize;
-		for (uint i=0; i<m_numblocks; ++i, curptr+=blockBytes)
-		{
-			uint thisbit = 1 << (i & 7);
-			if (!(m_blockbits[i/8] & thisbit)) continue;
-
-			HostSys::MemProtect(curptr, blockBytes, PageAccess_None());
-			HostSys::MmapResetPtr(curptr, blockBytes);
-		}
-	}
-
+	ReprotectCommittedBlocks( PageAccess_None() );
 	memzero_sse_a(m_blockbits.GetPtr(), _calcBlockBitArrayLength());
 }
 

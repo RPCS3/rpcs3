@@ -22,7 +22,9 @@
 #define xMOV64(regX, loc)	xMOVUPS(regX, loc)
 #define xMOV128(regX, loc)	xMOVUPS(regX, loc)
 
-static __pagealigned u8 nVifUpkExec[__pagesize*4];
+//static __pagealigned u8 nVifUpkExec[__pagesize*4];
+static RecompiledCodeReserve* nVifUpkExec = NULL;
+
 
 // Merges xmm vectors without modifying source reg
 void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw) {
@@ -288,17 +290,23 @@ static void nVifGen(int usn, int mask, int curCycle) {
 		vpugen.xUnpack(i);
 		vpugen.xMovDest();
 		xRET();
-
-		pxAssert( ((uptr)xGetPtr() - (uptr)nVifUpkExec) < sizeof(nVifUpkExec) );
 	}
 }
 
 void VifUnpackSSE_Init()
 {
-	HostSys::MemProtectStatic(nVifUpkExec, PageAccess_ReadWrite());
-	memset8<0xcc>( nVifUpkExec );
+	if (nVifUpkExec) return;
 
-	xSetPtr( nVifUpkExec );
+	DevCon.WriteLn( "Generating SSE-optimized unpacking functions for VIF interpreters..." );
+
+	nVifUpkExec = new RecompiledCodeReserve(L"VIF SSE-optimized Unpacking Functions");
+	nVifUpkExec->SetProfilerName("iVIF-SSE");
+	nVifUpkExec->SetBlockSize( 1 );
+	nVifUpkExec->Reserve( _64kb );
+
+	nVifUpkExec->ThrowIfNotOk();
+
+	xSetPtr( *nVifUpkExec );
 
 	for (int a = 0; a < 2; a++) {
 		for (int b = 0; b < 2; b++) {
@@ -306,5 +314,19 @@ void VifUnpackSSE_Init()
 				nVifGen(a, b, c);
 			}}}
 
-	HostSys::MemProtectStatic(nVifUpkExec, PageAccess_ExecOnly());
+	nVifUpkExec->ForbidModification();
+
+	DevCon.WriteLn( "Unpack function generation complete.  Generated function statistics:" );
+	DevCon.Indent().WriteLn(
+		L"Reserved buffer    : %u bytes @ %s\n"
+		L"x86 code generated : %u bytes\n",
+		(uint)nVifUpkExec->GetCommittedBytes(),
+		pxsPtr(nVifUpkExec->GetPtr()),
+		(uint)(nVifUpkExec->GetPtr() - xGetPtr())
+	);
+}
+
+void VifUnpackSSE_Destroy()
+{
+	safe_delete( nVifUpkExec );
 }

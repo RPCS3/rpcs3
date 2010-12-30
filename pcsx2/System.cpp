@@ -400,7 +400,7 @@ void SysMainMemory::ResetAll()
 	m_ee.Reset();
 	m_iop.Reset();
 	m_vu.Reset();
-	
+
 	// Note: newVif is reset as part of other VIF structures.
 }
 
@@ -472,6 +472,12 @@ SysCpuProviderPack::SysCpuProviderPack()
 	}
 
 	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
+
+	if (newVifDynaRec)
+	{
+		dVifReserve(0);
+		dVifReserve(1);
+	}
 }
 
 bool SysCpuProviderPack::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
@@ -491,6 +497,12 @@ void SysCpuProviderPack::CleanupMess() throw()
 	{
 		psxRec.Shutdown();
 		recCpu.Shutdown();
+
+		if (newVifDynaRec)
+		{
+			dVifRelease(0);
+			dVifRelease(1);
+		}
 	}
 	DESTRUCTOR_CATCHALL
 }
@@ -558,8 +570,11 @@ void SysClearExecutionCache()
 	CpuVU0->Reset();
 	CpuVU1->Reset();
 
-	resetNewVif(0);
-	resetNewVif(1);
+	if (newVifDynaRec)
+	{
+		dVifReset(0);
+		dVifReset(1);
+	}
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the
