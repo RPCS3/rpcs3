@@ -7,7 +7,8 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+#include "afxres.h"
+
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -171,18 +172,18 @@ BEGIN
     COMBOBOX        IDC_RENDERER,70,55,111,118,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Interlacing (F5):",IDC_STATIC,6,73,81,8
     COMBOBOX        IDC_INTERLACE,70,70,111,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "D3D internal res:",IDC_STATIC,27,105,55,8
-    EDITTEXT        IDC_RESX_EDIT,87,102,35,13,ES_AUTOHSCROLL | ES_NUMBER
-    CONTROL         "",IDC_RESX,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,115,105,11,14
-    EDITTEXT        IDC_RESY_EDIT,125,102,35,13,ES_AUTOHSCROLL | ES_NUMBER
-    CONTROL         "",IDC_RESY,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,149,105,11,14
-    CONTROL         "Native",IDC_NATIVERES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,122,135,33,10
+    LTEXT           "Custom resolution:",IDC_STATIC,26,135,65,8
+    EDITTEXT        IDC_RESX_EDIT,92,132,35,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_RESX,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,120,135,11,14
+    EDITTEXT        IDC_RESY_EDIT,130,132,35,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_RESY,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,154,130,11,14
+    CONTROL         "Native",IDC_NATIVERES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,92,105,33,10
     LTEXT           "Rendering threads:",IDC_STATIC,19,214,63,8
     EDITTEXT        IDC_SWTHREADS_EDIT,87,212,35,13,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,115,215,11,14
-    COMBOBOX        IDC_UPSCALE_MULTIPLIER,87,117,74,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Or use Scaling:",IDC_STATIC,33,120,49,8
-    LTEXT           "Or use original PS2 resolution :",IDC_STATIC,17,135,99,8
+    COMBOBOX        IDC_UPSCALE_MULTIPLIER,92,117,74,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Or use Scaling:",IDC_STATIC,38,120,49,8
+    LTEXT           "Original PS2 resolution :",IDC_STATIC,10,105,80,8
     CONTROL         "Edge anti-aliasing (AA1)",IDC_AA1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,230,93,10
     PUSHBUTTON      "Cancel",IDCANCEL,95,312,50,14
     CONTROL         2021,IDC_LOGO9,"Static",SS_BITMAP,6,6,175,44
@@ -194,7 +195,7 @@ BEGIN
     LTEXT           "Skipdraw Hack:",IDC_STATIC_TEXT_SKIPDRAW,11,289,50,8
     EDITTEXT        IDC_MSAAEDIT,69,260,35,13,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_MSAA,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,103,263,11,14
-    GROUPBOX        "D3D Upscaling (can cause glitches)",IDC_STATIC,6,87,175,64,BS_CENTER
+    GROUPBOX        "D3D Internal resolution (can cause glitches)",IDC_STATIC,6,87,175,64,BS_CENTER
     GROUPBOX        "Software Mode Settings",IDC_STATIC,6,198,175,50,BS_CENTER
     GROUPBOX        "Hardware Mode Settings",IDC_STATIC,6,152,175,45,BS_CENTER
     CONTROL         "Logarithmic Z",IDC_LOGZ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,88,166,58,10
@@ -307,7 +308,8 @@ END
 #include "res/tfx.fx"
 #include "res/convert.fx"
 #include "res/interlace.fx"
-#include "res/merge.fx"
+#include "res/merge.fx"
+
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 

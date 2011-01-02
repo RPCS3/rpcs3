@@ -25,6 +25,8 @@
 #include "GSUtil.h"
 #include "resource.h"
 
+#include "GSDevice9.h"
+
 GSSetting GSSettingsDlg::g_renderers[] =
 {
 	{0, "Direct3D9 (Hardware)", ""},
@@ -57,12 +59,12 @@ GSSetting GSSettingsDlg::g_aspectratio[] =
 
 GSSetting GSSettingsDlg::g_upscale_multiplier[] =
 {
-	{1, "1x", "Use D3D internal Res"},
-	{2, "2x", ""},
-	{3, "3x", ""},
-	{4, "4x", ""},
-	{5, "5x", ""},
-	{6, "6x", ""},
+	{1, "Custom", ""},
+	{2, "2x Native", ""},
+	{3, "3x Native", ""},
+	{4, "4x Native", ""},
+	{5, "5x Native", ""},
+	{6, "6x Native", ""},
 };
 
 GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
@@ -149,6 +151,12 @@ void GSSettingsDlg::OnInit()
 	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETRANGE, 0, MAKELPARAM(8192, 256));
 	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("resy", 1024), 0));
 
+	int r=theApp.GetConfig("Renderer", 0);
+	if (r>=0 && r<=2){//DX9
+		GSDevice9::ForceValidMsaaConfig();
+		m_lastValidMsaa=theApp.GetConfig("msaa", 0);
+	}
+
 	SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETRANGE, 0, MAKELPARAM(16, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("msaa", 0), 0));
 
@@ -160,6 +168,57 @@ void GSSettingsDlg::OnInit()
 
 bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
+	if(id == IDC_MSAAEDIT && code == EN_CHANGE)//validate and possibly warn user when changing msaa
+	{//post change
+		bool dx9 = false;
+		INT_PTR i;
+		if(ComboBoxGetSelData(IDC_RENDERER, i))
+			dx9 = i >= 0 && i <= 2;
+
+		if (dx9){
+
+			uint requestedMsaa= (int)SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_GETPOS, 0, 0);//valid from OnCommand?
+			uint derivedDepth=GSDevice9::GetMaxDepth(requestedMsaa);
+
+			if (derivedDepth==0){
+				//FIXME: Ugly UI: HW AA is currently a uint spinbox but usually only some values are supported (e.g. only 2/4/8 or a similar set).
+				//       Better solution would be to use a drop-down with only valid msaa values such that we don't need this. Maybe some day.
+				//       Known bad behavior: When manually deleting a HW AA value to put another instead (e.g. 2 -> delete -> 4)
+				//						     it's registered as 0 after the deletion (with possible higher derived z bits), and might issue
+				//							 a warning when the new value is registered (i.e. 4 in our example) since it might result in fewer
+				//							 z bits than 0, even if it's not different than the previous value (i.e. 2 in our example) z bits.
+				
+				//Find valid msaa values, regardless of derived z buffer bits
+				string supportedAa="";
+				for (int i=2; i<=16; i++)
+					if (GSDevice9::GetMaxDepth(i)){
+						if (supportedAa.length()) supportedAa+="/";
+						supportedAa += format("%d", i);
+					}
+				
+				if (!supportedAa.length())
+					supportedAa="None";
+
+				string s=format("AA=%d is not supported.\nSupported AA values: %s.", (int)requestedMsaa, supportedAa.c_str());
+				MessageBox(hWnd, s.c_str(),"Warning", MB_OK|MB_ICONWARNING);
+				SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa=m_lastValidMsaa);//revert value from inside OnCommand? is this OK?
+					
+			} else if (derivedDepth < GSDevice9::GetMaxDepth(m_lastValidMsaa)){
+				string s=format("AA=%d will force GSdx to degrade Z buffer\nfrom 32 to 24 bit, which will probably cause glitches\n(changing 'Logarithmic Z' might help some).\n\nContinue?", (int)requestedMsaa);
+				//s+= format("\nlastMsaa=%d, lastDepth=%d, newMsaa=%d, newDepth=%d", (int)m_lastValidMsaa, (int)GSDevice9::GetMaxDepth(m_lastValidMsaa), (int)requestedMsaa, (int)GSDevice9::GetMaxDepth(requestedMsaa));
+				if (IDOK!=MessageBox(hWnd, s.c_str(), "Warning", MB_OKCANCEL|MB_ICONWARNING))
+					SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa=m_lastValidMsaa);//revert value from inside OnCommand? is this OK?
+
+			}
+			m_lastValidMsaa=requestedMsaa;
+
+			UpdateControls();
+		}
+	}
+	else if(id == IDC_UPSCALE_MULTIPLIER && code == CBN_SELCHANGE)
+	{
+		UpdateControls();
+	}
 	if(id == IDC_RENDERER && code == CBN_SELCHANGE)
 	{
 		UpdateControls();
@@ -229,11 +288,17 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	return __super::OnCommand(hWnd, id, code);
 }
 
+
 void GSSettingsDlg::UpdateControls()
 {
 	INT_PTR i;
 
 	bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
+
+	int scaling=1;//in case reading the combo doesn't work, enable the custom res control anyway
+	if (ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, i)){
+		scaling=(int)i;
+	}
 
 	if(ComboBoxGetSelData(IDC_RENDERER, i))
 	{
@@ -251,15 +316,15 @@ void GSSettingsDlg::UpdateControls()
 		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO_OGL), ogl ? SW_SHOW : SW_HIDE);
 
 		EnableWindow(GetDlgItem(m_hWnd, IDC_WINDOWED), dx9);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native && scaling==1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native && scaling==1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native && scaling==1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native && scaling==1);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw && GSDevice9::GetMaxDepth(m_lastValidMsaa)<32);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);

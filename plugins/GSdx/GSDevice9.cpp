@@ -50,6 +50,31 @@ GSDevice9::~GSDevice9()
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
 
+
+//if supported and null!=msaa_desc,  msaa_desc will contain requested Count and Quality
+static bool IsMsaaSupported(CComPtr<IDirect3D9>& d3d, D3DFORMAT depth_format, uint msaaCount, OUT DXGI_SAMPLE_DESC* msaa_desc=NULL){
+	D3DCAPS9 d3dcaps;
+
+	if (msaaCount>16) return false;
+
+	memset(&d3dcaps, 0, sizeof(d3dcaps));
+	d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &d3dcaps);
+
+	DWORD quality[2] = {0, 0};
+
+	if(SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[0])) && quality[0] >0
+	&& SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, depth_format, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[1])) && quality[1] >0
+	){
+		if (msaa_desc){
+			msaa_desc->Count	= msaaCount;
+			msaa_desc->Quality	= std::min<DWORD>(quality[0] - 1, quality[1] - 1);
+		}
+		return true;
+	}
+
+	return false;
+}
+
 static bool TestDepthFormat(CComPtr<IDirect3D9> &d3d, D3DFORMAT format)
 {
 	if (FAILED(d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, format)))
@@ -58,6 +83,39 @@ static bool TestDepthFormat(CComPtr<IDirect3D9> &d3d, D3DFORMAT format)
 		return false;
 	return true;
 }
+
+
+//In descending order of preference
+static D3DFORMAT s_DX9formatsToSearch[]={D3DFMT_D32, D3DFMT_D32F_LOCKABLE, D3DFMT_D24S8};
+
+static D3DFORMAT BestD3dFormat(CComPtr<IDirect3D9>& d3d, int msaaCount=0, OUT DXGI_SAMPLE_DESC* msaa_desc=NULL){
+	if(!d3d) return D3DFMT_UNKNOWN;
+	if (1==msaaCount) msaaCount=0;
+
+	for (int i=0; i<sizeof(s_DX9formatsToSearch); i++)
+		if (TestDepthFormat(d3d, s_DX9formatsToSearch[i]) && (!msaaCount || IsMsaaSupported(d3d, s_DX9formatsToSearch[i], msaaCount, msaa_desc)))
+			return s_DX9formatsToSearch[i];
+
+	return D3DFMT_UNKNOWN;
+}
+
+//return: 32, 24, or 0 if not supported. if 1==msaa, considered as msaa=0
+uint GSDevice9::GetMaxDepth(uint msaa=0){
+	CComPtr<IDirect3D9> d3d;
+	d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
+
+	D3DFORMAT f=BestD3dFormat(d3d, msaa);
+	switch (f){
+		case D3DFMT_D32: case D3DFMT_D32F_LOCKABLE:	return 32;
+		case D3DFMT_D24S8:							return 24;
+	}
+	return 0;
+}
+
+void GSDevice9::ForceValidMsaaConfig(){
+		if (0==GetMaxDepth(theApp.GetConfig("msaa", 0)))
+				theApp.SetConfig("msaa", 0);//replace invalid msaa value in ini file with 0.
+};
 
 bool GSDevice9::Create(GSWnd* wnd)
 {
@@ -90,15 +148,18 @@ bool GSDevice9::Create(GSWnd* wnd)
 	m_d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
 	if(!m_d3d) return false;
-
-	if (TestDepthFormat(m_d3d, D3DFMT_D32))
-		m_depth_format = D3DFMT_D32;
-	else if (TestDepthFormat(m_d3d, D3DFMT_D32F_LOCKABLE))
-		m_depth_format = D3DFMT_D32F_LOCKABLE;
-	else if (TestDepthFormat(m_d3d, D3DFMT_D24S8))
-		m_depth_format = D3DFMT_D24S8;
-	else
-		return false;
+	ForceValidMsaaConfig();
+	//Get best format/depth for msaa. Assumption is that if the resulting depth is 24 instead of possible 32,
+	//                                the user was already warned when she selected it. (Lower res z buffer without warning is unacceptable).
+	m_depth_format=BestD3dFormat(m_d3d, m_msaa, &m_msaa_desc);
+	if (D3DFMT_UNKNOWN == m_depth_format){
+		//can't find a format with requested msaa, try without.
+		m_depth_format = BestD3dFormat(m_d3d, 0);
+		if (D3DFMT_UNKNOWN == m_depth_format)
+			return false;
+		
+		m_msaa=0;
+	}
 
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
 
@@ -139,26 +200,6 @@ bool GSDevice9::Create(GSWnd* wnd)
 		return false;
 	}
 
-	// msaa
-
-	for(uint32 i = 2; i <= 16; i++)
-	{
-		DWORD quality[2] = {0, 0};
-
-		if(SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[0])) && quality[0] > 0
-		&& SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, m_depth_format, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[1])) && quality[1] > 0)
-		{
-			m_msaa_desc.Count = i;
-			m_msaa_desc.Quality = std::min<DWORD>(quality[0] - 1, quality[1] - 1);
-
-			if(i >= m_msaa) break;
-		}
-	}
-
-	if (m_msaa_desc.Count == 1)
-		m_msaa = 0;
-
-	//
 
 	if(!Reset(1, 1))
 	{

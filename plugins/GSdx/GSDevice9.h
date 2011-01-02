@@ -213,4 +213,8 @@ public:
 
 	bool HasStencil() { return m_depth_format == D3DFMT_D24S8; }
 	bool HasDepth32() { return m_depth_format != D3DFMT_D24S8; }
+
+	static uint GetMaxDepth(uint msaaCount);
+	static void ForceValidMsaaConfig();
+
 };
