@@ -443,7 +443,7 @@
 #define wxUSE_DYNLIB_CLASS    1
 
 // experimental, don't use for now
-#define wxUSE_DYNAMIC_LOADER  0
+#define wxUSE_DYNAMIC_LOADER  1
 
 // Set to 1 to use socket classes
 #define wxUSE_SOCKETS       1
@@ -807,7 +807,7 @@
 // Default is 1.
 //
 // Recommended setting: 1 if you need it, can be safely set to 0 otherwise
-#define wxUSE_DISPLAY       0
+#define wxUSE_DISPLAY       1
 
 // Miscellaneous geometry code: needed for Canvas library
 #define wxUSE_GEOMETRY            1
